@@ -1,0 +1,46 @@
+Program notes:
+
+- Flat real mode and virtual 8086 mode
+   This code will only function correctly in pure 16-bit real mode.
+   If virtual 8086 mode is involved, the code will disable it's functions
+   to prevent exceptions and possible crashes from occuring.
+
+- Flat real mode and EMM386.EXE
+   EMM386.EXE accomplishes it's trickery on 386 or higher systems by running
+   the 16-bit DOS system under virtual 8086 mode. Programs that try to use
+   flat real mode will crash the system and initiate a hard reset
+   (Windows 95 and earlier) or will cause EMM386.EXE to hang the machine with
+   a textual error message (Windows 98). To avoid this crash, the library
+   will disable itself if EMM386.EXE is present (virtual 8086 mode detected).
+
+   On Microsoft systems, if EMM386.EXE is resident, you can disable EMM
+   functions (and v8086 mode) at runtime by typing "EMM386 OFF". You should
+   then be able to use flat real mode without problems. Later you can type
+   "EMM386 ON" to reenable EMM functions and v8086 mode.
+
+- Flat real mode and Microsoft Windows
+   If the library detects that it is running in a "DOS Box" under Windows,
+   it will disable it's functions. For the same reasons as EMM386.EXE,
+   attempts to use Flat Real Mode will only cause an exception, which under
+   Windows, immediately terminates the DOS Box and causes the desktop to
+   display an error message. This applies to all versions of Windows that
+   run in "386 enhanced mode", including "Windows 3.1 enhanced mode",
+   Windows 95, Windows 98, Windows ME, and all NT based versions.
+
+   If you are running Windows in Real or Standard Mode, where the kernel
+   does not use v8086 mode, you might be able to use flat real mode without
+   problems. But if you're running hardware THAT OLD you might as well just
+   stay with pure DOS mode.
+
+- Flat real mode and certain clone CPU & Emulator situations
+   On real Intel or AMD CPUs, attempting to do "flat real mode" style memory
+   access will cause a real-mode exception, because you are violating the
+   segment limits. This is why, when using the library, you must first
+   "enable" flat real mode. On clone CPUs and certain emulators however,
+   the CPU does not enforce segment limits. Such systems can give the
+   programmer the false impression that his code, using the library, will
+   run correctly. Therefore, if you want to ensure your code runs correctly
+   in all cases, I recommend testing your program and the flat real mode
+   library on as many systems as possible, ideally some Intel and some clone
+   hardware.
+

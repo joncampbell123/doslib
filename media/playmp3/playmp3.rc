@@ -1,0 +1,18 @@
+
+#include <windows.h>
+
+#include "resource.h"
+
+IDI_APPICON             ICON    DISCARDABLE     "playmp3.ico"
+
+IDD_ABOUT DIALOG DISCARDABLE  0, 0, 310, 29
+STYLE DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+CAPTION "About this program"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,254,6,50,14
+    ICON            IDI_APPICON,IDC_STATIC,4,5,18,20
+    LTEXT           "PLAYMP3 MP3/AAC/MP4/WAV/OGG/SPX player",IDC_STATIC,27,6,224,10
+    LTEXT           "(C) 2011-2012 Jonathan Campbell",IDC_STATIC,27,16,148,10
+END
+

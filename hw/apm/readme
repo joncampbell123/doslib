@@ -1,0 +1,5 @@
+Support routines for the Advanced Power Management BIOS interface.
+
+If you have a computer that supports it, your DOS program can make
+use of these functions as you need to.
+

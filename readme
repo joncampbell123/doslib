@@ -1,0 +1,87 @@
+
+*** NOTICE: Win32s support *****************
+
+The w32imphk library has been completely removed from this source
+base. Proper compilation of Win32s binaries now requires the
+Hackipedia branch of the Open Watcom compiler.
+
+Jonathan has made modifications to the linker and C runtime library
+in the Hackipedia branch to better support Win32 code targeting
+Windows 3.1 Win32s environments. The C runtime now compiles an
+alternate version of itself that avoids certain wide-char or
+environment string API calls not offered by Win32s and is therefore
+able to run in the Win32s world without patching the EXE or manually
+overriding certain import symbols.
+
+You will still be able to compile this code with the mainline version
+of Open Watcom, but you will not be able to use the Win32s builds
+under Windows 3.1 if you do.
+
+********************************************
+
+This is a collection of source code intended for DOS and DOS-level
+use. It is intended to be used in other open source projects as well
+as a learning tool for programmers who may want to learn hardware
+level programming and low level details of the MS-DOS PC platform.
+
+This code is designed to work with almost any commodity IBM PC/XT/AT/etc.
+hardware out there, though most of it is written primarily to work with
+mid 1990's Pentium-class hardware, or older, all the way down to the
+original 8088-based PCs.
+
+Each major branch of this source tree has a README file to describe
+exactly what is provided.
+
+Linux (32-bit only):
+   Run ./buildall.sh to compile. The script will also regenerate the
+   DOS batch files. Make sure the linux build of OpenWatcom is
+   present in /usr/watcom/binl.
+
+   Oh... I'd like to note that most distributions don't carry OpenWatcom
+   and compiling OpenWatcom from source is a real pain, so the easiest
+   way to get this going would be to obtain a compiled binary from
+   the Hackipedia website which you then unpack into /usr/watcom.
+
+   NOTE: The reason OpenWatcom will not work on 64-bit hosts is due to
+         OpenWatcom compiling itself (bootstrap) and then using itself
+         to compile linux executables. The Open Watcom developers do not
+         seem to support 64-bit targets therefore Open Watcom cannot
+         compile itself on 64-bit hosts.
+
+         It would be nice if they had instead written Open Watcom to
+         compile out the toolchain using GCC and binutils for most of
+         itself, which would make porting a *LOT* easier, but... oh
+         well.
+
+Windows XP/Vista/7:
+   Bring up the command shell, run the OWSETENV.BAT script, then
+   cd to this directory and type "BUILDALL". Your PATH variable should
+   refer to the Watcom "BINNT" directory, for best use on both
+   32-bit and 64-bit systems.
+
+MS-DOS:
+   Boot into plain MS-DOS using as few drivers and TSRs as possible,
+   but make sure HIMEM.SYS or EMM386.EXE is resident and SMARTDRV is
+   running (for caching). Run the OWSETENV.BAT script, then cd to this
+   directory and type BUILDALL.
+
+   Count on the build taking a long time, especially if you're running
+   this build on an ancient mid-1990's Pentium.
+
+Using the DOSBox 0.74 emulator:
+   If none of the above are an option, you can use DOSBox to compile
+   this code. Copy this source tree to one directory, and install the
+   DOS version of Open Watcom (using the DOS installer) to C:\WATCOM.
+   You should then setup your dosbox.conf so that when you start
+   DOSBox the autoexec.bat portion automatically mounts the top
+   directory of the whole project as C:, and then run the owsetenv.bat
+   script.
+
+   *MAKE SURE OWSETENV.BAT USES THE BINW DIRECTORY, NOT BINNT*
+
+   For best results set cycles=max and core=auto, and memsize to at
+   least 32MB. Then "CD" to the source directory and type BUILDALL.
+   Then sit back and be patient. Due to the overhead of emulation,
+   Watcom will then compile itself with the performance of a 200MHz
+   Pentium II DOS system on modern 2GHz CPUs.
+

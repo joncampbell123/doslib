@@ -1,0 +1,9 @@
+Parallel port:
+
+ Write function for "fast centronics" output mode.
+ Experiment with bidirectional mode.
+ ECP programming practice.
+ EPP mode?
+ Disney Sound Source example (SELECT=0 and send data according to FIFO).
+ Covox Speech Thing example (just write data at fixed rate).
+

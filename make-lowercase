@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+my $top=`pwd`; chomp $top;
+
+sub vfat_rename($$) {
+	my $from,$to;
+	($from,$to) = @_;
+
+	# uppercase DOS names with the vfat driver need some forceful convincing
+	# to actually make them lowercase
+	rename($from,"$to.xxx.xx");
+	rename("$to.xxx.xx",$to);
+}
+
+sub scan($) {
+	my $old = `pwd`; chomp $old;
+	my $cur = shift @_;
+	my @x;
+
+	print "scanning $cur\n";
+	chdir($cur) || die;
+
+	opendir(X,".") || return;
+	while (my $name = readdir(X)) {
+		next unless -f $name;
+		my $n = lc($name);
+		next if $n eq $name;
+		print "$name\n";
+		rename($name,$n) || die;
+		vfat_rename($name,$n);
+	}
+	closedir(X);
+
+	opendir(X,".") || return;
+	while (my $name = readdir(X)) {
+		next if $name =~ m/^\.+$/;
+		next if $name eq ".git";
+		next if $name eq ".GIT";
+		next unless -d $name;
+		my $n = lc($name);
+		next if $n eq $name;
+		print "$name\n";
+		rename($name,$n) || die;
+		vfat_rename($name,$n);
+	}
+	closedir(X);
+
+	opendir(X,".") || return;
+	while (my $name = readdir(X)) {
+		next if $name =~ m/^\.+$/;
+		next if $name eq ".git";
+		next if $name eq ".GIT";
+		next unless -d $name;
+		push(@x,$name);
+	}
+	closedir(X);
+	foreach my $name (@x) {
+		scan("$cur/$name");
+	}
+
+	chdir($old) || die;
+}
+
+scan($top);

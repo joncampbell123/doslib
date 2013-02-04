@@ -1,0 +1,170 @@
+This library is a collection of useful subroutines for accessing MS-DOS IBM
+compatible hardware directly from your program.
+
+It is written to make best use of mid-1990's hardware and older, targeting
+Pentium, 486, 386, 286, and 8086 hardware with less than 32MB of RAM (anything
+too underpowered to run Linux very well to accomplish the same goals). It can
+be used on newer hardware all the way up to modern multicore processors, but
+how well it works depends either the presence of the chipset or the emulation
+of the chipset via System Management Mode on newer BIOSes. Where possible,
+code is provided here for the newer hardware interfaces. But there are some
+situations where supporting the new hardware requires you to make substantial
+changes to your code and to the hardware state that can cause problems with DOS
+(such as the APIC on post-2000 hardware).
+
+If nothing else, this code serves as a useful tutorial on how to program the
+commodity PC hardware out there. If you always wanted to program the hardware
+directly, this code would be an excellent study guide.
+
+This code is designed to run in pure DOS mode. It is written to be tolerant
+towards running in a Windows "DOS Box", though that is strongly discouraged.
+
+8042 ............. 8042 keyboard controller (and PS/2 mouse)
+8250 ............. 8250/16450/16550/16750 serial port UART
+8254 ............. 8254 timer chip
+8259 ............. 8259 programmable interrupt controller
+acpi ............. ACPI BIOS support functions and experiments
+apm .............. APM BIOS support functions
+biosdisk ......... BIOS INT 13H low-level disk access
+cpu .............. CPU utility and CPU/FPU detection
+dos .............. MS-DOS environment library, allowing:
+                     - DOS detection (version? state?)
+                     - Windows detection (am I in a DOS Box? version?)
+                     - DOSBox 0.74-ish emulator detection
+                     - BIOS extended memory copy (INT 15H)
+                     - Lotus/Intel/Microsoft Expanded Memory API,
+		         usually EMM386.EXE
+                     - HIMEM.SYS Extended Memory API
+flatreal ......... 386 "Flat Real Mode" API, to allow direct extended memory
+                     access to 16-bit real-mode applications
+ide .............. IDE/ATA hard disk and ATAPI CD-ROM code
+isapnp ........... ISA Plug & Play BIOS API and hardware I/O
+mb ............... Motherboard-specific hacking "toys", see README for
+                     comprehensive list
+parport .......... PC parallel (printer) port functions
+pci .............. PCI bus functions
+pcie ............. PCI-Express bus functions
+smbios ........... DMI/SMBIOS parsing functions
+sndsb ............ Sound Blaster or compatible support functions
+ultrasnd ......... Gravis Ultrasound support functions
+usb .............. Universal Serial Bus functions
+vesa ............. VESA VGA BIOS video API
+vga .............. VGA/EGA/CGA/MDA/Tandy/PCjr/Hercules support functions
+
+Build subdirectory naming convention:
+
+    -- MS-DOS --
+
+    dos86c ........... 16-bit real mode build, compact memory model (8086+)
+    dos86s ........... 16-bit real mode build, small memory model (8086+)
+    dos86m ........... 16-bit real mode build, medium memory model (8086+)
+    dos86l ........... 16-bit real mode build, large memory model (8086+)
+    dos286c .......... 16-bit real mode build, compact memory model (assume/optimized for 286+)
+    dos286s .......... 16-bit real mode build, small memory model (assume/optimized for 286+)
+    dos286m .......... 16-bit real mode build, medium memory model (assume/optimized for 286+)
+    dos286l .......... 16-bit real mode build, large memory model (assume/optimized for 286+)
+    dos386f .......... 32-bit protected mode build, flat memory model (386 or higher)
+    dos486f .......... 32-bit protected mode build, flat memory model (assume/optimized for 486+)
+    dos586f .......... 32-bit protected mode build, flat memory model (assume/optimized for 586+)
+    dos686f .......... 32-bit protected mode build, flat memory model (assume/optimized for 686+)
+
+    -- OS/2 --
+
+    os2w2l ........... 16-bit protected mode build, large memory model (286 or higher)
+    os2w3l ........... 16-bit protected mode build, large memory model (assume/optimized for 386+)
+    os2d3f ........... 32-bit protected mode build, flat memory model (386 or higher)
+
+    -- Windows 3.0 --
+
+    win300l .......... 16-bit build, large memory model (8086+ real or protected mode)
+    win300c .......... 16-bit build, compact memory model (8086+ real or protected mode)
+    win302l .......... 16-bit build, large memory model (assume/optimized for 286+)
+    win302c .......... 16-bit build, compact memory model (assume/optimized for 286+)
+    win303l .......... 16-bit build, large memory model (assume/optimized for 386+)
+    win303c .......... 16-bit build, compact memory model (assume/optimized for 386+)
+
+    -- Windows 3.0 with Win386 --
+
+    win386 ........... 32-bit build, flat memory model (386+)
+
+    -- Windows 3.1 with Win386 --
+
+    win38631 ......... 32-bit build, flat memory model (386+ Windows 3.1 or higher)
+
+    -- Windows 3.1 --
+
+    win312l .......... 16-bit build, large memory model (286+ protected mode only)
+    win312c .......... 16-bit build, compact memory model (286+ protected mode only)
+    win313l .......... 16-bit build, large memory model (assume/optimized for 386+)
+    win313c .......... 16-bit build, compact memory model (assume/optimized for 386+)
+
+    -- Windows 3.1 Win32s --
+
+    win32s3 .......... 32-bit build, flat memory model (386+)
+    win32s4 .......... 32-bit build, flat memory model (assume/optimized for 486+)
+    win32s5 .......... 32-bit build, flat memory model (assume/optimized for 586+)
+    win32s6 .......... 32-bit build, flat memory model (assume/optimized for 686+)
+
+    -- Windows NT --
+
+    winnt ............ 32-bit build, flat memory model (386+)
+
+    -- Windows 95/98/ME --
+
+    win32 ............ 32-bit build, flat memory model (386+)
+
+    ------------------------------------------------------------------------------
+
+    The 16-bit small memory model can only hold up to 64KB of code + data,
+    anything that won't fit will not provide a working binary.
+    
+    Tests not applicable to each mode will not provide an EXE or will provide
+    a stub that announces why the test was not compiled in. For example:
+    32-bit protected mode builds of the Flat Real Mode library, where flat
+    real mode is unnecessary.
+    
+    Code is written to work as identically as possible across all three
+    build modes, unless rendered impossible by DOS extender or environmental
+    constraints. Multiple strategies may be chosen at runtime to make the
+    operation work. For precise details, read the source code.
+
+    NOTES:
+
+    - OS/2 16-bit builds are [so far] tested with OS/2 2.x and higher. I'll test
+      against OS/2 1.x when I get them working in an emulator someday... apparently
+      OS/2 1.x has some very well known timing bugs that can trigger on anything
+      faster than the 386 of the day.
+
+    - OS/2 32-bit builds require OS/2 2.x and higher
+
+    - Some OS/2 builds are compiled against the Presentation Manager. Most of them
+      though are written to work from the OS/2 command prompt.
+
+    - Windows builds are written to be forward-compatible: Windows 3.0 builds are
+      written to remain compatible with Windows 3.1/95/98/ME and Windows
+      NT/2000/XP/Vista/7 where possible.
+
+    - "win32" and "winnt" builds are usually interchangeable between Windows 9x/ME
+      and Windows NT/2000/XP/Vista/7. The different build designations may be used
+      in the future to allow programs to specialize for one or the other.
+
+    - I have tested this code under Windows 8 Release Preview. winnt and win32 builds
+      work fine. DOS and win16 versions will trigger a one-time message about old
+      application compatibility on 32-bit builds, but they will work regardless.
+
+    - "Win386" refers to Watcom Win386 which allows 32-bit programs to run natively
+      in the Win16 environment applying the same "extender" concept that it does for
+      DOS programs.
+
+*** KNOWN SERIOUS ISSUES THAT CAN OCCUR WITH THIS PROGRAM ***
+
+ 1) FreeDOS 1.0 and DOS32a DOS extender
+
+    There is a known issue with DOS32a and FreeDOS 1.0 that can cause bizarre
+    erratic behavior with this test code and in many cases can cause hard crashes.
+    This is most visible with complex programs like the VGA test program and
+    the PCI enumeration code when using the BIOS to enumerate the PCI bus.
+
+    You should use the real-mode versions of the code if possible, or use instead
+    a FreeDOS 1.1 installation.
+

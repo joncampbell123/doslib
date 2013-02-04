@@ -1,0 +1,31 @@
+faad2 library.
+Ported to MS-DOS/OpenWatcom by Jonathan Campbell.
+
+
+Notes:
+
+- The source code here is basically a copy of libfaad downloaded from
+  sourceforge. It has been modified to compile with Open Watcom instead
+  of GNU GCC & Make. Filenames are slowly being changed to fit within
+  the 8.3 DOS filename limit. Until that process is complete, you will
+  need a LFN-enabled DOS environment (such as Windows) or a Linux host,
+  to compile this code.
+
+- This compiles to 32-bit code only. The library doesn't act right when
+  compiled as 16-bit. Decoding sorta works but the audio flutters, and
+  memory corruption happens. Someday I or someone else will take this
+  code and produce a modified version optimized for 16-bit real-mode
+  DOS.
+
+- This program has Covox/Disney on LPT support. It works with DOSBox's
+  emulation as far as I know, but I do not have the actual hardware to
+  test against.
+
+- This program supports Sound Blaster, Gravis Ultrasound, LPT DAC, and
+  PC speaker for sound output. Do not use Sound Blaster playback with
+  Gravis Ultrasound SBOS/MEGA-EM, it will not work. PC speaker playback
+  may sound glitchy or scratchy depending on background interrupt
+  activity on your system. When using PC speaker output, make sure your
+  DOS extender can handle the timer interrupt being fired at a high
+  tick rate. If it cannot, your system will hang.
+

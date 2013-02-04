@@ -1,0 +1,16 @@
+The 'ext' directory contains external code incorporated into this project.
+The projects in question are open source projects that carry their own
+licenses.
+
+bzip2 ............... Bzip2 compression/decompression library
+faad ................ FAAD MPEG-4 AAC audio decoder library
+flac ................ Free Lossless Audio Codec library
+jpeg ................ JPEG image compression/decompression library
+lame ................ LAME MP3 audio encoder library
+libmad .............. MAD MPEG audio decoder library
+libogg .............. Xiph OGG bitstream reader/writer library
+speex ............... Xiph Speex codec library
+vorbis .............. Xiph Vorbis codec library
+vorbtool ............ Xiph Vorbis tools
+zlib ................ ZLIB compression/decompression library
+

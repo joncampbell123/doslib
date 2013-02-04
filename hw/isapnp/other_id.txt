@@ -1,0 +1,12 @@
+This is a database of ISA PnP device IDs not covered by the device id database
+in the specification.
+
+TOS7009         DeviceType 07,80,00          Toshiba FIR infared port
+
+TOS700D         DeviceType 07,00,02          Toshiba internal model (COM2)
+
+TOS7400         DeviceType 09,02,00          Toshiba PS/2 compatible mouse
+                                             (the "diddle" in the middle of the keyboard)
+
+YMH0021         DeviceType 04,01,00          Yamaha OPL3-SA3 sound card
+

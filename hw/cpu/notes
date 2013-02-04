@@ -1,0 +1,6 @@
+Failed experiments:
+ 
+  - Direct entry into RING 3 via VCPI (PRO3VCPI.ASM)
+       - Not going to work. VCPI servers assume you're entering into ring 0.
+       - Entering with a ring 3 address directly is not possible because of VCPI's ring 0 selectors.
+

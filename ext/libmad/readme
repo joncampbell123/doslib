@@ -1,0 +1,54 @@
+libmad library.
+Ported to MS-DOS/OpenWatcom by Jonathan Campbell.
+
+
+Notes:
+
+- The Sound Blaster MP3 player uses the same codebase as the test.exe
+  executable under hw/sndsb, except that some modes have been removed
+  and the code rewritten to decode and play back MP3 data.
+
+- If your DOS machine has no sound card, but does have the traditional
+  "PC Speaker", you can use playspkr.exe to play the MP3 through the
+  internal beeper (using the old DPCM trick). However there may be
+  slight audio glitches depending on background processes,
+  interrupts, and disk I/O. Make sure your DOS extender and CPU are
+  fast enough to service interrupts at a high timer tick rate.
+  Playback will also not sound very good if the "PC speaker" is not
+  an actual speaker, such as the piezoelectric ones on laptops.
+
+- If you have a Gravis Ultrasound, use the playgus.exe MP3 player.
+  The Sound Blaster version does NOT work with SBOS or MEGA-EM despite
+  my best efforts.
+
+- If you have a LPT parallel port, you can use the LPT DAC version,
+  playlpt.exe. Though playback up to 44.1KHz is supported, it may
+  not be possibly depending on whether or not the parallel port
+  delays I/O for compatability reasons, or any other sources of
+  latency.
+
+- Experimental: If you have a Covox Sound Master, try playsm.exe.
+  Since I don't actually have a Covox Sound Master, I don't know whether
+  this works on real hardware.
+
+
+
+TODO LIST:
+ - 16-bit real-mode MP3 decoding. Currently, libmad seems to compile properly
+   only for 32-bit flat protected mode. I got it to "sort of" compile for
+   16-bit large memory model builds, but it doesn't work properly and it seems
+   to cause memory corruption as well.
+
+   Specification for 16-bit real mode: Take libmad, valgrind it under Linux to
+   catch all possible problems, then incorporate the validated code into this
+   source tree. That will be the 32-bit build. Then, take the libmad source
+   code, put it under a separate directory (libmad16), modify it to use
+   14-bit precision and math that favors 16-bit integers (what will fit into
+   real-mode 8086 CPU registers), and incorporate that into /etc/libmad16.
+   Copy over the test programs here and compile them with it, to produce the
+   16-bit real mode builds. Make the makefile for libmad16 so that it only
+   produces binaries for 16-bit real mode builds. If the differences are
+   minimal enough, you could merge the two source trees into one project
+   that can produce a fast high quality decode for 386+ systems, and a faster
+   (less precise) decoder for systems as low as an 8086.
+

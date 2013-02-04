@@ -1,0 +1,63 @@
+#!/usr/bin/perl
+my $lib = shift @ARGV;
+die unless -f $lib;
+
+my @list = (
+	# internal sym. name		# external DLL symbol name
+	"_getBX\@0",			"getBX",
+	"_setBX\@4",			"setBX",
+
+	"_getCX\@0",			"getCX",
+	"_setCX\@4",			"setCX",
+
+	"_getECX\@0",			"getECX",
+	"_setECX\@4",			"setECX",
+
+	"_getESI\@0",			"getESI",
+	"_setESI\@4",			"setESI",
+
+	"_getEDI\@0",			"getEDI",
+	"_setEDI\@4",			"setEDI",
+
+	"_getDS\@0",			"getDS",
+	"_setDS\@4",			"setDS",
+
+	"_getES\@0",			"getES",
+	"_setES\@4",			"setES",
+
+	"_getEBX\@0",			"getEBX",
+	"_setEBX\@4",			"setEBX",
+
+	"_getEDX\@0",			"getEDX",
+	"_setEDX\@4",			"setEDX",
+
+	"_getEAX\@0",			"getEAX",
+	"_setEAX\@4",			"setEAX",
+
+	"_getMSW\@0",			"getMSW",
+	"_setMSW\@4",			"setMSW",
+
+	"_VdmMapFlat\@12",		"VdmMapFlat",
+	"_VDDInstallIOHook\@16",	"VDDInstallIOHook",
+	"_VDDDeInstallIOHook\@12",	"VDDDeInstallIOHook"
+);
+
+sub shellesc($) {
+	my $x = shift @_;
+	$x =~ s/([^a-zA-Z0-9\.])/\\$1/g;
+	return $x;
+}
+
+for ($i=0;$i < @list;$i += 2) {
+	my $iname,$dllname;
+
+	$dllname = $list[$i+0];
+	$iname = $list[$i+1];
+
+#	print "$iname -> $dllname\n";
+	$cmd = "wlib -q -b -c ".shellesc($lib)." ++".shellesc("'$iname'.'NTVDM.EXE'.'$dllname'");
+#	print "$cmd\n";
+	$x = system($cmd);
+	die unless $x == 0;
+}
+

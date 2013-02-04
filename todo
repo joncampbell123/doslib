@@ -1,0 +1,14 @@
+TODO LIST FOR HACKIPEDIA CODE:
+
+Take code out of 16-bit and 32-bit subdirectories and merge into other directories, adding the newer
+makefile system as used in the "hw" subdir. The makefiles I stuck there pre-date their development
+and are very inflexible. If you can have ONE source tree for libfaad, nettle, etc. that makes 16-bit
+and 32-bit, then you can clean up a lot in here.
+
+Bring the comdos, dos86, etc. *.mak stock files down to the top of the tree, where everyone can use
+them.
+
+Rewrite make scripts so that you can enable or disable building 286, 486, 586, 686, etc. specific
+builds. These were disabled initially because it would take way too long to build every little
+variation. Also add an option to reenable building "debug" builds.
+

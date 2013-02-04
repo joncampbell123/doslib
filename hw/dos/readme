@@ -1,0 +1,7 @@
+
+DOS support library
+   dos.obj ......................... Helper functions for DOS I/O to far and huge memory
+   emm.obj ......................... Utility library to make use of the Expanded Memory Manager (usually, EMM386.EXE)
+   dosbox.obj ...................... Utility function to detect if we're running in the DOSBox emulator
+   biosext.obj ..................... Utility function for real-mode software to use BIOS INT 15H AH=0x87 extended memory copy function
+   himemsys.obj .................... Utility library to make use of Extended Memory via HIMEM.SYS

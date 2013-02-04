@@ -1,0 +1,150 @@
+
+Audio player for MS-DOS
+(C) 2010-2011 Jonathan Campbell
+
+* System requirements
+
+  MS-DOS 5.0 or higher/FreeDOS 1.0 or higher
+  HIMEM.SYS must be present
+  Minimum 1.5MB of RAM (4MB recommended)
+  386 or higher processor (100MHz Pentium or higher recommended)
+
+* Supported audio output devices
+
+  - Sound Blaster
+  - Gravis Ultrasound
+  - PC speaker
+  - DAC on LPT1
+
+* Supported audio formats
+
+  - Windows WAV files (PCM only)               *.wav
+  - MP3 audio (as well as MP2, and layer I)    *.mp3 *.mp2 *.mpa
+  - AAC audio wrapped in ADTS frames           *.aac
+  - Ogg Vorbis                                 *.ogg *.oga
+  - Ogg Speex                                  *.spx
+  - ISO MPEG-4 AAC audio                       *.mp4 *.m4a
+  - Apple Quicktime (AAC audio)                *.mov
+
+* CPU requirements
+
+  Each codec has it's own minimum requirements for CPU horsepower:
+
+  Windows WAV:                          Any CPU
+  MP3:                                  486/33Mhz
+  AAC (LC):                             486/66MHz
+  AAC (HE-AAC SBR):                     Pentium/166MHz
+  Ogg Vorbis:                           Pentium/66MHz
+  Ogg Speex:                            386/33MHz
+
+  If playback stutters badly and cannot keep up well, then your CPU
+  is too slow.
+
+* DOS Box and virtualization warning
+
+  This code has been tested and developed to work in a pure DOS
+  environment (with or without EMM386.EXE). It has not been well-tested
+  to run in virtualized environments such as the Windows DOS Box and
+  is not guaranteed to work. It has been tested to work however with
+  full-system emulation environments such as DOSBox, QEMU, Virtual Box,
+  and MS Virtual PC.
+
+* Gravis Ultrasound SBOS/MEGA-EM problems
+
+  Despite efforts to make the Sound Blaster library work with these
+  emulation TSRs, this program will not work properly with GUS Sound Blaster
+  emulation. Disable and unload the driver, and then instruct the program
+  to use the native GUS interface.
+
+* Third party open source libraries involved in this program.
+  Note that due to the effort involved in porting them to DOS, I have
+  included their (modified) sources in the overall project tree.
+
+  libmad      MPEG audio decoder library
+  faad2       AAC decoder library
+  libogg      Xiph Ogg bitstream library
+  libvorbis   Ogg Vorbis codec library
+  speex       Ogg Speex codec library
+ 
+Q. Will this program work with newer sound cards?
+
+A. Only if the sound card emulates in some fashion the Sound Blaster interface,
+   or any of the other output devices listed. If the sound card is a PCI or
+   PCIe add-on card, it's very likely that it does not, though if the card
+   was manufactured prior to 2000 and intended for Windows 95/98 systems, the
+   manufacturer may have included a DOS TSR program that uses EMM386.EXE and
+   I/O port trapping to emulate the Sound Blaster interface.
+
+   Some PCI-based systems made in the 1996-1998 timeframe have Yamaha OPL3-SAx
+   or ESS chipsets integrated into the motherboard that emulate the Sound
+   Blaster to varying degrees of compatibility.
+
+   I also recall that some VIA EPIA motherboards from 2000-2003 have integrated
+   Sound Blaster emulation, if enabled in the BIOS setup menu.
+
+   The newest systems contain AC97 or Intel "Azila" HD audio chipsets that
+   do not emulate the Sound Blaster interface in any way.
+
+Q. When I run this program, it says that it sees my Sound Blaster 16 PnP,
+   but that it's "not configured"
+
+A. You have a Sound Blaster 16 that is ISA Plug & Play compatible,
+   and you have recently powered on or reset your system, and have not yet run
+   a PnP configuration utility to assign the card it's ISA resources.
+
+   You can obtain Creative's Plug & Play setup utility from various archives
+   across the internet, or you can use the "PNPCFG.EXE" demonstration program
+   in the HW\SNDSB directory to assign them manually.
+
+   If your sound card is a Sound Blaster 16 ViBRA or AWE 32/64, then it is
+   ISA Plug & Play compatible and requires ISA resource assignment.
+
+Q. When will this program support the newer PCI add-on cards?
+
+A. When time permits I will begin developing experimental drivers to talk
+   directly to the card and it's chipset. It also depends on whether I am able
+   to find the chipset documentation.
+
+   Card/chipset                           Hardware       Documentation
+                                         available?        available?
+   ----------------------------------------------------------------------
+   Yamaha OPL3-SAx                                             
+     * 1995-1997 Toshiba laptops with        Y                 Y
+       integrated ISA PnP OPL3-SAx chipset
+       and Sound Blaster emulation
+   
+   Intel "Azila" HD Audio
+     * 4 computers and 1 laptop              Y                 Y
+
+Q. When my Sound Blaster is configured to use IRQ 8-15, playback stops abruptly
+   within 3-5 seconds. The IRQ indicator shows no activity. Why?
+
+A1. You're using the DOS4GW.EXE DOS extender which does not reliably handle
+    that range of IRQs. Replace DOS4GW.EXE with the DOS32A extender.
+
+    Note that on clone Sound Blaster cards the audio might not stop, but the
+    IRQ indicator will cease to show any activity. On actual Creative hardware,
+    the DSP will stop playback if the system does not acknowledge the IRQ.
+
+A2. You're running the program on a PCI-based system and using an IRQ that
+    is occupied by PCI hardware. On most motherboards the chipset will ignore
+    the IRQ signal coming from the ISA bus in that scenario.
+
+    Consider changing the IRQ used by the Sound Blaster.
+
+    If your motherboard is Intel PIIX or PIIX3 based, you may consider using
+    the "motherboard toy" program under HW/MB/INTEL/PIIX3 to reconfigure
+    how IRQs are routed, so you do so at your own risk of hanging the system
+    unless you know what you are doing. Note that if you do, the changes you
+    make will be temporary and will be overwritten by the BIOS on system
+    reset.
+
+Q. PC speaker output sound slightly staticky and it "hiccups" periodically.
+
+A. PC speaker output requires the CPU to interrupt itself at a fixed rate
+   and program a delay time into the PC speaker hardware. Background interrupts
+   and delays from your BIOS will cause some amount of delays and jitter to
+   the audio. Additionally, hiccups are typically caused by playing the audio
+   off of an IDE/ATA hard disk, where reading requires the BIOS to disable
+   interrupts and enter an I/O loop to read the sectors.
+

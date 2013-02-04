@@ -1,0 +1,169 @@
+
+2012/05/29
+ - Added "Win16 executable buffer library". The purpose of this library is to provide
+   a common set of routines for both Win16 and Win32 applications that can be used
+   to generate code on the fly and execute it in the Win16 layer (yes, even from
+   Win32). The idea is that simple things that need to be done in Win16 can be done
+   from within a Win32 executable without having to carry around extra Win16 "support"
+   DLLs. Something as simple as making INT 10h BIOS calls (something Win16 apps are
+   able to do where Win32 apps are not).
+
+   It is not recommended that you use this library if your Win16 routines are in any
+   way complex, unless you want to debug and single-step raw 16-bit binary executable
+   data all day! If there is enough Win16 stuff you need to do, do it in an external
+   Win16 DLL instead and use the Win9x thunking library in hw/dos instead!
+
+   Supported OS and build combinations:
+
+   Win16 + Windows 3.1, 95, 98, ME
+   Win32 + Windows 95, 98, ME
+
+   This library does not support Windows 3.1 + Win32s.
+
+ - Added code to DISPDIB window library to use Win16 Executable Buffers for INT 10h
+   modesetting from Win32 applications. This lifts the restriction mentioned in the
+   2012/05/28 about how Win32 applications could not call the library and set up
+   80x25 VGA alphanumeric text mode---now they can!
+
+   Updated support matrix for windows/dispdib:
+   
+                    DISPDIB   320x200  320x240  320x400  320x480  INT 10h  Direct
+                     load       x256     x256     x256     x256    Mode 3   ptr
+   ------------------------------------------------------------------------------
+   Win 3.0 16-bit      -         -        -        -        -        -       -
+   Win 3.1 16-bit      Y         Y        Y        Y*       Y*       Y       Y
+   Win 3.1 Win32*      N         N        N        N        N        N       N
+   Windows 95 16-bit   Y         Y        Y        Y        Y        Y       Y
+   Windows 95 32-bit   Y         Y        Y        Y        Y        Y       Y
+   Windows 98 16-bit   Y         Y        Y        Y        Y        Y       Y
+   Windows 98 32-bit   Y         Y        Y        Y        Y        Y       Y
+   Windows ME 16-bit   Y         Y        Y        Y        Y        Y       Y
+   Windows ME 32-bit   Y         Y        Y        Y        Y        Y       Y
+
+* Windows 3.1 16-bit: DISPDIB.DLL on Windows 3.1 systems does not support 320x400
+                      and 320x480 modes by itself nor does it support drawing them.
+                      The DISPDIB library provided here in that case will reprogram
+                      the VGA registers by itself and use it's own rendering routines
+                      to fullfill the request.
+
+* Windows 3.1 32-bit: At this time 32-bit builds cannot use DISPDIB.DLL under
+                      Windows 3.1 Win32s because of a) lack of 32-bit to 16-bit
+                      thunking and b) DISPDIB.DLL which contrary to the Windows 9x/ME
+                      versions does not register a window class and does not use
+                      DDM_* window messages to carry out API calls. The Windows 3.1
+                      version only contains two DLL exported functions which are
+                      called directly to carry out modesetting and drawing.
+
+2012/05/28
+ - Started this log
+
+ - Added makefile support for OS/2 (16-bit and 32-bit)
+
+ - Updated hw/cpu and hw/dos to compile for OS/2 and modified code to not use
+   any tricks the OS/2 kernel does not support. OS/2 2.x and OS/2 Warp 3 problem
+   with CPUID for 16-bit DOS programs noted----the DOS kernel appears to mask
+   off the upper 16-bits of EFLAGS for 16-bit DOS programs in a way that
+   interferes with CPUID detection which means the CPU library fails to detect
+   all but the most rudimentary features of the CPU.
+
+ - Added windows/dispdib library and test program. This allows "fullscreen" VGA
+   320x200, 320x240, 320x400, and 320x480 256-color graphics under Windows 3.1,
+   Windows 95, Windows 98, and Windows ME. Rather than using the flimsy code in
+   Microsoft DISPDIB.H the library wraps DISPDIB.DLL functions in a safe and
+   stable manner that is less likely to cause problems and more compatible with
+   Windows (Microsoft's DISPDIB.H and the suggested window-message API doesn't
+   work with the Windows 3.1 version of DISPDIB.DLL). The library also fills in
+   functions missing from DISPDIB.DLL including direct video RAM access and the
+   ability to set other modes such as 80x25 alphanumeric text mode from Windows.
+
+   Windows 2000/XP/Vista/etc. does not support DISPDIB.DLL nor would the kernel
+   allow us to fiddle with VGA I/O registers. For programs that need 320x200x256
+   on those platforms, there's always DirectX (which offers a wider variety of
+   graphics modes anyway).
+
+   DISPDIB.DLL is important to understand because it lies at the core of most
+   "fullscreen" graphics on Windows 3.1/9x/ME systems, including:
+         - MCIAVI: AVI playback through Media Player on Windows 3.1 and 95 use it
+                   when you configure AVI playback to run fullscreen. Other MCI
+                   drivers will use it too, such as some commercial FLI/FLC
+                   drivers shipped for Windows 3.1.
+
+         - MotionPixel CD-ROMs: Playback in fullscreen mode is accomplished by
+                   the MCI driver using 320x480x256 mode X and "fake highcolor"
+                   dithering.
+
+         - WinG:   When 320x200x256 and 320x240x256 modes are involved, WinG will
+                   often call on DISPDIB.DLL to set the mode. So, indirectly,
+                   many WinG based games for Windows 3.1 (such as Nitemare 3D
+                   for Windows) use it when you select "fullscreen mode".
+
+         - DirectX: Windows 9x/ME builds of DirectX use DISPDIB.DLL to provide
+                    320x200x256 mode (and 320x240x256 if the program indicates
+                    interest in VGA "Mode X" type modes).
+
+   Support matrix for windows/dispdib at this time:
+   
+                    DISPDIB   320x200  320x240  320x400  320x480  INT 10h  Direct
+                     load       x256     x256     x256     x256    Mode 3   ptr
+   ------------------------------------------------------------------------------
+   Win 3.0 16-bit      -         -        -        -        -        -       -
+   Win 3.1 16-bit      Y         Y        Y        Y*       Y*       Y       Y
+   Win 3.1 Win32*      N         N        N        N        N        N       N
+   Windows 95 16-bit   Y         Y        Y        Y        Y        Y       Y
+   Windows 95 32-bit   Y         Y        Y        Y        Y        N       Y
+   Windows 98 16-bit   Y         Y        Y        Y        Y        Y       Y
+   Windows 98 32-bit   Y         Y        Y        Y        Y        N       Y
+   Windows ME 16-bit   Y         Y        Y        Y        Y        Y       Y
+   Windows ME 32-bit   Y         Y        Y        Y        Y        N       Y
+
+* Windows 3.1 16-bit: DISPDIB.DLL on Windows 3.1 systems does not support 320x400
+                      and 320x480 modes by itself nor does it support drawing them.
+                      The DISPDIB library provided here in that case will reprogram
+                      the VGA registers by itself and use it's own rendering routines
+                      to fullfill the request.
+
+* Windows 3.1 32-bit: At this time 32-bit builds cannot use DISPDIB.DLL under
+                      Windows 3.1 Win32s because of a) lack of 32-bit to 16-bit
+                      thunking and b) DISPDIB.DLL which contrary to the Windows 9x/ME
+                      versions does not register a window class and does not use
+                      DDM_* window messages to carry out API calls. The Windows 3.1
+                      version only contains two DLL exported functions which are
+                      called directly to carry out modesetting and drawing.
+
+2012/06/10
+ - Added PCI Express support library.
+
+ - Added code to ACPI demonstration program to show PCI Express MCFG tables.
+
+ - Fixed bug in SMBIOS program that prevented reading SMBIOS data from 32-bit
+   protected mode.
+
+ - Fixed makefile mistake that caused both TEST and MODESET programs in hw\vesa
+   to be the test program.
+
+ - Started experimental USB OHCI Host Controller library in hw\usb\ohci to
+   demonstrate programming and communicating with USB controllers. The program
+   is able to scan PCI and PCI-E busses to locate OHCI controllers, and then
+   query, reset, and change ownership to/from the BIOS as well as detect cases
+   where the BIOS may be using the USB controller for "Legacy Keyboard/Mouse"
+   emulation. All I have yet to figure out is why an ancient (2000-ish) IBM
+   NetVista is having no problem handing off OHCI control, but having problems
+   taking back control when we want it to. To put it another way, if you're
+   using a USB keyboard on the thing don't expect a responsive keyboard after
+   you run the test program.
+
+ - Added code to IDE test program to show C/H/S geometry and total sectors counts
+   from "Identify Device" command.
+
+ - Added test program to hw\biosdisk to read drive C geometry via INT 13h, through
+   the Fixed Disk Parameter Table, and from CMOS, and show them all to you so that
+   you can do comparative analysis and look for flaws. Helped me verify that DOSBox-x
+   is returning values correctly, but still didn't help with the problem of Windows
+   95 refusing to talk to my IDE emulation
+
+2012/07/28
+ - Finally figured out how to get Watcom Win386 builds to work! Apparently wlink
+   generates PharLap .rex files NOT .exe files. You need to wbind them to make a
+   working .exe.
+ - Added win386 targets to dos & cpu hw libraries
+

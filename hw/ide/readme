@@ -1,0 +1,6 @@
+IDE/ATA and IDE/ATAPI test program.
+
+This demonstrates how to talk directly to the IDE controller
+on most PCs that is connected to a hard drive and (in some cases)
+a CD-ROM drive as well.
+

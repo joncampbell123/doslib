@@ -1,0 +1,16 @@
+DEVICE=HIMEM.SYS /testmem:off
+DEVICE=EMM386.EXE
+FILES=30
+BUFFERS=20
+
+REM DEVICE=dos\cd1.SYS /D:banana
+
+rem DEVICE=cd1.SYS /D:banana /P:1f0,14
+rem DEVICE=cd1.SYS /D:banana /P:170,15
+rem DEVICE=cd1.SYS /D:banana /P:170,10
+rem DEVICE=cd1.SYS /D:banana /P:1e8,12
+rem DEVICE=cd1.SYS /D:banana /P:1e8,11
+rem DEVICE=cd1.SYS /D:banana /P:168,10
+rem DEVICE=cd1.SYS /D:banana /P:168,9
+
+LASTDRIVE=Z

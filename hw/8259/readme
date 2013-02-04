@@ -1,0 +1,7 @@
+Program notes:
+
+- Award BIOS on Pentium PIIX3 motherboard:
+
+   The ISR/IRR test will usually not show anything due to the strange
+   way the BIOS services interrupts.
+

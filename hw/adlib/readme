@@ -1,0 +1,14 @@
+Adlib OPL-2/OPL-3 Yamaha FM synthesizer support.
+
+Supports:
+  Adlib FM synthesizer @ 0x388
+  Sound Blaster FM synth (OPL-2 or OPL-3) @ 0x388
+
+ISA PnP notice: If you have a Sound Blaster 16 PnP installed and this
+program is unable to see the OPL-2/3 synth at 0x388, use the PNPCFG
+utility in the SNDSB Sound Blaster library to assign resources to the
+card. Make sure you assign the OPL port to 0x388.
+
+TODO: This code does not yet support multiple OPL chips, or OPL chips
+residing at an address other than 0x388.
+

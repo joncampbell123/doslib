@@ -1,0 +1,630 @@
+
+Creative Sound Blaster or 100% Compatible sound output library.
+(C) 2008-2011 Jonathan Campbell.
+Compiles with Open Watcom.
+
+What it supports:
+   Any Sound Blaster or Sound Blaster compatible interface that communicates
+   on ISA I/O ports 0x2x0-0x2xF (where X=2,4,6, or 8) using ISA DMA channels
+   0, 1, or 3 and 16-bit DMA on 0, 1, 3, 5, 6, or 7.
+
+   Also supports and recognizes various known emulations of the Sound Blaster,
+   including:
+
+      - Gallant/SC400 Crystal Semiconductor CS4232-based cards
+             - They emulate a SB16 with a SBPRO mixer, and a Windows Sound System
+               interface on 0x530 or 0xE30.
+             - Their Sound Blaster emulation also has a proprietary "plug & play"
+               software configuration command set, supported by this library
+
+      - Yamaha OPL3-SAx Sound Blaster emulation
+
+NOTICE: The sndsb.lib library by itself does not contain support for ISA Plug &
+        Play Sound Blaster cards. The isapnp library is kind of large and
+        building this library to depend on it only serves to add bloat to your
+        program (especially if you will be targeting pre-486 hardware where
+        PnP type hardware is very unlikely to be found).
+
+        If you do want your program to support PnP type cards (especially if
+        your code is intended for 486 and higher hardware) then you can link
+        into your program sndsbpnp.lib and isapnp.lib to enable autodetection
+        of ISA Plug & Play based Sound Blaster hardware.
+
+WARNING: Sound Blaster PnP support is written only to read back the
+	 resources assigned. Cards whos resources have not been assigned
+	 will be ignored.
+
+	 In the DOS world, the task of PnP resource assignment is
+	 generally given to a device driver or DOS utility that carries
+	 out configuration (such as: Creative PnP utilities).
+
+	 If you really want to, look at the PNPCFG.EXE utility provided
+	 here as an example of a minimalist Sound Blaster PnP resource
+	 assignment program. Then if you really want to, go ahead and
+	 write your program to auto-configure the card if necessary.
+	 I strongly recommend though that if you do that, you allow the
+	 user to turn it off, since the PnP device is likely sharing the
+	 system with perhaps several other ISA devices that could easily
+	 conflict with the one you're trying to auto-config!
+
+TABLE OF SUPPORTED CARDS
+------------------------
+
+    YES = Card is supported, verified by actual h/w testing
+  HWEMU = If listed with YES or LIKELY, the hardware itself responds to I/O ports
+          like a Sound Blaster even though the chipset is something else entirely
+ LIKELY = Card is supported, because the interface is Sound Blaster compatible,
+          but I have not yet tested and verified that it works. If listed with
+          SWEMU, then the software emulation is likely Sound Blaster compatible
+          even though the actual hardware is not.
+  MAYBE = Card might be Sound Blaster compatible, I don't really know
+    PNP = Card is ISA Plug & Play compatible, if listed with YES or LIKELY the
+          card will work with this library IF you first run an ISA PnP configuration
+          utilty to assign it's resources and bring it online.
+  PNPNC = Card is ISA Plug & Play compatible, but needs no configuration utility
+          to enable Sound Blaster or Sound Blaster emulation
+  SWEMU = Card is NOT Sound Blaster compatible, but comes with a DOS TSR that abuses
+          EMM386.EXE and/or Virtual 8086 mode to emulate a Sound Blaster
+   BIOS = Card is Sound Blaster compatible by emulation using motherboard audio,
+          and can be enabled/disabled through the BIOS setup menu
+    PCI = Card connects through PCI bus
+   MORE = Card is Sound Blaster compatible and has additional functions that might
+          be of interest
+     NO = Card is NOT Sound Blaster compatible
+
+  Finer details on every possible card I've tested is listed in the sndsb library
+  source code.
+
+Creative Sound Blaster 1.5 (CT1320C)                        LIKELY
+Creative Sound Blaster 2.0 (CT1350)                         YES
+Creative Sound Blaster Pro (CT1330)                         LIKELY
+Creative Sound Blaster Pro 2 (CT16x0)                       LIKELY
+Creative Sound Blaster 16                                   LIKELY
+Creative Sound Blaster 16 ViBRA                             LIKELY
+Creative Sound Blaster 16 ViBRA PnP (CTL00F0)               YES PNP
+Creative Sound Blaster 16 ViBRA PnP (CTL0070)               YES PNP
+Creative Sound Blaster AWE64 PnP (CTL00C3)                  YES PNP MORE
+Creative Sound Blaster AWE64 Gold PnP (CTL00B2)             YES PNP MORE
+Creative Sound Blaster Live! Value                          PCI LIKELY SWEMU
+Gallant SC-6000, Crystal Semiconductor CS4232               YES HWEMU
+VIA EPIA (????) [LOOK IT UP]                                YES BIOS HWEMU [*VIA EPIA]
+Yamaha OPL3-SAx                                             YES HWEMU PNPNC [*1]
+Gravis Ultrasound MAX & SBOS 4.x                            YES SWEMU [*GUS]
+Gravis Ultrasound MAX & MEGA-EM                             YES SWEMU [*GUS]
+
+[*GUS] Gravis Ultrasound: The GUS basically pretends to be a Sound Blaster and other
+                          components by trapping certain I/O ports and reflecting to
+                          a TSR by NMI. Most often the ports overlap the GUS's.
+                          Emulation is terrible, especially MEGA-EM that only emulates
+                          a Sound Blaster 1.xx DSP and will literally hang the machine
+                          if you use any DSP command outside the supported set. DMA
+                          timing is terrible. Rather than a continuous stream as by
+                          Sound Blaster you see instead the DMA speed by and finish
+                          far before the audio finishes playing. If you're a DOS
+                          program depending on the DMA to match timing, you're
+                          not going to work too well. Also does not emulate auto-init.
+
+[*1] Yamaha OPL3-SAx: it is listed as PNPNC because the only one I have to test against
+                      is embedded on the motherboard of a laptop who's BIOS takes care
+                      of ISA PnP resource allocation. In fact the BIOS lists the sound
+                      card as one of the system nodes that can be enumerated using the
+                      PnP BIOS entry point.
+
+[*VIA EPIA] VIA EPIA: For whatever reason, despite the BIOS-supported emulation, I am
+                      unable to actually hear the sound output through the line out
+                      jack. The card seems to require a proprietary initialization
+                      procedure to enable the output. Other than that, DMA and IRQ
+                      activity suggests that it works fine.
+
+DSP VERSIONS
+------------
+
+  - DSP 1.xx
+
+      The code talks to the card in a manner compatible with the original Sound Blaster.
+
+  - DSP 2.00
+
+      Sound Blaster 2.0 compatible operation. In this version Creative added auto-init
+      playback which means the software only needs to acknowledge the interrupt instead
+      of reprogramming the DSP to start another block.
+
+  - DSP 2.01
+
+      Creative added the "high speed DAC" mode to enable playback up to 44100Hz mono
+      (22050Hz stereo). On a real Sound Blaster 2.0 card I own, the DSP appears to have
+      timing problems where in non-high speed mode any other use of the ISA bus can
+      cause audible slowing down.
+
+  - DSP 3.xx
+
+      Sound Blaster Pro compatible output. Uses the mixer chip to enable stereo, which
+      should also work on clone cards, but will remain monural on Sound Blaster 16 cards
+      because Creative removed the control for some reason. Steroe playback on SB16 cards
+      require DSP 4.xx playback mode.
+
+  - DSP 4.xx
+
+      Sound Blaster 16 compatible output. This enables 16-bit audio playback. Stereo
+      playback on SB16 requires this mode, Pro stereo does not work. SB16 specific DSP
+      commands also allow "flipped sign" playback.
+
+  ADPCM playback only works with monural 8-bit audio. Direct DAC mode will only function
+  properly with 8-bit monural audio.
+
+WARNINGS
+--------
+
+Goldplay & Direct DAC modes:
+  - These modes work by using the CPU and the IRQ 0 timer interrupt
+    to play sound. If your machine is slow enough, the timer ISR
+    can overwhelm the CPU and effectively make the UI unresponsive.
+    This can happen for 16-bit builds on a slow enough configuration,
+    but it is especially a problem with 32-bit builds due to the
+    overhead involved with the 32-bit DOS extender.
+    
+    This program has a "watchdog timer" implemented into it's timer ISR
+    to try and deal with timer overrun. In most cases if the ISR consumes
+    all CPU the watchdog will time out, stop playing, and restore the
+    tick rate to 18.2/sec so that the UI becomes usable again and you can
+    safely stop playback and/or exit to DOS. But it is not 100% perfect,
+    and what can happen instead is that the Sound Blaster ISR can get
+    triggered in an infinite loop by a General Protection Fault (IRQ 5
+    and the GP# fault overlap thanks to politics between Intel and IBM),
+    or the DOS extender can crash to DOS with an error message about
+    overrunning the stack (with the timer and keyboard unresponsive!).
+
+    When you enable Direct DAC or Goldplay mode in the 32-bit version,
+    a warning message will remind you (once) of this potential pitfall,
+    and allow you to cancel the selection.
+    
+    The final warning is that this method should never be used in an
+    environment where everything is totally virtualized, especially from
+    within a Windows DOS box. Windows 95/98 have problems as it is dealing
+    with DOS games that reprogram the timer beyond 100Hz.
+    
+    Remember, if you play with Direct DAC mode or Goldplay mode, and the
+    program hangs or crashes, don't blame me---you were warned!
+    
+    NOTES: Sun/Oracle virtualbox. Does not work, produces low frequency
+           "warble". Also seems to cap the timer rate at about 4KHz, no
+	   matter what rate this program is trying to run at.
+
+    NOTES: DOSBox 0.74. Does not work, produces low frequency "warble"
+           though timer rate is correct. If you must hear Goldplay mode
+	   in action use the dosbox-x "branch" source code I posted in
+	   the Vogons forums, which contains a fix to make Goldplay mode
+	   work correctly in DOSBox (as well as allow many older demos
+	   to play music audibly).
+
+    NOTES: Direct DAC mode also affects recording. The same ISR timer
+           technique is used to issue DSP command 0x20 (Direct ADC input)
+	   and then read the result from the DSP. Experience says this
+	   technique maxes out at 11KHz, if overdriven the ISR might
+	   overrun the stack and crash.
+    
+Goldplay mode, an explanation:
+
+    In the demoscene from about 1991 to 1993 there was a short-lived
+    audio/tracker library called Goldplay that supported Sound Blaster
+    and Sound Blaster Pro in addition to Covox, Disney sound source
+    and other legacy one-sample-at-a-time sound output methods. The
+    libary was written to hook the timer interrupt and reprogram the
+    timer to run at the sample rate needed to play audio, then write
+    one sample from the interrupt.
+    
+    The obvious problem the programmer(s?) faced was that the code was
+    written for audio output methods that needed the CPU to write to them
+    at a constant rate, because the devices themselves had no way to pull
+    in audio by themselves. So naturally the timer interrupt was a way
+    to accomplish that. But then what do you do about the Sound Blaster,
+    which uses DMA and for stereo output does not offer a way to manually
+    write audio samples?
+    
+    Many demos at the time opted for the method of programming the timer
+    ISR to twice the sample rate, then alternately writing DSP command 0x10
+    and the audio sample to play. But DSP command 0x10 cannot run faster than
+    22050Hz, and cannot play stereo.
+    
+    Goldplay programmers apparently decided to support Sound Blaster then
+    using a simple hack. The library tells the DSP the block size is 65535
+    samples, then tells the DMA controller the buffer is 1 sample wide!
+    This means that during playback the DMA controller is transmitting the
+    same sample over the ISA bus. Then, from the timer ISR, the library
+    just overwrites that one byte with the latest sample to transmit. The DMA
+    controller sends the new byte next cycle, and the DSP gets "sound".
+    
+    The obvious problem of course is that the timer is very likely not running
+    at the same rate as the DSP, and this trick usually results in slightly
+    scratchy sound as a result of samples getting duplicated or dropped.
+    
+    Such a trick was possible, because systems at the time did not cache CPU
+    I/O (286s), or did cache CPU I/O but had logic to keep the cache coherent
+    between the DMA controller and the CPU (386, 486, Pentium motherboards).
+    On today's hardware the PCI bus logic and CPU memory controller would
+    have a lot of difficulty pulling a stunt like that, which is why you don't
+    really see that kind of trickery anymore.
+    
+    For testing purposes, the test program emulates that hacked method of
+    playback just to see if it's possible. So far, testing shows that it is,
+    even in configurations the Goldplay library would have never used (such
+    as "Goldplay mode" with 16-bit stereo PCM).
+    
+    NOTE: Even though the Goldplay library never recorded audio, this program
+          can also be used to test whether one can record audio from the DSP
+	  in this manner. Apparently it's possible, on real hardware! Switch
+	  on Goldplay mode and then select "record" to see in action.
+
+ADPCM auto-init:
+
+    On actual Creative hardware there are DSP commands to play sound data
+    compressed using Creative's proprietary ADPCM compression method.
+    On Sound Blaster 2.0 and higher DSPs, there are additional commands to
+    play the data in an auto-init fashion. Most clones and emulators know
+    the original ADPCM commands, but generally do not respond to the
+    auto-init versions. If you enable auto-init ADPCM and playback causes
+    nothing to happen, then your card/emulator does not recognize it.
+    
+    DOSBox 0.74:     Supports and decodes ADPCM, does not recognize
+                     auto-init ADPCM
+    VirtualBox:      Does not support ADPCM at all
+    Virtual PC:      Does not support ADPCM at all
+    Yamaha OPL3-SAx: Supports 4-bit ADPCM, cycles DMA for 2.6/2-bit silently,
+                     does not recognize auto-init ADPCM
+
+ADPCM reset step per IRQ:
+
+    DOSBox 0.74 emulates Sound Blaster ADPCM playback perfectly, except for
+    one difference observed on genuine Creative hardware: Once per IRQ, even
+    in auto-init mode, the DSP resets the step value, while DOSBox does not.
+    A program that is unaware of the reset will produce audio that generally
+    sounds OK but can audibly "flutter" depending on how often the IRQ
+    occurs. This fluttering effect is caused by the ADPCM data compressed
+    with one step size, and the SB decoding with the wrong step size, until
+    ADPCM limits knock them back into sync.
+
+    So when Creative documents the DSP commands as having a "reference byte"
+    version and a version that "decodes using accumulated reference byte"
+    consider they only mention the reference byte for good reason: the DSP
+    does not preserve any other ADPCM state. Probably to make decoding from
+    an arbitrary point in VOC files more predictable, I suppose.
+
+    You can test for proper behavior by loading an 8-bit monural WAV file,
+    setting the audio to 2.6 or 2 bit ADPCM, and playing it. On real hardware,
+    it should sound fine, while in DOSBox, it should audibly flutter like
+    a badly tuned FM radio. Switching off ADPCM reset per block should
+    cause the opposite: DOSBox sounds fine, while on real Creative hardware
+    it should audibly flutter.
+    
+    NOTE: The code has been tweaked to produce the best ADPCM output by ear
+          on real SB16 hardware. Creative's ADPCM compression overall though
+	  is crap, so in the end it's difficult to tell whether the flutter
+	  happens because of errors in my code or because resetting the
+	  step size leaves little to no room to properly encode the waveform
+	  at the reset point. All I know is that the reset values in my code
+	  seem to produce the least amount of audible flutter, even though
+	  nothing I can do eliminates it completely.
+	  
+	  One way to eliminate flutter is to change the IRQ interval to
+	  the large setting, so that the DSP plays a larger amount of data
+	  before resetting at the next block.
+
+Sound Blaster Pro stereo:
+
+    When Creative first implemented stereo in the Pro cards, they added a bit
+    to a mixer register that enables/disables it. The program sends a time
+    constant representing twice the sample rate, then flips on stereo, and...
+    stereo playback happens.
+    
+    Most clone cards made afterwards emulate this bit quite well, even the
+    cards that implement SB16 commands such as the Gallant SC-6000 chipsets.
+
+    But Creative for some reason removed that function on the Sound Blaster 16
+    cards and designed them instead to require the DSP 4.xx 0xBx-0xCx DSP
+    commands to play back in stereo. The result is that DOS programs written
+    around the Pro and it's stereo bit produce scratchy monural audio on the
+    SB16, while ironically producing correct stereo output on clone cards!
+
+    In this program, DSP mode 3.xx attempts to play stereo using DSP 3.x
+    commands and the stereo bit, while DSP 4.xx uses the SB16 command set
+    and does not set the stereo bit. If you have DSP 3.xx mode set and stereo
+    audio sounds funny, then you have true Creative SB16 hardware and you
+    need to reconfigure to DSP 4.xx mode.
+
+ISA Plug & Play compatibility:
+
+    If your SB16 is the ISA PnP variety, it will be automatically detected.
+    However if neither the BIOS nor any DOS utilities have assigned resources,
+    this program will not be able to make use of the card.
+    
+    To resolve the issue, try:
+    
+      - Using the PNPCFG program provided to assign resources.
+      - Use DOS utilities provided by the manufacturer to assign resources.
+        Creative for example offers a DOS utility to test and assign resources
+	to their Sound Blaster cards (both PnP and legacy versions)
+      - If your BIOS offers the option, see if the setup menu offers ISA
+        PnP resource assignment. Some BIOSes will automatically (try) to
+        assign resources. One BIOS I test against likes to assign my SB16
+        ViBRAX/V to IRQ 2 and DMA channel 0!
+
+    ISA PnP compatability verified with:
+      Sound Blaster 16 ViBRAC
+      Sound Blaster 16 ViBRAX/V
+      Sound Blaster AWE 32
+      Sound Blaster AWE 64 Gold
+      Microsoft Virtual PC Sound Blaster 16 emulation
+
+    Some cards, for whatever reason, do not appear to have working 16-bit DMA
+    transfer capability. Attempting to play 16-bit audio when the 16-bit DMA
+    channel is 5, 6, or 7 will result in nothing at all. If that happens, try
+    assigning both 8- and 16-bit DMA channels to DMA 0, 1, or 3.
+    
+Non-ISA Plug & Play card software configuration:
+
+    Some SB16 cards (or clones) are not ISA Plug & Play compatible, but do
+    have some proprietary method of configuring DMA and IRQ resources. For
+    these cards the PNPCFG utility will not work. You will instead need to
+    identify the card, and then run the appropriate tool to initialize them:
+    
+    Sound Blaster 16 (non PnP)
+      - Run the TEST program. Select the card. Note that if it has not been
+        assigned resources the DMA and IRQ fields will read -1. Go to the
+	device menu, and select Configure card. The program should indicate
+	you are using a non-PnP SB16 and should offer options to configure
+	IRQ and DMA channel settings. When you are finished, hit ENTER.
+	
+	NOTE: IRQ and DMA settings are changeable, while the base I/O address
+	      is NOT changeable. This method will also NOT work with PnP
+	      versions of Sound Blaster 16 hardware, nor will it work within
+	      Microsoft Virtual PC 2007 (emulated PnP SB16).
+	
+	NOTE: This is the recommended way to reconfigure Sound Blaster 16
+	      support in DOSBox, VirtualBox, and Bochs emulators as they
+	      emulate Sound Blaster 16 functions but without ISA PnP.
+
+    Gallant SC6600/Crystal CS4321 "SC-4000" cards
+      - Uses a jumper to configure the base I/O address, but all other
+        resources are assigned by non-standard DSP commands. The card
+	emulates a weird hybrid of Sound Blaster functions: a Pro-style mixer
+	and a DSP that reports itself as a Pro (v3.5) yet it also supports
+	SB16 DSP commands and 16-bit playback. The card also maps the CS4321
+	crystal codec to a configurable WSS address (usually 530h).
+	
+	Run the TEST program. Select the card. Note that if it has not been
+	assigned resources the DMA and IRQ fields will read -1. Go to the
+	device menu, and select Configure card. The program should indicate
+	you are using a SC-6000 card and offer options to change IRQ, DMA,
+	and WSS I/O port resources. When you are finished, hit ENTER.
+
+PCI motherboard issues:
+
+    Some motherboards block or only allow certain IRQ and DMA channels to
+    work across the PCI-ISA bridge. Normally the IRQs blocked are IRQ 9, 10,
+    11, 13, 14, and 15 depending on whether your BIOS has assigned them to
+    motherboard resources or PCI peripheral devices, while IRQ 3, 4, 5, 6,
+    and 7 are normally left open. BIOSes that assign IRQs to either PCI or
+    ISA normally allow you to change the assignment manually in the setup
+    menu.
+
+The 32-bit protected mode version has SB IRQ problems when configured to IRQ 8, 9, 10, etc...
+
+    On some 486/Pentium boards and ViBRA SB16 cards there seem to be
+    some horrible reliability problems between the BIOS, the DOS extender, and
+    the upper IRQs. The IRQ may work the first few times but after that nothing
+    fires and the Sound Blaster DSP stops playback waiting around for our ISR
+    to return acknowledgement.
+    
+    UPDATE: Independent testing reveals that it is a problem with the DOS4/GW
+            DOS extender. The issue mentioned above is reproducible on a lot
+	    of other hardware such as a Dell Pentium III test machine.
+    
+    There are several ways to handle this:
+      - Stop using DOS4/GW and run the program using open source DOS extender
+        DOS32a, which doesn't seem to have this problem.
+      - Use the 16-bit real mode versions. On the same systems they do not
+        appear to have any problems.
+      - Use a PNP configuration utility to move the IRQ down to 5, 7, etc.
+
+16-bit real mode large model hack, the SB IRQ indicator:
+
+    For reasons beyond my comprehension, the 16-bit large model builds had
+    a mysterious bug where half the time the subroutine would fail to redraw
+    the IRQ indicator. This was visible on screen as erratic jumpy movement
+    of the 'x' in the indicator. At one point, this indicator was responsible
+    for several severe memory corruption issues that would eventually crash
+    the machine!
+    
+    So, the 16-bit large model version redraws it instead from the main loop.
+    This means though that if the main loop is unable to function, the IRQ
+    indicator will not function and will be unable to show you if the DSP
+    is still signalling interrupts.
+    
+    16-bit real mode small model, and 32-bit protected mode builds, are
+    able to retain redrawing the indicator from the Sound Blaster ISR. Even
+    if the main UI hangs, you will still be able to see IRQ activity in the
+    upper left corner of your screen.
+
+Flip sign mode:
+
+    In the DOS/Windows world there are two de-facto "standard" PCM formats
+    widely used. One is 8-bit unsigned PCM, using byte values 0 to 255 (with
+    128 at center) to represent the waveform. The other is 16-bit signed PCM,
+    with -32768 to 32767 (with 0 at center). The SB16 DSP commands 0xBx-0xCx
+    have bitfields to indicate 16-bit playback, as well as whether the audio
+    data is signed or unsigned. In most cases, it is told to play either
+    unsigned 8-bit or signed 16-bit data, and clone cards support that command
+    as well. What clones and emulators get wrong though, are situations where
+    the DOS program instead instructs the DSP to play signed 8-bit PCM, or
+    unsigned 16-bit PCM.
+
+    Note that the same DSP command is used for playback and recording.
+    
+    When enabled, the program will flip the sign bit before sending to the
+    card, and then tell the SB16 DSP that it is the opposite signed/unsigned
+    mode. If your card fully supports the DSP commands, it should make no
+    audible change in the sound. If your card is a clone or an emulator that
+    is not aware of the bits, you will hear loud static.
+    
+    DOSBox 0.74: Fully supported
+    Bochs: Not fully supported. Loud static.
+    Gallant SC-6000 clone: Fully supported
+
+BUGS
+----
+
+1]  Direct DAC and Goldplay modes (anything using the timer ISR to play)
+    can overwhelm the CPU and effectively freeze the UI, forcing the user
+    to push reset button.
+
+    FIXED. Timer ISR has watchdog counter. When it hits zero, it forcibly
+    stops playback and resets timer to 18.2/sec tick rate. The UI, if
+    functional, will otherwise reset the watchdog and therefore allow the
+    audio to keep playing. This way, if your CPU is too slow, the program
+    will auto-recover within 5-10 seconds so that you can safely stop
+    playback and/or exit the program.
+
+2]  Audio playback occassionally skips 1-4 seconds forward. Audio recording
+    occassionally repeats a 1-4 second section to disk.
+
+    FIXED. The DMA counter readback code failed to consider the 8237 does
+    not necessarily latch the value during reading, causing reads to
+    occassionally give bad or incorrect readback values that confuse the
+    DMA tracking logic and cause it to over-refill the buffer.
+
+    The 8237 library has been updated to read the counter twice, and re-read
+    until the value counts down as expected.
+
+3]  The IRQ indicator would randomly draw or not draw in the 16-bit real mode
+    large build. It would also cause random memory corruption that would
+    eventually crash the computer.
+
+    FIXED, and FIXED. Changing the method by which "SB-IRQ" was written
+    fixed the memory corruption issue, though it doesn't explain the random
+    corruption, and it still didn't fix the random updating problem. Instead,
+    the code was written to have the main loop do the IRQ state update.
+    16-bit small model, and 32-bit flat mode builds retain the code to redraw
+    IRQ state from within the ISR.
+
+4]  On a Pentium motherboard (with Award bios dated 1995) having PCI, ISA slots
+    and Pentium 133MHz MMX processor, the 32-bit build cannot reliably service
+    Sound Blaster DSP interrupt if IRQ is assigned to IRQ 8 or higher.
+    Playback will work for awhile, then stop. A raw dump of the mixer shows
+    byte 0x82 set to 0x41 (which means the DSP is waiting for acknowledgement,
+    and therefore the IRQ was not serviced). 16-bit builds are not affected
+    by this bug.
+    
+    NOT FIXED. I noticed the problem is reproducible on a lot more than just
+    that one motherboard, and testing reveals that it is a problem with the
+    DOS4/GW DOS extender. You can resolve the issue by replacing the DOS
+    extender with one that does not have this problem, such as DOS32a
+    (http://www.sf.net/projects/dos32a).
+
+5]  Goldplay record/playback mode doesn't work when EMM386.EXE is resident and
+    active.
+
+    NOT FIXED. Goldplay mode relies on a hack where the DMA controller is
+    told the buffer is one sample wide, and that memory location is rewritten
+    from an ISR. Since EMM386.EXE needs to virtualize DMA along with memory,
+    it has to copy the data around when needed and it only does it once at the
+    start of DMA, thus rewriting the location does not work.
+
+    WORKAROUND: Disable EMM386.EXE by removing from CONFIG.SYS. If EMM386.EXE
+    is needed for other programs, then temporarily disable it by typing at
+    the DOS prompt:
+
+    emm386 off
+
+6]  Selecting "Device" -> "Trigger IRQ" when playing or selecting 16-bit audio
+    causes computer to lock up. 32-bit builds trigger a crash dump in DOS32a
+    and DOS4G/W.
+
+    FIXED. The Sound Blaster DSP expects one form of acknowledgement for 8-bit
+    I/O, and another form for 16-bit I/O. The code used the 8-bit version at
+    all times. If that is done, the Sound Blaster DSP re-fires the IRQ
+    expecting the ISR to take care of 16-bit I/O. Since the program never does,
+    the IRQ re-fires until the stack overflows and the program crashes.
+
+7]  Audio plays twice as fast or skips every other second when playing audio
+    on Gravis Ultrasound SBOS/MEGA-EM installations.
+
+    SBOS compatibility:
+       FIXED [16-bit real mode small model].
+    
+       FIXED??? [16-bit real mode large model]. At least it seemed to fix
+       itself, or at least stopped skipping ahead with noise every time the
+       DMA pointer crossed the end of the buffer. Perhaps the phase of the moon
+       changed during testing, who the fuck knows? >:[
+
+       FIXED, sort of [32-bit protected mode]. The test program now hooks the
+       NMI interrupt from protected mode so it can reflect it back to real
+       mode. However, the NMI handler doesn't seem to be able to trigger the
+       SB IRQ in protected mode, so playback will stall after playing a short
+       piece of the audio.
+       
+       The above NMI hack will work with DOS4/GW and DOS32a. However if
+       EMM386.EXE is resident and active, DOS4/GW will hard crash and reboot
+       the system upon receipt of an NMI interrupt. If your program needs
+       EMM386.EXE to be active, consider using DOS32a instead.
+
+       If EMM386.EXE is not active, and the test program does not hook the
+       NMI, DOS4/GW simply does not reflect the interrupt and the program
+       will not reliably detect the virtual sound card.
+       
+    MEGA-EM compatibility:
+       FIXED [16-bit real mode small model].
+       
+       NOT FIXED [16-bit real mode large model]. Despite extremely careful
+       DMA controller programming, running this program seems to invoke
+       EMM386.EXE's panic screen complaining about the program attemping
+       to do a 64KB DMA transfer (WHAT?!). Adding D=64 to the EMM386.EXE
+       device line in your CONFIG.SYS seems to resolve the issue.
+       
+       NOT FIXED [32-bit protected mode]. NMI interrupt causes DOS extenders to
+       panic. Hooking the NMI interrupt from protected mode to reflect back to
+       real mode doesn't resolve DOS4G/W causing a hard reset on NMI, but
+       when run under DOS32a the NMI emulation magic apparently fails to work,
+       and the test program fails to see the emulated sound card.
+    
+    While effort has been made to support SBOS and MEGA-EM emulation, I
+    consider full compatibility a low priority. I have no patience for
+    twitchy TSRs that have stability issues, shitty Sound Blaster emulation,
+    and bizarre DMA bugs.
+    
+8]  When playing audio through SBOS, switching to ADPCM mode causes the
+    program to hang and crash.
+
+    NOT FIXED. I have no patience with SBOS and I do not forsee any need
+    to use ADPCM mode with it.
+    
+    If you must use ADPCM playback with the Ultrasound, use MEGA-EM, which
+    at least does a reasonable job faking the ADPCM playback without causing
+    a hard crash.
+    
+9]  When playing ADPCM audio with MEGA-EM, the audio sounds buzzy and
+    distorted, or tinny and quiet like static.
+    
+    NOT FIXED. MEGA-EM attempts to fake ADPCM playback, but the programmers
+    obviously had no documentation on what exactly the ADPCM format did
+    (back then, who did?).
+
+Gravis SBOS bugs this code has to deal with:
+
+  - The people who wrote SBOS evidently failed to take into
+    consideration the interpolation used by the GF1 chip,
+    thus there are audible pops and buzzing at the boundaries
+    of DSP blocks not because of any errors but because of
+    the GF1 interpolating into undefined samples
+
+  - SBOS's use of INT 02h (NMI) causes DOS4/GW to hard reset
+    and DOS32a to crash to the DOS prompt with an exception
+    report. You can avoid the hard crash with DOS32a at least
+    by hooking INT 02h from protected mode to reflect to real
+    mode, but the NMI handler doesn't seem to be able to issue
+    the SB IRQ back into your protected mode program
+    
+  - I also noticed their NMI handler occasionally seems to not
+    carry out the DMA transfer at all. Instead it does the transfer
+    within the NMI handler. For programs that rely on the DMA pointer
+    to advance audio this is bad news, and something to watch for.
+

@@ -1,0 +1,11 @@
+Program notes:
+
+Award BIOS on Pentium PIIX3 motherboard:
+  - The BIOS is stupid with interrupts when any one IRQ is hooked without
+    calling back to the BIOS. When DOS extenders are involved (32-bit)
+    hooking IRQ 0 in this manner somehow prevents the BIOS from servicing
+    the keyboard (IRQ 1) even though the program has left it untouched.
+
+    If you run the 32-bit version of this program and your keyboard does
+    not respond, that's why.
+
