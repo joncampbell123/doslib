@@ -1,0 +1,5 @@
+#!/bin/bash
+#
+# Clean up the tree
+find -name \*~ -delete
+
