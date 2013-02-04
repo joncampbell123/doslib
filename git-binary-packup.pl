@@ -51,10 +51,22 @@ close(S);
 my $pwd = `pwd`; chomp $pwd;
 my $filename = "../".($as ne "" ? $as : $project)."-$lcdate-commit-$lcommit-binary.tar";
 if (!( -f "$filename.xz" )) {
-	print "Packing binary (all build files except LIB,OBJ,etc.)\n";
+	print "Packing binary\n";
 	print "  to: $filename\n";
 
-	$x = system("tar --exclude=.git --exclude=\\\*.cmd --exclude=\\\*.obj --exclude=\\\*.lib --exclude=\\\*.rex -cvf $filename build");
+	# build the list
+	my $list = '',$fn;
+	open(XX,"for i in dos86s dos86l dos86m dos86c dos386f; do find -iname \$i; done |") || die;
+	while ($fn = <XX>) {
+		chomp $fn;
+		next unless -d $fn;
+#		print "$fn\n";
+		$list .= "doslib/$fn ";
+	}
+	close(XX);
+	die if $list eq '';
+
+	$x = system("tar --exclude=\\\*.obj --exclude=\\\*.lib --exclude=.git -C .. -cvf $filename $list");
 	die unless $x == 0;
 	print "Packing to XZ\n";
 	$x = system("xz -6e $filename");

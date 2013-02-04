@@ -1,15 +1,15 @@
 @echo off
 
 deltree /Y 
-del /s /q dos86c\*.*
+del /s /q win302l\*.*
 deltree /Y 
-del /s /q dos86l\*.*
+del /s /q win313l\*.*
 deltree /Y 
-del /s /q dos86m\*.*
+del /s /q win32s3\*.*
 deltree /Y 
-del /s /q dos86s\*.*
+del /s /q winnt\*.*
 deltree /Y 
-del /s /q dos386f\*.*
+del /s /q win32\*.*
 del *.obj
 del *.exe
 del *.lib

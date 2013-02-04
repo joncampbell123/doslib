@@ -10,6 +10,12 @@ deltree /Y
 del /s /q dos86s\*.*
 deltree /Y 
 del /s /q dos386f\*.*
+deltree /Y 
+del /s /q win32s3\*.*
+deltree /Y 
+del /s /q winnt\*.*
+deltree /Y 
+del /s /q win32\*.*
 del *.obj
 del *.exe
 del *.lib
