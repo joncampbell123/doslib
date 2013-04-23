@@ -131,6 +131,11 @@ static volatile unsigned char faulted = 0;
 static UINT viewselector,my_ds=0,my_ss=0,my_cs=0;
 static void far *oldDPMIPFHook = NULL;
 static int hook_use_tlhelp = 0;
+static DWORD wow32_GetCurrentProcessId = 0;
+static DWORD wow32_ReadProcessMemory = 0;
+static DWORD wow32_GetLastError = 0;
+static DWORD wow32_CloseHandle = 0;
+static DWORD wow32_OpenProcess = 0;
 
 static int DPMILock(uint32_t base,uint32_t limit) {
 	int retv = 0;
@@ -357,6 +362,56 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 			s++; *d++ = cc;
 		}
 
+		return 0;
+	}
+	else if (windows_mode == WINDOWS_NT) {
+		DWORD handle;
+		DWORD myself;
+		DWORD result;
+		DWORD err;
+		char tmp[64];
+
+		/* FUCK YOU WINDOWS XP YOU MOTHER FUCKING PIECE OF FUCKING SHIT */
+
+#if 0
+		myself = __CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,0/*0 param*/,wow32_GetCurrentProcessId);
+		if (myself == 0) MessageBox(hwndMain,"NO MYSELF","",MB_OK);
+
+		handle = __CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,3/*3 param*/,wow32_OpenProcess,
+			/*1*/(DWORD)0x0010UL/*PROCESS_VM_READ*/,
+			/*2*/(DWORD)FALSE,
+			/*3*/(DWORD)myself);
+
+		if (handle == 0) {
+			err = __CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,0/*0 param*/,wow32_GetLastError);
+			sprintf(tmp,"err=0x%08lx",(unsigned long)err);
+			MessageBox(hwndMain,tmp,"",MB_OK);
+		}
+
+		sprintf(tmp,"0x%08lx",handle);
+		MessageBox(hwndMain,tmp,"",MB_OK);
+#endif
+		handle = 0xFFFFFFFFUL;
+
+#if 0
+		result = __CallProcEx32W(CPEX_DEST_STDCALL | 4/*convert param 3*/,5/*5 param*/,wow32_ReadProcessMemory,
+			/*1*/(DWORD)handle,/*2*/(DWORD)memofs,/*3*/(DWORD)((void far*)captureTmp),/*4*/(DWORD)howmuch,/*5*/(DWORD)0/*NULL*/);
+#endif
+		result = __CallProcEx32W(CPEX_DEST_STDCALL | 4/*convert param 3*/,5/*5 param*/,wow32_ReadProcessMemory,
+			/*1*/(DWORD)handle,/*2*/(DWORD)memofs,/*3*/(DWORD)((void far*)captureTmp),/*4*/(DWORD)howmuch,/*5*/(DWORD)0/*NULL*/);
+
+		err = __CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,0/*0 param*/,wow32_GetLastError);
+		if (result == 0) {
+			sprintf(tmp,"0x%08lx",(unsigned long)err);
+			MessageBox(hwndMain,tmp,"",MB_OK);
+		}
+
+#if 0
+		__CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,1/*1 param*/,wow32_CloseHandle,
+			/*1*/(DWORD)handle);
+#endif
+
+		if (result == 0) return howmuch;
 		return 0;
 	}
 	else {
@@ -887,7 +942,35 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *      areas. */
 	/* TODO: Some long-term Win95 stress testing is required.
 	 *       Also test Win98, and WinME */
-	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
+	if (windows_mode == WINDOWS_NT) {
+		/* use "Windows on Windows" to call into the Win32 world and use ReadProcessMemory() */
+		if (!genthunk32_init() || genthunk32w_kernel32 == 0) {
+			MessageBox(NULL,"Unable to initialize Win16->32 thunking code","Error",MB_OK);
+			return 1;
+		}
+
+		if ((wow32_CloseHandle=__GetProcAddress32W(genthunk32w_kernel32,"CloseHandle")) == 0) {
+			MessageBox(NULL,"Failed to obtain CloseHandle","",MB_OK);
+			return 1;
+		}
+		if ((wow32_OpenProcess=__GetProcAddress32W(genthunk32w_kernel32,"OpenProcess")) == 0) {
+			MessageBox(NULL,"Failed to obtain OpenProcess","",MB_OK);
+			return 1;
+		}
+		if ((wow32_GetCurrentProcessId=__GetProcAddress32W(genthunk32w_kernel32,"GetCurrentProcessId")) == 0) {
+			MessageBox(NULL,"Failed to obtain GetCurrentProcessId","",MB_OK);
+			return 1;
+		}
+		if ((wow32_ReadProcessMemory=__GetProcAddress32W(genthunk32w_kernel32,"ReadProcessMemory")) == 0) {
+			MessageBox(NULL,"Failed to obtain GetCurrentProcess","",MB_OK);
+			return 1;
+		}
+		if ((wow32_GetLastError=__GetProcAddress32W(genthunk32w_kernel32,"GetLastError")) == 0) {
+			MessageBox(NULL,"Failed to obtain GetLastError","",MB_OK);
+			return 1;
+		}
+	}
+	else if (windows_mode == WINDOWS_ENHANCED) {
 		/* Windows 3.1 or higher: Use Toolhelp.
 		   Windows 3.0: Use DPMI hacks.
 		   Windows NT: Use Toolhelp, or DPMI hack. Doesn't matter. NTVDM.EXE will not pass it down. */
@@ -994,7 +1077,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	}
 
 #if TARGET_MSDOS == 16
-	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
+	if (windows_mode == WINDOWS_NT) {
+		genthunk32_free();
+	}
+	else if (windows_mode == WINDOWS_ENHANCED) {
 		/* remove page fault handler */
 		if (hook_use_tlhelp) __InterruptUnRegister(NULL);
 		else win16_setexhandler(14,oldDPMIPFHook);
