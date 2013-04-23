@@ -15,6 +15,33 @@
  *
  *   - Testing so far shows that this program for whatever reason, either fails to load it's
  *     resources or simply hangs when Windows 3.0 is started in "real mode".
+ *
+ *   - When running this program under Windows 3.1 in DOSBox, do NOT use core=normal and cputype=486_slow.
+ *     Weird random errors show up and you will pull your hair out and waste entire weekends trying to debug
+ *     them. In this program's case, some random "Unhandled Exception 0xC0000005" error will show up when
+ *     you attempt to run this program. Set core=dynamic and cputype=pentium_slow, which seems to provide
+ *     more correct emulation and allow Win32s to work properly.
+ *
+ *     This sort of problem doesn't exactly surprise me since DOSBox was designed to run...
+ *     you know... *DOS games* anyway, so this doesn't exactly surprise me.
+ */
+/* Known memory maps in various versions of Windows:
+ *   - Windows 3.1/3.11:
+ *      * If Win32s program:
+ *         - 32-bit data segment base=0xFFFF0000 limit=0xFFFFFFFF
+ *         - The "first" 64KB of the data segment (which becomes linear address 0xFFFF0000-0xFFFFFFFF)
+ *           is mapped out (read or write will fault)
+ *         - Starting at 64KB the first 1MB of DOS memory is visible
+ *           from ptr=0x0001000-0x0010FFFF, or linear address 0x00000000-0x000FFFFF.
+ *         - Windows also repeats the first 64KB of lower DOS memory at
+ *           ptr=0x00110000-0x0011FFFF, or linear address 0x00100000-0x0010FFFF.
+ *         - For some reason, the first 1MB of DOS memory is also mapped to
+ *           ptr=0x002D0000-0x00357FFF, or linear address 0x002C0000-0x00347FFF.
+ *         - The BIOS (or a copy of the BIOS?) is at ptr=0x00390000-0x003DFFFF.
+ *         - The entire contents of system RAM are mapped at ptr=0x00410000.
+ *           In the test situation used to take these notes, DOSBox was configured with
+ *           memsize=12 and a 12MB region was observed from ptr=0x00410000-0x0100FFFF.
+ *         - VXD kernel structures are visible at ptr=0x80011000-0x8005FFFF (linear=0x80001000-0x8004FFFF).
  */
 
 #include <windows.h>
@@ -31,7 +58,8 @@
 
 /* display "modes", i.e. what we are displaying */
 enum {
-	DIM_LINEAR=0,			/* "linear" memory view (as seen from a flat 4GB paged viewpoint) */
+	DIM_DATASEG=0,			/* "linear" memory seen from the point of view of our data segment */
+	DIM_LINEAR,			/* "linear" memory view (as seen from a flat 4GB paged viewpoint) */
 	DIM_PHYSICAL,			/* "physical" memory view (making us a Windows equivalent of misc/hexmem1) */
 	DIM_SEGMENT,			/* we're viewing memory associated with a segment */
 	DIM_GLOBALHANDLE,		/* we locked a global memory object and we're showing it's contents */
@@ -59,6 +87,35 @@ char		drawTmp[512];
 #if TARGET_MSDOS == 16
 static volatile unsigned char faulted = 0;
 
+static int DPMILock(uint32_t base,uint32_t limit) {
+	int retv = 0;
+
+	__asm {
+		mov		ax,0x0600
+		mov		bx,word ptr [base+2]
+		mov		cx,word ptr [base]
+		mov		si,word ptr [limit+2]
+		mov		di,word ptr [limit]
+		int		31h
+		jc		nope
+		mov		retv,1
+nope:
+	}
+
+	return retv;
+}
+
+static void DPMIUnlock(uint32_t base,uint32_t limit) {
+	__asm {
+		mov		ax,0x0601
+		mov		bx,word ptr [base+2]
+		mov		cx,word ptr [base]
+		mov		si,word ptr [limit+2]
+		mov		di,word ptr [limit]
+		int		31h
+	}
+}
+
 /* SS:SP + 12h = SS (fault)
  * SS:SS + 10h = SP (fault)
  * SS:SP + 0Eh = FLAGS (fault)
@@ -84,23 +141,28 @@ static void __declspec(naked) fault_pf_toolhelp() {
 		cmp		word ptr [bp+6+6],14	/* SS:SP + 06h = interrupt number */
 		jnz		pass_on
 
+		xchg		bx,bx			/* FIXME: Bochs magic breakpoint */
+
 		/* set the faulted flag, change the return address, then IRET directly back */
 		mov		ax,seg faulted
 		mov		ds,ax
-		mov		faulted,1
-		add		word ptr [bp+6+10],3
+		inc		faulted
+		add		word ptr [bp+6+10],2
 		pop		bp
 		pop		ax
 		pop		ds
 		add		sp,0Ah			/* throw away handle, int number, and CS:IP return */
 		iret
 
-pass_on:	retf
+pass_on:	pop		bp
+		pop		ax
+		pop		ds
+		retf
 	}
 }
 
 static void __declspec(naked) fault_pf_dpmi() { /* DPMI exception handler */
-	__asm {
+	__asm { /* FIXME: Doesn't work yet */
 		.386p
 		push		ds
 		push		ax
@@ -108,8 +170,8 @@ static void __declspec(naked) fault_pf_dpmi() { /* DPMI exception handler */
 		mov		bp,sp
 		mov		ax,seg faulted
 		mov		ds,ax
-		mov		faulted,1
-		add		word ptr [bp+6+6],3
+		inc		faulted
+		add		word ptr [bp+6+6],2
 		pop		bp
 		pop		ax
 		pop		ds
@@ -144,6 +206,16 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 	volatile unsigned char *d = captureTmp;
 	volatile unsigned char *t,*sf,cc;
 	int fail = 0;
+
+	if (displayMode == DIM_LINEAR) {
+		DWORD x = GetVersion();
+
+		/* Windows 3.1 with Win32s: Despite "flat" memory Microsoft set the segment
+		 * base to 0xFFFF0000 for whatever reason, therefore, we have to add 0x10000
+		 * to the pointer value to convert the pointer to a linear address */
+		if ((x&0x80000000UL) && (x&0xFF) == 3)
+			s += 0x10000;
+	}
 
 	/* copy one page at a time */
 	sf = s + howmuch;
@@ -192,6 +264,13 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 
 	return fail;
 #else
+	if (displayMode == DIM_DATASEG) {
+		UINT my_ds=0;
+
+		__asm mov my_ds,ds
+		memofs += ((uint32_t)my_ds << 4UL);
+	}
+
 	if (windows_mode == WINDOWS_REAL) {
 		unsigned char *d = captureTmp,cc=0;
 		unsigned char far *sseg;
@@ -214,6 +293,41 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 		void far *oldDPMI;
 		int tlhelp = 0;
 		int fail=0;
+
+		__asm {
+			mov my_cs,cs
+			mov my_ds,ds
+			mov my_ss,ss
+		}
+
+		selector = AllocSelector(my_ds);
+		if (selector == 0) return howmuch;
+		SetSelectorBase(selector,memofs & 0xFFFFF000UL);
+		SetSelectorLimit(selector,howmuch + 0x1000UL);
+
+		/* lock the segment */
+		LockSegment(my_cs);
+		LockSegment(my_ds);
+		LockSegment(my_ss);
+
+		/* lock our segment data */
+//		if (memofs >= 0x110000UL && !DPMILock(memofs & 0xFFFFF000UL,howmuch + 0x1000UL))
+//			MessageBox(hwndMain,"DPMI lock fail #1","",MB_OK);
+
+		if (!DPMILock(GetSelectorBase(my_cs),GetSelectorLimit(my_cs)))
+			MessageBox(hwndMain,"DPMI lock fail #1","",MB_OK);
+
+		if (!DPMILock(GetSelectorBase(my_ds),GetSelectorLimit(my_ds)))
+			MessageBox(hwndMain,"DPMI lock fail #1","",MB_OK);
+
+		if (!DPMILock(GetSelectorBase(my_ss),GetSelectorLimit(my_ss)))
+			MessageBox(hwndMain,"DPMI lock fail #1","",MB_OK);
+
+		/* clear interrupts */
+		_cli();
+
+		/* and despite these precautions, Windows 3.11 still fucking crashes. WHY? WHY GOD FUCKING DAMN IT!?!?!
+		 * WHY IS IT SO FUCKING DIFFICULT FOR US TO HOOK THE FUCKING PAGE FAULT EXCEPTION!?!?!?!?!?? */
 
 		/* Windows NT warning: This code works fine, but NTVDM.EXE will not pass Page Fault exceptions
 		   down to us. Instead page faults will simply cause NTVDM.EXE to exit. So beware: if you're
@@ -239,7 +353,7 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 		   that Windows 3.1 expects to handle). If you run this program under Windows 3.1/3.0 under
 		   DOSBox 0.74 and this code causes a Page Fault, the next thing you will see is either a)
 		   Windows freeze solid or b) Windows crash-dump to the DOS prompt or c) Windows *TRY* to
-		   crash dump to the DOS prompt and hang.
+		   crash dump to the DOS prompt and hang. I really tried to make it compatible, but to no avail.
 
 		   Note that 32-bit builds of this program running under Windows 3.1 + Win32s are able to
 		   page fault without crashing erratically under DOSBox, which means that the problem probably
@@ -268,26 +382,6 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 				if (!win16_setexhandler(14,fault_pf_dpmi)) return howmuch;
 			}
 		}
-
-		__asm {
-			mov my_cs,cs
-			mov my_ds,ds
-			mov my_ss,ss
-		}
-
-		selector = AllocSelector(my_ds);
-		if (selector == 0) {
-			if (tlhelp) __InterruptUnRegister(NULL);
-			else win16_setexhandler(6,oldDPMI);
-			return howmuch;
-		}
-		SetSelectorBase(selector,memofs & 0xFFFFF000UL);
-		SetSelectorLimit(selector,howmuch + 0x1000UL);
-
-		/* we need to lock our code, data, and stack in place */
-		LockSegment(my_cs);
-		LockSegment(my_ds);
-		LockSegment(my_ss);
 
 		s = (unsigned int)(memofs & 0xFFFUL);
 		sf = s + howmuch;
@@ -324,15 +418,23 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 			}
 		}
 
-		UnlockSegment(my_cs);
-		UnlockSegment(my_ds);
-		UnlockSegment(my_ss);
-
 		if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
 			/* remove page fault handler */
 			if (tlhelp) __InterruptUnRegister(NULL);
 			else win16_setexhandler(6,oldDPMI);
 		}
+
+		/* restore interrupts */
+		_sti();
+
+//		if (memofs >= 0x110000UL) DPMIUnlock(memofs & 0xFFFFF000UL,howmuch + 0x1000UL);
+		DPMIUnlock(GetSelectorBase(my_cs),GetSelectorLimit(my_cs));
+		DPMIUnlock(GetSelectorBase(my_ds),GetSelectorLimit(my_ds));
+		DPMIUnlock(GetSelectorBase(my_ss),GetSelectorLimit(my_ss));
+
+		UnlockSegment(my_cs);
+		UnlockSegment(my_ds);
+		UnlockSegment(my_ss);
 
 		FreeSelector(selector);
 		return fail;
@@ -341,7 +443,7 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 }
 
 static int CaptureMemory(DWORD memofs,unsigned int howmuch) {
-	int fail;
+	int fail = 0;
 
 	if (howmuch > sizeof(captureTmp) || howmuch == 0) return howmuch;
 
@@ -350,27 +452,126 @@ static int CaptureMemory(DWORD memofs,unsigned int howmuch) {
 		howmuch = (unsigned int)(0UL - memofs);
 
 	switch (displayMode) {
+		case DIM_DATASEG:
 		case DIM_LINEAR:
 			fail = CaptureMemoryLinear(memofs,howmuch);
 			break;
 		default:
 			memset(captureTmp,0xFF,howmuch);
-			fail += howmuch;
+			fail = howmuch;
 			break;
 	}
 
 	return fail;
 }
 
+static void DoScanForward() { /* scan forward from current location to find next valid region */
+	/* NTS: Because of the number of exceptions/second we generate, Windows ME will very
+	 *      quickly revert to ignoring our exception handler and shutting down this program.
+	 *      Do not run under Windows ME. Hopefully I can figure out how to hack Windows ME
+	 *      not do to that! */
+
+	/* if the current location is valid */
+	if (CaptureMemory(displayOffset,1) == 0) {
+		/* step forward one page */
+		displayOffset = (displayOffset | 0xFFFUL) + 1UL;
+
+		/* scan from the current location, until we hit an unmapped page */
+		while (CaptureMemory(displayOffset,1) == 0) {
+			displayOffset = (displayOffset | 0xFFFUL) + 1UL;
+			if (displayOffset == 0UL) return; /* Whoops! Did we rollover past 4GB? */
+
+			/* allow user to abort scan by pressing ESC */
+			if (GetAsyncKeyState(VK_ESCAPE)) return;
+		}
+	}
+	else {
+		/* step forward one page */
+		displayOffset = (displayOffset | 0xFFFUL) + 1UL;
+
+		/* continue scanning until we hit a mapped page */
+		while (CaptureMemory(displayOffset,1) != 0) {
+			displayOffset = (displayOffset | 0xFFFUL) + 1UL;
+			if (displayOffset == 0UL) return; /* Whoops! Did we rollover past 4GB? */
+
+			/* allow user to abort scan by pressing ESC */
+			if (GetAsyncKeyState(VK_ESCAPE)) return;
+		}
+	}
+}
+
+static void DoScanBackward() { /* scan forward from current location to find next valid region */
+	/* NTS: Because of the number of exceptions/second we generate, Windows ME will very
+	 *      quickly revert to ignoring our exception handler and shutting down this program.
+	 *      Do not run under Windows ME. Hopefully I can figure out how to hack Windows ME
+	 *      not do to that! */
+
+	/* if the current location is valid */
+	if (CaptureMemory(displayOffset,1) == 0) {
+		/* step back one page */
+		displayOffset = (displayOffset - 1UL) & (~0xFFFUL);
+
+		/* scan from the current location, until we hit an unmapped page */
+		while (CaptureMemory(displayOffset,1) == 0) {
+			displayOffset = (displayOffset - 1UL) & (~0xFFFUL);
+			if (displayOffset == 0UL) return; /* Whoops! Did we rollover past 4GB? */
+
+			/* allow user to abort scan by pressing ESC */
+			if (GetAsyncKeyState(VK_ESCAPE)) return;
+		}
+
+		/* continue scanning until we hit an unmapped page */
+		while (CaptureMemory(displayOffset,1) != 0) {
+			displayOffset = (displayOffset - 1UL) & (~0xFFFUL);
+			if (displayOffset == 0UL) return; /* Whoops! Did we rollover past 4GB? */
+
+			/* allow user to abort scan by pressing ESC */
+			if (GetAsyncKeyState(VK_ESCAPE)) return;
+		}
+
+		displayOffset = (displayOffset | 0xFFFUL) + 1UL;
+	}
+	else {
+		/* step forward one page */
+		displayOffset = (displayOffset - 1UL) & (~0xFFFUL);
+
+		/* continue scanning until we hit a mapped page */
+		while (CaptureMemory(displayOffset,1) != 0) {
+			displayOffset = (displayOffset - 1UL) & (~0xFFFUL);
+			if (displayOffset == 0UL) return; /* Whoops! Did we rollover past 4GB? */
+
+			/* allow user to abort scan by pressing ESC */
+			if (GetAsyncKeyState(VK_ESCAPE)) return;
+		}
+
+		/* continue scanning until we hit an unmapped page */
+		while (CaptureMemory(displayOffset,1) == 0) {
+			displayOffset = (displayOffset - 1UL) & (~0xFFFUL);
+			if (displayOffset == 0UL) return; /* Whoops! Did we rollover past 4GB? */
+
+			/* allow user to abort scan by pressing ESC */
+			if (GetAsyncKeyState(VK_ESCAPE)) return;
+		}
+
+		displayOffset = (displayOffset | 0xFFFUL) + 1UL;
+	}
+}
+
 static const char *hexes = "0123456789ABCDEF";
+
+static void updateDisplayModeMenuCheck() {
+	CheckMenuItem(hwndMainViewMenu,IDC_VIEW_DATASEG,
+		MF_BYCOMMAND|(displayMode==DIM_DATASEG?MF_CHECKED:0));
+	CheckMenuItem(hwndMainViewMenu,IDC_VIEW_LINEAR,
+		MF_BYCOMMAND|(displayMode==DIM_LINEAR?MF_CHECKED:0));
+}
 
 static void RedrawMemory(HWND hwnd,HDC hdc) {
 	unsigned char *src,cc;
 	int rowspercopy;
-	int x,y,i,fail;
 	DWORD memofs;
+	int x,y,fail;
 	HFONT of;
-	int rem;
 
 	if (hwndMainClientDataColumns == 0)
 		return;
@@ -388,30 +589,26 @@ static void RedrawMemory(HWND hwnd,HDC hdc) {
 	}
 
 	memofs = displayOffset;
-	for (y=0;y < hwndMainClientRows;) {
+	for (y=0;y < hwndMainClientRows;y++,memofs += hwndMainClientDataColumns) {
+		fail = CaptureMemory(memofs,hwndMainClientDataColumns);
 		src = captureTmp;
-		rem = hwndMainClientRows - y; if (rem > rowspercopy) rem = rowspercopy;
-		fail = CaptureMemory(memofs,rem * hwndMainClientDataColumns);
 
 		if (fail > 0)
 			SetTextColor(hdc,RGB(128,0,0));
 		else
 			SetTextColor(hdc,RGB(0,0,0));
 
-		for (i=0;i < rem;i++) {
-			for (x=0;x < hwndMainClientDataColumns;x++) {
-				cc = *src++;
-				drawTmp[(x*3)+0] = hexes[cc>>4];
-				drawTmp[(x*3)+1] = hexes[cc&0xF];
-				drawTmp[(x*3)+2] = ' ';
+		for (x=0;x < hwndMainClientDataColumns;x++) {
+			cc = *src++;
+			drawTmp[(x*3)+0] = hexes[cc>>4];
+			drawTmp[(x*3)+1] = hexes[cc&0xF];
+			drawTmp[(x*3)+2] = ' ';
 
-				if (cc == 0) cc = '.';
-				drawTmp[(hwndMainClientDataColumns*3)+x] = cc;
-			}
-			drawTmp[hwndMainClientDataColumns*4] = 0;
-			TextOut(hdc,(hwndMainClientAddrColumns+1)*monospaceFontWidth,(y+i)*monospaceFontHeight,drawTmp,hwndMainClientDataColumns*4);
+			if (cc == 0) cc = '.';
+			drawTmp[(hwndMainClientDataColumns*3)+x] = cc;
 		}
-		y += rowspercopy;
+		drawTmp[hwndMainClientDataColumns*4] = 0;
+		TextOut(hdc,(hwndMainClientAddrColumns+1)*monospaceFontWidth,y*monospaceFontHeight,drawTmp,hwndMainClientDataColumns*4);
 	}
 
 	SelectObject(hdc,of);
@@ -459,6 +656,16 @@ BOOL CALLBACK FAR __loadds GoToDlgProc(HWND hwnd,UINT message,WPARAM wparam,LPAR
 	}
 
 	return FALSE;
+}
+
+static void ShowHelp() {
+	MessageBox(hwndMain,
+		"F1 = This help\n"
+		"< = Scan backward\n"
+		"> = Scan forward\n"
+		"up/down/left/right arrow keys = Navigate\n"
+		"ESC = If scanning, abort scan",
+		"Help key",MB_OK);
 }
 
 #if TARGET_MSDOS == 16
@@ -531,6 +738,25 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 			if (GetAsyncKeyState(VK_SHIFT)) displayOffset &= ~(0xFUL);
 			InvalidateRect(hwnd,NULL,FALSE);
 		}
+		else if (wparam == VK_F1) {
+			ShowHelp();
+		}
+		else if (wparam == 0xBE/*VK_PERIOD?*/) {
+			SetCursor(LoadCursor(NULL,IDC_WAIT)); /* Let the user know we're scanning */
+
+			DoScanForward();
+			InvalidateRect(hwnd,NULL,FALSE);
+
+			SetCursor(LoadCursor(NULL,IDC_ARROW)); /* Let the user know we're done */
+		}
+		else if (wparam == 0xBC/*VK_COMMA?*/) {
+			SetCursor(LoadCursor(NULL,IDC_WAIT)); /* Let the user know we're scanning */
+
+			DoScanBackward();
+			InvalidateRect(hwnd,NULL,FALSE);
+
+			SetCursor(LoadCursor(NULL,IDC_ARROW)); /* Let the user know we're done */
+		}
 	}
 	else if (message == WM_COMMAND) {
 		if (HIWORD(lparam) == 0) { /* from a menu */
@@ -541,6 +767,16 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 				case IDC_FILE_GO_TO:
 					if (DialogBox(myInstance,MAKEINTRESOURCE(IDD_GOTO),hwnd,MakeProcInstance(GoToDlgProc,myInstance)))
 						InvalidateRect(hwnd,NULL,FALSE);
+					break;
+				case IDC_VIEW_DATASEG:
+					displayMode = DIM_DATASEG;
+					InvalidateRect(hwnd,NULL,FALSE);
+					updateDisplayModeMenuCheck();
+					break;
+				case IDC_VIEW_LINEAR:
+					displayMode = DIM_LINEAR;
+					InvalidateRect(hwnd,NULL,FALSE);
+					updateDisplayModeMenuCheck();
 					break;
 			}
 		}
@@ -588,7 +824,10 @@ static int CreateAppMenu() {
 	hwndMainViewMenu = CreateMenu();
 	if (hwndMainViewMenu == NULL) return 0;
 
-	if (!AppendMenu(hwndMainViewMenu,MF_STRING|MF_ENABLED|MF_CHECKED,IDC_VIEW_LINEAR,"&Linear memory map"))
+	if (!AppendMenu(hwndMainViewMenu,MF_STRING|MF_ENABLED,IDC_VIEW_DATASEG,"&Data segment"))
+		return 0;
+
+	if (!AppendMenu(hwndMainViewMenu,MF_STRING|MF_ENABLED,IDC_VIEW_LINEAR,"&Linear memory map"))
 		return 0;
 
 	if (!AppendMenu(hwndMainMenu,MF_POPUP|MF_STRING|MF_ENABLED,(UINT)hwndMainViewMenu,"&View"))
@@ -613,20 +852,41 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #if TARGET_MSDOS == 16
 	if (windows_mode == WINDOWS_NT) {
 		if (MessageBox(NULL,
-			"The 16-bit version of this program does not have the ability to catch Page Faults under Windows NT.\n"
-			"If you browse a region of memory that causes a Page Fault, you will see this program disappear without warning.\n"
+			"The 16-bit version of this program does not have the ability\n"
+			"to catch Page Faults under Windows NT. If you browse a region\n"
+			"of memory that causes a Page Fault, you will see this program\n"
+			"disappear without warning.\n\n"
 			"Proceed?",
 			"WARNING",MB_YESNO) == IDNO)
 			return 1;
 	}
 	else if (windows_mode == WINDOWS_OS2) {
 		if (MessageBox(NULL,
-			"The 16-bit version of this program does not have the ability to catch Page Faults under OS/2.\n"
-			"If you browse a region of memory that causes a Page Fault, you will see the appropriate notifcation from OS/2.\n"
+			"The 16-bit version of this program does not have the ability\n"
+			"to catch Page Faults under OS/2. If you browse a region of\n"
+			"memory that causes a Page Fault, you will see the appropriate\n"
+			"notifcation from OS/2.\n\n"
 			"Proceed?",
 			"WARNING",MB_YESNO) == IDNO)
 			return 1;
 	}
+	else if (windows_mode == WINDOWS_ENHANCED && windows_version < (0x300 + 95)/*Windows 3.x*/) {
+		/* Windows 3.1 has tested my fucking patience to the max and it still crashes going through
+		 * our page fault handler. At this point, having burned an entire weekend and one workday
+		 * fighting this bullshit I don't really fucking care anymore. Tell the user to use another
+		 * version if possible. */
+		if (MessageBox(NULL,
+			"The 16-bit version is not reliable at catching page faults\n"
+			"under Windows 3.0/3.1 386 Enhanced Mode. If you browse a region\n"
+			"of memory that causes a Page Fault, Windows may hard crash or\n"
+			"suddenly drop to DOS. It is recommended that you either start\n"
+			"Windows 3.x in 286 Standard Mode or use the 32-bit Win32s version\n"
+			"if the Win32s subsystem is installed.\n\n"
+			"Proceed?",
+			"WARNING",MB_YESNO) == IDNO)
+			return 1;
+	}
+
 #endif
 
 	myInstance = hInstance;
@@ -685,7 +945,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		return 1;
 
 	/* default to "linear" view */
-	SetDisplayModeLinear(0xC0000);
+	SetDisplayModeLinear(0xF0000);
 
 	hwndMain = CreateWindow(WndProcClass,"HEXMEM memory dumping tool",
 		WS_OVERLAPPEDWINDOW,
@@ -703,6 +963,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	ShowWindow(hwndMain,nCmdShow);
 	UpdateWindow(hwndMain);
 
+	updateDisplayModeMenuCheck();
 	while (GetMessage(&msg,NULL,0,0)) {
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);

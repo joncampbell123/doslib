@@ -20,6 +20,15 @@
  *
  *   - Testing so far shows that this program for whatever reason, either fails to load it's
  *     resources or simply hangs when Windows 3.0 is started in "real mode".
+ *
+ *   - When running this program under Windows 3.1 in DOSBox, do NOT use core=normal and cputype=486_slow.
+ *     Weird random errors show up and you will pull your hair out and waste entire weekends trying to debug
+ *     them. In this program's case, COMDLG32.DLL will for whatever reason fail to initialize and Windows
+ *     will show a "library failed to initialize" error. Set core=dynamic and cputype=pentium_slow, which
+ *     seems to provide more correct emulation and allow Win32s to work properly.
+ *
+ *     This sort of problem doesn't exactly surprise me since DOSBox was designed to run...
+ *     you know... *DOS games* anyway, so this doesn't exactly surprise me.
  */
 /* Fun facts: The "Common dialog" routines didn't appear until Windows 3.1. If we blindly rely on GetOpenFileName
  *            the binary won't run under Windows 3.0. Closer examination of everything in Windows 3.0 makes it

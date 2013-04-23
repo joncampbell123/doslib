@@ -6,5 +6,6 @@
 #define IDC_FILE_QUIT			1000
 #define IDC_FILE_GO_TO			1001
 
-#define IDC_VIEW_LINEAR			2000
+#define IDC_VIEW_DATASEG		2000
+#define IDC_VIEW_LINEAR			2001
 
