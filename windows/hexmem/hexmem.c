@@ -24,6 +24,48 @@
  *
  *     This sort of problem doesn't exactly surprise me since DOSBox was designed to run...
  *     you know... *DOS games* anyway, so this doesn't exactly surprise me.
+ *
+ *   - There is a QEMU ray of False Hope that can occur with this program: If you run Windows 3.1
+ *     under QEMU (without the KVM emulation) and run this program, this program will work 100%
+ *     correctly and catch page faults. It is only when you run with KVM emulation enabled that the
+ *     more accurate emulation reveals Windows 3.1's crashiness with respect to page faults.
+ */
+/* TODO list:
+ *   - Test this program + Windows 3.1 on real hardware. Is Windows 3.1 *REALLY* that crashy when handling
+ *     a page fault??? If not, then is it possible for this program to work correctly?
+ *
+ *   - What about Windows 95? Win95 in QEMU is promising enough, but Win95 doesn't work in QEMU when you
+ *     enable KVM mode, so I have no idea if as noted above it happens to work because of the QEMU ray of
+ *     False Hope.
+ *
+ *           1. Bring up Win95 in VirtualBox, turn on all acceleration, and see if this program works properly.
+ *           2. Dig out an ancient Pentium or 486 and an IDE hard drive, install Win95, and see if this program works properly.
+ *
+ *   - If Win95 works, then what about Win98? WinME? Does the exception counter/limit in WinME apply to Win16 apps?
+ *
+ *   - Windows Millenium: The technique used by the Win32 program can be hampered by the fact KERNEL32.DLL
+ *     enforces an upper limit on the number of exceptions (or exceptions per second? or some kind of rate?).
+ *     When this upper limit is reached, the next page fault is handled directly by the system and our
+ *     structured exception handling is bypassed entirely. How do we work around this? Is there a kernel
+ *     function I can call to reset that counter? Any way to disable it? Will I have to stoop to the level
+ *     of zeroing a specific memory location or patching KERNEL32.DLL code to disable this limit? (I hope not!!).
+ *
+ *   - Windows NT/2000/XP/etc: It's plainly obvious from testing that NTVDM.EXE isn't going to pass page faults
+ *     down to us, even if we hook exceptions. But, I know from playing around once that it is possible to probe
+ *     the virtual Win16 environment by using ReadProcessMemory/WriteProcessMemory on an instance of NTVDM.EXE
+ *     from Win32. This opens up two developments I should do for this program:
+ *
+ *           1. In addition to the linear and dataseg modes now implemented, the Win32 version could have a
+ *              "process" mode in which you select a process to scan and it will read from that process's
+ *              memory and show it to you. This opens up many opportunities to look around, but it also means
+ *              that you could direct the program at any instance of NTVDM.EXE you want and look at the Win16
+ *              environment within.
+ *
+ *           2. The use of Windows NT "WOW" library functions. I know from experience it is possible to call
+ *              out to Win32 library functions from Win16 under NT (the DOS library we link to does just that
+ *              to get the real system version information, in fact!). So under NT, we could do without the
+ *              exception hooking entirely and call out to Win32 to use ReadProcessMemory() on ourself to
+ *              accomplish the same task!
  */
 /* Known memory maps in various versions of Windows:
  *   - Windows 3.1/3.11:
@@ -86,6 +128,9 @@ char		drawTmp[512];
 
 #if TARGET_MSDOS == 16
 static volatile unsigned char faulted = 0;
+static UINT viewselector,my_ds=0,my_ss=0,my_cs=0;
+static void far *oldDPMIPFHook = NULL;
+static int hook_use_tlhelp = 0;
 
 static int DPMILock(uint32_t base,uint32_t limit) {
 	int retv = 0;
@@ -116,6 +161,17 @@ static void DPMIUnlock(uint32_t base,uint32_t limit) {
 	}
 }
 
+static void __declspec(naked) _w16_capture() {
+	__asm {
+		nop
+		nop
+		mov		al,[es:si]
+		nop
+		nop
+		ret
+	}
+}
+
 /* SS:SP + 12h = SS (fault)
  * SS:SS + 10h = SP (fault)
  * SS:SP + 0Eh = FLAGS (fault)
@@ -128,7 +184,11 @@ static void DPMIUnlock(uint32_t base,uint32_t limit) {
  * SS:SP + 00h = IP (toolhelp.dll)
  *
  * to pass exception on: RETF
- * to restart instruction: clear first 10 bytes of the stack, and IRET (??) */
+ * to restart instruction: clear first 10 bytes of the stack, and IRET (??).
+ *
+ * NTS: I suspect some of the crashes observed were simply caused by page faults that happen
+ *      to occur in places OTHER than the main byte capture routine, which is why we check
+ *      the instruction pointer BEFORE modifying it! */
 static void __declspec(naked) fault_pf_toolhelp() {
 	__asm {
 		.386p
@@ -140,6 +200,19 @@ static void __declspec(naked) fault_pf_toolhelp() {
 		/* is this a page fault? */
 		cmp		word ptr [bp+6+6],14	/* SS:SP + 06h = interrupt number */
 		jnz		pass_on
+
+		/* did this happen in our OWN code segment? */
+		mov		ax,seg _w16_capture
+		cmp		word ptr [bp+6+10+2],ax
+		jnz		pass_on
+
+		/* did this happen in _w16_capture? */
+		mov		ax,offset _w16_capture
+		cmp		word ptr [bp+6+10],ax	/* if < _w16_capture then no */
+		jl		pass_on
+		add		ax,10
+		cmp		word ptr [bp+6+10],ax	/* if > (_w16_capture+10) then no */
+		jae		pass_on
 
 		xchg		bx,bx			/* FIXME: Bochs magic breakpoint */
 
@@ -288,104 +361,11 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 	}
 	else {
 		volatile unsigned char *d = captureTmp,cc=0;
-		UINT selector,my_ds=0,my_ss=0,my_cs=0;
 		unsigned int s=0,sf,t;
-		void far *oldDPMI;
-		int tlhelp = 0;
 		int fail=0;
 
-		__asm {
-			mov my_cs,cs
-			mov my_ds,ds
-			mov my_ss,ss
-		}
-
-		selector = AllocSelector(my_ds);
-		if (selector == 0) return howmuch;
-		SetSelectorBase(selector,memofs & 0xFFFFF000UL);
-		SetSelectorLimit(selector,howmuch + 0x1000UL);
-
-		/* lock the segment */
-		LockSegment(my_cs);
-		LockSegment(my_ds);
-		LockSegment(my_ss);
-
-		if (!DPMILock(GetSelectorBase(my_cs),GetSelectorLimit(my_cs)))
-			MessageBox(hwndMain,"DPMI lock fail #1","",MB_OK);
-
-		if (!DPMILock(GetSelectorBase(my_ds),GetSelectorLimit(my_ds)))
-			MessageBox(hwndMain,"DPMI lock fail #1","",MB_OK);
-
-		if (!DPMILock(GetSelectorBase(my_ss),GetSelectorLimit(my_ss)))
-			MessageBox(hwndMain,"DPMI lock fail #1","",MB_OK);
-
-		/* clear interrupts */
-		_cli();
-
-		/* and despite these precautions, Windows 3.11 still fucking crashes. WHY? WHY GOD FUCKING DAMN IT!?!?!
-		 * WHY IS IT SO FUCKING DIFFICULT FOR US TO HOOK THE FUCKING PAGE FAULT EXCEPTION!?!?!?!?!?? */
-
-		/* UPDATE: In fact, even if we DON'T hook the page fault and let Windows handle it by default, IT STILL
-		 *         HARD CRASHES!!! So basically no matter how stable OUR Page Fault handler is, Windows 3.11
-		 *         is the one who will still (eventually) hard crash!! */
-
-		/* The good news is that the technique used here, though worthless under Windows 3.1, are perfectly valid
-		 * under Windows 95, 98, and ME. Too bad that stability didn't make it's way over to Windows NT/2000/XP
-		 * NTVDM.EXE. */
-
-		/* Windows NT warning: This code works fine, but NTVDM.EXE will not pass Page Fault exceptions
-		   down to us. Instead page faults will simply cause NTVDM.EXE to exit. So beware: if you're
-		   scrolling through memory and suddenly the program disappears---that's why.
-
-		   We hook Page Fault anyway in the vain hope that some version of NT lets it pass through. */
-
-		/* OS/2 warning: Win-on-OS/2 also doesn't provide a way to catch page faults. */
-
-		/* Windows 3.0: Our DPMI-based hack also fails to catch page faults in 386 Enhanced Mode. Use Standard Mode if you need to browse through RAM */
-
-		/* WARNING WARNING WARNING!!!!!
-
-		   On actual hardware and most emulators, this code succeeds at catching page faults and safely
-		   reflecting back to the main loop.
-
-		   Tested and compatible:
-		   Windows 3.1 under QEMU
-		   Windows 95 under VirtualBox
-		   Windows 98 under VirtualBox
-
-		   DOSBox 0.74 however does NOT properly emulate the Page Fault exception (at least in a way
-		   that Windows 3.1 expects to handle). If you run this program under Windows 3.1/3.0 under
-		   DOSBox 0.74 and this code causes a Page Fault, the next thing you will see is either a)
-		   Windows freeze solid or b) Windows crash-dump to the DOS prompt or c) Windows *TRY* to
-		   crash dump to the DOS prompt and hang. I really tried to make it compatible, but to no avail.
-
-		   Note that 32-bit builds of this program running under Windows 3.1 + Win32s are able to
-		   page fault without crashing erratically under DOSBox, which means that the problem probably
-		   lies in DOSBox not properly emulating the 16-bit protected mode version of the Page Fault
-		   exception.
-
-		   I will be patching DOSBox-X to better emulate the Page Fault and resolve this issue. */
-
-		/* We really only need to trap Page Fault from 386 enhanced mode Windows 3.x or Windows 9x/ME/NT.
-		   Windows 3.x "standard mode" does not involve paging */
-		if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
-			/* Windows 3.1 or higher: Use Toolhelp.
-			   Windows 3.0: Use DPMI hacks */
-			tlhelp = (windows_mode == WINDOWS_NT) || (windows_version >= ((3 << 8) + 10)); /* Windows 3.1 or higher */
-
-			/* we may cause page faults. be prepared */
-			if (tlhelp) {
-				if (!ToolHelpInit() || __InterruptRegister == NULL || __InterruptUnRegister == NULL)
-					return howmuch;
-
-				if (!__InterruptRegister(NULL,MakeProcInstance((FARPROC)fault_pf_toolhelp,myInstance)))
-					return howmuch;
-			}
-			else {
-				oldDPMI = win16_getexhandler(14);
-				if (!win16_setexhandler(14,fault_pf_dpmi)) return howmuch;
-			}
-		}
+		SetSelectorBase(viewselector,memofs & 0xFFFFF000UL);
+		SetSelectorLimit(viewselector,howmuch + 0x1000UL);
 
 		s = (unsigned int)(memofs & 0xFFFUL);
 		sf = s + howmuch;
@@ -399,15 +379,12 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 				__asm {
 					push	si
 					push	es
+
 					mov	si,s
-					mov	ax,selector
+					mov	ax,viewselector
 					mov	es,ax
 
-					nop
-					nop
-					mov	al,[es:si]
-					nop
-					nop
+					call	_w16_capture
 
 					pop	es
 					pop	si
@@ -422,24 +399,6 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 			}
 		}
 
-		if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
-			/* remove page fault handler */
-			if (tlhelp) __InterruptUnRegister(NULL);
-			else win16_setexhandler(6,oldDPMI);
-		}
-
-		/* restore interrupts */
-		_sti();
-
-		DPMIUnlock(GetSelectorBase(my_cs),GetSelectorLimit(my_cs));
-		DPMIUnlock(GetSelectorBase(my_ds),GetSelectorLimit(my_ds));
-		DPMIUnlock(GetSelectorBase(my_ss),GetSelectorLimit(my_ss));
-
-		UnlockSegment(my_cs);
-		UnlockSegment(my_ds);
-		UnlockSegment(my_ss);
-
-		FreeSelector(selector);
 		return fail;
 	}
 #endif
@@ -854,11 +813,16 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 #if TARGET_MSDOS == 16
 	if (windows_mode == WINDOWS_NT) {
+		/* Windows XP: No matter what we do, no matter how we hook it, NTVDM.EXE isn't going to
+		 *             pass Page Faults to our exception handler. All it does is silently terminate
+		 *             our application. I have no idea how to work around this issue. So let the
+		 *             user know. */
 		if (MessageBox(NULL,
 			"The 16-bit version of this program does not have the ability\n"
 			"to catch Page Faults under Windows NT. If you browse a region\n"
 			"of memory that causes a Page Fault, you will see this program\n"
-			"disappear without warning.\n\n"
+			"disappear without warning. It is strongly recommended that you\n"
+			"use the Win32 or Win32s version of this program instead.\n\n"
 			"Proceed?",
 			"WARNING",MB_YESNO) == IDNO)
 			return 1;
@@ -877,7 +841,14 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		/* Windows 3.1 has tested my fucking patience to the max and it still crashes going through
 		 * our page fault handler. At this point, having burned an entire weekend and one workday
 		 * fighting this bullshit I don't really fucking care anymore. Tell the user to use another
-		 * version if possible. */
+		 * version if possible.
+		 *
+		 * NOTES: The problem it seems is not our page fault handler. The problem is how Windows 3.1
+		 *        underneath us handles the page fault. No matter what we do, or even regardless of
+		 *        whether or not we hook the page fault, Windows 3.1 will hang or hard crash to DOS
+		 *        on a page fault that it can't back up from the swap file. The good news is that
+		 *        whatever the hell is wrong was apparently fixed in Windows 95 and the Win16 hooking
+		 *        technique we use at least works properly under Windows 95, 98, and ME. */
 		if (MessageBox(NULL,
 			"The 16-bit version is not reliable at catching page faults\n"
 			"under Windows 3.0/3.1 386 Enhanced Mode. If you browse a region\n"
@@ -890,6 +861,56 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			return 1;
 	}
 
+	__asm {
+		mov my_cs,cs
+		mov my_ds,ds
+		mov my_ss,ss
+	}
+
+	if (windows_mode != WINDOWS_REAL) {
+		viewselector = AllocSelector(my_ds);
+		if (viewselector == 0) {
+			MessageBox(NULL,"Unable to alloc selector","Error",MB_OK);
+			return 1;
+		}
+	}
+
+	/* We really only need to trap Page Fault from 386 enhanced mode Windows 3.x or Windows 9x/ME/NT.
+	   Windows 3.x "standard mode" does not involve paging */
+	/* NTS: As of 2013/04/21: We no longer hook and unhook once per invocation of the memory copy function.
+	 *      TOOLHELP.DLL is one of those DLLs apparently where the MS dev assumed you would only hook/unhook
+	 *      once because the Windows 95 version will eventually pagefault in TOOLHELP.DLL if you repeatedly
+	 *      hook and unhook rapidly. Once that happens, TOOLHELP.DLL apparently loses it's ability to catch
+	 *      page faults and our attempts show up then as the standard KERNEL32.DLL error dialog. So to make
+	 *      this program work, we now hook ONCE at startup and unhook ONCE at shutdown. Testing shows the
+	 *      program is now fully capable of recovering from page faults and safely scanning the linear memory
+	 *      areas. */
+	/* TODO: Some long-term Win95 stress testing is required.
+	 *       Also test Win98, and WinME */
+	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
+		/* Windows 3.1 or higher: Use Toolhelp.
+		   Windows 3.0: Use DPMI hacks.
+		   Windows NT: Use Toolhelp, or DPMI hack. Doesn't matter. NTVDM.EXE will not pass it down. */
+		hook_use_tlhelp = (windows_mode == WINDOWS_NT) || (windows_version >= ((3 << 8) + 10)); /* Windows 3.1 or higher */
+
+		/* we may cause page faults. be prepared */
+		if (hook_use_tlhelp) {
+			if (!ToolHelpInit() || __InterruptRegister == NULL || __InterruptUnRegister == NULL)
+				hook_use_tlhelp = 0;
+
+			if (hook_use_tlhelp && !__InterruptRegister(NULL,MakeProcInstance((FARPROC)fault_pf_toolhelp,myInstance))) {
+				MessageBox(NULL,"Unable to InterruptRegister()","",MB_OK);
+				hook_use_tlhelp = 0;
+			}
+		}
+		if (!hook_use_tlhelp) {
+			oldDPMIPFHook = win16_getexhandler(14);
+			if (!win16_setexhandler(14,fault_pf_dpmi)) {
+				MessageBox(NULL,"Unable to hook Page Fault via DPMI","",MB_OK);
+				return 1;
+			}
+		}
+	}
 #endif
 
 	myInstance = hInstance;
@@ -971,6 +992,17 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
 	}
+
+#if TARGET_MSDOS == 16
+	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT) {
+		/* remove page fault handler */
+		if (hook_use_tlhelp) __InterruptUnRegister(NULL);
+		else win16_setexhandler(14,oldDPMIPFHook);
+	}
+
+	if (windows_mode != WINDOWS_REAL)
+		FreeSelector(viewselector);
+#endif
 
 	DestroyMenu(hwndMainMenu);
 	hwndMainMenu = NULL;
