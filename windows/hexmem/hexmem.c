@@ -147,7 +147,7 @@ static void __declspec(naked) fault_pf_toolhelp() {
 		mov		ax,seg faulted
 		mov		ds,ax
 		inc		faulted
-		add		word ptr [bp+6+10],2
+		add		word ptr [bp+6+10],3
 		pop		bp
 		pop		ax
 		pop		ds
@@ -171,7 +171,7 @@ static void __declspec(naked) fault_pf_dpmi() { /* DPMI exception handler */
 		mov		ax,seg faulted
 		mov		ds,ax
 		inc		faulted
-		add		word ptr [bp+6+6],2
+		add		word ptr [bp+6+6],3
 		pop		bp
 		pop		ax
 		pop		ds
@@ -310,10 +310,6 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 		LockSegment(my_ds);
 		LockSegment(my_ss);
 
-		/* lock our segment data */
-//		if (memofs >= 0x110000UL && !DPMILock(memofs & 0xFFFFF000UL,howmuch + 0x1000UL))
-//			MessageBox(hwndMain,"DPMI lock fail #1","",MB_OK);
-
 		if (!DPMILock(GetSelectorBase(my_cs),GetSelectorLimit(my_cs)))
 			MessageBox(hwndMain,"DPMI lock fail #1","",MB_OK);
 
@@ -328,6 +324,14 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 
 		/* and despite these precautions, Windows 3.11 still fucking crashes. WHY? WHY GOD FUCKING DAMN IT!?!?!
 		 * WHY IS IT SO FUCKING DIFFICULT FOR US TO HOOK THE FUCKING PAGE FAULT EXCEPTION!?!?!?!?!?? */
+
+		/* UPDATE: In fact, even if we DON'T hook the page fault and let Windows handle it by default, IT STILL
+		 *         HARD CRASHES!!! So basically no matter how stable OUR Page Fault handler is, Windows 3.11
+		 *         is the one who will still (eventually) hard crash!! */
+
+		/* The good news is that the technique used here, though worthless under Windows 3.1, are perfectly valid
+		 * under Windows 95, 98, and ME. Too bad that stability didn't make it's way over to Windows NT/2000/XP
+		 * NTVDM.EXE. */
 
 		/* Windows NT warning: This code works fine, but NTVDM.EXE will not pass Page Fault exceptions
 		   down to us. Instead page faults will simply cause NTVDM.EXE to exit. So beware: if you're
@@ -394,18 +398,18 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 				/* we have to do it this way to exert better control over how we resume from fault */
 				__asm {
 					push	si
-					push	ds
+					push	es
 					mov	si,s
 					mov	ax,selector
-					mov	ds,ax
+					mov	es,ax
 
 					nop
 					nop
-					mov	al,[si]
+					mov	al,[es:si]
 					nop
 					nop
 
-					pop	ds
+					pop	es
 					pop	si
 					mov	cc,al
 				}
@@ -427,7 +431,6 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 		/* restore interrupts */
 		_sti();
 
-//		if (memofs >= 0x110000UL) DPMIUnlock(memofs & 0xFFFFF000UL,howmuch + 0x1000UL);
 		DPMIUnlock(GetSelectorBase(my_cs),GetSelectorLimit(my_cs));
 		DPMIUnlock(GetSelectorBase(my_ds),GetSelectorLimit(my_ds));
 		DPMIUnlock(GetSelectorBase(my_ss),GetSelectorLimit(my_ss));
