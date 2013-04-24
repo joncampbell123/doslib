@@ -29,6 +29,15 @@
  *     under QEMU (without the KVM emulation) and run this program, this program will work 100%
  *     correctly and catch page faults. It is only when you run with KVM emulation enabled that the
  *     more accurate emulation reveals Windows 3.1's crashiness with respect to page faults.
+ *
+ *   - Windows NT/2000/XP/Vista/7/etc: The Win16 version cannot use TOOLHELP.DLL or DPMI hooks to catch
+ *     page faults. No matter what, NTVDM.EXE will never pass them down to us properly. However, as a
+ *     guest of the NTVDM.EXE world, we can use the Windows-on-Windows libraries to call directly into
+ *     the Win32 world, where we can then use some assembly language magic to setup a SEH frame, do the
+ *     memcpy(), and then return safely whether or not a page fault happened. So far, this technique works
+ *     very well.
+ *
+ *     Also of interest: The Windows NT technique described above also works under Linux + WINE.
  */
 /* TODO list:
  *   - Test this program + Windows 3.1 on real hardware. Is Windows 3.1 *REALLY* that crashy when handling
@@ -50,22 +59,6 @@
  *     function I can call to reset that counter? Any way to disable it? Will I have to stoop to the level
  *     of zeroing a specific memory location or patching KERNEL32.DLL code to disable this limit? (I hope not!!).
  *
- *   - Windows NT/2000/XP/etc: It's plainly obvious from testing that NTVDM.EXE isn't going to pass page faults
- *     down to us, even if we hook exceptions. But, I know from playing around once that it is possible to probe
- *     the virtual Win16 environment by using ReadProcessMemory/WriteProcessMemory on an instance of NTVDM.EXE
- *     from Win32. This opens up two developments I should do for this program:
- *
- *           1. In addition to the linear and dataseg modes now implemented, the Win32 version could have a
- *              "process" mode in which you select a process to scan and it will read from that process's
- *              memory and show it to you. This opens up many opportunities to look around, but it also means
- *              that you could direct the program at any instance of NTVDM.EXE you want and look at the Win16
- *              environment within.
- *
- *           2. The use of Windows NT "WOW" library functions. I know from experience it is possible to call
- *              out to Win32 library functions from Win16 under NT (the DOS library we link to does just that
- *              to get the real system version information, in fact!). So under NT, we could do without the
- *              exception hooking entirely and call out to Win32 to use ReadProcessMemory() on ourself to
- *              accomplish the same task!
  */
 /* Known memory maps in various versions of Windows:
  *   - Windows 3.1/3.11:
@@ -131,11 +124,9 @@ static volatile unsigned char faulted = 0;
 static UINT viewselector,my_ds=0,my_ss=0,my_cs=0;
 static void far *oldDPMIPFHook = NULL;
 static int hook_use_tlhelp = 0;
-static DWORD wow32_GetCurrentProcessId = 0;
+static DWORD wow32_GetCurrentProcess = 0;
 static DWORD wow32_ReadProcessMemory = 0;
 static DWORD wow32_GetLastError = 0;
-static DWORD wow32_CloseHandle = 0;
-static DWORD wow32_OpenProcess = 0;
 
 static int DPMILock(uint32_t base,uint32_t limit) {
 	int retv = 0;
@@ -365,54 +356,122 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 		return 0;
 	}
 	else if (windows_mode == WINDOWS_NT) {
+		DWORD linaddr=0,linhandle=0;
 		DWORD handle;
-		DWORD myself;
 		DWORD result;
 		DWORD err;
 		char tmp[64];
 
-		/* FUCK YOU WINDOWS XP YOU MOTHER FUCKING PIECE OF FUCKING SHIT */
-
-#if 0
-		myself = __CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,0/*0 param*/,wow32_GetCurrentProcessId);
-		if (myself == 0) MessageBox(hwndMain,"NO MYSELF","",MB_OK);
-
-		handle = __CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,3/*3 param*/,wow32_OpenProcess,
-			/*1*/(DWORD)0x0010UL/*PROCESS_VM_READ*/,
-			/*2*/(DWORD)FALSE,
-			/*3*/(DWORD)myself);
-
-		if (handle == 0) {
-			err = __CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,0/*0 param*/,wow32_GetLastError);
-			sprintf(tmp,"err=0x%08lx",(unsigned long)err);
-			MessageBox(hwndMain,tmp,"",MB_OK);
+		/* Use DPMI to allocate a linear block.
+		 * We will fill this block with executable code and then make the WOW Win32
+		 * code execute it from the Win32 world. */
+		__asm {
+			mov	ax,0x0501
+			xor	bx,bx
+			mov	cx,4096
+			int	31h
+			jc	nope
+			mov	word ptr linaddr,cx
+			mov	word ptr linaddr+2,bx
+			mov	word ptr linhandle,di
+			mov	word ptr linhandle+2,si
+nope:
 		}
 
-		sprintf(tmp,"0x%08lx",handle);
-		MessageBox(hwndMain,tmp,"",MB_OK);
-#endif
-		handle = 0xFFFFFFFFUL;
+		if (linaddr == 0) return howmuch; /* failed */
 
-#if 0
-		result = __CallProcEx32W(CPEX_DEST_STDCALL | 4/*convert param 3*/,5/*5 param*/,wow32_ReadProcessMemory,
-			/*1*/(DWORD)handle,/*2*/(DWORD)memofs,/*3*/(DWORD)((void far*)captureTmp),/*4*/(DWORD)howmuch,/*5*/(DWORD)0/*NULL*/);
-#endif
-		result = __CallProcEx32W(CPEX_DEST_STDCALL | 4/*convert param 3*/,5/*5 param*/,wow32_ReadProcessMemory,
-			/*1*/(DWORD)handle,/*2*/(DWORD)memofs,/*3*/(DWORD)((void far*)captureTmp),/*4*/(DWORD)howmuch,/*5*/(DWORD)0/*NULL*/);
+		SetSelectorBase(viewselector,linaddr);
+		SetSelectorLimit(viewselector,4096);
 
-		err = __CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,0/*0 param*/,wow32_GetLastError);
-		if (result == 0) {
-			sprintf(tmp,"0x%08lx",(unsigned long)err);
-			MessageBox(hwndMain,tmp,"",MB_OK);
+		/* ReadProcessMemory() refuses to do any work for us, so we'll just inject
+		 * 32-bit code into linear memory and execute it ourself.
+		 *
+		 * See what happens Microsoft when your APIs arbitrarily restrict functionality?
+		 * This is the hackery that programmers have to resort to, that you have to support
+		 * in your OS. If you had simply provided Win16 apps in NT a way to catch their
+		 * faults properly, none of this hack-fuckery would be necessary! */
+		{
+			static const unsigned int except_ofs = 128;
+			unsigned char far *x;
+			
+
+/*========================================================================*
+ *   MAIN SECTION                                                         *
+ *========================================================================*/
+			x = MK_FP(viewselector,0);
+
+			*x++ = 0xFC;	/* CLD */
+
+			*x++ = 0x68;	/* PUSH <addr> */
+			*((uint32_t*)x) = linaddr + except_ofs; x += 4;
+
+			*x++ = 0x64; *x++ = 0xFF; *x++ = 0x35; /* PUSH FS:[0] */
+			*((uint32_t*)x) = 0; x += 4;
+
+			*x++ = 0x64; *x++ = 0x89; *x++ = 0x25; /* MOV FS:[0],ESP */
+			*((uint32_t*)x) = 0; x += 4;
+
+			*x++ = 0x51;	/* PUSH CX */
+			*x++ = 0x56;	/* PUSH SI */
+			*x++ = 0x57;	/* PUSH DI */
+
+			*x++ = 0xBE;	/* MOV ESI,... */
+			*((uint32_t*)x) = memofs; x += 4;
+
+			*x++ = 0xBF;	/* MOV EDI,... */
+			*((uint32_t*)x) = __GetVDMPointer32W((void far*)captureTmp,1); x += 4;
+
+			*x++ = 0xB9;	/* MOV ECX,... */
+			*((uint32_t*)x) = (howmuch + 3) >> 2; x += 4;
+
+			*x++ = 0xF3; *x++ = 0xA5; /* REP MOVSD */
+
+			*x++ = 0x89;	/* MOV EAX,ECX */
+			*x++ = 0xC8;
+
+			*x++ = 0x5F;	/* POP DI */
+			*x++ = 0x5E;	/* POP SI */
+			*x++ = 0x59;	/* POP CX */
+
+			*x++ = 0x64; *x++ = 0x8F; *x++ = 0x05; /* POP FS:[0] */
+			*((uint32_t*)x) = 0; x += 4;
+
+			*x++ = 0x83; *x++ = 0xC4; *x++ = 0x04; /* ADD ESP,4 */
+
+			*x++ = 0xC3;	/* ret */
+
+/*========================================================================*
+ *   EXCEPTION HANDLER                                                    *
+ *========================================================================*/
+			x = MK_FP(viewselector,except_ofs);
+
+			*x++ = 0x8B; *x++ = 0x44; *x++ = 0x24; *x++ = 0x0C; /* MOV EAX, [ESP+C]  aka the struct _CONTEXT */
+
+			*x++ = 0x83; *x++ = 0x80;			/* ADD [EAX+0xB8],0x02   aka the EIP field */
+			*((uint32_t*)x) = 0xB8; x += 4;
+			*x++ = 0x02;
+
+			*x++ = 0x31;	/* XOR EAX,EAX */
+			*x++ = 0xC0;
+
+			*x++ = 0xC3;	/* ret */
 		}
 
-#if 0
-		__CallProcEx32W(CPEX_DEST_STDCALL/*nothing to convert*/,1/*1 param*/,wow32_CloseHandle,
-			/*1*/(DWORD)handle);
-#endif
+		result = __CallProcEx32W(CPEX_DEST_STDCALL,0/*5 param*/,linaddr);
 
-		if (result == 0) return howmuch;
-		return 0;
+		__asm {
+			mov	ax,0x0502
+			mov	di,word ptr linhandle
+			mov	si,word ptr linhandle+2
+			int	31h
+		}
+
+		if (result != 0) {
+			unsigned int i;
+			for (i=0;i < howmuch;i++) captureTmp[i] = 0xFF;
+		}
+
+		return result;
 	}
 	else {
 		volatile unsigned char *d = captureTmp,cc=0;
@@ -867,22 +926,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	detect_windows();
 
 #if TARGET_MSDOS == 16
-	if (windows_mode == WINDOWS_NT) {
-		/* Windows XP: No matter what we do, no matter how we hook it, NTVDM.EXE isn't going to
-		 *             pass Page Faults to our exception handler. All it does is silently terminate
-		 *             our application. I have no idea how to work around this issue. So let the
-		 *             user know. */
-		if (MessageBox(NULL,
-			"The 16-bit version of this program does not have the ability\n"
-			"to catch Page Faults under Windows NT. If you browse a region\n"
-			"of memory that causes a Page Fault, you will see this program\n"
-			"disappear without warning. It is strongly recommended that you\n"
-			"use the Win32 or Win32s version of this program instead.\n\n"
-			"Proceed?",
-			"WARNING",MB_YESNO) == IDNO)
-			return 1;
-	}
-	else if (windows_mode == WINDOWS_OS2) {
+	if (windows_mode == WINDOWS_OS2) {
 		if (MessageBox(NULL,
 			"The 16-bit version of this program does not have the ability\n"
 			"to catch Page Faults under OS/2. If you browse a region of\n"
@@ -949,20 +993,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			return 1;
 		}
 
-		if ((wow32_CloseHandle=__GetProcAddress32W(genthunk32w_kernel32,"CloseHandle")) == 0) {
-			MessageBox(NULL,"Failed to obtain CloseHandle","",MB_OK);
-			return 1;
-		}
-		if ((wow32_OpenProcess=__GetProcAddress32W(genthunk32w_kernel32,"OpenProcess")) == 0) {
-			MessageBox(NULL,"Failed to obtain OpenProcess","",MB_OK);
-			return 1;
-		}
-		if ((wow32_GetCurrentProcessId=__GetProcAddress32W(genthunk32w_kernel32,"GetCurrentProcessId")) == 0) {
-			MessageBox(NULL,"Failed to obtain GetCurrentProcessId","",MB_OK);
+		if ((wow32_GetCurrentProcess=__GetProcAddress32W(genthunk32w_kernel32,"GetCurrentProcess")) == 0) {
+			MessageBox(NULL,"Failed to obtain GetCurrentProcess","",MB_OK);
 			return 1;
 		}
 		if ((wow32_ReadProcessMemory=__GetProcAddress32W(genthunk32w_kernel32,"ReadProcessMemory")) == 0) {
-			MessageBox(NULL,"Failed to obtain GetCurrentProcess","",MB_OK);
+			MessageBox(NULL,"Failed to obtain ReadProcessMemory","",MB_OK);
 			return 1;
 		}
 		if ((wow32_GetLastError=__GetProcAddress32W(genthunk32w_kernel32,"GetLastError")) == 0) {
@@ -973,8 +1009,9 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	else if (windows_mode == WINDOWS_ENHANCED) {
 		/* Windows 3.1 or higher: Use Toolhelp.
 		   Windows 3.0: Use DPMI hacks.
-		   Windows NT: Use Toolhelp, or DPMI hack. Doesn't matter. NTVDM.EXE will not pass it down. */
-		hook_use_tlhelp = (windows_mode == WINDOWS_NT) || (windows_version >= ((3 << 8) + 10)); /* Windows 3.1 or higher */
+		   Windows NT: Use Toolhelp, or DPMI hack. Doesn't matter. NTVDM.EXE will not pass it down.
+		               However, this code is not executed under NT because a better technique is available. */
+		hook_use_tlhelp = (windows_version >= ((3 << 8) + 10)); /* Windows 3.1 or higher */
 
 		/* we may cause page faults. be prepared */
 		if (hook_use_tlhelp) {

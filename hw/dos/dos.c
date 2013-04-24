@@ -2193,7 +2193,7 @@ BOOL		__GenThunksChecked = 0;
 DWORD		(PASCAL FAR *__LoadLibraryEx32W)(LPCSTR lpName,DWORD reservedhfile,DWORD dwFlags) = NULL;
 BOOL		(PASCAL FAR *__FreeLibrary32W)(DWORD hinst) = NULL;
 DWORD		(PASCAL FAR *__GetProcAddress32W)(DWORD hinst,LPCSTR name) = NULL;
-DWORD		(PASCAL FAR *__GetVDMPointer32W)(LPVOID *ptr,UINT mask) = NULL;
+DWORD		(PASCAL FAR *__GetVDMPointer32W)(LPVOID ptr,UINT mask) = NULL;
 DWORD		(PASCAL FAR *__CallProc32W)(DWORD procaddr32,DWORD convertMask,DWORD params,...) = NULL; /* <- FIXME: How to use? */
 DWORD		(_cdecl _far *__CallProcEx32W)(DWORD params,DWORD convertMask,DWORD procaddr32,...) = NULL;
 

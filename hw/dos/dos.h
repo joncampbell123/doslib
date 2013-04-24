@@ -309,7 +309,7 @@ extern BOOL		__GenThunksChecked;
 extern DWORD		(PASCAL FAR *__LoadLibraryEx32W)(LPCSTR lpName,DWORD a,DWORD b);
 extern BOOL		(PASCAL FAR *__FreeLibrary32W)(DWORD hinst);
 extern DWORD		(PASCAL FAR *__GetProcAddress32W)(DWORD hinst,LPCSTR name);
-extern DWORD		(PASCAL FAR *__GetVDMPointer32W)(LPVOID *ptr,UINT mask);
+extern DWORD		(PASCAL FAR *__GetVDMPointer32W)(LPVOID ptr,UINT mask);
 extern DWORD		(_cdecl _far *__CallProcEx32W)(DWORD params,DWORD convertMask,DWORD procaddr32,...);
 
 /* NOTE: You call it as if it were declared CallProc32W(..., DWORD hinst,DWORD convertMask,DWORD procaddr32); Ick */
