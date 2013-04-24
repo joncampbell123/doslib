@@ -77,6 +77,12 @@
  *           In the test situation used to take these notes, DOSBox was configured with
  *           memsize=12 and a 12MB region was observed from ptr=0x00410000-0x0100FFFF.
  *         - VXD kernel structures are visible at ptr=0x80011000-0x8005FFFF (linear=0x80001000-0x8004FFFF).
+ *
+ *   - Windows 95:
+ *      * If Win32s program:
+ *         - 32-bit data segment base=0 limit=0xFFFFFFFF
+ *         - Starting at 64KB the first 1MB of DOS memory is visible. However, if Safe Mode
+ *           is enabled, the first 64KB of is mapped out.
  */
 
 #include <windows.h>
