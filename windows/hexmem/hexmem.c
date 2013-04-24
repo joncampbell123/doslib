@@ -78,11 +78,90 @@
  *           memsize=12 and a 12MB region was observed from ptr=0x00410000-0x0100FFFF.
  *         - VXD kernel structures are visible at ptr=0x80011000-0x8005FFFF (linear=0x80001000-0x8004FFFF).
  *
+ *      * If Win16 program:
+ *         - I don't know. Hard to tell when attempting to catch page faults causes hard crashes and
+ *           random dumps to DOS. But from what I have seen, the mapping is the same.
+ *
  *   - Windows 95:
- *      * If Win32s program:
+ *      * If Win32 program:
  *         - 32-bit data segment base=0 limit=0xFFFFFFFF
- *         - Starting at 64KB the first 1MB of DOS memory is visible. However, if Safe Mode
- *           is enabled, the first 64KB of is mapped out.
+ *         - The entire first 1MB of system memory is visible from 0x00000000-0x0012FFFF.
+ *           This normally includes the first 64KB of system memory which is readable AND
+ *           writeable (!!) unless you booted Windows 95 into Safe Mode, in which case,
+ *           the first 64KB is mapped out entirely.
+ *         - VXD kernel structures are visible at 0xC0001000.
+ *
+ *      * If Win16 program:
+ *         - Unlike the Win32 world. the first 1MB is still wide open and accessible. Other
+ *           than that, Win16 can generally see the same structures and address layout as Win32.
+ *         - BUG: Rapidly hooking/unhooking interrupts and exceptions using TOOLHELP.DLL eventually
+ *           causes TOOLHELP.DLL to exaust it's resources, page fault, and then lose the ability
+ *           to catch them.
+ *
+ *   - Windows 95 OSR 2.5 C:
+ *      * If Win32 program:
+ *         - 32-bit data segment base=0 limit=0xFFFFFFFF
+ *         - The entire first 1MB of system memory is visible from 0x00000000-0x0012FFFF.
+ *           This normally includes the first 64KB of system memory which is readable unless you
+ *           booted Windows 95 into Safe Mode, in which case, the first 64KB is mapped out entirely.
+ *         - VXD kernel structures are visible at 0xC0001000.
+ *
+ *      * If Win16 program:
+ *         - Unlike the Win32 world. the first 1MB is still wide open and accessible. Other
+ *           than that, Win16 can generally see the same structures and address layout as Win32.
+ *         - BUG: Rapidly hooking/unhooking interrupts and exceptions using TOOLHELP.DLL eventually
+ *           causes TOOLHELP.DLL to exaust it's resources, page fault, and then lose the ability
+ *           to catch them.
+ *
+ *   - Windows 98:
+ *      * If Win32 program:
+ *         - 32-bit data segment base=0 limit=0xFFFFFFFF
+ *         - The first 1MB of system memory is visible, except for the first 64KB, mapped to
+ *           0x00010000-0x00121FFF.
+ *         - VXD kernel structures are visible at 0xC0001000.
+ *         - Various scattered regions are visible, including some repeating BIOS data at
+ *           0xFF000000-0xFF0BFFFF and scattered bits between 0xC0000000-0xCFFFFFFF.
+ *
+ *      * If Win16 program:
+ *         - Unlike the Win32 world. the first 1MB is still wide open and accessible. Other
+ *           than that, Win16 can generally see the same structures and address layout as Win32.
+ *
+ *   - Windows 98 SE:
+ *      * If Win32 program:
+ *         - 32-bit data segment base=0 limit=0xFFFFFFFF
+ *         - The first 1MB of system memory is visible, except for the first 64KB, mapped to
+ *           0x00010000-0x00121FFF.
+ *         - VXD kernel structures are visible at 0xC0001000.
+ *         - Various scattered regions are visible, including some repeating BIOS data at
+ *           0xFF000000-0xFF0BFFFF and scattered bits between 0xC0000000-0xCFFFFFFF.
+ *
+ *      * If Win16 program:
+ *         - Unlike the Win32 world. the first 1MB is still wide open and accessible. Other
+ *           than that, Win16 can generally see the same structures and address layout as Win32.
+ *
+ *   - Windows ME:
+ *      * If Win32 program:
+ *         - 32-bit data segment base=0 limit=0xFFFFFFFF
+ *         - The first 64KB is mapped out entirely... but not in a straightforward manner.
+ *           For some odd reason, the boundary at which memory I/O is allowed is NOT on a page
+ *           boundary but is instead on some arbitrary memory address i.e. reads below
+ *           linear memory address 0xFE61 trigger a page fault, but at or above that address,
+ *           data is readable. I have no idea why Windows ME would do that.
+ *         - Despite the weird mapping in the first 64KB, the first 1MB is visible as usual
+ *           between 0x00010000-0x00123FFF-ish.
+ *         - The Win32 version no longer seems to trigger the page fault limit in KERNEL32.DLL
+ *           despite earlier versions of this code doing so. What did I do differently this time?
+ *         - Various scattered regions are visible, including some repeating BIOS data at
+ *           0xFF000000-0xFF0BFFFF and scattered bits between 0xC0000000-0xCFFFFFFF.
+ *         - VXD kernel structures are visible at 0xC0001000.
+ *         - Some list at 0x001A0000-0x0020AFFF (HO? HS?)
+ *         - 0x00400000: This is where this program is usually loaded
+ *         - 0x80001000-0x80006FFF: Unknown area with hardly any data. Windows 3.1 compatible VXD zone??
+ *
+ *      * If Win16 program:
+ *         - Unlike the Win32 world. the first 1MB is still wide open and accessible. Other
+ *           than that, Win16 can generally see the same structures and address layout as Win32.
+ *         - 0x00400000: 'PCHE' environment block for WINOLDAP? (4KB large)
  */
 
 #include <windows.h>
