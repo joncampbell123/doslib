@@ -1164,7 +1164,7 @@ int detect_windows() {
 		 *      XP       |   3.95              5.1
 		 *      Vista    |   3.95              6.0
 		 *      7        |   3.95              6.1
-		 *      (and so on...)
+		 *      8        |   3.95              6.2
 		 *
 		 */
 		if (genthunk32_init() && genthunk32w_kernel32_GetVersionEx != 0) {

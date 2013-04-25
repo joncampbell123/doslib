@@ -187,6 +187,16 @@
  *      * If Win16 program:
  *         - It is able to view memory, but page fault recovery does not work. Browsing into an
  *           unmapped region causes NTVDM.EXE to crash despite our exception handler.
+ *
+ *   - Windows 8:
+ *      * If Win32 program:
+ *         - Works fine. No issues.
+ *
+ *      * If Win16 program:
+ *         - It is able to view memory, but page fault recovery does not work. Browsing into an
+ *           unmapped region causes NTVDM.EXE to crash despite our exception handler. Windows 8
+ *           may ask you about enabling Win16/DOS support the first time you run this program or
+ *           any other 16-bit program.
  */
 
 #include <windows.h>
