@@ -216,6 +216,10 @@
 #include <dos.h>
 #include "resource.h"
 
+#if TARGET_MSDOS == 32
+# include <tlhelp32.h>			/* Toolhelp32 functions */
+#endif
+
 #include <hw/dos/dos.h>
 #include <windows/apihelp.h>
 
@@ -223,6 +227,7 @@
 enum {
 	DIM_DATASEG=0,			/* "linear" memory seen from the point of view of our data segment */
 	DIM_LINEAR,			/* "linear" memory view (as seen from a flat 4GB paged viewpoint) */
+	DIM_LINEAR_OTHER_PROCESS,	/* "linear" memory view of another process (if supported by the OS) */
 	DIM_PHYSICAL,			/* "physical" memory view (making us a Windows equivalent of misc/hexmem1) */
 	DIM_SEGMENT,			/* we're viewing memory associated with a segment */
 	DIM_GLOBALHANDLE,		/* we locked a global memory object and we're showing it's contents */
@@ -231,6 +236,7 @@ enum {
 HWND		hwndMain;
 HFONT		monospaceFont = NULL;
 int		monospaceFontWidth=0,monospaceFontHeight=0;
+const char*	hwndTitleBase = "HEXMEM memory dumping tool";
 const char*	WndProcClass = "HEXMEMWINDOWS";
 HINSTANCE	myInstance;
 HICON		AppIcon;
@@ -246,6 +252,17 @@ DWORD		displayOffset = 0;
 DWORD		displayMax = 0;
 char		captureTmp[4096];
 char		drawTmp[512];
+
+#if TARGET_MSDOS == 32
+DWORD		OtherProcessPID = ~(0UL);
+char		OtherProcessName[256] = {0};
+HANDLE		OtherProcessHandle = INVALID_HANDLE_VALUE;
+HANDLE		OtherProcessToolhelpSnapshot = INVALID_HANDLE_VALUE;
+
+HANDLE WINAPI	(*__CreateToolhelp32Snapshot)(DWORD dwFlags,DWORD th32ProcessID) = NULL;
+BOOL WINAPI	(*__Process32First)(HANDLE hSnapshot,LPPROCESSENTRY32 lppe) = NULL;
+BOOL WINAPI	(*__Process32Next)(HANDLE hSnapshot,LPPROCESSENTRY32 lppe) = NULL;
+#endif
 
 #if TARGET_MSDOS == 16
 static volatile unsigned char faulted = 0;
@@ -396,6 +413,32 @@ static void __declspec(naked) fault_pf_dpmi() { /* DPMI exception handler */
                        compares the fault location to pass or fail it. Weird. Full testing is impossible
 		       because KERNEL32.DLL will automatically terminate our program if we do 160
 		       consecutive faults in a row, ignoring our exception handler. */
+
+/* Win32: uses ReadProcessMemory on a process chosen by the user.
+ * Win16: not implemented. In the future, I plan on autodetecting Windows NT,
+ *        and then using the WOW32 calls to call into KERNEL32.DLL from Win16
+ *        and use the ToolHelp API, or autodetecting Windows 95 and somehow
+ *        calling the Win95 equivalents for a Win16 process to enumerate Win32
+ *        processes and read from their segments. */
+static int CaptureMemoryLinearOtherProcess(DWORD memofs,unsigned int howmuch) {
+#if TARGET_MSDOS == 32
+	unsigned int i;
+
+	if (OtherProcessHandle == INVALID_HANDLE_VALUE)
+		goto fill_ff;
+	if (ReadProcessMemory(OtherProcessHandle,(LPVOID)memofs,(LPVOID)captureTmp,(DWORD)howmuch,NULL) == 0)
+		goto fill_ff;
+
+	return 0;
+
+fill_ff:for (i=0;i < howmuch;i++) captureTmp[i] = 0xFF;
+	return howmuch;
+#elif TARGET_MSDOS == 16
+	return howmuch; /* TODO */
+#else
+	return howmuch;
+#endif
+}
 
 static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 #if TARGET_MSDOS == 32
@@ -660,6 +703,9 @@ static int CaptureMemory(DWORD memofs,unsigned int howmuch) {
 		case DIM_LINEAR:
 			fail = CaptureMemoryLinear(memofs,howmuch);
 			break;
+		case DIM_LINEAR_OTHER_PROCESS:
+			fail = CaptureMemoryLinearOtherProcess(memofs,howmuch);
+			break;
 		default:
 			memset(captureTmp,0xFF,howmuch);
 			fail = howmuch;
@@ -768,6 +814,8 @@ static void updateDisplayModeMenuCheck() {
 		MF_BYCOMMAND|(displayMode==DIM_DATASEG?MF_CHECKED:0));
 	CheckMenuItem(hwndMainViewMenu,IDC_VIEW_LINEAR,
 		MF_BYCOMMAND|(displayMode==DIM_LINEAR?MF_CHECKED:0));
+	CheckMenuItem(hwndMainViewMenu,IDC_VIEW_LINEAR_OTHER_PROCESS,
+		MF_BYCOMMAND|(displayMode==DIM_LINEAR_OTHER_PROCESS?MF_CHECKED:0));
 }
 
 static void RedrawMemory(HWND hwnd,HDC hdc) {
@@ -872,6 +920,115 @@ static void ShowHelp() {
 		"Help key",MB_OK);
 }
 
+#if TARGET_MSDOS == 32
+BOOL WINAPI PickAProcessDlgProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam) {
+	if (msg == WM_INITDIALOG) {
+		PostMessage(hwnd,WM_USER+1,0,0); /* populate the list */
+		SetFocus(GetDlgItem(hwnd,IDC_PROCESS_LIST));
+		return TRUE;
+	}
+	else if (msg == (WM_USER+1)) {
+		PROCESSENTRY32 p32;
+		HWND lbHwnd;
+		char tmp[256];
+		int idx;
+
+		lbHwnd = GetDlgItem(hwnd,IDC_PROCESS_LIST);
+
+		SendMessage(lbHwnd,LB_RESETCONTENT,0,0);
+
+		memset(&p32,0,sizeof(p32));
+		p32.dwSize = sizeof(p32);
+		if (__Process32First(OtherProcessToolhelpSnapshot,&p32)) {
+			do {
+				snprintf(tmp,sizeof(tmp)-1,"%s [%lu]",p32.szExeFile,(unsigned long)p32.th32ProcessID);
+				idx = (int)SendMessage(lbHwnd,LB_ADDSTRING,0,(LPARAM)tmp);
+				SendMessage(lbHwnd,LB_SETITEMDATA,idx,p32.th32ProcessID);
+
+				if (p32.th32ProcessID == OtherProcessPID)
+					SendMessage(lbHwnd,LB_SETCURSEL,idx,0);
+
+				memset(&p32,0,sizeof(p32));
+				p32.dwSize = sizeof(p32);
+			} while (__Process32Next(OtherProcessToolhelpSnapshot,&p32));
+		}
+	}
+	else if (msg == WM_COMMAND) {
+		if (wparam == IDOK) {
+			HWND lbHwnd;
+			int idx;
+
+			lbHwnd = GetDlgItem(hwnd,IDC_PROCESS_LIST);
+			
+			idx = (int)SendMessage(lbHwnd,LB_GETCURSEL,0,0);
+			if (idx >= 0) {
+				if (SendMessage(lbHwnd,LB_GETSEL,idx,0) != 0) { /* if it is actually selected... */
+					DWORD pid = (DWORD)SendMessage(lbHwnd,LB_GETITEMDATA,idx,0);
+					if (pid == GetCurrentProcessId()) {
+						MessageBox(hwnd,"The selected process is myself. To view linear memory visible from THIS process please use the 'Linear memory' option instead.","",MB_OK);
+					}
+					else if (pid != LB_ERR) {
+						OtherProcessHandle = OpenProcess(SYNCHRONIZE|PROCESS_VM_READ,FALSE,pid);
+						if (OtherProcessHandle != INVALID_HANDLE_VALUE) {
+							OtherProcessName[0] = 0;
+							if (SendMessage(lbHwnd,LB_GETTEXTLEN,idx,0) < (sizeof(OtherProcessName)-1))
+								SendMessage(lbHwnd,LB_GETTEXT,idx,(LPARAM)OtherProcessName);
+
+							OtherProcessPID = pid;
+							EndDialog(hwnd,1);
+						}
+						else {
+							MessageBox(hwnd,"Unable to open this process. You may not have sufficient privileges to do so.","",MB_OK);
+						}
+					}
+				}
+			}
+		}
+		else if (wparam == IDCANCEL) {
+			EndDialog(hwnd,0);
+		}
+	}
+
+	return FALSE;
+}
+#endif
+
+static int PickAProcess() {
+#if TARGET_MSDOS == 32
+	int ok;
+
+	if (OtherProcessToolhelpSnapshot != INVALID_HANDLE_VALUE) CloseHandle(OtherProcessToolhelpSnapshot);
+	OtherProcessToolhelpSnapshot = INVALID_HANDLE_VALUE;
+
+	if (OtherProcessHandle != INVALID_HANDLE_VALUE) CloseHandle(OtherProcessHandle);
+	OtherProcessHandle = INVALID_HANDLE_VALUE;
+
+	OtherProcessToolhelpSnapshot = __CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS,0);
+	if (OtherProcessToolhelpSnapshot == INVALID_HANDLE_VALUE) {
+		MessageBox(hwndMain,"Error enumerating processes: Toolhelp did not create snapshot","",MB_OK);
+		return 0;
+	}
+
+	ok = DialogBox(myInstance,MAKEINTRESOURCE(IDD_PROCESSES),hwndMain,PickAProcessDlgProc);
+	/* if ok == 1, the dialog proc also set OtherProcessPID and OtherProcessHandle */
+
+	CloseHandle(OtherProcessToolhelpSnapshot);
+	OtherProcessToolhelpSnapshot = INVALID_HANDLE_VALUE;
+	return ok;
+#endif
+	return 0;
+}
+
+static int CanViewOtherProcesses() {
+#if TARGET_MSDOS == 32
+	if (__CreateToolhelp32Snapshot != NULL && __Process32First != NULL &&
+		__Process32Next != NULL)
+		return 1; /* Yes we can, TOOLHELP API style */
+#endif
+
+	return 0;
+}
+
 #if TARGET_MSDOS == 16
 FARPROC WndProc_MPI;
 #endif
@@ -974,13 +1131,44 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 					break;
 				case IDC_VIEW_DATASEG:
 					displayMode = DIM_DATASEG;
+					SetWindowText(hwnd,hwndTitleBase);
 					InvalidateRect(hwnd,NULL,FALSE);
 					updateDisplayModeMenuCheck();
 					break;
 				case IDC_VIEW_LINEAR:
 					displayMode = DIM_LINEAR;
+					SetWindowText(hwnd,hwndTitleBase);
 					InvalidateRect(hwnd,NULL,FALSE);
 					updateDisplayModeMenuCheck();
+					break;
+				case IDC_VIEW_LINEAR_OTHER_PROCESS:
+					if (CanViewOtherProcesses()) {
+						if (PickAProcess()) {
+#if TARGET_MSDOS == 32
+							char tmp[256];
+
+							if (OtherProcessName[0] != 0) {
+								snprintf(tmp,sizeof(tmp)-1,"%s (%s)",
+									OtherProcessName,
+									hwndTitleBase);
+							}
+							else {
+								snprintf(tmp,sizeof(tmp)-1,"[process %lu] (%s)",
+									(unsigned long)OtherProcessPID,
+									hwndTitleBase);
+							}
+		
+							SetWindowText(hwnd,tmp);
+#endif
+
+							/* TODO: If supported by OS, then:
+							 *          bring up a dialog box to list processes, let the user pick, and if
+							 *          the user clicks OK, get the PID and assign it here */
+							displayMode = DIM_LINEAR_OTHER_PROCESS;
+							InvalidateRect(hwnd,NULL,FALSE);
+							updateDisplayModeMenuCheck();
+						}
+					}
 					break;
 			}
 		}
@@ -1034,6 +1222,11 @@ static int CreateAppMenu() {
 	if (!AppendMenu(hwndMainViewMenu,MF_STRING|MF_ENABLED,IDC_VIEW_LINEAR,"&Linear memory map"))
 		return 0;
 
+	if (!AppendMenu(hwndMainViewMenu,MF_STRING|
+		(CanViewOtherProcesses() ? MF_ENABLED : (MF_DISABLED|MF_GRAYED)),
+		IDC_VIEW_LINEAR_OTHER_PROCESS,"&Linear memory map of another process"))
+		return 0;
+
 	if (!AppendMenu(hwndMainMenu,MF_POPUP|MF_STRING|MF_ENABLED,(UINT)hwndMainViewMenu,"&View"))
 		return 0;
 
@@ -1052,6 +1245,18 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	/* some important decision making rests on what version of Windows we're running under */
 	probe_dos();
 	detect_windows();
+
+#if TARGET_MSDOS == 32
+	/* try to load and set up the TOOLHELP functions, if available */
+	{
+		HANDLE kern32 = GetModuleHandle("KERNEL32.DLL");
+		if (kern32) {
+			__CreateToolhelp32Snapshot = (void*)GetProcAddress(kern32,"CreateToolhelp32Snapshot");
+			__Process32First = (void*)GetProcAddress(kern32,"Process32First");
+			__Process32Next = (void*)GetProcAddress(kern32,"Process32Next");
+		}
+	}
+#endif
 
 #if TARGET_MSDOS == 16
 	if (windows_mode == WINDOWS_OS2) {
@@ -1219,7 +1424,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	/* default to "linear" view */
 	SetDisplayModeLinear(0xF0000);
 
-	hwndMain = CreateWindow(WndProcClass,"HEXMEM memory dumping tool",
+	hwndMain = CreateWindow(WndProcClass,hwndTitleBase,
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT,CW_USEDEFAULT,
 		(monospaceFontWidth*80)+(GetSystemMetrics(SM_CXFRAME)*2),
@@ -1253,6 +1458,14 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	if (windows_mode != WINDOWS_REAL)
 		FreeSelector(viewselector);
+#endif
+
+#if TARGET_MSDOS == 32
+	if (OtherProcessToolhelpSnapshot != INVALID_HANDLE_VALUE) CloseHandle(OtherProcessToolhelpSnapshot);
+	OtherProcessToolhelpSnapshot = INVALID_HANDLE_VALUE;
+
+	if (OtherProcessHandle != INVALID_HANDLE_VALUE) CloseHandle(OtherProcessHandle);
+	OtherProcessHandle = INVALID_HANDLE_VALUE;
 #endif
 
 	DestroyMenu(hwndMainMenu);
