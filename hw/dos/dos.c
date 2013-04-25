@@ -1013,23 +1013,29 @@ int detect_windows() {
 		 *      But that's not what the Win16 version of the function does! */
 
 		if (dos_version == 0) probe_dos();
-		if (windows_version == 0x035F && (dos_version >= 0x510 && dos_version <= 0x57f)) {
-			/* if the real DOS version is 5.50 then we're under NT */
-			windows_mode = WINDOWS_NT;
+
+		/* Windows 3.1/9x/ME */
+		raw = GetWinFlags();
+		if (raw & WF_PMODE) {
+			if (raw & WF_ENHANCED)
+				windows_mode = WINDOWS_ENHANCED;
+			else/* if (raw & WF_STANDARD)*/
+				windows_mode = WINDOWS_STANDARD;
+		}
+		else {
+			windows_mode = WINDOWS_REAL;
 		}
 
-		if (windows_mode != WINDOWS_NT) {
-			/* Windows 3.1/9x/ME */
-			raw = GetWinFlags();
-			if (raw & WF_PMODE) {
-				if (raw & WF_ENHANCED)
-					windows_mode = WINDOWS_ENHANCED;
-				else/* if (raw & WF_STANDARD)*/
-					windows_mode = WINDOWS_STANDARD;
-			}
-			else {
-				windows_mode = WINDOWS_REAL;
-			}
+		/* NTS: All 32-bit Windows systems since Windows NT 3.51 and Windows 95 return
+		 *      major=3 minor=95 when Win16 applications query the version number. The only
+		 *      exception to that rule is Windows NT 3.1, which returns major=3 minor=10,
+		 *      the same version number returned by Windows 3.1. */
+		if (windows_mode == WINDOWS_ENHANCED &&
+			(dos_version >= 0x510 && dos_version <= 0x57f)/* MS-DOS v5.50 */ &&
+			(windows_version == 0x035F /* Windows NT 4/2000/XP/Vista/7/8 */ ||
+			 windows_version == 0x030A /* Windows NT 3.1/3.5x */)) {
+			/* if the real DOS version is 5.50 then we're under NT */
+			windows_mode = WINDOWS_NT;
 		}
 
 		switch (dos_version>>8) {
@@ -1108,23 +1114,29 @@ int detect_windows() {
 		 *      But that's not what the Win16 version of the function does! */
 
 		if (dos_version == 0) probe_dos();
-		if (windows_version == 0x035F && (dos_version >= 0x510 && dos_version <= 0x57f)) {
-			/* if the real DOS version is 5.50 then we're under NT */
-			windows_mode = WINDOWS_NT;
+
+		/* Windows 3.1/9x/ME */
+		raw = GetWinFlags();
+		if (raw & WF_PMODE) {
+			if (raw & WF_ENHANCED)
+				windows_mode = WINDOWS_ENHANCED;
+			else/* if (raw & WF_STANDARD)*/
+				windows_mode = WINDOWS_STANDARD;
+		}
+		else {
+			windows_mode = WINDOWS_REAL;
 		}
 
-		if (windows_mode != WINDOWS_NT) {
-			/* Windows 3.1/9x/ME */
-			raw = GetWinFlags();
-			if (raw & WF_PMODE) {
-				if (raw & WF_ENHANCED)
-					windows_mode = WINDOWS_ENHANCED;
-				else/* if (raw & WF_STANDARD)*/
-					windows_mode = WINDOWS_STANDARD;
-			}
-			else {
-				windows_mode = WINDOWS_REAL;
-			}
+		/* NTS: All 32-bit Windows systems since Windows NT 3.51 and Windows 95 return
+		 *      major=3 minor=95 when Win16 applications query the version number. The only
+		 *      exception to that rule is Windows NT 3.1, which returns major=3 minor=10,
+		 *      the same version number returned by Windows 3.1. */
+		if (windows_mode == WINDOWS_ENHANCED &&
+			(dos_version >= 0x510 && dos_version <= 0x57f)/* MS-DOS v5.50 */ &&
+			(windows_version == 0x035F /* Windows NT 4/2000/XP/Vista/7/8 */ ||
+			 windows_version == 0x030A /* Windows NT 3.1/3.5x */)) {
+			/* if the real DOS version is 5.50 then we're under NT */
+			windows_mode = WINDOWS_NT;
 		}
 
 		switch (dos_version>>8) {
@@ -1139,6 +1151,22 @@ int detect_windows() {
 		/* If we're running under Windows 9x/ME or Windows NT/2000 we can thunk our way into
 		 * the Win32 world and call various functions to get a more accurate picture of the
 		 * Windows system we are running on */
+		/* NTS: Under Windows NT 3.51 or later this technique is the only way to get the
+		 *      true system version number. The Win16 GetVersion() will always return
+		 *      some backwards compatible version number except for NT 3.1:
+		 *
+		 *                   Win16             Win32
+		 *               +==========================
+		 *      NT 3.1   |   3.1               3.1
+		 *      NT 3.51  |   3.1               3.51
+		 *      NT 4.0   |   3.95              4.0
+		 *      2000     |   3.95              5.0
+		 *      XP       |   3.95              5.1
+		 *      Vista    |   3.95              6.0
+		 *      7        |   3.95              6.1
+		 *      (and so on...)
+		 *
+		 */
 		if (genthunk32_init() && genthunk32w_kernel32_GetVersionEx != 0) {
 			OSVERSIONINFO osv;
 

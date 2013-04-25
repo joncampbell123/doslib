@@ -82,6 +82,16 @@
  *         - I don't know. Hard to tell when attempting to catch page faults causes hard crashes and
  *           random dumps to DOS. But from what I have seen, the mapping is the same.
  *
+ *   - Windows NT 3.1:
+ *      * If Win32 program:
+ *         - The usual scattered Win32 NT structures scattered around. Nothing unusual.
+ *         - Only the Win32s version works. The Win32 version does not work.
+ *
+ *      * If Win16 program:
+ *         - Windows NT 3.1 NTVDM.EXE appears to have a strange page-fault bug: If you scan to address
+ *           0x00000000 (hitting the zero page), and then step up one line to hit 0xFFFFF000-0xFFFFFFFF, all
+ *           memory addresses become a mirror of the zero page, whether they were previously valid or not.
+ *
  *   - Windows 95:
  *      * If Win32 program:
  *         - 32-bit data segment base=0 limit=0xFFFFFFFF
@@ -162,6 +172,21 @@
  *         - Unlike the Win32 world. the first 1MB is still wide open and accessible. Other
  *           than that, Win16 can generally see the same structures and address layout as Win32.
  *         - 0x00400000: 'PCHE' environment block for WINOLDAP? (4KB large)
+ *
+ *   - Windows XP:
+ *      * If Win32 program:
+ *         - Works fine. No issues.
+ *
+ *      * If Win16 program:
+ *         - Works fine. No issues.
+ *
+ *   - Windows 7:
+ *      * If Win32 program:
+ *         - Works fine. No issues.
+ *
+ *      * If Win16 program:
+ *         - It is able to view memory, but page fault recovery does not work. Browsing into an
+ *           unmapped region causes NTVDM.EXE to crash despite our exception handler.
  */
 
 #include <windows.h>
