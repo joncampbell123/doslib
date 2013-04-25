@@ -7,8 +7,8 @@ set DOS4G=quiet
 if "%1" == "clean" call clean.bat
 if "%1" == "clean" goto end
 
-mkdir win32
-wmake -f ..\..\mak\win32.mak HPS=\ lib REL=..\.. 
+mkdir win38631
+wmake -f ..\..\mak\win38631.mak HPS=\ lib REL=..\.. 
 
 
 :end

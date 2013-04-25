@@ -91,6 +91,9 @@
  *         - Windows NT 3.1 NTVDM.EXE appears to have a strange page-fault bug: If you scan to address
  *           0x00000000 (hitting the zero page), and then step up one line to hit 0xFFFFF000-0xFFFFFFFF, all
  *           memory addresses become a mirror of the zero page, whether they were previously valid or not.
+ *         - Whoops! Now, for no apparent reason, the Win16 -> Win32 thunking code is not working for this
+ *           program, even though it works fine for the DOS test program. I'm not entirely sure what it is
+ *           I changed to break that functionality.
  *
  *   - Windows 95:
  *      * If Win32 program:
@@ -1321,8 +1324,12 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	 *       Also test Win98, and WinME */
 	if (windows_mode == WINDOWS_NT) {
 		/* use "Windows on Windows" to call into the Win32 world and use ReadProcessMemory() */
-		if (!genthunk32_init() || genthunk32w_kernel32 == 0) {
+		if (!genthunk32_init()) {
 			MessageBox(NULL,"Unable to initialize Win16->32 thunking code","Error",MB_OK);
+			return 1;
+		}
+		if (genthunk32w_kernel32 == 0) {
+			MessageBox(NULL,"Unable to initialize Win16->32 thunking code, cannot locate KERNEL32.DLL","Error",MB_OK);
 			return 1;
 		}
 
