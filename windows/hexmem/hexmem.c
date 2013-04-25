@@ -180,6 +180,14 @@
  *      * If Win16 program:
  *         - Works fine. No issues.
  *
+ *   - Windows Vista:
+ *      * If Win32 program:
+ *         - Works fine. No issues.
+ *
+ *      * If Win16 program:
+ *         - It is able to view memory, but page fault recovery does not work. Browsing into an
+ *           unmapped region causes NTVDM.EXE to crash despite our exception handler.
+ *
  *   - Windows 7:
  *      * If Win32 program:
  *         - Works fine. No issues.
