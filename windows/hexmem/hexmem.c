@@ -38,6 +38,20 @@
  *     very well.
  *
  *     Also of interest: The Windows NT technique described above also works under Linux + WINE.
+ *
+ *   - Windows Vista/7/8: The Win16 technique used to execute 32-bit code works for the most part however
+ *     for whatever reason our exception handler is not called if a page fault happens. Windows goes
+ *     straight to the unhandled exception handler and does not call our fault handler. It may have something
+ *     to do with the fact that Vista introduced Data Execution Prevention to "essential system processes"
+ *     and that NTVDM.EXE is considered such a process. I'll have to look into it.
+ *
+ *   - Windows 95/98/ME and Toolhelp CreateToolhelp32Snaphot/Process32First/Process32Next: This isn't
+ *     documented by Microsoft, but zeroing the structure between Process32First and Process32Next
+ *     causes enumeration to fail. Apparently these functions use one of the structure members to
+ *     do enumeration, and you have to pass the structure back unmodified to get the next process.
+ *     Also noteworthy: Whereas in Windows NT/2000/XP/etc. the process IDs are sane ranges (usually
+ *     in the 5 to 2000 range), PIDs in Windows 95/98/ME seem to be very large, either because they
+ *     are or because the PID always has the upper 16 bits set.
  */
 /* TODO list:
  *   - Test this program + Windows 3.1 on real hardware. Is Windows 3.1 *REALLY* that crashy when handling
@@ -49,15 +63,6 @@
  *
  *           1. Bring up Win95 in VirtualBox, turn on all acceleration, and see if this program works properly.
  *           2. Dig out an ancient Pentium or 486 and an IDE hard drive, install Win95, and see if this program works properly.
- *
- *   - If Win95 works, then what about Win98? WinME? Does the exception counter/limit in WinME apply to Win16 apps?
- *
- *   - Windows Millenium: The technique used by the Win32 program can be hampered by the fact KERNEL32.DLL
- *     enforces an upper limit on the number of exceptions (or exceptions per second? or some kind of rate?).
- *     When this upper limit is reached, the next page fault is handled directly by the system and our
- *     structured exception handling is bypassed entirely. How do we work around this? Is there a kernel
- *     function I can call to reset that counter? Any way to disable it? Will I have to stoop to the level
- *     of zeroing a specific memory location or patching KERNEL32.DLL code to disable this limit? (I hope not!!).
  *
  */
 /* Known memory maps in various versions of Windows:
@@ -275,6 +280,9 @@ static int hook_use_tlhelp = 0;
 static DWORD wow32_GetCurrentProcess = 0;
 static DWORD wow32_ReadProcessMemory = 0;
 static DWORD wow32_GetLastError = 0;
+static WORD wow32_data_exec_handle = 0;
+static unsigned char far *wow32_data_exec_segment = NULL;
+static DWORD wow32_code_linear_address = 0;
 
 static int DPMILock(uint32_t base,uint32_t limit) {
 	int retv = 0;
@@ -530,32 +538,10 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 		return 0;
 	}
 	else if (windows_mode == WINDOWS_NT) {
-		DWORD linaddr=0,linhandle=0;
 		DWORD handle;
 		DWORD result;
 		DWORD err;
 		char tmp[64];
-
-		/* Use DPMI to allocate a linear block.
-		 * We will fill this block with executable code and then make the WOW Win32
-		 * code execute it from the Win32 world. */
-		__asm {
-			mov	ax,0x0501
-			xor	bx,bx
-			mov	cx,4096
-			int	31h
-			jc	nope
-			mov	word ptr linaddr,cx
-			mov	word ptr linaddr+2,bx
-			mov	word ptr linhandle,di
-			mov	word ptr linhandle+2,si
-nope:
-		}
-
-		if (linaddr == 0) return howmuch; /* failed */
-
-		SetSelectorBase(viewselector,linaddr);
-		SetSelectorLimit(viewselector,4096);
 
 		/* ReadProcessMemory() refuses to do any work for us, so we'll just inject
 		 * 32-bit code into linear memory and execute it ourself.
@@ -572,12 +558,12 @@ nope:
 /*========================================================================*
  *   MAIN SECTION                                                         *
  *========================================================================*/
-			x = MK_FP(viewselector,0);
+			x = wow32_data_exec_segment;
 
 			*x++ = 0xFC;	/* CLD */
 
 			*x++ = 0x68;	/* PUSH <addr> */
-			*((uint32_t*)x) = linaddr + except_ofs; x += 4;
+			*((uint32_t*)x) = wow32_code_linear_address + except_ofs; x += 4;
 
 			*x++ = 0x64; *x++ = 0xFF; *x++ = 0x35; /* PUSH FS:[0] */
 			*((uint32_t*)x) = 0; x += 4;
@@ -617,7 +603,7 @@ nope:
 /*========================================================================*
  *   EXCEPTION HANDLER                                                    *
  *========================================================================*/
-			x = MK_FP(viewselector,except_ofs);
+			x = wow32_data_exec_segment + except_ofs;
 
 			*x++ = 0x8B; *x++ = 0x44; *x++ = 0x24; *x++ = 0x0C; /* MOV EAX, [ESP+C]  aka the struct _CONTEXT */
 
@@ -631,14 +617,7 @@ nope:
 			*x++ = 0xC3;	/* ret */
 		}
 
-		result = __CallProcEx32W(CPEX_DEST_STDCALL,0/*5 param*/,linaddr);
-
-		__asm {
-			mov	ax,0x0502
-			mov	di,word ptr linhandle
-			mov	si,word ptr linhandle+2
-			int	31h
-		}
+		result = __CallProcEx32W(CPEX_DEST_STDCALL,0/*5 param*/,wow32_code_linear_address);
 
 		if (result != 0) {
 			unsigned int i;
@@ -944,15 +923,33 @@ BOOL WINAPI PickAProcessDlgProc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam) 
 		p32.dwSize = sizeof(p32);
 		if (__Process32First(OtherProcessToolhelpSnapshot,&p32)) {
 			do {
-				snprintf(tmp,sizeof(tmp)-1,"%s [%lu]",p32.szExeFile,(unsigned long)p32.th32ProcessID);
+				/* NTS: Windows 95/98/ME Toolhelp implementation: In what could be considered one of the
+				 *      uglier hacks involved in the API, the upper 16 bits of the PID appear to be
+				 *      used instead by the API for enumeration and are usually some large value like
+				 *      0xFFF0. If we modify the upper 16 bits, such as for example zeroing them, then
+				 *      Process32Next is not able to continue enumeration for whatever reason.
+				 *
+				 *      Windows 95: What exactly the upper bits are seems to depend on the program being run:
+				 *        - This program: 0xFFC0 (Win32 or Win32s)
+				 *        - The Win16 version of this program: 0xFFC0
+				 *        - KERNEL32.DLL: 0xFFCF
+				 *        - SNDREC32.EXE: 0xFFC0
+				 *        - MMTASK.TSK:   0xFFFF
+				 *        - EXPLORER.EXE: 0xFFFF
+				 *        - Everything else, basically: 0xFFFF
+				 *
+				 *      It doesn't seem to matter if the process is 16-bit or 32-bit. But it does seem to
+				 *      be part of the PID and part of system tracking. */
+				if (windows_mode == WINDOWS_ENHANCED && (p32.th32ProcessID&0xFFC00000UL) == 0xFFC00000UL)
+					snprintf(tmp,sizeof(tmp)-1,"%s [win9x style 0x%08lx]",p32.szExeFile,(unsigned long)p32.th32ProcessID);
+				else
+					snprintf(tmp,sizeof(tmp)-1,"%s [%lu]",p32.szExeFile,(unsigned long)p32.th32ProcessID);
+					
 				idx = (int)SendMessage(lbHwnd,LB_ADDSTRING,0,(LPARAM)tmp);
 				SendMessage(lbHwnd,LB_SETITEMDATA,idx,p32.th32ProcessID);
 
 				if (p32.th32ProcessID == OtherProcessPID)
 					SendMessage(lbHwnd,LB_SETCURSEL,idx,0);
-
-				memset(&p32,0,sizeof(p32));
-				p32.dwSize = sizeof(p32);
 			} while (__Process32Next(OtherProcessToolhelpSnapshot,&p32));
 		}
 	}
@@ -1262,12 +1259,39 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #endif
 
 #if TARGET_MSDOS == 16
+	__asm {
+		mov my_cs,cs
+		mov my_ds,ds
+		mov my_ss,ss
+	}
+
 	if (windows_mode == WINDOWS_OS2) {
 		if (MessageBox(NULL,
 			"The 16-bit version of this program does not have the ability\n"
 			"to catch Page Faults under OS/2. If you browse a region of\n"
 			"memory that causes a Page Fault, you will see the appropriate\n"
 			"notifcation from OS/2.\n\n"
+			"Proceed?",
+			"WARNING",MB_YESNO) == IDNO)
+			return 1;
+	}
+	else if (windows_mode == WINDOWS_NT && windows_version >= 0x600/*Windows Vista or higher*/) {
+		/* Windows Vista, 7, and 8 NTVDM.EXE appears to have an issue with our page fault
+		 * handler preventing it from working correctly, in fact, I'm pretty sure that
+		 * Windows is outright ignoring our exception handler! I'm not certain at this time whether
+		 * other faults are occuring or whether it has anything to do with Data Execution
+		 * Prevention (which is enforced for NTVDM.EXE no matter what by Vista/7/8). Until
+		 * I find a workaround, we'll have to let the user know it might not work */
+		if (MessageBox(NULL,
+			"The 16-bit version of this program does not have the ability\n"
+			"to catch page faults under Windows Vista, 7, and 8. Browsing\n"
+			"unmapped pages will trigger an error dialog stating that NTVDM.EXE\n"
+			"has crashed. It is not known yet at this time what the problem\n"
+			"is.\n\n"
+			"If you intend to view the linear address space of a Win16 app\n"
+			"in Vista/7/8, it is strongly recommended that you use the 'Linear\n"
+			"memory map of another process' view mode of the Win32 version to\n"
+			"peer inside NTVDM.EXE\n\n"
 			"Proceed?",
 			"WARNING",MB_YESNO) == IDNO)
 			return 1;
@@ -1294,12 +1318,6 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			"Proceed?",
 			"WARNING",MB_YESNO) == IDNO)
 			return 1;
-	}
-
-	__asm {
-		mov my_cs,cs
-		mov my_ds,ds
-		mov my_ss,ss
 	}
 
 	if (windows_mode != WINDOWS_REAL) {
@@ -1345,6 +1363,17 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 			MessageBox(NULL,"Failed to obtain GetLastError","",MB_OK);
 			return 1;
 		}
+		if ((wow32_data_exec_handle=GlobalAlloc(GMEM_ZEROINIT|GMEM_FIXED,4096)) == NULL) {
+			MessageBox(NULL,"Unable to alloc dep exec buffer","",MB_OK);
+			return 1;
+		}
+		if ((wow32_data_exec_segment=GlobalLock(wow32_data_exec_handle)) == NULL) {
+			MessageBox(NULL,"Unable to lock dep exec buffer","",MB_OK);
+			return 1;
+		}
+
+		wow32_code_linear_address = GetSelectorBase(FP_SEG(wow32_data_exec_segment)) +
+			FP_OFF(wow32_data_exec_segment);
 	}
 	else if (windows_mode == WINDOWS_ENHANCED) {
 		/* Windows 3.1 or higher: Use Toolhelp.
@@ -1455,6 +1484,8 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 #if TARGET_MSDOS == 16
 	if (windows_mode == WINDOWS_NT) {
+		GlobalUnlock(wow32_data_exec_handle);
+		GlobalFree(wow32_data_exec_handle);
 		genthunk32_free();
 	}
 	else if (windows_mode == WINDOWS_ENHANCED) {
