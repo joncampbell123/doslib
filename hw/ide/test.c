@@ -1809,6 +1809,11 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			else vga_write("16-bit");
 			vga_write(" (chg)");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(ofsx+(width/cols),y++);
+			vga_write_color((select == 28) ? 0x70 : 0x0F);
+			vga_write("NOP test");
+			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -3181,11 +3186,58 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					}
 				}
 			}
+			else if (select == 28) { /* NOP */
+				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
+					do_ide_controller_user_wait_drive_ready(ide) == 0) {
+					ide->irq_fired = 0;
+					outp(ide->base_io+1,0x00);
+					outp(ide->base_io+2,0x12);
+					outp(ide->base_io+3,0x34);
+					outp(ide->base_io+4,0x56);
+					outp(ide->base_io+5,0x78);
+					outp(ide->base_io+7,0x00); /* <- NOP */
+					if (ide->flags.io_irq_enable)
+						do_ide_controller_user_wait_irq(ide,1);
 
+					do_ide_controller_user_wait_busy_controller(ide);
+					do_ide_controller_user_wait_drive_ready(ide);
+					x = inp(ide->base_io+7); /* what's the status? */
+					if (!(x&1)) {
+						vga_msg_box_create(&vgabox,"Success?? (It's not supposed to!)",0,0);
+					}
+					else if ((x&0xC9) != 0x41) {
+						sprintf(tmp,"Device rejected with error %02X (not the way it's supposed to)",x);
+						vga_msg_box_create(&vgabox,tmp,0,0);
+					}
+					else if ((inp(ide->base_io+1)&0x04) != 0x04) {
+						sprintf(tmp,"Device rejected with non-abort (not the way it's supposed to)",x);
+						vga_msg_box_create(&vgabox,tmp,0,0);
+					}
+					else {
+						unsigned char c=0,cc=0;
+
+						c=inp(ide->base_io+2); cc += (c == 0x12)?1:0;
+						c=inp(ide->base_io+3); cc += (c == 0x34)?1:0;
+						c=inp(ide->base_io+4); cc += (c == 0x56)?1:0;
+						c=inp(ide->base_io+5); cc += (c == 0x78)?1:0;
+
+						if (cc == 4)
+							vga_msg_box_create(&vgabox,"Success",0,0);
+						else
+							vga_msg_box_create(&vgabox,"Failed. Registers were modified.",0,0);
+					}
+
+					do {
+						c = getch();
+						if (c == 0) c = getch() << 8;
+					} while (!(c == 13 || c == 27));
+					vga_msg_box_destroy(&vgabox);
+				}
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 27;
+				select = 28;
 
 			redraw = 1;
 		}
@@ -3195,11 +3247,11 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 		}
 		else if (c == 0x4D00) {
 			if (select < 18) select += 18;
-			if (select > 27) select -= 18;
+			if (select > 28) select -= 18;
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 27)
+			if (++select > 28)
 				select = -1;
 
 			redraw = 1;
