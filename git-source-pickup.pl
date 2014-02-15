@@ -3,7 +3,7 @@
 $project = 'doslib';
 
 print "Ensuring the build tree is clean...\n";
-$x = system("./git-update-all");
+$x = system("./git-update-all-wo-push");
 die unless $x == 0;
 
 if (!open(S,"git --no-pager log --max-count=1 |")) { exit 1; }
