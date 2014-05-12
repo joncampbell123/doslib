@@ -2327,7 +2327,6 @@ int main() {
 				unsigned int b_frame,e_frame_active,e_frame;
 				unsigned int vlines=0,vactlines=0;
 				unsigned char b,bex,hex;
-				unsigned int htime=0;
 				unsigned int j;
 				char tmp[128];
 
@@ -2357,18 +2356,18 @@ int main() {
 								if (!(b&8)) vactlines++;
 								vlines++;
 							}
+							else {
+								e_frame_active = read_8254(0);
+							}
 						}
 						if ((b&8) != (bex&8)) {
 							bex = b;
 							if (!(b&8)) break; /* if going from vsync to active */
-							else e_frame_active = read_8254(0); /* if going from active to retrace */
 						}
 					} while (1);
 					e_frame = read_8254(0);
 					e_frame_active = (e_frame_active - e_frame) & 0xFFFF;
 					b_frame = (b_frame - e_frame) & 0xFFFF; /* remember: timer counts DOWN, 16-bit wide */
-					if (vlines != 0) htime = b_frame / vlines;
-					else htime = b_frame;
 					vga_write("\n");
 
 					if (vactlines != vlines)
@@ -2386,8 +2385,9 @@ int main() {
 						1000.0 / (((double)b_frame * 1000) / T8254_REF_CLOCK_HZ));
 					vga_write(tmp);
 
+					/* FIXME!! Values reported aren't quite right */
 					sprintf(tmp," horizontal refresh rate: %.3fHz\n",
-						1000.0 / ((((double)(b_frame - e_frame_active)) * 1000) / vlines / T8254_REF_CLOCK_HZ));
+						1000.0 / (((double)(b_frame - e_frame_active) * 1000) / vlines / T8254_REF_CLOCK_HZ));
 					vga_write(tmp);
 
 					_sti();
