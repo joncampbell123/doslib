@@ -2324,70 +2324,70 @@ int main() {
 #else
 			write_8254_system_timer(0); /* make sure the timer is in rate generator mode, full counter */
 			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA|VGA_IS_CGA)) {
-				unsigned int b_frame,e_frame_active,e_frame;
-				unsigned int vlines=0,vactlines=0;
-				unsigned char b,bex,hex;
+				unsigned int b_frame,e_retrace,b_vsync,e_frame_active,e_frame;
+				unsigned int vlines=0;
+				unsigned char b,hex;
 				unsigned int j;
 				char tmp[128];
 
 				while (1) {
-					vlines = vactlines = 0;
+					vlines = 0;
 
 					vga_clear();
 					vga_moveto(0,0);
 					vga_write_color(0x7);
-					vga_write("Measuring htotal and vtotal... ");
+					vga_write("Measuring htotal and vtotal...\n");
 
 					_cli();
-					/* wait for vsync to begin */
+					/* wait for vsync to pass */
 					vga_wait_for_vsync();
 					vga_wait_for_vsync_end();
-					b_frame = read_8254(0);
-					bex = 0;
-					hex = 0;
+					/* NTS: we measure the frame vsync to vsync */
+					b_frame = e_frame_active = read_8254(0);
+					/* wait for active picture area first (exit retrace) */
+					do { b = inp(vga_base_3x0 + 0xA);
+					} while (b&1);
+					e_retrace = read_8254(0);
+					hex = b; vlines++; /* count the start of line */
 					do {
 						b = inp(vga_base_3x0 + 0xA);
 						if ((b&1) != (hex&1)) {
 							hex = b;
-							/* NTS: Unfortunately VGA hardware is documented to set bit 1
-							 *      if either horizontal sync OR vertical retrace. for
-							 *      most VGA hardware following spec, vlines == vactlines */
-							if (!(b&1)) { /* start of a line */
-								if (!(b&8)) vactlines++;
-								vlines++;
-							}
-							else {
-								e_frame_active = read_8254(0);
-							}
+							if (!(b&1)) vlines++; /* start of a line */
+							else e_frame_active = read_8254(0); /* end of line, possibly start of retrace */
 						}
-						if ((b&8) != (bex&8)) {
-							bex = b;
-							if (!(b&8)) break; /* if going from vsync to active */
+						if (b&8) {
+							/* we just entered vsync */
+							b_vsync = read_8254(0);
+							break;
 						}
 					} while (1);
+					/* wait for vsync to end */
+					vga_wait_for_vsync_end();
 					e_frame = read_8254(0);
+					/* compute timing */
+					b_vsync = (b_vsync - e_frame) & 0xFFFF;
+					e_retrace = (b_frame - e_retrace) & 0xFFFF;
 					e_frame_active = (e_frame_active - e_frame) & 0xFFFF;
 					b_frame = (b_frame - e_frame) & 0xFFFF; /* remember: timer counts DOWN, 16-bit wide */
-					vga_write("\n");
 
-					if (vactlines != vlines)
-						sprintf(tmp," vertical lines: %u active / %u total (!)\n",vactlines,vlines);
-					else
-						sprintf(tmp," vertical lines: %u active\n",vactlines);
+					sprintf(tmp," vertical lines: %u active\n",vlines);
 					vga_write(tmp);
 
-					sprintf(tmp," vertical refresh took %.3f ms total, %.3f ms retrace\n",
+					sprintf(tmp," vertical refresh: %.3fms total\n vertical retrace: %.3fms (%.3fms top + %.3fms bottom)\n vertical sync pulse: %.3fms\n",
 						((double)b_frame * 1000) / T8254_REF_CLOCK_HZ,
-						((double)e_frame_active * 1000) / T8254_REF_CLOCK_HZ);
+						((double)((unsigned long)e_retrace + (unsigned long)e_frame_active) * 1000) / T8254_REF_CLOCK_HZ,
+						((double)e_retrace * 1000) / T8254_REF_CLOCK_HZ,
+						((double)e_frame_active * 1000) / T8254_REF_CLOCK_HZ,
+						((double)b_vsync * 1000) / T8254_REF_CLOCK_HZ);
 					vga_write(tmp);
 
 					sprintf(tmp," vertical refresh rate: %.3fHz\n",
 						1000.0 / (((double)b_frame * 1000) / T8254_REF_CLOCK_HZ));
 					vga_write(tmp);
 
-					/* FIXME!! Values reported aren't quite right */
-					sprintf(tmp," horizontal refresh rate: %.3fHz\n",
-						1000.0 / (((double)(b_frame - e_frame_active) * 1000) / vlines / T8254_REF_CLOCK_HZ));
+					sprintf(tmp," horizontal refresh rate: %.6fKHz\n",
+						1.0 / (((double)(b_frame - e_frame_active - e_retrace) * 1000) / vlines / T8254_REF_CLOCK_HZ));
 					vga_write(tmp);
 
 					_sti();
