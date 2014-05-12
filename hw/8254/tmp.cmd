@@ -1,1 +1,0 @@
--fr=nul -fo=win38631/.obj -i=.. -i../.. -e=2 -zq -zw -mf -d0 -s -oilrtfm -bt=windows -wx -fp3 -3r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=31 -dMSDOS=1 -dWIN386=1 -dTARGET86=386 -DMMODE=f -q -i="/usr/watcom/h/win" -dWIN386=1 8254.c

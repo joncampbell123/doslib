@@ -1,1 +1,0 @@
-option quiet system dos4g file dos386f/test.obj library ../../hw/flatreal/dos386f/flatreal.lib library ../../hw/dos/dos386f/dos.lib library ../../hw/cpu/dos386f/cpu.lib library ../../windows/ntvdm/dos386f/ntvdmlib.lib library ../../hw/dos/dos386f/dos.lib library ../../hw/cpu/dos386f/cpu.lib   name dos386f/test.exe
