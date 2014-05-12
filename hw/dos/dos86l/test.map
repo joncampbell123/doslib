@@ -1,0 +1,428 @@
+Open Watcom Linker Version 1.9
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       14/05/11 21:49:52
+Executable Image: dos86l/test.exe
+creating a DOS executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+DGROUP                          056d:0000            00001450
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+test_TEXT              CODE           AUTO           0000:0000       000003e3
+dos_TEXT               CODE           AUTO           0000:03f0       000013ca
+_TEXT                  CODE           AUTO           0000:17c0       00002df6
+dosbox_TEXT            CODE           AUTO           0000:45c0       000000bc
+cpu_TEXT               CODE           AUTO           0000:4680       000006b3
+text                   CODE           AUTO           0000:4d33       00000778
+ntvdmlib_TEXT          CODE           AUTO           0000:54b0       00000211
+FAR_DATA               FAR_DATA       AUTO           056c:0001       00000000
+_NULL                  BEGDATA        DGROUP         056d:0000       00000020
+_AFTERNULL             BEGDATA        DGROUP         056f:0000       00000002
+CONST                  DATA           DGROUP         056f:0002       00000798
+CONST2                 DATA           DGROUP         05e8:000a       00000000
+_DATA                  DATA           DGROUP         05e9:0000       00000352
+XIB                    DATA           DGROUP         061e:0002       00000000
+XI                     DATA           DGROUP         061e:0002       00000012
+XIE                    DATA           DGROUP         061f:0004       00000000
+YIB                    DATA           DGROUP         061f:0004       00000000
+YI                     DATA           DGROUP         061f:0004       00000006
+YIE                    DATA           DGROUP         061f:000a       00000000
+STRINGS                DATA           DGROUP         061f:000a       00000000
+DATA                   DATA           DGROUP         061f:000a       00000000
+_BSS                   BSS            DGROUP         061f:000a       00000126
+STACK                  STACK          DGROUP         0632:0000       00000800
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Module: dos86l/test.obj(/usr/src/doslib/hw/dos/test.c)
+0000:0000      main_
+Module: ../../hw/dos/dos86l/dos.lib(/usr/src/doslib/hw/dos/dos.c)
+056d:07c0*     _megaem_info
+056d:07c6+     _lib_dos_option
+056d:07c8+     _dos_LOL
+056d:07cc      _dos_flavor
+056d:07ce      _dos_version
+056d:07d0      _freedos_kernel_version
+056d:07d4      _dos_version_method
+056d:07d8      _windows_version_method
+056d:07dc+     _ntvdm_dosntast_tried
+056d:07de      _ntvdm_dosntast_handle
+056d:07e0      _freedos_kernel_version_str
+056d:07e4      _windows_emulation_comment_str
+056d:07e8      _windows_emulation
+056d:07ea      _windows_version
+056d:07ec      _windows_mode
+056d:07ed+     _windows_init
+056d:07ee+     _vcpi_probed
+056d:07ef+     _vcpi_present
+056d:07f0      _windows_mode_strs
+056d:0808+     _dpmi_flags
+056d:080a+     _dpmi_version
+056d:080c+     _dpmi_init
+056d:0810      _dpmi_entry_point
+056d:0814      _dpmi_present
+056d:0815+     _dpmi_processor_type
+056d:0816+     _dpmi_private_data_length_paragraphs
+056d:0818      _dpmi_private_data_segment
+056d:081a      _dpmi_entered
+056d:0820      _dpmi_rm_entry
+056d:0828      _dpmi_pm_entry
+0000:03f0*     _dos_xread_
+0000:0436*     _dos_xwrite_
+0000:047c      probe_dpmi_
+0000:0532      probe_dos_
+0000:063c      detect_windows_
+0000:088a*     dos_list_of_lists_
+0000:08c4*     dos_mcb_get_psp_
+0000:08e2+     mcb_name_is_junk_
+0000:090e+     dos_mcb_first_segment_
+0000:092c*     mcb_filter_name_
+0000:09e4+     dos_mcb_next_
+0000:0a98*     dos_mcb_first_
+0000:0ae4*     dos_parse_psp_
+0000:0b56+     dos_device_next_
+0000:0c30*     dos_device_first_
+0000:0ce0*     dos_linear_to_phys_vcpi_
+0000:0d3e      probe_vcpi_
+0000:0dc4*     dpmi_getexhandler_
+0000:0e00*     dpmi_setexhandler_
+0000:0e3e+     dpmi_private_alloc_
+0000:0e9e      dpmi_enter_
+0000:0f4e*     gravis_mega_em_detect_
+0000:0fd0*     gravis_sbos_detect_
+0000:1038*     gravis_ultramid_detect_
+0000:10a0*     dos_close_awareness_cancel_
+0000:10ba*     dos_close_awareness_ack_
+0000:10d4*     dos_close_awareness_enable_
+0000:1116*     dos_close_awareness_query_
+0000:114e*     dos_close_awareness_available_
+0000:1162*     dos_vm_yield_
+0000:117a      detect_virtualbox_emu_
+0000:12b8*     dpmi_lin2fmemcpy_
+0000:132e*     dpmi_lin2fmemcpy_init_
+0000:1354      windows_emulation_str_
+0000:136e+     ntvdm_dosntast_detect_
+0000:13d2+     ntvdm_dosntast_load_vdd_
+0000:14f4      ntvdm_dosntast_waveOutGetNumDevs_
+0000:151e      ntvdm_dosntast_waveOutGetDevCaps_
+0000:158a      ntvdm_dosntast_MessageBox_
+0000:15e0+     ntvdm_dosntast_init_
+0000:16a4*     ntvdm_dosntast_unload_
+0000:16e6      ntvdm_dosntast_GetTickCount_
+0000:1734      ntvdm_dosntast_getversionex_
+0000:1796      dos_flavor_str_
+056d:0845      _virtualbox_version_str
+056d:0886      _ntvdm_dosntast_io_base
+056d:0b2a      _dpmi_pm_es
+056d:0b2c      _dpmi_pm_ds
+056d:0b2e      _dpmi_pm_cs
+056d:0b30      _dpmi_pm_ss
+056d:0b32      _vcpi_minor_version
+056d:0b33      _vcpi_major_version
+Module: /usr/watcom/lib286/dos/clibl.lib(printf.c)
+0000:17c0      printf_
+Module: ../../hw/dos/dos86l/dos.lib(/usr/src/doslib/hw/dos/dosbox.c)
+0000:45c0      detect_dosbox_emu_
+Module: /usr/watcom/lib286/dos/clibl.lib(cstart)
+056d:0000*     __nullarea
+056d:0896*     __ovlflag
+056d:0897*     __intno
+056d:0898*     __ovlvec
+0000:17f0      _cstart_
+0000:18c3*     _Not_Enough_Memory_
+0000:19f7      __exit_
+0000:1a16      __do_exit_with_msg__
+0000:1a74      __GETDS
+Module: /usr/watcom/lib286/dos/clibl.lib(cmodel)
+0000:1a7e      _big_code_
+0000:1a7e*     CodeModelMismatch
+Module: /usr/watcom/lib286/dos/clibl.lib(intx086.c)
+0000:1a7e+     int86x_
+0000:1b17      int86_
+Module: ../../hw/cpu/dos86l/cpu.lib(/usr/src/doslib/hw/cpu/cpu.c)
+056d:08a0+     _cpu_sse_usable
+056d:08a1+     _cpu_sse_usable_probed
+056d:08a2+     _cpu_sse_usable_can_turn_on
+056d:08a3+     _cpu_sse_usable_can_turn_off
+056d:08a4+     _cpu_sse_unusable_reason
+056d:08a8+     _cpu_sse_usable_detection_method
+056d:08ac+     _cpu_cpuid_ext_info
+056d:08b0      _cpu_cpuid_vendor
+056d:08bd      _cpu_serial
+056d:08cd      _cpu_cpuid_features
+056d:08dd      _cpu_basic_level
+056d:08e0      _cpu_cpuid_max
+056d:08e4      _cpu_flags
+056d:08e6      _cpu_tmp1
+056d:08e8*     _cpu_basic_level_str
+0000:4696+     cpu_extended_cpuid_info_free_
+0000:46c0*     cpu_extended_cpuid_probe_
+0000:4a52      cpu_probe_
+0000:4a68*     cpu_check_sse_is_usable_
+0000:4c28*     cpu_sse_disable_
+0000:4cae*     cpu_sse_enable_
+Module: ../../hw/dos/dos86l/dos.lib(dosasm.asm)
+0000:4d48      _dpmi_enter_core
+0000:4f19      _dpmi_lin2fmemcpy_32
+0000:5039      _dpmi_lin2fmemcpy_16
+Module: ../../windows/ntvdm/dos86l/ntvdmlib.lib(/usr/src/doslib/windows/ntvdm/ntvdmlib.c)
+0000:54b0*     i_am_ntvdm_client_
+0000:54fe*     ntvdm_RM_ERR_str_
+0000:5530      ntvdm_UnregisterModule_
+0000:554e      ntvdm_RegisterModule_
+Module: /usr/watcom/lib286/dos/clibl.lib(iob.c)
+056d:0916      ___iob
+056d:0a7e*     __fmode
+056d:0b34      ___OpenStreams
+056d:0b38      ___ClosedStreams
+Module: /usr/watcom/lib286/dos/clibl.lib(fprtf.c)
+0000:1b5e      __fprtf_
+Module: /usr/watcom/lib286/dos/clibl.lib(xmsg.c)
+0000:1c29*     __exit_with_msg_
+0000:1c2e      __fatal_runtime_error_
+Module: /usr/watcom/lib286/dos/clibl.lib(cmain086.c)
+0000:1c4c      __CMain
+Module: /usr/watcom/lib286/dos/clibl.lib(initrtns.c)
+0000:1cb2      __InitRtns
+0000:1cb2*     __FInitRtns
+0000:1d0d      __FiniRtns
+0000:1d0d*     __FFiniRtns
+Module: /usr/watcom/lib286/dos/clibl.lib(crwdata)
+056d:0a80      __curbrk
+056d:0a88      __STACKLOW
+056d:0a8a      __STACKTOP
+056d:0a8c      __cbyte
+056d:0a8e      __child
+056d:0a90      __no87
+056d:0a9e      ___FPE_handler
+056d:0a82      __psp
+056d:0a92      __get_ovl_stack
+056d:0a96      __restore_ovl_stack
+056d:0a9a      __close_ovl_file
+056d:0aa2      __LpCmdLine
+056d:0aa6      __LpPgmName
+056d:0a84      __osmajor
+056d:0a85      __osminor
+056d:0a86      __osmode
+056d:0a87      __HShift
+Module: /usr/watcom/lib286/dos/clibl.lib(uselfn.c)
+056d:0aaa      ___uselfn
+Module: /usr/watcom/lib286/dos/clibl.lib(dosseg)
+0000:1d72      __DOSseg__
+Module: /usr/watcom/lib286/dos/clibl.lib(intr.c)
+0000:1d73      intr_
+Module: /usr/watcom/lib286/dos/clibl.lib(segread.c)
+0000:1d87      segread_
+Module: /usr/watcom/lib286/dos/clibl.lib(ffree.c)
+0000:1da7      _ffree_
+0000:1da7      free_
+Module: /usr/watcom/lib286/dos/clibl.lib(fmalloc.c)
+0000:1ded      _fmalloc_
+0000:1ded      malloc_
+056d:0aac+     ___fheap
+056d:0aae      ___fheapRover
+056d:0ab0      ___LargestSizeB4Rover
+Module: ../../hw/cpu/dos86l/cpu.lib(cpuasm.asm)
+0000:515f      cpu_basic_probe_
+0000:526a*     _inpd
+0000:527b*     _outpd
+0000:5289*     cpu_disable_serial_
+0000:52a6*     cpu_ask_serial_
+0000:52e2*     reset_8086_entry_
+0000:52e8*     bios_reset_cb_e_
+0000:5316*     cpu_rdtsc_
+0000:532c*     cpu_rdtsc_write_
+0000:5356      cpu_cpuid_
+0000:538e      _cpu_dpmi_win9x_sse_test
+Module: /usr/watcom/lib286/dos/clibl.lib(d_getvec.c)
+0000:1efa      _dos_getvect_
+Module: /usr/watcom/lib286/dos/clibl.lib(d_setvec.c)
+0000:1f05      _dos_setvect_
+Module: /usr/watcom/lib286/dos/clibl.lib(initfile.c)
+0000:1f12      __InitFiles_
+Module: /usr/watcom/lib286/dos/clibl.lib(ioexit.c)
+0000:2060*     fcloseall_
+0000:2067      __full_io_exit_
+Module: /usr/watcom/lib286/dos/clibl.lib(fputc.c)
+0000:2071      fputc_
+Module: /usr/watcom/lib286/dos/clibl.lib(ioalloc.c)
+0000:2141      __ioalloc_
+Module: /usr/watcom/lib286/dos/clibl.lib(prtf.c)
+0000:21db      __prtf_
+Module: /usr/watcom/lib286/dos/clibl.lib(flush.c)
+0000:2fa9      __flush_
+Module: /usr/watcom/lib286/dos/clibl.lib(enterdb.c)
+0000:30dc      __EnterWVIDEO_
+056d:0ab2+     ___WD_Present
+Module: /usr/watcom/lib286/dos/clibl.lib(___argc.c)
+056d:0b3c      ____Argv
+056d:0b40      ____Argc
+Module: /usr/watcom/lib286/dos/clibl.lib(amblksiz.c)
+056d:0ab4      __amblksiz
+Module: /usr/watcom/lib286/dos/clibl.lib(exit.c)
+0000:3100+     __null_int23_exit_
+0000:3101      exit_
+0000:3132*     _exit_
+056d:0ab6+     ___int23_exit
+056d:0aba+     ___FPE_handler_exit
+Module: /usr/watcom/lib286/dos/clibl.lib(sgdef086)
+056d:0b12      __Start_XI
+056d:0b24      __End_XI
+056d:0b24      __Start_YI
+056d:0b2a      __End_YI
+Module: /usr/watcom/lib286/dos/clibl.lib(dointr)
+0000:314c      _DoINTR_
+Module: /usr/watcom/lib286/dos/clibl.lib(nmalloc.c)
+0000:34c5      _nmalloc_
+056d:0abe      ___nheapbeg
+056d:0ac0      ___MiniHeapRover
+056d:0ac2      ___LargestSizeB4MiniHeapRover
+Module: /usr/watcom/lib286/dos/clibl.lib(mem.c)
+0000:35a0      __MemAllocator
+0000:366a      __MemFree
+Module: /usr/watcom/lib286/dos/clibl.lib(nfree.c)
+0000:37c7      _nfree_
+056d:0b42+     ___MiniHeapFreeRover
+Module: /usr/watcom/lib286/dos/clibl.lib(hpgrw086.c)
+0000:38c2      __CMain_nheapgrow_
+Module: /usr/watcom/lib286/dos/clibl.lib(growseg.c)
+0000:38c7      __GrowSeg_
+Module: /usr/watcom/lib286/dos/clibl.lib(allocseg.c)
+0000:39b9      __AllocSeg_
+Module: /usr/watcom/lib286/dos/clibl.lib(fmemneed.c)
+0000:3a50      __fmemneed_
+Module: /usr/watcom/lib286/dos/clibl.lib(fclose.c)
+0000:3a53+     __doclose_
+0000:3b04      __shutdown_stream_
+0000:3b1e*     fclose_
+056d:0b44+     ___RmTmpFileFn
+Module: /usr/watcom/lib286/dos/clibl.lib(freefp.c)
+0000:3b69      __freefp_
+0000:3be4      __purgefp_
+Module: /usr/watcom/lib286/dos/clibl.lib(seterrno.c)
+0000:3c25      __set_errno_
+0000:3c39*     __set_EDOM_
+0000:3c4b*     __set_ERANGE_
+0000:3c5d*     __set_EINVAL_
+0000:3c72      __set_doserrno_
+Module: /usr/watcom/lib286/dos/clibl.lib(chktty.c)
+0000:3c7e      __chktty_
+Module: /usr/watcom/lib286/dos/clibl.lib(wctomb.c)
+0000:3ca9      wctomb_
+Module: /usr/watcom/lib286/dos/clibl.lib(itoa.c)
+0000:3cd2+     utoa_
+0000:3d2f      itoa_
+Module: /usr/watcom/lib286/dos/clibl.lib(i4m)
+0000:3d54*     __I4M
+0000:3d54      __U4M
+Module: /usr/watcom/lib286/dos/clibl.lib(strupr.c)
+0000:3d6c      strupr_
+Module: /usr/watcom/lib286/dos/clibl.lib(noefgfmt.c)
+056d:0ac4      ___EFG_printf
+056d:0ac8*     ___EFG_scanf
+Module: /usr/watcom/lib286/dos/clibl.lib(mbisdbcs.c)
+056d:0b48      ___IsDBCS
+Module: /usr/watcom/lib286/dos/clibl.lib(mbislead.c)
+0000:3da1*     _ismbblead_
+056d:0b4a      ___MBCSIsTable
+Module: /usr/watcom/lib286/dos/clibl.lib(lltoa.c)
+0000:3dbd      ulltoa_
+0000:3ea2*     lltoa_
+Module: /usr/watcom/lib286/dos/clibl.lib(ltoa.c)
+0000:3f04      ultoa_
+0000:3f73*     ltoa_
+Module: /usr/watcom/lib286/dos/clibl.lib(__lseek.c)
+0000:3fa2      __lseek_
+Module: /usr/watcom/lib286/dos/clibl.lib(qwrit.c)
+0000:3fdc      __qwrite_
+Module: /usr/watcom/lib286/dos/clibl.lib(fsync.c)
+0000:4039      fsync_
+Module: /usr/watcom/lib286/dos/clibl.lib(nmemneed.c)
+0000:403e      __nmemneed_
+Module: /usr/watcom/lib286/dos/clibl.lib(grownear.c)
+0000:40c6      __LastFree_
+0000:4140      __ExpandDGROUP_
+Module: /usr/watcom/lib286/dos/clibl.lib(heapgrow.c)
+0000:4251*     _heapgrow_
+0000:4251*     _fheapgrow_
+0000:4252      _nheapgrow_
+Module: /usr/watcom/lib286/dos/clibl.lib(heapen.c)
+0000:42cc*     _heapenable_
+056d:0acc      ___heap_enabled
+Module: /usr/watcom/lib286/dos/clibl.lib(_clse.c)
+0000:42dd      __close_
+Module: /usr/watcom/lib286/dos/clibl.lib(errno.c)
+0000:4310      __get_errno_ptr_
+0000:4317      __get_doserrno_ptr_
+056d:0c4c+     _errno
+056d:0c4e+     __doserrno
+Module: /usr/watcom/lib286/dos/clibl.lib(isatt.c)
+0000:431e      isatty_
+Module: /usr/watcom/lib286/dos/clibl.lib(alphabet.c)
+056d:0794      ___Alphabet
+Module: /usr/watcom/lib286/dos/clibl.lib(mbinit.c)
+0000:4378      __mbinit_
+056d:0ace+     ___MBCodePage
+Module: /usr/watcom/lib286/dos/clibl.lib(dosret.c)
+0000:4453*     _dosretax_
+0000:4458*     _dosret0_
+0000:445f      __set_errno_dos_
+0000:44bd*     __set_errno_dos_reterr_
+Module: /usr/watcom/lib286/dos/clibl.lib(iomode.c)
+0000:44c8      __GetIOMode_
+0000:44ed      __SetIOMode_nogrow_
+056d:0ae4+     ___NFiles
+056d:0ae6+     ___init_mode
+056d:0b0e+     ___io_mode
+Module: /usr/watcom/lib286/dos/clibl.lib(filedos.c)
+0000:4510*     _dos_close_
+0000:451e      _dos_commit_
+Module: /usr/watcom/lib286/dos/clibl.lib(sbrk.c)
+0000:452e*     sbrk_
+0000:453e      __brk_
+Module: /usr/watcom/lib286/dos/clibl.lib(doserror)
+0000:45a8      __doserror_
+
+
+                        +--------------------+
+                        |   Libraries Used   |
+                        +--------------------+
+
+../../hw/dos/dos86l/dos.lib
+../../hw/cpu/dos86l/cpu.lib
+../../windows/ntvdm/dos86l/ntvdmlib.lib
+/usr/watcom/lib286/dos/clibl.lib
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  0800 (2048.)
+Memory size:  6b20 (27424.)
+Entry point address: 0000:17f0
+Link time: 00:00.00

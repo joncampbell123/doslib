@@ -1,0 +1,550 @@
+Open Watcom Linker Version 1.9
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       14/05/11 21:49:57
+Warning! W1080: file ../../hw/cpu/win38631/cpu.lib is a 16-bit object file
+Executable Image: win38631/cr3.exe
+creating a Windows 32-bit executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+DGROUP                          00005cd0             00003f00
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+text                   CODE           AUTO           00000000        00000117
+BEGTEXT                CODE           AUTO           00000118        00000006
+_TEXT                  CODE           AUTO           00000120        00005bb0
+CONST                  DATA           DGROUP         00005cd0        00000218
+CONST2                 DATA           DGROUP         00005ee8        00000000
+_DATA                  DATA           DGROUP         00005ef0        0000035c
+XIB                    DATA           DGROUP         0000624c        00000000
+XI                     DATA           DGROUP         0000624c        0000000c
+XIE                    DATA           DGROUP         00006258        00000000
+YIB                    DATA           DGROUP         00006258        00000000
+YI                     DATA           DGROUP         00006258        00000000
+YIE                    DATA           DGROUP         00006258        00000000
+DATA                   DATA           DGROUP         00006258        00000000
+_BSS                   BSS            DGROUP         00006258        00001974
+STACK                  STACK          DGROUP         00007bd0        00002000
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Module: win38631/cr3.obj(/usr/src/doslib/hw/dos/cr3.c)
+00000120       WINMAIN
+00000144+      main_
+Module: ../../hw/dos/win38631/dos.lib(/usr/src/doslib/hw/dos/winfcon.c)
+00000190*      _win_hwnd_
+00000198+      _win_kb_insert_
+00000208+      _win_sigint_
+00000250+      _win_sigint_post_
+00000260+      _WIN_WINDOWPROC
+00000728+      _win_kbhit_
+00000740+      _win_getch_
+0000077c+      _win_kb_read_
+0000079c+      _win_kb_write_
+000007b4*      _win_read_
+000007e0*      _win_write_
+0000080c*      _win_isatty_
+00000824+      _win_pump_wait_
+00000884+      _win_pump_
+00000900+      _win_redraw_line_row_
+000009f0+      _win_redraw_line_row_partial_
+00000afc+      _win_scrollup_
+00000bd0*      _win_newline_
+00000bf4+      _win_update_cursor_
+00000c38+      _win_putc_
+00000c98       _win_printf_
+00000d18*      _gdi_pause_
+00000d1c       _WIN_MAIN_CON_ENTRY
+00007014+      __win_hInstance
+Module: ../../hw/dos/win38631/dos.lib(/usr/src/doslib/hw/dos/dos.c)
+00005ef0*      _megaem_info
+00005ef6*      _lib_dos_option
+00005efc+      _dos_LOL
+00005f02*      _dos_flavor
+00005f04+      _dos_version
+00005f08*      _freedos_kernel_version
+00005f0c+      _dos_version_method
+00005f10+      _windows_version_method
+00005f14*      _dpmi_no_0301h
+00005f18*      _freedos_kernel_version_str
+00005f1c+      _windows_emulation_comment_str
+00005f20+      _windows_emulation
+00005f22+      _windows_version
+00005f24+      _windows_mode
+00005f25+      _windows_init
+00005f26+      _vcpi_probed
+00005f27+      _vcpi_present
+000010c0*      dpmi_linear_lock_
+00001114*      dpmi_linear_unlock_
+00001168+      dpmi_phys_addr_map_
+000011c0+      dpmi_phys_addr_free_
+000011ec*      dpmi_alloc_dos_
+00001270*      dpmi_free_dos_
+00001298*      _dos_xread_
+000012e0*      _dos_xwrite_
+00001328*      probe_dpmi_
+0000132c       probe_dos_
+000013d0*      win32_probe_for_wine_
+00001424       detect_windows_
+0000152c*      dos_list_of_lists_
+00001530*      dos_mcb_get_psp_
+00001550+      mcb_name_is_junk_
+00001580*      dos_mcb_first_segment_
+00001594*      detect_virtualbox_emu_
+000015ac*      mcb_filter_name_
+00001644+      dos_mcb_next_
+000016f0*      dos_mcb_first_
+00001730*      dos_parse_psp_
+000017c0+      dos_device_next_
+000018d0*      dos_device_first_
+00001990+      dos_linear_to_phys_vcpi_
+000019cc*      dos_ltp_probe_
+00001a4c*      dos_linear_to_phys_
+00001d24*      dpmi_linear_alloc_
+00001d88*      dpmi_linear_free_
+00001dcc*      probe_vcpi_
+00001dec*      windows_emulation_str_
+00001e08*      dos_flavor_str_
+00001e2c*      win386_alt_winnt_MapAliasToFlat_
+00001e40       win386_help_MapAliasToFlat_
+00005f28*      _windows_mode_strs
+00005f40+      _dos_ltp_info_init
+00005f41*      _virtualbox_version_str
+00007018+      _dos_ltp_info
+00007028*      _vcpi_minor_version
+00007029*      _vcpi_major_version
+Module: /usr/watcom/lib386/win/clib3r.lib(cstrtw32.asm)
+0000011a*      ___begtext
+00005f82       _LocalPtr
+00005f90*      ___A000
+00005f92*      ___B000
+00005f94*      ___B800
+00005f96*      ___C000
+00005f98*      ___D000
+00005f9a*      ___E000
+00005f9c*      ___F000
+00005f9e       __CodeSelectorBaseAddr
+00005fa4       __DataSelectorBaseAddr
+00005faa       __32BitCallBackAddr
+00005fb0*      __DLLEntryAddr
+00005fb6*      __WEPAddr
+00005fbc       __16BitCallBackAddr
+00005fc0*      Invoke16BitFunctionAddr
+00005fc6*      __INT21ADDR
+00005fcc       __WIN16THUNK1ADDR
+00005fd2       __WIN16THUNK2ADDR
+00005fd8*      __WIN16THUNK3ADDR
+00005fde*      __WIN16THUNK4ADDR
+00005fe4       __WIN16THUNK5ADDR
+00005fea*      __WIN16THUNK6ADDR
+00005ff0*      __Call16Addr
+0000601a*      __pid
+0000601c*      __wincmdptr
+000060b2       ___Is_DLL
+00005ff6*      __LpCmdLine
+00005ffa*      __LpPgmName
+00005ffe       __STACKLOW
+00006002*      __STACKTOP
+00006006*      __ASTACKSIZ
+0000600a*      __ASTACKPTR
+0000600e       __curbrk
+00006012*      __cbyte
+00006016       __osmajor
+00006017*      __osminor
+00006018*      __Extender
+00005f8e*      __no87
+000060b3*      ___FPE_handler
+00006019*      __init_387_emulator
+00001e54*      _cstart_
+00001e54       _wstart_
+00001e54*      _wstart2_
+00001e54*      __DLLstart_
+00001fd3       __exit_
+0000201e*      __GETDS
+00002027*      __Int21
+00002027       __Int21_
+Module: /usr/watcom/lib386/win/win386.lib(win1335)
+00002038       MESSAGEBEEP
+Module: /usr/watcom/lib386/win/clib3r.lib(signl.c)
+00002060+      __sigabort_
+00002070*      raise_
+000020b0       signal_
+Module: /usr/watcom/lib386/win/clib3r.lib(setjmp)
+00002104       _setjmp_
+00002133       longjmp_
+Module: /usr/watcom/lib386/win/win386.lib(win308)
+00002198       GETWINDOWWORD
+Module: /usr/watcom/lib386/win/clib3r.lib(setwl.c)
+000021c0       _COVER_GETWINDOWLONG
+00002240       _COVER_SETWINDOWLONG
+000060b8+      _WndProcList
+Module: /usr/watcom/lib386/win/win386.lib(win86)
+000022c6       DEFWINDOWPROC
+Module: /usr/watcom/lib386/win/win386.lib(win271)
+000022f2       GETSYSTEMMETRICS
+Module: /usr/watcom/lib386/win/win386.lib(win95)
+00002314       DESTROYWINDOW
+Module: /usr/watcom/lib386/win/win386.lib(win1324)
+00002336       HIDECARET
+Module: /usr/watcom/lib386/win/win386.lib(win1305)
+00002356       DESTROYCARET
+Module: /usr/watcom/lib386/win/win386.lib(win1341)
+00002370       POSTQUITMESSAGE
+Module: /usr/watcom/lib386/win/win386.lib(win368)
+00002390       LOADCURSOR
+Module: /usr/watcom/lib386/win/win386.lib(win481)
+000023b0       SETCURSOR
+Module: /usr/watcom/lib386/win/win386.lib(win1303)
+000023d2       CREATECARET
+Module: /usr/watcom/lib386/win/win386.lib(win1354)
+000023fe       SETCARETPOS
+Module: /usr/watcom/lib386/win/win386.lib(win1366)
+00002422       SHOWCARET
+Module: /usr/watcom/lib386/win/win386.lib(win289)
+00002442       GETUPDATERECT
+Module: /usr/watcom/lib386/win/win386.lib(win263)
+00002462       GETSTOCKOBJECT
+Module: /usr/watcom/lib386/win/win386.lib(win459)
+00002484       SELECTOBJECT
+Module: /usr/watcom/lib386/win/win386.lib(win437)
+000024aa       RECTANGLE
+Module: /usr/watcom/lib386/win/win386.lib(win18)
+000024dc       BEGINPAINT
+Module: /usr/watcom/lib386/win/win386.lib(win470)
+000024fc       SETBKMODE
+Module: /usr/watcom/lib386/win/win386.lib(win469)
+00002522       SETBKCOLOR
+Module: /usr/watcom/lib386/win/win386.lib(win512)
+00002546       SETTEXTCOLOR
+Module: /usr/watcom/lib386/win/win386.lib(win550)
+0000256a       TEXTOUT
+Module: /usr/watcom/lib386/win/win386.lib(win1310)
+0000258a       ENDPAINT
+Module: /usr/watcom/lib386/win/clib3r.lib(read.c)
+00002750       read_
+Module: /usr/watcom/lib386/win/clib3r.lib(write.c)
+00002b50       write_
+Module: /usr/watcom/lib386/win/clib3r.lib(isatt.c)
+00002bc0       isatty_
+Module: /usr/watcom/lib386/win/win386.lib(win226)
+00002bfe       GETMESSAGE
+Module: /usr/watcom/lib386/win/win386.lib(win555)
+00002c2a       TRANSLATEMESSAGE
+Module: /usr/watcom/lib386/win/win386.lib(win100)
+00002c4a       DISPATCHMESSAGE
+Module: /usr/watcom/lib386/win/win386.lib(win420)
+00002c68       PEEKMESSAGE
+Module: /usr/watcom/lib386/win/win386.lib(win427)
+00002c94       POSTMESSAGE
+Module: /usr/watcom/lib386/win/win386.lib(win190)
+00002cc2       GETDC
+Module: /usr/watcom/lib386/win/win386.lib(win444)
+00002ce4       RELEASEDC
+Module: /usr/watcom/lib386/win/win386.lib(win19)
+00002d0a       BITBLT
+Module: /usr/watcom/lib386/win/clib3r.lib(memmove.c)
+00002d30       memmove_
+Module: /usr/watcom/lib386/win/clib3r.lib(memset.c)
+00002d90       memset_
+Module: /usr/watcom/lib386/win/clib3r.lib(snprintf.c)
+00002df0       vsnprintf_
+00002e60       snprintf_
+Module: /usr/watcom/lib386/win/clib3r.lib(regclass.c)
+00002e90       _COVER_REGISTERCLASS
+Module: /usr/watcom/lib386/win/win386.lib(win399)
+00002eb6       MESSAGEBOX
+Module: /usr/watcom/lib386/win/win386.lib(win232)
+00002ed6       GETMODULEFILENAME
+Module: /usr/watcom/lib386/win/win386.lib(win78)
+00002ef6       CREATEWINDOW
+Module: /usr/watcom/lib386/win/win386.lib(win534)
+00002f16       SETWINDOWWORD
+Module: /usr/watcom/lib386/win/win386.lib(win59)
+00002f40       CREATEFONT
+Module: /usr/watcom/lib386/win/win386.lib(win193)
+00002f60       GETDESKTOPWINDOW
+Module: /usr/watcom/lib386/win/win386.lib(win170)
+00002f7c       GETCHARWIDTH
+Module: /usr/watcom/lib386/win/win386.lib(win536)
+00002f9c       SHOWWINDOW
+Module: /usr/watcom/lib386/win/win386.lib(win1373)
+00002fc2       UPDATEWINDOW
+Module: /usr/watcom/lib386/win/win386.lib(win531)
+00002fe2       SETWINDOWPOS
+Module: /usr/watcom/lib386/win/win386.lib(win360)
+00003002       ISWINDOW
+Module: /usr/watcom/lib386/win/win386.lib(win91)
+00003024       DELETEOBJECT
+Module: /usr/watcom/lib386/win/win386.lib(win291)
+00003046       GETVERSION
+Module: /usr/watcom/lib386/win/win386.lib(win370)
+00003060       LOADLIBRARY
+Module: /usr/watcom/lib386/win/win386.lib(win252)
+0000308c       GETPROCADDRESS
+Module: /usr/watcom/lib386/win/win386.lib(win1313)
+000030aa       FREELIBRARY
+Module: /usr/watcom/lib386/win/win386.lib(win309)
+000030ca       GETWINFLAGS
+Module: ../../hw/cpu/win38631/cpu.lib(/usr/src/doslib/hw/cpu/cpu.c)
+000060bc+      _cpu_sse_usable
+000060bd+      _cpu_sse_usable_probed
+000060be+      _cpu_sse_usable_can_turn_on
+000060bf+      _cpu_sse_usable_can_turn_off
+000060c0+      _cpu_sse_unusable_reason
+000060c4+      _cpu_sse_usable_detection_method
+000060c8+      _cpu_cpuid_ext_info
+00003100*      cpu_extended_cpuid_info_free_
+00003118*      cpu_extended_cpuid_probe_
+00003440       cpu_probe_
+0000345c*      cpu_check_sse_is_usable_
+000034ec*      cpu_sse_disable_
+00003508*      cpu_sse_enable_
+000060cc       _cpu_cpuid_vendor
+000060d9       _cpu_serial
+000060e9       _cpu_cpuid_features
+000060f9       _cpu_basic_level
+000060fc       _cpu_cpuid_max
+00006100       _cpu_flags
+00006102       _cpu_tmp1
+00006104*      _cpu_basic_level_str
+Module: /usr/watcom/lib386/win/clib3r.lib(i8s)
+00003524*      __U8RS
+0000353e*      __I8RS
+00003559*      __I8LS
+00003559       __U8LS
+Module: /usr/watcom/lib386/win/clib3r.lib(mapa2f.c)
+00003580       MapAliasToFlat_
+Module: /usr/watcom/lib386/win/clib3r.lib(dosseg)
+00001234       __DOSseg__
+Module: /usr/watcom/lib386/win/clib3r.lib(wep.c)
+00003610       WEP
+Module: /usr/watcom/lib386/win/clib3r.lib(initrtns.c)
+00003630       __InitRtns
+00003680       __FiniRtns
+Module: /usr/watcom/lib386/win/clib3r.lib(exit.c)
+000036d3       exit_
+00003700       _exit_
+Module: /usr/watcom/lib386/win/clib3r.lib(sigtab.c)
+00006120       __SignalTable
+Module: /usr/watcom/lib386/win/clib3r.lib(abort.c)
+00003725*      abort_
+00003737+      __terminate_
+00006154       ___abort
+Module: /usr/watcom/lib386/win/clib3r.lib(seterrno.c)
+00003749       __set_errno_
+00003755*      __set_EDOM_
+00003761*      __set_ERANGE_
+0000376d*      __set_EINVAL_
+0000377e       __set_doserrno_
+Module: /usr/watcom/lib386/win/clib3r.lib(ljmphdl.c)
+00006158       ___longjmp_handler
+Module: /usr/watcom/lib386/win/win386.lib(win300)
+00003792       GETWINDOWLONG
+Module: /usr/watcom/lib386/win/clib3r.lib(nmalloc.c)
+000037c0*      _nmalloc_
+000037c0       malloc_
+0000615c       ___nheapbeg
+00006160       ___MiniHeapRover
+00006164       ___LargestSizeB4MiniHeapRover
+Module: /usr/watcom/lib386/win/clib3r.lib(cb.c)
+0000702c       _CBJumpTable
+0000782c+      __CBRefsTable
+00003b80+      vGetCallbackRoutine_
+00003bf0       GetCallbackRoutine_
+00003c20*      ReleaseCallbackRoutine_
+00003c90       SetProc_
+00003d20*      _COVER_MAKEPROCINSTANCE
+00003d30*      _COVER_FREEPROCINSTANCE
+00003d40+      FREEPROCINSTANCE
+Module: /usr/watcom/lib386/win/win386.lib(win527)
+00003db6       SETWINDOWLONG
+Module: /usr/watcom/lib386/win/clib3r.lib(iomodtty.c)
+00003de0       __ChkTTYIOMode_
+00003e20*      __IOMode_
+Module: /usr/watcom/lib386/win/clib3r.lib(iomode.c)
+00003e40       __GetIOMode_
+00003e60       __SetIOMode_nogrow_
+00006168+      ___NFiles
+0000616c+      ___init_mode
+000061bc       ___io_mode
+Module: /usr/watcom/lib386/win/clib3r.lib(winrtns.c)
+000061c0       __WindowsIsWindowedHandle
+000061c4*      __WindowsRemoveWindowedHandle
+000061c8*      __WindowsNewWindow
+000061cc*      __WindowsCloseWindow
+000061d0*      __WindowsSetAbout
+000061d4*      __WindowsSetAppTitle
+000061d8*      __WindowsSetConTitle
+000061dc*      __WindowsDestroyOnClose
+000061e0*      __WindowsYieldControl
+000061e4*      __WindowsShutDown
+000061e8       __WindowsStdin
+000061ec       __WindowsStdout
+000061f0*      __WindowsKbhit
+000061f4*      __WindowsGetch
+000061f8*      __WindowsGetche
+000061fc*      __WindowsPutch
+00006200       __WindowsExitRtn
+Module: /usr/watcom/lib386/win/win386.lib(win581)
+00003e80       _LREAD
+Module: /usr/watcom/lib386/win/clib3r.lib(dosret.c)
+00003ea0*      _dosretax_
+00003eb0*      _dosret0_
+00003ec0       __set_errno_dos_
+00003f40*      __set_errno_dos_reterr_
+Module: /usr/watcom/lib386/win/clib3r.lib(__lseek.c)
+00003f50       __lseek_
+Module: /usr/watcom/lib386/win/win386.lib(win582)
+00003f9c       _LWRITE
+Module: /usr/watcom/lib386/win/clib3r.lib(stack386.c)
+00003fc0       stackavail_
+Module: /usr/watcom/lib386/win/clib3r.lib(stk)
+00003fe7*      __STK
+00003fd4*      __CHK
+00003fe4*      __GRO
+00004005       __STKOVERFLOW_
+Module: /usr/watcom/lib386/win/win386.lib(fldenv.asm)
+0000622c       __FLDENV
+00006230       __FSTENV
+00004014*      _FLOATINGPOINT
+Module: /usr/watcom/lib386/win/clib3r.lib(__stos)
+00004070       __STOSB
+000040a7*      __STOSD
+Module: /usr/watcom/lib386/win/clib3r.lib(prtf.c)
+00004120       __prtf_
+Module: /usr/watcom/lib386/win/clib3r.lib(getp16.c)
+00004fc0       GetProc16_
+Module: /usr/watcom/lib386/win/win386.lib(win441)
+00005184       REGISTERCLASS
+Module: /usr/watcom/lib386/win/clib3r.lib(nfree.c)
+000051c0       _nfree_
+000051c0       free_
+00007a38       ___MiniHeapFreeRover
+Module: ../../hw/cpu/win38631/cpu.lib(cpuasm.asm)
+00000000       cpu_basic_probe_
+000000d5*      cpu_disable_serial_
+000000ea*      cpu_ask_serial_
+Module: /usr/watcom/lib386/win/clib3r.lib(intxw32.c)
+000052c0*      int86_
+000052d0*      int86x_
+000052e0       intr_
+Module: /usr/watcom/lib386/win/clib3r.lib(sgdef086)
+0000624c       __Start_XI
+00006258       __End_XI
+00006258       __Start_YI
+00006258       __End_YI
+Module: /usr/watcom/lib386/win/clib3r.lib(xmsgwin.c)
+00005300+      __exit_with_msg_
+00005360       __fatal_runtime_error_
+Module: /usr/watcom/lib386/win/clib3r.lib(errno.c)
+00005380       __get_errno_ptr_
+00005390       __get_doserrno_ptr_
+00007a3c+      _errno
+00007a40+      __doserrno
+Module: /usr/watcom/lib386/win/clib3r.lib(nmemneed.c)
+000053a0       __nmemneed_
+Module: /usr/watcom/lib386/win/clib3r.lib(mem.c)
+000053b0       __MemAllocator
+00005480       __MemFree
+Module: /usr/watcom/lib386/win/clib3r.lib(grownear.c)
+00005720       __ExpandDGROUP_
+Module: /usr/watcom/lib386/win/clib3r.lib(wincb32.asm)
+00005732       __32BitCallBack
+Module: /usr/watcom/lib386/win/clib3r.lib(wctomb.c)
+00005760       wctomb_
+Module: /usr/watcom/lib386/win/clib3r.lib(itoa.c)
+00005790+      utoa_
+000057e0       itoa_
+Module: /usr/watcom/lib386/win/clib3r.lib(strupr.c)
+00005810       strupr_
+Module: /usr/watcom/lib386/win/clib3r.lib(noefgfmt.c)
+00006234       ___EFG_printf
+00006238*      ___EFG_scanf
+Module: /usr/watcom/lib386/win/clib3r.lib(lltoa.c)
+00005880       ulltoa_
+000058f0*      lltoa_
+Module: /usr/watcom/lib386/win/clib3r.lib(ltoa.c)
+00005920       ultoa_
+00005970*      ltoa_
+Module: /usr/watcom/lib386/win/clib3r.lib(mbisdbcs.c)
+00007a44       ___IsDBCS
+Module: /usr/watcom/lib386/win/clib3r.lib(mbislead.c)
+000059a0*      _ismbblead_
+00007a48       ___MBCSIsTable
+Module: /usr/watcom/lib386/win/clib3r.lib(udpdat.c)
+00007b4c       _UserProcs
+Module: /usr/watcom/lib386/win/win386.lib(win824)
+000059c0       _CLIB_INT86
+Module: /usr/watcom/lib386/win/win386.lib(win825)
+000059e0       _CLIB_INT86X
+Module: /usr/watcom/lib386/win/win386.lib(win1426)
+00005a00       _CLIB_INTR
+Module: /usr/watcom/lib386/win/clib3r.lib(enterdb.c)
+00005a20       __EnterWVIDEO_
+0000623c+      ___WD_Present
+Module: /usr/watcom/lib386/win/clib3r.lib(amblksiz.c)
+00006240       __amblksiz
+Module: /usr/watcom/lib386/win/clib3r.lib(heapen.c)
+00005a50*      _heapenable_
+00006244       ___heap_enabled
+Module: /usr/watcom/lib386/win/win386.lib(win811)
+00005a60       DPMIALLOC
+Module: /usr/watcom/lib386/win/clib3r.lib(nheapmin.c)
+00005a80       _nheapshrink_
+00005a80*      _nheapmin_
+00005a80*      _heapmin_
+00005a80*      _heapshrink_
+Module: /usr/watcom/lib386/win/clib3r.lib(alphabet.c)
+00005ec0       ___Alphabet
+Module: /usr/watcom/lib386/win/clib3r.lib(mbinit.c)
+00005baa       __mbinit_
+00006248+      ___MBCodePage
+Module: /usr/watcom/lib386/win/win386.lib(win812)
+00005c70       DPMIFREE
+Module: /usr/watcom/lib386/win/win386.lib(win352)
+00005c92       ISDBCSLEADBYTE
+Module: /usr/watcom/lib386/win/win386.lib(win214)
+00005cb4       GETKBCODEPAGE
+
+
+                        +--------------------+
+                        |   Libraries Used   |
+                        +--------------------+
+
+../../hw/dos/win38631/dos.lib
+../../hw/cpu/win38631/cpu.lib
+/usr/watcom/lib386/win/win386.lib
+/usr/watcom/lib386/win/clib3r.lib
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  2000 (8192.)
+Memory size:  9bd0 (39888.)
+Entry point address: 00001e54
+Link time: 00:00.01

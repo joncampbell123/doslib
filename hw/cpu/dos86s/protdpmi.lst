@@ -1,0 +1,234 @@
+     1                                  ; protdpmi.asm
+     2                                  ;
+     3                                  ; Test program: Protected mode via DPMI (DOS Protected Mode Interface)
+     4                                  ; (C) 2010-2012 Jonathan Campbell.
+     5                                  ; Hackipedia DOS library.
+     6                                  ;
+     7                                  ; This code is licensed under the LGPL.
+     8                                  ; <insert LGPL legal text here>
+     9                                  ;
+    10                                  ; proot of concept:
+    11                                  ; switching the CPU into 386 16-bit protected mode (and back) using DPMI
+    12                                  bits 16			; 16-bit real mode
+    13                                  org 0x100		; MS-DOS .COM style
+    14                                  
+    15                                  ; assume ES == DS and SS == DS and DS == CS
+    16                                  
+    17                                  ; ===== ENTRY POINT
+    18 00000000 8CC8                    		mov		ax,cs
+    19 00000002 8ED8                    		mov		ds,ax
+    20 00000004 8EC0                    		mov		es,ax
+    21 00000006 8ED0                    		mov		ss,ax
+    22                                  
+    23                                  ; we need to use DOS memory allocation, so we first need to resize our
+    24                                  ; memory ownership down to the actual size of the COM file.
+    25                                  ; Windows NT/XP/etc. seem to assume the COM takes 64KB, while Windows 95
+    26                                  ; follows the DOS way and has the COM assume all memory. So for this
+    27                                  ; code to work under Win9x much less DOS we need to do this step.
+    28 00000008 B44A                    		mov		ah,0x4A		; INT 21h AH=4Ah resize memory block
+    29 0000000A 8CCB                    		mov		bx,cs
+    30 0000000C 8EC3                    		mov		es,bx		; ES=our PSP segment
+    31 0000000E BB[2000]                		mov		bx,ENDOI
+    32 00000011 C1EB04                  		shr		bx,4		; in paragraphs, the size of this program + data
+    33 00000014 CD21                    		int		21h
+    34                                  
+    35 00000016 A3[1A00]                		mov		[MY_SEGMENT],ax
+    36 00000019 89C3                    		mov		bx,ax
+    37 0000001B C1EB0C                  		shr		bx,12
+    38 0000001E C1E004                  		shl		ax,4
+    39 00000021 891E[1400]              		mov		[MY_PHYS_BASE+2],bx
+    40 00000025 A3[1200]                		mov		[MY_PHYS_BASE+0],ax
+    41                                  
+    42 00000028 B88716                  		mov		ax,0x1687
+    43 0000002B CD2F                    		int		2Fh
+    44 0000002D 09C0                    		or		ax,ax
+    45 0000002F 7406                    		jz		dpmi_present
+    46 00000031 BA[2801]                		mov		dx,str_cpu_need_dpmi
+    47 00000034 E9B600                  		jmp		exit2dos_with_message
+    48                                  dpmi_present:
+    49 00000037 893E[0000]              		mov		[dpmi_entry+0],di
+    50 0000003B 8C06[0200]              		mov		[dpmi_entry+2],es
+    51 0000003F 8936[0E00]              		mov		[dpmi_data_size],si
+    52                                  
+    53                                  ; allocate private data for DPMI server, if needed
+    54 00000043 C706[1000]0000          		mov		word [dpmi_data_seg],0
+    55 00000049 833E[0E00]00            		cmp		word [dpmi_data_size],0
+    56 0000004E 7413                    		jz		dpmi_no_private
+    57 00000050 B448                    		mov		ah,0x48
+    58 00000052 8B1E[0E00]              		mov		bx,[dpmi_data_size]	; in paragraphs
+    59 00000056 CD21                    		int		21h
+    60 00000058 7306                    		jnc		.allocd
+    61 0000005A BA[3D01]                		mov		dx,str_cpu_dpmi_private_alloc_fail
+    62 0000005D E98D00                  		jmp		exit2dos_with_message
+    63 00000060 A3[1000]                .allocd:	mov		[dpmi_data_seg],ax
+    64                                  dpmi_no_private:
+    65                                  ; at this point: either we allocated memory successfully, or the DPMI server does not need private data segment
+    66                                  ; make the jump
+    67 00000063 8E06[1000]              		mov		es,[dpmi_data_seg]
+    68 00000067 B80100                  		mov		ax,1		; 16-bit app
+    69 0000006A FF1E[0000]              		call far	word [dpmi_entry]
+    70 0000006E 7305                    		jnc		dpmi_ok
+    71 00000070 BA[6601]                		mov		dx,str_dpmi_entry_fail
+    72 00000073 EB78                    		jmp		exit2dos_with_message
+    73                                  dpmi_ok:
+    74                                  ; save our protected mode side
+    75 00000075 8CC8                    		mov		ax,cs
+    76 00000077 A3[1600]                		mov		[MY_CODE_SEL],ax
+    77 0000007A 8CD8                    		mov		ax,ds
+    78 0000007C A3[1800]                		mov		[MY_DATA_SEL],ax
+    79                                  
+    80                                  ; we need a selector to draw on the screen with
+    81 0000007F B80200                  		mov		ax,0x0002
+    82 00000082 BB00B8                  		mov		bx,0xB800
+    83 00000085 CD31                    		int		31h
+    84 00000087 A3[1E00]                		mov		[vga_sel],ax
+    85                                  
+    86                                  ; draw on the screen
+    87 0000008A BE[8A01]                		mov		si,vdraw_msg
+    88 0000008D 31FF                    		xor		di,di
+    89 0000008F E87D00                  		call		vga_puts
+    90                                  
+    91                                  ; now switch back to real mode
+    92 00000092 B80603                  		mov		ax,0x0306
+    93 00000095 CD31                    		int		31h
+    94 00000097 890E[0400]              		mov		[raw_entry],cx
+    95 0000009B 891E[0600]              		mov		[raw_entry+2],bx
+    96 0000009F 66893E[0800]            		mov		[raw_exit],edi
+    97 000000A4 8936[0C00]              		mov		[raw_exit+4],si
+    98                                  
+    99                                  ; switch
+   100 000000A8 A1[1A00]                		mov		ax,[MY_SEGMENT]	; AX will become DS
+   101 000000AB 89C1                    		mov		cx,ax		; CX will become ES
+   102 000000AD 89C2                    		mov		dx,ax		; DX will become SS
+   103 000000AF 660FB7DC                		movzx		ebx,sp		; EBX will become (E)SP
+   104 000000B3 89C6                    		mov		si,ax		; SI will become CS
+   105 000000B5 66BF[C0000000]          		mov		edi,.realmode
+   106 000000BB 66FF2E[0800]            		jmp far		dword [raw_exit]
+   107                                  .realmode:
+   108                                  
+   109                                  ; we made it!
+   110 000000C0 BE[1302]                		mov		si,vdraw2_msg
+   111 000000C3 BFA000                  		mov		di,80*2
+   112 000000C6 E82D00                  		call		vga_puts_real
+   113                                  
+   114                                  ; jump back to protected mode
+   115 000000C9 A1[1800]                		mov		ax,[MY_DATA_SEL]	; AX will become DS
+   116 000000CC 89C1                    		mov		cx,ax			; CX will become ES
+   117 000000CE 89C2                    		mov		dx,ax			; DX will become SS
+   118 000000D0 660FB7DC                		movzx		ebx,sp			; EBX will become (E)SP
+   119 000000D4 8B36[1600]              		mov		si,[MY_CODE_SEL]	; SI will become CS
+   120 000000D8 66BF[E2000000]          		mov		edi,.protagain
+   121 000000DE FF2E[0400]              		jmp far		word [raw_entry]
+   122                                  .protagain:
+   123                                  
+   124                                  ; we made it!
+   125 000000E2 BE[CC01]                		mov		si,vdraw3_msg
+   126 000000E5 BF4001                  		mov		di,80*2*2
+   127 000000E8 E82400                  		call		vga_puts
+   128                                  
+   129                                  ; ===== DONE
+   130 000000EB EB04                    		jmp		exit2dos
+   131                                  
+   132                                  ; ===== EXIT TO DOS WITH ERROR MESSAGE DS:DX
+   133                                  exit2dos_with_message:
+   134 000000ED B409                    		mov		ah,9
+   135 000000EF CD21                    		int		21h
+   136                                  ; ===== EXIT TO DOS
+   137 000000F1 B8004C                  exit2dos:	mov		ax,4C00h
+   138 000000F4 CD21                    		int		21h
+   139                                  
+   140                                  vga_puts_real:
+   141                                  ; DS:SI = what to put
+   142                                  ;    DI = where to put it
+   143 000000F6 06                      		push		es
+   144 000000F7 50                      		push		ax
+   145 000000F8 56                      		push		si
+   146 000000F9 57                      		push		di
+   147 000000FA FC                      		cld
+   148 000000FB B800B8                  		mov		ax,0xB800
+   149 000000FE 8EC0                    		mov		es,ax
+   150 00000100 AC                      .l1:		lodsb
+   151 00000101 08C0                    		or		al,al
+   152 00000103 7405                    		jz		.le
+   153 00000105 B41E                    		mov		ah,0x1E
+   154 00000107 AB                      		stosw
+   155 00000108 EBF6                    		jmp		.l1
+   156 0000010A 5F                      .le:		pop		di
+   157 0000010B 5E                      		pop		si
+   158 0000010C 58                      		pop		ax
+   159 0000010D 07                      		pop		es
+   160 0000010E C3                      		ret
+   161                                  
+   162                                  vga_puts:
+   163                                  ; DS:SI = what to put
+   164                                  ;    DI = where to put it
+   165 0000010F 06                      		push		es
+   166 00000110 50                      		push		ax
+   167 00000111 56                      		push		si
+   168 00000112 57                      		push		di
+   169 00000113 FC                      		cld
+   170 00000114 A1[1E00]                		mov		ax,[vga_sel]
+   171 00000117 8EC0                    		mov		es,ax
+   172 00000119 AC                      .l1:		lodsb
+   173 0000011A 08C0                    		or		al,al
+   174 0000011C 7405                    		jz		.le
+   175 0000011E B41E                    		mov		ah,0x1E
+   176 00000120 AB                      		stosw
+   177 00000121 EBF6                    		jmp		.l1
+   178 00000123 5F                      .le:		pop		di
+   179 00000124 5E                      		pop		si
+   180 00000125 58                      		pop		ax
+   181 00000126 07                      		pop		es
+   182 00000127 C3                      		ret
+   183                                  
+   184                                  ; strings
+   185 00000128 44504D492073657276-     str_cpu_need_dpmi:db		"DPMI server required$"
+   186 00000131 657220726571756972-
+   187 0000013A 656424             
+   188 0000013D 556E61626C6520746F-     str_cpu_dpmi_private_alloc_fail:db "Unable to allocate private data for DPMI$"
+   189 00000146 20616C6C6F63617465-
+   190 0000014F 207072697661746520-
+   191 00000158 6461746120666F7220-
+   192 00000161 44504D4924         
+   193 00000166 556E61626C6520746F-     str_dpmi_entry_fail:db		"Unable to enter DPMI protected mode$"
+   194 0000016F 20656E746572204450-
+   195 00000178 4D492070726F746563-
+   196 00000181 746564206D6F646524 
+   197 0000018A 54686973206D657373-     vdraw_msg:	db		"This message was drawn on screen from DPMI 16-bit protected mode!",0
+   198 00000193 616765207761732064-
+   199 0000019C 7261776E206F6E2073-
+   200 000001A5 637265656E2066726F-
+   201 000001AE 6D2044504D49203136-
+   202 000001B7 2D6269742070726F74-
+   203 000001C0 6563746564206D6F64-
+   204 000001C9 652100             
+   205 000001CC 54686973206D657373-     vdraw3_msg:	db		"This message was drawn on screen back into DPMI 16-bit protected mode!",0
+   206 000001D5 616765207761732064-
+   207 000001DE 7261776E206F6E2073-
+   208 000001E7 637265656E20626163-
+   209 000001F0 6B20696E746F204450-
+   210 000001F9 4D492031362D626974-
+   211 00000202 2070726F7465637465-
+   212 0000020B 64206D6F64652100   
+   213 00000213 54686973206D657373-     vdraw2_msg:	db		"This message was drawn on screen back from real mode!",0
+   214 0000021C 616765207761732064-
+   215 00000225 7261776E206F6E2073-
+   216 0000022E 637265656E20626163-
+   217 00000237 6B2066726F6D207265-
+   218 00000240 616C206D6F64652100 
+   219                                  
+   220                                  ; vars
+   221                                  		section		.bss align=8
+   222 00000000 <res 00000004>          dpmi_entry:	resd		1
+   223 00000004 <res 00000004>          raw_entry:	resd		1
+   224 00000008 <res 00000004>          raw_exit:	resd		1
+   225 0000000C <res 00000002>          		resw		1
+   226 0000000E <res 00000002>          dpmi_data_size:	resw		1
+   227 00000010 <res 00000002>          dpmi_data_seg:	resw		1
+   228 00000012 <res 00000004>          MY_PHYS_BASE:	resd		1
+   229 00000016 <res 00000002>          MY_CODE_SEL:	resw		1
+   230 00000018 <res 00000002>          MY_DATA_SEL:	resw		1
+   231 0000001A <res 00000004>          MY_SEGMENT:	resd		1
+   232 0000001E <res 00000002>          vga_sel:	resw		1
+   233 00000020 <res 00000001>          ENDOI:		resb		1
+   234                                  

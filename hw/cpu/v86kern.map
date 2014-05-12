@@ -1,0 +1,18 @@
+
+- NASM Map file ---------------------------------------------------------------
+
+Source file:  v86kern.asm
+Output file:  dos86s/v86kern.com
+
+-- Program origin -------------------------------------------------------------
+
+00000100
+
+-- Sections (summary) ---------------------------------------------------------
+
+Vstart            Start             Stop              Length    Class     Name
+             100               100               100  00000000  progbits  .text
+             100               100              141F  0000131F  progbits  .code
+            1420              1420              191C  000004FC  progbits  .data
+            1920              1920              426A  0000294A  nobits    .bss
+

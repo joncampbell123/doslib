@@ -1,0 +1,230 @@
+Open Watcom Linker Version 1.9
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       14/05/11 21:54:33
+Executable Image: os2d3f/hellopm.exe
+creating an OS/2 32-bit Presentation Manager executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+DGROUP                          0002:00000000        00010240
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+BEGTEXT                CODE           AUTO           0001:00000000   00000007
+_TEXT                  CODE           AUTO           0001:00000010   00000e92
+_NULL                  BEGDATA        DGROUP         0002:00000000   00000004
+_AFTERNULL             BEGDATA        DGROUP         0002:00000004   00000000
+CONST                  DATA           DGROUP         0002:00000004   0000003c
+CONST2                 DATA           DGROUP         0002:00000040   00000000
+_DATA                  DATA           DGROUP         0002:00000040   000000b8
+XIB                    DATA           DGROUP         0002:000000f8   00000000
+XI                     DATA           DGROUP         0002:000000f8   00000006
+XIE                    DATA           DGROUP         0002:000000fe   00000000
+YIB                    DATA           DGROUP         0002:000000fe   00000000
+YI                     DATA           DGROUP         0002:000000fe   00000006
+YIE                    DATA           DGROUP         0002:00000104   00000000
+TIB                    DATA           DGROUP         0002:00000104   00000000
+TI                     DATA           DGROUP         0002:00000104   00000000
+TIE                    DATA           DGROUP         0002:00000104   00000000
+DATA                   DATA           DGROUP         0002:00000104   00000000
+_BSS                   BSS            DGROUP         0002:00000104   00000130
+STACK                  STACK          DGROUP         0002:00000240   00010000
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Module: os2d3f/hellopm.obj(/usr/src/doslib/os2/hello/hellopm.c)
+0001:00000010  main_
+0001:0000010c+ HelloWndProc
+0002:00000040+ _HelloWnd
+0002:00000044+ _HelloWndClient
+Module: /usr/watcom/lib386/os2/clib3r.lib(cstart)
+0001:00000190  _cstart_
+Module: /usr/watcom/lib386/os2/clib3r.lib(argcv.c)
+0002:00000104  __argc
+0002:00000108  __argv
+0002:0000010c  ___argc
+0002:00000110  ___argv
+Module: /usr/watcom/lib386/os2/clib3r.lib(main2o32.c)
+0001:000001f0  __OS2Main
+Module: /usr/watcom/lib386/os2/clib3r.lib(segdefns)
+0001:00000003  ___begtext
+0002:00000000* __nullarea
+0002:000000f8  __Start_XI
+0002:000000fe  __End_XI
+0002:000000fe  __Start_YI
+0002:00000104  __End_YI
+Module: /usr/watcom/lib386/os2/clib3r.lib(initargv.c)
+0001:00000260  __Init_Argv_
+0001:000002b0+ _getargv_
+0001:00000450  __Fini_Argv_
+Module: /usr/watcom/lib386/os2/clib3r.lib(initrtns.c)
+0001:00000470  __InitRtns
+0001:000004c0  __FiniRtns
+Module: /usr/watcom/lib386/os2/clib3r.lib(mthrdini.c)
+0001:00000520  __InitThreadData_
+0002:0000004c  ___ThreadDataSize
+Module: /usr/watcom/lib386/os2/clib3r.lib(memset.c)
+0001:00000540  memset_
+Module: /usr/watcom/lib386/os2/clib3r.lib(maino32.c)
+0002:00000050+ ___FirstThreadData
+0002:00000054+ ___GetThreadPtr
+0002:00000058* __AccessFileH
+0002:0000005c* __ReleaseFileH
+0002:00000060* __AccessIOB
+0002:00000064* __ReleaseIOB
+0002:00000068  __AccessNHeap
+0002:0000006c* __AccessFHeap
+0002:00000070  __ReleaseNHeap
+0002:00000074* __ReleaseFHeap
+0001:0000055e  __threadstack_
+0001:00000565* __threadid_
+0001:0000056c  __OS2MainInit_
+0001:000005db+ __OS2Init_
+0001:00000619* __OS2Fini_
+0001:00000621* __shutdown_stack_checking_
+0001:00000636  __exit_
+0002:00000078* __AccessTDList
+0002:0000007c* __ReleaseTDList
+0002:00000080+ ___sig_init_rtn
+0002:00000084* ___sig_fini_rtn
+0002:00000088* __threadstksize
+0002:0000008c  ___process_fini
+0002:00000118  ___Is_DLL
+0002:0000011c+ ___saved_CS
+Module: /usr/watcom/lib386/os2/clib3r.lib(cmain386.c)
+0001:00000680  __CMain
+Module: /usr/watcom/lib386/os2/clib3r.lib(dosseg)
+0000:00001234  __DOSseg__
+Module: /usr/watcom/lib386/os2/clib3r.lib(crwdata)
+0002:000000d4  __osmajor
+0002:000000d5  __osminor
+0002:000000a0* __LpDllName
+0002:000000a4* __LpwCmdLine
+0002:000000a8* __LpwPgmName
+0002:000000ac* __LpwDllName
+0002:00000098  __LpCmdLine
+0002:0000009c  __LpPgmName
+0002:00000090* __dynend
+0002:00000094  __curbrk
+0002:000000b0* __STACKLOW
+0002:000000b4* __STACKTOP
+0002:000000b8  __ASTACKSIZ
+0002:000000bc  __ASTACKPTR
+0002:000000c0* __cbyte
+0002:000000c4* __cbyte2
+0002:000000c8* __child
+0002:000000ce  __Envptr
+0002:000000d2* __Envseg
+0002:000000cc* __no87
+0002:000000d6* ___FPE_handler
+Module: /usr/watcom/lib386/os2/clib3r.lib(histsplt.c)
+0002:00000220  ___historical_splitparms
+Module: /usr/watcom/lib386/os2/clib3r.lib(___argc.c)
+0002:00000224  ____Argc
+0002:00000228  ____Argv
+Module: /usr/watcom/lib386/os2/clib3r.lib(nmalloc.c)
+0001:000006d0* _nmalloc_
+0001:000006d0  malloc_
+0002:000000dc  ___nheapbeg
+0002:000000e0  ___MiniHeapRover
+0002:000000e4  ___LargestSizeB4MiniHeapRover
+Module: /usr/watcom/lib386/os2/clib3r.lib(nfree.c)
+0001:000007d0  _nfree_
+0001:000007d0  free_
+0002:0000022c  ___MiniHeapFreeRover
+Module: /usr/watcom/lib386/os2/clib3r.lib(__stos)
+0001:000008e0  __STOSB
+0001:00000917* __STOSD
+Module: /usr/watcom/lib386/os2/clib3r.lib(cinit.c)
+0001:00000990  __CommonInit_
+0002:00000230  ___hmodule
+Module: /usr/watcom/lib386/os2/clib3r.lib(exit.c)
+0001:0000099b+ __null_int23_exit_
+0001:0000099c  exit_
+0001:000009ec* _exit_
+0002:000000e8+ ___int23_exit
+0002:000000ec+ ___FPE_handler_exit
+Module: /usr/watcom/lib386/os2/clib3r.lib(nmemneed.c)
+0001:00000a10  __nmemneed_
+Module: /usr/watcom/lib386/os2/clib3r.lib(mem.c)
+0001:00000a20  __MemAllocator
+0001:00000ad0  __MemFree
+Module: /usr/watcom/lib386/os2/clib3r.lib(grownear.c)
+0001:00000d70  __ExpandDGROUP_
+Module: /usr/watcom/lib386/os2/clib3r.lib(amblksiz.c)
+0002:000000f0  __amblksiz
+Module: /usr/watcom/lib386/os2/clib3r.lib(heapen.c)
+0001:00000d90* _heapenable_
+0002:000000f4  ___heap_enabled
+Module: /usr/watcom/lib386/os2/clib3r.lib(nheapmin.c)
+0001:00000dc0  _nheapshrink_
+0001:00000dc0* _nheapmin_
+0001:00000dc0* _heapmin_
+0001:00000dc0* _heapshrink_
+
+
+                        +----------------------+
+                        |   Imported Symbols   |
+                        +----------------------+
+
+Symbol                              Module
+======                              ======
+
+WinInitialize                       PMWIN
+WinCreateMsgQueue                   PMWIN
+WinRegisterClass                    PMWIN
+WinCreateStdWindow                  PMWIN
+WinGetMsg                           PMWIN
+WinDispatchMsg                      PMWIN
+WinDestroyWindow                    PMWIN
+WinDestroyMsgQueue                  PMWIN
+WinTerminate                        PMWIN
+WinBeginPaint                       PMWIN
+GpiErase                            PMGPI
+GpiCharStringAt                     PMGPI
+WinEndPaint                         PMWIN
+WinDefWindowProc                    PMWIN
+DosQuerySysInfo                     DOSCALLS
+DosExit                             DOSCALLS
+DosAllocMem                         DOSCALLS
+DosFreeMem                          DOSCALLS
+
+
+                        +--------------------+
+                        |   Libraries Used   |
+                        +--------------------+
+
+/usr/watcom/lib386/os2/clib3r.lib
+/usr/watcom/lib386/os2/os2386.lib
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  00010000 (65536.)
+Memory size:  000110e2 (69858.)
+Entry point address: 0001:00000190
+Link time: 00:00.00

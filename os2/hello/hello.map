@@ -1,0 +1,311 @@
+Open Watcom Linker Version 1.9
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       14/05/11 21:54:33
+Executable Image: os2d3f/hello.exe
+creating an OS/2 32-bit executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+DGROUP                          0002:00000000        000106c0
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+BEGTEXT                CODE           AUTO           0001:00000000   00000007
+_TEXT                  CODE           AUTO           0001:00000010   00002732
+_NULL                  BEGDATA        DGROUP         0002:00000000   00000004
+_AFTERNULL             BEGDATA        DGROUP         0002:00000004   00000000
+CONST                  DATA           DGROUP         0002:00000004   00000034
+CONST2                 DATA           DGROUP         0002:00000038   00000000
+_DATA                  DATA           DGROUP         0002:00000038   00000424
+XIB                    DATA           DGROUP         0002:0000045c   00000000
+XI                     DATA           DGROUP         0002:0000045c   00000012
+XIE                    DATA           DGROUP         0002:0000046e   00000000
+YIB                    DATA           DGROUP         0002:0000046e   00000000
+YI                     DATA           DGROUP         0002:0000046e   0000000c
+YIE                    DATA           DGROUP         0002:0000047a   00000000
+TIB                    DATA           DGROUP         0002:0000047a   00000000
+TI                     DATA           DGROUP         0002:0000047a   00000000
+TIE                    DATA           DGROUP         0002:0000047a   00000000
+DATA                   DATA           DGROUP         0002:0000047a   00000000
+_BSS                   BSS            DGROUP         0002:0000047c   00000241
+STACK                  STACK          DGROUP         0002:000006c0   00010000
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Module: os2d3f/hello.obj(/usr/src/doslib/os2/hello/hello.c)
+0001:00000010  main_
+Module: /usr/watcom/lib386/os2/clib3r.lib(cstart)
+0001:00000020  _cstart_
+Module: /usr/watcom/lib386/os2/clib3r.lib(printf.c)
+0001:00000080  printf_
+Module: /usr/watcom/lib386/os2/clib3r.lib(argcv.c)
+0002:0000047c  __argc
+0002:00000480  __argv
+0002:00000484  ___argc
+0002:00000488  ___argv
+Module: /usr/watcom/lib386/os2/clib3r.lib(main2o32.c)
+0001:000000b0  __OS2Main
+Module: /usr/watcom/lib386/os2/clib3r.lib(segdefns)
+0001:00000003  ___begtext
+0002:00000000* __nullarea
+0002:0000045c  __Start_XI
+0002:0000046e  __End_XI
+0002:0000046e  __Start_YI
+0002:0000047a  __End_YI
+Module: /usr/watcom/lib386/os2/clib3r.lib(iob.c)
+0002:00000038  ___iob
+0002:00000240* __fmode
+0002:0000048c  ___OpenStreams
+0002:00000490  ___ClosedStreams
+Module: /usr/watcom/lib386/os2/clib3r.lib(fprtf.c)
+0001:00000140  __fprtf_
+Module: /usr/watcom/lib386/os2/clib3r.lib(initargv.c)
+0001:00000200  __Init_Argv_
+0001:00000250+ _getargv_
+0001:000003f0  __Fini_Argv_
+Module: /usr/watcom/lib386/os2/clib3r.lib(initrtns.c)
+0001:00000410  __InitRtns
+0001:00000460  __FiniRtns
+Module: /usr/watcom/lib386/os2/clib3r.lib(mthrdini.c)
+0001:000004c0  __InitThreadData_
+0002:00000244  ___ThreadDataSize
+Module: /usr/watcom/lib386/os2/clib3r.lib(memset.c)
+0001:000004e0  memset_
+Module: /usr/watcom/lib386/os2/clib3r.lib(maino32.c)
+0002:00000248+ ___FirstThreadData
+0002:0000024c  ___GetThreadPtr
+0002:00000250  __AccessFileH
+0002:00000254  __ReleaseFileH
+0002:00000258  __AccessIOB
+0002:0000025c  __ReleaseIOB
+0002:00000260  __AccessNHeap
+0002:00000264* __AccessFHeap
+0002:00000268  __ReleaseNHeap
+0002:0000026c* __ReleaseFHeap
+0001:000004fe  __threadstack_
+0001:00000505* __threadid_
+0001:0000050c  __OS2MainInit_
+0001:0000057b+ __OS2Init_
+0001:000005b9* __OS2Fini_
+0001:000005c1* __shutdown_stack_checking_
+0001:000005d6  __exit_
+0002:00000270* __AccessTDList
+0002:00000274* __ReleaseTDList
+0002:00000278+ ___sig_init_rtn
+0002:0000027c* ___sig_fini_rtn
+0002:00000280* __threadstksize
+0002:00000284  ___process_fini
+0002:00000498  ___Is_DLL
+0002:0000049c+ ___saved_CS
+Module: /usr/watcom/lib386/os2/clib3r.lib(cmain386.c)
+0001:00000620  __CMain
+Module: /usr/watcom/lib386/os2/clib3r.lib(dosseg)
+0000:00001234  __DOSseg__
+Module: /usr/watcom/lib386/os2/clib3r.lib(initfile.c)
+0001:00000690  __InitFiles_
+Module: /usr/watcom/lib386/os2/clib3r.lib(ioexit.c)
+0001:00000790* fcloseall_
+0001:000007a0  __full_io_exit_
+Module: /usr/watcom/lib386/os2/clib3r.lib(fputc.c)
+0001:000007b0  fputc_
+Module: /usr/watcom/lib386/os2/clib3r.lib(ioalloc.c)
+0001:00000890  __ioalloc_
+Module: /usr/watcom/lib386/os2/clib3r.lib(prtf.c)
+0001:00000930  __prtf_
+Module: /usr/watcom/lib386/os2/clib3r.lib(flush.c)
+0001:00001600  __flush_
+Module: /usr/watcom/lib386/os2/clib3r.lib(crwdata)
+0002:000002cc  __osmajor
+0002:000002cd  __osminor
+0002:00000298* __LpDllName
+0002:0000029c* __LpwCmdLine
+0002:000002a0* __LpwPgmName
+0002:000002a4* __LpwDllName
+0002:00000290  __LpCmdLine
+0002:00000294  __LpPgmName
+0002:00000288* __dynend
+0002:0000028c  __curbrk
+0002:000002a8* __STACKLOW
+0002:000002ac* __STACKTOP
+0002:000002b0  __ASTACKSIZ
+0002:000002b4  __ASTACKPTR
+0002:000002b8* __cbyte
+0002:000002bc* __cbyte2
+0002:000002c0* __child
+0002:000002c6  __Envptr
+0002:000002ca* __Envseg
+0002:000002c4* __no87
+0002:000002ce* ___FPE_handler
+Module: /usr/watcom/lib386/os2/clib3r.lib(histsplt.c)
+0002:000005a0  ___historical_splitparms
+Module: /usr/watcom/lib386/os2/clib3r.lib(___argc.c)
+0002:000005a4  ____Argc
+0002:000005a8  ____Argv
+Module: /usr/watcom/lib386/os2/clib3r.lib(nmalloc.c)
+0001:00001700  _nmalloc_
+0001:00001700  malloc_
+0002:000002d4  ___nheapbeg
+0002:000002d8  ___MiniHeapRover
+0002:000002dc  ___LargestSizeB4MiniHeapRover
+Module: /usr/watcom/lib386/os2/clib3r.lib(nfree.c)
+0001:00001800  _nfree_
+0001:00001800  free_
+0002:000005ac  ___MiniHeapFreeRover
+Module: /usr/watcom/lib386/os2/clib3r.lib(__stos)
+0001:00001910  __STOSB
+0001:00001947* __STOSD
+Module: /usr/watcom/lib386/os2/clib3r.lib(cinit.c)
+0001:000019c0  __CommonInit_
+0002:000005b0  ___hmodule
+Module: /usr/watcom/lib386/os2/clib3r.lib(exit.c)
+0001:000019cb+ __null_int23_exit_
+0001:000019cc  exit_
+0001:00001a1c* _exit_
+0002:000002e0+ ___int23_exit
+0002:000002e4+ ___FPE_handler_exit
+Module: /usr/watcom/lib386/os2/clib3r.lib(xmsgo32.c)
+0001:00001a40+ __exit_with_msg_
+0001:00001a90  __fatal_runtime_error_
+Module: /usr/watcom/lib386/os2/clib3r.lib(fclose.c)
+0001:00001ab0+ __doclose_
+0001:00001b50  __shutdown_stream_
+0001:00001b70* fclose_
+0002:000005b4+ ___RmTmpFileFn
+Module: /usr/watcom/lib386/os2/clib3r.lib(freefp.c)
+0001:00001bc0  __freefp_
+0001:00001c10  __purgefp_
+Module: /usr/watcom/lib386/os2/clib3r.lib(seterrno.c)
+0001:00001c3e  __set_errno_
+0001:00001c4c* __set_EDOM_
+0001:00001c5a* __set_ERANGE_
+0001:00001c68* __set_EINVAL_
+0001:00001c7b  __set_doserrno_
+Module: /usr/watcom/lib386/os2/clib3r.lib(chktty.c)
+0001:00001c90  __chktty_
+Module: /usr/watcom/lib386/os2/clib3r.lib(wctomb.c)
+0001:00001cd0  wctomb_
+Module: /usr/watcom/lib386/os2/clib3r.lib(itoa.c)
+0001:00001d00+ utoa_
+0001:00001d50  itoa_
+Module: /usr/watcom/lib386/os2/clib3r.lib(strupr.c)
+0001:00001d80  strupr_
+Module: /usr/watcom/lib386/os2/clib3r.lib(noefgfmt.c)
+0002:000002e8  ___EFG_printf
+0002:000002ec* ___EFG_scanf
+Module: /usr/watcom/lib386/os2/clib3r.lib(lltoa.c)
+0001:00001df0  ulltoa_
+0001:00001e60* lltoa_
+Module: /usr/watcom/lib386/os2/clib3r.lib(ltoa.c)
+0001:00001e90  ultoa_
+0001:00001ee0* ltoa_
+Module: /usr/watcom/lib386/os2/clib3r.lib(mbisdbcs.c)
+0002:000005b8  ___IsDBCS
+Module: /usr/watcom/lib386/os2/clib3r.lib(mbislead.c)
+0001:00001f10* _ismbblead_
+0002:000005bc  ___MBCSIsTable
+Module: /usr/watcom/lib386/os2/clib3r.lib(__lseek.c)
+0001:00001f30  __lseek_
+Module: /usr/watcom/lib386/os2/clib3r.lib(fsync.c)
+0001:00001f60  fsync_
+Module: /usr/watcom/lib386/os2/clib3r.lib(qwrit.c)
+0001:00001f90  __qwrite_
+Module: /usr/watcom/lib386/os2/clib3r.lib(nmemneed.c)
+0001:00002030  __nmemneed_
+Module: /usr/watcom/lib386/os2/clib3r.lib(mem.c)
+0001:00002040  __MemAllocator
+0001:000020f0  __MemFree
+Module: /usr/watcom/lib386/os2/clib3r.lib(grownear.c)
+0001:00002390  __ExpandDGROUP_
+Module: /usr/watcom/lib386/os2/clib3r.lib(amblksiz.c)
+0002:000002f0  __amblksiz
+Module: /usr/watcom/lib386/os2/clib3r.lib(enterdb.c)
+0001:000023b0  __EnterWVIDEO_
+0002:000002f4+ ___WD_Present
+Module: /usr/watcom/lib386/os2/clib3r.lib(_clseos2.c)
+0001:000023e0  __close_
+Module: /usr/watcom/lib386/os2/clib3r.lib(isattos2.c)
+0001:00002420  isatty_
+Module: /usr/watcom/lib386/os2/clib3r.lib(alphabet.c)
+0002:00000010  ___Alphabet
+Module: /usr/watcom/lib386/os2/clib3r.lib(mbinit.c)
+0001:0000248a  __mbinit_
+0002:000002f8+ ___MBCodePage
+Module: /usr/watcom/lib386/os2/clib3r.lib(dosret.c)
+0001:00002590* _dosretax_
+0001:000025a0* _dosret0_
+0001:000025b0  __set_errno_dos_
+0001:000025e0* __set_errno_dos_reterr_
+Module: /usr/watcom/lib386/os2/clib3r.lib(iomode.c)
+0001:000025f0  __GetIOMode_
+0001:00002610  __SetIOMode_nogrow_
+0002:00000400+ ___NFiles
+0002:00000404+ ___init_mode
+0002:00000454+ ___io_mode
+Module: /usr/watcom/lib386/os2/clib3r.lib(heapen.c)
+0001:00002630* _heapenable_
+0002:00000458  ___heap_enabled
+Module: /usr/watcom/lib386/os2/clib3r.lib(nheapmin.c)
+0001:00002660  _nheapshrink_
+0001:00002660* _nheapmin_
+0001:00002660* _heapmin_
+0001:00002660* _heapshrink_
+
+
+                        +----------------------+
+                        |   Imported Symbols   |
+                        +----------------------+
+
+Symbol                              Module
+======                              ======
+
+DosQuerySysInfo                     DOSCALLS
+DosExit                             DOSCALLS
+DosWrite                            DOSCALLS
+DosSetFilePtr                       DOSCALLS
+DosResetBuffer                      DOSCALLS
+DosAllocMem                         DOSCALLS
+DosClose                            DOSCALLS
+DosQueryHType                       DOSCALLS
+DosQueryDBCSEnv                     NLS
+DosQueryCp                          DOSCALLS
+DosFreeMem                          DOSCALLS
+
+
+                        +--------------------+
+                        |   Libraries Used   |
+                        +--------------------+
+
+/usr/watcom/lib386/os2/clib3r.lib
+/usr/watcom/lib386/os2/os2386.lib
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  00010000 (65536.)
+Memory size:  00012e02 (77314.)
+Entry point address: 0001:00000020
+Link time: 00:00.01
