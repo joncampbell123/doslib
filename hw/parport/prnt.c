@@ -72,7 +72,7 @@ const char far *buf
 		/* strobe for at least 1us */
 		outp(prt->port+PARPORT_IO_CONTROL,ctl | PARPORT_CTL_STROBE);
 		TMTRK;
-		t8254_wait(ms1); timer -= ms1;
+		t8254_wait(ms1); timer = read_8254(0);
 		outp(prt->port+PARPORT_IO_CONTROL,ctl);
 
 		/* now: some sources say it is done when BUSY goes low, and some
