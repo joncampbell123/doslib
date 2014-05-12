@@ -3,6 +3,8 @@ rel=../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
+dos=1 # MS-DOS
+
 if [ "$1" == "clean" ]; then
 	do_clean
 	rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
