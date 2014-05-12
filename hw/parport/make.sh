@@ -22,6 +22,8 @@ if [ "$1" == "disk" ]; then
 	mcopy -i test.dsk dos386f/prnt.exe ::prnt386.exe
 	mcopy -i test.dsk dos86s/prntpnp.exe ::prnp86.exe
 	mcopy -i test.dsk dos386f/prntpnp.exe ::prnp386.exe
+	mcopy -i test.dsk dos86s/samptest.exe ::sampt86.exe
+	mcopy -i test.dsk dos386f/samptest.exe ::sampt386.exe
 	cp test.dsk test2.dsk
 fi
 
