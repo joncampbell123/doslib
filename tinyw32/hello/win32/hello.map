@@ -1,0 +1,71 @@
+Open Watcom Linker Version 1.9
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       14/05/11 19:32:03
+Executable Image: win32/hello.exe
+creating a Windows NT windowed executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+.idata                          00402000             00000090
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+.code                  CODE           AUTO           00401000        0000002d
+TRANSFER CODE          CODE           AUTO           00401030        0000000c
+.idata                 .idata         .idata         00402000        00000090
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Module: win32/hello.obj(hello.asm)
+00401000       _WinMain
+
+
+                        +----------------------+
+                        |   Imported Symbols   |
+                        +----------------------+
+
+Symbol                              Module
+======                              ======
+
+_MessageBoxA@16                     USER32.DLL
+_ExitProcess@4                      KERNEL32.DLL
+
+
+                        +--------------------+
+                        |   Libraries Used   |
+                        +--------------------+
+
+/usr/watcom/lib386/nt/kernel32.lib
+/usr/watcom/lib386/nt/user32.lib
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  1000 (4096.)
+Memory size:  00cc (204.)
+Entry point address: 00401000
+Link time: 00:00.00

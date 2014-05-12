@@ -1,0 +1,1 @@
+option quiet system dos4g file dos386f/brhist.obj file dos386f/console.obj file dos386f/get_audio.obj file dos386f/lame_main.obj file dos386f/lametime.obj file dos386f/main.obj file dos386f/parse.obj file dos386f/timestatus.obj library ../../ext/lame/dos386f/lame.lib option stack=128000 name dos386f/lame.exe

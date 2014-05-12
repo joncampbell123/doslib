@@ -1,0 +1,84 @@
+Open Watcom Linker Version 1.9
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       14/05/11 19:32:02
+Executable Image: win302l/hello.exe
+creating a Windows 16-bit executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+dgroup                          0002:0000            00000063
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+text                   CODE           AUTO           0001:0000       00000138
+data                   DATA           dgroup         0002:0000       0000004b
+bss                                   dgroup         0002:004b       00000018
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Module: win302l/hello.obj(hello.asm)
+0001:00f8      myWndProc
+
+
+                        +----------------------+
+                        |   Imported Symbols   |
+                        +----------------------+
+
+Symbol                              Module
+======                              ======
+
+POSTQUITMESSAGE                     USER
+INITTASK                            KERNEL
+INITAPP                             USER
+WAITEVENT                           KERNEL
+REGISTERCLASS                       USER
+DEFWINDOWPROC                       USER
+CREATEWINDOW                        USER
+SHOWWINDOW                          USER
+UPDATEWINDOW                        USER
+GETMESSAGE                          USER
+TRANSLATEMESSAGE                    USER
+DISPATCHMESSAGE                     USER
+MAKEPROCINSTANCE                    KERNEL
+GETSTOCKOBJECT                      GDI
+LOADCURSOR                          USER
+LOADICON                            USER
+
+
+                        +--------------------+
+                        |   Libraries Used   |
+                        +--------------------+
+
+/usr/watcom/lib286/win/windows.lib
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  1000 (4096.)
+Memory size:  019b (411.)
+Entry point address: 0001:0000
+Link time: 00:00.01

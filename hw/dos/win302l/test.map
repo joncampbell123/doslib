@@ -1,0 +1,446 @@
+Open Watcom Linker Version 1.9
+Portions Copyright (c) 1985-2002 Sybase, Inc. All Rights Reserved.
+Created on:       14/05/11 19:26:52
+Executable Image: win302l/test.exe
+creating a Windows 16-bit executable
+
+
+                        +------------+
+                        |   Groups   |
+                        +------------+
+
+Group                           Address              Size
+=====                           =======              ====
+
+DGROUP                          0002:0000            000035c0
+
+
+
+                        +--------------+
+                        |   Segments   |
+                        +--------------+
+
+Segment                Class          Group          Address         Size
+=======                =====          =====          =======         ====
+
+test_TEXT              CODE           AUTO           0001:0000       00000204
+winfcon_TEXT           CODE           AUTO           0001:0210       00000d99
+dos_TEXT               CODE           AUTO           0001:0fb0       00000d78
+dosbox_TEXT            CODE           AUTO           0001:1d30       00000003
+_TEXT                  CODE           AUTO           0001:1d34       000024c7
+FAR_DATA               FAR_DATA       AUTO           0002:0000       00000000
+_NULL                  BEGDATA        DGROUP         0002:0000       00000010
+AFX_NULL               BEGDATA        DGROUP         0002:0010       00000000
+CONST                  DATA           DGROUP         0002:0010       00000450
+CONST2                 DATA           DGROUP         0002:0460       00000000
+_DATA                  DATA           DGROUP         0002:0460       000002ae
+XIB                    DATA           DGROUP         0002:070e       00000000
+XI                     DATA           DGROUP         0002:070e       00000012
+XIE                    DATA           DGROUP         0002:0720       00000000
+YIB                    DATA           DGROUP         0002:0720       00000000
+YI                     DATA           DGROUP         0002:0720       00000000
+YIE                    DATA           DGROUP         0002:0720       00000000
+STRINGS                DATA           DGROUP         0002:0720       00000000
+DATA                   DATA           DGROUP         0002:0720       00000000
+BCSD                   DATA           DGROUP         0002:0720       00000000
+_BSS                   BSS            DGROUP         0002:0720       00000e9f
+STACK                  STACK          DGROUP         0002:15c0       00002000
+
+
+                        +----------------+
+                        |   Memory Map   |
+                        +----------------+
+
+* = unreferenced symbol
++ = symbol only referenced locally
+
+Address        Symbol
+=======        ======
+
+Module: win302l/test.obj(/usr/src/doslib/hw/dos/test.c)
+0001:0000      WINMAIN
+0001:0024+     main_
+Module: ../../hw/dos/win302l/dos.lib(/usr/src/doslib/hw/dos/winfcon.c)
+0001:0210*     _win_hwnd_
+0001:0214+     _win_kb_insert_
+0001:0272+     _win_sigint_
+0001:02d8+     _win_sigint_post_
+0001:02e6+     _WIN_WINDOWPROC
+0001:0694+     _win_kbhit_
+0001:06b0      _win_getch_
+0001:06e6+     _win_kb_read_
+0001:070e+     _win_kb_write_
+0001:0730*     _win_read_
+0001:0762*     _win_write_
+0001:0794*     _win_isatty_
+0001:07b4+     _win_pump_wait_
+0001:082c+     _win_pump_
+0001:08a2+     _win_update_cursor_
+0001:08cc+     _win_redraw_line_row_
+0001:097e+     _win_redraw_line_row_partial_
+0001:0a46+     _win_scrollup_
+0001:0af0+     _win_newline_
+0001:0b26+     _win_putc_
+0001:0b7c      _win_printf_
+0001:0c02+     _gdi_pause_
+0001:0c92      _WIN_MAIN_CON_ENTRY
+0002:14a8+     __win_WindowProc_MPI
+0002:14ac+     __win_hInstance
+Module: ../../hw/dos/win302l/dos.lib(/usr/src/doslib/hw/dos/dos.c)
+0002:0460*     _megaem_info
+0002:0466*     _lib_dos_option
+0002:0468+     _dos_LOL
+0002:046c      _dos_flavor
+0002:046e      _dos_version
+0002:0470      _freedos_kernel_version
+0002:0474      _dos_version_method
+0002:0478      _windows_version_method
+0002:047c      _freedos_kernel_version_str
+0002:0480      _windows_emulation_comment_str
+0002:0484      _windows_emulation
+0002:0486      _windows_version
+0002:0488      _windows_mode
+0002:0489+     _windows_init
+0002:048a+     _vcpi_probed
+0002:048b+     _vcpi_present
+0002:048c      _windows_mode_strs
+0002:04a4+     _dpmi_flags
+0002:04a6+     _dpmi_version
+0002:04a8+     _dpmi_init
+0002:04ac+     _dpmi_entry_point
+0002:04b0+     _dpmi_present
+0002:04b1+     _dpmi_processor_type
+0002:04b2+     _dpmi_private_data_length_paragraphs
+0002:04b4+     _dpmi_private_data_segment
+0002:04b6*     _dpmi_entered
+0002:04b8*     _dpmi_rm_entry
+0002:04c0*     _dpmi_pm_entry
+0002:04f8+     _genthunk32w_ntdll
+0002:04fc+     _genthunk32w_kernel32
+0002:0500+     _genthunk32w_kernel32_GetVersion
+0002:0504+     _genthunk32w_kernel32_GetVersionEx
+0002:0508+     _genthunk32w_kernel32_GetLastError
+0002:050c+     ___GenThunksExist
+0002:050e+     ___GenThunksChecked
+0002:0510+     ___LoadLibraryEx32W
+0002:0514+     ___FreeLibrary32W
+0001:0fb0*     _dos_xread_
+0001:0ff6*     _dos_xwrite_
+0001:106c      probe_dpmi_
+0001:117a      probe_dos_
+0001:1206+     win16_probe_for_wine_
+0001:12a4      detect_windows_
+0001:1404*     dos_list_of_lists_
+0001:143c*     dos_mcb_get_psp_
+0001:145c+     mcb_name_is_junk_
+0001:1488+     dos_mcb_first_segment_
+0001:14a4*     mcb_filter_name_
+0001:1576+     dos_mcb_next_
+0001:1644*     dos_mcb_first_
+0001:1690*     dos_parse_psp_
+0001:173e+     dos_device_next_
+0001:183e*     dos_device_first_
+0001:1902*     dos_linear_to_phys_vcpi_
+0001:1942      probe_vcpi_
+0001:195a*     win16_getexhandler_
+0001:1996*     win16_setexhandler_
+0001:19d4*     win16_getvect_
+0001:1a10*     win16_setvect_
+0001:1a4e+     genthunk32_init_
+0001:1bc2+     genthunk32_free_
+0001:1c00      ToolHelpInit_
+0001:1cb2*     ToolHelpFree_
+0001:1ce6      detect_virtualbox_emu_
+0001:1cea      windows_emulation_str_
+0001:1d04      dos_flavor_str_
+0002:0518+     ___GetProcAddress32W
+0002:051c+     ___GetVDMPointer32W
+0002:0520+     ___CallProc32W
+0002:0524+     ___CallProcEx32W
+0002:0528+     _ToolHelpProbed
+0002:052a+     _ToolHelpDLL
+0002:052c      ___TimerCount
+0002:0530+     ___InterruptUnRegister
+0002:0534+     ___InterruptRegister
+0002:0538      _virtualbox_version_str
+0002:14ae*     _dpmi_pm_es
+0002:14b0*     _dpmi_pm_ds
+0002:14b2*     _dpmi_pm_cs
+0002:14b4*     _dpmi_pm_ss
+0002:14b6      _vcpi_minor_version
+0002:14b7      _vcpi_major_version
+Module: ../../hw/dos/win302l/dos.lib(/usr/src/doslib/hw/dos/dosbox.c)
+0001:1d30      detect_dosbox_emu_
+Module: /usr/watcom/lib286/win/clibl.lib(wstart)
+0000:0006*     pLocalHeap
+0000:0008*     pAtomTable
+0000:000a*     pStackTop
+0000:000c*     pStackMin
+0000:000e*     pStackBot
+0002:0000*     __nullarea
+0002:057a*     __curbrk
+0002:057c*     __psp
+0002:057e      __osmajor
+0002:057f*     __osminor
+0002:0580*     __osmode
+0002:000a      __STACKLOW
+0002:000c*     __STACKTOP
+0002:0582*     __cbyte
+0002:0584      __child
+0002:0586*     __no87
+0002:0581*     __HShift
+0002:0588*     __get_ovl_stack
+0002:058c*     __restore_ovl_stack
+0002:0590*     ___FPE_handler
+0002:0594*     __LpCmdLine
+0002:0598*     __LpPgmName
+0001:1d34      _wstart_
+0001:1d34*     _cstart_
+0001:1e15      __exit_
+0001:1e26      __GETDS
+Module: /usr/watcom/lib286/win/clibl.lib(cmodel)
+0001:1e28      _big_code_
+0001:1e28*     CodeModelMismatch
+Module: /usr/watcom/lib286/win/clibl.lib(signl.c)
+0001:1e28+     __sigabort_
+0001:1e36      signal_
+0001:1edc      raise_
+Module: /usr/watcom/lib286/win/clibl.lib(setjmp)
+0001:1ff0      _setjmp_
+0001:2026      longjmp_
+Module: /usr/watcom/lib286/win/clibl.lib(read.c)
+0001:2069      read_
+Module: /usr/watcom/lib286/win/clibl.lib(write.c)
+0001:236b      write_
+Module: /usr/watcom/lib286/win/clibl.lib(isatt.c)
+0001:2561      isatty_
+Module: /usr/watcom/lib286/win/clibl.lib(memmove.c)
+0001:25a2      memmove_
+Module: /usr/watcom/lib286/win/clibl.lib(snprintf.c)
+0001:266f      vsnprintf_
+0001:26f7      snprintf_
+Module: /usr/watcom/lib286/win/clibl.lib(exit.c)
+0001:2729      __null_int23_exit_
+0001:272a      exit_
+0001:2763      _exit_
+0002:062c      ___int23_exit
+0002:0630+     ___FPE_handler_exit
+Module: /usr/watcom/lib286/win/clibl.lib(initrtns.c)
+0001:27b3      __FInitRtns
+0001:27be+     __InitRtns
+0001:281c      __FFiniRtns
+0001:2827      __FiniRtns
+Module: /usr/watcom/lib286/win/clibl.lib(dosseg)
+0001:288c      __DOSseg__
+Module: /usr/watcom/lib286/win/clibl.lib(abort.c)
+0001:288d*     abort_
+0001:28b0      __terminate_
+0002:0634      ___abort
+Module: /usr/watcom/lib286/win/clibl.lib(sigsy.c)
+0001:296d      __restore_int23_
+0001:29d7      __restore_int_ctrl_break_
+0001:2a61      __grab_int23_
+0001:2ad2      __grab_int_ctrl_break_
+Module: /usr/watcom/lib286/win/clibl.lib(sigtab.c)
+0002:0640      __SignalTable
+Module: /usr/watcom/lib286/win/clibl.lib(seterrno.c)
+0001:2b50      __set_errno_
+0001:2b6b*     __set_EDOM_
+0001:2b82*     __set_ERANGE_
+0001:2b98*     __set_EINVAL_
+0001:2bb1      __set_doserrno_
+Module: /usr/watcom/lib286/win/clibl.lib(sigfpe.c)
+0001:2bc1*     __raise_fpe_
+0001:2bc9      __sigfpe_handler_
+Module: /usr/watcom/lib286/win/clibl.lib(ljmphdl.c)
+0002:0674      ___longjmp_handler
+Module: /usr/watcom/lib286/win/clibl.lib(iomodtty.c)
+0001:2c56      __ChkTTYIOMode_
+0001:2c96*     __IOMode_
+Module: /usr/watcom/lib286/win/clibl.lib(iomode.c)
+0001:2cac      __GetIOMode_
+0001:2cc8      __SetIOMode_nogrow_
+0002:0678+     ___NFiles
+0002:067a+     ___init_mode
+0002:06a2      ___io_mode
+Module: /usr/watcom/lib286/win/clibl.lib(winrtns.c)
+0002:06a6      __WindowsIsWindowedHandle
+0002:06aa*     __WindowsRemoveWindowedHandle
+0002:06ae*     __WindowsNewWindow
+0002:06b2*     __WindowsCloseWindow
+0002:06b6*     __WindowsSetAbout
+0002:06ba*     __WindowsSetAppTitle
+0002:06be*     __WindowsSetConTitle
+0002:06c2*     __WindowsDestroyOnClose
+0002:06c6*     __WindowsYieldControl
+0002:06ca*     __WindowsShutDown
+0002:06ce      __WindowsStdin
+0002:06d2      __WindowsStdout
+0002:06d6*     __WindowsKbhit
+0002:06da*     __WindowsGetch
+0002:06de*     __WindowsGetche
+0002:06e2*     __WindowsPutch
+0002:06e6      __WindowsExitRtn
+Module: /usr/watcom/lib286/win/clibl.lib(dosret.c)
+0001:2ce2*     _dosretax_
+0001:2cf4*     _dosret0_
+0001:2d08      __set_errno_dos_
+0001:2d62*     __set_errno_dos_reterr_
+Module: /usr/watcom/lib286/win/clibl.lib(__lseek.c)
+0001:2d73      __lseek_
+Module: /usr/watcom/lib286/win/clibl.lib(stack086.c)
+0001:2db0      stackavail_
+Module: /usr/watcom/lib286/win/clibl.lib(stk)
+0001:2dc3*     __STK
+0001:2dda      __STKOVERFLOW_
+Module: /usr/watcom/lib286/win/clibl.lib(prtf.c)
+0001:2df7      __prtf_
+Module: /usr/watcom/lib286/win/clibl.lib(sgdef086)
+0002:070e      __Start_XI
+0002:0720      __End_XI
+0002:0720      __Start_YI
+0002:0720      __End_YI
+Module: /usr/watcom/lib286/win/clibl.lib(xmsgwin.c)
+0001:3cd4+     __exit_with_msg_
+0001:3d35      __fatal_runtime_error_
+Module: /usr/watcom/lib286/win/clibl.lib(chainint)
+0001:3d52      _chain_intr_
+Module: /usr/watcom/lib286/win/clibl.lib(d_setvec.c)
+0001:3d72      _dos_setvect_
+Module: /usr/watcom/lib286/win/clibl.lib(nonibm.c)
+0001:3d85+     __is_nonIBM_
+0002:0700      ___NonIBM
+Module: /usr/watcom/lib286/win/clibl.lib(d_getvec.c)
+0001:3dce      _dos_getvect_
+Module: /usr/watcom/lib286/win/clibl.lib(errno.c)
+0001:3ddf      __get_errno_ptr_
+0001:3de5      __get_doserrno_ptr_
+0002:14b8+     _errno
+0002:14ba+     __doserrno
+Module: /usr/watcom/lib286/win/clibl.lib(wctomb.c)
+0001:3deb      wctomb_
+Module: /usr/watcom/lib286/win/clibl.lib(itoa.c)
+0001:3e17+     utoa_
+0001:3e7a      itoa_
+Module: /usr/watcom/lib286/win/clibl.lib(i4m)
+0001:3ea2*     __I4M
+0001:3ea2      __U4M
+Module: /usr/watcom/lib286/win/clibl.lib(strupr.c)
+0001:3eba      strupr_
+Module: /usr/watcom/lib286/win/clibl.lib(noefgfmt.c)
+0002:0702      ___EFG_printf
+0002:0706*     ___EFG_scanf
+Module: /usr/watcom/lib286/win/clibl.lib(mbisdbcs.c)
+0002:14bc      ___IsDBCS
+Module: /usr/watcom/lib286/win/clibl.lib(mbislead.c)
+0001:3ef6*     _ismbblead_
+0002:14be      ___MBCSIsTable
+Module: /usr/watcom/lib286/win/clibl.lib(lltoa.c)
+0001:3f14      ulltoa_
+0001:3ffd*     lltoa_
+Module: /usr/watcom/lib286/win/clibl.lib(ltoa.c)
+0001:4061      ultoa_
+0001:40d4*     ltoa_
+Module: /usr/watcom/lib286/win/clibl.lib(enterdb.c)
+0001:4105      __EnterWVIDEO_
+0002:070a+     ___WD_Present
+Module: /usr/watcom/lib286/win/clibl.lib(alphabet.c)
+0002:043a      ___Alphabet
+Module: /usr/watcom/lib286/win/clibl.lib(mbinit.c)
+0001:415d      __mbinit_
+0002:070c+     ___MBCodePage
+
+
+                        +----------------------+
+                        |   Imported Symbols   |
+                        +----------------------+
+
+Symbol                              Module
+======                              ======
+
+MESSAGEBEEP                         USER
+GETWINDOWLONG                       USER
+DEFWINDOWPROC                       USER
+GETSYSTEMMETRICS                    USER
+DESTROYWINDOW                       USER
+HIDECARET                           USER
+DESTROYCARET                        USER
+POSTQUITMESSAGE                     USER
+LOADCURSOR                          USER
+SETCURSOR                           USER
+CREATECARET                         USER
+SETCARETPOS                         USER
+SHOWCARET                           USER
+GETUPDATERECT                       USER
+GETSTOCKOBJECT                      GDI
+SELECTOBJECT                        GDI
+RECTANGLE                           GDI
+BEGINPAINT                          USER
+SETBKMODE                           GDI
+SETBKCOLOR                          GDI
+SETTEXTCOLOR                        GDI
+TEXTOUT                             GDI
+ENDPAINT                            USER
+GETMESSAGE                          USER
+TRANSLATEMESSAGE                    USER
+DISPATCHMESSAGE                     USER
+PEEKMESSAGE                         USER
+POSTMESSAGE                         USER
+GETDC                               USER
+RELEASEDC                           USER
+BITBLT                              GDI
+YIELD                               KERNEL
+GETTICKCOUNT                        USER
+MAKEPROCINSTANCE                    KERNEL
+REGISTERCLASS                       USER
+MESSAGEBOX                          USER
+GETMODULEFILENAME                   KERNEL
+CREATEWINDOW                        USER
+SETWINDOWLONG                       USER
+CREATEFONT                          GDI
+GETDESKTOPWINDOW                    USER
+GETCHARWIDTH                        GDI
+SHOWWINDOW                          USER
+UPDATEWINDOW                        USER
+SETWINDOWPOS                        USER
+ISWINDOW                            USER
+DELETEOBJECT                        GDI
+GETVERSION                          KERNEL
+ALLOCSELECTOR                       KERNEL
+SETSELECTORBASE                     KERNEL
+SETSELECTORLIMIT                    KERNEL
+GETWINFLAGS                         KERNEL
+GETMODULEHANDLE                     KERNEL
+GETPROCADDRESS                      KERNEL
+SETERRORMODE                        KERNEL
+LOADLIBRARY                         KERNEL
+FREELIBRARY                         KERNEL
+INITTASK                            KERNEL
+INITAPP                             USER
+WAITEVENT                           KERNEL
+__AHSHIFT                           KERNEL
+_LREAD                              KERNEL
+_LWRITE                             KERNEL
+__fpmath                            WIN87EM
+__F000H                             KERNEL
+ISDBCSLEADBYTE                      KERNEL
+GETKBCODEPAGE                       KEYBOARD
+
+
+                        +--------------------+
+                        |   Libraries Used   |
+                        +--------------------+
+
+/usr/watcom/lib286/win/windows.lib
+../../hw/dos/win302l/dos.lib
+/usr/watcom/lib286/win/clibl.lib
+
+
+                        +-----------------------+
+                        |   Linker Statistics   |
+                        +-----------------------+
+
+Stack size:  2000 (8192.)
+Memory size:  77bb (30651.)
+Entry point address: 0001:1d34
+Link time: 00:00.01

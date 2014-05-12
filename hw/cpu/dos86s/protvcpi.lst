@@ -1,0 +1,461 @@
+     1                                  ; protvcpi.asm
+     2                                  ;
+     3                                  ; Test program: Protected mode via VCPI
+     4                                  ; (C) 2010-2012 Jonathan Campbell.
+     5                                  ; Hackipedia DOS library.
+     6                                  ;
+     7                                  ; This code is licensed under the LGPL.
+     8                                  ; <insert LGPL legal text here>
+     9                                  ;
+    10                                  ; proot of concept:
+    11                                  ; switching the CPU into 386 16-bit protected mode (and back) using VCPI
+    12                                  bits 16			; 16-bit real mode
+    13                                  org 0x100		; MS-DOS .COM style
+    14                                  
+    15                                  ; assume ES == DS and SS == DS and DS == CS
+    16                                  
+    17                                  ; SELECTORS
+    18                                  NULL_SEL	equ		0
+    19                                  CODE_SEL	equ		8
+    20                                  DATA_SEL	equ		16
+    21                                  VIDEO_SEL	equ		24
+    22                                  CODE32_SEL	equ		32
+    23                                  DATA32_SEL	equ		40
+    24                                  VCPI0_SEL	equ		48
+    25                                  VCPI1_SEL	equ		56
+    26                                  VCPI2_SEL	equ		64
+    27                                  TSS_SEL		equ		72
+    28                                  TSS2_SEL	equ		80
+    29                                  MAX_SEL		equ		88
+    30                                  
+    31                                  ; ===== ENTRY POINT
+    32 00000000 E8E902                  		call		cpu_is_386
+    33 00000003 7406                    		je		is_386
+    34 00000005 BA[1203]                		mov		dx,str_cpu_not_386
+    35 00000008 E9D802                  		jmp		exit2dos_with_message
+    36                                  is_386:
+    37                                  
+    38                                  ; ===== CHECK FOR VIRTUAL 8086 MODE. IN THIS CASE WE WANT IT, IT MEANS VCPI IS PRESENT
+    39 0000000B 0F01E0                  		smsw		ax			; 386 or higher: If we're in real mode
+    40 0000000E A801                    		test		al,1			; and bit 0 is already set, we're in virtual 8086
+    41 00000010 7506                    		jnz		isnt_realmode		; and our switch to prot mode will cause problems.
+    42 00000012 BA[2903]                		mov		dx,str_cpu_need_v86_mode
+    43 00000015 E9CB02                  		jmp		exit2dos_with_message
+    44                                  isnt_realmode:
+    45                                  
+    46                                  ; choose memory location for PAGE0, PAGEDIR. they must be 4K aligned
+    47 00000018 6631C9                  		xor		ecx,ecx
+    48 0000001B 8CC9                    		mov		cx,cs
+    49 0000001D 66C1E104                		shl		ecx,4
+    50                                  
+    51 00000021 66678DB9[D4090000]      		lea		edi,[ecx+ENDOI]
+    52 00000029 6681C7FF0F0000          		add		edi,0xFFF
+    53 00000030 6681E700F00000          		and		edi,0xF000
+    54 00000037 6629CF                  		sub		edi,ecx
+    55 0000003A 66893E[D009]            		mov		dword [PAGE0],edi
+    56 0000003F 6681C700100000          		add		edi,0x1000
+    57 00000046 66893E[CC09]            		mov		dword [PAGEDIR],edi
+    58                                  
+    59                                  ; ===== CHECK FOR VALID INT 67h
+    60 0000004B 31C0                    		xor		ax,ax
+    61 0000004D 8EC0                    		mov		es,ax
+    62 0000004F 26A19C01                		mov		ax,[es:(0x67*4)]
+    63 00000053 260B069E01              		or		ax,[es:(0x67*4)+2]
+    64 00000058 09C0                    		or		ax,ax
+    65 0000005A 7506                    		jnz		int67_valid
+    66 0000005C BA[4B03]                		mov		dx,str_cpu_need_int67
+    67 0000005F E98102                  		jmp		exit2dos_with_message
+    68                                  
+    69                                  ; ===== CHECK FOR VCPI
+    70 00000062 B800DE                  int67_valid:	mov		ax,0xDE00
+    71 00000065 CD67                    		int		67h
+    72 00000067 80FC00                  		cmp		ah,0
+    73 0000006A 7406                    		jz		vcpi_valid
+    74 0000006C BA[6403]                		mov		dx,str_cpu_need_vcpi
+    75 0000006F E97102                  		jmp		exit2dos_with_message
+    76                                  
+    77                                  ; fill in the page table, get VCPI selectors, and entry point
+    78 00000072 B801DE                  vcpi_valid:	mov		ax,0xDE01
+    79 00000075 1E                      		push		ds
+    80 00000076 07                      		pop		es
+    81 00000077 668B3E[D009]            		mov		edi,[PAGE0]
+    82 0000007C 66BE[4C000000]          		mov		esi,GDT + VCPI0_SEL
+    83 00000082 CD67                    		int		67h
+    84 00000084 80FC00                  		cmp		ah,0
+    85 00000087 7406                    		jz		vcpi_valid2
+    86 00000089 BA[7903]                		mov		dx,str_cpu_need_vcpi_info
+    87 0000008C E95402                  		jmp		exit2dos_with_message
+    88 0000008F 66891E[0000]            vcpi_valid2:	mov		dword [vcpi_entry],ebx
+    89                                  
+    90                                  ; ===== zero both TSS
+    91 00000094 FC                      		cld
+    92 00000095 1E                      		push		ds
+    93 00000096 07                      		pop		es
+    94 00000097 31C0                    		xor		ax,ax
+    95                                  
+    96 00000099 BF[F408]                		mov		di,TSS1
+    97 0000009C B93400                  		mov		cx,104/2
+    98 0000009F F3AB                    		rep		stosw
+    99                                  
+   100 000000A1 BF[6009]                		mov		di,TSS2
+   101 000000A4 B93400                  		mov		cx,104/2
+   102 000000A7 F3AB                    		rep		stosw
+   103                                  
+   104                                  ; ===== BUILD THE GLOBAL DESCRIPTOR TABLE AND GDTR REGISTER
+   105 000000A9 8CC8                    		mov		ax,cs
+   106 000000AB A3[1800]                		mov		word [MY_SEGMENT],ax
+   107 000000AE C706[1A00]0000          		mov		word [MY_SEGMENT+2],0
+   108 000000B4 89C3                    		mov		bx,ax
+   109 000000B6 C1EB0C                  		shr		bx,12
+   110 000000B9 C1E004                  		shl		ax,4			; BX:AX = 32-bit physical addr of our segment
+   111 000000BC A3[1400]                		mov		word [MY_PHYS_BASE],ax
+   112 000000BF 891E[1600]              		mov		word [MY_PHYS_BASE+2],bx
+   113                                  
+   114 000000C3 05[1C00]                		add		ax,GDT
+   115 000000C6 83D300                  		adc		bx,0			; BX:AX += offset of GDT
+   116                                  
+   117 000000C9 C706[0400]5700          		mov		word [GDTR],MAX_SEL - 1
+   118 000000CF A3[0600]                		mov		word [GDTR+2],ax
+   119 000000D2 891E[0800]              		mov		word [GDTR+4],bx	; GDTR: limit MAX_SEL-1 base=physical mem addr of GDT
+   120                                  
+   121 000000D6 A1[1400]                		mov		ax,word [MY_PHYS_BASE]
+   122 000000D9 8B1E[1600]              		mov		bx,word [MY_PHYS_BASE+2]
+   123 000000DD 05[7400]                		add		ax,IDT
+   124 000000E0 83D300                  		adc		bx,0
+   125                                  
+   126 000000E3 C706[0C00]FF07          		mov		word [IDTR],2047
+   127 000000E9 A3[0E00]                		mov		word [IDTR+2],ax
+   128 000000EC 891E[1000]              		mov		word [IDTR+4],bx
+   129                                  
+   130 000000F0 FC                      		cld
+   131                                  
+   132                                  ;     zero IDT
+   133 000000F1 BF[7400]                		mov		di,IDT
+   134 000000F4 B9FF03                  		mov		cx,1023
+   135 000000F7 31C0                    		xor		ax,ax
+   136 000000F9 F3AB                    		rep		stosw
+   137                                  
+   138 000000FB BF[1C00]                		mov		di,GDT
+   139                                  ;     NULL selector
+   140 000000FE 31C0                    		xor		ax,ax
+   141 00000100 AB                      		stosw
+   142 00000101 AB                      		stosw
+   143 00000102 AB                      		stosw
+   144 00000103 AB                      		stosw
+   145                                  ;     Code selector
+   146 00000104 48                      		dec		ax			; 0x0000 - 1 = 0xFFFF
+   147 00000105 AB                      		stosw					; LIMIT
+   148 00000106 A1[1400]                		mov		ax,[MY_PHYS_BASE]
+   149 00000109 AB                      		stosw					; BASE[15:0]
+   150 0000010A A0[1600]                		mov		al,[MY_PHYS_BASE+2]
+   151 0000010D B49A                    		mov		ah,0x9A
+   152 0000010F AB                      		stosw					; BASE[23:16] access byte=executable readable
+   153 00000110 B00F                    		mov		al,0x0F
+   154 00000112 8A26[1700]              		mov		ah,[MY_PHYS_BASE+3]	; LIMIT[19:16] flags=0 BASE[31:24]
+   155 00000116 AB                      		stosw
+   156                                  ;     Data selector
+   157 00000117 31C0                    		xor		ax,ax
+   158 00000119 48                      		dec		ax			; 0xFFFF
+   159 0000011A AB                      		stosw					; LIMIT
+   160 0000011B A1[1400]                		mov		ax,[MY_PHYS_BASE]
+   161 0000011E AB                      		stosw					; BASE[15:0]
+   162 0000011F A0[1600]                		mov		al,[MY_PHYS_BASE+2]
+   163 00000122 B492                    		mov		ah,0x92
+   164 00000124 AB                      		stosw					; BASE[23:16] access byte=data writeable
+   165 00000125 B00F                    		mov		al,0x0F
+   166 00000127 8A26[1700]              		mov		ah,[MY_PHYS_BASE+3]	; LIMIT[19:16] flags=0 BASE[31:24]
+   167 0000012B AB                      		stosw
+   168                                  ;     Data selector (video)
+   169 0000012C 31C0                    		xor		ax,ax
+   170 0000012E 48                      		dec		ax			; 0xFFFF
+   171 0000012F AB                      		stosw					; LIMIT
+   172 00000130 B80080                  		mov		ax,0x8000
+   173 00000133 AB                      		stosw					; BASE[15:0]
+   174 00000134 B00B                    		mov		al,0x0B			; BASE=0xB8000
+   175 00000136 B492                    		mov		ah,0x92
+   176 00000138 AB                      		stosw					; BASE[23:16] access byte=data writeable
+   177 00000139 B00F                    		mov		al,0x0F
+   178 0000013B 8A26[1700]              		mov		ah,[MY_PHYS_BASE+3]	; LIMIT[19:16] flags=0 BASE[31:24]
+   179 0000013F AB                      		stosw
+   180                                  ;     Code selector (32-bit)
+   181 00000140 48                      		dec		ax			; 0x0000 - 1 = 0xFFFF
+   182 00000141 AB                      		stosw					; LIMIT
+   183 00000142 A1[1400]                		mov		ax,[MY_PHYS_BASE]
+   184 00000145 AB                      		stosw					; BASE[15:0]
+   185 00000146 A0[1600]                		mov		al,[MY_PHYS_BASE+2]
+   186 00000149 B49A                    		mov		ah,0x9A
+   187 0000014B AB                      		stosw					; BASE[23:16] access byte=executable readable
+   188 0000014C B0CF                    		mov		al,0xCF
+   189 0000014E 8A26[1700]              		mov		ah,[MY_PHYS_BASE+3]	; LIMIT[19:16] flags=granular 32-bit BASE[31:24]
+   190 00000152 AB                      		stosw
+   191                                  ;     Data selector (32-bit)
+   192 00000153 31C0                    		xor		ax,ax
+   193 00000155 48                      		dec		ax			; 0xFFFF
+   194 00000156 AB                      		stosw					; LIMIT
+   195 00000157 A1[1400]                		mov		ax,[MY_PHYS_BASE]
+   196 0000015A AB                      		stosw					; BASE[15:0]
+   197 0000015B A0[1600]                		mov		al,[MY_PHYS_BASE+2]
+   198 0000015E B492                    		mov		ah,0x92
+   199 00000160 AB                      		stosw					; BASE[23:16] access byte=data writeable
+   200 00000161 B0CF                    		mov		al,0xCF
+   201 00000163 8A26[1700]              		mov		ah,[MY_PHYS_BASE+3]	; LIMIT[19:16] flags=granular 32-bit BASE[31:24]
+   202 00000167 AB                      		stosw
+   203                                  ;     VCPI0
+   204 00000168 83C708                  		add		di,8
+   205                                  ;     VCPI1
+   206 0000016B 83C708                  		add		di,8
+   207                                  ;     VCPI2
+   208 0000016E 83C708                  		add		di,8
+   209                                  ;     TSS selector (TSS_SEL)
+   210 00000171 668B1E[1400]            		mov		ebx,[MY_PHYS_BASE]
+   211 00000176 6681C3[F4080000]        		add		ebx,TSS1
+   212 0000017D B86700                  		mov		ax,104-1
+   213 00000180 AB                      		stosw					; LIMIT
+   214 00000181 89D8                    		mov		ax,bx
+   215 00000183 66C1EB10                		shr		ebx,16
+   216 00000187 AB                      		stosw					; BASE[15:0]
+   217 00000188 88D8                    		mov		al,bl
+   218 0000018A B489                    		mov		ah,0x89
+   219 0000018C AB                      		stosw					; BASE[23:16] access byte=data writeable non-busy TSS type 9
+   220 0000018D B00F                    		mov		al,0x0F
+   221 0000018F 88FC                    		mov		ah,bh			; LIMIT[19:16] flags=0 BASE[31:24]
+   222 00000191 AB                      		stosw
+   223                                  ;     TSS selector (TSS_VM86_SEL)
+   224 00000192 668B1E[1400]            		mov		ebx,[MY_PHYS_BASE]
+   225 00000197 6681C3[60090000]        		add		ebx,TSS2
+   226 0000019E B86700                  		mov		ax,104-1
+   227 000001A1 AB                      		stosw					; LIMIT
+   228 000001A2 89D8                    		mov		ax,bx
+   229 000001A4 66C1EB10                		shr		ebx,16
+   230 000001A8 AB                      		stosw					; BASE[15:0]
+   231 000001A9 88D8                    		mov		al,bl
+   232 000001AB B489                    		mov		ah,0x89
+   233 000001AD AB                      		stosw					; BASE[23:16] access byte=data writeable non-busy TSS type 9
+   234 000001AE B00F                    		mov		al,0x0F
+   235 000001B0 88FC                    		mov		ah,bh			; LIMIT[19:16] flags=0 BASE[31:24]
+   236 000001B2 AB                      		stosw
+   237                                  
+   238                                  ; prepare page directory
+   239 000001B3 FA                      		cli
+   240 000001B4 FC                      		cld
+   241 000001B5 1E                      		push		ds
+   242 000001B6 07                      		pop		es
+   243 000001B7 668B3E[CC09]            		mov		edi,[PAGEDIR]
+   244 000001BC 668B16[1400]            		mov		edx,[MY_PHYS_BASE]
+   245                                  
+   246 000001C1 668B1E[D009]            		mov		ebx,[PAGE0]
+   247 000001C6 66678D441A07            		lea		eax,[edx+ebx+7]
+   248 000001CC 66AB                    		stosd
+   249                                  
+   250 000001CE 6631C0                  		xor		eax,eax
+   251 000001D1 66B9FF030000            		mov		ecx,1023
+   252 000001D7 F366AB                  		rep		stosd
+   253                                  
+   254                                  ; prepare to switch
+   255 000001DA FA                      		cli
+   256 000001DB FC                      		cld
+   257 000001DC 1E                      		push		ds
+   258 000001DD 07                      		pop		es
+   259 000001DE BF[7408]                		mov		di,VCPI_SETUP
+   260 000001E1 668B16[1400]            		mov		edx,[MY_PHYS_BASE]
+   261                                  
+   262 000001E6 668B1E[CC09]            		mov		ebx,[PAGEDIR]
+   263 000001EB 66678D041A              		lea		eax,[edx+ebx]
+   264 000001F0 668905                  		mov		dword [di+0],eax	; ESI+0 = CR3 register = (SEG<<4)+PAGE0
+   265                                  
+   266 000001F3 66678D82[04000000]      		lea		eax,[edx+GDTR]
+   267 000001FB 66894504                		mov		dword [di+4],eax	; ESI+4 = GDTR
+   268                                  
+   269 000001FF 66678D82[0C000000]      		lea		eax,[edx+IDTR]
+   270 00000207 66894508                		mov		dword [di+8],eax	; ESI+8 = IDTR
+   271                                  
+   272 0000020B C7450C0000              		mov		word [di+0xC],0		; ESI+C = LDTR
+   273 00000210 C7450E5000              		mov		word [di+0xE],TSS2_SEL	; ESI+E = TR
+   274 00000215 66C74510[35020000]      		mov		dword [di+0x10],prot16_entry ; ESI+12 = prot16_entry
+   275 0000021D 66C7451408000000        		mov		dword [di+0x14],CODE_SEL	; ESI+10 = CS
+   276                                  
+   277                                  ; =============== JUMP INTO PROTECTED MODE USING VCPI
+   278 00000225 66BE[74080000]          		mov		esi,VCPI_SETUP
+   279 0000022B 660336[1400]            		add		esi,[MY_PHYS_BASE]	; ESI = *LINEAR* address (not DS:ESI!)
+   280 00000230 B80CDE                  		mov		ax,0xDE0C
+   281 00000233 CD67                    		int		67h
+   282                                  prot16_entry:
+   283                                  
+   284 00000235 B81000                  		mov		ax,DATA_SEL
+   285 00000238 8ED8                    		mov		ds,ax
+   286 0000023A 8EC0                    		mov		es,ax
+   287 0000023C 8ED0                    		mov		ss,ax
+   288                                  
+   289                                  ; draw directly onto VGA alphanumeric RAM at 0xB8000
+   290 0000023E FC                      		cld
+   291 0000023F 06                      		push		es
+   292 00000240 B81800                  		mov		ax,VIDEO_SEL
+   293 00000243 8EC0                    		mov		es,ax
+   294 00000245 BE[D103]                		mov		si,vdraw_msg
+   295 00000248 31FF                    		xor		di,di
+   296 0000024A AC                      vdraw1:		lodsb					; AL = DS:SI++
+   297 0000024B 08C0                    		or		al,al
+   298 0000024D 7405                    		jz		vdraw1e
+   299 0000024F B41E                    		mov		ah,0x1E
+   300 00000251 AB                      		stosw					; ES:DI = AX, DI += 2
+   301 00000252 EBF6                    		jmp		vdraw1
+   302 00000254 07                      vdraw1e:	pop		es
+   303                                  
+   304                                  ; now, jump into 32-bit protected mode
+   305 00000255 EA[5A02]2000            		jmp		CODE32_SEL:prot32_entry
+   306                                  bits 32
+   307 0000025A 66B82800                prot32_entry:	mov		ax,DATA32_SEL
+   308 0000025E 8ED8                    		mov		ds,ax
+   309 00000260 8EC0                    		mov		es,ax
+   310 00000262 8ED0                    		mov		ss,ax
+   311 00000264 BCF0FF0000              		mov		esp,0xFFF0
+   312                                  
+   313                                  ; draw directly onto VGA alphanumeric RAM at 0xB8000
+   314 00000269 FC                      		cld
+   315 0000026A BE[12040000]            		mov		esi,vdraw32_msg
+   316 0000026F BFA0800B00              		mov		edi,0xB8000+(80*2)
+   317 00000274 2B3D[14000000]          		sub		edi,[MY_PHYS_BASE]
+   318 0000027A AC                      vdraw321:	lodsb					; AL = DS:SI++
+   319 0000027B 08C0                    		or		al,al
+   320 0000027D 7406                    		jz		vdraw321e
+   321 0000027F B41E                    		mov		ah,0x1E
+   322 00000281 66AB                    		stosw					; ES:DI = AX, DI += 2
+   323 00000283 EBF5                    		jmp		vdraw321
+   324                                  vdraw321e:
+   325                                  
+   326                                  ; jump 32-bit to 16-bit
+   327 00000285 EA[8C020000]0800        		jmp		CODE_SEL:prot32_to_prot
+   328                                  bits 16
+   329 0000028C B81000                  prot32_to_prot:	mov		ax,DATA_SEL
+   330 0000028F 8ED8                    		mov		ds,ax
+   331 00000291 8EC0                    		mov		es,ax
+   332 00000293 8ED0                    		mov		ss,ax
+   333                                  
+   334                                  ; =============== JUMP OUT OF PROTECTED MODE USING VCPI
+   335 00000295 6689E3                  		mov		ebx,esp
+   336 00000298 6631C0                  		xor		eax,eax
+   337 0000029B A1[1800]                		mov		ax,[MY_SEGMENT]
+   338 0000029E 6650                    		push		eax			; SS:ESP+0x28 GS
+   339 000002A0 6650                    		push		eax			; SS:ESP+0x24 FS
+   340 000002A2 6650                    		push		eax			; SS:ESP+0x20 DS
+   341 000002A4 6650                    		push		eax			; SS:ESP+0x1C ES
+   342 000002A6 6650                    		push		eax			; SS:ESP+0x18 SS
+   343 000002A8 6653                    		push		ebx			; SS:ESP+0x14 ESP
+   344 000002AA 669C                    		pushfd					; SS:ESP+0x10 EFLAGS
+   345 000002AC 6650                    		push		eax			; SS:ESP+0x0C CS
+   346 000002AE 6668[C7020000]          		push		dword realmode_entry	; SS:ESP+0x08 EIP
+   347 000002B4 666A30                  		push		dword VCPI0_SEL		; SS:ESP+0x04
+   348 000002B7 66FF36[0000]            		push		dword [vcpi_entry]	; SS:ESP+0x00
+   349 000002BC 66B80CDE0000            		mov		eax,0xDE0C		; 0xDE0C = switch to v86 mode
+   350 000002C2 6667FF2C24              		jmp far		dword [esp]		; simulate a CALL FAR (SS: override implied)
+   351                                  
+   352                                  ; ====== PROVE WE MADE IT TO REAL MODE
+   353 000002C7 BE[9B03]                realmode_entry:	mov		si,vdraw2_msg
+   354 000002CA B800B8                  		mov		ax,0xB800
+   355 000002CD 8EC0                    		mov		es,ax
+   356 000002CF BF4001                  		mov		di,80*4
+   357 000002D2 AC                      vdraw2:		lodsb					; AL = DS:SI++
+   358 000002D3 08C0                    		or		al,al
+   359 000002D5 7405                    		jz		vdraw2e
+   360 000002D7 B41E                    		mov		ah,0x1E
+   361 000002D9 AB                      		stosw					; ES:DI = AX, DI += 2
+   362 000002DA EBF6                    		jmp		vdraw2
+   363 000002DC 8CC8                    vdraw2e:	mov		ax,cs
+   364 000002DE 8EC0                    		mov		es,ax
+   365                                  
+   366 000002E0 FB                      		sti
+   367                                  
+   368                                  ; ===== DONE
+   369 000002E1 EB04                    		jmp		exit2dos
+   370                                  
+   371                                  ; ===== EXIT TO DOS WITH ERROR MESSAGE DS:DX
+   372                                  exit2dos_with_message:
+   373 000002E3 B409                    		mov		ah,9
+   374 000002E5 CD21                    		int		21h
+   375                                  ; ===== EXIT TO DOS
+   376 000002E7 B8004C                  exit2dos:	mov		ax,4C00h
+   377 000002EA CD21                    		int		21h
+   378                                  
+   379                                  ; 8086 test: EFLAGS will always have bits 12-15 set
+   380 000002EC 9C                      cpu_is_386:	pushf
+   381 000002ED 58                      		pop		ax
+   382 000002EE 25FF0F                  		and		ax,0x0FFF
+   383 000002F1 50                      		push		ax
+   384 000002F2 9D                      		popf
+   385 000002F3 9C                      		pushf
+   386 000002F4 58                      		pop		ax
+   387 000002F5 2500F0                  		and		ax,0xF000
+   388 000002F8 3D00F0                  		cmp		ax,0xF000
+   389 000002FB 740F                    		jz		cpu_is_386_not
+   390                                  ; 286 test: EFLAGS will always have bits 12-15 clear
+   391 000002FD 0D00F0                  		or		ax,0xF000
+   392 00000300 50                      		push		ax
+   393 00000301 9D                      		popf
+   394 00000302 9C                      		pushf
+   395 00000303 58                      		pop		ax
+   396 00000304 2500F0                  		and		ax,0xF000
+   397 00000307 7403                    		jz		cpu_is_386_not
+   398                                  ; it's a 386
+   399 00000309 31C0                    		xor		ax,ax			; ZF=1
+   400 0000030B C3                      		ret
+   401 0000030C B80100                  cpu_is_386_not:	mov		ax,1
+   402 0000030F 09C0                    		or		ax,ax			; ZF=0
+   403 00000311 C3                      		ret
+   404                                  
+   405                                  ; strings
+   406 00000312 333836206F72206869-     str_cpu_not_386: db		"386 or higher required$"
+   407 0000031B 676865722072657175-
+   408 00000324 6972656424         
+   409 00000329 5669727475616C2038-     str_cpu_need_v86_mode: db	"Virtual 8086 mode required (VCPI)$"
+   410 00000332 303836206D6F646520-
+   411 0000033B 726571756972656420-
+   412 00000344 28564350492924     
+   413 0000034B 494E54203637682073-     str_cpu_need_int67:db		"INT 67h service required$"
+   414 00000354 657276696365207265-
+   415 0000035D 71756972656424     
+   416 00000364 564350492073657276-     str_cpu_need_vcpi:db		"VCPI server required$"
+   417 0000036D 657220726571756972-
+   418 00000376 656424             
+   419 00000379 564350492073657276-     str_cpu_need_vcpi_info:db	"VCPI server failed to return info$"
+   420 00000382 6572206661696C6564-
+   421 0000038B 20746F207265747572-
+   422 00000394 6E20696E666F24     
+   423 0000039B 54686973206D657373-     vdraw2_msg:	db		"This message was drawn on screen back from real mode!",0
+   424 000003A4 616765207761732064-
+   425 000003AD 7261776E206F6E2073-
+   426 000003B6 637265656E20626163-
+   427 000003BF 6B2066726F6D207265-
+   428 000003C8 616C206D6F64652100 
+   429 000003D1 54686973206D657373-     vdraw_msg:	db		"This message was drawn on screen from 386 16-bit protected mode!",0
+   430 000003DA 616765207761732064-
+   431 000003E3 7261776E206F6E2073-
+   432 000003EC 637265656E2066726F-
+   433 000003F5 6D203338362031362D-
+   434 000003FE 6269742070726F7465-
+   435 00000407 63746564206D6F6465-
+   436 00000410 2100               
+   437 00000412 54686973206D657373-     vdraw32_msg:	db		"This message was drawn on screen from 386 32-bit protected mode!",0
+   438 0000041B 616765207761732064-
+   439 00000424 7261776E206F6E2073-
+   440 0000042D 637265656E2066726F-
+   441 00000436 6D203338362033322D-
+   442 0000043F 6269742070726F7465-
+   443 00000448 63746564206D6F6465-
+   444 00000451 2100               
+   445                                  
+   446                                  ; vars
+   447                                  		section		.bss align=8
+   448 00000000 <res 00000004>          vcpi_entry:	resd		1
+   449 00000004 <res 00000008>          GDTR:		resq		1
+   450 0000000C <res 00000008>          IDTR:		resq		1
+   451 00000014 <res 00000004>          MY_PHYS_BASE:	resd		1
+   452 00000018 <res 00000004>          MY_SEGMENT:	resd		1
+   453 0000001C <res 00000058>          GDT:		resb		MAX_SEL
+   454 00000074 <res 00000800>          IDT:		resb		8*256
+   455 00000874 <res 00000080>          VCPI_SETUP:	resb		0x80
+   456 000008F4 <res 0000006C>          TSS1:		resb		108
+   457 00000960 <res 0000006C>          TSS2:		resb		108
+   458 000009CC <res 00000004>          PAGEDIR:	resd		1
+   459 000009D0 <res 00000004>          PAGE0:		resd		1
+   460 000009D4 <res 00000004>          ENDOI:		resd		1
+   461                                  
