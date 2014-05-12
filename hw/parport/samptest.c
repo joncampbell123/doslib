@@ -186,6 +186,8 @@ int main() {
 	if (i < 0 || i >= info_parports) return 1;
 	sprt = &info_parport[i];
 
+	write_8254_system_timer(0); /* make sure the timer is in rate generator mode, full counter */
+
 	avgsum = 0; avgcount = 0;
 	printf("Timing test: tight loop (no memory store) reading status port:\n");
 	for (i=0;i < (int)(sizeof(statr_test_reads)/sizeof(statr_test_reads[0]));i++) {

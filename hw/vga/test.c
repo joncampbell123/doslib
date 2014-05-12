@@ -21,6 +21,8 @@
 # include <windows/apihelp.h>
 # include <windows/dispdib/dispdib.h>
 # include <windows/win16eb/win16eb.h>
+#else
+# include <hw/8254/8254.h>
 #endif
 
 unsigned char paltmp[392*3];
@@ -34,6 +36,13 @@ int main() {
 
 	probe_dos();
 	detect_windows();
+
+#if !defined(TARGET_WINDOWS)
+	if (!probe_8254()) {
+		printf("8254 not found (I need this for time-sensitive portions of the driver)\n");
+		return 1;
+	}
+#endif
 
 #if defined(TARGET_WINDOWS)
 # ifdef WIN_STDOUT_CONSOLE
@@ -132,6 +141,7 @@ int main() {
 			vga_write("  9: VGA 8-bit wide \n");
 		else
 			vga_write("  9: VGA 9-bit wide \n");
+		vga_write("  z: Measurements     \n");
 
 		vga_write("ESC: quit\n");
 		vga_write_sync();
@@ -1905,6 +1915,8 @@ int main() {
 			}
 		}
 		else if (c == 'P') {
+#if TARGET_MSDOS == 16 && defined(__COMPACT__)
+#else
 			if (vga_flags & VGA_IS_TANDY) {
 				/* 160x200x16 */
 				int10_setmode(8);
@@ -2065,6 +2077,7 @@ int main() {
 				vga_sync_bios_cursor();
 				while (getch() != 13);
 			}
+#endif
 		}
 		else if (c == 'D') {
 			if (vga_flags & VGA_IS_CGA) { /* NTS: This test also works on EGA/VGA */
@@ -2237,6 +2250,8 @@ int main() {
 			}
 		}
 		else if (c == 'H') {
+#if TARGET_MSDOS == 16 && defined(__COMPACT__)
+#else
 			if (vga_flags & VGA_IS_HGC) {
 				vga_turn_on_hgc();
 				{
@@ -2272,6 +2287,7 @@ int main() {
 				vga_sync_bios_cursor();
 				while (getch() != 13);
 			}
+#endif
 		}
 		else if (c == 'T') {
 			int10_setmode(3);
@@ -2301,6 +2317,95 @@ int main() {
 				vga_sync_bios_cursor();
 				while (getch() != 13);
 			}
+		}
+		else if (c == 'z') {
+#ifdef TARGET_WINDOWS
+#elif TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
+			write_8254_system_timer(0); /* make sure the timer is in rate generator mode, full counter */
+			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA|VGA_IS_CGA)) {
+				unsigned int b_frame,e_frame_active,e_frame;
+				unsigned int vlines=0,vactlines=0;
+				unsigned char b,bex,hex;
+				unsigned int htime=0;
+				unsigned int j;
+				char tmp[128];
+
+				while (1) {
+					vlines = vactlines = 0;
+
+					vga_clear();
+					vga_moveto(0,0);
+					vga_write_color(0x7);
+					vga_write("Measuring htotal and vtotal... ");
+
+					_cli();
+					/* wait for vsync to begin */
+					vga_wait_for_vsync();
+					vga_wait_for_vsync_end();
+					b_frame = read_8254(0);
+					bex = 0;
+					hex = 0;
+					do {
+						b = inp(vga_base_3x0 + 0xA);
+						if ((b&1) != (hex&1)) {
+							hex = b;
+							/* NTS: Unfortunately VGA hardware is documented to set bit 1
+							 *      if either horizontal sync OR vertical retrace. for
+							 *      most VGA hardware following spec, vlines == vactlines */
+							if (!(b&1)) { /* start of a line */
+								if (!(b&8)) vactlines++;
+								vlines++;
+							}
+						}
+						if ((b&8) != (bex&8)) {
+							bex = b;
+							if (!(b&8)) break; /* if going from vsync to active */
+							else e_frame_active = read_8254(0); /* if going from active to retrace */
+						}
+					} while (1);
+					e_frame = read_8254(0);
+					e_frame_active = (e_frame_active - e_frame) & 0xFFFF;
+					b_frame = (b_frame - e_frame) & 0xFFFF; /* remember: timer counts DOWN, 16-bit wide */
+					if (vlines != 0) htime = b_frame / vlines;
+					else htime = b_frame;
+					vga_write("\n");
+
+					if (vactlines != vlines)
+						sprintf(tmp," vertical lines: %u active / %u total (!)\n",vactlines,vlines);
+					else
+						sprintf(tmp," vertical lines: %u active\n",vactlines);
+					vga_write(tmp);
+
+					sprintf(tmp," vertical refresh took %.3f ms total, %.3f ms retrace\n",
+						((double)b_frame * 1000) / T8254_REF_CLOCK_HZ,
+						((double)e_frame_active * 1000) / T8254_REF_CLOCK_HZ);
+					vga_write(tmp);
+
+					sprintf(tmp," vertical refresh rate: %.3fHz\n",
+						1000.0 / (((double)b_frame * 1000) / T8254_REF_CLOCK_HZ));
+					vga_write(tmp);
+
+					sprintf(tmp," horizontal refresh rate: %.3fHz\n",
+						1000.0 / ((((double)(b_frame - e_frame_active)) * 1000) / vlines / T8254_REF_CLOCK_HZ));
+					vga_write(tmp);
+
+					_sti();
+
+					if (kbhit()) {
+						if (getch() == 27) break;
+					}
+
+					for (j=0;j < 9;j++) t8254_wait(0xFFFF); /* 1/18.2 */
+				}
+			}
+			else {
+				vga_write("Only CGA/EGA/VGA may do that\n");
+				vga_write_sync();
+				vga_sync_bios_cursor();
+				while (getch() != 13);
+			}
+#endif
 		}
 	}
 	vga_sync_bios_cursor();
