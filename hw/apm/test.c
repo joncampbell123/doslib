@@ -96,6 +96,7 @@ int main(int argc,char **argv) {
 				help();
 			}
 			else if (!strncmp(a,"if:",3)) {
+				a += 3;
 				if (!strcmp(a,"real"))
 					req_mode = APM_CONNECT_REALMODE;
 				else if (!strcmp(a,"16pm"))
