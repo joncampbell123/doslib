@@ -961,6 +961,7 @@ static signed char			reduced_irq_interval = 0;
 static unsigned char			sample_rate_timer_clamp = 0;
 static unsigned char			goldplay_samplerate_choice = GOLDRATE_MATCH;
 static void				(interrupt *old_irq)() = NULL;
+static unsigned char			old_irq_masked = 0;
 
 #define OUTPUT_SIZE			(32*1024)
 static unsigned char*			output_buffer = NULL;
@@ -3532,12 +3533,13 @@ static void choose_sound_card_sb() {
 		stop_play();
 		if (sb_card->irq != -1) {
 			_dos_setvect(irq2int(sb_card->irq),old_irq);
-			p8259_mask(sb_card->irq);
+			if (old_irq_masked) p8259_mask(sb_card->irq);
 		}
 
 		sb_card = card;
 		sndsb_assign_dma_buffer(sb_card,sb_dma);
 		if (sb_card->irq != -1) {
+			old_irq_masked = p8259_is_masked(sb_card->irq);
 			old_irq = _dos_getvect(irq2int(sb_card->irq));
 			_dos_setvect(irq2int(sb_card->irq),sb_irq);
 			p8259_unmask(sb_card->irq);
@@ -4033,6 +4035,7 @@ int main(int argc,char **argv) {
 		}
 
 		if (sb_card->irq != -1) {
+			old_irq_masked = p8259_is_masked(sb_card->irq);
 			old_irq = _dos_getvect(irq2int(sb_card->irq));
 			_dos_setvect(irq2int(sb_card->irq),sb_irq);
 			p8259_unmask(sb_card->irq);
