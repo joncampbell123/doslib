@@ -104,6 +104,10 @@ static inline void p8259_mask(unsigned char c) {
 	p8259_write_mask(c,m | (1 << (c&7)));
 }
 
+static inline unsigned char p8259_is_masked(unsigned char c) {
+	return (p8259_read_mask(c) & (1 << (c&7)));
+}
+
 void p8259_ICW(unsigned char a,unsigned char b,unsigned char c,unsigned char d);
 unsigned char p8259_poll(unsigned char c);
 int probe_8259();

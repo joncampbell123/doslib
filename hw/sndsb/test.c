@@ -551,6 +551,7 @@ static void irq_0_watchdog_reset() {
 	irq_0_watchdog = 0x10000UL;
 }
 
+static unsigned char old_irq_masked = 0;
 static void (interrupt *old_irq_0)() = NULL;
 static void interrupt irq_0() { /* timer IRQ */
 	if (sb_card->dsp_play_method > SNDSB_DSPOUTMETHOD_DIRECT && !sb_card->goldplay_mode) {
@@ -2759,7 +2760,7 @@ void conf_sound_card() {
 
 				if (sb_card->irq != -1) {
 					_dos_setvect(irq2int(sb_card->irq),old_irq);
-					p8259_mask(sb_card->irq);
+					if (old_irq_masked) p8259_mask(sb_card->irq);
 				}
 
 				if (DMA8 > 3) DMA8 = -1;
@@ -2792,6 +2793,7 @@ void conf_sound_card() {
 				sb_card->irq = IRQ;
 
 				if (sb_card->irq != -1) {
+					old_irq_masked = p8259_is_masked(sb_card->irq);
 					old_irq = _dos_getvect(irq2int(sb_card->irq));
 					_dos_setvect(irq2int(sb_card->irq),sb_irq);
 					p8259_unmask(sb_card->irq);
@@ -2818,7 +2820,7 @@ void conf_sound_card() {
 
 			if (sb_card->irq != -1) {
 				_dos_setvect(irq2int(sb_card->irq),old_irq);
-				p8259_mask(sb_card->irq);
+				if (old_irq_masked) p8259_mask(sb_card->irq);
 			}
 
 			if (DMA8 < 0) DMA16 = -1;
@@ -2855,6 +2857,7 @@ void conf_sound_card() {
 			sb_card->irq = IRQ;
 
 			if (sb_card->irq != -1) {
+				old_irq_masked = p8259_is_masked(sb_card->irq);
 				old_irq = _dos_getvect(irq2int(sb_card->irq));
 				_dos_setvect(irq2int(sb_card->irq),sb_irq);
 				p8259_unmask(sb_card->irq);
@@ -2880,7 +2883,7 @@ void conf_sound_card() {
 
 			if (sb_card->irq != -1) {
 				_dos_setvect(irq2int(sb_card->irq),old_irq);
-				p8259_mask(sb_card->irq);
+				if (old_irq_masked) p8259_mask(sb_card->irq);
 			}
 
 			if (DMA8 > 3) DMA8 = -1;
@@ -2923,6 +2926,7 @@ void conf_sound_card() {
 			sb_card->irq = IRQ;
 
 			if (sb_card->irq != -1) {
+				old_irq_masked = p8259_is_masked(sb_card->irq);
 				old_irq = _dos_getvect(irq2int(sb_card->irq));
 				_dos_setvect(irq2int(sb_card->irq),sb_irq);
 				p8259_unmask(sb_card->irq);
@@ -3006,12 +3010,13 @@ void choose_sound_card() {
 		stop_play();
 		if (sb_card->irq != -1) {
 			_dos_setvect(irq2int(sb_card->irq),old_irq);
-			p8259_mask(sb_card->irq);
+			if (old_irq_masked) p8259_mask(sb_card->irq);
 		}
 
 		sb_card = card;
 		sndsb_assign_dma_buffer(sb_card,sb_dma);
 		if (sb_card->irq != -1) {
+			old_irq_masked = p8259_is_masked(sb_card->irq);
 			old_irq = _dos_getvect(irq2int(sb_card->irq));
 			_dos_setvect(irq2int(sb_card->irq),sb_irq);
 			p8259_unmask(sb_card->irq);
@@ -3459,6 +3464,7 @@ int main(int argc,char **argv) {
 	p8259_unmask(0);
 
 	if (sb_card->irq != -1) {
+		old_irq_masked = p8259_is_masked(sb_card->irq);
 		old_irq = _dos_getvect(irq2int(sb_card->irq));
 		_dos_setvect(irq2int(sb_card->irq),sb_irq);
 		p8259_unmask(sb_card->irq);
