@@ -302,6 +302,7 @@ static unsigned char		wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
 static unsigned long		wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
 static unsigned long		wav_sample_rate_by_timer_ticks = 1;
 static unsigned long		wav_sample_rate_by_timer = 1;
+static unsigned char		dont_chain_irq = 0;
 static unsigned char		wav_flipsign = 0;
 static unsigned char		wav_playing = 0;
 static unsigned char		wav_record = 0;
@@ -701,15 +702,21 @@ static void interrupt sb_irq() {
 	sb_irq_count++;
 	if (++IRQ_anim >= 4) IRQ_anim = 0;
 
-	/* WARNING: chaining to the old IRQ is often not a good idea. On most systems
-	 *          you only cause a crash. */
-	/* TODO: Add code that reads the PIC mask and/or reads the vector table to
-	 *       determine whether to chain, and then chain to the prior one, else
-	 *       ack the IRQ and return */
-
-	/* ack PIC */
-	if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
-	p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+	/* NTS: we assume that if the IRQ was masked when we took it, that we must not
+	 *      chain to the previous IRQ handler. This is very important considering
+	 *      that on most DOS systems an IRQ is masked for a very good reason---the
+	 *      interrupt handler doesn't exist! In fact, the IRQ vector could easily
+	 *      be unitialized or 0000:0000 for it! CALLing to that address is obviously
+	 *      not advised! */
+	if (old_irq_masked || old_irq == NULL || dont_chain_irq) {
+		/* ack the interrupt ourself, do not chain */
+		if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+	}
+	else {
+		/* chain to the previous IRQ, who will acknowledge the interrupt */
+		old_irq();
+	}
 }
 
 static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
@@ -2422,6 +2429,7 @@ static void help() {
 	printf(" /nodmap              Disable DMA probing\n");
 	printf(" /nohdmap             Disable 16-bit DMA probing\n");
 	printf(" /nowinvxd            don't try to identify Windows drivers\n");
+	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
 
 #if TARGET_MSDOS == 32
 	printf("The following option affects hooking the NMI interrupt. Hooking is\n");
@@ -3187,6 +3195,9 @@ int main(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return 1;
+			}
+			else if (!strcmp(a,"nochain")) {
+				dont_chain_irq = 1;
 			}
 			else if (!strcmp(a,"16k")) {
 				buffer_limit = 16UL * 1024UL;

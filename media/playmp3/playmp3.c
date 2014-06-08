@@ -944,6 +944,8 @@ static struct sndsb_ctx*		sb_card = NULL;
 static struct ultrasnd_ctx*		gus_card = NULL;
 static unsigned long			gus_write = 0;
 
+static unsigned char			dont_chain_irq = 0;
+
 /* LPT DAC */
 static unsigned short			lpt_port = 0x378;
 static unsigned char			lpt_dac_mode = LPT_DAC_STRAIGHT;
@@ -1166,12 +1168,21 @@ static void interrupt sb_irq() {
 	sb_irq_count++;
 	if (++IRQ_anim >= 4) IRQ_anim = 0;
 
-	/* NOTE TO SELF: On most hardware IRQ 5 is unassigned anyway and chaining to it seems
-	 * to cause massive 1-second delays per interrupt. */
-
-	/* ack PIC */
-	if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
-	p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+	/* NTS: we assume that if the IRQ was masked when we took it, that we must not
+	 *      chain to the previous IRQ handler. This is very important considering
+	 *      that on most DOS systems an IRQ is masked for a very good reason---the
+	 *      interrupt handler doesn't exist! In fact, the IRQ vector could easily
+	 *      be unitialized or 0000:0000 for it! CALLing to that address is obviously
+	 *      not advised! */
+	if (old_irq_masked || old_irq == NULL || dont_chain_irq) {
+		/* ack the interrupt ourself, do not chain */
+		if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+	}
+	else {
+		/* chain to the previous IRQ, who will acknowledge the interrupt */
+		old_irq();
+	}
 }
 
 static void load_audio_sb(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
@@ -3305,6 +3316,7 @@ static void help() {
 	printf(" /drv=<N>             Automatically pick output mode (sb,gus,pcspeaker,lptdac)\n");
 	printf(" /sc=<N>              Automatically pick Nth sound card (first card=1)\n");
 	printf(" /ddac                Force DSP Direct DAC output mode\n");
+	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
 }
 
 static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h) {
@@ -3636,6 +3648,9 @@ int main(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return 1;
+			}
+			else if (!strcmp(a,"nochain")) {
+				dont_chain_irq = 1;
 			}
 			else if (!strcmp(a,"16k")) {
 				buffer_limit = 16UL * 1024UL;
