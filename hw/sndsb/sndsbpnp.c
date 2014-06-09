@@ -178,14 +178,14 @@ int sndsb_try_isa_pnp(uint32_t id,uint8_t csn) {
 		return ok;
 	}
 
-	/* try to init */
+	/* try to init. note the init_card() function needs to know this is a PnP device. */
+	cx->pnp_id = id;
+	cx->pnp_csn = csn;
 	if (!sndsb_init_card(cx)) {
 		sndsb_free_card(cx);
 		return ISAPNPSB_FAILED;
 	}
 
-	cx->pnp_id = id;
-	cx->pnp_csn = csn;
 	isa_pnp_is_sound_blaster_compatible_id(cx->pnp_id,&cx->pnp_name);
 	return 1;
 }
