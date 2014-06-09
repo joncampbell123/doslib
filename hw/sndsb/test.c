@@ -302,6 +302,7 @@ static unsigned char		wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
 static unsigned long		wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
 static unsigned long		wav_sample_rate_by_timer_ticks = 1;
 static unsigned long		wav_sample_rate_by_timer = 1;
+static unsigned char		dont_sb_idle = 0;
 static unsigned char		dont_chain_irq = 0;
 static unsigned char		wav_flipsign = 0;
 static unsigned char		wav_playing = 0;
@@ -1143,6 +1144,12 @@ static void wav_idle() {
 
 	if (!wav_playing || wav_fd < 0)
 		return;
+
+	/* if we're playing without an IRQ handler, then we'll want this function
+	 * to poll the sound card's IRQ status and handle it directly so playback
+	 * continues to work. if we don't, playback will halt on actual Creative
+	 * Sound Blaster 16 hardware until it gets the I/O read to ack the IRQ */
+	if (!dont_sb_idle) sndsb_main_idle(sb_card);
 
 	_cli();
 #ifdef DMA_WRAP_DEBUG
@@ -2430,6 +2437,7 @@ static void help() {
 	printf(" /nohdmap             Disable 16-bit DMA probing\n");
 	printf(" /nowinvxd            don't try to identify Windows drivers\n");
 	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
+	printf(" /noidle              Don't use sndsb library idle function\n");
 
 #if TARGET_MSDOS == 32
 	printf("The following option affects hooking the NMI interrupt. Hooking is\n");
@@ -2555,12 +2563,12 @@ static const signed char sc6600_dma[] = { -1,0,1,3 };
 
 static const signed char sb16_non_pnp_irq[] = { -1,2,5,7,10 };
 static const signed char sb16_non_pnp_dma[] = { -1,0,1,3 };
-static const signed char sb16_non_pnp_dma16[] = { -1,5,6,7 };
+static const signed char sb16_non_pnp_dma16[] = { -1,0,1,3,5,6,7 };
 
 static const int16_t sb16_pnp_base[] = { 0x220,0x240,0x260,0x280 };
 static const signed char sb16_pnp_irq[] = { -1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
 static const signed char sb16_pnp_dma[] = { -1,0,1,3 };
-static const signed char sb16_pnp_dma16[] = { -1,5,6,7 };
+static const signed char sb16_pnp_dma16[] = { -1,0,1,3,5,6,7 };
 
 struct conf_list_item {
 	unsigned char	etype;
@@ -2772,7 +2780,6 @@ void conf_sound_card() {
 				}
 
 				if (DMA8 > 3) DMA8 = -1;
-				if (DMA16 < 4) DMA16 = DMA8;
 
 				/* disable the device IO (0) */
 				isa_pnp_write_address(0x07);	/* log device select */
@@ -2846,16 +2853,23 @@ void conf_sound_card() {
 			else if (IRQ == 5)		c |= 0x02;
 			else if (IRQ == 7)		c |= 0x04;
 			else if (IRQ == 10)		c |= 0x08;
+			else				IRQ = -1;
 			sndsb_write_mixer(sb_card,0x80,c);
 
 			c = 0;
 			if (DMA8 == 0)			c |= 0x01;
 			else if (DMA8 == 1)		c |= 0x02;
 			else if (DMA8 == 3)		c |= 0x08;
+			else				DMA8 = -1;
 
+			/* NTS: From the Creative programming guide:
+			 *      "DSP version 4.xx also supports the transfer of 16-bit sound data through
+			 *       8-bit DMA channel. To make this possible, set all 16-bit DMA channel bits
+			 *       to 0 leaving only 8-bit DMA channel set" */
 			if (DMA16 == 5)			c |= 0x20;
 			else if (DMA16 == 6)		c |= 0x40;
 			else if (DMA16 == 7)		c |= 0x80;
+			else if (DMA16 != DMA8)		DMA16 = -1;
 			sndsb_write_mixer(sb_card,0x81,c);
 
 			/* then the library needs to be updated */
@@ -3195,6 +3209,9 @@ int main(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return 1;
+			}
+			else if (!strcmp(a,"noidle")) {
+				dont_sb_idle = 1;
 			}
 			else if (!strcmp(a,"nochain")) {
 				dont_chain_irq = 1;
