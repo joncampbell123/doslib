@@ -1884,10 +1884,10 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		if (wav_sample_rate > 44100UL && !wav_stereo) return 0; /* mono maxes out at 44100Hz */
 		if (wav_sample_rate > 22050UL && wav_stereo) return 0; /* stereo maxes out at 22050Hz */
 	}
-	else if (cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_201) {
+	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {
 		if (wav_sample_rate > (cx->dsp_record ? 15000UL : 44100UL)) return 0;
 	}
-	else if (cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_200 || cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_1xx) {
+	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_200 || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
 		if (wav_sample_rate > (cx->dsp_record ? 13000UL : 23000UL)) return 0;
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
