@@ -738,6 +738,9 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 						cx->dma16 = cx->dma8;
 					if (cx->irq < 0)
 						cx->irq = gallant_sc6600_map_to_irq[(c>>3)&7];
+
+					cx->do_not_probe_irq = 1;
+					cx->do_not_probe_dma = 1;
 				}
 			}
 		}
