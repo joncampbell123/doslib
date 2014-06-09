@@ -281,6 +281,8 @@ static inline void sndsb_dsp_direct_output(struct sndsb_ctx *cx,unsigned char c)
 	sndsb_write_dsp(cx,c);
 }
 
+void sndsb_main_idle(struct sndsb_ctx *cx);
+
 /* Sound Blaster ADPCM encoding routines */
 unsigned char sndsb_encode_adpcm_4bit(unsigned char samp);
 unsigned char sndsb_encode_adpcm_2bit(unsigned char samp);

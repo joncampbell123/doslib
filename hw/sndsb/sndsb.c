@@ -686,6 +686,10 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 				else if (dmam & 0x20)	cx->dma16 = 5;
 			}
 
+			/* NTS: From the Creative programming guide:
+			 *      "DSP version 4.xx also supports the transfer of 16-bit sound data through
+			 *       8-bit DMA channel. To make this possible, set all 16-bit DMA channel bits
+			 *       to 0 leaving only 8-bit DMA channel set" */
 			if (cx->dma16 == -1)
 				cx->dma16 = cx->dma8;
 		}
@@ -1749,9 +1753,54 @@ int sndsb_reset_mixer(struct sndsb_ctx *cx) {
 	return 1;
 }
 
+/* general main loop idle function. does nothing, unless we're playing with no IRQ,
+ * in which case we're expected to poll IRQ status */
+void sndsb_main_idle(struct sndsb_ctx *cx) {
+	/* do nothing if direct mode, or we are assigned an IRQ, or if emulated by Windows */
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || cx->irq >= 0 || cx->windows_emulation ||
+		cx->vdmsound || cx->windows_xp_ntvdm) return;
+
+	/* blindly ack the IRQ (if any) by reading the proper I/O ports
+	 * so the sound card is happy. */
+	sndsb_interrupt_ack(cx,3);
+}
+
+/* we can do output method. if we can't, then don't bother playing, because it flat out won't work.
+ * if we can, then you want to check if it's supported, because if it's not, you may get weird results, but nothing catastrophic. */
+int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_rate,unsigned char wav_stereo,unsigned char wav_16bit) {
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_MAX) return 0; /* invalid DSP output method */
+	/* 16-bit audio requires we have a 16-bit DMA channel (even if it's the same as the 8-bit DMA) */
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && !wav_16bit && cx->dma8 < 0) return 0;
+	/* 8-bit audio requires we have an 8-bit DMA channel */
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx && wav_16bit && cx->dma16 < 0) return 0;
+	/* Depending on the playback method we MIGHT require an IRQ assignment. ADPCM block transfers
+	 * and DSP 1.xx playback requires the IRQ handler to command playback again, while the later
+	 * DSP commands are "auto-init" and do not need the IRQ handler to do anything except read
+	 * an I/O port to ack the IRQ. Depending on whether the card is a clone or a true Creative
+	 * Sound Blaster 16, this means that it's possible for DMA to continue on without responding
+	 * to the IRQ, or if a Creative product, DMA will halt until the IRQ is acked. */
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->irq < 0) {
+		/* if the DSP command requires an interrupt to continue, then require an IRQ.
+		 * else, we could run just fine without the IRQ. */
+		if (cx->dsp_adpcm || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx)
+			return 0;
+	}
+
+	/* the DSP time interval byte can only go down to 4000Hz */
+	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_sample_rate < 4000) return 0;
+	/* only the DSP 4.xx commands do 16-bit audio, and support flipped sign audio */
+	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) return 0;
+	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->dsp_play_flipped_sign) return 0;
+
+	return 1;
+}
+
+/* output method is supported (as in, recommended) */
 int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample_rate,unsigned char wav_stereo,unsigned char wav_16bit) {
+	if (!sndsb_dsp_out_method_can_do(cx,wav_sample_rate,wav_stereo,wav_16bit))
+		return 0;
+
 	if (wav_sample_rate < 4000UL) return 0;
-	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_MAX) return 0;
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx) {
 		if (cx->is_gallant_sc6600) {
 			if (cx->dsp_vmaj < 3) return 0;
@@ -1769,16 +1818,11 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		(cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))) return 0;
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->dsp_vmaj < 2) return 0;
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_vmaj < 1) return 0;
-	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && (cx->irq < 0 || cx->dma8 < 0)) return 0;
-	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx && wav_16bit && cx->dma16 < 0) return 0;
 
-	/* alright, check params */
+	/* playing stereo audio on cards earlier than DSP 3.xx is not advised because the stereo
+	 * bit is missing. if you try, you'll hear the audio at the correct pitch in mono with
+	 * a "buzzing" because you're hearing interleaved samples */
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_3xx && wav_stereo) return 0;
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) return 0;
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->dsp_play_flipped_sign) return 0;
-
-	/* the DSP time interval byte can only go down to 4000Hz */
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_sample_rate < 4000) return 0;
 
 	if (cx->dsp_adpcm > 0) {
 		/* Neither VDMSOUND.EXE or NTVDM's SB emulation handle ADPCM well */
@@ -2036,11 +2080,9 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		 * as 8-bit sounds like very loud garbage, be kind to the user */
 		if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && (bit16 || cx->dsp_play_flipped_sign))
 			return 0;
-		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && (cx->dma8 < 0 || cx->irq < 0))
-			return 0;
-		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx && bit16 && cx->dma16 < 0)
-			return 0;
-		if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && rate < 4000)
+		/* NTS: we use the "can do" function to reject obvious configurations that will never work
+		 *      on the card, verses an unsupported configuration that we advise not using */
+		if (!sndsb_dsp_out_method_can_do(cx,rate,stereo,bit16))
 			return 0;
 	}
 
