@@ -1786,11 +1786,14 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 			return 0;
 	}
 
-	/* the DSP time interval byte can only go down to 4000Hz */
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_sample_rate < 4000) return 0;
-	/* only the DSP 4.xx commands do 16-bit audio, and support flipped sign audio */
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) return 0;
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->dsp_play_flipped_sign) return 0;
+	if (cx->dsp_adpcm > 0) {
+		/* There is no ADPCM recording mode */
+		if (cx->dsp_record) return 0;
+		/* you can't play ADPCM audio directly */
+		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return 0;
+		/* nor can ADPCM support 16-bit, or stereo, or flipped sign */
+		if (wav_16bit || wav_stereo || cx->dsp_play_flipped_sign) return 0;
+	}
 
 	return 1;
 }
@@ -1800,7 +1803,13 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 	if (!sndsb_dsp_out_method_can_do(cx,wav_sample_rate,wav_stereo,wav_16bit))
 		return 0;
 
-	if (wav_sample_rate < 4000UL) return 0;
+	/* the DSP time interval byte can only go down to 4000Hz */
+	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_sample_rate < 4000) return 0;
+
+	/* only the DSP 4.xx commands do 16-bit audio, and support flipped sign audio */
+	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) return 0;
+	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->dsp_play_flipped_sign) return 0;
+
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx) {
 		if (cx->is_gallant_sc6600) {
 			if (cx->dsp_vmaj < 3) return 0;
@@ -1809,11 +1818,22 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 			if (cx->dsp_vmaj < 4) return 0;
 		}
 	}
+
+	/* Direct mode from within Windows emulation is NOT advised! */
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT && cx->windows_emulation)
 		return 0;
-	if (cx->dsp_vmaj >= 4 &&
+
+	/* Creative SB16 cards do not pay attention to the Sound Blaster Pro stereo bit.
+	 * Playing stereo using the 3xx method on 4.xx DSPs will not work. Most SB16 clones
+	 * will pay attention to that bit however, but it's best not to assume that will happen. */
+	if (cx->dsp_vmaj >= 4 && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && wav_stereo)
+		return 0;
+
+	/* Using the high-speed DSP playback commands is not advised, which is what the 201 and 3xx modes will do */
+	if (cx->dsp_vmaj >= 4 && (wav_sample_rate*(wav_stereo?2:1)) > (cx->dsp_record ? 11111 : 22222) &&
 		(cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201 || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx))
 		return 0;
+
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_201 &&
 		(cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))) return 0;
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->dsp_vmaj < 2) return 0;
@@ -1822,31 +1842,43 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 	/* playing stereo audio on cards earlier than DSP 3.xx is not advised because the stereo
 	 * bit is missing. if you try, you'll hear the audio at the correct pitch in mono with
 	 * a "buzzing" because you're hearing interleaved samples */
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_3xx && wav_stereo) return 0;
+	if (wav_stereo && cx->dsp_vmaj < 3) return 0;
 
 	if (cx->dsp_adpcm > 0) {
 		/* Neither VDMSOUND.EXE or NTVDM's SB emulation handle ADPCM well */
 		if (cx->vdmsound || cx->windows_xp_ntvdm) return 0;
 		/* Windows 98/ME SBEMUL.SYS handles emulation well, but doesn't do ADPCM either */
 		if (cx->windows_9x_me_sbemul_sys) return 0;
-		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return 0;
-		if (wav_16bit || wav_stereo || cx->dsp_play_flipped_sign) return 0;
-		if (wav_sample_rate > 12000UL) return 0;
+
+		if (cx->dsp_adpcm == ADPCM_4BIT) {
+			if (wav_sample_rate > 12000UL) return 0;
+		}
+		else if (cx->dsp_adpcm == ADPCM_2_6BIT) {
+			if (wav_sample_rate > 13000UL) return 0;
+		}
+		else if (cx->dsp_adpcm == ADPCM_2BIT) {
+			if (wav_sample_rate > 11000UL) return 0;
+		}
+		else {
+			return 0;
+		}
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
 		/* based on Sound Blaster 16 PnP cards that max out at 48000Hz apparently */
 		if (wav_sample_rate > 48000UL) return 0;
 	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {/*FIXME: Review Creative SDK documentation. Stereo playback didn't appear until the Pro, right?*/
-		if (wav_sample_rate > 44100UL && !wav_stereo) return 0;
-		if (wav_sample_rate > 22050UL && wav_stereo) return 0;
+	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+		if (wav_sample_rate > 44100UL && !wav_stereo) return 0; /* mono maxes out at 44100Hz */
+		if (wav_sample_rate > 22050UL && wav_stereo) return 0; /* stereo maxes out at 22050Hz */
 	}
-	else if (cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_200) {
-		if (wav_sample_rate > 23000UL) return 0;
+	else if (cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_201) {
+		if (wav_sample_rate > (cx->dsp_record ? 15000UL : 44100UL)) return 0;
+	}
+	else if (cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_200 || cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_1xx) {
+		if (wav_sample_rate > (cx->dsp_record ? 13000UL : 23000UL)) return 0;
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
-		if (wav_sample_rate > 23000UL) return 0;
-		if (wav_16bit || wav_stereo) return 0;
+		if (wav_sample_rate > (cx->dsp_record ? 13000UL : 23000UL)) return 0;
 	}
 
 	return 1;
@@ -2112,7 +2144,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	sndsb_write_dsp(cx,cx->dsp_record ? 0xD3 : 0xD1); /* turn off speaker if recording, else, turn on */
 
 	if (cx->dsp_adpcm > 0 && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) {
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(min(rate,22222UL)));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(rate));
 		if (stereo || bit16 || cx->dsp_record)
 			return 0; /* ADPCM modes do not support stereo or 16 bit nor recording */
 		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200)
@@ -2120,7 +2152,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(min(rate,22222UL)));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(rate));
 		/* Gravis Ultrasound SBOS/MEGA-EM don't handle auto-init 1.xx very well.
 		   the only way to cooperate with their shitty emulation is to strictly
 		   limit DMA count to the IRQ interval and to NOT set the auto-init flag */
@@ -2130,12 +2162,12 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_200) {
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
 		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(min(rate,22222UL)));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(rate));
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {/*FIXME: Review Creative SDK documentation. Stereo playback didn't appear until the Pro, right?*/
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
 		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(min(rate,44444UL)));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(rate));
 		/* NTS: I have a CT1350B card that has audible problems with the ISA bus when driven up to
 		 *      22050Hz in non-hispeed modes (if I have something else run, like reading the floppy
 		 *      drive, the audio "warbles", changing speed periodically). So while Creative suggests
@@ -2148,19 +2180,19 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2 && !strcmp(cx->dsp_copyright,"")) /* [1] */
 			cx->buffer_hispeed = (rate >= (cx->dsp_record ? 8000 : 16000));
 		else
-			cx->buffer_hispeed = (rate >= (cx->dsp_record ? 11111 : 23000));
+			cx->buffer_hispeed = (rate >= (cx->dsp_record ? 13000 : 23000));
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
-		unsigned long total_rate = min(rate,44444UL) * (cx->buffer_stereo ? 2UL : 1UL);
+		unsigned long total_rate = rate * (cx->buffer_stereo ? 2UL : 1UL);
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
 		if (cx->dsp_record) sndsb_write_dsp(cx,cx->buffer_stereo ? 0xA8 : 0xA0);
 		sndsb_write_mixer(cx,0x0E,0x20 | (cx->buffer_stereo ? 0x02 : 0x00));
 		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
 		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(total_rate));
-		cx->buffer_hispeed = (total_rate >= 23000);
+		cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 22050 : 23000));
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
-		sndsb_write_dsp_outrate(cx,min(rate,60000UL));
+		sndsb_write_dsp_outrate(cx,rate);
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
 	}
@@ -2210,13 +2242,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_200) {
 		sndsb_write_dsp(cx,cx->dsp_record ? 0x2C : 0x1C);
 	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {
-		if (cx->buffer_hispeed)
-			sndsb_write_dsp(cx,cx->dsp_record ? 0x98 : 0x90);
-		else
-			sndsb_write_dsp(cx,cx->dsp_record ? 0x2C : 0x1C);
-	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201 || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
 		if (cx->buffer_hispeed)
 			sndsb_write_dsp(cx,cx->dsp_record ? 0x98 : 0x90);
 		else
