@@ -2058,7 +2058,7 @@ unsigned long sndsb_real_sample_rate(struct sndsb_ctx *cx) {
 }
 
 unsigned char sndsb_rate_to_time_constant(unsigned long rate) {
-	return (unsigned char)((65536UL - (((256000000UL + (rate>>1UL)) / rate) + 128UL)) >> 8UL);
+	return (unsigned char)(256UL - (1000000UL / rate));
 }
 
 int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned char stereo,unsigned char bit16) {
