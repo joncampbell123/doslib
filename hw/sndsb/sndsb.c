@@ -555,6 +555,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_play_flipped_sign = 0;
 	cx->buffer_irq_interval = 0;
 	cx->windows_springwait = 0;
+	cx->do_not_probe_irq = 0;
+	cx->do_not_probe_dma = 0;
 	cx->is_gallant_sc6600 = 0;
 	cx->windows_emulation = 0;
 	cx->windows_xp_ntvdm = 0;
@@ -662,9 +664,9 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	if (sndsb_probe_mixer(cx)) /* NTS: Don't reset the mixer, just probe it */
 		cx->mixer_ok = 1;
 
-	/* Sound Blaster 16 (DSP 4.xx): we read the mixer registers */
+	/* Sound Blaster 16 (DSP 4.xx): we read the mixer registers, unless this card was initialized from a PnP device */
 	/* Earlier cards: we have to probe around for it */
-	if (cx->dsp_vmaj == 4 && !sndsb_probe_options.disable_sb16_read_config_byte) {
+	if (cx->dsp_vmaj == 4 && !sndsb_probe_options.disable_sb16_read_config_byte && cx->pnp_id == 0) {
 		unsigned char irqm = sndsb_read_mixer(cx,0x80);
 		unsigned char dmam = sndsb_read_mixer(cx,0x81);
 		if (cx->irq < 0 && irqm != 0xFF && irqm != 0x00) {
@@ -672,6 +674,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 			else if (irqm & 4)	cx->irq = 7;
 			else if (irqm & 2)	cx->irq = 5;
 			else if (irqm & 1)	cx->irq = 2;
+
+			cx->do_not_probe_irq = 1;
 		}
 		if (dmam != 0xFF && dmam != 0x00) {
 			if (cx->dma8 < 0) {
@@ -692,6 +696,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 			 *       to 0 leaving only 8-bit DMA channel set" */
 			if (cx->dma16 == -1)
 				cx->dma16 = cx->dma8;
+
+			cx->do_not_probe_dma = 1;
 		}
 	}
 
@@ -1713,19 +1719,23 @@ int sndsb_try_base(uint16_t iobase) {
 		return 0;
 	}
 
-	/* if we still have to figure out the IRQ, then probe around to figure it out */
-	if (!cx->is_gallant_sc6600 && cx->irq == -1 && windows_mode == WINDOWS_NONE && !sndsb_probe_options.disable_manual_irq_probing)
+	/* if we still have to figure out the IRQ, and it's not PnP then probe around to figure it out */
+	if (!cx->is_gallant_sc6600 && !cx->do_not_probe_irq && cx->pnp_id == 0 && cx->irq == -1 &&
+		windows_mode == WINDOWS_NONE && !sndsb_probe_options.disable_manual_irq_probing)
 		sndsb_manual_probe_irq(cx);
 
 	/* if we have to, detect the DMA channel. */
-	if (!cx->is_gallant_sc6600 && cx->dma8 == -1 && !sndsb_probe_options.disable_manual_dma_probing)
+	if (!cx->is_gallant_sc6600 && !cx->do_not_probe_dma && cx->pnp_id == 0 && cx->dma8 == -1 &&
+		!sndsb_probe_options.disable_manual_dma_probing)
 		sndsb_manual_probe_dma(cx);
 	/* and the high DMA channel too, if a SB16 or compatible. */
-	if (!cx->is_gallant_sc6600 && cx->dma16 == -1 && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx && !sndsb_probe_options.disable_manual_high_dma_probing)
+	if (!cx->is_gallant_sc6600 && !cx->do_not_probe_dma && cx->pnp_id == 0 && cx->dma16 == -1 &&
+		cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx && !sndsb_probe_options.disable_manual_high_dma_probing)
 		sndsb_manual_probe_high_dma(cx);
 
 	/* if we still have to figure out the IRQ, then probe around to figure it out */
-	if (!cx->is_gallant_sc6600 && cx->irq == -1 && !sndsb_probe_options.disable_alt_irq_probing)
+	if (!cx->is_gallant_sc6600 && !cx->do_not_probe_irq && cx->pnp_id == 0 && cx->irq == -1 &&
+		!sndsb_probe_options.disable_alt_irq_probing)
 		sndsb_alt_lite_probe_irq(cx);
 
 	sndsb_determine_ideal_dsp_play_method(cx);

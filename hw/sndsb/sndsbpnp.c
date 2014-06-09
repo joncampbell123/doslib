@@ -136,8 +136,11 @@ int isa_pnp_sound_blaster_get_resources(uint32_t id,unsigned char csn,struct snd
 			cx->oplio = isa_pnp_read_io_resource(2);
 			if (cx->oplio == 0 || cx->oplio == 0xFFFF) cx->oplio = 0;
 			cx->dma8 = isa_pnp_read_dma(0);
+			if ((cx->dma8&7) == 4) cx->dma8 = -1;
 			cx->dma16 = isa_pnp_read_dma(1);
+			if ((cx->dma16&7) == 4) cx->dma16 = -1;
 			cx->irq = isa_pnp_read_irq(0);
+			if ((cx->irq&0xF) == 0) cx->irq = -1;
 
 			/* logical device #1: gameport */
 			isa_pnp_write_address(0x07);	/* log device select */

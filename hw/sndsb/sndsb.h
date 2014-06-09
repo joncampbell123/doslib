@@ -135,6 +135,8 @@ struct sndsb_ctx {
 	uint8_t				windows_9x_me_sbemul_sys:1;/* Microsoft's SBEMUL.SYS driver, Windows 98/ME */
 	uint8_t				windows_creative_sb16_drivers:1;/* Creative Sound Blaster 16 drivers for Windows */
 	uint8_t				vdmsound:1;		/* We're running under VDMSOUND.EXE */
+	uint8_t				do_not_probe_irq:1;	/* if the card has known configuration registers, then do not probe */
+	uint8_t				do_not_probe_dma:1;	/* ... */
 /* array of mixer controls, determined by mixer chipset */
 	struct sndsb_mixer_control*	sb_mixer;
 	signed short			sb_mixer_items;

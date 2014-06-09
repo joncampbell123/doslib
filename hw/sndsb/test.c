@@ -2789,9 +2789,9 @@ void conf_sound_card() {
 				isa_pnp_write_data_register(0x31,0x00); /* IO range check: bit 0 */
 
 				isa_pnp_write_io_resource(0,BASE >= 0 ? BASE : 0);
-				isa_pnp_write_dma(0,DMA8 >= 0 ? DMA8 : 0xFF);
-				isa_pnp_write_dma(1,DMA16 >= 0 ? DMA16 : 0xFF);
-				isa_pnp_write_irq(0,IRQ > 0 ? IRQ : 0);
+				isa_pnp_write_dma(0,DMA8 >= 0 ? DMA8 : 4); /* setting the DMA field to "4" is how you unassign the resource */
+				isa_pnp_write_dma(1,DMA16 >= 0 ? DMA16 : 4);
+				isa_pnp_write_irq(0,IRQ > 0 ? IRQ : 0); /* setting the IRQ field to "0" is how you unassign the resource */
 				isa_pnp_write_irq_mode(0,2);	/* edge level high */
 
 				/* enable the device IO */
@@ -2865,11 +2865,15 @@ void conf_sound_card() {
 			/* NTS: From the Creative programming guide:
 			 *      "DSP version 4.xx also supports the transfer of 16-bit sound data through
 			 *       8-bit DMA channel. To make this possible, set all 16-bit DMA channel bits
-			 *       to 0 leaving only 8-bit DMA channel set" */
+			 *       to 0 leaving only 8-bit DMA channel set"
+			 *
+			 *      Also as far as I can tell there's really no way to assign
+			 *      an 8-bit DMA without either assigning to 5,6,7 or matching
+			 *      the 8-bit DMA channel */
 			if (DMA16 == 5)			c |= 0x20;
 			else if (DMA16 == 6)		c |= 0x40;
 			else if (DMA16 == 7)		c |= 0x80;
-			else if (DMA16 != DMA8)		DMA16 = -1;
+			else				DMA16 = DMA8;
 			sndsb_write_mixer(sb_card,0x81,c);
 
 			/* then the library needs to be updated */
