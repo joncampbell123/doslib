@@ -945,6 +945,7 @@ static struct ultrasnd_ctx*		gus_card = NULL;
 static unsigned long			gus_write = 0;
 
 static unsigned char			dont_chain_irq = 0;
+static unsigned char			dont_sb_idle = 0;
 
 /* LPT DAC */
 static unsigned short			lpt_port = 0x378;
@@ -2181,6 +2182,12 @@ static void mp3_idle() {
 	if (!mp3_playing || mp3_fd < 0)
 		return;
 
+	/* if we're playing without an IRQ handler, then we'll want this function
+	 * to poll the sound card's IRQ status and handle it directly so playback
+	 * continues to work. if we don't, playback will halt on actual Creative
+	 * Sound Blaster 16 hardware until it gets the I/O read to ack the IRQ */
+	if (!dont_sb_idle) sndsb_main_idle(sb_card);
+
 	/* load from disk */
 	if (sb_card != NULL) {
 		const unsigned int leeway = 2048;
@@ -3317,6 +3324,7 @@ static void help() {
 	printf(" /sc=<N>              Automatically pick Nth sound card (first card=1)\n");
 	printf(" /ddac                Force DSP Direct DAC output mode\n");
 	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
+	printf(" /noidle              Don't use sndsb library idle function\n");
 }
 
 static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h) {
@@ -3648,6 +3656,9 @@ int main(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return 1;
+			}
+			else if (!strcmp(a,"noidle")) {
+				dont_sb_idle = 1;
 			}
 			else if (!strcmp(a,"nochain")) {
 				dont_chain_irq = 1;
