@@ -2057,8 +2057,8 @@ unsigned long sndsb_real_sample_rate(struct sndsb_ctx *cx) {
 	return real_rate;
 }
 
-unsigned char sndsb_rate_to_time_constant(unsigned long rate) {
-	return (unsigned char)(256UL - (1000000UL / rate));
+unsigned char sndsb_rate_to_time_constant(struct sndsb_ctx *cx,unsigned long rate) {
+	return (unsigned char)((65536UL - (256000000UL / rate)) >> 8);
 }
 
 int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned char stereo,unsigned char bit16) {
@@ -2157,7 +2157,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	sndsb_write_dsp(cx,cx->dsp_record ? 0xD3 : 0xD1); /* turn off speaker if recording, else, turn on */
 
 	if (cx->dsp_adpcm > 0 && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) {
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(rate));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
 		if (stereo || bit16 || cx->dsp_record)
 			return 0; /* ADPCM modes do not support stereo or 16 bit nor recording */
 		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200)
@@ -2165,7 +2165,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(rate));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
 		/* Gravis Ultrasound SBOS/MEGA-EM don't handle auto-init 1.xx very well.
 		   the only way to cooperate with their shitty emulation is to strictly
 		   limit DMA count to the IRQ interval and to NOT set the auto-init flag */
@@ -2175,12 +2175,12 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_200) {
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
 		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(rate));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {/*FIXME: Review Creative SDK documentation. Stereo playback didn't appear until the Pro, right?*/
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
 		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(rate));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
 		/* NTS: I have a CT1350B card that has audible problems with the ISA bus when driven up to
 		 *      22050Hz in non-hispeed modes (if I have something else run, like reading the floppy
 		 *      drive, the audio "warbles", changing speed periodically). So while Creative suggests
@@ -2201,7 +2201,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		if (cx->dsp_record) sndsb_write_dsp(cx,cx->buffer_stereo ? 0xA8 : 0xA0);
 		sndsb_write_mixer(cx,0x0E,0x20 | (cx->buffer_stereo ? 0x02 : 0x00));
 		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(total_rate));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,total_rate));
 		cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 22050 : 23000));
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
