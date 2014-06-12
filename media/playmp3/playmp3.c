@@ -2463,7 +2463,7 @@ void begin_play() {
 			unsigned long final,timer_ticks;
 			while ((mp3_sample_rate*(pc_speaker_repeat+1)) < 19000UL) pc_speaker_repeat++;
 			final = mp3_sample_rate*(pc_speaker_repeat+1);
-			timer_ticks = t8254_us2ticks(1000000 / final);
+			timer_ticks = T8254_REF_CLOCK_HZ / final;
 			if (timer_ticks == 0) timer_ticks = 1;
 			output_max_volume = (unsigned int)timer_ticks;
 			write_8254_system_timer(timer_ticks);
