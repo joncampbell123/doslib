@@ -2196,7 +2196,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
+		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate * (cx->buffer_stereo ? 2UL : 1UL)));
 		cx->chose_autoinit_dsp = 0; /* DSP 1.xx does not support auto-init DSP commands */
 	}
 	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
