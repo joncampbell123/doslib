@@ -552,7 +552,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->windows_creative_sb16_drivers_ver = 0;
 	cx->windows_creative_sb16_drivers = 0;
 	cx->windows_9x_me_sbemul_sys = 0;
-	cx->dsp_play_flipped_sign = 0;
+	cx->audio_data_flipped_sign = 0;
 	cx->buffer_irq_interval = 0;
 	cx->windows_springwait = 0;
 	cx->do_not_probe_irq = 0;
@@ -1806,7 +1806,7 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		/* you can't play ADPCM audio directly */
 		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return 0;
 		/* nor can ADPCM support 16-bit, or stereo, or flipped sign */
-		if (wav_16bit || wav_stereo || cx->dsp_play_flipped_sign) return 0;
+		if (wav_16bit || wav_stereo || cx->audio_data_flipped_sign) return 0;
 	}
 
 	return 1;
@@ -1822,7 +1822,7 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 
 	/* only the DSP 4.xx commands do 16-bit audio, and support flipped sign audio */
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) return 0;
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->dsp_play_flipped_sign) return 0;
+	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->audio_data_flipped_sign) return 0;
 
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx) {
 		if (cx->is_gallant_sc6600) {
@@ -2024,7 +2024,7 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 			d8237_write_base(ch,((uint32_t)FP_SEG(p) << 4UL) + (uint32_t)FP_OFF(p));
 		}
 #endif
-		if ((cx->buffer_16bit?1:0)^(cx->dsp_play_flipped_sign?1:0))
+		if ((cx->buffer_16bit?1:0)^(cx->audio_data_flipped_sign?1:0))
 			memset(cx->goldplay_dma,0,4);
 		else
 			memset(cx->goldplay_dma,128,4);
@@ -2124,7 +2124,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 
 		/* don't let the API play 16-bit audio if less than DSP 4.xx because 16-bit audio played
 		 * as 8-bit sounds like very loud garbage, be kind to the user */
-		if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && (bit16 || cx->dsp_play_flipped_sign))
+		if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && (bit16 || cx->audio_data_flipped_sign))
 			return 0;
 		/* NTS: we use the "can do" function to reject obvious configurations that will never work
 		 *      on the card, verses an unsupported configuration that we advise not using */
@@ -2268,7 +2268,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 		unsigned int samps = cx->buffer_irq_interval * (cx->buffer_stereo?2:1);
 		sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | 0x04 | 0x02 |
 			(cx->dsp_record ? 0x08 : 0x00));	/* bCommand auto-init FIFO on */
-		sndsb_write_dsp(cx,(cx->dsp_play_flipped_sign ? 0x10 : 0x00) ^
+		sndsb_write_dsp(cx,(cx->audio_data_flipped_sign ? 0x10 : 0x00) ^
 			((cx->buffer_stereo ? 0x20 : 0x00) | (cx->buffer_16bit ? 0x10 : 0x00))); /* bMode */
 		sndsb_write_dsp(cx,samps);
 		sndsb_write_dsp(cx,samps>>8);

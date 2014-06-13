@@ -782,7 +782,7 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 		if (cx->buffer_last_io == 0)
 			wav_buffer_filepos = wav_position;
 
-		if (sb_card->dsp_play_flipped_sign) {
+		if (sb_card->audio_data_flipped_sign) {
 			if (wav_16bit)
 				for (i=0;i < ((int)how-1);i += 2) buffer[cx->buffer_last_io+i+1] ^= 0x80;
 			else
@@ -1013,7 +1013,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 #ifdef INCLUDE_FX
 			fx_proc(buffer + cx->buffer_last_io,rd / wav_bytes_per_sample);
 #endif
-			if (sb_card->dsp_play_flipped_sign) {
+			if (sb_card->audio_data_flipped_sign) {
 				if (wav_16bit)
 					for (i=0;i < (rd-1);i += 2) buffer[cx->buffer_last_io+i+1] ^= 0x80;
 				else
@@ -1062,12 +1062,12 @@ static void rec_vu(uint32_t pos) {
 				/* 16-bit PCM stereo */
 				for (x=0;x < leeway;x++) {
 					sample = ptr[x*2];
-					if (sb_card->dsp_play_flipped_sign) sample = abs((uint16_t)sample - 32768);
+					if (sb_card->audio_data_flipped_sign) sample = abs((uint16_t)sample - 32768);
 					else sample = abs((int16_t)sample);
 					if (L < sample) L = sample;
 
 					sample = ptr[x*2 + 1];
-					if (sb_card->dsp_play_flipped_sign) sample = abs((uint16_t)sample - 32768);
+					if (sb_card->audio_data_flipped_sign) sample = abs((uint16_t)sample - 32768);
 					else sample = abs((int16_t)sample);
 					if (R < sample) R = sample;
 				}
@@ -1076,7 +1076,7 @@ static void rec_vu(uint32_t pos) {
 				/* 16-bit PCM mono */
 				for (x=0;x < leeway;x++) {
 					sample = ptr[x];
-					if (sb_card->dsp_play_flipped_sign) sample = abs((uint16_t)sample - 32768);
+					if (sb_card->audio_data_flipped_sign) sample = abs((uint16_t)sample - 32768);
 					else sample = abs((int16_t)sample);
 					if (L < sample) L = sample;
 				}
@@ -1088,12 +1088,12 @@ static void rec_vu(uint32_t pos) {
 				/* 8-bit PCM stereo */
 				for (x=0;x < leeway;x++) {
 					sample = sb_dma->lin[x*2 + pos];
-					if (sb_card->dsp_play_flipped_sign) sample = abs((signed char)sample);
+					if (sb_card->audio_data_flipped_sign) sample = abs((signed char)sample);
 					else sample = abs((int)sample - 128);
 					if (L < sample) L = sample;
 
 					sample = sb_dma->lin[x*2 + 1 + pos];
-					if (sb_card->dsp_play_flipped_sign) sample = abs((signed char)sample);
+					if (sb_card->audio_data_flipped_sign) sample = abs((signed char)sample);
 					else sample = abs((int)sample - 128);
 					if (R < sample) R = sample;
 				}
@@ -1102,7 +1102,7 @@ static void rec_vu(uint32_t pos) {
 				/* 8-bit PCM mono */
 				for (x=0;x < leeway;x++) {
 					sample = sb_dma->lin[x + pos];
-					if (sb_card->dsp_play_flipped_sign) sample = abs((signed char)sample);
+					if (sb_card->audio_data_flipped_sign) sample = abs((signed char)sample);
 					else sample = abs((int)sample - 128);
 					if (L < sample) L = sample;
 				}
@@ -1267,7 +1267,7 @@ static void ui_anim(int force) {
 			msg = sndsb_adpcm_mode_str[sb_card->dsp_adpcm];
 			for (;cc < 52 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 		}
-		else if (sb_card->dsp_play_flipped_sign) {
+		else if (sb_card->audio_data_flipped_sign) {
 			msg = "[flipsign]";
 			for (;cc < 52 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 		}
@@ -1601,7 +1601,7 @@ void change_param_menu() {
 			vga_write_color(selector == 3 ? 0x70 : 0x1F);
 			vga_write(  "Translation:   ");
 			if (sb_card->dsp_adpcm > 0) vga_write(sndsb_adpcm_mode_str[sb_card->dsp_adpcm]);
-			else if (sb_card->dsp_play_flipped_sign) vga_write("Flip sign");
+			else if (sb_card->audio_data_flipped_sign) vga_write("Flip sign");
 			else vga_write("None");
 			vga_write_until(30);
 			vga_write("\n");
@@ -2341,7 +2341,7 @@ void update_cfg() {
 	main_menu_playback_timer_clamp.text =
 		sample_rate_timer_clamp ? "Clamp samplerate to timer: On" : "Clamp samplerate to timer: Off";
 	main_menu_playback_flip_sign.text =
-		sb_card->dsp_play_flipped_sign ? "Flipped sign: On" : "Flipped sign: Off";
+		sb_card->audio_data_flipped_sign ? "Flipped sign: On" : "Flipped sign: Off";
 }
 
 void prompt_play_wav(unsigned char rec) {
@@ -3702,7 +3702,7 @@ int main(int argc,char **argv) {
 			else if (mitem == &main_menu_playback_flip_sign) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
-				sb_card->dsp_play_flipped_sign = !sb_card->dsp_play_flipped_sign;
+				sb_card->audio_data_flipped_sign = !sb_card->audio_data_flipped_sign;
 				update_cfg();
 				if (wp) begin_play();
 			}

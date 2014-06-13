@@ -90,7 +90,7 @@ struct sndsb_ctx {
 	uint16_t			baseio,mpuio,oplio,gameio,aweio;
 	int8_t				dma8,dma16,irq;
 	uint8_t				dsp_adpcm;
-	uint8_t				dsp_play_flipped_sign;	/* DSP 4.xx command allows us to specify signed/unsigned */
+	uint8_t				audio_data_flipped_sign;	/* DSP 4.xx command allows us to specify signed/unsigned */
 	uint8_t				dsp_play_method;
 	uint8_t				dsp_vmaj,dsp_vmin;
 	uint8_t				dsp_ok,mixer_ok;
