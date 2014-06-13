@@ -54,7 +54,7 @@ void load_audio(WAVEHDR *hdr) {
 	unsigned int patience=2000;
 	signed long samp;
 	uint32_t how,max,ofs;
-	int rd,i;
+	int rd;
 
 	if (mp3_fd < 0) return;
 	max = hdr->dwBufferLength;
@@ -111,9 +111,6 @@ void load_audio(WAVEHDR *hdr) {
 						rd *= 2;
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < (rd>>1);i++) buffer[i] ^= 0x8000;
 			}
 			else {
 				/* 8-bit out */
@@ -152,9 +149,6 @@ void load_audio(WAVEHDR *hdr) {
 						}
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < rd;i++) buffer[i] ^= 0x80;
 			}
 
 			assert(mp3_data_read >= mp3_data);
@@ -234,9 +228,6 @@ void load_audio(WAVEHDR *hdr) {
 						rd *= 2;
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < (rd>>1);i++) buffer[i] ^= 0x8000;
 			}
 			else {
 				/* 8-bit out */
@@ -304,9 +295,6 @@ void load_audio(WAVEHDR *hdr) {
 						}
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < rd;i++) buffer[i] ^= 0x80;
 			}
 		}
 		if (mp3_file_type == TYPE_AAC && aac_dec_last_audio != NULL && aac_dec_last_audio < aac_dec_last_audio_fence) {
@@ -346,9 +334,6 @@ void load_audio(WAVEHDR *hdr) {
 						rd *= 2;
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < (rd>>1);i++) buffer[i] ^= 0x8000;
 			}
 			else {
 				/* 8-bit out */
@@ -379,9 +364,6 @@ void load_audio(WAVEHDR *hdr) {
 							buffer[rd++] = (*aac_dec_last_audio++ >> 8) + 0x80;
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < rd;i++) buffer[i] ^= 0x80;
 			}
 		}
 
@@ -568,10 +550,6 @@ void stop_play() {
 
 	waveOutHdrIndex = 0;
 	mp3_playing = 0;
-}
-
-static void change_param_menu() {
-	/* TODO */
 }
 
 DialogProcType HelpAboutProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
@@ -1292,9 +1270,6 @@ static void load_audio_sb(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint3
 						rd *= 2;
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < (rd>>1);i++) buffer[i] ^= 0x8000;
 			}
 			else {
 				/* 8-bit out */
@@ -1333,9 +1308,6 @@ static void load_audio_sb(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint3
 						}
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < rd;i++) buffer[i] ^= 0x80;
 			}
 
 			assert(mp3_data_read >= mp3_data);
@@ -1415,9 +1387,6 @@ static void load_audio_sb(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint3
 						rd *= 2;
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < (rd>>1);i++) buffer[i] ^= 0x8000;
 			}
 			else {
 				/* 8-bit out */
@@ -1485,9 +1454,6 @@ static void load_audio_sb(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint3
 						}
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < rd;i++) buffer[i] ^= 0x80;
 			}
 		}
 		if (mp3_file_type == TYPE_AAC && aac_dec_last_audio != NULL && aac_dec_last_audio < aac_dec_last_audio_fence) {
@@ -1527,9 +1493,6 @@ static void load_audio_sb(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint3
 						rd *= 2;
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < (rd>>1);i++) buffer[i] ^= 0x8000;
 			}
 			else {
 				/* 8-bit out */
@@ -1560,9 +1523,6 @@ static void load_audio_sb(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint3
 							buffer[rd++] = (*aac_dec_last_audio++ >> 8) + 0x80;
 					}
 				}
-
-				if (mp3_flipsign)
-					for (i=0;i < rd;i++) buffer[i] ^= 0x80;
 			}
 		}
 
@@ -2314,11 +2274,6 @@ void ui_anim(int force) {
 		}
 		for (;cc < 56 && *msg != 0;cc++) *wr++ = (rem << 8) | ((unsigned char)(*msg++));
 		for (;cc < 56;cc++) *wr++ = 0x1F20;
-
-		if (mp3_flipsign) {
-			msg = "[flipsign]";
-			for (;cc < 62 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
-		}
 		for (;cc < 62;cc++) *wr++ = 0x1F20;
 
 		/* finish the row */
@@ -2611,8 +2566,7 @@ static void change_param_menu() {
 			if (sb_card != NULL) {
 				vga_write_color(selector == 3 ? 0x70 : 0x1F);
 				vga_write(  "Translation:   ");
-				if (mp3_flipsign) vga_write("Flip sign");
-				else vga_write("None");
+				vga_write("None");
 				vga_write_until(30);
 				vga_write("\n");
 
@@ -2730,7 +2684,6 @@ static void change_param_menu() {
 						break;
 					case 3: /* translatin */
 						if (sb_card != NULL) {
-							mp3_flipsign = !mp3_flipsign;
 						}
 						else if (gus_card != NULL) {
 							if (gus_channel == 0) gus_channel = gus_active - 1;
@@ -2773,8 +2726,8 @@ static void change_param_menu() {
 						mp3_16bit = !mp3_16bit;
 						break;
 					case 3: /* translatin */
-						if (sb_card != NULL)
-							mp3_flipsign = !mp3_flipsign;
+						if (sb_card != NULL) {
+						}
 						else if (gus_card != NULL) {
 							if (++gus_channel == gus_active) gus_channel = 0;
 						}
@@ -3132,8 +3085,6 @@ static struct vga_menu_item main_menu_playback_goldplay =
 	{"xxx",			'g',	0,	0};
 static struct vga_menu_item main_menu_playback_goldplay_mode =
 	{"xxx",			'm',	0,	0};
-static struct vga_menu_item main_menu_playback_dsp_1xx_autoinit =
-	{"xxx",			'1',	0,	0};
 static struct vga_menu_item main_menu_playback_timer_clamp =
 	{"xxx",			'c',	0,	0};
 
@@ -3145,7 +3096,6 @@ static const struct vga_menu_item* main_menu_playback_sb[] = {
 	&main_menu_playback_reduced_irq,
 	&main_menu_playback_goldplay,
 	&main_menu_playback_goldplay_mode,
-	&main_menu_playback_dsp_1xx_autoinit,
 	&main_menu_playback_timer_clamp,
 	NULL
 };
@@ -3251,7 +3201,6 @@ static void update_cfg() {
 		sb_card->goldplay_mode = goldplay_mode;
 		sb_card->dsp_adpcm = 0;
 		sb_card->dsp_record = 0;
-		sb_card->dsp_play_flipped_sign = mp3_flipsign;
 		r = mp3_sample_rate;
 		r *= mp3_bytes_per_sample;
 		sb_card->buffer_irq_interval = r;
@@ -3293,13 +3242,9 @@ static void update_cfg() {
 	if (sb_card != NULL) {
 		main_menu_playback_goldplay.text =
 			goldplay_mode ? "Goldplay mode: On" : "Goldplay mode: Off";
-		main_menu_playback_dsp_1xx_autoinit.text =
-			sb_card->dsp_1xx_autoinit ? "DSP 1.xx autoinit: On" : "DSP 1.xx autoinit: Off";
 	}
 	else {
 		main_menu_playback_goldplay.text =
-			"--";
-		main_menu_playback_dsp_1xx_autoinit.text =
 			"--";
 	}
 
@@ -4204,15 +4149,6 @@ int main(int argc,char **argv) {
 					if (wp) stop_play();
 					if (++goldplay_samplerate_choice > GOLDRATE_MAX)
 						goldplay_samplerate_choice = GOLDRATE_MATCH;
-					update_cfg();
-					if (wp) begin_play();
-				}
-			}
-			else if (mitem == &main_menu_playback_dsp_1xx_autoinit) {
-				if (sb_card != NULL) {
-					unsigned char wp = mp3_playing;
-					if (wp) stop_play();
-					sb_card->dsp_1xx_autoinit = !sb_card->dsp_1xx_autoinit;
 					update_cfg();
 					if (wp) begin_play();
 				}
