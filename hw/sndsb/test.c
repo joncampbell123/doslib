@@ -312,7 +312,6 @@ static unsigned char		sample_rate_timer_clamp = 0;
 static unsigned char		goldplay_samplerate_choice = GOLDRATE_MATCH;
 
 /* fun with Creative ADPCM */
-static unsigned char		adpcm_mode = 0;
 static unsigned char		do_adpcm_ai_warning = 1;
 
 static volatile unsigned char	IRQ_anim = 0;
@@ -732,7 +731,7 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	if (up_to >= cx->buffer_size) return;
 	if (cx->buffer_size < 32) return;
 	if (cx->buffer_last_io == up_to) return;
-	if (adpcm_mode != 0) return;
+	if (sb_card->dsp_adpcm != 0) return;
 	if (max == 0) max = cx->buffer_size/4;
 	if (max < 16) return;
 	lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
@@ -835,7 +834,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	if (cx->buffer_size < 32) return;
 	if (cx->buffer_last_io == up_to) return;
 
-	if (adpcm_mode > 0 && (wav_16bit || wav_stereo)) return;
+	if (sb_card->dsp_adpcm > 0 && (wav_16bit || wav_stereo)) return;
 	if (max == 0) max = cx->buffer_size/4;
 	if (max < 16) return;
 	lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
@@ -887,7 +886,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 		if (cx->buffer_last_io == 0)
 			wav_buffer_filepos = wav_position;
 
-		if (adpcm_mode > 0) {
+		if (sb_card->dsp_adpcm > 0) {
 			unsigned int src;
 
 			/* 16-bit mode: avoid integer overflow below */
@@ -898,7 +897,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			if (initial) {
 				/* reference byte */
 				rd = _dos_xread(wav_fd,buffer + cx->buffer_last_io,1);
-				sndsb_encode_adpcm_set_reference(buffer[cx->buffer_last_io],adpcm_mode);
+				sndsb_encode_adpcm_set_reference(buffer[cx->buffer_last_io],sb_card->dsp_adpcm);
 				cx->buffer_last_io++;
 				adpcm_counter++;
 				wav_position++;
@@ -908,16 +907,16 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			}
 
 			/* number of samples */
-			if (adpcm_mode == ADPCM_4BIT)
+			if (sb_card->dsp_adpcm == ADPCM_4BIT)
 				src = how * 2;
-			else if (adpcm_mode == ADPCM_2_6BIT)
+			else if (sb_card->dsp_adpcm == ADPCM_2_6BIT)
 				src = how * 3;
-			else if (adpcm_mode == ADPCM_2BIT)
+			else if (sb_card->dsp_adpcm == ADPCM_2BIT)
 				src = how * 4;
 
 			if (src > sizeof(adpcm_tmp)) {
 				src = sizeof(adpcm_tmp);
-				if (adpcm_mode == ADPCM_2_6BIT)
+				if (sb_card->dsp_adpcm == ADPCM_2_6BIT)
 					src -= src % 3;
 			}
 
@@ -940,7 +939,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			fx_proc(adpcm_tmp,rd / wav_bytes_per_sample);
 #endif
 			wav_position += (uint32_t)rd;
-			if (adpcm_mode == ADPCM_4BIT) {
+			if (sb_card->dsp_adpcm == ADPCM_4BIT) {
 				rd /= 2;
 				for (i=0;i < rd;i++) {
 					c  = sndsb_encode_adpcm_4bit(adpcm_tmp[(i*2)  ]) << 4;
@@ -950,12 +949,12 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 					if (adpcm_reset_interval != 0) {
 						if (++adpcm_counter >= adpcm_reset_interval) {
 							adpcm_counter -= adpcm_reset_interval;
-							sndsb_encode_adpcm_reset_wo_ref(adpcm_mode);
+							sndsb_encode_adpcm_reset_wo_ref(sb_card->dsp_adpcm);
 						}
 					}
 				}
 			}
-			else if (adpcm_mode == ADPCM_2_6BIT) {
+			else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) {
 				rd /= 3;
 				for (i=0;i < rd;i++) {
 					c  = sndsb_encode_adpcm_2_6bit(adpcm_tmp[(i*3)  ],0) << 5;
@@ -966,12 +965,12 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 					if (adpcm_reset_interval != 0) {
 						if (++adpcm_counter >= adpcm_reset_interval) {
 							adpcm_counter -= adpcm_reset_interval;
-							sndsb_encode_adpcm_reset_wo_ref(adpcm_mode);
+							sndsb_encode_adpcm_reset_wo_ref(sb_card->dsp_adpcm);
 						}
 					}
 				}
 			}
-			else if (adpcm_mode == ADPCM_2BIT) {
+			else if (sb_card->dsp_adpcm == ADPCM_2BIT) {
 				rd /= 4;
 				for (i=0;i < rd;i++) {
 					c  = sndsb_encode_adpcm_2bit(adpcm_tmp[(i*4)  ]) << 6;
@@ -983,7 +982,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 					if (adpcm_reset_interval != 0) {
 						if (++adpcm_counter >= adpcm_reset_interval) {
 							adpcm_counter -= adpcm_reset_interval;
-							sndsb_encode_adpcm_reset_wo_ref(adpcm_mode);
+							sndsb_encode_adpcm_reset_wo_ref(sb_card->dsp_adpcm);
 						}
 					}
 				}
@@ -1189,9 +1188,9 @@ static void update_cfg();
 static unsigned long playback_live_position() {
 	signed long xx = (signed long)sndsb_read_dma_buffer_position(sb_card);
 	if (sb_card->buffer_last_io <= (unsigned long)xx) xx -= sb_card->buffer_size;
-	if (adpcm_mode == ADPCM_4BIT) xx *= 2;
-	else if (adpcm_mode == ADPCM_2_6BIT) xx *= 3;
-	else if (adpcm_mode == ADPCM_2BIT) xx *= 4;
+	if (sb_card->dsp_adpcm == ADPCM_4BIT) xx *= 2;
+	else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) xx *= 3;
+	else if (sb_card->dsp_adpcm == ADPCM_2BIT) xx *= 4;
 	xx += wav_buffer_filepos * wav_bytes_per_sample;
 	if (xx < 0) xx += wav_data_length;
 	return ((unsigned long)xx) / wav_bytes_per_sample;
@@ -1265,8 +1264,8 @@ static void ui_anim(int force) {
 		for (;cc < 36 && *msg != 0;cc++) *wr++ = (rem << 8) | ((unsigned char)(*msg++));
 		for (;cc < 36;cc++) *wr++ = 0x1F20;
 
-		if (adpcm_mode != 0) {
-			msg = sndsb_adpcm_mode_str[adpcm_mode];
+		if (sb_card->dsp_adpcm != 0) {
+			msg = sndsb_adpcm_mode_str[sb_card->dsp_adpcm];
 			for (;cc < 52 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 		}
 		else if (wav_flipsign) {
@@ -1602,7 +1601,7 @@ void change_param_menu() {
 
 			vga_write_color(selector == 3 ? 0x70 : 0x1F);
 			vga_write(  "Translation:   ");
-			if (adpcm_mode > 0) vga_write(sndsb_adpcm_mode_str[adpcm_mode]);
+			if (sb_card->dsp_adpcm > 0) vga_write(sndsb_adpcm_mode_str[sb_card->dsp_adpcm]);
 			else if (wav_flipsign) vga_write("Flip sign");
 			else vga_write("None");
 			vga_write_until(30);
@@ -1691,23 +1690,23 @@ void change_param_menu() {
 						wav_16bit = !wav_16bit;
 						break;
 					case 3: /* translatin */
-						if (adpcm_mode == ADPCM_2BIT) {
-							adpcm_mode = ADPCM_2_6BIT;
+						if (sb_card->dsp_adpcm == ADPCM_2BIT) {
+							sb_card->dsp_adpcm = ADPCM_2_6BIT;
 							wav_flipsign = 0;
 						}
-						else if (adpcm_mode == ADPCM_2_6BIT) {
-							adpcm_mode = ADPCM_4BIT;
+						else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) {
+							sb_card->dsp_adpcm = ADPCM_4BIT;
 							wav_flipsign = 0;
 						}
-						else if (adpcm_mode == ADPCM_4BIT) {
-							adpcm_mode = 0;
+						else if (sb_card->dsp_adpcm == ADPCM_4BIT) {
+							sb_card->dsp_adpcm = 0;
 							wav_flipsign = 1;
 						}
 						else if (wav_flipsign) {
 							wav_flipsign = 0;
 						}
 						else {
-							adpcm_mode = ADPCM_2BIT;
+							sb_card->dsp_adpcm = ADPCM_2BIT;
 						}
 						break;
 					case 4: /* DSP mode */
@@ -1736,25 +1735,25 @@ void change_param_menu() {
 						wav_16bit = !wav_16bit;
 						break;
 					case 3: /* translatin */
-						if (adpcm_mode == ADPCM_2BIT) {
-							adpcm_mode = 0;
+						if (sb_card->dsp_adpcm == ADPCM_2BIT) {
+							sb_card->dsp_adpcm = 0;
 							wav_flipsign = 0;
 						}
-						else if (adpcm_mode == ADPCM_2_6BIT) {
-							adpcm_mode = ADPCM_2BIT;
+						else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) {
+							sb_card->dsp_adpcm = ADPCM_2BIT;
 							wav_flipsign = 0;
 						}
-						else if (adpcm_mode == ADPCM_4BIT) {
-							adpcm_mode = ADPCM_2_6BIT;
+						else if (sb_card->dsp_adpcm == ADPCM_4BIT) {
+							sb_card->dsp_adpcm = ADPCM_2_6BIT;
 							wav_flipsign = 0;
 						}
 						else if (wav_flipsign) {
-							adpcm_mode = ADPCM_4BIT;
+							sb_card->dsp_adpcm = ADPCM_4BIT;
 							wav_flipsign = 0;
 						}
 						else {
 							wav_flipsign = 1;
-							adpcm_mode = 0;
+							sb_card->dsp_adpcm = 0;
 						}
 						break;
 					case 4: /* DSP mode */
@@ -2269,22 +2268,22 @@ void update_cfg() {
 	if (wav_sample_rate_by_timer_ticks == 0) wav_sample_rate_by_timer_ticks = 1;
 	wav_sample_rate_by_timer = T8254_REF_CLOCK_HZ / wav_sample_rate_by_timer_ticks;
 
-	sb_card->dsp_adpcm = adpcm_mode;
+	sb_card->dsp_adpcm = sb_card->dsp_adpcm;
 	sb_card->dsp_record = wav_record;
 	sb_card->dsp_play_flipped_sign = wav_flipsign;
 	r = wav_sample_rate;
-	if (adpcm_mode == ADPCM_4BIT) r /= 2;
-	else if (adpcm_mode == ADPCM_2_6BIT) r /= 3;
-	else if (adpcm_mode == ADPCM_2BIT) r /= 4;
+	if (sb_card->dsp_adpcm == ADPCM_4BIT) r /= 2;
+	else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) r /= 3;
+	else if (sb_card->dsp_adpcm == ADPCM_2BIT) r /= 4;
 	else r *= wav_bytes_per_sample;
 	adpcm_counter = 0;
 	adpcm_reset_interval = 0;
-	if (adpcm_mode > 0) {
-		if (adpcm_mode == ADPCM_4BIT)
+	if (sb_card->dsp_adpcm > 0) {
+		if (sb_card->dsp_adpcm == ADPCM_4BIT)
 			sb_card->buffer_irq_interval = wav_sample_rate / 2;
-		else if (adpcm_mode == ADPCM_2_6BIT)
+		else if (sb_card->dsp_adpcm == ADPCM_2_6BIT)
 			sb_card->buffer_irq_interval = wav_sample_rate / 3;
-		else if (adpcm_mode == ADPCM_2BIT)
+		else if (sb_card->dsp_adpcm == ADPCM_2BIT)
 			sb_card->buffer_irq_interval = wav_sample_rate / 4;
 
 		if (reduced_irq_interval == 2)
@@ -2294,12 +2293,12 @@ void update_cfg() {
 		else if (reduced_irq_interval == -1)
 			sb_card->buffer_irq_interval /= 100;
 
-		if (adpcm_mode == ADPCM_4BIT)
+		if (sb_card->dsp_adpcm == ADPCM_4BIT)
 			sb_card->buffer_irq_interval &= ~1UL;
-		else if (adpcm_mode == ADPCM_2_6BIT)
+		else if (sb_card->dsp_adpcm == ADPCM_2_6BIT)
 			sb_card->buffer_irq_interval -=
 				sb_card->buffer_irq_interval % 3;
-		else if (adpcm_mode == ADPCM_2BIT)
+		else if (sb_card->dsp_adpcm == ADPCM_2BIT)
 			sb_card->buffer_irq_interval &= ~3UL;
 
 		if (adpcm_do_reset_interval)
@@ -3607,7 +3606,7 @@ int main(int argc,char **argv) {
 			}
 			else if (mitem == &main_menu_help_about) {
 				struct vga_msg_box box;
-				vga_msg_box_create(&box,"Sound Blaster test program v1.0 for DOS\n\n(C) 2008-2012 Jonathan Campbell\nALL RIGHTS RESERVED\n"
+				vga_msg_box_create(&box,"Sound Blaster test program v1.0 for DOS\n\n(C) 2008-2014 Jonathan Campbell\nALL RIGHTS RESERVED\n"
 #if TARGET_MSDOS == 32
 					"32-bit protected mode version"
 #elif defined(__LARGE__)
