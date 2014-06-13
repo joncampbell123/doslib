@@ -137,6 +137,7 @@ struct sndsb_ctx {
 	uint8_t				vdmsound:1;		/* We're running under VDMSOUND.EXE */
 	uint8_t				do_not_probe_irq:1;	/* if the card has known configuration registers, then do not probe */
 	uint8_t				do_not_probe_dma:1;	/* ... */
+	uint8_t				force_hispeed:1;	/* always use highspeed DSP playback commands (except for DSP 4.xx) */
 /* array of mixer controls, determined by mixer chipset */
 	struct sndsb_mixer_control*	sb_mixer;
 	signed short			sb_mixer_items;

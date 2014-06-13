@@ -565,6 +565,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->buffer_last_io = 0;
 	cx->direct_dsp_io = 0;
 	cx->goldplay_mode = 0;
+	cx->force_hispeed = 0;
 	cx->vdmsound = 0;
 	cx->mega_em = 0;
 	cx->sbos = 0;
@@ -2190,7 +2191,9 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		 *         [Tested on Pentium MMX 200MHz system with ISA and PCI slots]
 		 *         [Applying fix [1] indeed resolved the audible warbling]
 		 *         [Is this fix needed for any other Sound Blaster products of that era?] */
-		if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2 && !strcmp(cx->dsp_copyright,"")) /* [1] */
+		if (cx->force_hispeed)
+			cx->buffer_hispeed = 1;
+		else if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2 && !strcmp(cx->dsp_copyright,"")) /* [1] */
 			cx->buffer_hispeed = (rate >= (cx->dsp_record ? 8000 : 16000));
 		else
 			cx->buffer_hispeed = (rate >= (cx->dsp_record ? 13000 : 23000));
@@ -2202,7 +2205,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		sndsb_write_mixer(cx,0x0E,0x20 | (cx->buffer_stereo ? 0x02 : 0x00));
 		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
 		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,total_rate));
-		cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 22050 : 23000));
+		cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 22050 : 23000)) || cx->force_hispeed;
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
 		sndsb_write_dsp_outrate(cx,rate);

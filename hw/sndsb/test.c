@@ -308,6 +308,7 @@ static unsigned char		wav_flipsign = 0;
 static unsigned char		wav_playing = 0;
 static unsigned char		wav_record = 0;
 static unsigned char		goldplay_mode = 0;
+static unsigned char		force_hispeed = 0;
 static signed char		reduced_irq_interval = 0;
 static unsigned char		sample_rate_timer_clamp = 0;
 static unsigned char		goldplay_samplerate_choice = GOLDRATE_MATCH;
@@ -2142,6 +2143,8 @@ static struct vga_menu_item main_menu_playback_dsp_1xx_autoinit =
 	{"xxx",			'1',	0,	0};
 static struct vga_menu_item main_menu_playback_timer_clamp =
 	{"xxx",			'c',	0,	0};
+static struct vga_menu_item main_menu_playback_force_hispeed =
+	{"xxx",			'h',	0,	0};
 
 static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_play,
@@ -2156,6 +2159,7 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_noreset_adpcm,
 	&main_menu_playback_dsp_1xx_autoinit,
 	&main_menu_playback_timer_clamp,
+	&main_menu_playback_force_hispeed,
 	NULL
 };
 
@@ -2267,6 +2271,7 @@ void update_cfg() {
 	if (wav_sample_rate_by_timer_ticks == 0) wav_sample_rate_by_timer_ticks = 1;
 	wav_sample_rate_by_timer = T8254_REF_CLOCK_HZ / wav_sample_rate_by_timer_ticks;
 
+	sb_card->force_hispeed = force_hispeed;
 	sb_card->goldplay_mode = goldplay_mode;
 	sb_card->dsp_adpcm = adpcm_mode;
 	sb_card->dsp_record = wav_record;
@@ -2345,6 +2350,8 @@ void update_cfg() {
 		sb_card->enable_adpcm_autoinit ? "ADPCM Auto-init: On" : "ADPCM Auto-init: Off";
 	main_menu_playback_goldplay.text =
 		goldplay_mode ? "Goldplay mode: On" : "Goldplay mode: Off";
+	main_menu_playback_force_hispeed.text =
+		force_hispeed ? "Force hispeed: On" : "Force hispeed: Off";
 	main_menu_playback_noreset_adpcm.text =
 		adpcm_do_reset_interval ? "ADPCM reset step/interval: On" : "ADPCM reset step/interval: Off";
 	main_menu_playback_dsp_1xx_autoinit.text =
@@ -3701,6 +3708,13 @@ int main(int argc,char **argv) {
 				vga_msg_box_destroy(&box);
 			}
 #endif
+			else if (mitem == &main_menu_playback_force_hispeed) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				force_hispeed = !force_hispeed;
+				update_cfg();
+				if (wp) begin_play();
+			}
 			else if (mitem == &main_menu_playback_goldplay) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
