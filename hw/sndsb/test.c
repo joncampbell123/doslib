@@ -3697,6 +3697,7 @@ int main(int argc,char **argv) {
 				if (wp) stop_play();
 				sb_card->force_hispeed = !sb_card->force_hispeed;
 				update_cfg();
+				ui_anim(1);
 				if (wp) begin_play();
 			}
 			else if (mitem == &main_menu_playback_flip_sign) {
@@ -3704,6 +3705,7 @@ int main(int argc,char **argv) {
 				if (wp) stop_play();
 				sb_card->audio_data_flipped_sign = !sb_card->audio_data_flipped_sign;
 				update_cfg();
+				ui_anim(1);
 				if (wp) begin_play();
 			}
 
@@ -3723,6 +3725,7 @@ int main(int argc,char **argv) {
 				}
 #endif
 				update_cfg();
+				ui_anim(1);
 				if (wp) begin_play();
 			}
 			else if (mitem == &main_menu_playback_goldplay_mode) {
@@ -3731,6 +3734,7 @@ int main(int argc,char **argv) {
 				if (++goldplay_samplerate_choice > GOLDRATE_MAX)
 					goldplay_samplerate_choice = GOLDRATE_MATCH;
 				update_cfg();
+				ui_anim(1);
 				if (wp) begin_play();
 			}
 			else if (mitem == &main_menu_windows_fullscreen) {
