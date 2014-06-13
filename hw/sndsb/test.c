@@ -2133,9 +2133,9 @@ static struct vga_menu_item main_menu_playback_force_hispeed =
 static struct vga_menu_item main_menu_playback_flip_sign =
 	{"xxx",			'l',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp4_fifo_autoinit =
-	{"xxx",			0,	0,	0};
+	{"xxx",			'f',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp4_fifo_single =
-	{"xxx",			0,	0,	0};
+	{"xxx",			'e',	0,	0};
 #endif
 
 static const struct vga_menu_item* main_menu_playback[] = {
