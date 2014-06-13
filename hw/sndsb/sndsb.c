@@ -581,6 +581,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_vmaj = 0;
 	cx->dsp_vmin = 0;
 	cx->buffer_phys = 0;
+	cx->buffer_lin = NULL;
 	cx->buffer_rate = 22050;
 	cx->enable_adpcm_autoinit = 0;
 	cx->dsp_adpcm = 0;
@@ -1952,9 +1953,10 @@ uint32_t sndsb_read_dma_buffer_position(struct sndsb_ctx *cx) {
 		cx->windows_springwait = 2;
 	}
 
+	/* "direct" and "goldplay" methods require the program to update the play point in some fashion,
+	 * usually by programming IRQ 0 to tick at the sample rate */
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || cx->goldplay_mode) {
-		r = cx->direct_dsp_io; /* caller must fake DMA using direct ADC/DAC and therefore must update this variable */
-		/* Goldplay hack mode also requires caller to maintain this pointer */
+		r = cx->direct_dsp_io;
 		if (r >= cx->buffer_size) r = cx->buffer_size - 1;
 	}
 	else if (cx->buffer_16bit) {
@@ -2008,6 +2010,9 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 		D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
 
 	if (cx->goldplay_mode) {
+		/* goldplay mode REQUIRES auto-init DMA */
+		if (!cx->chose_autoinit_dma) return -1;
+
 		/* Goldplay mode: The size of ONE sample is given to the DMA controller.
 		 * This tricks the DMA controller into re-transmitting that sample continuously
 		 * to the sound card. Then the demo uses the timer interrupt to modify that byte
@@ -2664,6 +2669,7 @@ unsigned char sndsb_read_mixer_entry(struct sndsb_ctx *sb,struct sndsb_mixer_con
 int sndsb_assign_dma_buffer(struct sndsb_ctx *cx,struct dma_8237_allocation *dma) {
 	cx->buffer_size = dma->length;
 	cx->buffer_phys = dma->phys;
+	cx->buffer_lin = dma->lin;
 	return 1;
 }
 
