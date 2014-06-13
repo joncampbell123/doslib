@@ -148,8 +148,8 @@ struct sndsb_ctx {
 /* function call */
 	void				(*timer_tick_func)(struct sndsb_ctx *cx);
 /* goldplay mode DMA buffer */
-	uint8_t				gold_memcpy;
 	uint8_t				goldplay_dma[4];
+	uint8_t				gold_memcpy;
 /* ISA PnP information */
 	const char*			pnp_name;
 	uint32_t			pnp_id;
