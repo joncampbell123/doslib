@@ -1113,10 +1113,10 @@ static uint32_t last_dma_position = 1;
 static void ui_anim(int force) {
 	VGA_ALPHA_PTR wr = vga_alpha_ram + 10;
 	const unsigned int width = 70 - 4;
+	unsigned long temp;
 	unsigned int i,rem,rem2,cc;
 	unsigned int pH,pM,pS,pSS;
 	const char *msg = "DMA:";
-	unsigned long temp;
 
 	/* Under Windows, yield every so often. Under Windows NT/2000/XP this prevents
 	 * NTVDM.EXE from pegging the CPU at 100%, allowing the rest of the OS to run
@@ -1184,9 +1184,18 @@ static void ui_anim(int force) {
 			msg = "[flipsign]";
 			for (;cc < 52 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 		}
-		for (;cc < 52;cc++) *wr++ = 0x1F20;
 
-		/* finish the row */
+		/* fill */
+		for (;cc < 67;cc++) *wr++ = 0x1F20;
+
+		msg = temp_str;
+		temp = sndsb_read_dma_buffer_position(sb_card);
+		sprintf(temp_str,"%05lx/%05lx",
+			(unsigned long)temp,
+			(unsigned long)sb_card->buffer_size);
+		for (;cc < 80 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
+
+		/* finish */
 		for (;cc < 80;cc++) *wr++ = 0x1F20;
 	}
 
