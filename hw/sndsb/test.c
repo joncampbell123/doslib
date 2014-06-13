@@ -2126,7 +2126,7 @@ static struct vga_menu_item main_menu_playback_dsp_autoinit_dma =
 static struct vga_menu_item main_menu_playback_dsp_autoinit_command =
 	{"xxx",			'c',	0,	0};
 static struct vga_menu_item main_menu_playback_timer_clamp =
-	{"xxx",			'c',	0,	0};
+	{"xxx",			0,	0,	0};
 static struct vga_menu_item main_menu_playback_force_hispeed =
 	{"xxx",			'h',	0,	0};
 static struct vga_menu_item main_menu_playback_flip_sign =

@@ -3086,6 +3086,10 @@ static struct vga_menu_item main_menu_playback_goldplay =
 static struct vga_menu_item main_menu_playback_goldplay_mode =
 	{"xxx",			'm',	0,	0};
 static struct vga_menu_item main_menu_playback_timer_clamp =
+	{"xxx",			0,	0,	0};
+static struct vga_menu_item main_menu_playback_dsp_autoinit_dma =
+	{"xxx",			't',	0,	0};
+static struct vga_menu_item main_menu_playback_dsp_autoinit_command =
 	{"xxx",			'c',	0,	0};
 
 static const struct vga_menu_item* main_menu_playback_sb[] = {
@@ -3097,6 +3101,8 @@ static const struct vga_menu_item* main_menu_playback_sb[] = {
 	&main_menu_playback_goldplay,
 	&main_menu_playback_goldplay_mode,
 	&main_menu_playback_timer_clamp,
+	&main_menu_playback_dsp_autoinit_dma,
+	&main_menu_playback_dsp_autoinit_command,
 	NULL
 };
 
@@ -3202,7 +3208,6 @@ static void update_cfg() {
 		sb_card->dsp_adpcm = 0;
 		sb_card->dsp_record = 0;
 		r = mp3_sample_rate;
-		r *= mp3_bytes_per_sample;
 		sb_card->buffer_irq_interval = r;
 		if (reduced_irq_interval == 2)
 			sb_card->buffer_irq_interval =
@@ -3250,6 +3255,10 @@ static void update_cfg() {
 
 	main_menu_playback_timer_clamp.text =
 		sample_rate_timer_clamp ? "Clamp samplerate to timer: On" : "Clamp samplerate to timer: Off";
+	main_menu_playback_dsp_autoinit_dma.text =
+		sb_card->dsp_autoinit_dma ? "DMA autoinit: On" : "DMA autoinit: Off";
+	main_menu_playback_dsp_autoinit_command.text =
+		sb_card->dsp_autoinit_command ? "DSP playback: auto-init" : "DSP playback: single-cycle";
 }
 
 static void help() {
@@ -3903,7 +3912,7 @@ int main(int argc,char **argv) {
 				struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
 				if (sndsb_card[i].baseio == 0) continue;
 				printf("  [%u] base=%X mpu=%X dma=%d dma16=%d irq=%d DSP=%u 1.XXAI=%u\n",
-						i+1,cx->baseio,cx->mpuio,cx->dma8,cx->dma16,cx->irq,cx->dsp_ok,cx->dsp_1xx_autoinit);
+						i+1,cx->baseio,cx->mpuio,cx->dma8,cx->dma16,cx->irq,cx->dsp_ok,cx->dsp_autoinit_dma);
 				printf("      MIXER=%u[%s] DSPv=%u.%u SC6600=%u OPL=%X GAME=%X AWE=%X\n",
 						cx->mixer_ok,sndsb_mixer_chip_str(cx->mixer_chip),
 						(unsigned int)cx->dsp_vmaj,(unsigned int)cx->dsp_vmin,
@@ -4152,6 +4161,20 @@ int main(int argc,char **argv) {
 					update_cfg();
 					if (wp) begin_play();
 				}
+			}
+			else if (mitem == &main_menu_playback_dsp_autoinit_dma) {
+				unsigned char wp = mp3_playing;
+				if (wp) stop_play();
+				sb_card->dsp_autoinit_dma = !sb_card->dsp_autoinit_dma;
+				update_cfg();
+				if (wp) begin_play();
+			}
+			else if (mitem == &main_menu_playback_dsp_autoinit_command) {
+				unsigned char wp = mp3_playing;
+				if (wp) stop_play();
+				sb_card->dsp_autoinit_command = !sb_card->dsp_autoinit_command;
+				update_cfg();
+				if (wp) begin_play();
 			}
 			else if (mitem == &main_menu_playback_timer_clamp) {
 				if (sb_card != NULL) {
