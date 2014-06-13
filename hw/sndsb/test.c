@@ -307,7 +307,6 @@ static unsigned char		dont_chain_irq = 0;
 static unsigned char		wav_flipsign = 0;
 static unsigned char		wav_playing = 0;
 static unsigned char		wav_record = 0;
-static unsigned char		goldplay_mode = 0;
 static signed char		reduced_irq_interval = 0;
 static unsigned char		sample_rate_timer_clamp = 0;
 static unsigned char		goldplay_samplerate_choice = GOLDRATE_MATCH;
@@ -1404,7 +1403,7 @@ void begin_play() {
 		return;
 
 	choice_rate = sample_rate_timer_clamp ? wav_sample_rate_by_timer : wav_sample_rate;
-	if (goldplay_mode) {
+	if (sb_card->goldplay_mode) {
 		if (goldplay_samplerate_choice == GOLDRATE_DOUBLE)
 			choice_rate *= 2;
 		else if (goldplay_samplerate_choice == GOLDRATE_MAX) {
@@ -2270,7 +2269,6 @@ void update_cfg() {
 	if (wav_sample_rate_by_timer_ticks == 0) wav_sample_rate_by_timer_ticks = 1;
 	wav_sample_rate_by_timer = T8254_REF_CLOCK_HZ / wav_sample_rate_by_timer_ticks;
 
-	sb_card->goldplay_mode = goldplay_mode;
 	sb_card->dsp_adpcm = adpcm_mode;
 	sb_card->dsp_record = wav_record;
 	sb_card->dsp_play_flipped_sign = wav_flipsign;
@@ -2347,7 +2345,7 @@ void update_cfg() {
 	main_menu_playback_autoinit_adpcm.text =
 		sb_card->enable_adpcm_autoinit ? "ADPCM Auto-init: On" : "ADPCM Auto-init: Off";
 	main_menu_playback_goldplay.text =
-		goldplay_mode ? "Goldplay mode: On" : "Goldplay mode: Off";
+		sb_card->goldplay_mode ? "Goldplay mode: On" : "Goldplay mode: Off";
 	main_menu_playback_force_hispeed.text =
 		sb_card->force_hispeed ? "Force hispeed: On" : "Force hispeed: Off";
 	main_menu_playback_noreset_adpcm.text =
@@ -3716,16 +3714,16 @@ int main(int argc,char **argv) {
 			else if (mitem == &main_menu_playback_goldplay) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
-				goldplay_mode = !goldplay_mode;
+				sb_card->goldplay_mode = !sb_card->goldplay_mode;
 #if TARGET_MSDOS == 32
-				if (!irq_0_had_warned && goldplay_mode) {
+				if (!irq_0_had_warned && sb_card->goldplay_mode) {
 					/* NOTE TO SELF: It can overwhelm the UI in DOSBox too, but DOSBox seems able to
 					   recover if you manage to hit CTRL+F12 to speed up the CPU cycles in the virtual machine.
 					   On real hardware, even with the recovery method the machine remains hung :( */
 					if (confirm_yes_no_dialog(dos32_irq_0_warning))
 						irq_0_had_warned = 1;
 					else
-						goldplay_mode = 0;
+						sb_card->goldplay_mode = 0;
 				}
 #endif
 				update_cfg();
