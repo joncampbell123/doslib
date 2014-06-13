@@ -2340,7 +2340,9 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 		}
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
-		unsigned short lv = (cx->buffer_irq_interval * (cx->buffer_stereo?2:1)) - 1;
+		unsigned long lv = (cx->buffer_irq_interval * (cx->buffer_stereo?2:1)) - 1;
+
+		if (lv > 65535UL) lv = 65535UL;
 
 		sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | (cx->chose_autoinit_dsp?0x04:0x00) | 0x02 |
 			(cx->dsp_record ? 0x08 : 0x00));	/* bCommand FIFO on */
@@ -2417,7 +2419,8 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 			}
 			/* ^ warning: assuming interval <= bufsize */
 		}
-		lv = (unsigned short)rem;
+		lv = rem;
+		if (lv > 65536UL) lv = 65536UL;
 		if (lv != 0) lv--;
 		cx->buffer_dma_started = npos;
 		cx->buffer_dma_started_length = rem;
@@ -2464,7 +2467,7 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 		}
 		else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
 			lv++;
-			if (cx->buffer_16bit) lv >>= 1;
+			if (cx->buffer_16bit) lv >>= 1UL;
 			lv--;
 			sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | (cx->chose_autoinit_dsp?0x04:0x00) | 0x02 |
 				(cx->dsp_record ? 0x08 : 0x00));	/* bCommand FIFO on */
