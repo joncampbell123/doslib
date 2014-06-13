@@ -1984,7 +1984,6 @@ int sndsb_shutdown_dma(struct sndsb_ctx *cx) {
 }
 
 int sndsb_setup_dma(struct sndsb_ctx *cx) {
-	int ainit = 0;
 #if TARGET_MSDOS == 32
 	uint64_t phys;
 #endif
@@ -2000,21 +1999,8 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 	/* set up the DMA channel */
 	outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
-	/* is auto-init involved? */
-	if (cx->goldplay_mode) /* Goldplay mode can be done with or without auto-init DMA */
-		ainit = cx->dsp_autoinit_dma;
-	else if (cx->dsp_adpcm) {
-		/* ADPCM can be autoinit or not if using single-cycle ADPCM,
-		   but if the auto-init versions of the ADPCM playback are involved,
-		   then we must use auto-init DMA */
-		ainit = (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->enable_adpcm_autoinit) || cx->dsp_autoinit_dma;
-	}
-	else { /* DSP commands (1.xx, 2.01+ highspeed, and even DSP 4.xx) can be single-cycle */
-		ainit = cx->dsp_autoinit_dma;
-	}
-
 	outp(d8237_ioport(ch,D8237_REG_W_WRITE_MODE),
-		(ainit ? D8237_MODER_AUTOINIT : 0) |
+		(cx->chose_autoinit_dma ? D8237_MODER_AUTOINIT : 0) |
 		D8237_MODER_CHANNEL(ch) |
 		D8237_MODER_TRANSFER(cx->dsp_record ? D8237_MODER_XFER_WRITE : D8237_MODER_XFER_READ) |
 		D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
