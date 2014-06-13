@@ -2119,6 +2119,7 @@ static struct vga_menu_item main_menu_playback_goldplay =
 	{"xxx",			'g',	0,	0};
 static struct vga_menu_item main_menu_playback_goldplay_mode =
 	{"xxx",			'm',	0,	0};
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static struct vga_menu_item main_menu_playback_noreset_adpcm =
 	{"xxx",			'n',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_autoinit_dma =
@@ -2131,6 +2132,11 @@ static struct vga_menu_item main_menu_playback_force_hispeed =
 	{"xxx",			'h',	0,	0};
 static struct vga_menu_item main_menu_playback_flip_sign =
 	{"xxx",			'l',	0,	0};
+static struct vga_menu_item main_menu_playback_dsp4_fifo_autoinit =
+	{"xxx",			0,	0,	0};
+static struct vga_menu_item main_menu_playback_dsp4_fifo_single =
+	{"xxx",			0,	0,	0};
+#endif
 
 static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_play,
@@ -2142,12 +2148,16 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_autoinit_adpcm,
 	&main_menu_playback_goldplay,
 	&main_menu_playback_goldplay_mode,
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_playback_noreset_adpcm,
 	&main_menu_playback_dsp_autoinit_dma,
 	&main_menu_playback_dsp_autoinit_command,
 	&main_menu_playback_timer_clamp,
 	&main_menu_playback_force_hispeed,
 	&main_menu_playback_flip_sign,
+	&main_menu_playback_dsp4_fifo_autoinit,
+	&main_menu_playback_dsp4_fifo_single,
+#endif
 	NULL
 };
 
@@ -2334,6 +2344,7 @@ void update_cfg() {
 		sb_card->enable_adpcm_autoinit ? "ADPCM Auto-init: On" : "ADPCM Auto-init: Off";
 	main_menu_playback_goldplay.text =
 		sb_card->goldplay_mode ? "Goldplay mode: On" : "Goldplay mode: Off";
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	main_menu_playback_force_hispeed.text =
 		sb_card->force_hispeed ? "Force hispeed: On" : "Force hispeed: Off";
 	main_menu_playback_noreset_adpcm.text =
@@ -2346,6 +2357,11 @@ void update_cfg() {
 		sample_rate_timer_clamp ? "Clamp samplerate to timer: On" : "Clamp samplerate to timer: Off";
 	main_menu_playback_flip_sign.text =
 		sb_card->audio_data_flipped_sign ? "Flipped sign: On" : "Flipped sign: Off";
+	main_menu_playback_dsp4_fifo_autoinit.text =
+		sb_card->dsp_4xx_fifo_autoinit ? "DSP 4.xx autoinit FIFO: On" : "DSP 4.xx autoinit FIFO: Off";
+	main_menu_playback_dsp4_fifo_single.text =
+		sb_card->dsp_4xx_fifo_single_cycle ? "DSP 4.xx single FIFO: On" : "DSP 4.xx single FIFO: Off";
+#endif
 }
 
 void prompt_play_wav(unsigned char rec) {
@@ -3696,6 +3712,23 @@ int main(int argc,char **argv) {
 				vga_msg_box_destroy(&box);
 			}
 #endif
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+			else if (mitem == &main_menu_playback_dsp4_fifo_autoinit) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				sb_card->dsp_4xx_fifo_autoinit = !sb_card->dsp_4xx_fifo_autoinit;
+				update_cfg();
+				ui_anim(1);
+				if (wp) begin_play();
+			}
+			else if (mitem == &main_menu_playback_dsp4_fifo_single) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				sb_card->dsp_4xx_fifo_single_cycle = !sb_card->dsp_4xx_fifo_single_cycle;
+				update_cfg();
+				ui_anim(1);
+				if (wp) begin_play();
+			}
 			else if (mitem == &main_menu_playback_force_hispeed) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
@@ -3712,7 +3745,7 @@ int main(int argc,char **argv) {
 				ui_anim(1);
 				if (wp) begin_play();
 			}
-
+#endif
 			else if (mitem == &main_menu_playback_goldplay) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
@@ -3769,6 +3802,7 @@ int main(int argc,char **argv) {
 					vga_msg_box_destroy(&box);
 				}
 			}
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_playback_noreset_adpcm) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
@@ -3797,6 +3831,7 @@ int main(int argc,char **argv) {
 				update_cfg();
 				if (wp) begin_play();
 			}
+#endif
 			else if (mitem == &main_menu_playback_reduced_irq) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();

@@ -551,8 +551,10 @@ int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
 int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->windows_creative_sb16_drivers_ver = 0;
 	cx->windows_creative_sb16_drivers = 0;
+	cx->dsp_4xx_fifo_single_cycle = 0;
 	cx->windows_9x_me_sbemul_sys = 0;
 	cx->audio_data_flipped_sign = 0;
+	cx->dsp_4xx_fifo_autoinit = 1;
 	cx->dsp_autoinit_command = 1;
 	cx->buffer_irq_interval = 0;
 	cx->windows_springwait = 0;
@@ -2330,7 +2332,9 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 
 		if (lv > 65535UL) lv = 65535UL;
 
-		sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | (cx->chose_autoinit_dsp?0x04:0x00) | 0x02 |
+		sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | (cx->chose_autoinit_dsp?0x04:0x00) |
+			((!cx->chose_autoinit_dsp && cx->dsp_4xx_fifo_single_cycle) ? 0x02 : 0x00) |
+			((cx->chose_autoinit_dsp && cx->dsp_4xx_fifo_autoinit) ? 0x02 : 0x00) |
 			(cx->dsp_record ? 0x08 : 0x00));	/* bCommand FIFO on */
 		sndsb_write_dsp(cx,(cx->audio_data_flipped_sign ? 0x10 : 0x00) ^
 			((cx->buffer_stereo ? 0x20 : 0x00) | (cx->buffer_16bit ? 0x10 : 0x00))); /* bMode */
@@ -2455,7 +2459,9 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 			lv++;
 			if (cx->buffer_16bit) lv >>= 1UL;
 			lv--;
-			sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | (cx->chose_autoinit_dsp?0x04:0x00) | 0x02 |
+			sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | (cx->chose_autoinit_dsp?0x04:0x00) |
+				((!cx->chose_autoinit_dsp && cx->dsp_4xx_fifo_single_cycle) ? 0x02 : 0x00) |
+				((cx->chose_autoinit_dsp && cx->dsp_4xx_fifo_autoinit) ? 0x02 : 0x00) |
 				(cx->dsp_record ? 0x08 : 0x00));	/* bCommand FIFO on */
 			sndsb_write_dsp(cx,(cx->audio_data_flipped_sign ? 0x10 : 0x00) ^
 				((cx->buffer_stereo ? 0x20 : 0x00) | (cx->buffer_16bit ? 0x10 : 0x00))); /* bMode */
