@@ -2265,7 +2265,6 @@ void update_cfg() {
 	if (sb_card->dsp_adpcm == ADPCM_4BIT) r /= 2;
 	else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) r /= 3;
 	else if (sb_card->dsp_adpcm == ADPCM_2BIT) r /= 4;
-	else r *= wav_bytes_per_sample;
 	adpcm_counter = 0;
 	adpcm_reset_interval = 0;
 	if (sb_card->dsp_adpcm > 0) {

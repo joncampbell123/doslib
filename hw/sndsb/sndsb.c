@@ -2102,7 +2102,6 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		cx->buffer_rate = rate;
 		cx->buffer_hispeed = 0;
 		cx->buffer_dma_started = 0;
-		cx->buffer_dma_started_length = cx->buffer_size;
 		cx->buffer_last_io = 0;
 		cx->dsp_stopping = 0;
 
@@ -2266,6 +2265,20 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	 * is not available, then don't use auto-init DSP commands. */
 	if (!cx->chose_autoinit_dma) cx->chose_autoinit_dsp = 0;
 
+	/* pick the DMA buffer length to be programmed.
+	 * if auto-init, then we can safely give the entire buffer size.
+	 * else, we must match the IRQ interval */
+	if (cx->chose_autoinit_dma) {
+		cx->buffer_dma_started_length = cx->buffer_size;
+	}
+	else {
+		cx->buffer_dma_started_length = cx->buffer_irq_interval;
+		if (cx->dsp_adpcm == 0) {
+			if (bit16) cx->buffer_dma_started_length <<= 1UL;
+			if (stereo) cx->buffer_dma_started_length <<= 1UL;
+		}
+	}
+
 	return 1;
 }
 
@@ -2280,7 +2293,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 	}
 
 	if (cx->dsp_adpcm > 0) {
-		if (cx->dsp_record || cx->goldplay_mode || cx->goldplay_mode)
+		if (cx->dsp_record || cx->goldplay_mode)
 			return 0;
 
 		if (cx->chose_autoinit_dsp) {
@@ -2450,7 +2463,9 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 			}
 		}
 		else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
-			if (cx->buffer_16bit) lv = ((lv+1)>>1)-1;
+			lv++;
+			if (cx->buffer_16bit) lv >>= 1;
+			lv--;
 			sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | (cx->chose_autoinit_dsp?0x04:0x00) | 0x02 |
 				(cx->dsp_record ? 0x08 : 0x00));	/* bCommand FIFO on */
 			sndsb_write_dsp(cx,(cx->audio_data_flipped_sign ? 0x10 : 0x00) ^
