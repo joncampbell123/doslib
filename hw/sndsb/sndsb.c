@@ -1876,6 +1876,11 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		/* nor Goldplay mode (well, you *could* but that's not likely to go over well) */
 		if (cx->goldplay_mode) return 0;
 	}
+	else if (cx->goldplay_mode) {
+		/* bug-check: goldplay 16-bit DMA is not possible if somehow the goldplay_dma[] field is not WORD-aligned
+		 * and 16-bit audio is using the 16-bit DMA channel (misaligned while 8-bit DMA is fine) */
+		if (cx->buffer_16bit && cx->dma16 >= 4 && ((unsigned int)(cx->goldplay_dma))&1) return 0;
+	}
 
 	return 1;
 }
