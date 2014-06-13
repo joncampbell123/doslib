@@ -1787,6 +1787,8 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && !wav_16bit && cx->dma8 < 0) return 0;
 	/* 8-bit audio requires we have an 8-bit DMA channel */
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx && wav_16bit && cx->dma16 < 0) return 0;
+	/* flipped sign is impossible with pre DSP 4.xx commands */
+	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->audio_data_flipped_sign) return 0;
 	/* Depending on the playback method we MIGHT require an IRQ assignment. ADPCM block transfers
 	 * and DSP 1.xx playback requires the IRQ handler to command playback again, while the later
 	 * DSP commands are "auto-init" and do not need the IRQ handler to do anything except read
