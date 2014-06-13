@@ -2127,6 +2127,8 @@ static struct vga_menu_item main_menu_playback_timer_clamp =
 	{"xxx",			'c',	0,	0};
 static struct vga_menu_item main_menu_playback_force_hispeed =
 	{"xxx",			'h',	0,	0};
+static struct vga_menu_item main_menu_playback_flip_sign =
+	{"xxx",			'l',	0,	0};
 
 static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_play,
@@ -2142,6 +2144,7 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_dsp_1xx_autoinit,
 	&main_menu_playback_timer_clamp,
 	&main_menu_playback_force_hispeed,
+	&main_menu_playback_flip_sign,
 	NULL
 };
 
@@ -2337,6 +2340,8 @@ void update_cfg() {
 		sb_card->dsp_1xx_autoinit ? "DSP 1.xx autoinit: On" : "DSP 1.xx autoinit: Off";
 	main_menu_playback_timer_clamp.text =
 		sample_rate_timer_clamp ? "Clamp samplerate to timer: On" : "Clamp samplerate to timer: Off";
+	main_menu_playback_flip_sign.text =
+		sb_card->dsp_play_flipped_sign ? "Flipped sign: On" : "Flipped sign: Off";
 }
 
 void prompt_play_wav(unsigned char rec) {
@@ -3694,6 +3699,14 @@ int main(int argc,char **argv) {
 				update_cfg();
 				if (wp) begin_play();
 			}
+			else if (mitem == &main_menu_playback_flip_sign) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				sb_card->dsp_play_flipped_sign = !sb_card->dsp_play_flipped_sign;
+				update_cfg();
+				if (wp) begin_play();
+			}
+
 			else if (mitem == &main_menu_playback_goldplay) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
