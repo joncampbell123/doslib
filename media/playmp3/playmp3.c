@@ -961,56 +961,8 @@ static const char *lpt_dac_mode_str[LPT_DAC_MAX] = {
 
 static void interrupt irq_0() { /* timer IRQ */
 	if (sb_card != NULL) {
-		if (sb_card->dsp_play_method > SNDSB_DSPOUTMETHOD_DIRECT && !sb_card->goldplay_mode) {
-			old_irq_0();
-			return;
-		}
-
-		/* if we're playing the DSP in direct mode, then it's our job to do the direct DAC/ADC commands */
-		if (mp3_playing) {
-			unsigned int patience;
-
-			irq_0_watchdog_do();
-			if (irq_0_watchdog == 0UL) {
-			}
-			else if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
-				/* HACK:For some reason DOSBox SB emulation demands we read the port some number of times before the DSP is ready.
-				 *      If we don't do this the sound runs at half the sample rate we intended. */
-				for (patience=16;patience > 0 && (inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80);) patience--;
-				if ((inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
-					if (irq_0_sent_command) {
-						irq_0_sent_command = 0;
-						outp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_DATA,sb_dma->lin[sb_card->direct_dsp_io]);
-						if (++sb_card->direct_dsp_io >= sb_dma->length) sb_card->direct_dsp_io = 0;
-					}
-					else {
-						irq_0_sent_command = 1;
-						outp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x10);	/* direct DAC write */
-					}
-				}
-			}
-			else if (sb_card->goldplay_mode) {
-				if (sb_card->buffer_16bit) {
-					sb_card->goldplay_dma[0] = sb_dma->lin[sb_card->direct_dsp_io++];
-					sb_card->goldplay_dma[1] = sb_dma->lin[sb_card->direct_dsp_io++];
-					if (sb_card->direct_dsp_io >= sb_dma->length) sb_card->direct_dsp_io = 0;
-					if (sb_card->buffer_stereo) {
-						sb_card->goldplay_dma[2] = sb_dma->lin[sb_card->direct_dsp_io++];
-						sb_card->goldplay_dma[3] = sb_dma->lin[sb_card->direct_dsp_io++];
-						if (sb_card->direct_dsp_io >= sb_dma->length) sb_card->direct_dsp_io = 0;
-					}
-				}
-				else {
-					/* copy the buffer into the first byte of the DMA buffer where the DMA controller is looping */
-					sb_card->goldplay_dma[0] = sb_dma->lin[sb_card->direct_dsp_io];
-					if (++sb_card->direct_dsp_io >= sb_dma->length) sb_card->direct_dsp_io = 0;
-					if (sb_card->buffer_stereo) {
-						sb_card->goldplay_dma[1] = sb_dma->lin[sb_card->direct_dsp_io];
-						if (++sb_card->direct_dsp_io >= sb_dma->length) sb_card->direct_dsp_io = 0;
-					}
-				}
-			}
-		}
+		if (sb_card && sb_card->timer_tick_func != NULL)
+			sb_card->timer_tick_func(sb_card);
 	}
 	else if (drv_mode == USE_PC_SPEAKER) {
 		if (mp3_playing) {
@@ -1027,10 +979,6 @@ static void interrupt irq_0() { /* timer IRQ */
 					pc_speaker_repetition++;
 				}
 			}
-		}
-		else {
-			old_irq_0();
-			return;
 		}
 	}
 	else if (drv_mode == USE_LPT_DAC) {
@@ -1050,10 +998,6 @@ static void interrupt irq_0() { /* timer IRQ */
 						output_buffer_o = 0;
 				}
 			}
-		}
-		else {
-			old_irq_0();
-			return;
 		}
 	}
 
@@ -2342,7 +2286,6 @@ void begin_play() {
 			irq_0_max = (T8254_REF_CLOCK_HZ / mp3_sample_rate_by_timer_ticks) * 10UL;
 		}
 
-		irq_0_sent_command = 0;
 		draw_irq_indicator();
 		mp3_playing = 1;
 		_sti();
@@ -2478,8 +2421,6 @@ void stop_play() {
 			irq_0_adv = 1;
 			irq_0_max = 1;
 			write_8254_system_timer(0); /* restore 18.2 tick/sec */
-			if (irq_0_sent_command) sndsb_write_dsp(sb_card,0x80);
-			irq_0_sent_command = 0;
 		}
 		sndsb_stop_dsp_playback(sb_card);
 		mp3_playing = 0;

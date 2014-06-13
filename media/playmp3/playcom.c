@@ -105,8 +105,8 @@ volatile unsigned char		IRQ_anim = 0;
 volatile unsigned char		sb_irq_count = 0;
 
 uint32_t			irq_0_count = 0;
-uint32_t			irq_0_adv = 0;
-uint32_t			irq_0_max = 0;
+uint32_t			irq_0_adv = 1;
+uint32_t			irq_0_max = 1;
 uint8_t				irq_0_sent_command = 0;
 unsigned char			irq_0_had_warned = 0;
 
