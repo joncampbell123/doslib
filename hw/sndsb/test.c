@@ -1,3 +1,6 @@
+/* FIXME: 16-bit real mode small memory model builds crash/hang on startup. Why? */
+
+/*=========================================OLD===================================================*/
 /* Emulator testing:
  *    Sun/Oracle VirtualBox:
  *       - Works perfectly
