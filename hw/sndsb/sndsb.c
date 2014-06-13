@@ -168,6 +168,58 @@ struct sndsb_ctx sndsb_card[SNDSB_MAX_CARDS];
 struct sndsb_ctx *sndsb_card_blaster=NULL;
 int sndsb_card_next = 0;
 
+void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx) {
+	if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS) & 0x80) { /* data available? */
+		cx->buffer_lin[cx->direct_dsp_io] = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
+		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
+		cx->timer_tick_func = sndsb_timer_tick_directi_cmd;
+		cx->direct_dac_sent_command = 0;
+	}
+}
+
+void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx) {
+	if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
+		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x20);	/* direct DAC read */
+		cx->timer_tick_func = sndsb_timer_tick_directi_data;
+		cx->direct_dac_sent_command = 1;
+	}
+}
+
+void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx) {
+	if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
+		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,cx->buffer_lin[cx->direct_dsp_io]);
+		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
+		cx->timer_tick_func = sndsb_timer_tick_directo_cmd;
+		cx->direct_dac_sent_command = 0;
+	}
+}
+
+void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx) {
+	if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
+		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x10);	/* direct DAC write */
+		cx->timer_tick_func = sndsb_timer_tick_directo_data;
+		cx->direct_dac_sent_command = 1;
+	}
+}
+
+void sndsb_timer_tick_goldi_cpy(struct sndsb_ctx *cx) {
+#if TARGET_MSDOS == 32
+	memcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma,cx->gold_memcpy);
+#else
+	_fmemcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma,cx->gold_memcpy);
+#endif
+	if ((cx->direct_dsp_io += cx->gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
+}
+
+void sndsb_timer_tick_goldo_cpy(struct sndsb_ctx *cx) {
+#if TARGET_MSDOS == 32
+	memcpy(cx->goldplay_dma,cx->buffer_lin+cx->direct_dsp_io,cx->gold_memcpy);
+#else
+	_fmemcpy(cx->goldplay_dma,cx->buffer_lin+cx->direct_dsp_io,cx->gold_memcpy);
+#endif
+	if ((cx->direct_dsp_io += cx->gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
+}
+
 struct sndsb_ctx *sndsb_by_base(uint16_t x) {
 	int i;
 
@@ -549,6 +601,7 @@ int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
  *      when probing. If any of them are -1, and this code knows how to deduce
  *      it directly from the hardware, then they will be updated */
 int sndsb_init_card(struct sndsb_ctx *cx) {
+	cx->timer_tick_func = NULL;
 	cx->windows_creative_sb16_drivers_ver = 0;
 	cx->windows_creative_sb16_drivers = 0;
 	cx->dsp_4xx_fifo_single_cycle = 0;
@@ -2081,9 +2134,12 @@ unsigned char sndsb_rate_to_time_constant(struct sndsb_ctx *cx,unsigned long rat
 int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned char stereo,unsigned char bit16) {
 	unsigned long lm;
 
+	/* TODO: Don't play if already playing */
+
 	cx->chose_use_dma = 0;
 	cx->chose_autoinit_dma = 0;
 	cx->chose_autoinit_dsp = 0;
+	cx->direct_dac_sent_command = 0;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT && cx->windows_emulation)
 		return 0;
 
@@ -2276,6 +2332,25 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 }
 
 int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
+		cx->gold_memcpy = 0;
+		if (cx->dsp_record)
+			cx->timer_tick_func = sndsb_timer_tick_directi_cmd;
+		else
+			cx->timer_tick_func = sndsb_timer_tick_directo_cmd;
+	}
+	else if (cx->goldplay_mode) {
+		cx->gold_memcpy = (cx->buffer_16bit?2:1)*(cx->buffer_stereo?2:1);
+		if (cx->dsp_record)
+			cx->timer_tick_func = sndsb_timer_tick_goldi_cpy;
+		else
+			cx->timer_tick_func = sndsb_timer_tick_goldo_cpy;
+	}
+	else {
+		cx->timer_tick_func = NULL;
+		cx->gold_memcpy = 0;
+	}
+
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) /* do nothing */
 		return 1;
 
@@ -2351,8 +2426,18 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 }
 
 int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
+	cx->gold_memcpy = 0;
 	cx->dsp_stopping = 1;
 	cx->windows_springwait = 0;
+	cx->timer_tick_func = NULL;
+	if (cx->direct_dac_sent_command) {
+		if (cx->dsp_record)
+			sndsb_read_dsp(cx);
+		else
+			sndsb_write_dsp(cx,0x80);
+
+		cx->direct_dac_sent_command = 0;
+	}
 
 	/* NTS: As far as I can tell, the best way to stop the sound card is just reset the DSP.
 	 *      The "Exit auto-init" commands don't seem to work */

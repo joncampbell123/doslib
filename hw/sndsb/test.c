@@ -528,8 +528,8 @@ static void draw_irq_indicator() {
 }
 
 static uint32_t irq_0_count = 0;
-static uint32_t irq_0_adv = 0;
-static uint32_t irq_0_max = 0;
+static uint32_t irq_0_adv = 1;
+static uint32_t irq_0_max = 1;
 #if TARGET_MSDOS == 32
 static unsigned char irq_0_had_warned = 0;
 #endif
@@ -552,110 +552,20 @@ static void irq_0_watchdog_reset() {
 	irq_0_watchdog = 0x10000UL;
 }
 
-/*===============================================*/
-uint8_t irq_0_sent_command = 0;
-unsigned int irq_0_gold_memcpy = 0;
-void (*sndsb_timer_tick_func)(struct sndsb_ctx *cx) = NULL;
-
-void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx);
-void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx);
-void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx);
-void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx);
-
-void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx) {
-	if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS) & 0x80) { /* data available? */
-		cx->buffer_lin[cx->direct_dsp_io] = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
-		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
-		sndsb_timer_tick_func = sndsb_timer_tick_directi_cmd;
-	}
-}
-
-void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx) {
-	if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
-		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x20);	/* direct DAC read */
-		sndsb_timer_tick_func = sndsb_timer_tick_directi_data;
-	}
-}
-
-void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx) {
-	if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
-		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,cx->buffer_lin[cx->direct_dsp_io]);
-		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
-		sndsb_timer_tick_func = sndsb_timer_tick_directo_cmd;
-	}
-}
-
-void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx) {
-	if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
-		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x10);	/* direct DAC write */
-		sndsb_timer_tick_func = sndsb_timer_tick_directo_data;
-	}
-}
-
-void sndsb_timer_tick_goldi_cpy(struct sndsb_ctx *cx) {
-#if TARGET_MSDOS == 32
-	memcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma,irq_0_gold_memcpy);
-#else
-	_fmemcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma,irq_0_gold_memcpy);
-#endif
-	if ((cx->direct_dsp_io += irq_0_gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
-}
-
-void sndsb_timer_tick_goldo_cpy(struct sndsb_ctx *cx) {
-#if TARGET_MSDOS == 32
-	memcpy(cx->goldplay_dma,cx->buffer_lin+cx->direct_dsp_io,irq_0_gold_memcpy);
-#else
-	_fmemcpy(cx->goldplay_dma,cx->buffer_lin+cx->direct_dsp_io,irq_0_gold_memcpy);
-#endif
-	if ((cx->direct_dsp_io += irq_0_gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
-}
-
-void sndsb_timer_tick(struct sndsb_ctx *cx) {
-	if (sndsb_timer_tick_func != NULL) {
-		sndsb_timer_tick_func(cx);
-	}
-	else {
-		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
-			if (cx->dsp_record)
-				sndsb_timer_tick_func = sndsb_timer_tick_directi_cmd;
-			else
-				sndsb_timer_tick_func = sndsb_timer_tick_directo_cmd;
-
-			sndsb_timer_tick_func(cx);
-		}
-		else if (cx->goldplay_mode) {
-			irq_0_gold_memcpy = (cx->buffer_16bit?2:1)*(cx->buffer_stereo?2:1);
-			if (cx->dsp_record)
-				sndsb_timer_tick_func = sndsb_timer_tick_goldi_cpy;
-			else
-				sndsb_timer_tick_func = sndsb_timer_tick_goldo_cpy;
-
-			sndsb_timer_tick_func(cx);
-		}
-	}
-}
-
-/*===============================================*/
-
 static unsigned char old_irq_masked = 0;
 static void (interrupt *old_irq_0)() = NULL;
 static void interrupt irq_0() { /* timer IRQ */
-	if (sb_card->dsp_play_method > SNDSB_DSPOUTMETHOD_DIRECT && !sb_card->goldplay_mode) {
-		old_irq_0();
-		return;
-	}
-
 	/* if we're playing the DSP in direct mode, then it's our job to do the direct DAC/ADC commands */
-	if (wav_playing) {
-		if (irq_0_watchdog > 0UL) {
-			sndsb_timer_tick(sb_card);
-			if (--irq_0_watchdog == 0UL) {
-				/* try to help by setting the timer rate back down */
-				write_8254_system_timer(0); /* restore 18.2 tick/sec */
-				irq_0_count = 0;
-				irq_0_adv = 1;
-				irq_0_max = 1;
-			}
+	if (wav_playing && irq_0_watchdog > 0UL) {
+		if (sb_card && sb_card->timer_tick_func != NULL)
+			sb_card->timer_tick_func(sb_card);
+
+		if (--irq_0_watchdog == 0UL) {
+			/* try to help by setting the timer rate back down */
+			write_8254_system_timer(0); /* restore 18.2 tick/sec */
+			irq_0_count = 0;
+			irq_0_adv = 1;
+			irq_0_max = 1;
 		}
 	}
 
@@ -1403,9 +1313,6 @@ void begin_play() {
 	if (wav_fd < 0)
 		return;
 
-	/* FIXME */
-	sndsb_timer_tick_func = NULL;
-
 	choice_rate = sample_rate_timer_clamp ? wav_sample_rate_by_timer : wav_sample_rate;
 	if (sb_card->goldplay_mode) {
 		if (goldplay_samplerate_choice == GOLDRATE_DOUBLE)
@@ -1492,7 +1399,6 @@ void begin_play() {
 		irq_0_max = wav_sample_rate_by_timer * 10UL;
 	}
 	draw_irq_indicator();
-	irq_0_sent_command = 0;
 	wav_playing = 1;
 	_sti();
 }
@@ -1506,20 +1412,10 @@ void stop_play() {
 		irq_0_adv = 1;
 		irq_0_max = 1;
 		write_8254_system_timer(0); /* restore 18.2 tick/sec */
-		if (irq_0_sent_command) {
-			if (wav_record)
-				sndsb_read_dsp(sb_card);
-			else
-				sndsb_write_dsp(sb_card,0x80);
-		}
-		irq_0_sent_command = 0;
 	}
 	sndsb_stop_dsp_playback(sb_card);
 	wav_playing = 0;
 	_sti();
-
-	/* FIXME */
-	sndsb_timer_tick_func = NULL;
 
 	ui_anim(1);
 	if (wav_fd >= 0 && wav_record) {

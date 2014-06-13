@@ -145,7 +145,10 @@ struct sndsb_ctx {
 /* array of mixer controls, determined by mixer chipset */
 	struct sndsb_mixer_control*	sb_mixer;
 	signed short			sb_mixer_items;
+/* function call */
+	void				(*timer_tick_func)(struct sndsb_ctx *cx);
 /* goldplay mode DMA buffer */
+	uint8_t				gold_memcpy;
 	uint8_t				goldplay_dma[4];
 /* ISA PnP information */
 	const char*			pnp_name;
@@ -166,6 +169,7 @@ struct sndsb_ctx {
 	uint8_t				chose_autoinit_dma:1;	/* the library chooses to use autoinit DMA */
 	uint8_t				chose_autoinit_dsp:1;	/* the library chooses to use auto-init commands */
 	uint8_t				chose_use_dma:1;	/* the library chooses to run in a manner that uses DMA */
+	uint8_t				direct_dac_sent_command:1;	/* direct DSP playback: we just sent the command, next is data */
 };
 
 /* runtime "options" that affect sound blaster probing.
@@ -308,6 +312,11 @@ unsigned char sndsb_read_mixer_entry(struct sndsb_ctx *sb,struct sndsb_mixer_con
 unsigned long sndsb_real_sample_rate(struct sndsb_ctx *cx);
 
 uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit);
+
+void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx);
+void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx);
+void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx);
+void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx);
 
 #if TARGET_MSDOS == 32
 int sb_nmi_32_auto_choose_hook();
