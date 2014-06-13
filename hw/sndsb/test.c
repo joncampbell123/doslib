@@ -1691,18 +1691,12 @@ void change_param_menu() {
 					case 3: /* translatin */
 						if (sb_card->dsp_adpcm == ADPCM_2BIT) {
 							sb_card->dsp_adpcm = ADPCM_2_6BIT;
-							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) {
 							sb_card->dsp_adpcm = ADPCM_4BIT;
-							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else if (sb_card->dsp_adpcm == ADPCM_4BIT) {
 							sb_card->dsp_adpcm = 0;
-							sb_card->dsp_play_flipped_sign = 1;
-						}
-						else if (sb_card->dsp_play_flipped_sign) {
-							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else {
 							sb_card->dsp_adpcm = ADPCM_2BIT;
@@ -1736,23 +1730,15 @@ void change_param_menu() {
 					case 3: /* translatin */
 						if (sb_card->dsp_adpcm == ADPCM_2BIT) {
 							sb_card->dsp_adpcm = 0;
-							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) {
 							sb_card->dsp_adpcm = ADPCM_2BIT;
-							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else if (sb_card->dsp_adpcm == ADPCM_4BIT) {
 							sb_card->dsp_adpcm = ADPCM_2_6BIT;
-							sb_card->dsp_play_flipped_sign = 0;
-						}
-						else if (sb_card->dsp_play_flipped_sign) {
-							sb_card->dsp_adpcm = ADPCM_4BIT;
-							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else {
-							sb_card->dsp_play_flipped_sign = 1;
-							sb_card->dsp_adpcm = 0;
+							sb_card->dsp_adpcm = ADPCM_4BIT;
 						}
 						break;
 					case 4: /* DSP mode */
