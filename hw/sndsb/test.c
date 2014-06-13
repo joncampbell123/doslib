@@ -304,7 +304,6 @@ static unsigned long		wav_sample_rate_by_timer_ticks = 1;
 static unsigned long		wav_sample_rate_by_timer = 1;
 static unsigned char		dont_sb_idle = 0;
 static unsigned char		dont_chain_irq = 0;
-static unsigned char		wav_flipsign = 0;
 static unsigned char		wav_playing = 0;
 static unsigned char		wav_record = 0;
 static signed char		reduced_irq_interval = 0;
@@ -783,7 +782,7 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 		if (cx->buffer_last_io == 0)
 			wav_buffer_filepos = wav_position;
 
-		if (wav_flipsign) {
+		if (sb_card->dsp_play_flipped_sign) {
 			if (wav_16bit)
 				for (i=0;i < ((int)how-1);i += 2) buffer[cx->buffer_last_io+i+1] ^= 0x80;
 			else
@@ -1014,7 +1013,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 #ifdef INCLUDE_FX
 			fx_proc(buffer + cx->buffer_last_io,rd / wav_bytes_per_sample);
 #endif
-			if (wav_flipsign) {
+			if (sb_card->dsp_play_flipped_sign) {
 				if (wav_16bit)
 					for (i=0;i < (rd-1);i += 2) buffer[cx->buffer_last_io+i+1] ^= 0x80;
 				else
@@ -1063,12 +1062,12 @@ static void rec_vu(uint32_t pos) {
 				/* 16-bit PCM stereo */
 				for (x=0;x < leeway;x++) {
 					sample = ptr[x*2];
-					if (wav_flipsign) sample = abs((uint16_t)sample - 32768);
+					if (sb_card->dsp_play_flipped_sign) sample = abs((uint16_t)sample - 32768);
 					else sample = abs((int16_t)sample);
 					if (L < sample) L = sample;
 
 					sample = ptr[x*2 + 1];
-					if (wav_flipsign) sample = abs((uint16_t)sample - 32768);
+					if (sb_card->dsp_play_flipped_sign) sample = abs((uint16_t)sample - 32768);
 					else sample = abs((int16_t)sample);
 					if (R < sample) R = sample;
 				}
@@ -1077,7 +1076,7 @@ static void rec_vu(uint32_t pos) {
 				/* 16-bit PCM mono */
 				for (x=0;x < leeway;x++) {
 					sample = ptr[x];
-					if (wav_flipsign) sample = abs((uint16_t)sample - 32768);
+					if (sb_card->dsp_play_flipped_sign) sample = abs((uint16_t)sample - 32768);
 					else sample = abs((int16_t)sample);
 					if (L < sample) L = sample;
 				}
@@ -1089,12 +1088,12 @@ static void rec_vu(uint32_t pos) {
 				/* 8-bit PCM stereo */
 				for (x=0;x < leeway;x++) {
 					sample = sb_dma->lin[x*2 + pos];
-					if (wav_flipsign) sample = abs((signed char)sample);
+					if (sb_card->dsp_play_flipped_sign) sample = abs((signed char)sample);
 					else sample = abs((int)sample - 128);
 					if (L < sample) L = sample;
 
 					sample = sb_dma->lin[x*2 + 1 + pos];
-					if (wav_flipsign) sample = abs((signed char)sample);
+					if (sb_card->dsp_play_flipped_sign) sample = abs((signed char)sample);
 					else sample = abs((int)sample - 128);
 					if (R < sample) R = sample;
 				}
@@ -1103,7 +1102,7 @@ static void rec_vu(uint32_t pos) {
 				/* 8-bit PCM mono */
 				for (x=0;x < leeway;x++) {
 					sample = sb_dma->lin[x + pos];
-					if (wav_flipsign) sample = abs((signed char)sample);
+					if (sb_card->dsp_play_flipped_sign) sample = abs((signed char)sample);
 					else sample = abs((int)sample - 128);
 					if (L < sample) L = sample;
 				}
@@ -1268,7 +1267,7 @@ static void ui_anim(int force) {
 			msg = sndsb_adpcm_mode_str[sb_card->dsp_adpcm];
 			for (;cc < 52 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 		}
-		else if (wav_flipsign) {
+		else if (sb_card->dsp_play_flipped_sign) {
 			msg = "[flipsign]";
 			for (;cc < 52 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 		}
@@ -1602,7 +1601,7 @@ void change_param_menu() {
 			vga_write_color(selector == 3 ? 0x70 : 0x1F);
 			vga_write(  "Translation:   ");
 			if (sb_card->dsp_adpcm > 0) vga_write(sndsb_adpcm_mode_str[sb_card->dsp_adpcm]);
-			else if (wav_flipsign) vga_write("Flip sign");
+			else if (sb_card->dsp_play_flipped_sign) vga_write("Flip sign");
 			else vga_write("None");
 			vga_write_until(30);
 			vga_write("\n");
@@ -1692,18 +1691,18 @@ void change_param_menu() {
 					case 3: /* translatin */
 						if (sb_card->dsp_adpcm == ADPCM_2BIT) {
 							sb_card->dsp_adpcm = ADPCM_2_6BIT;
-							wav_flipsign = 0;
+							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) {
 							sb_card->dsp_adpcm = ADPCM_4BIT;
-							wav_flipsign = 0;
+							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else if (sb_card->dsp_adpcm == ADPCM_4BIT) {
 							sb_card->dsp_adpcm = 0;
-							wav_flipsign = 1;
+							sb_card->dsp_play_flipped_sign = 1;
 						}
-						else if (wav_flipsign) {
-							wav_flipsign = 0;
+						else if (sb_card->dsp_play_flipped_sign) {
+							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else {
 							sb_card->dsp_adpcm = ADPCM_2BIT;
@@ -1737,22 +1736,22 @@ void change_param_menu() {
 					case 3: /* translatin */
 						if (sb_card->dsp_adpcm == ADPCM_2BIT) {
 							sb_card->dsp_adpcm = 0;
-							wav_flipsign = 0;
+							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) {
 							sb_card->dsp_adpcm = ADPCM_2BIT;
-							wav_flipsign = 0;
+							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else if (sb_card->dsp_adpcm == ADPCM_4BIT) {
 							sb_card->dsp_adpcm = ADPCM_2_6BIT;
-							wav_flipsign = 0;
+							sb_card->dsp_play_flipped_sign = 0;
 						}
-						else if (wav_flipsign) {
+						else if (sb_card->dsp_play_flipped_sign) {
 							sb_card->dsp_adpcm = ADPCM_4BIT;
-							wav_flipsign = 0;
+							sb_card->dsp_play_flipped_sign = 0;
 						}
 						else {
-							wav_flipsign = 1;
+							sb_card->dsp_play_flipped_sign = 1;
 							sb_card->dsp_adpcm = 0;
 						}
 						break;
@@ -2270,7 +2269,6 @@ void update_cfg() {
 
 	sb_card->dsp_adpcm = sb_card->dsp_adpcm;
 	sb_card->dsp_record = wav_record;
-	sb_card->dsp_play_flipped_sign = wav_flipsign;
 	r = wav_sample_rate;
 	if (sb_card->dsp_adpcm == ADPCM_4BIT) r /= 2;
 	else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) r /= 3;
