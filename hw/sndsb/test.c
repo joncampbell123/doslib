@@ -1483,7 +1483,7 @@ void begin_play() {
 		write_8254_system_timer(wav_sample_rate_by_timer_ticks);
 		irq_0_count = 0;
 		irq_0_adv = 182UL;		/* 18.2Hz */
-		irq_0_max = (T8254_REF_CLOCK_HZ / wav_sample_rate_by_timer_ticks) * 10UL;
+		irq_0_max = wav_sample_rate_by_timer * 10UL;
 	}
 	draw_irq_indicator();
 	irq_0_sent_command = 0;
@@ -2255,7 +2255,7 @@ int adpcm_warning_prompt() {
 void update_cfg() {
 	unsigned int r;
 
-	wav_sample_rate_by_timer_ticks = t8254_us2ticks(1000000 / wav_sample_rate);
+	wav_sample_rate_by_timer_ticks = T8254_REF_CLOCK_HZ / wav_sample_rate;
 	if (wav_sample_rate_by_timer_ticks == 0) wav_sample_rate_by_timer_ticks = 1;
 	wav_sample_rate_by_timer = T8254_REF_CLOCK_HZ / wav_sample_rate_by_timer_ticks;
 
