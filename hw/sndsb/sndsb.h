@@ -98,7 +98,7 @@ struct sndsb_ctx {
 	uint8_t				mixer_chip;
 	uint8_t				dsp_record;
 	uint8_t				mpu_ok;
-	uint32_t			buffer_size;
+	uint32_t			buffer_size;		/* length of the buffer IN BYTES */
 	uint32_t			buffer_rate;
 	uint8_t				buffer_16bit;
 	uint8_t				buffer_stereo;
@@ -122,12 +122,13 @@ struct sndsb_ctx {
 								                  An early tracker/sound library released in 1991 called Goldplay does just that, which is why
 										  stuff from the demoscene using that library has compatibility issued on today's hardware.
 										  Sick hack, huh? */
-	uint8_t				dsp_1xx_autoinit:1;	/* in most cases, you can just setup the DMA buffer to auto-init loop
+	uint8_t				dsp_autoinit_dma:1;	/* in most cases, you can just setup the DMA buffer to auto-init loop
 								   and then re-issue the playback command as normal. But some emulations,
 								   especially Gravis UltraSound SBOS/MEGA-EM, don't handle that too well.
 								   the only way to play properly with them is to NOT do auto-init DMA
 								   and to set the DSP block size & DMA count to only precisely the IRQ
 								   interval. In which case, set this to 0 */
+	uint8_t				dsp_autoinit_command:1;	/* whether or not to use the auto-init form of playback/recording */
 	uint8_t				windows_emulation:1;	/* we're running under Windows where the implementation is probably shitty */
 	uint8_t				windows_xp_ntvdm:1;	/* Microsoft's NTVDM.EXE based emulation in Windows XP requires some restrictive
 								   workarounds to buffer size, interval, etc. to work properly. Note this also
@@ -159,6 +160,9 @@ struct sndsb_ctx {
 								   DSP first and then setting up DMA only confuses the emulation. Doing this
 								   effectively defers DSP programming until after the host program has set up
 								   DMA, ensuring the minimalist emulation provided by Windows is not confused. */
+	uint8_t				chose_autoinit_dma:1;	/* the library chooses to use autoinit DMA */
+	uint8_t				chose_autoinit_dsp:1;	/* the library chooses to use auto-init commands */
+	uint8_t				chose_use_dma:1;	/* the library chooses to run in a manner that uses DMA */
 };
 
 /* runtime "options" that affect sound blaster probing.

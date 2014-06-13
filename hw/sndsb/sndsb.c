@@ -553,19 +553,23 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->windows_creative_sb16_drivers = 0;
 	cx->windows_9x_me_sbemul_sys = 0;
 	cx->audio_data_flipped_sign = 0;
+	cx->dsp_autoinit_command = 1;
 	cx->buffer_irq_interval = 0;
 	cx->windows_springwait = 0;
+	cx->chose_autoinit_dma = 0;
+	cx->chose_autoinit_dsp = 0;
 	cx->do_not_probe_irq = 0;
 	cx->do_not_probe_dma = 0;
 	cx->is_gallant_sc6600 = 0;
 	cx->windows_emulation = 0;
 	cx->windows_xp_ntvdm = 0;
 	cx->dsp_copyright[0] = 0;
-	cx->dsp_1xx_autoinit = 1;
+	cx->dsp_autoinit_dma = 1;
 	cx->buffer_last_io = 0;
 	cx->direct_dsp_io = 0;
 	cx->goldplay_mode = 0;
 	cx->force_hispeed = 0;
+	cx->chose_use_dma = 0;
 	cx->vdmsound = 0;
 	cx->mega_em = 0;
 	cx->sbos = 0;
@@ -615,7 +619,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 				  ALL interfaces just because one happens
 				  to be a GUS with MEGA-EM. */
 			cx->mega_em = 1;
-			cx->dsp_1xx_autoinit = 0;
+			cx->dsp_autoinit_dma = 0;
 			strcpy(cx->dsp_copyright,"Gravis MEGA-EM");
 		}
 	}
@@ -655,7 +659,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 			if (c == i) {
 				if (gravis_sbos_detect() >= 0) { /* is that you, SBOS? */
 					strcpy(cx->dsp_copyright,"Gravis SBOS");
-					cx->dsp_1xx_autoinit = 0;
+					cx->dsp_autoinit_dma = 0;
 					cx->sbos = 1;
 				}
 			}
@@ -925,6 +929,10 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		sndsb_interrupt_ack(cx,3);
 		sndsb_interrupt_ack(cx,3);
 	}
+
+	/* DSP 2xx and earlier do not have auto-init commands */
+	if (cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 || cx->dsp_vmin == 0))
+		cx->dsp_autoinit_command = 0;
 
 	sndsb_determine_ideal_dsp_play_method(cx);
 	return 1;
@@ -1809,6 +1817,8 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return 0;
 		/* nor can ADPCM support 16-bit, or stereo, or flipped sign */
 		if (wav_16bit || wav_stereo || cx->audio_data_flipped_sign) return 0;
+		/* nor Goldplay mode (well, you *could* but that's not likely to go over well) */
+		if (cx->goldplay_mode) return 0;
 	}
 
 	return 1;
@@ -1834,6 +1844,14 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 			if (cx->dsp_vmaj < 4) return 0;
 		}
 	}
+
+	/* goldplay mode requires auto-init DMA */
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->goldplay_mode && !cx->dsp_autoinit_dma)
+		return 0;
+
+	/* auto-init commands not supported until DSP 2.xx */
+	if (cx->dsp_autoinit_command && cx->dsp_vmaj < 2)
+		return 0;
 
 	/* Direct mode from within Windows emulation is NOT advised! */
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT && cx->windows_emulation)
@@ -1983,14 +2001,17 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 	outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
 	/* is auto-init involved? */
-	if (cx->goldplay_mode)
-		ainit = 1;
-	else if (cx->dsp_adpcm)
-		ainit = (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->enable_adpcm_autoinit) || cx->dsp_1xx_autoinit;
-	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200)
-		ainit = 1;
-	else
-		ainit = cx->dsp_1xx_autoinit;
+	if (cx->goldplay_mode) /* Goldplay mode can be done with or without auto-init DMA */
+		ainit = cx->dsp_autoinit_dma;
+	else if (cx->dsp_adpcm) {
+		/* ADPCM can be autoinit or not if using single-cycle ADPCM,
+		   but if the auto-init versions of the ADPCM playback are involved,
+		   then we must use auto-init DMA */
+		ainit = (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->enable_adpcm_autoinit) || cx->dsp_autoinit_dma;
+	}
+	else { /* DSP commands (1.xx, 2.01+ highspeed, and even DSP 4.xx) can be single-cycle */
+		ainit = cx->dsp_autoinit_dma;
+	}
 
 	outp(d8237_ioport(ch,D8237_REG_W_WRITE_MODE),
 		(ainit ? D8237_MODER_AUTOINIT : 0) |
@@ -2067,6 +2088,9 @@ unsigned char sndsb_rate_to_time_constant(struct sndsb_ctx *cx,unsigned long rat
 int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned char stereo,unsigned char bit16) {
 	unsigned long lm;
 
+	cx->chose_use_dma = 0;
+	cx->chose_autoinit_dma = 0;
+	cx->chose_autoinit_dsp = 0;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT && cx->windows_emulation)
 		return 0;
 
@@ -2159,66 +2183,96 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	 *                common at the time and often used with tape recorders.  */
 	sndsb_write_dsp(cx,cx->dsp_record ? 0xD3 : 0xD1); /* turn off speaker if recording, else, turn on */
 
-	if (cx->dsp_adpcm > 0 && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) {
+	/* these methods involve DMA */
+	cx->chose_use_dma = 1;
+	/* use auto-init DMA unless for some reason we can't */
+	cx->chose_autoinit_dma = cx->dsp_autoinit_dma;
+	cx->chose_autoinit_dsp = cx->dsp_autoinit_command;
+
+	/* Gravis Ultrasound SBOS/MEGA-EM don't handle auto-init 1.xx very well.
+	   the only way to cooperate with their shitty emulation is to strictly
+	   limit DMA count to the IRQ interval and to NOT set the auto-init flag */
+	if (cx->sbos || cx->mega_em)
+		cx->chose_autoinit_dma = cx->chose_autoinit_dsp = 0;
+
+	if (cx->dsp_adpcm > 0) {
 		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
-		if (stereo || bit16 || cx->dsp_record)
+		if (stereo || bit16 || cx->dsp_record || cx->goldplay_mode)
 			return 0; /* ADPCM modes do not support stereo or 16 bit nor recording */
-		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200)
+
+		/* if DSP 2.xx mode or higher and ADPCM auto-init enabled, enable autoinit */
+		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->enable_adpcm_autoinit && cx->dsp_autoinit_command) {
 			sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval);
+			cx->chose_autoinit_dsp = 1;
+		}
+		else {
+			cx->chose_autoinit_dsp = 0;
+		}
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
 		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
-		/* Gravis Ultrasound SBOS/MEGA-EM don't handle auto-init 1.xx very well.
-		   the only way to cooperate with their shitty emulation is to strictly
-		   limit DMA count to the IRQ interval and to NOT set the auto-init flag */
-		if (!cx->dsp_1xx_autoinit)
-			cx->buffer_dma_started_length = cx->buffer_irq_interval * (stereo?2:1);
+		cx->chose_autoinit_dsp = 0; /* DSP 1.xx does not support auto-init DSP commands */
 	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_200) {
-		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
-		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
-	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {/*FIXME: Review Creative SDK documentation. Stereo playback didn't appear until the Pro, right?*/
-		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
-		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
-		/* NTS: I have a CT1350B card that has audible problems with the ISA bus when driven up to
-		 *      22050Hz in non-hispeed modes (if I have something else run, like reading the floppy
-		 *      drive, the audio "warbles", changing speed periodically). So while Creative suggests
-		 *      enabling hispeed mode for rates 23KHz and above, I think it would be wiser instead
-		 *      to do hispeed mode for 16KHz or higher instead. [1]
-		 *         [DSP v2.2 with no copyright string]
-		 *         [Tested on Pentium MMX 200MHz system with ISA and PCI slots]
-		 *         [Applying fix [1] indeed resolved the audible warbling]
-		 *         [Is this fix needed for any other Sound Blaster products of that era?] */
-		if (cx->force_hispeed)
-			cx->buffer_hispeed = 1;
-		else if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2 && !strcmp(cx->dsp_copyright,"")) /* [1] */
-			cx->buffer_hispeed = (rate >= (cx->dsp_record ? 8000 : 16000));
-		else
-			cx->buffer_hispeed = (rate >= (cx->dsp_record ? 13000 : 23000));
-	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
+		/* DSP 2.00, 2.01+, and DSP 3.xx */
 		unsigned long total_rate = rate * (cx->buffer_stereo ? 2UL : 1UL);
+
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
-		if (cx->dsp_record) sndsb_write_dsp(cx,cx->buffer_stereo ? 0xA8 : 0xA0);
-		sndsb_write_mixer(cx,0x0E,0x20 | (cx->buffer_stereo ? 0x02 : 0x00));
-		sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
 		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,total_rate));
-		cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 22050 : 23000)) || cx->force_hispeed;
+
+		/* DSP 2.01 and higher can do "high-speed" DMA transfers up to 44.1KHz */
+		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_201) {
+			/* NTS: I have a CT1350B card that has audible problems with the ISA bus when driven up to
+			 *      22050Hz in non-hispeed modes (if I have something else run, like reading the floppy
+			 *      drive, the audio "warbles", changing speed periodically). So while Creative suggests
+			 *      enabling hispeed mode for rates 23KHz and above, I think it would be wiser instead
+			 *      to do hispeed mode for 16KHz or higher instead. [1]
+			 *         [DSP v2.2 with no copyright string]
+			 *         [Tested on Pentium MMX 200MHz system with ISA and PCI slots]
+			 *         [Applying fix [1] indeed resolved the audible warbling]
+			 *         [Is this fix needed for any other Sound Blaster products of that era?] */
+			if (cx->force_hispeed)
+				cx->buffer_hispeed = 1;
+			else if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2 && !strcmp(cx->dsp_copyright,"")) /* [1] */
+				cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 8000 : 16000));
+			else
+				cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 13000 : 23000));
+
+			/* DSP 3.xx stereo management */
+			if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+				/* Sound Blaster Pro requires the "set input mode to mono/stereo" commands if recording,
+				 * and sets mono/stereo mode with a bit defined in a specific mixer register */
+				if (cx->dsp_record) sndsb_write_dsp(cx,cx->buffer_stereo ? 0xA8 : 0xA0);
+				sndsb_write_mixer(cx,0x0E,0x20 | (cx->buffer_stereo ? 0x02 : 0x00));
+			}
+
+			/* if we need to, transmit block length */
+			if (cx->buffer_hispeed || cx->chose_autoinit_dsp)
+				sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
+		}
+		else {
+			cx->buffer_hispeed = 0;
+			if (cx->chose_autoinit_dsp)
+				sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
+		}
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
+		/* DSP 4.xx management is much simpler here */
 		sndsb_write_dsp_outrate(cx,rate);
 	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
-	}
+
+	/* auto-init DSP modes require auto-init DMA. if auto-init DMA
+	 * is not available, then don't use auto-init DSP commands. */
+	if (!cx->chose_autoinit_dma) cx->chose_autoinit_dsp = 0;
 
 	return 1;
 }
 
 int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) /* do nothing */
+		return 1;
+
 	/* defer beginning playback until the program first asks for the DMA position */
 	if (cx->windows_emulation && cx->windows_springwait == 0 && cx->windows_xp_ntvdm) {
 		cx->windows_springwait = 1;
@@ -2226,10 +2280,10 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 	}
 
 	if (cx->dsp_adpcm > 0) {
-		if (cx->dsp_record)
+		if (cx->dsp_record || cx->goldplay_mode || cx->goldplay_mode)
 			return 0;
 
-		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->enable_adpcm_autoinit) {
+		if (cx->chose_autoinit_dsp) {
 			if (cx->dsp_adpcm == ADPCM_4BIT)
 				sndsb_write_dsp(cx,0x7D); /* with ref. byte */
 			else if (cx->dsp_adpcm == ADPCM_2_6BIT)
@@ -2237,7 +2291,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 			else if (cx->dsp_adpcm == ADPCM_2BIT)
 				sndsb_write_dsp(cx,0x1F); /* with ref. byte */
 		}
-		else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) {
+		else {
 			unsigned short lv;
 
 			lv = cx->buffer_irq_interval - 1;
@@ -2251,29 +2305,36 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 			sndsb_write_dsp(cx,lv >> 8);
 		}
 	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
+	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
 		unsigned short lv = (cx->buffer_irq_interval * (cx->buffer_stereo?2:1)) - 1;
-		sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
-		sndsb_write_dsp(cx,lv);
-		sndsb_write_dsp(cx,lv >> 8);
-	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_200) {
-		sndsb_write_dsp(cx,cx->dsp_record ? 0x2C : 0x1C);
-	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201 || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
-		if (cx->buffer_hispeed)
-			sndsb_write_dsp(cx,cx->dsp_record ? 0x98 : 0x90);
-		else
-			sndsb_write_dsp(cx,cx->dsp_record ? 0x2C : 0x1C);
+
+		if (cx->chose_autoinit_dsp) {
+			/* preparation function has already transmitted block length, use autoinit commands */
+			if (cx->buffer_hispeed)
+				sndsb_write_dsp(cx,cx->dsp_record ? 0x98 : 0x90);
+			else
+				sndsb_write_dsp(cx,cx->dsp_record ? 0x2C : 0x1C);
+		}
+		else {
+			/* send single-cycle command, then transmit length */
+			if (cx->buffer_hispeed)
+				sndsb_write_dsp(cx,cx->dsp_record ? 0x99 : 0x91);
+			else {
+				sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
+				sndsb_write_dsp(cx,lv);
+				sndsb_write_dsp(cx,lv >> 8);
+			}
+		}
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
-		unsigned int samps = cx->buffer_irq_interval * (cx->buffer_stereo?2:1);
-		sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | 0x04 | 0x02 |
-			(cx->dsp_record ? 0x08 : 0x00));	/* bCommand auto-init FIFO on */
+		unsigned short lv = (cx->buffer_irq_interval * (cx->buffer_stereo?2:1)) - 1;
+
+		sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | (cx->chose_autoinit_dsp?0x04:0x00) | 0x02 |
+			(cx->dsp_record ? 0x08 : 0x00));	/* bCommand FIFO on */
 		sndsb_write_dsp(cx,(cx->audio_data_flipped_sign ? 0x10 : 0x00) ^
 			((cx->buffer_stereo ? 0x20 : 0x00) | (cx->buffer_16bit ? 0x10 : 0x00))); /* bMode */
-		sndsb_write_dsp(cx,samps);
-		sndsb_write_dsp(cx,samps>>8);
+		sndsb_write_dsp(cx,lv);
+		sndsb_write_dsp(cx,lv>>8);
 	}
 
 	return 1;
@@ -2316,81 +2377,88 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 }
 
 void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
+	unsigned long lv;
+
 	if (cx->dsp_stopping) return;
-	/* if we're doing the one-block-at-a-time 1.xx method, then start another right now */
-	if (cx->dsp_adpcm > 0 && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx &&
-		(cx->dsp_play_method < SNDSB_DSPOUTMETHOD_200 || !cx->enable_adpcm_autoinit)) {
-		unsigned short lv = cx->buffer_irq_interval - 1;
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return;
 
-		/* if we're doing it the non-autoinit method, then we
-		   also need to update the DMA pointer */
-		if (!cx->dsp_1xx_autoinit) {
-			unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
-			{
-				unsigned long npos = cx->buffer_dma_started_length + cx->buffer_dma_started;
-				unsigned long rem = cx->buffer_size - npos;
-				if ((signed long)rem < 0L) rem = 0UL;
-				if (rem > (unsigned long)lv) rem = (unsigned long)lv;
-				if (rem == 0) {
-					npos = 0;
-					rem = cx->buffer_irq_interval;
-					/* ^ warning: assuming interval <= bufsize */
-				}
-				lv = (unsigned short)rem;
-				cx->buffer_dma_started = npos;
-				cx->buffer_dma_started_length = rem;
-			}
-
-			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
-			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started); /* RAM location with not much around */
-			d8237_write_count(ch,cx->buffer_dma_started_length);
-			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
+	/* if we're doing it the non-autoinit method, then we
+	   also need to update the DMA pointer */
+	if (!cx->chose_autoinit_dma) {
+		unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
+		unsigned long npos = cx->buffer_dma_started_length + cx->buffer_dma_started;
+		unsigned long rem = cx->buffer_size - npos;
+		if ((signed long)rem < 0L) rem = 0UL;
+		lv = cx->buffer_irq_interval;
+		if (cx->dsp_adpcm == 0) {
+			if (cx->buffer_16bit) lv <<= 1UL;
+			if (cx->buffer_stereo) lv <<= 1UL;
 		}
-
-		if (cx->dsp_adpcm == ADPCM_4BIT)
-			sndsb_write_dsp(cx,0x74); /* without ref. byte */
-		else if (cx->dsp_adpcm == ADPCM_2_6BIT)
-			sndsb_write_dsp(cx,0x76); /* without ref. byte */
-		else if (cx->dsp_adpcm == ADPCM_2BIT)
-			sndsb_write_dsp(cx,0x16); /* without ref. byte */
-		sndsb_write_dsp(cx,lv);
-		sndsb_write_dsp(cx,lv >> 8);
-	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
-		unsigned short lv = cx->buffer_irq_interval;
-
-		/* if we're doing it the non-autoinit method, then we
-		   also need to update the DMA pointer */
-		if (!cx->dsp_1xx_autoinit) {
-			unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
-			{
-				unsigned long npos = cx->buffer_dma_started_length + cx->buffer_dma_started;
-				unsigned long rem = cx->buffer_size - npos;
-				if ((signed long)rem < 0L) rem = 0UL;
-				if (rem > (unsigned long)lv) rem = (unsigned long)lv;
-				if (rem == 0) {
-					npos = 0;
-					rem = cx->buffer_irq_interval;
-					/* ^ warning: assuming interval <= bufsize */
-				}
-				lv = (unsigned short)rem;
-				cx->buffer_dma_started = npos;
-				cx->buffer_dma_started_length = rem;
+		if (rem > (unsigned long)lv) rem = (unsigned long)lv;
+		if (rem == 0) {
+			npos = 0;
+			rem = cx->buffer_irq_interval;
+			if (cx->dsp_adpcm == 0) {
+				if (cx->buffer_16bit) rem <<= 1UL;
+				if (cx->buffer_stereo) rem <<= 1UL;
 			}
-
-			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
-			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started); /* RAM location with not much around */
-			d8237_write_count(ch,cx->buffer_dma_started_length);
-			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
+			/* ^ warning: assuming interval <= bufsize */
 		}
-
+		lv = (unsigned short)rem;
 		if (lv != 0) lv--;
-		sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
-		sndsb_write_dsp(cx,lv);
-		sndsb_write_dsp(cx,lv >> 8);
+		cx->buffer_dma_started = npos;
+		cx->buffer_dma_started_length = rem;
+
+		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
+		d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started); /* RAM location with not much around */
+		d8237_write_count(ch,cx->buffer_dma_started_length);
+		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
 	}
-	/* for anything else including no sound (or usually auto-init DMA)
-	 * there is nothing to do */
+	else {
+		lv = cx->buffer_irq_interval;
+		if (cx->dsp_adpcm == 0) {
+			if (cx->buffer_16bit) lv <<= 1UL;
+			if (cx->buffer_stereo) lv <<= 1UL;
+		}
+		if (lv != 0) lv--;
+	}
+
+	/* if we're doing the one-block-at-a-time 1.xx method, then start another right now */
+	if (!cx->chose_autoinit_dsp) {
+		if (cx->dsp_adpcm > 0) {
+			if (cx->dsp_adpcm == ADPCM_4BIT)
+				sndsb_write_dsp(cx,0x74); /* without ref. byte */
+			else if (cx->dsp_adpcm == ADPCM_2_6BIT)
+				sndsb_write_dsp(cx,0x76); /* without ref. byte */
+			else if (cx->dsp_adpcm == ADPCM_2BIT)
+				sndsb_write_dsp(cx,0x16); /* without ref. byte */
+			sndsb_write_dsp(cx,lv);
+			sndsb_write_dsp(cx,lv >> 8);
+		}
+		else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
+			/* send single-cycle command, then transmit length */
+			if (cx->buffer_hispeed) {
+				if (!cx->chose_autoinit_dma)
+					sndsb_write_dsp_blocksize(cx,lv+1);
+
+				sndsb_write_dsp(cx,cx->dsp_record ? 0x99 : 0x91);
+			}
+			else {
+				sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
+				sndsb_write_dsp(cx,lv);
+				sndsb_write_dsp(cx,lv >> 8);
+			}
+		}
+		else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
+			if (cx->buffer_16bit) lv = ((lv+1)>>1)-1;
+			sndsb_write_dsp(cx,(cx->buffer_16bit ? 0xB0 : 0xC0) | (cx->chose_autoinit_dsp?0x04:0x00) | 0x02 |
+				(cx->dsp_record ? 0x08 : 0x00));	/* bCommand FIFO on */
+			sndsb_write_dsp(cx,(cx->audio_data_flipped_sign ? 0x10 : 0x00) ^
+				((cx->buffer_stereo ? 0x20 : 0x00) | (cx->buffer_16bit ? 0x10 : 0x00))); /* bMode */
+			sndsb_write_dsp(cx,lv);
+			sndsb_write_dsp(cx,lv>>8);
+		}
+	}
 }
 
 void sndsb_choose_mixer(struct sndsb_ctx *card,signed char override) {

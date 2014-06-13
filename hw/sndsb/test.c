@@ -2121,8 +2121,10 @@ static struct vga_menu_item main_menu_playback_goldplay_mode =
 	{"xxx",			'm',	0,	0};
 static struct vga_menu_item main_menu_playback_noreset_adpcm =
 	{"xxx",			'n',	0,	0};
-static struct vga_menu_item main_menu_playback_dsp_1xx_autoinit =
-	{"xxx",			'1',	0,	0};
+static struct vga_menu_item main_menu_playback_dsp_autoinit_dma =
+	{"xxx",			't',	0,	0};
+static struct vga_menu_item main_menu_playback_dsp_autoinit_command =
+	{"xxx",			'c',	0,	0};
 static struct vga_menu_item main_menu_playback_timer_clamp =
 	{"xxx",			'c',	0,	0};
 static struct vga_menu_item main_menu_playback_force_hispeed =
@@ -2141,7 +2143,8 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_goldplay,
 	&main_menu_playback_goldplay_mode,
 	&main_menu_playback_noreset_adpcm,
-	&main_menu_playback_dsp_1xx_autoinit,
+	&main_menu_playback_dsp_autoinit_dma,
+	&main_menu_playback_dsp_autoinit_command,
 	&main_menu_playback_timer_clamp,
 	&main_menu_playback_force_hispeed,
 	&main_menu_playback_flip_sign,
@@ -2336,8 +2339,10 @@ void update_cfg() {
 		sb_card->force_hispeed ? "Force hispeed: On" : "Force hispeed: Off";
 	main_menu_playback_noreset_adpcm.text =
 		adpcm_do_reset_interval ? "ADPCM reset step/interval: On" : "ADPCM reset step/interval: Off";
-	main_menu_playback_dsp_1xx_autoinit.text =
-		sb_card->dsp_1xx_autoinit ? "DSP 1.xx autoinit: On" : "DSP 1.xx autoinit: Off";
+	main_menu_playback_dsp_autoinit_dma.text =
+		sb_card->dsp_autoinit_dma ? "DMA autoinit: On" : "DMA autoinit: Off";
+	main_menu_playback_dsp_autoinit_command.text =
+		sb_card->dsp_autoinit_command ? "DSP playback: auto-init" : "DSP playback: single-cycle";
 	main_menu_playback_timer_clamp.text =
 		sample_rate_timer_clamp ? "Clamp samplerate to timer: On" : "Clamp samplerate to timer: Off";
 	main_menu_playback_flip_sign.text =
@@ -3422,7 +3427,7 @@ int main(int argc,char **argv) {
 			struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
 			if (sndsb_card[i].baseio == 0 && sndsb_card[i].mpuio == 0) continue;
 			printf("  [%u] base=%X mpu=%X dma=%d dma16=%d irq=%d DSP=%u 1.XXAI=%u\n",
-					i+1,cx->baseio,cx->mpuio,cx->dma8,cx->dma16,cx->irq,cx->dsp_ok,cx->dsp_1xx_autoinit);
+					i+1,cx->baseio,cx->mpuio,cx->dma8,cx->dma16,cx->irq,cx->dsp_ok,cx->dsp_autoinit_dma);
 			printf("      MIXER=%u[%s] DSPv=%u.%u SC6600=%u OPL=%X GAME=%X AWE=%X\n",
 					cx->mixer_ok,sndsb_mixer_chip_str(cx->mixer_chip),
 					(unsigned int)cx->dsp_vmaj,(unsigned int)cx->dsp_vmin,
@@ -3772,10 +3777,17 @@ int main(int argc,char **argv) {
 				update_cfg();
 				if (wp) begin_play();
 			}
-			else if (mitem == &main_menu_playback_dsp_1xx_autoinit) {
+			else if (mitem == &main_menu_playback_dsp_autoinit_dma) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
-				sb_card->dsp_1xx_autoinit = !sb_card->dsp_1xx_autoinit;
+				sb_card->dsp_autoinit_dma = !sb_card->dsp_autoinit_dma;
+				update_cfg();
+				if (wp) begin_play();
+			}
+			else if (mitem == &main_menu_playback_dsp_autoinit_command) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				sb_card->dsp_autoinit_command = !sb_card->dsp_autoinit_command;
 				update_cfg();
 				if (wp) begin_play();
 			}
