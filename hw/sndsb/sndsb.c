@@ -2087,16 +2087,22 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 
 		if (phys == DOS_LTP_FAILED) return 0;
 		d8237_write_base(ch,phys);
-#else
-		{
-			unsigned char far *p = (unsigned char far*)(cx->goldplay_dma);
-			d8237_write_base(ch,((uint32_t)FP_SEG(p) << 4UL) + (uint32_t)FP_OFF(p));
-		}
-#endif
+
 		if ((cx->buffer_16bit?1:0)^(cx->audio_data_flipped_sign?1:0))
 			memset(cx->goldplay_dma,0,4);
 		else
 			memset(cx->goldplay_dma,128,4);
+#else
+		{
+			unsigned char far *p = (unsigned char far*)(cx->goldplay_dma);
+			d8237_write_base(ch,((uint32_t)FP_SEG(p) << 4UL) + (uint32_t)FP_OFF(p));
+
+			if ((cx->buffer_16bit?1:0)^(cx->audio_data_flipped_sign?1:0))
+				_fmemset(p,0,4);
+			else
+				_fmemset(p,128,4);
+		}
+#endif
 	}
 	else {
 		d8237_write_count(ch,cx->buffer_dma_started_length);
