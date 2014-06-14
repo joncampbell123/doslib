@@ -3664,6 +3664,7 @@ int main(int argc,char **argv) {
 					"DSP 4.xx autoinit FIFO . (SB16) use the FIFO for auto-init DSP 4.xx.\n"
 					"DSP 4.xx single FIFO ... (SB16) use the FIFO for single cycle DSP 4.xx.\n"
 					"DSP nag mode ........... Test 'nagging' the DSP, Crystal Dream style.\n"
+					"                         Has no effect unless DSP in single-cycle mode.\n"
 					"Poll ack when no IRQ ... If not assigned an IRQ, use polling of the status\n"
 					"                         port to prevent halting on SB16.\n"
 					"\n"
