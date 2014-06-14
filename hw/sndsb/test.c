@@ -1174,6 +1174,10 @@ static void ui_anim(int force) {
 		msg = sndsb_dspoutmethod_str[sb_card->dsp_play_method];
 		rem = sndsb_dsp_out_method_supported(sb_card,wav_sample_rate,wav_stereo,wav_16bit) ? 0x1A : 0x1C;
 		for (;cc < 36 && *msg != 0;cc++) *wr++ = (rem << 8) | ((unsigned char)(*msg++));
+		if (cc < 36) {
+			if (rem == 0x1C) *wr++ = 0x1E00 + '?';
+			else if (sb_card->reason_not_supported) *wr++ = 0x1A00 + '?';
+		}
 		for (;cc < 36;cc++) *wr++ = 0x1F20;
 
 		if (sb_card->dsp_adpcm != 0) {
@@ -1530,6 +1534,18 @@ void change_param_menu() {
 			vga_write_until(30);
 			vga_write("\n");
 
+			vga_moveto(0,10);
+			vga_write_color(0x1F);
+			vga_write_until(80);
+			vga_write("\n");
+			vga_write_until(80);
+			vga_write("\n");
+			vga_write_until(80);
+			vga_write("\n");
+			vga_moveto(0,10);
+			if (sb_card->reason_not_supported) vga_write(sb_card->reason_not_supported);
+
+			vga_moveto(0,13);
 			vga_write("\n");
 			vga_write_sync();
 			_sti();
@@ -3613,15 +3629,43 @@ int main(int argc,char **argv) {
 					"ADPCM        Convert audio to Sound Blaster ADPCM format and instruct DSP\n"
 					"             to play it. Clones generally do not support this.\n"
 					"\n"
-					"Auto-init    DSP 2.01 and higher support an auto-init variation of the\n"
-					"ADPCM        ADPCM playback commands. Clones definitely do not support this.\n"
+					"Auto-init    DSP 2.01 and higher support auto-init ADPCM playback. Clones\n"
+					"ADPCM        definitely do not support this.\n"
 					"\n"
 					"ADPCM reset  On actual Creative SB hardware the DSP resets the ADPCM step\n"
 					"per interval size per block. DOSBox, emulators, do not reset ADPCM state.\n"
 					"\n"
-					"Goldplay     A semi-popular music tracker library (1991 timeframe). Sound\n"
-					"             Blaster support uses a bizarre hacked DMA playback method\n"
-					"             that this program mimics when Goldplay mode is turned on.\n"
+					"Goldplay     A semi-popular music tracker library, SB support is hacky.\n"
+					"             This program can use the same technique for testing purposes\n"
+					"\n"
+					"Detailed explanations are available in README.TXT"
+					,0,0);
+				while (!quit) {
+					ui_anim(0);
+					if (kbhit()) {
+						i = getch();
+						if (i == 0) i = getch() << 8;
+						if (i == 13 || i == 27) {
+							quit = (i == 27);
+							break;
+						}
+					}
+				}
+				vga_msg_box_destroy(&box);
+
+				vga_msg_box_create(&box,
+					"Additional things you can play with:\n"
+					"\n"
+					"IRQ interval ..... DSP block size to play/record with.\n"
+					"DMA autoinit ..... Use/don't use auto-init on the DMA controller side.\n"
+					"DSP playback ..... Whether to use auto-init or single-cycle DSP commands.\n"
+					"Force hispeed .... If set, always use hispeed DSP playback (SB 2.0 and Pro).\n"
+					"\n"
+					"DSP 4.xx autoinit FIFO . (SB16) use the FIFO for auto-init DSP 4.xx.\n"
+					"DSP 4.xx single FIFO ... (SB16) use the FIFO for single cycle DSP 4.xx.\n"
+					"DSP nag mode ........... Test 'nagging' the DSP, Crystal Dream style.\n"
+					"Poll ack when no IRQ ... If not assigned an IRQ, use polling of the status\n"
+					"                         port to prevent halting on SB16.\n"
 					"\n"
 					"Detailed explanations are available in README.TXT"
 					,0,0);
@@ -3896,6 +3940,22 @@ int main(int argc,char **argv) {
 				if (confirm_quit()) {
 					loop = 0;
 					break;
+				}
+			}
+			else if (i == '?') {
+				if (sb_card->reason_not_supported) {
+					struct vga_msg_box box;
+
+					vga_msg_box_create(&box,sb_card->reason_not_supported,0,0);
+					while (1) {
+						ui_anim(0);
+						if (kbhit()) {
+							i = getch();
+							if (i == 0) i = getch() << 8;
+							if (i == 13 || i == 27) break;
+						}
+					}
+					vga_msg_box_destroy(&box);
 				}
 			}
 			else if (i == ' ') {
