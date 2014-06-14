@@ -269,6 +269,8 @@ void sndsb_choose_mixer(struct sndsb_ctx *card,signed char override);
 int sndsb_submit_buffer(struct sndsb_ctx *cx,unsigned char FAR *ptr,uint32_t phys,uint32_t len,uint32_t user,uint8_t loop);
 int sndsb_assign_dma_buffer(struct sndsb_ctx *cx,struct dma_8237_allocation *dma);
 unsigned char sndsb_rate_to_time_constant(struct sndsb_ctx *cx,unsigned long rate);
+void sndsb_irq_continue(struct sndsb_ctx *cx,unsigned char c);
+unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx);
 
 int sb_nmi_32_auto_choose_hook();
 #if TARGET_MSDOS == 32

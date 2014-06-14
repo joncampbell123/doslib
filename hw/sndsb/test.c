@@ -601,14 +601,7 @@ static void interrupt sb_irq() {
 	/* FIXME: The sndsb library should NOT do anything in
 	   send_buffer_again() if it knows playback has not started! */
 	/* for non-auto-init modes, start another buffer */
-	if (wav_playing) {
-		/* only call send_buffer_again if 8-bit DMA completed
-		   and bit 0 set, or if 16-bit DMA completed and bit 1 set */
-		if ((c & 1) && !sb_card->buffer_16bit)
-			sndsb_send_buffer_again(sb_card);
-		else if ((c & 2) && sb_card->buffer_16bit)
-			sndsb_send_buffer_again(sb_card);
-	}
+	if (wav_playing) sndsb_irq_continue(sb_card,c);
 
 	sb_irq_count++;
 	if (++IRQ_anim >= 4) IRQ_anim = 0;

@@ -1950,18 +1950,8 @@ void sndsb_main_idle(struct sndsb_ctx *cx) {
 		 * (longer than one sample period), since nagging the DSP ensures it never stops despite
 		 * the single-cycle mode it's in. The side effect of course is that since the DSP is
 		 * never given a chance to complete a whole block, it never fires the IRQ! */
-		if (cx->dsp_nag_mode && cx->chose_autoinit_dma && !cx->chose_autoinit_dsp) {
-			/* NTS: Do not nag the DSP when it's in "highspeed" DMA mode. Normal DSPs cannot accept
-			 *      commands in that state and any attempt will cause this function to hang for the
-			 *      DSP timeout period causing the main loop to jump and stutter. But if the user
-			 *      really *wants* us to do it (signified by setting dsp_nag_highspeed) then we'll do it */
-			if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->buffer_hispeed && cx->hispeed_matters && cx->hispeed_blocking && !cx->dsp_nag_hispeed) {
-				/* don't do it for highspeed DMA, user doesn't want us to. */
-			}
-			else {
-				sndsb_send_buffer_again(cx);
-			}
-		}
+		if (cx->dsp_nag_mode && sndsb_will_dsp_nag(cx))
+			sndsb_send_buffer_again(cx);
 
 		cx->timer_tick_signal = 0;
 	}
@@ -2034,6 +2024,37 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 
 	cx->reason_not_supported = NULL;
 	return 1;
+}
+
+unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx) {
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
+		return 0;
+
+	if (cx->chose_autoinit_dma && !cx->chose_autoinit_dsp) {
+		/* NTS: Do not nag the DSP when it's in "highspeed" DMA mode. Normal DSPs cannot accept
+		 *      commands in that state and any attempt will cause this function to hang for the
+		 *      DSP timeout period causing the main loop to jump and stutter. But if the user
+		 *      really *wants* us to do it (signified by setting dsp_nag_highspeed) then we'll do it */
+		if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->buffer_hispeed && cx->hispeed_matters && cx->hispeed_blocking && !cx->dsp_nag_hispeed)
+			return 0;
+	}
+
+	return 1;
+}
+
+/* meant to be called from an IRQ */
+void sndsb_irq_continue(struct sndsb_ctx *cx,unsigned char c) {
+	if (cx->dsp_nag_mode) {
+		/* if the main loop is nagging the DSP then we shouldn't do anything */
+		if (sndsb_will_dsp_nag(cx)) return;
+	}
+
+	/* only call send_buffer_again if 8-bit DMA completed
+	   and bit 0 set, or if 16-bit DMA completed and bit 1 set */
+	if ((c & 1) && !cx->buffer_16bit)
+		sndsb_send_buffer_again(cx);
+	else if ((c & 2) && cx->buffer_16bit)
+		sndsb_send_buffer_again(cx);
 }
 
 /* output method is supported (as in, recommended) */
@@ -2113,11 +2134,11 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 			/* yes */
 		}
 		/* we can do it if auto-init DMA and single-cycle DSP and we're nagging the DSP */
-		else if (cx->dsp_autoinit_dma && (!cx->dsp_autoinit_command || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) && cx->dsp_nag_mode) {
+		else if (cx->dsp_nag_mode && sndsb_will_dsp_nag(cx)) {
 			if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
 				/* yes */
 			}
-			else if ((cx->force_hispeed || wav_sample_rate > (cx->dsp_record ? 13000UL : 23000UL)) && cx->hispeed_blocking) {
+			else if ((cx->force_hispeed || (wav_sample_rate*(wav_stereo?2:1)) > (cx->dsp_record ? 13000UL : 23000UL)) && cx->hispeed_blocking) {
 				/* no */
 				cx->reason_not_supported = "No IRQ assigned & DSP nag mode is ineffective\nif the DSP will run in 2.0/Pro highspeed DSP mode.";
 				return 0;
@@ -2131,6 +2152,23 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 			cx->reason_not_supported = "No IRQ assigned, no known combinations are selected that\n"
 						"allow DSP playback to work. Try DSP auto-init with Poll ack\n"
 						"or DSP single-cycle with nag mode enabled.";
+			return 0;
+		}
+	}
+
+	if (cx->dsp_nag_mode) {
+		/* nag mode can cause problems with DSP 4.xx commands? */
+		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx) {
+			cx->reason_not_supported = "DSP nag mode on a SB16 in DSP 4.xx mode can cause problems.\n"
+						"Halting, popping/cracking, stereo L/R swapping timing glitches.\n"
+						"Use DSP auto-init and non-IRQ polling for more reliable DMA.";
+			return 0;
+		}
+		/* nag mode can cause lag from the idle command if hispeed mode is involved */
+		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_201 && cx->hispeed_matters && cx->hispeed_blocking &&
+			cx->dsp_nag_hispeed && (cx->force_hispeed || (wav_sample_rate*(wav_stereo?2:1)) > (cx->dsp_record ? 13000UL : 23000UL))) {
+			cx->reason_not_supported = "DSP nag mode when hispeed DSP playback is involved can cause\n"
+						"lagging and delay on this system because the DSP will block during playback";
 			return 0;
 		}
 	}
