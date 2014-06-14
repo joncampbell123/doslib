@@ -2050,6 +2050,8 @@ static struct vga_menu_item main_menu_playback_dsp4_fifo_autoinit =
 	{"xxx",			'f',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp4_fifo_single =
 	{"xxx",			'e',	0,	0};
+static struct vga_menu_item main_menu_playback_dsp_nag_mode =
+	{"xxx",			'o',	0,	0};
 #endif
 
 static const struct vga_menu_item* main_menu_playback[] = {
@@ -2071,6 +2073,7 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_flip_sign,
 	&main_menu_playback_dsp4_fifo_autoinit,
 	&main_menu_playback_dsp4_fifo_single,
+	&main_menu_playback_dsp_nag_mode,
 #endif
 	NULL
 };
@@ -2275,6 +2278,10 @@ void update_cfg() {
 		sb_card->dsp_4xx_fifo_autoinit ? "DSP 4.xx autoinit FIFO: On" : "DSP 4.xx autoinit FIFO: Off";
 	main_menu_playback_dsp4_fifo_single.text =
 		sb_card->dsp_4xx_fifo_single_cycle ? "DSP 4.xx single FIFO: On" : "DSP 4.xx single FIFO: Off";
+	main_menu_playback_dsp_nag_mode.text =
+		sb_card->dsp_nag_mode ?
+			(sb_card->dsp_nag_hispeed ? "DSP nag mode: All" : "DSP nag mode: Non-highspeed")
+			: "DSP nag mode: Off";
 #endif
 }
 
@@ -3631,6 +3638,23 @@ int main(int argc,char **argv) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
 				sb_card->dsp_4xx_fifo_autoinit = !sb_card->dsp_4xx_fifo_autoinit;
+				update_cfg();
+				ui_anim(1);
+				if (wp) begin_play();
+			}
+			else if (mitem == &main_menu_playback_dsp_nag_mode) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				if (sb_card->dsp_nag_mode && sb_card->dsp_nag_hispeed) {
+					sb_card->dsp_nag_mode = sb_card->dsp_nag_hispeed = 0;
+				}
+				else if (sb_card->dsp_nag_mode) {
+					sb_card->dsp_nag_mode = sb_card->dsp_nag_hispeed = 1;
+				}
+				else {
+					sb_card->dsp_nag_hispeed = 0;
+					sb_card->dsp_nag_mode = 1;
+				}
 				update_cfg();
 				ui_anim(1);
 				if (wp) begin_play();

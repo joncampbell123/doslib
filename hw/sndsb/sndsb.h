@@ -142,10 +142,13 @@ struct sndsb_ctx {
 	uint8_t				force_hispeed:1;	/* always use highspeed DSP playback commands (except for DSP 4.xx) */
 	uint8_t				dsp_4xx_fifo_autoinit:1; /* SB16 use FIFO for auto-init playback */
 	uint8_t				dsp_4xx_fifo_single_cycle:1; /* SB16 use FIFO for single-cycle playback */
+	uint8_t				dsp_nag_mode:1;		/* "Nag" the DSP during playback (Crystal Dream style) by reissuing playback while playback is active */
+	uint8_t				dsp_nag_hispeed:1;	/* "Nag" even during highspeed DMA playback (NOT recommended) */
 /* array of mixer controls, determined by mixer chipset */
 	struct sndsb_mixer_control*	sb_mixer;
 	signed short			sb_mixer_items;
-/* function call */
+/* function call. calling application should call this from the timer interrupt (usually IRQ 0) to
+ * allow direct DAC and "goldplay" modes to work or other idle maintenance functions. if NULL, do not call. */
 	void				(*timer_tick_func)(struct sndsb_ctx *cx);
 /* goldplay mode DMA buffer */
 	uint8_t				goldplay_dma[4];
@@ -170,6 +173,7 @@ struct sndsb_ctx {
 	uint8_t				chose_autoinit_dsp:1;	/* the library chooses to use auto-init commands */
 	uint8_t				chose_use_dma:1;	/* the library chooses to run in a manner that uses DMA */
 	uint8_t				direct_dac_sent_command:1;	/* direct DSP playback: we just sent the command, next is data */
+	uint8_t				timer_tick_signal:1;
 };
 
 /* runtime "options" that affect sound blaster probing.

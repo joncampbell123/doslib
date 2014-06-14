@@ -168,6 +168,10 @@ struct sndsb_ctx sndsb_card[SNDSB_MAX_CARDS];
 struct sndsb_ctx *sndsb_card_blaster=NULL;
 int sndsb_card_next = 0;
 
+void sndsb_timer_tick_gen(struct sndsb_ctx *cx) {
+	cx->timer_tick_signal = 1;
+}
+
 void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx) {
 	if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS) & 0x80) { /* data available? */
 		cx->buffer_lin[cx->direct_dsp_io] = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
@@ -601,6 +605,9 @@ int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
  *      when probing. If any of them are -1, and this code knows how to deduce
  *      it directly from the hardware, then they will be updated */
 int sndsb_init_card(struct sndsb_ctx *cx) {
+	cx->dsp_nag_mode = 0;
+	cx->dsp_nag_hispeed = 0;
+	cx->timer_tick_signal = 0;
 	cx->timer_tick_func = NULL;
 	cx->windows_creative_sb16_drivers_ver = 0;
 	cx->windows_creative_sb16_drivers = 0;
@@ -1834,6 +1841,54 @@ int sndsb_reset_mixer(struct sndsb_ctx *cx) {
 /* general main loop idle function. does nothing, unless we're playing with no IRQ,
  * in which case we're expected to poll IRQ status */
 void sndsb_main_idle(struct sndsb_ctx *cx) {
+	unsigned int oflags;
+
+	oflags = get_cpu_flags();
+	_cli();
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->timer_tick_signal) {
+		/* DSP "nag" mode: when the host program's IRQ handler called our timer tick callback, we
+		 * noted it so that at idle() we can nag the DSP at moderate intervals. Note that nag mode
+		 * only makes sense when autoinit DMA is in use, otherwise we risk skipping popping and
+		 * crackling. We also don't nag if the DSP is doing auto-init playback, because it makes
+		 * no sense to do so.
+		 *
+		 * The idea is to mimic for testing purposes the DSP "nagging" technique used by the
+		 * Triton Crystal Dreams demo that allow it to do full DMA playback Goldplay style
+		 * without needing to autodetect what IRQ the card is on. The programmer did not
+		 * write the code to use auto-init DSP commands. Instead, the demo uses the single
+		 * cycle DSP playback command (1.xx commands) with the DMA settings set to one sample
+		 * wide (Goldplay style), then, from the same IRQ 0 handler that does the music,
+		 * polls the DSP write status register to check DSP busy state. If the DSP is not busy,
+		 * it counts down a timer internally on each IRQ 0, then when it hits zero, begins
+		 * sending another DSP playback block (DSP command 0x14,xx,xx). It does this whether
+		 * or not the last DSP 0x14 command has finished playing or not, thus, "nagging" the
+		 * DSP. The upshot of this bizarre technique is that it doesn't need to pay any
+		 * attention to the Sound Blaster IRQ. The downside, of course, is that later 
+		 * "emulations" of the Sound Blaster don't recognize the technique and playback will
+		 * not work properly like that.
+		 *
+		 * The other reason to use such a technique is to avoid artifacts caused by the amount
+		 * of time it takes the signal an IRQ vs the CPU to program another single-cycle block
+		 * (longer than one sample period), since nagging the DSP ensures it never stops despite
+		 * the single-cycle mode it's in. The side effect of course is that since the DSP is
+		 * never given a chance to complete a whole block, it never fires the IRQ! */
+		if (cx->dsp_nag_mode && cx->chose_autoinit_dma && !cx->chose_autoinit_dsp) {
+			/* NTS: Do not nag the DSP when it's in "highspeed" DMA mode. Normal DSPs cannot accept
+			 *      commands in that state and any attempt will cause this function to hang for the
+			 *      DSP timeout period causing the main loop to jump and stutter. But if the user
+			 *      really *wants* us to do it (signified by setting dsp_nag_highspeed) then we'll do it */
+			if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->buffer_hispeed && !cx->dsp_nag_hispeed) {
+				/* don't do it for highspeed DMA, user doesn't want us to. */
+			}
+			else {
+				sndsb_send_buffer_again(cx);
+			}
+		}
+
+		cx->timer_tick_signal = 0;
+	}
+	if (oflags & 0x200/* if interrupts were enabled */) _sti();
+
 	/* do nothing if direct mode, or we are assigned an IRQ, or if emulated by Windows */
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || cx->irq >= 0 || cx->windows_emulation ||
 		cx->vdmsound || cx->windows_xp_ntvdm) return;
@@ -2358,7 +2413,11 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 			cx->timer_tick_func = sndsb_timer_tick_goldo_cpy;
 	}
 	else {
-		cx->timer_tick_func = NULL;
+		if (cx->dsp_nag_mode)
+			cx->timer_tick_func = sndsb_timer_tick_gen;
+		else
+			cx->timer_tick_func = NULL;
+
 		cx->gold_memcpy = 0;
 	}
 
@@ -2433,6 +2492,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 		sndsb_write_dsp(cx,lv>>8);
 	}
 
+	cx->timer_tick_signal = 0;
 	return 1;
 }
 
@@ -2478,6 +2538,7 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 		sndsb_write_mixer(cx,0x0E,0);
 	}
 
+	cx->timer_tick_signal = 0;
 	sndsb_write_dsp(cx,0xD3); /* turn off speaker */
 	return 1;
 }
