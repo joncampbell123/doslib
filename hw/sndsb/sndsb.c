@@ -2088,13 +2088,6 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		return 0;
 	}
 
-	/* Using the high-speed DSP playback commands is not advised, which is what the 201 and 3xx modes will do */
-	if (cx->dsp_vmaj >= 4 && (cx->force_hispeed || (wav_sample_rate*(wav_stereo?2:1)) > (cx->dsp_record ? 11111 : 22222)) &&
-		(cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201 || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx)) {
-		cx->reason_not_supported = "Sound Blaster 2.0/Pro high-speed DSP modes not\nrecommended for use on your DSP (DSP 4.xx detected)";
-		return 0;
-	}
-
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_201 &&
 		(cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))) {
 		cx->reason_not_supported = "DSP 2.01+ or higher playback requested for DSP older than v2.01";
@@ -2171,7 +2164,7 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		 *        a max 44100Hz to 48000Hz? */
 		if (wav_sample_rate > cx->max_sample_rate_dsp4xx) return 0;
 	}
-	else if ((cx->hispeed_matters && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) ||
+	else if ((!cx->hispeed_matters && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) ||
 		cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {
 		/* Because of the way Sound Blaster Pro stereo works and the way the time constant
 		 * is generated, the maximum sample rate is halved in stereo playback. On Pro and
@@ -2188,17 +2181,23 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		if (wav_sample_rate > (cx->dsp_record ? cx->max_sample_rate_sb_rec_dac : cx->max_sample_rate_sb_play_dac)) return 0;
 	}
 	cx->reason_not_supported = NULL;
-	if (cx->dsp_autoinit_command && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
-		cx->reason_not_supported = "DSP 1.xx commands do not support auto-init. Playback\nis automatically using single-cycle commands instead.";
-		return 1; /* we support it, but just to let you know... */
-	}
-
 	/* Creative SB16 cards do not pay attention to the Sound Blaster Pro stereo bit.
 	 * Playing stereo using the 3xx method on 4.xx DSPs will not work. Most SB16 clones
 	 * will pay attention to that bit however, but it's best not to assume that will happen. */
 	if (cx->dsp_vmaj >= 4 && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && wav_stereo) {
 		cx->reason_not_supported = "Sound Blaster Pro stereo playback on SB16 (DSP 4.xx)\nwill not play as stereo because Creative SB16\ncards ignore the mixer bit";
 		return 0;
+	}
+	/* SB16 cards seem to alias hispeed commands to normal DSP and let them set the time constant all the way up to the max supported by
+	 * the DSP, hispeed mode or not. */
+	if (cx->dsp_vmaj >= 4 && (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201 || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) && cx->hispeed_matters) {
+		cx->reason_not_supported = "Sound Blaster 2.0/Pro high-speed DSP modes not\nrecommended for use on your DSP (DSP 4.xx detected)";
+		return 0;
+	}
+	/* friendly reminder to the user that despite DSP autoinit enable 1.xx commands are not auto-init */
+	if (cx->dsp_autoinit_command && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
+		cx->reason_not_supported = "DSP 1.xx commands do not support auto-init. Playback\nis automatically using single-cycle commands instead.";
+		return 1; /* we support it, but just to let you know... */
 	}
 
 	return 1;

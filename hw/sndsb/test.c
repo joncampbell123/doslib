@@ -1462,12 +1462,14 @@ static void vga_write_until(unsigned int x) {
 }
 
 static int change_param_idx = 0;
+
+/* NTS: the 13000, 15000, 23000 values come from Creative documentation */
 static const unsigned short param_preset_rates[] = {
 	4000,	5512,	5675,	6000,
 	8000,	11025,	11111,	12000,
-	16000,	22050,	22222,	24000,
-	32000,	44100,	48000,	54000,
-	58000};
+	13000,	15000,	16000,	22050,
+	22222,	23000,	24000,  32000,
+	44100,	48000,	54000,	58000};
 
 #if TARGET_MSDOS == 32
 static const char *dos32_irq_0_warning =
