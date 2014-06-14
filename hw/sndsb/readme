@@ -628,3 +628,77 @@ Gravis SBOS bugs this code has to deal with:
     within the NMI handler. For programs that rely on the DMA pointer
     to advance audio this is bad news, and something to watch for.
 
+What is "nagging the DSP?
+-------------------------
+
+I recently patched up DOSBox-X to support the Triton "Crystal Dream" demo's
+Sound Blaster support. In the process of doing so, I learned a few funny
+things about both DOSBox source code and the Sound Blaster.
+
+First, the Crystal Dream demo uses the Goldplay technique, where the
+Sound Blaster is told the DSP block size is 65536 bytes, but the ISA DMA
+controller is put into auto-init mode and told the DMA transfer length
+is 1 byte (2 bytes if stereo). But what Crystal Dream does beyond that
+is interesting in it's own right.
+
+First of all, my initial assumption that the demo was hooking the wrong
+IRQ was wrong. I looked at the interrupt vector table while it was running
+and I saw that it hooked IRQ 0, and IRQ 1, but didn't hook any other
+interrupts. Which means that, when the Sound Blaster signals an IRQ,
+the demo doesn't respond to that IRQ at all.
+
+At the same time, the demo uses the single-cycle DSP playback commands,
+which means that at some point, the DSP will finish the block and the
+demo needs to start another one to keep playing. So how does it keep
+the audio going this way despite no IRQ handler?
+
+It turns out, digging into the IRQ 0 hook it sets up, the demo starts
+audio by sending DSP command 0x14 at the start. Then, the IRQ 0 handler
+not only renders music but also polls the DSP write status port 0x22C.
+If the DSP reports itself busy, the demo resets a counter, else when
+the DSP is not busy, it decrements the counter. When the counter gets
+low enough, the demo uses the IRQ 0 interrupt to send another DSP
+command block (0x14,xx,xx). The fact that the Sound Blaster has not
+yet finished playing the last block at this point is irrelevent.
+So, about 10-20 times a second, the demo is constantly interrupting
+DSP playback to start DSP playback, and the audio keeps going.
+
+Now on actual hardware apparently, this works perfectly fine. In fact,
+the advantage of the technique is that it allows audio without any
+small pops or crackles normally associated with the CPU and interrupt
+system taking too long to start another block, even on the original
+Sound Blaster. The other advantage is that, by doing it all from IRQ
+0 and effectively interrupting the DSP constantly the DSP never fires
+the IRQ normally associated with completing a block, so the demo never
+has to concern itself with IRQ detection logic (never mind it assumes
+DMA channel 1). When I coded support code for this in DOSBox's emulation,
+I coined it "nagging the DSP", because the demo is constantly nagging
+the DSP to keep playing in a rude manner (but it works!)
+
+To test this case, the sndsb library and test program allow you to
+enable that mode to see how well your Sound Blaster handles that kind
+of playback. To actually trigger the behavior, you will need to enable
+DSP nag mode, and switch DSP playback into single-cycle mode (where
+by default it is in autoinit mode).
+
+DSP auto-init vs DMA auto-init
+------------------------------
+
+Despite similar sounding names the two options control entirely different
+things. DMA auto-init concerns itself with the auto-init bit on the ISA
+DMA controller, which if set, causes the DMA controller to automatically
+restart a DMA block when it reaches the end.
+
+DSP auto-init concerns which set of DSP commands are used to start playback.
+The Sound Blaster family has two sets: single cycle, and auto-init.
+
+Single-cycle commands play a block of audio, then fire an IRQ and stop.
+Continuing playback requires the CPU to send another command to start
+playback again.
+
+Auto-init commands are usually only sent once. Once the command is sent,
+the DSP keeps playing (sending an IRQ every so many bytes) until it is told
+to stop. This is the recommended way to play audio on Sound Blaster hardware,
+although the original Sound Blaster does not support auto-init DSP modes,
+and many clones and emulations do not handle it well either.
+
