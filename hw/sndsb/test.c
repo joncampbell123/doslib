@@ -1400,7 +1400,7 @@ void begin_play() {
 	_cli();
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
 		unsigned long nr = (unsigned long)sb_card->buffer_rate * 2UL;
-		write_8254_system_timer(t8254_us2ticks(1000000UL / nr));
+		write_8254_system_timer(T8254_REF_CLOCK_HZ / nr);
 		irq_0_count = 0;
 		irq_0_adv = 182UL;		/* 18.2Hz */
 		irq_0_max = nr * 10UL;		/* sample rate */
