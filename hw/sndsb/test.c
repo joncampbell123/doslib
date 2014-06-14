@@ -2052,6 +2052,8 @@ static struct vga_menu_item main_menu_playback_dsp4_fifo_single =
 	{"xxx",			'e',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_nag_mode =
 	{"xxx",			'o',	0,	0};
+static struct vga_menu_item main_menu_playback_dsp_poll_ack_no_irq =
+	{"xxx",			'q',	0,	0};
 #endif
 
 static const struct vga_menu_item* main_menu_playback[] = {
@@ -2074,6 +2076,7 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_dsp4_fifo_autoinit,
 	&main_menu_playback_dsp4_fifo_single,
 	&main_menu_playback_dsp_nag_mode,
+	&main_menu_playback_dsp_poll_ack_no_irq,
 #endif
 	NULL
 };
@@ -2282,6 +2285,9 @@ void update_cfg() {
 		sb_card->dsp_nag_mode ?
 			(sb_card->dsp_nag_hispeed ? "DSP nag mode: All" : "DSP nag mode: Non-highspeed")
 			: "DSP nag mode: Off";
+	main_menu_playback_dsp_poll_ack_no_irq.text =
+		sb_card->poll_ack_when_no_irq ? "Poll ack when no IRQ: On" : "Poll ack when no IRQ: Off";
+
 #endif
 }
 
@@ -3638,6 +3644,14 @@ int main(int argc,char **argv) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
 				sb_card->dsp_4xx_fifo_autoinit = !sb_card->dsp_4xx_fifo_autoinit;
+				update_cfg();
+				ui_anim(1);
+				if (wp) begin_play();
+			}
+			else if (mitem == &main_menu_playback_dsp_poll_ack_no_irq) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				sb_card->poll_ack_when_no_irq = !sb_card->poll_ack_when_no_irq;
 				update_cfg();
 				ui_anim(1);
 				if (wp) begin_play();

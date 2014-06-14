@@ -609,6 +609,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_nag_hispeed = 0;
 	cx->timer_tick_signal = 0;
 	cx->timer_tick_func = NULL;
+	cx->poll_ack_when_no_irq = 1;
 	cx->windows_creative_sb16_drivers_ver = 0;
 	cx->windows_creative_sb16_drivers = 0;
 	cx->dsp_4xx_fifo_single_cycle = 0;
@@ -1889,13 +1890,10 @@ void sndsb_main_idle(struct sndsb_ctx *cx) {
 	}
 	if (oflags & 0x200/* if interrupts were enabled */) _sti();
 
-	/* do nothing if direct mode, or we are assigned an IRQ, or if emulated by Windows */
-	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || cx->irq >= 0 || cx->windows_emulation ||
-		cx->vdmsound || cx->windows_xp_ntvdm) return;
-
-	/* blindly ack the IRQ (if any) by reading the proper I/O ports
-	 * so the sound card is happy. */
-	sndsb_interrupt_ack(cx,3);
+	/* if DMA based playback and no IRQ assigned, then we need to poll the ack register to keep
+	 * playback from halting on SB16 hardware. Clones and SBpro and earlier don't seem to care. */
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->irq < 0 && cx->poll_ack_when_no_irq)
+		sndsb_interrupt_ack(cx,3);
 }
 
 /* we can do output method. if we can't, then don't bother playing, because it flat out won't work.
@@ -1917,7 +1915,7 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->irq < 0) {
 		/* if the DSP command requires an interrupt to continue, then require an IRQ.
 		 * else, we could run just fine without the IRQ. */
-		if (cx->dsp_adpcm || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx)
+		if (cx->dsp_adpcm)
 			return 0;
 	}
 
@@ -1993,6 +1991,31 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 	 * bit is missing. if you try, you'll hear the audio at the correct pitch in mono with
 	 * a "buzzing" because you're hearing interleaved samples */
 	if (wav_stereo && cx->dsp_vmaj < 3) return 0;
+
+	/* this library can play DMA without an IRQ channel assigned, but there are some restrictions on doing so */
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->irq < 0) {
+		/* we can do it if auto-init DMA and auto-init DSP and we poll the ack register */
+		if (cx->dsp_autoinit_dma && cx->dsp_autoinit_command && cx->poll_ack_when_no_irq) {
+			/* yes */
+		}
+		/* we can do it if auto-init DMA and single-cycle DSP and we're nagging the DSP */
+		else if (cx->dsp_autoinit_dma && (!cx->dsp_autoinit_command || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) && cx->dsp_nag_mode) {
+			if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
+				/* yes */
+			}
+			else if (cx->force_hispeed || wav_sample_rate > (cx->dsp_record ? 13000UL : 23000UL)) {
+				/* no */
+				return 0;
+			}
+			else {
+				/* yes */
+			}
+		}
+		else {
+			/* anything else is iffy */
+			return 0;
+		}
+	}
 
 	if (cx->dsp_adpcm > 0) {
 		/* Neither VDMSOUND.EXE or NTVDM's SB emulation handle ADPCM well */

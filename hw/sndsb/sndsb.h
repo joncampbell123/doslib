@@ -144,6 +144,7 @@ struct sndsb_ctx {
 	uint8_t				dsp_4xx_fifo_single_cycle:1; /* SB16 use FIFO for single-cycle playback */
 	uint8_t				dsp_nag_mode:1;		/* "Nag" the DSP during playback (Crystal Dream style) by reissuing playback while playback is active */
 	uint8_t				dsp_nag_hispeed:1;	/* "Nag" even during highspeed DMA playback (NOT recommended) */
+	uint8_t				poll_ack_when_no_irq:1;	/* If playing DMA without IRQ assignment, poll the "ack" register in idle call */
 /* array of mixer controls, determined by mixer chipset */
 	struct sndsb_mixer_control*	sb_mixer;
 	signed short			sb_mixer_items;
