@@ -1001,25 +1001,18 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		cx->hispeed_blocking = 0;
 		/* The DSP is responsive even during hispeed mode, you can nag it then just fine */
 		cx->dsp_nag_hispeed = 1;
-		/* FIXME: The SB16 is said to max out at 44.1KHz, but testing with some old ViBRA PnP cards
-		 *        shows that the DSP really maxes out at 48KHz. At what DSP version did that change
-		 *        take place? I *could* just go by whether or not the card is PnP but then if the
-		 *        calling program never used PnP to detect it we'd get the limit wrong */
-		/* and then observation with an actual card shows that DSP commands 1.xx through 3.xx are
-		 * emulated in a way that it's possible to drive monural output from 4KHz up to the max rate
-		 * of the SB16 DSP. Unlike the (documented) behavior of the SB 2.0 and SB Pro cards,
-		 * highspeed DSP commands are accepted but treated like an alias to non-highspeed commands,
-		 * which means on an SB16 it really makes no difference which command set you use. The weird
-		 * thing however, is that the DSP sample rate (through the time constant commands) is rate
-		 * limited to the DSP's max rate according to *monural* rate, meaning that with older commands
-		 * on a DSP that maxes out at 44.1KHz, you can go up to 44.1KHz mono or 22.05KHz stereo. On
-		 * SB16 ViBRA you can use the commands to go up to 48KHz mono, 24KHz stereo. The only way to
-		 * get 48KHz stereo is to use DSP 4.xx commands. */
-		cx->max_sample_rate_dsp4xx = 48000; /* TODO: If older SB16, 44100Hz */
+		/* FIXME: At exactly what DSP version did SB16 allow going up to 48KHz?
+		 * I'm going by the ViBRA test card I own having DSP 4.13 vs DOSBox sbtype=sb16
+		 * reporting DSP v4.5 */
+		if (cx->dsp_vmaj == 4 && cx->dsp_vmin > 5)
+			cx->max_sample_rate_dsp4xx = 48000;
+		else
+			cx->max_sample_rate_dsp4xx = 44100;
+
 		cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_dsp4xx;
 		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_dsp4xx;
 		cx->max_sample_rate_sb_play = cx->max_sample_rate_dsp4xx;
-		cx->max_sample_rate_sb_rec = cx->max_sample_rate_dsp4xx; /* FIXME: Is this right? */
+		cx->max_sample_rate_sb_rec = cx->max_sample_rate_dsp4xx;
 	}
 	else if (cx->dsp_vmaj == 3) {
 		if (cx->is_gallant_sc6600) { /* SC-6600 clone card */
