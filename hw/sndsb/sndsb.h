@@ -163,7 +163,11 @@ struct sndsb_ctx {
  * allow direct DAC and "goldplay" modes to work or other idle maintenance functions. if NULL, do not call. */
 	void				(*timer_tick_func)(struct sndsb_ctx *cx);
 /* goldplay mode DMA buffer */
+#if TARGET_MSDOS == 32
+	struct dma_8237_allocation*	goldplay_dma;
+#else
 	uint8_t				goldplay_dma[4];
+#endif
 	uint8_t				gold_memcpy;
 /* ISA PnP information */
 	const char*			pnp_name;

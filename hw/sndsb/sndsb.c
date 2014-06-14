@@ -209,7 +209,7 @@ void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx) {
 void sndsb_timer_tick_goldi_cpy(struct sndsb_ctx *cx) {
 	cx->timer_tick_signal = 1;
 #if TARGET_MSDOS == 32
-	memcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma,cx->gold_memcpy);
+	memcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma->lin,cx->gold_memcpy);
 #else
 	_fmemcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma,cx->gold_memcpy);
 #endif
@@ -219,7 +219,7 @@ void sndsb_timer_tick_goldi_cpy(struct sndsb_ctx *cx) {
 void sndsb_timer_tick_goldo_cpy(struct sndsb_ctx *cx) {
 	cx->timer_tick_signal = 1;
 #if TARGET_MSDOS == 32
-	memcpy(cx->goldplay_dma,cx->buffer_lin+cx->direct_dsp_io,cx->gold_memcpy);
+	memcpy(cx->goldplay_dma->lin,cx->buffer_lin+cx->direct_dsp_io,cx->gold_memcpy);
 #else
 	_fmemcpy(cx->goldplay_dma,cx->buffer_lin+cx->direct_dsp_io,cx->gold_memcpy);
 #endif
@@ -312,6 +312,12 @@ struct sndsb_ctx *sndsb_alloc_card() {
 }
 
 void sndsb_free_card(struct sndsb_ctx *c) {
+#if TARGET_MSDOS == 32
+	if (c->goldplay_dma) {
+		dma_8237_free_buffer(c->goldplay_dma);
+		c->goldplay_dma = NULL;
+	}
+#endif
 	memset(c,0,sizeof(*c));
 	if (c == sndsb_card_blaster) sndsb_card_blaster = NULL;
 }
@@ -367,6 +373,9 @@ struct sndsb_ctx *sndsb_try_blaster_var() {
 
 	e = sndsb_alloc_card();
 	if (e == NULL) return NULL;
+#if TARGET_MSDOS == 32
+	e->goldplay_dma = NULL;
+#endif
 	e->is_gallant_sc6600 = 0;
 	e->baseio = (uint16_t)A;
 	e->mpuio = (uint16_t)(P > 0 ? P : 0);
@@ -607,6 +616,9 @@ int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
  *      when probing. If any of them are -1, and this code knows how to deduce
  *      it directly from the hardware, then they will be updated */
 int sndsb_init_card(struct sndsb_ctx *cx) {
+#if TARGET_MSDOS == 32
+	cx->goldplay_dma = NULL;
+#endif
 	cx->dsp_nag_mode = 0;
 	cx->dsp_nag_hispeed = 0;
 	cx->hispeed_matters = 1; /* assume it does */
@@ -2301,9 +2313,6 @@ int sndsb_shutdown_dma(struct sndsb_ctx *cx) {
 }
 
 int sndsb_setup_dma(struct sndsb_ctx *cx) {
-#if TARGET_MSDOS == 32
-	uint64_t phys;
-#endif
 	unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
 
 	/* if we're doing the Windows "spring" buffer hack, then don't do anything.
@@ -2326,6 +2335,13 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 		/* goldplay mode REQUIRES auto-init DMA */
 		if (!cx->chose_autoinit_dma) return -1;
 
+#if TARGET_MSDOS == 32
+		if (cx->goldplay_dma == NULL) {
+			if ((cx->goldplay_dma=dma_8237_alloc_buffer(16)) == NULL)
+				return 0;
+		}
+#endif
+
 		/* Goldplay mode: The size of ONE sample is given to the DMA controller.
 		 * This tricks the DMA controller into re-transmitting that sample continuously
 		 * to the sound card. Then the demo uses the timer interrupt to modify that byte
@@ -2340,18 +2356,12 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 		d8237_write_count(ch,(cx->buffer_stereo ? 2 : 1)*(cx->buffer_16bit ? 2 : 1));
 		/* point it to our "goldplay_dma" */
 #if TARGET_MSDOS == 32
-		if (dos_ltp_info.dma_dos_xlate && (size_t)cx->goldplay_dma < 0x100000UL)
-			phys = (size_t)cx->goldplay_dma; /* EMM386.EXE intercepts DMA controller I/O and translates for us, it's OK */
-		else
-			phys = dos_linear_to_phys((size_t)cx->goldplay_dma);
-
-		if (phys == DOS_LTP_FAILED) return 0;
-		d8237_write_base(ch,phys);
+		d8237_write_base(ch,cx->goldplay_dma->phys);
 
 		if ((cx->buffer_16bit?1:0)^(cx->audio_data_flipped_sign?1:0))
-			memset(cx->goldplay_dma,0,4);
+			memset(cx->goldplay_dma->lin,0,4);
 		else
-			memset(cx->goldplay_dma,128,4);
+			memset(cx->goldplay_dma->lin,128,4);
 #else
 		{
 			unsigned char far *p = (unsigned char far*)(cx->goldplay_dma);
@@ -2606,6 +2616,11 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 			cx->timer_tick_func = sndsb_timer_tick_directo_cmd;
 	}
 	else if (cx->goldplay_mode) {
+#if TARGET_MSDOS == 32
+		if (cx->goldplay_dma == NULL)
+			return 0;
+#endif
+
 		cx->gold_memcpy = (cx->buffer_16bit?2:1)*(cx->buffer_stereo?2:1);
 		if (cx->dsp_record)
 			cx->timer_tick_func = sndsb_timer_tick_goldi_cpy;

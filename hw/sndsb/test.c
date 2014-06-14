@@ -4023,6 +4023,7 @@ int main(int argc,char **argv) {
 	if (sb_card->irq != -1)
 		_dos_setvect(irq2int(sb_card->irq),old_irq);
 
+	sndsb_free_card(sb_card);
 	free_sndsb(); /* will also de-ref/unhook the NMI reflection */
 	_dos_setvect(irq2int(0),old_irq_0);
 	return 0;
