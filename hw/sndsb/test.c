@@ -1,5 +1,13 @@
 /* FIXME: 16-bit real mode small memory model builds crash/hang on startup. Why? */
 
+/* TODO: Direct DAC modes: need to issue I/O read (if option enabled) after writing DSP command.
+ *       Also if option enabled, poll in IRQ handler up to option-specific times the DSP write status
+ *       to get it into a ready state.
+ *
+ * TODO: Now that you're aware of *ugh* the EMF Internal Damage demo's Sound Blaster support
+ *       method of talking to port 22Dh, add an option to this code that, if enabled, talks to
+ *       I/O port base+0xB, base+0xD, base+0xF, instead of base+0xA,base+0xC,base+0xE. */
+
 /*=========================================OLD===================================================*/
 /* Emulator testing:
  *    Sun/Oracle VirtualBox:
