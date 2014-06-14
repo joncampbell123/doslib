@@ -1537,7 +1537,18 @@ void change_param_menu() {
 			vga_write_until(30);
 			vga_write("\n");
 
-			vga_moveto(0,10);
+			sprintf(tmp,"%u",sb_card->dsp_direct_dac_read_after_command);
+			vga_write_color(selector == 5 ? 0x70 : 0x1F);
+			vga_write(  "DDAC read aft: ");
+			if (sndsb_dsp_out_method_supported(sb_card,wav_sample_rate,wav_stereo,wav_16bit))
+				vga_write_color(selector == 5 ? 0x70 : 0x1F);
+			else
+				vga_write_color(selector == 5 ? 0x74 : 0x1C);
+			vga_write(tmp);
+			vga_write_until(30);
+			vga_write("\n");
+
+			vga_moveto(0,11);
 			vga_write_color(0x1F);
 			vga_write_until(80);
 			vga_write("\n");
@@ -1545,10 +1556,10 @@ void change_param_menu() {
 			vga_write("\n");
 			vga_write_until(80);
 			vga_write("\n");
-			vga_moveto(0,10);
+			vga_moveto(0,11);
 			if (sb_card->reason_not_supported) vga_write(sb_card->reason_not_supported);
 
-			vga_moveto(0,13);
+			vga_moveto(0,14);
 			vga_write("\n");
 			vga_write_sync();
 			_sti();
@@ -1602,7 +1613,7 @@ void change_param_menu() {
 			}
 			else if (c == 0x4800) { /* up arrow */
 				if (selector > 0) selector--;
-				else selector=4;
+				else selector=5;
 				uiredraw=1;
 			}
 			else if (c == 0x4B00) { /* left arrow */
@@ -1641,6 +1652,10 @@ void change_param_menu() {
 						else
 							sb_card->dsp_play_method--;
 						break;
+					case 5: /* Direct DAC read after command/data */
+						if (sb_card->dsp_direct_dac_read_after_command != 0)
+							sb_card->dsp_direct_dac_read_after_command--;
+						break;
 				};
 				update_cfg();
 				uiredraw=1;
@@ -1678,12 +1693,16 @@ void change_param_menu() {
 						if (++sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_MAX)
 							sb_card->dsp_play_method = 0;
 						break;
+					case 5: /* Direct DAC read after command/data */
+						if (sb_card->dsp_direct_dac_read_after_command < 255)
+							sb_card->dsp_direct_dac_read_after_command++;
+						break;
 				};
 				update_cfg();
 				uiredraw=1;
 			}
 			else if (c == 0x5000) { /* down arrow */
-				if (selector < 4) selector++;
+				if (selector < 5) selector++;
 				else selector=0;
 				uiredraw=1;
 			}

@@ -172,12 +172,17 @@ void sndsb_timer_tick_gen(struct sndsb_ctx *cx) {
 	cx->timer_tick_signal = 1;
 }
 
+static inline void sndsb_timer_tick_directio_post_read(unsigned short port,unsigned short count) {
+	while (count-- != 0) inp(port);
+}
+
 void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx) {
 	if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS) & 0x80) { /* data available? */
 		cx->buffer_lin[cx->direct_dsp_io] = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
 		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
 		cx->timer_tick_func = sndsb_timer_tick_directi_cmd;
 		cx->direct_dac_sent_command = 0;
+		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_read_after_command);
 	}
 }
 
@@ -186,6 +191,7 @@ void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx) {
 		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x20);	/* direct DAC read */
 		cx->timer_tick_func = sndsb_timer_tick_directi_data;
 		cx->direct_dac_sent_command = 1;
+		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_read_after_command);
 	}
 }
 
@@ -195,6 +201,7 @@ void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx) {
 		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
 		cx->timer_tick_func = sndsb_timer_tick_directo_cmd;
 		cx->direct_dac_sent_command = 0;
+		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_read_after_command);
 	}
 }
 
@@ -203,6 +210,7 @@ void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx) {
 		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x10);	/* direct DAC write */
 		cx->timer_tick_func = sndsb_timer_tick_directo_data;
 		cx->direct_dac_sent_command = 1;
+		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_read_after_command);
 	}
 }
 
@@ -627,6 +635,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->timer_tick_func = NULL;
 	cx->poll_ack_when_no_irq = 1;
 	cx->reason_not_supported = NULL;
+	cx->dsp_direct_dac_read_after_command = 0;
 	cx->windows_creative_sb16_drivers_ver = 0;
 	cx->windows_creative_sb16_drivers = 0;
 	cx->dsp_4xx_fifo_single_cycle = 0;
@@ -1008,6 +1017,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 
 	if (cx->dsp_vmaj >= 4) {
+		/* Direct DAC playback has issues if it naively thinks it can just belt out write+byte on a timer */
+		cx->dsp_direct_dac_read_after_command = 2;
 		/* Highspeed DSP commands don't matter anymore, they're just an alias to older commands */
 		cx->hispeed_matters = 0;
 		cx->hispeed_blocking = 0;
