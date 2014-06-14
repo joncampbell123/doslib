@@ -176,8 +176,17 @@ static inline void sndsb_timer_tick_directio_post_read(unsigned short port,unsig
 	while (count-- != 0) inp(port);
 }
 
+static inline unsigned char sndsb_timer_tick_directio_poll_ready(unsigned short port,unsigned short count) {
+	unsigned char r = 0;
+
+	do { r = inp(port);
+	} while ((r&0x80) && count-- != 0);
+
+	return !(r&0x80);
+}
+
 void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx) {
-	if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS) & 0x80) { /* data available? */
+	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_poll_retry_timeout)) {
 		cx->buffer_lin[cx->direct_dsp_io] = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
 		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
 		cx->timer_tick_func = sndsb_timer_tick_directi_cmd;
@@ -187,7 +196,7 @@ void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx) {
 }
 
 void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx) {
-	if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
+	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_poll_retry_timeout)) {
 		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x20);	/* direct DAC read */
 		cx->timer_tick_func = sndsb_timer_tick_directi_data;
 		cx->direct_dac_sent_command = 1;
@@ -196,7 +205,7 @@ void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx) {
 }
 
 void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx) {
-	if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
+	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_poll_retry_timeout)) {
 		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,cx->buffer_lin[cx->direct_dsp_io]);
 		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
 		cx->timer_tick_func = sndsb_timer_tick_directo_cmd;
@@ -206,7 +215,7 @@ void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx) {
 }
 
 void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx) {
-	if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80) == 0) { /* if DSP ready */
+	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_poll_retry_timeout)) {
 		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x10);	/* direct DAC write */
 		cx->timer_tick_func = sndsb_timer_tick_directo_data;
 		cx->direct_dac_sent_command = 1;
@@ -635,6 +644,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->timer_tick_func = NULL;
 	cx->poll_ack_when_no_irq = 1;
 	cx->reason_not_supported = NULL;
+	cx->dsp_direct_dac_poll_retry_timeout = 0;
 	cx->dsp_direct_dac_read_after_command = 0;
 	cx->windows_creative_sb16_drivers_ver = 0;
 	cx->windows_creative_sb16_drivers = 0;
@@ -1017,8 +1027,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 
 	if (cx->dsp_vmaj >= 4) {
-		/* Direct DAC playback has issues if it naively thinks it can just belt out write+byte on a timer */
-		cx->dsp_direct_dac_read_after_command = 2;
 		/* Highspeed DSP commands don't matter anymore, they're just an alias to older commands */
 		cx->hispeed_matters = 0;
 		cx->hispeed_blocking = 0;
