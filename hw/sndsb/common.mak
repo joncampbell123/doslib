@@ -13,6 +13,10 @@ PNPCFG_EXE =  $(SUBDIR)$(HPS)pnpcfg.exe
 # I'm tired of stripping the features down just to make the compact builds work
 NO_TEST_EXE=1
 ! endif
+! ifeq MMODE s
+# I'm tired of stripping the features down just to make the small builds work
+NO_TEST_EXE=1
+! endif
 !endif
 
 !ifndef NO_TEST_EXE

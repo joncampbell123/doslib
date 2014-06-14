@@ -609,6 +609,8 @@ int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
 int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_nag_mode = 0;
 	cx->dsp_nag_hispeed = 0;
+	cx->hispeed_matters = 1; /* assume it does */
+	cx->hispeed_blocking = 1; /* assume it does */
 	cx->timer_tick_signal = 0;
 	cx->timer_tick_func = NULL;
 	cx->poll_ack_when_no_irq = 1;
@@ -652,6 +654,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_record = 0;
 	cx->sb_mixer_items = 0;
 	cx->sb_mixer = NULL;
+	cx->max_sample_rate_sb_play_dac = 23000;
+	cx->max_sample_rate_sb_rec_dac = 13000;
 
 	if (!sndsb_reset_dsp(cx)) return 0;
 	cx->dsp_ok = 1;
@@ -989,6 +993,69 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	else {
 		if (sndsb_probe_mpu401(cx))
 			cx->mpu_ok = 1;
+	}
+
+	if (cx->dsp_vmaj >= 4) {
+		/* Highspeed DSP commands don't matter anymore, they're just an alias to older commands */
+		cx->hispeed_matters = 0;
+		cx->hispeed_blocking = 0;
+		/* The DSP is responsive even during hispeed mode, you can nag it then just fine */
+		cx->dsp_nag_hispeed = 1;
+		/* FIXME: The SB16 is said to max out at 44.1KHz, but testing with some old ViBRA PnP cards
+		 *        shows that the DSP really maxes out at 48KHz. At what DSP version did that change
+		 *        take place? I *could* just go by whether or not the card is PnP but then if the
+		 *        calling program never used PnP to detect it we'd get the limit wrong */
+		/* and then observation with an actual card shows that DSP commands 1.xx through 3.xx are
+		 * emulated in a way that it's possible to drive monural output from 4KHz up to the max rate
+		 * of the SB16 DSP. Unlike the (documented) behavior of the SB 2.0 and SB Pro cards,
+		 * highspeed DSP commands are accepted but treated like an alias to non-highspeed commands,
+		 * which means on an SB16 it really makes no difference which command set you use. The weird
+		 * thing however, is that the DSP sample rate (through the time constant commands) is rate
+		 * limited to the DSP's max rate according to *monural* rate, meaning that with older commands
+		 * on a DSP that maxes out at 44.1KHz, you can go up to 44.1KHz mono or 22.05KHz stereo. On
+		 * SB16 ViBRA you can use the commands to go up to 48KHz mono, 24KHz stereo. The only way to
+		 * get 48KHz stereo is to use DSP 4.xx commands. */
+		cx->max_sample_rate_dsp4xx = 48000; /* TODO: If older SB16, 44100Hz */
+		cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_dsp4xx;
+		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_dsp4xx;
+		cx->max_sample_rate_sb_play = cx->max_sample_rate_dsp4xx;
+		cx->max_sample_rate_sb_rec = cx->max_sample_rate_dsp4xx; /* FIXME: Is this right? */
+	}
+	else if (cx->dsp_vmaj == 3) {
+		if (cx->is_gallant_sc6600) { /* SC-6600 clone card */
+			/* FIXME: do some further testing */
+			cx->max_sample_rate_dsp4xx = 44100;
+			cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_dsp4xx;
+			cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_dsp4xx;
+			cx->max_sample_rate_sb_play = cx->max_sample_rate_dsp4xx; /* FIXME: Is this right? */
+			cx->max_sample_rate_sb_rec = cx->max_sample_rate_dsp4xx; /* FIXME: Is this right? */
+		}
+		else { /* Sound Blaster Pro */
+			cx->max_sample_rate_dsp4xx = 0;
+			cx->max_sample_rate_sb_hispeed_rec = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_hispeed = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_play = 23000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+			cx->max_sample_rate_sb_rec = 23000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+		}
+	}
+	else if (cx->dsp_vmaj == 2) {
+		if (cx->dsp_vmin >= 1) { /* Sound Blaster 2.01 */
+			cx->max_sample_rate_dsp4xx = 0;
+			cx->max_sample_rate_sb_hispeed_rec = 15000;
+			cx->max_sample_rate_sb_rec = 13000;
+			cx->max_sample_rate_sb_hispeed = 44100;
+			cx->max_sample_rate_sb_play = 23000;
+		}
+		else { /* Sound Blaster 2.0, without hispeed DSP commands */
+			cx->max_sample_rate_dsp4xx = 0;
+			cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_sb_rec = 13000;
+			cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_sb_play = 23000;
+		}
+	}
+	else { /* Sound Blaster 1.x */
+		cx->max_sample_rate_dsp4xx = 0;
+		cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_sb_rec = 13000;
+		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_sb_play = 23000;
 	}
 
 	/* if any of our tests left the SB IRQ hanging, clear it now */
@@ -1888,7 +1955,7 @@ void sndsb_main_idle(struct sndsb_ctx *cx) {
 			 *      commands in that state and any attempt will cause this function to hang for the
 			 *      DSP timeout period causing the main loop to jump and stutter. But if the user
 			 *      really *wants* us to do it (signified by setting dsp_nag_highspeed) then we'll do it */
-			if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->buffer_hispeed && !cx->dsp_nag_hispeed) {
+			if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->buffer_hispeed && cx->hispeed_matters && cx->hispeed_blocking && !cx->dsp_nag_hispeed) {
 				/* don't do it for highspeed DMA, user doesn't want us to. */
 			}
 			else {
@@ -2007,14 +2074,6 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		return 0;
 	}
 
-	/* Creative SB16 cards do not pay attention to the Sound Blaster Pro stereo bit.
-	 * Playing stereo using the 3xx method on 4.xx DSPs will not work. Most SB16 clones
-	 * will pay attention to that bit however, but it's best not to assume that will happen. */
-	if (cx->dsp_vmaj >= 4 && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && wav_stereo) {
-		cx->reason_not_supported = "Sound Blaster Pro stereo playback on SB16 (DSP 4.xx)\nwill not play as stereo because Creative SB16\ncards ignore the mixer bit";
-		return 0;
-	}
-
 	if (wav_stereo && cx->dsp_vmaj < 3) {
 		cx->reason_not_supported = "You are playing stereo audio on a DSP that doesn't support stereo";
 		return 0;
@@ -2065,7 +2124,7 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 			if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
 				/* yes */
 			}
-			else if (cx->force_hispeed || wav_sample_rate > (cx->dsp_record ? 13000UL : 23000UL)) {
+			else if ((cx->force_hispeed || wav_sample_rate > (cx->dsp_record ? 13000UL : 23000UL)) && cx->hispeed_blocking) {
 				/* no */
 				cx->reason_not_supported = "No IRQ assigned & DSP nag mode is ineffective\nif the DSP will run in 2.0/Pro highspeed DSP mode.";
 				return 0;
@@ -2106,26 +2165,42 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
 		/* based on Sound Blaster 16 PnP cards that max out at 48000Hz apparently */
-		if (wav_sample_rate > 48000UL) return 0;
+		/* FIXME: Is there a way for us to distinguish a Sound Blaster 16 (max 44100Hz)
+		 *        from later cards (max 48000Hz) *other* than whether or not it is Plug & Play?
+		 *        Such as using the DSP version? At what DSP version did the card go from
+		 *        a max 44100Hz to 48000Hz? */
+		if (wav_sample_rate > cx->max_sample_rate_dsp4xx) return 0;
 	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
-		if (wav_sample_rate > 44100UL && !wav_stereo) return 0; /* mono maxes out at 44100Hz */
-		if (wav_sample_rate > 22050UL && wav_stereo) return 0; /* stereo maxes out at 22050Hz */
-	}
-	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {
-		if (wav_sample_rate > (cx->dsp_record ? 15000UL : 44100UL)) return 0;
+	else if ((cx->hispeed_matters && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) ||
+		cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {
+		/* Because of the way Sound Blaster Pro stereo works and the way the time constant
+		 * is generated, the maximum sample rate is halved in stereo playback. On Pro and
+		 * old SB16 cards this means a max of 44100Hz mono 22050Hz stereo. On SB16 ViBRA
+		 * cards, this usually means a maximum of 48000Hz mono 24000Hz stereo.
+		 *
+		 * For DSP 2.01+ support, we also use this calculation because hispeed mode is involved */
+		if (wav_sample_rate > ((cx->dsp_record ? cx->max_sample_rate_sb_hispeed : cx->max_sample_rate_sb_hispeed) / (wav_stereo ? 2U : 1U))) return 0;
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_200 || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
-		if (wav_sample_rate > (cx->dsp_record ? 13000UL : 23000UL)) return 0;
+		if (wav_sample_rate > (cx->dsp_record ? cx->max_sample_rate_sb_rec : cx->max_sample_rate_sb_play)) return 0;
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
-		if (wav_sample_rate > (cx->dsp_record ? 13000UL : 23000UL)) return 0;
+		if (wav_sample_rate > (cx->dsp_record ? cx->max_sample_rate_sb_rec_dac : cx->max_sample_rate_sb_play_dac)) return 0;
 	}
 	cx->reason_not_supported = NULL;
 	if (cx->dsp_autoinit_command && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
 		cx->reason_not_supported = "DSP 1.xx commands do not support auto-init. Playback\nis automatically using single-cycle commands instead.";
 		return 1; /* we support it, but just to let you know... */
 	}
+
+	/* Creative SB16 cards do not pay attention to the Sound Blaster Pro stereo bit.
+	 * Playing stereo using the 3xx method on 4.xx DSPs will not work. Most SB16 clones
+	 * will pay attention to that bit however, but it's best not to assume that will happen. */
+	if (cx->dsp_vmaj >= 4 && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && wav_stereo) {
+		cx->reason_not_supported = "Sound Blaster Pro stereo playback on SB16 (DSP 4.xx)\nwill not play as stereo because Creative SB16\ncards ignore the mixer bit";
+		return 0;
+	}
+
 	return 1;
 }
 

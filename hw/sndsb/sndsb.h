@@ -145,10 +145,20 @@ struct sndsb_ctx {
 	uint8_t				dsp_nag_mode:1;		/* "Nag" the DSP during playback (Crystal Dream style) by reissuing playback while playback is active */
 	uint8_t				dsp_nag_hispeed:1;	/* "Nag" even during highspeed DMA playback (NOT recommended) */
 	uint8_t				poll_ack_when_no_irq:1;	/* If playing DMA without IRQ assignment, poll the "ack" register in idle call */
+	uint8_t				hispeed_matters:1;	/* If set, playing at rates above 22050Hz requires hispeed DSP commands */
+	uint8_t				hispeed_blocking:1;	/* DSP does not accept commands, requires reset, in hispeed DSP playback */
 	const char*			reason_not_supported;	/* from last call can_do() or is_supported() */
 /* array of mixer controls, determined by mixer chipset */
 	struct sndsb_mixer_control*	sb_mixer;
 	signed short			sb_mixer_items;
+/* max sample rate of the DSP */
+	unsigned short			max_sample_rate_dsp4xx;		/* in Hz, maximum per sample frame */
+	unsigned short			max_sample_rate_sb_hispeed;	/* in Hz, maximum per sample i.e. DSP maxes out at this value at mono, or half this value at stereo */
+	unsigned short			max_sample_rate_sb_hispeed_rec;	/* in Hz, maximum per sample i.e. DSP maxes out at this value at mono, or half this value at stereo */
+	unsigned short			max_sample_rate_sb_play;	/* in Hz, maximum playback rate in non-hispeed mode */
+	unsigned short			max_sample_rate_sb_rec;		/* in Hz, maximum recording rate in non-hispeed mode */
+	unsigned short			max_sample_rate_sb_play_dac;	/* in Hz, maximum playback rate through DSP command 0x10 (Direct DAC output) */
+	unsigned short			max_sample_rate_sb_rec_dac;	/* in Hz, maximum recording rate through DSP command 0x20 (Direct DAC input) */
 /* function call. calling application should call this from the timer interrupt (usually IRQ 0) to
  * allow direct DAC and "goldplay" modes to work or other idle maintenance functions. if NULL, do not call. */
 	void				(*timer_tick_func)(struct sndsb_ctx *cx);
