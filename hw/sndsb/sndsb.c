@@ -2420,10 +2420,13 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 }
 
 unsigned long sndsb_real_sample_rate(struct sndsb_ctx *cx) {
-	const unsigned long total_rate = (unsigned long)cx->buffer_rate * (cx->buffer_stereo ? 2UL : 1UL);
-	const unsigned char timeconst = (unsigned char)((65536UL - (256000000UL / min(total_rate,54000UL))) >> 8UL);
+	unsigned long total_rate;
+	unsigned char timeconst;
 	unsigned long real_rate;
 
+	total_rate = (unsigned long)cx->buffer_rate * (cx->buffer_stereo ? 2UL : 1UL);
+	if (total_rate < 4000UL) total_rate = 4000UL;
+	timeconst = (unsigned char)((65536UL - (256000000UL / total_rate)) >> 8UL);
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) return cx->buffer_rate;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return cx->buffer_rate;
 
@@ -2440,6 +2443,7 @@ unsigned long sndsb_real_sample_rate(struct sndsb_ctx *cx) {
 }
 
 unsigned char sndsb_rate_to_time_constant(struct sndsb_ctx *cx,unsigned long rate) {
+	if (rate < 4000UL) rate = 4000UL;
 	return (unsigned char)((65536UL - (256000000UL / rate)) >> 8);
 }
 
