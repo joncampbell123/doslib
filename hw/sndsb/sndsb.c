@@ -644,7 +644,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->timer_tick_func = NULL;
 	cx->poll_ack_when_no_irq = 1;
 	cx->reason_not_supported = NULL;
-	cx->dsp_direct_dac_poll_retry_timeout = 0;
+	cx->dsp_direct_dac_poll_retry_timeout = 16; /* assume at least 16 I/O reads to wait for DSP ready */
 	cx->dsp_direct_dac_read_after_command = 0;
 	cx->windows_creative_sb16_drivers_ver = 0;
 	cx->windows_creative_sb16_drivers = 0;
@@ -1027,8 +1027,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 
 	if (cx->dsp_vmaj >= 4) {
-		/* Direct DAC output can work, but apparently it takes the DSP a few tries even after the sample interval */
-		cx->dsp_direct_dac_poll_retry_timeout = 16;
 		/* Highspeed DSP commands don't matter anymore, they're just an alias to older commands */
 		cx->hispeed_matters = 0;
 		cx->hispeed_blocking = 0;
@@ -1054,6 +1052,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 	else if (cx->dsp_vmaj == 3) {
 		if (cx->is_gallant_sc6600) { /* SC-6600 clone card */
+			cx->dsp_direct_dac_poll_retry_timeout = 4; /* DSP is responsive to direct DAC to allow lesser timeout */
 			/* NTS: Officially, the max sample rate is 24000Hz, but the DSP seems to allow up to 25000Hz,
 			 *      then limit the sample rate to that up until about 35000Hz where it suddenly clamps
 			 *      the rate down to 24000Hz. Mildly strange bug. */
