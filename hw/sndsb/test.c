@@ -1,12 +1,23 @@
-/* FIXME: 16-bit real mode small memory model builds crash/hang on startup. Why? */
 
-/* TODO: Direct DAC modes: need to issue I/O read (if option enabled) after writing DSP command.
- *       Also if option enabled, poll in IRQ handler up to option-specific times the DSP write status
- *       to get it into a ready state.
+/* Notes:
+ *    Gallant SC-660 clone:
+ *       - Does not support auto-init ADPCM, though all single-cycle ADPCM commands are
+ *         correctly supported.
+ *       - DSP time constant is rate limited, but there's a minor bug in how it does it:
  *
- * TODO: Now that you're aware of *ugh* the EMF Internal Damage demo's Sound Blaster support
- *       method of talking to port 22Dh, add an option to this code that, if enabled, talks to
- *       I/O port base+0xB, base+0xD, base+0xF, instead of base+0xA,base+0xC,base+0xE. */
+ *            If you submit 4000...25000Hz   -> You get 4000...25000Hz
+ *            If you submit 25000...35000Hz  -> You get 25000Hz
+ *            If you submit 35000...44100Hz  -> You get 24000Hz?
+ *
+ *            This bug does not affect DSP 4.xx SB16 commands and does not affect
+ *            high-speed DSP commands.
+ *       - SB16 commands are supported... kind of. The card is obviously coded to expect
+ *         only the auto-init + FIFO form of the DSP 4.xx commands (any other combination,
+ *         such as single-cycle with/without FIFO or auto-init without FIFO, is ignored by
+ *         the card).
+ *       - Nag mode has no effect for DSP 4.xx commands, since single-cycle is impossible.
+ *       - Does not stop playback if IRQ not acknowledged.
+ */
 
 /*=========================================OLD===================================================*/
 /* Emulator testing:

@@ -1042,6 +1042,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		else
 			cx->max_sample_rate_dsp4xx = 44100;
 
+		cx->enable_adpcm_autoinit = 1; /* NTS: Unless there are DSP 4.xx SB clones out there that don't, we can assume auto-init ADPCM */
 		cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_dsp4xx;
 		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_dsp4xx;
 		cx->max_sample_rate_sb_play = cx->max_sample_rate_dsp4xx;
@@ -1053,12 +1054,16 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 	else if (cx->dsp_vmaj == 3) {
 		if (cx->is_gallant_sc6600) { /* SC-6600 clone card */
-			/* FIXME: do some further testing */
+			/* NTS: Officially, the max sample rate is 24000Hz, but the DSP seems to allow up to 25000Hz,
+			 *      then limit the sample rate to that up until about 35000Hz where it suddenly clamps
+			 *      the rate down to 24000Hz. Mildly strange bug. */
 			cx->max_sample_rate_dsp4xx = 44100;
-			cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_dsp4xx;
-			cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_dsp4xx;
-			cx->max_sample_rate_sb_play = cx->max_sample_rate_dsp4xx; /* FIXME: Is this right? */
-			cx->max_sample_rate_sb_rec = cx->max_sample_rate_dsp4xx; /* FIXME: Is this right? */
+			cx->max_sample_rate_sb_hispeed_rec = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_hispeed = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_play = 25000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+			cx->max_sample_rate_sb_rec = 25000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+			cx->enable_adpcm_autoinit = 0; /* does NOT support auto-init ADPCM */
+			/* also: hi-speed DSP is blocking, and it matters: to go above 23KHz you have to use hi-speed DSP commands */
 		}
 		else { /* Sound Blaster Pro */
 			cx->max_sample_rate_dsp4xx = 0;
@@ -2208,6 +2213,12 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		/* Neither VDMSOUND.EXE or NTVDM's SB emulation handle ADPCM well */
 		if (cx->vdmsound || cx->windows_xp_ntvdm || cx->windows_9x_me_sbemul_sys) {
 			cx->reason_not_supported = "You are attempting ADPCM within Windows\nemulation that will likely not support ADPCM playback";
+			return 0;
+		}
+
+		/* Gallant SC-6600 clones do not support auto-init ADPCM, though they support all modes */
+		if (cx->is_gallant_sc6600 && cx->enable_adpcm_autoinit && cx->dsp_autoinit_command) {
+			cx->reason_not_supported = "SC-6600 SB clones do not support auto-init ADPCM";
 			return 0;
 		}
 
