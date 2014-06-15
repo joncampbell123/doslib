@@ -1027,6 +1027,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 
 	if (cx->dsp_vmaj >= 4) {
+		/* Direct DAC output can work, but apparently it takes the DSP a few tries even after the sample interval */
+		cx->dsp_direct_dac_poll_retry_timeout = 16;
 		/* Highspeed DSP commands don't matter anymore, they're just an alias to older commands */
 		cx->hispeed_matters = 0;
 		cx->hispeed_blocking = 0;
@@ -1044,6 +1046,10 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_dsp4xx;
 		cx->max_sample_rate_sb_play = cx->max_sample_rate_dsp4xx;
 		cx->max_sample_rate_sb_rec = cx->max_sample_rate_dsp4xx;
+		if (cx->max_sample_rate_dsp4xx > 44100) { /* SB16 ViBRA cards apparently allow Direct DAC output up to 24KHz instead of 23KHz */
+			cx->max_sample_rate_sb_play_dac = 24000;
+			/* TODO: Is recording speed affected? */
+		}
 	}
 	else if (cx->dsp_vmaj == 3) {
 		if (cx->is_gallant_sc6600) { /* SC-6600 clone card */
