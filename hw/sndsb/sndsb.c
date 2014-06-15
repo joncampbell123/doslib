@@ -1078,7 +1078,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 			cx->max_sample_rate_dsp4xx = 0;
 			cx->max_sample_rate_sb_hispeed_rec = 15000;
 			cx->max_sample_rate_sb_rec = 13000;
-			cx->max_sample_rate_sb_hispeed = 44100;
+			cx->max_sample_rate_sb_hispeed = 44100; /* NTS: On actual SB 2.1 hardware I own you can apparently go up to 46KHz? */
 			cx->max_sample_rate_sb_play = 23000;
 		}
 		else { /* Sound Blaster 2.0, without hispeed DSP commands */
@@ -2222,6 +2222,9 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 			return 0;
 		}
 
+		/* NTS: If we could easily differentiate Creative SB 2.0 from clones, we could identify the
+		 *      slightly out-of-spec ranges supported by the SB 2.0 that deviates from Creative
+		 *      documentation */
 		if (cx->dsp_adpcm == ADPCM_4BIT) {
 			if (wav_sample_rate > 12000UL) return 0;
 		}
@@ -2229,7 +2232,7 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 			if (wav_sample_rate > 13000UL) return 0;
 		}
 		else if (cx->dsp_adpcm == ADPCM_2BIT) {
-			if (wav_sample_rate > 11000UL) return 0;
+			if (wav_sample_rate > 11000UL) return 0; /* NTS: On actual Creative SB 2.0 hardware, this can apparently go up to 15KHz */
 		}
 		else {
 			return 0;

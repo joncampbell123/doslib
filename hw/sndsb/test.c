@@ -17,6 +17,14 @@
  *         the card).
  *       - Nag mode has no effect for DSP 4.xx commands, since single-cycle is impossible.
  *       - Does not stop playback if IRQ not acknowledged.
+ *
+ *    Sound Blaster 2.0 (Creative):
+ *       - DSP 1.xx playback maxes out at 22050Hz (not 23KHz documented by Creative)
+ *       - DSP 2.xx playback maxes out at 46000Hz (not 44.1KHz documented by Creative)
+ *       - DSP auto-init ADPCM supported
+ *       - ADPCM 4-bit maxes out at 12KHz
+ *       - ADPCM 2.6-bit maxes out at 12KHz (not 13KHz documented by Creative)
+ *       - ADPCM 2-bit maxes out at 15KHz (not 11KHz documented by Creative)
  */
 
 /*=========================================OLD===================================================*/
