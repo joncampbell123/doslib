@@ -124,7 +124,7 @@ int main() {
 					mi.reserved_mask_size,	mi.reserved_field_position,
 					mi.direct_color_mode_info);
 				printf("    Physical addr: 0x%08lX Linbytes/scan=%u BankPages=%u LinPages=%u\n",(unsigned long)mi.phys_base_ptr,
-					mi.lin_bytes_per_line,	mi.bank_number_of_image_pages,
+					mi.lin_bytes_per_line,	mi.bank_number_of_image_pages+1,
 					mi.lin_number_of_image_pages);
 				printf("    Lin RGBA (size,pos) R=(%u,%u) G=(%u,%u) B=(%u,%u) A=(%u,%u) maxpixelclock=%lu\n",
 					mi.lin_red_mask_size,		mi.lin_red_field_position,
