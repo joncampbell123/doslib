@@ -34,7 +34,7 @@ struct vbe_info_block { /* for 1.x (256-byte) or 2.x/3.x (512-byte) */
 	uint32_t	oem_string_ptr;		/* +0x006 */
 	uint32_t	capabilities;		/* +0x00A */
 	uint32_t	video_mode_ptr;		/* +0x00E */
-	uint16_t	total_memory_kb;	/* +0x012 */
+	uint16_t	total_memory_64kb;	/* +0x012 */
 	uint16_t	oem_software_rev;	/* +0x014 */
 	uint32_t	oem_vendor_name_ptr;	/* +0x016 */
 	uint32_t	oem_product_name_ptr;	/* +0x01A */

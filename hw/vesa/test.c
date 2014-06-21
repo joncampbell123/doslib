@@ -40,7 +40,7 @@ int main() {
 	if (vbe_info->capabilities & VBE_CAP_LARGE_XFER_BLANKING)
 		printf("               Should blank the display during large transfers\n");
 
-	printf("     Total memory:           %uKB\n",vbe_info->total_memory_kb);
+	printf("     Total memory:           %luKB\n",(unsigned long)vbe_info->total_memory_64kb * 64UL);
 	printf("     OEM software version:   %u.%u\n",vbe_info->oem_software_rev >> 8,vbe_info->oem_software_rev & 0xFF);
 
 	vbe_copystring(tmp,sizeof(tmp),vbe_info->oem_string_ptr,vbe_info);
