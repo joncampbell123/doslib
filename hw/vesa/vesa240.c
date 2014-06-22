@@ -23,9 +23,30 @@ struct mode_remap {
 void			(__interrupt __far *old_int10)();
 struct mode_remap	remap[MAX_REMAP];
 int			remap_count=0;
+union REGS		remap_rr;
 
 void __interrupt __far new_int10(union INTPACK ip) {
-	if (ip.w.ax == 0x4F02) {
+	if (ip.h.ah == 0x00) {
+		unsigned int i,j;
+
+		for (i=0;i < remap_count;i++) {
+			if (remap[i].source_mode == (ip.h.al&0x7F)) {
+				j = remap[i].target_mode | ((ip.h.al&0x80)?0x8000:0x0000);
+				__asm {
+					push	ds
+					mov	ax,seg old_int10
+					mov	ax,0x4F02
+					mov	bx,j
+					pushf
+					callf	dword ptr [old_int10]
+					pop	ds
+				}
+
+				return;
+			}
+		}
+	}
+	else if (ip.w.ax == 0x4F02) {
 		unsigned int i;
 
 		for (i=0;i < remap_count;i++) {
@@ -49,6 +70,43 @@ static void help() {
 }
 
 void end_of_resident();
+
+void install_320x200x256_remap() {
+	struct vbe_mode_info nmi;
+	uint16_t nmode,tnmode;
+	int nentry;
+
+	nmode=0;
+	for (nentry=0;nentry < 1024;nentry++) {
+		tnmode = vbe_read_mode_entry(vbe_info->video_mode_ptr,nentry);
+		if (tnmode == 0xFFFF) break;
+		memset(&nmi,0,sizeof(nmi));
+		if (!vbe_read_mode_info(tnmode,&nmi)) continue;
+		if (!(nmi.mode_attributes & VESA_MODE_ATTR_HW_SUPPORTED)) continue;
+		if (!(nmi.mode_attributes & VESA_MODE_ATTR_GRAPHICS_MODE)) continue;
+		if (nmi.x_resolution != 320) continue;
+		if (nmi.y_resolution != 240) continue;
+		if (nmi.number_of_planes != 1) continue;
+		if (nmi.bits_per_pixel != 8) continue;
+		if (!(nmi.memory_model == 5/*non-chain 4 256-color*/ || nmi.memory_model == 4/*packed*/ || nmi.memory_model == 3/*4-plane*/)) continue;
+		nmode = tnmode;
+		break;
+	}
+
+	if (nmode != 0) {
+		printf("  Remapping mode 0x13 to 0x%03x (%ux%ux%u)\n",nmode,
+				nmi.x_resolution,nmi.y_resolution,nmi.bits_per_pixel);
+
+		if (remap_count < MAX_REMAP) {
+			remap[remap_count].source_mode = 0x13;
+			remap[remap_count].target_mode = nmode&0x3FFF;
+			remap_count++;
+		}
+	}
+	else {
+		printf("  No mapping available for mode 0x13\n");
+	}
+}
 
 int main(int argc,char **argv) {
 	char *a,*command=NULL;
@@ -93,6 +151,9 @@ int main(int argc,char **argv) {
 		printf("VBE bios does not provide a mode list\n");
 		return 1;
 	}
+
+	/* also find a mapping from mode 0x13 (320x200x256) to VESA BIOS */
+	install_320x200x256_remap();
 
 	for (entry=0;entry < 1024;entry++) {
 		struct vbe_mode_info mi={0},nmi;
@@ -160,6 +221,7 @@ int main(int argc,char **argv) {
 	old_int10 = _dos_getvect(0x10);
 	_dos_setvect(0x10,new_int10);
 	_sti();
+	printf("INT 10h hooked\n"); fflush(stdout);
 	_dos_keep(0,(34000+sizeof(remap))>>4); /* FIXME! */
 	return 0;
 }
