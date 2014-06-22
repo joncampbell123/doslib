@@ -901,7 +901,7 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 	vga_write_CRTC(0x10,p->vertical_start_retrace);
 		c |= ((p->vertical_start_retrace >> 8) & 1) << 2;
 		c |= ((p->vertical_start_retrace >> 9) & 1) << 7;
-	vga_write_CRTC(0x12,(p->vertical_display_end - 1)); /* NTS: FreeVGA docs are WRONG. This is total active lines - 1 */
+	vga_write_CRTC(0x12,(p->vertical_display_end - 1));
 		c |= (((p->vertical_display_end - 1) >> 8) & 1) << 1;
 		c |= (((p->vertical_display_end - 1) >> 9) & 1) << 6;
 	vga_write_CRTC(0x15,p->vertical_blank_start);
