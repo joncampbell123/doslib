@@ -869,7 +869,7 @@ void vga_correct_crtc_mode(struct vga_mode_params *p) {
  *          that way too, but at least we can read back the "safe" values the BIOS
  *          programmed into the hardware */
 void vga_write_crtc_mode(struct vga_mode_params *p) {
-	unsigned char c;
+	unsigned char c,c2;
 
 	if (!(vga_flags & VGA_IS_VGA))
 		return;
@@ -892,6 +892,8 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 		(p->clock_div2 << 3));
 
 	c = 0; /* use 'c' as overflow register */
+	c2 = vga_read_CRTC(0x09); /* read max scan line */
+	c2 &= ~(1 << 5); /* mask out start vertical blank bit 9 */
 	vga_write_CRTC(0x11, /* NTS: we leave bit 7 (protect) == 0 so we can program regs 0-7 in this routine */
 		(((p->refresh_cycles_per_scanline == 5) ? 1 : 0) << 6) |
 		(p->vertical_end_retrace & 0xF));
@@ -901,11 +903,12 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 	vga_write_CRTC(0x10,p->vertical_start_retrace);
 		c |= ((p->vertical_start_retrace >> 8) & 1) << 2;
 		c |= ((p->vertical_start_retrace >> 9) & 1) << 7;
-	vga_write_CRTC(0x12,(p->vertical_display_end - 1));
+	vga_write_CRTC(0x12,p->vertical_display_end - 1);
 		c |= (((p->vertical_display_end - 1) >> 8) & 1) << 1;
 		c |= (((p->vertical_display_end - 1) >> 9) & 1) << 6;
-	vga_write_CRTC(0x15,p->vertical_blank_start);
-		c |= ((p->vertical_blank_start >> 8) & 1) << 3;
+	vga_write_CRTC(0x15,p->vertical_blank_start - 1);
+		c |= (((p->vertical_blank_start - 1) >> 8) & 1) << 3;
+		c2|= (((p->vertical_blank_start - 1) >> 9) & 1) << 5;
 
 	/* NTS: this field is 7 bits wide but "Some SVGA chipsets use all 8" as VGADOC says. */
 	/*      writing it in this way resolves the partial/full screen blanking problems with Intel 855/915/945 chipsets */
@@ -916,6 +919,7 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 		(p->inc_mem_addr_only_every_4th << 5));
 	vga_write_CRTC(0x07,c); /* overflow reg */
 
+	vga_write_CRTC(0x09,c2);
 	vga_write_CRTC(0x17,
 		(vga_read_CRTC(0x17) & 0x10) | /* NTS: one undocumented bit, perhaps best not to change it */
 		((p->word_mode^1) << 6) |
@@ -942,7 +946,7 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 }
 
 void vga_read_crtc_mode(struct vga_mode_params *p) {
-	unsigned char c;
+	unsigned char c,c2;
 
 	if (!(vga_flags & VGA_IS_VGA))
 		return;
@@ -982,6 +986,7 @@ void vga_read_crtc_mode(struct vga_mode_params *p) {
 	p->horizontal_start_delay_after_retrace = (vga_read_CRTC(5) >> 5) & 3;
 
 	c = vga_read_CRTC(7); /* c = overflow reg */
+	c2 = vga_read_CRTC(9);
 
 	p->vertical_total = (vga_read_CRTC(6) | ((c & 1) << 8) | (((c >> 5) & 1) << 9)) + 2;
 	p->vertical_start_retrace = (vga_read_CRTC(0x10) | (((c >> 2) & 1) << 8) | (((c >> 7) & 1) << 9));
@@ -992,10 +997,9 @@ void vga_read_crtc_mode(struct vga_mode_params *p) {
 	p->refresh_cycles_per_scanline = ((vga_read_CRTC(0x11) >> 6) & 1) ? 5 : 3;
 	p->inc_mem_addr_only_every_4th = (vga_read_CRTC(0x14) >> 5) & 1;
 	p->vertical_display_end = ((vga_read_CRTC(0x12) | (((c >> 1) & 1) << 8) | (((c >> 6) & 1) << 9))) + 1;
-	p->vertical_blank_start = (vga_read_CRTC(0x15) | (((c >> 3) & 1) << 8));
-	p->vertical_blank_end = (vga_read_CRTC(0x16) & 0x7F) |
-		(p->vertical_blank_start & (~0x7F));
-	if ((p->vertical_blank_start&0x7F) >= (p->vertical_blank_end&0x7F))
+	p->vertical_blank_start = ((vga_read_CRTC(0x15) | (((c >> 3) & 1) << 8) | (((c2 >> 5) & 1) << 9))) + 1;
+	p->vertical_blank_end = (vga_read_CRTC(0x16) & 0x7F) | (p->vertical_blank_start & (~0x7F));
+	if (p->vertical_blank_start > p->vertical_blank_end)
 		p->vertical_blank_end += 0x80;
 }
 
