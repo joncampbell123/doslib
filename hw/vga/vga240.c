@@ -14,7 +14,7 @@
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
 
-unsigned char		force8 = 0;
+unsigned char		force89 = 0; /* 0=dont force    8=force 8    9=force 9 */
 unsigned char		blanking_fix = 1;
 int			blanking_align = 0;
 void			(__interrupt __far *old_int10)();
@@ -26,10 +26,10 @@ void __interrupt __far new_int10(union INTPACK ip) {
 				ip.w.ax = 0xDFAA;
 				ip.w.bx = 0xCACA;
 				break;
-			case 1: /* change force8 option */
+			case 1: /* change force89 option */
 				ip.w.ax = 0xDFAA;
 				ip.w.bx = 0xCACA;
-				force8 = ip.h.ch;
+				force89 = ip.h.ch;
 				break;
 			case 2: /* change blanking fix option */
 				ip.w.ax = 0xDFAA;
@@ -73,14 +73,25 @@ void __interrupt __far new_int10(union INTPACK ip) {
 		/* mono or color? */
 		port = (inp(0x3CC)&1)?0x3D4:0x3B4;
 
-		/* force 8-pixel */
-		if (force8 && (ip.h.al <= 3 || ip.h.al == 7)) {
-			outp(0x3C4,0x01); /* seq, clocking mode reg */
-			t = inp(0x3C5);
-			outp(0x3C5,t|0x01); /* select 8 dots/char */
+		if (ip.h.al <= 3 || ip.h.al == 7) {
+			/* force 8-pixel */
+			if (force89 == 8) {
+				outp(0x3C4,0x01); /* seq, clocking mode reg */
+				t = inp(0x3C5);
+				outp(0x3C5,t|0x01); /* select 8 dots/char */
 
-			t = inp(0x3CC); /* then select 25MHz clock */
-			outp(0x3C2,t&(~0xC));
+				t = inp(0x3CC); /* then select 25MHz clock */
+				outp(0x3C2,t&(~0xC));
+			}
+			/* force 9-pixel */
+			else if (force89 == 9) {
+				outp(0x3C4,0x01); /* seq, clocking mode reg */
+				t = inp(0x3C5);
+				outp(0x3C5,t&0xFE); /* select 9 dots/char */
+
+				t = inp(0x3CC); /* then select 28MHz clock */
+				outp(0x3C2,(t&(~0xC)) | (1 << 2));
+			}
 		}
 
 		if (blanking_fix) {
@@ -246,7 +257,7 @@ int res_set_opt8(unsigned char func,unsigned char opt) {
 void end_of_resident();
 
 int main(int argc,char **argv) {
-	unsigned char force8_set=0;
+	unsigned char force89_set=0;
 	unsigned char blanking_fix_set=0;
 	unsigned char blanking_align_set=0;
 	char *a,*command=NULL;
@@ -281,12 +292,16 @@ int main(int argc,char **argv) {
 				blanking_align_set = 1;
 			}
 			else if (!strcmp(a,"8")) {
-				force8_set = 1;
-				force8 = 1;
+				force89_set = 1;
+				force89 = 8;
 			}
-			else if (!strcmp(a,"N8")) {
-				force8_set = 1;
-				force8 = 0;
+			else if (!strcmp(a,"9")) {
+				force89_set = 1;
+				force89 = 9;
+			}
+			else if (!strcmp(a,"N8") || !strcmp(a,"N9")) {
+				force89_set = 1;
+				force89 = 0;
 			}
 			else {
 				fprintf(stderr,"Unknown switch %s\n",a);
@@ -336,9 +351,9 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 
-		if (force8_set) {
-			if (!res_set_opt8(1,force8)) {
-				printf("Failed to set force8\n");
+		if (force89_set) {
+			if (!res_set_opt8(1,force89)) {
+				printf("Failed to set force89\n");
 				return 1;
 			}
 		}
