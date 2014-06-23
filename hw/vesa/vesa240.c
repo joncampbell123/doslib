@@ -1,4 +1,13 @@
 
+/* TODO: Make the 320x200x256-color override hack optional (and off by default).
+ *       
+ *       On an S3 Virge PCI card I own, substituting a VESA BIOS mode for mode
+ *       13h causes additional compatability problems because things like
+ *       horizontal pel and other standard VGA tricks don't work at all.
+ *       Considering you just finished the Standard VGA version of this hack,
+ *       the mode 13h hack is no longer necessary and it should be disabled by
+ *       default though available as an option. */
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stddef.h>
