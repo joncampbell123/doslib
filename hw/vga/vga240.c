@@ -13,7 +13,9 @@
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
 
+unsigned char		force8 = 0;
 unsigned char		blanking_fix = 1;
+int			blanking_align = 0;
 void			(__interrupt __far *old_int10)();
 
 void __interrupt __far new_int10(union INTPACK ip) {
@@ -41,8 +43,19 @@ void __interrupt __far new_int10(union INTPACK ip) {
 		/* mono or color? */
 		port = (inp(0x3CC)&1)?0x3D4:0x3B4;
 
+		/* force 8-pixel */
+		if (force8 && (ip.h.al <= 3 || ip.h.al == 7)) {
+			outp(0x3C4,0x01); /* seq, clocking mode reg */
+			t = inp(0x3C5);
+			outp(0x3C5,t|0x01); /* select 8 dots/char */
+
+			t = inp(0x3CC); /* then select 25MHz clock */
+			outp(0x3C2,t&(~0xC));
+		}
+
 		if (blanking_fix) {
 			unsigned int lines;
+			unsigned int extra;
 
 			/* read from the card how many active display lines there are */
 			outp(port,0x12); /* display end */
@@ -52,11 +65,33 @@ void __interrupt __far new_int10(union INTPACK ip) {
 			lines += (t&0x02)?0x100:0x000;
 			lines += (t&0x40)?0x200:0x000;
 
-			/* now use that count to reprogram the blanking area and display params */
+			/* how many extra lines will there be? */
+			if (lines < vdisplay_e)
+				extra = vdisplay_e - lines;
+			else
+				extra = 0;
+
+			/* now use that count to reprogram the blanking area and display params.
+			 * use the extra line count to adjust vertical retrace downward so the
+			 * shortened image is centered. if we do not do this, then the image is
+			 * "stuck" to the bottom of the screen with black at the top. */
 			vdisplay_e = lines;
 			vblank_s = lines + 8;
-			vretrace_s = lines + 10;
-			vretrace_e = lines + 12;
+			if (blanking_align < 0) {
+				/* align image to top */
+				vretrace_s = lines + 10 + extra;
+				vretrace_e = lines + 12 + extra;
+			}
+			else if (blanking_align == 0) {
+				/* align to center */
+				vretrace_s = lines + 10 + (extra/2);
+				vretrace_e = lines + 12 + (extra/2);
+			}
+			else {
+				/* align to bottom */
+				vretrace_s = lines + 10;
+				vretrace_e = lines + 12;
+			}
 		}
 
 		/* reprogram the CRTC back to a 480 line mode */
@@ -123,6 +158,11 @@ static void help() {
 	printf("\n");
 	printf("  /NOBLANKFIX        If given, active display is extended, which may reveal\n");
 	printf("                     offscreen rendering or random data.\n");
+	printf("  /BA=N              Adjust vertical retrace to center display area, where\n");
+	printf("                     N is -1 (top), 0 (center), 1 (bottom)\n");
+	printf("  /8                 Force alphanumeric modes to 8 pixels/char. Use this\n");
+	printf("                     option if your VGA scan/capture misdetects the output\n");
+	printf("                     as 640x480 instead of 720x480\n");
 }
 
 void end_of_resident();
@@ -145,6 +185,13 @@ int main(int argc,char **argv) {
 			}
 			else if (!strcasecmp(a,"NOBLANKFIX")) {
 				blanking_fix = 0;
+			}
+			else if (!strncasecmp(a,"BA=",3)) {
+				a += 3;
+				blanking_align = atoi(a);
+			}
+			else if (!strcmp(a,"8")) {
+				force8 = 1;
 			}
 			else {
 				fprintf(stderr,"Unknown switch %s\n",a);
