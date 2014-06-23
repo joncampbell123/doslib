@@ -39,7 +39,10 @@ void __interrupt __far new_int10(union INTPACK ip) {
 			case 3: /* change blanking align option */
 				ip.w.ax = 0xDFAA;
 				ip.w.bx = 0xCACA;
-				blanking_align = (int)((char)ip.h.ch); /* sign extend 0xFF,0x00,0x01 to -1,0,1 */
+				if (ip.h.ch & 0x80)
+					blanking_align = -1;
+				else
+					blanking_align = ip.h.ch;
 				break;
 			default:
 				ip.w.ax = 0xDFFF;
@@ -364,6 +367,7 @@ int main(int argc,char **argv) {
 			}
 		}
 		if (blanking_align_set) {
+			if (blanking_align < 0) blanking_align = 0xFF;
 			if (!res_set_opt8(3,(unsigned char)blanking_align)) {
 				printf("Failed to set blank align\n");
 				return 1;
