@@ -124,7 +124,7 @@ int main(int argc,char **argv) {
 		if (*a == '/' || *a == '-') {
 			do { a++; } while (*a == '/' || *a == '-');
 
-			if (!strcmp(a,"i") || !strcmp(a,"install")) {
+			if (!strcasecmp(a,"i") || !strcasecmp(a,"install")) {
 				command = a;
 			}
 			else {
