@@ -35,6 +35,7 @@ void __interrupt __far new_int10(union INTPACK ip) {
 				__asm {
 					push	ds
 					mov	ax,seg old_int10
+					mov	ds,ax
 					mov	ax,0x4F02
 					mov	bx,j
 					pushf
