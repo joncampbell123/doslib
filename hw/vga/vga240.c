@@ -13,16 +13,17 @@
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
 
+unsigned char		blanking_fix = 1;
 void			(__interrupt __far *old_int10)();
 
 void __interrupt __far new_int10(union INTPACK ip) {
 	if (ip.h.ah == 0x00) {
-		const unsigned int vtotal = 0x20B; /* NTS: one less than actual scanlines */
-		const unsigned int vretrace_s = 0x1EA;
-		const unsigned int vretrace_e = 0x1EC;
-		const unsigned int vdisplay_e = 0x1E0;
-		const unsigned int vblank_s = 0x1E8;
-		const unsigned int vblank_e = 0x204;
+		unsigned int vtotal = 0x20B; /* NTS: one less than actual scanlines */
+		unsigned int vretrace_s = 0x1EA;
+		unsigned int vretrace_e = 0x1EC;
+		unsigned int vdisplay_e = 0x1E0;
+		unsigned int vblank_s = 0x1E8;
+		unsigned int vblank_e = 0x204;
 		unsigned int mode = ip.h.al;
 		unsigned char t,ov=0;
 		unsigned int port;
@@ -39,6 +40,24 @@ void __interrupt __far new_int10(union INTPACK ip) {
 
 		/* mono or color? */
 		port = (inp(0x3CC)&1)?0x3D4:0x3B4;
+
+		if (blanking_fix) {
+			unsigned int lines;
+
+			/* read from the card how many active display lines there are */
+			outp(port,0x12); /* display end */
+			lines = inp(port+1); /* bits 0-7 */
+			outp(port,0x07); /* overflow */
+			t = inp(port+1);
+			lines += (t&0x02)?0x100:0x000;
+			lines += (t&0x40)?0x200:0x000;
+
+			/* now use that count to reprogram the blanking area and display params */
+			vdisplay_e = lines;
+			vblank_s = lines + 8;
+			vretrace_s = lines + 10;
+			vretrace_e = lines + 12;
+		}
 
 		/* reprogram the CRTC back to a 480 line mode */
 		outp(port,0x11); /* retrace end (also clear protect bit, and preserve whatever the "bandwidth" bit contains) */
@@ -95,12 +114,15 @@ void __interrupt __far new_int10(union INTPACK ip) {
 }
 
 static void help() {
-	printf("VGA240 /INSTALL\n");
+	printf("VGA240 /INSTALL [/NOBLANKFIX]\n");
 	printf("\n");
 	printf("Intercept VGA BIOS calls to force video modes with at least 480 scan lines,\n");
 	printf("which may improve video quality with scan converters or enable capture/viewing\n");
 	printf("where devices would normally ignore 400-line output.\n");
 	printf("(C) 2014 Jonathan Campbell\n");
+	printf("\n");
+	printf("  /NOBLANKFIX        If given, active display is extended, which may reveal\n");
+	printf("                     offscreen rendering or random data.\n");
 }
 
 void end_of_resident();
@@ -118,8 +140,11 @@ int main(int argc,char **argv) {
 		if (*a == '/' || *a == '-') {
 			do { a++; } while (*a == '/' || *a == '-');
 
-			if (!strcmp(a,"i") || !strcmp(a,"install")) {
+			if (!strcasecmp(a,"i") || !strcasecmp(a,"install")) {
 				command = a;
+			}
+			else if (!strcasecmp(a,"NOBLANKFIX")) {
+				blanking_fix = 0;
 			}
 			else {
 				fprintf(stderr,"Unknown switch %s\n",a);
