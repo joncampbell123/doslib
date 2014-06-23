@@ -1,4 +1,33 @@
 
+/* TODO: Add two options
+ *
+ *       1) runtime enable/disable intercept (if you don't want to force to 480 anymore)
+ *
+ *       2) disable overscan options
+ *
+ *          I'm noticing that the PEXHDCAP card is mis-detecting the 8-pixel overscan
+ *          as part of the active picture, so what I get is a capture that's missing
+ *          8 pixels from the right side and capturing 8 pixels of black on the left
+ *          (or depending on the DOS game/demo, whatever color was programmed to be
+ *          the overscan color).
+ *
+ *          So what would be useful is if the user could have us disable the overscan
+ *          border entirely, or disable overscan on the sides only, or top/bottom only,
+ *          or just leave it alone--whatever the user wants.
+ *
+ *          I'm guessing modern VGA capture cards like the PEXHDCAP are made for Windows
+ *          desktops only where overscan color is never used, and that's why DOS overscan
+ *          colors confuse it a bit like that.
+ *
+ *          On the S3 Virge PCI card I have, even for parts of the picture that are
+ *          pure black, the card seems to bias the R,G,B output a bit including overscan
+ *          and you can clearly see on the output a dark gray where active picture area
+ *          and overscan are rendered, which might have something to do with the shifted
+ *          image on capture as well.
+ *
+ * TODO: Reduce memory footprint. 32KB is a bit much, and it crowds out some of the
+ *       stuff you want to capture. */
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <ctype.h>
