@@ -1,4 +1,10 @@
 
+/* TODO: Interesting bugs found
+ *
+ *
+ *      In DOSBox-X: Setting mode 6 (640x200 CGA graphics) leaves div2=1 which DOSBox-X
+ *      then mis-emulates as 640x200 2-color at 35Hz not 70Hz */
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <ctype.h>
@@ -44,6 +50,19 @@ void bios_cls() {
 		pop	bx
 		pop	ax
 	}
+}
+
+unsigned int common_prompt_number() {
+	unsigned int nm;
+
+	tmpline[0] = 0;
+	fgets(tmpline,sizeof(tmpline),stdin);
+	if (isdigit(tmpline[0]))
+		nm = (unsigned int)strtoul(tmpline,NULL,0);
+	else
+		nm = ~0;
+
+	return nm;
 }
 
 void help_main() {
@@ -239,7 +258,7 @@ int main() {
 			printf("\n");
 
 			printf("ESC  Exit to DOS       ? Explain this\n");
-			printf("m    Set mode\n");
+			printf("m    Set mode          C Change clock\n");
 		}
 
 		c = getch();
@@ -251,18 +270,27 @@ int main() {
 		else if (c == 'm') {
 			unsigned int nm;
 
-
 			printf("\n");
 			printf("Mode? "); fflush(stdout);
-			tmpline[0] = 0;
-			fgets(tmpline,sizeof(tmpline),stdin);
-			if (isdigit(tmpline[0]))
-				nm = (unsigned int)strtoul(tmpline,NULL,0);
-			else
-				nm = ~0;
-
+			nm = common_prompt_number();
 			if (nm < 128) {
 				int10_setmode(nm);
+				redraw = 1;
+			}
+		}
+		else if (c == 'c') {
+			unsigned int nm;
+
+			printf("\n");
+			for (nm=0;nm < 4;nm++) printf(" [%u] = %-8luHz   [%u] = %luHz\n",
+				nm,vga_clock_rates[nm],
+				nm+4,vga_clock_rates[nm]>>1);
+			printf("Clock? "); fflush(stdout);
+			nm = common_prompt_number();
+			if (nm != ~0 && nm < 8) {
+				mp.clock_select = nm&3;
+				mp.clock_div2 = (nm&4)?1:0;
+				vga_write_crtc_mode(&mp);
 				redraw = 1;
 			}
 		}
