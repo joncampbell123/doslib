@@ -1,12 +1,9 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-# TODO: Eventually split out vga.c and vgagui.c into VGA.LIB and VGAGUI.LIB
-
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = HW_VGA_LIB
 
-#OBJS =        $(SUBDIR)$(HPS)vgagui.obj $(SUBDIR)$(HPS)vgatty.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 
 !ifeq TARGET_MSDOS 16
