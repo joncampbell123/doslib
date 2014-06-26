@@ -509,6 +509,9 @@ int probe_vga() {
 void vga_relocate_crtc(unsigned char color) {
 	unsigned char moc = 0;
 
+	/* this code assumes color == 0 or color == 1 */
+	color = (color != 0)?1:0;
+
 	/* VGA: Easy, read the register, write it back */
 	if (vga_flags & VGA_IS_VGA) {
 		moc = inp(0x3CC);
@@ -517,7 +520,7 @@ void vga_relocate_crtc(unsigned char color) {
 	}
 	else if (vga_flags & VGA_IS_EGA) {
 		/* EGA: We can't read it, but we can write it from our best guess */
-		outp(0x3C2,0x02 | color);
+		outp(0x3C2,0x02 | (color?1:0));
 	}
 
 	vga_base_3x0 = color ? 0x3D0 : 0x3B0;
