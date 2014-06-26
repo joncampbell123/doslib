@@ -41,7 +41,6 @@
 #include <dos.h>
 
 #include <hw/dos/dos.h>
-#include <hw/vga/vga.h>
 
 unsigned char		force89 = 0; /* 0=dont force    8=force 8    9=force 9 */
 unsigned char		blanking_fix = 1;
@@ -226,11 +225,11 @@ void __interrupt __far new_int10(union INTPACK ip) {
 }
 
 static void help() {
-	printf("VGA240 /INSTALL [/NOBLANKFIX]\n");
+	printf("VGA240 [options]\n");
 	printf("\n");
 	printf("Intercept VGA BIOS calls to force video modes with at least 480 scan lines,\n");
-	printf("which may improve video quality with scan converters or enable capture/viewing\n");
-	printf("where devices would normally ignore 400-line output.\n");
+	printf("to improve scan converter output and allow capture/viewing with flat panel or\n");
+	printf("VGA capture cards that do not support 350/400-line DOS modes.\n");
 	printf("\n");
 	printf("If the program is resident, you can run this program with other options to\n");
 	printf("change configuration at runtime along with /SET\n");
@@ -289,8 +288,6 @@ int res_set_opt8(unsigned char func,unsigned char opt) {
 
 	return (a == 0xDFAA && b == 0xCACA);
 }
-
-void end_of_resident();
 
 int main(int argc,char **argv) {
 	unsigned char force89_set=0;
@@ -363,11 +360,6 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 
-		if (!probe_vga()) {
-			printf("VGA BIOS not found\n");
-			return 1;
-		}
-
 		_cli();
 		old_int10 = _dos_getvect(0x10);
 		_dos_setvect(0x10,new_int10);
@@ -379,7 +371,8 @@ int main(int argc,char **argv) {
 			pop	ax
 		}
 		printf("INT 10h hooked\n"); fflush(stdout);
-		_dos_keep(0,(34000)>>4); /* FIXME! */
+		_dos_keep(0,(18000+256)>>4);	/* FIXME! How can an Open Watcom C program autodetect it's true resident size? */
+						/* Examples given by Open Watcom are for .COM programs! */
 	}
 	else if (tolower(*command) == 's') {
 		if (!resident()) {
@@ -417,8 +410,5 @@ int main(int argc,char **argv) {
 	}
 
 	return 0;
-}
-
-void end_of_resident() {
 }
 
