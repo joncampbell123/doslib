@@ -82,10 +82,10 @@ void __interrupt __far new_int10(union INTPACK ip) {
 		return;
 	}
 	else if (ip.h.ah == 0x00) {
-		unsigned int vtotal = 0x20B; /* NTS: one less than actual scanlines */
+		unsigned int vtotal = 0x20B; /* NTS: two less than actual scanlines */
 		unsigned int vretrace_s = 0x1EA;
 		unsigned int vretrace_e = 0x1EC;
-		unsigned int vdisplay_e = 0x1E0;
+		unsigned int vdisplay_e = 0x1E0; /* NTS: this value is the display end, actual register value is - 1 */
 		unsigned int vblank_s = 0x1E8;
 		unsigned int vblank_e = 0x204;
 		unsigned int mode = ip.h.al;
@@ -137,6 +137,7 @@ void __interrupt __far new_int10(union INTPACK ip) {
 			t = inp(port+1);
 			lines += (t&0x02)?0x100:0x000;
 			lines += (t&0x40)?0x200:0x000;
+			lines++; /* display reg is value - 1 */
 
 			/* how many extra lines will there be? */
 			if (lines < vdisplay_e)
@@ -166,6 +167,9 @@ void __interrupt __far new_int10(union INTPACK ip) {
 				vretrace_e = lines + 12;
 			}
 		}
+
+		/* vertical display end is actually value - 1 */
+		vdisplay_e--;
 
 		/* reprogram the CRTC back to a 480 line mode */
 		outp(port,0x11); /* retrace end (also clear protect bit, and preserve whatever the "bandwidth" bit contains) */
