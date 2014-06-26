@@ -35,6 +35,34 @@ unsigned char paltmp[392*3];
 
 char *vga_get_buf = NULL;
 
+void vga_write_state_DEBUG(FILE *f) {
+	unsigned char tmp[128];
+	sprintf(tmp,"VGA=%u EGA=%u CGA=%u MDA=%u MCGA=%u HGC=%u(%u) Tandy/PCjr=%u Amstrad=%u\n",
+			(vga_flags & VGA_IS_VGA) ? 1 : 0,
+			(vga_flags & VGA_IS_EGA) ? 1 : 0,
+			(vga_flags & VGA_IS_CGA) ? 1 : 0,
+			(vga_flags & VGA_IS_MDA) ? 1 : 0,
+			(vga_flags & VGA_IS_MCGA) ? 1 : 0,
+			(vga_flags & VGA_IS_HGC) ? 1 : 0,vga_hgc_type,
+			(vga_flags & VGA_IS_TANDY) ? 1 : 0,
+			(vga_flags & VGA_IS_AMSTRAD) ? 1 : 0);
+	if (f == NULL)
+		vga_write(tmp);
+	else
+		fputs(tmp,f);
+
+	sprintf(tmp,"  3x0 I/O base = 0x%03x  RAM @ 0x%05lx-0x%05lx  ALPHA=%u 9W=%u\n",
+			vga_base_3x0,
+			(unsigned long)vga_ram_base,
+			(unsigned long)vga_ram_base+vga_ram_size-1UL,
+			vga_alpha_mode,
+			vga_9wide);
+	if (f == NULL)
+		vga_write(tmp);
+	else
+		fputs(tmp,f);
+}
+
 char *vga_gets(unsigned int maxlen) {
 	unsigned char bx=vga_pos_x,by=vga_pos_y;
 	unsigned int pos;

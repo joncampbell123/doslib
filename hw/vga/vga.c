@@ -504,34 +504,6 @@ int probe_vga() {
 #endif
 }
 
-void vga_write_state_DEBUG(FILE *f) {
-	unsigned char tmp[128];
-	sprintf(tmp,"VGA=%u EGA=%u CGA=%u MDA=%u MCGA=%u HGC=%u(%u) Tandy/PCjr=%u Amstrad=%u\n",
-			(vga_flags & VGA_IS_VGA) ? 1 : 0,
-			(vga_flags & VGA_IS_EGA) ? 1 : 0,
-			(vga_flags & VGA_IS_CGA) ? 1 : 0,
-			(vga_flags & VGA_IS_MDA) ? 1 : 0,
-			(vga_flags & VGA_IS_MCGA) ? 1 : 0,
-			(vga_flags & VGA_IS_HGC) ? 1 : 0,vga_hgc_type,
-			(vga_flags & VGA_IS_TANDY) ? 1 : 0,
-			(vga_flags & VGA_IS_AMSTRAD) ? 1 : 0);
-	if (f == NULL)
-		vga_write(tmp);
-	else
-		fputs(tmp,f);
-
-	sprintf(tmp,"  3x0 I/O base = 0x%03x  RAM @ 0x%05lx-0x%05lx  ALPHA=%u 9W=%u\n",
-			vga_base_3x0,
-			(unsigned long)vga_ram_base,
-			(unsigned long)vga_ram_base+vga_ram_size-1UL,
-			vga_alpha_mode,
-			vga_9wide);
-	if (f == NULL)
-		vga_write(tmp);
-	else
-		fputs(tmp,f);
-}
-
 /* WARNING: [At least in DOSBox 0.74] do not call this for any CGA or EGA graphics modes.
  *          It seems to trigger a false mode change and alphanumeric mode */
 void vga_relocate_crtc(unsigned char color) {
