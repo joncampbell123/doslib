@@ -7,7 +7,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = HW_VGA_LIB
 
 C_SOURCE =    vga.c
-OBJS =        $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)vgagui.obj
+OBJS =        $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)vgagui.obj $(SUBDIR)$(HPS)vgatty.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 
 !ifeq TARGET_MSDOS 16
@@ -17,7 +17,7 @@ VGA240_EXE = $(SUBDIR)$(HPS)vga240.exe
 !endif
 
 $(HW_VGA_LIB): $(OBJS)
-	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vga.obj -+$(SUBDIR)$(HPS)vgagui.obj
+	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vga.obj -+$(SUBDIR)$(HPS)vgagui.obj -+$(SUBDIR)$(HPS)vgatty.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit

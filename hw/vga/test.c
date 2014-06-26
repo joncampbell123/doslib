@@ -16,7 +16,8 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
-#include <hw/vga/vgagui.h>
+//#include <hw/vga/vgagui.h>
+#include <hw/vga/vgatty.h>
 
 #ifdef TARGET_WINDOWS
 # define WINFCON_STOCK_WIN_MAIN
@@ -29,6 +30,72 @@
 #endif
 
 unsigned char paltmp[392*3];
+
+#define VGA_GET_BUF_SIZE 255
+
+char *vga_get_buf = NULL;
+
+char *vga_gets(unsigned int maxlen) {
+	unsigned char bx=vga_pos_x,by=vga_pos_y;
+	unsigned int pos;
+	int c;
+
+	if (vga_get_buf == NULL) {
+		vga_get_buf = malloc(VGA_GET_BUF_SIZE+1);
+		if (vga_get_buf == NULL) return NULL;
+	}
+
+	if (maxlen > VGA_GET_BUF_SIZE)
+		maxlen = VGA_GET_BUF_SIZE;
+
+	pos = 0;
+	vga_get_buf[pos] = 0;
+	vga_moveto(bx+pos,by);
+	vga_write_sync();
+	vga_sync_bios_cursor();
+
+	do {
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 8) {
+			if (pos > 0) {
+				pos--;
+				vga_moveto(bx+pos,by);
+				vga_writec(' ');
+				vga_moveto(bx+pos,by);
+				vga_write_sync();
+				vga_sync_bios_cursor();
+			}
+		}
+		else if (c == 27) {
+			pos = 0;
+			vga_get_buf[pos] = 0;
+			vga_moveto(bx+pos,by);
+			vga_write_sync();
+			vga_sync_bios_cursor();
+			return NULL;
+		}
+		else if (c == 13) {
+			break;
+		}
+		else if (c >= 32 || c < 0) {
+			if (pos < maxlen) {
+				vga_moveto(bx+pos,by);
+				vga_writec(c);
+				vga_get_buf[pos++] = c;
+				vga_moveto(bx+pos,by);
+				vga_write_sync();
+				vga_sync_bios_cursor();
+			}
+		}
+	} while (1);
+	vga_get_buf[pos] = 0;
+	vga_moveto(bx,by);
+	vga_write_sync();
+	vga_sync_bios_cursor();
+	return vga_get_buf;
+}
 
 int main() {
 #if defined(TARGET_WINDOWS)

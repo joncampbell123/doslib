@@ -296,6 +296,7 @@
 #include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
 #include <hw/vga/vgagui.h>
+#include <hw/vga/vgatty.h>
 
 #if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
   /* chop features out of the Compact memory model build to ensure all code fits inside 64KB */

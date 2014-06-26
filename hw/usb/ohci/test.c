@@ -33,6 +33,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/vga/vga.h>
 #include <hw/vga/vgagui.h>
+#include <hw/vga/vgatty.h>
 
 static char str_tmp[256];
 

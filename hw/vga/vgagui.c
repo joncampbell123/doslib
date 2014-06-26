@@ -13,6 +13,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
+#include <hw/vga/vgatty.h>
 #include <hw/vga/vgagui.h>
 
 #ifdef TARGET_WINDOWS
@@ -22,91 +23,8 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
-static char*			vga_get_buf = NULL;
-
 struct vga_menu_bar_state	vga_menu_bar = {NULL,-1,0};
 void				(*vga_menu_idle)() = NULL;
-
-void vga_scroll_up(unsigned char lines) {
-	VGA_ALPHA_PTR rd,wr;
-	unsigned char row,c;
-
-	if (lines == 0)
-		return;
-	else if (lines > vga_height)
-		lines = vga_height;
-
-	if (lines < vga_height) {
-		unsigned char lcopy = vga_height - lines;
-		wr = vga_alpha_ram;
-		rd = vga_alpha_ram + (lines * vga_stride);
-		for (row=0;row < lcopy;row++) {
-			for (c=0;c < vga_stride;c++) {
-				*wr++ = *rd++;
-			}
-		}
-	}
-
-	wr = vga_alpha_ram + ((vga_height - lines) * vga_stride);
-	for (row=0;row < lines;row++) {
-		for (c=0;c < vga_stride;c++)
-			*wr++ = (vga_color << 8) | 0x20;
-	}
-}
-
-void vga_cursor_down() {
-	if (++vga_pos_y >= vga_height) {
-		vga_pos_y = vga_height - 1;
-		vga_scroll_up(1);
-	}
-}
-
-void vga_writec(char c) {
-	if (c == '\n') {
-		vga_pos_x = 0;
-		vga_cursor_down();
-	}
-	else if (c == '\t') {
-		vga_pos_x = (vga_pos_x | 7) + 1;
-		if (vga_pos_x >= vga_width) {
-			vga_pos_x = 0;
-			vga_cursor_down();
-		}
-	}
-	else {
-		if (vga_pos_x >= vga_width) {
-			vga_pos_x = 0;
-			vga_cursor_down();
-		}
-
-		vga_alpha_ram[(vga_pos_y * vga_stride) + vga_pos_x] = c | (vga_color << 8);
-		vga_pos_x++;
-	}
-}
-
-void vga_write(const char *msg) {
-	while (*msg != 0) vga_writec(*msg++);
-}
-
-void vga_write_sync() { /* sync writing pos with BIOS cursor and hardware */
-	if (vga_alpha_mode) {
-		unsigned int ofs = (vga_pos_y * vga_stride) + vga_pos_x;
-		vga_write_CRTC(0xE,ofs >> 8);
-		vga_write_CRTC(0xF,ofs);
-	}
-}
-
-void vga_clear() {
-	VGA_ALPHA_PTR wr;
-	unsigned char r,c;
-
-	wr = vga_alpha_ram;
-	for (r=0;r < vga_height;r++) {
-		for (c=0;c < vga_stride;c++) {
-			*wr++ = 0x0720;
-		}
-	}
-}
 
 int vga_menu_item_nonselectable(const struct vga_menu_item *m) {
 	if (m->text == (char*)1) return 1;
@@ -572,67 +490,5 @@ int confirm_yes_no_dialog(const char *message) {
 	}
 
 	return ret;
-}
-
-char *vga_gets(unsigned int maxlen) {
-	unsigned char bx=vga_pos_x,by=vga_pos_y;
-	unsigned int pos;
-	int c;
-
-	if (vga_get_buf == NULL) {
-		vga_get_buf = malloc(VGA_GET_BUF_SIZE+1);
-		if (vga_get_buf == NULL) return NULL;
-	}
-
-	if (maxlen > VGA_GET_BUF_SIZE)
-		maxlen = VGA_GET_BUF_SIZE;
-
-	pos = 0;
-	vga_get_buf[pos] = 0;
-	vga_moveto(bx+pos,by);
-	vga_write_sync();
-	vga_sync_bios_cursor();
-
-	do {
-		c = getch();
-		if (c == 0) c = getch() << 8;
-
-		if (c == 8) {
-			if (pos > 0) {
-				pos--;
-				vga_moveto(bx+pos,by);
-				vga_writec(' ');
-				vga_moveto(bx+pos,by);
-				vga_write_sync();
-				vga_sync_bios_cursor();
-			}
-		}
-		else if (c == 27) {
-			pos = 0;
-			vga_get_buf[pos] = 0;
-			vga_moveto(bx+pos,by);
-			vga_write_sync();
-			vga_sync_bios_cursor();
-			return NULL;
-		}
-		else if (c == 13) {
-			break;
-		}
-		else if (c >= 32 || c < 0) {
-			if (pos < maxlen) {
-				vga_moveto(bx+pos,by);
-				vga_writec(c);
-				vga_get_buf[pos++] = c;
-				vga_moveto(bx+pos,by);
-				vga_write_sync();
-				vga_sync_bios_cursor();
-			}
-		}
-	} while (1);
-	vga_get_buf[pos] = 0;
-	vga_moveto(bx,by);
-	vga_write_sync();
-	vga_sync_bios_cursor();
-	return vga_get_buf;
 }
 
