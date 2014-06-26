@@ -874,30 +874,6 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 	if (!(vga_flags & VGA_IS_VGA))
 		return;
 
-	/* NOTES:
-	 *   According to an S3 virge test card:
-	 *
-	 *
-	 *         vtotal = number of scan lines. Register value is total - 2
-	 *
-	 *         vblank = start & end values are scan lines involved in blanking INCLUSIVELY.
-	 *                  example: start=440 end=457 means scan lines 440 <= x <= 457 are
-	 *                  blanked. FreeVGA is wrong.
-	 *
-	 *         vretrace = start & end values are start inclusive, end exclusive (as far as I can tell).
-	 *                    example: start=440 end=457 means 440 <= x < 457
-	 *
-	 *         vdisplay end = the display end register seems to be the active display line
-	 *                        count, minus 1.
-	 *
-	 *         hblank = start & end values seem to be inclusive, register value seems to
-	 *                  be clock position - 1 (NEED TO CONFIRM). start <= x <= end.
-	 *
-	 *         htotal = horizontal character clock total. Register is total - 5.
-	 *
-	 *         hretrace = start & end values are start includive, end exclusive (as far as I can tell).
-	 */
-
 	/* sync disable */
 	c = vga_read_CRTC(0x17);
 	vga_write_CRTC(0x17,c&0x7F);
@@ -936,7 +912,7 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 
 	/* NTS: this field is 7 bits wide but "Some SVGA chipsets use all 8" as VGADOC says. */
 	/*      writing it in this way resolves the partial/full screen blanking problems with Intel 855/915/945 chipsets */
-	vga_write_CRTC(0x16,p->vertical_blank_end);
+	vga_write_CRTC(0x16,p->vertical_blank_end - 1);
 
 	vga_write_CRTC(0x14, /* NTS we write "underline location == 0" */
 		(p->dword_mode << 6) |
@@ -954,10 +930,10 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 		((p->map13 ^ 1) << 0));
 	vga_write_CRTC(0,(p->horizontal_total - 5));
 	vga_write_CRTC(1,(p->horizontal_display_end - 1));
-	vga_write_CRTC(2,p->horizontal_blank_start);
-	vga_write_CRTC(3,(p->horizontal_blank_end & 0x1F) | (p->horizontal_start_delay_after_total << 5) | 0x80);
+	vga_write_CRTC(2,p->horizontal_blank_start - 1);
+	vga_write_CRTC(3,((p->horizontal_blank_end - 1) & 0x1F) | (p->horizontal_start_delay_after_total << 5) | 0x80);
 	vga_write_CRTC(4,p->horizontal_start_retrace);
-	vga_write_CRTC(5,(((p->horizontal_blank_end >> 5) & 1) << 7) | (p->horizontal_start_delay_after_retrace << 5) |
+	vga_write_CRTC(5,((((p->horizontal_blank_end - 1) >> 5) & 1) << 7) | (p->horizontal_start_delay_after_retrace << 5) |
 		(p->horizontal_end_retrace & 0x1F));
 
 	/* reinforce write protect */
@@ -996,10 +972,10 @@ void vga_read_crtc_mode(struct vga_mode_params *p) {
 	p->dword_mode = (vga_read_CRTC(0x14) >> 6) & 1;
 	p->horizontal_total = vga_read_CRTC(0) + 5;
 	p->horizontal_display_end = vga_read_CRTC(1) + 1;
-	p->horizontal_blank_start = vga_read_CRTC(2);
-	p->horizontal_blank_end = (vga_read_CRTC(3) & 0x1F) | ((vga_read_CRTC(5) >> 7) << 5) |
-		(p->horizontal_blank_start & (~0x3F));
-	if ((p->horizontal_blank_start&0x3F) >= (p->horizontal_blank_end&0x3F))
+	p->horizontal_blank_start = vga_read_CRTC(2) + 1;
+	p->horizontal_blank_end = ((vga_read_CRTC(3) & 0x1F) | ((vga_read_CRTC(5) >> 7) << 5) |
+		((p->horizontal_blank_start - 1) & (~0x3F))) + 1;
+	if (p->horizontal_blank_start >= p->horizontal_blank_end)
 		p->horizontal_blank_end += 0x40;
 	p->horizontal_start_retrace = vga_read_CRTC(4);
 	p->horizontal_end_retrace = (vga_read_CRTC(5) & 0x1F) |
@@ -1022,8 +998,8 @@ void vga_read_crtc_mode(struct vga_mode_params *p) {
 	p->inc_mem_addr_only_every_4th = (vga_read_CRTC(0x14) >> 5) & 1;
 	p->vertical_display_end = ((vga_read_CRTC(0x12) | (((c >> 1) & 1) << 8) | (((c >> 6) & 1) << 9))) + 1;
 	p->vertical_blank_start = ((vga_read_CRTC(0x15) | (((c >> 3) & 1) << 8) | (((c2 >> 5) & 1) << 9))) + 1;
-	p->vertical_blank_end = (vga_read_CRTC(0x16) & 0x7F) | (p->vertical_blank_start & (~0x7F));
-	if (p->vertical_blank_start > p->vertical_blank_end)
+	p->vertical_blank_end = ((vga_read_CRTC(0x16) & 0x7F) | ((p->vertical_blank_start - 1) & (~0x7F))) + 1;
+	if (p->vertical_blank_start >= p->vertical_blank_end)
 		p->vertical_blank_end += 0x80;
 }
 
