@@ -16,6 +16,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
+#include <hw/vga/vgagui.h>
 
 #ifdef TARGET_WINDOWS
 # define WINFCON_STOCK_WIN_MAIN

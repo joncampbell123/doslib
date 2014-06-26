@@ -27,6 +27,7 @@
 #include <hw/vga/vga.h>
 #include <hw/dos/dos.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
+#include <hw/vga/vgagui.h>
 #include <isapnp/isapnp.h>
 
 static unsigned char far devnode_raw[4096];

@@ -95,8 +95,6 @@ extern unsigned char	vga_stride;
 extern unsigned short	vga_flags;
 extern unsigned char	vga_9wide;
 
-extern void (*vga_menu_idle)();
-
 unsigned char int10_getmode();
 void vga_write(const char *msg);
 void int10_setmode(unsigned char mode);
@@ -116,13 +114,6 @@ void vga_write_state_DEBUG(FILE *f);
 void vga_relocate_crtc(unsigned char color);
 void vga_switch_to_mono();
 void vga_switch_to_color();
-void vga_moveto(unsigned char x,unsigned char y);
-void vga_scroll_up(unsigned char lines);
-void vga_cursor_down();
-void vga_writec(char c);
-void vga_write(const char *msg);
-void vga_write_sync();
-void vga_clear();
 void vga_turn_on_hgc();
 void vga_turn_off_hgc();
 void vga_set_cga_palette_and_background(unsigned char pal,unsigned char color);
@@ -327,45 +318,4 @@ struct vga_mode_params {
 	unsigned char		map14:1;		/* CRTC[0x17] bit 1 */
 	unsigned char		map13:1;		/* CRTC[0x17] bit 0 */
 };
-
-struct vga_menu_item {
-	char*		text;
-	unsigned char	shortcut_key;
-	unsigned char	disabled:1;
-	unsigned char	reserved:7;
-};
-
-struct vga_menu_bar_item {
-	char*				name;
-	unsigned char			shortcut_key,shortcut_scan;
-	unsigned char			x,w;
-	const struct vga_menu_item**	items;
-};
-
-struct vga_menu_bar_state {
-	const struct vga_menu_bar_item*	bar;
-	int				sel;
-	unsigned char			row;
-};
-
-struct vga_msg_box {
-	VGA_ALPHA_PTR	screen,buf;
-	unsigned int	w,h,x,y;
-};
-
-#define MAX_MENU_BAR	16
-
-extern struct vga_menu_bar_state vga_menu_bar;
-
-void vga_menu_draw_item(VGA_ALPHA_PTR screen,const struct vga_menu_item **scan,unsigned int i,unsigned int w,unsigned int color,unsigned int tcolor);
-const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item *menu,unsigned char row,unsigned int *spec);
-int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_y,unsigned int min_x);
-int vga_menu_item_nonselectable(const struct vga_menu_item *m);
-void vga_msg_box_destroy(struct vga_msg_box *b);
-int confirm_yes_no_dialog(const char *message);
-const struct vga_menu_item *vga_menu_bar_keymon();
-void vga_menu_bar_draw();
-
-#define VGA_GET_BUF_SIZE 255
-char *vga_gets(unsigned int maxlen);
 

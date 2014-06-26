@@ -32,6 +32,7 @@
 #include <hw/pci/pci.h>
 #include <hw/cpu/cpu.h>
 #include <hw/vga/vga.h>
+#include <hw/vga/vgagui.h>
 
 static char str_tmp[256];
 

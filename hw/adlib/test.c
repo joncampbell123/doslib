@@ -28,6 +28,7 @@
 #include <hw/vga/vga.h>
 #include <hw/dos/dos.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
+#include <hw/vga/vgagui.h>
 #include <hw/adlib/adlib.h>
 
 static unsigned int musical_scale[18] = {

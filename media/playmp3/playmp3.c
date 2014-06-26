@@ -885,6 +885,7 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 #include <hw/8254/8254.h>		/* 8254 timer */
 #include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/isapnp/isapnp.h>
+#include <hw/vga/vgagui.h>
 
 /* Sound Blaster */
 #include <hw/sndsb/sndsb.h>
