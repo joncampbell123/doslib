@@ -315,301 +315,310 @@ int main() {
 			unsigned char redraw=1;
 			unsigned char disable=0;
 			struct vga_mode_params mp,omp;
-			vga_read_crtc_mode(&mp); omp = mp;
 
-			do {
-				if (redraw) {
-					unsigned long rate;
-					double hrate,vrate;
+			if (vga_flags & VGA_IS_VGA) {
+				vga_read_crtc_mode(&mp); omp = mp;
 
-					rate = vga_clock_rates[mp.clock_select];
-					if (mp.clock_div2) rate >>= 1;
-					hrate = (double)rate / ((mp.clock9 ? 9 : 8) * mp.horizontal_total);
-					vrate = hrate / mp.vertical_total;
+				do {
+					if (redraw) {
+						unsigned long rate;
+						double hrate,vrate;
 
-					vga_clear();
-					vga_moveto(0,0);
-					vga_write_color(0x7);
+						rate = vga_clock_rates[mp.clock_select];
+						if (mp.clock_div2) rate >>= 1;
+						hrate = (double)rate / ((mp.clock9 ? 9 : 8) * mp.horizontal_total);
+						vrate = hrate / mp.vertical_total;
 
-					sprintf(tmp,
-						"Clk=%u(%luHz) H%c V%c 9clk=%u div2=%u w/dw=%u/%u hr=%.3fKHz vr=%.3fHz\n",
-						mp.clock_select,
-						vga_clock_rates[mp.clock_select] >> (mp.clock_div2 ? 1 : 0),
-						mp.hsync_neg?'-':'+',
-						mp.vsync_neg?'-':'+',
-						mp.clock9,
-						mp.clock_div2,
-						mp.word_mode,
-						mp.dword_mode,
-						hrate / 1000,
-						vrate);
-					vga_write(tmp);
+						vga_clear();
+						vga_moveto(0,0);
+						vga_write_color(0x7);
 
-					sprintf(tmp,
-						"ref_cycles/scanline=%u inc_only_4th=%u\n",
-						mp.refresh_cycles_per_scanline,
-						mp.inc_mem_addr_only_every_4th);
-					vga_write(tmp);
+						sprintf(tmp,
+								"Clk=%u(%luHz) H%c V%c 9clk=%u div2=%u w/dw=%u/%u hr=%.3fKHz vr=%.3fHz\n",
+								mp.clock_select,
+								vga_clock_rates[mp.clock_select] >> (mp.clock_div2 ? 1 : 0),
+								mp.hsync_neg?'-':'+',
+								mp.vsync_neg?'-':'+',
+								mp.clock9,
+								mp.clock_div2,
+								mp.word_mode,
+								mp.dword_mode,
+								hrate / 1000,
+								vrate);
+						vga_write(tmp);
 
-					sprintf(tmp,
-						"V: total=%u s/e-rtrace=%u <= x < %u de=%u s/e-blank=%u <= x < %u\n",
-						mp.vertical_total,
-						mp.vertical_start_retrace,
-						mp.vertical_end_retrace,
-						mp.vertical_display_end,
-						mp.vertical_blank_start,
-						mp.vertical_blank_end);
-					vga_write(tmp);
+						sprintf(tmp,
+								"ref_cycles/scanline=%u inc_only_4th=%u\n",
+								mp.refresh_cycles_per_scanline,
+								mp.inc_mem_addr_only_every_4th);
+						vga_write(tmp);
 
-					sprintf(tmp,
-						"H: total=%u s/e-rtrace=%u <= x < %u de=%u s/e-blank=%u <= x < %u d@t=%u d@r=%u\n",
-						mp.horizontal_total,
-						mp.horizontal_start_retrace,
-						mp.horizontal_end_retrace,
-						mp.horizontal_display_end,
-						mp.horizontal_blank_start,
-						mp.horizontal_blank_end,
-						mp.horizontal_start_delay_after_total,
-						mp.horizontal_start_delay_after_retrace);
-					vga_write(tmp);
+						sprintf(tmp,
+								"V: total=%u s/e-rtrace=%u <= x < %u de=%u s/e-blank=%u <= x < %u\n",
+								mp.vertical_total,
+								mp.vertical_start_retrace,
+								mp.vertical_end_retrace,
+								mp.vertical_display_end,
+								mp.vertical_blank_start,
+								mp.vertical_blank_end);
+						vga_write(tmp);
 
-					sprintf(tmp,
-						"SLR=%u shift4=%u aws=%u memadiv2=%u scandiv2=%u map14=%u map13=%u\n",
-						mp.shift_load_rate,
-						mp.shift4_enable,
-						mp.address_wrap_select,
-						mp.memaddr_div2,
-						mp.scanline_div2,
-						mp.map14,
-						mp.map13);
-					vga_write(tmp);
+						sprintf(tmp,
+								"H: total=%u s/e-rtrace=%u <= x < %u de=%u s/e-blank=%u <= x < %u d@t=%u d@r=%u\n",
+								mp.horizontal_total,
+								mp.horizontal_start_retrace,
+								mp.horizontal_end_retrace,
+								mp.horizontal_display_end,
+								mp.horizontal_blank_start,
+								mp.horizontal_blank_end,
+								mp.horizontal_start_delay_after_total,
+								mp.horizontal_start_delay_after_retrace);
+						vga_write(tmp);
 
-					vga_write("\n");
-					vga_write("h/H htotal  v/V vtotal  c/C clock  9/9 8/9clk  2/2 div2   w/W word  d/D dword\n");
-					vga_write("[/[ HS+/-   ]/] VS+/-   b/B hblnks n/N hblnke  j/J vblnks k/K vblnke = reread\n");
-				}
-				redraw = 0;
-				c = getch();
-				if (c == 27) break;
-				else if (c == '=') {
-					if (!disable) {
-						vga_write_crtc_mode(&mp);
-						vga_read_crtc_mode(&mp);
-						redraw = 1;
+						sprintf(tmp,
+								"SLR=%u shift4=%u aws=%u memadiv2=%u scandiv2=%u map14=%u map13=%u\n",
+								mp.shift_load_rate,
+								mp.shift4_enable,
+								mp.address_wrap_select,
+								mp.memaddr_div2,
+								mp.scanline_div2,
+								mp.map14,
+								mp.map13);
+						vga_write(tmp);
+
+						vga_write("\n");
+						vga_write("h/H htotal  v/V vtotal  c/C clock  9/9 8/9clk  2/2 div2   w/W word  d/D dword\n");
+						vga_write("[/[ HS+/-   ]/] VS+/-   b/B hblnks n/N hblnke  j/J vblnks k/K vblnke = reread\n");
 					}
-				}
-				else if (c == 'b' || c == 'B') {
-					if (c == 'b' && mp.horizontal_blank_start > 4)
-						mp.horizontal_blank_start--;
-					else if (c == 'B' && mp.horizontal_blank_start < 1024)
-						mp.horizontal_blank_start++;
+					redraw = 0;
+					c = getch();
+					if (c == 27) break;
+					else if (c == '=') {
+						if (!disable) {
+							vga_write_crtc_mode(&mp);
+							vga_read_crtc_mode(&mp);
+							redraw = 1;
+						}
+					}
+					else if (c == 'b' || c == 'B') {
+						if (c == 'b' && mp.horizontal_blank_start > 4)
+							mp.horizontal_blank_start--;
+						else if (c == 'B' && mp.horizontal_blank_start < 1024)
+							mp.horizontal_blank_start++;
 
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == 'j' || c == 'J') {
-					if (c == 'j' && mp.vertical_blank_start > 4)
-						mp.vertical_blank_start--;
-					else if (c == 'J' && mp.vertical_blank_start < 1024)
-						mp.vertical_blank_start++;
+					else if (c == 'j' || c == 'J') {
+						if (c == 'j' && mp.vertical_blank_start > 4)
+							mp.vertical_blank_start--;
+						else if (c == 'J' && mp.vertical_blank_start < 1024)
+							mp.vertical_blank_start++;
 
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == 'n' || c == 'N') {
-					if (c == 'n' && mp.horizontal_blank_end > 4)
-						mp.horizontal_blank_end--;
-					else if (c == 'N' && mp.horizontal_blank_end < 1024)
-						mp.horizontal_blank_end++;
+					else if (c == 'n' || c == 'N') {
+						if (c == 'n' && mp.horizontal_blank_end > 4)
+							mp.horizontal_blank_end--;
+						else if (c == 'N' && mp.horizontal_blank_end < 1024)
+							mp.horizontal_blank_end++;
 
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == 'k' || c == 'K') {
-					if (c == 'k' && mp.vertical_blank_end > 4)
-						mp.vertical_blank_end--;
-					else if (c == 'K' && mp.vertical_blank_end < 1024)
-						mp.vertical_blank_end++;
+					else if (c == 'k' || c == 'K') {
+						if (c == 'k' && mp.vertical_blank_end > 4)
+							mp.vertical_blank_end--;
+						else if (c == 'K' && mp.vertical_blank_end < 1024)
+							mp.vertical_blank_end++;
 
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == '2') {
-					mp.clock_div2 = !mp.clock_div2;
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+					else if (c == '2') {
+						mp.clock_div2 = !mp.clock_div2;
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == '[') {
-					mp.hsync_neg = !mp.hsync_neg;
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+					else if (c == '[') {
+						mp.hsync_neg = !mp.hsync_neg;
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == ']') {
-					mp.vsync_neg = !mp.vsync_neg;
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+					else if (c == ']') {
+						mp.vsync_neg = !mp.vsync_neg;
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == '9' || c == '(') {
-					mp.clock9 = !mp.clock9;
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+					else if (c == '9' || c == '(') {
+						mp.clock9 = !mp.clock9;
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == 'w' || c == 'W') {
-					mp.word_mode = (c == 'W');
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+					else if (c == 'w' || c == 'W') {
+						mp.word_mode = (c == 'W');
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == 'd' || c == 'D') {
-					mp.dword_mode = (c == 'D');
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+					else if (c == 'd' || c == 'D') {
+						mp.dword_mode = (c == 'D');
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == 'c' || c == 'C') {
-					if (c == 'C') mp.clock_select++;
-					else if (c == 'c') mp.clock_select--;
-					mp.clock_select &= 3;
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+					else if (c == 'c' || c == 'C') {
+						if (c == 'C') mp.clock_select++;
+						else if (c == 'c') mp.clock_select--;
+						mp.clock_select &= 3;
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == 'v' || c == 'V') {
-					if (c == 'v') {
-						if (mp.vertical_total > 4)
-							mp.vertical_total--;
-					}
-					else {
-						if (mp.vertical_total < 1023)
-							mp.vertical_total++;
-					}
+					else if (c == 'v' || c == 'V') {
+						if (c == 'v') {
+							if (mp.vertical_total > 4)
+								mp.vertical_total--;
+						}
+						else {
+							if (mp.vertical_total < 1023)
+								mp.vertical_total++;
+						}
 
-					/* recompute start/end retrace/blank in proportion to the new value */
-					mp.vertical_start_retrace =
-						(((long)mp.vertical_total * omp.vertical_start_retrace) / omp.vertical_total);
-					mp.vertical_end_retrace = mp.vertical_start_retrace +
-						(omp.vertical_end_retrace - omp.vertical_start_retrace);
-					mp.vertical_blank_start =
-						(((long)mp.vertical_total * omp.vertical_blank_start) / omp.vertical_total);
-					mp.vertical_blank_end = mp.vertical_blank_start +
-						(omp.vertical_blank_end - omp.vertical_blank_start);
-					mp.vertical_display_end =
-						(((long)mp.vertical_total * omp.vertical_display_end) / omp.vertical_total);
-
-					/* experience points:
-					 *
-					 *    nVidia VGA seems to demand a minimum 2 clocks between horizontal_blank_end
-					 *      and horizontal_total, or else it ends up blanking through the next line.
-					 *
-					 *    Intel VGA emulation hates this code especially when the output is the LVDS
-					 *      laptop display :( */
-					if ((mp.vertical_blank_end+2) > mp.vertical_total) {
-						mp.vertical_blank_end = mp.vertical_total - 2;
-						mp.vertical_blank_start = mp.vertical_blank_end -
+						/* recompute start/end retrace/blank in proportion to the new value */
+						mp.vertical_start_retrace =
+							(((long)mp.vertical_total * omp.vertical_start_retrace) / omp.vertical_total);
+						mp.vertical_end_retrace = mp.vertical_start_retrace +
+							(omp.vertical_end_retrace - omp.vertical_start_retrace);
+						mp.vertical_blank_start =
+							(((long)mp.vertical_total * omp.vertical_blank_start) / omp.vertical_total);
+						mp.vertical_blank_end = mp.vertical_blank_start +
 							(omp.vertical_blank_end - omp.vertical_blank_start);
-					}
-					if (mp.vertical_blank_start < mp.vertical_display_end)
-						mp.vertical_blank_start = mp.vertical_display_end;
+						mp.vertical_display_end =
+							(((long)mp.vertical_total * omp.vertical_display_end) / omp.vertical_total);
 
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
-					}
-				}
-				else if (c == 'h' || c == 'H') {
-					if (c == 'h') {
-						if (mp.horizontal_total > 4)
-							mp.horizontal_total--;
-					}
-					else {
-						if (mp.horizontal_total < 255)
-							mp.horizontal_total++;
-					}
+						/* experience points:
+						 *
+						 *    nVidia VGA seems to demand a minimum 2 clocks between horizontal_blank_end
+						 *      and horizontal_total, or else it ends up blanking through the next line.
+						 *
+						 *    Intel VGA emulation hates this code especially when the output is the LVDS
+						 *      laptop display :( */
+						if ((mp.vertical_blank_end+2) > mp.vertical_total) {
+							mp.vertical_blank_end = mp.vertical_total - 2;
+							mp.vertical_blank_start = mp.vertical_blank_end -
+								(omp.vertical_blank_end - omp.vertical_blank_start);
+						}
+						if (mp.vertical_blank_start < mp.vertical_display_end)
+							mp.vertical_blank_start = mp.vertical_display_end;
 
-					/* recompute start/end retrace/blank in proportion to the new value */
-					mp.horizontal_start_retrace =
-						(((long)mp.horizontal_total * omp.horizontal_start_retrace) / omp.horizontal_total);
-					mp.horizontal_end_retrace = mp.horizontal_start_retrace +
-						(omp.horizontal_end_retrace - omp.horizontal_start_retrace);
-					mp.horizontal_blank_start =
-						(((long)mp.horizontal_total * omp.horizontal_blank_start) / omp.horizontal_total);
-					mp.horizontal_blank_end = mp.horizontal_blank_start +
-						(omp.horizontal_blank_end - omp.horizontal_blank_start);
-					mp.horizontal_display_end =
-						(((long)mp.horizontal_total * omp.horizontal_display_end) / omp.horizontal_total);
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
+					}
+					else if (c == 'h' || c == 'H') {
+						if (c == 'h') {
+							if (mp.horizontal_total > 4)
+								mp.horizontal_total--;
+						}
+						else {
+							if (mp.horizontal_total < 255)
+								mp.horizontal_total++;
+						}
 
-					/* experience points:
-					 *
-					 *    Intel VGA emulation hates this code especially when the output is the LVDS
-					 *      laptop display :( */
-					if ((mp.horizontal_blank_end+2) > mp.horizontal_total) {
-						mp.horizontal_blank_end = mp.horizontal_total - 2;
-						mp.horizontal_blank_start = mp.horizontal_blank_end -
+						/* recompute start/end retrace/blank in proportion to the new value */
+						mp.horizontal_start_retrace =
+							(((long)mp.horizontal_total * omp.horizontal_start_retrace) / omp.horizontal_total);
+						mp.horizontal_end_retrace = mp.horizontal_start_retrace +
+							(omp.horizontal_end_retrace - omp.horizontal_start_retrace);
+						mp.horizontal_blank_start =
+							(((long)mp.horizontal_total * omp.horizontal_blank_start) / omp.horizontal_total);
+						mp.horizontal_blank_end = mp.horizontal_blank_start +
 							(omp.horizontal_blank_end - omp.horizontal_blank_start);
-					}
-					if (mp.horizontal_blank_start < mp.horizontal_display_end)
-						mp.horizontal_blank_start = mp.horizontal_display_end;
+						mp.horizontal_display_end =
+							(((long)mp.horizontal_total * omp.horizontal_display_end) / omp.horizontal_total);
 
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+						/* experience points:
+						 *
+						 *    Intel VGA emulation hates this code especially when the output is the LVDS
+						 *      laptop display :( */
+						if ((mp.horizontal_blank_end+2) > mp.horizontal_total) {
+							mp.horizontal_blank_end = mp.horizontal_total - 2;
+							mp.horizontal_blank_start = mp.horizontal_blank_end -
+								(omp.horizontal_blank_end - omp.horizontal_blank_start);
+						}
+						if (mp.horizontal_blank_start < mp.horizontal_display_end)
+							mp.horizontal_blank_start = mp.horizontal_display_end;
+
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == 'T') {
-					if (!disable) {
-						redraw=1;
-						disable=1;
-						int10_setmode(3);
-						update_state_from_vga();
-						if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+					else if (c == 'T') {
+						if (!disable) {
+							redraw=1;
+							disable=1;
+							int10_setmode(3);
+							update_state_from_vga();
+							if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+						}
 					}
-				}
-				else if (c == ' ') {
-					if (!disable) {
-						vga_correct_crtc_mode(&mp);
-						vga_write_crtc_mode(&mp);
-						redraw = 1;
+					else if (c == ' ') {
+						if (!disable) {
+							vga_correct_crtc_mode(&mp);
+							vga_write_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-				else if (c == 'r') {
-					if (!disable) {
-						vga_read_crtc_mode(&mp);
-						redraw = 1;
+					else if (c == 'r') {
+						if (!disable) {
+							vga_read_crtc_mode(&mp);
+							redraw = 1;
+						}
 					}
-				}
-			} while (1);
+				} while (1);
+			}
+			else {
+				vga_write("Only VGA may do that\n");
+				vga_write_sync();
+				vga_sync_bios_cursor();
+				while (getch() != 13);
+			}
 		}
 		else if (c == 'x') {
 /* FIXME: All this wonderful code overflows the 64KB code limit in Watcom C++ under Compact memory model */
