@@ -767,8 +767,8 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 	vga_write_CRTC(0x17,c&0x7F);
 
 	c = inp(0x3CC); /* misc out reg */
-	c &= ~((1 << 2) | (1 << 6) | (1 << 7));
-	c |= p->clock_select << 2;
+	c &= ~((3 << 2) | (1 << 6) | (1 << 7));
+	c |= (p->clock_select&3) << 2;
 	c |= p->hsync_neg << 6;
 	c |= p->vsync_neg << 7;
 	outp(0x3C2,c);
