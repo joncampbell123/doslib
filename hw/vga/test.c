@@ -2,6 +2,8 @@
           - Pass all messages through the DispDib hook function.
           - Restore VGA and exit if the user ALT+TAB's out of our app */
 
+/* TODO: This program has TOO MANY TEST ROUTINES IN IT and needs to be split up into utilities */
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
