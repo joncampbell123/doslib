@@ -284,35 +284,6 @@ static WORD wow32_data_exec_handle = 0;
 static unsigned char far *wow32_data_exec_segment = NULL;
 static DWORD wow32_code_linear_address = 0;
 
-static int DPMILock(uint32_t base,uint32_t limit) {
-	int retv = 0;
-
-	__asm {
-		mov		ax,0x0600
-		mov		bx,word ptr [base+2]
-		mov		cx,word ptr [base]
-		mov		si,word ptr [limit+2]
-		mov		di,word ptr [limit]
-		int		31h
-		jc		nope
-		mov		retv,1
-nope:
-	}
-
-	return retv;
-}
-
-static void DPMIUnlock(uint32_t base,uint32_t limit) {
-	__asm {
-		mov		ax,0x0601
-		mov		bx,word ptr [base+2]
-		mov		cx,word ptr [base]
-		mov		si,word ptr [limit+2]
-		mov		di,word ptr [limit]
-		int		31h
-	}
-}
-
 static void __declspec(naked) _w16_capture() {
 	__asm {
 		nop
@@ -538,10 +509,7 @@ static int CaptureMemoryLinear(DWORD memofs,unsigned int howmuch) {
 		return 0;
 	}
 	else if (windows_mode == WINDOWS_NT) {
-		DWORD handle;
 		DWORD result;
-		DWORD err;
-		char tmp[64];
 
 		/* ReadProcessMemory() refuses to do any work for us, so we'll just inject
 		 * 32-bit code into linear memory and execute it ourself.
