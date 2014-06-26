@@ -414,9 +414,6 @@ int main() {
 
 					/* experience points:
 					 *
-					 *    nVidia VGA seems to demand a minimum 2 clocks between horizontal_blank_end
-					 *      and horizontal_total, or else it ends up blanking through the next line.
-					 *
 					 *    Intel VGA emulation hates this code especially when the output is the LVDS
 					 *      laptop display :( */
 					if ((mp.horizontal_blank_end+2) > mp.horizontal_total) {
