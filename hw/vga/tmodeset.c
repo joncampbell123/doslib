@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
+#include <ctype.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
@@ -16,6 +17,8 @@
 #if defined(TARGET_WINDOWS)
 # error WRONG
 #endif
+
+char tmpline[80];
 
 void bios_cls() {
 	/* use INT 10h to scroll-clear the screen */
@@ -236,6 +239,7 @@ int main() {
 			printf("\n");
 
 			printf("ESC  Exit to DOS       ? Explain this\n");
+			printf("m    Set mode\n");
 		}
 
 		c = getch();
@@ -243,6 +247,24 @@ int main() {
 		else if (c == '?') {
 			redraw = 1;
 			help_main();
+		}
+		else if (c == 'm') {
+			unsigned int nm;
+
+
+			printf("\n");
+			printf("Mode? "); fflush(stdout);
+			tmpline[0] = 0;
+			fgets(tmpline,sizeof(tmpline),stdin);
+			if (isdigit(tmpline[0]))
+				nm = (unsigned int)strtoul(tmpline,NULL,0);
+			else
+				nm = ~0;
+
+			if (nm < 128) {
+				int10_setmode(nm);
+				redraw = 1;
+			}
 		}
 	}
 
