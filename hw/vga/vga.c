@@ -555,11 +555,15 @@ void vga_switch_to_mono() {
 	/* next, tell the BIOS of the change */
 #ifndef TARGET_WINDOWS
 # if TARGET_MSDOS == 32
+	*((unsigned char*)0x449) = 0x07; /* mode 7 */
 	*((unsigned char*)0x463) = 0xB4;
 	*((unsigned char*)0x410) |= 0x30; /*  -> change to 80x25 mono */
+	*((unsigned char*)0x465) &= ~0x04; /* monochrome operation */
 # else
+	*((unsigned char far*)MK_FP(0x40,0x49)) = 0x07; /* mode 7 */
 	*((unsigned char far*)MK_FP(0x40,0x63)) = 0xB4;
 	*((unsigned char far*)MK_FP(0x40,0x10)) |= 0x30; /*  -> change to 80x25 mono */
+	*((unsigned char far*)MK_FP(0x40,0x65)) &= ~0x04; /* monochrome operation */
 # endif
 #endif
 }
@@ -593,13 +597,17 @@ void vga_switch_to_color() {
 	/* next, tell the BIOS of the change */
 #ifndef TARGET_WINDOWS
 # if TARGET_MSDOS == 32
+	*((unsigned char*)0x449) = 0x03; /* mode 3 */
 	*((unsigned char*)0x463) = 0xD4;
 	*((unsigned char*)0x410) &= 0x30; /* INT 11 initial video mode */
 	*((unsigned char*)0x410) |= 0x20; /*  -> change to 80x25 color */
+	*((unsigned char*)0x465) |= 0x04; /* color operation */
 # else
+	*((unsigned char far*)MK_FP(0x40,0x49)) = 0x03; /* mode 3 */
 	*((unsigned char far*)MK_FP(0x40,0x63)) = 0xD4;
 	*((unsigned char far*)MK_FP(0x40,0x10)) &= 0x30; /* INT 11 initial video mode */
 	*((unsigned char far*)MK_FP(0x40,0x10)) |= 0x20; /*  -> change to 80x25 color */
+	*((unsigned char far*)MK_FP(0x40,0x65)) |= 0x04; /* color operation */
 # endif
 #endif
 }
