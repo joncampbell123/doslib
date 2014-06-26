@@ -168,6 +168,9 @@ int main() {
 			}
 		}
 		else if (c == 'A') {
+#ifdef TARGET_WINDOWS
+#elif TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
 			if (vga_flags & VGA_IS_AMSTRAD) {
 				static unsigned char pat[4] = {0x11,0x55,0xEE,0xFF};
 				static unsigned char shf[4] = {2,1,2,0};
@@ -206,6 +209,7 @@ int main() {
 				vga_sync_bios_cursor();
 				while (getch() != 13);
 			}
+#endif
 		}
 		else if (c == 'm') {
 			int c;
@@ -250,7 +254,7 @@ int main() {
 					vga_write(tmp);
 
 					sprintf(tmp,
-						"V: total=%u s/e-rtrace=%u-%u de=%u s/e-blank=%u=%u\n",
+						"V: total=%u s/e-rtrace=%u <= x < %u de=%u s/e-blank=%u <= x < %u\n",
 						mp.vertical_total,
 						mp.vertical_start_retrace,
 						mp.vertical_end_retrace,
@@ -260,7 +264,7 @@ int main() {
 					vga_write(tmp);
 
 					sprintf(tmp,
-						"H: total=%u s/e-rtrace=%u-%u de=%u s/e-blank=%u-%u del@tot=%u del@ret=%u\n",
+						"H: total=%u s/e-rtrace=%u <= x < %u de=%u s/e-blank=%u <= x < %u d@t=%u d@r=%u\n",
 						mp.horizontal_total,
 						mp.horizontal_start_retrace,
 						mp.horizontal_end_retrace,
@@ -283,12 +287,67 @@ int main() {
 					vga_write(tmp);
 
 					vga_write("\n");
-					vga_write("h/H htotal  v/V vtotal  c/C clock  9/9 8/9clk  2/2 div2  w/W word  d/D dword\n");
-					vga_write("[/[ HS+/-   ]/] VS+/-\n");
+					vga_write("h/H htotal  v/V vtotal  c/C clock  9/9 8/9clk  2/2 div2   w/W word  d/D dword\n");
+					vga_write("[/[ HS+/-   ]/] VS+/-   b/B hblnks n/N hblnke  j/J vblnks k/K vblnke = reread\n");
 				}
 				redraw = 0;
 				c = getch();
 				if (c == 27) break;
+				else if (c == '=') {
+					if (!disable) {
+						vga_write_crtc_mode(&mp);
+						vga_read_crtc_mode(&mp);
+						redraw = 1;
+					}
+				}
+				else if (c == 'b' || c == 'B') {
+					if (c == 'b' && mp.horizontal_blank_start > 4)
+						mp.horizontal_blank_start--;
+					else if (c == 'B' && mp.horizontal_blank_start < 1024)
+						mp.horizontal_blank_start++;
+
+					if (!disable) {
+						vga_correct_crtc_mode(&mp);
+						vga_write_crtc_mode(&mp);
+						redraw = 1;
+					}
+				}
+				else if (c == 'j' || c == 'J') {
+					if (c == 'j' && mp.vertical_blank_start > 4)
+						mp.vertical_blank_start--;
+					else if (c == 'J' && mp.vertical_blank_start < 1024)
+						mp.vertical_blank_start++;
+
+					if (!disable) {
+						vga_correct_crtc_mode(&mp);
+						vga_write_crtc_mode(&mp);
+						redraw = 1;
+					}
+				}
+				else if (c == 'n' || c == 'N') {
+					if (c == 'n' && mp.horizontal_blank_end > 4)
+						mp.horizontal_blank_end--;
+					else if (c == 'N' && mp.horizontal_blank_end < 1024)
+						mp.horizontal_blank_end++;
+
+					if (!disable) {
+						vga_correct_crtc_mode(&mp);
+						vga_write_crtc_mode(&mp);
+						redraw = 1;
+					}
+				}
+				else if (c == 'k' || c == 'K') {
+					if (c == 'k' && mp.vertical_blank_end > 4)
+						mp.vertical_blank_end--;
+					else if (c == 'K' && mp.vertical_blank_end < 1024)
+						mp.vertical_blank_end++;
+
+					if (!disable) {
+						vga_correct_crtc_mode(&mp);
+						vga_write_crtc_mode(&mp);
+						redraw = 1;
+					}
+				}
 				else if (c == '2') {
 					mp.clock_div2 = !mp.clock_div2;
 					if (!disable) {
