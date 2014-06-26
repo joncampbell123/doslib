@@ -9,8 +9,11 @@ TEST_EXE =     $(SUBDIR)$(HPS)test.exe
 !ifeq TARGET_MSDOS 16
 !ifndef TARGET_WINDOWS
 VGA240_EXE =   $(SUBDIR)$(HPS)vga240.exe
-TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.exe
 !endif
+!endif
+
+!ifndef TARGET_WINDOWS
+TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.exe
 !endif
 
 $(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj
