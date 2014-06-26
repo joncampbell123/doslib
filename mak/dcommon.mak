@@ -5,6 +5,16 @@ $(HW_VGA_LIB):
 	@cd $(HW_VGA_LIB_DIR)
 	@$(MAKECMD) build lib
 	@cd $(HERE)
+
+$(HW_VGATTY_LIB):
+	@cd $(HW_VGATTY_LIB_DIR)
+	@$(MAKECMD) build lib
+	@cd $(HERE)
+
+$(HW_VGAGUI_LIB):
+	@cd $(HW_VGAGUI_LIB_DIR)
+	@$(MAKECMD) build lib
+	@cd $(HERE)
 !endif
 
 # HW\CPU------------------------------------------------------------------------------------

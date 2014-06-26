@@ -7,3 +7,8 @@ set DOS4G=quiet
 if "%1" == "clean" call clean.bat
 if "%1" == "clean" goto end
 
+mkdir dos386f
+wmake -f ..\..\mak\dos386f.mak HPS=\ lib REL=..\.. 
+
+
+:end
