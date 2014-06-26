@@ -15,11 +15,14 @@ VGA240_EXE = $(SUBDIR)$(HPS)vga240.exe
 !endif
 !endif
 
-$(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)vgagui.obj
-	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vga.obj -+$(SUBDIR)$(HPS)vgagui.obj
+$(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj
+	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vga.obj
 
 $(HW_VGATTY_LIB): $(SUBDIR)$(HPS)vgatty.obj $(HW_VGA_LIB)
 	wlib -q -b -c $(HW_VGATTY_LIB) -+$(SUBDIR)$(HPS)vgatty.obj
+
+$(HW_VGAGUI_LIB): $(SUBDIR)$(HPS)vgagui.obj $(HW_VGATTY_LIB)
+	wlib -q -b -c $(HW_VGAGUI_LIB) -+$(SUBDIR)$(HPS)vgagui.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -29,7 +32,7 @@ $(HW_VGATTY_LIB): $(SUBDIR)$(HPS)vgatty.obj $(HW_VGA_LIB)
 
 all: lib exe
        
-lib: $(HW_VGA_LIB) $(HW_VGATTY_LIB) .symbolic
+lib: $(HW_VGA_LIB) $(HW_VGATTY_LIB) $(HW_VGAGUI_LIB) .symbolic
 	
 exe: $(TEST_EXE) $(VGA240_EXE) .symbolic
 
