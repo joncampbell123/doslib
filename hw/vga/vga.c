@@ -874,6 +874,30 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 	if (!(vga_flags & VGA_IS_VGA))
 		return;
 
+	/* NOTES:
+	 *   According to an S3 virge test card:
+	 *
+	 *
+	 *         vtotal = number of scan lines. Register value is total - 2
+	 *
+	 *         vblank = start & end values are scan lines involved in blanking INCLUSIVELY.
+	 *                  example: start=440 end=457 means scan lines 440 <= x <= 457 are
+	 *                  blanked. FreeVGA is wrong.
+	 *
+	 *         vretrace = start & end values are start inclusive, end exclusive (as far as I can tell).
+	 *                    example: start=440 end=457 means 440 <= x < 457
+	 *
+	 *         vdisplay end = the display end register seems to be the active display line
+	 *                        count, minus 1.
+	 *
+	 *         hblank = start & end values seem to be inclusive, register value seems to
+	 *                  be clock position - 1 (NEED TO CONFIRM). start <= x <= end.
+	 *
+	 *         htotal = horizontal character clock total. Register is total - 5.
+	 *
+	 *         hretrace = start & end values are start includive, end exclusive (as far as I can tell).
+	 */
+
 	/* sync disable */
 	c = vga_read_CRTC(0x17);
 	vga_write_CRTC(0x17,c&0x7F);
