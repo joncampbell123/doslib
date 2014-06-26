@@ -141,7 +141,7 @@ int main() {
 			vga_write("  9: VGA 8-bit wide \n");
 		else
 			vga_write("  9: VGA 9-bit wide \n");
-		vga_write("  z: Measurements     \n");
+		vga_write("  z: Measurements     o: Change overscan\n");
 
 		vga_write("ESC: quit\n");
 		vga_write_sync();
@@ -2316,6 +2316,21 @@ int main() {
 				vga_write_sync();
 				vga_sync_bios_cursor();
 				while (getch() != 13);
+			}
+		}
+		else if (c == 'o') {
+			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
+				unsigned char color;
+
+				inp(vga_base_3x0+0xA); /* reset flipflop */
+				outp(0x3C0,0x11); /* load overscan color reg */
+				color = inp(0x3C1);
+				color++;
+
+				inp(vga_base_3x0+0xA); /* reset flipflop */
+				outp(0x3C0,0x11); /* load overscan color reg */
+				outp(0x3C0,color);
+				outp(0x3C0,0x20); /* PAS=1 */
 			}
 		}
 		else if (c == 'z') {
