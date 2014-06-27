@@ -27,28 +27,37 @@
 char tmpline[80];
 
 void bios_cls() {
-	/* use INT 10h to scroll-clear the screen */
-	__asm {
-		push	ax
-		push	bx
-		push	cx
-		push	dx
-		push	bp
-		push	ds
+	VGA_ALPHA_PTR ap;
+	VGA_RAM_PTR rp;
+	unsigned char m;
 
-		mov	ax,0x0600
-		mov	bh,0x07
-		mov	cx,0x0000	/* upper left (x,y) 0,0 */
-		mov	dh,24
-		mov	dl,79		/* lower right (x,y) 79,24 */
-		int	10h
+	m = int10_getmode();
+	if ((rp=vga_graphics_ram) != NULL && !(m <= 3 || m == 7)) {
+#if TARGET_MSDOS == 16
+		unsigned int i,im;
 
-		pop	ds
-		pop	bp
-		pop	dx
-		pop	cx
-		pop	bx
-		pop	ax
+		im = (FP_SEG(vga_graphics_ram_fence) - FP_SEG(vga_graphics_ram));
+		if (im > 0xFFE) im = 0xFFE;
+		im <<= 4;
+		for (i=0;i < im;i++) vga_graphics_ram[i] = 0;
+#else
+		while (rp < vga_graphics_ram_fence) *rp++ = 0;
+#endif
+	}
+	else if ((ap=vga_alpha_ram) != NULL) {
+#if TARGET_MSDOS == 16
+		unsigned int i,im;
+
+		im = (FP_SEG(vga_alpha_ram_fence) - FP_SEG(vga_alpha_ram));
+		if (im > 0x7FE) im = 0x7FE;
+		im <<= 4 - 1; /* because ptr is type uint16_t */
+		for (i=0;i < im;i++) vga_alpha_ram[i] = 0x0720;
+#else
+		while (ap < vga_alpha_ram_fence) *ap++ = 0x0720;
+#endif
+	}
+	else {
+		printf("WARNING: bios cls no ptr\n");
 	}
 }
 
