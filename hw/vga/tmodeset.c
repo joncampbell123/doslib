@@ -267,7 +267,8 @@ int main() {
 			printf("\n");
 
 			printf("ESC  Exit to DOS       ? Explain this\n");
-			printf("m    Set mode          C Change clock\n");
+			printf("m    Set mode          c Change clock\n");
+			printf("9    Toggle 8/9\n");
 		}
 
 		c = getch();
@@ -275,6 +276,11 @@ int main() {
 		else if (c == '?') {
 			redraw = 1;
 			help_main();
+		}
+		else if (c == '9') {
+			mp.clock9 = !mp.clock9;
+			vga_write_crtc_mode(&mp);
+			redraw = 1;
 		}
 		else if (c == 'm') {
 			unsigned int nm;
