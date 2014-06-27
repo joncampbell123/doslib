@@ -319,5 +319,6 @@ struct vga_mode_params {
 	unsigned char		map13:1;		/* CRTC[0x17] bit 0 */
 	unsigned char		scan_double:1;		/* CRTC[0x09] bit 7 */
 	unsigned char		max_scanline;		/* CRTC[0x09] bit 4-0 */
+	unsigned char		offset;			/* CRTC[0x13] */
 };
 

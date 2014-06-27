@@ -387,6 +387,11 @@ int main() {
 								mp.max_scanline);
 						vga_write(tmp);
 
+						sprintf(tmp,
+								"offset=%u\n",
+								mp.offset);
+						vga_write(tmp);
+
 						vga_write("\n");
 						vga_write("h/H htotal  v/V vtotal  c/C clock  9/9 8/9clk  2/2 div2   w/W word  d/D dword\n");
 						vga_write("[/[ HS+/-   ]/] VS+/-   b/B hblnks n/N hblnke  j/J vblnks k/K vblnke = reread\n");

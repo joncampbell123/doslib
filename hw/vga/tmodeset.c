@@ -125,6 +125,7 @@ void help_main() {
 	printf(" map13=      (1) Map MA13 = bit 13\n");
 	printf(" ref/scanline= Refresh cycles/scanline\n");
 	printf(" hrate/vrate= Horz./Vert. refresh rate\n");
+	printf(" offset=     offset (unit per scanline)\n");
 	printf("\n");
 	printf("ESC to return, ENTER/SPACE for more...\n");
 
@@ -266,9 +267,10 @@ int main() {
 					mp.horizontal_start_delay_after_total,
 					mp.horizontal_start_delay_after_retrace);
 
-			printf("scan2x=%u maxscanline=%u\n",
+			printf("scan2x=%u maxscanline=%u offset=%u\n",
 					mp.scan_double,
-					mp.max_scanline);
+					mp.max_scanline,
+					mp.offset);
 
 			printf("\n");
 
@@ -278,11 +280,24 @@ int main() {
 			printf("-    H/Vsync polarity  $ mem4 toggle\n");
 			printf("4    toggle shift4     5 toggle SLR\n");
 			printf("2    toggle more...    M max scanline\n");
+			printf("o    offset register\n");
 		}
 
 		c = getch();
 		if (c == 27) break;
 		else if (c == 13) {
+			redraw = 1;
+		}
+		else if (c == 'o') {
+			unsigned int nm;
+
+			printf("\n");
+			printf("New value? "); fflush(stdout);
+			nm = common_prompt_number();
+			if (nm <= 255) {
+				mp.offset = nm;
+				vga_write_crtc_mode(&mp);
+			}
 			redraw = 1;
 		}
 		else if (c == 'M') {
