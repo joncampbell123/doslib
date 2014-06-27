@@ -277,12 +277,24 @@ int main() {
 			printf("9    Toggle 8/9        w Word/Dword\n");
 			printf("-    H/Vsync polarity  $ mem4 toggle\n");
 			printf("4    toggle shift4     5 toggle SLR\n");
-			printf("2    toggle more...\n");
+			printf("2    toggle more...    M max scanline\n");
 		}
 
 		c = getch();
 		if (c == 27) break;
 		else if (c == 13) {
+			redraw = 1;
+		}
+		else if (c == 'M') {
+			unsigned int nm;
+
+			printf("\n");
+			printf("New value? "); fflush(stdout);
+			nm = common_prompt_number();
+			if (nm > 0 && nm <= 32) {
+				mp.max_scanline = nm;
+				vga_write_crtc_mode(&mp);
+			}
 			redraw = 1;
 		}
 		else if (c == '2') {
@@ -293,9 +305,14 @@ int main() {
 			printf(" r   toggle refresh cycles/scan\n");
 			printf(" 3   toggle map13\n");
 			printf(" 4   toggle map14\n");
+			printf(" d   toggle scan double\n");
 
 			c = getch();
-			if (c == 'm') {
+			if (c == 'd') {
+				mp.scan_double = !mp.scan_double;
+				vga_write_crtc_mode(&mp);
+			}
+			else if (c == 'm') {
 				mp.memaddr_div2 = !mp.memaddr_div2;
 				vga_write_crtc_mode(&mp);
 			}
