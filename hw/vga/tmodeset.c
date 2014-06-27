@@ -269,14 +269,71 @@ int main() {
 			printf("ESC  Exit to DOS       ? Explain this\n");
 			printf("m    Set mode          c Change clock\n");
 			printf("9    Toggle 8/9        w Word/Dword\n");
-			printf("-    H/Vsync polarity\n");
+			printf("-    H/Vsync polarity  $ mem4 toggle\n");
+			printf("4    toggle shift4     5 toggle SLR\n");
+			printf("2    toggle more...\n");
 		}
 
 		c = getch();
 		if (c == 27) break;
+		else if (c == 13) {
+			redraw = 1;
+		}
+		else if (c == '2') {
+			printf("\n");
+			printf(" m   toggle memaddr div2\n");
+			printf(" s   toggle scanline div2\n");
+			printf(" a   toggle address wrap select\n");
+			printf(" r   toggle refresh cycles/scan\n");
+			printf(" 3   toggle map13\n");
+			printf(" 4   toggle map14\n");
+
+			c = getch();
+			if (c == 'm') {
+				mp.memaddr_div2 = !mp.memaddr_div2;
+				vga_write_crtc_mode(&mp);
+			}
+			else if (c == 's') {
+				mp.scanline_div2 = !mp.scanline_div2;
+				vga_write_crtc_mode(&mp);
+			}
+			else if (c == 'a') {
+				mp.address_wrap_select = !mp.address_wrap_select;
+				vga_write_crtc_mode(&mp);
+			}
+			else if (c == 'r') {
+				mp.refresh_cycles_per_scanline = !mp.refresh_cycles_per_scanline;
+				vga_write_crtc_mode(&mp);
+			}
+			else if (c == '3') {
+				mp.map13 = !mp.map13;
+				vga_write_crtc_mode(&mp);
+			}
+			else if (c == '4') {
+				mp.map14 = !mp.map14;
+				vga_write_crtc_mode(&mp);
+			}
+
+			redraw = 1;
+		}
+		else if (c == '4') {
+			mp.shift4_enable = !mp.shift4_enable;
+			vga_write_crtc_mode(&mp);
+			redraw = 1;
+		}
+		else if (c == '5') {
+			mp.shift_load_rate = !mp.shift_load_rate;
+			vga_write_crtc_mode(&mp);
+			redraw = 1;
+		}
 		else if (c == '?') {
 			redraw = 1;
 			help_main();
+		}
+		else if (c == '$') {
+			mp.inc_mem_addr_only_every_4th = !mp.inc_mem_addr_only_every_4th;
+			vga_write_crtc_mode(&mp);
+			redraw = 1;
 		}
 		else if (c == '-') {
 			unsigned int nm;
@@ -306,10 +363,8 @@ int main() {
 			printf("\n");
 			printf("Mode? "); fflush(stdout);
 			nm = common_prompt_number();
-			if (nm < 128) {
-				int10_setmode(nm);
-				redraw = 1;
-			}
+			if (nm < 128) int10_setmode(nm);
+			redraw = 1;
 		}
 		else if (c == 'c') {
 			unsigned int nm;
