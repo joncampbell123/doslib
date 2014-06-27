@@ -288,6 +288,10 @@ int main() {
 		else if (c == 13) {
 			redraw = 1;
 		}
+		else if (c == '=') {
+			vga_write_crtc_mode(&mp);
+			redraw = 1;
+		}
 		else if (c == 'o') {
 			unsigned int nm;
 
