@@ -317,5 +317,7 @@ struct vga_mode_params {
 	unsigned char		scanline_div2:1;	/* CRTC[0x17] bit 2 */
 	unsigned char		map14:1;		/* CRTC[0x17] bit 1 */
 	unsigned char		map13:1;		/* CRTC[0x17] bit 0 */
+	unsigned char		scan_double:1;		/* CRTC[0x09] bit 7 */
+	unsigned char		max_scanline;		/* CRTC[0x09] bit 4-0 */
 };
 

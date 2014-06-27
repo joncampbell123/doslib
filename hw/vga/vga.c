@@ -815,6 +815,9 @@ void vga_write_crtc_mode(struct vga_mode_params *p) {
 		(p->inc_mem_addr_only_every_4th << 5));
 	vga_write_CRTC(0x07,c); /* overflow reg */
 
+	c2 &= ~(0x9F);	/* mask out SD + Max scanline */
+	c2 |= (p->scan_double << 7);
+	c2 |= (p->max_scanline - 1) & 0x1F;
 	vga_write_CRTC(0x09,c2);
 	vga_write_CRTC(0x17,
 		(vga_read_CRTC(0x17) & 0x10) | /* NTS: one undocumented bit, perhaps best not to change it */
@@ -884,6 +887,8 @@ void vga_read_crtc_mode(struct vga_mode_params *p) {
 	c = vga_read_CRTC(7); /* c = overflow reg */
 	c2 = vga_read_CRTC(9);
 
+	p->scan_double = (c2 >> 7) & 1;
+	p->max_scanline = (c2 & 0x1F) + 1;
 	p->vertical_total = (vga_read_CRTC(6) | ((c & 1) << 8) | (((c >> 5) & 1) << 9)) + 2;
 	p->vertical_start_retrace = (vga_read_CRTC(0x10) | (((c >> 2) & 1) << 8) | (((c >> 7) & 1) << 9));
 	p->vertical_end_retrace = (vga_read_CRTC(0x11) & 0xF) |

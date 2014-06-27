@@ -375,14 +375,16 @@ int main() {
 						vga_write(tmp);
 
 						sprintf(tmp,
-								"SLR=%u shift4=%u aws=%u memadiv2=%u scandiv2=%u map14=%u map13=%u\n",
+								"SLR=%u shift4=%u aws=%u memadiv2=%u scandiv2=%u map14=%u map13=%u sd=%u max=%u\n",
 								mp.shift_load_rate,
 								mp.shift4_enable,
 								mp.address_wrap_select,
 								mp.memaddr_div2,
 								mp.scanline_div2,
 								mp.map14,
-								mp.map13);
+								mp.map13,
+								mp.scan_double,
+								mp.max_scanline);
 						vga_write(tmp);
 
 						vga_write("\n");

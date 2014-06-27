@@ -147,6 +147,8 @@ void help_main() {
 	printf(" blnk=       .. blanking as inequality\n");
 	printf(" sdtot=      .. start delay after total\n");
 	printf(" sdretr=     .. start delay aft retrace\n");
+	printf(" scan2x=     Scan double bit\n");
+	printf(" maxscanline= Max scanline per cell or row\n");
 	printf("\n");
 	printf("ESC to return, ENTER/SPACE for more...\n");
 
@@ -263,6 +265,10 @@ int main() {
 					mp.horizontal_blank_end,
 					mp.horizontal_start_delay_after_total,
 					mp.horizontal_start_delay_after_retrace);
+
+			printf("scan2x=%u maxscanline=%u\n",
+					mp.scan_double,
+					mp.max_scanline);
 
 			printf("\n");
 
