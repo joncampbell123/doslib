@@ -193,7 +193,6 @@ int main() {
 			vrate = hrate / mp.vertical_total;
 
 			bios_cls();
-
 			/* position the cursor to home */
 			vga_moveto(0,0);
 			vga_sync_bios_cursor();
@@ -293,9 +292,16 @@ int main() {
 			redraw = 1;
 		}
 		else if (c == 'x') {
+			bios_cls();
+			/* position the cursor to home */
+			vga_moveto(0,0);
+			vga_sync_bios_cursor();
+
 			printf("\n");
 			printf(" c   CRTC configuration\n");
 			printf(" s   Sequencer configuration\n");
+			printf(" C   CRTC anti-configuration\n");
+			printf(" S   Sequencer anti-configuration\n");
 
 			c = getch();
 			if (c == 'c') {
@@ -306,10 +312,24 @@ int main() {
 				mp.inc_mem_addr_only_every_4th = 0;
 				vga_write_crtc_mode(&mp);
 			}
+			else if (c == 'C') {
+				mp.word_mode = 1;
+				mp.dword_mode = 1;
+				mp.address_wrap_select = 1;
+				mp.inc_mem_addr_only_every_4th = 0;
+				vga_write_crtc_mode(&mp);
+			}
 			else if (c == 's') {
 				/* CRTC-side configuration of Mode-X */
-				vga_write_sequencer(4,0x06);
 				vga_write_sequencer(0,0x01);
+				vga_write_sequencer(4,0x06);
+				vga_write_sequencer(0,0x03);
+				vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
+				vga_write_crtc_mode(&mp);
+			}
+			else if (c == 'S') {
+				vga_write_sequencer(0,0x01);
+				vga_write_sequencer(4,0x0E);
 				vga_write_sequencer(0,0x03);
 				vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
 				vga_write_crtc_mode(&mp);
@@ -342,6 +362,11 @@ int main() {
 			redraw = 1;
 		}
 		else if (c == '2') {
+			bios_cls();
+			/* position the cursor to home */
+			vga_moveto(0,0);
+			vga_sync_bios_cursor();
+
 			printf("\n");
 			printf(" m   toggle memaddr div2\n");
 			printf(" s   toggle scanline div2\n");
