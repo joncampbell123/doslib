@@ -268,7 +268,8 @@ int main() {
 
 			printf("ESC  Exit to DOS       ? Explain this\n");
 			printf("m    Set mode          c Change clock\n");
-			printf("9    Toggle 8/9\n");
+			printf("9    Toggle 8/9        w Word/Dword\n");
+			printf("-    H/Vsync polarity\n");
 		}
 
 		c = getch();
@@ -276,6 +277,23 @@ int main() {
 		else if (c == '?') {
 			redraw = 1;
 			help_main();
+		}
+		else if (c == '-') {
+			unsigned int nm;
+
+			printf("\n");
+			printf(" 0: h + v +\n");
+			printf(" 1: h - v +\n");
+			printf(" 2: h + v -\n");
+			printf(" 3: h - v -\n");
+			printf("Mode? "); fflush(stdout);
+			nm = common_prompt_number();
+			if (nm != ~0 && nm < 4) {
+				mp.hsync_neg = (nm&1);
+				mp.vsync_neg = (nm&2)?1:0;
+				vga_write_crtc_mode(&mp);
+				redraw = 1;
+			}
 		}
 		else if (c == '9') {
 			mp.clock9 = !mp.clock9;
@@ -305,6 +323,23 @@ int main() {
 			if (nm != ~0 && nm < 8) {
 				mp.clock_select = nm&3;
 				mp.clock_div2 = (nm&4)?1:0;
+				vga_write_crtc_mode(&mp);
+				redraw = 1;
+			}
+		}
+		else if (c == 'w') {
+			unsigned int nm;
+
+			printf("\n");
+			printf(" 0: byte (w=0 d=0)\n");
+			printf(" 1: word (w=1 d=0)\n");
+			printf(" 2: dword (w=1 d=1)\n");
+			printf(" 3: dword !word (w=0 d=1)\n");
+			printf("Mode? "); fflush(stdout);
+			nm = common_prompt_number();
+			if (nm != ~0 && nm < 4) {
+				mp.dword_mode = (nm&2)?1:0;
+				mp.word_mode = (nm&1)^mp.dword_mode;	/* 0 1 2 3 > 00 01 11 10 */
 				vga_write_crtc_mode(&mp);
 				redraw = 1;
 			}
