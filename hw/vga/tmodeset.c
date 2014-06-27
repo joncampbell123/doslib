@@ -280,7 +280,7 @@ int main() {
 			printf("-    H/Vsync polarity  $ mem4 toggle\n");
 			printf("4    toggle shift4     5 toggle SLR\n");
 			printf("2    toggle more...    M max scanline\n");
-			printf("o    offset register\n");
+			printf("o    offset register   x Mode-X\n");
 		}
 
 		c = getch();
@@ -290,6 +290,31 @@ int main() {
 		}
 		else if (c == '=') {
 			vga_write_crtc_mode(&mp);
+			redraw = 1;
+		}
+		else if (c == 'x') {
+			printf("\n");
+			printf(" c   CRTC configuration\n");
+			printf(" s   Sequencer configuration\n");
+
+			c = getch();
+			if (c == 'c') {
+				/* CRTC-side configuration of Mode-X */
+				mp.word_mode = 0;
+				mp.dword_mode = 0;
+				mp.address_wrap_select = 1;
+				mp.inc_mem_addr_only_every_4th = 0;
+				vga_write_crtc_mode(&mp);
+			}
+			else if (c == 's') {
+				/* CRTC-side configuration of Mode-X */
+				vga_write_sequencer(4,0x06);
+				vga_write_sequencer(0,0x01);
+				vga_write_sequencer(0,0x03);
+				vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
+				vga_write_crtc_mode(&mp);
+			}
+
 			redraw = 1;
 		}
 		else if (c == 'o') {
