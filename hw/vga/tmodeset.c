@@ -158,6 +158,142 @@ void help_main() {
 	if (c == 27) return;
 }
 
+static unsigned char rdump[4096];
+
+void dump_to_file() {
+	char tmpname[32];
+	char nname[17];
+	int c,mode,i;
+	FILE *fp;
+
+	mode = int10_getmode();
+	sprintf(nname,"VGADMP%02X",mode);
+
+	bios_cls();
+	/* position the cursor to home */
+	vga_moveto(0,0);
+	vga_sync_bios_cursor();
+
+	printf("Standard VGA registers and RAM will be\n");
+	printf("dumped to %s. Hit ENTER to proceed.\n",nname);
+	printf("\n");
+
+	c = getch();
+	if (c != 13) return;
+
+	/* ============= Sequencer ============ */
+	for (i=0;i < 256;i++) rdump[i] = vga_read_sequencer(i);
+
+	/* ----- write */
+	sprintf(tmpname,"%s.SEQ",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		fwrite(rdump,256,1,fp);
+		fclose(fp);
+	}
+
+	/* ============= GC ============ */
+	for (i=0;i < 256;i++) rdump[i] = vga_read_GC(i);
+
+	/* ----- write */
+	sprintf(tmpname,"%s.GC",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		fwrite(rdump,256,1,fp);
+		fclose(fp);
+	}
+
+	/* ============= CRTC ============ */
+	for (i=0;i < 256;i++) rdump[i] = vga_read_CRTC(i);
+
+	/* ----- write */
+	sprintf(tmpname,"%s.CRT",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		fwrite(rdump,256,1,fp);
+		fclose(fp);
+	}
+
+	/* ============= Attribute controller ============ */
+	for (i=0;i < 256;i++) rdump[i] = vga_read_AC(i);
+
+	/* ----- write */
+	sprintf(tmpname,"%s.AC",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		fwrite(rdump,256,1,fp);
+		fclose(fp);
+	}
+
+	/* ============= VGA palette ============ */
+	outp(0x3C8,0);
+	outp(0x3C7,0);
+	for (i=0;i < (2*3*256);i++) rdump[i] = inp(0x3C9);
+
+	/* ----- write */
+	sprintf(tmpname,"%s.DAC",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		fwrite(rdump,2*3*256,1,fp);
+		fclose(fp);
+	}
+
+	/* ============= Reg scan/dump ============ */
+	for (i=0;i < 0x30;i++) rdump[i] = inp(0x3B0+i);
+
+	/* ----- write */
+	sprintf(tmpname,"%s.RED",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		fwrite(rdump,0x30,1,fp);
+		fclose(fp);
+	}
+
+	/* ============= RAM scan/dump ============ */
+	{
+		unsigned char seq4,crt17h,crt14h,pl,ogc5,ogc6;
+
+		ogc6 = vga_read_GC(6);
+		ogc5 = vga_read_GC(5);
+		seq4 = vga_read_sequencer(4);
+		crt14h = vga_read_CRTC(0x14);
+		crt17h = vga_read_CRTC(0x17);
+
+		/* switch into planar mode briefly for planar capture */
+		vga_write_sequencer(4,0x06);
+		vga_write_sequencer(0,0x01);
+		vga_write_sequencer(0,0x03);
+		vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
+
+		/* for each plane, write to file */
+		for (pl=0;pl < 4;pl++) {
+			sprintf(tmpname,"%s.PL%u",nname,pl);
+			if ((fp=fopen(tmpname,"wb")) != NULL) {
+				vga_write_GC(6,(ogc6 & (~0xE)) + 0x4); /* we want video RAM to map to 0xA0000-0xAFFFF */
+				vga_write_GC(5,(ogc5 & (~0x7B))); /* read mode=0 write mode=0 host o/e=0 */
+				vga_write_GC(4,pl); /* read map select */
+
+				for (i=0;i < (65536/1024);i++) {
+#if TARGET_MSDOS == 32
+					memcpy(rdump,((unsigned char*)0xA0000) + (unsigned int)(i * 1024),1024);
+#else
+					_fmemcpy(rdump,MK_FP(0xA000,(unsigned int)(i * 1024U)),1024);
+#endif
+					fwrite(rdump,1024,1,fp);
+				}
+				fclose(fp);
+			}
+		}
+
+		vga_write_sequencer(4,seq4);
+		vga_write_sequencer(0,0x01);
+		vga_write_sequencer(0,0x03);
+		vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
+		vga_write_CRTC(0x14,crt14h);
+		vga_write_CRTC(0x17,crt17h);
+		vga_write_GC(5,ogc5);
+		vga_write_GC(6,ogc6);
+	}
+
+	/* ======================================= */
+	printf("Done\n");
+	while (getch() != 13);
+}
+
 /* utility function to flash VGA color palette registers */
 void flash_vga_pal() {
 	unsigned char palidx,palold[3],palflash=1,w[3],redraw=1,flashwait=0;
@@ -513,7 +649,7 @@ int main() {
 			printf("4    toggle shift4     5 toggle SLR\n");
 			printf("2    toggle more...    M max scanline\n");
 			printf("o    offset register   x Mode-X\n");
-			printf("z    palette tinkering\n");
+			printf("z    palette tinkering d Dump regs\n");
 		}
 
 		c = getch();
@@ -523,6 +659,21 @@ int main() {
 		}
 		else if (c == '=') {
 			vga_write_crtc_mode(&mp);
+			redraw = 1;
+		}
+		else if (c == 'd') {
+			bios_cls();
+			/* position the cursor to home */
+			vga_moveto(0,0);
+			vga_sync_bios_cursor();
+
+			printf("\n");
+			printf(" f   Dump VGA state to file\n");
+
+			c = getch();
+			if (c == 'f')
+				dump_to_file();
+
 			redraw = 1;
 		}
 		else if (c == 'z') {
