@@ -167,6 +167,18 @@ static inline void vga_write_color(unsigned char c) {
 	vga_color = c;
 }
 
+static inline void vga_read_PAL(unsigned char i,unsigned char *p,unsigned int count) {
+	count *= 3;
+	outp(0x3C7,i);
+	while (count-- > 0) *p++ = inp(0x3C9);
+}
+
+static inline void vga_write_PAL(unsigned char i,unsigned char *p,unsigned int count) {
+	count *= 3;
+	outp(0x3C8,i);
+	while (count-- > 0) outp(0x3C9,*p++);
+}
+
 /* NTS: VGA hardware treats bit 5 of the index as a "screen enable".
  *      When the caller is done reprogramming it is expected to or the index by VGA_AC_ENABLE */
 static inline void vga_write_AC(unsigned char i,unsigned char c) {
