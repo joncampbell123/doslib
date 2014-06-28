@@ -19,6 +19,7 @@
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
 #include <hw/vga/vgatty.h>
+#include <hw/8254/8254.h>
 
 #if defined(TARGET_WINDOWS)
 # error WRONG
@@ -157,6 +158,233 @@ void help_main() {
 	if (c == 27) return;
 }
 
+/* utility function to flash VGA color palette registers */
+void flash_vga_pal() {
+	unsigned char palidx,palold[3],palflash=1,w[3],redraw=1,flashwait=0;
+	int c;
+
+	bios_cls();
+	/* position the cursor to home */
+	vga_moveto(0,0);
+	vga_sync_bios_cursor();
+
+	printf("Flashing VGA color palette entry.\n");
+	printf("ESC to quit, use Left/Right arrow keys\n");
+	printf("to select palette entry, Up/Down to\n");
+	printf("change values.\n");
+	printf("\n");
+
+	palidx = 40;
+	for (c=0;c < palidx;c++) {
+		unsigned short b,cc;
+
+		vga_moveto(c,5);
+		vga_sync_bios_cursor();
+		cc = 0x0930 + (c&0xF);
+		b = c;
+
+		__asm {
+			push	ax
+			push	bx
+			push	cx
+			mov	ax,cc
+			mov	bx,b
+			mov	cx,1
+			int	10h
+			pop	cx
+			pop	bx
+			pop	ax
+		}
+	}
+	printf("\n");
+	printf("\n");
+
+	palidx = 7; /* start with color 7 (the text we print) */
+	vga_read_PAL(palidx,palold,1);
+
+	while (1) {
+		t8254_wait(0x10000UL); /* 9 / 18.2Hz = 0.5 second (about). no faster. don't give users seizures. */
+
+		if (redraw) {
+			printf("\x0D" "idx=0x%02x val=0x%02x%02x%02x",
+				palidx,palold[0],palold[1],palold[2]);
+			fflush(stdout);
+			redraw = 0;
+		}
+
+		if (kbhit()) {
+			c = getch();
+			if (c == 27)
+				break;
+			else if (c == 0) {
+				c = getch();
+				if (c == 0x4B) { /* left */
+					vga_write_PAL(palidx,palold,1);
+					palidx--;
+					vga_read_PAL(palidx,palold,1);
+					flashwait = 9 - 1;
+					palflash = 1;
+					redraw = 1;
+				}
+				else if (c == 0x4D) { /* right */
+					vga_write_PAL(palidx,palold,1);
+					palidx++;
+					vga_read_PAL(palidx,palold,1);
+					flashwait = 9 - 1;
+					palflash = 1;
+					redraw = 1;
+				}
+				else if (c == 0x48) { /* up */
+					palold[0]++;
+					palold[1]++;
+					palold[2]++;
+					vga_write_PAL(palidx,palold,1);
+					vga_read_PAL(palidx,palold,1);
+					flashwait = 255 - 20;
+					palflash = 0;
+					redraw = 1;
+				}
+				else if (c == 0x50) { /* down */
+					palold[0]--;
+					palold[1]--;
+					palold[2]--;
+					vga_write_PAL(palidx,palold,1);
+					vga_read_PAL(palidx,palold,1);
+					flashwait = 255 - 20;
+					palflash = 0;
+					redraw = 1;
+				}
+			}
+		}
+
+		if (++flashwait == 9) {
+			flashwait = 0;
+			w[0] = palflash ? (palold[0] + 0x18) : palold[0];
+			w[1] = palflash ? (palold[1] + 0x18) : palold[1];
+			w[2] = palflash ? (palold[2] + 0x18) : palold[2];
+			vga_write_PAL(palidx,w,1);
+			palflash = !palflash;
+		}
+	}
+
+	vga_write_PAL(palidx,palold,1);
+}
+
+/* utility function to flash Attribute Controller Palette indexes */
+void flash_acp() {
+	unsigned char palidx,palold,palflash=1,w,redraw=1,flashwait=0;
+	int c;
+
+	bios_cls();
+	/* position the cursor to home */
+	vga_moveto(0,0);
+	vga_sync_bios_cursor();
+
+	printf("Flashing Attribute Controller entry.\n");
+	printf("ESC to quit, use Left/Right arrow keys\n");
+	printf("to select palette entry, Up/Down to\n");
+	printf("change values.\n");
+	printf("\n");
+
+	palidx = 40;
+	for (c=0;c < palidx;c++) {
+		unsigned short b,cc;
+
+		vga_moveto(c,5);
+		vga_sync_bios_cursor();
+		cc = 0x0930 + (c&0xF);
+		b = c;
+
+		__asm {
+			push	ax
+			push	bx
+			push	cx
+			mov	ax,cc
+			mov	bx,b
+			mov	cx,1
+			int	10h
+			pop	cx
+			pop	bx
+			pop	ax
+		}
+	}
+	printf("\n");
+	printf("\n");
+
+	palidx = 7; /* start with color 7 (the text we print) */
+	palold = vga_read_AC(palidx);
+
+	while (1) {
+		t8254_wait(0x10000UL); /* 9 / 18.2Hz = 0.5 second (about). no faster. don't give users seizures. */
+
+		if (redraw) {
+			printf("\x0D" "idx=0x%02x val=0x%02x RGB(%u,%u,%u)",
+				palidx,palold,
+				((palold&4)>>1) | ((palold&32)>>5),
+				 (palold&2)     | ((palold&16)>>4),
+				((palold&1)<<1) | ((palold& 8)>>3));
+			fflush(stdout);
+			redraw = 0;
+		}
+
+		if (kbhit()) {
+			c = getch();
+			if (c == 27)
+				break;
+			else if (c == 0) {
+				c = getch();
+				if (c == 0x4B) { /* left */
+					vga_write_AC(palidx,palold);
+					vga_write_AC(palidx | VGA_AC_ENABLE,palold);
+					palidx = (palidx-1)&0xF;
+					palold = vga_read_AC(palidx);
+					flashwait = 9 - 1;
+					palflash = 1;
+					redraw = 1;
+				}
+				else if (c == 0x4D) { /* right */
+					vga_write_AC(palidx,palold);
+					vga_write_AC(palidx | VGA_AC_ENABLE,palold);
+					palidx = (palidx+1)&0xF;
+					palold = vga_read_AC(palidx);
+					flashwait = 9 - 1;
+					palflash = 1;
+					redraw = 1;
+				}
+				else if (c == 0x48) { /* up */
+					palold++;
+					vga_write_AC(palidx,palold);
+					vga_write_AC(palidx | VGA_AC_ENABLE,palold);
+					palold = vga_read_AC(palidx);
+					flashwait = 255 - 20;
+					palflash = 0;
+					redraw = 1;
+				}
+				else if (c == 0x50) { /* down */
+					palold--;
+					vga_write_AC(palidx,palold);
+					vga_write_AC(palidx | VGA_AC_ENABLE,palold);
+					palold = vga_read_AC(palidx);
+					flashwait = 255 - 20;
+					palflash = 0;
+					redraw = 1;
+				}
+			}
+		}
+
+		if (++flashwait == 9) {
+			flashwait = 0;
+			w = palflash ? (palold ^ 0x3F) : palold;
+			vga_write_AC(palidx,w);
+			vga_write_AC(palidx | VGA_AC_ENABLE,w);
+			palflash = !palflash;
+		}
+	}
+
+	vga_write_AC(palidx,palold);
+	vga_write_AC(palidx | VGA_AC_ENABLE,palold);
+}
+
 int main() {
 	unsigned char redraw,vga_mode;
 	struct vga_mode_params mp;
@@ -164,6 +392,11 @@ int main() {
 
 	probe_dos();
 	detect_windows();
+
+	if (!probe_8254()) {
+		printf("8254 not found (I need this for time-sensitive portions of the driver)\n");
+		return 1;
+	}
 
 	if (!probe_vga()) {
 		printf("VGA probe failed\n");
@@ -280,6 +513,7 @@ int main() {
 			printf("4    toggle shift4     5 toggle SLR\n");
 			printf("2    toggle more...    M max scanline\n");
 			printf("o    offset register   x Mode-X\n");
+			printf("z    palette tinkering\n");
 		}
 
 		c = getch();
@@ -289,6 +523,24 @@ int main() {
 		}
 		else if (c == '=') {
 			vga_write_crtc_mode(&mp);
+			redraw = 1;
+		}
+		else if (c == 'z') {
+			bios_cls();
+			/* position the cursor to home */
+			vga_moveto(0,0);
+			vga_sync_bios_cursor();
+
+			printf("\n");
+			printf(" a   Flash attrib control palette\n");
+			printf(" p   Flash VGA color palette\n");
+
+			c = getch();
+			if (c == 'a')
+				flash_acp();
+			else if (c == 'p')
+				flash_vga_pal();
+
 			redraw = 1;
 		}
 		else if (c == 'x') {
