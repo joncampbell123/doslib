@@ -1004,6 +1004,18 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 #endif
 
+	/* check DMA against the DMA controller presence.
+	 * If there is no 16-bit DMA (channels 4-7) then we cannot use
+	 * those channels */
+	if (!(d8237_flags&D8237_DMA_SECONDARY)) {
+		if (cx->dma16 >= 4) cx->dma16 = -1;
+		if (cx->dma8 >= 4) cx->dma8 = -1;
+	}
+	if (!(d8237_flags&D8237_DMA_PRIMARY)) {
+		if (cx->dma16 >= 0 && cx->dma16 < 4) cx->dma16 = -1;
+		if (cx->dma8 >= 0 && cx->dma8 < 4) cx->dma8 = -1;
+	}
+
 	if (cx->mpuio == 0) { /* uh oh, we have to probe for it */
 		if (sndsb_by_mpu(0x330) == NULL) {
 			cx->mpuio = 0x330; /* more common */
@@ -1796,6 +1808,10 @@ void sndsb_manual_probe_dma(struct sndsb_ctx *cx) {
 		for (tri=0;tri < sizeof(tries);tri++) {
 			if (eliminated & (1U << tries[tri]))
 				continue;
+			if (!(d8237_flags&D8237_DMA_SECONDARY) && tries[tri] >= 4)
+				continue;
+			if (!(d8237_flags&D8237_DMA_PRIMARY) && tries[tri] < 4)
+				continue;
 			if (!sndsb_reset_dsp(cx))
 				break;
 
@@ -2018,6 +2034,22 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 	}
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) {
 		cx->reason_not_supported = "16-bit PCM playback requires DSP 4.xx mode";
+		return 0;
+	}
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && wav_16bit && cx->dma16 >= 4 && !(d8237_flags&D8237_DMA_SECONDARY)) {
+		cx->reason_not_supported = "DMA-based playback, 16-bit PCM, dma16 channel refers to\nnon-existent secondary DMA controller";
+		return 0;
+	}
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && wav_16bit && cx->dma16 >= 0 && cx->dma16 < 4 && !(d8237_flags&D8237_DMA_PRIMARY)) {
+		cx->reason_not_supported = "DMA-based playback, 16-bit PCM, dma16 channel refers to\nnon-existent primary DMA controller";
+		return 0;
+	}
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && !wav_16bit && cx->dma8 >= 4 && !(d8237_flags&D8237_DMA_SECONDARY)) { /* as if this would ever happen, but.. */
+		cx->reason_not_supported = "DMA-based playback, 8-bit PCM, dma8 channel refers to\nnon-existent secondary DMA controller";
+		return 0;
+	}
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && !wav_16bit && cx->dma8 >= 0 && cx->dma8 < 4 && !(d8237_flags&D8237_DMA_PRIMARY)) { /* as if this would ever happen, but.. */
+		cx->reason_not_supported = "DMA-based playback, 8-bit PCM, dma8 channel refers to\nnon-existent primary DMA controller";
 		return 0;
 	}
 
