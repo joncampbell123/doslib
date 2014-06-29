@@ -2470,6 +2470,7 @@ static void help() {
 	printf(" /nowinvxd            don't try to identify Windows drivers\n");
 	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
 	printf(" /noidle              Don't use sndsb library idle function\n");
+	printf(" /adma                Assume DMA controllers are present\n");
 
 #if TARGET_MSDOS == 32
 	printf("The following option affects hooking the NMI interrupt. Hooking is\n");
@@ -3225,6 +3226,7 @@ int main(int argc,char **argv) {
 	unsigned char sb_irq_pcount = 0;
 	int i,loop,redraw,bkgndredraw,cc;
 	const struct vga_menu_item *mitem = NULL;
+	unsigned char assume_dma = 0;
 	uint32_t buffer_limit = 0;
 	int disable_probe = 0;
 	int disable_pnp = 0;
@@ -3245,6 +3247,9 @@ int main(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return 1;
+			}
+			else if (!strcmp(a,"adma")) {
+				assume_dma = 1;
 			}
 			else if (!strcmp(a,"noidle")) {
 				dont_sb_idle = 1;
@@ -3327,6 +3332,9 @@ int main(int argc,char **argv) {
 	/* TODO: Make sure this code still runs reliably without DMA (Direct DAC etc) if DMA not available! */
 	if (!probe_8237())
 		printf("WARNING: Cannot init 8237 DMA\n");
+
+	if (assume_dma)
+		d8237_flags |= D8237_DMA_PRIMARY | D8237_DMA_SECONDARY;
 
 	printf("DMA available: 0-3=%s 4-7=%s\n",
 		d8237_flags&D8237_DMA_PRIMARY?"yes":"no",
