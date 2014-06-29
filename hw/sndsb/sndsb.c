@@ -2048,7 +2048,7 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		cx->reason_not_supported = "DMA-based playback, 8-bit PCM, dma8 channel refers to\nnon-existent secondary DMA controller";
 		return 0;
 	}
-	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && !wav_16bit && cx->dma8 >= 0 && cx->dma8 < 4 && !(d8237_flags&D8237_DMA_PRIMARY)) { /* as if this would ever happen, but.. */
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && !wav_16bit && cx->dma8 >= 0 && cx->dma8 < 4 && !(d8237_flags&D8237_DMA_PRIMARY)) {
 		cx->reason_not_supported = "DMA-based playback, 8-bit PCM, dma8 channel refers to\nnon-existent primary DMA controller";
 		return 0;
 	}
