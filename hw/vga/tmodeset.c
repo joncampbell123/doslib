@@ -64,7 +64,7 @@ unsigned int common_prompt_number() {
 	if (isdigit(tmpline[0]))
 		nm = (unsigned int)strtoul(tmpline,NULL,0);
 	else
-		nm = ~0;
+		nm = ~0U;
 
 	return nm;
 }
@@ -887,7 +887,26 @@ int main() {
 			printf("\n");
 			printf("Mode? "); fflush(stdout);
 			nm = common_prompt_number();
-			if (nm < 128) int10_setmode(nm);
+			if (nm != (~0U)) {
+				if (nm < 0x100) {
+					int10_setmode(nm);
+				}
+				else {
+					uint16_t a;
+
+					a = nm;
+					/* VESA BIOS extensions or no, try to set a mode */
+					__asm {
+						push	ax
+						push	bx
+						mov	ax,0x4F02
+						mov	bx,a
+						int	0x10
+						pop	bx
+						pop	ax
+					}
+				}
+			}
 			redraw = 1;
 		}
 		else if (c == 'c') {
