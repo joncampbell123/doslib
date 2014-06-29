@@ -265,7 +265,7 @@ void dump_to_file() {
 			sprintf(tmpname,"%s.PL%u",nname,pl);
 			if ((fp=fopen(tmpname,"wb")) != NULL) {
 				vga_write_sequencer(4,0x06);
-				vga_write_GC(6,(ogc6 & (~0xE)) + (1 << 2) + 1); /* we want video RAM to map to 0xA0000-0xAFFFF AND we want to temporarily disable alphanumeric mode */
+				vga_write_GC(6,(ogc6 & (~0xF)) + (1 << 2) + 1); /* we want video RAM to map to 0xA0000-0xAFFFF AND we want to temporarily disable alphanumeric mode */
 				vga_write_GC(5,(ogc5 & (~0x7B))); /* read mode=0 write mode=0 host o/e=0 */
 				vga_write_GC(4,pl); /* read map select */
 
