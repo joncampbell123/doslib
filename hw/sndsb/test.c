@@ -1,5 +1,23 @@
 
+/* TODO:
+ *    I found a Sharp laptop (1996-ish) with a ISA PnP Sound Blaster clone (ESS0100)
+ *    which is apparently an ESS 688 Pnp AudioDrive. Add code to support it.
+ *    (also, Adlib detection fails on this clone) */
+
 /* Notes:
+ *    ESS 688 PnP AudioDrive:
+ *       - Plug and Play enumerated from the BIOS on a Sharp laptop (uses IRQ 9?!?)
+ *       - Supports most Sound Blaster Pro commands and emulates the mixer
+ *       - Nag mode works
+ *       - No DSP copyright string
+ *       - DSP does not wait if IRQ is not ACKed
+ *       - Supports ADPCM single-cycle commands!
+ *       - Does NOT support ADPCM auto-init commands
+ *       - DSP direct DAC commands are not rate-limited, it's possible to play up to
+ *         about 60KHz using direct DAC output!
+ *       - Also emulates Adlib (OPL3), which our ADLIB library is apparently unable to
+ *         validate at this time.
+ *
  *    Gallant SC-660 clone:
  *       - Does not support auto-init ADPCM, though all single-cycle ADPCM commands are
  *         correctly supported.
