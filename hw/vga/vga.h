@@ -191,10 +191,16 @@ static inline void vga_write_AC(unsigned char i,unsigned char c) {
 static inline unsigned char vga_read_AC(unsigned char i) {
 	unsigned char c;
 
-	inp(vga_base_3x0+0xA);
-	outp(0x3C0,i|0x20);
+	/* NTS: Reading the palette registers must occur this way because
+	 *      an old S3 Virge DX card I have will misread the values
+	 *      when PAS=1 otherwise. */
+
+	inp(vga_base_3x0+0xA);	/* reset latch */
+	outp(0x3C0,i&(~0x20));	/* index with PAS=0 */
 	c = inp(0x3C1);
-	inp(vga_base_3x0+0xA);
+	outp(0x3C0,i|0x20);	/* index with PAS=1 */
+	inp(vga_base_3x0+0xA);	/* reset latch */
+
 	return c;
 }
 
