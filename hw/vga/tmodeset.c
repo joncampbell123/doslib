@@ -245,11 +245,12 @@ void dump_to_file() {
 
 	/* ============= RAM scan/dump ============ */
 	{
-		unsigned char seq4,crt17h,crt14h,pl,ogc5,ogc6;
+		unsigned char seq4,crt17h,crt14h,pl,ogc5,ogc6,seqmask;
 
 		ogc6 = vga_read_GC(6);
 		ogc5 = vga_read_GC(5);
 		seq4 = vga_read_sequencer(4);
+		seqmask = vga_read_sequencer(VGA_SC_MAP_MASK);
 		crt14h = vga_read_CRTC(0x14);
 		crt17h = vga_read_CRTC(0x17);
 
@@ -282,7 +283,7 @@ void dump_to_file() {
 		vga_write_sequencer(4,seq4);
 		vga_write_sequencer(0,0x01);
 		vga_write_sequencer(0,0x03);
-		vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
+		vga_write_sequencer(VGA_SC_MAP_MASK,seqmask);
 		vga_write_CRTC(0x14,crt14h);
 		vga_write_CRTC(0x17,crt17h);
 		vga_write_GC(5,ogc5);
