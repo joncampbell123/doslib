@@ -1,10 +1,4 @@
 
-/* TODO: Interesting bugs found
- *
- *
- *      In DOSBox-X: Setting mode 6 (640x200 CGA graphics) leaves div2=1 which DOSBox-X
- *      then mis-emulates as 640x200 2-color at 35Hz not 70Hz */
-
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <ctype.h>
