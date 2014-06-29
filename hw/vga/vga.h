@@ -198,6 +198,7 @@ static inline unsigned char vga_read_AC(unsigned char i) {
 	inp(vga_base_3x0+0xA);	/* reset latch */
 	outp(0x3C0,i&(~0x20));	/* index with PAS=0 */
 	c = inp(0x3C1);
+	inp(vga_base_3x0+0xA);	/* reset latch */
 	outp(0x3C0,i|0x20);	/* index with PAS=1 */
 	inp(vga_base_3x0+0xA);	/* reset latch */
 
