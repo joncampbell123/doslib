@@ -80,6 +80,43 @@ unsigned char d8237_page_ioport_map_at[8] = {0x87,0x83,0x81,0x82, 0x8F,0x8B,0x89
  * the 16-bit address shift, which is why this is a variable not a const */
 unsigned char d8237_16bit_ashift = 0xF0;
 
+static int d8237_readwrite_test4(unsigned int bch) {
+	int j,i;
+
+	if (bch & 4) {
+		for (j=8;j < 16;j++) {
+			if (inp(0xC0+(j*2)) != 0xFF) break; /* found SOMETHING */
+		}
+	}
+	else {
+		for (j=8;j < 16;j++) {
+			if (inp(j) != 0xFF) break; /* found SOMETHING */
+		}
+	}
+
+	if (j != 16) { /* OK. Now go through any DMA channel that still reads 0xFFFF 0xFFFF
+			  and try to modify the value. As for conflicts with active
+			  DMA channels? Well... if they're all reading 0xFFFF then none
+			  of them are active, so what's to worry about really? */
+		for (i=0;i < 4;i++) {
+			if (d8237_read_base_lo16(bch+i) == 0xFFFFU && d8237_read_count_lo16(bch+i) == 0xFFFFU) {
+				d8237_write_count(bch+i,0x20); /* harmless short count */
+				d8237_write_base(bch+i,0xBBBB0UL); /* direct it harmlessly at unused VGA RAM */
+				if (d8237_read_base_lo16(bch+i) != 0xFFFFU || d8237_read_count_lo16(bch+i) != 0xFFFFU) {
+					d8237_write_count(bch+i,0xFFFF);
+					d8237_write_base(bch+i,0xFFFFFF);
+					return 1; /* found one */
+				}
+			}
+			else {
+				return 1; /* wait, found one! */
+			}
+		}
+	}
+
+	return 0;
+}
+
 /* probing function, for several reasons:
  *    - post-2011 systems may very well omit the DMA controller entirely, as legacy hardware
  *    - pre-AT hardware may not have the secondary DMA controller
@@ -108,6 +145,10 @@ int probe_8237() {
 		i++;
 	}
 
+	/* BUGFIX: Apparently, on an old Sharp laptop, it's quite possible after cold boot
+	 *         for ALL 4 DMA CHANNELS to register as having base == 0xFFFF and count == 0xFFFF
+	 *         which falsely leads our code to believe there's no DMA controller! */
+	if (i == 4 && d8237_readwrite_test4(0)) i = 0;
 	if (i == 4) return 0; /* if not found, then quit */
 	d8237_flags |= D8237_DMA_PRIMARY;
 
@@ -133,6 +174,7 @@ int probe_8237() {
 		if (d8237_read_count_lo16(i) != 0xFFFFU) break;
 		i++;
 	}
+	if (i == 8 && d8237_readwrite_test4(4)) i = 4;
 	if (i != 8) d8237_flags |= D8237_DMA_SECONDARY; /* if found, then say so */
 
 	if (d8237_flags & D8237_DMA_SECONDARY) {
