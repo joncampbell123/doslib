@@ -3307,10 +3307,15 @@ int main(int argc,char **argv) {
 		printf("Cannot init VGA\n");
 		return 1;
 	}
-	if (!probe_8237()) {
-		printf("Cannot init 8237 DMA\n");
-		return 1;
-	}
+
+	/* TODO: Make sure this code still runs reliably without DMA (Direct DAC etc) if DMA not available! */
+	if (!probe_8237())
+		printf("WARNING: Cannot init 8237 DMA\n");
+
+	printf("DMA available: 0-3=%s 4-7=%s\n",
+		d8237_flags&D8237_DMA_PRIMARY?"yes":"no",
+		d8237_flags&D8237_DMA_SECONDARY?"yes":"no");
+
 	if (!probe_8259()) {
 		printf("Cannot init 8259 PIC\n");
 		return 1;
