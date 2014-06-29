@@ -126,7 +126,9 @@ int main() {
 		printf("\n");
 	}
 
-	while (getch() != 13);
+	if (isatty(1) && isatty(0)) {
+		while (getch() != 13);
+	}
 
 	if (vbe_info->video_mode_ptr != 0UL) {
 		for (entry=0;entry < 128;entry++) {
@@ -139,8 +141,10 @@ int main() {
 			else
 				printf("Cannot get info on mode 0x%04x\n",mode);
 
-			while ((c=getch()) != 13) {
-				if (c == 27) return 1;
+			if (isatty(1) && isatty(0)) {
+				while ((c=getch()) != 13) {
+					if (c == 27) return 1;
+				}
 			}
 		}
 	}
