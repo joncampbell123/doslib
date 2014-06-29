@@ -264,19 +264,27 @@ void dump_to_file() {
 		for (pl=0;pl < 4;pl++) {
 			sprintf(tmpname,"%s.PL%u",nname,pl);
 			if ((fp=fopen(tmpname,"wb")) != NULL) {
-				vga_write_GC(6,(ogc6 & (~0xE)) + 0x4); /* we want video RAM to map to 0xA0000-0xAFFFF */
+				vga_write_sequencer(4,0x06);
+				vga_write_GC(6,(ogc6 & (~0xE)) + (1 << 2) + 1); /* we want video RAM to map to 0xA0000-0xAFFFF AND we want to temporarily disable alphanumeric mode */
 				vga_write_GC(5,(ogc5 & (~0x7B))); /* read mode=0 write mode=0 host o/e=0 */
 				vga_write_GC(4,pl); /* read map select */
 
 				for (i=0;i < (65536/1024);i++) {
+					unsigned int j;
+
 #if TARGET_MSDOS == 32
-					memcpy(rdump,((unsigned char*)0xA0000) + (unsigned int)(i * 1024),1024);
+					volatile unsigned char *s = ((volatile unsigned char*)0xA0000) + (unsigned int)(i * 1024);
+					volatile unsigned char *d = (volatile unsigned char*)rdump;
+					for (j=0;j < 1024;j++) d[j] = s[j];
 #else
-					_fmemcpy(rdump,MK_FP(0xA000,(unsigned int)(i * 1024U)),1024);
+					volatile unsigned char FAR *s = (volatile unsigned char FAR*)MK_FP(0xA000,(i * 1024));
+					volatile unsigned char FAR *d = (volatile unsigned char FAR*)rdump;
+					for (j=0;j < 1024;j++) d[j] = s[j];
 #endif
 					fwrite(rdump,1024,1,fp);
 				}
 				fclose(fp);
+				vga_write_GC(6,ogc6); /* restore */
 			}
 		}
 
