@@ -177,6 +177,32 @@ void dump_to_file() {
 	printf("Standard VGA registers and RAM will be\n");
 	printf("dumped to %s. Hit ENTER to proceed.\n",nname);
 	printf("\n");
+	printf("\n");
+	printf("\n");
+
+	for (c=0;c < 40;c++) {
+		unsigned short b,cc;
+
+		vga_moveto(c,3);
+		vga_sync_bios_cursor();
+		cc = 0x0930 + (c&0xF);
+		b = c;
+
+		__asm {
+			push	ax
+			push	bx
+			push	cx
+			mov	ax,cc
+			mov	bx,b
+			mov	cx,1
+			int	10h
+			pop	cx
+			pop	bx
+			pop	ax
+		}
+	}
+	vga_moveto(0,5);
+	vga_sync_bios_cursor();
 
 	c = getch();
 	if (c != 13) return;
