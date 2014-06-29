@@ -192,7 +192,8 @@ uint32_t			vesa_lfb_base = 0;
 uint32_t			vesa_bnk_rproc = 0;
 uint8_t				vesa_bnk_window = 0;		/* which window to use */
 uint16_t			vesa_bnk_winseg = 0;
-uint16_t			vesa_bnk_winshf = 0;
+uint16_t			vesa_bnk_winshf = 0;		/* window granularity shift value NOT window size */
+uint16_t			vesa_bnk_winszshf = 0;		/* window size shift value NOT window size */
 uint16_t			vesa_bnk_wincur = 0;
 
 #if TARGET_MSDOS == 32
@@ -704,7 +705,7 @@ int vbe_mode_decision_acceptmode(struct vbe_mode_decision *md,struct vbe_mode_in
 	else {
 		vesa_bnk_window = 0;	/* TODO */
 		vesa_bnk_winseg = mi->win_a_segment;
-		switch (mi->win_size) {
+		switch (mi->win_granularity) {
 			case 1:		vesa_bnk_winshf = 10; break;
 			case 2:		vesa_bnk_winshf = 11; break;
 			case 4:		vesa_bnk_winshf = 12; break;
@@ -715,6 +716,22 @@ int vbe_mode_decision_acceptmode(struct vbe_mode_decision *md,struct vbe_mode_in
 			case 128:	vesa_bnk_winshf = 17; break;
 			default:	vesa_bnk_winshf = 14; break;
 		}
+		switch (mi->win_size) {
+			case 1:		vesa_bnk_winszshf = 10; break;
+			case 2:		vesa_bnk_winszshf = 11; break;
+			case 4:		vesa_bnk_winszshf = 12; break;
+			case 8:		vesa_bnk_winszshf = 13; break;
+			case 16:	vesa_bnk_winszshf = 14; break;
+			case 32:	vesa_bnk_winszshf = 15; break;
+			case 64:	vesa_bnk_winszshf = 16; break;
+			case 128:	vesa_bnk_winszshf = 17; break;
+			default:	vesa_bnk_winszshf = 14; break;
+		}
+
+		/* sanity check: window SIZE cannot be smaller than window GRANULARITY */
+		if (vesa_bnk_winszshf < vesa_bnk_winshf)
+			vesa_bnk_winszshf = vesa_bnk_winshf;
+
 		vesa_bnk_wincur = 0xFF;
 		vesa_bnk_rproc = md->no_wf ? 0UL : mi->window_function;
 		vesa_writeb = vesa_bnk_writeb;

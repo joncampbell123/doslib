@@ -149,6 +149,7 @@ extern uint32_t			vesa_bnk_rproc;
 extern uint8_t			vesa_bnk_window;		/* which window to use */
 extern uint16_t			vesa_bnk_winseg;
 extern uint16_t			vesa_bnk_winshf;
+extern uint16_t			vesa_bnk_winszshf;
 extern uint16_t			vesa_bnk_wincur;
 
 #if TARGET_MSDOS == 32
