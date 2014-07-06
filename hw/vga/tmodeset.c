@@ -580,6 +580,7 @@ int main() {
 		if (redraw) {
 			unsigned long rate;
 			double hrate,vrate;
+			unsigned char gfx_misc;
 
 			redraw = 0;
 			vga_mode = int10_getmode();
@@ -594,6 +595,9 @@ int main() {
 			/* position the cursor to home */
 			vga_moveto(0,0);
 			vga_sync_bios_cursor();
+
+			/* also read GC misc */
+			gfx_misc = vga_read_GC(6);
 
 			printf("VGA=%u EGA=%u CGA=%u MDA=%u MCGA=%u HGC=%u(%u)\n",
 					(vga_flags & VGA_IS_VGA) ? 1 : 0,
@@ -633,10 +637,11 @@ int main() {
 					mp.scanline_div2,
 					mp.address_wrap_select);
 
-			printf("map14=%u map13=%u ref/scanline=%u\n",
+			printf("map14=%u map13=%u ref/scanline=%u o/e=%u\n",
 					mp.map14,
 					mp.map13,
-					mp.refresh_cycles_per_scanline);
+					mp.refresh_cycles_per_scanline,
+					(gfx_misc&2)?1:0);
 
 			printf("hrate=%.3fKHz vrate=%.3fHz\n",
 					hrate / 1000,
@@ -648,9 +653,10 @@ int main() {
 					mp.vertical_start_retrace,
 					mp.vertical_end_retrace);
 
-			printf(" blnk=%u <=x< %u\n",
+			printf(" blnk=%u <=x< %u alpha=%u\n",
 					mp.vertical_blank_start,
-					mp.vertical_blank_end);
+					mp.vertical_blank_end,
+					((gfx_misc&1)^1)?1:0); /* the bit is called "alpha disable" */
 
 			printf("H:tot=%u disp=%u retr=%u <=x< %u\n",
 					mp.horizontal_total,
