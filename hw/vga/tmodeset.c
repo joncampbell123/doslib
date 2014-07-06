@@ -813,11 +813,19 @@ int main() {
 			printf(" 3   toggle map13\n");
 			printf(" 4   toggle map14\n");
 			printf(" d   toggle scan double\n");
+			printf(" o   toggle odd/even\n");
+			printf(" p   toggle alpha disable\n");
 
 			c = getch();
 			if (c == 'd') {
 				mp.scan_double = !mp.scan_double;
 				vga_write_crtc_mode(&mp);
+			}
+			else if (c == 'o') {
+				vga_write_GC(6,vga_read_GC(6)^2);
+			}
+			else if (c == 'p') {
+				vga_write_GC(6,vga_read_GC(6)^1);
 			}
 			else if (c == 'm') {
 				mp.memaddr_div2 = !mp.memaddr_div2;
