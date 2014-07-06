@@ -1807,7 +1807,7 @@ int main() {
 		else if (c == 'X') {
 			if (vga_flags & (VGA_IS_VGA|VGA_IS_MCGA)) {
 				volatile VGA_RAM_PTR wr;
-				unsigned int w,h,x,y;
+				unsigned int w,h,x,y,ii;
 
 				int10_setmode(19);
 				update_state_from_vga();
@@ -1830,6 +1830,22 @@ int main() {
 				for (c=0;c < 64;c++) vga_palette_write(c,0,0);
 				for (c=0;c < 64;c++) vga_palette_write(0,c,0);
 				for (c=0;c < 64;c++) vga_palette_write(0,0,c);
+				while (getch() != 13);
+
+				for (y=0;y < 200;y++) {
+					if (kbhit()) {
+						int c = getch();
+						if (c == ' ' || c == 27) break;
+					}
+
+					vga_wait_for_vsync();
+					vga_wait_for_vsync_end();
+					for (ii=0;ii < 32;ii++) {
+						vga_wait_for_hsync();
+						vga_wait_for_hsync_end();
+					}
+					vga_set_start_location(y*(w/4));
+				}
 				while (getch() != 13);
 
 				int10_setmode(3);
