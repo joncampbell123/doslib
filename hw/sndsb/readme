@@ -529,8 +529,6 @@ BUGS
     locations above 1MB, so DMA was effectively playing some unrelated data.
     Goldplay mode now allocates a separate (16-byte long) DMA buffer.
 
-    emm386 off
-
 6]  Selecting "Device" -> "Trigger IRQ" when playing or selecting 16-bit audio
     causes computer to lock up. 32-bit builds trigger a crash dump in DOS32a
     and DOS4G/W.
