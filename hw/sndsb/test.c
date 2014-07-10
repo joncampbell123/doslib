@@ -3976,6 +3976,8 @@ int main(int argc,char **argv) {
 					"                         Has no effect unless DSP in single-cycle mode.\n"
 					"Poll ack when no IRQ ... If not assigned an IRQ, use polling of the status\n"
 					"                         port to prevent halting on SB16.\n"
+					"DSP alias port ......... Use alias port 22Dh instead of 22Ch.\n"
+					"Backwards .............. Play file backwards by using DMA decrement mode.\n"
 					"\n"
 					"Detailed explanations are available in README.TXT"
 					,0,0);
