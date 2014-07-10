@@ -130,6 +130,8 @@ struct sndsb_ctx {
 								   and to set the DSP block size & DMA count to only precisely the IRQ
 								   interval. In which case, set this to 0 */
 	uint8_t				dsp_autoinit_command:1;	/* whether or not to use the auto-init form of playback/recording */
+	uint8_t				dosbox_emulation:1;	/* we're running from within DOSBox */
+	uint8_t				virtualbox_emulation:1;	/* we're running from within Sun/Oracle Virtualbox */
 	uint8_t				windows_emulation:1;	/* we're running under Windows where the implementation is probably shitty */
 	uint8_t				windows_xp_ntvdm:1;	/* Microsoft's NTVDM.EXE based emulation in Windows XP requires some restrictive
 								   workarounds to buffer size, interval, etc. to work properly. Note this also

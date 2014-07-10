@@ -1,3 +1,5 @@
+/* FIXME: This code is failing to detect that it's running under the latest (4.3) VirtualBox. Why? */
+
 /* FIXME: This just in: your IRQ testing routine can hang the system especially (as in DOSBox) when IRQs that are
  *        normally masked have a corresponding interrupt vector set to NULL (0000:0000). You need to double-check
  *        the probe function and make sure there is no possible way uninitialized vectors execute when any
@@ -371,6 +373,11 @@ struct sndsb_ctx *sndsb_try_blaster_var() {
 	if (sndsb_card_blaster != NULL)
 		return sndsb_card_blaster;
 
+	/* some of our detection relies on knowing what OS we're running under */
+	cpu_probe();
+	probe_dos();
+	detect_windows();
+
 	s = getenv("BLASTER");
 	if (s == NULL) return NULL;
 
@@ -658,6 +665,11 @@ int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
  *      when probing. If any of them are -1, and this code knows how to deduce
  *      it directly from the hardware, then they will be updated */
 int sndsb_init_card(struct sndsb_ctx *cx) {
+	/* some of our detection relies on knowing what OS we're running under */
+	cpu_probe();
+	probe_dos();
+	detect_windows();
+
 #if TARGET_MSDOS == 32
 	cx->goldplay_dma = NULL;
 #endif
@@ -665,10 +677,12 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_nag_mode = 0;
 	cx->dsp_nag_hispeed = 0;
 	cx->hispeed_matters = 1; /* assume it does */
+	cx->dosbox_emulation = 0;
 	cx->hispeed_blocking = 1; /* assume it does */
 	cx->timer_tick_signal = 0;
 	cx->timer_tick_func = NULL;
 	cx->poll_ack_when_no_irq = 1;
+	cx->virtualbox_emulation = 0;
 	cx->reason_not_supported = NULL;
 	cx->dsp_alias_port = sndsb_probe_options.use_dsp_alias;
 	cx->dsp_direct_dac_poll_retry_timeout = 16; /* assume at least 16 I/O reads to wait for DSP ready */
@@ -1018,7 +1032,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 
 	/* add our commentary for other emulation environments we can detect */
-	if (detect_dosbox_emu() && !cx->windows_emulation) {
+	if (!cx->windows_emulation && detect_dosbox_emu()) {
 		/* add commentary if we know we're running under the DOSBox emulator.
 		 * Nothing special, DOSBox does a damn good job at it's emulation so
 		 * no workarounds are required. */
@@ -1026,6 +1040,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		char *f = cx->dsp_copyright+sizeof(cx->dsp_copyright)-1;
 		const char *add = " [DOSBox]";
 
+		cx->dosbox_emulation = 1;
 		if (x != cx->dsp_copyright) {
 			while (x < f && *add) *x++ = *add++;
 			*x = 0;
@@ -1034,6 +1049,9 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 			strcpy(cx->dsp_copyright,"DOSBox emulator");
 		}
 	}
+
+	if (!cx->windows_emulation && detect_virtualbox_emu())
+		cx->virtualbox_emulation = 1;
 #endif
 
 	/* check DMA against the DMA controller presence.
@@ -1648,6 +1666,7 @@ void sndsb_manual_probe_high_dma(struct sndsb_ctx *cx) {
 		 * value rather than the 0xFFFF value most DMA controllers return. In other words,
 		 * we're compensating for VirtualBox's mediocre DMA emulation. */
 		if (detect_virtualbox_emu()) {
+			cx->virtualbox_emulation = 1;
 			DEBUG(fprintf(stdout,"Setting test duration to longer period to work with VirtualBox\n"));
 			testlen = 22050/5;
 		}
@@ -1797,6 +1816,7 @@ void sndsb_manual_probe_dma(struct sndsb_ctx *cx) {
 		 * value rather than the 0xFFFF value most DMA controllers return. In other words,
 		 * we're compensating for VirtualBox's mediocre DMA emulation. */
 		if (detect_virtualbox_emu()) {
+			cx->virtualbox_emulation = 1;
 			DEBUG(fprintf(stdout,"Setting test duration to longer period to work with VirtualBox\n"));
 			testlen = 22050/5;
 		}
@@ -2352,6 +2372,29 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		cx->reason_not_supported = "DSP 1.xx commands do not support auto-init. Playback\nis automatically using single-cycle commands instead.";
 		return 1; /* we support it, but just to let you know... */
 	}
+	/* playing DMA backwards with 16-bit audio is not advised.
+	 * it COULD theoretically work with a 16-bit DMA channel because of how it counts, but...
+	 * there's also the risk you use an 8-bit DMA channel which of course gets the byte order wrong! */
+	if (cx->backwards && wav_16bit) {
+		cx->reason_not_supported = "16-bit PCM played backwards is not recommended\nbyte order may not be correct to sound card";
+		return 0;
+	}
+	/* it's also a good bet Windows virtualization never even considers DMA in decrement mode because nobody really ever uses it */
+	if (cx->backwards && cx->windows_emulation) {
+		cx->reason_not_supported = "DMA played backwards is not recommended from\nwithin a Windows DOS box";
+		return 0;
+	}
+	/* EMM386.EXE seems to handle backwards DMA just fine, but we can't assume v86 monitors handle it well */
+#if TARGET_MSDOS == 32
+	if (cx->backwards && dos_ltp_info.paging && dos_ltp_info.dma_dos_xlate) {
+#else
+	if (cx->backwards && (cpu_flags&CPU_FLAG_V86_ACTIVE)) {
+#endif
+		cx->reason_not_supported = "DMA played backwards is not recommended from\nwithin a virtual 8086 mode monitor";
+		return 0;
+	}
+
+	/* NTS: Virtualbox supports backwards DMA, it's OK */
 
 	return 1;
 }
