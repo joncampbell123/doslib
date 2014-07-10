@@ -983,6 +983,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 					wav_position = lseek(wav_fd,0,SEEK_END);
 					if (wav_position >= adj) wav_position -= adj;
 					else if (wav_position != 0UL) wav_position = 0;
+					wav_position /= wav_bytes_per_sample;
 				}
 
 				lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
@@ -1210,6 +1211,8 @@ static unsigned long playback_live_position() {
 	if (sb_card->backwards) {
 		if (sb_card->buffer_last_io >= (unsigned long)xx)
 			xx += sb_card->buffer_size;
+
+		xx -= sb_card->buffer_size; /* because we started from the end */
 	}
 	else {
 		if (sb_card->buffer_last_io <= (unsigned long)xx)
@@ -1534,6 +1537,7 @@ void begin_play() {
 
 void stop_play() {
 	if (!wav_playing) return;
+	if (!wav_record) wav_position = playback_live_position();
 
 	_cli();
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || sb_card->goldplay_mode) {
@@ -1566,9 +1570,6 @@ void stop_play() {
 		wav_data_length = len - 44;
 		wav_position = 0;
 		rec_vu(~0UL);
-	}
-	else {
-		wav_position = playback_live_position();
 	}
 }
 
@@ -3824,7 +3825,7 @@ int main(int argc,char **argv) {
 			}
 			else if (mitem == &main_menu_help_about) {
 				struct vga_msg_box box;
-				vga_msg_box_create(&box,"Sound Blaster test program v1.0 for DOS\n\n(C) 2008-2014 Jonathan Campbell\nALL RIGHTS RESERVED\n"
+				vga_msg_box_create(&box,"Sound Blaster test program v1.1 for DOS\n\n(C) 2008-2014 Jonathan Campbell\nALL RIGHTS RESERVED\n"
 #if TARGET_MSDOS == 32
 					"32-bit protected mode version"
 #elif defined(__LARGE__)
