@@ -903,7 +903,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			}
 
 #ifdef INCLUDE_FX
-			fx_proc(adpcm_tmp,rd / wav_bytes_per_sample);
+			if (!sb_card->backwards) fx_proc(adpcm_tmp,rd / wav_bytes_per_sample);
 #endif
 			wav_position += (uint32_t)rd;
 			if (sb_card->dsp_adpcm == ADPCM_4BIT) {
@@ -1012,7 +1012,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 
 			assert((cx->buffer_last_io+((uint32_t)rd)) <= cx->buffer_size);
 #ifdef INCLUDE_FX
-			fx_proc(buffer + cx->buffer_last_io,rd / wav_bytes_per_sample);
+			if (!sb_card->backwards) fx_proc(buffer + cx->buffer_last_io,rd / wav_bytes_per_sample);
 #endif
 			if (sb_card->audio_data_flipped_sign) {
 				if (wav_16bit)
