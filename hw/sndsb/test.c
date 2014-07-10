@@ -1500,6 +1500,7 @@ static void vga_write_until(unsigned int x) {
 }
 
 static int change_param_idx = 0;
+static int change_alias_idx = 0;
 
 /* NTS: the 13000, 15000, 23000 values come from Creative documentation */
 static const unsigned short param_preset_rates[] = {
@@ -1516,6 +1517,78 @@ static const char *dos32_irq_0_warning =
 	"         and possibly cause a crash.\n"
 	"         Enable?";
 #endif
+
+void change_alias_menu() {
+	unsigned char loop=1;
+	unsigned char redraw=1;
+	unsigned char uiredraw=1;
+	unsigned char selector=change_alias_idx;
+	VGA_ALPHA_PTR vga;
+	unsigned int cc;
+	char tmp[128];
+
+	while (loop) {
+		if (redraw || uiredraw) {
+			_cli();
+			if (redraw) {
+				for (vga=vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+				ui_anim(1);
+			}
+			vga_moveto(0,4);
+
+			vga_write_color(selector == 0 ? 0x70 : 0x1F);
+			sprintf(tmp,"DSP alias:     %u",sb_card->dsp_alias_port);
+			vga_write(tmp);
+			vga_write_until(30);
+			vga_write("\n");
+
+			vga_write_sync();
+			_sti();
+			redraw = 0;
+			uiredraw = 0;
+		}
+
+		if (kbhit()) {
+			int c = getch();
+			if (c == 0) c = getch() << 8;
+
+			if (c == 27 || c == 13)
+				loop = 0;
+			else if (c == 0x4800) { /* up arrow */
+//				if (selector > 0) selector--;
+//				else selector=0;
+				uiredraw=1;
+			}
+			else if (c == 0x5000) { /* down arrow */
+//				if (selector < -1) selector++;
+//				else selector=0;
+				uiredraw=1;
+			}
+			else if (c == 0x4B00) { /* left arrow */
+				switch (selector) {
+					case 0:	/* sample rate */
+						sb_card->dsp_alias_port ^= 1;
+						break;
+				};
+				update_cfg();
+				uiredraw=1;
+			}
+			else if (c == 0x4D00) { /* right arrow */
+				switch (selector) {
+					case 0:	/* sample rate */
+						sb_card->dsp_alias_port ^= 1;
+						break;
+				};
+				update_cfg();
+				uiredraw=1;
+			}
+		}
+
+		ui_anim(0);
+	}
+
+	change_param_idx = selector;
+}
 
 void change_param_menu() {
 	unsigned char loop=1;
@@ -2195,6 +2268,8 @@ static const struct vga_menu_item main_menu_device_choose_sound_card =
 static const struct vga_menu_item main_menu_device_configure_sound_card =
 	{"Configure sound card",'o',	0,	0};
 #endif
+static struct vga_menu_item main_menu_device_dsp_alias =
+	{"Alias ports",		'a',	0,	0};
 
 static const struct vga_menu_item* main_menu_device[] = {
 	&main_menu_device_dsp_reset,
@@ -2210,6 +2285,7 @@ static const struct vga_menu_item* main_menu_device[] = {
 #ifdef LIVE_CFG
 	&main_menu_device_configure_sound_card,
 #endif
+	&main_menu_device_dsp_alias,
 	NULL
 };
 
@@ -3787,6 +3863,14 @@ int main(int argc,char **argv) {
 				update_cfg();
 				ui_anim(1);
 				if (wp) begin_play();
+			}
+			else if (mitem == &main_menu_device_dsp_alias) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				change_alias_menu();
+				if (wp) begin_play();
+				bkgndredraw = 1;
+				redraw = 1;
 			}
 			else if (mitem == &main_menu_playback_dsp_poll_ack_no_irq) {
 				unsigned char wp = wav_playing;
