@@ -134,6 +134,7 @@ struct sndsb_ctx {
 	uint8_t				windows_xp_ntvdm:1;	/* Microsoft's NTVDM.EXE based emulation in Windows XP requires some restrictive
 								   workarounds to buffer size, interval, etc. to work properly. Note this also
 								   applies to Windows Vista. */
+	uint8_t				dsp_alias_port:1;	/* if set, use DSP alias I/O port 0x22D (SB DSP 1.x and 2.x only!) EMF_ID style */
 	uint8_t				windows_9x_me_sbemul_sys:1;/* Microsoft's SBEMUL.SYS driver, Windows 98/ME */
 	uint8_t				windows_creative_sb16_drivers:1;/* Creative Sound Blaster 16 drivers for Windows */
 	uint8_t				vdmsound:1;		/* We're running under VDMSOUND.EXE */
@@ -204,6 +205,7 @@ struct sndsb_probe_opts {
 	unsigned char			disable_manual_dma_probing:1;		/* don't probe for DMA channel if unknown         /nodmap */
 	unsigned char			disable_manual_high_dma_probing:1;	/* don't probe for 16-bit DMA channel if unknown  /nohdmap */
 	unsigned char			disable_windows_vxd_checks:1;		/* don't try to identify Windows drivers          /nowinvxd */
+	unsigned char			use_dsp_alias:1;			/* probe, initialize and default to alias 22Dh    /sbalias:dsp */
 };
 
 extern struct sndsb_probe_opts		sndsb_probe_options;

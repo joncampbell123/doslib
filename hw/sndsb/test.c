@@ -2471,6 +2471,7 @@ static void help() {
 	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
 	printf(" /noidle              Don't use sndsb library idle function\n");
 	printf(" /adma                Assume DMA controllers are present\n");
+	printf(" /sbalias:dsp         Use DSP alias port 0x22D by default\n");
 
 #if TARGET_MSDOS == 32
 	printf("The following option affects hooking the NMI interrupt. Hooking is\n");
@@ -3250,6 +3251,9 @@ int main(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"adma")) {
 				assume_dma = 1;
+			}
+			else if (!strcmp(a,"sbalias:dsp")) {
+				sndsb_probe_options.use_dsp_alias = 1;
 			}
 			else if (!strcmp(a,"noidle")) {
 				dont_sb_idle = 1;

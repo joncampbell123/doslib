@@ -186,40 +186,40 @@ static inline unsigned char sndsb_timer_tick_directio_poll_ready(unsigned short 
 }
 
 void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx) {
-	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_poll_retry_timeout)) {
+	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
 		cx->buffer_lin[cx->direct_dsp_io] = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
 		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
 		cx->timer_tick_func = sndsb_timer_tick_directi_cmd;
 		cx->direct_dac_sent_command = 0;
-		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_read_after_command);
+		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
 	}
 }
 
 void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx) {
-	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_poll_retry_timeout)) {
-		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x20);	/* direct DAC read */
+	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
+		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),0x20);	/* direct DAC read */
 		cx->timer_tick_func = sndsb_timer_tick_directi_data;
 		cx->direct_dac_sent_command = 1;
-		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_read_after_command);
+		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
 	}
 }
 
 void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx) {
-	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_poll_retry_timeout)) {
-		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,cx->buffer_lin[cx->direct_dsp_io]);
+	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
+		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),cx->buffer_lin[cx->direct_dsp_io]);
 		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
 		cx->timer_tick_func = sndsb_timer_tick_directo_cmd;
 		cx->direct_dac_sent_command = 0;
-		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_read_after_command);
+		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
 	}
 }
 
 void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx) {
-	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_poll_retry_timeout)) {
-		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,0x10);	/* direct DAC write */
+	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
+		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),0x10);	/* direct DAC write */
 		cx->timer_tick_func = sndsb_timer_tick_directo_data;
 		cx->direct_dac_sent_command = 1;
-		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS,cx->dsp_direct_dac_read_after_command);
+		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
 	}
 }
 
@@ -418,7 +418,7 @@ int sndsb_read_dsp(struct sndsb_ctx *cx) {
 	int c = -1;
 
 	do {
-		if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS) & 0x80) { /* data available? */
+		if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS+(cx->dsp_alias_port?1:0)) & 0x80) { /* data available? */
 			c = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
 			break;
 		}
@@ -591,10 +591,10 @@ int sndsb_write_dsp(struct sndsb_ctx *cx,uint8_t d) {
 
 	DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
 	do {
-		if (inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS) & 0x80)
+		if (inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0)) & 0x80)
 			t8254_wait(t8254_us2ticks(10));
 		else {
-			outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA,d);
+			outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),d);
 			return 1;
 		}
 	} while (--patience != 0);
@@ -645,6 +645,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->timer_tick_func = NULL;
 	cx->poll_ack_when_no_irq = 1;
 	cx->reason_not_supported = NULL;
+	cx->dsp_alias_port = sndsb_probe_options.use_dsp_alias;
 	cx->dsp_direct_dac_poll_retry_timeout = 16; /* assume at least 16 I/O reads to wait for DSP ready */
 	cx->dsp_direct_dac_read_after_command = 0;
 	cx->windows_creative_sb16_drivers_ver = 0;
@@ -693,7 +694,12 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_ok = 1;
 
 	/* hm, what version are you? */
-	sndsb_query_dsp_version(cx);
+	if (!sndsb_query_dsp_version(cx)) {
+		/* hm? failed the DSP version command?
+		 * are you OK? test by sending "disable speaker" */
+		if (!sndsb_write_dsp(cx,0xD1))
+			cx->dsp_ok = 0;
+	}
 
 	/* FIX: Apparently when SBOS unloads it leaves behind the I/O
 	        port stuck returning 0xAA, which can trick most SB
@@ -1924,21 +1930,21 @@ int sndsb_try_base(uint16_t iobase) {
 	}
 
 	/* if we still have to figure out the IRQ, and it's not PnP then probe around to figure it out */
-	if (!cx->is_gallant_sc6600 && !cx->do_not_probe_irq && cx->pnp_id == 0 && cx->irq == -1 &&
+	if (cx->dsp_ok && !cx->is_gallant_sc6600 && !cx->do_not_probe_irq && cx->pnp_id == 0 && cx->irq == -1 &&
 		windows_mode == WINDOWS_NONE && !sndsb_probe_options.disable_manual_irq_probing)
 		sndsb_manual_probe_irq(cx);
 
 	/* if we have to, detect the DMA channel. */
-	if (!cx->is_gallant_sc6600 && !cx->do_not_probe_dma && cx->pnp_id == 0 && cx->dma8 == -1 &&
+	if (cx->dsp_ok && !cx->is_gallant_sc6600 && !cx->do_not_probe_dma && cx->pnp_id == 0 && cx->dma8 == -1 &&
 		!sndsb_probe_options.disable_manual_dma_probing)
 		sndsb_manual_probe_dma(cx);
 	/* and the high DMA channel too, if a SB16 or compatible. */
-	if (!cx->is_gallant_sc6600 && !cx->do_not_probe_dma && cx->pnp_id == 0 && cx->dma16 == -1 &&
+	if (cx->dsp_ok && !cx->is_gallant_sc6600 && !cx->do_not_probe_dma && cx->pnp_id == 0 && cx->dma16 == -1 &&
 		cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx && !sndsb_probe_options.disable_manual_high_dma_probing)
 		sndsb_manual_probe_high_dma(cx);
 
 	/* if we still have to figure out the IRQ, then probe around to figure it out */
-	if (!cx->is_gallant_sc6600 && !cx->do_not_probe_irq && cx->pnp_id == 0 && cx->irq == -1 &&
+	if (cx->dsp_ok && !cx->is_gallant_sc6600 && !cx->do_not_probe_irq && cx->pnp_id == 0 && cx->irq == -1 &&
 		!sndsb_probe_options.disable_alt_irq_probing)
 		sndsb_alt_lite_probe_irq(cx);
 
@@ -2017,6 +2023,10 @@ void sndsb_main_idle(struct sndsb_ctx *cx) {
 /* we can do output method. if we can't, then don't bother playing, because it flat out won't work.
  * if we can, then you want to check if it's supported, because if it's not, you may get weird results, but nothing catastrophic. */
 int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_rate,unsigned char wav_stereo,unsigned char wav_16bit) {
+	if (!cx->dsp_ok) {
+		cx->reason_not_supported = "DSP not detected";
+		return 0; /* No DSP, no playback */
+	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_MAX) {
 		cx->reason_not_supported = "play method out of range";
 		return 0; /* invalid DSP output method */
@@ -2131,6 +2141,10 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_sample_rate < 4000) {
 		cx->reason_not_supported = "Non-SB16 playback below 4000Hz probably not going to work";
+		return 0;
+	}
+	if (cx->dsp_alias_port && cx->dsp_vmaj > 2) {
+		cx->reason_not_supported = "DSP alias I/O ports only exist on original Sound Blaster\nDSP 1.xx and 2.xx";
 		return 0;
 	}
 
