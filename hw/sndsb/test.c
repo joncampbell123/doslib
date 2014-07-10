@@ -677,13 +677,11 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	int rd,i,bufe=0;
 	uint32_t how;
 
-	/* FIXME */
-	if (cx->backwards) return;
-
 	/* caller should be rounding! */
 	assert((up_to & 3UL) == 0UL);
 	if (up_to >= cx->buffer_size) return;
 	if (cx->buffer_size < 32) return;
+	if (cx->backwards) return; /* NTS: When we do support backwards DMA recording, this code will need to reverse the audio then write forwards in WAV */
 	if (cx->buffer_last_io == up_to) return;
 	if (sb_card->dsp_adpcm != 0) return;
 	if (max == 0) max = cx->buffer_size/4;
@@ -855,7 +853,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 		if (sb_card->dsp_adpcm > 0) {
 			unsigned int src;
 
-			/* FIXME */
+			/* FIXME: Would be neat to demonstrate ADPCM playback with backwards DMA */
 			if (cx->backwards) break;
 
 			/* 16-bit mode: avoid integer overflow below */
@@ -1439,7 +1437,34 @@ void begin_play() {
 
 	if (wav_playing)
 		return;
-		
+
+	/* sorry, lock out unimplemented modes */
+	{
+		const char *why = NULL;
+		int i;
+
+		if (sb_card->backwards && sb_card->dsp_adpcm != 0)
+			why = "Backwards playback and ADPCM not implemented";
+		else if (sb_card->backwards && wav_record) /* NTS: When we do support this, code will need to reverse audio before writing to WAV */
+			why = "Backwards recording not implemented";
+
+		if (why) {
+			struct vga_msg_box box;
+			vga_msg_box_create(&box,why,0,0);
+			while (1) {
+				ui_anim(0);
+				if (kbhit()) {
+					i = getch();
+					if (i == 0) i = getch() << 8;
+					if (i == 13 || i == 27) break;
+				}
+			}
+			vga_msg_box_destroy(&box);
+
+			return;
+		}
+	}
+
 	if (wav_record)
 		open_wav_unique_name();
 
