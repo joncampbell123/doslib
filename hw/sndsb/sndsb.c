@@ -188,7 +188,13 @@ static inline unsigned char sndsb_timer_tick_directio_poll_ready(unsigned short 
 void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx) {
 	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
 		cx->buffer_lin[cx->direct_dsp_io] = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
-		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
+		if (cx->backwards) {
+			if (cx->direct_dsp_io == 0) cx->direct_dsp_io = cx->buffer_size - 1;
+			else cx->direct_dsp_io--;
+		}
+		else {
+			if ((++cx->direct_dsp_io) >= cx->buffer_size) cx->direct_dsp_io = 0;
+		}
 		cx->timer_tick_func = sndsb_timer_tick_directi_cmd;
 		cx->direct_dac_sent_command = 0;
 		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
@@ -207,7 +213,13 @@ void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx) {
 void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx) {
 	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
 		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),cx->buffer_lin[cx->direct_dsp_io]);
-		if (++cx->direct_dsp_io >= cx->buffer_size) cx->direct_dsp_io = 0;
+		if (cx->backwards) {
+			if (cx->direct_dsp_io == 0) cx->direct_dsp_io = cx->buffer_size - 1;
+			else cx->direct_dsp_io--;
+		}
+		else {
+			if ((++cx->direct_dsp_io) >= cx->buffer_size) cx->direct_dsp_io = 0;
+		}
 		cx->timer_tick_func = sndsb_timer_tick_directo_cmd;
 		cx->direct_dac_sent_command = 0;
 		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
@@ -230,7 +242,13 @@ void sndsb_timer_tick_goldi_cpy(struct sndsb_ctx *cx) {
 #else
 	_fmemcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma,cx->gold_memcpy);
 #endif
-	if ((cx->direct_dsp_io += cx->gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
+	if (cx->backwards) {
+		if (cx->direct_dsp_io < cx->gold_memcpy) cx->direct_dsp_io = cx->buffer_size - cx->gold_memcpy;
+		else cx->direct_dsp_io -= cx->gold_memcpy;
+	}
+	else {
+		if ((cx->direct_dsp_io += cx->gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
+	}
 }
 
 void sndsb_timer_tick_goldo_cpy(struct sndsb_ctx *cx) {
@@ -240,7 +258,13 @@ void sndsb_timer_tick_goldo_cpy(struct sndsb_ctx *cx) {
 #else
 	_fmemcpy(cx->goldplay_dma,cx->buffer_lin+cx->direct_dsp_io,cx->gold_memcpy);
 #endif
-	if ((cx->direct_dsp_io += cx->gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
+	if (cx->backwards) {
+		if (cx->direct_dsp_io < cx->gold_memcpy) cx->direct_dsp_io = cx->buffer_size - cx->gold_memcpy;
+		else cx->direct_dsp_io -= cx->gold_memcpy;
+	}
+	else {
+		if ((cx->direct_dsp_io += cx->gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
+	}
 }
 
 struct sndsb_ctx *sndsb_by_base(uint16_t x) {
@@ -637,6 +661,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 #if TARGET_MSDOS == 32
 	cx->goldplay_dma = NULL;
 #endif
+	cx->backwards = 0;
 	cx->dsp_nag_mode = 0;
 	cx->dsp_nag_hispeed = 0;
 	cx->hispeed_matters = 1; /* assume it does */
@@ -2372,18 +2397,30 @@ uint32_t sndsb_read_dma_buffer_position(struct sndsb_ctx *cx) {
 	else if (cx->buffer_16bit) {
 		if (cx->dma16 < 0) return 0;
 		r = d8237_read_count(cx->dma16);
-		if (r >= 0xFFFEUL) r = 0; /* FIXME: the 8237 library should have a "is terminal count" function */
-		if (r >= cx->buffer_dma_started_length) r = cx->buffer_dma_started_length - 1;
-		r = cx->buffer_dma_started_length - (r+1);
-		r += cx->buffer_dma_started;
+		if (cx->backwards) {
+			/* TODO */
+		}
+		else {
+			if (r >= 0xFFFEUL) r = 0; /* FIXME: the 8237 library should have a "is terminal count" function */
+			if (r >= cx->buffer_dma_started_length) r = cx->buffer_dma_started_length - 1;
+			r = cx->buffer_dma_started_length - (r+1);
+			r += cx->buffer_dma_started;
+		}
 	}
 	else {
 		if (cx->dma8 < 0) return 0;
 		r = d8237_read_count(cx->dma8);
-		if (r >= 0xFFFFUL) r = 0;
-		if (r >= cx->buffer_dma_started_length) r = cx->buffer_dma_started_length - 1;
-		r = cx->buffer_dma_started_length - (r+1);
-		r += cx->buffer_dma_started;
+		if (cx->backwards) {
+			if (r >= 0xFFFFUL) r = 0;
+			if (r >= cx->buffer_dma_started_length) r = cx->buffer_dma_started_length - 1;
+			r += cx->buffer_dma_started;
+		}
+		else {
+			if (r >= 0xFFFFUL) r = 0;
+			if (r >= cx->buffer_dma_started_length) r = cx->buffer_dma_started_length - 1;
+			r = cx->buffer_dma_started_length - (r+1);
+			r += cx->buffer_dma_started;
+		}
 	}
 
 	return r;
@@ -2405,13 +2442,18 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 	if (cx->windows_emulation && cx->windows_springwait == 0 && cx->windows_xp_ntvdm)
 		return 1;
 
-	cx->direct_dsp_io = 0;
+	if (cx->backwards)
+		cx->direct_dsp_io = cx->buffer_size - 1;
+	else
+		cx->direct_dsp_io = 0;
+
 	if ((signed char)ch == -1) return 0;
 	/* set up the DMA channel */
 	outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
 	outp(d8237_ioport(ch,D8237_REG_W_WRITE_MODE),
 		(cx->chose_autoinit_dma ? D8237_MODER_AUTOINIT : 0) |
+		(cx->backwards ? D8237_MODER_ADDR_DEC : 0) |
 		D8237_MODER_CHANNEL(ch) |
 		D8237_MODER_TRANSFER(cx->dsp_record ? D8237_MODER_XFER_WRITE : D8237_MODER_XFER_READ) |
 		D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
@@ -2419,6 +2461,8 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 	if (cx->goldplay_mode) {
 		/* goldplay mode REQUIRES auto-init DMA */
 		if (!cx->chose_autoinit_dma) return -1;
+
+		cx->gold_memcpy = (cx->buffer_16bit?2:1)*(cx->buffer_stereo?2:1);
 
 #if TARGET_MSDOS == 32
 		if (cx->goldplay_dma == NULL) {
@@ -2441,7 +2485,7 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 		d8237_write_count(ch,(cx->buffer_stereo ? 2 : 1)*(cx->buffer_16bit ? 2 : 1));
 		/* point it to our "goldplay_dma" */
 #if TARGET_MSDOS == 32
-		d8237_write_base(ch,cx->goldplay_dma->phys);
+		d8237_write_base(ch,cx->goldplay_dma->phys + (cx->backwards ? (cx->gold_memcpy-1) : 0));
 
 		if ((cx->buffer_16bit?1:0)^(cx->audio_data_flipped_sign?1:0))
 			memset(cx->goldplay_dma->lin,0,4);
@@ -2450,7 +2494,7 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 #else
 		{
 			unsigned char far *p = (unsigned char far*)(cx->goldplay_dma);
-			d8237_write_base(ch,((uint32_t)FP_SEG(p) << 4UL) + (uint32_t)FP_OFF(p));
+			d8237_write_base(ch,((uint32_t)FP_SEG(p) << 4UL) + (uint32_t)FP_OFF(p) + (cx->backwards ? (cx->gold_memcpy-1) : 0));
 
 			if ((cx->buffer_16bit?1:0)^(cx->audio_data_flipped_sign?1:0))
 				_fmemset(p,0,4);
@@ -2461,7 +2505,10 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 	}
 	else {
 		d8237_write_count(ch,cx->buffer_dma_started_length);
-		d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started); /* RAM location with not much around */
+		if (cx->backwards)
+			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started+cx->buffer_dma_started_length-1);
+		else
+			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started); /* RAM location with not much around */
 	}
 
 	outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
@@ -2882,7 +2929,10 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 		cx->buffer_dma_started_length = rem;
 
 		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
-		d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started); /* RAM location with not much around */
+		if (cx->backwards)
+			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started+cx->buffer_dma_started_length-1); /* RAM location with not much around */
+		else
+			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started); /* RAM location with not much around */
 		d8237_write_count(ch,cx->buffer_dma_started_length);
 		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
 	}

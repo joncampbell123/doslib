@@ -135,6 +135,7 @@ struct sndsb_ctx {
 								   workarounds to buffer size, interval, etc. to work properly. Note this also
 								   applies to Windows Vista. */
 	uint8_t				dsp_alias_port:1;	/* if set, use DSP alias I/O port 0x22D (SB DSP 1.x and 2.x only!) EMF_ID style */
+	uint8_t				backwards:1;		/* play buffer in reverse. will instruct DMA controller to decrement addr */
 	uint8_t				windows_9x_me_sbemul_sys:1;/* Microsoft's SBEMUL.SYS driver, Windows 98/ME */
 	uint8_t				windows_creative_sb16_drivers:1;/* Creative Sound Blaster 16 drivers for Windows */
 	uint8_t				vdmsound:1;		/* We're running under VDMSOUND.EXE */

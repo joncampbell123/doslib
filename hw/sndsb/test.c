@@ -1099,6 +1099,10 @@ static void wav_idle() {
 	 * Sound Blaster 16 hardware until it gets the I/O read to ack the IRQ */
 	if (!dont_sb_idle) sndsb_main_idle(sb_card);
 
+	/* FIXME */
+	if (sb_card->backwards)
+		return;
+
 	_cli();
 #ifdef DMA_WRAP_DEBUG
 	pos2 = sndsb_read_dma_buffer_position(sb_card);
@@ -1669,7 +1673,18 @@ void change_param_menu() {
 			vga_write_until(30);
 			vga_write("\n");
 
-			vga_moveto(0,12);
+			sprintf(tmp,"%s",sb_card->backwards?"Backwards":"Forwards");
+			vga_write_color(selector == 7 ? 0x70 : 0x1F);
+			vga_write(  "Direction:     ");
+			if (sndsb_dsp_out_method_supported(sb_card,wav_sample_rate,wav_stereo,wav_16bit))
+				vga_write_color(selector == 7 ? 0x70 : 0x1F);
+			else
+				vga_write_color(selector == 7 ? 0x74 : 0x1C);
+			vga_write(tmp);
+			vga_write_until(30);
+			vga_write("\n");
+
+			vga_moveto(0,13);
 			vga_write_color(0x1F);
 			vga_write_until(80);
 			vga_write("\n");
@@ -1677,10 +1692,10 @@ void change_param_menu() {
 			vga_write("\n");
 			vga_write_until(80);
 			vga_write("\n");
-			vga_moveto(0,12);
+			vga_moveto(0,13);
 			if (sb_card->reason_not_supported) vga_write(sb_card->reason_not_supported);
 
-			vga_moveto(0,15);
+			vga_moveto(0,16);
 			vga_write("\n");
 			vga_write_sync();
 			_sti();
@@ -1734,11 +1749,11 @@ void change_param_menu() {
 			}
 			else if (c == 0x4800) { /* up arrow */
 				if (selector > 0) selector--;
-				else selector=6;
+				else selector=7;
 				uiredraw=1;
 			}
 			else if (c == 0x5000) { /* down arrow */
-				if (selector < 6) selector++;
+				if (selector < 7) selector++;
 				else selector=0;
 				uiredraw=1;
 			}
@@ -1786,6 +1801,9 @@ void change_param_menu() {
 						if (sb_card->dsp_direct_dac_poll_retry_timeout != 0)
 							sb_card->dsp_direct_dac_poll_retry_timeout--;
 						break;
+					case 7:
+						sb_card->backwards ^= 1;
+						break;
 				};
 				update_cfg();
 				uiredraw=1;
@@ -1830,6 +1848,9 @@ void change_param_menu() {
 					case 6: /* Direct DAC read poll retry timeout */
 						if (sb_card->dsp_direct_dac_poll_retry_timeout < 255)
 							sb_card->dsp_direct_dac_poll_retry_timeout++;
+						break;
+					case 7:
+						sb_card->backwards ^= 1;
 						break;
 				};
 				update_cfg();
