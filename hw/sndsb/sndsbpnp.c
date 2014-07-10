@@ -1,3 +1,7 @@
+/* TODO: Drag out the old Pentium 120MHz laptop you have in storage. It appears
+ *       to have an ESS PnP Audiodrive chipset which you should add recognition
+ *       for here. */
+
 /* Additional support functions for Sound Blaster 16 ISA Plug & Play based cards.
  * This is compiled into a separate library (sndsbpnp.lib) so that a programmer
  * can include it only if they want to handle the cards directly. In most cases,
