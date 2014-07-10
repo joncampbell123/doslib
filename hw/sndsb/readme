@@ -650,7 +650,7 @@ Besides the EMF_ID fix mentioned above (in DSP alias port), the demo
 also appears to use DMA decrement mode. What that means is that, instead
 of pointing the DMA controller at the first byte and rendering audio
 forwards, it instead points the DMA controller at the last byte and
-renders audio backwards, then tells the DMA controller to decrment
+renders audio backwards, then tells the DMA controller to decrement
 the address after every byte (instead of incrementing) so that the
 backwards audio is played forwards.
 
