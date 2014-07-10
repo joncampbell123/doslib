@@ -4257,6 +4257,14 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
+			else if (i == 0x4300) { /* F9 */
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				sb_card->backwards ^= 1;
+				if (wp) begin_play();
+				bkgndredraw = 1;
+				redraw = 1;
+			}
 		}
 
 		/* Windows "close-awareness".
