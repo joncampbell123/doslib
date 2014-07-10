@@ -676,6 +676,9 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	int rd,i,bufe=0;
 	uint32_t how;
 
+	/* FIXME */
+	if (cx->backwards) return;
+
 	/* caller should be rounding! */
 	assert((up_to & 3UL) == 0UL);
 	if (up_to >= cx->buffer_size) return;
@@ -798,23 +801,35 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 		if (irq_0_watchdog < 16UL)
 			break;
 
-		if (up_to < cx->buffer_last_io) {
-			how = (cx->buffer_size - cx->buffer_last_io); /* from last IO to end of buffer */
-			bufe = 1;
+		if (cx->backwards) {
+			if (up_to > cx->buffer_last_io) {
+				how = cx->buffer_last_io;
+				if (how == 0) how = cx->buffer_size - up_to;
+				bufe = 1;
+			}
+			else {
+				how = (cx->buffer_last_io - up_to);
+				bufe = 0;
+			}
 		}
 		else {
-			if (up_to <= 8UL) break;
-			how = ((up_to-8UL) - cx->buffer_last_io); /* from last IO to up_to */
-			bufe = 0;
+			if (up_to < cx->buffer_last_io) {
+				how = (cx->buffer_size - cx->buffer_last_io); /* from last IO to end of buffer */
+				bufe = 1;
+			}
+			else {
+				how = (up_to - cx->buffer_last_io); /* from last IO to up_to */
+				bufe = 0;
+			}
 		}
 
-		if (how > max)
+		if (how == 0UL)
+			break;
+		else if (how > max)
 			how = max;
 		else if (how > 16384UL)
 			how = 16384UL;
 		else if (!bufe && how < min)
-			break;
-		else if (how == 0UL)
 			break;
 
 		if (!load) {
@@ -838,6 +853,9 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 
 		if (sb_card->dsp_adpcm > 0) {
 			unsigned int src;
+
+			/* FIXME */
+			if (cx->backwards) break;
 
 			/* 16-bit mode: avoid integer overflow below */
 			if (how > 2048)
@@ -944,18 +962,50 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			cx->buffer_last_io += (uint32_t)rd;
 		}
 		else {
+			uint32_t oa,adj;
+
+			oa = cx->buffer_last_io;
+			if (cx->backwards) {
+				if (cx->buffer_last_io == 0) {
+					cx->buffer_last_io = cx->buffer_size - how;
+				}
+				else if (cx->buffer_last_io >= how) {
+					cx->buffer_last_io -= how;
+				}
+				else {
+					abort();
+				}
+
+				adj = (uint32_t)how / wav_bytes_per_sample;
+				if (wav_position >= adj) wav_position -= adj;
+				else if (wav_position != 0UL) wav_position = 0;
+				else {
+					wav_position = lseek(wav_fd,0,SEEK_END);
+					if (wav_position >= adj) wav_position -= adj;
+					else if (wav_position != 0UL) wav_position = 0;
+				}
+
+				lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
+			}
+
+			assert(cx->buffer_last_io <= cx->buffer_size);
 			rd = _dos_xread(wav_fd,buffer + cx->buffer_last_io,how);
 			if (rd == 0 || rd == -1) {
-				wav_position = 0;
-				lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
-				rd = _dos_xread(wav_fd,buffer + cx->buffer_last_io,how);
-				if (rd == 0 || rd == -1) {
-					/* hmph, fine */
+				if (!cx->backwards) {
+					wav_position = 0;
+					lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
+					rd = _dos_xread(wav_fd,buffer + cx->buffer_last_io,how);
+					if (rd == 0 || rd == -1) {
+						/* hmph, fine */
 #if TARGET_MSDOS == 32
-					memset(buffer+cx->buffer_last_io,128,how);
+						memset(buffer+cx->buffer_last_io,128,how);
 #else
-					_fmemset(buffer+cx->buffer_last_io,128,how);
+						_fmemset(buffer+cx->buffer_last_io,128,how);
 #endif
+						rd = (int)how;
+					}
+				}
+				else {
 					rd = (int)how;
 				}
 			}
@@ -971,12 +1021,16 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 					for (i=0;i < rd;i++) buffer[cx->buffer_last_io+i] ^= 0x80;
 			}
 
-			wav_position += (uint32_t)rd / wav_bytes_per_sample;
-			cx->buffer_last_io += (uint32_t)rd;
+			if (!cx->backwards) {
+				cx->buffer_last_io += (uint32_t)rd;
+				wav_position += (uint32_t)rd / wav_bytes_per_sample;
+			}
 		}
 
 		assert(cx->buffer_last_io <= cx->buffer_size);
-		if (cx->buffer_last_io == cx->buffer_size) cx->buffer_last_io = 0;
+		if (!cx->backwards) {
+			if (cx->buffer_last_io == cx->buffer_size) cx->buffer_last_io = 0;
+		}
 		max -= (uint32_t)rd;
 	}
 
@@ -1084,7 +1138,7 @@ static void rec_vu(uint32_t pos) {
 #define DMA_WRAP_DEBUG
 
 static void wav_idle() {
-	const unsigned int leeway = 2048;
+	const unsigned int leeway = sb_card->buffer_size / 100;
 	uint32_t pos;
 #ifdef DMA_WRAP_DEBUG
 	uint32_t pos2;
@@ -1099,26 +1153,37 @@ static void wav_idle() {
 	 * Sound Blaster 16 hardware until it gets the I/O read to ack the IRQ */
 	if (!dont_sb_idle) sndsb_main_idle(sb_card);
 
-	/* FIXME */
-	if (sb_card->backwards)
-		return;
-
 	_cli();
 #ifdef DMA_WRAP_DEBUG
 	pos2 = sndsb_read_dma_buffer_position(sb_card);
 #endif
 	pos = sndsb_read_dma_buffer_position(sb_card);
 #ifdef DMA_WRAP_DEBUG
-	if (pos < 0x1000 && pos2 >= (sb_card->buffer_size-0x1000)) {
-		/* normal DMA wrap-around, no problem */
+	if (sb_card->backwards) {
+		if (pos2 < 0x1000 && pos >= (sb_card->buffer_size-0x1000)) {
+			/* normal DMA wrap-around, no problem */
+		}
+		else {
+			if (pos > pos2)	fprintf(stderr,"DMA glitch! 0x%04lx 0x%04lx\n",pos,pos2);
+			else		pos = max(pos,pos2);
+		}
+
+		pos += leeway;
+		if (pos >= sb_card->buffer_size) pos -= sb_card->buffer_size;
 	}
 	else {
-		if (pos < pos2)	fprintf(stderr,"DMA glitch! 0x%04lx 0x%04lx\n",pos,pos2);
-		else		pos = min(pos,pos2);
+		if (pos < 0x1000 && pos2 >= (sb_card->buffer_size-0x1000)) {
+			/* normal DMA wrap-around, no problem */
+		}
+		else {
+			if (pos < pos2)	fprintf(stderr,"DMA glitch! 0x%04lx 0x%04lx\n",pos,pos2);
+			else		pos = min(pos,pos2);
+		}
+
+		if (pos < leeway) pos += sb_card->buffer_size - leeway;
+		else pos -= leeway;
 	}
 #endif
-	if (pos < leeway) pos = 0UL;
-	else pos -= leeway;
 	pos &= (~3UL); /* round down */
 	_sti();
 
@@ -1141,7 +1206,16 @@ static void update_cfg();
 
 static unsigned long playback_live_position() {
 	signed long xx = (signed long)sndsb_read_dma_buffer_position(sb_card);
-	if (sb_card->buffer_last_io <= (unsigned long)xx) xx -= sb_card->buffer_size;
+
+	if (sb_card->backwards) {
+		if (sb_card->buffer_last_io >= (unsigned long)xx)
+			xx += sb_card->buffer_size;
+	}
+	else {
+		if (sb_card->buffer_last_io <= (unsigned long)xx)
+			xx -= sb_card->buffer_size;
+	}
+
 	if (sb_card->dsp_adpcm == ADPCM_4BIT) xx *= 2;
 	else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) xx *= 3;
 	else if (sb_card->dsp_adpcm == ADPCM_2BIT) xx *= 4;
