@@ -481,6 +481,7 @@ unsigned char sndsb_test_write_mixer(struct sndsb_ctx *cx,uint8_t i,uint8_t d) {
  *      DOSBox for example seems to return 0x0A. */
 int sndsb_probe_mixer(struct sndsb_ctx *cx) {
 	cx->mixer_chip = 0;
+
 	/* if there is a wider "master volume" control 0x30 then we're a CT1745 or higher */
 	if (	(sndsb_test_write_mixer(cx,0x30,0x08)&0xF8) == 0x08 &&
 		(sndsb_test_write_mixer(cx,0x30,0x38)&0xF8) == 0x38 &&
@@ -500,7 +501,7 @@ int sndsb_probe_mixer(struct sndsb_ctx *cx) {
 	}
 
 	sndsb_choose_mixer(cx,-1);
-	return 1;
+	return (cx->mixer_chip != 0);
 }
 
 int sndsb_mpu_command(struct sndsb_ctx *cx,uint8_t d) {
