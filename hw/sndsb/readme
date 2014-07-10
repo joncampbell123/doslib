@@ -523,15 +523,11 @@ BUGS
 5]  Goldplay record/playback mode doesn't work when EMM386.EXE is resident and
     active.
 
-    NOT FIXED. Goldplay mode relies on a hack where the DMA controller is
-    told the buffer is one sample wide, and that memory location is rewritten
-    from an ISR. Since EMM386.EXE needs to virtualize DMA along with memory,
-    it has to copy the data around when needed and it only does it once at the
-    start of DMA, thus rewriting the location does not work.
-
-    WORKAROUND: Disable EMM386.EXE by removing from CONFIG.SYS. If EMM386.EXE
-    is needed for other programs, then temporarily disable it by typing at
-    the DOS prompt:
+    FIXED. It turns out pointing DMA at the Sound Blaster context structure
+    was a bad idea. It happens to work in non-EMM386.EXE situations because
+    the struct usually ended up below 16MB. But EMM386.EXE does not virtualize
+    locations above 1MB, so DMA was effectively playing some unrelated data.
+    Goldplay mode now allocates a separate (16-byte long) DMA buffer.
 
     emm386 off
 
@@ -561,7 +557,7 @@ BUGS
        mode. However, the NMI handler doesn't seem to be able to trigger the
        SB IRQ in protected mode, so playback will stall after playing a short
        piece of the audio.
-       
+ 
        The above NMI hack will work with DOS4/GW and DOS32a. However if
        EMM386.EXE is resident and active, DOS4/GW will hard crash and reboot
        the system upon receipt of an NMI interrupt. If your program needs
@@ -627,6 +623,67 @@ Gravis SBOS bugs this code has to deal with:
     carry out the DMA transfer at all. Instead it does the transfer
     within the NMI handler. For programs that rely on the DMA pointer
     to advance audio this is bad news, and something to watch for.
+
+DSP alias port
+--------------
+
+A long time ago I stumbled upon an old demo written by the Eletromotive
+force (EMF_ID.ZIP) that I thought was interesting, but could never get
+the Sound Blaster mode working. Every time I tried, the demo hung after
+prompting for Sound Blaster setup.
+
+It wasn't until I ran it in DOSBox that I eventually figured out what
+was wrong: the demo relied on using the ALIAS of the DSP port, meaning
+that it read status from and wrote DSP commands to port 0x22D instead
+of 0x22C. I immediately plugged in an old Sound Blaster (DSP 2.0) and
+confirmed that all I/O ports do in fact appear on both the original
+and the alias ports, as if the card only decodes 4 bits and pays attention
+to the top 3 while ignoring the LSB.
+
+If you have an old Sound Blaster card, you might enable DSP alias port
+mode to instruct the library to use port 0x22D to see if it actually
+works. If it works, you have an original Sound Blaster that aliases
+it's I/O ports.
+
+Backwards mode
+--------------
+
+Besides the EMF_ID fix mentioned above (in DSP alias port), the demo
+also appears to use DMA decrement mode. What that means is that, instead
+of pointing the DMA controller at the first byte and rendering audio
+forwards, it instead points the DMA controller at the last byte and
+renders audio backwards, then tells the DMA controller to decrment
+the address after every byte (instead of incrementing) so that the
+backwards audio is played forwards.
+
+If you want to play files backwards or want to test whether your
+motherboard supports DMA decrement mode, you can go into the
+"parameters" page and set "direction" to "backwards". if you hear
+the audio perfectly in reverse, then your motherboard supports the
+"decrement" bit of the DMA controller's mode register.
+
+I consider it an additional test of robustness if you set both DMA
+and the DSP into single-cycle non-auto-init mode and playback does not
+exhibit any glitches.
+
+WARNING: Backwards mode should be used with 8-bit PCM only! 16-bit PCM
+         backwards playback is NOT RECOMMENDED, especially if your
+         sound card is configured to use an 8-bit DMA channel to carry
+         it (byte order is backwards and LOUD STATIC will result!).
+
+         If you are using a 16-bit DMA channel, then theoretically it
+         MIGHT work, but there are no guarantees. To consider why it
+         might work, think about how the DMA controller uses the low
+         15 bits to determine the memory address, then imagine how
+         the DMA controller loads 16 bits from memory (PROBABLY in
+         the correct byte order!) and sends it to the sound card.
+
+* TODO, NOT YET IMPLEMENTED *
+
+ - Recording in backwards mode (use backwards DMA to record, then write
+   data FORWARDS to the WAV file)
+ - ADPCM playback with DMA backwards mode (compress to ADPCM backwards,
+   then write compressed ADPCM backwards!)
 
 What is "nagging the DSP?
 -------------------------
@@ -701,4 +758,30 @@ the DSP keeps playing (sending an IRQ every so many bytes) until it is told
 to stop. This is the recommended way to play audio on Sound Blaster hardware,
 although the original Sound Blaster does not support auto-init DSP modes,
 and many clones and emulations do not handle it well either.
+
+Sound Blaster 16 auto-init/FIFO modes
+-------------------------------------
+
+Sound Blaster 16 cards (DSP 4.xx) support a new set of commands that
+includes bits to specify whether the DSP plays the audio as single-cycle
+or auto-init, as well as whether or not it will enable the FIFO.
+Under normal circumstances, you would not use the FIFO for single-cycle
+and use the FIFO in auto-init. The option is given to you however to see
+what happens if you, say, switch off the FIFO in auto-init, or enable
+the FIFO in single-cycle.
+
+Note that clones implementing SB16 DSP commands support only the most
+common commands and do not support the uncommon combinations mentioned
+above. SC-6000 cards for example support FIFO & auto-init but do not
+support single-cycle or non-FIFO auto-init forms of the command.
+
+Most clones do not emulate the SB16 anyway, even those produced in the
+late years (1996-1999) of the ISA bus and DOS support.
+
+If you're wondering by the way what happens, single-cycle DSP playback
+with the FIFO enabled tends to miss some samples. The DSP acts as if
+it completes the block early with data still in the FIFO, and then
+forgets the contents of the FIFO. Auto-init without FIFO apparently
+has no effect, but I would bet that if the ISA bus was busy with
+another device the lack of FIFO might cause some audible effects.
 
