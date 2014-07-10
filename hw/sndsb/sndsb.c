@@ -2738,6 +2738,9 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 			if (bit16) cx->buffer_dma_started_length <<= 1UL;
 			if (stereo) cx->buffer_dma_started_length <<= 1UL;
 		}
+
+		if (cx->backwards)
+			cx->buffer_dma_started = cx->buffer_size - cx->buffer_dma_started_length;
 	}
 
 	return 1;
@@ -2904,30 +2907,39 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 	   also need to update the DMA pointer */
 	if (!cx->chose_autoinit_dma) {
 		unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
-		unsigned long npos = cx->buffer_dma_started_length + cx->buffer_dma_started;
-		unsigned long rem = cx->buffer_size - npos;
-		if ((signed long)rem < 0L) rem = 0UL;
+		unsigned long npos = cx->buffer_dma_started;
+		unsigned long rem = cx->buffer_dma_started;
+
 		lv = cx->buffer_irq_interval;
 		if (cx->dsp_adpcm == 0) {
 			if (cx->buffer_16bit) lv <<= 1UL;
 			if (cx->buffer_stereo) lv <<= 1UL;
 		}
-		if (rem > (unsigned long)lv) rem = (unsigned long)lv;
-		if (rem == 0) {
-			npos = 0;
-			rem = cx->buffer_irq_interval;
-			if (cx->dsp_adpcm == 0) {
-				if (cx->buffer_16bit) rem <<= 1UL;
-				if (cx->buffer_stereo) rem <<= 1UL;
-			}
-			/* ^ warning: assuming interval <= bufsize */
-		}
-		lv = rem;
-		if (lv > 65536UL) lv = 65536UL;
-		if (lv != 0) lv--;
-		cx->buffer_dma_started = npos;
-		cx->buffer_dma_started_length = rem;
 
+		if (cx->backwards) {
+			if (rem == 0) {
+				npos = cx->buffer_size - lv;
+				rem = cx->buffer_size;
+			}
+			else {
+				if (npos >= lv) npos -= lv;
+				else npos = 0;
+			}
+		}
+		else {
+			npos += cx->buffer_dma_started_length;
+			rem = npos + lv;
+			if (npos >= cx->buffer_size) {
+				npos = 0;
+				rem = lv;
+			}
+			else if (rem > cx->buffer_size) {
+				rem = cx->buffer_size;
+			}
+		}
+
+		cx->buffer_dma_started = npos;
+		cx->buffer_dma_started_length = lv = rem - npos;
 		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 		if (cx->backwards)
 			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started+cx->buffer_dma_started_length-1); /* RAM location with not much around */
@@ -2935,6 +2947,7 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started); /* RAM location with not much around */
 		d8237_write_count(ch,cx->buffer_dma_started_length);
 		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
+		if (lv != 0) lv--;
 	}
 	else {
 		lv = cx->buffer_irq_interval;
