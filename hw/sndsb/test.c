@@ -578,6 +578,7 @@ static uint32_t irq_0_max = 1;
 #if TARGET_MSDOS == 32
 static unsigned char irq_0_had_warned = 0;
 #endif
+static unsigned char dsp_alias_had_warned = 0;
 
 /* IRQ 0 watchdog: when playing audio it is possible to exceed the rate
    that the CPU can possibly handle servicing the interrupt. This results
@@ -1597,6 +1598,12 @@ static const char *dos32_irq_0_warning =
 	"         Enable?";
 #endif
 
+static const char *dsp_alias_warning =
+	"WARNING: DSP alias port will not work unless you are using an original\n"
+	"         Sound Blaster (DSP 1.xx or 2.xx) and NOT a clone. See the\n"
+	"         README file for more information.\n"
+	"         Enable anyway?";
+
 void change_alias_menu() {
 	unsigned char loop=1;
 	unsigned char redraw=1;
@@ -1664,6 +1671,16 @@ void change_alias_menu() {
 		}
 
 		ui_anim(0);
+	}
+
+	if (!dsp_alias_had_warned && sb_card->dsp_alias_port) {
+		/* NOTE TO SELF: It can overwhelm the UI in DOSBox too, but DOSBox seems able to
+		   recover if you manage to hit CTRL+F12 to speed up the CPU cycles in the virtual machine.
+		   On real hardware, even with the recovery method the machine remains hung :( */
+		if (confirm_yes_no_dialog(dsp_alias_warning))
+			dsp_alias_had_warned = 1;
+		else
+			sb_card->dsp_alias_port = 0;
 	}
 
 	change_param_idx = selector;
