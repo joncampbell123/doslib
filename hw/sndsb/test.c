@@ -2335,8 +2335,8 @@ static const struct vga_menu_item main_menu_windows_fullscreen =
 static const struct vga_menu_item* main_menu_file[] = {
 	&main_menu_file_set,
 	&main_menu_file_quit,
-	&menu_separator,
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+	&menu_separator,
 	&main_menu_windows_fullscreen,
 #endif
 	NULL
@@ -2358,13 +2358,13 @@ static struct vga_menu_item main_menu_playback_goldplay =
 	{"xxx",			'g',	0,	0};
 static struct vga_menu_item main_menu_playback_goldplay_mode =
 	{"xxx",			'm',	0,	0};
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-static struct vga_menu_item main_menu_playback_noreset_adpcm =
-	{"xxx",			'n',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_autoinit_dma =
 	{"xxx",			't',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_autoinit_command =
 	{"xxx",			'c',	0,	0};
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+static struct vga_menu_item main_menu_playback_noreset_adpcm =
+	{"xxx",			'n',	0,	0};
 static struct vga_menu_item main_menu_playback_timer_clamp =
 	{"xxx",			0,	0,	0};
 static struct vga_menu_item main_menu_playback_force_hispeed =
@@ -2391,10 +2391,10 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_autoinit_adpcm,
 	&main_menu_playback_goldplay,
 	&main_menu_playback_goldplay_mode,
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-	&main_menu_playback_noreset_adpcm,
 	&main_menu_playback_dsp_autoinit_dma,
 	&main_menu_playback_dsp_autoinit_command,
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+	&main_menu_playback_noreset_adpcm,
 	&main_menu_playback_timer_clamp,
 	&main_menu_playback_force_hispeed,
 	&main_menu_playback_flip_sign,
@@ -2426,8 +2426,10 @@ static const struct vga_menu_item main_menu_device_choose_sound_card =
 static const struct vga_menu_item main_menu_device_configure_sound_card =
 	{"Configure sound card",'o',	0,	0};
 #endif
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static struct vga_menu_item main_menu_device_dsp_alias =
 	{"Alias ports",		'a',	0,	0};
+#endif
 
 static const struct vga_menu_item* main_menu_device[] = {
 	&main_menu_device_dsp_reset,
@@ -2443,7 +2445,9 @@ static const struct vga_menu_item* main_menu_device[] = {
 #ifdef LIVE_CFG
 	&main_menu_device_configure_sound_card,
 #endif
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_device_dsp_alias,
+#endif
 	NULL
 };
 
@@ -2592,15 +2596,15 @@ void update_cfg() {
 		sb_card->enable_adpcm_autoinit ? "ADPCM Auto-init: On" : "ADPCM Auto-init: Off";
 	main_menu_playback_goldplay.text =
 		sb_card->goldplay_mode ? "Goldplay mode: On" : "Goldplay mode: Off";
+	main_menu_playback_dsp_autoinit_dma.text =
+		sb_card->dsp_autoinit_dma ? "DMA autoinit: On" : "DMA autoinit: Off";
+	main_menu_playback_dsp_autoinit_command.text =
+		sb_card->dsp_autoinit_command ? "DSP playback: auto-init" : "DSP playback: single-cycle";
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	main_menu_playback_force_hispeed.text =
 		sb_card->force_hispeed ? "Force hispeed: On" : "Force hispeed: Off";
 	main_menu_playback_noreset_adpcm.text =
 		adpcm_do_reset_interval ? "ADPCM reset step/interval: On" : "ADPCM reset step/interval: Off";
-	main_menu_playback_dsp_autoinit_dma.text =
-		sb_card->dsp_autoinit_dma ? "DMA autoinit: On" : "DMA autoinit: Off";
-	main_menu_playback_dsp_autoinit_command.text =
-		sb_card->dsp_autoinit_command ? "DSP playback: auto-init" : "DSP playback: single-cycle";
 	main_menu_playback_timer_clamp.text =
 		sample_rate_timer_clamp ? "Clamp samplerate to timer: On" : "Clamp samplerate to timer: Off";
 	main_menu_playback_flip_sign.text =
@@ -4180,6 +4184,14 @@ int main(int argc,char **argv) {
 				update_cfg();
 				if (wp) begin_play();
 			}
+			else if (mitem == &main_menu_playback_timer_clamp) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				sample_rate_timer_clamp = !sample_rate_timer_clamp;
+				update_cfg();
+				if (wp) begin_play();
+			}
+#endif
 			else if (mitem == &main_menu_playback_dsp_autoinit_dma) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
@@ -4194,14 +4206,6 @@ int main(int argc,char **argv) {
 				update_cfg();
 				if (wp) begin_play();
 			}
-			else if (mitem == &main_menu_playback_timer_clamp) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				sample_rate_timer_clamp = !sample_rate_timer_clamp;
-				update_cfg();
-				if (wp) begin_play();
-			}
-#endif
 			else if (mitem == &main_menu_playback_reduced_irq) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
