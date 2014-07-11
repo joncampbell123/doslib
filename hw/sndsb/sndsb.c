@@ -2795,7 +2795,9 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 
 		/* don't let the API play 16-bit audio if less than DSP 4.xx because 16-bit audio played
 		 * as 8-bit sounds like very loud garbage, be kind to the user */
-		if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && (bit16 || cx->audio_data_flipped_sign))
+		if (cx->ess_extensions && cx->dsp_play_method < SNDSB_DSPOUTMETHOD_3xx && (bit16 || cx->audio_data_flipped_sign))
+			return 0;
+		else if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && (bit16 || cx->audio_data_flipped_sign))
 			return 0;
 		/* NTS: we use the "can do" function to reject obvious configurations that will never work
 		 *      on the card, verses an unsupported configuration that we advise not using */
@@ -2879,6 +2881,8 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 			 *         [Is this fix needed for any other Sound Blaster products of that era?] */
 			if (cx->force_hispeed)
 				cx->buffer_hispeed = 1;
+			else if (cx->ess_extensions && bit16) /* ESS 688/1869 extended 16-bit counterparts do not offer high-speed mode */
+				cx->buffer_hispeed = 0;
 			else if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2 && !strcmp(cx->dsp_copyright,"")) /* [1] */
 				cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 8000 : 16000));
 			else
