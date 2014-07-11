@@ -1524,11 +1524,7 @@ void begin_play() {
 		wav_position = 0;
 	}
 
-#if TARGET_MSDOS == 32
-	/* DOS extenders have weird problems with SB IRQ 8 or higher that
-	   we have to poke and prod it all the way to keep going. In case
-	   it got stuck up again, do all the ACKing needed to resume IRQ
-	   signals */
+	/* make sure the IRQ is acked */
 	if (sb_card->irq >= 8) {
 		p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
 		p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
@@ -1538,7 +1534,6 @@ void begin_play() {
 	}
 	if (sb_card->irq >= 0)
 		p8259_unmask(sb_card->irq);
-#endif
 
 	if (!sndsb_begin_dsp_playback(sb_card))
 		return;
@@ -4378,6 +4373,9 @@ int main(int argc,char **argv) {
 	close_wav();
 	printf("Freeing buffer...\n");
 	dma_8237_free_buffer(sb_dma); sb_dma = NULL;
+
+	if (sb_card->irq >= 0 && old_irq_masked)
+		p8259_mask(sb_card->irq);
 
 	printf("Releasing IRQ...\n");
 	if (sb_card->irq != -1)
