@@ -3837,6 +3837,7 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	/* please let me know if the user attempts to close my DOS Box */
 	if (dos_close_awareness_available()) {
 		int d;
@@ -3858,6 +3859,7 @@ int main(int argc,char **argv) {
 		else
 			printf("Close-awareness enabled\n");
 	}
+#endif
 
 	if (wav_file[0] != 0) open_wav();
 	if (autoplay) begin_play();
@@ -4363,6 +4365,7 @@ int main(int argc,char **argv) {
 			}
 		}
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 		/* Windows "close-awareness".
 		 * If the user attempts to close the DOSBox window, Windows will let us know */
 		if (dos_close_awareness_available()) {
@@ -4382,6 +4385,7 @@ int main(int argc,char **argv) {
 				break;
 			}
 		}
+#endif
 
 		ui_anim(0);
 	}
