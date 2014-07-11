@@ -1126,6 +1126,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 				c2 &= 0xF;
 				if (c2 != 0) {
 					cx->ess_chipset = (c2 & 8) ? SNDSB_ESS_1869 : SNDSB_ESS_688;
+					cx->ess_controller_playback = 0;/*TODO: Set to 1 by default when we fully support controller-reg based playback*/
 					cx->ess_extensions = 1;
 
 					/* that also means that we can deduce the true IRQ/DMA from the chipset */
@@ -1237,7 +1238,17 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		}
 	}
 	else if (cx->dsp_vmaj == 3) {
-		if (cx->is_gallant_sc6600) { /* SC-6600 clone card */
+		if (cx->ess_chipset != 0) { /* ESS 688/1869 */
+			cx->dsp_direct_dac_poll_retry_timeout = 4; /* DSP is responsive to direct DAC to allow lesser timeout */
+			cx->max_sample_rate_dsp4xx = 44100;
+			cx->max_sample_rate_sb_hispeed_rec = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_hispeed = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_play = 44100; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+			cx->max_sample_rate_sb_rec = 44100; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+			cx->enable_adpcm_autoinit = 0; /* does NOT support auto-init ADPCM */
+			/* also: hi-speed DSP is blocking, and it matters: to go above 23KHz you have to use hi-speed DSP commands */
+		}
+		else if (cx->is_gallant_sc6600) { /* SC-6600 clone card */
 			cx->dsp_direct_dac_poll_retry_timeout = 4; /* DSP is responsive to direct DAC to allow lesser timeout */
 			/* NTS: Officially, the max sample rate is 24000Hz, but the DSP seems to allow up to 25000Hz,
 			 *      then limit the sample rate to that up until about 35000Hz where it suddenly clamps
@@ -2212,10 +2223,15 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		cx->reason_not_supported = "Flipped sign playback requires DSP 4.xx playback";
 		return 0;
 	}
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) {
+
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && wav_16bit && cx->ess_extensions) {
+		/* OK. we can use ESS extensions to do 16-bit playback */
+	}
+	else if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) {
 		cx->reason_not_supported = "16-bit PCM playback requires DSP 4.xx mode";
 		return 0;
 	}
+
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && wav_16bit && cx->dma16 >= 4 && !(d8237_flags&D8237_DMA_SECONDARY)) {
 		cx->reason_not_supported = "DMA-based playback, 16-bit PCM, dma16 channel refers to\nnon-existent secondary DMA controller";
 		return 0;
@@ -2260,12 +2276,14 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		}
 	}
 	else if (cx->goldplay_mode) {
+#if TARGET_MSDOS == 16
 		/* bug-check: goldplay 16-bit DMA is not possible if somehow the goldplay_dma[] field is not WORD-aligned
 		 * and 16-bit audio is using the 16-bit DMA channel (misaligned while 8-bit DMA is fine) */
 		if (cx->buffer_16bit && cx->dma16 >= 4 && ((unsigned int)(cx->goldplay_dma))&1) {
 			cx->reason_not_supported = "16-bit PCM Goldplay playback requested\nand DMA buffer is not word-aligned.";
 			return 0;
 		}
+#endif
 	}
 
 	cx->reason_not_supported = NULL;
@@ -2980,21 +2998,35 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
 		unsigned short lv = (cx->buffer_irq_interval * (cx->buffer_stereo?2:1)) - 1;
 
-		if (cx->chose_autoinit_dsp) {
-			/* preparation function has already transmitted block length, use autoinit commands */
-			if (cx->buffer_hispeed)
-				sndsb_write_dsp(cx,cx->dsp_record ? 0x98 : 0x90);
-			else
-				sndsb_write_dsp(cx,cx->dsp_record ? 0x2C : 0x1C);
-		}
-		else {
-			/* send single-cycle command, then transmit length */
-			if (cx->buffer_hispeed)
-				sndsb_write_dsp(cx,cx->dsp_record ? 0x99 : 0x91);
+		if (cx->ess_extensions && cx->buffer_16bit) {
+			if (cx->chose_autoinit_dsp) {
+				/* preparation function has already transmitted block length, use autoinit commands */
+				sndsb_write_dsp(cx,cx->dsp_record ? 0x2D : 0x1D);
+			}
 			else {
-				sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
+				/* send single-cycle command, then transmit length */
+				sndsb_write_dsp(cx,cx->dsp_record ? 0x25 : 0x15);
 				sndsb_write_dsp(cx,lv);
 				sndsb_write_dsp(cx,lv >> 8);
+			}
+		}
+		else {
+			if (cx->chose_autoinit_dsp) {
+				/* preparation function has already transmitted block length, use autoinit commands */
+				if (cx->buffer_hispeed)
+					sndsb_write_dsp(cx,cx->dsp_record ? 0x98 : 0x90);
+				else
+					sndsb_write_dsp(cx,cx->dsp_record ? 0x2C : 0x1C);
+			}
+			else {
+				/* send single-cycle command, then transmit length */
+				if (cx->buffer_hispeed)
+					sndsb_write_dsp(cx,cx->dsp_record ? 0x99 : 0x91);
+				else {
+					sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
+					sndsb_write_dsp(cx,lv);
+					sndsb_write_dsp(cx,lv >> 8);
+				}
 			}
 		}
 	}
@@ -3139,16 +3171,21 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 		}
 		else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
 			/* send single-cycle command, then transmit length */
-			if (cx->buffer_hispeed) {
-				if (!cx->chose_autoinit_dma)
-					sndsb_write_dsp_blocksize(cx,lv+1);
-
-				sndsb_write_dsp(cx,cx->dsp_record ? 0x99 : 0x91);
-			}
-			else {
-				sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
+			if (cx->ess_extensions && cx->buffer_16bit) {
+				sndsb_write_dsp(cx,cx->dsp_record ? 0x25 : 0x15);
 				sndsb_write_dsp(cx,lv);
 				sndsb_write_dsp(cx,lv >> 8);
+			}
+			else {
+				if (cx->buffer_hispeed) {
+					sndsb_write_dsp_blocksize(cx,lv+1);
+					sndsb_write_dsp(cx,cx->dsp_record ? 0x99 : 0x91);
+				}
+				else {
+					sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
+					sndsb_write_dsp(cx,lv);
+					sndsb_write_dsp(cx,lv >> 8);
+				}
 			}
 		}
 		else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
