@@ -1245,7 +1245,10 @@ static unsigned long playback_live_position() {
 	return ((unsigned long)xx) / wav_bytes_per_sample;
 }
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static unsigned char dos_vm_yield_counter = 0;
+#endif
+
 static uint32_t last_dma_position = 1;
 static void ui_anim(int force) {
 	VGA_ALPHA_PTR wr = vga_alpha_ram + 10;
@@ -1255,6 +1258,7 @@ static void ui_anim(int force) {
 	unsigned int pH,pM,pS,pSS;
 	const char *msg = "DMA:";
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	/* Under Windows, yield every so often. Under Windows NT/2000/XP this prevents
 	 * NTVDM.EXE from pegging the CPU at 100%, allowing the rest of the OS to run
 	 * smoother. */
@@ -1272,6 +1276,7 @@ static void ui_anim(int force) {
 				dos_vm_yield_counter = 0;
 		}
 	}
+#endif
 
 	wav_idle();
 
@@ -3723,6 +3728,7 @@ int main(int argc,char **argv) {
 			printf("Also found one at 0x240\n");
 	}
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	/* There is a known issue with NTVDM.EXE Sound Blaster emulation under Windows XP. Not only
 	 * do we get stuttery audio, but at some random point (1-5 minutes of continuous playback)
 	 * the DOS VM crashes up for some unknown reason (VM is hung). */
@@ -3740,6 +3746,7 @@ int main(int argc,char **argv) {
 			}
 		}
 	}
+#endif
 
 	if (sc_idx < 0) {
 		int count=0;
