@@ -151,7 +151,6 @@ struct sndsb_ctx {
 	uint8_t				do_not_probe_irq:1;	/* if the card has known configuration registers, then do not probe */
 	uint8_t				do_not_probe_dma:1;	/* ... */
 	uint8_t				ess_extensions:1;	/* use ESS 688/1869 extended commands */
-	uint8_t				ess_controller_playback:1; /* use ESS 688/1869 controller registers to manage playback */
 	uint8_t				force_hispeed:1;	/* always use highspeed DSP playback commands (except for DSP 4.xx) */
 	uint8_t				dsp_4xx_fifo_autoinit:1; /* SB16 use FIFO for auto-init playback */
 	uint8_t				dsp_4xx_fifo_single_cycle:1; /* SB16 use FIFO for single-cycle playback */

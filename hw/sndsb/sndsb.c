@@ -1126,7 +1126,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 				c2 &= 0xF;
 				if (c2 != 0) {
 					cx->ess_chipset = (c2 & 8) ? SNDSB_ESS_1869 : SNDSB_ESS_688;
-					cx->ess_controller_playback = 0;/*TODO: Set to 1 by default when we fully support controller-reg based playback*/
 					cx->ess_extensions = 1;
 
 					/* that also means that we can deduce the true IRQ/DMA from the chipset */
@@ -2215,12 +2214,16 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		cx->reason_not_supported = "DMA-based playback, 8-bit PCM, no channel assigned (dma8)";
 		return 0;
 	}
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->audio_data_flipped_sign) {
+
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && cx->ess_extensions) {
+		/* OK. we can use ESS extensions with flipped sign */
+	}
+	else if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->audio_data_flipped_sign) {
 		cx->reason_not_supported = "Flipped sign playback requires DSP 4.xx playback";
 		return 0;
 	}
 
-	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && wav_16bit && cx->ess_extensions) {
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && cx->ess_extensions) {
 		/* OK. we can use ESS extensions to do 16-bit playback */
 	}
 	else if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) {
@@ -2796,8 +2799,6 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		/* don't let the API play 16-bit audio if less than DSP 4.xx because 16-bit audio played
 		 * as 8-bit sounds like very loud garbage, be kind to the user */
 		if (bit16) {
-			if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->audio_data_flipped_sign)
-				return 0;
 			if (cx->ess_extensions) {
 				if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_3xx)
 					return 0;
@@ -2887,10 +2888,10 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 			 *         [Tested on Pentium MMX 200MHz system with ISA and PCI slots]
 			 *         [Applying fix [1] indeed resolved the audible warbling]
 			 *         [Is this fix needed for any other Sound Blaster products of that era?] */
-			if (cx->force_hispeed)
-				cx->buffer_hispeed = 1;
-			else if (cx->ess_extensions && bit16) /* ESS 688/1869 extended 16-bit counterparts do not offer high-speed mode */
+			if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) /* ESS 688/1869 use of the extensions it doesn't matter */
 				cx->buffer_hispeed = 0;
+			else if (cx->force_hispeed)
+				cx->buffer_hispeed = 1;
 			else if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2 && !strcmp(cx->dsp_copyright,"")) /* [1] */
 				cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 8000 : 16000));
 			else
@@ -3008,19 +3009,73 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 		}
 	}
 	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
-		unsigned short lv = (cx->buffer_irq_interval * (cx->buffer_stereo?2:1)) - 1;
+		unsigned short lv = (cx->buffer_irq_interval * (cx->buffer_stereo?2:1) * (cx->buffer_16bit?2:1)) - 1;
 
-		if (cx->ess_extensions && cx->buffer_16bit) {
-			if (cx->chose_autoinit_dsp) {
-				/* preparation function has already transmitted block length, use autoinit commands */
-				sndsb_write_dsp(cx,cx->dsp_record ? 0x2D : 0x1D);
+		if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) { /* ESS 688/1869 chipset specific DSP playback.
+					     using this mode bypasses a lot of the Sound Blaster Pro emulation
+					     and restrictions and allows us to run up to 48KHz 16-bit stereo */
+			unsigned short t16;
+			int b;
+
+			b = sndsb_ess_read_controller(cx,0xA8);
+			if (b == -1) return 0;
+			b &= ~3;
+			b |= (cx->buffer_stereo?1:2);	/* 10=mono 01=stereo */
+			sndsb_ess_write_controller(cx,0xA8,b);
+
+			if (cx->goldplay_mode)
+				b = cx->buffer_16bit ? 1 : 0;	/* demand transfer DMA 2 bytes (16-bit) or single transfer DMA (8-bit) */
+			else
+				b = 3;  /* demand transfer DMA 4 bytes per request */
+			sndsb_ess_write_controller(cx,0xB9,b);
+
+			if (cx->buffer_rate > 22050) {
+				/* bit 7: = 1
+				 * bit 6:0: = sample rate divider
+				 *
+				 * rate = 795.5KHz / (256 - x) */
+				b = 256 - (795500UL / (unsigned long)cx->buffer_rate);
+				if (b < 0x80) b = 0x80;
 			}
 			else {
-				/* send single-cycle command, then transmit length */
-				sndsb_write_dsp(cx,cx->dsp_record ? 0x25 : 0x15);
-				sndsb_write_dsp(cx,lv);
-				sndsb_write_dsp(cx,lv >> 8);
+				/* bit 7: = 1
+				 * bit 6:0: = sample rate divider
+				 *
+				 * rate = 397.7KHz / (128 - x) */
+				b = 128 - (397700UL / (unsigned long)cx->buffer_rate);
+				if (b < 0) b = 0;
 			}
+			sndsb_ess_write_controller(cx,0xA1,b);
+
+			b = 256 - (7160000UL / ((unsigned long)cx->buffer_rate * 32UL)); /* 80% of rate/2 times 82 I think... */
+			sndsb_ess_write_controller(cx,0xA2,b);
+
+			t16 = -(lv+1);
+			sndsb_ess_write_controller(cx,0xA4,t16); /* DMA transfer count low */
+			sndsb_ess_write_controller(cx,0xA5,t16>>8); /* DMA transfer count high */
+
+			b = sndsb_ess_read_controller(cx,0xB1);
+			if (b == -1) return 0;
+			b &= ~0xA0; /* clear compat game IRQ, fifo half-empty IRQs */
+			b |= 0x50; /* set overflow IRQ, and "no function" */
+			sndsb_ess_write_controller(cx,0xB1,b);
+
+			b = sndsb_ess_read_controller(cx,0xB2);
+			if (b == -1) return 0;
+			b &= ~0xA0; /* clear compat */
+			b |= 0x50; /* set DRQ/DACKB inputs for DMA */
+			sndsb_ess_write_controller(cx,0xB2,b);
+
+			b = 0x91; /* enable FIFO+DMA, reserved, load signal */
+			b |= (cx->buffer_16bit ^ cx->audio_data_flipped_sign) ? 0x20 : 0x00; /* signed complement mode or not */
+			b |= (cx->buffer_stereo) ? 0x08 : 0x40; /* [3]=stereo [6]=!stereo */
+			b |= (cx->buffer_16bit) ? 0x04 : 0x00; /* [2]=16bit */
+			sndsb_ess_write_controller(cx,0xB7,b);
+
+			b = 0x01; /* DMA enable */
+			b |= (cx->chose_autoinit_dsp) ? 0x04 : 0x00;
+			b |= (cx->dsp_record) ? 0x0A : 0x00; /* [3]=DMA converter in ADC mode [1]=DMA read for ADC */
+			sndsb_ess_write_controller(cx,0xB8,b);
 		}
 		else {
 			if (cx->chose_autoinit_dsp) {
@@ -3105,6 +3160,17 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 
 	cx->timer_tick_signal = 0;
 	sndsb_write_dsp(cx,0xD3); /* turn off speaker */
+
+	if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+		int b;
+
+		b = sndsb_ess_read_controller(cx,0xB8);
+		if (b != -1) {
+			b &= ~0x01; /* stop DMA */
+			sndsb_ess_write_controller(cx,0xB8,b);
+		}
+	}
+
 	return 1;
 }
 
@@ -3183,10 +3249,19 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 		}
 		else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
 			/* send single-cycle command, then transmit length */
-			if (cx->ess_extensions && cx->buffer_16bit) {
-				sndsb_write_dsp(cx,cx->dsp_record ? 0x25 : 0x15);
-				sndsb_write_dsp(cx,lv);
-				sndsb_write_dsp(cx,lv >> 8);
+			if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+				unsigned short t16;
+				unsigned char b;
+
+				/* trigger another block */
+				b = sndsb_ess_read_controller(cx,0xB8);
+				sndsb_ess_write_controller(cx,0xB8,b & ~1);
+
+				t16 = -(lv+1);
+				sndsb_ess_write_controller(cx,0xA4,t16); /* DMA transfer count low */
+				sndsb_ess_write_controller(cx,0xA5,t16>>8); /* DMA transfer count high */
+
+				sndsb_ess_write_controller(cx,0xB8,b | 1);
 			}
 			else {
 				if (cx->buffer_hispeed) {
