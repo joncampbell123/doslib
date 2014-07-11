@@ -964,7 +964,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		}
 	}
 
-#if TARGET_MSDOS == 16 && defined(__COMPACT__)
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
 	/* trimmed to keep total code <= 64KB */
 #else
 	if (windows_mode == WINDOWS_NT) {
@@ -1346,7 +1346,7 @@ int sndsb_determine_ideal_dsp_play_method(struct sndsb_ctx *cx) {
 	return 1;
 }
 
-#if TARGET_MSDOS == 16 && defined(__COMPACT__)
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
 #else
 static unsigned char sb_test_irq_number = 0;
 static volatile unsigned short int sb_test_irq_flag = 0;
@@ -1365,7 +1365,7 @@ static void interrupt far sb_test_irq() {
  * some DOS boxes, this lite version works better in virtualized environments
  * like Windows NT/9x DOS boxes. */
 void sndsb_alt_lite_probe_irq(struct sndsb_ctx *cx) {
-#if TARGET_MSDOS == 16 && defined(__COMPACT__)
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
 	/* too much code */
 #else
 	void (interrupt *old_irq)() = NULL;
@@ -1619,7 +1619,7 @@ void sndsb_alt_lite_probe_irq(struct sndsb_ctx *cx) {
  *        - Microsoft Virtual PC SB16 emulation (short DSP blocks fail to trigger IRQ activity)
  *            Workaround: read the SB16 compatible mixer byte to obtain configuration */
 void sndsb_manual_probe_irq(struct sndsb_ctx *cx) {
-#if TARGET_MSDOS == 16 && defined(__COMPACT__)
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
 	/* too much code */
 #else
 	unsigned int round = 0;
@@ -1784,7 +1784,7 @@ void sndsb_manual_probe_irq(struct sndsb_ctx *cx) {
 }
 
 void sndsb_manual_probe_high_dma(struct sndsb_ctx *cx) {
-#if TARGET_MSDOS == 16 && defined(__COMPACT__)
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
 	/* too much code */
 #else
 	/* NTS: Original code test-played 8192 bytes at 8KHz.
@@ -1933,7 +1933,7 @@ void sndsb_manual_probe_high_dma(struct sndsb_ctx *cx) {
 }
 
 void sndsb_manual_probe_dma(struct sndsb_ctx *cx) {
-#if TARGET_MSDOS == 16 && defined(__COMPACT__)
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
 	/* too much code */
 #else
 	/* NTS: Original code test-played 8192 bytes at 8KHz.

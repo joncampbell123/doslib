@@ -11,11 +11,13 @@ PNPCFG_EXE =  $(SUBDIR)$(HPS)pnpcfg.exe
 !ifeq TARGET_MSDOS 16
 ! ifeq MMODE c
 # I'm tired of stripping the features down just to make the compact builds work
+NO_TEST_ISAPNP=1
 NO_TEST_EXE=1
 ! endif
 ! ifeq MMODE s
 # I'm tired of stripping the features down just to make the small builds work
-NO_TEST_EXE=1
+NO_TEST_ISAPNP=1
+#NO_TEST_EXE=1
 ! endif
 !endif
 
@@ -47,7 +49,11 @@ $(TEST_EXE): $(WINDOWS_W9XVMM_LIB) $(WINDOWS_W9XVMM_LIB_DEPENDENCIES) $(HW_SNDSB
 ! ifeq TARGET_MSDOS 16 # Sound Blaster library needs more stack than default
 	%append tmp.cmd option stack=4096
 ! endif
-	%append tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)test.obj $(HW_SNDSB_LIB_WLINK_LIBRARIES) $(HW_SNDSBPNP_LIB_WLINK_LIBRARIES) $(HW_8237_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(HW_VGAGUI_LIB_WLINK_LIBRARIES) $(HW_VGATTY_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) $(HW_CPU_LIB_WLINK_LIBRARIES) $(HW_ISAPNP_LIB_WLINK_LIBRARIES) $(WINDOWS_W9XVMM_LIB_WLINK_LIBRARIES) name $(TEST_EXE)
+	%append tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)test.obj $(HW_SNDSB_LIB_WLINK_LIBRARIES) $(HW_8237_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(HW_VGAGUI_LIB_WLINK_LIBRARIES) $(HW_VGATTY_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) $(HW_CPU_LIB_WLINK_LIBRARIES)
+!  ifndef NO_TEST_ISAPNP
+	%append tmp.cmd $(HW_ISAPNP_LIB_WLINK_LIBRARIES) $(WINDOWS_W9XVMM_LIB_WLINK_LIBRARIES) $(HW_SNDSBPNP_LIB_WLINK_LIBRARIES)
+!  endif
+	%append tmp.cmd name $(TEST_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
