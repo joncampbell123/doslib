@@ -2133,11 +2133,14 @@ int sndsb_try_base(uint16_t iobase) {
 
 int sndsb_interrupt_reason(struct sndsb_ctx *cx) {
 	if (cx->dsp_vmaj >= 4) {
-	    /* Sound Blaster 16: We can read a mixer byte to determine why the interrupt happened */
-	    /* bit 0: 1=8-bit DSP or MIDI */
-	    /* bit 1: 1=16-bit DSP */
-	    /* bit 2: 1=MPU-401 */
-	    return sndsb_read_mixer(cx,0x82) & 7;
+		/* Sound Blaster 16: We can read a mixer byte to determine why the interrupt happened */
+		/* bit 0: 1=8-bit DSP or MIDI */
+		/* bit 1: 1=16-bit DSP */
+		/* bit 2: 1=MPU-401 */
+		return sndsb_read_mixer(cx,0x82) & 7;
+	}
+	else if (cx->ess_extensions) {
+		return cx->buffer_16bit ? 2 : 1;
 	}
 
 	/* DSP 3.xx and earlier: just assume the interrupt happened because of the DSP */
