@@ -1119,7 +1119,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		cx->virtualbox_emulation = 1;
 
 	/* DSP v3.1 and no copyright string means it might be an ESS 688/1869 chipset */
-	if (!cx->windows_emulation && cx->dsp_vmaj == 3 && cx->dsp_vmin == 1 &&
+	/* FIXME: A freak accident during development shows me it's possible to change the DSP version to v2.1 */
+	if (!cx->windows_emulation && !cx->is_gallant_sc6600 && cx->dsp_vmaj == 3 && cx->dsp_vmin == 1 &&
 		cx->dsp_copyright[0] == 0 && !sndsb_probe_options.disable_ess_extensions) {
 		/* Use DSP command 0xE7 to detect ESS chipset */
 		if (sndsb_write_dsp(cx,0xE7)) {
@@ -1244,6 +1245,9 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 	else if (cx->dsp_vmaj == 3) {
 		if (cx->ess_chipset != 0) { /* ESS 688/1869 */
+			/* FIXME: Apparently the ESS 688 in a laptop I test on is quite capable of running at 48KHz
+			 *        or even beyond that up to 64KHz barring ISA bus limitations (16-bit stereo at 54KHz
+			 *        audibly "warbles" because of that). */
 			cx->dsp_direct_dac_poll_retry_timeout = 4; /* DSP is responsive to direct DAC to allow lesser timeout */
 			cx->max_sample_rate_dsp4xx = 44100;
 			cx->max_sample_rate_sb_hispeed_rec = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
