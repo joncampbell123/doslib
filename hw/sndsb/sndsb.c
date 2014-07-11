@@ -2795,10 +2795,18 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 
 		/* don't let the API play 16-bit audio if less than DSP 4.xx because 16-bit audio played
 		 * as 8-bit sounds like very loud garbage, be kind to the user */
-		if (cx->ess_extensions && cx->dsp_play_method < SNDSB_DSPOUTMETHOD_3xx && (bit16 || cx->audio_data_flipped_sign))
-			return 0;
-		else if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && (bit16 || cx->audio_data_flipped_sign))
-			return 0;
+		if (bit16) {
+			if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->audio_data_flipped_sign)
+				return 0;
+			if (cx->ess_extensions) {
+				if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_3xx)
+					return 0;
+			}
+			else if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx) {
+				return 0;
+			}
+		}
+
 		/* NTS: we use the "can do" function to reject obvious configurations that will never work
 		 *      on the card, verses an unsupported configuration that we advise not using */
 		if (!sndsb_dsp_out_method_can_do(cx,rate,stereo,bit16))
