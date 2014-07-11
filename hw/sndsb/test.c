@@ -1493,12 +1493,8 @@ void begin_play() {
 
 	update_cfg();
 	irq_0_watchdog_reset();
-	if (!sndsb_prepare_dsp_playback(sb_card,choice_rate,wav_stereo,wav_16bit)) {
-		vga_moveto(0,23);
-		vga_write_color(0x1F);
-		vga_write("DSP prepare failed");
+	if (!sndsb_prepare_dsp_playback(sb_card,choice_rate,wav_stereo,wav_16bit))
 		return;
-	}
 
 	sndsb_setup_dma(sb_card);
 
@@ -1544,12 +1540,8 @@ void begin_play() {
 		p8259_unmask(sb_card->irq);
 #endif
 
-	if (!sndsb_begin_dsp_playback(sb_card)) {
-		vga_moveto(0,23);
-		vga_write_color(0x1F);
-		vga_write("DSP begin failed       ");
+	if (!sndsb_begin_dsp_playback(sb_card))
 		return;
-	}
 
 	_cli();
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
@@ -1568,10 +1560,6 @@ void begin_play() {
 	draw_irq_indicator();
 	wav_playing = 1;
 	_sti();
-
-	vga_moveto(0,23);
-	vga_write_color(0x1F);
-	vga_write("                        ");
 }
 
 void stop_play() {
