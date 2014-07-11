@@ -2316,14 +2316,18 @@ static const struct vga_menu_item main_menu_file_set =
 	{"Set file...",		's',	0,	0};
 static const struct vga_menu_item main_menu_file_quit =
 	{"Quit",		'q',	0,	0};
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static const struct vga_menu_item main_menu_windows_fullscreen =
 	{"Windows fullscreen",	'f',	0,	0};
+#endif
 
 static const struct vga_menu_item* main_menu_file[] = {
 	&main_menu_file_set,
 	&main_menu_file_quit,
 	&menu_separator,
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_windows_fullscreen,
+#endif
 	NULL
 };
 
@@ -4127,6 +4131,7 @@ int main(int argc,char **argv) {
 				ui_anim(1);
 				if (wp) begin_play();
 			}
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_windows_fullscreen) {
 				/* NTS: Does not seem to work under Windows XP */
 				if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_STANDARD) {
@@ -4155,7 +4160,6 @@ int main(int argc,char **argv) {
 					vga_msg_box_destroy(&box);
 				}
 			}
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_playback_noreset_adpcm) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
