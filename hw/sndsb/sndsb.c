@@ -2809,6 +2809,23 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 			else
 				cx->buffer_irq_interval = (lm / 2UL);
 		}
+		else if (cx->ess_extensions) {
+			/* ESS 688/1869 chipsets: Unless using Goldplay mode we normally tell the chipset
+			 * to use 2 or 4 byte demand transfers to optimize ISA bandwidth. If not using
+			 * auto-init DMA, this method of transfer will fail if the interval is not a
+			 * multiple of 4 bytes.
+			 *
+			 * I *think* that this might be responsible for why non-auto-init DSP+DMA playback
+			 * eventually stalls on one ESS 688-based laptop SB clone I test on. */
+			if (!cx->goldplay_mode && !cx->dsp_autoinit_dma) {
+				if (bit16) lm <<= 1UL;
+				if (stereo) lm <<= 1UL;
+				lm &= ~3; /* round down 4 bytes */
+				if (lm == 0) lm = 4;
+				if (bit16) lm >>= 1UL;
+				if (stereo) lm >>= 1UL;
+			}
+		}
 
 		/* don't let the API play 16-bit audio if less than DSP 4.xx because 16-bit audio played
 		 * as 8-bit sounds like very loud garbage, be kind to the user */
