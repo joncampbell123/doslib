@@ -349,7 +349,9 @@ enum {
 static unsigned char		animator = 0;
 static int			wav_fd = -1;
 static char			temp_str[512];
+#ifdef ISAPNP
 static unsigned char far	devnode_raw[4096];
+#endif
 static char			wav_file[130] = {0};
 static unsigned char		wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
 static unsigned long		wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
