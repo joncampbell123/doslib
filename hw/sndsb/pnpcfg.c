@@ -1,6 +1,3 @@
-/* TODO: Drag out the old Pentium 120MHz laptop you have in storage. It appears
- *       to have an ESS PnP Audiodrive chipset which you should add recognition
- *       for here. */
 
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */

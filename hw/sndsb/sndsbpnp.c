@@ -1,6 +1,3 @@
-/* TODO: Drag out the old Pentium 120MHz laptop you have in storage. It appears
- *       to have an ESS PnP Audiodrive chipset which you should add recognition
- *       for here. */
 
 /* Additional support functions for Sound Blaster 16 ISA Plug & Play based cards.
  * This is compiled into a separate library (sndsbpnp.lib) so that a programmer
@@ -35,8 +32,23 @@
 int isa_pnp_is_sound_blaster_compatible_id(uint32_t id,char const **whatis) {
 	int r=0;
 
+	/* if it's an ESS product... */
+	if (ISAPNP_ID_FMATCH(id,'E','S','S')) {
+		if (ISAPNP_ID_LMATCH(id,0x0100)) { /* ESS0100 */
+			/* On an old Pentium 120MHz laptop this does not show
+			 * up in PnP enumeration but is instead reported as
+			 * a device node by the PnP BIOS.
+			 *
+			 *      Port 0x220 length 0x10
+			 *      Port 0x388 length 0x04
+			 *      IRQ 9
+			 *      DMA channel 1 */
+			*whatis = "ES688 Plug And Play AudioDrive";
+			r = 1;
+		}
+	}
 	/* if it's a creative product... */
-	if (ISAPNP_ID_FMATCH(id,'C','T','L')) {
+	else if (ISAPNP_ID_FMATCH(id,'C','T','L')) {
 		if (ISAPNP_ID_LMATCH(id,0x0070)) { /* CTL0070 */
 			/* For ref (configuration regs):
 			 *   IO[0]  = Base I/O port
@@ -104,6 +116,68 @@ int isa_pnp_iobase_typical_mpu(uint16_t io) {
 	return ((io&0xF) == 0) && (io == 0x300 || io == 0x330);
 }
 
+int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,struct isa_pnp_device_node far *devn,unsigned int devn_size,struct sndsb_ctx *cx) {
+	unsigned char far *rsc, far *rf;
+	struct isapnp_tag tag;
+	unsigned int i;
+
+	cx->baseio = 0;
+	cx->gameio = 0;
+	cx->aweio = 0;
+	cx->oplio = 0;
+	cx->mpuio = 0;
+	cx->dma16 = -1;
+	cx->dma8 = -1;
+	cx->irq = -1;
+
+	if (devn_size <= sizeof(*devn)) return 0;
+	rsc = (unsigned char far*)devn + sizeof(*devn);
+	rf = (unsigned char far*)devn + devn_size;
+
+	if (ISAPNP_ID_FMATCH(id,'E','S','S')) {
+		if (ISAPNP_ID_LMATCH(id,0x0100)) { /* ESS0100 ES688 Plug And Play AudioDrive */
+			do {
+				if (!isapnp_read_tag(&rsc,rf,&tag))
+					break;
+				if (tag.tag == ISAPNP_TAG_END)
+					break;
+
+				switch (tag.tag) {
+					case ISAPNP_TAG_FIXED_IO_PORT: {
+					       struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
+					       if (x->base >= 0x210 && x->base <= 0x260 && x->length == 0x10)
+						       cx->baseio = x->base;
+					       else if (x->base >= 0x388 && x->base <= 0x38C && x->length == 4)
+						       cx->oplio = x->base;
+					} break;
+					case ISAPNP_TAG_IRQ_FORMAT: {
+						struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;
+						for (i=0;i < 16;i++) {
+							if (x->irq_mask & (1U << (unsigned int)i)) { /* NTS: PnP devices usually support odd IRQs like IRQ 9 */
+								if (cx->irq < 0) cx->irq = i;
+							}
+						}
+					} break;
+					case ISAPNP_TAG_DMA_FORMAT: {
+						struct isapnp_tag_dma_format far *x = (struct isapnp_tag_dma_format far*)tag.data;
+						for (i=0;i < 8;i++) {
+							if (x->dma_mask & (1U << (unsigned int)i)) {
+								if (cx->dma8 < 0 && i < 4) cx->dma8 = i;
+							}
+						}
+					} break;
+				}
+			} while (1);
+		}
+	}
+	else if (ISAPNP_ID_FMATCH(id,'C','T','L')) {
+		/* Do nothing: Creative cards are usually probed from the ISA bus and not reported by the BIOS */
+	}
+
+	if (cx->baseio == 0) return ISAPNPSB_NO_RESOURCES;
+	return 1;
+}
+
 /* NTS: The caller is expected to pnp_wake_scn() then siphon off the device id */
 int isa_pnp_sound_blaster_get_resources(uint32_t id,unsigned char csn,struct sndsb_ctx *cx) {
 	cx->baseio = 0;
@@ -115,7 +189,12 @@ int isa_pnp_sound_blaster_get_resources(uint32_t id,unsigned char csn,struct snd
 	cx->dma8 = -1;
 	cx->irq = -1;
 
-	if (ISAPNP_ID_FMATCH(id,'C','T','L')) {
+	if (ISAPNP_ID_FMATCH(id,'E','S','S')) {
+		if (ISAPNP_ID_LMATCH(id,0x0100)) { /* ESS0100 ES688 Plug And Play AudioDrive */
+			/* TODO: I don't have any ISA cards of this type, only one integrated into a laptop */
+		}
+	}
+	else if (ISAPNP_ID_FMATCH(id,'C','T','L')) {
 		/* Creative SB PnP cards are fairly consistent on the resource layout. If you have one that this
 		 * code fails to match, feel free to add it here */
 		if (	ISAPNP_ID_LMATCH(id,0x0070) || /* CTL0070 Creative ViBRA16C PnP */
@@ -168,6 +247,34 @@ int isa_pnp_sound_blaster_get_resources(uint32_t id,unsigned char csn,struct snd
 	return 1;
 }
 
+/* try device from ISA PnP BIOS device node (reported by BIOS not probed directly by us) */
+int sndsb_try_isa_pnp_bios(uint32_t id,uint8_t node,struct isa_pnp_device_node far *devn,unsigned int devn_size) {
+	struct sndsb_ctx *cx;
+	int ok = 0;
+
+	cx = sndsb_alloc_card();
+	if (cx == NULL) return ISAPNPSB_TOO_MANY_CARDS;
+
+	/* now extract ISA resources and init the card */
+	ok = isa_pnp_bios_sound_blaster_get_resources(id,node,devn,devn_size,cx);
+	if (ok < 1) {
+		sndsb_free_card(cx);
+		return ok;
+	}
+
+	/* try to init. note the init_card() function needs to know this is a PnP device. */
+	cx->pnp_id = id;
+	cx->pnp_bios_node = node;
+	if (!sndsb_init_card(cx)) {
+		sndsb_free_card(cx);
+		return ISAPNPSB_FAILED;
+	}
+
+	isa_pnp_is_sound_blaster_compatible_id(cx->pnp_id,&cx->pnp_name);
+	return 1;
+}
+
+/* try device from ISA PnP device by CSN (card select number) */
 int sndsb_try_isa_pnp(uint32_t id,uint8_t csn) {
 	struct sndsb_ctx *cx;
 	int ok = 0;

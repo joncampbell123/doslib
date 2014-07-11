@@ -179,6 +179,7 @@ struct sndsb_ctx {
 	const char*			pnp_name;
 	uint32_t			pnp_id;
 	uint8_t				pnp_csn;				/* PnP Card Select Number */
+	uint8_t				pnp_bios_node;				/* PnP BIOS device node (0xFF if none) */
 /* Windows compat hack */
 	uint16_t			windows_creative_sb16_drivers_ver;
 	uint8_t				windows_springwait;	/* when windows_emulation == 1, defer actually starting a DSP block until

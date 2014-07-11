@@ -1,8 +1,10 @@
 
 /* NTS: The caller is expected to pnp_wake_scn() then siphon off the device id */
 int isa_pnp_sound_blaster_get_resources(uint32_t id,unsigned char csn,struct sndsb_ctx *cx);
+int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,struct isa_pnp_device_node far *devn,unsigned int devn_size,struct sndsb_ctx *cx);
 /* NTS: same for this function */
 int sndsb_try_isa_pnp(uint32_t id,uint8_t csn);
+int sndsb_try_isa_pnp_bios(uint32_t id,uint8_t node,struct isa_pnp_device_node far *devn,unsigned int devn_size);
 
 /* possible error codes (zero or negative) from try_isa_pnp and get_resources */
 

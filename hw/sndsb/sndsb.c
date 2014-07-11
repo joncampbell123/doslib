@@ -333,7 +333,12 @@ void free_sndsb() {
 }
 
 int init_sndsb() {
+	int i;
+
 	memset(sndsb_card,0,sizeof(sndsb_card));
+	for (i=0;i < SNDSB_MAX_CARDS;i++)
+		sndsb_card[i].pnp_bios_node = 0xFF;
+
 	sndsb_card_blaster = NULL;
 	sndsb_card_next = 0;
 #if TARGET_MSDOS == 32
@@ -362,6 +367,7 @@ void sndsb_free_card(struct sndsb_ctx *c) {
 	}
 #endif
 	memset(c,0,sizeof(*c));
+	c->pnp_bios_node = 0xFF;
 	if (c == sndsb_card_blaster) sndsb_card_blaster = NULL;
 }
 

@@ -345,6 +345,7 @@ enum {
 static unsigned char		animator = 0;
 static int			wav_fd = -1;
 static char			temp_str[512];
+static unsigned char far	devnode_raw[4096];
 static char			wav_file[130] = {0};
 static unsigned char		wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
 static unsigned long		wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
@@ -3607,9 +3608,9 @@ int main(int argc,char **argv) {
 		if (find_isa_pnp_bios()) {
 			int ret;
 			char tmp[192];
-			unsigned int j;
+			unsigned int j,nodesize=0;
 			const char *whatis = NULL;
-			unsigned char csn,data[192];
+			unsigned char csn,node=0,numnodes=0xFF,data[192];
 
 			memset(data,0,sizeof(data));
 			if (isa_pnp_bios_get_pnp_isa_cfg(data) == 0) {
@@ -3621,6 +3622,29 @@ int main(int argc,char **argv) {
 				printf("  ISA PnP BIOS failed to return configuration info\n");
 			}
 
+			/* enumerate device nodes reported by the BIOS */
+			if (isa_pnp_bios_number_of_sysdev_nodes(&numnodes,&nodesize) == 0 && numnodes != 0xFF && nodesize <= sizeof(devnode_raw)) {
+				for (node=0;node != 0xFF;) {
+					struct isa_pnp_device_node far *devn;
+					unsigned char this_node;
+
+					/* apparently, start with 0. call updates node to
+					 * next node number, or 0xFF to signify end */
+					this_node = node;
+					if (isa_pnp_bios_get_sysdev_node(&node,devnode_raw,ISA_PNP_BIOS_GET_SYSDEV_NODE_CTRL_NOW) != 0) break;
+
+					devn = (struct isa_pnp_device_node far*)devnode_raw;
+					if (isa_pnp_is_sound_blaster_compatible_id(devn->product_id,&whatis)) {
+						isa_pnp_product_id_to_str(tmp,devn->product_id);
+						if ((ret = sndsb_try_isa_pnp_bios(devn->product_id,this_node,devn,sizeof(devnode_raw))) <= 0)
+							printf("ISA PnP BIOS: error %d for %s '%s'\n",ret,tmp,whatis);
+						else
+							printf("ISA PnP BIOS: found %s '%s'\n",tmp,whatis);
+					}
+				}
+			}
+
+			/* enumerate the ISA bus directly */
 			if (isapnp_read_data != 0) {
 				printf("Scanning ISA PnP devices...\n");
 				for (csn=1;csn < 255;csn++) {
@@ -3640,6 +3664,8 @@ int main(int argc,char **argv) {
 							isa_pnp_product_id_to_str(tmp,*((uint32_t*)data));
 							if ((ret = sndsb_try_isa_pnp(*((uint32_t*)data),csn)) <= 0)
 								printf("ISA PnP: error %d for %s '%s'\n",ret,tmp,whatis);
+							else
+								printf("ISA PnP: found %s '%s'\n",tmp,whatis);
 						}
 					}
 
