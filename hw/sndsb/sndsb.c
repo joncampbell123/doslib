@@ -2878,6 +2878,10 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate * (cx->buffer_stereo ? 2UL : 1UL)));
 		cx->chose_autoinit_dsp = 0; /* DSP 1.xx does not support auto-init DSP commands */
 	}
+	else if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+		/* do nothing----using SBPro DSP commands then programming ESS registers serves only to
+		 * confuse the chip and cause it to stop responding. */
+	}
 	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
 		/* DSP 2.00, 2.01+, and DSP 3.xx */
 		unsigned long total_rate = rate * (cx->buffer_stereo ? 2UL : 1UL);
@@ -3034,7 +3038,10 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 			b = 0x00; /* DMA disable */
 			b |= (cx->chose_autoinit_dsp) ? 0x04 : 0x00;
 			b |= (cx->dsp_record) ? 0x0A : 0x00; /* [3]=DMA converter in ADC mode [1]=DMA read for ADC */
-			sndsb_ess_write_controller(cx,0xB8,b);
+			if (sndsb_ess_write_controller(cx,0xB8,b) == -1) {
+				_sti();
+				return 0;
+			}
 
 			b = sndsb_ess_read_controller(cx,0xA8);
 			if (b == -1) {
@@ -3043,13 +3050,19 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 			}
 			b &= ~0xB; /* clear mono/stereo and record monitor (bits 3, 1, and 0) */
 			b |= (cx->buffer_stereo?1:2);	/* 10=mono 01=stereo */
-			sndsb_ess_write_controller(cx,0xA8,b);
+			if (sndsb_ess_write_controller(cx,0xA8,b) == -1) {
+				_sti();
+				return 0;
+			}
 
 			if (cx->goldplay_mode)
 				b = cx->buffer_16bit ? 1 : 0;	/* demand transfer DMA 2 bytes (16-bit) or single transfer DMA (8-bit) */
 			else
 				b = 3;  /* demand transfer DMA 4 bytes per request */
-			sndsb_ess_write_controller(cx,0xB9,b);
+			if (sndsb_ess_write_controller(cx,0xB9,b) == -1) {
+				_sti();
+				return 0;
+			}
 
 			if (cx->buffer_rate > 22050) {
 				/* bit 7: = 1
@@ -3067,14 +3080,23 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 				b = 128 - (397700UL / (unsigned long)cx->buffer_rate);
 				if (b < 0) b = 0;
 			}
-			sndsb_ess_write_controller(cx,0xA1,b);
+			if (sndsb_ess_write_controller(cx,0xA1,b) == -1) {
+				_sti();
+				return 0;
+			}
 
 			b = 256 - (7160000UL / ((unsigned long)cx->buffer_rate * 32UL)); /* 80% of rate/2 times 82 I think... */
-			sndsb_ess_write_controller(cx,0xA2,b);
+			if (sndsb_ess_write_controller(cx,0xA2,b) == -1) {
+				_sti();
+				return 0;
+			}
 
 			t16 = -(lv+1);
-			sndsb_ess_write_controller(cx,0xA4,t16); /* DMA transfer count low */
-			sndsb_ess_write_controller(cx,0xA5,t16>>8); /* DMA transfer count high */
+			if (sndsb_ess_write_controller(cx,0xA4,t16) == -1 || /* DMA transfer count low */
+				sndsb_ess_write_controller(cx,0xA5,t16>>8)) { /* DMA transfer count high */
+				_sti();
+				return 0;
+			}
 
 			b = sndsb_ess_read_controller(cx,0xB1);
 			if (b == -1) {
@@ -3083,7 +3105,10 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 			}
 			b &= ~0xA0; /* clear compat game IRQ, fifo half-empty IRQs */
 			b |= 0x50; /* set overflow IRQ, and "no function" */
-			sndsb_ess_write_controller(cx,0xB1,b);
+			if (sndsb_ess_write_controller(cx,0xB1,b) == -1) {
+				_sti();
+				return 0;
+			}
 
 			b = sndsb_ess_read_controller(cx,0xB2);
 			if (b == -1) {
@@ -3092,24 +3117,36 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 			}
 			b &= ~0xA0; /* clear compat */
 			b |= 0x50; /* set DRQ/DACKB inputs for DMA */
-			sndsb_ess_write_controller(cx,0xB2,b);
+			if (sndsb_ess_write_controller(cx,0xB2,b) == -1) {
+				_sti();
+				return 0;
+			}
 
 			b = 0x51; /* enable FIFO+DMA, reserved, load signal */
 			b |= (cx->buffer_16bit ^ cx->audio_data_flipped_sign) ? 0x20 : 0x00; /* signed complement mode or not */
-			sndsb_ess_write_controller(cx,0xB7,b);
+			if (sndsb_ess_write_controller(cx,0xB7,b) == -1) {
+				_sti();
+				return 0;
+			}
 
 			b = 0x90; /* enable FIFO+DMA, reserved, load signal */
 			b |= (cx->buffer_16bit ^ cx->audio_data_flipped_sign) ? 0x20 : 0x00; /* signed complement mode or not */
 			b |= (cx->buffer_stereo) ? 0x08 : 0x40; /* [3]=stereo [6]=!stereo */
 			b |= (cx->buffer_16bit) ? 0x04 : 0x00; /* [2]=16bit */
-			sndsb_ess_write_controller(cx,0xB7,b);
+			if (sndsb_ess_write_controller(cx,0xB7,b) == -1) {
+				_sti();
+				return 0;
+			}
 
 			b = sndsb_ess_read_controller(cx,0xB8);
 			if (b == -1) {
 				_sti();
 				return 0;
 			}
-			sndsb_ess_write_controller(cx,0xB8,b | 1); /* enable DMA */
+			if (sndsb_ess_write_controller(cx,0xB8,b | 1) == -1) { /* enable DMA */
+				_sti();
+				return 0;
+			}
 		}
 		else {
 			if (cx->chose_autoinit_dsp) {
