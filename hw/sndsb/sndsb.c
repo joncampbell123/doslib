@@ -482,16 +482,55 @@ int sndsb_read_dsp(struct sndsb_ctx *cx) {
 	return c;
 }
 
+unsigned int sndsb_ess_set_extended_mode(struct sndsb_ctx *cx,int enable) {
+	if (cx->ess_chipset == 0) return 0; /* if not an ESS chipset then, no */
+	if (!cx->ess_extensions) return 0; /* if caller/user says not to use extensions, then, no */
+	if (cx->ess_extended_mode == !!enable) return 1;
+
+	if (!sndsb_write_dsp(cx,enable?0xC6:0xC7))
+		return 0;
+
+	cx->ess_extended_mode = !!enable;
+	return 1;
+}
+
+int sndsb_ess_read_controller(struct sndsb_ctx *cx,int reg) {
+	if (reg < 0xA0 || reg >= 0xC0) return -1;
+	if (sndsb_ess_set_extended_mode(cx,1) == 0) return -1;
+	/* "Reading the data buffer of the ESS 1869: Command C0h is used to read
+	 * the ES1869 controller registers used for Extended mode. Send C0h
+	 * followed by the register number, Axh or Bxh. */
+	if (!sndsb_write_dsp(cx,0xC0)) return -1;
+	if (!sndsb_write_dsp(cx,reg)) return -1;
+	return sndsb_read_dsp(cx);
+}
+
+int sndsb_ess_write_controller(struct sndsb_ctx *cx,int reg,unsigned char value) {
+	if (reg < 0xA0 || reg >= 0xC0) return -1;
+	if (sndsb_ess_set_extended_mode(cx,1) == 0) return -1;
+	if (!sndsb_write_dsp(cx,reg)) return -1;
+	if (!sndsb_write_dsp(cx,value)) return -1;
+	return 0;
+}
+
 int sndsb_reset_dsp(struct sndsb_ctx *cx) {
 	if (cx->baseio == 0) {
 		DEBUG(fprintf(stdout,"BUG: sndsb baseio == 0\n"));
 		return 0;
 	}
 
+	/* DSP reset takes the ESS out of extended mode */
+	if (cx->ess_chipset != 0)
+		cx->ess_extended_mode = 0;
+
 	/* DSP reset procedure */
 	/* "write 1 to the DSP and wait 3 microseconds" */
 	DEBUG(fprintf(stdout,"sndsb_reset_dsp() reset in progress\n"));
-	outp(cx->baseio+SNDSB_BIO_DSP_RESET,1);
+	if (cx->ess_extensions)
+		outp(cx->baseio+SNDSB_BIO_DSP_RESET,3); /* ESS reset and flush FIFO */
+	else
+		outp(cx->baseio+SNDSB_BIO_DSP_RESET,1); /* normal reset */
+
 	t8254_wait(t8254_us2ticks(1000));	/* be safe and wait 1ms */
 	outp(cx->baseio+SNDSB_BIO_DSP_RESET,0);
 
@@ -695,6 +734,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_nag_mode = 0;
 	cx->ess_extensions = 0;
 	cx->dsp_nag_hispeed = 0;
+	cx->ess_extended_mode = 0;
 	cx->hispeed_matters = 1; /* assume it does */
 	cx->dosbox_emulation = 0;
 	cx->hispeed_blocking = 1; /* assume it does */
@@ -1078,6 +1118,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		/* Use DSP command 0xE7 to detect ESS chipset */
 		if (sndsb_write_dsp(cx,0xE7)) {
 			unsigned char c1,c2;
+			int in;
 
 			c1 = sndsb_read_dsp(cx);
 			c2 = sndsb_read_dsp(cx);
@@ -1086,6 +1127,40 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 				if (c2 != 0) {
 					cx->ess_chipset = (c2 & 8) ? SNDSB_ESS_1869 : SNDSB_ESS_688;
 					cx->ess_extensions = 1;
+
+					/* that also means that we can deduce the true IRQ/DMA from the chipset */
+					if ((in=sndsb_ess_read_controller(cx,0xB1)) != -1) { /* 0xB1 Legacy Audio Interrupt Control */
+						switch (in&0xF) {
+							case 0x5:
+								cx->irq = 5;
+								break;
+							case 0xA:
+								cx->irq = 7;
+								break;
+							case 0xF:
+								cx->irq = 10;
+								break;
+							default: /* "2,9,all others" */
+								cx->irq = 9;
+								break;
+						}
+					}
+					if ((in=sndsb_ess_read_controller(cx,0xB2)) != -1) { /* 0xB2 DRQ Control */
+						switch (in&0xF) {
+							case 0x5:
+								cx->dma8 = 0;
+								break;
+							case 0xA:
+								cx->dma8 = 1;
+								break;
+							case 0xF:
+								cx->dma8 = 3;
+								break;
+							default:
+								cx->dma8 = -1;
+								break;
+						}
+					}
 
 					/* TODO: 1869 datasheet recommends reading mixer index 0x40
 					 *       four times to read back 0x18 0x69 A[11:8] A[7:0]

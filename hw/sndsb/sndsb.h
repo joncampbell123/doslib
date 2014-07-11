@@ -205,6 +205,7 @@ struct sndsb_ctx {
 	uint8_t				chose_autoinit_dsp:1;	/* the library chooses to use auto-init commands */
 	uint8_t				chose_use_dma:1;	/* the library chooses to run in a manner that uses DMA */
 	uint8_t				direct_dac_sent_command:1;	/* direct DSP playback: we just sent the command, next is data */
+	uint8_t				ess_extended_mode:1;	/* if set, ESS chip is in extended mode */
 	uint8_t				timer_tick_signal:1;
 };
 
@@ -291,6 +292,9 @@ void sndsb_choose_mixer(struct sndsb_ctx *card,signed char override);
 int sndsb_submit_buffer(struct sndsb_ctx *cx,unsigned char FAR *ptr,uint32_t phys,uint32_t len,uint32_t user,uint8_t loop);
 int sndsb_assign_dma_buffer(struct sndsb_ctx *cx,struct dma_8237_allocation *dma);
 unsigned char sndsb_rate_to_time_constant(struct sndsb_ctx *cx,unsigned long rate);
+unsigned int sndsb_ess_set_extended_mode(struct sndsb_ctx *cx,int enable);
+int sndsb_ess_read_controller(struct sndsb_ctx *cx,int reg);
+int sndsb_ess_write_controller(struct sndsb_ctx *cx,int reg,unsigned char value);
 void sndsb_irq_continue(struct sndsb_ctx *cx,unsigned char c);
 unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx);
 
