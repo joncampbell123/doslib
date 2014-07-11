@@ -2485,6 +2485,11 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		 *        a max 44100Hz to 48000Hz? */
 		if (wav_sample_rate > cx->max_sample_rate_dsp4xx) return 0;
 	}
+	else if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+		/* I've been able to drive ESS chips up to 48Khz and beyond (though beyond 48KHz 16-bit stereo
+		 * the ISA bus can't keep up well). But let's cap it at 48KHz anyway */
+		if (wav_sample_rate > 48000) return 0;
+	}
 	else if ((!cx->hispeed_matters && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) ||
 		cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201) {
 		/* Because of the way Sound Blaster Pro stereo works and the way the time constant
