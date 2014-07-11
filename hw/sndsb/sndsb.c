@@ -3082,7 +3082,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 
 			b = 0x01; /* DMA enable */
 			b |= (cx->chose_autoinit_dsp) ? 0x04 : 0x00;
-			b |= (cx->dsp_record) ? 0x0A : 0x00; /* [3]=DMA converter in ADC mode [1]=DMA read for ADC */
+			b |= (cx->dsp_record) ? 0x08 : 0x00; /* [3]=DMA converter in ADC mode [1]=DMA read for ADC(don't set it kills recording????) */
 			sndsb_ess_write_controller(cx,0xB8,b);
 		}
 		else {
