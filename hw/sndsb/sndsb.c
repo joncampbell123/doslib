@@ -1,5 +1,11 @@
 /* FIXME: This code is failing to detect that it's running under the latest (4.3) VirtualBox. Why? */
 
+/* TODO: Add a flag to the sound blaster context to track whether or not DSP playback/record is active. */
+
+/* TODO: How to add support for full duplex audio? ESS 688 and 1869 chipsets for example can do full
+ *       duplex but only at the same sample rate. I'm not sure if Sound Blaster 16 ViBRA cards can
+ *       do full duplex. */
+
 /* FIXME: This just in: your IRQ testing routine can hang the system especially (as in DOSBox) when IRQs that are
  *        normally masked have a corresponding interrupt vector set to NULL (0000:0000). You need to double-check
  *        the probe function and make sure there is no possible way uninitialized vectors execute when any
