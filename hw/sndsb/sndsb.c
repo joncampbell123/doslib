@@ -2638,6 +2638,12 @@ int sndsb_shutdown_dma(struct sndsb_ctx *cx) {
 
 int sndsb_setup_dma(struct sndsb_ctx *cx) {
 	unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
+	unsigned char dma_mode = D8237_MODER_MODESEL_SINGLE;
+
+	/* ESS bugfix: except for goldplay mode, we tell the chipset to use demand mode fetching.
+	 * So then, setup the DMA controller for it too! */
+	if (cx->ess_extensions && !cx->goldplay_mode)
+		dma_mode = D8237_MODER_MODESEL_DEMAND;
 
 	/* if we're doing the Windows "spring" buffer hack, then don't do anything.
 	 * later when the calling program queries the DMA position, we'll setup DSP playback and call this function again */
@@ -2658,7 +2664,7 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 		(cx->backwards ? D8237_MODER_ADDR_DEC : 0) |
 		D8237_MODER_CHANNEL(ch) |
 		D8237_MODER_TRANSFER(cx->dsp_record ? D8237_MODER_XFER_WRITE : D8237_MODER_XFER_READ) |
-		D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
+		D8237_MODER_MODESEL(dma_mode));
 
 	if (cx->goldplay_mode) {
 		/* goldplay mode REQUIRES auto-init DMA */
