@@ -779,11 +779,18 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 static unsigned char adpcm_do_reset_interval=1;
 static unsigned long adpcm_reset_interval=0;
 static unsigned long adpcm_counter=0;
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
 static unsigned char adpcm_tmp[4096];
+#endif
 static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
 	unsigned char FAR *buffer = sb_dma->lin;
 	VGA_ALPHA_PTR wr = vga_alpha_ram + 80 - 6;
-	unsigned char c,load=0;
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
+	unsigned char c;
+#endif
+	unsigned char load=0;
 	uint16_t prev[6];
 	int rd,i,bufe=0;
 	uint32_t how;
@@ -859,6 +866,9 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			wav_buffer_filepos = wav_position;
 
 		if (sb_card->dsp_adpcm > 0) {
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+			break; /* cut */
+#else
 			unsigned int src;
 
 			/* FIXME: Would be neat to demonstrate ADPCM playback with backwards DMA */
@@ -967,6 +977,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			}
 
 			cx->buffer_last_io += (uint32_t)rd;
+#endif
 		}
 		else {
 			uint32_t oa,adj;

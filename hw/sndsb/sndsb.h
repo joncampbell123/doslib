@@ -342,6 +342,8 @@ static inline void sndsb_dsp_direct_output(struct sndsb_ctx *cx,unsigned char c)
 void sndsb_main_idle(struct sndsb_ctx *cx);
 
 /* Sound Blaster ADPCM encoding routines */
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
 unsigned char sndsb_encode_adpcm_4bit(unsigned char samp);
 unsigned char sndsb_encode_adpcm_2bit(unsigned char samp);
 unsigned char sndsb_encode_adpcm_2_6bit(unsigned char samp,unsigned char b2);
@@ -350,6 +352,7 @@ void sndsb_encode_adpcm_reset_wo_ref(unsigned char mode);
 void sndsb_alt_lite_probe_irq(struct sndsb_ctx *cx);
 void sndsb_manual_probe_irq(struct sndsb_ctx *cx);
 void sndsb_manual_probe_dma(struct sndsb_ctx *cx);
+#endif
 
 void sndsb_write_mixer_entry(struct sndsb_ctx *sb,struct sndsb_mixer_control *mc,unsigned char nb);
 unsigned char sndsb_read_mixer_entry(struct sndsb_ctx *sb,struct sndsb_mixer_control *mc);

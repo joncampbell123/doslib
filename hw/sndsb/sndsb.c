@@ -69,11 +69,15 @@
 # define DEBUG(x)
 #endif
 
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+/* cut */
+#else
 static int			adpcm_pred = 128;
 static signed char		adpcm_last = 0;
 static unsigned char		adpcm_step = 0;
 static unsigned char		adpcm_error = 0;
 static unsigned char		adpcm_lim = 0;
+#endif
 
 /* CT1335 */
 struct sndsb_mixer_control sndsb_mixer_ct1335[] = {
@@ -2215,16 +2219,23 @@ void sndsb_main_idle(struct sndsb_ctx *cx) {
 /* we can do output method. if we can't, then don't bother playing, because it flat out won't work.
  * if we can, then you want to check if it's supported, because if it's not, you may get weird results, but nothing catastrophic. */
 int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_rate,unsigned char wav_stereo,unsigned char wav_16bit) {
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+# define MSG(x) cx->reason_not_supported = x
+#else
+# define MSG(x)
+	cx->reason_not_supported = "";
+#endif
+
 	if (!cx->dsp_ok) {
-		cx->reason_not_supported = "DSP not detected";
+		MSG("DSP not detected");
 		return 0; /* No DSP, no playback */
 	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_MAX) {
-		cx->reason_not_supported = "play method out of range";
+		MSG("play method out of range");
 		return 0; /* invalid DSP output method */
 	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && !wav_16bit && cx->dma8 < 0) {
-		cx->reason_not_supported = "DMA-based playback, 8-bit PCM, no channel assigned (dma8)";
+		MSG("DMA-based playback, 8-bit PCM, no channel assigned (dma8)");
 		return 0;
 	}
 
@@ -2232,7 +2243,7 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		/* OK. we can use ESS extensions with flipped sign */
 	}
 	else if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->audio_data_flipped_sign) {
-		cx->reason_not_supported = "Flipped sign playback requires DSP 4.xx playback";
+		MSG("Flipped sign playback requires DSP 4.xx playback");
 		return 0;
 	}
 
@@ -2240,54 +2251,54 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		/* OK. we can use ESS extensions to do 16-bit playback */
 	}
 	else if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_16bit) {
-		cx->reason_not_supported = "16-bit PCM playback requires DSP 4.xx mode";
+		MSG("16-bit PCM playback requires DSP 4.xx mode");
 		return 0;
 	}
 
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && wav_16bit && cx->dma16 < 0) {
-		cx->reason_not_supported = "DMA-based playback, 16-bit PCM, no channel assigned (dma16)";
+		MSG("DMA-based playback, 16-bit PCM, no channel assigned (dma16)");
 		return 0;
 	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && wav_16bit && cx->dma16 >= 4 && !(d8237_flags&D8237_DMA_SECONDARY)) {
-		cx->reason_not_supported = "DMA-based playback, 16-bit PCM, dma16 channel refers to\nnon-existent secondary DMA controller";
+		MSG("DMA-based playback, 16-bit PCM, dma16 channel refers to\nnon-existent secondary DMA controller");
 		return 0;
 	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && wav_16bit && cx->dma16 >= 0 && cx->dma16 < 4 && !(d8237_flags&D8237_DMA_PRIMARY)) {
-		cx->reason_not_supported = "DMA-based playback, 16-bit PCM, dma16 channel refers to\nnon-existent primary DMA controller";
+		MSG("DMA-based playback, 16-bit PCM, dma16 channel refers to\nnon-existent primary DMA controller");
 		return 0;
 	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && !wav_16bit && cx->dma8 >= 4 && !(d8237_flags&D8237_DMA_SECONDARY)) { /* as if this would ever happen, but.. */
-		cx->reason_not_supported = "DMA-based playback, 8-bit PCM, dma8 channel refers to\nnon-existent secondary DMA controller";
+		MSG("DMA-based playback, 8-bit PCM, dma8 channel refers to\nnon-existent secondary DMA controller");
 		return 0;
 	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && !wav_16bit && cx->dma8 >= 0 && cx->dma8 < 4 && !(d8237_flags&D8237_DMA_PRIMARY)) {
-		cx->reason_not_supported = "DMA-based playback, 8-bit PCM, dma8 channel refers to\nnon-existent primary DMA controller";
+		MSG("DMA-based playback, 8-bit PCM, dma8 channel refers to\nnon-existent primary DMA controller");
 		return 0;
 	}
 
 	if (cx->dsp_adpcm > 0) {
 		if (cx->dsp_record) {
-			cx->reason_not_supported = "No such thing as ADPCM recording";
+			MSG("No such thing as ADPCM recording");
 			return 0;
 		}
 		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
-			cx->reason_not_supported = "No such thing as direct DAC ADPCM playback";
+			MSG("No such thing as direct DAC ADPCM playback");
 			return 0;
 		}
 		if (wav_16bit) {
-			cx->reason_not_supported = "No such thing as 16-bit ADPCM playback";
+			MSG("No such thing as 16-bit ADPCM playback");
 			return 0;
 		}
 		if (wav_stereo) {
-			cx->reason_not_supported = "No such thing as stereo ADPCM playback";
+			MSG("No such thing as stereo ADPCM playback");
 			return 0;
 		}
 		if (cx->audio_data_flipped_sign) {
-			cx->reason_not_supported = "No such thing as flipped sign ADPCM playback";
+			MSG("No such thing as flipped sign ADPCM playback");
 			return 0;
 		}
 		if (cx->goldplay_mode) {
-			cx->reason_not_supported = "Goldplay ADPCM playback not supported";
+			MSG("Goldplay ADPCM playback not supported");
 			return 0;
 		}
 	}
@@ -2296,14 +2307,17 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		/* bug-check: goldplay 16-bit DMA is not possible if somehow the goldplay_dma[] field is not WORD-aligned
 		 * and 16-bit audio is using the 16-bit DMA channel (misaligned while 8-bit DMA is fine) */
 		if (cx->buffer_16bit && cx->dma16 >= 4 && ((unsigned int)(cx->goldplay_dma))&1) {
-			cx->reason_not_supported = "16-bit PCM Goldplay playback requested\nand DMA buffer is not word-aligned.";
+			MSG("16-bit PCM Goldplay playback requested\nand DMA buffer is not word-aligned.");
 			return 0;
 		}
 #endif
 	}
 
+# if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	cx->reason_not_supported = NULL;
+# endif
 	return 1;
+#undef MSG
 }
 
 unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx) {
@@ -2339,71 +2353,78 @@ void sndsb_irq_continue(struct sndsb_ctx *cx,unsigned char c) {
 
 /* output method is supported (as in, recommended) */
 int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample_rate,unsigned char wav_stereo,unsigned char wav_16bit) {
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+# define MSG(x) cx->reason_not_supported = x
+#else
+# define MSG(x)
+	cx->reason_not_supported = "";
+#endif
+
 	if (!sndsb_dsp_out_method_can_do(cx,wav_sample_rate,wav_stereo,wav_16bit))
 		return 0;
 
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && wav_sample_rate < 4000) {
-		cx->reason_not_supported = "Non-SB16 playback below 4000Hz probably not going to work";
+		MSG("Non-SB16 playback below 4000Hz probably not going to work");
 		return 0;
 	}
 	if (cx->dsp_alias_port && cx->dsp_vmaj > 2) {
-		cx->reason_not_supported = "DSP alias I/O ports only exist on original Sound Blaster\nDSP 1.xx and 2.xx";
+		MSG("DSP alias I/O ports only exist on original Sound Blaster\nDSP 1.xx and 2.xx");
 		return 0;
 	}
 
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx) {
 		if (cx->is_gallant_sc6600) {
 			if (cx->dsp_vmaj < 3) {
-				cx->reason_not_supported = "DSP 4.xx playback requires SB16 or clone [SC-6000]";
+				MSG("DSP 4.xx playback requires SB16 or clone [SC-6000]");
 				return 0;
 			}
 		}
 		else {
 			if (cx->dsp_vmaj < 4) {
-				cx->reason_not_supported = "DSP 4.xx playback requires SB16";
+				MSG("DSP 4.xx playback requires SB16");
 				return 0;
 			}
 		}
 	}
 
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->goldplay_mode && !cx->dsp_autoinit_dma) {
-		cx->reason_not_supported = "Goldplay mode requires auto-init DMA to work properly";
+		MSG("Goldplay mode requires auto-init DMA to work properly");
 		return 0;
 	}
 	if (cx->dsp_autoinit_command && cx->dsp_vmaj < 2) {
-		cx->reason_not_supported = "Auto-init DSP command support requires DSP 2.0 or higher";
+		MSG("Auto-init DSP command support requires DSP 2.0 or higher");
 		return 0;
 	}
 	if ((cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || cx->goldplay_mode) && cx->windows_emulation) {
-		cx->reason_not_supported = "Direct mode or goldplay mode not recommended\nfor use within a Windows DOS box, it won't work";
+		MSG("Direct mode or goldplay mode not recommended\nfor use within a Windows DOS box, it won't work");
 		return 0;
 	}
 
 	if (wav_stereo && cx->dsp_vmaj < 3) {
-		cx->reason_not_supported = "You are playing stereo audio on a DSP that doesn't support stereo";
+		MSG("You are playing stereo audio on a DSP that doesn't support stereo");
 		return 0;
 	}
 
 	if (wav_stereo && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_play_method < SNDSB_DSPOUTMETHOD_3xx) {
-		cx->reason_not_supported = "You are playing stereo audio in a DSP mode\nthat doesn't support stereo";
+		MSG("You are playing stereo audio in a DSP mode\nthat doesn't support stereo");
 		return 0;
 	}
 	if (wav_stereo && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
-		cx->reason_not_supported = "Direct DAC mode does not support stereo";
+		MSG("Direct DAC mode does not support stereo");
 		return 0;
 	}
 
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_201 &&
 		(cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))) {
-		cx->reason_not_supported = "DSP 2.01+ or higher playback requested for DSP older than v2.01";
+		MSG("DSP 2.01+ or higher playback requested for DSP older than v2.01");
 		return 0;
 	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->dsp_vmaj < 2) {
-		cx->reason_not_supported = "DSP 2.0 or higher playback requested for DSP older than v2.0";
+		MSG("DSP 2.0 or higher playback requested for DSP older than v2.0");
 		return 0;
 	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_vmaj < 1) {
-		cx->reason_not_supported = "DSP 1.xx or higher playback requested for\na DSP who's version I can't determine";
+		MSG("DSP 1.xx or higher playback requested for\na DSP who's version I can't determine");
 		return 0;
 	}
 
@@ -2424,7 +2445,7 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 			}
 			else if ((cx->force_hispeed || (wav_sample_rate*(wav_stereo?2:1)) > (cx->dsp_record ? 13000UL : 23000UL)) && cx->hispeed_blocking) {
 				/* no */
-				cx->reason_not_supported = "No IRQ assigned & DSP nag mode is ineffective\nif the DSP will run in 2.0/Pro highspeed DSP mode.";
+				MSG("No IRQ assigned & DSP nag mode is ineffective\nif the DSP will run in 2.0/Pro highspeed DSP mode.");
 				return 0;
 			}
 			else {
@@ -2433,9 +2454,9 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		}
 		else {
 			/* anything else is iffy */
-			cx->reason_not_supported = "No IRQ assigned, no known combinations are selected that\n"
-						"allow DSP playback to work. Try DSP auto-init with Poll ack\n"
-						"or DSP single-cycle with nag mode enabled.";
+			MSG("No IRQ assigned, no known combinations are selected that\n"
+				"allow DSP playback to work. Try DSP auto-init with Poll ack\n"
+				"or DSP single-cycle with nag mode enabled.");
 			return 0;
 		}
 	}
@@ -2443,31 +2464,31 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 	if (cx->dsp_nag_mode) {
 		/* nag mode can cause problems with DSP 4.xx commands? */
 		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx) {
-			cx->reason_not_supported = "DSP nag mode on a SB16 in DSP 4.xx mode can cause problems.\n"
+			MSG("DSP nag mode on a SB16 in DSP 4.xx mode can cause problems.\n"
 						"Halting, popping/cracking, stereo L/R swapping timing glitches.\n"
-						"Use DSP auto-init and non-IRQ polling for more reliable DMA.";
+						"Use DSP auto-init and non-IRQ polling for more reliable DMA.");
 			return 0;
 		}
 		/* nag mode can cause lag from the idle command if hispeed mode is involved */
 		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_201 && cx->hispeed_matters && cx->hispeed_blocking &&
 			cx->dsp_nag_hispeed && (cx->force_hispeed || (wav_sample_rate*(wav_stereo?2:1)) > (cx->dsp_record ? 13000UL : 23000UL))) {
-			cx->reason_not_supported = "DSP nag mode when hispeed DSP playback is involved can cause\n"
-						"lagging and delay on this system because the DSP will block during playback";
+			MSG("DSP nag mode when hispeed DSP playback is involved can cause\n"
+				"lagging and delay on this system because the DSP will block during playback");
 			return 0;
 		}
 	}
 
-	cx->reason_not_supported = "Target sample rate out of range";
+	MSG("Target sample rate out of range");
 	if (cx->dsp_adpcm > 0) {
 		/* Neither VDMSOUND.EXE or NTVDM's SB emulation handle ADPCM well */
 		if (cx->vdmsound || cx->windows_xp_ntvdm || cx->windows_9x_me_sbemul_sys) {
-			cx->reason_not_supported = "You are attempting ADPCM within Windows\nemulation that will likely not support ADPCM playback";
+			MSG("You are attempting ADPCM within Windows\nemulation that will likely not support ADPCM playback");
 			return 0;
 		}
 
 		/* Gallant SC-6600 clones do not support auto-init ADPCM, though they support all modes */
 		if (cx->is_gallant_sc6600 && cx->enable_adpcm_autoinit && cx->dsp_autoinit_command) {
-			cx->reason_not_supported = "SC-6600 SB clones do not support auto-init ADPCM";
+			MSG("SC-6600 SB clones do not support auto-init ADPCM");
 			return 0;
 		}
 
@@ -2516,35 +2537,35 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
 		if (wav_sample_rate > (cx->dsp_record ? cx->max_sample_rate_sb_rec_dac : cx->max_sample_rate_sb_play_dac)) return 0;
 	}
-	cx->reason_not_supported = NULL;
+	MSG(NULL);
 	/* Creative SB16 cards do not pay attention to the Sound Blaster Pro stereo bit.
 	 * Playing stereo using the 3xx method on 4.xx DSPs will not work. Most SB16 clones
 	 * will pay attention to that bit however, but it's best not to assume that will happen. */
 	if (cx->dsp_vmaj >= 4 && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && wav_stereo) {
-		cx->reason_not_supported = "Sound Blaster Pro stereo playback on SB16 (DSP 4.xx)\nwill not play as stereo because Creative SB16\ncards ignore the mixer bit";
+		MSG("Sound Blaster Pro stereo playback on SB16 (DSP 4.xx)\nwill not play as stereo because Creative SB16\ncards ignore the mixer bit");
 		return 0;
 	}
 	/* SB16 cards seem to alias hispeed commands to normal DSP and let them set the time constant all the way up to the max supported by
 	 * the DSP, hispeed mode or not. */
 	if (cx->dsp_vmaj >= 4 && (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_201 || cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) && cx->hispeed_matters) {
-		cx->reason_not_supported = "Sound Blaster 2.0/Pro high-speed DSP modes not\nrecommended for use on your DSP (DSP 4.xx detected)";
+		MSG("Sound Blaster 2.0/Pro high-speed DSP modes not\nrecommended for use on your DSP (DSP 4.xx detected)");
 		return 0;
 	}
 	/* friendly reminder to the user that despite DSP autoinit enable 1.xx commands are not auto-init */
 	if (cx->dsp_autoinit_command && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
-		cx->reason_not_supported = "DSP 1.xx commands do not support auto-init. Playback\nis automatically using single-cycle commands instead.";
+		MSG("DSP 1.xx commands do not support auto-init. Playback\nis automatically using single-cycle commands instead.");
 		return 1; /* we support it, but just to let you know... */
 	}
 	/* playing DMA backwards with 16-bit audio is not advised.
 	 * it COULD theoretically work with a 16-bit DMA channel because of how it counts, but...
 	 * there's also the risk you use an 8-bit DMA channel which of course gets the byte order wrong! */
 	if (cx->backwards && wav_16bit) {
-		cx->reason_not_supported = "16-bit PCM played backwards is not recommended\nbyte order may not be correct to sound card";
+		MSG("16-bit PCM played backwards is not recommended\nbyte order may not be correct to sound card");
 		return 0;
 	}
 	/* it's also a good bet Windows virtualization never even considers DMA in decrement mode because nobody really ever uses it */
 	if (cx->backwards && cx->windows_emulation) {
-		cx->reason_not_supported = "DMA played backwards is not recommended from\nwithin a Windows DOS box";
+		MSG("DMA played backwards is not recommended from\nwithin a Windows DOS box");
 		return 0;
 	}
 	/* EMM386.EXE seems to handle backwards DMA just fine, but we can't assume v86 monitors handle it well */
@@ -2553,13 +2574,17 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 #else
 	if (cx->backwards && (cpu_flags&CPU_FLAG_V86_ACTIVE)) {
 #endif
-		cx->reason_not_supported = "DMA played backwards is not recommended from\nwithin a virtual 8086 mode monitor";
+		MSG("DMA played backwards is not recommended from\nwithin a virtual 8086 mode monitor");
 		return 0;
 	}
 
 	/* NTS: Virtualbox supports backwards DMA, it's OK */
 
+# if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+	cx->reason_not_supported = NULL;
+# endif
 	return 1;
+#undef MSG
 }
 
 int sndsb_write_dsp_blocksize(struct sndsb_ctx *cx,uint16_t tc) {
@@ -3431,6 +3456,9 @@ void sndsb_choose_mixer(struct sndsb_ctx *card,signed char override) {
 	}
 }
 
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+/* CUT ADPCM encoding */
+#else
 /* NTS: This is the best documentation I could fine regarding the Sound Blaster ADPCM format.
  *      Tables and method taken from DOSBox 0.74 SB emulation. The information on multimedia.cx's
  *      Wiki is wrong. */
@@ -3578,6 +3606,7 @@ void sndsb_encode_adpcm_reset_wo_ref(unsigned char mode) {
 	else
 		adpcm_step = 5; /* FIXME: Testing by ear seems to favor this one. Is this correct? */
 }
+#endif
 
 void sndsb_write_mixer_entry(struct sndsb_ctx *sb,struct sndsb_mixer_control *mc,unsigned char nb) {
 	unsigned char b;
