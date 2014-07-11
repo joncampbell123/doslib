@@ -3257,6 +3257,23 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 	if (cx->dsp_stopping) return;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return;
 
+	/* ESS chipsets: I believe the reason non-auto-init DMA+DSP is halting is because
+	 * we first needs to stop DMA on the chip THEN reprogram the DMA controller.
+	 * Perhaps the FIFO is hardwired to refill at all times and reprogramming the
+	 * DMA controller THEN twiddling the DMA enable opens a window of opportunity
+	 * for refill to happen at the wrong time? */
+	if (!cx->chose_autoinit_dsp) {
+		if (cx->dsp_adpcm > 0) {
+		}
+		else if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+			unsigned char b;
+
+			/* stop DMA */
+			b = sndsb_ess_read_controller(cx,0xB8);
+			sndsb_ess_write_controller(cx,0xB8,b & ~1);
+		}
+	}
+
 	/* if we're doing it the non-autoinit method, then we
 	   also need to update the DMA pointer */
 	if (!cx->chose_autoinit_dma) {
@@ -3334,9 +3351,8 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 				sndsb_ess_write_controller(cx,0xA4,t16); /* DMA transfer count low */
 				sndsb_ess_write_controller(cx,0xA5,t16>>8); /* DMA transfer count high */
 
-				/* trigger another block */
+				/* start DMA again */
 				b = sndsb_ess_read_controller(cx,0xB8);
-				sndsb_ess_write_controller(cx,0xB8,b & ~1);
 				sndsb_ess_write_controller(cx,0xB8,b | 1);
 			}
 			else {
