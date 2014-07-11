@@ -3,7 +3,6 @@
 CFLAGS_1 =
 !ifndef DEBUG
 DEBUG = -d0
-CFLAGS_1 = -s
 DSUFFIX =
 !else
 DSUFFIX = d
