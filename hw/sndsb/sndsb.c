@@ -79,6 +79,9 @@ static unsigned char		adpcm_error = 0;
 static unsigned char		adpcm_lim = 0;
 #endif
 
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+/* cut */
+#else
 /* CT1335 */
 struct sndsb_mixer_control sndsb_mixer_ct1335[] = {
 /*      index, of,ln,name */
@@ -144,6 +147,7 @@ struct sndsb_mixer_control sndsb_mixer_ct1745[] = {
 	{0x46, 4, 4, "Bass L"},
 	{0x47, 4, 4, "Bass R"}
 };
+#endif
 
 signed char gallant_sc6600_map_to_dma[4] = {-1, 0, 1, 3};
 signed char gallant_sc6600_map_to_irq[8] = {-1, 7, 9,10,11, 5,-1,-1};
@@ -3442,6 +3446,8 @@ void sndsb_choose_mixer(struct sndsb_ctx *card,signed char override) {
 	card->sb_mixer = NULL;
 	idx = override >= 0 ? override : card->mixer_chip;
 
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
 	if (idx == SNDSB_MIXER_CT1335) {
 		card->sb_mixer = sndsb_mixer_ct1335;
 		card->sb_mixer_items = (signed short)(sizeof(sndsb_mixer_ct1335) / sizeof(struct sndsb_mixer_control));
@@ -3454,6 +3460,7 @@ void sndsb_choose_mixer(struct sndsb_ctx *card,signed char override) {
 		card->sb_mixer = sndsb_mixer_ct1745;
 		card->sb_mixer_items = (signed short)(sizeof(sndsb_mixer_ct1745) / sizeof(struct sndsb_mixer_control));
 	}
+#endif
 }
 
 #if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
