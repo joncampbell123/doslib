@@ -161,6 +161,12 @@ const char *sndsb_dspoutmethod_str[SNDSB_DSPOUTMETHOD_MAX] = {
 	"4.xx"
 };
 
+const char *sndsb_ess_chipsets_str[SNDSB_ESS_MAX] = {
+	"none",
+	"ESS688",
+	"ESS1869"
+};
+
 #if TARGET_MSDOS == 32
 signed char			sndsb_nmi_32_hook = -1;
 #endif
@@ -169,6 +175,11 @@ struct sndsb_probe_opts sndsb_probe_options={0};
 struct sndsb_ctx sndsb_card[SNDSB_MAX_CARDS];
 struct sndsb_ctx *sndsb_card_blaster=NULL;
 int sndsb_card_next = 0;
+
+const char *sndsb_ess_chipset_str(unsigned int c) {
+	if (c >= SNDSB_ESS_MAX) return NULL;
+	return sndsb_ess_chipsets_str[c];
+}
 
 void sndsb_timer_tick_gen(struct sndsb_ctx *cx) {
 	cx->timer_tick_signal = 1;
@@ -680,7 +691,9 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->goldplay_dma = NULL;
 #endif
 	cx->backwards = 0;
+	cx->ess_chipset = 0;
 	cx->dsp_nag_mode = 0;
+	cx->ess_extensions = 0;
 	cx->dsp_nag_hispeed = 0;
 	cx->hispeed_matters = 1; /* assume it does */
 	cx->dosbox_emulation = 0;
@@ -1058,7 +1071,37 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 
 	if (!cx->windows_emulation && detect_virtualbox_emu())
 		cx->virtualbox_emulation = 1;
+
+	/* DSP v3.1 and no copyright string means it might be an ESS 688/1869 chipset */
+	if (!cx->windows_emulation && cx->dsp_vmaj == 3 && cx->dsp_vmin == 1 &&
+		cx->dsp_copyright[0] == 0 && !sndsb_probe_options.disable_ess_extensions) {
+		/* Use DSP command 0xE7 to detect ESS chipset */
+		if (sndsb_write_dsp(cx,0xE7)) {
+			unsigned char c1,c2;
+
+			c1 = sndsb_read_dsp(cx);
+			c2 = sndsb_read_dsp(cx);
+			if (c1 == 0x68 && (c2 & 0xF0) == 0x80) { /* ESS responds 0x68 0x8x where x = version code */
+				c2 &= 0xF;
+				if (c2 != 0) {
+					cx->ess_chipset = (c2 & 8) ? SNDSB_ESS_1869 : SNDSB_ESS_688;
+					cx->ess_extensions = 1;
+
+					/* TODO: 1869 datasheet recommends reading mixer index 0x40
+					 *       four times to read back 0x18 0x69 A[11:8] A[7:0]
+					 *       where A is the base address of the configuration
+					 *       device. I don't have an ESS 1869 on hand to test
+					 *       and dev that. Sorry. --J.C. */
+				}
+			}
+		}
+	}
 #endif
+
+	if (cx->ess_chipset != 0 && cx->dsp_copyright[0] == 0) {
+		const char *s = sndsb_ess_chipset_str(cx->ess_chipset);
+		if (s != NULL) strcpy(cx->dsp_copyright,s);
+	}
 
 	/* check DMA against the DMA controller presence.
 	 * If there is no 16-bit DMA (channels 4-7) then we cannot use

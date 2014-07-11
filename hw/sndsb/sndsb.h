@@ -48,6 +48,13 @@ enum {
 };
 
 enum {
+	SNDSB_ESS_NONE=0,
+	SNDSB_ESS_688,
+	SNDSB_ESS_1869,
+	SNDSB_ESS_MAX
+};
+
+enum {
 	ADPCM_NONE=0,
 	ADPCM_4BIT,
 	ADPCM_2_6BIT,
@@ -143,6 +150,7 @@ struct sndsb_ctx {
 	uint8_t				vdmsound:1;		/* We're running under VDMSOUND.EXE */
 	uint8_t				do_not_probe_irq:1;	/* if the card has known configuration registers, then do not probe */
 	uint8_t				do_not_probe_dma:1;	/* ... */
+	uint8_t				ess_extensions:1;	/* use ESS 688/1869 extended commands */
 	uint8_t				force_hispeed:1;	/* always use highspeed DSP playback commands (except for DSP 4.xx) */
 	uint8_t				dsp_4xx_fifo_autoinit:1; /* SB16 use FIFO for auto-init playback */
 	uint8_t				dsp_4xx_fifo_single_cycle:1; /* SB16 use FIFO for single-cycle playback */
@@ -180,6 +188,7 @@ struct sndsb_ctx {
 	uint32_t			pnp_id;
 	uint8_t				pnp_csn;				/* PnP Card Select Number */
 	uint8_t				pnp_bios_node;				/* PnP BIOS device node (0xFF if none) */
+	uint8_t				ess_chipset;		/* which ESS chipset */
 /* Windows compat hack */
 	uint16_t			windows_creative_sb16_drivers_ver;
 	uint8_t				windows_springwait;	/* when windows_emulation == 1, defer actually starting a DSP block until
@@ -209,6 +218,7 @@ struct sndsb_probe_opts {
 	unsigned char			disable_manual_dma_probing:1;		/* don't probe for DMA channel if unknown         /nodmap */
 	unsigned char			disable_manual_high_dma_probing:1;	/* don't probe for 16-bit DMA channel if unknown  /nohdmap */
 	unsigned char			disable_windows_vxd_checks:1;		/* don't try to identify Windows drivers          /nowinvxd */
+	unsigned char			disable_ess_extensions:1;		/* don't use/detect ESS688/ESS1869 commands       /noess */
 	unsigned char			use_dsp_alias:1;			/* probe, initialize and default to alias 22Dh    /sbalias:dsp */
 };
 
@@ -347,6 +357,8 @@ void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx);
 void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx);
 void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx);
 void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx);
+
+const char *sndsb_ess_chipset_str(unsigned int c);
 
 #if TARGET_MSDOS == 32
 int sb_nmi_32_auto_choose_hook();

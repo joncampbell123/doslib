@@ -2686,6 +2686,7 @@ static void help() {
 	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
 	printf(" /noidle              Don't use sndsb library idle function\n");
 	printf(" /adma                Assume DMA controllers are present\n");
+	printf(" /noess               Do not use/detect ESS 688/1869 extensions\n");
 	printf(" /sbalias:dsp         Use DSP alias port 0x22D by default\n");
 
 #if TARGET_MSDOS == 32
@@ -3464,6 +3465,9 @@ int main(int argc,char **argv) {
 				help();
 				return 1;
 			}
+			else if (!strcmp(a,"noess")) {
+				sndsb_probe_options.disable_ess_extensions = 1;
+			}
 			else if (!strcmp(a,"adma")) {
 				assume_dma = 1;
 			}
@@ -3725,6 +3729,9 @@ int main(int argc,char **argv) {
 					cx->mixer_ok,sndsb_mixer_chip_str(cx->mixer_chip),
 					(unsigned int)cx->dsp_vmaj,(unsigned int)cx->dsp_vmin,
 					cx->is_gallant_sc6600,cx->oplio,cx->gameio,cx->aweio);
+			printf("      ESS=%u[%s] use=%u\n",
+					cx->ess_chipset,sndsb_ess_chipset_str(cx->ess_chipset),
+					cx->ess_extensions);
 #ifdef ISAPNP
 			if (cx->pnp_name != NULL) {
 				isa_pnp_product_id_to_str(temp_str,cx->pnp_id);
