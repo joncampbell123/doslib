@@ -2700,6 +2700,7 @@ void prompt_play_wav(unsigned char rec) {
 
 static void help() {
 	printf("test [options]\n");
+#if !(TARGET_MSDOS == 16 && defined(__COMPACT__)) /* this is too much to cram into a small model EXE */
 	printf(" /h /help             This help\n");
 	printf(" /nopnp               Don't scan for ISA Plug & Play devices\n");
 	printf(" /noprobe             Don't probe ISA I/O ports for non PnP devices\n");
@@ -2720,6 +2721,7 @@ static void help() {
 	printf(" /adma                Assume DMA controllers are present\n");
 	printf(" /noess               Do not use/detect ESS 688/1869 extensions\n");
 	printf(" /sbalias:dsp         Use DSP alias port 0x22D by default\n");
+#endif
 
 #if TARGET_MSDOS == 32
 	printf("The following option affects hooking the NMI interrupt. Hooking is\n");
