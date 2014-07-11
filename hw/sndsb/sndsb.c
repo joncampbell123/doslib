@@ -3019,15 +3019,29 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
 		unsigned short lv = (cx->buffer_irq_interval * (cx->buffer_stereo?2:1) * (cx->buffer_16bit?2:1)) - 1;
 
-		if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) { /* ESS 688/1869 chipset specific DSP playback.
-					     using this mode bypasses a lot of the Sound Blaster Pro emulation
-					     and restrictions and allows us to run up to 48KHz 16-bit stereo */
+		if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+			/* ESS 688/1869 chipset specific DSP playback.
+			   using this mode bypasses a lot of the Sound Blaster Pro emulation
+			   and restrictions and allows us to run up to 48KHz 16-bit stereo */
 			unsigned short t16;
 			int b;
 
+			_cli();
+
+			/* clear IRQ */
+			sndsb_interrupt_ack(cx,3);
+
+			b = 0x00; /* DMA disable */
+			b |= (cx->chose_autoinit_dsp) ? 0x04 : 0x00;
+			b |= (cx->dsp_record) ? 0x0A : 0x00; /* [3]=DMA converter in ADC mode [1]=DMA read for ADC */
+			sndsb_ess_write_controller(cx,0xB8,b);
+
 			b = sndsb_ess_read_controller(cx,0xA8);
-			if (b == -1) return 0;
-			b &= ~3;
+			if (b == -1) {
+				_sti();
+				return 0;
+			}
+			b &= ~0xB; /* clear mono/stereo and record monitor (bits 3, 1, and 0) */
 			b |= (cx->buffer_stereo?1:2);	/* 10=mono 01=stereo */
 			sndsb_ess_write_controller(cx,0xA8,b);
 
@@ -3063,27 +3077,39 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 			sndsb_ess_write_controller(cx,0xA5,t16>>8); /* DMA transfer count high */
 
 			b = sndsb_ess_read_controller(cx,0xB1);
-			if (b == -1) return 0;
+			if (b == -1) {
+				_sti();
+				return 0;
+			}
 			b &= ~0xA0; /* clear compat game IRQ, fifo half-empty IRQs */
 			b |= 0x50; /* set overflow IRQ, and "no function" */
 			sndsb_ess_write_controller(cx,0xB1,b);
 
 			b = sndsb_ess_read_controller(cx,0xB2);
-			if (b == -1) return 0;
+			if (b == -1) {
+				_sti();
+				return 0;
+			}
 			b &= ~0xA0; /* clear compat */
 			b |= 0x50; /* set DRQ/DACKB inputs for DMA */
 			sndsb_ess_write_controller(cx,0xB2,b);
 
-			b = 0x91; /* enable FIFO+DMA, reserved, load signal */
+			b = 0x51; /* enable FIFO+DMA, reserved, load signal */
+			b |= (cx->buffer_16bit ^ cx->audio_data_flipped_sign) ? 0x20 : 0x00; /* signed complement mode or not */
+			sndsb_ess_write_controller(cx,0xB7,b);
+
+			b = 0x90; /* enable FIFO+DMA, reserved, load signal */
 			b |= (cx->buffer_16bit ^ cx->audio_data_flipped_sign) ? 0x20 : 0x00; /* signed complement mode or not */
 			b |= (cx->buffer_stereo) ? 0x08 : 0x40; /* [3]=stereo [6]=!stereo */
 			b |= (cx->buffer_16bit) ? 0x04 : 0x00; /* [2]=16bit */
 			sndsb_ess_write_controller(cx,0xB7,b);
 
-			b = 0x01; /* DMA enable */
-			b |= (cx->chose_autoinit_dsp) ? 0x04 : 0x00;
-			b |= (cx->dsp_record) ? 0x08 : 0x00; /* [3]=DMA converter in ADC mode [1]=DMA read for ADC(don't set it kills recording????) */
-			sndsb_ess_write_controller(cx,0xB8,b);
+			b = sndsb_ess_read_controller(cx,0xB8);
+			if (b == -1) {
+				_sti();
+				return 0;
+			}
+			sndsb_ess_write_controller(cx,0xB8,b | 1); /* enable DMA */
 		}
 		else {
 			if (cx->chose_autoinit_dsp) {
