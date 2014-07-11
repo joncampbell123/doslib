@@ -643,6 +643,14 @@ mode to instruct the library to use port 0x22D to see if it actually
 works. If it works, you have an original Sound Blaster that aliases
 it's I/O ports.
 
+List of cards and whether or not ports alias:
+---------------------------------------------
+Sound Blaster (DSP 1.x)                 PROBABLY
+Sound Blaster (DSP 2.01)                YES
+Sound Blaster Pro (DSP 3.x)             PROBABLY NOT
+Sound Blaster 16 (DSP 4.x)              NO
+ESS Plug and Play AudioDrive            YES (DSP PORTS ONLY)
+
 Backwards mode
 --------------
 
