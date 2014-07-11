@@ -656,6 +656,7 @@ static void interrupt sb_irq() {
 
 	sb_irq_count++;
 	if (++IRQ_anim >= 4) IRQ_anim = 0;
+	draw_irq_indicator();
 
 	/* NTS: we assume that if the IRQ was masked when we took it, that we must not
 	 *      chain to the previous IRQ handler. This is very important considering
@@ -1327,7 +1328,6 @@ static void ui_anim(int force) {
 	}
 
 	irq_0_watchdog_ack();
-	draw_irq_indicator();
 
 	{
 		static const unsigned char anims[] = {'-','/','|','\\'};
@@ -1556,13 +1556,13 @@ void begin_play() {
 		irq_0_adv = 182UL;		/* 18.2Hz */
 		irq_0_max = wav_sample_rate_by_timer * 10UL;
 	}
-	draw_irq_indicator();
 	wav_playing = 1;
 	_sti();
 }
 
 void stop_play() {
 	if (!wav_playing) return;
+	draw_irq_indicator();
 	if (!wav_record) {
 		wav_position = playback_live_position();
 		wav_position -= wav_position % (unsigned long)wav_bytes_per_sample;
@@ -4271,10 +4271,10 @@ int main(int argc,char **argv) {
 			if (!wav_playing) update_cfg();
 			if (bkgndredraw) {
 				for (vga=vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
-				draw_irq_indicator();
 				vga_menu_bar_draw();
 			}
 			ui_anim(bkgndredraw);
+			draw_irq_indicator();
 			_cli();
 			vga_moveto(0,2);
 			vga_write_color(0x1F);
