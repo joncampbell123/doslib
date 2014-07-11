@@ -1576,7 +1576,10 @@ void begin_play() {
 
 void stop_play() {
 	if (!wav_playing) return;
-	if (!wav_record) wav_position = playback_live_position();
+	if (!wav_record) {
+		wav_position = playback_live_position();
+		wav_position -= wav_position % (unsigned long)wav_bytes_per_sample;
+	}
 
 	_cli();
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || sb_card->goldplay_mode) {
