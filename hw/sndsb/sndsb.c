@@ -1149,16 +1149,16 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 					if ((in=sndsb_ess_read_controller(cx,0xB2)) != -1) { /* 0xB2 DRQ Control */
 						switch (in&0xF) {
 							case 0x5:
-								cx->dma8 = 0;
+								cx->dma8 = cx->dma16 = 0;
 								break;
 							case 0xA:
-								cx->dma8 = 1;
+								cx->dma8 = cx->dma16 = 1;
 								break;
 							case 0xF:
-								cx->dma8 = 3;
+								cx->dma8 = cx->dma16 = 3;
 								break;
 							default:
-								cx->dma8 = -1;
+								cx->dma8 = cx->dma16 = -1;
 								break;
 						}
 					}
@@ -2215,10 +2215,6 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		cx->reason_not_supported = "DMA-based playback, 8-bit PCM, no channel assigned (dma8)";
 		return 0;
 	}
-	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx && wav_16bit && cx->dma16 < 0) {
-		cx->reason_not_supported = "DMA-based playback, 16-bit PCM, no channel assigned (dma16)";
-		return 0;
-	}
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx && cx->audio_data_flipped_sign) {
 		cx->reason_not_supported = "Flipped sign playback requires DSP 4.xx playback";
 		return 0;
@@ -2232,6 +2228,10 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		return 0;
 	}
 
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && wav_16bit && cx->dma16 < 0) {
+		cx->reason_not_supported = "DMA-based playback, 16-bit PCM, no channel assigned (dma16)";
+		return 0;
+	}
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && wav_16bit && cx->dma16 >= 4 && !(d8237_flags&D8237_DMA_SECONDARY)) {
 		cx->reason_not_supported = "DMA-based playback, 16-bit PCM, dma16 channel refers to\nnon-existent secondary DMA controller";
 		return 0;
