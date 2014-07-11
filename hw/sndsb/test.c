@@ -585,7 +585,6 @@ static uint32_t irq_0_max = 1;
 #if TARGET_MSDOS == 32
 static unsigned char irq_0_had_warned = 0;
 #endif
-static unsigned char dsp_alias_had_warned = 0;
 
 /* IRQ 0 watchdog: when playing audio it is possible to exceed the rate
    that the CPU can possibly handle servicing the interrupt. This results
@@ -1626,7 +1625,6 @@ static void vga_write_until(unsigned int x) {
 }
 
 static int change_param_idx = 0;
-static int change_alias_idx = 0;
 
 /* NTS: the 13000, 15000, 23000 values come from Creative documentation */
 static const unsigned short param_preset_rates[] = {
@@ -1644,12 +1642,17 @@ static const char *dos32_irq_0_warning =
 	"         Enable?";
 #endif
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+static int change_alias_idx = 0;
+static unsigned char dsp_alias_had_warned = 0;
 static const char *dsp_alias_warning =
 	"WARNING: DSP alias port will not work unless you are using an original\n"
 	"         Sound Blaster (DSP 1.xx or 2.xx) and NOT a clone. See the\n"
 	"         README file for more information.\n"
 	"         Enable anyway?";
+#endif
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 void change_alias_menu() {
 	unsigned char loop=1;
 	unsigned char redraw=1;
@@ -1731,6 +1734,7 @@ void change_alias_menu() {
 
 	change_param_idx = selector;
 }
+#endif
 
 void change_param_menu() {
 	unsigned char loop=1;
