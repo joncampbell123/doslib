@@ -3324,14 +3324,13 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 				unsigned short t16;
 				unsigned char b;
 
-				/* trigger another block */
-				b = sndsb_ess_read_controller(cx,0xB8);
-				sndsb_ess_write_controller(cx,0xB8,b & ~1);
-
 				t16 = -(lv+1);
 				sndsb_ess_write_controller(cx,0xA4,t16); /* DMA transfer count low */
 				sndsb_ess_write_controller(cx,0xA5,t16>>8); /* DMA transfer count high */
 
+				/* trigger another block */
+				b = sndsb_ess_read_controller(cx,0xB8);
+				sndsb_ess_write_controller(cx,0xB8,b & ~1);
 				sndsb_ess_write_controller(cx,0xB8,b | 1);
 			}
 			else {
