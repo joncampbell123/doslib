@@ -218,8 +218,13 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 			}
 		} while (1);
 
-		if (cx->dma8 >= 0 && cx->dma16 < 0)
-			cx->dma16 = cx->dma8;
+		if (ISAPNP_ID_FMATCH(id,'Y','M','H') && ISAPNP_ID_LMATCH(id,0x0021)) {
+			/* The OPL3-SAx does not have a 16-bit DMA channel */
+		}
+		else {
+			if (cx->dma8 >= 0 && cx->dma16 < 0)
+				cx->dma16 = cx->dma8;
+		}
 	}
 	else if (ISAPNP_ID_FMATCH(id,'C','T','L')) {
 		/* Do nothing: Creative cards are usually probed from the ISA bus and not reported by the BIOS */
