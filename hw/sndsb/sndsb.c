@@ -1141,40 +1141,49 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 				c2 &= 0xF;
 				if (c2 != 0) {
 					cx->ess_chipset = (c2 & 8) ? SNDSB_ESS_1869 : SNDSB_ESS_688;
-					cx->ess_extensions = 1;
 
-					/* that also means that we can deduce the true IRQ/DMA from the chipset */
-					if ((in=sndsb_ess_read_controller(cx,0xB1)) != -1) { /* 0xB1 Legacy Audio Interrupt Control */
-						switch (in&0xF) {
-							case 0x5:
-								cx->irq = 5;
-								break;
-							case 0xA:
-								cx->irq = 7;
-								break;
-							case 0xF:
-								cx->irq = 10;
-								break;
-							default: /* "2,9,all others" */
-								cx->irq = 9;
-								break;
+					if (cx->ess_chipset == SNDSB_ESS_688) { /* ESS 688? I know how to program that! */
+						cx->ess_extensions = 1;
+
+						/* that also means that we can deduce the true IRQ/DMA from the chipset */
+						if ((in=sndsb_ess_read_controller(cx,0xB1)) != -1) { /* 0xB1 Legacy Audio Interrupt Control */
+							switch (in&0xF) {
+								case 0x5:
+									cx->irq = 5;
+									break;
+								case 0xA:
+									cx->irq = 7;
+									break;
+								case 0xF:
+									cx->irq = 10;
+									break;
+								default: /* "2,9,all others" */
+									cx->irq = 9;
+									break;
+							}
+						}
+						if ((in=sndsb_ess_read_controller(cx,0xB2)) != -1) { /* 0xB2 DRQ Control */
+							switch (in&0xF) {
+								case 0x5:
+									cx->dma8 = cx->dma16 = 0;
+									break;
+								case 0xA:
+									cx->dma8 = cx->dma16 = 1;
+									break;
+								case 0xF:
+									cx->dma8 = cx->dma16 = 3;
+									break;
+								default:
+									cx->dma8 = cx->dma16 = -1;
+									break;
+							}
 						}
 					}
-					if ((in=sndsb_ess_read_controller(cx,0xB2)) != -1) { /* 0xB2 DRQ Control */
-						switch (in&0xF) {
-							case 0x5:
-								cx->dma8 = cx->dma16 = 0;
-								break;
-							case 0xA:
-								cx->dma8 = cx->dma16 = 1;
-								break;
-							case 0xF:
-								cx->dma8 = cx->dma16 = 3;
-								break;
-							default:
-								cx->dma8 = cx->dma16 = -1;
-								break;
-						}
+					else if (cx->ess_chipset == SNDSB_ESS_1869) {
+						/* TODO: There are some problems with the code. One: reading the registers
+						 *       does not produce correct IRQ/DMA. Two: when we program the sample
+						 *       rate we get audio that plays about 2.5x too fast. Maybe this is
+						 *       just an artifact of testing the code on a Compaq ESS1887 chipset. */
 					}
 
 					/* TODO: 1869 datasheet recommends reading mixer index 0x40

@@ -47,6 +47,14 @@ int isa_pnp_is_sound_blaster_compatible_id(uint32_t id,char const **whatis) {
 			r = 1;
 		}
 	}
+	/* ESS/Compaq product */
+	else if (ISAPNP_ID_FMATCH(id,'C','P','Q')) {
+		if (ISAPNP_ID_LMATCH(id,0xB040)) { /* CPQB040 ES1887 (Compaq) */
+			/* Seen on a late 90's Compaq */
+			*whatis = "ES1887 Compaq";
+			r = 1;
+		}
+	}
 	/* if it's a creative product... */
 	else if (ISAPNP_ID_FMATCH(id,'C','T','L')) {
 		if (ISAPNP_ID_LMATCH(id,0x0070)) { /* CTL0070 */
@@ -134,41 +142,43 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 	rsc = (unsigned char far*)devn + sizeof(*devn);
 	rf = (unsigned char far*)devn + devn_size;
 
-	if (ISAPNP_ID_FMATCH(id,'E','S','S')) {
-		if (ISAPNP_ID_LMATCH(id,0x0100)) { /* ESS0100 ES688 Plug And Play AudioDrive */
-			do {
-				if (!isapnp_read_tag(&rsc,rf,&tag))
-					break;
-				if (tag.tag == ISAPNP_TAG_END)
-					break;
+	if (	(ISAPNP_ID_FMATCH(id,'E','S','S') && ISAPNP_ID_LMATCH(id,0x0100)) || /* ESS0100 ES688 Plug And Play AudioDrive */
+		(ISAPNP_ID_FMATCH(id,'C','P','Q') && ISAPNP_ID_LMATCH(id,0xB040))    /* CPQB040 ESS1887 Compaq */) {
+		do {
+			if (!isapnp_read_tag(&rsc,rf,&tag))
+				break;
+			if (tag.tag == ISAPNP_TAG_END)
+				break;
 
-				switch (tag.tag) {
-					case ISAPNP_TAG_FIXED_IO_PORT: {
-					       struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
-					       if (x->base >= 0x210 && x->base <= 0x260 && x->length == 0x10)
-						       cx->baseio = x->base;
-					       else if (x->base >= 0x388 && x->base <= 0x38C && x->length == 4)
-						       cx->oplio = x->base;
+			switch (tag.tag) {
+				case ISAPNP_TAG_FIXED_IO_PORT: {
+					struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
+					if (x->base >= 0x210 && x->base <= 0x260 && x->length == 0x10)
+						cx->baseio = x->base;
+					else if (x->base >= 0x388 && x->base <= 0x38C && x->length == 4)
+						cx->oplio = x->base;
 					} break;
-					case ISAPNP_TAG_IRQ_FORMAT: {
-						struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;
-						for (i=0;i < 16;i++) {
-							if (x->irq_mask & (1U << (unsigned int)i)) { /* NTS: PnP devices usually support odd IRQs like IRQ 9 */
-								if (cx->irq < 0) cx->irq = i;
-							}
+				case ISAPNP_TAG_IRQ_FORMAT: {
+					struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;
+					for (i=0;i < 16;i++) {
+						if (x->irq_mask & (1U << (unsigned int)i)) { /* NTS: PnP devices usually support odd IRQs like IRQ 9 */
+							if (cx->irq < 0) cx->irq = i;
 						}
+					}
 					} break;
-					case ISAPNP_TAG_DMA_FORMAT: {
-						struct isapnp_tag_dma_format far *x = (struct isapnp_tag_dma_format far*)tag.data;
-						for (i=0;i < 8;i++) {
-							if (x->dma_mask & (1U << (unsigned int)i)) {
-								if (cx->dma8 < 0 && i < 4) cx->dma8 = i;
-							}
+				case ISAPNP_TAG_DMA_FORMAT: {
+					struct isapnp_tag_dma_format far *x = (struct isapnp_tag_dma_format far*)tag.data;
+					for (i=0;i < 8;i++) {
+						if (x->dma_mask & (1U << (unsigned int)i)) {
+							if (cx->dma8 < 0 && i < 4) cx->dma8 = i;
 						}
+					}
 					} break;
-				}
-			} while (1);
-		}
+			}
+		} while (1);
+
+		if (cx->dma8 >= 0 && cx->dma16 < 0)
+			cx->dma16 = cx->dma8;
 	}
 	else if (ISAPNP_ID_FMATCH(id,'C','T','L')) {
 		/* Do nothing: Creative cards are usually probed from the ISA bus and not reported by the BIOS */
@@ -191,6 +201,11 @@ int isa_pnp_sound_blaster_get_resources(uint32_t id,unsigned char csn,struct snd
 
 	if (ISAPNP_ID_FMATCH(id,'E','S','S')) {
 		if (ISAPNP_ID_LMATCH(id,0x0100)) { /* ESS0100 ES688 Plug And Play AudioDrive */
+			/* TODO: I don't have any ISA cards of this type, only one integrated into a laptop */
+		}
+	}
+	else if (ISAPNP_ID_FMATCH(id,'C','P','Q')) {
+		if (ISAPNP_ID_LMATCH(id,0xB040)) { /* CPQB040 ES1887 (Compaq) */
 			/* TODO: I don't have any ISA cards of this type, only one integrated into a laptop */
 		}
 	}
