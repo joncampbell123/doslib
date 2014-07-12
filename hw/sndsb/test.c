@@ -603,8 +603,8 @@ static void irq_0_watchdog_reset() {
 }
 
 static unsigned char old_irq_masked = 0;
-static void (interrupt *old_irq_0)() = NULL;
-static void interrupt irq_0() { /* timer IRQ */
+static void (interrupt far *old_irq_0)() = NULL;
+static void interrupt far irq_0() { /* timer IRQ */
 	/* if we're playing the DSP in direct mode, then it's our job to do the direct DAC/ADC commands */
 	if (wav_playing && irq_0_watchdog > 0UL) {
 		if (sb_card && sb_card->timer_tick_func != NULL)
@@ -636,8 +636,8 @@ static void interrupt irq_0() { /* timer IRQ */
 	}
 }
 
-static void (interrupt *old_irq)() = NULL;
-static void interrupt sb_irq() {
+static void (interrupt far *old_irq)() = NULL;
+static void interrupt far sb_irq() {
 	unsigned char c;
 
 	sb_irq_count++;
