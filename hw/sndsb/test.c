@@ -4454,6 +4454,9 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
+			else if (i == 0x4200) { /* F8 */
+				getch(); /* delibrate pause */
+			}
 		}
 
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
