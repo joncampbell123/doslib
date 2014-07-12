@@ -602,6 +602,12 @@ static void irq_0_watchdog_reset() {
 	irq_0_watchdog = 0x10000UL;
 }
 
+/* WARNING!!! This interrupt handler calls subroutines. To avoid system
+ * instability in the event the IRQ fires while, say, executing a routine
+ * in the DOS kernel, you must compile this code with the -zu flag in
+ * 16-bit real mode Large and Compact memory models! Without -zu, minor
+ * memory corruption in the DOS kernel will result and the system will
+ * hang and/or crash. */
 static unsigned char old_irq_masked = 0;
 static void (interrupt *old_irq_0)() = NULL;
 static void interrupt irq_0() { /* timer IRQ */
@@ -636,6 +642,12 @@ static void interrupt irq_0() { /* timer IRQ */
 	}
 }
 
+/* WARNING!!! This interrupt handler calls subroutines. To avoid system
+ * instability in the event the IRQ fires while, say, executing a routine
+ * in the DOS kernel, you must compile this code with the -zu flag in
+ * 16-bit real mode Large and Compact memory models! Without -zu, minor
+ * memory corruption in the DOS kernel will result and the system will
+ * hang and/or crash. */
 static void (interrupt *old_irq)() = NULL;
 static void interrupt sb_irq() {
 	unsigned char c;
