@@ -30,13 +30,23 @@ CPULEV6 = 6
 TARGET86 = 86
 !endif
 
+# large and compact model builds must not assume DS != SS.
+# some interrupt handlers call subroutines in this code. if not notified that DS != SS
+# the subroutines will mis-address parameters and screw things up.
+!ifeq MMODE l
+ZU_FLAG=-zu
+!endif
+!ifeq MMODE c
+ZU_FLAG=-zu
+!endif
+
 TARGET_MSDOS = 16
 SUBDIR   = dos$(TARGET86)$(MMODE)$(DSUFFIX)
 CC       = wcc
 LINKER   = wcl
 WLINK_SYSTEM = dos
 WLINK_CON_SYSTEM = dos
-CFLAGS   = -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
+CFLAGS   = -e=2 $(ZU_FLAG) -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
 CFLAGS386= -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
 CFLAGS386_TO_586= -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
 CFLAGS386_TO_686= -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
