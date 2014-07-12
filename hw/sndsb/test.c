@@ -3861,9 +3861,9 @@ int main(int argc,char **argv) {
 					cx->mixer_ok,sndsb_mixer_chip_str(cx->mixer_chip),
 					(unsigned int)cx->dsp_vmaj,(unsigned int)cx->dsp_vmin,
 					cx->is_gallant_sc6600,cx->oplio,cx->gameio,cx->aweio);
-			printf("      ESS=%u[%s] use=%u\n",
+			printf("      ESS=%u[%s] use=%u wss=%X OPL3SAx=%X\n",
 					cx->ess_chipset,sndsb_ess_chipset_str(cx->ess_chipset),
-					cx->ess_extensions);
+					cx->ess_extensions,cx->wssio,cx->opl3sax_controlio);
 #ifdef ISAPNP
 			if (cx->pnp_name != NULL) {
 				isa_pnp_product_id_to_str(temp_str,cx->pnp_id);

@@ -132,10 +132,20 @@ int isa_pnp_iobase_typical_mpu(uint16_t io) {
 	return ((io&0xF) == 0) && (io == 0x300 || io == 0x330);
 }
 
+void pnp_opl3sax_ioport_chk(struct sndsb_ctx *cx,unsigned int iop,uint16_t base) {
+	switch (iop) {
+		case 0:	cx->baseio = base; break;
+		case 1: cx->wssio = base; break;
+		case 2: cx->oplio = base; break;
+		case 3: cx->mpuio = base; break;
+		case 4: cx->opl3sax_controlio = base; break;
+	};
+}
+
 int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,struct isa_pnp_device_node far *devn,unsigned int devn_size,struct sndsb_ctx *cx) {
 	unsigned char far *rsc, far *rf;
 	struct isapnp_tag tag;
-	unsigned int i;
+	unsigned int i,iop=0;
 
 	cx->baseio = 0;
 	cx->gameio = 0;
@@ -169,23 +179,34 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 			switch (tag.tag) {
 				case ISAPNP_TAG_IO_PORT: {
 					struct isapnp_tag_io_port far *x = (struct isapnp_tag_io_port far*)tag.data;
-					if (x->min_range == x->max_range) {
-						if (x->min_range >= 0x210 && x->min_range <= 0x260 && (x->min_range&0xF) == 0 && x->length == 0x10)
-							cx->baseio = x->min_range;
-						else if (x->min_range >= 0x388 && x->min_range <= 0x38C && (x->min_range&3) == 0 && x->length == 4)
-							cx->oplio = x->min_range;
-						else if (x->min_range >= 0x300 && x->min_range <= 0x330 && (x->min_range&0xF) == 0 && x->length >= 2 && x->length <= 4)
-							cx->mpuio = x->min_range;
+					if (ISAPNP_ID_FMATCH(id,'Y','M','H') && ISAPNP_ID_LMATCH(id,0x0021)) { /* OPL3-SAx */
+						pnp_opl3sax_ioport_chk(cx,iop,x->min_range);
+					}
+					else {
+						if (x->min_range == x->max_range) {
+							if (x->min_range >= 0x210 && x->min_range <= 0x260 && (x->min_range&0xF) == 0 && x->length == 0x10)
+								cx->baseio = x->min_range;
+							else if (x->min_range >= 0x388 && x->min_range <= 0x38C && (x->min_range&3) == 0 && x->length == 4)
+								cx->oplio = x->min_range;
+							else if (x->min_range >= 0x300 && x->min_range <= 0x330 && (x->min_range&0xF) == 0 && x->length >= 2 && x->length <= 4)
+								cx->mpuio = x->min_range;
+						}
 					}
 				} break;
 				case ISAPNP_TAG_FIXED_IO_PORT: {
 					struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
-					if (x->base >= 0x210 && x->base <= 0x280 && (x->base&0xF) == 0 && x->length == 0x10)
-						cx->baseio = x->base;
-					else if (x->base >= 0x388 && x->base <= 0x38C && (x->base&3) == 0 && x->length == 4)
-						cx->oplio = x->base;
-					else if (x->base >= 0x300 && x->base <= 0x330 && (x->base&0xF) == 0 && x->length >= 2 && x->length <= 4)
-						cx->mpuio = x->base;
+					if (ISAPNP_ID_FMATCH(id,'Y','M','H') && ISAPNP_ID_LMATCH(id,0x0021)) { /* OPL3-SAx */
+						pnp_opl3sax_ioport_chk(cx,iop,x->base);
+					}
+					else {
+						if (x->base >= 0x210 && x->base <= 0x280 && (x->base&0xF) == 0 && x->length == 0x10)
+							cx->baseio = x->base;
+						else if (x->base >= 0x388 && x->base <= 0x38C && (x->base&3) == 0 && x->length == 4)
+							cx->oplio = x->base;
+						else if (x->base >= 0x300 && x->base <= 0x330 && (x->base&0xF) == 0 && x->length >= 2 && x->length <= 4)
+							cx->mpuio = x->base;
+					}
+					iop++;
 					} break;
 				case ISAPNP_TAG_IRQ_FORMAT: {
 					struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;

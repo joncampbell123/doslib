@@ -95,6 +95,7 @@ enum {
 
 struct sndsb_ctx {
 	uint16_t			baseio,mpuio,oplio,gameio,aweio;
+	uint16_t			wssio,opl3sax_controlio;
 	int8_t				dma8,dma16,irq;
 	uint8_t				dsp_adpcm;
 	uint8_t				audio_data_flipped_sign;	/* DSP 4.xx command allows us to specify signed/unsigned */
