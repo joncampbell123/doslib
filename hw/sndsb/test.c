@@ -4308,9 +4308,9 @@ int main(int argc,char **argv) {
 			if (bkgndredraw) {
 				for (vga=vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
 				vga_menu_bar_draw();
+				draw_irq_indicator();
 			}
 			ui_anim(bkgndredraw);
-			draw_irq_indicator();
 			_cli();
 			vga_moveto(0,2);
 			vga_write_color(0x1F);
