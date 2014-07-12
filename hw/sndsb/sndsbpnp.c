@@ -55,6 +55,14 @@ int isa_pnp_is_sound_blaster_compatible_id(uint32_t id,char const **whatis) {
 			r = 1;
 		}
 	}
+	/* Yamaha product */
+	else if (ISAPNP_ID_FMATCH(id,'Y','M','H')) {
+		if (ISAPNP_ID_LMATCH(id,0x0021)) { /* YMH0021 OPL3-SAx (TODO: Which one? SA2 or SA3) */
+			/* Seen on a late 90's Toshiba laptop (1997-ish) */
+			*whatis = "Yamaha OPL3-SAx";
+			r = 1;
+		}
+	}
 	/* if it's a creative product... */
 	else if (ISAPNP_ID_FMATCH(id,'C','T','L')) {
 		if (ISAPNP_ID_LMATCH(id,0x0070)) { /* CTL0070 */
@@ -142,8 +150,16 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 	rsc = (unsigned char far*)devn + sizeof(*devn);
 	rf = (unsigned char far*)devn + devn_size;
 
+	/* NTS: Yamaha OPL3-SAx chipset:
+	 *         - There are two DMA channels, the first one (we care about) is for Sound Blaster emulation
+	 *         - The card also offers a Windows Sound System interface at 0x530, which we don't care about because we focus on Sound Blaster.
+	 *         - I have no plans for this code to use the WSS interface because this library's focus is and should remain on the Sound Blaster
+	 *           interface. I will use the WSS interface however for minor things like reading Sound Blaster emulation IRQ and DMA assignment.
+	 *           I will write a separate library for Windows Sound System type audio playback. If your code wants to support both, it can link
+	 *           to both libraries and pick the best one for your needs. */
 	if (	(ISAPNP_ID_FMATCH(id,'E','S','S') && ISAPNP_ID_LMATCH(id,0x0100)) || /* ESS0100 ES688 Plug And Play AudioDrive */
-		(ISAPNP_ID_FMATCH(id,'C','P','Q') && ISAPNP_ID_LMATCH(id,0xB040))    /* CPQB040 ESS1887 Compaq */) {
+		(ISAPNP_ID_FMATCH(id,'C','P','Q') && ISAPNP_ID_LMATCH(id,0xB040)) || /* CPQB040 ESS1887 Compaq */
+		(ISAPNP_ID_FMATCH(id,'Y','M','H') && ISAPNP_ID_LMATCH(id,0x0021))    /* YMH0021 OPL3-SAx (TODO: Which one? SA2 or SA3) */) {
 		do {
 			if (!isapnp_read_tag(&rsc,rf,&tag))
 				break;
@@ -220,6 +236,11 @@ int isa_pnp_sound_blaster_get_resources(uint32_t id,unsigned char csn,struct snd
 	}
 	else if (ISAPNP_ID_FMATCH(id,'C','P','Q')) {
 		if (ISAPNP_ID_LMATCH(id,0xB040)) { /* CPQB040 ES1887 (Compaq) */
+			/* TODO: I don't have any ISA cards of this type, only one integrated into a laptop */
+		}
+	}
+	else if (ISAPNP_ID_FMATCH(id,'Y','M','H')) {
+		if (ISAPNP_ID_LMATCH(id,0x0021)) { /* YMH0021 OPL3-SAx (TODO: Which one? SA2 or SA3) */
 			/* TODO: I don't have any ISA cards of this type, only one integrated into a laptop */
 		}
 	}
