@@ -3309,9 +3309,14 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 
 void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 	unsigned long lv;
+	unsigned char ch;
 
 	if (cx->dsp_stopping) return;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return;
+	ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
+
+	if (!cx->chose_autoinit_dma)
+		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
 	/* ESS chipsets: I believe the reason non-auto-init DMA+DSP is halting is because
 	 * we first needs to stop DMA on the chip THEN reprogram the DMA controller.
@@ -3333,7 +3338,6 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 	/* if we're doing it the non-autoinit method, then we
 	   also need to update the DMA pointer */
 	if (!cx->chose_autoinit_dma) {
-		unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
 		unsigned long npos = cx->buffer_dma_started;
 		unsigned long rem = cx->buffer_dma_started;
 
@@ -3367,7 +3371,6 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 
 		cx->buffer_dma_started = npos;
 		cx->buffer_dma_started_length = lv = rem - npos;
-		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 		if (cx->backwards)
 			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started+cx->buffer_dma_started_length-1); /* RAM location with not much around */
 		else
