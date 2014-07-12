@@ -2662,6 +2662,8 @@ void prompt_play_wav(unsigned char rec) {
 
 			if (kbhit()) {
 				c = getch();
+				if (c == 0) c = getch() << 8;
+
 				if (c == 27) {
 					ok = -1;
 				}
@@ -2674,7 +2676,7 @@ void prompt_play_wav(unsigned char rec) {
 						redraw = 1;
 					}
 				}
-				else if (c >= 32) {
+				else if (c >= 32 && c < 256) {
 					if (cursor < 79) {
 						temp[cursor++] = (char)c;
 						temp[cursor  ] = (char)0;
