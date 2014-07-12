@@ -564,20 +564,17 @@ static void fx_proc(unsigned char FAR *d,unsigned int samp) {
 
 void stop_play();
 
-static void draw_irq_indicator() {
-	/* NOTE TO SELF: For some reason not quite understandable to me, 16-bit real mode builds with large memory
-	 * models will randomly crash if we scan a const char * string for printing the text on the display. Perhaps
-	 * some weird segment register corruption... who knows. Watcom is a pretty funny compiler that way --JC */
+static inline void draw_irq_indicator() {
 	VGA_ALPHA_PTR wr = vga_alpha_ram;
 	unsigned char i;
 
-	*wr++ = 0x1E00 | 'S';
-	*wr++ = 0x1E00 | 'B';
-	*wr++ = 0x1E00 | '-';
-	*wr++ = 0x1E00 | 'I';
-	*wr++ = 0x1E00 | 'R';
-	*wr++ = 0x1E00 | 'Q';
-	for (i=0;i < 4;i++) *wr++ = (uint16_t)(i == IRQ_anim ? 'x' : '-') | 0x1E00;
+	wr[0] = 0x1E00 | 'S';
+	wr[1] = 0x1E00 | 'B';
+	wr[2] = 0x1E00 | '-';
+	wr[3] = 0x1E00 | 'I';
+	wr[4] = 0x1E00 | 'R';
+	wr[5] = 0x1E00 | 'Q';
+	for (i=0;i < 4;i++) wr[i+6] = (uint16_t)(i == IRQ_anim ? 'x' : '-') | 0x1E00;
 }
 
 static uint32_t irq_0_count = 0;
@@ -643,6 +640,10 @@ static void (interrupt *old_irq)() = NULL;
 static void interrupt sb_irq() {
 	unsigned char c;
 
+	sb_irq_count++;
+	if (++IRQ_anim >= 4) IRQ_anim = 0;
+	draw_irq_indicator();
+
 	/* ack soundblaster DSP if DSP was the cause of the interrupt */
 	/* NTS: Experience says if you ack the wrong event on DSP 4.xx it
 	   will just re-fire the IRQ until you ack it correctly...
@@ -655,10 +656,6 @@ static void interrupt sb_irq() {
 	   send_buffer_again() if it knows playback has not started! */
 	/* for non-auto-init modes, start another buffer */
 	if (wav_playing) sndsb_irq_continue(sb_card,c);
-
-	sb_irq_count++;
-	if (++IRQ_anim >= 4) IRQ_anim = 0;
-	draw_irq_indicator();
 
 	/* NTS: we assume that if the IRQ was masked when we took it, that we must not
 	 *      chain to the previous IRQ handler. This is very important considering
