@@ -192,6 +192,7 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 								cx->mpuio = x->min_range;
 						}
 					}
+					iop++;
 				} break;
 				case ISAPNP_TAG_FIXED_IO_PORT: {
 					struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
