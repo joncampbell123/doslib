@@ -7,10 +7,6 @@ set DOS4G=quiet
 if "%1" == "clean" call clean.bat
 if "%1" == "clean" goto end
 
-<<<<<<< HEAD
-mkdir win38631
-wmake -f ..\..\mak\win38631.mak HPS=\ lib REL=..\.. 
-=======
 mkdir dos86c
 wmake -f ..\..\mak\dos86c.mak HPS=\ all REL=..\.. 
 
@@ -25,7 +21,6 @@ wmake -f ..\..\mak\dos86s.mak HPS=\ all REL=..\..
 
 mkdir dos386f
 wmake -f ..\..\mak\dos386f.mak HPS=\ all REL=..\.. 
->>>>>>> 0fcdf9b2f23b51b833bbc0038be81e65152f0d38
 
 
 :end
