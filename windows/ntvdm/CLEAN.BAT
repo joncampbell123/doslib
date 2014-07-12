@@ -1,7 +1,7 @@
 @echo off
 
 deltree /Y 
-del /s /q dos386f\*.*
+del /s /q win38631\*.*
 del *.obj
 del *.exe
 del *.lib
