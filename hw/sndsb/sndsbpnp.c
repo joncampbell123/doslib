@@ -180,7 +180,7 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 				} break;
 				case ISAPNP_TAG_FIXED_IO_PORT: {
 					struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
-					if (x->base >= 0x210 && x->base <= 0x260 && (x->base&0xF) == 0 && x->length == 0x10)
+					if (x->base >= 0x210 && x->base <= 0x280 && (x->base&0xF) == 0 && x->length == 0x10)
 						cx->baseio = x->base;
 					else if (x->base >= 0x388 && x->base <= 0x38C && (x->base&3) == 0 && x->length == 4)
 						cx->oplio = x->base;
