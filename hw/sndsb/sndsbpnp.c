@@ -171,6 +171,7 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 					for (i=0;i < 8;i++) {
 						if (x->dma_mask & (1U << (unsigned int)i)) {
 							if (cx->dma8 < 0 && i < 4) cx->dma8 = i;
+							if (cx->dma16 < 0 && i >= 4) cx->dma16 = i;
 						}
 					}
 					} break;
