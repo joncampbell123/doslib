@@ -2644,7 +2644,10 @@ void update_cfg() {
 
 void prompt_play_wav(unsigned char rec) {
 	unsigned char gredraw = 1;
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
 	struct find_t ft;
+#endif
 
 	{
 		const char *rp;
@@ -2653,7 +2656,10 @@ void prompt_play_wav(unsigned char rec) {
 		memcpy(temp,wav_file,strlen(wav_file)+1);
 		while (!ok) {
 			if (gredraw) {
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
 				char *cwd;
+#endif
 
 				gredraw = 0;
 				vga_clear();
@@ -2665,6 +2671,8 @@ void prompt_play_wav(unsigned char rec) {
 				ui_anim(1);
 				redraw = 1;
 
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
 				cwd = getcwd(NULL,0);
 				if (cwd) {
 					vga_moveto(0,6);
@@ -2704,6 +2712,7 @@ void prompt_play_wav(unsigned char rec) {
 
 					_dos_findclose(&ft);
 				}
+#endif
 			}
 			if (redraw) {
 				rp = (const char*)temp;
@@ -2726,6 +2735,9 @@ void prompt_play_wav(unsigned char rec) {
 					ok = -1;
 				}
 				else if (c == 13) {
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+					ok = 1;
+#else
 					struct stat st;
 
 					if (isalpha(temp[0]) && temp[1] == ':' && temp[2] == 0) {
@@ -2750,6 +2762,7 @@ void prompt_play_wav(unsigned char rec) {
 					else {
 						ok = 1;
 					}
+#endif
 				}
 				else if (c == 8) {
 					if (cursor != 0) {

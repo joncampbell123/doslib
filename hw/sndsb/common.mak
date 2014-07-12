@@ -15,9 +15,7 @@ NO_TEST_ISAPNP=1
 NO_TEST_EXE=1
 ! endif
 ! ifeq MMODE s
-# sigh.. once again, too big for small memory model
 NO_TEST_ISAPNP=1
-NO_TEST_EXE=1
 ! endif
 !endif
 
