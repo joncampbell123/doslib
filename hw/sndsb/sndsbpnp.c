@@ -151,12 +151,25 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 				break;
 
 			switch (tag.tag) {
+				case ISAPNP_TAG_IO_PORT: {
+					struct isapnp_tag_io_port far *x = (struct isapnp_tag_io_port far*)tag.data;
+					if (x->min_range == x->max_range) {
+						if (x->min_range >= 0x210 && x->min_range <= 0x260 && (x->min_range&0xF) == 0 && x->length == 0x10)
+							cx->baseio = x->min_range;
+						else if (x->min_range >= 0x388 && x->min_range <= 0x38C && (x->min_range&3) == 0 && x->length == 4)
+							cx->oplio = x->min_range;
+						else if (x->min_range >= 0x300 && x->min_range <= 0x330 && (x->min_range&0xF) == 0 && x->length >= 2 && x->length <= 4)
+							cx->mpuio = x->min_range;
+					}
+				} break;
 				case ISAPNP_TAG_FIXED_IO_PORT: {
 					struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
-					if (x->base >= 0x210 && x->base <= 0x260 && x->length == 0x10)
+					if (x->base >= 0x210 && x->base <= 0x260 && (x->base&0xF) == 0 && x->length == 0x10)
 						cx->baseio = x->base;
-					else if (x->base >= 0x388 && x->base <= 0x38C && x->length == 4)
+					else if (x->base >= 0x388 && x->base <= 0x38C && (x->base&3) == 0 && x->length == 4)
 						cx->oplio = x->base;
+					else if (x->base >= 0x300 && x->base <= 0x330 && (x->base&0xF) == 0 && x->length >= 2 && x->length <= 4)
+						cx->mpuio = x->base;
 					} break;
 				case ISAPNP_TAG_IRQ_FORMAT: {
 					struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;
