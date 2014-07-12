@@ -305,6 +305,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <malloc.h>
+#include <direct.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <dos.h>
@@ -2633,13 +2634,8 @@ void update_cfg() {
 }
 
 void prompt_play_wav(unsigned char rec) {
-	vga_clear();
-	vga_moveto(0,4);
-	vga_write_color(0x07);
-	vga_write("Enter WAV file path:\n");
-	vga_write_sync();
-	draw_irq_indicator();
-	ui_anim(1);
+	unsigned char gredraw = 1;
+	struct find_t ft;
 
 	{
 		const char *rp;
@@ -2647,6 +2643,59 @@ void prompt_play_wav(unsigned char rec) {
 		int cursor = strlen(wav_file),i,c,redraw=1,ok=0;
 		memcpy(temp,wav_file,strlen(wav_file)+1);
 		while (!ok) {
+			if (gredraw) {
+				char *cwd;
+
+				gredraw = 0;
+				vga_clear();
+				vga_moveto(0,4);
+				vga_write_color(0x07);
+				vga_write("Enter WAV file path:\n");
+				vga_write_sync();
+				draw_irq_indicator();
+				ui_anim(1);
+				redraw = 1;
+
+				cwd = getcwd(NULL,0);
+				if (cwd) {
+					vga_moveto(0,6);
+					vga_write_color(0x0B);
+					vga_write(cwd);
+					vga_write_sync();
+				}
+
+				if (_dos_findfirst("*.*",_A_NORMAL|_A_RDONLY,&ft) == 0) {
+					int x=0,y=7,cw = 14,i;
+					char *ex;
+
+					do {
+						ex = strrchr(ft.name,'.');
+						if (!ex) ex = "";
+
+						if (ft.attrib&_A_SUBDIR) {
+							vga_write_color(0x0F);
+						}
+						else if (!strcasecmp(ex,".wav")) {
+							vga_write_color(0x1E);
+						}
+						else {
+							vga_write_color(0x07);
+						}
+						vga_moveto(x,y);
+						for (i=0;i < 13 && ft.name[i] != 0;) vga_writec(ft.name[i++]);
+						for (;i < 14;i++) vga_writec(' ');
+
+						x += cw;
+						if ((x+cw) > vga_width) {
+							x = 0;
+							if (y >= vga_height) break;
+							y++;
+						}
+					} while (_dos_findnext(&ft) == 0);
+
+					_dos_findclose(&ft);
+				}
+			}
 			if (redraw) {
 				rp = (const char*)temp;
 				vga_moveto(0,5);
@@ -2668,7 +2717,30 @@ void prompt_play_wav(unsigned char rec) {
 					ok = -1;
 				}
 				else if (c == 13) {
-					ok = 1;
+					struct stat st;
+
+					if (isalpha(temp[0]) && temp[1] == ':' && temp[2] == 0) {
+						unsigned int total;
+
+						_dos_setdrive(tolower(temp[0])+1-'a',&total);
+						temp[0] = 0;
+						gredraw = 1;
+						cursor = 0;
+					}
+					else if (stat(temp,&st) == 0) {
+						if (S_ISDIR(st.st_mode)) {
+							chdir(temp);
+							temp[0] = 0;
+							gredraw = 1;
+							cursor = 0;
+						}
+						else {
+							ok = 1;
+						}
+					}
+					else {
+						ok = 1;
+					}
 				}
 				else if (c == 8) {
 					if (cursor != 0) {
