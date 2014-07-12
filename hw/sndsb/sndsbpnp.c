@@ -197,10 +197,21 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 					} break;
 				case ISAPNP_TAG_DMA_FORMAT: {
 					struct isapnp_tag_dma_format far *x = (struct isapnp_tag_dma_format far*)tag.data;
-					for (i=0;i < 8;i++) {
-						if (x->dma_mask & (1U << (unsigned int)i)) {
-							if (cx->dma8 < 0 && i < 4) cx->dma8 = i;
-							if (cx->dma16 < 0 && i >= 4) cx->dma16 = i;
+					if (ISAPNP_ID_FMATCH(id,'Y','M','H') && ISAPNP_ID_LMATCH(id,0x0021)) {
+						/* the OPL3-SAx lists two DMA channels, the second one marked as bytecount and
+						 * related to Sound Blaster emulation (Toshiba BIOS) */
+						for (i=0;i < 8;i++) {
+							if (x->dma_mask & (1U << (unsigned int)i)) {
+								if (cx->dma8 < 0 && i < 4 && x->byte_count) cx->dma8 = i;
+							}
+						}
+					}
+					else {
+						for (i=0;i < 8;i++) {
+							if (x->dma_mask & (1U << (unsigned int)i)) {
+								if (cx->dma8 < 0 && i < 4) cx->dma8 = i;
+								if (cx->dma16 < 0 && i >= 4) cx->dma16 = i;
+							}
 						}
 					}
 					} break;
