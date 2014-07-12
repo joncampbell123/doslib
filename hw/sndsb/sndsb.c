@@ -11,6 +11,11 @@
  *        the probe function and make sure there is no possible way uninitialized vectors execute when any
  *        particular IRQ is fired. */
 
+/* FIXME: On a laptop with ESS 688 playing 16-bit PCM with auto-init DSP and auto-init DMA, the IRQ does not
+ *        fire periodically as it should. Any other mode (auto-init DMA with single-cycle DMA, or any of the
+ *        8-bit modes) fires the IRQ periodically as in auto-init. This is important for anyone who might try
+ *        to use this library to play music entirely from the interrupt. */
+
 /* FIXME: There might be a way to deal with some troubles you've been having with this code:
  *
  *        Troubles:
