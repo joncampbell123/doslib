@@ -173,7 +173,7 @@ void midi_tick_track(unsigned int i) {
 	t->us_tick_cnt_mtpq += 10000UL * (unsigned long)ticks_per_quarter_note;
 	while (t->us_tick_cnt_mtpq >= t->us_per_quarter_note) {
 		t->us_tick_cnt_mtpq -= t->us_per_quarter_note;
-		if (t->wait == 0) {
+		while (t->wait == 0) {
 			if (t->read >= t->fence) break;
 
 #if 1
@@ -211,7 +211,8 @@ void midi_tick_track(unsigned int i) {
 				case 0x9: { /* note on */
 					d = midi_trk_read(t);
 					ch = midi_ch + (b&0xF); /* c=key d=velocity */
-					on_key_on(t,ch,c,d);
+					if (d != 0) on_key_on(t,ch,c,d); /* "A Note On with a velocity of 0 is actually a note off" Bleh, really? */
+					else on_key_off(t,ch,c,d);
 					} break;
 				case 0xB: { /* control change */
 					d = midi_trk_read(t);
@@ -229,7 +230,7 @@ void midi_tick_track(unsigned int i) {
 					if (b == 0xFF) {
 						if (c == 0x7F) { /* c=type d=len */
 							unsigned long len = midi_trk_read_delta(t);
-							fprintf(stderr,"Type 0x7F len=%lu %p/%p/%p\n",len,t->raw,t->read,t->fence);
+//							fprintf(stderr,"Type 0x7F len=%lu %p/%p/%p\n",len,t->raw,t->read,t->fence);
 							if (len < 512UL) {
 								/* unknown */
 								midi_trk_skip(t,len);
@@ -240,7 +241,20 @@ void midi_tick_track(unsigned int i) {
 						}
 						else if (c < 0x7F) {
 							d = midi_trk_read(t);
-							fprintf(stderr,"Type 0x%02x len=%lu %p/%p/%p\n",c,d,t->raw,t->read,t->fence);
+
+							if (c == 0x51 && d >= 3) {
+								d -= 3;
+								t->us_per_quarter_note = ((unsigned long)midi_trk_read(t)<<16UL)+
+									((unsigned long)midi_trk_read(t)<<8UL)+
+									((unsigned long)midi_trk_read(t)<<0UL);
+
+								fprintf(stderr,"us/quarter %lu\n",
+									t->us_per_quarter_note);
+							}
+							else {
+								fprintf(stderr,"Type 0x%02x len=%lu %p/%p/%p\n",c,d,t->raw,t->read,t->fence);
+							}
+
 							midi_trk_skip(t,d);
 						}
 						else {
@@ -273,10 +287,10 @@ void midi_tick_track(unsigned int i) {
 			/* and then read the next event */
 			t->wait = midi_trk_read_delta(t);
 #if 1
-			fprintf(stderr,"wait %lu\n",t->wait);
+			fprintf(stderr,"wait[%u] %lu\n",i,t->wait);
 #endif
 		}
-		else {
+		if (t->wait != 0) {
 			t->wait--;
 		}
 	}
