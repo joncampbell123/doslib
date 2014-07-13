@@ -400,6 +400,7 @@ void adlib_shut_up() {
 		f->sustain_level = 0;
 		f->release_rate = 4;
 		f->f_number = 400;
+		f->sustain = 1;
 		f->octave = 4;
 		f->key_on = 0;
 
@@ -411,6 +412,7 @@ void adlib_shut_up() {
 		f->sustain_level = 0;
 		f->release_rate = 4;
 		f->f_number = 0;
+		f->sustain = 1;
 		f->octave = 0;
 		f->key_on = 0;
 	}
