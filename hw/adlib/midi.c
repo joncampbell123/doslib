@@ -117,6 +117,25 @@ static void drop_fm_note(struct midi_channel *ch,unsigned char key) {
 	}
 }
 
+static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
+	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/0);
+	double freq = midi_note_freq(ch,key);
+	unsigned int ach;
+
+	if (note == NULL) return;
+
+	note->busy = 1;
+	note->note_number = key;
+	note->note_velocity = vel;
+	note->note_channel = (unsigned int)(ch - midi_ch);
+	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
+	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
+	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+	adlib_fm[ach].mod.sustain_level = vel >> 3;
+	adlib_fm[ach].mod.key_on = 1;
+	adlib_update_groupA0(ach,&adlib_fm[ach]);
+}
+
 static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/1);
 	double freq = midi_note_freq(ch,key);
@@ -258,6 +277,11 @@ void midi_tick_track(unsigned int i) {
 					ch = midi_ch + (b&0xF); /* c=key d=velocity */
 					if (d != 0) on_key_on(t,ch,c,d); /* "A Note On with a velocity of 0 is actually a note off" Bleh, really? */
 					else on_key_off(t,ch,c,d);
+					} break;
+				case 0xA: { /* polyphonic aftertouch */
+					d = midi_trk_read(t);
+					ch = midi_ch + (b&0xF); /* c=key d=velocity */
+					on_key_aftertouch(t,ch,c,d);
 					} break;
 				case 0xB: { /* control change */
 					d = midi_trk_read(t);
