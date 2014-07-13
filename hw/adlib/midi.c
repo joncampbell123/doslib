@@ -88,11 +88,6 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 	fprintf(stderr,"on ach=%u\n",ach);
 #endif
 
-	if (ch->note_on) {
-		adlib_fm[ach].mod.key_on = 0;
-		adlib_update_groupA0(ach,&adlib_fm[ach]);
-	}
-
 	ch->note_on = 1;
 	ch->note_number = key;
 	ch->note_velocity = vel;
