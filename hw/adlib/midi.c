@@ -531,7 +531,11 @@ int load_midi_file(const char *path) {
 		}
 		else if (!memcmp(tmp,"MTrk",4)) {
 			if (sz == 0UL) continue;
-			if (sz > 64000UL) goto err;
+#if TARGET_MSDOS == 16
+			if (sz > 64000UL) goto err; /* 64KB */
+#else
+			if (sz > (1UL << 20UL)) goto err; /* 1MB */
+#endif
 			if (tracki >= MIDI_MAX_TRACKS) goto err;
 			midi_trk[tracki].raw = malloc(sz);
 			if (midi_trk[tracki].raw == NULL) goto err;
