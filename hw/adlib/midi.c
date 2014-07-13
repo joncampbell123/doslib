@@ -20,6 +20,7 @@
 #include <malloc.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <math.h>
 #include <dos.h>
 
 #include <hw/vga/vga.h>
@@ -73,9 +74,15 @@ static inline unsigned char midi_trk_read(struct midi_track *t) {
 	return c;
 }
 
+static double midi_notes[0x80];
+
+static double midi_note_freq(struct midi_channel *ch,unsigned char key) {
+	return midi_notes[key&0x7F];
+}
+
 static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	unsigned int ach = (unsigned int)(t - midi_trk); /* pointer math */
-	double freq = 440 + key; /* FIXME */
+	double freq = midi_note_freq(ch,key);
 
 #if 1
 	fprintf(stderr,"on ach=%u\n",ach);
@@ -97,7 +104,7 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 
 static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	unsigned int ach = (unsigned int)(t - midi_trk); /* pointer math */
-	double freq = 440 + key; /* FIXME */
+	double freq = midi_note_freq(ch,key);
 
 #if 1
 	fprintf(stderr,"off ach=%u\n",ach);
@@ -463,6 +470,12 @@ int main(int argc,char **argv) {
 	if (!probe_8254()) { /* we need the timer to keep time with the music */
 		printf("8254 timer not found\n");
 		return 1;
+	}
+
+	/* compute midi notes */
+	for (i=0;i < 128;i++) {
+		double a = 440.0 * pow(2,((double)(i - 69)) / 12);
+		midi_notes[i] = a;
 	}
 
 	for (i=0;i < MIDI_MAX_TRACKS;i++) {
