@@ -84,7 +84,7 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 	unsigned int ach = (unsigned int)(ch - midi_ch); /* pointer math */
 	double freq = midi_note_freq(ch,key);
 
-#if 1
+#if 0
 	fprintf(stderr,"on ach=%u\n",ach);
 #endif
 
@@ -101,7 +101,7 @@ static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsig
 	unsigned int ach = (unsigned int)(ch - midi_ch); /* pointer math */
 	double freq = midi_note_freq(ch,key);
 
-#if 1
+#if 0
 	fprintf(stderr,"off ach=%u\n",ach);
 #endif
 
@@ -171,7 +171,7 @@ void midi_tick_track(unsigned int i) {
 		while (t->wait == 0) {
 			if (t->read >= t->fence) break;
 
-#if 1
+#if 0
 			fprintf(stderr,"Parse[%u]: ",i);
 			{
 				unsigned int i;
@@ -281,7 +281,7 @@ void midi_tick_track(unsigned int i) {
 
 			/* and then read the next event */
 			t->wait = midi_trk_read_delta(t);
-#if 1
+#if 0
 			fprintf(stderr,"wait[%u] %lu\n",i,t->wait);
 #endif
 		}
