@@ -63,15 +63,15 @@ struct midi_note		midi_notes[ADLIB_FM_VOICES];
 struct midi_channel		midi_ch[MIDI_MAX_CHANNELS];
 struct midi_track		midi_trk[MIDI_MAX_TRACKS];
 static unsigned int		midi_trk_count=0;
-static unsigned char		midi_playing=0;
+static volatile unsigned char	midi_playing=0;
 
 /* MIDI params. Nobody ever said it was a straightforward standard!
  * NTS: These are for reading reference. Internally we convert everything to 100Hz time base. */
 static unsigned int ticks_per_quarter_note=0;	/* "Ticks per beat" */
 
-static unsigned int irq0_cnt=0,irq0_add=0,irq0_max=0;
 static void (interrupt *old_irq0)();
-static unsigned long irq0_ticks=0;
+static volatile unsigned long irq0_ticks=0;
+static volatile unsigned int irq0_cnt=0,irq0_add=0,irq0_max=0;
 
 static inline unsigned char midi_trk_read(struct midi_track *t) {
 	unsigned char c;
@@ -384,10 +384,11 @@ void midi_tick_track(unsigned int i) {
 }
 
 void midi_tick() {
-	unsigned int i;
+	if (midi_playing) {
+		unsigned int i;
 
-	if (!midi_playing) return;
-	for (i=0;i < midi_trk_count;i++) midi_tick_track(i);
+		for (i=0;i < midi_trk_count;i++) midi_tick_track(i);
+	}
 }
 
 /* WARNING: subroutine call in interrupt handler. make sure you compile with -zu flag for large/compact memory models */
