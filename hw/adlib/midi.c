@@ -160,14 +160,18 @@ void midi_tick_track(unsigned int i) {
 	struct midi_track *t = midi_trk + i;
 	struct midi_channel *ch;
 	unsigned char b,c,d;
+	int cnt=0;
 
 	/*DEBUG*/
 //	if (i != 0) return;
 	if (t->read >= t->fence) return;
 
+//	fprintf(stderr,"[%u] %lu / %lu\n",i,t->us_tick_cnt_mtpq,t->us_per_quarter_note);
 	t->us_tick_cnt_mtpq += 10000UL * (unsigned long)ticks_per_quarter_note;
 	while (t->us_tick_cnt_mtpq >= t->us_per_quarter_note) {
 		t->us_tick_cnt_mtpq -= t->us_per_quarter_note;
+		cnt++;
+
 		while (t->wait == 0) {
 			if (t->read >= t->fence) break;
 
@@ -243,11 +247,21 @@ void midi_tick_track(unsigned int i) {
 									((unsigned long)midi_trk_read(t)<<8UL)+
 									((unsigned long)midi_trk_read(t)<<0UL);
 
-								fprintf(stderr,"us/quarter %lu\n",
-									t->us_per_quarter_note);
+								if (1/*TODO: If format 0 or format 1*/) {
+									/* Ugh. Unless format 2, the tempo applies to all tracks */
+									int j;
+
+									for (j=0;j < midi_trk_count;j++) {
+										if (j != i) midi_trk[j].us_per_quarter_note =
+											t->us_per_quarter_note;
+									}
+								}
+
+//								fprintf(stderr,"us/quarter[%u] %lu\n",
+//									i,t->us_per_quarter_note);
 							}
 							else {
-								fprintf(stderr,"Type 0x%02x len=%lu %p/%p/%p\n",c,d,t->raw,t->read,t->fence);
+//								fprintf(stderr,"Type 0x%02x len=%lu %p/%p/%p\n",c,d,t->raw,t->read,t->fence);
 							}
 
 							midi_trk_skip(t,d);
@@ -258,7 +272,7 @@ void midi_tick_track(unsigned int i) {
 					}
 					else {
 						unsigned long len = midi_trk_read_delta(t);
-						fprintf(stderr,"Sysex len=%lu %p/%p/%p\n",len,t->raw,t->read,t->fence);
+//						fprintf(stderr,"Sysex len=%lu %p/%p/%p\n",len,t->raw,t->read,t->fence);
 						midi_trk_skip(t,len);
 					}
 					} break;
@@ -289,6 +303,8 @@ void midi_tick_track(unsigned int i) {
 			t->wait--;
 		}
 	}
+//	if (cnt != 0)
+//		printf("cnt=%u\n",cnt);
 }
 
 void midi_tick() {
