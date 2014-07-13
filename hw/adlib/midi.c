@@ -81,7 +81,7 @@ static double midi_note_freq(struct midi_channel *ch,unsigned char key) {
 }
 
 static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
-	unsigned int ach = (unsigned int)(t - midi_trk); /* pointer math */
+	unsigned int ach = (unsigned int)(ch - midi_ch); /* pointer math */
 	double freq = midi_note_freq(ch,key);
 
 #if 1
@@ -103,7 +103,7 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 }
 
 static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
-	unsigned int ach = (unsigned int)(t - midi_trk); /* pointer math */
+	unsigned int ach = (unsigned int)(ch - midi_ch); /* pointer math */
 	double freq = midi_note_freq(ch,key);
 
 #if 1
