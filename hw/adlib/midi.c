@@ -74,15 +74,42 @@ static inline unsigned char midi_trk_read(struct midi_track *t) {
 }
 
 static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
+	unsigned int ach = (unsigned int)(t - midi_trk); /* pointer math */
+	double freq = 440 + key; /* FIXME */
+
+#if 1
+	fprintf(stderr,"on ach=%u\n",ach);
+#endif
+
+	if (ch->note_on) {
+		adlib_fm[ach].mod.key_on = 0;
+		adlib_update_groupA0(ach,&adlib_fm[ach]);
+	}
+
 	ch->note_on = 1;
 	ch->note_number = key;
 	ch->note_velocity = vel;
+
+	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
+	adlib_fm[ach].mod.key_on = 1;
+	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
 
 static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
+	unsigned int ach = (unsigned int)(t - midi_trk); /* pointer math */
+	double freq = 440 + key; /* FIXME */
+
+#if 1
+	fprintf(stderr,"off ach=%u\n",ach);
+#endif
+
 	ch->note_on = 0;
 	ch->note_number = key;
 	ch->note_velocity = vel;
+
+	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
+	adlib_fm[ach].mod.key_on = 0;
+	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
 
 static inline void on_control_change(struct midi_track *t,struct midi_channel *ch,unsigned char num,unsigned char val) {
@@ -133,19 +160,23 @@ void midi_tick_track(unsigned int i) {
 	unsigned char b,c,d;
 
 	/*DEBUG*/
-	if (i != 0) return;
+//	if (i != 0) return;
 	if (t->read >= t->fence) return;
 
 	t->us_tick_cnt_mtpq += 10000UL * (unsigned long)ticks_per_quarter_note;
 	while (t->us_tick_cnt_mtpq >= t->us_per_quarter_note) {
 		t->us_tick_cnt_mtpq -= t->us_per_quarter_note;
 		if (t->wait == 0) {
-			fprintf(stderr,"Parse: ");
+			if (t->read >= t->fence) break;
+
+#if 0
+			fprintf(stderr,"Parse[%u]: ",i);
 			{
 				unsigned int i;
-				for (i=0;i < 24;i++) fprintf(stderr,"%02x ",t->read[i]);
+				for (i=0;i < 22 && (t->read+i) < t->fence;i++) fprintf(stderr,"%02x ",t->read[i]);
 			}
 			fprintf(stderr,"\n");
+#endif
 
 			/* read pointer should be pointing at MIDI event bytes, just after the time delay */
 			b = midi_trk_read(t);
@@ -159,15 +190,15 @@ void midi_tick_track(unsigned int i) {
 				b = t->last_status;
 			}
 			switch (b>>4) {
-				case 0x8: { /* note on */
-					d = midi_trk_read(t);
-					ch = midi_ch + (b&0xF); /* c=key d=velocity */
-					on_key_on(t,ch,c,d);
-					} break;
-				case 0x9: { /* note off */
+				case 0x8: { /* note off */
 					d = midi_trk_read(t);
 					ch = midi_ch + (b&0xF); /* c=key d=velocity */
 					on_key_off(t,ch,c,d);
+					} break;
+				case 0x9: { /* note on */
+					d = midi_trk_read(t);
+					ch = midi_ch + (b&0xF); /* c=key d=velocity */
+					on_key_on(t,ch,c,d);
 					} break;
 				case 0xB: { /* control change */
 					d = midi_trk_read(t);
@@ -215,16 +246,20 @@ void midi_tick_track(unsigned int i) {
 					break;
 			};
 
-			fprintf(stderr,"Par-t: ");
+#if 0
+			fprintf(stderr,"Par-t[%u]: ",i);
 			{
 				unsigned int i;
-				for (i=0;i < 24;i++) fprintf(stderr,"%02x ",t->read[i]);
+				for (i=0;i < 22 && (t->read+i) < t->fence;i++) fprintf(stderr,"%02x ",t->read[i]);
 			}
 			fprintf(stderr,"\n");
+#endif
 
 			/* and then read the next event */
 			t->wait = midi_trk_read_delta(t);
+#if 0
 			fprintf(stderr,"wait %lu\n",t->wait);
+#endif
 		}
 		else {
 			t->wait--;
@@ -272,9 +307,9 @@ void adlib_shut_up() {
 		f->mod_multiple = 1;
 		f->total_level = 63 - 16;
 		f->attack_rate = 15;
-		f->decay_rate = 0;
-		f->sustain_level = 7;
-		f->release_rate = 7;
+		f->decay_rate = 2;
+		f->sustain_level = 0;
+		f->release_rate = 4;
 		f->f_number = 400;
 		f->octave = 4;
 		f->key_on = 0;
@@ -283,9 +318,9 @@ void adlib_shut_up() {
 		f->mod_multiple = 1;
 		f->total_level = 63 - 16;
 		f->attack_rate = 15;
-		f->decay_rate = 0;
-		f->sustain_level = 7;
-		f->release_rate = 7;
+		f->decay_rate = 2;
+		f->sustain_level = 0;
+		f->release_rate = 4;
 		f->f_number = 0;
 		f->octave = 0;
 		f->key_on = 0;
