@@ -176,7 +176,7 @@ void midi_tick_track(unsigned int i) {
 		if (t->wait == 0) {
 			if (t->read >= t->fence) break;
 
-#if 0
+#if 1
 			fprintf(stderr,"Parse[%u]: ",i);
 			{
 				unsigned int i;
@@ -188,8 +188,14 @@ void midi_tick_track(unsigned int i) {
 			/* read pointer should be pointing at MIDI event bytes, just after the time delay */
 			b = midi_trk_read(t);
 			if (b&0x80) {
-				t->last_status = b;
-				c = midi_trk_read(t);
+				if (b < 0xF8) {
+					if (b >= 0xF0)
+						t->last_status = 0;
+					else
+						t->last_status = b;
+				}
+				if (b != 0x00 && ((b&0xF8) != 0xF0))
+					c = midi_trk_read(t);
 			}
 			else {
 				/* blegh. last status */
@@ -243,13 +249,15 @@ void midi_tick_track(unsigned int i) {
 					}
 					else {
 						unsigned long len = midi_trk_read_delta(t);
-						fprintf(stderr,"Sysex len=%lu %p/%p/%p\n",len,d,t->raw,t->read,t->fence);
-						midi_trk_skip(t,d);
+						fprintf(stderr,"Sysex len=%lu %p/%p/%p\n",len,t->raw,t->read,t->fence);
+						midi_trk_skip(t,len);
 					}
 					} break;
 				default:
-					fprintf(stderr,"t=%u Unknown MIDI message 0x%02x at %p/%p/%p\n",i,b,t->raw,t->read,t->fence);
-					midi_trk_end(t);
+					if (b != 0x00) {
+						fprintf(stderr,"t=%u Unknown MIDI message 0x%02x at %p/%p/%p\n",i,b,t->raw,t->read,t->fence);
+						midi_trk_end(t);
+					}
 					break;
 			};
 
@@ -264,7 +272,7 @@ void midi_tick_track(unsigned int i) {
 
 			/* and then read the next event */
 			t->wait = midi_trk_read_delta(t);
-#if 0
+#if 1
 			fprintf(stderr,"wait %lu\n",t->wait);
 #endif
 		}
