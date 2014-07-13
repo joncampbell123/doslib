@@ -396,9 +396,9 @@ void adlib_shut_up() {
 		f->mod_multiple = 1;
 		f->total_level = 63 - 16;
 		f->attack_rate = 15;
-		f->decay_rate = 2;
+		f->decay_rate = 4;
 		f->sustain_level = 0;
-		f->release_rate = 4;
+		f->release_rate = 8;
 		f->f_number = 400;
 		f->sustain = 1;
 		f->octave = 4;
@@ -408,9 +408,9 @@ void adlib_shut_up() {
 		f->mod_multiple = 1;
 		f->total_level = 63 - 16;
 		f->attack_rate = 15;
-		f->decay_rate = 2;
+		f->decay_rate = 4;
 		f->sustain_level = 0;
-		f->release_rate = 4;
+		f->release_rate = 8;
 		f->f_number = 0;
 		f->sustain = 1;
 		f->octave = 0;
