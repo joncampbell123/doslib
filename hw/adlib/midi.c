@@ -40,7 +40,7 @@ struct midi_note {
 };
 
 struct midi_channel {
-	unsigned char		dummy;
+	unsigned char		program;
 };
 
 struct midi_track {
@@ -141,6 +141,12 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 	double freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
+	/* HACK: Ignore percussion */
+	if ((ch->program >= 8 && ch->program <= 15)/*Chromatic percussion*/ ||
+		(ch->program >= 112 && ch->program <= 119)/*Percussive*/ ||
+		ch == &midi_ch[9]/*MIDI channel 10 (DAMN YOU 1-BASED COUNTING)*/)
+		return;
+
 	if (note == NULL) {
 		/* then we'll have to knock one off to make room */
 		drop_fm_note(ch,key);
@@ -180,6 +186,7 @@ static inline void on_control_change(struct midi_track *t,struct midi_channel *c
 }
 
 static inline void on_program_change(struct midi_track *t,struct midi_channel *ch,unsigned char inst) {
+	ch->program = inst;
 }
 
 static inline void on_pitch_bend(struct midi_track *t,struct midi_channel *ch,int bend/*-8192 to 8192*/) {
@@ -224,11 +231,6 @@ void midi_tick_track(unsigned int i) {
 	unsigned char b,c,d;
 	int cnt=0;
 
-	/* HACK: Filter channel 10 (percussion) */
-	if (i == 10) return;
-
-	/*DEBUG*/
-//	if (i != 0) return;
 	if (t->read >= t->fence) return;
 
 //	fprintf(stderr,"[%u] %lu / %lu\n",i,t->us_tick_cnt_mtpq,t->us_per_quarter_note);
@@ -467,7 +469,7 @@ void midi_reset_channels() {
 	int i;
 
 	for (i=0;i < MIDI_MAX_CHANNELS;i++) {
-		midi_ch[i].dummy = 0;
+		midi_ch[i].program = 0;
 	}
 }
 
