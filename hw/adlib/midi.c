@@ -93,6 +93,8 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 	ch->note_velocity = vel;
 
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
+	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 1;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -110,6 +112,8 @@ static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsig
 	ch->note_velocity = vel;
 
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
+	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 0;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -161,6 +165,9 @@ void midi_tick_track(unsigned int i) {
 	struct midi_channel *ch;
 	unsigned char b,c,d;
 	int cnt=0;
+
+	/* HACK: Filter channel 10 (percussion) */
+	if (i == 10) return;
 
 	/*DEBUG*/
 //	if (i != 0) return;
