@@ -35,6 +35,7 @@
 struct midi_note {
 	unsigned char		note_number;
 	unsigned char		note_velocity;
+	unsigned char		note_track;	/* from what MIDI track */
 	unsigned char		note_channel;	/* from what MIDI channel */
 	unsigned int		busy:1;		/* if occupied */
 };
@@ -87,13 +88,14 @@ static float midi_note_freq(struct midi_channel *ch,unsigned char key) {
 	return midi_note_freqs[key&0x7F];
 }
 
-static struct midi_note *get_fm_note(struct midi_channel *ch,unsigned char key,unsigned char do_alloc) {
+static struct midi_note *get_fm_note(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char do_alloc) {
+	unsigned int tch = (unsigned int)(t - midi_trk); /* pointer math */
 	unsigned int ach = (unsigned int)(ch - midi_ch); /* pointer math */
 	unsigned int i,freen=~0;
 
 	for (i=0;i < ADLIB_FM_VOICES;i++) {
 		if (midi_notes[i].busy) {
-			if (midi_notes[i].note_channel == ach && midi_notes[i].note_number == key)
+			if (midi_notes[i].note_channel == ach && midi_notes[i].note_track == tch && midi_notes[i].note_number == key)
 				return &midi_notes[i];
 		}
 		else {
@@ -118,7 +120,7 @@ static void drop_fm_note(struct midi_channel *ch,unsigned char key) {
 }
 
 static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
-	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/0);
+	struct midi_note *note = get_fm_note(t,ch,key,/*do_alloc*/0);
 	float freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
@@ -127,6 +129,7 @@ static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *c
 	note->busy = 1;
 	note->note_number = key;
 	note->note_velocity = vel;
+	note->note_track = (unsigned int)(t - midi_trk);
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
@@ -137,7 +140,7 @@ static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *c
 }
 
 static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
-	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/1);
+	struct midi_note *note = get_fm_note(t,ch,key,/*do_alloc*/1);
 	float freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
@@ -150,13 +153,14 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 	if (note == NULL) {
 		/* then we'll have to knock one off to make room */
 		drop_fm_note(ch,key);
-		note = get_fm_note(ch,key,1);
+		note = get_fm_note(t,ch,key,1);
 		if (note == NULL) return;
 	}
 
 	note->busy = 1;
 	note->note_number = key;
 	note->note_velocity = vel;
+	note->note_track = (unsigned int)(t - midi_trk);
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
@@ -167,7 +171,7 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 }
 
 static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
-	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/0);
+	struct midi_note *note = get_fm_note(t,ch,key,/*do_alloc*/0);
 	float freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
