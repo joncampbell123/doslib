@@ -81,9 +81,9 @@ static inline unsigned char midi_trk_read(struct midi_track *t) {
 	return c;
 }
 
-static double midi_note_freqs[0x80];
+static float midi_note_freqs[0x80];
 
-static double midi_note_freq(struct midi_channel *ch,unsigned char key) {
+static float midi_note_freq(struct midi_channel *ch,unsigned char key) {
 	return midi_note_freqs[key&0x7F];
 }
 
@@ -119,7 +119,7 @@ static void drop_fm_note(struct midi_channel *ch,unsigned char key) {
 
 static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/0);
-	double freq = midi_note_freq(ch,key);
+	float freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
 	if (note == NULL) return;
@@ -138,7 +138,7 @@ static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *c
 
 static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/1);
-	double freq = midi_note_freq(ch,key);
+	float freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
 	/* HACK: Ignore percussion */
@@ -168,7 +168,7 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 
 static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/0);
-	double freq = midi_note_freq(ch,key);
+	float freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
 	if (note == NULL) return;
@@ -581,7 +581,7 @@ int main(int argc,char **argv) {
 	}
 
 	/* compute midi notes */
-	for (i=0;i < 128;i++) {
+	for (i=0;i < 0x80;i++) {
 		double a = 440.0 * pow(2,((double)(i - 69)) / 12);
 		midi_note_freqs[i] = a;
 	}
