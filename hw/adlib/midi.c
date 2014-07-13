@@ -31,10 +31,16 @@
 #include <hw/vga/vgatty.h>
 #include <hw/adlib/adlib.h>
 
-struct midi_channel {
+/* one per OPL channel */
+struct midi_note {
 	unsigned char		note_number;
 	unsigned char		note_velocity;
-	unsigned int		note_on:1;
+	unsigned char		note_channel;	/* from what MIDI channel */
+	unsigned int		busy:1;		/* if occupied */
+};
+
+struct midi_channel {
+	unsigned char		dummy;
 };
 
 struct midi_track {
@@ -52,6 +58,7 @@ struct midi_track {
 #define MIDI_MAX_CHANNELS	16
 #define MIDI_MAX_TRACKS		64
 
+struct midi_note		midi_notes[ADLIB_FM_VOICES];
 struct midi_channel		midi_ch[MIDI_MAX_CHANNELS];
 struct midi_track		midi_trk[MIDI_MAX_TRACKS];
 static unsigned int		midi_trk_count=0;
@@ -74,24 +81,59 @@ static inline unsigned char midi_trk_read(struct midi_track *t) {
 	return c;
 }
 
-static double midi_notes[0x80];
+static double midi_note_freqs[0x80];
 
 static double midi_note_freq(struct midi_channel *ch,unsigned char key) {
-	return midi_notes[key&0x7F];
+	return midi_note_freqs[key&0x7F];
+}
+
+static struct midi_note *get_fm_note(struct midi_channel *ch,unsigned char key,unsigned char do_alloc) {
+	unsigned int ach = (unsigned int)(ch - midi_ch); /* pointer math */
+	unsigned int i,freen=~0;
+
+	for (i=0;i < ADLIB_FM_VOICES;i++) {
+		if (midi_notes[i].busy) {
+			if (midi_notes[i].note_channel == ach && midi_notes[i].note_number == key)
+				return &midi_notes[i];
+		}
+		else {
+			if (freen == ~0) freen = i;
+		}
+	}
+
+	if (do_alloc && freen != ~0) return &midi_notes[freen];
+	return NULL;
+}
+
+static void drop_fm_note(struct midi_channel *ch,unsigned char key) {
+	unsigned int ach = (unsigned int)(ch - midi_ch); /* pointer math */
+	unsigned int i;
+
+	for (i=0;i < ADLIB_FM_VOICES;i++) {
+		if (midi_notes[i].busy && midi_notes[i].note_channel == ach) {
+			midi_notes[i].busy = 0;
+			break;
+		}
+	}
 }
 
 static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
-	unsigned int ach = (unsigned int)(ch - midi_ch); /* pointer math */
+	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/1);
 	double freq = midi_note_freq(ch,key);
+	unsigned int ach;
 
-#if 0
-	fprintf(stderr,"on ach=%u\n",ach);
-#endif
+	if (note == NULL) {
+		/* then we'll have to knock one off to make room */
+		drop_fm_note(ch,key);
+		note = get_fm_note(ch,key,1);
+		if (note == NULL) return;
+	}
 
-	ch->note_on = 1;
-	ch->note_number = key;
-	ch->note_velocity = vel;
-
+	note->busy = 1;
+	note->note_number = key;
+	note->note_velocity = vel;
+	note->note_channel = (unsigned int)(ch - midi_ch);
+	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
 	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
 	adlib_fm[ach].mod.sustain_level = vel >> 3;
@@ -100,17 +142,14 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 }
 
 static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
-	unsigned int ach = (unsigned int)(ch - midi_ch); /* pointer math */
+	struct midi_note *note = get_fm_note(ch,key,/*do_alloc*/0);
 	double freq = midi_note_freq(ch,key);
+	unsigned int ach;
 
-#if 0
-	fprintf(stderr,"off ach=%u\n",ach);
-#endif
+	if (note == NULL) return;
 
-	ch->note_on = 0;
-	ch->note_number = key;
-	ch->note_velocity = vel;
-
+	note->busy = 0;
+	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
 	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
 	adlib_fm[ach].mod.sustain_level = vel >> 3;
@@ -350,6 +389,9 @@ void adlib_shut_up() {
 	for (i=0;i < adlib_fm_voices;i++) {
 		struct adlib_fm_operator *f;
 
+		midi_notes[i].busy = 0;
+		midi_notes[i].note_channel = 0;
+
 		f = &adlib_fm[i].mod;
 		f->mod_multiple = 1;
 		f->total_level = 63 - 16;
@@ -399,9 +441,7 @@ void midi_reset_channels() {
 	int i;
 
 	for (i=0;i < MIDI_MAX_CHANNELS;i++) {
-		midi_ch[i].note_number = 69;
-		midi_ch[i].note_velocity = 127;
-		midi_ch[i].note_on = 0;
+		midi_ch[i].dummy = 0;
 	}
 }
 
@@ -515,7 +555,7 @@ int main(int argc,char **argv) {
 	/* compute midi notes */
 	for (i=0;i < 128;i++) {
 		double a = 440.0 * pow(2,((double)(i - 69)) / 12);
-		midi_notes[i] = a;
+		midi_note_freqs[i] = a;
 	}
 
 	for (i=0;i < MIDI_MAX_TRACKS;i++) {
