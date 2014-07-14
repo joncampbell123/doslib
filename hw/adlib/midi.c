@@ -54,6 +54,7 @@ struct midi_track {
 	unsigned long		us_tick_cnt_mtpq; /* Microseconds advanced (up to 10000 us or one unit at 100Hz) x ticks per quarter note */
 	unsigned long		wait;
 	unsigned char		last_status;	/* MIDI last status byte */
+	unsigned int		eof:1;		/* we hit the end of the track */
 };
 
 #define MIDI_MAX_CHANNELS	16
@@ -83,8 +84,10 @@ static inline unsigned char midi_trk_read(struct midi_track *t) {
 	unsigned char c;
 
 	/* NTS: 16-bit large/compact builds MUST compare pointers as unsigned long to compare FAR pointers correctly! */
-	if (t->read == NULL || (unsigned long)t->read >= (unsigned long)t->fence)
+	if (t->read == NULL || (unsigned long)t->read >= (unsigned long)t->fence) {
+		t->eof = 1;
 		return 0xFF;
+	}
 
 	c = *(t->read);
 #if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
@@ -399,8 +402,10 @@ void midi_tick_track(unsigned int i) {
 	int cnt=0;
 
 	/* NTS: 16-bit large/compact builds MUST compare pointers as unsigned long to compare FAR pointers correctly! */
-	if (t->read == NULL || (unsigned long)t->read >= (unsigned long)t->fence)
+	if (t->read == NULL || (unsigned long)t->read >= (unsigned long)t->fence) {
+		t->eof = 1;
 		return;
+	}
 
 	t->us_tick_cnt_mtpq += 10000UL * (unsigned long)ticks_per_quarter_note;
 	while (t->us_tick_cnt_mtpq >= t->us_per_quarter_note) {
@@ -408,8 +413,10 @@ void midi_tick_track(unsigned int i) {
 		cnt++;
 
 		while (t->wait == 0) {
-			if ((unsigned long)t->read >= (unsigned long)t->fence)
+			if ((unsigned long)t->read >= (unsigned long)t->fence) {
+				t->eof = 1;
 				break;
+			}
 
 			/* read pointer should be pointing at MIDI event bytes, just after the time delay */
 			b = midi_trk_read(t);
@@ -522,11 +529,25 @@ void midi_tick_track(unsigned int i) {
 	}
 }
 
+void adlib_shut_up();
+void midi_reset_tracks();
+void midi_reset_channels();
+
 void midi_tick() {
 	if (midi_playing) {
 		unsigned int i;
+		int eof=0;
 
-		for (i=0;i < midi_trk_count;i++) midi_tick_track(i);
+		for (i=0;i < midi_trk_count;i++) {
+			midi_tick_track(i);
+			eof += midi_trk[i].eof?1:0;
+		}
+
+		if (eof >= midi_trk_count) {
+			adlib_shut_up();
+			midi_reset_tracks();
+			midi_reset_channels();
+		}
 	}
 }
 
@@ -595,6 +616,7 @@ void midi_reset_track(unsigned int i) {
 
 	if (i >= MIDI_MAX_TRACKS) return;
 	t = &midi_trk[i];
+	t->eof = 0;
 	t->last_status = 0;
 	t->us_tick_cnt_mtpq = 0;
 	t->us_per_quarter_note = (60000000UL / 120UL); /* 120BPM */
