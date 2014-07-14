@@ -82,9 +82,9 @@ static inline unsigned char midi_trk_read(struct midi_track *t) {
 	return c;
 }
 
-static float midi_note_freqs[0x80];
+static uint32_t midi_note_freqs[0x80];
 
-static float midi_note_freq(struct midi_channel *ch,unsigned char key) {
+static uint32_t midi_note_freq(struct midi_channel *ch,unsigned char key) {
 	return midi_note_freqs[key&0x7F];
 }
 
@@ -121,7 +121,7 @@ static void drop_fm_note(struct midi_channel *ch,unsigned char key) {
 
 static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	struct midi_note *note = get_fm_note(t,ch,key,/*do_alloc*/0);
-	float freq = midi_note_freq(ch,key);
+	uint32_t freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
 	if (note == NULL) return;
@@ -132,7 +132,7 @@ static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *c
 	note->note_track = (unsigned int)(t - midi_trk);
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
-	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
+	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
 	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
 	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 1;
@@ -141,7 +141,7 @@ static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *c
 
 static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	struct midi_note *note = get_fm_note(t,ch,key,/*do_alloc*/1);
-	float freq = midi_note_freq(ch,key);
+	uint32_t freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
 	/* HACK: Ignore percussion */
@@ -163,7 +163,7 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 	note->note_track = (unsigned int)(t - midi_trk);
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
-	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
+	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
 	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
 	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 1;
@@ -172,14 +172,14 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 
 static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	struct midi_note *note = get_fm_note(t,ch,key,/*do_alloc*/0);
-	float freq = midi_note_freq(ch,key);
+	uint32_t freq = midi_note_freq(ch,key);
 	unsigned int ach;
 
 	if (note == NULL) return;
 
 	note->busy = 0;
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
-	adlib_freq_to_fm_op(&adlib_fm[ach].mod,freq);
+	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
 	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
 	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 0;
@@ -592,7 +592,7 @@ int main(int argc,char **argv) {
 	/* compute midi notes */
 	for (i=0;i < 0x80;i++) {
 		double a = 440.0 * pow(2,((double)(i - 69)) / 12);
-		midi_note_freqs[i] = a;
+		midi_note_freqs[i] = (uint32_t)(a * 65536UL);
 	}
 
 	for (i=0;i < MIDI_MAX_TRACKS;i++) {
