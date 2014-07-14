@@ -73,20 +73,62 @@ static void (interrupt *old_irq0)();
 static volatile unsigned long irq0_ticks=0;
 static volatile unsigned int irq0_cnt=0,irq0_add=0,irq0_max=0;
 
+#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
+static inline unsigned long farptr2phys(unsigned char far *p) { /* take 16:16 pointer convert to physical memory address */
+	return ((unsigned long)FP_SEG(p) << 4UL) + ((unsigned long)FP_OFF(p));
+}
+#endif
+
 static inline unsigned char midi_trk_read(struct midi_track *t) {
 	unsigned char c;
 
-	if (t->read == NULL || t->read >= t->fence) return 0xFF;
+	/* NTS: 16-bit large/compact builds MUST compare pointers as unsigned long to compare FAR pointers correctly! */
+	if (t->read == NULL || (unsigned long)t->read >= (unsigned long)t->fence)
+		return 0xFF;
+
 	c = *(t->read);
 #if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
-	if (FP_OFF(t->read) == 0xFFFF) /* 16:16 far pointer aware */
-		t->read = MK_FP(FP_SEG(t->read)+0x1000,0);
+	if (FP_OFF(t->read) >= 0xF) /* 16:16 far pointer aware (NTS: Programs reassigning this pointer MUST normalize the FAR pointer) */
+		t->read = MK_FP(FP_SEG(t->read)+0x1,0);
 	else
 		t->read++;
 #else
 	t->read++;
 #endif
 	return c;
+}
+
+void midi_trk_end(struct midi_track *t) {
+	t->wait = ~0UL;
+	t->read = t->fence;
+}
+
+void midi_trk_skip(struct midi_track *t,unsigned long len) {
+	unsigned long rem;
+
+	/* NTS: 16-bit large/compact builds MUST compare pointers as unsigned long to compare FAR pointers correctly! */
+	if (t->read == NULL || (unsigned long)t->read >= (unsigned long)t->fence)
+		return;
+
+	if (len > 0xFFF0UL) {
+		midi_trk_end(t);
+		return;
+	}
+#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
+	{
+		unsigned long tt;
+
+		tt = farptr2phys(t->read);
+		rem = farptr2phys(t->fence) - tt;
+		if (rem > len) rem = len;
+		tt += rem;
+		t->read = MK_FP(tt>>4,tt&0xF);
+	}
+#else
+	rem = (unsigned long)(t->fence - t->read);
+	if (len > rem) len = rem;
+	t->read += len;
+#endif
 }
 
 static const uint32_t midikeys_freqs[0x80] = {
@@ -332,56 +374,15 @@ static inline void on_program_change(struct midi_track *t,struct midi_channel *c
 static inline void on_pitch_bend(struct midi_track *t,struct midi_channel *ch,int bend/*-8192 to 8192*/) {
 }
 
-void midi_trk_end(struct midi_track *t) {
-	t->wait = ~0UL;
-	t->read = t->fence;
-}
-
-#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
-static inline unsigned long farptr2phys(unsigned char far *p) { /* take 16:16 pointer convert to physical memory address */
-	return ((unsigned long)FP_SEG(p) << 4UL) + ((unsigned long)FP_OFF(p));
-}
-#endif
-
-void midi_trk_skip(struct midi_track *t,unsigned long len) {
-	unsigned long rem;
-
-	if (t->read == NULL || t->read >= t->fence) return;
-	if (len > 0xFFF0UL) {
-		midi_trk_end(t);
-		return;
-	}
-#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
-	while (len != 0UL) {
-		/* how far can we skip forward, considering 16:16 far pointers and 64KB segment wrap? */
-		rem = farptr2phys(t->fence) - farptr2phys(t->read);
-		if (rem > (0x10000UL - (unsigned long)FP_OFF(t->read))) /* if a 64KB wrap is coming up, then aim for that */
-			rem = (0x10000UL - (unsigned long)FP_OFF(t->read));
-		if (rem > len) rem = len;
-
-		if (((unsigned long)FP_OFF(t->read)+rem) == 0x10000UL) {
-			fprintf(stderr,"16:16 wrap skip!\n");
-			t->read = MK_FP(FP_SEG(t->read)+0x1000,0);
-		}
-		else {
-			t->read += (unsigned)rem;
-		}
-
-		len -= rem;
-	}
-#else
-	rem = (unsigned long)(t->fence - t->read);
-	if (len > rem) len = rem;
-	t->read += len;
-#endif
-}
-
 unsigned long midi_trk_read_delta(struct midi_track *t) {
 	unsigned long tc = 0;
 	unsigned char c = 0,b;
 
-	if (t->read == NULL) return 0;
-	while (c < 4 && t->read < t->fence) {
+	/* NTS: 16-bit large/compact builds MUST compare pointers as unsigned long to compare FAR pointers correctly! */
+	if (t->read == NULL || (unsigned long)t->read >= (unsigned long)t->fence)
+		return tc;
+
+	while (c < 4) {
 		b = midi_trk_read(t);
 		tc = (tc << 7UL) + (unsigned long)(b&0x7F);
 		if (!(b&0x80)) break;
@@ -397,25 +398,18 @@ void midi_tick_track(unsigned int i) {
 	unsigned char b,c,d;
 	int cnt=0;
 
-	if (t->read >= t->fence) return;
+	/* NTS: 16-bit large/compact builds MUST compare pointers as unsigned long to compare FAR pointers correctly! */
+	if (t->read == NULL || (unsigned long)t->read >= (unsigned long)t->fence)
+		return;
 
-//	fprintf(stderr,"[%u] %lu / %lu\n",i,t->us_tick_cnt_mtpq,t->us_per_quarter_note);
 	t->us_tick_cnt_mtpq += 10000UL * (unsigned long)ticks_per_quarter_note;
 	while (t->us_tick_cnt_mtpq >= t->us_per_quarter_note) {
 		t->us_tick_cnt_mtpq -= t->us_per_quarter_note;
 		cnt++;
 
 		while (t->wait == 0) {
-			if (t->read >= t->fence) break;
-
-#if 0
-			fprintf(stderr,"Parse[%u]: ",i);
-			{
-				unsigned int i;
-				for (i=0;i < 22 && (t->read+i) < t->fence;i++) fprintf(stderr,"%02x ",t->read[i]);
-			}
-			fprintf(stderr,"\n");
-#endif
+			if ((unsigned long)t->read >= (unsigned long)t->fence)
+				break;
 
 			/* read pointer should be pointing at MIDI event bytes, just after the time delay */
 			b = midi_trk_read(t);
@@ -494,9 +488,6 @@ void midi_tick_track(unsigned int i) {
 											t->us_per_quarter_note;
 									}
 								}
-
-//								fprintf(stderr,"us/quarter[%u] %lu\n",
-//									i,t->us_per_quarter_note);
 							}
 							else {
 //								fprintf(stderr,"Type 0x%02x len=%lu %p/%p/%p\n",c,d,t->raw,t->read,t->fence);
@@ -522,27 +513,13 @@ void midi_tick_track(unsigned int i) {
 					break;
 			};
 
-#if 0
-			fprintf(stderr,"Par-t[%u]: ",i);
-			{
-				unsigned int i;
-				for (i=0;i < 22 && (t->read+i) < t->fence;i++) fprintf(stderr,"%02x ",t->read[i]);
-			}
-			fprintf(stderr,"\n");
-#endif
-
 			/* and then read the next event */
 			t->wait = midi_trk_read_delta(t);
-#if 0
-			fprintf(stderr,"wait[%u] %lu\n",i,t->wait);
-#endif
 		}
 		if (t->wait != 0) {
 			t->wait--;
 		}
 	}
-//	if (cnt != 0)
-//		printf("cnt=%u\n",cnt);
 }
 
 void midi_tick() {
@@ -743,7 +720,8 @@ int load_midi_file(const char *path) {
 						p += (unsigned)cando;
 				}
 
-				midi_trk[tracki].fence = p;
+				cando = farptr2phys(p);
+				midi_trk[tracki].fence = MK_FP(cando>>4,cando&0xF);
 			}
 #else
 			midi_trk[tracki].fence = midi_trk[tracki].raw + (unsigned)sz;
