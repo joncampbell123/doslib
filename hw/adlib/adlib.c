@@ -277,11 +277,11 @@ void adlib_freq_to_fm_op(struct adlib_fm_operator *f,double freq) {
 	freq *= (1UL << (20UL - (unsigned long)f->octave));
 	l = (unsigned long)freq / 49716UL;
 	f->octave = 4;
-	while (l > 1023) {
+	while (l > 1023UL) {
 		f->octave++;
 		l >>= 1UL;
 	}
-	while (l < 256) {
+	while (l != 0UL && l < 256UL) {
 		f->octave--;
 		l <<= 1UL;
 	}
