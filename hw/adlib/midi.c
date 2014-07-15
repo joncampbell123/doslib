@@ -374,6 +374,9 @@ static inline void on_program_change(struct midi_track *t,struct midi_channel *c
 	ch->program = inst;
 }
 
+static inline void on_channel_aftertouch(struct midi_track *t,struct midi_channel *ch,unsigned char velocity) {
+}
+
 static inline void on_pitch_bend(struct midi_track *t,struct midi_channel *ch,int bend/*-8192 to 8192*/) {
 }
 
@@ -459,6 +462,9 @@ void midi_tick_track(unsigned int i) {
 					} break;
 				case 0xC: { /* program change */
 					on_program_change(t,ch,c); /* c=instrument d=not used */
+					} break;
+				case 0xD: { /* channel aftertouch */
+					on_channel_aftertouch(t,ch,c); /* c=velocity d=not used */
 					} break;
 				case 0xE: { /* pitch bend */
 					d = midi_trk_read(t);
