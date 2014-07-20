@@ -871,3 +871,18 @@ ESS 1869 undocumented registers (as seen on a Compaq branded ESS 1887)
 0xB0               Unknown (always reads 0xB0, writes change register 0xA0 instead)
 0xB3               Unknown (only bit 0 is changeable)
 
+ESS sample & filter clock divider behavior
+------------------------------------------
+
+This isn't mentioned in ESS's datasheets, but if you set the sample rate
+divider to 0xFF (or 0x7F) the DAC stops (does not cycle samples) and will
+stay that way until you enter another divider. It doesn't appear to harm
+the chip in any way.
+
+Note that 0x00 is also a valid clock divider (in which case the DAC just
+plays the audio really slow).
+
+The divider for their lowpass filter appears to have the same behavior.
+Setting the divider to 0x00 turns the audio into a very low bandwidth
+signal (as you'd expect) while 0xFF silences output entirely.
+
