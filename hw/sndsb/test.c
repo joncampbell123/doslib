@@ -2146,10 +2146,10 @@ void play_with_ess() {
 					_sti();
 				}
 
-				redraw = 1;
+				uiredraw = 1;
 			}
 			else if (c == ' ')
-				redraw = 1;
+				uiredraw = 1;
 			else if (c == 27)
 				loop = 0;
 			else if (c == 0x4800) { /* up arrow */
@@ -2355,7 +2355,7 @@ void play_with_mixer() {
 					sndsb_write_mixer(sb_card,(unsigned char)selector,nb);
 				}
 
-				redraw = 1;
+				uiredraw = 1;
 			}
 			else if (c == 'r' || c == 'R') {
 				rawmode = !rawmode;
@@ -2366,7 +2366,7 @@ void play_with_mixer() {
 			else if (c == 27)
 				loop = 0;
 			else if (c == ' ')
-				redraw = 1;
+				uiredraw = 1;
 			else if (c == 0x4800) { /* up arrow */
 				if (rawmode) {
 					selector -= 0x10;
