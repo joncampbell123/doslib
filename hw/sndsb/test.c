@@ -2947,8 +2947,8 @@ static const signed char sb16_pnp_dma16[] = { -1,0,1,3,5,6,7 };
 static const signed char ess_688_irq[] = { -1,2,5,7,10 };
 static const signed char ess_688_dma[] = { -1,0,1,3 };
 
-signed char ess_688_map_to_dma[4] = {-1, 0, 1, 3};
-signed char ess_688_map_to_irq[8] = {-1, 5, 7, 10};
+signed char ess_688_map_to_dma[4] = {-1, 0, 1, 3}; /* NTS: Not sure what the datasheet means by "all others" when value == 0x0 */
+signed char ess_688_map_to_irq[8] = { 9, 5, 7, 10}; /* NTS: Doesn't seem to be a way to say "no IRQ" */
 
 struct conf_list_item {
 	unsigned char	etype;
@@ -3150,7 +3150,8 @@ void conf_sound_card() {
 		 * device. So far the only ESS 688 have is in a laptop where the chip is "embedded"
 		 * into the motherboard and is "Plug & Play" only in that the PnP BIOS reports it
 		 * in device node enumeration, yet I am apparently able to change IRQ/DMA resources
-		 * this way. */
+		 * this way. UPDATE: Well, it turns out the chip lets me change the IRQ, but the
+		 * DMA channel seems to be fixed (unchangeable). */
 		conf_item_index_lookup(&ess_688[0]/*IRQ*/,sb_card->irq);
 		conf_item_index_lookup(&ess_688[1]/*DMA*/,sb_card->dma8);
 		if (conf_sound_card_list("ESS 688",ess_688,sizeof(ess_688)/sizeof(ess_688[0]),56)) {
@@ -3196,6 +3197,19 @@ void conf_sound_card() {
 				sndsb_ess_write_controller(sb_card,0xB2,(unsigned char)tmp);
 			}
 			sndsb_reset_dsp(sb_card);
+
+			/* now... some registers might actually be readonly.
+			 * we'll find out when we readback and find which ones have changed. */
+			tmp = sndsb_ess_read_controller(sb_card,0xB1); /* interrupt control */
+			if (tmp >= 0) {
+				if ((tmp&3) == ((tmp>>2)&3))
+					IRQ = ess_688_map_to_irq[tmp & 3];
+			}
+			tmp = sndsb_ess_read_controller(sb_card,0xB2); /* DMA control */
+			if (tmp >= 0) {
+				if ((tmp&3) == ((tmp>>2)&3))
+					DMA8 = ess_688_map_to_dma[tmp & 3];
+			}
 
 			/* then the library needs to be updated */
 			/* TODO: there should be a sndsb_ call to do this! */
