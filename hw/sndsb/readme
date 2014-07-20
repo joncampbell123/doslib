@@ -826,3 +826,25 @@ off. If you want to make sure that the registers exist, type 'p' to
 trigger a re-detection cycle. Know that for undefined registers, the
 program may hang temporarily waiting for DSP timeouts.
 
+ESS undocumented registers
+--------------------------
+
+Perhaps this is simply lack of documentation in the ES1869 datasheet,
+but there are additional registers not listed.
+
+0xA0               Unknown (only 4 bits are changeable)
+0xA3               Unknown (all 8 bits changeable)
+0xA6               Left (master? PCM?) volume
+0xA7               Right (master? PCM?) volume
+0xA8               Unknown (but bit 0 appears to enable/disable audio output)
+0xA9               Unknown (all 8 bits changeable)
+0xAA               Master volume? (also changed when you write 0xAB)
+0xAB               Master volume? (writing this also changes 0xAA)
+0xAC               Unknown (all 8 bits changeable)
+0xAD               Unknown (all 8 bits changeable)
+0xAE               Unknown (all 8 bits changeable)
+0xAF               Unknown (all 8 bits changeable)
+
+0xB0               Unknown (always reads 0xB0, writes change register 0xA0 instead)
+0xB3               Unknown (only bit 0 is changeable)
+
