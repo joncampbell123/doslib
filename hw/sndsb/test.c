@@ -2944,11 +2944,11 @@ static const signed char sb16_pnp_irq[] = { -1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
 static const signed char sb16_pnp_dma[] = { -1,0,1,3 };
 static const signed char sb16_pnp_dma16[] = { -1,0,1,3,5,6,7 };
 
-static const signed char ess_688_irq[] = { -1,2,5,7,10 };
+static const signed char ess_688_irq[] = { -1,5,7,9,10 }; /* NTS: The datasheet says 2/9/"all others". Since PCs map IRQ 2 to IRQ 9 we'll just say "IRQ 9" */
 static const signed char ess_688_dma[] = { -1,0,1,3 };
 
 signed char ess_688_map_to_dma[4] = {-1, 0, 1, 3}; /* NTS: Not sure what the datasheet means by "all others" when value == 0x0 */
-signed char ess_688_map_to_irq[8] = { 9, 5, 7, 10}; /* NTS: Doesn't seem to be a way to say "no IRQ" */
+signed char ess_688_map_to_irq[8] = { 9, 5, 7, 10}; /* NTS: Doesn't seem to be a way to say "no IRQ". value == 0x0 is 2/9/"all others" and IRQ 2 on ISA is mapped to IRQ 9, so.. */
 
 struct conf_list_item {
 	unsigned char	etype;
