@@ -1377,10 +1377,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		sndsb_interrupt_ack(cx,3);
 	}
 
-	/* If an ESS chipset, there's a good chance that 16-bit PCM is played over the 8-bit DMA channel */
-	if (cx->ess_extensions && cx->dma16 < 0 && cx->dma8 >= 0)
-		cx->dma16 = cx->dma8;
-
 	/* DSP 2xx and earlier do not have auto-init commands */
 	if (cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))
 		cx->dsp_autoinit_command = 0;
@@ -2213,6 +2209,10 @@ int sndsb_try_base(uint16_t iobase) {
 	if (cx->dsp_ok && !cx->is_gallant_sc6600 && !cx->do_not_probe_irq && cx->pnp_id == 0 && cx->irq == -1 &&
 		!sndsb_probe_options.disable_alt_irq_probing)
 		sndsb_alt_lite_probe_irq(cx);
+
+	/* If an ESS chipset, there's a good chance that 16-bit PCM is played over the 8-bit DMA channel */
+	if (cx->ess_extensions && cx->dma16 < 0 && cx->dma8 >= 0)
+		cx->dma16 = cx->dma8;
 
 	sndsb_determine_ideal_dsp_play_method(cx);
 	return 1;
