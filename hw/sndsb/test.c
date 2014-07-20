@@ -3287,9 +3287,9 @@ void conf_sound_card() {
 		return;
 	}
 	else if (sb_card->ess_extensions && sb_card->ess_chipset == SNDSB_ESS_688) {
-		/* the Gallant SC-6600 has it's own weird "plug & play"
-		   configuration method, although the base I/O is not
-		   software configurable */
+		/* ESS control registers also allow changing IRQ/DMA, at least on non-PnP versions.
+		 * It's also possible to change the base I/O, even if the PnP protocol is not available,
+		 * but that's a bit too iffy at the moment to play with. */
 		conf_item_index_lookup(&ess_688[0]/*IRQ*/,sb_card->irq);
 		conf_item_index_lookup(&ess_688[1]/*DMA*/,sb_card->dma8);
 		if (conf_sound_card_list("ESS 688",ess_688,sizeof(ess_688)/sizeof(ess_688[0]),56)) {
