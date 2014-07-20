@@ -1,12 +1,4 @@
 
-/* TODO: The code works perfectly on the ESS chipset of the old laptop EXCEPT that
- *       the real-mode build has problems with non-auto-init DSP + DMA mode
- *       especially with short IRQ intervals. It only happens with non-auto-init-DMA. */
-
-/* TODO:
- *    I found a Sharp laptop (1996-ish) with a ISA PnP Sound Blaster clone (ESS0100)
- *    which is apparently an ESS 688 Pnp AudioDrive. Add code to support it. */
-
 /* Notes:
  *    ESS 688 PnP AudioDrive:
  *       - Plug and Play enumerated from the BIOS on a Sharp laptop (uses IRQ 9?!?)
