@@ -3187,8 +3187,11 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 
 			if (cx->goldplay_mode)
 				b = cx->buffer_16bit ? 1 : 0;	/* demand transfer DMA 2 bytes (16-bit) or single transfer DMA (8-bit) */
+			else if (cx->ess_chipset == SNDSB_ESS_1869)
+				b = 1;	/* demand transfer DMA 2 bytes per request. The chipset will play too fast if we use the 4 bytes/request mode (as seen on a Compaq) */
 			else
 				b = 3;  /* demand transfer DMA 4 bytes per request */
+
 			if (sndsb_ess_write_controller(cx,0xB9,b) == -1) {
 				_sti();
 				return 0;
