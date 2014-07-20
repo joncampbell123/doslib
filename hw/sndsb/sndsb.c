@@ -1229,12 +1229,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 							}
 						}
 					}
-					else if (cx->ess_chipset == SNDSB_ESS_1869) {
-						/* TODO: There are some problems with the code. One: reading the registers
-						 *       does not produce correct IRQ/DMA. Two: when we program the sample
-						 *       rate we get audio that plays about 2.5x too fast. Maybe this is
-						 *       just an artifact of testing the code on a Compaq ESS1887 chipset. */
-						if (sndsb_probe_options.experimental_ess) cx->ess_extensions = 1;
+					else if (cx->ess_chipset == SNDSB_ESS_1869) { /* ESS 1869? I know how to program that! */
+						cx->ess_extensions = 1;
 
 						/* The ESS 1869 (on the Compaq) appears to use the same 8-bit DMA for 16-bit as well.
 						 * Perhaps the second DMA channel listed by the BIOS is the second channel (for full
