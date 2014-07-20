@@ -2055,6 +2055,10 @@ void play_with_ess() {
 			if (selector > 0xFF) selector = 0xFF;
 			else if (selector < 0) selector = 0;
 			offset = 0;
+
+			/* reading ESS controllers involves the DSP so avoid conflicts by clearing interrupts */
+			_cli();
+
 			for (cc=0;cc < 256;cc++) {
 				x = ((cc & 15)*3)+4;
 				y = (cc >> 4)+4;
@@ -2083,6 +2087,8 @@ void play_with_ess() {
 					vga_write(temp_str);
 				}
 			}
+
+			_sti();
 		}
 
 		if (kbhit()) {
@@ -2117,8 +2123,14 @@ void play_with_ess() {
 					unsigned char nb;
 					nb = (unsigned char)xdigit2int(a) << 4;
 					nb |= (unsigned char)xdigit2int(b);
+
+					/* reading ESS controllers involves the DSP so avoid conflicts by clearing interrupts */
+					_cli();
+
 					sndsb_ess_write_controller(sb_card,(unsigned char)selector,nb);
 					ess688_not_present[selector] = 0;
+
+					_sti();
 				}
 
 				redraw = 1;
