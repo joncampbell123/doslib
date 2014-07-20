@@ -3170,7 +3170,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 
 			t16 = -(lv+1);
 			if (sndsb_ess_write_controller(cx,0xA4,t16) == -1 || /* DMA transfer count low */
-				sndsb_ess_write_controller(cx,0xA5,t16>>8)) { /* DMA transfer count high */
+				sndsb_ess_write_controller(cx,0xA5,t16>>8) == -1) { /* DMA transfer count high */
 				_sti();
 				return 0;
 			}
