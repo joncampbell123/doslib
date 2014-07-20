@@ -3150,7 +3150,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 				if (b < 0x80) b = 0x80;
 			}
 			else {
-				/* bit 7: = 1
+				/* bit 7: = 0
 				 * bit 6:0: = sample rate divider
 				 *
 				 * rate = 397.7KHz / (128 - x) */
