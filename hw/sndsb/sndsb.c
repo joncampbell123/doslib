@@ -1189,6 +1189,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 						 *       does not produce correct IRQ/DMA. Two: when we program the sample
 						 *       rate we get audio that plays about 2.5x too fast. Maybe this is
 						 *       just an artifact of testing the code on a Compaq ESS1887 chipset. */
+						if (sndsb_probe_options.experimental_ess) cx->ess_extensions = 1;
 					}
 
 					/* TODO: 1869 datasheet recommends reading mixer index 0x40

@@ -2817,6 +2817,8 @@ static void help() {
 	printf(" /adma                Assume DMA controllers are present\n");
 	printf(" /noess               Do not use/detect ESS 688/1869 extensions\n");
 	printf(" /sbalias:dsp         Use DSP alias port 0x22D by default\n");
+	printf(" /ex-ess              Experimentally use ESS extensions for ESS chips\n");
+	printf("                      not directly supported.\n");
 #endif
 
 #if TARGET_MSDOS == 32
@@ -3594,6 +3596,9 @@ int main(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return 1;
+			}
+			else if (!strcmp(a,"ex-ess")) {
+				sndsb_probe_options.experimental_ess = 1;
 			}
 			else if (!strcmp(a,"noess")) {
 				sndsb_probe_options.disable_ess_extensions = 1;

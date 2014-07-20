@@ -221,6 +221,7 @@ struct sndsb_probe_opts {
 	unsigned char			disable_manual_high_dma_probing:1;	/* don't probe for 16-bit DMA channel if unknown  /nohdmap */
 	unsigned char			disable_windows_vxd_checks:1;		/* don't try to identify Windows drivers          /nowinvxd */
 	unsigned char			disable_ess_extensions:1;		/* don't use/detect ESS688/ESS1869 commands       /noess */
+	unsigned char			experimental_ess:1;			/* use ESS extensions even on chips not yet supported /ex-ess */
 	unsigned char			use_dsp_alias:1;			/* probe, initialize and default to alias 22Dh    /sbalias:dsp */
 };
 
