@@ -1232,6 +1232,11 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 					else if (cx->ess_chipset == SNDSB_ESS_1869) { /* ESS 1869? I know how to program that! */
 						cx->ess_extensions = 1;
 
+						/* NTS: The ESS 1869 and later have PnP methods to configure themselves, and the
+						 * registers are documented as readonly for that reason, AND, on the ESS 1887 in
+						 * the Compaq system I test, the 4-bit value that supposedly corresponds to IRQ
+						 * doesn't seem to do anything. */
+
 						/* The ESS 1869 (on the Compaq) appears to use the same 8-bit DMA for 16-bit as well.
 						 * Perhaps the second DMA channel listed by the BIOS is the second channel (for full
 						 * duplex?) */
@@ -3186,12 +3191,31 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 				return 0;
 			}
 
+			/* NTS: The meaning of bits 1:0 in register 0xB9
+			 *
+			 *      00 single DMA transfer mode
+			 *      01 demand DMA transfer mode, 2 bytes/request
+			 *      10 demand DMA transfer mode, 4 bytes/request
+			 *      11 reserved
+			 *
+			 * NOTES on what happens if you set bits 1:0 (DMA transfer type) to the "reserved" 11 value:
+			 *
+			 *      ESS 688 (Sharp laptop)          Nothing, apparently. Treated the same as 4 bytes/request
+			 *
+			 *      ESS 1887 (Compaq Presario)      Triggers a hardware bug where the chip appears to fetch
+			 *                                      3 bytes per demand transfer but then only handle 1 byte,
+			 *                                      which translates to audio playing at 3x the sample rate
+			 *                                      it should be. NOT because the DAC is running any faster,
+			 *                                      but because the chip is only playing back every 3rd sample!
+			 *                                      This play only 3rds behavior is consistent across 8/16-bit
+			 *                                      PCM and mono/stereo.
+			 */
+
+			/* TODO: This should be one of the options the user can tinker with for testing! */
 			if (cx->goldplay_mode)
 				b = cx->buffer_16bit ? 1 : 0;	/* demand transfer DMA 2 bytes (16-bit) or single transfer DMA (8-bit) */
-			else if (cx->ess_chipset == SNDSB_ESS_1869)
-				b = 1;	/* demand transfer DMA 2 bytes per request. The chipset will play too fast if we use the 4 bytes/request mode (as seen on a Compaq) */
 			else
-				b = 3;  /* demand transfer DMA 4 bytes per request */
+				b = 2;  /* demand transfer DMA 4 bytes per request */
 
 			if (sndsb_ess_write_controller(cx,0xB9,b) == -1) {
 				_sti();

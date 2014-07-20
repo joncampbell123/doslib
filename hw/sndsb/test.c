@@ -1,4 +1,9 @@
 
+/* TODO: The ESS control register dump should show text on the side that provides a
+ *       visual "guide" on what the bits are supposed to mean (slightly different
+ *       text for ESS 688 vs ESS 1887, etc.) so the user has more guidance in poking
+ *       around those control registers */
+
 /* Notes:
  *    ESS 688 PnP AudioDrive:
  *       - Plug and Play enumerated from the BIOS on a Sharp laptop (uses IRQ 9?!?)
@@ -2083,7 +2088,7 @@ void play_with_ess() {
 				}
 				bb = (unsigned char)bbi;
 				vga_moveto(x,y);
-				vga_write_color(cc == selector ? 0x70 : 0x1E);
+				vga_write_color(cc == selector ? 0x70 : (ess688_not_present[cc] ? 0x16 : 0x1E));
 				sprintf(temp_str,"%02X ",bb);
 				vga_write(temp_str);
 
