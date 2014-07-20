@@ -848,3 +848,26 @@ but there are additional registers not listed.
 0xB0               Unknown (always reads 0xB0, writes change register 0xA0 instead)
 0xB3               Unknown (only bit 0 is changeable)
 
+ESS 1869 undocumented registers (as seen on a Compaq branded ESS)
+-----------------------------------------------------------------
+
+0xA0               Unknown (only 2:0 bits are changeable)
+0xA3               Unknown (all 8 bits changeable)
+0xA6               Zero (not changeable)
+0xA7               Zero (not changeable)
+0xA8               This actually is documented, but some weird behavior observed
+                     with bits 1:0. In the datasheet, bit 0 is a mono/stereo
+                     select. Actual behavior with 1:0:
+
+                     00 = only one audio channel played
+                     01 = normal stereo playback
+                     02 = chip output is difference between L-R rather than sum.
+                          perhaps a good way to hear the Dobly "surround" channel of movie audio,
+                          or to filter out the vocals of most music, or to hear just how destructive
+                          your MP3 encoder is to audio you "can't hear".
+                     03 = normal stereo playback
+0xA9               Unknown, bits 6:4 and 2:0 are writable, bits 3 and 7 have a mind of their own
+0xAA-0xAF          Zero (not changeable)
+0xB0               Unknown (always reads 0xB0, writes change register 0xA0 instead)
+0xB3               Unknown (only bit 0 is changeable)
+
