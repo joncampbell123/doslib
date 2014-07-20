@@ -470,6 +470,17 @@ Flip sign mode:
     Bochs: Not fully supported. Loud static.
     Gallant SC-6000 clone: Fully supported
 
+ESS 688 auto-init does not fire IRQ:
+
+    ESS chipsets work perfectly fine with auto-init and single-cycle modes,
+    EXCEPT that for whatever reason, the chipset does not fire the IRQ if
+    playing or recording 16-bit PCM and using auto-init DSP mode.
+
+    If designing a game to use this library, this may be something to keep
+    in mind if you are considering having music playback or synthesis occur
+    from an IRQ---you cannot rely on using the SB IRQ to do this on ESS
+    chipsets.
+
 BUGS
 ----
 
@@ -790,4 +801,28 @@ it completes the block early with data still in the FIFO, and then
 forgets the contents of the FIFO. Auto-init without FIFO apparently
 has no effect, but I would bet that if the ISA bus was busy with
 another device the lack of FIFO might cause some audible effects.
+
+ESS 688, changing the IRQ and PnP BIOS conflicts
+------------------------------------------------
+
+If you change the IRQ from this test program, understand that if the
+ESS chipset is listed by the PnP BIOS, the original IRQ (now wrong)
+will be used from the PnP BIOS enumeration and IRQ will appear not
+to work. To avoid this, run the test program with /nopnp every time
+after changing the IRQ.
+
+ESS chipsets and the ESS control register raw mode
+--------------------------------------------------
+
+For debugging purposes, the program allows you to poke at the ESS
+registers as raw byte values. Understand that doing this may cause
+temporary issues with the hardware or cause problems and hangs with
+the software. Poke at the registers at your own risk.
+
+By default, only registers 0xA0-0xB9 are shown for ESS 688 chipsets.
+Registers 0x00-0x9F do not exist, and on ESS 688 chipsets, the DSP
+will not return any data for registers 0xBA-0xBF so they are blocked
+off. If you want to make sure that the registers exist, type 'p' to
+trigger a re-detection cycle. Know that for undefined registers, the
+program may hang temporarily waiting for DSP timeouts.
 
