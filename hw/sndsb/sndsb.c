@@ -1317,15 +1317,16 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 	else if (cx->dsp_vmaj == 3) {
 		if (cx->ess_chipset != 0) { /* ESS 688/1869 */
-			/* FIXME: Apparently the ESS 688 in a laptop I test on is quite capable of running at 48KHz
-			 *        or even beyond that up to 64KHz barring ISA bus limitations (16-bit stereo at 54KHz
-			 *        audibly "warbles" because of that). */
+			/* NTS: The ESS 688 (Sharp laptop) and ESS 1869 (Compaq desktop) I test against seems quite capable
+			 *      of playing back at 48KHz, in fact it will happily go beyond 48KHz up to 64KHz in my tests
+			 *      barring ISA bus limitations (16-bit stereo at 54KHz audibly "warbles" for example). For
+			 *      for consistentcy's sake, we'll just go ahead and say the chip goes up to 48KHz */
 			cx->dsp_direct_dac_poll_retry_timeout = 4; /* DSP is responsive to direct DAC to allow lesser timeout */
-			cx->max_sample_rate_dsp4xx = 44100;
-			cx->max_sample_rate_sb_hispeed_rec = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
-			cx->max_sample_rate_sb_hispeed = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
-			cx->max_sample_rate_sb_play = 44100; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
-			cx->max_sample_rate_sb_rec = 44100; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+			cx->max_sample_rate_dsp4xx = 48000;
+			cx->max_sample_rate_sb_hispeed_rec = 48000;
+			cx->max_sample_rate_sb_hispeed = 48000;
+			cx->max_sample_rate_sb_play = 48000;
+			cx->max_sample_rate_sb_rec = 48000;
 			cx->enable_adpcm_autoinit = 0; /* does NOT support auto-init ADPCM */
 			/* also: hi-speed DSP is blocking, and it matters: to go above 23KHz you have to use hi-speed DSP commands */
 		}
