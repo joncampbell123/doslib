@@ -2052,6 +2052,7 @@ void play_with_ess() {
 			vga_write(temp_str);
 			vga_write("\n");
 
+			redraw = uiredraw = 0;
 			if (selector > 0xFF) selector = 0xFF;
 			else if (selector < 0) selector = 0;
 			offset = 0;
