@@ -1380,6 +1380,10 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		sndsb_interrupt_ack(cx,3);
 	}
 
+	/* If an ESS chipset, there's a good chance that 16-bit PCM is played over the 8-bit DMA channel */
+	if (cx->ess_extensions && cx->dma16 < 0 && cx->dma8 >= 0)
+		cx->dma16 = cx->dma8;
+
 	/* DSP 2xx and earlier do not have auto-init commands */
 	if (cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))
 		cx->dsp_autoinit_command = 0;
