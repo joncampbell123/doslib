@@ -3168,7 +3168,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 				return 0;
 			}
 
-			t16 = -(lv+1);
+			t16 = -lv;
 			if (sndsb_ess_write_controller(cx,0xA4,t16) == -1 || /* DMA transfer count low */
 				sndsb_ess_write_controller(cx,0xA5,t16>>8) == -1) { /* DMA transfer count high */
 				_sti();
@@ -3421,7 +3421,7 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 				unsigned short t16;
 				unsigned char b;
 
-				t16 = -(lv+1);
+				t16 = -lv;
 				sndsb_ess_write_controller(cx,0xA4,t16); /* DMA transfer count low */
 				sndsb_ess_write_controller(cx,0xA5,t16>>8); /* DMA transfer count high */
 
