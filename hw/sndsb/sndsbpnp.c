@@ -228,11 +228,14 @@ int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,stru
 							}
 						}
 					}
-					else {
+					else { /* ESS */
+						/* the PnP BIOS on the Compaq unit I have for the ESS 1868 lists two
+						 * DMA channels (second one being DMA channel 5) but only the first
+						 * one is used for 8 and 16-bit (so then the second one is the 2nd
+						 * channel for full duplex?) */
 						for (i=0;i < 8;i++) {
 							if (x->dma_mask & (1U << (unsigned int)i)) {
 								if (cx->dma8 < 0 && i < 4) cx->dma8 = i;
-								if (cx->dma16 < 0 && i >= 4) cx->dma16 = i;
 							}
 						}
 					}

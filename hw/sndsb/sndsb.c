@@ -1199,13 +1199,18 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 								case 0xF:
 									cx->irq = 10;
 									break;
-								default: /* "2,9,all others" */
+								case 0x0: /* "2,9,all others" */
 									cx->irq = 9;
+									break;
+								default:
 									break;
 							}
 						}
 						if ((in=sndsb_ess_read_controller(cx,0xB2)) != -1) { /* 0xB2 DRQ Control */
 							switch (in&0xF) {
+								case 0x0:
+									cx->dma8 = cx->dma16 = -1;
+									break;
 								case 0x5:
 									cx->dma8 = cx->dma16 = 0;
 									break;
@@ -1216,7 +1221,10 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 									cx->dma8 = cx->dma16 = 3;
 									break;
 								default:
-									cx->dma8 = cx->dma16 = -1;
+									if (cx->dma8 >= 0 && cx->dma16 < 0)
+										cx->dma16 = cx->dma8;
+									if (cx->dma16 >= 0 && cx->dma8 < 0)
+										cx->dma8 = cx->dma16;
 									break;
 							}
 						}
@@ -1227,6 +1235,14 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 						 *       rate we get audio that plays about 2.5x too fast. Maybe this is
 						 *       just an artifact of testing the code on a Compaq ESS1887 chipset. */
 						if (sndsb_probe_options.experimental_ess) cx->ess_extensions = 1;
+
+						/* The ESS 1869 (on the Compaq) appears to use the same 8-bit DMA for 16-bit as well.
+						 * Perhaps the second DMA channel listed by the BIOS is the second channel (for full
+						 * duplex?) */
+						if (cx->dma8 >= 0 && cx->dma16 < 0)
+							cx->dma16 = cx->dma8;
+						if (cx->dma16 >= 0 && cx->dma8 < 0)
+							cx->dma8 = cx->dma16;
 					}
 
 					/* TODO: 1869 datasheet recommends reading mixer index 0x40
