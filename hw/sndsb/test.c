@@ -2025,7 +2025,8 @@ void change_param_menu() {
 }
 
 #ifdef SB_MIXER
-static unsigned char ess688_not_present[0x100]={0};
+static unsigned char ess688_not_present_init=1;
+static unsigned char ess688_not_present[0x100];
 void play_with_ess() {
 	unsigned char bb;
 	unsigned char loop=1;
@@ -2038,6 +2039,17 @@ void play_with_ess() {
 	int bbi;
 
 	if (!sb_card->ess_extensions) return;
+
+	if (ess688_not_present_init) {
+		ess688_not_present_init = 0;
+		if (sb_card->ess_chipset == SNDSB_ESS_688) {
+			for (cc=0x00;cc < 0xFF;cc++) ess688_not_present[cc] = 1;
+			for (cc=0xA0;cc < 0xBA;cc++) ess688_not_present[cc] = 0;
+		}
+		else {
+			for (cc=0x00;cc < 0xFF;cc++) ess688_not_present[cc] = 0;
+		}
+	}
 
 	while (loop) {
 		if (redraw || uiredraw) {
@@ -2136,6 +2148,8 @@ void play_with_ess() {
 
 				redraw = 1;
 			}
+			else if (c == ' ')
+				redraw = 1;
 			else if (c == 27)
 				loop = 0;
 			else if (c == 0x4800) { /* up arrow */
@@ -2351,6 +2365,8 @@ void play_with_mixer() {
 			}
 			else if (c == 27)
 				loop = 0;
+			else if (c == ' ')
+				redraw = 1;
 			else if (c == 0x4800) { /* up arrow */
 				if (rawmode) {
 					selector -= 0x10;
