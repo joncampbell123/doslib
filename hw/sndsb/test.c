@@ -2048,7 +2048,7 @@ void play_with_ess() {
 			}
 			vga_moveto(0,2);
 			vga_write_color(0x1F);
-			sprintf(temp_str,"x=enter byte value\n");
+			sprintf(temp_str,"x=enter byte value p=re-detect\n");
 			vga_write(temp_str);
 			vga_write("\n");
 
@@ -2089,7 +2089,11 @@ void play_with_ess() {
 			int c = getch();
 			if (c == 0) c = getch() << 8;
 
-			if (c == 'x') {
+			if (c == 'p') {
+				for (cc=0;cc < 256;cc++) ess688_not_present[cc] = 0;
+				redraw = 1;
+			}
+			else if (c == 'x') {
 				int a,b;
 
 				vga_moveto(0,2);
