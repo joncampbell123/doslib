@@ -2025,6 +2025,119 @@ void change_param_menu() {
 }
 
 #ifdef SB_MIXER
+void play_with_ess() {
+	unsigned char bb;
+	unsigned char loop=1;
+	unsigned char redraw=1;
+	unsigned char uiredraw=1;
+	signed short offset=0;
+	signed short selector=0;
+	signed short cc,x,y;
+	VGA_ALPHA_PTR vga;
+
+	if (!sb_card->ess_extensions) return;
+
+	while (loop) {
+		if (redraw || uiredraw) {
+			_cli();
+			if (redraw) {
+				for (vga=vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+				ui_anim(1);
+			}
+			vga_moveto(0,2);
+			vga_write_color(0x1F);
+			sprintf(temp_str,"x=enter byte value\n");
+			vga_write(temp_str);
+			vga_write("\n");
+
+			if (selector > 0xFF) selector = 0xFF;
+			else if (selector < 0) selector = 0;
+			offset = 0;
+			for (cc=0;cc < 256;cc++) {
+				x = ((cc & 15)*3)+4;
+				y = (cc >> 4)+4;
+				bb = sndsb_ess_read_controller(sb_card,(unsigned char)cc);
+				vga_moveto(x,y);
+				vga_write_color(cc == selector ? 0x70 : 0x1E);
+				sprintf(temp_str,"%02X ",bb);
+				vga_write(temp_str);
+
+				if ((cc&15) == 0) {
+					sprintf(temp_str,"%02x  ",cc&0xF0);
+					vga_write_color(0x1F);
+					vga_moveto(0,y);
+					vga_write(temp_str);
+				}
+				if (cc <= 15) {
+					sprintf(temp_str,"%02x ",cc);
+					vga_write_color(0x1F);
+					vga_moveto(x,y-1);
+					vga_write(temp_str);
+				}
+			}
+		}
+
+		if (kbhit()) {
+			int c = getch();
+			if (c == 0) c = getch() << 8;
+
+			if (c == 'x') {
+				int a,b;
+
+				vga_moveto(0,2);
+				vga_write_color(0x1F);
+				vga_write("Type hex value:                             \n");
+				vga_write_sync();
+
+				a = getch();
+				vga_moveto(20,2);
+				vga_write_color(0x1E);
+				vga_writec((char)a);
+				vga_write_sync();
+
+				b = getch();
+				vga_moveto(21,2);
+				vga_write_color(0x1E);
+				vga_writec((char)b);
+				vga_write_sync();
+
+				if (isxdigit(a) && isxdigit(b)) {
+					unsigned char nb;
+					nb = (unsigned char)xdigit2int(a) << 4;
+					nb |= (unsigned char)xdigit2int(b);
+					sndsb_ess_write_controller(sb_card,(unsigned char)selector,nb);
+				}
+
+				redraw = 1;
+			}
+			else if (c == 27)
+				loop = 0;
+			else if (c == 0x4800) { /* up arrow */
+				selector -= 0x10;
+				selector &= 0xFF;
+				uiredraw=1;
+			}
+			else if (c == 0x4B00) { /* left arrow */
+				selector--;
+				selector &= 0xFF;
+				uiredraw=1;
+			}
+			else if (c == 0x4D00) { /* right arrow */
+				selector++;
+				selector &= 0xFF;
+				uiredraw=1;
+			}
+			else if (c == 0x5000) { /* down arrow */
+				selector += 0x10;
+				selector &= 0xFF;
+				uiredraw=1;
+			}
+		}
+
+		ui_anim(0);
+	}
+}
+
 void play_with_mixer() {
 	signed short visrows=25-(4+1);
 	signed short visy=4;
@@ -2134,7 +2247,7 @@ void play_with_mixer() {
 				sndsb_choose_mixer(sb_card,mixer);
 				redraw=1;
 			}
-			else if (isdigit(c)) {
+			else if (isdigit(c) && !rawmode) {
 				int i=0;
 				char temp_str[7];
 				unsigned int val;
@@ -2426,6 +2539,8 @@ static const struct vga_menu_item main_menu_device_trigger_irq =
 #ifdef SB_MIXER
 static const struct vga_menu_item main_menu_device_mixer_controls =
 	{"Mixer controls",	'm',	0,	0};
+static const struct vga_menu_item main_menu_device_ess_controls =
+	{"ESS 688/1868 controls",'e',	0,	0};
 #endif
 #ifdef CARD_INFO_AND_CHOOSER
 static const struct vga_menu_item main_menu_device_info =
@@ -2448,6 +2563,7 @@ static const struct vga_menu_item* main_menu_device[] = {
 	&main_menu_device_trigger_irq,
 #ifdef SB_MIXER
 	&main_menu_device_mixer_controls,
+	&main_menu_device_ess_controls,
 #endif
 #ifdef CARD_INFO_AND_CHOOSER
 	&main_menu_device_info,
@@ -4459,6 +4575,11 @@ int main(int argc,char **argv) {
 #ifdef SB_MIXER
 			else if (mitem == &main_menu_device_mixer_controls) {
 				play_with_mixer();
+				bkgndredraw = 1;
+				redraw = 1;
+			}
+			else if (mitem == &main_menu_device_ess_controls) {
+				play_with_ess();
 				bkgndredraw = 1;
 				redraw = 1;
 			}
