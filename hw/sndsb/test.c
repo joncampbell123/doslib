@@ -2025,15 +2025,17 @@ void change_param_menu() {
 }
 
 #ifdef SB_MIXER
+static unsigned char ess688_not_present[0x100]={0};
 void play_with_ess() {
 	unsigned char bb;
 	unsigned char loop=1;
 	unsigned char redraw=1;
 	unsigned char uiredraw=1;
 	signed short offset=0;
-	signed short selector=0;
+	signed short selector=0xA0;
 	signed short cc,x,y;
 	VGA_ALPHA_PTR vga;
+	int bbi;
 
 	if (!sb_card->ess_extensions) return;
 
@@ -2056,7 +2058,13 @@ void play_with_ess() {
 			for (cc=0;cc < 256;cc++) {
 				x = ((cc & 15)*3)+4;
 				y = (cc >> 4)+4;
-				bb = sndsb_ess_read_controller(sb_card,(unsigned char)cc);
+				if (ess688_not_present[cc])
+					bbi = -1;
+				else {
+					bbi = sndsb_ess_read_controller(sb_card,(unsigned char)cc);
+					if (bbi < 0) ess688_not_present[cc] = 1;
+				}
+				bb = (unsigned char)bbi;
 				vga_moveto(x,y);
 				vga_write_color(cc == selector ? 0x70 : 0x1E);
 				sprintf(temp_str,"%02X ",bb);
@@ -2106,6 +2114,7 @@ void play_with_ess() {
 					nb = (unsigned char)xdigit2int(a) << 4;
 					nb |= (unsigned char)xdigit2int(b);
 					sndsb_ess_write_controller(sb_card,(unsigned char)selector,nb);
+					ess688_not_present[selector] = 0;
 				}
 
 				redraw = 1;
