@@ -3141,6 +3141,79 @@ void conf_sound_card() {
 	 *                                    to change the configuration out from under it */
 	else if (sb_card->windows_creative_sb16_drivers) {
 	}
+	else if (sb_card->ess_extensions && sb_card->ess_chipset == SNDSB_ESS_688) {
+		/* ESS control registers also allow changing IRQ/DMA, at least on non-PnP versions.
+		 * It's also possible to change the base I/O, even if the PnP protocol is not available,
+		 * but that's a bit too iffy at the moment to play with.
+		 *
+		 * TODO: This configuration method is said not to work if the ESS 688 is a ISA PnP
+		 * device. So far the only ESS 688 have is in a laptop where the chip is "embedded"
+		 * into the motherboard and is "Plug & Play" only in that the PnP BIOS reports it
+		 * in device node enumeration, yet I am apparently able to change IRQ/DMA resources
+		 * this way. */
+		conf_item_index_lookup(&ess_688[0]/*IRQ*/,sb_card->irq);
+		conf_item_index_lookup(&ess_688[1]/*DMA*/,sb_card->dma8);
+		if (conf_sound_card_list("ESS 688",ess_688,sizeof(ess_688)/sizeof(ess_688[0]),56)) {
+			signed char IRQ = ess_688_irq[ess_688[0].setting];/*IRQ*/
+			signed char DMA8 = ess_688_dma[ess_688[1].setting];/*DMA*/
+			unsigned char do_stop_start = wav_playing;
+			unsigned char irq_i=0,dma_i=0;
+			int tmp;
+
+			if (do_stop_start) stop_play();
+
+			if (sb_card->irq != -1) {
+				_dos_setvect(irq2int(sb_card->irq),old_irq);
+				if (old_irq_masked) p8259_mask(sb_card->irq);
+			}
+
+			if (DMA8 > 3) DMA8 = -1;
+
+			while (dma_i < 3 && ess_688_map_to_dma[dma_i] != DMA8) dma_i++;
+			while (irq_i < 7 && ess_688_map_to_irq[irq_i] != IRQ) irq_i++;
+
+			/* byte expansion:
+			 *
+			 *   00 = 0000
+			 *   01 = 0101
+			 *   10 = 1010
+			 *   11 = 1111
+			 */
+			dma_i = (dma_i & 3) | ((dma_i & 3) << 2);
+			irq_i = (irq_i & 3) | ((irq_i & 3) << 2);
+
+			/* write the ESS registers to make the change */
+			/* NTS: on later chipsets (PnP) these are readonly */
+			tmp = sndsb_ess_read_controller(sb_card,0xB1); /* interrupt control */
+			if (tmp >= 0) {
+				tmp = (tmp & 0xF0) + irq_i;
+				sndsb_ess_write_controller(sb_card,0xB1,(unsigned char)tmp);
+			}
+
+			tmp = sndsb_ess_read_controller(sb_card,0xB2); /* DMA control */
+			if (tmp >= 0) {
+				tmp = (tmp & 0xF0) + dma_i;
+				sndsb_ess_write_controller(sb_card,0xB2,(unsigned char)tmp);
+			}
+			sndsb_reset_dsp(sb_card);
+
+			/* then the library needs to be updated */
+			/* TODO: there should be a sndsb_ call to do this! */
+			sb_card->dma8 = DMA8;
+			sb_card->dma16 = DMA8;
+			sb_card->irq = IRQ;
+
+			if (sb_card->irq != -1) {
+				old_irq_masked = p8259_is_masked(sb_card->irq);
+				old_irq = _dos_getvect(irq2int(sb_card->irq));
+				_dos_setvect(irq2int(sb_card->irq),sb_irq);
+				p8259_unmask(sb_card->irq);
+			}
+
+			if (do_stop_start) begin_play();
+		}
+		return;
+	}
 	/* -------- ISA Plug & Play --------- */
 	else if (sb_card->pnp_id != 0) {
 		if (ISAPNP_ID_FMATCH(sb_card->pnp_id,'C','T','L')) {
@@ -3265,73 +3338,6 @@ void conf_sound_card() {
 			/* TODO: there should be a sndsb_ call to do this! */
 			sb_card->dma8 = DMA8;
 			sb_card->dma16 = DMA16;
-			sb_card->irq = IRQ;
-
-			if (sb_card->irq != -1) {
-				old_irq_masked = p8259_is_masked(sb_card->irq);
-				old_irq = _dos_getvect(irq2int(sb_card->irq));
-				_dos_setvect(irq2int(sb_card->irq),sb_irq);
-				p8259_unmask(sb_card->irq);
-			}
-
-			if (do_stop_start) begin_play();
-		}
-		return;
-	}
-	else if (sb_card->ess_extensions && sb_card->ess_chipset == SNDSB_ESS_688) {
-		/* ESS control registers also allow changing IRQ/DMA, at least on non-PnP versions.
-		 * It's also possible to change the base I/O, even if the PnP protocol is not available,
-		 * but that's a bit too iffy at the moment to play with. */
-		conf_item_index_lookup(&ess_688[0]/*IRQ*/,sb_card->irq);
-		conf_item_index_lookup(&ess_688[1]/*DMA*/,sb_card->dma8);
-		if (conf_sound_card_list("ESS 688",ess_688,sizeof(ess_688)/sizeof(ess_688[0]),56)) {
-			signed char IRQ = ess_688_irq[ess_688[0].setting];/*IRQ*/
-			signed char DMA8 = ess_688_dma[ess_688[1].setting];/*DMA*/
-			unsigned char do_stop_start = wav_playing;
-			unsigned char irq_i=0,dma_i=0;
-			int tmp;
-
-			if (do_stop_start) stop_play();
-
-			if (sb_card->irq != -1) {
-				_dos_setvect(irq2int(sb_card->irq),old_irq);
-				if (old_irq_masked) p8259_mask(sb_card->irq);
-			}
-
-			if (DMA8 > 3) DMA8 = -1;
-
-			while (dma_i < 3 && ess_688_map_to_dma[dma_i] != DMA8) dma_i++;
-			while (irq_i < 7 && ess_688_map_to_irq[irq_i] != IRQ) irq_i++;
-
-			/* byte expansion:
-			 *
-			 *   00 = 0000
-			 *   01 = 0101
-			 *   10 = 1010
-			 *   11 = 1111
-			 */
-			dma_i = (dma_i & 3) | ((dma_i & 3) << 2);
-			irq_i = (irq_i & 3) | ((irq_i & 3) << 2);
-
-			/* write the ESS registers to make the change */
-			/* NTS: on later chipsets (PnP) these are readonly */
-			tmp = sndsb_ess_read_controller(sb_card,0xB1); /* interrupt control */
-			if (tmp >= 0) {
-				tmp = (tmp & 0xF0) + irq_i;
-				sndsb_ess_write_controller(sb_card,0xB1,(unsigned char)tmp);
-			}
-
-			tmp = sndsb_ess_read_controller(sb_card,0xB2); /* DMA control */
-			if (tmp >= 0) {
-				tmp = (tmp & 0xF0) + dma_i;
-				sndsb_ess_write_controller(sb_card,0xB2,(unsigned char)tmp);
-			}
-			sndsb_reset_dsp(sb_card);
-
-			/* then the library needs to be updated */
-			/* TODO: there should be a sndsb_ call to do this! */
-			sb_card->dma8 = DMA8;
-			sb_card->dma16 = DMA8;
 			sb_card->irq = IRQ;
 
 			if (sb_card->irq != -1) {
