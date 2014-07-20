@@ -501,6 +501,27 @@ int sndsb_read_dsp(struct sndsb_ctx *cx) {
 	return c;
 }
 
+int sndsb_read_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms) {
+	unsigned int patience = (unsigned int)(timeout_ms / 10UL);
+	int c = -1;
+
+	do {
+		if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS+(cx->dsp_alias_port?1:0)) & 0x80) { /* data available? */
+			c = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
+			break;
+		}
+
+		t8254_wait(t8254_us2ticks(10));
+		if (--patience == 0) {
+			DEBUG(fprintf(stdout,"sndsb_read_dsp() read timeout\n"));
+			return -1;
+		}
+	} while (1);
+
+	DEBUG(fprintf(stdout,"sndsb_read_dsp() == 0x%02X\n",c));
+	return c;
+}
+
 unsigned int sndsb_ess_set_extended_mode(struct sndsb_ctx *cx,int enable) {
 	if (cx->ess_chipset == 0) return 0; /* if not an ESS chipset then, no */
 	if (!cx->ess_extensions) return 0; /* if caller/user says not to use extensions, then, no */
@@ -694,6 +715,22 @@ int sndsb_probe_mpu401(struct sndsb_ctx *cx) {
 
 int sndsb_write_dsp(struct sndsb_ctx *cx,uint8_t d) {
 	unsigned int patience = 25000;
+
+	DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
+	do {
+		if (inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0)) & 0x80)
+			t8254_wait(t8254_us2ticks(10));
+		else {
+			outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),d);
+			return 1;
+		}
+	} while (--patience != 0);
+	DEBUG(fprintf(stdout,"sndsb_write_dsp() timeout\n"));
+	return 0;
+}
+
+int sndsb_write_dsp_timeout(struct sndsb_ctx *cx,uint8_t d,unsigned long timeout_ms) {
+	unsigned int patience = (unsigned int)(timeout_ms / 10UL);
 
 	DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
 	do {
