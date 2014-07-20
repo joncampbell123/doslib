@@ -826,8 +826,8 @@ off. If you want to make sure that the registers exist, type 'p' to
 trigger a re-detection cycle. Know that for undefined registers, the
 program may hang temporarily waiting for DSP timeouts.
 
-ESS undocumented registers
---------------------------
+ESS 688 undocumented registers
+------------------------------
 
 Perhaps this is simply lack of documentation in the ES1869 datasheet,
 but there are additional registers not listed.
