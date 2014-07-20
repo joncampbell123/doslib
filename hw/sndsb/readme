@@ -848,8 +848,8 @@ but there are additional registers not listed.
 0xB0               Unknown (always reads 0xB0, writes change register 0xA0 instead)
 0xB3               Unknown (only bit 0 is changeable)
 
-ESS 1869 undocumented registers (as seen on a Compaq branded ESS)
------------------------------------------------------------------
+ESS 1869 undocumented registers (as seen on a Compaq branded ESS 1887)
+----------------------------------------------------------------------
 
 0xA0               Unknown (only 2:0 bits are changeable)
 0xA3               Unknown (all 8 bits changeable)
