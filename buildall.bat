@@ -8,6 +8,11 @@ cd build-logs
 call buildall.bat %WHAT%
 cd ..
 
+echo Building: dosdrv
+cd dosdrv
+call buildall.bat %WHAT%
+cd ..
+
 echo Building: ext
 cd ext
 call buildall.bat %WHAT%
