@@ -5,10 +5,10 @@ org 0			; MS-DOS .SYS style
 
 ; =================== HEADER ====================
 dw	0xFFFF,0xFFFF	; next device ptr
-dw	0xA000		; bit 15: 1=character device
+dw	0xA800		; bit 15: 1=character device
 			; bit 14: 0=does not support IOCTL control strings
 			; bit 13: 0=does not support output until busy
-			; bit 11: 0=does not understand open/close
+			; bit 11: 1=understands open/close
 			; bit  6: 0=does not understand 3.2 functions
 			; bit 3:0: 0=not NUL, STDIN, STDOUT, CLOCK, etc.
 dw	drv_strategy	; offset of strategy routine
@@ -70,8 +70,8 @@ func_table:	dw	func_init			; 0x00 INIT
 		dw	output_status			; 0x0A OUTPUT STATUS
 		dw	ignore				; 0x0B FLUSH OUTPUT BUFFERS
 		dw	bad_request			; 0x0C I/O write
-		dw	ignore				; 0x0D open
-		dw	ignore				; 0x0E close
+		dw	open				; 0x0D open
+		dw	close				; 0x0E close
 		dw	bad_request			; 0x0F REMOVABLE MEDIA CALL
 		dw	bad_request			; 0x10 OUTPUT UNTIL BUSY
 
@@ -89,6 +89,12 @@ func_init:						; 0x00 INIT
 ignore:							; 0x01 MEDIA CHECK
 							; 0x07 FLUSH INPUT BUFFERS
 							; 0x0B FLUSH OUTPUT BUFFERS
+		mov		word [es:bx+3],0x0100
+		ret
+
+open:
+close:
+		mov		word [cs:data_fp],data
 							; 0x0D open
 							; 0x0E close
 		mov		word [es:bx+3],0x0100
