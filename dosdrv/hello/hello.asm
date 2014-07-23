@@ -21,9 +21,11 @@ req_pkt:dd 0
 
 ; =================== Strategy routine ==========
 drv_strategy:
-	mov		[cs:req_pkt+0],bx
-	mov		[cs:req_pkt+2],es
-	retf
+	mov		[cs:req_pkt+0],bx		; BYTE ES:BX+0x00 = length of request header
+	mov		[cs:req_pkt+2],es		; BYTE ES:BX+0x01 = unit number
+	retf						; BYTE ES:BX+0x02 = command code
+							; WORD ES:BX+0x03 = driver return status word
+							;      ES:BX+0x05 = reserved??
 
 ; =================== Interrupt routine =========
 drv_interrupt:
@@ -57,7 +59,7 @@ drv_interrupt:
 ; ===================== func table ================
 func_table:	dw	func_init			; 0x00 INIT
 		dw	ignore				; 0x01 MEDIA CHECK
-		dw	ignore				; 0x02 BUILD BIOS BPB
+		dw	bad_request			; 0x02 BUILD BIOS BPB
 		dw	bad_request			; 0x03 I/O read
 		dw	read				; 0x04 READ
 		dw	nd_read				; 0x05 NON-DESTRUCTIVE READ
@@ -74,13 +76,17 @@ func_table:	dw	func_init			; 0x00 INIT
 		dw	bad_request			; 0x10 OUTPUT UNTIL BUSY
 
 func_init:						; 0x00 INIT
-		mov		word [es:bx+3],0x0100
-		mov		word [es:bx+14],end_resident
-		mov		word [es:bx+16],cs
+							;  BYTE ES:BX+0x0D = number of units initialized
+							; DWORD ES:BX+0x0E = return break address (last address of driver)
+							; DWORD ES:BX+0x12 = pointer to the character on the CONFIG.SYS line following DEVICE=
+							;                    block devices return FAR pointer to BIOS param block here
+							;  BYTE ES:BX+0x16 = drive number (A=0, B=1) for first unit of block driver (MS-DOS 3+)
+		mov		word [es:bx+3],0x0100	; status: no error, done
+		mov		word [es:bx+14],end_resident	; change "last address in driver"
+		mov		word [es:bx+16],cs	; NTS: we MUST change this, else Windows 95 chokes
 		ret
 
 ignore:							; 0x01 MEDIA CHECK
-							; 0x02 BUILD BIOS BPB
 							; 0x07 FLUSH INPUT BUFFERS
 							; 0x0B FLUSH OUTPUT BUFFERS
 							; 0x0D open
@@ -88,7 +94,8 @@ ignore:							; 0x01 MEDIA CHECK
 		mov		word [es:bx+3],0x0100
 		ret
 
-bad_request:						; 0x03 I/O read
+bad_request:						; 0x02 BUILD BIOS BPB
+							; 0x03 I/O read
 							; 0x0C I/O write
 							; 0x0F REMOVABLE MEDIA CALL
 							; 0x10 OUTPUT UNTIL BUSY
@@ -96,11 +103,42 @@ bad_request:						; 0x03 I/O read
 		ret
 
 read:							; 0x04 READ
-		mov		word [es:bx+3],0x8105
+							;  BYTE ES:BX+0x0D = media descriptor byte
+							; DWORD ES:BX+0x0E = far pointer to buffer to read to
+							;  WORD ES:BX+0x12 = count of bytes to read, on return, count of bytes read
+							;  WORD ES:BX+0x14 = starting block number (block devices)
+							; DWORD ES:BX+0x16 = far pointer to volume label if error 15 reported
+		mov		word [es:bx+3],0x0100
+		push		cx
+		push		di
+		push		bp
+		xor		bp,bp			; BP = return byte counter
+		lds		di,[es:bx+0x0E]		; DS:DI = caller's buffer
+		mov		cx,[es:bx+0x12]		; CX = count of bytes to read
+.rloop:		jcxz		.end
+		mov		si,word [cs:data_fp]
+		mov		al,[cs:si]
+		mov		byte [di],al
+		inc		di			; DS:DI++
+		dec		cx			; count--
+		inc		bp			; BP++
+		inc		word [cs:data_fp]
+		cmp		word [cs:data_fp],data_eof
+		jnz		.rloop
+		mov		word [cs:data_fp],data
+		jmp		.rloop
+.end:		mov		[es:bx+0x12],bp
+		pop		bp
+		pop		di
+		pop		cx
 		ret
 
 nd_read:						; 0x05 NON-DESTRUCTIVE READ
-		mov		word [es:bx+3],0x8105
+							;  BYTE ES:BX+0x0D = return char
+		mov		si,word [cs:data_fp]
+		mov		al,[cs:si]
+		mov		byte [es:bx+0x0D],al
+		mov		word [es:bx+3],0x0100
 		ret
 
 write:							; 0x08 WRITE
@@ -115,6 +153,10 @@ input_status:						; 0x06 INPUT STATUS
 output_status:						; 0x0A OUTPUT STATUS
 		mov		word [es:bx+3],0x8105
 		ret
+
+data_fp:	dw		data
+data:		db		"Hello world! First MS-DOS device driver!",13,10
+data_eof:	equ		$-$$
 
 end_resident:	equ		$-$$
 
