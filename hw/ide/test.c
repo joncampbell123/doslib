@@ -2172,7 +2172,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					do_ide_controller_user_wait_drive_ready(ide);
 				}
 			}
-
 			else if (select == 4) { /* check power mode */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
 					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
@@ -2216,6 +2215,144 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 
 					wait_for_enter_or_escape();
 					vga_msg_box_destroy(&vgabox);
+				}
+			}
+			else if (select == 5 || select == 6) { /* identify device OR identify packet device */
+				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
+					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
+					idelib_controller_reset_irq_counter(ide);
+					idelib_controller_write_command(ide,select == 6 ? 0xA1 : 0xEC); /* <- (A1h) identify packet device (ECh) identify device */
+					if (ide->flags.io_irq_enable) {
+						do_ide_controller_user_wait_irq(ide,1);
+						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+					}
+					do_ide_controller_user_wait_busy_controller(ide);
+					do_ide_controller_user_wait_drive_ready(ide);
+					if (!(ide->last_status&1)) {
+						/* NOTE TO SELF: A lot of docs on the web imply that DRQ is something you consult
+						 *               to check if the device is ready for one WORD transfer. That's
+						 *               wrong, most IDE implementations in fact expect us to check DRQ
+						 *               once then transfer one whole sector in one blast. Some test
+						 *               hardware I have (an old Toshiba laptop for example) will actually
+						 *               lower DRQ once you read and if this loop were to check per WORD
+						 *               it would "get stuck" after the first word. */
+						uint16_t info[256];
+
+						/* read it */
+						for (i=0;i < 256;i++) info[i] = inpw(ide->base_io+0); /* read 16-bit word from data port, PIO */
+
+						/* ------------ PAGE 1 -------------*/
+						redraw = backredraw = 1;
+						vga_write_color(0x0F);
+						vga_clear();
+
+						for (y=0;y < 16;y++) {
+							vga_moveto(0,y);
+
+							sprintf(tmp,"%02X: ",y*8);
+							vga_write(tmp);
+
+							for (x=0;x < 8;x++) {
+								sprintf(tmp,"%04x ",info[x+(y*8)]);
+								vga_write(tmp);
+							}
+
+							for (x=0;x < 8;x++) {
+								i = info[x+(y*8)] >> 8;
+								if (i < 32 || i > 127) i = '.';
+								vga_writec(i);
+
+								i = info[x+(y*8)] & 0xFF;
+								if (i < 32 || i > 127) i = '.';
+								vga_writec(i);
+							}
+						}
+
+						vga_write_color(0x0E);
+
+						vga_moveto(0,17);
+						vga_write("Serial: ");
+						for (x=0;x < 10;x++) {
+							tmp[x*2 + 0] = info[10+x] >> 8;
+							tmp[x*2 + 1] = info[10+x] & 0xFF;
+						}
+						tmp[10*2] = 0; vga_write(tmp);
+
+						vga_write(" F/W rev: ");
+						for (x=0;x < 4;x++) {
+							tmp[x*2 + 0] = info[23+x] >> 8;
+							tmp[x*2 + 1] = info[23+x] & 0xFF;
+						}
+						tmp[4*2] = 0; vga_write(tmp);
+
+						vga_moveto(0,18);
+						vga_write("Model: ");
+						for (x=0;x < 20;x++) {
+							tmp[x*2 + 0] = info[27+x] >> 8;
+							tmp[x*2 + 1] = info[27+x] & 0xFF;
+						}
+						tmp[20*2] = 0; vga_write(tmp);
+
+						vga_moveto(0,19);
+						sprintf(tmp,"Logical C/H/S: %u/%u/%u  ",
+								info[1],info[3],info[6]);
+						vga_write(tmp);
+						sprintf(tmp,"Current C/H/S: %u/%u/%u",
+								info[54],info[55],info[56]);
+						vga_write(tmp);
+
+						vga_moveto(0,20);
+						sprintf(tmp,"Current Capacity: %lu  Total user addressable: %lu  ",
+								(unsigned long)info[57] | ((unsigned long)info[58] << 16UL),
+								(unsigned long)info[60] | ((unsigned long)info[61] << 16UL));
+						vga_write(tmp);
+
+						vga_moveto(0,22);
+						vga_write_color(0x0D);
+						vga_write("For more information consult ATA documentation\n");
+						vga_write("Hit ENTER to see more of the data");
+
+						wait_for_enter_or_escape();
+
+						/* ------------ PAGE 2 -------------*/
+						redraw = backredraw = 1;
+						vga_write_color(0x0F);
+						vga_clear();
+
+						for (y=16;y < 32;y++) {
+							vga_moveto(0,y-16);
+
+							sprintf(tmp,"%02X: ",y*8);
+							vga_write(tmp);
+
+							for (x=0;x < 8;x++) {
+								sprintf(tmp,"%04x ",info[x+(y*8)]);
+								vga_write(tmp);
+							}
+
+							for (x=0;x < 8;x++) {
+								i = info[x+(y*8)] >> 8;
+								if (i < 32 || i > 127) i = '.';
+								vga_writec(i);
+
+								i = info[x+(y*8)] & 0xFF;
+								if (i < 32 || i > 127) i = '.';
+								vga_writec(i);
+							}
+						}
+
+						vga_moveto(0,17);
+						vga_write_color(0x0D);
+						vga_write("For more information consult ATA documentation\n");
+						vga_write("Hit ENTER to return to the menu");
+
+						wait_for_enter_or_escape();
+					}
+					else {
+						common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+						wait_for_enter_or_escape();
+						vga_msg_box_destroy(&vgabox);
+					}
 				}
 			}
 
@@ -2341,151 +2478,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 						if (c == 0) c = getch() << 8;
 					} while (!(c == 13 || c == 27));
 					vga_msg_box_destroy(&vgabox);
-				}
-			}
-			else if (select == 5 || select == 6) { /* identify device OR identify packet device */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) == 0) {
-					ide->irq_fired = 0;
-					outp(ide->base_io+7,select == 6 ? 0xA1 : 0xEC); /* <- identify device */
-					if (ide->flags.io_irq_enable)
-						do_ide_controller_user_wait_irq(ide,1);
-
-					do_ide_controller_user_wait_busy_controller(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-					x = inp(ide->base_io+7); /* what's the status? */
-					if (!(x&1)) { /* if no error, read result from count register */
-						/* NOTE TO SELF: A lot of docs on the web imply that DRQ is something you consult
-						 *               to check if the device is ready for one WORD transfer. That's
-						 *               wrong, most IDE implementations in fact expect us to check DRQ
-						 *               once then transfer one whole sector in one blast. Some test
-						 *               hardware I have (an old Toshiba laptop for example) will actually
-						 *               lower DRQ once you read and if this loop were to check per WORD
-						 *               it would "get stuck" after the first word. */
-						if (do_ide_controller_user_wait_drive_drq(ide) == 0) {
-							/* wait for Data Request */
-							uint16_t info[256];
-
-							for (i=0;i < 256;i++)
-								info[i] = inpw(ide->base_io+0); /* read 16-bit word from data port, PIO */
-
-							/* ------------ PAGE 1 -------------*/
-							redraw = backredraw = 1;
-							vga_write_color(0x0F);
-							vga_clear();
-
-							for (y=0;y < 16;y++) {
-								vga_moveto(0,y);
-
-								sprintf(tmp,"%02X: ",y*8);
-								vga_write(tmp);
-
-								for (x=0;x < 8;x++) {
-									sprintf(tmp,"%04x ",info[x+(y*8)]);
-									vga_write(tmp);
-								}
-
-								for (x=0;x < 8;x++) {
-									i = info[x+(y*8)] >> 8;
-									if (i < 32 || i > 127) i = '.';
-									vga_writec(i);
-
-									i = info[x+(y*8)] & 0xFF;
-									if (i < 32 || i > 127) i = '.';
-									vga_writec(i);
-								}
-							}
-
-							vga_write_color(0x0E);
-
-							vga_moveto(0,17);
-							vga_write("Serial: ");
-							for (x=0;x < 10;x++) {
-								tmp[x*2 + 0] = info[10+x] >> 8;
-								tmp[x*2 + 1] = info[10+x] & 0xFF;
-							}
-							tmp[10*2] = 0; vga_write(tmp);
-
-							vga_write(" F/W rev: ");
-							for (x=0;x < 4;x++) {
-								tmp[x*2 + 0] = info[23+x] >> 8;
-								tmp[x*2 + 1] = info[23+x] & 0xFF;
-							}
-							tmp[4*2] = 0; vga_write(tmp);
-
-							vga_moveto(0,18);
-							vga_write("Model: ");
-							for (x=0;x < 20;x++) {
-								tmp[x*2 + 0] = info[27+x] >> 8;
-								tmp[x*2 + 1] = info[27+x] & 0xFF;
-							}
-							tmp[20*2] = 0; vga_write(tmp);
-
-							vga_moveto(0,19);
-							sprintf(tmp,"Logical C/H/S: %u/%u/%u  ",
-								info[1],info[3],info[6]);
-							vga_write(tmp);
-							sprintf(tmp,"Current C/H/S: %u/%u/%u",
-								info[54],info[55],info[56]);
-							vga_write(tmp);
-
-							vga_moveto(0,20);
-							sprintf(tmp,"Current Capacity: %lu  Total user addressable: %lu  ",
-								(unsigned long)info[57] | ((unsigned long)info[58] << 16UL),
-								(unsigned long)info[60] | ((unsigned long)info[61] << 16UL));
-							vga_write(tmp);
-
-							vga_moveto(0,22);
-							vga_write_color(0x0D);
-							vga_write("For more information consult ATA documentation\n");
-							vga_write("Hit ENTER to see more of the data");
-
-							while (getch() != 13);
-
-							/* ------------ PAGE 2 -------------*/
-							redraw = backredraw = 1;
-							vga_write_color(0x0F);
-							vga_clear();
-
-							for (y=16;y < 32;y++) {
-								vga_moveto(0,y-16);
-
-								sprintf(tmp,"%02X: ",y*8);
-								vga_write(tmp);
-
-								for (x=0;x < 8;x++) {
-									sprintf(tmp,"%04x ",info[x+(y*8)]);
-									vga_write(tmp);
-								}
-
-								for (x=0;x < 8;x++) {
-									i = info[x+(y*8)] >> 8;
-									if (i < 32 || i > 127) i = '.';
-									vga_writec(i);
-
-									i = info[x+(y*8)] & 0xFF;
-									if (i < 32 || i > 127) i = '.';
-									vga_writec(i);
-								}
-							}
-
-							vga_moveto(0,17);
-							vga_write_color(0x0D);
-							vga_write("For more information consult ATA documentation\n");
-							vga_write("Hit ENTER to return to the menu");
-
-							while (getch() != 13);
-						}
-					}
-					else {
-						sprintf(tmp,"Device rejected with error %02X",x);
-						vga_msg_box_create(&vgabox,tmp,0,0);
-						do {
-							c = getch();
-							if (c == 0) c = getch() << 8;
-						} while (!(c == 13 || c == 27));
-						vga_msg_box_destroy(&vgabox);
-					}
 				}
 			}
 			else if (select == 7 || select == 8 || select == 9 || select == 10) { /* ATAPI eject/load CD-ROM */
