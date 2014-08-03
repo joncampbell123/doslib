@@ -206,3 +206,26 @@ void ide_vlb_sync32_pio(struct ide_controller *ide) {
 	inp(ide->base_io+2);
 }
 
+void idelib_enable_interrupt(struct ide_controller *ide,unsigned char en) {
+	if (en) {
+		if (ide->flags.io_irq_enable) return;
+		ide->flags.io_irq_enable = 1;
+		ide->irq_fired = 0;
+
+		/* force clear IRQ */
+		inp(ide->base_io+7);
+
+		/* enable at IDE controller */
+		if (ide->alt_io != 0) outp(ide->alt_io,0x08); /* nIEN=0 (enable) and not reset */
+	}
+	else {
+		if (!ide->flags.io_irq_enable) return;
+
+		/* disable at IDE controller */
+		if (ide->alt_io != 0) outp(ide->alt_io,0x08+0x02); /* nIEN=1 (disable) and not reset */
+
+		ide->flags.io_irq_enable = 0;
+		ide->irq_fired = 0;
+	}
+}
+

@@ -31,6 +31,7 @@ int idelib_controller_is_error(struct ide_controller *ide);
 int idelib_controller_is_drq_ready(struct ide_controller *ide);
 int idelib_controller_is_drive_ready(struct ide_controller *ide);
 
+void idelib_enable_interrupt(struct ide_controller *ide,unsigned char en);
 int idelib_controller_allocated(struct ide_controller *ide);
 struct ide_controller *idelib_probe(struct ide_controller *ide);
 struct ide_controller *idelib_get_controller(int i);

@@ -3449,6 +3449,8 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 
 static void (interrupt *my_ide_old_irq)() = NULL;
 static struct ide_controller *my_ide_irq_ide = NULL;
+static int my_ide_irq_number = -1;
+
 static void interrupt my_ide_irq() {
 	(*(vga_alpha_ram + (vga_width*(vga_height-1))))++;
 
@@ -3461,36 +3463,45 @@ static void interrupt my_ide_irq() {
 	}
 }
 
-void do_ide_controller_enable_irq(struct ide_controller *ide,unsigned char en) {
-	if (ide->irq < 0) {
-		ide->flags.io_irq_enable = 0;
+void do_ide_controller_hook_irq(struct ide_controller *ide) {
+	if (my_ide_irq_number >= 0 || my_ide_old_irq != NULL || ide->irq < 0)
 		return;
-	}
 
-	if (en && my_ide_old_irq == NULL) {
-		/* let the IRQ know what IDE controller */
-		my_ide_irq_ide = ide;
-		ide->irq_fired = 0;
+	/* let the IRQ know what IDE controller */
+	my_ide_irq_ide = ide;
 
-		/* force clear IRQ */
-		inp(ide->base_io+7);
+	/* enable on IDE controller */
+	p8259_mask(ide->irq);
+	idelib_enable_interrupt(ide,1);
 
-		/* hook IRQ */
-		my_ide_old_irq = _dos_getvect(irq2int(ide->irq));
-		_dos_setvect(irq2int(ide->irq),my_ide_irq);
+	/* hook IRQ */
+	my_ide_old_irq = _dos_getvect(irq2int(ide->irq));
+	_dos_setvect(irq2int(ide->irq),my_ide_irq);
+	my_ide_irq_number = ide->irq;
 
-		/* enable at PIC */
-		p8259_unmask(ide->irq);
+	/* enable at PIC */
+	p8259_unmask(ide->irq);
+}
 
-		/* enable on IDE controller */
-		if (ide->alt_io != 0) outp(ide->alt_io,0x08); /* nIEN=0 (enable) and not reset */
-	}
-	else if (!en && my_ide_old_irq != NULL) {
-		if (ide->alt_io != 0) outp(ide->alt_io,0x08+0x02); /* nIEN=1 (disable) and not reset */
-		p8259_mask(ide->irq);
-		_dos_setvect(irq2int(ide->irq),my_ide_old_irq);
-		my_ide_old_irq = NULL;
-	}
+void do_ide_controller_unhook_irq(struct ide_controller *ide) {
+	if (my_ide_irq_number < 0 || my_ide_old_irq == NULL || ide->irq < 0)
+		return;
+
+	/* disable on IDE controller, then mask at PIC */
+	idelib_enable_interrupt(ide,0);
+	p8259_mask(ide->irq);
+
+	/* restore the original vector */
+	_dos_setvect(irq2int(ide->irq),my_ide_old_irq);
+	my_ide_irq_number = -1;
+	my_ide_old_irq = NULL;
+}
+
+void do_ide_controller_enable_irq(struct ide_controller *ide,unsigned char en) {
+	if (!en || ide->irq < 0 || ide->irq != my_ide_irq_number)
+		do_ide_controller_unhook_irq(ide);
+	if (en && ide->irq >= 0)
+		do_ide_controller_hook_irq(ide);
 }
 
 void do_ide_controller(struct ide_controller *ide) {
