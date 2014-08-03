@@ -96,6 +96,21 @@ struct ide_controller *idelib_by_alt_io(uint16_t io);
 struct ide_controller *idelib_by_irq(int8_t irq);
 void ide_vlb_sync32_pio(struct ide_controller *ide);
 
+static inline void idelib_controller_ack_irq(struct ide_controller *ide) {
+	/* reading port 0x3F6 (normal method of status update) does not clear IRQ.
+	 * reading port 0x1F7 reads status AND clears IRQ */
+	ide->last_status = inp(ide->base_io+7);
+	if (!(ide->last_status&0x80)) ide->taskfile[ide->selected_drive].status = ide->last_status;
+}
+
+static inline void idelib_controller_write_command(struct ide_controller *ide,unsigned char cmd) { /* WARNING: does not check controller or drive readiness */
+	outp(ide->base_io+7,cmd);
+}
+
+static inline void idelib_controller_reset_irq_counter(struct ide_controller *ide) {
+	ide->irq_fired = 0;
+}
+
 static inline unsigned char idelib_read_device_control(struct ide_controller *ide) {
 	return ide->device_control;
 }
