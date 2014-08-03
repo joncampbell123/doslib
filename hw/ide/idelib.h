@@ -25,7 +25,11 @@ extern int8_t				idelib_init;
 
 void idelib_controller_update_status(struct ide_controller *ide);
 const struct ide_controller *idelib_get_standard_isa_port(int i);
+
 int idelib_controller_is_busy(struct ide_controller *ide);
+int idelib_controller_is_error(struct ide_controller *ide);
+int idelib_controller_is_drq_ready(struct ide_controller *ide);
+
 int idelib_controller_allocated(struct ide_controller *ide);
 struct ide_controller *idelib_probe(struct ide_controller *ide);
 struct ide_controller *idelib_get_controller(int i);

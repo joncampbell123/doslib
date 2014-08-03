@@ -107,7 +107,6 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
  *           1 if still busy, but user said to proceed */
 int do_ide_controller_user_wait_drive_drq(struct ide_controller *ide) {
 	struct vga_msg_box vgabox;
-	unsigned char status;
 	int ret = 0,c = 0;
 
 	if (ide == NULL)
@@ -120,18 +119,17 @@ int do_ide_controller_user_wait_drive_drq(struct ide_controller *ide) {
 	 *      implementations dumb enough to return such confusing state. */
 	/* use the alt status register if possible, else the base I/O.
 	 * the alt status register is said not to clear pending interrupts */
-	status = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
-	if ((status & 0x80) || !(status & 0x08)) {
+	idelib_controller_update_status(ide);
+	if (!idelib_controller_is_drq_ready(ide)) {
 		unsigned long show_countdown = 0x1000UL;
 
 		do {
-			status = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
-			if (!(status & 0x80)) {
-				if (status & 0x08) break; /* DRQ ready */
-				if (status & 0x01) { /* DRQ not ready, but an error occured */
-					ret = -2;
-					break;
-				}
+			idelib_controller_update_status(ide);
+			if (idelib_controller_is_drq_ready(ide))
+				break;
+			else if (idelib_controller_is_error(ide)) {
+				ret = -2;
+				break;
 			}
 
 			/* if the drive&controller is busy then show the dialog and wait for non-busy

@@ -63,6 +63,16 @@ int idelib_controller_is_busy(struct ide_controller *ide) {
 	return (ide->last_status&0x80);
 }
 
+int idelib_controller_is_error(struct ide_controller *ide) {
+	if (ide == NULL) return 0;
+	return (ide->last_status&0x01);
+}
+
+int idelib_controller_is_drq_ready(struct ide_controller *ide) {
+	if (ide == NULL) return 0;
+	return (ide->last_status&0x08);
+}
+
 int idelib_controller_allocated(struct ide_controller *ide) {
 	if (ide == NULL) return 0;
 	return (ide->base_io != 0);
