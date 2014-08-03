@@ -3610,9 +3610,9 @@ void do_ide_controller(struct ide_controller *ide) {
 					if (c >= 0) { /* if not busy, or busy and user commands us to continue */
 						vga_msg_box_create(&vgabox,"Host reset in progress",0,0);
 
-						outp(ide->alt_io,0x0C); /* nIEN=0 and host reset */
+						idelib_device_control_set_reset(ide,1);
 						t8254_wait(t8254_us2ticks(1000000));
-						outp(ide->alt_io,0x08+(ide->flags.io_irq_enable?0:2)); /* nIEN=x and not reset */
+						idelib_device_control_set_reset(ide,0);
 
 						vga_msg_box_destroy(&vgabox);
 

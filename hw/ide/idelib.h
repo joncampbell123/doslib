@@ -94,9 +94,17 @@ struct ide_controller *idelib_by_alt_io(uint16_t io);
 struct ide_controller *idelib_by_irq(int8_t irq);
 void ide_vlb_sync32_pio(struct ide_controller *ide);
 
+static inline unsigned char idelib_read_device_control(struct ide_controller *ide) {
+	return ide->device_control;
+}
+
 static inline void idelib_write_device_control(struct ide_controller *ide,unsigned char byte) {
 	ide->device_control = byte;
 	outp(ide->alt_io,byte);
+}
+
+static inline void idelib_device_control_set_reset(struct ide_controller *ide,unsigned char reset) {
+	idelib_write_device_control(ide,(ide->device_control & (~0x06)) | (reset ? 0x04/*SRST*/ : (ide->flags.io_irq_enable?0x00:0x02/*nIEN*/)));
 }
 
 void free_idelib();
