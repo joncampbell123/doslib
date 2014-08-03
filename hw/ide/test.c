@@ -2182,26 +2182,22 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			else if (select == 1) { /* sleep */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
 					do_ide_controller_user_wait_drive_ready(ide) == 0) {
-					ide->irq_fired = 0;
-					outp(ide->base_io+7,0xE6); /* <- sleep */
-					if (ide->flags.io_irq_enable)
+					idelib_controller_reset_irq_counter(ide);
+					idelib_controller_write_command(ide,0xE6); /* <- sleep */
+					if (ide->flags.io_irq_enable) {
 						do_ide_controller_user_wait_irq(ide,1);
-
+						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+					}
 					do_ide_controller_user_wait_busy_controller(ide);
 					/* do NOT wait for drive ready---the drive is never ready when it's asleep! */
-					x = inp(ide->base_io+7); /* what's the status? */
-					if (!(x&1)) {
+					if (!(ide->last_status&1)) {
 						vga_msg_box_create(&vgabox,"Success.\n\nHit ENTER to re-awaken the device",0,0);
 						do_ide_controller_atapi_device_check_post_host_reset(ide);
 					}
 					else {
-						sprintf(tmp,"Device rejected with error %02X",x);
-						vga_msg_box_create(&vgabox,tmp,0,0);
+						common_ide_success_or_error_vga_msg_box(ide,&vgabox);
 					}
-					do {
-						c = getch();
-						if (c == 0) c = getch() << 8;
-					} while (!(c == 13 || c == 27));
+					wait_for_enter_or_escape();
 					vga_msg_box_destroy(&vgabox);
 				}
 			}
