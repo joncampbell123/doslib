@@ -46,6 +46,18 @@
 static int read_mode = 12;
 static int pio_width = 16;	/* 16: standard I/O   32: 32-bit I/O   33: 32-bit I/O with VLB "sync sequence" */
 
+static void common_ide_success_or_error_vga_msg_box(struct ide_controller *ide,struct vga_msg_box *vgabox) {
+	if (!(ide->last_status&1)) {
+		vga_msg_box_create(vgabox,"Success",0,0);
+	}
+	else {
+		char tmp[90];
+
+		sprintf(tmp,"Device rejected with error %02X",ide->last_status);
+		vga_msg_box_create(vgabox,tmp,0,0);
+	}
+}
+
 static void wait_for_enter_or_escape() {
 	int c;
 
@@ -2162,14 +2174,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					}
 					do_ide_controller_user_wait_busy_controller(ide);
 					do_ide_controller_user_wait_drive_ready(ide);
-
-					if (!(ide->last_status&1)) {
-						vga_msg_box_create(&vgabox,"Success",0,0);
-					}
-					else {
-						sprintf(tmp,"Device rejected with error %02X",ide->last_status);
-						vga_msg_box_create(&vgabox,tmp,0,0);
-					}
+					common_ide_success_or_error_vga_msg_box(ide,&vgabox);
 					wait_for_enter_or_escape();
 					vga_msg_box_destroy(&vgabox);
 				}
