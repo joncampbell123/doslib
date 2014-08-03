@@ -356,7 +356,7 @@ void do_ide_controller_drive_write_unc_test(struct ide_controller *ide,unsigned 
 	if (c != 0) return;
 
 	/* select the drive we want */
-	outp(ide->base_io+6/*0x1F6*/,0xA0|(which<<4));
+	idelib_controller_drive_select(ide,which,/*head*/0);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -572,7 +572,7 @@ void do_ide_controller_drive_readverify_test(struct ide_controller *ide,unsigned
 	if (c != 0) return;
 
 	/* select the drive we want */
-	outp(ide->base_io+6/*0x1F6*/,0xA0|(which<<4));
+	idelib_controller_drive_select(ide,which,/*head*/0);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -983,7 +983,7 @@ void do_ide_controller_drive_rw_test(struct ide_controller *ide,unsigned char wh
 	if (c != 0) return;
 
 	/* select the drive we want */
-	outp(ide->base_io+6/*0x1F6*/,0xA0|(which<<4));
+	idelib_controller_drive_select(ide,which,/*head*/0);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -1546,7 +1546,7 @@ void do_ide_controller_drive_media_status_notify(struct ide_controller *ide,unsi
 	if (c != 0) return;
 
 	/* select the drive we want */
-	outp(ide->base_io+6/*0x1F6*/,0xA0|(which<<4));
+	idelib_controller_drive_select(ide,which,/*head*/0);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -1777,7 +1777,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	if (c != 0) return;
 
 	/* select the drive we want */
-	outp(ide->base_io+6/*0x1F6*/,0xA0|(which<<4));
+	idelib_controller_drive_select(ide,which,/*head*/0);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);

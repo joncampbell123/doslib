@@ -206,6 +206,11 @@ void ide_vlb_sync32_pio(struct ide_controller *ide) {
 	inp(ide->base_io+2);
 }
 
+void idelib_controller_drive_select(struct ide_controller *ide,unsigned char which/*1=slave 0=master*/,unsigned char head/*CHS mode head value*/) {
+	if (ide == NULL) return;
+	outp(ide->base_io+6/*0x1F6*/,((which&1)<<4) + (head&0xF) + 0xA0);
+}
+
 void idelib_enable_interrupt(struct ide_controller *ide,unsigned char en) {
 	if (en) {
 		if (ide->flags.io_irq_enable) return;
