@@ -61,6 +61,7 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 
 	/* use the alt status register if possible, else the base I/O.
 	 * the alt status register is said not to clear pending interrupts */
+	idelib_controller_update_status(ide);
 	status = idelib_controller_is_busy(ide);
 	if (status) {
 		unsigned long show_countdown = 0x1000UL;
@@ -68,6 +69,7 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 		 * or until the user forces us to proceed */
 
 		do {
+			idelib_controller_update_status(ide);
 			status = idelib_controller_is_busy(ide);
 			if (!status) break;
 

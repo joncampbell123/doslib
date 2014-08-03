@@ -53,12 +53,14 @@ int init_idelib() {
 void free_idelib() {
 }
 
-int idelib_controller_is_busy(struct ide_controller *ide) {
-	unsigned char c;
+void idelib_controller_update_status(struct ide_controller *ide) {
+	if (ide == NULL) return;
+	ide->last_status = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
+}
 
+int idelib_controller_is_busy(struct ide_controller *ide) {
 	if (ide == NULL) return 0;
-	c = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
-	return (c&0x80);
+	return (ide->last_status&0x80);
 }
 
 int idelib_controller_allocated(struct ide_controller *ide) {

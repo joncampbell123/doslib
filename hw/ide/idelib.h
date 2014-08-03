@@ -16,12 +16,14 @@ struct ide_controller {
 	volatile uint16_t		irq_fired;		/* IRQ counter */
 	int8_t				irq;
 	struct ide_controller_flags	flags;
+	uint8_t				last_status;
 };
 
 extern const struct ide_controller	ide_isa_standard[4];
 extern struct ide_controller		ide_controller[MAX_IDE_CONTROLLER];
 extern int8_t				idelib_init;
 
+void idelib_controller_update_status(struct ide_controller *ide);
 const struct ide_controller *idelib_get_standard_isa_port(int i);
 int idelib_controller_is_busy(struct ide_controller *ide);
 int idelib_controller_allocated(struct ide_controller *ide);
