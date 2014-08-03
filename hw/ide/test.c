@@ -339,7 +339,7 @@ int do_ide_controller_atapi_device_check_post_host_reset(struct ide_controller *
 		return -1;
 	}
 
-	inp(ide->base_io+7);
+	inp(ide->base_io+7); /* eat the IRQ signal */
 	return 0;
 }
 
@@ -1787,6 +1787,37 @@ void do_ide_controller_drive_media_status_notify(struct ide_controller *ide,unsi
 	}
 }
 
+int do_ide_controller_drive_check_select(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+	int c,ret = 0;
+
+	if (idelib_controller_update_taskfile(ide,0xC0/* status and drive/select */,IDELIB_TASKFILE_LBA48_UPDATE) < 0)
+		return -1;
+
+	if (which != ide->selected_drive || ide->head_select == 0xFF) {
+		vga_msg_box_create(&vgabox,"IDE controller drive select unsuccessful\n\nHit 'C' to cancel, spacebar to proceed anyway",0,0);
+
+		do {
+			c = getch();
+			if (c == 0) c = getch() << 8;
+
+			if (c == 'c' || c == 'C') {
+				ret = -1;
+				break;
+			}
+			else if (c == ' ') {
+				ret = 1;
+				break;
+			}
+		} while (1);
+
+		vga_msg_box_destroy(&vgabox);
+		return ret;
+	}
+
+	return ret;
+}
+
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 	char redraw=1;
@@ -1807,6 +1838,10 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
 	if (c != 0) return;
+
+	/* read back: did the drive select take effect? if not, it might not be there. another common sign is the head/drive select reads back 0xFF */
+	c = do_ide_controller_drive_check_select(ide,which);
+	if (c < 0) return;
 
 	/* it might be a CD-ROM drive, which in some cases might not raise the Drive Ready bit */
 	do_ide_controller_atapi_device_check_post_host_reset(ide);
