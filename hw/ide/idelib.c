@@ -396,6 +396,22 @@ void idelib_read_pio16(unsigned char *buf,unsigned int len,struct ide_controller
 		buf += 2;
 		lws--;
 	}
-	if (len != 0) *buf = (unsigned char)inpw(ide->base_io);
+	if (len != 0) *buf = inp(ide->base_io);
+}
+
+void idelib_read_pio32(unsigned char *buf,unsigned int len,struct ide_controller *ide) {
+	unsigned int lws = len >> 2;
+
+	len &= 3;
+	while (lws != 0) {
+		*((uint32_t*)buf) = inpd(ide->base_io); /* from data port */
+		buf += 4;
+		lws--;
+	}
+	if (len & 2) {
+		*((uint16_t*)buf) = inpw(ide->base_io);
+		buf += 2;
+	}
+	if (len & 1) *buf = inp(ide->base_io);
 }
 

@@ -2240,7 +2240,13 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 
 						/* read it */
 						do_ide_controller_user_wait_drive_drq(ide);
-						idelib_read_pio16((unsigned char*)info,512,ide);
+						if (pio_width >= 32) {
+							if (pio_width == 33) ide_vlb_sync32_pio(ide);
+							idelib_read_pio32((unsigned char*)info,512,ide);
+						}
+						else {
+							idelib_read_pio16((unsigned char*)info,512,ide);
+						}
 
 						/* ------------ PAGE 1 -------------*/
 						redraw = backredraw = 1;
