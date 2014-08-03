@@ -1850,6 +1850,9 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	do_ide_controller_atapi_device_check_post_host_reset(ide);
 
 	/* wait for the drive to indicate readiness */
+	/* NTS: If the drive never becomes ready even despite our reset hacks, there's a strong
+	 *      possibility that the device doesn't exist. This can happen for example if there
+	 *      is a master attached but no slave. */
 	c = do_ide_controller_user_wait_drive_ready(ide);
 	if (c < 0) return;
 
