@@ -60,17 +60,22 @@ void idelib_controller_update_status(struct ide_controller *ide) {
 
 int idelib_controller_is_busy(struct ide_controller *ide) {
 	if (ide == NULL) return 0;
-	return (ide->last_status&0x80);
+	return !!(ide->last_status&0x80);
 }
 
 int idelib_controller_is_error(struct ide_controller *ide) {
 	if (ide == NULL) return 0;
-	return (ide->last_status&0x01);
+	return !!(ide->last_status&0x01) && !(ide->last_status&0x80)/*and not busy*/;
 }
 
 int idelib_controller_is_drq_ready(struct ide_controller *ide) {
 	if (ide == NULL) return 0;
-	return (ide->last_status&0x08);
+	return !!(ide->last_status&0x08) && !(ide->last_status&0x80)/*and not busy*/;
+}
+
+int idelib_controller_is_drive_ready(struct ide_controller *ide) {
+	if (ide == NULL) return 0;
+	return !!(ide->last_status&0x40) && !(ide->last_status&0x80)/*and not busy*/;
 }
 
 int idelib_controller_allocated(struct ide_controller *ide) {

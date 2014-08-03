@@ -214,7 +214,6 @@ int do_ide_controller_user_wait_irq(struct ide_controller *ide,uint16_t count) {
  *          1 if still busy, but user said to proceed */
 int do_ide_controller_user_wait_drive_ready(struct ide_controller *ide) {
 	struct vga_msg_box vgabox;
-	unsigned char status;
 	int ret = 0,c;
 
 	if (ide == NULL)
@@ -222,19 +221,19 @@ int do_ide_controller_user_wait_drive_ready(struct ide_controller *ide) {
 
 	/* use the alt status register if possible, else the base I/O.
 	 * the alt status register is said not to clear pending interrupts */
-	status = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
-	if ((status & 0x80) || !(status & 0x40)) {
+	idelib_controller_update_status(ide);
+	if (!idelib_controller_is_drive_ready(ide)) {
 		unsigned long show_countdown = 0x1000UL;
 
 		/* if the drive&controller is busy then show the dialog and wait for non-busy
 		 * or until the user forces us to proceed */
 
 		do {
-			status = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
-			if (!(status & 0x80)) {
-				/* OK, is the drive ready? */
-				if (status & 0x40) break;
-			}
+			idelib_controller_update_status(ide);
+			if (idelib_controller_is_drive_ready(ide))
+				break;
+			else if (idelib_controller_is_error(ide))
+				break; /* this is possible too?? or is VirtualBox fucking with us when the CD-ROM drive is on Primary slave? */
 
 			if (show_countdown > 0UL) {
 				if (--show_countdown == 0UL)
@@ -1789,7 +1788,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 
 	/* wait for the drive to indicate readiness */
 	c = do_ide_controller_user_wait_drive_ready(ide);
-	if (c != 0) return;
+	if (c < 0) return;
 
 	while (1) {
 		if (backredraw) {
