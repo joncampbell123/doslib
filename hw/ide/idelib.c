@@ -387,3 +387,15 @@ struct ide_taskfile *idelib_controller_get_taskfile(struct ide_controller *ide,i
 	return &ide->taskfile[which];
 }
 
+void idelib_read_pio16(unsigned char *buf,unsigned int len,struct ide_controller *ide) {
+	unsigned int lws = len >> 1;
+
+	len &= 1;
+	while (lws != 0) {
+		*((uint16_t*)buf) = inpw(ide->base_io); /* from data port */
+		buf += 2;
+		lws--;
+	}
+	if (len != 0) *buf = (unsigned char)inpw(ide->base_io);
+}
+

@@ -2239,7 +2239,8 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 						uint16_t info[256];
 
 						/* read it */
-						for (i=0;i < 256;i++) info[i] = inpw(ide->base_io+0); /* read 16-bit word from data port, PIO */
+						do_ide_controller_user_wait_drive_drq(ide);
+						idelib_read_pio16((unsigned char*)info,512,ide);
 
 						/* ------------ PAGE 1 -------------*/
 						redraw = backredraw = 1;
