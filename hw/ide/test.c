@@ -2207,7 +2207,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			}
 			else if (select == 0) { /* standby */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) == 0) {
+					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
 					idelib_controller_reset_irq_counter(ide);
 					idelib_controller_write_command(ide,0xE0); /* <- standby immediate */
 					if (ide->flags.io_irq_enable) {
@@ -2223,7 +2223,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			}
 			else if (select == 1) { /* sleep */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) == 0) {
+					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
 					idelib_controller_reset_irq_counter(ide);
 					idelib_controller_write_command(ide,0xE6); /* <- sleep */
 					if (ide->flags.io_irq_enable) {
@@ -2245,7 +2245,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			}
 			else if (select == 2) { /* idle */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) == 0) {
+					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
 					idelib_controller_reset_irq_counter(ide);
 					idelib_controller_write_command(ide,0xE1); /* <- idle immediate */
 					if (ide->flags.io_irq_enable) {
