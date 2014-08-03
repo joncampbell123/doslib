@@ -3766,9 +3766,23 @@ int main(int argc,char **argv) {
 		printf("Cannot init VGA\n");
 		return 1;
 	}
+	/* the IDE code has some timing requirements and we'll use the 8254 to do it */
+	/* I bet that by the time motherboard manufacturers stop implementing the 8254 the IDE port will be long gone too */
+	if (!probe_8254()) {
+		printf("8254 chip not detected\n");
+		return 1;
+	}
+	/* interrupt controller */
+	if (!probe_8259()) {
+		printf("8259 chip not detected\n");
+		return 1;
+	}
 	if (!init_idelib()) {
 		printf("Cannot init IDE lib\n");
 		return 1;
+	}
+	if (pci_probe(-1/*default preference*/) != PCI_CFG_NONE) {
+		printf("PCI bus detected.\n");
 	}
 
 	printf("Probing standard IDE ports...\n");
@@ -3782,8 +3796,6 @@ int main(int argc,char **argv) {
 			printf("\x0D                             \x0D"); fflush(stdout);
 		}
 	}
-
-	/* TODO: Probe PCI controllers */
 
 	if (int10_getmode() != 3) {
 		int10_setmode(3);

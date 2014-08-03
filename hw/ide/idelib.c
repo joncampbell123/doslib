@@ -43,16 +43,6 @@ int init_idelib() {
 		/* do NOT under any circumstances talk directly to IDE from under Windows! */
 		if (windows_mode != WINDOWS_NONE) return (idelib_init=0);
 
-		/* the IDE code has some timing requirements and we'll use the 8254 to do it */
-		/* I bet that by the time motherboard manufacturers stop implementing the 8254 the IDE port will be long gone too */
-		if (!probe_8254()) return (idelib_init=0);
-
-		/* interrupt controller */
-		if (!probe_8259()) return (idelib_init=0);
-	
-		/* we want to know if additional PCI-type IDE controllers are around, such as PCI addin cards */
-		pci_probe(-1/*default preference*/);
-
 		/* init OK */
 		idelib_init = 1;
 	}
