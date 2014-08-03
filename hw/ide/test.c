@@ -2172,6 +2172,53 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					do_ide_controller_user_wait_drive_ready(ide);
 				}
 			}
+
+			else if (select == 4) { /* check power mode */
+				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
+					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
+					struct ide_taskfile *tsk;
+
+					idelib_controller_reset_irq_counter(ide);
+
+					/* in case command doesn't do anything, fill sector count value with 0x0A */
+					tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+					tsk->sector_count = 0x0A; /* our special "codeword" to tell if the command updated it or not */
+					idelib_controller_apply_taskfile(ide,0x04/*base_io+2*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/);
+
+					idelib_controller_write_command(ide,0xE5); /* <- check power mode */
+					if (ide->flags.io_irq_enable) {
+						do_ide_controller_user_wait_irq(ide,1);
+						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+					}
+					do_ide_controller_user_wait_busy_controller(ide);
+					do_ide_controller_user_wait_drive_ready(ide);
+
+					if (!(ide->last_status&1)) { /* if no error, read result from count register */
+						const char *what = "";
+
+						/* read back from sector count field */
+						idelib_controller_update_taskfile(ide,0x04/*base_io+2*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/);
+
+						x = tsk->sector_count;
+						if (x == 0) what = "Standby mode";
+						else if (x == 0x0A) what = "?? (failure to update reg probably)";
+						else if (x == 0x40) what = "NV Cache Power mode spun/spin down";
+						else if (x == 0x41) what = "NV Cache Power mode spun/spin up";
+						else if (x == 0x80) what = "Idle mode";
+						else if (x == 0xFF) what = "Active or idle";
+						sprintf(tmp,"Result: %02X %s",x,what);
+
+						vga_msg_box_create(&vgabox,tmp,0,0);
+					}
+					else {
+						common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+					}
+
+					wait_for_enter_or_escape();
+					vga_msg_box_destroy(&vgabox);
+				}
+			}
+
 			else if (select == 30) { /* show IDE register taskfile */
 				if (idelib_controller_update_taskfile(ide,0xFF,0) == 0) {
 					struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
@@ -2294,46 +2341,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 						if (c == 0) c = getch() << 8;
 					} while (!(c == 13 || c == 27));
 					vga_msg_box_destroy(&vgabox);
-				}
-			}
-			else if (select == 4) { /* check power mode */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) == 0) {
-					ide->irq_fired = 0;
-					outp(ide->base_io+7,0xE5); /* <- check power mode */
-					if (ide->flags.io_irq_enable)
-						do_ide_controller_user_wait_irq(ide,1);
-
-					do_ide_controller_user_wait_busy_controller(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-					x = inp(ide->base_io+7); /* what's the status? */
-					if (!(x&1)) { /* if no error, read result from count register */
-						const char *what = "";
-
-						x = inp(ide->base_io+2);
-						if (x == 0) what = "Standby mode";
-						else if (x == 0x40) what = "NV Cache Power mode spun/spin down";
-						else if (x == 0x41) what = "NV Cache Power mode spun/spin up";
-						else if (x == 0x80) what = "Idle mode";
-						else if (x == 0xFF) what = "Active or idle";
-						sprintf(tmp,"Result: %02X %s",x,what);
-
-						vga_msg_box_create(&vgabox,tmp,0,0);
-						do {
-							c = getch();
-							if (c == 0) c = getch() << 8;
-						} while (!(c == 13 || c == 27));
-						vga_msg_box_destroy(&vgabox);
-					}
-					else {
-						sprintf(tmp,"Device rejected with error %02X",x);
-						vga_msg_box_create(&vgabox,tmp,0,0);
-						do {
-							c = getch();
-							if (c == 0) c = getch() << 8;
-						} while (!(c == 13 || c == 27));
-						vga_msg_box_destroy(&vgabox);
-					}
 				}
 			}
 			else if (select == 5 || select == 6) { /* identify device OR identify packet device */
