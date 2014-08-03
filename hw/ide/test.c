@@ -53,7 +53,6 @@ static int pio_width = 16;	/* 16: standard I/O   32: 32-bit I/O   33: 32-bit I/O
  *          1 if still busy, but user said to proceed */
 int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 	struct vga_msg_box vgabox;
-	unsigned char status;
 	int ret = 0,c = 0;
 	
 	if (ide == NULL)
@@ -62,16 +61,14 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 	/* use the alt status register if possible, else the base I/O.
 	 * the alt status register is said not to clear pending interrupts */
 	idelib_controller_update_status(ide);
-	status = idelib_controller_is_busy(ide);
-	if (status) {
+	if (idelib_controller_is_busy(ide)) {
 		unsigned long show_countdown = 0x1000UL;
 		/* if the drive&controller is busy then show the dialog and wait for non-busy
 		 * or until the user forces us to proceed */
 
 		do {
 			idelib_controller_update_status(ide);
-			status = idelib_controller_is_busy(ide);
-			if (!status) break;
+			if (!idelib_controller_is_busy(ide)) break;
 
 			/* if the drive&controller is busy then show the dialog and wait for non-busy
 			 * or until the user forces us to proceed */
