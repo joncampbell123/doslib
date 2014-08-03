@@ -32,10 +32,10 @@ struct ide_taskfile {
 		uint16_t		chs_cylinder_high;
 	};
 	uint8_t				head_select;		/* 0x1F6. mode [bits 7:5] select [bit 4] head [bits 3:0] */
-	union {							/* 0x1F7. command(W) and status(R) */
-		uint8_t			command;
-		uint8_t			status;
-	};
+	uint8_t				command;		/* 0x1F7. command(W) and status(R) */
+	uint8_t				status;			/* also port 0x3F6 status */
+	uint8_t				assume_lba48:1;		/* assume LBA48 response (i.e. 0x1F2-0x1F5 are 16-bit wide) */
+	uint8_t				_reserved_:7;
 };
 
 struct ide_controller {
@@ -44,8 +44,13 @@ struct ide_controller {
 	volatile uint16_t		irq_fired;		/* IRQ counter */
 	int8_t				irq;
 	struct ide_controller_flags	flags;
-	struct ide_taskfile		taskfile;
+	struct ide_taskfile		taskfile[2];		/* one per drive */
+	uint8_t				head_select;
+	uint8_t				device_control;		/* 0x3F6. control bits last written */
+	uint8_t				drive_address;		/* 0x3F7. drive select and head */
 	uint8_t				last_status;
+	uint8_t				selected_drive:1;	/* which drive is selected */
+	uint8_t				_reserved_:7;
 };
 
 extern const struct ide_controller	ide_isa_standard[4];
@@ -60,7 +65,25 @@ int idelib_controller_is_error(struct ide_controller *ide);
 int idelib_controller_is_drq_ready(struct ide_controller *ide);
 int idelib_controller_is_drive_ready(struct ide_controller *ide);
 
-void idelib_controller_drive_select(struct ide_controller *ide,unsigned char which,unsigned char head);
+enum {
+	IDELIB_DRIVE_SELECT_MASTER=0,
+	IDELIB_DRIVE_SELECT_SLAVE=1
+};
+
+enum {
+	IDELIB_DRIVE_SELECT_MODE_LBA48=0x02,		/* LBA48 (2 << 5) = 0x40 */
+	IDELIB_DRIVE_SELECT_MODE_CHS=0x05,		/* LBA (5 << 5) = 0xA0 */
+	IDELIB_DRIVE_SELECT_MODE_LBA=0x07		/* CHS (7 << 5) = 0xE0 */
+};
+
+enum {
+	IDELIB_TASKFILE_LBA48=0x01
+};
+
+void idelib_controller_drive_select(struct ide_controller *ide,unsigned char which/*1=slave 0=master*/,unsigned char head/*CHS mode head value*/,unsigned char mode/*upper 3 bits*/);
+int idelib_controller_apply_taskfile(struct ide_controller *ide,unsigned char portmask,unsigned char flags);
+int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char portmask);
+
 void idelib_enable_interrupt(struct ide_controller *ide,unsigned char en);
 int idelib_controller_allocated(struct ide_controller *ide);
 struct ide_controller *idelib_probe(struct ide_controller *ide);
@@ -70,6 +93,11 @@ struct ide_controller *idelib_by_base_io(uint16_t io);
 struct ide_controller *idelib_by_alt_io(uint16_t io);
 struct ide_controller *idelib_by_irq(int8_t irq);
 void ide_vlb_sync32_pio(struct ide_controller *ide);
+
+static inline void idelib_write_device_control(struct ide_controller *ide,unsigned char byte) {
+	ide->device_control = byte;
+	outp(ide->alt_io,byte);
+}
 
 void free_idelib();
 int init_idelib();

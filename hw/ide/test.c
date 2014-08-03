@@ -356,7 +356,7 @@ void do_ide_controller_drive_write_unc_test(struct ide_controller *ide,unsigned 
 	if (c != 0) return;
 
 	/* select the drive we want */
-	idelib_controller_drive_select(ide,which,/*head*/0);
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -493,7 +493,7 @@ void do_ide_controller_drive_write_unc_test(struct ide_controller *ide,unsigned 
 						vga_write("           ");
 
 						/* select drive */
-						outp(ide->base_io+6,0xA0 | (which << 4));
+						idelib_controller_drive_select(ide,which,/*head=*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
 						if (do_ide_controller_user_wait_busy_controller(ide) != 0) break;
 						if (do_ide_controller_user_wait_drive_ready(ide) != 0) break;
 
@@ -572,7 +572,7 @@ void do_ide_controller_drive_readverify_test(struct ide_controller *ide,unsigned
 	if (c != 0) return;
 
 	/* select the drive we want */
-	idelib_controller_drive_select(ide,which,/*head*/0);
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -816,7 +816,7 @@ void do_ide_controller_drive_readverify_test(struct ide_controller *ide,unsigned
 
 						y = 0;
 						if (select == 0 || select == 3 || select == 4) { /* CHS */
-							outp(ide->base_io+6,0xA0 | (which << 4) | head);
+							idelib_controller_drive_select(ide,which,head,IDELIB_DRIVE_SELECT_MODE_CHS);
 							if (do_ide_controller_user_wait_busy_controller(ide) != 0) break;
 							if (do_ide_controller_user_wait_drive_ready(ide) != 0) break;
 							outp(ide->base_io+1,0x00);
@@ -983,7 +983,7 @@ void do_ide_controller_drive_rw_test(struct ide_controller *ide,unsigned char wh
 	if (c != 0) return;
 
 	/* select the drive we want */
-	idelib_controller_drive_select(ide,which,/*head*/0);
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -1276,7 +1276,7 @@ void do_ide_controller_drive_rw_test(struct ide_controller *ide,unsigned char wh
 
 						y = 0;
 						if (select == 0 || select == 3 || select == 4) { /* CHS */
-							outp(ide->base_io+6,0xA0 | (which << 4) | head);
+							idelib_controller_drive_select(ide,which,head,IDELIB_DRIVE_SELECT_MODE_CHS);
 							if (do_ide_controller_user_wait_busy_controller(ide) != 0) break;
 							if (do_ide_controller_user_wait_drive_ready(ide) != 0) break;
 							outp(ide->base_io+1,0x00);
@@ -1546,7 +1546,7 @@ void do_ide_controller_drive_media_status_notify(struct ide_controller *ide,unsi
 	if (c != 0) return;
 
 	/* select the drive we want */
-	idelib_controller_drive_select(ide,which,/*head*/0);
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -1777,7 +1777,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	if (c != 0) return;
 
 	/* select the drive we want */
-	idelib_controller_drive_select(ide,which,/*head*/0);
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
 
 	/* in case the IDE controller is busy for that time */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -3654,6 +3654,9 @@ void do_ide_controller(struct ide_controller *ide) {
 	}
 
 	do_ide_controller_enable_irq(ide,0);
+	idelib_enable_interrupt(ide,1); /* NTS: Most BIOSes know to unmask the IRQ at the PIC, but there might be some
+					        idiot BIOSes who don't clear the nIEN bit in the device control when
+						executing INT 13h, so it's probably best to do it for them. */
 }
 
 void do_main_menu() {
