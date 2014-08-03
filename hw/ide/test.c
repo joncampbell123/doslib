@@ -2017,7 +2017,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			}
 			else if (select == 30) { /* show IDE register taskfile */
 				if (idelib_controller_update_taskfile(ide,0xFF,0) == 0) {
-					struct ide_taskfile *tsk = &ide->taskfile[ide->selected_drive];
+					struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
 
 					redraw = backredraw = 1;
 					vga_write_color(0x0F);

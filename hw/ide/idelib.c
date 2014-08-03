@@ -381,3 +381,9 @@ int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char p
 	return 0;
 }
 
+struct ide_taskfile *idelib_controller_get_taskfile(struct ide_controller *ide,int which) {
+	if (which < 0) which = ide->selected_drive;
+	else if (which >= 2) return NULL;
+	return &ide->taskfile[which];
+}
+
