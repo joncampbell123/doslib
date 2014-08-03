@@ -201,7 +201,7 @@ struct ide_controller *idelib_probe(struct ide_controller *ide) {
 	newide->base_io = ide->base_io;
 	newide->alt_io = alt_io;
 
-	idelib_controller_update_taskfile(newide,0xFF/*all registers*/);
+	idelib_controller_update_taskfile(newide,0xFF/*all registers*/,0);
 
 	newide->device_control = 0x08+(newide->flags.io_irq_enable?0x00:0x02); /* can't read device control but we can guess */
 	if (ide->alt_io != 0) outp(ide->alt_io,newide->device_control);
@@ -271,11 +271,16 @@ int idelib_controller_apply_taskfile(struct ide_controller *ide,unsigned char po
 		if ((ide->head_select&0x1F) != (ide->taskfile[ide->selected_drive].head_select&0x1F)) return -1;
 		outp(ide->base_io+6,ide->taskfile[ide->selected_drive].head_select);
 	}
-	ide->taskfile[ide->selected_drive].assume_lba48 = (flags&IDELIB_TASKFILE_LBA48)?1:0;
 
-	/* and read back the upper 3 bits for the current mode, to detect LBA48 commands */
+	if (flags&IDELIB_TASKFILE_LBA48_UPDATE)
+		ide->taskfile[ide->selected_drive].assume_lba48 = (flags&IDELIB_TASKFILE_LBA48)?1:0;
+
+	/* and read back the upper 3 bits for the current mode, to detect LBA48 commands.
+	 * NTS: Unfortunately some implementations, even though you wrote 0x4x, will return 0xEx regardless,
+	 *      so it's not really that easy. In that case, the only way to know is if the flags are set
+	 *      in the taskfile indicating that an LBA48 command was issued. */
 	if (ide->taskfile[ide->selected_drive].assume_lba48/*we KNOW we issued an LBA48 command*/ ||
-		(ide->head_select&0xE0) == 0x40/*LBA48 command was issued*/) {
+		(ide->head_select&0xE0) == 0x40/*LBA48 command was issued (NTS: but most IDE controllers replace with 0xE0, so...)*/) {
 		/* write 16 bits to 0x1F2-0x1F5 */
 		if (portmask & 0x04) {
 			outp(ide->base_io+2,ide->taskfile[ide->selected_drive].sector_count>>8);
@@ -317,7 +322,7 @@ int idelib_controller_apply_taskfile(struct ide_controller *ide,unsigned char po
 	return 0;
 }
 
-int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char portmask) {
+int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char portmask,unsigned char flags) {
 	if (portmask & 0x80/*base+7*/) {
 		ide->last_status = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
 		if (ide->last_status&0x80) return -1; /* if the controller is busy, then the other registers have no meaning */
@@ -330,7 +335,15 @@ int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char p
 		ide->taskfile[ide->selected_drive].head_select = ide->head_select;
 	}
 
-	/* and read back the upper 3 bits for the current mode, to detect LBA48 commands */
+	if (flags&IDELIB_TASKFILE_LBA48_UPDATE)
+		ide->taskfile[ide->selected_drive].assume_lba48 = (flags&IDELIB_TASKFILE_LBA48)?1:0;
+
+	/* and read back the upper 3 bits for the current mode, to detect LBA48 commands.
+	 * NTS: Unfortunately some implementations, even though you wrote 0x4x, will return 0xEx regardless,
+	 *      so it's not really that easy. In that case, the only way to know is if the flags are set
+	 *      in the taskfile indicating that an LBA48 command was issued. the program using this function
+	 *      will presumably let us know if it is by sending:
+	 *      flags = IDELIB_TASKFILE_LBA48 | IDELIB_TASKFILE_LBA48_UPDATE */
 	if (ide->taskfile[ide->selected_drive].assume_lba48/*we KNOW we issued an LBA48 command*/ ||
 		(ide->head_select&0xE0) == 0x40/*LBA48 command was issued*/) {
 		/* read back 16 bits from 0x1F2-0x1F5 */

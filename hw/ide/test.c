@@ -1998,6 +1998,11 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			vga_write_color((select == 29) ? 0x70 : 0x0F);
 			vga_write("Read verify tests >>");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(ofsx+(width/cols),y++);
+			vga_write_color((select == 30) ? 0x70 : 0x0F);
+			vga_write("Show IDE register taskfile");
+			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -2009,6 +2014,58 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 		else if (c == 13) {
 			if (select == -1) {
 				break;
+			}
+			else if (select == 30) { /* show IDE register taskfile */
+				if (idelib_controller_update_taskfile(ide,0xFF,0) == 0) {
+					struct ide_taskfile *tsk = &ide->taskfile[ide->selected_drive];
+
+					redraw = backredraw = 1;
+					vga_write_color(0x0F);
+					vga_clear();
+
+					vga_moveto(0,0);
+					vga_write("IDE taskfile:\n\n");
+
+					vga_write("IDE controller:\n");
+					sprintf(tmp," selected_drive=%u last_status=0x%02x drive_address=0x%02x\n device_control=0x%02x head_select=0x%02x\n\n",
+						ide->selected_drive,	ide->last_status,
+						ide->drive_address,	ide->device_control,
+						ide->head_select);
+					vga_write(tmp);
+
+					vga_write("IDE device:\n");
+					sprintf(tmp," assume_lba48=%u\n",tsk->assume_lba48);
+					vga_write(tmp);
+					sprintf(tmp," error=0x%02x\n",tsk->error); /* aliased to features */
+					vga_write(tmp);
+					sprintf(tmp," sector_count=0x%04x\n",tsk->sector_count);
+					vga_write(tmp);
+					sprintf(tmp," lba0_3/chs_sector=0x%04x\n",tsk->lba0_3);
+					vga_write(tmp);
+					sprintf(tmp," lba1_4/chs_cyl_low=0x%04x\n",tsk->lba1_4);
+					vga_write(tmp);
+					sprintf(tmp," lba2_5/chs_cyl_high=0x%04x\n",tsk->lba2_5);
+					vga_write(tmp);
+					sprintf(tmp," head_select=0x%02x\n",tsk->head_select);
+					vga_write(tmp);
+					sprintf(tmp," command=0x%02x\n",tsk->command);
+					vga_write(tmp);
+					sprintf(tmp," status=0x%02x\n",tsk->status);
+					vga_write(tmp);
+
+					do {
+						c = getch();
+						if (c == 0) c = getch() << 8;
+					} while (!(c == 13 || c == 27));
+				}
+				else {
+					vga_msg_box_create(&vgabox,"Failed to read taskfile",0,0);
+					do {
+						c = getch();
+						if (c == 0) c = getch() << 8;
+					} while (!(c == 13 || c == 27));
+					vga_msg_box_destroy(&vgabox);
+				}
 			}
 			else if (select == 21) { /* media eject */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
@@ -3425,7 +3482,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 29;
+				select = 30;
 
 			redraw = 1;
 		}
@@ -3435,11 +3492,11 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 		}
 		else if (c == 0x4D00) {
 			if (select < 18) select += 18;
-			if (select > 29) select -= 18;
+			if (select > 30) select -= 18;
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 29)
+			if (++select > 30)
 				select = -1;
 
 			redraw = 1;

@@ -77,12 +77,13 @@ enum {
 };
 
 enum {
-	IDELIB_TASKFILE_LBA48=0x01
+	IDELIB_TASKFILE_LBA48=0x01,
+	IDELIB_TASKFILE_LBA48_UPDATE=0x02
 };
 
 void idelib_controller_drive_select(struct ide_controller *ide,unsigned char which/*1=slave 0=master*/,unsigned char head/*CHS mode head value*/,unsigned char mode/*upper 3 bits*/);
 int idelib_controller_apply_taskfile(struct ide_controller *ide,unsigned char portmask,unsigned char flags);
-int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char portmask);
+int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char portmask,unsigned char flags);
 
 void idelib_enable_interrupt(struct ide_controller *ide,unsigned char en);
 int idelib_controller_allocated(struct ide_controller *ide);
