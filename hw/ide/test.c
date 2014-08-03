@@ -57,6 +57,10 @@ static void common_ide_success_or_error_vga_msg_box(struct ide_controller *ide,s
 		vga_msg_box_create(vgabox,tmp,0,0);
 	}
 }
+	
+static void common_failed_to_read_taskfile_vga_msg_box(struct vga_msg_box *vgabox) {
+	vga_msg_box_create(vgabox,"Failed to read taskfile",0,0);
+}
 
 static void wait_for_enter_or_escape() {
 	int c;
@@ -2080,11 +2084,8 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					} while (!(c == 13 || c == 27));
 				}
 				else {
-					vga_msg_box_create(&vgabox,"Failed to read taskfile",0,0);
-					do {
-						c = getch();
-						if (c == 0) c = getch() << 8;
-					} while (!(c == 13 || c == 27));
+					common_failed_to_read_taskfile_vga_msg_box(&vgabox);
+					wait_for_enter_or_escape();
 					vga_msg_box_destroy(&vgabox);
 				}
 			}
@@ -2204,52 +2205,54 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			else if (select == 2) { /* idle */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
 					do_ide_controller_user_wait_drive_ready(ide) == 0) {
-					ide->irq_fired = 0;
-					outp(ide->base_io+7,0xE1); /* <- idle immediate */
-					if (ide->flags.io_irq_enable)
+					idelib_controller_reset_irq_counter(ide);
+					idelib_controller_write_command(ide,0xE1); /* <- idle immediate */
+					if (ide->flags.io_irq_enable) {
 						do_ide_controller_user_wait_irq(ide,1);
-
+						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+					}
 					do_ide_controller_user_wait_busy_controller(ide);
 					do_ide_controller_user_wait_drive_ready(ide);
-					x = inp(ide->base_io+7); /* what's the status? */
-					if (!(x&1)) {
-						vga_msg_box_create(&vgabox,"Success",0,0);
-					}
-					else {
-						sprintf(tmp,"Device rejected with error %02X",x);
-						vga_msg_box_create(&vgabox,tmp,0,0);
-					}
-					do {
-						c = getch();
-						if (c == 0) c = getch() << 8;
-					} while (!(c == 13 || c == 27));
+					common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+					wait_for_enter_or_escape();
 					vga_msg_box_destroy(&vgabox);
 				}
 			}
 			else if (select == 3) { /* device reset */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) == 0) {
-					unsigned char task[7];
-
-					ide->irq_fired = 0;
-					outp(ide->base_io+7,0x08); /* <- device reset */
+					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
+					idelib_controller_reset_irq_counter(ide);
+					idelib_controller_write_command(ide,0x08); /* <- device reset */
 					do_ide_controller_user_wait_busy_controller(ide);
-					/* Two things can happen: The device can return an error (which is fine).
-					   Or it can signal success by setting status to 0x00.
-					   If it's an ATAPI CD-ROM drive, it will also set lo/hi cylinder count
-					   to magic value low=0x14 hi=0xEB */
-					for (x=0;x < 7;x++) task[x] = inp(ide->base_io+x+1);
 
-					sprintf(tmp,"Device response: (0x1F1-0x1F7) %02X %02X %02X %02X %02X %02X %02X",
-						task[0],task[1],task[2],task[3],task[4],task[5],task[6]);
-					vga_msg_box_create(&vgabox,tmp,0,0);
-					do {
-						c = getch();
-						if (c == 0) c = getch() << 8;
-					} while (!(c == 13 || c == 27));
+					/* NTS: Device reset doesn't necessary seem to signal an IRQ, at least not
+					 *      immediately. On some implementations the IRQ will have fired by now,
+					 *      on others, it will have fired by now for hard drives but for CD-ROM
+					 *      drives will not fire until the registers are read back, and others
+					 *      don't fire at all. So don't count on the IRQ, just poll and busy
+					 *      wait for the drive to signal readiness. */
+
+					if (idelib_controller_update_taskfile(ide,0xFF,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/) == 0) {
+						struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+
+						sprintf(tmp,"Device response: (0x1F1-0x1F7) %02X %02X %02X %02X %02X %02X %02X",
+							tsk->error,	tsk->sector_count,
+							tsk->lba0_3,	tsk->lba1_4,
+							tsk->lba2_5,	tsk->head_select,
+							tsk->status);
+						vga_msg_box_create(&vgabox,tmp,0,0);
+					}
+					else {
+						common_failed_to_read_taskfile_vga_msg_box(&vgabox);
+					}
+
+					/* it MIGHT have fired an IRQ... */
+					idelib_controller_ack_irq(ide);
+
+					wait_for_enter_or_escape();
 					vga_msg_box_destroy(&vgabox);
-
 					do_ide_controller_atapi_device_check_post_host_reset(ide);
+					do_ide_controller_user_wait_drive_ready(ide);
 				}
 			}
 			else if (select == 4) { /* check power mode */
