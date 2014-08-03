@@ -312,34 +312,37 @@ int do_ide_controller_user_wait_drive_ready(struct ide_controller *ide) {
  *       caller doesn't do that, this routine will probably end up running through
  *       the routine on the wrong IDE device */
 int do_ide_controller_atapi_device_check_post_host_reset(struct ide_controller *ide) {
-	unsigned char b;
+	idelib_controller_update_status(ide);
+	if (idelib_controller_is_busy(ide)) return -1;			/* YOU'RE SUPPOSED TO WAIT FOR CONTROLLER NOT-BUSY! */
+	if (idelib_controller_is_drive_ready(ide)) return 0;		/* Drive indicates readiness, nothing to do */
 
-	b = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
-	if (b & 0x80) return -1;	/* YOU'RE SUPPOSED TO WAIT FOR CONTROLLER NOT-BUSY! */
-	if (b & 0x40) return 0;		/* Drive indicates readiness, nothing to do */
+	if ((ide->last_status&0xC1) == 0) { /* <- typical post-reset state. VirtualBox/QEMU never raises Drive Ready bit */
+		struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
 
-	if ((b&0xC1) == 0) { /* <- typical post-reset state. VirtualBox/QEMU never raises Drive Ready bit */
 		/* OK: If I write things to 0x1F2-0x1F5 can I read them back? */
-		outp(ide->base_io+2,0x55);
-		outp(ide->base_io+3,0xAA);
-		outp(ide->base_io+4,0x3F);
+		tsk->sector_count = 0x55;
+		tsk->lba0_3 = 0xAA;
+		tsk->lba1_4 = 0x3F;
 
-		if (inp(ide->base_io+2) != 0x55 || inp(ide->base_io+3) != 0xAA || inp(ide->base_io+4) != 0x3F)
+		idelib_controller_apply_taskfile(ide,0x1C/*regs 2-4*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear*/);
+		tsk->sector_count = tsk->lba0_3 = tsk->lba1_4 = 0; /* DEBUG: just to be sure */
+		idelib_controller_update_taskfile(ide,0x1C/*regs 2-4*/,0);
+
+		if (tsk->sector_count != 0x55 || tsk->lba0_3 != 0xAA || tsk->lba1_4 != 0x3F)
 			return -1;	/* Nope. IDE device is not there (also possibly the device is fucked up) */
 
-		/* read status again... */
-		b = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
+		idelib_controller_update_status(ide);
 	}
-	if ((b&0xC1) == 0) { /* <- if the first test did not trigger drive ready, then whack the command port with ATA NO-OP */
-		outp(ide->base_io+7,0x00);
+	if ((ide->last_status&0xC1) == 0) { /* <- if the first test did not trigger drive ready, then whack the command port with ATA NO-OP */
+		idelib_controller_write_command(ide,0x00);
 		t8254_wait(t8254_us2ticks(100000)); /* <- give it 100ms to respond */
-		b = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
+		idelib_controller_update_status(ide);
 	}
-	if ((b&0xC1) == 0) { /* <- if the NO-OP test didn't work, then forget it, I'm out of ideas */
+	if ((ide->last_status&0xC1) == 0) { /* <- if the NO-OP test didn't work, then forget it, I'm out of ideas */
 		return -1;
 	}
 
-	inp(ide->base_io+7); /* eat the IRQ signal */
+	idelib_controller_ack_irq(ide);
 	return 0;
 }
 
