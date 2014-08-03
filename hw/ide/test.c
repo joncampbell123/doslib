@@ -3513,11 +3513,28 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 
 static void (interrupt *my_ide_old_irq)() = NULL;
 static struct ide_controller *my_ide_irq_ide = NULL;
+static unsigned long ide_irq_counter = 0;
 static int my_ide_irq_number = -1;
 
 static void interrupt my_ide_irq() {
-	(*(vga_alpha_ram + (vga_width*(vga_height-1))))++;
+	int i;
 
+	/* we CANNOT use sprintf() here. sprintf() doesn't work to well from within an interrupt handler,
+	 * and can cause crashes in 16-bit realmode builds. */
+	i = vga_width*(vga_height-1);
+	vga_alpha_ram[i++] = 0x1F00 | 'I';
+	vga_alpha_ram[i++] = 0x1F00 | 'R';
+	vga_alpha_ram[i++] = 0x1F00 | 'Q';
+	vga_alpha_ram[i++] = 0x1F00 | ':';
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter / 100000UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /  10000UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /   1000UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /    100UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /     10UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /       1L) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ' ';
+
+	ide_irq_counter++;
 	if (my_ide_irq_ide != NULL) {
 		my_ide_irq_ide->irq_fired++;
 
