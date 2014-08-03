@@ -23,6 +23,7 @@ extern struct ide_controller		ide_controller[MAX_IDE_CONTROLLER];
 extern int8_t				idelib_init;
 
 const struct ide_controller *idelib_get_standard_isa_port(int i);
+int idelib_controller_is_busy(struct ide_controller *ide);
 int idelib_controller_allocated(struct ide_controller *ide);
 struct ide_controller *idelib_probe(struct ide_controller *ide);
 struct ide_controller *idelib_get_controller(int i);

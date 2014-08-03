@@ -61,15 +61,15 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 
 	/* use the alt status register if possible, else the base I/O.
 	 * the alt status register is said not to clear pending interrupts */
-	status = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
-	if (status & 0x80) {
+	status = idelib_controller_is_busy(ide);
+	if (status) {
 		unsigned long show_countdown = 0x1000UL;
 		/* if the drive&controller is busy then show the dialog and wait for non-busy
 		 * or until the user forces us to proceed */
 
 		do {
-			status = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
-			if (!(status & 0x80)) break;
+			status = idelib_controller_is_busy(ide);
+			if (!status) break;
 
 			/* if the drive&controller is busy then show the dialog and wait for non-busy
 			 * or until the user forces us to proceed */
