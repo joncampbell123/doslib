@@ -1866,37 +1866,6 @@ void do_drive_standby_test(struct ide_controller *ide,unsigned char which) {
 	vga_msg_box_destroy(&vgabox);
 }
 
-void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
-	struct vga_msg_box vgabox;
-
-	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
-		return;
-
-	idelib_controller_reset_irq_counter(ide);
-	idelib_controller_write_command(ide,0xE6); /* <- sleep */
-	if (ide->flags.io_irq_enable) {
-		do_ide_controller_user_wait_irq(ide,1);
-		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
-	}
-	do_ide_controller_user_wait_busy_controller(ide);
-	/* do NOT wait for drive ready---the drive is never ready when it's asleep! */
-	if (!(ide->last_status&1)) {
-		vga_msg_box_create(&vgabox,"Success.\n\nHit ENTER to re-awaken the device",0,0);
-		wait_for_enter_or_escape();
-		vga_msg_box_destroy(&vgabox);
-		do_ide_controller_atapi_device_check_post_host_reset(ide);
-		idelib_controller_reset_irq_counter(ide);
-		idelib_controller_ack_irq(ide);
-		do_ide_controller_user_wait_busy_controller(ide);
-		do_ide_controller_user_wait_drive_ready(ide);
-	}
-	else {
-		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
-		wait_for_enter_or_escape();
-		vga_msg_box_destroy(&vgabox);
-	}
-}
-
 void do_drive_idle_test(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 
@@ -1954,6 +1923,57 @@ void do_drive_device_reset_test(struct ide_controller *ide,unsigned char which) 
 	vga_msg_box_destroy(&vgabox);
 	do_ide_controller_atapi_device_check_post_host_reset(ide);
 	do_ide_controller_user_wait_drive_ready(ide);
+}
+
+void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+
+	idelib_controller_reset_irq_counter(ide);
+	idelib_controller_write_command(ide,0xE6); /* <- sleep */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	/* do NOT wait for drive ready---the drive is never ready when it's asleep! */
+	if (!(ide->last_status&1)) {
+		vga_msg_box_create(&vgabox,"Success.\n\nHit ENTER to re-awaken the device",0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+
+		/* clear IRQ state, wait for IDE controller to signal ready.
+		 * once in sleep state, the device probably won't respond normally until device reset.
+		 * do NOT wait for drive ready, the drive will never be ready in this state because
+		 * (duh) it's asleep. */
+
+		/* now re-awaken the device with DEVICE RESET */
+		idelib_controller_ack_irq(ide);
+		idelib_controller_reset_irq_counter(ide);
+		idelib_controller_write_command(ide,0x08); /* <- device reset */
+		do_ide_controller_user_wait_busy_controller(ide);
+
+		/* it MIGHT have fired an IRQ... */
+		idelib_controller_ack_irq(ide);
+
+		do_ide_controller_atapi_device_check_post_host_reset(ide);
+		do_ide_controller_user_wait_drive_ready(ide);
+
+		if (!idelib_controller_is_error(ide))
+			vga_msg_box_create(&vgabox,"Success",0,0);
+		else
+			common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+	else {
+		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
 }
 
 void do_drive_check_power_mode(struct ide_controller *ide,unsigned char which) {
