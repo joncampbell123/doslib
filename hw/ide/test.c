@@ -1882,13 +1882,19 @@ void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
 	/* do NOT wait for drive ready---the drive is never ready when it's asleep! */
 	if (!(ide->last_status&1)) {
 		vga_msg_box_create(&vgabox,"Success.\n\nHit ENTER to re-awaken the device",0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
 		do_ide_controller_atapi_device_check_post_host_reset(ide);
+		idelib_controller_reset_irq_counter(ide);
+		idelib_controller_ack_irq(ide);
+		do_ide_controller_user_wait_busy_controller(ide);
+		do_ide_controller_user_wait_drive_ready(ide);
 	}
 	else {
 		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
 	}
-	wait_for_enter_or_escape();
-	vga_msg_box_destroy(&vgabox);
 }
 
 void do_drive_idle_test(struct ide_controller *ide,unsigned char which) {
