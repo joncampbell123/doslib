@@ -45,6 +45,12 @@
 
 static int read_mode = 12;
 static int pio_width = 16;	/* 16: standard I/O   32: 32-bit I/O   33: 32-bit I/O with VLB "sync sequence" */
+static int pio_width_warning = 1;
+static unsigned char big_scary_write_test_warning = 1;
+
+static char tmp[1024];
+static uint16_t ide_info[256];
+static unsigned char cdrom_sector[512U*63U];	/* ~32KB, enough for CD-ROM sector or 63 512-byte sectors */
 
 static unsigned char sanitizechar(unsigned char c) {
 	if (c < 32) return '.';
@@ -56,8 +62,6 @@ static void common_ide_success_or_error_vga_msg_box(struct ide_controller *ide,s
 		vga_msg_box_create(vgabox,"Success",0,0);
 	}
 	else {
-		char tmp[90];
-
 		sprintf(tmp,"Device rejected with error %02X",ide->last_status);
 		vga_msg_box_create(vgabox,tmp,0,0);
 	}
@@ -80,7 +84,6 @@ static int wait_for_enter_or_escape() {
 
 static void do_warn_if_atapi_not_in_command_state(struct ide_controller *ide) {
 	struct vga_msg_box vgabox;
-	char tmp[128];
 
 	if (!idelib_controller_atapi_command_state(ide)) {
 		sprintf(tmp,"WARNING: ATAPI device not in command state as expected (state=%u)",idelib_controller_read_atapi_state(ide));
@@ -92,7 +95,6 @@ static void do_warn_if_atapi_not_in_command_state(struct ide_controller *ide) {
 
 static void do_warn_if_atapi_not_in_complete_state(struct ide_controller *ide) {
 	struct vga_msg_box vgabox;
-	char tmp[128];
 
 	if (!idelib_controller_atapi_complete_state(ide)) {
 		sprintf(tmp,"WARNING: ATAPI device not in complete state as expected (state=%u)",idelib_controller_read_atapi_state(ide));
@@ -376,13 +378,6 @@ int do_ide_controller_atapi_device_check_post_host_reset(struct ide_controller *
 	idelib_controller_ack_irq(ide);
 	return 0;
 }
-
-static char tmp[1024];
-static uint16_t ide_info[256];
-static unsigned char cdrom_sector[512U*63U];	/* ~32KB, enough for CD-ROM sector or 63 512-byte sectors */
-static unsigned char big_scary_write_test_warning = 1;
-
-static int pio_width_warning = 1;
 
 void do_ide_controller_drive_write_unc_test(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
