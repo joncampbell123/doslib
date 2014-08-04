@@ -57,6 +57,39 @@ static unsigned char sanitizechar(unsigned char c) {
 	return c;
 }
 
+/* construct ATAPI/SCSI-MMC READ command according to user's choice, either READ(10) or READ(12) */
+static void do_construct_atapi_scsi_mmc_read(unsigned char *buf/*must be 12 bytes*/,uint32_t sector,uint32_t tlen_sect) {
+	memset(buf,0,12);
+	if (read_mode == 12) {
+		/* command: READ(12) */
+		buf[0] = 0xA8;
+
+		/* fill in the Logical Block Address */
+		buf[2] = sector >> 24;
+		buf[3] = sector >> 16;
+		buf[4] = sector >> 8;
+		buf[5] = sector;
+
+		buf[6] = tlen_sect >> 24UL;
+		buf[7] = tlen_sect >> 16UL;
+		buf[8] = tlen_sect >> 8UL;
+		buf[9] = tlen_sect;
+	}
+	else {
+		/* command: READ(10) */
+		buf[0] = 0x28;
+
+		/* fill in the Logical Block Address */
+		buf[2] = sector >> 24;
+		buf[3] = sector >> 16;
+		buf[4] = sector >> 8;
+		buf[5] = sector;
+
+		buf[7] = tlen_sect >> 8;
+		buf[8] = tlen_sect;
+	}
+}
+
 static void common_ide_success_or_error_vga_msg_box(struct ide_controller *ide,struct vga_msg_box *vgabox) {
 	if (!(ide->last_status&1)) {
 		vga_msg_box_create(vgabox,"Success",0,0);
@@ -87,6 +120,17 @@ static void do_warn_if_atapi_not_in_command_state(struct ide_controller *ide) {
 
 	if (!idelib_controller_atapi_command_state(ide)) {
 		sprintf(tmp,"WARNING: ATAPI device not in command state as expected (state=%u)",idelib_controller_read_atapi_state(ide));
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+
+static void do_warn_if_atapi_not_in_data_input_state(struct ide_controller *ide) {
+	struct vga_msg_box vgabox;
+
+	if (!idelib_controller_atapi_data_input_state(ide)) {
+		sprintf(tmp,"WARNING: ATAPI device not in data input state as expected (state=%u)",idelib_controller_read_atapi_state(ide));
 		vga_msg_box_create(&vgabox,tmp,0,0);
 		wait_for_enter_or_escape();
 		vga_msg_box_destroy(&vgabox);
@@ -2194,6 +2238,111 @@ void do_drive_atapi_eject_load(struct ide_controller *ide,unsigned char which,un
 	}
 }
 
+void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char which) {
+	unsigned long sector = 16; /* read the ISO 9660 table of contents */
+	unsigned long tlen = 2048; /* one sector */
+	unsigned long tlen_sect = 1;
+	struct vga_msg_box vgabox;
+	uint8_t buf[12] = {0};
+	unsigned int x,y,i;
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+	if (idelib_controller_atapi_prepare_packet_command(ide,/*xfer=to host no DMA*/0x04,/*byte count=*/tlen) < 0) /* fill out taskfile with command */
+		return;
+	if (idelib_controller_apply_taskfile(ide,0xBE/*base_io+1-5&7*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/) < 0) /* also writes command */
+		return;
+
+	/* NTS: Despite OSDev ATAPI advice, IRQ doesn't seem to fire at this stage, we must poll wait */
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	idelib_controller_update_atapi_state(ide);
+	if (!(ide->last_status&1)) { /* if no error, read result from count register */
+		do_warn_if_atapi_not_in_command_state(ide); /* sector count register should signal we're in the command stage */
+
+		do_construct_atapi_scsi_mmc_read(buf,sector,tlen_sect);
+		idelib_controller_reset_irq_counter(ide); /* IRQ will fire after command completion */
+		idelib_controller_atapi_write_command(ide,buf,12); /* write 12-byte ATAPI command data */
+		if (ide->flags.io_irq_enable) { /* NOW we wait for the IRQ */
+			do_ide_controller_user_wait_irq(ide,1);
+			idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+		}
+		do_ide_controller_user_wait_busy_controller(ide);
+		do_ide_controller_user_wait_drive_ready(ide);
+		idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
+		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+
+		if (!idelib_controller_is_error(ide)) { /* OK. success. now read the data */
+			memset(cdrom_sector,0,tlen);
+			do_ide_controller_user_wait_drive_drq(ide);
+			do_warn_if_atapi_not_in_data_input_state(ide); /* sector count register should signal we're in the completed stage (command/data=0 input/output=1) */
+			idelib_read_pio_general(cdrom_sector,tlen,ide,pio_width);
+			if (ide->flags.io_irq_enable) { /* NOW we wait for another IRQ (completion) */
+				do_ide_controller_user_wait_irq(ide,1);
+				idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+			}
+			idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
+			do_warn_if_atapi_not_in_complete_state(ide); /* sector count register should signal we're in the completed stage (command/data=1 input/output=1) */
+
+			/* ---- draw contents on the screen ---- */
+			vga_write_color(0x0E); vga_clear();
+
+			vga_moveto(0,2);
+			vga_write_color(0x08);
+			vga_write("BYTE ");
+
+			vga_moveto(5,2);
+			for (x=0;x < 16;x++) {
+				sprintf(tmp,"+%X ",x);
+				vga_write(tmp);
+			}
+
+			vga_moveto(5+(16*3)+1,2);
+			for (x=0;x < 16;x++) {
+				sprintf(tmp,"%X",x);
+				vga_write(tmp);
+			}
+
+			for (i=0;i < 8;i++) { /* 16x16x8 = 2^(4+4+3) = 2^11 = 2048 */
+				for (y=0;y < 16;y++) {
+					vga_moveto(0,y+3);
+					vga_write_color(0x08);
+					sprintf(tmp,"%04X ",(i*256)+(y*16));
+					vga_write(tmp);
+				}
+
+				for (y=0;y < 16;y++) {
+					vga_moveto(5,y+3);
+					vga_write_color(0x0F);
+					for (x=0;x < 16;x++) {
+						sprintf(tmp,"%02X ",cdrom_sector[(i*256)+(y*16)+x]);
+						vga_write(tmp);
+					}
+
+					vga_moveto(5+(16*3)+1,y+3);
+					vga_write_color(0x0E);
+					for (x=0;x < 16;x++) {
+						vga_writec(sanitizechar(cdrom_sector[(i*256)+(y*16)+x]));
+					}
+				}
+
+				if (wait_for_enter_or_escape() == 27)
+					break; /* allow user to exit early by hitting ESC */
+			}
+		}
+		else {
+			do_warn_if_atapi_not_in_complete_state(ide); /* sector count register should signal we're in the completed stage (command/data=1 input/output=1) */
+		}
+	}
+	else {
+		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 	char redraw=1;
@@ -2474,6 +2623,10 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 				static const unsigned char cmd[4] = {2/*eject*/,3/*load*/,1/*start*/,0/*stop*/};
 				do_drive_atapi_eject_load(ide,which,cmd[select-7]);
 			}
+			else if (select == 11) { /* ATAPI read CD-ROM */
+				do_drive_read_one_sector_test(ide,which);
+				redraw = backredraw = 1;
+			}
 
 			else if (select == 28) { /* NOP */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
@@ -2655,146 +2808,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 				}
 			}
 
-			else if (select == 11) { /* ATAPI read CD-ROM */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) == 0) {
-					unsigned long sector = 16; /* read the ISO 9660 table of contents */
-					unsigned long tlen = 2048; /* one sector */
-					unsigned long tlen_sect = 1;
-
-					y = 0;
-					outp(ide->base_io+1,0x04); /* no DMA, xfer to host */
-					outp(ide->base_io+2,0x00);
-					outp(ide->base_io+3,0);
-					outp(ide->base_io+4,tlen);
-					outp(ide->base_io+5,tlen >> 8UL);
-					outp(ide->base_io+7,0xA0); /* <- ATAPI PACKET */
-					/* NTS: Do NOT wait for IRQ, the CD-ROM won't fire one here */
-					do_ide_controller_user_wait_busy_controller(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-					x = inp(ide->base_io+7); /* what's the status? */
-					if (!(x&1)) { /* if no error, read result from count register */
-						uint8_t buf[12] = {0x00,0x00,0x00,0x00,
-							0x00,0x00,0x00,0x00,
-							0x00,0x00,0x00,0x00};
-
-						if (read_mode == 12) {
-							/* command: READ(12) */
-							buf[0] = 0xA8;
-
-							/* fill in the Logical Block Address */
-							buf[2] = sector >> 24;
-							buf[3] = sector >> 16;
-							buf[4] = sector >> 8;
-							buf[5] = sector;
-
-							buf[6] = tlen_sect >> 24UL;
-							buf[7] = tlen_sect >> 16UL;
-							buf[8] = tlen_sect >> 8UL;
-							buf[9] = tlen_sect;
-						}
-						else {
-							/* command: READ(10) */
-							buf[0] = 0x28;
-
-							/* fill in the Logical Block Address */
-							buf[2] = sector >> 24;
-							buf[3] = sector >> 16;
-							buf[4] = sector >> 8;
-							buf[5] = sector;
-
-							buf[7] = tlen_sect >> 8;
-							buf[8] = tlen_sect;
-						}
-
-						ide->irq_fired = 0;
-						for (i=0;i < 6;i++)
-							outpw(ide->base_io+0,((uint16_t*)buf)[i]);
-
-						if (ide->flags.io_irq_enable)
-							do_ide_controller_user_wait_irq(ide,1);
-
-						do_ide_controller_user_wait_busy_controller(ide);
-						do_ide_controller_user_wait_drive_ready(ide);
-						x = inp(ide->base_io+7); /* what's the status? */
-						if (!(x&1)) {
-							memset(cdrom_sector,0,tlen);
-							if (do_ide_controller_user_wait_drive_drq(ide) == 0) {
-								if (pio_width >= 32) {
-									if (pio_width == 33) ide_vlb_sync32_pio(ide);
-
-									/* suck in the data and display it */
-									for (i=0;i < (tlen>>2U);i++)
-										((uint32_t*)cdrom_sector)[i] = inpd(ide->base_io+0);
-								}
-								else {
-									/* suck in the data and display it */
-									for (i=0;i < (tlen>>1U);i++)
-										((uint16_t*)cdrom_sector)[i] = inpw(ide->base_io+0);
-								}
-							}
-
-							/* wait for controller */
-							do_ide_controller_user_wait_busy_controller(ide);
-							do_ide_controller_user_wait_drive_ready(ide);
-							y = 1;
-							x = inp(ide->base_io+7); /* what's the status? */
-							if (!(x&1)) {
-								vga_msg_box_create(&vgabox,"Success",0,0);
-							}
-							else {
-								sprintf(tmp,"Device rejected with error %02X after read",x);
-								vga_msg_box_create(&vgabox,tmp,0,0);
-							}
-						}
-						else {
-							sprintf(tmp,"Device rejected with error %02X",x);
-							vga_msg_box_create(&vgabox,tmp,0,0);
-						}
-						do {
-							c = getch();
-							if (c == 0) c = getch() << 8;
-						} while (!(c == 13 || c == 27));
-						vga_msg_box_destroy(&vgabox);
-
-						if (y) {
-							vga_write_color(0xF);
-							vga_clear();
-							vga_moveto(0,0);
-
-							for (y=0;y < 128;y++) {
-								for (x=0;x < 16;x++) {
-									sprintf(tmp,"%02X ",cdrom_sector[(y*16)+x]);
-									vga_write(tmp);
-								}
-
-								for (x=0;x < 16;x++) {
-									i = cdrom_sector[(y*16)+x];
-									if (i < 32 || i > 127) i = '.';
-									vga_writec(i);
-								}
-
-								if ((y%vga_height) == (vga_height-1))
-									while (getch() != 13);
-
-								vga_write("\n");
-							}
-
-							while (getch() != 13);
-							redraw = backredraw = 1;
-						}
-					}
-					else {
-						sprintf(tmp,"Device rejected with error %02X",x);
-						vga_msg_box_create(&vgabox,tmp,0,0);
-						do {
-							c = getch();
-							if (c == 0) c = getch() << 8;
-						} while (!(c == 13 || c == 27));
-						vga_msg_box_destroy(&vgabox);
-					}
-				}
-			}
 			else if (select == 13 || select == 14) { /* read/write tests */
 				do_ide_controller_drive_rw_test(ide,which,select==14?1:0);
 				redraw = backredraw = 1;

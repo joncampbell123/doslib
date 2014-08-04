@@ -131,6 +131,10 @@ static inline void idelib_device_control_set_reset(struct ide_controller *ide,un
 	idelib_write_device_control(ide,(ide->device_control & (~0x06)) | (reset ? 0x04/*SRST*/ : (ide->flags.io_irq_enable?0x00:0x02/*nIEN*/)));
 }
 
+static inline int idelib_controller_atapi_data_input_state(struct ide_controller *ide) {
+	return (idelib_controller_read_atapi_state(ide) == 2); /* [bit 1] input/output == 1 [bit 0] command/data == 0 */
+}
+
 static inline int idelib_controller_atapi_command_state(struct ide_controller *ide) {
 	return (idelib_controller_read_atapi_state(ide) == 1); /* [bit 1] input/output == 0 [bit 0] command/data == 1 */
 }
