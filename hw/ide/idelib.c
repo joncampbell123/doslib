@@ -468,3 +468,15 @@ int idelib_controller_read_atapi_state(struct ide_controller *ide) {
 	return (tsk->sector_count&3);
 }
 
+int idelib_controller_update_atapi_drq(struct ide_controller *ide) {
+	return idelib_controller_update_taskfile(ide,0x30/*base_io+4-5*/,0);
+}
+
+int idelib_controller_read_atapi_drq(struct ide_controller *ide) {
+	struct ide_taskfile *tsk;
+
+	if (ide == NULL) return -1;
+	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+	return ((tsk->lba1_4&0xFF) + ((tsk->lba2_5&0xFF) << 8));
+}
+

@@ -102,6 +102,8 @@ int idelib_controller_atapi_prepare_packet_command(struct ide_controller *ide,un
 void idelib_controller_atapi_write_command(struct ide_controller *ide,unsigned char *buf,unsigned int len/*Only "12" is supported!*/);
 int idelib_controller_update_atapi_state(struct ide_controller *ide);
 int idelib_controller_read_atapi_state(struct ide_controller *ide);
+int idelib_controller_update_atapi_drq(struct ide_controller *ide);
+int idelib_controller_read_atapi_drq(struct ide_controller *ide);
 
 static inline void idelib_controller_ack_irq(struct ide_controller *ide) {
 	/* reading port 0x3F6 (normal method of status update) does not clear IRQ.

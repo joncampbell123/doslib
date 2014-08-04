@@ -2269,7 +2269,6 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 		}
 		do_ide_controller_user_wait_busy_controller(ide);
 		do_ide_controller_user_wait_drive_ready(ide);
-		idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
 		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
 		wait_for_enter_or_escape();
 		vga_msg_box_destroy(&vgabox);
@@ -2277,7 +2276,18 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 		if (!idelib_controller_is_error(ide)) { /* OK. success. now read the data */
 			memset(cdrom_sector,0,tlen);
 			do_ide_controller_user_wait_drive_drq(ide);
+			idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
+			idelib_controller_update_atapi_drq(ide); /* also need to read back the DRQ (data) length the drive has chosen */
 			do_warn_if_atapi_not_in_data_input_state(ide); /* sector count register should signal we're in the completed stage (command/data=0 input/output=1) */
+			if (idelib_controller_read_atapi_drq(ide) != tlen) {
+				/* we're asking for one sector (2048) bytes, the drive should return that, if not, something's wrong.
+				 * even cheap POS drives in old laptops will at least always return 2048! */
+				sprintf(tmp,"Warning: ATAPI device returned DRQ=%u (expected %u)",
+					idelib_controller_read_atapi_drq(ide),tlen);
+				vga_msg_box_create(&vgabox,tmp,0,0);
+				wait_for_enter_or_escape();
+				vga_msg_box_destroy(&vgabox);
+			}
 			idelib_read_pio_general(cdrom_sector,tlen,ide,pio_width);
 			if (ide->flags.io_irq_enable) { /* NOW we wait for another IRQ (completion) */
 				do_ide_controller_user_wait_irq(ide,1);
