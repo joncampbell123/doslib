@@ -12,7 +12,7 @@
  *        hardware standards that is conceptually simple yet so manu manufacturers managed to fuck
  *        up their implementation in some way or another.
  *      - Cleanup this code, move library into idelib.c+idelib.h
- *      - Fix corner cases where we're IDE busy waiting and user commands to break free ('C' or spacebar
+ *      - Fix corner cases where we're IDE busy waiting and user commands to break free (ESC or spacebar
  *        do not break out of read/write loop, forcing the user to CTRL+ALT+DEL or press reset.
  *
  * Also don't forget:
@@ -106,7 +106,7 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 			 * or until the user forces us to proceed */
 			if (show_countdown > 0UL) {
 				if (--show_countdown == 0UL)
-					vga_msg_box_create(&vgabox,"IDE controller busy, waiting...\n\nHit 'C' to cancel, spacebar to proceed anyway",0,0);
+					vga_msg_box_create(&vgabox,"IDE controller busy, waiting...\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
 			}
 
 
@@ -114,7 +114,7 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 				c = getch();
 				if (c == 0) c = getch() << 8;
 
-				if (c == 'c' || c == 'C') {
+				if (c == 27) {
 					ret = -1;
 					break;
 				}
@@ -168,14 +168,14 @@ int do_ide_controller_user_wait_drive_drq(struct ide_controller *ide) {
 			 * or until the user forces us to proceed */
 			if (show_countdown > 0UL) {
 				if (--show_countdown == 0UL)
-					vga_msg_box_create(&vgabox,"Waiting for Data Request from IDE device\n\nHit 'C' to cancel, spacebar to proceed anyway",0,0);
+					vga_msg_box_create(&vgabox,"Waiting for Data Request from IDE device\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
 			}
 
 			if (kbhit()) {
 				c = getch();
 				if (c == 0) c = getch() << 8;
 
-				if (c == 'c' || c == 'C') {
+				if (c == 27) {
 					ret = -1;
 					break;
 				}
@@ -215,14 +215,14 @@ int do_ide_controller_user_wait_irq(struct ide_controller *ide,uint16_t count) {
 			 * or until the user forces us to proceed */
 			if (show_countdown > 0UL) {
 				if (--show_countdown == 0UL)
-					vga_msg_box_create(&vgabox,"Waiting for IDE IRQ\n\nHit 'C' to cancel, spacebar to proceed anyway",0,0);
+					vga_msg_box_create(&vgabox,"Waiting for IDE IRQ\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
 			}
 
 			if (kbhit()) {
 				c = getch();
 				if (c == 0) c = getch() << 8;
 
-				if (c == 'c' || c == 'C') {
+				if (c == 27) {
 					ret = -1;
 					break;
 				}
@@ -269,14 +269,14 @@ int do_ide_controller_user_wait_drive_ready(struct ide_controller *ide) {
 
 			if (show_countdown > 0UL) {
 				if (--show_countdown == 0UL)
-					vga_msg_box_create(&vgabox,"IDE device not ready, waiting...\n\nHit 'C' to cancel, spacebar to proceed anyway",0,0);
+					vga_msg_box_create(&vgabox,"IDE device not ready, waiting...\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
 			}
 
 			if (kbhit()) {
 				c = getch();
 				if (c == 0) c = getch() << 8;
 
-				if (c == 'c' || c == 'C') {
+				if (c == 27) {
 					ret = -1;
 					break;
 				}
@@ -1805,13 +1805,13 @@ int do_ide_controller_drive_check_select(struct ide_controller *ide,unsigned cha
 		return -1;
 
 	if (which != ide->selected_drive || ide->head_select == 0xFF) {
-		vga_msg_box_create(&vgabox,"IDE controller drive select unsuccessful\n\nHit 'C' to cancel, spacebar to proceed anyway",0,0);
+		vga_msg_box_create(&vgabox,"IDE controller drive select unsuccessful\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
 
 		do {
 			c = getch();
 			if (c == 0) c = getch() << 8;
 
-			if (c == 'c' || c == 'C') {
+			if (c == 27) {
 				ret = -1;
 				break;
 			}
