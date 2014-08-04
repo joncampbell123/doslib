@@ -100,6 +100,8 @@ struct ide_controller *idelib_by_irq(int8_t irq);
 void ide_vlb_sync32_pio(struct ide_controller *ide);
 int idelib_controller_atapi_prepare_packet_command(struct ide_controller *ide,unsigned char features,unsigned int bytecount);
 void idelib_controller_atapi_write_command(struct ide_controller *ide,unsigned char *buf,unsigned int len/*Only "12" is supported!*/);
+int idelib_controller_update_atapi_state(struct ide_controller *ide);
+int idelib_controller_read_atapi_state(struct ide_controller *ide);
 
 static inline void idelib_controller_ack_irq(struct ide_controller *ide) {
 	/* reading port 0x3F6 (normal method of status update) does not clear IRQ.
@@ -127,6 +129,14 @@ static inline void idelib_write_device_control(struct ide_controller *ide,unsign
 
 static inline void idelib_device_control_set_reset(struct ide_controller *ide,unsigned char reset) {
 	idelib_write_device_control(ide,(ide->device_control & (~0x06)) | (reset ? 0x04/*SRST*/ : (ide->flags.io_irq_enable?0x00:0x02/*nIEN*/)));
+}
+
+static inline int idelib_controller_atapi_command_state(struct ide_controller *ide) {
+	return (idelib_controller_read_atapi_state(ide) == 1); /* [bit 1] input/output == 0 [bit 0] command/data == 1 */
+}
+
+static inline int idelib_controller_atapi_complete_state(struct ide_controller *ide) {
+	return (idelib_controller_read_atapi_state(ide) == 3); /* [bit 1] input/output == 1 [bit 0] command/data == 1 */
 }
 
 void free_idelib();

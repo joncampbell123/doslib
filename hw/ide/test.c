@@ -78,6 +78,30 @@ static int wait_for_enter_or_escape() {
 	return c;
 }
 
+static void do_warn_if_atapi_not_in_command_state(struct ide_controller *ide) {
+	struct vga_msg_box vgabox;
+	char tmp[128];
+
+	if (!idelib_controller_atapi_command_state(ide)) {
+		sprintf(tmp,"WARNING: ATAPI device not in command state as expected (state=%u)",idelib_controller_read_atapi_state(ide));
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+
+static void do_warn_if_atapi_not_in_complete_state(struct ide_controller *ide) {
+	struct vga_msg_box vgabox;
+	char tmp[128];
+
+	if (!idelib_controller_atapi_complete_state(ide)) {
+		sprintf(tmp,"WARNING: ATAPI device not in complete state as expected (state=%u)",idelib_controller_read_atapi_state(ide));
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+
 /*-----------------------------------------------------------------*/
 
 /* returns: -1 if user said to cancel
@@ -2114,7 +2138,10 @@ void do_drive_atapi_eject_load(struct ide_controller *ide,unsigned char which,un
 	/* NTS: Despite OSDev ATAPI advice, IRQ doesn't seem to fire at this stage, we must poll wait */
 	do_ide_controller_user_wait_busy_controller(ide);
 	do_ide_controller_user_wait_drive_ready(ide);
+	idelib_controller_update_atapi_state(ide);
 	if (!(ide->last_status&1)) { /* if no error, read result from count register */
+		do_warn_if_atapi_not_in_command_state(ide); /* sector count register should signal we're in the command stage */
+
 		buf[4] = atapi_eject_how; /* fill in byte 4 which tells ATAPI how to start/stop the unit */
 		idelib_controller_reset_irq_counter(ide); /* IRQ will fire after command completion */
 		idelib_controller_atapi_write_command(ide,buf,12); /* write 12-byte ATAPI command data */
@@ -2124,9 +2151,12 @@ void do_drive_atapi_eject_load(struct ide_controller *ide,unsigned char which,un
 		}
 		do_ide_controller_user_wait_busy_controller(ide);
 		do_ide_controller_user_wait_drive_ready(ide);
+		idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
 		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
 		wait_for_enter_or_escape();
 		vga_msg_box_destroy(&vgabox);
+
+		do_warn_if_atapi_not_in_complete_state(ide); /* sector count register should signal we're in the completed stage (command/data=1 input/output=1) */
 	}
 	else {
 		common_ide_success_or_error_vga_msg_box(ide,&vgabox);

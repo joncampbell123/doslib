@@ -451,3 +451,20 @@ void idelib_controller_atapi_write_command(struct ide_controller *ide,unsigned c
 		outpw(ide->base_io+0,0/*pad*/);
 }
 
+int idelib_controller_update_atapi_state(struct ide_controller *ide) {
+	struct ide_taskfile *tsk;
+
+	if (ide == NULL) return -1;
+	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+	tsk->sector_count = inp(ide->base_io+2);
+	return 0;
+}
+
+int idelib_controller_read_atapi_state(struct ide_controller *ide) {
+	struct ide_taskfile *tsk;
+
+	if (ide == NULL) return -1;
+	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+	return (tsk->sector_count&3);
+}
+
