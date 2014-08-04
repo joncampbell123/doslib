@@ -1821,6 +1821,109 @@ int do_ide_controller_drive_check_select(struct ide_controller *ide,unsigned cha
 	return ret;
 }
 
+void do_drive_standby_test(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+
+	idelib_controller_reset_irq_counter(ide);
+	idelib_controller_write_command(ide,0xE0); /* <- standby immediate */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+	wait_for_enter_or_escape();
+	vga_msg_box_destroy(&vgabox);
+}
+
+void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+
+	idelib_controller_reset_irq_counter(ide);
+	idelib_controller_write_command(ide,0xE6); /* <- sleep */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	/* do NOT wait for drive ready---the drive is never ready when it's asleep! */
+	if (!(ide->last_status&1)) {
+		vga_msg_box_create(&vgabox,"Success.\n\nHit ENTER to re-awaken the device",0,0);
+		do_ide_controller_atapi_device_check_post_host_reset(ide);
+	}
+	else {
+		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+	}
+	wait_for_enter_or_escape();
+	vga_msg_box_destroy(&vgabox);
+}
+
+void do_drive_idle_test(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+
+	idelib_controller_reset_irq_counter(ide);
+	idelib_controller_write_command(ide,0xE1); /* <- idle immediate */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+	wait_for_enter_or_escape();
+	vga_msg_box_destroy(&vgabox);
+}
+		
+void do_drive_device_reset_test(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+
+	idelib_controller_reset_irq_counter(ide);
+	idelib_controller_write_command(ide,0x08); /* <- device reset */
+	do_ide_controller_user_wait_busy_controller(ide);
+
+	/* NTS: Device reset doesn't necessary seem to signal an IRQ, at least not
+	 *      immediately. On some implementations the IRQ will have fired by now,
+	 *      on others, it will have fired by now for hard drives but for CD-ROM
+	 *      drives will not fire until the registers are read back, and others
+	 *      don't fire at all. So don't count on the IRQ, just poll and busy
+	 *      wait for the drive to signal readiness. */
+
+	if (idelib_controller_update_taskfile(ide,0xFF,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/) == 0) {
+		struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+
+		sprintf(tmp,"Device response: (0x1F1-0x1F7) %02X %02X %02X %02X %02X %02X %02X",
+			tsk->error,	tsk->sector_count,
+			tsk->lba0_3,	tsk->lba1_4,
+			tsk->lba2_5,	tsk->head_select,
+			tsk->status);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+	}
+	else {
+		common_failed_to_read_taskfile_vga_msg_box(&vgabox);
+	}
+
+	/* it MIGHT have fired an IRQ... */
+	idelib_controller_ack_irq(ide);
+
+	wait_for_enter_or_escape();
+	vga_msg_box_destroy(&vgabox);
+	do_ide_controller_atapi_device_check_post_host_reset(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+}
+
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 	char redraw=1;
@@ -2078,100 +2181,16 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			break;
 		}
 		else if (c == 13) {
-			if (select == -1) {
+			if (select == -1)
 				break;
-			}
-			else if (select == 0) { /* standby */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
-					idelib_controller_reset_irq_counter(ide);
-					idelib_controller_write_command(ide,0xE0); /* <- standby immediate */
-					if (ide->flags.io_irq_enable) {
-						do_ide_controller_user_wait_irq(ide,1);
-						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
-					}
-					do_ide_controller_user_wait_busy_controller(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-					common_ide_success_or_error_vga_msg_box(ide,&vgabox);
-					wait_for_enter_or_escape();
-					vga_msg_box_destroy(&vgabox);
-				}
-			}
-			else if (select == 1) { /* sleep */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
-					idelib_controller_reset_irq_counter(ide);
-					idelib_controller_write_command(ide,0xE6); /* <- sleep */
-					if (ide->flags.io_irq_enable) {
-						do_ide_controller_user_wait_irq(ide,1);
-						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
-					}
-					do_ide_controller_user_wait_busy_controller(ide);
-					/* do NOT wait for drive ready---the drive is never ready when it's asleep! */
-					if (!(ide->last_status&1)) {
-						vga_msg_box_create(&vgabox,"Success.\n\nHit ENTER to re-awaken the device",0,0);
-						do_ide_controller_atapi_device_check_post_host_reset(ide);
-					}
-					else {
-						common_ide_success_or_error_vga_msg_box(ide,&vgabox);
-					}
-					wait_for_enter_or_escape();
-					vga_msg_box_destroy(&vgabox);
-				}
-			}
-			else if (select == 2) { /* idle */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
-					idelib_controller_reset_irq_counter(ide);
-					idelib_controller_write_command(ide,0xE1); /* <- idle immediate */
-					if (ide->flags.io_irq_enable) {
-						do_ide_controller_user_wait_irq(ide,1);
-						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
-					}
-					do_ide_controller_user_wait_busy_controller(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-					common_ide_success_or_error_vga_msg_box(ide,&vgabox);
-					wait_for_enter_or_escape();
-					vga_msg_box_destroy(&vgabox);
-				}
-			}
-			else if (select == 3) { /* device reset */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
-					idelib_controller_reset_irq_counter(ide);
-					idelib_controller_write_command(ide,0x08); /* <- device reset */
-					do_ide_controller_user_wait_busy_controller(ide);
-
-					/* NTS: Device reset doesn't necessary seem to signal an IRQ, at least not
-					 *      immediately. On some implementations the IRQ will have fired by now,
-					 *      on others, it will have fired by now for hard drives but for CD-ROM
-					 *      drives will not fire until the registers are read back, and others
-					 *      don't fire at all. So don't count on the IRQ, just poll and busy
-					 *      wait for the drive to signal readiness. */
-
-					if (idelib_controller_update_taskfile(ide,0xFF,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/) == 0) {
-						struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
-
-						sprintf(tmp,"Device response: (0x1F1-0x1F7) %02X %02X %02X %02X %02X %02X %02X",
-							tsk->error,	tsk->sector_count,
-							tsk->lba0_3,	tsk->lba1_4,
-							tsk->lba2_5,	tsk->head_select,
-							tsk->status);
-						vga_msg_box_create(&vgabox,tmp,0,0);
-					}
-					else {
-						common_failed_to_read_taskfile_vga_msg_box(&vgabox);
-					}
-
-					/* it MIGHT have fired an IRQ... */
-					idelib_controller_ack_irq(ide);
-
-					wait_for_enter_or_escape();
-					vga_msg_box_destroy(&vgabox);
-					do_ide_controller_atapi_device_check_post_host_reset(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-				}
-			}
+			else if (select == 0) /* standby */
+				do_drive_standby_test(ide,which);
+			else if (select == 1) /* sleep */
+				do_drive_sleep_test(ide,which);
+			else if (select == 2) /* idle */
+				do_drive_idle_test(ide,which);
+			else if (select == 3) /* device reset */
+				do_drive_device_reset_test(ide,which);
 			else if (select == 4) { /* check power mode */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
 					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
