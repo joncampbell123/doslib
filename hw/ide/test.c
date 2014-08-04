@@ -1954,12 +1954,10 @@ void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
 		idelib_controller_reset_irq_counter(ide);
 		idelib_controller_write_command(ide,0x08); /* <- device reset */
 		do_ide_controller_user_wait_busy_controller(ide);
+		idelib_controller_update_taskfile(ide,0xFF,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/); /* updating the taskfile seems to help with getting CD-ROM drives online */
 
 		/* it MIGHT have fired an IRQ... */
 		idelib_controller_ack_irq(ide);
-
-		do_ide_controller_atapi_device_check_post_host_reset(ide);
-		do_ide_controller_user_wait_drive_ready(ide);
 
 		if (!idelib_controller_is_error(ide))
 			vga_msg_box_create(&vgabox,"Success",0,0);
@@ -1968,6 +1966,9 @@ void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
 
 		wait_for_enter_or_escape();
 		vga_msg_box_destroy(&vgabox);
+
+		do_ide_controller_atapi_device_check_post_host_reset(ide);
+		do_ide_controller_user_wait_drive_ready(ide);
 	}
 	else {
 		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
