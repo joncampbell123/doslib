@@ -2348,6 +2348,7 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 			}
 		}
 		else {
+			idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
 			do_warn_if_atapi_not_in_complete_state(ide); /* sector count register should signal we're in the completed stage (command/data=1 input/output=1) */
 		}
 	}
