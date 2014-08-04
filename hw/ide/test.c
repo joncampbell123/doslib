@@ -46,6 +46,11 @@
 static int read_mode = 12;
 static int pio_width = 16;	/* 16: standard I/O   32: 32-bit I/O   33: 32-bit I/O with VLB "sync sequence" */
 
+static unsigned char sanitizechar(unsigned char c) {
+	if (c < 32) return '.';
+	return c;
+}
+
 static void common_ide_success_or_error_vga_msg_box(struct ide_controller *ide,struct vga_msg_box *vgabox) {
 	if (!(ide->last_status&1)) {
 		vga_msg_box_create(vgabox,"Success",0,0);
@@ -62,13 +67,15 @@ static void common_failed_to_read_taskfile_vga_msg_box(struct vga_msg_box *vgabo
 	vga_msg_box_create(vgabox,"Failed to read taskfile",0,0);
 }
 
-static void wait_for_enter_or_escape() {
+static int wait_for_enter_or_escape() {
 	int c;
 
 	do {
 		c = getch();
 		if (c == 0) c = getch() << 8;
 	} while (!(c == 13 || c == 27));
+
+	return c;
 }
 
 /*-----------------------------------------------------------------*/
@@ -1994,11 +2001,9 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 		idelib_read_pio_general((unsigned char*)info,512,ide,pio_width);
 
 		/* ------------ PAGE 1 -------------*/
-		vga_write_color(0x0E);
-		vga_clear();
+		vga_write_color(0x0E); vga_clear();
 
-		vga_moveto(0,0);
-		vga_write("Serial: ");
+		vga_moveto(0,0); vga_write("Serial: ");
 		for (x=0;x < 10;x++) {
 			tmp[x*2 + 0] = info[10+x] >> 8;
 			tmp[x*2 + 1] = info[10+x] & 0xFF;
@@ -2020,24 +2025,66 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 		tmp[20*2] = 0; vga_write(tmp);
 
 		vga_moveto(0,1);
-		sprintf(tmp,"Logical C/H/S: %u/%u/%u  ",
-				info[1],info[3],info[6]);
+		sprintf(tmp,"Logical C/H/S: %u/%u/%u  ",info[1],info[3],info[6]);
 		vga_write(tmp);
-		sprintf(tmp,"Current C/H/S: %u/%u/%u",
-				info[54],info[55],info[56]);
+		sprintf(tmp,"Current C/H/S: %u/%u/%u",  info[54],info[55],info[56]);
 		vga_write(tmp);
 
 		vga_moveto(0,2);
 		sprintf(tmp,"Current Capacity: %lu  Total user addressable: %lu  ",
-				(unsigned long)info[57] | ((unsigned long)info[58] << 16UL),
-				(unsigned long)info[60] | ((unsigned long)info[61] << 16UL));
+			(unsigned long)info[57] | ((unsigned long)info[58] << 16UL),
+			(unsigned long)info[60] | ((unsigned long)info[61] << 16UL));
 		vga_write(tmp);
 
 		vga_moveto(0,3);
 		vga_write_color(0x0D);
 		vga_write("For more information consult ATA documentation. Hit ENTER to continue.");
 
-		wait_for_enter_or_escape();
+		/* top row */
+		vga_moveto(0,5);
+		vga_write_color(0x08);
+		vga_write("WORD ");
+
+		vga_moveto(5,5);
+		for (x=0;x < 8;x++) {
+			sprintf(tmp,"+%u   ",x);
+			vga_write(tmp);
+		}
+		vga_moveto(46,5);
+		for (x=0;x < 8;x++) {
+			sprintf(tmp,"%u ",x);
+			vga_write(tmp);
+		}
+		vga_write("HI/LO byte order");
+
+		/* data, page by page */
+		for (i=0;i < 2;i++) {
+			for (y=0;y < 16;y++) {
+				vga_moveto(0,6+y);
+				vga_write_color(0x08);
+				for (x=0;x < 8;x++) {
+					sprintf(tmp,"%04x ",(y*8)+(i*128)+x);
+					vga_write(tmp);
+				}
+
+				vga_moveto(5,6+y);
+				vga_write_color(0x0F);
+				for (x=0;x < 8;x++) {
+					sprintf(tmp,"%04x ",info[(y*8)+(i*128)+x]);
+					vga_write(tmp);
+				}
+
+				vga_moveto(46,6+y);
+				vga_write_color(0x0E);
+				for (x=0;x < 8;x++) {
+					vga_writec(sanitizechar(info[(y*8)+(i*128)+x] >> 8));
+					vga_writec(sanitizechar(info[(y*8)+(i*128)+x] & 0xFF));
+				}
+			}
+
+			if (wait_for_enter_or_escape() == 27)
+				break; /* allow ESC to immediately break out */
+		}
 	}
 	else {
 		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
