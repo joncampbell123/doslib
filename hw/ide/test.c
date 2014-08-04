@@ -1927,6 +1927,7 @@ void do_drive_device_reset_test(struct ide_controller *ide,unsigned char which) 
 
 void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
+	int c;
 
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return;
@@ -1941,34 +1942,40 @@ void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
 	/* do NOT wait for drive ready---the drive is never ready when it's asleep! */
 	if (!(ide->last_status&1)) {
 		vga_msg_box_create(&vgabox,"Success.\n\nHit ENTER to re-awaken the device",0,0);
-		wait_for_enter_or_escape();
+		c = wait_for_enter_or_escape();
 		vga_msg_box_destroy(&vgabox);
 
-		/* clear IRQ state, wait for IDE controller to signal ready.
-		 * once in sleep state, the device probably won't respond normally until device reset.
-		 * do NOT wait for drive ready, the drive will never be ready in this state because
-		 * (duh) it's asleep. */
+		if (c != 27) { /* if the user did NOT hit ESCAPE, then re-awaken the device */
+			/* clear IRQ state, wait for IDE controller to signal ready.
+			 * once in sleep state, the device probably won't respond normally until device reset.
+			 * do NOT wait for drive ready, the drive will never be ready in this state because
+			 * (duh) it's asleep. */
 
-		/* now re-awaken the device with DEVICE RESET */
-		idelib_controller_ack_irq(ide);
-		idelib_controller_reset_irq_counter(ide);
-		idelib_controller_write_command(ide,0x08); /* <- device reset */
-		do_ide_controller_user_wait_busy_controller(ide);
-		idelib_controller_update_taskfile(ide,0xFF,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/); /* updating the taskfile seems to help with getting CD-ROM drives online */
+			/* now re-awaken the device with DEVICE RESET */
+			idelib_controller_ack_irq(ide);
+			idelib_controller_reset_irq_counter(ide);
+			idelib_controller_write_command(ide,0x08); /* <- device reset */
+			do_ide_controller_user_wait_busy_controller(ide);
+			idelib_controller_update_taskfile(ide,0xFF,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/); /* updating the taskfile seems to help with getting CD-ROM drives online */
 
-		/* it MIGHT have fired an IRQ... */
-		idelib_controller_ack_irq(ide);
+			/* it MIGHT have fired an IRQ... */
+			idelib_controller_ack_irq(ide);
 
-		if (!idelib_controller_is_error(ide))
-			vga_msg_box_create(&vgabox,"Success",0,0);
-		else
-			common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+			if (!idelib_controller_is_error(ide))
+				vga_msg_box_create(&vgabox,"Success",0,0);
+			else
+				common_ide_success_or_error_vga_msg_box(ide,&vgabox);
 
-		wait_for_enter_or_escape();
-		vga_msg_box_destroy(&vgabox);
+			wait_for_enter_or_escape();
+			vga_msg_box_destroy(&vgabox);
 
-		do_ide_controller_atapi_device_check_post_host_reset(ide);
-		do_ide_controller_user_wait_drive_ready(ide);
+			do_ide_controller_atapi_device_check_post_host_reset(ide);
+			do_ide_controller_user_wait_drive_ready(ide);
+		}
+		else {
+			do_ide_controller_atapi_device_check_post_host_reset(ide);
+			do_ide_controller_user_wait_busy_controller(ide);
+		}
 	}
 	else {
 		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
