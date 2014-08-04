@@ -425,3 +425,29 @@ void idelib_read_pio_general(unsigned char *buf,unsigned int lw,struct ide_contr
 	}
 }
 
+int idelib_controller_atapi_prepare_packet_command(struct ide_controller *ide,unsigned char features,unsigned int bytecount) {
+	struct ide_taskfile *tsk;
+
+	if (ide == NULL) return -1;
+	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+	tsk->features = features;				/* 0x1F1 */
+	tsk->sector_count = 0; /* unused? */			/* 0x1F2 */
+	tsk->lba0_3 = 0; /* unused */				/* 0x1F3 */
+	tsk->lba1_4 = bytecount & 0xFF;				/* 0x1F4 */
+	tsk->lba2_5 = bytecount >> 8;				/* 0x1F5 */
+	tsk->command = 0xA0;	/* ATAPI packet command */	/* 0x1F7 */
+	return 0;
+}
+
+void idelib_controller_atapi_write_command(struct ide_controller *ide,unsigned char *buf,unsigned int len/*Only "12" is supported!*/) {
+	unsigned int i;
+
+	if (len > 12) len = 12; /* max 12 bytes (6 words) */
+	len = (len + 1) / 2; /* command bytes transmitted in WORDs */
+
+	for (i=0;i < 6 && i < len;i++)
+		outpw(ide->base_io+0,((uint16_t*)buf)[i]);
+	for (;i < len;i++)
+		outpw(ide->base_io+0,0/*pad*/);
+}
+

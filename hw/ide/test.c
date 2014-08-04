@@ -2093,6 +2093,48 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 	}
 }
 
+void do_drive_atapi_eject_load(struct ide_controller *ide,unsigned char which,unsigned char atapi_eject_how) {
+	struct vga_msg_box vgabox;
+	uint8_t buf[12] = {0x1B/*EJECT*/,0x00,0x00,0x00, /* ATAPI EJECT (START/STOP UNIT) command */
+		0x00,0x00,0x00,0x00,
+		0x00,0x00,0x00,0x00};
+	/* NTS: buf[4] is filled in with how to start/stop the unit:
+	 *   0x00 STOP (spin down)
+	 *   0x01 START (spin up)
+	 *   0x02 EJECT (eject CD, usually eject CD-ROM tray)
+	 *   0x03 LOAD (load CD, close CD tray if drive is capable) */
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+	if (idelib_controller_atapi_prepare_packet_command(ide,/*xfer=to host no DMA*/0x04,/*byte count=*/0) < 0) /* fill out taskfile with command */
+		return;
+	if (idelib_controller_apply_taskfile(ide,0xBE/*base_io+1-5&7*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/) < 0) /* also writes command */
+		return;
+
+	/* NTS: Despite OSDev ATAPI advice, IRQ doesn't seem to fire at this stage, we must poll wait */
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	if (!(ide->last_status&1)) { /* if no error, read result from count register */
+		buf[4] = atapi_eject_how; /* fill in byte 4 which tells ATAPI how to start/stop the unit */
+		idelib_controller_reset_irq_counter(ide); /* IRQ will fire after command completion */
+		idelib_controller_atapi_write_command(ide,buf,12); /* write 12-byte ATAPI command data */
+		if (ide->flags.io_irq_enable) { /* NOW we wait for the IRQ */
+			do_ide_controller_user_wait_irq(ide,1);
+			idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+		}
+		do_ide_controller_user_wait_busy_controller(ide);
+		do_ide_controller_user_wait_drive_ready(ide);
+		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+	else {
+		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 	char redraw=1;
@@ -2127,6 +2169,9 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	 *      is a master attached but no slave. */
 	c = do_ide_controller_user_wait_drive_ready(ide);
 	if (c < 0) return;
+
+	/* for completeness, clear pending IRQ */
+	idelib_controller_ack_irq(ide);
 
 	while (1) {
 		if (backredraw) {
@@ -2366,6 +2411,10 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 				do_drive_identify_device_test(ide,which,select == 6 ? 0xA1 : 0xEC);
 				redraw = backredraw = 1;
 			}
+			else if (select == 7 || select == 8 || select == 9 || select == 10) { /* ATAPI eject/load CD-ROM */
+				static const unsigned char cmd[4] = {2/*eject*/,3/*load*/,1/*start*/,0/*stop*/};
+				do_drive_atapi_eject_load(ide,which,cmd[select-7]);
+			}
 
 			else if (select == 28) { /* NOP */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
@@ -2546,66 +2595,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					vga_msg_box_destroy(&vgabox);
 				}
 			}
-			else if (select == 7 || select == 8 || select == 9 || select == 10) { /* ATAPI eject/load CD-ROM */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) == 0) {
-					outp(ide->base_io+1,0x04); /* no DMA, xfer to host */
-					outp(ide->base_io+2,0x00);
-					outp(ide->base_io+3,0x00); /* byte count == 0 */
-					outp(ide->base_io+4,0x00);
-					outp(ide->base_io+5,0x00);
-					outp(ide->base_io+7,0xA0); /* <- ATAPI PACKET */
-					/* NTS: It is said that you DONT wait for IRQ here */
-					do_ide_controller_user_wait_busy_controller(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-					x = inp(ide->base_io+7); /* what's the status? */
-					if (!(x&1)) { /* if no error, read result from count register */
-						uint8_t buf[12] = {0x1B/*EJECT*/,0x00,0x00,0x00,
-							0x00,0x00,0x00,0x00,
-							0x00,0x00,0x00,0x00};
-						if (select == 7)
-							buf[4] = 2;	/* eject */
-						else if (select == 8)
-							buf[4] = 3;	/* load */
-						else if (select == 9)
-							buf[4] = 1;	/* start */
-						else if (select == 10)
-							buf[4] = 0;	/* stop */
 
-						ide->irq_fired = 0;
-						for (i=0;i < 6;i++)
-							outpw(ide->base_io+0,((uint16_t*)buf)[i]);
-
-						if (ide->flags.io_irq_enable)
-							do_ide_controller_user_wait_irq(ide,1);
-
-						do_ide_controller_user_wait_busy_controller(ide);
-						do_ide_controller_user_wait_drive_ready(ide);
-						x = inp(ide->base_io+7); /* what's the status? */
-						if (!(x&1)) {
-							vga_msg_box_create(&vgabox,"Success",0,0);
-						}
-						else {
-							sprintf(tmp,"Device rejected with error %02X",x);
-							vga_msg_box_create(&vgabox,tmp,0,0);
-						}
-						do {
-							c = getch();
-							if (c == 0) c = getch() << 8;
-						} while (!(c == 13 || c == 27));
-						vga_msg_box_destroy(&vgabox);
-					}
-					else {
-						sprintf(tmp,"Device rejected with error %02X",x);
-						vga_msg_box_create(&vgabox,tmp,0,0);
-						do {
-							c = getch();
-							if (c == 0) c = getch() << 8;
-						} while (!(c == 13 || c == 27));
-						vga_msg_box_destroy(&vgabox);
-					}
-				}
-			}
 			else if (select == 11) { /* ATAPI read CD-ROM */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
 					do_ide_controller_user_wait_drive_ready(ide) == 0) {

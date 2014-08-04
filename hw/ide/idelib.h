@@ -98,6 +98,8 @@ struct ide_controller *idelib_by_base_io(uint16_t io);
 struct ide_controller *idelib_by_alt_io(uint16_t io);
 struct ide_controller *idelib_by_irq(int8_t irq);
 void ide_vlb_sync32_pio(struct ide_controller *ide);
+int idelib_controller_atapi_prepare_packet_command(struct ide_controller *ide,unsigned char features,unsigned int bytecount);
+void idelib_controller_atapi_write_command(struct ide_controller *ide,unsigned char *buf,unsigned int len/*Only "12" is supported!*/);
 
 static inline void idelib_controller_ack_irq(struct ide_controller *ide) {
 	/* reading port 0x3F6 (normal method of status update) does not clear IRQ.
