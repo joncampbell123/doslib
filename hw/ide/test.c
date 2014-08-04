@@ -2363,6 +2363,61 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 				}
 			}
 
+			else if (select == 28) { /* NOP */
+				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
+					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
+					struct ide_taskfile *tsk;
+
+					idelib_controller_reset_irq_counter(ide);
+
+					/* in case command doesn't do anything, fill sector count value with 0x0A */
+					tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+					tsk->features = 0x00; /* will read back into error reg */
+					tsk->sector_count = 0x12;
+					tsk->lba0_3 = 0x34;
+					tsk->lba1_4 = 0x56;
+					tsk->lba2_5 = 0x78;
+					tsk->command = 0x00; /* <- NOP */
+					idelib_controller_apply_taskfile(ide,0xBE/*base_io+1-5&7*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/);
+					if (ide->flags.io_irq_enable) {
+						do_ide_controller_user_wait_irq(ide,1);
+						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+					}
+					do_ide_controller_user_wait_busy_controller(ide);
+					do_ide_controller_user_wait_drive_ready(ide);
+					if (!(ide->last_status&1)) {
+						vga_msg_box_create(&vgabox,"Success?? (It's not supposed to!)",0,0);
+					}
+					else if ((ide->last_status&0xC9) != 0x41) {
+						sprintf(tmp,"Device rejected with error %02X (not the way it's supposed to)",x);
+						vga_msg_box_create(&vgabox,tmp,0,0);
+					}
+					else {
+						idelib_controller_update_taskfile(ide,0xBE,0);
+						if ((tsk->error&0x04) != 0x04) {
+							sprintf(tmp,"Device rejected with non-abort (not the way it's supposed to)",x);
+							vga_msg_box_create(&vgabox,tmp,0,0);
+						}
+						else {
+							unsigned char c=0,cc=0;
+
+							c=tsk->sector_count; cc += (c == 0x12)?1:0;
+							c=tsk->lba0_3; cc += (c == 0x34)?1:0;
+							c=tsk->lba1_4; cc += (c == 0x56)?1:0;
+							c=tsk->lba2_5; cc += (c == 0x78)?1:0;
+
+							if (cc == 4)
+								vga_msg_box_create(&vgabox,"Success",0,0);
+							else
+								vga_msg_box_create(&vgabox,"Failed. Registers were modified.",0,0);
+						}
+					}
+
+					wait_for_enter_or_escape();
+					vga_msg_box_destroy(&vgabox);
+				}
+			}
+
 			else if (select == 30) { /* show IDE register taskfile */
 				if (idelib_controller_update_taskfile(ide,0xFF,0) == 0) {
 					struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
@@ -3487,54 +3542,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 						} while (!(c == 13 || c == 27));
 						vga_msg_box_destroy(&vgabox);
 					}
-				}
-			}
-			else if (select == 28) { /* NOP */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) == 0) {
-					ide->irq_fired = 0;
-					outp(ide->base_io+1,0x00);
-					outp(ide->base_io+2,0x12);
-					outp(ide->base_io+3,0x34);
-					outp(ide->base_io+4,0x56);
-					outp(ide->base_io+5,0x78);
-					outp(ide->base_io+7,0x00); /* <- NOP */
-					if (ide->flags.io_irq_enable)
-						do_ide_controller_user_wait_irq(ide,1);
-
-					do_ide_controller_user_wait_busy_controller(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-					x = inp(ide->base_io+7); /* what's the status? */
-					if (!(x&1)) {
-						vga_msg_box_create(&vgabox,"Success?? (It's not supposed to!)",0,0);
-					}
-					else if ((x&0xC9) != 0x41) {
-						sprintf(tmp,"Device rejected with error %02X (not the way it's supposed to)",x);
-						vga_msg_box_create(&vgabox,tmp,0,0);
-					}
-					else if ((inp(ide->base_io+1)&0x04) != 0x04) {
-						sprintf(tmp,"Device rejected with non-abort (not the way it's supposed to)",x);
-						vga_msg_box_create(&vgabox,tmp,0,0);
-					}
-					else {
-						unsigned char c=0,cc=0;
-
-						c=inp(ide->base_io+2); cc += (c == 0x12)?1:0;
-						c=inp(ide->base_io+3); cc += (c == 0x34)?1:0;
-						c=inp(ide->base_io+4); cc += (c == 0x56)?1:0;
-						c=inp(ide->base_io+5); cc += (c == 0x78)?1:0;
-
-						if (cc == 4)
-							vga_msg_box_create(&vgabox,"Success",0,0);
-						else
-							vga_msg_box_create(&vgabox,"Failed. Registers were modified.",0,0);
-					}
-
-					do {
-						c = getch();
-						if (c == 0) c = getch() << 8;
-					} while (!(c == 13 || c == 27));
-					vga_msg_box_destroy(&vgabox);
 				}
 			}
 		}

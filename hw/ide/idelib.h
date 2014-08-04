@@ -86,6 +86,7 @@ int idelib_controller_apply_taskfile(struct ide_controller *ide,unsigned char po
 int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char portmask,unsigned char flags);
 struct ide_taskfile *idelib_controller_get_taskfile(struct ide_controller *ide,int which);
 void idelib_read_pio16(unsigned char *buf,unsigned int len,struct ide_controller *ide);
+void idelib_read_pio32(unsigned char *buf,unsigned int len,struct ide_controller *ide);
 
 void idelib_enable_interrupt(struct ide_controller *ide,unsigned char en);
 int idelib_controller_allocated(struct ide_controller *ide);
