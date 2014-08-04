@@ -2291,6 +2291,9 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 			/* ---- draw contents on the screen ---- */
 			vga_write_color(0x0E); vga_clear();
 
+			vga_moveto(0,0);
+			vga_write("Contents of CD-ROM sector 16 (2048) bytes");
+
 			vga_moveto(0,2);
 			vga_write_color(0x08);
 			vga_write("BYTE ");
