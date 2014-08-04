@@ -1924,6 +1924,128 @@ void do_drive_device_reset_test(struct ide_controller *ide,unsigned char which) 
 	do_ide_controller_user_wait_drive_ready(ide);
 }
 
+void do_drive_check_power_mode(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+	struct ide_taskfile *tsk;
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+
+	idelib_controller_reset_irq_counter(ide);
+
+	/* in case command doesn't do anything, fill sector count value with 0x0A */
+	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+	tsk->sector_count = 0x0A; /* our special "codeword" to tell if the command updated it or not */
+	idelib_controller_apply_taskfile(ide,0x04/*base_io+2*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/);
+
+	idelib_controller_write_command(ide,0xE5); /* <- check power mode */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+
+	if (!(ide->last_status&1)) { /* if no error, read result from count register */
+		const char *what = "";
+		unsigned char x;
+
+		/* read back from sector count field */
+		idelib_controller_update_taskfile(ide,0x04/*base_io+2*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/);
+
+		x = tsk->sector_count;
+		if (x == 0) what = "Standby mode";
+		else if (x == 0x0A) what = "?? (failure to update reg probably)";
+		else if (x == 0x40) what = "NV Cache Power mode spun/spin down";
+		else if (x == 0x41) what = "NV Cache Power mode spun/spin up";
+		else if (x == 0x80) what = "Idle mode";
+		else if (x == 0xFF) what = "Active or idle";
+
+		sprintf(tmp,"Result: %02X %s",x,what);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+	}
+	else {
+		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+	}
+
+	wait_for_enter_or_escape();
+	vga_msg_box_destroy(&vgabox);
+}
+
+void do_drive_identify_device_test(struct ide_controller *ide,unsigned char which,unsigned char command) {
+	struct vga_msg_box vgabox;
+	unsigned int x,y,i;
+	uint16_t info[256];
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+
+	idelib_controller_reset_irq_counter(ide);
+	idelib_controller_write_command(ide,command); /* <- (A1h) identify packet device (ECh) identify device */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	if (!(ide->last_status&1)) {
+		/* read it */
+		do_ide_controller_user_wait_drive_drq(ide);
+		idelib_read_pio_general((unsigned char*)info,512,ide,pio_width);
+
+		/* ------------ PAGE 1 -------------*/
+		vga_write_color(0x0E);
+		vga_clear();
+
+		vga_moveto(0,0);
+		vga_write("Serial: ");
+		for (x=0;x < 10;x++) {
+			tmp[x*2 + 0] = info[10+x] >> 8;
+			tmp[x*2 + 1] = info[10+x] & 0xFF;
+		}
+		tmp[10*2] = 0; vga_write(tmp);
+
+		vga_write(" F/W rev: ");
+		for (x=0;x < 4;x++) {
+			tmp[x*2 + 0] = info[23+x] >> 8;
+			tmp[x*2 + 1] = info[23+x] & 0xFF;
+		}
+		tmp[4*2] = 0; vga_write(tmp);
+
+		vga_write(" Model: ");
+		for (x=0;x < 20;x++) {
+			tmp[x*2 + 0] = info[27+x] >> 8;
+			tmp[x*2 + 1] = info[27+x] & 0xFF;
+		}
+		tmp[20*2] = 0; vga_write(tmp);
+
+		vga_moveto(0,1);
+		sprintf(tmp,"Logical C/H/S: %u/%u/%u  ",
+				info[1],info[3],info[6]);
+		vga_write(tmp);
+		sprintf(tmp,"Current C/H/S: %u/%u/%u",
+				info[54],info[55],info[56]);
+		vga_write(tmp);
+
+		vga_moveto(0,2);
+		sprintf(tmp,"Current Capacity: %lu  Total user addressable: %lu  ",
+				(unsigned long)info[57] | ((unsigned long)info[58] << 16UL),
+				(unsigned long)info[60] | ((unsigned long)info[61] << 16UL));
+		vga_write(tmp);
+
+		vga_moveto(0,3);
+		vga_write_color(0x0D);
+		vga_write("For more information consult ATA documentation. Hit ENTER to continue.");
+
+		wait_for_enter_or_escape();
+	}
+	else {
+		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 	char redraw=1;
@@ -2191,195 +2313,11 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 				do_drive_idle_test(ide,which);
 			else if (select == 3) /* device reset */
 				do_drive_device_reset_test(ide,which);
-			else if (select == 4) { /* check power mode */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
-					struct ide_taskfile *tsk;
-
-					idelib_controller_reset_irq_counter(ide);
-
-					/* in case command doesn't do anything, fill sector count value with 0x0A */
-					tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
-					tsk->sector_count = 0x0A; /* our special "codeword" to tell if the command updated it or not */
-					idelib_controller_apply_taskfile(ide,0x04/*base_io+2*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/);
-
-					idelib_controller_write_command(ide,0xE5); /* <- check power mode */
-					if (ide->flags.io_irq_enable) {
-						do_ide_controller_user_wait_irq(ide,1);
-						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
-					}
-					do_ide_controller_user_wait_busy_controller(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-
-					if (!(ide->last_status&1)) { /* if no error, read result from count register */
-						const char *what = "";
-
-						/* read back from sector count field */
-						idelib_controller_update_taskfile(ide,0x04/*base_io+2*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/);
-
-						x = tsk->sector_count;
-						if (x == 0) what = "Standby mode";
-						else if (x == 0x0A) what = "?? (failure to update reg probably)";
-						else if (x == 0x40) what = "NV Cache Power mode spun/spin down";
-						else if (x == 0x41) what = "NV Cache Power mode spun/spin up";
-						else if (x == 0x80) what = "Idle mode";
-						else if (x == 0xFF) what = "Active or idle";
-						sprintf(tmp,"Result: %02X %s",x,what);
-
-						vga_msg_box_create(&vgabox,tmp,0,0);
-					}
-					else {
-						common_ide_success_or_error_vga_msg_box(ide,&vgabox);
-					}
-
-					wait_for_enter_or_escape();
-					vga_msg_box_destroy(&vgabox);
-				}
-			}
+			else if (select == 4) /* check power mode */
+				do_drive_check_power_mode(ide,which);
 			else if (select == 5 || select == 6) { /* identify device OR identify packet device */
-				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
-					idelib_controller_reset_irq_counter(ide);
-					idelib_controller_write_command(ide,select == 6 ? 0xA1 : 0xEC); /* <- (A1h) identify packet device (ECh) identify device */
-					if (ide->flags.io_irq_enable) {
-						do_ide_controller_user_wait_irq(ide,1);
-						idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
-					}
-					do_ide_controller_user_wait_busy_controller(ide);
-					do_ide_controller_user_wait_drive_ready(ide);
-					if (!(ide->last_status&1)) {
-						/* NOTE TO SELF: A lot of docs on the web imply that DRQ is something you consult
-						 *               to check if the device is ready for one WORD transfer. That's
-						 *               wrong, most IDE implementations in fact expect us to check DRQ
-						 *               once then transfer one whole sector in one blast. Some test
-						 *               hardware I have (an old Toshiba laptop for example) will actually
-						 *               lower DRQ once you read and if this loop were to check per WORD
-						 *               it would "get stuck" after the first word. */
-						uint16_t info[256];
-
-						/* read it */
-						do_ide_controller_user_wait_drive_drq(ide);
-						if (pio_width >= 32) {
-							if (pio_width == 33) ide_vlb_sync32_pio(ide);
-							idelib_read_pio32((unsigned char*)info,512,ide);
-						}
-						else {
-							idelib_read_pio16((unsigned char*)info,512,ide);
-						}
-
-						/* ------------ PAGE 1 -------------*/
-						redraw = backredraw = 1;
-						vga_write_color(0x0F);
-						vga_clear();
-
-						for (y=0;y < 16;y++) {
-							vga_moveto(0,y);
-
-							sprintf(tmp,"%02X: ",y*8);
-							vga_write(tmp);
-
-							for (x=0;x < 8;x++) {
-								sprintf(tmp,"%04x ",info[x+(y*8)]);
-								vga_write(tmp);
-							}
-
-							for (x=0;x < 8;x++) {
-								i = info[x+(y*8)] >> 8;
-								if (i < 32 || i > 127) i = '.';
-								vga_writec(i);
-
-								i = info[x+(y*8)] & 0xFF;
-								if (i < 32 || i > 127) i = '.';
-								vga_writec(i);
-							}
-						}
-
-						vga_write_color(0x0E);
-
-						vga_moveto(0,17);
-						vga_write("Serial: ");
-						for (x=0;x < 10;x++) {
-							tmp[x*2 + 0] = info[10+x] >> 8;
-							tmp[x*2 + 1] = info[10+x] & 0xFF;
-						}
-						tmp[10*2] = 0; vga_write(tmp);
-
-						vga_write(" F/W rev: ");
-						for (x=0;x < 4;x++) {
-							tmp[x*2 + 0] = info[23+x] >> 8;
-							tmp[x*2 + 1] = info[23+x] & 0xFF;
-						}
-						tmp[4*2] = 0; vga_write(tmp);
-
-						vga_moveto(0,18);
-						vga_write("Model: ");
-						for (x=0;x < 20;x++) {
-							tmp[x*2 + 0] = info[27+x] >> 8;
-							tmp[x*2 + 1] = info[27+x] & 0xFF;
-						}
-						tmp[20*2] = 0; vga_write(tmp);
-
-						vga_moveto(0,19);
-						sprintf(tmp,"Logical C/H/S: %u/%u/%u  ",
-								info[1],info[3],info[6]);
-						vga_write(tmp);
-						sprintf(tmp,"Current C/H/S: %u/%u/%u",
-								info[54],info[55],info[56]);
-						vga_write(tmp);
-
-						vga_moveto(0,20);
-						sprintf(tmp,"Current Capacity: %lu  Total user addressable: %lu  ",
-								(unsigned long)info[57] | ((unsigned long)info[58] << 16UL),
-								(unsigned long)info[60] | ((unsigned long)info[61] << 16UL));
-						vga_write(tmp);
-
-						vga_moveto(0,22);
-						vga_write_color(0x0D);
-						vga_write("For more information consult ATA documentation\n");
-						vga_write("Hit ENTER to see more of the data");
-
-						wait_for_enter_or_escape();
-
-						/* ------------ PAGE 2 -------------*/
-						redraw = backredraw = 1;
-						vga_write_color(0x0F);
-						vga_clear();
-
-						for (y=16;y < 32;y++) {
-							vga_moveto(0,y-16);
-
-							sprintf(tmp,"%02X: ",y*8);
-							vga_write(tmp);
-
-							for (x=0;x < 8;x++) {
-								sprintf(tmp,"%04x ",info[x+(y*8)]);
-								vga_write(tmp);
-							}
-
-							for (x=0;x < 8;x++) {
-								i = info[x+(y*8)] >> 8;
-								if (i < 32 || i > 127) i = '.';
-								vga_writec(i);
-
-								i = info[x+(y*8)] & 0xFF;
-								if (i < 32 || i > 127) i = '.';
-								vga_writec(i);
-							}
-						}
-
-						vga_moveto(0,17);
-						vga_write_color(0x0D);
-						vga_write("For more information consult ATA documentation\n");
-						vga_write("Hit ENTER to return to the menu");
-
-						wait_for_enter_or_escape();
-					}
-					else {
-						common_ide_success_or_error_vga_msg_box(ide,&vgabox);
-						wait_for_enter_or_escape();
-						vga_msg_box_destroy(&vgabox);
-					}
-				}
+				do_drive_identify_device_test(ide,which,select == 6 ? 0xA1 : 0xEC);
+				redraw = backredraw = 1;
 			}
 
 			else if (select == 28) { /* NOP */

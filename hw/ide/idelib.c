@@ -415,3 +415,13 @@ void idelib_read_pio32(unsigned char *buf,unsigned int len,struct ide_controller
 	if (len & 1) *buf = inp(ide->base_io);
 }
 
+void idelib_read_pio_general(unsigned char *buf,unsigned int lw,struct ide_controller *ide,unsigned char pio_width) {
+	if (pio_width >= 32) {
+		if (pio_width == 33) ide_vlb_sync32_pio(ide);
+		idelib_read_pio32(buf,lw,ide);
+	}
+	else {
+		idelib_read_pio16(buf,lw,ide);
+	}
+}
+
