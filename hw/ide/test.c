@@ -5,6 +5,8 @@
  *         * ATAPI packet commands
  *         * EVERYTHING---This code basically works on test hardware, now it's time to clean it up
  *           modularize and refactor.
+ *      - Add menu item where the user can ask this code to test whether or not the IDE controller
+ *        supports 32-bit PIO properly.
  *      - Start using this code for reference and implementation of IDE emulation within DOSBox-X
  *      - Add menu items to allow the user to play with SET FEATURES command
  *      - Add submenu where the user can play with the S.M.A.R.T. ATA commands
@@ -17,6 +19,22 @@
  *
  * Also don't forget:
  *   - Test programs for specific IDE chipsets (like Intel PIIX3) to demonstrate IDE DMA READ/WRITE commands
+ *
+ * Interesting notes:
+ *   - Toshiba Satellite Pro 465CDX/2.1
+ *      - Putting the hard drive to sleep seems to put the IDE controller to sleep too. IDE controller
+ *        "busy" bit is stuck on when hard drive asleep. Only way out seems to be doing a "host reset"
+ *        on that IDE controller. Note that NORMAL behavior is that the IDE controller remains not-busy
+ *        but the device is not ready.
+ *
+ *      - The CD-ROM drive (or secondary IDE?) appears to ignore 32-bit I/O to port 0x170 (base_io+0).
+ *        If you attempt to read a sector or identify command results using 32-bit PIO, you get only
+ *        0xFFFFFFFF. Reading data only works when PIO is done as 16-bit. NORMAL behavior suggests
+ *        either 32-bit PIO gets 32 bits at a time (PCI based IDE) or 32-bit PIO gets 16 bits of IDE
+ *        data and 16 bits of the adjacent 16-bit I/O register due to 386/486-era ISA subdivision of
+ *        32-bit I/O into two 16-bit I/O reads. Supposedly, on pre-PCI controllers, 32-bit PIO could
+ *        be made to work if you tell the card in advance using the "VLB keying sequence", but I have
+ *        yet to find such a card.
  *
  * Known hardware this code has trouble with (so far):
  * 
