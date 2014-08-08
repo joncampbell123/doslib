@@ -70,3 +70,86 @@ void do_warn_if_atapi_not_in_complete_state(struct ide_controller *ide) {
 	}
 }
 
+int do_ide_controller_drive_check_select(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+	int c,ret = 0;
+
+	if (idelib_controller_update_taskfile(ide,0xC0/* status and drive/select */,IDELIB_TASKFILE_LBA48_UPDATE) < 0)
+		return -1;
+
+	if (which != ide->selected_drive || ide->head_select == 0xFF) {
+		vga_msg_box_create(&vgabox,"IDE controller drive select unsuccessful\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
+
+		do {
+			c = getch();
+			if (c == 0) c = getch() << 8;
+
+			if (c == 27) {
+				ret = -1;
+				break;
+			}
+			else if (c == ' ') {
+				ret = 1;
+				break;
+			}
+		} while (1);
+
+		vga_msg_box_destroy(&vgabox);
+		return ret;
+	}
+
+	return ret;
+}
+
+void do_common_show_ide_taskfile(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+	int c;
+
+	if (idelib_controller_update_taskfile(ide,0xFF,0) == 0) {
+		struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+
+		vga_write_color(0x0F);
+		vga_clear();
+
+		vga_moveto(0,0);
+		vga_write("IDE taskfile:\n\n");
+
+		vga_write("IDE controller:\n");
+		sprintf(tmp," selected_drive=%u last_status=0x%02x drive_address=0x%02x\n device_control=0x%02x head_select=0x%02x\n\n",
+			ide->selected_drive,	ide->last_status,
+			ide->drive_address,	ide->device_control,
+			ide->head_select);
+		vga_write(tmp);
+
+		vga_write("IDE device:\n");
+		sprintf(tmp," assume_lba48=%u\n",tsk->assume_lba48);
+		vga_write(tmp);
+		sprintf(tmp," error=0x%02x\n",tsk->error); /* aliased to features */
+		vga_write(tmp);
+		sprintf(tmp," sector_count=0x%04x\n",tsk->sector_count);
+		vga_write(tmp);
+		sprintf(tmp," lba0_3/chs_sector=0x%04x\n",tsk->lba0_3);
+		vga_write(tmp);
+		sprintf(tmp," lba1_4/chs_cyl_low=0x%04x\n",tsk->lba1_4);
+		vga_write(tmp);
+		sprintf(tmp," lba2_5/chs_cyl_high=0x%04x\n",tsk->lba2_5);
+		vga_write(tmp);
+		sprintf(tmp," head_select=0x%02x\n",tsk->head_select);
+		vga_write(tmp);
+		sprintf(tmp," command=0x%02x\n",tsk->command);
+		vga_write(tmp);
+		sprintf(tmp," status=0x%02x\n",tsk->status);
+		vga_write(tmp);
+
+		do {
+			c = getch();
+			if (c == 0) c = getch() << 8;
+		} while (!(c == 13 || c == 27));
+	}
+	else {
+		common_failed_to_read_taskfile_vga_msg_box(&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+

@@ -94,3 +94,61 @@ int ide_memcmp_all_FF(unsigned char *d,unsigned int bytes) {
 	return 0;
 }
 
+/* A warning to people who may write their own IDE code: If a drive
+ * has been put to sleep, or put through a host reset, the "drive ready"
+ * bit will NEVER come up. If you are naive, your code will loop forever
+ * waiting for drive ready. To get drive ready to come up you have to
+ * send it a NO-OP command, which it will reply with an error, but it
+ * will then signal readiness.
+ *
+ * Now, in this case the Status register (0x1F7/0x3F6) will always
+ * read back 0x00, but 0x00 is also what would be read back if no
+ * such device existed. How do we tell the two scenarios apart?
+ * Well it turns out that if the device is there, then anything you
+ * read/write from ports 0x1F2-0x1F5 will read back the same value.
+ * If the IDE device does not exist, then ports 0x1F2-0x1F5 will
+ * always return 0x00 (or 0xFF?) no matter what we write.
+ *
+ * Once we know the device is there, we can then "trick" the device
+ * into reporting readiness by issuing ATA NO-OP, which the device
+ * will respond to with an error, but more importantly, it will set
+ * the Device Ready bit. */
+/* NOTE: The caller must have already gone through the process of writing the
+ *       head & drive select and waiting for controller readiness. if the
+ *       caller doesn't do that, this routine will probably end up running through
+ *       the routine on the wrong IDE device */
+int do_ide_controller_atapi_device_check_post_host_reset(struct ide_controller *ide) {
+	idelib_controller_update_status(ide);
+	if (idelib_controller_is_busy(ide)) return -1;			/* YOU'RE SUPPOSED TO WAIT FOR CONTROLLER NOT-BUSY! */
+	if (idelib_controller_is_drive_ready(ide)) return 0;		/* Drive indicates readiness, nothing to do */
+
+	if ((ide->last_status&0xC1) == 0) { /* <- typical post-reset state. VirtualBox/QEMU never raises Drive Ready bit */
+		struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+
+		/* OK: If I write things to 0x1F2-0x1F5 can I read them back? */
+		tsk->sector_count = 0x55;
+		tsk->lba0_3 = 0xAA;
+		tsk->lba1_4 = 0x3F;
+
+		idelib_controller_apply_taskfile(ide,0x1C/*regs 2-4*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear*/);
+		tsk->sector_count = tsk->lba0_3 = tsk->lba1_4 = 0; /* DEBUG: just to be sure */
+		idelib_controller_update_taskfile(ide,0x1C/*regs 2-4*/,0);
+
+		if (tsk->sector_count != 0x55 || tsk->lba0_3 != 0xAA || tsk->lba1_4 != 0x3F)
+			return -1;	/* Nope. IDE device is not there (also possibly the device is fucked up) */
+
+		idelib_controller_update_status(ide);
+	}
+	if ((ide->last_status&0xC1) == 0) { /* <- if the first test did not trigger drive ready, then whack the command port with ATA NO-OP */
+		idelib_controller_write_command(ide,0x00);
+		t8254_wait(t8254_us2ticks(100000)); /* <- give it 100ms to respond */
+		idelib_controller_update_status(ide);
+	}
+	if ((ide->last_status&0xC1) == 0) { /* <- if the NO-OP test didn't work, then forget it, I'm out of ideas */
+		return -1;
+	}
+
+	idelib_controller_ack_irq(ide);
+	return 0;
+}
+
