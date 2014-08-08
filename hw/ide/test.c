@@ -2752,8 +2752,9 @@ static const char *drive_main_menustrings[] = {
 	"CD-ROM eject/load >>",
 	"PIO mode >>",				/* 5 */
 	"Read HDD tests >>",
+	"Read verify HDD tests >>",
 	"Write HDD tests >>",
-	"Read verify HDD tests >>"
+	"Media status notification >>"
 };
 
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
@@ -2964,12 +2965,19 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					redraw = backredraw = 1;
 					break;
 				case 6: /* Read HDD test */
-				case 7: /* Write HDD test */
-					do_ide_controller_drive_rw_test(ide,which,select==7/*write test*/?1:0);
+					do_ide_controller_drive_rw_test(ide,which,0);
 					redraw = backredraw = 1;
 					break;
-				case 8: /* read verify */
+				case 7: /* Read verify */
 					do_ide_controller_drive_readverify_test(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 8: /* Write HDD test */
+					do_ide_controller_drive_rw_test(ide,which,1);
+					redraw = backredraw = 1;
+					break;
+				case 9: /* media status notify */
+					do_ide_controller_drive_media_status_notify(ide,which);
 					redraw = backredraw = 1;
 					break;
 			};
@@ -3496,10 +3504,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					if (c == 0) c = getch() << 8;
 				} while (!(c == 13 || c == 27));
 
-				redraw = backredraw = 1;
-			}
-			else if (select == 20) {
-				do_ide_controller_drive_media_status_notify(ide,which);
 				redraw = backredraw = 1;
 			}
 			else if (select == 27) {
