@@ -24,4 +24,5 @@ void common_failed_to_read_taskfile_vga_msg_box(struct vga_msg_box *vgabox);
 void do_warn_if_atapi_not_in_data_input_state(struct ide_controller *ide);
 void do_warn_if_atapi_not_in_complete_state(struct ide_controller *ide);
 void do_warn_if_atapi_not_in_command_state(struct ide_controller *ide);
+int confirm_pio32_warning(struct ide_controller *ide);
 

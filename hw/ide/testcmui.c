@@ -153,3 +153,44 @@ void do_common_show_ide_taskfile(struct ide_controller *ide,unsigned char which)
 	}
 }
 
+int confirm_pio32_warning(struct ide_controller *ide) {
+	if (ide->pio_width < 32 && pio_width_warning) {
+		struct vga_msg_box vgabox;
+		char proceed = 1;
+		int c;
+
+		if (pio_width_warning) {
+			vga_msg_box_create(&vgabox,
+				"WARNING: Data I/O will not function correctly if your IDE controller\n"
+				"does not support 32-bit PIO. IDE data transfers are traditionally\n"
+				"carried out as 16-bit I/O.\n"
+				"\n"
+				"In most cases, if the IDE controller is connected as a PCI device and\n"
+				"the controller was made 1998 or later, it's likely safe to enable.\n"
+				"Some hardware in the 1994-1997 timeframe may have problems.\n"
+				"\n"
+				"Though not confirmed, 32-bit PIO may also work if your IDE controller\n"
+				"is connected to the VESA local bus port of your 486 motherboard. In\n"
+				"that case it is recommended to try 32-bit VLB sync PIO first.\n"
+				"\n"
+				"Hit ENTER to proceed, ESC to cancel"
+				,0,0);
+			do {
+				c = getch();
+				if (c == 0) c = getch() << 8;
+			} while (!(c == 13 || c == 27));
+			vga_msg_box_destroy(&vgabox);
+			if (c == 27) {
+				proceed = 0;
+			}
+			else {
+				pio_width_warning = 0;
+			}
+		}
+
+		return proceed;
+	}
+
+	return 1;
+}
+
