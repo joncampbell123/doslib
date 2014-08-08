@@ -3745,35 +3745,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 
 				redraw = backredraw = 1;
 			}
-			else if (select == 27) {
-				char proceed = 1;
-
-				if (pio_width_warning) {
-					vga_msg_box_create(&vgabox,"WARNING: Data I/O will not function correctly if your\n"
-						"IDE controller and/or ATA device does not support 32-bit PIO when enabled\n"
-						"\n"
-						"Hit ENTER to proceed switching on 32-bit PIO, ESC to cancel"
-						,0,0);
-					do {
-						c = getch();
-						if (c == 0) c = getch() << 8;
-					} while (!(c == 13 || c == 27));
-					vga_msg_box_destroy(&vgabox);
-					if (c == 27) {
-						proceed = 0;
-					}
-					else {
-						pio_width_warning = 0;
-					}
-				}
-
-				if (proceed) {
-					if (pio_width == 32) pio_width = 33;
-					else if (pio_width == 16) pio_width = 32;
-					else pio_width = 16;
-					redraw = 1;
-				}
-			}
 			else if (select == 19) {
 				unsigned int val=0,re=1,x=0,ok=0;
 
