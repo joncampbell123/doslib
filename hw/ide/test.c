@@ -2436,13 +2436,67 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 	}
 }
 
+struct menuboxbounds {
+	unsigned char		cols,rows;
+	unsigned char		ofsx,ofsy;
+	unsigned char		col_width;
+	unsigned char		width,height;
+	const char**		item_string;
+	int			item_max;
+};
+
+void menuboxbound_redraw(struct menuboxbounds *mbox,int select) {
+	int i,x,y;
+
+	for (i=0;i <= mbox->item_max;i++) {
+		int col = i / mbox->rows;
+		x = mbox->ofsx + (col * mbox->col_width);
+		y = mbox->ofsy + (i % mbox->rows);
+
+		vga_moveto(x,y);
+		vga_write_color((select == i) ? 0x70 : 0x0F);
+		vga_write(mbox->item_string[i]);
+		while (vga_pos_x < (x+mbox->col_width) && vga_pos_x != 0) vga_writec(' ');
+	}
+}
+
+void menuboxbounds_set_def_list(struct menuboxbounds *mbox,unsigned int ofsx,unsigned int ofsy,unsigned int cols) {
+	mbox->cols = 1;
+	mbox->ofsx = 4;
+	mbox->ofsy = 7;
+	mbox->rows = vga_height - (mbox->ofsy + 1);
+	mbox->width = vga_width - (mbox->ofsx * 2);
+	mbox->col_width = mbox->width / mbox->cols;
+}
+
+void menuboxbounds_set_item_strings_array(struct menuboxbounds *mbox,const char **str,unsigned int count) {
+	mbox->item_string = str;
+	mbox->item_max = count - 1;
+}
+
+#define menuboxbounds_set_item_strings_arraylen(mbox,str) menuboxbounds_set_item_strings_array(mbox,str,sizeof(str)/sizeof(str[0]))
+
+static const char *drive_main_power_states_strings[] = {
+	"Show IDE register taskfile",		/* 0 */
+	"Standby",
+	"Sleep",
+	"Idle",
+	"Device reset",
+	"Power mode"				/* 5 */
+};
+
 void do_drive_power_states_test(struct ide_controller *ide,unsigned char which) {
-	char redraw=1;
-	char backredraw=1;
 	VGA_ALPHA_PTR vga;
+	struct menuboxbounds mbox;
+	char backredraw=1;
 	unsigned int x,y;
+	char redraw=1;
 	int select=-1;
 	int c;
+
+	/* UI element vars */
+	menuboxbounds_set_def_list(&mbox,/*ofsx=*/4,/*ofsy=*/7,/*cols=*/1);
+	menuboxbounds_set_item_strings_arraylen(&mbox,drive_main_power_states_strings);
 
 	/* most of the commands assume a ready controller. if it's stuck,
 	 * we'd rather the user have a visual indication that it's stuck that way */
@@ -2512,48 +2566,14 @@ void do_drive_power_states_test(struct ide_controller *ide,unsigned char which) 
 		}
 
 		if (redraw) {
-			const int cols = 2;
-			const int ofsx = 4;
-			const int width = vga_width - 8;
-
 			redraw = 0;
 
-			y = 5;
-			vga_moveto(ofsx,y++);
+			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
 			vga_write("Back to IDE drive main menu");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < (mbox.width+mbox.ofsx) && vga_pos_x != 0) vga_writec(' ');
 
-			y = 7;
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 0) ? 0x70 : 0x0F);
-			vga_write("Standby");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 1) ? 0x70 : 0x0F);
-			vga_write("Sleep");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 2) ? 0x70 : 0x0F);
-			vga_write("Idle");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 3) ? 0x70 : 0x0F);
-			vga_write("Device reset");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 4) ? 0x70 : 0x0F);
-			vga_write("Power Mode");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 5) ? 0x70 : 0x0F);
-			vga_write("Show IDE register taskfile");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+			menuboxbound_redraw(&mbox,select);
 		}
 
 		c = getch();
@@ -2565,29 +2585,37 @@ void do_drive_power_states_test(struct ide_controller *ide,unsigned char which) 
 		else if (c == 13) {
 			if (select == -1)
 				break;
-			else if (select == 0) /* standby */
-				do_drive_standby_test(ide,which);
-			else if (select == 1) /* sleep */
-				do_drive_sleep_test(ide,which);
-			else if (select == 2) /* idle */
-				do_drive_idle_test(ide,which);
-			else if (select == 3) /* device reset */
-				do_drive_device_reset_test(ide,which);
-			else if (select == 4) /* check power mode */
-				do_drive_check_power_mode(ide,which);
-			else if (select == 5) { /* show IDE register taskfile */
-				do_common_show_ide_taskfile(ide,which);
-				redraw = backredraw = 1;
-			}
+
+			switch (select) {
+				case 0: /* show IDE register taskfile */
+					do_common_show_ide_taskfile(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 1: /* standby */
+					do_drive_standby_test(ide,which);
+					break;
+				case 2: /* sleep */
+					do_drive_sleep_test(ide,which);
+					break;
+				case 3: /* idle */
+					do_drive_idle_test(ide,which);
+					break;
+				case 4: /* device reset */
+					do_drive_device_reset_test(ide,which);
+					break;
+				case 5: /* check power mode */
+					do_drive_check_power_mode(ide,which);
+					break;
+			};
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 5;
+				select = mbox.item_max;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 5)
+			if (++select > mbox.item_max)
 				select = -1;
 
 			redraw = 1;
@@ -2595,14 +2623,26 @@ void do_drive_power_states_test(struct ide_controller *ide,unsigned char which) 
 	}
 }
 
+static const char *drive_main_menustrings[] = {
+	"Show IDE register taskfile",		/* 0 */
+	"Identify (ATA)",
+	"Identify packet (ATAPI)",
+	"Power states >>",
+	"CD-ROM eject/load >>"
+};
+
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
-	struct vga_msg_box vgabox;
-	char redraw=1;
+	struct menuboxbounds mbox;
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
-	unsigned int x,y,i;
+	unsigned int x,y;
 	int select=-1;
+	char redraw=1;
 	int c;
+
+	/* UI element vars */
+	menuboxbounds_set_def_list(&mbox,/*ofsx=*/4,/*ofsy=*/7,/*cols=*/1);
+	menuboxbounds_set_item_strings_arraylen(&mbox,drive_main_menustrings);
 
 	/* most of the commands assume a ready controller. if it's stuck,
 	 * we'd rather the user have a visual indication that it's stuck that way */
@@ -2671,86 +2711,43 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 		}
 
 		if (redraw) {
-			const int cols = 2;
-			const int ofsx = 4;
-			const int width = vga_width - 8;
-
 			redraw = 0;
 
-			y = 5;
-			vga_moveto(ofsx,y++);
+			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
 			vga_write("Back to IDE controller main menu");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < (mbox.width+mbox.ofsx) && vga_pos_x != 0) vga_writec(' ');
 
-			y = 7;
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 0) ? 0x70 : 0x0F);
-			vga_write("Power states >>");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+			menuboxbound_redraw(&mbox,select);
 
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 5) ? 0x70 : 0x0F);
-			vga_write("Identify");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 6) ? 0x70 : 0x0F);
-			vga_write("Ident Packet");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 7) ? 0x70 : 0x0F);
-			vga_write("Eject CD-ROM");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
+#if 0
 			vga_moveto(ofsx,y++);
 			vga_write_color((select == 8) ? 0x70 : 0x0F);
-			vga_write("Load CD-ROM");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 9) ? 0x70 : 0x0F);
-			vga_write("Start CD-ROM");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 10) ? 0x70 : 0x0F);
-			vga_write("Stop CD-ROM");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 11) ? 0x70 : 0x0F);
-			vga_write("Read CD-ROM");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 12) ? 0x70 : 0x0F);
 			vga_write("Read[2] CD-ROM");
 			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx,y++);
-			vga_write_color((select == 13) ? 0x70 : 0x0F);
+			vga_write_color((select == 9) ? 0x70 : 0x0F);
 			vga_write("Read HDD tests >>");
 			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx,y++);
-			vga_write_color((select == 14) ? 0x70 : 0x0F);
+			vga_write_color((select == 10) ? 0x70 : 0x0F);
 			vga_write("Write HDD tests >>");
 			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx,y++);
-			vga_write_color((select == 15) ? 0x70 : 0x0F);
+			vga_write_color((select == 11) ? 0x70 : 0x0F);
 			vga_write("Read2x CD-ROM");
 			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx,y++);
-			vga_write_color((select == 16) ? 0x70 : 0x0F);
+			vga_write_color((select == 12) ? 0x70 : 0x0F);
 			vga_write("Read15x CD-ROM");
 			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx,y++);
-			vga_write_color((select == 17) ? 0x70 : 0x0F);
+			vga_write_color((select == 13) ? 0x70 : 0x0F);
 			vga_write("CD-ROM READ");
 			if (read_mode == 12) vga_write("(12)");
 			else vga_write("(10)");
@@ -2759,52 +2756,52 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 
 			y = 7;
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 18) ? 0x70 : 0x0F);
+			vga_write_color((select == 14) ? 0x70 : 0x0F);
 			vga_write("Set Multiple Mode test");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 19) ? 0x70 : 0x0F);
+			vga_write_color((select == 15) ? 0x70 : 0x0F);
 			vga_write("Set Multiple Mode >>");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 20) ? 0x70 : 0x0F);
+			vga_write_color((select == 16) ? 0x70 : 0x0F);
 			vga_write("Media Status Notify >>");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 21) ? 0x70 : 0x0F);
+			vga_write_color((select == 17) ? 0x70 : 0x0F);
 			vga_write("Media Eject");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 22) ? 0x70 : 0x0F);
+			vga_write_color((select == 18) ? 0x70 : 0x0F);
 			vga_write("Media Lock");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 23) ? 0x70 : 0x0F);
+			vga_write_color((select == 19) ? 0x70 : 0x0F);
 			vga_write("Media Unlock");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 24) ? 0x70 : 0x0F);
+			vga_write_color((select == 20) ? 0x70 : 0x0F);
 			vga_write("Write Uncorrectable");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 25) ? 0x70 : 0x0F);
+			vga_write_color((select == 21) ? 0x70 : 0x0F);
 			vga_write("CD-ROM INQUIRY");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 26) ? 0x70 : 0x0F);
+			vga_write_color((select == 22) ? 0x70 : 0x0F);
 			vga_write("CD-ROM READ TOC");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 27) ? 0x70 : 0x0F);
+			vga_write_color((select == 23) ? 0x70 : 0x0F);
 			vga_write("PIO WIDTH: ");
 			if (pio_width == 33) vga_write("32-bit sync");
 			else if (pio_width == 32) vga_write("32-bit");
@@ -2813,19 +2810,20 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 28) ? 0x70 : 0x0F);
+			vga_write_color((select == 24) ? 0x70 : 0x0F);
 			vga_write("NOP test");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 29) ? 0x70 : 0x0F);
+			vga_write_color((select == 25) ? 0x70 : 0x0F);
 			vga_write("Read verify tests >>");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 30) ? 0x70 : 0x0F);
+			vga_write_color((select == 26) ? 0x70 : 0x0F);
 			vga_write("Show IDE register taskfile");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+#endif
 		}
 
 		c = getch();
@@ -2837,23 +2835,35 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 		else if (c == 13) {
 			if (select == -1)
 				break;
-			else if (select == 0) { /* power states */
-				do_drive_power_states_test(ide,which);
-				redraw = backredraw = 1;
-			}
-			else if (select == 5/*Identify*/ || select == 6/*Identify packet*/) {
-				do_drive_identify_device_test(ide,which,select == 6 ? 0xA1 : 0xEC);
-				redraw = backredraw = 1;
-			}
-			else if (select == 7 || select == 8 || select == 9 || select == 10) { /* ATAPI eject/load CD-ROM */
+
+			switch (select) {
+				case 0: /* show IDE register taskfile */
+					do_common_show_ide_taskfile(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 1: /*Identify*/
+				case 2: /*Identify packet*/
+					do_drive_identify_device_test(ide,which,select == 2 ? 0xA1/*Identify packet*/ : 0xEC/*Identify*/);
+					redraw = backredraw = 1;
+					break;
+				case 3: /* power states */
+					do_drive_power_states_test(ide,which);
+					redraw = backredraw = 1;
+					break;
+			};
+#if 0
+			else if (select >= 4 && select <= 7) { /* ATAPI eject/load CD-ROM */
 				static const unsigned char cmd[4] = {2/*eject*/,3/*load*/,1/*start*/,0/*stop*/};
-				do_drive_atapi_eject_load(ide,which,cmd[select-7]);
+				do_drive_atapi_eject_load(ide,which,cmd[select-3]);
 			}
-			else if (select == 11) { /* ATAPI read CD-ROM */
+#endif
+#if 0
+			else if (select == 7) { /* ATAPI read CD-ROM */
 				do_drive_read_one_sector_test(ide,which);
 				redraw = backredraw = 1;
 			}
-
+#endif
+#if 0 /* PORTME */
 			else if (select == 28) { /* NOP */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
 					do_ide_controller_user_wait_drive_ready(ide) >= 0) {
@@ -3792,24 +3802,22 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					}
 				}
 			}
+#endif
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 30;
+				select = mbox.item_max;
 
 			redraw = 1;
 		}
-		else if (c == 0x4B00) {
-			if (select >= 18) select -= 18;
+		else if (c == 0x4B00) { /* left */
 			redraw = 1;
 		}
-		else if (c == 0x4D00) {
-			if (select < 18) select += 18;
-			if (select > 30) select -= 18;
+		else if (c == 0x4D00) { /* right */
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 30)
+			if (++select > mbox.item_max)
 				select = -1;
 
 			redraw = 1;
