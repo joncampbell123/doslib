@@ -195,7 +195,7 @@ struct ide_controller *idelib_probe(struct ide_controller *ide) {
 	if (inp(ide->base_io+7) == 0xFF)
 		return NULL;
 
-	newide->pio32_atapi_command = 0;
+	newide->pio32_atapi_command = 0; /* always assume ATAPI packet commands are to be written with 16-bit PIO */
 	newide->pio_width = IDELIB_PIO_WIDTH_16; /* always default to 16-bit PIO */
 	newide->irq_fired = 0;
 	newide->irq = irq;
