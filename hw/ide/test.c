@@ -62,7 +62,6 @@
 #include <hw/ide/idelib.h>
 
 static int read_mode = 12;
-static int pio_width = 16;	/* 16: standard I/O   32: 32-bit I/O   33: 32-bit I/O with VLB "sync sequence" */
 static int pio_width_warning = 1;
 static unsigned char big_scary_write_test_warning = 1;
 
@@ -1269,8 +1268,8 @@ void do_ide_controller_drive_rw_test(struct ide_controller *ide,unsigned char wh
 								if (!(x&1)) { /* if no error, read result from count register */
 									if (writetest) {
 										if (do_ide_controller_user_wait_drive_drq(ide) == 0) {
-											if (pio_width >= 32) {
-												if (pio_width == 33) ide_vlb_sync32_pio(ide);
+											if (ide->pio_width >= 32) {
+												if (ide->pio_width == 33) ide_vlb_sync32_pio(ide);
 
 												for (i=0;i < (512/4UL);i++)
 													outpd(ide->base_io+0,((uint32_t*)cdrom_sector)[i+(sectn*128)]);
@@ -1291,8 +1290,8 @@ void do_ide_controller_drive_rw_test(struct ide_controller *ide,unsigned char wh
 									}
 									else { /* read */
 										if (do_ide_controller_user_wait_drive_drq(ide) == 0) {
-											if (pio_width >= 32) {
-												if (pio_width == 33) ide_vlb_sync32_pio(ide);
+											if (ide->pio_width >= 32) {
+												if (ide->pio_width == 33) ide_vlb_sync32_pio(ide);
 
 												for (i=0;i < (512/4UL);i++)
 													((uint32_t*)cdrom_sector)[i+(sectn*128)] = inpd(ide->base_io+0);
@@ -1940,7 +1939,7 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 	if (!(ide->last_status&1)) {
 		/* read it */
 		do_ide_controller_user_wait_drive_drq(ide);
-		idelib_read_pio_general((unsigned char*)info,512,ide,pio_width);
+		idelib_read_pio_general((unsigned char*)info,512,ide,IDELIB_PIO_WIDTH_DEFAULT);
 
 		/* ------------ PAGE 1 -------------*/
 		vga_write_color(0x0E); vga_clear();
@@ -2135,7 +2134,7 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 				wait_for_enter_or_escape();
 				vga_msg_box_destroy(&vgabox);
 			}
-			idelib_read_pio_general(cdrom_sector,tlen,ide,pio_width);
+			idelib_read_pio_general(cdrom_sector,tlen,ide,IDELIB_PIO_WIDTH_DEFAULT);
 			if (ide->flags.io_irq_enable) { /* NOW we wait for another IRQ (completion) */
 				do_ide_controller_user_wait_irq(ide,1);
 				idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
@@ -2206,8 +2205,8 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 	}
 }
 
-int confirm_pio32_warning() {
-	if (pio_width < 32 && pio_width_warning) {
+int confirm_pio32_warning(struct ide_controller *ide) {
+	if (ide->pio_width < 32 && pio_width_warning) {
 		struct vga_msg_box vgabox;
 		char proceed = 1;
 		int c;
@@ -2801,9 +2800,9 @@ void ide_pio_autodetect(struct ide_controller *ide,unsigned char which) {
 	c = wait_for_enter_or_escape();
 	if (c == 27) return;
 
-	if (ok32) pio_width = 32;
-	else if (ok32vlb) pio_width = 33;
-	else pio_width = 16;
+	if (ok32) ide->pio_width = 32;
+	else if (ok32vlb) ide->pio_width = 33;
+	else ide->pio_width = 16;
 }
 
 static const char *drive_main_pio_mode_strings[] = {
@@ -2856,11 +2855,11 @@ void do_drive_pio_mode(struct ide_controller *ide,unsigned char which) {
 	idelib_controller_ack_irq(ide);
 
 	/* match selection to PIO mode */
-	if (pio_width == 16)
+	if (ide->pio_width == 16)
 		select = 0;
-	else if (pio_width == 32)
+	else if (ide->pio_width == 32)
 		select = 1;
-	else if (pio_width == 33)
+	else if (ide->pio_width == 33)
 		select = 2;
 
 	while (1) {
@@ -2891,9 +2890,9 @@ void do_drive_pio_mode(struct ide_controller *ide,unsigned char which) {
 			}
 			vga_write(which ? " Slave" : " Master");
 			vga_write(" << PIO mode");
-			if (pio_width == 33)
+			if (ide->pio_width == 33)
 				vga_write(" [32-bit VLB]");
-			else if (pio_width == 32)
+			else if (ide->pio_width == 32)
 				vga_write(" [32-bit]");
 			else
 				vga_write(" [16-bit]");
@@ -2933,28 +2932,28 @@ void do_drive_pio_mode(struct ide_controller *ide,unsigned char which) {
 			switch (select) {
 				case 0: /* 16-bit */
 					doexit = 1;
-					pio_width = 16;
+					ide->pio_width = 16;
 					break;
 				case 1: /* 32-bit */
-					if (confirm_pio32_warning()) {
-						pio_width = 32;
+					if (confirm_pio32_warning(ide)) {
+						ide->pio_width = 32;
 						doexit = 1;
 					}
 					break;
 				case 2: /* 32-bit VLB */
-					if (confirm_pio32_warning()) {
-						pio_width = 33;
+					if (confirm_pio32_warning(ide)) {
+						ide->pio_width = 33;
 						doexit = 1;
 					}
 					break;
 				case 3: /* Autodetect */
 					redraw = backredraw = 1;
 					ide_pio_autodetect(ide,which);
-					if (pio_width == 16)
+					if (ide->pio_width == 16)
 						select = 0;
-					else if (pio_width == 32)
+					else if (ide->pio_width == 32)
 						select = 1;
-					else if (pio_width == 33)
+					else if (ide->pio_width == 33)
 						select = 2;
 					break;
 			};
@@ -3103,9 +3102,9 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			redraw = 1;
 
 			/* update a string or two: PIO mode */
-			if (pio_width == 33)
+			if (ide->pio_width == 33)
 				drive_main_menustrings[5] = "PIO mode (currently: 32-bit VLB) >>";
-			else if (pio_width == 32)
+			else if (ide->pio_width == 32)
 				drive_main_menustrings[5] = "PIO mode (currently: 32-bit) >>";
 			else
 				drive_main_menustrings[5] = "PIO mode (currently: 16-bit) >>";
@@ -3582,8 +3581,8 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 											/* NTS: wait_drive_drq() by design will return -2 if the drive
 												sets the error bit, whether or not DRQ is asserted */
 												/* suck in the data and display it */
-											if (pio_width >= 32) {
-												if (pio_width == 33) ide_vlb_sync32_pio(ide);
+											if (ide->pio_width >= 32) {
+												if (ide->pio_width == 33) ide_vlb_sync32_pio(ide);
 
 												/* suck in the data and display it */
 												for (i=0;i < ((xl+3)>>2U);i++)

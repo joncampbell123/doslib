@@ -195,6 +195,8 @@ struct ide_controller *idelib_probe(struct ide_controller *ide) {
 	if (inp(ide->base_io+7) == 0xFF)
 		return NULL;
 
+	newide->pio32_atapi_command = 0;
+	newide->pio_width = IDELIB_PIO_WIDTH_16; /* always default to 16-bit PIO */
 	newide->irq_fired = 0;
 	newide->irq = irq;
 	newide->flags.io_irq_enable = (newide->irq >= 0) ? 1 : 0;	/* unless otherwise known, use the IRQ */
@@ -439,6 +441,9 @@ void idelib_discard_pio32(unsigned int len,struct ide_controller *ide) {
 }
 
 void idelib_discard_pio_general(unsigned int lw,struct ide_controller *ide,unsigned char pio_width) {
+	if (pio_width == 0)
+		pio_width = ide->pio_width;
+
 	if (pio_width >= 32) {
 		if (pio_width == 33) ide_vlb_sync32_pio(ide);
 		idelib_discard_pio32(lw,ide);
@@ -449,6 +454,9 @@ void idelib_discard_pio_general(unsigned int lw,struct ide_controller *ide,unsig
 }
 
 void idelib_read_pio_general(unsigned char *buf,unsigned int lw,struct ide_controller *ide,unsigned char pio_width) {
+	if (pio_width == 0)
+		pio_width = ide->pio_width;
+
 	if (pio_width >= 32) {
 		if (pio_width == 33) ide_vlb_sync32_pio(ide);
 		idelib_read_pio32(buf,lw,ide);
@@ -476,12 +484,23 @@ void idelib_controller_atapi_write_command(struct ide_controller *ide,unsigned c
 	unsigned int i;
 
 	if (len > 12) len = 12; /* max 12 bytes (6 words) */
-	len = (len + 1) / 2; /* command bytes transmitted in WORDs */
 
-	for (i=0;i < 6 && i < len;i++)
-		outpw(ide->base_io+0,((uint16_t*)buf)[i]);
-	for (;i < len;i++)
-		outpw(ide->base_io+0,0/*pad*/);
+	if (ide->pio_width >= IDELIB_PIO_WIDTH_32 && ide->pio32_atapi_command) {
+		if (ide->pio_width == IDELIB_PIO_WIDTH_32_VLB) ide_vlb_sync32_pio(ide);
+
+		len = (len + 3) / 4; /* command bytes transmitted in DWORDs */
+		for (i=0;i < 3 && i < len;i++) /* 3x4 = 12 */
+			outpd(ide->base_io+0,((uint32_t*)buf)[i]);
+		for (;i < 3;i++)
+			outpd(ide->base_io+0,0/*pad*/);
+	}
+	else {
+		len = (len + 1) / 2; /* command bytes transmitted in WORDs */
+		for (i=0;i < 6 && i < len;i++) /* 6x2 = 12 */
+			outpw(ide->base_io+0,((uint16_t*)buf)[i]);
+		for (;i < 6;i++)
+			outpw(ide->base_io+0,0/*pad*/);
+	}
 }
 
 int idelib_controller_update_atapi_state(struct ide_controller *ide) {

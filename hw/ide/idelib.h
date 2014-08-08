@@ -49,8 +49,17 @@ struct ide_controller {
 	uint8_t				device_control;		/* 0x3F6. control bits last written */
 	uint8_t				drive_address;		/* 0x3F7. drive select and head */
 	uint8_t				last_status;
+	uint8_t				pio_width;		/* PIO width (16=16-bit 32=32-bit 33=32-bit VLB key) */
 	uint8_t				selected_drive:1;	/* which drive is selected */
-	uint8_t				_reserved_:7;
+	uint8_t				pio32_atapi_command:1;	/* if set, allow 32-bit PIO when sending ATAPI command */
+	uint8_t				_reserved_:6;
+};
+
+enum {
+	IDELIB_PIO_WIDTH_DEFAULT=0,
+	IDELIB_PIO_WIDTH_16=16,
+	IDELIB_PIO_WIDTH_32=32,
+	IDELIB_PIO_WIDTH_32_VLB=33
 };
 
 extern const struct ide_controller	ide_isa_standard[4];
