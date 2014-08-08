@@ -3081,6 +3081,12 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			menuboxbound_redraw(&mbox,select);
 
 #if 0
+			else if (select == 7) { /* ATAPI read CD-ROM */
+				do_drive_read_one_sector_test(ide,which);
+				redraw = backredraw = 1;
+			}
+#endif
+#if 0
 			vga_moveto(ofsx,y++);
 			vga_write_color((select == 8) ? 0x70 : 0x0F);
 			vga_write("Read[2] CD-ROM");
@@ -3210,12 +3216,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					redraw = backredraw = 1;
 					break;
 			};
-#if 0
-			else if (select == 7) { /* ATAPI read CD-ROM */
-				do_drive_read_one_sector_test(ide,which);
-				redraw = backredraw = 1;
-			}
-#endif
 #if 0 /* PORTME */
 			else if (select == 28) { /* NOP */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
