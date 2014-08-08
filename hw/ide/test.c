@@ -3061,11 +3061,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 				}
 			}
 
-			else if (select == 30) { /* show IDE register taskfile */
-				do_common_show_ide_taskfile(ide,which);
-				redraw = backredraw = 1;
-			}
-
 			else if (select == 21) { /* media eject */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
 					do_ide_controller_user_wait_drive_ready(ide) == 0) {
