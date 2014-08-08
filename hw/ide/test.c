@@ -61,51 +61,15 @@
 #include <hw/vga/vgatty.h>
 #include <hw/ide/idelib.h>
 
-static int read_mode = 12;
+#include "testutil.h"
+
+static int cdrom_read_mode = 12;
 static int pio_width_warning = 1;
 static unsigned char big_scary_write_test_warning = 1;
 
 static char tmp[1024];
 static uint16_t ide_info[256];
 static unsigned char cdrom_sector[512U*63U];	/* ~32KB, enough for CD-ROM sector or 63 512-byte sectors */
-
-static unsigned char sanitizechar(unsigned char c) {
-	if (c < 32) return '.';
-	return c;
-}
-
-/* construct ATAPI/SCSI-MMC READ command according to user's choice, either READ(10) or READ(12) */
-static void do_construct_atapi_scsi_mmc_read(unsigned char *buf/*must be 12 bytes*/,uint32_t sector,uint32_t tlen_sect) {
-	memset(buf,0,12);
-	if (read_mode == 12) {
-		/* command: READ(12) */
-		buf[0] = 0xA8;
-
-		/* fill in the Logical Block Address */
-		buf[2] = sector >> 24;
-		buf[3] = sector >> 16;
-		buf[4] = sector >> 8;
-		buf[5] = sector;
-
-		buf[6] = tlen_sect >> 24UL;
-		buf[7] = tlen_sect >> 16UL;
-		buf[8] = tlen_sect >> 8UL;
-		buf[9] = tlen_sect;
-	}
-	else {
-		/* command: READ(10) */
-		buf[0] = 0x28;
-
-		/* fill in the Logical Block Address */
-		buf[2] = sector >> 24;
-		buf[3] = sector >> 16;
-		buf[4] = sector >> 8;
-		buf[5] = sector;
-
-		buf[7] = tlen_sect >> 8;
-		buf[8] = tlen_sect;
-	}
-}
 
 static void common_ide_success_or_error_vga_msg_box(struct ide_controller *ide,struct vga_msg_box *vgabox) {
 	if (!(ide->last_status&1)) {
@@ -119,17 +83,6 @@ static void common_ide_success_or_error_vga_msg_box(struct ide_controller *ide,s
 	
 static void common_failed_to_read_taskfile_vga_msg_box(struct vga_msg_box *vgabox) {
 	vga_msg_box_create(vgabox,"Failed to read taskfile",0,0);
-}
-
-static int wait_for_enter_or_escape() {
-	int c;
-
-	do {
-		c = getch();
-		if (c == 0) c = getch() << 8;
-	} while (!(c == 13 || c == 27));
-
-	return c;
 }
 
 static void do_warn_if_atapi_not_in_command_state(struct ide_controller *ide) {
@@ -377,6 +330,37 @@ int do_ide_controller_user_wait_drive_ready(struct ide_controller *ide) {
 		if (ret == 0 && c != 0) ungetch(c);
 		if (show_countdown == 0UL)
 			vga_msg_box_destroy(&vgabox);
+	}
+
+	return ret;
+}
+
+int do_ide_controller_drive_check_select(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+	int c,ret = 0;
+
+	if (idelib_controller_update_taskfile(ide,0xC0/* status and drive/select */,IDELIB_TASKFILE_LBA48_UPDATE) < 0)
+		return -1;
+
+	if (which != ide->selected_drive || ide->head_select == 0xFF) {
+		vga_msg_box_create(&vgabox,"IDE controller drive select unsuccessful\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
+
+		do {
+			c = getch();
+			if (c == 0) c = getch() << 8;
+
+			if (c == 27) {
+				ret = -1;
+				break;
+			}
+			else if (c == ' ') {
+				ret = 1;
+				break;
+			}
+		} while (1);
+
+		vga_msg_box_destroy(&vgabox);
+		return ret;
 	}
 
 	return ret;
@@ -1468,6 +1452,8 @@ void do_ide_controller_drive_rw_test(struct ide_controller *ide,unsigned char wh
 /* NOTE: In typical standards-compliant manner, the "media lock/unlock" and "get media status" commands
          don't seem to apply to actual CD-ROM drives attached to the IDE bus. Don't be surprised if on
          any hardware you test this on you get errors. */
+/* NTS: I really have *NO* idea whether or not I'm implementing these correctly at all. I don't have
+ *      any IDE ATA/ATAPI hardware that responds to these commands. */
 void do_ide_controller_drive_media_status_notify(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 	char redraw=1;
@@ -1697,37 +1683,6 @@ void do_ide_controller_drive_media_status_notify(struct ide_controller *ide,unsi
 			redraw = 1;
 		}
 	}
-}
-
-int do_ide_controller_drive_check_select(struct ide_controller *ide,unsigned char which) {
-	struct vga_msg_box vgabox;
-	int c,ret = 0;
-
-	if (idelib_controller_update_taskfile(ide,0xC0/* status and drive/select */,IDELIB_TASKFILE_LBA48_UPDATE) < 0)
-		return -1;
-
-	if (which != ide->selected_drive || ide->head_select == 0xFF) {
-		vga_msg_box_create(&vgabox,"IDE controller drive select unsuccessful\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
-
-		do {
-			c = getch();
-			if (c == 0) c = getch() << 8;
-
-			if (c == 27) {
-				ret = -1;
-				break;
-			}
-			else if (c == ' ') {
-				ret = 1;
-				break;
-			}
-		} while (1);
-
-		vga_msg_box_destroy(&vgabox);
-		return ret;
-	}
-
-	return ret;
 }
 
 void do_drive_standby_test(struct ide_controller *ide,unsigned char which) {
@@ -2106,7 +2061,7 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 	if (!(ide->last_status&1)) { /* if no error, read result from count register */
 		do_warn_if_atapi_not_in_command_state(ide); /* sector count register should signal we're in the command stage */
 
-		do_construct_atapi_scsi_mmc_read(buf,sector,tlen_sect);
+		do_construct_atapi_scsi_mmc_read(buf,sector,tlen_sect,cdrom_read_mode);
 		idelib_controller_reset_irq_counter(ide); /* IRQ will fire after command completion */
 		idelib_controller_atapi_write_command(ide,buf,12); /* write 12-byte ATAPI command data */
 		if (ide->flags.io_irq_enable) { /* NOW we wait for the IRQ */
