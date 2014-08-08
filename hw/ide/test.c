@@ -1915,6 +1915,7 @@ void do_drive_standby_test(struct ide_controller *ide,unsigned char which) {
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return;
 
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
 	idelib_controller_reset_irq_counter(ide);
 	idelib_controller_write_command(ide,0xE0); /* <- standby immediate */
 	if (ide->flags.io_irq_enable) {
@@ -1953,6 +1954,7 @@ void do_drive_device_reset_test(struct ide_controller *ide,unsigned char which) 
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return;
 
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
 	idelib_controller_reset_irq_counter(ide);
 	idelib_controller_write_command(ide,0x08); /* <- device reset */
 	do_ide_controller_user_wait_busy_controller(ide);
@@ -1994,6 +1996,7 @@ void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return;
 
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
 	idelib_controller_reset_irq_counter(ide);
 	idelib_controller_write_command(ide,0xE6); /* <- sleep */
 	if (ide->flags.io_irq_enable) {
@@ -2053,6 +2056,7 @@ void do_drive_check_power_mode(struct ide_controller *ide,unsigned char which) {
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return;
 
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
 	idelib_controller_reset_irq_counter(ide);
 
 	/* in case command doesn't do anything, fill sector count value with 0x0A */
@@ -2102,6 +2106,7 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return;
 
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
 	idelib_controller_reset_irq_counter(ide);
 	idelib_controller_write_command(ide,command); /* <- (A1h) identify packet device (ECh) identify device */
 	if (ide->flags.io_irq_enable) {
@@ -2221,6 +2226,7 @@ void do_drive_atapi_eject_load(struct ide_controller *ide,unsigned char which,un
 
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return;
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
 	if (idelib_controller_atapi_prepare_packet_command(ide,/*xfer=to host no DMA*/0x04,/*byte count=*/0) < 0) /* fill out taskfile with command */
 		return;
 	if (idelib_controller_apply_taskfile(ide,0xBE/*base_io+1-5&7*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/) < 0) /* also writes command */
@@ -2266,6 +2272,7 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return;
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
 	if (idelib_controller_atapi_prepare_packet_command(ide,/*xfer=to host no DMA*/0x04,/*byte count=*/tlen) < 0) /* fill out taskfile with command */
 		return;
 	if (idelib_controller_apply_taskfile(ide,0xBE/*base_io+1-5&7*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/) < 0) /* also writes command */
