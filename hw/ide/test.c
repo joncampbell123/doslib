@@ -2982,7 +2982,8 @@ static const char *drive_main_menustrings[] = {
 	"CD-ROM eject/load >>",
 	"PIO mode >>",				/* 5 */
 	"Read HDD tests >>",
-	"Write HDD tests >>"
+	"Write HDD tests >>",
+	"Read verify HDD tests >>"
 };
 
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
@@ -3217,6 +3218,10 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					do_ide_controller_drive_rw_test(ide,which,select==7/*write test*/?1:0);
 					redraw = backredraw = 1;
 					break;
+				case 8: /* read verify */
+					do_ide_controller_drive_readverify_test(ide,which);
+					redraw = backredraw = 1;
+					break;
 			};
 #if 0 /* PORTME */
 			else if (select == 28) { /* NOP */
@@ -3348,15 +3353,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					} while (!(c == 13 || c == 27));
 					vga_msg_box_destroy(&vgabox);
 				}
-			}
-
-			else if (select == 13 || select == 14) { /* read/write tests */
-				do_ide_controller_drive_rw_test(ide,which,select==14?1:0);
-				redraw = backredraw = 1;
-			}
-			else if (select == 29) { /* read verify */
-				do_ide_controller_drive_readverify_test(ide,which);
-				redraw = backredraw = 1;
 			}
 			else if (select == 24) {
 				do_ide_controller_drive_write_unc_test(ide,which);
