@@ -2815,7 +2815,7 @@ static const char *drive_main_pio_mode_strings[] = {
 	/* TODO: Add "Test now" option */
 };
 
-void do_drive_cdrom_pio_mode(struct ide_controller *ide,unsigned char which) {
+void do_drive_pio_mode(struct ide_controller *ide,unsigned char which) {
 	struct menuboxbounds mbox;
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
@@ -3198,7 +3198,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					redraw = backredraw = 1;
 					break;
 				case 5: /* PIO mode */
-					do_drive_cdrom_pio_mode(ide,which);
+					do_drive_pio_mode(ide,which);
 					redraw = backredraw = 1;
 					break;
 			};
