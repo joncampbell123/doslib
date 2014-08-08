@@ -399,6 +399,17 @@ void idelib_read_pio16(unsigned char *buf,unsigned int len,struct ide_controller
 	if (len != 0) *buf = inp(ide->base_io);
 }
 
+void idelib_discard_pio16(unsigned int len,struct ide_controller *ide) {
+	unsigned int lws = len >> 1;
+
+	len &= 1;
+	while (lws != 0) {
+		inpw(ide->base_io); /* from data port */
+		lws--;
+	}
+	if (len != 0) inp(ide->base_io);
+}
+
 void idelib_read_pio32(unsigned char *buf,unsigned int len,struct ide_controller *ide) {
 	unsigned int lws = len >> 2;
 
@@ -413,6 +424,28 @@ void idelib_read_pio32(unsigned char *buf,unsigned int len,struct ide_controller
 		buf += 2;
 	}
 	if (len & 1) *buf = inp(ide->base_io);
+}
+
+void idelib_discard_pio32(unsigned int len,struct ide_controller *ide) {
+	unsigned int lws = len >> 2;
+
+	len &= 3;
+	while (lws != 0) {
+		inpd(ide->base_io); /* from data port */
+		lws--;
+	}
+	if (len & 2) inpw(ide->base_io);
+	if (len & 1) inp(ide->base_io);
+}
+
+void idelib_discard_pio_general(unsigned int lw,struct ide_controller *ide,unsigned char pio_width) {
+	if (pio_width >= 32) {
+		if (pio_width == 33) ide_vlb_sync32_pio(ide);
+		idelib_discard_pio32(lw,ide);
+	}
+	else {
+		idelib_discard_pio16(lw,ide);
+	}
 }
 
 void idelib_read_pio_general(unsigned char *buf,unsigned int lw,struct ide_controller *ide,unsigned char pio_width) {

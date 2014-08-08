@@ -2719,6 +2719,7 @@ void ide_pio_autodetect(struct ide_controller *ide,unsigned char which) {
 		vga_write("OK ");
 		do_ide_controller_user_wait_drive_drq(ide);
 		idelib_read_pio_general(info_32,1024,ide,33/*PIO 32 VLB*/);
+		idelib_discard_pio_general(512,ide,16/*PIO 16*/); /* <- in case 32-bit PIO did nothing, discard using 16-bit PIO */
 
 		/* compare the data. is it the same? if so, 32-bit PIO is supported */
 		if (!memcmp(info_16,info_32,512)) {
@@ -2770,6 +2771,7 @@ void ide_pio_autodetect(struct ide_controller *ide,unsigned char which) {
 		vga_write("OK ");
 		do_ide_controller_user_wait_drive_drq(ide);
 		idelib_read_pio_general(info_32,1024,ide,32/*PIO 32*/);
+		idelib_discard_pio_general(512,ide,16/*PIO 16*/); /* <- in case 32-bit PIO did nothing, discard using 16-bit PIO */
 
 		/* compare the data. is it the same? if so, 32-bit PIO is supported */
 		if (!memcmp(info_16,info_32,512)) {
