@@ -3031,6 +3031,14 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			backredraw = 0;
 			redraw = 1;
 
+			/* update a string or two: PIO mode */
+			if (pio_width == 33)
+				drive_main_menustrings[5] = "PIO mode (currently: 32-bit VLB) >>";
+			else if (pio_width == 32)
+				drive_main_menustrings[5] = "PIO mode (currently: 32-bit) >>";
+			else
+				drive_main_menustrings[5] = "PIO mode (currently: 16-bit) >>";
+
 			for (y=0;y < vga_height;y++) {
 				for (x=0;x < vga_width;x++) {
 					*vga++ = 0x1E00 + 177;
