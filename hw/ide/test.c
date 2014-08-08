@@ -2448,31 +2448,6 @@ void do_drive_cdrom_startstop_test(struct ide_controller *ide,unsigned char whic
 	}
 }
 
-/* check for another possible case where 16-bit PIO word is in lower half of 32-bit read, junk in upper */
-static int ide_memcmp_every_other_word(unsigned char *pio16,unsigned char *pio32,unsigned int words) {
-	while (words > 0) {
-		uint16_t a = *((uint16_t*)pio16);
-		uint16_t b = (uint16_t)(*((uint32_t*)pio32) & 0xFFFF);
-		if (a != b) return (int)(a-b);
-		pio16 += 2;
-		pio32 += 4;
-		words--;
-	}
-
-	return 0;
-}
-
-/* return 0 if all bytes are 0xFF */
-static int ide_memcmp_all_FF(unsigned char *d,unsigned int bytes) {
-	while (bytes > 0) {
-		if (*d != 0xFF) return 1;
-		d++;
-		bytes--;
-	}
-
-	return 0;
-}
-
 void ide_pio_autodetect(struct ide_controller *ide,unsigned char which) {
 	unsigned char ok32=0,ok32vlb=0;
 	unsigned char ident=0,identpacket=0;
