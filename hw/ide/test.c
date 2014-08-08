@@ -2980,7 +2980,9 @@ static const char *drive_main_menustrings[] = {
 	"Identify packet (ATAPI)",
 	"Power states >>",
 	"CD-ROM eject/load >>",
-	"PIO mode >>"				/* 5 */
+	"PIO mode >>",				/* 5 */
+	"Read HDD tests >>",
+	"Write HDD tests >>"
 };
 
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
@@ -3090,11 +3092,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			vga_moveto(ofsx,y++);
 			vga_write_color((select == 8) ? 0x70 : 0x0F);
 			vga_write("Read[2] CD-ROM");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 9) ? 0x70 : 0x0F);
-			vga_write("Read HDD tests >>");
 			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx,y++);
@@ -3213,6 +3210,11 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					break;
 				case 5: /* PIO mode */
 					do_drive_pio_mode(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 6: /* Read HDD test */
+				case 7: /* Write HDD test */
+					do_ide_controller_drive_rw_test(ide,which,select==7/*write test*/?1:0);
 					redraw = backredraw = 1;
 					break;
 			};
