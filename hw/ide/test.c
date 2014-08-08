@@ -2649,7 +2649,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 				do_drive_device_reset_test(ide,which);
 			else if (select == 4) /* check power mode */
 				do_drive_check_power_mode(ide,which);
-			else if (select == 5 || select == 6) { /* identify device OR identify packet device */
+			else if (select == 5/*Identify*/ || select == 6/*Identify packet*/) {
 				do_drive_identify_device_test(ide,which,select == 6 ? 0xA1 : 0xEC);
 				redraw = backredraw = 1;
 			}
