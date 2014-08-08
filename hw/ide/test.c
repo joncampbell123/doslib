@@ -441,6 +441,58 @@ int do_ide_controller_atapi_device_check_post_host_reset(struct ide_controller *
 	return 0;
 }
 
+void do_common_show_ide_taskfile(struct ide_controller *ide,unsigned char which) {
+	struct vga_msg_box vgabox;
+	int c;
+
+	if (idelib_controller_update_taskfile(ide,0xFF,0) == 0) {
+		struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+
+		vga_write_color(0x0F);
+		vga_clear();
+
+		vga_moveto(0,0);
+		vga_write("IDE taskfile:\n\n");
+
+		vga_write("IDE controller:\n");
+		sprintf(tmp," selected_drive=%u last_status=0x%02x drive_address=0x%02x\n device_control=0x%02x head_select=0x%02x\n\n",
+			ide->selected_drive,	ide->last_status,
+			ide->drive_address,	ide->device_control,
+			ide->head_select);
+		vga_write(tmp);
+
+		vga_write("IDE device:\n");
+		sprintf(tmp," assume_lba48=%u\n",tsk->assume_lba48);
+		vga_write(tmp);
+		sprintf(tmp," error=0x%02x\n",tsk->error); /* aliased to features */
+		vga_write(tmp);
+		sprintf(tmp," sector_count=0x%04x\n",tsk->sector_count);
+		vga_write(tmp);
+		sprintf(tmp," lba0_3/chs_sector=0x%04x\n",tsk->lba0_3);
+		vga_write(tmp);
+		sprintf(tmp," lba1_4/chs_cyl_low=0x%04x\n",tsk->lba1_4);
+		vga_write(tmp);
+		sprintf(tmp," lba2_5/chs_cyl_high=0x%04x\n",tsk->lba2_5);
+		vga_write(tmp);
+		sprintf(tmp," head_select=0x%02x\n",tsk->head_select);
+		vga_write(tmp);
+		sprintf(tmp," command=0x%02x\n",tsk->command);
+		vga_write(tmp);
+		sprintf(tmp," status=0x%02x\n",tsk->status);
+		vga_write(tmp);
+
+		do {
+			c = getch();
+			if (c == 0) c = getch() << 8;
+		} while (!(c == 13 || c == 27));
+	}
+	else {
+		common_failed_to_read_taskfile_vga_msg_box(&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+
 void do_ide_controller_drive_write_unc_test(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 	char redraw=1;
@@ -2384,6 +2436,165 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 	}
 }
 
+void do_drive_power_states_test(struct ide_controller *ide,unsigned char which) {
+	char redraw=1;
+	char backredraw=1;
+	VGA_ALPHA_PTR vga;
+	unsigned int x,y;
+	int select=-1;
+	int c;
+
+	/* most of the commands assume a ready controller. if it's stuck,
+	 * we'd rather the user have a visual indication that it's stuck that way */
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+
+	/* select the drive we want */
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
+
+	/* in case the IDE controller is busy for that time */
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+
+	/* read back: did the drive select take effect? if not, it might not be there. another common sign is the head/drive select reads back 0xFF */
+	c = do_ide_controller_drive_check_select(ide,which);
+	if (c < 0) return;
+
+	/* it might be a CD-ROM drive, which in some cases might not raise the Drive Ready bit */
+	do_ide_controller_atapi_device_check_post_host_reset(ide);
+
+	/* wait for the drive to indicate readiness */
+	/* NTS: If the drive never becomes ready even despite our reset hacks, there's a strong
+	 *      possibility that the device doesn't exist. This can happen for example if there
+	 *      is a master attached but no slave. */
+	c = do_ide_controller_user_wait_drive_ready(ide);
+	if (c < 0) return;
+
+	/* for completeness, clear pending IRQ */
+	idelib_controller_ack_irq(ide);
+
+	while (1) {
+		if (backredraw) {
+			vga = vga_alpha_ram;
+			backredraw = 0;
+			redraw = 1;
+
+			for (y=0;y < vga_height;y++) {
+				for (x=0;x < vga_width;x++) {
+					*vga++ = 0x1E00 + 177;
+				}
+			}
+
+			vga_moveto(0,0);
+
+			vga_write_color(0x1F);
+			vga_write("        IDE controller ");
+			sprintf(tmp,"@%X",ide->base_io);
+			vga_write(tmp);
+			if (ide->alt_io != 0) {
+				sprintf(tmp," alt %X",ide->alt_io);
+				vga_write(tmp);
+			}
+			if (ide->irq >= 0) {
+				sprintf(tmp," IRQ %d",ide->irq);
+				vga_write(tmp);
+			}
+			vga_write(which ? " Slave" : " Master");
+			vga_write(" << Power states");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+
+			vga_write_color(0xC);
+			vga_write("WARNING: This code talks directly to your hard disk controller.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			vga_write_color(0xC);
+			vga_write("         If you value the data on your hard drive do not run this program.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		if (redraw) {
+			const int cols = 2;
+			const int ofsx = 4;
+			const int width = vga_width - 8;
+
+			redraw = 0;
+
+			y = 5;
+			vga_moveto(ofsx,y++);
+			vga_write_color((select == -1) ? 0x70 : 0x0F);
+			vga_write("Back to IDE drive main menu");
+			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			y = 7;
+			vga_moveto(ofsx,y++);
+			vga_write_color((select == 0) ? 0x70 : 0x0F);
+			vga_write("Standby");
+			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(ofsx,y++);
+			vga_write_color((select == 1) ? 0x70 : 0x0F);
+			vga_write("Sleep");
+			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(ofsx,y++);
+			vga_write_color((select == 2) ? 0x70 : 0x0F);
+			vga_write("Idle");
+			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(ofsx,y++);
+			vga_write_color((select == 3) ? 0x70 : 0x0F);
+			vga_write("Device reset");
+			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(ofsx,y++);
+			vga_write_color((select == 4) ? 0x70 : 0x0F);
+			vga_write("Power Mode");
+			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(ofsx,y++);
+			vga_write_color((select == 5) ? 0x70 : 0x0F);
+			vga_write("Show IDE register taskfile");
+			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			break;
+		}
+		else if (c == 13) {
+			if (select == -1)
+				break;
+			else if (select == 0) /* standby */
+				do_drive_standby_test(ide,which);
+			else if (select == 1) /* sleep */
+				do_drive_sleep_test(ide,which);
+			else if (select == 2) /* idle */
+				do_drive_idle_test(ide,which);
+			else if (select == 3) /* device reset */
+				do_drive_device_reset_test(ide,which);
+			else if (select == 4) /* check power mode */
+				do_drive_check_power_mode(ide,which);
+			else if (select == 5) { /* show IDE register taskfile */
+				do_common_show_ide_taskfile(ide,which);
+				redraw = backredraw = 1;
+			}
+		}
+		else if (c == 0x4800) {
+			if (--select < -1)
+				select = 5;
+
+			redraw = 1;
+		}
+		else if (c == 0x5000) {
+			if (++select > 5)
+				select = -1;
+
+			redraw = 1;
+		}
+	}
+}
+
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 	char redraw=1;
@@ -2475,27 +2686,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			y = 7;
 			vga_moveto(ofsx,y++);
 			vga_write_color((select == 0) ? 0x70 : 0x0F);
-			vga_write("Standby");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 1) ? 0x70 : 0x0F);
-			vga_write("Sleep");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 2) ? 0x70 : 0x0F);
-			vga_write("Idle");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 3) ? 0x70 : 0x0F);
-			vga_write("Device reset");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
-			vga_write_color((select == 4) ? 0x70 : 0x0F);
-			vga_write("Power Mode");
+			vga_write("Power states >>");
 			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx,y++);
@@ -2646,16 +2837,10 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 		else if (c == 13) {
 			if (select == -1)
 				break;
-			else if (select == 0) /* standby */
-				do_drive_standby_test(ide,which);
-			else if (select == 1) /* sleep */
-				do_drive_sleep_test(ide,which);
-			else if (select == 2) /* idle */
-				do_drive_idle_test(ide,which);
-			else if (select == 3) /* device reset */
-				do_drive_device_reset_test(ide,which);
-			else if (select == 4) /* check power mode */
-				do_drive_check_power_mode(ide,which);
+			else if (select == 0) { /* power states */
+				do_drive_power_states_test(ide,which);
+				redraw = backredraw = 1;
+			}
 			else if (select == 5/*Identify*/ || select == 6/*Identify packet*/) {
 				do_drive_identify_device_test(ide,which,select == 6 ? 0xA1 : 0xEC);
 				redraw = backredraw = 1;
@@ -2725,54 +2910,10 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			}
 
 			else if (select == 30) { /* show IDE register taskfile */
-				if (idelib_controller_update_taskfile(ide,0xFF,0) == 0) {
-					struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
-
-					redraw = backredraw = 1;
-					vga_write_color(0x0F);
-					vga_clear();
-
-					vga_moveto(0,0);
-					vga_write("IDE taskfile:\n\n");
-
-					vga_write("IDE controller:\n");
-					sprintf(tmp," selected_drive=%u last_status=0x%02x drive_address=0x%02x\n device_control=0x%02x head_select=0x%02x\n\n",
-						ide->selected_drive,	ide->last_status,
-						ide->drive_address,	ide->device_control,
-						ide->head_select);
-					vga_write(tmp);
-
-					vga_write("IDE device:\n");
-					sprintf(tmp," assume_lba48=%u\n",tsk->assume_lba48);
-					vga_write(tmp);
-					sprintf(tmp," error=0x%02x\n",tsk->error); /* aliased to features */
-					vga_write(tmp);
-					sprintf(tmp," sector_count=0x%04x\n",tsk->sector_count);
-					vga_write(tmp);
-					sprintf(tmp," lba0_3/chs_sector=0x%04x\n",tsk->lba0_3);
-					vga_write(tmp);
-					sprintf(tmp," lba1_4/chs_cyl_low=0x%04x\n",tsk->lba1_4);
-					vga_write(tmp);
-					sprintf(tmp," lba2_5/chs_cyl_high=0x%04x\n",tsk->lba2_5);
-					vga_write(tmp);
-					sprintf(tmp," head_select=0x%02x\n",tsk->head_select);
-					vga_write(tmp);
-					sprintf(tmp," command=0x%02x\n",tsk->command);
-					vga_write(tmp);
-					sprintf(tmp," status=0x%02x\n",tsk->status);
-					vga_write(tmp);
-
-					do {
-						c = getch();
-						if (c == 0) c = getch() << 8;
-					} while (!(c == 13 || c == 27));
-				}
-				else {
-					common_failed_to_read_taskfile_vga_msg_box(&vgabox);
-					wait_for_enter_or_escape();
-					vga_msg_box_destroy(&vgabox);
-				}
+				do_common_show_ide_taskfile(ide,which);
+				redraw = backredraw = 1;
 			}
+
 			else if (select == 21) { /* media eject */
 				if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
 					do_ide_controller_user_wait_drive_ready(ide) == 0) {
