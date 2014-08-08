@@ -493,236 +493,6 @@ void do_common_show_ide_taskfile(struct ide_controller *ide,unsigned char which)
 	}
 }
 
-void do_ide_controller_drive_write_unc_test(struct ide_controller *ide,unsigned char which) {
-	struct vga_msg_box vgabox;
-	char redraw=1;
-	char backredraw=1;
-	VGA_ALPHA_PTR vga;
-	unsigned int x,y;
-	int select=-1;
-	int c;
-
-	vga_msg_box_create(&vgabox,"WARNING!!! WARNING!!! WARNING!!!\n"
-		"\n"
-		"This write test uses the WRITE UNCORRECTABLE command on\n"
-		"your hard drive to write pseudo-uncorrectable sectors.\n"
-		"Until the pseudo-uncorrectable sectors are written, reads\n"
-		"from the sectors will show up as errors.\n"
-		"\n"
-		"Hit ESC to cancel, or ENTER if this is what you want"
-		,0,0);
-	do {
-		c = getch();
-		if (c == 0) c = getch() << 8;
-	} while (!(c == 13 || c == 27));
-	vga_msg_box_destroy(&vgabox);
-	if (c == 27) return;
-
-	/* most of the commands assume a ready controller. if it's stuck,
-	 * we'd rather the user have a visual indication that it's stuck that way */
-	c = do_ide_controller_user_wait_busy_controller(ide);
-	if (c != 0) return;
-
-	/* select the drive we want */
-	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
-
-	/* in case the IDE controller is busy for that time */
-	c = do_ide_controller_user_wait_busy_controller(ide);
-	if (c != 0) return;
-
-	/* it might be a CD-ROM drive, which in some cases might not raise the Drive Ready bit */
-	do_ide_controller_atapi_device_check_post_host_reset(ide);
-
-	/* wait for the drive to indicate readiness */
-	c = do_ide_controller_user_wait_drive_ready(ide);
-	if (c != 0) return;
-
-	while (1) {
-		if (backredraw) {
-			vga = vga_alpha_ram;
-			backredraw = 0;
-			redraw = 1;
-
-			for (y=0;y < vga_height;y++) {
-				for (x=0;x < vga_width;x++) {
-					*vga++ = 0x1E00 + 177;
-				}
-			}
-
-			vga_moveto(0,0);
-
-			vga_write_color(0x1F);
-			vga_write("        IDE controller ");
-			sprintf(tmp,"@%X",ide->base_io);
-			vga_write(tmp);
-			if (ide->alt_io != 0) {
-				sprintf(tmp," alt %X",ide->alt_io);
-				vga_write(tmp);
-			}
-			if (ide->irq >= 0) {
-				sprintf(tmp," IRQ %d",ide->irq);
-				vga_write(tmp);
-			}
-			vga_write(which ? " Slave" : " Master");
-			vga_write(" Uncorrectable write");
-			vga_write(" test");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
-
-			vga_write_color(0xC);
-			vga_write("WARNING: This code talks directly to your hard disk controller.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
-			vga_write_color(0xC);
-			vga_write("         If you value the data on your hard drive do not run this program.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
-		}
-
-		if (redraw) {
-			const int cols = 2;
-
-			redraw = 0;
-
-			y = 5;
-			vga_moveto(8,y++);
-			vga_write_color((select == -1) ? 0x70 : 0x0F);
-			vga_write("Back to IDE drive menu");
-			while (vga_pos_x < ((vga_width/cols)-4) && vga_pos_x != 0) vga_writec(' ');
-
-			y = 7;
-			vga_moveto(8,y++);
-			vga_write_color((select == 0) ? 0x70 : 0x0F);
-			vga_write("Write Unc 1x ");
-			while (vga_pos_x < ((vga_width/cols)-4) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(8,y++);
-			vga_write_color((select == 1) ? 0x70 : 0x0F);
-			vga_write("Write Unc 4x ");
-			while (vga_pos_x < ((vga_width/cols)-4) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(8,y++);
-			vga_write_color((select == 2) ? 0x70 : 0x0F);
-			vga_write("Write Unc 63x ");
-			while (vga_pos_x < ((vga_width/cols)-4) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(8,y++);
-			vga_write_color((select == 3) ? 0x70 : 0x0F);
-			vga_write("Write Unc 255x ");
-			while (vga_pos_x < ((vga_width/cols)-4) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(8,y++);
-			vga_write_color((select == 4) ? 0x70 : 0x0F);
-			vga_write("Write Unc 1024x ");
-			while (vga_pos_x < ((vga_width/cols)-4) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(8,y++);
-			vga_write_color((select == 5) ? 0x70 : 0x0F);
-			vga_write("Write Unc 16384x ");
-			while (vga_pos_x < ((vga_width/cols)-4) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(8,y++);
-			vga_write_color((select == 6) ? 0x70 : 0x0F);
-			vga_write("Write Unc 65536x ");
-			while (vga_pos_x < ((vga_width/cols)-4) && vga_pos_x != 0) vga_writec(' ');
-		}
-
-		c = getch();
-		if (c == 0) c = getch() << 8;
-
-		if (c == 27) {
-			break;
-		}
-		else if (c == 13) {
-			if (select == -1) {
-				break;
-			}
-			else if (select >= 0 && select <= 6) {
-				unsigned long long sector = 0;
-				unsigned long tlen_sect = 1;
-				unsigned char stop = 0;
-
-				switch (select) {
-					case 0:		tlen_sect = 1UL; break;
-					case 1:		tlen_sect = 4UL; break;
-					case 2:		tlen_sect = 63UL; break;
-					case 3:		tlen_sect = 255UL; break;
-					case 4:		tlen_sect = 1024UL; break;
-					case 5:		tlen_sect = 16384UL; break;
-					case 6:		tlen_sect = 65536UL; break;
-				}
-
-				while (!stop) {
-					if (do_ide_controller_user_wait_busy_controller(ide) == 0 &&
-						do_ide_controller_user_wait_drive_ready(ide) == 0) {
-						ide->irq_fired = 0;
-
-						sprintf(tmp,"WriteUnc sector %016llu (%016llX) %u sects",sector,sector,(unsigned int)tlen_sect);
-						vga_moveto(0,0);
-						vga_write_color(0x0E);
-						vga_write(tmp);
-						vga_write("           ");
-
-						/* select drive */
-						idelib_controller_drive_select(ide,which,/*head=*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
-						if (do_ide_controller_user_wait_busy_controller(ide) != 0) break;
-						if (do_ide_controller_user_wait_drive_ready(ide) != 0) break;
-
-						/* the command takes LBA and count LBA48-style */
-						outp(ide->base_io+1,0x5A); /* <- pseudo-uncorrectable without logging */
-						outp(ide->base_io+2,tlen_sect >> 8); /* number of sectors hi byte */
-						outp(ide->base_io+3,sector >> 24ULL);
-						outp(ide->base_io+4,sector >> 32ULL);
-						outp(ide->base_io+5,sector >> 40ULL);
-
-						outp(ide->base_io+1,0x5A); /* <- pseudo-uncorrectable without logging */
-						outp(ide->base_io+2,tlen_sect); /* number of sectors lo byte */
-						outp(ide->base_io+3,sector);
-						outp(ide->base_io+4,sector >> 8ULL);
-						outp(ide->base_io+5,sector >> 16ULL);
-
-						outp(ide->base_io+7,0x45); /* <- write uncorrectable */
-						if (ide->flags.io_irq_enable)
-							do_ide_controller_user_wait_irq(ide,1);
-
-						if (do_ide_controller_user_wait_busy_controller(ide) != 0) break;
-						if (do_ide_controller_user_wait_drive_ready(ide) != 0) break;
-						x = inp(ide->base_io+7); /* what's the status? */
-						if (!(x&1)) { /* if no error, read result from count register */
-						}
-						else {
-							stop = 1;
-							sprintf(tmp,"Device rejected with error %02X",x);
-							vga_msg_box_create(&vgabox,tmp,0,0);
-							do {
-								c = getch();
-								if (c == 0) c = getch() << 8;
-							} while (!(c == 13 || c == 27));
-							vga_msg_box_destroy(&vgabox);
-						}
-					}
-					else {
-						stop = 1;
-					}
-
-					if (!stop) sector += tlen_sect;
-				}
-
-				redraw = backredraw = 1;
-			}
-		}
-		else if (c == 0x4800) {
-			if (--select < -1)
-				select = 6;
-
-			redraw = 1;
-		}
-		else if (c == 0x5000) {
-			if (++select > 6)
-				select = -1;
-
-			redraw = 1;
-		}
-	}
-}
-
 void do_ide_controller_drive_readverify_test(struct ide_controller *ide,unsigned char which) {
 #if TARGET_MSDOS == 16 && defined(__COMPACT__)
 #else
@@ -3096,11 +2866,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx,y++);
-			vga_write_color((select == 10) ? 0x70 : 0x0F);
-			vga_write("Write HDD tests >>");
-			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx,y++);
 			vga_write_color((select == 11) ? 0x70 : 0x0F);
 			vga_write("Read2x CD-ROM");
 			while (vga_pos_x < ((width/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
@@ -3150,11 +2915,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 20) ? 0x70 : 0x0F);
-			vga_write("Write Uncorrectable");
-			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx+(width/cols),y++);
 			vga_write_color((select == 21) ? 0x70 : 0x0F);
 			vga_write("CD-ROM INQUIRY");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
@@ -3167,16 +2927,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			vga_moveto(ofsx+(width/cols),y++);
 			vga_write_color((select == 24) ? 0x70 : 0x0F);
 			vga_write("NOP test");
-			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 25) ? 0x70 : 0x0F);
-			vga_write("Read verify tests >>");
-			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 26) ? 0x70 : 0x0F);
-			vga_write("Show IDE register taskfile");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 #endif
 		}
@@ -3353,10 +3103,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					} while (!(c == 13 || c == 27));
 					vga_msg_box_destroy(&vgabox);
 				}
-			}
-			else if (select == 24) {
-				do_ide_controller_drive_write_unc_test(ide,which);
-				redraw = backredraw = 1;
 			}
 			else if (select == 17) {
 				if (read_mode == 12)
