@@ -1,4 +1,7 @@
 
+#ifndef __DOSLIB_HW_VGA_VGA_H
+#define __DOSLIB_HW_VGA_VGA_H
+
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
@@ -340,4 +343,6 @@ struct vga_mode_params {
 	unsigned char		max_scanline;		/* CRTC[0x09] bit 4-0 */
 	unsigned char		offset;			/* CRTC[0x13] */
 };
+
+#endif /* __DOSLIB_HW_VGA_VGA_H */
 

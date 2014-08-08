@@ -1,4 +1,7 @@
 
+#ifndef __DOSLIB_HW_IDE_IDELIB_H
+#define __DOSLIB_HW_IDE_IDELIB_H
+
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -159,4 +162,6 @@ static inline int idelib_controller_atapi_complete_state(struct ide_controller *
 
 void free_idelib();
 int init_idelib();
+
+#endif /* __DOSLIB_HW_IDE_IDELIB_H */
 
