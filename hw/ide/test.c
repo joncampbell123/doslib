@@ -2478,10 +2478,10 @@ void menuboxbounds_set_item_strings_array(struct menuboxbounds *mbox,const char 
 
 static const char *drive_main_power_states_strings[] = {
 	"Show IDE register taskfile",		/* 0 */
+	"Device reset",
 	"Standby",
 	"Sleep",
 	"Idle",
-	"Device reset",
 	"Power mode"				/* 5 */
 };
 
@@ -2591,17 +2591,17 @@ void do_drive_power_states_test(struct ide_controller *ide,unsigned char which) 
 					do_common_show_ide_taskfile(ide,which);
 					redraw = backredraw = 1;
 					break;
-				case 1: /* standby */
+				case 1: /* device reset */
+					do_drive_device_reset_test(ide,which);
+					break;
+				case 2: /* standby */
 					do_drive_standby_test(ide,which);
 					break;
-				case 2: /* sleep */
+				case 3: /* sleep */
 					do_drive_sleep_test(ide,which);
 					break;
-				case 3: /* idle */
+				case 4: /* idle */
 					do_drive_idle_test(ide,which);
-					break;
-				case 4: /* device reset */
-					do_drive_device_reset_test(ide,which);
 					break;
 				case 5: /* check power mode */
 					do_drive_check_power_mode(ide,which);
