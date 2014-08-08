@@ -2436,6 +2436,47 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 	}
 }
 
+int confirm_pio32_warning() {
+	if (pio_width_warning) {
+		struct vga_msg_box vgabox;
+		char proceed = 1;
+		int c;
+
+		if (pio_width_warning) {
+			vga_msg_box_create(&vgabox,
+				"WARNING: Data I/O will not function correctly if your IDE controller\n"
+				"does not support 32-bit PIO. IDE data transfers are traditionally\n"
+				"carried out as 16-bit I/O.\n"
+				"\n"
+				"In most cases, if the IDE controller is connected as a PCI device and\n"
+				"the controller was made 1998 or later, it's likely safe to enable.\n"
+				"Some hardware in the 1994-1997 timeframe may have problems.\n"
+				"\n"
+				"Though not confirmed, 32-bit PIO may also work if your IDE controller\n"
+				"is connected to the VESA local bus port of your 486 motherboard. In\n"
+				"that case it is recommended to try 32-bit VLB keyed PIO first.\n"
+				"\n"
+				"Hit ENTER to proceed, ESC to cancel"
+				,0,0);
+			do {
+				c = getch();
+				if (c == 0) c = getch() << 8;
+			} while (!(c == 13 || c == 27));
+			vga_msg_box_destroy(&vgabox);
+			if (c == 27) {
+				proceed = 0;
+			}
+			else {
+				pio_width_warning = 0;
+			}
+		}
+
+		return proceed;
+	}
+
+	return 1;
+}
+
 struct menuboxbounds {
 	unsigned char		cols,rows;
 	unsigned char		ofsx,ofsy;
@@ -2767,12 +2808,179 @@ void do_drive_cdrom_startstop_test(struct ide_controller *ide,unsigned char whic
 	}
 }
 
+static const char *drive_main_pio_mode_strings[] = {
+	"16-bit PIO (standard)",		/* 0 */
+	"32-bit PIO",
+	"32-bit PIO (VLB sync)"
+	/* TODO: Add "Test now" option */
+};
+
+void do_drive_cdrom_pio_mode(struct ide_controller *ide,unsigned char which) {
+	struct menuboxbounds mbox;
+	char backredraw=1;
+	VGA_ALPHA_PTR vga;
+	unsigned int x,y;
+	int select=-1;
+	char redraw=1;
+	int c;
+
+	/* UI element vars */
+	menuboxbounds_set_def_list(&mbox,/*ofsx=*/4,/*ofsy=*/7,/*cols=*/1);
+	menuboxbounds_set_item_strings_arraylen(&mbox,drive_main_pio_mode_strings);
+
+	/* most of the commands assume a ready controller. if it's stuck,
+	 * we'd rather the user have a visual indication that it's stuck that way */
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+
+	/* select the drive we want */
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
+
+	/* in case the IDE controller is busy for that time */
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+
+	/* read back: did the drive select take effect? if not, it might not be there. another common sign is the head/drive select reads back 0xFF */
+	c = do_ide_controller_drive_check_select(ide,which);
+	if (c < 0) return;
+
+	/* it might be a CD-ROM drive, which in some cases might not raise the Drive Ready bit */
+	do_ide_controller_atapi_device_check_post_host_reset(ide);
+
+	/* wait for the drive to indicate readiness */
+	/* NTS: If the drive never becomes ready even despite our reset hacks, there's a strong
+	 *      possibility that the device doesn't exist. This can happen for example if there
+	 *      is a master attached but no slave. */
+	c = do_ide_controller_user_wait_drive_ready(ide);
+	if (c < 0) return;
+
+	/* for completeness, clear pending IRQ */
+	idelib_controller_ack_irq(ide);
+
+	/* match selection to PIO mode */
+	if (pio_width == 16)
+		select = 0;
+	else if (pio_width == 32)
+		select = 1;
+	else if (pio_width == 33)
+		select = 2;
+
+	while (1) {
+		if (backredraw) {
+			vga = vga_alpha_ram;
+			backredraw = 0;
+			redraw = 1;
+
+			for (y=0;y < vga_height;y++) {
+				for (x=0;x < vga_width;x++) {
+					*vga++ = 0x1E00 + 177;
+				}
+			}
+
+			vga_moveto(0,0);
+
+			vga_write_color(0x1F);
+			vga_write("        IDE controller ");
+			sprintf(tmp,"@%X",ide->base_io);
+			vga_write(tmp);
+			if (ide->alt_io != 0) {
+				sprintf(tmp," alt %X",ide->alt_io);
+				vga_write(tmp);
+			}
+			if (ide->irq >= 0) {
+				sprintf(tmp," IRQ %d",ide->irq);
+				vga_write(tmp);
+			}
+			vga_write(which ? " Slave" : " Master");
+			vga_write(" << PIO mode");
+			if (pio_width == 33)
+				vga_write(" [32-bit VLB]");
+			else if (pio_width == 32)
+				vga_write(" [32-bit]");
+			else
+				vga_write(" [16-bit]");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+
+			vga_write_color(0xC);
+			vga_write("WARNING: This code talks directly to your hard disk controller.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			vga_write_color(0xC);
+			vga_write("         If you value the data on your hard drive do not run this program.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		if (redraw) {
+			redraw = 0;
+
+			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
+			vga_write_color((select == -1) ? 0x70 : 0x0F);
+			vga_write("Back to IDE drive main menu");
+			while (vga_pos_x < (mbox.width+mbox.ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			menuboxbound_redraw(&mbox,select);
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			break;
+		}
+		else if (c == 13) {
+			if (select == -1)
+				break;
+
+			switch (select) {
+				case 0: /* 16-bit */
+					pio_width = 16;
+					break;
+				case 1: /* 32-bit */
+					if (confirm_pio32_warning())
+						pio_width = 32;
+					else
+						select = 0;
+					break;
+				case 2: /* 32-bit VLB */
+					if (confirm_pio32_warning())
+						pio_width = 33;
+					else
+						select = 0;
+					break;
+			};
+
+			if (select >= 0 && select <= 2) /* if selected a PIO, then exit */
+				break;
+			else
+				redraw = 1;
+		}
+		else if (c == 0x4800) {
+			if (--select < -1)
+				select = mbox.item_max;
+
+			redraw = 1;
+		}
+		else if (c == 0x4B00) { /* left */
+			redraw = 1;
+		}
+		else if (c == 0x4D00) { /* right */
+			redraw = 1;
+		}
+		else if (c == 0x5000) {
+			if (++select > mbox.item_max)
+				select = -1;
+
+			redraw = 1;
+		}
+	}
+}
+
 static const char *drive_main_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
 	"Identify (ATA)",
 	"Identify packet (ATAPI)",
 	"Power states >>",
-	"CD-ROM eject/load >>"
+	"CD-ROM eject/load >>",
+	"PIO mode >>"				/* 5 */
 };
 
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
@@ -2945,15 +3153,6 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(ofsx+(width/cols),y++);
-			vga_write_color((select == 23) ? 0x70 : 0x0F);
-			vga_write("PIO WIDTH: ");
-			if (pio_width == 33) vga_write("32-bit sync");
-			else if (pio_width == 32) vga_write("32-bit");
-			else vga_write("16-bit");
-			vga_write(" (chg)");
-			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
-
-			vga_moveto(ofsx+(width/cols),y++);
 			vga_write_color((select == 24) ? 0x70 : 0x0F);
 			vga_write("NOP test");
 			while (vga_pos_x < (((width*2)/cols)+ofsx) && vga_pos_x != 0) vga_writec(' ');
@@ -2996,6 +3195,10 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					break;
 				case 4: /* CD-ROM start/stop/eject/load */
 					do_drive_cdrom_startstop_test(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 5: /* PIO mode */
+					do_drive_cdrom_pio_mode(ide,which);
 					redraw = backredraw = 1;
 					break;
 			};
