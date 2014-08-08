@@ -2207,7 +2207,7 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 }
 
 int confirm_pio32_warning() {
-	if (pio_width_warning) {
+	if (pio_width < 32 && pio_width_warning) {
 		struct vga_msg_box vgabox;
 		char proceed = 1;
 		int c;
@@ -2224,7 +2224,7 @@ int confirm_pio32_warning() {
 				"\n"
 				"Though not confirmed, 32-bit PIO may also work if your IDE controller\n"
 				"is connected to the VESA local bus port of your 486 motherboard. In\n"
-				"that case it is recommended to try 32-bit VLB keyed PIO first.\n"
+				"that case it is recommended to try 32-bit VLB sync PIO first.\n"
 				"\n"
 				"Hit ENTER to proceed, ESC to cancel"
 				,0,0);
@@ -2578,11 +2578,237 @@ void do_drive_cdrom_startstop_test(struct ide_controller *ide,unsigned char whic
 	}
 }
 
+/* check for another possible case where 16-bit PIO word is in lower half of 32-bit read, junk in upper */
+static int ide_memcmp_every_other_word(unsigned char *pio16,unsigned char *pio32,unsigned int words) {
+	while (words > 0) {
+		uint16_t a = *((uint16_t*)pio16);
+		uint16_t b = (uint16_t)(*((uint32_t*)pio32) & 0xFFFF);
+		if (a != b) return (int)(a-b);
+		pio16 += 2;
+		pio32 += 4;
+		words--;
+	}
+
+	return 0;
+}
+
+/* return 0 if all bytes are 0xFF */
+static int ide_memcmp_all_FF(unsigned char *d,unsigned int bytes) {
+	while (bytes > 0) {
+		if (*d != 0xFF) return 1;
+		d++;
+		bytes--;
+	}
+
+	return 0;
+}
+
+void ide_pio_autodetect(struct ide_controller *ide,unsigned char which) {
+	unsigned char ok32=0,ok32vlb=0;
+	unsigned char ident=0,identpacket=0;
+	unsigned char *info_16 = cdrom_sector;			/* 512 bytes */
+	unsigned char *info_32 = cdrom_sector + 512;		/* 1024 bytes */
+	struct vga_msg_box vgabox;
+	int c;
+
+	pio_width_warning = 0;
+
+	vga_msg_box_create(&vgabox,
+		"I will test various data transfers to try and auto-detect whether\n"
+		"or not your IDE controller can do 32-bit PIO.\n"
+		"\n"
+		"Hit ENTER to proceed, ESC to cancel"
+		,0,0);
+	do {
+		c = getch();
+		if (c == 0) c = getch() << 8;
+	} while (!(c == 13 || c == 27));
+	vga_msg_box_destroy(&vgabox);
+	if (c == 27) return;
+
+	/* OK start */
+	vga_write_color(0x0E);
+	vga_clear();
+	vga_moveto(0,0);
+	vga_write("PIO test in progress...\n\n");
+
+	/* ====================================== 16-bit PIO ================================ */
+	/* the secondary purpose of this test is to autodetect whether to carry out 32-bit PIO
+	 * using Identify or Identify Packet commands */
+	vga_write("16-bit PIO test: ");
+
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+	c = do_ide_controller_drive_check_select(ide,which);
+	if (c < 0) return;
+	do_ide_controller_atapi_device_check_post_host_reset(ide);
+	c = do_ide_controller_user_wait_drive_ready(ide);
+	if (c < 0) return;
+	idelib_controller_ack_irq(ide);
+	idelib_controller_reset_irq_counter(ide);
+
+	/* first: try identify device */
+	vga_write("[0xEC] ");
+	idelib_controller_write_command(ide,0xEC/*Identify device*/);
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	if (!(ide->last_status&1)) {
+		ident = 1; /* it worked! */
+		vga_write("OK ");
+		do_ide_controller_user_wait_drive_drq(ide);
+		idelib_read_pio_general(info_16,512,ide,16/*PIO 16*/);
+	}
+
+	/* then try identify packet device */
+	if (!ident) {
+		vga_write("[0xA1] ");
+		idelib_controller_write_command(ide,0xA1/*Identify packet device*/);
+		if (ide->flags.io_irq_enable) {
+			do_ide_controller_user_wait_irq(ide,1);
+			idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+		}
+		do_ide_controller_user_wait_busy_controller(ide);
+		do_ide_controller_user_wait_drive_ready(ide);
+		if (!(ide->last_status&1)) {
+			identpacket = 1; /* it worked! */
+			vga_write("OK ");
+			do_ide_controller_user_wait_drive_drq(ide);
+			idelib_read_pio_general(info_16,512,ide,16/*PIO 16*/);
+		}
+	}
+	vga_write("\n");
+
+	if (!ident && !identpacket) {
+		vga_write("Sorry, neither command worked. I don't have a reliable way to test.\nHit ENTER to continue.");
+		wait_for_enter_or_escape();
+		return;
+	}
+
+	/* ====================================== 32-bit PIO VLB ================================ */
+	vga_write("32-bit PIO VLB test: ");
+
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+	c = do_ide_controller_drive_check_select(ide,which);
+	if (c < 0) return;
+	do_ide_controller_atapi_device_check_post_host_reset(ide);
+	c = do_ide_controller_user_wait_drive_ready(ide);
+	if (c < 0) return;
+	idelib_controller_ack_irq(ide);
+	idelib_controller_reset_irq_counter(ide);
+
+	/* do it */
+	idelib_controller_write_command(ide,identpacket ? 0xA1/*Identify packet device*/ : 0xEC/*Identify device*/);
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	if (!(ide->last_status&1)) {
+		vga_write("OK ");
+		do_ide_controller_user_wait_drive_drq(ide);
+		idelib_read_pio_general(info_32,1024,ide,33/*PIO 32 VLB*/);
+
+		/* compare the data. is it the same? if so, 32-bit PIO is supported */
+		if (!memcmp(info_16,info_32,512)) {
+			vga_write("Data matches 16-bit PIO read, 32-bit VLB PIO supported");
+			ok32vlb = 1;
+		}
+		/* if we see the 16-bit PIO interleaved with some other WORD junk across 1024 bytes then
+		 * we can assume it's likely the 16-bit data in the lower WORD and the contents of
+		 * IDE registers 0x1F2-0x1F3 in the upper WORD */
+		else if (!ide_memcmp_every_other_word(info_16,info_32,256)) {
+			vga_write("Like 16-bit PIO interleaved with junk, not supported");
+		}
+		/* another possibility seen on a Toshiba Satellite Pro, is that 32-bit PIO is flat out
+		 * ignored and we read back 0xFFFFFFFF, and the device acts as no PIO ever occurred */
+		else if (!ide_memcmp_all_FF(info_32,1024)) {
+			vga_write("No data whatsoever (0xFFFFFFFF), not supported");
+		}
+		else {
+			vga_write("???");
+		}
+	}
+	vga_write("\n");
+
+	/* ====================================== 32-bit PIO ================================ */
+	vga_write("32-bit PIO test: ");
+
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+	c = do_ide_controller_drive_check_select(ide,which);
+	if (c < 0) return;
+	do_ide_controller_atapi_device_check_post_host_reset(ide);
+	c = do_ide_controller_user_wait_drive_ready(ide);
+	if (c < 0) return;
+	idelib_controller_ack_irq(ide);
+	idelib_controller_reset_irq_counter(ide);
+
+	/* do it */
+	idelib_controller_write_command(ide,identpacket ? 0xA1/*Identify packet device*/ : 0xEC/*Identify device*/);
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	if (!(ide->last_status&1)) {
+		vga_write("OK ");
+		do_ide_controller_user_wait_drive_drq(ide);
+		idelib_read_pio_general(info_32,1024,ide,32/*PIO 32*/);
+
+		/* compare the data. is it the same? if so, 32-bit PIO is supported */
+		if (!memcmp(info_16,info_32,512)) {
+			vga_write("Data matches 16-bit PIO read, 32-bit PIO supported");
+			ok32 = 1;
+		}
+		/* if we see the 16-bit PIO interleaved with some other WORD junk across 1024 bytes then
+		 * we can assume it's likely the 16-bit data in the lower WORD and the contents of
+		 * IDE registers 0x1F2-0x1F3 in the upper WORD */
+		else if (!ide_memcmp_every_other_word(info_16,info_32,256)) {
+			vga_write("Like 16-bit PIO interleaved with junk, not supported");
+		}
+		/* another possibility seen on a Toshiba Satellite Pro, is that 32-bit PIO is flat out
+		 * ignored and we read back 0xFFFFFFFF, and the device acts as no PIO ever occurred */
+		else if (!ide_memcmp_all_FF(info_32,1024)) {
+			vga_write("No data whatsoever (0xFFFFFFFF), not supported");
+		}
+		else {
+			vga_write("???");
+		}
+	}
+	vga_write("\n");
+
+	/* DEBUG */
+	vga_write_color(0x0F);
+	vga_write("\nHit enter to accept new PIO mode, ESC to cancel\n");
+	c = wait_for_enter_or_escape();
+	if (c == 27) return;
+
+	if (ok32) pio_width = 32;
+	else if (ok32vlb) pio_width = 33;
+	else pio_width = 16;
+}
+
 static const char *drive_main_pio_mode_strings[] = {
 	"16-bit PIO (standard)",		/* 0 */
 	"32-bit PIO",
-	"32-bit PIO (VLB sync)"
-	/* TODO: Add "Test now" option */
+	"32-bit PIO (VLB sync)",
+	"Autodetect"
 };
 
 void do_drive_pio_mode(struct ide_controller *ide,unsigned char which) {
@@ -2697,28 +2923,41 @@ void do_drive_pio_mode(struct ide_controller *ide,unsigned char which) {
 			break;
 		}
 		else if (c == 13) {
+			unsigned char doexit = 0;
+
 			if (select == -1)
 				break;
 
 			switch (select) {
 				case 0: /* 16-bit */
+					doexit = 1;
 					pio_width = 16;
 					break;
 				case 1: /* 32-bit */
-					if (confirm_pio32_warning())
+					if (confirm_pio32_warning()) {
 						pio_width = 32;
-					else
-						select = 0;
+						doexit = 1;
+					}
 					break;
 				case 2: /* 32-bit VLB */
-					if (confirm_pio32_warning())
+					if (confirm_pio32_warning()) {
 						pio_width = 33;
-					else
+						doexit = 1;
+					}
+					break;
+				case 3: /* Autodetect */
+					redraw = backredraw = 1;
+					ide_pio_autodetect(ide,which);
+					if (pio_width == 16)
 						select = 0;
+					else if (pio_width == 32)
+						select = 1;
+					else if (pio_width == 33)
+						select = 2;
 					break;
 			};
 
-			if (select >= 0 && select <= 2) /* if selected a PIO, then exit */
+			if (doexit)
 				break;
 			else
 				redraw = 1;
