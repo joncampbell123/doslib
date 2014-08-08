@@ -62,14 +62,15 @@
 #include <hw/ide/idelib.h>
 
 #include "testutil.h"
+#include "test.h"
 
-static int cdrom_read_mode = 12;
-static int pio_width_warning = 1;
-static unsigned char big_scary_write_test_warning = 1;
+unsigned char			cdrom_read_mode = 12;
+unsigned char			pio_width_warning = 1;
+unsigned char			big_scary_write_test_warning = 1;
 
-static char tmp[1024];
-static uint16_t ide_info[256];
-static unsigned char cdrom_sector[512U*63U];	/* ~32KB, enough for CD-ROM sector or 63 512-byte sectors */
+char				tmp[1024];
+uint16_t			ide_info[256];
+unsigned char			cdrom_sector[512U*63U];	/* ~32KB, enough for CD-ROM sector or 63 512-byte sectors */
 
 static void common_ide_success_or_error_vga_msg_box(struct ide_controller *ide,struct vga_msg_box *vgabox) {
 	if (!(ide->last_status&1)) {
