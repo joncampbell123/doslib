@@ -162,7 +162,7 @@ again:	/* jump point: send execution back here for another sector */
 			sprintf(tmp,"%lu-%lu",sector,sector+tlen_sect-1UL); vga_write(tmp);
 			sprintf(tmp,"(%lu) bytes",(unsigned long)tlen); vga_write(tmp);
 
-			ey = 3+16+2;
+			ey = 3+16+3;
 			vga_moveto(0,3+16+1);
 			sprintf(tmp,"%u/%lu in %u DRQ transfers: ",ret_len,tlen,drq_log_ent);
 			vga_write(tmp);
