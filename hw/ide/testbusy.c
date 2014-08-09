@@ -38,7 +38,7 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 	 * the alt status register is said not to clear pending interrupts */
 	idelib_controller_update_status(ide);
 	if (idelib_controller_is_busy(ide)) {
-		unsigned long show_countdown = 0x1000UL;
+		unsigned long show_countdown = 500000UL / 100UL; /* 0.5s / 100us units */
 		/* if the drive&controller is busy then show the dialog and wait for non-busy
 		 * or until the user forces us to proceed */
 
@@ -53,8 +53,7 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 					vga_msg_box_create(&vgabox,"IDE controller busy, waiting...\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
 			}
 
-
-			if (kbhit()) {
+			if (show_countdown == 0UL && kbhit()) { /* if keyboard input and we're showing prompt */
 				c = getch();
 				if (c == 0) c = getch() << 8;
 
@@ -67,6 +66,8 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 					break;
 				}
 			}
+
+			t8254_wait(t8254_us2ticks(100)); /* wait 100us (0.0001 seconds) */
 		} while (1);
 
 		if (show_countdown == 0UL)
@@ -96,7 +97,7 @@ int do_ide_controller_user_wait_drive_drq(struct ide_controller *ide) {
 	 * the alt status register is said not to clear pending interrupts */
 	idelib_controller_update_status(ide);
 	if (!idelib_controller_is_drq_ready(ide)) {
-		unsigned long show_countdown = 0x1000UL;
+		unsigned long show_countdown = 500000UL / 100UL; /* 0.5s / 100us units */
 
 		do {
 			idelib_controller_update_status(ide);
@@ -114,7 +115,7 @@ int do_ide_controller_user_wait_drive_drq(struct ide_controller *ide) {
 					vga_msg_box_create(&vgabox,"Waiting for Data Request from IDE device\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
 			}
 
-			if (kbhit()) {
+			if (show_countdown == 0UL && kbhit()) { /* if keyboard input and we're showing prompt */
 				c = getch();
 				if (c == 0) c = getch() << 8;
 
@@ -127,6 +128,8 @@ int do_ide_controller_user_wait_drive_drq(struct ide_controller *ide) {
 					break;
 				}
 			}
+
+			t8254_wait(t8254_us2ticks(100)); /* wait 100us (0.0001 seconds) */
 		} while (1);
 
 		if (show_countdown == 0UL)
@@ -147,7 +150,7 @@ int do_ide_controller_user_wait_irq(struct ide_controller *ide,uint16_t count) {
 		return -1;
 
 	if (ide->irq_fired < count) {
-		unsigned long show_countdown = 0x1000UL;
+		unsigned long show_countdown = 500000UL / 100UL; /* 0.5s / 100us units */
 
 		do {
 			if (ide->irq_fired >= count)
@@ -160,7 +163,7 @@ int do_ide_controller_user_wait_irq(struct ide_controller *ide,uint16_t count) {
 					vga_msg_box_create(&vgabox,"Waiting for IDE IRQ\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
 			}
 
-			if (kbhit()) {
+			if (show_countdown == 0UL && kbhit()) { /* if keyboard input and we're showing prompt */
 				c = getch();
 				if (c == 0) c = getch() << 8;
 
@@ -173,6 +176,8 @@ int do_ide_controller_user_wait_irq(struct ide_controller *ide,uint16_t count) {
 					break;
 				}
 			}
+
+			t8254_wait(t8254_us2ticks(100)); /* wait 100us (0.0001 seconds) */
 		} while (1);
 
 		if (show_countdown == 0UL)
@@ -196,7 +201,7 @@ int do_ide_controller_user_wait_drive_ready(struct ide_controller *ide) {
 	 * the alt status register is said not to clear pending interrupts */
 	idelib_controller_update_status(ide);
 	if (!idelib_controller_is_drive_ready(ide)) {
-		unsigned long show_countdown = 0x1000UL;
+		unsigned long show_countdown = 500000UL / 100UL; /* 0.5s / 100us units */
 
 		/* if the drive&controller is busy then show the dialog and wait for non-busy
 		 * or until the user forces us to proceed */
@@ -213,7 +218,7 @@ int do_ide_controller_user_wait_drive_ready(struct ide_controller *ide) {
 					vga_msg_box_create(&vgabox,"IDE device not ready, waiting...\n\nHit ESC to cancel, spacebar to proceed anyway",0,0);
 			}
 
-			if (kbhit()) {
+			if (show_countdown == 0UL && kbhit()) { /* if keyboard input and we're showing prompt */
 				c = getch();
 				if (c == 0) c = getch() << 8;
 
@@ -226,6 +231,8 @@ int do_ide_controller_user_wait_drive_ready(struct ide_controller *ide) {
 					break;
 				}
 			}
+
+			t8254_wait(t8254_us2ticks(100)); /* wait 100us (0.0001 seconds) */
 		} while (1);
 
 		if (show_countdown == 0UL)
