@@ -69,7 +69,6 @@ int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 			}
 		} while (1);
 
-		if (ret == 0 && c != 0) ungetch(c);
 		if (show_countdown == 0UL)
 			vga_msg_box_destroy(&vgabox);
 	}
@@ -130,7 +129,6 @@ int do_ide_controller_user_wait_drive_drq(struct ide_controller *ide) {
 			}
 		} while (1);
 
-		if (ret == 0 && c != 0) ungetch(c);
 		if (show_countdown == 0UL)
 			vga_msg_box_destroy(&vgabox);
 	}
@@ -177,7 +175,6 @@ int do_ide_controller_user_wait_irq(struct ide_controller *ide,uint16_t count) {
 			}
 		} while (1);
 
-		if (ret == 0 && c != 0) ungetch(c);
 		if (show_countdown == 0UL)
 			vga_msg_box_destroy(&vgabox);
 	}
@@ -231,7 +228,6 @@ int do_ide_controller_user_wait_drive_ready(struct ide_controller *ide) {
 			}
 		} while (1);
 
-		if (ret == 0 && c != 0) ungetch(c);
 		if (show_countdown == 0UL)
 			vga_msg_box_destroy(&vgabox);
 	}
