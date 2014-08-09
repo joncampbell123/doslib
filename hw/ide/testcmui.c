@@ -194,3 +194,44 @@ int confirm_pio32_warning(struct ide_controller *ide) {
 	return 1;
 }
 
+unsigned long prompt_cdrom_sector_number() {
+	unsigned long sector = 16;
+	struct vga_msg_box box;
+	VGA_ALPHA_PTR sco;
+	char temp_str[16];
+	int c,i=0;
+
+	vga_msg_box_create(&box,"Enter CD-ROM sector number:",2,0);
+	sco = vga_alpha_ram + ((box.y+2) * vga_width) + box.x + 2;
+	while (1) {
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27)
+			return ~0UL;
+		else if (c == 13) {
+			if (i == 0) break;
+			temp_str[i] = 0;
+			if (isdigit(temp_str[0]))
+				sector = strtol(temp_str,NULL,0);
+			else
+				sector = 16;
+
+			break;
+		}
+		else if (isdigit(c)) {
+			if (i < 15) {
+				sco[i] = c | 0x1E00;
+				temp_str[i++] = c;
+			}
+		}
+		else if (c == 8) {
+			if (i > 0) i--;
+			sco[i] = ' ' | 0x1E00;
+		}
+	}
+	vga_msg_box_destroy(&box);
+
+	return sector;
+}
+
