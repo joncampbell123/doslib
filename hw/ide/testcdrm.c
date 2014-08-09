@@ -36,7 +36,7 @@
 #include "testpwr.h"
 
 void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char which) {
-	uint16_t drq_log[32768/2048];
+	uint16_t drq_log[((unsigned long)sizeof(cdrom_sector))/2048UL];
 	unsigned long sector = 16; /* read the ISO 9660 table of contents */
 	unsigned long tlen = 2048; /* one sector */
 	unsigned long tlen_sect = 1;
@@ -50,8 +50,10 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 	if (sector == ~0UL)
 		return;
 	tlen_sect = prompt_cdrom_sector_count();
-	if (tlen_sect == 0UL || tlen_sect == ~0UL || tlen_sect > (32768UL/2048UL))
+	if (tlen_sect == 0UL || tlen_sect == ~0UL)
 		return;
+	if (tlen_sect > ((unsigned long)sizeof(cdrom_sector) / 2048UL))
+		tlen_sect = ((unsigned long)sizeof(cdrom_sector) / 2048UL);
 	tlen = tlen_sect * 2048UL;
 
 again:	/* jump point: send execution back here for another sector */

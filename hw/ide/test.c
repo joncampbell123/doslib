@@ -84,7 +84,7 @@ unsigned char			big_scary_write_test_warning = 1;
 
 char				tmp[1024];
 uint16_t			ide_info[256];
-unsigned char			cdrom_sector[512U*63U];	/* ~32KB, enough for CD-ROM sector or 63 512-byte sectors */
+unsigned char			cdrom_sector[512U*64U];	/* ~32KB, enough for 16 CD-ROM sector or 64 512-byte sectors */
 
 /*-----------------------------------------------------------------*/
 
