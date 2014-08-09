@@ -79,27 +79,59 @@ again:	/* jump point: send execution back here for another sector */
 		do_ide_controller_user_wait_drive_ready(ide);
 
 		if (!idelib_controller_is_error(ide)) { /* OK. success. now read the data */
+			unsigned int ret_len = 0,drq_len;
+
+			/* NTS: I hate to break it to newbie IDE programmers, but reading back the sector isn't
+			 *      quite the simple "read N bytes" from the drive. In reality, you wait for the drive
+			 *      to signal DRQ, and then read back the length of data it has available for you to
+			 *      read by, then you read that amount, and if more data is due, then you wait for
+			 *      another IRQ and DRQ signal.
+			 *
+			 *      On the positive side, it means that on an error, the transfer can abort early if
+			 *      it needs to. */
 			memset(cdrom_sector,0,tlen);
-			do_ide_controller_user_wait_drive_drq(ide);
-			idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
-			idelib_controller_update_atapi_drq(ide); /* also need to read back the DRQ (data) length the drive has chosen */
-			do_warn_if_atapi_not_in_data_input_state(ide); /* sector count register should signal we're in the completed stage (command/data=0 input/output=1) */
-			if (idelib_controller_read_atapi_drq(ide) != tlen) {
-				/* we're asking for one sector (2048) bytes, the drive should return that, if not, something's wrong.
-				 * even cheap POS drives in old laptops will at least always return 2048! */
-				sprintf(tmp,"Warning: ATAPI device returned DRQ=%u (expected %u)",
-					idelib_controller_read_atapi_drq(ide),tlen);
-				vga_msg_box_create(&vgabox,tmp,0,0);
-				wait_for_enter_or_escape();
-				vga_msg_box_destroy(&vgabox);
+			while (ret_len < tlen) {
+				if (idelib_controller_is_error(ide)) {
+					vga_msg_box_create(&vgabox,"Error",0,0);
+					wait_for_enter_or_escape();
+					vga_msg_box_destroy(&vgabox);
+					break;
+				}
+
+				idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
+				idelib_controller_update_atapi_drq(ide); /* also need to read back the DRQ (data) length the drive has chosen */
+				if (idelib_controller_atapi_complete_state(ide)) { /* if suddenly in complete state, exit out */
+					do_warn_if_atapi_not_in_data_input_state(ide); /* sector count register should signal we're in the completed stage (command/data=0 input/output=1) */
+					break;
+				}
+
+				do_ide_controller_user_wait_drive_drq(ide);
+				idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
+				idelib_controller_update_atapi_drq(ide); /* also need to read back the DRQ (data) length the drive has chosen */
+				do_warn_if_atapi_not_in_data_input_state(ide); /* sector count register should signal we're in the completed stage (command/data=0 input/output=1) */
+
+				drq_len = idelib_controller_read_atapi_drq(ide);
+				if (drq_len < 2048UL || (drq_len % 2048UL) != 0UL || (drq_len+ret_len) > tlen) {
+					/* we're asking for one sector (2048) bytes, the drive should return that, if not, something's wrong.
+					 * even cheap POS drives in old laptops will at least always return 2048! */
+					sprintf(tmp,"Warning: ATAPI device returned unexpected DRQ=%u (%u+%u = %u)",
+						drq_len,ret_len,tlen);
+					vga_msg_box_create(&vgabox,tmp,0,0);
+					wait_for_enter_or_escape();
+					vga_msg_box_destroy(&vgabox);
+					break;
+				}
+
+				/* OK. read it in */
+				idelib_read_pio_general(cdrom_sector+ret_len,drq_len,ide,IDELIB_PIO_WIDTH_DEFAULT);
+				if (ide->flags.io_irq_enable) { /* NOW we wait for another IRQ (completion) */
+					do_ide_controller_user_wait_irq(ide,1);
+					idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+				}
+				do_ide_controller_user_wait_busy_controller(ide);
+				do_ide_controller_user_wait_drive_ready(ide);
+				ret_len += drq_len;
 			}
-			idelib_read_pio_general(cdrom_sector,tlen,ide,IDELIB_PIO_WIDTH_DEFAULT);
-			if (ide->flags.io_irq_enable) { /* NOW we wait for another IRQ (completion) */
-				do_ide_controller_user_wait_irq(ide,1);
-				idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
-			}
-			do_ide_controller_user_wait_busy_controller(ide);
-			do_ide_controller_user_wait_drive_ready(ide);
 			idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
 			do_warn_if_atapi_not_in_complete_state(ide); /* sector count register should signal we're in the completed stage (command/data=1 input/output=1) */
 
