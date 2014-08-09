@@ -35,13 +35,14 @@
 #include "testnop.h"
 #include "testpwr.h"
 
-void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
+void do_drive_read_test(struct ide_controller *ide,unsigned char which,unsigned char continuous) {
 	uint16_t drq_log[((unsigned long)sizeof(cdrom_sector))/2048UL];
 	unsigned long sector = 16; /* read the ISO 9660 table of contents */
 	unsigned long tlen = 2048; /* one sector */
 	unsigned long tlen_sect = 1;
 	struct vga_msg_box vgabox;
 	unsigned int drq_log_ent;
+	unsigned int cleared=0;
 	uint8_t buf[12] = {0};
 	unsigned int x,y,i;
 	int c;
@@ -83,7 +84,7 @@ again:	/* jump point: send execution back here for another sector */
 		do_ide_controller_user_wait_drive_ready(ide);
 
 		if (!idelib_controller_is_error(ide)) { /* OK. success. now read the data */
-			unsigned int ret_len = 0,drq_len;
+			unsigned int ret_len = 0,drq_len,ey;
 
 			/* NTS: I hate to break it to newbie IDE programmers, but reading back the sector isn't
 			 *      quite the simple "read N bytes" from the drive. In reality, you wait for the drive
@@ -150,13 +151,18 @@ again:	/* jump point: send execution back here for another sector */
 			do_warn_if_atapi_not_in_complete_state(ide); /* sector count register should signal we're in the completed stage (command/data=1 input/output=1) */
 
 			/* ---- draw contents on the screen ---- */
-			vga_write_color(0x0E); vga_clear();
+			vga_write_color(0x0E);
+			if (!continuous || (continuous && !cleared)) {
+				vga_clear();
+				cleared = 1;
+			}
 
 			vga_moveto(0,0);
 			vga_write("Contents of CD-ROM sector ");
 			sprintf(tmp,"%lu-%lu",sector,sector+tlen_sect-1UL); vga_write(tmp);
 			sprintf(tmp,"(%lu) bytes",(unsigned long)tlen); vga_write(tmp);
 
+			ey = 3+16+2;
 			vga_moveto(0,3+16+1);
 			sprintf(tmp,"%u/%lu in %u DRQ transfers: ",ret_len,tlen,drq_log_ent);
 			vga_write(tmp);
@@ -165,6 +171,7 @@ again:	/* jump point: send execution back here for another sector */
 				if ((vga_pos_x+len) > vga_width) vga_write("\n ");
 				vga_write(tmp);
 			}
+			while (vga_pos_y <= ey) vga_write(" ");
 
 			vga_moveto(0,2);
 			vga_write_color(0x08);
@@ -205,8 +212,17 @@ again:	/* jump point: send execution back here for another sector */
 					}
 				}
 
-				if ((c=wait_for_enter_or_escape()) == 27)
-					break; /* allow user to exit early by hitting ESC */
+				if (continuous) {
+					if (kbhit()) {
+						c = getch();
+						if (c == 0) c = getch() << 8;
+					}
+					break;
+				}
+				else {
+					if ((c=wait_for_enter_or_escape()) == 27)
+						break; /* allow user to exit early by hitting ESC */
+				}
 			}
 
 			if (c != 27) {
@@ -234,6 +250,7 @@ again:	/* jump point: send execution back here for another sector */
 static const char *drive_cdrom_reading_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
 	"Read CD-ROM data sectors",
+	"Read CD-ROM data continuously"
 };
 
 void do_drive_cdrom_reading(struct ide_controller *ide,unsigned char which) {
@@ -341,8 +358,9 @@ void do_drive_cdrom_reading(struct ide_controller *ide,unsigned char which) {
 					do_common_show_ide_taskfile(ide,which);
 					redraw = backredraw = 1;
 					break;
-				case 1: /*Read a sector*/
-					do_drive_read_test(ide,which);
+				case 1: /*Read sectors*/
+				case 2: /*Read sectors continuously*/
+					do_drive_read_test(ide,which,/*continuous=*/(select==2));
 					redraw = backredraw = 1;
 					break;
 			};
