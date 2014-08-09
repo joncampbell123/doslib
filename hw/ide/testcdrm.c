@@ -40,6 +40,7 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which,unsigned 
 	unsigned long sector = 16; /* read the ISO 9660 table of contents */
 	unsigned long tlen = 2048; /* one sector */
 	unsigned long tlen_sect = 1;
+	unsigned char user_esc = 0;
 	struct vga_msg_box vgabox;
 	unsigned int drq_log_ent;
 	unsigned int cleared=0;
@@ -67,8 +68,9 @@ again:	/* jump point: send execution back here for another sector */
 		return;
 
 	/* NTS: Despite OSDev ATAPI advice, IRQ doesn't seem to fire at this stage, we must poll wait */
-	do_ide_controller_user_wait_busy_controller(ide);
-	do_ide_controller_user_wait_drive_ready(ide);
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+
 	idelib_controller_update_atapi_state(ide);
 	if (!(ide->last_status&1)) { /* if no error, read result from count register */
 		do_warn_if_atapi_not_in_command_state(ide); /* sector count register should signal we're in the command stage */
@@ -77,11 +79,13 @@ again:	/* jump point: send execution back here for another sector */
 		idelib_controller_reset_irq_counter(ide); /* IRQ will fire after command completion */
 		idelib_controller_atapi_write_command(ide,buf,12); /* write 12-byte ATAPI command data */
 		if (ide->flags.io_irq_enable) { /* NOW we wait for the IRQ */
-			do_ide_controller_user_wait_irq(ide,1);
+			if (do_ide_controller_user_wait_irq(ide,1) < 0)
+				return;
 			idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
 		}
-		do_ide_controller_user_wait_busy_controller(ide);
-		do_ide_controller_user_wait_drive_ready(ide);
+
+		if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+			return;
 
 		if (!idelib_controller_is_error(ide)) { /* OK. success. now read the data */
 			unsigned int ret_len = 0,drq_len,ey;
@@ -118,7 +122,10 @@ again:	/* jump point: send execution back here for another sector */
 					break;
 				}
 
-				do_ide_controller_user_wait_drive_drq(ide);
+				if (do_ide_controller_user_wait_drive_drq(ide) < 0) {
+					user_esc = 1;
+					break;
+				}
 				idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
 				idelib_controller_update_atapi_drq(ide); /* also need to read back the DRQ (data) length the drive has chosen */
 				do_warn_if_atapi_not_in_data_input_state(ide); /* sector count register should signal we're in the completed stage (command/data=0 input/output=1) */
@@ -140,11 +147,18 @@ again:	/* jump point: send execution back here for another sector */
 				/* OK. read it in */
 				idelib_read_pio_general(cdrom_sector+ret_len,drq_len,ide,IDELIB_PIO_WIDTH_DEFAULT);
 				if (ide->flags.io_irq_enable) { /* NOW we wait for another IRQ (completion) */
-					do_ide_controller_user_wait_irq(ide,1);
+					if (do_ide_controller_user_wait_irq(ide,1) < 0) {
+						user_esc = 1;
+						break;
+					}
 					idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
 				}
-				do_ide_controller_user_wait_busy_controller(ide);
-				do_ide_controller_user_wait_drive_ready(ide);
+
+				if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0) {
+					user_esc = 1;
+					break;
+				}
+
 				ret_len += drq_len;
 			}
 			idelib_controller_update_atapi_state(ide); /* having completed the command, read ATAPI state again */
@@ -212,7 +226,7 @@ again:	/* jump point: send execution back here for another sector */
 					}
 				}
 
-				if (continuous) {
+				if (continuous && !user_esc) {
 					if (kbhit()) {
 						c = getch();
 						if (c == 0) c = getch() << 8;
@@ -225,7 +239,7 @@ again:	/* jump point: send execution back here for another sector */
 				}
 			}
 
-			if (c != 27) {
+			if (c != 27 && !user_esc) {
 				/* if the user hit ENTER, then read another sector and display that too */
 				sector += tlen_sect;
 				goto again;
