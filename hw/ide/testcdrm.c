@@ -36,6 +36,8 @@
 #include "testpwr.h"
 
 void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char which) {
+	uint16_t drq_log[32768/2048];
+	unsigned int drq_log_ent = 0;
 	unsigned long sector = 16; /* read the ISO 9660 table of contents */
 	unsigned long tlen = 2048; /* one sector */
 	unsigned long tlen_sect = 1;
@@ -110,7 +112,9 @@ again:	/* jump point: send execution back here for another sector */
 				idelib_controller_update_atapi_drq(ide); /* also need to read back the DRQ (data) length the drive has chosen */
 				do_warn_if_atapi_not_in_data_input_state(ide); /* sector count register should signal we're in the completed stage (command/data=0 input/output=1) */
 
+				assert(drq_log_ent < (sizeof(drq_log)/sizeof(drq_log[0])));
 				drq_len = idelib_controller_read_atapi_drq(ide);
+				drq_log[drq_log_ent++] = drq_len;
 				if (drq_len < 2048UL || (drq_len % 2048UL) != 0UL || (drq_len+ret_len) > tlen) {
 					/* we're asking for one sector (2048) bytes, the drive should return that, if not, something's wrong.
 					 * even cheap POS drives in old laptops will at least always return 2048! */
@@ -142,6 +146,15 @@ again:	/* jump point: send execution back here for another sector */
 			vga_write("Contents of CD-ROM sector ");
 			sprintf(tmp,"%lu-%lu",sector,sector+tlen_sect-1UL); vga_write(tmp);
 			sprintf(tmp,"(%lu) bytes",(unsigned long)tlen); vga_write(tmp);
+
+			vga_moveto(0,3+16+1);
+			sprintf(tmp,"%u/%lu in %u DRQ transfers: ",ret_len,tlen,drq_log_ent);
+			vga_write(tmp);
+			for (x=0;x < drq_log_ent;x++) {
+				int len = sprintf(tmp,"%u ",drq_log[x]);
+				if ((vga_pos_x+len) > vga_width) vga_write("\n ");
+				vga_write(tmp);
+			}
 
 			vga_moveto(0,2);
 			vga_write_color(0x08);
