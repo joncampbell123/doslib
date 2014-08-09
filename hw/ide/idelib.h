@@ -90,7 +90,8 @@ enum {
 
 enum {
 	IDELIB_TASKFILE_LBA48=0x01,
-	IDELIB_TASKFILE_LBA48_UPDATE=0x02
+	IDELIB_TASKFILE_LBA48_UPDATE=0x02,
+	IDELIB_TASKFILE_SELECTED_UPDATE=0x04		/* allow update function to change "selected drive" pointer */
 };
 
 void idelib_controller_drive_select(struct ide_controller *ide,unsigned char which/*1=slave 0=master*/,unsigned char head/*CHS mode head value*/,unsigned char mode/*upper 3 bits*/);

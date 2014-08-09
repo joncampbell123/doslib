@@ -56,6 +56,7 @@ void free_idelib() {
 void idelib_controller_update_status(struct ide_controller *ide) {
 	if (ide == NULL) return;
 	ide->last_status = inp(ide->alt_io != 0 ? /*0x3F6-ish status*/ide->alt_io : /*status register*/(ide->base_io+7));
+	if (ide->alt_io != 0) ide->drive_address = inp(ide->alt_io+1);
 
 	/* if the IDE controller is NOT busy, then also note the status according to the selected drive's taskfile */
 	if (!(ide->last_status&0x80)) ide->taskfile[ide->selected_drive].status = ide->last_status;
@@ -195,6 +196,7 @@ struct ide_controller *idelib_probe(struct ide_controller *ide) {
 	if (inp(ide->base_io+7) == 0xFF)
 		return NULL;
 
+	newide->drive_address = 0;
 	newide->pio32_atapi_command = 0; /* always assume ATAPI packet commands are to be written with 16-bit PIO */
 	newide->pio_width = IDELIB_PIO_WIDTH_16; /* always default to 16-bit PIO */
 	newide->irq_fired = 0;
@@ -203,7 +205,7 @@ struct ide_controller *idelib_probe(struct ide_controller *ide) {
 	newide->base_io = ide->base_io;
 	newide->alt_io = alt_io;
 
-	idelib_controller_update_taskfile(newide,0xFF/*all registers*/,0);
+	idelib_controller_update_taskfile(newide,0xFF/*all registers*/,IDELIB_TASKFILE_SELECTED_UPDATE);
 
 	newide->device_control = 0x08+(newide->flags.io_irq_enable?0x00:0x02); /* can't read device control but we can guess */
 	if (ide->alt_io != 0) outp(ide->alt_io,newide->device_control);
@@ -334,6 +336,7 @@ int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char p
 		/* NTS: we do not pay attention to the drive select bit, because some IDE implementations
 		 *      will read back the wrong value especially if only a slave is connected to the chain, no master */
 		ide->head_select = inp(ide->base_io+6);
+		if (ide->alt_io != 0) ide->drive_address = inp(ide->alt_io+1);
 		ide->taskfile[ide->selected_drive].head_select = ide->head_select;
 	}
 
