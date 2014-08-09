@@ -47,6 +47,10 @@ void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char whic
 	sector = prompt_cdrom_sector_number();
 	if (sector == ~0UL)
 		return;
+	tlen_sect = prompt_cdrom_sector_count();
+	if (tlen_sect == 0UL || tlen_sect == ~0UL || tlen_sect > (32768UL/2048UL))
+		return;
+	tlen = tlen_sect * 2048UL;
 
 again:	/* jump point: send execution back here for another sector */
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
@@ -104,8 +108,8 @@ again:	/* jump point: send execution back here for another sector */
 
 			vga_moveto(0,0);
 			vga_write("Contents of CD-ROM sector ");
-			sprintf(tmp,"%lu",sector); vga_write(tmp);
-			vga_write(" (2048) bytes");
+			sprintf(tmp,"%lu-%lu",sector,sector+tlen_sect-1UL); vga_write(tmp);
+			sprintf(tmp,"(%lu) bytes",(unsigned long)tlen); vga_write(tmp);
 
 			vga_moveto(0,2);
 			vga_write_color(0x08);
@@ -123,7 +127,7 @@ again:	/* jump point: send execution back here for another sector */
 				vga_write(tmp);
 			}
 
-			for (i=0;i < 8;i++) { /* 16x16x8 = 2^(4+4+3) = 2^11 = 2048 */
+			for (i=0;i < (tlen/256UL);i++) { /* 16x16x8 = 2^(4+4+3) = 2^11 = 2048 */
 				for (y=0;y < 16;y++) {
 					vga_moveto(0,y+3);
 					vga_write_color(0x08);
@@ -152,7 +156,7 @@ again:	/* jump point: send execution back here for another sector */
 
 			if (c != 27) {
 				/* if the user hit ENTER, then read another sector and display that too */
-				sector++;
+				sector += tlen_sect;
 				goto again;
 			}
 		}
@@ -174,7 +178,7 @@ again:	/* jump point: send execution back here for another sector */
 
 static const char *drive_cdrom_reading_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
-	"Read CD-ROM data sector"
+	"Read CD-ROM data sectors",
 };
 
 void do_drive_cdrom_reading(struct ide_controller *ide,unsigned char which) {
@@ -282,7 +286,7 @@ void do_drive_cdrom_reading(struct ide_controller *ide,unsigned char which) {
 					do_common_show_ide_taskfile(ide,which);
 					redraw = backredraw = 1;
 					break;
-				case 1: /*Identify*/
+				case 1: /*Read a sector*/
 					do_drive_read_one_sector_test(ide,which);
 					redraw = backredraw = 1;
 					break;
