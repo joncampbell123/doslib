@@ -93,10 +93,10 @@ static const char *drive_main_menustrings[] = {
 	"Identify (ATA)",
 	"Identify packet (ATAPI)",
 	"Power states >>",
-	"CD-ROM eject/load >>",
-	"PIO mode >>",				/* 5 */
-	"No-op",
+	"PIO mode >>",				/* 4 */ /* rewritten */
+	"No-op",				/* 5 */
 	"Tweaks and adjustments >>",
+	"CD-ROM eject/load >>",
 	"CD-ROM reading >>"
 };
 
@@ -184,11 +184,11 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 
 			/* update a string or two: PIO mode */
 			if (ide->pio_width == 33)
-				drive_main_menustrings[5] = "PIO mode (currently: 32-bit VLB) >>";
+				drive_main_menustrings[4] = "PIO mode (currently: 32-bit VLB) >>";
 			else if (ide->pio_width == 32)
-				drive_main_menustrings[5] = "PIO mode (currently: 32-bit) >>";
+				drive_main_menustrings[4] = "PIO mode (currently: 32-bit) >>";
 			else
-				drive_main_menustrings[5] = "PIO mode (currently: 16-bit) >>";
+				drive_main_menustrings[4] = "PIO mode (currently: 16-bit) >>";
 
 			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
@@ -222,19 +222,19 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					do_drive_power_states_test(ide,which);
 					redraw = backredraw = 1;
 					break;
-				case 4: /* CD-ROM start/stop/eject/load */
-					do_drive_cdrom_startstop_test(ide,which);
-					redraw = backredraw = 1;
-					break;
-				case 5: /* PIO mode */
+				case 4: /* PIO mode */
 					do_drive_pio_mode(ide,which);
 					redraw = backredraw = 1;
 					break;
-				case 6: /* NOP */
+				case 5: /* NOP */
 					do_ide_controller_drive_nop_test(ide,which);
 					break;
-				case 7: /* Tweaks and adjustments */
+				case 6: /* Tweaks and adjustments */
 					do_drive_tweaks_and_adjustments(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 7: /* CD-ROM start/stop/eject/load */
+					do_drive_cdrom_startstop_test(ide,which);
 					redraw = backredraw = 1;
 					break;
 				case 8: /* CD-ROM reading */
