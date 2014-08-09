@@ -37,11 +37,11 @@
 
 void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char which) {
 	uint16_t drq_log[32768/2048];
-	unsigned int drq_log_ent = 0;
 	unsigned long sector = 16; /* read the ISO 9660 table of contents */
 	unsigned long tlen = 2048; /* one sector */
 	unsigned long tlen_sect = 1;
 	struct vga_msg_box vgabox;
+	unsigned int drq_log_ent;
 	uint8_t buf[12] = {0};
 	unsigned int x,y,i;
 	int c;
@@ -91,6 +91,7 @@ again:	/* jump point: send execution back here for another sector */
 			 *
 			 *      On the positive side, it means that on an error, the transfer can abort early if
 			 *      it needs to. */
+			drq_log_ent = 0;
 			memset(cdrom_sector,0,tlen);
 			while (ret_len < tlen) {
 				if (idelib_controller_is_error(ide)) {
