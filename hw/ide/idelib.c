@@ -331,9 +331,9 @@ int idelib_controller_update_taskfile(struct ide_controller *ide,unsigned char p
 	}
 
 	if (portmask & 0x40/*base+6*/) {
-		/* read drive select, use it to determine who is selected */
+		/* NTS: we do not pay attention to the drive select bit, because some IDE implementations
+		 *      will read back the wrong value especially if only a slave is connected to the chain, no master */
 		ide->head_select = inp(ide->base_io+6);
-		ide->selected_drive = (ide->head_select >> 4) & 1;
 		ide->taskfile[ide->selected_drive].head_select = ide->head_select;
 	}
 

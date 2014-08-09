@@ -180,14 +180,52 @@ void do_drive_check_power_mode(struct ide_controller *ide,unsigned char which) {
 
 void do_drive_device_reset_test(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
+	struct ide_taskfile *tsk;
+	int c;
 
-	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
-		return;
+	/* most of the commands assume a ready controller. if it's stuck,
+	 * we'd rather the user have a visual indication that it's stuck that way */
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
 
-	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
+	/* select the drive we want */
+	idelib_controller_drive_select(ide,which,/*head*/0,IDELIB_DRIVE_SELECT_MODE_CHS);
+
+	/* in case the IDE controller is busy for that time */
+	c = do_ide_controller_user_wait_busy_controller(ide);
+	if (c != 0) return;
+
+	/* read back: did the drive select take effect? if not, it might not be there. another common sign is the head/drive select reads back 0xFF */
+	c = do_ide_controller_drive_check_select(ide,which);
+	if (c < 0) return;
+
+	/* it might be a CD-ROM drive, which in some cases might not raise the Drive Ready bit */
+	do_ide_controller_atapi_device_check_post_host_reset(ide);
+
+	/* wait for the drive to indicate readiness */
+	/* NTS: If the drive never becomes ready even despite our reset hacks, there's a strong
+	 *      possibility that the device doesn't exist. This can happen for example if there
+	 *      is a master attached but no slave. */
+	c = do_ide_controller_user_wait_drive_ready(ide);
+	if (c < 0) return;
+
+	/* for completeness, clear pending IRQ */
+	idelib_controller_ack_irq(ide);
 	idelib_controller_reset_irq_counter(ide);
+
+	/* make sure the registers are cleared */
+	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+	tsk->error = 0x99;
+	tsk->sector_count = 0xAA;
+	tsk->lba0_3 = 0xBB;
+	tsk->lba1_4 = 0xCC;
+	tsk->lba2_5 = 0xDD;
+	idelib_controller_apply_taskfile(ide,0x3E/*base_io+1-5*/,IDELIB_TASKFILE_LBA48_UPDATE|IDELIB_TASKFILE_LBA48);
 	idelib_controller_write_command(ide,0x08); /* <- device reset */
 	do_ide_controller_user_wait_busy_controller(ide);
+
+	/* it MIGHT have fired an IRQ... */
+	idelib_controller_ack_irq(ide);
 
 	/* NTS: Device reset doesn't necessary seem to signal an IRQ, at least not
 	 *      immediately. On some implementations the IRQ will have fired by now,
@@ -197,8 +235,6 @@ void do_drive_device_reset_test(struct ide_controller *ide,unsigned char which) 
 	 *      wait for the drive to signal readiness. */
 
 	if (idelib_controller_update_taskfile(ide,0xFF,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/) == 0) {
-		struct ide_taskfile *tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
-
 		sprintf(tmp,"Device response: (0x1F1-0x1F7) %02X %02X %02X %02X %02X %02X %02X",
 			tsk->error,	tsk->sector_count,
 			tsk->lba0_3,	tsk->lba1_4,
@@ -210,12 +246,9 @@ void do_drive_device_reset_test(struct ide_controller *ide,unsigned char which) 
 		common_failed_to_read_taskfile_vga_msg_box(&vgabox);
 	}
 
-	/* it MIGHT have fired an IRQ... */
-	idelib_controller_ack_irq(ide);
-
 	wait_for_enter_or_escape();
 	vga_msg_box_destroy(&vgabox);
-	do_ide_controller_atapi_device_check_post_host_reset(ide);
+	do_ide_controller_atapi_device_check_post_host_reset(ide); /* NTS: This will change the taskfile further! */
 	do_ide_controller_user_wait_drive_ready(ide);
 }
 
