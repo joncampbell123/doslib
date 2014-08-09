@@ -35,7 +35,7 @@
 #include "testnop.h"
 #include "testpwr.h"
 
-void do_drive_read_one_sector_test(struct ide_controller *ide,unsigned char which) {
+void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 	uint16_t drq_log[((unsigned long)sizeof(cdrom_sector))/2048UL];
 	unsigned long sector = 16; /* read the ISO 9660 table of contents */
 	unsigned long tlen = 2048; /* one sector */
@@ -90,6 +90,13 @@ again:	/* jump point: send execution back here for another sector */
 			 *      to signal DRQ, and then read back the length of data it has available for you to
 			 *      read by, then you read that amount, and if more data is due, then you wait for
 			 *      another IRQ and DRQ signal.
+			 *
+			 *      In most cases, the DRQ returned by the drive is the same length you passed in,
+			 *      but NOT ALWAYS. Many cheap laptop drives for example will only return "2048"
+			 *      because they don't have a lot of buffer, and many DVD-ROM drives like to vary
+			 *      the DRQ size per transfer for whatever reason, whether "dynamically" according
+			 *      to CD-ROM spin speed or based on whatever data it's managed to read and buffer
+			 *      so far.
 			 *
 			 *      On the positive side, it means that on an error, the transfer can abort early if
 			 *      it needs to. */
@@ -335,7 +342,7 @@ void do_drive_cdrom_reading(struct ide_controller *ide,unsigned char which) {
 					redraw = backredraw = 1;
 					break;
 				case 1: /*Read a sector*/
-					do_drive_read_one_sector_test(ide,which);
+					do_drive_read_test(ide,which);
 					redraw = backredraw = 1;
 					break;
 			};
