@@ -270,6 +270,7 @@ again:	/* jump point: send execution back here for another sector */
 					user_esc = 1;
 					break;
 				}
+				idelib_controller_reset_irq_counter(ide); /* IRQ will fire after command completion */
 				idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
 			}
 
@@ -289,22 +290,14 @@ again:	/* jump point: send execution back here for another sector */
 			else
 				drq_len = 512;
 
-			/* OK. read it in */
+			/* OK. read it in and acknowledge */
 			idelib_read_pio_general(cdrom_sector+ret_len,drq_len,ide,IDELIB_PIO_WIDTH_DEFAULT);
-			if (ide->flags.io_irq_enable) { /* NOW we wait for another IRQ (completion) */
-				if (do_ide_controller_user_wait_irq(ide,1) < 0) {
-					user_esc = 1;
-					break;
-				}
-				idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
-			}
-
 			ret_len += drq_len;
 		}
 
 		/* ---- draw contents on the screen ---- */
 		vga_write_color(0x0E);
-		if (!continuous || (continuous && !cleared)) {
+		if (!cleared) {
 			vga_clear();
 			cleared = 1;
 		}

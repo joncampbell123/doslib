@@ -166,7 +166,7 @@ again:	/* jump point: send execution back here for another sector */
 
 			/* ---- draw contents on the screen ---- */
 			vga_write_color(0x0E);
-			if (!continuous || (continuous && !cleared)) {
+			if (!cleared) {
 				vga_clear();
 				cleared = 1;
 			}
