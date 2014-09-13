@@ -457,22 +457,16 @@ void do_ide_controller(struct ide_controller *ide) {
 			}
 			else if (select == 0) { /* host reset */
 				if (ide->alt_io != 0) {
-					/* just in case the IDE controller demands it, wait for not-busy before banging
-					 * the host reset bit. if the IDE controller is hung, the user can command us
-					 * to continue regardless */
+					vga_msg_box_create(&vgabox,"Host reset in progress",0,0);
+
+					idelib_device_control_set_reset(ide,1);
+					t8254_wait(t8254_us2ticks(1000000));
+					idelib_device_control_set_reset(ide,0);
+
+					vga_msg_box_destroy(&vgabox);
+
+					/* now wait for not busy */
 					c = do_ide_controller_user_wait_busy_controller(ide);
-					if (c >= 0) { /* if not busy, or busy and user commands us to continue */
-						vga_msg_box_create(&vgabox,"Host reset in progress",0,0);
-
-						idelib_device_control_set_reset(ide,1);
-						t8254_wait(t8254_us2ticks(1000000));
-						idelib_device_control_set_reset(ide,0);
-
-						vga_msg_box_destroy(&vgabox);
-
-						/* now wait for not busy */
-						c = do_ide_controller_user_wait_busy_controller(ide);
-					}
 				}
 			}
 			else if (select == 1) {
