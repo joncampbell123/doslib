@@ -466,7 +466,7 @@ void do_ide_controller(struct ide_controller *ide) {
 					vga_msg_box_destroy(&vgabox);
 
 					/* now wait for not busy */
-					c = do_ide_controller_user_wait_busy_controller(ide);
+					do_ide_controller_user_wait_busy_controller(ide);
 				}
 			}
 			else if (select == 1) {
