@@ -113,7 +113,8 @@ struct drive_rw_test_info {
 	unsigned short int	cylinder;
 	unsigned short int	head,sector;
 	unsigned short int	multiple_sectors;	/* multiple mode sector count */
-	unsigned short int	num_sectors;		/* how many to read per command */
+	unsigned short int	max_multiple_sectors;
+	unsigned short int	read_sectors;		/* how many to read per command */
 	uint64_t		max_lba;
 	uint64_t		lba;
 	unsigned char		mode;			/* DRIVE_RW_MODE_* */
@@ -126,6 +127,8 @@ static struct drive_rw_test_info drive_rw_test_nfo;
 
 static char drive_readwrite_test_geo[128];
 static char drive_readwrite_test_chs[128];
+static char drive_readwrite_test_numsec[128];
+static char drive_readwrite_test_mult[128];
 
 static const char *drive_readwrite_test_modes[] = {
 	"Mode: C/H/S",
@@ -140,7 +143,9 @@ static const char *drive_read_test_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
 	"*mode*",				/* 1 */ /* rewritten (CHS, LBA, CHS MULTI, etc) */
 	drive_readwrite_test_geo,
-	drive_readwrite_test_chs
+	drive_readwrite_test_chs,
+	drive_readwrite_test_numsec,
+	drive_readwrite_test_mult
 };
 
 void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
@@ -216,6 +221,13 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 				drive_rw_test_nfo.head,
 				drive_rw_test_nfo.sector,
 				drive_rw_test_nfo.lba);
+
+			sprintf(drive_readwrite_test_numsec,"Number of sectors per read: %u",
+				drive_rw_test_nfo.read_sectors);
+
+			sprintf(drive_readwrite_test_mult,"Multiple mode: %u sectors (max=%u)",
+				drive_rw_test_nfo.multiple_sectors,
+				drive_rw_test_nfo.max_multiple_sectors);
 
 			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
@@ -319,10 +331,12 @@ void do_drive_readwrite_tests(struct ide_controller *ide,unsigned char which) {
 			drive_rw_test_nfo.max_lba = ((uint64_t)info[58] << 16ULL) + ((uint64_t)info[57]);
 
 		drive_rw_test_nfo.sector = 1;
-		drive_rw_test_nfo.num_sectors = 1;
+		drive_rw_test_nfo.read_sectors = 1;
 		drive_rw_test_nfo.mode = DRIVE_RW_MODE_CHS;
 		if (drive_rw_test_nfo.can_do_multiple && (info[59]&0x100))
 			drive_rw_test_nfo.multiple_sectors = info[59]&0xFF;
+		if (drive_rw_test_nfo.can_do_multiple && (info[47]&0xFF) != 0)
+			drive_rw_test_nfo.max_multiple_sectors = info[47]&0xFF;
 	}
 
 	/* UI element vars */
