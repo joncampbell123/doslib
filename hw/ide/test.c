@@ -175,8 +175,32 @@ static void do_hdd_drive_read_test(struct ide_controller *ide,unsigned char whic
 
 	if (nfo->read_sectors == 0) return;
 
+	/* multiple mode: make sure the multiple sector count doesn't exceed our buffer size.
+	 * if it does, try to set multiple count to lesser value. */
 	if (nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE) {
+		if (nfo->multiple_sectors > ((unsigned long)sizeof(cdrom_sector) / 512UL) && nfo->multiple_sectors > 1) {
+			/* even though most IDE devices really only support power-of-2 sizes, we do a scan downward anyway */
+			c = ((unsigned long)sizeof(cdrom_sector) / 512UL);
+			do {
+				if (c <= 1) break;
+				do_ide_set_multiple_mode(ide,which,c);
+				{
+					uint16_t info[256];
+
+					do_ide_identify((unsigned char*)info,sizeof(info),ide,which,0xEC/*ATA IDENTIFY DEVICE*/);
+					drive_rw_test_nfo.multiple_sectors = info[59]&0xFF;
+				}
+
+				if (nfo->multiple_sectors > ((unsigned long)sizeof(cdrom_sector) / 512UL))
+					c--;
+				else
+					break;
+			} while (1);
+		}
+
 		if (nfo->multiple_sectors > ((unsigned long)sizeof(cdrom_sector) / 512UL))
+			return;
+		if (nfo->multiple_sectors == 0)
 			return;
 	}
 
