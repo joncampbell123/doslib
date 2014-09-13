@@ -184,15 +184,23 @@ static void do_hdd_drive_read_test(struct ide_controller *ide,unsigned char whic
 	idelib_controller_reset_irq_counter(ide); /* IRQ will fire after command completion */
 	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
 
-	tlen_sect = nfo->read_sectors;
-	if (tlen_sect > ((unsigned long)sizeof(cdrom_sector) / 512UL))
-		tlen_sect = ((unsigned long)sizeof(cdrom_sector) / 512UL);
-	tlen = tlen_sect * 512UL;
-
 again:	/* jump point: send execution back here for another sector */
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return;
 	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
+
+	tlen_sect = nfo->read_sectors;
+
+	/* C/H/S continuous: limit reads to within track, don't cross. we can't assume the drive will do that. */
+	if (continuous && (nfo->mode == DRIVE_RW_MODE_CHS || nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE)) {
+		if ((nfo->sector + tlen_sect) > nfo->num_sector)
+			tlen_sect = (nfo->num_sector + 1 - nfo->sector);
+	}
+
+	if (tlen_sect > ((unsigned long)sizeof(cdrom_sector) / 512UL))
+		tlen_sect = ((unsigned long)sizeof(cdrom_sector) / 512UL);
+	tlen = tlen_sect * 512UL;
+
 	if (nfo->mode == DRIVE_RW_MODE_LBA48 || nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE) {
 		tsk->sector_count = tlen_sect;
 		tsk->lba0_3 = nfo->lba & 0xFF;
