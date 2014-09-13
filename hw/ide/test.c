@@ -445,7 +445,18 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 						redraw = 1;
 					}
 					break;
-				case 5: /* */
+				case 5: /* Multiple mode sector count */
+					c = prompt_sector_count();
+					if (c >= 0 && c <= 255) {
+						do_ide_set_multiple_mode(ide,which,c);
+						{
+							uint16_t info[256];
+
+							do_ide_identify((unsigned char*)info,sizeof(info),ide,which,0xEC/*ATA IDENTIFY DEVICE*/);
+							drive_rw_test_nfo.multiple_sectors = info[59]&0xFF;
+						}
+						redraw = 1;
+					}
 					break;
 			};
 		}
