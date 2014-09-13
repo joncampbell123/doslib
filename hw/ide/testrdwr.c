@@ -33,6 +33,7 @@
 #include "testmumo.h"
 #include "testrdts.h"
 #include "testrdtv.h"
+#include "testrdws.h"
 #include "test.h"
 
 #include "testnop.h"
@@ -641,6 +642,7 @@ void do_drive_readwrite_tests(struct ide_controller *ide,unsigned char which) {
 					redraw = backredraw = 1;
 					break;
 				case 2: /* Write tests */
+					do_drive_write_test(ide,which);
 					redraw = backredraw = 1;
 					break;
 				case 3: /* Read verify tests */

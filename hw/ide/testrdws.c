@@ -38,7 +38,7 @@
 #include "testnop.h"
 #include "testpwr.h"
 
-static const char *drive_read_test_menustrings[] = {
+static const char *drive_write_test_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
 	"*mode*",				/* 1 */ /* rewritten (CHS, LBA, CHS MULTI, etc) */
 	drive_readwrite_test_geo,
@@ -49,7 +49,7 @@ static const char *drive_read_test_menustrings[] = {
 	"Read sectors continuously"
 };
 
-static void do_hdd_drive_read_test(struct ide_controller *ide,unsigned char which,unsigned char continuous,struct drive_rw_test_info *nfo) {
+static void do_hdd_drive_write_test(struct ide_controller *ide,unsigned char which,unsigned char continuous,struct drive_rw_test_info *nfo) {
 	unsigned char user_esc = 0;
 	struct vga_msg_box vgabox;
 	struct ide_taskfile *tsk;
@@ -323,7 +323,7 @@ again:	/* jump point: send execution back here for another sector */
 	}
 }
 
-void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
+void do_drive_write_test(struct ide_controller *ide,unsigned char which) {
 	struct menuboxbounds mbox;
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
@@ -334,7 +334,7 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 
 	/* UI element vars */
 	menuboxbounds_set_def_list(&mbox,/*ofsx=*/4,/*ofsy=*/7,/*cols=*/1);
-	menuboxbounds_set_item_strings_arraylen(&mbox,drive_read_test_menustrings);
+	menuboxbounds_set_item_strings_arraylen(&mbox,drive_write_test_menustrings);
 
 	while (1) {
 		if (backredraw) {
@@ -383,7 +383,7 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 		if (redraw) {
 			redraw = 0;
 
-			drive_read_test_menustrings[1] = drive_readwrite_test_modes[drive_rw_test_nfo.mode];
+			drive_write_test_menustrings[1] = drive_readwrite_test_modes[drive_rw_test_nfo.mode];
 
 			sprintf(drive_readwrite_test_geo,"Geometry: C/H/S %u/%u/%u LBA %llu",
 				drive_rw_test_nfo.num_cylinder,
@@ -461,7 +461,7 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 					break;
 				case 6: /*Read sectors*/
 				case 7: /*Read sectors continuously*/
-					do_hdd_drive_read_test(ide,which,/*continuous=*/(select==7),&drive_rw_test_nfo);
+					do_hdd_drive_write_test(ide,which,/*continuous=*/(select==7),&drive_rw_test_nfo);
 					redraw = backredraw = 1;
 					break;
 			};
