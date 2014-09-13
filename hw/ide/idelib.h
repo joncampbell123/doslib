@@ -101,6 +101,9 @@ struct ide_taskfile *idelib_controller_get_taskfile(struct ide_controller *ide,i
 void idelib_read_pio16(unsigned char *buf,unsigned int len,struct ide_controller *ide);
 void idelib_read_pio32(unsigned char *buf,unsigned int len,struct ide_controller *ide);
 void idelib_read_pio_general(unsigned char *buf,unsigned int lw,struct ide_controller *ide,unsigned char pio_width);
+void idelib_write_pio16(unsigned char *buf,unsigned int len,struct ide_controller *ide);
+void idelib_write_pio32(unsigned char *buf,unsigned int len,struct ide_controller *ide);
+void idelib_write_pio_general(unsigned char *buf,unsigned int lw,struct ide_controller *ide,unsigned char pio_width);
 void idelib_discard_pio16(unsigned int len,struct ide_controller *ide);
 void idelib_discard_pio32(unsigned int len,struct ide_controller *ide);
 void idelib_discard_pio_general(unsigned int lw,struct ide_controller *ide,unsigned char pio_width);
