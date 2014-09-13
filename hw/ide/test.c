@@ -87,7 +87,7 @@ char				tmp[1024];
 uint16_t			ide_info[256];
 
 #if TARGET_MSDOS == 32
-unsigned char			cdrom_sector[512U*120U];/* ~60KB, enough for 30 CD-ROM sector or 120 512-byte sectors */
+unsigned char			cdrom_sector[512U*256U];/* ~128KB, enough for 64 CD-ROM sector or 256 512-byte sectors */
 #else
 # if defined(__LARGE__) || defined(__COMPACT__)
 unsigned char			cdrom_sector[512U*16U];	/* ~8KB, enough for 4 CD-ROM sector or 16 512-byte sectors */

@@ -56,6 +56,8 @@ static void do_cdrom_drive_read_test(struct ide_controller *ide,unsigned char wh
 		return;
 	if (tlen_sect > ((unsigned long)sizeof(cdrom_sector) / 2048UL))
 		tlen_sect = ((unsigned long)sizeof(cdrom_sector) / 2048UL);
+	if (tlen_sect > ((65536UL/2048UL)-1UL)) /* don't try ATAPI requests 64KB or larger, the size field is 16-bit wide */
+		tlen_sect = ((65536UL/2048UL)-1UL);
 	tlen = tlen_sect * 2048UL;
 
 again:	/* jump point: send execution back here for another sector */
