@@ -169,7 +169,6 @@ static void do_hdd_drive_read_test(struct ide_controller *ide,unsigned char whic
 	struct ide_taskfile *tsk;
 	unsigned long tlen_sect;
 	unsigned int cleared=0;
-	uint8_t buf[12] = {0};
 	unsigned int x,y,i;
 	unsigned long tlen;
 	int c;
@@ -254,7 +253,7 @@ again:	/* jump point: send execution back here for another sector */
 		return;
 
 	if (!idelib_controller_is_error(ide)) { /* OK. success. now read the data */
-		unsigned int ret_len = 0,drq_len,ey;
+		unsigned int ret_len = 0,drq_len;
 
 		memset(cdrom_sector,0,tlen);
 		while (ret_len < tlen) {
@@ -366,7 +365,21 @@ again:	/* jump point: send execution back here for another sector */
 
 		if (c != 27 && !user_esc) {
 			/* if the user hit ENTER, then read another sector and display that too */
-//			sector += tlen_sect;
+			if (nfo->mode == DRIVE_RW_MODE_CHS || nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE) {
+				nfo->sector += (unsigned long long)tlen_sect;
+				while (nfo->sector > nfo->num_sector) {
+					nfo->sector -= nfo->num_sector;
+					nfo->head++;
+				}
+				while (nfo->head >= nfo->num_head) {
+					nfo->head -= nfo->num_head;
+					nfo->cylinder++;
+				}
+			}
+			else {
+				nfo->lba += (unsigned long long)tlen_sect;
+			}
+
 			goto again;
 		}
 	}
