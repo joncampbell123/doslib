@@ -66,10 +66,12 @@ void do_drive_multiple_mode(struct ide_controller *ide,unsigned char which) {
 		return;
 	}
 
+	/* WORD 47: [15:8] RESERVED
+	 *          [7:0]  Maximum number of sectors that shall be transferred per interrupt on READ/WRITE multiple */
 	/* WORD 59: [15:9] RESERVED
 	 *          [8]    Multiple sector setting is valid
 	 *          [7:0]  Current setting for number of sectors to transfer per interrupt for multiple read/write */
-	if (!(info[59]&0x100)) {
+	if (!(info[47]&0xFF)) {
 		struct vga_msg_box vgabox;
 
 		vga_msg_box_create(&vgabox,"WARNING: IDE device does not appear to support SET MULTIPLE.\nENTER to continue, ESC to cancel.",0,0);
@@ -97,8 +99,8 @@ void do_drive_multiple_mode(struct ide_controller *ide,unsigned char which) {
 			vga_moveto(0,0);
 
 			vga_write_color(0x1F);
-			vga_write("        IDE controller multiple mode ");
-			sprintf(tmp,"%u sectors ",info[59]&0xFF);
+			vga_write("        IDE multiple mode: ");
+			sprintf(tmp,"sec=%u / max=%u ",info[59]&0xFF,info[47]&0xFF);
 			vga_write(tmp);
 			sprintf(tmp,"@%X",ide->base_io);
 			vga_write(tmp);
