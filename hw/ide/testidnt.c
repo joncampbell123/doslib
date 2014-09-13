@@ -114,12 +114,17 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 		vga_write(tmp);
 
 		vga_moveto(0,2);
-		sprintf(tmp,"Current Capacity: %lu  Total user addressable: %lu  ",
+		sprintf(tmp,"Current Capacity: %lu  Total user addressable: %lu",
 			(unsigned long)info[57] | ((unsigned long)info[58] << 16UL),
 			(unsigned long)info[60] | ((unsigned long)info[61] << 16UL));
 		vga_write(tmp);
 
 		vga_moveto(0,3);
+		sprintf(tmp,"LBA48 capacity: %llu",
+			(unsigned long long)info[100] | ((unsigned long long)info[101] << 16ULL) | ((unsigned long long)info[102] << 32ULL) | ((unsigned long long)info[103] << 48ULL));
+		vga_write(tmp);
+
+		vga_moveto(0,4);
 		vga_write_color(0x0D);
 		vga_write("For more information consult ATA documentation. Hit ENTER to continue.");
 
