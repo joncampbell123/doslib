@@ -309,7 +309,7 @@ again:	/* jump point: send execution back here for another sector */
 		else {
 			sprintf(tmp,"%llu-%llu",nfo->lba,nfo->lba+(unsigned long long)tlen_sect-1ULL); vga_write(tmp);
 		}
-		sprintf(tmp,"(%lu) bytes",(unsigned long)tlen); vga_write(tmp);
+		sprintf(tmp,"(%lu) bytes  ",(unsigned long)tlen); vga_write(tmp);
 
 		vga_moveto(0,2);
 		vga_write_color(0x08);
@@ -375,9 +375,30 @@ again:	/* jump point: send execution back here for another sector */
 					nfo->head -= nfo->num_head;
 					nfo->cylinder++;
 				}
+
+				if (nfo->cylinder >= 16384) {
+					nfo->cylinder = 16383;
+					nfo->sector = nfo->num_sector;
+					nfo->head = nfo->num_head - 1;
+				}
+
+				nfo->lba  = (unsigned long long)nfo->cylinder * (unsigned long long)nfo->num_sector * (unsigned long long)nfo->num_head;
+				nfo->lba += (unsigned long long)nfo->head * (unsigned long long)nfo->num_sector;
+				nfo->lba += (unsigned long long)nfo->sector - 1ULL;
 			}
 			else {
 				nfo->lba += (unsigned long long)tlen_sect;
+
+				nfo->sector = (int)(nfo->lba % (unsigned long long)nfo->num_sector) + 1;
+				nfo->head = (int)((nfo->lba / (unsigned long long)nfo->num_sector) % (unsigned long long)nfo->num_head);
+				if (nfo->lba >= (16384ULL * (unsigned long long)nfo->num_sector * (unsigned long long)nfo->num_head)) {
+					nfo->cylinder = 16383;
+					nfo->sector = nfo->num_sector;
+					nfo->head = nfo->num_head - 1;
+				}
+				else {
+					nfo->cylinder = (int)((nfo->lba / (unsigned long long)nfo->num_sector) / (unsigned long long)nfo->num_head);
+				}
 			}
 
 			goto again;
