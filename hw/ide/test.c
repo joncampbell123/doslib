@@ -163,6 +163,219 @@ int drive_rw_test_mode_supported(struct drive_rw_test_info *nfo) {
 	return 1;
 }
 
+static void do_hdd_drive_read_test(struct ide_controller *ide,unsigned char which,unsigned char continuous,struct drive_rw_test_info *nfo) {
+	unsigned char user_esc = 0;
+	struct vga_msg_box vgabox;
+	struct ide_taskfile *tsk;
+	unsigned long tlen_sect;
+	unsigned int cleared=0;
+	uint8_t buf[12] = {0};
+	unsigned int x,y,i;
+	unsigned long tlen;
+	int c;
+
+	if (nfo->read_sectors == 0) return;
+
+	if (nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE) {
+		if (nfo->multiple_sectors > tsk->sector_count) return;
+	}
+
+	idelib_controller_reset_irq_counter(ide); /* IRQ will fire after command completion */
+	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+
+	tlen_sect = nfo->read_sectors;
+	if (tlen_sect > ((unsigned long)sizeof(cdrom_sector) / 512UL))
+		tlen_sect = ((unsigned long)sizeof(cdrom_sector) / 512UL);
+	tlen = tlen_sect * 512UL;
+
+again:	/* jump point: send execution back here for another sector */
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
+	if (nfo->mode == DRIVE_RW_MODE_LBA48 || nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE) {
+		tsk->sector_count = tlen_sect;
+		tsk->lba0_3 = nfo->lba & 0xFF;
+		tsk->lba1_4 = (nfo->lba >> 8) & 0xFF;
+		tsk->lba2_5 = (nfo->lba >> 16) & 0xFF;
+		tsk->lba0_3 |= ((nfo->lba >> 24) & 0xFF) << 8;
+		tsk->lba1_4 |= ((nfo->lba >> 32) & 0xFF) << 8;
+		tsk->lba2_5 |= ((nfo->lba >> 40) & 0xFF) << 8;
+		tsk->head_select = (which << 4) | 0x40;
+
+		if (nfo->mode == DRIVE_RW_MODE_LBA48)
+			tsk->command = 0x24; /* READ SECTORS EXT */
+		else if (nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE)
+			tsk->command = 0x29; /* READ MULTIPLE EXT */
+
+		if (idelib_controller_apply_taskfile(ide,0xFC/*base_io+2-7*/,IDELIB_TASKFILE_LBA48_UPDATE|IDELIB_TASKFILE_LBA48/*set LBA48*/) < 0)
+			return;
+	}
+	else {
+		if (tsk->sector_count > 256) return;
+		tsk->sector_count = (tlen_sect&0xFF);
+		if (nfo->mode == DRIVE_RW_MODE_CHS || nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE) {
+			tsk->chs_sector = nfo->sector;
+			tsk->chs_cylinder_low = nfo->cylinder & 0xFF;
+			tsk->chs_cylinder_high = (nfo->cylinder >> 8) & 0xFF;
+			tsk->head_select = (nfo->head & 0xF) | (which << 4) | 0xA0;
+		}
+		else if (nfo->mode == DRIVE_RW_MODE_LBA || nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE) {
+			tsk->lba0_3 = nfo->lba & 0xFF;
+			tsk->lba1_4 = (nfo->lba >> 8) & 0xFF;
+			tsk->lba2_5 = (nfo->lba >> 16) & 0xFF;
+			tsk->head_select = ((nfo->lba >> 24) & 0xF) | (which << 4) | 0xE0;
+		}
+
+		if (nfo->mode == DRIVE_RW_MODE_CHS || nfo->mode == DRIVE_RW_MODE_LBA)
+			tsk->command = 0x20; /* READ SECTORS */
+		else if (nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE)
+			tsk->command = 0xC4; /* READ MULTIPLE */
+
+		if (idelib_controller_apply_taskfile(ide,0xFC/*base_io+2-7*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/) < 0)
+			return;
+	}
+
+	if (ide->flags.io_irq_enable) { /* NOW we wait for the IRQ */
+		if (do_ide_controller_user_wait_irq(ide,1) < 0)
+			return;
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return;
+
+	if (!idelib_controller_is_error(ide)) { /* OK. success. now read the data */
+		unsigned int ret_len = 0,drq_len,ey;
+
+		memset(cdrom_sector,0,tlen);
+		while (ret_len < tlen) {
+			if (idelib_controller_is_error(ide)) {
+				vga_msg_box_create(&vgabox,"Error",0,0);
+				wait_for_enter_or_escape();
+				vga_msg_box_destroy(&vgabox);
+				break;
+			}
+
+			if (ide->flags.io_irq_enable) { /* NOW we wait for the IRQ */
+				if (do_ide_controller_user_wait_irq(ide,1) < 0) {
+					user_esc = 1;
+					break;
+				}
+				idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+			}
+
+			if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0) {
+				user_esc = 1;
+				break;
+			}
+
+			if (do_ide_controller_user_wait_drive_drq(ide) < 0) {
+				user_esc = 1;
+				break;
+			}
+
+			if (nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE) {
+				drq_len = nfo->multiple_sectors * 512;
+			}
+			else {
+				drq_len = 512;
+			}
+
+			/* OK. read it in */
+			idelib_read_pio_general(cdrom_sector+ret_len,drq_len,ide,IDELIB_PIO_WIDTH_DEFAULT);
+			if (ide->flags.io_irq_enable) { /* NOW we wait for another IRQ (completion) */
+				if (do_ide_controller_user_wait_irq(ide,1) < 0) {
+					user_esc = 1;
+					break;
+				}
+				idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+			}
+
+			ret_len += drq_len;
+		}
+
+		/* ---- draw contents on the screen ---- */
+		vga_write_color(0x0E);
+		if (!continuous || (continuous && !cleared)) {
+			vga_clear();
+			cleared = 1;
+		}
+
+		vga_moveto(0,0);
+		vga_write("Contents of HDD sector ");
+		if (nfo->mode == DRIVE_RW_MODE_CHS || nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE) {
+			sprintf(tmp,"CHS %u/%u/%u",nfo->cylinder,nfo->head,nfo->sector); vga_write(tmp);
+		}
+		else {
+			sprintf(tmp,"%llu-%llu",nfo->lba,nfo->lba+(unsigned long long)tlen_sect-1ULL); vga_write(tmp);
+		}
+		sprintf(tmp,"(%lu) bytes",(unsigned long)tlen); vga_write(tmp);
+
+		vga_moveto(0,2);
+		vga_write_color(0x08);
+		vga_write("BYTE ");
+
+		vga_moveto(5,2);
+		for (x=0;x < 16;x++) {
+			sprintf(tmp,"+%X ",x);
+			vga_write(tmp);
+		}
+
+		vga_moveto(5+(16*3)+1,2);
+		for (x=0;x < 16;x++) {
+			sprintf(tmp,"%X",x);
+			vga_write(tmp);
+		}
+
+		for (i=0;i < (tlen/256UL);i++) { /* 16x16x8 = 2^(4+4+3) = 2^11 = 2048 */
+			for (y=0;y < 16;y++) {
+				vga_moveto(0,y+3);
+				vga_write_color(0x08);
+				sprintf(tmp,"%04X ",(i*256)+(y*16));
+				vga_write(tmp);
+			}
+
+			for (y=0;y < 16;y++) {
+				vga_moveto(5,y+3);
+				vga_write_color(0x0F);
+				for (x=0;x < 16;x++) {
+					sprintf(tmp,"%02X ",cdrom_sector[(i*256)+(y*16)+x]);
+					vga_write(tmp);
+				}
+
+				vga_moveto(5+(16*3)+1,y+3);
+				vga_write_color(0x0E);
+				for (x=0;x < 16;x++) {
+					vga_writec(sanitizechar(cdrom_sector[(i*256)+(y*16)+x]));
+				}
+			}
+
+			if (continuous && !user_esc) {
+				if (kbhit()) {
+					c = getch();
+					if (c == 0) c = getch() << 8;
+				}
+				break;
+			}
+			else {
+				if ((c=wait_for_enter_or_escape()) == 27)
+					break; /* allow user to exit early by hitting ESC */
+			}
+		}
+
+		if (c != 27 && !user_esc) {
+			/* if the user hit ENTER, then read another sector and display that too */
+//			sector += tlen_sect;
+			goto again;
+		}
+	}
+	else {
+		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+
 void do_drive_readwrite_edit_chslba(struct ide_controller *ide,unsigned char which,struct drive_rw_test_info *nfo,unsigned char editgeo) {
 	uint64_t lba,tmp;
 	int cyl,head,sect;
@@ -601,7 +814,9 @@ static const char *drive_read_test_menustrings[] = {
 	drive_readwrite_test_geo,
 	drive_readwrite_test_chs,
 	drive_readwrite_test_numsec,
-	drive_readwrite_test_mult
+	drive_readwrite_test_mult,
+	"Read sectors",
+	"Read sectors continuously"
 };
 
 void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
@@ -739,6 +954,11 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 						}
 						redraw = 1;
 					}
+					break;
+				case 6: /*Read sectors*/
+				case 7: /*Read sectors continuously*/
+					do_hdd_drive_read_test(ide,which,/*continuous=*/(select==7),&drive_rw_test_nfo);
+					redraw = backredraw = 1;
 					break;
 			};
 		}
