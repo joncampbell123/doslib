@@ -272,7 +272,7 @@ int idelib_controller_apply_taskfile(struct ide_controller *ide,unsigned char po
 		/* if writing the taskfile would select a different drive or head, then error out */
 		ide->head_select = inp(ide->base_io+6);
 		if (ide->selected_drive != ((ide->head_select >> 4) & 1)) return -1;
-		if ((ide->head_select&0x1F) != (ide->taskfile[ide->selected_drive].head_select&0x1F)) return -1;
+		if ((ide->head_select&0x10) != (ide->taskfile[ide->selected_drive].head_select&0x10)) return -1;
 		outp(ide->base_io+6,ide->taskfile[ide->selected_drive].head_select);
 	}
 
