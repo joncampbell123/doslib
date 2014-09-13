@@ -104,7 +104,18 @@ enum {
 	DRIVE_RW_MODE_LBA,
 	DRIVE_RW_MODE_LBAMULTIPLE,
 	DRIVE_RW_MODE_LBA48,
-	DRIVE_RW_MODE_LBA48_MULTIPLE
+	DRIVE_RW_MODE_LBA48_MULTIPLE,
+
+	DRIVE_RW_MODE_MAX
+};
+
+static const char *drive_readwrite_test_modes[] = {
+	"Mode: C/H/S",
+	"Mode: C/H/S MULTIPLE",
+	"Mode: LBA",
+	"Mode: LBA MULTIPLE",
+	"Mode: LBA48",
+	"Mode: LBA48 MULTIPLE"
 };
 
 struct drive_rw_test_info {
@@ -130,14 +141,181 @@ static char drive_readwrite_test_chs[128];
 static char drive_readwrite_test_numsec[128];
 static char drive_readwrite_test_mult[128];
 
-static const char *drive_readwrite_test_modes[] = {
-	"Mode: C/H/S",
-	"Mode: C/H/S MULTIPLE",
-	"Mode: LBA",
-	"Mode: LBA MULTIPLE",
-	"Mode: LBA48",
-	"Mode: LBA48 MULTIPLE"
-};
+int drive_rw_test_mode_supported(struct drive_rw_test_info *nfo) {
+	if (!drive_rw_test_nfo.can_do_multiple &&
+		(nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE ||
+		 nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE ||
+		 nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE))
+		return 0;
+
+	if (!drive_rw_test_nfo.can_do_lba &&
+		(nfo->mode == DRIVE_RW_MODE_LBA ||
+		 nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE ||
+		 nfo->mode == DRIVE_RW_MODE_LBA48 ||
+		 nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE))
+		return 0;
+
+	if (!drive_rw_test_nfo.can_do_lba48 &&
+		(nfo->mode == DRIVE_RW_MODE_LBA48 ||
+		 nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE))
+		return 0;
+
+	return 1;
+}
+
+void do_drive_readwrite_test_choose_mode(struct ide_controller *ide,unsigned char which,struct drive_rw_test_info *nfo) {
+	int select=drive_rw_test_nfo.mode;
+	struct menuboxbounds mbox;
+	char backredraw=1;
+	VGA_ALPHA_PTR vga;
+	unsigned int x,y;
+	char redraw=1;
+	int c;
+
+	/* UI element vars */
+	menuboxbounds_set_def_list(&mbox,/*ofsx=*/4,/*ofsy=*/7,/*cols=*/1);
+	menuboxbounds_set_item_strings_arraylen(&mbox,drive_readwrite_test_modes);
+
+	while (1) {
+		if (backredraw) {
+			vga = vga_alpha_ram;
+			backredraw = 0;
+			redraw = 1;
+
+			for (y=0;y < vga_height;y++) {
+				for (x=0;x < vga_width;x++) {
+					*vga++ = 0x1E00 + 177;
+				}
+			}
+
+			vga_moveto(0,0);
+
+			vga_write_color(0x1F);
+			vga_write("        IDE r/w test mode ");
+			sprintf(tmp,"@%X",ide->base_io);
+			vga_write(tmp);
+			if (ide->alt_io != 0) {
+				sprintf(tmp," alt %X",ide->alt_io);
+				vga_write(tmp);
+			}
+			if (ide->irq >= 0) {
+				sprintf(tmp," IRQ %d",ide->irq);
+				vga_write(tmp);
+			}
+			vga_write(which ? " Slave" : " Master");
+
+			sprintf(tmp," lba=%u lba48=%u multiple=%u",
+				drive_rw_test_nfo.can_do_lba?1:0,
+				drive_rw_test_nfo.can_do_lba48?1:0,
+				drive_rw_test_nfo.can_do_multiple?1:0);
+			vga_write(tmp);
+
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+
+			vga_write_color(0xC);
+			vga_write("WARNING: This code talks directly to your hard disk controller.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			vga_write_color(0xC);
+			vga_write("         If you value the data on your hard drive do not run this program.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		if (redraw) {
+			redraw = 0;
+
+			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
+			vga_write_color((select == -1) ? 0x70 : 0x0F);
+			vga_write("Back");
+			while (vga_pos_x < (mbox.width+mbox.ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			menuboxbound_redraw(&mbox,select);
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			break;
+		}
+		else if (c == 13) {
+			struct vga_msg_box vgabox;
+
+			if (!drive_rw_test_nfo.can_do_multiple &&
+				(select == DRIVE_RW_MODE_CHSMULTIPLE ||
+				select == DRIVE_RW_MODE_LBAMULTIPLE ||
+				select == DRIVE_RW_MODE_LBA48_MULTIPLE)) {
+
+				vga_msg_box_create(&vgabox,
+					"The IDE device doesn't seem to support SET MULTIPLE/READ MULTIPLE.\n"
+					"Are you sure you want to choose this mode?\n"
+					"\n"
+					"Hit ENTER to proceed, ESC to cancel"
+					,0,0);
+				do {
+					c = getch();
+					if (c == 0) c = getch() << 8;
+				} while (!(c == 13 || c == 27));
+				vga_msg_box_destroy(&vgabox);
+				if (c == 27) continue;
+			}
+
+			if (!drive_rw_test_nfo.can_do_lba &&
+				(select == DRIVE_RW_MODE_LBA ||
+				select == DRIVE_RW_MODE_LBAMULTIPLE ||
+				select == DRIVE_RW_MODE_LBA48 ||
+				select == DRIVE_RW_MODE_LBA48_MULTIPLE)) {
+
+				vga_msg_box_create(&vgabox,
+					"The IDE device doesn't seem to support LBA mode.\n"
+					"Are you sure you want to choose this mode?\n"
+					"\n"
+					"Hit ENTER to proceed, ESC to cancel"
+					,0,0);
+				do {
+					c = getch();
+					if (c == 0) c = getch() << 8;
+				} while (!(c == 13 || c == 27));
+				vga_msg_box_destroy(&vgabox);
+				if (c == 27) continue;
+			}
+
+			if (!drive_rw_test_nfo.can_do_lba48 &&
+				(select == DRIVE_RW_MODE_LBA48 ||
+				select == DRIVE_RW_MODE_LBA48_MULTIPLE)) {
+
+				vga_msg_box_create(&vgabox,
+					"The IDE device doesn't seem to support 48-bit LBA.\n"
+					"Are you sure you want to choose this mode?\n"
+					"\n"
+					"Hit ENTER to proceed, ESC to cancel"
+					,0,0);
+				do {
+					c = getch();
+					if (c == 0) c = getch() << 8;
+				} while (!(c == 13 || c == 27));
+				vga_msg_box_destroy(&vgabox);
+				if (c == 27) continue;
+			}
+
+			if (select >= 0)
+				drive_rw_test_nfo.mode = select;
+
+			break;
+		}
+		else if (c == 0x4800) {
+			if (--select < -1)
+				select = mbox.item_max;
+
+			redraw = 1;
+		}
+		else if (c == 0x5000) {
+			if (++select > mbox.item_max)
+				select = -1;
+
+			redraw = 1;
+		}
+	}
+}
 
 static const char *drive_read_test_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
@@ -252,8 +430,22 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 					do_common_show_ide_taskfile(ide,which);
 					redraw = backredraw = 1;
 					break;
-				case 1: /* Read tests */
+				case 1: /* Mode */
+					do_drive_readwrite_test_choose_mode(ide,which,&drive_rw_test_nfo);
 					redraw = backredraw = 1;
+					break;
+				case 2: /* */
+					break;
+				case 3: /* */
+					break;
+				case 4: /* Number of sectors */
+					c = prompt_sector_count();
+					if (c >= 1 && c <= 256) {
+						drive_rw_test_nfo.read_sectors = c;
+						redraw = 1;
+					}
+					break;
+				case 5: /* */
 					break;
 			};
 		}
@@ -264,9 +456,29 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 			redraw = 1;
 		}
 		else if (c == 0x4B00) { /* left */
+			switch (select) {
+				case 1: /* Mode */
+					do {
+						if (drive_rw_test_nfo.mode == 0)
+							drive_rw_test_nfo.mode = DRIVE_RW_MODE_MAX-1;
+						else
+							drive_rw_test_nfo.mode--;
+					} while (!drive_rw_test_mode_supported(&drive_rw_test_nfo));
+					break;
+			};
+
 			redraw = 1;
 		}
 		else if (c == 0x4D00) { /* right */
+			switch (select) {
+				case 1: /* Mode */
+					do {
+						if (++drive_rw_test_nfo.mode >= DRIVE_RW_MODE_MAX)
+							drive_rw_test_nfo.mode = 0;
+					} while (!drive_rw_test_mode_supported(&drive_rw_test_nfo));
+					break;
+			};
+
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
