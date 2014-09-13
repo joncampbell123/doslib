@@ -100,6 +100,21 @@ void do_drive_sleep_test(struct ide_controller *ide,unsigned char which) {
 			idelib_controller_ack_irq(ide);
 			idelib_controller_reset_irq_counter(ide);
 			idelib_controller_write_command(ide,0x08); /* <- device reset */
+
+			/* NTS: some laptops, especially Toshiba, have a hard drive connected to the primary
+			 *      channel. for some reason, issuing ANY command after sleep causes the IDE
+			 *      controller to signal BUSY and never come out of it. The only way out of
+			 *      the situation is to do a host reset (reset the IDE controller). */
+			if (do_ide_controller_user_wait_busy_timeout_controller(ide,1000/*ms*/)) { /* if we waited too long for IDE ready */
+				vga_msg_box_create(&vgabox,"Host reset in progress",0,0);
+
+				idelib_device_control_set_reset(ide,1);
+				t8254_wait(t8254_us2ticks(1000000));
+				idelib_device_control_set_reset(ide,0);
+
+				vga_msg_box_destroy(&vgabox);
+			}
+
 			do_ide_controller_user_wait_busy_controller(ide);
 			idelib_controller_update_taskfile(ide,0xFF,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/); /* updating the taskfile seems to help with getting CD-ROM drives online */
 
