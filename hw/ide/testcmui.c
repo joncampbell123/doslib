@@ -207,8 +207,10 @@ int prompt_sector_count() {
 		c = getch();
 		if (c == 0) c = getch() << 8;
 
-		if (c == 27)
-			return ~0UL;
+		if (c == 27) {
+			sector = (int)(~0UL);
+			break;
+		}
 		else if (c == 13) {
 			if (i == 0) break;
 			temp_str[i] = 0;
@@ -248,8 +250,10 @@ unsigned long prompt_cdrom_sector_number() {
 		c = getch();
 		if (c == 0) c = getch() << 8;
 
-		if (c == 27)
-			return ~0UL;
+		if (c == 27) {
+			sector = (int)(~0UL);
+			break;
+		}
 		else if (c == 13) {
 			if (i == 0) break;
 			temp_str[i] = 0;
@@ -289,8 +293,10 @@ unsigned long prompt_cdrom_sector_count() {
 		c = getch();
 		if (c == 0) c = getch() << 8;
 
-		if (c == 27)
-			return ~0UL;
+		if (c == 27) {
+			sector = (int)(~0UL);
+			break;
+		}
 		else if (c == 13) {
 			if (i == 0) break;
 			temp_str[i] = 0;
