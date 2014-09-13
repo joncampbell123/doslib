@@ -191,6 +191,8 @@ void do_drive_readwrite_edit_chslba(struct ide_controller *ide,unsigned char whi
 		"Edit position:                  ",
 		2+4,0);
 	while (1) {
+		char recalc = 0;
+
 		if (redraw) {
 			redraw = 0;
 
@@ -250,6 +252,49 @@ nextkey:	if (c == 27) {
 			if (++select > 3) select = 0;
 			redraw = 1;
 		}
+
+		else if (c == 0x4B00) { /* left */
+			switch (select) {
+				case 0:
+					if (cyl == 0) cyl = editgeo ? 16383 : (nfo->num_cylinder - 1);
+					else cyl--;
+					break;
+				case 1:
+					if (head == 0) head = editgeo ? 16 : (nfo->num_head - 1);
+					else head--;
+					break;
+				case 2:
+					if (sect <= 1) sect = editgeo ? 256 : nfo->num_sector;
+					else sect--;
+					break;
+				case 3:
+					if (lba > 0ULL) lba--;
+					break;
+			};
+
+			recalc = 1;
+			redraw = 1;
+		}
+		else if (c == 0x4D00) { /* right */
+			switch (select) {
+				case 0:
+					if ((++cyl) >= (editgeo ? 16384 : nfo->num_cylinder)) cyl = 0;
+					break;
+				case 1:
+					if ((++head) >= (editgeo ? 17 : nfo->num_head)) head = 0;
+					break;
+				case 2:
+					if ((++sect) >= (editgeo ? 257 : (nfo->num_sector+1))) sect = 1;
+					break;
+				case 3:
+					lba++;
+					break;
+			};
+
+			recalc = 1;
+			redraw = 1;
+		}
+
 		else if (c == 8 || isdigit(c)) {
 			unsigned int sy = box.y+2+1 + select;
 			unsigned int sx = box.x+2+11;
@@ -313,6 +358,12 @@ nextkey:	if (c == 27) {
 				case 3:	lba=strtoull(temp_str,NULL,0); break;
 			}
 
+			recalc = 1;
+			goto nextkey;
+		}
+
+		if (recalc) {
+			recalc = 0;
 			if (sect == 0) sect = 1;
 			if (cyl > 16383) cyl = 16383;
 
@@ -364,7 +415,6 @@ nextkey:	if (c == 27) {
 			}
 
 			redraw = 1;
-			goto nextkey;
 		}
 	}
 	vga_msg_box_destroy(&box);
