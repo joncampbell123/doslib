@@ -106,8 +106,13 @@ static const char *drive_main_menustrings[] = {
 	"No-op",				/* 5 */
 	"Tweaks and adjustments >>",
 	"CD-ROM eject/load >>",
-	"CD-ROM reading >>"
+	"CD-ROM reading >>",
+	"Multiple mode >>"
 };
+
+void do_drive_multiple_mode(struct ide_controller *ide,unsigned char which) {
+	/* TODO */
+}
 
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 	struct menuboxbounds mbox;
@@ -248,6 +253,10 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					break;
 				case 8: /* CD-ROM reading */
 					do_drive_cdrom_reading(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 9: /* multiple mode */
+					do_drive_multiple_mode(ide,which);
 					redraw = backredraw = 1;
 					break;
 			};

@@ -31,13 +31,11 @@
 #include "testnop.h"
 #include "testpwr.h"
 
-void do_drive_identify_device_test(struct ide_controller *ide,unsigned char which,unsigned char command) {
-	struct vga_msg_box vgabox;
-	unsigned int x,y,i;
-	uint16_t info[256];
-
+int do_ide_identify(unsigned char *info/*512*/,unsigned int sz,struct ide_controller *ide,unsigned char which,unsigned char command) {
+	if (sz < 512)
+		return -1;
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
-		return;
+		return -1;
 
 	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
 	idelib_controller_reset_irq_counter(ide);
@@ -48,11 +46,21 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 	}
 	do_ide_controller_user_wait_busy_controller(ide);
 	do_ide_controller_user_wait_drive_ready(ide);
-	if (!(ide->last_status&1)) {
-		/* read it */
-		do_ide_controller_user_wait_drive_drq(ide);
-		idelib_read_pio_general((unsigned char*)info,512,ide,IDELIB_PIO_WIDTH_DEFAULT);
+	if (ide->last_status&1) return 1;
 
+	/* read it */
+	do_ide_controller_user_wait_drive_drq(ide);
+	idelib_read_pio_general((unsigned char*)info,512,ide,IDELIB_PIO_WIDTH_DEFAULT);
+	return 0;
+}
+
+void do_drive_identify_device_test(struct ide_controller *ide,unsigned char which,unsigned char command) {
+	unsigned int x,y,i;
+	uint16_t info[256];
+	int r;
+
+	r = do_ide_identify((unsigned char*)info,512,ide,which,command);
+	if (r == 0) {
 		/* ------------ PAGE 1 -------------*/
 		vga_write_color(0x0E); vga_clear();
 
@@ -139,7 +147,9 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 				break; /* allow ESC to immediately break out */
 		}
 	}
-	else {
+	else if (r > 0) {
+		struct vga_msg_box vgabox;
+
 		common_ide_success_or_error_vga_msg_box(ide,&vgabox);
 		wait_for_enter_or_escape();
 		vga_msg_box_destroy(&vgabox);
