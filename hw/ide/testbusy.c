@@ -27,6 +27,41 @@
 /* returns: -1 if user said to cancel
  *          0 if not busy
  *          1 if still busy, but user said to proceed */
+int do_ide_controller_user_wait_busy_timeout_controller(struct ide_controller *ide,unsigned int timeout) {
+	int ret = 0;
+	
+	if (ide == NULL)
+		return -1;
+
+	/* use the alt status register if possible, else the base I/O.
+	 * the alt status register is said not to clear pending interrupts */
+	idelib_controller_update_status(ide);
+	if (idelib_controller_is_busy(ide)) {
+		unsigned long show_countdown = (unsigned long)timeout * 10UL; /* ms -> 100us units */
+
+		do {
+			idelib_controller_update_status(ide);
+			if (!idelib_controller_is_busy(ide)) break;
+
+			/* if the drive&controller is busy then show the dialog and wait for non-busy
+			 * or until the user forces us to proceed */
+			if (show_countdown > 0UL) {
+				if (--show_countdown == 0UL) {
+					ret = 1;
+					break;
+				}
+			}
+
+			t8254_wait(t8254_us2ticks(100)); /* wait 100us (0.0001 seconds) */
+		} while (1);
+	}
+
+	return ret;
+}
+
+/* returns: -1 if user said to cancel
+ *          0 if not busy
+ *          1 if still busy, but user said to proceed */
 int do_ide_controller_user_wait_busy_controller(struct ide_controller *ide) {
 	struct vga_msg_box vgabox;
 	int ret = 0,c = 0;
