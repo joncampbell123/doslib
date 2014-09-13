@@ -6,6 +6,13 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 C_SOURCE =    idelib.c
 OBJS =        $(SUBDIR)$(HPS)idelib.obj $(SUBDIR)$(HPS)idelib.obj
 
+!ifeq TARGET_MSDOS 16
+! ifeq MMODE c
+# this test program isn't going to fit in the compact memory model. sorry.
+NO_TEST_EXE=1
+! endif
+!endif
+
 !ifndef NO_TEST_EXE
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 !endif
