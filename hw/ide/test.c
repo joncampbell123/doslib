@@ -308,8 +308,10 @@ again:	/* jump point: send execution back here for another sector */
 			}
 
 			if (nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE ||
-				nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE)
+				nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE) {
 				drq_len = nfo->multiple_sectors * 512;
+				if ((ret_len+drq_len) > tlen) drq_len = tlen - ret_len;
+			}
 			else
 				drq_len = 512;
 
