@@ -177,7 +177,8 @@ static void do_hdd_drive_read_test(struct ide_controller *ide,unsigned char whic
 	if (nfo->read_sectors == 0) return;
 
 	if (nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE) {
-		if (nfo->multiple_sectors > tsk->sector_count) return;
+		if (nfo->multiple_sectors > ((unsigned long)sizeof(cdrom_sector) / 512UL))
+			return;
 	}
 
 	idelib_controller_reset_irq_counter(ide); /* IRQ will fire after command completion */
