@@ -38,6 +38,8 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+static unsigned char drive_write_warning = 1;
+
 static const char *drive_write_test_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
 	"*mode*",				/* 1 */ /* rewritten (CHS, LBA, CHS MULTI, etc) */
@@ -45,8 +47,8 @@ static const char *drive_write_test_menustrings[] = {
 	drive_readwrite_test_chs,
 	drive_readwrite_test_numsec,
 	drive_readwrite_test_mult,
-	"Read sectors",
-	"Read sectors continuously"
+	"Write sectors",
+	"Write sectors continuously"
 };
 
 static void do_hdd_drive_write_test(struct ide_controller *ide,unsigned char which,unsigned char continuous,struct drive_rw_test_info *nfo) {
@@ -331,6 +333,46 @@ void do_drive_write_test(struct ide_controller *ide,unsigned char which) {
 	int select=-1;
 	char redraw=1;
 	int c;
+
+	if (drive_write_warning) {
+		struct vga_msg_box box;
+
+		vga_msg_box_create(&box,
+			"WARNING: This test is destructive. It overwrites the data on the disk.\n"
+			"         If you value the data on your hard drive DO NOT RUN THIS TEST.\n"
+			"\n"
+			"Hit ESC to cancel, ENTER to continue"
+			,0,0);
+		c = wait_for_enter_or_escape();
+		vga_msg_box_destroy(&box);
+		if (c == 27) return;
+
+		vga_msg_box_create(&box,
+			"WARNING: Are you sure? The contents of the hard disk will be overwritten\n"
+			"         in the process of carrying out this test!\n"
+			"\n"
+			"Hit ESC to cancel, ENTER to continue"
+			,0,0);
+		c = wait_for_enter_or_escape();
+		vga_msg_box_destroy(&box);
+		if (c == 27) return;
+
+		vga_msg_box_create(&box,
+			"FINAL WARNING: This test will overwrite the sectors on the disk with\n"
+			"               test data. The test is not undoable. ARE YOU SURE?\n"
+			"\n"
+			"If you confirm, this warning will not show again until the test program\n"
+			"is restarted.\n"
+			"\n"
+			"Hit ESC to cancel, ENTER to continue"
+			,0,0);
+		c = wait_for_enter_or_escape();
+		vga_msg_box_destroy(&box);
+		if (c == 27) return;
+
+		/* if you say so! */
+		drive_write_warning = 0;
+	}
 
 	/* UI element vars */
 	menuboxbounds_set_def_list(&mbox,/*ofsx=*/4,/*ofsy=*/7,/*cols=*/1);
