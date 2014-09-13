@@ -31,6 +31,28 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+int do_ide_set_multiple_mode(struct ide_controller *ide,unsigned char which,unsigned char sz) {
+	struct ide_taskfile *tsk;
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return -1;
+
+	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
+	idelib_controller_reset_irq_counter(ide);
+	tsk->sector_count = sz;
+	idelib_controller_apply_taskfile(ide,0x04/*base_io+2*/,IDELIB_TASKFILE_LBA48_UPDATE/*clear LBA48*/);
+	idelib_controller_write_command(ide,0xC6); /* <- (C6h) SET MULTIPLE MODE */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	if (ide->last_status&1) return 1;
+	return 0;
+}
+
 int do_ide_identify(unsigned char *info/*512*/,unsigned int sz,struct ide_controller *ide,unsigned char which,unsigned char command) {
 	if (sz < 512)
 		return -1;
