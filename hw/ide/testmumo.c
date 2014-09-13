@@ -147,8 +147,14 @@ void do_drive_multiple_mode(struct ide_controller *ide,unsigned char which) {
 					do_common_show_ide_taskfile(ide,which);
 					redraw = backredraw = 1;
 					break;
-				case 1: /*set sector count*/
-					break;
+				case 1: /*set sector count*/ {
+					r = prompt_sector_count();
+					if (r >= 0 && r < 256) {
+						do_ide_set_multiple_mode(ide,which,r);
+						do_ide_identify((unsigned char*)info,sizeof(info),ide,which,0xEC/*ATA IDENTIFY DEVICE*/);
+						redraw = backredraw = 1;
+					}
+					} break;
 				case 2: /*probe valid values*/ {
 					unsigned char orig_sz = info[59]&0xFF;
 

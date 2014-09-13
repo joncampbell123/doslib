@@ -27,4 +27,5 @@ void do_warn_if_atapi_not_in_command_state(struct ide_controller *ide);
 int confirm_pio32_warning(struct ide_controller *ide);
 unsigned long prompt_cdrom_sector_number();
 unsigned long prompt_cdrom_sector_count();
+int prompt_sector_count();
 
