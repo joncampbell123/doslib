@@ -59,7 +59,7 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 	uint16_t info[256];
 	int r;
 
-	r = do_ide_identify((unsigned char*)info,512,ide,which,command);
+	r = do_ide_identify((unsigned char*)info,sizeof(info),ide,which,command);
 	if (r == 0) {
 		/* ------------ PAGE 1 -------------*/
 		vga_write_color(0x0E); vga_clear();
