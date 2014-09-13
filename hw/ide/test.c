@@ -274,12 +274,11 @@ again:	/* jump point: send execution back here for another sector */
 				break;
 			}
 
-			if (nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE) {
+			if (nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE || nfo->mode == DRIVE_RW_MODE_LBAMULTIPLE ||
+				nfo->mode == DRIVE_RW_MODE_LBA48_MULTIPLE)
 				drq_len = nfo->multiple_sectors * 512;
-			}
-			else {
+			else
 				drq_len = 512;
-			}
 
 			/* OK. read it in */
 			idelib_read_pio_general(cdrom_sector+ret_len,drq_len,ide,IDELIB_PIO_WIDTH_DEFAULT);
