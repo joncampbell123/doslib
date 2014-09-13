@@ -163,6 +163,228 @@ int drive_rw_test_mode_supported(struct drive_rw_test_info *nfo) {
 	return 1;
 }
 
+void do_drive_readwrite_edit_chslba(struct ide_controller *ide,unsigned char which,struct drive_rw_test_info *nfo,unsigned char editgeo) {
+	uint64_t lba,tmp;
+	int cyl,head,sect;
+	struct vga_msg_box box;
+	unsigned char redraw=1;
+	unsigned char ok=1;
+	char temp_str[64];
+	int select=0;
+	int c,i=0;
+
+	if (editgeo) {
+		cyl = nfo->num_cylinder;
+		sect = nfo->num_sector;
+		head = nfo->num_head;
+		lba = nfo->max_lba;
+	}
+	else {
+		cyl = nfo->cylinder;
+		sect = nfo->sector;
+		head = nfo->head;
+		lba = nfo->lba;
+	}
+
+	vga_msg_box_create(&box,editgeo ?
+		"Edit disk geometry:             " :
+		"Edit position:                  ",
+		2+4,0);
+	while (1) {
+		if (redraw) {
+			redraw = 0;
+
+			vga_moveto(box.x+2,box.y+2+1 + 0);
+			vga_write_color(0x1E);
+			vga_write("Cylinder:  ");
+			vga_write_color(select == 0 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",cyl);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 1);
+			vga_write_color(0x1E);
+			vga_write("Head:      ");
+			vga_write_color(select == 1 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",head);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 2);
+			vga_write_color(0x1E);
+			vga_write("Sector:    ");
+			vga_write_color(select == 2 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",sect);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 3);
+			vga_write_color(0x1E);
+			vga_write("LBA:       ");
+			vga_write_color(select == 3 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%llu",lba);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+nextkey:	if (c == 27) {
+			ok = 0;
+			break;
+		}
+		else if (c == 13) {
+			ok = 1;
+			break;
+		}
+		else if (c == 0x4800) {
+			if (--select < 0) select = 3;
+			redraw = 1;
+		}
+		else if (c == 0x5000 || c == 9/*tab*/) {
+			if (++select > 3) select = 0;
+			redraw = 1;
+		}
+		else if (c == 8 || isdigit(c)) {
+			unsigned int sy = box.y+2+1 + select;
+			unsigned int sx = box.x+2+11;
+
+			switch (select) {
+				case 0:	sprintf(temp_str,"%u",cyl); break;
+				case 1:	sprintf(temp_str,"%u",head); break;
+				case 2:	sprintf(temp_str,"%u",sect); break;
+				case 3:	sprintf(temp_str,"%llu",lba); break;
+			}
+
+			if (c == 8) {
+				i = strlen(temp_str) - 1;
+				if (i < 0) i = 0;
+				temp_str[i] = 0;
+			}
+			else {
+				i = strlen(temp_str);
+				if (i == 1 && temp_str[0] == '0') i--;
+				if ((i+2) < sizeof(temp_str)) {
+					temp_str[i++] = (char)c;
+					temp_str[i] = 0;
+				}
+			}
+
+			redraw = 1;
+			while (1) {
+				if (redraw) {
+					redraw = 0;
+					vga_moveto(sx,sy);
+					vga_write_color(0x70);
+					vga_write(temp_str);
+					while (vga_pos_x < (box.x+box.w-4) && vga_pos_x != 0) vga_writec(' ');
+				}
+
+				c = getch();
+				if (c == 0) c = getch() << 8;
+
+				if (c == 8) {
+					if (i > 0) {
+						temp_str[--i] = 0;
+						redraw = 1;
+					}
+				}
+				else if (isdigit(c)) {
+					if ((i+2) < sizeof(temp_str)) {
+						temp_str[i++] = (char)c;
+						temp_str[i] = 0;
+						redraw = 1;
+					}
+				}
+				else {
+					break;
+				}
+			}
+
+			switch (select) {
+				case 0:	tmp=strtoull(temp_str,NULL,0); cyl=(tmp >  16383ULL ? 16383ULL : tmp); break;
+				case 1:	tmp=strtoull(temp_str,NULL,0); head=(tmp >    16ULL ?    16ULL : tmp); break;
+				case 2:	tmp=strtoull(temp_str,NULL,0); sect=(tmp >   256ULL ?   256ULL : tmp); break;
+				case 3:	lba=strtoull(temp_str,NULL,0); break;
+			}
+
+			if (sect == 0) sect = 1;
+			if (cyl > 16383) cyl = 16383;
+
+			if (editgeo) {
+				if (cyl < 1) cyl = 1;
+				if (head < 1) head = 1;
+				if (head > 16) head = 16;
+				if (sect > 256) sect = 256;
+
+				if (select == 3) {
+					if (lba >= (16383ULL * 16ULL * 63ULL)) {
+						sect = 63;
+						head = 16;
+						cyl = 16383;
+					}
+					else {
+						cyl = (int)(lba / (unsigned long long)sect / (unsigned long long)head);
+						if (cyl < 0) cyl = 1;
+						if (cyl > 16383) cyl = 16383;
+					}
+				}
+				else if (cyl < 16383) {
+					lba = (unsigned long long)cyl * (unsigned long long)head * (unsigned long long)sect;
+				}
+			}
+			else {
+				if (cyl < 0) cyl = 0;
+				if (head < 0) head = 0;
+				if (head > 15) head = 15;
+				if (sect > 255) sect = 255;
+
+				if (select == 3) {
+					sect = (int)(lba % (unsigned long long)nfo->num_sector) + 1;
+					head = (int)((lba / (unsigned long long)nfo->num_sector) % (unsigned long long)nfo->num_head);
+					if (lba >= (16384ULL * (unsigned long long)nfo->num_sector * (unsigned long long)nfo->num_head)) {
+						cyl = 16383;
+						sect = nfo->num_sector;
+						head = nfo->num_head - 1;
+					}
+					else {
+						cyl = (int)((lba / (unsigned long long)nfo->num_sector) / (unsigned long long)nfo->num_head);
+					}
+				}
+				else {
+					lba  = (unsigned long long)cyl * (unsigned long long)nfo->num_sector * (unsigned long long)nfo->num_head;
+					lba += (unsigned long long)head * (unsigned long long)nfo->num_sector;
+					lba += (unsigned long long)sect - 1ULL;
+				}
+			}
+
+			redraw = 1;
+			goto nextkey;
+		}
+	}
+	vga_msg_box_destroy(&box);
+
+	if (ok) {
+		if (editgeo) {
+			nfo->num_cylinder = cyl;
+			nfo->num_sector = sect;
+			nfo->num_head = head;
+			nfo->max_lba = lba;
+		}
+		else {
+			nfo->cylinder = cyl;
+			nfo->sector = sect;
+			nfo->head = head;
+			nfo->lba = lba;
+		}
+	}
+}
+
 void do_drive_readwrite_test_choose_mode(struct ide_controller *ide,unsigned char which,struct drive_rw_test_info *nfo) {
 	int select=drive_rw_test_nfo.mode;
 	struct menuboxbounds mbox;
@@ -434,9 +656,13 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 					do_drive_readwrite_test_choose_mode(ide,which,&drive_rw_test_nfo);
 					redraw = backredraw = 1;
 					break;
-				case 2: /* */
+				case 2: /* Edit geometry/max LBA */
+					do_drive_readwrite_edit_chslba(ide,which,&drive_rw_test_nfo,/*editgeo*/1);
+					redraw = 1;
 					break;
-				case 3: /* */
+				case 3: /* Edit position */
+					do_drive_readwrite_edit_chslba(ide,which,&drive_rw_test_nfo,/*editgeo*/0);
+					redraw = 1;
 					break;
 				case 4: /* Number of sectors */
 					c = prompt_sector_count();
