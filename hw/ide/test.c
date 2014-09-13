@@ -758,6 +758,10 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 							drive_rw_test_nfo.mode--;
 					} while (!drive_rw_test_mode_supported(&drive_rw_test_nfo));
 					break;
+				case 4: /* Number of sectors */
+					if (drive_rw_test_nfo.read_sectors > 1)
+						drive_rw_test_nfo.read_sectors--;
+					break;
 			};
 
 			redraw = 1;
@@ -769,6 +773,10 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 						if (++drive_rw_test_nfo.mode >= DRIVE_RW_MODE_MAX)
 							drive_rw_test_nfo.mode = 0;
 					} while (!drive_rw_test_mode_supported(&drive_rw_test_nfo));
+					break;
+				case 4: /* Number of sectors */
+					if (drive_rw_test_nfo.read_sectors < 256)
+						drive_rw_test_nfo.read_sectors++;
 					break;
 			};
 
