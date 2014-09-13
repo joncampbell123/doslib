@@ -98,6 +98,335 @@ unsigned char			cdrom_sector[512U*64U];	/* ~32KB, enough for 16 CD-ROM sector or
 
 /*-----------------------------------------------------------------*/
 
+enum {
+	DRIVE_RW_MODE_CHS=0,
+	DRIVE_RW_MODE_CHSMULTIPLE,
+	DRIVE_RW_MODE_LBA,
+	DRIVE_RW_MODE_LBAMULTIPLE,
+	DRIVE_RW_MODE_LBA48,
+	DRIVE_RW_MODE_LBA48_MULTIPLE
+};
+
+struct drive_rw_test_info {
+	unsigned short int	num_cylinder;		/* likely 0-16383 */
+	unsigned short int	num_head,num_sector;	/* likely 0-15 and 0-63 */
+	unsigned short int	cylinder;
+	unsigned short int	head,sector;
+	unsigned short int	multiple_sectors;	/* multiple mode sector count */
+	unsigned short int	num_sectors;		/* how many to read per command */
+	uint64_t		max_lba;
+	uint64_t		lba;
+	unsigned char		mode;			/* DRIVE_RW_MODE_* */
+	unsigned int		can_do_lba:1;
+	unsigned int		can_do_lba48:1;
+	unsigned int		can_do_multiple:1;
+};
+
+static struct drive_rw_test_info drive_rw_test_nfo;
+
+static char drive_readwrite_test_geo[128];
+static char drive_readwrite_test_chs[128];
+
+static const char *drive_readwrite_test_modes[] = {
+	"Mode: C/H/S",
+	"Mode: C/H/S MULTIPLE",
+	"Mode: LBA",
+	"Mode: LBA MULTIPLE",
+	"Mode: LBA48",
+	"Mode: LBA48 MULTIPLE"
+};
+
+static const char *drive_read_test_menustrings[] = {
+	"Show IDE register taskfile",		/* 0 */
+	"*mode*",				/* 1 */ /* rewritten (CHS, LBA, CHS MULTI, etc) */
+	drive_readwrite_test_geo,
+	drive_readwrite_test_chs
+};
+
+void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
+	struct menuboxbounds mbox;
+	char backredraw=1;
+	VGA_ALPHA_PTR vga;
+	unsigned int x,y;
+	int select=-1;
+	char redraw=1;
+	int c;
+
+	/* UI element vars */
+	menuboxbounds_set_def_list(&mbox,/*ofsx=*/4,/*ofsy=*/7,/*cols=*/1);
+	menuboxbounds_set_item_strings_arraylen(&mbox,drive_read_test_menustrings);
+
+	while (1) {
+		if (backredraw) {
+			vga = vga_alpha_ram;
+			backredraw = 0;
+			redraw = 1;
+
+			for (y=0;y < vga_height;y++) {
+				for (x=0;x < vga_width;x++) {
+					*vga++ = 0x1E00 + 177;
+				}
+			}
+
+			vga_moveto(0,0);
+
+			vga_write_color(0x1F);
+			vga_write("        IDE r/w tests ");
+			sprintf(tmp,"@%X",ide->base_io);
+			vga_write(tmp);
+			if (ide->alt_io != 0) {
+				sprintf(tmp," alt %X",ide->alt_io);
+				vga_write(tmp);
+			}
+			if (ide->irq >= 0) {
+				sprintf(tmp," IRQ %d",ide->irq);
+				vga_write(tmp);
+			}
+			vga_write(which ? " Slave" : " Master");
+
+			sprintf(tmp," lba=%u lba48=%u multiple=%u",
+				drive_rw_test_nfo.can_do_lba?1:0,
+				drive_rw_test_nfo.can_do_lba48?1:0,
+				drive_rw_test_nfo.can_do_multiple?1:0);
+			vga_write(tmp);
+
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+
+			vga_write_color(0xC);
+			vga_write("WARNING: This code talks directly to your hard disk controller.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			vga_write_color(0xC);
+			vga_write("         If you value the data on your hard drive do not run this program.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		if (redraw) {
+			redraw = 0;
+
+			drive_read_test_menustrings[1] = drive_readwrite_test_modes[drive_rw_test_nfo.mode];
+
+			sprintf(drive_readwrite_test_geo,"Geometry: C/H/S %u/%u/%u LBA %llu",
+				drive_rw_test_nfo.num_cylinder,
+				drive_rw_test_nfo.num_head,
+				drive_rw_test_nfo.num_sector,
+				drive_rw_test_nfo.max_lba);
+
+			sprintf(drive_readwrite_test_chs,"Position: C/H/S %u/%u/%u LBA %llu",
+				drive_rw_test_nfo.cylinder,
+				drive_rw_test_nfo.head,
+				drive_rw_test_nfo.sector,
+				drive_rw_test_nfo.lba);
+
+			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
+			vga_write_color((select == -1) ? 0x70 : 0x0F);
+			vga_write("Back to IDE controller main menu");
+			while (vga_pos_x < (mbox.width+mbox.ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			menuboxbound_redraw(&mbox,select);
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			break;
+		}
+		else if (c == 13) {
+			if (select == -1)
+				break;
+
+			switch (select) {
+				case 0: /* show IDE register taskfile */
+					do_common_show_ide_taskfile(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 1: /* Read tests */
+					redraw = backredraw = 1;
+					break;
+			};
+		}
+		else if (c == 0x4800) {
+			if (--select < -1)
+				select = mbox.item_max;
+
+			redraw = 1;
+		}
+		else if (c == 0x4B00) { /* left */
+			redraw = 1;
+		}
+		else if (c == 0x4D00) { /* right */
+			redraw = 1;
+		}
+		else if (c == 0x5000) {
+			if (++select > mbox.item_max)
+				select = -1;
+
+			redraw = 1;
+		}
+	}
+}
+
+/*-----------------------------------------------------------------*/
+
+static const char *drive_readwrite_tests_menustrings[] = {
+	"Show IDE register taskfile",		/* 0 */
+	"Reading tests >>",
+	"Writing tests >>",
+	"Read verify tests"
+};
+
+void do_drive_readwrite_tests(struct ide_controller *ide,unsigned char which) {
+	struct menuboxbounds mbox;
+	char backredraw=1;
+	VGA_ALPHA_PTR vga;
+	unsigned int x,y;
+	int select=-1;
+	char redraw=1;
+	int c;
+
+	/* get geometry and max sector count *NOW* then the user can tweak them later */
+	memset(&drive_rw_test_nfo,0,sizeof(drive_rw_test_nfo));
+	{
+		uint16_t info[256];
+
+		c = do_ide_identify((unsigned char*)info,sizeof(info),ide,which,0xEC/*ATA IDENTIFY DEVICE*/);
+		if (c < 0) return;
+
+		drive_rw_test_nfo.can_do_lba = (info[49] & 0x200) ? 1 : 0;
+		drive_rw_test_nfo.can_do_multiple = ((info[47] & 0xFF) != 0) ? 1 : 0;
+		drive_rw_test_nfo.can_do_lba48 = drive_rw_test_nfo.can_do_lba && ((info[83] & 0x400) ? 1 : 0);
+
+		/* NTS: Never mind the thousands of OSes out there still using these fields, ATA-8 marks them "obsolete".
+		 *      Thanks. You guys realize this is the same logic behind the infuriating number of APIs in Windows
+		 *      that are "obsolete" yet everything relies on them?
+		 *
+		 *      This is why you keep OLDER copies of standards around, guys! */
+		drive_rw_test_nfo.num_cylinder = info[54];	/* number of current logical cylinders */
+		drive_rw_test_nfo.num_head = info[55];		/* number of current logical heads */
+		drive_rw_test_nfo.num_sector = info[56];	/* number of current logical sectors */
+		if (drive_rw_test_nfo.num_cylinder == 0 && drive_rw_test_nfo.num_head == 0 && drive_rw_test_nfo.num_sector == 0) {
+			drive_rw_test_nfo.num_cylinder = info[1]; /* number of logical cylinders */
+			drive_rw_test_nfo.num_head = info[3];	/* number of logical heads */
+			drive_rw_test_nfo.num_sector = info[6]; /* number of logical sectors */
+		}
+
+		if (drive_rw_test_nfo.can_do_lba48)
+			drive_rw_test_nfo.max_lba = ((uint64_t)info[103] << 48ULL) + ((uint64_t)info[102] << 32ULL) +
+				((uint64_t)info[101] << 16ULL) + ((uint64_t)info[100]);
+		if (drive_rw_test_nfo.max_lba == 0)
+			drive_rw_test_nfo.max_lba = ((uint64_t)info[61] << 16ULL) + ((uint64_t)info[60]);
+		if (drive_rw_test_nfo.max_lba == 0)
+			drive_rw_test_nfo.max_lba = ((uint64_t)info[58] << 16ULL) + ((uint64_t)info[57]);
+
+		drive_rw_test_nfo.sector = 1;
+		drive_rw_test_nfo.num_sectors = 1;
+		drive_rw_test_nfo.mode = DRIVE_RW_MODE_CHS;
+		if (drive_rw_test_nfo.can_do_multiple && (info[59]&0x100))
+			drive_rw_test_nfo.multiple_sectors = info[59]&0xFF;
+	}
+
+	/* UI element vars */
+	menuboxbounds_set_def_list(&mbox,/*ofsx=*/4,/*ofsy=*/7,/*cols=*/1);
+	menuboxbounds_set_item_strings_arraylen(&mbox,drive_readwrite_tests_menustrings);
+
+	while (1) {
+		if (backredraw) {
+			vga = vga_alpha_ram;
+			backredraw = 0;
+			redraw = 1;
+
+			for (y=0;y < vga_height;y++) {
+				for (x=0;x < vga_width;x++) {
+					*vga++ = 0x1E00 + 177;
+				}
+			}
+
+			vga_moveto(0,0);
+
+			vga_write_color(0x1F);
+			vga_write("        IDE controller read/write tests ");
+			sprintf(tmp,"@%X",ide->base_io);
+			vga_write(tmp);
+			if (ide->alt_io != 0) {
+				sprintf(tmp," alt %X",ide->alt_io);
+				vga_write(tmp);
+			}
+			if (ide->irq >= 0) {
+				sprintf(tmp," IRQ %d",ide->irq);
+				vga_write(tmp);
+			}
+			vga_write(which ? " Slave" : " Master");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+
+			vga_write_color(0xC);
+			vga_write("WARNING: This code talks directly to your hard disk controller.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			vga_write_color(0xC);
+			vga_write("         If you value the data on your hard drive do not run this program.");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		if (redraw) {
+			redraw = 0;
+
+			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
+			vga_write_color((select == -1) ? 0x70 : 0x0F);
+			vga_write("Back to IDE controller main menu");
+			while (vga_pos_x < (mbox.width+mbox.ofsx) && vga_pos_x != 0) vga_writec(' ');
+
+			menuboxbound_redraw(&mbox,select);
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			break;
+		}
+		else if (c == 13) {
+			if (select == -1)
+				break;
+
+			switch (select) {
+				case 0: /* show IDE register taskfile */
+					do_common_show_ide_taskfile(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 1: /* Read tests */
+					do_drive_read_test(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 2: /* Write tests */
+					redraw = backredraw = 1;
+					break;
+				case 3: /* Read verify tests */
+					redraw = backredraw = 1;
+					break;
+			};
+		}
+		else if (c == 0x4800) {
+			if (--select < -1)
+				select = mbox.item_max;
+
+			redraw = 1;
+		}
+		else if (c == 0x4B00) { /* left */
+			redraw = 1;
+		}
+		else if (c == 0x4D00) { /* right */
+			redraw = 1;
+		}
+		else if (c == 0x5000) {
+			if (++select > mbox.item_max)
+				select = -1;
+
+			redraw = 1;
+		}
+	}
+}
+
+/*-----------------------------------------------------------------*/
+
 static const char *drive_main_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
 	"Identify (ATA)",
@@ -108,7 +437,8 @@ static const char *drive_main_menustrings[] = {
 	"Tweaks and adjustments >>",
 	"CD-ROM eject/load >>",
 	"CD-ROM reading >>",
-	"Multiple mode >>"
+	"Multiple mode >>",
+	"Read/Write tests >>"			/* 10 */
 };
 
 void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
@@ -254,6 +584,10 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					break;
 				case 9: /* multiple mode */
 					do_drive_multiple_mode(ide,which);
+					redraw = backredraw = 1;
+					break;
+				case 10: /* read/write tests */
+					do_drive_readwrite_tests(ide,which);
 					redraw = backredraw = 1;
 					break;
 			};
