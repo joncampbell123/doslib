@@ -142,7 +142,6 @@ again:	/* jump point: send execution back here for another sector */
 		vga_write(" FAILED\n");
 	}
 
-
 	if (continuous && !user_esc) {
 		if (kbhit()) {
 			c = getch();
