@@ -121,13 +121,13 @@ again:	/* jump point: send execution back here for another sector */
 	vga_write_color(0x0E);
 	if (!cleared) {
 		vga_clear();
-		vga_moveto(0,0);
-		vga_write("Sector verification:\n");
 		cleared = 1;
 	}
 
+	vga_moveto(0,0);
+	vga_write("Sector verification:\n");
 	if (nfo->mode == DRIVE_RW_MODE_CHS || nfo->mode == DRIVE_RW_MODE_CHSMULTIPLE) {
-		sprintf(tmp,"CHS %u/%u/%u",nfo->cylinder,nfo->head,nfo->sector); vga_write(tmp);
+		sprintf(tmp,"CHS %u/%u/%u    ",nfo->cylinder,nfo->head,nfo->sector); vga_write(tmp);
 	}
 	else {
 		sprintf(tmp,"%llu-%llu",nfo->lba,nfo->lba+(unsigned long long)tlen_sect-1ULL); vga_write(tmp);
