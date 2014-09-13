@@ -35,7 +35,7 @@
 #include "testnop.h"
 #include "testpwr.h"
 
-void do_drive_read_test(struct ide_controller *ide,unsigned char which,unsigned char continuous) {
+static void do_cdrom_drive_read_test(struct ide_controller *ide,unsigned char which,unsigned char continuous) {
 	uint16_t drq_log[((unsigned long)sizeof(cdrom_sector))/2048UL];
 	unsigned long sector = 16; /* read the ISO 9660 table of contents */
 	unsigned long tlen = 2048; /* one sector */
@@ -374,7 +374,7 @@ void do_drive_cdrom_reading(struct ide_controller *ide,unsigned char which) {
 					break;
 				case 1: /*Read sectors*/
 				case 2: /*Read sectors continuously*/
-					do_drive_read_test(ide,which,/*continuous=*/(select==2));
+					do_cdrom_drive_read_test(ide,which,/*continuous=*/(select==2));
 					redraw = backredraw = 1;
 					break;
 			};
