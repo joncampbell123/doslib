@@ -192,6 +192,7 @@ void do_drive_readwrite_edit_chslba(struct ide_controller *ide,unsigned char whi
 		2+4,0);
 	while (1) {
 		char recalc = 0;
+		char rekey = 0;
 
 		if (redraw) {
 			redraw = 0;
@@ -358,8 +359,8 @@ nextkey:	if (c == 27) {
 				case 3:	lba=strtoull(temp_str,NULL,0); break;
 			}
 
+			rekey = 1;
 			recalc = 1;
-			goto nextkey;
 		}
 
 		if (recalc) {
@@ -415,6 +416,11 @@ nextkey:	if (c == 27) {
 			}
 
 			redraw = 1;
+		}
+
+		if (rekey) {
+			rekey = 0;
+			goto nextkey;
 		}
 	}
 	vga_msg_box_destroy(&box);
