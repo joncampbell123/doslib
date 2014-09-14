@@ -43,7 +43,9 @@ static const char *drive_misc_tests_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
 	"Flush cache",
 	"Flush cache ext (LBA48)",
-	"Execute device diagnostic"
+	"Execute device diagnostic",
+	"CFA Disable Media Card Pass through",
+	"CFA Enable Media Card Pass through"	/* 5*/
 };
 
 void do_drive_misc_tests(struct ide_controller *ide,unsigned char which) {
@@ -156,7 +158,28 @@ void do_drive_misc_tests(struct ide_controller *ide,unsigned char which) {
 					vga_msg_box_destroy(&vgabox);
 					redraw = 1;
 					break;
+				case 4: /* Disable media card pass through */
+					do_ide_media_card_pass_through(ide,which,0);
+					if (!idelib_controller_is_error(ide))
+						vga_msg_box_create(&vgabox,"Success",0,0);
+					else
+						common_ide_success_or_error_vga_msg_box(ide,&vgabox);
 
+					wait_for_enter_or_escape();
+					vga_msg_box_destroy(&vgabox);
+					redraw = 1;
+					break;
+				case 5: /* Enable media card pass through */
+					do_ide_media_card_pass_through(ide,which,1);
+					if (!idelib_controller_is_error(ide))
+						vga_msg_box_create(&vgabox,"Success",0,0);
+					else
+						common_ide_success_or_error_vga_msg_box(ide,&vgabox);
+
+					wait_for_enter_or_escape();
+					vga_msg_box_destroy(&vgabox);
+					redraw = 1;
+					break;
 			};
 		}
 		else if (c == 0x4800) {

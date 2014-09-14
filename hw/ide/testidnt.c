@@ -31,6 +31,28 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+int do_ide_media_card_pass_through(struct ide_controller *ide,unsigned char which,unsigned char enable) {
+	struct ide_taskfile *tsk;
+
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return -1;
+
+	tsk = idelib_controller_get_taskfile(ide,-1/*selected drive*/);
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
+	idelib_controller_reset_irq_counter(ide);
+	tsk->features = (enable != 0 ? 1 : 0);
+	idelib_controller_apply_taskfile(ide,0x02/*base_io+1*/,IDELIB_TASKFILE_LBA48_UPDATE|IDELIB_TASKFILE_LBA48);
+	idelib_controller_write_command(ide,0xD1); /* <- (D1h) CHECK MEDIA CARD TYPE */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	if (ide->last_status&1) return 1;
+	return 0;
+}
+
 int do_ide_set_multiple_mode(struct ide_controller *ide,unsigned char which,unsigned char sz) {
 	struct ide_taskfile *tsk;
 
