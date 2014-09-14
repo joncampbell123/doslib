@@ -76,6 +76,40 @@ int do_ide_identify(unsigned char *info/*512*/,unsigned int sz,struct ide_contro
 	return 0;
 }
 
+int do_ide_flush(struct ide_controller *ide,unsigned char which,unsigned char lba48) {
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return -1;
+
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
+	idelib_controller_reset_irq_counter(ide);
+	idelib_controller_write_command(ide,lba48?0xEA:0xE7); /* <- (E7h) FLUSH CACHE (EA) FLUSH CACHE EXT */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	if (ide->last_status&1) return 1;
+	return 0;
+}
+	
+int do_ide_device_diagnostic(struct ide_controller *ide,unsigned char which) {
+	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
+		return -1;
+
+	idelib_controller_ack_irq(ide); /* <- make sure to ack IRQ */
+	idelib_controller_reset_irq_counter(ide);
+	idelib_controller_write_command(ide,0x90); /* <- (90h) EXECUTE DEVICE DIAGNOSTIC */
+	if (ide->flags.io_irq_enable) {
+		do_ide_controller_user_wait_irq(ide,1);
+		idelib_controller_ack_irq(ide); /* <- or else it won't fire again */
+	}
+	do_ide_controller_user_wait_busy_controller(ide);
+	do_ide_controller_user_wait_drive_ready(ide);
+	if (ide->last_status&1) return 1;
+	return 0;
+}
+
 void do_drive_identify_device_test(struct ide_controller *ide,unsigned char which,unsigned char command) {
 	unsigned int x,y,i;
 	uint16_t info[256];
