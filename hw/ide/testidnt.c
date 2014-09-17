@@ -132,6 +132,28 @@ int do_ide_device_diagnostic(struct ide_controller *ide,unsigned char which) {
 	return 0;
 }
 
+void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char which,uint16_t *nfo) {
+	char fname[24];
+	int fd;
+
+	/* we might be running off the IDE drive we're about to write to.
+	 * so to avoid hangups in INT 13h and DOS we need to temporarily unhook the IRQ and
+	 * reenable the IRQ for the BIOS */
+	do_ide_controller_enable_irq(ide,0);
+	idelib_enable_interrupt(ide,1); /* <- in case of stupid/lazy BIOS */
+
+	/* OK. start writing */
+	sprintf(fname,"%s.ID",basename);
+	fd = open(fname,O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0666);
+	if (fd >= 0) {
+		write(fd,nfo,512);
+		close(fd);
+	}
+
+	/* OK. hook it again. */
+	do_ide_controller_enable_irq(ide,ide->flags.io_irq_enable);
+}
+
 void do_drive_identify_device_test(struct ide_controller *ide,unsigned char which,unsigned char command) {
 	unsigned int x,y,i;
 	uint16_t info[256];
@@ -182,7 +204,7 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 
 		vga_moveto(0,4);
 		vga_write_color(0x0D);
-		vga_write("For more information consult ATA documentation. Hit ENTER to continue.");
+		vga_write("For more information read ATA documentation. ENTER to continue, 'S' to save.");
 
 		/* top row */
 		vga_moveto(0,5);
@@ -226,8 +248,24 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 				}
 			}
 
-			if (wait_for_enter_or_escape() == 27)
-				break; /* allow ESC to immediately break out */
+			/* wait for ENTER, ESC, or 'S' */
+			do {
+				r=getch();
+				if (r == 's' || r == 'S') {
+					vga_write_color(0x0E); vga_clear(); vga_moveto(0,0); 
+					do_ident_save(command == 0xA1 ? "ATAPI" : "ATA",ide,which,info);
+					vga_write("\nSaved. Hit ENTER to continue.\n");
+					wait_for_enter_or_escape();
+					break;
+				}
+				else if (r == 27 || r == 13) {
+					break;
+				}
+			} while (1);
+
+			/* ESC or 'S' to break out */
+			if (r == 's' || r == 27)
+				break;
 		}
 	}
 	else if (r > 0) {
