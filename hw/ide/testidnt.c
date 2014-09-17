@@ -132,9 +132,39 @@ int do_ide_device_diagnostic(struct ide_controller *ide,unsigned char which) {
 	return 0;
 }
 
-void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char which,uint16_t *nfo) {
+void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char which,uint16_t *nfo/*512 bytes/256 words*/,unsigned char command) {
+	unsigned char range[512];
+	unsigned char orgl;
 	char fname[24];
-	int fd;
+	int fd,r;
+
+	/* also record how the drive records SET MULTIPLE MODE */
+	orgl = nfo[59]&0xFF;
+	vga_write("Scanning SET MULTIPLE MODE supported values\n");
+	for (r=0;r < 256;r++) {
+		/* set sector count, then use IDENTIFY DEVICE to read back the value */
+		if (do_ide_set_multiple_mode(ide,which,r) < 0)
+			break;
+		if (do_ide_identify((unsigned char*)nfo,512,ide,which,command) < 0)
+			break;
+		range[r] = nfo[59]&0xFF;
+
+		/* then set it back to "1" */
+		if (do_ide_set_multiple_mode(ide,which,1) < 0)
+			break;
+		if (do_ide_identify((unsigned char*)nfo,512,ide,which,command) < 0)
+			break;
+		range[r+256] = nfo[59]&0xFF;
+
+		vga_write(".");
+	}
+	vga_write("\n");
+
+	/* restore the original value */
+	if (do_ide_set_multiple_mode(ide,which,orgl) < 0)
+		return;
+	if (do_ide_identify((unsigned char*)nfo,512,ide,which,command) < 0)
+		return;
 
 	/* we might be running off the IDE drive we're about to write to.
 	 * so to avoid hangups in INT 13h and DOS we need to temporarily unhook the IRQ and
@@ -147,6 +177,13 @@ void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char
 	fd = open(fname,O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0666);
 	if (fd >= 0) {
 		write(fd,nfo,512);
+		close(fd);
+	}
+
+	sprintf(fname,"%s.SMM",basename);
+	fd = open(fname,O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0666);
+	if (fd >= 0) {
+		write(fd,range,512);
 		close(fd);
 	}
 
@@ -253,7 +290,7 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 				r=getch();
 				if (r == 's' || r == 'S') {
 					vga_write_color(0x0E); vga_clear(); vga_moveto(0,0); 
-					do_ident_save(command == 0xA1 ? "ATAPI" : "ATA",ide,which,info);
+					do_ident_save(command == 0xA1 ? "ATAPI" : "ATA",ide,which,info,command);
 					vga_write("\nSaved. Hit ENTER to continue.\n");
 					wait_for_enter_or_escape();
 					break;
