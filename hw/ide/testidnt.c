@@ -132,11 +132,6 @@ int do_ide_device_diagnostic(struct ide_controller *ide,unsigned char which) {
 	return 0;
 }
 
-/* --- FIXME --- */
-extern unsigned short smartdrv_version;
-int smartdrv_flush();
-/* ------------- */
-
 void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char which,uint16_t *nfo/*512 bytes/256 words*/,unsigned char command) {
 	unsigned char range[512];
 	unsigned char orgl;

@@ -531,5 +531,12 @@ void far *win386_alt_winnt_MapAliasToFlat(DWORD farptr);
 void far *win386_help_MapAliasToFlat(DWORD farptr);
 #endif
 
+extern unsigned short			smartdrv_version;
+extern int				smartdrv_fd;
+
+int smartdrv_close();
+int smartdrv_flush();
+int smartdrv_detect();
+
 #endif /* __HW_DOS_DOS_H */
 
