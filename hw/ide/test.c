@@ -91,6 +91,115 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+/* TODO: add to DOS library */
+unsigned short			smartdrv_version = 0xFFFF;
+
+int smartdrv_flush() {
+	if (smartdrv_version == 0xFFFF || smartdrv_version == 0)
+		return 0;
+
+	if (smartdrv_version >= 0x400) { /* SMARTDRV 4.xx and later */
+#if TARGET_MSDOS == 32
+		__asm {
+			push	eax
+			push	ebx
+			mov	eax,0x4A10		; SMARTDRV
+			mov	ebx,0x0001		; FLUSH BUFFERS (COMMIT CACHE)
+			int	0x2F
+			pop	ebx
+			pop	eax
+		}
+#else
+		__asm {
+			push	ax
+			push	bx
+			mov	ax,0x4A10		; SMARTDRV
+			mov	bx,0x0001		; FLUSH BUFFERS (COMMIT CACHE)
+			int	0x2F
+			pop	bx
+			pop	ax
+		}
+#endif
+	}
+
+	return 1;
+}
+
+int smartdrv_detect() {
+	unsigned int rvax=0,rvbp=0;
+
+	if (smartdrv_version == 0xFFFF) {
+		/* Is Microsoft SMARTDRV 4.x or equivalent disk cache present? */
+
+#if TARGET_MSDOS == 32
+		__asm {
+			push	eax
+			push	ebx
+			push	ecx
+			push	edx
+			push	esi
+			push	edi
+			push	ebp
+			push	ds
+			mov	eax,0x4A10		; SMARTDRV 4.xx INSTALLATION CHECK AND HIT RATIOS
+			mov	ebx,0
+			mov	ecx,0xEBAB		; "BABE" backwards
+			xor	ebp,ebp
+			int	0x2F			; multiplex (hope your DOS extender supports it properly!)
+			pop	ds
+			mov	ebx,ebp			; copy EBP to EBX. Watcom C uses EBP to refer to the stack!
+			pop	ebp
+			mov	rvax,eax		; we only care about EAX and EBP(now EBX)
+			mov	rvbp,ebx
+			pop	edi
+			pop	esi
+			pop	edx
+			pop	ecx
+			pop	ebx
+			pop	eax
+		}
+#else
+		__asm {
+			push	ax
+			push	bx
+			push	cx
+			push	dx
+			push	si
+			push	di
+			push	bp
+			push	ds
+			mov	ax,0x4A10		; SMARTDRV 4.xx INSTALLATION CHECK AND HIT RATIOS
+			mov	bx,0
+			mov	cx,0xEBAB		; "BABE" backwards
+			xor	bp,bp
+			int	0x2F			; multiplex
+			pop	ds
+			mov	bx,bp			; copy BP to BX. Watcom C uses BP to refer to the stack!
+			pop	bp
+			mov	rvax,ax			; we only care about EAX and EBP(now EBX)
+			mov	rvbp,bx
+			pop	di
+			pop	si
+			pop	dx
+			pop	cx
+			pop	bx
+			pop	ax
+		}
+#endif
+
+		if ((rvax&0xFFFF) == 0xBABE && (rvbp&0xFFFF) >= 0x400 && (rvbp&0xFFFF) <= 0x5FF) {
+			/* yup. SMARTDRV 4.xx! */
+			smartdrv_version = rvbp&0xFFFF;
+		}
+		else {
+			smartdrv_version = 0;
+		}
+	}
+
+	return (smartdrv_version != 0);
+}
+/* END TODO */
+
 unsigned char			cdrom_read_mode = 12;
 unsigned char			pio_width_warning = 1;
 unsigned char			big_scary_write_test_warning = 1;
@@ -384,6 +493,13 @@ void do_ide_controller(struct ide_controller *ide) {
 	int select=-1;
 	int c;
 
+	/* we're taking a drive, possibly out from MS-DOS.
+	 * make sure SMARTDRV flushes the cache so that it does not attempt to
+	 * write to the disk while we're controlling the IDE controller */
+	if (smartdrv_version != 0) {
+		for (c=0;c < 4;c++) smartdrv_flush();
+	}
+
 	/* most of the commands assume a ready controller. if it's stuck,
 	 * we'd rather the user have a visual indication that it's stuck that way */
 	c = do_ide_controller_user_wait_busy_controller(ide);
@@ -632,9 +748,19 @@ void do_main_menu() {
 int main(int argc,char **argv) {
 	struct ide_controller *idectrl;
 	struct ide_controller *newide;
+	int do_pause=0;
 	int i;
 
 	printf("IDE ATA/ATAPI test program\n");
+
+	if (smartdrv_detect()) {
+		printf("WARNING: SMARTDRV %x.%02x or equivalent disk cache detected!\n",smartdrv_version>>8,smartdrv_version&0xFF);
+		printf("         Running this program with SMARTDRV enabled is NOT RECOMMENDED,\n");
+		printf("         especially when using the snapshot functions!\n");
+		printf("         If you choose to test anyway, this program will attempt to flush\n");
+		printf("         the disk cache as much as possible to avoid conflict.\n");
+		do_pause=1;
+	}
 
 	/* we take a GUI-based approach (kind of) */
 	if (!probe_vga()) {
@@ -678,6 +804,16 @@ int main(int argc,char **argv) {
 		}
 		else {
 			printf("\x0D                             \x0D"); fflush(stdout);
+		}
+	}
+
+	if (do_pause) {
+		printf("Hit ENTER to continue, ESC to cancel\n");
+		i = wait_for_enter_or_escape();
+		if (i == 27) {
+			do_main_menu();
+			free_idelib();
+			return 0;
 		}
 	}
 

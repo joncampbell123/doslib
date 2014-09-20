@@ -132,6 +132,11 @@ int do_ide_device_diagnostic(struct ide_controller *ide,unsigned char which) {
 	return 0;
 }
 
+/* --- FIXME --- */
+extern unsigned short smartdrv_version;
+int smartdrv_flush();
+/* ------------- */
+
 void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char which,uint16_t *nfo/*512 bytes/256 words*/,unsigned char command) {
 	unsigned char range[512];
 	unsigned char orgl;
@@ -172,6 +177,11 @@ void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char
 	do_ide_controller_enable_irq(ide,0);
 	idelib_enable_interrupt(ide,1); /* <- in case of stupid/lazy BIOS */
 
+	/* if SMARTDRV is resident, now is a good time to write to disk */
+	if (smartdrv_version != 0) {
+		for (r=0;r < 4;r++) smartdrv_flush();
+	}
+
 	/* OK. start writing */
 	sprintf(fname,"%s.ID",basename);
 	fd = open(fname,O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0666);
@@ -185,6 +195,12 @@ void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char
 	if (fd >= 0) {
 		write(fd,range,512);
 		close(fd);
+	}
+
+	/* if SMARTDRV is resident, flush our snapshot to disk because we're going
+	 * to take over the IDE controller again */
+	if (smartdrv_version != 0) {
+		for (r=0;r < 4;r++) smartdrv_flush();
 	}
 
 	/* OK. hook it again. */
