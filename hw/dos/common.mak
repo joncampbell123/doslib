@@ -26,6 +26,7 @@ NTVDMVDD_LIB_WLINK_LIBRARIES = library $(NTVDMVDD_LIB)
 !ifndef TARGET_WINDOWS
 ! ifndef TARGET_OS2
 LOL_EXE =     $(SUBDIR)$(HPS)lol.exe
+TESTSMRT_EXE =$(SUBDIR)$(HPS)testsmrt.exe
 NTASTRM_EXE = $(SUBDIR)$(HPS)ntastrm.exe
 !  ifeq TARGET_MSDOS 16
 TESTDPMI_EXE =$(SUBDIR)$(HPS)testdpmi.exe
@@ -86,9 +87,16 @@ $(SUBDIR)$(HPS)dosntast.obj: dosntast.c
 
 all: lib exe
 
-exe: $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) .symbolic
+exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) .symbolic
 
 lib: $(DOSNTAST_VDD) $(HW_DOS_LIB) .symbolic
+
+!ifdef TESTSMRT_EXE
+$(TESTSMRT_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testsmrt.obj
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)testsmrt.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TESTSMRT_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
 
 !ifdef NTASTRM_EXE
 $(NTASTRM_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)ntastrm.obj
