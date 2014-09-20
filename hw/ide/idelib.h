@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define MAX_IDE_CONTROLLER 8
+#define MAX_IDE_CONTROLLER 16
 
 struct ide_controller_flags {
 	uint8_t		io_irq_enable:1;	/* if set, disk I/O should use IRQ to signal completion */
