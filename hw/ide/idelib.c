@@ -91,6 +91,9 @@ struct ide_controller *idelib_get_controller(int i) {
 	return &ide_controller[i];
 }
 
+/* NTS: The controller is "allocated" if the base I/O port is nonzero.
+ *      Therefore, if the caller never fills in base_io, it remains
+ *      unallocated, and next call the same struct is returned. */
 struct ide_controller *idelib_new_controller() {
 	int i;
 
@@ -144,6 +147,12 @@ struct ide_controller *idelib_by_irq(int8_t irq) {
 	return NULL;
 }
 
+/* To explain: an IDE controller struct is passed in by the caller
+ * only to describe what resources to use. A completely new IDE
+ * controller struct is allocated and initialized based on what
+ * we were given. The caller can then dispose of the original
+ * struct. This gives the caller freedom to declare a struct on
+ * the stack and use it without consequences. */
 struct ide_controller *idelib_probe(struct ide_controller *ide) {
 	struct ide_controller *newide = NULL;
 	uint16_t alt_io = 0;
