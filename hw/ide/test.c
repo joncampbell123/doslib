@@ -61,6 +61,17 @@
 #include <hw/vga/vgatty.h>
 #include <hw/ide/idelib.h>
 
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+  /* chop features out of the Compact memory model build to ensure all code fits inside 64KB */
+#else
+# define ISAPNP
+#endif
+
+#ifdef ISAPNP
+#include <hw/isapnp/isapnp.h>
+#include <hw/sndsb/sndsbpnp.h>
+#endif
+
 #include "testutil.h"
 #include "testmbox.h"
 #include "testcmui.h"
@@ -648,6 +659,15 @@ int main(int argc,char **argv) {
 	if (pci_probe(-1/*default preference*/) != PCI_CFG_NONE) {
 		printf("PCI bus detected.\n");
 	}
+#ifdef ISAPNP
+	if (!init_isa_pnp_bios()) {
+		printf("Cannot init ISA PnP\n");
+	}
+	if (find_isa_pnp_bios()) {
+		printf("ISA PnP BIOS detected\n");
+		/* TODO */
+	}
+#endif
 
 	printf("Probing standard IDE ports...\n");
 	for (i=0;(idectrl = (struct ide_controller*)idelib_get_standard_isa_port(i)) != NULL;i++) {
