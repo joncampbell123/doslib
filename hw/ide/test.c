@@ -97,6 +97,9 @@ unsigned char			big_scary_write_test_warning = 1;
 
 char				tmp[1024];
 uint16_t			ide_info[256];
+#ifdef ISAPNP
+static unsigned char far	devnode_raw[4096];
+#endif
 
 #if TARGET_MSDOS == 32
 unsigned char			cdrom_sector[512U*256U];/* ~128KB, enough for 64 CD-ROM sector or 256 512-byte sectors */
@@ -639,7 +642,6 @@ void do_main_menu() {
 int main(int argc,char **argv) {
 	struct ide_controller *idectrl;
 	struct ide_controller *newide;
-	int do_pause=0;
 	int i;
 
 	printf("IDE ATA/ATAPI test program\n");
@@ -650,7 +652,6 @@ int main(int argc,char **argv) {
 		printf("         especially when using the snapshot functions!\n");
 		printf("         If you choose to test anyway, this program will attempt to flush\n");
 		printf("         the disk cache as much as possible to avoid conflict.\n");
-		do_pause=1;
 	}
 
 	/* we take a GUI-based approach (kind of) */
@@ -681,8 +682,95 @@ int main(int argc,char **argv) {
 		printf("Cannot init ISA PnP\n");
 	}
 	if (find_isa_pnp_bios()) {
+		unsigned int nodesize=0;
+		unsigned char node=0,numnodes=0xFF,data[192];
+
+		memset(data,0,sizeof(data));
 		printf("ISA PnP BIOS detected\n");
-		/* TODO */
+		if (isa_pnp_bios_get_pnp_isa_cfg(data) == 0) {
+			struct isapnp_pnp_isa_cfg *nfo = (struct isapnp_pnp_isa_cfg*)data;
+			isapnp_probe_next_csn = nfo->total_csn;
+			isapnp_read_data = nfo->isa_pnp_port;
+		}
+		else {
+			printf("  ISA PnP BIOS failed to return configuration info\n");
+		}
+
+		/* enumerate device nodes reported by the BIOS */
+		if (isa_pnp_bios_number_of_sysdev_nodes(&numnodes,&nodesize) == 0 && numnodes != 0xFF && nodesize <= sizeof(devnode_raw)) {
+			printf("Scanning ISA PnP BIOS devices...\n");
+			for (node=0;node != 0xFF;) {
+				struct isa_pnp_device_node far *devn;
+				unsigned char far *rsc, far *rf;
+				unsigned char this_node;
+				struct isapnp_tag tag;
+				unsigned int ioport1=0;
+				unsigned int ioport2=0;
+				unsigned int i;
+				int irq = -1;
+
+				/* apparently, start with 0. call updates node to
+				 * next node number, or 0xFF to signify end */
+				this_node = node;
+				if (isa_pnp_bios_get_sysdev_node(&node,devnode_raw,ISA_PNP_BIOS_GET_SYSDEV_NODE_CTRL_NOW) != 0) break;
+
+				devn = (struct isa_pnp_device_node far*)devnode_raw;
+				if (devn->type_code[0] == 0x01/*system device, hard disk controller*/ &&
+					devn->type_code[1] == 0x01/*Generic ESDI/IDE/ATA controller*/ &&
+					devn->type_code[2] == 0x00/*Generic IDE*/) {
+					rsc = (unsigned char far*)devn + sizeof(*devn);
+					rf = (unsigned char far*)devn + sizeof(devnode_raw);
+
+					do {
+						if (!isapnp_read_tag(&rsc,rf,&tag))
+							break;
+						if (tag.tag == ISAPNP_TAG_END)
+							break;
+
+						switch (tag.tag) {
+							case ISAPNP_TAG_IO_PORT: {
+								struct isapnp_tag_io_port far *x = (struct isapnp_tag_io_port far*)tag.data;
+								if (ioport1 == 0 && x->length == 8)
+									ioport1 = x->min_range;
+								else if (ioport2 == 0 && (x->length == 2 || x->length == 4))
+									ioport2 = x->min_range;
+							} break;
+						case ISAPNP_TAG_FIXED_IO_PORT: {
+							struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
+							if (ioport1 == 0 && x->length == 8)
+								ioport1 = x->base;
+							else if (ioport2 == 0 && (x->length == 2 || x->length == 4))
+								ioport2 = x->base;
+							} break;
+						case ISAPNP_TAG_IRQ_FORMAT: {
+							struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;
+							for (i=0;i < 16;i++) {
+								if (x->irq_mask & (1U << (unsigned int)i)) { /* NTS: PnP devices usually support odd IRQs like IRQ 9 */
+									if (irq < 0) irq = i;
+								}
+							}
+							} break;
+						}
+					} while (1);
+
+					if (ioport1 != 0) {
+						struct ide_controller n;
+
+						printf("  Found PnP IDE controller: base=0x%03x alt=0x%03x IRQ=%d\n",
+							ioport1,ioport2,irq);
+
+						memset(&n,0,sizeof(n));
+						n.base_io = ioport1;
+						n.alt_io = ioport2;
+						n.irq = (int8_t)irq; /* -1 is no IRQ */
+						if ((newide = idelib_probe(&n)) == NULL) {
+							printf("    Warning: probe failed\n");
+							/* not filling it in leaves it open for allocation again */
+						}
+					}
+				}
+			}
+		}
 	}
 #endif
 
@@ -698,14 +786,12 @@ int main(int argc,char **argv) {
 		}
 	}
 
-	if (do_pause) {
-		printf("Hit ENTER to continue, ESC to cancel\n");
-		i = wait_for_enter_or_escape();
-		if (i == 27) {
-			smartdrv_close();
-			free_idelib();
-			return 0;
-		}
+	printf("Hit ENTER to continue, ESC to cancel\n");
+	i = wait_for_enter_or_escape();
+	if (i == 27) {
+		smartdrv_close();
+		free_idelib();
+		return 0;
 	}
 
 	if (int10_getmode() != 3) {
