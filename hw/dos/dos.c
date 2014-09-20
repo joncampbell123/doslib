@@ -52,8 +52,10 @@ const char *windows_version_method = NULL;
 int8_t dpmi_no_0301h = -1; /* whether or not the DOS extender provides function 0301h */
 #endif
 
+#if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2))
 unsigned short smartdrv_version = 0xFFFF;
 int smartdrv_fd = -1;
+#endif
 
 #if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS)
 uint8_t ntvdm_dosntast_tried = 0;
@@ -3343,6 +3345,7 @@ void far *win386_help_MapAliasToFlat(DWORD farptr) {
 }
 #endif
 
+#if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2))
 int smartdrv_close() {
 	if (smartdrv_fd >= 0) {
 		close(smartdrv_fd);
@@ -3549,4 +3552,5 @@ err1:					pop	ds
 
 	return (smartdrv_version != 0);
 }
+#endif
 

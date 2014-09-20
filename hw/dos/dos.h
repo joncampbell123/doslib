@@ -531,8 +531,10 @@ void far *win386_alt_winnt_MapAliasToFlat(DWORD farptr);
 void far *win386_help_MapAliasToFlat(DWORD farptr);
 #endif
 
+#if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2))
 extern unsigned short			smartdrv_version;
 extern int				smartdrv_fd;
+#endif
 
 int smartdrv_close();
 int smartdrv_flush();
