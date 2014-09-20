@@ -675,7 +675,97 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 	if (pci_probe(-1/*default preference*/) != PCI_CFG_NONE) {
+		uint8_t bus,dev,func,iport;
+
 		printf("PCI bus detected.\n");
+		if (pci_bios_last_bus == -1) {
+			printf("  Autodetecting PCI bus count...\n");
+			pci_probe_for_last_bus();
+		}
+		printf("  Last bus:                 %d\n",pci_bios_last_bus);
+		printf("  Bus decode bits:          %d\n",pci_bus_decode_bits);
+		for (bus=0;bus <= pci_bios_last_bus;bus++) {
+			for (dev=0;dev < 32;dev++) {
+				uint8_t functions = pci_probe_device_functions(bus,dev);
+				for (func=0;func < functions;func++) {
+					/* make sure something is there before announcing it */
+					uint16_t vendor,device,subsystem,subvendor_id;
+					struct ide_controller ide={0};
+					uint32_t class_code;
+					uint8_t revision_id;
+					int IRQ_pin,IRQ_n;
+					uint32_t reg;
+
+					vendor = pci_read_cfgw(bus,dev,func,0x00); if (vendor == 0xFFFF) continue;
+					device = pci_read_cfgw(bus,dev,func,0x02); if (device == 0xFFFF) continue;
+					subvendor_id = pci_read_cfgw(bus,dev,func,0x2C);
+					subsystem = pci_read_cfgw(bus,dev,func,0x2E);
+					class_code = pci_read_cfgl(bus,dev,func,0x08);
+					revision_id = class_code & 0xFF;
+					class_code >>= 8UL;
+
+					/* must be: class 0x01 (mass storage) 0x01 (IDE controller) */
+					if ((class_code&0xFFFF00UL) != 0x010100UL)
+						continue;
+
+					/* read the command register. is the device enabled? */
+					reg = pci_read_cfgw(bus,dev,func,0x04); /* read Command register */
+					if (!(reg&1)) continue; /* if the I/O space bit is cleared, then no */
+
+					/* tell the user! */
+					printf("    Found PCI IDE controller %02x:%02x:%02x class=0x%06x\n",bus,dev,func,class_code&0xFFFFFFUL);
+
+					/* enumerate from THAT the primary and secondary IDE */
+					for (iport=0;iport < 2;iport++) {
+						if (class_code&(0x01 << (iport*2))) { /* bit 0 is set if primary in native, bit 2 if secondary in native */
+							/* "native mode" */
+
+							/* read it from the BARs */
+							reg = pci_read_cfgl(bus,dev,func,0x10+(iport*8)); /* command block */
+							if ((reg&1) && (reg&0xFFFF0000UL) == 0UL) /* copy down IF an I/O resource */
+								ide.base_io = reg & 0xFFFC;
+
+							reg = pci_read_cfgl(bus,dev,func,0x14+(iport*8)); /* control block */
+							if ((reg&1) && (reg&0xFFFF0000UL) == 0UL) /* copy down IF an I/O resource */
+								ide.alt_io = reg & 0xFFFC;
+
+							/* get IRQ number and PCI interrupt (A-D) */
+							IRQ_n = pci_read_cfgb(bus,dev,func,0x3C);
+							IRQ_pin = pci_read_cfgb(bus,dev,func,0x3D);
+							if (IRQ_n != 0 && IRQ_n < 16 && IRQ_pin != 0 && IRQ_pin <= 4)
+								ide.irq = IRQ_n;
+							else
+								ide.irq = -1;
+
+							if (ide.base_io != 0 && (ide.base_io&7) == 0) {
+								printf("      PCI IDE%u in native mode, IRQ=%d base=0x%3x alt=0x%3x\n",
+									iport,ide.irq,ide.base_io,ide.alt_io);
+
+								if ((newide = idelib_probe(&ide)) == NULL)
+									printf("    Warning: probe failed\n");
+							}
+						}
+						else {
+							/* "compatability mode".
+							 * this is retarded, why didn't the PCI standards people just come out and
+							 * say: guys, if you're a PCI device then frickin' show up as a proper PCI
+							 * device and announce what resources you're using in the BARs and IRQ
+							 * registers so OSes are not required to guess like this! */
+							ide.base_io = iport ? 0x170 : 0x1F0;
+							ide.alt_io = iport ? 0x376 : 0x3F6;
+							ide.irq = iport ? 15 : 14;
+
+							printf("      PCI IDE%u in compat mode, IRQ=%d base=0x%3x alt=0x%3x\n",
+								iport,ide.irq,ide.base_io,ide.alt_io);
+
+							if ((newide = idelib_probe(&ide)) == NULL)
+								printf("    Warning: probe failed\n");
+						}
+					}
+				}
+			}
+		}
+
 	}
 #ifdef ISAPNP
 	if (!init_isa_pnp_bios()) {
