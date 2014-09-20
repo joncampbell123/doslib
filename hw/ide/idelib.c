@@ -18,12 +18,10 @@
 struct ide_controller		ide_controller[MAX_IDE_CONTROLLER];
 int8_t				idelib_init = -1;
 
-const struct ide_controller ide_isa_standard[4] = {
+const struct ide_controller ide_isa_standard[2] = {
 	/*base alt fired irq flags*/
 	{0x1F0,0x3F6,0,14,{0}},
-	{0x170,0x376,0,15,{0}},
-	{0x1E8,0x3EE,0,11,{0}},	/* <- fixme: is this right? */
-	{0x168,0x36E,0,10,{0}}	/* <- fixme; is this right? */
+	{0x170,0x376,0,15,{0}}
 };
 
 const struct ide_controller *idelib_get_standard_isa_port(int i) {

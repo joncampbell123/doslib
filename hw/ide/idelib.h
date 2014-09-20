@@ -65,7 +65,7 @@ enum {
 	IDELIB_PIO_WIDTH_32_VLB=33
 };
 
-extern const struct ide_controller	ide_isa_standard[4];
+extern const struct ide_controller	ide_isa_standard[2];
 extern struct ide_controller		ide_controller[MAX_IDE_CONTROLLER];
 extern int8_t				idelib_init;
 
