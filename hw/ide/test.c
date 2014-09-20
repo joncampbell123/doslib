@@ -631,7 +631,7 @@ void do_main_menu() {
 			select++;
 			while (select >= 0 && select < MAX_IDE_CONTROLLER && idelib_get_controller(select) == NULL)
 				select++;
-			if (select >= (MAX_IDE_CONTROLLER-1))
+			if (select >= MAX_IDE_CONTROLLER)
 				select = -1;
 
 			redraw = 1;
