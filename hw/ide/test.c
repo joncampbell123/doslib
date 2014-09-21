@@ -933,19 +933,22 @@ int main(int argc,char **argv) {
 							if (tag.tag == ISAPNP_TAG_END)
 								break;
 
+							/* NTS: A Toshiba Satellite 465CDX I own lists the primary IDE controller's alt port range (0x3F6)
+							 *      as having length == 1 for some reason. */
+
 							switch (tag.tag) {
 								case ISAPNP_TAG_IO_PORT: {
 									struct isapnp_tag_io_port far *x = (struct isapnp_tag_io_port far*)tag.data;
 									if (ioport1 == 0 && x->length == 8)
 										ioport1 = x->min_range;
-									else if (ioport2 == 0 && (x->length == 2 || x->length == 4))
+									else if (ioport2 == 0 && (x->length == 1 || x->length == 2 || x->length == 4))
 										ioport2 = x->min_range;
 								} break;
 							case ISAPNP_TAG_FIXED_IO_PORT: {
 								struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
 								if (ioport1 == 0 && x->length == 8)
 									ioport1 = x->base;
-								else if (ioport2 == 0 && (x->length == 2 || x->length == 4))
+								else if (ioport2 == 0 && (x->length == 1 || x->length == 2 || x->length == 4))
 									ioport2 = x->base;
 								} break;
 							case ISAPNP_TAG_IRQ_FORMAT: {
