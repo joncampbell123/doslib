@@ -312,6 +312,8 @@ static int my_ide_irq_number = -1;
 static void interrupt my_ide_irq() {
 	int i;
 
+	i = vga_width*(vga_height-1);
+
 	_cli();
 	if (my_ide_irq_ide != NULL) {
 		my_ide_irq_ide->irq_fired++;
@@ -323,6 +325,14 @@ static void interrupt my_ide_irq() {
 		 * side, and we'll crash from an IRQ storm (level-triggered, obviously!) */
 		idelib_controller_ack_irq(my_ide_irq_ide);
 
+		/* If too many IRQs fired, then unhook the IRQ and use polling from now on.
+		 * apparently some newer SATA controllers in IDE mode needs this, else we
+		 * get an infinite storm of IRQs and we'll crash. */
+		if (my_ide_irq_ide->irq_fired >= 0xFFFEU) {
+			do_ide_controller_unhook_irq(my_ide_irq_ide);
+			vga_alpha_ram[i+12] = 0x1C00 | '!';
+		}
+
 		/* ack PIC */
 		if (my_ide_irq_ide->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
 		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
@@ -330,7 +340,6 @@ static void interrupt my_ide_irq() {
 
 	/* we CANNOT use sprintf() here. sprintf() doesn't work to well from within an interrupt handler,
 	 * and can cause crashes in 16-bit realmode builds. */
-	i = vga_width*(vga_height-1);
 	vga_alpha_ram[i++] = 0x1F00 | 'I';
 	vga_alpha_ram[i++] = 0x1F00 | 'R';
 	vga_alpha_ram[i++] = 0x1F00 | 'Q';
