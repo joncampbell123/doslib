@@ -318,20 +318,26 @@ static void interrupt my_ide_irq() {
 	if (my_ide_irq_ide != NULL) {
 		my_ide_irq_ide->irq_fired++;
 
-		/* ack IRQ on IDE controller.
-		 * on 90% of the 1990's hardware I've tested this is not required, however
-		 * it seems some of the latest Serial ATA chipsets in IDE mode require us
-		 * to do this or else they will fire the IRQ again when we ack on the PIC
-		 * side, and we'll crash from an IRQ storm (level-triggered, obviously!) */
+		/* NTS: This code requires some explanation: On an Intel Core i3 mini-itx motherboard I recently
+		 * bought, the SATA controller (in IDE mode) has a problem with IDE interrupts where for reasons
+		 * beyond my understanding, once the IRQ fires, the IRQ continues to fire and will not stop no
+		 * matter what registers we read or ports we poke. It fires rapidly enough that our busy wait
+		 * code cannot proceed and the program "hangs" while the IRQ counter on the screen counts upward
+		 * very fast. It is only when exiting back to DOS that the BIOS somehow makes it stop.
+		 *
+		 * That motherboard is the reason this code was implemented. should any other SATA/IDE controller
+		 * have this problem, this code will eventually stop the IRQ flood by masking off the IRQ and
+		 * switching the IDE controller struct into polling mode so that the user can continue to use
+		 * this program without having to hit the reset button! */
+
+		/* ack IRQ on IDE controller */
 		idelib_controller_ack_irq(my_ide_irq_ide);
 
 		/* ack PIC */
 		if (my_ide_irq_ide->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
 		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
 
-		/* If too many IRQs fired, then unhook the IRQ and use polling from now on.
-		 * apparently some newer SATA controllers in IDE mode needs this, else we
-		 * get an infinite storm of IRQs and we'll crash. */
+		/* If too many IRQs fired, then unhook the IRQ and use polling from now on. */
 		if (my_ide_irq_ide->irq_fired >= 0xFFFEU) {
 			do_ide_controller_unhook_irq(my_ide_irq_ide);
 			vga_alpha_ram[i+12] = 0x1C00 | '!';
@@ -550,7 +556,7 @@ void do_ide_controller(struct ide_controller *ide) {
 	}
 
 	do_ide_controller_enable_irq(ide,0);
-	idelib_enable_interrupt(ide,1); /* NTS: Most BIOSes know to unmask the IRQ at the PIC, but there might be some
+	idelib_otr_enable_interrupt(ide,1); /* NTS: Most BIOSes know to unmask the IRQ at the PIC, but there might be some
 					        idiot BIOSes who don't clear the nIEN bit in the device control when
 						executing INT 13h, so it's probably best to do it for them. */
 }
@@ -777,6 +783,15 @@ int main(int argc,char **argv) {
 
 								if ((newide = idelib_probe(&ide)) == NULL)
 									printf("    Warning: probe failed\n");
+
+								/* HACK: An ASUS Intel Core i3 motherboard I own has a SATA controller
+								 * that has problems with IDE interrupts (when set to IDE mode).
+								 * Once an IDE interrupt fires there's no way to shut it off and
+								 * the controller crapfloods the PIC causing our program to "hang"
+								 * running through the IRQ handler. */
+								if (vendor == 0x8086 && device == 0x8C80) { /* Intel Haswell-based motherboard (2014) */
+									idelib_enable_interrupt(newide,0); /* don't bother with interrupts */
+								}
 							}
 						}
 						else {

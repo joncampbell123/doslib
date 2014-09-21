@@ -240,6 +240,28 @@ void idelib_controller_drive_select(struct ide_controller *ide,unsigned char whi
 	ide->taskfile[ide->selected_drive].head_select = ide->head_select;
 }
 
+void idelib_otr_enable_interrupt(struct ide_controller *ide,unsigned char en) { /* "off the record" interrupt control */
+	if (en) {
+		if (!(ide->device_control&0x02)) /* if nIEN=0 already do nothing */
+			return;
+
+		/* force clear IRQ */
+		inp(ide->base_io+7);
+
+		/* enable at IDE controller */
+		if (ide->alt_io != 0) idelib_write_device_control(ide,0x08); /* nIEN=0 (enable) and not reset */
+		else ide->device_control = 0x00; /* fake it */
+	}
+	else {
+		if (ide->device_control&0x02) /* if nIEN=1 already do nothing */
+			return;
+
+		/* disable at IDE controller */
+		if (ide->alt_io != 0) idelib_write_device_control(ide,0x08+0x02); /* nIEN=1 (disable) and not reset */
+		else ide->device_control = 0x02; /* fake it */
+	}
+}
+
 void idelib_enable_interrupt(struct ide_controller *ide,unsigned char en) {
 	if (en) {
 		if (!(ide->device_control&0x02)) /* if nIEN=0 already do nothing */

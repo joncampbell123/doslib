@@ -108,6 +108,7 @@ void idelib_discard_pio16(unsigned int len,struct ide_controller *ide);
 void idelib_discard_pio32(unsigned int len,struct ide_controller *ide);
 void idelib_discard_pio_general(unsigned int lw,struct ide_controller *ide,unsigned char pio_width);
 
+void idelib_otr_enable_interrupt(struct ide_controller *ide,unsigned char en);
 void idelib_enable_interrupt(struct ide_controller *ide,unsigned char en);
 int idelib_controller_allocated(struct ide_controller *ide);
 struct ide_controller *idelib_probe(struct ide_controller *ide);
