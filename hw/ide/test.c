@@ -312,6 +312,22 @@ static int my_ide_irq_number = -1;
 static void interrupt my_ide_irq() {
 	int i;
 
+	_cli();
+	if (my_ide_irq_ide != NULL) {
+		my_ide_irq_ide->irq_fired++;
+
+		/* ack IRQ on IDE controller.
+		 * on 90% of the 1990's hardware I've tested this is not required, however
+		 * it seems some of the latest Serial ATA chipsets in IDE mode require us
+		 * to do this or else they will fire the IRQ again when we ack on the PIC
+		 * side, and we'll crash from an IRQ storm (level-triggered, obviously!) */
+		idelib_controller_ack_irq(my_ide_irq_ide);
+
+		/* ack PIC */
+		if (my_ide_irq_ide->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+	}
+
 	/* we CANNOT use sprintf() here. sprintf() doesn't work to well from within an interrupt handler,
 	 * and can cause crashes in 16-bit realmode builds. */
 	i = vga_width*(vga_height-1);
@@ -328,13 +344,6 @@ static void interrupt my_ide_irq() {
 	vga_alpha_ram[i++] = 0x1F00 | ' ';
 
 	ide_irq_counter++;
-	if (my_ide_irq_ide != NULL) {
-		my_ide_irq_ide->irq_fired++;
-
-		/* ack PIC */
-		if (my_ide_irq_ide->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
-		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
-	}
 }
 
 void do_ide_controller_hook_irq(struct ide_controller *ide) {
@@ -347,6 +356,7 @@ void do_ide_controller_hook_irq(struct ide_controller *ide) {
 	/* enable on IDE controller */
 	p8259_mask(ide->irq);
 	idelib_enable_interrupt(ide,1);
+	idelib_controller_ack_irq(ide);
 
 	/* hook IRQ */
 	my_ide_old_irq = _dos_getvect(irq2int(ide->irq));
@@ -362,8 +372,9 @@ void do_ide_controller_unhook_irq(struct ide_controller *ide) {
 		return;
 
 	/* disable on IDE controller, then mask at PIC */
-	idelib_enable_interrupt(ide,0);
 	p8259_mask(ide->irq);
+	idelib_controller_ack_irq(ide);
+	idelib_enable_interrupt(ide,0);
 
 	/* restore the original vector */
 	_dos_setvect(irq2int(ide->irq),my_ide_old_irq);
@@ -726,8 +737,21 @@ int main(int argc,char **argv) {
 								ide.base_io = reg & 0xFFFC;
 
 							reg = pci_read_cfgl(bus,dev,func,0x14+(iport*8)); /* control block */
-							if ((reg&1) && (reg&0xFFFF0000UL) == 0UL) /* copy down IF an I/O resource */
-								ide.alt_io = reg & 0xFFFC;
+							if ((reg&1) && (reg&0xFFFF0000UL) == 0UL) { /* copy down IF an I/O resource */
+								/* NTS: This requires some explanation: The PCI I/O resource encoding cannot
+								 * represent I/O port ranges smaller than 4 ports, nor can it represent
+								 * a 4-port resource unless the base port is a multiple of the I/O port
+								 * range length.
+								 *
+								 * The alt I/O port on legacy systems is 0x3F6/0x376. For a PCI device to
+								 * declare the same range, it must effectively declare 0x3F4/0x374 to
+								 * 0x3F7/377 and then map the legacy ports from 2 ports in from the base.
+								 *
+								 * When a newer chipset uses a different base port, the same rule applies:
+								 * the I/O resource is 4 ports large, and the last 2 ports (base+2) are
+								 * the legacy IDE I/O ports that would be 0x3F6/0x376. */
+								ide.alt_io = (reg & 0xFFFC) + 2;
+							}
 
 							/* get IRQ number and PCI interrupt (A-D) */
 							IRQ_n = pci_read_cfgb(bus,dev,func,0x3C);
