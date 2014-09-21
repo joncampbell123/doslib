@@ -371,7 +371,7 @@ void do_ide_controller_hook_irq(struct ide_controller *ide) {
 
 	/* enable on IDE controller */
 	p8259_mask(ide->irq);
-	idelib_enable_interrupt(ide,1);
+	idelib_otr_enable_interrupt(ide,1);
 	idelib_controller_ack_irq(ide);
 
 	/* hook IRQ */
@@ -390,7 +390,7 @@ void do_ide_controller_unhook_irq(struct ide_controller *ide) {
 	/* disable on IDE controller, then mask at PIC */
 	p8259_mask(ide->irq);
 	idelib_controller_ack_irq(ide);
-	idelib_enable_interrupt(ide,0);
+	idelib_otr_enable_interrupt(ide,0);
 
 	/* restore the original vector */
 	_dos_setvect(irq2int(ide->irq),my_ide_old_irq);
@@ -666,19 +666,84 @@ void do_main_menu() {
 	}
 }
 
+unsigned char opt_ignore_smartdrv = 0;
+unsigned char opt_no_irq = 0;
+unsigned char opt_no_pci = 0;
+unsigned char opt_no_isapnp = 0;
+unsigned char opt_no_isa_probe = 0;
+
+static void help() {
+	printf("test [options]\n");
+	printf("\n");
+	printf("IDE ATA/ATAPI test program\n");
+	printf("(C) 2012-2014 Jonathan Campbell, Hackipedia.org\n");
+	printf("\n");
+	printf("  /NS             Don't check if SMARTDRV is resident\n");
+	printf("  /NOIRQ          Don't use IRQ by default\n");
+	printf("  /NOPCI          Don't scan PCI bus\n");
+	printf("  /NOISAPNP       Don't scan ISA Plug & Play BIOS\n");
+	printf("  /NOPROBE        Don't probe ISA legacy ports\n");
+}
+
+int parse_argv(int argc,char **argv) {
+	char *a;
+	int i;
+
+	for (i=1;i < argc;) {
+		a = argv[i++];
+
+		if (*a == '/') {
+			do { a++; } while (*a == '/');
+
+			if (!strcasecmp(a,"?") || !strcasecmp(a,"h") || !strcasecmp(a,"help")) {
+				help();
+				return 1;
+			}
+			else if (!strcasecmp(a,"ns")) {
+				opt_ignore_smartdrv = 1;
+			}
+			else if (!strcasecmp(a,"noirq")) {
+				opt_no_irq = 1;
+			}
+			else if (!strcasecmp(a,"nopci")) {
+				opt_no_pci = 1;
+			}
+			else if (!strcasecmp(a,"noisapnp")) {
+				opt_no_isapnp = 1;
+			}
+			else if (!strcasecmp(a,"noprobe")) {
+				opt_no_isa_probe = 1;
+			}
+			else {
+				printf("Unknown switch %s\n",a);
+				return 1;
+			}
+		}
+		else {
+			help();
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
 int main(int argc,char **argv) {
 	struct ide_controller *idectrl;
 	struct ide_controller *newide;
 	int i;
 
-	printf("IDE ATA/ATAPI test program\n");
+	if (parse_argv(argc,argv))
+		return 1;
 
-	if (smartdrv_detect()) {
-		printf("WARNING: SMARTDRV %u.%02u or equivalent disk cache detected!\n",smartdrv_version>>8,smartdrv_version&0xFF);
-		printf("         Running this program with SMARTDRV enabled is NOT RECOMMENDED,\n");
-		printf("         especially when using the snapshot functions!\n");
-		printf("         If you choose to test anyway, this program will attempt to flush\n");
-		printf("         the disk cache as much as possible to avoid conflict.\n");
+	if (!opt_ignore_smartdrv) {
+		if (smartdrv_detect()) {
+			printf("WARNING: SMARTDRV %u.%02u or equivalent disk cache detected!\n",smartdrv_version>>8,smartdrv_version&0xFF);
+			printf("         Running this program with SMARTDRV enabled is NOT RECOMMENDED,\n");
+			printf("         especially when using the snapshot functions!\n");
+			printf("         If you choose to test anyway, this program will attempt to flush\n");
+			printf("         the disk cache as much as possible to avoid conflict.\n");
+		}
 	}
 
 	/* we take a GUI-based approach (kind of) */
@@ -701,210 +766,213 @@ int main(int argc,char **argv) {
 		printf("Cannot init IDE lib\n");
 		return 1;
 	}
-	if (pci_probe(-1/*default preference*/) != PCI_CFG_NONE) {
-		uint8_t bus,dev,func,iport;
+	if (!opt_no_pci) {
+		if (pci_probe(-1/*default preference*/) != PCI_CFG_NONE) {
+			uint8_t bus,dev,func,iport;
 
-		printf("PCI bus detected.\n");
-		if (pci_bios_last_bus == -1) {
-			printf("  Autodetecting PCI bus count...\n");
-			pci_probe_for_last_bus();
-		}
-		printf("  Last bus:                 %d\n",pci_bios_last_bus);
-		printf("  Bus decode bits:          %d\n",pci_bus_decode_bits);
-		for (bus=0;bus <= pci_bios_last_bus;bus++) {
-			for (dev=0;dev < 32;dev++) {
-				uint8_t functions = pci_probe_device_functions(bus,dev);
-				for (func=0;func < functions;func++) {
-					/* make sure something is there before announcing it */
-					uint16_t vendor,device,subsystem,subvendor_id;
-					struct ide_controller ide={0};
-					uint32_t class_code;
-					uint8_t revision_id;
-					int IRQ_pin,IRQ_n;
-					uint32_t reg;
+			printf("PCI bus detected.\n");
+			if (pci_bios_last_bus == -1) {
+				printf("  Autodetecting PCI bus count...\n");
+				pci_probe_for_last_bus();
+			}
+			printf("  Last bus:                 %d\n",pci_bios_last_bus);
+			printf("  Bus decode bits:          %d\n",pci_bus_decode_bits);
+			for (bus=0;bus <= pci_bios_last_bus;bus++) {
+				for (dev=0;dev < 32;dev++) {
+					uint8_t functions = pci_probe_device_functions(bus,dev);
+					for (func=0;func < functions;func++) {
+						/* make sure something is there before announcing it */
+						uint16_t vendor,device,subsystem,subvendor_id;
+						struct ide_controller ide={0};
+						uint32_t class_code;
+						uint8_t revision_id;
+						int IRQ_pin,IRQ_n;
+						uint32_t reg;
 
-					vendor = pci_read_cfgw(bus,dev,func,0x00); if (vendor == 0xFFFF) continue;
-					device = pci_read_cfgw(bus,dev,func,0x02); if (device == 0xFFFF) continue;
-					subvendor_id = pci_read_cfgw(bus,dev,func,0x2C);
-					subsystem = pci_read_cfgw(bus,dev,func,0x2E);
-					class_code = pci_read_cfgl(bus,dev,func,0x08);
-					revision_id = class_code & 0xFF;
-					class_code >>= 8UL;
+						vendor = pci_read_cfgw(bus,dev,func,0x00); if (vendor == 0xFFFF) continue;
+						device = pci_read_cfgw(bus,dev,func,0x02); if (device == 0xFFFF) continue;
+						subvendor_id = pci_read_cfgw(bus,dev,func,0x2C);
+						subsystem = pci_read_cfgw(bus,dev,func,0x2E);
+						class_code = pci_read_cfgl(bus,dev,func,0x08);
+						revision_id = class_code & 0xFF;
+						class_code >>= 8UL;
 
-					/* must be: class 0x01 (mass storage) 0x01 (IDE controller) */
-					if ((class_code&0xFFFF00UL) != 0x010100UL)
-						continue;
+						/* must be: class 0x01 (mass storage) 0x01 (IDE controller) */
+						if ((class_code&0xFFFF00UL) != 0x010100UL)
+							continue;
 
-					/* read the command register. is the device enabled? */
-					reg = pci_read_cfgw(bus,dev,func,0x04); /* read Command register */
-					if (!(reg&1)) continue; /* if the I/O space bit is cleared, then no */
+						/* read the command register. is the device enabled? */
+						reg = pci_read_cfgw(bus,dev,func,0x04); /* read Command register */
+						if (!(reg&1)) continue; /* if the I/O space bit is cleared, then no */
 
-					/* tell the user! */
-					printf("    Found PCI IDE controller %02x:%02x:%02x class=0x%06x\n",bus,dev,func,class_code&0xFFFFFFUL);
+						/* tell the user! */
+						printf("    Found PCI IDE controller %02x:%02x:%02x class=0x%06x\n",bus,dev,func,class_code&0xFFFFFFUL);
 
-					/* enumerate from THAT the primary and secondary IDE */
-					for (iport=0;iport < 2;iport++) {
-						if (class_code&(0x01 << (iport*2))) { /* bit 0 is set if primary in native, bit 2 if secondary in native */
-							/* "native mode" */
+						/* enumerate from THAT the primary and secondary IDE */
+						for (iport=0;iport < 2;iport++) {
+							if (class_code&(0x01 << (iport*2))) { /* bit 0 is set if primary in native, bit 2 if secondary in native */
+								/* "native mode" */
 
-							/* read it from the BARs */
-							reg = pci_read_cfgl(bus,dev,func,0x10+(iport*8)); /* command block */
-							if ((reg&1) && (reg&0xFFFF0000UL) == 0UL) /* copy down IF an I/O resource */
-								ide.base_io = reg & 0xFFFC;
+								/* read it from the BARs */
+								reg = pci_read_cfgl(bus,dev,func,0x10+(iport*8)); /* command block */
+								if ((reg&1) && (reg&0xFFFF0000UL) == 0UL) /* copy down IF an I/O resource */
+									ide.base_io = reg & 0xFFFC;
 
-							reg = pci_read_cfgl(bus,dev,func,0x14+(iport*8)); /* control block */
-							if ((reg&1) && (reg&0xFFFF0000UL) == 0UL) { /* copy down IF an I/O resource */
-								/* NTS: This requires some explanation: The PCI I/O resource encoding cannot
-								 * represent I/O port ranges smaller than 4 ports, nor can it represent
-								 * a 4-port resource unless the base port is a multiple of the I/O port
-								 * range length.
-								 *
-								 * The alt I/O port on legacy systems is 0x3F6/0x376. For a PCI device to
-								 * declare the same range, it must effectively declare 0x3F4/0x374 to
-								 * 0x3F7/377 and then map the legacy ports from 2 ports in from the base.
-								 *
-								 * When a newer chipset uses a different base port, the same rule applies:
-								 * the I/O resource is 4 ports large, and the last 2 ports (base+2) are
-								 * the legacy IDE I/O ports that would be 0x3F6/0x376. */
-								ide.alt_io = (reg & 0xFFFC) + 2;
+								reg = pci_read_cfgl(bus,dev,func,0x14+(iport*8)); /* control block */
+								if ((reg&1) && (reg&0xFFFF0000UL) == 0UL) { /* copy down IF an I/O resource */
+									/* NTS: This requires some explanation: The PCI I/O resource encoding cannot
+									 * represent I/O port ranges smaller than 4 ports, nor can it represent
+									 * a 4-port resource unless the base port is a multiple of the I/O port
+									 * range length.
+									 *
+									 * The alt I/O port on legacy systems is 0x3F6/0x376. For a PCI device to
+									 * declare the same range, it must effectively declare 0x3F4/0x374 to
+									 * 0x3F7/377 and then map the legacy ports from 2 ports in from the base.
+									 *
+									 * When a newer chipset uses a different base port, the same rule applies:
+									 * the I/O resource is 4 ports large, and the last 2 ports (base+2) are
+									 * the legacy IDE I/O ports that would be 0x3F6/0x376. */
+									ide.alt_io = (reg & 0xFFFC) + 2;
+								}
+
+								/* get IRQ number and PCI interrupt (A-D) */
+								IRQ_n = pci_read_cfgb(bus,dev,func,0x3C);
+								IRQ_pin = pci_read_cfgb(bus,dev,func,0x3D);
+								if (IRQ_n != 0 && IRQ_n < 16 && IRQ_pin != 0 && IRQ_pin <= 4)
+									ide.irq = IRQ_n;
+								else
+									ide.irq = -1;
+
+								if (ide.base_io != 0 && (ide.base_io&7) == 0) {
+									printf("      PCI IDE%u in native mode, IRQ=%d base=0x%3x alt=0x%3x\n",
+											iport,ide.irq,ide.base_io,ide.alt_io);
+
+									if ((newide = idelib_probe(&ide)) == NULL)
+										printf("    Warning: probe failed\n");
+
+									/* HACK: An ASUS Intel Core i3 motherboard I own has a SATA controller
+									 * that has problems with IDE interrupts (when set to IDE mode).
+									 * Once an IDE interrupt fires there's no way to shut it off and
+									 * the controller crapfloods the PIC causing our program to "hang"
+									 * running through the IRQ handler. */
+									if (vendor == 0x8086 && device == 0x8C80) { /* Intel Haswell-based motherboard (2014) */
+										idelib_enable_interrupt(newide,0); /* don't bother with interrupts */
+									}
+								}
 							}
+							else {
+								/* "compatability mode".
+								 * this is retarded, why didn't the PCI standards people just come out and
+								 * say: guys, if you're a PCI device then frickin' show up as a proper PCI
+								 * device and announce what resources you're using in the BARs and IRQ
+								 * registers so OSes are not required to guess like this! */
+								ide.base_io = iport ? 0x170 : 0x1F0;
+								ide.alt_io = iport ? 0x376 : 0x3F6;
+								ide.irq = iport ? 15 : 14;
 
-							/* get IRQ number and PCI interrupt (A-D) */
-							IRQ_n = pci_read_cfgb(bus,dev,func,0x3C);
-							IRQ_pin = pci_read_cfgb(bus,dev,func,0x3D);
-							if (IRQ_n != 0 && IRQ_n < 16 && IRQ_pin != 0 && IRQ_pin <= 4)
-								ide.irq = IRQ_n;
-							else
-								ide.irq = -1;
-
-							if (ide.base_io != 0 && (ide.base_io&7) == 0) {
-								printf("      PCI IDE%u in native mode, IRQ=%d base=0x%3x alt=0x%3x\n",
-									iport,ide.irq,ide.base_io,ide.alt_io);
+								printf("      PCI IDE%u in compat mode, IRQ=%d base=0x%3x alt=0x%3x\n",
+										iport,ide.irq,ide.base_io,ide.alt_io);
 
 								if ((newide = idelib_probe(&ide)) == NULL)
 									printf("    Warning: probe failed\n");
-
-								/* HACK: An ASUS Intel Core i3 motherboard I own has a SATA controller
-								 * that has problems with IDE interrupts (when set to IDE mode).
-								 * Once an IDE interrupt fires there's no way to shut it off and
-								 * the controller crapfloods the PIC causing our program to "hang"
-								 * running through the IRQ handler. */
-								if (vendor == 0x8086 && device == 0x8C80) { /* Intel Haswell-based motherboard (2014) */
-									idelib_enable_interrupt(newide,0); /* don't bother with interrupts */
-								}
 							}
-						}
-						else {
-							/* "compatability mode".
-							 * this is retarded, why didn't the PCI standards people just come out and
-							 * say: guys, if you're a PCI device then frickin' show up as a proper PCI
-							 * device and announce what resources you're using in the BARs and IRQ
-							 * registers so OSes are not required to guess like this! */
-							ide.base_io = iport ? 0x170 : 0x1F0;
-							ide.alt_io = iport ? 0x376 : 0x3F6;
-							ide.irq = iport ? 15 : 14;
-
-							printf("      PCI IDE%u in compat mode, IRQ=%d base=0x%3x alt=0x%3x\n",
-								iport,ide.irq,ide.base_io,ide.alt_io);
-
-							if ((newide = idelib_probe(&ide)) == NULL)
-								printf("    Warning: probe failed\n");
 						}
 					}
 				}
 			}
 		}
-
 	}
 #ifdef ISAPNP
-	if (!init_isa_pnp_bios()) {
-		printf("Cannot init ISA PnP\n");
-	}
-	if (find_isa_pnp_bios()) {
-		unsigned int nodesize=0;
-		unsigned char node=0,numnodes=0xFF,data[192];
-
-		memset(data,0,sizeof(data));
-		printf("ISA PnP BIOS detected\n");
-		if (isa_pnp_bios_get_pnp_isa_cfg(data) == 0) {
-			struct isapnp_pnp_isa_cfg *nfo = (struct isapnp_pnp_isa_cfg*)data;
-			isapnp_probe_next_csn = nfo->total_csn;
-			isapnp_read_data = nfo->isa_pnp_port;
+	if (!opt_no_isapnp) {
+		if (!init_isa_pnp_bios()) {
+			printf("Cannot init ISA PnP\n");
 		}
-		else {
-			printf("  ISA PnP BIOS failed to return configuration info\n");
-		}
+		if (find_isa_pnp_bios()) {
+			unsigned int nodesize=0;
+			unsigned char node=0,numnodes=0xFF,data[192];
 
-		/* enumerate device nodes reported by the BIOS */
-		if (isa_pnp_bios_number_of_sysdev_nodes(&numnodes,&nodesize) == 0 && numnodes != 0xFF && nodesize <= sizeof(devnode_raw)) {
-			printf("Scanning ISA PnP BIOS devices...\n");
-			for (node=0;node != 0xFF;) {
-				struct isa_pnp_device_node far *devn;
-				unsigned char far *rsc, far *rf;
-				unsigned char this_node;
-				struct isapnp_tag tag;
-				unsigned int ioport1=0;
-				unsigned int ioport2=0;
-				unsigned int i;
-				int irq = -1;
+			memset(data,0,sizeof(data));
+			printf("ISA PnP BIOS detected\n");
+			if (isa_pnp_bios_get_pnp_isa_cfg(data) == 0) {
+				struct isapnp_pnp_isa_cfg *nfo = (struct isapnp_pnp_isa_cfg*)data;
+				isapnp_probe_next_csn = nfo->total_csn;
+				isapnp_read_data = nfo->isa_pnp_port;
+			}
+			else {
+				printf("  ISA PnP BIOS failed to return configuration info\n");
+			}
 
-				/* apparently, start with 0. call updates node to
-				 * next node number, or 0xFF to signify end */
-				this_node = node;
-				if (isa_pnp_bios_get_sysdev_node(&node,devnode_raw,ISA_PNP_BIOS_GET_SYSDEV_NODE_CTRL_NOW) != 0) break;
+			/* enumerate device nodes reported by the BIOS */
+			if (isa_pnp_bios_number_of_sysdev_nodes(&numnodes,&nodesize) == 0 && numnodes != 0xFF && nodesize <= sizeof(devnode_raw)) {
+				printf("Scanning ISA PnP BIOS devices...\n");
+				for (node=0;node != 0xFF;) {
+					struct isa_pnp_device_node far *devn;
+					unsigned char far *rsc, far *rf;
+					unsigned char this_node;
+					struct isapnp_tag tag;
+					unsigned int ioport1=0;
+					unsigned int ioport2=0;
+					unsigned int i;
+					int irq = -1;
 
-				devn = (struct isa_pnp_device_node far*)devnode_raw;
-				if (devn->type_code[0] == 0x01/*system device, hard disk controller*/ &&
-					devn->type_code[1] == 0x01/*Generic ESDI/IDE/ATA controller*/ &&
-					devn->type_code[2] == 0x00/*Generic IDE*/) {
-					rsc = (unsigned char far*)devn + sizeof(*devn);
-					rf = (unsigned char far*)devn + sizeof(devnode_raw);
+					/* apparently, start with 0. call updates node to
+					 * next node number, or 0xFF to signify end */
+					this_node = node;
+					if (isa_pnp_bios_get_sysdev_node(&node,devnode_raw,ISA_PNP_BIOS_GET_SYSDEV_NODE_CTRL_NOW) != 0) break;
 
-					do {
-						if (!isapnp_read_tag(&rsc,rf,&tag))
-							break;
-						if (tag.tag == ISAPNP_TAG_END)
-							break;
+					devn = (struct isa_pnp_device_node far*)devnode_raw;
+					if (devn->type_code[0] == 0x01/*system device, hard disk controller*/ &&
+							devn->type_code[1] == 0x01/*Generic ESDI/IDE/ATA controller*/ &&
+							devn->type_code[2] == 0x00/*Generic IDE*/) {
+						rsc = (unsigned char far*)devn + sizeof(*devn);
+						rf = (unsigned char far*)devn + sizeof(devnode_raw);
 
-						switch (tag.tag) {
-							case ISAPNP_TAG_IO_PORT: {
-								struct isapnp_tag_io_port far *x = (struct isapnp_tag_io_port far*)tag.data;
+						do {
+							if (!isapnp_read_tag(&rsc,rf,&tag))
+								break;
+							if (tag.tag == ISAPNP_TAG_END)
+								break;
+
+							switch (tag.tag) {
+								case ISAPNP_TAG_IO_PORT: {
+									struct isapnp_tag_io_port far *x = (struct isapnp_tag_io_port far*)tag.data;
+									if (ioport1 == 0 && x->length == 8)
+										ioport1 = x->min_range;
+									else if (ioport2 == 0 && (x->length == 2 || x->length == 4))
+										ioport2 = x->min_range;
+								} break;
+							case ISAPNP_TAG_FIXED_IO_PORT: {
+								struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
 								if (ioport1 == 0 && x->length == 8)
-									ioport1 = x->min_range;
+									ioport1 = x->base;
 								else if (ioport2 == 0 && (x->length == 2 || x->length == 4))
-									ioport2 = x->min_range;
-							} break;
-						case ISAPNP_TAG_FIXED_IO_PORT: {
-							struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
-							if (ioport1 == 0 && x->length == 8)
-								ioport1 = x->base;
-							else if (ioport2 == 0 && (x->length == 2 || x->length == 4))
-								ioport2 = x->base;
-							} break;
-						case ISAPNP_TAG_IRQ_FORMAT: {
-							struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;
-							for (i=0;i < 16;i++) {
-								if (x->irq_mask & (1U << (unsigned int)i)) { /* NTS: PnP devices usually support odd IRQs like IRQ 9 */
-									if (irq < 0) irq = i;
+									ioport2 = x->base;
+								} break;
+							case ISAPNP_TAG_IRQ_FORMAT: {
+								struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;
+								for (i=0;i < 16;i++) {
+									if (x->irq_mask & (1U << (unsigned int)i)) { /* NTS: PnP devices usually support odd IRQs like IRQ 9 */
+										if (irq < 0) irq = i;
+									}
 								}
+								} break;
 							}
-							} break;
-						}
-					} while (1);
+						} while (1);
 
-					if (ioport1 != 0) {
-						struct ide_controller n;
+						if (ioport1 != 0) {
+							struct ide_controller n;
 
-						printf("  Found PnP IDE controller: base=0x%03x alt=0x%03x IRQ=%d\n",
-							ioport1,ioport2,irq);
+							printf("  Found PnP IDE controller: base=0x%03x alt=0x%03x IRQ=%d\n",
+								ioport1,ioport2,irq);
 
-						memset(&n,0,sizeof(n));
-						n.base_io = ioport1;
-						n.alt_io = ioport2;
-						n.irq = (int8_t)irq; /* -1 is no IRQ */
-						if ((newide = idelib_probe(&n)) == NULL) {
-							printf("    Warning: probe failed\n");
-							/* not filling it in leaves it open for allocation again */
+							memset(&n,0,sizeof(n));
+							n.base_io = ioport1;
+							n.alt_io = ioport2;
+							n.irq = (int8_t)irq; /* -1 is no IRQ */
+							if ((newide = idelib_probe(&n)) == NULL) {
+								printf("    Warning: probe failed\n");
+								/* not filling it in leaves it open for allocation again */
+							}
 						}
 					}
 				}
@@ -913,15 +981,26 @@ int main(int argc,char **argv) {
 	}
 #endif
 
-	printf("Probing standard IDE ports...\n");
-	for (i=0;(idectrl = (struct ide_controller*)idelib_get_standard_isa_port(i)) != NULL;i++) {
-		printf("   %3X/%3X IRQ %d: ",idectrl->base_io,idectrl->alt_io,idectrl->irq); fflush(stdout);
+	if (!opt_no_isa_probe) {
+		printf("Probing standard IDE ports...\n");
+		for (i=0;(idectrl = (struct ide_controller*)idelib_get_standard_isa_port(i)) != NULL;i++) {
+			printf("   %3X/%3X IRQ %d: ",idectrl->base_io,idectrl->alt_io,idectrl->irq); fflush(stdout);
 
-		if ((newide = idelib_probe(idectrl)) != NULL) {
-			printf("FOUND: alt=%X irq=%d\n",newide->alt_io,newide->irq);
+			if ((newide = idelib_probe(idectrl)) != NULL) {
+				printf("FOUND: alt=%X irq=%d\n",newide->alt_io,newide->irq);
+			}
+			else {
+				printf("\x0D                             \x0D"); fflush(stdout);
+			}
 		}
-		else {
-			printf("\x0D                             \x0D"); fflush(stdout);
+	}
+
+	if (opt_no_irq) {
+		unsigned int i;
+
+		for (i=0;i < MAX_IDE_CONTROLLER;i++) {
+			struct ide_controller *ide = &ide_controller[i];
+			if (idelib_controller_allocated(ide)) idelib_enable_interrupt(ide,0); /* don't bother with interrupts */
 		}
 	}
 
