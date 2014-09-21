@@ -331,6 +331,7 @@ static void interrupt my_ide_irq() {
 		if (my_ide_irq_ide->irq_fired >= 0xFFFEU) {
 			do_ide_controller_unhook_irq(my_ide_irq_ide);
 			vga_alpha_ram[i+12] = 0x1C00 | '!';
+			my_ide_irq_ide->irq_fired = ~0; /* make sure the IRQ counter is as large as possible */
 		}
 
 		/* ack PIC */
