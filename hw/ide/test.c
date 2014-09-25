@@ -1020,8 +1020,8 @@ int main(int argc,char **argv) {
 		update_state_from_vga();
 	}
 
-	smartdrv_close();
 	do_main_menu();
+	smartdrv_close();
 	free_idelib();
 	return 0;
 }
