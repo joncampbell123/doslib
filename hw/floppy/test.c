@@ -52,6 +52,12 @@ struct floppy_controller *floppy_get_standard_isa_port(int x) {
 struct floppy_controller		floppy_controllers[MAX_FLOPPY_CONTROLLER];
 int8_t					floppy_controllers_init = -1;
 
+struct floppy_controller *floppy_get_controller(int x) {
+	if (x < 0 || x >= MAX_FLOPPY_CONTROLLER) return NULL;
+	if (floppy_controllers[x].base_io == 0) return NULL;
+	return &floppy_controllers[x];
+}
+
 int wait_for_enter_or_escape() {
 	int c;
 
@@ -182,6 +188,108 @@ int init_floppy_controller_lib() {
 void free_floppy_controller_lib() {
 }
 
+/*------------------------------------------------------------------------*/
+
+char	tmp[1024];
+
+void do_main_menu() {
+	char redraw=1;
+	char backredraw=1;
+	VGA_ALPHA_PTR vga;
+	struct floppy_controller *ide;
+	unsigned int x,y,i;
+	int select=-1;
+	int c;
+
+	while (1) {
+		if (backredraw) {
+			vga = vga_alpha_ram;
+			backredraw = 0;
+			redraw = 1;
+
+			for (y=0;y < vga_height;y++) {
+				for (x=0;x < vga_width;x++) {
+					*vga++ = 0x1E00 + 177;
+				}
+			}
+
+			vga_moveto(0,0);
+
+			vga_write_color(0x1F);
+			vga_write("        Floppy controller test program");
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		if (redraw) {
+			redraw = 0;
+
+			y = 5;
+			vga_moveto(8,y++);
+			vga_write_color((select == -1) ? 0x70 : 0x0F);
+			vga_write("Exit program");
+			y++;
+
+			for (i=0;i < MAX_FLOPPY_CONTROLLER;i++) {
+				ide = floppy_get_controller(i);
+				if (ide != NULL) {
+					vga_moveto(8,y++);
+					vga_write_color((select == (int)i) ? 0x70 : 0x0F);
+
+					sprintf(tmp,"Controller @ %04X",ide->base_io);
+					vga_write(tmp);
+
+					if (ide->irq >= 0) {
+						sprintf(tmp," IRQ %2d",ide->irq);
+						vga_write(tmp);
+					}
+
+					if (ide->dma >= 0) {
+						sprintf(tmp," DMA %2d",ide->dma);
+						vga_write(tmp);
+					}
+				}
+			}
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			break;
+		}
+		else if (c == 13) {
+			if (select == -1) {
+				break;
+			}
+			else if (select >= 0 && select < MAX_FLOPPY_CONTROLLER) {
+				ide = floppy_get_controller(select);
+//				if (ide != NULL) do_ide_controller(ide);
+				backredraw = redraw = 1;
+			}
+		}
+		else if (c == 0x4800) {
+			if (select <= -1)
+				select = MAX_FLOPPY_CONTROLLER - 1;
+			else
+				select--;
+
+			while (select >= 0 && floppy_get_controller(select) == NULL)
+				select--;
+
+			redraw = 1;
+		}
+		else if (c == 0x5000) {
+			select++;
+			while (select >= 0 && select < MAX_FLOPPY_CONTROLLER && floppy_get_controller(select) == NULL)
+				select++;
+			if (select >= MAX_FLOPPY_CONTROLLER)
+				select = -1;
+
+			redraw = 1;
+		}
+	}
+}
+
 int main(int argc,char **argv) {
 	struct floppy_controller *reffdc;
 	struct floppy_controller *newfdc;
@@ -229,6 +337,7 @@ int main(int argc,char **argv) {
 		return 0;
 	}
 
+	do_main_menu();
 	free_floppy_controller_lib();
 	return 0;
 }
