@@ -95,28 +95,40 @@ static inline void floppy_controller_write_DOR(struct floppy_controller *i,unsig
 void floppy_controller_drive_select(struct floppy_controller *i,unsigned char drv) {
 	if (drv > 3) return;
 
-	i->digital_out &= ~0x83;		/* also clear motor control */
+	i->digital_out &= ~0xF3;		/* also clear motor control */
 	i->digital_out |= drv;
 	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
 
-void floppy_controller_set_motor_state(struct floppy_controller *i,unsigned char set) {
-	i->digital_out &= ~0x80;
-	i->digital_out |= (set?0x80:0x00);
+void floppy_controller_set_motor_state(struct floppy_controller *i,unsigned char drv,unsigned char set) {
+	if (drv > 3) return;
+
+	i->digital_out &= ~(0x10 << drv);
+	i->digital_out |= (set?(0x10 << drv):0x00);
 	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
 
 void floppy_controller_enable_dma(struct floppy_controller *i,unsigned char set) {
 	if (i->dma < 0 || i->irq < 0) set = 0;
 
+	i->use_dma = !!set;
 	i->digital_out &= ~0x08;
 	i->digital_out |= (set?0x08:0x00);
 	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
 
+void floppy_controller_enable_dma_otr(struct floppy_controller *i,unsigned char set) {
+	unsigned char c;
+
+	c = i->digital_out;
+	c &= ~0x08;
+	c |= (set?0x08:0x00);
+	outp(i->base_io+2,c);			/* 0x3F2 Digital Output Register */
+}
+
 void floppy_controller_set_reset(struct floppy_controller *i,unsigned char set) {
-	i->digital_out &= ~0x84;		/* also clear motor control */
-	i->digital_out |= (set?0x04:0x00);
+	i->digital_out &= ~0xF4;		/* also clear motor control */
+	i->digital_out |= (set?0x00:0x04);	/* bit is INVERTED (0=reset 1=normal) */
 	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
 
@@ -153,17 +165,17 @@ struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
 	 * completely change or invert their meaning between PS/2 and Model 30,
 	 * so we don't concern ourself with them, we only care that there's
 	 * something there and we can let the program using this lib figure it out. */
-	t1 = inp(i->base_io+0);
-	t1 &= inp(i->base_io+1);
+	t1 = inp(ret->base_io+0);
+	t1 &= inp(ret->base_io+1);
 	if (t1 != 0xFF) ret->ps2_mode = 1;
 
 	/* and ... guess */
-	floppy_controller_write_DOR(i,0x04+(ret->use_dma?0x08:0x00));	/* most BIOSes: DMA/IRQ enable, !reset, motor off, drive A select */
-	floppy_controller_read_status(i);
+	floppy_controller_write_DOR(ret,0x04+(ret->use_dma?0x08:0x00));	/* most BIOSes: DMA/IRQ enable, !reset, motor off, drive A select */
+	floppy_controller_read_status(ret);
 
 	/* is the Digital Out port readable? */
-	t1 = inp(i->base_io+2);
-	if (t1 == i->digital_out) ret->digital_out_rw = 1;
+	t1 = inp(ret->base_io+2);
+	if (t1 == ret->digital_out) ret->digital_out_rw = 1;
 
 	return ret;
 }
@@ -323,12 +335,62 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 		if (redraw) {
 			redraw = 0;
 
+			floppy_controller_read_status(fdc);
+
+			y = 3;
+			vga_moveto(8,y++);
+			vga_write_color(0x0F);
+			sprintf(tmp,"DOR: 0x%02x Status: 0x%02x",fdc->digital_out,fdc->main_status);
+			vga_write(tmp);
+
 			y = 5;
 			vga_moveto(8,y++);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
 			vga_write("Main menu");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 			y++;
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 0) ? 0x70 : 0x0F);
+			vga_write("DMA/IRQ: ");
+			vga_write(fdc->use_dma ? "Enabled" : "Disabled");
+			vga_write(" (hit enter to toggle)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 1) ? 0x70 : 0x0F);
+			vga_write("Reset signal: ");
+			vga_write((fdc->digital_out&0x04) ? "Off" : "On");
+			vga_write(" (hit enter to toggle)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 2) ? 0x70 : 0x0F);
+			vga_write("Drive A motor: ");
+			vga_write((fdc->digital_out&0x10) ? "On" : "Off");
+			vga_write(" (hit enter to toggle)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 3) ? 0x70 : 0x0F);
+			vga_write("Drive B motor: ");
+			vga_write((fdc->digital_out&0x20) ? "On" : "Off");
+			vga_write(" (hit enter to toggle)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 4) ? 0x70 : 0x0F);
+			vga_write("Drive C motor: ");
+			vga_write((fdc->digital_out&0x40) ? "On" : "Off");
+			vga_write(" (hit enter to toggle)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 5) ? 0x70 : 0x0F);
+			vga_write("Drive D motor: ");
+			vga_write((fdc->digital_out&0x80) ? "On" : "Off");
+			vga_write(" (hit enter to toggle)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -341,15 +403,39 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			if (select == -1) {
 				break;
 			}
+			else if (select == 0) { /* DMA/IRQ enable */
+				floppy_controller_enable_dma(fdc,!fdc->use_dma);
+				redraw = 1;
+			}
+			else if (select == 1) { /* reset */
+				floppy_controller_set_reset(fdc,!!(fdc->digital_out&0x04)); /* bit is INVERTED 1=normal 0=reset */
+				redraw = 1;
+			}
+			else if (select == 2) { /* Drive A motor */
+				floppy_controller_set_motor_state(fdc,0/*A*/,!(fdc->digital_out&0x10));
+				redraw = 1;
+			}
+			else if (select == 3) { /* Drive B motor */
+				floppy_controller_set_motor_state(fdc,1/*B*/,!(fdc->digital_out&0x20));
+				redraw = 1;
+			}
+			else if (select == 4) { /* Drive C motor */
+				floppy_controller_set_motor_state(fdc,2/*C*/,!(fdc->digital_out&0x40));
+				redraw = 1;
+			}
+			else if (select == 5) { /* Drive D motor */
+				floppy_controller_set_motor_state(fdc,3/*D*/,!(fdc->digital_out&0x80));
+				redraw = 1;
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = -1;
+				select = 5;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > -1)
+			if (++select > 5)
 				select = -1;
 
 			redraw = 1;
@@ -357,6 +443,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 	}
 
 	do_floppy_controller_enable_irq(fdc,0);
+	floppy_controller_enable_dma_otr(fdc,1); /* because BIOSes probably won't */
+	p8259_unmask(fdc->irq);
 }
 
 void do_main_menu() {
@@ -487,10 +575,12 @@ int main(int argc,char **argv) {
 		printf("   %3X IRQ %d DMA %d: ",reffdc->base_io,reffdc->irq,reffdc->dma); fflush(stdout);
 
 		if ((newfdc = floppy_controller_probe(reffdc)) != NULL) {
-			printf("FOUND. PS/2 mode=%u use dma=%u DOR R/W=%u\n",
+			printf("FOUND. PS/2 mode=%u use dma=%u DOR R/W=%u DOR=0x%02x mstat=0x%02x\n",
 				newfdc->ps2_mode,
 				newfdc->use_dma,
-				newfdc->digital_out_rw);
+				newfdc->digital_out_rw,
+				newfdc->digital_out,
+				newfdc->main_status);
 		}
 		else {
 			printf("\x0D                             \x0D"); fflush(stdout);
