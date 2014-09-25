@@ -122,6 +122,12 @@ HW_IDE_LIB=$(HW_IDE_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)idelib.lib
 HW_IDE_LIB_DEPENDENCIES=
 HW_IDE_LIB_WLINK_LIBRARIES=library $(HW_IDE_LIB)
 
+# HW\FLOPPY---------------------------------------------------------------------------------
+HW_FLOPPY_LIB_DIR=$(REL)$(HPS)hw$(HPS)floppy
+HW_FLOPPY_LIB=$(HW_FLOPPY_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)floppy.lib
+HW_FLOPPY_LIB_DEPENDENCIES=
+HW_FLOPPY_LIB_WLINK_LIBRARIES=library $(HW_FLOPPY_LIB)
+
 # HW\ADLIB----------------------------------------------------------------------------------
 HW_ADLIB_LIB_DIR=$(REL)$(HPS)hw$(HPS)adlib
 HW_ADLIB_LIB=$(HW_ADLIB_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)adlib.lib

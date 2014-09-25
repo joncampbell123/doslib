@@ -137,6 +137,14 @@ $(HW_IDE_LIB):
 	@cd $(HERE)
 !endif
 
+# HW\FLOPPY---------------------------------------------------------------------------------
+!ifneq NOW_BUILDING HW_FLOPPY_LIB
+$(HW_FLOPPY_LIB):
+	@cd $(HW_FLOPPY_LIB_DIR)
+	@$(MAKECMD) build lib
+	@cd $(HERE)
+!endif
+
 # HW\ISAPNP---------------------------------------------------------------------------------
 !ifneq NOW_BUILDING HW_ISAPNP_LIB
 $(HW_ISAPNP_LIB):
