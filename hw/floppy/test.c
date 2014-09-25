@@ -95,7 +95,7 @@ static inline void floppy_controller_write_DOR(struct floppy_controller *i,unsig
 void floppy_controller_drive_select(struct floppy_controller *i,unsigned char drv) {
 	if (drv > 3) return;
 
-	i->digital_out &= ~0xF3;		/* also clear motor control */
+	i->digital_out &= ~0x03;
 	i->digital_out |= drv;
 	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
@@ -127,7 +127,7 @@ void floppy_controller_enable_dma_otr(struct floppy_controller *i,unsigned char 
 }
 
 void floppy_controller_set_reset(struct floppy_controller *i,unsigned char set) {
-	i->digital_out &= ~0xF4;		/* also clear motor control */
+	i->digital_out &= ~0x04;
 	i->digital_out |= (set?0x00:0x04);	/* bit is INVERTED (0=reset 1=normal) */
 	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
@@ -391,6 +391,14 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write((fdc->digital_out&0x80) ? "On" : "Off");
 			vga_write(" (hit enter to toggle)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 6) ? 0x70 : 0x0F);
+			vga_write("Drive select: ");
+			sprintf(tmp,"%c(%u)",(fdc->digital_out&3)+'A',fdc->digital_out&3);
+			vga_write(tmp);
+			vga_write(" (hit enter to toggle)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -427,15 +435,19 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				floppy_controller_set_motor_state(fdc,3/*D*/,!(fdc->digital_out&0x80));
 				redraw = 1;
 			}
+			else if (select == 6) { /* Drive select */
+				floppy_controller_drive_select(fdc,((fdc->digital_out&3)+1)&3);
+				redraw = 1;
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 5;
+				select = 6;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 5)
+			if (++select > 6)
 				select = -1;
 
 			redraw = 1;
