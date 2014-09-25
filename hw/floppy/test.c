@@ -32,7 +32,9 @@ struct floppy_controller {
 	uint8_t			use_dma:1;		/* if set, use DMA. else, use PIO data transfer */
 
 	/* what we know about the controller */
+	uint8_t			version;		/* result of command 0x10 (determine controller version) or 0x00 if not yet queried */
 	uint8_t			ps2_mode:1;		/* controller is in PS/2 mode (has status registers A and B I/O ports) */
+	uint8_t			digital_out_rw:1;	/* digital out (0x3F2) is readable */
 };
 
 /* standard I/O ports for floppy controllers */
@@ -50,6 +52,17 @@ struct floppy_controller *floppy_get_standard_isa_port(int x) {
 struct floppy_controller		floppy_controllers[MAX_FLOPPY_CONTROLLER];
 int8_t					floppy_controllers_init = -1;
 
+int wait_for_enter_or_escape() {
+	int c;
+
+	do {
+		c = getch();
+		if (c == 0) c = getch() << 8;
+	} while (!(c == 13 || c == 27));
+
+	return c;
+}
+
 struct floppy_controller *alloc_floppy_controller() {
 	unsigned int i=0;
 
@@ -59,6 +72,44 @@ struct floppy_controller *alloc_floppy_controller() {
 	}
 
 	return NULL;
+}
+
+static inline uint8_t floppy_controller_read_status(struct floppy_controller *i) {
+	i->main_status = inp(i->base_io+4); /* 0x3F4 main status */
+	return i->main_status;
+}
+
+static inline void floppy_controller_write_DOR(struct floppy_controller *i,unsigned char c) {
+	i->digital_out = c;
+	outp(i->base_io+2,c);	/* 0x3F2 Digital Output Register */
+}
+
+void floppy_controller_drive_select(struct floppy_controller *i,unsigned char drv) {
+	if (drv > 3) return;
+
+	i->digital_out &= ~0x83;		/* also clear motor control */
+	i->digital_out |= drv;
+	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
+}
+
+void floppy_controller_set_motor_state(struct floppy_controller *i,unsigned char set) {
+	i->digital_out &= ~0x80;
+	i->digital_out |= (set?0x80:0x00);
+	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
+}
+
+void floppy_controller_enable_dma(struct floppy_controller *i,unsigned char set) {
+	if (i->dma < 0 || i->irq < 0) set = 0;
+
+	i->digital_out &= ~0x08;
+	i->digital_out |= (set?0x08:0x00);
+	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
+}
+
+void floppy_controller_set_reset(struct floppy_controller *i,unsigned char set) {
+	i->digital_out &= ~0x84;		/* also clear motor control */
+	i->digital_out |= (set?0x04:0x00);
+	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
 
 struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
@@ -87,7 +138,7 @@ struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
 	else
 		ret->dma = -1;
 
-	ret->use_dma = (ret->dma >= 0);
+	ret->use_dma = (ret->dma >= 0 && ret->irq >= 0); /* FIXME: I'm sure there's a way to do DMA without IRQ */
 
 	/* if something appears at 0x3F0-0x3F1, assume "PS/2 mode".
 	 * there are finer intricate details where the meaning of some bits
@@ -97,6 +148,14 @@ struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
 	t1 = inp(i->base_io+0);
 	t1 &= inp(i->base_io+1);
 	if (t1 != 0xFF) ret->ps2_mode = 1;
+
+	/* and ... guess */
+	floppy_controller_write_DOR(i,0x04+(ret->use_dma?0x08:0x00));	/* most BIOSes: DMA/IRQ enable, !reset, motor off, drive A select */
+	floppy_controller_read_status(i);
+
+	/* is the Digital Out port readable? */
+	t1 = inp(i->base_io+2);
+	if (t1 == i->digital_out) ret->digital_out_rw = 1;
 
 	return ret;
 }
@@ -153,11 +212,21 @@ int main(int argc,char **argv) {
 		printf("   %3X IRQ %d DMA %d: ",reffdc->base_io,reffdc->irq,reffdc->dma); fflush(stdout);
 
 		if ((newfdc = floppy_controller_probe(reffdc)) != NULL) {
-			printf("FOUND\n");
+			printf("FOUND. PS/2 mode=%u use dma=%u DOR R/W=%u\n",
+				newfdc->ps2_mode,
+				newfdc->use_dma,
+				newfdc->digital_out_rw);
 		}
 		else {
 			printf("\x0D                             \x0D"); fflush(stdout);
 		}
+	}
+
+	printf("Hit ENTER to continue, ESC to cancel\n");
+	i = wait_for_enter_or_escape();
+	if (i == 27) {
+		free_floppy_controller_lib();
+		return 0;
 	}
 
 	free_floppy_controller_lib();
