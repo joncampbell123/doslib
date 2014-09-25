@@ -63,6 +63,11 @@ cd flatreal
 call make.bat %WHAT%
 cd ..
 
+echo Building: floppy
+cd floppy
+call make.bat %WHAT%
+cd ..
+
 echo Building: ide
 cd ide
 call make.bat %WHAT%
