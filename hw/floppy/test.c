@@ -490,10 +490,28 @@ void do_check_interrupt_status(struct floppy_controller *fdc) {
 	fdc->cylinder = resp[1];
 }
 
+void do_spin_up_motor(struct floppy_controller *fdc,unsigned char drv) {
+	if (drv > 3) return;
+
+	if (!(fdc->digital_out & (0x10 << drv))) {
+		struct vga_msg_box vgabox;
+
+		vga_msg_box_create(&vgabox,"Spinning up motor",0,0);
+
+		/* if the motor isn't on, then turn it on, and then wait for motor to stabilize */
+		floppy_controller_set_motor_state(fdc,drv,1);
+		t8254_wait(t8254_us2ticks(500000)); /* 500ms */
+
+		vga_msg_box_destroy(&vgabox);
+	}
+}
+
 void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 	struct vga_msg_box vgabox;
 	char cmd[10];
 	int wd,wdo;
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
 
 	floppy_controller_read_status(fdc);
 	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
@@ -537,6 +555,8 @@ void do_calibrate_drive(struct floppy_controller *fdc) {
 	struct vga_msg_box vgabox;
 	char cmd[10];
 	int wd,wdo;
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
 
 	floppy_controller_read_status(fdc);
 	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
