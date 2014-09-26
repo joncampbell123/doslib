@@ -550,11 +550,6 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 
 	/* use Check Interrupt Status */
 	do_check_interrupt_status(fdc);
-
-	sprintf(tmp,"Seek finished, ST0=0x%02x Cyl=%u",fdc->st[0],fdc->cylinder);
-	vga_msg_box_create(&vgabox,tmp,0,0);
-	wait_for_enter_or_escape();
-	vga_msg_box_destroy(&vgabox);
 }
 
 void do_calibrate_drive(struct floppy_controller *fdc) {
@@ -594,11 +589,6 @@ void do_calibrate_drive(struct floppy_controller *fdc) {
 
 	/* use Check Interrupt Status */
 	do_check_interrupt_status(fdc);
-
-	sprintf(tmp,"Calibrate finished, ST0=0x%02x Cyl=%u",fdc->st[0],fdc->cylinder);
-	vga_msg_box_create(&vgabox,tmp,0,0);
-	wait_for_enter_or_escape();
-	vga_msg_box_destroy(&vgabox);
 }
 
 void do_check_drive_status(struct floppy_controller *fdc) {
@@ -644,12 +634,6 @@ void do_check_drive_status(struct floppy_controller *fdc) {
 
 	/* return value is ST3 */
 	fdc->st[3] = resp[0];
-
-	/* show result to user */
-	sprintf(tmp,"Command result: 0x%02x",resp[0]);
-	vga_msg_box_create(&vgabox,tmp,0,0);
-	wait_for_enter_or_escape();
-	vga_msg_box_destroy(&vgabox);
 }
 
 unsigned long prompt_track_number() {
