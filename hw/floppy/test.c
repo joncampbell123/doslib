@@ -695,7 +695,7 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 		do_floppy_controller_reset(fdc);
 
 	wdo = 2;
-	cmd[0] = 0x0A;	/* Read sector ID */
+	cmd[0] = 0x0A + 0x40;	/* Read sector ID [6:6] MFM=1 */
 	cmd[1] = (fdc->digital_out&3)+(head<<2)/* [1:0] = DR1,DR0 [2:2] = HD */;
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
