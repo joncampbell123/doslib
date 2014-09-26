@@ -24,7 +24,8 @@ struct floppy_controller {
 	int8_t			dma;
 
 	/* known state */
-	uint8_t			ps2_status_regs[2];	/* 0x3F0-0x3F1 */
+	uint8_t			ps2_status[2];		/* 0x3F0-0x3F1 */
+	uint8_t			st[4];			/* ST0...ST3 */
 	uint8_t			digital_out;		/* last value written to 0x3F2 */
 	uint8_t			main_status;		/* last value read from 0x3F4 */
 	uint8_t			digital_in;		/* last value read from 0x3F7 */
@@ -82,6 +83,16 @@ struct floppy_controller *alloc_floppy_controller() {
 	}
 
 	return NULL;
+}
+
+void floppy_controller_read_ps2_status(struct floppy_controller *i) {
+	if (i->ps2_mode) {
+		i->ps2_status[0] = inp(i->base_io+0);
+		i->ps2_status[1] = inp(i->base_io+1);
+	}
+	else {
+		i->ps2_status[0] = i->ps2_status[1] = 0xFF;
+	}
 }
 
 static inline uint8_t floppy_controller_read_status(struct floppy_controller *i) {
@@ -364,13 +375,21 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 
 			floppy_controller_read_status(fdc);
 			floppy_controller_read_DIR(fdc);
+			floppy_controller_read_ps2_status(fdc);
 
-			y = 3;
+			y = 2;
 			vga_moveto(8,y++);
 			vga_write_color(0x0F);
 			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh",
 				fdc->digital_out,fdc->digital_in,
 				fdc->main_status,fdc->control_cfg);
+			vga_write(tmp);
+
+			vga_moveto(8,y++);
+			vga_write_color(0x0F);
+			sprintf(tmp,"ST0..3: %02x %02x %02x %02x PS/2 %02x %02x",
+				fdc->st[0],fdc->st[1],fdc->st[2],fdc->st[3],
+				fdc->ps2_status[0],fdc->ps2_status[1]);
 			vga_write(tmp);
 
 			y = 5;
