@@ -27,7 +27,8 @@ struct floppy_controller {
 	uint8_t			ps2_status_regs[2];	/* 0x3F0-0x3F1 */
 	uint8_t			digital_out;		/* last value written to 0x3F2 */
 	uint8_t			main_status;		/* last value read from 0x3F4 */
-	uint8_t			digital_in;		/* last value written to 0x3F7 */
+	uint8_t			digital_in;		/* last value read from 0x3F7 */
+	uint8_t			control_cfg;		/* last value written to 0x3F7 */
 	uint16_t		irq_fired;
 
 	/* desired state */
@@ -100,6 +101,16 @@ static inline uint8_t floppy_controller_read_DIR(struct floppy_controller *i) {
 static inline void floppy_controller_write_DOR(struct floppy_controller *i,unsigned char c) {
 	i->digital_out = c;
 	outp(i->base_io+2,c);	/* 0x3F2 Digital Output Register */
+}
+
+static inline void floppy_controller_write_CCR(struct floppy_controller *i,unsigned char c) {
+	i->control_cfg = c;
+	outp(i->base_io+7,c);	/* 0x3F7 Control Configuration Register */
+}
+
+void floppy_controller_set_data_transfer_rate(struct floppy_controller *i,unsigned char rsel) {
+	if (rsel > 3) return;
+	floppy_controller_write_CCR(i,(i->control_cfg & ~3) + rsel); /* change bits [1:0] */
 }
 
 void floppy_controller_drive_select(struct floppy_controller *i,unsigned char drv) {
@@ -356,7 +367,7 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			y = 3;
 			vga_moveto(8,y++);
 			vga_write_color(0x0F);
-			sprintf(tmp,"DOR: 0x%02x Status: 0x%02x",fdc->digital_out,fdc->main_status);
+			sprintf(tmp,"DOR: 0x%02x Status: 0x%02x CCR: 0x%02x",fdc->digital_out,fdc->main_status,fdc->control_cfg);
 			vga_write(tmp);
 
 			y = 5;
@@ -415,6 +426,18 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write(tmp);
 			vga_write(" (hit enter to toggle)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 7) ? 0x70 : 0x0F);
+			vga_write("Transfer rate: ");
+			switch (fdc->control_cfg&3) {
+				case 0:	vga_write("500kbit/sec"); break;
+				case 1:	vga_write("300kbit/sec"); break;
+				case 2:	vga_write("250kbit/sec"); break;
+				case 3:	vga_write("1mbit/sec"); break;
+			};
+			vga_write(" (hit enter to toggle)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -455,15 +478,19 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				floppy_controller_drive_select(fdc,((fdc->digital_out&3)+1)&3);
 				redraw = 1;
 			}
+			else if (select == 7) { /* Transfer rate */
+				floppy_controller_set_data_transfer_rate(fdc,((fdc->control_cfg&3)+1)&3);
+				redraw = 1;
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 6;
+				select = 7;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 6)
+			if (++select > 7)
 				select = -1;
 
 			redraw = 1;
