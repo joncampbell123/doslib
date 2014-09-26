@@ -363,11 +363,14 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			redraw = 0;
 
 			floppy_controller_read_status(fdc);
+			floppy_controller_read_DIR(fdc);
 
 			y = 3;
 			vga_moveto(8,y++);
 			vga_write_color(0x0F);
-			sprintf(tmp,"DOR: 0x%02x Status: 0x%02x CCR: 0x%02x",fdc->digital_out,fdc->main_status,fdc->control_cfg);
+			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh",
+				fdc->digital_out,fdc->digital_in,
+				fdc->main_status,fdc->control_cfg);
 			vga_write(tmp);
 
 			y = 5;
