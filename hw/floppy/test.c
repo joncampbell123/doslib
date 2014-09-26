@@ -388,8 +388,10 @@ int floppy_controller_wait_irq(struct floppy_controller *fdc,unsigned int timeou
 }
 
 int floppy_controller_write_data(struct floppy_controller *fdc,const unsigned char *data,int len) {
+	unsigned int oflags = get_cpu_flags();
 	int ret = 0;
 
+	_cli(); /* clear interrupts so we can focus on talking to the FDC */
 	while (len > 0) {
 		floppy_controller_read_status(fdc);
 		if (!floppy_controller_wait_data_ready(fdc,1000)) {
@@ -405,12 +407,15 @@ int floppy_controller_write_data(struct floppy_controller *fdc,const unsigned ch
 		len--; ret++;
 	}
 
+	if (oflags&0x200/*IF interrupt enable was on*/) _sti();
 	return ret;
 }
 
 int floppy_controller_read_data(struct floppy_controller *fdc,unsigned char *data,int len) {
+	unsigned int oflags = get_cpu_flags();
 	int ret = 0;
 
+	_cli();
 	while (len > 0) {
 		floppy_controller_read_status(fdc);
 		if (!floppy_controller_wait_data_ready(fdc,1000)) {
@@ -426,6 +431,7 @@ int floppy_controller_read_data(struct floppy_controller *fdc,unsigned char *dat
 		len--; ret++;
 	}
 
+	if (oflags&0x200/*IF interrupt enable was on*/) _sti();
 	return ret;
 }
 
