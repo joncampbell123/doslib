@@ -522,6 +522,46 @@ void do_spin_up_motor(struct floppy_controller *fdc,unsigned char drv) {
 	}
 }
 
+void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
+	struct vga_msg_box vgabox;
+	char cmd[10];
+	int wd,wdo;
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	floppy_controller_reset_irq_counter(fdc);
+
+	wdo = 3;
+	cmd[0] = 0x8F + (track < 0 ? 0x40 : 0x00); /* Seek rel [6:6] = DIR */
+	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
+	cmd[2] = abs(track);
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 3) {
+		sprintf(tmp,"Failed to write data to FDC, %u/%u",wd,wdo);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* fires an IRQ. doesn't return state */
+	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* use Check Interrupt Status */
+	do_check_interrupt_status(fdc);
+}
+
 void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 	struct vga_msg_box vgabox;
 	char cmd[10];
@@ -644,6 +684,49 @@ void do_check_drive_status(struct floppy_controller *fdc) {
 
 	/* return value is ST3 */
 	fdc->st[3] = resp[0];
+}
+
+signed long prompt_signed_track_number() {
+	signed long track = 0;
+	struct vga_msg_box box;
+	VGA_ALPHA_PTR sco;
+	char temp_str[16];
+	int c,i=0;
+
+	vga_msg_box_create(&box,"Enter relative track number:",2,0);
+	sco = vga_alpha_ram + ((box.y+2) * vga_width) + box.x + 2;
+	while (1) {
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			track = 0;
+			break;
+		}
+		else if (c == 13) {
+			if (i == 0) break;
+			temp_str[i] = 0;
+			if (isdigit(temp_str[0]))
+				track = strtol(temp_str,NULL,0);
+			else
+				track = 0;
+
+			break;
+		}
+		else if (isdigit(c) || c == '-') {
+			if (i < 15) {
+				sco[i] = c | 0x1E00;
+				temp_str[i++] = c;
+			}
+		}
+		else if (c == 8) {
+			if (i > 0) i--;
+			sco[i] = ' ' | 0x1E00;
+		}
+	}
+	vga_msg_box_destroy(&box);
+
+	return track;
 }
 
 unsigned long prompt_track_number() {
@@ -836,6 +919,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 10) ? 0x70 : 0x0F);
 			vga_write("Seek (xfh)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 11) ? 0x70 : 0x0F);
+			vga_write("Seek relative (xfh)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -895,15 +983,22 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 					redraw = 1;
 				}
 			}
+			else if (select == 11) { /* seek relative */
+				signed long track = prompt_signed_track_number();
+				if (track >= -255L && track <= 255L) {
+					do_seek_drive_rel(fdc,(int)track);
+					redraw = 1;
+				}
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 10;
+				select = 11;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 10)
+			if (++select > 11)
 				select = -1;
 
 			redraw = 1;
