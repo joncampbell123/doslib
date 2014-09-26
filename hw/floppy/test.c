@@ -602,45 +602,6 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 	do_check_interrupt_status(fdc);
 }
 
-void do_calibrate_drive(struct floppy_controller *fdc) {
-	struct vga_msg_box vgabox;
-	char cmd[10];
-	int wd,wdo;
-
-	do_spin_up_motor(fdc,fdc->digital_out&3);
-
-	floppy_controller_read_status(fdc);
-	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
-		do_floppy_controller_reset(fdc);
-
-	floppy_controller_reset_irq_counter(fdc);
-
-	wdo = 2;
-	cmd[0] = 0x07;	/* Calibrate */
-	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 */;
-	wd = floppy_controller_write_data(fdc,cmd,wdo);
-	if (wd < 2) {
-		sprintf(tmp,"Failed to write data to FDC, %u/%u",wd,wdo);
-		vga_msg_box_create(&vgabox,tmp,0,0);
-		wait_for_enter_or_escape();
-		vga_msg_box_destroy(&vgabox);
-		do_floppy_controller_reset(fdc);
-		return;
-	}
-
-	/* fires an IRQ. doesn't return state */
-	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
-	floppy_controller_wait_data_ready_ms(fdc,1000);
-
-	/* the command SHOULD terminate */
-	floppy_controller_wait_data_ready(fdc,20);
-	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
-		do_floppy_controller_reset(fdc);
-
-	/* use Check Interrupt Status */
-	do_check_interrupt_status(fdc);
-}
-
 void do_check_drive_status(struct floppy_controller *fdc) {
 	struct vga_msg_box vgabox;
 	char cmd[10],resp[10];
@@ -684,6 +645,132 @@ void do_check_drive_status(struct floppy_controller *fdc) {
 
 	/* return value is ST3 */
 	fdc->st[3] = resp[0];
+}
+
+void do_calibrate_drive(struct floppy_controller *fdc) {
+	struct vga_msg_box vgabox;
+	char cmd[10];
+	int wd,wdo;
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	floppy_controller_reset_irq_counter(fdc);
+
+	wdo = 2;
+	cmd[0] = 0x07;	/* Calibrate */
+	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 */;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 2) {
+		sprintf(tmp,"Failed to write data to FDC, %u/%u",wd,wdo);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* fires an IRQ. doesn't return state */
+	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* use Check Interrupt Status */
+	do_check_interrupt_status(fdc);
+}
+
+int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsigned char head) {
+	int rd,wd,rdo,wdo;
+	char cmd[10];
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	wdo = 2;
+	cmd[0] = 0x0A;	/* Read sector ID */
+	cmd[1] = (fdc->digital_out&3)+(head<<2)/* [1:0] = DR1,DR0 [2:2] = HD */;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 2) {
+		do_floppy_controller_reset(fdc);
+		return 0;
+	}
+
+	/* wait for data ready. does not fire an IRQ */
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	rdo = 7;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+		do_floppy_controller_reset(fdc);
+		return 0;
+	}
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* return value is ST3 */
+	if (rd >= 3) {
+		fdc->st[0] = resp[0];
+		fdc->st[1] = resp[1];
+		fdc->st[2] = resp[2];
+	}
+
+	return rd;
+}
+
+void do_read_sector_id_demo(struct floppy_controller *fdc) {
+	unsigned char headsel=0;
+	char resp[10];
+	int c;
+
+	vga_moveto(0,0);
+	vga_write_color(0x0E);
+	vga_clear();
+
+	vga_write("Read Sector ID demo. Space to switch heads.\n\n");
+
+	do {
+		if (kbhit()) {
+			c = getch();
+			if (c == 0) c = getch() << 8;
+
+			if (c == 27)
+				break;
+			else if (c == ' ')
+				headsel ^= 1;
+		}
+
+		if ((c=do_read_sector_id(resp,fdc,headsel)) == 7) {
+			vga_moveto(0,2);
+			vga_write_color(0x0F);
+
+			sprintf(tmp,"ST: %02xh %02xh %02xh %02xh\n",fdc->st[0],fdc->st[1],fdc->st[2],fdc->st[3]);
+			vga_write(tmp);
+
+			sprintf(tmp,"C/H/S/sz: %u/%u/%u/%u       \n",resp[3],resp[4],resp[5],resp[6]);
+			vga_write(tmp);
+		}
+		else {
+			vga_moveto(0,2);
+			vga_write_color(0x0F);
+
+			sprintf(tmp,"ST: --h --h --h --h (ret=%d)\n",c);
+			vga_write(tmp);
+
+			sprintf(tmp,"C/H/S/sz: 0/0/0/0       \n");
+			vga_write(tmp);
+		}
+	} while (1);
 }
 
 signed long prompt_signed_track_number() {
@@ -922,7 +1009,12 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 11) ? 0x70 : 0x0F);
-			vga_write("Seek relative (xfh)");
+			vga_write("Seek relative (1xfh)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 12) ? 0x70 : 0x0F);
+			vga_write("Read sector ID (xah)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
@@ -990,15 +1082,19 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 					redraw = 1;
 				}
 			}
+			else if (select == 12) { /* read sector ID */
+				do_read_sector_id_demo(fdc);
+				backredraw = 1;
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 11;
+				select = 12;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 11)
+			if (++select > 12)
 				select = -1;
 
 			redraw = 1;
