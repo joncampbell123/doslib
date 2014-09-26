@@ -757,7 +757,7 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
 			sprintf(tmp,"ST: %02xh %02xh %02xh %02xh\n",fdc->st[0],fdc->st[1],fdc->st[2],fdc->st[3]);
 			vga_write(tmp);
 
-			sprintf(tmp,"C/H/S/sz: %u/%u/%u/%u       \n",resp[3],resp[4],resp[5],resp[6]);
+			sprintf(tmp,"C/H/S/sz: %-3u/%-3u/%-3u/%-3u       \n",resp[3],resp[4],resp[5],resp[6]);
 			vga_write(tmp);
 		}
 		else {
@@ -767,7 +767,7 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
 			sprintf(tmp,"ST: --h --h --h --h (ret=%d)\n",c);
 			vga_write(tmp);
 
-			sprintf(tmp,"C/H/S/sz: 0/0/0/0       \n");
+			sprintf(tmp,"C/H/S/sz: ---/---/---/---       \n");
 			vga_write(tmp);
 		}
 	} while (1);
