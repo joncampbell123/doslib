@@ -27,6 +27,7 @@ struct floppy_controller {
 	uint8_t			ps2_status_regs[2];	/* 0x3F0-0x3F1 */
 	uint8_t			digital_out;		/* last value written to 0x3F2 */
 	uint8_t			main_status;		/* last value read from 0x3F4 */
+	uint8_t			digital_in;		/* last value written to 0x3F7 */
 	uint16_t		irq_fired;
 
 	/* desired state */
@@ -35,8 +36,8 @@ struct floppy_controller {
 	/* what we know about the controller */
 	uint8_t			version;		/* result of command 0x10 (determine controller version) or 0x00 if not yet queried */
 	uint8_t			ps2_mode:1;		/* controller is in PS/2 mode (has status registers A and B I/O ports) */
+	uint8_t			at_mode:1;		/* controller is in AT mode (has Digital Input Register and Control Config Reg) */
 	uint8_t			digital_out_rw:1;	/* digital out (0x3F2) is readable */
-
 };
 
 /* standard I/O ports for floppy controllers */
@@ -85,6 +86,15 @@ struct floppy_controller *alloc_floppy_controller() {
 static inline uint8_t floppy_controller_read_status(struct floppy_controller *i) {
 	i->main_status = inp(i->base_io+4); /* 0x3F4 main status */
 	return i->main_status;
+}
+
+static inline uint8_t floppy_controller_read_DIR(struct floppy_controller *i) {
+	if (i->at_mode || i->ps2_mode)
+		i->digital_in = inp(i->base_io+7); /* 0x3F7 */
+	else
+		i->digital_in = 0xFF;
+
+	return i->digital_in;
 }
 
 static inline void floppy_controller_write_DOR(struct floppy_controller *i,unsigned char c) {
@@ -169,6 +179,10 @@ struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
 	t1 &= inp(ret->base_io+1);
 	if (t1 != 0xFF) ret->ps2_mode = 1;
 
+	/* what about the AT & PS/2 style CCR & DIR */
+	t1 = inp(ret->base_io+7);
+	if (t1 != 0xFF) ret->at_mode = 1;
+
 	/* and ... guess */
 	floppy_controller_write_DOR(ret,0x04+(ret->use_dma?0x08:0x00));	/* most BIOSes: DMA/IRQ enable, !reset, motor off, drive A select */
 	floppy_controller_read_status(ret);
@@ -176,6 +190,8 @@ struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
 	/* is the Digital Out port readable? */
 	t1 = inp(ret->base_io+2);
 	if (t1 == ret->digital_out) ret->digital_out_rw = 1;
+
+	floppy_controller_read_DIR(ret);
 
 	return ret;
 }
@@ -587,11 +603,13 @@ int main(int argc,char **argv) {
 		printf("   %3X IRQ %d DMA %d: ",reffdc->base_io,reffdc->irq,reffdc->dma); fflush(stdout);
 
 		if ((newfdc = floppy_controller_probe(reffdc)) != NULL) {
-			printf("FOUND. PS/2 mode=%u use dma=%u DOR R/W=%u DOR=0x%02x mstat=0x%02x\n",
+			printf("FOUND. PS/2=%u AT=%u dma=%u DOR/RW=%u DOR=%02xh DIR=%02xh mst=%02xh\n",
 				newfdc->ps2_mode,
+				newfdc->at_mode,
 				newfdc->use_dma,
 				newfdc->digital_out_rw,
 				newfdc->digital_out,
+				newfdc->digital_in,
 				newfdc->main_status);
 		}
 		else {
