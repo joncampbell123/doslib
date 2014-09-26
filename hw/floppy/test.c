@@ -490,6 +490,49 @@ void do_check_interrupt_status(struct floppy_controller *fdc) {
 	fdc->cylinder = resp[1];
 }
 
+void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
+	struct vga_msg_box vgabox;
+	char cmd[10];
+	int wd,wdo;
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	floppy_controller_reset_irq_counter(fdc);
+
+	wdo = 3;
+	cmd[0] = 0x0F;	/* Seek */
+	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
+	cmd[2] = track;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 3) {
+		sprintf(tmp,"Failed to write data to FDC, %u/%u",wd,wdo);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* fires an IRQ. doesn't return state */
+	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	/* use Check Interrupt Status */
+	do_check_interrupt_status(fdc);
+
+	sprintf(tmp,"Seek finished, ST0=0x%02x Cyl=%u",fdc->st[0],fdc->cylinder);
+	vga_msg_box_create(&vgabox,tmp,0,0);
+	wait_for_enter_or_escape();
+	vga_msg_box_destroy(&vgabox);
+}
+
 void do_calibrate_drive(struct floppy_controller *fdc) {
 	struct vga_msg_box vgabox;
 	char cmd[10];
@@ -583,6 +626,49 @@ void do_check_drive_status(struct floppy_controller *fdc) {
 	vga_msg_box_destroy(&vgabox);
 }
 
+unsigned long prompt_track_number() {
+	unsigned long track = 0;
+	struct vga_msg_box box;
+	VGA_ALPHA_PTR sco;
+	char temp_str[16];
+	int c,i=0;
+
+	vga_msg_box_create(&box,"Enter track number:",2,0);
+	sco = vga_alpha_ram + ((box.y+2) * vga_width) + box.x + 2;
+	while (1) {
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			track = (int)(~0UL);
+			break;
+		}
+		else if (c == 13) {
+			if (i == 0) break;
+			temp_str[i] = 0;
+			if (isdigit(temp_str[0]))
+				track = strtol(temp_str,NULL,0);
+			else
+				track = 0;
+
+			break;
+		}
+		else if (isdigit(c)) {
+			if (i < 15) {
+				sco[i] = c | 0x1E00;
+				temp_str[i++] = c;
+			}
+		}
+		else if (c == 8) {
+			if (i > 0) i--;
+			sco[i] = ' ' | 0x1E00;
+		}
+	}
+	vga_msg_box_destroy(&box);
+
+	return track;
+}
+
 void do_floppy_controller(struct floppy_controller *fdc) {
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
@@ -633,9 +719,10 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			y = 2;
 			vga_moveto(8,y++);
 			vga_write_color(0x0F);
-			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh",
+			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh cyl=%u",
 				fdc->digital_out,fdc->digital_in,
-				fdc->main_status,fdc->control_cfg);
+				fdc->main_status,fdc->control_cfg,
+				fdc->cylinder);
 			vga_write(tmp);
 
 			vga_moveto(8,y++);
@@ -724,6 +811,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 9) ? 0x70 : 0x0F);
 			vga_write("Calibrate (x7h)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 10) ? 0x70 : 0x0F);
+			vga_write("Seek (xfh)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -776,15 +868,22 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				do_calibrate_drive(fdc);
 				redraw = 1;
 			}
+			else if (select == 10) { /* seek */
+				unsigned long track = prompt_track_number();
+				if (track != (~0UL) && track < 256) {
+					do_seek_drive(fdc,(uint8_t)track);
+					redraw = 1;
+				}
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 9;
+				select = 10;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 9)
+			if (++select > 10)
 				select = -1;
 
 			redraw = 1;
