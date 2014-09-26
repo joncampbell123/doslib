@@ -368,6 +368,16 @@ static inline void floppy_controller_reset_irq_counter(struct floppy_controller 
 	fdc->irq_fired = 0;
 }
 
+int floppy_controller_wait_busy_in_instruction(struct floppy_controller *fdc,unsigned int timeout) {
+	do {
+		floppy_controller_read_status(fdc);
+		if (!floppy_controller_busy_in_instruction(fdc)) return 1;
+		t8254_wait(t8254_us2ticks(1000));
+	} while (--timeout != 0);
+
+	return 0;
+}
+
 int floppy_controller_wait_data_ready_ms(struct floppy_controller *fdc,unsigned int timeout) {
 	do {
 		floppy_controller_read_status(fdc);
@@ -488,7 +498,7 @@ void do_check_interrupt_status(struct floppy_controller *fdc) {
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
-	if (floppy_controller_busy_in_instruction(fdc))
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
 		do_floppy_controller_reset(fdc);
 
 	/* return value is ST0 and the current cylinder */
@@ -545,7 +555,7 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
-	if (floppy_controller_busy_in_instruction(fdc))
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
 		do_floppy_controller_reset(fdc);
 
 	/* use Check Interrupt Status */
@@ -584,7 +594,7 @@ void do_calibrate_drive(struct floppy_controller *fdc) {
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
-	if (floppy_controller_busy_in_instruction(fdc))
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
 		do_floppy_controller_reset(fdc);
 
 	/* use Check Interrupt Status */
@@ -629,7 +639,7 @@ void do_check_drive_status(struct floppy_controller *fdc) {
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
-	if (floppy_controller_busy_in_instruction(fdc))
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
 		do_floppy_controller_reset(fdc);
 
 	/* return value is ST3 */
@@ -729,7 +739,7 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			y = 2;
 			vga_moveto(8,y++);
 			vga_write_color(0x0F);
-			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh cyl=%u",
+			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh cyl=%-3u",
 				fdc->digital_out,fdc->digital_in,
 				fdc->main_status,fdc->control_cfg,
 				fdc->cylinder);
