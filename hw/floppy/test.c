@@ -30,6 +30,7 @@ struct floppy_controller {
 	uint8_t			main_status;		/* last value read from 0x3F4 */
 	uint8_t			digital_in;		/* last value read from 0x3F7 */
 	uint8_t			control_cfg;		/* last value written to 0x3F7 */
+	uint8_t			cylinder;		/* last known cylinder position */
 	uint16_t		irq_fired;
 
 	/* desired state */
@@ -442,6 +443,95 @@ void do_floppy_controller_reset(struct floppy_controller *fdc) {
 	vga_msg_box_destroy(&vgabox);
 }
 
+void do_check_interrupt_status(struct floppy_controller *fdc) {
+	struct vga_msg_box vgabox;
+	char cmd[10],resp[10];
+	int rd,wd,rdo,wdo;
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	wdo = 1;
+	cmd[0] = 0x08;	/* Check interrupt status */
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 1) {
+		sprintf(tmp,"Failed to write data to FDC, %u/%u",wd,wdo);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* wait for data ready. does not fire an IRQ (because you use this to clear IRQ status!) */
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* NTS: It's not specified whether this returns 2 bytes if success and 1 if no IRQ pending.. or...? */
+	rdo = 2;
+	resp[1] = 0;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+		sprintf(tmp,"Failed to read data from the FDC, %u/%u",rd,rdo);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	/* return value is ST0 and the current cylinder */
+	fdc->st[0] = resp[0];
+	fdc->cylinder = resp[1];
+}
+
+void do_calibrate_drive(struct floppy_controller *fdc) {
+	struct vga_msg_box vgabox;
+	char cmd[10];
+	int wd,wdo;
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	floppy_controller_reset_irq_counter(fdc);
+
+	wdo = 2;
+	cmd[0] = 0x07;	/* Calibrate */
+	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 */;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 2) {
+		sprintf(tmp,"Failed to write data to FDC, %u/%u",wd,wdo);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* fires an IRQ. doesn't return state */
+	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	/* use Check Interrupt Status */
+	do_check_interrupt_status(fdc);
+
+	sprintf(tmp,"Calibrate finished, ST0=0x%02x Cyl=%u",fdc->st[0],fdc->cylinder);
+	vga_msg_box_create(&vgabox,tmp,0,0);
+	wait_for_enter_or_escape();
+	vga_msg_box_destroy(&vgabox);
+}
+
 void do_check_drive_status(struct floppy_controller *fdc) {
 	struct vga_msg_box vgabox;
 	char cmd[10],resp[10];
@@ -683,6 +773,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				redraw = 1;
 			}
 			else if (select == 9) { /* calibrate drive */
+				do_calibrate_drive(fdc);
+				redraw = 1;
 			}
 		}
 		else if (c == 0x4800) {
