@@ -330,6 +330,169 @@ void do_floppy_controller_enable_irq(struct floppy_controller *fdc,unsigned char
 		do_floppy_controller_hook_irq(fdc);
 }
 
+static inline uint8_t floppy_controller_busy_in_instruction(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0x10) == 0x10)?1:0; /* busy == 1 */
+}
+
+static inline uint8_t floppy_controller_data_io_ready(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0x80) == 0x80)?1:0; /* data ready == 1 */
+}
+
+static inline uint8_t floppy_controller_can_read_data(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0xC0) == 0xC0)?1:0; /* data ready == 1 and data i/o == 1 */
+}
+
+static inline uint8_t floppy_controller_can_write_data(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0xC0) == 0x80)?1:0; /* data ready == 1 and data i/o == 0 */
+}
+
+static inline uint8_t floppy_controller_read_data_byte(struct floppy_controller *fdc) {
+	return inp(fdc->base_io+5);
+}
+
+static inline void floppy_controller_write_data_byte(struct floppy_controller *fdc,uint8_t b) {
+	outp(fdc->base_io+5,b);
+}
+
+static inline int floppy_controller_wait_data_ready(struct floppy_controller *fdc,unsigned int timeout) {
+	do {
+		floppy_controller_read_status(fdc);
+		if (floppy_controller_data_io_ready(fdc)) return 1;
+	} while (--timeout != 0);
+
+	return 0;
+}
+
+static inline void floppy_controller_reset_irq_counter(struct floppy_controller *fdc) {
+	fdc->irq_fired = 0;
+}
+
+int floppy_controller_wait_data_ready_ms(struct floppy_controller *fdc,unsigned int timeout) {
+	do {
+		floppy_controller_read_status(fdc);
+		if (floppy_controller_data_io_ready(fdc)) return 1;
+		t8254_wait(t8254_us2ticks(1000));
+	} while (--timeout != 0);
+
+	return 0;
+}
+
+int floppy_controller_wait_irq(struct floppy_controller *fdc,unsigned int timeout,unsigned int counter) {
+	do {
+		if (fdc->irq_fired >= counter) break;
+		t8254_wait(t8254_us2ticks(1000));
+	} while (--timeout != 0);
+
+	return 0;
+}
+
+int floppy_controller_write_data(struct floppy_controller *fdc,const unsigned char *data,int len) {
+	int ret = 0;
+
+	while (len > 0) {
+		floppy_controller_read_status(fdc);
+		if (!floppy_controller_wait_data_ready(fdc,1000)) {
+			if (ret == 0) ret = -1;
+			break;
+		}
+		if (!floppy_controller_can_write_data(fdc)) {
+			if (ret == 0) ret = -2;
+			break;
+		}
+
+		floppy_controller_write_data_byte(fdc,*data++);
+		len--; ret++;
+	}
+
+	return ret;
+}
+
+int floppy_controller_read_data(struct floppy_controller *fdc,unsigned char *data,int len) {
+	int ret = 0;
+
+	while (len > 0) {
+		floppy_controller_read_status(fdc);
+		if (!floppy_controller_wait_data_ready(fdc,1000)) {
+			if (ret == 0) ret = -1;
+			break;
+		}
+		if (!floppy_controller_can_read_data(fdc)) {
+			if (ret == 0) ret = -2;
+			break;
+		}
+
+		*data++ = floppy_controller_read_data_byte(fdc);
+		len--; ret++;
+	}
+
+	return ret;
+}
+
+void do_floppy_controller_reset(struct floppy_controller *fdc) {
+	struct vga_msg_box vgabox;
+
+	vga_msg_box_create(&vgabox,"FDC reset in progress",0,0);
+
+	floppy_controller_set_reset(fdc,1);
+	t8254_wait(t8254_us2ticks(1000000));
+	floppy_controller_set_reset(fdc,0);
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+	floppy_controller_read_status(fdc);
+
+	vga_msg_box_destroy(&vgabox);
+}
+
+void do_check_drive_status(struct floppy_controller *fdc) {
+	struct vga_msg_box vgabox;
+	char cmd[10],resp[10];
+	int rd,wd,rdo,wdo;
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	wdo = 2;
+	cmd[0] = 0x04;	/* Check drive status */
+	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD = 0 */;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 2) {
+		sprintf(tmp,"Failed to write data to FDC, %u/%u",wd,wdo);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* wait for data ready. does not fire an IRQ */
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	rdo = 1;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+		sprintf(tmp,"Failed to read data from the FDC, %u/%u",rd,rdo);
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	/* return value is ST3 */
+	fdc->st[3] = resp[0];
+
+	/* show result to user */
+	sprintf(tmp,"Command result: 0x%02x",resp[0]);
+	vga_msg_box_create(&vgabox,tmp,0,0);
+	wait_for_enter_or_escape();
+	vga_msg_box_destroy(&vgabox);
+}
+
 void do_floppy_controller(struct floppy_controller *fdc) {
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
@@ -460,6 +623,17 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			};
 			vga_write(" (hit enter to toggle)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			y++;
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 8) ? 0x70 : 0x0F);
+			vga_write("Check drive status (x4h)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 9) ? 0x70 : 0x0F);
+			vga_write("Calibrate (x7h)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -504,15 +678,21 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				floppy_controller_set_data_transfer_rate(fdc,((fdc->control_cfg&3)+1)&3);
 				redraw = 1;
 			}
+			else if (select == 8) { /* check drive status */
+				do_check_drive_status(fdc);
+				redraw = 1;
+			}
+			else if (select == 9) { /* calibrate drive */
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 7;
+				select = 9;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 7)
+			if (++select > 9)
 				select = -1;
 
 			redraw = 1;
