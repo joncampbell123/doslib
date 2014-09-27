@@ -888,7 +888,7 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
 		do_floppy_controller_reset(fdc);
 
-	/* return value is ST3 */
+	/* accept ST0..ST2 from response and update */
 	if (rd >= 3) {
 		fdc->st[0] = resp[0];
 		fdc->st[1] = resp[1];
