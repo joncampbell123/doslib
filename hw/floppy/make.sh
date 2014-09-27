@@ -10,7 +10,8 @@ if [ "$1" == "clean" ]; then
 fi
 
 if [ "$1" == "disk" ]; then
-	make_msdos_data_disk test.dsk || exit 1
+#	make_msdos_data_disk test.dsk || exit 1
+	gunzip -c -d win95.dsk.gz >test.dsk || exit 1
 	mcopy -i test.dsk dos86m/test.exe ::test86m.exe
 	mcopy -i test.dsk dos86l/test.exe ::test86.exe
 	mcopy -i test.dsk dos386f/test.exe ::test386.exe
