@@ -676,6 +676,16 @@ void do_check_drive_status(struct floppy_controller *fdc) {
 	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
 		do_floppy_controller_reset(fdc);
 
+	/* Check Drive Status (x4h)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   0   1   0   0
+	 *      1 |  x   x   x   x   x  HD DR1 DR0
+	 *
+	 *       HD = Head select (on PC platform, doesn't matter)
+	 *  DR1,DR0 = Drive select */
+
 	wdo = 2;
 	cmd[0] = 0x04;	/* Check drive status */
 	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD = 0 */;
@@ -691,6 +701,13 @@ void do_check_drive_status(struct floppy_controller *fdc) {
 
 	/* wait for data ready. does not fire an IRQ */
 	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* Check Drive Status (x4h) response
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |              ST3
+         */
 
 	rdo = 1;
 	rd = floppy_controller_read_data(fdc,resp,rdo);
