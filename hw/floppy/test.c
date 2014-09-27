@@ -416,6 +416,10 @@ static inline uint8_t floppy_controller_can_write_data(struct floppy_controller 
 	return ((fdc->main_status & 0xC0) == 0x80)?1:0; /* data ready == 1 and data i/o == 0 */
 }
 
+static inline uint8_t floppy_controller_can_write_data_non_dma(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0xE0) == 0xA0)?1:0; /* data ready == 1 and data i/o == 0 AND NDMA == 1 */
+}
+
 static inline uint8_t floppy_controller_read_data_byte(struct floppy_controller *fdc) {
 	return inp(fdc->base_io+5);
 }
@@ -478,6 +482,34 @@ int floppy_controller_write_data(struct floppy_controller *fdc,const unsigned ch
 			break;
 		}
 		if (!floppy_controller_can_write_data(fdc)) {
+			if (ret == 0) ret = -2;
+			break;
+		}
+
+		floppy_controller_write_data_byte(fdc,*data++);
+		len--; ret++;
+	}
+
+	if (oflags&0x200/*IF interrupt enable was on*/) _sti();
+	return ret;
+}
+
+#if TARGET_MSDOS == 32
+int floppy_controller_write_data_ndma(struct floppy_controller *fdc,const unsigned char *data,int len) {
+#else
+int floppy_controller_write_data_ndma(struct floppy_controller *fdc,const unsigned char far *data,int len) {
+#endif
+	unsigned int oflags = get_cpu_flags();
+	int ret = 0;
+
+	_cli();
+	while (len > 0) {
+		floppy_controller_read_status(fdc);
+		if (!floppy_controller_wait_data_ready(fdc,1000)) {
+			if (ret == 0) ret = -1;
+			break;
+		}
+		if (!floppy_controller_can_write_data_non_dma(fdc)) {
 			if (ret == 0) ret = -2;
 			break;
 		}
@@ -1064,6 +1096,168 @@ unsigned long prompt_track_number() {
 	return track;
 }
 
+void do_floppy_write_test(struct floppy_controller *fdc) {
+	unsigned int data_length;
+	unsigned int returned_length = 0;
+	char cmd[10],resp[10];
+	uint8_t cyl,head,sect,ssz,nsect;
+	int rd,rdo,wd,wdo,x,p;
+
+	cyl = 0;
+	head = 0;
+	sect = 1;
+	nsect = 2; /* two sector */
+	ssz = 2; /* 512 */
+
+	data_length = nsect * (128 << ssz);
+
+	vga_moveto(0,0);
+	vga_write_color(0x0E);
+	vga_clear();
+
+	sprintf(tmp,"Writing C/H/S/sz/num %u/%u/%u/%u/%u\n",cyl,head,sect,128 << ssz,nsect);
+	vga_write(tmp);
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
+
+	if (floppy_dma == NULL) return;
+	if (data_length > floppy_dma->length) return;
+
+	for (x=0;(unsigned int)x < data_length;x++) floppy_dma->lin[x] = x;
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	if (fdc->dma >= 0 && fdc->use_dma) {
+		outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma) | D8237_MASK_SET); /* mask */
+
+		outp(d8237_ioport(fdc->dma,D8237_REG_W_WRITE_MODE),
+			D8237_MODER_CHANNEL(fdc->dma) |
+			D8237_MODER_TRANSFER(D8237_MODER_XFER_READ) |
+			D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
+
+		d8237_write_count(fdc->dma,data_length);
+		d8237_write_base(fdc->dma,floppy_dma->phys);
+
+		outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma)); /* unmask */
+	}
+
+	/* Write Sector (x5h)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   0   1   0   1
+	 *      1 |  x   x   x   x   x  HD DR1 DR0
+	 *      2 |            Cylinder
+	 *      3 |              Head
+	 *      4 |         Sector Number
+	 *      5 |          Sector Size
+	 *      6 |    Track length/last sector
+	 *      7 |        Length of GAP3
+	 *      8 |          Data Length
+	 *
+	 *         HD = Head select (on PC platform, doesn't matter)
+	 *    DR1,DR0 = Drive select */
+
+	/* NTS: To ensure we read only one sector, Track length/last sector must equal
+	 * Sector Number field. The floppy controller stops reading on error or when
+	 * sector number matches. This is very important for the PIO mode of this code,
+	 * else we'll never complete reading properly and never get to reading back
+	 * the status bytes. */
+
+	wdo = 9;
+	cmd[0] = 0x40/* MFM=1 */ + 0x05/* WRITE DATA */;
+	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD */;
+	cmd[2] = cyl;	/* cyl=0 */
+	cmd[3] = head;	/* head=0 */
+	cmd[4] = sect;	/* sector=1 */
+	cmd[5] = ssz;	/* sector size=2 (512 bytes) */
+	cmd[6] = sect+nsect-1; /* last sector of the track (what sector to stop at). */
+	cmd[7] = 0;	/* gap size (??) */
+	cmd[8] = 0xFF;	/* DTL (not used) */
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 2) {
+		vga_write("Write data port failed\n");
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	vga_write("Write in progress\n");
+
+	/* fires an IRQ */
+	if (fdc->use_dma) {
+		floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
+		floppy_controller_wait_data_ready_ms(fdc,1000);
+	}
+	else {
+		floppy_controller_wait_data_ready_ms(fdc,10000);
+
+		p = floppy_controller_write_data_ndma(fdc,floppy_dma->lin,data_length);
+		if (p < 0) {
+			sprintf(tmp,"NDMA write failed %d\n",p);
+			vga_write(tmp);
+			p = 0;
+		}
+		returned_length = (unsigned int)p;
+	}
+
+	rdo = 7;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+		vga_write("Write data port failed\n");
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* Write Sector (x5h) response
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |              ST0
+	 *      1 |              ST1
+	 *      2 |              ST2
+	 *      3 |           Cylinder
+	 *      4 |             Head
+	 *      5 |        Sector Number
+	 *      6 |         Sector Size
+         */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* accept ST0..ST2 from response and update */
+	if (rd >= 3) {
+		fdc->st[0] = resp[0];
+		fdc->st[1] = resp[1];
+		fdc->st[2] = resp[2];
+	}
+	if (rd >= 4) {
+		fdc->cylinder = resp[3];
+	}
+
+	/* (if DMA) did we get any data? */
+	if (fdc->dma >= 0 && fdc->use_dma) {
+		uint32_t dma_len = d8237_read_count(fdc->dma);
+		uint8_t status = inp(d8237_ioport(fdc->dma,D8237_REG_R_STATUS));
+
+		/* some DMA controllers reset the count back to the original value on terminal count.
+		 * so if the DMA controller says terminal count, the true count is zero */
+		if (status&D8237_STATUS_TC(fdc->dma)) dma_len = 0;
+
+		if (dma_len > (uint32_t)data_length) dma_len = (uint32_t)data_length;
+		returned_length = (unsigned int)((uint32_t)data_length - dma_len);
+	}
+
+	sprintf(tmp,"%lu bytes written\n",(unsigned long)returned_length);
+	vga_write(tmp);
+	vga_write("\n");
+
+	wait_for_enter_or_escape();
+}
+
 void do_floppy_read_test(struct floppy_controller *fdc) {
 	unsigned int data_length;
 	unsigned int returned_length = 0;
@@ -1356,6 +1550,113 @@ void do_floppy_controller_read_tests(struct floppy_controller *fdc) {
 	}
 }
 
+void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
+	char backredraw=1;
+	VGA_ALPHA_PTR vga;
+	unsigned int x,y;
+	char redraw=1;
+	int select=-1;
+	int c;
+
+	while (1) {
+		if (backredraw) {
+			vga = vga_alpha_ram;
+			backredraw = 0;
+			redraw = 1;
+
+			for (y=0;y < vga_height;y++) {
+				for (x=0;x < vga_width;x++) {
+					*vga++ = 0x1E00 + 177;
+				}
+			}
+
+			vga_moveto(0,0);
+
+			vga_write_color(0x1F);
+			vga_write("        Write tests ");
+			sprintf(tmp,"@%X",fdc->base_io);
+			vga_write(tmp);
+			if (fdc->irq >= 0) {
+				sprintf(tmp," IRQ %d",fdc->irq);
+				vga_write(tmp);
+			}
+			if (fdc->dma >= 0) {
+				sprintf(tmp," DMA %d",fdc->dma);
+				vga_write(tmp);
+			}
+			if (floppy_dma != NULL) {
+				sprintf(tmp," phys=%08lxh len=%04lxh",(unsigned long)floppy_dma->phys,(unsigned long)floppy_dma->length);
+				vga_write(tmp);
+			}
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		if (redraw) {
+			redraw = 0;
+
+			floppy_controller_read_status(fdc);
+			floppy_controller_read_DIR(fdc);
+			floppy_controller_read_ps2_status(fdc);
+
+			y = 2;
+			vga_moveto(8,y++);
+			vga_write_color(0x0F);
+			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh cyl=%-3u",
+				fdc->digital_out,fdc->digital_in,
+				fdc->main_status,fdc->control_cfg,
+				fdc->cylinder);
+			vga_write(tmp);
+
+			vga_moveto(8,y++);
+			vga_write_color(0x0F);
+			sprintf(tmp,"ST0..3: %02x %02x %02x %02x PS/2 %02x %02x",
+				fdc->st[0],fdc->st[1],fdc->st[2],fdc->st[3],
+				fdc->ps2_status[0],fdc->ps2_status[1]);
+			vga_write(tmp);
+
+			y = 5;
+			vga_moveto(8,y++);
+			vga_write_color((select == -1) ? 0x70 : 0x0F);
+			vga_write("FDC menu");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			y++;
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 0) ? 0x70 : 0x0F);
+			vga_write("Write sector");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			break;
+		}
+		else if (c == 13) {
+			if (select == -1) {
+				break;
+			}
+			else if (select == 0) { /* Write Sector */
+				do_floppy_write_test(fdc);
+				backredraw = 1;
+			}
+		}
+		else if (c == 0x4800) {
+			if (--select < -1)
+				select = 0;
+
+			redraw = 1;
+		}
+		else if (c == 0x5000) {
+			if (++select > 0)
+				select = -1;
+
+			redraw = 1;
+		}
+	}
+}
+
 void do_floppy_controller(struct floppy_controller *fdc) {
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
@@ -1534,6 +1835,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 13) ? 0x70 : 0x0F);
 			vga_write("Read testing >>");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 14) ? 0x70 : 0x0F);
+			vga_write("Write testing >>");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -1608,15 +1914,19 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				do_floppy_controller_read_tests(fdc);
 				backredraw = 1;
 			}
+			else if (select == 14) { /* write testing */
+				do_floppy_controller_write_tests(fdc);
+				backredraw = 1;
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 13;
+				select = 14;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 13)
+			if (++select > 14)
 				select = -1;
 
 			redraw = 1;
