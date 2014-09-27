@@ -408,6 +408,10 @@ static inline uint8_t floppy_controller_can_read_data(struct floppy_controller *
 	return ((fdc->main_status & 0xC0) == 0xC0)?1:0; /* data ready == 1 and data i/o == 1 */
 }
 
+static inline uint8_t floppy_controller_can_read_data_non_dma(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0xE0) == 0xE0)?1:0; /* data ready == 1 and data i/o == 1 and NDMA == 1 */
+}
+
 static inline uint8_t floppy_controller_can_write_data(struct floppy_controller *fdc) {
 	return ((fdc->main_status & 0xC0) == 0x80)?1:0; /* data ready == 1 and data i/o == 0 */
 }
@@ -498,6 +502,34 @@ int floppy_controller_read_data(struct floppy_controller *fdc,unsigned char *dat
 			break;
 		}
 		if (!floppy_controller_can_read_data(fdc)) {
+			if (ret == 0) ret = -2;
+			break;
+		}
+
+		*data++ = floppy_controller_read_data_byte(fdc);
+		len--; ret++;
+	}
+
+	if (oflags&0x200/*IF interrupt enable was on*/) _sti();
+	return ret;
+}
+
+#if TARGET_MSDOS == 32
+int floppy_controller_read_data_ndma(struct floppy_controller *fdc,unsigned char *data,int len) {
+#else
+int floppy_controller_read_data_ndma(struct floppy_controller *fdc,unsigned char far *data,int len) {
+#endif
+	unsigned int oflags = get_cpu_flags();
+	int ret = 0;
+
+	_cli();
+	while (len > 0) {
+		floppy_controller_read_status(fdc);
+		if (!floppy_controller_wait_data_ready(fdc,1000)) {
+			if (ret == 0) ret = -1;
+			break;
+		}
+		if (!floppy_controller_can_read_data_non_dma(fdc)) {
 			if (ret == 0) ret = -2;
 			break;
 		}
@@ -1080,7 +1112,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	cmd[3] = 0x00;	/* head=0 */
 	cmd[4] = 0x01;	/* sector=1 */
 	cmd[5] = 0x02;	/* sector size=2 (512 bytes) */
-	cmd[6] = 18;	/* last sector of the track (18 sectors/track) */
+	cmd[6] = 1;	/* last sector of the track (what sector to stop at). Set to same as starting sector to read one sector. */
 	cmd[7] = 0;	/* gap size (??) */
 	cmd[8] = 0xFF;	/* DTL (not used) */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
@@ -1099,6 +1131,14 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	}
 	else {
 		floppy_controller_wait_data_ready_ms(fdc,10000);
+
+		p = floppy_controller_read_data_ndma(fdc,floppy_dma->lin,data_length);
+		if (p < 0) {
+			sprintf(tmp,"NDMA read failed %d\n",p);
+			vga_write(tmp);
+			p = 0;
+		}
+		returned_length = (unsigned int)p;
 	}
 
 	rdo = 7;
@@ -1148,9 +1188,6 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 
 		if (dma_len > (uint32_t)data_length) dma_len = (uint32_t)data_length;
 		returned_length = (unsigned int)((uint32_t)data_length - dma_len);
-	}
-	else {
-		/* ... */
 	}
 
 	sprintf(tmp,"%lu bytes received\n",(unsigned long)returned_length);
