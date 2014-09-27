@@ -11,6 +11,7 @@
 
 #include <hw/vga/vga.h>
 #include <hw/dos/dos.h>
+#include <hw/8237/8237.h>		/* DMA controller */
 #include <hw/8254/8254.h>		/* 8254 timer */
 #include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/vga/vgagui.h>
@@ -54,6 +55,8 @@ struct floppy_controller *floppy_get_standard_isa_port(int x) {
 	if (x < 0 || x >= (sizeof(floppy_standard_isa)/sizeof(floppy_standard_isa[0]))) return NULL;
 	return &floppy_standard_isa[x];
 }
+
+struct dma_8237_allocation*		floppy_dma = NULL; /* DMA buffer */
 
 struct floppy_controller		floppy_controllers[MAX_FLOPPY_CONTROLLER];
 int8_t					floppy_controllers_init = -1;
@@ -867,6 +870,18 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 	int select=-1;
 	int c;
 
+	/* and allocate DMA too */
+	if (fdc->dma >= 0 && floppy_dma == NULL) {
+		uint32_t choice = 32768;
+
+		do {
+			floppy_dma = dma_8237_alloc_buffer(choice);
+			if (floppy_dma == NULL) choice -= 4096UL;
+		} while (floppy_dma == NULL && choice > 4096UL);
+
+		if (floppy_dma == NULL) return;
+	}
+
 	/* if the floppy struct says to use interrupts, then do it */
 	do_floppy_controller_enable_irq(fdc,fdc->use_dma);
 
@@ -894,6 +909,10 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			}
 			if (fdc->dma >= 0) {
 				sprintf(tmp," DMA %d",fdc->dma);
+				vga_write(tmp);
+			}
+			if (floppy_dma != NULL) {
+				sprintf(tmp," phys=%08lxh len=%04lxh",(unsigned long)floppy_dma->phys,(unsigned long)floppy_dma->length);
 				vga_write(tmp);
 			}
 			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
@@ -1101,6 +1120,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 		}
 	}
 
+	if (floppy_dma != NULL) {
+		dma_8237_free_buffer(floppy_dma);
+		floppy_dma = NULL;
+	}
+
 	do_floppy_controller_enable_irq(fdc,0);
 	floppy_controller_enable_dma_otr(fdc,1); /* because BIOSes probably won't */
 	p8259_unmask(fdc->irq);
@@ -1214,6 +1238,8 @@ int main(int argc,char **argv) {
 		printf("Cannot init VGA\n");
 		return 1;
 	}
+	if (!probe_8237())
+		printf("WARNING: Cannot init 8237 DMA\n");
 	/* the floppy code has some timing requirements and we'll use the 8254 to do it */
 	/* newer motherboards don't even have a floppy controller and it's probable they'll stop implementing the 8254 at some point too */
 	if (!probe_8254()) {
