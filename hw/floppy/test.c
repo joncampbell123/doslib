@@ -616,6 +616,19 @@ void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
 
 	floppy_controller_reset_irq_counter(fdc);
 
+	/* Seek Relative (1xFh)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  1 DIR   0   0   1   1   1   1
+	 *      1 |  x   x   x   x   x  HD DR1 DR0
+	 *      2 |         Cylinder Step
+	 *
+	 *         HD = Head select (on PC platform, doesn't matter)
+	 *    DR1,DR0 = Drive select
+	 *        DIR = Step direction (1=inward increasing, 0=outward decreasing)
+	 *  Cyl. step = How many tracks to step */
+
 	wdo = 3;
 	cmd[0] = 0x8F + (track < 0 ? 0x40 : 0x00); /* Seek rel [6:6] = DIR */
 	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
@@ -633,6 +646,11 @@ void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
 	/* fires an IRQ. doesn't return state */
 	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
 	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* Seek Relative (1xFh) response
+	 *
+	 * (none)
+	 */
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
@@ -787,7 +805,7 @@ void do_calibrate_drive(struct floppy_controller *fdc) {
 	/* Calibrate Drive (x7h) response
 	 *
 	 * (none)
-         */
+	 */
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
