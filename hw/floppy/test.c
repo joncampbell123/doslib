@@ -533,6 +533,14 @@ void do_check_interrupt_status(struct floppy_controller *fdc) {
 	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
 		do_floppy_controller_reset(fdc);
 
+	/* Check Interrupt Status (x8h)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   1   0   0   0
+	 *
+	 */
+
 	wdo = 1;
 	cmd[0] = 0x08;	/* Check interrupt status */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
@@ -560,6 +568,14 @@ void do_check_interrupt_status(struct floppy_controller *fdc) {
 		do_floppy_controller_reset(fdc);
 		return;
 	}
+
+	/* Check Interrupt Status (x8h) response
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |              ST0
+	 *      1 |        Current Cylinder
+	 */
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
