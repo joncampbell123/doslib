@@ -674,6 +674,18 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 
 	floppy_controller_reset_irq_counter(fdc);
 
+	/* Seek (xFh)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   1   1   1   1
+	 *      1 |  x   x   x   x   x  HD DR1 DR0
+	 *      2 |            Cylinder
+	 *
+	 *         HD = Head select (on PC platform, doesn't matter)
+	 *    DR1,DR0 = Drive select
+	 *   Cylinder = Track to move to */
+
 	wdo = 3;
 	cmd[0] = 0x0F;	/* Seek */
 	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
@@ -691,6 +703,11 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 	/* fires an IRQ. doesn't return state */
 	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
 	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* Seek (xFh) response
+	 *
+	 * (none)
+	 */
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
