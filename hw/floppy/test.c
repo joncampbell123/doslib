@@ -841,6 +841,16 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
 		do_floppy_controller_reset(fdc);
 
+	/* Read ID (xAh)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   1   0   1   0
+	 *      1 |  x   x   x   x   x  HD DR1 DR0
+	 *
+	 *         HD = Head select (on PC platform, doesn't matter)
+	 *    DR1,DR0 = Drive select */
+
 	wdo = 2;
 	cmd[0] = 0x0A + 0x40;	/* Read sector ID [6:6] MFM=1 */
 	cmd[1] = (fdc->digital_out&3)+(head<<2)/* [1:0] = DR1,DR0 [2:2] = HD */;
@@ -859,6 +869,19 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 		do_floppy_controller_reset(fdc);
 		return 0;
 	}
+
+	/* Read ID (xAh) response
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |              ST0
+	 *      1 |              ST1
+	 *      2 |              ST2
+	 *      3 |           Cylinder
+	 *      4 |             Head
+	 *      5 |        Sector Number
+	 *      6 |         Sector Size
+         */
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
