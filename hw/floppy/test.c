@@ -1157,6 +1157,8 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 		d8237_write_base(fdc->dma,floppy_dma->phys);
 
 		outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma)); /* unmask */
+
+		inp(d8237_ioport(fdc->dma,D8237_REG_R_STATUS)); /* read status port to clear TC bits */
 	}
 
 	/* Write Sector (x5h)
@@ -1218,7 +1220,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 
 			p = floppy_controller_write_data_ndma(fdc,floppy_dma->lin + returned_length,128 << ssz);
 			if (p < 0 || p > (128 << ssz)) {
-				sprintf(tmp,"NDMA write failed %d\n",p);
+				sprintf(tmp,"NDMA write failed %d (%02xh)\n",p,fdc->main_status);
 				vga_write(tmp);
 				p = 0;
 			}
@@ -1334,6 +1336,8 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 		d8237_write_base(fdc->dma,floppy_dma->phys);
 
 		outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma)); /* unmask */
+
+		inp(d8237_ioport(fdc->dma,D8237_REG_R_STATUS)); /* read status port to clear TC bits */
 	}
 
 	/* Read Sector (x6h)
@@ -1390,7 +1394,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 
 			p = floppy_controller_read_data_ndma(fdc,floppy_dma->lin + returned_length,128 << ssz);
 			if (p < 0 || p > (128 << ssz)) {
-				sprintf(tmp,"NDMA read failed %d\n",p);
+				sprintf(tmp,"NDMA read failed %d (%02xh)\n",p,fdc->main_status);
 				vga_write(tmp);
 				p = 0;
 			}
