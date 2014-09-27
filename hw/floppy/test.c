@@ -437,6 +437,26 @@ static inline int floppy_controller_wait_data_ready(struct floppy_controller *fd
 	return 0;
 }
 
+static inline int floppy_controller_wait_data_read_non_dma_ready(struct floppy_controller *fdc,unsigned int timeout) {
+	do {
+		floppy_controller_read_status(fdc);
+		if (floppy_controller_can_read_data_non_dma(fdc)) return 1;
+		t8254_wait(t8254_us2ticks(1000));
+	} while (--timeout != 0);
+
+	return 0;
+}
+
+static inline int floppy_controller_wait_data_write_non_dma_ready(struct floppy_controller *fdc,unsigned int timeout) {
+	do {
+		floppy_controller_read_status(fdc);
+		if (floppy_controller_can_write_data_non_dma(fdc)) return 1;
+		t8254_wait(t8254_us2ticks(1000));
+	} while (--timeout != 0);
+
+	return 0;
+}
+
 static inline void floppy_controller_reset_irq_counter(struct floppy_controller *fdc) {
 	fdc->irq_fired = 0;
 }
@@ -476,7 +496,6 @@ int floppy_controller_write_data(struct floppy_controller *fdc,const unsigned ch
 
 	_cli(); /* clear interrupts so we can focus on talking to the FDC */
 	while (len > 0) {
-		floppy_controller_read_status(fdc);
 		if (!floppy_controller_wait_data_ready(fdc,1000)) {
 			if (ret == 0) ret = -1;
 			break;
@@ -504,12 +523,11 @@ int floppy_controller_write_data_ndma(struct floppy_controller *fdc,const unsign
 
 	_cli();
 	while (len > 0) {
-		floppy_controller_read_status(fdc);
 		if (!floppy_controller_wait_data_ready(fdc,1000)) {
 			if (ret == 0) ret = -1;
 			break;
 		}
-		if (!floppy_controller_can_write_data_non_dma(fdc)) {
+		if (!floppy_controller_wait_data_write_non_dma_ready(fdc,1000)) {
 			if (ret == 0) ret = -2;
 			break;
 		}
@@ -528,7 +546,6 @@ int floppy_controller_read_data(struct floppy_controller *fdc,unsigned char *dat
 
 	_cli();
 	while (len > 0) {
-		floppy_controller_read_status(fdc);
 		if (!floppy_controller_wait_data_ready(fdc,1000)) {
 			if (ret == 0) ret = -1;
 			break;
@@ -556,12 +573,11 @@ int floppy_controller_read_data_ndma(struct floppy_controller *fdc,unsigned char
 
 	_cli();
 	while (len > 0) {
-		floppy_controller_read_status(fdc);
 		if (!floppy_controller_wait_data_ready(fdc,1000)) {
 			if (ret == 0) ret = -1;
 			break;
 		}
-		if (!floppy_controller_can_read_data_non_dma(fdc)) {
+		if (!floppy_controller_wait_data_read_non_dma_ready(fdc,1000)) {
 			if (ret == 0) ret = -2;
 			break;
 		}
@@ -1191,15 +1207,26 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 		floppy_controller_wait_data_ready_ms(fdc,1000);
 	}
 	else {
-		floppy_controller_wait_data_ready_ms(fdc,10000);
+		/* NOTES:
+		 *
+		 * Sun/Oracle VirtualBox floppy emulation bug: PIO mode doesn't seem to be supported properly on write
+		 * for more than one sector. It will SEEM like it works, but when you read the data back only the first
+		 * sector was ever written. On the same configuration, READ works fine using the same PIO mode. */
+		while (returned_length < data_length) {
+			if ((returned_length+(128 << ssz)) > data_length) break;
+			floppy_controller_wait_data_ready_ms(fdc,10000);
 
-		p = floppy_controller_write_data_ndma(fdc,floppy_dma->lin,data_length);
-		if (p < 0) {
-			sprintf(tmp,"NDMA write failed %d\n",p);
-			vga_write(tmp);
-			p = 0;
+			p = floppy_controller_write_data_ndma(fdc,floppy_dma->lin + returned_length,128 << ssz);
+			if (p < 0 || p > (128 << ssz)) {
+				sprintf(tmp,"NDMA write failed %d\n",p);
+				vga_write(tmp);
+				p = 0;
+			}
+
+			returned_length += p;
+			/* stop on incomplete transfer */
+			if (p != (128 << ssz)) break;
 		}
-		returned_length = (unsigned int)p;
 	}
 
 	rdo = 7;
@@ -1357,15 +1384,21 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 		floppy_controller_wait_data_ready_ms(fdc,1000);
 	}
 	else {
-		floppy_controller_wait_data_ready_ms(fdc,10000);
+		while (returned_length < data_length) {
+			if ((returned_length+(128 << ssz)) > data_length) break;
+			floppy_controller_wait_data_ready_ms(fdc,10000);
 
-		p = floppy_controller_read_data_ndma(fdc,floppy_dma->lin,data_length);
-		if (p < 0) {
-			sprintf(tmp,"NDMA read failed %d\n",p);
-			vga_write(tmp);
-			p = 0;
+			p = floppy_controller_read_data_ndma(fdc,floppy_dma->lin + returned_length,128 << ssz);
+			if (p < 0 || p > (128 << ssz)) {
+				sprintf(tmp,"NDMA read failed %d\n",p);
+				vga_write(tmp);
+				p = 0;
+			}
+
+			returned_length += p;
+			/* stop on incomplete transfer */
+			if (p != (128 << ssz)) break;
 		}
-		returned_length = (unsigned int)p;
 	}
 
 	rdo = 7;
