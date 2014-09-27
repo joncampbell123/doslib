@@ -1065,16 +1065,26 @@ unsigned long prompt_track_number() {
 }
 
 void do_floppy_read_test(struct floppy_controller *fdc) {
-	unsigned int data_length = 512;
+	unsigned int data_length;
 	unsigned int returned_length = 0;
 	char cmd[10],resp[10];
+	uint8_t cyl,head,sect,ssz,nsect;
 	int rd,rdo,wd,wdo,x,y,p;
+
+	cyl = 0;
+	head = 0;
+	sect = 1;
+	nsect = 2; /* two sector */
+	ssz = 2; /* 512 */
+
+	data_length = nsect * (128 << ssz);
 
 	vga_moveto(0,0);
 	vga_write_color(0x0E);
 	vga_clear();
 
-	vga_write("Read test\n");
+	sprintf(tmp,"Reading C/H/S/sz/num %u/%u/%u/%u/%u\n",cyl,head,sect,128 << ssz,nsect);
+	vga_write(tmp);
 
 	do_spin_up_motor(fdc,fdc->digital_out&3);
 
@@ -1131,11 +1141,11 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	wdo = 9;
 	cmd[0] = 0x40/* MFM=1 */ + 0x06/* READ DATA */;
 	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD */;
-	cmd[2] = 0x00;	/* cyl=0 */
-	cmd[3] = 0x00;	/* head=0 */
-	cmd[4] = 0x01;	/* sector=1 */
-	cmd[5] = 0x02;	/* sector size=2 (512 bytes) */
-	cmd[6] = 1;	/* last sector of the track (what sector to stop at). Set to same as starting sector to read one sector. */
+	cmd[2] = cyl;	/* cyl=0 */
+	cmd[3] = head;	/* head=0 */
+	cmd[4] = sect;	/* sector=1 */
+	cmd[5] = ssz;	/* sector size=2 (512 bytes) */
+	cmd[6] = sect+nsect-1; /* last sector of the track (what sector to stop at). */
 	cmd[7] = 0;	/* gap size (??) */
 	cmd[8] = 0xFF;	/* DTL (not used) */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
@@ -1218,7 +1228,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	vga_write("\n");
 
 	vga_write_color(0x0F);
-	for (p=0;p < 2;p++) {
+	for (p=0;p < ((returned_length+255)/256);p++) {
 		for (y=0;y < 16;y++) {
 			vga_moveto(0,6+y);
 			for (x=0;x < 16;x++) {
