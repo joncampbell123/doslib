@@ -1029,6 +1029,112 @@ unsigned long prompt_track_number() {
 	return track;
 }
 
+void do_floppy_controller_read_tests(struct floppy_controller *fdc) {
+	char backredraw=1;
+	VGA_ALPHA_PTR vga;
+	unsigned int x,y;
+	char redraw=1;
+	int select=-1;
+	int c;
+
+	while (1) {
+		if (backredraw) {
+			vga = vga_alpha_ram;
+			backredraw = 0;
+			redraw = 1;
+
+			for (y=0;y < vga_height;y++) {
+				for (x=0;x < vga_width;x++) {
+					*vga++ = 0x1E00 + 177;
+				}
+			}
+
+			vga_moveto(0,0);
+
+			vga_write_color(0x1F);
+			vga_write("        Read tests ");
+			sprintf(tmp,"@%X",fdc->base_io);
+			vga_write(tmp);
+			if (fdc->irq >= 0) {
+				sprintf(tmp," IRQ %d",fdc->irq);
+				vga_write(tmp);
+			}
+			if (fdc->dma >= 0) {
+				sprintf(tmp," DMA %d",fdc->dma);
+				vga_write(tmp);
+			}
+			if (floppy_dma != NULL) {
+				sprintf(tmp," phys=%08lxh len=%04lxh",(unsigned long)floppy_dma->phys,(unsigned long)floppy_dma->length);
+				vga_write(tmp);
+			}
+			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		if (redraw) {
+			redraw = 0;
+
+			floppy_controller_read_status(fdc);
+			floppy_controller_read_DIR(fdc);
+			floppy_controller_read_ps2_status(fdc);
+
+			y = 2;
+			vga_moveto(8,y++);
+			vga_write_color(0x0F);
+			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh cyl=%-3u",
+				fdc->digital_out,fdc->digital_in,
+				fdc->main_status,fdc->control_cfg,
+				fdc->cylinder);
+			vga_write(tmp);
+
+			vga_moveto(8,y++);
+			vga_write_color(0x0F);
+			sprintf(tmp,"ST0..3: %02x %02x %02x %02x PS/2 %02x %02x",
+				fdc->st[0],fdc->st[1],fdc->st[2],fdc->st[3],
+				fdc->ps2_status[0],fdc->ps2_status[1]);
+			vga_write(tmp);
+
+			y = 5;
+			vga_moveto(8,y++);
+			vga_write_color((select == -1) ? 0x70 : 0x0F);
+			vga_write("FDC menu");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			y++;
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 0) ? 0x70 : 0x0F);
+			vga_write("Read sector");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			break;
+		}
+		else if (c == 13) {
+			if (select == -1) {
+				break;
+			}
+			else if (select == 0) { /* Read Sector */
+				redraw = 1;
+			}
+		}
+		else if (c == 0x4800) {
+			if (--select < -1)
+				select = 0;
+
+			redraw = 1;
+		}
+		else if (c == 0x5000) {
+			if (++select > 0)
+				select = -1;
+
+			redraw = 1;
+		}
+	}
+}
+
 void do_floppy_controller(struct floppy_controller *fdc) {
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
@@ -1202,6 +1308,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 12) ? 0x70 : 0x0F);
 			vga_write("Read sector ID (xah)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 13) ? 0x70 : 0x0F);
+			vga_write("Read testing >>");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -1272,15 +1383,19 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				do_read_sector_id_demo(fdc);
 				backredraw = 1;
 			}
+			else if (select == 13) { /* read testing */
+				do_floppy_controller_read_tests(fdc);
+				backredraw = 1;
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 12;
+				select = 13;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 12)
+			if (++select > 13)
 				select = -1;
 
 			redraw = 1;
