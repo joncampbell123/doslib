@@ -742,6 +742,15 @@ void do_calibrate_drive(struct floppy_controller *fdc) {
 
 	floppy_controller_reset_irq_counter(fdc);
 
+	/* Calibrate Drive (x7h)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   0   1   1   1
+	 *      1 |  x   x   x   x   x   0 DR1 DR0
+	 *
+	 *  DR1,DR0 = Drive select */
+
 	wdo = 2;
 	cmd[0] = 0x07;	/* Calibrate */
 	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 */;
@@ -758,6 +767,11 @@ void do_calibrate_drive(struct floppy_controller *fdc) {
 	/* fires an IRQ. doesn't return state */
 	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
 	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* Calibrate Drive (x7h) response
+	 *
+	 * (none)
+         */
 
 	/* the command SHOULD terminate */
 	floppy_controller_wait_data_ready(fdc,20);
