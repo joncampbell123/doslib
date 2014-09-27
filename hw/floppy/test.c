@@ -1228,7 +1228,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	vga_write("\n");
 
 	vga_write_color(0x0F);
-	for (p=0;p < ((returned_length+255)/256);p++) {
+	for (p=0;p == 0 || p < ((returned_length+255)/256);p++) {
 		for (y=0;y < 16;y++) {
 			vga_moveto(0,6+y);
 			for (x=0;x < 16;x++) {
