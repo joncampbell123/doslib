@@ -894,6 +894,9 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 		fdc->st[1] = resp[1];
 		fdc->st[2] = resp[2];
 	}
+	if (rd >= 4) {
+		fdc->cylinder = resp[3];
+	}
 
 	return rd;
 }
@@ -1029,6 +1032,153 @@ unsigned long prompt_track_number() {
 	return track;
 }
 
+void do_floppy_read_test(struct floppy_controller *fdc) {
+	unsigned int data_length = 512;
+	unsigned int returned_length = 0;
+	char cmd[10],resp[10];
+	int rd,rdo,wd,wdo,x,y,p;
+
+	vga_moveto(0,0);
+	vga_write_color(0x0E);
+	vga_clear();
+
+	vga_write("Read test\n");
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
+
+	if (floppy_dma == NULL) return;
+	if (data_length > floppy_dma->length) return;
+
+#if TARGET_MSDOS == 32
+	memset(floppy_dma->lin,0,data_length);
+#else
+	_fmemset(floppy_dma->lin,0,data_length);
+#endif
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	if (fdc->dma >= 0 && fdc->use_dma) {
+		outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma) | D8237_MASK_SET); /* mask */
+
+		outp(d8237_ioport(fdc->dma,D8237_REG_W_WRITE_MODE),
+			D8237_MODER_CHANNEL(fdc->dma) |
+			D8237_MODER_TRANSFER(D8237_MODER_XFER_WRITE) |
+			D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
+
+		d8237_write_count(fdc->dma,data_length);
+		d8237_write_base(fdc->dma,floppy_dma->phys);
+
+		outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma)); /* unmask */
+	}
+
+	wdo = 9;
+	cmd[0] = 0x40/* MFM=1 */ + 0x06/* READ DATA */;
+	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD */;
+	cmd[2] = 0x00;	/* cyl=0 */
+	cmd[3] = 0x00;	/* head=0 */
+	cmd[4] = 0x01;	/* sector=1 */
+	cmd[5] = 0x02;	/* sector size=2 (512 bytes) */
+	cmd[6] = 18;	/* last sector of the track (18 sectors/track) */
+	cmd[7] = 0;	/* gap size (??) */
+	cmd[8] = 0xFF;	/* DTL (not used) */
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 2) {
+		vga_write("Write data port failed\n");
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	vga_write("Read in progress\n");
+
+	/* fires an IRQ */
+	if (fdc->use_dma) {
+		floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
+		floppy_controller_wait_data_ready_ms(fdc,1000);
+	}
+	else {
+		floppy_controller_wait_data_ready_ms(fdc,10000);
+	}
+
+	rdo = 7;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+		vga_write("Read data port failed\n");
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* Read Sector (xAh) response
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |              ST0
+	 *      1 |              ST1
+	 *      2 |              ST2
+	 *      3 |           Cylinder
+	 *      4 |             Head
+	 *      5 |        Sector Number
+	 *      6 |         Sector Size
+         */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* accept ST0..ST2 from response and update */
+	if (rd >= 3) {
+		fdc->st[0] = resp[0];
+		fdc->st[1] = resp[1];
+		fdc->st[2] = resp[2];
+	}
+	if (rd >= 4) {
+		fdc->cylinder = resp[3];
+	}
+
+	/* (if DMA) did we get any data? */
+	if (fdc->dma >= 0 && fdc->use_dma) {
+		uint32_t dma_len = d8237_read_count(fdc->dma);
+		uint8_t status = inp(d8237_ioport(fdc->dma,D8237_REG_R_STATUS));
+
+		/* some DMA controllers reset the count back to the original value on terminal count.
+		 * so if the DMA controller says terminal count, the true count is zero */
+		if (status&D8237_STATUS_TC(fdc->dma)) dma_len = 0;
+
+		if (dma_len > (uint32_t)data_length) dma_len = (uint32_t)data_length;
+		returned_length = (unsigned int)((uint32_t)data_length - dma_len);
+	}
+	else {
+		/* ... */
+	}
+
+	sprintf(tmp,"%lu bytes received\n",(unsigned long)returned_length);
+	vga_write(tmp);
+	vga_write("\n");
+
+	vga_write_color(0x0F);
+	for (p=0;p < 2;p++) {
+		for (y=0;y < 16;y++) {
+			vga_moveto(0,6+y);
+			for (x=0;x < 16;x++) {
+				sprintf(tmp,"%02x ",floppy_dma->lin[((y+(p*16))*16)+x]);
+				vga_write(tmp);
+			}
+
+			vga_moveto(50,6+y);
+			for (x=0;x < 16;x++) {
+				tmp[0] = floppy_dma->lin[((y+(p*16))*16)+x];
+				if (tmp[0] < 32) tmp[0] = '.';
+				tmp[1] = 0;
+				vga_write(tmp);
+			}
+		}
+
+		wait_for_enter_or_escape();
+	}
+}
+
 void do_floppy_controller_read_tests(struct floppy_controller *fdc) {
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
@@ -1117,7 +1267,8 @@ void do_floppy_controller_read_tests(struct floppy_controller *fdc) {
 				break;
 			}
 			else if (select == 0) { /* Read Sector */
-				redraw = 1;
+				do_floppy_read_test(fdc);
+				backredraw = 1;
 			}
 		}
 		else if (c == 0x4800) {
