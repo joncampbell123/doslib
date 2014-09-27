@@ -1105,6 +1105,29 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 		outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma)); /* unmask */
 	}
 
+	/* Read Sector (x6h)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   0   1   1   0
+	 *      1 |  x   x   x   x   x  HD DR1 DR0
+	 *      2 |            Cylinder
+	 *      3 |              Head
+	 *      4 |         Sector Number
+	 *      5 |          Sector Size
+	 *      6 |    Track length/last sector
+	 *      7 |        Length of GAP3
+	 *      8 |          Data Length
+	 *
+	 *         HD = Head select (on PC platform, doesn't matter)
+	 *    DR1,DR0 = Drive select */
+
+	/* NTS: To ensure we read only one sector, Track length/last sector must equal
+	 * Sector Number field. The floppy controller stops reading on error or when
+	 * sector number matches. This is very important for the PIO mode of this code,
+	 * else we'll never complete reading properly and never get to reading back
+	 * the status bytes. */
+
 	wdo = 9;
 	cmd[0] = 0x40/* MFM=1 */ + 0x06/* READ DATA */;
 	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD */;
@@ -1149,7 +1172,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 		return;
 	}
 
-	/* Read Sector (xAh) response
+	/* Read Sector (x6h) response
 	 *
 	 *   Byte |  7   6   5   4   3   2   1   0
 	 *   -----+---------------------------------
