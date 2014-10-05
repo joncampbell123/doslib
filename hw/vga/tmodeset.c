@@ -741,6 +741,8 @@ int main() {
 			redraw = 1;
 		}
 		else if (c == 'z') {
+			unsigned int nm;
+
 			bios_cls();
 			/* position the cursor to home */
 			vga_moveto(0,0);
@@ -749,12 +751,19 @@ int main() {
 			printf("\n");
 			printf(" a   Flash attrib control palette\n");
 			printf(" p   Flash VGA color palette\n");
+			printf(" o   Change overscan color\n");
 
 			c = getch();
 			if (c == 'a')
 				flash_acp();
 			else if (c == 'p')
 				flash_vga_pal();
+			else if (c == 'o') {
+				printf("\n");
+				printf("New color code (hex or dec)? "); fflush(stdout);
+				nm = common_prompt_number();
+				if (nm <= 255) vga_write_AC(0x11 | VGA_AC_ENABLE,nm);
+			}
 
 			redraw = 1;
 		}
