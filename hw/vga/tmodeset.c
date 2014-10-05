@@ -685,6 +685,7 @@ int main() {
 			printf("2    toggle more...    M max scanline\n");
 			printf("o    offset register   x Mode-X\n");
 			printf("z    palette tinkering d Dump regs\n");
+			printf("h    panning/hpel\n");
 		}
 
 		c = getch();
@@ -694,6 +695,34 @@ int main() {
 		}
 		else if (c == '=') {
 			vga_write_crtc_mode(&mp);
+			redraw = 1;
+		}
+		else if (c == 'h') {
+			unsigned int nm;
+
+			bios_cls();
+			/* position the cursor to home */
+			vga_moveto(0,0);
+			vga_sync_bios_cursor();
+
+			printf("\n");
+			printf(" o   Play with offset register (CRTC)\n");
+			printf(" p   Play with hpel register (AC)\n");
+
+			c = getch();
+			if (c == 'o') {
+				printf("\n");
+				printf("New offset (can be decimal or hexadecimal)? "); fflush(stdout);
+				nm = common_prompt_number();
+				vga_set_start_location(nm);
+			}
+			else if (c == 'p') {
+				printf("\n");
+				printf("New hpel? "); fflush(stdout);
+				nm = common_prompt_number();
+				if (nm <= 255) vga_write_AC(0x13 | VGA_AC_ENABLE,nm);
+			}
+
 			redraw = 1;
 		}
 		else if (c == 'd') {
