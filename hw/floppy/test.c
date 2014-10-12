@@ -1709,6 +1709,193 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 	}
 }
 
+void prompt_position() {
+	uint64_t tmp;
+	int cyl,head,sect;
+	struct vga_msg_box box;
+	unsigned char redraw=1;
+	unsigned char ok=1;
+	char temp_str[64];
+	int select=0;
+	int c,i=0;
+
+	cyl = current_track;
+	sect = current_sect;
+	head = current_head;
+
+	vga_msg_box_create(&box,
+		"Edit position:                  ",
+		2+3,0);
+	while (1) {
+		char recalc = 0;
+		char rekey = 0;
+
+		if (redraw) {
+			redraw = 0;
+
+			vga_moveto(box.x+2,box.y+2+1 + 0);
+			vga_write_color(0x1E);
+			vga_write("Cylinder:  ");
+			vga_write_color(select == 0 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",cyl);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 1);
+			vga_write_color(0x1E);
+			vga_write("Head:      ");
+			vga_write_color(select == 1 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",head);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 2);
+			vga_write_color(0x1E);
+			vga_write("Sector:    ");
+			vga_write_color(select == 2 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",sect);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+nextkey:	if (c == 27) {
+			ok = 0;
+			break;
+		}
+		else if (c == 13) {
+			ok = 1;
+			break;
+		}
+		else if (c == 0x4800) {
+			if (--select < 0) select = 2;
+			redraw = 1;
+		}
+		else if (c == 0x5000 || c == 9/*tab*/) {
+			if (++select > 2) select = 0;
+			redraw = 1;
+		}
+
+		else if (c == 0x4B00) { /* left */
+			switch (select) {
+				case 0:
+					if (cyl == 0) cyl = 255;
+					else cyl--;
+					break;
+				case 1:
+					if (head == 0) head = 1;
+					else head--;
+					break;
+				case 2:
+					if (sect <= 1) sect = 255;
+					else sect--;
+					break;
+			};
+
+			recalc = 1;
+			redraw = 1;
+		}
+		else if (c == 0x4D00) { /* right */
+			switch (select) {
+				case 0:
+					if ((++cyl) >= 256) cyl = 0;
+					break;
+				case 1:
+					if ((++head) >= 2) head = 0;
+					break;
+				case 2:
+					if ((++sect) >= 255) sect = 1;
+					break;
+			};
+
+			recalc = 1;
+			redraw = 1;
+		}
+
+		else if (c == 8 || isdigit(c)) {
+			unsigned int sy = box.y+2+1 + select;
+			unsigned int sx = box.x+2+11;
+
+			switch (select) {
+				case 0:	sprintf(temp_str,"%u",cyl); break;
+				case 1:	sprintf(temp_str,"%u",head); break;
+				case 2:	sprintf(temp_str,"%u",sect); break;
+			}
+
+			if (c == 8) {
+				i = strlen(temp_str) - 1;
+				if (i < 0) i = 0;
+				temp_str[i] = 0;
+			}
+			else {
+				i = strlen(temp_str);
+				if (i == 1 && temp_str[0] == '0') i--;
+				if ((i+2) < sizeof(temp_str)) {
+					temp_str[i++] = (char)c;
+					temp_str[i] = 0;
+				}
+			}
+
+			redraw = 1;
+			while (1) {
+				if (redraw) {
+					redraw = 0;
+					vga_moveto(sx,sy);
+					vga_write_color(0x70);
+					vga_write(temp_str);
+					while (vga_pos_x < (box.x+box.w-4) && vga_pos_x != 0) vga_writec(' ');
+				}
+
+				c = getch();
+				if (c == 0) c = getch() << 8;
+
+				if (c == 8) {
+					if (i > 0) {
+						temp_str[--i] = 0;
+						redraw = 1;
+					}
+				}
+				else if (isdigit(c)) {
+					if ((i+2) < sizeof(temp_str)) {
+						temp_str[i++] = (char)c;
+						temp_str[i] = 0;
+						redraw = 1;
+					}
+				}
+				else {
+					break;
+				}
+			}
+
+			switch (select) {
+				case 0:	tmp=strtoull(temp_str,NULL,0);  cyl=(tmp > 255ULL ? 255ULL : tmp); break;
+				case 1:	tmp=strtoull(temp_str,NULL,0); head=(tmp >   1ULL ?   1ULL : tmp); break;
+				case 2:	tmp=strtoull(temp_str,NULL,0); sect=(tmp > 255ULL ? 255ULL : tmp); break;
+			}
+
+			rekey = 1;
+			recalc = 1;
+		}
+
+		if (rekey) {
+			rekey = 0;
+			goto nextkey;
+		}
+	}
+	vga_msg_box_destroy(&box);
+
+	if (ok) {
+		current_track = cyl;
+		current_sect = sect;
+		current_head = head;
+	}
+}
+
 void do_floppy_controller(struct floppy_controller *fdc) {
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
@@ -1945,6 +2132,10 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			}
 			else if (select == 7) { /* Transfer rate */
 				floppy_controller_set_data_transfer_rate(fdc,((fdc->control_cfg&3)+1)&3);
+				redraw = 1;
+			}
+			else if (select == 8) { /* Position */
+				prompt_position();
 				redraw = 1;
 			}
 
