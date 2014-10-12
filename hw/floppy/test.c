@@ -1711,7 +1711,7 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 
 void prompt_position() {
 	uint64_t tmp;
-	int cyl,head,sect;
+	int cyl,head,sect,ssz;
 	struct vga_msg_box box;
 	unsigned char redraw=1;
 	unsigned char ok=1;
@@ -1719,13 +1719,14 @@ void prompt_position() {
 	int select=0;
 	int c,i=0;
 
+	ssz = current_sectsize_p2;
 	cyl = current_track;
 	sect = current_sect;
 	head = current_head;
 
 	vga_msg_box_create(&box,
 		"Edit position:                  ",
-		2+3,0);
+		2+4,0);
 	while (1) {
 		char recalc = 0;
 		char rekey = 0;
@@ -1759,6 +1760,15 @@ void prompt_position() {
 			while (i < (box.w-4-11)) temp_str[i++] = ' ';
 			temp_str[i] = 0;
 			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 3);
+			vga_write_color(0x1E);
+			vga_write("Sect. size:");
+			vga_write_color(select == 3 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",128 << ssz);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
 		}
 
 		c = getch();
@@ -1773,11 +1783,11 @@ nextkey:	if (c == 27) {
 			break;
 		}
 		else if (c == 0x4800) {
-			if (--select < 0) select = 2;
+			if (--select < 0) select = 3;
 			redraw = 1;
 		}
 		else if (c == 0x5000 || c == 9/*tab*/) {
-			if (++select > 2) select = 0;
+			if (++select > 3) select = 0;
 			redraw = 1;
 		}
 
@@ -1792,8 +1802,12 @@ nextkey:	if (c == 27) {
 					else head--;
 					break;
 				case 2:
-					if (sect <= 1) sect = 255;
+					if (sect == 0) sect = 255;
 					else sect--;
+					break;
+				case 3:
+					if (ssz == 0) ssz = 7;
+					else ssz--;
 					break;
 			};
 
@@ -1809,7 +1823,10 @@ nextkey:	if (c == 27) {
 					if ((++head) >= 2) head = 0;
 					break;
 				case 2:
-					if ((++sect) >= 255) sect = 1;
+					if ((++sect) >= 255) sect = 0;
+					break;
+				case 3:
+					if ((++ssz) > 7) ssz = 0;
 					break;
 			};
 
@@ -1825,6 +1842,7 @@ nextkey:	if (c == 27) {
 				case 0:	sprintf(temp_str,"%u",cyl); break;
 				case 1:	sprintf(temp_str,"%u",head); break;
 				case 2:	sprintf(temp_str,"%u",sect); break;
+				case 3: sprintf(temp_str,"%u",128 << ssz); break;
 			}
 
 			if (c == 8) {
@@ -1876,6 +1894,12 @@ nextkey:	if (c == 27) {
 				case 0:	tmp=strtoull(temp_str,NULL,0);  cyl=(tmp > 255ULL ? 255ULL : tmp); break;
 				case 1:	tmp=strtoull(temp_str,NULL,0); head=(tmp >   1ULL ?   1ULL : tmp); break;
 				case 2:	tmp=strtoull(temp_str,NULL,0); sect=(tmp > 255ULL ? 255ULL : tmp); break;
+				case 3:
+					tmp=strtoull(temp_str,NULL,0);
+					if (tmp > 16384ULL) tmp = 16384ULL;
+					ssz=0; /* 128 */
+					while ((128<<ssz) < (unsigned int)tmp) ssz++;
+					break;
 			}
 
 			rekey = 1;
@@ -1890,6 +1914,7 @@ nextkey:	if (c == 27) {
 	vga_msg_box_destroy(&box);
 
 	if (ok) {
+		current_sectsize_p2 = ssz;
 		current_track = cyl;
 		current_sect = sect;
 		current_head = head;
