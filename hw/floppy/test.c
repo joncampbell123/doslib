@@ -310,6 +310,15 @@ void free_floppy_controller_lib() {
 
 char	tmp[1024];
 
+/* "current position" */
+static int current_sect = 1;
+static int current_head = 0;
+static int current_track = 0;
+static int current_sectsize_p2 = 2;		/* NTS: 128 << N, 128 << 2 = 512 */
+static int current_sectcount = 2;		/* two sectors */
+static unsigned char allow_multitrack = 1;	/* set MT bit */
+static unsigned char mfm_mode = 1;		/* set bit to indicate MFM (not FM) */
+
 static void (interrupt *my_floppy_old_irq)() = NULL;
 static struct floppy_controller *my_floppy_irq_floppy = NULL;
 static unsigned long floppy_irq_counter = 0;
@@ -711,7 +720,7 @@ void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
 
 	wdo = 3;
 	cmd[0] = 0x8F + (track < 0 ? 0x40 : 0x00); /* Seek rel [6:6] = DIR */
-	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
+	cmd[1] = (fdc->digital_out&3)+(current_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
 	cmd[2] = abs(track);
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 3) {
@@ -768,7 +777,7 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 
 	wdo = 3;
 	cmd[0] = 0x0F;	/* Seek */
-	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
+	cmd[1] = (fdc->digital_out&3)+(current_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
 	cmd[2] = track;
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 3) {
@@ -819,7 +828,7 @@ void do_check_drive_status(struct floppy_controller *fdc) {
 
 	wdo = 2;
 	cmd[0] = 0x04;	/* Check drive status */
-	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD = 0 */;
+	cmd[1] = (fdc->digital_out&3)+(current_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] = HD = 0 */;
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
 		sprintf(tmp,"Failed to write data to FDC, %u/%u",wd,wdo);
@@ -925,14 +934,15 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 	 *
 	 *   Byte |  7   6   5   4   3   2   1   0
 	 *   -----+---------------------------------
-	 *      0 |  0   0   0   0   1   0   1   0
+	 *      0 |  0  MF   0   0   1   0   1   0
 	 *      1 |  x   x   x   x   x  HD DR1 DR0
 	 *
+	 *         MF = MFM/FM
 	 *         HD = Head select (on PC platform, doesn't matter)
 	 *    DR1,DR0 = Drive select */
 
 	wdo = 2;
-	cmd[0] = 0x0A + 0x40;	/* Read sector ID [6:6] MFM=1 */
+	cmd[0] = 0x0A + (mfm_mode?0x40:0x00); /* Read sector ID [6:6] MFM */
 	cmd[1] = (fdc->digital_out&3)+(head<<2)/* [1:0] = DR1,DR0 [2:2] = HD */;
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
@@ -982,7 +992,7 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 }
 
 void do_read_sector_id_demo(struct floppy_controller *fdc) {
-	unsigned char headsel=0;
+	unsigned char headsel = current_head;
 	char resp[10];
 	int c;
 
@@ -1119,11 +1129,11 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	uint8_t cyl,head,sect,ssz,nsect;
 	int rd,rdo,wd,wdo,x,p;
 
-	cyl = 0;
-	head = 0;
-	sect = 1;
-	nsect = 2; /* two sector */
-	ssz = 2; /* 512 */
+	cyl = current_track;
+	head = current_head&1;
+	sect = current_sect;
+	nsect = current_sectcount;
+	ssz = current_sectsize_p2;
 
 	data_length = nsect * (128 << ssz);
 
@@ -1165,7 +1175,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	 *
 	 *   Byte |  7   6   5   4   3   2   1   0
 	 *   -----+---------------------------------
-	 *      0 |  0   0   0   0   0   1   0   1
+	 *      0 | MT  MF   0   0   0   1   0   1
 	 *      1 |  x   x   x   x   x  HD DR1 DR0
 	 *      2 |            Cylinder
 	 *      3 |              Head
@@ -1175,6 +1185,8 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	 *      7 |        Length of GAP3
 	 *      8 |          Data Length
 	 *
+	 *         MT = Multi-track
+	 *         MF = MFM/FM
 	 *         HD = Head select (on PC platform, doesn't matter)
 	 *    DR1,DR0 = Drive select */
 
@@ -1185,7 +1197,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	 * the status bytes. */
 
 	wdo = 9;
-	cmd[0] = 0x40/* MFM=1 */ + 0x05/* WRITE DATA */;
+	cmd[0] = (allow_multitrack?0x80:0x00)/*Multitrack*/ + (mfm_mode?0x40:0x00)/* MFM */ + 0x05/* WRITE DATA */;
 	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD */;
 	cmd[2] = cyl;	/* cyl=0 */
 	cmd[3] = head;	/* head=0 */
@@ -1294,11 +1306,11 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	uint8_t cyl,head,sect,ssz,nsect;
 	int rd,rdo,wd,wdo,x,y,p;
 
-	cyl = 0;
-	head = 0;
-	sect = 1;
-	nsect = 2; /* two sector */
-	ssz = 2; /* 512 */
+	cyl = current_track;
+	head = current_head&1;
+	sect = current_sect;
+	nsect = current_sectcount;
+	ssz = current_sectsize_p2;
 
 	data_length = nsect * (128 << ssz);
 
@@ -1344,7 +1356,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	 *
 	 *   Byte |  7   6   5   4   3   2   1   0
 	 *   -----+---------------------------------
-	 *      0 |  0   0   0   0   0   1   1   0
+	 *      0 | MT  MF  SK   0   0   1   1   0
 	 *      1 |  x   x   x   x   x  HD DR1 DR0
 	 *      2 |            Cylinder
 	 *      3 |              Head
@@ -1354,6 +1366,9 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	 *      7 |        Length of GAP3
 	 *      8 |          Data Length
 	 *
+	 *         MT = Multi-track
+	 *         MF = MFM/FM
+	 *         SK = Skip deleted address mark
 	 *         HD = Head select (on PC platform, doesn't matter)
 	 *    DR1,DR0 = Drive select */
 
@@ -1364,7 +1379,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	 * the status bytes. */
 
 	wdo = 9;
-	cmd[0] = 0x40/* MFM=1 */ + 0x06/* READ DATA */;
+	cmd[0] = (allow_multitrack?0x80:0x00)/*Multitrack*/ + (mfm_mode?0x40:0x00)/* MFM */ + 0x06/* READ DATA */;
 	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD */;
 	cmd[2] = cyl;	/* cyl=0 */
 	cmd[3] = head;	/* head=0 */
@@ -1841,40 +1856,51 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			};
 			vga_write(" (hit enter to toggle)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
-			y++;
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 8) ? 0x70 : 0x0F);
+			vga_write("Position C/H/S/sz/count: ");
+			sprintf(tmp,"%u/%u/%u/%u/%u MT=%u %s",current_track,current_head,
+				current_sect,128 << current_sectsize_p2,current_sectcount,
+				allow_multitrack,
+				mfm_mode?"MFM":"FM");
+
+			vga_write(tmp);
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			y++;
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 9) ? 0x70 : 0x0F);
 			vga_write("Check drive status (x4h)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 9) ? 0x70 : 0x0F);
+			vga_write_color((select == 10) ? 0x70 : 0x0F);
 			vga_write("Calibrate (x7h)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 10) ? 0x70 : 0x0F);
+			vga_write_color((select == 11) ? 0x70 : 0x0F);
 			vga_write("Seek (xfh)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 11) ? 0x70 : 0x0F);
+			vga_write_color((select == 12) ? 0x70 : 0x0F);
 			vga_write("Seek relative (1xfh)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 12) ? 0x70 : 0x0F);
+			vga_write_color((select == 13) ? 0x70 : 0x0F);
 			vga_write("Read sector ID (xah)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 13) ? 0x70 : 0x0F);
+			vga_write_color((select == 14) ? 0x70 : 0x0F);
 			vga_write("Read testing >>");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 14) ? 0x70 : 0x0F);
+			vga_write_color((select == 15) ? 0x70 : 0x0F);
 			vga_write("Write testing >>");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
@@ -1921,49 +1947,50 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				floppy_controller_set_data_transfer_rate(fdc,((fdc->control_cfg&3)+1)&3);
 				redraw = 1;
 			}
-			else if (select == 8) { /* check drive status */
+
+			else if (select == 9) { /* check drive status */
 				do_check_drive_status(fdc);
 				redraw = 1;
 			}
-			else if (select == 9) { /* calibrate drive */
+			else if (select == 10) { /* calibrate drive */
 				do_calibrate_drive(fdc);
 				redraw = 1;
 			}
-			else if (select == 10) { /* seek */
+			else if (select == 11) { /* seek */
 				unsigned long track = prompt_track_number();
 				if (track != (~0UL) && track < 256) {
 					do_seek_drive(fdc,(uint8_t)track);
 					redraw = 1;
 				}
 			}
-			else if (select == 11) { /* seek relative */
+			else if (select == 12) { /* seek relative */
 				signed long track = prompt_signed_track_number();
 				if (track >= -255L && track <= 255L) {
 					do_seek_drive_rel(fdc,(int)track);
 					redraw = 1;
 				}
 			}
-			else if (select == 12) { /* read sector ID */
+			else if (select == 13) { /* read sector ID */
 				do_read_sector_id_demo(fdc);
 				backredraw = 1;
 			}
-			else if (select == 13) { /* read testing */
+			else if (select == 14) { /* read testing */
 				do_floppy_controller_read_tests(fdc);
 				backredraw = 1;
 			}
-			else if (select == 14) { /* write testing */
+			else if (select == 15) { /* write testing */
 				do_floppy_controller_write_tests(fdc);
 				backredraw = 1;
 			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 14;
+				select = 15;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 14)
+			if (++select > 15)
 				select = -1;
 
 			redraw = 1;
