@@ -1124,7 +1124,7 @@ unsigned long prompt_track_number() {
 }
 
 void do_floppy_write_test(struct floppy_controller *fdc) {
-	unsigned int data_length;
+	unsigned int data_length,unit_length;
 	unsigned int returned_length = 0;
 	char cmd[10],resp[10];
 	uint8_t cyl,head,sect,ssz,nsect;
@@ -1137,9 +1137,11 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	ssz = current_sectsize_p2;
 
 	if (current_sectsize_p2 > 0)
-		data_length = nsect * (128 << ssz);
+		unit_length = (128 << ssz);
 	else
-		data_length = current_sectsize_smaller;
+		unit_length = current_sectsize_smaller;
+
+	data_length = nsect * unit_length;
 
 	vga_moveto(0,0);
 	vga_write_color(0x0E);
@@ -1304,7 +1306,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 }
 
 void do_floppy_read_test(struct floppy_controller *fdc) {
-	unsigned int data_length;
+	unsigned int data_length,unit_length;
 	unsigned int returned_length = 0;
 	char cmd[10],resp[10];
 	uint8_t cyl,head,sect,ssz,nsect;
@@ -1317,9 +1319,11 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	ssz = current_sectsize_p2;
 
 	if (current_sectsize_p2 > 0)
-		data_length = nsect * (128 << ssz);
+		unit_length = (128 << ssz);
 	else
-		data_length = current_sectsize_smaller;
+		unit_length = current_sectsize_smaller;
+
+	data_length = nsect * unit_length;
 
 	vga_moveto(0,0);
 	vga_write_color(0x0E);
