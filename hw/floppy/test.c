@@ -311,9 +311,10 @@ void free_floppy_controller_lib() {
 char	tmp[1024];
 
 /* "current position" */
-static int current_sect = 1;
-static int current_head = 0;
-static int current_track = 0;
+static int current_log_sect = 1;
+static int current_log_head = 0;
+static int current_phys_head = 0;
+static int current_log_track = 0;
 static int current_sectsize_p2 = 2;		/* NTS: 128 << N, 128 << 2 = 512 */
 static int current_sectsize_smaller = 0xFF;	/* if sectsize_p2 == 0 */
 static int current_sectcount = 2;		/* two sectors */
@@ -721,7 +722,7 @@ void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
 
 	wdo = 3;
 	cmd[0] = 0x8F + (track < 0 ? 0x40 : 0x00); /* Seek rel [6:6] = DIR */
-	cmd[1] = (fdc->digital_out&3)+(current_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
+	cmd[1] = (fdc->digital_out&3)+(current_phys_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
 	cmd[2] = abs(track);
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 3) {
@@ -778,7 +779,7 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 
 	wdo = 3;
 	cmd[0] = 0x0F;	/* Seek */
-	cmd[1] = (fdc->digital_out&3)+(current_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
+	cmd[1] = (fdc->digital_out&3)+(current_phys_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
 	cmd[2] = track;
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 3) {
@@ -829,7 +830,7 @@ void do_check_drive_status(struct floppy_controller *fdc) {
 
 	wdo = 2;
 	cmd[0] = 0x04;	/* Check drive status */
-	cmd[1] = (fdc->digital_out&3)+(current_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] = HD = 0 */;
+	cmd[1] = (fdc->digital_out&3)+(current_phys_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] = HD = 0 */;
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
 		sprintf(tmp,"Failed to write data to FDC, %u/%u",wd,wdo);
@@ -993,7 +994,7 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 }
 
 void do_read_sector_id_demo(struct floppy_controller *fdc) {
-	unsigned char headsel = current_head;
+	unsigned char headsel = current_phys_head;
 	char resp[10];
 	int c;
 
@@ -1130,9 +1131,9 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	uint8_t cyl,head,sect,ssz,nsect;
 	int rd,rdo,wd,wdo,x,p;
 
-	cyl = current_track;
-	head = current_head&1;
-	sect = current_sect;
+	cyl = current_log_track;
+	head = current_log_head;
+	sect = current_log_sect;
 	nsect = current_sectcount;
 	ssz = current_sectsize_p2;
 
@@ -1204,7 +1205,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 
 	wdo = 9;
 	cmd[0] = (allow_multitrack?0x80:0x00)/*Multitrack*/ + (mfm_mode?0x40:0x00)/* MFM */ + 0x05/* WRITE DATA */;
-	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD */;
+	cmd[1] = (fdc->digital_out&3)+(current_phys_head&1?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] = HD */;
 	cmd[2] = cyl;	/* cyl=0 */
 	cmd[3] = head;	/* head=0 */
 	cmd[4] = sect;	/* sector=1 */
@@ -1312,9 +1313,9 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	uint8_t cyl,head,sect,ssz,nsect;
 	int rd,rdo,wd,wdo,x,y,p;
 
-	cyl = current_track;
-	head = current_head&1;
-	sect = current_sect;
+	cyl = current_log_track;
+	head = current_log_head;
+	sect = current_log_sect;
 	nsect = current_sectcount;
 	ssz = current_sectsize_p2;
 
@@ -1391,7 +1392,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 
 	wdo = 9;
 	cmd[0] = (allow_multitrack?0x80:0x00)/*Multitrack*/ + (mfm_mode?0x40:0x00)/* MFM */ + 0x06/* READ DATA */;
-	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 [2:2] = HD */;
+	cmd[1] = (fdc->digital_out&3)+(current_phys_head&1?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] = HD */;
 	cmd[2] = cyl;	/* cyl=0 */
 	cmd[3] = head;	/* head=0 */
 	cmd[4] = sect;	/* sector=1 */
@@ -1732,9 +1733,9 @@ void prompt_position() {
 
 	sszm = current_sectsize_smaller;
 	ssz = current_sectsize_p2;
-	cyl = current_track;
-	sect = current_sect;
-	head = current_head;
+	cyl = current_log_track;
+	sect = current_log_sect;
+	head = current_log_head;
 
 	vga_msg_box_create(&box,
 		"Edit position:                  ",
@@ -1958,9 +1959,9 @@ nextkey:	if (c == 27) {
 	if (ok) {
 		current_sectsize_smaller = sszm;
 		current_sectsize_p2 = ssz;
-		current_track = cyl;
-		current_sect = sect;
-		current_head = head;
+		current_log_track = cyl;
+		current_log_sect = sect;
+		current_log_head = head;
 	}
 }
 
@@ -2114,11 +2115,14 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 8) ? 0x70 : 0x0F);
-			vga_write("Position C/H/S/sz/count: ");
-			sprintf(tmp,"%u/%u/%u/%u/%u MT=%u %s",current_track,current_head,
-				current_sect,
+			vga_write("Pos log C/H/S/sz/cnt: ");
+			sprintf(tmp,"%u/%u/%u/%u/%u  phyH=%u  MT=%u %s",
+				current_log_track,
+				current_log_head,
+				current_log_sect,
 				current_sectsize_p2 > 0 ? (128 << current_sectsize_p2) : current_sectsize_smaller,
 				current_sectcount,
+				current_phys_head,
 				allow_multitrack,
 				mfm_mode?"MFM":"FM");
 
