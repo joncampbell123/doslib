@@ -315,6 +315,7 @@ static int current_sect = 1;
 static int current_head = 0;
 static int current_track = 0;
 static int current_sectsize_p2 = 2;		/* NTS: 128 << N, 128 << 2 = 512 */
+static int current_sectsize_smaller = 0xFF;	/* if sectsize_p2 == 0 */
 static int current_sectcount = 2;		/* two sectors */
 static unsigned char allow_multitrack = 1;	/* set MT bit */
 static unsigned char mfm_mode = 1;		/* set bit to indicate MFM (not FM) */
@@ -1205,7 +1206,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	cmd[5] = ssz;	/* sector size=2 (512 bytes) */
 	cmd[6] = sect+nsect-1; /* last sector of the track (what sector to stop at). */
 	cmd[7] = 0;	/* gap size (??) */
-	cmd[8] = 0xFF;	/* DTL (not used) */
+	cmd[8] = current_sectsize_smaller; /* DTL (not used if 256 or larger) */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
 		vga_write("Write data port failed\n");
@@ -1387,7 +1388,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	cmd[5] = ssz;	/* sector size=2 (512 bytes) */
 	cmd[6] = sect+nsect-1; /* last sector of the track (what sector to stop at). */
 	cmd[7] = 0;	/* gap size (??) */
-	cmd[8] = 0xFF;	/* DTL (not used) */
+	cmd[8] = current_sectsize_smaller; /* DTL (not used if 256 or larger) */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
 		vga_write("Write data port failed\n");
@@ -1711,7 +1712,7 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 
 void prompt_position() {
 	uint64_t tmp;
-	int cyl,head,sect,ssz;
+	int cyl,head,sect,ssz,sszm;
 	struct vga_msg_box box;
 	unsigned char redraw=1;
 	unsigned char ok=1;
@@ -1719,6 +1720,7 @@ void prompt_position() {
 	int select=0;
 	int c,i=0;
 
+	sszm = current_sectsize_smaller;
 	ssz = current_sectsize_p2;
 	cyl = current_track;
 	sect = current_sect;
@@ -1765,7 +1767,10 @@ void prompt_position() {
 			vga_write_color(0x1E);
 			vga_write("Sect. size:");
 			vga_write_color(select == 3 ? 0x70 : 0x1E);
-			i=sprintf(temp_str,"%u",128 << ssz);
+			if (ssz > 0)
+				i=sprintf(temp_str,"%u",128 << ssz);
+			else
+				i=sprintf(temp_str,"%u",sszm);
 			while (i < (box.w-4-11)) temp_str[i++] = ' ';
 			temp_str[i] = 0;
 			vga_write(temp_str);
@@ -1806,8 +1811,18 @@ nextkey:	if (c == 27) {
 					else sect--;
 					break;
 				case 3:
-					if (ssz == 0) ssz = 7;
-					else ssz--;
+					if (ssz == 0) {
+						if (sszm <= 1) {
+							sszm = 0xFF;
+							ssz = 7;
+						}
+						else {
+							sszm--;
+						}
+					}
+					else {
+						ssz--;
+					}
 					break;
 			};
 
@@ -1826,7 +1841,18 @@ nextkey:	if (c == 27) {
 					if ((++sect) >= 255) sect = 0;
 					break;
 				case 3:
-					if ((++ssz) > 7) ssz = 0;
+					if (ssz == 0) {
+						if ((++sszm) > 255) {
+							sszm = 0xFF;
+							ssz = 1;
+						}
+					}
+					else {
+						if ((++ssz) > 7) {
+							ssz = 0;
+							sszm = 1;
+						}
+					}
 					break;
 			};
 
@@ -1842,7 +1868,7 @@ nextkey:	if (c == 27) {
 				case 0:	sprintf(temp_str,"%u",cyl); break;
 				case 1:	sprintf(temp_str,"%u",head); break;
 				case 2:	sprintf(temp_str,"%u",sect); break;
-				case 3: sprintf(temp_str,"%u",128 << ssz); break;
+				case 3: sprintf(temp_str,"%u",ssz != 0 ? (128 << ssz) : sszm); break;
 			}
 
 			if (c == 8) {
@@ -1897,8 +1923,14 @@ nextkey:	if (c == 27) {
 				case 3:
 					tmp=strtoull(temp_str,NULL,0);
 					if (tmp > 16384ULL) tmp = 16384ULL;
-					ssz=0; /* 128 */
-					while ((128<<ssz) < (unsigned int)tmp) ssz++;
+					if (tmp >= 256UL) {
+						ssz=1; /* 256 */
+						while ((128<<ssz) < (unsigned int)tmp) ssz++;
+					}
+					else {
+						ssz=0;
+						sszm=(unsigned int)tmp;
+					}
 					break;
 			}
 
@@ -1914,6 +1946,7 @@ nextkey:	if (c == 27) {
 	vga_msg_box_destroy(&box);
 
 	if (ok) {
+		current_sectsize_smaller = sszm;
 		current_sectsize_p2 = ssz;
 		current_track = cyl;
 		current_sect = sect;
@@ -2073,7 +2106,9 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 8) ? 0x70 : 0x0F);
 			vga_write("Position C/H/S/sz/count: ");
 			sprintf(tmp,"%u/%u/%u/%u/%u MT=%u %s",current_track,current_head,
-				current_sect,128 << current_sectsize_p2,current_sectcount,
+				current_sect,
+				current_sectsize_p2 > 0 ? (128 << current_sectsize_p2) : current_sectsize_smaller,
+				current_sectcount,
 				allow_multitrack,
 				mfm_mode?"MFM":"FM");
 
