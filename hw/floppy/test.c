@@ -1136,7 +1136,10 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	nsect = current_sectcount;
 	ssz = current_sectsize_p2;
 
-	data_length = nsect * (128 << ssz);
+	if (current_sectsize_p2 > 0)
+		data_length = nsect * (128 << ssz);
+	else
+		data_length = current_sectsize_smaller;
 
 	vga_moveto(0,0);
 	vga_write_color(0x0E);
@@ -1313,7 +1316,10 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	nsect = current_sectcount;
 	ssz = current_sectsize_p2;
 
-	data_length = nsect * (128 << ssz);
+	if (current_sectsize_p2 > 0)
+		data_length = nsect * (128 << ssz);
+	else
+		data_length = current_sectsize_smaller;
 
 	vga_moveto(0,0);
 	vga_write_color(0x0E);
