@@ -1732,6 +1732,7 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 
 void prompt_position() {
 	uint64_t tmp;
+	int en_mfm,en_mt;
 	int cyl,head,phead,sect,ssz,sszm,scount;
 	struct vga_msg_box box;
 	unsigned char redraw=1;
@@ -1740,6 +1741,8 @@ void prompt_position() {
 	int select=0;
 	int c,i=0;
 
+	en_mfm = mfm_mode;
+	en_mt = allow_multitrack;
 	sszm = current_sectsize_smaller;
 	scount = current_sectcount;
 	phead = current_phys_head;
@@ -1750,7 +1753,7 @@ void prompt_position() {
 
 	vga_msg_box_create(&box,
 		"Edit position:                  ",
-		2+6,0);
+		2+8,0);
 	while (1) {
 		char recalc = 0;
 		char rekey = 0;
@@ -1814,6 +1817,24 @@ void prompt_position() {
 			while (i < (box.w-4-11)) temp_str[i++] = ' ';
 			temp_str[i] = 0;
 			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 6);
+			vga_write_color(0x1E);
+			vga_write("Multitrack:");
+			vga_write_color(select == 6 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%s",en_mt?"On":"Off");
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 7);
+			vga_write_color(0x1E);
+			vga_write("FM/MFM:    ");
+			vga_write_color(select == 7 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%s",en_mfm?"MFM":"FM");
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
 		}
 
 		c = getch();
@@ -1828,11 +1849,11 @@ nextkey:	if (c == 27) {
 			break;
 		}
 		else if (c == 0x4800) {
-			if (--select < 0) select = 5;
+			if (--select < 0) select = 7;
 			redraw = 1;
 		}
 		else if (c == 0x5000 || c == 9/*tab*/) {
-			if (++select > 5) select = 0;
+			if (++select > 7) select = 0;
 			redraw = 1;
 		}
 
@@ -1872,6 +1893,12 @@ nextkey:	if (c == 27) {
 					if (scount <= 1) scount = 256;
 					else scount--;
 					break;
+				case 6:
+					en_mt = !en_mt;
+					break;
+				case 7:
+					en_mfm = !en_mfm;
+					break;
 			};
 
 			recalc = 1;
@@ -1908,13 +1935,19 @@ nextkey:	if (c == 27) {
 				case 5:
 					if ((++scount) >= 257) scount = 1;
 					break;
+				case 6:
+					en_mt = !en_mt;
+					break;
+				case 7:
+					en_mfm = !en_mfm;
+					break;
 			};
 
 			recalc = 1;
 			redraw = 1;
 		}
 
-		else if (c == 8 || isdigit(c)) {
+		else if ((c == 8 || isdigit(c)) && (select != 6 && select != 7)) {
 			unsigned int sy = box.y+2+1 + select;
 			unsigned int sx = box.x+2+11;
 
@@ -2006,6 +2039,8 @@ nextkey:	if (c == 27) {
 	vga_msg_box_destroy(&box);
 
 	if (ok) {
+		mfm_mode = en_mfm;
+		allow_multitrack = en_mt;
 		current_sectsize_smaller = sszm;
 		current_sectcount = scount;
 		current_phys_head = phead;
