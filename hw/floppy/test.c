@@ -1154,6 +1154,10 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	do_spin_up_motor(fdc,fdc->digital_out&3);
 
 	if (floppy_dma == NULL) return;
+	if (data_length > floppy_dma->length) {
+		nsect = floppy_dma->length / unit_length;
+		data_length = nsect * unit_length;
+	}
 	if (data_length > floppy_dma->length) return;
 
 	for (x=0;(unsigned int)x < data_length;x++) floppy_dma->lin[x] = x;
@@ -1336,6 +1340,10 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	do_spin_up_motor(fdc,fdc->digital_out&3);
 
 	if (floppy_dma == NULL) return;
+	if (data_length > floppy_dma->length) {
+		nsect = floppy_dma->length / unit_length;
+		data_length = nsect * unit_length;
+	}
 	if (data_length > floppy_dma->length) return;
 
 #if TARGET_MSDOS == 32
