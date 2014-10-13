@@ -1723,7 +1723,7 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 
 void prompt_position() {
 	uint64_t tmp;
-	int cyl,head,phead,sect,ssz,sszm;
+	int cyl,head,phead,sect,ssz,sszm,scount;
 	struct vga_msg_box box;
 	unsigned char redraw=1;
 	unsigned char ok=1;
@@ -1732,6 +1732,7 @@ void prompt_position() {
 	int c,i=0;
 
 	sszm = current_sectsize_smaller;
+	scount = current_sectcount;
 	phead = current_phys_head;
 	ssz = current_sectsize_p2;
 	cyl = current_log_track;
@@ -1740,7 +1741,7 @@ void prompt_position() {
 
 	vga_msg_box_create(&box,
 		"Edit position:                  ",
-		2+5,0);
+		2+6,0);
 	while (1) {
 		char recalc = 0;
 		char rekey = 0;
@@ -1795,6 +1796,15 @@ void prompt_position() {
 			while (i < (box.w-4-11)) temp_str[i++] = ' ';
 			temp_str[i] = 0;
 			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 5);
+			vga_write_color(0x1E);
+			vga_write("Sect count:");
+			vga_write_color(select == 5 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",scount);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
 		}
 
 		c = getch();
@@ -1809,11 +1819,11 @@ nextkey:	if (c == 27) {
 			break;
 		}
 		else if (c == 0x4800) {
-			if (--select < 0) select = 4;
+			if (--select < 0) select = 5;
 			redraw = 1;
 		}
 		else if (c == 0x5000 || c == 9/*tab*/) {
-			if (++select > 4) select = 0;
+			if (++select > 5) select = 0;
 			redraw = 1;
 		}
 
@@ -1849,6 +1859,10 @@ nextkey:	if (c == 27) {
 					if (phead == 0) phead = 1;
 					else phead--;
 					break;
+				case 5:
+					if (scount <= 1) scount = 256;
+					else scount--;
+					break;
 			};
 
 			recalc = 1;
@@ -1882,6 +1896,9 @@ nextkey:	if (c == 27) {
 				case 4:
 					if ((++phead) >= 2) phead = 0;
 					break;
+				case 5:
+					if ((++scount) >= 257) scount = 1;
+					break;
 			};
 
 			recalc = 1;
@@ -1898,6 +1915,7 @@ nextkey:	if (c == 27) {
 				case 2:	sprintf(temp_str,"%u",sect); break;
 				case 3: sprintf(temp_str,"%u",ssz != 0 ? (128 << ssz) : sszm); break;
 				case 4:	sprintf(temp_str,"%u",phead); break;
+				case 5:	sprintf(temp_str,"%u",scount); break;
 			}
 
 			if (c == 8) {
@@ -1962,6 +1980,9 @@ nextkey:	if (c == 27) {
 					}
 					break;
 				case 4:	tmp=strtoull(temp_str,NULL,0); phead=(tmp >  1ULL ?   1ULL : tmp); break;
+				case 5:	tmp=strtoull(temp_str,NULL,0); scount=(tmp > 256ULL ? 256ULL : tmp);
+					if (scount == 0) scount = 1;
+					break;
 			}
 
 			rekey = 1;
@@ -1977,6 +1998,7 @@ nextkey:	if (c == 27) {
 
 	if (ok) {
 		current_sectsize_smaller = sszm;
+		current_sectcount = scount;
 		current_phys_head = phead;
 		current_sectsize_p2 = ssz;
 		current_log_track = cyl;
