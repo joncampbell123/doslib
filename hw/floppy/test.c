@@ -1814,7 +1814,7 @@ nextkey:	if (c == 27) {
 					else cyl--;
 					break;
 				case 1:
-					if (head == 0) head = 1;
+					if (head == 0) head = 255;
 					else head--;
 					break;
 				case 2:
@@ -1846,10 +1846,10 @@ nextkey:	if (c == 27) {
 					if ((++cyl) >= 256) cyl = 0;
 					break;
 				case 1:
-					if ((++head) >= 2) head = 0;
+					if ((++head) >= 256) head = 0;
 					break;
 				case 2:
-					if ((++sect) >= 255) sect = 0;
+					if ((++sect) >= 256) sect = 0;
 					break;
 				case 3:
 					if (ssz == 0) {
@@ -1929,7 +1929,7 @@ nextkey:	if (c == 27) {
 
 			switch (select) {
 				case 0:	tmp=strtoull(temp_str,NULL,0);  cyl=(tmp > 255ULL ? 255ULL : tmp); break;
-				case 1:	tmp=strtoull(temp_str,NULL,0); head=(tmp >   1ULL ?   1ULL : tmp); break;
+				case 1:	tmp=strtoull(temp_str,NULL,0); head=(tmp > 255ULL ? 255ULL : tmp); break;
 				case 2:	tmp=strtoull(temp_str,NULL,0); sect=(tmp > 255ULL ? 255ULL : tmp); break;
 				case 3:
 					tmp=strtoull(temp_str,NULL,0);
