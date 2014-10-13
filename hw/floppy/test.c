@@ -1503,7 +1503,8 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 			}
 		}
 
-		wait_for_enter_or_escape();
+		if (wait_for_enter_or_escape() == 27)
+			break;
 	}
 }
 
