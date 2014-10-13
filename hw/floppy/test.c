@@ -1147,7 +1147,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	vga_write_color(0x0E);
 	vga_clear();
 
-	sprintf(tmp,"Writing C/H/S/sz/num %u/%u/%u/%u/%u\n",cyl,head,sect,128 << ssz,nsect);
+	sprintf(tmp,"Writing C/H/S/sz/num %u/%u/%u/%u/%u\n",cyl,head,sect,unit_length,nsect);
 	vga_write(tmp);
 
 	do_spin_up_motor(fdc,fdc->digital_out&3);
@@ -1233,11 +1233,11 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 		 * for more than one sector. It will SEEM like it works, but when you read the data back only the first
 		 * sector was ever written. On the same configuration, READ works fine using the same PIO mode. */
 		while (returned_length < data_length) {
-			if ((returned_length+(128 << ssz)) > data_length) break;
+			if ((returned_length+unit_length) > data_length) break;
 			floppy_controller_wait_data_ready_ms(fdc,10000);
 
-			p = floppy_controller_write_data_ndma(fdc,floppy_dma->lin + returned_length,128 << ssz);
-			if (p < 0 || p > (128 << ssz)) {
+			p = floppy_controller_write_data_ndma(fdc,floppy_dma->lin + returned_length,unit_length);
+			if (p < 0 || p > unit_length) {
 				sprintf(tmp,"NDMA write failed %d (%02xh)\n",p,fdc->main_status);
 				vga_write(tmp);
 				p = 0;
@@ -1245,7 +1245,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 
 			returned_length += p;
 			/* stop on incomplete transfer */
-			if (p != (128 << ssz)) break;
+			if (p != unit_length) break;
 		}
 	}
 
@@ -1329,7 +1329,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	vga_write_color(0x0E);
 	vga_clear();
 
-	sprintf(tmp,"Reading C/H/S/sz/num %u/%u/%u/%u/%u\n",cyl,head,sect,128 << ssz,nsect);
+	sprintf(tmp,"Reading C/H/S/sz/num %u/%u/%u/%u/%u\n",cyl,head,sect,unit_length,nsect);
 	vga_write(tmp);
 
 	do_spin_up_motor(fdc,fdc->digital_out&3);
@@ -1415,11 +1415,11 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	}
 	else {
 		while (returned_length < data_length) {
-			if ((returned_length+(128 << ssz)) > data_length) break;
+			if ((returned_length+unit_length) > data_length) break;
 			floppy_controller_wait_data_ready_ms(fdc,10000);
 
-			p = floppy_controller_read_data_ndma(fdc,floppy_dma->lin + returned_length,128 << ssz);
-			if (p < 0 || p > (128 << ssz)) {
+			p = floppy_controller_read_data_ndma(fdc,floppy_dma->lin + returned_length,unit_length);
+			if (p < 0 || p > unit_length) {
 				sprintf(tmp,"NDMA read failed %d (%02xh)\n",p,fdc->main_status);
 				vga_write(tmp);
 				p = 0;
@@ -1427,7 +1427,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 
 			returned_length += p;
 			/* stop on incomplete transfer */
-			if (p != (128 << ssz)) break;
+			if (p != unit_length) break;
 		}
 	}
 
