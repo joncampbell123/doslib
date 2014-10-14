@@ -2463,7 +2463,7 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 8) ? 0x70 : 0x0F);
+			vga_write_color((select == 9) ? 0x70 : 0x0F);
 			vga_write("Pos log C/H/S/sz/cnt: ");
 			sprintf(tmp,"%u/%u/%u/%u/%u  phyH=%u  MT=%u %s",
 				current_log_track,
@@ -2480,43 +2480,43 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			y++;
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 9) ? 0x70 : 0x0F);
+			vga_write_color((select == 10) ? 0x70 : 0x0F);
 			vga_write("Check drive status (x4h)");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_write_color((select == 10) ? 0x70 : 0x0F);
+			vga_write_color((select == 11) ? 0x70 : 0x0F);
 			vga_write("Calibrate (x7h)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 11) ? 0x70 : 0x0F);
+			vga_write_color((select == 12) ? 0x70 : 0x0F);
 			vga_write("Seek (xFh)");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_write_color((select == 12) ? 0x70 : 0x0F);
+			vga_write_color((select == 13) ? 0x70 : 0x0F);
 			vga_write("Seek relative (1xFh)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 13) ? 0x70 : 0x0F);
+			vga_write_color((select == 14) ? 0x70 : 0x0F);
 			vga_write("Read sector ID (xAh)");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_write_color((select == 14) ? 0x70 : 0x0F);
+			vga_write_color((select == 15) ? 0x70 : 0x0F);
 			vga_write("Read testing >>");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 15) ? 0x70 : 0x0F);
+			vga_write_color((select == 16) ? 0x70 : 0x0F);
 			vga_write("Write testing >>");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_write_color((select == 16) ? 0x70 : 0x0F);
+			vga_write_color((select == 17) ? 0x70 : 0x0F);
 			vga_write("Dump Registers (xEh)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
-			vga_write_color((select == 17) ? 0x70 : 0x0F);
+			vga_write_color((select == 18) ? 0x70 : 0x0F);
 			vga_write("Get Version (1x0h)");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 		}
@@ -2572,61 +2572,60 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				floppy_controller_set_reset(fdc,!!(fdc->digital_out&0x04)); /* bit is INVERTED 1=normal 0=reset */
 				redraw = 1;
 			}
-			else if (select == 8) { /* Position */
+			else if (select == 9) { /* Position */
 				prompt_position();
 				redraw = 1;
 			}
-
-			else if (select == 9) { /* check drive status */
+			else if (select == 10) { /* check drive status */
 				do_check_drive_status(fdc);
 				redraw = 1;
 			}
-			else if (select == 10) { /* calibrate drive */
+			else if (select == 11) { /* calibrate drive */
 				do_calibrate_drive(fdc);
 				redraw = 1;
 			}
-			else if (select == 11) { /* seek */
+			else if (select == 12) { /* seek */
 				unsigned long track = prompt_track_number();
 				if (track != (~0UL) && track < 256) {
 					do_seek_drive(fdc,(uint8_t)track);
 					redraw = 1;
 				}
 			}
-			else if (select == 12) { /* seek relative */
+			else if (select == 13) { /* seek relative */
 				signed long track = prompt_signed_track_number();
 				if (track >= -255L && track <= 255L) {
 					do_seek_drive_rel(fdc,(int)track);
 					redraw = 1;
 				}
 			}
-			else if (select == 13) { /* read sector ID */
+			else if (select == 14) { /* read sector ID */
 				do_read_sector_id_demo(fdc);
 				backredraw = 1;
 			}
-			else if (select == 14) { /* read testing */
+			else if (select == 15) { /* read testing */
 				do_floppy_controller_read_tests(fdc);
 				backredraw = 1;
 			}
-			else if (select == 15) { /* write testing */
+			else if (select == 16) { /* write testing */
 				do_floppy_controller_write_tests(fdc);
 				backredraw = 1;
 			}
-			else if (select == 16) { /* dump registers */
+			else if (select == 17) { /* dump registers */
 				do_floppy_dumpreg(fdc);
 			}
-			else if (select == 17) { /* get version */
+			else if (select == 18) { /* get version */
 				do_floppy_get_version(fdc);
 				redraw = 1;
 			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 17;
+				select = 18;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 17)
+			if (++select > 18)
 				select = -1;
 
 			redraw = 1;
