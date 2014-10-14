@@ -1039,6 +1039,9 @@ int do_floppy_controller_specify(struct floppy_controller *fdc) {
 	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
 		do_floppy_controller_reset(fdc);
 
+	/* use Check Interrupt Status */
+	do_check_interrupt_status(fdc);
+
 	return 1;
 }
 
