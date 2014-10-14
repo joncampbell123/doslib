@@ -924,6 +924,137 @@ void do_calibrate_drive(struct floppy_controller *fdc) {
 	do_check_interrupt_status(fdc);
 }
 
+int do_floppy_dumpreg(struct floppy_controller *fdc) {
+	int rd,wd,rdo,wdo;
+	char cmd[10],resp[10];
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	/* Dump Registers (xEh)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   1   1   1   0
+	 */
+
+	wdo = 1;
+	cmd[0] = 0x0E;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 1) {
+		do_floppy_controller_reset(fdc);
+		return 0;
+	}
+
+	/* wait for data ready. does not fire an IRQ */
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	rdo = 10;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+		do_floppy_controller_reset(fdc);
+		return 0;
+	}
+
+	/* Dump Registers (xEh) response
+	 *
+	 *   Byte |  7    6    5    4    3    2    1    0
+	 *   -----+--------------------------------------
+	 *      0 |       Current Cylinder (drive 0)             <- Also known as PCN0
+	 *      1 |       Current Cylinder (drive 1)             <- Also known as PCN1
+	 *      2 |       Current Cylinder (drive 2)             <- Also known as PCN2
+	 *      3 |       Current Cylinder (drive 3)             <- Also known as PCN3
+	 *      4 |  <------SRT----->    <------HUT----->
+	 *      5 |  <------------HLT-------------->   ND
+	 *      6 |  <--------------SC/EOT-------------->
+	 *      7 |LOCK   0   D3   D2   D1   D0   GAP WGATE
+	 *      8 |  0   EIS EFIFO POLL  <---FIFOTHR---->
+	 *      9 |  <--------------PRETRK-------------->
+	 *
+	 *          SRT = Step rate interval (0.5 to 8ms in 0.5 steps at 1mbit/sec, affected by data rate)
+	 *          HUT = Head unload time (affected by data rate)
+	 *          HLT = Head load time (affected by data rate)
+	 *           ND = Non-DMA mode flag. If set, the controller should operate in the non-DMA mode.
+	 *       SC/EOT = Sector count/End of track
+	 *      D3...D0 = Drive Select 3..0, which ones are in Perpendicular Mode
+	 *          GAP = Alter Gap 2 length in Perpendicular Mode
+	 *        WGATE = Write gate alters timing of WE, to allow for pre-erase loads in perpendicular drives.
+	 *          EIS = Enable Implied Seek
+	 *        EFIFO = Enable FIFO. When 0, FIFO is enabled. When 1, FIFO is disabled.
+	 *         POLL = Polling disable. When set, internal polling routine is disabled.
+	 *      FIFOTHR = FIFO threshold - 1 in the execution phase of read/write commands. 0h to Fh maps to 1...16 bytes.
+	 *       PRETRK = Precompensation start track number.
+	 *
+	 *
+	 *      82077AA Drive Control Delays (ms) Table 5-10
+	 *
+	 *        |                HUT                 |                 SRT                |
+	 *        |   1M     500K     300K     250K    |   1M     500K     300K     250K    |
+	 *     ---+------------------------------------+------------------------------------+
+	 *      0 |  128      256      426      512    |  8.0       16     26.7       32    |
+	 *      1 |    8       16     26.7       32    |  7.5       15       25       30    |
+	 *     ...............................................................................
+	 *     Eh |  112      224      373      448    |  1.0        2     3.33        4    |
+	 *     Fh |  120      240      400      480    |  0.5        1     1.67        2    |
+	 *        +------------------------------------+------------------------------------+
+	 *
+	 *        |                HLT                 |
+	 *        |   1M     500K     300K     250K    |
+	 *     ---+------------------------------------+
+	 *      0 |  128      256      426      512    |
+	 *      1 |    1        2      3.3        4    |
+	 *     ..........................................
+	 *    7Eh |  126      252      420      504    |
+	 *    7Fh |  127      254      423      508    |
+	 *        +------------------------------------+
+         */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	{
+		struct vga_msg_box vgabox;
+		char *w=tmp;
+		int i;
+
+		for (i=0;i < rd;i++) w += sprintf(w,"%02x ",resp[i]);
+		*w++ = '\n';
+		*w++ = '\n';
+		*w = 0;
+
+		w += sprintf(w,"PCN[0-3](physical track) = %u,%u,%u,%u\n",
+			resp[0],resp[1],resp[2],resp[3]);
+		w += sprintf(w,"SRT=%u  HUT=%u  HLT=%u  ND=%u\n",
+			resp[4]>>4,resp[4]&0xF,
+			resp[5]>>1,resp[5]&1);
+		w += sprintf(w,"SC/EOT=%u  LOCK=%u  D[0-3](perpendicular)=%u,%u,%u,%u\n",
+			resp[6],
+			(resp[7]>>7)&1,
+			(resp[7]>>5)&1,
+			(resp[7]>>4)&1,
+			(resp[7]>>3)&1,
+			(resp[7]>>2)&1);
+		w += sprintf(w,"GAP=%u  WGATE=%u  EIS=%u  EFIFO=%u  POLL=%u\n",
+			(resp[7]>>1)&1,
+			(resp[7]>>0)&1,
+			(resp[8]>>6)&1,
+			(resp[8]>>5)&1,
+			(resp[8]>>4)&1);
+		w += sprintf(w,"FIFOTHR=%u  PRETRK=%u",
+			(resp[8]>>0)&0xF,
+			resp[9]);
+
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+	}
+
+	return 1;
+}
+
 int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsigned char head) {
 	int rd,wd,rdo,wdo;
 	char cmd[10];
@@ -2217,16 +2348,16 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 11) ? 0x70 : 0x0F);
-			vga_write("Seek (xfh)");
+			vga_write("Seek (xFh)");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 12) ? 0x70 : 0x0F);
-			vga_write("Seek relative (1xfh)");
+			vga_write("Seek relative (1xFh)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 13) ? 0x70 : 0x0F);
-			vga_write("Read sector ID (xah)");
+			vga_write("Read sector ID (xAh)");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 14) ? 0x70 : 0x0F);
@@ -2237,6 +2368,10 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 15) ? 0x70 : 0x0F);
 			vga_write("Write testing >>");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+
+			vga_write_color((select == 16) ? 0x70 : 0x0F);
+			vga_write("Dump Registers (xEh)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -2320,15 +2455,18 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				do_floppy_controller_write_tests(fdc);
 				backredraw = 1;
 			}
+			else if (select == 16) { /* dump registers */
+				do_floppy_dumpreg(fdc);
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 15;
+				select = 16;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 15)
+			if (++select > 16)
 				select = -1;
 
 			redraw = 1;
