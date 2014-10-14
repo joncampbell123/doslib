@@ -1010,8 +1010,12 @@ int do_floppy_get_version(struct floppy_controller *fdc) {
 }
 
 int do_floppy_controller_specify(struct floppy_controller *fdc) {
+	int retry_count=0;
 	char cmd[10];
 	int wd,wdo;
+	int drv;
+
+retry:	drv = fdc->digital_out & 3;
 
 	floppy_controller_read_status(fdc);
 	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
@@ -1051,6 +1055,16 @@ int do_floppy_controller_specify(struct floppy_controller *fdc) {
 
 	/* use Check Interrupt Status */
 	do_check_interrupt_status(fdc);
+
+	/* if it failed, try again */
+	if ((fdc->st[0]&0xC0) == 0xC0 || (fdc->st[0]&0xC0) == 0x40) {
+		if ((++retry_count) < 8) { /* what the hell VirtualBox? */
+			floppy_controller_drive_select(fdc,drv);
+			goto retry;
+		}
+
+		return 0;
+	}
 
 	return 1;
 }
