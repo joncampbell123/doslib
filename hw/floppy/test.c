@@ -216,18 +216,28 @@ void floppy_controller_set_motor_state(struct floppy_controller *i,unsigned char
 void floppy_controller_enable_dma(struct floppy_controller *i,unsigned char set) {
 	if (i->dma < 0) set = 0;
 	i->use_dma = !!set;
+
+	/* 82077AA refers to this bit as "!DMAGATE", and only in AT mode.
+	 * Setting it gates both the IRQ and DMA. It says it has no effect
+	 * in PS/2 mode. Doh! */
+	i->digital_out &= ~0x08;
+	i->digital_out |= ((i->use_irq || i->use_dma)?0x08:0x00);
+	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
 
 void floppy_controller_enable_irq(struct floppy_controller *i,unsigned char set) {
 	if (i->irq < 0) set = 0;
-
 	i->use_irq = !!set;
+
+	/* 82077AA refers to this bit as "!DMAGATE", and only in AT mode.
+	 * Setting it gates both the IRQ and DMA. It says it has no effect
+	 * in PS/2 mode. Doh! */
 	i->digital_out &= ~0x08;
-	i->digital_out |= (set?0x08:0x00);
+	i->digital_out |= ((i->use_irq || i->use_dma)?0x08:0x00);
 	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
 
-void floppy_controller_enable_irq_otr(struct floppy_controller *i,unsigned char set) {
+void floppy_controller_enable_irqdma_gate_otr(struct floppy_controller *i,unsigned char set) {
 	unsigned char c;
 
 	c = i->digital_out;
@@ -1483,8 +1493,8 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	vga_write("Write in progress\n");
 
 	/* fires an IRQ */
-	if (fdc->use_irq) {
-		floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
+	if (fdc->use_dma) {
+		if (fdc->use_irq) floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
 		floppy_controller_wait_data_ready_ms(fdc,1000);
 	}
 	else {
@@ -1674,8 +1684,8 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	vga_write("Read in progress\n");
 
 	/* fires an IRQ */
-	if (fdc->use_irq) {
-		floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
+	if (fdc->use_dma) {
+		if (fdc->use_irq) floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
 		floppy_controller_wait_data_ready_ms(fdc,1000);
 	}
 	else {
@@ -2328,7 +2338,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 	}
 
 	/* if the floppy struct says to use interrupts, then do it */
-	do_floppy_controller_enable_irq(fdc,fdc->use_dma);
+	do_floppy_controller_enable_irq(fdc,fdc->use_irq);
+	floppy_controller_enable_dma(fdc,fdc->use_dma);
 
 	while (1) {
 		if (backredraw) {
@@ -2402,8 +2413,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 1) ? 0x70 : 0x0F);
-			vga_write("Reset signal: ");
-			vga_write((fdc->digital_out&0x04) ? "Off" : "On");
+			vga_write("IRQ: ");
+			vga_write(fdc->use_irq ? "Enabled" : "Disabled");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
@@ -2443,6 +2454,12 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				case 2:	vga_write("250kbit/sec"); break;
 				case 3:	vga_write("1mbit/sec"); break;
 			};
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 8) ? 0x70 : 0x0F);
+			vga_write("Reset signal: ");
+			vga_write((fdc->digital_out&0x04) ? "Off" : "On");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
@@ -2523,8 +2540,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 
 				redraw = 1;
 			}
-			else if (select == 1) { /* reset */
-				floppy_controller_set_reset(fdc,!!(fdc->digital_out&0x04)); /* bit is INVERTED 1=normal 0=reset */
+			else if (select == 1) { /* IRQ enable */
+				do_floppy_controller_enable_irq(fdc,!fdc->use_irq);
 				redraw = 1;
 			}
 			else if (select == 2) { /* Drive A motor */
@@ -2549,6 +2566,10 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			}
 			else if (select == 7) { /* Transfer rate */
 				floppy_controller_set_data_transfer_rate(fdc,((fdc->control_cfg&3)+1)&3);
+				redraw = 1;
+			}
+			else if (select == 8) { /* reset */
+				floppy_controller_set_reset(fdc,!!(fdc->digital_out&0x04)); /* bit is INVERTED 1=normal 0=reset */
 				redraw = 1;
 			}
 			else if (select == 8) { /* Position */
@@ -2618,7 +2639,7 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 	}
 
 	do_floppy_controller_enable_irq(fdc,0);
-	floppy_controller_enable_irq_otr(fdc,1); /* because BIOSes probably won't */
+	floppy_controller_enable_irqdma_gate_otr(fdc,1); /* because BIOSes probably won't */
 	p8259_unmask(fdc->irq);
 }
 
