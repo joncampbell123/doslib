@@ -2108,6 +2108,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 		}
 
 		if (redraw) {
+			int cx = vga_width / 2;
+
 			redraw = 0;
 
 			floppy_controller_read_status(fdc);
@@ -2141,42 +2143,33 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 0) ? 0x70 : 0x0F);
 			vga_write("DMA/IRQ: ");
 			vga_write(fdc->use_dma ? "Enabled" : "Disabled");
-			vga_write(" (hit enter to toggle)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_moveto(8,y++);
 			vga_write_color((select == 1) ? 0x70 : 0x0F);
 			vga_write("Reset signal: ");
 			vga_write((fdc->digital_out&0x04) ? "Off" : "On");
-			vga_write(" (hit enter to toggle)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 2) ? 0x70 : 0x0F);
 			vga_write("Drive A motor: ");
 			vga_write((fdc->digital_out&0x10) ? "On" : "Off");
-			vga_write(" (hit enter to toggle)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_moveto(8,y++);
 			vga_write_color((select == 3) ? 0x70 : 0x0F);
 			vga_write("Drive B motor: ");
 			vga_write((fdc->digital_out&0x20) ? "On" : "Off");
-			vga_write(" (hit enter to toggle)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 4) ? 0x70 : 0x0F);
 			vga_write("Drive C motor: ");
 			vga_write((fdc->digital_out&0x40) ? "On" : "Off");
-			vga_write(" (hit enter to toggle)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_moveto(8,y++);
 			vga_write_color((select == 5) ? 0x70 : 0x0F);
 			vga_write("Drive D motor: ");
 			vga_write((fdc->digital_out&0x80) ? "On" : "Off");
-			vga_write(" (hit enter to toggle)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
@@ -2184,19 +2177,16 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write("Drive select: ");
 			sprintf(tmp,"%c(%u)",(fdc->digital_out&3)+'A',fdc->digital_out&3);
 			vga_write(tmp);
-			vga_write(" (hit enter to toggle)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_moveto(8,y++);
 			vga_write_color((select == 7) ? 0x70 : 0x0F);
-			vga_write("Transfer rate: ");
+			vga_write("Data rate: ");
 			switch (fdc->control_cfg&3) {
 				case 0:	vga_write("500kbit/sec"); break;
 				case 1:	vga_write("300kbit/sec"); break;
 				case 2:	vga_write("250kbit/sec"); break;
 				case 3:	vga_write("1mbit/sec"); break;
 			};
-			vga_write(" (hit enter to toggle)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
