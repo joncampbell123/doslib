@@ -1146,9 +1146,12 @@ int do_floppy_dumpreg(struct floppy_controller *fdc) {
 	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
 		do_floppy_controller_reset(fdc);
 
-	/* copy down the ND and EIS bits */
-	fdc->non_dma_mode = resp[5]&1;
-	fdc->implied_seek = (resp[8]>>6)&1;
+	/* copy down info we want to keep track of */
+	fdc->current_srt = resp[4] >> 4;
+	fdc->current_hut = resp[4] & 0x0F;
+	fdc->current_hlt = resp[5] >> 1;
+	fdc->non_dma_mode = resp[5] & 0x01;
+	fdc->implied_seek = (resp[8] >> 6) & 1;
 
 	{
 		struct vga_msg_box vgabox;
