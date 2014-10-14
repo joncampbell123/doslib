@@ -2209,9 +2209,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_moveto(8,y++);
 			vga_write_color((select == 9) ? 0x70 : 0x0F);
 			vga_write("Check drive status (x4h)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_moveto(8,y++);
 			vga_write_color((select == 10) ? 0x70 : 0x0F);
 			vga_write("Calibrate (x7h)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
@@ -2219,9 +2218,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_moveto(8,y++);
 			vga_write_color((select == 11) ? 0x70 : 0x0F);
 			vga_write("Seek (xfh)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_moveto(8,y++);
 			vga_write_color((select == 12) ? 0x70 : 0x0F);
 			vga_write("Seek relative (1xfh)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
@@ -2229,9 +2227,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_moveto(8,y++);
 			vga_write_color((select == 13) ? 0x70 : 0x0F);
 			vga_write("Read sector ID (xah)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
-			vga_moveto(8,y++);
 			vga_write_color((select == 14) ? 0x70 : 0x0F);
 			vga_write("Read testing >>");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
@@ -2239,7 +2236,7 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_moveto(8,y++);
 			vga_write_color((select == 15) ? 0x70 : 0x0F);
 			vga_write("Write testing >>");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
