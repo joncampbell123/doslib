@@ -107,6 +107,9 @@ struct floppy_controller {
 	uint8_t			digital_out_rw:1;	/* digital out (0x3F2) is readable */
 	uint8_t			non_dma_mode:1;		/* "ND" bit in Dump Regs */
 	uint8_t			implied_seek:1;		/* "EIS" bit in Dump Regs */
+	uint8_t			current_srt:4;
+	uint8_t			current_hut:4;
+	uint8_t			current_hlt;
 };
 
 /* standard I/O ports for floppy controllers */
@@ -260,6 +263,11 @@ struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
 		ret->dma = -1;
 
 	ret->use_dma = (ret->dma >= 0 && ret->irq >= 0); /* FIXME: I'm sure there's a way to do DMA without IRQ */
+
+	/* assume middle-of-the-road defaults */
+	ret->current_srt = 8;		/* 4/8/14/16ms for 1M/500K/300K/250K */
+	ret->current_hut = 8;		/* 64/128/213/256 for 1M/500K/300K/250K */
+	ret->current_hlt = 0x40;	/* 64/128/213/256 for 1M/500K/300K/250K */
 
 	/* assume controller has ND (Non-DMA) and EIS (implied seek) turned off.
 	 * most BIOSes do that. */
