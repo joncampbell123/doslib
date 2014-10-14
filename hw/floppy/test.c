@@ -98,12 +98,15 @@ struct floppy_controller {
 
 	/* desired state */
 	uint8_t			use_dma:1;		/* if set, use DMA. else, use PIO data transfer */
+	uint8_t			use_implied_seek:1;	/* if set, act like controller has Implied Seek enabled */
 
 	/* what we know about the controller */
 	uint8_t			version;		/* result of command 0x10 (determine controller version) or 0x00 if not yet queried */
 	uint8_t			ps2_mode:1;		/* controller is in PS/2 mode (has status registers A and B I/O ports) */
 	uint8_t			at_mode:1;		/* controller is in AT mode (has Digital Input Register and Control Config Reg) */
 	uint8_t			digital_out_rw:1;	/* digital out (0x3F2) is readable */
+	uint8_t			non_dma_mode:1;		/* "ND" bit in Dump Regs */
+	uint8_t			implied_seek:1;		/* "EIS" bit in Dump Regs */
 };
 
 /* standard I/O ports for floppy controllers */
@@ -257,6 +260,9 @@ struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
 		ret->dma = -1;
 
 	ret->use_dma = (ret->dma >= 0 && ret->irq >= 0); /* FIXME: I'm sure there's a way to do DMA without IRQ */
+
+	/* assume controller has ND (Non-DMA) and EIS (implied seek) turned off.
+	 * most BIOSes do that. */
 
 	/* if something appears at 0x3F0-0x3F1, assume "PS/2 mode".
 	 * there are finer intricate details where the meaning of some bits
@@ -1014,6 +1020,10 @@ int do_floppy_dumpreg(struct floppy_controller *fdc) {
 	floppy_controller_wait_data_ready(fdc,20);
 	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
 		do_floppy_controller_reset(fdc);
+
+	/* copy down the ND and EIS bits */
+	fdc->non_dma_mode = resp[5]&1;
+	fdc->implied_seek = (resp[8]>>6)&1;
 
 	{
 		struct vga_msg_box vgabox;
