@@ -930,6 +930,60 @@ void do_calibrate_drive(struct floppy_controller *fdc) {
 	do_check_interrupt_status(fdc);
 }
 
+int do_floppy_get_version(struct floppy_controller *fdc) {
+	int rd,wd,rdo,wdo;
+	char cmd[10],resp[10];
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	/* Version (1x0h)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   1   0   0   0   0
+	 */
+
+	wdo = 1;
+	cmd[0] = 0x10;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 1) {
+		do_floppy_controller_reset(fdc);
+		return 0;
+	}
+
+	/* wait for data ready. does not fire an IRQ */
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	rdo = 1;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+		do_floppy_controller_reset(fdc);
+		return 0;
+	}
+
+	/* Version (1x0h) response
+	 *
+	 *   Byte |  7    6    5    4    3    2    1    0
+	 *   -----+--------------------------------------
+	 *      0 |            Version or error
+	 *
+	 * Version/Error values:
+	 *     0x80: Not an enhanced controller (we got an invalid opcode)
+	 *     0x90: Enhanced controller
+         */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	fdc->version = resp[0];
+	return 1;
+
+}
+
 int do_floppy_dumpreg(struct floppy_controller *fdc) {
 	int rd,wd,rdo,wdo;
 	char cmd[10],resp[10];
@@ -2260,10 +2314,10 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			y = 2;
 			vga_moveto(8,y++);
 			vga_write_color(0x0F);
-			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh cyl=%-3u",
+			sprintf(tmp,"DOR %02xh DIR %02xh Stat %02xh CCR %02xh cyl=%-3u ver=%02xh",
 				fdc->digital_out,fdc->digital_in,
 				fdc->main_status,fdc->control_cfg,
-				fdc->cylinder);
+				fdc->cylinder,   fdc->version);
 			vga_write(tmp);
 
 			vga_moveto(8,y++);
@@ -2382,6 +2436,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 16) ? 0x70 : 0x0F);
 			vga_write("Dump Registers (xEh)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 17) ? 0x70 : 0x0F);
+			vga_write("Get Version (1x0h)");
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -2468,15 +2527,19 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			else if (select == 16) { /* dump registers */
 				do_floppy_dumpreg(fdc);
 			}
+			else if (select == 17) { /* get version */
+				do_floppy_get_version(fdc);
+				redraw = 1;
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 16;
+				select = 17;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 16)
+			if (++select > 17)
 				select = -1;
 
 			redraw = 1;
