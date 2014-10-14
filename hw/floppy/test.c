@@ -97,6 +97,7 @@ struct floppy_controller {
 	uint16_t		irq_fired;
 
 	/* desired state */
+	uint8_t			use_irq:1;		/* if set, use IRQ. else. ??? */
 	uint8_t			use_dma:1;		/* if set, use DMA. else, use PIO data transfer */
 	uint8_t			use_implied_seek:1;	/* if set, act like controller has Implied Seek enabled */
 
@@ -213,15 +214,20 @@ void floppy_controller_set_motor_state(struct floppy_controller *i,unsigned char
 }
 
 void floppy_controller_enable_dma(struct floppy_controller *i,unsigned char set) {
-	if (i->dma < 0 || i->irq < 0) set = 0;
-
+	if (i->dma < 0) set = 0;
 	i->use_dma = !!set;
+}
+
+void floppy_controller_enable_irq(struct floppy_controller *i,unsigned char set) {
+	if (i->irq < 0) set = 0;
+
+	i->use_irq = !!set;
 	i->digital_out &= ~0x08;
 	i->digital_out |= (set?0x08:0x00);
 	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
 }
 
-void floppy_controller_enable_dma_otr(struct floppy_controller *i,unsigned char set) {
+void floppy_controller_enable_irq_otr(struct floppy_controller *i,unsigned char set) {
 	unsigned char c;
 
 	c = i->digital_out;
@@ -262,7 +268,8 @@ struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
 	else
 		ret->dma = -1;
 
-	ret->use_dma = (ret->dma >= 0 && ret->irq >= 0); /* FIXME: I'm sure there's a way to do DMA without IRQ */
+	ret->use_dma = (ret->dma >= 0);
+	ret->use_irq = (ret->irq >= 0);
 
 	/* assume middle-of-the-road defaults */
 	ret->current_srt = 8;		/* 4/8/14/16ms for 1M/500K/300K/250K */
@@ -286,7 +293,7 @@ struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
 	if (t1 != 0xFF) ret->at_mode = 1;
 
 	/* and ... guess */
-	floppy_controller_write_DOR(ret,0x04+(ret->use_dma?0x08:0x00));	/* most BIOSes: DMA/IRQ enable, !reset, motor off, drive A select */
+	floppy_controller_write_DOR(ret,0x04+(ret->use_irq?0x08:0x00));	/* most BIOSes: DMA/IRQ enable, !reset, motor off, drive A select */
 	floppy_controller_read_status(ret);
 
 	/* is the Digital Out port readable? */
@@ -389,7 +396,7 @@ void do_floppy_controller_hook_irq(struct floppy_controller *fdc) {
 
 	/* enable on floppy controller */
 	p8259_mask(fdc->irq);
-	floppy_controller_enable_dma(fdc,1);
+	floppy_controller_enable_irq(fdc,1);
 
 	/* hook IRQ */
 	my_floppy_old_irq = _dos_getvect(irq2int(fdc->irq));
@@ -406,7 +413,7 @@ void do_floppy_controller_unhook_irq(struct floppy_controller *fdc) {
 
 	/* disable on floppy controller, then mask at PIC */
 	p8259_mask(fdc->irq);
-	floppy_controller_enable_dma(fdc,0);
+	floppy_controller_enable_irq(fdc,0);
 
 	/* restore the original vector */
 	_dos_setvect(irq2int(fdc->irq),my_floppy_old_irq);
@@ -749,7 +756,7 @@ void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
 	}
 
 	/* fires an IRQ. doesn't return state */
-	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
+	if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
 	floppy_controller_wait_data_ready_ms(fdc,1000);
 
 	/* Seek Relative (1xFh) response
@@ -806,7 +813,7 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 	}
 
 	/* fires an IRQ. doesn't return state */
-	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
+	if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
 	floppy_controller_wait_data_ready_ms(fdc,1000);
 
 	/* Seek (xFh) response
@@ -921,7 +928,7 @@ void do_calibrate_drive(struct floppy_controller *fdc) {
 	}
 
 	/* fires an IRQ. doesn't return state */
-	if (fdc->use_dma) floppy_controller_wait_irq(fdc,1000,1);
+	if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
 	floppy_controller_wait_data_ready_ms(fdc,1000);
 
 	/* Calibrate Drive (x7h) response
@@ -990,6 +997,49 @@ int do_floppy_get_version(struct floppy_controller *fdc) {
 	fdc->version = resp[0];
 	return 1;
 
+}
+
+int do_floppy_controller_specify(struct floppy_controller *fdc) {
+	char cmd[10];
+	int wd,wdo;
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	/* Specify (x3h)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   0   0   1   1
+	 *      1 |  <--- SRT --->   <----HUT---->
+	 *      2 |  <-----------HLT--------->  ND
+	 */
+
+	wdo = 3;
+	cmd[0] = 0x03;
+	cmd[1] = (fdc->current_srt << 4) | (fdc->current_hut & 0xF);
+	cmd[2] = (fdc->current_hlt << 1) | (fdc->non_dma_mode & 1);
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 3) {
+		do_floppy_controller_reset(fdc);
+		return 0;
+	}
+
+	/* wait for data ready. does not fire an IRQ */
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* Specify (x3h) response
+	 *
+	 * (none)
+	 */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	return 1;
 }
 
 int do_floppy_dumpreg(struct floppy_controller *fdc) {
@@ -1430,7 +1480,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	vga_write("Write in progress\n");
 
 	/* fires an IRQ */
-	if (fdc->use_dma) {
+	if (fdc->use_irq) {
 		floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
 		floppy_controller_wait_data_ready_ms(fdc,1000);
 	}
@@ -1621,7 +1671,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	vga_write("Read in progress\n");
 
 	/* fires an IRQ */
-	if (fdc->use_dma) {
+	if (fdc->use_irq) {
 		floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
 		floppy_controller_wait_data_ready_ms(fdc,1000);
 	}
@@ -2344,7 +2394,7 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 0) ? 0x70 : 0x0F);
-			vga_write("DMA/IRQ: ");
+			vga_write("DMA: ");
 			vga_write(fdc->use_dma ? "Enabled" : "Disabled");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 
@@ -2461,8 +2511,13 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			if (select == -1) {
 				break;
 			}
-			else if (select == 0) { /* DMA/IRQ enable */
-				floppy_controller_enable_dma(fdc,!fdc->use_dma);
+			else if (select == 0) { /* DMA enable */
+				fdc->non_dma_mode = !fdc->non_dma_mode;
+				if (do_floppy_controller_specify(fdc)) /* if specify fails, don't change DMA flag */
+					floppy_controller_enable_dma(fdc,!fdc->non_dma_mode); /* enable DMA = !(non-dma-mode) */
+				else
+					fdc->non_dma_mode = !fdc->non_dma_mode;
+
 				redraw = 1;
 			}
 			else if (select == 1) { /* reset */
@@ -2560,7 +2615,7 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 	}
 
 	do_floppy_controller_enable_irq(fdc,0);
-	floppy_controller_enable_dma_otr(fdc,1); /* because BIOSes probably won't */
+	floppy_controller_enable_irq_otr(fdc,1); /* because BIOSes probably won't */
 	p8259_unmask(fdc->irq);
 }
 
