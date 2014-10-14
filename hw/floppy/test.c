@@ -42,7 +42,7 @@ struct floppy_controller {
 							/*     [7:7] End of Cylinder */
 							/*     [6:6] always 0 */
 							/*     [5:5] Data error */
-							/*     [4:4] Time out (data override) */
+							/*     [4:4] Time out (data overrun) */
 							/*     [3:3] always 0 */
 							/*     [2:2] No data */
 							/*     [1:1] Not writeable */
