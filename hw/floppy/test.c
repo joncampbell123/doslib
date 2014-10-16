@@ -1423,7 +1423,26 @@ void do_floppy_format_track(struct floppy_controller *fdc) {
 	vga_write_color(0x0E);
 	vga_clear();
 
-	sprintf(tmp,"Formatting C/H/S/sz/num %u/%u/%u/%u/%u\n",current_log_track,current_log_head,current_log_sect,unit_length,nsect);
+	{
+		struct vga_msg_box vgabox;
+		char *w=tmp;
+		int i;
+
+		w += sprintf(w,"I will format the track as having %u sectors/track,\n",
+			nsect);
+		w += sprintf(w,"first sector %u, logical track %u, %u bytes/sector.\n",
+			current_log_sect,current_log_track,128 << current_sectsize_p2);
+		w += sprintf(w,"I am using the sector number count for sectors/track.\n");
+		w += sprintf(w,"\n");
+		w += sprintf(w,"Hit ENTER to continue, ESC to stop now");
+
+		vga_msg_box_create(&vgabox,tmp,0,0);
+		i = wait_for_enter_or_escape();
+		vga_msg_box_destroy(&vgabox);
+		if (i == 27) return;
+	}
+
+	sprintf(tmp,"Formatting C/H/S/sz/num %u/%u/%u/%u/%u\n",current_log_track,current_log_head,current_log_sect,128 << current_sectsize_p2,nsect);
 	vga_write(tmp);
 
 	do_spin_up_motor(fdc,fdc->digital_out&3);
