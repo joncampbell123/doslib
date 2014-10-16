@@ -346,6 +346,8 @@ static int current_log_sect = 1;
 static int current_log_head = 0;
 static int current_phys_head = 0;
 static int current_log_track = 0;
+static int current_phys_rw_gap = 0x1B;		/* gap size for read/write commands */
+static int current_phys_fmt_gap = 0x54;		/* gap size when formatting */
 static int current_sectsize_p2 = 2;		/* NTS: 128 << N, 128 << 2 = 512 */
 static int current_sectsize_smaller = 0xFF;	/* if sectsize_p2 == 0 */
 static int current_sectcount = 2;		/* two sectors */
@@ -2215,7 +2217,7 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 void prompt_position() {
 	uint64_t tmp;
 	int en_mfm,en_mt;
-	int cyl,head,phead,sect,ssz,sszm,scount;
+	int cyl,head,phead,sect,ssz,sszm,scount,gaprw,gapfmt;
 	struct vga_msg_box box;
 	unsigned char redraw=1;
 	unsigned char ok=1;
@@ -2226,6 +2228,8 @@ void prompt_position() {
 	en_mfm = mfm_mode;
 	en_mt = allow_multitrack;
 	sszm = current_sectsize_smaller;
+	gapfmt = current_phys_fmt_gap;
+	gaprw = current_phys_rw_gap;
 	scount = current_sectcount;
 	phead = current_phys_head;
 	ssz = current_sectsize_p2;
@@ -2235,7 +2239,7 @@ void prompt_position() {
 
 	vga_msg_box_create(&box,
 		"Edit position:                  ",
-		2+8,0);
+		2+10,0);
 	while (1) {
 		char recalc = 0;
 		char rekey = 0;
@@ -2317,6 +2321,24 @@ void prompt_position() {
 			while (i < (box.w-4-11)) temp_str[i++] = ' ';
 			temp_str[i] = 0;
 			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 8);
+			vga_write_color(0x1E);
+			vga_write("R/W gap:   ");
+			vga_write_color(select == 8 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",gaprw);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
+
+			vga_moveto(box.x+2,box.y+2+1 + 9);
+			vga_write_color(0x1E);
+			vga_write("Fmt gap:   ");
+			vga_write_color(select == 9 ? 0x70 : 0x1E);
+			i=sprintf(temp_str,"%u",gapfmt);
+			while (i < (box.w-4-11)) temp_str[i++] = ' ';
+			temp_str[i] = 0;
+			vga_write(temp_str);
 		}
 
 		c = getch();
@@ -2331,11 +2353,11 @@ nextkey:	if (c == 27) {
 			break;
 		}
 		else if (c == 0x4800) {
-			if (--select < 0) select = 7;
+			if (--select < 0) select = 9;
 			redraw = 1;
 		}
 		else if (c == 0x5000 || c == 9/*tab*/) {
-			if (++select > 7) select = 0;
+			if (++select > 9) select = 0;
 			redraw = 1;
 		}
 
@@ -2381,6 +2403,14 @@ nextkey:	if (c == 27) {
 				case 7:
 					en_mfm = !en_mfm;
 					break;
+				case 8:
+					if (gaprw == 0) gaprw = 255;
+					else gaprw--;
+					break;
+				case 9:
+					if (gapfmt == 0) gapfmt = 255;
+					else gapfmt--;
+					break;
 			};
 
 			recalc = 1;
@@ -2423,6 +2453,14 @@ nextkey:	if (c == 27) {
 				case 7:
 					en_mfm = !en_mfm;
 					break;
+				case 8:
+					if (gaprw == 255) gaprw = 0;
+					else gaprw++;
+					break;
+				case 9:
+					if (gapfmt == 255) gapfmt = 0;
+					else gapfmt++;
+					break;
 			};
 
 			recalc = 1;
@@ -2440,6 +2478,8 @@ nextkey:	if (c == 27) {
 				case 3: sprintf(temp_str,"%u",ssz != 0 ? (128 << ssz) : sszm); break;
 				case 4:	sprintf(temp_str,"%u",phead); break;
 				case 5:	sprintf(temp_str,"%u",scount); break;
+				case 8:	sprintf(temp_str,"%u",gaprw); break;
+				case 9:	sprintf(temp_str,"%u",gapfmt); break;
 			}
 
 			if (c == 8) {
@@ -2507,6 +2547,8 @@ nextkey:	if (c == 27) {
 				case 5:	tmp=strtoull(temp_str,NULL,0); scount=(tmp > 256ULL ? 256ULL : tmp);
 					if (scount == 0) scount = 1;
 					break;
+				case 8:	tmp=strtoull(temp_str,NULL,0); gaprw=(tmp > 255ULL ? 255ULL : tmp); break;
+				case 9:	tmp=strtoull(temp_str,NULL,0); gapfmt=(tmp > 255ULL ? 255ULL : tmp); break;
 			}
 
 			rekey = 1;
@@ -2524,6 +2566,8 @@ nextkey:	if (c == 27) {
 		mfm_mode = en_mfm;
 		allow_multitrack = en_mt;
 		current_sectsize_smaller = sszm;
+		current_phys_fmt_gap = gapfmt;
+		current_phys_rw_gap = gaprw;
 		current_sectcount = scount;
 		current_phys_head = phead;
 		current_sectsize_p2 = ssz;
