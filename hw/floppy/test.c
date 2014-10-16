@@ -1407,6 +1407,186 @@ unsigned long prompt_track_number() {
 	return track;
 }
 
+void do_floppy_format_track(struct floppy_controller *fdc) {
+	unsigned int data_length,unit_length;
+	unsigned int returned_length = 0;
+	char cmd[10],resp[10];
+	int rd,rdo,wd,wdo,p;
+	uint8_t nsect;
+
+	nsect = current_sectcount;
+
+	unit_length = 4;
+	data_length = nsect * unit_length;
+
+	vga_moveto(0,0);
+	vga_write_color(0x0E);
+	vga_clear();
+
+	sprintf(tmp,"Formatting C/H/S/sz/num %u/%u/%u/%u/%u\n",current_log_track,current_log_head,current_log_sect,unit_length,nsect);
+	vga_write(tmp);
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
+
+	if (floppy_dma == NULL) return;
+	if (data_length > floppy_dma->length) {
+		nsect = floppy_dma->length / unit_length;
+		data_length = nsect * unit_length;
+	}
+	if (data_length > floppy_dma->length) return;
+
+	/* sector pattern. 4 bytes for each sector to write */
+	for (rd=0;rd < nsect;rd++) {
+		wd = rd * unit_length;
+
+		/*   |
+		 * --+---------------------------
+		 * 0 | Cylinder
+		 * 1 | Head
+		 * 2 | Sector address
+		 * 3 | Sector size code
+		 */
+		floppy_dma->lin[wd++] = current_log_track;
+		floppy_dma->lin[wd++] = current_log_head;
+		floppy_dma->lin[wd++] = current_log_sect + rd;
+		floppy_dma->lin[wd++] = current_sectsize_p2;
+	}
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	if (fdc->dma >= 0 && fdc->use_dma) {
+		outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma) | D8237_MASK_SET); /* mask */
+
+		outp(d8237_ioport(fdc->dma,D8237_REG_W_WRITE_MODE),
+			D8237_MODER_CHANNEL(fdc->dma) |
+			D8237_MODER_TRANSFER(D8237_MODER_XFER_READ) |
+			D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
+
+		d8237_write_count(fdc->dma,data_length);
+		d8237_write_base(fdc->dma,floppy_dma->phys);
+
+		outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma)); /* unmask */
+
+		inp(d8237_ioport(fdc->dma,D8237_REG_R_STATUS)); /* read status port to clear TC bits */
+	}
+
+	/* Format Track (xDh)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0  MF   0   0   1   1   0   1
+	 *      1 |  0   0   0   0   0  HD DR1 DR0
+	 *      2 |  <------ bytes/sector ------->
+	 *      3 |  <----- sectors/track ------->
+	 *      4 |  <--------- GAP3 ------------>
+	 *      5 |  <------ Fill byte ---------->
+	 *
+	 *         MF = MFM/FM
+	 *         HD = Head select (on PC platform, doesn't matter)
+	 *    DR1,DR0 = Drive select */
+
+	wdo = 6;
+	cmd[0] = (mfm_mode?0x40:0x00)/* MFM */ + 0x0D/* FORMAT TRACK */;
+	cmd[1] = (fdc->digital_out&3)+(current_phys_head&1?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] = HD */;
+	cmd[2] = current_sectsize_p2;
+	cmd[3] = nsect;
+	cmd[4] = 0x54;			/* suggested for 3.5" (FIXME: Make this user-changeable) */
+	cmd[5] = 0xAA;			/* fill byte */
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 2) {
+		vga_write("Write data port failed\n");
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	vga_write("Format in progress\n");
+
+	/* fires an IRQ */
+	if (fdc->use_dma) {
+		if (fdc->use_irq) floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
+		floppy_controller_wait_data_ready_ms(fdc,1000);
+	}
+	else {
+		/* NOTES:
+		 *
+		 * Sun/Oracle VirtualBox floppy emulation bug: PIO mode doesn't seem to be supported properly on write
+		 * for more than one sector. It will SEEM like it works, but when you read the data back only the first
+		 * sector was ever written. On the same configuration, READ works fine using the same PIO mode. */
+		while (returned_length < data_length) {
+			if ((returned_length+unit_length) > data_length) break;
+			floppy_controller_wait_data_ready_ms(fdc,10000);
+
+			p = floppy_controller_write_data_ndma(fdc,floppy_dma->lin + returned_length,unit_length);
+			if (p < 0 || p > unit_length) {
+				sprintf(tmp,"NDMA write failed %d (%02xh)\n",p,fdc->main_status);
+				vga_write(tmp);
+				p = 0;
+			}
+
+			returned_length += p;
+			/* stop on incomplete transfer */
+			if (p != unit_length) break;
+		}
+	}
+
+	rdo = 7;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+		vga_write("Write data port failed\n");
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* Format Track (xDh) response
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |              ST0
+	 *      1 |              ST1
+	 *      2 |              ST2
+	 *      3 |               ?
+	 *      4 |               ?
+	 *      5 |               ?
+	 *      6 |               ?
+         */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* accept ST0..ST2 from response and update */
+	if (rd >= 3) {
+		fdc->st[0] = resp[0];
+		fdc->st[1] = resp[1];
+		fdc->st[2] = resp[2];
+	}
+	if (rd >= 4) {
+		fdc->cylinder = resp[3];
+	}
+
+	/* (if DMA) did we get any data? */
+	if (fdc->dma >= 0 && fdc->use_dma) {
+		uint32_t dma_len = d8237_read_count(fdc->dma);
+		uint8_t status = inp(d8237_ioport(fdc->dma,D8237_REG_R_STATUS));
+
+		/* some DMA controllers reset the count back to the original value on terminal count.
+		 * so if the DMA controller says terminal count, the true count is zero */
+		if (status&D8237_STATUS_TC(fdc->dma)) dma_len = 0;
+
+		if (dma_len > (uint32_t)data_length) dma_len = (uint32_t)data_length;
+		returned_length = (unsigned int)((uint32_t)data_length - dma_len);
+	}
+
+	sprintf(tmp,"%lu bytes written\n",(unsigned long)returned_length);
+	vga_write(tmp);
+	vga_write("\n");
+
+	wait_for_enter_or_escape();
+}
+
 void do_floppy_write_test(struct floppy_controller *fdc) {
 	unsigned int data_length,unit_length;
 	unsigned int returned_length = 0;
@@ -1498,7 +1678,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	cmd[4] = sect;	/* sector=1 */
 	cmd[5] = ssz;	/* sector size=2 (512 bytes) */
 	cmd[6] = sect+nsect-1; /* last sector of the track (what sector to stop at). */
-	cmd[7] = 0;	/* gap size (??) */
+	cmd[7] = 0x1B;	/* gap size (FIXME: This is the recommended 3.5" gap size) */
 	cmd[8] = current_sectsize_smaller; /* DTL (not used if 256 or larger) */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
@@ -1689,7 +1869,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	cmd[4] = sect;	/* sector=1 */
 	cmd[5] = ssz;	/* sector size=2 (512 bytes) */
 	cmd[6] = sect+nsect-1; /* last sector of the track (what sector to stop at). */
-	cmd[7] = 0;	/* gap size (??) */
+	cmd[7] = 0x1B;	/* gap size (FIXME: This is the recommended 3.5" gap size) */
 	cmd[8] = current_sectsize_smaller; /* DTL (not used if 256 or larger) */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
@@ -2637,6 +2817,10 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			else if (select == 18) { /* get version */
 				do_floppy_get_version(fdc);
 				redraw = 1;
+			}
+			else if (select == 19) { /* format track */
+				do_floppy_format_track(fdc);
+				backredraw = 1;
 			}
 		}
 		else if (c == 0x4800) {
