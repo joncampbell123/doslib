@@ -1513,7 +1513,7 @@ void do_floppy_format_track(struct floppy_controller *fdc) {
 	cmd[1] = (fdc->digital_out&3)+(current_phys_head&1?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] = HD */;
 	cmd[2] = current_sectsize_p2;
 	cmd[3] = nsect;
-	cmd[4] = 0x54;			/* suggested for 3.5" (FIXME: Make this user-changeable) */
+	cmd[4] = current_phys_fmt_gap;
 	cmd[5] = 0xAA;			/* fill byte */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
@@ -1699,7 +1699,7 @@ void do_floppy_write_test(struct floppy_controller *fdc) {
 	cmd[4] = sect;	/* sector=1 */
 	cmd[5] = ssz;	/* sector size=2 (512 bytes) */
 	cmd[6] = sect+nsect-1; /* last sector of the track (what sector to stop at). */
-	cmd[7] = 0x1B;	/* gap size (FIXME: This is the recommended 3.5" gap size) */
+	cmd[7] = current_phys_rw_gap;
 	cmd[8] = current_sectsize_smaller; /* DTL (not used if 256 or larger) */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
@@ -1890,7 +1890,7 @@ void do_floppy_read_test(struct floppy_controller *fdc) {
 	cmd[4] = sect;	/* sector=1 */
 	cmd[5] = ssz;	/* sector size=2 (512 bytes) */
 	cmd[6] = sect+nsect-1; /* last sector of the track (what sector to stop at). */
-	cmd[7] = 0x1B;	/* gap size (FIXME: This is the recommended 3.5" gap size) */
+	cmd[7] = current_phys_rw_gap;
 	cmd[8] = current_sectsize_smaller; /* DTL (not used if 256 or larger) */
 	wd = floppy_controller_write_data(fdc,cmd,wdo);
 	if (wd < 2) {
