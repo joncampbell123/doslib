@@ -1435,8 +1435,13 @@ void do_floppy_format_track(struct floppy_controller *fdc) {
 		w += sprintf(w,"first sector %u, logical track %u, %u bytes/sector.\n",
 			current_log_sect,current_log_track,128 << current_sectsize_p2);
 		w += sprintf(w,"I am using the sector number count for sectors/track.\n");
+		w += sprintf(w,"Since (last I checked) the head is currently located at\n");
+		w += sprintf(w,"track %u, physical track %u will be formatted logical\n",
+			fdc->cylinder,fdc->cylinder);
+		w += sprintf(w,"track %u.\n",
+			current_log_track);
 		w += sprintf(w,"\n");
-		w += sprintf(w,"Hit ENTER to continue, ESC to stop now");
+		w += sprintf(w,"Hit ENTER to continue if this is what you want, ESC to stop now");
 
 		vga_msg_box_create(&vgabox,tmp,0,0);
 		i = wait_for_enter_or_escape();
