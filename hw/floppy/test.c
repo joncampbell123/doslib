@@ -1438,8 +1438,11 @@ void do_floppy_format_track(struct floppy_controller *fdc) {
 		w += sprintf(w,"Since (last I checked) the head is currently located at\n");
 		w += sprintf(w,"track %u, physical track %u will be formatted logical\n",
 			fdc->cylinder,fdc->cylinder);
-		w += sprintf(w,"track %u.\n",
-			current_log_track);
+		w += sprintf(w,"track %u. The track will be marked as having logical head %u\n",
+			current_log_track,
+			current_log_head);
+		w += sprintf(w,"and formatted on physical head %u\n",
+			current_phys_head);
 		w += sprintf(w,"\n");
 		w += sprintf(w,"Hit ENTER to continue if this is what you want, ESC to stop now");
 
