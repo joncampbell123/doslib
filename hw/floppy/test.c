@@ -1444,7 +1444,7 @@ void do_floppy_format_track(struct floppy_controller *fdc) {
 		w += sprintf(w,"and formatted on physical head %u\n",
 			current_phys_head);
 		w += sprintf(w,"\n");
-		w += sprintf(w,"Hit ENTER to continue if this is what you want, ESC to stop now");
+		w += sprintf(w,"Hit ENTER to continue if this is what you want,\nor ESC to stop now.");
 
 		vga_msg_box_create(&vgabox,tmp,0,0);
 		i = wait_for_enter_or_escape();
