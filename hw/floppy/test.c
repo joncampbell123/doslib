@@ -2595,7 +2595,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 
 	/* and allocate DMA too */
 	if (fdc->dma >= 0 && floppy_dma == NULL) {
+#if TARGET_MSDOS == 32
+		uint32_t choice = 65536;
+#else
 		uint32_t choice = 32768;
+#endif
 
 		do {
 			floppy_dma = dma_8237_alloc_buffer(choice);
