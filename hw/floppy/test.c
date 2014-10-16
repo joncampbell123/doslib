@@ -2536,6 +2536,10 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 18) ? 0x70 : 0x0F);
 			vga_write("Get Version (1x0h)");
 			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+
+			vga_write_color((select == 19) ? 0x70 : 0x0F);
+			vga_write("Format Track (xDh)");
+			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -2637,12 +2641,12 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 18;
+				select = 19;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 18)
+			if (++select > 19)
 				select = -1;
 
 			redraw = 1;
