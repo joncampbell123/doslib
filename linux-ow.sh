@@ -6,6 +6,11 @@ if [ -d "/usr/src/openwatcom-1.9/rel2/binl" ]; then
 	export WATCOM=/usr/src/openwatcom-1.9/rel2
 fi
 
+# Jonathan has started developing with OpenWatcom 2.0 branch. Use it!
+if [ -d "/usr/watcom-2.0/binl" ]; then
+	export WATCOM=/usr/watcom-2.0
+fi
+
 echo "Using: $WATCOM"
 
 export EDPATH=$WATCOM/eddat
