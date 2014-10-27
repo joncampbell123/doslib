@@ -1,14 +1,14 @@
 #!/usr/bin/bash
 export WATCOM=/usr/watcom
 
-# TESTING: If Jon's custom branch of Open Watcom 1.9 is present, use it--this is vital for testing!
-if [ -d "/usr/src/openwatcom-1.9/rel2/binl" ]; then
-	export WATCOM=/usr/src/openwatcom-1.9/rel2
-fi
-
 # Jonathan has started developing with OpenWatcom 2.0 branch. Use it!
 if [ -d "/usr/watcom-2.0/binl" ]; then
 	export WATCOM=/usr/watcom-2.0
+fi
+
+# TESTING: If Jon's custom branch of Open Watcom 2.0 is present, use it--this is vital for testing!
+if [ -d "/usr/src/ow/open-watcom-v2/rel/binl" ]; then
+	export WATCOM=/usr/src/ow/open-watcom-v2/rel
 fi
 
 echo "Using: $WATCOM"
