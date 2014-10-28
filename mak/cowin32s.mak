@@ -81,12 +81,13 @@ WLINK_SYSTEM = win32s
 WLINK_CON_SYSTEM = win32s
 WLINK_DLL_SYSTEM = win32s
 RCFLAGS  = -q -r -bt=nt $(WIN_INCLUDE)
-CFLAGS   = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV3F) -$(CPULEV3)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bg
-CFLAGS386= -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV3F) -$(CPULEV3)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bg
+# NTS: We disable stack checking for now (the -s switch). Open Watcom 2.0's stack checking doesn't work properly in Windows 3.1 Win32s
+CFLAGS   = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV3F) -$(CPULEV3)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bg -s
+CFLAGS386= -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV3F) -$(CPULEV3)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bg -s
 # a 586 version of the build flags, so some OBJ files can target Pentium or higher instructions
-CFLAGS386_TO_586= -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bg
+CFLAGS386_TO_586= -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bg -s
 # a 686 version of the build flags, so some OBJ files can target Pentium or higher instructions
-CFLAGS386_TO_686= -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bg
+CFLAGS386_TO_686= -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bg -s
 AFLAGS   = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -wx -fp$(CPULEV3F) -$(CPULEV3) -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE)
 NASMFLAGS= -DTARGET_MSDOS=32 -DMSDOS=1 -DTARGET86=$(TARGET86) -DTARGET_WINDOWS=$(TARGET_WINDOWS) -DMMODE=$(MMODE)
 
