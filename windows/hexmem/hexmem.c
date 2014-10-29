@@ -1086,6 +1086,31 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 			SetCursor(LoadCursor(NULL,IDC_ARROW)); /* Let the user know we're done */
 		}
+		else if (wparam == 'E') {
+#if TARGET_MSDOS == 32
+			char *x = NULL;
+			LPCH (WINAPI *getenv)(void);
+			HMODULE krn = GetModuleHandle("KERNEL32.DLL");
+
+			if (krn) {
+				getenv = (void*)GetProcAddress(krn,"GetEnvironmentStringsA");
+				if (getenv != NULL) x = getenv();
+
+				if (x == NULL) {
+					getenv = (void*)GetProcAddress(krn,"GetEnvironmentStrings");
+					if (getenv != NULL) x = getenv();
+				}
+			}
+
+			if (x != NULL) {
+				displayOffset = (DWORD)x;
+				displayMode = DIM_DATASEG;
+				SetWindowText(hwnd,hwndTitleBase);
+				InvalidateRect(hwnd,NULL,FALSE);
+				updateDisplayModeMenuCheck();
+			}
+#endif
+		}
 	}
 	else if (message == WM_COMMAND) {
 		if (HIWORD(lparam) == 0) { /* from a menu */
