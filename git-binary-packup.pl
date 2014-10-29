@@ -56,7 +56,7 @@ if (!( -f "$filename.xz" )) {
 
 	# build the list
 	my $list = '',$fn;
-	open(XX,"for i in dos86s dos86l dos86m dos86c dos386f \*.com \*.exe; do find -iname \$i; done |") || die;
+	open(XX,"for i in dos86s dos86l dos86m dos86c dos386f win32 win302l win313l win32s3 winnt \*.com \*.exe; do find -iname \$i; done |") || die;
 	while ($fn = <XX>) {
 		chomp $fn;
 		next unless -d $fn;
