@@ -734,6 +734,7 @@ int main() {
 			unsigned char mcr = uart_8250_read_MCR(uart);
 			unsigned char msr = uart_8250_read_MSR(uart);
 			uart_8250_get_config(uart,&baud,&bits,&stop_bits,&parity);
+			printf("\x0D");
 			printf("State: %lu baud %u-bit %u stop bits %s DTR=%u RTS=%u LOOP=%u\n",baud,bits,stop_bits,type_8250_parity(parity),
 				(mcr & 1) ? 1 : 0/*DTR*/,
 				(mcr & 2) ? 1 : 0/*RTS*/,
