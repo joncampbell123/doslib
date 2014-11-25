@@ -732,11 +732,17 @@ int main() {
 			unsigned long baud=0;
 			unsigned char bits=0,stop_bits=0,parity=0;
 			unsigned char mcr = uart_8250_read_MCR(uart);
+			unsigned char msr = uart_8250_read_MSR(uart);
 			uart_8250_get_config(uart,&baud,&bits,&stop_bits,&parity);
 			printf("State: %lu baud %u-bit %u stop bits %s DTR=%u RTS=%u LOOP=%u\n",baud,bits,stop_bits,type_8250_parity(parity),
 				(mcr & 1) ? 1 : 0/*DTR*/,
 				(mcr & 2) ? 1 : 0/*RTS*/,
 				(mcr & 16) ? 1 : 0/*LOOP*/);
+			printf("       CTS=%u DSR=%u RI=%u CD=%u\n",
+				(msr & 16) ? 1 : 0,
+				(msr & 32) ? 1 : 0,
+				(msr & 64) ? 1 : 0,
+				(msr & 128) ? 1 : 0);
 			printf("1. Change config   2. Toggle DTR  3. Toggle RTS   4. Show on console\n");
 			printf("5. Config FIFO     ");
 			if (use_8250_int)	printf("6. To poll IO  ");

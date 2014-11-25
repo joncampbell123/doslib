@@ -99,6 +99,10 @@ static inline uint8_t uart_8250_read_MCR(struct info_8250 *uart) {
 	return inp(uart->port+PORT_8250_MCR);
 }
 
+static inline uint8_t uart_8250_read_MSR(struct info_8250 *uart) {
+	return inp(uart->port+PORT_8250_MSR);
+}
+
 static inline void uart_8250_set_line_control(struct info_8250 *uart,uint8_t lcr) {
 	outp(uart->port+PORT_8250_LCR,lcr);
 }
