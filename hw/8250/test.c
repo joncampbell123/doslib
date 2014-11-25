@@ -638,6 +638,9 @@ case ISAPNP_TAG_FIXED_IO_PORT: {
 #endif
 
 int main() {
+	unsigned char msr_redraw = 1;
+	unsigned char redraw = 1;
+	unsigned char p_msr = 0;
 	int i,die,choice;
 
 	printf("8250/16450/16550 test program\n");
@@ -728,82 +731,104 @@ int main() {
 	uart_8250_set_baudrate(uart,uart_8250_baud_to_divisor(uart,9600));
 
 	for (die=0;die == 0;) {
-		{
+		unsigned char msr = uart_8250_read_MSR(uart);
+
+		if (redraw) {
 			unsigned long baud=0;
 			unsigned char bits=0,stop_bits=0,parity=0;
 			unsigned char mcr = uart_8250_read_MCR(uart);
-			unsigned char msr = uart_8250_read_MSR(uart);
+
+			redraw = 0;
+			msr_redraw = 1;
+
 			uart_8250_get_config(uart,&baud,&bits,&stop_bits,&parity);
 			printf("\x0D");
 			printf("State: %lu baud %u-bit %u stop bits %s DTR=%u RTS=%u LOOP=%u\n",baud,bits,stop_bits,type_8250_parity(parity),
 				(mcr & 1) ? 1 : 0/*DTR*/,
 				(mcr & 2) ? 1 : 0/*RTS*/,
 				(mcr & 16) ? 1 : 0/*LOOP*/);
-			printf("       CTS=%u DSR=%u RI=%u CD=%u\n",
-				(msr & 16) ? 1 : 0,
-				(msr & 32) ? 1 : 0,
-				(msr & 64) ? 1 : 0,
-				(msr & 128) ? 1 : 0);
 			printf("1. Change config   2. Toggle DTR  3. Toggle RTS   4. Show on console\n");
 			printf("5. Config FIFO     ");
 			if (use_8250_int)	printf("6. To poll IO  ");
 			else			printf("6. To int IO   ");
 			printf("7. Toggle LOOP ");
 			printf("\n");
-			printf("? "); fflush(stdout);
 		}
 
-		choice = getch();
-		if (choice == 27) {
-			die++;
-			break;
-		}
-		else if (choice == '1') {
-			change_config(uart);
-		}
-		else if (choice == '2') {
-			uart_8250_set_MCR(uart,uart_8250_read_MCR(uart) ^ 1);
-		}
-		else if (choice == '3') {
-			uart_8250_set_MCR(uart,uart_8250_read_MCR(uart) ^ 2);
-		}
-		else if (choice == '7') {
-			uart_8250_set_MCR(uart,uart_8250_read_MCR(uart) ^ 16);
-		}
-		else if (choice == '4') {
-			show_console(uart);
-		}
-		else if (choice == '5') {
-			config_fifo(uart);
-		}
-		else if (choice == '6') {
-			/* NTS: Apparently a lot of hardware has problems with just turning on interrupts.
-			 *      So do everything we can to fucking whip the UART into shape. Drain & reset
-			 *      it's FIFO. Clear all interrupt events. Unmask the IRQ. Enable all interrupt
-			 *      events. What ever it fucking takes */
-			_cli();
+		if ((msr ^ p_msr) & 0xF0) msr_redraw = 1;
+		p_msr = msr;
 
-			/* ACK the IRQ to ensure the PIC will send more. Doing this resolves a bug on
-			 * a Toshiba 465CDX and IBM NetVista where enabling interrupts would seem to
-			 * "hang" the machine (when in fact it was just the PIC not firing interrupts
-			 * and therefore preventing the keyboard and timer from having their interrupts
-			 * serviced) */
-			if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
-			p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+		if (msr_redraw) {
+			msr_redraw = 0;
+			printf(	"\x0D"
+				"CTS=%u DSR=%u RI=%u CD=%u ? ",
+				(msr & 16) ? 1 : 0,
+				(msr & 32) ? 1 : 0,
+				(msr & 64) ? 1 : 0,
+				(msr & 128) ? 1 : 0);
+			fflush(stdout);
+		}
 
-			use_8250_int = !use_8250_int;
-			if (use_8250_int) uart_8250_enable_interrupt(uart,0xF);
-			else uart_8250_enable_interrupt(uart,0x0);
-			for (i=0;i < 256 && (inp(uart->port+PORT_8250_IIR) & 1) == 0;i++) {
-				inp(uart->port);
-				inp(uart->port+PORT_8250_MSR);
-				inp(uart->port+PORT_8250_MCR);
-				inp(uart->port+PORT_8250_LSR);
-				inp(uart->port+PORT_8250_IIR);
-				inp(uart->port+PORT_8250_IER);
+		if (kbhit()) {
+			choice = getch();
+			if (choice == 27) {
+				die++;
+				break;
 			}
-			if (i == 256) printf("Warning: Unable to clear UART interrupt conditions\n");
-			_sti();
+			else if (choice == '1') {
+				change_config(uart);
+				redraw = 1;
+			}
+			else if (choice == '2') {
+				uart_8250_set_MCR(uart,uart_8250_read_MCR(uart) ^ 1);
+				redraw = 1;
+			}
+			else if (choice == '3') {
+				uart_8250_set_MCR(uart,uart_8250_read_MCR(uart) ^ 2);
+				redraw = 1;
+			}
+			else if (choice == '7') {
+				uart_8250_set_MCR(uart,uart_8250_read_MCR(uart) ^ 16);
+				redraw = 1;
+			}
+			else if (choice == '4') {
+				show_console(uart);
+				redraw = 1;
+			}
+			else if (choice == '5') {
+				config_fifo(uart);
+				redraw = 1;
+			}
+			else if (choice == '6') {
+				/* NTS: Apparently a lot of hardware has problems with just turning on interrupts.
+				 *      So do everything we can to fucking whip the UART into shape. Drain & reset
+				 *      it's FIFO. Clear all interrupt events. Unmask the IRQ. Enable all interrupt
+				 *      events. What ever it fucking takes */
+				_cli();
+
+				/* ACK the IRQ to ensure the PIC will send more. Doing this resolves a bug on
+				 * a Toshiba 465CDX and IBM NetVista where enabling interrupts would seem to
+				 * "hang" the machine (when in fact it was just the PIC not firing interrupts
+				 * and therefore preventing the keyboard and timer from having their interrupts
+				 * serviced) */
+				if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+				p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+				redraw = 1;
+
+				use_8250_int = !use_8250_int;
+				if (use_8250_int) uart_8250_enable_interrupt(uart,0xF);
+				else uart_8250_enable_interrupt(uart,0x0);
+				for (i=0;i < 256 && (inp(uart->port+PORT_8250_IIR) & 1) == 0;i++) {
+					inp(uart->port);
+					inp(uart->port+PORT_8250_MSR);
+					inp(uart->port+PORT_8250_MCR);
+					inp(uart->port+PORT_8250_LSR);
+					inp(uart->port+PORT_8250_IIR);
+					inp(uart->port+PORT_8250_IER);
+				}
+				if (i == 256) printf("Warning: Unable to clear UART interrupt conditions\n");
+				_sti();
+			}
 		}
 	}
 
