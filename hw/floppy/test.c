@@ -785,6 +785,77 @@ void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
 	do_check_interrupt_status(fdc);
 }
 
+unsigned long prompt_track_number();
+
+void do_step_tracks(struct floppy_controller *fdc) {
+	unsigned long start,end,track;
+	struct vga_msg_box vgabox;
+	int retry = 3;
+	char cmd[10];
+	int wd,wdo;
+
+	start = prompt_track_number();
+	if (start == (~0UL)) return;
+
+	end = prompt_track_number();
+	if (start == (~0UL)) return;
+	if (start > end) return;
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
+
+	do {
+		vga_msg_box_create(&vgabox,"Seeking to track 0",0,0);
+
+		floppy_controller_read_status(fdc);
+		if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+			do_floppy_controller_reset(fdc);
+
+		floppy_controller_reset_irq_counter(fdc);
+
+		/* Calibrate Drive (x7h)
+		 *
+		 *   Byte |  7   6   5   4   3   2   1   0
+		 *   -----+---------------------------------
+		 *      0 |  0   0   0   0   0   1   1   1
+		 *      1 |  x   x   x   x   x   0 DR1 DR0
+		 *
+		 *  DR1,DR0 = Drive select */
+
+		wdo = 2;
+		cmd[0] = 0x07;	/* Calibrate */
+		cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 */;
+		wd = floppy_controller_write_data(fdc,cmd,wdo);
+		if (wd < 2) {
+			vga_msg_box_destroy(&vgabox);
+			do_floppy_controller_reset(fdc);
+			return;
+		}
+
+		/* fires an IRQ. doesn't return state */
+		if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
+		floppy_controller_wait_data_ready_ms(fdc,1000);
+
+		/* Calibrate Drive (x7h) response
+		 *
+		 * (none)
+		 */
+
+		/* the command SHOULD terminate */
+		floppy_controller_wait_data_ready(fdc,20);
+		if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+			do_floppy_controller_reset(fdc);
+
+		/* use Check Interrupt Status */
+		do_check_interrupt_status(fdc);
+
+		/* un-draw the box */
+		vga_msg_box_destroy(&vgabox);
+
+		/* retry */
+		if (--retry < 0) break;
+	} while (1);
+}
+
 void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 	struct vga_msg_box vgabox;
 	char cmd[10];
@@ -2795,6 +2866,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 19) ? 0x70 : 0x0F);
 			vga_write("Format Track (xDh)");
 			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 20) ? 0x70 : 0x0F);
+			vga_write("Step through tracks");
+			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -2897,15 +2973,19 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				do_floppy_format_track(fdc);
 				backredraw = 1;
 			}
+			else if (select == 20) { /* step through tracks */
+				do_step_tracks(fdc);
+				backredraw = 1;
+			}
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 19;
+				select = 20;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 19)
+			if (++select > 20)
 				select = -1;
 
 			redraw = 1;
