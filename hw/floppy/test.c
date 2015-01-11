@@ -788,10 +788,12 @@ void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
 unsigned long prompt_track_number();
 void do_seek_drive(struct floppy_controller *fdc,uint8_t track);
 void do_calibrate_drive(struct floppy_controller *fdc);
+int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsigned char head);
 
 void do_step_tracks(struct floppy_controller *fdc) {
 	unsigned long start,end,track;
 	struct vga_msg_box vgabox;
+	unsigned char resp[7];
 	char tmp[64];
 	int del,c;
 
@@ -821,7 +823,11 @@ void do_step_tracks(struct floppy_controller *fdc) {
 		sprintf(tmp,"Seeking track %lu",track);
 		vga_msg_box_create(&vgabox,tmp,0,0);
 
+		/* move head */
 		do_seek_drive(fdc,(uint8_t)track);
+
+		/* read sector ID to try and force head select if FDC doesn't do it from seek command */
+		do_read_sector_id(resp,fdc,current_phys_head);
 
 		/* delay 2 second */
 		for (del=0;del < 2000;del++)
