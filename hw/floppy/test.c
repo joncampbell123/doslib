@@ -836,8 +836,8 @@ void do_step_tracks(struct floppy_controller *fdc) {
 		/* read sector ID to try and force head select if FDC doesn't do it from seek command */
 		do_read_sector_id(resp,fdc,current_phys_head);
 
-		/* delay 2 second */
-		for (del=0;del < 2000;del++)
+		/* delay 1 second */
+		for (del=0;del < 1000;del++)
 			t8254_wait(t8254_us2ticks(1000));
 
 		/* un-draw the box */
