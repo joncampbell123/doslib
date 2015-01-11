@@ -725,6 +725,13 @@ void do_spin_up_motor(struct floppy_controller *fdc,unsigned char drv) {
 
 		vga_msg_box_destroy(&vgabox);
 	}
+	else {
+		/* some controllers auto-timeout the motor against our will.
+		 * perhaps this is what the Linux kernel means by "twaddling" the motor bit */
+		floppy_controller_set_motor_state(fdc,drv,1);
+		t8254_wait(t8254_us2ticks(50000)); /* 50ms */
+		floppy_controller_set_motor_state(fdc,drv,1);
+	}
 }
 
 void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
