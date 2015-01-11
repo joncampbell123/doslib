@@ -786,13 +786,14 @@ void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
 }
 
 unsigned long prompt_track_number();
+void do_seek_drive(struct floppy_controller *fdc,uint8_t track);
+void do_calibrate_drive(struct floppy_controller *fdc);
 
 void do_step_tracks(struct floppy_controller *fdc) {
 	unsigned long start,end,track;
 	struct vga_msg_box vgabox;
-	int retry = 3;
-	char cmd[10];
-	int wd,wdo;
+	char tmp[64];
+	int del,c;
 
 	start = prompt_track_number();
 	if (start == (~0UL)) return;
@@ -803,57 +804,32 @@ void do_step_tracks(struct floppy_controller *fdc) {
 
 	do_spin_up_motor(fdc,fdc->digital_out&3);
 
-	do {
-		vga_msg_box_create(&vgabox,"Seeking to track 0",0,0);
+	vga_msg_box_create(&vgabox,"Seeking to track 0",0,0);
+	do_calibrate_drive(fdc);
+	do_calibrate_drive(fdc);
+	do_calibrate_drive(fdc);
+	vga_msg_box_destroy(&vgabox);
 
-		floppy_controller_read_status(fdc);
-		if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
-			do_floppy_controller_reset(fdc);
-
-		floppy_controller_reset_irq_counter(fdc);
-
-		/* Calibrate Drive (x7h)
-		 *
-		 *   Byte |  7   6   5   4   3   2   1   0
-		 *   -----+---------------------------------
-		 *      0 |  0   0   0   0   0   1   1   1
-		 *      1 |  x   x   x   x   x   0 DR1 DR0
-		 *
-		 *  DR1,DR0 = Drive select */
-
-		wdo = 2;
-		cmd[0] = 0x07;	/* Calibrate */
-		cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 */;
-		wd = floppy_controller_write_data(fdc,cmd,wdo);
-		if (wd < 2) {
-			vga_msg_box_destroy(&vgabox);
-			do_floppy_controller_reset(fdc);
-			return;
+	/* step! */
+	for (track=start;track <= end;track++) {
+		if (kbhit()) {
+			c = getch();
+			if (c == 0) c = getch() << 8;
+			if (c == 27) break;
 		}
 
-		/* fires an IRQ. doesn't return state */
-		if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
-		floppy_controller_wait_data_ready_ms(fdc,1000);
+		sprintf(tmp,"Seeking track %lu",track);
+		vga_msg_box_create(&vgabox,tmp,0,0);
 
-		/* Calibrate Drive (x7h) response
-		 *
-		 * (none)
-		 */
+		do_seek_drive(fdc,(uint8_t)track);
 
-		/* the command SHOULD terminate */
-		floppy_controller_wait_data_ready(fdc,20);
-		if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
-			do_floppy_controller_reset(fdc);
-
-		/* use Check Interrupt Status */
-		do_check_interrupt_status(fdc);
+		/* delay 2 second */
+		for (del=0;del < 2000;del++)
+			t8254_wait(t8254_us2ticks(1000));
 
 		/* un-draw the box */
 		vga_msg_box_destroy(&vgabox);
-
-		/* retry */
-		if (--retry < 0) break;
-	} while (1);
+	}
 }
 
 void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
