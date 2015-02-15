@@ -11,6 +11,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/flatreal/flatreal.h>
 
 /*=====move to cpu lib=====*/
 unsigned char			apic_flags = 0;
@@ -99,6 +100,21 @@ int probe_apic() {
 
 /*=========================*/
 
+/* APIC read/write functions.
+ * WARNING: You are responsible for making sure APIC was detected before using these functions!
+ * Also, Intel warns about some newer registers requiring aligned access to work properly OR ELSE. */
+#if TARGET_MSDOS == 32
+static inline uint32_t apic_readd(uint32_t offset) {
+	return *((volatile uint32_t*)(apic_base+offset));
+}
+#else
+/* 16-bit real mode versions that rely on Flat Real Mode to work */
+static inline uint32_t apic_readd(uint32_t offset) {
+	if (flatrealmode_test()) flatrealmode_setup(FLATREALMODE_4GB);
+	return flatrealmode_readd(apic_base+offset);
+}
+#endif
+
 int main(int argc,char **argv) {
 	if (!probe_apic()) {
 		printf("APIC not detected. Reason: %s\n",apic_error_str);
@@ -108,6 +124,33 @@ int main(int argc,char **argv) {
 	printf("APIC base address:        0x%08lx\n",(unsigned long)apic_base);
 	printf("APIC global enable:       %u\n",(unsigned int)(apic_flags&APIC_FLAG_GLOBAL_ENABLE?1:0));
 	printf("Read from bootstrap CPU:  %u\n",(unsigned int)(apic_flags&APIC_FLAG_PROBE_ON_BOOT_CPU?1:1));
+
+#if TARGET_MSDOS == 32
+	dos_ltp_probe();
+	/* TODO: If LTP probe indicates we shouldn't assume physical<->linear addresses (i.e paging) then bail out */
+#else
+	probe_dos();
+	detect_windows();
+	if (!flatrealmode_setup(FLATREALMODE_4GB)) {
+		printf("Cannot enter flat real mode\n");
+		return 1;
+	}
+#endif
+
+	{
+		unsigned int i;
+
+		/* NTS: For safe access on Intel processors always read on DWORD aligned boundary */
+		printf("APIC dump:\n");
+		for (i=0;i < 0x400;i += 4) {
+			if ((i&0x1F) == 0)
+				printf("0x%03x:",i);
+
+			printf("%08lx ",(unsigned long)apic_readd(i));
+			if ((i&0x1F) == 0x1C)
+				printf("\n");
+		}
+	}
 
 	return 0;
 }
