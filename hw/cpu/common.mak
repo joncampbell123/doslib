@@ -58,9 +58,16 @@ V86KERN2_COM =$(SUBDIR)$(HPS)v86kern2.com
 ALIGNCHK_COM =$(SUBDIR)$(HPS)alignchk.com
 !endif
 
+!ifdef APIC_EXE
+OBJS +=       $(SUBDIR)$(HPS)apiclib.obj
+!endif
+
 $(HW_CPU_LIB): $(OBJS)
 	wlib -q -b -c $(HW_CPU_LIB) -+$(SUBDIR)$(HPS)cpu.obj -+$(SUBDIR)$(HPS)cpuasm.obj
 	wlib -q -b -c $(HW_CPU_LIB) -+$(SUBDIR)$(HPS)gdt_enum.obj
+!ifdef APIC_EXE
+	wlib -q -b -c $(HW_CPU_LIB) -+$(SUBDIR)$(HPS)apiclib.obj
+!endif
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit

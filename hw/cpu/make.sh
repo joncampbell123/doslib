@@ -93,6 +93,9 @@ if [ "$1" == "disk" ]; then
 	mcopy -i test.dsk dos86s/protvcpi.com ::protvcpi.com
 	mcopy -i test.dsk dos86s/protdpmi.com ::protdpmi.com
 
+	mcopy -i test.dsk dos86c/apic.exe ::apic86c.exe
+	mcopy -i test.dsk dos86s/apic.exe ::apic86s.exe
+	mcopy -i test.dsk dos86m/apic.exe ::apic86m.exe
 	mcopy -i test.dsk dos86l/apic.exe ::apic86l.exe
 	mcopy -i test.dsk dos386f/apic.exe ::apic386.exe
 
