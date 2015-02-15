@@ -93,6 +93,9 @@ if [ "$1" == "disk" ]; then
 	mcopy -i test.dsk dos86s/protvcpi.com ::protvcpi.com
 	mcopy -i test.dsk dos86s/protdpmi.com ::protdpmi.com
 
+	mcopy -i test.dsk dos86l/apic.exe ::apic86l.exe
+	mcopy -i test.dsk dos386f/apic.exe ::apic386.exe
+
 	# bootable win95 rescue disk with test program
 	gunzip -c -d win95.dsk.gz >bochstst/win95.dsk
 	gunzip -c -d hdd.dsk.gz >bochstst/hdd.dsk

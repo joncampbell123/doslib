@@ -40,6 +40,7 @@ RDTSC_EXE =   $(SUBDIR)$(HPS)rdtsc.exe
 ! ifndef TARGET_OS2
 # test programs (MS-DOS only)
 RESET_EXE =   $(SUBDIR)$(HPS)reset.exe
+APIC_EXE =    $(SUBDIR)$(HPS)apic.exe
 ! endif
 !endif
 
@@ -74,7 +75,7 @@ all: lib exe
 	
 lib: $(HW_CPU_LIB) .symbolic
 	
-exe: $(GDTTAE_EXE) $(TEST_EXE) $(DISPSN_EXE) $(RESET_EXE) $(MMX_EXE) $(SSE_EXE) $(SSEOFF_EXE) $(PROT286_COM) $(PROT386_COM) $(TSS_COM) $(TSSRING_COM) $(ALIGNCHK_COM) $(V86_COM) $(V86KERN_COM) $(V86KERN2_COM) $(PROTVCPI_COM) $(PROTDPMI_COM) $(RDTSC_EXE) $(GDTLIST_EXE) .symbolic
+exe: $(GDTTAE_EXE) $(TEST_EXE) $(DISPSN_EXE) $(RESET_EXE) $(APIC_EXE) $(MMX_EXE) $(SSE_EXE) $(SSEOFF_EXE) $(PROT286_COM) $(PROT386_COM) $(TSS_COM) $(TSSRING_COM) $(ALIGNCHK_COM) $(V86_COM) $(V86KERN_COM) $(V86KERN2_COM) $(PROTVCPI_COM) $(PROTDPMI_COM) $(RDTSC_EXE) $(GDTLIST_EXE) .symbolic
 
 !ifdef BUILD_NASM_COM
 $(V86_COM): v86.asm
@@ -188,6 +189,14 @@ $(RDTSC_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_8254_LIB) $(SUBDIR)$
 $(RESET_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_8042_LIB) $(HW_8254_LIB) $(SUBDIR)$(HPS)reset.obj
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) library $(HW_8042_LIB) library $(HW_8254_LIB) file $(SUBDIR)$(HPS)reset.obj
 	%write tmp.cmd name $(RESET_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef APIC_EXE
+$(APIC_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)apic.obj
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)apic.obj
+	%write tmp.cmd name $(APIC_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
