@@ -40,17 +40,15 @@ int main(int argc,char **argv) {
 	{
 		unsigned int i;
 
-		/* NTS: For safe access on Intel processors always read on DWORD aligned boundary.
-		 * Skip reserved regions 0x00-0x1F and 0x40-0x7F */
+		/* NTS: For safe access on Intel processors always read on 16-byte aligned boundary, 32-bit at all times.
+		 * Intel warns the undefined bytes 4-15 between the regs are undefined and may cause undefined behavior. */
 		printf("APIC dump:\n");
-		for (i=0x20;i < 0x2A0;i += 4) {
-			if (i == 0x40) i = 0x80;
-
-			if ((i&0x1F) == 0)
+		for (i=0x0;i < 0x400;i += 16) {
+			if ((i&0x7F) == 0)
 				printf("0x%03x:",i);
 
 			printf("%08lx ",(unsigned long)apic_readd(i));
-			if ((i&0x1F) == 0x1C)
+			if ((i&0x7F) == 0x70)
 				printf("\n");
 		}
 	}
