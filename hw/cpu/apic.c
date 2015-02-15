@@ -13,6 +13,15 @@
 #include <hw/dos/dos.h>
 
 /*=====move to cpu lib=====*/
+unsigned char			apic_flags = 0;
+uint32_t			apic_base = 0;
+const char*			apic_error_str = NULL;
+
+#define APIC_FLAG_PRESENT		(1U << 0U)
+#define APIC_FLAG_GLOBAL_ENABLE		(1U << 1U)
+#define APIC_FLAG_PROBE_ON_BOOT_CPU	(1U << 2U)
+#define APIC_FLAG_CANT_DETECT		(1U << 6U)
+#define APIC_FLAG_PROBED		(1U << 7U)
 
 #if TARGET_MSDOS == 32
 static inline uint64_t cpu_rdmsr(const uint32_t idx);
@@ -37,48 +46,68 @@ uint64_t cpu_rdmsr(const uint32_t idx);
 void cpu_wrmsr(const uint32_t idx,const uint64_t val);
 #endif
 
+void forget_apic() {
+	apic_flags = 0; /* to permit re-probing */
+}
+
+int probe_apic() {
+	if (apic_flags == 0) {
+		uint32_t reg;
+
+		/* FIXME: Some say the APIC-like interface appeared in the late 486 era, though as a separate chip,
+		 *        unlike the Pentium and later that put the APIC on-chip. How do we detect those? */
+		apic_flags = APIC_FLAG_PROBED;
+
+		cpu_probe();
+		if (cpu_basic_level < CPU_586) {
+			apic_error_str = "APIC support requires at least a 586/Pentium class system";
+			return 0;
+		}
+		detect_windows();
+		if (windows_mode >= WINDOWS_STANDARD) {
+			apic_error_str = "I will not attempt to play with the APIC from within Windows";
+			apic_flags |= APIC_FLAG_CANT_DETECT;
+			return 0;
+		}
+		if (cpu_v86_active) {
+			apic_error_str = "I will not attempt to play with the APIC from virtual 8086 mode";
+			apic_flags |= APIC_FLAG_CANT_DETECT;
+			return 0;
+		}
+		if (!(cpu_flags & CPU_FLAG_CPUID)) {
+			apic_error_str = "APIC detection requires CPUID";
+			return 0;
+		}
+		if (!(cpu_cpuid_features.a.raw[2/*EDX*/] & (1UL << 9UL))) {
+			apic_error_str = "CPU does not have on-chip APIC";
+			return 0;
+		}
+		if (!(cpu_cpuid_features.a.raw[2/*EDX*/] & (1UL << 5UL))) {
+			apic_error_str = "CPU does have on-chip APIC but no support for RDMSR/WRMSR";
+			return 0;
+		}
+
+		reg = cpu_rdmsr(0x0000001B); /* hopefully, we do not crash */
+		apic_base = (unsigned long)(reg & 0xFFFFF000UL);
+		apic_flags |= APIC_FLAG_PRESENT;
+		apic_flags |= (reg & (1UL << 11UL)) ? APIC_FLAG_GLOBAL_ENABLE : 0;
+		apic_flags |= (reg & (1UL << 8UL)) ? APIC_FLAG_PROBE_ON_BOOT_CPU : 0;
+	}
+
+	return (apic_flags & APIC_FLAG_PRESENT)?1:0;
+}
+
 /*=========================*/
 
 int main(int argc,char **argv) {
-	uint32_t reg;
+	if (!probe_apic()) {
+		printf("APIC not detected. Reason: %s\n",apic_error_str);
+		return 1;
+	}
 
-	cpu_probe();
-	probe_dos();
-	detect_windows();
-	probe_dpmi();
-	probe_vcpi();
-
-	/* FIXME: Some say the APIC-like interface appeared in the late 486 era, though as a separate chip,
-	 *        unlike the Pentium and later that put the APIC on-chip. How do we detect those? */
-	if (cpu_basic_level < CPU_586) {
-		printf("APIC support requires at least a 586/Pentium class system\n");
-		return 1;
-	}
-	if (windows_mode >= WINDOWS_STANDARD) {
-		printf("I will not attempt to play with the APIC from within Windows\n");
-		return 1;
-	}
-	if (cpu_v86_active) {
-		printf("I will not attempt to play with the APIC from virtual 8086 mode\n");
-		return 1;
-	}
-	if (!(cpu_flags & CPU_FLAG_CPUID)) {
-		printf("APIC detection requires CPUID\n");
-		return 1;
-	}
-	if (!(cpu_cpuid_features.a.raw[2/*EDX*/] & (1UL << 9UL))) {
-		printf("CPU does not have on-chip APIC\n");
-		return 1;
-	}
-	if (!(cpu_cpuid_features.a.raw[2/*EDX*/] & (1UL << 5UL))) {
-		printf("CPU does have on-chip APIC but no support for RDMSR/WRMSR\n");
-		return 1;
-	}
-	reg = cpu_rdmsr(0x0000001B); /* hopefully, we do not crash */
-	printf("Raw contents of MSR 0x1B: 0x%08lx\n",(unsigned long)reg);
-	printf("APIC base address:        0x%08lx\n",(unsigned long)reg & 0xFFFFF000UL);	/* reg[31:12] = APIC base address */
-	printf("APIC global enable:       %u\n",(unsigned int)((reg >> 11UL) & 1UL));
-	printf("Read from bootstrap CPU:  %u\n",(unsigned int)((reg >> 8UL) & 1UL));
+	printf("APIC base address:        0x%08lx\n",(unsigned long)apic_base);
+	printf("APIC global enable:       %u\n",(unsigned int)(apic_flags&APIC_FLAG_GLOBAL_ENABLE?1:0));
+	printf("Read from bootstrap CPU:  %u\n",(unsigned int)(apic_flags&APIC_FLAG_PROBE_ON_BOOT_CPU?1:1));
 
 	return 0;
 }
