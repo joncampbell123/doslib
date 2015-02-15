@@ -249,4 +249,27 @@ int cpu_check_sse_is_usable();
 int cpu_sse_disable();
 int cpu_sse_enable();
 
+#if TARGET_MSDOS == 32
+static inline uint64_t cpu_rdmsr(const uint32_t idx);
+#pragma aux cpu_rdmsr = \
+	".586p" \
+	"rdmsr" \
+	parm [ecx] \
+	value [edx eax]
+
+static inline void cpu_wrmsr(const uint32_t idx,const uint64_t val);
+#pragma aux cpu_wrmsr = \
+	".586p" \
+	"wrmsr" \
+	parm [ecx] [edx eax]
+#else
+/* This is too much code to inline insert everywhere---unless you want extra-large EXEs.
+ * It's better to conform to Watcom's register calling convention and make it a function.
+ * Note that if you look at the assembly language most of the code is shuffling the values
+ * around to convert EDX:EAX to AX:BX:CX:DX and disabling interrupts during the call. */
+/* see CPUASM.ASM */
+uint64_t cpu_rdmsr(const uint32_t idx);
+void cpu_wrmsr(const uint32_t idx,const uint64_t val);
+#endif
+
 #endif /* __HW_CPU_CPU_H */
