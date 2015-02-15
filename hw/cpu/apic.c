@@ -40,9 +40,12 @@ int main(int argc,char **argv) {
 	{
 		unsigned int i;
 
-		/* NTS: For safe access on Intel processors always read on DWORD aligned boundary */
+		/* NTS: For safe access on Intel processors always read on DWORD aligned boundary.
+		 * Skip reserved regions 0x00-0x1F and 0x40-0x7F */
 		printf("APIC dump:\n");
-		for (i=0;i < 0x2A0;i += 4) {
+		for (i=0x20;i < 0x2A0;i += 4) {
+			if (i == 0x40) i = 0x80;
+
 			if ((i&0x1F) == 0)
 				printf("0x%03x:",i);
 
