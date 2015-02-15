@@ -42,7 +42,7 @@ int main(int argc,char **argv) {
 
 		/* NTS: For safe access on Intel processors always read on DWORD aligned boundary */
 		printf("APIC dump:\n");
-		for (i=0;i < 0x400;i += 4) {
+		for (i=0;i < 0x2A0;i += 4) {
 			if ((i&0x1F) == 0)
 				printf("0x%03x:",i);
 
