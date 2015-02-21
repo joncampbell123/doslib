@@ -96,7 +96,6 @@ unsigned char			opt_no_irq = 0;
 unsigned char			opt_no_pci = 0;
 unsigned char			opt_no_isapnp = 0;
 unsigned char			opt_no_isa_probe = 0;
-unsigned char			opt_irq_mask = 0;
 unsigned char			opt_irq_chain = 1;
 
 unsigned char			cdrom_read_mode = 12;
@@ -362,16 +361,6 @@ static void interrupt my_ide_irq() {
 
 		/* ack IRQ on IDE controller */
 		idelib_controller_ack_irq(my_ide_irq_ide);
-
-		/* if the user says so, or default, mask the IRQ.
-		 * the program after handling the IRQ will unmask later.
-		 * masking the IRQ prevents it from firing again for whatever reason.
-		 * hopefully this is a workaround for the issue mentioned above with
-		 * modern (2010 or later) Intel SATA/IDE chipsets that are probably
-		 * related to something like edge-triggered vs level-triggered interrupts.
-		 *
-		 * if the user has selected this option chances are they also disabled IRQ chaining */
-		if (opt_irq_mask && my_ide_irq_ide->irq >= 0) p8259_mask(my_ide_irq_ide->irq);
 	}
 
 	if (!opt_irq_chain || my_ide_old_irq == NULL) {
@@ -718,12 +707,9 @@ static void help() {
 	printf("  /NOPROBE        Don't probe ISA legacy ports\n");
 	printf("  /IRQCHAIN       IRQ should chain to previous handler (default)\n");
 	printf("  /IRQNOCHAIN     IRQ should NOT chain to previous handler\n");
-	printf("  /IRQMASK        IRQ should mask interrupt\n");
-	printf("  /IRQNOMASK      IRQ should not mask interrupt (default)\n");
 }
 
 int parse_argv(int argc,char **argv) {
-	char gave_irq_mask=0,gave_irq_chain=0;
 	char *a;
 	int i;
 
@@ -740,21 +726,11 @@ int parse_argv(int argc,char **argv) {
 			else if (!strcasecmp(a,"ns")) {
 				opt_ignore_smartdrv = 1;
 			}
-			else if (!strcasecmp(a,"irqnomask")) {
-				opt_irq_mask = 0;
-				gave_irq_mask = 1;
-			}
-			else if (!strcasecmp(a,"irqmask")) {
-				opt_irq_mask = 1;
-				gave_irq_mask = 1;
-			}
 			else if (!strcasecmp(a,"irqnochain")) {
 				opt_irq_chain = 0;
-				gave_irq_chain = 1;
 			}
 			else if (!strcasecmp(a,"irqchain")) {
 				opt_irq_chain = 1;
-				gave_irq_chain = 1;
 			}
 			else if (!strcasecmp(a,"noirq")) {
 				opt_no_irq = 1;
@@ -777,15 +753,6 @@ int parse_argv(int argc,char **argv) {
 			help();
 			return 1;
 		}
-	}
-
-	if (opt_irq_mask && opt_irq_chain) {
-		/* if the user gave both /IRQMASK and /IRQCHAIN then warn */
-		if (gave_irq_mask && gave_irq_chain)
-			printf("WARNING: /IRQMASK and /IRQCHAIN combined is not recommended!\n");
-		/* else if IRQ masking requested auto turn off IRQ chaining */
-		else
-			opt_irq_chain = 0;
 	}
 
 	return 0;
