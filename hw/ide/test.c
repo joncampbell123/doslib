@@ -676,6 +676,8 @@ unsigned char opt_no_irq = 0;
 unsigned char opt_no_pci = 0;
 unsigned char opt_no_isapnp = 0;
 unsigned char opt_no_isa_probe = 0;
+unsigned char opt_irq_mask = 0;
+unsigned char opt_irq_chain = 0;
 
 static void help() {
 	printf("test [options]\n");
@@ -688,6 +690,10 @@ static void help() {
 	printf("  /NOPCI          Don't scan PCI bus\n");
 	printf("  /NOISAPNP       Don't scan ISA Plug & Play BIOS\n");
 	printf("  /NOPROBE        Don't probe ISA legacy ports\n");
+	printf("  /IRQCHAIN       IRQ should chain to previous handler (NOT TESTED!)\n");
+	printf("  /IRQNOCHAIN     IRQ should NOT chain to previous handler\n");
+	printf("  /IRQMASK        IRQ should mask interrupt until IDE command is processed (NOT TESTED!)\n");
+	printf("  /IRQNOMASK      IRQ should not mask interrupt until IDE command is processed\n");
 }
 
 int parse_argv(int argc,char **argv) {
@@ -706,6 +712,18 @@ int parse_argv(int argc,char **argv) {
 			}
 			else if (!strcasecmp(a,"ns")) {
 				opt_ignore_smartdrv = 1;
+			}
+			else if (!strcasecmp(a,"irqnomask")) {
+				opt_irq_mask = 0;
+			}
+			else if (!strcasecmp(a,"irqmask")) {
+				opt_irq_mask = 1;
+			}
+			else if (!strcasecmp(a,"irqnochain")) {
+				opt_irq_chain = 0;
+			}
+			else if (!strcasecmp(a,"irqchain")) {
+				opt_irq_chain = 1;
 			}
 			else if (!strcasecmp(a,"noirq")) {
 				opt_no_irq = 1;
