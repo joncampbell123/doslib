@@ -706,8 +706,8 @@ static void help() {
 	printf("  /NOPROBE        Don't probe ISA legacy ports\n");
 	printf("  /IRQCHAIN       IRQ should chain to previous handler (NOT TESTED!)\n");
 	printf("  /IRQNOCHAIN     IRQ should NOT chain to previous handler\n");
-	printf("  /IRQMASK        IRQ should mask interrupt until IDE command is processed (NOT TESTED!)\n");
-	printf("  /IRQNOMASK      IRQ should not mask interrupt until IDE command is processed\n");
+	printf("  /IRQMASK        IRQ should mask interrupt\n");
+	printf("  /IRQNOMASK      IRQ should not mask interrupt\n");
 }
 
 int parse_argv(int argc,char **argv) {
