@@ -2,6 +2,13 @@
 extern unsigned char		cdrom_read_mode;
 extern unsigned char		pio_width_warning;
 extern unsigned char		big_scary_write_test_warning;
+extern unsigned char		opt_ignore_smartdrv;
+extern unsigned char		opt_no_irq;
+extern unsigned char		opt_no_pci;
+extern unsigned char		opt_no_isapnp;
+extern unsigned char		opt_no_isa_probe;
+extern unsigned char		opt_irq_mask;
+extern unsigned char		opt_irq_chain;
 
 extern char			tmp[1024];
 extern uint16_t			ide_info[256];
