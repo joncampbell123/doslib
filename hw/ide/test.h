@@ -19,4 +19,5 @@ extern unsigned char		cdrom_sector[512U*64U];	/* ~32KB, enough for 16 CD-ROM sec
 void do_ide_controller_hook_irq(struct ide_controller *ide);
 void do_ide_controller_unhook_irq(struct ide_controller *ide);
 void do_ide_controller_enable_irq(struct ide_controller *ide,unsigned char en);
+void do_ide_controller_emergency_halt_irq(struct ide_controller *ide);
 

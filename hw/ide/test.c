@@ -91,6 +91,14 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+unsigned char			opt_ignore_smartdrv = 0;
+unsigned char			opt_no_irq = 0;
+unsigned char			opt_no_pci = 0;
+unsigned char			opt_no_isapnp = 0;
+unsigned char			opt_no_isa_probe = 0;
+unsigned char			opt_irq_mask = 0;
+unsigned char			opt_irq_chain = 0;
+
 unsigned char			cdrom_read_mode = 12;
 unsigned char			pio_width_warning = 1;
 unsigned char			big_scary_write_test_warning = 1;
@@ -312,9 +320,24 @@ static int my_ide_irq_number = -1;
 static void interrupt my_ide_irq() {
 	int i;
 
-	i = vga_width*(vga_height-1);
-
 	_cli();
+
+	/* we CANNOT use sprintf() here. sprintf() doesn't work to well from within an interrupt handler,
+	 * and can cause crashes in 16-bit realmode builds. */
+	i = vga_width*(vga_height-1);
+	vga_alpha_ram[i++] = 0x1F00 | 'I';
+	vga_alpha_ram[i++] = 0x1F00 | 'R';
+	vga_alpha_ram[i++] = 0x1F00 | 'Q';
+	vga_alpha_ram[i++] = 0x1F00 | ':';
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter / 100000UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /  10000UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /   1000UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /    100UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /     10UL) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /       1L) % 10UL));
+	vga_alpha_ram[i++] = 0x1F00 | ' ';
+	ide_irq_counter++;
+
 	if (my_ide_irq_ide != NULL) {
 		my_ide_irq_ide->irq_fired++;
 
@@ -337,34 +360,26 @@ static void interrupt my_ide_irq() {
 
 		/* ack IRQ on IDE controller */
 		idelib_controller_ack_irq(my_ide_irq_ide);
+	}
 
+	if (!opt_irq_chain || my_ide_old_irq == NULL) {
 		/* ack PIC */
 		if (my_ide_irq_ide->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
 		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+	}
+	else {
+		/* chain to previous */
+		my_ide_old_irq();
+	}
 
-		/* If too many IRQs fired, then unhook the IRQ and use polling from now on. */
+	/* If too many IRQs fired, then stop the IRQ and use polling from now on. */
+	if (my_ide_irq_ide != NULL) {
 		if (my_ide_irq_ide->irq_fired >= 0xFFFEU) {
-			do_ide_controller_unhook_irq(my_ide_irq_ide);
+			do_ide_controller_emergency_halt_irq(my_ide_irq_ide);
 			vga_alpha_ram[i+12] = 0x1C00 | '!';
 			my_ide_irq_ide->irq_fired = ~0; /* make sure the IRQ counter is as large as possible */
 		}
 	}
-
-	/* we CANNOT use sprintf() here. sprintf() doesn't work to well from within an interrupt handler,
-	 * and can cause crashes in 16-bit realmode builds. */
-	vga_alpha_ram[i++] = 0x1F00 | 'I';
-	vga_alpha_ram[i++] = 0x1F00 | 'R';
-	vga_alpha_ram[i++] = 0x1F00 | 'Q';
-	vga_alpha_ram[i++] = 0x1F00 | ':';
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter / 100000UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /  10000UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /   1000UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /    100UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /     10UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /       1L) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ' ';
-
-	ide_irq_counter++;
 }
 
 void do_ide_controller_hook_irq(struct ide_controller *ide) {
@@ -401,6 +416,13 @@ void do_ide_controller_unhook_irq(struct ide_controller *ide) {
 	_dos_setvect(irq2int(ide->irq),my_ide_old_irq);
 	my_ide_irq_number = -1;
 	my_ide_old_irq = NULL;
+}
+
+void do_ide_controller_emergency_halt_irq(struct ide_controller *ide) {
+	/* disable on IDE controller, then mask at PIC */
+	if (ide->irq >= 0) p8259_mask(ide->irq);
+	idelib_controller_ack_irq(ide);
+	idelib_otr_enable_interrupt(ide,0);
 }
 
 void do_ide_controller_enable_irq(struct ide_controller *ide,unsigned char en) {
@@ -670,14 +692,6 @@ void do_main_menu() {
 		}
 	}
 }
-
-unsigned char opt_ignore_smartdrv = 0;
-unsigned char opt_no_irq = 0;
-unsigned char opt_no_pci = 0;
-unsigned char opt_no_isapnp = 0;
-unsigned char opt_no_isa_probe = 0;
-unsigned char opt_irq_mask = 0;
-unsigned char opt_irq_chain = 0;
 
 static void help() {
 	printf("test [options]\n");
