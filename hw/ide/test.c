@@ -328,7 +328,12 @@ static void interrupt my_ide_irq() {
 		 * That motherboard is the reason this code was implemented. should any other SATA/IDE controller
 		 * have this problem, this code will eventually stop the IRQ flood by masking off the IRQ and
 		 * switching the IDE controller struct into polling mode so that the user can continue to use
-		 * this program without having to hit the reset button! */
+		 * this program without having to hit the reset button!
+		 *
+		 * Another Intel Core i3 system (2010) has the same problem, with SATA ports and one IDE port.
+		 * This happens even when talking to the IDE port and not the SATA-IDE emulation.
+		 *
+		 * It seems to be a problem with Intel-based motherboards, 2010 or later. */
 
 		/* ack IRQ on IDE controller */
 		idelib_controller_ack_irq(my_ide_irq_ide);
@@ -752,7 +757,8 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 	/* the IDE code has some timing requirements and we'll use the 8254 to do it */
-	/* I bet that by the time motherboard manufacturers stop implementing the 8254 the IDE port will be long gone too */
+	/* I bet that by the time motherboard manufacturers stop implementing the 8254 the legacy DOS support this
+	 * program requires to run will be long gone too. */
 	if (!probe_8254()) {
 		printf("8254 chip not detected\n");
 		return 1;
@@ -934,7 +940,7 @@ int main(int argc,char **argv) {
 								break;
 
 							/* NTS: A Toshiba Satellite 465CDX I own lists the primary IDE controller's alt port range (0x3F6)
-							 *      as having length == 1 for some reason. */
+							 *      as having length == 1 for some reason. Probably because of the floppy controller. */
 
 							switch (tag.tag) {
 								case ISAPNP_TAG_IO_PORT: {
