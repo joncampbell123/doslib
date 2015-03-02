@@ -38,6 +38,7 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+#ifdef READ_VERIFY
 static const char *drive_read_verify_test_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
 	"*mode*",				/* 1 */ /* rewritten (CHS, LBA, CHS MULTI, etc) */
@@ -197,6 +198,7 @@ again:	/* jump point: send execution back here for another sector */
 		goto again;
 	}
 }
+#endif
 
 #ifdef READ_VERIFY
 void do_drive_read_verify_test(struct ide_controller *ide,unsigned char which) {
