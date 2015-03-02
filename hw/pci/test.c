@@ -106,7 +106,7 @@ int main(int argc,char **argv) {
 
 		for (reg=0;reg < 25;reg++) {
 			val = pci_read_cfgb(0,0,0,reg);
-			printf("%02X ",(unsigned int)val);
+			printf("%02X ",(unsigned int)val & 0xFF);
 		}
 		printf("\n");
 		while (getch() != 13);
