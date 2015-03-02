@@ -73,15 +73,48 @@ struct t8254_readback_t {
 	struct t8254_readback_entry_t	timer[3];
 };
 
+extern uint32_t t8254_counter[3];
+extern int8_t probed_8254_result;
+
 int probe_8254();
-t8254_time_t read_8254(unsigned char timer);
-void write_8254(unsigned char timer,t8254_time_t count,unsigned char mode);
-void t8254_pc_speaker_set_gate(unsigned char m);
-unsigned char t8254_pc_speaker_read_gate();
 void readback_8254(unsigned char what,struct t8254_readback_t *t); /* WARNING: 8254 only, will not work on 8253 chips in original PC/XT hardware */
 unsigned long t8254_us2ticks(unsigned long a);
 unsigned long t8254_us2ticksr(unsigned long a,unsigned long *rem);
 void t8254_wait(unsigned long ticks);
+
+static inline t8254_time_t read_8254(unsigned char timer) {
+	t8254_time_t x;
+
+	if (timer > 2) return 0;
+	outp(T8254_CONTROL_PORT,(timer << 6) | (0 << 4) | 0);	/* latch counter N, counter latch read */
+	x  = (t8254_time_t)inp(T8254_TIMER_PORT(timer));
+	x |= (t8254_time_t)inp(T8254_TIMER_PORT(timer)) << 8U;
+	return x;
+}
+
+/* NTS: At the hardware level, count == 0 is equivalent to programming 0x10000 into it.
+ *      t8254_time_t is a 16-bit integer, and we write 16 bits, so 0 and 0x10000 is
+ *      the same thing to us anyway */
+static inline void write_8254(unsigned char timer,t8254_time_t count,unsigned char mode) {
+	if (timer > 2) return;
+	outp(T8254_CONTROL_PORT,(timer << 6) | (3 << 4) | (mode << 1)); /* set new time */
+	outp(T8254_TIMER_PORT(timer),count);
+	outp(T8254_TIMER_PORT(timer),count >> 8);
+	/* for our own timing code, keep track of what that count was. we can't read it back from H/W anyway */
+	t8254_counter[timer] = (count == 0 ? 0x10000 : count);
+}
+
+static inline unsigned char t8254_pc_speaker_read_gate() {
+	return inp(PC_SPEAKER_GATE) & 3;
+}
+
+static inline void t8254_pc_speaker_set_gate(unsigned char m) {
+	unsigned char x;
+
+	x = inp(PC_SPEAKER_GATE);
+	x = (x & ~0x3) | (m & 3);
+	outp(PC_SPEAKER_GATE,x);
+}
 
 static inline void write_8254_system_timer(t8254_time_t max) {
 	write_8254(0,max,T8254_MODE_2_RATE_GENERATOR);
@@ -90,9 +123,6 @@ static inline void write_8254_system_timer(t8254_time_t max) {
 static inline void write_8254_pc_speaker(t8254_time_t max) {
 	write_8254(2,max,T8254_MODE_3_SQUARE_WAVE_MODE);
 }
-
-extern uint32_t t8254_counter[3];
-extern int8_t probed_8254_result;
 
 #endif /* __HW_8254_8254_H */
 

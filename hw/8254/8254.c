@@ -71,43 +71,6 @@ int probe_8254() {
 	return (probed_8254_result=1);
 }
 
-t8254_time_t read_8254(unsigned char timer) {
-	t8254_time_t x;
-
-	if (timer > 2) return 0;
-	outp(T8254_CONTROL_PORT,(timer << 6) | (0 << 4) | 0);	/* latch counter N, counter latch read */
-	x  = (t8254_time_t)inp(T8254_TIMER_PORT(timer));
-	x |= (t8254_time_t)inp(T8254_TIMER_PORT(timer)) << 8U;
-	return x;
-}
-
-/* NTS: At the hardware level, count == 0 is equivalent to programming 0x10000 into it.
- *      t8254_time_t is a 16-bit integer, and we write 16 bits, so 0 and 0x10000 is
- *      the same thing to us anyway */
-void write_8254(unsigned char timer,t8254_time_t count,unsigned char mode) {
-	if (timer > 2) return;
-	outp(T8254_CONTROL_PORT,(timer << 6) | (3 << 4) | (mode << 1)); /* set new time */
-	outp(T8254_TIMER_PORT(timer),count);
-	outp(T8254_TIMER_PORT(timer),count >> 8);
-	/* for our own timing code, keep track of what that count was. we can't read it back from H/W anyway */
-	t8254_counter[timer] = (count == 0 ? 0x10000 : count);
-}
-
-unsigned char t8254_pc_speaker_read_gate() {
-	unsigned char x;
-
-	x = inp(PC_SPEAKER_GATE);
-	return x & 3;
-}
-
-void t8254_pc_speaker_set_gate(unsigned char m) {
-	unsigned char x;
-
-	x = inp(PC_SPEAKER_GATE);
-	x = (x & ~0x3) | (m & 3);
-	outp(PC_SPEAKER_GATE,x);
-}
-
 void readback_8254(unsigned char what,struct t8254_readback_t *t) {
 	t8254_time_t x;
 	unsigned int i;
