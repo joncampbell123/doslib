@@ -188,6 +188,10 @@ static void _cli();
 static void _sti();
 #pragma aux _sti = "sti"
 
+static inline void _sti_if_flags(unsigned int f) {
+	if (f&0x200) _sti(); /* if IF bit was set, then restore interrupts by STI */
+}
+
 /* NTS: remember for Watcom: 16-bit realmode sizeof(int) == 2, 32-bit flat mode sizeof(int) == 4 */
 static unsigned int get_cpu_flags();
 #if TARGET_MSDOS == 32

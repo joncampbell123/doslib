@@ -76,6 +76,9 @@ void readback_8254(unsigned char what,struct t8254_readback_t *t) {
 	unsigned int i;
 
 	if (what & 0x30) { /* if anything to readback */
+		unsigned int cpu_flags = get_cpu_flags();
+
+		_cli(); /* do not interrupt me */
 		for (i=0;i <= 2;i++) {
 			if (what & (T8254_READBACK_TIMER_0 << i)) { /* if asked to read back the timer... */
 				/* NTS: Intel docs say we're supposed to be able to latch multiple counters in one I/O command then read them back,
@@ -93,6 +96,9 @@ void readback_8254(unsigned char what,struct t8254_readback_t *t) {
 				}
 			}
 		}
+
+		/* restore caller's IF bit */
+		_sti_if_flags(cpu_flags);
 	}
 }
 

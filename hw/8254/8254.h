@@ -82,7 +82,7 @@ unsigned long t8254_us2ticks(unsigned long a);
 unsigned long t8254_us2ticksr(unsigned long a,unsigned long *rem);
 void t8254_wait(unsigned long ticks);
 
-static inline t8254_time_t read_8254(unsigned char timer) {
+static inline t8254_time_t read_8254_ncli(unsigned char timer) {
 	t8254_time_t x;
 
 	if (timer > 2) return 0;
@@ -92,16 +92,34 @@ static inline t8254_time_t read_8254(unsigned char timer) {
 	return x;
 }
 
+static inline t8254_time_t read_8254(unsigned char timer) {
+	unsigned int flags;
+	t8254_time_t x;
+
+	flags = get_cpu_flags();
+	x = read_8254_ncli(timer);
+	_sti_if_flags(flags);
+	return x;
+}
+
 /* NTS: At the hardware level, count == 0 is equivalent to programming 0x10000 into it.
  *      t8254_time_t is a 16-bit integer, and we write 16 bits, so 0 and 0x10000 is
  *      the same thing to us anyway */
-static inline void write_8254(unsigned char timer,t8254_time_t count,unsigned char mode) {
+static inline void write_8254_ncli(unsigned char timer,t8254_time_t count,unsigned char mode) {
 	if (timer > 2) return;
 	outp(T8254_CONTROL_PORT,(timer << 6) | (3 << 4) | (mode << 1)); /* set new time */
 	outp(T8254_TIMER_PORT(timer),count);
 	outp(T8254_TIMER_PORT(timer),count >> 8);
 	/* for our own timing code, keep track of what that count was. we can't read it back from H/W anyway */
 	t8254_counter[timer] = (count == 0 ? 0x10000 : count);
+}
+
+static inline void write_8254(unsigned char timer,t8254_time_t count,unsigned char mode) {
+	unsigned int flags;
+
+	flags = get_cpu_flags();
+	write_8254_ncli(timer,count,mode);
+	_sti_if_flags(flags);
 }
 
 static inline unsigned char t8254_pc_speaker_read_gate() {
