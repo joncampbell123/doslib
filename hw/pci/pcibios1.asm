@@ -38,7 +38,15 @@ use16
 %endif
 
 %if TARGET_MSDOS == 16
+ ; large & medium memory models have far pointers for code segments
  %ifidni MMODE,l
+  %define MMODE_FAR_CALL
+ %endif
+ %ifidni MMODE,m
+  %define MMODE_FAR_CALL
+ %endif
+
+ %ifdef MMODE_FAR_CALL
   %define retnative retf
   %define cdecl_param_offset 6	; RETF addr + PUSH BP
  %else
@@ -56,6 +64,7 @@ try_pci_bios2_:
 		mov		ax,0xB101
 		xor		edi,edi			; BUGFIX: Some BIOSes don't set EDI so the "entry point" address we get is whatever Watcom left on the stack.
 							;         This fix resolves the weird erratic values seen when running under Microsoft Virtual PC 2007.
+		xor		edx,edx
 		xor		ebx,ebx
 		xor		ecx,edx
 		int		0x1A
