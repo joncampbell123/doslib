@@ -102,7 +102,8 @@ static inline unsigned char d8237_page_ioport(unsigned char ch) {
 	return d8237_page_ioport_map[ch];
 }
 
-static inline void d8237_reset_flipflop(unsigned char ch) {
+/*============*/
+static inline void d8237_reset_flipflop_ncli(unsigned char ch) {
 	/* NOTE TO SELF: This code used to write the port, then read it. Based on some ancient 386SX laptop
 	 *               I have who's DMA controller demands it, apparently. But then VirtualBox seems
 	 *               to mis-emulate THAT and leave the flip-flop in the wrong state, causing erratic
@@ -111,38 +112,90 @@ static inline void d8237_reset_flipflop(unsigned char ch) {
 	outp(d8237_ioport(ch,0xC),0x00); /* A3-0=1100 IOR=0 IOW=1 -> clear byte pointer flip/flop */
 }
 
-/* FIXME: Does the DMA autoincrement the return value as it goes or is it the static value we wrote? */
-static inline uint16_t d8237_read_base_lo16(unsigned char ch) {
+static inline void d8237_reset_flipflop(unsigned char ch) {
+	unsigned int flags = get_cpu_flags();
+	_cli();
+	d8237_reset_flipflop_ncli(ch);
+	_sti_if_flags(flags);
+}
+
+/*============*/
+static inline uint16_t d8237_read_base_lo16_ncli(unsigned char ch) {
 	unsigned char iop = d8237_ioport(ch,(ch&3)*2);
 	uint16_t r;
 
-	d8237_reset_flipflop(ch);
+	d8237_reset_flipflop_ncli(ch);
 	r  = (uint16_t)inp(iop);
 	r |= (uint16_t)inp(iop) << 8U;
 	return r;
 }
 
-static inline void d8237_write_base_lo16(unsigned char ch,uint16_t o) {
+static inline uint16_t d8237_read_base_lo16(unsigned char ch) {
+	unsigned int flags = get_cpu_flags();
+	uint16_t x;
+	_cli();
+	x = d8237_read_base_lo16_ncli(ch);
+	_sti_if_flags(flags);
+	return x;
+}
+
+/*============*/
+static inline uint16_t d8237_read_count_lo16_direct_ncli(unsigned char ch) {
+	unsigned char iop = d8237_ioport(ch,((ch&3)*2) + 1);
+	uint16_t r;
+
+	d8237_reset_flipflop_ncli(ch);
+	r  = (uint16_t)inp(iop);
+	r |= (uint16_t)inp(iop) << 8U;
+	return r;
+}
+
+static inline uint16_t d8237_read_count_lo16_direct(unsigned char ch) {
+	unsigned int flags = get_cpu_flags();
+	uint16_t x;
+	_cli();
+	x = d8237_read_count_lo16_direct_ncli(ch);
+	_sti_if_flags(flags);
+	return x;
+}
+
+/*============*/
+static inline void d8237_write_base_lo16_ncli(unsigned char ch,uint16_t o) {
 	unsigned char iop = d8237_ioport(ch,(ch&3)*2);
-	d8237_reset_flipflop(ch);
+	d8237_reset_flipflop_ncli(ch);
 	outp(iop,o);
 	outp(iop,o >> 8);
 }
 
-uint16_t d8237_read_count_lo16(unsigned char ch);
+static inline void d8237_write_base_lo16(unsigned char ch,uint16_t o) {
+	unsigned int flags = get_cpu_flags();
+	_cli();
+	d8237_write_base_lo16_ncli(ch,o);
+	_sti_if_flags(flags);
+}
+
+/*============*/
+static inline void d8237_write_count_lo16_ncli(unsigned char ch,uint16_t o) {
+	unsigned char iop = d8237_ioport(ch,((ch&3)*2) + 1);
+	d8237_reset_flipflop_ncli(ch);
+	outp(iop,o);
+	outp(iop,o >> 8);
+}
 
 static inline void d8237_write_count_lo16(unsigned char ch,uint16_t o) {
-	unsigned char iop = d8237_ioport(ch,((ch&3)*2) + 1);
-	d8237_reset_flipflop(ch);
-	outp(iop,o);
-	outp(iop,o >> 8);
+	unsigned int flags = get_cpu_flags();
+	_cli();
+	d8237_write_count_lo16_ncli(ch,o);
+	_sti_if_flags(flags);
 }
 
+/*============*/
 int probe_8237();
 uint32_t d8237_read_base(unsigned char ch);
 void d8237_write_base(unsigned char ch,uint32_t o);
 uint32_t d8237_read_count(unsigned char ch);
 void d8237_write_count(unsigned char ch,uint32_t o);
+uint16_t d8237_read_count_lo16(unsigned char ch);
 
 struct dma_8237_allocation {
 	unsigned char FAR*		lin;		/* linear (program accessible pointer) */

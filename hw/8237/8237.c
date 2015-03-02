@@ -443,26 +443,24 @@ fail:
 }
 
 uint16_t d8237_read_count_lo16(unsigned char ch) {
-	unsigned char iop = d8237_ioport(ch,((ch&3)*2) + 1);
-	uint16_t r,r2,patience=32; /* <- this is needed for DMA controllers that can't return reliable values
-				         and would cause this code to get stuck in a loop...
-					 like Windows XP's SB emulation (Ooh, burn!) */
+	unsigned int flags = get_cpu_flags();
+	uint16_t r,r2,patience=32;
 
 	/* The DMA controller as emulated by DOSBox and on real hardware does not guarantee latching the count while reading.
-	 * or... apparently it DOES latch, but only the upper byte, which means we could read back 0x7FF8 followed by 0x7F04! */
+	 * it can change between reading the upper and lower bytes. so we need to do this loop to read a coherent value. */
+	_cli();
 	d8237_reset_flipflop(ch);
-	r2  = (uint16_t)inp(iop);
-	r2 |= (uint16_t)inp(iop) << 8U;
+	r2 = d8237_read_count_lo16_direct_ncli(ch);
 	do {
 		r   = r2;
-		r2  = (uint16_t)inp(iop);
-		r2 |= (uint16_t)inp(iop) << 8U;
-		if (r == 0xFFFF) break; /* if at terminal count, then break now */
+		r2 = d8237_read_count_lo16_direct_ncli(ch);
 		/* the counter must be decreasing! */
 		if ((r&0xFF00) != (r2&0xFF00)) continue;
+		if (r == 0xFFFF) break; /* if at terminal count, then break now */
 		if (r2 > r) continue;
 		break;
 	} while (--patience != 0U);
+	_sti_if_flags(flags);
 
 	return r2;
 }
