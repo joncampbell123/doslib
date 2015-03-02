@@ -15,10 +15,6 @@ NO_TEST_EXE=1
 # this test program isn't going to fit in the small memory model. sorry.
 NO_TEST_EXE=1
 ! endif
-! ifeq MMODE m
-# this test program isn't going to fit in the medium memory model. sorry.
-NO_TEST_EXE=1
-! endif
 !endif
 
 !ifndef NO_TEST_EXE

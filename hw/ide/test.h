@@ -28,3 +28,9 @@ void do_ide_controller_unhook_irq(struct ide_controller *ide);
 void do_ide_controller_enable_irq(struct ide_controller *ide,unsigned char en);
 void do_ide_controller_emergency_halt_irq(struct ide_controller *ide);
 
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__) || defined(__MEDIUM__))
+  /* chop features out of the Compact memory model build to ensure all code fits inside 64KB */
+#else
+# define ISAPNP
+#endif
+

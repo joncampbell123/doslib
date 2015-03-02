@@ -61,17 +61,6 @@
 #include <hw/vga/vgatty.h>
 #include <hw/ide/idelib.h>
 
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
-  /* chop features out of the Compact memory model build to ensure all code fits inside 64KB */
-#else
-# define ISAPNP
-#endif
-
-#ifdef ISAPNP
-#include <hw/isapnp/isapnp.h>
-#include <hw/sndsb/sndsbpnp.h>
-#endif
-
 #include "testutil.h"
 #include "testmbox.h"
 #include "testcmui.h"
@@ -90,6 +79,11 @@
 
 #include "testnop.h"
 #include "testpwr.h"
+
+#ifdef ISAPNP
+#include <hw/isapnp/isapnp.h>
+#include <hw/sndsb/sndsbpnp.h>
+#endif
 
 unsigned char			opt_ignore_smartdrv = 0;
 unsigned char			opt_no_irq = 0;
