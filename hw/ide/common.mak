@@ -11,10 +11,6 @@ OBJS =        $(SUBDIR)$(HPS)idelib.obj $(SUBDIR)$(HPS)idelib.obj
 # this test program isn't going to fit in the compact memory model. sorry.
 NO_TEST_EXE=1
 ! endif
-! ifeq MMODE s
-# this test program isn't going to fit in the small memory model. sorry.
-#NO_TEST_EXE=1
-! endif
 !endif
 
 !ifndef NO_TEST_EXE
