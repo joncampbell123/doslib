@@ -27,6 +27,7 @@
 
 #include "testnop.h"
 
+#ifdef NOP_TEST
 void do_ide_controller_drive_nop_test(struct ide_controller *ide,unsigned char which) {
 	struct vga_msg_box vgabox;
 	struct ide_taskfile *tsk;
@@ -81,4 +82,5 @@ void do_ide_controller_drive_nop_test(struct ide_controller *ide,unsigned char w
 	wait_for_enter_or_escape();
 	vga_msg_box_destroy(&vgabox);
 }
+#endif /* NOP_TEST */
 

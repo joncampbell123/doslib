@@ -646,8 +646,10 @@ void do_drive_readwrite_tests(struct ide_controller *ide,unsigned char which) {
 					redraw = backredraw = 1;
 					break;
 				case 3: /* Read verify tests */
+#ifdef READ_VERIFY
 					do_drive_read_verify_test(ide,which);
 					redraw = backredraw = 1;
+#endif
 					break;
 			};
 		}

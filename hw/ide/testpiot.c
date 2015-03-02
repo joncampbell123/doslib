@@ -28,6 +28,8 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+#ifdef PIO_AUTODETECT
+
 void ide_pio_autodetect(struct ide_controller *ide,unsigned char which) {
 	unsigned char ok32=0,ok32vlb=0;
 	unsigned char ident=0,identpacket=0;
@@ -230,4 +232,6 @@ void ide_pio_autodetect(struct ide_controller *ide,unsigned char which) {
 	else if (ok32vlb) ide->pio_width = 33;
 	else ide->pio_width = 16;
 }
+
+#endif /* PIO_AUTODETECT */
 

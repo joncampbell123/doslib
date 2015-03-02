@@ -19,7 +19,7 @@ extern unsigned char		cdrom_sector[512U*256U];/* ~128KB, enough for 64 CD-ROM se
 # if defined(__LARGE__) || defined(__COMPACT__)
 extern unsigned char		cdrom_sector[512U*16U];	/* ~8KB, enough for 4 CD-ROM sector or 16 512-byte sectors */
 # else
-extern unsigned char		cdrom_sector[512U*64U];	/* ~32KB, enough for 16 CD-ROM sector or 64 512-byte sectors */
+extern unsigned char		cdrom_sector[512U*8U];	/* ~4KB, enough for 2 CD-ROM sector or 8 512-byte sectors */
 # endif
 #endif
 
@@ -32,5 +32,21 @@ void do_ide_controller_emergency_halt_irq(struct ide_controller *ide);
   /* chop features out of the Compact memory model build to ensure all code fits inside 64KB */
 #else
 # define ISAPNP
+#endif
+
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+  /* chop features out of the Compact memory model build to ensure all code fits inside 64KB */
+#else
+# define PCI_SCAN
+# define MORE_TEXT
+# define ATAPI_ZIP
+# define NOP_TEST
+# define MISC_TEST
+# define MULTIPLE_MODE_MENU
+# define PIO_MODE_MENU
+# define POWER_MENU
+# define TWEAK_MENU
+# define PIO_AUTODETECT
+# define READ_VERIFY
 #endif
 

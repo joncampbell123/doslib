@@ -37,6 +37,8 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+#ifdef MISC_TEST
+
 /*-----------------------------------------------------------------*/
 
 static const char *drive_misc_tests_menustrings[] = {
@@ -202,4 +204,6 @@ void do_drive_misc_tests(struct ide_controller *ide,unsigned char which) {
 		}
 	}
 }
+
+#endif /* MISC_TEST */
 

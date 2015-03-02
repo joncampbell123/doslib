@@ -33,6 +33,8 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+#ifdef PIO_MODE_MENU
+
 static const char *drive_main_pio_mode_strings[] = {
 	"16-bit PIO (standard)",		/* 0 */
 	"32-bit PIO",
@@ -211,4 +213,6 @@ void do_drive_pio_mode(struct ide_controller *ide,unsigned char which) {
 		}
 	}
 }
+
+#endif /* PIO_MODE_MENU */
 

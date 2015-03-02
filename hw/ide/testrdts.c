@@ -51,6 +51,7 @@ static const char *drive_read_test_menustrings[] = {
 	"Read sectors (Zip ATAPI) continuously"	/* 9 */
 };
 
+#ifdef ATAPI_ZIP
 static void do_hdd_drive_read_atapi_test(struct ide_controller *ide,unsigned char which,unsigned char continuous,struct drive_rw_test_info *nfo) {
 	uint16_t drq_log[((unsigned long)sizeof(cdrom_sector))/512UL];
 	unsigned long sector = 16; /* read the ISO 9660 table of contents */
@@ -288,6 +289,7 @@ again:	/* jump point: send execution back here for another sector */
 		vga_msg_box_destroy(&vgabox);
 	}
 }
+#endif
 
 static void do_hdd_drive_read_test(struct ide_controller *ide,unsigned char which,unsigned char continuous,struct drive_rw_test_info *nfo) {
 	unsigned char user_esc = 0;
@@ -706,8 +708,10 @@ void do_drive_read_test(struct ide_controller *ide,unsigned char which) {
 					break;
 				case 8: /*Read sectors (Zip ATAPI) */
 				case 9: /*Read sectors (Zip ATAPI) continuously*/
+#ifdef ATAPI_ZIP
 					do_hdd_drive_read_atapi_test(ide,which,/*continuous=*/(select==9),&drive_rw_test_nfo);
 					redraw = backredraw = 1;
+#endif
 					break;
 			};
 		}

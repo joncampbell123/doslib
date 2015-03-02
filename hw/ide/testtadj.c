@@ -34,6 +34,8 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+#ifdef TWEAK_MENU
+
 static const char *drive_tweaks_and_adjustments_strings[] = {
 	""					/* 0 */ /* "Allow 32-bit PIO for ATAPI command" */
 };
@@ -171,4 +173,6 @@ void do_drive_tweaks_and_adjustments(struct ide_controller *ide,unsigned char wh
 		}
 	}
 }
+
+#endif /* TWEAK_MENU */
 

@@ -36,6 +36,8 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+#ifdef MULTIPLE_MODE_MENU
+
 static const char *drive_multiple_mode_menustrings[] = {
 	"Show IDE register taskfile",		/* 0 */
 	"Set sector count",
@@ -211,4 +213,5 @@ void do_drive_multiple_mode(struct ide_controller *ide,unsigned char which) {
 		}
 	}
 }
+#endif /* MULTIPLE_MODE_MENU */
 

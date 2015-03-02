@@ -108,7 +108,7 @@ unsigned char			cdrom_sector[512U*256U];/* ~128KB, enough for 64 CD-ROM sector o
 # if defined(__LARGE__) || defined(__COMPACT__)
 unsigned char			cdrom_sector[512U*16U];	/* ~8KB, enough for 4 CD-ROM sector or 16 512-byte sectors */
 # else
-unsigned char			cdrom_sector[512U*64U];	/* ~32KB, enough for 16 CD-ROM sector or 64 512-byte sectors */
+unsigned char			cdrom_sector[512U*8U];	/* ~4KB, enough for 2 CD-ROM sector or 8 512-byte sectors */
 # endif
 #endif
 
@@ -248,19 +248,27 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					redraw = backredraw = 1;
 					break;
 				case 3: /* power states */
+#ifdef POWER_MENU
 					do_drive_power_states_test(ide,which);
 					redraw = backredraw = 1;
+#endif
 					break;
 				case 4: /* PIO mode */
+#ifdef PIO_MODE_MENU
 					do_drive_pio_mode(ide,which);
 					redraw = backredraw = 1;
+#endif
 					break;
 				case 5: /* NOP */
+#ifdef NOP_TEST
 					do_ide_controller_drive_nop_test(ide,which);
+#endif
 					break;
 				case 6: /* Tweaks and adjustments */
+#ifdef TWEAK_MENU
 					do_drive_tweaks_and_adjustments(ide,which);
 					redraw = backredraw = 1;
+#endif
 					break;
 				case 7: /* CD-ROM start/stop/eject/load */
 					do_drive_cdrom_startstop_test(ide,which);
@@ -271,16 +279,20 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 					redraw = backredraw = 1;
 					break;
 				case 9: /* multiple mode */
+#ifdef MULTIPLE_MODE_MENU
 					do_drive_multiple_mode(ide,which);
 					redraw = backredraw = 1;
+#endif
 					break;
 				case 10: /* read/write tests */
 					do_drive_readwrite_tests(ide,which);
 					redraw = backredraw = 1;
 					break;
 				case 11: /* misc */
+#ifdef MISC_TEST
 					do_drive_misc_tests(ide,which);
 					redraw = backredraw = 1;
+#endif
 					break;
 			};
 		}
@@ -692,12 +704,16 @@ static void help() {
 	printf("test [options]\n");
 	printf("\n");
 	printf("IDE ATA/ATAPI test program\n");
-	printf("(C) 2012-2014 Jonathan Campbell, Hackipedia.org\n");
+	printf("(C) 2012-2015 Jonathan Campbell, Hackipedia.org\n");
 	printf("\n");
 	printf("  /NS             Don't check if SMARTDRV is resident\n");
 	printf("  /NOIRQ          Don't use IRQ by default\n");
+#ifdef PCI_SCAN
 	printf("  /NOPCI          Don't scan PCI bus\n");
+#endif
+#ifdef ISAPNP
 	printf("  /NOISAPNP       Don't scan ISA Plug & Play BIOS\n");
+#endif
 	printf("  /NOPROBE        Don't probe ISA legacy ports\n");
 	printf("  /IRQCHAIN       IRQ should chain to previous handler (default)\n");
 	printf("  /IRQNOCHAIN     IRQ should NOT chain to previous handler\n");
@@ -763,10 +779,12 @@ int main(int argc,char **argv) {
 	if (!opt_ignore_smartdrv) {
 		if (smartdrv_detect()) {
 			printf("WARNING: SMARTDRV %u.%02u or equivalent disk cache detected!\n",smartdrv_version>>8,smartdrv_version&0xFF);
+#ifdef MORE_TEXT
 			printf("         Running this program with SMARTDRV enabled is NOT RECOMMENDED,\n");
 			printf("         especially when using the snapshot functions!\n");
 			printf("         If you choose to test anyway, this program will attempt to flush\n");
 			printf("         the disk cache as much as possible to avoid conflict.\n");
+#endif
 		}
 	}
 
@@ -791,6 +809,7 @@ int main(int argc,char **argv) {
 		printf("Cannot init IDE lib\n");
 		return 1;
 	}
+#ifdef PCI_SCAN
 	if (!opt_no_pci) {
 		if (pci_probe(-1/*default preference*/) != PCI_CFG_NONE) {
 			uint8_t bus,dev,func,iport;
@@ -907,6 +926,7 @@ int main(int argc,char **argv) {
 			}
 		}
 	}
+#endif
 #ifdef ISAPNP
 	if (!opt_no_isapnp) {
 		if (!init_isa_pnp_bios()) {

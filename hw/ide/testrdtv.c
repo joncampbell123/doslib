@@ -198,6 +198,7 @@ again:	/* jump point: send execution back here for another sector */
 	}
 }
 
+#ifdef READ_VERIFY
 void do_drive_read_verify_test(struct ide_controller *ide,unsigned char which) {
 	struct menuboxbounds mbox;
 	char backredraw=1;
@@ -376,4 +377,5 @@ void do_drive_read_verify_test(struct ide_controller *ide,unsigned char which) {
 		}
 	}
 }
+#endif /*READ_VERIFY*/
 
