@@ -2334,6 +2334,9 @@ int main() {
 					vga_set_cga_mode(VGA_CGA_MODE_40WIDE|VGA_CGA_MODE_GRAPHICS|VGA_CGA_MODE_VIDEO_ENABLE);
 					vga_set_cga_palette_and_background(1,VGA_CGA_PALETTE_CS_ALT_INTENSITY);
 					while (getch() != 13);
+					vga_set_cga_mode(VGA_CGA_MODE_40WIDE|VGA_CGA_MODE_GRAPHICS|VGA_CGA_MODE_VIDEO_ENABLE);
+					vga_set_cga_palette_and_background(0,VGA_CGA_PALETTE_CS_ALT_INTENSITY);
+					while (getch() != 13);
 				}
 				else { /* EGA/VGA compatible test */
 					/* NTS: We have to redraw it. Some VGA clones (primarily Intel 855/915/945 chipsets) do not properly
