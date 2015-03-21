@@ -1848,6 +1848,22 @@ int main() {
 				}
 				while (getch() != 13);
 
+				for (y=0;y < (0x40000 / w);y++) {
+					if (kbhit()) {
+						int c = getch();
+						if (c == ' ' || c == 27) break;
+					}
+
+					vga_wait_for_vsync();
+					vga_wait_for_vsync_end();
+					for (ii=0;ii < 32;ii++) {
+						vga_wait_for_hsync();
+						vga_wait_for_hsync_end();
+					}
+					vga_set_start_location(y*(w/4));
+				}
+				while (getch() != 13);
+
 				int10_setmode(3);
 				update_state_from_vga();
 				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
