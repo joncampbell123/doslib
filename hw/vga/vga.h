@@ -132,9 +132,11 @@ void vga_alpha_switch_to_font_plane();
 void vga_alpha_switch_from_font_plane();
 void vga_set_9wide(unsigned char en);
 void vga_select_charset_a_b(unsigned short a,unsigned short b);
+void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags);
 void vga_correct_crtc_mode(struct vga_mode_params *p);
-void vga_write_crtc_mode(struct vga_mode_params *p);
 void vga_read_crtc_mode(struct vga_mode_params *p);
+
+#define VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC	0x0001
 
 static inline unsigned char vga_read_CRTC(unsigned char i) {
 	outp(vga_base_3x0+4,i);

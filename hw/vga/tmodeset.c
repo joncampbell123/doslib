@@ -694,7 +694,7 @@ int main() {
 			redraw = 1;
 		}
 		else if (c == '=') {
-			vga_write_crtc_mode(&mp);
+			vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			redraw = 1;
 		}
 		else if (c == 'h') {
@@ -786,14 +786,14 @@ int main() {
 				mp.dword_mode = 0;
 				mp.address_wrap_select = 1;
 				mp.inc_mem_addr_only_every_4th = 0;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			else if (c == 'C') {
 				mp.word_mode = 1;
 				mp.dword_mode = 1;
 				mp.address_wrap_select = 1;
 				mp.inc_mem_addr_only_every_4th = 0;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			else if (c == 's') {
 				/* CRTC-side configuration of Mode-X */
@@ -801,14 +801,14 @@ int main() {
 				vga_write_sequencer(4,0x06);
 				vga_write_sequencer(0,0x03);
 				vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			else if (c == 'S') {
 				vga_write_sequencer(0,0x01);
 				vga_write_sequencer(4,0x0E);
 				vga_write_sequencer(0,0x03);
 				vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 
 			redraw = 1;
@@ -821,7 +821,7 @@ int main() {
 			nm = common_prompt_number();
 			if (nm <= 255) {
 				mp.offset = nm;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			redraw = 1;
 		}
@@ -833,7 +833,7 @@ int main() {
 			nm = common_prompt_number();
 			if (nm > 0 && nm <= 32) {
 				mp.max_scanline = nm;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			redraw = 1;
 		}
@@ -857,7 +857,7 @@ int main() {
 			c = getch();
 			if (c == 'd') {
 				mp.scan_double = !mp.scan_double;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			else if (c == 'o') {
 				vga_write_GC(6,vga_read_GC(6)^2);
@@ -867,39 +867,39 @@ int main() {
 			}
 			else if (c == 'm') {
 				mp.memaddr_div2 = !mp.memaddr_div2;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			else if (c == 's') {
 				mp.scanline_div2 = !mp.scanline_div2;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			else if (c == 'a') {
 				mp.address_wrap_select = !mp.address_wrap_select;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			else if (c == 'r') {
 				mp.refresh_cycles_per_scanline = !mp.refresh_cycles_per_scanline;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			else if (c == '3') {
 				mp.map13 = !mp.map13;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 			else if (c == '4') {
 				mp.map14 = !mp.map14;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			}
 
 			redraw = 1;
 		}
 		else if (c == '4') {
 			mp.shift4_enable = !mp.shift4_enable;
-			vga_write_crtc_mode(&mp);
+			vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			redraw = 1;
 		}
 		else if (c == '5') {
 			mp.shift_load_rate = !mp.shift_load_rate;
-			vga_write_crtc_mode(&mp);
+			vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			redraw = 1;
 		}
 		else if (c == '?') {
@@ -908,7 +908,7 @@ int main() {
 		}
 		else if (c == '$') {
 			mp.inc_mem_addr_only_every_4th = !mp.inc_mem_addr_only_every_4th;
-			vga_write_crtc_mode(&mp);
+			vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			redraw = 1;
 		}
 		else if (c == '-') {
@@ -924,13 +924,13 @@ int main() {
 			if (nm != ~0 && nm < 4) {
 				mp.hsync_neg = (nm&1);
 				mp.vsync_neg = (nm&2)?1:0;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 				redraw = 1;
 			}
 		}
 		else if (c == '9') {
 			mp.clock9 = !mp.clock9;
-			vga_write_crtc_mode(&mp);
+			vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 			redraw = 1;
 		}
 		else if (c == 'm') {
@@ -973,7 +973,7 @@ int main() {
 			if (nm != ~0 && nm < 8) {
 				mp.clock_select = nm&3;
 				mp.clock_div2 = (nm&4)?1:0;
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 				redraw = 1;
 			}
 		}
@@ -990,7 +990,7 @@ int main() {
 			if (nm != ~0 && nm < 4) {
 				mp.dword_mode = (nm&2)?1:0;
 				mp.word_mode = (nm&1)^mp.dword_mode;	/* 0 1 2 3 > 00 01 11 10 */
-				vga_write_crtc_mode(&mp);
+				vga_write_crtc_mode(&mp,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 				redraw = 1;
 			}
 		}

@@ -764,7 +764,7 @@ void vga_correct_crtc_mode(struct vga_mode_params *p) {
  *          experimentation is not good for them. You can of course fry a VGA monitor
  *          that way too, but at least we can read back the "safe" values the BIOS
  *          programmed into the hardware */
-void vga_write_crtc_mode(struct vga_mode_params *p) {
+void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags) {
 	unsigned char c,c2;
 
 	if (!(vga_flags & VGA_IS_VGA))
