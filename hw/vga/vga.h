@@ -344,6 +344,7 @@ struct vga_mode_params {
 	unsigned char		scan_double:1;		/* CRTC[0x09] bit 7 */
 	unsigned char		max_scanline;		/* CRTC[0x09] bit 4-0 */
 	unsigned char		offset;			/* CRTC[0x13] */
+	unsigned char		sync_enable:1;		/* CRTC[0x17] bit 7 */
 };
 
 #endif /* __DOSLIB_HW_VGA_VGA_H */

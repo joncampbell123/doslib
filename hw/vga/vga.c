@@ -770,9 +770,11 @@ void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags) {
 	if (!(vga_flags & VGA_IS_VGA))
 		return;
 
-	/* sync disable */
-	c = vga_read_CRTC(0x17);
-	vga_write_CRTC(0x17,c&0x7F);
+	/* sync disable unless told not to */
+	if (!(flags & VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC)) {
+		c = vga_read_CRTC(0x17);
+		vga_write_CRTC(0x17,c&0x7F);
+	}
 
 	c = inp(0x3CC); /* misc out reg */
 	c &= ~((3 << 2) | (1 << 6) | (1 << 7));
@@ -820,14 +822,6 @@ void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags) {
 	c2 |= (p->max_scanline - 1) & 0x1F;
 	vga_write_CRTC(0x09,c2);
 	vga_write_CRTC(0x13,p->offset);
-	vga_write_CRTC(0x17,
-		(vga_read_CRTC(0x17) & 0x10) | /* NTS: one undocumented bit, perhaps best not to change it */
-		((p->word_mode^1) << 6) |
-		(p->address_wrap_select << 5) |
-		(p->memaddr_div2 << 3) |
-		(p->scanline_div2 << 2) |
-		((p->map14 ^ 1) << 1) |
-		((p->map13 ^ 1) << 0));
 	vga_write_CRTC(0,(p->horizontal_total - 5));
 	vga_write_CRTC(1,(p->horizontal_display_end - 1));
 	vga_write_CRTC(2,p->horizontal_blank_start - 1);
@@ -836,13 +830,20 @@ void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags) {
 	vga_write_CRTC(5,((((p->horizontal_blank_end - 1) >> 5) & 1) << 7) | (p->horizontal_start_delay_after_retrace << 5) |
 		(p->horizontal_end_retrace & 0x1F));
 
+	/* finish by writing reg 0x17 which also enables sync */
+	vga_write_CRTC(0x17,
+		(p->sync_enable << 7) |
+		(vga_read_CRTC(0x17) & 0x10) | /* NTS: one undocumented bit, perhaps best not to change it */
+		((p->word_mode^1) << 6) |
+		(p->address_wrap_select << 5) |
+		(p->memaddr_div2 << 3) |
+		(p->scanline_div2 << 2) |
+		((p->map14 ^ 1) << 1) |
+		((p->map13 ^ 1) << 0));
+
 	/* reinforce write protect */
 	c = vga_read_CRTC(0x11);
 	vga_write_CRTC(0x11,c|0x80);
-
-	/* sync enable */
-	c = vga_read_CRTC(0x17);
-	vga_write_CRTC(0x17,c|0x80);
 }
 
 void vga_read_crtc_mode(struct vga_mode_params *p) {
@@ -862,6 +863,7 @@ void vga_read_crtc_mode(struct vga_mode_params *p) {
 	p->shift4_enable = (c >> 4) & 1;
 	p->shift_load_rate = (c >> 2) & 1;
 
+	p->sync_enable = (vga_read_CRTC(0x17) >> 7) & 1;
 	p->word_mode = ((vga_read_CRTC(0x17) >> 6) & 1) ^ 1;
 	p->address_wrap_select = (vga_read_CRTC(0x17) >> 5) & 1;
 	p->memaddr_div2 = (vga_read_CRTC(0x17) >> 3) & 1;
