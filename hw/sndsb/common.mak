@@ -15,7 +15,9 @@ NO_TEST_ISAPNP=1
 NO_TEST_EXE=1
 ! endif
 ! ifeq MMODE s
+# yet again, doesn't fit into the small memory model (by 10 bytes)
 NO_TEST_ISAPNP=1
+NO_TEST_EXE=1
 ! endif
 !endif
 
