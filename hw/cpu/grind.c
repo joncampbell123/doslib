@@ -321,11 +321,6 @@ int main() {
 			grind_free();
 			return 1;
 		}
-#ifdef GRIND_FAR
-		printf("[buf=%x:%x] ",FP_SEG(grind_buf),FP_OFF(grind_buf));
-#else
-		printf("[buf=%p] ",grind_buf);
-#endif
 
 		printf("WRITE ");fflush(stdout);
 #ifdef GRIND_FAR
