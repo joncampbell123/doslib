@@ -175,6 +175,32 @@ void grind_free() {
 	grind_free_buf();
 }
 
+int grind_execute_buf() {
+#ifdef GRIND_NEED_CODE_ALIAS_SEL
+	void far *x;
+
+	if (grind_buf_csel == 0) return 0;
+
+	x = MK_FP(grind_buf_csel,FP_OFF(grind_buf));
+	__asm callf	[x]
+#else
+	if (grind_buf == NULL) return 0;
+
+# ifdef GRIND_FAR
+	__asm callf	[grind_buf]
+# else
+	__asm call	[grind_buf]
+# endif
+#endif
+
+	return 1;
+}
+
+static void pause_if_tty() {
+	unsigned char c;
+	if (isatty(1)) { do { read(0,&c,1); } while (c != 13); }
+}
+
 int main() {
 	unsigned int i;
 
@@ -220,6 +246,7 @@ int main() {
 
 		printf("OK\n");
 	}
+	pause_if_tty();
 
 	for (i=0;i < 24;i++) {
 		printf("Buffer write... ");fflush(stdout);
@@ -256,6 +283,63 @@ int main() {
 		printf("WRITE ");fflush(stdout);
 		grind_buf[0] = i;
 		grind_buf[1] = i+1;
+
+		printf("UNLOCK ");fflush(stdout);
+		grind_unlock_buf();
+
+		printf("FREE ");fflush(stdout);
+		grind_free_buf();
+
+		printf("OK\n");
+	}
+	pause_if_tty();
+
+	for (i=0;i < 24;i++) {
+#ifdef GRIND_FAR
+		printf("RETF... ");fflush(stdout);
+#else
+		printf("RET... ");fflush(stdout);
+#endif
+
+		printf("INIT ");fflush(stdout);
+		if (!grind_init()) {
+			printf("<--FAIL\n");
+			grind_free();
+			return 1;
+		}
+
+		printf("ALLOC ");fflush(stdout);
+		if (!grind_alloc_buf()) {
+			printf("<--FAIL\n");
+			grind_free();
+			return 1;
+		}
+
+		printf("LOCK ");fflush(stdout);
+		if (!grind_lock_buf()) {
+			printf("<--FAIL\n");
+			grind_free();
+			return 1;
+		}
+#ifdef GRIND_FAR
+		printf("[buf=%x:%x] ",FP_SEG(grind_buf),FP_OFF(grind_buf));
+#else
+		printf("[buf=%p] ",grind_buf);
+#endif
+
+		printf("WRITE ");fflush(stdout);
+#ifdef GRIND_FAR
+		grind_buf[0] = 0xCB; // RETF
+#else
+		grind_buf[0] = 0xC3; // RET
+#endif
+
+		printf("EXEC ");fflush(stdout);
+		if (!grind_execute_buf()) {
+			printf("<--FAIL\n");
+			grind_free();
+			return 1;
+		}
 
 		printf("UNLOCK ");fflush(stdout);
 		grind_unlock_buf();
