@@ -38,8 +38,10 @@ typedef uint16_t		grind_seg_t;
 
 #ifdef GRIND_FAR
 typedef unsigned char far*	grind_buf_ptr_t;
+# define GRIND_RET_INS		(0xCB) /* RETF */
 #else
 typedef unsigned char*		grind_buf_ptr_t;
+# define GRIND_RET_INS		(0xC3) /* RET */
 #endif
 
 #if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS) /* For this to work in Windows 3.1, we need a code segment alias of our data segment */
@@ -323,11 +325,7 @@ int main() {
 		}
 
 		printf("WRITE ");fflush(stdout);
-#ifdef GRIND_FAR
-		grind_buf[0] = 0xCB; // RETF
-#else
-		grind_buf[0] = 0xC3; // RET
-#endif
+		grind_buf[0] = GRIND_RET_INS;
 
 		printf("EXEC ");fflush(stdout);
 		if (!grind_execute_buf()) {
