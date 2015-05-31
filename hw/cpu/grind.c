@@ -47,7 +47,7 @@ typedef unsigned char*		grind_buf_ptr_t;
 
 #if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS) /* For this to work in Windows 3.1, we need a code segment alias of our data segment */
 # define GRIND_NEED_CODE_ALIAS_SEL
-#elif TARGET_MSDOS == 32 && defined(WIN386) /* Win386 too */
+#elif TARGET_MSDOS == 32 && defined(TARGET_WINDOWS) && defined(WIN386) /* Win386 too */
 # define GRIND_NEED_CODE_ALIAS_SEL
 #endif
 
@@ -101,7 +101,18 @@ int grind_alloc_buf() {
 int grind_lock_buf() {
 #ifdef GRIND_NEED_CODE_ALIAS_SEL
 	if (grind_buf_dsel == 0 && grind_buf_whnd != 0) {
+# ifdef WIN386
+		/* Watcom's Win386 extender doesn't do us any favors here for our use of GPTR.
+		 * The return value of GlobalLock through the extender seems to be the Win16 16:16 FAR pointer
+		 * stuffed into the 32 bits of a NEAR pointer in Win386 land. Yuck. */
+		{
+			DWORD x = (DWORD)GlobalLock(grind_buf_whnd);
+			if (x == (DWORD)0) return 0;
+			grind_buf = MK_FP(x>>16,x&0xFFFF);
+		}
+# else
 		grind_buf = GlobalLock(grind_buf_whnd);
+#endif
 		if (grind_buf == NULL) return 0;
 		grind_buf_dsel = FP_SEG(grind_buf);
 	}
@@ -120,12 +131,9 @@ int grind_lock_buf() {
 void grind_unlock_buf() {
 #ifdef GRIND_NEED_CODE_ALIAS_SEL
 	if (grind_buf_csel) {
-		// FIXME: This call makes the Win386 extender crash?
-		//        And commenting this out doesn't seem to cause any GDT leaks in Windows 3.1?
-		//        So does that mean GlobalAlloc/GlobalFree somehow track aliases?
-# ifndef WIN386
+		// NTS: Omitting the call to FreeSelector() doesn't seem to leak in Windows 3.1. Does GlobalAlloc
+		//      somehow track aliases to the segment? Seems like an invitation for bad coding practice to me.
 		FreeSelector(grind_buf_csel);
-# endif
 		grind_buf_csel = 0;
 	}
 	if (grind_buf_dsel) {
@@ -174,18 +182,21 @@ int main() {
 		printf("INIT ");fflush(stdout);
 		if (!grind_init()) {
 			printf("<--FAIL\n");
+			grind_free();
 			return 1;
 		}
 
 		printf("ALLOC(%zu) ",grind_buf_size);fflush(stdout);
 		if (!grind_alloc_buf()) {
 			printf("<--FAIL\n");
+			grind_free();
 			return 1;
 		}
 
 		printf("LOCK ");fflush(stdout);
 		if (!grind_lock_buf()) {
 			printf("<--FAIL\n");
+			grind_free();
 			return 1;
 		}
 #ifdef GRIND_FAR
@@ -209,18 +220,24 @@ int main() {
 		printf("INIT ");fflush(stdout);
 		if (!grind_init()) {
 			printf("<--FAIL\n");
+			grind_free();
 			return 1;
 		}
 
 		printf("ALLOC ");fflush(stdout);
 		if (!grind_alloc_buf()) {
 			printf("<--FAIL\n");
+			grind_free();
 			return 1;
 		}
+#ifdef GRIND_NEED_CODE_ALIAS_SEL
+		printf("[hnd=%x] ",grind_buf_whnd);
+#endif
 
 		printf("LOCK ");fflush(stdout);
 		if (!grind_lock_buf()) {
 			printf("<--FAIL\n");
+			grind_free();
 			return 1;
 		}
 #ifdef GRIND_FAR
