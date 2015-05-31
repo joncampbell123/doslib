@@ -168,44 +168,39 @@ int main() {
 		return 1;
 	}
 
-	printf("Buffer test... ");fflush(stdout);
-
 	for (i=0;i < 24;i++) {
-	printf("INIT ");fflush(stdout);
-	if (!grind_init()) {
-		printf("<--FAIL\n");
-		return 1;
-	}
+		printf("Buffer test... ");fflush(stdout);
 
-	printf("ALLOC(%zu) ",grind_buf_size);fflush(stdout);
-	if (!grind_alloc_buf()) {
-		printf("<--FAIL\n");
-		return 1;
-	}
+		printf("INIT ");fflush(stdout);
+		if (!grind_init()) {
+			printf("<--FAIL\n");
+			return 1;
+		}
+
+		printf("ALLOC(%zu) ",grind_buf_size);fflush(stdout);
+		if (!grind_alloc_buf()) {
+			printf("<--FAIL\n");
+			return 1;
+		}
+
+		printf("LOCK ");fflush(stdout);
+		if (!grind_lock_buf()) {
+			printf("<--FAIL\n");
+			return 1;
+		}
 #ifdef GRIND_FAR
-	printf("[buf=%x:%x] ",FP_SEG(grind_buf),FP_OFF(grind_buf));
+		printf("[buf=%x:%x] ",FP_SEG(grind_buf),FP_OFF(grind_buf));
 #else
-	printf("[buf=%p] ",grind_buf);
+		printf("[buf=%p] ",grind_buf);
 #endif
 
-	printf("LOCK ");fflush(stdout);
-	if (!grind_lock_buf()) {
-		printf("<--FAIL\n");
-		return 1;
-	}
-#ifdef GRIND_FAR
-	printf("[buf=%x:%x] ",FP_SEG(grind_buf),FP_OFF(grind_buf));
-#else
-	printf("[buf=%p] ",grind_buf);
-#endif
+		printf("UNLOCK ");fflush(stdout);
+		grind_unlock_buf();
 
-	printf("UNLOCK ");fflush(stdout);
-	grind_unlock_buf();
+		printf("FREE ");fflush(stdout);
+		grind_free_buf();
 
-	printf("FREE ");fflush(stdout);
-	grind_free_buf();
-
-	printf("OK\n");
+		printf("OK\n");
 	}
 
 	grind_free();
