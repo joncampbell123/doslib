@@ -26,9 +26,6 @@
 #if TARGET_MSDOS == 32
 # define GRIND_REGSIZE		32
 # define GRIND_CODE32
-# ifdef WIN386
-#  define GRIND_FAR
-# endif
 typedef uint32_t		grind_off_t;
 typedef uint16_t		grind_seg_t;
 #else
@@ -47,8 +44,6 @@ typedef unsigned char*		grind_buf_ptr_t;
 
 #if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS) /* For this to work in Windows 3.1, we need a code segment alias of our data segment */
 # define GRIND_NEED_CODE_ALIAS_SEL
-#elif TARGET_MSDOS == 32 && defined(TARGET_WINDOWS) && defined(WIN386) /* Win386 too */
-# define GRIND_NEED_CODE_ALIAS_SEL
 #endif
 
 grind_buf_ptr_t		grind_buf = NULL;
@@ -64,6 +59,29 @@ uint16_t		grind_buf_csel = 0;
 
 int grind_init() {
 	cpu_probe();
+
+#if TARGET_MSDOS == 32 && defined(TARGET_WINDOWS) && defined(WIN386)
+	// double-check: even though the Win386 extender does not alloc segment bases from linear addr zero,
+	// our code assumes that at least the code and data 32-bit segments have the same base. is that true?
+	// if not, this code won't work.
+	{
+		WORD s1=0,s2=0;
+
+		__asm {
+			mov	s1,cs
+			mov	s2,ds
+		}
+
+		if (GetSelectorBase(s1) != GetSelectorBase(s2)) {
+			MessageBox((HWND)NULL,"Win386 error: GRIND library not available. CS.base != DS.base","",MB_OK);
+			return 0;
+		}
+		if (GetSelectorLimit(s1) > GetSelectorLimit(s2)) {
+			MessageBox((HWND)NULL,"Win386 error: GRIND library not available. CS.limit > DS.limit","",MB_OK);
+			return 0;
+		}
+	}
+#endif
 
 	if (!grind_buf_init) {
 		grind_buf_size = 512;
@@ -101,18 +119,7 @@ int grind_alloc_buf() {
 int grind_lock_buf() {
 #ifdef GRIND_NEED_CODE_ALIAS_SEL
 	if (grind_buf_dsel == 0 && grind_buf_whnd != 0) {
-# ifdef WIN386
-		/* Watcom's Win386 extender doesn't do us any favors here for our use of GPTR.
-		 * The return value of GlobalLock through the extender seems to be the Win16 16:16 FAR pointer
-		 * stuffed into the 32 bits of a NEAR pointer in Win386 land. Yuck. */
-		{
-			DWORD x = (DWORD)GlobalLock(grind_buf_whnd);
-			if (x == (DWORD)0) return 0;
-			grind_buf = MK_FP(x>>16,x&0xFFFF);
-		}
-# else
 		grind_buf = GlobalLock(grind_buf_whnd);
-#endif
 		if (grind_buf == NULL) return 0;
 		grind_buf_dsel = FP_SEG(grind_buf);
 	}
