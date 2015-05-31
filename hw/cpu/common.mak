@@ -28,6 +28,7 @@ OBJS =        $(SUBDIR)$(HPS)cpuasm.obj $(SUBDIR)$(HPS)cpu.obj $(SUBDIR)$(HPS)gd
 MMX_EXE =     $(SUBDIR)$(HPS)mmx.exe
 SSE_EXE =     $(SUBDIR)$(HPS)sse.exe
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+GRIND_EXE =   $(SUBDIR)$(HPS)grind.exe
 DISPSN_EXE =  $(SUBDIR)$(HPS)dispsn.exe
 SSEOFF_EXE =  $(SUBDIR)$(HPS)sseoff.exe
 GDTLIST_EXE = $(SUBDIR)$(HPS)gdtlist.exe
@@ -82,7 +83,7 @@ all: lib exe
 	
 lib: $(HW_CPU_LIB) .symbolic
 	
-exe: $(GDTTAE_EXE) $(TEST_EXE) $(DISPSN_EXE) $(RESET_EXE) $(APIC_EXE) $(MMX_EXE) $(SSE_EXE) $(SSEOFF_EXE) $(PROT286_COM) $(PROT386_COM) $(TSS_COM) $(TSSRING_COM) $(ALIGNCHK_COM) $(V86_COM) $(V86KERN_COM) $(V86KERN2_COM) $(PROTVCPI_COM) $(PROTDPMI_COM) $(RDTSC_EXE) $(GDTLIST_EXE) .symbolic
+exe: $(GDTTAE_EXE) $(TEST_EXE) $(GRIND_EXE) $(DISPSN_EXE) $(RESET_EXE) $(APIC_EXE) $(MMX_EXE) $(SSE_EXE) $(SSEOFF_EXE) $(PROT286_COM) $(PROT386_COM) $(TSS_COM) $(TSSRING_COM) $(ALIGNCHK_COM) $(V86_COM) $(V86KERN_COM) $(V86KERN2_COM) $(PROTVCPI_COM) $(PROTDPMI_COM) $(RDTSC_EXE) $(GDTLIST_EXE) .symbolic
 
 !ifdef BUILD_NASM_COM
 $(V86_COM): v86.asm
@@ -171,6 +172,25 @@ $(TEST_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 ! endif
 ! ifdef WIN_NE_SETVER_BUILD
 	$(WIN_NE_SETVER_BUILD) $(TEST_EXE)
+! endif
+
+$(GRIND_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)grind.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)grind.obj option map=$(SUBDIR)$(HPS)grind.map
+! ifdef TARGET_WINDOWS
+!  ifeq TARGET_MSDOS 16
+	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+!  endif
+! endif
+	%write tmp.cmd name $(GRIND_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+! ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(GRIND_EXE)
+	@wbind $(GRIND_EXE) -q -n
+! endif
+! ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(GRIND_EXE)
 ! endif
 
 $(RDTSC_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_8254_LIB) $(SUBDIR)$(HPS)rdtsc.obj
