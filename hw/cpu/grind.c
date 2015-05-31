@@ -60,8 +60,6 @@ uint16_t		grind_buf_csel = 0;
 #endif
 
 int grind_init() {
-	cpu_probe();
-
 #if TARGET_MSDOS == 32 && defined(TARGET_WINDOWS) && defined(WIN386)
 	// double-check: even though the Win386 extender does not alloc segment bases from linear addr zero,
 	// our code assumes that at least the code and data 32-bit segments have the same base. is that true?
@@ -206,6 +204,7 @@ static void pause_if_tty() {
 int main() {
 	unsigned int i;
 
+	cpu_probe();
 	if (!grind_init()) {
 		printf("Failed to init grind library\n");
 		return 1;
