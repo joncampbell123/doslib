@@ -291,6 +291,10 @@ static inline grind_ADDw() {
 				grind_imm_t chf = *((grind_imm_t*)(asm_buf+8)) ^ *((grind_imm_t*)(asm_buf+16));
 				// what changed between ADDs. IF(9) is supposed to change, therefore the ^0x200. ideally chf2 == 0 unless emulation problems.
 				grind_imm_t chf2 = *((grind_imm_t*)(asm_buf+12)) ^ *((grind_imm_t*)(asm_buf+20)) ^ 0x200;
+				// what flags were changed by both DIV instructions
+				grind_imm_t chbf = ((*((grind_imm_t*)(asm_buf+8)) ^ *((grind_imm_t*)(asm_buf+12))) |
+					(*((grind_imm_t*)(asm_buf+16)) ^ *((grind_imm_t*)(asm_buf+20)))) &
+					chf;
 
 				if (*((grind_imm_t*)(asm_buf+0)) != *((grind_imm_t*)(asm_buf+4))) {
 					printf("WARNING: Two ADD passes with different sums 0x%x != 0x%x\n",
@@ -303,6 +307,7 @@ static inline grind_ADDw() {
 				printf("ADDw %3u + %-3u = %3u\n",i,j,(unsigned int)(*((grind_imm_t*)(asm_buf+0))));
 				printf("    zero/set flags that changed:      0x%08x (wanted=0xAD5)\n",chf); // what flags we were able to change vs what we changed
 				printf("    ...then after ADD:                0x%08x (^0x200 expect IF change)\n",chf2); // what differed between the two ADD instructions.
+				printf("    flag changes (both):              0x%08x\n",chbf); // what was changed by DIV
 				printf("    flag result:                      CF%u PF%u AF%u ZF%u SF%u TF%u IF%u DF%u OF%u\n",
 					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 0) & 1,	// CF
 					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 2) & 1,	// PF
@@ -447,6 +452,10 @@ static inline grind_DIVw() {
 				grind_imm_t chf = *((grind_imm_t*)(asm_buf+8)) ^ *((grind_imm_t*)(asm_buf+16));
 				// what changed between DIVs. IF(9) is supposed to change, therefore the ^0x200. ideally chf2 == 0 unless emulation problems.
 				grind_imm_t chf2 = *((grind_imm_t*)(asm_buf+12)) ^ *((grind_imm_t*)(asm_buf+20)) ^ 0x200;
+				// what flags were changed by both DIV instructions
+				grind_imm_t chbf = ((*((grind_imm_t*)(asm_buf+8)) ^ *((grind_imm_t*)(asm_buf+12))) |
+					(*((grind_imm_t*)(asm_buf+16)) ^ *((grind_imm_t*)(asm_buf+20)))) &
+					chf;
 
 				if (*((grind_imm_t*)(asm_buf+0)) != *((grind_imm_t*)(asm_buf+4))) {
 					printf("WARNING: Two DIV passes with different results 0x%x != 0x%x\n",
@@ -464,6 +473,7 @@ static inline grind_DIVw() {
 				printf("DIVw %3u / %-3u = %3u remainder %u\n",i,j,(unsigned int)(*((grind_imm_t*)(asm_buf+0))),(unsigned int)(*((grind_imm_t*)(asm_buf+24))));
 				printf("    zero/set flags that changed:      0x%08x (wanted=0xAD5)\n",chf); // what flags we were able to change vs what we changed
 				printf("    ...then after DIV:                0x%08x (^0x200 expect IF change)\n",chf2); // what differed between the two DIV instructions.
+				printf("    flag changes (both):              0x%08x\n",chbf); // what was changed by DIV
 				printf("    flag result:                      CF%u PF%u AF%u ZF%u SF%u TF%u IF%u DF%u OF%u\n",
 					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 0) & 1,	// CF
 					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 2) & 1,	// PF
