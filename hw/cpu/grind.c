@@ -86,6 +86,34 @@ static inline grind_buf_ptr_t grind_buf_w__mov_Add_const(grind_buf_ptr_t w,unsig
 	return w;
 }
 
+// OR (E)reg,const
+static inline grind_buf_ptr_t grind_buf_w__or_Reg_const(grind_buf_ptr_t w,unsigned char reg,unsigned int c) {
+	if (reg >= 8) return w;
+	if (reg == GRIND_REG_AX) {
+		*w++ = 0x0D;		// OR (E)AX,const
+	}
+	else {
+		*w++ = 0x81;		// OR reg,const
+		*w++ = (3 << 6) + (1/*OR*/ << 3) + reg;		// mod=3 reg=0 r/m=reg
+	}
+	*((grind_imm_t*)w) = c; w += sizeof(grind_imm_t);
+	return w;
+}
+
+// AND (E)reg,const
+static inline grind_buf_ptr_t grind_buf_w__and_Reg_const(grind_buf_ptr_t w,unsigned char reg,unsigned int c) {
+	if (reg >= 8) return w;
+	if (reg == GRIND_REG_AX) {
+		*w++ = 0x25;		// AND (E)AX,const
+	}
+	else {
+		*w++ = 0x81;		// AND reg,const
+		*w++ = (3 << 6) + (4/*AND*/ << 3) + reg;	// mod=3 reg=0 r/m=reg
+	}
+	*((grind_imm_t*)w) = c; w += sizeof(grind_imm_t);
+	return w;
+}
+
 // MOV (E)reg,const
 static inline grind_buf_ptr_t grind_buf_w__mov_Reg_const(grind_buf_ptr_t w,unsigned char reg,unsigned int c) {
 	if (reg >= 8) return w;
@@ -332,44 +360,122 @@ int main() {
 	}
 
 	for (i=0;i < 256;i++) {
-		printf("\x0D                           \x0D");
-		printf("ADD%u %u,%u ",GRIND_REGSIZE,i,j);fflush(stdout);
-
 		for (j=0;j < 256;j++) {
 			grind_buf_ptr_t w = grind_buf;
 
-			*((grind_imm_t*)(asm_buf+0)) = 0;
+			*((grind_imm_t*)(asm_buf+0)) = 0;					// ADD result
+			*((grind_imm_t*)(asm_buf+4)) = 0;					// ADD result (2)
+			*((grind_imm_t*)(asm_buf+8)) = 0;					// FLAGS before (after init)
+			*((grind_imm_t*)(asm_buf+12)) = 0;					// FLAGS after
+			*((grind_imm_t*)(asm_buf+16)) = 0;					// FLAGS before (after init)
+			*((grind_imm_t*)(asm_buf+20)) = 0;					// FLAGS after
 
-			*w++ = GRIND_INT3_INS;							// INT3
+//			*w++ = GRIND_INT3_INS;							// INT3
+
+			// save DS, EAX, FLAGS
 			w=grind_buf_w__push_Sreg(w,GRIND_SEG_DS);				// PUSH DS
 			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
 			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
 
+			// DS = segment of asm_buf
 			w=grind_buf_w__mov_Reg16_const(w,GRIND_REG_AX,FP_SEG(asm_buf));		// MOV AX,const
 			w=grind_buf_w__mov_Seg_from_Reg(w,GRIND_SEG_DS,GRIND_REG_AX);		// MOV <seg>,<reg>
 
+			// set EFLAGS to known state
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__and_Reg_const(w,GRIND_REG_AX,~0xFD5);			// AND AX,<mask off CF(0),PF(2),AF(4),ZF(6),SF(7),TF(8),IF(9),DF(10),OF(11)>  1111 1101 0101
+			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+
+			// store state of EFLAGS now, store result in asm_buf+8
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+8,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// asm_buf+0 = i + j, store result in asm_buf+0
 			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);				// MOV (E)AX,const
 			w=grind_buf_w__mov_Add_const(w,GRIND_REG_AX,j);				// ADD (E)AX,const
-			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf),GRIND_REG_AX);	// MOV [offset],(E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+0,GRIND_REG_AX);	// MOV [offset],(E)AX
 
+			// store state of EFLAGS now, in asm_buf+12
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+12,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// set EFLAGS to known state
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__or_Reg_const(w,GRIND_REG_AX,0xAD5);			// OR AX,<set CF(0),PF(2),AF(4),ZF(6),SF(7),IF(9),OF(11)>  1010 1101 0101
+			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+
+			// store state of EFLAGS now, store result in asm_buf+16
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+16,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// asm_buf+0 = i + j, store result in asm_buf+4
+			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);				// MOV (E)AX,const
+			w=grind_buf_w__mov_Add_const(w,GRIND_REG_AX,j);				// ADD (E)AX,const
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+4,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// store state of EFLAGS now, store result in asm_buf+20
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+20,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// restore FLAGS, EAX, DS, exit subroutine
 			w=grind_buf_w__pop_Flags(w);						// POPF(D)
 			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
 			w=grind_buf_w__pop_Sreg(w,GRIND_SEG_DS);				// POP DS
 			*w++ = GRIND_RET_INS;							// RET
 
+			// SANITY CHECK
+			if (w > (grind_buf + grind_buf_size)) {
+				printf("<--BUFFER OVERRUN\n");
+				grind_free();
+				return 1;
+			}
+
+			// EXECUTE IT
 			if (!grind_execute_buf()) {
 				printf("<--FAIL\n");
 				grind_free();
 				return 1;
 			}
 
-			if (*((grind_imm_t*)(asm_buf+0)) != ((grind_imm_t)(i+j))) {
-				printf("ADD result failed! %u + %u = %u ",i,j,i+j);
-				break;
+			// note what checked
+			{
+				grind_imm_t chf = *((grind_imm_t*)(asm_buf+8)) ^ *((grind_imm_t*)(asm_buf+16)); // what changed after init, before ADDs
+				grind_imm_t chf2 = *((grind_imm_t*)(asm_buf+12)) ^ *((grind_imm_t*)(asm_buf+20)); // what changed between ADDs
+
+				if (*((grind_imm_t*)(asm_buf+0)) != *((grind_imm_t*)(asm_buf+4))) {
+					printf("WARNING: Two ADD passes with different sums 0x%x != 0x%x\n",
+						*((grind_imm_t*)(asm_buf+0)),
+						*((grind_imm_t*)(asm_buf+4)));
+				}
+
+				printf("ADDw %3u + %-3u = %3u\n",i,j,(unsigned int)(*((grind_imm_t*)(asm_buf+0))));
+				printf("    zero/set flags that changed:      0x%08x\n",chf);
+				printf("    ...then after ADD:                0x%08x\n",chf2);
+				printf("    flag result:                      CF%u PF%u AF%u ZF%u SF%u TF%u IF%u DF%u OF%u\n",
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 0) & 1,	// CF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 2) & 1,	// PF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 4) & 1,	// AF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 6) & 1,	// ZF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 7) & 1,	// SF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 8) & 1,	// TF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 9) & 1,	// IF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 10) & 1,	// DF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 11) & 1);	// OF
 			}
 		}
 	}
-	printf("-- DONE\n");
 
 	grind_unlock_buf();
 	grind_free_buf();
