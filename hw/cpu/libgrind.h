@@ -15,12 +15,14 @@
 # define GRIND_CODE32
 typedef uint32_t		grind_off_t;
 typedef uint16_t		grind_seg_t;
+typedef uint32_t		grind_imm_t;
 #else
 # define GRIND_REGSIZE		16
 # define GRIND_CODE16
 # define GRIND_FAR
 typedef uint16_t		grind_off_t;
 typedef uint16_t		grind_seg_t;
+typedef uint16_t		grind_imm_t;
 #endif
 
 #ifdef GRIND_FAR
@@ -30,6 +32,8 @@ typedef unsigned char far*	grind_buf_ptr_t;
 typedef unsigned char*		grind_buf_ptr_t;
 # define GRIND_RET_INS		(0xC3) /* RET */
 #endif
+
+#define GRIND_INT3_INS		(0xCC) /* INT 3 */
 
 #if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS) /* For this to work in Windows 3.1, we need a code segment alias of our data segment */
 # define GRIND_NEED_CODE_ALIAS_SEL
