@@ -195,8 +195,8 @@ static inline grind_ADDw() {
 		return 1;
 	}
 
-	for (i=0;i < 256;i++) {
-		for (j=0;j < 256;j++) {
+	for (i=0;i < 24;i++) {
+		for (j=0;j < 24;j++) {
 			grind_buf_ptr_t w = grind_buf;
 
 			*((grind_imm_t*)(asm_buf+0)) = 0;					// ADD result
@@ -339,8 +339,8 @@ static inline grind_DIVw() {
 		return 1;
 	}
 
-	for (i=0;i < 256;i++) {
-		for (j=1;j < 256;j++) {
+	for (i=0;i < 16;i++) {
+		for (j=1;j < 16;j++) { // do NOT divide by zero
 			grind_buf_ptr_t w = grind_buf;
 
 			*((grind_imm_t*)(asm_buf+0)) = 0;					// DIV result
