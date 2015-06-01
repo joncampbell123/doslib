@@ -205,5 +205,21 @@ static inline grind_buf_ptr_t grind_buf_w__mov_memoff_from_reg(grind_buf_ptr_t w
 	return w;
 }
 
+// XOR reg,reg
+static inline grind_buf_ptr_t grind_buf_w__xor_Reg_Reg(grind_buf_ptr_t w,unsigned char reg1,unsigned char reg2) {
+	if (reg1 >= 8 || reg2 >= 8) return w;
+	*w++ = 0x31;
+	*w++ = (3 << 6) + (reg2 << 3) + reg1;	// mod=3 reg=reg2 r/m=reg1
+	return w;
+}
+
+// DIV reg
+static inline grind_buf_ptr_t grind_buf_w__div_Reg(grind_buf_ptr_t w,unsigned char reg) {
+	if (reg >= 8) return w;
+	*w++ = 0xF7;
+	*w++ = (3 << 6) + (6/*DIV*/ << 3) + reg;	// mod=3 reg=6 r/m=reg1
+	return w;
+}
+
 #endif /* __HW_CPU_LIBGRIND_H */
 

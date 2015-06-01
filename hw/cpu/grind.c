@@ -323,6 +323,167 @@ static inline grind_ADDw() {
 	return 0;
 }
 
+static inline grind_DIVw() {
+	unsigned int i,j;
+
+	if (!grind_init()) {
+		grind_free();
+		return 1;
+	}
+	if (!grind_alloc_buf()) {
+		grind_free();
+		return 1;
+	}
+	if (!grind_lock_buf()) {
+		grind_free();
+		return 1;
+	}
+
+	for (i=0;i < 256;i++) {
+		for (j=1;j < 256;j++) {
+			grind_buf_ptr_t w = grind_buf;
+
+			*((grind_imm_t*)(asm_buf+0)) = 0;					// DIV result
+			*((grind_imm_t*)(asm_buf+4)) = 0;					// DIV result (2)
+			*((grind_imm_t*)(asm_buf+8)) = 0;					// FLAGS before (after init)
+			*((grind_imm_t*)(asm_buf+12)) = 0;					// FLAGS after
+			*((grind_imm_t*)(asm_buf+16)) = 0;					// FLAGS before (after init)
+			*((grind_imm_t*)(asm_buf+20)) = 0;					// FLAGS after
+			*((grind_imm_t*)(asm_buf+24)) = 0;					// DIV remainder
+			*((grind_imm_t*)(asm_buf+28)) = 0;					// DIV remainder (2)
+
+//			*w++ = GRIND_INT3_INS;							// INT3
+
+			// save DS, EAX, FLAGS
+			w=grind_buf_w__push_Sreg(w,GRIND_SEG_DS);				// PUSH DS
+			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
+			w=grind_buf_w__push_Reg(w,GRIND_REG_BX);				// PUSH (E)BX
+			w=grind_buf_w__push_Reg(w,GRIND_REG_DX);				// PUSH (E)DX
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+
+			// DS = segment of asm_buf
+			w=grind_buf_w__mov_Reg16_const(w,GRIND_REG_AX,FP_SEG(asm_buf));		// MOV AX,const
+			w=grind_buf_w__mov_Seg_from_Reg(w,GRIND_SEG_DS,GRIND_REG_AX);		// MOV <seg>,<reg>
+
+			// set EFLAGS to known state
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__and_Reg_const(w,GRIND_REG_AX,~0xAD5);			// AND AX,<mask off CF(0),PF(2),AF(4),ZF(6),SF(7),IF(9),OF(11)>  1010 1101 0101
+			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+
+			// store state of EFLAGS now, store result in asm_buf+8
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+8,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// asm_buf+0 = i / j, store result in asm_buf+0
+			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);				// MOV (E)AX,const
+			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_BX,j);				// MOV (E)BX,const
+			w=grind_buf_w__xor_Reg_Reg(w,GRIND_REG_DX,GRIND_REG_DX);		// XOR (E)DX,(E)DX
+			w=grind_buf_w__div_Reg(w,GRIND_REG_BX);					// DIV (E)BX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+0,GRIND_REG_AX);	// MOV [offset],(E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+24,GRIND_REG_DX);	// MOV [offset],(E)DX
+
+			// store state of EFLAGS now, in asm_buf+12
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+12,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// set EFLAGS to known state
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__or_Reg_const(w,GRIND_REG_AX,0xAD5);			// OR AX,<set CF(0),PF(2),AF(4),ZF(6),SF(7),IF(9),OF(11)>  1010 1101 0101
+			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+
+			// store state of EFLAGS now, store result in asm_buf+16
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+16,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// asm_buf+0 = i / j, store result in asm_buf+4
+			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);				// MOV (E)AX,const
+			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_BX,j);				// MOV (E)BX,const
+			w=grind_buf_w__xor_Reg_Reg(w,GRIND_REG_DX,GRIND_REG_DX);		// XOR (E)DX,(E)DX
+			w=grind_buf_w__div_Reg(w,GRIND_REG_BX);					// DIV (E)BX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+4,GRIND_REG_AX);	// MOV [offset],(E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+28,GRIND_REG_DX);	// MOV [offset],(E)DX
+
+			// store state of EFLAGS now, store result in asm_buf+20
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+20,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// restore FLAGS, EAX, DS, exit subroutine
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_DX);					// POP (E)DX
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_BX);					// POP (E)BX
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__pop_Sreg(w,GRIND_SEG_DS);				// POP DS
+			*w++ = GRIND_RET_INS;							// RET
+
+			// SANITY CHECK
+			if (w > (grind_buf + grind_buf_size)) {
+				printf("<--BUFFER OVERRUN\n");
+				grind_free();
+				return 1;
+			}
+
+			// EXECUTE IT
+			if (!grind_execute_buf()) {
+				printf("<--FAIL\n");
+				grind_free();
+				return 1;
+			}
+
+			// note what checked
+			{
+				// what changed after init, before DIVs
+				grind_imm_t chf = *((grind_imm_t*)(asm_buf+8)) ^ *((grind_imm_t*)(asm_buf+16));
+				// what changed between DIVs. IF(9) is supposed to change, therefore the ^0x200. ideally chf2 == 0 unless emulation problems.
+				grind_imm_t chf2 = *((grind_imm_t*)(asm_buf+12)) ^ *((grind_imm_t*)(asm_buf+20)) ^ 0x200;
+
+				if (*((grind_imm_t*)(asm_buf+0)) != *((grind_imm_t*)(asm_buf+4))) {
+					printf("WARNING: Two DIV passes with different results 0x%x != 0x%x\n",
+						*((grind_imm_t*)(asm_buf+0)),
+						*((grind_imm_t*)(asm_buf+4)));
+				}
+				if (*((grind_imm_t*)(asm_buf+24)) != *((grind_imm_t*)(asm_buf+28))) {
+					printf("WARNING: Two DIV passes with different remainders 0x%x != 0x%x\n",
+						*((grind_imm_t*)(asm_buf+24)),
+						*((grind_imm_t*)(asm_buf+28)));
+				}
+
+				// NTS: We want to know if EFLAGS differed after both DIV instructions to detect problems.
+				//      Executing the DIV instruction twice should show same results and same changes to the flags.
+				printf("DIVw %3u / %-3u = %3u remainder %u\n",i,j,(unsigned int)(*((grind_imm_t*)(asm_buf+0))),(unsigned int)(*((grind_imm_t*)(asm_buf+24))));
+				printf("    zero/set flags that changed:      0x%08x (wanted=0xAD5)\n",chf); // what flags we were able to change vs what we changed
+				printf("    ...then after DIV:                0x%08x (^0x200 expect IF change)\n",chf2); // what differed between the two DIV instructions.
+				printf("    flag result:                      CF%u PF%u AF%u ZF%u SF%u TF%u IF%u DF%u OF%u\n",
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 0) & 1,	// CF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 2) & 1,	// PF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 4) & 1,	// AF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 6) & 1,	// ZF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 7) & 1,	// SF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 8) & 1,	// TF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 9) & 1,	// IF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 10) & 1,	// DF
+					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 11) & 1);	// OF
+			}
+		}
+	}
+
+	grind_unlock_buf();
+	grind_free_buf();
+	grind_free();
+	return 0;
+}
+
 int main() {
 	cpu_probe();
 	if (!grind_init()) {
@@ -335,6 +496,8 @@ int main() {
 	if (grind_selftest_bufwrite()) return 1;
 	pause_if_tty();
 	if (grind_selftest_nullret()) return 1;
+	pause_if_tty();
+	if (grind_DIVw()) return 1;
 	pause_if_tty();
 	if (grind_ADDw()) return 1;
 	pause_if_tty();
