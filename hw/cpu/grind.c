@@ -220,7 +220,7 @@ static inline grind_ADDw() {
 			// set EFLAGS to known state
 			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
 			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
-			w=grind_buf_w__and_Reg_const(w,GRIND_REG_AX,~0xFD5);			// AND AX,<mask off CF(0),PF(2),AF(4),ZF(6),SF(7),TF(8),IF(9),DF(10),OF(11)>  1111 1101 0101
+			w=grind_buf_w__and_Reg_const(w,GRIND_REG_AX,~0xAD5);			// AND AX,<mask off CF(0),PF(2),AF(4),ZF(6),SF(7),IF(9),OF(11)>  1010 1101 0101
 			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
 			w=grind_buf_w__pop_Flags(w);						// POPF(D)
 			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
@@ -296,9 +296,11 @@ static inline grind_ADDw() {
 						*((grind_imm_t*)(asm_buf+4)));
 				}
 
+				// NTS: We want to know if EFLAGS differed after both ADD instructions to detect problems.
+				//      Executing the ADD instruction twice should show same results and same changes to the flags.
 				printf("ADDw %3u + %-3u = %3u\n",i,j,(unsigned int)(*((grind_imm_t*)(asm_buf+0))));
-				printf("    zero/set flags that changed:      0x%08x\n",chf);
-				printf("    ...then after ADD:                0x%08x\n",chf2);
+				printf("    zero/set flags that changed:      0x%08x (wanted=0xAD5)\n",chf); // what flags we were able to change vs what we changed
+				printf("    ...then after ADD:                0x%08x\n",chf2); // what differed between the two ADD instructions.
 				printf("    flag result:                      CF%u PF%u AF%u ZF%u SF%u TF%u IF%u DF%u OF%u\n",
 					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 0) & 1,	// CF
 					(((unsigned int)(*((grind_imm_t*)(asm_buf+12)))) >> 2) & 1,	// PF
