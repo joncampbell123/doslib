@@ -385,9 +385,11 @@ static inline grind_DIVw() {
 			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+8,GRIND_REG_AX);	// MOV [offset],(E)AX
 
 			// asm_buf+0 = i / j, store result in asm_buf+0
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
 			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);				// MOV (E)AX,const
 			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_BX,j);				// MOV (E)BX,const
 			w=grind_buf_w__xor_Reg_Reg(w,GRIND_REG_DX,GRIND_REG_DX);		// XOR (E)DX,(E)DX
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
 			w=grind_buf_w__div_Reg(w,GRIND_REG_BX);					// DIV (E)BX
 			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+0,GRIND_REG_AX);	// MOV [offset],(E)AX
 			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+24,GRIND_REG_DX);	// MOV [offset],(E)DX
@@ -412,9 +414,11 @@ static inline grind_DIVw() {
 			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+16,GRIND_REG_AX);	// MOV [offset],(E)AX
 
 			// asm_buf+0 = i / j, store result in asm_buf+4
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
 			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);				// MOV (E)AX,const
 			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_BX,j);				// MOV (E)BX,const
 			w=grind_buf_w__xor_Reg_Reg(w,GRIND_REG_DX,GRIND_REG_DX);		// XOR (E)DX,(E)DX
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
 			w=grind_buf_w__div_Reg(w,GRIND_REG_BX);					// DIV (E)BX
 			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+4,GRIND_REG_AX);	// MOV [offset],(E)AX
 			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+28,GRIND_REG_DX);	// MOV [offset],(E)DX
