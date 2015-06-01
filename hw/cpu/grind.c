@@ -134,6 +134,23 @@ static inline grind_buf_ptr_t grind_buf_w__pop_Sreg(grind_buf_ptr_t w,unsigned c
 	return w;
 }
 
+// MOV [offset],reg
+static inline grind_buf_ptr_t grind_buf_w__mov_memoff_from_reg(grind_buf_ptr_t w,grind_off_t o,unsigned char reg) {
+	if (reg == GRIND_REG_AX) {
+		*w++ = 0xA3;				// MOV [offset],(E)AX
+	}
+	else {
+		*w++ = 0x89;				// MOV [offset],(E)reg
+#ifdef GRIND_CODE32
+		*w++ = (0 << 6) + (reg << 3) + (5);	// mod=0 reg=reg r/m=5 32-bit encoding
+#else
+		*w++ = (0 << 6) + (reg << 3) + (6);	// mod=0 reg=reg r/m=6 16-bit encoding
+#endif
+	}
+	*((grind_off_t*)w) = o; w += sizeof(grind_off_t);
+	return w;
+}
+
 
 
 
@@ -321,30 +338,34 @@ int main() {
 		for (j=0;j < 256;j++) {
 			grind_buf_ptr_t w = grind_buf;
 
-			*w++ = GRIND_INT3_INS;						// INT3
-#ifdef GRIND_FAR
-			w=grind_buf_w__push_Sreg(w,GRIND_SEG_DS);			// PUSH DS
-#endif
-			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);			// PUSH (E)AX
-			w=grind_buf_w__push_Flags(w);					// PUSHF(D)
+			*((grind_imm_t*)(asm_buf+0)) = 0;
 
-			w=grind_buf_w__mov_Reg16_const(w,GRIND_REG_AX,FP_SEG(asm_buf));	// MOV AX,const
-			w=grind_buf_w__mov_Seg_from_Reg(w,GRIND_SEG_DS,GRIND_REG_AX);	// MOV <seg>,<reg>
+			*w++ = GRIND_INT3_INS;							// INT3
+			w=grind_buf_w__push_Sreg(w,GRIND_SEG_DS);				// PUSH DS
+			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
 
-			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);			// MOV (E)AX,const
-			w=grind_buf_w__mov_Add_const(w,GRIND_REG_AX,j);			// ADD (E)AX,const
+			w=grind_buf_w__mov_Reg16_const(w,GRIND_REG_AX,FP_SEG(asm_buf));		// MOV AX,const
+			w=grind_buf_w__mov_Seg_from_Reg(w,GRIND_SEG_DS,GRIND_REG_AX);		// MOV <seg>,<reg>
 
-			w=grind_buf_w__pop_Flags(w);					// POPF(D)
-			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);				// POP (E)AX
-#ifdef GRIND_FAR
-			w=grind_buf_w__pop_Sreg(w,GRIND_SEG_DS);			// POP DS
-#endif
-			*w++ = GRIND_RET_INS;						// RET
+			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);				// MOV (E)AX,const
+			w=grind_buf_w__mov_Add_const(w,GRIND_REG_AX,j);				// ADD (E)AX,const
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf),GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__pop_Sreg(w,GRIND_SEG_DS);				// POP DS
+			*w++ = GRIND_RET_INS;							// RET
 
 			if (!grind_execute_buf()) {
 				printf("<--FAIL\n");
 				grind_free();
 				return 1;
+			}
+
+			if (*((grind_imm_t*)(asm_buf+0)) != ((grind_imm_t)(i+j))) {
+				printf("ADD result failed! %u + %u = %u ",i,j,i+j);
+				break;
 			}
 		}
 	}
