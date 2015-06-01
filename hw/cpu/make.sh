@@ -26,6 +26,9 @@ if [ "$1" == "disk" ]; then
 	make_msdos_data_disk test.dsk || exit 1
 	mcopy -i test.dsk dos386f/dos4gw.exe ::dos4gw.exe
 
+	mcopy -i test.dsk dos86l/grind.exe ::grind86.exe
+	mcopy -i test.dsk dos386f/grind.exe ::grin386.exe
+
 	mcopy -i test.dsk dos86l/test.exe ::test86l.exe
 	mcopy -i test.dsk dos386f/test.exe ::test386.exe
 

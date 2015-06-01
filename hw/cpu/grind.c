@@ -330,21 +330,8 @@ static int grind_selftest_nullret() {
 	return 0;
 }
 
-int main() {
+static inline grind_ADDw() {
 	unsigned int i,j;
-
-	cpu_probe();
-	if (!grind_init()) {
-		printf("Failed to init grind library\n");
-		return 1;
-	}
-
-	if (grind_selftest_buffer()) return 1;
-	pause_if_tty();
-	if (grind_selftest_bufwrite()) return 1;
-	pause_if_tty();
-	if (grind_selftest_nullret()) return 1;
-	pause_if_tty();
 
 	if (!grind_init()) {
 		grind_free();
@@ -480,6 +467,24 @@ int main() {
 	grind_unlock_buf();
 	grind_free_buf();
 	grind_free();
+	return 0;
+}
+
+int main() {
+	cpu_probe();
+	if (!grind_init()) {
+		printf("Failed to init grind library\n");
+		return 1;
+	}
+
+	if (grind_selftest_buffer()) return 1;
+	pause_if_tty();
+	if (grind_selftest_bufwrite()) return 1;
+	pause_if_tty();
+	if (grind_selftest_nullret()) return 1;
+	pause_if_tty();
+	if (grind_ADDw()) return 1;
+	pause_if_tty();
 	return 0;
 }
 
