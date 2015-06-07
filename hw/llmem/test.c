@@ -34,6 +34,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/llmem/llmem.h>
+#include <hw/cpu/cpuidext.h>
 
 static unsigned char temp1[256],temp2[256];
 

@@ -34,6 +34,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/llmem/llmem.h>
+#include <hw/cpu/cpuidext.h>
 
 unsigned char		llmem_probed = 0;
 unsigned char		llmem_meth_pse = 0;
