@@ -401,9 +401,6 @@ void far *dpmi_getexhandler(unsigned char n);
 int dpmi_setexhandler(unsigned char n,void far *x);
 #endif
 
-int gravis_sbos_detect();
-int gravis_ultramid_detect();
-
 #if TARGET_MSDOS == 32 && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
 /* TODO: This should be moved into the hw/DOS library */
 extern unsigned char		nmi_32_hooked;
