@@ -109,11 +109,8 @@ $(NTASTRM_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)ntastrm.
 !endif
 
 !ifdef DOSNTAST_VDD_BUILD
-$(DOSNTAST_VDD): $(HW_DOS_LIB) $(HW_CPU_LIB) $(NTVDMLIB_LIB) $(NTVDMVDD_LIB) $(SUBDIR)$(HPS)dosntast.obj $(WINDOWS_W32IMPHK_OBJ)
+$(DOSNTAST_VDD): $(HW_DOS_LIB) $(HW_CPU_LIB) $(NTVDMLIB_LIB) $(NTVDMVDD_LIB) $(SUBDIR)$(HPS)dosntast.obj
 	%write tmp.cmd option quiet system $(WLINK_DLL_SYSTEM) $(HW_CPU_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) $(NTVDMVDD_LIB_WLINK_LIBRARIES) $(NTVDMLIB_LIB_WLINK_LIBRARIES) library winmm.lib file $(SUBDIR)$(HPS)dosntast.obj
-! ifdef NEED_W32IMPHK_OBJ
-#	%write tmp.cmd file $(WINDOWS_W32IMPHK_OBJ)
-! endif
 	%write tmp.cmd option modname='DOSNTAST'
 ! ifeq TARGET_MSDOS 32
 	%write tmp.cmd option nostdcall
@@ -153,12 +150,9 @@ $(TESTDPMI_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testdpm
 !endif
 
 !ifdef TEST_EXE
-$(TEST_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(WINDOWS_W32IMPHK_OBJ)
+$(TEST_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)test.obj $(HW_DOS_LIB_WLINK_LIBRARIES)
 	%write tmp.cmd option map=$(SUBDIR)$(HPS)test.map
-! ifdef NEED_W32IMPHK_OBJ
-	%write tmp.cmd file $(WINDOWS_W32IMPHK_OBJ)
-! endif
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -178,12 +172,9 @@ $(TEST_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(
 !endif
 
 !ifdef CR3_EXE
-$(CR3_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)cr3.obj $(WINDOWS_W32IMPHK_OBJ)
+$(CR3_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)cr3.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)cr3.obj $(HW_DOS_LIB_WLINK_LIBRARIES)
 	%write tmp.cmd option map=$(SUBDIR)$(HPS)cr3.map
-! ifdef NEED_W32IMPHK_OBJ
-	%write tmp.cmd file $(WINDOWS_W32IMPHK_OBJ)
-! endif
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED

@@ -42,11 +42,8 @@ $(HELLDLL1_RES): helldll1.rc
 	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)HELLDLL1.RES  $[@
 !endif
 
-$(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES) $(WINDOWS_W32IMPHK_OBJ)
+$(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)hello.obj
-!ifdef NEED_W32IMPHK_OBJ
-	%write tmp.cmd file $(WINDOWS_W32IMPHK_OBJ)
-!endif
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -64,12 +61,9 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES) $(WINDOWS_W32IMPHK_OBJ)
 !endif
 
 !ifdef HELLDLL1_EXE
-$(HELLDLL1_EXE): $(SUBDIR)$(HPS)helldll1.obj $(HELLDLL1_RES) $(WINDOWS_W32IMPHK_OBJ)
+$(HELLDLL1_EXE): $(SUBDIR)$(HPS)helldll1.obj $(HELLDLL1_RES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)helldll1.obj
 	%write tmp.cmd library $(SUBDIR)$(HPS)HELLDLD1.LIB
-! ifdef NEED_W32IMPHK_OBJ
-	%write tmp.cmd file $(WINDOWS_W32IMPHK_OBJ)
-! endif
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -84,11 +78,8 @@ $(HELLDLL1_EXE): $(SUBDIR)$(HPS)helldll1.obj $(HELLDLL1_RES) $(WINDOWS_W32IMPHK_
 !endif
 
 !ifdef HELLDLD1_DLL
-$(HELLDLD1_DLL) $(HELLDLD1_LIB): $(SUBDIR)$(HPS)helldld1.obj $(WINDOWS_W32IMPHK_OBJ)
+$(HELLDLD1_DLL) $(HELLDLD1_LIB): $(SUBDIR)$(HPS)helldld1.obj
 	%write tmp.cmd option quiet system $(WLINK_DLL_SYSTEM) file $(SUBDIR)$(HPS)helldld1.obj
-! ifdef NEED_W32IMPHK_OBJ
-	%write tmp.cmd file $(WINDOWS_W32IMPHK_OBJ)
-! endif
 ! ifndef WIN386
 	%write tmp.cmd option modname='HELLDLD1'
 ! endif

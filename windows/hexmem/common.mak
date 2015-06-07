@@ -27,11 +27,8 @@ exe: $(HEXMEM_EXE) .symbolic
 $(HEXMEM_RES): hexmem.rc
 	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)hexmem.res  $[@
 
-$(HEXMEM_EXE): $(SUBDIR)$(HPS)hexmem.obj $(HEXMEM_RES) $(WINDOWS_W32IMPHK_OBJ) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
+$(HEXMEM_EXE): $(SUBDIR)$(HPS)hexmem.obj $(HEXMEM_RES) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(HW_DOS_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)hexmem.obj
-!ifdef NEED_W32IMPHK_OBJ
-	%write tmp.cmd file $(WINDOWS_W32IMPHK_OBJ)
-!endif
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
 	%write tmp.cmd EXPORT GoToDlgProc.2 PRIVATE RESIDENT

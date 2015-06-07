@@ -48,11 +48,8 @@ VDDC1D_DLL_THIS_BUILD=1
 !endif
 
 !ifdef VDDC1D_DLL_THIS_BUILD
-$(VDDC1D_DLL): $(HW_DOS_LIB) $(HW_CPU_LIB) $(WINDOWS_NTVDMLIB_LIB) $(WINDOWS_NTVDMVDD_LIB) $(WINDOWS_W32IMPHK_COMPAT_LIB) $(WINDOWS_W32IMPHK_COMPAT_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)vddc1d.obj
-	%write tmp.cmd option quiet system $(WLINK_DLL_SYSTEM) library $(WINDOWS_NTVDMVDD_LIB) library $(WINDOWS_NTVDMLIB_LIB) $(WINDOWS_W32IMPHK_WLINK) file $(SUBDIR)$(HPS)vddc1d.obj
-! ifdef NEED_W32IMPHK_OBJ
-#	%write tmp.cmd file $(WINDOWS_W32IMPHK_OBJ)
-! endif
+$(VDDC1D_DLL): $(HW_DOS_LIB) $(HW_CPU_LIB) $(WINDOWS_NTVDMLIB_LIB) $(WINDOWS_NTVDMVDD_LIB) $(SUBDIR)$(HPS)vddc1d.obj
+	%write tmp.cmd option quiet system $(WLINK_DLL_SYSTEM) library $(WINDOWS_NTVDMVDD_LIB) library $(WINDOWS_NTVDMLIB_LIB) file $(SUBDIR)$(HPS)vddc1d.obj
 	%write tmp.cmd option modname='VDDC1D'
 ! ifeq TARGET_MSDOS 32
 	%write tmp.cmd option nostdcall
@@ -78,11 +75,8 @@ $(VDDC1D_DLL): winnt$(HPS)vddc1d.dll
 	@$(COPY) winnt$(HPS)vddc1d.dll $(VDDC1D_DLL)
 !endif
 
-$(VDDC1_EXE): $(HW_DOS_LIB) $(HW_CPU_LIB) $(WINDOWS_NTVDMLIB_LIB) $(SUBDIR)$(HPS)vddc1.obj $(WINDOWS_W32IMPHK_OBJ) $(WINDOWS_W32IMPHK_OBJ)
+$(VDDC1_EXE): $(HW_DOS_LIB) $(HW_CPU_LIB) $(WINDOWS_NTVDMLIB_LIB) $(SUBDIR)$(HPS)vddc1.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) library $(HW_DOS_LIB) library $(HW_CPU_LIB) library $(WINDOWS_NTVDMLIB_LIB) file $(SUBDIR)$(HPS)vddc1.obj
-!ifdef NEED_W32IMPHK_OBJ
-	%write tmp.cmd file $(WINDOWS_W32IMPHK_OBJ)
-!endif
 !ifdef TARGET_WINDOWS
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED

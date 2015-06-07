@@ -177,16 +177,6 @@ $(HW_FLATREAL_LIB):
 	@cd $(HERE)
 !endif
 
-# WINDOWS\W32IMPHK--------------------------------------------------------------------------
-!ifneq NOW_BUILDING WINDOWS_W32IMPHK
-! ifdef WINDOWS_W32IMPHK_OBJ
-$(WINDOWS_W32IMPHK_OBJ):
-	@cd $(WINDOWS_W32IMPHK_DIR)
-	@$(MAKECMD) build lib
-	@cd $(HERE)
-! endif
-!endif
-
 # WINDOWS\NTVDM-----------------------------------------------------------------------------
 !ifneq NOW_BUILDING WINDOWS_NTVDM
 ! ifdef WINDOWS_NTVDMLIB_LIB

@@ -118,9 +118,6 @@ WIN_NE_SETVER_BUILD = ../../tool/chgnever.pl 3.1
 # needed to rename ,exe back to .rex if the "EXE" was actually a .rex file
 WIN386_EXE_TO_REX_IF_REX = ../../tool/win386-exe-to-rex-if-rex.pl
 
-# the program is encouraged to use the win32s import hack
-#NEED_W32IMPHK_OBJ = 1
-
 !include "$(REL)$(HPS)mak$(HPS)bcommon.mak"
 !include "common.mak"
 !include "$(REL)$(HPS)mak$(HPS)dcommon.mak"

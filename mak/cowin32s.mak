@@ -111,9 +111,6 @@ CFLAGS386_TO_686_DLL = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx
 AFLAGS_DLL = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -wx -fp$(CPULEV3F) -$(CPULEV3) -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bd
 NASMFLAGS_DLL = -DTARGET_MSDOS=32 -DMSDOS=1 -DTARGET86=$(TARGET86) -DTARGET_WINDOWS=$(TARGET_WINDOWS) -DMMODE=$(MMODE)
 
-# the program is encouraged to use the win32s import hack
-#NEED_W32IMPHK_OBJ = 1
-
 !include "$(REL)$(HPS)mak$(HPS)bcommon.mak"
 !include "common.mak"
 !include "$(REL)$(HPS)mak$(HPS)dcommon.mak"

@@ -48,14 +48,14 @@ HW_VGAGUI_LIB_WLINK_LIBRARIES=library $(HW_VGAGUI_LIB) $(HW_VGA_LIB_WLINK_LIBRAR
 # HW\CPU------------------------------------------------------------------------------------
 HW_CPU_LIB=$(HW_CPU_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)cpu.lib
 HW_CPU_LIB_DIR=$(REL)$(HPS)hw$(HPS)cpu
-HW_CPU_LIB_DEPENDENCIES=$(WINDOWS_NTVDMLIB_LIB) $(HW_DOS_LIB) $(WINDOWS_W32IMPHK_OBJ)
-HW_CPU_LIB_WLINK_LIBRARIES=$(WINDOWS_NTVDMLIB_LIB_WLINK_LIBRARIES) library $(HW_DOS_LIB) library $(HW_CPU_LIB) $(WINDOWS_W32IMPHK_WLINK)
+HW_CPU_LIB_DEPENDENCIES=$(WINDOWS_NTVDMLIB_LIB) $(HW_DOS_LIB)
+HW_CPU_LIB_WLINK_LIBRARIES=$(WINDOWS_NTVDMLIB_LIB_WLINK_LIBRARIES) library $(HW_DOS_LIB) library $(HW_CPU_LIB)
 
 # HW\DOS------------------------------------------------------------------------------------
 HW_DOS_LIB=$(HW_DOS_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)dos.lib
 HW_DOS_LIB_DIR=$(REL)$(HPS)hw$(HPS)dos
-HW_DOS_LIB_DEPENDENCIES=$(WINDOWS_NTVDMLIB_LIB) $(HW_CPU_LIB) $(WINDOWS_W32IMPHK_OBJ)
-HW_DOS_LIB_WLINK_LIBRARIES=$(WINDOWS_NTVDMLIB_LIB_WLINK_LIBRARIES) library $(HW_DOS_LIB) library $(HW_CPU_LIB) $(WINDOWS_W32IMPHK_WLINK)
+HW_DOS_LIB_DEPENDENCIES=$(WINDOWS_NTVDMLIB_LIB) $(HW_CPU_LIB)
+HW_DOS_LIB_WLINK_LIBRARIES=$(WINDOWS_NTVDMLIB_LIB_WLINK_LIBRARIES) library $(HW_DOS_LIB) library $(HW_CPU_LIB)
 
 # HW\LLMEM----------------------------------------------------------------------------------
 HW_LLMEM_LIB_DIR=$(REL)$(HPS)hw$(HPS)llmem
@@ -233,9 +233,6 @@ WINDOWS_NTVDMVDD_LIB_WLINK_LIBRARIES=library $(HW_DOS_LIB) library $(HW_CPU_LIB)
 !  endif
 ! endif
 !endif
-
-# WINDOWS\W32IMPHK--------------------------------------------------------------------------
-# ---REMOVED---
 
 # WINDOWS\W9XVMM----------------------------------------------------------------------------
 WINDOWS_W9XVMM_LIB_DIR=$(REL)$(HPS)windows$(HPS)w9xvmm
