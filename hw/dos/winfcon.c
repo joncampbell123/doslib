@@ -143,7 +143,7 @@ void _win_sigint_post(struct _win_console_ctx FAR *ctx) {
 	ctx->pendingSigInt = 1;
 }
 
-#if (TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && defined(WIN386))) && TARGET_WINDOWS < 31
+#if ((TARGET_MSDOS == 16 && TARGET_WINDOWS < 31) || (TARGET_MSDOS == 32 && defined(WIN386)))
 FARPROC _win_WindowProc_MPI;
 #endif
 /* NTS: Win16 only: DS (data segment) is NOT necessarily the data segment of the instance
@@ -613,7 +613,7 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 	/* we want each instance to have it's own WNDCLASS, even though Windows (Win16) considers them all instances
 	 * coming from the same HMODULE. In Win32, there is no such thing as a "previous instance" anyway */
 	wnd.style = CS_HREDRAW|CS_VREDRAW;
-#if (TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && defined(WIN386))) && TARGET_WINDOWS < 31
+#if ((TARGET_MSDOS == 16 && TARGET_WINDOWS < 31) || (TARGET_MSDOS == 32 && defined(WIN386)))
 	wnd.lpfnWndProc = (WNDPROC)_win_WindowProc_MPI;
 #else
 	wnd.lpfnWndProc = _win_WindowProc;
