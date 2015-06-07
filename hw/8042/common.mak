@@ -4,11 +4,11 @@ NOW_BUILDING = HW_8042_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    8042.c
-OBJS =        $(SUBDIR)$(HPS)8042.obj
+OBJS =        $(SUBDIR)$(HPS)8042.obj $(SUBDIR)$(HPS)8042aux.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 
 $(HW_8042_LIB): $(OBJS)
-	wlib -q -b -c $(HW_8042_LIB) -+$(SUBDIR)$(HPS)8042.obj
+	wlib -q -b -c $(HW_8042_LIB) -+$(SUBDIR)$(HPS)8042.obj -+$(SUBDIR)$(HPS)8042aux.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit

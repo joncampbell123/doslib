@@ -1,6 +1,13 @@
 @echo off
 
 deltree /Y 
+del /s /q winnt\*.*
+del *.obj
+del *.exe
+del *.lib
+del *.com
+del foo.gz
+deltree /Y 
 del /s /q dos86c\*.*
 deltree /Y 
 del /s /q dos86l\*.*
