@@ -7,11 +7,6 @@ set DOS4G=quiet
 if "%1" == "clean" call clean.bat
 if "%1" == "clean" goto end
 
-mkdir winnt
-wmake -f ..\..\mak\winnt.mak HPS=\ lib REL=..\.. 
-
-
-:end
 mkdir dos86c
 wmake -f ..\..\mak\dos86c.mak HPS=\ all REL=..\.. 
 
