@@ -288,36 +288,6 @@ no_cpuid:
 	retnative
 
 %if TARGET_MSDOS == 16
-global reset_8086_entry_
-reset_8086_entry_:
-	cli
-	jmp		0xFFFF:0x0000
-%endif
-
-%if TARGET_MSDOS == 16
-global bios_reset_cb_e_
-bios_reset_cb_e_:
-	cli
-; DEBUG: Prove our routine is executing properly by drawing on VGA RAM
-	mov		ax,0xB800
-	mov		ds,ax
-	mov		word [0],0x1E30
-; now load state from 0x50:0x04 where the setup put it
-	mov		ax,0x50
-	mov		ds,ax
-	mov		ax,[0x08]
-	mov		sp,ax
-	mov		ax,[0x0A]
-	mov		ss,ax
-	mov		bx,[0x0C]
-	push		word [ds:0x06]
-	push		word [ds:0x04]
-	mov		ds,bx
-	mov		es,bx
-	retf
-%endif
-
-%if TARGET_MSDOS == 16
 ; incoming Watcom convention:
 ; DX:AX = CPUID register
 ; BX = (near) pointer to struct OR
