@@ -20,6 +20,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/cpu/cpup3sn.h>
 #include <hw/cpu/cpuidext.h>
+#include <hw/dos/doswin.h>
 
 #ifdef TARGET_WINDOWS
 # define WINFCON_STOCK_WIN_MAIN

@@ -12,6 +12,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/flatreal/flatreal.h>
+#include <hw/dos/doswin.h>
 
 #include <hw/cpu/apiclib.h>
 
