@@ -229,6 +229,7 @@
 #endif
 
 #include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 #include <windows/apihelp.h>
 
 /* display "modes", i.e. what we are displaying */

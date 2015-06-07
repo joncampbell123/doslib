@@ -14,6 +14,7 @@
 #include <hw/ide/idelib.h>
 #include <hw/pci/pci.h>
 #include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 
 struct ide_controller		ide_controller[MAX_IDE_CONTROLLER];
 int8_t				idelib_init = -1;

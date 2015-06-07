@@ -40,6 +40,7 @@
 #include <hw/vga/vga.h>
 #include <hw/vesa/vesa.h>
 #include <hw/flatreal/flatreal.h>
+#include <hw/dos/doswin.h>
 
 static int sstep = 0; /* single step */
 

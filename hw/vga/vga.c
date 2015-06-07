@@ -13,6 +13,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
+#include <hw/dos/doswin.h>
 
 #ifdef TARGET_WINDOWS
 # include <hw/dos/winfcon.h>

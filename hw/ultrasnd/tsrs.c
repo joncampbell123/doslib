@@ -5,6 +5,9 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/dos/tgusmega.h>
+#include <hw/dos/tgussbos.h>
+#include <hw/dos/tgusumid.h>
 
 /* this program demonstrates how to detect Gravis Ultrasound TSR programs */
 int main() {

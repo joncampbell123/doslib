@@ -19,6 +19,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 #include <hw/cpu/cpusse.h>
 
 /* DEBUG: Flush out calls that aren't there */

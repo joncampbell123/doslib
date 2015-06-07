@@ -121,6 +121,7 @@
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
 #include <hw/8250/8250.h>
+#include <hw/dos/doswin.h>
 
 #if defined(ISAPNP)
 #include <hw/8250/8250pnp.h>

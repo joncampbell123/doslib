@@ -14,6 +14,7 @@
 #include <hw/8259/8259.h>
 #include <hw/smbios/smbios.h>
 #include <hw/flatreal/flatreal.h>
+#include <hw/dos/doswin.h>
 
 uint8_t				smbios_access=0;
 #if TARGET_MSDOS == 32

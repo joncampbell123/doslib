@@ -30,6 +30,7 @@
 #include <hw/llmem/llmem.h>
 #include <hw/vga/vga.h>
 #include <hw/vga/vgatty.h>
+#include <hw/dos/doswin.h>
 
 #if TARGET_MSDOS == 16
 static unsigned long segoff2phys(void far *p) {

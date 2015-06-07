@@ -29,6 +29,7 @@
 #include "resource.h"
 
 #include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 #include <windows/apihelp.h>
 #include <windows/dispdib/dispdib.h>
 #include <windows/win16eb/win16eb.h>

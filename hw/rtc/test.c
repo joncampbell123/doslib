@@ -15,6 +15,9 @@
 #include <hw/dos/dos.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
 #include <hw/8259/8259.h>		/* 8259 PIC */
+#include <hw/dos/doswin.h>
+#include <hw/vga/vgagui.h>
+#include <hw/vga/vgatty.h>
 
 static const char *months[12] = {
 	"January",

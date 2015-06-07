@@ -29,6 +29,7 @@
 #include <hw/apm/apm.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
 #include <hw/8259/8259.h>		/* 8259 PIC */
+#include <hw/dos/doswin.h>
 
 static void help() {
 	fprintf(stderr,"test [options] [action]\n");

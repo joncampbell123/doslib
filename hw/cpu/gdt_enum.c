@@ -32,6 +32,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 #include <hw/cpu/gdt_enum.h>
 
 unsigned char				cpu_gdtlib_can_read = 0,cpu_gdtlib_can_write = 0,cpu_gdtlib_result = 0xFF;

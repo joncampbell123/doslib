@@ -315,6 +315,10 @@
 #include <hw/sndsb/sndsb.h>
 #include <hw/vga/vgagui.h>
 #include <hw/vga/vgatty.h>
+#include <hw/dos/doswin.h>
+#include <hw/dos/tgusmega.h>
+#include <hw/dos/tgussbos.h>
+#include <hw/dos/tgusumid.h>
 
 #if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
   /* chop features out of the Compact memory model build to ensure all code fits inside 64KB */

@@ -37,6 +37,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/dos/dosbox.h>
+#include <hw/dos/doswin.h>
 #include <windows/w9xvmm/vxd_enum.h>
 
 #if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS)

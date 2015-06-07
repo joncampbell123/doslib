@@ -12,6 +12,7 @@
 #include <hw/dos/dos.h>
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
+#include <hw/dos/doswin.h>
 #include <hw/parport/parport.h>
 
 #if defined(ISAPNP)

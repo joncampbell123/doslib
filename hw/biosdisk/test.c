@@ -26,6 +26,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 #include <hw/biosdisk/biosdisk.h>
 
 static char enable_extended = 1;

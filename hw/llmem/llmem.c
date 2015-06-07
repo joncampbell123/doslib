@@ -35,6 +35,7 @@
 #include <hw/dos/dos.h>
 #include <hw/llmem/llmem.h>
 #include <hw/cpu/cpuidext.h>
+#include <hw/dos/doswin.h>
 
 unsigned char		llmem_probed = 0;
 unsigned char		llmem_meth_pse = 0;

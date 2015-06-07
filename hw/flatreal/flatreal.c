@@ -11,6 +11,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/dos/emm.h>
+#include <hw/dos/doswin.h>
 #include <hw/flatreal/flatreal.h>
 
 #if TARGET_MSDOS == 16

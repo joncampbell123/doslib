@@ -35,6 +35,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/8250/8250.h>
+#include <hw/dos/doswin.h>
 
 const char *type_8250_strs[TYPE_8250_MAX] = {
 	"8250",

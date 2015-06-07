@@ -20,6 +20,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 #include <hw/cpu/cpurdtsc.h>
 #ifndef TARGET_WINDOWS
 # include <hw/8254/8254.h>

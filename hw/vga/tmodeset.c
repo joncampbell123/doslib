@@ -14,6 +14,7 @@
 #include <hw/vga/vga.h>
 #include <hw/vga/vgatty.h>
 #include <hw/8254/8254.h>
+#include <hw/dos/doswin.h>
 
 #if defined(TARGET_WINDOWS)
 # error WRONG

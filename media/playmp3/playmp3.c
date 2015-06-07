@@ -22,6 +22,7 @@
 
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
+#include <hw/dos/doswin.h>
 
 #if TARGET_MSDOS == 16
 # error Sorry, this code does not compile 16-bit

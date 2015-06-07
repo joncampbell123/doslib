@@ -61,6 +61,9 @@
 #include <hw/8254/8254.h>		/* 8254 timer */
 #include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
+#include <hw/dos/doswin.h>
+#include <hw/dos/tgusmega.h>
+#include <hw/dos/tgussbos.h>
 
 /* Windows 9x VxD enumeration */
 #include <windows/w9xvmm/vxd_enum.h>

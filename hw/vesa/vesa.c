@@ -155,6 +155,7 @@
 #include <hw/dos/dos.h>
 #include <hw/vesa/vesa.h>
 #include <hw/flatreal/flatreal.h>
+#include <hw/dos/doswin.h>
 
 #if TARGET_MSDOS == 32
 void vbe_realbnk(struct dpmi_realmode_call *rc) {

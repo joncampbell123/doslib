@@ -9,6 +9,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 #include <hw/parport/parport.h>
 
 const char *parport_type_str[PARPORT_MAX] = {

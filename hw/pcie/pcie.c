@@ -32,6 +32,7 @@
 #include <hw/acpi/acpi.h>	/* on x86 systems you need the ACPI BIOS to locate PCI Express MMIO space */
 #include <hw/pcie/pcie.h>
 #include <hw/cpu/cpu.h>
+#include <hw/dos/doswin.h>
 
 unsigned char			pcie_cfg_probed = 0;
 unsigned char			pcie_cfg = PCIE_CFG_NONE;

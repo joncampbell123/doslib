@@ -34,6 +34,7 @@
 #include <hw/vga/vga.h>
 #include <hw/vga/vgagui.h>
 #include <hw/vga/vgatty.h>
+#include <hw/dos/doswin.h>
 
 static char str_tmp[256];
 
