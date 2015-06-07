@@ -288,36 +288,6 @@ no_cpuid:
 	retnative
 
 %if TARGET_MSDOS == 16
-; WARNING: Do not execute this instruction when you are a Windows application.
-;          The Windows VM doesn't take it well.
-; uint64_t __cdecl cpu_rdmsr(uint32_t val):
-; read MSR and return.
-; places 64-bit value in AX:BX:CX:DX according to Watcom register calling convention
-global cpu_rdmsr_
-cpu_rdmsr_:
-	pushf
-	cli
-
-	; assemble EAX = DX:AX 32-bit value given to us
-	shl	edx,16
-	mov	dx,ax
-	mov	ecx,edx
-
-	; doit
-	rdmsr
-
-	; reshuffle to return as 64-bit value in AX:BX:CX:DX
-	xchg eax,edx
-	mov ecx,edx
-	mov ebx,eax
-	shr eax,16
-	shr ecx,16
-
-	popf
-	retnative
-%endif
-
-%if TARGET_MSDOS == 16
  %ifndef TARGET_WINDOWS
 ; unsigned int _cdecl cpu_dpmi_win9x_sse_test();
 ; NOTE: The caller should have first checked dpmi_present, and that dpmi_pm_entry, and dpmi_rm_entry
