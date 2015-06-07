@@ -68,3 +68,45 @@ ok:
 
 #endif
 
+#if !defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
+
+/* NTS: This only allows for exception interrupts 0x00-0x1F */
+void far *dpmi_getexhandler(unsigned char n) {
+	unsigned short s=0;
+	unsigned int o=0;
+
+	__asm {
+		mov	ax,0x202
+		mov	bl,n
+		xor	cx,cx
+		xor	dx,dx
+		int	31h
+		mov	s,cx
+		mov	o,edx
+	}
+
+	return MK_FP(s,o);
+}
+
+/* NTS: This only allows for exception interrupts 0x00-0x1F */
+int dpmi_setexhandler(unsigned char n,void far *x) {
+	unsigned short s=FP_SEG(x);
+	unsigned int o=FP_OFF(x);
+	int c=1;
+
+	__asm {
+		mov	ax,0x203
+		mov	bl,n
+		mov	cx,s
+		mov	edx,o
+		int	31h
+		jnc	ok
+		mov	c,0
+ok:
+	}
+
+	return c;
+}
+
+#endif
+
