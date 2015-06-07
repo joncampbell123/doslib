@@ -18,6 +18,7 @@
 #include <dos.h>
 
 #include <hw/cpu/cpu.h>
+#include <hw/cpu/cpup3sn.h>
 #include <hw/cpu/cpuidext.h>
 
 #ifdef TARGET_WINDOWS

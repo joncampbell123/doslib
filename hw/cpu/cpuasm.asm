@@ -35,8 +35,6 @@ extern _cpu_cpuid_max
 extern _cpu_cpuid_vendor
 ; struct cpu_cpuid_feature cpu_cpuid_features;
 extern _cpu_cpuid_features
-; struct cpu_serial_number cpu_serial;
-extern _cpu_serial
 ; NTS: Do NOT define variables here, Watcom or NASM is putting them in the wrong places (like at 0x000!)
 
 section .text class=CODE
@@ -312,90 +310,6 @@ _outpd:	push		bp
 	pop		bp
 	retnative
 %endif
-
-; cpu_disable_serial(): Disable the Processor Serial Number on Intel
-; Pentium III processors that have it.
-;
-; Note that you cannot re-enable the processor serial number from
-; software and it will not come back until a full reboot. This is by
-; design.
-;
-; Warning: This routine does not check for you whether the CPU supports
-;          it. If your CPU does not support this function the resulting
-;          fault is your responsibility.
-;
-; Warning: This code will likely cause a fault if run within virtual
-;          8086 mode.
-global cpu_disable_serial_
-cpu_disable_serial_:
-	push		eax
-	push		ecx
-	push		edx
-	mov		ecx,0x119
-	rdmsr
-	or		eax,0x200000
-	wrmsr
-	pop		edx
-	pop		ecx
-	pop		eax
-	retnative
-
-; cpu_ask_serial(): Read the Processor Serial Number on Intel Pentium III
-; processors.
-;
-; Warning: This does not check whether your CPU supports the feature. Checking
-; for PSN support is your responsibility, else the CPU will issue a fault and
-; crash your program. Note that if the serial number was disabled by software
-; this code will cause a fault as if the feature were never present.
-global cpu_ask_serial_
-cpu_ask_serial_:
-%if TARGET_MSDOS == 16
- %ifidni MMODE,l
-	push		ds
- %endif
- %ifidni MMODE,c
-	push		ds
- %endif
-%endif
-	push		eax
-	push		ebx
-	push		ecx
-	push		edx
-	
-%if TARGET_MSDOS == 16
- %ifidni MMODE,l
-	mov		ax,seg _cpu_serial
-	mov		ds,ax
- %endif
- %ifidni MMODE,c
-	mov		ax,seg _cpu_serial
-	mov		ds,ax
- %endif
-%endif
-
-	xor		ebx,ebx
-	mov		ecx,ebx
-	mov		edx,ebx
-	mov		eax,3
-	cpuid
-	mov		dword [_cpu_serial+0],edx
-	mov		dword [_cpu_serial+4],ecx
-	mov		dword [_cpu_serial+8],ebx
-	mov		dword [_cpu_serial+12],eax
-
-	pop		edx
-	pop		ecx
-	pop		ebx
-	pop		eax
-%if TARGET_MSDOS == 16
- %ifidni MMODE,l
-	pop		ds
- %endif
- %ifidni MMODE,c
-	pop		ds
- %endif
-%endif
-	retnative
 
 %if TARGET_MSDOS == 16
 global reset_8086_entry_

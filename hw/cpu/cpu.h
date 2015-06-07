@@ -99,10 +99,6 @@ struct cpu_cpuid_ext_apm {
 struct cpuid_result {
 	uint32_t			eax,ebx,ecx,edx;
 };
-
-struct cpu_serial_number {
-	uint32_t	raw[4];	/* EDX, ECX, EBX, EAX */
-};
 #pragma pack(pop)
 
 /* "Basic" CPU level */
@@ -144,12 +140,6 @@ extern uint16_t				cpu_tmp1;
 
 void cpu_probe();
 int cpu_basic_probe(); /* external assembly language function */
-
-/* WARNING: Caller is expected to check CPUID information to ensure the
-            processor supports this feature! */
-void cpu_ask_serial();
-void cpu_disable_serial();
-extern struct cpu_serial_number cpu_serial;
 
 static void _cli();
 #pragma aux _cli = "cli"

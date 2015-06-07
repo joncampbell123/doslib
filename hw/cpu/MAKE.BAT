@@ -28,26 +28,3 @@ wmake -f ..\..\mak\os2w2l.mak HPS=\ all REL=..\..
 mkdir os2d3f
 wmake -f ..\..\mak\os2d3f.mak HPS=\ all REL=..\.. 
 
-mkdir win302l
-wmake -f ..\..\mak\win302l.mak HPS=\ all REL=..\.. 
-
-mkdir win313l
-wmake -f ..\..\mak\win313l.mak HPS=\ all REL=..\.. 
-
-mkdir win32s3
-wmake -f ..\..\mak\win32s3.mak HPS=\ all REL=..\.. 
-
-mkdir winnt
-wmake -f ..\..\mak\winnt.mak HPS=\ all REL=..\.. 
-
-mkdir win32
-wmake -f ..\..\mak\win32.mak HPS=\ all REL=..\.. 
-
-mkdir win386
-wmake -f ..\..\mak\win386.mak HPS=\ all REL=..\.. 
-
-mkdir win38631
-wmake -f ..\..\mak\win38631.mak HPS=\ all REL=..\.. 
-
-
-:end

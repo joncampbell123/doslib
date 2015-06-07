@@ -56,7 +56,6 @@
 #endif
 
 char				cpu_cpuid_vendor[13]={0};
-struct cpu_serial_number	cpu_serial = {0};
 struct cpu_cpuid_features	cpu_cpuid_features = {0};
 signed char			cpu_basic_level = -1;
 uint32_t			cpu_cpuid_max = 0;
