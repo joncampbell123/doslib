@@ -438,5 +438,7 @@ int smartdrv_flush();
 int smartdrv_detect();
 #endif
 
+uint32_t dos_linear_to_phys_vcpi(uint32_t pn);
+
 #endif /* __HW_DOS_DOS_H */
 
