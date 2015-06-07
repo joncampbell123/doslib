@@ -401,15 +401,6 @@ void far *dpmi_getexhandler(unsigned char n);
 int dpmi_setexhandler(unsigned char n,void far *x);
 #endif
 
-struct mega_em_info {
-    unsigned char	intnum;
-    uint16_t		version;
-    uint16_t		response;
-};
-
-extern struct mega_em_info megaem_info;
-
-int gravis_mega_em_detect(struct mega_em_info *x);
 int gravis_sbos_detect();
 int gravis_ultramid_detect();
 

@@ -36,7 +36,6 @@
 # define _dos_setvect ___EVIL___
 #endif
 
-struct mega_em_info megaem_info={0};
 struct lib_dos_options lib_dos_option={0};
 
 /* DOS "list of lists" pointer */
@@ -2505,32 +2504,6 @@ int dpmi_enter(unsigned char mode) {
 #endif
 
 #if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
-int gravis_mega_em_detect(struct mega_em_info *x) {
-/* TODO: Cache results, only need to scan once */
-    union REGS regs={0};
-    regs.w.ax = 0xFD12;
-    regs.w.bx = 0x3457;
-#if TARGET_MSDOS == 32
-    int386(0x21,&regs,&regs);
-#else
-    int86(0x21,&regs,&regs);
-#endif
-    if (regs.w.ax == 0x5678) {
-	x->intnum = regs.h.cl;
-	x->version = regs.w.dx;
-	x->response = regs.w.bx;
-
-	if (x->version == 0) {
-	    if (x->response == 0x1235)
-	    	x->version = 0x200;
-	    else if (x->response == 0x1237)
-	    	x->version = 0x300;
-	}
-	return 1;
-    }
-    return 0;
-}
-
 /* returns interrupt vector */
 /* these functions are duplicates of the ones in the ULTRASND library
    because it matters to this library whether or not we're talking to
