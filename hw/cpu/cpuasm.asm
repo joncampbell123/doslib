@@ -342,60 +342,6 @@ bios_reset_cb_e_:
 %endif
 
 %if TARGET_MSDOS == 16
-; cpu_rdtsc():
-; read RDTSC and return.
-; places 64-bit value in AX:BX:CX:DX according to Watcom register calling convention
-global cpu_rdtsc_
-cpu_rdtsc_:
-	pushf
-	cli
-	rdtsc
-	xchg eax,edx
-	mov ecx,edx
-	mov ebx,eax
-	shr eax,16
-	shr ecx,16
-	popf
-	retnative
-%endif
-
-%if TARGET_MSDOS == 16
-; WARNING: Do not execute this instruction when you are a Windows application.
-;          The Windows VM doesn't take it well.
-; void __cdecl cpu_rdtsc_write(uint64_t val):
-; write RDTSC and return.
-global cpu_rdtsc_write_
-cpu_rdtsc_write_:
-	pushf
-	push	ax
-	push	bx
-	push	cx
-	push	dx
-	cli
-
-	; assemble EAX = AX:BX
-	shl	eax,16
-	mov	ax,bx
-
-	; assemble EDX = CX:DX
-	shl	ecx,16
-	and	edx,0xFFFF
-	or	edx,ecx
-
-	; doit
-	xchg	eax,edx
-	mov	ecx,0x10
-	wrmsr
-
-	pop	dx
-	pop	cx
-	pop	bx
-	pop	ax
-	popf
-	retnative
-%endif
-
-%if TARGET_MSDOS == 16
 ; incoming Watcom convention:
 ; DX:AX = CPUID register
 ; BX = (near) pointer to struct OR

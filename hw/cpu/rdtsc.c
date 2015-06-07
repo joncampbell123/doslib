@@ -20,7 +20,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
-#include <hw/cpu/rdtsc.h>
+#include <hw/cpu/cpurdtsc.h>
 #ifndef TARGET_WINDOWS
 # include <hw/8254/8254.h>
 #endif

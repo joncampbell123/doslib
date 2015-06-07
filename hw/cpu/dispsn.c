@@ -28,6 +28,7 @@
 #include <dos.h>
 
 #include <hw/cpu/cpu.h>
+#include <hw/cpu/cpup3sn.h>
 
 #ifdef TARGET_WINDOWS
 # define WINFCON_STOCK_WIN_MAIN

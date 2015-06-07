@@ -22,7 +22,7 @@ NASMFLAGS_THIS =
 NOW_BUILDING = HW_CPU_LIB
 
 # NTS: CPU functions here are to be moved at some point to the cpu library!
-OBJS =        $(SUBDIR)$(HPS)cpuasm.obj $(SUBDIR)$(HPS)cpup3sn.obj $(SUBDIR)$(HPS)cpup3snc.obj $(SUBDIR)$(HPS)cpusse.obj $(SUBDIR)$(HPS)cpu.obj $(SUBDIR)$(HPS)cpuidext.obj $(SUBDIR)$(HPS)gdt_enum.obj $(SUBDIR)$(HPS)libgrind.obj
+OBJS =        $(SUBDIR)$(HPS)cpuasm.obj $(SUBDIR)$(HPS)cpup3sn.obj $(SUBDIR)$(HPS)cpup3snc.obj $(SUBDIR)$(HPS)cpusse.obj $(SUBDIR)$(HPS)cpu.obj $(SUBDIR)$(HPS)cpuidext.obj $(SUBDIR)$(HPS)gdt_enum.obj $(SUBDIR)$(HPS)libgrind.obj $(SUBDIR)$(HPS)cpurdtsc.obj
 
 # test programs (MS-DOS and Windows)
 MMX_EXE =     $(SUBDIR)$(HPS)mmx.exe
@@ -68,6 +68,7 @@ $(HW_CPU_LIB): $(OBJS)
 	wlib -q -b -c $(HW_CPU_LIB) -+$(SUBDIR)$(HPS)gdt_enum.obj -+$(SUBDIR)$(HPS)libgrind.obj
 	wlib -q -b -c $(HW_CPU_LIB) -+$(SUBDIR)$(HPS)cpuidext.obj -+$(SUBDIR)$(HPS)cpusse.obj
 	wlib -q -b -c $(HW_CPU_LIB) -+$(SUBDIR)$(HPS)cpup3sn.obj -+$(SUBDIR)$(HPS)cpup3snc.obj
+	wlib -q -b -c $(HW_CPU_LIB) -+$(SUBDIR)$(HPS)cpurdtsc.obj
 !ifdef APIC_EXE
 	wlib -q -b -c $(HW_CPU_LIB) -+$(SUBDIR)$(HPS)apiclib.obj
 !endif
