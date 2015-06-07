@@ -288,30 +288,6 @@ no_cpuid:
 	retnative
 
 %if TARGET_MSDOS == 16
-; uint32_t __cdecl inpd(uint16_t port);
-global _inpd
-_inpd:	push		bp
-	mov		bp,sp
-	mov		dx,[bp+cdecl_param_offset]
-	in		eax,dx
-	mov		dx,ax
-	shr		eax,16
-	xchg		dx,ax
-	pop		bp
-	retnative
-
-; void __cdecl outpd(uint16_t port,uint32_t data);
-global _outpd
-_outpd:	push		bp
-	mov		bp,sp
-	mov		dx,[bp+cdecl_param_offset]
-	mov		eax,[bp+cdecl_param_offset+2]
-	out		dx,eax
-	pop		bp
-	retnative
-%endif
-
-%if TARGET_MSDOS == 16
 global reset_8086_entry_
 reset_8086_entry_:
 	cli
