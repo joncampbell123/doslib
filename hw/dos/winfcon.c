@@ -589,7 +589,7 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 
 	_win_hInstance = hInstance;
 	snprintf(_win_WindowProcClass,sizeof(_win_WindowProcClass),"_HW_DOS_WINFCON_%lX",(DWORD)hInstance);
-#if (TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && defined(WIN386))) && TARGET_WINDOWS < 31
+#if ((TARGET_MSDOS == 16 && TARGET_WINDOWS < 31) || (TARGET_MSDOS == 32 && defined(WIN386)))
 	_win_WindowProc_MPI = MakeProcInstance((FARPROC)_win_WindowProc,hInstance);
 #endif
 
