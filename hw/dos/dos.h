@@ -425,11 +425,6 @@ int dos_close_awareness_available();
 int dos_close_awareness_enable(unsigned char en);
 #endif
 
-#if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
-extern uint8_t ntvdm_dosntast_tried;
-extern uint16_t ntvdm_dosntast_handle;
-#endif
-
 /* unlike DOSBox, VirtualBox's ROM BIOS contains it's version number, which we copy down here */
 extern char virtualbox_version_str[64];
 
@@ -453,18 +448,6 @@ struct lib_dos_options {
 };
 
 extern struct lib_dos_options lib_dos_option;
-
-#if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
-extern uint16_t ntvdm_dosntast_io_base;
-
-int ntvdm_dosntast_init();
-void ntvdm_dosntast_unload();
-uint32_t ntvdm_dosntast_GetTickCount();
-int ntvdm_dosntast_MessageBox(const char *text);
-unsigned int ntvdm_dosntast_waveOutGetNumDevs();
-unsigned int ntvdm_dosntast_getversionex(OSVERSIONINFO *ovi);
-uint32_t ntvdm_dosntast_waveOutGetDevCaps(uint32_t uDeviceID,WAVEOUTCAPS *pwoc,uint16_t cbwoc);
-#endif
 
 # define DOSNTAST_HANDLE_UNASSIGNED		0xFFFFU
 

@@ -9,7 +9,7 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = HW_DOS_LIB
 
-OBJS =        $(SUBDIR)$(HPS)dos.obj $(SUBDIR)$(HPS)biosext.obj $(SUBDIR)$(HPS)himemsys.obj $(SUBDIR)$(HPS)emm.obj $(SUBDIR)$(HPS)dosbox.obj $(SUBDIR)$(HPS)biosmem.obj $(SUBDIR)$(HPS)biosmem3.obj $(SUBDIR)$(HPS)dosasm.obj $(SUBDIR)$(HPS)tgusmega.obj $(SUBDIR)$(HPS)tgussbos.obj $(SUBDIR)$(HPS)tgusumid.obj
+OBJS =        $(SUBDIR)$(HPS)dos.obj $(SUBDIR)$(HPS)biosext.obj $(SUBDIR)$(HPS)himemsys.obj $(SUBDIR)$(HPS)emm.obj $(SUBDIR)$(HPS)dosbox.obj $(SUBDIR)$(HPS)biosmem.obj $(SUBDIR)$(HPS)biosmem3.obj $(SUBDIR)$(HPS)dosasm.obj $(SUBDIR)$(HPS)tgusmega.obj $(SUBDIR)$(HPS)tgussbos.obj $(SUBDIR)$(HPS)tgusumid.obj $(SUBDIR)$(HPS)dosntvdm.obj
 !ifdef TARGET_WINDOWS
 OBJS +=       $(SUBDIR)$(HPS)winfcon.obj
 !endif
@@ -64,7 +64,7 @@ $(HW_DOS_LIB): $(OBJS)
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dosbox.obj -+$(SUBDIR)$(HPS)biosmem.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)biosmem3.obj -+$(SUBDIR)$(HPS)dosasm.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)tgusmega.obj -+$(SUBDIR)$(HPS)tgussbos.obj
-	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)tgusumid.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)tgusumid.obj -+$(SUBDIR)$(HPS)dosntvdm.obj
 !ifdef TARGET_WINDOWS
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)winfcon.obj
 !endif
