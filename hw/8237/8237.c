@@ -63,6 +63,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/8237/8237.h>
+#include <hw/dos/doswin.h>
 
 unsigned char d8237_flags = 0;
 unsigned char d8237_channels = 0;
