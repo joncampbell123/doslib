@@ -27,23 +27,7 @@
 # include <os2.h>
 #endif
 
-enum {
-	WINDOWS_NONE=0,
-	WINDOWS_REAL,
-	WINDOWS_STANDARD,
-	WINDOWS_ENHANCED,
-	WINDOWS_NT,
-	WINDOWS_OS2,			/* Not Windows, OS/2 */
-					/* Exact meaning: If we're a DOS/Windows program, then we know we're running under OS/2
-					   and OS/2 is emulating DOS/Windows. If we're an OS/2 program, then we're in our native
-					   environment */
-	WINDOWS_MAX
-};
-
 extern unsigned char FAR *dos_LOL;
-
-extern const char *windows_mode_strs[WINDOWS_MAX];
-#define windows_mode_str(x)	windows_mode_strs[x]
 
 #if TARGET_MSDOS == 32 && !defined(TARGET_OS2)
 extern int8_t dpmi_no_0301h; /* -1 = not tested 0 = avail 1 = N/A */
@@ -52,11 +36,6 @@ extern int8_t dpmi_no_0301h; /* -1 = not tested 0 = avail 1 = N/A */
 #endif
 
 #define DPMI_ENTER_AUTO 0xFF
-
-enum {
-	WINEMU_NONE=0,
-	WINEMU_WINE
-};
 
 /* DOS "Flavor" we are running under.
  * I originally didn't care too much until one day some really strange
@@ -71,9 +50,6 @@ enum {
 
 extern uint8_t dos_flavor;
 extern uint16_t dos_version;
-extern uint8_t windows_mode;
-extern uint16_t windows_version;
-extern uint8_t windows_emulation;
 extern const char *dos_version_method;
 extern uint32_t freedos_kernel_version;
 #if TARGET_MSDOS == 32
@@ -81,15 +57,8 @@ extern char *freedos_kernel_version_str;
 #else
 extern char far *freedos_kernel_version_str;
 #endif
-extern const char *windows_version_method;
-extern const char *windows_emulation_comment_str;
 extern unsigned char vcpi_present;
 extern unsigned char vcpi_major_version,vcpi_minor_version;
-
-/* TODO: Someday, these will become variables */
-
-/* whether the Windows emulation allows Win16 to call DPMI */
-#define windows_emulation_includes_dpmi		0
 
 struct dos_mcb_enum {
 	uint16_t	segment;
@@ -205,7 +174,6 @@ int dpmi_enter(unsigned char mode);
 
 void probe_dos();
 void probe_dpmi();
-int detect_windows();
 int probe_vcpi();
 
 uint16_t dos_mcb_first_segment();
@@ -357,45 +325,6 @@ typedef struct WAVEOUTCAPS {
 #pragma pack(pop)
 #endif
 
-#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(WIN386)
-# include <windows.h>
-# include <stdint.h>
-
-extern unsigned char		win9x_qt_thunk_probed;
-extern unsigned char		win9x_qt_thunk_available;
-
-typedef WORD HGLOBAL16; /* <- NTS: Taken from WINE header definitions */
-
-extern void			(__stdcall *QT_Thunk)();
-extern DWORD			(__stdcall *LoadLibrary16)(LPSTR lpszLibFileName);
-extern VOID			(__stdcall *FreeLibrary16)(DWORD dwInstance);
-extern HGLOBAL16		(__stdcall *GlobalAlloc16)(UINT flags,DWORD size);
-extern HGLOBAL16		(__stdcall *GlobalFree16)(HGLOBAL16 handle);
-extern DWORD			(__stdcall *GlobalLock16)(HGLOBAL16 handle);
-extern BOOL			(__stdcall *GlobalUnlock16)(HGLOBAL16 handle);
-extern VOID			(__stdcall *GlobalUnfix16)(HGLOBAL16 handle);
-extern DWORD			(__stdcall *GetProcAddress16)(DWORD dwInstance, LPSTR lpszProcName);
-extern VOID			(__stdcall *GlobalFix16)(HGLOBAL16 handle);
-
-extern DWORD			win9x_kernel_win16;
-extern DWORD			win9x_user_win16;
-
-int Win9xQT_ThunkInit();
-void Win9xQT_ThunkFree();
-#endif
-
-#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
-# include <toolhelp.h>
-extern HMODULE			ToolHelpDLL;
-extern unsigned char		ToolHelpProbed;
-extern BOOL			(PASCAL FAR *__TimerCount)(TIMERINFO FAR *t);
-extern BOOL			(PASCAL FAR *__InterruptUnRegister)(HTASK htask);
-extern BOOL			(PASCAL FAR *__InterruptRegister)(HTASK htask,FARPROC callback);
-
-int ToolHelpInit();
-void ToolHelpFree();
-#endif
-
 #if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
 void far *dpmi_getexhandler(unsigned char n);
 int dpmi_setexhandler(unsigned char n,void far *x);
@@ -436,8 +365,6 @@ int __cdecl dpmi_lin2fmemcpy_16(unsigned char far *dst,uint32_t lsrc,uint32_t sz
 int dpmi_lin2fmemcpy(unsigned char far *dst,uint32_t lsrc,uint32_t sz);
 int dpmi_lin2fmemcpy_init();
 #endif
-
-const char *windows_emulation_str(uint8_t e);
 
 struct lib_dos_options {
 	uint8_t			dont_load_dosntast:1;	/* do not automatically load DOSNTAST, but use it if loaded. */

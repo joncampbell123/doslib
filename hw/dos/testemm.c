@@ -19,6 +19,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/dos/emm.h>
+#include <hw/dos/doswin.h>
 
 static const char *message = "Hello world. How are you?";
 static const char *message2 = "Pingas. Sup dawg. Hello world. Dork. Hahahajajaja.";

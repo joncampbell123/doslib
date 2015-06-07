@@ -23,6 +23,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/dos/dosbox.h>
+#include <hw/dos/doswin.h>
 
 #ifdef TARGET_WINDOWS
 #error wrong target

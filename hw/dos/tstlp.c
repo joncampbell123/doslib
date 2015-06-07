@@ -19,6 +19,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/dos/dosbox.h>
+#include <hw/dos/doswin.h>
 
 #if TARGET_MSDOS == 32
 uint16_t cpu_read_my_cs() {

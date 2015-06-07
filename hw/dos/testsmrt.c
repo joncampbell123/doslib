@@ -18,6 +18,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 #include <hw/dos/dosbox.h>
 
 int main() {
