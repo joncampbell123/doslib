@@ -117,16 +117,6 @@ enum {
 	CPU_MAX
 };
 
-struct cpu_cpuid_ext_info {
-	char					brand[49];
-	uint32_t				cpuid_max;
-	struct cpu_cpuid_ext_features		features;
-	struct cpu_cpuid_ext_cache_tlb		cache_tlb;
-	struct cpu_cpuid_ext_cache_tlb_l2	cache_tlb_l2;
-	struct cpu_cpuid_ext_apm		apm;
-	struct cpu_cpuid_ext_longmode		longmode;
-};
-
 extern unsigned char			cpu_sse_usable;
 extern unsigned char			cpu_sse_usable_probed;
 extern const char*			cpu_sse_unusable_reason;
@@ -134,7 +124,6 @@ extern unsigned char			cpu_sse_usable_can_turn_on;
 extern unsigned char			cpu_sse_usable_can_turn_off;
 extern const char*			cpu_sse_usable_detection_method;
 
-extern struct cpu_cpuid_ext_info*	cpu_cpuid_ext_info;
 extern const char *			cpu_basic_level_str[CPU_MAX];
 extern char				cpu_cpuid_vendor[13];
 extern struct cpu_cpuid_features	cpu_cpuid_features;
@@ -145,18 +134,6 @@ extern uint16_t				cpu_tmp1;
 
 /* compatability */
 #define cpu_v86_active (cpu_flags & CPU_FLAG_V86_ACTIVE)
-
-/* has L1 TLB/CACHE info */
-#define cpu_cpuid_ext_info_has_cache_tlb_l1 (cpu_cpuid_ext_info && cpu_cpuid_ext_info->cpuid_max >= 0x80000005UL)
-
-/* has L2 TLB/CACHE info */
-#define cpu_cpuid_ext_info_has_cache_tlb_l2 (cpu_cpuid_ext_info && cpu_cpuid_ext_info->cpuid_max >= 0x80000006UL)
-
-/* has APM info */
-#define cpu_cpuid_ext_info_has_apm (cpu_cpuid_ext_info && cpu_cpuid_ext_info->cpuid_max >= 0x80000007UL)
-
-/* has Long mode info */
-#define cpu_cpuid_ext_info_has_longmode (cpu_cpuid_ext_info && cpu_cpuid_ext_info->cpuid_max >= 0x80000008UL)
 
 #define cpu_basic_level_to_string(x) (x >= 0 ? cpu_basic_level_str[x] : "?")
 
@@ -174,8 +151,6 @@ extern uint16_t				cpu_tmp1;
 
 void cpu_probe();
 int cpu_basic_probe(); /* external assembly language function */
-int cpu_extended_cpuid_probe();
-void cpu_extended_cpuid_info_free();
 
 /* WARNING: Caller is expected to check CPUID information to ensure the
             processor supports this feature! */

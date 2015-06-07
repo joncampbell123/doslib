@@ -62,8 +62,6 @@ unsigned char			cpu_sse_usable_can_turn_off = 0;
 const char*			cpu_sse_unusable_reason = NULL;
 const char*			cpu_sse_usable_detection_method = NULL;
 
-struct cpu_cpuid_ext_info*	cpu_cpuid_ext_info = NULL;
-
 char				cpu_cpuid_vendor[13]={0};
 struct cpu_serial_number	cpu_serial = {0};
 struct cpu_cpuid_features	cpu_cpuid_features = {0};
@@ -198,89 +196,6 @@ static void __declspec(naked) fault_int6() { /* DPMI exception handler */
 	}
 }
 #endif
-
-void cpu_extended_cpuid_info_free() {
-	if (cpu_cpuid_ext_info) free(cpu_cpuid_ext_info);
-	cpu_cpuid_ext_info = NULL;
-}
-
-int cpu_extended_cpuid_probe() {
-	struct cpuid_result r={0};
-
-	cpu_extended_cpuid_info_free();
-
-	cpu_cpuid_ext_info = malloc(sizeof(struct cpu_cpuid_ext_info));
-	if (cpu_cpuid_ext_info == NULL) return 0;
-	memset(cpu_cpuid_ext_info,0,sizeof(struct cpu_cpuid_ext_info));
-
-	if (cpu_flags & CPU_FLAG_CPUID) {
-		/* probe for extended CPUID */
-		cpu_cpuid(0x80000000UL,&r);
-		if (r.eax >= 0x80000001UL) {
-			cpu_cpuid_ext_info->cpuid_max = r.eax;
-			cpu_flags |= CPU_FLAG_CPUID_EXT;
-
-			cpu_cpuid(0x80000001UL,&r);
-			cpu_cpuid_ext_info->features.a.raw[0] = r.eax;
-			cpu_cpuid_ext_info->features.a.raw[1] = r.ebx;
-			cpu_cpuid_ext_info->features.a.raw[2] = r.ecx;
-			cpu_cpuid_ext_info->features.a.raw[3] = r.edx;
-
-			if (cpu_cpuid_ext_info->cpuid_max >= 0x80000004UL) {
-				cpu_cpuid(0x80000002UL,&r);
-				((uint32_t*)cpu_cpuid_ext_info->brand)[0] = r.eax;
-				((uint32_t*)cpu_cpuid_ext_info->brand)[1] = r.ebx;
-				((uint32_t*)cpu_cpuid_ext_info->brand)[2] = r.ecx;
-				((uint32_t*)cpu_cpuid_ext_info->brand)[3] = r.edx;
-
-				cpu_cpuid(0x80000003UL,&r);
-				((uint32_t*)cpu_cpuid_ext_info->brand)[4] = r.eax;
-				((uint32_t*)cpu_cpuid_ext_info->brand)[5] = r.ebx;
-				((uint32_t*)cpu_cpuid_ext_info->brand)[6] = r.ecx;
-				((uint32_t*)cpu_cpuid_ext_info->brand)[7] = r.edx;
-
-				cpu_cpuid(0x80000004UL,&r);
-				((uint32_t*)cpu_cpuid_ext_info->brand)[8] = r.eax;
-				((uint32_t*)cpu_cpuid_ext_info->brand)[9] = r.ebx;
-				((uint32_t*)cpu_cpuid_ext_info->brand)[10] = r.ecx;
-				((uint32_t*)cpu_cpuid_ext_info->brand)[11] = r.edx;
-
-				cpu_cpuid_ext_info->brand[48] = 0;
-			}
-
-			if (cpu_cpuid_ext_info->cpuid_max >= 0x80000005UL) {
-				cpu_cpuid(0x80000005UL,&r);
-				cpu_cpuid_ext_info->cache_tlb.a.raw[0] = r.eax;
-				cpu_cpuid_ext_info->cache_tlb.a.raw[1] = r.ebx;
-				cpu_cpuid_ext_info->cache_tlb.a.raw[2] = r.ecx;
-				cpu_cpuid_ext_info->cache_tlb.a.raw[3] = r.edx;
-			}
-
-			if (cpu_cpuid_ext_info->cpuid_max >= 0x80000006UL) {
-				cpu_cpuid(0x80000006UL,&r);
-				cpu_cpuid_ext_info->cache_tlb_l2.a.raw[0] = r.eax;
-				cpu_cpuid_ext_info->cache_tlb_l2.a.raw[1] = r.ebx;
-				cpu_cpuid_ext_info->cache_tlb_l2.a.raw[2] = r.ecx;
-				cpu_cpuid_ext_info->cache_tlb_l2.a.raw[3] = r.edx;
-			}
-
-			if (cpu_cpuid_ext_info->cpuid_max >= 0x80000007UL) {
-				cpu_cpuid(0x80000007UL,&r);
-				cpu_cpuid_ext_info->apm.a.raw[0] = r.eax;
-			}
-
-			if (cpu_cpuid_ext_info->cpuid_max >= 0x80000008UL) {
-				cpu_cpuid(0x80000008UL,&r);
-				cpu_cpuid_ext_info->longmode.a.raw[0] = r.eax;
-				cpu_cpuid_ext_info->longmode.a.raw[1] = r.ebx;
-				cpu_cpuid_ext_info->longmode.a.raw[2] = r.ecx;
-				cpu_cpuid_ext_info->longmode.a.raw[3] = r.edx;
-			}
-		}
-	}
-
-	return (cpu_flags & CPU_FLAG_CPUID_EXT)?1:0;
-}
 
 void cpu_probe() {
 #if TARGET_MSDOS == 32
