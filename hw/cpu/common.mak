@@ -120,7 +120,7 @@ $(ALIGNCHK_COM): alignchk.asm
 !endif
 
 $(MMX_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)mmx.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)mmx.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)mmx.obj option map=$(SUBDIR)$(HPS)mmx.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -139,7 +139,7 @@ $(MMX_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)mmx.obj
 ! endif
 
 $(SSE_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)sse.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)sse.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)sse.obj option map=$(SUBDIR)$(HPS)sse.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -196,7 +196,7 @@ $(GRIND_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)grind.obj
 ! endif
 
 $(RDTSC_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_8254_LIB) $(SUBDIR)$(HPS)rdtsc.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) library $(HW_8254_LIB) file $(SUBDIR)$(HPS)rdtsc.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) library $(HW_8254_LIB) file $(SUBDIR)$(HPS)rdtsc.obj option map=$(SUBDIR)$(HPS)rdtsc.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -216,7 +216,7 @@ $(RDTSC_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_8254_LIB) $(SUBDIR)$
 
 !ifdef RESET_EXE
 $(RESET_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_8042_LIB) $(HW_8254_LIB) $(SUBDIR)$(HPS)reset.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) library $(HW_8042_LIB) library $(HW_8254_LIB) file $(SUBDIR)$(HPS)reset.obj
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) library $(HW_8042_LIB) library $(HW_8254_LIB) file $(SUBDIR)$(HPS)reset.obj option map=$(SUBDIR)$(HPS)reset.map
 	%write tmp.cmd name $(RESET_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
@@ -224,14 +224,14 @@ $(RESET_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_8042_LIB) $(HW_8254_
 
 !ifdef APIC_EXE
 $(APIC_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_FLATREAL_LIB) $(SUBDIR)$(HPS)apic.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) $(HW_FLATREAL_LIB_WLINK_LIBRARIES) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)apic.obj
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) $(HW_FLATREAL_LIB_WLINK_LIBRARIES) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)apic.obj option map=$(SUBDIR)$(HPS)apic.map
 	%write tmp.cmd name $(APIC_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 $(DISPSN_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)dispsn.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)dispsn.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)dispsn.obj option map=$(SUBDIR)$(HPS)dispsn.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -250,7 +250,7 @@ $(DISPSN_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)dispsn.ob
 ! endif
 
 $(SSEOFF_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)sseoff.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)sseoff.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)sseoff.obj option map=$(SUBDIR)$(HPS)sseoff.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -269,7 +269,7 @@ $(SSEOFF_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)sseoff.ob
 ! endif
 
 $(GDTLIST_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gdtlist.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)gdtlist.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)gdtlist.obj option map=$(SUBDIR)$(HPS)gdtlist.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -289,7 +289,7 @@ $(GDTLIST_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gdtlist.
 
 !ifdef GDTTAE_EXE
 $(GDTTAE_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gdttae.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)gdttae.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)gdttae.obj option map=$(SUBDIR)$(HPS)gdttae.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
