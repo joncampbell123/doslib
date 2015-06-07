@@ -19,6 +19,7 @@
 
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
+#include <hw/cpu/cpusse.h>
 
 #ifdef TARGET_WINDOWS
 # define WINFCON_STOCK_WIN_MAIN

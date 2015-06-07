@@ -117,13 +117,6 @@ enum {
 	CPU_MAX
 };
 
-extern unsigned char			cpu_sse_usable;
-extern unsigned char			cpu_sse_usable_probed;
-extern const char*			cpu_sse_unusable_reason;
-extern unsigned char			cpu_sse_usable_can_turn_on;
-extern unsigned char			cpu_sse_usable_can_turn_off;
-extern const char*			cpu_sse_usable_detection_method;
-
 extern const char *			cpu_basic_level_str[CPU_MAX];
 extern char				cpu_cpuid_vendor[13];
 extern struct cpu_cpuid_features	cpu_cpuid_features;
@@ -223,10 +216,6 @@ static inline void cpu_cpuid(uint32_t idx,struct cpuid_result *x);
 #else
 void cpu_cpuid(uint32_t idx,struct cpuid_result *x);
 #endif
-
-int cpu_check_sse_is_usable();
-int cpu_sse_disable();
-int cpu_sse_enable();
 
 #if TARGET_MSDOS == 32
 static inline uint64_t cpu_rdmsr(const uint32_t idx);
