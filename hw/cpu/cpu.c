@@ -62,16 +62,6 @@ uint32_t			cpu_cpuid_max = 0;
 unsigned char			cpu_flags = 0;
 uint16_t			cpu_tmp1 = 0;
 
-const char *cpu_basic_level_str[CPU_MAX] = {
-	"8086",
-	"186",
-	"286",
-	"386",
-	"486",
-	"586",
-	"686"
-};
-
 void cpu_probe() {
 #if TARGET_MSDOS == 32
 	/* we're obviously in 32-bit protected mode, or else this code would not be running at all */
