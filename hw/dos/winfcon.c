@@ -44,6 +44,13 @@
 
 #ifdef WIN_STDOUT_CONSOLE
 
+/* _export is not valid for Win32. this silences a Watcom linker warning */
+#if TARGET_MSDOS == 32
+# define winproc_export
+#else
+# define winproc_export _export
+#endif
+
 #undef read
 #undef write
 #undef getch
@@ -156,7 +163,7 @@ FARPROC _win_WindowProc_MPI;
  *      reloads the (cached) instance data segment it will cause all instances to crash when you
  *      spawn multiple instances and then close the first one you spawned. NOT using __loadds
  *      removes that crash. */
-WindowProcType_NoLoadDS _export _win_WindowProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
+WindowProcType_NoLoadDS winproc_export _win_WindowProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 #if TARGET_MSDOS == 32 && defined(WIN386)
 	struct _win_console_ctx FAR *_ctx_console;
 	{
