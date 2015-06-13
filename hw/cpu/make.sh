@@ -30,6 +30,8 @@ if [ "$1" == "disk" ]; then
 
 	mcopy -i test.dsk dos86l/grind.exe ::grind86.exe
 	mcopy -i test.dsk dos386f/grind.exe ::grin386.exe
+	mcopy -i test.dsk dos86l/gr_add.exe ::gradd16.exe
+	mcopy -i test.dsk dos386f/gr_add.exe ::gradd32.exe
 
 	mcopy -i test.dsk dos86l/test.exe ::test86l.exe
 	mcopy -i test.dsk dos386f/test.exe ::test386.exe
