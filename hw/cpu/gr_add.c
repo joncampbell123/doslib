@@ -1,0 +1,242 @@
+/* grind.c
+ *
+ * Run instruction encodings through combinations and record changes to registers and flags.
+ *
+ * This code is licensed under the LGPL.
+ * <insert LGPL legal text here>
+ *
+ */
+
+#include <stdio.h>
+#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
+#include <stdlib.h>
+#include <unistd.h>
+#include <assert.h>
+#include <malloc.h>
+#include <fcntl.h>
+#include <dos.h>
+
+#include <hw/cpu/cpu.h>
+#include <hw/cpu/libgrind.h>
+
+#ifdef TARGET_WINDOWS
+# define WINFCON_STOCK_WIN_MAIN
+# include <hw/dos/winfcon.h>
+#endif
+
+static unsigned int min_i=0,max_i=511;
+static unsigned int min_j=0,max_j=511;
+
+static unsigned char asm_buf[64];
+
+static unsigned char log_buf[4096];
+static unsigned int log_bufi=0;
+static int log_fd = -1;
+
+static void log_flush() {
+	if (log_fd >= 0 && log_bufi != 0)
+		write(log_fd,log_buf,log_bufi);
+
+	log_bufi = 0;
+}
+
+static void log_lazy_flush(size_t extra) {
+	if (log_fd >= 0 && (extra >= sizeof(log_buf) || log_bufi >= (sizeof(log_buf)-extra)))
+		log_flush();
+}
+
+static void log_close() {
+	log_flush();
+	if (log_fd >= 0) {
+		close(log_fd);
+		log_fd = -1;
+	}
+}
+
+static void log_open(const char *path) {
+	log_close();
+	log_fd = open(path,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
+}
+
+static inline grind_ADDw() {
+	const unsigned int FL_mask = 0x8D5U; // CF(0),PF(2),AF(4),ZF(6),SF(7),OF(11)  1000 1101 0101
+	unsigned int i,j;
+
+	if (!grind_init()) {
+		grind_free();
+		return 1;
+	}
+	if (!grind_alloc_buf()) {
+		grind_free();
+		return 1;
+	}
+	if (!grind_lock_buf()) {
+		grind_free();
+		return 1;
+	}
+
+	log_open("gr_add.bin");
+	// header
+	*((uint32_t*)(log_buf+log_bufi)) = 0x444E5247;			// 'GRND'
+	log_bufi += 4;
+	*((uint32_t*)(log_buf+log_bufi)) = 0x77444441;			// 'ADDw'
+	log_bufi += 4;
+	*((uint8_t*)(log_buf+log_bufi)) = sizeof(unsigned int);		// sizeof unsigned int (2 or 4)
+	log_bufi += 1;
+	*((uint8_t*)(log_buf+log_bufi)) = cpu_flags;			// CPU flags
+	log_bufi += 1;
+	*((unsigned int*)(log_buf+log_bufi)) = min_i;			// min-max i inclusive
+	log_bufi += sizeof(unsigned int);
+	*((unsigned int*)(log_buf+log_bufi)) = max_i;			// min-max i inclusive
+	log_bufi += sizeof(unsigned int);
+	*((unsigned int*)(log_buf+log_bufi)) = min_j;			// min-max j inclusive
+	log_bufi += sizeof(unsigned int);
+	*((unsigned int*)(log_buf+log_bufi)) = max_j;			// min-max j inclusive
+	log_bufi += sizeof(unsigned int);
+	*((unsigned int*)(log_buf+log_bufi)) = FL_mask;			// flag test mask
+	log_bufi += sizeof(unsigned int);
+
+	log_lazy_flush(32);
+
+	i = min_i;
+	do {
+		printf("i=%u j=%u..%u",i,min_j,max_j);
+		fflush(stdout);
+
+		j = min_j;
+		do {
+			grind_buf_ptr_t w = grind_buf;
+
+			*((grind_imm_t*)(asm_buf+0)) = 0;					// ADD result
+			*((grind_imm_t*)(asm_buf+4)) = 0;					// ADD result (2)
+			*((grind_imm_t*)(asm_buf+8)) = 0;					// FLAGS before (after init)
+			*((grind_imm_t*)(asm_buf+12)) = 0;					// FLAGS after
+			*((grind_imm_t*)(asm_buf+16)) = 0;					// FLAGS before (after init)
+			*((grind_imm_t*)(asm_buf+20)) = 0;					// FLAGS after
+
+//			*w++ = GRIND_INT3_INS;							// INT3
+
+			// save DS, EAX, FLAGS
+			w=grind_buf_w__push_Sreg(w,GRIND_SEG_DS);				// PUSH DS
+			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+
+			// DS = segment of asm_buf
+			w=grind_buf_w__mov_Reg16_const(w,GRIND_REG_AX,FP_SEG(asm_buf));		// MOV AX,const
+			w=grind_buf_w__mov_Seg_from_Reg(w,GRIND_SEG_DS,GRIND_REG_AX);		// MOV <seg>,<reg>
+
+			// set EFLAGS to known state
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__and_Reg_const(w,GRIND_REG_AX,~FL_mask);			// AND AX,<mask off CF(0),PF(2),AF(4),ZF(6),SF(7),IF(9),OF(11)>  1010 1101 0101
+			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+
+			// store state of EFLAGS now, store result in asm_buf+8
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+8,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// asm_buf+0 = i + j, store result in asm_buf+0
+			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);				// MOV (E)AX,const
+			w=grind_buf_w__mov_Add_const(w,GRIND_REG_AX,j);				// ADD (E)AX,const
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+0,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// store state of EFLAGS now, in asm_buf+12
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+12,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// set EFLAGS to known state
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__or_Reg_const(w,GRIND_REG_AX,FL_mask);			// OR AX,<set CF(0),PF(2),AF(4),ZF(6),SF(7),IF(9),OF(11)>  1010 1101 0101
+			w=grind_buf_w__push_Reg(w,GRIND_REG_AX);				// PUSH (E)AX
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+
+			// store state of EFLAGS now, store result in asm_buf+16
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+16,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// asm_buf+0 = i + j, store result in asm_buf+4
+			w=grind_buf_w__mov_Reg_const(w,GRIND_REG_AX,i);				// MOV (E)AX,const
+			w=grind_buf_w__mov_Add_const(w,GRIND_REG_AX,j);				// ADD (E)AX,const
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+4,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// store state of EFLAGS now, store result in asm_buf+20
+			w=grind_buf_w__push_Flags(w);						// PUSHF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__mov_memoff_from_reg(w,FP_OFF(asm_buf)+20,GRIND_REG_AX);	// MOV [offset],(E)AX
+
+			// restore FLAGS, EAX, DS, exit subroutine
+			w=grind_buf_w__pop_Flags(w);						// POPF(D)
+			w=grind_buf_w__pop_Reg(w,GRIND_REG_AX);					// POP (E)AX
+			w=grind_buf_w__pop_Sreg(w,GRIND_SEG_DS);				// POP DS
+			*w++ = GRIND_RET_INS;							// RET
+
+			// SANITY CHECK
+			if (w > (grind_buf + grind_buf_size)) {
+				printf("<--BUFFER OVERRUN\n");
+				grind_free();
+				return 1;
+			}
+
+			// EXECUTE IT
+			if (!grind_execute_buf()) {
+				printf("<--FAIL\n");
+				grind_free();
+				return 1;
+			}
+
+			// sanity check
+			if (*((grind_imm_t*)(asm_buf+0)) != *((grind_imm_t*)(asm_buf+4))) {
+				printf("WARNING: Two ADD passes with different sums 0x%x != 0x%x\n",
+					*((grind_imm_t*)(asm_buf+0)),
+					*((grind_imm_t*)(asm_buf+4)));
+			}
+
+			// log results
+			log_lazy_flush(64);
+			*((unsigned int*)(log_buf+log_bufi)) = i;				// I
+			log_bufi += sizeof(unsigned int);
+			*((unsigned int*)(log_buf+log_bufi)) = j;				// J
+			log_bufi += sizeof(unsigned int);
+			*((unsigned int*)(log_buf+log_bufi)) = *((grind_imm_t*)(asm_buf+0));	// I+J
+			log_bufi += sizeof(unsigned int);
+			*((unsigned int*)(log_buf+log_bufi)) = *((grind_imm_t*)(asm_buf+8));	// FLAGS before init #1
+			log_bufi += sizeof(unsigned int);
+			*((unsigned int*)(log_buf+log_bufi)) = *((grind_imm_t*)(asm_buf+12));	// FLAGS after init #1
+			log_bufi += sizeof(unsigned int);
+			*((unsigned int*)(log_buf+log_bufi)) = *((grind_imm_t*)(asm_buf+16));	// FLAGS before init #2
+			log_bufi += sizeof(unsigned int);
+			*((unsigned int*)(log_buf+log_bufi)) = *((grind_imm_t*)(asm_buf+20));	// FLAGS after init #2
+			log_bufi += sizeof(unsigned int);
+			// log entry finish
+			log_lazy_flush(16);
+		} while ((j++) != max_j);
+
+		printf("\x0D");
+		fflush(stdout);
+	} while ((i++) != max_i);
+
+	grind_unlock_buf();
+	grind_free_buf();
+	grind_free();
+	log_flush();
+	return 0;
+}
+
+int main() {
+	cpu_probe();
+
+	printf("Testing ADDw x+y (%u <= x <= %u)+(%u <= y <= %u)\n",min_i,max_i,min_j,max_j);
+	grind_ADDw();
+	log_close();
+	return 0;
+}
+
