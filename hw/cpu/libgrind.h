@@ -235,5 +235,13 @@ static inline grind_buf_ptr_t grind_buf_w__div_Reg(grind_buf_ptr_t w,unsigned ch
 	return w;
 }
 
+// MUL reg
+static inline grind_buf_ptr_t grind_buf_w__mul_Reg(grind_buf_ptr_t w,unsigned char reg) {
+	if (reg >= 8) return w;
+	*w++ = 0xF7;
+	*w++ = (3 << 6) + (4/*MUL*/ << 3) + reg;	// mod=3 reg=4 r/m=reg1
+	return w;
+}
+
 #endif /* __HW_CPU_LIBGRIND_H */
 
