@@ -438,13 +438,15 @@ void flash_vga_pal() {
 
 /* utility function to flash Attribute Controller Palette indexes */
 void flash_acp() {
-	unsigned char palidx,palold,palflash=1,w,redraw=1,flashwait=0;
+	unsigned char palidx,palold,palflash=1,w,redraw=1,flashwait=0,vga_mode;
 	int c;
 
 	bios_cls();
 	/* position the cursor to home */
 	vga_moveto(0,0);
 	vga_sync_bios_cursor();
+
+	vga_mode = int10_getmode();
 
 	printf("Flashing Attribute Controller entry.\n");
 	printf("ESC to quit, use Left/Right arrow keys\n");
@@ -476,6 +478,17 @@ void flash_acp() {
 	}
 	printf("\n");
 	printf("\n");
+
+	/* 320x200x256 mode: draw all 256 colors for ref */
+	if (vga_mode == 19 && vga_graphics_ram != NULL) {
+		VGA_RAM_PTR draw;
+		unsigned int x,y;
+
+		for (y=0;y < 8;y++) {
+			draw = vga_graphics_ram + (320 * (200 - 1 - y));
+			for (x=0;x < 256;x++) *draw++ = x;
+		}
+	}
 
 	palidx = 7; /* start with color 7 (the text we print) */
 	palold = vga_read_AC(palidx);
