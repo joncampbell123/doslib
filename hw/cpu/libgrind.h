@@ -112,6 +112,20 @@ static inline grind_buf_ptr_t grind_buf_w__mov_Add_const(grind_buf_ptr_t w,unsig
 	return w;
 }
 
+// SUB (E)reg,const
+static inline grind_buf_ptr_t grind_buf_w__mov_Sub_const(grind_buf_ptr_t w,unsigned char reg,unsigned int c) {
+	if (reg >= 8) return w;
+	if (reg == GRIND_REG_AX) {
+		*w++ = 0x05+0x28;	// SUB (E)AX,const
+	}
+	else {
+		*w++ = 0x81;		// SUB reg,const
+		*w++ = (3 << 6) + (5/*SUB*/ << 3) + reg;	// mod=3 reg=0 r/m=reg
+	}
+	*((grind_imm_t*)w) = c; w += sizeof(grind_imm_t);
+	return w;
+}
+
 // OR (E)reg,const
 static inline grind_buf_ptr_t grind_buf_w__or_Reg_const(grind_buf_ptr_t w,unsigned char reg,unsigned int c) {
 	if (reg >= 8) return w;
