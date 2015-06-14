@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <malloc.h>
+#include <errno.h>
 #include <fcntl.h>
 #include <dos.h>
 
@@ -63,12 +64,18 @@ static void log_flush() {
 					log_fd = -1;
 				}
 
-				printf("\nUnable to write full log. Swap floppies and hit ENTER or CTRL+C to quit.\n");
-				printf("You will have to assemble the full file from fragments when this is done.\n");
-				do_pause();
+				if (errno == ENOSPC) {
+					printf("\nUnable to write full log. Swap floppies and hit ENTER or CTRL+C to quit.\n");
+					printf("You will have to assemble the full file from fragments when this is done.\n");
+					do_pause();
 
-				if (!log_reopen()) {
-					printf("Unable to reopen log.\n");
+					if (!log_reopen()) {
+						printf("Unable to reopen log.\n");
+						exit(1);
+					}
+				}
+				else {
+					printf("\nError writing log.\n"); /* TODO: Does Open Watcom's library have strerror() like GNU/Linux? */
 					exit(1);
 				}
 			}
