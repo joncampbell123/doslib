@@ -34,11 +34,12 @@ static unsigned char asm_buf[64];
 static char *log_filename = NULL;
 
 #if TARGET_MSDOS == 32
-static unsigned char log_buf[256*1024];		// 256KB
+static unsigned char log_buf[63*1024];		// 63KB
 #else
 static unsigned char log_buf[30*1024];		// 30KB
 #endif
 
+static int log_reopen_counter=0;
 static unsigned int log_bufi=0;
 static int log_fd = -1;
 
@@ -51,14 +52,37 @@ static void log_close();
 static int log_reopen();
 static int log_open(const char *path);
 
+static void log_incname() {
+	unsigned int num;
+	char *n;
+
+	if (log_filename == NULL)
+		return;
+
+	n = log_filename;
+	while (*n && n[1] != 0) n++; // scan until n = last char
+	if (*n == 0) return;
+
+	num = ++log_reopen_counter;
+
+	do {
+		*n = ((char)(num % 10U)) + '0';
+		num /= 10U;
+		n--;
+		if (n < log_filename) break;
+		if (*n == '.') break;
+	} while (num != 0U);
+}
+
 static void log_flush() {
 	if (log_fd >= 0 && log_bufi != 0) {
-		int wd,wr,wo=0;
+		unsigned int wd,wr,wo=0;
 
 		do {
 			assert(wo < log_bufi);
 			wr = log_bufi - wo;
 			wd = write(log_fd,log_buf+wo,wr);
+			if (/*another way to check for wd == -1*/wd > sizeof(log_buf)) wd = 0;
 
 			// note what we could write
 			if (wd > 0) wo += wd;
@@ -70,11 +94,16 @@ static void log_flush() {
 					log_fd = -1;
 				}
 
+				// strange behavior in MS-DOS 5.0: if there is not enough disk space for X bytes, then it will
+				// write 0 bytes and return to us that it wrote 0 bytes. not what I expected, coming from the
+				// Linux world that would write as much as it can before giving up. --J.C.
 				if (errno == ENOSPC) {
-					printf("\nUnable to write full log. Swap floppies and hit ENTER or CTRL+C to quit.\n");
+					printf("\nWrite: out of space (%u / %u written)\n",wd,wr);
+					printf("Unable to write full log. Swap floppies and hit ENTER or CTRL+C to quit.\n");
 					printf("You will have to assemble the full file from fragments when this is done.\n");
 					do_pause();
 
+					log_incname();
 					if (!log_reopen()) {
 						printf("Unable to reopen log.\n");
 						exit(1);
@@ -124,6 +153,8 @@ static int log_open(const char *path) {
 		free(log_filename);
 		log_filename = NULL;
 	}
+
+	log_reopen_counter = 0;
 
 	log_fd = open(path,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
 	if (log_fd < 0) return 0;
