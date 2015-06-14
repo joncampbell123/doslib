@@ -125,7 +125,7 @@ if [ "$1" == "disk" ]; then
 	mcopy -i bochstst/win95.dsk config.sys ::config.sys
 
 	# boot grind disk GR_ADD
-	make_msdos_data_disk gr_add.dsk || exit 1
+	gunzip -c -d msdos5m.dsk.gz >gr_add.dsk
 	mcopy -i gr_add.dsk dos386f/dos4gw.exe ::dos4gw.exe
 
 	mcopy -i gr_add.dsk dos86l/gr_add.exe ::gradd16.exe
