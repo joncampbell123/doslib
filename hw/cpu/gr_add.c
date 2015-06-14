@@ -75,7 +75,7 @@ static void log_flush() {
 					}
 				}
 				else {
-					printf("\nError writing log.\n"); /* TODO: Does Open Watcom's library have strerror() like GNU/Linux? */
+					printf("\nError writing log: %s.\n",strerror(errno));
 					exit(1);
 				}
 			}
