@@ -223,8 +223,8 @@ _EOF
 
 # $1: name/path of the disk image to create
 make_msdos_data_disk() {
-	dd if=/dev/zero of=test.dsk bs=512 count=2880 || return 0
-	mkfs.vfat -n TEST test.dsk || return 0
+	dd if=/dev/zero "of=$1" bs=512 count=2880 || return 0
+	mkfs.vfat -n TEST "$1" || return 0
 	return 0
 }
 
