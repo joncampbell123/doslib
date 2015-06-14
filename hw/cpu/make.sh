@@ -123,6 +123,13 @@ if [ "$1" == "disk" ]; then
 	mcopy -i bochstst/win95.dsk bochstst/emm386.exe ::emm386.exe
 	mdel -i bochstst/win95.dsk ::config.sys
 	mcopy -i bochstst/win95.dsk config.sys ::config.sys
+
+	# boot grind disk GR_ADD
+	make_msdos_data_disk gr_add.dsk || exit 1
+	mcopy -i gr_add.dsk dos386f/dos4gw.exe ::dos4gw.exe
+
+	mcopy -i gr_add.dsk dos86l/gr_add.exe ::gradd16.exe
+	mcopy -i gr_add.dsk dos386f/gr_add.exe ::gradd32.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then

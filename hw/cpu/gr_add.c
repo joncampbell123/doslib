@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
+#include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <assert.h>
@@ -29,13 +30,53 @@ static unsigned int min_j=0,max_j=511;
 
 static unsigned char asm_buf[64];
 
+static char *log_filename = NULL;
 static unsigned char log_buf[4096];
 static unsigned int log_bufi=0;
 static int log_fd = -1;
 
+static void do_pause() {
+	unsigned char c;
+	if (isatty(1)) { do { read(0,&c,1); } while (c != 13); }
+}
+
+static void log_close();
+static int log_reopen();
+static int log_open(const char *path);
+
 static void log_flush() {
-	if (log_fd >= 0 && log_bufi != 0)
-		write(log_fd,log_buf,log_bufi);
+	if (log_fd >= 0 && log_bufi != 0) {
+		int wd,wr,wo=0;
+
+		do {
+			assert(wo < log_bufi);
+			wr = log_bufi - wo;
+			wd = write(log_fd,log_buf+wo,wr);
+
+			// note what we could write
+			if (wd > 0) wo += wd;
+
+			if (wd < wr) {
+				// make sure DOS flushes to disk
+				if (log_fd >= 0) {
+					close(log_fd);
+					log_fd = -1;
+				}
+
+				printf("\nUnable to write full log. Swap floppies and hit ENTER or CTRL+C to quit.\n");
+				printf("You will have to assemble the full file from fragments when this is done.\n");
+				do_pause();
+
+				if (!log_reopen()) {
+					printf("Unable to reopen log.\n");
+					exit(1);
+				}
+			}
+			else {
+				break;
+			}
+		} while (wo < log_bufi);
+	}
 
 	log_bufi = 0;
 }
@@ -53,9 +94,29 @@ static void log_close() {
 	}
 }
 
-static void log_open(const char *path) {
+static int log_reopen() {
+	if (log_fd >= 0) return 1;
+	if (log_filename == NULL) return 0;
+
+	log_fd = open(log_filename,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
+	if (log_fd < 0) return 0;
+
+	return 1;
+}
+
+static int log_open(const char *path) {
 	log_close();
+
+	if (log_filename) {
+		free(log_filename);
+		log_filename = NULL;
+	}
+
 	log_fd = open(path,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
+	if (log_fd < 0) return 0;
+
+	log_filename = strdup(path);
+	return 1;
 }
 
 static inline grind_ADDw() {
