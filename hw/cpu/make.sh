@@ -16,7 +16,7 @@ win38631=1
 
 if [ "$1" == "clean" ]; then
 	do_clean
-	rm -fv test.dsk v86kern.map
+	rm -fv test.dsk gr_add.dsk v86kern.map
 	rm -f bochstst/win95.dsk bochstst/hdd.dsk
 	exit 0
 fi
