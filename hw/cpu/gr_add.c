@@ -32,7 +32,13 @@ static unsigned int min_j=0,max_j=511;
 static unsigned char asm_buf[64];
 
 static char *log_filename = NULL;
-static unsigned char log_buf[4096];
+
+#if TARGET_MSDOS == 32
+static unsigned char log_buf[256*1024];		// 256KB
+#else
+static unsigned char log_buf[30*1024];		// 30KB
+#endif
+
 static unsigned int log_bufi=0;
 static int log_fd = -1;
 
