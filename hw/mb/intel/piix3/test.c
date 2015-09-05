@@ -70,6 +70,9 @@ static void ch_help() {
 	fprintf(stderr,"  /pi:rtio=<1|0>         Enable/disable chipset I/O of RTC\n");
 	fprintf(stderr,"  /pi:pci-irq-<x>=<N>    Route PCI IRQ x to IRQ N where 'x' is A,B,C or D\n");
 	fprintf(stderr,"                         and N is 1...15, or 0 to disable/assign to ISA [!]\n");
+	fprintf(stderr,"  /pi:mbdma-<x>=<N>[f]   Route motherboard DMA signal 'x' (0-1) to ISA DMA channel,\n");
+	fprintf(stderr,"                         or 'off' to disable the channel. Add 'f' to the end to\n");
+	fprintf(stderr,"                         enable type F + DMA buffer for the channel.\n");
 }
 
 static const char *s_yesno(int b) {
@@ -292,6 +295,30 @@ int main(int argc,char **argv) {
 				}
 				pci_write_cfgb(pci_isa_bridge.bus,pci_isa_bridge.dev,pci_isa_bridge.func,0x60+which,b);
 			}
+			else if (!strncmp(a,"mbdma-",6) && a[7] == '=') {
+				int which;
+				int fast=0;
+
+				which = (tolower(a[6]) - '0')&1;
+				if (!strcmp(a+8,"off")) {
+					val = 4; /* 100 = default (off) */
+				}
+				else {
+					val = atoi(a+8)&7;
+					if (a[9] == 'f') fast=1; /* 'f' suffix means fast */
+				}
+
+				b = pci_read_cfgb(pci_isa_bridge.bus,pci_isa_bridge.dev,pci_isa_bridge.func,0x76+which);
+
+				b &= ~0x80;
+				b |= fast << 7;
+
+				b &= ~0x07;
+				b |= val&7;
+
+				pci_write_cfgb(pci_isa_bridge.bus,pci_isa_bridge.dev,pci_isa_bridge.func,0x76+which,b);
+			}
+
 		}
 
 		if (cmd == CMD_DUMPRAW) {
