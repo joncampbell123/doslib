@@ -91,7 +91,14 @@ enum {
  *
  *        The 'aweio' variable is meant to represent the wavetable section of
  *        the Sound Blaster AWE32 and AWE64 cards. It will be set by the ISA PnP
- *        code (since those cards are ISA PnP compliant) else it will be zero. */
+ *        code (since those cards are ISA PnP compliant) else it will be zero.
+ *
+ *        NOTE: MPU-401 base I/O is provided only if the Sound Blaster card has some way to provide it, whether through ISA PnP,
+ *              the BLASTER environment variable, or any other software configuration method. Otherwise, it is not set. As of
+ *              2015/12/17 the code to probe the MPU-401 base address manually has been removed as it has been found to be the
+ *              source of the problem with a VIA EPIA motherboard where something exists at 0x330 that isn't an MPU-401, but when
+ *              probed like an MPU-401, kills the IDE controller until you reboot the machine. All MPU-401 support code will be
+ *              moved to it's own library at a future date. */
 
 struct sndsb_ctx {
 	uint16_t			baseio,mpuio,oplio,gameio,aweio;
@@ -105,7 +112,6 @@ struct sndsb_ctx {
 	uint8_t				dsp_stopping;
 	uint8_t				mixer_chip;
 	uint8_t				dsp_record;
-	uint8_t				mpu_ok;
 	uint32_t			buffer_size;		/* length of the buffer IN BYTES */
 	uint32_t			buffer_rate;
 	uint8_t				buffer_16bit;
@@ -254,7 +260,6 @@ extern struct sndsb_ctx *sndsb_card_blaster;
 extern int sndsb_card_next;
 
 struct sndsb_ctx *sndsb_by_base(uint16_t x);
-struct sndsb_ctx *sndsb_by_mpu(uint16_t x);
 struct sndsb_ctx *sndsb_by_irq(int8_t x);
 struct sndsb_ctx *sndsb_by_dma(uint16_t x);
 struct sndsb_ctx *sndsb_alloc_card();
@@ -269,10 +274,6 @@ int sndsb_reset_dsp(struct sndsb_ctx *cx);
 int sndsb_read_mixer(struct sndsb_ctx *cx,uint8_t i);
 void sndsb_write_mixer(struct sndsb_ctx *cx,uint8_t i,uint8_t d);
 int sndsb_probe_mixer(struct sndsb_ctx *cx);
-int sndsb_mpu_command(struct sndsb_ctx *cx,uint8_t d);
-int sndsb_mpu_write(struct sndsb_ctx *cx,uint8_t d);
-int sndsb_mpu_read(struct sndsb_ctx *cx);
-int sndsb_probe_mpu401(struct sndsb_ctx *cx);
 int sndsb_write_dsp(struct sndsb_ctx *cx,uint8_t d);
 int sndsb_write_dsp_timeout(struct sndsb_ctx *cx,uint8_t d,unsigned long timeout_ms);
 int sndsb_write_dsp_timeconst(struct sndsb_ctx *cx,uint8_t tc);

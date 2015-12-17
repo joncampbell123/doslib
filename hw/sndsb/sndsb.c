@@ -313,17 +313,6 @@ struct sndsb_ctx *sndsb_by_base(uint16_t x) {
 	return 0;
 }
 
-struct sndsb_ctx *sndsb_by_mpu(uint16_t x) {
-	int i;
-
-	for (i=0;i < SNDSB_MAX_CARDS;i++) {
-		if (sndsb_card[i].mpuio == x)
-			return sndsb_card+i;
-	}
-
-	return 0;
-}
-
 struct sndsb_ctx *sndsb_by_irq(int8_t x) {
 	int i;
 
@@ -385,7 +374,7 @@ struct sndsb_ctx *sndsb_alloc_card() {
 	int i;
 
 	for (i=0;i < SNDSB_MAX_CARDS;i++) {
-		if (sndsb_card[i].baseio == 0 && sndsb_card[i].mpuio == 0)
+		if (sndsb_card[i].baseio == 0)
 			return sndsb_card+i;
 	}
 
@@ -472,7 +461,6 @@ struct sndsb_ctx *sndsb_try_blaster_var() {
 	e->dsp_vmaj = 0;
 	e->dsp_vmin = 0;
 	e->mixer_ok = 0;
-	e->mpu_ok = 0;
 	e->dsp_ok = 0;
 	return (sndsb_card_blaster=e);
 }
@@ -634,88 +622,6 @@ int sndsb_probe_mixer(struct sndsb_ctx *cx) {
 	return (cx->mixer_chip != 0);
 }
 
-int sndsb_mpu_command(struct sndsb_ctx *cx,uint8_t d) {
-	unsigned int patience = 100;
-
-	do {
-		if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) & 0x40) /* if not ready for cmd, wait and try again */
-			t8254_wait(t8254_us2ticks(100));
-		else {
-			outp(cx->mpuio+SNDSB_MPUIO_COMMAND,d);
-			return 1;
-		}
-	} while (--patience != 0);
-	return 0;
-}
-
-int sndsb_mpu_write(struct sndsb_ctx *cx,uint8_t d) {
-	unsigned int patience = 100;
-
-	do {
-		if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) & 0x40) /* if not ready for cmd, wait and try again */
-			t8254_wait(t8254_us2ticks(100));
-		else {
-			outp(cx->mpuio+SNDSB_MPUIO_DATA,d);
-			return 1;
-		}
-	} while (--patience != 0);
-	return 0;
-}
-
-int sndsb_mpu_read(struct sndsb_ctx *cx) {
-	unsigned int patience = 100;
-
-	do {
-		if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) & 0x80) /* if data ready not ready, wait and try again */
-			t8254_wait(t8254_us2ticks(100));
-		else {
-			return inp(cx->mpuio+SNDSB_MPUIO_DATA);
-		}
-	} while (--patience != 0);
-
-	return -1;
-}
-
-/* this code makes sure the MPU exists */
-int sndsb_probe_mpu401(struct sndsb_ctx *cx) {
-	unsigned int patience = 10;
-	int c;
-
-	if (cx->mpuio == 0) return 0;
-
-	/* check the command register. note however that if neither data is available
-	 * or a command can be written this can return 0xFF */
-	if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) == 0xFF) {
-		/* hm, perhaps it's stuck returning data? */
-		do { /* wait for it to signal no data and/or ability to write command */
-			inp(cx->mpuio+SNDSB_MPUIO_DATA);
-			if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) != 0xFF)
-				break;
-
-			if (--patience == 0) return 0;
-			t8254_wait(t8254_us2ticks(100)); /* 100us */
-		} while(1);
-	}
-
-	patience=3;
-	do {
-		/* OK we got the status register to return something other than 0xFF.
-		 * Issue a reset */
-		if (sndsb_mpu_command(cx,0xFF)) {
-			if ((c=sndsb_mpu_read(cx)) == 0xFE) {
-				break;
-			}
-		}
-
-		if (--patience == 0)
-			return 0;
-
-		t8254_wait(t8254_us2ticks(10)); /* 10us */
-	} while (1);
-
-	return 1;
-}
-
 int sndsb_write_dsp(struct sndsb_ctx *cx,uint8_t d) {
 	unsigned int patience = 25000;
 
@@ -831,7 +737,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->vdmsound = 0;
 	cx->mega_em = 0;
 	cx->sbos = 0;
-	cx->mpu_ok = 0;
 	cx->dsp_ok = 0;
 	cx->mixer_ok = 0;
 	cx->dsp_vmaj = 0;
@@ -1275,28 +1180,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	if (!(d8237_flags&D8237_DMA_PRIMARY)) {
 		if (cx->dma16 >= 0 && cx->dma16 < 4) cx->dma16 = -1;
 		if (cx->dma8 >= 0 && cx->dma8 < 4) cx->dma8 = -1;
-	}
-
-	if (cx->mpuio == 0) { /* uh oh, we have to probe for it */
-		if (sndsb_by_mpu(0x330) == NULL) {
-			cx->mpuio = 0x330; /* more common */
-			if (sndsb_probe_mpu401(cx))
-				cx->mpu_ok = 1;
-			else {
-				if (sndsb_by_mpu(0x300) == NULL) {
-					cx->mpuio = 0x300; /* less common */
-					if (sndsb_probe_mpu401(cx))
-						cx->mpu_ok = 1;
-					else {
-						cx->mpuio = 0;
-					}
-				}
-			}
-		}
-	}
-	else {
-		if (sndsb_probe_mpu401(cx))
-			cx->mpu_ok = 1;
 	}
 
 	if (cx->dsp_vmaj >= 4) {
@@ -3763,3 +3646,120 @@ uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit)
 	return ret;
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+//// FIXME FIXME FIXME This is MPU-401 support code. It does not belong in the Sound Blaster library   ////
+//// because MPU-401 can exist independently of Sound Blaster. Move this code out to it's own library! ////
+//// In the same manner that Adlib OPL-2/3 support exists in it's own library, MPU-401 belongs in it's ////
+//// own library.                                                                                      ////
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+#if 0
+
+int sndsb_mpu_command(struct sndsb_ctx *cx,uint8_t d) {
+	unsigned int patience = 100;
+
+	do {
+		if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) & 0x40) /* if not ready for cmd, wait and try again */
+			t8254_wait(t8254_us2ticks(100));
+		else {
+			outp(cx->mpuio+SNDSB_MPUIO_COMMAND,d);
+			return 1;
+		}
+	} while (--patience != 0);
+	return 0;
+}
+
+int sndsb_mpu_write(struct sndsb_ctx *cx,uint8_t d) {
+	unsigned int patience = 100;
+
+	do {
+		if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) & 0x40) /* if not ready for cmd, wait and try again */
+			t8254_wait(t8254_us2ticks(100));
+		else {
+			outp(cx->mpuio+SNDSB_MPUIO_DATA,d);
+			return 1;
+		}
+	} while (--patience != 0);
+	return 0;
+}
+
+int sndsb_mpu_read(struct sndsb_ctx *cx) {
+	unsigned int patience = 100;
+
+	do {
+		if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) & 0x80) /* if data ready not ready, wait and try again */
+			t8254_wait(t8254_us2ticks(100));
+		else {
+			return inp(cx->mpuio+SNDSB_MPUIO_DATA);
+		}
+	} while (--patience != 0);
+
+	return -1;
+}
+
+/* this code makes sure the MPU exists */
+int sndsb_probe_mpu401(struct sndsb_ctx *cx) {
+	unsigned int patience = 10;
+	int c;
+
+	if (cx->mpuio == 0) return 0;
+
+	/* check the command register. note however that if neither data is available
+	 * or a command can be written this can return 0xFF */
+	if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) == 0xFF) {
+		/* hm, perhaps it's stuck returning data? */
+		do { /* wait for it to signal no data and/or ability to write command */
+			inp(cx->mpuio+SNDSB_MPUIO_DATA);
+			if (inp(cx->mpuio+SNDSB_MPUIO_STATUS) != 0xFF)
+				break;
+
+			if (--patience == 0) return 0;
+			t8254_wait(t8254_us2ticks(100)); /* 100us */
+		} while(1);
+	}
+
+	patience=3;
+	do {
+		/* OK we got the status register to return something other than 0xFF.
+		 * Issue a reset */
+		if (sndsb_mpu_command(cx,0xFF)) {
+			if ((c=sndsb_mpu_read(cx)) == 0xFE) {
+				break;
+			}
+		}
+
+		if (--patience == 0)
+			return 0;
+
+		t8254_wait(t8254_us2ticks(10)); /* 10us */
+	} while (1);
+
+	return 1;
+}
+
+/// detect fragment
+
+	if (cx->mpuio == 0) { /* uh oh, we have to probe for it */
+		if (sndsb_by_mpu(0x330) == NULL) {
+			cx->mpuio = 0x330; /* more common */
+			if (sndsb_probe_mpu401(cx))
+				cx->mpu_ok = 1;
+			else {
+				if (sndsb_by_mpu(0x300) == NULL) {
+					cx->mpuio = 0x300; /* less common */
+					if (sndsb_probe_mpu401(cx))
+						cx->mpu_ok = 1;
+					else {
+						cx->mpuio = 0;
+					}
+				}
+			}
+		}
+	}
+	else {
+		if (sndsb_probe_mpu401(cx))
+			cx->mpu_ok = 1;
+	}
+
+/// end fragment
+
+#endif
