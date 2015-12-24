@@ -56,7 +56,7 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-	printf("Your BIOS provides a ISA PnP structure\n");
+	printf("Your BIOS provides a ISA PnP structure at F000:%04X\n",(unsigned int)isa_pnp_bios_offset);
 	printf("   version=0x%02X length=0x%02X  control=0x%04X  event_notify_flag @ 0x%08lX\n",
 		isa_pnp_info.version,		isa_pnp_info.length,
 		isa_pnp_info.control,		(unsigned long)isa_pnp_info.event_notify_flag_addr);
