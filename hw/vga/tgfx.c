@@ -220,6 +220,11 @@ void v320x200x256_VGA_menu_setpixel_box3rw() {
 	if ((vga_flags & VGA_IS_VGA) == 0)
 		return;
 
+	printf("This code is reading, writing, then\n");
+	printf("restoring each pixel. If the code\n");
+	printf("works correctly, no rectangle should\n");
+	printf("be visible.\n");
+
 	xm = v320x200x256_VGA_state.width/2;
 	ym = v320x200x256_VGA_state.height/2;
 	if (xm == 0 || ym == 0) return;
