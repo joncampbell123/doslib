@@ -75,7 +75,7 @@ void v320x200x256_VGA_update_from_CRTC_state() {
 	v320x200x256_VGA_state.width = p.horizontal_display_end * 4;
 	v320x200x256_VGA_state.height = (p.vertical_display_end + p.max_scanline - 1) / p.max_scanline; /* <- NTS: Modern Intel chipsets however ignore the partial last scanline! */
 	v320x200x256_VGA_state.virt_height = v320x200x256_VGA_state.vram_size / v320x200x256_VGA_state.stride;
-	v320x200x256_VGA_state.vis_offset = vga_get_start_location();
+	v320x200x256_VGA_state.vis_offset = vga_get_start_location() << 2; /* this will lose the upper 2 bits, by design. also does not pay attention to hpel */
 	v320x200x256_VGA_state.draw_ptr = vga_graphics_ram + v320x200x256_VGA_state.draw_offset;
 }
 
