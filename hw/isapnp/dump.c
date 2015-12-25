@@ -27,6 +27,10 @@
 #include <hw/dos/dos.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
 #include <isapnp/isapnp.h>
+#include <hw/dos/doswin.h>
+#if TARGET_MSDOS == 16
+# include <hw/flatreal/flatreal.h>	/* Flat Real mode */
+#endif
 
 static unsigned char tmp[128];
 static unsigned char devnode_raw[8192];
@@ -469,6 +473,108 @@ static int dump_isa_pnp_device_enum() {
 	return 0;
 }
 
+int dump_mmio_phys(const char *path,uint32_t base,uint32_t len) {
+	FILE *fp;
+
+	if (path == NULL || base == 0UL || len == 0UL) return 0;
+
+	cpu_probe();
+	probe_dos();
+	detect_windows();
+
+	fp = fopen(path,"wb");
+	if (fp == NULL) { fprintf(stderr,"Unable to open %s to dump to\n",path); return 1; }
+
+#if TARGET_MSDOS == 32
+	/* FIXME: We're assuming paging is disabled! We *could* be running under a DPMI server or EMM386.EXE */
+	while (len > 0) {
+		uint32_t cnt = min(len,(uint32_t)sizeof(devnode_raw));
+		unsigned int o = 0;
+		uint32_t wr = cnt;
+
+		while (cnt > 0) {
+			devnode_raw[o] = *((unsigned char*)base);
+			base++;
+			cnt--;
+			len--;
+			o++;
+		}
+
+		fwrite(devnode_raw,wr,1,fp);
+	}
+#else
+	if (!flatrealmode_setup(FLATREALMODE_4GB)) {
+		fprintf(stderr,"ERROR: Unable to initialize Flat Real mode\n");
+		fclose(fp);
+		return 0;
+	}
+
+	while (len > 0) {
+		uint32_t cnt = min(len,(uint32_t)sizeof(devnode_raw));
+		unsigned int o = 0;
+		uint32_t wr = cnt;
+
+		/* NTS: It's always possible that the DOS kernel at some point might make use of extended memory,
+		 *      and reset Flat Real Mode, so we have to make sure to switch it back on. */
+		if (flatrealmode_test()) {
+			/* test failed, GP# fault occurred. switch it back on */
+			if (!flatrealmode_setup(FLATREALMODE_4GB)) {
+				fprintf(stderr,"ERROR: Unable to initialize Flat Real mode\n");
+				fclose(fp);
+				return 0;
+			}
+		}
+
+		while (cnt > 0) {
+			devnode_raw[o] = flatrealmode_readb(base);
+			base++;
+			cnt--;
+			len--;
+			o++;
+		}
+
+		fwrite(devnode_raw,wr,1,fp);
+	}
+#endif
+
+	fclose(fp);
+	return 0;
+}
+
+int dump_isa_pnp_escd() {
+	unsigned int min_escd_write=0,escd_size=0;
+	unsigned long nv_base=0;
+	unsigned int ret_ax;
+	FILE *fp;
+
+	fp = fopen("ESCDINFO.TXT","w");
+	if (!fp) { fprintf(stderr,"Error writing dumpfile\n"); return -1; }
+
+	printf("Asking for ESCD information...\n"); fflush(stdout);
+	ret_ax = isa_pnp_bios_get_escd_info(&min_escd_write,&escd_size,&nv_base);
+	fprintf(fp,"PNP BIOS Function 41h Get Extended System Configuration Data (ESCD) Info:\n");
+	fprintf(fp,"   Result AX:                                     0x%04x\n",ret_ax);
+	if (ret_ax == 0) {
+		fprintf(fp,"   ESCD size:                                     %u bytes\n",escd_size);
+		fprintf(fp,"   Minimum ESCD write:                            %u bytes\n",min_escd_write);
+		fprintf(fp,"   Memory-mapped non-volatile storage location:   0x%08lx (physical memory address)\n",(unsigned long)nv_base);
+		if (nv_base != 0) {
+			fflush(fp); /* just in case */
+			printf("Dumping ESCD non-volatile memory (MMIO)\n");
+			if (dump_mmio_phys("ESCDNV41.BIN",nv_base,max(escd_size,min_escd_write))) {
+				fclose(fp);
+				return -1;
+			}
+		}
+	}
+
+	/* TODO: code to read ESCD data using function 42h "Read Extended System Configuration Data (ESCD)" which
+	 *       directs the BIOS to read it then return to our buffers. */
+
+	fclose(fp);
+	return 0;
+}
+
 int main(int argc,char **argv) {
 	printf("ISA Plug & Play dump program\n");
 
@@ -488,6 +594,7 @@ int main(int argc,char **argv) {
 	if (dump_pnp_entry()) return 1;
 	if (dump_isa_pnp_bios_devnodes()) return 1;
 	if (dump_isa_pnp_device_enum()) return 1;
+	if (dump_isa_pnp_escd()) return 1;
 
 	free_isa_pnp_bios();
 	return 0;
