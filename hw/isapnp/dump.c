@@ -29,7 +29,7 @@
 #include <isapnp/isapnp.h>
 
 static unsigned char tmp[128];
-static unsigned char devnode_raw[4096];
+static unsigned char devnode_raw[8192];
 static char dev_product[256];
 
 static int dump_pnp_entry() {
@@ -81,12 +81,12 @@ static int dump_pnp_entry() {
 	return 0;
 }
 
-static void fprintf_devnode_pnp_decode(FILE *fp_raw,unsigned char far *rsc,unsigned char far *rsc_fence) {
+static void fprintf_devnode_pnp_decode(FILE *fp_raw,unsigned char far *rsc,unsigned char far *rsc_fence,unsigned int liter_limit) {
 	struct isapnp_tag tag;
 	unsigned char liter;
 	unsigned int i;
 
-	for (liter=0;liter <= 2;liter++) {
+	for (liter=0;liter <= liter_limit;liter++) {
 		if (!isapnp_read_tag(&rsc,rsc_fence,&tag))
 			break;
 
@@ -311,8 +311,157 @@ static int dump_isa_pnp_bios_devnodes() {
 		};
 
 		/* the three configuration blocks are in this one buffer, one after the other */
-		fprintf_devnode_pnp_decode(fp_raw,devnode_raw + sizeof(*devn),devnode_raw + devn->size);
+		fprintf_devnode_pnp_decode(fp_raw,devnode_raw + sizeof(*devn),devnode_raw + devn->size,2);
 		fclose(fp_raw);
+	}
+
+	fclose(fp);
+	return 0;
+}
+
+static int dump_isa_pnp_device_enum() {
+	struct isapnp_pnp_isa_cfg far *nfo;
+	unsigned int ok=0,i,j,csn;
+	unsigned int ret_ax;
+	unsigned int ff=0;
+	unsigned char cc;
+	FILE *fp,*fp_raw;
+	char vendorid[9];
+
+	printf("Asking for ISA PnP device enumeration..."); fflush(stdout);
+
+	_fmemset(devnode_raw,0,sizeof(*nfo));
+	ret_ax = isa_pnp_bios_get_pnp_isa_cfg(devnode_raw);
+	nfo = (struct isapnp_pnp_isa_cfg far*)devnode_raw;
+
+	if (ret_ax != 0) {
+		printf(" failed. nothing returned\n");
+		return 0;
+	}
+
+	printf(" ok. rev=%u csn=%u pnp_port=0x%X\n",
+		nfo->revision,
+		nfo->total_csn,
+		nfo->isa_pnp_port);
+
+	fp = fopen("PNPISAEN.TXT","w");
+	if (!fp) { fprintf(stderr,"Error writing dumpfile\n"); return -1; }
+
+	fprintf(fp,"ISA PnP device enumeration.\n");
+	fprintf(fp,"BIOS struct revision:      %u\n",nfo->revision);
+	fprintf(fp,"BIOS Total CSNs:           %u\n",nfo->total_csn);
+	fprintf(fp,"BIOS ISA PnP I/O port:     0x%X\n",nfo->isa_pnp_port);
+
+	if (nfo->revision == 1 && nfo->total_csn != 0 && nfo->isa_pnp_port != 0) {
+		isapnp_read_data = nfo->isa_pnp_port;
+		for (i=0;i < 256;i++) {
+			isa_pnp_init_key();
+			isa_pnp_wake_csn(i);
+			isa_pnp_set_read_data_port(isapnp_read_data);
+			isa_pnp_write_data_register(0x02,0x02);	/* bit 1: set -> return to Wait For Key state (or else a Pentium Pro system I own eventually locks up and hangs) */
+		}
+
+		csn = 1;
+		do {
+			isa_pnp_init_key();
+			isa_pnp_wake_csn(csn);
+
+			ok = 0;
+			if (!ok) {
+				isa_pnp_write_address(0x06); /* CSN */
+				if (isa_pnp_read_data() == csn) ok = 1;
+			}
+
+			if (ok) {
+				printf("Reading ISA PnP CSN %u\n",csn);
+
+				isa_pnp_write_address(0x06); /* CSN */
+				isa_pnp_write_data(csn);
+
+				isa_pnp_write_address(0x07); /* logical dev index */
+				isa_pnp_write_data(0); /* main dev */
+
+				isa_pnp_write_address(0x06); /* CSN */
+				if (isa_pnp_read_data() != csn)
+					fprintf(stderr," - Warning, cannot readback CSN[1]\n");
+
+				sprintf(tmp,"PNPISA%02X.BIN",csn);
+				fp_raw = fopen(tmp,"wb");
+				if (fp_raw == NULL) {
+					fprintf(stderr,"Cannot open %s for write\n",tmp);
+					fclose(fp);
+					return 1;
+				}
+
+				/* apparently doing this lets us read back the serial and vendor ID in addition to resource data */
+				/* if we don't, then we only read back the resource data */
+				isa_pnp_init_key();
+				isa_pnp_wake_csn(csn);
+
+				for (j=0;j < 9;j++) vendorid[j] = isa_pnp_read_config();
+				fprintf(fp,"CSN 0x%02X: Serial/Vendor ID: %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+					csn,
+					vendorid[0],vendorid[1],vendorid[2],vendorid[3],
+					vendorid[4],vendorid[5],vendorid[6],vendorid[7],
+					vendorid[8]);
+
+				{
+					isa_pnp_product_id_to_str(tmp,*((uint32_t*)vendorid));
+					fprintf(fp,"    Product ID 0x%08lx '%s'\n",*((uint32_t*)vendorid),tmp);
+				}
+
+				fwrite(vendorid,9,1,fp_raw);
+
+				/* try to read the data, as raw as possible */
+				i=0;
+				ff=0;
+				while (i < sizeof(devnode_raw)) {
+					cc = isa_pnp_read_config();
+					if (cc == 0xFF) {
+						ff++;
+						if (ff >= 256) break; /* a run of 256 FF's means end of data */
+					}
+					else {
+						ff=0;
+					}
+
+					devnode_raw[i++] = cc;
+				}
+
+				if (i > 0) {
+					assert(i <= sizeof(devnode_raw));
+					fwrite(devnode_raw,i,1,fp_raw);
+				}
+
+				fclose(fp_raw);
+
+				sprintf(tmp,"PNPISA%02X.TXT",csn);
+				fp_raw = fopen(tmp,"w");
+				if (fp_raw == NULL) {
+					fprintf(stderr,"Cannot open %s for write\n",tmp);
+					fclose(fp);
+					return 1;
+				}
+
+				fprintf(fp_raw,"CSN 0x%02X: Serial/Vendor ID: %02x %02x %02x %02x %02x %02x %02x %02x %02x\n",
+					csn,
+					vendorid[0],vendorid[1],vendorid[2],vendorid[3],
+					vendorid[4],vendorid[5],vendorid[6],vendorid[7],
+					vendorid[8]);
+
+				{
+					isa_pnp_product_id_to_str(tmp,*((uint32_t*)vendorid));
+					fprintf(fp_raw,"    Product ID 0x%08lx '%s'\n\n",*((uint32_t*)vendorid),tmp);
+				}
+
+				fprintf_devnode_pnp_decode(fp_raw,devnode_raw,devnode_raw + i,0);
+				fclose(fp_raw);
+			}
+
+			/* return back to "wait for key" state */
+			isa_pnp_write_data_register(0x02,0x02);	/* bit 1: set -> return to Wait For Key state (or else a Pentium Pro system I own eventually locks up and hangs) */
+			csn++;
+		} while (csn < 255);
 	}
 
 	fclose(fp);
@@ -337,6 +486,7 @@ int main(int argc,char **argv) {
 
 	if (dump_pnp_entry()) return 1;
 	if (dump_isa_pnp_bios_devnodes()) return 1;
+	if (dump_isa_pnp_device_enum()) return 1;
 
 	free_isa_pnp_bios();
 	return 0;
