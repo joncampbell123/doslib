@@ -145,6 +145,7 @@ static void fprintf_devnode_pnp_decode(FILE *fp_raw,unsigned char far *rsc,unsig
 					fprintf(fp_raw,"\n");
 					} break;
 				case ISAPNP_TAG_END_DEPENDENT_FUNCTION:
+					fprintf(fp_raw,"\n");
 					break;
 				case ISAPNP_TAG_IO_PORT: {
 					struct isapnp_tag_io_port far *x = (struct isapnp_tag_io_port far*)tag.data;
