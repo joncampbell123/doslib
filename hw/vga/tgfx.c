@@ -247,6 +247,52 @@ void v320x200x256_VGA_menu_setpixel_box3rw() {
 	}
 }
 
+void v320x200x256_VGA_menu_setpixel_box3rwdisp() {
+	unsigned int x,y,xm,ym;
+	unsigned char p;
+	int c;
+
+	if ((vga_flags & VGA_IS_VGA) == 0)
+		return;
+
+	xm = v320x200x256_VGA_state.width/2;
+	ym = v320x200x256_VGA_state.height/2;
+	if (xm == 0 || ym == 0) return;
+
+	for (y=(ym/2);y < ym;y++) {
+		for (x=(xm/2);x < xm;x++) {
+			v320x200x256_VGA_setpixel(x,y,x+y);
+		}
+	}
+
+	for (y=0;y < ym;y++) {
+		for (x=0;x < xm;x++) {
+			p = v320x200x256_VGA_getpixel(x,y);
+			v320x200x256_VGA_setpixel(x+xm,y,p);
+		}
+	}
+
+	for (y=0;y < ym;y++) {
+		for (x=0;x < xm;x++) {
+			p = v320x200x256_VGA_getpixel(x,y);
+			v320x200x256_VGA_setpixel(x,y+ym,p);
+		}
+	}
+
+	for (y=0;y < ym;y++) {
+		for (x=0;x < xm;x++) {
+			p = v320x200x256_VGA_getpixel(x,y);
+			v320x200x256_VGA_setpixel(x+xm,y+ym,p);
+		}
+	}
+
+	while (1) {
+		c = getch();
+		if (c == 27 || c == 13)
+			break;
+	}
+}
+
 void v320x200x256_VGA_menu_setpixel() {
 	unsigned char redraw;
 	int c;
@@ -266,6 +312,7 @@ void v320x200x256_VGA_menu_setpixel() {
 			printf("ESC  Top menu          A. Box1\n");
 			printf("B. Box1b               C. Box2overdraw\n");
 			printf("D. Box3inv1            E. Box3rw\n");
+			printf("F. Box3rw displace\n");
 		}
 
 		c = getch();
@@ -289,6 +336,10 @@ void v320x200x256_VGA_menu_setpixel() {
 		}
 		else if (c == 'e' || c == 'E') {
 			v320x200x256_VGA_menu_setpixel_box3rw();
+			redraw = 1;
+		}
+		else if (c == 'f' || c == 'F') {
+			v320x200x256_VGA_menu_setpixel_box3rwdisp();
 			redraw = 1;
 		}
 	}
