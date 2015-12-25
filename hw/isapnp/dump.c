@@ -105,12 +105,12 @@ static void fprintf_devnode_pnp_decode(FILE *fp_raw,unsigned char far *rsc,unsig
 			switch (tag.tag) {
 				case ISAPNP_TAG_PNP_VERSION: {
 					struct isapnp_tag_pnp_version far *x = (struct isapnp_tag_pnp_version far*)tag.data;
-					fprintf(fp_raw,"PnP v%u.%u Vendor=0x%02X",x->pnp>>4,x->pnp&0xF,x->vendor);
+					fprintf(fp_raw,"PnP v%u.%u Vendor=0x%02X\n",x->pnp>>4,x->pnp&0xF,x->vendor);
 					} break;
 				case ISAPNP_TAG_COMPATIBLE_DEVICE_ID: {
 					struct isapnp_tag_compatible_device_id far *x = (struct isapnp_tag_compatible_device_id far*)tag.data;
 					isa_pnp_product_id_to_str(tmp,x->id);
-					fprintf(fp_raw,"0x%08lx '%s'",(unsigned long)x->id,tmp);
+					fprintf(fp_raw,"0x%08lx '%s'\n",(unsigned long)x->id,tmp);
 					} break;
 				case ISAPNP_TAG_IRQ_FORMAT: {
 					struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;
@@ -159,7 +159,7 @@ static void fprintf_devnode_pnp_decode(FILE *fp_raw,unsigned char far *rsc,unsig
 				case ISAPNP_TAG_LOGICAL_DEVICE_ID: {
 					struct isapnp_tag_logical_device_id far *x = (struct isapnp_tag_logical_device_id far*)tag.data;
 					isa_pnp_product_id_to_str(tmp,x->logical_device_id);
-					fprintf(fp_raw,"0x%08lx '%s'",(unsigned long)x->logical_device_id,tmp);
+					fprintf(fp_raw,"0x%08lx '%s'\n",(unsigned long)x->logical_device_id,tmp);
 					} break;
 				case ISAPNP_TAG_FIXED_MEMORY_LOCATION_32: {
 					struct isapnp_tag_fixed_memory_location_32 far *x = (struct isapnp_tag_fixed_memory_location_32 far*)tag.data;
@@ -179,7 +179,7 @@ static void fprintf_devnode_pnp_decode(FILE *fp_raw,unsigned char far *rsc,unsig
 					if ((i+1) > sizeof(tmp)) i = sizeof(tmp) - 1;
 					if (i != 0) _fmemcpy(tmp,tag.data,i);
 					tmp[i] = 0;
-					fprintf(fp_raw,"\"%s\"",tmp);
+					fprintf(fp_raw,"\"%s\"\n",tmp);
 					} break;
 				default:
 					fprintf(fp_raw,"(not implemented)\n");
