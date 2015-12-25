@@ -12,9 +12,11 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
-#include <hw/vga/vgatty.h>
 #include <hw/8254/8254.h>
+#include <hw/vga/vgatty.h>
 #include <hw/dos/doswin.h>
+
+#include <hw/vga/gvg256.h>
 
 #if defined(TARGET_WINDOWS)
 # error WRONG
@@ -56,16 +58,6 @@ void bios_cls() {
 }
 
 /*===================================================================================*/
-struct v320x200x256_VGA_state {
-	uint16_t		stride;			// bytes per scanline
-	uint16_t		width,virt_width;	// video width vs virtual width
-	uint16_t		height,virt_height;	// video height vs virtual height
-	uint16_t		draw_offset;		// draw offset
-	uint16_t		vis_offset;		// visual offset
-	uint32_t		vram_size;		// size of VRAM
-	VGA_RAM_PTR		draw_ptr;
-};
-
 struct v320x200x256_VGA_state v320x200x256_VGA_state = {0};
 
 void v320x200x256_VGA_update_from_CRTC_state() {
