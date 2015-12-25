@@ -485,6 +485,8 @@ int dump_mmio_phys(const char *path,uint32_t base,uint32_t len) {
 	fp = fopen(path,"wb");
 	if (fp == NULL) { fprintf(stderr,"Unable to open %s to dump to\n",path); return 1; }
 
+	printf("Dumping MMIO data from base 0x%08lx length 0x%08lx\n",(unsigned long)base,(unsigned long)len);
+
 #if TARGET_MSDOS == 32
 	/* FIXME: We're assuming paging is disabled! We *could* be running under a DPMI server or EMM386.EXE */
 	while (len > 0) {
@@ -560,7 +562,6 @@ int dump_isa_pnp_escd() {
 		fprintf(fp,"   Memory-mapped non-volatile storage location:   0x%08lx (physical memory address)\n",(unsigned long)nv_base);
 		if (nv_base != 0) {
 			fflush(fp); /* just in case */
-			printf("Dumping ESCD non-volatile memory (MMIO)\n");
 			if (dump_mmio_phys("ESCDNV41.BIN",nv_base,max(escd_size,min_escd_write))) {
 				fclose(fp);
 				return -1;
