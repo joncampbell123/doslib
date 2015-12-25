@@ -30,9 +30,56 @@
 
 static unsigned char tmp[4096];
 
-int main(int argc,char **argv) {
-	FILE *fp=NULL;
+static int dump_pnp_entry() {
+	FILE *fp;
 
+	printf("ISA PnP BIOS found, dumping info now.\n");
+
+	fp = fopen("PNPENTRY.TXT","wb");
+	if (!fp) { fprintf(stderr,"Error writing dumpfile\n"); return -1; }
+
+	fprintf(fp,"BIOS Provides PnP structure at F000:%04X\n",(unsigned int)isa_pnp_bios_offset);
+	fprintf(fp,"\n");
+
+	memcpy(tmp,isa_pnp_info.signature,4); tmp[4] = 0;
+	fprintf(fp,"  Signature:                   %s\n",tmp);
+
+	fprintf(fp,"  Version:                     0x%02x (BCD as version %x.%x)\n",isa_pnp_info.version,isa_pnp_info.version>>4,isa_pnp_info.version&0xF);
+	fprintf(fp,"  Length:                      0x%02x bytes\n",isa_pnp_info.length);
+	fprintf(fp,"  Control:                     0x%02x\n",isa_pnp_info.control);
+
+	fprintf(fp,"                                 - ");
+	switch (isa_pnp_info.control&3) {
+		case 0:		fprintf(fp,"Event notification is not supported"); break;
+		case 1:		fprintf(fp,"Event notification is handled through polling"); break;
+		case 2:		fprintf(fp,"Event notification is asynchronous (at interrupt time)"); break;
+		default:	fprintf(fp,"Event notification is ???"); break;
+	};
+	fprintf(fp,"\n");
+
+	fprintf(fp,"  Event notify flag at:        0x%08lx (physical mem address)\n",(unsigned long)isa_pnp_info.event_notify_flag_addr);
+	fprintf(fp,"  Real-mode entry at:          %04X:%04X\n",isa_pnp_info.rm_ent_segment,isa_pnp_info.rm_ent_offset);
+	fprintf(fp,"  Protected-mode entry at:     Segment base 0x%08lX offset 0x%04X\n",
+			(unsigned long)isa_pnp_info.pm_ent_segment_base,(unsigned int)isa_pnp_info.pm_ent_offset);
+
+	fprintf(fp,"  OEM device ID:               0x%08lX",
+			(unsigned long)isa_pnp_info.oem_device_id);
+	if (isa_pnp_info.oem_device_id != 0UL) {
+		isa_pnp_product_id_to_str(tmp,(uint32_t)isa_pnp_info.oem_device_id);
+		fprintf(fp," EISA product ident '%s'",tmp);
+	}
+	fprintf(fp,"\n");
+
+	fprintf(fp,"  Real-mode data segment:      0x%04X\n",
+			(unsigned int)isa_pnp_info.rm_ent_data_segment);
+	fprintf(fp,"  Protected mode data segment: Segment base 0x%08lx\n",
+			(unsigned long)isa_pnp_info.pm_ent_data_segment_base);
+
+	fclose(fp);
+	return 0;
+}
+
+int main(int argc,char **argv) {
 	printf("ISA Plug & Play dump program\n");
 
 	if (!probe_8254()) {
@@ -48,50 +95,7 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-	printf("ISA PnP BIOS found, dumping info now.\n");
-	{
-		fp = fopen("PNPENTRY.TXT","wb");
-		if (!fp) { fprintf(stderr,"Error writing dumpfile\n"); return 1; }
-
-		fprintf(fp,"BIOS Provides PnP structure at F000:%04X\n",(unsigned int)isa_pnp_bios_offset);
-		fprintf(fp,"\n");
-
-		memcpy(tmp,isa_pnp_info.signature,4); tmp[4] = 0;
-		fprintf(fp,"  Signature:                   %s\n",tmp);
-
-		fprintf(fp,"  Version:                     0x%02x (BCD as version %x.%x)\n",isa_pnp_info.version,isa_pnp_info.version>>4,isa_pnp_info.version&0xF);
-		fprintf(fp,"  Length:                      0x%02x bytes\n",isa_pnp_info.length);
-		fprintf(fp,"  Control:                     0x%02x\n",isa_pnp_info.control);
-
-		fprintf(fp,"                                 - ");
-		switch (isa_pnp_info.control&3) {
-			case 0:		fprintf(fp,"Event notification is not supported"); break;
-			case 1:		fprintf(fp,"Event notification is handled through polling"); break;
-			case 2:		fprintf(fp,"Event notification is asynchronous (at interrupt time)"); break;
-			default:	fprintf(fp,"Event notification is ???"); break;
-		};
-		fprintf(fp,"\n");
-
-		fprintf(fp,"  Event notify flag at:        0x%08lx (physical mem address)\n",(unsigned long)isa_pnp_info.event_notify_flag_addr);
-		fprintf(fp,"  Real-mode entry at:          %04X:%04X\n",isa_pnp_info.rm_ent_segment,isa_pnp_info.rm_ent_offset);
-		fprintf(fp,"  Protected-mode entry at:     Segment base 0x%08lX offset 0x%04X\n",
-			(unsigned long)isa_pnp_info.pm_ent_segment_base,(unsigned int)isa_pnp_info.pm_ent_offset);
-		
-		fprintf(fp,"  OEM device ID:               0x%08lX",
-			(unsigned long)isa_pnp_info.oem_device_id);
-		if (isa_pnp_info.oem_device_id != 0UL) {
-			isa_pnp_product_id_to_str(tmp,(uint32_t)isa_pnp_info.oem_device_id);
-			fprintf(fp," EISA product ident '%s'",tmp);
-		}
-		fprintf(fp,"\n");
-
-		fprintf(fp,"  Real-mode data segment:      0x%04X\n",
-			(unsigned int)isa_pnp_info.rm_ent_data_segment);
-		fprintf(fp,"  Protected mode data segment: Segment base 0x%08lx\n",
-			(unsigned long)isa_pnp_info.pm_ent_data_segment_base);
-
-		fclose(fp);
-	}
+	if (dump_pnp_entry()) return 1;
 
 	free_isa_pnp_bios();
 	return 0;
