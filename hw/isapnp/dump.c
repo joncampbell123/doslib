@@ -30,6 +30,7 @@
 
 static unsigned char tmp[128];
 static unsigned char devnode_raw[4096];
+static char dev_product[256];
 
 static int dump_pnp_entry() {
 	FILE *fp;
@@ -80,14 +81,120 @@ static int dump_pnp_entry() {
 	return 0;
 }
 
+static void fprintf_devnode_pnp_decode(FILE *fp_raw,unsigned char far *rsc,unsigned char far *rsc_fence) {
+	struct isapnp_tag tag;
+	unsigned char liter;
+	unsigned int i;
+
+	for (liter=0;liter <= 2;liter++) {
+		if (!isapnp_read_tag(&rsc,rsc_fence,&tag))
+			break;
+
+		fprintf(fp_raw,"* ISA PnP %s resource configuration block\n",isapnp_config_block_str[liter]);
+
+		do {
+			fprintf(fp_raw,"  %14s: ",isapnp_tag_str(tag.tag));
+			if (tag.tag == ISAPNP_TAG_START_DEPENDENT_FUNCTION || tag.tag == ISAPNP_TAG_END_DEPENDENT_FUNCTION)
+				fprintf(fp_raw,"---------------------");
+
+			if (tag.tag == ISAPNP_TAG_END) { /* end tag */
+				fprintf(fp_raw,"\n");
+				break;
+			}
+
+			switch (tag.tag) {
+				case ISAPNP_TAG_PNP_VERSION: {
+					struct isapnp_tag_pnp_version far *x = (struct isapnp_tag_pnp_version far*)tag.data;
+					fprintf(fp_raw,"PnP v%u.%u Vendor=0x%02X",x->pnp>>4,x->pnp&0xF,x->vendor);
+					} break;
+				case ISAPNP_TAG_COMPATIBLE_DEVICE_ID: {
+					struct isapnp_tag_compatible_device_id far *x = (struct isapnp_tag_compatible_device_id far*)tag.data;
+					isa_pnp_product_id_to_str(tmp,x->id);
+					fprintf(fp_raw,"0x%08lx '%s'",(unsigned long)x->id,tmp);
+					} break;
+				case ISAPNP_TAG_IRQ_FORMAT: {
+					struct isapnp_tag_irq_format far *x = (struct isapnp_tag_irq_format far*)tag.data;
+					fprintf(fp_raw,"HTE=%u LTE=%u HTL=%u LTL=%u\n",x->hte,x->lte,x->htl,x->ltl);
+					fprintf(fp_raw,"             IRQ lines: ");
+					for (i=0;i < 16;i++) {
+						if (x->irq_mask & (1U << (unsigned int)i))
+							fprintf(fp_raw,"%u ",i);
+					}
+					fprintf(fp_raw,"\n");
+					} break;
+				case ISAPNP_TAG_DMA_FORMAT: {
+					struct isapnp_tag_dma_format far *x = (struct isapnp_tag_dma_format far*)tag.data;
+					if (x->bus_master) fprintf(fp_raw,"BusMaster ");
+					if (x->byte_count) fprintf(fp_raw,"ByteCount ");
+					if (x->word_count) fprintf(fp_raw,"WordCount ");
+
+					fprintf(fp_raw,"Speed=%s xferPref=%s\n",isapnp_dma_speed_str[x->dma_speed],isapnp_dma_xfer_preference_str[x->xfer_preference]);
+
+					fprintf(fp_raw,"             DMA channels: ");
+					for (i=0;i < 8;i++) {
+						if (x->dma_mask & (1U << (unsigned int)i))
+							fprintf(fp_raw,"%u ",i);
+					}
+					fprintf(fp_raw,"\n");
+					} break;
+				case ISAPNP_TAG_START_DEPENDENT_FUNCTION: {
+					if (tag.len > 0) {
+						struct isapnp_tag_start_dependent_function far *x = (struct isapnp_tag_start_dependent_function far*)tag.data;
+						fprintf(fp_raw,"Priority=%s",isapnp_sdf_priority_str(x->priority));
+					}
+					fprintf(fp_raw,"\n");
+					} break;
+				case ISAPNP_TAG_END_DEPENDENT_FUNCTION:
+					break;
+				case ISAPNP_TAG_IO_PORT: {
+					struct isapnp_tag_io_port far *x = (struct isapnp_tag_io_port far*)tag.data;
+					fprintf(fp_raw,"Decode %ubit, range 0x%04X-0x%04X, align 0x%02X, length: 0x%02X",
+						x->decode_16bit?16:10,x->min_range,x->max_range,x->alignment,x->length);
+					fprintf(fp_raw,"\n");
+					} break;
+				case ISAPNP_TAG_FIXED_IO_PORT: {
+					struct isapnp_tag_fixed_io_port far *x = (struct isapnp_tag_fixed_io_port far*)tag.data;
+					fprintf(fp_raw,"At %04X, length %02X\n",x->base,x->length);
+					} break;
+				case ISAPNP_TAG_LOGICAL_DEVICE_ID: {
+					struct isapnp_tag_logical_device_id far *x = (struct isapnp_tag_logical_device_id far*)tag.data;
+					isa_pnp_product_id_to_str(tmp,x->logical_device_id);
+					fprintf(fp_raw,"0x%08lx '%s'",(unsigned long)x->logical_device_id,tmp);
+					} break;
+				case ISAPNP_TAG_FIXED_MEMORY_LOCATION_32: {
+					struct isapnp_tag_fixed_memory_location_32 far *x = (struct isapnp_tag_fixed_memory_location_32 far*)tag.data;
+					fprintf(fp_raw,"%s %s %s %s %s %s\n",
+						x->writeable ? "Writeable" : "Read only",
+						x->cacheable ? "Cacheable" : "No-cache",
+						x->support_hi_addr ? "Hi-addr" : "",
+						isapnp_fml32_miosize_str[x->memory_io_size],
+						x->shadowable ? "Shadowable" : "No-shadow",
+						x->expansion_rom ? "Expansion ROM" : "RAM");
+					fprintf(fp_raw,"             Base 0x%08lX len 0x%08lX\n",
+						(unsigned long)x->base,
+						(unsigned long)x->length);
+					} break;
+				case ISAPNP_TAG_ANSI_ID_STRING: {
+					i = tag.len;
+					if ((i+1) > sizeof(tmp)) i = sizeof(tmp) - 1;
+					if (i != 0) _fmemcpy(tmp,tag.data,i);
+					tmp[i] = 0;
+					fprintf(fp_raw,"\"%s\"",tmp);
+					} break;
+				default:
+					fprintf(fp_raw,"(not implemented)\n");
+					break;
+			};
+		} while (isapnp_read_tag(&rsc,rsc_fence,&tag));
+	}
+}
+
 static int dump_isa_pnp_bios_devnodes() {
 	const char *dev_class = NULL,*dev_type = NULL,*dev_stype = NULL,*dev_itype = NULL;
 	struct isa_pnp_device_node far *devn;
 	unsigned int ret_ax,nodesize=0xFFFF;
 	unsigned char numnodes=0xFF;
-	char dev_product[256] = {0};
 	unsigned char current_node;
-	struct isapnp_tag tag;
 	unsigned char node;
 	FILE *fp,*fp_raw;
 
@@ -203,6 +310,8 @@ static int dump_isa_pnp_bios_devnodes() {
 				fprintf(fp_raw,	"                           - Device can only be configured at runtime\n"); break;
 		};
 
+		/* the three configuration blocks are in this one buffer, one after the other */
+		fprintf_devnode_pnp_decode(fp_raw,devnode_raw + sizeof(*devn),devnode_raw + devn->size);
 		fclose(fp_raw);
 	}
 
