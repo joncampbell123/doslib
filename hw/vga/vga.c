@@ -673,6 +673,14 @@ void vga_set_stride(unsigned int stride) {
 	vga_write_CRTC(0x13,stride);
 }
 
+uint16_t vga_get_start_location() {
+	uint16_t r;
+
+	r  = vga_read_CRTC(0x0D);
+	r += vga_read_CRTC(0x0C) << 8;
+	return r;
+}
+
 void vga_set_start_location(unsigned int offset) {
 	vga_write_CRTC(0x0C,offset>>8);
 	vga_write_CRTC(0x0D,offset);

@@ -56,13 +56,15 @@ void bios_cls() {
 }
 
 /*===================================================================================*/
-struct v320x200x256_VGA_state {
+static struct v320x200x256_VGA_state {
 	uint16_t		stride;			// bytes per scanline
 	uint16_t		width,virt_width;	// video width vs virtual width
 	uint16_t		height,virt_height;	// video height vs virtual height
-	uint32_t		draw_offset,vis_offset;	// draw offset in VRAM CRTC offset in VRAM
+	uint16_t		draw_offset;		// draw offset
+	uint16_t		vis_offset;		// visual offset
 	uint32_t		vram_size;		// size of VRAM
-} v320x200x256_VGA_state;
+	VGA_RAM_PTR		draw_ptr;
+} v320x200x256_VGA_state = {0};
 
 void v320x200x256_VGA_update_from_CRTC_state() {
 	struct vga_mode_params p;
@@ -73,10 +75,12 @@ void v320x200x256_VGA_update_from_CRTC_state() {
 	v320x200x256_VGA_state.width = p.horizontal_display_end * 4;
 	v320x200x256_VGA_state.height = (p.vertical_display_end + p.max_scanline - 1) / p.max_scanline; /* <- NTS: Modern Intel chipsets however ignore the partial last scanline! */
 	v320x200x256_VGA_state.virt_height = v320x200x256_VGA_state.vram_size / v320x200x256_VGA_state.stride;
+	v320x200x256_VGA_state.vis_offset = vga_get_start_location();
+	v320x200x256_VGA_state.draw_ptr = vga_graphics_ram + v320x200x256_VGA_state.draw_offset;
 }
 
 static inline uint8_t v320x200x256_VGA_getpixelnc(const unsigned int x,const unsigned int y) {
-	return vga_graphics_ram[(y*v320x200x256_VGA_state.width)+x];
+	return v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.width)+x];
 }
 
 static inline uint8_t v320x200x256_VGA_getpixel(const unsigned int x,const unsigned int y) {
@@ -85,7 +89,7 @@ static inline uint8_t v320x200x256_VGA_getpixel(const unsigned int x,const unsig
 }
 
 static inline void v320x200x256_VGA_setpixelnc(const unsigned int x,const unsigned int y,const uint8_t v) {
-	vga_graphics_ram[(y*v320x200x256_VGA_state.width)+x] = v;
+	v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.width)+x] = v;
 }
 
 static inline void v320x200x256_VGA_setpixel(const unsigned int x,const unsigned int y,const uint8_t v) {
@@ -293,6 +297,52 @@ void v320x200x256_VGA_menu_setpixel_box3rwdisp() {
 	}
 }
 
+void v320x200x256_VGA_menu_setpixel_box3rwzoom() {
+	unsigned int x,y,xm,ym;
+	unsigned char p;
+	int c;
+
+	if ((vga_flags & VGA_IS_VGA) == 0)
+		return;
+
+	xm = v320x200x256_VGA_state.width/2;
+	ym = v320x200x256_VGA_state.height/2;
+	if (xm == 0 || ym == 0) return;
+
+	for (y=(ym/4);y < ym;y++) {
+		for (x=(xm/4);x < xm;x++) {
+			v320x200x256_VGA_setpixel(x,y,x+y);
+		}
+	}
+
+	for (y=0;y < ym;y++) {
+		for (x=0;x < xm;x++) {
+			p = v320x200x256_VGA_getpixel(x>>1,y>>1);
+			v320x200x256_VGA_setpixel(x+xm,y,p);
+		}
+	}
+
+	for (y=0;y < ym;y++) {
+		for (x=0;x < xm;x++) {
+			p = v320x200x256_VGA_getpixel(x>>1,y>>1);
+			v320x200x256_VGA_setpixel(x,y+ym,p);
+		}
+	}
+
+	for (y=0;y < ym;y++) {
+		for (x=0;x < xm;x++) {
+			p = v320x200x256_VGA_getpixel(x>>1,y>>1);
+			v320x200x256_VGA_setpixel(x+xm,y+ym,p);
+		}
+	}
+
+	while (1) {
+		c = getch();
+		if (c == 27 || c == 13)
+			break;
+	}
+}
+
 void v320x200x256_VGA_menu_setpixel() {
 	unsigned char redraw;
 	int c;
@@ -312,7 +362,7 @@ void v320x200x256_VGA_menu_setpixel() {
 			printf("ESC  Top menu          A. Box1\n");
 			printf("B. Box1b               C. Box2overdraw\n");
 			printf("D. Box3inv1            E. Box3rw\n");
-			printf("F. Box3rw displace\n");
+			printf("F. Box3rw displace     G. Box3rwzoom\n");
 		}
 
 		c = getch();
@@ -340,6 +390,10 @@ void v320x200x256_VGA_menu_setpixel() {
 		}
 		else if (c == 'f' || c == 'F') {
 			v320x200x256_VGA_menu_setpixel_box3rwdisp();
+			redraw = 1;
+		}
+		else if (c == 'g' || c == 'G') {
+			v320x200x256_VGA_menu_setpixel_box3rwzoom();
 			redraw = 1;
 		}
 	}

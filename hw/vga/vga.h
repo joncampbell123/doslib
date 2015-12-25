@@ -124,6 +124,7 @@ void vga_set_cga_mode(unsigned char b);
 void vga_tandy_setpalette(unsigned char i,unsigned char c);
 void vga_enable_256color_modex();
 void vga_set_stride(unsigned int stride);
+uint16_t vga_get_start_location();
 void vga_set_start_location(unsigned int offset);
 void vga_set_ypan_sub(unsigned char c);
 void vga_set_xpan(unsigned char c);
