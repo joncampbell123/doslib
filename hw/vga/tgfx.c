@@ -56,7 +56,7 @@ void bios_cls() {
 }
 
 /*===================================================================================*/
-static struct v320x200x256_VGA_state {
+struct v320x200x256_VGA_state {
 	uint16_t		stride;			// bytes per scanline
 	uint16_t		width,virt_width;	// video width vs virtual width
 	uint16_t		height,virt_height;	// video height vs virtual height
@@ -64,7 +64,9 @@ static struct v320x200x256_VGA_state {
 	uint16_t		vis_offset;		// visual offset
 	uint32_t		vram_size;		// size of VRAM
 	VGA_RAM_PTR		draw_ptr;
-} v320x200x256_VGA_state = {0};
+};
+
+struct v320x200x256_VGA_state v320x200x256_VGA_state = {0};
 
 void v320x200x256_VGA_update_from_CRTC_state() {
 	struct vga_mode_params p;
