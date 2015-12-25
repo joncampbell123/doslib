@@ -200,6 +200,7 @@ again:		if (c == 27) {
 							}
 							else {
 								unsigned char len = cc & 7;
+								if ((len+1) > sizeof(devnode_raw)) break;
 								for (j=0;(unsigned char)j < len;j++) data[j+1] = isa_pnp_read_config();
 							}
 
