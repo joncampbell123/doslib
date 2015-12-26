@@ -697,6 +697,10 @@ unsigned int isa_pnp_bios_get_static_alloc_resinfo(unsigned char far *a) {
 	return ~0;
 }
 
+unsigned int isa_pnp_bios_read_escd(unsigned char far *a) {
+	return ~0;
+}
+
 unsigned int isa_pnp_bios_get_pnp_isa_cfg(unsigned char far *a) {
 	/* use the DOS segment we allocated as a "trampoline" for the 16-bit code to write the return values to */
 	/* SEG:0x0000 = a (node)

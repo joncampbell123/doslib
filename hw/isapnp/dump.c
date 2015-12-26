@@ -547,7 +547,7 @@ int dump_isa_pnp_escd() {
 	unsigned int min_escd_write=0,escd_size=0;
 	unsigned long nv_base=0;
 	unsigned int ret_ax;
-	FILE *fp;
+	FILE *fp,*fp_raw;
 
 	fp = fopen("ESCDINFO.TXT","w");
 	if (!fp) { fprintf(stderr,"Error writing dumpfile\n"); return -1; }
@@ -567,10 +567,20 @@ int dump_isa_pnp_escd() {
 				return -1;
 			}
 		}
-	}
 
-	/* TODO: code to read ESCD data using function 42h "Read Extended System Configuration Data (ESCD)" which
-	 *       directs the BIOS to read it then return to our buffers. */
+		if (escd_size != 0 && escd_size <= sizeof(devnode_raw)) {
+			printf("Asking to read ESCD...\n"); fflush(stdout);
+			ret_ax = isa_pnp_bios_read_escd(devnode_raw);
+			fprintf(fp,"PNP BIOS Function 42h Read Extended System Configuration Data (ESCD):\n");
+			fprintf(fp,"  Result AX:                                      0x%04x\n",ret_ax);
+			if (ret_ax == 0) {
+				fp_raw = fopen("ESCDREAD.BIN","wb");
+				if (fp_raw == NULL) { fprintf(stderr,"Cannot open file to write\n"); fclose(fp); return 1; }
+				fwrite(devnode_raw,escd_size,1,fp_raw);
+				fclose(fp_raw);
+			}
+		}
+	}
 
 	fclose(fp);
 	return 0;

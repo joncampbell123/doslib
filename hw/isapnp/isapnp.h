@@ -284,6 +284,7 @@ unsigned int isa_pnp_bios_send_message(unsigned int msg);
 unsigned int isa_pnp_bios_get_static_alloc_resinfo(unsigned char far *a);
 unsigned int isa_pnp_bios_get_pnp_isa_cfg(unsigned char far *a);
 unsigned int isa_pnp_bios_get_escd_info(unsigned int far *min_escd_write_size,unsigned int far *escd_size,unsigned long far *nv_storage_base);
+unsigned int isa_pnp_bios_read_escd(unsigned char far *a);
 #else
 /* we can call the real-mode subroutine directly, no translation */
 /* NTS: __cdecl follows the documented calling convention of this call i.e. Microsoft C++ style */
@@ -293,6 +294,7 @@ unsigned int isa_pnp_bios_get_escd_info(unsigned int far *min_escd_write_size,un
 #  define isa_pnp_bios_get_static_alloc_resinfo(a)	((unsigned int (__cdecl far *)(int,unsigned char far *,unsigned int))isa_pnp_rm_call)(0x0A,a,isa_pnp_info.rm_ent_data_segment)
 #  define isa_pnp_bios_get_pnp_isa_cfg(a)		((unsigned int (__cdecl far *)(int,unsigned char far *,unsigned int))isa_pnp_rm_call)(0x40,a,isa_pnp_info.rm_ent_data_segment)
 #  define isa_pnp_bios_get_escd_info(a,b,c)		((unsigned int (__cdecl far *)(int,unsigned int far *,unsigned int far *,unsigned long far *,unsigned int))isa_pnp_rm_call)(0x41,a,b,c,isa_pnp_info.rm_ent_data_segment)
+#  define isa_pnp_bios_read_escd(a)			((unsigned int (__cdecl far *)(int,unsigned char far *,unsigned int,unsigned int))isa_pnp_rm_call)(0x42,a,0,isa_pnp_info.rm_ent_data_segment)
 #endif
 
 /* abc = ASCII letters of the alphabet
