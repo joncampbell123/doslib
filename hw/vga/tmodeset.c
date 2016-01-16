@@ -155,7 +155,7 @@ void help_main() {
 
 static unsigned char rdump[4096];
 
-void dump_bios_to_file() {
+void dump_bios_to_file(int automated) {
 	unsigned int bios_sz_512=0; // VGA BIOS size in 512 byte chunks
 	unsigned char chksum=0;
 	FILE *fp;
@@ -187,10 +187,12 @@ void dump_bios_to_file() {
 		printf("*POSSIBLY* Found VGA BIOS at C0000 (unknown size? assuming 64KB)\n");
 	}
 
-	printf("Ready to capture. Hit Enter\n");
+	if (!automated) {
+		printf("Ready to capture. Hit Enter\n");
 
-	c = getch();
-	if (c != 13) return;
+		c = getch();
+		if (c != 13) return;
+	}
 
 	fp = fopen("VGABIOS.BIN","wb");
 	if (fp == NULL) return;
@@ -214,14 +216,16 @@ void dump_bios_to_file() {
 
 	fclose(fp);
 
-	printf("Done.\n");
-	if (chksum != 0) printf("WARNING: VGA checksum failed. Check dump\n");
-	do {
-		c = getch();
-	} while (!(c == 13 || c == 27));
+	if (!automated) {
+		printf("Done.\n");
+		if (chksum != 0) printf("WARNING: VGA checksum failed. Check dump\n");
+		do {
+			c = getch();
+		} while (!(c == 13 || c == 27));
+	}
 }
 
-void dump_to_file() {
+void dump_to_file(int automated) {
 	char tmpname[32];
 	char nname[17];
 	int c,mode,i;
@@ -258,7 +262,11 @@ void dump_to_file() {
 	}
 
 	printf("Standard VGA registers and RAM will be\n");
-	printf("dumped to %s. Hit ENTER to proceed.\n",nname);
+	if (!automated)
+		printf("dumped to %s. Hit ENTER to proceed.\n",nname);
+	else
+		printf("dumped to %s. Dumping now.\n",nname);
+
 	printf("\n");
 	printf("\n");
 	printf("\n");
@@ -293,7 +301,7 @@ void dump_to_file() {
 	{
 		unsigned short x,y,aa,bb;
 
-		/* FIXME: What do VGA BIOSes do with "setpixel" if the mode we set is a 16bpp/24bpp/32bpp mode?? the "pixel color" field is too small! */
+		/* FIXME: What do VGA BIOSes do with "setpixel" if the mode we set is a 16bpp/24bpp/32bpp mode?? the "pixel color" field is too small to hold highcolor pixels! */
 		for (y=(6*16);y < 8+(6*16);y++) {
 			for (x=0;x < 256;x++) {
 				aa = 0x0C00 + x;
@@ -316,8 +324,10 @@ void dump_to_file() {
 		}
 	}
 
-	c = getch();
-	if (c != 13) return;
+	if (!automated) {
+		c = getch();
+		if (c != 13) return;
+	}
 
 	/* ============= Sequencer ============ */
 	for (i=0;i < 256;i++) rdump[i] = vga_read_sequencer(i);
@@ -437,8 +447,53 @@ void dump_to_file() {
 	}
 
 	/* ======================================= */
-	printf("Done\n");
-	while (getch() != 13);
+	if (!automated) {
+		printf("Done\n");
+		while (getch() != 13);
+	}
+}
+
+void dump_auto_modes_and_bios() {
+	unsigned int smode;
+	int c;
+
+	bios_cls();
+	/* position the cursor to home */
+	vga_moveto(0,0);
+	vga_sync_bios_cursor();
+
+	printf("I will run through all video modes\n");
+	printf("and dump their contents. This may\n");
+	printf("harm your monitor if it is old, please\n");
+	printf("take caution.\n");
+	printf("\n");
+	printf("Hit ENTER to continue.\n");
+
+	c = getch();
+	if (c != 13) return;
+
+	int10_setmode(3);
+
+	dump_bios_to_file(/*automated=*/1);
+
+	/* standard (non-VESA BIOS) modes */
+	for (smode=0;smode < 127/*avoid Paradise special modes [RBIL]*/;smode++) {
+		if (smode >= 8 && smode < 13) {
+			/* do not enumerate these modes. they don't work, unless you're Tandy/PCjr.
+			 * some early 1990's SVGA cards will even crash in the VGA BIOS if you ask for such modes! */
+			continue;
+		}
+
+		/* set the mode. if it didn't take, then skip */
+		int10_setmode(smode);
+		if (int10_getmode() != smode) continue;
+
+		/* DUMP IT! */
+		dump_to_file(/*automated=*/1);
+
+		/* back to a safe default */
+		int10_setmode(3);
+	}
 }
 
 /* utility function to flash VGA color palette registers */
@@ -878,12 +933,15 @@ int main() {
 			printf("\n");
 			printf(" f   Dump VGA state to file\n");
 			printf(" b   Dump VGA BIOS to file\n");
+			printf(" a   Auto-capture all modes and BIOS\n");
 
 			c = getch();
 			if (c == 'f')
-				dump_to_file();
+				dump_to_file(/*automated=*/0);
 			else if (c == 'b')
-				dump_bios_to_file();
+				dump_bios_to_file(/*automated=*/0);
+			else if (c == 'a')
+				dump_auto_modes_and_bios();
 
 			redraw = 1;
 		}
