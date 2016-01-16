@@ -155,6 +155,72 @@ void help_main() {
 
 static unsigned char rdump[4096];
 
+void dump_bios_to_file() {
+	unsigned int bios_sz_512=0; // VGA BIOS size in 512 byte chunks
+	unsigned char chksum=0;
+	FILE *fp;
+	int c,i,j;
+
+	bios_cls();
+	vga_moveto(0,0);
+	vga_sync_bios_cursor();
+
+	/* how big is it anyway? */
+	{
+#if TARGET_MSDOS == 32
+		volatile unsigned char *s = ((volatile unsigned char*)0xC0000);
+		volatile unsigned char *d = (volatile unsigned char*)rdump;
+		for (j=0;j < 512;j++) d[j] = s[j];
+#else
+		volatile unsigned char FAR *s = (volatile unsigned char FAR*)MK_FP(0xC000,0x0000);
+		volatile unsigned char FAR *d = (volatile unsigned char FAR*)rdump;
+		for (j=0;j < 512;j++) d[j] = s[j];
+#endif
+	}
+
+	if (rdump[0] == 0x55 && rdump[1] == 0xAA && rdump[2] >= 8/*4KB*/) {
+		bios_sz_512 = rdump[2];
+		printf("Found VGA BIOS at C0000 (%u.%uKB)\n",bios_sz_512 / 2,(bios_sz_512 & 1) * 5);
+	}
+	else {
+		bios_sz_512 = 128; // 64KB
+		printf("*POSSIBLY* Found VGA BIOS at C0000 (unknown size? assuming 64KB)\n");
+	}
+
+	printf("Ready to capture. Hit Enter\n");
+
+	c = getch();
+	if (c != 13) return;
+
+	fp = fopen("VGABIOS.BIN","wb");
+	if (fp == NULL) return;
+
+	for (i=0;(unsigned int)i < bios_sz_512;i++) {
+		for (j=0;j < 512;j++) {
+#if TARGET_MSDOS == 32
+			volatile unsigned char *s = ((volatile unsigned char*)0xC0000) + (i * 512);
+			volatile unsigned char *d = (volatile unsigned char*)rdump;
+			for (j=0;j < 512;j++) d[j] = s[j];
+#else
+			volatile unsigned char FAR *s = (volatile unsigned char FAR*)MK_FP(0xC000 + ((unsigned int)i << (9U-4U)),0);
+			volatile unsigned char FAR *d = (volatile unsigned char FAR*)rdump;
+			for (j=0;j < 512;j++) d[j] = s[j];
+#endif
+		}
+
+		for (j=0;j < 512;j++) chksum += rdump[j];
+		fwrite(rdump,512,1,fp);
+	}
+
+	fclose(fp);
+
+	printf("Done.\n");
+	if (chksum != 0) printf("WARNING: VGA checksum failed. Check dump\n");
+	do {
+		c = getch();
+	} while (!(c == 13 || c == 27));
+}
+
 void dump_to_file() {
 	char tmpname[32];
 	char nname[17];
@@ -711,7 +777,7 @@ int main() {
 			printf("4    toggle shift4     5 toggle SLR\n");
 			printf("2    toggle more...    M max scanline\n");
 			printf("o    offset register   x Mode-X\n");
-			printf("z    palette tinkering d Dump regs\n");
+			printf("z    palette tinkering d Dump\n");
 			printf("h    panning/hpel\n");
 		}
 
@@ -760,10 +826,13 @@ int main() {
 
 			printf("\n");
 			printf(" f   Dump VGA state to file\n");
+			printf(" b   Dump VGA BIOS to file\n");
 
 			c = getch();
 			if (c == 'f')
 				dump_to_file();
+			else if (c == 'b')
+				dump_bios_to_file();
 
 			redraw = 1;
 		}
