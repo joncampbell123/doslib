@@ -142,7 +142,7 @@ static int tseng_promptuser() {
 # error WRONG
 #endif
 
-char tmpline[80];
+char tmpline[160];
 
 void bios_cls() {
 	VGA_ALPHA_PTR ap;
@@ -347,6 +347,40 @@ void dump_bios_to_file(int automated) {
 	}
 }
 
+static void int10_9_print(const char *x) {
+	while (*x != 0) {
+		unsigned short b,cc;
+
+		if (*x == '\n') {
+			vga_moveto(0,vga_pos_y+1);
+			vga_sync_bios_cursor();
+			x++;
+		}
+		else {
+			vga_sync_bios_cursor();
+
+			cc = 0x0900 + (((unsigned char)(*x++)) & 0xFF);
+			b = 7;
+
+			__asm {
+				push	ax
+				push	bx
+				push	cx
+				mov	ax,cc
+				mov	bx,b
+				mov	cx,1
+				int	10h
+				pop	cx
+				pop	bx
+				pop	ax
+			}
+
+			vga_moveto(vga_pos_x+1,vga_pos_y);
+			vga_sync_bios_cursor();
+		}
+	}
+}
+
 void dump_to_file(int automated) {
 	char tmpname[32];
 	char nname[17];
@@ -361,37 +395,23 @@ void dump_to_file(int automated) {
 	vga_moveto(0,0);
 	vga_sync_bios_cursor();
 
-	/* older VGA BIOSes seem to have problems printing the first line as black on black text.
-	 * Mayhe this will help? */
-	{
-		unsigned short b,cc;
+	/* NTS: Older SVGA cards have BIOSes that won't printf to SVGA modes,
+	 *      but will apparently support INT 10h AH=0x09. We want this
+	 *      text to appear on screen! */
 
-		cc = 0x0900 | ((unsigned char)'x'); /* AH=9 AL='x' */
-		b = 0x07;
+#if defined(SVGA_TSENG)
+	int10_9_print("Tseng VGA registers and RAM will be\n");
+#else
+	int10_9_print("Standard VGA registers and RAM will be\n");
+#endif
 
-		__asm {
-			push	ax
-			push	bx
-			push	cx
-			mov	ax,cc
-			mov	bx,b
-			mov	cx,1
-			int	10h
-			pop	cx
-			pop	bx
-			pop	ax
-		}
-	}
-
-	printf("Standard VGA registers and RAM will be\n");
+	vga_moveto(0,1);
+	vga_sync_bios_cursor();
 	if (!automated)
-		printf("dumped to %s. Hit ENTER to proceed.\n",nname);
+		sprintf(tmpline,"dumped to %s. Hit ENTER.\n",nname);
 	else
-		printf("dumped to %s. INT 10h mode 0x%02x.\n",nname,mode);
-
-	printf("\n");
-	printf("\n");
-	printf("\n");
+		sprintf(tmpline,"dumped to %s. Mode 0x%02x.\n",nname,mode);
+	int10_9_print(tmpline);
 
 	/* draw colored text for visual reference */
 	for (c=0;c < 40;c++) {
