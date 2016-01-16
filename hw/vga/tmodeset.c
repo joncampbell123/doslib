@@ -16,6 +16,119 @@
 #include <hw/8254/8254.h>
 #include <hw/dos/doswin.h>
 
+#if defined(SVGA_TSENG)
+unsigned char tseng_mode = 0;
+
+enum {
+	ET3000=1,
+	ET4000
+};
+
+static int tseng_et3000_detect() {
+	unsigned char old,val;
+	int base;
+
+	old = inp(0x3CD);
+	outp(0x3CD,old ^ 0x3F);
+	val = inp(0x3CD);
+	outp(0x3CD,old);
+	if (val != (old ^ 0x3F)) return 0;
+
+	if (inp(0x3CC) & 1)	base = 0x3D4;
+	else			base = 0x3B4;
+	outp(base,0x1B);
+	old = inp(base+1);
+	outp(base+1,old ^ 0xFF);
+	val = inp(base+1);
+	outp(base+1,old);
+	if (val != (old ^ 0xFF)) return 0;
+
+	/* ET3000 detected */
+	return 1;
+}
+
+static int tseng_et4000_detect() {
+	unsigned char new,old,val;
+	int base;
+
+	/* extended register enable */
+	outp(0x3BF,0x03);
+	if (inp(0x3CC) & 1)	outp(0x3D8,0xA0);
+	else			outp(0x3B8,0xA0);
+
+	old = inp(0x3CD);
+	outp(0x3CD,0x55);
+	val = inp(0x3CD);
+	outp(0x3CD,old);
+	if (val != 0x55) return 0;
+
+	if (inp(0x3CC) & 1)	base = 0x3D4;
+	else			base = 0x3B4;
+	outp(base,0x33);
+	old = inp(base+1);
+	new = old ^ 0x0F;
+	outp(base+1,new);
+	val = inp(base+1);
+	outp(base+1,old);
+	if (val != new) return 0;
+
+	/* extended register lock */
+	if (inp(0x3CC) & 1)	outp(0x3D8,0x29);
+	else			outp(0x3B8,0x29);
+	outp(0x3BF,0x01);
+
+	/* ET4000 detected */
+	return 1;
+}
+
+static void tseng_autodetect() {
+	tseng_mode = 0;
+
+	/* improvised from svgalib autodetect code */
+	if (tseng_et3000_detect())
+		tseng_mode = ET3000;
+	else if (tseng_et4000_detect())
+		tseng_mode = ET4000;
+}
+
+static int tseng_promptuser() {
+	int c;
+
+	printf("Tseng Labs ET3000/ET4000 version.\n");
+	tseng_autodetect();
+	printf("Select card type. My guess is marked in the list below with (*).\n");
+	printf("If the default is correct, hit ENTER\n");
+
+	printf("   1. Tseng ET3000");			if (tseng_mode == ET3000) printf(" (*)");	printf("\n");
+	printf("   2. Tseng ET4000");			if (tseng_mode == ET4000) printf(" (*)");	printf("\n");
+	printf(" ESC. Neither (not TSENG LABS)");	if (tseng_mode == 0) printf(" (*)");		printf("\n");
+
+	do {
+		c = getch();
+		if (c == '1') {
+			tseng_mode = ET3000;
+			break;
+		}
+		else if (c == '2') {
+			tseng_mode = ET4000;
+			break;
+		}
+		else if (c == 27) {
+			tseng_mode = 0;
+			break;
+		}
+		else if (c == 13) {
+			/* default */
+			break;
+		}
+	} while (1);
+
+	if (tseng_mode == 0) return 0;
+
+	return 1;
+}
+#endif
+
 #if defined(TARGET_WINDOWS)
 # error WRONG
 #endif
@@ -786,6 +899,10 @@ int main() {
 		printf("Modesetting + readback of CRTC registers is only supported on VGA\n");
 		return 1;
 	}
+
+#ifdef SVGA_TSENG
+	if (!tseng_promptuser()) return 1;
+#endif
 
 	redraw = 1;
 	while (1) {
