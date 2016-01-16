@@ -47,14 +47,25 @@ static int tseng_et3000_detect() {
 	return 1;
 }
 
+static void tseng_et4000_extended_set_lock(int x) {
+	if (x) {
+		if (inp(0x3CC) & 1)	outp(0x3D8,0x29);
+		else			outp(0x3B8,0x29);
+		outp(0x3BF,0x01);
+	}
+	else {
+		outp(0x3BF,0x03);
+		if (inp(0x3CC) & 1)	outp(0x3D8,0xA0);
+		else			outp(0x3B8,0xA0);
+	}
+}
+
 static int tseng_et4000_detect() {
 	unsigned char new,old,val;
 	int base;
 
 	/* extended register enable */
-	outp(0x3BF,0x03);
-	if (inp(0x3CC) & 1)	outp(0x3D8,0xA0);
-	else			outp(0x3B8,0xA0);
+	tseng_et4000_extended_set_lock(/*unlock*/0);
 
 	old = inp(0x3CD);
 	outp(0x3CD,0x55);
@@ -73,9 +84,7 @@ static int tseng_et4000_detect() {
 	if (val != new) return 0;
 
 	/* extended register lock */
-	if (inp(0x3CC) & 1)	outp(0x3D8,0x29);
-	else			outp(0x3B8,0x29);
-	outp(0x3BF,0x01);
+	tseng_et4000_extended_set_lock(/*lock*/1);
 
 	/* ET4000 detected */
 	return 1;
@@ -453,6 +462,29 @@ void dump_to_file(int automated) {
 		t8254_wait(t8254_us2ticks(1000000UL));
 	}
 
+#if defined(SVGA_TSENG)
+	sprintf(tmpname,"%s.NFO",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		if (tseng_mode == ET3000)
+			fprintf(fp,"Tseng ET3000 specific register dump.\n");
+		else if (tseng_mode == ET4000)
+			fprintf(fp,"Tseng ET4000 specific register dump.\n");
+
+		fprintf(fp,"\n");
+		fprintf(fp,"Additional files in this specific dump:\n");
+		fprintf(fp,"  *.CRT          CRTC register dump (as left by BIOS)\n");
+		fprintf(fp,"  *.CRU          CRTC register dump after extended unlock.\n");
+		fprintf(fp,"  *.CRL          CRTC register dump after extended lock again.\n");
+		fprintf(fp,"\n");
+		fprintf(fp,"The PL0, PL1, PL2, and PL3 files contain the entire ET4000 memory\n");
+		fprintf(fp,"range. All 8 (ET3000) or 16 (ET4000) possible 64KB banks are dumped\n");
+		fprintf(fp,"to the file to record how they map to VGA memory. The capture was\n");
+		fprintf(fp,"read in 64KB chunks, per 64KB bank.\n");
+
+		fclose(fp);
+	}
+#endif
+
 	/* ============= Sequencer ============ */
 	for (i=0;i < 256;i++) rdump[i] = vga_read_sequencer(i);
 
@@ -482,6 +514,32 @@ void dump_to_file(int automated) {
 		fwrite(rdump,256,1,fp);
 		fclose(fp);
 	}
+
+#if defined(SVGA_TSENG)
+	tseng_et4000_extended_set_lock(/*unlock*/0);
+
+	/* ============= CRTC unlocked ============ */
+	for (i=0;i < 256;i++) rdump[i] = vga_read_CRTC(i);
+
+	/* ----- write */
+	sprintf(tmpname,"%s.CRU",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		fwrite(rdump,256,1,fp);
+		fclose(fp);
+	}
+
+	tseng_et4000_extended_set_lock(/*lock*/1);
+
+	/* ============= CRTC locked ============ */
+	for (i=0;i < 256;i++) rdump[i] = vga_read_CRTC(i);
+
+	/* ----- write */
+	sprintf(tmpname,"%s.CRL",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		fwrite(rdump,256,1,fp);
+		fclose(fp);
+	}
+#endif
 
 	/* ============= Attribute controller ============ */
 	for (i=0;i < 256;i++) rdump[i] = vga_read_AC(i);
@@ -515,7 +573,85 @@ void dump_to_file(int automated) {
 		fclose(fp);
 	}
 
-	/* ============= RAM scan/dump ============ */
+	/* ============= RAM scan/dump (normal) ============ */
+	{
+		unsigned char ogc6;
+
+		ogc6 = vga_read_GC(6);
+
+		/* for each plane, write to file */
+		{
+			sprintf(tmpname,"%s.RAM",nname);
+			if ((fp=fopen(tmpname,"wb")) != NULL) {
+#if defined(SVGA_TSENG)
+				unsigned int bank,bmax;
+
+				// TSENG ET3000/ET4000 VGA=========================
+				// Capture VGA memory (each 64KB plane) as seen by all 8 or 16 SVGA banks
+				vga_write_GC(6,(ogc6 & (~0xC)) + 1); /* we want video RAM to map to 0xA0000-0xAFFFF */
+
+				if (tseng_mode == ET4000)
+					bmax = 16;
+				else if (tseng_mode == ET3000)
+					bmax = 8;
+				else
+					abort();
+
+				for (bank=0;bank < bmax;bank++) {
+					if (tseng_mode == ET4000)
+						outp(0x3CD/*Segment Select*/,bank | (bank << 4));
+					else if (tseng_mode == ET3000)
+						outp(0x3CD/*Segment Select*/,bank | (bank << 3) | 0x40/*64KB configuration*/);
+
+					for (i=0;i < (65536/1024);i++) {
+						unsigned int j;
+
+#if TARGET_MSDOS == 32
+						volatile unsigned char *s = ((volatile unsigned char*)0xA0000) + (unsigned int)(i * 1024);
+						volatile unsigned char *d = (volatile unsigned char*)rdump;
+						for (j=0;j < 1024;j++) d[j] = s[j];
+#else
+						volatile unsigned char FAR *s = (volatile unsigned char FAR*)MK_FP(0xA000,(i * 1024));
+						volatile unsigned char FAR *d = (volatile unsigned char FAR*)rdump;
+						for (j=0;j < 1024;j++) d[j] = s[j];
+#endif
+						fwrite(rdump,1024,1,fp);
+					}
+				}
+				outp(0x3CD/*Segment Select*/,0);
+				fclose(fp);
+				vga_write_GC(6,ogc6); /* restore */
+				// ======================================
+#else//=====================================================================================
+				// STANDARD VGA=========================
+				// Capture VGA planar memory (each 64KB plane)
+				vga_write_GC(6,(ogc6 & (~0xC)) + 1); /* we want video RAM to map to 0xA0000-0xAFFFF */
+
+				for (i=0;i < (65536/1024);i++) {
+					unsigned int j;
+
+#if TARGET_MSDOS == 32
+					volatile unsigned char *s = ((volatile unsigned char*)0xA0000) + (unsigned int)(i * 1024);
+					volatile unsigned char *d = (volatile unsigned char*)rdump;
+					for (j=0;j < 1024;j++) d[j] = s[j];
+#else
+					volatile unsigned char FAR *s = (volatile unsigned char FAR*)MK_FP(0xA000,(i * 1024));
+					volatile unsigned char FAR *d = (volatile unsigned char FAR*)rdump;
+					for (j=0;j < 1024;j++) d[j] = s[j];
+#endif
+					fwrite(rdump,1024,1,fp);
+				}
+				fclose(fp);
+				vga_write_GC(6,ogc6); /* restore */
+				// ======================================
+#endif
+			}
+		}
+
+		vga_write_GC(6,ogc6);
+	}
+
+	/* ============= RAM scan/dump (planar) ============ */
 	{
 		unsigned char seq4,crt17h,crt14h,pl,ogc5,ogc6,seqmask;
 
@@ -536,6 +672,51 @@ void dump_to_file(int automated) {
 		for (pl=0;pl < 4;pl++) {
 			sprintf(tmpname,"%s.PL%u",nname,pl);
 			if ((fp=fopen(tmpname,"wb")) != NULL) {
+#if defined(SVGA_TSENG)
+				unsigned int bank,bmax;
+
+				// TSENG ET3000/ET4000 VGA=========================
+				// Capture VGA memory (each 64KB plane) as seen by all 8 or 16 SVGA banks
+				vga_write_sequencer(4,0x06);
+				vga_write_GC(6,(ogc6 & (~0xF)) + (1 << 2) + 1); /* we want video RAM to map to 0xA0000-0xAFFFF AND we want to temporarily disable alphanumeric mode */
+				vga_write_GC(5,(ogc5 & (~0x7B))); /* read mode=0 write mode=0 host o/e=0 */
+				vga_write_GC(4,pl); /* read map select */
+
+				if (tseng_mode == ET4000)
+					bmax = 16;
+				else if (tseng_mode == ET3000)
+					bmax = 8;
+				else
+					abort();
+
+				for (bank=0;bank < bmax;bank++) {
+					if (tseng_mode == ET4000)
+						outp(0x3CD/*Segment Select*/,bank | (bank << 4));
+					else if (tseng_mode == ET3000)
+						outp(0x3CD/*Segment Select*/,bank | (bank << 3) | 0x40/*64KB configuration*/);
+
+					for (i=0;i < (65536/1024);i++) {
+						unsigned int j;
+
+#if TARGET_MSDOS == 32
+						volatile unsigned char *s = ((volatile unsigned char*)0xA0000) + (unsigned int)(i * 1024);
+						volatile unsigned char *d = (volatile unsigned char*)rdump;
+						for (j=0;j < 1024;j++) d[j] = s[j];
+#else
+						volatile unsigned char FAR *s = (volatile unsigned char FAR*)MK_FP(0xA000,(i * 1024));
+						volatile unsigned char FAR *d = (volatile unsigned char FAR*)rdump;
+						for (j=0;j < 1024;j++) d[j] = s[j];
+#endif
+						fwrite(rdump,1024,1,fp);
+					}
+				}
+				outp(0x3CD/*Segment Select*/,0);
+				fclose(fp);
+				vga_write_GC(6,ogc6); /* restore */
+				// ======================================
+#else//=====================================================================================
+				// STANDARD VGA=========================
+				// Capture VGA planar memory (each 64KB plane)
 				vga_write_sequencer(4,0x06);
 				vga_write_GC(6,(ogc6 & (~0xF)) + (1 << 2) + 1); /* we want video RAM to map to 0xA0000-0xAFFFF AND we want to temporarily disable alphanumeric mode */
 				vga_write_GC(5,(ogc5 & (~0x7B))); /* read mode=0 write mode=0 host o/e=0 */
@@ -557,6 +738,8 @@ void dump_to_file(int automated) {
 				}
 				fclose(fp);
 				vga_write_GC(6,ogc6); /* restore */
+				// ======================================
+#endif
 			}
 		}
 
