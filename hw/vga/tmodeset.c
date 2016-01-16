@@ -265,7 +265,7 @@ void dump_to_file(int automated) {
 	if (!automated)
 		printf("dumped to %s. Hit ENTER to proceed.\n",nname);
 	else
-		printf("dumped to %s. Dumping now.\n",nname);
+		printf("dumped to %s. INT 10h mode 0x%02x.\n",nname,mode);
 
 	printf("\n");
 	printf("\n");
@@ -327,6 +327,17 @@ void dump_to_file(int automated) {
 	if (!automated) {
 		c = getch();
 		if (c != 13) return;
+	}
+	else {
+		/* do it before capturing. we don't know if our tricks below would screw up the SVGA mode.
+		 * we delay in order to allow the VGA monitor to sync. if appearance of the mode on a monitor
+		 * matters this gives a camcorder pointed at the screen and/or VGA capture/scan conversion
+		 * time to get a picture of the mode. */
+
+		/* wait 3 sec */
+		t8254_wait(t8254_us2ticks(1000000UL));
+		t8254_wait(t8254_us2ticks(1000000UL));
+		t8254_wait(t8254_us2ticks(1000000UL));
 	}
 
 	/* ============= Sequencer ============ */
