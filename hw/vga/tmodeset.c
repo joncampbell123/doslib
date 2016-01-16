@@ -235,12 +235,35 @@ void dump_to_file() {
 	vga_moveto(0,0);
 	vga_sync_bios_cursor();
 
+	/* older VGA BIOSes seem to have problems printing the first line as black on black text.
+	 * Mayhe this will help? */
+	{
+		unsigned short b,cc;
+
+		cc = 0x0900 | ((unsigned char)'x'); /* AH=9 AL='x' */
+		b = 0x07;
+
+		__asm {
+			push	ax
+			push	bx
+			push	cx
+			mov	ax,cc
+			mov	bx,b
+			mov	cx,1
+			int	10h
+			pop	cx
+			pop	bx
+			pop	ax
+		}
+	}
+
 	printf("Standard VGA registers and RAM will be\n");
 	printf("dumped to %s. Hit ENTER to proceed.\n",nname);
 	printf("\n");
 	printf("\n");
 	printf("\n");
 
+	/* draw colored text for visual reference */
 	for (c=0;c < 40;c++) {
 		unsigned short b,cc;
 
@@ -262,8 +285,36 @@ void dump_to_file() {
 			pop	ax
 		}
 	}
-	vga_moveto(0,5);
+	vga_moveto(0,6);
 	vga_sync_bios_cursor();
+
+	/* older VGA BIOSes might not print the text on screen (doesn't support INT 10h teletype functions in SVGA mode).
+	 * but they do support the "set pixel" calls. so also draw on the screen with Set Pixel. */
+	{
+		unsigned short x,y,aa,bb;
+
+		/* FIXME: What do VGA BIOSes do with "setpixel" if the mode we set is a 16bpp/24bpp/32bpp mode?? the "pixel color" field is too small! */
+		for (y=(6*16);y < 8+(6*16);y++) {
+			for (x=0;x < 256;x++) {
+				aa = 0x0C00 + x;
+				bb = 0;
+
+				__asm {
+					push	ax
+					push	bx
+					push	cx
+					mov	ax,aa
+					mov	bx,bb
+					mov	cx,x
+					mov	dx,y
+					int	10h
+					pop	cx
+					pop	bx
+					pop	ax
+				}
+			}
+		}
+	}
 
 	c = getch();
 	if (c != 13) return;
