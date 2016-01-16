@@ -458,9 +458,12 @@ void dump_to_file(int automated) {
 	}
 
 	/* ======================================= */
+	printf("Done\n");
 	if (!automated) {
-		printf("Done\n");
 		while (getch() != 13);
+	}
+	else {
+		t8254_wait(t8254_us2ticks(1000000UL));
 	}
 }
 
