@@ -9,3 +9,6 @@ where a full 16-bit decode is NOT used, but instead only decodes the lower 12 bi
 That means that in addition to the documented port 0x46E8, you can also write this
 port through aliases 0x06E8, 0x16E8, 0x26E8, 0x36E8 up through 0xF6E8.
 
+True to the documentation, clearing bit 3 of port 0x46E8 disables all VGA I/O ports
+offered by the ET4000AX chipset.
+
