@@ -477,7 +477,7 @@ void dump_auto_modes_and_bios() {
 	dump_bios_to_file(/*automated=*/1);
 
 	/* standard modes.
-	 * on SVGA cards (made either prior to or after VESA BIOS extensions) will have SVGA modes beyond the standard IBM INT 10h modelist */
+	 * SVGA cards (made either prior to or after VESA BIOS extensions) will have SVGA modes beyond the standard IBM INT 10h modelist */
 	for (smode=0;smode < 127/*avoid Paradise special modes [RBIL]*/;smode++) {
 		if (smode >= 8 && smode < 13) {
 			/* do not enumerate these modes. they don't work, unless you're Tandy/PCjr.
