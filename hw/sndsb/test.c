@@ -4554,10 +4554,9 @@ int main(int argc,char **argv) {
 				redraw = 1;
 			}
 			else if (mitem == &main_menu_device_busy_cycle) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
+				// NTS: The user may be testing the busy cycle while the card is playing audio. Do NOT stop playback!
+				//      The test carried out in this function does not send DSP commands, it only polls the DSP.
 				measure_dsp_busy_cycle();
-				if (wp) begin_play();
 				bkgndredraw = 1;
 				redraw = 1;
 			}
