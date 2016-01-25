@@ -1664,6 +1664,115 @@ static const char *dsp_alias_warning =
 #endif
 
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+void measure_dsp_busy_cycle() {
+	unsigned long time1 = 0,time2 = 0,tlimit;
+	unsigned char timehits = 0;
+	t8254_time_t pr,cr,dl;
+	unsigned char pc,cc;
+	unsigned int i;
+	int c;
+
+	vga_write_color(0x07);
+	vga_clear();
+	vga_moveto(0,0);
+	vga_write("Testing DSP busy cycle... please wait\n");
+
+	_cli();
+
+	pc = inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS);
+	pr = read_8254(0);
+	tlimit = t8254_us2ticks(1000000);
+
+	time1 = 0;
+	while (time1 < tlimit) {
+		for (i=0;i < 1024;i++) {
+			cc = inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS);
+			if ((cc&0x80) != (pc&0x80)) break;
+			pc = cc;
+		}
+
+		cr = read_8254(0);
+		dl = pr - cr; /* we expect rollover. remember the 8254 counts DOWN */
+		pr = cr;
+		time1 += dl;
+
+		if ((cc&0x80) != (pc&0x80)) {
+			break;
+		}
+	}
+
+	time1 = 0;
+	while (time1 < tlimit) {
+		for (i=0;i < 1024;i++) {
+			cc = inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS);
+			if ((cc&0x80) != (pc&0x80)) break;
+			pc = cc;
+		}
+
+		cr = read_8254(0);
+		dl = pr - cr; /* we expect rollover. remember the 8254 counts DOWN */
+		pr = cr;
+		time1 += dl;
+
+		if ((cc&0x80) != (pc&0x80)) {
+			timehits |= 1;
+			break;
+		}
+	}
+
+	pc = cc;
+	pr = cr;
+	while (time2 < tlimit) {
+		for (i=0;i < 1024;i++) {
+			cc = inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS);
+			if ((cc&0x80) != (pc&0x80)) break;
+			pc = cc;
+		}
+
+		cr = read_8254(0);
+		dl = pr - cr; /* we expect rollover. remember the 8254 counts DOWN */
+		pr = cr;
+		time2 += dl;
+
+		if ((cc&0x80) != (pc&0x80)) {
+			timehits |= 2;
+			break;
+		}
+	}
+
+	_sti();
+
+	vga_write_color(0x07);
+	vga_write("DSP busy cycle measurements:\n");
+
+	if (timehits & 1) {
+		vga_write("Time to first transition: ");
+		sprintf(temp_str,"%.6f sec\n",(double)time1 / T8254_REF_CLOCK_HZ);
+		vga_write(temp_str);
+	}
+	else {
+		vga_write("Time to first transition could not be measured\n");
+	}
+
+	if (timehits & 2) {
+		vga_write("Time to second transition: ");
+		sprintf(temp_str,"%.6f sec\n",(double)time2 / T8254_REF_CLOCK_HZ);
+		vga_write(temp_str);
+	}
+	else {
+		vga_write("Time to second transition could not be measured\n");
+	}
+
+	vga_write("\n");
+	vga_write("Explanation: On some Creative Sound Blaster cards the DSP's busy bit (port 22Ch)\n");
+	vga_write("             cycles on/off by itself. This can be seen by software when polling.\n");
+	vga_write_sync();
+
+	do {
+		c = getch();
+	} while (!(c == 13 || c == 27));
+}
+
 void change_alias_menu() {
 	unsigned char loop=1;
 	unsigned char redraw=1;
@@ -2606,6 +2715,8 @@ static const struct vga_menu_item main_menu_device_configure_sound_card =
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static struct vga_menu_item main_menu_device_dsp_alias =
 	{"Alias ports",		'a',	0,	0};
+static struct vga_menu_item main_menu_device_busy_cycle =
+	{"Busy cycle",		'b',	0,	0};
 #endif
 
 static const struct vga_menu_item* main_menu_device[] = {
@@ -2625,6 +2736,7 @@ static const struct vga_menu_item* main_menu_device[] = {
 #endif
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_device_dsp_alias,
+	&main_menu_device_busy_cycle,
 #endif
 	NULL
 };
@@ -4437,6 +4549,14 @@ int main(int argc,char **argv) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
 				change_alias_menu();
+				if (wp) begin_play();
+				bkgndredraw = 1;
+				redraw = 1;
+			}
+			else if (mitem == &main_menu_device_busy_cycle) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				measure_dsp_busy_cycle();
 				if (wp) begin_play();
 				bkgndredraw = 1;
 				redraw = 1;
