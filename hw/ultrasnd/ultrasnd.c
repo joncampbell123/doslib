@@ -295,6 +295,46 @@ void ultrasnd_set_active_voices(struct ultrasnd_ctx *u,unsigned char voices) {
 	ultrasnd_select_write(u,0x0E,0xC0 | (u->active_voices - 1));
 }
 
+void ultrasnd_abort_dma_transfer(struct ultrasnd_ctx *u) {
+	/* clear pending or active DMA, in case the reset didn't do anything with it */
+	ultrasnd_select_write(u,0x41,0x00);	/* disable any DMA */
+	ultrasnd_select_read(u,0x41); /* read to clear DMA terminal count---even though we didn't ask for TC IRQ */
+}
+
+void ultrasnd_stop_timers(struct ultrasnd_ctx *u) {
+	outp(u->port+0x008,0x04); /* select "timer stuff" */
+	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
+	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
+	ultrasnd_select_write(u,0x46,0xFF); /* reset */
+	ultrasnd_select_write(u,0x47,0xFF); /* reset */
+}
+
+void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
+	unsigned char c;
+	unsigned int i;
+
+	/* stop all voices, in case the last program left them running
+	   and firing off IRQs (like most MS-DOS GUS demos, apparently) */
+	for (i=0;i < 32;i++) {
+		ultrasnd_select_voice(u,i);
+		ultrasnd_select_write(u,0x00,3); /* force stop the voice */
+		ultrasnd_select_write(u,0x00,3); /* force stop the voice */
+		ultrasnd_select_write(u,0x06,0);
+		ultrasnd_select_write(u,0x07,0);
+		ultrasnd_select_write(u,0x08,0);
+		ultrasnd_select_write16(u,0x09,0);
+		ultrasnd_select_write(u,0x00,3);
+		ultrasnd_select_write(u,0x0D,0);
+		ultrasnd_select_read(u,0x8D); /* clear volume ramp IRQ pending */
+	}
+	ultrasnd_select_voice(u,0);
+
+	/* forcibly clear any pending voice IRQs */
+	i=0;
+	do { c = ultrasnd_select_read(u,0x8F);
+	} while ((++i) < 256 && (c&0xC0) != 0);
+}
+
 /* NOTE: If possible, you are supposed to provide both IRQs and both DMA channels provided by ULTRASND,
  *       or given by a probing function. However this function also supports basic probing without any
  *       knowledge of what IRQ is involved. To do that, pass in the context with port number nonzero
@@ -303,8 +343,8 @@ void ultrasnd_set_active_voices(struct ultrasnd_ctx *u,unsigned char voices) {
  *       if program_cfg is nonzero, this routine will write the IRQ and DMA configuration registers. */
 int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	void (interrupt far *old_irq)() = NULL;
-	unsigned char c1,c2,c2i,c;
-	unsigned int i,patience;
+	unsigned char c1,c2,c3,c3i;
+	unsigned int i;
 
 	/* The "Gravis Ultrasound Programmers Encyclopedia" describes a probe function that only
 	 * checks whether the onboard RAM can be peek'd and poke'd. Lame. Our test here goes
@@ -326,62 +366,41 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	/* reset the GF1 */
 	ultrasnd_select_write(u,0x4C,0x00); /* 0x4C: reset register -> master reset (bit 0=0) disable DAC (bit 1=0) master IRQ disable (bit 2=0) */
 	t8254_wait(t8254_us2ticks(20000)); /* wait 20ms for good measure, most docs imply 14 CPU cycles via IN statements but I don't think that's enough */
-	c1 = ultrasnd_selected_read(u); /* FIXME: Reading the reg back immediately works correctly, but writing the selector register and reading back returns incorrect data? Is that DOSBox being weird or does the GUS actually do that? */
+	c1 = ultrasnd_selected_read(u);
 
-	/* FIXME: DOSBox's emulation implies that the timers fire the IRQ anyway even if we don't set bit 2. Is that what the actual GUS does or is DOSBox full of it on that matter? */
-	c2i = 0x03 | (u->irq1 >= 0 ? 0x4 : 0x0); /* don't set bit 2 unless we intend to actually service the IRQ interrupt */
-	ultrasnd_select_write(u,0x4C,c2i); /* 0x4C: reset register -> end reset (bit 0=1) enable DAC (bit 1=1) master IRQ enable (bit 2) */
-	t8254_wait(t8254_us2ticks(20000)); /* wait 20ms for good measure, most docs imply 14 CPU cycles via IN statements but I don't think that's enough */
-	c2 = ultrasnd_selected_read(u); /* FIXME: Reading the reg back immediately works correctly, but writing the selector register and reading back returns incorrect data? Is that DOSBox being weird or does the GUS actually do that? */
+	/* take the GF1 out of reset. don't enable the DAC/IRQ right away, because reset/end reset clears bits 1-2.
+	 * if we were to write 0x07 now, we would read back 0x01 and DAC/IRQ enable would remain unset. */
+	ultrasnd_select_write(u,0x4C,0x01); /* 0x4C: reset register -> end reset (bit 0=1) */
+	t8254_wait(t8254_us2ticks(1000));
+	c2 = ultrasnd_selected_read(u);
 
-	if (c1 == 0xFF && c2 == 0xFF) {
+	/* once out of reset, now we can set DAC enable (bit 1) and IRQ enable (bit 2) */
+	c3i = 0x03 | (u->irq1 >= 0 ? 0x4 : 0x0); /* don't set bit 2 unless we intend to actually service the IRQ interrupt */
+	ultrasnd_select_write(u,0x4C,c3i); /* 0x4C: reset register -> stay out of reset (bit 0=1) DAC enable (bit1) IRQ enable (bit2) */
+	c3 = ultrasnd_selected_read(u);
+
+	/* if we read back nothing, then it's not a GUS. there's probably nothing there, even. */
+	if (c1 == 0xFF && c2 == 0xFF && c3 == 0xFF) {
 		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Read back 0xFF during reset, so it's probably not there\n",u->port);
 		return 1;
 	}
 
-	/* FIXME: The ultrasound SDK documentation never says anything about being able to read the registers.
-	 *        The programmer's encyclopedia though implies you can. So then, can we hit the reset register
-	 *        and read it back to know it's there? [DOSBox emulation: yes, we can!] */
-	/* Did we really write Ultrasound register 0x4C or is it something else? */
-	if ((c1&7) != 0 || (c2&7) != c2i) {
-		/* HACK: DOSBox 0.74 emulates a GUS that happily leaves your bits set after reset.
-		         The Real Thing however resets your bits as part of the reset. So what you
-			 will likely read back is only one of the bits set, and you will need to
-			 turn on the DAC by reading and writing again. */
-		if (c1 == 0 && c2 == 1) {
-			ultrasnd_select_write(u,0x4C,c2i); /* 0x4C: reset register -> end reset (bit 0=1) enable DAC (bit 1=1) master IRQ enable (bit 2) */
-			t8254_wait(t8254_us2ticks(20000)); /* wait 20ms for good measure, most docs imply 14 CPU cycles via IN statements but I don't think that's enough */
-			c2 = ultrasnd_selected_read(u); /* FIXME: Reading the reg back immediately works correctly, but writing the selector register and reading back returns incorrect data? Is that DOSBox being weird or does the GUS actually do that? */
-			if ((c2&7) != c2i) {
-				fprintf(stderr,"Gravis Ultrasound[0x%03x]: Reset register OK but DAC enable bit is stuck off, which means that your GUS is probably not going to output the audio we are playing. If UltraInit has been showing error messages you may want to check that the line/speaker output amplifier is OK. c1=0x%02x c2=%02x\n",u->port,c1,c2);
-			}
-		}
-		else {
-			if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Reset register is supposed to be read/write. This is probably not a GUS. c1=0x%02x c2=%02x\n",u->port,c1,c2);
-			return 1;
-		}
+	/* the reset phase should show c1 == 0x00, c2 == 0x01, and c3 == c3i (0x03 or 0x07).
+	 * testing with real hardware says the reset register is readable, even though the GUS SDK doesn't say so. */
+	if ((c1&7) != 0 || (c2&7) != 1 || (c3&7) != c3i) {
+		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Reset register is supposed to be read/write. This is probably not a GUS. c1=0x%02x c2=%02x\n",u->port,c1,c2);
+		return 1;
 	}
 
-	/* the tests below can cause interrupts. so hook the IRQ */
-	if (u->irq1 >= 0) {
-		ultrasnd_test_irq_fired = 0;
-		ultrasnd_test_irq_n = u->irq1;
-		old_irq = _dos_getvect(irq2int(u->irq1));
-		_dos_setvect(irq2int(u->irq1),ultrasnd_test_irq);
-		/* perhaps a probing test prior to this call fired off the IRQ, but we failed to hook it because we didn't know. */
-		_cli();
-		p8259_OCW2(u->irq1,P8259_OCW2_SPECIFIC_EOI | (u->irq1&7));
-		if (u->irq1 >= 8) p8259_OCW2(2,P8259_OCW2_SPECIFIC_EOI | 2); /* IRQ 8-15 -> IRQ 2 chaining */
-		_sti();
-		p8259_unmask(u->irq1);
-		t8254_wait(t8254_us2ticks(1000)); /* 1ms */
-		/* in case we did unmask an IRQ, it probably fired about now and bumped up our IRQ counter */
-		_cli();
-		if (ultrasnd_test_irq_fired != 0 && debug_on)
-			fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ %d was apparently stuck prior to this probe function, and I just got it un-stuck\n",u->port,u->irq1);
-		ultrasnd_test_irq_fired = 0;
-		_sti();
-	}
+	/* switch off the IRQ again, so we can safely force stop IRQ sources */
+	ultrasnd_select_write(u,0x4C,0x03);
+
+	/* force the card into a known state */
+	ultrasnd_test_irq_n = u->irq1;
+	ultrasnd_test_irq_fired = 0;
+	ultrasnd_abort_dma_transfer(u);
+	ultrasnd_stop_all_voices(u);
+	ultrasnd_stop_timers(u);
 
 	if (u->irq1 >= 0 && program_cfg) {
 		/* now use the Mixer register to enable line out, and to select the IRQ control register.
@@ -389,15 +408,15 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 		 * course write only. but we can program them to match what we know about IRQ and DMA
 		 * settings */
 		outp(u->port+0x000,0x40 | 0x08);	/* bit 1: 0=enable line out, bit 0: 0=enable line in, bit 3: 1=enable latches  bit 6: 1=next I/O goes to IRQ latches */
-		c1 = ultrasnd_valid_irq(u,u->irq1);
-		if (u->irq2 == u->irq1) c1 |= 0x40; /* same IRQ */
-		else c1 |= ultrasnd_valid_irq(u,u->irq2) << 3;
+		c1 = ultrasnd_valid_irq(u,u->irq1);	/* IRQ1 must be set */
+		if (u->irq2 == u->irq1) c1 |= 0x40;	/* same IRQ */
+		else c1 |= ultrasnd_valid_irq(u,u->irq2) << 3; /* IRQ2 can be unset */
 		outp(u->port+0x00B,c1);
 
 		outp(u->port+0x000,0x00 | 0x08);	/* bit 1: 0=enable line out, bit 0: 0=enable line in, bit 3: 1=enable latches  bit 6: 0=next I/O goes to DMA latches */
-		c1 = ultrasnd_valid_dma(u,u->dma1);
-		if (u->dma2 == u->dma1) c1 |= 0x40; /* same IRQ */
-		else c1 |= ultrasnd_valid_dma(u,u->dma2) << 3;
+		c1 = ultrasnd_valid_dma(u,u->dma1);	/* DMA1 can be unset */
+		if (u->dma2 == u->dma1) c1 |= 0x40;	/* same DMA */
+		else c1 |= ultrasnd_valid_dma(u,u->dma2) << 3; /* DMA2 can be unset */
 		outp(u->port+0x00B,c1);
 	}
 	else {
@@ -405,65 +424,49 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 		outp(u->port+0x000,0x00 | 0x08);	/* bit 1: 0=enable line out, bit 0: 0=enable line in, bit 3: 1=enable latches  bit 6: 1=next I/O goes to DMA latches */
 	}
 
-	/* clear pending or active DMA, in case the reset didn't do anything with it */
-	ultrasnd_select_write(u,0x41,0x00);	/* disable any DMA */
-	ultrasnd_select_read(u,0x41); /* read to clear DMA terminal count---even though we didn't ask for TC IRQ */
+	if ((inp(u->port+0x006)&0xC) != 0)
+		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ status register shows pending IRQs despite GUS reset procedure\n",u->port);
 
-	/* stop all voices, in case the last program left them running
-	   and firing off IRQs (like most MS-DOS GUS demos, apparently) */
-	for (i=0;i < 32;i++) {
-		ultrasnd_select_voice(u,i);
-		ultrasnd_select_write(u,0x06,0);
-		ultrasnd_select_write(u,0x07,0);
-		ultrasnd_select_write(u,0x08,0);
-		ultrasnd_select_write16(u,0x09,0);
-		ultrasnd_select_write(u,0x00,3);
-		ultrasnd_select_write(u,0x0D,0);
-		ultrasnd_select_read(u,0x8D);
+	/* the tests below can cause interrupts. so hook the IRQ */
+	if (u->irq1 >= 0) {
+		old_irq = _dos_getvect(irq2int(u->irq1));
+		_dos_setvect(irq2int(u->irq1),ultrasnd_test_irq);
+		p8259_unmask(u->irq1);
 	}
 
-	/* clear all IRQ events */
-	patience = 5000;
-	ultrasnd_select_voice(u,0);
-	do {
-		if (--patience == 0) {
-			if (debug_on) fprintf(stderr,"GUS: Ran out of patience attempting to clear interrupt events\n");
-			break;
-		}
+	/* IRQ is safe to enable now */
+	c3i = 0x03 | (u->irq1 >= 0 ? 0x4 : 0x0); /* don't set bit 2 unless we intend to actually service the IRQ interrupt */
+	ultrasnd_select_write(u,0x4C,c3i); /* 0x4C: reset register -> stay out of reset (bit 0=1) DAC enable (bit1) IRQ enable (bit2) */
 
+	/* enabling the IRQ may have triggered one. if so, let me know please */
+	if (u->irq1 >= 0) {
 		_cli();
-		if ((c1 = (ultrasnd_select_read(u,0x8F) & 0xC0)) != 0xC0) {
-			ultrasnd_select_voice(u,c1&0x1F);
-			ultrasnd_select_read(u,0x8D);
-			ultrasnd_select_write(u,0x00,3);
-			_sti();
-		}
-	} while (c1 != 0xC0);
-	c1 = inp(u->port+0x006);
-	_sti();
+		if (ultrasnd_test_irq_fired != 0 && debug_on)
+			fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ %d stuck on card, despite all attempts to clear it\n",u->port,u->irq1);
+		ultrasnd_test_irq_fired = 0;
+		_sti();
+	}
 
-	/* any IRQs that did happen, ignore them */
-	ultrasnd_test_irq_fired = 0;
+	if (u->irq1 >= 0 && ultrasnd_test_irq_fired != 0)
+		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ fired at or before the timer was enabled. Did something else happen?\n",u->port,ultrasnd_test_irq_fired);
+	if ((inp(u->port+0x006)&0xC) != 0)
+		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ status register still shows pending IRQ for timers despite clearing and resetting them\n",u->port);
 
 	/* Gravis SDK also shows there are two timer registers. When loaded by the application they count up to 0xFF then generate an IRQ.
 	 * So if we load them and no counting happens, it's not a GUS. */
 	outp(u->port+0x008,0x04); /* select "timer stuff" */
 	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
 	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
-	ultrasnd_select_write(u,0x46,0x80); /* load timer 1 */
-	ultrasnd_select_write(u,0x47,0x80); /* load timer 2 */
+	ultrasnd_select_write(u,0x46,0x80); /* load timer 1 (0x7F * 80us = 10.16ms) */
+	ultrasnd_select_write(u,0x47,0x80); /* load timer 2 (0x7F * 320us = 40.64ms) */
 	ultrasnd_select_write(u,0x45,0x0C); /* enable timer 1 & 2 IRQ */
 	outp(u->port+0x008,0x04); /* select "timer stuff" */
 	outp(u->port+0x009,0x03); /* unmask timer IRQs, clear reset, start timers */
 
-	if ((inp(u->port+0x006)&0xC) != 0)
-		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ status register still shows pending IRQ for timers despite clearing and resetting them\n",u->port);
-	if (u->irq1 >= 0 && ultrasnd_test_irq_fired != 0)
-		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ fired at or before the timer was enabled. Did something else happen?\n",u->port,ultrasnd_test_irq_fired);
-
-	/* wait 500ms, more than enough time for the timers to count up to 0xFF and signal IRQ */
+	/* wait 100ms, more than enough time for the timers to count up to 0xFF and signal IRQ */
 	/* NTS: The SDK doc doesn't say, but apparently the timer will hit 0xFF, fire the IRQ, then reset to 0 and count up again (or else DOSBox is mis-emulating the GUS) */
-	for (i=0,c1=0;i < 500 && (c1&0xC) != 0xC;i++) {
+	c1 = inp(u->port+0x006);
+	for (i=0,c1=0;i < 100 && (c1&0xC) != 0xC;i++) {
 		t8254_wait(t8254_us2ticks(1000)); /* 1ms */
 		c1 = inp(u->port+0x006); /* IRQ status */
 	}
@@ -478,17 +481,6 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer never signalled IRQ\n");
 		goto irqfail;
 	}
-
-	/* wait for the timer to stop */
-	patience = 100;
-	do {
-		t8254_wait(t8254_us2ticks(1000)); /* 1ms */
-		c = inp(u->port+0x008);
-		if (--patience == 0) {
-			fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timeout waiting for timers to stop\n",u->port);
-			break;
-		}
-	} while ((c&0x60) == 0x00);
 
 	/* check the RAM. is there at least a 4KB region we can peek and poke? */
 	/* FIXME: According to Wikipedia there are versions of the card that don't have RAM at all (just ROM). How do we work with those? */
@@ -635,7 +627,7 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 
 	if (u->irq1 >= 0) {
 		_dos_setvect(irq2int(u->irq1),old_irq);
-		p8259_mask(u->irq1);
+		if (old_irq == NULL) p8259_mask(u->irq1);
 	}
 
 	if (u->dma1 >= 0)
@@ -660,84 +652,21 @@ timerfail:
 	goto commoncleanup;
 commoncleanup:
 	if (u->irq1 >= 0) {
-		unsigned char irr,i;
-
 		_dos_setvect(irq2int(u->irq1),old_irq);
-		p8259_mask(u->irq1);
-
-		/* problem: the GUS's IRQ acts like a level-triggered interrupt. if we don't
-		 * take pains to clear it, it remains "stuck" and nobody else can signal that IRQ */
-
-		ultrasnd_select_write(u,0x4C,0x00); /* 0x4C: reset register -> master reset (bit 0=0) disable DAC (bit 1=0) master IRQ disable (bit 2=0) */
-		t8254_wait(t8254_us2ticks(20000)); /* wait 20ms for good measure, most docs imply 14 CPU cycles via IN statements but I don't think that's enough */
-		ultrasnd_select_write(u,0x4C,0x01); /* 0x4C: reset register -> end reset (bit 0=1) enable DAC (bit 1=1) master IRQ enable (bit 2) */
-		t8254_wait(t8254_us2ticks(20000)); /* wait 20ms for good measure, most docs imply 14 CPU cycles via IN statements but I don't think that's enough */
-
-		/* clear pending or active DMA, in case the reset didn't do anything with it */
-		ultrasnd_select_write(u,0x41,0x00);	/* disable any DMA */
-		ultrasnd_select_read(u,0x41); /* read to clear DMA terminal count---even though we didn't ask for TC IRQ */
-
-		/* Gravis SDK also shows there are two timer registers. When loaded by the application they count up to 0xFF then generate an IRQ.
-		 * So if we load them and no counting happens, it's not a GUS. */
-		outp(u->port+0x008,0x04); /* select "timer stuff" */
-		outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
-		ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
-		outp(u->port+0x008,0x04); /* select "timer stuff" */
-		outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
-
-		/* stop all voices, in case the last program left them running
-		   and firing off IRQs (like most MS-DOS GUS demos, apparently) */
-		for (i=0;i < 32;i++) {
-			ultrasnd_select_voice(u,i);
-			ultrasnd_select_write(u,0x06,0);
-			ultrasnd_select_write(u,0x07,0);
-			ultrasnd_select_write(u,0x08,0);
-			ultrasnd_select_write16(u,0x09,0);
-			ultrasnd_select_write(u,0x00,3);
-			ultrasnd_select_write(u,0x0D,0);
-			ultrasnd_select_read(u,0x8D);
-		}
-
-		/* clear all IRQ events */
-		patience = 5000;
-		ultrasnd_select_voice(u,0);
-		do {
-			if (--patience == 0) {
-				if (debug_on) fprintf(stderr,"GUS: Ran out of patience attempting to clear interrupt events\n");
-				break;
-			}
-
-			_cli();
-			if ((c1 = (ultrasnd_select_read(u,0x8F) & 0xC0)) != 0xC0) {
-				ultrasnd_select_voice(u,c1&0x1F);
-				ultrasnd_select_read(u,0x8D);
-				ultrasnd_select_write(u,0x00,3);
-				_sti();
-			}
-		} while (c1 != 0xC0);
-
-		/* suck up all possible IRQ events */
-		for (i=0;i < 255;i++) c1 = inp(u->port+0x006); /* IRQ status */
-
-		_sti();
-
-		/* the IRQ might actually be waiting to be ACKed.
-		 * if we don't take care of this, conflicts can happen, like the PLAYMP3
-		 * program probing for Ultrasnd then SoundBlaster, and the un-acked IRQ
-		 * prevents the Sound Blaster (on the same IRQ) from getting it's IRQ signal.
-		 * This is more likely than you think considering DOSBox's default configuration */
-		irr = (unsigned short)p8259_read_IRR(u->irq1);
-		if (irr & (1 << (u->irq1 & 7))) {
-			fprintf(stderr,"Gravis Ultrasound[0x%03x]: Stray IRQ signal\n",u->port);
-			p8259_OCW2(u->irq1,P8259_OCW2_SPECIFIC_EOI|(u->irq1&7));
-		}
-
-		irr = (unsigned short)p8259_read_IRR(u->irq1);
-		if (irr & (1 << (u->irq1 & 7))) {
-			fprintf(stderr,"Gravis Ultrasound[0x%03x]: Stray IRQ signal...again!\n",u->port);
-			p8259_OCW2(u->irq1,P8259_OCW2_SPECIFIC_EOI|(u->irq1&7));
-		}
+		if (old_irq == NULL) p8259_mask(u->irq1);
 	}
+
+	/* reset the GF1 */
+	ultrasnd_select_write(u,0x4C,0x00); /* 0x4C: reset register -> master reset (bit 0=0) disable DAC (bit 1=0) master IRQ disable (bit 2=0) */
+	t8254_wait(t8254_us2ticks(20000)); /* wait 20ms for good measure, most docs imply 14 CPU cycles via IN statements but I don't think that's enough */
+	c1 = ultrasnd_selected_read(u);
+
+	/* take the GF1 out of reset. don't enable the DAC/IRQ right away, because reset/end reset clears bits 1-2.
+	 * if we were to write 0x07 now, we would read back 0x01 and DAC/IRQ enable would remain unset. */
+	ultrasnd_select_write(u,0x4C,0x01); /* 0x4C: reset register -> end reset (bit 0=1) */
+	t8254_wait(t8254_us2ticks(1000));
+	c2 = ultrasnd_selected_read(u);
+
 	return 1;
 }
 
@@ -818,116 +747,6 @@ struct ultrasnd_ctx *ultrasnd_alloc_card() {
 	return NULL;
 }
 
-static void interrupt far dummy_irq_hi() {
-	p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
-	p8259_OCW2(2,P8259_OCW2_NON_SPECIFIC_EOI);
-}
-
-static void interrupt far dummy_irq() {
-	p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
-}
-
-/* updates a bitmask on what IRQs have fired on their own (and therefore are not fired by the GUS).
- * also returns a bitmask of "stuck" interrupts, which is important given my comments below on
- * DOSBox and the GUS's persistent IRQ signal once timers have been triggered */
-static unsigned short ultrasnd_irq_watch(unsigned short *eirq) {
-	void far *oldvec[16] = {NULL}; /* Apparently some systems including DOSBox have masked IRQs pointing to NULL interrupt vectors. So to properly test we have to put a dummy there. Ewwwww... */
-	unsigned short irr,stuck = 0,irq,intv;
-	unsigned int patience = 0;
-	unsigned char ml,mh;
-#if TARGET_MSDOS == 32
-	uint32_t *intvec = (uint32_t*)0x00000000;
-#else
-	uint32_t far *intvec = (uint32_t far *)MK_FP(0x0000,0x000);
-#endif
-
-	for (irq=0;irq < 16;irq++) {
-		intv = irq2int(irq);
-		/* read the interrupt table directly. assume the DOS extender (if 32-bit) would translate getvect() and cause problems */
-		if (intvec[intv] == 0x00000000UL) {
-			oldvec[irq] = _dos_getvect(intv);
-			if (irq >= 8) _dos_setvect(intv,dummy_irq_hi);
-			else _dos_setvect(intv,dummy_irq);
-		}
-		else {
-			oldvec[irq] = NULL;
-		}
-	}
-
-	/* BUG: DOSBox's emulation (and possibly the real thing) fire the IRQ
-	 *      for the timer even if we don't set Master IRQ enable. This
-	 *      results in the IRQ being stuck active but masked off. So what
-	 *      we have to do is unmask the IRQ long enough for it to fire,
-	 *      then re-mask it for the activity test. Doing this also means that
-	 *      if the IRQ was active for something else, then that something
-	 *      else will have it's interrupt serviced properly. Else, if it
-	 *      was the GUS, then this lets the PIC get the IRQ signal out of
-	 *      it's way to allow the GUS to fire again. */
-
-	_cli();
-	ml = p8259_read_mask(0);	/* IRQ0-7 */
-	mh = p8259_read_mask(8);	/* IRQ8-15 */
-	p8259_write_mask(0,0x00);	/* unmask all interrupts, give the IRQ a chance to fire. keep a record of any IRQs that remain stuck */
-	p8259_write_mask(8,0x00);
-	_sti();
-	stuck = 0xFFFF;
-	for (patience=0;patience < 250;patience++) {
-		t8254_wait(t8254_us2ticks(1000));
-		_cli();
-		irr  = (unsigned short)p8259_read_IRR(0);
-		irr |= (unsigned short)p8259_read_IRR(8) << 8U;
-		_sti();
-		stuck &= irr;
-	}
-	/* issue a specific EOI for any interrupt that remains stuck and unserviced */
-	for (irq=2;irq <= 15;irq++) {
-		if (irq == 2 || irq == 9) {
-			/* do not disturb the IRQ 8-15 -> IRQ 2 chain or IRQ 9 weirdness. GUS cards don't use IRQ 9 anyway. */
-		}
-		else if (stuck & (1U << irq)) {
-			_cli();
-			p8259_OCW2(irq,P8259_OCW2_SPECIFIC_EOI | (irq&7));
-			if (irq >= 8) p8259_OCW2(2,P8259_OCW2_SPECIFIC_EOI | 2); /* IRQ 8-15 -> IRQ 2 chaining */
-			_sti(); /* then give the EOI'd IRQ a chance to clear */
-		}
-	}
-	if (eirq != NULL) {
-		_cli();
-		/* now carry out the test and note interrupts as they happen */
-		p8259_write_mask(0,0xFF);	/* mask off all interrupts */
-		p8259_write_mask(8,0xFF);
-		patience = 250;
-		do {
-			t8254_wait(t8254_us2ticks(1000));
-
-			irr  = (unsigned short)p8259_read_IRR(0);
-			irr |= (unsigned short)p8259_read_IRR(8) << 8U;
-			for (irq=0;irq < 16;irq++) {
-				if (stuck & (1U << irq)) {
-				}
-				else if (irr & (1U << irq)) {
-					*eirq |= 1U << irq;
-				}
-			}
-		} while (--patience != 0);
-	}
-//	fprintf(stdout,"Pre-test IRQ elimination: 0x%04X irr=0x%04x stuck=0x%04x\n",*eirq,irr,stuck);
-
-	/* restore interrupt mask */
-	p8259_write_mask(0,ml);
-	p8259_write_mask(8,mh);
-	_sti();
-
-	for (irq=0;irq < 16;irq++) {
-		if (oldvec[irq] != NULL) {
-			intv = irq2int(irq);
-			intvec[intv] = 0x00000000UL;
-		}
-	}
-
-	return stuck;
-}
-
 int ultrasnd_test_irq_timer(struct ultrasnd_ctx *u,int irq) {
 	unsigned char c1;
 	unsigned int i;
@@ -977,8 +796,6 @@ int ultrasnd_test_irq_timer(struct ultrasnd_ctx *u,int irq) {
 }
 
 struct ultrasnd_ctx *ultrasnd_try_base(uint16_t base) {
-	unsigned char irq_tries[] = {2,3,5,7,11,12,15},tri;
-	unsigned short eliminated_irq = 0U,stuck,iv,i,cc;
 	struct ultrasnd_ctx *u;
 
 	if (ultrasnd_port_taken(base))
@@ -989,63 +806,13 @@ struct ultrasnd_ctx *ultrasnd_try_base(uint16_t base) {
 	ultrasnd_init_ctx(u);
 	u->port = base;
 
-	if (u->irq1 < 0) {
-		/* prior to probing, take note of IRQs that fire without help from the GUS.
-		 * ignore return value (stuck IRQs) */
-		ultrasnd_irq_watch(&eliminated_irq);
-	}
-
 	if (ultrasnd_probe(u,0)) {
 		ultrasnd_free_card(u);
 		return NULL;
 	}
 
 	if (u->irq1 < 0) {
-		/* FIXME: DOSBox 0.74: This code hangs somewhere in here if auto-detecting a GUS configured on IRQ 11, or 15.
-		 *        Update: The vector patching code in the watch function fixes it for the most part---but if you run
-		 *        the real-mode version and then the protected mode version, the IRQ hang will occur again. */
-		for (cc=0;u->irq1 < 0 && cc < 2;cc++) {
-			/* probe again, updating the eliminated mask but also noting which IRQs are stuck.
-			 * if DOSBox's emulation is correct, the GUS will persist in it's IRQ signalling
-			 * because of our timer testing and the stuck IRQ might be the one we're looking for. */
-			stuck = ultrasnd_irq_watch(NULL);
-			if (stuck == 0)
-				break;
-			else if ((stuck & (stuck - 1)) == 0) { /* if only 1 bit set */
-				i=0;
-				for (iv=0;iv < 16;iv++) {
-					if (stuck & (1 << iv)) {
-						i = iv;
-						break;
-					}
-				}
-
-				if ((eliminated_irq & (1 << iv)) == 0) {
-					if (ultrasnd_valid_irq(u,i) != 0 && ultrasnd_test_irq_timer(u,i))
-						u->irq1 = i;
-					else
-						eliminated_irq |= 1 << iv;
-
-					stuck = ultrasnd_irq_watch(NULL);
-				}
-			}
-			else {
-				break; /* we'll have to try another way */
-			}
-		}
-
-		for (tri=0;u->irq1 < 0 && tri < sizeof(irq_tries);tri++) {
-			if (eliminated_irq & (1 << irq_tries[tri]))
-				continue;
-
-			if (ultrasnd_valid_irq(u,irq_tries[tri]) != 0 && ultrasnd_test_irq_timer(u,irq_tries[tri]))
-				u->irq1 = irq_tries[tri];
-			else
-				eliminated_irq |= 1 << irq_tries[tri];
-
-			ultrasnd_irq_watch(NULL);
-		}
-		ultrasnd_irq_watch(NULL);
+		/* TODO: IRQ probing code. We *had* probing code but it was a bit too intrusive! */
 	}
 
 	if (u->dma1 < 0) {

@@ -71,19 +71,17 @@ int main(int argc,char **argv) {
 			ultrasnd_env->irq2,
 			ultrasnd_env->dma1,
 			ultrasnd_env->dma2);
-		if (ultrasnd_probe(ultrasnd_env,0)) {
+
+		/* NTS: Most programs linked against the GUS SDK program the IRQ and DMA into the card
+		 *      from the ULTRASND environment variable. So that's what we do here. */
+		if (ultrasnd_probe(ultrasnd_env,1)) {
 			printf("Never mind, doesn't work\n");
 			ultrasnd_free_card(ultrasnd_env);
 		}
 	}
 
-	if (windows_mode == WINDOWS_NONE) {
-		/* FIXME: Windows XP DOS Box: This probing function causes the (virtual) keyboard to stop responding. Why? */
-		if (ultrasnd_try_base(0x220))
-			printf("Also found one at 0x220\n");
-		if (ultrasnd_try_base(0x240))
-			printf("Also found one at 0x240\n");
-	}
+	/* NTS: We no longer auto-probe for the card (at this time) because it is also standard for DOS
+	 *      programs using the GUS SDK to expect the ULTRASND variable */
 
 	for (i=0;i < MAX_ULTRASND;i++) {
 		u = &ultrasnd_card[i];
