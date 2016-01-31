@@ -453,7 +453,7 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 		_sti();
 	}
 
-	if (u->irq1 >= 0 && ultrasnd_test_irq_fired != 0)
+	if (u->irq1 >= 0 && ultrasnd_test_irq_fired != 0 && debug_on)
 		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ fired at or before the timer was enabled. Did something else happen?\n",u->port,ultrasnd_test_irq_fired);
 
 	/* Gravis SDK also shows there are two timer registers. When loaded by the application they count up to 0xFF then generate an IRQ.
@@ -474,17 +474,13 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 		t8254_wait(t8254_us2ticks(1000)); /* 1ms */
 		c1 = inp(u->port+0x006); /* IRQ status */
 	}
-	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
-	outp(u->port+0x008,0x04); /* select "timer stuff" */
-	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
-	ultrasnd_select_write(u,0x46,0x00);
-	ultrasnd_select_write(u,0x47,0x00);
+	ultrasnd_stop_timers(u);
 	if ((c1&0xC) != 0xC) {
-		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer readback fail 0x%02x\n",c1);
+		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer readback fail 0x%02x\n",u->port,c1);
 		goto timerfail;
 	}
 	if (u->irq1 >= 0 && ultrasnd_test_irq_fired == 0) {
-		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer never signalled IRQ\n");
+		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer never signalled IRQ\n",u->port);
 		goto irqfail;
 	}
 
@@ -605,7 +601,8 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 
 			if ((unsigned int)rem >= testlen) goto dmafail;
 			else if (rem != 0) {
-				fprintf(stderr,"Gravis Ultrasound[0x%03x]: DMA transfer is incomplete (%u/%u), probably stalled out during transfer. You should choose another DMA channel.\n",u->port,rem,testlen);
+				if (debug_on)
+					fprintf(stderr,"Gravis Ultrasound[0x%03x]: DMA transfer is incomplete (%u/%u), probably stalled out during transfer. You should choose another DMA channel.\n",u->port,rem,testlen);
 				goto dmafail;
 			}
 
@@ -613,11 +610,13 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 			for (i=0;i < len;i++) {
 				c = ultrasnd_peek(u,i+0x1000);
 				if (c != testing[i]) {
-					fprintf(stderr,"Gravis Ultrasound[0x%03x]: DMA transfer corrupted test data (phys=%8lx lin=%8lx)\n",u->port,(unsigned long)phys,(unsigned long)lin);
-					fprintf(stderr,"  I wrote: '%s'\n",testing);
-					fprintf(stderr," Got back: '");
-					for (i=0;i < len;i++) fprintf(stderr,"%c",ultrasnd_peek(u,i+0x1000));
-					fprintf(stderr,"'\n");
+					if (debug_on) {
+						fprintf(stderr,"Gravis Ultrasound[0x%03x]: DMA transfer corrupted test data (phys=%8lx lin=%8lx)\n",u->port,(unsigned long)phys,(unsigned long)lin);
+						fprintf(stderr,"  I wrote: '%s'\n",testing);
+						fprintf(stderr," Got back: '");
+						for (i=0;i < len;i++) fprintf(stderr,"%c",ultrasnd_peek(u,i+0x1000));
+						fprintf(stderr,"'\n");
+					}
 					goto dmafail;
 				}
 			}
@@ -650,16 +649,16 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	ultrasnd_set_active_voices(u,14);
 	return 0;
 dmafail:
-	fprintf(stderr,"Gravis Ultrasound[0x%03x]: DMA test failed, nothing was transferred\n",u->port);
+	if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: DMA test failed, nothing was transferred\n",u->port);
 	goto commoncleanup;
 irqfail:
-	fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ test failed, timers did not signal IRQ handler\n",u->port);
+	if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ test failed, timers did not signal IRQ handler\n",u->port);
 	goto commoncleanup;
 ramfail:
-	fprintf(stderr,"Gravis Ultrasound[0x%03x]: RAM test failed\n",u->port);
+	if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: RAM test failed\n",u->port);
 	goto commoncleanup;
 timerfail:
-	fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer test failed (IRQstatus=0x%02X)\n",u->port,inp(u->port+0x006));
+	if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer test failed (IRQstatus=0x%02X)\n",u->port,inp(u->port+0x006));
 	goto commoncleanup;
 commoncleanup:
 	if (u->irq1 >= 0) {
