@@ -1145,7 +1145,7 @@ static void interrupt gus_irq() {
 
 	if (old_irq_masked || old_irq == NULL || dont_chain_irq) {
 		/* ack the interrupt ourself, do not chain */
-		if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+		if (gus_card->irq1 >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
 		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
 	}
 	else {
