@@ -927,6 +927,7 @@ static unsigned long			gus_write = 0;
 
 static unsigned char			dont_chain_irq = 0;
 static unsigned char			dont_sb_idle = 0;
+static unsigned char			dont_use_gus_dma_tc = 0;
 
 /* LPT DAC */
 static unsigned short			lpt_port = 0x378;
@@ -1546,7 +1547,7 @@ static void mad_gus_send_il(unsigned long ofs,int16_t *src,unsigned long len,uns
 		len >>= 1;
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((int16_t*)dst)[i] = src[(i<<st)+channel];
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1562,7 +1563,7 @@ static void mad_gus_send_il(unsigned long ofs,int16_t *src,unsigned long len,uns
 	else {
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((uint8_t*)dst)[i] = (src[(i<<st)+channel] >> 8);
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -1588,7 +1589,7 @@ static void mad_gus_send_il_dac(unsigned long ofs,void *src,unsigned long len,un
 		len >>= 1;
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((int16_t*)dst)[i] = ((int16_t*)src)[(i<<st)+channel];
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1604,7 +1605,7 @@ static void mad_gus_send_il_dac(unsigned long ofs,void *src,unsigned long len,un
 	else {
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((uint8_t*)dst)[i] = ((uint8_t*)src)[(i<<st)+channel] ^ 0x80;
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -1640,7 +1641,7 @@ static void mad_gus_send(unsigned long ofs,mad_sample_t *src,unsigned long len) 
 				((int16_t*)dst)[i] = (int16_t)samp;
 		}
 
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1665,7 +1666,7 @@ static void mad_gus_send(unsigned long ofs,mad_sample_t *src,unsigned long len) 
 				dst[i] = (uint8_t)samp;
 		}
 
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -3276,6 +3277,7 @@ static void help() {
 	printf(" /ddac                Force DSP Direct DAC output mode\n");
 	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
 	printf(" /noidle              Don't use sndsb library idle function\n");
+	printf(" /nodmatc             Don't use Ultrasound DMA TC IRQ\n");
 }
 
 static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h) {
@@ -3712,6 +3714,9 @@ int main(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"noidle")) {
 				dont_sb_idle = 1;
+			}
+			else if (!strcmp(a,"nodmatc")) {
+				dont_use_gus_dma_tc = 1;
 			}
 			else if (!strcmp(a,"nochain")) {
 				dont_chain_irq = 1;
