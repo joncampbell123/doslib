@@ -964,6 +964,34 @@ static const char *lpt_dac_mode_str[LPT_DAC_MAX] = {
 	"Disney"
 };
 
+/*============================TODO: move to library=============================*/
+static int vector_is_iret(const unsigned char vector) {
+	const unsigned char far *p;
+	uint32_t rvector;
+
+#if TARGET_MSDOS == 32
+	rvector = ((uint32_t*)0)[vector];
+	if (rvector == 0) return 0;
+	p = (const unsigned char*)(((rvector >> 16UL) << 4UL) + (rvector & 0xFFFFUL));
+#else
+	rvector = *((uint32_t far*)MK_FP(0,(vector*4)));
+	if (rvector == 0) return 0;
+	p = (const unsigned char far*)MK_FP(rvector>>16UL,rvector&0xFFFFUL);
+#endif
+
+	if (*p == 0xCF) {
+		// IRET. Yep.
+		return 1;
+	}
+	else if (p[0] == 0xFE && p[1] == 0x38) {
+		// DOSBox callback. Probably not going to ACK the interrupt.
+		return 1;
+	}
+
+	return 0;
+}
+/*==============================================================================*/
+
 static void interrupt irq_0() { /* timer IRQ */
 	if (sb_card != NULL) {
 		if (sb_card && sb_card->timer_tick_func != NULL)
@@ -3541,6 +3569,9 @@ static void choose_sound_card_sb() {
 		if (sb_card->irq != -1) {
 			old_irq_masked = p8259_is_masked(sb_card->irq);
 			old_irq = _dos_getvect(irq2int(sb_card->irq));
+			if (vector_is_iret(irq2int(sb_card->irq)))
+				old_irq_masked = 1;
+
 			_dos_setvect(irq2int(sb_card->irq),sb_irq);
 			p8259_unmask(sb_card->irq);
 		}
@@ -4152,6 +4183,9 @@ int main(int argc,char **argv) {
 		if (sb_card->irq != -1) {
 			old_irq_masked = p8259_is_masked(sb_card->irq);
 			old_irq = _dos_getvect(irq2int(sb_card->irq));
+			if (vector_is_iret(irq2int(sb_card->irq)))
+				old_irq_masked = 1;
+
 			_dos_setvect(irq2int(sb_card->irq),sb_irq);
 			p8259_unmask(sb_card->irq);
 		}
@@ -4178,6 +4212,9 @@ int main(int argc,char **argv) {
 		if (gus_card->irq1 != -1) {
 			old_irq_masked = p8259_is_masked(gus_card->irq1);
 			old_irq = _dos_getvect(irq2int(gus_card->irq1));
+			if (vector_is_iret(irq2int(gus_card->irq1)))
+				old_irq_masked = 1;
+
 			_dos_setvect(irq2int(gus_card->irq1),gus_irq);
 			p8259_unmask(gus_card->irq1);
 			ultrasnd_select_write(gus_card,0x4C,0x07);
