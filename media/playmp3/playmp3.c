@@ -3077,6 +3077,9 @@ static const struct vga_menu_item main_menu_device_info =
 static const struct vga_menu_item main_menu_device_choose_sound_card =
 	{"Choose sound card",	'c',	0,	0};
 
+static const struct vga_menu_item main_menu_device_gus_reset_tinker =
+	{"GUS reset tinker",	'r',	0,	0};
+
 static const struct vga_menu_item* main_menu_device_sb[] = {
 	&main_menu_device_dsp_reset,
 	&main_menu_device_mixer_reset,
@@ -3089,6 +3092,7 @@ static const struct vga_menu_item* main_menu_device_sb[] = {
 static const struct vga_menu_item* main_menu_device_gus[] = {
 	&main_menu_device_info,
 	&main_menu_device_choose_sound_card,
+	&main_menu_device_gus_reset_tinker,
 	NULL
 };
 
@@ -3467,6 +3471,65 @@ static void choose_sound_card_sb() {
 	}
 
 	vga_msg_box_destroy(&box);
+}
+
+static void do_gus_reset_tinker() {
+	int c,rows=3+1,cols=70;
+	unsigned char reset_reg = 0;
+	unsigned char fredraw = 1;
+	unsigned char redraw = 1;
+	struct vga_msg_box box;
+
+	vga_msg_box_create(&box,"",rows,cols); /* 3 rows 70 cols */
+
+	while (1) {
+		ui_anim(0);
+
+		if (redraw || fredraw) {
+			reset_reg = ultrasnd_select_read(gus_card,0x4C);
+
+			if (fredraw) {
+				vga_moveto(box.x+2,box.y+1);
+				vga_write_color(0x1E);
+				vga_write("GUS reset register:");
+
+				vga_moveto(box.x+2,box.y+3);
+				vga_write_color(0x1E);
+				vga_write("Play with the register by pressing 0-7 on the keyboard to");
+
+				vga_moveto(box.x+2,box.y+4);
+				vga_write_color(0x1E);
+				vga_write("toggle bits. May cause audio to stop playing.");
+			}
+
+			sprintf(temp_str,"0x%02x",reset_reg);
+			vga_moveto(box.x+2+22,box.y+1);
+			vga_write_color(0x1F);
+			vga_write(temp_str);
+
+			fredraw = 0;
+			redraw = 0;
+		}
+
+		if (kbhit()) {
+			c = getch();
+			if (c == 0) c = getch() << 8;
+
+			if (c == 27) {
+				break;
+			}
+			else if (c == 13) {
+			}
+			else if (c >= '0' && c <= '7') {
+				reset_reg ^= (1 << (c - '0'));
+				ultrasnd_select_write(gus_card,0x4C,reset_reg);
+				redraw = 1;
+			}
+		}
+	}
+
+	vga_msg_box_destroy(&box);
+
 }
 
 static void choose_sound_card_gus() {
@@ -4160,6 +4223,9 @@ int main(int argc,char **argv) {
 			else if (mitem == &main_menu_device_choose_sound_card) {
 				if (sb_card != NULL) choose_sound_card_sb();
 				else if (gus_card != NULL) choose_sound_card_gus();
+			}
+			else if (mitem == &main_menu_device_gus_reset_tinker) {
+				if (gus_card != NULL) do_gus_reset_tinker();
 			}
 		}
 
