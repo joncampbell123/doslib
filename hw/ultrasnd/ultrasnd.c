@@ -279,8 +279,25 @@ int ultrasnd_valid_irq(struct ultrasnd_ctx *u,int8_t i) {
 	return 0;
 }
 
+static struct ultrasnd_ctx *ultrasnd_test_card = NULL;
+
 static void interrupt far ultrasnd_test_irq() {
+	unsigned char irqstat,patience=255;
+
 	ultrasnd_test_irq_fired++;
+
+	/* read IRQ status. flush all possible reasons for an IRQ signal */
+	do {
+		irqstat = inp(ultrasnd_test_card->port+6);
+		if (irqstat & 0x80)
+			ultrasnd_select_read(ultrasnd_test_card,0x41);
+		else if (irqstat & 0x60)
+			ultrasnd_select_read(ultrasnd_test_card,0x8F);
+		else
+			break;
+
+		if (--patience == 0) break;
+	} while (1);
 
 	/* ack PIC */
 	if (ultrasnd_test_irq_n >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
@@ -391,6 +408,7 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	}
 
 	/* force the card into a known state */
+	ultrasnd_test_card = u;
 	ultrasnd_test_irq_n = u->irq1;
 	ultrasnd_test_irq_fired = 0;
 	ultrasnd_abort_dma_transfer(u);
@@ -489,7 +507,7 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 
 	/* initial versions came stock with 256KB with support for additional RAM in 256KB increments */
 	u->total_ram = 256UL << 10UL; /* 256KB */
-	for (i=1;i < ((8UL << 20UL) >> 18UL);i++) { /* test up to 8MB (8MB / 256KB banks) */
+	for (i=1;i < ((1UL << 20UL) >> 18UL);i++) { /* test up to 1MB (1MB / 256KB banks) */
 		uint32_t ofs = (uint32_t)i << (uint32_t)18UL;
 
 		/* put sentry value at base to detect address wrapping */
