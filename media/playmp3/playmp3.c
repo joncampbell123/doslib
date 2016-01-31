@@ -2781,6 +2781,7 @@ static void change_param_menu() {
 		ultrasnd_select_write(gus_card,0x4C,0x03);
 		ultrasnd_set_active_voices(gus_card,32);
 		ultrasnd_stop_all_voices(gus_card);
+		ultrasnd_set_active_voices(gus_card,gus_active);
 		if (gus_card->irq1 != -1) ultrasnd_select_write(gus_card,0x4C,0x07);
 	}
 
