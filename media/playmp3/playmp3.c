@@ -1648,7 +1648,7 @@ static void load_audio_gus(uint32_t up_to,uint32_t min,uint32_t max,uint8_t init
 	if (max == 0) max = gus_buffer_length/4;
 	if (max < 16) return;
 	if (mp3_fd < 0) return;
-	up_to &= (~3UL);
+	up_to &= (~0x1FUL);
 
 	while (max > 0UL) {
 		if (up_to < gus_write) {
@@ -1656,8 +1656,8 @@ static void load_audio_gus(uint32_t up_to,uint32_t min,uint32_t max,uint8_t init
 			bufe = 1;
 		}
 		else {
-			if (up_to <= 8UL) break;
-			how = (up_to-8UL) - gus_write; /* from last IO to up_to */
+			if (up_to <= 0x20UL) break;
+			how = (up_to-0x20UL) - gus_write; /* from last IO to up_to */
 			bufe = 0;
 		}
 
@@ -1667,7 +1667,9 @@ static void load_audio_gus(uint32_t up_to,uint32_t min,uint32_t max,uint8_t init
 			how = max;
 		else if (!bufe && how < min)
 			break;
-		else if (how == 0UL)
+
+		how &= (~0x1FUL);
+		if (how == 0UL)
 			break;
 
 		if (!load) {
