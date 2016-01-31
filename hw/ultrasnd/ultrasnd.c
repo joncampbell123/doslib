@@ -282,22 +282,7 @@ int ultrasnd_valid_irq(struct ultrasnd_ctx *u,int8_t i) {
 static struct ultrasnd_ctx *ultrasnd_test_card = NULL;
 
 static void interrupt far ultrasnd_test_irq() {
-	unsigned char irqstat,patience=255;
-
 	ultrasnd_test_irq_fired++;
-
-	/* read IRQ status. flush all possible reasons for an IRQ signal */
-	do {
-		irqstat = inp(ultrasnd_test_card->port+6);
-		if (irqstat & 0x80)
-			ultrasnd_select_read(ultrasnd_test_card,0x41);
-		else if (irqstat & 0x60)
-			ultrasnd_select_read(ultrasnd_test_card,0x8F);
-		else
-			break;
-
-		if (--patience == 0) break;
-	} while (1);
 
 	/* ack PIC */
 	if (ultrasnd_test_irq_n >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
@@ -319,11 +304,20 @@ void ultrasnd_abort_dma_transfer(struct ultrasnd_ctx *u) {
 }
 
 void ultrasnd_stop_timers(struct ultrasnd_ctx *u) {
-	outp(u->port+0x008,0x04); /* select "timer stuff" */
-	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
-	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
+	unsigned int patience;
+
+	patience = 16;
+	do {
+		outp(u->port+0x008,0x04); /* select "timer stuff" */
+		outp(u->port+0x009,0x00); /* turn off timer 1 & 2 */
+		outp(u->port+0x009,0x60); /* mask timer 1 & 2 */
+		outp(u->port+0x009,0x80); /* clear timer IRQ */
+	} while (--patience != 0 && (inp(u->port+0x008) & 0xE0) != 0);
+
+	ultrasnd_select_write(u,0x45,0x0C); /* enable timer 1 & 2 IRQ */
 	ultrasnd_select_write(u,0x46,0x00); /* reset */
 	ultrasnd_select_write(u,0x47,0x00); /* reset */
+	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
 }
 
 void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
@@ -900,20 +894,32 @@ void ultrasnd_set_voice_end(struct ultrasnd_ctx *u,unsigned char voice,uint32_t 
 }
 
 void ultrasnd_drain_irq_events(struct ultrasnd_ctx *u) {
-	unsigned int pass=0;
+	unsigned char irqstat,patience = 255;
+	unsigned int pass = 0,i;
 	unsigned char c;
-	unsigned int i;
 
-	_cli();
+	/* read IRQ status. flush all possible reasons for an IRQ signal */
+	do {
+		irqstat = inp(u->port+6);
+		if (irqstat & 0x80)
+			ultrasnd_select_read(u,0x41);
+		else if (irqstat & 0x60)
+			ultrasnd_select_read(u,0x8F);
+		else if (irqstat & 0x0C)
+			ultrasnd_stop_timers(u);
+		else
+			break;
+
+		if (--patience == 0) break;
+	} while (1);
 
 	do {
 		if ((++pass) >= 256) break;
 		for (i=0;i < 256;i++) ultrasnd_select_read(u,0x41);
 		for (i=0;i < 256;i++) ultrasnd_select_read(u,0x8F);
+		ultrasnd_stop_timers(u);
 		c = inp(u->port+6);
 	} while ((c & 0xE0) != 0);
-
-	_sti();
 }
 
 void ultrasnd_stop_voice(struct ultrasnd_ctx *u,int i) {

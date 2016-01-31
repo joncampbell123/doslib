@@ -315,6 +315,7 @@ int main(int argc,char **argv) {
 	ultrasnd_abort_dma_transfer(gus);
 	ultrasnd_stop_all_voices(gus);
 	ultrasnd_stop_timers(gus);
+	ultrasnd_drain_irq_events(gus);
 	printf("Freeing buffer...\n");
 	return 0;
 }

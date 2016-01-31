@@ -4488,6 +4488,11 @@ int main(int argc,char **argv) {
 	else if (gus_card != NULL) {
 		ultrasnd_select_write(gus_card,0x4C,0x03);
 
+		ultrasnd_abort_dma_transfer(gus_card);
+		ultrasnd_stop_all_voices(gus_card);
+		ultrasnd_stop_timers(gus_card);
+		ultrasnd_drain_irq_events(gus_card);
+
 		printf("Releasing IRQ %d...\n",gus_card->irq1);
 		if (gus_card->irq1 != -1)
 			_dos_setvect(irq2int(gus_card->irq1),old_irq);
