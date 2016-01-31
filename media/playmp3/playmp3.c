@@ -3663,6 +3663,7 @@ static void do_gus_reset_tinker() {
 				active_voices--;
 				gus_card->active_voices = (active_voices & 0x1F) + 1;
 				if (gus_card->active_voices != 32) ultrasnd_stop_voice(gus_card,gus_card->active_voices);
+				for (c=0;c < 256 && (ultrasnd_select_read(gus_card,0x8F) & 0xC0) != 0xC0;) c++; // eat all voice interrupts. the GF1 has problems clearing them out once we cut off the voice!
 				ultrasnd_select_write(gus_card,0x0E,active_voices);
 				redraw = 1;
 				_sti();
@@ -3673,6 +3674,7 @@ static void do_gus_reset_tinker() {
 				ultrasnd_select_write(gus_card,0x0E,active_voices);
 				gus_card->active_voices = (active_voices & 0x1F) + 1;
 				if (gus_card->active_voices != 1) ultrasnd_stop_voice(gus_card,gus_card->active_voices - 1);
+				for (c=0;c < 256 && (ultrasnd_select_read(gus_card,0x8F) & 0xC0) != 0xC0;) c++; // eat all voice interrupts. the GF1 has problems clearing them out once we cut off the voice!
 				redraw = 1;
 				_sti();
 			}
