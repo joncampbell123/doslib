@@ -340,6 +340,21 @@ void ultrasnd_flush_irq_events(struct ultrasnd_ctx *u) {
 	_sti();
 }
 
+void ultrasnd_stop_and_reset_voice(struct ultrasnd_ctx *u,uint8_t channel) {
+	if (channel >= 32) return;
+
+	ultrasnd_select_voice(u,channel);
+	ultrasnd_select_write(u,0x00,3); /* force stop the voice */
+	ultrasnd_select_write(u,0x00,3); /* force stop the voice */
+	ultrasnd_select_write(u,0x06,0);
+	ultrasnd_select_write(u,0x07,0);
+	ultrasnd_select_write(u,0x08,0);
+	ultrasnd_select_write16(u,0x09,0);
+	ultrasnd_select_write(u,0x00,3);
+	ultrasnd_select_write(u,0x0D,0);
+	ultrasnd_select_read(u,0x8D); /* clear volume ramp IRQ pending */
+}
+
 void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
 	unsigned int old_voices;
 	unsigned char c;
@@ -360,18 +375,7 @@ void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
 
 	/* stop all voices, in case the last program left them running
 	   and firing off IRQs (like most MS-DOS GUS demos, apparently) */
-	for (i=0;i < 32;i++) {
-		ultrasnd_select_voice(u,i);
-		ultrasnd_select_write(u,0x00,3); /* force stop the voice */
-		ultrasnd_select_write(u,0x00,3); /* force stop the voice */
-		ultrasnd_select_write(u,0x06,0);
-		ultrasnd_select_write(u,0x07,0);
-		ultrasnd_select_write(u,0x08,0);
-		ultrasnd_select_write16(u,0x09,0);
-		ultrasnd_select_write(u,0x00,3);
-		ultrasnd_select_write(u,0x0D,0);
-		ultrasnd_select_read(u,0x8D); /* clear volume ramp IRQ pending */
-	}
+	for (i=0;i < 32;i++) ultrasnd_stop_and_reset_voice(u,(uint8_t)i);
 	ultrasnd_select_voice(u,0);
 
 	/* forcibly clear any pending voice IRQs */

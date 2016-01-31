@@ -2770,6 +2770,16 @@ static void change_param_menu() {
 				sb_card->dsp_play_method = oldmethod;
 		}
 	}
+	else if (gus_card != NULL) {
+		/* NTS: The GF1 chip, on changing the active voice count, seems to treat any new
+		 *      channels added on as if they have corrupt state (Ultrasound MAX behavior).
+		 *      So we have to clear their state before allowing them to run if we want to
+		 *      avoid hangs, random channels buzzing, and IRQ storms. */
+		ultrasnd_select_write(gus_card,0x4C,0x03);
+		ultrasnd_set_active_voices(gus_card,32);
+		ultrasnd_stop_all_voices(gus_card);
+		if (gus_card->irq1 != -1) ultrasnd_select_write(gus_card,0x4C,0x07);
+	}
 
 	change_param_idx = selector;
 	mp3_bytes_per_sample = (mp3_stereo ? 2 : 1) * (mp3_16bit ? 2 : 1);
@@ -3552,7 +3562,7 @@ static void choose_sound_card_sb() {
 }
 
 static void do_gus_reset_tinker() {
-	int c,rows=3+1,cols=70;
+	int c,rows=3+2,cols=72;
 	unsigned char active_voices = 0;
 	unsigned char reset_reg = 0;
 	unsigned char fredraw = 1;
@@ -3595,6 +3605,10 @@ static void do_gus_reset_tinker() {
 				vga_moveto(box.x+2,box.y+4);
 				vga_write_color(0x1E);
 				vga_write("Up/Down arrow keys to play with Active Voices. May cause audio to stop.");
+
+				vga_moveto(box.x+2,box.y+5);
+				vga_write_color(0x1E);
+				vga_write("For safety reasons, new active voices are initialized when incremented.");
 			}
 
 			sprintf(temp_str,"0x%02x",reset_reg);
@@ -3635,6 +3649,7 @@ static void do_gus_reset_tinker() {
 				_cli();
 				active_voices++;
 				ultrasnd_select_write(gus_card,0x0E,active_voices);
+				if ((active_voices&0x1F) != 0) ultrasnd_stop_and_reset_voice(gus_card,active_voices & 0x1F); // to avoid random behavior, lockups, and random noises, initialize the new voice
 				gus_card->active_voices = (active_voices & 0x1F) + 1;
 				redraw = 1;
 				_sti();
