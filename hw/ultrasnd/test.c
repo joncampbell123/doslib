@@ -65,7 +65,6 @@ static const struct vga_menu_bar_item main_menu_bar[] = {
 
 static void ui_anim(int force) {
 	VGA_ALPHA_PTR wr = vga_alpha_ram + 10;
-	const unsigned int width = 70 - 4;
 
 	{
 		static const unsigned char anims[] = {'-','/','|','\\'};
@@ -296,6 +295,7 @@ int main(int argc,char **argv) {
 
 		if (redraw || bkgndredraw) {
 			if (bkgndredraw) {
+				for (vga=vga_alpha_ram,cc=0;cc < (80*1);cc++) *vga++ = 0x1E00 | 32;
 				for (vga=vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
 				vga_menu_bar_draw();
 				draw_irq_indicator();
