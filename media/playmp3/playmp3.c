@@ -1547,7 +1547,7 @@ static void mad_gus_send_il(unsigned long ofs,int16_t *src,unsigned long len,uns
 		len >>= 1;
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((int16_t*)dst)[i] = src[(i<<st)+channel];
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1563,7 +1563,7 @@ static void mad_gus_send_il(unsigned long ofs,int16_t *src,unsigned long len,uns
 	else {
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((uint8_t*)dst)[i] = (src[(i<<st)+channel] >> 8);
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -1589,7 +1589,7 @@ static void mad_gus_send_il_dac(unsigned long ofs,void *src,unsigned long len,un
 		len >>= 1;
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((int16_t*)dst)[i] = ((int16_t*)src)[(i<<st)+channel];
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1605,7 +1605,7 @@ static void mad_gus_send_il_dac(unsigned long ofs,void *src,unsigned long len,un
 	else {
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((uint8_t*)dst)[i] = ((uint8_t*)src)[(i<<st)+channel] ^ 0x80;
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -1641,7 +1641,7 @@ static void mad_gus_send(unsigned long ofs,mad_sample_t *src,unsigned long len) 
 				((int16_t*)dst)[i] = (int16_t)samp;
 		}
 
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | ((!dont_use_gus_dma_tc && gus_card->irq1) >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1666,7 +1666,7 @@ static void mad_gus_send(unsigned long ofs,mad_sample_t *src,unsigned long len) 
 				dst[i] = (uint8_t)samp;
 		}
 
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (!dont_use_gus_dma_tc && (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0)));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a;
