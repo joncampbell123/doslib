@@ -2703,7 +2703,7 @@ static void change_param_menu() {
 								sb_card->dsp_play_method--;
 						}
 						else if (gus_card != NULL) {
-							if (gus_active > 14) gus_active--;
+							if (gus_active > 1) gus_active--;
 							if (gus_channel >= gus_active) gus_channel = gus_active - 1;
 						}
 						break;
@@ -3312,7 +3312,7 @@ static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h
 	vga_write(temp_str);
 
 	vga_moveto(x,y + 1);
-	sprintf(temp_str,"Voices: %u Output: %uHz DMAIRQ:%lu VOICEIRQ:%lu TC:%u",
+	sprintf(temp_str,"Voices: %u Output: %luHz DMAIRQ:%lu VOICEIRQ:%lu TC:%u",
 		cx->active_voices,	cx->output_rate,
 		gus_dma_tc,		gus_irq_voice,
 		gus_card->dma_tc_irq_happened);
@@ -4088,7 +4088,7 @@ int main(int argc,char **argv) {
 			for (i=0;i < MAX_ULTRASND;i++) {
 				struct ultrasnd_ctx *u = &ultrasnd_card[i];
 				if (ultrasnd_card_taken(u)) {
-					printf("[%u] RAM=%dKB PORT=0x%03x IRQ=%d,%d DMA=%d,%d 256KB-boundary=%u voices=%u/%uHz\n",
+					printf("[%u] RAM=%dKB PORT=0x%03x IRQ=%d,%d DMA=%d,%d 256KB-boundary=%u voices=%u/%luHz\n",
 						i+1,
 						(int)(u->total_ram >> 10UL),
 						u->port,

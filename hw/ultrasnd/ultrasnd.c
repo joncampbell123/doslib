@@ -162,12 +162,13 @@ static int ultrasnd_test_irq_fired = 0;
 static int ultrasnd_test_irq_n = 0;
 
 /* actual sample rate table (based on total voices) */
-const uint16_t ultrasnd_rate_per_voices[33] = {
-    44100, 44100, 44100, 44100,  44100, 44100, 44100, 44100,  	/* 0-7 */
-    44100, 44100, 44100, 44100,  44100, 44100, 44100, 41160,  	/* 8-15 */
-    38587, 36317, 34300, 32494,  30870, 29400, 28063, 26843,	/* 16-23 */
-    25725, 24696, 23746, 22866,  22050, 21289, 20580, 19916,	/* 24-31 */
-    19293 };							/* 32 */
+/* NOTE: Values 1 & 2 are aliases of 3 & 4 based on actual GF1 hardware */
+const uint32_t ultrasnd_rate_per_voices[33] = {
+    0UL,     205800UL,154350UL,205800UL, 154350UL,123480UL,102900UL,88200UL,  	/* 0-7 */
+    77175UL, 68600UL, 61740UL, 56127UL,  51450UL, 47492UL, 44100UL, 41160UL,  	/* 8-15 */
+    38587UL, 36317UL, 34300UL, 32494UL,  30870UL, 29400UL, 28063UL, 26843UL,	/* 16-23 */
+    25725UL, 24696UL, 23746UL, 22866UL,  22050UL, 21289UL, 20580UL, 19916UL,	/* 24-31 */
+    19293UL };									/* 32 */
 
 struct ultrasnd_ctx ultrasnd_card[MAX_ULTRASND];
 struct ultrasnd_ctx *ultrasnd_env = NULL;
@@ -305,9 +306,13 @@ static void interrupt far ultrasnd_test_irq() {
 }
 
 void ultrasnd_set_active_voices(struct ultrasnd_ctx *u,unsigned char voices) {
-	if (voices < 14) u->active_voices = 14;
-	else if (voices > 32) u->active_voices = 32;
+	/* Actual GF1 behavior says that you can set the voice count down as low as
+	 * 2. The GF1 chipset does NOT cap it to 14 as documented. Doing this opens
+	 * up the possibility of running the sample rate at higher than 44.1KHz
+	 * sample rates. */
+	if (voices < 1) u->active_voices = 1;
 	else u->active_voices = voices;
+
 	u->output_rate = ultrasnd_rate_per_voices[u->active_voices];
 	ultrasnd_select_write(u,0x0E,0xC0 | (u->active_voices - 1));
 }
@@ -336,8 +341,22 @@ void ultrasnd_flush_irq_events(struct ultrasnd_ctx *u) {
 }
 
 void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
+	unsigned int old_voices;
 	unsigned char c;
 	unsigned int i;
+
+	/* there seems to be this odd hardware issue with the GF1 chip
+	 * where voices beyond the number of Active voices are either
+	 * unwriteable or their contents get corrupted somehow. So if
+	 * you just change the voices without clearing them, the GF1
+	 * acts on whatever bits are there and may act funny, or emit
+	 * buzzing noises from the random data it's pointing to. It's
+	 * more than just annoying, it can cause an IRQ storm. So to
+	 * compensate, temporarily set the active voices count to 32
+	 * to access ALL of them, zero them out, then restore the
+	 * active voices count */
+	old_voices = u->active_voices;
+	ultrasnd_set_active_voices(u,32);
 
 	/* stop all voices, in case the last program left them running
 	   and firing off IRQs (like most MS-DOS GUS demos, apparently) */
@@ -359,6 +378,8 @@ void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
 	i=0;
 	do { c = ultrasnd_select_read(u,0x8F);
 	} while ((++i) < 256 && (c&0xC0) != 0xC0);
+
+	ultrasnd_set_active_voices(u,old_voices);
 }
 
 /* NOTE: If possible, you are supposed to provide both IRQs and both DMA channels provided by ULTRASND,
