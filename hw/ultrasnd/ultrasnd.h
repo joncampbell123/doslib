@@ -36,6 +36,8 @@ struct ultrasnd_ctx {
 	uint8_t		reserved:7;
 	uint8_t		voicemode[32];	/* voice modes. because when you enable 16-bit PCM weird shit happens to the DRAM addresses */
 	struct dma_8237_allocation *dram_xfer_a;
+	uint8_t		dma_tc_irq_happened:1; /* set by caller to indicate DMA TC IRQ happened */
+	uint8_t		reserved2:7;
 };
 
 extern const uint16_t ultrasnd_rate_per_voices[33];

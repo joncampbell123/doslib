@@ -1121,7 +1121,10 @@ static void interrupt gus_irq() {
 	if (irq_stat & 0x80) {
 		/* DMA TC. read and clear. */
 		c = ultrasnd_select_read(gus_card,0x41);
-		if (c & 0x40) gus_dma_tc++;
+		if (c & 0x40) {
+			gus_card->dma_tc_irq_happened = 1;
+			gus_dma_tc++;
+		}
 	}
 	if (irq_stat & 0x60) {
 		unsigned char patience = 255;

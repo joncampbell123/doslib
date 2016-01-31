@@ -1080,6 +1080,7 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 		/* disable GUS DMA */
 		ultrasnd_select_write(u,0x41,(u->dma1 >= 4 ? 4 : 0) | (flags & 0xE0)); /* data size in bit 2, writing to DRAM, enable DMA, and bits 6-7 provided by caller */
 		ultrasnd_select_read(u,0x41); /* read to clear DMA terminal count---even though we didn't ask for TC IRQ */
+		u->dma_tc_irq_happened = 0;
 
 		/* Now initiate a DMA transfer (host) */
 		outp(d8237_ioport(u->dma1,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(u->dma1) | D8237_MASK_SET); /* mask */
@@ -1108,12 +1109,19 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 		 * will return with bit 6 set whether we asked for TC IRQ or not. */
 		patience = 10000; /* 100ns * 10000 = 1 sec */
 		do {
-			rem = d8237_read_count(u->dma1);
-			if (rem == 0 || rem >= 0xFFFE)
-				break;
+			if (u->irq1 >= 0 && (flags & ULTRASND_DMA_TC_IRQ) != 0) {
+				/* wait for caller's IRQ handler to set the flag */
+				if (u->dma_tc_irq_happened) break;
+			}
+			else {
+				rem = d8237_read_count(u->dma1);
+				if (rem == 0 || rem >= 0xFFFE)
+					break;
+			}
 
 			t8254_wait(t8254_us2ticks(100));
 		} while (--patience != 0);
+		rem = d8237_read_count(u->dma1);
 		if (rem >= 0xFFFE) rem = 0;
 
 		if (debug_on) {
