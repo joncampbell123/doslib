@@ -3475,6 +3475,7 @@ static void choose_sound_card_sb() {
 
 static void do_gus_reset_tinker() {
 	int c,rows=3+1,cols=70;
+	unsigned char active_voices = 0;
 	unsigned char reset_reg = 0;
 	unsigned char fredraw = 1;
 	unsigned char redraw = 1;
@@ -3486,6 +3487,10 @@ static void do_gus_reset_tinker() {
 		ui_anim(0);
 
 		if (redraw || fredraw) {
+			active_voices = ultrasnd_select_read(gus_card,0x8E);
+			/* BUGFIX: DOSBox/DOSBox-X does not emulate reading back the active voices register */
+			if (active_voices == 0) active_voices = 0xC0 | (gus_card->active_voices - 1); /* fake it */
+
 			reset_reg = ultrasnd_select_read(gus_card,0x4C);
 
 			if (fredraw) {
@@ -3493,17 +3498,26 @@ static void do_gus_reset_tinker() {
 				vga_write_color(0x1E);
 				vga_write("GUS reset register:");
 
+				vga_moveto(box.x+34,box.y+1);
+				vga_write_color(0x1E);
+				vga_write("Active voices:");
+
 				vga_moveto(box.x+2,box.y+3);
 				vga_write_color(0x1E);
-				vga_write("Play with the register by pressing 0-7 on the keyboard to");
+				vga_write("Play with the register by pressing 0-7 on the keyboard to toggle bits.");
 
 				vga_moveto(box.x+2,box.y+4);
 				vga_write_color(0x1E);
-				vga_write("toggle bits. May cause audio to stop playing.");
+				vga_write("Up/Down arrow keys to play with Active Voices. May cause audio to stop.");
 			}
 
 			sprintf(temp_str,"0x%02x",reset_reg);
-			vga_moveto(box.x+2+22,box.y+1);
+			vga_moveto(box.x+2+21,box.y+1);
+			vga_write_color(0x1F);
+			vga_write(temp_str);
+
+			sprintf(temp_str,"0x%02x",active_voices);
+			vga_moveto(box.x+2+48,box.y+1);
 			vga_write_color(0x1F);
 			vga_write(temp_str);
 
@@ -3519,6 +3533,18 @@ static void do_gus_reset_tinker() {
 				break;
 			}
 			else if (c == 13) {
+			}
+			else if (c == 0x4800) { //up
+				active_voices--;
+				ultrasnd_select_write(gus_card,0x0E,active_voices);
+				gus_card->active_voices = (active_voices & 0x1F) + 1;
+				redraw = 1;
+			}
+			else if (c == 0x5000) { //down
+				active_voices++;
+				ultrasnd_select_write(gus_card,0x0E,active_voices);
+				gus_card->active_voices = (active_voices & 0x1F) + 1;
+				redraw = 1;
 			}
 			else if (c >= '0' && c <= '7') {
 				reset_reg ^= (1 << (c - '0'));
