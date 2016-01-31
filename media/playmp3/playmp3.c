@@ -1137,7 +1137,10 @@ static void interrupt gus_irq() {
 				gus_irq_voice++;
 			}
 		}
-	} while (irq_stat & 0xE0);
+		else {
+			break;
+		}
+	} while (1);
 
 	sb_irq_count++;
 	if (++IRQ_anim >= 4) IRQ_anim = 0;
