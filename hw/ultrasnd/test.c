@@ -25,8 +25,6 @@
 #include <hw/vga/vgagui.h>
 #include <hw/vga/vgatty.h>
 
-static struct dma_8237_allocation *gus_dma = NULL; /* DMA buffer */
-
 static struct ultrasnd_ctx*	gus = NULL;
 
 static volatile unsigned char	IRQ_anim = 0;
@@ -227,21 +225,6 @@ int main(int argc,char **argv) {
 		p8259_unmask(gus->irq1);
 	}
 
-	printf("Allocating sound buffer..."); fflush(stdout);
-	{
-		uint32_t choice = 0x10000UL - 0x10UL;
-
-		do {
-			gus_dma = dma_8237_alloc_buffer(choice);
-			if (gus_dma == NULL) choice -= 4096UL;
-		} while (gus_dma == NULL && choice > 4096UL);
-
-		if (gus_dma == NULL) {
-			printf(" failed\n");
-			return 0;
-		}
-	}
-
 	i = int10_getmode();
 	if (i != 3) int10_setmode(3);
 	
@@ -333,7 +316,6 @@ int main(int argc,char **argv) {
 	ultrasnd_stop_all_voices(gus);
 	ultrasnd_stop_timers(gus);
 	printf("Freeing buffer...\n");
-	dma_8237_free_buffer(gus_dma); gus_dma = NULL;
 	return 0;
 }
 
