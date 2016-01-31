@@ -3594,7 +3594,7 @@ static void choose_sound_card_sb() {
 }
 
 static void do_gus_reset_tinker() {
-	int c,rows=3+1,cols=70;
+	int c,rows=3+3,cols=78;
 	unsigned char active_voices = 0;
 	unsigned char reset_reg = 0;
 	unsigned char fredraw = 1;
@@ -3633,6 +3633,14 @@ static void do_gus_reset_tinker() {
 				vga_moveto(box.x+2,box.y+4);
 				vga_write_color(0x1E);
 				vga_write("Up/Down arrow keys to play with Active Voices. May cause audio to stop.");
+
+				vga_moveto(box.x+2,box.y+5);
+				vga_write_color(0x1E);
+				vga_write("The GF1 chip is not meant to change Active voices realtime, some glitches");
+
+				vga_moveto(box.x+2,box.y+6);
+				vga_write_color(0x1E);
+				vga_write("may occur if you do. The GF1 is not stable below about 4-5 voices.");
 			}
 
 			sprintf(temp_str,"0x%02x",reset_reg);
