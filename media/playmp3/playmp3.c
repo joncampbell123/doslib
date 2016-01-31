@@ -3489,7 +3489,7 @@ static void do_gus_reset_tinker() {
 		if (redraw || fredraw) {
 			active_voices = ultrasnd_select_read(gus_card,0x8E);
 			/* BUGFIX: DOSBox/DOSBox-X does not emulate reading back the active voices register */
-			if (active_voices == 0) active_voices = 0xC0 | (gus_card->active_voices - 1); /* fake it */
+			if (active_voices == 0) active_voices = 0xE0 | (gus_card->active_voices - 1); /* fake it */
 
 			reset_reg = ultrasnd_select_read(gus_card,0x4C);
 
