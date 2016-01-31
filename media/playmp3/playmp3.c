@@ -3963,7 +3963,7 @@ int main(int argc,char **argv) {
 			}
 		}
 
-		if (!doit || ultrasnd_probe(ultrasnd_env,0)) {
+		if (!doit || ultrasnd_probe(ultrasnd_env,1)) {
 			printf("Never mind, doesn't work\n");
 			ultrasnd_free_card(ultrasnd_env);
 		}
