@@ -1117,32 +1117,28 @@ static unsigned long gus_dma_tc = 0;
 static unsigned long gus_irq_voice = 0;
 
 static void interrupt gus_irq() {
-	unsigned char irq_stat,c,irq_patience=3;
+	unsigned char irq_stat,c;
 
-	do {
-		irq_stat = inp(gus_card->port+6);
-		if (irq_stat & 0x80) { // bit 7
-			/* DMA TC. read and clear. */
-			c = ultrasnd_select_read(gus_card,0x41);
-			if (c & 0x40) {
-				gus_card->dma_tc_irq_happened = 1;
-				gus_dma_tc++;
-			}
+	irq_stat = inp(gus_card->port+6);
+	if (irq_stat & 0x80) { // bit 7
+		/* DMA TC. read and clear. */
+		c = ultrasnd_select_read(gus_card,0x41);
+		if (c & 0x40) {
+			gus_card->dma_tc_irq_happened = 1;
+			gus_dma_tc++;
 		}
-		if (irq_stat & 0x60) { // bits 6-5
-			unsigned char patience = 255;
+	}
+	if (irq_stat & 0x60) { // bits 6-5
+		unsigned char patience = 64;
 
-			/* voice/ramp IRQ. read and clear each one. */
-			do {
-				c = ultrasnd_select_read(gus_card,0x8F);
-				if ((c & 0xC0) == 0xC0) break; /* NTS: bit 6 and 7 are inverted. 0=IRQ happened 1=IRQ did not happen */
-				if (--patience == 0) break; /* should not happen */
-			} while (1);
-			gus_irq_voice++;
-		}
-
-		if (--irq_patience == 0) break;
-	} while ((irq_stat & 0xE0) != 0);
+		/* voice/ramp IRQ. read and clear each one. */
+		do {
+			c = ultrasnd_select_read(gus_card,0x8F);
+			if ((c & 0xC0) == 0xC0) break; /* NTS: bit 6 and 7 are inverted. 0=IRQ happened 1=IRQ did not happen */
+			if (--patience == 0) break; /* should not happen */
+		} while (1);
+		gus_irq_voice++;
+	}
 
 	sb_irq_count++;
 	if (++IRQ_anim >= 4) IRQ_anim = 0;
