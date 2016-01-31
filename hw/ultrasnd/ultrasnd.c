@@ -162,13 +162,12 @@ static int ultrasnd_test_irq_fired = 0;
 static int ultrasnd_test_irq_n = 0;
 
 /* actual sample rate table (based on total voices) */
-/* NOTE: Values 1 & 2 are aliases of 3 & 4 based on actual GF1 hardware */
-const uint32_t ultrasnd_rate_per_voices[33] = {
-    0UL,     205800UL,154350UL,205800UL, 154350UL,123480UL,102900UL,88200UL,  	/* 0-7 */
-    77175UL, 68600UL, 61740UL, 56127UL,  51450UL, 47492UL, 44100UL, 41160UL,  	/* 8-15 */
-    38587UL, 36317UL, 34300UL, 32494UL,  30870UL, 29400UL, 28063UL, 26843UL,	/* 16-23 */
-    25725UL, 24696UL, 23746UL, 22866UL,  22050UL, 21289UL, 20580UL, 19916UL,	/* 24-31 */
-    19293UL };									/* 32 */
+const uint16_t ultrasnd_rate_per_voices[33] = {
+    44100, 44100, 44100, 44100,  44100, 44100, 44100, 44100,  	/* 0-7 */
+    44100, 44100, 44100, 44100,  44100, 44100, 44100, 41160,  	/* 8-15 */
+    38587, 36317, 34300, 32494,  30870, 29400, 28063, 26843,	/* 16-23 */
+    25725, 24696, 23746, 22866,  22050, 21289, 20580, 19916,	/* 24-31 */
+    19293 };							/* 32 */
 
 struct ultrasnd_ctx ultrasnd_card[MAX_ULTRASND];
 struct ultrasnd_ctx *ultrasnd_env = NULL;
@@ -280,27 +279,6 @@ int ultrasnd_valid_irq(struct ultrasnd_ctx *u,int8_t i) {
 	return 0;
 }
 
-static struct ultrasnd_ctx *ultrasnd_test_card = NULL;
-
-void ultrasnd_drain_irq_events(struct ultrasnd_ctx *u) {
-	unsigned char irqstat,patience=255;
-
-	/* read IRQ status. flush all possible reasons for an IRQ signal */
-	do {
-		irqstat = inp(u->port+6);
-		if (irqstat & 0x80)
-			ultrasnd_select_read(u,0x41);
-		else if (irqstat & 0x60)
-			ultrasnd_select_read(u,0x8F);
-		else if (irqstat & 0x0C)
-			ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
-		else
-			break;
-
-		if (--patience == 0) break;
-	} while (1);
-}
-
 static void interrupt far ultrasnd_test_irq() {
 	ultrasnd_test_irq_fired++;
 
@@ -310,13 +288,9 @@ static void interrupt far ultrasnd_test_irq() {
 }
 
 void ultrasnd_set_active_voices(struct ultrasnd_ctx *u,unsigned char voices) {
-	/* Actual GF1 behavior says that you can set the voice count down as low as
-	 * 2. The GF1 chipset does NOT cap it to 14 as documented. Doing this opens
-	 * up the possibility of running the sample rate at higher than 44.1KHz
-	 * sample rates. */
-	if (voices < 1) u->active_voices = 1;
+	if (voices < 14) u->active_voices = 14;
+	else if (voices > 32) u->active_voices = 32;
 	else u->active_voices = voices;
-
 	u->output_rate = ultrasnd_rate_per_voices[u->active_voices];
 	ultrasnd_select_write(u,0x0E,0xC0 | (u->active_voices - 1));
 }
@@ -335,59 +309,30 @@ void ultrasnd_stop_timers(struct ultrasnd_ctx *u) {
 	ultrasnd_select_write(u,0x47,0xFF); /* reset */
 }
 
-void ultrasnd_flush_irq_events(struct ultrasnd_ctx *u) {
-	unsigned int i;
-
-	_cli();
-	for (i=0;i < 256;i++) inp(u->port+6); // IRQ status
-	for (i=0;i < 256;i++) ultrasnd_select_read(u,0x8F);
-	_sti();
-}
-
-void ultrasnd_stop_and_reset_voice(struct ultrasnd_ctx *u,uint8_t channel) {
-	if (channel >= 32) return;
-
-	ultrasnd_select_voice(u,channel);
-	ultrasnd_select_write(u,0x00,3); /* force stop the voice */
-	ultrasnd_select_write(u,0x00,3); /* force stop the voice */
-	ultrasnd_select_write(u,0x06,0);
-	ultrasnd_select_write(u,0x07,0);
-	ultrasnd_select_write(u,0x08,0);
-	ultrasnd_select_write16(u,0x09,0);
-	ultrasnd_select_write(u,0x00,3);
-	ultrasnd_select_write(u,0x0D,0);
-	ultrasnd_select_read(u,0x8D); /* clear volume ramp IRQ pending */
-}
-
 void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
-	unsigned int old_voices;
 	unsigned char c;
 	unsigned int i;
 
-	/* there seems to be this odd hardware issue with the GF1 chip
-	 * where voices beyond the number of Active voices are either
-	 * unwriteable or their contents get corrupted somehow. So if
-	 * you just change the voices without clearing them, the GF1
-	 * acts on whatever bits are there and may act funny, or emit
-	 * buzzing noises from the random data it's pointing to. It's
-	 * more than just annoying, it can cause an IRQ storm. So to
-	 * compensate, temporarily set the active voices count to 32
-	 * to access ALL of them, zero them out, then restore the
-	 * active voices count */
-	old_voices = u->active_voices;
-	ultrasnd_set_active_voices(u,32);
-
 	/* stop all voices, in case the last program left them running
 	   and firing off IRQs (like most MS-DOS GUS demos, apparently) */
-	for (i=0;i < 32;i++) ultrasnd_stop_and_reset_voice(u,(uint8_t)i);
+	for (i=0;i < 32;i++) {
+		ultrasnd_select_voice(u,i);
+		ultrasnd_select_write(u,0x00,3); /* force stop the voice */
+		ultrasnd_select_write(u,0x00,3); /* force stop the voice */
+		ultrasnd_select_write(u,0x06,0);
+		ultrasnd_select_write(u,0x07,0);
+		ultrasnd_select_write(u,0x08,0);
+		ultrasnd_select_write16(u,0x09,0);
+		ultrasnd_select_write(u,0x00,3);
+		ultrasnd_select_write(u,0x0D,0);
+		ultrasnd_select_read(u,0x8D); /* clear volume ramp IRQ pending */
+	}
 	ultrasnd_select_voice(u,0);
 
 	/* forcibly clear any pending voice IRQs */
 	i=0;
 	do { c = ultrasnd_select_read(u,0x8F);
 	} while ((++i) < 256 && (c&0xC0) != 0xC0);
-
-	ultrasnd_set_active_voices(u,old_voices);
 }
 
 /* NOTE: If possible, you are supposed to provide both IRQs and both DMA channels provided by ULTRASND,
@@ -446,16 +391,11 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	}
 
 	/* force the card into a known state */
-	_cli();
-	ultrasnd_test_card = u;
 	ultrasnd_test_irq_n = u->irq1;
 	ultrasnd_test_irq_fired = 0;
 	ultrasnd_abort_dma_transfer(u);
 	ultrasnd_stop_all_voices(u);
 	ultrasnd_stop_timers(u);
-	ultrasnd_flush_irq_events(u);
-	ultrasnd_drain_irq_events(u);
-	_sti();
 
 	if (u->irq1 >= 0 && program_cfg) {
 		/* now use the Mixer register to enable line out, and to select the IRQ control register.
@@ -539,15 +479,6 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 		goto irqfail;
 	}
 
-	/* force the card into a known state */
-	_cli();
-	ultrasnd_abort_dma_transfer(u);
-	ultrasnd_stop_all_voices(u);
-	ultrasnd_stop_timers(u);
-	ultrasnd_flush_irq_events(u);
-	ultrasnd_drain_irq_events(u);
-	_sti();
-
 	/* check the RAM. is there at least a 4KB region we can peek and poke? */
 	/* FIXME: According to Wikipedia there are versions of the card that don't have RAM at all (just ROM). How do we work with those? */
 	for (i=0;i < 0x1000U;i++) ultrasnd_poke(u,i,(uint8_t)(i^0x55));
@@ -558,7 +489,7 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 
 	/* initial versions came stock with 256KB with support for additional RAM in 256KB increments */
 	u->total_ram = 256UL << 10UL; /* 256KB */
-	for (i=1;i < ((1UL << 20UL) >> 18UL);i++) { /* test up to 1MB (1MB / 256KB banks) */
+	for (i=1;i < ((8UL << 20UL) >> 18UL);i++) { /* test up to 8MB (8MB / 256KB banks) */
 		uint32_t ofs = (uint32_t)i << (uint32_t)18UL;
 
 		/* put sentry value at base to detect address wrapping */
@@ -721,15 +652,6 @@ commoncleanup:
 		_dos_setvect(irq2int(u->irq1),old_irq);
 		if (old_irq == NULL) p8259_mask(u->irq1);
 	}
-
-	/* force the card into a known state */
-	_cli();
-	ultrasnd_abort_dma_transfer(u);
-	ultrasnd_stop_all_voices(u);
-	ultrasnd_stop_timers(u);
-	ultrasnd_flush_irq_events(u);
-	ultrasnd_drain_irq_events(u);
-	_sti();
 
 	/* reset the GF1 */
 	ultrasnd_select_write(u,0x4C,0x00); /* 0x4C: reset register -> master reset (bit 0=0) disable DAC (bit 1=0) master IRQ disable (bit 2=0) */

@@ -1137,9 +1137,6 @@ static void interrupt gus_irq() {
 				gus_irq_voice++;
 			}
 		}
-		else if (irq_stat & 0x0C) {
-			ultrasnd_select_write(gus_card,0x45,0x00); /* disable timer 1 & 2 IRQ */
-		}
 		else {
 			break;
 		}
@@ -2706,7 +2703,7 @@ static void change_param_menu() {
 								sb_card->dsp_play_method--;
 						}
 						else if (gus_card != NULL) {
-							if (gus_active > 1) gus_active--;
+							if (gus_active > 14) gus_active--;
 							if (gus_channel >= gus_active) gus_channel = gus_active - 1;
 						}
 						break;
@@ -2772,17 +2769,6 @@ static void change_param_menu() {
 			else
 				sb_card->dsp_play_method = oldmethod;
 		}
-	}
-	else if (gus_card != NULL) {
-		/* NTS: The GF1 chip, on changing the active voice count, seems to treat any new
-		 *      channels added on as if they have corrupt state (Ultrasound MAX behavior).
-		 *      So we have to clear their state before allowing them to run if we want to
-		 *      avoid hangs, random channels buzzing, and IRQ storms. */
-		ultrasnd_select_write(gus_card,0x4C,0x03);
-		ultrasnd_set_active_voices(gus_card,32);
-		ultrasnd_stop_all_voices(gus_card);
-		ultrasnd_set_active_voices(gus_card,gus_active);
-		if (gus_card->irq1 != -1) ultrasnd_select_write(gus_card,0x4C,0x07);
 	}
 
 	change_param_idx = selector;
@@ -3326,7 +3312,7 @@ static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h
 	vga_write(temp_str);
 
 	vga_moveto(x,y + 1);
-	sprintf(temp_str,"Voices: %u Output: %luHz DMAIRQ:%lu VOICEIRQ:%lu TC:%u",
+	sprintf(temp_str,"Voices: %u Output: %uHz DMAIRQ:%lu VOICEIRQ:%lu TC:%u",
 		cx->active_voices,	cx->output_rate,
 		gus_dma_tc,		gus_irq_voice,
 		gus_card->dma_tc_irq_happened);
@@ -3566,7 +3552,7 @@ static void choose_sound_card_sb() {
 }
 
 static void do_gus_reset_tinker() {
-	int c,rows=3+2,cols=72;
+	int c,rows=3+1,cols=70;
 	unsigned char active_voices = 0;
 	unsigned char reset_reg = 0;
 	unsigned char fredraw = 1;
@@ -3594,10 +3580,6 @@ static void do_gus_reset_tinker() {
 				vga_write_color(0x1E);
 				vga_write("GUS reset register:");
 
-				// NOTE: If you run an active voice, and then drop the active voice count down below the
-				//       active voice (cutting it off), strange and erratic things can happen, including
-				//       stuck voices and IRQ storms. On the Ultrasound MAX, the GF1 acts as if voices
-				//       beyond the active count have corrupted state. Warn the user by turning the text red.
 				vga_moveto(box.x+34,box.y+1);
 				vga_write_color(0x1E);
 				vga_write("Active voices:");
@@ -3609,10 +3591,6 @@ static void do_gus_reset_tinker() {
 				vga_moveto(box.x+2,box.y+4);
 				vga_write_color(0x1E);
 				vga_write("Up/Down arrow keys to play with Active Voices. May cause audio to stop.");
-
-				vga_moveto(box.x+2,box.y+5);
-				vga_write_color(0x1E);
-				vga_write("For safety reasons, new active voices are initialized when incremented.");
 			}
 
 			sprintf(temp_str,"0x%02x",reset_reg);
@@ -3622,10 +3600,7 @@ static void do_gus_reset_tinker() {
 
 			sprintf(temp_str,"0x%02x",active_voices);
 			vga_moveto(box.x+2+48,box.y+1);
-			if (((active_voices & 0x1F) + 1) <= gus_channel)
-				vga_write_color(0x1C);	// bright red
-			else
-				vga_write_color(0x1F);
+			vga_write_color(0x1F);
 			vga_write(temp_str);
 
 			fredraw = 0;
@@ -3650,15 +3625,9 @@ static void do_gus_reset_tinker() {
 				_sti();
 			}
 			else if (c == 0x5000) { //down
-				// WARNING: If you increment the active voices register while the GF1 is running (and especially
-				//          while voices are active) what can happen is that new voices added by the change
-				//          may have corrupted state and can do anything from adding buzzing noises to the output
-				//          to causing random IRQ storms. In some cases, it can cause our IRQ handler to get
-				//          stuck handling an endless stream of queued IRQ events.
 				_cli();
 				active_voices++;
 				ultrasnd_select_write(gus_card,0x0E,active_voices);
-				if ((active_voices&0x1F) != 0) ultrasnd_stop_and_reset_voice(gus_card,active_voices & 0x1F); // to avoid random behavior, lockups, and random noises, initialize the new voice
 				gus_card->active_voices = (active_voices & 0x1F) + 1;
 				redraw = 1;
 				_sti();
@@ -4119,7 +4088,7 @@ int main(int argc,char **argv) {
 			for (i=0;i < MAX_ULTRASND;i++) {
 				struct ultrasnd_ctx *u = &ultrasnd_card[i];
 				if (ultrasnd_card_taken(u)) {
-					printf("[%u] RAM=%dKB PORT=0x%03x IRQ=%d,%d DMA=%d,%d 256KB-boundary=%u voices=%u/%luHz\n",
+					printf("[%u] RAM=%dKB PORT=0x%03x IRQ=%d,%d DMA=%d,%d 256KB-boundary=%u voices=%u/%uHz\n",
 						i+1,
 						(int)(u->total_ram >> 10UL),
 						u->port,
@@ -4518,11 +4487,6 @@ int main(int argc,char **argv) {
 	}
 	else if (gus_card != NULL) {
 		ultrasnd_select_write(gus_card,0x4C,0x03);
-
-		ultrasnd_abort_dma_transfer(gus_card);
-		ultrasnd_stop_all_voices(gus_card);
-		ultrasnd_stop_timers(gus_card);
-		ultrasnd_flush_irq_events(gus_card);
 
 		printf("Releasing IRQ %d...\n",gus_card->irq1);
 		if (gus_card->irq1 != -1)
