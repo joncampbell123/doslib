@@ -311,6 +311,7 @@ void ultrasnd_stop_timers(struct ultrasnd_ctx *u) {
 		outp(u->port+0x008,0x04); /* select "timer stuff" */
 		outp(u->port+0x009,0x00); /* turn off timer 1 & 2 */
 		outp(u->port+0x009,0x60); /* mask timer 1 & 2 */
+		outp(u->port+0x009,0xE0); /* clear timer IRQ */
 		outp(u->port+0x009,0x80); /* clear timer IRQ */
 	} while (--patience != 0 && (inp(u->port+0x008) & 0xE0) != 0);
 
