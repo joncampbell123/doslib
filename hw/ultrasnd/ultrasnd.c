@@ -332,7 +332,7 @@ void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
 	/* forcibly clear any pending voice IRQs */
 	i=0;
 	do { c = ultrasnd_select_read(u,0x8F);
-	} while ((++i) < 256 && (c&0xC0) != 0);
+	} while ((++i) < 256 && (c&0xC0) != 0xC0);
 }
 
 /* NOTE: If possible, you are supposed to provide both IRQs and both DMA channels provided by ULTRASND,
@@ -1078,7 +1078,7 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 		_cli();
 
 		/* disable GUS DMA */
-		ultrasnd_select_write(u,0x41,0x00);
+		ultrasnd_select_write(u,0x41,(u->dma1 >= 4 ? 4 : 0) | (flags & 0xE0)); /* data size in bit 2, writing to DRAM, enable DMA, and bits 6-7 provided by caller */
 		ultrasnd_select_read(u,0x41); /* read to clear DMA terminal count---even though we didn't ask for TC IRQ */
 
 		/* Now initiate a DMA transfer (host) */
@@ -1091,12 +1091,12 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 		d8237_write_count(u->dma1,len);
 
 		/* Now initiate a DMA transfer (GUS DRAM) */
-		ultrasnd_select_write(u,0x41,(u->dma1 >= 4 ? 4 : 0) | (flags & 0xC0)); /* data size in bit 2, writing to DRAM, enable DMA, and bits 6-7 provided by caller */
+		ultrasnd_select_write(u,0x41,(u->dma1 >= 4 ? 4 : 0) | (flags & 0xE0)); /* data size in bit 2, writing to DRAM, enable DMA, and bits 6-7 provided by caller */
 		if (u->dma1 >= 4) /* Ugh, even DMA is subject to Gravis 16-bit translation */
 			ultrasnd_select_write16(u,0x42,(uint16_t)(ultrasnd_dram_16bit_xlate(ofs)>>4UL));
 		else
 			ultrasnd_select_write16(u,0x42,(uint16_t)(ofs>>4UL));
-		ultrasnd_select_write(u,0x41,(u->dma1 >= 4 ? 4 : 0) | 0x1 | (flags & 0xC0)); /* data size in bit 2, writing to DRAM, enable DMA, and bits 6-7 provided by caller */
+		ultrasnd_select_write(u,0x41,(u->dma1 >= 4 ? 4 : 0) | 0x1 | (flags & 0xE0)); /* data size in bit 2, writing to DRAM, enable DMA, and bits 6-7 provided by caller */
 
 		/* GO! */
 		outp(d8237_ioport(u->dma1,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(u->dma1)); /* unmask */
@@ -1127,8 +1127,7 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 		outp(d8237_ioport(u->dma1,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(u->dma1) | D8237_MASK_SET); /* mask */
 
 		/* stop DMA */
-		ultrasnd_select_write(u,0x41,0x00);
-		ultrasnd_select_read(u,0x41); /* read to clear DMA terminal count---even though we didn't ask for TC IRQ */
+		ultrasnd_select_write(u,0x41,(u->dma1 >= 4 ? 4 : 0) | (flags & 0xE0)); /* data size in bit 2, writing to DRAM, enable DMA, and bits 6-7 provided by caller */
 	}
 	else {
 		if (flags & ULTRASND_DMA_FLIP_MSB) {

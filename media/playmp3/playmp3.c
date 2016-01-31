@@ -1111,6 +1111,44 @@ static void interrupt sb_irq() {
 	}
 }
 
+static unsigned long gus_dma_tc = 0;
+static unsigned long gus_irq_voice = 0;
+
+static void interrupt gus_irq() {
+	unsigned char irq_stat,c;
+
+	irq_stat = inp(gus_card->port+6);
+	if (irq_stat & 0x80) {
+		/* DMA TC. read and clear. */
+		c = ultrasnd_select_read(gus_card,0x41);
+		if (c & 0x40) gus_dma_tc++;
+	}
+	if (irq_stat & 0x60) {
+		unsigned char patience = 255;
+
+		/* voice/ramp IRQ. read and clear each one. */
+		do {
+			c = ultrasnd_select_read(gus_card,0x8F);
+			if ((c & 0xC0) == 0xC0) break; /* NTS: bit 6 and 7 are inverted. 0=IRQ happened 1=IRQ did not happen */
+			if (--patience == 0) break; /* should not happen */
+		} while (1);
+		gus_irq_voice++;
+	}
+
+	sb_irq_count++;
+	if (++IRQ_anim >= 4) IRQ_anim = 0;
+
+	if (old_irq_masked || old_irq == NULL || dont_chain_irq) {
+		/* ack the interrupt ourself, do not chain */
+		if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+	}
+	else {
+		/* chain to the previous IRQ, who will acknowledge the interrupt */
+		old_irq();
+	}
+}
+
 static void load_audio_sb(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
 	VGA_ALPHA_PTR wr = vga_alpha_ram + 80 - 6;
 	unsigned int patience=2000;
@@ -1505,7 +1543,7 @@ static void mad_gus_send_il(unsigned long ofs,int16_t *src,unsigned long len,uns
 		len >>= 1;
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((int16_t*)dst)[i] = src[(i<<st)+channel];
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT);
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1521,7 +1559,7 @@ static void mad_gus_send_il(unsigned long ofs,int16_t *src,unsigned long len,uns
 	else {
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((uint8_t*)dst)[i] = (src[(i<<st)+channel] >> 8);
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0);
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -1547,7 +1585,7 @@ static void mad_gus_send_il_dac(unsigned long ofs,void *src,unsigned long len,un
 		len >>= 1;
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((int16_t*)dst)[i] = ((int16_t*)src)[(i<<st)+channel];
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT);
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1563,7 +1601,7 @@ static void mad_gus_send_il_dac(unsigned long ofs,void *src,unsigned long len,un
 	else {
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((uint8_t*)dst)[i] = ((uint8_t*)src)[(i<<st)+channel] ^ 0x80;
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0);
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -1599,7 +1637,7 @@ static void mad_gus_send(unsigned long ofs,mad_sample_t *src,unsigned long len) 
 				((int16_t*)dst)[i] = (int16_t)samp;
 		}
 
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT);
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1624,7 +1662,7 @@ static void mad_gus_send(unsigned long ofs,mad_sample_t *src,unsigned long len) 
 				dst[i] = (uint8_t)samp;
 		}
 
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0);
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | (gus_card->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -2114,10 +2152,14 @@ static void mp3_idle() {
 			sb_card->buffer_size/4/*max*/,0/*first block*/);
 	}
 	else if (gus_card != NULL) {
-		unsigned long gus_pos = ultrasnd_read_voice_current(gus_card,gus_channel) - gus_buffer_start;
+		unsigned long gus_pos;
+
+		_cli();
+		gus_pos = ultrasnd_read_voice_current(gus_card,gus_channel) - gus_buffer_start;
 		gus_pos -= 4096UL;
 		if ((signed long)gus_pos < 0) gus_pos = 0;
 		gus_pos &= (~3UL);
+		_sti();
 
 		load_audio_gus(gus_pos/*up to*/,min(4096UL,gus_buffer_length/8)/*min*/,min(32768UL,gus_buffer_length/2)/*max*/,0/*first block*/);
 	}
@@ -2307,7 +2349,7 @@ void begin_play() {
 
 		ultrasnd_stop_voice(gus_card,gus_channel);
 		ultrasnd_set_active_voices(gus_card,gus_active);
-		ultrasnd_set_voice_mode(gus_card,gus_channel,ULTRASND_VOICE_MODE_LOOP | (mp3_16bit?ULTRASND_VOICE_MODE_16BIT:0));
+		ultrasnd_set_voice_mode(gus_card,gus_channel,ULTRASND_VOICE_MODE_LOOP | (mp3_16bit?ULTRASND_VOICE_MODE_16BIT:0) | ULTRASND_VOICE_MODE_STOP);
 		ultrasnd_set_voice_fc(gus_card,gus_channel,ultrasnd_sample_rate_to_fc(gus_card,mp3_sample_rate));
 		ultrasnd_set_voice_ramp_rate(gus_card,gus_channel,0,0);
 		ultrasnd_set_voice_ramp_start(gus_card,gus_channel,0xF0); /* NTS: You have to set the ramp start/end because it will override your current volume */
@@ -2318,11 +2360,12 @@ void begin_play() {
 		ultrasnd_set_voice_start(gus_card,gus_channel,gus_buffer_start);
 		ultrasnd_set_voice_end(gus_card,gus_channel,gus_buffer_start+gus_buffer_length-(mp3_16bit?2:1));
 		ultrasnd_set_voice_current(gus_card,gus_channel,gus_buffer_start);
-		ultrasnd_set_voice_mode(gus_card,gus_channel,ULTRASND_VOICE_MODE_LOOP | (mp3_16bit?ULTRASND_VOICE_MODE_16BIT:0));
+		ultrasnd_set_voice_mode(gus_card,gus_channel,ULTRASND_VOICE_MODE_LOOP | (mp3_16bit?ULTRASND_VOICE_MODE_16BIT:0) |
+			(gus_card->irq1 >= 0 ? ULTRASND_VOICE_MODE_IRQ : 0));
 
 		if (mp3_stereo) {
 			ultrasnd_stop_voice(gus_card,gus_channel+1);
-			ultrasnd_set_voice_mode(gus_card,gus_channel+1,ULTRASND_VOICE_MODE_LOOP | (mp3_16bit?ULTRASND_VOICE_MODE_16BIT:0));
+			ultrasnd_set_voice_mode(gus_card,gus_channel+1,ULTRASND_VOICE_MODE_LOOP | (mp3_16bit?ULTRASND_VOICE_MODE_16BIT:0) | ULTRASND_VOICE_MODE_STOP);
 			ultrasnd_set_voice_fc(gus_card,gus_channel+1,ultrasnd_sample_rate_to_fc(gus_card,mp3_sample_rate));
 			ultrasnd_set_voice_ramp_rate(gus_card,gus_channel+1,0,0);
 			ultrasnd_set_voice_ramp_start(gus_card,gus_channel+1,0xF0); /* NTS: You have to set the ramp start/end because it will override your current volume */
@@ -2333,7 +2376,8 @@ void begin_play() {
 			ultrasnd_set_voice_start(gus_card,gus_channel+1,gus_buffer_start+gus_buffer_length+gus_buffer_gap);
 			ultrasnd_set_voice_end(gus_card,gus_channel+1,gus_buffer_start+gus_buffer_length+gus_buffer_gap+gus_buffer_length-(mp3_16bit?2:1));
 			ultrasnd_set_voice_current(gus_card,gus_channel+1,gus_buffer_start+gus_buffer_length+gus_buffer_gap);
-			ultrasnd_set_voice_mode(gus_card,gus_channel+1,ULTRASND_VOICE_MODE_LOOP | (mp3_16bit?ULTRASND_VOICE_MODE_16BIT:0));
+			ultrasnd_set_voice_mode(gus_card,gus_channel+1,ULTRASND_VOICE_MODE_LOOP | (mp3_16bit?ULTRASND_VOICE_MODE_16BIT:0) |
+				(gus_card->irq1 >= 0 ? ULTRASND_VOICE_MODE_IRQ : 0));
 		}
 
 		ultrasnd_start_voice_imm(gus_card,gus_channel);
@@ -3254,8 +3298,9 @@ static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h
 	vga_write(temp_str);
 
 	vga_moveto(x,y + 1);
-	sprintf(temp_str,"Active voices: %u  Output rate: %uHz",
-		cx->active_voices,	cx->output_rate);
+	sprintf(temp_str,"Active voices: %u Output rate: %uHz DMAIRQ:%lu VOICEIRQ:%lu",
+		cx->active_voices,	cx->output_rate,
+		gus_dma_tc,		gus_irq_voice);
 	vga_write(temp_str);
 }
 
@@ -3349,14 +3394,30 @@ static void show_device_info_sb() {
 }
 
 static void show_device_info_gus() {
-	int c,rows=2,cols=70;
+	unsigned long p_gus_irq_voice = 0;
+	unsigned long p_gus_dma_tc = 0;
+	int c,rows=2,cols=70,redraw=1;
 	struct vga_msg_box box;
 
 	vga_msg_box_create(&box,"",rows,cols); /* 3 rows 70 cols */
-	draw_device_info_gus(gus_card,box.x+2,box.y+1,cols-4,rows);
 
 	while (1) {
 		ui_anim(0);
+
+		if (redraw) {
+			p_gus_dma_tc = gus_dma_tc;
+			p_gus_irq_voice = gus_irq_voice;
+			draw_device_info_gus(gus_card,box.x+2,box.y+1,cols-4,rows);
+			redraw = 0;
+		}
+		else {
+			if (p_gus_dma_tc != gus_dma_tc || p_gus_irq_voice != gus_irq_voice) {
+				redraw = 1;
+				p_gus_dma_tc = gus_dma_tc;
+				p_gus_irq_voice = gus_irq_voice;
+			}
+		}
+
 		if (kbhit()) {
 			c = getch();
 			if (c == 0) c = getch() << 8;
@@ -4071,9 +4132,17 @@ int main(int argc,char **argv) {
 			sndsb_dsp_out_method_supported(sb_card,11025,1/*stereo*/,0/*16-bit*/);
 	}
 	else if (gus_card != NULL) {
-		/* TODO: Does the GUS classic play 16-bit samples? */
 		mp3_16bit = 1;
 		mp3_stereo = 1;
+
+		ultrasnd_select_write(gus_card,0x4C,0x03);
+		if (gus_card->irq1 != -1) {
+			old_irq_masked = p8259_is_masked(gus_card->irq1);
+			old_irq = _dos_getvect(irq2int(gus_card->irq1));
+			_dos_setvect(irq2int(gus_card->irq1),gus_irq);
+			p8259_unmask(gus_card->irq1);
+			ultrasnd_select_write(gus_card,0x4C,0x07);
+		}
 	}
 
 	i = int10_getmode();
@@ -4373,6 +4442,13 @@ int main(int argc,char **argv) {
 		printf("Releasing IRQ %d...\n",sb_card->irq);
 		if (sb_card->irq != -1)
 			_dos_setvect(irq2int(sb_card->irq),old_irq);
+	}
+	else if (gus_card != NULL) {
+		ultrasnd_select_write(gus_card,0x4C,0x03);
+
+		printf("Releasing IRQ %d...\n",gus_card->irq1);
+		if (gus_card->irq1 != -1)
+			_dos_setvect(irq2int(gus_card->irq1),old_irq);
 	}
 
 	if (output_buffer != NULL) {

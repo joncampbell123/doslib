@@ -17,6 +17,8 @@
 #define ULTRASND_VOICE_MODE_BACKWARDS		0x40
 #define ULTRASND_VOICE_MODE_IRQ_PENDING		0x80
 
+/* enable DMA TC IRQ */
+#define ULTRASND_DMA_TC_IRQ			0x20
 /* data being sent is 16-bit PCM */
 #define ULTRASND_DMA_DATA_SIZE_16BIT		0x40
 /* during transfer invert bit 7 (or bit 15) to convert unsigned->signed */
