@@ -1117,7 +1117,7 @@ static unsigned long gus_dma_tc = 0;
 static unsigned long gus_irq_voice = 0;
 
 static void interrupt gus_irq() {
-	unsigned char irq_stat,c,irq_patience=255;
+	unsigned char irq_stat,c,irq_patience=3;
 
 	do {
 		irq_stat = inp(gus_card->port+6);
@@ -3313,9 +3313,10 @@ static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h
 	vga_write(temp_str);
 
 	vga_moveto(x,y + 1);
-	sprintf(temp_str,"Active voices: %u Output rate: %uHz DMAIRQ:%lu VOICEIRQ:%lu",
+	sprintf(temp_str,"Voices: %u Output: %uHz DMAIRQ:%lu VOICEIRQ:%lu TC:%u",
 		cx->active_voices,	cx->output_rate,
-		gus_dma_tc,		gus_irq_voice);
+		gus_dma_tc,		gus_irq_voice,
+		gus_card->dma_tc_irq_happened);
 	vga_write(temp_str);
 }
 
@@ -3565,11 +3566,15 @@ static void do_gus_reset_tinker() {
 		ui_anim(0);
 
 		if (redraw || fredraw) {
+			_cli();
+
 			active_voices = ultrasnd_select_read(gus_card,0x8E);
 			/* BUGFIX: DOSBox/DOSBox-X does not emulate reading back the active voices register */
 			if (active_voices == 0) active_voices = 0xE0 | (gus_card->active_voices - 1); /* fake it */
 
 			reset_reg = ultrasnd_select_read(gus_card,0x4C);
+
+			_sti();
 
 			if (fredraw) {
 				vga_moveto(box.x+2,box.y+1);
@@ -3613,21 +3618,27 @@ static void do_gus_reset_tinker() {
 			else if (c == 13) {
 			}
 			else if (c == 0x4800) { //up
+				_cli();
 				active_voices--;
 				ultrasnd_select_write(gus_card,0x0E,active_voices);
 				gus_card->active_voices = (active_voices & 0x1F) + 1;
 				redraw = 1;
+				_sti();
 			}
 			else if (c == 0x5000) { //down
+				_cli();
 				active_voices++;
 				ultrasnd_select_write(gus_card,0x0E,active_voices);
 				gus_card->active_voices = (active_voices & 0x1F) + 1;
 				redraw = 1;
+				_sti();
 			}
 			else if (c >= '0' && c <= '7') {
+				_cli();
 				reset_reg ^= (1 << (c - '0'));
 				ultrasnd_select_write(gus_card,0x4C,reset_reg);
 				redraw = 1;
+				_sti();
 			}
 		}
 	}

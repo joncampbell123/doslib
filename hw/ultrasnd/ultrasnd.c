@@ -1100,6 +1100,7 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 		ultrasnd_select_write(u,0x41,(u->dma1 >= 4 ? 4 : 0) | 0x1 | (flags & 0xE0)); /* data size in bit 2, writing to DRAM, enable DMA, and bits 6-7 provided by caller */
 
 		/* GO! */
+		u->dma_tc_irq_happened = 0;
 		outp(d8237_ioport(u->dma1,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(u->dma1)); /* unmask */
 
 		_sti();
