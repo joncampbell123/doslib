@@ -1116,10 +1116,12 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 		} while (--patience != 0);
 		if (rem >= 0xFFFE) rem = 0;
 
-		if (patience == 0)
-			fprintf(stderr,"GUS DMA transfer timeout (rem=%lu)\n",rem);
-		if (rem != 0)
-			fprintf(stderr,"GUS DMA transfer TC while DMA controller has %u remaining\n",rem);
+		if (debug_on) {
+			if (patience == 0)
+				fprintf(stderr,"GUS DMA transfer timeout (rem=%lu)\n",rem);
+			if (rem != 0)
+				fprintf(stderr,"GUS DMA transfer TC while DMA controller has %u remaining\n",rem);
+		}
 
 		/* mask DMA channel again */
 		outp(d8237_ioport(u->dma1,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(u->dma1) | D8237_MASK_SET); /* mask */
