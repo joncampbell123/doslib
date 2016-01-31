@@ -3671,6 +3671,7 @@ static void do_gus_reset_tinker() {
 				active_voices++;
 				ultrasnd_select_write(gus_card,0x0E,active_voices);
 				gus_card->active_voices = (active_voices & 0x1F) + 1;
+				if (gus_card->active_voices != 1) ultrasnd_stop_voice(gus_card,gus_card->active_voices - 1);
 				redraw = 1;
 				_sti();
 			}
