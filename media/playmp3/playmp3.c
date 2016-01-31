@@ -3580,6 +3580,10 @@ static void do_gus_reset_tinker() {
 				vga_write_color(0x1E);
 				vga_write("GUS reset register:");
 
+				// NOTE: If you run an active voice, and then drop the active voice count down below the
+				//       active voice (cutting it off), strange and erratic things can happen, including
+				//       stuck voices and IRQ storms. On the Ultrasound MAX, the GF1 acts as if voices
+				//       beyond the active count have corrupted state. Warn the user by turning the text red.
 				vga_moveto(box.x+34,box.y+1);
 				vga_write_color(0x1E);
 				vga_write("Active voices:");
@@ -3600,7 +3604,10 @@ static void do_gus_reset_tinker() {
 
 			sprintf(temp_str,"0x%02x",active_voices);
 			vga_moveto(box.x+2+48,box.y+1);
-			vga_write_color(0x1F);
+			if (((active_voices & 0x1F) + 1) <= gus_channel)
+				vga_write_color(0x1C);	// bright red
+			else
+				vga_write_color(0x1F);
 			vga_write(temp_str);
 
 			fredraw = 0;
