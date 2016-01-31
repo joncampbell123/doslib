@@ -87,4 +87,5 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 void ultrasnd_dram_buffer_free(struct ultrasnd_ctx *u);
 void ultrasnd_abort_dma_transfer(struct ultrasnd_ctx *u);
 void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u);
+void ultrasnd_stop_timers(struct ultrasnd_ctx *u);
 
