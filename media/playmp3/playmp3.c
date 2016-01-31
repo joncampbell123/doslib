@@ -928,6 +928,7 @@ static unsigned long			gus_write = 0;
 static unsigned char			dont_chain_irq = 0;
 static unsigned char			dont_sb_idle = 0;
 static unsigned char			dont_use_gus_dma_tc = 0;
+static unsigned char			dont_use_gus_dma = 0;
 
 /* LPT DAC */
 static unsigned short			lpt_port = 0x378;
@@ -3278,6 +3279,7 @@ static void help() {
 	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
 	printf(" /noidle              Don't use sndsb library idle function\n");
 	printf(" /nodmatc             Don't use Ultrasound DMA TC IRQ\n");
+	printf(" /nogusdma            Don't use Ultrasound DMA\n");
 }
 
 static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h) {
@@ -3715,6 +3717,9 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"noidle")) {
 				dont_sb_idle = 1;
 			}
+			else if (!strcmp(a,"nogusdma")) {
+				dont_use_gus_dma = 1;
+			}
 			else if (!strcmp(a,"nodmatc")) {
 				dont_use_gus_dma_tc = 1;
 			}
@@ -4151,6 +4156,9 @@ int main(int argc,char **argv) {
 			p8259_unmask(gus_card->irq1);
 			ultrasnd_select_write(gus_card,0x4C,0x07);
 		}
+
+		if (dont_use_gus_dma)
+			gus_card->use_dma = 0;
 	}
 
 	i = int10_getmode();
