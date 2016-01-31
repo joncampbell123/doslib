@@ -1117,11 +1117,11 @@ static unsigned long gus_dma_tc = 0;
 static unsigned long gus_irq_voice = 0;
 
 static void interrupt gus_irq() {
-	unsigned char irq_stat,c;
+	unsigned char irq_stat,c,irq_patience=255;
 
 	do {
 		irq_stat = inp(gus_card->port+6);
-		if (irq_stat & 0x80) {
+		if (irq_stat & 0x80) { // bit 7
 			/* DMA TC. read and clear. */
 			c = ultrasnd_select_read(gus_card,0x41);
 			if (c & 0x40) {
@@ -1129,7 +1129,7 @@ static void interrupt gus_irq() {
 				gus_dma_tc++;
 			}
 		}
-		if (irq_stat & 0x60) {
+		if (irq_stat & 0x60) { // bits 6-5
 			unsigned char patience = 255;
 
 			/* voice/ramp IRQ. read and clear each one. */
@@ -1140,6 +1140,8 @@ static void interrupt gus_irq() {
 			} while (1);
 			gus_irq_voice++;
 		}
+
+		if (--irq_patience == 0) break;
 	} while ((irq_stat & 0xE0) != 0);
 
 	sb_irq_count++;
