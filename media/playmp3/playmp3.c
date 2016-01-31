@@ -1145,6 +1145,8 @@ static unsigned char gus_dma_tc_ignore = 0;
 
 static unsigned long gus_dma_tc = 0;
 static unsigned long gus_irq_voice = 0;
+static unsigned long gus_timer_ticks = 0;
+static unsigned char gus_timer_ctl = 0;
 
 static void interrupt gus_irq() {
 	unsigned char irq_stat,c;
@@ -1164,6 +1166,16 @@ static void interrupt gus_irq() {
 			if ((c & 0xC0) != 0xC0) {
 				gus_irq_voice++;
 			}
+		}
+		else if (irq_stat & 0x0C) { // bit 3-4
+			if (gus_timer_ctl != 0) {
+				ultrasnd_select_write(gus_card,0x45,0x00);
+				ultrasnd_select_write(gus_card,0x46,0x00); /* load timer 1 (0xFF * 80us = 20ms) */
+				ultrasnd_select_write(gus_card,0x47,0x00); /* load timer 2 (0xFF * 320us = 80ms) */
+				ultrasnd_select_write(gus_card,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
+			}
+
+			gus_timer_ticks++;
 		}
 		else {
 			break;
@@ -2383,6 +2395,7 @@ void begin_play() {
 		ultrasnd_stop_all_voices(gus_card);
 		ultrasnd_stop_timers(gus_card);
 		ultrasnd_drain_irq_events(gus_card);
+		gus_timer_ctl = 0;
 
 		gus_write = 0;
 		load_audio_gus((gus_buffer_length/2UL)/*up to*/,0/*min*/,0/*max*/,1/*first block*/);
@@ -2807,6 +2820,7 @@ static void change_param_menu() {
 		ultrasnd_stop_timers(gus_card);
 		ultrasnd_drain_irq_events(gus_card);
 		ultrasnd_set_active_voices(gus_card,gus_active);
+		gus_timer_ctl = 0;
 		_sti();
 	}
 
@@ -3175,6 +3189,8 @@ static const struct vga_menu_item main_menu_device_choose_sound_card =
 
 static const struct vga_menu_item main_menu_device_gus_reset_tinker =
 	{"GUS reset tinker",	'r',	0,	0};
+static const struct vga_menu_item main_menu_device_gus_timer_test =
+	{"GUS timer test",	't',	0,	0};
 
 static const struct vga_menu_item* main_menu_device_sb[] = {
 	&main_menu_device_dsp_reset,
@@ -3189,6 +3205,7 @@ static const struct vga_menu_item* main_menu_device_gus[] = {
 	&main_menu_device_info,
 	&main_menu_device_choose_sound_card,
 	&main_menu_device_gus_reset_tinker,
+	&main_menu_device_gus_timer_test,
 	NULL
 };
 
@@ -3351,10 +3368,10 @@ static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h
 	vga_write(temp_str);
 
 	vga_moveto(x,y + 1);
-	sprintf(temp_str,"Voices: %u Output: %luHz DMAIRQ:%lu VOICEIRQ:%lu TC:%u",
+	sprintf(temp_str,"Voices: %u Output: %luHz DMAIRQ:%lu VOICEIRQ:%lu TIMIRQ:%lu TC:%u",
 		cx->active_voices,	cx->output_rate,
 		gus_dma_tc,		gus_irq_voice,
-		gus_card->dma_tc_irq_happened);
+		gus_timer_ticks,	gus_card->dma_tc_irq_happened);
 	vga_write(temp_str);
 }
 
@@ -3591,6 +3608,30 @@ static void choose_sound_card_sb() {
 	}
 
 	vga_msg_box_destroy(&box);
+}
+
+static void do_gus_timer_test() {
+	_cli();
+	if (gus_timer_ctl == 0) {
+		// start
+		gus_timer_ctl = 0x04;
+
+		ultrasnd_stop_timers(gus_card);
+		outp(gus_card->port+0x008,0x04); /* select "timer stuff" */
+		outp(gus_card->port+0x009,0xE0);
+		outp(gus_card->port+0x009,0x80);
+		outp(gus_card->port+0x009,0x60);
+		outp(gus_card->port+0x009,0x20/*mask timer 2 */ | 0x01/*enable timer 1*/);
+		ultrasnd_select_write(gus_card,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
+		ultrasnd_select_write(gus_card,0x46,0x00); /* load timer 1 (0xFF * 80us = 20ms) */
+		ultrasnd_select_write(gus_card,0x47,0x00); /* load timer 2 (0xFF * 320us = 80ms) */
+	}
+	else {
+		// stop
+		gus_timer_ctl = 0;
+		ultrasnd_stop_timers(gus_card);
+	}
+	_sti();
 }
 
 static void do_gus_reset_tinker() {
@@ -4426,6 +4467,9 @@ int main(int argc,char **argv) {
 			else if (mitem == &main_menu_device_gus_reset_tinker) {
 				if (gus_card != NULL) do_gus_reset_tinker();
 			}
+			else if (mitem == &main_menu_device_gus_timer_test) {
+				if (gus_card != NULL) do_gus_timer_test();
+			}
 		}
 
 		if (sb_irq_count != sb_irq_pcount) {
@@ -4552,6 +4596,7 @@ int main(int argc,char **argv) {
 		ultrasnd_stop_all_voices(gus_card);
 		ultrasnd_stop_timers(gus_card);
 		ultrasnd_drain_irq_events(gus_card);
+		gus_timer_ctl = 0;
 
 		printf("Releasing IRQ %d...\n",gus_card->irq1);
 		if (gus_card->irq1 != -1)
