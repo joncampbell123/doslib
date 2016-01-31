@@ -30,7 +30,7 @@ struct ultrasnd_ctx {
 	int8_t		irq1,irq2;	/* NOTE: These can be the same */
 	uint32_t	total_ram;	/* total RAM onboard. in most cases, a multiple of 256KB */
 	uint8_t		active_voices;
-	uint16_t	output_rate;
+	uint32_t	output_rate;
 	uint8_t		boundary256k:1;	/* whether all DMA transfers, playback, etc. must occur within 256KB block boundaries */
 	uint8_t		use_dma:1;	/* whether to use DMA to upload/download data from DRAM */
 	uint8_t		reserved:7;
@@ -40,7 +40,7 @@ struct ultrasnd_ctx {
 	uint8_t		reserved2:7;
 };
 
-extern const uint16_t ultrasnd_rate_per_voices[33];
+extern const uint32_t ultrasnd_rate_per_voices[33];
 extern struct ultrasnd_ctx ultrasnd_card[MAX_ULTRASND];
 extern struct ultrasnd_ctx *ultrasnd_env;
 extern int ultrasnd_inited;
