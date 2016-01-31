@@ -437,6 +437,8 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	if (u->irq1 >= 0) {
 		old_irq = _dos_getvect(irq2int(u->irq1));
 		_dos_setvect(irq2int(u->irq1),ultrasnd_test_irq);
+		p8259_mask(u->irq1);
+		outp(p8259_irq_to_base_port(u->irq1,0),P8259_OCW2_SPECIFIC_EOI|(u->irq1&7)); /* make sure IRQ is acked */
 		p8259_unmask(u->irq1);
 	}
 
