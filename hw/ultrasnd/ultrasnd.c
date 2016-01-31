@@ -371,12 +371,10 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	/* take the GF1 out of reset. don't enable the DAC/IRQ right away, because reset/end reset clears bits 1-2.
 	 * if we were to write 0x07 now, we would read back 0x01 and DAC/IRQ enable would remain unset. */
 	ultrasnd_select_write(u,0x4C,0x01); /* 0x4C: reset register -> end reset (bit 0=1) */
-	t8254_wait(t8254_us2ticks(1000));
 	c2 = ultrasnd_selected_read(u);
 
 	/* once out of reset, now we can set DAC enable (bit 1) and IRQ enable (bit 2) */
-	c3i = 0x03 | (u->irq1 >= 0 ? 0x4 : 0x0); /* don't set bit 2 unless we intend to actually service the IRQ interrupt */
-	ultrasnd_select_write(u,0x4C,c3i); /* 0x4C: reset register -> stay out of reset (bit 0=1) DAC enable (bit1) IRQ enable (bit2) */
+	ultrasnd_select_write(u,0x4C,0x03); /* 0x4C: reset register -> stay out of reset (bit 0=1) DAC enable (bit1) IRQ enable (bit2) */
 	c3 = ultrasnd_selected_read(u);
 
 	/* if we read back nothing, then it's not a GUS. there's probably nothing there, even. */
@@ -385,15 +383,12 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 		return 1;
 	}
 
-	/* the reset phase should show c1 == 0x00, c2 == 0x01, and c3 == c3i (0x03 or 0x07).
+	/* the reset phase should show c1 == 0x00, c2 == 0x01, and c3 == 0x03.
 	 * testing with real hardware says the reset register is readable, even though the GUS SDK doesn't say so. */
-	if ((c1&7) != 0 || (c2&7) != 1 || (c3&7) != c3i) {
+	if ((c1&7) != 0 || (c2&7) != 1 || (c3&7) != 3) {
 		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Reset register is supposed to be read/write. This is probably not a GUS. c1=0x%02x c2=%02x\n",u->port,c1,c2);
 		return 1;
 	}
-
-	/* switch off the IRQ again, so we can safely force stop IRQ sources */
-	ultrasnd_select_write(u,0x4C,0x03);
 
 	/* force the card into a known state */
 	ultrasnd_test_irq_n = u->irq1;
@@ -473,6 +468,8 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
 	outp(u->port+0x008,0x04); /* select "timer stuff" */
 	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
+	ultrasnd_select_write(u,0x46,0x02);
+	ultrasnd_select_write(u,0x47,0x02);
 	if ((c1&0xC) != 0xC) {
 		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer readback fail 0x%02x\n",c1);
 		goto timerfail;
