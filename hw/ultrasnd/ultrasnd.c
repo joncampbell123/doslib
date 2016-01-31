@@ -282,23 +282,27 @@ int ultrasnd_valid_irq(struct ultrasnd_ctx *u,int8_t i) {
 
 static struct ultrasnd_ctx *ultrasnd_test_card = NULL;
 
-static void interrupt far ultrasnd_test_irq() {
+void ultrasnd_drain_irq_events(struct ultrasnd_ctx *u) {
 	unsigned char irqstat,patience=255;
-
-	ultrasnd_test_irq_fired++;
 
 	/* read IRQ status. flush all possible reasons for an IRQ signal */
 	do {
-		irqstat = inp(ultrasnd_test_card->port+6);
+		irqstat = inp(u->port+6);
 		if (irqstat & 0x80)
-			ultrasnd_select_read(ultrasnd_test_card,0x41);
+			ultrasnd_select_read(u,0x41);
 		else if (irqstat & 0x60)
-			ultrasnd_select_read(ultrasnd_test_card,0x8F);
+			ultrasnd_select_read(u,0x8F);
+		else if (irqstat & 0x0C)
+			ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
 		else
 			break;
 
 		if (--patience == 0) break;
 	} while (1);
+}
+
+static void interrupt far ultrasnd_test_irq() {
+	ultrasnd_test_irq_fired++;
 
 	/* ack PIC */
 	if (ultrasnd_test_irq_n >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
@@ -442,6 +446,7 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	}
 
 	/* force the card into a known state */
+	_cli();
 	ultrasnd_test_card = u;
 	ultrasnd_test_irq_n = u->irq1;
 	ultrasnd_test_irq_fired = 0;
@@ -449,6 +454,8 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	ultrasnd_stop_all_voices(u);
 	ultrasnd_stop_timers(u);
 	ultrasnd_flush_irq_events(u);
+	ultrasnd_drain_irq_events(u);
+	_sti();
 
 	if (u->irq1 >= 0 && program_cfg) {
 		/* now use the Mixer register to enable line out, and to select the IRQ control register.
@@ -531,6 +538,15 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer never signalled IRQ\n");
 		goto irqfail;
 	}
+
+	/* force the card into a known state */
+	_cli();
+	ultrasnd_abort_dma_transfer(u);
+	ultrasnd_stop_all_voices(u);
+	ultrasnd_stop_timers(u);
+	ultrasnd_flush_irq_events(u);
+	ultrasnd_drain_irq_events(u);
+	_sti();
 
 	/* check the RAM. is there at least a 4KB region we can peek and poke? */
 	/* FIXME: According to Wikipedia there are versions of the card that don't have RAM at all (just ROM). How do we work with those? */
@@ -705,6 +721,15 @@ commoncleanup:
 		_dos_setvect(irq2int(u->irq1),old_irq);
 		if (old_irq == NULL) p8259_mask(u->irq1);
 	}
+
+	/* force the card into a known state */
+	_cli();
+	ultrasnd_abort_dma_transfer(u);
+	ultrasnd_stop_all_voices(u);
+	ultrasnd_stop_timers(u);
+	ultrasnd_flush_irq_events(u);
+	ultrasnd_drain_irq_events(u);
+	_sti();
 
 	/* reset the GF1 */
 	ultrasnd_select_write(u,0x4C,0x00); /* 0x4C: reset register -> master reset (bit 0=0) disable DAC (bit 1=0) master IRQ disable (bit 2=0) */

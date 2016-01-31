@@ -1137,6 +1137,9 @@ static void interrupt gus_irq() {
 				gus_irq_voice++;
 			}
 		}
+		else if (irq_stat & 0x0C) {
+			ultrasnd_select_write(gus_card,0x45,0x00); /* disable timer 1 & 2 IRQ */
+		}
 		else {
 			break;
 		}
