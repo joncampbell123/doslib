@@ -3646,6 +3646,11 @@ static void do_gus_reset_tinker() {
 				_sti();
 			}
 			else if (c == 0x5000) { //down
+				// WARNING: If you increment the active voices register while the GF1 is running (and especially
+				//          while voices are active) what can happen is that new voices added by the change
+				//          may have corrupted state and can do anything from adding buzzing noises to the output
+				//          to causing random IRQ storms. In some cases, it can cause our IRQ handler to get
+				//          stuck handling an endless stream of queued IRQ events.
 				_cli();
 				active_voices++;
 				ultrasnd_select_write(gus_card,0x0E,active_voices);
