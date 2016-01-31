@@ -2351,6 +2351,10 @@ void begin_play() {
 		mp3_data_clear();
 		mad_reset_decoder();
 
+		ultrasnd_abort_dma_transfer(gus_card);
+		ultrasnd_stop_all_voices(gus_card);
+		ultrasnd_stop_timers(gus_card);
+
 		gus_write = 0;
 		load_audio_gus((gus_buffer_length/2UL)/*up to*/,0/*min*/,0/*max*/,1/*first block*/);
 
