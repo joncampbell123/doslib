@@ -326,6 +326,15 @@ void ultrasnd_stop_timers(struct ultrasnd_ctx *u) {
 	ultrasnd_select_write(u,0x47,0xFF); /* reset */
 }
 
+void ultrasnd_flush_irq_events(struct ultrasnd_ctx *u) {
+	unsigned int i;
+
+	_cli();
+	for (i=0;i < 256;i++) inp(u->port+6); // IRQ status
+	for (i=0;i < 256;i++) ultrasnd_select_read(u,0x8F);
+	_sti();
+}
+
 void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
 	unsigned char c;
 	unsigned int i;
@@ -414,6 +423,7 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	ultrasnd_abort_dma_transfer(u);
 	ultrasnd_stop_all_voices(u);
 	ultrasnd_stop_timers(u);
+	ultrasnd_flush_irq_events(u);
 
 	if (u->irq1 >= 0 && program_cfg) {
 		/* now use the Mixer register to enable line out, and to select the IRQ control register.

@@ -92,4 +92,5 @@ void ultrasnd_dram_buffer_free(struct ultrasnd_ctx *u);
 void ultrasnd_abort_dma_transfer(struct ultrasnd_ctx *u);
 void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u);
 void ultrasnd_stop_timers(struct ultrasnd_ctx *u);
+void ultrasnd_flush_irq_events(struct ultrasnd_ctx *u);
 
