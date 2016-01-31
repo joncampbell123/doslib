@@ -932,10 +932,9 @@ void ultrasnd_stop_voice(struct ultrasnd_ctx *u,int i) {
 
 	ultrasnd_select_voice(u,i);
 	for (j=0;j < 16;j++) {
-		c = ultrasnd_select_read(u,0x80); /* voice select (read) */
+		c = ultrasnd_select_read(u,0x80) & (~ULTRASND_VOICE_MODE_IRQ/*disable IRQ */); /* voice select (read) */
 		ultrasnd_select_write(u,0x00,c | 3); /* voice select (write), set STOP VOICE */
 		t8254_wait(t8254_us2ticks(100)); /* 100us */
-		c = ultrasnd_select_read(u,0x80); /* voice select (read) */
 		ultrasnd_select_write(u,0x00,c | 3); /* voice select (write), set STOP VOICE */
 		t8254_wait(t8254_us2ticks(100)); /* 100us */
 		c = ultrasnd_select_read(u,0x80); /* voice select (read) */
