@@ -2800,10 +2800,14 @@ static void change_param_menu() {
 		}
 	}
 	else if (gus_card != NULL) {
+		_cli();
+		ultrasnd_set_active_voices(gus_card,32);
 		ultrasnd_abort_dma_transfer(gus_card);
 		ultrasnd_stop_all_voices(gus_card);
 		ultrasnd_stop_timers(gus_card);
 		ultrasnd_drain_irq_events(gus_card);
+		ultrasnd_set_active_voices(gus_card,gus_active);
+		_sti();
 	}
 
 	change_param_idx = selector;
