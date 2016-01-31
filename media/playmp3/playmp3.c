@@ -3699,6 +3699,10 @@ static void choose_sound_card_gus() {
 	vga_msg_box_destroy(&box);
 }
 
+static void sndsb_atexit() {
+	free_sndsb(); /* will also de-ref/unhook the NMI reflection */
+}
+
 int main(int argc,char **argv) {
 	int no_sb = 0;
 	int no_gus = 0;
@@ -3855,6 +3859,7 @@ int main(int argc,char **argv) {
 		printf("Cannot init library\n");
 		return 1;
 	}
+	atexit(sndsb_atexit);
 	if (!init_isa_pnp_bios()) {
 		printf("Cannot init ISA PnP\n");
 		return 1;
