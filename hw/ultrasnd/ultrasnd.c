@@ -322,8 +322,8 @@ void ultrasnd_stop_timers(struct ultrasnd_ctx *u) {
 	outp(u->port+0x008,0x04); /* select "timer stuff" */
 	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
 	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
-	ultrasnd_select_write(u,0x46,0xFF); /* reset */
-	ultrasnd_select_write(u,0x47,0xFF); /* reset */
+	ultrasnd_select_write(u,0x46,0x00); /* reset */
+	ultrasnd_select_write(u,0x47,0x00); /* reset */
 }
 
 void ultrasnd_stop_all_voices(struct ultrasnd_ctx *u) {
@@ -414,6 +414,7 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	ultrasnd_abort_dma_transfer(u);
 	ultrasnd_stop_all_voices(u);
 	ultrasnd_stop_timers(u);
+	ultrasnd_drain_irq_events(u);
 
 	if (u->irq1 >= 0 && program_cfg) {
 		/* now use the Mixer register to enable line out, and to select the IRQ control register.
@@ -437,9 +438,6 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 		outp(u->port+0x000,0x00 | 0x08);	/* bit 1: 0=enable line out, bit 0: 0=enable line in, bit 3: 1=enable latches  bit 6: 1=next I/O goes to DMA latches */
 	}
 
-	if ((inp(u->port+0x006)&0xC) != 0)
-		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ status register shows pending IRQs despite GUS reset procedure\n",u->port);
-
 	/* the tests below can cause interrupts. so hook the IRQ */
 	if (u->irq1 >= 0) {
 		old_irq = _dos_getvect(irq2int(u->irq1));
@@ -462,8 +460,6 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 
 	if (u->irq1 >= 0 && ultrasnd_test_irq_fired != 0)
 		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ fired at or before the timer was enabled. Did something else happen?\n",u->port,ultrasnd_test_irq_fired);
-	if ((inp(u->port+0x006)&0xC) != 0)
-		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ status register still shows pending IRQ for timers despite clearing and resetting them\n",u->port);
 
 	/* Gravis SDK also shows there are two timer registers. When loaded by the application they count up to 0xFF then generate an IRQ.
 	 * So if we load them and no counting happens, it's not a GUS. */
@@ -486,8 +482,8 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
 	outp(u->port+0x008,0x04); /* select "timer stuff" */
 	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
-	ultrasnd_select_write(u,0x46,0x02);
-	ultrasnd_select_write(u,0x47,0x02);
+	ultrasnd_select_write(u,0x46,0x00);
+	ultrasnd_select_write(u,0x47,0x00);
 	if ((c1&0xC) != 0xC) {
 		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: Timer readback fail 0x%02x\n",c1);
 		goto timerfail;
@@ -650,6 +646,11 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	else
 		u->use_dma = 0;
 
+	ultrasnd_abort_dma_transfer(u);
+	ultrasnd_stop_all_voices(u);
+	ultrasnd_stop_timers(u);
+	ultrasnd_drain_irq_events(u);
+
 	for (i=0;i < 32;i++) u->voicemode[i] = 0;
 	ultrasnd_set_active_voices(u,14);
 	return 0;
@@ -681,6 +682,11 @@ commoncleanup:
 	ultrasnd_select_write(u,0x4C,0x01); /* 0x4C: reset register -> end reset (bit 0=1) */
 	t8254_wait(t8254_us2ticks(1000));
 	c2 = ultrasnd_selected_read(u);
+
+	ultrasnd_abort_dma_transfer(u);
+	ultrasnd_stop_all_voices(u);
+	ultrasnd_stop_timers(u);
+	ultrasnd_drain_irq_events(u);
 
 	return 1;
 }
@@ -760,54 +766,6 @@ struct ultrasnd_ctx *ultrasnd_alloc_card() {
 	}
 
 	return NULL;
-}
-
-int ultrasnd_test_irq_timer(struct ultrasnd_ctx *u,int irq) {
-	unsigned char c1;
-	unsigned int i;
-
-	i  = (unsigned short)p8259_read_IRR(0);
-	i |= (unsigned short)p8259_read_IRR(8) << 8U;
-	if (i & (1 << irq)) {
-		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ timer test cannot work, IRQ %u already fired\n",u->port,irq);
-		return 0;
-	}
-
-	_cli();
-	p8259_mask(irq);
-
-	/* Gravis SDK also shows there are two timer registers. When loaded by the application they count up to 0xFF then generate an IRQ.
-	 * So if we load them and no counting happens, it's not a GUS. */
-	outp(u->port+0x008,0x04); /* select "timer stuff" */
-	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
-	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
-	ultrasnd_select_write(u,0x46,0xFE); /* load timer 1 */
-	ultrasnd_select_write(u,0x47,0xFE); /* load timer 2 */
-	ultrasnd_select_write(u,0x45,0x0C); /* enable timer 1 & 2 IRQ */
-	outp(u->port+0x008,0x04); /* select "timer stuff" */
-	outp(u->port+0x009,0x03); /* unmask timer IRQs, clear reset, start timers */
-
-	/* wait 50ms, more than enough time for the timers to count up to 0xFF and signal IRQ */
-	for (i=0;i < 500 && (c1&0xC) != 0xC;i++) {
-		t8254_wait(t8254_us2ticks(1000)); /* 1ms */
-		c1 = inp(u->port+0x006); /* IRQ status */
-	}
-	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
-	outp(u->port+0x008,0x04); /* select "timer stuff" */
-	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
-	if ((c1&0xC) != 0xC) {
-		if (debug_on) fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ timer test failed, timers did not complete (0x%02x)\n",u->port,c1);
-		return 0;
-	}
-
-	i  = (unsigned short)p8259_read_IRR(0);
-	i |= (unsigned short)p8259_read_IRR(8) << 8U;
-	if (!(i & (1 << irq))) {
-//		fprintf(stderr,"Gravis Ultrasound[0x%03x]: IRQ timer test failed, IRQ %d did not fire\n",u->port,irq);
-		return 0;
-	}
-
-	return 1;
 }
 
 struct ultrasnd_ctx *ultrasnd_try_base(uint16_t base) {
@@ -939,6 +897,23 @@ void ultrasnd_set_voice_end(struct ultrasnd_ctx *u,unsigned char voice,uint32_t 
 	ultrasnd_select_voice(u,voice);
 	ultrasnd_select_write16(u,0x04,ofs >> 7UL);
 	ultrasnd_select_write16(u,0x05,ofs << 9UL);
+}
+
+void ultrasnd_drain_irq_events(struct ultrasnd_ctx *u) {
+	unsigned int pass=0;
+	unsigned char c;
+	unsigned int i;
+
+	_cli();
+
+	do {
+		if ((++pass) >= 256) break;
+		for (i=0;i < 256;i++) ultrasnd_select_read(u,0x41);
+		for (i=0;i < 256;i++) ultrasnd_select_read(u,0x8F);
+		c = inp(u->port+6);
+	} while ((c & 0xE0) != 0);
+
+	_sti();
 }
 
 void ultrasnd_stop_voice(struct ultrasnd_ctx *u,int i) {
