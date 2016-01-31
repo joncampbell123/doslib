@@ -89,7 +89,7 @@ int main(int argc,char **argv) {
 		}
 	}
 	for (irq=8;irq < 16;irq++) {
-		vec = 0x70 + irq;
+		vec = 0x70 + irq - 8;
 		if (need_patching(vec)) {
 			printf("Patching IRQ %u with PIC-friendly code\n",irq);
 			patch_irq(vec,irq);
