@@ -1113,6 +1113,8 @@ static void interrupt sb_irq() {
 	}
 }
 
+static unsigned char gus_dma_tc_ignore = 0;
+
 static unsigned long gus_dma_tc = 0;
 static unsigned long gus_irq_voice = 0;
 
@@ -1121,7 +1123,7 @@ static void interrupt gus_irq() {
 
 	do {
 		irq_stat = inp(gus_card->port+6);
-		if (irq_stat & 0x80) { // bit 7
+		if ((irq_stat & 0x80) && (!gus_dma_tc_ignore)) { // bit 7
 			/* DMA TC. read and clear. */
 			c = ultrasnd_select_read(gus_card,0x41);
 			if (c & 0x40) {
@@ -3281,6 +3283,7 @@ static void help() {
 	printf(" /noidle              Don't use sndsb library idle function\n");
 	printf(" /nodmatc             Don't use Ultrasound DMA TC IRQ\n");
 	printf(" /nogusdma            Don't use Ultrasound DMA\n");
+	printf(" /nocountdmatc        Don't count Ultrasound DMA TC IRQ\n");
 }
 
 static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h) {
@@ -3735,6 +3738,9 @@ int main(int argc,char **argv) {
 			}
 			else if (!strcmp(a,"nogusdma")) {
 				dont_use_gus_dma = 1;
+			}
+			else if (!strcmp(a,"nocountdmatc")) {
+				gus_dma_tc_ignore = 1;
 			}
 			else if (!strcmp(a,"nodmatc")) {
 				dont_use_gus_dma_tc = 1;
