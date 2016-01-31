@@ -458,14 +458,15 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 
 	/* Gravis SDK also shows there are two timer registers. When loaded by the application they count up to 0xFF then generate an IRQ.
 	 * So if we load them and no counting happens, it's not a GUS. */
-	outp(u->port+0x008,0x04); /* select "timer stuff" */
-	outp(u->port+0x009,0xE0); /* clear timer IRQ, mask off timer 1 & 2 */
-	ultrasnd_select_write(u,0x45,0x00); /* disable timer 1 & 2 IRQ */
+	ultrasnd_stop_timers(u);
+	ultrasnd_select_write(u,0x45,0x0C); /* enable timer 1 & 2 IRQ */
 	ultrasnd_select_write(u,0x46,0x80); /* load timer 1 (0x7F * 80us = 10.16ms) */
 	ultrasnd_select_write(u,0x47,0x80); /* load timer 2 (0x7F * 320us = 40.64ms) */
-	ultrasnd_select_write(u,0x45,0x0C); /* enable timer 1 & 2 IRQ */
 	outp(u->port+0x008,0x04); /* select "timer stuff" */
-	outp(u->port+0x009,0x03); /* unmask timer IRQs, clear reset, start timers */
+	outp(u->port+0x009,0xE0); /* mask and irq clear */
+	outp(u->port+0x009,0x60); /* mask timers */
+	outp(u->port+0x009,0x00); /* unmask timers */
+	outp(u->port+0x009,0x03); /* start timers */
 
 	/* wait 100ms, more than enough time for the timers to count up to 0xFF and signal IRQ */
 	/* NTS: The SDK doc doesn't say, but apparently the timer will hit 0xFF, fire the IRQ, then reset to 0 and count up again (or else DOSBox is mis-emulating the GUS) */
