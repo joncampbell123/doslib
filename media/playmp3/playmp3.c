@@ -3463,6 +3463,7 @@ static void show_device_info_sb() {
 }
 
 static void show_device_info_gus() {
+	unsigned long p_gus_timer_ticks = 0;
 	unsigned long p_gus_irq_voice = 0;
 	unsigned long p_gus_dma_tc = 0;
 	int c,rows=2,cols=70,redraw=1;
@@ -3476,14 +3477,16 @@ static void show_device_info_gus() {
 		if (redraw) {
 			p_gus_dma_tc = gus_dma_tc;
 			p_gus_irq_voice = gus_irq_voice;
+			p_gus_timer_ticks = gus_timer_ticks;
 			draw_device_info_gus(gus_card,box.x+2,box.y+1,cols-4,rows);
 			redraw = 0;
 		}
 		else {
-			if (p_gus_dma_tc != gus_dma_tc || p_gus_irq_voice != gus_irq_voice) {
+			if (p_gus_dma_tc != gus_dma_tc || p_gus_irq_voice != gus_irq_voice || p_gus_timer_ticks != gus_timer_ticks) {
 				redraw = 1;
 				p_gus_dma_tc = gus_dma_tc;
 				p_gus_irq_voice = gus_irq_voice;
+				p_gus_timer_ticks = gus_timer_ticks;
 			}
 		}
 
