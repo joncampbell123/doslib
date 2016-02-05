@@ -3519,16 +3519,29 @@ static void show_device_info_sb() {
 static void do_gus_timer_test();
 
 static void show_device_info_gus() {
+	unsigned char old_olddmatc = dont_use_gus_dma_tc;
 	unsigned long p_gus_timer_ticks = 0;
 	unsigned long p_gus_irq_voice = 0;
 	unsigned long p_gus_dma_tc = 0;
 	int c,rows=4,cols=70,redraw=1;
+	unsigned char slowmode=0;
 	struct vga_msg_box box;
 
 	vga_msg_box_create(&box,"",rows,cols); /* 3 rows 70 cols */
 
 	while (1) {
+		if (slowmode && gus_card->irq1 >= 0) p8259_mask(gus_card->irq1);
+		if (slowmode) t8254_wait(t8254_us2ticks(500000));
 		ui_anim(0);
+
+		if (slowmode && gus_card->irq1 >= 0) {
+			p8259_unmask(gus_card->irq1);
+			outp(0x80,0x00); // IODELAY
+			outp(0x80,0x00); // IODELAY
+			outp(0x80,0x00); // IODELAY
+			outp(0x80,0x00); // IODELAY
+			p8259_mask(gus_card->irq1);
+		}
 
 		if (redraw) {
 			p_gus_dma_tc = gus_dma_tc;
@@ -3560,10 +3573,21 @@ static void show_device_info_gus() {
 			}
 			else if (c == 't')
 				do_gus_timer_test();
+			else if (c == 's') {
+				slowmode ^= 1;
+				if (slowmode)
+					dont_use_gus_dma_tc = 1;
+				else
+					dont_use_gus_dma_tc = old_olddmatc;
+
+				if (!slowmode && gus_card->irq1 >= 0) p8259_unmask(gus_card->irq1);
+			}
 		}
 	}
 
 	vga_msg_box_destroy(&box);
+	dont_use_gus_dma_tc = old_olddmatc;
+	if (gus_card->irq1 >= 0) p8259_unmask(gus_card->irq1);
 }
 
 static void draw_sound_card_choice_sb(unsigned int x,unsigned int y,unsigned int w,struct sndsb_ctx *cx,int sel) {
