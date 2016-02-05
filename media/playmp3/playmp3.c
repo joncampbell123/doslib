@@ -28,6 +28,9 @@
 # error Sorry, this code does not compile 16-bit
 #endif
 
+// DEBUG: collect what we read back from IRQ status
+#define GUS_IRQSTAT_COLLECT
+
 #if defined(TARGET_WINDOWS)
 /* ------------------------------------------ Windows version --------------------------------------- */
 #include "playcom.h"
@@ -1148,11 +1151,29 @@ static unsigned long gus_irq_voice = 0;
 static unsigned long gus_timer_ticks = 0;
 static unsigned char gus_timer_ctl = 0;
 
+#ifdef GUS_IRQSTAT_COLLECT
+static unsigned char gus_irq_stats_buf[4096];
+static volatile unsigned int gus_irq_stats_i=0,gus_irq_stats_o=0;
+#endif
+
 static void interrupt gus_irq() {
 	unsigned char irq_stat,c;
 
 	do {
 		irq_stat = inp(gus_card->port+6);
+
+#ifdef GUS_IRQSTAT_COLLECT
+		/* collect IRQ status bits for diagnostics */
+		{
+			unsigned int ni = gus_irq_stats_i+1;
+			if (ni == sizeof(gus_irq_stats_buf)) ni = 0;
+			if (ni != gus_irq_stats_o) {
+				gus_irq_stats_buf[gus_irq_stats_i] = irq_stat;
+				gus_irq_stats_i = ni;
+			}
+		}
+#endif
+
 		if ((irq_stat & 0x80) && (!gus_dma_tc_ignore)) { // bit 7
 			/* DMA TC. read and clear. */
 			c = ultrasnd_select_read(gus_card,0x41);
@@ -3371,6 +3392,39 @@ static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h
 		gus_dma_tc,		gus_irq_voice,
 		gus_timer_ticks,	gus_card->dma_tc_irq_happened);
 	vga_write(temp_str);
+
+	vga_moveto(x,y + 2);
+	vga_write("IRQstatlog: ");
+
+	_cli();
+	{
+		int i,c;
+		int max = (((x+w-1)-vga_pos_x)/3) * 2;
+		int avail = (int)gus_irq_stats_i - (int)gus_irq_stats_o;
+		if (avail < 0) avail += sizeof(gus_irq_stats_buf);
+		if (avail > max) {
+			int adv = avail - max;
+			gus_irq_stats_o += adv;
+			if (gus_irq_stats_o >= sizeof(gus_irq_stats_buf))
+				gus_irq_stats_o -= sizeof(gus_irq_stats_buf);
+		}
+
+		c = 0;
+		i = gus_irq_stats_o;
+		while (i != gus_irq_stats_i) {
+			if ((vga_pos_x+3) >= (x+w-1)) {
+				vga_moveto(x,vga_pos_y + 1);
+				vga_write("IRQstatlog: ");
+			}
+
+			sprintf(temp_str,"%02X ",gus_irq_stats_buf[i]);
+			vga_write(temp_str);
+
+			if ((++i) >= sizeof(gus_irq_stats_buf)) i = 0;
+			if (++c >= max) break;
+		}
+	}
+	_sti();
 }
 
 static void draw_device_info_sb(struct sndsb_ctx *cx,int x,int y,int w,int h) {
@@ -3462,11 +3516,13 @@ static void show_device_info_sb() {
 	vga_msg_box_destroy(&box);
 }
 
+static void do_gus_timer_test();
+
 static void show_device_info_gus() {
 	unsigned long p_gus_timer_ticks = 0;
 	unsigned long p_gus_irq_voice = 0;
 	unsigned long p_gus_dma_tc = 0;
-	int c,rows=2,cols=70,redraw=1;
+	int c,rows=4,cols=70,redraw=1;
 	struct vga_msg_box box;
 
 	vga_msg_box_create(&box,"",rows,cols); /* 3 rows 70 cols */
@@ -3496,6 +3552,14 @@ static void show_device_info_gus() {
 
 			if (c == 27 || c == 13)
 				break;
+			else if (c == ' ') {
+				if (mp3_playing)
+					stop_play();
+				else
+					begin_play();
+			}
+			else if (c == 't')
+				do_gus_timer_test();
 		}
 	}
 
@@ -3743,7 +3807,7 @@ static void do_gus_reset_tinker() {
 }
 
 static void choose_sound_card_gus() {
-	int c,rows=3+1+MAX_ULTRASND,cols=70,sel=0,i;
+	int c,rows=4+1+MAX_ULTRASND,cols=70,sel=0,i;
 	unsigned char wp = mp3_playing;
 	struct ultrasnd_ctx *card;
 	struct vga_msg_box box;
@@ -3754,7 +3818,7 @@ static void choose_sound_card_gus() {
 	}
 
 	vga_msg_box_create(&box,"",rows,cols); /* 3 rows 70 cols */
-	draw_device_info_gus(gus_card,box.x+2,box.y+1+rows-3,cols,3);
+	draw_device_info_gus(gus_card,box.x+2,box.y+1+rows-4,cols-4,4);
 	for (i=0;i < MAX_ULTRASND;i++)
 		draw_sound_card_choice_gus(box.x+2,box.y+1+i,cols,&ultrasnd_card[i],i == sel);
 
@@ -3779,13 +3843,13 @@ static void choose_sound_card_gus() {
 				if (sel == 0) sel = MAX_ULTRASND - 1;
 				else sel--;
 				draw_sound_card_choice_gus(box.x+2,box.y+1+sel,cols,&ultrasnd_card[sel],1);
-				draw_device_info_gus(&ultrasnd_card[sel],box.x+2,box.y+1+rows-3,cols,3);
+				draw_device_info_gus(&ultrasnd_card[sel],box.x+2,box.y+1+rows-4,cols-4,4);
 			}
 			else if (c == 0x5000) {
 				draw_sound_card_choice_gus(box.x+2,box.y+1+sel,cols,&ultrasnd_card[sel],0);
 				if (++sel == MAX_ULTRASND) sel = 0;
 				draw_sound_card_choice_gus(box.x+2,box.y+1+sel,cols,&ultrasnd_card[sel],1);
-				draw_device_info_gus(&ultrasnd_card[sel],box.x+2,box.y+1+rows-3,cols,3);
+				draw_device_info_gus(&ultrasnd_card[sel],box.x+2,box.y+1+rows-4,cols-4,4);
 			}
 		}
 	}
