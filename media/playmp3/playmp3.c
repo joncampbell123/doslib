@@ -931,6 +931,7 @@ static unsigned long			gus_write = 0;
 static unsigned char			dont_chain_irq = 0;
 static unsigned char			dont_sb_idle = 0;
 static unsigned char			dont_use_gus_dma_tc = 0;
+static unsigned char			dont_wait_gus_dma_tc = 0;
 static unsigned char			dont_use_gus_dma = 0;
 
 /* LPT DAC */
@@ -1609,7 +1610,9 @@ static void mad_gus_send_il(unsigned long ofs,int16_t *src,unsigned long len,uns
 		len >>= 1;
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((int16_t*)dst)[i] = src[(i<<st)+channel];
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT |
+			(dont_wait_gus_dma_tc ? ULTRASND_VOICE_MODE_IRQ_BUT_DMA_WAIT : 0) |
+			((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1625,7 +1628,9 @@ static void mad_gus_send_il(unsigned long ofs,int16_t *src,unsigned long len,uns
 	else {
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((uint8_t*)dst)[i] = (src[(i<<st)+channel] >> 8);
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,
+			(dont_wait_gus_dma_tc ? ULTRASND_VOICE_MODE_IRQ_BUT_DMA_WAIT : 0) |
+			((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -1651,7 +1656,9 @@ static void mad_gus_send_il_dac(unsigned long ofs,void *src,unsigned long len,un
 		len >>= 1;
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((int16_t*)dst)[i] = ((int16_t*)src)[(i<<st)+channel];
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT |
+			(dont_wait_gus_dma_tc ? ULTRASND_VOICE_MODE_IRQ_BUT_DMA_WAIT : 0) |
+			((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1667,7 +1674,9 @@ static void mad_gus_send_il_dac(unsigned long ofs,void *src,unsigned long len,un
 	else {
 		assert(len <= 4096UL);
 		for (i=0;i < len;i++) ((uint8_t*)dst)[i] = ((uint8_t*)src)[(i<<st)+channel] ^ 0x80;
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,
+			(dont_wait_gus_dma_tc ? ULTRASND_VOICE_MODE_IRQ_BUT_DMA_WAIT : 0) |
+			((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -1703,7 +1712,9 @@ static void mad_gus_send(unsigned long ofs,mad_sample_t *src,unsigned long len) 
 				((int16_t*)dst)[i] = (int16_t)samp;
 		}
 
-		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT | ((!dont_use_gus_dma_tc && gus_card->irq1) >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len<<1,ULTRASND_DMA_DATA_SIZE_16BIT |
+			(dont_wait_gus_dma_tc ? ULTRASND_VOICE_MODE_IRQ_BUT_DMA_WAIT : 0) |
+			((!dont_use_gus_dma_tc && gus_card->irq1) >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a,b;
@@ -1728,7 +1739,9 @@ static void mad_gus_send(unsigned long ofs,mad_sample_t *src,unsigned long len) 
 				dst[i] = (uint8_t)samp;
 		}
 
-		ultrasnd_send_dram_buffer(gus_card,ofs,len,0 | ((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
+		ultrasnd_send_dram_buffer(gus_card,ofs,len,
+			(dont_wait_gus_dma_tc ? ULTRASND_VOICE_MODE_IRQ_BUT_DMA_WAIT : 0) |
+			((!dont_use_gus_dma_tc && gus_card->irq1 >= 0) ? ULTRASND_DMA_TC_IRQ : 0));
 
 		if (ofs == 0) {
 			unsigned char a;
@@ -3519,7 +3532,7 @@ static void show_device_info_sb() {
 static void do_gus_timer_test();
 
 static void show_device_info_gus() {
-	unsigned char old_olddmatc = dont_use_gus_dma_tc;
+	unsigned char old_oldwaittc = dont_wait_gus_dma_tc;
 	unsigned long p_gus_timer_ticks = 0;
 	unsigned long p_gus_irq_voice = 0;
 	unsigned long p_gus_dma_tc = 0;
@@ -3576,9 +3589,9 @@ static void show_device_info_gus() {
 			else if (c == 's') {
 				slowmode ^= 1;
 				if (slowmode)
-					dont_use_gus_dma_tc = 1;
+					dont_wait_gus_dma_tc = 1;
 				else
-					dont_use_gus_dma_tc = old_olddmatc;
+					dont_wait_gus_dma_tc = old_oldwaittc;
 
 				if (!slowmode && gus_card->irq1 >= 0) p8259_unmask(gus_card->irq1);
 			}
@@ -3586,7 +3599,7 @@ static void show_device_info_gus() {
 	}
 
 	vga_msg_box_destroy(&box);
-	dont_use_gus_dma_tc = old_olddmatc;
+	dont_wait_gus_dma_tc = old_oldwaittc;
 	if (gus_card->irq1 >= 0) p8259_unmask(gus_card->irq1);
 }
 

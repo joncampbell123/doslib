@@ -1051,7 +1051,7 @@ unsigned char FAR *ultrasnd_dram_buffer_alloc(struct ultrasnd_ctx *u,unsigned lo
 	return u->dram_xfer_a->lin;
 }
 
-int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long len,uint8_t flags) {
+int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long len,uint16_t flags) {
 	unsigned char FAR *src;
 	uint8_t dma = u->use_dma;
 	unsigned int patience;
@@ -1109,7 +1109,7 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 		 * will return with bit 6 set whether we asked for TC IRQ or not. */
 		patience = 10000; /* 100ns * 10000 = 1 sec */
 		do {
-			if (u->irq1 >= 0 && (flags & ULTRASND_DMA_TC_IRQ) != 0) {
+			if (u->irq1 >= 0 && (flags & ULTRASND_DMA_TC_IRQ) != 0 && !(flags & ULTRASND_VOICE_MODE_IRQ_BUT_DMA_WAIT)) {
 				/* wait for caller's IRQ handler to set the flag */
 				if (u->dma_tc_irq_happened) break;
 			}

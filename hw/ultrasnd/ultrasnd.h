@@ -16,6 +16,8 @@
 #define ULTRASND_VOICE_MODE_IRQ			0x20
 #define ULTRASND_VOICE_MODE_BACKWARDS		0x40
 #define ULTRASND_VOICE_MODE_IRQ_PENDING		0x80
+/* extra flags */
+#define ULTRASND_VOICE_MODE_IRQ_BUT_DMA_WAIT	0x0100
 
 /* enable DMA TC IRQ */
 #define ULTRASND_DMA_TC_IRQ			0x20
@@ -87,7 +89,7 @@ void ultrasnd_set_voice_current(struct ultrasnd_ctx *u,unsigned char voice,uint3
 void ultrasnd_set_voice_pan(struct ultrasnd_ctx *u,unsigned char voice,uint8_t pan);
 void ultrasnd_set_voice_ramp_control(struct ultrasnd_ctx *u,unsigned char voice,uint8_t ctl);
 unsigned char FAR *ultrasnd_dram_buffer_alloc(struct ultrasnd_ctx *u,unsigned long len);
-int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long len,uint8_t flags);
+int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long len,uint16_t flags);
 void ultrasnd_dram_buffer_free(struct ultrasnd_ctx *u);
 void ultrasnd_abort_dma_transfer(struct ultrasnd_ctx *u);
 void ultrasnd_drain_irq_events(struct ultrasnd_ctx *u);
