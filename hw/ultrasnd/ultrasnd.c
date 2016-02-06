@@ -851,7 +851,7 @@ struct ultrasnd_ctx *ultrasnd_try_ultrasnd_env() {
 	return (ultrasnd_env=u);
 }
 
-uint16_t ultrasnd_sample_rate_to_fc(struct ultrasnd_ctx *u,unsigned int r) {
+uint16_t ultrasnd_sample_rate_to_fc(struct ultrasnd_ctx *u,unsigned long r) {
 	uint32_t m;
 
 	/* "frequency counter" is 6.8 fixed point */

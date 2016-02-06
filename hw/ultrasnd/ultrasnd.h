@@ -71,7 +71,7 @@ struct ultrasnd_ctx *ultrasnd_alloc_card();
 int ultrasnd_test_irq_timer(struct ultrasnd_ctx *u,int irq);
 struct ultrasnd_ctx *ultrasnd_try_base(uint16_t base);
 struct ultrasnd_ctx *ultrasnd_try_ultrasnd_env();
-uint16_t ultrasnd_sample_rate_to_fc(struct ultrasnd_ctx *u,unsigned int r);
+uint16_t ultrasnd_sample_rate_to_fc(struct ultrasnd_ctx *u,unsigned long r);
 unsigned char ultrasnd_read_voice_mode(struct ultrasnd_ctx *u,unsigned char voice);
 void ultrasnd_set_voice_mode(struct ultrasnd_ctx *u,unsigned char voice,uint8_t mode);
 void ultrasnd_set_voice_fc(struct ultrasnd_ctx *u,unsigned char voice,uint16_t fc);
