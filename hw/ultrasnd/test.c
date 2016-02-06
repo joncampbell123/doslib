@@ -67,9 +67,14 @@ static const struct vga_menu_item main_menu_hardware_reset =
 static const struct vga_menu_item main_menu_hardware_zero_gus_ram =
 	{"Zero GUS RAM",	'z',	0,	0};
 
+static const struct vga_menu_item main_menu_hardware_play_voice =
+	{"Play voice",		'p',	0,	0};
+
 static const struct vga_menu_item* main_menu_hardware[] = {
 	&main_menu_hardware_reset,
 	&main_menu_hardware_zero_gus_ram,
+	&menu_separator,
+	&main_menu_hardware_play_voice,
 	NULL
 };
 
@@ -426,6 +431,171 @@ int confirm_quit() {
 	return confirm_yes_no_dialog("Are you sure you want to exit to DOS?");
 }
 
+unsigned char select_voice = 0;
+
+static void do_play_voice() {
+	uint16_t a,b;
+	int c,rows=3+3,cols=78;
+	uint32_t voice_current=0,voice_start=0,voice_end=0,cc32;
+	unsigned char voice_mode = 0,cc;
+	unsigned char fredraw = 1;
+	unsigned char redraw = 1;
+	struct vga_msg_box box;
+
+	vga_msg_box_create(&box,"",rows,cols); /* 3 rows 70 cols */
+
+	while (1) {
+		ui_anim(0);
+
+		_cli();
+
+		ultrasnd_select_voice(gus,select_voice);
+		cc32  = (uint32_t)ultrasnd_select_read16(gus,0x82) << (uint32_t)16UL;
+		cc32 |= (uint32_t)ultrasnd_select_read16(gus,0x83);
+		cc32 &= (uint32_t)0x1FFFFFE0UL; /* bits 15-13 not used. bits 4-0 not used */
+		if (voice_start != cc32) redraw = 1;
+		voice_start = cc32;
+
+		ultrasnd_select_voice(gus,select_voice);
+		cc32  = (uint32_t)ultrasnd_select_read16(gus,0x84) << (uint32_t)16UL;
+		cc32 |= (uint32_t)ultrasnd_select_read16(gus,0x85);
+		cc32 &= (uint32_t)0x1FFFFFE0UL; /* bits 15-13 not used. bits 4-0 not used */
+		if (voice_end != cc32) redraw = 1;
+		voice_end = cc32;
+
+		ultrasnd_select_voice(gus,select_voice);
+		do {
+			a = ultrasnd_select_read16(gus,0x8A);
+			cc32 = (uint32_t)ultrasnd_select_read16(gus,0x8B);
+			b = ultrasnd_select_read16(gus,0x8A);
+		} while (a != b);
+		cc32 |= (uint32_t)a << (uint32_t)16;
+		cc32 &= (uint32_t)0x1FFFFFE0UL; /* bits 15-13 not used. bits 4-0 not used */
+		if (voice_current != cc32) redraw = 1;
+		voice_current = cc32;
+
+		cc = ultrasnd_read_voice_mode(gus,select_voice);
+		if (voice_mode != cc) redraw = 1;
+		voice_mode = cc;
+
+		_sti();
+
+		if (redraw || fredraw) {
+			if (fredraw) {
+				vga_moveto(box.x+2,box.y+1);
+				vga_write_color(0x1E);
+				sprintf(temp_str,"GUS voice #%d ",select_voice+1);
+				vga_write(temp_str);
+			}
+			vga_moveto(box.x+2+17,box.y+1);
+			vga_write_color(0x1F);
+			sprintf(temp_str,"STOP=%u:%u %2u-bit LOOP=%u BIDIR=%u IRQ=%u BACK=%u",
+				(voice_mode&ULTRASND_VOICE_MODE_IS_STOPPED)		?  1 : 0,
+				(voice_mode&ULTRASND_VOICE_MODE_STOP)			?  1 : 0,
+				(voice_mode&ULTRASND_VOICE_MODE_16BIT)			? 16 : 8,
+				(voice_mode&ULTRASND_VOICE_MODE_LOOP)			?  1 : 0,
+				(voice_mode&ULTRASND_VOICE_MODE_BIDIR)			?  1 : 0,
+				(voice_mode&ULTRASND_VOICE_MODE_IRQ)			?  1 : 0,
+				(voice_mode&ULTRASND_VOICE_MODE_BACKWARDS)		?  1 : 0);
+			vga_write(temp_str);
+
+			if (fredraw) {
+				vga_moveto(box.x+2,box.y+2);
+				vga_write_color(0x1E);
+				sprintf(temp_str,"Position: ");
+				vga_write(temp_str);
+			}
+			vga_moveto(box.x+2+17,box.y+2);
+			vga_write_color(0x1F);
+			sprintf(temp_str,"Start %05lx.%x   Current %05lx.%x   End %05lx.%x",
+				(unsigned long)((voice_start >> 9UL) & 0xFFFFFUL),
+				(unsigned int) ((voice_start >> 5UL) & 0xFUL),
+
+				(unsigned long)((voice_current >> 9UL) & 0xFFFFFUL),
+				(unsigned int) ((voice_current >> 5UL) & 0xFUL),
+
+				(unsigned long)((voice_end >> 9UL) & 0xFFFFFUL),
+				(unsigned int) ((voice_end >> 5UL) & 0xFUL));
+			vga_write(temp_str);
+
+			fredraw = 0;
+			redraw = 0;
+		}
+
+		if (kbhit()) {
+			c = getch();
+			if (c == 0) c = getch() << 8;
+
+			if (c == 27) {
+				break;
+			}
+			else if (c == 'b') {
+				_cli();
+				voice_mode = ultrasnd_read_voice_mode(gus,select_voice);
+				ultrasnd_set_voice_mode(gus,select_voice,voice_mode ^ ULTRASND_VOICE_MODE_BIDIR);
+				_sti();
+			}
+			else if (c == 'r') {
+				_cli();
+				voice_mode = ultrasnd_read_voice_mode(gus,select_voice);
+				ultrasnd_set_voice_mode(gus,select_voice,voice_mode ^ ULTRASND_VOICE_MODE_BACKWARDS);
+				_sti();
+			}
+			else if (c == 'l') {
+				_cli();
+				voice_mode = ultrasnd_read_voice_mode(gus,select_voice);
+				ultrasnd_set_voice_mode(gus,select_voice,voice_mode ^ ULTRASND_VOICE_MODE_LOOP);
+				_sti();
+			}
+			else if (c == 'i') {
+				_cli();
+				voice_mode = ultrasnd_read_voice_mode(gus,select_voice);
+				ultrasnd_set_voice_mode(gus,select_voice,voice_mode ^ ULTRASND_VOICE_MODE_IRQ);
+				_sti();
+			}
+			else if (c == ' ') {
+				if (voice_mode & (ULTRASND_VOICE_MODE_STOP|ULTRASND_VOICE_MODE_IS_STOPPED))
+					ultrasnd_start_voice(gus,select_voice);
+				else
+					ultrasnd_stop_voice(gus,select_voice);
+			}
+			else if (c == 's') {
+				_cli();
+				ultrasnd_stop_voice(gus,select_voice);
+				ultrasnd_select_voice(gus,select_voice);
+				ultrasnd_select_write16(gus,0x0A,voice_start >> 16UL);
+				ultrasnd_select_write16(gus,0x0B,voice_start);
+				if ((voice_mode & (ULTRASND_VOICE_MODE_STOP|ULTRASND_VOICE_MODE_IS_STOPPED)) == 0)
+					ultrasnd_start_voice(gus,select_voice);
+				_sti();
+			}
+			else if (c == 'e') {
+				_cli();
+				ultrasnd_stop_voice(gus,select_voice);
+				ultrasnd_select_voice(gus,select_voice);
+				ultrasnd_select_write16(gus,0x0A,voice_end >> 16UL);
+				ultrasnd_select_write16(gus,0x0B,voice_end);
+				if ((voice_mode & (ULTRASND_VOICE_MODE_STOP|ULTRASND_VOICE_MODE_IS_STOPPED)) == 0)
+					ultrasnd_start_voice(gus,select_voice);
+				_sti();
+			}
+			else if (c == 0x4800) { //up
+				if (select_voice == 0) select_voice = gus->active_voices - 1;
+				else select_voice--;
+				redraw = fredraw = 1;
+			}
+			else if (c == 0x5000) { //down
+				if (select_voice == (gus->active_voices-1)) select_voice = 0;
+				else select_voice++;
+				redraw = fredraw = 1;
+			}
+		}
+	}
+
+	vga_msg_box_destroy(&box);
+
+}
+
 int main(int argc,char **argv) {
 	const struct vga_menu_item *mitem = NULL;
 	int i,loop,redraw,bkgndredraw,cc;
@@ -575,6 +745,9 @@ int main(int argc,char **argv) {
 				}
 				vga_msg_box_destroy(&box);
 			}
+			else if (mitem == &main_menu_hardware_play_voice) {
+				do_play_voice();
+			}
 			else if (mitem == &main_menu_hardware_zero_gus_ram) {
 				uint32_t o;
 				unsigned int count;
@@ -634,6 +807,7 @@ int main(int argc,char **argv) {
 
 					if (channel >= 1 && channel <= 32) {
 						channel--;
+						select_voice = channel;
 
 						printf("GUS RAM offset? "); fflush(stdout);
 						fgets(temp_str,sizeof(temp_str)-1,stdin);
