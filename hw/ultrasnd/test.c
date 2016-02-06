@@ -579,6 +579,30 @@ static void do_play_voice() {
 					ultrasnd_start_voice(gus,select_voice);
 				_sti();
 			}
+			else if (c == '.' || c == '>') { /* > */
+				// confirm my theory the GUS is *always* rendering the voice's position whether it's moving or not,
+				// by allowing the user to step the pointer
+				_cli();
+				ultrasnd_stop_voice(gus,select_voice);
+				ultrasnd_select_voice(gus,select_voice);
+				voice_current += (c == '>' ? (512UL << 9UL) : (1UL << 9UL));
+				ultrasnd_select_write16(gus,0x0A,voice_current >> 16UL);
+				ultrasnd_select_write16(gus,0x0B,voice_current);
+				redraw = 1;
+				_sti();
+			}
+			else if (c == ',' || c == '<') { /* < */
+				// confirm my theory the GUS is *always* rendering the voice's position whether it's moving or not,
+				// by allowing the user to step the pointer
+				_cli();
+				ultrasnd_stop_voice(gus,select_voice);
+				ultrasnd_select_voice(gus,select_voice);
+				voice_current -= (c == '<' ? (512UL << 9UL) : (1UL << 9UL));
+				ultrasnd_select_write16(gus,0x0A,voice_current >> 16UL);
+				ultrasnd_select_write16(gus,0x0B,voice_current);
+				redraw = 1;
+				_sti();
+			}
 			else if (c == 0x4800) { //up
 				if (select_voice == 0) select_voice = gus->active_voices - 1;
 				else select_voice--;
