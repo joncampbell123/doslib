@@ -781,10 +781,38 @@ int main(int argc,char **argv) {
 			else if (mitem == &main_menu_file_load_wav) {
 				unsigned char FAR *buf;
 
+				buf = ultrasnd_dram_buffer_alloc(gus,32768);
+				if (buf == NULL) buf = ultrasnd_dram_buffer_alloc(gus,16384);
+				if (buf == NULL) buf = ultrasnd_dram_buffer_alloc(gus,8192);
+				if (buf == NULL) buf = ultrasnd_dram_buffer_alloc(gus,4096);
+				if (buf == NULL) buf = ultrasnd_dram_buffer_alloc(gus,2048);
+
 				redraw=1;
 				bkgndredraw=1;
 				close_wav();
-				if (prompt_wav(0) > 0 && open_wav() && wav_data_size > 0UL && (buf=ultrasnd_dram_buffer_alloc(gus,16384)) != NULL) {
+				if (prompt_wav(0) < 0) {
+				}
+				else if (!open_wav() || wav_data_size == 0UL) {
+					fflush(stdin);
+					vga_moveto(0,0);
+					vga_clear();
+					vga_write_sync();
+					vga_sync_bios_cursor();
+
+					printf("WAV rejected\n");
+					while (getch() != 13);
+				}
+				else if (buf == NULL) {
+					fflush(stdin);
+					vga_moveto(0,0);
+					vga_clear();
+					vga_write_sync();
+					vga_sync_bios_cursor();
+	
+					printf("Failed to alloc GUS DRAM buffer\n");
+					while (getch() != 13);
+				}
+				else {
 					unsigned long offset=0,end,o,rem;
 					struct vga_msg_box box;
 					int channel=-1,rd;
