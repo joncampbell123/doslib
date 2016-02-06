@@ -15,7 +15,7 @@
 
 #define mp3_data_size (16*1024)
 
-#define COMMON_ABOUT_HELP_STR	"WAV/MP3/AAC/OGG/MP4/MOV audio player v1.0 for DOS\n(C) 2008-2014 Jonathan Campbell ALL RIGHTS RESERVED\n" \
+#define COMMON_ABOUT_HELP_STR	"WAV/MP3/AAC/OGG/MP4/MOV audio player v1.1 for DOS\n(C) 2008-2016 Jonathan Campbell ALL RIGHTS RESERVED\n" \
 	"32-bit protected mode version\n" \
 	"\n" \
 	"Uses libmad MP3 decoder library (C) 2000-2004 Underbit Technologies, Inc.\n" \
