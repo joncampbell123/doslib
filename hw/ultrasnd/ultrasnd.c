@@ -866,7 +866,7 @@ unsigned char ultrasnd_read_voice_mode(struct ultrasnd_ctx *u,unsigned char voic
 
 void ultrasnd_set_voice_mode(struct ultrasnd_ctx *u,unsigned char voice,uint8_t mode) {
 	ultrasnd_select_voice(u,voice); mode &= ~3;
-	mode |= ultrasnd_select_read(u,0x00) & 3;
+	mode |= ultrasnd_select_read(u,0x80) & 3;
 
 	ultrasnd_select_voice(u,voice);
 	ultrasnd_select_write(u,0x00,mode);
