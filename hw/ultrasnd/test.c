@@ -89,6 +89,13 @@ static void draw_irq_indicator() {
 	for (i=0;i < 4;i++) wr[i+6] = (uint16_t)(i == IRQ_anim ? 'x' : '-') | 0x1E00;
 }
 
+static unsigned char gus_dma_tc_ignore = 0;
+
+static unsigned long gus_dma_tc = 0;
+static unsigned long gus_irq_voice = 0;
+static unsigned long gus_timer_ticks = 0;
+static unsigned char gus_timer_ctl = 0;
+
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
  * instability in the event the IRQ fires while, say, executing a routine
  * in the DOS kernel, you must compile this code with the -zu flag in
@@ -97,9 +104,41 @@ static void draw_irq_indicator() {
  * hang and/or crash. */
 static void (interrupt *old_irq)() = NULL;
 static void interrupt gus_irq() {
+	unsigned char irq_stat,c;
+
 	gus_irq_count++;
 	if (++IRQ_anim >= 4) IRQ_anim = 0;
 	draw_irq_indicator();
+
+	do {
+		irq_stat = inp(gus->port+6);
+
+		if ((irq_stat & 0x80) && (!gus_dma_tc_ignore)) { // bit 7
+			/* DMA TC. read and clear. */
+			c = ultrasnd_select_read(gus,0x41);
+			if (c & 0x40) {
+				gus->dma_tc_irq_happened = 1;
+				gus_dma_tc++;
+			}
+		}
+		else if (irq_stat & 0x60) { // bits 6-5
+			c = ultrasnd_select_read(gus,0x8F);
+			if ((c & 0xC0) != 0xC0) {
+				gus_irq_voice++;
+			}
+		}
+		else if (irq_stat & 0x0C) { // bit 3-4
+			if (gus_timer_ctl != 0) {
+				ultrasnd_select_write(gus,0x45,0x00);
+				ultrasnd_select_write(gus,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
+			}
+
+			gus_timer_ticks++;
+		}
+		else {
+			break;
+		}
+	} while (1);
 
 	if (old_irq_masked || old_irq == NULL || dont_chain_irq) {
 		/* ack the interrupt ourself, do not chain */
