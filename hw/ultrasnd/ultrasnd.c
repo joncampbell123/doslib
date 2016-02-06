@@ -1105,8 +1105,6 @@ int ultrasnd_send_dram_buffer(struct ultrasnd_ctx *u,uint32_t ofs,unsigned long 
 		_sti();
 
 		/* watch it run */
-		/* Note that DOSBox's emulation of a GUS does not indicate DMA TC, since we didn't ask for it, but the actual GF1 chipset
-		 * will return with bit 6 set whether we asked for TC IRQ or not. */
 		patience = 10000; /* 100ns * 10000 = 1 sec */
 		do {
 			if (u->irq1 >= 0 && (flags & ULTRASND_DMA_TC_IRQ) != 0 && !(flags & ULTRASND_VOICE_MODE_IRQ_BUT_DMA_WAIT)) {
