@@ -13,6 +13,6 @@ BEGIN
     DEFPUSHBUTTON   "OK",IDOK,254,6,50,14
     ICON            IDI_APPICON,IDC_STATIC,4,5,18,20
     LTEXT           "PLAYMP3 MP3/AAC/MP4/WAV/OGG/SPX player",IDC_STATIC,27,6,224,10
-    LTEXT           "(C) 2011-2012 Jonathan Campbell",IDC_STATIC,27,16,148,10
+    LTEXT           "(C) 2011-2016 Jonathan Campbell",IDC_STATIC,27,16,148,10
 END
 
