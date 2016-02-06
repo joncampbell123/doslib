@@ -27,6 +27,8 @@
 
 static struct ultrasnd_ctx*	gus = NULL;
 
+static char			temp_str[1024];
+
 static volatile unsigned char	IRQ_anim = 0;
 static volatile unsigned char	gus_irq_count = 0;
 
@@ -41,7 +43,12 @@ static const struct vga_menu_item menu_separator =
 static const struct vga_menu_item main_menu_file_quit =
 	{"Quit",		'q',	0,	0};
 
+static const struct vga_menu_item main_menu_file_load_wav =
+	{"Load WAV",		'l',	0,	0};
+
 static const struct vga_menu_item* main_menu_file[] = {
+	&main_menu_file_load_wav,
+	&menu_separator,
 	&main_menu_file_quit,
 	NULL
 };
@@ -54,10 +61,23 @@ static const struct vga_menu_item* main_menu_help[] = {
 	NULL
 };
 
+static const struct vga_menu_item main_menu_hardware_reset =
+	{"Reset",		'r',	0,	0};
+
+static const struct vga_menu_item main_menu_hardware_zero_gus_ram =
+	{"Zero GUS RAM",	'z',	0,	0};
+
+static const struct vga_menu_item* main_menu_hardware[] = {
+	&main_menu_hardware_reset,
+	&main_menu_hardware_zero_gus_ram,
+	NULL
+};
+
 static const struct vga_menu_bar_item main_menu_bar[] = {
 	/* name                 key     scan    x       w       id */
 	{" File ",		'F',	0x21,	0,	6,	&main_menu_file}, /* ALT-F */
-	{" Help ",		'H',	0x23,	6,	6,	&main_menu_help}, /* ALT-H */
+	{" Hardware ",          'a',    0x1E,   6,      10,     &main_menu_hardware}, /* ALT-A */
+	{" Help ",		'H',	0x23,	16,	6,	&main_menu_help}, /* ALT-H */
 	{NULL,			0,	0x00,	0,	0,	0}
 };
 
@@ -76,6 +96,8 @@ static void my_vga_menu_idle() {
 	ui_anim(0);
 }
 
+static char wav_file[256] = {0};
+
 static void draw_irq_indicator() {
 	VGA_ALPHA_PTR wr = vga_alpha_ram;
 	unsigned char i;
@@ -87,6 +109,244 @@ static void draw_irq_indicator() {
 	wr[4] = 0x1E00 | 'R';
 	wr[5] = 0x1E00 | 'Q';
 	for (i=0;i < 4;i++) wr[i+6] = (uint16_t)(i == IRQ_anim ? 'x' : '-') | 0x1E00;
+}
+
+int wav_fd = -1;
+unsigned int wav_bits = 0;
+unsigned int wav_channels = 0;
+unsigned long wav_sample_rate = 0;
+unsigned long wav_data_offset = 0;
+unsigned long wav_data_size = 0;
+
+void close_wav() {
+	if (wav_fd >= 0) {
+		close(wav_fd);
+		wav_fd = -1;
+	}
+}
+
+int open_wav() {
+	unsigned long len;
+	unsigned char tmp[128];
+
+	if (wav_fd >= 0)
+		return 1;
+	if (wav_file[0] == 0)
+		return 0;
+
+	wav_fd = open(wav_file,O_RDONLY | O_BINARY);
+	if (wav_fd < 0) return 0;
+
+	if (read(wav_fd,tmp,12) < 12) {
+		close_wav();
+		return 0;
+	}
+	if (memcmp(tmp,"RIFF",4) != 0 || memcmp(tmp+8,"WAVE",4) != 0) {
+		close_wav();
+		return 0;
+	}
+
+	/* next should be 'fmt ' */
+	if (read(wav_fd,tmp,8) < 8) {
+		close_wav();
+		return 0;
+	}
+	if (memcmp(tmp,"fmt ",4) != 0) {
+		close_wav();
+		return 0;
+	}
+	len = *((uint32_t*)(tmp+4));
+	if (len > 128UL || len < 16UL) {
+		close_wav();
+		return 0;
+	}
+	if (read(wav_fd,tmp,(int)len) < (int)len) {
+		close_wav();
+		return 0;
+	}
+	/*
+	 * WORD  wFormatTag;                        +0
+	 * WORD  nChannels;                         +2
+	 * DWORD nSamplesPerSec;                    +4
+	 * DWORD nAvgBytesPerSec;                   +8
+	 * WORD  nBlockAlign;                       +12
+	 * WORD  wBitsPerSample;                    +14
+	 *                                          =16
+	 */
+	if (*((uint16_t*)(tmp+0)) != 1/*WAVE_FORMAT_PCM*/) {
+		close_wav();
+		return 0;
+	}
+	wav_bits = *((uint16_t*)(tmp+14));
+	wav_channels = *((uint16_t*)(tmp+2));
+	wav_sample_rate = *((uint32_t*)(tmp+4));
+	if ((wav_bits != 8 && wav_bits != 16) || wav_channels < 1 || wav_channels > 2 || wav_sample_rate < 1000UL || wav_sample_rate > 192000UL) {
+		close_wav();
+		return 0;
+	}
+
+again:	if (read(wav_fd,tmp,8) < 8) {
+		close_wav();
+		return 0;
+	}
+	len = *((uint32_t*)(tmp+4));
+	if (memcmp(tmp,"data",4) != 0) {
+		lseek(wav_fd,len,SEEK_CUR);
+		goto again;
+	}
+	wav_data_offset = lseek(wav_fd,0,SEEK_CUR);
+	wav_data_size = len;
+	return 1;
+}
+
+int prompt_wav(unsigned char rec) {
+	int ok = 0;
+	unsigned char gredraw = 1;
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
+	struct find_t ft;
+#endif
+
+	{
+		const char *rp;
+		char temp[sizeof(wav_file)];
+		int cursor = strlen(wav_file),i,c,redraw=1;
+		memcpy(temp,wav_file,strlen(wav_file)+1);
+		while (!ok) {
+			if (gredraw) {
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
+				char *cwd;
+#endif
+
+				gredraw = 0;
+				vga_clear();
+				vga_moveto(0,4);
+				vga_write_color(0x07);
+				vga_write("Enter WAV file path:\n");
+				vga_write_sync();
+				draw_irq_indicator();
+				ui_anim(1);
+				redraw = 1;
+
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#else
+				cwd = getcwd(NULL,0);
+				if (cwd) {
+					vga_moveto(0,6);
+					vga_write_color(0x0B);
+					vga_write(cwd);
+					vga_write_sync();
+				}
+
+				if (_dos_findfirst("*.*",_A_NORMAL|_A_RDONLY,&ft) == 0) {
+					int x=0,y=7,cw = 14,i;
+					char *ex;
+
+					do {
+						ex = strrchr(ft.name,'.');
+						if (!ex) ex = "";
+
+						if (ft.attrib&_A_SUBDIR) {
+							vga_write_color(0x0F);
+						}
+						else if (!strcasecmp(ex,".wav")) {
+							vga_write_color(0x1E);
+						}
+						else {
+							vga_write_color(0x07);
+						}
+						vga_moveto(x,y);
+						for (i=0;i < 13 && ft.name[i] != 0;) vga_writec(ft.name[i++]);
+						for (;i < 14;i++) vga_writec(' ');
+
+						x += cw;
+						if ((x+cw) > vga_width) {
+							x = 0;
+							if (y >= vga_height) break;
+							y++;
+						}
+					} while (_dos_findnext(&ft) == 0);
+
+					_dos_findclose(&ft);
+				}
+#endif
+			}
+			if (redraw) {
+				rp = (const char*)temp;
+				vga_moveto(0,5);
+				vga_write_color(0x0E);
+				for (i=0;i < 80;i++) {
+					if (*rp != 0)	vga_writec(*rp++);
+					else		vga_writec(' ');	
+				}
+				vga_moveto(cursor,5);
+				vga_write_sync();
+				redraw=0;
+			}
+
+			if (kbhit()) {
+				c = getch();
+				if (c == 0) c = getch() << 8;
+
+				if (c == 27) {
+					ok = -1;
+				}
+				else if (c == 13) {
+#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+					ok = 1;
+#else
+					struct stat st;
+
+					if (isalpha(temp[0]) && temp[1] == ':' && temp[2] == 0) {
+						unsigned int total;
+
+						_dos_setdrive(tolower(temp[0])+1-'a',&total);
+						temp[0] = 0;
+						gredraw = 1;
+						cursor = 0;
+					}
+					else if (stat(temp,&st) == 0) {
+						if (S_ISDIR(st.st_mode)) {
+							chdir(temp);
+							temp[0] = 0;
+							gredraw = 1;
+							cursor = 0;
+						}
+						else {
+							ok = 1;
+						}
+					}
+					else {
+						ok = 1;
+					}
+#endif
+				}
+				else if (c == 8) {
+					if (cursor != 0) {
+						temp[--cursor] = 0;
+						redraw = 1;
+					}
+				}
+				else if (c >= 32 && c < 256) {
+					if (cursor < 79) {
+						temp[cursor++] = (char)c;
+						temp[cursor  ] = (char)0;
+						redraw = 1;
+					}
+				}
+			}
+			else {
+				ui_anim(0);
+			}
+		}
+
+		if (ok == 1) {
+			memcpy(wav_file,temp,strlen(temp)+1);
+		}
+	}
+
+	return ok;
 }
 
 static unsigned char gus_dma_tc_ignore = 0;
@@ -278,7 +538,9 @@ int main(int argc,char **argv) {
 	vga_menu_bar.sel = -1;
 	vga_menu_bar.row = 1;
 	vga_menu_idle = my_vga_menu_idle;
-	
+
+	ultrasnd_set_active_voices(gus,14);
+
 	while (loop) {
 		if ((mitem = vga_menu_bar_keymon()) != NULL) {
 			/* act on it */
@@ -311,6 +573,173 @@ int main(int argc,char **argv) {
 						if (i == 13 || i == 27) break;
 					}
 				}
+				vga_msg_box_destroy(&box);
+			}
+			else if (mitem == &main_menu_hardware_zero_gus_ram) {
+				uint32_t o;
+				unsigned int count;
+				struct vga_msg_box box;
+				vga_msg_box_create(&box,"Clearing DRAM...     \n",0,0);
+
+				_cli();
+				ultrasnd_abort_dma_transfer(gus);
+				_sti();
+
+				for (o=0;o < gus->total_ram;o += 0x400UL/*1KB*/) {
+					vga_moveto(box.x+2,box.y+2);
+					vga_write_color(0x1F);
+					sprintf(temp_str,"%%%02u %uKB/%uKB",
+					(unsigned int)((o * 100UL) / gus->total_ram),
+						(unsigned int)(o >> 10UL),
+						(unsigned int)(gus->total_ram >> 10UL));
+					vga_write(temp_str);
+
+					if (kbhit()) {
+						if (getch() == 27)
+							break;
+					}
+
+					for (count=0;count < 0x400/*1KB*/;count++)
+						ultrasnd_poke(gus,o+(uint32_t)count,0x00);
+				}
+
+				vga_msg_box_destroy(&box);
+			}
+			else if (mitem == &main_menu_file_load_wav) {
+				unsigned char FAR *buf;
+
+				redraw=1;
+				bkgndredraw=1;
+				close_wav();
+				if (prompt_wav(0) > 0 && open_wav() && wav_data_size > 0UL && (buf=ultrasnd_dram_buffer_alloc(gus,16384)) != NULL) {
+					unsigned long offset=0,end,o,rem;
+					struct vga_msg_box box;
+					int channel=-1,rd;
+
+					fflush(stdin);
+					vga_moveto(0,0);
+					vga_clear();
+					vga_write_sync();
+					vga_sync_bios_cursor();
+
+					printf("%u-bits/sample %u-channel %luHz %lu bytes long\n",
+						wav_bits,
+						wav_channels,
+						wav_sample_rate,
+						wav_data_size);
+
+					printf("Assign to GUS channel (1-32)? "); fflush(stdout);
+					fgets(temp_str,sizeof(temp_str)-1,stdin);
+					channel = isdigit(temp_str[0]) ? atoi(temp_str) : -1;
+
+					if (channel >= 1 && channel <= 32) {
+						channel--;
+
+						printf("GUS RAM offset? "); fflush(stdout);
+						fgets(temp_str,sizeof(temp_str)-1,stdin);
+						offset = isdigit(temp_str[0]) ? strtoul(temp_str,NULL,0) : (~0UL);
+
+						if (offset < (unsigned long)gus->total_ram) {
+							end = offset + wav_data_size;
+							if (end > gus->total_ram) end = gus->total_ram;
+
+							printf("Stop at address (0x%lx)? ",(unsigned long)end);
+							fgets(temp_str,sizeof(temp_str)-1,stdin);
+							o = isdigit(temp_str[0]) ? strtoul(temp_str,NULL,0) : (~0UL);
+							if (o > offset && o != (~0UL) && o <= gus->total_ram) end = o;
+
+							printf("Will load into GUS RAM 0x%lx-0x%lx.\n",
+								(unsigned long)offset,(unsigned long)end-1UL);
+							if (gus->boundary256k && (offset & 0xFFFC0000UL) != ((end-1UL)&0xFFFC0000UL))
+								printf("WARNING: Which also crosses a 256KKB boundary!\n");
+
+							printf("Continue (y/n)? "); fflush(stdout);
+							fgets(temp_str,sizeof(temp_str)-1,stdin);
+							if (tolower(temp_str[0]) == 'y') {
+								vga_msg_box_create(&box,"Uploading.......\n",0,0);
+
+								ultrasnd_stop_voice(gus,channel);
+
+								o = offset;
+								rem = end - offset;
+								lseek(wav_fd,wav_data_offset,SEEK_SET);
+								while (rem > 0UL) {
+									vga_moveto(box.x+2,box.y+2);
+									vga_write_color(0x1F);
+									sprintf(temp_str,"%%%02u %uKB/%uKB",
+										(unsigned int)(((o-offset) * 100UL) / wav_data_size),
+										(unsigned int)((o-offset) >> 10UL),
+										(unsigned int)(((end-offset)+0x3FFUL) >> 10UL));
+									vga_write(temp_str);
+
+									if (kbhit()) {
+										if (getch() == 27)
+											break;
+									}
+
+									if (rem > (unsigned long)gus->dram_xfer_a->length)
+										rd = gus->dram_xfer_a->length;
+									else
+										rd = (int)rem;
+
+									_dos_xread(wav_fd,buf,rd);
+									ultrasnd_send_dram_buffer(gus,o,rd,
+										(wav_bits == 16 ? ULTRASND_DMA_DATA_SIZE_16BIT : ULTRASND_DMA_FLIP_MSB) |
+										(gus->irq1 >= 0 ? ULTRASND_DMA_TC_IRQ : 0));
+									rem -= (unsigned long)rd;
+									o += (unsigned long)rd;
+								}
+
+								vga_msg_box_destroy(&box);
+
+								ultrasnd_set_voice_mode(gus,channel,
+									(wav_bits == 16 ? ULTRASND_VOICE_MODE_16BIT : 0) |
+									ULTRASND_VOICE_MODE_STOP | ULTRASND_VOICE_MODE_IS_STOPPED);
+								ultrasnd_set_voice_fc(gus,channel,
+									ultrasnd_sample_rate_to_fc(gus,(unsigned long)wav_sample_rate * (unsigned long)wav_channels));
+								ultrasnd_set_voice_ramp_rate(gus,channel,0,0);
+								ultrasnd_set_voice_ramp_start(gus,channel,0xF0); /* NTS: You have to set the ramp start/end because it will override your current volume */
+								ultrasnd_set_voice_ramp_end(gus,channel,0xF0);
+								ultrasnd_set_voice_volume(gus,channel,0xFFF0); /* full vol */
+								ultrasnd_set_voice_pan(gus,channel,7);
+								ultrasnd_set_voice_ramp_control(gus,channel,0);
+								ultrasnd_set_voice_start(gus,channel,offset);
+								ultrasnd_set_voice_end(gus,channel,end-(wav_bits == 16 ? 2 : 1));
+								ultrasnd_set_voice_current(gus,channel,offset);
+								ultrasnd_set_voice_mode(gus,channel,
+									(wav_bits == 16 ? ULTRASND_VOICE_MODE_16BIT : 0) |
+									(gus->irq1 >= 0 ? ULTRASND_VOICE_MODE_IRQ : 0) |
+									ULTRASND_VOICE_MODE_STOP | ULTRASND_VOICE_MODE_IS_STOPPED);
+							}
+						}
+					}
+				}
+				close_wav();
+			}
+			else if (mitem == &main_menu_hardware_reset) {
+				struct vga_msg_box box;
+				vga_msg_box_create(&box,"Resetting...",0,0);
+
+				_cli();
+				ultrasnd_abort_dma_transfer(gus);
+				ultrasnd_stop_all_voices(gus);
+				ultrasnd_stop_timers(gus);
+				ultrasnd_drain_irq_events(gus);
+
+				ultrasnd_select_write(gus,0x4C,0x00); /* 0x4C: reset register -> master reset (bit 0=0) disable DAC (bit 1=0) master IRQ disable (bit 2=0) */
+				t8254_wait(t8254_us2ticks(20000)); /* wait 20ms for good measure, most docs imply 14 CPU cycles via IN statements but I don't think that's enough */
+				ultrasnd_select_write(gus,0x4C,0x01);
+				ultrasnd_select_write(gus,0x4C,0x03);
+				if (gus->irq1 >= 0) ultrasnd_select_write(gus,0x4C,0x07);
+
+				ultrasnd_abort_dma_transfer(gus);
+				ultrasnd_stop_all_voices(gus);
+				ultrasnd_stop_timers(gus);
+				ultrasnd_drain_irq_events(gus);
+
+				t8254_wait(t8254_us2ticks(500000));
+				_sti();
+
 				vga_msg_box_destroy(&box);
 			}
 		}
