@@ -489,14 +489,15 @@ static void do_play_voice() {
 			}
 			vga_moveto(box.x+2+17,box.y+1);
 			vga_write_color(0x1F);
-			sprintf(temp_str,"STOP=%u:%u %2u-bit LOOP=%u BIDIR=%u IRQ=%u BACK=%u",
+			sprintf(temp_str,"STOP=%u:%u %2u-bit LOOP=%u BIDIR=%u IRQ=%u BACK=%u PEND=%u",
 				(voice_mode&ULTRASND_VOICE_MODE_IS_STOPPED)		?  1 : 0,
 				(voice_mode&ULTRASND_VOICE_MODE_STOP)			?  1 : 0,
 				(voice_mode&ULTRASND_VOICE_MODE_16BIT)			? 16 : 8,
 				(voice_mode&ULTRASND_VOICE_MODE_LOOP)			?  1 : 0,
 				(voice_mode&ULTRASND_VOICE_MODE_BIDIR)			?  1 : 0,
 				(voice_mode&ULTRASND_VOICE_MODE_IRQ)			?  1 : 0,
-				(voice_mode&ULTRASND_VOICE_MODE_BACKWARDS)		?  1 : 0);
+				(voice_mode&ULTRASND_VOICE_MODE_BACKWARDS)		?  1 : 0,
+				(voice_mode&ULTRASND_VOICE_MODE_IRQ_PENDING)		?  1 : 0);
 			vga_write(temp_str);
 
 			if (fredraw) {
@@ -547,10 +548,22 @@ static void do_play_voice() {
 				ultrasnd_set_voice_mode(gus,select_voice,voice_mode ^ ULTRASND_VOICE_MODE_LOOP);
 				_sti();
 			}
+			else if (c == 'p') {
+				_cli();
+				voice_mode = ultrasnd_read_voice_mode(gus,select_voice);
+				ultrasnd_set_voice_mode(gus,select_voice,voice_mode ^ ULTRASND_VOICE_MODE_IRQ_PENDING);
+				_sti();
+			}
 			else if (c == 'i') {
 				_cli();
 				voice_mode = ultrasnd_read_voice_mode(gus,select_voice);
 				ultrasnd_set_voice_mode(gus,select_voice,voice_mode ^ ULTRASND_VOICE_MODE_IRQ);
+				_sti();
+			}
+			else if (c == 'F') {
+				_cli();
+				ultrasnd_select_voice(gus,select_voice);
+				ultrasnd_select_write(gus,0x00,0xFF);
 				_sti();
 			}
 			else if (c == ' ') {
