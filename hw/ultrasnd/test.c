@@ -519,6 +519,9 @@ static void do_play_voice() {
 				(unsigned int) ((voice_end >> 5UL) & 0xFUL));
 			vga_write(temp_str);
 
+			vga_moveto(box.x+2,box.y+6);
+			vga_write("b=bidir r=reverse l=loop p=pending i=irq F=FF s>start e>end <>step SPC=play");
+
 			fredraw = 0;
 			redraw = 0;
 		}
@@ -529,6 +532,12 @@ static void do_play_voice() {
 
 			if (c == 27) {
 				break;
+			}
+			else if (c == '6') {
+				_cli();
+				voice_mode = ultrasnd_read_voice_mode(gus,select_voice);
+				ultrasnd_set_voice_mode(gus,select_voice,voice_mode ^ ULTRASND_VOICE_MODE_16BIT);
+				_sti();
 			}
 			else if (c == 'b') {
 				_cli();
