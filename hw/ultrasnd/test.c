@@ -535,7 +535,7 @@ static void do_play_voice() {
 			vga_write_color((gus_ignore_irq & 0x60) ? 0x1E : 0x1F);
 			vga_write("I=ignorevoiceIRQ ");
 			vga_write_color(0x1F);
-			vga_write("S=read2X6 V=clearvoiceIRQ D=clearDMAIRQ");
+			vga_write("S=read2X6 V=clearVoiceIRQ D=clrDMAIRQ c/C=FCadj");
 
 			vga_moveto(box.x+2,box.y+6);
 			vga_write_color(0x1F);
@@ -618,6 +618,22 @@ static void do_play_voice() {
 				ultrasnd_select_write16(gus,0x0B,voice_end);
 				if ((voice_mode & (ULTRASND_VOICE_MODE_STOP|ULTRASND_VOICE_MODE_IS_STOPPED)) == 0)
 					ultrasnd_start_voice(gus,select_voice);
+				_sti();
+			}
+			else if (c == 'c') {
+				_cli();
+				ultrasnd_select_voice(gus,select_voice);
+				voice_freq -= (1 << 1);
+				ultrasnd_select_write16(gus,0x01,voice_freq);
+				redraw = 1;
+				_sti();
+			}
+			else if (c == 'C') {
+				_cli();
+				ultrasnd_select_voice(gus,select_voice);
+				voice_freq += (1 << 1);
+				ultrasnd_select_write16(gus,0x01,voice_freq);
+				redraw = 1;
 				_sti();
 			}
 			else if (c == '[') { /* [ */
