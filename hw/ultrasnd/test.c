@@ -515,12 +515,12 @@ static void do_play_voice() {
 			}
 			vga_moveto(box.x+2+17,box.y+2);
 			vga_write_color(0x1F);
-			sprintf(temp_str,"Start %05lx.%x  Current %05lx.%x  End %05lx.%x  FC %02lx.%03x",
+			sprintf(temp_str,"Start %05lx.%x  Current %05lx.%03x  End %05lx.%x  FC %02lx.%03x",
 				(unsigned long)((voice_start >> 9UL) & 0xFFFFFUL),
 				(unsigned int) ((voice_start >> 5UL) & 0xFUL),
 
 				(unsigned long)((voice_current >> 9UL) & 0xFFFFFUL),
-				(unsigned int) ((voice_current >> 5UL) & 0xFUL),
+				(unsigned int)(( voice_current         & 0x1FFUL) << 3UL),
 
 				(unsigned long)((voice_end >> 9UL) & 0xFFFFFUL),
 				(unsigned int) ((voice_end >> 5UL) & 0xFUL),
@@ -618,6 +618,30 @@ static void do_play_voice() {
 				ultrasnd_select_write16(gus,0x0B,voice_end);
 				if ((voice_mode & (ULTRASND_VOICE_MODE_STOP|ULTRASND_VOICE_MODE_IS_STOPPED)) == 0)
 					ultrasnd_start_voice(gus,select_voice);
+				_sti();
+			}
+			else if (c == '[') { /* [ */
+				// confirm my theory the GUS is *always* rendering the voice's position whether it's moving or not,
+				// by allowing the user to step the pointer
+				_cli();
+				if ((voice_mode&3) == 0) ultrasnd_stop_voice(gus,select_voice);
+				ultrasnd_select_voice(gus,select_voice);
+				voice_current--;
+				ultrasnd_select_write16(gus,0x0A,voice_current >> 16UL);
+				ultrasnd_select_write16(gus,0x0B,voice_current);
+				redraw = 1;
+				_sti();
+			}
+			else if (c == ']') { /* ] */
+				// confirm my theory the GUS is *always* rendering the voice's position whether it's moving or not,
+				// by allowing the user to step the pointer
+				_cli();
+				if ((voice_mode&3) == 0) ultrasnd_stop_voice(gus,select_voice);
+				ultrasnd_select_voice(gus,select_voice);
+				voice_current++;
+				ultrasnd_select_write16(gus,0x0A,voice_current >> 16UL);
+				ultrasnd_select_write16(gus,0x0B,voice_current);
+				redraw = 1;
 				_sti();
 			}
 			else if (c == '.' || c == '>') { /* > */
