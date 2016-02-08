@@ -602,7 +602,7 @@ static void do_play_voice() {
 			}
 			else if (c == 's') {
 				_cli();
-				ultrasnd_stop_voice(gus,select_voice);
+				if ((voice_mode&3) == 0) ultrasnd_stop_voice(gus,select_voice);
 				ultrasnd_select_voice(gus,select_voice);
 				ultrasnd_select_write16(gus,0x0A,voice_start >> 16UL);
 				ultrasnd_select_write16(gus,0x0B,voice_start);
@@ -612,7 +612,7 @@ static void do_play_voice() {
 			}
 			else if (c == 'e') {
 				_cli();
-				ultrasnd_stop_voice(gus,select_voice);
+				if ((voice_mode&3) == 0) ultrasnd_stop_voice(gus,select_voice);
 				ultrasnd_select_voice(gus,select_voice);
 				ultrasnd_select_write16(gus,0x0A,voice_end >> 16UL);
 				ultrasnd_select_write16(gus,0x0B,voice_end);
@@ -624,7 +624,7 @@ static void do_play_voice() {
 				// confirm my theory the GUS is *always* rendering the voice's position whether it's moving or not,
 				// by allowing the user to step the pointer
 				_cli();
-				ultrasnd_stop_voice(gus,select_voice);
+				if ((voice_mode&3) == 0) ultrasnd_stop_voice(gus,select_voice);
 				ultrasnd_select_voice(gus,select_voice);
 				voice_current += (c == '>' ? (512UL << 9UL) : (1UL << 9UL));
 				ultrasnd_select_write16(gus,0x0A,voice_current >> 16UL);
@@ -636,7 +636,7 @@ static void do_play_voice() {
 				// confirm my theory the GUS is *always* rendering the voice's position whether it's moving or not,
 				// by allowing the user to step the pointer
 				_cli();
-				ultrasnd_stop_voice(gus,select_voice);
+				if ((voice_mode&3) == 0) ultrasnd_stop_voice(gus,select_voice);
 				ultrasnd_select_voice(gus,select_voice);
 				voice_current -= (c == '<' ? (512UL << 9UL) : (1UL << 9UL));
 				ultrasnd_select_write16(gus,0x0A,voice_current >> 16UL);
