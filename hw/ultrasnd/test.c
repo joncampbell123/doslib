@@ -642,6 +642,21 @@ static void do_play_voice() {
 				else
 					gus_ignore_irq = 0;
 			}
+			else if (c == 'S') {
+				_cli();
+				inp(gus->port+6); // probably won't do anything, just checking
+				_sti();
+			}
+			else if (c == 'V') {
+				_cli();
+				ultrasnd_select_read(gus,0x8F); // to clear stuck voice IRQs
+				_sti();
+			}
+			else if (c == 'D') {
+				_cli();
+				ultrasnd_select_read(gus,0x41); // to clear stuck DMA IRQs
+				_sti();
+			}
 		}
 	}
 
