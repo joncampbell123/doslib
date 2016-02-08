@@ -437,6 +437,7 @@ unsigned char select_voice = 0;
 static void do_play_voice() {
 	uint16_t a,b;
 	int c,rows=3+3,cols=78;
+	uint16_t voice_freq=0;
 	uint32_t voice_current=0,voice_start=0,voice_end=0,cc32;
 	unsigned char voice_mode = 0,cc;
 	unsigned char fredraw = 1;
@@ -449,6 +450,11 @@ static void do_play_voice() {
 		ui_anim(0);
 
 		_cli();
+
+		ultrasnd_select_voice(gus,select_voice);
+		a = ultrasnd_select_read16(gus,0x81);
+		if (voice_freq != a) redraw = 1;
+		voice_freq = a;
 
 		ultrasnd_select_voice(gus,select_voice);
 		cc32  = (uint32_t)ultrasnd_select_read16(gus,0x82) << (uint32_t)16UL;
@@ -509,7 +515,7 @@ static void do_play_voice() {
 			}
 			vga_moveto(box.x+2+17,box.y+2);
 			vga_write_color(0x1F);
-			sprintf(temp_str,"Start %05lx.%x   Current %05lx.%x   End %05lx.%x",
+			sprintf(temp_str,"Start %05lx.%x  Current %05lx.%x  End %05lx.%x  FC %02lx.%03x",
 				(unsigned long)((voice_start >> 9UL) & 0xFFFFFUL),
 				(unsigned int) ((voice_start >> 5UL) & 0xFUL),
 
@@ -517,10 +523,22 @@ static void do_play_voice() {
 				(unsigned int) ((voice_current >> 5UL) & 0xFUL),
 
 				(unsigned long)((voice_end >> 9UL) & 0xFFFFFUL),
-				(unsigned int) ((voice_end >> 5UL) & 0xFUL));
+				(unsigned int) ((voice_end >> 5UL) & 0xFUL),
+				
+				(unsigned long)((voice_freq >> 10UL) & 0xFFUL),
+				(unsigned int)(((voice_freq >>  1UL) & 0x1FFUL) << 3UL));
 			vga_write(temp_str);
 
+			vga_moveto(box.x+2,box.y+5);
+			vga_write_color(0x1F);
+			vga_write("6=8/16-bit ");
+			vga_write_color((gus_ignore_irq & 0x60) ? 0x1E : 0x1F);
+			vga_write("I=ignorevoiceIRQ ");
+			vga_write_color(0x1F);
+			vga_write("S=read2X6 V=clearvoiceIRQ D=clearDMAIRQ");
+
 			vga_moveto(box.x+2,box.y+6);
+			vga_write_color(0x1F);
 			vga_write("b=bidir r=reverse l=loop p=pending i=irq F=FF s>start e>end <>step SPC=play");
 
 			fredraw = 0;
@@ -641,6 +659,8 @@ static void do_play_voice() {
 					gus_ignore_irq = 0x60; /* ignore voice/ramp */
 				else
 					gus_ignore_irq = 0;
+
+				redraw = 1;
 			}
 			else if (c == 'S') {
 				_cli();
