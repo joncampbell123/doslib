@@ -70,11 +70,15 @@ static const struct vga_menu_item main_menu_hardware_zero_gus_ram =
 static const struct vga_menu_item main_menu_hardware_play_voice =
 	{"Play voice",		'p',	0,	0};
 
+static const struct vga_menu_item main_menu_device_gus_timer_test =
+	{"GUS timer test",	't',	0,	0};
+
 static const struct vga_menu_item* main_menu_hardware[] = {
 	&main_menu_hardware_reset,
 	&main_menu_hardware_zero_gus_ram,
 	&menu_separator,
 	&main_menu_hardware_play_voice,
+	&main_menu_device_gus_timer_test,
 	NULL
 };
 
@@ -433,6 +437,30 @@ int confirm_quit() {
 }
 
 unsigned char select_voice = 0;
+
+static void do_gus_timer_test() {
+	_cli();
+	if (gus_timer_ctl == 0) {
+		// start
+		gus_timer_ctl = 0x04;
+
+		ultrasnd_stop_timers(gus);
+		outp(gus->port+0x008,0x04); /* select "timer stuff" */
+		outp(gus->port+0x009,0xE0);
+		outp(gus->port+0x009,0x80);
+		outp(gus->port+0x009,0x60);
+		outp(gus->port+0x009,0x20/*mask timer 2 */ | 0x01/*enable timer 1*/);
+		ultrasnd_select_write(gus,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
+		ultrasnd_select_write(gus,0x46,0x00); /* load timer 1 (0xFF * 80us = 20ms) */
+		ultrasnd_select_write(gus,0x47,0x00); /* load timer 2 (0xFF * 320us = 80ms) */
+	}
+	else {
+		// stop
+		gus_timer_ctl = 0;
+		ultrasnd_stop_timers(gus);
+	}
+	_sti();
+}
 
 static void do_play_voice() {
 	uint16_t a,b;
@@ -875,6 +903,9 @@ int main(int argc,char **argv) {
 			}
 			else if (mitem == &main_menu_hardware_play_voice) {
 				do_play_voice();
+			}
+			else if (mitem == &main_menu_device_gus_timer_test) {
+				do_gus_timer_test();
 			}
 			else if (mitem == &main_menu_hardware_zero_gus_ram) {
 				uint32_t o;
