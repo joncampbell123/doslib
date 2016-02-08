@@ -559,11 +559,11 @@ static void do_play_voice() {
 
 			vga_moveto(box.x+2,box.y+5);
 			vga_write_color(0x1F);
-			vga_write("6=8/16-bit ");
+			vga_write("6=8/16 ");
 			vga_write_color((gus_ignore_irq & 0x60) ? 0x1E : 0x1F);
-			vga_write("I=ignorevoiceIRQ ");
+			vga_write("I=ignVocIRQ ");
 			vga_write_color(0x1F);
-			vga_write("S=read2X6 V=clearVoiceIRQ D=clrDMAIRQ c/C=FCadj");
+			vga_write("S=read2X6 V=clrVocIRQ D=clrDMAIRQ T=clrTimerIRQ c/C=FCadj");
 
 			vga_moveto(box.x+2,box.y+6);
 			vga_write_color(0x1F);
@@ -743,6 +743,12 @@ static void do_play_voice() {
 			else if (c == 'D') {
 				_cli();
 				ultrasnd_select_read(gus,0x41); // to clear stuck DMA IRQs
+				_sti();
+			}
+			else if (c == 'T') {
+				_cli();
+				ultrasnd_select_write(gus,0x45,0x00);
+				ultrasnd_select_write(gus,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
 				_sti();
 			}
 		}
