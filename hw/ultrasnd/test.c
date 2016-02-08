@@ -360,6 +360,7 @@ static unsigned long gus_dma_tc = 0;
 static unsigned long gus_irq_voice = 0;
 static unsigned long gus_timer_ticks = 0;
 static unsigned char gus_timer_ctl = 0;
+static unsigned char gus_ignore_irq = 0;
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
  * instability in the event the IRQ fires while, say, executing a routine
@@ -375,6 +376,7 @@ static void interrupt gus_irq() {
 	if (++IRQ_anim >= 4) IRQ_anim = 0;
 	draw_irq_indicator();
 
+	if (!gus_ignore_irq) {
 	do {
 		irq_stat = inp(gus->port+6);
 
@@ -404,6 +406,7 @@ static void interrupt gus_irq() {
 			break;
 		}
 	} while (1);
+	}
 
 	if (old_irq_masked || old_irq == NULL || dont_chain_irq) {
 		/* ack the interrupt ourself, do not chain */
@@ -635,11 +638,14 @@ static void do_play_voice() {
 				else select_voice++;
 				redraw = fredraw = 1;
 			}
+			else if (c == 'I') {
+				gus_ignore_irq ^= 1;
+			}
 		}
 	}
 
 	vga_msg_box_destroy(&box);
-
+	gus_ignore_irq = 0;
 }
 
 int main(int argc,char **argv) {
