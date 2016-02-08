@@ -477,7 +477,7 @@ static void do_play_voice() {
 			b = ultrasnd_select_read16(gus,0x8A);
 		} while (a != b);
 		cc32 |= (uint32_t)a << (uint32_t)16;
-		cc32 &= (uint32_t)0x1FFFFFE0UL; /* bits 15-13 not used. bits 4-0 not used */
+		cc32 &= (uint32_t)0x1FFFFFFFUL; /* bits 15-13 not used */
 		if (voice_current != cc32) redraw = 1;
 		voice_current = cc32;
 
