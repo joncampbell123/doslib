@@ -376,9 +376,8 @@ static void interrupt gus_irq() {
 	if (++IRQ_anim >= 4) IRQ_anim = 0;
 	draw_irq_indicator();
 
-	if (!gus_ignore_irq) {
 	do {
-		irq_stat = inp(gus->port+6);
+		irq_stat = inp(gus->port+6) & (~gus_ignore_irq);
 
 		if ((irq_stat & 0x80) && (!gus_dma_tc_ignore)) { // bit 7
 			/* DMA TC. read and clear. */
@@ -406,7 +405,6 @@ static void interrupt gus_irq() {
 			break;
 		}
 	} while (1);
-	}
 
 	if (old_irq_masked || old_irq == NULL || dont_chain_irq) {
 		/* ack the interrupt ourself, do not chain */
@@ -639,7 +637,10 @@ static void do_play_voice() {
 				redraw = fredraw = 1;
 			}
 			else if (c == 'I') {
-				gus_ignore_irq ^= 1;
+				if (gus_ignore_irq == 0)
+					gus_ignore_irq = 0x60; /* ignore voice/ramp */
+				else
+					gus_ignore_irq = 0;
 			}
 		}
 	}
