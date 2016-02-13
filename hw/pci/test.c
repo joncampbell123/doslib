@@ -116,6 +116,8 @@ int main(int argc,char **argv) {
 					subvendor_id = pci_read_cfgw(bus,dev,func,0x2C);
 					subsystem = pci_read_cfgw(bus,dev,func,0x2E);
 
+					// NTS: issue a word-size read from 0x0E to avoid some buggy 1999-ish Dell PCI motherboards
+					// that return the wrong byte when asked to read a configuration space byte.
 					header_type = (uint8_t)pci_read_cfgw(bus,dev,func,0x0E);
 
 					class_code = pci_read_cfgl(bus,dev,func,0x08);
@@ -133,7 +135,12 @@ int main(int argc,char **argv) {
 						uint8_t l,p;
 						uint16_t t;
 
-						// read the two in one cycle
+						// read the two in one cycle.
+						// believe it or not, there exist some Pentium based systems made between 1997 and 2000
+						// that have some bug in their PCI controller that causes read problems with byte-wide
+						// configuration access (Dell Optiplex system with Pentium III Celeron). The wrong byte
+						// is returned. It's not a BIOS bug because it happens through ports 0xCF8-0xCFF too.
+						// we avoid that by reading the two registers at once as a word.
 						t = pci_read_cfgw(bus,dev,func,0x3C);
 						l = (uint8_t)(t&0xFF); // 0x3C interrupt line
 						p = (uint8_t)(t>>8); // 0x3D interrupt pin
