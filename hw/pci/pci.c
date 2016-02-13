@@ -17,6 +17,13 @@
  * to fiddle with the PCI bus and program registers while maintaining downlevel
  * compatability with older hardware, perhaps all the way down to the 8086. */
 
+/* A word of caution: There do exist late 1990's motherboard chipsets with bugs
+ * in the PCI controller regarding byte-size access. On a Pentium III Celeron Dell
+ * Dimension, both the BIOS and PCI controller (port 0xCF8-0xCFF) read/write the
+ * wrong byte in configuration space when accessing bytewise. If your code must
+ * work on such systems, try to use word/dword configuration space access where
+ * possible. */
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
