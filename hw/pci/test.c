@@ -128,6 +128,7 @@ int main(int argc,char **argv) {
 				for (func=0;func < functions;func++) {
 					/* make sure something is there before announcing it */
 					uint16_t vendor,device,subsystem,subvendor_id;
+					uint8_t header_type;
 					uint32_t class_code;
 					uint8_t revision_id;
 					vendor = pci_read_cfgw(bus,dev,func,0x00); if (vendor == 0xFFFF) continue;
@@ -135,18 +136,19 @@ int main(int argc,char **argv) {
 					subvendor_id = pci_read_cfgw(bus,dev,func,0x2C);
 					subsystem = pci_read_cfgw(bus,dev,func,0x2E);
 
+					header_type = pci_read_cfgb(bus,dev,func,0x0D);
 					class_code = pci_read_cfgl(bus,dev,func,0x08);
 					revision_id = class_code & 0xFF;
 					class_code >>= 8UL;
 
 					/* show it Linux sysfs style */
-					printf(" %04x:%02x:%02x.%x: Vendor %04x Device %04x Sub %04x Vnd %04x Class %06lx rev %02x\n",
-						0,bus,dev,func,
+					printf(" %02x:%02x.%x: Vendor %04x Device %04x Sub %04x Vnd %04x Class %06lx rev %02x htyp %02x\n",
+						bus,dev,func,
 						vendor,device,subsystem,subvendor_id,
-						class_code,revision_id);
+						class_code,revision_id,header_type);
 
 					/* any interrupt? */
-					{
+					if ((header_type&0x7F) == 0 || (header_type&0x7F) == 1) {
 						uint8_t l = pci_read_cfgb(bus,dev,func,0x3C);
 						uint8_t p = pci_read_cfgb(bus,dev,func,0x3D);
 						if (p != 0)
@@ -158,7 +160,14 @@ int main(int argc,char **argv) {
 					 * affects any resources that TSRs or other functions might be trying to use at
 					 * the same time, so we must disable interrupts while doing this */
 					{
-						uint8_t bar;
+						uint8_t bar,bmax;
+
+						if ((header_type&0x7F) == 0)
+							bmax = 6;
+						else if ((header_type&0x7F) == 1)
+							bmax = 2;
+						else
+							bmax = 0;
 
 						for (bar=0;bar < 6;bar++) {
 							uint8_t io=0;
@@ -242,6 +251,10 @@ int main(int argc,char **argv) {
 						while (getch() != 13);
 						line -= 16;
 					}
+
+					/* single function device? stop scanning. */
+					if (func == 0 && !(header_type & 0x80))
+						break;
 				}
 			}
 		}
