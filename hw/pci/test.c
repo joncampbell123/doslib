@@ -136,7 +136,7 @@ int main(int argc,char **argv) {
 					subvendor_id = pci_read_cfgw(bus,dev,func,0x2C);
 					subsystem = pci_read_cfgw(bus,dev,func,0x2E);
 
-					header_type = pci_read_cfgb(bus,dev,func,0x0D);
+					header_type = pci_read_cfgb(bus,dev,func,0x0E);
 					class_code = pci_read_cfgl(bus,dev,func,0x08);
 					revision_id = class_code & 0xFF;
 					class_code >>= 8UL;
@@ -174,6 +174,7 @@ int main(int argc,char **argv) {
 							uint32_t lower=0,higher=0;
 							uint8_t reg = 0x10+(bar*4);
 							uint32_t sigbits,addrbits;
+							uint16_t command;
 
 							_cli();
 							t32a = pci_read_cfgl(bus,dev,func,reg);
@@ -190,11 +191,16 @@ int main(int argc,char **argv) {
 							}
 							lower = t32a & sigbits;
 
+							command = pci_read_cfgw(bus,dev,func,0x04);
+							pci_write_cfgw(bus,dev,func,0x04,0);//disconnect
+
 							pci_write_cfgl(bus,dev,func,reg,0);
 							t32b = pci_read_cfgl(bus,dev,func,reg);
 							pci_write_cfgl(bus,dev,func,reg,~0UL);
 							t32c = pci_read_cfgl(bus,dev,func,reg);
 							pci_write_cfgl(bus,dev,func,reg,t32a); /* restore prior contents */
+
+							pci_write_cfgw(bus,dev,func,0x04,command);//restore command
 
 							if (t32a == t32b && t32b == t32c) {
 								/* hm, can't change it? */
