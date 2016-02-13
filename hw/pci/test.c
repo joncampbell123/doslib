@@ -173,21 +173,27 @@ int main(int argc,char **argv) {
 							pci_write_cfgl(bus,dev,func,reg,t32a); /* restore prior contents */
 							if (t32a == t32b && t32b == t32c) {
 								/* hm, can't change it? */
+								if (io && (t32a & 0xFFFF) == 0) continue;
+								if (!io && t32a == 0) continue;
+
+								_sti();
+								line++;
+								if (io) printf("    IO: 0x%04lx [FIXED]\n",lower);
+								else    printf("   MEM: 0x%08lx [FIXED] %s\n",lower,
+									t32a & 8 ? "Prefetch" : "Non-prefetch");
 							}
 							else {
 								uint32_t size = ~(t32c & ~(io ? 3UL : 15UL));
 								if (io) size &= 0xFFFFUL;
 								if ((size+1UL) == 0UL) continue;
 								higher = lower + size;
-							}
 
-							if (higher == lower) continue;
-
-							_sti();
-							line++;
-							if (io) printf("    IO: 0x%04lx-0x%04lx\n",lower,higher);
-							else    printf("   MEM: 0x%08lx-0x%08lx %s\n",lower,higher,
+								_sti();
+								line++;
+								if (io) printf("    IO: 0x%04lx-0x%04lx\n",lower,higher);
+								else    printf("   MEM: 0x%08lx-0x%08lx %s\n",lower,higher,
 									t32a & 8 ? "Prefetch" : "Non-prefetch");
+							}
 						}
 						_sti();
 					}
