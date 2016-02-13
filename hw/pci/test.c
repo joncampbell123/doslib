@@ -169,7 +169,7 @@ int main(int argc,char **argv) {
 						else
 							bmax = 0;
 
-						for (bar=0;bar < 6;bar++) {
+						for (bar=0;bar < bmax;bar++) {
 							uint8_t io=0;
 							uint32_t lower=0,higher=0;
 							uint8_t reg = 0x10+(bar*4);
