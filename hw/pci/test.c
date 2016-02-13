@@ -223,6 +223,7 @@ int main(int argc,char **argv) {
 									higher = t32a | nsize;
 								}
 								else {
+									line += 2;
 									printf(" * caution: probing PCI configuration gave inconsistent results.\n");
 									printf("     mask=0x%08lx nsize=0x%08lx orig=0x%08lx b=0x%08lx c=0x%08lx\n",mask,nsize,t32a,t32b,t32c);
 								}
@@ -237,9 +238,9 @@ int main(int argc,char **argv) {
 						_sti();
 					}
 
-					if (++line >= 20) {
+					if (++line >= 16) {
 						while (getch() != 13);
-						line -= 20;
+						line -= 16;
 					}
 				}
 			}
