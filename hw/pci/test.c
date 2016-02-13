@@ -24,10 +24,12 @@ static void help() {
 	printf("   /b1               Prefer BIOS 1.x access\n");
 	printf("   /t1               Prefer Type 1 (0xCF8-0xCFF) access\n");
 	printf("   /t2               Prefer Type 2 (0xCxxx) access\n");
+	printf("   /d                Dump config space too\n");
 }
 
 int main(int argc,char **argv) {
 	int pref = -1,i;
+	char dumpraw = 0;
 
 	for (i=1;i < argc;) {
 		char *a = argv[i++];
@@ -38,6 +40,9 @@ int main(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help") || !strcmp(a,"?")) {
 				help();
 				return 1;
+			}
+			else if (!strcmp(a,"d")) {
+				dumpraw = 1;
 			}
 			else if (!strcmp(a,"b")) {
 				pref = PCI_CFG_BIOS;
@@ -92,31 +97,6 @@ int main(int argc,char **argv) {
 	printf("  Last bus:                 %d\n",pci_bios_last_bus);
 	printf("  Bus decode bits:          %d\n",pci_bus_decode_bits);
 
-	{ /* prove readability by dumping 0,0,0 config space */
-		unsigned int reg;
-		uint32_t val;
-
-		printf("PCI BUS/DEV/FUNC 0/0/0 config space: [DWORD]\n");
-		for (reg=0;reg < (8*4);reg += 4) {
-			val = pci_read_cfgl(0,0,0,reg);
-			printf("%08lX ",(unsigned long)val);
-		}
-		printf("\n");
-
-		for (reg=0;reg < (15*2);reg += 2) {
-			val = pci_read_cfgw(0,0,0,reg);
-			printf("%04X ",(unsigned int)val);
-		}
-		printf("\n");
-
-		for (reg=0;reg < 25;reg++) {
-			val = pci_read_cfgb(0,0,0,reg);
-			printf("%02X ",(unsigned int)val & 0xFF);
-		}
-		printf("\n");
-		while (getch() != 13);
-	}
-
 	/* then enumerate the bus */
 	{
 		int line=0;
@@ -136,7 +116,8 @@ int main(int argc,char **argv) {
 					subvendor_id = pci_read_cfgw(bus,dev,func,0x2C);
 					subsystem = pci_read_cfgw(bus,dev,func,0x2E);
 
-					header_type = pci_read_cfgb(bus,dev,func,0x0E);
+					header_type = (uint8_t)pci_read_cfgw(bus,dev,func,0x0E);
+
 					class_code = pci_read_cfgl(bus,dev,func,0x08);
 					revision_id = class_code & 0xFF;
 					class_code >>= 8UL;
@@ -149,8 +130,13 @@ int main(int argc,char **argv) {
 
 					/* any interrupt? */
 					if ((header_type&0x7F) == 0 || (header_type&0x7F) == 1) {
-						uint8_t l = pci_read_cfgb(bus,dev,func,0x3C);
-						uint8_t p = pci_read_cfgb(bus,dev,func,0x3D);
+						uint8_t l,p;
+						uint16_t t;
+
+						// read the two in one cycle
+						t = pci_read_cfgw(bus,dev,func,0x3C);
+						l = (uint8_t)(t&0xFF); // 0x3C interrupt line
+						p = (uint8_t)(t>>8); // 0x3D interrupt pin
 						if (p != 0)
 							printf("   IRQ: %u (pin %c (%02Xh))\n",l,p-1+'A',p);
 					}
@@ -256,6 +242,34 @@ int main(int argc,char **argv) {
 					if (++line >= 16) {
 						while (getch() != 13);
 						line -= 16;
+					}
+
+					if (dumpraw) { /* prove readability by dumping 0,0,0 config space */
+						unsigned int reg;
+						uint32_t val;
+
+						for (reg=0;reg < (4*8*4);reg += 4) {
+							val = pci_read_cfgl(0,0,0,reg);
+							printf("%08lX",(unsigned long)val);
+							if ((reg&((4*8)-1)) == ((4*8)-4)) printf("\n");
+							else printf(" ");
+						}
+
+						for (reg=0;reg < (2*16*4);reg += 2) {
+							val = pci_read_cfgw(0,0,0,reg);
+							printf("%04X",(unsigned int)val);
+							if ((reg&((2*16)-1)) == ((2*16)-2)) printf("\n");
+							else printf(" ");
+						}
+
+						for (reg=0;reg < (16*4);reg++) {
+							val = pci_read_cfgb(0,0,0,reg);
+							printf("%02X",(unsigned int)val & 0xFF);
+							if ((reg&((1*16)-1)) == ((1*16)-1)) printf("\n");
+							else printf(" ");
+						}
+
+						while (getch() != 13);
 					}
 
 					/* single function device? stop scanning. */
