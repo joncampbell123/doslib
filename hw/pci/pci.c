@@ -97,7 +97,6 @@ uint32_t pci_read_cfg_BIOS(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uin
 			(bus << 8) | (card << 3) | func,
 			/* DI=reg */
 			reg);
-		return ~0UL;
 	}
 #endif
 
