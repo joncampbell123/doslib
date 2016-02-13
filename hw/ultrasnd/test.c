@@ -468,6 +468,7 @@ static void do_play_voice() {
 	uint16_t voice_freq=0;
 	uint32_t voice_current=0,voice_start=0,voice_end=0,cc32;
 	unsigned char voice_mode = 0,cc;
+	unsigned char ramp_mode = 0;
 	unsigned char fredraw = 1;
 	unsigned char redraw = 1;
 	struct vga_msg_box box;
@@ -513,6 +514,11 @@ static void do_play_voice() {
 		if (voice_mode != cc) redraw = 1;
 		voice_mode = cc;
 
+		ultrasnd_select_voice(gus,select_voice);
+		cc = ultrasnd_select_read(gus,0x8D);
+		if (ramp_mode != cc) redraw = 1;
+		ramp_mode = cc;
+
 		_sti();
 
 		if (redraw || fredraw) {
@@ -524,7 +530,7 @@ static void do_play_voice() {
 			}
 			vga_moveto(box.x+2+17,box.y+1);
 			vga_write_color(0x1F);
-			sprintf(temp_str,"STOP=%u:%u %2u-bit LOOP=%u BIDIR=%u IRQ=%u BACK=%u PEND=%u",
+			sprintf(temp_str,"STOP=%u:%u %2u-bit LOOP=%u BIDIR=%u IRQ=%u BACK=%u PEND=%u ROLL=%u",
 				(voice_mode&ULTRASND_VOICE_MODE_IS_STOPPED)		?  1 : 0,
 				(voice_mode&ULTRASND_VOICE_MODE_STOP)			?  1 : 0,
 				(voice_mode&ULTRASND_VOICE_MODE_16BIT)			? 16 : 8,
@@ -532,7 +538,8 @@ static void do_play_voice() {
 				(voice_mode&ULTRASND_VOICE_MODE_BIDIR)			?  1 : 0,
 				(voice_mode&ULTRASND_VOICE_MODE_IRQ)			?  1 : 0,
 				(voice_mode&ULTRASND_VOICE_MODE_BACKWARDS)		?  1 : 0,
-				(voice_mode&ULTRASND_VOICE_MODE_IRQ_PENDING)		?  1 : 0);
+				(voice_mode&ULTRASND_VOICE_MODE_IRQ_PENDING)		?  1 : 0,
+				(ramp_mode&0x04)                                        ?  1 : 0);
 			vga_write(temp_str);
 
 			if (fredraw) {
@@ -567,7 +574,7 @@ static void do_play_voice() {
 
 			vga_moveto(box.x+2,box.y+6);
 			vga_write_color(0x1F);
-			vga_write("b=bidir r=reverse l=loop p=pending i=irq F=FF s>start e>end <>step SPC=play");
+			vga_write("b=bidir r=rev l=loop p=pend i=irq F=FF s>start e>end <>step SPC=play R=roll");
 
 			fredraw = 0;
 			redraw = 0;
@@ -590,6 +597,13 @@ static void do_play_voice() {
 				_cli();
 				voice_mode = ultrasnd_read_voice_mode(gus,select_voice);
 				ultrasnd_set_voice_mode(gus,select_voice,voice_mode ^ ULTRASND_VOICE_MODE_BIDIR);
+				_sti();
+			}
+			else if (c == 'R') {
+				_cli();
+				ultrasnd_select_voice(gus,select_voice);
+				ramp_mode = ultrasnd_select_read(gus,0x8D);
+				ultrasnd_select_write(gus,0x0D,ramp_mode ^ 0x04);
 				_sti();
 			}
 			else if (c == 'r') {
