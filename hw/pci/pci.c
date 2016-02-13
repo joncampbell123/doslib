@@ -184,7 +184,7 @@ void pci_probe_for_last_bus() {
 	 * erroneously come up with 16 busses attached, each having the same device list 16
 	 * times */
 	uint32_t id[16],bar[16],sub[16];
-	uint8_t bus;
+	uint8_t bus,card;
 
 	for (bus=0;bus < 16;bus++) {
 		id[bus] = pci_read_cfgl(bus,0,0,0x00);
@@ -212,8 +212,34 @@ void pci_probe_for_last_bus() {
 		}
 	} while (bus-- != 0);
 
-	/* now check for the last working root device, and mark that */
-	for (bus=0xF;bus != 0 && id[bus] == ~0UL;) bus--;
+	/* now check for the last working root device, and mark that. */
+	/* NTS: I have a Dell Optiplex Pentium III Celeron system where motherboard devices
+	 *      enumerate as PCI devices on bus 0, and PCI cards enumerate on bus 1, but there
+	 *      is no device on bus=1 card=0 function=0. if we only counted busses where there
+	 *      was a device 0 then this code would miss all PCI add-in cards on that system.
+	 *
+	 *      At the time I found this, I had also noticed that the 3Dfx glide drivers for
+	 *      DOS would fail to find the Voodoo II card in the system even though the card
+	 *      was plugged in and fully functional. Perhaps GLIDE2.OVL was making the same
+	 *      assumption about PCI device enumeration.
+	 *
+	 *      So to work with these systems, we check for any devices on that bus rather
+	 *      than assume no devices if no device 0. */
+	for (bus=0xF;bus != 0;) {
+		/* if we already know there's something there, then stop */
+		if (id[bus] != ~0UL) break;
+
+		/* nothing found there. let's scan */
+		for (card=0;card < 32;card++) {
+			id[bus] = pci_read_cfgl(bus,card,0,0x00);
+			if (id[bus] != ~0UL) break;
+		}
+
+		if (id[bus] == ~0UL)
+			bus--; // nothing found. keep scanning.
+		else
+			break; // found something. stop.
+	}
 	pci_bios_last_bus = bus;
 }
 
