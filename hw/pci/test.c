@@ -11,6 +11,11 @@
 #include <hw/pci/pci.h>
 #include <hw/cpu/cpu.h>
 
+static inline unsigned char pci_powerof2(uint32_t x) {
+	if (x == 0) return 1;
+	return (x & (x - 1)) == 0 ? 1 : 0;
+}
+
 static void help() {
 	printf("test [options]\n");
 	printf("Test PCI access library\n");
@@ -159,18 +164,29 @@ int main(int argc,char **argv) {
 							uint8_t io=0;
 							uint32_t lower=0,higher=0;
 							uint8_t reg = 0x10+(bar*4);
+							uint32_t sigbits,addrbits;
 
 							_cli();
 							t32a = pci_read_cfgl(bus,dev,func,reg);
 							if (t32a == 0xFFFFFFFFUL) continue;
+
 							io = t32a & 1;
-							if (io) lower = t32a & 0xFFFFFFFCUL;
-							else    lower = t32a & 0xFFFFFFF0UL;
+							if (io) {
+								sigbits = 0x0000FFFCUL;
+								addrbits = 0x0000FFFFUL;
+							}
+							else {
+								sigbits = 0xFFFFFFF0UL;
+								addrbits = 0xFFFFFFFFUL;
+							}
+							lower = t32a & sigbits;
+
 							pci_write_cfgl(bus,dev,func,reg,0);
 							t32b = pci_read_cfgl(bus,dev,func,reg);
 							pci_write_cfgl(bus,dev,func,reg,~0UL);
 							t32c = pci_read_cfgl(bus,dev,func,reg);
 							pci_write_cfgl(bus,dev,func,reg,t32a); /* restore prior contents */
+
 							if (t32a == t32b && t32b == t32c) {
 								/* hm, can't change it? */
 								if (io && (t32a & 0xFFFF) == 0) continue;
@@ -183,10 +199,33 @@ int main(int argc,char **argv) {
 									t32a & 8 ? "Prefetch" : "Non-prefetch");
 							}
 							else {
-								uint32_t size = ~(t32c & ~(io ? 3UL : 15UL));
-								if (io) size &= 0xFFFFUL;
-								if ((size+1UL) == 0UL) continue;
-								higher = lower + size;
+								uint32_t mask,nsize;
+
+								mask = (~t32b) & t32c & sigbits; // any bits that were 0 after writing 0 | any bits that were 1 after writing 1
+								nsize = mask ^ addrbits;
+
+								/* use the mask to determine size. the mask should be ~(2^N - 1)
+								 * for example 0xFFFF0000, 0xFF000000, etc... we obtain size like this:
+								 *
+								 * mask              nsize        size = (nsize + 1)
+								 * --------------------------------
+								 * 0xFFFFFF00        0x000000FF   0x00000100 (256KB)
+								 * 0xFFFF0000        0x0000FFFF   0x00010000 (64KB)
+								 * 0xFF000000        0x00FFFFFF   0x01000000 (16MB)
+								 *
+								 * mask         nsize         size = (nsize + 1)
+								 * --------------------------------
+								 * 0xFFFC       0x0003        0x00000004 (4)
+								 * 0xFFF0       0x000F        0x00000010 (16)
+								 * 0xFF00       0x00FF        0x00000100 (256) */
+								if (pci_powerof2(nsize + (uint32_t)1UL)) {
+									lower = t32a & (~nsize);
+									higher = t32a | nsize;
+								}
+								else {
+									printf(" * caution: probing PCI configuration gave inconsistent results.\n");
+									printf("     mask=0x%08lx nsize=0x%08lx orig=0x%08lx b=0x%08lx c=0x%08lx\n",mask,nsize,t32a,t32b,t32c);
+								}
 
 								_sti();
 								line++;
