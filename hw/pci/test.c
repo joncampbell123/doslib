@@ -249,21 +249,21 @@ int main(int argc,char **argv) {
 						uint32_t val;
 
 						for (reg=0;reg < (4*8*4);reg += 4) {
-							val = pci_read_cfgl(0,0,0,reg);
+							val = pci_read_cfgl(bus,dev,func,reg);
 							printf("%08lX",(unsigned long)val);
 							if ((reg&((4*8)-1)) == ((4*8)-4)) printf("\n");
 							else printf(" ");
 						}
 
 						for (reg=0;reg < (2*16*4);reg += 2) {
-							val = pci_read_cfgw(0,0,0,reg);
+							val = pci_read_cfgw(bus,dev,func,reg);
 							printf("%04X",(unsigned int)val);
 							if ((reg&((2*16)-1)) == ((2*16)-2)) printf("\n");
 							else printf(" ");
 						}
 
 						for (reg=0;reg < (16*4);reg++) {
-							val = pci_read_cfgb(0,0,0,reg);
+							val = pci_read_cfgb(bus,dev,func,reg);
 							printf("%02X",(unsigned int)val & 0xFF);
 							if ((reg&((1*16)-1)) == ((1*16)-1)) printf("\n");
 							else printf(" ");
