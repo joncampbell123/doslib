@@ -34,7 +34,7 @@ void v320x200x256_VGA_setmode(unsigned int flags);
 
 double v320x200x256_VGA_get_hsync_rate();
 double v320x200x256_VGA_get_refresh_rate();
-void v320x200x256_VGA_setwindow(int x,int y,int w,int h);
+void v320x200x256_VGA_setwindow(int x,int y,int w,int h,int vwidth);
 
 static inline void v320x200x256_VGA_update_vis_ptr() {
 #if TARGET_MSDOS == 16

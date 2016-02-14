@@ -92,7 +92,15 @@ void v320x200x256_VGA_update_from_CRTC_state() {
 	v320x200x256_VGA_update_par();
 }
 
-void v320x200x256_VGA_setwindow(int x,int y,int w,int h) {
+void v320x200x256_VGA_setvirtwidth(int w) {
+	w = (w + (1 << v320x200x256_VGA_state.stride_shift)) >> (1 + v320x200x256_VGA_state.stride_shift);
+	if (w < 1) w = 1;
+	if (w > 255) w = 255;
+	vga_write_CRTC(0x13,w);
+	v320x200x256_VGA_update_from_CRTC_state();
+}
+
+void v320x200x256_VGA_setwindow(int x,int y,int w,int h,int vwidth) {
 	int minx,miny,maxx,maxy,maxw,maxh,vmy;
 
 	x = (x + 2) & (~3);
@@ -110,6 +118,18 @@ void v320x200x256_VGA_setwindow(int x,int y,int w,int h) {
 	maxy = v320x200x256_VGA_crtc_state.vertical_start_retrace - 1;
 	maxw = (v320x200x256_VGA_crtc_state.horizontal_total - (v320x200x256_VGA_crtc_state.horizontal_end_retrace + 2 - v320x200x256_VGA_crtc_state.horizontal_start_retrace)) * 4;
 	maxh = v320x200x256_VGA_crtc_state.vertical_total - (v320x200x256_VGA_crtc_state.vertical_end_retrace + 2 - v320x200x256_VGA_crtc_state.vertical_start_retrace);
+
+	if (vwidth <= 0) vwidth = v320x200x256_VGA_state.virt_width;
+	{
+		unsigned int d = 2 << v320x200x256_VGA_state.stride_shift;
+		unsigned int i = (vwidth + (d>>1)) / d;
+
+		if (i == 0) i = 1;
+		else if (i > 255) i = 255;
+		vga_stride = i * 2;
+		v320x200x256_VGA_crtc_state.offset = i;
+		v320x200x256_VGA_state.stride = v320x200x256_VGA_state.virt_width = vga_stride << v320x200x256_VGA_state.stride_shift;
+	}
 
 	if (maxw > v320x200x256_VGA_state.stride) maxw = v320x200x256_VGA_state.stride;
 	vmy = (int)(((unsigned long)v320x200x256_VGA_state.vram_size / (unsigned long)v320x200x256_VGA_state.stride) * (unsigned long)v320x200x256_VGA_state.scan_height_div);
