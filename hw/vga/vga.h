@@ -42,6 +42,10 @@ extern const unsigned char hgc_text_crtc[12];
 void vga_turn_on_hgc();
 void vga_turn_off_hgc();
 
+int tseng_et3000_detect();
+void tseng_et4000_extended_set_lock(int x);
+int tseng_et4000_detect();
+
 /* EGA/VGA memory map bits */
 enum {
 	VGA_MEMMAP_A0000_128K=0,
