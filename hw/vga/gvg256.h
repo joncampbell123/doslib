@@ -56,8 +56,42 @@ static inline void v320x200x256_VGA_update_draw_ptr() {
 #endif
 }
 
+static inline
+#if TARGET_MSDOS == 16
+unsigned char far *
+#else
+unsigned char *
+#endif
+v320x200x256_VGA_pixelmemaddro(const uint32_t o) {
+#if TARGET_MSDOS == 16
+	const uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
+	const uint16_t of = ((uint16_t)(o & 0xF)) + FP_OFF(v320x200x256_VGA_state.draw_ptr);
+	return MK_FP(sg,of);
+#else
+	return v320x200x256_VGA_state.draw_ptr+o;
+#endif
+}
+
+static inline
+#if TARGET_MSDOS == 16
+unsigned char far *
+#else
+unsigned char *
+#endif
+v320x200x256_VGA_pixelmemaddrxy(const unsigned int x,const unsigned int y) {
+	const uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x;
+	return v320x200x256_VGA_pixelmemaddro(o);
+}
+
 static inline uint8_t v320x200x256_VGA_getpixelnc(const unsigned int x,const unsigned int y) {
+#if TARGET_MSDOS == 16
+	uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x + (uint32_t)FP_OFF(v320x200x256_VGA_state.draw_ptr);
+	uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
+	VGA_RAM_PTR p = MK_FP(sg,(uint16_t)(o & 0xF));
+	return *p;
+#else
 	return v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.stride)+x];
+#endif
 }
 
 static inline uint8_t v320x200x256_VGA_getpixel(const unsigned int x,const unsigned int y) {
@@ -66,7 +100,14 @@ static inline uint8_t v320x200x256_VGA_getpixel(const unsigned int x,const unsig
 }
 
 static inline void v320x200x256_VGA_setpixelnc(const unsigned int x,const unsigned int y,const uint8_t v) {
+#if TARGET_MSDOS == 16
+	uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x + (uint32_t)FP_OFF(v320x200x256_VGA_state.draw_ptr);
+	uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
+	VGA_RAM_PTR p = MK_FP(sg,(uint16_t)(o & 0xF));
+	*p = v;
+#else
 	v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.stride)+x] = v;
+#endif
 }
 
 static inline void v320x200x256_VGA_setpixel(const unsigned int x,const unsigned int y,const uint8_t v) {
