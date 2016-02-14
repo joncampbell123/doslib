@@ -60,17 +60,46 @@ void bios_cls() {
 /*===================================================================================*/
 struct v320x200x256_VGA_state v320x200x256_VGA_state = {0};
 
+static inline void v320x200x256_VGA_update_vis_ptr() {
+#if TARGET_MSDOS == 16
+	uint32_t o = vga_ram_base + v320x200x256_VGA_state.vis_offset + v320x200x256_VGA_state.hpel;
+	v320x200x256_VGA_state.vis_ptr = MK_FP(o >> 4UL,o & 0xFUL);
+#else
+	v320x200x256_VGA_state.vis_ptr = vga_graphics_ram + v320x200x256_VGA_state.vis_offset + v320x200x256_VGA_state.hpel;
+#endif
+}
+
+static inline void v320x200x256_VGA_update_draw_ptr() {
+#if TARGET_MSDOS == 16
+	uint32_t o = vga_ram_base + v320x200x256_VGA_state.draw_offset;
+	v320x200x256_VGA_state.draw_ptr = MK_FP(o >> 4UL,o & 0xFUL);
+#else
+	v320x200x256_VGA_state.draw_ptr = vga_graphics_ram + v320x200x256_VGA_state.draw_offset;
+#endif
+}
+
 void v320x200x256_VGA_update_from_CRTC_state() {
 	struct vga_mode_params p;
 
+	update_state_from_vga();
 	vga_read_crtc_mode(&p);
+
+	// TODO: If we detect Tseng ET3000/ET4000 and memory map at A0000 we could set this to 128KB
 	v320x200x256_VGA_state.vram_size = 0x10000UL; /* assume 64KB. this mode support code doesn't assume the ability to do Mode X tricks */
-	v320x200x256_VGA_state.stride = v320x200x256_VGA_state.virt_width = p.offset * 2 * 4; /* assume doubleword size */
+
+	// NTS: On most SVGA chipsets except Tseng, only the DWORD mode of the CRTC has any use. Any other mode reveals the ugly truth
+	//      as to how most SVGA chipsets implement "chained" VGA 320x200x256-color mode and the garbled VGA output is useless.
+	// TODO: If we detect Tseng ET3000/ET4000 the VGA stride shift should reflect that byte & dword mode are the same
+	v320x200x256_VGA_state.stride_shift = p.dword_mode ? 2 : (p.word_mode ? 1 : 0);
+
+	v320x200x256_VGA_state.stride = v320x200x256_VGA_state.virt_width = vga_stride << v320x200x256_VGA_state.stride_shift;
 	v320x200x256_VGA_state.width = p.horizontal_display_end * 4;
 	v320x200x256_VGA_state.height = (p.vertical_display_end + p.max_scanline - 1) / p.max_scanline; /* <- NTS: Modern Intel chipsets however ignore the partial last scanline! */
 	v320x200x256_VGA_state.virt_height = v320x200x256_VGA_state.vram_size / v320x200x256_VGA_state.stride;
-	v320x200x256_VGA_state.vis_offset = vga_get_start_location() << 2; /* this will lose the upper 2 bits, by design. also does not pay attention to hpel */
-	v320x200x256_VGA_state.draw_ptr = vga_graphics_ram + v320x200x256_VGA_state.draw_offset;
+	v320x200x256_VGA_state.vis_offset = p.offset << v320x200x256_VGA_state.stride_shift;
+	v320x200x256_VGA_state.hpel = (vga_read_AC(0x13) >> 1) & 7;
+	v320x200x256_VGA_update_draw_ptr();
+	v320x200x256_VGA_update_vis_ptr();
 }
 
 static inline uint8_t v320x200x256_VGA_getpixelnc(const unsigned int x,const unsigned int y) {
