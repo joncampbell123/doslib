@@ -23,6 +23,12 @@ struct vga_mode_params v320x200x256_VGA_crtc_state = {0};
 struct vga_mode_params v320x200x256_VGA_crtc_state_init = {0}; // initial state after setting mode
 
 void v320x200x256_VGA_init() {
+	/* the VGA display is 4:3. No question there. We allow the calling program to overwrite this later in case the DOS program
+	 * is intended for 16:9 modern flat panel displays */
+	v320x200x256_VGA_state.dar_n = 4;
+	v320x200x256_VGA_state.dar_d = 3;
+
+	/* there are some enhancements we can provide IF the card is a ET3000/ET4000 */
 	if (tseng_et3000_detect()) {
 		v320x200x256_VGA_state.tseng = 1;
 		v320x200x256_VGA_state.tseng_et4000 = 0;
@@ -51,6 +57,13 @@ void v320x200x256_VGA_setmode(unsigned int flags) {
 	v320x200x256_VGA_crtc_state_init = v320x200x256_VGA_crtc_state;
 }
 
+void v320x200x256_VGA_update_par() {
+	/* VGA monitors tend to vertically stretch the picture to fill the screen no matter what the scan line count, as long as the horizontal and
+	 * vertical sync timing is within the monitor's supported ranges of course. */
+	v320x200x256_VGA_state.par_n = v320x200x256_VGA_crtc_state.vertical_total;
+	v320x200x256_VGA_state.par_d = v320x200x256_VGA_crtc_state.horizontal_total * 4;
+}
+
 void v320x200x256_VGA_update_from_CRTC_state() {
 	update_state_from_vga();
 	vga_read_crtc_mode(&v320x200x256_VGA_crtc_state);
@@ -74,5 +87,6 @@ void v320x200x256_VGA_update_from_CRTC_state() {
 	v320x200x256_VGA_state.hpel = (vga_read_AC(0x13) >> 1) & 7;
 	v320x200x256_VGA_update_draw_ptr();
 	v320x200x256_VGA_update_vis_ptr();
+	v320x200x256_VGA_update_par();
 }
 

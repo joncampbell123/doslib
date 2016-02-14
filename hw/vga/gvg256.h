@@ -17,6 +17,8 @@ struct v320x200x256_VGA_state {
 	uint8_t			_reserved:6;
 	VGA_RAM_PTR		draw_ptr;
 	VGA_RAM_PTR		vis_ptr;
+	unsigned int		dar_n,dar_d;		// display aspect ratio
+	unsigned int		par_n,par_d;		// pixel aspect ratio
 };
 
 extern struct v320x200x256_VGA_state v320x200x256_VGA_state;
@@ -24,6 +26,7 @@ extern struct vga_mode_params v320x200x256_VGA_crtc_state;
 extern struct vga_mode_params v320x200x256_VGA_crtc_state_init;
 
 void v320x200x256_VGA_init();
+void v320x200x256_VGA_update_par();
 void v320x200x256_VGA_update_from_CRTC_state();
 void v320x200x256_VGA_setmode(unsigned int flags);
 #define v320x200x256_VGA_setmode_FLAG_DONT_USE_INT10		(1U << 0UL)
