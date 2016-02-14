@@ -24,6 +24,7 @@ struct v320x200x256_VGA_state {
 extern struct v320x200x256_VGA_state v320x200x256_VGA_state;
 extern struct vga_mode_params v320x200x256_VGA_crtc_state;
 extern struct vga_mode_params v320x200x256_VGA_crtc_state_init;
+extern struct vga_mode_params v320x200x256_VGA_crtc_state_basemode;
 
 void v320x200x256_VGA_init();
 void v320x200x256_VGA_update_par();
@@ -35,6 +36,7 @@ void v320x200x256_VGA_setmode(unsigned int flags);
 double v320x200x256_VGA_get_hsync_rate();
 double v320x200x256_VGA_get_refresh_rate();
 void v320x200x256_VGA_setwindow(int x,int y,int w,int h,int vwidth);
+int v320x200x256_VGA_setvideomode(int width,int height,double hsync,double vsync);
 
 static inline void v320x200x256_VGA_update_vis_ptr() {
 #if TARGET_MSDOS == 16

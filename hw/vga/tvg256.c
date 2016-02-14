@@ -313,11 +313,54 @@ static void v320x200x256_VGA_menu_windowing() {
 				v320x200x256_VGA_state.height);
 
 			printf("\n");
+			printf("A=320x200 B=320x240 C=352x200 D=352x240\n");
+			printf("E=320x400 F=320x480 G=352x400 H=352x480\n");
+			printf("I=360x400 J=360x480\n");
 		}
 
 		c = getch();
 		if (c == 27)
 			break;
+		else if (c == 'A') {
+			v320x200x256_VGA_setvideomode(320,200,-1,-1);
+			redraw = 1;
+		}
+		else if (c == 'B') {
+			v320x200x256_VGA_setvideomode(320,240,-1,-1);
+			redraw = 1;
+		}
+		else if (c == 'C') {
+			v320x200x256_VGA_setvideomode(352,200,-1,-1);
+			redraw = 1;
+		}
+		else if (c == 'D') {
+			v320x200x256_VGA_setvideomode(352,240,-1,-1);
+			redraw = 1;
+		}
+		else if (c == 'E') {
+			v320x200x256_VGA_setvideomode(320,400,-1,-1);
+			redraw = 1;
+		}
+		else if (c == 'F') {
+			v320x200x256_VGA_setvideomode(320,480,-1,-1);
+			redraw = 1;
+		}
+		else if (c == 'G') {
+			v320x200x256_VGA_setvideomode(352,400,-1,-1);
+			redraw = 1;
+		}
+		else if (c == 'H') {
+			v320x200x256_VGA_setvideomode(352,480,-1,-1);
+			redraw = 1;
+		}
+		else if (c == 'I') {
+			v320x200x256_VGA_setvideomode(360,400,-1,-1);
+			redraw = 1;
+		}
+		else if (c == 'J') {
+			v320x200x256_VGA_setvideomode(360,480,-1,-1);
+			redraw = 1;
+		}
 		else if (c == 'v') {
 			if (v320x200x256_VGA_state.stride > (2 << v320x200x256_VGA_state.stride_shift)) {
 				v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width,
