@@ -38,19 +38,6 @@ unsigned char	vga_stride = 80;
 unsigned short	vga_flags = 0;
 unsigned char	vga_9wide = 0;
 
-/* HGC values for HGC graphics */
-static unsigned char hgc_graphics_crtc[12] = {
-	0x35,0x2D,0x2E,0x07,
-	0x5B,0x02,0x57,0x57,
-	0x02,0x03,0x00,0x00
-};
-
-static unsigned char hgc_text_crtc[12] = {
-	0x61,0x50,0x52,0x0F,
-	0x19,0x06,0x19,0x19,
-	0x02,0x0D,0x0D,0x0C
-};
-
 uint32_t vga_clock_rates[4] = {
 	25175000UL,
 	(25175000UL*9UL)/8UL,	/* ~28MHz */
@@ -616,31 +603,6 @@ void vga_switch_to_color() {
 void vga_moveto(unsigned char x,unsigned char y) {
 	vga_pos_x = x;
 	vga_pos_y = y;
-}
-
-void vga_turn_on_hgc() {
-	unsigned char c;
-
-	outp(0x3B8,0x00); /* turn off video */
-	outp(0x3BF,0x01); /* enable setting graphics mode */
-	outp(0x3B8,0x02); /* turn on graphics */
-	for (c=0;c < 12;c++) {
-		outp(0x3B4,c);
-		outp(0x3B5,hgc_graphics_crtc[c]);
-	}
-	outp(0x3B8,0x0A); /* turn on graphics+video */
-}
-
-void vga_turn_off_hgc() {
-	unsigned char c;
-
-	outp(0x3B8,0x00); /* turn off video */
-	outp(0x3BF,0x00); /* disable setting graphics mode */
-	for (c=0;c < 12;c++) {
-		outp(0x3B4,c);
-		outp(0x3B5,hgc_text_crtc[c]);
-	}
-	outp(0x3B8,0x28); /* turn on video and text */
 }
 
 void vga_set_cga_palette_and_background(unsigned char pal,unsigned char color) {

@@ -36,6 +36,12 @@ typedef uint16_t far *VGA_ALPHA_PTR;
 #define VGA_EGA_BYTES_PER_CHAR_BITMAP		32
 #define VGA_EGA_BYTES_PER_CHAR_BITMAP_SHIFT	5
 
+extern const unsigned char hgc_graphics_crtc[12];
+extern const unsigned char hgc_text_crtc[12];
+
+void vga_turn_on_hgc();
+void vga_turn_off_hgc();
+
 /* EGA/VGA memory map bits */
 enum {
 	VGA_MEMMAP_A0000_128K=0,
