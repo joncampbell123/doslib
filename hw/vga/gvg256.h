@@ -17,6 +17,7 @@ struct v320x200x256_VGA_state {
 };
 
 extern struct v320x200x256_VGA_state v320x200x256_VGA_state;
+extern struct vga_mode_params v320x200x256_VGA_crtc_state;
 
 void v320x200x256_VGA_update_from_CRTC_state();
 
