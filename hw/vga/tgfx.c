@@ -74,20 +74,20 @@ void v320x200x256_VGA_update_from_CRTC_state() {
 }
 
 static inline uint8_t v320x200x256_VGA_getpixelnc(const unsigned int x,const unsigned int y) {
-	return v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.width)+x];
+	return v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.stride)+x];
 }
 
 static inline uint8_t v320x200x256_VGA_getpixel(const unsigned int x,const unsigned int y) {
-	if (x >= v320x200x256_VGA_state.width || y >= v320x200x256_VGA_state.height) return 0;
+	if (x >= v320x200x256_VGA_state.stride || y >= v320x200x256_VGA_state.height) return 0;
 	return v320x200x256_VGA_getpixelnc(x,y);
 }
 
 static inline void v320x200x256_VGA_setpixelnc(const unsigned int x,const unsigned int y,const uint8_t v) {
-	v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.width)+x] = v;
+	v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.stride)+x] = v;
 }
 
 static inline void v320x200x256_VGA_setpixel(const unsigned int x,const unsigned int y,const uint8_t v) {
-	if (x >= v320x200x256_VGA_state.width || y >= v320x200x256_VGA_state.height) return;
+	if (x >= v320x200x256_VGA_state.stride || y >= v320x200x256_VGA_state.height) return;
 	v320x200x256_VGA_setpixelnc(x,y,v);
 }
 
