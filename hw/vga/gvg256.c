@@ -67,8 +67,8 @@ double v320x200x256_VGA_get_refresh_rate() {
 void v320x200x256_VGA_update_par() {
 	/* VGA monitors tend to vertically stretch the picture to fill the screen no matter what the scan line count, as long as the horizontal and
 	 * vertical sync timing is within the monitor's supported ranges of course. */
-	v320x200x256_VGA_state.par_n = v320x200x256_VGA_crtc_state.vertical_total;
-	v320x200x256_VGA_state.par_d = v320x200x256_VGA_crtc_state.horizontal_total * 4;
+	v320x200x256_VGA_state.par_n = v320x200x256_VGA_crtc_state.vertical_total * 2;
+	v320x200x256_VGA_state.par_d = v320x200x256_VGA_crtc_state.horizontal_total * 4 * v320x200x256_VGA_state.scan_height_div;
 }
 
 void v320x200x256_VGA_update_from_CRTC_state() {
