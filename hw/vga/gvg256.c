@@ -27,20 +27,6 @@ void v320x200x256_VGA_init() {
 	 * is intended for 16:9 modern flat panel displays */
 	v320x200x256_VGA_state.dar_n = 4;
 	v320x200x256_VGA_state.dar_d = 3;
-
-	/* there are some enhancements we can provide IF the card is a ET3000/ET4000 */
-	if (tseng_et3000_detect()) {
-		v320x200x256_VGA_state.tseng = 1;
-		v320x200x256_VGA_state.tseng_et4000 = 0;
-	}
-	else if (tseng_et4000_detect()) {
-		v320x200x256_VGA_state.tseng = 1;
-		v320x200x256_VGA_state.tseng_et4000 = 1;
-	}
-	else {
-		v320x200x256_VGA_state.tseng = 0;
-		v320x200x256_VGA_state.tseng_et4000 = 0;
-	}
 }
 
 void v320x200x256_VGA_setmode(unsigned int flags) {
@@ -50,22 +36,12 @@ void v320x200x256_VGA_setmode(unsigned int flags) {
 	v320x200x256_VGA_update_from_CRTC_state();
 	v320x200x256_VGA_crtc_state_init = v320x200x256_VGA_crtc_state;
 
-	if (v320x200x256_VGA_state.tseng) {
-		/* ET4000 cards have a weird way of enabling "mode X" or more than 64KB of RAM
-		 * where the CRTC steps through RAM the same whether BYTE mode or DWORD mode.
-		 * Apparently the default DWORD mode causes 64KB wraparound to emulate VGA.
-		 * If we want to enable pointer math to access 128KB we need to switch to BYTE mode. */
-		vga_set_memory_map(0/*0xA0000-0xBFFFF*/);
-		v320x200x256_VGA_crtc_state.word_mode = 0;
-		v320x200x256_VGA_crtc_state.dword_mode = 0;
-	}
-	else {
-		/* Normal VGA/SVGA modes implement VGA "chained mode" by mapping 4 bytes every 16 bytes
-		 * and read/write the same. DWORD and WORD bits are on. */
-		vga_set_memory_map(1/*0xA0000-0xAFFFF*/);
-		v320x200x256_VGA_crtc_state.word_mode = 1;
-		v320x200x256_VGA_crtc_state.dword_mode = 1;
-	}
+	/* Normal VGA/SVGA modes implement VGA "chained mode" by mapping 4 bytes every 16 bytes
+	 * and read/write the same. DWORD and WORD bits are on. */
+	vga_set_memory_map(1/*0xA0000-0xAFFFF*/);
+	v320x200x256_VGA_crtc_state.word_mode = 1;
+	v320x200x256_VGA_crtc_state.dword_mode = 1;
+
 	vga_write_crtc_mode(&v320x200x256_VGA_crtc_state,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 	v320x200x256_VGA_update_from_CRTC_state();
 }
@@ -98,14 +74,8 @@ void v320x200x256_VGA_update_from_CRTC_state() {
 	update_state_from_vga();
 	vga_read_crtc_mode(&v320x200x256_VGA_crtc_state);
 
-	if (v320x200x256_VGA_state.tseng && vga_ram_base == 0xA0000UL && vga_ram_size == 0x20000UL) {
-		v320x200x256_VGA_state.vram_size = 0x20000UL; /* 128KB */
-		v320x200x256_VGA_state.stride_shift = v320x200x256_VGA_crtc_state.dword_mode ? 2 : (v320x200x256_VGA_crtc_state.word_mode ? 1 : 2); /* byte/dword mode are the same */
-	}
-	else {
-		v320x200x256_VGA_state.vram_size = 0x10000UL; /* 64KB */
-		v320x200x256_VGA_state.stride_shift = v320x200x256_VGA_crtc_state.dword_mode ? 2 : (v320x200x256_VGA_crtc_state.word_mode ? 1 : 0);
-	}
+	v320x200x256_VGA_state.vram_size = 0x10000UL; /* 64KB */
+	v320x200x256_VGA_state.stride_shift = v320x200x256_VGA_crtc_state.dword_mode ? 2 : (v320x200x256_VGA_crtc_state.word_mode ? 1 : 0);
 
 	v320x200x256_VGA_state.stride =
 		v320x200x256_VGA_state.virt_width = vga_stride << v320x200x256_VGA_state.stride_shift;

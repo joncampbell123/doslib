@@ -14,8 +14,6 @@ struct v320x200x256_VGA_state {
 	uint8_t			scan_height_div;
 	uint8_t			hpel;			// horizontal pel
 	uint8_t			stride_shift;		// reflects VGA CRTC byte/word/dword mode
-	uint8_t			tseng:1;		// card is Tseng ET3000/ET4000
-	uint8_t			tseng_et4000:1;		// card is ET4000
 	uint8_t			_reserved:6;
 	VGA_RAM_PTR		draw_ptr;
 	VGA_RAM_PTR		vis_ptr;
@@ -62,14 +60,8 @@ unsigned char far *
 #else
 unsigned char *
 #endif
-v320x200x256_VGA_pixelmemaddro(const uint32_t o) {
-#if TARGET_MSDOS == 16
-	const uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
-	const uint16_t of = ((uint16_t)(o & 0xF)) + FP_OFF(v320x200x256_VGA_state.draw_ptr);
-	return MK_FP(sg,of);
-#else
+v320x200x256_VGA_pixelmemaddro(const uint16_t o) {
 	return v320x200x256_VGA_state.draw_ptr+o;
-#endif
 }
 
 static inline
@@ -79,19 +71,12 @@ unsigned char far *
 unsigned char *
 #endif
 v320x200x256_VGA_pixelmemaddrxy(const unsigned int x,const unsigned int y) {
-	const uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x;
+	const uint16_t o = ((uint16_t)y * (uint16_t)v320x200x256_VGA_state.stride) + (uint16_t)x;
 	return v320x200x256_VGA_pixelmemaddro(o);
 }
 
 static inline uint8_t v320x200x256_VGA_getpixelnc(const unsigned int x,const unsigned int y) {
-#if TARGET_MSDOS == 16
-	const uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x + (uint32_t)FP_OFF(v320x200x256_VGA_state.draw_ptr);
-	const uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
-	const VGA_RAM_PTR p = MK_FP(sg,(uint16_t)(o & 0xF));
-	return *p;
-#else
-	return v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.stride)+x];
-#endif
+	return *v320x200x256_VGA_pixelmemaddrxy(x,y);
 }
 
 static inline uint8_t v320x200x256_VGA_getpixel(const unsigned int x,const unsigned int y) {
@@ -100,14 +85,7 @@ static inline uint8_t v320x200x256_VGA_getpixel(const unsigned int x,const unsig
 }
 
 static inline void v320x200x256_VGA_setpixelnc(const unsigned int x,const unsigned int y,const uint8_t v) {
-#if TARGET_MSDOS == 16
-	const uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x + (uint32_t)FP_OFF(v320x200x256_VGA_state.draw_ptr);
-	const uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
-	const VGA_RAM_PTR p = MK_FP(sg,(uint16_t)(o & 0xF));
-	*p = v;
-#else
-	v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.stride)+x] = v;
-#endif
+	*v320x200x256_VGA_pixelmemaddrxy(x,y) = v;
 }
 
 static inline void v320x200x256_VGA_setpixel(const unsigned int x,const unsigned int y,const uint8_t v) {
