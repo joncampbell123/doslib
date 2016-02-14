@@ -357,7 +357,7 @@ void v320x200x256_VGA_menu() {
 			vga_sync_bios_cursor();
 			redraw = 0;
 
-			printf("stride=%u w=%u/%u h=%u/%u\nvram=%lu par=%u:%u (%.3f)\nfps=%.3f\n\n",
+			printf("stride=%u w=%u/%u h=%u/%u\nvram=%lu par=%u:%u (%.3f)\nhsync=%.3fKHz fps=%.3f\n\n",
 				v320x200x256_VGA_state.stride,
 				v320x200x256_VGA_state.width,
 				v320x200x256_VGA_state.virt_width,
@@ -367,6 +367,7 @@ void v320x200x256_VGA_menu() {
 				v320x200x256_VGA_state.par_n,
 				v320x200x256_VGA_state.par_d,
 				(double)v320x200x256_VGA_state.par_n / v320x200x256_VGA_state.par_d,
+				(double)v320x200x256_VGA_get_hsync_rate() / 1000,
 				(double)v320x200x256_VGA_get_refresh_rate());
 
 			printf("ESC  Main menu         A. SetPixel\n");

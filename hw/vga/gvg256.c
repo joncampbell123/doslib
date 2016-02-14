@@ -57,6 +57,14 @@ void v320x200x256_VGA_setmode(unsigned int flags) {
 	v320x200x256_VGA_crtc_state_init = v320x200x256_VGA_crtc_state;
 }
 
+double v320x200x256_VGA_get_hsync_rate() {
+	double t = (double)vga_clock_rates[v320x200x256_VGA_crtc_state.clock_select];
+	t /= (uint32_t)v320x200x256_VGA_crtc_state.horizontal_total *
+		(v320x200x256_VGA_crtc_state.clock_div2 ? (uint32_t)2 : (uint32_t)1) *
+		(v320x200x256_VGA_crtc_state.clock9 ? (uint32_t)9 : (uint32_t)8);
+	return t;
+}
+
 double v320x200x256_VGA_get_refresh_rate() {
 	double t = (double)vga_clock_rates[v320x200x256_VGA_crtc_state.clock_select];
 	t /= (uint32_t)v320x200x256_VGA_crtc_state.horizontal_total *
