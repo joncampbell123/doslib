@@ -474,9 +474,11 @@ int ultrasnd_probe(struct ultrasnd_ctx *u,int program_cfg) {
 	/* wait 100ms, more than enough time for the timers to count up to 0xFF and signal IRQ */
 	/* NTS: The SDK doc doesn't say, but apparently the timer will hit 0xFF, fire the IRQ, then reset to 0 and count up again (or else DOSBox is mis-emulating the GUS) */
 	c1 = inp(u->port+0x006);
-	for (i=0,c1=0;i < 100 && (c1&0xC) != 0xC;i++) {
-		t8254_wait(t8254_us2ticks(1000)); /* 1ms */
+	for (i=0,c1=0;i < 20 && (c1&0xC) != 0xC;i++) {
+		_cli();
+		t8254_wait(t8254_us2ticks(10000)); /* 10ms */
 		c1 = inp(u->port+0x006); /* IRQ status */
+		_sti();
 	}
 	ultrasnd_stop_timers(u);
 	if ((c1&0xC) != 0xC) {
