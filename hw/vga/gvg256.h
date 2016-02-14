@@ -32,6 +32,8 @@ void v320x200x256_VGA_setmode(unsigned int flags);
 #define v320x200x256_VGA_setmode_FLAG_DONT_USE_INT10		(1U << 0UL)
 /* ^ set this flag if you already set the video mode to INT 10h mode 0x13 */
 
+double v320x200x256_VGA_get_refresh_rate();
+
 static inline void v320x200x256_VGA_update_vis_ptr() {
 #if TARGET_MSDOS == 16
 	uint32_t o = vga_ram_base + v320x200x256_VGA_state.vis_offset + v320x200x256_VGA_state.hpel;
