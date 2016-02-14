@@ -367,7 +367,7 @@ void v320x200x256_VGA_menu() {
 				v320x200x256_VGA_state.par_n,
 				v320x200x256_VGA_state.par_d,
 				(double)v320x200x256_VGA_state.par_n / v320x200x256_VGA_state.par_d,
-				(double)v320x200x256_VGA_get_hsync_rate() / 1000,
+				(double)v320x200x256_VGA_get_hsync_rate() / 1000, /* Hz -> KHz */
 				(double)v320x200x256_VGA_get_refresh_rate());
 
 			printf("ESC  Main menu         A. SetPixel\n");
