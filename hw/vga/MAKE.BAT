@@ -25,11 +25,3 @@ wmake -f ..\..\mak\dos386f.mak HPS=\ all REL=..\..
 mkdir win313l
 wmake -f ..\..\mak\win313l.mak HPS=\ all REL=..\.. 
 
-mkdir win32s3
-wmake -f ..\..\mak\win32s3.mak HPS=\ all REL=..\.. 
-
-mkdir win32
-wmake -f ..\..\mak\win32.mak HPS=\ all REL=..\.. 
-
-
-:end

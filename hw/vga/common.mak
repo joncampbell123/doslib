@@ -24,11 +24,11 @@ $(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)herc.obj $(SUBDIR)$(HPS)tse
 $(HW_VGATTY_LIB): $(SUBDIR)$(HPS)vgatty.obj $(HW_VGA_LIB)
 	wlib -q -b -c $(HW_VGATTY_LIB) -+$(SUBDIR)$(HPS)vgatty.obj
 
-$(HW_VGAGUI_LIB): $(SUBDIR)$(HPS)vgagfx.obj $(HW_VGA_LIB)
-	wlib -q -b -c $(HW_VGAGUI_LIB) -+$(SUBDIR)$(HPS)vgagfx.obj
+$(HW_VGAGUI_LIB): $(SUBDIR)$(HPS)vgagui.obj $(HW_VGA_LIB)
+	wlib -q -b -c $(HW_VGAGUI_LIB) -+$(SUBDIR)$(HPS)vgagui.obj
 
-$(HW_VGAGFX_LIB): $(SUBDIR)$(HPS)vgagui.obj $(SUBDIR)$(HPS)gvg256.obj $(SUBDIR)$(HPS)tvg256.obj $(HW_VGATTY_LIB)
-	wlib -q -b -c $(HW_VGAGFX_LIB) -+$(SUBDIR)$(HPS)vgagui.obj -+$(SUBDIR)$(HPS)gvg256.obj -+$(SUBDIR)$(HPS)tvg256.obj
+$(HW_VGAGFX_LIB): $(SUBDIR)$(HPS)vgagfx.obj $(SUBDIR)$(HPS)gvg256.obj $(SUBDIR)$(HPS)tvg256.obj $(HW_VGATTY_LIB)
+	wlib -q -b -c $(HW_VGAGFX_LIB) -+$(SUBDIR)$(HPS)vgagfx.obj -+$(SUBDIR)$(HPS)gvg256.obj -+$(SUBDIR)$(HPS)tvg256.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
