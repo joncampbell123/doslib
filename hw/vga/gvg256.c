@@ -144,9 +144,6 @@ void v320x200x256_VGA_setwindow(int x,int y,int w,int h) {
 	if (w < 4) w = 4;
 	if (h < 1) h = 1;
 
-	printf("x=%d y=%d w=%d h=%d maxx=%d maxy=%d\n",x,y,w,h,maxx,maxy);
-	getch();
-
 	v320x200x256_VGA_crtc_state.horizontal_start_retrace =
 		v320x200x256_VGA_crtc_state_init.horizontal_start_retrace - (x / 4);
 	v320x200x256_VGA_crtc_state.horizontal_blank_start =
