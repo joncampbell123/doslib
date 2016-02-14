@@ -20,18 +20,49 @@
 
 struct v320x200x256_VGA_state v320x200x256_VGA_state = {0};
 struct vga_mode_params v320x200x256_VGA_crtc_state = {0};
+struct vga_mode_params v320x200x256_VGA_crtc_state_init = {0}; // initial state after setting mode
+
+void v320x200x256_VGA_init() {
+	if (tseng_et3000_detect()) {
+		v320x200x256_VGA_state.tseng = 1;
+		v320x200x256_VGA_state.tseng_et4000 = 0;
+	}
+	else if (tseng_et4000_detect()) {
+		v320x200x256_VGA_state.tseng = 1;
+		v320x200x256_VGA_state.tseng_et4000 = 1;
+	}
+	else {
+		v320x200x256_VGA_state.tseng = 0;
+		v320x200x256_VGA_state.tseng_et4000 = 0;
+	}
+}
+
+void v320x200x256_VGA_setmode(unsigned int flags) {
+	if (!(flags & v320x200x256_VGA_setmode_FLAG_DONT_USE_INT10))
+		int10_setmode(0x13);
+
+	if (v320x200x256_VGA_state.tseng)
+		vga_set_memory_map(0/*0xA0000-0xBFFFF*/);
+	else
+		vga_set_memory_map(1/*0xA0000-0xAFFFF*/);
+
+	update_state_from_vga();
+	v320x200x256_VGA_update_from_CRTC_state();
+	v320x200x256_VGA_crtc_state_init = v320x200x256_VGA_crtc_state;
+}
 
 void v320x200x256_VGA_update_from_CRTC_state() {
 	update_state_from_vga();
 	vga_read_crtc_mode(&v320x200x256_VGA_crtc_state);
 
-	// TODO: If we detect Tseng ET3000/ET4000 and memory map at A0000 we could set this to 128KB
-	v320x200x256_VGA_state.vram_size = 0x10000UL; /* assume 64KB. this mode support code doesn't assume the ability to do Mode X tricks */
-
-	// NTS: On most SVGA chipsets except Tseng, only the DWORD mode of the CRTC has any use. Any other mode reveals the ugly truth
-	//      as to how most SVGA chipsets implement "chained" VGA 320x200x256-color mode and the garbled VGA output is useless.
-	// TODO: If we detect Tseng ET3000/ET4000 the VGA stride shift should reflect that byte & dword mode are the same
-	v320x200x256_VGA_state.stride_shift = v320x200x256_VGA_crtc_state.dword_mode ? 2 : (v320x200x256_VGA_crtc_state.word_mode ? 1 : 0);
+	if (v320x200x256_VGA_state.tseng && vga_ram_base == 0xA0000UL && vga_ram_size == 0x20000UL) {
+		v320x200x256_VGA_state.vram_size = 0x20000UL; /* 128KB */
+		v320x200x256_VGA_state.stride_shift = v320x200x256_VGA_crtc_state.dword_mode ? 2 : (v320x200x256_VGA_crtc_state.word_mode ? 1 : 2); /* byte/dword mode are the same */
+	}
+	else {
+		v320x200x256_VGA_state.vram_size = 0x10000UL; /* 64KB */
+		v320x200x256_VGA_state.stride_shift = v320x200x256_VGA_crtc_state.dword_mode ? 2 : (v320x200x256_VGA_crtc_state.word_mode ? 1 : 0);
+	}
 
 	v320x200x256_VGA_state.stride =
 		v320x200x256_VGA_state.virt_width = vga_stride << v320x200x256_VGA_state.stride_shift;

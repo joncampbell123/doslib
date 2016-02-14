@@ -12,14 +12,22 @@ struct v320x200x256_VGA_state {
 	uint32_t		vram_size;		// size of VRAM
 	uint8_t			hpel;			// horizontal pel
 	uint8_t			stride_shift;		// reflects VGA CRTC byte/word/dword mode
+	uint8_t			tseng:1;		// card is Tseng ET3000/ET4000
+	uint8_t			tseng_et4000:1;		// card is ET4000
+	uint8_t			_reserved:6;
 	VGA_RAM_PTR		draw_ptr;
 	VGA_RAM_PTR		vis_ptr;
 };
 
 extern struct v320x200x256_VGA_state v320x200x256_VGA_state;
 extern struct vga_mode_params v320x200x256_VGA_crtc_state;
+extern struct vga_mode_params v320x200x256_VGA_crtc_state_init;
 
+void v320x200x256_VGA_init();
 void v320x200x256_VGA_update_from_CRTC_state();
+void v320x200x256_VGA_setmode(unsigned int flags);
+#define v320x200x256_VGA_setmode_FLAG_DONT_USE_INT10		(1U << 0UL)
+/* ^ set this flag if you already set the video mode to INT 10h mode 0x13 */
 
 static inline void v320x200x256_VGA_update_vis_ptr() {
 #if TARGET_MSDOS == 16

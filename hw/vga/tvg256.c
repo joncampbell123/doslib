@@ -345,9 +345,8 @@ void v320x200x256_VGA_menu() {
 	if ((vga_flags & VGA_IS_VGA) == 0)
 		return;
 
-	int10_setmode(0x13);
-	update_state_from_vga();
-	v320x200x256_VGA_update_from_CRTC_state();
+	v320x200x256_VGA_init();
+	v320x200x256_VGA_setmode(0);
 
 	redraw = 1;
 	while (1) {
