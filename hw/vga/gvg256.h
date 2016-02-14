@@ -7,9 +7,11 @@ struct v320x200x256_VGA_state {
 	uint16_t		stride;			// bytes per scanline
 	uint16_t		width,virt_width;	// video width vs virtual width
 	uint16_t		height,virt_height;	// video height vs virtual height
+	uint16_t		scan_height;		// raster video height
 	uint32_t		draw_offset;		// draw offset
 	uint32_t		vis_offset;		// visual offset
 	uint32_t		vram_size;		// size of VRAM
+	uint8_t			scan_height_div;
 	uint8_t			hpel;			// horizontal pel
 	uint8_t			stride_shift;		// reflects VGA CRTC byte/word/dword mode
 	uint8_t			tseng:1;		// card is Tseng ET3000/ET4000
@@ -34,6 +36,7 @@ void v320x200x256_VGA_setmode(unsigned int flags);
 
 double v320x200x256_VGA_get_hsync_rate();
 double v320x200x256_VGA_get_refresh_rate();
+void v320x200x256_VGA_setwindow(int x,int y,int w,int h);
 
 static inline void v320x200x256_VGA_update_vis_ptr() {
 #if TARGET_MSDOS == 16

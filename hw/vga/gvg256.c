@@ -97,6 +97,8 @@ void v320x200x256_VGA_update_from_CRTC_state() {
 	v320x200x256_VGA_state.stride =
 		v320x200x256_VGA_state.virt_width = vga_stride << v320x200x256_VGA_state.stride_shift;
 	v320x200x256_VGA_state.width = v320x200x256_VGA_crtc_state.horizontal_display_end * 4;
+	v320x200x256_VGA_state.scan_height_div = v320x200x256_VGA_crtc_state.max_scanline;
+	v320x200x256_VGA_state.scan_height = v320x200x256_VGA_crtc_state.vertical_display_end;
 	v320x200x256_VGA_state.height = (v320x200x256_VGA_crtc_state.vertical_display_end +
 		v320x200x256_VGA_crtc_state.max_scanline - 1) / v320x200x256_VGA_crtc_state.max_scanline; /* <- NTS: Modern Intel chipsets however ignore the partial last scanline! */
 	v320x200x256_VGA_state.virt_height = v320x200x256_VGA_state.vram_size / v320x200x256_VGA_state.stride;
@@ -105,5 +107,68 @@ void v320x200x256_VGA_update_from_CRTC_state() {
 	v320x200x256_VGA_update_draw_ptr();
 	v320x200x256_VGA_update_vis_ptr();
 	v320x200x256_VGA_update_par();
+}
+
+void v320x200x256_VGA_setwindow(int x,int y,int w,int h) {
+	int minx,miny,maxx,maxy,maxw,maxh;
+
+	x = (x + 2) & (~3);
+	w = (w + 2) & (~3);
+	if (w < 4) w = 4;
+	if (w > ((255+5)*4)) w = (255+5)*4;
+	if (h < 1) h = 1;
+	if (h > (1023 + 2)) h = 1023 + 2;
+
+	v320x200x256_VGA_crtc_state = v320x200x256_VGA_crtc_state_init;
+
+	minx = (v320x200x256_VGA_crtc_state.horizontal_end_retrace - v320x200x256_VGA_crtc_state.horizontal_total) * 4;
+	miny = v320x200x256_VGA_crtc_state.vertical_end_retrace - v320x200x256_VGA_crtc_state.vertical_total;
+	maxx = v320x200x256_VGA_crtc_state.horizontal_start_retrace * 4;
+	maxy = v320x200x256_VGA_crtc_state.vertical_start_retrace;
+	maxw = (v320x200x256_VGA_crtc_state.horizontal_total - (v320x200x256_VGA_crtc_state.horizontal_end_retrace - v320x200x256_VGA_crtc_state.horizontal_start_retrace)) * 4;
+	maxh = v320x200x256_VGA_crtc_state.vertical_total - (v320x200x256_VGA_crtc_state.vertical_end_retrace - v320x200x256_VGA_crtc_state.vertical_start_retrace);
+
+	if (x == (int)0x8000)
+		x = ((((int)v320x200x256_VGA_crtc_state.horizontal_display_end * 4) + 4 - w) / 2) & (~3);
+	if (y == (int)0x8000)
+		y = ((int)v320x200x256_VGA_crtc_state.vertical_display_end - h) / 2;
+
+	if (x < minx) x = minx;
+	if (y < miny) y = miny;
+	if (x > maxx) x = maxx;
+	if (y > maxy) y = maxy;
+	if ((x+w) > maxx) w = maxx - x;
+	if ((y+h) > maxy) h = maxy - y;
+	if (w > maxw) w = maxw;
+	if (h > maxh) h = maxh;
+	if (w < 4) w = 4;
+	if (h < 1) h = 1;
+
+	printf("x=%d y=%d w=%d h=%d maxx=%d maxy=%d\n",x,y,w,h,maxx,maxy);
+	getch();
+
+	v320x200x256_VGA_crtc_state.horizontal_start_retrace =
+		v320x200x256_VGA_crtc_state_init.horizontal_start_retrace - (x / 4);
+	v320x200x256_VGA_crtc_state.horizontal_blank_start =
+		v320x200x256_VGA_crtc_state_init.horizontal_blank_start - (x / 4);
+	v320x200x256_VGA_crtc_state.horizontal_end_retrace =
+		v320x200x256_VGA_crtc_state_init.horizontal_end_retrace - (x / 4);
+	v320x200x256_VGA_crtc_state.horizontal_blank_end =
+		v320x200x256_VGA_crtc_state_init.horizontal_blank_end - (x / 4);
+	v320x200x256_VGA_crtc_state.vertical_start_retrace =
+		v320x200x256_VGA_crtc_state_init.vertical_start_retrace - y;
+	v320x200x256_VGA_crtc_state.vertical_blank_start =
+		v320x200x256_VGA_crtc_state_init.vertical_blank_start - y;
+	v320x200x256_VGA_crtc_state.vertical_end_retrace =
+		v320x200x256_VGA_crtc_state_init.vertical_end_retrace - y;
+	v320x200x256_VGA_crtc_state.vertical_blank_end =
+		v320x200x256_VGA_crtc_state_init.vertical_blank_end - y;
+	v320x200x256_VGA_crtc_state.horizontal_display_end =
+		w / 4;
+	v320x200x256_VGA_crtc_state.vertical_display_end =
+		h;
+
+	vga_write_crtc_mode(&v320x200x256_VGA_crtc_state,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
+	v320x200x256_VGA_update_from_CRTC_state();
 }
 

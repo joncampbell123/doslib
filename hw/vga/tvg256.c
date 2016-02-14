@@ -282,6 +282,106 @@ static void v320x200x256_VGA_menu_setpixel_box3rwzoom() {
 	}
 }
 
+static void v320x200x256_VGA_menu_windowing() {
+	int posx = (int)0x8000,posy = (int)0x8000;
+	unsigned char redraw;
+	int c;
+
+	if ((vga_flags & VGA_IS_VGA) == 0)
+		return;
+
+	redraw = 1;
+	while (1) {
+		if (redraw) {
+			/* position the cursor to home */
+			bios_cls();
+			vga_moveto(0,0);
+			vga_sync_bios_cursor();
+			redraw = 0;
+
+			printf("w/W/h/H=dim x/X/y/Y/c=pos\n");
+			printf("  pos=(");
+			if (posx == (int)0x8000) printf("NA");
+			else printf("%d",posx);
+			printf(",");
+			if (posy == (int)0x8000) printf("NA");
+			else printf("%d",posy);
+			printf(") ");
+
+			printf("vis=(%d,%d) ",
+				v320x200x256_VGA_state.width,
+				v320x200x256_VGA_state.height);
+
+			printf("\n");
+		}
+
+		c = getch();
+		if (c == 27)
+			break;
+		else if (c == 'c') {
+			posx = posy = (int)0x8000;
+			v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width,v320x200x256_VGA_state.scan_height);
+			redraw = 1;
+		}
+		else if (c == 'x') {
+			if (posx == (int)0x8000)
+				posx = 0;
+			else
+				posx -= 4;
+			v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width,v320x200x256_VGA_state.scan_height);
+			redraw = 1;
+		}
+		else if (c == 'X') {
+			if (posx == (int)0x8000)
+				posx = 0;
+			else
+				posx += 4;
+			v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width,v320x200x256_VGA_state.scan_height);
+			redraw = 1;
+		}
+		else if (c == 'y') {
+			if (posy == (int)0x8000)
+				posy = 0;
+			else
+				posy--;
+			v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width,v320x200x256_VGA_state.scan_height);
+			redraw = 1;
+		}
+		else if (c == 'Y') {
+			if (posy == (int)0x8000)
+				posy = 0;
+			else
+				posy++;
+			v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width,v320x200x256_VGA_state.scan_height);
+			redraw = 1;
+		}
+		else if (c == 'w') {
+			if (v320x200x256_VGA_state.width > 4) {
+				v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width-4,v320x200x256_VGA_state.scan_height);
+				redraw = 1;
+			}
+		}
+		else if (c == 'W') {
+			if (v320x200x256_VGA_state.width < 4096) {
+				v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width+4,v320x200x256_VGA_state.scan_height);
+				redraw = 1;
+			}
+		}
+		else if (c == 'h') {
+			if (v320x200x256_VGA_state.height > 0) {
+				v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width,v320x200x256_VGA_state.scan_height-1);
+				redraw = 1;
+			}
+		}
+		else if (c == 'H') {
+			if (v320x200x256_VGA_state.height < 4096) {
+				v320x200x256_VGA_setwindow(posx,posy,v320x200x256_VGA_state.width,v320x200x256_VGA_state.scan_height+1);
+				redraw = 1;
+			}
+		}
+	}
+}
+
 static void v320x200x256_VGA_menu_setpixel() {
 	unsigned char redraw;
 	int c;
@@ -371,6 +471,7 @@ void v320x200x256_VGA_menu() {
 				(double)v320x200x256_VGA_get_refresh_rate());
 
 			printf("ESC  Main menu         A. SetPixel\n");
+			printf("B. Windowing\n");
 		}
 
 		c = getch();
@@ -378,6 +479,10 @@ void v320x200x256_VGA_menu() {
 			break;
 		else if (c == 'a' || c == 'A') {
 			v320x200x256_VGA_menu_setpixel();
+			redraw = 1;
+		}
+		else if (c == 'b' || c == 'B') {
+			v320x200x256_VGA_menu_windowing();
 			redraw = 1;
 		}
 	}
