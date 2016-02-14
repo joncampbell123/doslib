@@ -85,9 +85,9 @@ v320x200x256_VGA_pixelmemaddrxy(const unsigned int x,const unsigned int y) {
 
 static inline uint8_t v320x200x256_VGA_getpixelnc(const unsigned int x,const unsigned int y) {
 #if TARGET_MSDOS == 16
-	uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x + (uint32_t)FP_OFF(v320x200x256_VGA_state.draw_ptr);
-	uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
-	VGA_RAM_PTR p = MK_FP(sg,(uint16_t)(o & 0xF));
+	const uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x + (uint32_t)FP_OFF(v320x200x256_VGA_state.draw_ptr);
+	const uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
+	const VGA_RAM_PTR p = MK_FP(sg,(uint16_t)(o & 0xF));
 	return *p;
 #else
 	return v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.stride)+x];
@@ -101,9 +101,9 @@ static inline uint8_t v320x200x256_VGA_getpixel(const unsigned int x,const unsig
 
 static inline void v320x200x256_VGA_setpixelnc(const unsigned int x,const unsigned int y,const uint8_t v) {
 #if TARGET_MSDOS == 16
-	uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x + (uint32_t)FP_OFF(v320x200x256_VGA_state.draw_ptr);
-	uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
-	VGA_RAM_PTR p = MK_FP(sg,(uint16_t)(o & 0xF));
+	const uint32_t o = ((uint32_t)y * (uint32_t)v320x200x256_VGA_state.stride) + (uint32_t)x + (uint32_t)FP_OFF(v320x200x256_VGA_state.draw_ptr);
+	const uint16_t sg = FP_SEG(v320x200x256_VGA_state.draw_ptr) + (uint16_t)(o >> (uint32_t)4);
+	const VGA_RAM_PTR p = MK_FP(sg,(uint16_t)(o & 0xF));
 	*p = v;
 #else
 	v320x200x256_VGA_state.draw_ptr[(y*v320x200x256_VGA_state.stride)+x] = v;
