@@ -47,14 +47,26 @@ void v320x200x256_VGA_setmode(unsigned int flags) {
 	if (!(flags & v320x200x256_VGA_setmode_FLAG_DONT_USE_INT10))
 		int10_setmode(0x13);
 
-	if (v320x200x256_VGA_state.tseng)
-		vga_set_memory_map(0/*0xA0000-0xBFFFF*/);
-	else
-		vga_set_memory_map(1/*0xA0000-0xAFFFF*/);
-
 	update_state_from_vga();
 	v320x200x256_VGA_update_from_CRTC_state();
 	v320x200x256_VGA_crtc_state_init = v320x200x256_VGA_crtc_state;
+
+	if (v320x200x256_VGA_state.tseng) {
+		/* ET4000 cards have a weird way of enabling "mode X" or more than 64KB of RAM
+		 * where the CRTC steps through RAM the same whether BYTE mode or DWORD mode.
+		 * Apparently the default DWORD mode causes 64KB wraparound to emulate VGA.
+		 * If we want to enable pointer math to access 128KB we need to switch to BYTE mode. */
+		vga_set_memory_map(0/*0xA0000-0xBFFFF*/);
+		v320x200x256_VGA_crtc_state.word_mode = 0;
+		v320x200x256_VGA_crtc_state.dword_mode = 0;
+	}
+	else {
+		/* Normal VGA/SVGA modes implement VGA "chained mode" by mapping 4 bytes every 16 bytes
+		 * and read/write the same. DWORD and WORD bits are on. */
+		vga_set_memory_map(1/*0xA0000-0xAFFFF*/);
+		v320x200x256_VGA_crtc_state.word_mode = 1;
+		v320x200x256_VGA_crtc_state.dword_mode = 1;
+	}
 }
 
 double v320x200x256_VGA_get_hsync_rate() {
