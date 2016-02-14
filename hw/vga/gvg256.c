@@ -47,7 +47,6 @@ void v320x200x256_VGA_setmode(unsigned int flags) {
 	if (!(flags & v320x200x256_VGA_setmode_FLAG_DONT_USE_INT10))
 		int10_setmode(0x13);
 
-	update_state_from_vga();
 	v320x200x256_VGA_update_from_CRTC_state();
 	v320x200x256_VGA_crtc_state_init = v320x200x256_VGA_crtc_state;
 
@@ -67,6 +66,8 @@ void v320x200x256_VGA_setmode(unsigned int flags) {
 		v320x200x256_VGA_crtc_state.word_mode = 1;
 		v320x200x256_VGA_crtc_state.dword_mode = 1;
 	}
+	vga_write_crtc_mode(&v320x200x256_VGA_crtc_state,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
+	v320x200x256_VGA_update_from_CRTC_state();
 }
 
 double v320x200x256_VGA_get_hsync_rate() {
