@@ -15,6 +15,11 @@ $(HW_VGAGUI_LIB):
 	@cd $(HW_VGAGUI_LIB_DIR)
 	@$(MAKECMD) build lib
 	@cd $(HERE)
+
+$(HW_VGAGFX_LIB):
+	@cd $(HW_VGAGFX_LIB_DIR)
+	@$(MAKECMD) build lib
+	@cd $(HERE)
 !endif
 
 # HW\CPU------------------------------------------------------------------------------------
