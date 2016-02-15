@@ -1055,23 +1055,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	}
 
 	/* add our commentary for other emulation environments we can detect */
-	if (!cx->windows_emulation && detect_dosbox_emu()) {
-		/* add commentary if we know we're running under the DOSBox emulator.
-		 * Nothing special, DOSBox does a damn good job at it's emulation so
-		 * no workarounds are required. */
-		char *x = cx->dsp_copyright+strlen(cx->dsp_copyright);
-		char *f = cx->dsp_copyright+sizeof(cx->dsp_copyright)-1;
-		const char *add = " [DOSBox]";
-
+	if (!cx->windows_emulation && detect_dosbox_emu())
 		cx->dosbox_emulation = 1;
-		if (x != cx->dsp_copyright) {
-			while (x < f && *add) *x++ = *add++;
-			*x = 0;
-		}
-		else {
-			strcpy(cx->dsp_copyright,"DOSBox emulator");
-		}
-	}
 
 	if (!cx->windows_emulation && detect_virtualbox_emu())
 		cx->virtualbox_emulation = 1;
