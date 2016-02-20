@@ -2103,7 +2103,7 @@ int sndsb_interrupt_reason(struct sndsb_ctx *cx) {
 		return sndsb_read_mixer(cx,0x82) & 7;
 	}
 	else if (cx->ess_extensions) {
-		return cx->buffer_16bit ? 2 : 1;
+		return 1; /* ESS DMA is always 8-bit. You always clear the IRQ through port 0x22E, even 16-bit PCM */
 	}
 
 	/* DSP 3.xx and earlier: just assume the interrupt happened because of the DSP */
