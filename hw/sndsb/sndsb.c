@@ -104,8 +104,8 @@ struct sndsb_mixer_control sndsb_mixer_ct1345[] = {
 /*      index, of,ln,name */
 	{0x04, 1, 3, "Voice R"},		{0x04, 5, 3, "Voice L"},
 	{0x0A, 1, 2, "Mic"},
-	{0x0C, 1, 2, "Input source"},		{0x0C, 3, 1, "Lowpass filter"},		{0x0C, 5, 1, "Input filter"},
-	{0x0E, 1, 1, "Stereo switch"},		{0x0E, 5, 1, "Output filter"},
+	{0x0C, 1, 2, "Input source"},		{0x0C, 3, 1, "8.8KHz lowpass filter"},		{0x0C, 5, 1, "Input filter bypass"},
+	{0x0E, 1, 1, "Stereo switch"},		{0x0E, 5, 1, "Output filter bypass"},
 	{0x22, 1, 3, "Master R"},		{0x22, 5, 3, "Master L"},
 	{0x26, 1, 3, "MIDI R"},			{0x26, 5, 3, "MIDI L"},
 	{0x28, 1, 3, "CD R"},			{0x28, 5, 3, "CD L"},
