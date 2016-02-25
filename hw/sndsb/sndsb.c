@@ -2921,7 +2921,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 				/* Sound Blaster Pro requires the "set input mode to mono/stereo" commands if recording,
 				 * and sets mono/stereo mode with a bit defined in a specific mixer register */
 				if (cx->dsp_record) sndsb_write_dsp(cx,cx->buffer_stereo ? 0xA8 : 0xA0);
-				sndsb_write_mixer(cx,0x0E,0x20 | (cx->buffer_stereo ? 0x02 : 0x00));
+				sndsb_write_mixer(cx,0x0E,(cx->buffer_rate >= 15000 ? 0x20 : 0x00) | (cx->buffer_stereo ? 0x02 : 0x00));
 			}
 
 			/* if we need to, transmit block length */
