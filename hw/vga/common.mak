@@ -52,6 +52,10 @@ $(TGFX_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_VGAGFX_LIB) $(HW_VGAG
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_VGAGFX_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)tgfx.obj name $(TGFX_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+	@$(COPY) ed2.pcx $(SUBDIR)$(HPS)ed2.pcx
+	@$(COPY) megaman.pcx $(SUBDIR)$(HPS)megaman.pcx
+	@$(COPY) chikyuu.pcx $(SUBDIR)$(HPS)chikyuu.pcx
+	@$(COPY) 46113319.pcx $(SUBDIR)$(HPS)46113319.pcx
 !endif
 
 !ifdef TMODESET_EXE

@@ -7,8 +7,32 @@ set DOS4G=quiet
 if "%1" == "clean" call clean.bat
 if "%1" == "clean" goto end
 
+mkdir dos86c
+wmake -f ..\..\mak\dos86c.mak HPS=\ all REL=..\.. 
+
 mkdir dos86l
-wmake -f ..\..\mak\dos86l.mak HPS=\ lib REL=..\.. 
+wmake -f ..\..\mak\dos86l.mak HPS=\ all REL=..\.. 
+
+mkdir dos86m
+wmake -f ..\..\mak\dos86m.mak HPS=\ all REL=..\.. 
+
+mkdir dos86s
+wmake -f ..\..\mak\dos86s.mak HPS=\ all REL=..\.. 
+
+mkdir dos386f
+wmake -f ..\..\mak\dos386f.mak HPS=\ all REL=..\.. 
+
+mkdir win302l
+wmake -f ..\..\mak\win302l.mak HPS=\ all REL=..\.. 
+
+mkdir win313l
+wmake -f ..\..\mak\win313l.mak HPS=\ all REL=..\.. 
+
+mkdir win32s3
+wmake -f ..\..\mak\win32s3.mak HPS=\ all REL=..\.. 
+
+mkdir win32
+wmake -f ..\..\mak\win32.mak HPS=\ all REL=..\.. 
 
 
 :end

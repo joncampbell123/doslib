@@ -282,6 +282,124 @@ static void v320x200x256_VGA_menu_setpixel_box3rwzoom() {
 	}
 }
 
+/* this one's for you, Sparky4. Non-mode-X PCX drawing routine. Not fast, but shows you how PCX compression works. --J.C. */
+#pragma pack(push,1)
+typedef struct pcx_header {
+	uint8_t			manufacturer;		// +0x00  always 0x0A
+	uint8_t			version;		// +0x01  0, 2, 3, or 5
+	uint8_t			encoding;		// +0x02  always 0x01 for RLE
+	uint8_t			bitsPerPlane;		// +0x03  bits per pixel in each color plane (1, 2, 4, 8, 24)
+	uint16_t		Xmin,Ymin,Xmax,Ymax;	// +0x04  window (image dimensions). Pixel count in each dimension is Xmin <= x <= Xmax, Ymin <= y <= Ymax i.e. INCLUSIVE
+	uint16_t		VertDPI,HorzDPI;	// +0x0C  vertical/horizontal resolution in DPI
+	uint8_t			palette[48];		// +0x10  16-color or less color palette
+	uint8_t			reserved;		// +0x40  reserved, set to zero
+	uint8_t			colorPlanes;		// +0x41  number of color planes
+	uint16_t		bytesPerPlaneLine;	// +0x42  number of bytes to read for a single plane's scanline (uncompressed, apparently)
+	uint16_t		palType;		// +0x44  palette type (1 = color)
+	uint16_t		hScrSize,vScrSize;	// +0x46  scrolling?
+	uint8_t			pad[54];		// +0x4A  padding
+};							// =0x80
+#pragma pack(pop)
+
+static void v320x200x256_VGA_menu_setpixel_drawpcx(unsigned int sx,unsigned int sy,const char *path) {
+	struct pcx_header *pcx;
+	unsigned int buffersz;
+	char *buffer,*fence,*s;
+	unsigned char b,count;
+	unsigned int x,y,rx;
+	unsigned int w,h;
+	int fd,c;
+
+	if ((vga_flags & VGA_IS_VGA) == 0)
+		return;
+
+	/* load PCX into memory */
+	fd = open(path,O_RDONLY|O_BINARY);
+	if (fd < 0) {
+		printf("Can't open '%s'\n",path);
+		return;
+	}
+
+	{
+		unsigned long fsz = lseek(fd,0,SEEK_END);
+		if (fsz <= 128UL/* too small to be PCX */ || fsz > 32000UL/*too large for this demo*/) {
+			close(fd);
+			return;
+		}
+
+		buffersz = (unsigned int)fsz; /* WARNING: unsigned long (32-bit) truncation to unsigned int (16-bit) in real-mode MS-DOS */
+		buffer = malloc(buffersz);
+		if (buffer == NULL) {
+			close(fd);
+			return;
+		}
+		fence = buffer + buffersz;
+		lseek(fd,0,SEEK_SET);
+		read(fd,buffer,buffersz);
+	}
+	close(fd);
+
+	/* PCX is loaded. process it from memory buffer. */
+	pcx = (struct pcx_header*)buffer; /* PCX header */
+	w = pcx->Xmax + 1 - pcx->Xmin;
+	h = pcx->Ymax + 1 - pcx->Ymin;
+	if (w == 0 || h == 0 || w > 320 || h > 240 || pcx->bitsPerPlane != 8 || pcx->colorPlanes != 1) {
+		printf("Don't like the PCX: w=%u h=%u bpp=%u colorplanes=%u\n",
+			w,h,pcx->bitsPerPlane,pcx->colorPlanes);
+		free(buffer);
+		return;
+	}
+
+	/* VGA palette is at the end */
+	if (buffersz >= (128+769)) {
+		s = buffer + buffersz - 769;
+		if (*s == 0x0C) {
+			s++;
+			vga_palette_lseek(0);
+			for (c=0;c < 256;c++) {
+				vga_palette_write(s[0] >> 2,s[1] >> 2,s[2] >> 2);
+				s += 3;
+			}
+
+			fence -= 769; /* don't decode VGA palette as RLE! */
+		}
+	}
+
+	/* DRAW! */
+	rx=0;
+	x=sx;y=sy;
+	s = buffer+128; /* start after PCX header */
+	do {
+		b = *s++;
+		if ((b&0xC0) == 0xC0) {
+			count = b&0x3F;
+			if (s >= fence) break;
+			b = *s++;
+			while (count > 0) {
+				v320x200x256_VGA_setpixel(x++,y,b);
+				if ((++rx) >= pcx->bytesPerPlaneLine) {
+					x=sx;
+					y++;
+					rx=0;
+				}
+				count--;
+			}
+		}
+		else {
+			v320x200x256_VGA_setpixel(x++,y,b);
+			if ((++rx) >= pcx->bytesPerPlaneLine) {
+				x=sx;
+				y++;
+				rx=0;
+			}
+		}
+	} while (s < fence);
+
+	/* we're done. free the buffer */
+	free(buffer);
+	buffer = fence = s = NULL;
+}
+
 static void v320x200x256_VGA_menu_windowing() {
 	int posx = (int)0x8000,posy = (int)0x8000;
 	unsigned char redraw;
@@ -459,6 +577,7 @@ static void v320x200x256_VGA_menu_setpixel() {
 			printf("B. Box1b               C. Box2overdraw\n");
 			printf("D. Box3inv1            E. Box3rw\n");
 			printf("F. Box3rw displace     G. Box3rwzoom\n");
+			printf("H. PCX draw\n");
 		}
 
 		c = getch();
@@ -490,6 +609,45 @@ static void v320x200x256_VGA_menu_setpixel() {
 		}
 		else if (c == 'g' || c == 'G') {
 			v320x200x256_VGA_menu_setpixel_box3rwzoom();
+			redraw = 1;
+		}
+		else if (c == 'h' || c == 'H') {
+			v320x200x256_VGA_menu_setpixel_drawpcx(0,0,"megaman.pcx");
+			v320x200x256_VGA_menu_setpixel_drawpcx(0,100,"megaman.pcx");
+
+			while (1) {
+				c = getch();
+				if (c == 27 || c == 13)
+					break;
+			}
+
+			/* Test PCX shamelessly copied from Sparky4's project */
+			v320x200x256_VGA_menu_setpixel_drawpcx(0,0,"46113319.pcx");
+
+			while (1) {
+				c = getch();
+				if (c == 27 || c == 13)
+					break;
+			}
+
+			/* Another test PCX shamelessly copied from Sparky4's project */
+			v320x200x256_VGA_menu_setpixel_drawpcx(0,0,"chikyuu.pcx");
+
+			while (1) {
+				c = getch();
+				if (c == 27 || c == 13)
+					break;
+			}
+
+			/* Yet another test PCX shamelessly copied from Sparky4's project */
+			v320x200x256_VGA_menu_setpixel_drawpcx(0,0,"ed2.pcx");
+
+			while (1) {
+				c = getch();
+				if (c == 27 || c == 13)
+					break;
+			}
+
 			redraw = 1;
 		}
 	}
