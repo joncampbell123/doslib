@@ -268,7 +268,7 @@ int main(int argc,char **argv) {
 						if ((++color_run) == 126) break;
 					}
 
-					if (color_run < 8) color_run = 0;
+					if (color_run < 3) color_run = 0;
 
 					if (color_run == 0) {
 						unsigned char ppixel = transparent_color,same_count = 0;
@@ -277,7 +277,7 @@ int main(int argc,char **argv) {
 						scan_y = y;
 						while (scan_y < out_strip_height && *scan_s != transparent_color) {
 							if (*scan_s == ppixel) {
-								if (same_count >= 8) {
+								if (same_count >= 4) {
 									d -= same_count;
 									scan_y -= same_count;
 									scan_s -= same_count * src_pcx_stride;
