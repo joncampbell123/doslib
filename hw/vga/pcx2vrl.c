@@ -16,11 +16,11 @@
 struct vrl_header {
 	uint8_t			vrl_sig[4];		// +0x00  "VRL1"
 	uint8_t			fmt_sig[4];		// +0x04  "VGAX"
-	uint8_t			height;			// +0x08  Sprite height
-	uint8_t			width;			// +0x09  Sprite width
-	int8_t			hotspot_x;		// +0x0A  Hotspot offset (X) for programmer's reference
-	int8_t			hotspot_y;		// +0x0B  Hotspot offset (Y) for programmer's reference
-};							// =0x0C
+	uint16_t		height;			// +0x08  Sprite height
+	uint16_t		width;			// +0x0A  Sprite width
+	int16_t			hotspot_x;		// +0x0C  Hotspot offset (X) for programmer's reference
+	int16_t			hotspot_y;		// +0x0E  Hotspot offset (Y) for programmer's reference
+};							// =0x10
 #pragma pack(pop)
 
 #pragma pack(push,1)
