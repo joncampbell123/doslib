@@ -249,7 +249,7 @@ int main(int argc,char **argv) {
 				while (y < out_strip_height && *s == transparent_color) {
 					y++;
 					s += src_pcx_stride;
-					if ((++skipcount) == 255) break;
+					if ((++skipcount) == 254) break;
 				}
 
 				// check: can we do a run length of one color?
@@ -265,7 +265,7 @@ int main(int argc,char **argv) {
 						if (*scan_s != first_color) break;
 						scan_y++;
 						scan_s += src_pcx_stride;
-						if ((++color_run) == 127) break;
+						if ((++color_run) == 126) break;
 					}
 
 					if (color_run < 8) color_run = 0;
@@ -293,7 +293,7 @@ int main(int argc,char **argv) {
 							scan_y++;
 							*d++ = ppixel = *scan_s;
 							scan_s += src_pcx_stride;
-							if ((++runcount) == 127) break;
+							if ((++runcount) == 126) break;
 						}
 					}
 					else {
@@ -322,8 +322,7 @@ int main(int argc,char **argv) {
 			}
 
 			// final byte
-			*d++ = 0x00;
-			*d++ = 0x00;
+			*d++ = 0xFF;
 			assert(d <= dfence);
 			write(fd,out_strip,(int)(d - out_strip));
 		}

@@ -465,10 +465,8 @@ static void v320x200x256_VGA_menu_setpixel_drawvrl(unsigned int sx,unsigned int 
 		y=sy;
 		while ((s+2) <= fence) {
 			run = *s++;
+			if (run == 0xFF) break;
 			skip = *s++;
-			if (run == 0 && skip == 0)
-				break;
-
 			y += skip;
 			if (run & 0x80) {
 				if (s >= fence) break;
