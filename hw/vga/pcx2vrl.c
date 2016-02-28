@@ -50,7 +50,7 @@ static unsigned int		src_pcx_stride = 0;
 static unsigned int		src_pcx_width = 0;
 static unsigned int		src_pcx_height = 0;
 
-static unsigned char		out_strip[512+16];
+static unsigned char		out_strip[(256*3)+16];
 static unsigned int		out_strip_height = 0;
 static unsigned int		out_strips = 0;
 
@@ -240,35 +240,77 @@ int main(int argc,char **argv) {
 			s = src_pcx + x;
 			dfence = out_strip + sizeof(out_strip);
 			while (y < out_strip_height) {
-				unsigned char same_as_first = 0;
 				unsigned char *stripstart = d;
-				unsigned char first_pixel;
+				unsigned char color_run = 0;
 
 				d += 2; // patch bytes later
 				runcount = 0;
 				skipcount = 0;
-				while (skipcount < 255 && y < out_strip_height && *s == transparent_color) {
+				while (y < out_strip_height && *s == transparent_color) {
 					y++;
-					skipcount++;
 					s += src_pcx_stride;
-				}
-				if (y < out_strip_height && *s != transparent_color) {
-					first_pixel = *d++ = *s;
-					same_as_first = 1;
-					y++;
-					runcount++;
-					s += src_pcx_stride;
-				}
-				while (runcount < 127 && y < out_strip_height && *s != transparent_color) {
-					if (*s != first_pixel) same_as_first = 0;
-					*d++ = *s; // copy the pixel
-					y++;
-					runcount++;
-					s += src_pcx_stride;
+					if ((++skipcount) == 255) break;
 				}
 
+				// check: can we do a run length of one color?
+				if (y < out_strip_height && *s != transparent_color) {
+					unsigned char first_color = *s;
+					unsigned char *scan_s = s;
+					unsigned int scan_y = y;
+
+					scan_s += src_pcx_stride;
+					color_run = 1;
+					scan_y++;
+
+					while (scan_y < out_strip_height) {
+						if (*scan_s != first_color) {
+							if (color_run < 8) color_run = 0;
+							break;
+						}
+						scan_y++;
+						scan_s += src_pcx_stride;
+						if ((++color_run) == 127) break;
+					}
+
+					if (color_run == 0) {
+						unsigned char ppixel,same_count = 0;
+
+						scan_s = s;
+						scan_y = y;
+						while (scan_y < out_strip_height && *scan_s != transparent_color) {
+							if (*scan_s == ppixel) {
+								if (same_count >= 8) {
+									d -= same_count;
+									scan_y -= same_count;
+									scan_s -= same_count * src_pcx_stride;
+									runcount -= same_count;
+									break;
+								}
+								same_count++;
+							}
+							else {
+								same_count=0;
+							}
+
+							scan_y++;
+							*d++ = ppixel = *scan_s;
+							scan_s += src_pcx_stride;
+							if ((++runcount) == 127) break;
+						}
+					}
+					else {
+						runcount = color_run;
+					}
+
+					y = scan_y;
+					s = scan_s;
+				}
+
+				if (runcount == 0 && skipcount == 0) {
+					d = stripstart;
+				}
 				// overwrite the first byte with run + skip count
-				if (same_as_first && runcount > 3) {
+				else if (color_run != 0 && runcount > 3) {
 					stripstart[0] = runcount + 0x80; // it's a run of one color
 					d = stripstart + 3; // it becomes <runcount+0x80> <skipcount> <color to repeat>
 				}
