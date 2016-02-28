@@ -400,6 +400,102 @@ static void v320x200x256_VGA_menu_setpixel_drawpcx(unsigned int sx,unsigned int 
 	buffer = fence = s = NULL;
 }
 
+#pragma pack(push,1)
+struct vrl_header {
+	uint8_t			vrl_sig[4];		// +0x00  "VRL1"
+	uint8_t			fmt_sig[4];		// +0x04  "VGAX"
+	uint16_t		height;			// +0x08  Sprite height
+	uint16_t		width;			// +0x0A  Sprite width
+	int16_t			hotspot_x;		// +0x0C  Hotspot offset (X) for programmer's reference
+	int16_t			hotspot_y;		// +0x0E  Hotspot offset (Y) for programmer's reference
+};							// =0x10
+#pragma pack(pop)
+
+static void v320x200x256_VGA_menu_setpixel_drawvrl(unsigned int sx,unsigned int sy,const char *path) {
+	struct vrl_header *vrl;
+	unsigned int buffersz;
+	char *buffer,*fence,*s;
+	unsigned char b,run,skip;
+	unsigned int x,y,rx;
+	unsigned int w;
+	int fd;
+
+	if ((vga_flags & VGA_IS_VGA) == 0)
+		return;
+
+	/* load PCX into memory */
+	fd = open(path,O_RDONLY|O_BINARY);
+	if (fd < 0) {
+		printf("Can't open '%s'\n",path);
+		return;
+	}
+
+	{
+		unsigned long fsz = lseek(fd,0,SEEK_END);
+		if (fsz <= 20UL || fsz > 64000UL) {
+			close(fd);
+			return;
+		}
+
+		buffersz = (unsigned int)fsz; /* WARNING: unsigned long (32-bit) truncation to unsigned int (16-bit) in real-mode MS-DOS */
+		buffer = malloc(buffersz);
+		if (buffer == NULL) {
+			close(fd);
+			return;
+		}
+		fence = buffer + buffersz;
+		lseek(fd,0,SEEK_SET);
+		read(fd,buffer,buffersz);
+	}
+	close(fd);
+
+	/* VRL is loaded. process it from memory buffer. */
+	vrl = (struct vrl_header*)buffer; /* VRL header */
+	if (memcmp(vrl->vrl_sig,"VRL1",4) || memcmp(vrl->fmt_sig,"VGAX",4)) {
+		fprintf(stderr,"Dont like the VRL\n");
+		free(buffer);
+		return;
+	}
+
+	/* DRAW! */
+	rx=0;x=sx;y=sy;
+	s = buffer+sizeof(*vrl); /* start after VRL header */
+	w = vrl->width;
+	while ((s+2) <= fence && rx < vrl->width) {
+		y=sy;
+		while ((s+2) <= fence) {
+			run = *s++;
+			skip = *s++;
+			if (run == 0 && skip == 0)
+				break;
+
+			y += skip;
+			if (run & 0x80) {
+				if (s >= fence) break;
+				b = *s++;
+
+				while (run > 0x80) {
+					v320x200x256_VGA_setpixel(x,y++,b);
+					run--;
+				}
+			}
+			else {
+				while (s < fence && run > 0) {
+					v320x200x256_VGA_setpixel(x,y++,*s++);
+					run--;
+				}
+			}
+		}
+
+		rx++;
+		x++;
+	}
+
+	/* we're done. free the buffer */
+	free(buffer);
+	buffer = fence = s = NULL;
+}
+
 static void v320x200x256_VGA_menu_windowing() {
 	int posx = (int)0x8000,posy = (int)0x8000;
 	unsigned char redraw;
@@ -577,7 +673,7 @@ static void v320x200x256_VGA_menu_setpixel() {
 			printf("B. Box1b               C. Box2overdraw\n");
 			printf("D. Box3inv1            E. Box3rw\n");
 			printf("F. Box3rw displace     G. Box3rwzoom\n");
-			printf("H. PCX draw\n");
+			printf("H. PCX draw            I. VRL draw\n");
 		}
 
 		c = getch();
@@ -641,6 +737,71 @@ static void v320x200x256_VGA_menu_setpixel() {
 
 			/* Yet another test PCX shamelessly copied from Sparky4's project */
 			v320x200x256_VGA_menu_setpixel_drawpcx(0,0,"ed2.pcx");
+
+			while (1) {
+				c = getch();
+				if (c == 27 || c == 13)
+					break;
+			}
+
+			redraw = 1;
+		}
+		else if (c == 'i' || c == 'I') {
+			unsigned int x,y;
+
+			v320x200x256_VGA_menu_setpixel_drawpcx(0,0,"megaman.pcx");
+			for (y=0;y < 200;y++) {
+				for (x=0;x < 320;x++) {
+					v320x200x256_VGA_setpixel(x,y,x^y);
+				}
+			}
+			v320x200x256_VGA_menu_setpixel_drawvrl(0,0,"megaman.vrl");
+			v320x200x256_VGA_menu_setpixel_drawvrl(0,100,"megaman.vrl");
+
+			while (1) {
+				c = getch();
+				if (c == 27 || c == 13)
+					break;
+			}
+
+			/* Test PCX shamelessly copied from Sparky4's project */
+			v320x200x256_VGA_menu_setpixel_drawpcx(0,0,"46113319.pcx");
+			for (y=0;y < 200;y++) {
+				for (x=0;x < 320;x++) {
+					v320x200x256_VGA_setpixel(x,y,x^y);
+				}
+			}
+			v320x200x256_VGA_menu_setpixel_drawvrl(0,0,"46113319.vrl");
+
+			while (1) {
+				c = getch();
+				if (c == 27 || c == 13)
+					break;
+			}
+
+			/* Another test PCX shamelessly copied from Sparky4's project */
+			v320x200x256_VGA_menu_setpixel_drawpcx(0,0,"chikyuu.pcx");
+			for (y=0;y < 200;y++) {
+				for (x=0;x < 320;x++) {
+					v320x200x256_VGA_setpixel(x,y,x^y);
+				}
+			}
+			v320x200x256_VGA_menu_setpixel_drawvrl(0,0,"chikyuu.vrl");
+
+			while (1) {
+				c = getch();
+				if (c == 27 || c == 13)
+					break;
+			}
+
+			/* Yet another test PCX shamelessly copied from Sparky4's project */
+			v320x200x256_VGA_menu_setpixel_drawpcx(0,0,"ed2.pcx");
+			for (y=0;y < 200;y++) {
+				for (x=0;x < 320;x++) {
+					v320x200x256_VGA_setpixel(x,y,x^y);
+				}
+			}
+			v320x200x256_VGA_menu_setpixel_drawvrl(0,0,"ed2.vrl");
 
 			while (1) {
 				c = getch();

@@ -258,22 +258,20 @@ int main(int argc,char **argv) {
 					unsigned char *scan_s = s;
 					unsigned int scan_y = y;
 
-					scan_s += src_pcx_stride;
 					color_run = 1;
+					scan_s += src_pcx_stride;
 					scan_y++;
-
 					while (scan_y < out_strip_height) {
-						if (*scan_s != first_color) {
-							if (color_run < 8) color_run = 0;
-							break;
-						}
+						if (*scan_s != first_color) break;
 						scan_y++;
 						scan_s += src_pcx_stride;
 						if ((++color_run) == 127) break;
 					}
 
+					if (color_run < 8) color_run = 0;
+
 					if (color_run == 0) {
-						unsigned char ppixel,same_count = 0;
+						unsigned char ppixel = transparent_color,same_count = 0;
 
 						scan_s = s;
 						scan_y = y;
@@ -299,6 +297,7 @@ int main(int argc,char **argv) {
 						}
 					}
 					else {
+						*d++ = first_color;
 						runcount = color_run;
 					}
 
@@ -309,15 +308,17 @@ int main(int argc,char **argv) {
 				if (runcount == 0 && skipcount == 0) {
 					d = stripstart;
 				}
-				// overwrite the first byte with run + skip count
-				else if (color_run != 0 && runcount > 3) {
-					stripstart[0] = runcount + 0x80; // it's a run of one color
-					d = stripstart + 3; // it becomes <runcount+0x80> <skipcount> <color to repeat>
-				}
 				else {
-					stripstart[0] = runcount; // <runcount> <skipcount> [run]
+					// overwrite the first byte with run + skip count
+					if (color_run != 0) {
+						stripstart[0] = runcount + 0x80; // it's a run of one color
+						d = stripstart + 3; // it becomes <runcount+0x80> <skipcount> <color to repeat>
+					}
+					else {
+						stripstart[0] = runcount; // <runcount> <skipcount> [run]
+					}
+					stripstart[1] = skipcount;
 				}
-				stripstart[1] = skipcount;
 			}
 
 			// final byte
