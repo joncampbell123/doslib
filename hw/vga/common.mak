@@ -54,9 +54,13 @@ $(TGFX_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_VGAGFX_LIB) $(HW_VGAG
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 	@$(COPY) ed2.pcx $(SUBDIR)$(HPS)ed2.pcx
+	@$(COPY) ed2.vrl $(SUBDIR)$(HPS)ed2.vrl
 	@$(COPY) megaman.pcx $(SUBDIR)$(HPS)megaman.pcx
+	@$(COPY) megaman.vrl $(SUBDIR)$(HPS)megaman.vrl
 	@$(COPY) chikyuu.pcx $(SUBDIR)$(HPS)chikyuu.pcx
+	@$(COPY) chikyuu.vrl $(SUBDIR)$(HPS)chikyuu.vrl
 	@$(COPY) 46113319.pcx $(SUBDIR)$(HPS)46113319.pcx
+	@$(COPY) 46113319.vrl $(SUBDIR)$(HPS)46113319.vrl
 !endif
 
 !ifdef TMODESET_EXE
