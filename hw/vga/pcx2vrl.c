@@ -174,7 +174,7 @@ int main(int argc,char **argv) {
 		if (*s == 0x0C) {
 			src_pcx_end = s++;
 			if (pal_file != NULL) {
-				fd = open(pal_file,O_WRONLY|O_CREAT|O_TRUNC,0644);
+				fd = open(pal_file,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
 				if (fd < 0) {
 					fprintf(stderr,"Cannot create file '%s', %s\n",pal_file,strerror(errno));
 					return 1;
@@ -220,7 +220,7 @@ int main(int argc,char **argv) {
 	}
 
 	/* write out */
-	fd = open(dst_file,O_WRONLY|O_CREAT|O_TRUNC,0644);
+	fd = open(dst_file,O_WRONLY|O_CREAT|O_TRUNC|O_BINARY,0644);
 	if (fd < 0) {
 		fprintf(stderr,"Cannot create file '%s', %s\n",dst_file,strerror(errno));
 		return 1;

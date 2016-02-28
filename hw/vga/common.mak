@@ -14,6 +14,7 @@ VGA240_EXE =   $(SUBDIR)$(HPS)vga240.exe
 
 !ifndef TARGET_WINDOWS
 TGFX_EXE =     $(SUBDIR)$(HPS)tgfx.exe
+DRAWVRL_EXE =  $(SUBDIR)$(HPS)drawvrl.exe
 PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
 TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.exe
 TMOTSENG_EXE = $(SUBDIR)$(HPS)tmotseng.exe
@@ -41,7 +42,7 @@ all: lib exe
        
 lib: $(HW_VGA_LIB) $(HW_VGATTY_LIB) $(HW_VGAGUI_LIB) $(HW_VGAGFX_LIB) .symbolic
 	
-exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(PCX2VRL_EXE) $(TGFX_EXE) $(VGA240_EXE) .symbolic
+exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(PCX2VRL_EXE) $(DRAWVRL_EXE) $(TGFX_EXE) $(VGA240_EXE) .symbolic
 
 $(TEST_EXE): $(HW_VGATTY_LIB) $(HW_VGATTY_LIB_DEPENDENCIES) $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(HW_VGATTY_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE)
@@ -55,12 +56,16 @@ $(TGFX_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_VGAGFX_LIB) $(HW_VGAG
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 	@$(COPY) ed2.pcx $(SUBDIR)$(HPS)ed2.pcx
 	@$(COPY) ed2.vrl $(SUBDIR)$(HPS)ed2.vrl
+	@$(COPY) ed2.pal $(SUBDIR)$(HPS)ed2.pal
 	@$(COPY) megaman.pcx $(SUBDIR)$(HPS)megaman.pcx
 	@$(COPY) megaman.vrl $(SUBDIR)$(HPS)megaman.vrl
+	@$(COPY) megaman.pal $(SUBDIR)$(HPS)megaman.pal
 	@$(COPY) chikyuu.pcx $(SUBDIR)$(HPS)chikyuu.pcx
 	@$(COPY) chikyuu.vrl $(SUBDIR)$(HPS)chikyuu.vrl
+	@$(COPY) chikyuu.pal $(SUBDIR)$(HPS)chikyuu.pal
 	@$(COPY) 46113319.pcx $(SUBDIR)$(HPS)46113319.pcx
 	@$(COPY) 46113319.vrl $(SUBDIR)$(HPS)46113319.vrl
+	@$(COPY) 46113319.pal $(SUBDIR)$(HPS)46113319.pal
 !endif
 
 !ifdef TMODESET_EXE
@@ -87,6 +92,13 @@ $(VGA240_EXE): $(SUBDIR)$(HPS)vga240.obj
 !ifdef PCX2VRL_EXE
 $(PCX2VRL_EXE): $(SUBDIR)$(HPS)pcx2vrl.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)pcx2vrl.obj name $(PCX2VRL_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef DRAWVRL_EXE
+$(DRAWVRL_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)drawvrl.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)drawvrl.obj name $(DRAWVRL_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
