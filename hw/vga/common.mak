@@ -14,6 +14,7 @@ VGA240_EXE =   $(SUBDIR)$(HPS)vga240.exe
 
 !ifndef TARGET_WINDOWS
 TGFX_EXE =     $(SUBDIR)$(HPS)tgfx.exe
+PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
 TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.exe
 TMOTSENG_EXE = $(SUBDIR)$(HPS)tmotseng.exe
 !endif
@@ -40,7 +41,7 @@ all: lib exe
        
 lib: $(HW_VGA_LIB) $(HW_VGATTY_LIB) $(HW_VGAGUI_LIB) $(HW_VGAGFX_LIB) .symbolic
 	
-exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(TGFX_EXE) $(VGA240_EXE) .symbolic
+exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(PCX2VRL_EXE) $(TGFX_EXE) $(VGA240_EXE) .symbolic
 
 $(TEST_EXE): $(HW_VGATTY_LIB) $(HW_VGATTY_LIB_DEPENDENCIES) $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(HW_VGATTY_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE)
@@ -75,6 +76,13 @@ $(TMOTSENG_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_82
 !ifdef VGA240_EXE
 $(VGA240_EXE): $(SUBDIR)$(HPS)vga240.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)vga240.obj name $(VGA240_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef PCX2VRL_EXE
+$(PCX2VRL_EXE): $(SUBDIR)$(HPS)pcx2vrl.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)pcx2vrl.obj name $(PCX2VRL_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
