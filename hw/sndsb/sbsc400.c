@@ -57,6 +57,11 @@ int sndsb_read_sc400_config(struct sndsb_ctx *cx) {
 	if (cx->irq < 0)
 		cx->irq = gallant_sc6600_map_to_irq[(c>>3)&7];
 
+	/* SC400 cards also have a Windows Sound System interface on one of two base I/O ports */
+	cx->wssio = (a & 0x10) ? 0xE80 : 0x530;
+	/* and a game port */
+	if (!(a & 2)) cx->gameio = 0x201;
+
 	cx->do_not_probe_irq = 1;
 	cx->do_not_probe_dma = 1;
 	return 1;
