@@ -47,3 +47,18 @@ int sndsb_interrupt_reason(struct sndsb_ctx *cx) {
 	return 1;
 }
 
+/* meant to be called from an IRQ */
+void sndsb_irq_continue(struct sndsb_ctx *cx,unsigned char c) {
+	if (cx->dsp_nag_mode) {
+		/* if the main loop is nagging the DSP then we shouldn't do anything */
+		if (sndsb_will_dsp_nag(cx)) return;
+	}
+
+	/* only call send_buffer_again if 8-bit DMA completed
+	   and bit 0 set, or if 16-bit DMA completed and bit 1 set */
+	if ((c & 1) && !cx->buffer_16bit)
+		sndsb_send_buffer_again(cx);
+	else if ((c & 2) && cx->buffer_16bit)
+		sndsb_send_buffer_again(cx);
+}
+
