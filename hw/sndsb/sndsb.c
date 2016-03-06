@@ -77,123 +77,8 @@
 # define DEBUG(x)
 #endif
 
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
-/* cut */
-#else
-static int			adpcm_pred = 128;
-static signed char		adpcm_last = 0;
-static unsigned char		adpcm_step = 0;
-static unsigned char		adpcm_error = 0;
-static unsigned char		adpcm_lim = 0;
-#endif
-
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
-/* cut */
-#else
-/* CT1335 */
-struct sndsb_mixer_control sndsb_mixer_ct1335[] = {
-/*      index, of,ln,name */
-	{0x02, 1, 3, "Master"},
-	{0x06, 1, 3, "MIDI"},
-	{0x08, 1, 3, "CD"},
-	{0x0A, 1, 2, "Voice"}
-};
-
-/* CT1345 */
-struct sndsb_mixer_control sndsb_mixer_ct1345[] = {
-/*      index, of,ln,name */
-	{0x04, 1, 3, "Voice R"},		{0x04, 5, 3, "Voice L"},
-	{0x0A, 1, 2, "Mic"},
-	{0x0C, 1, 2, "Input source"},		{0x0C, 3, 1, "8.8KHz lowpass filter"},		{0x0C, 5, 1, "Input filter bypass"},
-	{0x0E, 1, 1, "Stereo switch"},		{0x0E, 5, 1, "Output filter bypass"},
-	{0x22, 1, 3, "Master R"},		{0x22, 5, 3, "Master L"},
-	{0x26, 1, 3, "MIDI R"},			{0x26, 5, 3, "MIDI L"},
-	{0x28, 1, 3, "CD R"},			{0x28, 5, 3, "CD L"},
-	{0x2E, 1, 3, "Line R"},			{0x2E, 5, 3, "Line L"}
-};
-
-/* CT1745 */
-struct sndsb_mixer_control sndsb_mixer_ct1745[] = {
-/*      index, of,ln,name */
-	{0x30, 3, 5, "Master L"},		{0x31, 3, 5, "Master R"},
-	{0x32, 3, 5, "Volume L"},		{0x33, 3, 5, "Volume R"},
-	{0x34, 3, 5, "MIDI L"},			{0x35, 3, 5, "MIDI R"},
-	{0x36, 3, 5, "CD L"},			{0x37, 3, 5, "CD R"},
-	{0x38, 3, 5, "Line L"},			{0x39, 3, 5, "Line R"},
-	{0x3A, 3, 5, "Mic"},
-	{0x3B, 6, 2, "PC speaker"},
-
-	{0x3C, 0, 1, "Out mixer: mic"},
-	{0x3C, 1, 1, "Out mixer: CD R"},
-	{0x3C, 2, 1, "Out mixer: CD L"},
-	{0x3C, 3, 1, "Out mixer: Line R"},
-	{0x3C, 4, 1, "Out mixer: Line L"},
-
-	{0x3D, 0, 1, "In mixer L: Mic"},
-	{0x3D, 1, 1, "In mixer L: CD R"},
-	{0x3D, 2, 1, "In mixer L: CD L"},
-	{0x3D, 3, 1, "In mixer L: Line R"},
-	{0x3D, 4, 1, "In mixer L: Line L"},
-	{0x3D, 5, 1, "In mixer L: MIDI R"},
-	{0x3D, 6, 1, "In mixer L: MIDI L"},
-
-	{0x3E, 0, 1, "In mixer R: Mic"},
-	{0x3E, 1, 1, "In mixer R: CD R"},
-	{0x3E, 2, 1, "In mixer R: CD L"},
-	{0x3E, 3, 1, "In mixer R: Line R"},
-	{0x3E, 4, 1, "In mixer R: Line L"},
-	{0x3E, 5, 1, "In mixer R: MIDI R"},
-	{0x3E, 6, 1, "In mixer R: MIDI L"},
-
-	{0x3F, 6, 2, "Input gain L"},
-	{0x40, 6, 2, "Input gain R"},
-	{0x41, 6, 2, "Output gain L"},
-	{0x42, 6, 2, "Output gain R"},
-	{0x43, 0, 1, "AGC"},
-	{0x44, 4, 4, "Treble L"},
-	{0x45, 4, 4, "Treble R"},
-	{0x46, 4, 4, "Bass L"},
-	{0x47, 4, 4, "Bass R"}
-};
-
-/* ESS AudioDrive 688 */
-struct sndsb_mixer_control sndsb_mixer_ess688[] = {
-/*      index, of,ln,name */
-	{0x14, 4, 4, "Audio 1 Play Volume L"},		{0x14, 0, 4, "Audio 1 Play Volume R"},
-	{0x1A, 4, 4, "Mic Mix Volume L"},		{0x1A, 0, 4, "Mic Mix Volume R"},
-	{0x1C, 4, 1, "Ext. Record Source Mute"},	{0x1C, 0, 3, "Ext. Record Source"},	// 0=Mic 2=AuxA(CD) 4=Mic 6=Line see ESS 1688 for more info
-	{0x32, 4, 4, "Master Volume L"},		{0x32, 0, 4, "Master Volume R"},
-	{0x36, 4, 4, "FM Volume L"},			{0x36, 0, 4, "FM Volume R"},
-	{0x38, 4, 4, "AuxA(CD) Volume L"},		{0x38, 0, 4, "AuxA(CD) Volume R"},
-	{0x3A, 4, 4, "AuxB Volume L"},			{0x3A, 0, 4, "AuxB Volume R"},
-	{0x3C, 0, 3, "PC speaker volume"},
-	{0x3E, 4, 4, "Line Volume L"},			{0x3E, 0, 4, "Line Volume R"},
-	{0x42, 7, 1, "Serial Mode Input Override"},	{0x42, 4, 3, "Serial Mode Source Select"},
-	{0x42, 0, 4, "Serial Mode Mic Record Level"},
-	{0x44, 7, 1, "Serial Mode Output Vol Override"},
-	{0x44, 4, 3, "Serial Mode Output Select"},
-	{0x44, 0, 4, "Serial Mode Master Volume"}
-
-};
-#endif
-
 signed char gallant_sc6600_map_to_dma[4] = {-1, 0, 1, 3};
 signed char gallant_sc6600_map_to_irq[8] = {-1, 7, 9,10,11, 5,-1,-1};
-
-const char* sndsb_adpcm_mode_str[4] = {
-	"none",
-	"ADPCM 4-bit",
-	"ADPCM 2.6-bit",
-	"ADPCM 2-bit"
-};
-
-const char *sndsb_mixer_chip_name[SNDSB_MIXER_MAX] = {
-	"none",
-	"CT1335",
-	"CT1345",
-	"CT1745",
-	"ESS 688"
-};
 
 const char *sndsb_dspoutmethod_str[SNDSB_DSPOUTMETHOD_MAX] = {
 	"direct",
@@ -204,12 +89,6 @@ const char *sndsb_dspoutmethod_str[SNDSB_DSPOUTMETHOD_MAX] = {
 	"4.xx"
 };
 
-const char *sndsb_ess_chipsets_str[SNDSB_ESS_MAX] = {
-	"none",
-	"ESS688",
-	"ESS1869"
-};
-
 #if TARGET_MSDOS == 32
 signed char			sndsb_nmi_32_hook = -1;
 #endif
@@ -218,11 +97,6 @@ struct sndsb_probe_opts sndsb_probe_options={0};
 struct sndsb_ctx sndsb_card[SNDSB_MAX_CARDS];
 struct sndsb_ctx *sndsb_card_blaster=NULL;
 int sndsb_card_next = 0;
-
-const char *sndsb_ess_chipset_str(unsigned int c) {
-	if (c >= SNDSB_ESS_MAX) return NULL;
-	return sndsb_ess_chipsets_str[c];
-}
 
 void sndsb_timer_tick_gen(struct sndsb_ctx *cx) {
 	cx->timer_tick_signal = 1;
@@ -414,294 +288,6 @@ void sndsb_free_card(struct sndsb_ctx *c) {
 	if (c == sndsb_card_blaster) sndsb_card_blaster = NULL;
 }
 
-struct sndsb_ctx *sndsb_try_blaster_var() {
-	int A=-1,I=-1,D=-1,H=-1,P=-1;
-	struct sndsb_ctx *e;
-	char *s;
-
-	if (sndsb_card_blaster != NULL)
-		return sndsb_card_blaster;
-
-	/* some of our detection relies on knowing what OS we're running under */
-	cpu_probe();
-	probe_dos();
-	detect_windows();
-
-	s = getenv("BLASTER");
-	if (s == NULL) return NULL;
-
-	while (*s != 0) {
-		if (*s == ' ') {
-			s++;
-			continue;
-		}
-
-		if (*s == 'A') {
-			s++;
-			A = strtol(s,&s,16);
-		}
-		else if (*s == 'P') {
-			s++;
-			P = strtol(s,&s,16);
-		}
-		else if (*s == 'I') {
-			s++;
-			I = strtol(s,&s,10);
-		}
-		else if (*s == 'D') {
-			s++;
-			D = strtol(s,&s,10);
-		}
-		else if (*s == 'H') {
-			s++;
-			H = strtol(s,&s,10);
-		}
-		else {
-			while (*s && *s != ' ') s++;
-			while (*s == ' ') s++;
-		}
-	}
-
-	if (A < 0 || I < 0 || D < 0 || I > 15 || D > 7)
-		return NULL;
-
-	if (sndsb_by_base(A) != NULL)
-		return 0;
-
-	e = sndsb_alloc_card();
-	if (e == NULL) return NULL;
-#if TARGET_MSDOS == 32
-	e->goldplay_dma = NULL;
-#endif
-	e->is_gallant_sc6600 = 0;
-	e->baseio = (uint16_t)A;
-	e->mpuio = (uint16_t)(P > 0 ? P : 0);
-	e->dma8 = (int8_t)D;
-	e->dma16 = (int8_t)H;
-	e->irq = (int8_t)I;
-	e->dsp_vmaj = 0;
-	e->dsp_vmin = 0;
-	e->mixer_ok = 0;
-	e->dsp_ok = 0;
-	return (sndsb_card_blaster=e);
-}
-
-const char *sndsb_mixer_chip_str(uint8_t c) {
-	if (c >= SNDSB_MIXER_MAX) return NULL;
-	return sndsb_mixer_chip_name[c];
-}
-
-/* NTS: this function enforces a timeout of 250ms */
-int sndsb_read_dsp(struct sndsb_ctx *cx) {
-	unsigned int patience = 25000;
-	int c = -1;
-
-	do {
-		if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS+(cx->dsp_alias_port?1:0)) & 0x80) { /* data available? */
-			c = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
-			break;
-		}
-
-		t8254_wait(t8254_us2ticks(10));
-		if (--patience == 0) {
-			DEBUG(fprintf(stdout,"sndsb_read_dsp() read timeout\n"));
-			return -1;
-		}
-	} while (1);
-
-	DEBUG(fprintf(stdout,"sndsb_read_dsp() == 0x%02X\n",c));
-	return c;
-}
-
-int sndsb_read_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms) {
-	unsigned int patience = (unsigned int)(timeout_ms / 10UL);
-	int c = -1;
-
-	do {
-		if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS+(cx->dsp_alias_port?1:0)) & 0x80) { /* data available? */
-			c = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
-			break;
-		}
-
-		t8254_wait(t8254_us2ticks(10));
-		if (--patience == 0) {
-			DEBUG(fprintf(stdout,"sndsb_read_dsp() read timeout\n"));
-			return -1;
-		}
-	} while (1);
-
-	DEBUG(fprintf(stdout,"sndsb_read_dsp() == 0x%02X\n",c));
-	return c;
-}
-
-unsigned int sndsb_ess_set_extended_mode(struct sndsb_ctx *cx,int enable) {
-	if (cx->ess_chipset == 0) return 0; /* if not an ESS chipset then, no */
-	if (!cx->ess_extensions) return 0; /* if caller/user says not to use extensions, then, no */
-	if (cx->ess_extended_mode == !!enable) return 1;
-
-	if (!sndsb_write_dsp(cx,enable?0xC6:0xC7))
-		return 0;
-
-	cx->ess_extended_mode = !!enable;
-	return 1;
-}
-
-int sndsb_ess_read_controller(struct sndsb_ctx *cx,int reg) {
-	if (reg < 0xA0 || reg >= 0xC0) return -1;
-	if (sndsb_ess_set_extended_mode(cx,1) == 0) return -1;
-	/* "Reading the data buffer of the ESS 1869: Command C0h is used to read
-	 * the ES1869 controller registers used for Extended mode. Send C0h
-	 * followed by the register number, Axh or Bxh. */
-	if (!sndsb_write_dsp_timeout(cx,0xC0,20000UL)) return -1;
-	if (!sndsb_write_dsp_timeout(cx,reg,20000UL)) return -1;
-	return sndsb_read_dsp(cx);
-}
-
-int sndsb_ess_write_controller(struct sndsb_ctx *cx,int reg,unsigned char value) {
-	if (reg < 0xA0 || reg >= 0xC0) return -1;
-	if (sndsb_ess_set_extended_mode(cx,1) == 0) return -1;
-	if (!sndsb_write_dsp_timeout(cx,reg,20000UL)) return -1;
-	if (!sndsb_write_dsp_timeout(cx,value,20000UL)) return -1;
-	return 0;
-}
-
-int sndsb_reset_dsp(struct sndsb_ctx *cx) {
-	if (cx->baseio == 0) {
-		DEBUG(fprintf(stdout,"BUG: sndsb baseio == 0\n"));
-		return 0;
-	}
-
-	/* DSP reset takes the ESS out of extended mode */
-	if (cx->ess_chipset != 0)
-		cx->ess_extended_mode = 0;
-
-	/* DSP reset procedure */
-	/* "write 1 to the DSP and wait 3 microseconds" */
-	DEBUG(fprintf(stdout,"sndsb_reset_dsp() reset in progress\n"));
-	if (cx->ess_extensions)
-		outp(cx->baseio+SNDSB_BIO_DSP_RESET,3); /* ESS reset and flush FIFO */
-	else
-		outp(cx->baseio+SNDSB_BIO_DSP_RESET,1); /* normal reset */
-
-	t8254_wait(t8254_us2ticks(1000));	/* be safe and wait 1ms */
-	outp(cx->baseio+SNDSB_BIO_DSP_RESET,0);
-
-	/* wait for the DSP to return 0xAA */
-	/* "typically the DSP takes about 100us to initialize itself" */
-	if (sndsb_read_dsp(cx) != 0xAA) {
-		if (sndsb_read_dsp(cx) != 0xAA) {
-			DEBUG(fprintf(stdout,"sndsb_read_dsp() did not return satisfactory answer\n"));
-			return 0;
-		}
-	}
-
-	return 1;
-}
-
-int sndsb_read_mixer(struct sndsb_ctx *cx,uint8_t i) {
-	outp(cx->baseio+SNDSB_BIO_MIXER_INDEX,i);
-	return inp(cx->baseio+SNDSB_BIO_MIXER_DATA);
-}
-
-void sndsb_write_mixer(struct sndsb_ctx *cx,uint8_t i,uint8_t d) {
-	outp(cx->baseio+SNDSB_BIO_MIXER_INDEX,i);
-	outp(cx->baseio+SNDSB_BIO_MIXER_DATA,d);
-}
-
-unsigned char sndsb_test_write_mixer(struct sndsb_ctx *cx,uint8_t i,uint8_t d) {
-	unsigned char o,c;
-	o = sndsb_read_mixer(cx,i); sndsb_write_mixer(cx,i,d);
-	c = sndsb_read_mixer(cx,i); sndsb_write_mixer(cx,i,o);
-	return c;
-}
-
-/* NTS: If DOSBox's emulation is correct, 0xFF is not necessarily what is returned for
- *      unknown registers, therefore it's not an accurate way to probe the chipset.
- *      DOSBox for example seems to return 0x0A. */
-int sndsb_probe_mixer(struct sndsb_ctx *cx) {
-	cx->mixer_chip = 0;
-
-	/* if there is a wider "master volume" control 0x30 then we're a CT1745 or higher */
-	if (	(sndsb_test_write_mixer(cx,0x30,0x08)&0xF8) == 0x08 &&
-		(sndsb_test_write_mixer(cx,0x30,0x38)&0xF8) == 0x38 &&
-		(sndsb_test_write_mixer(cx,0x31,0x08)&0xF8) == 0x08 &&
-		(sndsb_test_write_mixer(cx,0x31,0x38)&0xF8) == 0x38) {
-		cx->mixer_chip = SNDSB_MIXER_CT1745;
-	}
-	/* If there is a "master volume" control at 0x22 then we're at CT1345 or higher */
-	else if((sndsb_test_write_mixer(cx,0x22,0x33)&0xEE) == 0x22 &&
-		(sndsb_test_write_mixer(cx,0x22,0xCC)&0xEE) == 0xCC) {
-		cx->mixer_chip = SNDSB_MIXER_CT1345;
-	}
-	/* hm, may be at CT1335 */
-	else if((sndsb_test_write_mixer(cx,0x02,0x02)&0x0E) == 0x02 &&
-		(sndsb_test_write_mixer(cx,0x02,0x0C)&0x0E) == 0x0C) {
-		cx->mixer_chip = SNDSB_MIXER_CT1335;
-	}
-
-	sndsb_choose_mixer(cx,-1);
-	return (cx->mixer_chip != 0);
-}
-
-int sndsb_write_dsp(struct sndsb_ctx *cx,uint8_t d) {
-	unsigned int patience = 25000;
-
-	DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
-	do {
-		if (inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0)) & 0x80)
-			t8254_wait(t8254_us2ticks(10));
-		else {
-			outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),d);
-			return 1;
-		}
-	} while (--patience != 0);
-	DEBUG(fprintf(stdout,"sndsb_write_dsp() timeout\n"));
-	return 0;
-}
-
-int sndsb_write_dsp_timeout(struct sndsb_ctx *cx,uint8_t d,unsigned long timeout_ms) {
-	unsigned int patience = (unsigned int)(timeout_ms / 10UL);
-
-	DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
-	do {
-		if (inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0)) & 0x80)
-			t8254_wait(t8254_us2ticks(10));
-		else {
-			outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),d);
-			return 1;
-		}
-	} while (--patience != 0);
-	DEBUG(fprintf(stdout,"sndsb_write_dsp() timeout\n"));
-	return 0;
-}
-
-int sndsb_write_dsp_timeconst(struct sndsb_ctx *cx,uint8_t tc) {
-	if (!sndsb_write_dsp(cx,0x40))
-		return 0;
-	if (!sndsb_write_dsp(cx,tc))
-		return 0;
-	return 1;
-}
-
-int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
-	int a,b;
-
-	if (!sndsb_write_dsp(cx,SNDSB_DSPCMD_GET_VERSION))
-		return 0;
-
-	if ((a=sndsb_read_dsp(cx)) < 0)
-		return 0;
-	if ((b=sndsb_read_dsp(cx)) < 0)
-		return 0;
-	if (a == 0xFF || b == 0xFF)
-		return 0;
-
-	cx->dsp_vmaj = (uint8_t)a;
-	cx->dsp_vmin = (uint8_t)b;
-	DEBUG(fprintf(stdout,"sndsb_query_dsp_version() == v%u.%u\n",a,b));
-	return 1;
-}
-
 /* NTS: We do not test IRQ and DMA channels here */
 /* NTS: The caller may have set irq == -1, dma8 == -1, or dma16 == -1, such as
  *      when probing. If any of them are -1, and this code knows how to deduce
@@ -760,6 +346,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->sbos = 0;
 	cx->dsp_ok = 0;
 	cx->mixer_ok = 0;
+	cx->mixer_probed = 0;
 	cx->dsp_vmaj = 0;
 	cx->dsp_vmin = 0;
 	cx->buffer_phys = 0;
@@ -768,8 +355,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->enable_adpcm_autoinit = 0;
 	cx->dsp_adpcm = 0;
 	cx->dsp_record = 0;
-	cx->sb_mixer_items = 0;
-	cx->sb_mixer = NULL;
 	cx->max_sample_rate_sb_play_dac = 23000;
 	cx->max_sample_rate_sb_rec_dac = 13000;
 
@@ -792,39 +377,14 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	if (cx->dsp_vmaj == 0xAA && cx->dsp_vmin == 0xAA)
 		return 0; /* That's not a Sound Blaster! */
 
-	/* FIX: Gravis Ultrasound MEGA-EM emulates a VERY LIMITED SUBSET
-	        of the Sound Blaster. Worse, it hangs the machine with an
-		error message when you use any command it doesn't know!
-
-		MEGA-EM usually reports itself as v1.3, but you can also
-		use EMUSET -X2 to enable a rudimentary sort of DSP v2.1
-		emulation. True SB hardware doesn't carry a DSP copyright
-		string until v3.0, so it's probable we wouldn't get anything
-		anyway. The DSP copyright string command is not recognized
-		by MEGA-EM. */
-	if (cx->dsp_vmaj <= 2) {
-		if (gravis_mega_em_detect(&megaem_info)) { /* is that you, MEGA-EM? */
-			/* FIXME: Is there some sort of hack we can use
-			          to determine what I/O port MEGA-EM is
-				  watching? I would like this code to
-				  not self-limit it's capabilities to
-				  ALL interfaces just because one happens
-				  to be a GUS with MEGA-EM. */
-			cx->mega_em = 1;
-			cx->dsp_autoinit_dma = 0;
-			strcpy(cx->dsp_copyright,"Gravis MEGA-EM");
-		}
-	}
-
-	/* if the DSP is recent enough, it might have a copyright string.
-
-	   DSPs prior to the Sound Blaster Pro don't really seem to return
-	   anything in response to DSP command 0xE3, in fact it might be that
-	   Creative added it with the SB16 (DSP v4.x). However I also know
-	   from programming experience that many SB clones DO return a string
-	   and report themselves with varying version numbers like v3.1, v2.5,
-	   etc. */
-	if (!cx->mega_em && cx->dsp_vmaj >= 2) {
+	/* It seems to me the safest way to know whether or not to read the
+	 * copyright string is to assume anything before DSP version 3.xx
+	 * does not. Sound Blaster 2.0 and earlier don't have one, and
+	 * neither does Sound Blaster Pro (DSP 3.xx). The other reason is
+	 * that some emulation code (Gravis Ultrasound SBOS/MEGA-EM) emulate
+	 * DSP 2.xx or 1.xx and they do not handle the copyright string command
+	 * well at all, in fact, MEGA-EM will halt the system if you try. */
+	if (cx->dsp_vmaj >= 3) {
 		int i,c;
 
 		sndsb_write_dsp(cx,0xE3);
@@ -836,30 +396,19 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		}
 		cx->dsp_copyright[i] = (char)0;
 		DEBUG(fprintf(stdout,"sndsb_init_card() copyright == '%s'\n",cx->dsp_copyright));
-
-		/* check for whacked-out DSP "strings" like a continuous
-		   sequence of 0x01 bytes. it might be Gravis SBOS, which
-		   also reports itself as DSP v2.1 */
-		if (cx->dsp_vmaj <= 2 && i >= (sizeof(cx->dsp_copyright)-1)) {
-			for (i=0,c=0;i < (sizeof(cx->dsp_copyright)-1);i++) {
-				if (cx->dsp_copyright[i] == 1)
-					c++;
-				else
-					break;
-			}
-
-			if (c == i) {
-				if (gravis_sbos_detect() >= 0) { /* is that you, SBOS? */
-					strcpy(cx->dsp_copyright,"Gravis SBOS");
-					cx->dsp_autoinit_dma = 0;
-					cx->sbos = 1;
-				}
-			}
+	}
+	else if (cx->dsp_vmaj == 1 || cx->dsp_vmaj == 2) {
+		if (gravis_mega_em_detect(&megaem_info)) { // MEGA-EM emulates DSP 1.xx. It can emulate DSP 2.01, but badly
+			cx->mega_em = 1;
+			cx->dsp_autoinit_dma = 0;
+			strcpy(cx->dsp_copyright,"Gravis MEGA-EM");
+		}
+		else if (gravis_sbos_detect() >= 0) { // SBOS only emulates DSP 1.xx
+			strcpy(cx->dsp_copyright,"Gravis SBOS");
+			cx->dsp_autoinit_dma = 0;
+			cx->sbos = 1;
 		}
 	}
-
-	if (sndsb_probe_mixer(cx)) /* NTS: Don't reset the mixer, just probe it */
-		cx->mixer_ok = 1;
 
 	/* Sound Blaster 16 (DSP 4.xx): we read the mixer registers, unless this card was initialized from a PnP device */
 	/* Earlier cards: we have to probe around for it */
@@ -1102,7 +651,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 					if (cx->ess_chipset == SNDSB_ESS_688) { /* ESS 688? I know how to program that! */
 						cx->ess_extensions = 1;
 						cx->mixer_chip = SNDSB_MIXER_ESS688;
-						sndsb_choose_mixer(cx,-1);
 
 						/* that also means that we can deduce the true IRQ/DMA from the chipset */
 						if ((in=sndsb_ess_read_controller(cx,0xB1)) != -1) { /* 0xB1 Legacy Audio Interrupt Control */
@@ -1149,7 +697,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 					else if (cx->ess_chipset == SNDSB_ESS_1869) { /* ESS 1869? I know how to program that! */
 						cx->ess_extensions = 1;
 						cx->mixer_chip = SNDSB_MIXER_ESS688;
-						sndsb_choose_mixer(cx,-1);
 
 						/* NTS: The ESS 1869 and later have PnP methods to configure themselves, and the
 						 * registers are documented as readonly for that reason, AND, on the ESS 1887 in
@@ -2136,14 +1683,6 @@ int sndsb_interrupt_reason(struct sndsb_ctx *cx) {
 	return 1;
 }
 
-int sndsb_reset_mixer(struct sndsb_ctx *cx) {
-	if (cx->baseio == 0)
-		return 0;
-
-	sndsb_write_mixer(cx,0x00,0x00);	/* "write any 8-bit value to reset the chip" */
-	return 1;
-}
-
 /* general main loop idle function. does nothing, unless we're playing with no IRQ,
  * in which case we're expected to poll IRQ status */
 void sndsb_main_idle(struct sndsb_ctx *cx) {
@@ -2560,199 +2099,6 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 # endif
 	return 1;
 #undef MSG
-}
-
-int sndsb_write_dsp_blocksize(struct sndsb_ctx *cx,uint16_t tc) {
-	if (!sndsb_write_dsp(cx,0x48))
-		return 0;
-	if (!sndsb_write_dsp(cx,tc-1))
-		return 0;
-	if (!sndsb_write_dsp(cx,(tc-1)>>8))
-		return 0;
-	return 1;
-}
-
-int sndsb_write_dsp_outrate(struct sndsb_ctx *cx,unsigned long rate) {
-	if (!sndsb_write_dsp(cx,0x41))
-		return 0;
-	if (!sndsb_write_dsp(cx,rate>>8)) /* Ugh, Creative, be consistent! */
-		return 0;
-	if (!sndsb_write_dsp(cx,rate))
-		return 0;
-	return 1;
-}
-
-uint32_t sndsb_read_dma_buffer_position(struct sndsb_ctx *cx) {
-	uint32_t r;
-
-	/* the program is asking for DMA position. If we're doing the Windows springwait hack,
-	 * then NOW is the time to initialize DSP transfer! */
-	if (cx->windows_emulation && cx->windows_springwait == 1 && cx->windows_xp_ntvdm) {
-		sndsb_prepare_dsp_playback(cx,cx->buffer_rate,cx->buffer_stereo,cx->buffer_16bit);
-		sndsb_setup_dma(cx);
-		sndsb_begin_dsp_playback(cx);
-		cx->windows_springwait = 2;
-	}
-
-	/* "direct" and "goldplay" methods require the program to update the play point in some fashion,
-	 * usually by programming IRQ 0 to tick at the sample rate */
-	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || cx->goldplay_mode) {
-		r = cx->direct_dsp_io;
-		if (r >= cx->buffer_size) r = cx->buffer_size - 1;
-	}
-	else if (cx->buffer_16bit) {
-		if (cx->dma16 < 0) return 0;
-		r = d8237_read_count(cx->dma16);
-		if (cx->backwards) {
-			/* TODO */
-		}
-		else {
-			if (r >= 0xFFFEUL) r = 0; /* FIXME: the 8237 library should have a "is terminal count" function */
-			if (r >= cx->buffer_dma_started_length) r = cx->buffer_dma_started_length - 1;
-			r = cx->buffer_dma_started_length - (r+1);
-			r += cx->buffer_dma_started;
-		}
-	}
-	else {
-		if (cx->dma8 < 0) return 0;
-		r = d8237_read_count(cx->dma8);
-		if (cx->backwards) {
-			if (r >= 0xFFFFUL) r = 0;
-			if (r >= cx->buffer_dma_started_length) r = cx->buffer_dma_started_length - 1;
-			r += cx->buffer_dma_started;
-		}
-		else {
-			if (r >= 0xFFFFUL) r = 0;
-			if (r >= cx->buffer_dma_started_length) r = cx->buffer_dma_started_length - 1;
-			r = cx->buffer_dma_started_length - (r+1);
-			r += cx->buffer_dma_started;
-		}
-	}
-
-	return r;
-}
-
-int sndsb_shutdown_dma(struct sndsb_ctx *cx) {
-	unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
-	if ((signed char)ch == -1) return 0;
-	/* set up the DMA channel */
-	outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
-	return 1;
-}
-
-int sndsb_setup_dma(struct sndsb_ctx *cx) {
-	unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
-	unsigned char dma_mode = D8237_MODER_MODESEL_SINGLE;
-
-	/* ESS bugfix: except for goldplay mode, we tell the chipset to use demand mode fetching.
-	 * So then, setup the DMA controller for it too! */
-	if (cx->ess_extensions && !cx->goldplay_mode)
-		dma_mode = D8237_MODER_MODESEL_DEMAND;
-
-	/* if we're doing the Windows "spring" buffer hack, then don't do anything.
-	 * later when the calling program queries the DMA position, we'll setup DSP playback and call this function again */
-	if (cx->windows_emulation && cx->windows_springwait == 0 && cx->windows_xp_ntvdm)
-		return 1;
-
-	if (cx->backwards)
-		cx->direct_dsp_io = cx->buffer_size - 1;
-	else
-		cx->direct_dsp_io = 0;
-
-	if ((signed char)ch == -1) return 0;
-	/* set up the DMA channel */
-	outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
-
-	outp(d8237_ioport(ch,D8237_REG_W_WRITE_MODE),
-		(cx->chose_autoinit_dma ? D8237_MODER_AUTOINIT : 0) |
-		(cx->backwards ? D8237_MODER_ADDR_DEC : 0) |
-		D8237_MODER_CHANNEL(ch) |
-		D8237_MODER_TRANSFER(cx->dsp_record ? D8237_MODER_XFER_WRITE : D8237_MODER_XFER_READ) |
-		D8237_MODER_MODESEL(dma_mode));
-
-	if (cx->goldplay_mode) {
-		/* goldplay mode REQUIRES auto-init DMA */
-		if (!cx->chose_autoinit_dma) return -1;
-
-		cx->gold_memcpy = (cx->buffer_16bit?2:1)*(cx->buffer_stereo?2:1);
-
-#if TARGET_MSDOS == 32
-		if (cx->goldplay_dma == NULL) {
-			if ((cx->goldplay_dma=dma_8237_alloc_buffer(16)) == NULL)
-				return 0;
-		}
-#endif
-
-		/* Goldplay mode: The size of ONE sample is given to the DMA controller.
-		 * This tricks the DMA controller into re-transmitting that sample continuously
-		 * to the sound card. Then the demo uses the timer interrupt to modify that byte
-		 * and make audio. This was apparently popular with Goldplay in the 1991-1993
-		 * demoscene time frame, and evidently worked fine, but on today's PCs with CPU
-		 * caches and buffers this crap would obviously never fly.
-		 *
-		 * Note we allow the program to do this with 16-bit output, even though the
-		 * original Goldplay library was limited to 8 and nobody ever did this kind of
-		 * hackery by the time 16-bit SB output was the norm. But my test code shows
-		 * that you can pull that stunt with stereo and 16-bit audio modes too! */
-		d8237_write_count(ch,(cx->buffer_stereo ? 2 : 1)*(cx->buffer_16bit ? 2 : 1));
-		/* point it to our "goldplay_dma" */
-#if TARGET_MSDOS == 32
-		d8237_write_base(ch,cx->goldplay_dma->phys + (cx->backwards ? (cx->gold_memcpy-1) : 0));
-
-		if ((cx->buffer_16bit?1:0)^(cx->audio_data_flipped_sign?1:0))
-			memset(cx->goldplay_dma->lin,0,4);
-		else
-			memset(cx->goldplay_dma->lin,128,4);
-#else
-		{
-			unsigned char far *p = (unsigned char far*)(cx->goldplay_dma);
-			d8237_write_base(ch,((uint32_t)FP_SEG(p) << 4UL) + (uint32_t)FP_OFF(p) + (cx->backwards ? (cx->gold_memcpy-1) : 0));
-
-			if ((cx->buffer_16bit?1:0)^(cx->audio_data_flipped_sign?1:0))
-				_fmemset(p,0,4);
-			else
-				_fmemset(p,128,4);
-		}
-#endif
-	}
-	else {
-		d8237_write_count(ch,cx->buffer_dma_started_length);
-		if (cx->backwards)
-			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started+cx->buffer_dma_started_length-1);
-		else
-			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started); /* RAM location with not much around */
-	}
-
-	outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
-	return 1;
-}
-
-unsigned long sndsb_real_sample_rate(struct sndsb_ctx *cx) {
-	unsigned long total_rate;
-	unsigned char timeconst;
-	unsigned long real_rate;
-
-	total_rate = (unsigned long)cx->buffer_rate * (cx->buffer_stereo ? 2UL : 1UL);
-	if (total_rate < 4000UL) total_rate = 4000UL;
-	timeconst = (unsigned char)((65536UL - (256000000UL / total_rate)) >> 8UL);
-	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) return cx->buffer_rate;
-	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return cx->buffer_rate;
-
-	/* 256 - (1000000 / rate) = const
-	 * -(1000000 / rate) = const - 256
-	 * 1000000 / rate = -(const - 256)
-	 * 1000000 / rate = -const + 256
-	 * 1000000 = (-const + 256) * rate
-	 * 1000000 / (-const + 256) = rate
-	 * 1000000 / (256 - const) = rate */
-	real_rate = 1000000UL / (unsigned long)(256 - timeconst);
-	if (cx->buffer_stereo) real_rate /= 2UL;
-	return real_rate;
-}
-
-unsigned char sndsb_rate_to_time_constant(struct sndsb_ctx *cx,unsigned long rate) {
-	if (rate < 4000UL) rate = 4000UL;
-	return (unsigned char)((65536UL - (256000000UL / rate)) >> 8);
 }
 
 int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned char stereo,unsigned char bit16) {
@@ -3433,232 +2779,6 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 			sndsb_write_dsp(cx,lv>>8);
 		}
 	}
-}
-
-void sndsb_choose_mixer(struct sndsb_ctx *card,signed char override) {
-	signed char idx;
-
-	card->sb_mixer_items = 0;
-	card->sb_mixer = NULL;
-	idx = override >= 0 ? override : card->mixer_chip;
-
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
-#else
-	if (idx == SNDSB_MIXER_CT1335) {
-		card->sb_mixer = sndsb_mixer_ct1335;
-		card->sb_mixer_items = (signed short)(sizeof(sndsb_mixer_ct1335) / sizeof(struct sndsb_mixer_control));
-	}
-	else if (idx == SNDSB_MIXER_CT1345) {
-		card->sb_mixer = sndsb_mixer_ct1345;
-		card->sb_mixer_items = (signed short)(sizeof(sndsb_mixer_ct1345) / sizeof(struct sndsb_mixer_control));
-	}
-	else if (idx == SNDSB_MIXER_CT1745) {
-		card->sb_mixer = sndsb_mixer_ct1745;
-		card->sb_mixer_items = (signed short)(sizeof(sndsb_mixer_ct1745) / sizeof(struct sndsb_mixer_control));
-	}
-	else if (idx == SNDSB_MIXER_ESS688) {
-		card->sb_mixer = sndsb_mixer_ess688;
-		card->sb_mixer_items = (signed short)(sizeof(sndsb_mixer_ess688) / sizeof(struct sndsb_mixer_control));
-	}
-#endif
-}
-
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
-/* CUT ADPCM encoding */
-#else
-/* NTS: This is the best documentation I could fine regarding the Sound Blaster ADPCM format.
- *      Tables and method taken from DOSBox 0.74 SB emulation. The information on multimedia.cx's
- *      Wiki is wrong. */
-unsigned char sndsb_encode_adpcm_4bit(unsigned char samp) {
-	static const signed char scaleMap[64] = {
-		0,  1,  2,  3,  4,  5,  6,  7,  0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,
-		1,  3,  5,  7,  9, 11, 13, 15, -1,  -3,  -5,  -7,  -9, -11, -13, -15,
-		2,  6, 10, 14, 18, 22, 26, 30, -2,  -6, -10, -14, -18, -22, -26, -30,
-		4, 12, 20, 28, 36, 44, 52, 60, -4, -12, -20, -28, -36, -44, -52, -60
-	};
-	static const signed char adjustMap[32] = {
-		 0, 0, 0, 0, 0, 1, 1, 1,
-		-1, 0, 0, 0, 0, 1, 1, 1,
-		-1, 0, 0, 0, 0, 1, 1, 1,
-		-1, 0, 0, 0, 0, 0, 0, 0
-	};
-	signed int sdelta = (signed int)((signed char)(samp - adpcm_pred));
-	unsigned char sign = 0;
-
-	sdelta = (sdelta * 2) + (adpcm_step < 3 ? adpcm_error : 0);
-	adpcm_error = sdelta & ((1 << (adpcm_step + 1)) - 1);
-	sdelta >>= adpcm_step+1;
-	if (sdelta < 0) {
-		sdelta = -sdelta;
-		sign = 8;
-	}
-	if (sdelta > 7) sdelta = 7;
-	adpcm_pred += scaleMap[(adpcm_step*16)+sign+sdelta];
-	if (adpcm_pred < 0) adpcm_pred = 0;
-	else if (adpcm_pred > 0xFF) adpcm_pred = 0xFF;
-	adpcm_step += adjustMap[(adpcm_step*8)+sdelta];
-	if ((signed char)adpcm_step < 0) adpcm_step = 0;
-	if (adpcm_step > 3) adpcm_step = 3;
-	return (unsigned char)sdelta | sign;
-}
-
-/* NTS: This is the best documentation I could fine regarding the Sound Blaster ADPCM format.
- *      Tables and method taken from DOSBox 0.74 SB emulation. The information on multimedia.cx's
- *      Wiki is wrong. */
-unsigned char sndsb_encode_adpcm_2bit(unsigned char samp) {
-	static const signed char scaleMap[24] = {
-		0,  1,  0,  -1,  1,  3,  -1,  -3,
-		2,  6, -2,  -6,  4, 12,  -4, -12,
-		8, 24, -8, -24, 16, 48, -16, -48
-/* NTS: This table is correct as tested against real Creative SB
-        hardware. DOSBox's version has a typo on the last row
-	that will make the 2-bit playback sound WORSE in it. */
-	};
-	static const signed char adjustMap[12] = {
-		 0, 1, -1, 1,
-		-1, 1, -1, 1,
-		-1, 1, -1, 0
-	};
-	signed int sdelta = (signed int)((signed char)(samp - adpcm_pred));
-	unsigned char sign = 0;
-
-	sdelta = (sdelta * 2) + (adpcm_step == 0 ? adpcm_error : 0);
-	adpcm_error = sdelta & ((1 << adpcm_step) - 1);
-	sdelta >>= adpcm_step+1;
-
-	if (sdelta < 0) {
-		sdelta = -sdelta;
-		sign = 2;
-	}
-
-	/* "ring" suppression */
-	if (adpcm_step == 5 && sdelta == 1 && adpcm_last == 3 && sign == 0)
-		sdelta = 0;
-
-	if (sdelta > 1) sdelta = 1;
-	adpcm_last = sdelta + sign;
-	adpcm_pred += scaleMap[(adpcm_step*4)+sign+sdelta];
-	if (adpcm_pred < 0) adpcm_pred = 0;
-	else if (adpcm_pred > 0xFF) adpcm_pred = 0xFF;
-	adpcm_step += adjustMap[(adpcm_step*2)+sdelta];
-	if ((signed char)adpcm_step < 0) adpcm_step = 0;
-	if (adpcm_step > 5) adpcm_step = 5;
-	return (unsigned char)sdelta | sign;
-}
-
-/* NTS: This is the best documentation I could fine regarding the Sound Blaster ADPCM format.
- *      Tables and method taken from DOSBox 0.74 SB emulation. The information on multimedia.cx's
- *      Wiki is wrong. */
-unsigned char sndsb_encode_adpcm_2_6bit(unsigned char samp,unsigned char b2) {
-	static const signed char scaleMap[40] = {
-		0,  1,  2,  3,  0,  -1,  -2,  -3,
-		1,  3,  5,  7, -1,  -3,  -5,  -7,
-		2,  6, 10, 14, -2,  -6, -10, -14,
-		4, 12, 20, 28, -4, -12, -20, -28,
-		5, 15, 25, 35, -5, -15, -25, -35
-	};
-	static const signed char adjustMap[20] = {
-		 0, 0, 0, 1,
-		-1, 0, 0, 1,
-		-1, 0, 0, 1,
-		-1, 0, 0, 1,
-		-1, 0, 0, 0
-	};
-	signed int sdelta = (signed int)((signed char)(samp - adpcm_pred));
-	unsigned char sign = 0;
-
-	sdelta = (sdelta * 2) + (adpcm_step < 2 ? adpcm_error : 0);
-	adpcm_error = sdelta & ((1 << (adpcm_step + (b2 ? 2 : 1))) - 1);
-	sdelta >>= adpcm_step+1;
-
-	if (sdelta < 0) {
-		sdelta = -sdelta;
-		sign = 4;
-	}
-
-	if (sdelta > 3) sdelta = 3;
-	sdelta += sign;
-	if (b2) sdelta &= 0x6;
-	adpcm_pred += scaleMap[(adpcm_step*8)+sdelta];
-	if (adpcm_pred < 0) adpcm_pred = 0;
-	else if (adpcm_pred > 0xFF) adpcm_pred = 0xFF;
-	adpcm_step += adjustMap[(adpcm_step*4)+(sdelta&3)];
-	if ((signed char)adpcm_step < 0) adpcm_step = 0;
-	if (adpcm_step > 5) adpcm_step = 5;
-	return (unsigned char)sdelta;
-}
-
-void sndsb_encode_adpcm_set_reference(unsigned char c,unsigned char mode) {
-	adpcm_pred = c;
-	adpcm_step = 0;
-	if (mode == ADPCM_4BIT)
-		adpcm_lim = 5;
-	else if (mode == ADPCM_2_6BIT)
-		adpcm_lim = 3;
-	else if (mode == ADPCM_2BIT)
-		adpcm_lim = 1;
-}
-
-/* undocumented and not properly emulated by DOSBox either:
-   when Creative said the non-reference ADPCM commands "continue
-   using accumulated reference byte" they apparently meant that
-   it resets the step value to max. Yes, even in auto-init
-   ADPCM mode. Failure to follow this results in audible
-   "fluttering" once per IRQ. */
-void sndsb_encode_adpcm_reset_wo_ref(unsigned char mode) {
-	if (mode == ADPCM_4BIT)
-		adpcm_step = 3;
-	else if (mode == ADPCM_2_6BIT)
-		adpcm_step = 4;
-	else
-		adpcm_step = 5; /* FIXME: Testing by ear seems to favor this one. Is this correct? */
-}
-#endif
-
-void sndsb_write_mixer_entry(struct sndsb_ctx *sb,struct sndsb_mixer_control *mc,unsigned char nb) {
-	unsigned char b;
-	if (mc->length == 0) return;
-	else if (mc->length == 8) {
-		sndsb_write_mixer(sb,mc->index,nb);
-	}
-	else {
-		b = sndsb_read_mixer(sb,mc->index);
-		b &= ~(((1 << mc->length) - 1) << mc->offset);
-		b |= (nb & ((1 << mc->length) - 1)) << mc->offset;
-		sndsb_write_mixer(sb,mc->index,b);
-	}
-}
-
-unsigned char sndsb_read_mixer_entry(struct sndsb_ctx *sb,struct sndsb_mixer_control *mc) {
-	unsigned char b;
-	if (mc->length == 0) return 0;
-	b = sndsb_read_mixer(sb,mc->index);
-	return (b >> mc->offset) & ((1 << mc->length) - 1);
-}
-
-int sndsb_assign_dma_buffer(struct sndsb_ctx *cx,struct dma_8237_allocation *dma) {
-	cx->buffer_size = dma->length;
-	cx->buffer_phys = dma->phys;
-	cx->buffer_lin = dma->lin;
-	return 1;
-}
-
-uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit) {
-	uint32_t ret = 60UL * 1024UL;
-	if (limit != 0UL && ret > limit) ret = limit;
-
-	/* Known constraint: Windows 3.1 Creative SB16 drivers don't like it when DOS apps
-	 *                   use too large a DMA buffer. It causes Windows to complain about
-	 *                   "a DOS program violating the integrity of the operating system".
-	 *
-	 *                   FIXME: Even with small buffers, it "violates the integrity" anyway.
-	 *                          So what the fuck is wrong then? */
-	if (windows_mode == WINDOWS_ENHANCED && windows_version < 0x35F && /* Windows 3.1 and Creative SB16 drivers v3.57 */
-		ctx->windows_creative_sb16_drivers && ctx->windows_creative_sb16_drivers_ver == (0x300 + 57)) {
-		if (ret > (4UL * 1024UL)) ret = 4UL * 1024UL;
-	}
-
-	return ret;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////

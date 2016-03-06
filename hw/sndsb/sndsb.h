@@ -109,7 +109,6 @@ struct sndsb_ctx {
 	uint8_t				audio_data_flipped_sign;	/* DSP 4.xx command allows us to specify signed/unsigned */
 	uint8_t				dsp_play_method;
 	uint8_t				dsp_vmaj,dsp_vmin;
-	uint8_t				dsp_ok,mixer_ok;
 	uint8_t				dsp_stopping;
 	uint8_t				mixer_chip;
 	uint8_t				dsp_record;
@@ -129,6 +128,9 @@ struct sndsb_ctx {
 	uint32_t			buffer_phys;
 	char				dsp_copyright[128];
 	/* adjustment for known weird clones of the SB chipset */
+	uint8_t				dsp_ok:1;
+	uint8_t				mixer_ok:1;
+	uint8_t				mixer_probed:1;
 	uint8_t				is_gallant_sc6600:1;	/* Reveal/Gallant SC6600: DSP v3.5 but supports SB16 commands except for the mixer register configuration stuff */
 	uint8_t				enable_adpcm_autoinit:1;/* Most emulators including DOSBox do not emulate auto-init ADPCM playback */
 	uint8_t				mega_em:1;		/* Gravis MEGA-EM detected, tread very very carefully */
@@ -170,9 +172,6 @@ struct sndsb_ctx {
 	uint8_t				dsp_direct_dac_read_after_command;	/* read the DSP write status N times after direct DAC commands */
 	uint8_t				dsp_direct_dac_poll_retry_timeout;	/* poll DSP write status up to N times again before attempting DSP command */
 	const char*			reason_not_supported;	/* from last call can_do() or is_supported() */
-/* array of mixer controls, determined by mixer chipset */
-	struct sndsb_mixer_control*	sb_mixer;
-	signed short			sb_mixer_items;
 /* max sample rate of the DSP */
 	unsigned short			max_sample_rate_dsp4xx;		/* in Hz, maximum per sample frame */
 	unsigned short			max_sample_rate_sb_hispeed;	/* in Hz, maximum per sample i.e. DSP maxes out at this value at mono, or half this value at stereo */
@@ -252,7 +251,6 @@ struct sndsb_mixer_control {
 };
 
 extern const char *sndsb_dspoutmethod_str[SNDSB_DSPOUTMETHOD_MAX];
-extern const char *sndsb_mixer_chip_name[SNDSB_MIXER_MAX];
 extern struct sndsb_ctx sndsb_card[SNDSB_MAX_CARDS];
 extern signed char gallant_sc6600_map_to_dma[4];
 extern signed char gallant_sc6600_map_to_irq[8];
@@ -269,13 +267,11 @@ void free_sndsb();
 void sndsb_free_card(struct sndsb_ctx *c);
 struct sndsb_ctx *sndsb_try_blaster_var();
 const char *sndsb_mixer_chip_str(uint8_t c);
-int sndsb_read_dsp(struct sndsb_ctx *cx);
 int sndsb_read_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms);
 int sndsb_reset_dsp(struct sndsb_ctx *cx);
 int sndsb_read_mixer(struct sndsb_ctx *cx,uint8_t i);
 void sndsb_write_mixer(struct sndsb_ctx *cx,uint8_t i,uint8_t d);
 int sndsb_probe_mixer(struct sndsb_ctx *cx);
-int sndsb_write_dsp(struct sndsb_ctx *cx,uint8_t d);
 int sndsb_write_dsp_timeout(struct sndsb_ctx *cx,uint8_t d,unsigned long timeout_ms);
 int sndsb_write_dsp_timeconst(struct sndsb_ctx *cx,uint8_t tc);
 int sndsb_query_dsp_version(struct sndsb_ctx *cx);
@@ -294,7 +290,6 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx);
 int sndsb_stop_dsp_playback(struct sndsb_ctx *cx);
 void sndsb_send_buffer_again(struct sndsb_ctx *cx);
 int sndsb_determine_ideal_dsp_play_method(struct sndsb_ctx *cx);
-void sndsb_choose_mixer(struct sndsb_ctx *card,signed char override);
 int sndsb_submit_buffer(struct sndsb_ctx *cx,unsigned char FAR *ptr,uint32_t phys,uint32_t len,uint32_t user,uint8_t loop);
 int sndsb_assign_dma_buffer(struct sndsb_ctx *cx,struct dma_8237_allocation *dma);
 unsigned char sndsb_rate_to_time_constant(struct sndsb_ctx *cx,unsigned long rate);
@@ -303,6 +298,8 @@ int sndsb_ess_read_controller(struct sndsb_ctx *cx,int reg);
 int sndsb_ess_write_controller(struct sndsb_ctx *cx,int reg,unsigned char value);
 void sndsb_irq_continue(struct sndsb_ctx *cx,unsigned char c);
 unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx);
+
+const struct sndsb_mixer_control *sndsb_get_mixer_controls(struct sndsb_ctx *card,signed short *count,signed char override);
 
 int sb_nmi_32_auto_choose_hook();
 #if TARGET_MSDOS == 32
@@ -319,6 +316,14 @@ static inline unsigned char sndsb_ctx_to_index(struct sndsb_ctx *c) {
 
 static inline struct sndsb_ctx *sndsb_index_to_ctx(unsigned char c) {
 	return sndsb_card + c;
+}
+
+static inline int sndsb_write_dsp(struct sndsb_ctx *cx,uint8_t d) {
+	return sndsb_write_dsp_timeout(cx,d,25000UL);
+}
+
+static inline int sndsb_read_dsp(struct sndsb_ctx *cx) {
+	return sndsb_read_dsp_timeout(cx,250000UL);
 }
 
 static inline int sndsb_recommend_vm_wait(struct sndsb_ctx *cx) {
@@ -360,8 +365,8 @@ void sndsb_manual_probe_irq(struct sndsb_ctx *cx);
 void sndsb_manual_probe_dma(struct sndsb_ctx *cx);
 #endif
 
-void sndsb_write_mixer_entry(struct sndsb_ctx *sb,struct sndsb_mixer_control *mc,unsigned char nb);
-unsigned char sndsb_read_mixer_entry(struct sndsb_ctx *sb,struct sndsb_mixer_control *mc);
+void sndsb_write_mixer_entry(struct sndsb_ctx *sb,const struct sndsb_mixer_control *mc,unsigned char nb);
+unsigned char sndsb_read_mixer_entry(struct sndsb_ctx *sb,const struct sndsb_mixer_control *mc);
 unsigned long sndsb_real_sample_rate(struct sndsb_ctx *cx);
 
 uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit);

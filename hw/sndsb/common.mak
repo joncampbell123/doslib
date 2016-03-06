@@ -4,7 +4,7 @@ NOW_BUILDING = HW_SNDSB_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    sndsb.c
-OBJS =        $(SUBDIR)$(HPS)sndsb.obj
+OBJS =        $(SUBDIR)$(HPS)sndsb.obj $(SUBDIR)$(HPS)sbmixstr.obj $(SUBDIR)$(HPS)sbadpcm.obj $(SUBDIR)$(HPS)sbmixer.obj $(SUBDIR)$(HPS)sbmixerc.obj $(SUBDIR)$(HPS)sbmixnm.obj $(SUBDIR)$(HPS)sbenvbls.obj $(SUBDIR)$(HPS)sbdspio.obj $(SUBDIR)$(HPS)sbdsprst.obj $(SUBDIR)$(HPS)sbdspver.obj $(SUBDIR)$(HPS)sbtc1.obj $(SUBDIR)$(HPS)sbtc2.obj $(SUBDIR)$(HPS)sbdspcm1.obj $(SUBDIR)$(HPS)sbesscnm.obj $(SUBDIR)$(HPS)sbessreg.obj $(SUBDIR)$(HPS)sbdmabuf.obj
 OBJSPNP =     $(SUBDIR)$(HPS)sndsbpnp.obj
 PNPCFG_EXE =  $(SUBDIR)$(HPS)pnpcfg.exe
 
@@ -17,7 +17,7 @@ NO_TEST_EXE=1
 ! ifeq MMODE s
 # yet again, doesn't fit into the small memory model (by 10 bytes)
 NO_TEST_ISAPNP=1
-NO_TEST_EXE=1
+#NO_TEST_EXE=1
 ! endif
 !endif
 
@@ -26,7 +26,12 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 !endif
 
 $(HW_SNDSB_LIB): $(OBJS)
-	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sndsb.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sndsb.obj -+$(SUBDIR)$(HPS)sbmixstr.obj -+$(SUBDIR)$(HPS)sbadpcm.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbmixer.obj -+$(SUBDIR)$(HPS)sbmixnm.obj -+$(SUBDIR)$(HPS)sbmixerc.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbenvbls.obj -+$(SUBDIR)$(HPS)sbdspio.obj -+$(SUBDIR)$(HPS)sbdsprst.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbdspcm1.obj -+$(SUBDIR)$(HPS)sbesscnm.obj -+$(SUBDIR)$(HPS)sbessreg.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbdspver.obj -+$(SUBDIR)$(HPS)sbtc1.obj -+$(SUBDIR)$(HPS)sbtc2.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbdmabuf.obj
 
 $(HW_SNDSBPNP_LIB): $(OBJSPNP)
 	wlib -q -b -c $(HW_SNDSBPNP_LIB) -+$(SUBDIR)$(HPS)sndsbpnp.obj

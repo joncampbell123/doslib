@@ -2850,10 +2850,14 @@ static void play_with_mixer_sb() {
 	unsigned char uiredraw=1;
 	signed short offset=0;
 	signed short selector=0;
-	struct sndsb_mixer_control* ent;
+	signed short sb_mixer_items = -1;
+	const struct sndsb_mixer_control *sb_mixer;
+	const struct sndsb_mixer_control *ent;
 	unsigned char rawmode=0;
 	signed short cc,x,y;
 	VGA_ALPHA_PTR vga;
+
+	sb_mixer = sndsb_get_mixer_controls(sb_card,&sb_mixer_items,mixer);
 
 	while (loop) {
 		if (redraw || uiredraw) {
@@ -2901,20 +2905,20 @@ static void play_with_mixer_sb() {
 				vga_write(temp_str);
 				vga_write("\n");
 
-				if (selector >= sb_card->sb_mixer_items)
-					selector = sb_card->sb_mixer_items - 1;
-				if (offset >= sb_card->sb_mixer_items)
-					offset = sb_card->sb_mixer_items - 1;
+				if (selector >= sb_mixer_items)
+					selector = sb_mixer_items - 1;
+				if (offset >= sb_mixer_items)
+					offset = sb_mixer_items - 1;
 				if (offset < 0)
 					offset = 0;
 
 				for (y=0;y < visrows;y++) {
-					if ((y+offset) >= sb_card->sb_mixer_items)
+					if ((y+offset) >= sb_mixer_items)
 						break;
-					if (!sb_card->sb_mixer)
+					if (!sb_mixer)
 						break;
 
-					ent = sb_card->sb_mixer + offset + y;
+					ent = sb_mixer + offset + y;
 					vga_moveto(0,y+visy);
 					vga_write_color((y+offset) == selector ? 0x70 : 0x1E);
 					if (ent->length == 1)
@@ -2946,10 +2950,10 @@ static void play_with_mixer_sb() {
 				if (mixer == 0) mixer++;
 				if (mixer == sb_card->mixer_chip) mixer++;
 				if (mixer >= SNDSB_MIXER_MAX) mixer = -1;
-				sndsb_choose_mixer(sb_card,mixer);
+				sb_mixer = sndsb_get_mixer_controls(sb_card,&sb_mixer_items,mixer);
 				redraw=1;
 			}
-			else if (isdigit(c)) {
+			else if (isdigit(c) && !rawmode) {
 				int i=0;
 				char temp_str[7];
 				unsigned int val;
@@ -2971,8 +2975,8 @@ static void play_with_mixer_sb() {
 							if (i == 0) break;
 							temp_str[i] = 0;
 							val = (unsigned int)strtol(temp_str,NULL,0);
-							val &= (1 << sb_card->sb_mixer[selector].length) - 1;
-							sndsb_write_mixer_entry(sb_card,sb_card->sb_mixer+selector,val);
+							val &= (1 << sb_mixer[selector].length) - 1;
+							sndsb_write_mixer_entry(sb_card,sb_mixer+selector,val);
 							break;
 						}
 						else if (isdigit(c)) {
@@ -3017,7 +3021,7 @@ static void play_with_mixer_sb() {
 					sndsb_write_mixer(sb_card,(unsigned char)selector,nb);
 				}
 
-				redraw = 1;
+				uiredraw = 1;
 			}
 			else if (c == 'r' || c == 'R') {
 				rawmode = !rawmode;
@@ -3027,6 +3031,8 @@ static void play_with_mixer_sb() {
 			}
 			else if (c == 27)
 				loop = 0;
+			else if (c == ' ')
+				uiredraw = 1;
 			else if (c == 0x4800) { /* up arrow */
 				if (rawmode) {
 					selector -= 0x10;
@@ -3049,11 +3055,10 @@ static void play_with_mixer_sb() {
 					uiredraw=1;
 				}
 				else {
-					if (selector >= 0 && selector < sb_card->sb_mixer_items &&
-						sb_card->sb_mixer != NULL) {
-						unsigned char v = sndsb_read_mixer_entry(sb_card,sb_card->sb_mixer+selector);
+					if (selector >= 0 && selector < sb_mixer_items && sb_mixer != NULL) {
+						unsigned char v = sndsb_read_mixer_entry(sb_card,sb_mixer+selector);
 						if (v > 0) v--;
-						sndsb_write_mixer_entry(sb_card,sb_card->sb_mixer+selector,v);
+						sndsb_write_mixer_entry(sb_card,sb_mixer+selector,v);
 						uiredraw=1;
 					}
 				}
@@ -3065,11 +3070,10 @@ static void play_with_mixer_sb() {
 					uiredraw=1;
 				}
 				else {
-					if (selector >= 0 && selector < sb_card->sb_mixer_items &&
-						sb_card->sb_mixer != NULL) {
-						unsigned char v = sndsb_read_mixer_entry(sb_card,sb_card->sb_mixer+selector);
-						if (v < ((1 << sb_card->sb_mixer[selector].length)-1)) v++;
-						sndsb_write_mixer_entry(sb_card,sb_card->sb_mixer+selector,v);
+					if (selector >= 0 && selector < sb_mixer_items && sb_mixer != NULL) {
+						unsigned char v = sndsb_read_mixer_entry(sb_card,sb_mixer+selector);
+						if (v < ((1 << sb_mixer[selector].length)-1)) v++;
+						sndsb_write_mixer_entry(sb_card,sb_mixer+selector,v);
 						uiredraw=1;
 					}
 				}
@@ -3093,7 +3097,7 @@ static void play_with_mixer_sb() {
 					uiredraw=1;
 				}
 				else {
-					if ((selector+1) < sb_card->sb_mixer_items) {
+					if ((selector+1) < sb_mixer_items) {
 						uiredraw=1;
 						selector++;
 						if (selector >= (offset+visrows)) {
@@ -3106,10 +3110,10 @@ static void play_with_mixer_sb() {
 				if (rawmode) {
 				}
 				else {
-					if ((selector+1) < sb_card->sb_mixer_items) {
+					if ((selector+1) < sb_mixer_items) {
 						selector += visrows-1;
-						if (selector >= sb_card->sb_mixer_items)
-							selector = sb_card->sb_mixer_items-1;
+						if (selector >= sb_mixer_items)
+							selector = sb_mixer_items-1;
 						if (selector >= (offset+visrows))
 							offset = selector-(visrows-1);
 						uiredraw=1;
@@ -3120,9 +3124,8 @@ static void play_with_mixer_sb() {
 				if (rawmode) {
 				}
 				else {
-					if (selector >= 0 && selector < sb_card->sb_mixer_items &&
-						sb_card->sb_mixer != NULL) {
-						sndsb_write_mixer_entry(sb_card,sb_card->sb_mixer+selector,0);
+					if (selector >= 0 && selector < sb_mixer_items && sb_mixer != NULL) {
+						sndsb_write_mixer_entry(sb_card,sb_mixer+selector,0);
 						uiredraw=1;
 					}
 				}
@@ -3131,10 +3134,9 @@ static void play_with_mixer_sb() {
 				if (rawmode) {
 				}
 				else {
-					if (selector >= 0 && selector < sb_card->sb_mixer_items &&
-						sb_card->sb_mixer != NULL) {
-						sndsb_write_mixer_entry(sb_card,sb_card->sb_mixer+selector,
-							(1 << sb_card->sb_mixer[selector].length) - 1);
+					if (selector >= 0 && selector < sb_mixer_items && sb_mixer != NULL) {
+						sndsb_write_mixer_entry(sb_card,sb_mixer+selector,
+							(1 << sb_mixer[selector].length) - 1);
 						uiredraw=1;
 					}
 				}
@@ -4132,6 +4134,15 @@ int main(int argc,char **argv) {
 		/* NTS: We used to probe for the GUS, but that seems to cause too many
 		 *      problems. So instead, we demand the user set the ULTRASND variable. */
 	}
+
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+	/* init card no longer probes the mixer */
+	for (i=0;i < SNDSB_MAX_CARDS;i++) {
+		struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
+		if (cx->baseio == 0) continue;
+		if (!cx->mixer_probed) sndsb_probe_mixer(cx);
+	}
+#endif
 
 	if (autopick < 0) {
 		int def_choice = -1;
