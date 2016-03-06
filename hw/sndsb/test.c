@@ -4277,14 +4277,22 @@ int main(int argc,char **argv) {
 	}
 #endif
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	/* init card no longer probes the mixer */
 	for (i=0;i < SNDSB_MAX_CARDS;i++) {
 		struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
 		if (cx->baseio == 0) continue;
-		if (!cx->mixer_probed) sndsb_probe_mixer(cx);
-	}
+
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+		if (!cx->mixer_probed)
+			sndsb_probe_mixer(cx);
 #endif
+		if (cx->irq < 0)
+			sndsb_probe_irq(cx);
+		if (cx->dma8 < 0) // NTS: for some cards, this will also set the 16-bit DMA channel
+			sndsb_probe_dma8(cx);
+		if (cx->dma16 < 0)
+			sndsb_probe_dma16(cx);
+	}
 
 	if (sc_idx < 0) {
 		int count=0;

@@ -428,6 +428,10 @@ static inline void sndsb_detect_virtualbox() {
 		sndsb_virtualbox_emulation = 1;
 }
 
+void sndsb_probe_irq(struct sndsb_ctx *cx);
+void sndsb_probe_dma8(struct sndsb_ctx *cx);
+void sndsb_probe_dma16(struct sndsb_ctx *cx);
+
 #if TARGET_MSDOS == 32
 int sb_nmi_32_auto_choose_hook();
 #endif
