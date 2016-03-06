@@ -32,28 +32,6 @@ unsigned char vcpi_probed = 0;
 unsigned char vcpi_present = 0;
 unsigned char vcpi_major_version,vcpi_minor_version;
 
-/* NTS: According to the VCPI specification this call is only supposed to report
- *      the physical memory address for anything below the 1MB boundary. And so
- *      far EMM386.EXE strictly adheres to that rule by not reporting success for
- *      addresses >= 1MB. The 32-bit limitation is a result of the VCPI system
- *      call, since the physical address is returned in EDX. */
-uint32_t dos_linear_to_phys_vcpi(uint32_t pn) {
-	uint32_t r=0xFFFFFFFFUL;
-
-	__asm {
-		.586p
-		mov	ax,0xDE06
-		mov	ecx,pn
-		int	67h
-		or	ah,ah
-		jnz	err1		; if AH == 0 then EDX = page phys addr
-		mov	r,edx
-err1:
-	}
-
-	return r;
-}
-
 #if !defined(TARGET_WINDOWS)
 static int int67_null() {
 	uint32_t ptr;

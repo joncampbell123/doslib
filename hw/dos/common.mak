@@ -9,7 +9,7 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = HW_DOS_LIB
 
-OBJS =        $(SUBDIR)$(HPS)dos.obj $(SUBDIR)$(HPS)dosxio.obj $(SUBDIR)$(HPS)biosext.obj $(SUBDIR)$(HPS)himemsys.obj $(SUBDIR)$(HPS)emm.obj $(SUBDIR)$(HPS)dosbox.obj $(SUBDIR)$(HPS)biosmem.obj $(SUBDIR)$(HPS)biosmem3.obj $(SUBDIR)$(HPS)dosasm.obj $(SUBDIR)$(HPS)tgusmega.obj $(SUBDIR)$(HPS)tgussbos.obj $(SUBDIR)$(HPS)tgusumid.obj $(SUBDIR)$(HPS)dosntvdm.obj $(SUBDIR)$(HPS)doswin.obj $(SUBDIR)$(HPS)dos_lol.obj $(SUBDIR)$(HPS)dossmdrv.obj $(SUBDIR)$(HPS)dosvbox.obj $(SUBDIR)$(HPS)dosmapal.obj $(SUBDIR)$(HPS)dosflavr.obj $(SUBDIR)$(HPS)dos9xvm.obj $(SUBDIR)$(HPS)dos_nmi.obj $(SUBDIR)$(HPS)win32lrd.obj $(SUBDIR)$(HPS)win3216t.obj $(SUBDIR)$(HPS)win16vec.obj $(SUBDIR)$(HPS)dpmiexcp.obj $(SUBDIR)$(HPS)dosvcpi.obj $(SUBDIR)$(HPS)ddpmilin.obj $(SUBDIR)$(HPS)ddpmiphy.obj $(SUBDIR)$(HPS)ddpmidos.obj $(SUBDIR)$(HPS)ddpmidsc.obj $(SUBDIR)$(HPS)dpmirmcl.obj $(SUBDIR)$(HPS)dos_mcb.obj $(SUBDIR)$(HPS)dospsp.obj $(SUBDIR)$(HPS)dosdev.obj $(SUBDIR)$(HPS)dos_ltp.obj $(SUBDIR)$(HPS)dosdpmi.obj
+OBJS =        $(SUBDIR)$(HPS)dos.obj $(SUBDIR)$(HPS)dosxio.obj $(SUBDIR)$(HPS)biosext.obj $(SUBDIR)$(HPS)himemsys.obj $(SUBDIR)$(HPS)emm.obj $(SUBDIR)$(HPS)dosbox.obj $(SUBDIR)$(HPS)biosmem.obj $(SUBDIR)$(HPS)biosmem3.obj $(SUBDIR)$(HPS)dosasm.obj $(SUBDIR)$(HPS)dosdlm16.obj $(SUBDIR)$(HPS)dosdlm32.obj $(SUBDIR)$(HPS)tgusmega.obj $(SUBDIR)$(HPS)tgussbos.obj $(SUBDIR)$(HPS)tgusumid.obj $(SUBDIR)$(HPS)dosntvdm.obj $(SUBDIR)$(HPS)doswin.obj $(SUBDIR)$(HPS)dos_lol.obj $(SUBDIR)$(HPS)dossmdrv.obj $(SUBDIR)$(HPS)dosvbox.obj $(SUBDIR)$(HPS)dosmapal.obj $(SUBDIR)$(HPS)dosflavr.obj $(SUBDIR)$(HPS)dos9xvm.obj $(SUBDIR)$(HPS)dos_nmi.obj $(SUBDIR)$(HPS)win32lrd.obj $(SUBDIR)$(HPS)win3216t.obj $(SUBDIR)$(HPS)win16vec.obj $(SUBDIR)$(HPS)dpmiexcp.obj $(SUBDIR)$(HPS)dosvcpi.obj $(SUBDIR)$(HPS)ddpmilin.obj $(SUBDIR)$(HPS)ddpmiphy.obj $(SUBDIR)$(HPS)ddpmidos.obj $(SUBDIR)$(HPS)ddpmidsc.obj $(SUBDIR)$(HPS)dpmirmcl.obj $(SUBDIR)$(HPS)dos_mcb.obj $(SUBDIR)$(HPS)dospsp.obj $(SUBDIR)$(HPS)dosdev.obj $(SUBDIR)$(HPS)dos_ltp.obj $(SUBDIR)$(HPS)dosdpmi.obj $(SUBDIR)$(HPS)dosdpfmc.obj $(SUBDIR)$(HPS)dosdpent.obj $(SUBDIR)$(HPS)dosvcpmp.obj
 !ifdef TARGET_WINDOWS
 OBJS +=       $(SUBDIR)$(HPS)winfcon.obj
 !endif
@@ -59,24 +59,27 @@ DOSNTAST_VDD_BUILD=1
 !endif
 
 $(HW_DOS_LIB): $(OBJS)
-	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dos.obj -+$(SUBDIR)$(HPS)biosext.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dos.obj      -+$(SUBDIR)$(HPS)biosext.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)himemsys.obj -+$(SUBDIR)$(HPS)emm.obj
-	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dosbox.obj -+$(SUBDIR)$(HPS)biosmem.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dosbox.obj   -+$(SUBDIR)$(HPS)biosmem.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)biosmem3.obj -+$(SUBDIR)$(HPS)dosasm.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)tgusmega.obj -+$(SUBDIR)$(HPS)tgussbos.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)tgusumid.obj -+$(SUBDIR)$(HPS)dosntvdm.obj
-	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)doswin.obj -+$(SUBDIR)$(HPS)dosxio.obj
-	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dos_lol.obj -+$(SUBDIR)$(HPS)dossmdrv.obj
-	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dosvbox.obj -+$(SUBDIR)$(HPS)dosmapal.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)doswin.obj   -+$(SUBDIR)$(HPS)dosxio.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dos_lol.obj  -+$(SUBDIR)$(HPS)dossmdrv.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dosvbox.obj  -+$(SUBDIR)$(HPS)dosmapal.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dosflavr.obj -+$(SUBDIR)$(HPS)dos9xvm.obj
-	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dos_nmi.obj -+$(SUBDIR)$(HPS)win32lrd.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dos_nmi.obj  -+$(SUBDIR)$(HPS)win32lrd.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)win3216t.obj -+$(SUBDIR)$(HPS)win16vec.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dpmiexcp.obj -+$(SUBDIR)$(HPS)dosvcpi.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)ddpmilin.obj -+$(SUBDIR)$(HPS)ddpmiphy.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)ddpmidos.obj -+$(SUBDIR)$(HPS)ddpmidsc.obj
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dpmirmcl.obj -+$(SUBDIR)$(HPS)dos_mcb.obj
-	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dospsp.obj -+$(SUBDIR)$(HPS)dosdev.obj
-	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dos_ltp.obj -+$(SUBDIR)$(HPS)dosdpmi.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dospsp.obj   -+$(SUBDIR)$(HPS)dosdev.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dos_ltp.obj  -+$(SUBDIR)$(HPS)dosdpmi.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dosdpfmc.obj -+$(SUBDIR)$(HPS)dosdlm16.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dosdlm32.obj -+$(SUBDIR)$(HPS)dosdpent.obj
+	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)dosvcpmp.obj
 !ifdef TARGET_WINDOWS
 	wlib -q -b -c $(HW_DOS_LIB) -+$(SUBDIR)$(HPS)winfcon.obj
 !endif
