@@ -129,15 +129,9 @@ void vga_switch_to_mono();
 void vga_switch_to_color();
 void vga_turn_on_hgc();
 void vga_turn_off_hgc();
-void vga_set_cga_palette_and_background(unsigned char pal,unsigned char color);
-void vga_set_cga_mode(unsigned char b);
-void vga_tandy_setpalette(unsigned char i,unsigned char c);
 void vga_enable_256color_modex();
-void vga_set_stride(unsigned int stride);
 uint16_t vga_get_start_location();
 void vga_set_start_location(unsigned int offset);
-void vga_set_ypan_sub(unsigned char c);
-void vga_set_xpan(unsigned char c);
 void vga_splitscreen(unsigned int v);
 void vga_alpha_switch_to_font_plane();
 void vga_alpha_switch_from_font_plane();
@@ -157,6 +151,18 @@ static inline unsigned char vga_read_CRTC(unsigned char i) {
 static inline unsigned char vga_read_GC(unsigned char i) {
 	outp(0x3CE,i);
 	return inp(0x3CF);
+}
+
+static inline void vga_moveto(unsigned char x,unsigned char y) {
+	vga_pos_x = x;
+	vga_pos_y = y;
+}
+
+static inline void vga_tandy_setpalette(unsigned char i,unsigned char c) {
+	inp(0x3DA);
+	outp(0x3DA,0x10 + i);
+	outp(0x3DE,c);	/* NTS: This works properly on Tandy [at least DOSBox] */
+	outp(0x3DA,c);	/* NTS: Writing 0x00 like some sames do works on Tandy but PCjr takes THIS byte as palette data */
 }
 
 static inline unsigned char vga_read_sequencer(unsigned char i) {
@@ -179,6 +185,10 @@ static inline void vga_write_CRTC(unsigned char i,unsigned char c) {
 	outp(vga_base_3x0+5,c);
 }
 
+static inline void vga_set_ypan_sub(unsigned char c) {
+	vga_write_CRTC(0x08,c);
+}
+
 static inline void vga_write_color(unsigned char c) {
 	vga_color = c;
 }
@@ -195,6 +205,14 @@ static inline void vga_write_PAL(unsigned char i,unsigned char *p,unsigned int c
 	while (count-- > 0) outp(0x3C9,*p++);
 }
 
+static inline void vga_set_cga_palette_and_background(unsigned char pal,unsigned char color) {
+	outp(0x3D9,(pal << 5) | color);
+}
+
+static inline void vga_set_cga_mode(unsigned char b) {
+	outp(0x3D8,b);
+}
+
 /* NTS: VGA hardware treats bit 5 of the index as a "screen enable".
  *      When the caller is done reprogramming it is expected to or the index by VGA_AC_ENABLE */
 static inline void vga_write_AC(unsigned char i,unsigned char c) {
@@ -202,6 +220,10 @@ static inline void vga_write_AC(unsigned char i,unsigned char c) {
 	outp(0x3C0,i);
 	outp(0x3C0,c);
 	inp(vga_base_3x0+0xA);
+}
+
+static inline void vga_set_xpan(unsigned char c) {
+	vga_write_AC(0x13|0x20,c);
 }
 
 static inline unsigned char vga_read_AC(unsigned char i) {
@@ -219,6 +241,12 @@ static inline unsigned char vga_read_AC(unsigned char i) {
 	inp(vga_base_3x0+0xA);	/* reset latch */
 
 	return c;
+}
+
+static inline void vga_set_stride(unsigned int stride) {
+	/* TODO: Knowing the current "byte/word/dword" memory size, compute properly */
+	stride >>= (2+1); /* divide by DWORD * 2 */
+	vga_write_CRTC(0x13,stride);
 }
 
 static inline void vga_AC_reenable_screen() {
