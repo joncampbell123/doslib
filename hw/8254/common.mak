@@ -4,11 +4,12 @@ NOW_BUILDING = HW_8254_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    8254.c
-OBJS =        $(SUBDIR)$(HPS)8254.obj $(SUBDIR)$(HPS)8254rd.obj
+OBJS =        $(SUBDIR)$(HPS)8254.obj $(SUBDIR)$(HPS)8254rd.obj $(SUBDIR)$(HPS)8254tick.obj $(SUBDIR)$(HPS)8254ticr.obj $(SUBDIR)$(HPS)8254wait.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 
 $(HW_8254_LIB): $(OBJS)
-	wlib -q -b -c $(HW_8254_LIB) -+$(SUBDIR)$(HPS)8254.obj -+$(SUBDIR)$(HPS)8254rd.obj
+	wlib -q -b -c $(HW_8254_LIB) -+$(SUBDIR)$(HPS)8254.obj     -+$(SUBDIR)$(HPS)8254rd.obj   -+$(SUBDIR)$(HPS)8254tick.obj
+	wlib -q -b -c $(HW_8254_LIB) -+$(SUBDIR)$(HPS)8254ticr.obj -+$(SUBDIR)$(HPS)8254wait.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
