@@ -4,10 +4,10 @@ NOW_BUILDING = HW_8237_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    8237.c
-OBJS =        $(SUBDIR)$(HPS)8237.obj
+OBJS =        $(SUBDIR)$(HPS)8237.obj $(SUBDIR)$(HPS)8237rdbs.obj
 
 $(HW_8237_LIB): $(OBJS)
-	wlib -q -b -c $(HW_8237_LIB) -+$(SUBDIR)$(HPS)8237.obj
+	wlib -q -b -c $(HW_8237_LIB) -+$(SUBDIR)$(HPS)8237.obj -+$(SUBDIR)$(HPS)8237rdbs.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
