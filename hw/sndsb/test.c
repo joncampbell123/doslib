@@ -4294,6 +4294,9 @@ int main(int argc,char **argv) {
 			sndsb_probe_dma8_E2(cx);
 		if (cx->dma8 < 0) // NTS: for some cards, this will also set the 16-bit DMA channel
 			sndsb_probe_dma8_14(cx);
+
+		// having IRQ and DMA changes the ideal playback method
+		sndsb_determine_ideal_dsp_play_method(cx);
 	}
 
 	if (sc_idx < 0) {
