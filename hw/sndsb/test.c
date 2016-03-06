@@ -4292,6 +4292,8 @@ int main(int argc,char **argv) {
 			sndsb_probe_irq_80(cx);
 		if (cx->dma8 < 0) // NTS: for some cards, this will also set the 16-bit DMA channel
 			sndsb_probe_dma8_E2(cx);
+		if (cx->dma8 < 0) // NTS: for some cards, this will also set the 16-bit DMA channel
+			sndsb_probe_dma8_14(cx);
 		if (cx->dma16 < 0)
 			sndsb_probe_dma16(cx);
 	}

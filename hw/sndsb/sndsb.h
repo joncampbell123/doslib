@@ -428,6 +428,7 @@ static inline void sndsb_detect_virtualbox() {
 void sndsb_probe_irq_F2(struct sndsb_ctx *cx);
 void sndsb_probe_irq_80(struct sndsb_ctx *cx);
 void sndsb_probe_dma8_E2(struct sndsb_ctx *cx);
+void sndsb_probe_dma8_14(struct sndsb_ctx *cx);
 void sndsb_probe_dma16(struct sndsb_ctx *cx);
 
 #if TARGET_MSDOS == 32
