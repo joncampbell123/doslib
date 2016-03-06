@@ -338,6 +338,8 @@
 #include <hw/sndsb/sndsbpnp.h>
 #endif
 
+static unsigned char sb_debug = 0;
+
 static struct dma_8237_allocation *sb_dma = NULL; /* DMA buffer */
 
 static struct sndsb_ctx*	sb_card = NULL;
@@ -4027,6 +4029,9 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"nochain")) {
 				dont_chain_irq = 1;
 			}
+			else if (!strcmp(a,"debug")) {
+				sb_debug = 1;
+			}
 			else if (!strcmp(a,"16k")) {
 				buffer_limit = 16UL * 1024UL;
 			}
@@ -4286,14 +4291,22 @@ int main(int argc,char **argv) {
 		if (!cx->mixer_probed)
 			sndsb_probe_mixer(cx);
 #endif
-		if (cx->irq < 0)
+		if (cx->irq < 0) {
 			sndsb_probe_irq_F2(cx);
-		if (cx->irq < 0)
+			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (F2) found IRQ %d\n",cx->baseio,cx->irq);
+		}
+		if (cx->irq < 0) {
 			sndsb_probe_irq_80(cx);
-		if (cx->dma8 < 0) // NTS: for some cards, this will also set the 16-bit DMA channel
+			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (80) found IRQ %d\n",cx->baseio,cx->irq);
+		}
+		if (cx->dma8 < 0) { // NTS: for some cards, this will also set the 16-bit DMA channel
 			sndsb_probe_dma8_E2(cx);
-		if (cx->dma8 < 0) // NTS: for some cards, this will also set the 16-bit DMA channel
+			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (E2) found DMA %d\n",cx->baseio,cx->dma8);
+		}
+		if (cx->dma8 < 0) { // NTS: for some cards, this will also set the 16-bit DMA channel
 			sndsb_probe_dma8_14(cx);
+			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (14) found DMA %d\n",cx->baseio,cx->dma8);
+		}
 
 		// having IRQ and DMA changes the ideal playback method
 		sndsb_determine_ideal_dsp_play_method(cx);
