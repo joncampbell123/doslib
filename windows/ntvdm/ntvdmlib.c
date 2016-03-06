@@ -19,26 +19,6 @@
 #include <hw/dos/dosbox.h>
 #include <windows/ntvdm/ntvdmlib.h>
 
-#if defined(NTVDM_CLIENT)
-int i_am_ntvdm_client() {
-	probe_dos();
-	if (cpu_basic_level < 0) cpu_probe();
-	detect_windows();
-
-#if defined(TARGET_WINDOWS)
-	/* WINE (Wine Is Not an Emulator) tends to run the code in
-	 * a more direct fashion */
-	if (windows_emulation == WINEMU_WINE)
-		return 0;
-#endif
-
-	if (windows_mode == WINDOWS_NT)
-		return 1;
-
-	return 0;
-}
-#endif
-
 #if !defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
 static uint16_t		ntvdm_rm_code_sel = 0;		/* 1024 bytes long */
 static unsigned char*	ntvdm_rm_code_ptr = NULL;
@@ -54,7 +34,7 @@ int ntvdm_rm_code_alloc() {
 	return 1;
 }
 
-static void ntvdm_rm_code_call(struct dpmi_realmode_call *rc) {
+void ntvdm_rm_code_call(struct dpmi_realmode_call *rc) {
 	rc->cs = ((size_t)ntvdm_rm_code_ptr) >> 4UL;
 	rc->ip = ((size_t)ntvdm_rm_code_ptr) & 0xFUL;
 

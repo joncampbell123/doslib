@@ -68,6 +68,7 @@ int i_am_ntvdm_client();
 const char *ntvdm_RM_ERR_str(uint16_t c);
 void ntvdm_UnregisterModule(uint16_t handle);
 uint16_t ntvdm_RegisterModule(const char *dll_name,const char *dll_init_routine,const char *dll_dispatch_routine);
+void ntvdm_rm_code_call(struct dpmi_realmode_call *rc);
 
 #if !defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
 int ntvdm_rm_code_alloc();
