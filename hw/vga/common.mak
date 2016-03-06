@@ -22,8 +22,9 @@ TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.exe
 TMOTSENG_EXE = $(SUBDIR)$(HPS)tmotseng.exe
 !endif
 
-$(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)herc.obj $(SUBDIR)$(HPS)tseng.obj
-	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vga.obj -+$(SUBDIR)$(HPS)herc.obj -+$(SUBDIR)$(HPS)tseng.obj
+$(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)herc.obj $(SUBDIR)$(HPS)tseng.obj $(SUBDIR)$(HPS)vgach3c0.obj $(SUBDIR)$(HPS)vgastget.obj $(SUBDIR)$(HPS)vgatxt50.obj
+	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vga.obj      -+$(SUBDIR)$(HPS)herc.obj     -+$(SUBDIR)$(HPS)tseng.obj
+	wlib -q -b -c $(HW_VGA_LIB) -+$(SUBDIR)$(HPS)vgach3c0.obj -+$(SUBDIR)$(HPS)vgastget.obj -+$(SUBDIR)$(HPS)vgatxt50.obj
 
 $(HW_VGATTY_LIB): $(SUBDIR)$(HPS)vgatty.obj $(HW_VGA_LIB)
 	wlib -q -b -c $(HW_VGATTY_LIB) -+$(SUBDIR)$(HPS)vgatty.obj

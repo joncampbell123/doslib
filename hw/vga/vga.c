@@ -46,31 +46,6 @@ uint32_t vga_clock_rates[4] = {
 	0
 };
 
-int check_vga_3C0() {
-	unsigned char mor;
-
-	/* Misc. output register test. This register is supposed to be readable at 0x3CC, writeable at 0x3C2,
-	 * and contain 7 documented bits that we can freely change */
-	_cli();
-	mor = inp(0x3CC);
-	outp(0x3C2,0);	/* turn it all off */
-	if ((inp(0x3CC)&0xEF) != 0) { /* NTS: do not assume bit 4 is changeable */
-		/* well if I couldn't change it properly it isn't the Misc. output register now is it? */
-		outp(0x3C2,mor); /* restore it */
-		return 0;
-	}
-	outp(0x3C2,0xEF);	/* turn it all on (NTS: bit 4 is undocumented) */
-	if ((inp(0x3CC)&0xEF) != 0xEF) { /* NTS: do not assume bit 4 is changeable */
-		/* well if I couldn't change it properly it isn't the Misc. output register now is it? */
-		outp(0x3C2,mor); /* restore it */
-		return 0;
-	}
-	outp(0x3C2,mor);
-	_sti();
-
-	return 1;
-}
-
 void vga_sync_hw_cursor() {
 	unsigned int i;
 	i = vga_read_CRTC(0xF);			/* cursor low */
@@ -635,14 +610,6 @@ void vga_set_stride(unsigned int stride) {
 	vga_write_CRTC(0x13,stride);
 }
 
-uint16_t vga_get_start_location() {
-	uint16_t r;
-
-	r  = vga_read_CRTC(0x0D);
-	r += vga_read_CRTC(0x0C) << 8;
-	return r;
-}
-
 void vga_set_start_location(unsigned int offset) {
 	vga_write_CRTC(0x0C,offset>>8);
 	vga_write_CRTC(0x0D,offset);
@@ -877,21 +844,6 @@ void vga_read_crtc_mode(struct vga_mode_params *p) {
 	p->vertical_blank_end = ((vga_read_CRTC(0x16) & 0x7F) | ((p->vertical_blank_start - 1) & (~0x7F))) + 1;
 	if (p->vertical_blank_start >= p->vertical_blank_end)
 		p->vertical_blank_end += 0x80;
-}
-
-void vga_bios_set_80x50_text() { /* switch to VGA 80x50 8-line high text */
-#if defined(TARGET_WINDOWS)
-#else
-	union REGS regs = {0};
-	regs.w.ax = 0x1112;
-	regs.w.bx = 0;
-# if TARGET_MSDOS == 32
-	int386(0x10,&regs,&regs);
-# else
-	int86(0x10,&regs,&regs);
-# endif
-	vga_height = 50;
-#endif
 }
 
 #if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
