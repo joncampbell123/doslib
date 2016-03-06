@@ -42,11 +42,11 @@ int sndsb_read_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms) {
 			break;
 		}
 
-		t8254_wait(pause);
-		if (--patience == 0) {
+		if (patience-- == 0) {
 			DEBUG(fprintf(stdout,"sndsb_read_dsp() read timeout\n"));
 			return -1;
 		}
+		t8254_wait(pause);
 	} while (1);
 
 	DEBUG(fprintf(stdout,"sndsb_read_dsp() == 0x%02X\n",c));
@@ -59,13 +59,17 @@ int sndsb_write_dsp_timeout(struct sndsb_ctx *cx,uint8_t d,unsigned long timeout
 
 	DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
 	do {
-		if (inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0)) & 0x80)
-			t8254_wait(pause);
-		else {
+		if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0)) & 0x80) == 0) {
 			outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),d);
 			return 1;
 		}
-	} while (--patience != 0);
+
+		if (patience-- == 0) {
+			DEBUG(fprintf(stdout,"sndsb_write_dsp() write timeout\n"));
+			return -1;
+		}
+		t8254_wait(pause);
+	} while (1);
 	DEBUG(fprintf(stdout,"sndsb_write_dsp() timeout\n"));
 	return 0;
 }

@@ -202,15 +202,13 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 
 	if (!sndsb_reset_dsp(cx)) return 0;
 	if (!sndsb_query_dsp_version(cx)) return 0; // FIXME: Do all Sound Blaster cards support this? Are there any shitty SB clones that don't?
-	cx->dsp_ok = 1;
 
-	/* FIX: Apparently when SBOS unloads it leaves behind the I/O
-	        port stuck returning 0xAA, which can trick most SB
-		compatible DOS programs into thinking the DSP is still
-		there. But if we read back the DSP version as 0xAA 0xAA
-		then we know it's just SBOS not cleaning up after itself */
-	if (cx->dsp_vmaj == 0xAA && cx->dsp_vmin == 0xAA)
-		return 0; /* That's not a Sound Blaster! */
+	/* Gravis Ultrasound SBOS, when unloaded, might leave the read data port at 0xAA which
+	 * we then read back as DSP version 0xAA 0xAA. */
+	if (cx->dsp_vmaj == 0xAA && cx->dsp_vmin == 0xAA) return 0;
+
+	/* OK */
+	cx->dsp_ok = 1;
 
 	/* It seems to me the safest way to know whether or not to read the
 	 * copyright string is to assume anything before DSP version 3.xx
