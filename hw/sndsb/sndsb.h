@@ -429,6 +429,7 @@ static inline void sndsb_detect_virtualbox() {
 }
 
 void sndsb_probe_irq(struct sndsb_ctx *cx);
+void sndsb_probe_irq2(struct sndsb_ctx *cx);
 void sndsb_probe_dma8(struct sndsb_ctx *cx);
 void sndsb_probe_dma16(struct sndsb_ctx *cx);
 
