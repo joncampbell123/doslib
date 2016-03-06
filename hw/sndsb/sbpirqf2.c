@@ -77,7 +77,3 @@ void sndsb_probe_irq_F2(struct sndsb_ctx *cx) {
 	}
 }
 
-void sndsb_probe_dma16(struct sndsb_ctx *cx) {
-	// TODO
-}
-
