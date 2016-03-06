@@ -33,6 +33,7 @@ enum {
 	SNDSB_MIXER_CT1335=1,
 	SNDSB_MIXER_CT1345,		/* Sound Blaster Pro chip */
 	SNDSB_MIXER_CT1745,		/* Sound Blaster 16 */
+	SNDSB_MIXER_ESS688,		/* ESS AudioDrive 688 */
 	SNDSB_MIXER_MAX
 };
 

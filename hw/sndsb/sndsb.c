@@ -155,6 +155,26 @@ struct sndsb_mixer_control sndsb_mixer_ct1745[] = {
 	{0x46, 4, 4, "Bass L"},
 	{0x47, 4, 4, "Bass R"}
 };
+
+/* ESS AudioDrive 688 */
+struct sndsb_mixer_control sndsb_mixer_ess688[] = {
+/*      index, of,ln,name */
+	{0x14, 4, 4, "Audio 1 Play Volume L"},		{0x14, 0, 4, "Audio 1 Play Volume R"},
+	{0x1A, 4, 4, "Mic Mix Volume L"},		{0x1A, 0, 4, "Mic Mix Volume R"},
+	{0x1C, 4, 1, "Ext. Record Source Mute"},	{0x1C, 0, 3, "Ext. Record Source"},	// 0=Mic 2=AuxA(CD) 4=Mic 6=Line see ESS 1688 for more info
+	{0x32, 4, 4, "Master Volume L"},		{0x32, 0, 4, "Master Volume R"},
+	{0x36, 4, 4, "FM Volume L"},			{0x36, 0, 4, "FM Volume R"},
+	{0x38, 4, 4, "AuxA(CD) Volume L"},		{0x38, 0, 4, "AuxA(CD) Volume R"},
+	{0x3A, 4, 4, "AuxB Volume L"},			{0x3A, 0, 4, "AuxB Volume R"},
+	{0x3C, 0, 3, "PC speaker volume"},
+	{0x3E, 4, 4, "Line Volume L"},			{0x3E, 0, 4, "Line Volume R"},
+	{0x42, 7, 1, "Serial Mode Input Override"},	{0x42, 4, 3, "Serial Mode Source Select"},
+	{0x42, 0, 4, "Serial Mode Mic Record Level"},
+	{0x44, 7, 1, "Serial Mode Output Vol Override"},
+	{0x44, 4, 3, "Serial Mode Output Select"},
+	{0x44, 0, 4, "Serial Mode Master Volume"}
+
+};
 #endif
 
 signed char gallant_sc6600_map_to_dma[4] = {-1, 0, 1, 3};
@@ -171,7 +191,8 @@ const char *sndsb_mixer_chip_name[SNDSB_MIXER_MAX] = {
 	"none",
 	"CT1335",
 	"CT1345",
-	"CT1745"
+	"CT1745",
+	"ESS 688"
 };
 
 const char *sndsb_dspoutmethod_str[SNDSB_DSPOUTMETHOD_MAX] = {
@@ -1080,6 +1101,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 
 					if (cx->ess_chipset == SNDSB_ESS_688) { /* ESS 688? I know how to program that! */
 						cx->ess_extensions = 1;
+						cx->mixer_chip = SNDSB_MIXER_ESS688;
+						sndsb_choose_mixer(cx,-1);
 
 						/* that also means that we can deduce the true IRQ/DMA from the chipset */
 						if ((in=sndsb_ess_read_controller(cx,0xB1)) != -1) { /* 0xB1 Legacy Audio Interrupt Control */
@@ -1125,6 +1148,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 					}
 					else if (cx->ess_chipset == SNDSB_ESS_1869) { /* ESS 1869? I know how to program that! */
 						cx->ess_extensions = 1;
+						cx->mixer_chip = SNDSB_MIXER_ESS688;
+						sndsb_choose_mixer(cx,-1);
 
 						/* NTS: The ESS 1869 and later have PnP methods to configure themselves, and the
 						 * registers are documented as readonly for that reason, AND, on the ESS 1887 in
@@ -3430,6 +3455,10 @@ void sndsb_choose_mixer(struct sndsb_ctx *card,signed char override) {
 	else if (idx == SNDSB_MIXER_CT1745) {
 		card->sb_mixer = sndsb_mixer_ct1745;
 		card->sb_mixer_items = (signed short)(sizeof(sndsb_mixer_ct1745) / sizeof(struct sndsb_mixer_control));
+	}
+	else if (idx == SNDSB_MIXER_ESS688) {
+		card->sb_mixer = sndsb_mixer_ess688;
+		card->sb_mixer_items = (signed short)(sizeof(sndsb_mixer_ess688) / sizeof(struct sndsb_mixer_control));
 	}
 #endif
 }
