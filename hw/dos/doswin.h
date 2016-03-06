@@ -1,4 +1,7 @@
 
+#ifndef __HW_DOS_DOSWIN_H
+#define __HW_DOS_DOSWIN_H
+
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
@@ -80,4 +83,6 @@ extern BOOL			(PASCAL FAR *__InterruptRegister)(HTASK htask,FARPROC callback);
 int ToolHelpInit();
 void ToolHelpFree();
 #endif
+
+#endif //__HW_DOS_DOSWIN_H
 

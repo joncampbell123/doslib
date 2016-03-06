@@ -3,6 +3,8 @@
  *          interrupt handlers the calling program should do that. */
 
 #include <hw/cpu/cpu.h>
+#include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
 #include <stdint.h>
 
 #define SNDSB_MAX_CARDS				4
@@ -386,6 +388,34 @@ void sndsb_ess_extensions_probe(struct sndsb_ctx *cx);
 void sndsb_detect_windows_dosbox_vm_quirks(struct sndsb_ctx *cx);
 void sndsb_validate_dma_against_8237(struct sndsb_ctx *cx);
 int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_rate,unsigned char wav_stereo,unsigned char wav_16bit);
+
+extern void (*sndsb_read_sb16_irqdma_resources_CB)(struct sndsb_ctx *cx);
+static inline void sndsb_enable_sb16_support() {
+	sndsb_read_sb16_irqdma_resources_CB = sndsb_read_sb16_irqdma_resources;
+}
+
+extern int (*sndsb_read_sc400_config_CB)(struct sndsb_ctx *cx);
+static inline void sndsb_enable_sc400_support() {
+	sndsb_read_sc400_config_CB = sndsb_read_sc400_config;
+}
+
+extern void (*sndsb_detect_windows_dosbox_vm_quirks_CB)(struct sndsb_ctx *cx);
+static inline void sndsb_enable_windows_vm_support() {
+	sndsb_detect_windows_dosbox_vm_quirks_CB = sndsb_detect_windows_dosbox_vm_quirks;
+}
+
+extern void (*sndsb_ess_extensions_probe_CB)(struct sndsb_ctx *cx);
+static inline void sndsb_enable_ess_audiodrive_support() {
+	sndsb_ess_extensions_probe_CB = sndsb_ess_extensions_probe;
+}
+
+extern unsigned char sndsb_virtualbox_emulation;
+static inline void sndsb_detect_virtualbox() {
+	if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_NT)
+		return;
+	if (detect_virtualbox_emu())
+		sndsb_virtualbox_emulation = 1;
+}
 
 #if TARGET_MSDOS == 32
 int sb_nmi_32_auto_choose_hook();

@@ -77,6 +77,12 @@
 # define DEBUG(x)
 #endif
 
+void (*sndsb_detect_windows_dosbox_vm_quirks_CB)(struct sndsb_ctx *cx) = NULL;
+void (*sndsb_read_sb16_irqdma_resources_CB)(struct sndsb_ctx *cx) = NULL;
+void (*sndsb_ess_extensions_probe_CB)(struct sndsb_ctx *cx) = NULL;
+int (*sndsb_read_sc400_config_CB)(struct sndsb_ctx *cx) = NULL;
+
+unsigned char sndsb_virtualbox_emulation = 0;
 struct sndsb_probe_opts sndsb_probe_options={0};
 struct sndsb_ctx sndsb_card[SNDSB_MAX_CARDS];
 struct sndsb_ctx *sndsb_card_blaster=NULL;
@@ -264,8 +270,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->timer_tick_signal = 0;
 	cx->timer_tick_func = NULL;
 	cx->poll_ack_when_no_irq = 1;
-	cx->virtualbox_emulation = 0;
 	cx->reason_not_supported = NULL;
+	cx->virtualbox_emulation = sndsb_virtualbox_emulation;
 	cx->dsp_alias_port = sndsb_probe_options.use_dsp_alias;
 	cx->dsp_direct_dac_poll_retry_timeout = 16; /* assume at least 16 I/O reads to wait for DSP ready */
 	cx->dsp_direct_dac_read_after_command = 0;
@@ -341,8 +347,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 
 	/* Sound Blaster 16 (DSP 4.xx): we read the mixer registers, unless this card was initialized from a PnP device */
 	/* Earlier cards: we have to probe around for it */
-	if (cx->dsp_vmaj == 4 && !sndsb_probe_options.disable_sb16_read_config_byte && cx->pnp_id == 0)
-		sndsb_read_sb16_irqdma_resources(cx);
+	if (sndsb_read_sb16_irqdma_resources_CB != NULL && cx->dsp_vmaj == 4 && !sndsb_probe_options.disable_sb16_read_config_byte && cx->pnp_id == 0)
+		sndsb_read_sb16_irqdma_resources_CB(cx);
 
 	/* Reveal SC400 SB16 clone: I have this card and I can tell
 	 * from programming experience that while it reports itself
@@ -360,21 +366,17 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	 * fake the DMA transfer by writing to the DSP command
 	 * port, something I took advantage of prior to figuring out
 	 * the DMA controller back in the day */
-	if (!strcmp(cx->dsp_copyright,"SC-6000"))
-		sndsb_read_sc400_config(cx);
+	if (sndsb_read_sc400_config_CB != NULL && !strcmp(cx->dsp_copyright,"SC-6000"))
+		sndsb_read_sc400_config_CB(cx);
 
-	if (windows_mode != WINDOWS_NONE)
-		sndsb_detect_windows_dosbox_vm_quirks(cx);
-
-	/* Sun/Oracle VirtualBox quirks */
-	if (!cx->windows_emulation && detect_virtualbox_emu())
-		cx->virtualbox_emulation = 1;
+	if (sndsb_detect_windows_dosbox_vm_quirks_CB != NULL && windows_mode != WINDOWS_NONE)
+		sndsb_detect_windows_dosbox_vm_quirks_CB(cx);
 
 	/* DSP v3.1 and no copyright string means it might be an ESS 688/1869 chipset */
 	/* FIXME: A freak accident during development shows me it's possible to change the DSP version to v2.1 */
-	if (!cx->windows_emulation && !cx->is_gallant_sc6600 && cx->dsp_vmaj == 3 && cx->dsp_vmin == 1 &&
+	if (sndsb_ess_extensions_probe_CB != NULL && !cx->windows_emulation && !cx->is_gallant_sc6600 && cx->dsp_vmaj == 3 && cx->dsp_vmin == 1 &&
 		cx->dsp_copyright[0] == 0 && !sndsb_probe_options.disable_ess_extensions)
-		sndsb_ess_extensions_probe(cx);
+		sndsb_ess_extensions_probe_CB(cx);
 
 	/* If the context refers to DMA channels that don't exist on the system, then mark them off appropriately */
 	sndsb_validate_dma_against_8237(cx);
@@ -880,8 +882,7 @@ void sndsb_manual_probe_high_dma(struct sndsb_ctx *cx) {
 		 * in their DMA controller emulation where 'terminal count' is the original programmed
 		 * value rather than the 0xFFFF value most DMA controllers return. In other words,
 		 * we're compensating for VirtualBox's mediocre DMA emulation. */
-		if (detect_virtualbox_emu()) {
-			cx->virtualbox_emulation = 1;
+		if (cx->virtualbox_emulation) {
 			DEBUG(fprintf(stdout,"Setting test duration to longer period to work with VirtualBox\n"));
 			testlen = 22050/5;
 		}
@@ -1030,8 +1031,7 @@ void sndsb_manual_probe_dma(struct sndsb_ctx *cx) {
 		 * in their DMA controller emulation where 'terminal count' is the original programmed
 		 * value rather than the 0xFFFF value most DMA controllers return. In other words,
 		 * we're compensating for VirtualBox's mediocre DMA emulation. */
-		if (detect_virtualbox_emu()) {
-			cx->virtualbox_emulation = 1;
+		if (cx->virtualbox_emulation) {
 			DEBUG(fprintf(stdout,"Setting test duration to longer period to work with VirtualBox\n"));
 			testlen = 22050/5;
 		}

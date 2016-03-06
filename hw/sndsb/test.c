@@ -4122,6 +4122,16 @@ int main(int argc,char **argv) {
 		printf("Cannot init library\n");
 		return 1;
 	}
+
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+	/* it's up to us now to tell it certain minor things */
+	sndsb_detect_virtualbox();		// whether or not we're running in VirtualBox
+	/* sndsb now allows us to keep the EXE small by not referring to extra sound card support */
+	sndsb_enable_sb16_support();		// SB16 support
+	sndsb_enable_sc400_support();		// SC400 support
+	sndsb_enable_ess_audiodrive_support();	// ESS AudioDrive support
+#endif
+
 #if TARGET_MSDOS == 32
 	if (sndsb_nmi_32_hook > 0) /* it means the NMI hook is taken */
 		printf("Sound Blaster NMI hook/reflection active\n");
