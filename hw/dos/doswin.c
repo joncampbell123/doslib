@@ -40,15 +40,6 @@ uint16_t windows_version = 0;		/* NOTE: 0 for Windows NT */
 uint8_t windows_mode = 0;
 uint8_t windows_init = 0;
 
-const char *windows_mode_strs[WINDOWS_MAX] = {
-	"None",
-	"Real",
-	"Standard",
-	"Enhanced",
-	"NT",
-	"OS/2"
-};
-
 /* TESTING (whether or not it correctly detects the presence of Windows):
  *    Note that in some columns the API returns insufficient information and the
  *    API has to use it's best guess on the correct value, which might be
