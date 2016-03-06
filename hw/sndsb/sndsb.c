@@ -223,12 +223,10 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		if (gravis_mega_em_detect(&megaem_info)) { // MEGA-EM emulates DSP 1.xx. It can emulate DSP 2.01, but badly
 			cx->mega_em = 1;
 			cx->dsp_autoinit_dma = 0;
-			strcpy(cx->dsp_copyright,"Gravis MEGA-EM");
 		}
 		else if (gravis_sbos_detect() >= 0) { // SBOS only emulates DSP 1.xx
-			strcpy(cx->dsp_copyright,"Gravis SBOS");
-			cx->dsp_autoinit_dma = 0;
 			cx->sbos = 1;
+			cx->dsp_autoinit_dma = 0;
 		}
 	}
 
@@ -256,138 +254,11 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	if (!strcmp(cx->dsp_copyright,"SC-6000"))
 		sndsb_read_sc400_config(cx);
 
+	if (windows_mode != WINDOWS_NONE)
+		sndsb_detect_windows_dosbox_vm_quirks(cx);
+
 #if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
-	/* trimmed to keep total code <= 64KB */
 #else
-	if (windows_mode == WINDOWS_NT) {
-		/* Windows NT would never let a DOS program like us talk directly to hardware,
-		 * so if we see a Sound Blaster like device it's very likely an emulation driver.
-		 * Working correctly then requires us to deduce what emulation driver we're running under. */
-
-		/* No copyright string and DSP v2.1: Microsoft Windows XP/Vista/7 native NTVDM.EXE SB emulation */
-		if (cx->dsp_copyright[0] == 0 && cx->dsp_vmaj == 2 && cx->dsp_vmin == 1) {
-			cx->windows_xp_ntvdm = 1;
-			cx->windows_emulation = 1;
-			strcpy(cx->dsp_copyright,"Microsoft Windows XP/Vista/7 NTVDM.EXE SB emulation");
-		}
-		/* anything else: probably VDMSOUND.EXE, which provides good enough emulation we don't need workarounds */
-		/* TODO: Is there anything we can do to detect with certainty that it's VDMSOUND.EXE? */
-		else {
-			/* NTS: VDMSOUND.EXE emulates everything down to the copyright string, so append to the string instead of replacing */
-			char *x = cx->dsp_copyright+strlen(cx->dsp_copyright);
-			char *f = cx->dsp_copyright+sizeof(cx->dsp_copyright)-1;
-			const char *add = " [VDMSOUND]";
-
-			cx->vdmsound = 1;
-			cx->windows_emulation = 1;
-			if (x != cx->dsp_copyright) {
-				while (x < f && *add) *x++ = *add++;
-				*x = 0;
-			}
-			else {
-				strcpy(cx->dsp_copyright,"VDMSOUND");
-			}
-		}
-	}
-	else if (windows_mode == WINDOWS_ENHANCED) { /* Windows 9x/ME Sound Blaster */
-		struct w9x_vmm_DDB_scan vxdscan;
-		unsigned char vxdscanned = 0;
-
-		/* Two possibilities from experience:
-		 *    a) We can see and talk to the Sound Blaster because the driver
-		 *       implements a "pass through" virtualization like mode. Meaning,
-		 *       if we start talking to the Sound Blaster the driver catches it
-		 *       and treats it as yet another process opening the sound card.
-		 *       Meaning that, as long as we have the sound card playing audio,
-		 *       other Windows applications cannot open it, and if other Windows
-		 *       applications have it open, we cannot initialize the card.
-		 *
-		 *       That scenario is typical of:
-		 *
-		 *          - Microsoft Windows 95 with Microsoft stock Sound Blaster 16 drivers
-		 *
-		 *       That scenario brings up an interesting problem as well: Since
-		 *       it literally "passes through" the I/O, we see the card for what
-		 *       it is. So we can't check for inconsistencies in I/O like we can
-		 *       with most emulations. If knowing about this matters enough, we
-		 *       have to know how to poke around inside the Windows kernel and
-		 *       autodetect which drivers are resident.
-		 *
-		 *    b) The Sound Blaster is virtual. In the most common case with
-		 *       Windows 9x, it likely means there's a PCI-based sound card
-		 *       installed with kernel-level emulation enabled. What we are able
-		 *       to do depends on what the driver offers us.
-		 *
-		 *       That scenario is typical of:
-		 *
-		 *          Microsoft Windows 98/ME with PCI-based sound hardware. In
-		 *          one test scenario of mine, it was a Sound Blaster Live!
-		 *          value card and Creative "Sound Blaster 16 emulation" drivers.
-		 *
-		 *          Microsoft Windows ME, through SBEMUL.SYS, which uses the
-		 *          systemwide default sound driver to completely virtualize
-		 *          the sound card. On one virtual machine, Windows ME uses the
-		 *          AC'97 codec driver to emulate a Sound Blaster Pro.
-		 *
-		 *       Since emulation can vary greatly, detecting the emulator through
-		 *       I/O inconsistencies is unlikely to work, again, if it matters we
-		 *       need a way to poke into the Windows kernel and look at which drivers
-		 *       are resident.
-		 *
-		 *    c) The Sound Blaster is actual hardware, and Windows is not blocking
-		 *       or virtualizing any I/O ports.
-		 *
-		 *       I know you're probably saying to yourself: Ick! But under Windows 95
-		 *       such scenarios are possible: if there is a SB16 compatible sound
-		 *       card out there and no drivers are installed to talk to it, Windows
-		 *       95 itself will not talk to the card, but will allow DOS programs
-		 *       to do so. Amazingly, it will still virtualize the DMA controller
-		 *       in a manner that allows everything to work!
-		 *
-		 *       Whatever you do in this scenario: Don't let multiple DOS boxes talk
-		 *       to the same Sound Blaster card!!!
-		 *
-		 * So unlike the Windows NT case, we can't assume emulators or capabilities
-		 * because it varies greatly depending on the host configuration. But we
-		 * can try our best and at least try to avoid things that might trip up
-		 * Windows 9x. */
-		cx->windows_emulation = 1; /* NTS: The "pass thru" scenario counts as emulation */
-
-		if (!sndsb_probe_options.disable_windows_vxd_checks && w9x_vmm_first_vxd(&vxdscan)) {
-			vxdscanned = 1;
-			do {
-				/* If SBEMUL.SYS is present, then it's definitely Windows 98/ME SBEMUL.SYS */
-				if (!memcmp(vxdscan.ddb.name,"SBEMUL  ",8)) {
-					cx->windows_9x_me_sbemul_sys = 1;
-				}
-				/* If a Sound Blaster 16 is present, usually Windows 9x/ME will install the
-				 * stock Creative drivers shipped on the CD-ROM */
-				else if (!memcmp(vxdscan.ddb.name,"VSB16   ",8)) {
-					cx->windows_creative_sb16_drivers = 1;
-					cx->windows_creative_sb16_drivers_ver = ((uint16_t)vxdscan.ddb.Mver << 8U) | ((uint16_t)vxdscan.ddb.minorver);
-				}
-			} while (w9x_vmm_next_vxd(&vxdscan));
-			w9x_vmm_last_vxd(&vxdscan);
-		}
-
-		/* DSP v3.2, no copyright string, and (no VxD scan OR SBEMUL.SYS is visible)
-		 * Might be Microsoft Windows 98/ME SBEMUL.SYS */
-		if ((!vxdscanned || cx->windows_9x_me_sbemul_sys) && cx->dsp_vmaj == 3 && cx->dsp_vmin == 2 && cx->dsp_copyright[0] == 0) {
-			/* No hacks required, the emulation is actually quite reasonable, though as usual
-			 * using extremely short block sizes will cause stuttering. The only recognition
-			 * necessary is that SBEMUL.SYS does not support the ADPCM modes. Applies to Windows 98
-			 * and Windows ME. */
-			strcpy(cx->dsp_copyright,"Microsoft Windows 98/ME SBEMUL.SYS");
-		}
-		/* Sound Blaster 16 DSP, and VSB16 (SB16.VXD) is visible.
-		 * Might be Creative's Sound Blaster 16 drivers. */
-		else if (cx->windows_creative_sb16_drivers && cx->dsp_vmaj == 4 && !strcmp(cx->dsp_copyright,"COPYRIGHT (C) CREATIVE TECHNOLOGY LTD, 1992.")) {
-			sprintf(cx->dsp_copyright,"Creative Sound Blaster 16 driver for Win 3.1/9x/ME v%u.%u",
-				cx->windows_creative_sb16_drivers_ver>>8,
-				cx->windows_creative_sb16_drivers_ver&0xFF);
-		}
-	}
-
 	/* Sun/Oracle VirtualBox quirks */
 	if (!cx->windows_emulation && detect_virtualbox_emu())
 		cx->virtualbox_emulation = 1;
@@ -1954,7 +1825,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 				cx->buffer_hispeed = 0;
 			else if (cx->force_hispeed)
 				cx->buffer_hispeed = 1;
-			else if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2 && !strcmp(cx->dsp_copyright,"")) /* [1] */
+			else if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2) /* [1] */
 				cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 8000 : 16000));
 			else
 				cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 13000 : 23000));
