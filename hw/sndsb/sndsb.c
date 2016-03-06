@@ -898,13 +898,14 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 			unsigned char a,b,c;
 			a = (unsigned char)sndsb_read_dsp(cx);
 			if (a == 0xAA) a = (unsigned char)sndsb_read_dsp(cx);
-			/* observation: if the card is jumpered to 220h, the first byte is 0x2E, second is 0xC5.
-			                if the card is jumpered to 240h, the first byte is 0x2F, second is 0xC3.
-					is that really what bit 0 indicates? */
-			if ((a&0xFE) == 0x2E) {
+
+			if (a != 0xFF) {
 				cx->is_gallant_sc6600 = 1;
 				b = (unsigned char)sndsb_read_dsp(cx);
 				c = (unsigned char)sndsb_read_dsp(cx);
+				/* A: Unknown bits, and some bits that define the Windows Sound System base I/O and gameport enable.
+				 * B: Unknown bits, and some bits that define the base I/O of the CD-ROM interface.
+				 * C: DMA, IRQ, and MPU IRQ control bits */
 				if (b != 0 && c != 0) {
 					/* SC400: Experience says the card always works over
 					 * the 8-bit DMA even for 16-bit PCM audio */
