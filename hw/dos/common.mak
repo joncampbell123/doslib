@@ -107,14 +107,14 @@ lib: $(DOSNTAST_VDD) $(HW_DOS_LIB) .symbolic
 
 !ifdef TESTSMRT_EXE
 $(TESTSMRT_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testsmrt.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)testsmrt.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TESTSMRT_EXE)
+	%write tmp.cmd option quiet option map=$(TESTSMRT_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)testsmrt.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TESTSMRT_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef NTASTRM_EXE
 $(NTASTRM_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)ntastrm.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)ntastrm.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(NTASTRM_EXE)
+	%write tmp.cmd option quiet option map=$(NTASTRM_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)ntastrm.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(NTASTRM_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
@@ -163,7 +163,7 @@ $(TESTDPMI_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testdpm
 !ifdef TEST_EXE
 $(TEST_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)test.obj $(HW_DOS_LIB_WLINK_LIBRARIES)
-	%write tmp.cmd option map=$(SUBDIR)$(HPS)test.map
+	%write tmp.cmd option map=$(TEST_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -185,7 +185,7 @@ $(TEST_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 !ifdef CR3_EXE
 $(CR3_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)cr3.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)cr3.obj $(HW_DOS_LIB_WLINK_LIBRARIES)
-	%write tmp.cmd option map=$(SUBDIR)$(HPS)cr3.map
+	%write tmp.cmd option map=$(CR3_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
@@ -206,35 +206,35 @@ $(CR3_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)cr3.obj
 
 !ifdef TSTLP_EXE
 $(TSTLP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)tstlp.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)tstlp.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TSTLP_EXE)
+	%write tmp.cmd option quiet option map=$(TSTLP_EXE).map system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)tstlp.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TSTLP_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef TESTBEXT_EXE
 $(TESTBEXT_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testbext.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)testbext.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TESTBEXT_EXE)
+	%write tmp.cmd option quiet option map=$(TESTBEXT_EXE).map system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)testbext.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TESTBEXT_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef TSTHIMEM_EXE
 $(TSTHIMEM_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)tsthimem.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)tsthimem.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TSTHIMEM_EXE)
+	%write tmp.cmd option quiet option map=$(TSTHIMEM_EXE).map system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)tsthimem.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TSTHIMEM_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef TESTEMM_EXE
 $(TESTEMM_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testemm.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)testemm.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TESTEMM_EXE)
+	%write tmp.cmd option quiet option map=$(TESTEMM_EXE).map system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)testemm.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TESTEMM_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef TSTBIOM_EXE
 $(TSTBIOM_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)tstbiom.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)tstbiom.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TSTBIOM_EXE)
+	%write tmp.cmd option quiet option map=$(TSTBIOM_EXE).map system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)tstbiom.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TSTBIOM_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
