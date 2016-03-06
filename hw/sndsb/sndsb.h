@@ -404,10 +404,21 @@ static inline void sndsb_enable_windows_vm_support() {
 	sndsb_detect_windows_dosbox_vm_quirks_CB = sndsb_detect_windows_dosbox_vm_quirks;
 }
 
+int sndsb_begin_dsp_playback_s_ESS(struct sndsb_ctx *cx,unsigned short lv);
+void sndsb_send_buffer_again_s_ESS(struct sndsb_ctx *cx,unsigned long lv);
+int sndsb_stop_dsp_playback_s_ESS(struct sndsb_ctx *cx);
+
 extern void (*sndsb_ess_extensions_probe_CB)(struct sndsb_ctx *cx);
+extern int (*sndsb_stop_dsp_playback_s_ESS_CB)(struct sndsb_ctx *cx);
+extern void (*sndsb_send_buffer_again_s_ESS_CB)(struct sndsb_ctx *cx,unsigned long lv);
+extern int (*sndsb_begin_dsp_playback_s_ESS_CB)(struct sndsb_ctx *cx,unsigned short lv);
 static inline void sndsb_enable_ess_audiodrive_support() {
 	sndsb_ess_extensions_probe_CB = sndsb_ess_extensions_probe;
+	sndsb_stop_dsp_playback_s_ESS_CB = sndsb_stop_dsp_playback_s_ESS;
+	sndsb_send_buffer_again_s_ESS_CB = sndsb_send_buffer_again_s_ESS;
+	sndsb_begin_dsp_playback_s_ESS_CB = sndsb_begin_dsp_playback_s_ESS;
 }
+
 
 extern unsigned char sndsb_virtualbox_emulation;
 static inline void sndsb_detect_virtualbox() {
