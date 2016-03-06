@@ -32,7 +32,7 @@ static void interrupt sb_probe_irq_handler() {
  * command 0xF2 does not work. Again for safety reasons, we only probe IRQs
  * that original Sound Blaster hardware would use. */
 static unsigned char test_irqs[] = {2,3,5,7};
-void sndsb_probe_irq2(struct sndsb_ctx *cx) {
+void sndsb_probe_irq_80(struct sndsb_ctx *cx) {
 	unsigned char irqn=0,iter,expect;
 	unsigned char masked;
 

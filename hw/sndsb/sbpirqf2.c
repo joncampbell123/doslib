@@ -32,7 +32,7 @@ static void interrupt sb_probe_irq_handler() {
  * use sndsb_probe_irq2() to use method #2. Note that for safety reasons, we
  * only test against IRQ's that the original Sound Blaster would use */
 static unsigned char test_irqs[] = {2,3,5,7};
-void sndsb_probe_irq(struct sndsb_ctx *cx) {
+void sndsb_probe_irq_F2(struct sndsb_ctx *cx) {
 	unsigned char irqn=0,iter,expect;
 	unsigned char masked;
 
