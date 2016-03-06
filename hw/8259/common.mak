@@ -8,7 +8,7 @@ MAKE_IRQPATCH = 1
 !endif
 
 C_SOURCE =    8259.c
-OBJS =        $(SUBDIR)$(HPS)8259.obj
+OBJS =        $(SUBDIR)$(HPS)8259.obj $(SUBDIR)$(HPS)8259poll.obj $(SUBDIR)$(HPS)8259icw.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 
 !ifdef MAKE_IRQPATCH
@@ -16,7 +16,7 @@ IRQPATCH_EXE = $(SUBDIR)$(HPS)irqpatch.exe
 !endif
 
 $(HW_8259_LIB): $(OBJS)
-	wlib -q -b -c $(HW_8259_LIB) -+$(SUBDIR)$(HPS)8259.obj
+	wlib -q -b -c $(HW_8259_LIB) -+$(SUBDIR)$(HPS)8259.obj -+$(SUBDIR)$(HPS)8259poll.obj -+$(SUBDIR)$(HPS)8259icw.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit

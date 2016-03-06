@@ -44,21 +44,6 @@
 unsigned char p8259_slave_present = 0;
 signed char p8259_probed = 0;
 
-void p8259_ICW(unsigned char a,unsigned char b,unsigned char c,unsigned char d) {
-	outp(p8259_irq_to_base_port(c,0),a | 0x10);	/* D4 == 1 */
-	outp(p8259_irq_to_base_port(c,1),b);
-	outp(p8259_irq_to_base_port(c,1),c);
-	if (a & 1) outp(p8259_irq_to_base_port(c,1),d);
-}
-
-/* NTS: bit 7 is set if there was an interrupt */
-/* WARNING: This code crashes DOSBox 0.74 with "PIC poll not handled" error message */
-unsigned char p8259_poll(unsigned char c) {
-	/* issue poll command to read and ack an interrupt */
-	p8259_OCW3(c,0x0C);	/* OCW3 = POLL=1 SMM=0 RR=0 */
-	return inp(p8259_irq_to_base_port(c,0));
-}
-
 int probe_8259() {
 	unsigned char om,cm,c2;
 	unsigned int flags;
