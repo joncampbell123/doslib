@@ -4286,8 +4286,8 @@ int main(int argc,char **argv) {
 		if (!cx->mixer_probed)
 			sndsb_probe_mixer(cx);
 #endif
-//		if (cx->irq < 0)
-//			sndsb_probe_irq(cx);
+		if (cx->irq < 0)
+			sndsb_probe_irq(cx);
 		if (cx->irq < 0)
 			sndsb_probe_irq2(cx);
 		if (cx->dma8 < 0) // NTS: for some cards, this will also set the 16-bit DMA channel
