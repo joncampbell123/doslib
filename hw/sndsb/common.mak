@@ -11,12 +11,12 @@ PNPCFG_EXE =  $(SUBDIR)$(HPS)pnpcfg.exe
 !ifeq TARGET_MSDOS 16
 ! ifeq MMODE c
 # this test program isn't going to fit in the compact memory model. sorry.
-NO_TEST_ISAPNP=1
-NO_TEST_EXE=1
+#NO_TEST_ISAPNP=1
+#NO_TEST_EXE=1
 ! endif
 ! ifeq MMODE s
 # yet again, doesn't fit into the small memory model (by 10 bytes)
-NO_TEST_ISAPNP=1
+#NO_TEST_ISAPNP=1
 #NO_TEST_EXE=1
 ! endif
 !endif
