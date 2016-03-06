@@ -131,11 +131,120 @@ void sndsb_free_card(struct sndsb_ctx *c) {
 	if (c == sndsb_card_blaster) sndsb_card_blaster = NULL;
 }
 
+void sndsb_validate_dma_against_8237(struct sndsb_ctx *cx) {
+	/* check DMA against the DMA controller presence.
+	 * If there is no 16-bit DMA (channels 4-7) then we cannot use
+	 * those channels */
+	if (!(d8237_flags&D8237_DMA_SECONDARY)) {
+		if (cx->dma16 >= 4) cx->dma16 = -1;
+		if (cx->dma8 >= 4) cx->dma8 = -1;
+	}
+	if (!(d8237_flags&D8237_DMA_PRIMARY)) {
+		if (cx->dma16 >= 0 && cx->dma16 < 4) cx->dma16 = -1;
+		if (cx->dma8 >= 0 && cx->dma8 < 4) cx->dma8 = -1;
+	}
+}
+
+void sndsb_update_capabilities(struct sndsb_ctx *cx) {
+	if (cx->dsp_vmaj >= 4) {
+		/* Highspeed DSP commands don't matter anymore, they're just an alias to older commands */
+		cx->hispeed_matters = 0;
+		cx->hispeed_blocking = 0;
+		/* The DSP is responsive even during hispeed mode, you can nag it then just fine */
+		cx->dsp_nag_hispeed = 1;
+		/* FIXME: At exactly what DSP version did SB16 allow going up to 48KHz?
+		 * I'm going by the ViBRA test card I own having DSP 4.13 vs DOSBox sbtype=sb16
+		 * reporting DSP v4.5 */
+		if (cx->dsp_vmaj == 4 && cx->dsp_vmin > 5)
+			cx->max_sample_rate_dsp4xx = 48000;
+		else
+			cx->max_sample_rate_dsp4xx = 44100;
+
+		cx->enable_adpcm_autoinit = 1; /* NTS: Unless there are DSP 4.xx SB clones out there that don't, we can assume auto-init ADPCM */
+		cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_dsp4xx;
+		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_dsp4xx;
+		cx->max_sample_rate_sb_play = cx->max_sample_rate_dsp4xx;
+		cx->max_sample_rate_sb_rec = cx->max_sample_rate_dsp4xx;
+		if (cx->max_sample_rate_dsp4xx > 44100) { /* SB16 ViBRA cards apparently allow Direct DAC output up to 24KHz instead of 23KHz */
+			cx->max_sample_rate_sb_play_dac = 24000;
+			/* TODO: Is recording speed affected? */
+		}
+	}
+	else if (cx->dsp_vmaj == 3) {
+		if (cx->ess_chipset != 0) { /* ESS 688/1869 */
+			/* NTS: The ESS 688 (Sharp laptop) and ESS 1869 (Compaq desktop) I test against seems quite capable
+			 *      of playing back at 48KHz, in fact it will happily go beyond 48KHz up to 64KHz in my tests
+			 *      barring ISA bus limitations (16-bit stereo at 54KHz audibly "warbles" for example). For
+			 *      for consistentcy's sake, we'll just go ahead and say the chip goes up to 48KHz */
+			cx->dsp_direct_dac_poll_retry_timeout = 4; /* DSP is responsive to direct DAC to allow lesser timeout */
+			cx->max_sample_rate_dsp4xx = 48000;
+			cx->max_sample_rate_sb_hispeed_rec = 48000;
+			cx->max_sample_rate_sb_hispeed = 48000;
+			cx->max_sample_rate_sb_play = 48000;
+			cx->max_sample_rate_sb_rec = 48000;
+			cx->enable_adpcm_autoinit = 0; /* does NOT support auto-init ADPCM */
+			/* also: hi-speed DSP is blocking, and it matters: to go above 23KHz you have to use hi-speed DSP commands */
+		}
+		else if (cx->is_gallant_sc6600) { /* SC-6600 clone card */
+			cx->dsp_direct_dac_poll_retry_timeout = 4; /* DSP is responsive to direct DAC to allow lesser timeout */
+			/* NTS: Officially, the max sample rate is 24000Hz, but the DSP seems to allow up to 25000Hz,
+			 *      then limit the sample rate to that up until about 35000Hz where it suddenly clamps
+			 *      the rate down to 24000Hz. Mildly strange bug. */
+			cx->max_sample_rate_dsp4xx = 44100;
+			cx->max_sample_rate_sb_hispeed_rec = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_hispeed = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_play = 25000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+			cx->max_sample_rate_sb_rec = 25000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+			cx->enable_adpcm_autoinit = 0; /* does NOT support auto-init ADPCM */
+			/* also: hi-speed DSP is blocking, and it matters: to go above 23KHz you have to use hi-speed DSP commands */
+		}
+		else { /* Sound Blaster Pro */
+			cx->max_sample_rate_dsp4xx = 0;
+			cx->max_sample_rate_sb_hispeed_rec = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_hispeed = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
+			cx->max_sample_rate_sb_play = 23000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+			cx->max_sample_rate_sb_rec = 23000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
+		}
+	}
+	else if (cx->dsp_vmaj == 2) {
+		if (cx->dsp_vmin >= 1) { /* Sound Blaster 2.01 */
+			cx->max_sample_rate_dsp4xx = 0;
+			cx->max_sample_rate_sb_hispeed_rec = 15000;
+			cx->max_sample_rate_sb_rec = 13000;
+			cx->max_sample_rate_sb_hispeed = 44100; /* NTS: On actual SB 2.1 hardware I own you can apparently go up to 46KHz? */
+			cx->max_sample_rate_sb_play = 23000;
+		}
+		else { /* Sound Blaster 2.0, without hispeed DSP commands */
+			cx->max_sample_rate_dsp4xx = 0;
+			cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_sb_rec = 13000;
+			cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_sb_play = 23000;
+		}
+	}
+	else { /* Sound Blaster 1.x */
+		cx->max_sample_rate_dsp4xx = 0;
+		cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_sb_rec = 13000;
+		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_sb_play = 23000;
+	}
+
+	/* DSP 2xx and earlier do not have auto-init commands */
+	if (cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))
+		cx->dsp_autoinit_command = 0;
+	if (cx->irq < 0) {
+		if (cx->dsp_autoinit_command)
+			cx->dsp_nag_mode = 0;
+		else
+			cx->dsp_nag_mode = 1;
+	}
+}
+
+/* NTS: This routine NO LONGER probes the mixer */
 /* NTS: We do not test IRQ and DMA channels here */
 /* NTS: The caller may have set irq == -1, dma8 == -1, or dma16 == -1, such as
  *      when probing. If any of them are -1, and this code knows how to deduce
  *      it directly from the hardware, then they will be updated */
 int sndsb_init_card(struct sndsb_ctx *cx) {
+	unsigned int i;
+
 	/* some of our detection relies on knowing what OS we're running under */
 	cpu_probe();
 	probe_dos();
@@ -257,8 +366,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	if (windows_mode != WINDOWS_NONE)
 		sndsb_detect_windows_dosbox_vm_quirks(cx);
 
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
-#else
 	/* Sun/Oracle VirtualBox quirks */
 	if (!cx->windows_emulation && detect_virtualbox_emu())
 		cx->virtualbox_emulation = 1;
@@ -268,118 +375,18 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	if (!cx->windows_emulation && !cx->is_gallant_sc6600 && cx->dsp_vmaj == 3 && cx->dsp_vmin == 1 &&
 		cx->dsp_copyright[0] == 0 && !sndsb_probe_options.disable_ess_extensions)
 		sndsb_ess_extensions_probe(cx);
-#endif
 
-	/* check DMA against the DMA controller presence.
-	 * If there is no 16-bit DMA (channels 4-7) then we cannot use
-	 * those channels */
-	if (!(d8237_flags&D8237_DMA_SECONDARY)) {
-		if (cx->dma16 >= 4) cx->dma16 = -1;
-		if (cx->dma8 >= 4) cx->dma8 = -1;
-	}
-	if (!(d8237_flags&D8237_DMA_PRIMARY)) {
-		if (cx->dma16 >= 0 && cx->dma16 < 4) cx->dma16 = -1;
-		if (cx->dma8 >= 0 && cx->dma8 < 4) cx->dma8 = -1;
-	}
+	/* If the context refers to DMA channels that don't exist on the system, then mark them off appropriately */
+	sndsb_validate_dma_against_8237(cx);
 
-	if (cx->dsp_vmaj >= 4) {
-		/* Highspeed DSP commands don't matter anymore, they're just an alias to older commands */
-		cx->hispeed_matters = 0;
-		cx->hispeed_blocking = 0;
-		/* The DSP is responsive even during hispeed mode, you can nag it then just fine */
-		cx->dsp_nag_hispeed = 1;
-		/* FIXME: At exactly what DSP version did SB16 allow going up to 48KHz?
-		 * I'm going by the ViBRA test card I own having DSP 4.13 vs DOSBox sbtype=sb16
-		 * reporting DSP v4.5 */
-		if (cx->dsp_vmaj == 4 && cx->dsp_vmin > 5)
-			cx->max_sample_rate_dsp4xx = 48000;
-		else
-			cx->max_sample_rate_dsp4xx = 44100;
+	/* Using what we know of the card, update the capabilities in the context */
+	sndsb_update_capabilities(cx);
 
-		cx->enable_adpcm_autoinit = 1; /* NTS: Unless there are DSP 4.xx SB clones out there that don't, we can assume auto-init ADPCM */
-		cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_dsp4xx;
-		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_dsp4xx;
-		cx->max_sample_rate_sb_play = cx->max_sample_rate_dsp4xx;
-		cx->max_sample_rate_sb_rec = cx->max_sample_rate_dsp4xx;
-		if (cx->max_sample_rate_dsp4xx > 44100) { /* SB16 ViBRA cards apparently allow Direct DAC output up to 24KHz instead of 23KHz */
-			cx->max_sample_rate_sb_play_dac = 24000;
-			/* TODO: Is recording speed affected? */
-		}
-	}
-	else if (cx->dsp_vmaj == 3) {
-		if (cx->ess_chipset != 0) { /* ESS 688/1869 */
-			/* NTS: The ESS 688 (Sharp laptop) and ESS 1869 (Compaq desktop) I test against seems quite capable
-			 *      of playing back at 48KHz, in fact it will happily go beyond 48KHz up to 64KHz in my tests
-			 *      barring ISA bus limitations (16-bit stereo at 54KHz audibly "warbles" for example). For
-			 *      for consistentcy's sake, we'll just go ahead and say the chip goes up to 48KHz */
-			cx->dsp_direct_dac_poll_retry_timeout = 4; /* DSP is responsive to direct DAC to allow lesser timeout */
-			cx->max_sample_rate_dsp4xx = 48000;
-			cx->max_sample_rate_sb_hispeed_rec = 48000;
-			cx->max_sample_rate_sb_hispeed = 48000;
-			cx->max_sample_rate_sb_play = 48000;
-			cx->max_sample_rate_sb_rec = 48000;
-			cx->enable_adpcm_autoinit = 0; /* does NOT support auto-init ADPCM */
-			/* also: hi-speed DSP is blocking, and it matters: to go above 23KHz you have to use hi-speed DSP commands */
-		}
-		else if (cx->is_gallant_sc6600) { /* SC-6600 clone card */
-			cx->dsp_direct_dac_poll_retry_timeout = 4; /* DSP is responsive to direct DAC to allow lesser timeout */
-			/* NTS: Officially, the max sample rate is 24000Hz, but the DSP seems to allow up to 25000Hz,
-			 *      then limit the sample rate to that up until about 35000Hz where it suddenly clamps
-			 *      the rate down to 24000Hz. Mildly strange bug. */
-			cx->max_sample_rate_dsp4xx = 44100;
-			cx->max_sample_rate_sb_hispeed_rec = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
-			cx->max_sample_rate_sb_hispeed = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
-			cx->max_sample_rate_sb_play = 25000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
-			cx->max_sample_rate_sb_rec = 25000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
-			cx->enable_adpcm_autoinit = 0; /* does NOT support auto-init ADPCM */
-			/* also: hi-speed DSP is blocking, and it matters: to go above 23KHz you have to use hi-speed DSP commands */
-		}
-		else { /* Sound Blaster Pro */
-			cx->max_sample_rate_dsp4xx = 0;
-			cx->max_sample_rate_sb_hispeed_rec = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
-			cx->max_sample_rate_sb_hispeed = 44100; /* playback and recording rate (it's halved to 22050Hz for stereo) */
-			cx->max_sample_rate_sb_play = 23000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
-			cx->max_sample_rate_sb_rec = 23000; /* non-hispeed mode (and it's halved to 11500Hz for stereo) */
-		}
-	}
-	else if (cx->dsp_vmaj == 2) {
-		if (cx->dsp_vmin >= 1) { /* Sound Blaster 2.01 */
-			cx->max_sample_rate_dsp4xx = 0;
-			cx->max_sample_rate_sb_hispeed_rec = 15000;
-			cx->max_sample_rate_sb_rec = 13000;
-			cx->max_sample_rate_sb_hispeed = 44100; /* NTS: On actual SB 2.1 hardware I own you can apparently go up to 46KHz? */
-			cx->max_sample_rate_sb_play = 23000;
-		}
-		else { /* Sound Blaster 2.0, without hispeed DSP commands */
-			cx->max_sample_rate_dsp4xx = 0;
-			cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_sb_rec = 13000;
-			cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_sb_play = 23000;
-		}
-	}
-	else { /* Sound Blaster 1.x */
-		cx->max_sample_rate_dsp4xx = 0;
-		cx->max_sample_rate_sb_hispeed_rec = cx->max_sample_rate_sb_rec = 13000;
-		cx->max_sample_rate_sb_hispeed = cx->max_sample_rate_sb_play = 23000;
-	}
+	/* make sure IRQs are cleared */
+	for (i=0;i < 3;i++) sndsb_interrupt_ack(cx,3);
 
-	/* if any of our tests left the SB IRQ hanging, clear it now */
-	if (cx->irq >= 0) {
-		sndsb_interrupt_ack(cx,3);
-		sndsb_interrupt_ack(cx,3);
-	}
-
-	/* DSP 2xx and earlier do not have auto-init commands */
-	if (cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))
-		cx->dsp_autoinit_command = 0;
-	if (cx->irq < 0) {
-		if (cx->dsp_autoinit_command)
-			cx->dsp_nag_mode = 0;
-		else
-			cx->dsp_nag_mode = 1;
-	}
-
+	/* auto-determine the best way to play audio */
 	sndsb_determine_ideal_dsp_play_method(cx);
-
 	return 1;
 }
 
@@ -1206,22 +1213,6 @@ int sndsb_try_base(uint16_t iobase) {
 		cx->dma16 = cx->dma8;
 
 	sndsb_determine_ideal_dsp_play_method(cx);
-	return 1;
-}
-
-int sndsb_interrupt_reason(struct sndsb_ctx *cx) {
-	if (cx->dsp_vmaj >= 4) {
-		/* Sound Blaster 16: We can read a mixer byte to determine why the interrupt happened */
-		/* bit 0: 1=8-bit DSP or MIDI */
-		/* bit 1: 1=16-bit DSP */
-		/* bit 2: 1=MPU-401 */
-		return sndsb_read_mixer(cx,0x82) & 7;
-	}
-	else if (cx->ess_extensions) {
-		return 1; /* ESS DMA is always 8-bit. You always clear the IRQ through port 0x22E, even 16-bit PCM */
-	}
-
-	/* DSP 3.xx and earlier: just assume the interrupt happened because of the DSP */
 	return 1;
 }
 

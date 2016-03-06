@@ -4,7 +4,7 @@ NOW_BUILDING = HW_SNDSB_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    sndsb.c
-OBJS =        $(SUBDIR)$(HPS)sndsb.obj $(SUBDIR)$(HPS)sbmixstr.obj $(SUBDIR)$(HPS)sbadpcm.obj $(SUBDIR)$(HPS)sbmixer.obj $(SUBDIR)$(HPS)sbmixerc.obj $(SUBDIR)$(HPS)sbmixnm.obj $(SUBDIR)$(HPS)sbenvbls.obj $(SUBDIR)$(HPS)sbdspio.obj $(SUBDIR)$(HPS)sbdsprst.obj $(SUBDIR)$(HPS)sbdspver.obj $(SUBDIR)$(HPS)sbtc1.obj $(SUBDIR)$(HPS)sbtc2.obj $(SUBDIR)$(HPS)sbdspcm1.obj $(SUBDIR)$(HPS)sbesscnm.obj $(SUBDIR)$(HPS)sbessreg.obj $(SUBDIR)$(HPS)sbdmabuf.obj $(SUBDIR)$(HPS)sbdspmst.obj $(SUBDIR)$(HPS)sbenum.obj $(SUBDIR)$(HPS)sbenumc.obj $(SUBDIR)$(HPS)sbnmi.obj $(SUBDIR)$(HPS)sbdacio.obj $(SUBDIR)$(HPS)sbgoldio.obj $(SUBDIR)$(HPS)sbsc400.obj $(SUBDIR)$(HPS)sbdspcpr.obj $(SUBDIR)$(HPS)sb16mres.obj $(SUBDIR)$(HPS)sbessprb.obj
+OBJS =        $(SUBDIR)$(HPS)sndsb.obj $(SUBDIR)$(HPS)sbmixstr.obj $(SUBDIR)$(HPS)sbadpcm.obj $(SUBDIR)$(HPS)sbmixer.obj $(SUBDIR)$(HPS)sbmixerc.obj $(SUBDIR)$(HPS)sbmixnm.obj $(SUBDIR)$(HPS)sbenvbls.obj $(SUBDIR)$(HPS)sbdspio.obj $(SUBDIR)$(HPS)sbdsprst.obj $(SUBDIR)$(HPS)sbdspver.obj $(SUBDIR)$(HPS)sbtc1.obj $(SUBDIR)$(HPS)sbtc2.obj $(SUBDIR)$(HPS)sbdspcm1.obj $(SUBDIR)$(HPS)sbesscnm.obj $(SUBDIR)$(HPS)sbessreg.obj $(SUBDIR)$(HPS)sbdmabuf.obj $(SUBDIR)$(HPS)sbdspmst.obj $(SUBDIR)$(HPS)sbenum.obj $(SUBDIR)$(HPS)sbenumc.obj $(SUBDIR)$(HPS)sbnmi.obj $(SUBDIR)$(HPS)sbdacio.obj $(SUBDIR)$(HPS)sbgoldio.obj $(SUBDIR)$(HPS)sbsc400.obj $(SUBDIR)$(HPS)sbdspcpr.obj $(SUBDIR)$(HPS)sb16mres.obj $(SUBDIR)$(HPS)sbessprb.obj $(SUBDIR)$(HPS)sbmswinq.obj $(SUBDIR)$(HPS)sbirq.obj
 OBJSPNP =     $(SUBDIR)$(HPS)sndsbpnp.obj
 PNPCFG_EXE =  $(SUBDIR)$(HPS)pnpcfg.exe
 
@@ -26,15 +26,16 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 !endif
 
 $(HW_SNDSB_LIB): $(OBJS)
-	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sndsb.obj -+$(SUBDIR)$(HPS)sbmixstr.obj -+$(SUBDIR)$(HPS)sbadpcm.obj
-	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbmixer.obj -+$(SUBDIR)$(HPS)sbmixnm.obj -+$(SUBDIR)$(HPS)sbmixerc.obj
-	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbenvbls.obj -+$(SUBDIR)$(HPS)sbdspio.obj -+$(SUBDIR)$(HPS)sbdsprst.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sndsb.obj    -+$(SUBDIR)$(HPS)sbmixstr.obj -+$(SUBDIR)$(HPS)sbadpcm.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbmixer.obj  -+$(SUBDIR)$(HPS)sbmixnm.obj  -+$(SUBDIR)$(HPS)sbmixerc.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbenvbls.obj -+$(SUBDIR)$(HPS)sbdspio.obj  -+$(SUBDIR)$(HPS)sbdsprst.obj
 	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbdspcm1.obj -+$(SUBDIR)$(HPS)sbesscnm.obj -+$(SUBDIR)$(HPS)sbessreg.obj
 	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbdmabuf.obj -+$(SUBDIR)$(HPS)sbdspmst.obj -+$(SUBDIR)$(HPS)sbenum.obj
-	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbgoldio.obj -+$(SUBDIR)$(HPS)sbsc400.obj -+$(SUBDIR)$(HPS)sbdspcpr.obj
-	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbenumc.obj -+$(SUBDIR)$(HPS)sbnmi.obj -+$(SUBDIR)$(HPS)sbdacio.obj
-	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbdspver.obj -+$(SUBDIR)$(HPS)sbtc1.obj -+$(SUBDIR)$(HPS)sbtc2.obj
-	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sb16mres.obj -+$(SUBDIR)$(HPS)sbessprb.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbgoldio.obj -+$(SUBDIR)$(HPS)sbsc400.obj  -+$(SUBDIR)$(HPS)sbdspcpr.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sb16mres.obj -+$(SUBDIR)$(HPS)sbessprb.obj -+$(SUBDIR)$(HPS)sbmswinq.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbenumc.obj  -+$(SUBDIR)$(HPS)sbnmi.obj    -+$(SUBDIR)$(HPS)sbdacio.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbdspver.obj -+$(SUBDIR)$(HPS)sbtc1.obj    -+$(SUBDIR)$(HPS)sbtc2.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbirq.obj
 
 $(HW_SNDSBPNP_LIB): $(OBJSPNP)
 	wlib -q -b -c $(HW_SNDSBPNP_LIB) -+$(SUBDIR)$(HPS)sndsbpnp.obj
@@ -57,9 +58,9 @@ $(TEST_EXE): $(WINDOWS_W9XVMM_LIB) $(WINDOWS_W9XVMM_LIB_DEPENDENCIES) $(HW_SNDSB
 ! ifeq TARGET_MSDOS 16 # Sound Blaster library needs more stack than default
 	%append tmp.cmd option stack=4096
 ! endif
-	%append tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)test.obj $(HW_SNDSB_LIB_WLINK_LIBRARIES) $(HW_8237_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(HW_VGAGUI_LIB_WLINK_LIBRARIES) $(HW_VGATTY_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) $(HW_CPU_LIB_WLINK_LIBRARIES)
+	%append tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)test.obj $(HW_SNDSB_LIB_WLINK_LIBRARIES) $(HW_8237_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_8259_LIB_WLINK_LIBRARIES) $(HW_VGAGUI_LIB_WLINK_LIBRARIES) $(HW_VGATTY_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) $(HW_CPU_LIB_WLINK_LIBRARIES) $(WINDOWS_W9XVMM_LIB_WLINK_LIBRARIES) $(HW_SNDSBPNP_LIB_WLINK_LIBRARIES)
 !  ifndef NO_TEST_ISAPNP
-	%append tmp.cmd $(HW_ISAPNP_LIB_WLINK_LIBRARIES) $(WINDOWS_W9XVMM_LIB_WLINK_LIBRARIES) $(HW_SNDSBPNP_LIB_WLINK_LIBRARIES)
+	%append tmp.cmd $(HW_ISAPNP_LIB_WLINK_LIBRARIES)
 !  endif
 	%append tmp.cmd name $(TEST_EXE)
 	@wlink @tmp.cmd

@@ -384,6 +384,7 @@ void sndsb_read_sb16_irqdma_resources(struct sndsb_ctx *cx);
 int sndsb_read_dsp_copyright(struct sndsb_ctx *cx,char *buf,unsigned int buflen);
 void sndsb_ess_extensions_probe(struct sndsb_ctx *cx);
 void sndsb_detect_windows_dosbox_vm_quirks(struct sndsb_ctx *cx);
+void sndsb_validate_dma_against_8237(struct sndsb_ctx *cx);
 
 #if TARGET_MSDOS == 32
 int sb_nmi_32_auto_choose_hook();
