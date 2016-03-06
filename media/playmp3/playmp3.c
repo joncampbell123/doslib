@@ -4014,6 +4014,14 @@ int main(int argc,char **argv) {
 		printf("Cannot init library\n");
 		return 1;
 	}
+
+	/* it's up to us now to tell it certain minor things */
+	sndsb_detect_virtualbox();		// whether or not we're running in VirtualBox
+	/* sndsb now allows us to keep the EXE small by not referring to extra sound card support */
+	sndsb_enable_sb16_support();		// SB16 support
+	sndsb_enable_sc400_support();		// SC400 support
+	sndsb_enable_ess_audiodrive_support();	// ESS AudioDrive support
+
 	atexit(sndsb_atexit);
 	if (!init_isa_pnp_bios()) {
 		printf("Cannot init ISA PnP\n");
