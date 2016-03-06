@@ -397,8 +397,10 @@ static signed char		reduced_irq_interval = 0;
 static unsigned char		sample_rate_timer_clamp = 0;
 static unsigned char		goldplay_samplerate_choice = GOLDRATE_MATCH;
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 /* fun with Creative ADPCM */
 static unsigned char		do_adpcm_ai_warning = 1;
+#endif
 
 static volatile unsigned char	IRQ_anim = 0;
 static volatile unsigned char	sb_irq_count = 0;
@@ -2734,8 +2736,10 @@ static const struct vga_menu_item* main_menu_playback[] = {
 
 static const struct vga_menu_item main_menu_device_dsp_reset =
 	{"DSP reset",		'r',	0,	0};
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static const struct vga_menu_item main_menu_device_mixer_reset =
 	{"Mixer reset",		'r',	0,	0};
+#endif
 static const struct vga_menu_item main_menu_device_trigger_irq =
 	{"Trigger IRQ",		't',	0,	0};
 #ifdef SB_MIXER
@@ -2763,7 +2767,9 @@ static struct vga_menu_item main_menu_device_busy_cycle =
 
 static const struct vga_menu_item* main_menu_device[] = {
 	&main_menu_device_dsp_reset,
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_device_mixer_reset,
+#endif
 	&main_menu_device_trigger_irq,
 #ifdef SB_MIXER
 	&main_menu_device_mixer_controls,
@@ -4307,6 +4313,7 @@ int main(int argc,char **argv) {
 		if (!cx->mixer_probed)
 			sndsb_probe_mixer(cx);
 #endif
+
 		if (cx->irq < 0) {
 			sndsb_probe_irq_F2(cx);
 			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (F2) found IRQ %d\n",cx->baseio,cx->irq);
@@ -4331,18 +4338,27 @@ int main(int argc,char **argv) {
 	if (sc_idx < 0) {
 		int count=0;
 		for (i=0;i < SNDSB_MAX_CARDS;i++) {
+			const char *ess_str;
+			const char *mixer_str;
+
 			struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
 			if (cx->baseio == 0) continue;
+
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+			mixer_str = sndsb_mixer_chip_str(cx->mixer_chip);
+			ess_str = sndsb_ess_chipset_str(cx->ess_chipset);
+#else
+			mixer_str = "";
+			ess_str = "";
+#endif
 
 			printf("  [%u] base=%X mpu=%X dma=%d dma16=%d irq=%d DSP=%u 1.XXAI=%u\n",
 					i+1,cx->baseio,cx->mpuio,cx->dma8,cx->dma16,cx->irq,cx->dsp_ok,cx->dsp_autoinit_dma);
 			printf("      MIXER=%u[%s] DSPv=%u.%u SC6600=%u OPL=%X GAME=%X AWE=%X\n",
-					cx->mixer_ok,sndsb_mixer_chip_str(cx->mixer_chip),
-					(unsigned int)cx->dsp_vmaj,(unsigned int)cx->dsp_vmin,
+					cx->mixer_ok,mixer_str,(unsigned int)cx->dsp_vmaj,(unsigned int)cx->dsp_vmin,
 					cx->is_gallant_sc6600,cx->oplio,cx->gameio,cx->aweio);
 			printf("      ESS=%u[%s] use=%u wss=%X OPL3SAx=%X\n",
-					cx->ess_chipset,sndsb_ess_chipset_str(cx->ess_chipset),
-					cx->ess_extensions,cx->wssio,cx->opl3sax_controlio);
+					cx->ess_chipset,ess_str,cx->ess_extensions,cx->wssio,cx->opl3sax_controlio);
 #ifdef ISAPNP
 			if (cx->pnp_name != NULL) {
 				isa_pnp_product_id_to_str(temp_str,cx->pnp_id);
@@ -4507,6 +4523,7 @@ int main(int argc,char **argv) {
 				t8254_wait(t8254_us2ticks(1000000));
 				vga_msg_box_destroy(&box);
 			}
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_device_mixer_reset) {
 				struct vga_msg_box box;
 				vga_msg_box_create(&box,"Resetting mixer...",0,0);
@@ -4514,6 +4531,7 @@ int main(int argc,char **argv) {
 				t8254_wait(t8254_us2ticks(1000000));
 				vga_msg_box_destroy(&box);
 			}
+#endif
 			else if (mitem == &main_menu_help_about) {
 				struct vga_msg_box box;
 				vga_msg_box_create(&box,"Sound Blaster test program v1.1 for DOS\n\n(C) 2008-2014 Jonathan Campbell\nALL RIGHTS RESERVED\n"
