@@ -70,6 +70,9 @@ l_dpmi_pm_entry		dd	0
 l_dpmi_segs		dw	0,0,0,0
 this_process_psp	dw	0
 
+; make them global
+global l_dpmi_mode, l_dpmi_rm_entry, l_dpmi_pm_entry, l_dpmi_segs, this_process_psp
+
 ; void __cdecl dpmi_enter_core(); /* Watcom's inline assembler is too limiting to carry out the DPMI entry and switch back */
 global _dpmi_enter_core
 _dpmi_enter_core:
@@ -342,6 +345,9 @@ l_rm_reentry		dd	0
 ; we need these selectors for copy operation
 l_lin2fm_src_sel	dw	0
 l_lin2fm_dst_sel	dw	0
+
+; make them global
+global l_lin2fm_params,l_lin2fm_param_dst,l_lin2fm_param_lsrc,l_lin2fm_param_sz,l_rm_ret,l_rm_reentry,l_lin2fm_src_sel,l_lin2fm_dst_sel
 
  %endif
 %endif
