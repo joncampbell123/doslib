@@ -201,15 +201,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->max_sample_rate_sb_rec_dac = 13000;
 
 	if (!sndsb_reset_dsp(cx)) return 0;
+	if (!sndsb_query_dsp_version(cx)) return 0; // FIXME: Do all Sound Blaster cards support this? Are there any shitty SB clones that don't?
 	cx->dsp_ok = 1;
-
-	/* hm, what version are you? */
-	if (!sndsb_query_dsp_version(cx)) {
-		/* hm? failed the DSP version command?
-		 * are you OK? test by sending "disable speaker" */
-		if (!sndsb_write_dsp(cx,0xD1))
-			cx->dsp_ok = 0;
-	}
 
 	/* FIX: Apparently when SBOS unloads it leaves behind the I/O
 	        port stuck returning 0xAA, which can trick most SB
