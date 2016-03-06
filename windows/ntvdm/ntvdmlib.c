@@ -39,19 +39,6 @@ int i_am_ntvdm_client() {
 }
 #endif
 
-const char *ntvdm_RM_ERR_str(uint16_t c) {
-	switch (c) {
-		case ntvdm_RM_ERR_DLL_NOT_FOUND:	return "DLL not found";
-		case ntvdm_RM_ERR_DISPATCH_NOT_FOUND:	return "Dispatch routine not found";
-		case ntvdm_RM_ERR_INIT_NOT_FOUND:	return "Init routine not found";
-		case ntvdm_RM_ERR_NOT_ENOUGH_MEMORY:	return "Not enough memory";
-		/* our own */
-		case ntvdm_RM_ERR_NOT_AVAILABLE:	return "Interface not available";
-	}
-
-	return "?";
-}
-
 #if !defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
 static uint16_t		ntvdm_rm_code_sel = 0;		/* 1024 bytes long */
 static unsigned char*	ntvdm_rm_code_ptr = NULL;

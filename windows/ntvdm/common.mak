@@ -17,8 +17,8 @@ $(WINDOWS_NTVDMVDD_LIB): $(SUBDIR)$(HPS)ntvdmvdd.obj
 	perl ./wlib-ntvdm $(WINDOWS_NTVDMVDD_LIB)
 !endif
 
-$(WINDOWS_NTVDMLIB_LIB): $(SUBDIR)$(HPS)ntvdmlib.obj
-	wlib -q -b -c $(WINDOWS_NTVDMLIB_LIB) -+$(SUBDIR)$(HPS)ntvdmlib.obj
+$(WINDOWS_NTVDMLIB_LIB): $(SUBDIR)$(HPS)ntvdmlib.obj $(SUBDIR)$(HPS)nterrstr.obj
+	wlib -q -b -c $(WINDOWS_NTVDMLIB_LIB) -+$(SUBDIR)$(HPS)ntvdmlib.obj -+$(SUBDIR)$(HPS)nterrstr.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
