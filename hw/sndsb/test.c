@@ -1363,8 +1363,10 @@ static void ui_anim(int force) {
 		for (;cc < 36;cc++) *wr++ = 0x1F20;
 
 		if (sb_card->dsp_adpcm != 0) {
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			msg = sndsb_adpcm_mode_str[sb_card->dsp_adpcm];
 			for (;cc < 52 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
+#endif
 		}
 		else if (sb_card->audio_data_flipped_sign) {
 			msg = "[flipsign]";
@@ -1927,9 +1929,15 @@ void change_param_menu() {
 
 			vga_write_color(selector == 3 ? 0x70 : 0x1F);
 			vga_write(  "Translation:   ");
-			if (sb_card->dsp_adpcm > 0) vga_write(sndsb_adpcm_mode_str[sb_card->dsp_adpcm]);
-			else if (sb_card->audio_data_flipped_sign) vga_write("Flip sign");
-			else vga_write("None");
+			if (sb_card->dsp_adpcm > 0) {
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+				vga_write(sndsb_adpcm_mode_str[sb_card->dsp_adpcm]);
+#endif
+			}
+			else if (sb_card->audio_data_flipped_sign)
+				vga_write("Flip sign");
+			else
+				vga_write("None");
 			vga_write_until(30);
 			vga_write("\n");
 
@@ -2666,8 +2674,10 @@ static const struct vga_menu_item main_menu_playback_params =
 	{"Parameters",		'a',	0,	0};
 static struct vga_menu_item main_menu_playback_reduced_irq =
 	{"xxx",			'i',	0,	0};
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static struct vga_menu_item main_menu_playback_autoinit_adpcm =
 	{"xxx",			'd',	0,	0};
+#endif
 static struct vga_menu_item main_menu_playback_goldplay =
 	{"xxx",			'g',	0,	0};
 static struct vga_menu_item main_menu_playback_goldplay_mode =
@@ -2702,7 +2712,9 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&menu_separator,
 	&main_menu_playback_params,
 	&main_menu_playback_reduced_irq,
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_playback_autoinit_adpcm,
+#endif
 	&main_menu_playback_goldplay,
 	&main_menu_playback_goldplay_mode,
 	&main_menu_playback_dsp_autoinit_dma,
@@ -2830,9 +2842,11 @@ int confirm_quit() {
 	return confirm_yes_no_dialog("Are you sure you want to exit to DOS?");
 }
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 int adpcm_warning_prompt() {
 	return confirm_yes_no_dialog("Most Sound Blaster clones do not support auto-init ADPCM playback.\nIf nothing plays when enabled, your sound card is one of them.\n\nEnable?");
 }
+#endif
 
 void update_cfg() {
 	unsigned int r;
@@ -2912,8 +2926,10 @@ void update_cfg() {
 		main_menu_playback_goldplay_mode.text =
 			"?";
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	main_menu_playback_autoinit_adpcm.text =
 		sb_card->enable_adpcm_autoinit ? "ADPCM Auto-init: On" : "ADPCM Auto-init: Off";
+#endif
 	main_menu_playback_goldplay.text =
 		sb_card->goldplay_mode ? "Goldplay mode: On" : "Goldplay mode: Off";
 	main_menu_playback_dsp_autoinit_dma.text =
@@ -4803,6 +4819,7 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_playback_autoinit_adpcm) {
 				unsigned char wp = wav_playing;
 				if (do_adpcm_ai_warning) {
@@ -4819,6 +4836,7 @@ int main(int argc,char **argv) {
 					if (wp) begin_play();
 				}
 			}
+#endif
 			else if (mitem == &main_menu_device_trigger_irq) {
 				unsigned char wp = wav_playing;
 				unsigned int patience=1000;
