@@ -77,22 +77,6 @@
 # define DEBUG(x)
 #endif
 
-signed char gallant_sc6600_map_to_dma[4] = {-1, 0, 1, 3};
-signed char gallant_sc6600_map_to_irq[8] = {-1, 7, 9,10,11, 5,-1,-1};
-
-const char *sndsb_dspoutmethod_str[SNDSB_DSPOUTMETHOD_MAX] = {
-	"direct",
-	"1.xx",
-	"2.00",
-	"2.01",
-	"3.xx",
-	"4.xx"
-};
-
-#if TARGET_MSDOS == 32
-signed char			sndsb_nmi_32_hook = -1;
-#endif
-
 struct sndsb_probe_opts sndsb_probe_options={0};
 struct sndsb_ctx sndsb_card[SNDSB_MAX_CARDS];
 struct sndsb_ctx *sndsb_card_blaster=NULL;
@@ -101,147 +85,6 @@ int sndsb_card_next = 0;
 void sndsb_timer_tick_gen(struct sndsb_ctx *cx) {
 	cx->timer_tick_signal = 1;
 }
-
-static inline void sndsb_timer_tick_directio_post_read(unsigned short port,unsigned short count) {
-	while (count-- != 0) inp(port);
-}
-
-static inline unsigned char sndsb_timer_tick_directio_poll_ready(unsigned short port,unsigned short count) {
-	unsigned char r = 0;
-
-	do { r = inp(port);
-	} while ((r&0x80) && count-- != 0);
-
-	return !(r&0x80);
-}
-
-void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx) {
-	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
-		cx->buffer_lin[cx->direct_dsp_io] = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
-		if (cx->backwards) {
-			if (cx->direct_dsp_io == 0) cx->direct_dsp_io = cx->buffer_size - 1;
-			else cx->direct_dsp_io--;
-		}
-		else {
-			if ((++cx->direct_dsp_io) >= cx->buffer_size) cx->direct_dsp_io = 0;
-		}
-		cx->timer_tick_func = sndsb_timer_tick_directi_cmd;
-		cx->direct_dac_sent_command = 0;
-		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
-	}
-}
-
-void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx) {
-	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
-		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),0x20);	/* direct DAC read */
-		cx->timer_tick_func = sndsb_timer_tick_directi_data;
-		cx->direct_dac_sent_command = 1;
-		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
-	}
-}
-
-void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx) {
-	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
-		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),cx->buffer_lin[cx->direct_dsp_io]);
-		if (cx->backwards) {
-			if (cx->direct_dsp_io == 0) cx->direct_dsp_io = cx->buffer_size - 1;
-			else cx->direct_dsp_io--;
-		}
-		else {
-			if ((++cx->direct_dsp_io) >= cx->buffer_size) cx->direct_dsp_io = 0;
-		}
-		cx->timer_tick_func = sndsb_timer_tick_directo_cmd;
-		cx->direct_dac_sent_command = 0;
-		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
-	}
-}
-
-void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx) {
-	if (sndsb_timer_tick_directio_poll_ready(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_poll_retry_timeout)) {
-		outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),0x10);	/* direct DAC write */
-		cx->timer_tick_func = sndsb_timer_tick_directo_data;
-		cx->direct_dac_sent_command = 1;
-		sndsb_timer_tick_directio_post_read(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0),cx->dsp_direct_dac_read_after_command);
-	}
-}
-
-void sndsb_timer_tick_goldi_cpy(struct sndsb_ctx *cx) {
-	cx->timer_tick_signal = 1;
-#if TARGET_MSDOS == 32
-	memcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma->lin,cx->gold_memcpy);
-#else
-	_fmemcpy(cx->buffer_lin+cx->direct_dsp_io,cx->goldplay_dma,cx->gold_memcpy);
-#endif
-	if (cx->backwards) {
-		if (cx->direct_dsp_io < cx->gold_memcpy) cx->direct_dsp_io = cx->buffer_size - cx->gold_memcpy;
-		else cx->direct_dsp_io -= cx->gold_memcpy;
-	}
-	else {
-		if ((cx->direct_dsp_io += cx->gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
-	}
-}
-
-void sndsb_timer_tick_goldo_cpy(struct sndsb_ctx *cx) {
-	cx->timer_tick_signal = 1;
-#if TARGET_MSDOS == 32
-	memcpy(cx->goldplay_dma->lin,cx->buffer_lin+cx->direct_dsp_io,cx->gold_memcpy);
-#else
-	_fmemcpy(cx->goldplay_dma,cx->buffer_lin+cx->direct_dsp_io,cx->gold_memcpy);
-#endif
-	if (cx->backwards) {
-		if (cx->direct_dsp_io < cx->gold_memcpy) cx->direct_dsp_io = cx->buffer_size - cx->gold_memcpy;
-		else cx->direct_dsp_io -= cx->gold_memcpy;
-	}
-	else {
-		if ((cx->direct_dsp_io += cx->gold_memcpy) >= cx->buffer_size) cx->direct_dsp_io = 0;
-	}
-}
-
-struct sndsb_ctx *sndsb_by_base(uint16_t x) {
-	int i;
-
-	for (i=0;i < SNDSB_MAX_CARDS;i++) {
-		if (sndsb_card[i].baseio == x)
-			return sndsb_card+i;
-	}
-
-	return 0;
-}
-
-struct sndsb_ctx *sndsb_by_irq(int8_t x) {
-	int i;
-
-	for (i=0;i < SNDSB_MAX_CARDS;i++) {
-		if (sndsb_card[i].irq == x)
-			return sndsb_card+i;
-	}
-
-	return 0;
-}
-
-struct sndsb_ctx *sndsb_by_dma(uint16_t x) {
-	int i;
-
-	for (i=0;i < SNDSB_MAX_CARDS;i++) {
-		if (sndsb_card[i].baseio > 0 && (sndsb_card[i].dma8 == x || sndsb_card[i].dma16 == x))
-			return sndsb_card+i;
-	}
-
-	return 0;
-}
-
-#if TARGET_MSDOS == 32
-int sb_nmi_32_auto_choose_hook() {
-	if (sndsb_nmi_32_hook >= 0)
-		return sndsb_nmi_32_hook;
-
-	/* auto-detect SBOS/MEGA-EM and enable nmi reflection if present */
-	if (gravis_mega_em_detect(&megaem_info) || gravis_sbos_detect() >= 0)
-		return 1;
-
-	return 0;
-}
-#endif
 
 void free_sndsb() {
 #if TARGET_MSDOS == 32
@@ -308,7 +151,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_nag_hispeed = 0;
 	cx->ess_extended_mode = 0;
 	cx->hispeed_matters = 1; /* assume it does */
-	cx->dosbox_emulation = 0;
 	cx->hispeed_blocking = 1; /* assume it does */
 	cx->timer_tick_signal = 0;
 	cx->timer_tick_func = NULL;
@@ -384,19 +226,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	 * that some emulation code (Gravis Ultrasound SBOS/MEGA-EM) emulate
 	 * DSP 2.xx or 1.xx and they do not handle the copyright string command
 	 * well at all, in fact, MEGA-EM will halt the system if you try. */
-	if (cx->dsp_vmaj >= 3) {
-		int i,c;
-
-		sndsb_write_dsp(cx,0xE3);
-		for (i=0;i < (sizeof(cx->dsp_copyright)-1);i++) {
-			c = sndsb_read_dsp(cx);
-			if (c < 0) break;
-			cx->dsp_copyright[i] = (char)c;
-			if (c == 0) break;
-		}
-		cx->dsp_copyright[i] = (char)0;
-		DEBUG(fprintf(stdout,"sndsb_init_card() copyright == '%s'\n",cx->dsp_copyright));
-	}
+	if (cx->dsp_vmaj >= 3)
+		sndsb_read_dsp_copyright(cx,cx->dsp_copyright,sizeof(cx->dsp_copyright));
 	else if (cx->dsp_vmaj == 1 || cx->dsp_vmaj == 2) {
 		if (gravis_mega_em_detect(&megaem_info)) { // MEGA-EM emulates DSP 1.xx. It can emulate DSP 2.01, but badly
 			cx->mega_em = 1;
@@ -412,40 +243,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 
 	/* Sound Blaster 16 (DSP 4.xx): we read the mixer registers, unless this card was initialized from a PnP device */
 	/* Earlier cards: we have to probe around for it */
-	if (cx->dsp_vmaj == 4 && !sndsb_probe_options.disable_sb16_read_config_byte && cx->pnp_id == 0) {
-		unsigned char irqm = sndsb_read_mixer(cx,0x80);
-		unsigned char dmam = sndsb_read_mixer(cx,0x81);
-		if (cx->irq < 0 && irqm != 0xFF && irqm != 0x00) {
-			if (irqm & 8)		cx->irq = 10;
-			else if (irqm & 4)	cx->irq = 7;
-			else if (irqm & 2)	cx->irq = 5;
-			else if (irqm & 1)	cx->irq = 2;
-
-			cx->do_not_probe_irq = 1;
-		}
-		if (dmam != 0xFF && dmam != 0x00) {
-			if (cx->dma8 < 0) {
-				if (dmam & 8)		cx->dma8 = 3;
-				else if (dmam & 2)	cx->dma8 = 1;
-				else if (dmam & 1)	cx->dma8 = 0;
-			}
-
-			if (cx->dma16 < 0) {
-				if (dmam & 0x80)	cx->dma16 = 7;
-				else if (dmam & 0x40)	cx->dma16 = 6;
-				else if (dmam & 0x20)	cx->dma16 = 5;
-			}
-
-			/* NTS: From the Creative programming guide:
-			 *      "DSP version 4.xx also supports the transfer of 16-bit sound data through
-			 *       8-bit DMA channel. To make this possible, set all 16-bit DMA channel bits
-			 *       to 0 leaving only 8-bit DMA channel set" */
-			if (cx->dma16 == -1)
-				cx->dma16 = cx->dma8;
-
-			cx->do_not_probe_dma = 1;
-		}
-	}
+	if (cx->dsp_vmaj == 4 && !sndsb_probe_options.disable_sb16_read_config_byte && cx->pnp_id == 0)
+		sndsb_read_sb16_irqdma_resources(cx);
 
 	/* Reveal SC400 SB16 clone: I have this card and I can tell
 	 * from programming experience that while it reports itself
@@ -463,35 +262,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	 * fake the DMA transfer by writing to the DSP command
 	 * port, something I took advantage of prior to figuring out
 	 * the DMA controller back in the day */
-	if (!strcmp(cx->dsp_copyright,"SC-6000")) {
-		if (sndsb_write_dsp(cx,0x58)) {
-			unsigned char a,b,c;
-			a = (unsigned char)sndsb_read_dsp(cx);
-			if (a == 0xAA) a = (unsigned char)sndsb_read_dsp(cx);
-
-			if (a != 0xFF) {
-				cx->is_gallant_sc6600 = 1;
-				b = (unsigned char)sndsb_read_dsp(cx);
-				c = (unsigned char)sndsb_read_dsp(cx);
-				/* A: Unknown bits, and some bits that define the Windows Sound System base I/O and gameport enable.
-				 * B: Unknown bits, and some bits that define the base I/O of the CD-ROM interface.
-				 * C: DMA, IRQ, and MPU IRQ control bits */
-				if (b != 0 && c != 0) {
-					/* SC400: Experience says the card always works over
-					 * the 8-bit DMA even for 16-bit PCM audio */
-					if (cx->dma8 < 0)
-						cx->dma8 = gallant_sc6600_map_to_dma[c&3];
-					if (cx->dma16 < 0)
-						cx->dma16 = cx->dma8;
-					if (cx->irq < 0)
-						cx->irq = gallant_sc6600_map_to_irq[(c>>3)&7];
-
-					cx->do_not_probe_irq = 1;
-					cx->do_not_probe_dma = 1;
-				}
-			}
-		}
-	}
+	if (!strcmp(cx->dsp_copyright,"SC-6000"))
+		sndsb_read_sc400_config(cx);
 
 #if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
 	/* trimmed to keep total code <= 64KB */
@@ -625,108 +397,16 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		}
 	}
 
-	/* add our commentary for other emulation environments we can detect */
-	if (!cx->windows_emulation && detect_dosbox_emu())
-		cx->dosbox_emulation = 1;
-
+	/* Sun/Oracle VirtualBox quirks */
 	if (!cx->windows_emulation && detect_virtualbox_emu())
 		cx->virtualbox_emulation = 1;
 
 	/* DSP v3.1 and no copyright string means it might be an ESS 688/1869 chipset */
 	/* FIXME: A freak accident during development shows me it's possible to change the DSP version to v2.1 */
 	if (!cx->windows_emulation && !cx->is_gallant_sc6600 && cx->dsp_vmaj == 3 && cx->dsp_vmin == 1 &&
-		cx->dsp_copyright[0] == 0 && !sndsb_probe_options.disable_ess_extensions) {
-		/* Use DSP command 0xE7 to detect ESS chipset */
-		if (sndsb_write_dsp(cx,0xE7)) {
-			unsigned char c1,c2;
-			int in;
-
-			c1 = sndsb_read_dsp(cx);
-			c2 = sndsb_read_dsp(cx);
-			if (c1 == 0x68 && (c2 & 0xF0) == 0x80) { /* ESS responds 0x68 0x8x where x = version code */
-				c2 &= 0xF;
-				if (c2 != 0) {
-					cx->ess_chipset = (c2 & 8) ? SNDSB_ESS_1869 : SNDSB_ESS_688;
-
-					if (cx->ess_chipset == SNDSB_ESS_688) { /* ESS 688? I know how to program that! */
-						cx->ess_extensions = 1;
-						cx->mixer_chip = SNDSB_MIXER_ESS688;
-
-						/* that also means that we can deduce the true IRQ/DMA from the chipset */
-						if ((in=sndsb_ess_read_controller(cx,0xB1)) != -1) { /* 0xB1 Legacy Audio Interrupt Control */
-							switch (in&0xF) {
-								case 0x5:
-									cx->irq = 5;
-									break;
-								case 0xA:
-									cx->irq = 7;
-									break;
-								case 0xF:
-									cx->irq = 10;
-									break;
-								case 0x0: /* "2,9,all others" */
-									cx->irq = 9;
-									break;
-								default:
-									break;
-							}
-						}
-						if ((in=sndsb_ess_read_controller(cx,0xB2)) != -1) { /* 0xB2 DRQ Control */
-							switch (in&0xF) {
-								case 0x0:
-									cx->dma8 = cx->dma16 = -1;
-									break;
-								case 0x5:
-									cx->dma8 = cx->dma16 = 0;
-									break;
-								case 0xA:
-									cx->dma8 = cx->dma16 = 1;
-									break;
-								case 0xF:
-									cx->dma8 = cx->dma16 = 3;
-									break;
-								default:
-									if (cx->dma8 >= 0 && cx->dma16 < 0)
-										cx->dma16 = cx->dma8;
-									if (cx->dma16 >= 0 && cx->dma8 < 0)
-										cx->dma8 = cx->dma16;
-									break;
-							}
-						}
-					}
-					else if (cx->ess_chipset == SNDSB_ESS_1869) { /* ESS 1869? I know how to program that! */
-						cx->ess_extensions = 1;
-						cx->mixer_chip = SNDSB_MIXER_ESS688;
-
-						/* NTS: The ESS 1869 and later have PnP methods to configure themselves, and the
-						 * registers are documented as readonly for that reason, AND, on the ESS 1887 in
-						 * the Compaq system I test, the 4-bit value that supposedly corresponds to IRQ
-						 * doesn't seem to do anything. */
-
-						/* The ESS 1869 (on the Compaq) appears to use the same 8-bit DMA for 16-bit as well.
-						 * Perhaps the second DMA channel listed by the BIOS is the second channel (for full
-						 * duplex?) */
-						if (cx->dma8 >= 0 && cx->dma16 < 0)
-							cx->dma16 = cx->dma8;
-						if (cx->dma16 >= 0 && cx->dma8 < 0)
-							cx->dma8 = cx->dma16;
-					}
-
-					/* TODO: 1869 datasheet recommends reading mixer index 0x40
-					 *       four times to read back 0x18 0x69 A[11:8] A[7:0]
-					 *       where A is the base address of the configuration
-					 *       device. I don't have an ESS 1869 on hand to test
-					 *       and dev that. Sorry. --J.C. */
-				}
-			}
-		}
-	}
+		cx->dsp_copyright[0] == 0 && !sndsb_probe_options.disable_ess_extensions)
+		sndsb_ess_extensions_probe(cx);
 #endif
-
-	if (cx->ess_chipset != 0 && cx->dsp_copyright[0] == 0) {
-		const char *s = sndsb_ess_chipset_str(cx->ess_chipset);
-		if (s != NULL) strcpy(cx->dsp_copyright,s);
-	}
 
 	/* check DMA against the DMA controller presence.
 	 * If there is no 16-bit DMA (channels 4-7) then we cannot use
