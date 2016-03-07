@@ -62,10 +62,8 @@ enum {
 
 extern const char *isapnp_dma_xfer_preference_str[4];
 extern const char *isapnp_fml32_miosize_str[4];
-extern const char *isapnp_sdf_priority_strs[3];
 extern const char *isapnp_config_block_str[3];
 extern const char *isapnp_dma_speed_str[4];
-extern const char *isapnp_tag_strs[];
 
 #pragma pack(push,1)
 struct isa_pnp_bios_struct {
