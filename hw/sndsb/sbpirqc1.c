@@ -32,11 +32,17 @@ static void interrupt sb_probe_irq_handler() {
  * use sndsb_probe_irq2() to use method #2. Note that for safety reasons, we
  * only test against IRQ's that the original Sound Blaster would use */
 static unsigned char test_irqs[] = {2,3,5,7};
-void sndsb_probe_irq_F2(struct sndsb_ctx *cx) {
+void sndsb_probe_irq_common1(struct sndsb_ctx *cx,uint8_t cmd) {
 	unsigned char irqn=0,iter,expect;
 	unsigned char masked;
+	unsigned short wait=1;
 
 	if (cx->irq >= 0) return;
+
+	if (cmd == 0xF2)
+		wait = t8254_us2ticks(5000);
+	else if (cmd == 0x80)
+		wait = t8254_us2ticks(10000);
 
 	while (irqn < sizeof(test_irqs)) {
 		sb_irq_test = test_irqs[irqn];
@@ -51,14 +57,23 @@ void sndsb_probe_irq_F2(struct sndsb_ctx *cx) {
 		_sti();
 
 		for (iter=0;iter < 10;iter++) {
-			/* trigger an IRQ */
 			_cli();
-			sndsb_interrupt_ack(cx,sndsb_interrupt_reason(cx));
-			sndsb_write_dsp(cx,0xF2);
+			if (cmd == 0xF2) {
+				/* trigger an IRQ */
+				sndsb_interrupt_ack(cx,sndsb_interrupt_reason(cx));
+				sndsb_write_dsp(cx,0xF2);
+			}
+			else if (cmd == 0x80) {
+				sndsb_interrupt_ack(cx,sndsb_interrupt_reason(cx));
+				sndsb_write_dsp_timeconst(cx,0x00); /* time constant 0x00 = 3900Hz */
+				sndsb_write_dsp(cx,0x80); /* silent block */
+				sndsb_write_dsp(cx,0x10);
+				sndsb_write_dsp(cx,0x00); /* 0x10 samples */
+			}
 			_sti();
 
 			/* wait 5ms */
-			t8254_wait(t8254_us2ticks(5000));
+			t8254_wait(wait);
 
 			/* any interrupt? */
 			++expect;
