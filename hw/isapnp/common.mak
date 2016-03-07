@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = HW_ISAPNP_LIB
 
 C_SOURCE =    isapnp.c
-OBJS =        $(SUBDIR)$(HPS)isapnp.obj $(SUBDIR)$(HPS)isapnp.obj $(SUBDIR)$(HPS)pnpiord.obj $(SUBDIR)$(HPS)pnpiowd.obj $(SUBDIR)$(HPS)pnpirqrd.obj $(SUBDIR)$(HPS)pnpirqwd.obj $(SUBDIR)$(HPS)pnpdmard.obj $(SUBDIR)$(HPS)pnpdmawd.obj $(SUBDIR)$(HPS)pnpdregr.obj $(SUBDIR)$(HPS)pnpdregw.obj
+OBJS =        $(SUBDIR)$(HPS)isapnp.obj $(SUBDIR)$(HPS)isapnp.obj $(SUBDIR)$(HPS)pnpiord.obj $(SUBDIR)$(HPS)pnpiowd.obj $(SUBDIR)$(HPS)pnpirqrd.obj $(SUBDIR)$(HPS)pnpirqwd.obj $(SUBDIR)$(HPS)pnpdmard.obj $(SUBDIR)$(HPS)pnpdmawd.obj $(SUBDIR)$(HPS)pnpdregr.obj $(SUBDIR)$(HPS)pnpdregw.obj $(SUBDIR)$(HPS)pnprdcfg.obj $(SUBDIR)$(HPS)pnpsrdpt.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 DUMP_EXE =    $(SUBDIR)$(HPS)dump.exe
 
@@ -13,6 +13,7 @@ $(HW_ISAPNP_LIB): $(OBJS)
 	wlib -q -b -c $(HW_ISAPNP_LIB) -+$(SUBDIR)$(HPS)isapnp.obj   -+$(SUBDIR)$(HPS)pnpiord.obj  -+$(SUBDIR)$(HPS)pnpiowd.obj
 	wlib -q -b -c $(HW_ISAPNP_LIB) -+$(SUBDIR)$(HPS)pnpirqrd.obj -+$(SUBDIR)$(HPS)pnpirqwd.obj -+$(SUBDIR)$(HPS)pnpdmard.obj
 	wlib -q -b -c $(HW_ISAPNP_LIB) -+$(SUBDIR)$(HPS)pnpdmawd.obj -+$(SUBDIR)$(HPS)pnpdregr.obj -+$(SUBDIR)$(HPS)pnpdregw.obj
+	wlib -q -b -c $(HW_ISAPNP_LIB) -+$(SUBDIR)$(HPS)pnprdcfg.obj -+$(SUBDIR)$(HPS)pnpsrdpt.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit

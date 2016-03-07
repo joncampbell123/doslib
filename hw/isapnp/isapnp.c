@@ -1238,27 +1238,3 @@ int isa_pnp_init_key_readback(unsigned char *data/*9 bytes*/) {
 	return (checksum == data[8]);
 }
 
-void isa_pnp_set_read_data_port(uint16_t port) {
-	isa_pnp_write_address(0x00);	/* RD_DATA port */
-	isa_pnp_write_data(port >> 2);
-}
-
-unsigned char isa_pnp_read_config() {
-	unsigned int patience = 20;
-	unsigned char ret = 0xFF;
-
-	do {
-		isa_pnp_write_address(0x05);
-		if (isa_pnp_read_data() & 1) {
-			isa_pnp_write_address(0x04);
-			ret = isa_pnp_read_data();
-			break;
-		}
-		else {
-			if (--patience == 0) break;
-			t8254_wait(t8254_us2ticks(100));
-		}
-	} while (1);
-	return ret;
-}
-
