@@ -23,7 +23,7 @@ lib: $(HW_8042_LIB) .symbolic
 exe: $(TEST_EXE) .symbolic
 
 $(TEST_EXE): $(HW_8042_LIB) $(HW_8042_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(HW_8042_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE)
+	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_SYSTEM) $(HW_8042_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 
