@@ -124,14 +124,6 @@ int isa_pnp_is_sound_blaster_compatible_id(uint32_t id,char const **whatis) {
 	return r;
 }
 
-int isa_pnp_iobase_typical_sb(uint16_t io) {
-	return ((io&0xF) == 0) && (io >= 0x210 && io <= 0x280);
-}
-
-int isa_pnp_iobase_typical_mpu(uint16_t io) {
-	return ((io&0xF) == 0) && (io == 0x300 || io == 0x330);
-}
-
 void pnp_opl3sax_ioport_chk(struct sndsb_ctx *cx,unsigned int iop,uint16_t base) {
 	switch (iop) {
 		case 0:	cx->baseio = base; break;

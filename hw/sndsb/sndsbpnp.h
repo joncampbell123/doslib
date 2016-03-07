@@ -18,6 +18,12 @@ int sndsb_try_isa_pnp_bios(uint32_t id,uint8_t node,struct isa_pnp_device_node f
 /* end error codes */
 
 int isa_pnp_is_sound_blaster_compatible_id(uint32_t id,char const **whatis);
-int isa_pnp_iobase_typical_mpu(uint16_t io);
-int isa_pnp_iobase_typical_sb(uint16_t io);
+
+static inline int isa_pnp_iobase_typical_sb(uint16_t io) {
+	return ((io&0xF) == 0) && (io >= 0x210 && io <= 0x280);
+}
+
+static inline int isa_pnp_iobase_typical_mpu(uint16_t io) {
+	return ((io&0xF) == 0) && (io == 0x300 || io == 0x330);
+}
 
