@@ -338,6 +338,8 @@
 #include <hw/sndsb/sndsbpnp.h>
 #endif
 
+static unsigned char force_dma_probe = 0;
+static unsigned char force_irq_probe = 0;
 static unsigned char irq_probe_f2 = 1;
 static unsigned char irq_probe_80 = 1;
 static unsigned char dma_probe_e2 = 1;
@@ -3150,6 +3152,8 @@ static void help() {
 	printf(" /ni80                Don't use DSP command 0x80 to probe IRQ\n");
 	printf(" /nde2                Don't use DSP command 0xE2 to probe DMA\n");
 	printf(" /nd14                Don't use DSP command 0x14 to probe DMA\n");
+	printf(" /fip                 Force IRQ probe\n");
+	printf(" /fdp                 Force DMA probe\n");
 #endif
 
 #if TARGET_MSDOS == 32
@@ -4065,6 +4069,12 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"nd14")) {
 				dma_probe_14 = 0;
 			}
+			else if (!strcmp(a,"fip")) {
+				force_irq_probe = 1;
+			}
+			else if (!strcmp(a,"fdp")) {
+				force_dma_probe = 1;
+			}
 			else if (!strcmp(a,"noidle")) {
 				dont_sb_idle = 1;
 			}
@@ -4333,6 +4343,15 @@ int main(int argc,char **argv) {
 		if (!cx->mixer_probed)
 			sndsb_probe_mixer(cx);
 #endif
+
+		if (force_irq_probe) {
+			if (sb_debug) printf("SB %03x: Forgetting IRQ, forcing probe\n",cx->baseio);
+			cx->irq = -1;
+		}
+		if (force_dma_probe) {
+			if (sb_debug) printf("SB %03x: Forgetting DMA, forcing probe\n",cx->baseio);
+			cx->dma8 = cx->dma16 = -1;
+		}
 
 		if (cx->irq < 0 && irq_probe_f2) {
 			if (sb_debug) printf("SB %03x: Probing IRQ (F2)...\n",cx->baseio);
