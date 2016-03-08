@@ -80,7 +80,7 @@ int main(int argc,char **argv) {
 	}
 	codebuf_fence = (unsigned char far*)MK_FP(FP_SEG(codebuf),FP_OFF(codebuf)+0x1000U);
 
-	for (irq=2;irq < 8;irq++) {
+	for (irq=3;irq < 8;irq++) {
 		vec = 0x08 + irq;
 		if (need_patching(vec)) {
 			printf("Patching IRQ %u with PIC-friendly code\n",irq);
