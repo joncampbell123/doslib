@@ -70,7 +70,7 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 			sndsb_write_dsp(cx,(len - 1) >> 8);
 
 			/* wait 250ms */
-			j=250;
+			j=500;
 			do {
 				t8254_wait(t8254_us2ticks(1000));
 				i = d8237_read_count(ch)&0xFFFFUL;
@@ -84,6 +84,9 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 				/* it worked */
 			}
 			else {
+				// temp debug msg
+				fprintf(stderr,"DMA probe failed, counter %u stat=%02x\n",i,inp(d8237_ioport(ch,D8237_REG_R_STATUS)));
+
 				sndsb_reset_dsp(cx);
 				break;
 			}
