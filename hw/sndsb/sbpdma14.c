@@ -54,7 +54,7 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
 			outp(d8237_ioport(ch,D8237_REG_W_WRITE_MODE),
-					D8237_MODER_CHANNEL(ch) | D8237_MODER_TRANSFER(D8237_MODER_XFER_WRITE) | D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
+					D8237_MODER_CHANNEL(ch) | D8237_MODER_TRANSFER(D8237_MODER_XFER_READ) | D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
 
 			inp(d8237_ioport(ch,D8237_REG_R_STATUS));
 			d8237_write_count(ch,len);
@@ -69,10 +69,10 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 			sndsb_write_dsp(cx,(len - 1));
 			sndsb_write_dsp(cx,(len - 1) >> 8);
 
-			/* wait 250ms */
-			j=500;
+			/* wait 100ms */
+			j=10;
 			do {
-				t8254_wait(t8254_us2ticks(1000));
+				t8254_wait(t8254_us2ticks(10000));
 				i = d8237_read_count(ch)&0xFFFFUL;
 				if (i == 0U || i == 0xFFFFU) break;
 				if (--j == 0) break;
