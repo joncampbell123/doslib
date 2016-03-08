@@ -25,8 +25,8 @@
 static unsigned char try_dma[] = {1,3};
 void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 	struct dma_8237_allocation *dma = NULL; /* DMA buffer */
-	unsigned int len = 22050 / 25;
 	uint8_t ch,dmap=0,iter=0;
+	unsigned int len = 100,i;
 	uint8_t old_mask;
 
 	if (cx->dma8 >= 0) return;
@@ -69,12 +69,13 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 			sndsb_write_dsp(cx,(len - 1));
 			sndsb_write_dsp(cx,(len - 1) >> 8);
 
-			/* wait 100ms (period should be 50ms) */
-			t8254_wait(t8254_us2ticks(100000));
+			/* wait 10ms */
+			t8254_wait(t8254_us2ticks(10000));
 
 			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
-			if ((d8237_read_count(ch)&0xFFFFUL) == 0UL) {
+			i = d8237_read_count(ch)&0xFFFFUL;
+			if (i == 0U || i == 0xFFFFU) {
 				/* it worked */
 			}
 			else {
