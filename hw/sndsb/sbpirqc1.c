@@ -39,10 +39,13 @@ void sndsb_probe_irq_common1(struct sndsb_ctx *cx,uint8_t cmd) {
 
 	if (cx->irq >= 0) return;
 
-	if (cmd == 0xF2)
+	if (cmd == 0xF2) {
+		if (cx->sbos) return; // DSP command 0xF2 causes SBOS to hang the system
 		wait = t8254_us2ticks(5000);
-	else if (cmd == 0x80)
+	}
+	else if (cmd == 0x80) {
 		wait = t8254_us2ticks(10000);
+	}
 
 	while (irqn < sizeof(test_irqs)) {
 		sb_irq_test = test_irqs[irqn];

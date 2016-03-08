@@ -51,7 +51,7 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
 	uint8_t old_mask;
 
 	if (cx->dma8 >= 0) return;
-	if (cx->sbos || cx->mega_em) return;
+//	if (cx->sbos || cx->mega_em) return; // SBOS and MEGA-EM silently ignore DSP command 0xE2
 	if (!sndsb_reset_dsp(cx)) return;
 	reg = 0xAA;
 
