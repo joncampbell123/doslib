@@ -65,9 +65,10 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 			/* use DSP command 0x14 */
 			sndsb_interrupt_ack(cx,sndsb_interrupt_reason(cx));
 			sndsb_write_dsp_timeconst(cx,0xD3); /* 22050Hz */
-			sndsb_write_dsp(cx,0x14);
-			sndsb_write_dsp(cx,(len - 1));
-			sndsb_write_dsp(cx,(len - 1) >> 8);
+			sndsb_write_dsp(cx,0x14);	// NTS: We tell the DSP the block is 0xFF long because Sound Blaster 2.0
+			sndsb_write_dsp(cx,0xFF);	//      cards seem to stop short if given really short blocks and therefore
+			sndsb_write_dsp(cx,0xFF);	//      cause this test to fail. It will have to stop anyway because the
+							//      DMA controller will make it stop at the true length.
 
 			/* wait 250ms */
 			j=500;
@@ -79,6 +80,7 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 			} while (1);
 
 			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
+			sndsb_reset_dsp(cx);
 
 			if (i == 0U || i == 0xFFFFU) {
 				/* it worked */
@@ -86,8 +88,7 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 			else {
 				// temp debug msg
 				fprintf(stderr,"DMA probe failed, counter %u stat=%02x\n",i,inp(d8237_ioport(ch,D8237_REG_R_STATUS)));
-
-				sndsb_reset_dsp(cx);
+				// end temp
 				break;
 			}
 		}
