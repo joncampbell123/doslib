@@ -51,7 +51,7 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
 	uint8_t old_mask;
 
 	if (cx->dma8 >= 0) return;
-	if (cx->sbos) return; // DSP command 0xE2 causes SBOS to hang the system
+	if (cx->sbos || cx->mega_em) return; // DSP command 0xE2 causes both SBOS and MEGA-EM to hang the system
 	if (!sndsb_reset_dsp(cx)) return;
 	reg = 0xAA;
 
