@@ -50,6 +50,7 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 
 		/* any DMA? and did the byte returned match the patttern? */
 		for (iter=0;iter < 10;iter++) {
+			_cli();
 			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
 			outp(d8237_ioport(ch,D8237_REG_W_WRITE_MODE),
@@ -59,6 +60,7 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 			d8237_write_count(ch,len);
 			d8237_write_base(ch,dma->phys);
 			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
+			_sti();
 
 			/* use DSP command 0x14 */
 			sndsb_interrupt_ack(cx,sndsb_interrupt_reason(cx));

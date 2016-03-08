@@ -51,7 +51,6 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
 	uint8_t old_mask;
 
 	if (cx->dma8 >= 0) return;
-//	if (cx->sbos || cx->mega_em) return; // DSP command 0xE2 causes both SBOS and MEGA-EM to hang the system
 	if (!sndsb_reset_dsp(cx)) return;
 	reg = 0xAA;
 
@@ -68,6 +67,7 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
 		/* any DMA? and did the byte returned match the patttern? */
 		iterr = 0;
 		for (iter=0;iter < 10;iter++) {
+			_cli();
 			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
 			test_byte = (uint8_t)read_8254_ncli(0);
@@ -80,6 +80,7 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
 			d8237_write_count(ch,8);
 			d8237_write_base(ch,dma->phys);
 			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
+			_sti();
 
 			/* use DSP command 0xE2 */
 			sndsb_interrupt_ack(cx,sndsb_interrupt_reason(cx));

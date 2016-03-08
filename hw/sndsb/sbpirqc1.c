@@ -38,7 +38,6 @@ void sndsb_probe_irq_common1(struct sndsb_ctx *cx,uint8_t cmd) {
 	unsigned short wait=1;
 
 	if (cx->irq >= 0) return;
-	if (cx->sbos) return; // DSP command 0xF2 causes SBOS to hang the system, and 0x80 eventually hangs the system too
 
 	if (cmd == 0xF2)
 		wait = t8254_us2ticks(5000);
@@ -58,7 +57,6 @@ void sndsb_probe_irq_common1(struct sndsb_ctx *cx,uint8_t cmd) {
 		_sti();
 
 		for (iter=0;iter < 10;iter++) {
-			_cli();
 			if (cmd == 0xF2) {
 				/* trigger an IRQ */
 				sndsb_interrupt_ack(cx,sndsb_interrupt_reason(cx));
@@ -71,7 +69,6 @@ void sndsb_probe_irq_common1(struct sndsb_ctx *cx,uint8_t cmd) {
 				sndsb_write_dsp(cx,0x10);
 				sndsb_write_dsp(cx,0x00); /* 0x10 samples */
 			}
-			_sti();
 
 			/* wait 5ms */
 			t8254_wait(wait);
