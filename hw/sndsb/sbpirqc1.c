@@ -38,7 +38,6 @@ void sndsb_probe_irq_common1(struct sndsb_ctx *cx,uint8_t cmd) {
 	unsigned short wait=1;
 
 	if (cx->irq >= 0) return;
-	if (cx->sbos) return; // NTS: these tests cause SBOS to hang
 
 	if (cmd == 0xF2)
 		wait = t8254_us2ticks(5000);
