@@ -31,7 +31,7 @@ static void interrupt sb_probe_irq_handler() {
  * Works with most Sound Blaster cards. If it doesn't work, then you should
  * use sndsb_probe_irq2() to use method #2. Note that for safety reasons, we
  * only test against IRQ's that the original Sound Blaster would use */
-static unsigned char test_irqs[] = {2,3,5,7};
+static unsigned char test_irqs[] = {3,5,7};
 void sndsb_probe_irq_common1(struct sndsb_ctx *cx,uint8_t cmd) {
 	unsigned char irqn=0,iter,expect;
 	unsigned char masked;
