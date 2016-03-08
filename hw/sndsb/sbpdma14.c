@@ -84,9 +84,6 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 				/* it worked */
 			}
 			else {
-				// temp debug msg
-				fprintf(stderr,"DMA probe failed, counter %u stat=%02x\n",i,inp(d8237_ioport(ch,D8237_REG_R_STATUS)));
-
 				sndsb_reset_dsp(cx);
 				break;
 			}
