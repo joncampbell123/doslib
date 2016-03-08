@@ -4315,18 +4315,22 @@ int main(int argc,char **argv) {
 #endif
 
 		if (cx->irq < 0) {
+			if (sb_debug) printf("SB %03x: Probing IRQ (F2)...\n",cx->baseio);
 			sndsb_probe_irq_F2(cx);
 			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (F2) found IRQ %d\n",cx->baseio,cx->irq);
 		}
 		if (cx->irq < 0) {
+			if (sb_debug) printf("SB %03x: Probing IRQ (80)...\n",cx->baseio);
 			sndsb_probe_irq_80(cx);
 			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (80) found IRQ %d\n",cx->baseio,cx->irq);
 		}
 		if (cx->dma8 < 0) { // NTS: for some cards, this will also set the 16-bit DMA channel
+			if (sb_debug) printf("SB %03x: Probing DMA (E2)...\n",cx->baseio);
 			sndsb_probe_dma8_E2(cx);
 			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (E2) found DMA %d\n",cx->baseio,cx->dma8);
 		}
 		if (cx->dma8 < 0) { // NTS: for some cards, this will also set the 16-bit DMA channel
+			if (sb_debug) printf("SB %03x: Probing DMA (14)...\n",cx->baseio);
 			sndsb_probe_dma8_14(cx);
 			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (14) found DMA %d\n",cx->baseio,cx->dma8);
 		}
