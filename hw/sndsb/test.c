@@ -338,6 +338,10 @@
 #include <hw/sndsb/sndsbpnp.h>
 #endif
 
+static unsigned char irq_probe_f2 = 1;
+static unsigned char irq_probe_80 = 1;
+static unsigned char dma_probe_e2 = 1;
+static unsigned char dma_probe_14 = 1;
 static unsigned char sb_debug = 0;
 
 static struct dma_8237_allocation *sb_dma = NULL; /* DMA buffer */
@@ -3142,6 +3146,10 @@ static void help() {
 	printf(" /sbalias:dsp         Use DSP alias port 0x22D by default\n");
 	printf(" /ex-ess              Experimentally use ESS extensions for ESS chips\n");
 	printf("                      not directly supported.\n");
+	printf(" /nif2                Don't use DSP command 0xF2 to probe IRQ\n");
+	printf(" /ni80                Don't use DSP command 0x80 to probe IRQ\n");
+	printf(" /nde2                Don't use DSP command 0xE2 to probe DMA\n");
+	printf(" /nd14                Don't use DSP command 0x14 to probe DMA\n");
 #endif
 
 #if TARGET_MSDOS == 32
@@ -4045,6 +4053,18 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"sbalias:dsp")) {
 				sndsb_probe_options.use_dsp_alias = 1;
 			}
+			else if (!strcmp(a,"nif2")) {
+				irq_probe_f2 = 0;
+			}
+			else if (!strcmp(a,"ni80")) {
+				irq_probe_80 = 0;
+			}
+			else if (!strcmp(a,"nde2")) {
+				dma_probe_e2 = 0;
+			}
+			else if (!strcmp(a,"nd14")) {
+				dma_probe_14 = 0;
+			}
 			else if (!strcmp(a,"noidle")) {
 				dont_sb_idle = 1;
 			}
@@ -4314,22 +4334,22 @@ int main(int argc,char **argv) {
 			sndsb_probe_mixer(cx);
 #endif
 
-		if (cx->irq < 0) {
+		if (cx->irq < 0 && irq_probe_f2) {
 			if (sb_debug) printf("SB %03x: Probing IRQ (F2)...\n",cx->baseio);
 			sndsb_probe_irq_F2(cx);
 			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (F2) found IRQ %d\n",cx->baseio,cx->irq);
 		}
-		if (cx->irq < 0) {
+		if (cx->irq < 0 && irq_probe_80) {
 			if (sb_debug) printf("SB %03x: Probing IRQ (80)...\n",cx->baseio);
 			sndsb_probe_irq_80(cx);
 			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (80) found IRQ %d\n",cx->baseio,cx->irq);
 		}
-		if (cx->dma8 < 0) { // NTS: for some cards, this will also set the 16-bit DMA channel
+		if (cx->dma8 < 0 && dma_probe_e2) { // NTS: for some cards, this will also set the 16-bit DMA channel
 			if (sb_debug) printf("SB %03x: Probing DMA (E2)...\n",cx->baseio);
 			sndsb_probe_dma8_E2(cx);
 			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (E2) found DMA %d\n",cx->baseio,cx->dma8);
 		}
-		if (cx->dma8 < 0) { // NTS: for some cards, this will also set the 16-bit DMA channel
+		if (cx->dma8 < 0 && dma_probe_14) { // NTS: for some cards, this will also set the 16-bit DMA channel
 			if (sb_debug) printf("SB %03x: Probing DMA (14)...\n",cx->baseio);
 			sndsb_probe_dma8_14(cx);
 			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (14) found DMA %d\n",cx->baseio,cx->dma8);
