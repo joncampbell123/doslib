@@ -78,7 +78,7 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
 					D8237_MODER_CHANNEL(ch) | D8237_MODER_TRANSFER(D8237_MODER_XFER_WRITE) | D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
 
 			inp(d8237_ioport(ch,D8237_REG_R_STATUS));
-			d8237_write_count(ch,8);
+			d8237_write_count(ch,1);
 			d8237_write_base(ch,dma->phys);
 			outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
 			_sti();
