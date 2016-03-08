@@ -51,7 +51,7 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx) {
 	uint8_t old_mask;
 
 	if (cx->dma8 >= 0) return;
-	if (cx->sbos) return; // NTS: doesn't work with SBOS, there's no point in running the test
+	if (cx->sbos || cx->mega_em) return; // NTS: doesn't work with SBOS or MEGA-EM, there's no point in running the test
 	if (!sndsb_reset_dsp(cx)) return;
 	reg = 0xAA;
 
