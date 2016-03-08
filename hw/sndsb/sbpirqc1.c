@@ -38,6 +38,7 @@ void sndsb_probe_irq_common1(struct sndsb_ctx *cx,uint8_t cmd) {
 	unsigned short wait=1;
 
 	if (cx->irq >= 0) return;
+	if (cx->sbos && cmd == 0xF2) return; // NTS: don't ever use DSP command 0xF2 with Gravis SBOS. It will crash during this test.
 
 	if (cmd == 0xF2)
 		wait = t8254_us2ticks(5000);
