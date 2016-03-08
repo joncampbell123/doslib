@@ -30,6 +30,7 @@ void sndsb_probe_dma8_14(struct sndsb_ctx *cx) {
 	uint8_t old_mask;
 
 	if (cx->dma8 >= 0) return;
+	if (cx->sbos) return; // NTS: this test causes SBOS to hang (WHY???)
 	if (!sndsb_reset_dsp(cx)) return;
 
 	dma = dma_8237_alloc_buffer(len);
