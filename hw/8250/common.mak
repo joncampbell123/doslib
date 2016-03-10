@@ -4,13 +4,14 @@ NOW_BUILDING = HW_8250_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    8250.c
-OBJS =        $(SUBDIR)$(HPS)8250.obj
+OBJS =        $(SUBDIR)$(HPS)8250.obj $(SUBDIR)$(HPS)8250prob.obj $(SUBDIR)$(HPS)8250bios.obj
 OBJSPNP =     $(SUBDIR)$(HPS)8250pnp.obj $(SUBDIR)$(HPS)8250pnpa.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 TESTPNP_EXE = $(SUBDIR)$(HPS)testpnp.exe
 
 $(HW_8250_LIB): $(OBJS)
-	wlib -q -b -c $(HW_8250_LIB) -+$(SUBDIR)$(HPS)8250.obj
+	wlib -q -b -c $(HW_8250_LIB) -+$(SUBDIR)$(HPS)8250.obj     -+$(SUBDIR)$(HPS)8250prob.obj
+	wlib -q -b -c $(HW_8250_LIB) -+$(SUBDIR)$(HPS)8250bios.obj
 
 $(HW_8250PNP_LIB): $(OBJSPNP)
 	wlib -q -b -c $(HW_8250PNP_LIB) -+$(SUBDIR)$(HPS)8250pnp.obj -+$(SUBDIR)$(HPS)8250pnpa.obj

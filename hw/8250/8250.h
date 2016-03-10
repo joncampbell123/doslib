@@ -134,6 +134,7 @@ static inline void uart_8250_write(struct info_8250 *uart,uint8_t c) {
 
 int init_8250();
 int probe_8250(uint16_t port);
+int probe_8250_bios_ports();
 int add_pnp_8250(uint16_t port,int irq);
 int already_got_8250_port(uint16_t port);
 uint16_t get_8250_bios_port(unsigned int index);
