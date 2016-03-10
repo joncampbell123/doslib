@@ -680,6 +680,7 @@ int main() {
 		printf("Warning, ISA PnP BIOS not found\n");
 	}
 #else
+	probe_8250_bios_ports();
 	printf("%u BIOS I/O ports listed\nThey are: ",(unsigned int)bios_8250_ports);
 	for (i=0;i < (int)bios_8250_ports;i++) printf("0x%04x ",get_8250_bios_port(i));
 	printf("\n");
