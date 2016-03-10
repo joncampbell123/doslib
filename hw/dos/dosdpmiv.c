@@ -19,10 +19,6 @@
 #include <hw/dos/doswin.h>
 #include <hw/dos/dosntvdm.h>
 
-#if TARGET_MSDOS == 32 && !defined(TARGET_OS2)
-int8_t dpmi_no_0301h = -1; /* whether or not the DOS extender provides function 0301h */
-#endif
-
 #if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && !defined(TARGET_WINDOWS))
 uint16_t dpmi_flags=0;
 uint16_t dpmi_version=0;
