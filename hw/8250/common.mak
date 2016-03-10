@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    8250.c
 OBJS =        $(SUBDIR)$(HPS)8250.obj
-OBJSPNP =     $(SUBDIR)$(HPS)8250pnp.obj
+OBJSPNP =     $(SUBDIR)$(HPS)8250pnp.obj $(SUBDIR)$(HPS)8250pnpa.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 TESTPNP_EXE = $(SUBDIR)$(HPS)testpnp.exe
 
@@ -13,7 +13,7 @@ $(HW_8250_LIB): $(OBJS)
 	wlib -q -b -c $(HW_8250_LIB) -+$(SUBDIR)$(HPS)8250.obj
 
 $(HW_8250PNP_LIB): $(OBJSPNP)
-	wlib -q -b -c $(HW_8250PNP_LIB) -+$(SUBDIR)$(HPS)8250pnp.obj
+	wlib -q -b -c $(HW_8250PNP_LIB) -+$(SUBDIR)$(HPS)8250pnp.obj -+$(SUBDIR)$(HPS)8250pnpa.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
