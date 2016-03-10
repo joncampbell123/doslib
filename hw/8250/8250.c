@@ -63,17 +63,6 @@ int already_got_8250_port(uint16_t port) {
 	return 0;
 }
 
-uint16_t get_8250_bios_port(unsigned int index) {
-	if (index >= (unsigned int)bios_8250_ports)
-		return 0;
-
-#if TARGET_MSDOS == 32
-	return *((uint16_t*)(0x400 + (index*2)));
-#else
-	return *((uint16_t far*)MK_FP(0x40,index*2));
-#endif
-}
-
 int init_8250() {
 	if (!inited_8250) {
 		memset(base_8250_port,0,sizeof(base_8250_port));

@@ -53,3 +53,14 @@ int probe_8250_bios_ports() {
 	return (bios_8250_ports > 0) ? 1 : 0;
 }
 
+uint16_t get_8250_bios_port(unsigned int index) {
+	if (index >= (unsigned int)bios_8250_ports)
+		return 0;
+
+#if TARGET_MSDOS == 32
+	return *((uint16_t*)(0x400 + (index*2)));
+#else
+	return *((uint16_t far*)MK_FP(0x40,index*2));
+#endif
+}
+
