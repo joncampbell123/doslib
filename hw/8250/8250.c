@@ -45,7 +45,6 @@ const char *type_8250_strs[TYPE_8250_MAX] = {
 	"16750"
 };
 
-const uint16_t		standard_8250_ports[STANDARD_8250_PORT_COUNT] = {0x3F8,0x2F8,0x3E8,0x2E8};
 uint16_t		base_8250_port[MAX_8250_PORTS];
 struct info_8250	info_8250_port[MAX_8250_PORTS];
 unsigned int		base_8250_ports;
