@@ -15,8 +15,8 @@ extern uint16_t ntvdm_dosntast_handle;
 #if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
 extern uint16_t ntvdm_dosntast_io_base;
 
-int ntvdm_dosntast_init();
 void ntvdm_dosntast_unload();
+unsigned int ntvdm_dosntast_init();
 uint32_t ntvdm_dosntast_GetTickCount();
 int ntvdm_dosntast_MessageBox(const char *text);
 unsigned int ntvdm_dosntast_waveOutGetNumDevs();

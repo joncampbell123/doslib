@@ -124,7 +124,7 @@ int ntvdm_dosntast_load_vdd() {
 
 /* initialize the library.
  * if dont_load_dosntast is set, then it will not load the VDD driver but will use the driver if already loaded */
-int ntvdm_dosntast_init() {
+unsigned int ntvdm_dosntast_init() {
 	uint32_t t1=0,t2=0;
 
 	if (!ntvdm_dosntast_tried) {
