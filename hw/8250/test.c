@@ -140,6 +140,8 @@ static unsigned int irq_buffer_i=0,irq_buffer_o=0;
 static unsigned char irq_bufferout[IRQ_BUFFER_SIZE];
 static unsigned int irq_bufferout_i=0,irq_bufferout_o=0;
 
+static char use_8250_int=0;
+
 static void irq_buffer_reset() {
 	_cli();
 	irq_buffer_i = irq_buffer_o = 0;

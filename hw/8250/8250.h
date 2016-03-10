@@ -85,7 +85,6 @@ extern uint16_t			base_8250_port[MAX_8250_PORTS];
 extern struct info_8250		info_8250_port[MAX_8250_PORTS];
 extern unsigned int		base_8250_ports;
 extern unsigned char		bios_8250_ports;
-extern char			use_8250_int;
 extern char			inited_8250;
 
 #define type_8250_to_str(x)	type_8250_strs[x]
