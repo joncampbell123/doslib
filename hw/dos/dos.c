@@ -46,12 +46,6 @@ uint16_t dos_version = 0;
 uint32_t freedos_kernel_version = 0;
 const char *dos_version_method = NULL;
 
-#if TARGET_MSDOS == 32
-char *freedos_kernel_version_str = NULL;
-#else
-char far *freedos_kernel_version_str = NULL;
-#endif
-
 void probe_dos() {
 #if TARGET_MSDOS == 32 && 0
 	assert(sizeof(struct dpmi_realmode_call) == 0x32);
@@ -271,20 +265,8 @@ err1:
 				(((uint32_t)regs.h.cl) << 8UL) |
 				((uint32_t)regs.h.bl);
 
-			/* now retrieve the FreeDOS kernel string */
-			/* FIXME: Does this syscall have a way to return an error or indicate that it didn't return a string? */
-			regs.w.ax = 0x33FF;
-# if TARGET_MSDOS == 32
-			int386(0x21,&regs,&regs);
-# else
-			int86(0x21,&regs,&regs);
-# endif
-
-# if TARGET_MSDOS == 32
-			freedos_kernel_version_str = (unsigned char*)(((uint32_t)regs.w.dx << 4UL) + (uint32_t)regs.w.ax);
-# else
-			freedos_kernel_version_str = MK_FP(regs.w.dx,regs.w.ax);
-# endif
+			/* NTS: We no longer return the string automatically. The program can call dos_get_freedos_kernel_string()
+			 *      to obtain if it desired */
 		}
 		else if (dos_version >= 0x200 && regs.h.bh == 0xFF)
 			dos_flavor = DOS_FLAVOR_MSDOS;

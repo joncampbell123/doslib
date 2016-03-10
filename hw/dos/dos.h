@@ -52,13 +52,15 @@ extern uint8_t dos_flavor;
 extern uint16_t dos_version;
 extern const char *dos_version_method;
 extern uint32_t freedos_kernel_version;
-#if TARGET_MSDOS == 32
-extern char *freedos_kernel_version_str;
-#else
-extern char far *freedos_kernel_version_str;
-#endif
 extern unsigned char vcpi_present;
 extern unsigned char vcpi_major_version,vcpi_minor_version;
+
+#if TARGET_MSDOS == 32
+const char *
+#else
+const char far *
+#endif
+dos_get_freedos_kernel_version_string();
 
 struct dos_mcb_enum {
 	uint16_t	segment;

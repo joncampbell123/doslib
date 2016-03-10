@@ -37,12 +37,19 @@ int main() {
 	printf("    Method: '%s'\n",dos_version_method);
 	printf("    Flavor: '%s'\n",dos_flavor_str(dos_flavor));
 	if (dos_flavor == DOS_FLAVOR_FREEDOS) {
+#if TARGET_MSDOS == 32
+		const char *freedos_kernel_version_str;
+#else
+		const char far *freedos_kernel_version_str;
+#endif
+
 		printf("    FreeDOS kernel %u.%u.%u (%lX)\n",
 			(unsigned int)((freedos_kernel_version >> 16UL) & 0xFFUL),
 			(unsigned int)((freedos_kernel_version >> 8UL) & 0xFFUL),
 			(unsigned int)((freedos_kernel_version) & 0xFFUL),
 			(unsigned long)freedos_kernel_version);
-		if (freedos_kernel_version_str != NULL) {
+
+		if ((freedos_kernel_version_str=dos_get_freedos_kernel_version_string()) != NULL) {
 #if TARGET_MSDOS == 32
 			printf("    FreeDOS kernel version string: %s\n",
 				freedos_kernel_version_str);
