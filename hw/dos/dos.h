@@ -62,6 +62,24 @@ const char far *
 #endif
 dos_get_freedos_kernel_version_string();
 
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
+void win32_probe_for_wine(); /* Probing for WINE from the Win32 layer */
+#elif defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
+void win16_probe_for_wine(); /* Probing for WINE from the Win16 layer */
+#endif
+
+#if TARGET_MSDOS == 32 && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+void mux_realmode_2F_call(struct dpmi_realmode_call *rc);
+#endif
+#if TARGET_MSDOS == 16 && defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+void mux_realmode_2F_call(struct dpmi_realmode_call far *rc);
+#endif
+
+#if TARGET_MSDOS == 32
+void *dpmi_phys_addr_map(uint32_t phys,uint32_t size);
+void dpmi_phys_addr_free(void *base);
+#endif
+
 struct dos_mcb_enum {
 	uint16_t	segment;
 	uint16_t	counter;
