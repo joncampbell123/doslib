@@ -58,6 +58,10 @@ use16
 
 %ifndef TARGET_WINDOWS
  %if TARGET_MSDOS == 16
+
+; make them global
+global l_dpmi_mode, l_dpmi_rm_entry, l_dpmi_pm_entry, l_dpmi_segs, this_process_psp
+
 ; cheap coding: put some variables here in the code segment. as real-mode
 ; code there's nothing to stop us from leaving DS == CS on entry and letting
 ; DPMI build an alias to our own code segment
@@ -69,9 +73,6 @@ l_dpmi_pm_entry		dd	0
 ; that we can re-enter protected mode
 l_dpmi_segs		dw	0,0,0,0
 this_process_psp	dw	0
-
-; make them global
-global l_dpmi_mode, l_dpmi_rm_entry, l_dpmi_pm_entry, l_dpmi_segs, this_process_psp
 
 ; void __cdecl dpmi_enter_core(); /* Watcom's inline assembler is too limiting to carry out the DPMI entry and switch back */
 global _dpmi_enter_core
@@ -327,6 +328,9 @@ dpmi_int21_hook_exit:
 %if TARGET_MSDOS == 16
  %ifndef TARGET_WINDOWS
 
+; make them global
+global l_lin2fm_params,l_lin2fm_param_dst,l_lin2fm_param_lsrc,l_lin2fm_param_sz,l_rm_ret,l_rm_reentry,l_lin2fm_src_sel,l_lin2fm_dst_sel
+
 ; WARNING: The caller must have ensured we are running on a 386 or higher, and that
 ;          the DPMI entry points were obtained
 
@@ -345,9 +349,6 @@ l_rm_reentry		dd	0
 ; we need these selectors for copy operation
 l_lin2fm_src_sel	dw	0
 l_lin2fm_dst_sel	dw	0
-
-; make them global
-global l_lin2fm_params,l_lin2fm_param_dst,l_lin2fm_param_lsrc,l_lin2fm_param_sz,l_rm_ret,l_rm_reentry,l_lin2fm_src_sel,l_lin2fm_dst_sel
 
  %endif
 %endif
