@@ -28,12 +28,6 @@
 #include <hw/dos/doswin.h>
 #include <hw/dos/dosntvdm.h>
 
-#if TARGET_MSDOS == 32
-char *freedos_kernel_version_str = NULL;
-#else
-char far *freedos_kernel_version_str = NULL;
-#endif
-
 // TODO: Need to re-test this against FreeDOS! Setup a VM!
 #if TARGET_MSDOS == 32
 const char *
