@@ -80,6 +80,10 @@ void *dpmi_phys_addr_map(uint32_t phys,uint32_t size);
 void dpmi_phys_addr_free(void *base);
 #endif
 
+#if TARGET_MSDOS == 32 && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+unsigned int dpmi_test_rm_entry_call(struct dpmi_realmode_call *rc);
+#endif
+
 struct dos_mcb_enum {
 	uint16_t	segment;
 	uint16_t	counter;
