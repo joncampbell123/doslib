@@ -177,6 +177,7 @@ struct sndsb_ctx {
 	uint8_t				poll_ack_when_no_irq:1;	/* If playing DMA without IRQ assignment, poll the "ack" register in idle call */
 	uint8_t				hispeed_matters:1;	/* If set, playing at rates above 22050Hz requires hispeed DSP commands */
 	uint8_t				hispeed_blocking:1;	/* DSP does not accept commands, requires reset, in hispeed DSP playback */
+	uint8_t				dsp_autoinit_dma_override:1;	/* for "dsp_autoinit_dma", to force it if you want to see what happens. */
 	uint8_t				dsp_direct_dac_read_after_command;	/* read the DSP write status N times after direct DAC commands */
 	uint8_t				dsp_direct_dac_poll_retry_timeout;	/* poll DSP write status up to N times again before attempting DSP command */
 	const char*			reason_not_supported;	/* from last call can_do() or is_supported() */
