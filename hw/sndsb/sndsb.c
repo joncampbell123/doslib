@@ -605,11 +605,12 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	cx->chose_use_dma = 1;
 	/* use auto-init DMA unless for some reason we can't. do not use auto-init DMA if not using auto-init DSP commands.
 	 * however, DSP nag mode requires auto-init DMA to work properly even with single-cycle DSP commands, or else audio will play too fast.
+	 * Goldplay mode also requires auto-init DMA, so that it can repeat the one sample to the sound card over the ISA bus.
 	 * note that in the spirit of hacking, we allow an override anyway, if you want to see what happens when you break that rule. */
 	/* there are known cases where auto-init DMA with single-cycle DSP causes problems:
 	 *   - Some PCI sound cards with emulation drivers in DOS will act funny (Sound Blaster Live! EMU10K1 SB16 emulation)
 	 *   - Pro Audio Spectrum cards will exhibit occasional pops and crackles between DSP blocks (PAS16) */
-	cx->chose_autoinit_dma = cx->dsp_autoinit_dma && (cx->dsp_autoinit_command || cx->dsp_autoinit_dma_override || cx->dsp_nag_mode);
+	cx->chose_autoinit_dma = cx->dsp_autoinit_dma && (cx->dsp_autoinit_command || cx->dsp_autoinit_dma_override || cx->dsp_nag_mode || cx->goldplay_mode);
 	cx->chose_autoinit_dsp = cx->dsp_autoinit_command;
 
 	/* Gravis Ultrasound SBOS/MEGA-EM don't handle auto-init 1.xx very well.
