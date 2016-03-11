@@ -28,7 +28,7 @@
 # define _dos_setvect ___EVIL___
 #endif
 
-#if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS)
+#if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
 uint8_t ntvdm_dosntast_tried = 0;
 uint16_t ntvdm_dosntast_handle = (~0U);
 #endif
@@ -207,88 +207,6 @@ void ntvdm_dosntast_unload() {
 		ntvdm_UnregisterModule(ntvdm_dosntast_handle);
 		ntvdm_dosntast_handle = DOSNTAST_HANDLE_UNASSIGNED;
 	}
-}
-
-uint32_t ntvdm_dosntast_GetTickCount() {
-	uint32_t retv = 0xFFFFFFFFUL;
-
-	if (ntvdm_dosntast_handle == DOSNTAST_HANDLE_UNASSIGNED)
-		return 0; /* failed */
-	if (!ntvdm_rm_code_alloc())
-		return 0;
-
-#if TARGET_MSDOS == 32
-	{
-		struct dpmi_realmode_call rc={0};
-		rc.ebx = DOSNTAST_GET_TICK_COUNT_C;
-		ntvdm_DispatchCall_dpmi(ntvdm_dosntast_handle,&rc);
-		retv = rc.ebx;
-	}
-#else
-	{
-		const uint16_t h = ntvdm_dosntast_handle;
-
-		__asm {
-			.386p
-			push	ebx
-			mov	ebx,DOSNTAST_GET_TICK_COUNT
-			mov	ax,h
-			ntvdm_Dispatch_ins_asm_db
-			mov	retv,ebx
-			pop	ebx
-		}
-	}
-#endif
-
-	return retv;
-}
-
-unsigned int ntvdm_dosntast_getversionex(OSVERSIONINFO *ovi) {
-	unsigned int retv=0;
-
-	if (ntvdm_dosntast_handle == DOSNTAST_HANDLE_UNASSIGNED)
-		return 0; /* failed */
-	if (!ntvdm_rm_code_alloc())
-		return 0;
-
-#if TARGET_MSDOS == 32
-	{
-		uint16_t myds=0;
-		struct dpmi_realmode_call rc={0};
-		__asm mov myds,ds
-		rc.ebx = DOSNTAST_GETVERSIONEX_C;
-		rc.esi = (uint32_t)ovi;
-		rc.ecx = 1;
-		rc.ds = myds;
-		ntvdm_DispatchCall_dpmi(ntvdm_dosntast_handle,&rc);
-		retv = rc.ebx;
-	}
-#else
-	{
-		const uint16_t s = FP_SEG(ovi),o = FP_OFF(ovi),h = ntvdm_dosntast_handle;
-
-		__asm {
-			.386p
-			push	ds
-			push	esi
-			push	ecx
-			mov	ebx,DOSNTAST_GETVERSIONEX
-			xor	esi,esi
-			mov	ax,h
-			mov	si,s
-			mov	ds,si
-			mov	si,o
-			xor	cx,cx
-			ntvdm_Dispatch_ins_asm_db
-			mov	retv,bx
-			pop	esi
-			pop	ebx
-			pop	ds
-		}
-	}
-#endif
-
-	return retv;
 }
 
 #endif
