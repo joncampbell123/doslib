@@ -411,21 +411,8 @@ int detect_windows() {
 		/* now... if this is Windows NT, the next thing we can do is use NTVDM.EXE's
 		 * BOP opcodes to load a "helper" DLL that allows us to call into Win32 */
 # if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS)
-		if (windows_mode == WINDOWS_NT && ntvdm_dosntast_init()) {
-			/* OK. Ask for the version number */
-			OSVERSIONINFO ovi;
-
-			memset(&ovi,0,sizeof(ovi));
-			ovi.dwOSVersionInfoSize = sizeof(ovi);
-			if (ntvdm_dosntast_getversionex(&ovi)) {
-				windows_version_method = "GetVersionEx [NTVDM.EXE + DOSNTAST.VDD]";
-				windows_version = (ovi.dwMajorVersion << 8) | ovi.dwMinorVersion;
-				if (ovi.dwPlatformId == 2/*VER_PLATFORM_WIN32_NT*/)
-					windows_mode = WINDOWS_NT;
-				else
-					windows_mode = WINDOWS_ENHANCED;
-			}
-		}
+		if (windows_mode == WINDOWS_NT && detect_windows_ntdvm_dosntast_init_CB)
+			detect_windows_ntdvm_dosntast_init_CB();
 # endif
 	}
 #endif

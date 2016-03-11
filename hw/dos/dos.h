@@ -462,6 +462,17 @@ int smartdrv_flush();
 int smartdrv_detect();
 #endif
 
+#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+void detect_windows_ntdvm_dosntast_init_func();
+void (*detect_windows_ntdvm_dosntast_init_CB)() = NULL;
+
+static inline void detect_window_enable_ntdvm() {
+	detect_windows_ntdvm_dosntast_init_CB = detect_windows_ntdvm_dosntast_init_func;
+}
+#else
+# define detect_window_enable_ntdvm()
+#endif
+
 uint32_t dos_linear_to_phys_vcpi(uint32_t pn);
 
 #endif /* __HW_DOS_DOS_H */
