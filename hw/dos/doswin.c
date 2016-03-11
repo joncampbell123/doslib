@@ -410,8 +410,8 @@ int detect_windows() {
 
 		/* now... if this is Windows NT, the next thing we can do is use NTVDM.EXE's
 		 * BOP opcodes to load a "helper" DLL that allows us to call into Win32 */
-# if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS)
-		if (windows_mode == WINDOWS_NT && detect_windows_ntdvm_dosntast_init_CB)
+# if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+		if (windows_mode == WINDOWS_NT && detect_windows_ntdvm_dosntast_init_CB != NULL)
 			detect_windows_ntdvm_dosntast_init_CB();
 # endif
 	}

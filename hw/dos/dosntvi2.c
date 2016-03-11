@@ -30,6 +30,23 @@
 #endif
 
 #if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
-void (*detect_windows_ntdvm_dosntast_init_CB)() = NULL;
+void detect_windows_ntdvm_dosntast_init_func() {
+	OSVERSIONINFO ovi;
+
+	if (!ntvdm_dosntast_init())
+		return;
+
+	/* OK. Ask for the version number */
+	memset(&ovi,0,sizeof(ovi));
+	ovi.dwOSVersionInfoSize = sizeof(ovi);
+	if (ntvdm_dosntast_getversionex(&ovi)) {
+		windows_version_method = "GetVersionEx [NTVDM.EXE + DOSNTAST.VDD]";
+		windows_version = (ovi.dwMajorVersion << 8) | ovi.dwMinorVersion;
+		if (ovi.dwPlatformId == 2/*VER_PLATFORM_WIN32_NT*/)
+			windows_mode = WINDOWS_NT;
+		else
+			windows_mode = WINDOWS_ENHANCED;
+	}
+}
 #endif
 

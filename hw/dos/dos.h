@@ -468,7 +468,7 @@ int ntvdm_dosntast_load_vdd();
 void ntvdm_dosntast_unload();
 #endif
 
-#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+#if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
 void detect_windows_ntdvm_dosntast_init_func();
 extern void (*detect_windows_ntdvm_dosntast_init_CB)();
 
