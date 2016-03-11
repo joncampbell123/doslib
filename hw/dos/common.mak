@@ -133,6 +133,7 @@ $(NTASTRM_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)ntastrm.
 !ifdef DOSNTAST_VDD_BUILD
 $(DOSNTAST_VDD): $(HW_DOS_LIB) $(HW_CPU_LIB) $(NTVDMLIB_LIB) $(NTVDMVDD_LIB) $(SUBDIR)$(HPS)dosntast.obj
 	%write tmp.cmd option quiet system $(WLINK_DLL_SYSTEM) $(HW_CPU_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) $(NTVDMVDD_LIB_WLINK_LIBRARIES) $(NTVDMLIB_LIB_WLINK_LIBRARIES) library winmm.lib file $(SUBDIR)$(HPS)dosntast.obj
+	%write tmp.cmd option map=$(DOSNTAST_VDD).map
 	%write tmp.cmd option modname='DOSNTAST'
 ! ifeq TARGET_MSDOS 32
 	%write tmp.cmd option nostdcall
@@ -160,6 +161,7 @@ $(DOSNTAST_VDD): winnt$(HPS)dosntast.vdd
 !ifdef LOL_EXE
 $(LOL_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)lol.obj
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)lol.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(LOL_EXE)
+	%write tmp.cmd option map=$(LOL_EXE).map
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
@@ -167,6 +169,7 @@ $(LOL_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)lol.obj
 !ifdef TESTDPMI_EXE
 $(TESTDPMI_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testdpmi.obj
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)testdpmi.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TESTDPMI_EXE)
+	%write tmp.cmd option map=$(TESTDPMI_EXE).map
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
