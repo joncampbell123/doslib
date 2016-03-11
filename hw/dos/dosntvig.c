@@ -30,6 +30,8 @@
 #endif
 
 #if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+void (*detect_windows_ntdvm_dosntast_init_CB)() = NULL;
+
 void detect_windows_ntdvm_dosntast_init_func() {
 	OSVERSIONINFO ovi;
 

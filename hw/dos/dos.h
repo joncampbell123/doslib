@@ -462,9 +462,15 @@ int smartdrv_flush();
 int smartdrv_detect();
 #endif
 
+#if defined(NTVDM_CLIENT) && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+uint16_t ntvdm_dosntast_detect();
+int ntvdm_dosntast_load_vdd();
+void ntvdm_dosntast_unload();
+#endif
+
 #if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
 void detect_windows_ntdvm_dosntast_init_func();
-void (*detect_windows_ntdvm_dosntast_init_CB)() = NULL;
+extern void (*detect_windows_ntdvm_dosntast_init_CB)();
 
 static inline void detect_window_enable_ntdvm() {
 	detect_windows_ntdvm_dosntast_init_CB = detect_windows_ntdvm_dosntast_init_func;
