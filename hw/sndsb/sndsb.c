@@ -244,7 +244,9 @@ void sndsb_update_capabilities(struct sndsb_ctx *cx) {
 	 * do not use nag mode with an IRQ.
 	 *
 	 * Notes:
-	 *   - Nag mode requires auto-init DMA to work correctly. It will cause the audio to play too fast otherwise. */
+	 *   - Nag mode requires auto-init DMA to work correctly. It will cause the audio to play too fast otherwise.
+	 *   - Nag mode causes minor popping/crackling artifacts on Pro Audio Spectrum (PAS16) cards. Obviously because
+	 *     you're constantly interrupting the DSP, and the emulation doesn't quite handle that well. */
 	if (cx->irq < 0) {
 		if (cx->dsp_autoinit_command)
 			cx->dsp_nag_mode = 0;
