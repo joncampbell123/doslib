@@ -237,7 +237,10 @@ void sndsb_update_capabilities(struct sndsb_ctx *cx) {
 
 	/* DSP 2xx and earlier do not have auto-init commands */
 	if (cx->dsp_vmaj < 2 || (cx->dsp_vmaj == 2 && cx->dsp_vmin == 0))
-		cx->dsp_autoinit_command = 0;
+		cx->dsp_autoinit_command = cx->dsp_autoinit_dma = 0;
+
+	/* if we did not obtain an IRQ, and we are not using auto-init mode, then we can
+	 * manage playback by borrowing a trick from Crystal Dream by "nagging" the DSP to keep playing. */
 	if (cx->irq < 0) {
 		if (cx->dsp_autoinit_command)
 			cx->dsp_nag_mode = 0;
@@ -280,6 +283,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_direct_dac_read_after_command = 0;
 	cx->windows_creative_sb16_drivers_ver = 0;
 	cx->windows_creative_sb16_drivers = 0;
+	cx->dsp_autoinit_dma_override = 0;
 	cx->dsp_4xx_fifo_single_cycle = 0;
 	cx->windows_9x_me_sbemul_sys = 0;
 	cx->audio_data_flipped_sign = 0;
@@ -341,10 +345,12 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 		if (gravis_mega_em_detect(&megaem_info)) { // MEGA-EM emulates DSP 1.xx. It can emulate DSP 2.01, but badly
 			cx->mega_em = 1;
 			cx->dsp_autoinit_dma = 0;
+			cx->dsp_autoinit_command = 0;
 		}
 		else if (gravis_sbos_detect() >= 0) { // SBOS only emulates DSP 1.xx
 			cx->sbos = 1;
 			cx->dsp_autoinit_dma = 0;
+			cx->dsp_autoinit_command = 0;
 		}
 	}
 
@@ -386,6 +392,9 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 
 	/* Using what we know of the card, update the capabilities in the context */
 	sndsb_update_capabilities(cx);
+
+	/* If the DSP is not capable of auto-init DMA, then we should not default to auto-init DMA */
+	if (!cx->dsp_autoinit_command) cx->dsp_autoinit_dma = 0;
 
 	/* make sure IRQs are cleared */
 	for (i=0;i < 3;i++) sndsb_interrupt_ack(cx,3);
@@ -585,8 +594,12 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 
 	/* these methods involve DMA */
 	cx->chose_use_dma = 1;
-	/* use auto-init DMA unless for some reason we can't */
-	cx->chose_autoinit_dma = cx->dsp_autoinit_dma;
+	/* use auto-init DMA unless for some reason we can't. do not use auto-init DMA if not using auto-init DSP commands.
+	 * note that in the spirit of hacking, we allow an override anyway, if you want to see what happens when you break that rule. */
+	/* there are known cases where auto-init DMA with single-cycle DSP causes problems:
+	 *   - Some PCI sound cards with emulation drivers in DOS will act funny (Sound Blaster Live! EMU10K1 SB16 emulation)
+	 *   - Pro Audio Spectrum cards will exhibit occasional pops and crackles between DSP blocks (PAS16) */
+	cx->chose_autoinit_dma = cx->dsp_autoinit_dma && (cx->dsp_autoinit_command || cx->dsp_autoinit_dma_override);
 	cx->chose_autoinit_dsp = cx->dsp_autoinit_command;
 
 	/* Gravis Ultrasound SBOS/MEGA-EM don't handle auto-init 1.xx very well.

@@ -338,6 +338,7 @@
 #include <hw/sndsb/sndsbpnp.h>
 #endif
 
+static unsigned char dma_autoinit_override = 0;
 static unsigned char force_dma_probe = 0;
 static unsigned char force_irq_probe = 0;
 static unsigned char irq_probe_f2 = 1;
@@ -3154,6 +3155,7 @@ static void help() {
 	printf(" /nd14                Don't use DSP command 0x14 to probe DMA\n");
 	printf(" /fip                 Force IRQ probe\n");
 	printf(" /fdp                 Force DMA probe\n");
+	printf(" /dmaaio              Allow DMA auto-init override (careful!)\n");
 #endif
 
 #if TARGET_MSDOS == 32
@@ -4069,6 +4071,9 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"nd14")) {
 				dma_probe_14 = 0;
 			}
+			else if (!strcmp(a,"dmaaio")) {
+				dma_autoinit_override = 1;
+			}
 			else if (!strcmp(a,"fip")) {
 				force_irq_probe = 1;
 			}
@@ -4373,6 +4378,12 @@ int main(int argc,char **argv) {
 			sndsb_probe_dma8_14(cx);
 			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (14) found DMA %d\n",cx->baseio,cx->dma8);
 		}
+
+		// DMA auto-init override.
+		// WARNING: Single-cycle DSP commands with auto-init DMA can cause problems with SB clones or emulation.
+		//   - Sound Blaster Live! (EMU10K1 PCI cards) will play the audio extra-fast
+		//   - Pro Audio Spectrum cards will have occasional pops and crackles (confirmed on PAS16)
+		if (dma_autoinit_override) cx->dsp_autoinit_dma_override = 1;
 
 		// having IRQ and DMA changes the ideal playback method
 		sndsb_determine_ideal_dsp_play_method(cx);
