@@ -34,7 +34,7 @@ static volatile unsigned char	gus_irq_count = 0;
 
 static unsigned char		animator = 0;
 static unsigned char		old_irq_masked = 0;
-static unsigned char		dont_chain_irq = 0;
+static unsigned char		dont_chain_irq = 1;	// FIXME: I don't know why IRQ chaining is a problem, but it is.
 static unsigned char		no_dma=0;
 
 static const struct vga_menu_item menu_separator =
@@ -814,6 +814,8 @@ int main(int argc,char **argv) {
 				no_dma = 1;
 			else if (!strcmp(a,"nochain"))
 				dont_chain_irq = 1;
+			else if (!strcmp(a,"chain"))
+				dont_chain_irq = 0;
 			else {
 				help();
 				return 1;
