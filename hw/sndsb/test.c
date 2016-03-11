@@ -4871,6 +4871,9 @@ int main(int argc,char **argv) {
 				if (wp) begin_play();
 			}
 			else if (mitem == &main_menu_playback_dsp_autoinit_command) {
+				/* NOTES:
+				 *
+				 *   - Pro Audio Spectrum 16 (PAS16): Despite reporting DSP v2.0, auto-init commands actually do work */
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
 				sb_card->dsp_autoinit_command = !sb_card->dsp_autoinit_command;
