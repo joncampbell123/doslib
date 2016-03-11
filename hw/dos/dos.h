@@ -479,6 +479,21 @@ static inline void detect_window_enable_ntdvm() {
 # define detect_window_enable_ntdvm()
 #endif
 
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(WIN386)
+int Win9xQT_ThunkInit();
+void Win9xQT_ThunkFree();
+#endif
+
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(WIN386)
+int probe_dos_version_win9x_qt_thunk_func();
+extern int (*probe_dos_version_win9x_qt_thunk_CB)();
+static inline void detect_dos_version_enable_win9x_qt_thunk() {
+	probe_dos_version_win9x_qt_thunk_CB = probe_dos_version_win9x_qt_thunk_func;
+}
+#else
+# define detect_dos_version_enable_win9x_qt_thunk()
+#endif
+
 uint32_t dos_linear_to_phys_vcpi(uint32_t pn);
 
 #endif /* __HW_DOS_DOS_H */

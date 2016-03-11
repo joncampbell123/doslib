@@ -33,6 +33,7 @@
 
 int main() {
 	detect_window_enable_ntdvm(); // we care about whether or not we're running in NTVDM.EXE under Windows NT
+	detect_dos_version_enable_win9x_qt_thunk(); // we care about DOS version from Win32 builds
 
 	probe_dos();
 	printf("DOS version %x.%02u\n",dos_version>>8,dos_version&0xFF);

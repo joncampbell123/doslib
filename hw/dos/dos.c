@@ -46,6 +46,10 @@ uint16_t dos_version = 0;
 uint32_t freedos_kernel_version = 0;
 const char *dos_version_method = NULL;
 
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(WIN386)
+int (*probe_dos_version_win9x_qt_thunk_CB)() = NULL;
+#endif
+
 void probe_dos() {
 #if TARGET_MSDOS == 32 && 0
 	assert(sizeof(struct dpmi_realmode_call) == 0x32);
@@ -114,44 +118,9 @@ err1:
 			}
 
 			/* Try: Windows 9x/ME QT_Thunk hack to call down into the Win16 layer's version of GetVersion() */
-			if (!ok && major == 4 && Win9xQT_ThunkInit()) {
-				DWORD fptr,raw=0;
+			if (!ok && major == 4 && probe_dos_version_win9x_qt_thunk_CB != NULL)
+				ok = probe_dos_version_win9x_qt_thunk_CB();
 
-				fptr = GetProcAddress16(win9x_kernel_win16,"GETVERSION");
-				if (fptr != 0) {
-					dos_version_method = "Read from Win16 GetVersion() [32->16 QT_Thunk]";
-
-					{
-						__asm {
-							mov	edx,fptr
-							mov	eax,dword ptr [QT_Thunk]
-
-							; QT_Thunk needs 0x40 byte of data storage at [EBP]
-							; give it some, right here on the stack
-							push	ebp
-							mov	ebp,esp
-							sub	esp,0x40
-
-							call	eax	; <- QT_Thunk
-
-							; release stack storage
-							mov	esp,ebp
-							pop	ebp
-
-							; take Win16 response in DX:AX translate to EAX
-							shl	edx,16
-							and	eax,0xFFFF
-							or	eax,edx
-							mov	raw,eax
-						}
-					}
-
-					if (raw != 0) {
-						dos_version = (((raw >> 24UL) & 0xFFUL) << 8UL) | (((raw >> 16UL) & 0xFFUL) << 0UL);
-						ok = 1;
-					}
-				}
-			}
 			/* Tried: Windows 3.1 with Win32s. Microsoft Win32 documentation gleefully calls Dos3Call "obsolete",
 			 *        yet inspection of the Win32s DLLs shows that W32SKRNL.DLL has a _Dos3Call@0 symbol in it
 			 *        that acts just like the Win16 version, calling down into DOS, and most of the Win32s DLLs
