@@ -429,11 +429,6 @@ int probe_vga() {
 #endif
 }
 
-void vga_set_start_location(unsigned int offset) {
-	vga_write_CRTC(0x0C,offset>>8);
-	vga_write_CRTC(0x0D,offset);
-}
-
 #if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
 unsigned char int10_getmode() {
 	unsigned char *base,*p,ret;
