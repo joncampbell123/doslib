@@ -117,6 +117,14 @@ Media Vision Pro Audio Spectrum 16 (PAS16 650-0018)         YES
                       procedure to enable the output. Other than that, DMA and IRQ
                       activity suggests that it works fine.
 
+PRO AUDIO SPECTRUM ISSUES
+-------------------------
+
+Apparently if the Pro Audio Spectrum chip and the Sound Blaster emulation have different
+IRQ settings, SNDSB will not be able to use or detect the IRQ. If this happens, try
+running INSTALL.EXE and reconfiguring the card to put both onto the same IRQ (IRQ 5
+recommended).  [PAS16 test]
+
 DSP VERSIONS
 ------------
 
