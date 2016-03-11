@@ -244,18 +244,19 @@ void sndsb_update_capabilities(struct sndsb_ctx *cx) {
 	 * do not use nag mode with an IRQ.
 	 *
 	 * Notes:
-	 *   - Pro Audio Spectrum cards treat reading port 0x22E as both an acknowledgement AND as a sign
-	 *     to tell the DSP to stop (completion of a DSP block). Nag mode will cause audio playback to
-	 *     run too fast on these cards. */
+	 *   - Nag mode requires auto-init DMA to work correctly. It will cause the audio to play too fast otherwise. */
 	if (cx->irq < 0) {
 		if (cx->dsp_autoinit_command)
 			cx->dsp_nag_mode = 0;
 		else
-			cx->dsp_nag_mode = 1;
+			cx->dsp_nag_mode = cx->dsp_autoinit_dma = 1;
 	}
 	else {
 		cx->dsp_nag_mode = 0;
 	}
+
+	/* If the DSP is not capable of auto-init DMA, then we should not default to auto-init DMA */
+	if (!cx->dsp_autoinit_command && !cx->dsp_nag_mode) cx->dsp_autoinit_dma = 0;
 }
 
 /* NTS: This routine NO LONGER probes the mixer */
@@ -401,9 +402,6 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 
 	/* Using what we know of the card, update the capabilities in the context */
 	sndsb_update_capabilities(cx);
-
-	/* If the DSP is not capable of auto-init DMA, then we should not default to auto-init DMA */
-	if (!cx->dsp_autoinit_command) cx->dsp_autoinit_dma = 0;
 
 	/* make sure IRQs are cleared */
 	for (i=0;i < 3;i++) sndsb_interrupt_ack(cx,3);
@@ -604,11 +602,12 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	/* these methods involve DMA */
 	cx->chose_use_dma = 1;
 	/* use auto-init DMA unless for some reason we can't. do not use auto-init DMA if not using auto-init DSP commands.
+	 * however, DSP nag mode requires auto-init DMA to work properly even with single-cycle DSP commands, or else audio will play too fast.
 	 * note that in the spirit of hacking, we allow an override anyway, if you want to see what happens when you break that rule. */
 	/* there are known cases where auto-init DMA with single-cycle DSP causes problems:
 	 *   - Some PCI sound cards with emulation drivers in DOS will act funny (Sound Blaster Live! EMU10K1 SB16 emulation)
 	 *   - Pro Audio Spectrum cards will exhibit occasional pops and crackles between DSP blocks (PAS16) */
-	cx->chose_autoinit_dma = cx->dsp_autoinit_dma && (cx->dsp_autoinit_command || cx->dsp_autoinit_dma_override);
+	cx->chose_autoinit_dma = cx->dsp_autoinit_dma && (cx->dsp_autoinit_command || cx->dsp_autoinit_dma_override || cx->dsp_nag_mode);
 	cx->chose_autoinit_dsp = cx->dsp_autoinit_command;
 
 	/* Gravis Ultrasound SBOS/MEGA-EM don't handle auto-init 1.xx very well.
