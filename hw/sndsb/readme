@@ -78,19 +78,20 @@ TABLE OF SUPPORTED CARDS
 Creative Sound Blaster 1.5 (CT1320C)                        LIKELY
 Creative Sound Blaster 2.0 (CT1350)                         YES
 Creative Sound Blaster Pro (CT1330)                         LIKELY
-Creative Sound Blaster Pro 2 (CT16x0)                       LIKELY
-Creative Sound Blaster 16                                   LIKELY
-Creative Sound Blaster 16 ViBRA                             LIKELY
+Creative Sound Blaster Pro 2 (CT16x0)                       YES
+Creative Sound Blaster 16                                   YES
+Creative Sound Blaster 16 ViBRA                             YES
 Creative Sound Blaster 16 ViBRA PnP (CTL00F0)               YES PNP
 Creative Sound Blaster 16 ViBRA PnP (CTL0070)               YES PNP
 Creative Sound Blaster AWE64 PnP (CTL00C3)                  YES PNP MORE
 Creative Sound Blaster AWE64 Gold PnP (CTL00B2)             YES PNP MORE
-Creative Sound Blaster Live! Value                          PCI LIKELY SWEMU
+Creative Sound Blaster Live! Value                          PCI YES SWEMU
 Gallant SC-6000, Crystal Semiconductor CS4232               YES HWEMU
 VIA EPIA (????) [LOOK IT UP]                                YES BIOS HWEMU [*VIA EPIA]
 Yamaha OPL3-SAx                                             YES HWEMU PNPNC [*1]
 Gravis Ultrasound MAX & SBOS 4.x                            YES SWEMU [*GUS]
 Gravis Ultrasound MAX & MEGA-EM                             YES SWEMU [*GUS]
+Media Vision Pro Audio Spectrum 16 (PAS16 650-0018)         YES
 
 [*GUS] Gravis Ultrasound: The GUS basically pretends to be a Sound Blaster and other
                           components by trapping certain I/O ports and reflecting to

@@ -4385,7 +4385,8 @@ int main(int argc,char **argv) {
 		//   - Pro Audio Spectrum cards will have occasional pops and crackles (confirmed on PAS16)
 		if (dma_autoinit_override) cx->dsp_autoinit_dma_override = 1;
 
-		// having IRQ and DMA changes the ideal playback method
+		// having IRQ and DMA changes the ideal playback method and capabilities
+		sndsb_update_capabilities(cx);
 		sndsb_determine_ideal_dsp_play_method(cx);
 	}
 

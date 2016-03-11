@@ -306,6 +306,7 @@ unsigned int sndsb_ess_set_extended_mode(struct sndsb_ctx *cx,int enable);
 int sndsb_ess_read_controller(struct sndsb_ctx *cx,int reg);
 int sndsb_ess_write_controller(struct sndsb_ctx *cx,int reg,unsigned char value);
 void sndsb_irq_continue(struct sndsb_ctx *cx,unsigned char c);
+void sndsb_update_capabilities(struct sndsb_ctx *cx);
 unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx);
 
 const struct sndsb_mixer_control *sndsb_get_mixer_controls(struct sndsb_ctx *card,signed short *count,signed char override);

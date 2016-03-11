@@ -240,12 +240,21 @@ void sndsb_update_capabilities(struct sndsb_ctx *cx) {
 		cx->dsp_autoinit_command = cx->dsp_autoinit_dma = 0;
 
 	/* if we did not obtain an IRQ, and we are not using auto-init mode, then we can
-	 * manage playback by borrowing a trick from Crystal Dream by "nagging" the DSP to keep playing. */
+	 * manage playback by borrowing a trick from Crystal Dream by "nagging" the DSP to keep playing.
+	 * do not use nag mode with an IRQ.
+	 *
+	 * Notes:
+	 *   - Pro Audio Spectrum cards treat reading port 0x22E as both an acknowledgement AND as a sign
+	 *     to tell the DSP to stop (completion of a DSP block). Nag mode will cause audio playback to
+	 *     run too fast on these cards. */
 	if (cx->irq < 0) {
 		if (cx->dsp_autoinit_command)
 			cx->dsp_nag_mode = 0;
 		else
 			cx->dsp_nag_mode = 1;
+	}
+	else {
+		cx->dsp_nag_mode = 0;
 	}
 }
 
