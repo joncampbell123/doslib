@@ -903,9 +903,6 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return;
 	ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
 
-	if (!cx->chose_autoinit_dma)
-		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
-
 	/* FIXME: Can we remove this now? This is stupid. The sound card fired the IRQ because the DMA
 	 *        byte count overflowed. This probably happened because I was not aware at the time
 	 *        what happens when IRQ handlers call other subroutines on the stack. This is extra I/O
@@ -958,6 +955,7 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 
 		cx->buffer_dma_started = npos;
 		cx->buffer_dma_started_length = lv = rem - npos;
+		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 		if (cx->backwards)
 			d8237_write_base(ch,cx->buffer_phys+cx->buffer_dma_started+cx->buffer_dma_started_length-1); /* RAM location with not much around */
 		else
