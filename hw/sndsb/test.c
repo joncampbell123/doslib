@@ -412,7 +412,6 @@ static unsigned char		do_adpcm_ai_warning = 1;
 #endif
 
 static volatile unsigned char	IRQ_anim = 0;
-static volatile unsigned char	sb_irq_count = 0;
 
 #ifdef INCLUDE_FX
 /* effects */
@@ -694,7 +693,7 @@ static void (interrupt *old_irq)() = NULL;
 static void interrupt sb_irq() {
 	unsigned char c;
 
-	sb_irq_count++;
+	sb_card->irq_counter++;
 	if (++IRQ_anim >= 4) IRQ_anim = 0;
 	draw_irq_indicator();
 
@@ -4026,7 +4025,7 @@ void fx_vol_dialog() {
 #endif
 
 int main(int argc,char **argv) {
-	unsigned char sb_irq_pcount = 0;
+	uint32_t sb_irq_pcounter = 0;
 	int i,loop,redraw,bkgndredraw,cc;
 	const struct vga_menu_item *mitem = NULL;
 	unsigned char assume_dma = 0;
@@ -4928,16 +4927,17 @@ int main(int argc,char **argv) {
 			else if (mitem == &main_menu_device_trigger_irq) {
 				unsigned char wp = wav_playing;
 				unsigned int patience=1000;
-				unsigned char pirqc;
+				uint32_t pirqc;
+
 				if (wp) stop_play();
-   				pirqc = sb_irq_count;
+   				pirqc = sb_card->irq_counter;
 				sndsb_write_dsp(sb_card,0xF2);
 /* FIX: Wait for the IRQ to actually fire. Starting playback after sending
    the command also creates an IRQ storm that can crash the machine. */
 				do {
 					if (--patience == 0) break;
 					t8254_wait(t8254_us2ticks(1000));
-				} while (sb_irq_count == pirqc);
+				} while (sb_card->irq_counter == pirqc);
 				if (wp) begin_play();
 			}
 #ifdef SB_MIXER
@@ -4978,8 +4978,8 @@ int main(int argc,char **argv) {
 #endif
 		}
 
-		if (sb_irq_count != sb_irq_pcount) {
-			sb_irq_pcount = sb_irq_count;
+		if (sb_card->irq_counter != sb_irq_pcounter) {
+			sb_irq_pcounter = sb_card->irq_counter;
 			redraw = 1;
 		}
 

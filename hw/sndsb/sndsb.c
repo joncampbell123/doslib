@@ -278,6 +278,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->goldplay_dma = NULL;
 #endif
 	cx->backwards = 0;
+	cx->irq_counter = 0;
 	cx->ess_chipset = 0;
 	cx->dsp_playing = 0;
 	cx->dsp_prepared = 0;

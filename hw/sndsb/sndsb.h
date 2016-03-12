@@ -132,6 +132,7 @@ struct sndsb_ctx {
 								/* ADPCM modes: This becomes "bytes per IRQ" which depending on the ADPCM encoding can be 1/2, 1/3, or 1/4 the sample count. The first ADPCM block is expected to have the reference byte. */
 								/* Sound blaster 1.0 and 2.0: Short intervals may cause playback to audibly pop and stutter, since DSP playback requires reprogramming per block */
 	volatile uint32_t		buffer_last_io;		/* EXTERNAL USE: where the calling program last wrote/read the buffer. prepare_dma sets this to zero, but program maintains it */
+	volatile uint32_t		irq_counter;		/* caller is supposed to increment this per IRQ */
 	unsigned char FAR*		buffer_lin;		/* linear (program accessible pointer) */
 	uint32_t			buffer_phys;
 	char				dsp_copyright[128];
