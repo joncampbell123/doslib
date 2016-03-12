@@ -174,6 +174,10 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		MSG("Direct mode or goldplay mode not recommended\nfor use within a Windows DOS box, it won't work");
 		return 0;
 	}
+	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx && cx->dsp_nag_mode && !cx->dsp_autoinit_dma) {
+		MSG("Nag mode requires auto-init DMA to work properly");
+		return 0;
+	}
 
 	if (wav_stereo && cx->dsp_vmaj < 3) {
 		MSG("You are playing stereo audio on a DSP that doesn't support stereo");
