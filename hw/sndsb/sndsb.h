@@ -145,6 +145,7 @@ struct sndsb_ctx {
 	uint8_t				mega_em:1;		/* Gravis MEGA-EM detected, tread very very carefully */
 	uint8_t				sbos:1;			/* Gravis SBOS */
 	/* options for calling library */
+	uint8_t				always_reset_dsp_to_stop:1;
 	uint8_t				goldplay_mode:1;	/* Goldplay mode: Set DMA transfer length to 1 (2 if stereo) and overwrite the same region of memory from timer.
 								                  An early tracker/sound library released in 1991 called Goldplay does just that, which is why
 										  stuff from the demoscene using that library has compatibility issued on today's hardware.

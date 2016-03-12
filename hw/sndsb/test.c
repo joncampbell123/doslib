@@ -339,6 +339,7 @@
 #endif
 
 static unsigned char assume_dsp_hispeed_doesnt_block = 0;
+static unsigned char always_reset_dsp_to_stop = 0;
 static unsigned char dma_autoinit_override = 0;
 static unsigned char force_dma_probe = 0;
 static unsigned char force_irq_probe = 0;
@@ -3158,6 +3159,7 @@ static void help() {
 	printf(" /fdp                 Force DMA probe\n");
 	printf(" /dmaaio              Allow DMA auto-init override (careful!)\n");
 	printf(" /hinoblk             Assume DSP hispeed modes are non-blocking\n");
+	printf(" /stopres             Always reset DSP to stop playback\n");
 #endif
 
 #if TARGET_MSDOS == 32
@@ -4073,6 +4075,9 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"nd14")) {
 				dma_probe_14 = 0;
 			}
+			else if (!strcmp(a,"stopres")) {
+				always_reset_dsp_to_stop = 1;
+			}
 			else if (!strcmp(a,"hinoblk")) {
 				assume_dsp_hispeed_doesnt_block = 1;
 			}
@@ -4390,6 +4395,7 @@ int main(int argc,char **argv) {
 		//   - Pro Audio Spectrum cards will have occasional pops and crackles (confirmed on PAS16)
 		if (dma_autoinit_override) cx->dsp_autoinit_dma_override = 1;
 		if (assume_dsp_hispeed_doesnt_block) cx->hispeed_blocking = 0;
+		if (always_reset_dsp_to_stop) cx->always_reset_dsp_to_stop = 1;
 
 		// having IRQ and DMA changes the ideal playback method and capabilities
 		sndsb_update_capabilities(cx);

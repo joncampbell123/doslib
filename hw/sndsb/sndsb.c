@@ -297,6 +297,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->windows_creative_sb16_drivers = 0;
 	cx->dsp_autoinit_dma_override = 0;
 	cx->dsp_4xx_fifo_single_cycle = 0;
+	cx->always_reset_dsp_to_stop = 0;
 	cx->windows_9x_me_sbemul_sys = 0;
 	cx->audio_data_flipped_sign = 0;
 	cx->dsp_4xx_fifo_autoinit = 1;
@@ -826,12 +827,61 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 	return 1;
 }
 
+int sndsb_wait_for_dma_to_stop(struct sndsb_ctx *cx) {
+	unsigned int nonmove = 0,patience = 100;
+	uint16_t pr,cr;
+
+	/* wait for the DMA channel to stop moving */
+	if (cx->buffer_16bit)	cr = d8237_read_count(cx->dma16);
+	else			cr = d8237_read_count(cx->dma8);
+	do {
+		if (--patience == 0) break;
+		t8254_wait(t8254_us2ticks(10000)); /* 10ms */
+		pr = cr;
+		if (cx->buffer_16bit)	cr = d8237_read_count(cx->dma16);
+		else			cr = d8237_read_count(cx->dma8);
+		if (pr == cr) nonmove++;
+		else nonmove = 0;
+	} while (nonmove < 3);
+
+	return (patience != 0) ? 1/*success*/ : 0/*failure*/;
+}
+
 int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 	cx->gold_memcpy = 0;
 	cx->dsp_stopping = 1;
 	cx->windows_springwait = 0;
 	cx->timer_tick_func = NULL;
-	if (cx->direct_dac_sent_command) {
+
+	if (cx->always_reset_dsp_to_stop) {
+		sndsb_reset_dsp(cx);
+
+		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx)
+			sndsb_write_mixer(cx,0x0E,0); /* enable filter + disable stereo SB Pro */
+	}
+	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) {
+		if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && sndsb_stop_dsp_playback_s_ESS_CB != NULL) {
+			/* ESS audiodrive stop, not using Sound Blaster commands */
+			sndsb_stop_dsp_playback_s_ESS_CB(cx);
+		}
+		else {
+			if (cx->buffer_hispeed && cx->hispeed_blocking)
+				sndsb_reset_dsp(cx); /* SB 2.x and SB Pro DSP hispeed mode needs DSP reset to stop playback */
+			else if (cx->buffer_16bit)
+				sndsb_write_dsp(cx,0xD5); /* Halt 16-bit DMA */
+			else
+				sndsb_write_dsp(cx,0xD0); /* Halt 8-bit DMA */
+
+			if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+				if (cx->dsp_record) sndsb_write_dsp(cx,0xA0); /* Disable Stereo Input mode SB Pro */
+				sndsb_write_mixer(cx,0x0E,0); /* enable filter + disable stereo SB Pro */
+			}
+		}
+
+		if (!sndsb_wait_for_dma_to_stop(cx)) sndsb_reset_dsp(cx); /* make it stop */
+		sndsb_shutdown_dma(cx);
+	}
+	else if (cx->direct_dac_sent_command) {
 		if (cx->dsp_record)
 			sndsb_read_dsp(cx);
 		else
@@ -840,43 +890,8 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 		cx->direct_dac_sent_command = 0;
 	}
 
-	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx)
-		sndsb_reset_dsp(cx);
-	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && cx->dsp_record)
-		sndsb_write_dsp(cx,0xA0);
-
-	if ((cx->buffer_16bit && cx->dma16 >= 0) || (!cx->buffer_16bit && cx->dma8 >= 0)) {
-		unsigned int nonmove = 0,patience = 100;
-		uint16_t pr,cr;
-
-		/* wait for the DMA channel to stop moving */
-		if (cx->buffer_16bit)	cr = d8237_read_count(cx->dma16);
-		else			cr = d8237_read_count(cx->dma8);
-		do {
-			if (--patience == 0) break;
-			t8254_wait(t8254_us2ticks(10000)); /* 10ms */
-			pr = cr;
-			if (cx->buffer_16bit)	cr = d8237_read_count(cx->dma16);
-			else			cr = d8237_read_count(cx->dma8);
-			if (pr == cr) nonmove++;
-			else nonmove = 0;
-		} while (nonmove < 3);
-
-		if (patience == 0) /* make it stop, if we failed to stop it */
-			sndsb_reset_dsp(cx);
-	}
-
-	if (cx->dsp_play_method > SNDSB_DSPOUTMETHOD_DIRECT) {
-		sndsb_shutdown_dma(cx);
-		sndsb_write_mixer(cx,0x0E,0);
-	}
-
 	cx->timer_tick_signal = 0;
 	sndsb_write_dsp(cx,0xD3); /* turn off speaker */
-
-	if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && sndsb_stop_dsp_playback_s_ESS_CB != NULL)
-		sndsb_stop_dsp_playback_s_ESS_CB(cx);
-
 	return 1;
 }
 
@@ -891,6 +906,10 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 	if (!cx->chose_autoinit_dma)
 		outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
 
+	/* FIXME: Can we remove this now? This is stupid. The sound card fired the IRQ because the DMA
+	 *        byte count overflowed. This probably happened because I was not aware at the time
+	 *        what happens when IRQ handlers call other subroutines on the stack. This is extra I/O
+	 *        per IRQ that I would like to get rid of. */
 	/* ESS chipsets: I believe the reason non-auto-init DMA+DSP is halting is because
 	 * we first needs to stop DMA on the chip THEN reprogram the DMA controller.
 	 * Perhaps the FIFO is hardwired to refill at all times and reprogramming the
