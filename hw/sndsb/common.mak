@@ -4,7 +4,7 @@ NOW_BUILDING = HW_SNDSB_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    sndsb.c
-OBJS =        $(SUBDIR)$(HPS)sndsb.obj $(SUBDIR)$(HPS)sbmixstr.obj $(SUBDIR)$(HPS)sbadpcm.obj $(SUBDIR)$(HPS)sbmixer.obj $(SUBDIR)$(HPS)sbmixerc.obj $(SUBDIR)$(HPS)sbmixnm.obj $(SUBDIR)$(HPS)sbenvbls.obj $(SUBDIR)$(HPS)sbdspio.obj $(SUBDIR)$(HPS)sbdsprst.obj $(SUBDIR)$(HPS)sbdspver.obj $(SUBDIR)$(HPS)sbtc1.obj $(SUBDIR)$(HPS)sbtc2.obj $(SUBDIR)$(HPS)sbdspcm1.obj $(SUBDIR)$(HPS)sbesscnm.obj $(SUBDIR)$(HPS)sbessreg.obj $(SUBDIR)$(HPS)sbdmabuf.obj $(SUBDIR)$(HPS)sbdspmst.obj $(SUBDIR)$(HPS)sbenum.obj $(SUBDIR)$(HPS)sbenumc.obj $(SUBDIR)$(HPS)sbnmi.obj $(SUBDIR)$(HPS)sbdacio.obj $(SUBDIR)$(HPS)sbgoldio.obj $(SUBDIR)$(HPS)sbsc400.obj $(SUBDIR)$(HPS)sbdspcpr.obj $(SUBDIR)$(HPS)sb16mres.obj $(SUBDIR)$(HPS)sbessprb.obj $(SUBDIR)$(HPS)sbmswinq.obj $(SUBDIR)$(HPS)sbirq.obj $(SUBDIR)$(HPS)sbnag.obj $(SUBDIR)$(HPS)sbcaps.obj $(SUBDIR)$(HPS)sbessply.obj $(SUBDIR)$(HPS)sbpirqc1.obj $(SUBDIR)$(HPS)sbpdmae2.obj $(SUBDIR)$(HPS)sbpdma14.obj
+OBJS =        $(SUBDIR)$(HPS)sndsb.obj $(SUBDIR)$(HPS)sbmixstr.obj $(SUBDIR)$(HPS)sbadpcm.obj $(SUBDIR)$(HPS)sbmixer.obj $(SUBDIR)$(HPS)sbmixerc.obj $(SUBDIR)$(HPS)sbmixnm.obj $(SUBDIR)$(HPS)sbenvbls.obj $(SUBDIR)$(HPS)sbdspio.obj $(SUBDIR)$(HPS)sbdsprst.obj $(SUBDIR)$(HPS)sbdspver.obj $(SUBDIR)$(HPS)sbtc1.obj $(SUBDIR)$(HPS)sbtc2.obj $(SUBDIR)$(HPS)sbdspcm1.obj $(SUBDIR)$(HPS)sbesscnm.obj $(SUBDIR)$(HPS)sbessreg.obj $(SUBDIR)$(HPS)sbdmabuf.obj $(SUBDIR)$(HPS)sbdspmst.obj $(SUBDIR)$(HPS)sbenum.obj $(SUBDIR)$(HPS)sbenumc.obj $(SUBDIR)$(HPS)sbnmi.obj $(SUBDIR)$(HPS)sbdacio.obj $(SUBDIR)$(HPS)sbgoldio.obj $(SUBDIR)$(HPS)sbsc400.obj $(SUBDIR)$(HPS)sbdspcpr.obj $(SUBDIR)$(HPS)sb16mres.obj $(SUBDIR)$(HPS)sbessprb.obj $(SUBDIR)$(HPS)sbmswinq.obj $(SUBDIR)$(HPS)sbirq.obj $(SUBDIR)$(HPS)sbnag.obj $(SUBDIR)$(HPS)sbcaps.obj $(SUBDIR)$(HPS)sbessply.obj $(SUBDIR)$(HPS)sbpirqc1.obj $(SUBDIR)$(HPS)sbpdmae2.obj $(SUBDIR)$(HPS)sbpdma14.obj $(SUBDIR)$(HPS)sbirqtst.obj
 OBJSPNP =     $(SUBDIR)$(HPS)sndsbpnp.obj
 PNPCFG_EXE =  $(SUBDIR)$(HPS)pnpcfg.exe
 
@@ -37,7 +37,7 @@ $(HW_SNDSB_LIB): $(OBJS)
 	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbdspver.obj -+$(SUBDIR)$(HPS)sbtc1.obj    -+$(SUBDIR)$(HPS)sbtc2.obj
 	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbirq.obj    -+$(SUBDIR)$(HPS)sbnag.obj    -+$(SUBDIR)$(HPS)sbcaps.obj
 	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbessply.obj -+$(SUBDIR)$(HPS)sbpirqc1.obj -+$(SUBDIR)$(HPS)sbpdma14.obj
-	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbpdmae2.obj
+	wlib -q -b -c $(HW_SNDSB_LIB) -+$(SUBDIR)$(HPS)sbpdmae2.obj -+$(SUBDIR)$(HPS)sbirqtst.obj
 
 $(HW_SNDSBPNP_LIB): $(OBJSPNP)
 	wlib -q -b -c $(HW_SNDSBPNP_LIB) -+$(SUBDIR)$(HPS)sndsbpnp.obj

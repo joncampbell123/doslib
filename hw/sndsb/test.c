@@ -4926,19 +4926,27 @@ int main(int argc,char **argv) {
 #endif
 			else if (mitem == &main_menu_device_trigger_irq) {
 				unsigned char wp = wav_playing;
-				unsigned int patience=1000;
-				uint32_t pirqc;
+				struct vga_msg_box box;
+				int res;
 
 				if (wp) stop_play();
-   				pirqc = sb_card->irq_counter;
-				sndsb_write_dsp(sb_card,0xF2);
-/* FIX: Wait for the IRQ to actually fire. Starting playback after sending
-   the command also creates an IRQ storm that can crash the machine. */
-				do {
-					if (--patience == 0) break;
-					t8254_wait(t8254_us2ticks(1000));
-				} while (sb_card->irq_counter == pirqc);
+
+				vga_msg_box_create(&box,"Issuing DSP command to test IRQ",0,0);
+				res = sndsb_irq_test(sb_card);
+				vga_msg_box_destroy(&box);
+
 				if (wp) begin_play();
+
+				vga_msg_box_create(&box,(res > 0) ? "IRQ test success" : "IRQ test failed",0,0);
+				while (1) {
+					ui_anim(0);
+					if (kbhit()) {
+						i = getch();
+						if (i == 0) i = getch() << 8;
+						if (i == 13 || i == 27) break;
+					}
+				}
+				vga_msg_box_destroy(&box);
 			}
 #ifdef SB_MIXER
 			else if (mitem == &main_menu_device_mixer_controls) {

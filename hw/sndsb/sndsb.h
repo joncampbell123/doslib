@@ -450,6 +450,7 @@ static inline void sndsb_probe_irq_80(struct sndsb_ctx *cx) {
 void sndsb_probe_dma8_E2(struct sndsb_ctx *cx);
 void sndsb_probe_dma8_14(struct sndsb_ctx *cx);
 void sndsb_probe_dma16(struct sndsb_ctx *cx);
+int sndsb_irq_test(struct sndsb_ctx *cx);
 
 #if TARGET_MSDOS == 32
 int sb_nmi_32_auto_choose_hook();
