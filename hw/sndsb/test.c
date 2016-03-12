@@ -4932,12 +4932,12 @@ int main(int argc,char **argv) {
 				if (wp) stop_play();
 
 				vga_msg_box_create(&box,"Issuing DSP command to test IRQ",0,0);
-				res = sndsb_irq_test(sb_card);
+				res = sndsb_irq_test(sb_card); // -1 test inconclusive 0 = failed 1 = pass */
 				vga_msg_box_destroy(&box);
 
 				if (wp) begin_play();
 
-				vga_msg_box_create(&box,(res > 0) ? "IRQ test success" : "IRQ test failed",0,0);
+				vga_msg_box_create(&box,(res < 0) ? "IRQ test N/A" : ((res > 0) ? "IRQ test success" : "IRQ test failed"),0,0);
 				while (1) {
 					ui_anim(0);
 					if (kbhit()) {
