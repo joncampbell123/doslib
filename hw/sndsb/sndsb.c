@@ -840,20 +840,20 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 		cx->direct_dac_sent_command = 0;
 	}
 
-	/* NTS: As far as I can tell, the best way to stop the sound card is just reset the DSP.
-	 *      The "Exit auto-init" commands don't seem to work */
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx)
 		sndsb_reset_dsp(cx);
-	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_3xx && cx->dsp_record)
+	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && cx->dsp_record)
 		sndsb_write_dsp(cx,0xA0);
 
 	if ((cx->buffer_16bit && cx->dma16 >= 0) || (!cx->buffer_16bit && cx->dma8 >= 0)) {
+		unsigned int nonmove = 0,patience = 100;
 		uint16_t pr,cr;
-		unsigned int nonmove = 0;
+
 		/* wait for the DMA channel to stop moving */
 		if (cx->buffer_16bit)	cr = d8237_read_count(cx->dma16);
 		else			cr = d8237_read_count(cx->dma8);
 		do {
+			if (--patience == 0) break;
 			t8254_wait(t8254_us2ticks(10000)); /* 10ms */
 			pr = cr;
 			if (cx->buffer_16bit)	cr = d8237_read_count(cx->dma16);
@@ -861,6 +861,9 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 			if (pr == cr) nonmove++;
 			else nonmove = 0;
 		} while (nonmove < 3);
+
+		if (patience == 0) /* make it stop, if we failed to stop it */
+			sndsb_reset_dsp(cx);
 	}
 
 	if (cx->dsp_play_method > SNDSB_DSPOUTMETHOD_DIRECT) {
