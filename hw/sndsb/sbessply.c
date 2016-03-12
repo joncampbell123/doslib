@@ -188,6 +188,10 @@ void sndsb_send_buffer_again_s_ESS(struct sndsb_ctx *cx,unsigned long lv) {
 	unsigned short t16;
 	unsigned char b;
 
+	/* stop DMA for a bit */
+	b = sndsb_ess_read_controller(cx,0xB8);
+	sndsb_ess_write_controller(cx,0xB8,b & (~1));
+
 	t16 = -(lv+1);
 	sndsb_ess_write_controller(cx,0xA4,t16); /* DMA transfer count low */
 	sndsb_ess_write_controller(cx,0xA5,t16>>8); /* DMA transfer count high */

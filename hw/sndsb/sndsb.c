@@ -604,6 +604,7 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 
 	/* these methods involve DMA */
 	cx->chose_use_dma = 1;
+
 	/* use auto-init DMA unless for some reason we can't. do not use auto-init DMA if not using auto-init DSP commands.
 	 * however, DSP nag mode requires auto-init DMA to work properly even with single-cycle DSP commands, or else audio will play too fast.
 	 * Goldplay mode also requires auto-init DMA, so that it can repeat the one sample to the sound card over the ISA bus.
@@ -611,14 +612,13 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	/* there are known cases where auto-init DMA with single-cycle DSP causes problems:
 	 *   - Some PCI sound cards with emulation drivers in DOS will act funny (Sound Blaster Live! EMU10K1 SB16 emulation)
 	 *   - Pro Audio Spectrum cards will exhibit occasional pops and crackles between DSP blocks (PAS16) */
-	cx->chose_autoinit_dma = cx->dsp_autoinit_dma && (cx->dsp_autoinit_command || cx->dsp_autoinit_dma_override || cx->dsp_nag_mode || cx->goldplay_mode);
-	cx->chose_autoinit_dsp = cx->dsp_autoinit_command;
-
-	/* Gravis Ultrasound SBOS/MEGA-EM don't handle auto-init 1.xx very well.
-	   the only way to cooperate with their shitty emulation is to strictly
-	   limit DMA count to the IRQ interval and to NOT set the auto-init flag */
-	if (cx->sbos || cx->mega_em)
-		cx->chose_autoinit_dma = cx->chose_autoinit_dsp = 0;
+	if (cx->sbos || cx->mega_em) {
+		cx->chose_autoinit_dma = cx->chose_autoinit_dsp = 0; // except that MEGA-EM and SBOS suck at emulation
+	}
+	else {
+		cx->chose_autoinit_dma = cx->dsp_autoinit_dma && (cx->dsp_autoinit_command || cx->dsp_autoinit_dma_override || cx->dsp_nag_mode || cx->goldplay_mode);
+		cx->chose_autoinit_dsp = cx->dsp_autoinit_command;
+	}
 
 	if (cx->dsp_adpcm > 0) {
 		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
@@ -652,41 +652,26 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 
 		/* DSP 2.01 and higher can do "high-speed" DMA transfers up to 44.1KHz */
 		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_201) {
-			/* NTS: I have a CT1350B card that has audible problems with the ISA bus when driven up to
-			 *      22050Hz in non-hispeed modes (if I have something else run, like reading the floppy
-			 *      drive, the audio "warbles", changing speed periodically). So while Creative suggests
-			 *      enabling hispeed mode for rates 23KHz and above, I think it would be wiser instead
-			 *      to do hispeed mode for 16KHz or higher instead. [1]
-			 *         [DSP v2.2 with no copyright string]
-			 *         [Tested on Pentium MMX 200MHz system with ISA and PCI slots]
-			 *         [Applying fix [1] indeed resolved the audible warbling]
-			 *         [Is this fix needed for any other Sound Blaster products of that era?] */
-			if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) /* ESS 688/1869 use of the extensions it doesn't matter */
-				cx->buffer_hispeed = 0;
-			else if (cx->force_hispeed)
+			if (cx->force_hispeed)
 				cx->buffer_hispeed = 1;
-			else if (cx->dsp_vmaj == 2 && cx->dsp_vmin == 2) /* [1] */
-				cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 8000 : 16000));
 			else
-				cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 13000 : 23000));
-
-			/* DSP 3.xx stereo management */
-			if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
-				/* Sound Blaster Pro requires the "set input mode to mono/stereo" commands if recording,
-				 * and sets mono/stereo mode with a bit defined in a specific mixer register */
-				if (cx->dsp_record) sndsb_write_dsp(cx,cx->buffer_stereo ? 0xA8 : 0xA0);
-				sndsb_write_mixer(cx,0x0E,(cx->buffer_rate >= 15000 ? 0x20 : 0x00) | (cx->buffer_stereo ? 0x02 : 0x00));
-			}
-
-			/* if we need to, transmit block length */
-			if (cx->buffer_hispeed || cx->chose_autoinit_dsp)
-				sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
+				cx->buffer_hispeed = (total_rate >= (cx->dsp_record ? 10000 : 20000));
 		}
 		else {
 			cx->buffer_hispeed = 0;
-			if (cx->chose_autoinit_dsp)
-				sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
 		}
+
+		/* DSP 3.xx stereo management */
+		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+			/* Sound Blaster Pro requires the "set input mode to mono/stereo" commands if recording,
+			 * and sets mono/stereo mode with a bit defined in a specific mixer register */
+			if (cx->dsp_record) sndsb_write_dsp(cx,cx->buffer_stereo ? 0xA8 : 0xA0);
+			sndsb_write_mixer(cx,0x0E,(cx->buffer_rate >= 15000 ? 0x20 : 0x00) | (cx->buffer_stereo ? 0x02 : 0x00));
+		}
+
+		/* if we need to, transmit block length */
+		if (cx->buffer_hispeed || cx->chose_autoinit_dsp)
+			sndsb_write_dsp_blocksize(cx,cx->buffer_irq_interval * (stereo?2:1));
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
 		/* DSP 4.xx management is much simpler here */
@@ -902,22 +887,6 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 	if (cx->dsp_stopping) return;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return;
 	ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
-
-	/* FIXME: Can we remove this now? This is stupid. The sound card fired the IRQ because the DMA
-	 *        byte count overflowed. This probably happened because I was not aware at the time
-	 *        what happens when IRQ handlers call other subroutines on the stack. This is extra I/O
-	 *        per IRQ that I would like to get rid of. */
-	/* ESS chipsets: I believe the reason non-auto-init DMA+DSP is halting is because
-	 * we first needs to stop DMA on the chip THEN reprogram the DMA controller.
-	 * Perhaps the FIFO is hardwired to refill at all times and reprogramming the
-	 * DMA controller THEN twiddling the DMA enable opens a window of opportunity
-	 * for refill to happen at the wrong time? */
-	if (!cx->chose_autoinit_dsp) {
-		if (cx->dsp_adpcm > 0)
-			{ }
-		else if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && sndsb_stop_dsp_playback_s_ESS_CB != NULL)
-			sndsb_stop_dsp_playback_s_ESS_CB(cx);
-	}
 
 	/* if we're doing it the non-autoinit method, then we
 	   also need to update the DMA pointer */
