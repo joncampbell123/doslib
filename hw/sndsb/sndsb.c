@@ -841,8 +841,10 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 	if (cx->always_reset_dsp_to_stop) {
 		sndsb_reset_dsp(cx);
 
-		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx)
+		if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
+			if (cx->dsp_record) sndsb_write_dsp(cx,0xA0); /* Disable Stereo Input mode SB Pro */
 			sndsb_write_mixer(cx,0x0E,0); /* enable filter + disable stereo SB Pro */
+		}
 	}
 	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) {
 		if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && sndsb_stop_dsp_playback_s_ESS_CB != NULL) {
