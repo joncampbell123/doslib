@@ -56,7 +56,7 @@ void sndsb_irq_continue(struct sndsb_ctx *cx,unsigned char c) {
 
 	/* only call send_buffer_again if 8-bit DMA completed
 	   and bit 0 set, or if 16-bit DMA completed and bit 1 set */
-	if ((c & 1) && !cx->buffer_16bit)
+	if ((c & 1) && (!cx->buffer_16bit || cx->ess_extensions))
 		sndsb_send_buffer_again(cx);
 	else if ((c & 2) && cx->buffer_16bit)
 		sndsb_send_buffer_again(cx);
