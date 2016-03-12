@@ -2749,7 +2749,7 @@ static const struct vga_menu_item main_menu_device_mixer_reset =
 	{"Mixer reset",		'r',	0,	0};
 #endif
 static const struct vga_menu_item main_menu_device_trigger_irq =
-	{"Trigger IRQ",		't',	0,	0};
+	{"IRQ test",		't',	0,	0};
 #ifdef SB_MIXER
 static const struct vga_menu_item main_menu_device_mixer_controls =
 	{"Mixer controls",	'm',	0,	0};
