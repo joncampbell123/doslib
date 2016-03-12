@@ -2750,6 +2750,14 @@ static const struct vga_menu_item main_menu_device_mixer_reset =
 #endif
 static const struct vga_menu_item main_menu_device_trigger_irq =
 	{"IRQ test",		't',	0,	0};
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+static const struct vga_menu_item main_menu_device_autoinit_stop =
+	{"Exit auto-init",	'x',	0,	0};
+static const struct vga_menu_item main_menu_device_autoinit_stopcont =
+	{"Exit & continue auto-init",	'o',	0,	0};
+static const struct vga_menu_item main_menu_device_haltcont_dma =
+	{"Halt & continue DMA",	'h',	0,	0};
+#endif
 #ifdef SB_MIXER
 static const struct vga_menu_item main_menu_device_mixer_controls =
 	{"Mixer controls",	'm',	0,	0};
@@ -2779,6 +2787,11 @@ static const struct vga_menu_item* main_menu_device[] = {
 	&main_menu_device_mixer_reset,
 #endif
 	&main_menu_device_trigger_irq,
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+	&main_menu_device_autoinit_stop,
+	&main_menu_device_autoinit_stopcont,
+	&main_menu_device_haltcont_dma,
+#endif
 #ifdef SB_MIXER
 	&main_menu_device_mixer_controls,
 	&main_menu_device_ess_controls,
@@ -4948,6 +4961,90 @@ int main(int argc,char **argv) {
 				}
 				vga_msg_box_destroy(&box);
 			}
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+			else if (mitem == &main_menu_device_haltcont_dma) {
+				struct vga_msg_box box;
+
+				vga_msg_box_create(&box,"Asking to halt DMA. Hit enter to then ask to continue DMA",0,0);
+
+				_cli(); // do not conflict with IRQ handler
+				sndsb_halt_dma(sb_card);
+				_sti();
+
+				while (1) {
+					ui_anim(0);
+					if (kbhit()) {
+						i = getch();
+						if (i == 0) i = getch() << 8;
+						if (i == 13 || i == 27) break;
+					}
+				}
+				vga_msg_box_destroy(&box);
+
+				_cli(); // do not conflict with IRQ handler
+				sndsb_continue_dma(sb_card);
+				_sti();
+			}
+			else if (mitem == &main_menu_device_autoinit_stop || mitem == &main_menu_device_autoinit_stopcont) {
+				unsigned char wp = wav_playing;
+				struct vga_msg_box box;
+
+				vga_msg_box_create(&box,"Asking sound card to exit auto-init mode\nAudio should stop after one IRQ block.\nContinuing auto-init will not work if playback stops",0,0);
+
+				_cli(); // do not conflict with IRQ handler
+				sndsb_exit_autoinit_mode(sb_card);
+				_sti();
+
+				while (1) {
+					ui_anim(0);
+					if (kbhit()) {
+						i = getch();
+						if (i == 0) i = getch() << 8;
+						if (i == 13 || i == 27) break;
+					}
+				}
+				vga_msg_box_destroy(&box);
+
+				if (mitem == &main_menu_device_autoinit_stopcont) {
+					vga_msg_box_create(&box,"Asking sound card to reenter auto-init mode\nIf audio already stopped, then this will not restart it.\nHit enter to next use the continue DMA commands.",0,0);
+
+					_cli(); // do not conflict with IRQ handler
+					sndsb_continue_autoinit_mode(sb_card);
+					_sti();
+
+					while (1) {
+						ui_anim(0);
+						if (kbhit()) {
+							i = getch();
+							if (i == 0) i = getch() << 8;
+							if (i == 13 || i == 27) break;
+						}
+					}
+					vga_msg_box_destroy(&box);
+
+					vga_msg_box_create(&box,"I sent continue DMA commands. Did they work?",0,0);
+
+					_cli(); // do not conflict with IRQ handler
+					sndsb_continue_dma(sb_card);
+					_sti();
+
+					while (1) {
+						ui_anim(0);
+						if (kbhit()) {
+							i = getch();
+							if (i == 0) i = getch() << 8;
+							if (i == 13 || i == 27) break;
+						}
+					}
+					vga_msg_box_destroy(&box);
+				}
+
+				if (wp) {
+					stop_play();
+					begin_play();
+				}
+			}
+#endif
 #ifdef SB_MIXER
 			else if (mitem == &main_menu_device_mixer_controls) {
 				play_with_mixer();

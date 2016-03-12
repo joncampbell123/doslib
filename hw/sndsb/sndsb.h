@@ -451,7 +451,11 @@ void sndsb_probe_dma8_E2(struct sndsb_ctx *cx);
 void sndsb_probe_dma8_14(struct sndsb_ctx *cx);
 void sndsb_probe_dma16(struct sndsb_ctx *cx);
 int sndsb_irq_test(struct sndsb_ctx *cx);
-
+int sndsb_exit_autoinit_mode(struct sndsb_ctx *cx);
+int sndsb_continue_autoinit_mode(struct sndsb_ctx *cx);
+int sndsb_halt_dma(struct sndsb_ctx *cx);
+int sndsb_continue_dma(struct sndsb_ctx *cx);
+	
 #if TARGET_MSDOS == 32
 int sb_nmi_32_auto_choose_hook();
 #endif
