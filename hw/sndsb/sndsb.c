@@ -279,6 +279,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 #endif
 	cx->backwards = 0;
 	cx->ess_chipset = 0;
+	cx->dsp_playing = 0;
+	cx->dsp_prepared = 0;
 	cx->dsp_nag_mode = 0;
 	cx->ess_extensions = 0;
 	cx->dsp_nag_hispeed = 0;
@@ -480,8 +482,10 @@ int sndsb_try_base(uint16_t iobase) {
 int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned char stereo,unsigned char bit16) {
 	unsigned long lm;
 
-	/* TODO: Don't play if already playing */
+	if (cx->dsp_playing)
+		return 0;
 
+	cx->dsp_prepared = 1;
 	cx->chose_use_dma = 0;
 	cx->chose_autoinit_dma = 0;
 	cx->chose_autoinit_dsp = 0;
@@ -498,7 +502,6 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		cx->buffer_hispeed = 0;
 		cx->buffer_dma_started = 0;
 		cx->buffer_last_io = 0;
-		cx->dsp_stopping = 0;
 
 		lm = cx->buffer_size;
 		if (cx->dsp_adpcm == 0) {
@@ -703,6 +706,11 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 }
 
 int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
+	if (!cx->dsp_prepared || cx->dsp_playing)
+		return 0;
+
+	cx->dsp_playing = 1;
+	cx->dsp_prepared = 0;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
 		cx->gold_memcpy = 0;
 		if (cx->dsp_record)
@@ -833,8 +841,12 @@ int sndsb_wait_for_dma_to_stop(struct sndsb_ctx *cx) {
 }
 
 int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
+	if (!cx->dsp_playing)
+		return 0;
+
 	cx->gold_memcpy = 0;
-	cx->dsp_stopping = 1;
+	cx->dsp_playing = 0;
+	cx->dsp_prepared = 0;
 	cx->windows_springwait = 0;
 	cx->timer_tick_func = NULL;
 
@@ -886,7 +898,7 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 	unsigned long lv;
 	unsigned char ch;
 
-	if (cx->dsp_stopping) return;
+	if (!cx->dsp_playing) return;
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) return;
 	ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
 

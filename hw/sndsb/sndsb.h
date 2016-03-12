@@ -118,7 +118,6 @@ struct sndsb_ctx {
 	uint8_t				audio_data_flipped_sign;	/* DSP 4.xx command allows us to specify signed/unsigned */
 	uint8_t				dsp_play_method;
 	uint8_t				dsp_vmaj,dsp_vmin;
-	uint8_t				dsp_stopping;
 	uint8_t				mixer_chip;
 	uint8_t				dsp_record;
 	uint32_t			buffer_size;		/* length of the buffer IN BYTES */
@@ -144,6 +143,8 @@ struct sndsb_ctx {
 	uint8_t				enable_adpcm_autoinit:1;/* Most emulators including DOSBox do not emulate auto-init ADPCM playback */
 	uint8_t				mega_em:1;		/* Gravis MEGA-EM detected, tread very very carefully */
 	uint8_t				sbos:1;			/* Gravis SBOS */
+	uint8_t				dsp_playing:1;
+	uint8_t				dsp_prepared:1;
 	/* options for calling library */
 	uint8_t				always_reset_dsp_to_stop:1;
 	uint8_t				goldplay_mode:1;	/* Goldplay mode: Set DMA transfer length to 1 (2 if stereo) and overwrite the same region of memory from timer.
