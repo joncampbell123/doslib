@@ -764,6 +764,16 @@ of playback. To actually trigger the behavior, you will need to enable
 DSP nag mode, and switch DSP playback into single-cycle mode (where
 by default it is in autoinit mode).
 
+DSP hispeed mode on SB 2.x and SB Pro
+-------------------------------------
+
+On these cards, DSP hispeed mode, normally needed for >= 23KHz mono or
+>= 12KHz stereo, puts the DSP into a mode that does not respond to
+commands, thus it is said to be "blocking". If you want to see whether
+or not it is blocking, you can use /hinoblk to make the library act as
+if it's not, then observe whether the program temporarily hangs when
+attempting to stop DMA.
+
 DSP auto-init vs DMA auto-init
 ------------------------------
 
