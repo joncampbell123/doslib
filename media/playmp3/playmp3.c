@@ -3992,6 +3992,7 @@ int main(int argc,char **argv) {
 	if (autopick >= 0 && autopick != USE_GUS)
 		no_gus = 1;
 
+	cpu_probe();
 	probe_dos();
 	detect_windows();
 	if (!probe_vga()) {
