@@ -867,7 +867,7 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 		else {
 			if (cx->buffer_hispeed && cx->hispeed_blocking)
 				sndsb_reset_dsp(cx); /* SB 2.x and SB Pro DSP hispeed mode needs DSP reset to stop playback */
-			else if (cx->buffer_16bit)
+			else if (cx->buffer_16bit && !cx->ess_extensions && !cx->is_gallant_sc6600)
 				sndsb_write_dsp(cx,0xD5); /* Halt 16-bit DMA */
 			else
 				sndsb_write_dsp(cx,0xD0); /* Halt 8-bit DMA */
