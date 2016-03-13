@@ -139,6 +139,12 @@ HW_FLOPPY_LIB=$(HW_FLOPPY_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)floppy.lib
 HW_FLOPPY_LIB_DEPENDENCIES=
 HW_FLOPPY_LIB_WLINK_LIBRARIES=library $(HW_FLOPPY_LIB)
 
+# HW\DOSBOXID---------------------------------------------------------------------------------
+HW_DOSBOXID_LIB_DIR=$(REL)$(HPS)hw$(HPS)dosboxid
+HW_DOSBOXID_LIB=$(HW_DOSBOXID_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)dosboxid.lib
+HW_DOSBOXID_LIB_DEPENDENCIES=
+HW_DOSBOXID_LIB_WLINK_LIBRARIES=library $(HW_DOSBOXID_LIB)
+
 # HW\ADLIB----------------------------------------------------------------------------------
 HW_ADLIB_LIB_DIR=$(REL)$(HPS)hw$(HPS)adlib
 HW_ADLIB_LIB=$(HW_ADLIB_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)adlib.lib
