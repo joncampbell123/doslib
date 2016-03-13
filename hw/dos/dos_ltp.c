@@ -105,10 +105,15 @@ int dos_ltp_probe() {
 
 				mov	eax,cr3
 				mov	r3,eax
-
-				mov	eax,cr4
-				mov	r4,eax
 			}
+
+			if (cpu_flags & CPU_FLAG_CR4_EXISTS) {
+				__asm {
+					mov	eax,cr4
+					mov	r4,eax
+				}
+			}
+
 			dos_ltp_info.cr0 = r0;
 			dos_ltp_info.cr3 = r3;
 			dos_ltp_info.cr4 = r4;
@@ -212,10 +217,15 @@ uint64_t dos_linear_to_phys(uint32_t linear) {
 
 			mov	eax,cr3
 			mov	r3,eax
-
-			mov	eax,cr4
-			mov	r4,eax
 		}
+
+		if (cpu_flags & CPU_FLAG_CR4_EXISTS) {
+			__asm {
+				mov	eax,cr4
+				mov	r4,eax
+			}
+		}
+
 		dos_ltp_info.cr3 = r3;
 		dos_ltp_info.cr4 = r4;
 	}
