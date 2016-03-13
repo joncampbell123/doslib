@@ -868,15 +868,20 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 			/* NTS: We issue "exit auto-init DMA" and "halt DMA". If we don't, then the Sound Blaster 16 DSP
 			 * will get confused if you play with auto-init DSP commands, then stop and restart with non-auto-init
 			 * DSP commands. We use "exit auto-init DMA" to make it clear the DSP should start again with the
-			 * "auto-init" mode disabled. */
+			 * "auto-init" mode disabled.
+			 *
+			 * Reveal SC400 cards however don't recognize or like the "exit auto-init DMA" commands and playback
+			 * will stop inappropriately from it.
+			 *
+			 * That is why we only issue "exit auto-init" for Creative Sound Blaster 16 cards, never for SC400 */
 			if (cx->buffer_hispeed && cx->hispeed_blocking)
 				sndsb_reset_dsp(cx); /* SB 2.x and SB Pro DSP hispeed mode needs DSP reset to stop playback */
 			else if (cx->buffer_16bit && !cx->ess_extensions && !cx->is_gallant_sc6600) {
-				if (cx->chose_autoinit_dsp && cx->dsp_vmaj == 4) sndsb_write_dsp(cx,0xD9); /* Exit auto-init 16-bit DMA */
+				if (cx->chose_autoinit_dsp && !cx->is_gallant_sc6600 && cx->dsp_vmaj == 4) sndsb_write_dsp(cx,0xD9); /* Exit auto-init 16-bit DMA */
 				sndsb_write_dsp(cx,0xD5); /* Halt 16-bit DMA */
 			}
 			else {
-				if (cx->chose_autoinit_dsp && cx->dsp_vmaj == 4) sndsb_write_dsp(cx,0xDA); /* Exit auto-init 8-bit DMA */
+				if (cx->chose_autoinit_dsp && !cx->is_gallant_sc6600 && cx->dsp_vmaj == 4) sndsb_write_dsp(cx,0xDA); /* Exit auto-init 8-bit DMA */
 				sndsb_write_dsp(cx,0xD0); /* Halt 8-bit DMA */
 			}
 

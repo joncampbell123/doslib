@@ -4613,7 +4613,7 @@ int main(int argc,char **argv) {
 #endif
 			else if (mitem == &main_menu_help_about) {
 				struct vga_msg_box box;
-				vga_msg_box_create(&box,"Sound Blaster test program v1.1 for DOS\n\n(C) 2008-2014 Jonathan Campbell\nALL RIGHTS RESERVED\n"
+				vga_msg_box_create(&box,"Sound Blaster test program v1.2 for DOS\n\n(C) 2008-2016 Jonathan Campbell\nALL RIGHTS RESERVED\n"
 #if TARGET_MSDOS == 32
 					"32-bit protected mode version"
 #elif defined(__LARGE__)
@@ -4963,13 +4963,21 @@ int main(int argc,char **argv) {
 			}
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_device_haltcont_dma) {
+				unsigned char wp = wav_playing;
 				struct vga_msg_box box;
+				int res;
 
 				vga_msg_box_create(&box,"Asking to halt DMA. Hit enter to then ask to continue DMA",0,0);
 
 				_cli(); // do not conflict with IRQ handler
-				sndsb_halt_dma(sb_card);
+				res = sndsb_halt_dma(sb_card);
 				_sti();
+				if (!res) {
+					vga_msg_box_destroy(&box);
+					vga_msg_box_create(&box,"Failed to halt DMA",0,0);
+					stop_play();
+					sndsb_reset_dsp(sb_card);
+				}
 
 				while (1) {
 					ui_anim(0);
@@ -4982,18 +4990,43 @@ int main(int argc,char **argv) {
 				vga_msg_box_destroy(&box);
 
 				_cli(); // do not conflict with IRQ handler
-				sndsb_continue_dma(sb_card);
+				res = sndsb_continue_dma(sb_card);
 				_sti();
+				if (!res) {
+					vga_msg_box_create(&box,"Failed to continue DMA",0,0);
+					stop_play();
+					sndsb_reset_dsp(sb_card);
+
+					while (1) {
+						ui_anim(0);
+						if (kbhit()) {
+							i = getch();
+							if (i == 0) i = getch() << 8;
+							if (i == 13 || i == 27) break;
+						}
+					}
+
+					vga_msg_box_destroy(&box);
+				}
+
+				if (wp) begin_play();
 			}
 			else if (mitem == &main_menu_device_autoinit_stop || mitem == &main_menu_device_autoinit_stopcont) {
 				unsigned char wp = wav_playing;
 				struct vga_msg_box box;
+				int res;
 
 				vga_msg_box_create(&box,"Asking sound card to exit auto-init mode\nAudio should stop after one IRQ block.\nContinuing auto-init will not work if playback stops",0,0);
 
 				_cli(); // do not conflict with IRQ handler
-				sndsb_exit_autoinit_mode(sb_card);
+				res = sndsb_exit_autoinit_mode(sb_card);
 				_sti();
+				if (!res) {
+					vga_msg_box_destroy(&box);
+					vga_msg_box_create(&box,"Failed to exit auto-init DMA",0,0);
+					stop_play();
+					sndsb_reset_dsp(sb_card);
+				}
 
 				while (1) {
 					ui_anim(0);
@@ -5009,8 +5042,14 @@ int main(int argc,char **argv) {
 					vga_msg_box_create(&box,"Asking sound card to reenter auto-init mode\nIf audio already stopped, then this will not restart it.\nHit enter to next use the continue DMA commands.",0,0);
 
 					_cli(); // do not conflict with IRQ handler
-					sndsb_continue_autoinit_mode(sb_card);
+					res = sndsb_continue_autoinit_mode(sb_card);
 					_sti();
+					if (!res) {
+						vga_msg_box_destroy(&box);
+						vga_msg_box_create(&box,"Failed to continue auto-init DMA",0,0);
+						stop_play();
+						sndsb_reset_dsp(sb_card);
+					}
 
 					while (1) {
 						ui_anim(0);
@@ -5025,8 +5064,14 @@ int main(int argc,char **argv) {
 					vga_msg_box_create(&box,"I sent continue DMA commands. Did they work?",0,0);
 
 					_cli(); // do not conflict with IRQ handler
-					sndsb_continue_dma(sb_card);
+					res = sndsb_continue_dma(sb_card);
 					_sti();
+					if (!res) {
+						vga_msg_box_destroy(&box);
+						vga_msg_box_create(&box,"Failed to continue DMA",0,0);
+						stop_play();
+						sndsb_reset_dsp(sb_card);
+					}
 
 					while (1) {
 						ui_anim(0);
