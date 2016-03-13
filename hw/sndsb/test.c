@@ -4,7 +4,21 @@
  *       text for ESS 688 vs ESS 1887, etc.) so the user has more guidance in poking
  *       around those control registers */
 
+/* TODO: Sound Blaster Live! DOS emulation is pretty good Sound Blaster 16 emulation,
+ *       though missing some commands. How do we detect that emulation driver and
+ *       react appropriately? */
+
 /* Notes:
+ *    Sound Blaster Live! EMU10K1 PCI:
+ *       - Emulates a Sound Blaster 16
+ *       - Doesn't support Direct DAC commands (silently ignored)
+ *       - Doesn't support ADPCM playback modes (DMA doesn't even cycle)
+ *       - Playing audio by single cycle reveals that the last little part of the
+ *         buffer will always be skipped by the DSP.
+ *       - Our code thinks (incorrectly) it can change the IRQ/DMA settings of the card.
+ *       - Backwards DMA playback/recording doesn't work (why would it?)
+ *       - Otherwise, it works!
+ *
  *    ESS 688 PnP AudioDrive:
  *       - Plug and Play enumerated from the BIOS on a Sharp laptop (uses IRQ 9?!?)
  *       - Supports most Sound Blaster Pro commands and emulates the mixer
