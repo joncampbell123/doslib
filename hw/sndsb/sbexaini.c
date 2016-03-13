@@ -42,7 +42,7 @@ int sndsb_continue_autoinit_mode(struct sndsb_ctx *cx) {
 	if (!cx->dsp_playing) return 1;
 	if (!cx->chose_autoinit_dsp) return 1;
 	if (cx->buffer_hispeed && cx->hispeed_blocking) return 0;
-	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_1xx) return 1;
+	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx) return 1; // SB16 at least
 
 	/* Note these DSP commands are so little used even DOSBox doesn't implement them! */
 	if (cx->buffer_16bit && !cx->ess_extensions && !cx->is_gallant_sc6600)
