@@ -624,6 +624,11 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		cx->chose_autoinit_dsp = cx->dsp_autoinit_command;
 	}
 
+	/* ESS chipsets need to be kicked out of the extended mode for standard Sound Blaster commands to work.
+	 * Else, audio playback is silent and playback is quirky. */
+	if (cx->ess_extended_mode && (cx->dsp_adpcm > 0 || cx->dsp_play_method != SNDSB_DSPOUTMETHOD_3xx))
+		sndsb_reset_dsp(cx);
+
 	if (cx->dsp_adpcm > 0) {
 		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
 		if (stereo || bit16 || cx->dsp_record || cx->goldplay_mode)
