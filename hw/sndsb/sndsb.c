@@ -590,6 +590,10 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	if (cx->dsp_vmaj >= 4)
 		sndsb_interrupt_ack(cx,3);
 
+	/* ESS audio drive: documentation suggests resetting before starting playback */
+	if (cx->ess_extensions)
+		sndsb_reset_dsp(cx);
+
 	/* NTS: I have an old CT1350 that requires the "speaker on" command
 	 * even for direct command (0x10) audio to work (or else, you get a
 	 * quiet staticky sound that resembles your audio). So while this
@@ -905,6 +909,11 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 
 	cx->timer_tick_signal = 0;
 	sndsb_write_dsp(cx,0xD3); /* turn off speaker */
+
+	/* ESS audio drive: documentation suggests resetting after stopping playback */
+	if (cx->ess_extensions)
+		sndsb_reset_dsp(cx);
+
 	return 1;
 }
 
