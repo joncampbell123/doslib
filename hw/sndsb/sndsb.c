@@ -864,7 +864,7 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 		}
 	}
 	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) {
-		if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && sndsb_stop_dsp_playback_s_ESS_CB != NULL) {
+		if (cx->ess_extensions && cx->dsp_adpcm == 0 && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && sndsb_stop_dsp_playback_s_ESS_CB != NULL) {
 			/* ESS audiodrive stop, not using Sound Blaster commands */
 			sndsb_stop_dsp_playback_s_ESS_CB(cx);
 		}
