@@ -27,7 +27,6 @@
 int sndsb_halt_dma(struct sndsb_ctx *cx) {
 	if (!cx->dsp_playing) return 1;
 	if (cx->goldplay_mode) return 1;
-	if (!cx->chose_autoinit_dsp) return 1;
 	if (cx->buffer_hispeed && cx->hispeed_blocking) return 0;
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_1xx) return 1;
 
@@ -42,7 +41,6 @@ int sndsb_halt_dma(struct sndsb_ctx *cx) {
 int sndsb_continue_dma(struct sndsb_ctx *cx) {
 	if (!cx->dsp_playing) return 1;
 	if (cx->goldplay_mode) return 1;
-	if (!cx->chose_autoinit_dsp) return 1;
 	if (cx->buffer_hispeed && cx->hispeed_blocking) return 0;
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_1xx) return 1;
 
