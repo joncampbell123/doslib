@@ -3,6 +3,14 @@ rel=../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
+dos=1 # MS-DOS
+win30=1 # Windows 3.0
+win31=1 # Windows 3.1
+win32=1 # Windows 9x/NT/XP/Vista/etc.
+win32s=1 # Windows 3.1 + Win32s
+win386=1
+win38631=1
+
 if [ "$1" == "clean" ]; then
 	do_clean
 	rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd

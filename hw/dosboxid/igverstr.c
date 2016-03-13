@@ -32,7 +32,6 @@ int probe_dosbox_id_version_string(char *buf,size_t len) {
 		buf[i++] = c;
 	}
 
-	assert(i < len);
 	buf[i] = 0;
 	return 1;
 }
