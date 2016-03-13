@@ -872,11 +872,11 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 			if (cx->buffer_hispeed && cx->hispeed_blocking)
 				sndsb_reset_dsp(cx); /* SB 2.x and SB Pro DSP hispeed mode needs DSP reset to stop playback */
 			else if (cx->buffer_16bit && !cx->ess_extensions && !cx->is_gallant_sc6600) {
-				if (cx->chose_autoinit_dsp) sndsb_write_dsp(cx,0xD9); /* Exit auto-init 16-bit DMA */
+				if (cx->chose_autoinit_dsp && cx->dsp_vmaj == 4) sndsb_write_dsp(cx,0xD9); /* Exit auto-init 16-bit DMA */
 				sndsb_write_dsp(cx,0xD5); /* Halt 16-bit DMA */
 			}
 			else {
-				if (cx->chose_autoinit_dsp) sndsb_write_dsp(cx,0xDA); /* Exit auto-init 8-bit DMA */
+				if (cx->chose_autoinit_dsp && cx->dsp_vmaj == 4) sndsb_write_dsp(cx,0xDA); /* Exit auto-init 8-bit DMA */
 				sndsb_write_dsp(cx,0xD0); /* Halt 8-bit DMA */
 			}
 
