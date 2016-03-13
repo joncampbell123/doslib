@@ -34,11 +34,6 @@ int sndsb_begin_dsp_playback_s_ESS(struct sndsb_ctx *cx,unsigned short lv) {
 	/* clear IRQ */
 	sndsb_interrupt_ack(cx,3);
 
-	/* need to reset the DSP to kick it into extended mode,
-	 * or the DSP will fail to play audio. FIXME: is the problem
-	 * simply that we shut off the DMA enable bit? */
-	if (!cx->ess_extended_mode) sndsb_reset_dsp(cx);
-
 	b = 0x00; /* DMA disable */
 	b |= (cx->chose_autoinit_dsp) ? 0x04 : 0x00;
 	b |= (cx->dsp_record) ? 0x0A : 0x00; /* [3]=DMA converter in ADC mode [1]=DMA read for ADC */
