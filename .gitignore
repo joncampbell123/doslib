@@ -1,5 +1,6 @@
-\*.bat
-\*.BAT
-\*.map
-\*.MAP
+*.bat
+*.BAT
+*.map
+*.MAP
+tmp.cmd
 
