@@ -15,15 +15,6 @@
 
 #include <hw/dosboxid/iglib.h>
 
-void dosbox_id_debug_message(const char *str) {
-	unsigned char c;
-
-	dosbox_id_write_regsel(DOSBOX_ID_REG_DEBUG_OUT);
-	dosbox_id_reset_latch();
-	while ((c=((unsigned char)(*str++))) != 0U) dosbox_id_write_data_nrl_u8(c);
-	dosbox_id_flush_write();
-}
-
 int main(int argc,char **argv) {
 	char tmp[128];
 

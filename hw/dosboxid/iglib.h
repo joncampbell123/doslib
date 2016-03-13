@@ -58,6 +58,7 @@ int probe_dosbox_id();
 int probe_dosbox_id_version_string(char *buf,size_t len);
 void dosbox_id_write_data_nrl(const uint32_t val);
 void dosbox_id_write_data(const uint32_t val);
+void dosbox_id_debug_message(const char *str);
 
 #endif /* __DOSLIB_HW_IDE_DOSBOXIGLIB_H */
 

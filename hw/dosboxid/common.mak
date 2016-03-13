@@ -4,13 +4,13 @@ NOW_BUILDING = HW_DOSBOXID_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    iglib.c
-OBJS =        $(SUBDIR)$(HPS)iglib.obj $(SUBDIR)$(HPS)igregio.obj $(SUBDIR)$(HPS)igrselio.obj $(SUBDIR)$(HPS)igprobe.obj $(SUBDIR)$(HPS)igreset.obj $(SUBDIR)$(HPS)igrident.obj $(SUBDIR)$(HPS)igverstr.obj
+OBJS =        $(SUBDIR)$(HPS)iglib.obj $(SUBDIR)$(HPS)igregio.obj $(SUBDIR)$(HPS)igrselio.obj $(SUBDIR)$(HPS)igprobe.obj $(SUBDIR)$(HPS)igreset.obj $(SUBDIR)$(HPS)igrident.obj $(SUBDIR)$(HPS)igverstr.obj $(SUBDIR)$(HPS)igdbgmsg.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 
 $(HW_DOSBOXID_LIB): $(OBJS)
-	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)iglib.obj    -+$(SUBDIR)$(HPS)igregio.obj -+$(SUBDIR)$(HPS)igrselio.obj
-	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)igprobe.obj  -+$(SUBDIR)$(HPS)igreset.obj -+$(SUBDIR)$(HPS)igrident.obj
-	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)igverstr.obj
+	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)iglib.obj    -+$(SUBDIR)$(HPS)igregio.obj  -+$(SUBDIR)$(HPS)igrselio.obj
+	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)igprobe.obj  -+$(SUBDIR)$(HPS)igreset.obj  -+$(SUBDIR)$(HPS)igrident.obj
+	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)igverstr.obj -+$(SUBDIR)$(HPS)igdbgmsg.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
