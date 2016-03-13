@@ -79,6 +79,8 @@ int main() {
 		printf(" - Your CPU is currently running in protected mode\n");
 	if (cpu_flags & CPU_FLAG_PROTECTED_MODE_32)
 		printf(" - Your CPU is currently running in 32-bit protected mode\n");
+	if (cpu_flags & CPU_FLAG_CR4_EXISTS)
+		printf(" - CR4 flag exists\n");
 
 	if (cpu_flags & CPU_FLAG_CPUID) {
 		printf(" - With CPUID (Vendor='%s' MaxID=0x%lX)\n",cpu_cpuid_vendor,cpu_cpuid_max);

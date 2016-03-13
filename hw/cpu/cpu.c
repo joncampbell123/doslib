@@ -153,5 +153,9 @@ void cpu_probe() {
 		}
 	}
 #endif
+
+	/* Don't try to read CR4 on pre-Pentium CPUs, it will cause a crash. */
+	if (cpu_basic_level >= 5)
+		cpu_flags |= CPU_FLAG_CR4_EXISTS;
 }
 

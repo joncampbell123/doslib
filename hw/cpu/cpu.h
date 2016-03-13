@@ -137,6 +137,7 @@ extern uint16_t				cpu_tmp1;
  *                          and we can safely use 32-bit registers and hacks. This will always be set for
  *                          Win32 and 32-bit DOS, obviously. If set, PROTECTED_MODE is also set. */
 #define CPU_FLAG_DONT_WRITE_RDTSC	(1 << 6)
+#define CPU_FLAG_CR4_EXISTS		(1 << 7)
 
 void cpu_probe();
 int cpu_basic_probe(); /* external assembly language function */
