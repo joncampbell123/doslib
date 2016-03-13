@@ -15,5 +15,14 @@
 
 #include <hw/dosboxid/iglib.h>
 
-uint16_t dosbox_id_baseio = 0x28U;	// Default ports 0x28 - 0x2B
+int probe_dosbox_id() {
+	uint32_t t;
+
+	if (!dosbox_id_reset()) return 0;
+
+	t = dosbox_id_read_identification();
+	if (t != DOSBOX_ID_IDENTIFICATION) return 0;
+
+	return 1;
+}
 

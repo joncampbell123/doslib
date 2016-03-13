@@ -15,5 +15,9 @@
 
 #include <hw/dosboxid/iglib.h>
 
-uint16_t dosbox_id_baseio = 0x28U;	// Default ports 0x28 - 0x2B
+uint32_t dosbox_id_read_identification() {
+	/* now read the identify register */
+	dosbox_id_write_regsel(DOSBOX_ID_REG_IDENTIFY);
+	return dosbox_id_read_data();
+}
 
