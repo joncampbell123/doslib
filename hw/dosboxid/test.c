@@ -115,7 +115,7 @@ int probe_dosbox_id() {
 	return 1;
 }
 
-int probe_dosbox_version_string(char *buf,size_t len) {
+int probe_dosbox_id_version_string(char *buf,size_t len) {
 	uint32_t tmp;
 	size_t i=0;
 
@@ -155,7 +155,7 @@ int main(int argc,char **argv) {
 	}
 	printf("DOSBox integration device found at I/O port %xh\n",dosbox_id_baseio);
 
-	if (probe_dosbox_version_string(tmp,sizeof(tmp)))
+	if (probe_dosbox_id_version_string(tmp,sizeof(tmp)))
 		printf("DOSBox version string: '%s'\n",tmp);
 	else
 		printf("DOSBox version string N/A\n");
