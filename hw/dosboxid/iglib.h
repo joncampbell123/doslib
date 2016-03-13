@@ -12,6 +12,7 @@ extern uint16_t dosbox_id_baseio;
 #define DOSBOX_ID_COMMAND			(2U)
 
 #define DOSBOX_ID_CMD_RESET_LATCH		(0x00U)
+#define DOSBOX_ID_CMD_FLUSH_WRITE		(0x01U)
 #define DOSBOX_ID_CMD_RESET_INTERFACE		(0xFFU)
 
 #define DOSBOX_ID_RESET_DATA_CODE		(0xD05B0C5UL)
@@ -20,6 +21,9 @@ extern uint16_t dosbox_id_baseio;
 
 #define DOSBOX_ID_REG_IDENTIFY			(0x00000000UL)
 #define DOSBOX_ID_REG_VERSION_STRING		(0x00000002UL)
+
+#define DOSBOX_ID_REG_DEBUG_OUT			(0x0000DEB0UL)
+#define DOSBOX_ID_REG_DEBUG_CLEAR		(0x0000DEB1UL)
 
 /* return value of DOSBOX_ID_REG_IDENTIFY */
 #define DOSBOX_ID_IDENTIFICATION		(0xD05B0740UL)
@@ -30,6 +34,18 @@ static inline void dosbox_id_reset_latch() {
 
 static inline void dosbox_id_reset_interface() {
 	outp(DOSBOX_IDPORT(DOSBOX_ID_COMMAND),DOSBOX_ID_CMD_RESET_INTERFACE);
+}
+
+static inline void dosbox_id_flush_write() {
+	outp(DOSBOX_IDPORT(DOSBOX_ID_COMMAND),DOSBOX_ID_CMD_FLUSH_WRITE);
+}
+
+static inline uint8_t dosbox_id_read_data_nrl_u8() {
+	return inp(DOSBOX_IDPORT(DOSBOX_ID_DATA));
+}
+
+static inline void dosbox_id_write_data_nrl_u8(const unsigned char c) {
+	outp(DOSBOX_IDPORT(DOSBOX_ID_DATA),c);
 }
 
 uint32_t dosbox_id_read_regsel();

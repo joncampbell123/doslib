@@ -16,7 +16,7 @@
 #include <hw/dosboxid/iglib.h>
 
 int probe_dosbox_id_version_string(char *buf,size_t len) {
-	uint32_t tmp;
+	unsigned char c;
 	size_t i=0;
 
 	if (len == 0) return 0;
@@ -26,16 +26,10 @@ int probe_dosbox_id_version_string(char *buf,size_t len) {
 	dosbox_id_write_regsel(DOSBOX_ID_REG_VERSION_STRING);
 	dosbox_id_reset_latch();
 
-	while ((i+4) < len) {
-		tmp = dosbox_id_read_data_nrl();
-		*((uint32_t*)(buf+i)) = tmp;
-		i += 4;
-
-		/* DOSBox-X will stop filling the register at the end of the string.
-		 * The string "ABCDE" would be returned "ABCD" "E\0\0\0". The shortcut
-		 * here is that we can test only the uppermost 8 bits for end of string
-		 * instead of each byte. */
-		if ((tmp >> 24UL) == 0) break;
+	while ((i+1) < len) {
+		c = dosbox_id_read_data_nrl_u8();
+		if (c == 0) break;
+		buf[i++] = c;
 	}
 
 	assert(i < len);
