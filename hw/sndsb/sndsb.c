@@ -865,8 +865,10 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx) {
 			sndsb_stop_dsp_playback_s_ESS_CB(cx);
 		}
 		else {
-			/* NTS: We issue "exit auto-init DMA" and "halt DMA" only because the SB16 DSP will
-			 *      confuse auto-init and single-cycle otherwise if you change between them. */
+			/* NTS: We issue "exit auto-init DMA" and "halt DMA". If we don't, then the Sound Blaster 16 DSP
+			 * will get confused if you play with auto-init DSP commands, then stop and restart with non-auto-init
+			 * DSP commands. We use "exit auto-init DMA" to make it clear the DSP should start again with the
+			 * "auto-init" mode disabled. */
 			if (cx->buffer_hispeed && cx->hispeed_blocking)
 				sndsb_reset_dsp(cx); /* SB 2.x and SB Pro DSP hispeed mode needs DSP reset to stop playback */
 			else if (cx->buffer_16bit && !cx->ess_extensions && !cx->is_gallant_sc6600) {
