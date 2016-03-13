@@ -181,6 +181,7 @@ int sndsb_stop_dsp_playback_s_ESS(struct sndsb_ctx *cx) {
 		sndsb_ess_write_controller(cx,0xB8,b);
 	}
 
+	sndsb_ess_set_extended_mode(cx,0);
 	return 1;
 }
 

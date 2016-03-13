@@ -28,6 +28,7 @@ int sndsb_exit_autoinit_mode(struct sndsb_ctx *cx) {
 	if (!cx->dsp_playing) return 1;
 	if (!cx->chose_autoinit_dsp) return 1;
 	if (cx->buffer_hispeed && cx->hispeed_blocking) return 0; // DSP does not respond to commands in high-speed mode
+	if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) return 0; // ESS audiodrive in extended mode does not support this
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_1xx) return 1;
 
 	if (cx->buffer_16bit && !cx->ess_extensions && !cx->is_gallant_sc6600)
@@ -43,6 +44,7 @@ int sndsb_continue_autoinit_mode(struct sndsb_ctx *cx) {
 	if (!cx->chose_autoinit_dsp) return 1;
 	if (cx->is_gallant_sc6600) return 0; // Reveal SC400 cards do not support Continue auto-init DMA
 	if (cx->buffer_hispeed && cx->hispeed_blocking) return 0; // DSP does not respond to commands in high-speed mode
+	if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) return 0; // ESS audiodrive in extended mode does not support this
 	if (cx->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx) return 1; // SB16 at least
 
 	/* Note these DSP commands are so little used even DOSBox doesn't implement them! */
