@@ -79,7 +79,7 @@ extern const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #if defined(MSDOS) || (defined(WINDOWS) && !defined(WIN32))
 #  define OS_CODE  0x00
 #  if defined(__TURBOC__) || defined(__BORLANDC__)
-#    if (__STDC__ == 1) && (defined(__LARGE__) || defined(__COMPACT__))
+#    if (__STDC__ == 1) && (defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__))
        /* Allow compilation with ANSI keywords only enabled */
        void _Cdecl farfree( void *block );
        void *_Cdecl farmalloc( unsigned long nbytes );
