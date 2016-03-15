@@ -66,12 +66,17 @@ use16
   %define retnative retf
   %define cdecl_param_offset 6	; RETF addr + PUSH BP
  %else
-  %ifidni MMODE,m
+  %ifidni MMODE,h
    %define retnative retf
    %define cdecl_param_offset 6	; RETF addr + PUSH BP
   %else
-   %define retnative ret
-   %define cdecl_param_offset 4	; RET addr + PUSH BP
+   %ifidni MMODE,m
+    %define retnative retf
+    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
+   %else
+    %define retnative ret
+    %define cdecl_param_offset 4 ; RET addr + PUSH BP
+   %endif
   %endif
  %endif
 %else
@@ -112,9 +117,14 @@ cpu_basic_probe_:
 ; BUGFIX: Calling near a function that returns far is like taking a long walk off a short pier
 	push		cs
  %else
-  %ifidni MMODE,m
+  %ifidni MMODE,h
 ; BUGFIX: Calling near a function that returns far is like taking a long walk off a short pier
 	push		cs
+  %else
+   %ifidni MMODE,m
+; BUGFIX: Calling near a function that returns far is like taking a long walk off a short pier
+	push		cs
+   %endif
   %endif
  %endif
 %endif

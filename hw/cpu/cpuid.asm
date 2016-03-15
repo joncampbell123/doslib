@@ -28,12 +28,17 @@ use16
   %define retnative retf
   %define cdecl_param_offset 6	; RETF addr + PUSH BP
  %else
-  %ifidni MMODE,m
+  %ifidni MMODE,h
    %define retnative retf
    %define cdecl_param_offset 6	; RETF addr + PUSH BP
   %else
-   %define retnative ret
-   %define cdecl_param_offset 4	; RET addr + PUSH BP
+   %ifidni MMODE,m
+    %define retnative retf
+    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
+   %else
+    %define retnative ret
+    %define cdecl_param_offset 4 ; RET addr + PUSH BP
+   %endif
   %endif
  %endif
 %else
@@ -49,6 +54,10 @@ use16
 global cpu_cpuid_
 cpu_cpuid_:
 %ifidni MMODE,l
+	push	ds
+	push	es
+%endif
+%ifidni MMODE,h
 	push	ds
 	push	es
 %endif
@@ -70,6 +79,11 @@ cpu_cpuid_:
 	or	eax,edx
 
 %ifidni MMODE,l
+	mov	dx,ds
+	mov	es,dx
+	mov	ds,cx
+%endif
+%ifidni MMODE,h
 	mov	dx,ds
 	mov	es,dx
 	mov	ds,cx
@@ -97,6 +111,10 @@ cpu_cpuid_:
 	pop	ax
 	popf
 %ifidni MMODE,l
+	pop	es
+	pop	ds
+%endif
+%ifidni MMODE,h
 	pop	es
 	pop	ds
 %endif
