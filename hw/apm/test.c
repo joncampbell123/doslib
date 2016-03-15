@@ -44,6 +44,8 @@ static void help() {
 	fprintf(stderr,"medium");
 #  elif defined(__COMPACT__)
 	fprintf(stderr,"compact");
+#  elif defined(__HUGE__)
+	fprintf(stderr,"huge");
 #  else
 	fprintf(stderr,"small");
 #  endif

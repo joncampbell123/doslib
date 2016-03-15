@@ -80,7 +80,7 @@ int apm_bios_probe() { /* 8.8 version */
 		xor	bx,bx
 		int	0x15
 		jc	err1
-#if defined(__LARGE__) || defined(__COMPACT__)
+#if defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 		push	ds
 		mov	si,seg apm_bios		; we need DS = segment of apm_bios variable
 		mov	ds,si
@@ -92,7 +92,7 @@ int apm_bios_probe() { /* 8.8 version */
 		mov	byte ptr [si+1],al
 		mov	word ptr [si+2],bx
 		mov	word ptr [si+4],cx
-#if defined(__LARGE__) || defined(__COMPACT__)
+#if defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 		pop	ds
 #endif
 err1:

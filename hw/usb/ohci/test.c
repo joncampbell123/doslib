@@ -948,6 +948,8 @@ void main_menu() {
 					"16-bit real mode (medium model) version"
 #elif defined(__COMPACT__)
 					"16-bit real mode (compact model) version"
+#elif defined(__HUGE__)
+					"16-bit real mode (huge model) version"
 #else
 					"16-bit real mode (small model) version"
 #endif

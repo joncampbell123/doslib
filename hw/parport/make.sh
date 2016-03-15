@@ -4,6 +4,7 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
 dos=1 # MS-DOS
+doshuge=1 # MS-DOS huge
 
 if [ "$1" == "clean" ]; then
 	do_clean
