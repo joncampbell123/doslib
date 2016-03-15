@@ -14,7 +14,7 @@
 #include <hw/vga/vga.h>
 #include <hw/vga/vrl.h>
 
-static inline void draw_vrl_modex_stripystretch(unsigned char far *draw,unsigned char *s,unsigned int ystretch/*10.6 fixed pt*/) {
+static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,unsigned char *s,unsigned int ystretch/*10.6 fixed pt*/) {
 	unsigned char run,skip,b,fy=0;
 
 	do {
@@ -57,7 +57,7 @@ static inline void draw_vrl_modex_stripystretch(unsigned char far *draw,unsigned
 	} while (1);
 }
 
-void draw_vrl_modexystretch(unsigned int x,unsigned int y,unsigned int xstretch/*1/64 scale 10.6 fixed pt*/,unsigned int ystretch/*1/6 scale 10.6*/,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
+void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xstretch/*1/64 scale 10.6 fixed pt*/,unsigned int ystretch/*1/6 scale 10.6*/,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
 	unsigned int vram_offset = (y * vga_stride) + (x >> 2),fx=0;
 	unsigned char vga_plane = (x & 3);
 	unsigned int limit = vga_stride;
@@ -75,7 +75,7 @@ void draw_vrl_modexystretch(unsigned int x,unsigned int y,unsigned int xstretch/
 			if (x >= hdr->width) break;
 			s = data + lineoffs[x];
 		}
-		draw_vrl_modex_stripystretch(draw,s,ystretch);
+		draw_vrl1_vgax_modex_stripystretch(draw,s,ystretch);
 
 		/* end of a vertical strip. next line? */
 		fx += xstretch;

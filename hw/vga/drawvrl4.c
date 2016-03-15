@@ -73,17 +73,17 @@ int main(int argc,char **argv) {
 	}
 
 	/* preprocess the sprite to generate line offsets */
-	vrl_lineoffs = vrl_genlineoffsets(vrl_header,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+	vrl_lineoffs = vrl1_vgax_genlineoffsets(vrl_header,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
 	if (vrl_lineoffs == NULL) return 1;
 
-	draw_vrl_modex(0,0,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+	draw_vrl1_vgax_modex(0,0,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
 	while (getch() != 13);
 
 	{
 		unsigned int i;
 
 		for (i=1;i < 320;i++)
-			draw_vrl_modex(i,0,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+			draw_vrl1_vgax_modex(i,0,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
 	}
 	while (getch() != 13);
 
@@ -91,7 +91,7 @@ int main(int argc,char **argv) {
 		unsigned int i;
 
 		for (i=1;i < 200;i++)
-			draw_vrl_modex(i,i,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+			draw_vrl1_vgax_modex(i,i,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
 	}
 	while (getch() != 13);
 
@@ -99,14 +99,14 @@ int main(int argc,char **argv) {
 		unsigned int i;
 
 		for (i=(2 << 6)/*200%*/;i >= (1 << 4)/*25%*/;i--)
-			draw_vrl_modexstretch(0,0,i,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+			draw_vrl1_vgax_modexstretch(0,0,i,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
 	}
 	while (getch() != 13);
 	{
 		unsigned int i;
 
 		for (i=(2 << 6)/*200%*/;i >= (1 << 4)/*25%*/;i--)
-			draw_vrl_modexystretch(0,0,i,i,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+			draw_vrl1_vgax_modexystretch(0,0,i,i,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
 	}
 	while (getch() != 13);
 

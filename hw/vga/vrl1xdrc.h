@@ -1,5 +1,5 @@
 
-static inline void draw_vrl_modex_strip(unsigned char far *draw,unsigned char far *s) {
+static inline void draw_vrl1_vgax_modex_strip(unsigned char far *draw,unsigned char far *s) {
 	const unsigned char stride = vga_stride;
 
 	__asm {

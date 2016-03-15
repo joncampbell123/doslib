@@ -15,7 +15,7 @@
 #include <hw/vga/vrl.h>
 #include <hw/vga/vrl1xdrc.h>
 
-void draw_vrl_modex(unsigned int x,unsigned int y,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
+void draw_vrl1_vgax_modex(unsigned int x,unsigned int y,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
 	unsigned int vram_offset = (y * vga_stride) + (x >> 2),sx;
 	unsigned char vga_plane = (x & 3);
 	unsigned char far *draw;
@@ -26,7 +26,7 @@ void draw_vrl_modex(unsigned int x,unsigned int y,struct vrl1_vgax_header *hdr,v
 		draw = vga_graphics_ram + vram_offset;
 		vga_write_sequencer(0x02/*map mask*/,1 << vga_plane);
 		s = data + lineoffs[sx];
-		draw_vrl_modex_strip(draw,s);
+		draw_vrl1_vgax_modex_strip(draw,s);
 
 		/* end of a vertical strip. next line? */
 		if ((++vga_plane) == 4) {
