@@ -16,9 +16,13 @@
 #include <hw/vga/vrl1xdrc.h>
 
 void draw_vrl1_vgax_modex(unsigned int x,unsigned int y,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
+#if TARGET_MSDOS == 32
+	unsigned char *draw;
+#else
+	unsigned char far *draw;
+#endif
 	unsigned int vram_offset = (y * vga_stride) + (x >> 2),sx;
 	unsigned char vga_plane = (x & 3);
-	unsigned char far *draw;
 	unsigned char *s;
 
 	/* draw one by one */

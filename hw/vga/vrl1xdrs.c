@@ -16,10 +16,14 @@
 #include <hw/vga/vrl1xdrc.h>
 
 void draw_vrl1_vgax_modexstretch(unsigned int x,unsigned int y,unsigned int xstretch/*1/64 scale 10.6 fixed pt*/,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
+#if TARGET_MSDOS == 32
+	unsigned char *draw;
+#else
+	unsigned char far *draw;
+#endif
 	unsigned int vram_offset = (y * vga_stride) + (x >> 2),fx=0;
 	unsigned char vga_plane = (x & 3);
 	unsigned int limit = vga_stride;
-	unsigned char far *draw;
 	unsigned char *s;
 
 	if (limit > hdr->width) limit = hdr->width;

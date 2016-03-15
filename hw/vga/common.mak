@@ -10,7 +10,6 @@ TEST_EXE =     $(SUBDIR)$(HPS)test.exe
 !ifndef TARGET_WINDOWS
 VGA240_EXE =   $(SUBDIR)$(HPS)vga240.exe
 DRAWVRL3_EXE = $(SUBDIR)$(HPS)drawvrl3.exe
-DRAWVRL4_EXE = $(SUBDIR)$(HPS)drawvrl4.exe
 !endif
 !endif
 
@@ -21,6 +20,7 @@ PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
 DRAWVRL2_EXE = $(SUBDIR)$(HPS)drawvrl2.exe
 TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.exe
 TMOTSENG_EXE = $(SUBDIR)$(HPS)tmotseng.exe
+DRAWVRL4_EXE = $(SUBDIR)$(HPS)drawvrl4.exe
 !endif
 
 $(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)herc.obj $(SUBDIR)$(HPS)tseng.obj $(SUBDIR)$(HPS)vgach3c0.obj $(SUBDIR)$(HPS)vgastget.obj $(SUBDIR)$(HPS)vgatxt50.obj $(SUBDIR)$(HPS)vgaclks.obj $(SUBDIR)$(HPS)vgabicur.obj $(SUBDIR)$(HPS)vgasetmm.obj $(SUBDIR)$(HPS)vgarcrtc.obj $(SUBDIR)$(HPS)vgasemo.obj $(SUBDIR)$(HPS)vgaseco.obj $(SUBDIR)$(HPS)vgacrtcc.obj $(SUBDIR)$(HPS)vgacrtcr.obj $(SUBDIR)$(HPS)vgacrtcs.obj $(SUBDIR)$(HPS)vgasplit.obj $(SUBDIR)$(HPS)vgamodex.obj $(SUBDIR)$(HPS)vga9wide.obj $(SUBDIR)$(HPS)vgaalfpl.obj $(SUBDIR)$(HPS)vgaselcs.obj $(SUBDIR)$(HPS)vgastloc.obj $(SUBDIR)$(HPS)vrl1xlof.obj $(SUBDIR)$(HPS)vrl1xdrw.obj $(SUBDIR)$(HPS)vrl1ydrw.obj $(SUBDIR)$(HPS)vrl1xdrs.obj

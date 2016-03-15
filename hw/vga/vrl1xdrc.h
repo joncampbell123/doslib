@@ -1,4 +1,59 @@
 
+#if TARGET_MSDOS == 32
+static inline void draw_vrl1_vgax_modex_strip(unsigned char *draw,unsigned char *s) {
+	const unsigned char stride = vga_stride;
+
+	__asm {
+		push	edx
+		push	ecx
+		push	ebx
+		push	esi
+		push	edi
+		movzx	ebx,stride
+		mov	edx,ebx
+		dec	edx
+		mov	esi,s
+		mov	edi,draw
+		cld
+
+outloop:	lodsb
+		cmp	al,0xFF
+		jz	stoploop
+
+		movzx	ecx,al		; CX = run length
+
+		lodsb			; skip count
+		mul	bl		; AX = stride * skip
+		add	di,ax		; draw += stride * skip
+
+		or	cl,cl		; is the high bit in CL set?
+		jns	copystrip	; if not, then we copy CX bytes	
+
+		; same color strip. next byte is the color to write
+		and	cl,0x7F
+		lodsb
+		jcxz	outloop
+colorloop:	stosb
+		add	edi,edx
+		loop	colorloop
+		jmp	short outloop
+
+		; pixels to copy
+copystrip:	jcxz	outloop
+copyloop:	lodsb
+		stosb
+		add	edi,edx
+		loop	copyloop
+		jmp	short outloop
+
+stoploop:	pop	edi
+		pop	esi
+		pop	ebx
+		pop	ecx
+		pop	edx
+	}
+}
+#else
 static inline void draw_vrl1_vgax_modex_strip(unsigned char far *draw,unsigned char far *s) {
 	const unsigned char stride = vga_stride;
 
@@ -58,4 +113,5 @@ stoploop:	pop	di
 		pop	es
 	}
 }
+#endif
 
