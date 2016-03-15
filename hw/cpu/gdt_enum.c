@@ -70,7 +70,7 @@ int cpu_gdtlib_read_ldtr(uint16_t *sel) {
 #endif
 
 #if TARGET_MSDOS == 16
-# if defined(__LARGE__) || defined(__COMPACT__)
+# if defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 	__asm {
 		.286p
 		push	ds
@@ -105,7 +105,7 @@ int cpu_gdtlib_read_gdtr(struct x86_gdtr *raw) {
 		return 0;
 
 #if TARGET_MSDOS == 16
-# if defined(__LARGE__) || defined(__COMPACT__)
+# if defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 	__asm {
 		.286p
 		push	ds

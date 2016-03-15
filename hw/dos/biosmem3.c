@@ -35,7 +35,7 @@ int _biosmem_size_E820_3(unsigned long *index,struct bios_E820 *nfo) {
 		mov	ebx,idx
 		mov	ecx,24
 		mov	edx,0x534D4150
-#if defined(__LARGE__) || defined(__COMPACT__)
+#if defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 		mov	di,word ptr [nfo+2]	; segment portion of far pointer
 		mov	es,di
 #endif

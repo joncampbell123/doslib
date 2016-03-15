@@ -68,7 +68,7 @@ int main() {
 		psubusb	mm0,[esi+8]
 		movq	[esi+32],mm0
 	}
-#elif defined(__LARGE__) || defined(__COMPACT__)
+#elif defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 	__asm {
 		.686p
 		.mmx

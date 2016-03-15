@@ -65,6 +65,15 @@ make_buildlist() {
 		fi
 	fi
 
+	# huge memory model support
+	if [ x"$doshuge" == x"1" ]; then
+		if [ x"$build_everything" == x"1" ]; then
+			build_list="$build_list dos86h dos286h"
+		else
+			build_list="$build_list dos86h"
+		fi
+	fi
+
 	# some parts can compile as 16-bit OS/2 application code (command line).
 	# Note that OS/2 16-bit means "OS/2 16-bit code for OS/2 1.x or higher".
 	if [ x"$os216" == x"1" ]; then

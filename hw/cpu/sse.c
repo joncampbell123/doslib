@@ -86,7 +86,7 @@ int main() {
 		andps	xmm0,[esi+16]
 		movaps	[esi+32],xmm0
 	}
-#elif defined(__LARGE__) || defined(__COMPACT__)
+#elif defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 	__asm {
 		.686p
 		.xmm
@@ -137,7 +137,7 @@ int main() {
 		mulps	xmm0,[esi+16]
 		movaps	[esi+32],xmm0
 	}
-#elif defined(__LARGE__) || defined(__COMPACT__)
+#elif defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 	__asm {
 		.686p
 		.xmm

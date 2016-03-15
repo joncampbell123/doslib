@@ -67,7 +67,7 @@ uint32_t ntvdm_dosntast_waveOutGetDevCaps(uint32_t uDeviceID,WAVEOUTCAPS *pwoc,u
 		rep		insb
 		popad
 	}
-#elif defined(__LARGE__) || defined(__COMPACT__)
+#elif defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 	__asm {
 		.386p
 		push		es

@@ -74,7 +74,7 @@ static void (interrupt *old_irq0)();
 static volatile unsigned long irq0_ticks=0;
 static volatile unsigned int irq0_cnt=0,irq0_add=0,irq0_max=0;
 
-#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
+#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__))
 static inline unsigned long farptr2phys(unsigned char far *p) { /* take 16:16 pointer convert to physical memory address */
 	return ((unsigned long)FP_SEG(p) << 4UL) + ((unsigned long)FP_OFF(p));
 }
@@ -90,7 +90,7 @@ static inline unsigned char midi_trk_read(struct midi_track *t) {
 	}
 
 	c = *(t->read);
-#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
+#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__))
 	if (FP_OFF(t->read) >= 0xF) /* 16:16 far pointer aware (NTS: Programs reassigning this pointer MUST normalize the FAR pointer) */
 		t->read = MK_FP(FP_SEG(t->read)+0x1,0);
 	else
@@ -117,7 +117,7 @@ void midi_trk_skip(struct midi_track *t,unsigned long len) {
 		midi_trk_end(t);
 		return;
 	}
-#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
+#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__))
 	{
 		unsigned long tt;
 
@@ -703,7 +703,7 @@ int load_midi_file(const char *path) {
 		}
 		else if (!memcmp(tmp,"MTrk",4)) {
 			if (sz == 0UL) continue;
-#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
+#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__))
 			if (sz > (640UL << 10UL)) goto err; /* 640KB */
 #elif TARGET_MSDOS == 32
 			if (sz > (1UL << 20UL)) goto err; /* 1MB */
@@ -711,7 +711,7 @@ int load_midi_file(const char *path) {
 			if (sz > (60UL << 10UL)) goto err; /* 60KB */
 #endif
 			if (tracki >= MIDI_MAX_TRACKS) goto err;
-#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
+#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__))
 			{
 				unsigned segv;
 
@@ -724,7 +724,7 @@ int load_midi_file(const char *path) {
 #endif
 			if (midi_trk[tracki].raw == NULL) goto err;
 			midi_trk[tracki].read = midi_trk[tracki].raw;
-#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
+#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__))
 			{
 				unsigned char far *p = midi_trk[tracki].raw;
 				unsigned long rem = (unsigned long)sz;
@@ -855,7 +855,7 @@ int main(int argc,char **argv) {
 
 	for (i=0;i < MIDI_MAX_TRACKS;i++) {
 		if (midi_trk[i].raw) {
-#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__))
+#if TARGET_MSDOS == 16 && (defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__))
 			_dos_freemem(FP_SEG(midi_trk[i].raw)); /* NTS: Because we allocated with _dos_allocmem */
 #else
 			free(midi_trk[i].raw);
