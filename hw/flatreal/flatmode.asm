@@ -13,12 +13,17 @@
   %define retnative retf
   %define cdecl_param_offset 6	; RETF addr + PUSH BP
  %else
-  %ifidni MMODE,m
+  %ifidni MMODE,h
    %define retnative retf
    %define cdecl_param_offset 6	; RETF addr + PUSH BP
   %else
-   %define retnative ret
-   %define cdecl_param_offset 4	; RET addr + PUSH BP
+   %ifidni MMODE,m
+    %define retnative retf
+    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
+   %else
+    %define retnative ret
+    %define cdecl_param_offset 4 ; RET addr + PUSH BP
+   %endif
   %endif
  %endif
 %else
@@ -31,6 +36,12 @@ segment .data public align=4 class=data
 
 ; NTS: Help NASM put the code segment in the right place for Watcom to link it in properly
 segment text public align=1 class=code
+
+%if TARGET_MSDOS == 32
+bits 32
+%else
+bits 16
+%endif
 
 %if TARGET_MSDOS == 16
 
@@ -98,6 +109,10 @@ _flatrealmode_force_datasel:
 %else
  %ifidni MMODE,c
  %define FARPTR_
+ %else
+  %ifidni MMODE,h
+  %define FARPTR_
+  %endif
  %endif
 %endif
 

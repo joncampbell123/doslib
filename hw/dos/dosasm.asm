@@ -16,6 +16,12 @@ extern _dpmi_pm_cs,_dpmi_pm_ds,_dpmi_pm_es,_dpmi_pm_ss
 
 section .text class=CODE
 
+%if TARGET_MSDOS == 32
+bits 32
+%else
+bits 16
+%endif
+
 ; NTS: If we code 'push ax' and 'popf' for the 16-bit tests in 32-bit protected mode we will screw up the stack pointer and crash
 ;      so we avoid duplicate code by defining 'native' pushf/popf functions and 'result' to ax or eax depending on CPU mode
 %if TARGET_MSDOS == 32
@@ -43,12 +49,17 @@ use16
   %define retnative retf
   %define cdecl_param_offset 6	; RETF addr + PUSH BP
  %else
-  %ifidni MMODE,m
+  %ifidni MMODE,h
    %define retnative retf
    %define cdecl_param_offset 6	; RETF addr + PUSH BP
   %else
-   %define retnative ret
-   %define cdecl_param_offset 4	; RET addr + PUSH BP
+   %ifidni MMODE,m
+    %define retnative retf
+    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
+   %else
+    %define retnative ret
+    %define cdecl_param_offset 4 ; RET addr + PUSH BP
+   %endif
   %endif
  %endif
 %else

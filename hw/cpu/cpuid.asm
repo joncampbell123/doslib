@@ -1,6 +1,12 @@
 
 section .text class=CODE
 
+%if TARGET_MSDOS == 32
+bits 32
+%else
+bits 16
+%endif
+
 ; NTS: If we code 'push ax' and 'popf' for the 16-bit tests in 32-bit protected mode we will screw up the stack pointer and crash
 ;      so we avoid duplicate code by defining 'native' pushf/popf functions and 'result' to ax or eax depending on CPU mode
 %if TARGET_MSDOS == 32

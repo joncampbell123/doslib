@@ -13,12 +13,17 @@
   %define retnative retf
   %define cdecl_param_offset 6	; RETF addr + PUSH BP
  %else
-  %ifidni MMODE,m
+  %ifidni MMODE,h
    %define retnative retf
    %define cdecl_param_offset 6	; RETF addr + PUSH BP
   %else
-   %define retnative ret
-   %define cdecl_param_offset 4	; RET addr + PUSH BP
+   %ifidni MMODE,m
+    %define retnative retf
+    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
+   %else
+    %define retnative ret
+    %define cdecl_param_offset 4 ; RET addr + PUSH BP
+   %endif
   %endif
  %endif
 %else
@@ -26,8 +31,15 @@
  %define cdecl_param_offset 8	; RET addr + PUSH EBP
 %endif
 
+
 ; NTS: Associate our data with Watcom's data segment
 segment .data public align=4 class=data
+
+%if TARGET_MSDOS == 32
+bits 32
+%else
+bits 16
+%endif
 
 %if TARGET_MSDOS == 16
 ; ext vars

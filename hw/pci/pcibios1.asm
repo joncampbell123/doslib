@@ -14,6 +14,12 @@ extern _pci_bios_interface_level	; 16-bit
 section .text
 
 %if TARGET_MSDOS == 32
+bits 32
+%else
+bits 16
+%endif
+
+%if TARGET_MSDOS == 32
 %define point_s esi
 %define result eax
 %define pushan pushad
@@ -43,6 +49,9 @@ use16
   %define MMODE_FAR_CALL
  %endif
  %ifidni MMODE,m
+  %define MMODE_FAR_CALL
+ %endif
+ %ifidni MMODE,h
   %define MMODE_FAR_CALL
  %endif
 
