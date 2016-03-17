@@ -19,11 +19,6 @@
 #define SNDSB_BIO_DSP_READ_STATUS		0xE
 #define SNDSB_BIO_DSP_READ_STATUS16		0xF
 
-/* 0x3x0 + const = I/O port */
-#define SNDSB_MPUIO_DATA			0x0
-#define SNDSB_MPUIO_COMMAND			0x1
-#define SNDSB_MPUIO_STATUS			0x1
-
 /* DSP versions */
 #define SNDSB_DSPCMD_SPEAKER_ON			0xD1
 #define SNDSB_DSPCMD_SPEAKER_OFF		0xD3
