@@ -144,8 +144,6 @@ int mpu401_try_base(uint16_t iobase) {
 		return 0;
 	}
 
-	/* we NO LONGER auto-probe IRQ and DMA here.
-	 * If the program wants us to do that, there is another call to do so */
 	return 1;
 }
 
