@@ -23,12 +23,9 @@
 #include <math.h>
 #include <dos.h>
 
-#include <hw/vga/vga.h>
 #include <hw/dos/dos.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
 #include <hw/8259/8259.h>
-#include <hw/vga/vgagui.h>
-#include <hw/vga/vgatty.h>
 #include <hw/adlib/adlib.h>
 
 /* one per OPL channel */
@@ -784,10 +781,6 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-	if (!probe_vga()) {
-		printf("Cannot init VGA\n");
-		return 1;
-	}
 	if (!init_adlib()) {
 		printf("Cannot init library\n");
 		return 1;
