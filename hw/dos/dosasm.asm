@@ -7,64 +7,27 @@
 ; This code is licensed under the LGPL.
 ; <insert LGPL legal text here>
 
-section .text class=CODE %segment_use
+; NTS: We use NASM (Netwide Assembler) to achieve our goals here because WASM (Watcom Assembler) sucks.
+;      I'll consider using their assembler when they get a proper conditional macro system in place.
 
-extern _dpmi_entered ; BYTE
-extern _dpmi_entry_point ; DWORD
-extern _dpmi_private_data_segment ; word
-extern _dpmi_rm_entry ; qword
-extern _dpmi_pm_entry ; dword
-extern _dpmi_pm_cs,_dpmi_pm_ds,_dpmi_pm_es,_dpmi_pm_ss
+; handy memory model defines
+%include "_memmodl.inc"
 
-%if TARGET_MSDOS == 32
-bits 32
-%else
-bits 16
-%endif
+; handy defines for watcall handling
+%include "_watcall.inc"
 
-; NTS: If we code 'push ax' and 'popf' for the 16-bit tests in 32-bit protected mode we will screw up the stack pointer and crash
-;      so we avoid duplicate code by defining 'native' pushf/popf functions and 'result' to ax or eax depending on CPU mode
-%if TARGET_MSDOS == 32
- %define point_s esi
- %define result eax
- %define pushfn pushfd
- %define popfn popfd
-use32
-%else
- %define point_s si
- %define result ax
- %define pushfn pushf
- %define popfn popf
-use16
-%endif
+; handy defines for common reg names between 16/32-bit
+%include "_comregn.inc"
 
-%if TARGET_MSDOS == 16
- %ifndef MMODE
-  %error You must specify MMODE variable (memory model) for 16-bit real mode code
- %endif
-%endif
+; extern defs for *.c code
+%include "dos.inc"
 
-%if TARGET_MSDOS == 16
- %ifidni MMODE,l
-  %define retnative retf
-  %define cdecl_param_offset 6	; RETF addr + PUSH BP
- %else
-  %ifidni MMODE,h
-   %define retnative retf
-   %define cdecl_param_offset 6	; RETF addr + PUSH BP
-  %else
-   %ifidni MMODE,m
-    %define retnative retf
-    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
-   %else
-    %define retnative ret
-    %define cdecl_param_offset 4 ; RET addr + PUSH BP
-   %endif
-  %endif
- %endif
-%else
- %define retnative ret
- %define cdecl_param_offset 8	; RET addr + PUSH EBP
+; ---------- CODE segment -----------------
+%include "_segcode.inc"
+
+; NASM won't do it for us... make sure "retnative" is defined
+%ifndef retnative
+ %error retnative not defined
 %endif
 
 %ifndef TARGET_WINDOWS
@@ -363,3 +326,8 @@ l_lin2fm_dst_sel	dw	0
 
  %endif
 %endif
+
+; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
+; else this code will not work correctly
+group DGROUP _DATA
+
