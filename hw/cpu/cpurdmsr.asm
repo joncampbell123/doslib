@@ -1,67 +1,34 @@
+; cpurdmsr.asm
+;
+; RDMSR support for 16-bit code
+; (C) 2009-2012 Jonathan Campbell.
+; Hackipedia DOS library.
+;
+; This code is licensed under the LGPL.
+; <insert LGPL legal text here>
+;
 
-section .text class=CODE %segment_use
+; NTS: We use NASM (Netwide Assembler) to achieve our goals here because WASM (Watcom Assembler) sucks.
+;      I'll consider using their assembler when they get a proper conditional macro system in place.
 
-global cpu_basic_probe_
-extern _cpu_flags
-extern _cpu_tmp1
-extern _cpu_cpuid_max
-; char cpu_v86_active
-; extern _cpu_v86_active
-; char cpu_cpuid_vendor[13];
-extern _cpu_cpuid_vendor
-; struct cpu_cpuid_feature cpu_cpuid_features;
-extern _cpu_cpuid_features
-; NTS: Do NOT define variables here, Watcom or NASM is putting them in the wrong places (like at 0x000!)
+; handy memory model defines
+%include "_memmodl.inc"
 
-%if TARGET_MSDOS == 32
-bits 32
-%else
-bits 16
-%endif
+; handy defines for watcall handling
+%include "_watcall.inc"
 
-; NTS: If we code 'push ax' and 'popf' for the 16-bit tests in 32-bit protected mode we will screw up the stack pointer and crash
-;      so we avoid duplicate code by defining 'native' pushf/popf functions and 'result' to ax or eax depending on CPU mode
-%if TARGET_MSDOS == 32
- %define point_s esi
- %define result eax
- %define pushfn pushfd
- %define popfn popfd
-use32
-%else
- %define point_s si
- %define result ax
- %define pushfn pushf
- %define popfn popf
-use16
-%endif
+; handy defines for common reg names between 16/32-bit
+%include "_comregn.inc"
 
-%if TARGET_MSDOS == 16
- %ifndef MMODE
-  %error You must specify MMODE variable (memory model) for 16-bit real mode code
- %endif
-%endif
+; extern defs for *.c code
+%include "cpu.inc"
 
-%if TARGET_MSDOS == 16
- %ifidni MMODE,l
-  %define retnative retf
-  %define cdecl_param_offset 6	; RETF addr + PUSH BP
- %else
-  %ifidni MMODE,h
-   %define retnative retf
-   %define cdecl_param_offset 6	; RETF addr + PUSH BP
-  %else
-   %ifidni MMODE,m
-    %define retnative retf
-    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
-   %else
-    %define retnative ret
-    %define cdecl_param_offset 4 ; RET addr + PUSH BP
-   %endif
-  %endif
- %endif
-%else
- %define retnative ret
- %define cdecl_param_offset 8	; RET addr + PUSH EBP
+; ---------- CODE segment -----------------
+%include "_segcode.inc"
+
+; NASM won't do it for us... make sure "retnative" is defined
+%ifndef retnative
+ %error retnative not defined
 %endif
 
 %if TARGET_MSDOS == 16
@@ -93,4 +60,8 @@ cpu_rdmsr_:
 	popf
 	retnative
 %endif
+
+; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
+; else this code will not work correctly
+group DGROUP _DATA
 
