@@ -1,12 +1,12 @@
 
+section .text class=CODE %segment_use
+
 extern _dpmi_entered ; BYTE
 extern _dpmi_entry_point ; DWORD
 extern _dpmi_private_data_segment ; word
 extern _dpmi_rm_entry ; qword
 extern _dpmi_pm_entry ; dword
 extern _dpmi_pm_cs,_dpmi_pm_ds,_dpmi_pm_es,_dpmi_pm_ss
-
-section .text class=CODE %segment_use
 
 %if TARGET_MSDOS == 32
 bits 32
