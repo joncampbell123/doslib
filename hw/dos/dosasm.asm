@@ -20,6 +20,7 @@
 %include "_comregn.inc"
 
 ; extern defs for *.c code
+%define this_is dosasm
 %include "dos.inc"
 
 ; ---------- CODE segment -----------------

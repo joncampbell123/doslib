@@ -169,7 +169,3 @@ _flatrealmode_force_datasel_j2:
 		retnative
 %endif
 
-; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
-; else this code will not work correctly
-group DGROUP _DATA
-

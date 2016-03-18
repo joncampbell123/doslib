@@ -11,6 +11,8 @@ extern _dpmi_rm_entry ; qword
 extern _dpmi_pm_entry ; dword
 extern _dpmi_pm_cs,_dpmi_pm_ds,_dpmi_pm_es,_dpmi_pm_ss
 
+%ifidn this_is,dosasm
+%else
 extern l_lin2fm_params
 extern l_lin2fm_param_dst
 extern l_lin2fm_param_lsrc
@@ -19,4 +21,5 @@ extern l_rm_ret
 extern l_rm_reentry
 extern l_lin2fm_src_sel
 extern l_lin2fm_dst_sel
+%endif
 
