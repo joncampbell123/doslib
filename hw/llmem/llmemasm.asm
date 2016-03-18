@@ -1,67 +1,36 @@
+; llmemasm.asm
+;
+; <fixme>
+; (C) 2011-2012 Jonathan Campbell.
+; Hackipedia DOS library.
+;
+; This code is licensed under the LGPL.
+; <insert LGPL legal text here>
 
-; NTS: We use NASM to achieve our goals here because WASM sucks donkey balls
-;      Maybe when they bother to implement a proper conditional macro system, I'll consider it...
+; NTS: We use NASM (Netwide Assembler) to achieve our goals here because WASM (Watcom Assembler) sucks.
+;      I'll consider using their assembler when they get a proper conditional macro system in place.
 
-%if TARGET_MSDOS == 16
- %ifndef MMODE
-  %error You must specify MMODE variable (memory model) for 16-bit real mode code
- %endif
+; handy memory model defines
+%include "_memmodl.inc"
+
+; handy defines for watcall handling
+%include "_watcall.inc"
+
+; handy defines for common reg names between 16/32-bit
+%include "_comregn.inc"
+
+; extern defs for *.c code
+%include "llmem.inc"
+
+; ---------- CODE segment -----------------
+%include "_segcode.inc"
+
+; NASM won't do it for us... make sure "retnative" is defined
+%ifndef retnative
+ %error retnative not defined
 %endif
 
 %if TARGET_MSDOS == 16
- %ifidni MMODE,l
-  %define retnative retf
-  %define cdecl_param_offset 6	; RETF addr + PUSH BP
- %else
-  %ifidni MMODE,h
-   %define retnative retf
-   %define cdecl_param_offset 6	; RETF addr + PUSH BP
-  %else
-   %ifidni MMODE,m
-    %define retnative retf
-    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
-   %else
-    %define retnative ret
-    %define cdecl_param_offset 4 ; RET addr + PUSH BP
-   %endif
-  %endif
- %endif
-%else
- %define retnative ret
- %define cdecl_param_offset 8	; RET addr + PUSH EBP
-%endif
-
-
-; NTS: Associate our data with Watcom's data segment
-segment .data public align=4 class=data %segment_use
-
-%if TARGET_MSDOS == 32
-bits 32
-%else
-bits 16
-%endif
-
-%if TARGET_MSDOS == 16
-; ext vars
-; uint32_t far* near	llmemcpy_gdt = NULL;
-extern _llmemcpy_gdt
-; uint16_t near		llmemcpy_gdtr[4];
-extern _llmemcpy_gdtr
-; uint16_t near		llmemcpy_idtr[4];
-extern _llmemcpy_idtr
-; uint32_t near		llmemcpy_vcpi[0x20];
-extern _llmemcpy_vcpi
-; uint32_t near		llmemcpy_vcpi_return[2];
-extern _llmemcpy_vcpi_return
-; volatile void FAR*	llmemcpy_pagetables = NULL;
-extern _llmemcpy_pagetables
-%endif
-
-; NTS: Help NASM put the code segment in the right place for Watcom to link it in properly
-segment text public align=1 class=code
-
-%if TARGET_MSDOS == 16
-
 global llmem_memcpy_16_inner_pae_
 llmem_memcpy_16_inner_pae_:
 		; save sregs
@@ -187,7 +156,7 @@ _llmem_memcpy_16_inner_pse_vcpi:
 		xor	eax,eax
 		push	eax	; +0
 
-%define extra		16	; +16
+ %define extra		16	; +16
 ; end extra
 		mov	bp,sp
 
@@ -292,7 +261,7 @@ _llmem_memcpy_16_inner_pse_vcpi:
 		add	sp,extra
 		pop	bp
 		retnative
-%undef extra
+ %undef extra
 
 ; alternate version to do PAE llmemcpy when VCPI/EMM386.EXE is active.
 ; void __cdecl llmem_memcpy_16_inner_pae_vcpi(uint32_t dst,uint32_t src,uint32_t cpy);
@@ -326,7 +295,7 @@ _llmem_memcpy_16_inner_pae_vcpi:
 		xor	eax,eax
 		push	eax	; +0
 
-%define extra		20	; +20
+ %define extra		20	; +20
 ; end extra
 		mov	bp,sp
 
@@ -469,6 +438,5 @@ _llmem_memcpy_16_inner_pae_vcpi:
 		add	sp,extra
 		pop	bp
 		retnative
-%undef extra
-
+ %undef extra
 %endif
