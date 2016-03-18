@@ -1,50 +1,33 @@
+; flatmode.asm
+;
+; Flat real mode support routines
+; (C) 2011-2012 Jonathan Campbell.
+; Hackipedia DOS library.
+;
+; This code is licensed under the LGPL.
+; <insert LGPL legal text here>
 
-; NTS: We use NASM to achieve our goals here because WASM sucks donkey balls
-;      Maybe when they bother to implement a proper conditional macro system, I'll consider it...
+; NTS: We use NASM (Netwide Assembler) to achieve our goals here because WASM (Watcom Assembler) sucks.
+;      I'll consider using their assembler when they get a proper conditional macro system in place.
 
-%if TARGET_MSDOS == 16
- %ifndef MMODE
-  %error You must specify MMODE variable (memory model) for 16-bit real mode code
- %endif
+; handy memory model defines
+%include "_memmodl.inc"
+
+; handy defines for watcall handling
+%include "_watcall.inc"
+
+; handy defines for common reg names between 16/32-bit
+%include "_comregn.inc"
+
+; ---------- CODE segment -----------------
+%include "_segcode.inc"
+
+; NASM won't do it for us... make sure "retnative" is defined
+%ifndef retnative
+ %error retnative not defined
 %endif
 
 %if TARGET_MSDOS == 16
- %ifidni MMODE,l
-  %define retnative retf
-  %define cdecl_param_offset 6	; RETF addr + PUSH BP
- %else
-  %ifidni MMODE,h
-   %define retnative retf
-   %define cdecl_param_offset 6	; RETF addr + PUSH BP
-  %else
-   %ifidni MMODE,m
-    %define retnative retf
-    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
-   %else
-    %define retnative ret
-    %define cdecl_param_offset 4 ; RET addr + PUSH BP
-   %endif
-  %endif
- %endif
-%else
- %define retnative ret
- %define cdecl_param_offset 8	; RET addr + PUSH EBP
-%endif
-
-; NTS: Associate our data with Watcom's data segment
-segment .data public align=4 class=data %segment_use
-
-; NTS: Help NASM put the code segment in the right place for Watcom to link it in properly
-segment text public align=1 class=code %segment_use
-
-%if TARGET_MSDOS == 32
-bits 32
-%else
-bits 16
-%endif
-
-%if TARGET_MSDOS == 16
-
 ; int flatrealmode_test()
 global flatrealmode_test_
 flatrealmode_test_:
@@ -91,7 +74,9 @@ _flatrealmode_test_fail:
 		add		sp,6			; throw away IRETF address (IP+CS+FLAGS)
 		inc		ax			; make AX nonzero
 		jmp short	_flatrealmode_test_conclude
+%endif
 
+%if TARGET_MSDOS == 16
 ; void __cdecl flatrealmode_force_datasel(void *ptr);
 global _flatrealmode_force_datasel
 _flatrealmode_force_datasel:
@@ -103,42 +88,20 @@ _flatrealmode_force_datasel:
 		mov		ax,cs
 		mov		word [cs:_flatrealmode_force_datasel_j2_hackme+3],ax		; overwrite segment portion of JMP FAR instruction
 
-; LARGE and COMPACT memory models: a far pointer is passed onto the stack
-%ifidni MMODE,l
-%define FARPTR_
-%else
- %ifidni MMODE,c
- %define FARPTR_
- %else
-  %ifidni MMODE,h
-  %define FARPTR_
-  %endif
- %endif
-%endif
-
-%ifdef FARPTR_
- %undef FARPTR_
+		xor		esi,esi
+		mov		si,[bp+cdecl_param_offset]
+		xor		eax,eax
+ %ifdef MMODE_DATA_VAR_DEF_FAR
 		; LARGE memory model version (we're given a FAR pointer)
 		; caller passes us the address of the constructed GDT (near ptr)
-		xor		esi,esi
-		mov		si,[bp+cdecl_param_offset]
-
-		; now convert to physical addr
-		xor		eax,eax
 		mov		ax,[bp+cdecl_param_offset+2]
-		shl		eax,4
-		add		eax,esi
-%else		; SMALL memory model version (we're given a NEAR pointer)
+ %else		; SMALL memory model version (we're given a NEAR pointer)
 		; caller passes us the address of the constructed GDT (near ptr)
-		xor		esi,esi
-		mov		si,[bp+cdecl_param_offset]
-
-		; now convert to physical addr
-		xor		eax,eax
 		mov		ax,ds
+ %endif
+		; now convert to physical addr
 		shl		eax,4
 		add		eax,esi
-%endif
 
 		; disable interrupts, we're going to fuck with the CPU mode and thunk into protected mode
 		cli
