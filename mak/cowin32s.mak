@@ -88,7 +88,7 @@ CFLAGS386_TO_586= -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$
 # a 686 version of the build flags, so some OBJ files can target Pentium or higher instructions
 CFLAGS386_TO_686= -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bg
 AFLAGS   = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -wx -fp$(CPULEV3F) -$(CPULEV3) -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE)
-NASMFLAGS= -DTARGET_MSDOS=32 -DMSDOS=1 -DTARGET86=$(TARGET86) -DTARGET_WINDOWS=$(TARGET_WINDOWS) -DMMODE=$(MMODE) -Dsegment_use=USE32
+NASMFLAGS= -DTARGET_MSDOS=32 -DMSDOS=1 -DTARGET86=$(TARGET86) -DTARGET_WINDOWS=$(TARGET_WINDOWS) -DMMODE=$(MMODE) -Dsegment_use=USE32 -I$(REL)/asminc/
 
 # NTS: In the Windows 3.1 Win32s world there is no such thing as a console application
 RCFLAGS_CON = $(RCFLAGS)
@@ -109,7 +109,7 @@ CFLAGS386_TO_586_DLL = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx
 # a 686 version of the build flags, so some OBJ files can target Pentium or higher instructions
 CFLAGS386_TO_686_DLL = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6)r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bd
 AFLAGS_DLL = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -wx -fp$(CPULEV3F) -$(CPULEV3) -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET_WINDOWS=$(TARGET_WINDOWS) -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WIN_INCLUDE) -bd
-NASMFLAGS_DLL = -DTARGET_MSDOS=32 -DMSDOS=1 -DTARGET86=$(TARGET86) -DTARGET_WINDOWS=$(TARGET_WINDOWS) -DMMODE=$(MMODE) -Dsegment_use=USE32
+NASMFLAGS_DLL = -DTARGET_MSDOS=32 -DMSDOS=1 -DTARGET86=$(TARGET86) -DTARGET_WINDOWS=$(TARGET_WINDOWS) -DMMODE=$(MMODE) -Dsegment_use=USE32 -I$(REL)/asminc/
 
 !include "$(REL)$(HPS)mak$(HPS)bcommon.mak"
 !include "common.mak"

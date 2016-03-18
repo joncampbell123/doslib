@@ -59,7 +59,7 @@ CFLAGS386_TO_586= -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx 
 # a 686 version of the build flags, so some OBJ files can target Pentium or higher instructions
 CFLAGS386_TO_686= -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6)r -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
 AFLAGS   = -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -wx -fp$(CPULEV3F) -$(CPULEV3) -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
-NASMFLAGS= -DTARGET_MSDOS=32 -DMSDOS=1 -DTARGET86=$(TARGET86) -DMMODE=$(MMODE) -Dsegment_use=USE32
+NASMFLAGS= -DTARGET_MSDOS=32 -DMSDOS=1 -DTARGET86=$(TARGET86) -DMMODE=$(MMODE) -Dsegment_use=USE32 -I$(REL)/asminc/
 
 # NTS: MS-DOS is console based, no difference
 CFLAGS_CON = $(CFLAGS)
