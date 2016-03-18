@@ -11,7 +11,7 @@ extern _pci_bios_hw_characteristics	; 8-bit
 extern _pci_bios_last_bus		; 16-bit
 extern _pci_bios_interface_level	; 16-bit
 
-section .text
+section .text %segment_use
 
 %if TARGET_MSDOS == 32
 bits 32

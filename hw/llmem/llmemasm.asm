@@ -33,7 +33,7 @@
 
 
 ; NTS: Associate our data with Watcom's data segment
-segment .data public align=4 class=data
+segment .data public align=4 class=data %segment_use
 
 %if TARGET_MSDOS == 32
 bits 32

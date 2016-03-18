@@ -1,4 +1,6 @@
 
+section .text class=CODE %segment_use
+
 %if TARGET_MSDOS == 16
  %ifndef TARGET_WINDOWS
 extern _dpmi_pm_cs
@@ -22,8 +24,6 @@ extern _cpu_cpuid_vendor
 ; struct cpu_cpuid_feature cpu_cpuid_features;
 extern _cpu_cpuid_features
 ; NTS: Do NOT define variables here, Watcom or NASM is putting them in the wrong places (like at 0x000!)
-
-section .text class=CODE
 
 %if TARGET_MSDOS == 32
 bits 32

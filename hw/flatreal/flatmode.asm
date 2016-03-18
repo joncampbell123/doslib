@@ -32,10 +32,10 @@
 %endif
 
 ; NTS: Associate our data with Watcom's data segment
-segment .data public align=4 class=data
+segment .data public align=4 class=data %segment_use
 
 ; NTS: Help NASM put the code segment in the right place for Watcom to link it in properly
-segment text public align=1 class=code
+segment text public align=1 class=code %segment_use
 
 %if TARGET_MSDOS == 32
 bits 32

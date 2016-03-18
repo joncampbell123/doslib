@@ -1,5 +1,5 @@
 
-section .text class=CODE
+section .text class=CODE %segment_use
 
 %if TARGET_MSDOS == 32
 bits 32
