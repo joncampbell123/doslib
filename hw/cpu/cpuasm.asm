@@ -8,99 +8,23 @@
 ; <insert LGPL legal text here>
 ;
 
-; FIXME: This needs to provide CPUID for 16-bit real mode code (32-bit versions can use #pragma aux or inline asm)
-
 ; NTS: We use NASM (Netwide Assembler) to achieve our goals here because WASM (Watcom Assembler) sucks.
 ;      I'll consider using their assembler when they get a proper conditional macro system in place.
 
-; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
-; else this code will not work correctly
-%ifidni segment_use,use32
-section _DATA align=4 class=DATA use32
-%else
- %ifidni segment_use,use16
-segment _DATA align=4 class=DATA use16
- %else
-  %error unknown or undefined segment_use
- %endif
-%endif
+; handy memory model defines
+%include "_memmodl.inc"
 
-%if TARGET_MSDOS == 16
- %ifndef TARGET_WINDOWS
-extern _dpmi_pm_cs
-extern _dpmi_pm_ds
-extern _dpmi_pm_ss
-extern _dpmi_pm_es
-extern _dpmi_entered
-extern _dpmi_pm_entry
-extern _dpmi_rm_entry
- %endif
-%endif
+; handy defines for watcall handling
+%include "_watcall.inc"
 
-global cpu_basic_probe_
-extern _cpu_flags
-extern _cpu_tmp1
-extern _cpu_cpuid_max
-extern _cpu_cpuid_vendor ; char cpu_cpuid_vendor[13];
-extern _cpu_cpuid_features ; struct cpu_cpuid_feature cpu_cpuid_features;
-; NTS: Do NOT define variables here, Watcom or NASM is putting them in the wrong places (like at 0x000!)
+; handy defines for common reg names between 16/32-bit
+%include "_comregn.inc"
 
-; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
-; else this code will not work correctly
-%ifidni segment_use,use32
-section _TEXT PARA align=16 class=CODE use32
-%else
- %ifidni segment_use,use16
-segment _TEXT PARA align=16 class=CODE use16
- %else
-  %error unknown or undefined segment_use
- %endif
-%endif
+; extern defs for *.c code
+%include "cpu.inc"
 
-; NTS: If we code 'push ax' and 'popf' for the 16-bit tests in 32-bit protected mode we will screw up the stack pointer and crash
-;      so we avoid duplicate code by defining 'native' pushf/popf functions and 'result' to ax or eax depending on CPU mode
-%if TARGET_MSDOS == 32
- %define point_s esi
- %define result eax
- %define pushfn pushfd
- %define popfn popfd
-use32
-%else
- %define point_s si
- %define result ax
- %define pushfn pushf
- %define popfn popf
-use16
-%endif
-
-%if TARGET_MSDOS == 16
- %ifndef MMODE
-  %error You must specify MMODE variable (memory model) for 16-bit real mode code
- %endif
-%endif
-
-%if TARGET_MSDOS == 16
- %ifidni MMODE,l
-  %define retnative retf
-  %define cdecl_param_offset 6	; RETF addr + PUSH BP
- %else
-  %ifidni MMODE,h
-   %define retnative retf
-   %define cdecl_param_offset 6	; RETF addr + PUSH BP
-  %else
-   %ifidni MMODE,m
-    %define retnative retf
-    %define cdecl_param_offset 6 ; RETF addr + PUSH BP
-   %else
-    %define retnative ret
-    %define cdecl_param_offset 4 ; RET addr + PUSH BP
-   %endif
-  %endif
- %endif
-%else
- %define retnative ret
- %define cdecl_param_offset 8	; RET addr + PUSH EBP
-%endif
+; ---------- CODE segment -----------------
+%include "_segcode.inc"
 
 ; 0 = 8086
 ; 1 = 186
@@ -114,6 +38,7 @@ use16
 
 ; caller is expected to zero cpu_flags prior to calling
 
+global cpu_basic_probe_
 cpu_basic_probe_:
 %if TARGET_MSDOS == 16
 	push		bx
@@ -167,6 +92,7 @@ cpu_basic_probe_:
 cpu_basic_probe_f_:
 
 	; check: is a FPU present?
+	; FIXME: given the Open Watcom issue with 8086 processors, does this have the same problem??
 	fninit
 	mov		word [_cpu_tmp1],0x5A5A
 	fnstsw		word [_cpu_tmp1]
