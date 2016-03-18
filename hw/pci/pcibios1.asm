@@ -1,70 +1,33 @@
+; pcibios1.asm
+;
+; <fixme>
+; (C) 2011-2012 Jonathan Campbell.
+; Hackipedia DOS library.
+;
+; This code is licensed under the LGPL.
+; <insert LGPL legal text here>
 
-; NTS: We use NASM to achieve our goals here because WASM sucks donkey balls
-;      Maybe when they bother to implement a proper conditional macro system, I'll consider it...
+; NTS: We use NASM (Netwide Assembler) to achieve our goals here because WASM (Watcom Assembler) sucks.
+;      I'll consider using their assembler when they get a proper conditional macro system in place.
 
-global try_pci_bios1_
-global try_pci_bios2_
-global _pci_bios_read_dword_16
-global _pci_bios_write_dword_16
-extern _pci_bios_protmode_entry_point	; 32-bit
-extern _pci_bios_hw_characteristics	; 8-bit
-extern _pci_bios_last_bus		; 16-bit
-extern _pci_bios_interface_level	; 16-bit
+; handy memory model defines
+%include "_memmodl.inc"
 
-section .text %segment_use
+; handy defines for watcall handling
+%include "_watcall.inc"
 
-%if TARGET_MSDOS == 32
-bits 32
-%else
-bits 16
-%endif
+; handy defines for common reg names between 16/32-bit
+%include "_comregn.inc"
 
-%if TARGET_MSDOS == 32
-%define point_s esi
-%define result eax
-%define pushan pushad
-%define popan popad
-%define pushfn pushfd
-%define popfn popfd
-use32
-%else
-%define point_s si
-%define result ax
-%define pushan pusha
-%define popan popa
-%define pushfn pushf
-%define popfn popf
-use16
-%endif
+; extern defs for *.c code
+%include "pci.inc"
 
-%if TARGET_MSDOS == 16
- %ifndef MMODE
-  %error You must specify MMODE variable (memory model) for 16-bit real mode code
- %endif
-%endif
+; ---------- CODE segment -----------------
+%include "_segcode.inc"
 
-%if TARGET_MSDOS == 16
- ; large & medium memory models have far pointers for code segments
- %ifidni MMODE,l
-  %define MMODE_FAR_CALL
- %endif
- %ifidni MMODE,m
-  %define MMODE_FAR_CALL
- %endif
- %ifidni MMODE,h
-  %define MMODE_FAR_CALL
- %endif
-
- %ifdef MMODE_FAR_CALL
-  %define retnative retf
-  %define cdecl_param_offset 6	; RETF addr + PUSH BP
- %else
-  %define retnative ret
-  %define cdecl_param_offset 4	; RET addr + PUSH BP
- %endif
-%else
- %define retnative ret
- %define cdecl_param_offset 8	; RET addr + PUSH EBP
+; NASM won't do it for us... make sure "retnative" is defined
+%ifndef retnative
+ %error retnative not defined
 %endif
 
 ; int try_pci_bios2();
@@ -93,10 +56,10 @@ try_pci_bios2_:
 		mov		word [_pci_bios_last_bus],cx
 
 		popan
-		mov		result,1
+		mov		result_reg,1
 		retnative
 fail:		popan
-		xor		result,result
+		xor		result_reg,result_reg
 		retnative
 
 ; int try_pci_bios1();
@@ -110,10 +73,10 @@ try_pci_bios1_:
 		cmp		cx,0x2049
 		jnz		fail2
 		popan
-		mov		result,1
+		mov		result_reg,1
 		retnative
 fail2:		popan
-		xor		result,result
+		xor		result_reg,result_reg
 		retnative
 
 %if TARGET_MSDOS == 16
@@ -164,4 +127,8 @@ _pci_bios_write_dword_16:
 		pop		bp
 		retnative
 %endif
+
+; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
+; else this code will not work correctly
+group DGROUP _DATA
 
