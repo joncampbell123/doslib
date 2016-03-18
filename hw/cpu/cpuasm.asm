@@ -26,6 +26,11 @@
 ; ---------- CODE segment -----------------
 %include "_segcode.inc"
 
+; NASM won't do it for us... make sure "retnative" is defined
+%ifndef retnative
+ %error retnative not defined
+%endif
+
 ; 0 = 8086
 ; 1 = 186
 ; 2 = 286
