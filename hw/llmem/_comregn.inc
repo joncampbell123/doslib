@@ -4,14 +4,16 @@
 %if TARGET_MSDOS == 32
  %define point_s esi
  %define result_reg eax
+ %define pushan pushad
+ %define popan popad
  %define pushfn pushfd
  %define popfn popfd
-use32
 %else
  %define point_s si
  %define result_reg ax
+ %define pushan pusha
+ %define popan popa
  %define pushfn pushf
  %define popfn popf
-use16
 %endif
 
