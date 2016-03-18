@@ -36,8 +36,9 @@
 ; bit 0 = CPUID
 ; bit 1 = FPU
 
-; caller is expected to zero cpu_flags prior to calling
-
+; caller is expected to zero cpu_flags prior to calling.
+; NTS: Even in Large memory model we do not have to worry about whether DS is set to allow us
+;      access to DGROUP, because Watcom emits assembly setting DS = DGROUP for us when calling this function.
 global cpu_basic_probe_
 cpu_basic_probe_:
 %if TARGET_MSDOS == 16
@@ -55,21 +56,9 @@ cpu_basic_probe_:
 	push		edi
 	push		ebp
 %endif
-%if TARGET_MSDOS == 16
- %ifidni MMODE,l
+%ifdef MMODE_CODE_CALL_DEF_FAR
 ; BUGFIX: Calling near a function that returns far is like taking a long walk off a short pier
-	push		cs
- %else
-  %ifidni MMODE,h
-; BUGFIX: Calling near a function that returns far is like taking a long walk off a short pier
-	push		cs
-  %else
-   %ifidni MMODE,m
-; BUGFIX: Calling near a function that returns far is like taking a long walk off a short pier
-	push		cs
-   %endif
-  %endif
- %endif
+	push		cs 
 %endif
 	call		cpu_basic_probe_f_
 %if TARGET_MSDOS == 16
@@ -89,8 +78,8 @@ cpu_basic_probe_:
 %endif
 	retnative
 
+; inner core of the function. outer core takes care of saving regs
 cpu_basic_probe_f_:
-
 	; check: is a FPU present?
 	; FIXME: given the Open Watcom issue with 8086 processors, does this have the same problem??
 	fninit
@@ -113,18 +102,18 @@ no_fpu:
 ;              Skip the 8086 test.
 %if TARGET_MSDOS == 16
 	pushfn
-	pop		result
+	pop		result_reg
 
 	; an 8086 will always set bits 12-15
 	and		ax,0x0FFF
-	push		result
+	push		result_reg
 	popfn
 	pushfn
-	pop		result
+	pop		result_reg
 	and		ax,0xF000
 	cmp		ax,0xF000
 	jnz		test286
-	mov		result,0
+	mov		result_reg,0
 	retnative
 %endif
 
@@ -138,14 +127,14 @@ test286:
 	; a 286 will always clear bits 12-15 (in real mode)
 	pushfn				; save FLAGS
 	or		ax,0xF000
-	push		result
+	push		result_reg
 	popfn
 	pushfn
-	pop		result
+	pop		result_reg
 	popfn				; restore original FLAGS
 	and		ax,0xF000
 	jnz		test386		; if ((val&0xF000) == 0) then AND shouldv'e left ZF=1
-	mov		result,2
+	mov		result_reg,2
 	retnative
 %endif
 
@@ -178,7 +167,7 @@ test386:
 	pop		eax
 	test		eax,0x40000
 	jnz		test486
-	mov		result,3
+	mov		result_reg,3
 	retnative
 
 test486:
@@ -238,7 +227,7 @@ cpuid_as_is:
 	retnative
 
 no_cpuid:
-	mov		result,4
+	mov		result_reg,4
 	retnative
 
 ; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
