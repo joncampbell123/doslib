@@ -15,7 +15,12 @@
 
 #include <hw/dosboxid/iglib.h>
 
-int main(int argc,char **argv) {
+#ifdef TARGET_WINDOWS
+# define WINFCON_STOCK_WIN_MAIN
+# include <hw/dos/winfcon.h>
+#endif
+
+int main(int argc,char **argv,char **envp) {
 	char tmp[128];
 
 	probe_dos();
