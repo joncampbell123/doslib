@@ -13,7 +13,17 @@
 ; NTS: We use NASM (Netwide Assembler) to achieve our goals here because WASM (Watcom Assembler) sucks.
 ;      I'll consider using their assembler when they get a proper conditional macro system in place.
 
-section .text class=CODE %segment_use
+; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
+; else this code will not work correctly
+%ifidni segment_use,use32
+section _DATA align=4 class=DATA use32
+%else
+ %ifidni segment_use,use16
+segment _DATA align=4 class=DATA use16
+ %else
+  %error unknown or undefined segment_use
+ %endif
+%endif
 
 %if TARGET_MSDOS == 16
  %ifndef TARGET_WINDOWS
@@ -31,18 +41,20 @@ global cpu_basic_probe_
 extern _cpu_flags
 extern _cpu_tmp1
 extern _cpu_cpuid_max
-; char cpu_v86_active
-; extern _cpu_v86_active
-; char cpu_cpuid_vendor[13];
-extern _cpu_cpuid_vendor
-; struct cpu_cpuid_feature cpu_cpuid_features;
-extern _cpu_cpuid_features
+extern _cpu_cpuid_vendor ; char cpu_cpuid_vendor[13];
+extern _cpu_cpuid_features ; struct cpu_cpuid_feature cpu_cpuid_features;
 ; NTS: Do NOT define variables here, Watcom or NASM is putting them in the wrong places (like at 0x000!)
 
-%if TARGET_MSDOS == 32
-bits 32
+; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
+; else this code will not work correctly
+%ifidni segment_use,use32
+section _TEXT PARA align=16 class=CODE use32
 %else
-bits 16
+ %ifidni segment_use,use16
+segment _TEXT PARA align=16 class=CODE use16
+ %else
+  %error unknown or undefined segment_use
+ %endif
 %endif
 
 ; NTS: If we code 'push ax' and 'popf' for the 16-bit tests in 32-bit protected mode we will screw up the stack pointer and crash
@@ -302,4 +314,8 @@ cpuid_as_is:
 no_cpuid:
 	mov		result,4
 	retnative
+
+; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
+; else this code will not work correctly
+group DGROUP _DATA
 
