@@ -66,19 +66,16 @@ void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xst
 #else
 	unsigned char far *draw;
 #endif
+	const unsigned int xmax = hdr->width << 6U;
 	unsigned int vram_offset = (y * vga_stride) + (x >> 2),fx=0;
 	unsigned char vga_plane = (x & 3);
 	unsigned char *s;
 
 	/* draw one by one */
-	do {
+	while (fx < xmax) {
 		draw = vga_graphics_ram + vram_offset;
 		vga_write_sequencer(0x02/*map mask*/,1 << vga_plane);
-		{
-			unsigned int x = fx >> 6;
-			if (x >= hdr->width) break;
-			s = data + lineoffs[x];
-		}
+		s = data + lineoffs[fx >> 6U];
 		draw_vrl1_vgax_modex_stripystretch(draw,s,ystretch);
 
 		/* end of a vertical strip. next line? */
@@ -87,6 +84,6 @@ void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xst
 			vram_offset++;
 			vga_plane = 0;
 		}
-	} while(1);
+	}
 }
 
