@@ -119,7 +119,7 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 			else l = (unsigned int)strlen(sci->text);
 			if (l > 78) l = 78;
 			if (w < (l+2)) w = (l+2);
-			if (h < (i+2) && (h+2+row) <= 25) h = i+2;
+			if (h < (i+2) && (i+2+row) <= vga_height) h = i+2;
 		}
 		items = i;
 
