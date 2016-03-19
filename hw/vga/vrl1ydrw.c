@@ -68,10 +68,7 @@ void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xst
 #endif
 	unsigned int vram_offset = (y * vga_stride) + (x >> 2),fx=0;
 	unsigned char vga_plane = (x & 3);
-	unsigned int limit = vga_stride;
 	unsigned char *s;
-
-	if (limit > hdr->width) limit = hdr->width;
 
 	/* draw one by one */
 	do {
@@ -87,7 +84,6 @@ void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xst
 		/* end of a vertical strip. next line? */
 		fx += xstretch;
 		if ((++vga_plane) == 4) {
-			if (--limit == 0) break;
 			vram_offset++;
 			vga_plane = 0;
 		}
