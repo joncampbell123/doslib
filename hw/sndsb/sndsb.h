@@ -7,128 +7,129 @@
 #include <hw/dos/doswin.h>
 #include <stdint.h>
 
-#define SNDSB_MAX_CARDS				4
+#define SNDSB_MAX_CARDS						4
 
+/* Sound Blaster I/O ports */
 /* 0x2x0 + const = I/O port */
-#define SNDSB_BIO_MIXER_INDEX			0x4
-#define SNDSB_BIO_MIXER_DATA			0x5
-#define SNDSB_BIO_DSP_RESET			0x6
-#define SNDSB_BIO_DSP_READ_DATA			0xA
-#define SNDSB_BIO_DSP_WRITE_DATA		0xC
-#define SNDSB_BIO_DSP_WRITE_STATUS		0xC
-#define SNDSB_BIO_DSP_READ_STATUS		0xE
-#define SNDSB_BIO_DSP_READ_STATUS16		0xF
+#define SNDSB_BIO_MIXER_INDEX					0x4
+#define SNDSB_BIO_MIXER_DATA					0x5
+#define SNDSB_BIO_DSP_RESET					0x6
+#define SNDSB_BIO_DSP_READ_DATA					0xA
+#define SNDSB_BIO_DSP_WRITE_DATA				0xC
+#define SNDSB_BIO_DSP_WRITE_STATUS				0xC
+#define SNDSB_BIO_DSP_READ_STATUS				0xE
+#define SNDSB_BIO_DSP_READ_STATUS16				0xF
 
-/* DSP versions */
-#define SNDSB_DSPCMD_DSP_STATUS_SB2		0x04	// DSP Status (SB 2.0 to SB Pro 2)
-#define SNDSB_DSPCMD_DIRECT_DAC_OUT		0x10
-#define SNDSB_DSPCMD_ESS_DIRECT_DAC_OUT_16BIT	0x11	// ESS 1869 16-bit direct DAC output
-#define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT		0x14	// NTS: DOSBox source code mentions a DOS game (Wari) using DSP command 0x15 to do the same?
-#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_16BIT	0x15	// ESS 1869 16-bit DMA out (data rate limit equiv. SB 8-bit)
-#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_2BIT	0x16
-#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_2BIT_REF	0x17
-#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_8BIT	0x1C
-#define SNDSB_DSPCMD_AUTOINIT_ESS_DMA_DAC_OUT_16BIT 0x1D	// See ESS1869 datasheet
-#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_ADPCM_2BIT 0x1F
-#define SNDSB_DSPCMD_DIRECT_DAC_IN		0x20
-#define SNDSB_DSPCMD_ESS_DIRECT_DAC_IN_16BIT	0x21	// See ESS1869 datasheet
-#define SNDSB_DSPCMD_DMA_DAC_IN_8BIT		0x24
-#define SNDSB_DSPCMD_ESS_DMA_DAC_IN_16BIT	0x25	// See ESS1869 datasheet
-#define SNDSB_DSPCMD_DIRECT_DAC_IN_BURST	0x28	// Mentioned in TFM's DSP commands for SB to SB Pro 2. You just read from the DSP until you reset it. Does this work??
-#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_IN_8BIT	0x2C
-#define SNDSB_DSPCMD_AUTOINIT_ESS_DMA_DAC_IN_16BIT 0x2D	// See ESS1869 datasheet
-#define SNDSB_DSPCMD_MIDI_READ_POLL		0x30
-#define SNDSB_DSPCMD_MIDI_READ_INTERRUPT	0x31
-#define SNDSB_DSPCMD_MIDI_READ_TIMESTAMP_POLL	0x32
-#define SNDSB_DSPCMD_MIDI_READ_TIMESTAMP_INTERRUPT 0x33
-#define SNDSB_DSPCMD_MIDI_RW_POLL_UART_MODE	0x34	// all read/write to the DSP is MIDI bytes until reset
-#define SNDSB_DSPCMD_MIDI_RW_INTERRUPT_UART_MODE 0x35	// all read/write to the DSP is MIDI bytes until reset
-#define SNDSB_DSPCMD_MIDI_RW_TIMESTAMP_INTERRUPT_UART_MODE 0x37 // all read/write to the DSP is MIDI bytes until reset
-#define SNDSB_DSPCMD_MIDI_WRITE_POLL		0x38
-#define SNDSB_DSPCMD_SET_TIME_CONSTANT		0x40
-#define SNDSB_DSPCMD_SET_SAMPLE_RATE		0x41	// output sample rate (SB16)
-#define SNDSB_DSPCMD_SET_INPUT_SAMPLE_RATE	0x42	// input sample rate (SB16)
-#define SNDSB_DSPCMD_CONTINUE_AUTOINIT_DMA_8BIT	0x45
-#define SNDSB_DSPCMD_CONTINUE_AUTOINIT_DMA_16BIT 0x47
-#define SNDSB_DSPCMD_SET_DMA_BLOCK_SIZE		0x48
-#define SNDSB_DSPCMD_REVEAL_SC400_WRITE_CONFIG	0x50		// then write a byte that configures IRQ and DMA assignment
-#define SNDSB_DSPCMD_REVEAL_SC400_READ_CONFIG	0x58		// read 3 bytes, two are jumper settings, final byte is config byte
-#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_43BIT 0x64		// ESS1869 ESPCM 4.3-bit playback
-#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_43BIT_REF 0x65	// ESS1869 ESPCM 4.3-bit playback with ref byte
-#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_34BIT 0x66		// ESS1869 ESPCM 3.4-bit playback
-#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_34BIT_REF 0x67	// ESS1869 ESPCM 3.4-bit playback with ref byte
-#define SNDSB_DSPCND_ESS_DMA_DAC_OUT_ESPCM_25BIT 0x6A		// ESS1869 ESPCM 2.5-bit playback
-#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_25BIT_REF 0x6B	// ESS1869 ESPCM 2.5-bit playback with ref byte
-#define SNDSB_DSPCMD_REVEAL_SC400_SET_DSP_VERSION 0x6E		// write two bytes, which become the DSP version reported by DSP command 0xE1
-#define SNDSB_DSPCMD_ESS_DMA_DAC_IN_ESPCM_43BIT	0x6E		// ESS1869 ESPCM 4.3-bit recording
-#define SNDSB_DSPCMD_ESS_DMA_DAC_IN_ESPCM_43BIT_REF 0x6F	// ESS1869 ESPCM 4.3-bit recording with ref byte
-#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT	0x74
-#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT_REF	0x75
-#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_26BIT	0x76	// 2.6-bit ADPCM output
-#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_26BIT_REF 0x77	// 2.6-bit ADPCM output
-#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_ADPCM_4BIT_REF 0x7D
-#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_ADPCM_26BIT_REF 0x7F
-#define SNDSB_DSPCMD_SILENT_BLOCK		0x80
-#define SNDSB_DSPCMD_REVEAL_SC400_MYSTERY_COMMAND_88 0x88	// unknown DSP command used by TESTSC.EXE. No clue what it does.
-#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_8BIT_HISPEED 0x90
-#define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED	0x91
-#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_IN_8BIT_HISPEED 0x98
-#define SNDSB_DSPCMD_DMA_DAC_IN_8BIT_HISPEED	0x99
-#define SNDSB_DSPCMD_ESS_WRITE_REGISTER		0xA0		// ESS audiodrive commands 0xA0-0xBF, next byte goes to ESS register. Yes, it overlaps SB16 and SBPro2 commands here!
-#define SNDSB_DSPCMD_SET_INPUT_MODE_MONO	0xA0
-#define SNDSB_DSPCMD_SET_INPUT_MODE_STEREO	0xA8
-#define SNDSB_DSPCMD_SB16_DMA_DAC_OUT_16BIT	0xB0		// NTS: This is the BASE command value, 0xB0-0xBF use lower 4 bits for record/play, single/auto, fifo enable/disable
-#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_16BIT 0xB6	// NTS: This is command 0xBx with fifo on, autoinit=1, playback
-#define SNDSB_DSPCMD_SB16_DMA_DAC_IN_16BIT	0xB8		// NTS: This is command 0xBx with fifo off, autoinit=0, record
-#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_16BIT 0xBE	// NTS: This is command 0xBx with fifo on, autoinit=1, record
-#define SNDSB_DSPCMD_ESS_READ_REGISTER		0xC0		// ESS audiodrive: next byte says what register to read (same value range as ESS write).
-#define SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT	0xC0		// NTS: This is the BASE command value, 0xC0-0xCF use lower 4 bits for record/play, single/auto, fifo enable/disable
-#define SNDSB_DSPCMD_ESS_RESUME_AFTER_SUSPEND	0xC1		// See ESS1869 datasheet
-#define SNDSB_DSPCMD_ESS_SET_EXTENDED_MODE	0xC6		// ESS audiodrive enable extended mode for ESS commands
-#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT 0xC6	// NTS: This is command 0xCx with fifo on, autoinit=1, playback
-#define SNDSB_DSPCMD_ESS_CLEAR_EXTENDED_MODE	0xC7		// ESS audiodrive clear extended mode
-#define SNDSB_DSPCMD_SB16_DMA_DAC_IN_8BIT	0xC8		// NTS: This is command 0xCx with fifo off, autoinit=0, record
-#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_8BIT 0xCE		// NTS: This is command 0xCx with fifo on, autoinit=1, record
-#define SNDSB_DSPCMD_ESS_READ_GPO01_POWER_MANAGEMENT_REG 0xCE	// See ESS1869 datasheet
-#define SNDSB_DSPCMD_ESS_WRITE_GPO01_POWER_MANAGEMENT_REG 0xCF	// See ESS1869 datasheet
-#define SNDSB_DSPCMD_HALT_DMA_8BIT		0xD0
-#define SNDSB_DSPCMD_SPEAKER_ON			0xD1
-#define SNDSB_DSPCMD_SPEAKER_OFF		0xD3
-#define SNDSB_DSPCMD_CONTINUE_DMA_8BIT		0xD4
-#define SNDSB_DSPCMD_HALT_DMA_16BIT		0xD5
-#define SNDSB_DSPCMD_CONTINUE_DMA_16BIT		0xD6
-#define SNDSB_DSPCMD_ASK_SPEAKER_STATUS		0xD8
-#define SNDSB_DSPCMD_EXIT_AUTOINIT_DMA_16BIT	0xD9
-#define SNDSB_DSPCMD_EXIT_AUTOINIT_DMA_8BIT	0xDA
-#define SNDSB_DSPCMD_ESS_READ_CURRENT_INPUT_GAIN 0xDC		// See ESS1869 datasheet
-#define SNDSB_DSPCMD_ESS_WRITE_CURRENT_INPUT_GAIN 0xDD		// See ESS1869 datasheet
-#define SNDSB_DSPCMD_DSP_IDENTIFY		0xE0
-#define SNDSB_DSPCMD_GET_VERSION		0xE1
-#define SNDSB_DSPCMD_DMA_TEST			0xE2	// it takes the byte you send with this command, uses the bits to sum against an internal register, then writes the results back through DMA
-#define SNDSB_DSPCMD_DSP_COPYRIGHT		0xE3
-#define SNDSB_DSPCMD_WRITE_TEST_REGISTER	0xE4
-#define SNDSB_DSPCMD_REVEAL_SC400_DMA_TEST	0xE6	// SC400 SB clones write 8-byte string 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 via DMA in response
-#define SNDSB_DSPCMD_ESS_GET_VERSION		0xE7	// ESS audiodrive get version
-#define SNDSB_DSPCMD_READ_TEST_REGISTER		0xE8
-#define SNDSB_DSPCMD_SINE_GENERATOR		0xF0	// does this really exist? TFM's DSP commands page says so...
-#define SNDSB_DSPCMD_DSP_AUX_STATUS		0xF1	// SB to SB Pro 2
-#define SNDSB_DSPCMD_TRIGGER_IRQ		0xF2
-#define SNDSB_DSPCMD_TRIGGER_IRQ16		0xF3
-#define SNDSB_DSPCMD_DSP_STATUS_SB16		0xFB
-#define SNDSB_DSPCMD_DSP_AUX_STATUS_SB16	0xFC
-#define SNDSB_DSPCMD_DSP_COMMAND_STATUS_SB16	0xFD
-#define SNDSB_DSPCMD_ESS_FORCE_POWER_DOWN	0xFD	// See ESS1869 datasheet
+/* DSP commands */
+#define SNDSB_DSPCMD_DSP_STATUS_SB2				0x04 // DSP Status (SB 2.0 to SB Pro 2)
+#define SNDSB_DSPCMD_DIRECT_DAC_OUT				0x10
+#define SNDSB_DSPCMD_ESS_DIRECT_DAC_OUT_16BIT			0x11 // ESS 1869 16-bit direct DAC output
+#define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT				0x14 // NTS: DOSBox source code mentions a DOS game (Wari) using DSP command 0x15 to do the same?
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_16BIT			0x15 // ESS 1869 16-bit DMA out (data rate limit equiv. SB 8-bit)
+#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_2BIT			0x16
+#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_2BIT_REF			0x17
+#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_8BIT			0x1C
+#define SNDSB_DSPCMD_AUTOINIT_ESS_DMA_DAC_OUT_16BIT		0x1D // See ESS1869 datasheet
+#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_ADPCM_2BIT		0x1F
+#define SNDSB_DSPCMD_DIRECT_DAC_IN				0x20
+#define SNDSB_DSPCMD_ESS_DIRECT_DAC_IN_16BIT			0x21 // See ESS1869 datasheet
+#define SNDSB_DSPCMD_DMA_DAC_IN_8BIT				0x24
+#define SNDSB_DSPCMD_ESS_DMA_DAC_IN_16BIT			0x25 // See ESS1869 datasheet
+#define SNDSB_DSPCMD_DIRECT_DAC_IN_BURST			0x28 // Does this work???
+#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_IN_8BIT			0x2C
+#define SNDSB_DSPCMD_AUTOINIT_ESS_DMA_DAC_IN_16BIT		0x2D // See ESS1869 datasheet
+#define SNDSB_DSPCMD_MIDI_READ_POLL				0x30
+#define SNDSB_DSPCMD_MIDI_READ_INTERRUPT			0x31
+#define SNDSB_DSPCMD_MIDI_READ_TIMESTAMP_POLL			0x32
+#define SNDSB_DSPCMD_MIDI_READ_TIMESTAMP_INTERRUPT		0x33
+#define SNDSB_DSPCMD_MIDI_RW_POLL_UART_MODE			0x34 // all read/write to the DSP is MIDI bytes until reset
+#define SNDSB_DSPCMD_MIDI_RW_INTERRUPT_UART_MODE		0x35 // all read/write to the DSP is MIDI bytes until reset
+#define SNDSB_DSPCMD_MIDI_RW_TIMESTAMP_INTERRUPT_UART_MODE	0x37 // all read/write to the DSP is MIDI bytes until reset
+#define SNDSB_DSPCMD_MIDI_WRITE_POLL				0x38
+#define SNDSB_DSPCMD_SET_TIME_CONSTANT				0x40
+#define SNDSB_DSPCMD_SET_SAMPLE_RATE				0x41 // output sample rate (SB16)
+#define SNDSB_DSPCMD_SET_INPUT_SAMPLE_RATE			0x42 // input sample rate (SB16)
+#define SNDSB_DSPCMD_CONTINUE_AUTOINIT_DMA_8BIT			0x45
+#define SNDSB_DSPCMD_CONTINUE_AUTOINIT_DMA_16BIT		0x47
+#define SNDSB_DSPCMD_SET_DMA_BLOCK_SIZE				0x48
+#define SNDSB_DSPCMD_REVEAL_SC400_WRITE_CONFIG			0x50 // then write a byte that configures IRQ and DMA assignment
+#define SNDSB_DSPCMD_REVEAL_SC400_READ_CONFIG			0x58 // read 3 bytes, two are jumper settings, final byte is config byte
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_43BIT		0x64 // ESS1869 ESPCM 4.3-bit playback
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_43BIT_REF		0x65 // ESS1869 ESPCM 4.3-bit playback with ref byte
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_34BIT		0x66 // ESS1869 ESPCM 3.4-bit playback
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_34BIT_REF		0x67 // ESS1869 ESPCM 3.4-bit playback with ref byte
+#define SNDSB_DSPCND_ESS_DMA_DAC_OUT_ESPCM_25BIT		0x6A // ESS1869 ESPCM 2.5-bit playback
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_25BIT_REF		0x6B // ESS1869 ESPCM 2.5-bit playback with ref byte
+#define SNDSB_DSPCMD_REVEAL_SC400_SET_DSP_VERSION		0x6E // write two bytes, which become the DSP version reported by DSP command 0xE1
+#define SNDSB_DSPCMD_ESS_DMA_DAC_IN_ESPCM_43BIT			0x6E // ESS1869 ESPCM 4.3-bit recording
+#define SNDSB_DSPCMD_ESS_DMA_DAC_IN_ESPCM_43BIT_REF		0x6F // ESS1869 ESPCM 4.3-bit recording with ref byte
+#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT			0x74
+#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT_REF			0x75
+#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_26BIT			0x76 // 2.6-bit ADPCM output
+#define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_26BIT_REF		0x77 // 2.6-bit ADPCM output
+#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_ADPCM_4BIT_REF	0x7D
+#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_ADPCM_26BIT_REF	0x7F
+#define SNDSB_DSPCMD_SILENT_BLOCK				0x80
+#define SNDSB_DSPCMD_REVEAL_SC400_MYSTERY_COMMAND_88		0x88 // unknown DSP command used by TESTSC.EXE. No clue what it does.
+#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_8BIT_HISPEED		0x90
+#define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED			0x91
+#define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_IN_8BIT_HISPEED		0x98
+#define SNDSB_DSPCMD_DMA_DAC_IN_8BIT_HISPEED			0x99
+#define SNDSB_DSPCMD_ESS_WRITE_REGISTER				0xA0 // ESS audiodrive 0xA0-0xBF, next byte goes to ESS register.
+#define SNDSB_DSPCMD_SET_INPUT_MODE_MONO			0xA0
+#define SNDSB_DSPCMD_SET_INPUT_MODE_STEREO			0xA8
+#define SNDSB_DSPCMD_SB16_DMA_DAC_OUT_16BIT			0xB0 // SB16 0xB0-0xBF use lower 4 bits for record/play, single/auto, fifo enable/disable
+#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_16BIT		0xB6 // NTS: This is command 0xBx with fifo on, autoinit=1, playback
+#define SNDSB_DSPCMD_SB16_DMA_DAC_IN_16BIT			0xB8 // NTS: This is command 0xBx with fifo off, autoinit=0, record
+#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_16BIT		0xBE // NTS: This is command 0xBx with fifo on, autoinit=1, record
+#define SNDSB_DSPCMD_ESS_READ_REGISTER				0xC0 // ESS audiodrive: next byte says what register to read (same value range as ESS write).
+#define SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT			0xC0 // SB16 0xC0-0xCF use lower 4 bits for record/play, single/auto, fifo enable/disable
+#define SNDSB_DSPCMD_ESS_RESUME_AFTER_SUSPEND			0xC1 // See ESS1869 datasheet
+#define SNDSB_DSPCMD_ESS_SET_EXTENDED_MODE			0xC6 // ESS audiodrive enable extended mode for ESS commands
+#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT		0xC6 // NTS: This is command 0xCx with fifo on, autoinit=1, playback
+#define SNDSB_DSPCMD_ESS_CLEAR_EXTENDED_MODE			0xC7 // ESS audiodrive clear extended mode
+#define SNDSB_DSPCMD_SB16_DMA_DAC_IN_8BIT			0xC8 // NTS: This is command 0xCx with fifo off, autoinit=0, record
+#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_8BIT		0xCE // NTS: This is command 0xCx with fifo on, autoinit=1, record
+#define SNDSB_DSPCMD_ESS_READ_GPO01_POWER_MANAGEMENT_REG	0xCE // See ESS1869 datasheet
+#define SNDSB_DSPCMD_ESS_WRITE_GPO01_POWER_MANAGEMENT_REG	0xCF // See ESS1869 datasheet
+#define SNDSB_DSPCMD_HALT_DMA_8BIT				0xD0
+#define SNDSB_DSPCMD_SPEAKER_ON					0xD1
+#define SNDSB_DSPCMD_SPEAKER_OFF				0xD3
+#define SNDSB_DSPCMD_CONTINUE_DMA_8BIT				0xD4
+#define SNDSB_DSPCMD_HALT_DMA_16BIT				0xD5
+#define SNDSB_DSPCMD_CONTINUE_DMA_16BIT				0xD6
+#define SNDSB_DSPCMD_ASK_SPEAKER_STATUS				0xD8
+#define SNDSB_DSPCMD_EXIT_AUTOINIT_DMA_16BIT			0xD9
+#define SNDSB_DSPCMD_EXIT_AUTOINIT_DMA_8BIT			0xDA
+#define SNDSB_DSPCMD_ESS_READ_CURRENT_INPUT_GAIN		0xDC // See ESS1869 datasheet
+#define SNDSB_DSPCMD_ESS_WRITE_CURRENT_INPUT_GAIN		0xDD // See ESS1869 datasheet
+#define SNDSB_DSPCMD_DSP_IDENTIFY				0xE0
+#define SNDSB_DSPCMD_GET_VERSION				0xE1
+#define SNDSB_DSPCMD_DMA_TEST					0xE2 // byte sent with command changes a register, which is returned to you by DMA write
+#define SNDSB_DSPCMD_DSP_COPYRIGHT				0xE3
+#define SNDSB_DSPCMD_WRITE_TEST_REGISTER			0xE4
+#define SNDSB_DSPCMD_REVEAL_SC400_DMA_TEST			0xE6 // SC400 SB clones write 8-byte string 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 via DMA in response
+#define SNDSB_DSPCMD_ESS_GET_VERSION				0xE7 // ESS audiodrive get version
+#define SNDSB_DSPCMD_READ_TEST_REGISTER				0xE8
+#define SNDSB_DSPCMD_SINE_GENERATOR				0xF0 // does this really exist? TFM's DSP commands page says so...
+#define SNDSB_DSPCMD_DSP_AUX_STATUS				0xF1 // SB to SB Pro 2
+#define SNDSB_DSPCMD_TRIGGER_IRQ				0xF2
+#define SNDSB_DSPCMD_TRIGGER_IRQ16				0xF3
+#define SNDSB_DSPCMD_DSP_STATUS_SB16				0xFB
+#define SNDSB_DSPCMD_DSP_AUX_STATUS_SB16			0xFC
+#define SNDSB_DSPCMD_DSP_COMMAND_STATUS_SB16			0xFD
+#define SNDSB_DSPCMD_ESS_FORCE_POWER_DOWN			0xFD // See ESS1869 datasheet
 
 /* macro to write ESS register */
-#define SNDSB_DSPCMD_ESS_WRITE_REG(x)		(((x)&0x1F)+0xA0)
+#define SNDSB_DSPCMD_ESS_WRITE_REG(x)				(((x)&0x1F)+0xA0)
 
 /* macro to construct SB16 record/play command. <CMD> <BMODE> <16-bit length - 1 LO byte first> */
 #define SNDSB_DSPCMD_SB16_DMA_DAC_CMD_COMBO(pcm16,adc,autoinit,fifo)	(0xB0 + ((pcm16)?0x00:0x10) + ((adc)?8:0) + ((autoinit)?4:0) + ((fifo)?2:0))
 #define SNDSB_DSPCMD_SB16_DMA_DAC_CMD_BMODE(stereo,_signed)		(((stereo)?0x20:0x00) + ((_signed)?0x10:0x00))
 
 /* MPU commands */
-#define SNDSB_MPUCMD_RESET			0xFF
-#define SNDSB_MPUCMD_ENTER_UART			0x3F
+#define SNDSB_MPUCMD_ENTER_UART					0x3F
+#define SNDSB_MPUCMD_RESET					0xFF
 
 enum {
 	SNDSB_MIXER_CT1335=1,
