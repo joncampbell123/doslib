@@ -127,10 +127,6 @@
 #define SNDSB_DSPCMD_SB16_DMA_DAC_CMD_COMBO(pcm16,adc,autoinit,fifo)	(0xB0 + ((pcm16)?0x00:0x10) + ((adc)?8:0) + ((autoinit)?4:0) + ((fifo)?2:0))
 #define SNDSB_DSPCMD_SB16_DMA_DAC_CMD_BMODE(stereo,_signed)		(((stereo)?0x20:0x00) + ((_signed)?0x10:0x00))
 
-/* MPU commands */
-#define SNDSB_MPUCMD_ENTER_UART					0x3F
-#define SNDSB_MPUCMD_RESET					0xFF
-
 enum {
 	SNDSB_MIXER_CT1335=1,
 	SNDSB_MIXER_CT1345,		/* Sound Blaster Pro chip */

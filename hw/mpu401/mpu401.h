@@ -4,10 +4,15 @@
 
 #define MPU401_MAX_CARDS			4
 
+/* MPU-401 I/O ports */
 /* 0x3x0 + const = I/O port */
 #define MPU401_IO_DATA				0x0
 #define MPU401_IO_COMMAND			0x1
 #define MPU401_IO_STATUS			0x1
+
+/* MPU commands */
+#define MPU401_MPUCMD_ENTER_UART		0x3F
+#define MPU401_MPUCMD_RESET			0xFF
 
 struct mpu401_ctx {
 	uint16_t		baseio;
