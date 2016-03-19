@@ -29,7 +29,8 @@
 #define SNDSB_DSPCMD_SB16ASP_GET_REGISTER			0x0F // According to DOSBox source code
 #define SNDSB_DSPCMD_DIRECT_DAC_OUT				0x10
 #define SNDSB_DSPCMD_ESS_DIRECT_DAC_OUT_16BIT			0x11 // ESS 1869 16-bit direct DAC output
-#define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT				0x14 // NTS: DOSBox source code mentions a DOS game (Wari) using DSP command 0x15 to do the same?
+#define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT				0x14
+#define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_WARI_ALIAS		0x15 // DOSBox says "Wari" uses this alias of command 0x14 (which was confirmed by running the game)
 #define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_16BIT			0x15 // ESS 1869 16-bit DMA out (data rate limit equiv. SB 8-bit)
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_2BIT			0x16
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_2BIT_REF			0x17
