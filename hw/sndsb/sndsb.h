@@ -22,6 +22,11 @@
 
 /* DSP commands */
 #define SNDSB_DSPCMD_DSP_STATUS_SB2				0x04 // DSP Status (SB 2.0 to SB Pro 2)
+#define SNDSB_DSPCMD_SB16ASP_SET_MODE_REGISTER			0x04 // According to DOSBox source code
+#define SNDSB_DSPCMD_SB16ASP_SET_CODEC_PARAMETER		0x05 // According to DOSBox source code
+#define SNDSB_DSPCMD_SB16ASP_GET_VERSION			0x08 // According to DOSBox source code
+#define SNDSB_DSPCMD_SB16ASP_SET_REGISTER			0x0E // According to DOSBox source code
+#define SNDSB_DSPCMD_SB16ASP_GET_REGISTER			0x0F // According to DOSBox source code
 #define SNDSB_DSPCMD_DIRECT_DAC_OUT				0x10
 #define SNDSB_DSPCMD_ESS_DIRECT_DAC_OUT_16BIT			0x11 // ESS 1869 16-bit direct DAC output
 #define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT				0x14 // NTS: DOSBox source code mentions a DOS game (Wari) using DSP command 0x15 to do the same?
@@ -115,6 +120,7 @@
 #define SNDSB_DSPCMD_DSP_AUX_STATUS				0xF1 // SB to SB Pro 2
 #define SNDSB_DSPCMD_TRIGGER_IRQ				0xF2
 #define SNDSB_DSPCMD_TRIGGER_IRQ16				0xF3
+#define SNDSB_DSPCMD_SB16ASP_MYSTERY_COMMAND_F9			0xF9 // According to DOSBox source code
 #define SNDSB_DSPCMD_DSP_STATUS_SB16				0xFB
 #define SNDSB_DSPCMD_DSP_AUX_STATUS_SB16			0xFC
 #define SNDSB_DSPCMD_DSP_COMMAND_STATUS_SB16			0xFD
