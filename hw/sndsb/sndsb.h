@@ -69,11 +69,14 @@
 #define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_16BIT 0xBE	// NTS: This is command 0xBx with fifo on, autoinit=1, record
 #define SNDSB_DSPCMD_ESS_READ_REGISTER		0xC0		// ESS audiodrive: next byte says what register to read (same value range as ESS write).
 #define SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT	0xC0		// NTS: This is the BASE command value, 0xC0-0xCF use lower 4 bits for record/play, single/auto, fifo enable/disable
+#define SNDSB_DSPCMD_ESS_RESUME_AFTER_SUSPEND	0xC1		// See ESS1869 datasheet
 #define SNDSB_DSPCMD_ESS_SET_EXTENDED_MODE	0xC6		// ESS audiodrive enable extended mode for ESS commands
 #define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT 0xC6	// NTS: This is command 0xCx with fifo on, autoinit=1, playback
 #define SNDSB_DSPCMD_ESS_CLEAR_EXTENDED_MODE	0xC7		// ESS audiodrive clear extended mode
 #define SNDSB_DSPCMD_SB16_DMA_DAC_IN_8BIT	0xC8		// NTS: This is command 0xCx with fifo off, autoinit=0, record
 #define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_8BIT 0xCE		// NTS: This is command 0xCx with fifo on, autoinit=1, record
+#define SNDSB_DSPCMD_ESS_READ_GPO01_POWER_MANAGEMENT_REG 0xCE	// See ESS1869 datasheet
+#define SNDSB_DSPCMD_ESS_WRITE_GPO01_POWER_MANAGEMENT_REG 0xCF	// See ESS1869 datasheet
 #define SNDSB_DSPCMD_HALT_DMA_8BIT		0xD0
 #define SNDSB_DSPCMD_SPEAKER_ON			0xD1
 #define SNDSB_DSPCMD_SPEAKER_OFF		0xD3
@@ -83,6 +86,8 @@
 #define SNDSB_DSPCMD_ASK_SPEAKER_STATUS		0xD8
 #define SNDSB_DSPCMD_EXIT_AUTOINIT_DMA_16BIT	0xD9
 #define SNDSB_DSPCMD_EXIT_AUTOINIT_DMA_8BIT	0xDA
+#define SNDSB_DSPCMD_ESS_READ_CURRENT_INPUT_GAIN 0xDC		// See ESS1869 datasheet
+#define SNDSB_DSPCMD_ESS_WRITE_CURRENT_INPUT_GAIN 0xDD		// See ESS1869 datasheet
 #define SNDSB_DSPCMD_DSP_IDENTIFY		0xE0
 #define SNDSB_DSPCMD_GET_VERSION		0xE1
 #define SNDSB_DSPCMD_DMA_TEST			0xE2	// it takes the byte you send with this command, uses the bits to sum against an internal register, then writes the results back through DMA
@@ -98,6 +103,7 @@
 #define SNDSB_DSPCMD_DSP_STATUS_SB16		0xFB
 #define SNDSB_DSPCMD_DSP_AUX_STATUS_SB16	0xFC
 #define SNDSB_DSPCMD_DSP_COMMAND_STATUS_SB16	0xFD
+#define SNDSB_DSPCMD_ESS_FORCE_POWER_DOWN	0xFD	// See ESS1869 datasheet
 
 /* macro to write ESS register */
 #define SNDSB_DSPCMD_ESS_WRITE_REG(x)		(((x)&0x1F)+0xA0)
