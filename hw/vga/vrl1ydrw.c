@@ -19,32 +19,31 @@ static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char *draw,unsign
 #else
 static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,unsigned char *s,unsigned int ystretch/*10.6 fixed pt*/) {
 #endif
-	unsigned char run,skip,b,fy=0;
+	unsigned char run,skip,b;
+	unsigned int fy=0,ym;
 
 	do {
 		run = *s++;
 		if (run == 0xFF) break;
 		skip = *s++;
-		while (skip > 0) {
-			while (fy < (1 << 6)) {
+		if (skip > 0) {
+			ym = (unsigned int)skip << 6U;
+			while (fy < ym) {
 				draw += vga_stride;
 				fy += ystretch;
 			}
-			fy -= 1 << 6;
-			skip--;
+			fy -= ym;
 		}
 
 		if (run & 0x80) {
 			b = *s++;
-			while (run > 0x80) {
-				while (fy < (1 << 6)) {
-					*draw = b;
-					draw += vga_stride;
-					fy += ystretch;
-				}
-				fy -= 1 << 6;
-				run--;
+			ym = ((unsigned int)(run - 0x80)) << 6U;
+			while (fy < ym) {
+				*draw = b;
+				draw += vga_stride;
+				fy += ystretch;
 			}
+			fy -= ym;
 		}
 		else {
 			while (run > 0) {
