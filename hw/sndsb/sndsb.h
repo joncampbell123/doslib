@@ -22,15 +22,21 @@
 /* DSP versions */
 #define SNDSB_DSPCMD_DSP_STATUS_SB2		0x04	// DSP Status (SB 2.0 to SB Pro 2)
 #define SNDSB_DSPCMD_DIRECT_DAC_OUT		0x10
+#define SNDSB_DSPCMD_ESS_DIRECT_DAC_OUT_16BIT	0x11	// ESS 1869 16-bit direct DAC output
 #define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT		0x14	// NTS: DOSBox source code mentions a DOS game (Wari) using DSP command 0x15 to do the same?
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_16BIT	0x15	// ESS 1869 16-bit DMA out (data rate limit equiv. SB 8-bit)
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_2BIT	0x16
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_2BIT_REF	0x17
 #define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_8BIT	0x1C
+#define SNDSB_DSPCMD_AUTOINIT_ESS_DMA_DAC_OUT_16BIT 0x1D	// See ESS1869 datasheet
 #define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_ADPCM_2BIT 0x1F
 #define SNDSB_DSPCMD_DIRECT_DAC_IN		0x20
+#define SNDSB_DSPCMD_ESS_DIRECT_DAC_IN_16BIT	0x21	// See ESS1869 datasheet
 #define SNDSB_DSPCMD_DMA_DAC_IN_8BIT		0x24
+#define SNDSB_DSPCMD_ESS_DMA_DAC_IN_16BIT	0x25	// See ESS1869 datasheet
 #define SNDSB_DSPCMD_DIRECT_DAC_IN_BURST	0x28	// Mentioned in TFM's DSP commands for SB to SB Pro 2. You just read from the DSP until you reset it. Does this work??
 #define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_IN_8BIT	0x2C
+#define SNDSB_DSPCMD_AUTOINIT_ESS_DMA_DAC_IN_16BIT 0x2D	// See ESS1869 datasheet
 #define SNDSB_DSPCMD_MIDI_READ_POLL		0x30
 #define SNDSB_DSPCMD_MIDI_READ_INTERRUPT	0x31
 #define SNDSB_DSPCMD_MIDI_READ_TIMESTAMP_POLL	0x32
@@ -47,7 +53,15 @@
 #define SNDSB_DSPCMD_SET_DMA_BLOCK_SIZE		0x48
 #define SNDSB_DSPCMD_REVEAL_SC400_WRITE_CONFIG	0x50		// then write a byte that configures IRQ and DMA assignment
 #define SNDSB_DSPCMD_REVEAL_SC400_READ_CONFIG	0x58		// read 3 bytes, two are jumper settings, final byte is config byte
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_43BIT 0x64		// ESS1869 ESPCM 4.3-bit playback
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_43BIT_REF 0x65	// ESS1869 ESPCM 4.3-bit playback with ref byte
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_34BIT 0x66		// ESS1869 ESPCM 3.4-bit playback
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_34BIT_REF 0x67	// ESS1869 ESPCM 3.4-bit playback with ref byte
+#define SNDSB_DSPCND_ESS_DMA_DAC_OUT_ESPCM_25BIT 0x6A		// ESS1869 ESPCM 2.5-bit playback
+#define SNDSB_DSPCMD_ESS_DMA_DAC_OUT_ESPCM_25BIT_REF 0x6B	// ESS1869 ESPCM 2.5-bit playback with ref byte
 #define SNDSB_DSPCMD_REVEAL_SC400_SET_DSP_VERSION 0x6E		// write two bytes, which become the DSP version reported by DSP command 0xE1
+#define SNDSB_DSPCMD_ESS_DMA_DAC_IN_ESPCM_43BIT	0x6E		// ESS1869 ESPCM 4.3-bit recording
+#define SNDSB_DSPCMD_ESS_DMA_DAC_IN_ESPCM_43BIT_REF 0x6F	// ESS1869 ESPCM 4.3-bit recording with ref byte
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT	0x74
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT_REF	0x75
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_26BIT	0x76	// 2.6-bit ADPCM output
