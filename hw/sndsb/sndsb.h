@@ -60,14 +60,18 @@
 #define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED	0x91
 #define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_IN_8BIT_HISPEED 0x98
 #define SNDSB_DSPCMD_DMA_DAC_IN_8BIT_HISPEED	0x99
+#define SNDSB_DSPCMD_ESS_WRITE_REGISTER		0xA0		// ESS audiodrive commands 0xA0-0xBF, next byte goes to ESS register. Yes, it overlaps SB16 and SBPro2 commands here!
 #define SNDSB_DSPCMD_SET_INPUT_MODE_MONO	0xA0
 #define SNDSB_DSPCMD_SET_INPUT_MODE_STEREO	0xA8
 #define SNDSB_DSPCMD_SB16_DMA_DAC_OUT_16BIT	0xB0		// NTS: This is the BASE command value, 0xB0-0xBF use lower 4 bits for record/play, single/auto, fifo enable/disable
 #define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_16BIT 0xB6	// NTS: This is command 0xBx with fifo on, autoinit=1, playback
 #define SNDSB_DSPCMD_SB16_DMA_DAC_IN_16BIT	0xB8		// NTS: This is command 0xBx with fifo off, autoinit=0, record
 #define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_16BIT 0xBE	// NTS: This is command 0xBx with fifo on, autoinit=1, record
+#define SNDSB_DSPCMD_ESS_READ_REGISTER		0xC0		// ESS audiodrive: next byte says what register to read (same value range as ESS write).
 #define SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT	0xC0		// NTS: This is the BASE command value, 0xC0-0xCF use lower 4 bits for record/play, single/auto, fifo enable/disable
+#define SNDSB_DSPCMD_ESS_SET_EXTENDED_MODE	0xC6		// ESS audiodrive enable extended mode for ESS commands
 #define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT 0xC6	// NTS: This is command 0xCx with fifo on, autoinit=1, playback
+#define SNDSB_DSPCMD_ESS_CLEAR_EXTENDED_MODE	0xC7		// ESS audiodrive clear extended mode
 #define SNDSB_DSPCMD_SB16_DMA_DAC_IN_8BIT	0xC8		// NTS: This is command 0xCx with fifo off, autoinit=0, record
 #define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_8BIT 0xCE		// NTS: This is command 0xCx with fifo on, autoinit=1, record
 #define SNDSB_DSPCMD_HALT_DMA_8BIT		0xD0
@@ -94,6 +98,9 @@
 #define SNDSB_DSPCMD_DSP_STATUS_SB16		0xFB
 #define SNDSB_DSPCMD_DSP_AUX_STATUS_SB16	0xFC
 #define SNDSB_DSPCMD_DSP_COMMAND_STATUS_SB16	0xFD
+
+/* macro to write ESS register */
+#define SNDSB_DSPCMD_ESS_WRITE_REG(x)		(((x)&0x1F)+0xA0)
 
 /* macro to construct SB16 record/play command. <CMD> <BMODE> <16-bit length - 1 LO byte first> */
 #define SNDSB_DSPCMD_SB16_DMA_DAC_CMD_COMBO(pcm16,adc,autoinit,fifo)	(0xB0 + ((pcm16)?0x00:0x10) + ((adc)?8:0) + ((autoinit)?4:0) + ((fifo)?2:0))
