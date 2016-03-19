@@ -284,6 +284,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->dsp_prepared = 0;
 	cx->dsp_nag_mode = 0;
 	cx->ess_extensions = 0;
+	cx->wari_hack_mode = 0;
 	cx->dsp_nag_hispeed = 0;
 	cx->ess_extended_mode = 0;
 	cx->hispeed_matters = 1; /* assume it does */
@@ -799,7 +800,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 				if (cx->buffer_hispeed)
 					sndsb_write_dsp(cx,cx->dsp_record ? 0x99 : 0x91);
 				else {
-					sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
+					sndsb_write_dsp(cx,(cx->dsp_record ? 0x24 : 0x14) + (cx->wari_hack_mode ? 1 : 0));
 					sndsb_write_dsp(cx,lv);
 					sndsb_write_dsp(cx,lv >> 8);
 				}
@@ -1001,7 +1002,7 @@ void sndsb_send_buffer_again(struct sndsb_ctx *cx) {
 					sndsb_write_dsp(cx,cx->dsp_record ? 0x99 : 0x91);
 				}
 				else {
-					sndsb_write_dsp(cx,cx->dsp_record ? 0x24 : 0x14);
+					sndsb_write_dsp(cx,(cx->dsp_record ? 0x24 : 0x14) + (cx->wari_hack_mode ? 1 : 0));
 					sndsb_write_dsp(cx,lv);
 					sndsb_write_dsp(cx,lv >> 8);
 				}

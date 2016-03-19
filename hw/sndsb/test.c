@@ -2727,6 +2727,8 @@ static struct vga_menu_item main_menu_playback_dsp_nag_mode =
 	{"xxx",			'o',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_poll_ack_no_irq =
 	{"xxx",			'q',	0,	0};
+static struct vga_menu_item main_menu_playback_wari_hack_alias =
+	{"xxx",			'w',	0,	0};
 #endif
 
 static const struct vga_menu_item* main_menu_playback[] = {
@@ -2752,6 +2754,7 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_dsp4_fifo_single,
 	&main_menu_playback_dsp_nag_mode,
 	&main_menu_playback_dsp_poll_ack_no_irq,
+	&main_menu_playback_wari_hack_alias,
 #endif
 	NULL
 };
@@ -2996,7 +2999,8 @@ void update_cfg() {
 			: "DSP nag mode: Off";
 	main_menu_playback_dsp_poll_ack_no_irq.text =
 		sb_card->poll_ack_when_no_irq ? "Poll ack when no IRQ: On" : "Poll ack when no IRQ: Off";
-
+	main_menu_playback_wari_hack_alias.text =
+		sb_card->wari_hack_mode ? "Wari Hack Alias: On" : "Wari Hack Alias: Off";
 #endif
 }
 
@@ -4780,6 +4784,14 @@ int main(int argc,char **argv) {
 				measure_dsp_busy_cycle();
 				bkgndredraw = 1;
 				redraw = 1;
+			}
+			else if (mitem == &main_menu_playback_wari_hack_alias) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+				sb_card->wari_hack_mode = !sb_card->wari_hack_mode;
+				update_cfg();
+				ui_anim(1);
+				if (wp) begin_play();
 			}
 			else if (mitem == &main_menu_playback_dsp_poll_ack_no_irq) {
 				unsigned char wp = wav_playing;
