@@ -45,6 +45,9 @@
 #define SNDSB_DSPCMD_CONTINUE_AUTOINIT_DMA_8BIT	0x45
 #define SNDSB_DSPCMD_CONTINUE_AUTOINIT_DMA_16BIT 0x47
 #define SNDSB_DSPCMD_SET_DMA_BLOCK_SIZE		0x48
+#define SNDSB_DSPCMD_REVEAL_SC400_WRITE_CONFIG	0x50		// then write a byte that configures IRQ and DMA assignment
+#define SNDSB_DSPCMD_REVEAL_SC400_READ_CONFIG	0x58		// read 3 bytes, two are jumper settings, final byte is config byte
+#define SNDSB_DSPCMD_REVEAL_SC400_SET_DSP_VERSION 0x6E		// write two bytes, which become the DSP version reported by DSP command 0xE1
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT	0x74
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT_REF	0x75
 #define SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_26BIT	0x76	// 2.6-bit ADPCM output
@@ -52,6 +55,7 @@
 #define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_ADPCM_4BIT_REF 0x7D
 #define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_ADPCM_26BIT_REF 0x7F
 #define SNDSB_DSPCMD_SILENT_BLOCK		0x80
+#define SNDSB_DSPCMD_REVEAL_SC400_MYSTERY_COMMAND_88 0x88	// unknown DSP command used by TESTSC.EXE. No clue what it does.
 #define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_OUT_8BIT_HISPEED 0x90
 #define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED	0x91
 #define SNDSB_DSPCMD_AUTOINIT_DMA_DAC_IN_8BIT_HISPEED 0x98
@@ -77,8 +81,11 @@
 #define SNDSB_DSPCMD_EXIT_AUTOINIT_DMA_8BIT	0xDA
 #define SNDSB_DSPCMD_DSP_IDENTIFY		0xE0
 #define SNDSB_DSPCMD_GET_VERSION		0xE1
+#define SNDSB_DSPCMD_DMA_TEST			0xE2	// it takes the byte you send with this command, uses the bits to sum against an internal register, then writes the results back through DMA
 #define SNDSB_DSPCMD_DSP_COPYRIGHT		0xE3
 #define SNDSB_DSPCMD_WRITE_TEST_REGISTER	0xE4
+#define SNDSB_DSPCMD_REVEAL_SC400_DMA_TEST	0xE6	// SC400 SB clones write 8-byte string 0x01 0x02 0x04 0x08 0x10 0x20 0x40 0x80 via DMA in response
+#define SNDSB_DSPCMD_ESS_GET_VERSION		0xE7	// ESS audiodrive get version
 #define SNDSB_DSPCMD_READ_TEST_REGISTER		0xE8
 #define SNDSB_DSPCMD_SINE_GENERATOR		0xF0	// does this really exist? TFM's DSP commands page says so...
 #define SNDSB_DSPCMD_DSP_AUX_STATUS		0xF1	// SB to SB Pro 2
