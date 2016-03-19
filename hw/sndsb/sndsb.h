@@ -58,6 +58,14 @@
 #define SNDSB_DSPCMD_DMA_DAC_IN_8BIT_HISPEED	0x99
 #define SNDSB_DSPCMD_SET_INPUT_MODE_MONO	0xA0
 #define SNDSB_DSPCMD_SET_INPUT_MODE_STEREO	0xA8
+#define SNDSB_DSPCMD_SB16_DMA_DAC_OUT_16BIT	0xB0		// NTS: This is the BASE command value, 0xB0-0xBF use lower 4 bits for record/play, single/auto, fifo enable/disable
+#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_16BIT 0xB6	// NTS: This is command 0xBx with fifo on, autoinit=1, playback
+#define SNDSB_DSPCMD_SB16_DMA_DAC_IN_16BIT	0xB8		// NTS: This is command 0xBx with fifo off, autoinit=0, record
+#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_16BIT 0xBE	// NTS: This is command 0xBx with fifo on, autoinit=1, record
+#define SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT	0xC0		// NTS: This is the BASE command value, 0xC0-0xCF use lower 4 bits for record/play, single/auto, fifo enable/disable
+#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT 0xC6	// NTS: This is command 0xCx with fifo on, autoinit=1, playback
+#define SNDSB_DSPCMD_SB16_DMA_DAC_IN_8BIT	0xC8		// NTS: This is command 0xCx with fifo off, autoinit=0, record
+#define SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_IN_8BIT 0xCE		// NTS: This is command 0xCx with fifo on, autoinit=1, record
 #define SNDSB_DSPCMD_HALT_DMA_8BIT		0xD0
 #define SNDSB_DSPCMD_SPEAKER_ON			0xD1
 #define SNDSB_DSPCMD_SPEAKER_OFF		0xD3
@@ -79,6 +87,10 @@
 #define SNDSB_DSPCMD_DSP_STATUS_SB16		0xFB
 #define SNDSB_DSPCMD_DSP_AUX_STATUS_SB16	0xFC
 #define SNDSB_DSPCMD_DSP_COMMAND_STATUS_SB16	0xFD
+
+/* macro to construct SB16 record/play command. <CMD> <BMODE> <16-bit length - 1 LO byte first> */
+#define SNDSB_DSPCMD_SB16_DMA_DAC_CMD_COMBO(pcm16,adc,autoinit,fifo)	(0xB0 + ((pcm16)?0x00:0x10) + ((adc)?8:0) + ((autoinit)?4:0) + ((fifo)?2:0))
+#define SNDSB_DSPCMD_SB16_DMA_DAC_CMD_BMODE(stereo,_signed)		(((stereo)?0x20:0x00) + ((_signed)?0x10:0x00))
 
 /* MPU commands */
 #define SNDSB_MPUCMD_RESET			0xFF
