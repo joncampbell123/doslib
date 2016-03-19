@@ -4744,6 +4744,8 @@ int main(int argc,char **argv) {
 					"                         port to prevent halting on SB16.\n"
 					"DSP alias port ......... Use alias port 22Dh instead of 22Ch.\n"
 					"Backwards .............. Play file backwards by using DMA decrement mode.\n"
+					"Wari hack alias ........ Use DSP command 0x15 instead of DSP command 0x14\n"
+					"                         to play audio. 'Wari' uses this oddity for audio.\n"
 					"\n"
 					"Detailed explanations are available in README.TXT"
 					,0,0);
