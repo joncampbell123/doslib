@@ -30,9 +30,11 @@ extern uint16_t dosbox_id_baseio;
 /* DOSBOX_ID_REG_SCREENSHOT_TRIGGER bitfield for writing */
 #define DOSBOX_ID_SCREENSHOT_IMAGE		(1UL << 0UL)		/* trigger a screenshot. wait for vertical retrace, then read the register to check it happened */
 #define DOSBOX_ID_SCREENSHOT_VIDEO		(1UL << 1UL)		/* toggle on/off video capture */
+#define DOSBOX_ID_SCREENSHOT_WAVE		(1UL << 2UL)		/* toggle on/off WAVE capture */
 /* DOSBOX_ID_REG_SCREENSHOT_TRIGGER readback */
 #define DOSBOX_ID_SCREENSHOT_STATUS_IMAGE_IN_PROGRESS	(1UL << 0UL)	/* if set, DOSBox is prepared to write a screenshot on vertical retrace. will clear itself when it happens */
 #define DOSBOX_ID_SCREENSHOT_STATUS_VIDEO_IN_PROGRESS	(1UL << 1UL)	/* if set, DOSBox is capturing video. */
+#define DOSBOX_ID_SCREENSHOT_STATUS_WAVE_IN_PROGRESS	(1UL << 2UL)	/* if set, DOSBox is capturing WAVE audio */
 #define DOSBOX_ID_SCREENSHOT_STATUS_NOT_ENABLED		(1UL << 30UL)	/* if set, DOSBox has not enabled this register. */
 #define DOSBOX_ID_SCREENSHOT_STATUS_NOT_AVAILABLE	(1UL << 31UL)	/* if set, DOSBox was compiled without screenshot/video support (C_SSHOT not defined) */
 
