@@ -95,6 +95,7 @@ int main(int argc,char **argv) {
 		unsigned int i,j,o,o2,x,y,rx,w,h;
 		unsigned char ostride;
 		VGA_RAM_PTR omemptr;
+		int xdir=1,ydir=1;
 
 		/* starting coords. note: this technique is limited to x coordinates of multiple of 4 */
 		x = 0;
@@ -103,7 +104,12 @@ int main(int argc,char **argv) {
 		/* do it */
 		ostride = vga_state.vga_stride; // save original stride
 		omemptr = vga_state.vga_graphics_ram; // save original mem ptr
-		while (x < (320 - vrl_header->width) && y < (200 - vrl_header->height)) {
+		while (1) {
+			/* stop animating if the user hits ENTER */
+			if (kbhit()) {
+				if (getch() == 13) break;
+			}
+
 			/* render box bounds. y does not need modification, but x and width must be multiple of 4 */
 			rx = x & (~3);
 			h = vrl_header->height;
@@ -141,11 +147,14 @@ int main(int argc,char **argv) {
 			vga_state.vga_stride = ostride;
 
 			/* step */
-			x++;
-			y++;
+			x += xdir;
+			y += ydir;
+			if (x >= (319 - vrl_header->width))
+				xdir = -xdir;
+			if (y >= (199 - vrl_header->height))
+				ydir = -ydir;
 		}
 	}
-	while (getch() != 13);
 
 	/* make distinctive pattern offscreen, render sprite, copy onscreen.
 	 * this time, we render the distinctive pattern to another offscreen location and just copy.
@@ -156,6 +165,7 @@ int main(int argc,char **argv) {
 		unsigned int i,j,o,o2,x,y,rx,w,h;
 		unsigned char ostride;
 		VGA_RAM_PTR omemptr;
+		int xdir=1,ydir=1;
 
 		/* fill pattern offset with a distinctive pattern */
 		for (i=0;i < 320;i++) {
@@ -172,7 +182,12 @@ int main(int argc,char **argv) {
 		/* do it */
 		ostride = vga_state.vga_stride; // save original stride
 		omemptr = vga_state.vga_graphics_ram; // save original mem ptr
-		while (x < (320 - vrl_header->width) && y < (200 - vrl_header->height)) {
+		while (1) {
+			/* stop animating if the user hits ENTER */
+			if (kbhit()) {
+				if (getch() == 13) break;
+			}
+
 			/* render box bounds. y does not need modification, but x and width must be multiple of 4 */
 			rx = x & (~3);
 			h = vrl_header->height;
@@ -209,11 +224,14 @@ int main(int argc,char **argv) {
 			vga_state.vga_stride = ostride;
 
 			/* step */
-			x++;
-			y++;
+			x += xdir;
+			y += ydir;
+			if (x >= (319 - vrl_header->width))
+				xdir = -xdir;
+			if (y >= (199 - vrl_header->height))
+				ydir = -ydir;
 		}
 	}
-	while (getch() != 13);
 
 	int10_setmode(3);
 	free(vrl_lineoffs);
