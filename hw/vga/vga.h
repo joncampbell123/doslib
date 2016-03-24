@@ -27,6 +27,7 @@ struct vgastate_t {
 	VGA_ALPHA_PTR		vga_alpha_ram;
 	VGA_ALPHA_PTR		vga_alpha_ram_fence;
 	unsigned char		vga_draw_stride;
+	unsigned char		vga_draw_stride_limit;		// further X clipping
 	unsigned char		vga_alpha_mode:1;
 	unsigned char		vga_9wide:1;
 };

@@ -202,7 +202,7 @@ void update_state_from_vga() {
 		update_state_vga_memory_map_select(2); /* 0xB0000 */
 	}
 
-	vga_state.vga_draw_stride = vga_state.vga_stride;
+	vga_state.vga_draw_stride_limit = vga_state.vga_draw_stride = vga_state.vga_stride;
 }
 
 int probe_vga() {
