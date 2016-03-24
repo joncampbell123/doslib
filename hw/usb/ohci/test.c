@@ -840,7 +840,7 @@ void main_menu() {
 			redraw=1;
 
 			vga = vga_alpha_ram;
-			x = vga_width * vga_height;
+			x = vga_state.vga_width * vga_state.vga_height;
 			for (y=0;y < x;y++) vga[y] = 0x0700 | ' ';
 
 			vga_menu_bar_draw();

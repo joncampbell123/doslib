@@ -365,7 +365,7 @@ void do_floppy_controller_unhook_irq(struct floppy_controller *fdc);
 static void interrupt my_floppy_irq() {
 	int i;
 
-	i = vga_width*(vga_height-1);
+	i = vga_state.vga_width*(vga_state.vga_height-1);
 
 	_cli();
 	if (my_floppy_irq_floppy != NULL) {
@@ -1391,7 +1391,7 @@ signed long prompt_signed_track_number() {
 	int c,i=0;
 
 	vga_msg_box_create(&box,"Enter relative track number:",2,0);
-	sco = vga_alpha_ram + ((box.y+2) * vga_width) + box.x + 2;
+	sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 	while (1) {
 		c = getch();
 		if (c == 0) c = getch() << 8;
@@ -1434,7 +1434,7 @@ unsigned long prompt_track_number() {
 	int c,i=0;
 
 	vga_msg_box_create(&box,"Enter track number:",2,0);
-	sco = vga_alpha_ram + ((box.y+2) * vga_width) + box.x + 2;
+	sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 	while (1) {
 		c = getch();
 		if (c == 0) c = getch() << 8;
@@ -2082,8 +2082,8 @@ void do_floppy_controller_read_tests(struct floppy_controller *fdc) {
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_height;y++) {
-				for (x=0;x < vga_width;x++) {
+			for (y=0;y < vga_state.vga_height;y++) {
+				for (x=0;x < vga_state.vga_width;x++) {
 					*vga++ = 0x1E00 + 177;
 				}
 			}
@@ -2106,7 +2106,7 @@ void do_floppy_controller_read_tests(struct floppy_controller *fdc) {
 				sprintf(tmp," phys=%08lxh len=%04lxh",(unsigned long)floppy_dma->phys,(unsigned long)floppy_dma->length);
 				vga_write(tmp);
 			}
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		if (redraw) {
@@ -2136,13 +2136,13 @@ void do_floppy_controller_read_tests(struct floppy_controller *fdc) {
 			vga_moveto(8,y++);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
 			vga_write("FDC menu");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 			y++;
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 0) ? 0x70 : 0x0F);
 			vga_write("Read sector");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -2189,8 +2189,8 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_height;y++) {
-				for (x=0;x < vga_width;x++) {
+			for (y=0;y < vga_state.vga_height;y++) {
+				for (x=0;x < vga_state.vga_width;x++) {
 					*vga++ = 0x1E00 + 177;
 				}
 			}
@@ -2213,7 +2213,7 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 				sprintf(tmp," phys=%08lxh len=%04lxh",(unsigned long)floppy_dma->phys,(unsigned long)floppy_dma->length);
 				vga_write(tmp);
 			}
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		if (redraw) {
@@ -2243,13 +2243,13 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 			vga_moveto(8,y++);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
 			vga_write("FDC menu");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 			y++;
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 0) ? 0x70 : 0x0F);
 			vga_write("Write sector");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -2571,7 +2571,7 @@ nextkey:	if (c == 27) {
 					vga_moveto(sx,sy);
 					vga_write_color(0x70);
 					vga_write(temp_str);
-					while (vga_pos_x < (box.x+box.w-4) && vga_pos_x != 0) vga_writec(' ');
+					while (vga_state.vga_pos_x < (box.x+box.w-4) && vga_state.vga_pos_x != 0) vga_writec(' ');
 				}
 
 				c = getch();
@@ -2679,8 +2679,8 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_height;y++) {
-				for (x=0;x < vga_width;x++) {
+			for (y=0;y < vga_state.vga_height;y++) {
+				for (x=0;x < vga_state.vga_width;x++) {
 					*vga++ = 0x1E00 + 177;
 				}
 			}
@@ -2703,11 +2703,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				sprintf(tmp," phys=%08lxh len=%04lxh",(unsigned long)floppy_dma->phys,(unsigned long)floppy_dma->length);
 				vga_write(tmp);
 			}
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		if (redraw) {
-			int cx = vga_width / 2;
+			int cx = vga_state.vga_width / 2;
 
 			redraw = 0;
 
@@ -2735,48 +2735,48 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_moveto(8,y++);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
 			vga_write("Main menu");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 			y++;
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 0) ? 0x70 : 0x0F);
 			vga_write("DMA: ");
 			vga_write(fdc->use_dma ? "Enabled" : "Disabled");
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 1) ? 0x70 : 0x0F);
 			vga_write("IRQ: ");
 			vga_write(fdc->use_irq ? "Enabled" : "Disabled");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 2) ? 0x70 : 0x0F);
 			vga_write("Drive A motor: ");
 			vga_write((fdc->digital_out&0x10) ? "On" : "Off");
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 3) ? 0x70 : 0x0F);
 			vga_write("Drive B motor: ");
 			vga_write((fdc->digital_out&0x20) ? "On" : "Off");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 4) ? 0x70 : 0x0F);
 			vga_write("Drive C motor: ");
 			vga_write((fdc->digital_out&0x40) ? "On" : "Off");
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 5) ? 0x70 : 0x0F);
 			vga_write("Drive D motor: ");
 			vga_write((fdc->digital_out&0x80) ? "On" : "Off");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 6) ? 0x70 : 0x0F);
 			vga_write("Drive select: ");
 			sprintf(tmp,"%c(%u)",(fdc->digital_out&3)+'A',fdc->digital_out&3);
 			vga_write(tmp);
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 7) ? 0x70 : 0x0F);
 			vga_write("Data rate: ");
@@ -2786,13 +2786,13 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				case 2:	vga_write("250kbit/sec"); break;
 				case 3:	vga_write("1mbit/sec"); break;
 			};
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 8) ? 0x70 : 0x0F);
 			vga_write("Reset signal: ");
 			vga_write((fdc->digital_out&0x04) ? "Off" : "On");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 9) ? 0x70 : 0x0F);
@@ -2808,58 +2808,58 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				mfm_mode?"MFM":"FM");
 
 			vga_write(tmp);
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 			y++;
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 10) ? 0x70 : 0x0F);
 			vga_write("Check drive status (x4h)");
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 11) ? 0x70 : 0x0F);
 			vga_write("Calibrate (x7h)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 12) ? 0x70 : 0x0F);
 			vga_write("Seek (xFh)");
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 13) ? 0x70 : 0x0F);
 			vga_write("Seek relative (1xFh)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 14) ? 0x70 : 0x0F);
 			vga_write("Read sector ID (xAh)");
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 15) ? 0x70 : 0x0F);
 			vga_write("Read testing >>");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 16) ? 0x70 : 0x0F);
 			vga_write("Write testing >>");
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 17) ? 0x70 : 0x0F);
 			vga_write("Dump Registers (xEh)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 18) ? 0x70 : 0x0F);
 			vga_write("Get Version (1x0h)");
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color((select == 19) ? 0x70 : 0x0F);
 			vga_write("Format Track (xDh)");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 20) ? 0x70 : 0x0F);
 			vga_write("Step through tracks");
-			while (vga_pos_x < cx && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -3006,8 +3006,8 @@ void do_main_menu() {
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_height;y++) {
-				for (x=0;x < vga_width;x++) {
+			for (y=0;y < vga_state.vga_height;y++) {
+				for (x=0;x < vga_state.vga_width;x++) {
 					*vga++ = 0x1E00 + 177;
 				}
 			}
@@ -3016,7 +3016,7 @@ void do_main_menu() {
 
 			vga_write_color(0x1F);
 			vga_write("        Floppy controller test program");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		if (redraw) {

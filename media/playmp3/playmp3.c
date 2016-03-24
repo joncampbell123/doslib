@@ -2684,7 +2684,7 @@ static void change_param_menu() {
 					VGA_ALPHA_PTR sco;
 					struct vga_msg_box box;
 					vga_msg_box_create(&box,"Custom sample rate",2,0);
-					sco = vga_alpha_ram + ((box.y+2) * vga_width) + box.x + 2;
+					sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 					sco[i] = c | 0x1E00;
 					temp_str[i++] = c;
 					while (1) {
@@ -2960,7 +2960,7 @@ static void play_with_mixer_sb() {
 				VGA_ALPHA_PTR sco;
 				struct vga_msg_box box;
 				vga_msg_box_create(&box,"Custom value",2,0);
-				sco = vga_alpha_ram + ((box.y+2) * vga_width) + box.x + 2;
+				sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 				sco[i] = c | 0x1E00;
 				temp_str[i++] = c;
 				while (1) {
@@ -3362,14 +3362,14 @@ static void help() {
 static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h) {
 	/* clear prior contents */
 	{
-		VGA_ALPHA_PTR p = vga_alpha_ram + (y * vga_width) + x;
+		VGA_ALPHA_PTR p = vga_alpha_ram + (y * vga_state.vga_width) + x;
 		unsigned int a,b;
 
 		for (b=0;b < h;b++) {
 			for (a=0;a < w;a++) {
 				*p++ = 0x1E20;
 			}
-			p += vga_width - w;
+			p += vga_state.vga_width - w;
 		}
 	}
 
@@ -3394,14 +3394,14 @@ static void draw_device_info_sb(struct sndsb_ctx *cx,int x,int y,int w,int h) {
 
 	/* clear prior contents */
 	{
-		VGA_ALPHA_PTR p = vga_alpha_ram + (y * vga_width) + x;
+		VGA_ALPHA_PTR p = vga_alpha_ram + (y * vga_state.vga_width) + x;
 		unsigned int a,b;
 
 		for (b=0;b < h;b++) {
 			for (a=0;a < w;a++) {
 				*p++ = 0x1E20;
 			}
-			p += vga_width - w;
+			p += vga_state.vga_width - w;
 		}
 	}
 
@@ -3561,13 +3561,13 @@ static void draw_sound_card_choice_sb(unsigned int x,unsigned int y,unsigned int
 		sprintf(temp_str,"%03Xh IRQ%-2d DMA%d DMA%d MPU:%03Xh ",
 			cx->baseio,	cx->irq,	cx->dma8,	cx->dma16,	cx->mpuio);
 		vga_write(temp_str);
-		while (vga_pos_x < (x+w) && *msg != 0) vga_writec(*msg++);
+		while (vga_state.vga_pos_x < (x+w) && *msg != 0) vga_writec(*msg++);
 	}
 	else {
 		vga_write_color(sel ? 0x70 : 0x18);
 		vga_write("(none)");
 	}
-	while (vga_pos_x < (x+w)) vga_writec(' ');
+	while (vga_state.vga_pos_x < (x+w)) vga_writec(' ');
 }
 
 static void draw_sound_card_choice_gus(unsigned int x,unsigned int y,unsigned int w,struct ultrasnd_ctx *cx,int sel) {
@@ -3582,7 +3582,7 @@ static void draw_sound_card_choice_gus(unsigned int x,unsigned int y,unsigned in
 		vga_write_color(sel ? 0x70 : 0x18);
 		vga_write("(none)");
 	}
-	while (vga_pos_x < (x+w)) vga_writec(' ');
+	while (vga_state.vga_pos_x < (x+w)) vga_writec(' ');
 }
 
 static void choose_sound_card_sb() {

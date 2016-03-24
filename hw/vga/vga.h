@@ -5,6 +5,13 @@
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
+struct vgastate_t {
+	unsigned char		vga_pos_x,vga_pos_y,vga_color;
+	unsigned char		vga_width,vga_height;
+	unsigned char		vga_hgc_type;
+	unsigned int		vga_base_3x0;
+};
+
 #if TARGET_MSDOS == 32
 typedef unsigned char *VGA_RAM_PTR;
 typedef uint16_t *VGA_ALPHA_PTR;
@@ -99,17 +106,15 @@ enum { /* color select (text=border color  320x200=background    640x200=foregro
 	VGA_CGA_PALETTE_CS_ALT_INTENSITY=(1U << 4U)
 };
 
+extern struct vgastate_t	vga_state;
+
 extern VGA_RAM_PTR	vga_graphics_ram;
 extern VGA_RAM_PTR	vga_graphics_ram_fence;
 extern VGA_ALPHA_PTR	vga_alpha_ram;
 extern VGA_ALPHA_PTR	vga_alpha_ram_fence;
 
 extern uint32_t		vga_clock_rates[4];
-extern unsigned char	vga_pos_x,vga_pos_y,vga_color;
-extern unsigned char	vga_width,vga_height;
 extern unsigned char	vga_alpha_mode;
-extern unsigned char	vga_hgc_type;
-extern unsigned int	vga_base_3x0;
 extern unsigned long	vga_ram_base;
 extern unsigned long	vga_ram_size;
 extern unsigned char	vga_stride;
@@ -152,8 +157,8 @@ void vga_read_crtc_mode(struct vga_mode_params *p);
 #define VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC	0x0001
 
 static inline unsigned char vga_read_CRTC(unsigned char i) {
-	outp(vga_base_3x0+4,i);
-	return inp(vga_base_3x0+5);
+	outp(vga_state.vga_base_3x0+4,i);
+	return inp(vga_state.vga_base_3x0+5);
 }
 
 static inline unsigned char vga_read_GC(unsigned char i) {
@@ -162,8 +167,8 @@ static inline unsigned char vga_read_GC(unsigned char i) {
 }
 
 static inline void vga_moveto(unsigned char x,unsigned char y) {
-	vga_pos_x = x;
-	vga_pos_y = y;
+	vga_state.vga_pos_x = x;
+	vga_state.vga_pos_y = y;
 }
 
 static inline void vga_tandy_setpalette(unsigned char i,unsigned char c) {
@@ -189,8 +194,8 @@ static inline void vga_write_GC(unsigned char i,unsigned char c) {
 }
 
 static inline void vga_write_CRTC(unsigned char i,unsigned char c) {
-	outp(vga_base_3x0+4,i);
-	outp(vga_base_3x0+5,c);
+	outp(vga_state.vga_base_3x0+4,i);
+	outp(vga_state.vga_base_3x0+5,c);
 }
 
 static inline void vga_set_ypan_sub(unsigned char c) {
@@ -198,7 +203,7 @@ static inline void vga_set_ypan_sub(unsigned char c) {
 }
 
 static inline void vga_write_color(unsigned char c) {
-	vga_color = c;
+	vga_state.vga_color = c;
 }
 
 static inline void vga_read_PAL(unsigned char i,unsigned char *p,unsigned int count) {
@@ -224,10 +229,10 @@ static inline void vga_set_cga_mode(unsigned char b) {
 /* NTS: VGA hardware treats bit 5 of the index as a "screen enable".
  *      When the caller is done reprogramming it is expected to or the index by VGA_AC_ENABLE */
 static inline void vga_write_AC(unsigned char i,unsigned char c) {
-	inp(vga_base_3x0+0xA); /* reset flipflop */
+	inp(vga_state.vga_base_3x0+0xA); /* reset flipflop */
 	outp(0x3C0,i);
 	outp(0x3C0,c);
-	inp(vga_base_3x0+0xA);
+	inp(vga_state.vga_base_3x0+0xA);
 }
 
 static inline void vga_set_xpan(unsigned char c) {
@@ -241,12 +246,12 @@ static inline unsigned char vga_read_AC(unsigned char i) {
 	 *      an old S3 Virge DX card I have will misread the values
 	 *      when PAS=1 otherwise. */
 
-	inp(vga_base_3x0+0xA);	/* reset latch */
-	outp(0x3C0,i&(~0x20));	/* index with PAS=0 */
+	inp(vga_state.vga_base_3x0+0xA);	/* reset latch */
+	outp(0x3C0,i&(~0x20));			/* index with PAS=0 */
 	c = inp(0x3C1);
-	inp(vga_base_3x0+0xA);	/* reset latch */
-	outp(0x3C0,i|0x20);	/* index with PAS=1 */
-	inp(vga_base_3x0+0xA);	/* reset latch */
+	inp(vga_state.vga_base_3x0+0xA);	/* reset latch */
+	outp(0x3C0,i|0x20);			/* index with PAS=1 */
+	inp(vga_state.vga_base_3x0+0xA);	/* reset latch */
 
 	return c;
 }
@@ -258,9 +263,9 @@ static inline void vga_set_stride(unsigned int stride) {
 }
 
 static inline void vga_AC_reenable_screen() {
-	inp(vga_base_3x0+0xA); /* reset flipflop */
+	inp(vga_state.vga_base_3x0+0xA); /* reset flipflop */
 	outp(0x3C0,0x20);
-	inp(vga_base_3x0+0xA);
+	inp(vga_state.vga_base_3x0+0xA);
 }
 
 static inline void vga_palette_lseek(unsigned int i) {
@@ -274,28 +279,23 @@ static inline void vga_palette_write(unsigned char r,unsigned char g,unsigned ch
 }
 
 static inline unsigned char vga_in_vsync() {
-	unsigned int p = vga_base_3x0 + 0xA;
-	return (inp(p) & 0x8);
+	return (inp(vga_state.vga_base_3x0 + 0xA) & 0x8);
 }
 
 static inline void vga_wait_for_hsync() {
-	unsigned int p = vga_base_3x0 + 0xA;
-	while ((inp(p) & 0x1) == 0);
+	while ((inp(vga_state.vga_base_3x0 + 0xA) & 0x1) == 0);
 }
 
 static inline void vga_wait_for_hsync_end() {
-	unsigned int p = vga_base_3x0 + 0xA;
-	while ((inp(p) & 0x1) != 0);
+	while ((inp(vga_state.vga_base_3x0 + 0xA) & 0x1) != 0);
 }
 
 static inline void vga_wait_for_vsync() {
-	unsigned int p = vga_base_3x0 + 0xA;
-	while ((inp(p) & 0x8) == 0);
+	while ((inp(vga_state.vga_base_3x0 + 0xA) & 0x8) == 0);
 }
 
 static inline void vga_wait_for_vsync_end() {
-	unsigned int p = vga_base_3x0 + 0xA;
-	while ((inp(p) & 0x8) != 0);
+	while ((inp(vga_state.vga_base_3x0 + 0xA) & 0x8) != 0);
 }
 
 static inline unsigned char vga_AC_RGB_to_code(unsigned char r,unsigned char g,unsigned char b) {

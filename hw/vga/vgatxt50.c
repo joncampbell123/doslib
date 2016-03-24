@@ -26,7 +26,7 @@ void vga_bios_set_80x50_text() { /* switch to VGA 80x50 8-line high text */
 # else
 	int86(0x10,&regs,&regs);
 # endif
-	vga_height = 50;
+	vga_state.vga_height = 50;
 #endif
 }
 

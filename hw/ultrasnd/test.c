@@ -270,9 +270,9 @@ int prompt_wav(unsigned char rec) {
 						for (;i < 14;i++) vga_writec(' ');
 
 						x += cw;
-						if ((x+cw) > vga_width) {
+						if ((x+cw) > vga_state.vga_width) {
 							x = 0;
-							if (y >= vga_height) break;
+							if (y >= vga_state.vga_height) break;
 							y++;
 						}
 					} while (_dos_findnext(&ft) == 0);

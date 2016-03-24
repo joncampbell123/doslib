@@ -286,7 +286,7 @@ static void int10_9_print(const char *x) {
 		unsigned short b,cc;
 
 		if (*x == '\n') {
-			vga_moveto(0,vga_pos_y+1);
+			vga_moveto(0,vga_state.vga_pos_y+1);
 			vga_sync_bios_cursor();
 			x++;
 		}
@@ -309,7 +309,7 @@ static void int10_9_print(const char *x) {
 				pop	ax
 			}
 
-			vga_moveto(vga_pos_x+1,vga_pos_y);
+			vga_moveto(vga_state.vga_pos_x+1,vga_state.vga_pos_y);
 			vga_sync_bios_cursor();
 		}
 	}
@@ -1073,11 +1073,11 @@ int main() {
 					(vga_flags & VGA_IS_CGA) ? 1 : 0,
 					(vga_flags & VGA_IS_MDA) ? 1 : 0,
 					(vga_flags & VGA_IS_MCGA) ? 1 : 0,
-					(vga_flags & VGA_IS_HGC) ? 1 : 0,vga_hgc_type);
+					(vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type);
 			printf("Tandy/PCjr=%u Amstrad=%u IO=%03xh ALPHA=%u\n",
 					(vga_flags & VGA_IS_TANDY) ? 1 : 0,
 					(vga_flags & VGA_IS_AMSTRAD) ? 1 : 0,
-					vga_base_3x0,
+					vga_state.vga_base_3x0,
 					vga_alpha_mode);
 
 			printf("RAM 0x%05lx-0x%05lx 9W=%u INT10=%u(0x%02x)\n",

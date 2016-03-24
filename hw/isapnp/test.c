@@ -822,7 +822,7 @@ break;
 
 					rsc = devnode_raw + sizeof(*devn);
 					for (i=sizeof(*devn);i < devn->size;i++) {
-						if (vga_pos_x >= (vga_width-2)) vga_write("\n");
+						if (vga_state.vga_pos_x >= (vga_state.vga_width-2)) vga_write("\n");
 						sprintf(tmp,"%02X ",devnode_raw[i]);
 						vga_write(tmp);
 					}

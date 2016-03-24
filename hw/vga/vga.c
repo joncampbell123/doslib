@@ -27,11 +27,13 @@ VGA_RAM_PTR	vga_graphics_ram_fence = NULL;
 VGA_ALPHA_PTR	vga_alpha_ram = NULL;
 VGA_ALPHA_PTR	vga_alpha_ram_fence = NULL;
 
-unsigned char	vga_pos_x = 0,vga_pos_y = 0,vga_color = 0x7;
-unsigned char	vga_width = 80,vga_height = 25;
+struct vgastate_t	vga_state;
+
+//unsigned char	vga_pos_x = 0,vga_pos_y = 0,vga_color = 0x7;
+//unsigned char	vga_width = 80,vga_height = 25;
 unsigned char	vga_alpha_mode = 0;
-unsigned char	vga_hgc_type = 0;
-unsigned int	vga_base_3x0 = 0;
+//unsigned char	vga_hgc_type = 0;
+//unsigned int	vga_base_3x0 = 0;
 unsigned long	vga_ram_base = 0;
 unsigned long	vga_ram_size = 0;
 unsigned char	vga_stride = 80;
@@ -42,8 +44,8 @@ void vga_sync_hw_cursor() {
 	unsigned int i;
 	i = vga_read_CRTC(0xF);			/* cursor low */
 	i |= vga_read_CRTC(0xE) << 8;		/* cursor high */
-	vga_pos_x = i % vga_stride;
-	vga_pos_y = i / vga_stride;
+	vga_state.vga_pos_x = i % vga_stride;
+	vga_state.vga_pos_y = i / vga_stride;
 }
 
 void update_state_vga_memory_map_select(unsigned char c) {
@@ -87,20 +89,21 @@ void update_state_vga_memory_map_select(unsigned char c) {
 void update_state_from_vga() {
 	unsigned char c;
 
-	vga_pos_x = vga_pos_y = 0;
+	vga_state.vga_pos_x = 0;
+	vga_state.vga_pos_y = 0;
 	vga_stride = 80;
-	vga_height = 25;
-	vga_width = 80;
+	vga_state.vga_height = 25;
+	vga_state.vga_width = 80;
 	vga_9wide = 0;
 
 	if (vga_flags & VGA_IS_VGA) { /* VGA only. EGA cards DO have the misc. output reg but it's write-only */
 		/* update state from H/W which I/O port */
 		c = inp(0x3CC);
 		if (c & 1) {
-			vga_base_3x0 = 0x3D0;
+			vga_state.vga_base_3x0 = 0x3D0;
 		}
 		else {
-			vga_base_3x0 = 0x3B0;
+			vga_state.vga_base_3x0 = 0x3B0;
 		}
 
 		/* now ask the graphics controller where/how VGA memory is mapped */
@@ -117,7 +120,7 @@ void update_state_from_vga() {
 		/* read from the CRTC controller the stride, width, and height */
 		vga_stride = vga_read_CRTC(0x13) * 2;	/* "offset" register */
 		if (vga_alpha_mode) {
-			vga_width = vga_stride;
+			vga_state.vga_width = vga_stride;
 			vga_sync_hw_cursor();
 			/* TODO: read vertical blank values and calculate active area, then divide by scan line height, to get alpha height */
 			/* TODO: read horizontal blank values to calculate active area, then visible width */
@@ -141,11 +144,11 @@ void update_state_from_vga() {
 # endif
 #endif
 		if ((c&0xF0) == 0xD0)
-			vga_base_3x0 = 0x3D0;
+			vga_state.vga_base_3x0 = 0x3D0;
 		else if ((c&0xF0) == 0xB0)
-			vga_base_3x0 = 0x3B0;
+			vga_state.vga_base_3x0 = 0x3B0;
 		else {
-			vga_base_3x0 = 0x3D0;
+			vga_state.vga_base_3x0 = 0x3D0;
 		}
 
 		/* reading from the graphics controller (0x3CE) doesn't work, deduce from BIOS mode */
@@ -155,7 +158,7 @@ void update_state_from_vga() {
 				vga_alpha_mode = 1;
 
  /* the best we can do is assume B0000 if CRTC is at 3Bx or B8000 if at 3Dx even though it's possible to map at B8000 and 3Bx */
-				if (vga_base_3x0 == 0x3B0)
+				if (vga_state.vga_base_3x0 == 0x3B0)
 					update_state_vga_memory_map_select(2);
 				else
 					update_state_vga_memory_map_select(3);
@@ -173,7 +176,7 @@ void update_state_from_vga() {
 		/* read from the CRTC controller the stride, width, and height */
 		vga_stride = vga_read_CRTC(0x13) * 2;	/* "offset" register */
 		if (vga_alpha_mode) {
-			vga_width = vga_stride;
+			vga_state.vga_width = vga_stride;
 			vga_sync_hw_cursor();
 			/* TODO: read vertical blank values and calculate active area, then divide by scan line height, to get alpha height */
 			/* TODO: read horizontal blank values to calculate active area, then visible width */
@@ -201,7 +204,7 @@ void update_state_from_vga() {
 #endif
 	}
 	else if (vga_flags & VGA_IS_CGA) {
-		vga_base_3x0 = 0x3D0; /* always at 0x3Dx */
+		vga_state.vga_base_3x0 = 0x3D0; /* always at 0x3Dx */
 
 		/* TODO: If Tandy, detect state */
 
@@ -219,7 +222,7 @@ void update_state_from_vga() {
 
 		if (c <= 1) {
 			vga_stride = 40;
-			vga_width = 40;
+			vga_state.vga_width = 40;
 		}
 
 		vga_ram_base = 0xB8000;
@@ -244,7 +247,7 @@ void update_state_from_vga() {
 #endif
 	}
 	else if (vga_flags & VGA_IS_MDA) {
-		vga_base_3x0 = 0x3B0; /* always at 0x3Bx */
+		vga_state.vga_base_3x0 = 0x3B0; /* always at 0x3Bx */
 		vga_alpha_mode = 1; /* stock MDA doesn't have graphics */
 		vga_ram_base = 0xB0000;
 		vga_ram_size = 0x08000;
@@ -283,7 +286,7 @@ int probe_vga() {
 	unsigned char c,c2;
 
 	vga_flags = 0;
-	vga_base_3x0 = 0;
+	vga_state.vga_base_3x0 = 0;
 
 	/* apparently the best way is to ask the VGA BIOS */
 	/* according to sources I have this function only works on VGA BIOSes and nothing prior to that */
@@ -416,10 +419,10 @@ int probe_vga() {
 		}
 		if (patience > 0 && (c^cm) & 0x80) { /* if it changed, then HGC */
 			vga_flags |= VGA_IS_HGC;
-			vga_hgc_type = (c >> 4) & 7;
+			vga_state.vga_hgc_type = (c >> 4) & 7;
 			switch ((c>>4)&7) {
-				case 5: case 1: vga_hgc_type = (c>>4)&7; break;
-				default: vga_hgc_type = 0; break;
+				case 5: case 1: vga_state.vga_hgc_type = (c>>4)&7; break;
+				default: vga_state.vga_hgc_type = 0; break;
 			}
 		}
 	}

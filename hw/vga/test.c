@@ -43,7 +43,7 @@ void vga_write_state_DEBUG(FILE *f) {
 			(vga_flags & VGA_IS_CGA) ? 1 : 0,
 			(vga_flags & VGA_IS_MDA) ? 1 : 0,
 			(vga_flags & VGA_IS_MCGA) ? 1 : 0,
-			(vga_flags & VGA_IS_HGC) ? 1 : 0,vga_hgc_type,
+			(vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type,
 			(vga_flags & VGA_IS_TANDY) ? 1 : 0,
 			(vga_flags & VGA_IS_AMSTRAD) ? 1 : 0);
 	if (f == NULL)
@@ -52,11 +52,11 @@ void vga_write_state_DEBUG(FILE *f) {
 		fputs(tmp,f);
 
 	sprintf(tmp,"  3x0 I/O base = 0x%03x  RAM @ 0x%05lx-0x%05lx  ALPHA=%u 9W=%u\n",
-			vga_base_3x0,
-			(unsigned long)vga_ram_base,
-			(unsigned long)vga_ram_base+vga_ram_size-1UL,
-			vga_alpha_mode,
-			vga_9wide);
+		vga_state.vga_base_3x0,
+		(unsigned long)vga_ram_base,
+		(unsigned long)vga_ram_base+vga_ram_size-1UL,
+		vga_alpha_mode,
+		vga_9wide);
 	if (f == NULL)
 		vga_write(tmp);
 	else
@@ -64,7 +64,7 @@ void vga_write_state_DEBUG(FILE *f) {
 }
 
 char *vga_gets(unsigned int maxlen) {
-	unsigned char bx=vga_pos_x,by=vga_pos_y;
+	unsigned char bx=vga_state.vga_pos_x,by=vga_state.vga_pos_y;
 	unsigned int pos;
 	int c;
 
@@ -2526,12 +2526,12 @@ int main() {
 			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
 				unsigned char color;
 
-				inp(vga_base_3x0+0xA); /* reset flipflop */
+				inp(vga_state.vga_base_3x0+0xA); /* reset flipflop */
 				outp(0x3C0,0x11); /* load overscan color reg */
 				color = inp(0x3C1);
 				color++;
 
-				inp(vga_base_3x0+0xA); /* reset flipflop */
+				inp(vga_state.vga_base_3x0+0xA); /* reset flipflop */
 				outp(0x3C0,0x11); /* load overscan color reg */
 				outp(0x3C0,color);
 				outp(0x3C0,0x20); /* PAS=1 */
@@ -2564,12 +2564,12 @@ int main() {
 					/* NTS: we measure the frame vsync to vsync */
 					b_frame = e_frame_active = read_8254(0);
 					/* wait for active picture area first (exit retrace) */
-					do { b = inp(vga_base_3x0 + 0xA);
+					do { b = inp(vga_state.vga_base_3x0 + 0xA);
 					} while (b&1);
 					e_retrace = read_8254(0);
 					hex = b; vlines++; /* count the start of line */
 					do {
-						b = inp(vga_base_3x0 + 0xA);
+						b = inp(vga_state.vga_base_3x0 + 0xA);
 						if ((b&1) != (hex&1)) {
 							hex = b;
 							if (!(b&1)) vlines++; /* start of a line */

@@ -29,11 +29,11 @@ void vga_scroll_up(unsigned char lines) {
 
 	if (lines == 0)
 		return;
-	else if (lines > vga_height)
-		lines = vga_height;
+	else if (lines > vga_state.vga_height)
+		lines = vga_state.vga_height;
 
-	if (lines < vga_height) {
-		unsigned char lcopy = vga_height - lines;
+	if (lines < vga_state.vga_height) {
+		unsigned char lcopy = vga_state.vga_height - lines;
 		wr = vga_alpha_ram;
 		rd = vga_alpha_ram + (lines * vga_stride);
 		for (row=0;row < lcopy;row++) {
@@ -43,40 +43,40 @@ void vga_scroll_up(unsigned char lines) {
 		}
 	}
 
-	wr = vga_alpha_ram + ((vga_height - lines) * vga_stride);
+	wr = vga_alpha_ram + ((vga_state.vga_height - lines) * vga_stride);
 	for (row=0;row < lines;row++) {
 		for (c=0;c < vga_stride;c++)
-			*wr++ = (vga_color << 8) | 0x20;
+			*wr++ = (vga_state.vga_color << 8) | 0x20;
 	}
 }
 
 void vga_cursor_down() {
-	if (++vga_pos_y >= vga_height) {
-		vga_pos_y = vga_height - 1;
+	if (++vga_state.vga_pos_y >= vga_state.vga_height) {
+		vga_state.vga_pos_y = vga_state.vga_height - 1;
 		vga_scroll_up(1);
 	}
 }
 
 void vga_writec(char c) {
 	if (c == '\n') {
-		vga_pos_x = 0;
+		vga_state.vga_pos_x = 0;
 		vga_cursor_down();
 	}
 	else if (c == '\t') {
-		vga_pos_x = (vga_pos_x | 7) + 1;
-		if (vga_pos_x >= vga_width) {
-			vga_pos_x = 0;
+		vga_state.vga_pos_x = (vga_state.vga_pos_x | 7) + 1;
+		if (vga_state.vga_pos_x >= vga_state.vga_width) {
+			vga_state.vga_pos_x = 0;
 			vga_cursor_down();
 		}
 	}
 	else {
-		if (vga_pos_x >= vga_width) {
-			vga_pos_x = 0;
+		if (vga_state.vga_pos_x >= vga_state.vga_width) {
+			vga_state.vga_pos_x = 0;
 			vga_cursor_down();
 		}
 
-		vga_alpha_ram[(vga_pos_y * vga_stride) + vga_pos_x] = c | (vga_color << 8);
-		vga_pos_x++;
+		vga_alpha_ram[(vga_state.vga_pos_y * vga_stride) + vga_state.vga_pos_x] = c | (vga_state.vga_color << 8);
+		vga_state.vga_pos_x++;
 	}
 }
 
@@ -86,7 +86,7 @@ void vga_write(const char *msg) {
 
 void vga_write_sync() { /* sync writing pos with BIOS cursor and hardware */
 	if (vga_alpha_mode) {
-		unsigned int ofs = (vga_pos_y * vga_stride) + vga_pos_x;
+		unsigned int ofs = (vga_state.vga_pos_y * vga_stride) + vga_state.vga_pos_x;
 		vga_write_CRTC(0xE,ofs >> 8);
 		vga_write_CRTC(0xF,ofs);
 	}
@@ -97,7 +97,7 @@ void vga_clear() {
 	unsigned char r,c;
 
 	wr = vga_alpha_ram;
-	for (r=0;r < vga_height;r++) {
+	for (r=0;r < vga_state.vga_height;r++) {
 		for (c=0;c < vga_stride;c++) {
 			*wr++ = 0x0720;
 		}

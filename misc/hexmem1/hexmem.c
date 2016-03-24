@@ -197,8 +197,8 @@ int main(int argc,char **argv) {
     if (!probe_vga())
 	    return 1;
 
-    if (vga_height > 50)
-	    vga_height = 50;
+    if (vga_state.vga_height > 50)
+	    vga_state.vga_height = 50;
 
     if (windows_mode != WINDOWS_NONE) {
 #if TARGET_MSDOS == 32
@@ -314,9 +314,9 @@ int main(int argc,char **argv) {
     while (!die) {
 	if (drawmem) {
 	    unsigned char *rdptr = datatmp;
-	    copy_data_to(rdptr,segment,vga_height);
-	    for (y=0;y < vga_height;y++) {
-		VGA_ALPHA_PTR dst = vga_alpha_ram + (y * vga_width);
+	    copy_data_to(rdptr,segment,vga_state.vga_height);
+	    for (y=0;y < vga_state.vga_height;y++) {
+		VGA_ALPHA_PTR dst = vga_alpha_ram + (y * vga_state.vga_width);
 		for (x=0;x < 16;x++) {
 		    dst[x] =
 		        (unsigned short)hexen[((segment+(y*16ULL))>>(60ULL-(x*4ULL)))&0xFULL]|
@@ -335,7 +335,7 @@ int main(int argc,char **argv) {
 		    unsigned char b = *rdptr++;
 		    dst[x++] = (unsigned short)b | (unsigned short)0x0D00;
 		}
-		while (x < vga_width)
+		while (x < vga_state.vga_width)
 		    dst[x++] = (unsigned short)' ' | (unsigned short)0x0700;
 	    }
 	    drawmem=0;
@@ -370,9 +370,9 @@ int main(int argc,char **argv) {
 		else if (c == 8) {
 			if (i > 0) {
 				input[--i] = 0;
-				vga_moveto(vga_pos_x-1,vga_pos_y);
+				vga_moveto(vga_state.vga_pos_x-1,vga_state.vga_pos_y);
 				vga_writec(' ');
-				vga_moveto(vga_pos_x-1,vga_pos_y);
+				vga_moveto(vga_state.vga_pos_x-1,vga_state.vga_pos_y);
 				vga_write_sync();
 			}
 		}
@@ -398,11 +398,11 @@ int main(int argc,char **argv) {
 		drawmem=1;
 	    }
 	    else if (key == 0x49) {
-		segment -= (unsigned)vga_height * repeat * 16ULL;
+		segment -= (unsigned)vga_state.vga_height * repeat * 16ULL;
 		drawmem=1;
 	    }
 	    else if (key == 0x51) {
-		segment += (unsigned)vga_height * repeat * 16ULL;
+		segment += (unsigned)vga_state.vga_height * repeat * 16ULL;
 		drawmem=1;
 	    }
 

@@ -41,6 +41,6 @@ void vga_relocate_crtc(unsigned char color) {
 		outp(0x3C2,0x02 | (color?1:0));
 	}
 
-	vga_base_3x0 = color ? 0x3D0 : 0x3B0;
+	vga_state.vga_base_3x0 = color ? 0x3D0 : 0x3B0;
 }
 

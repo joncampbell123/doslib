@@ -122,7 +122,7 @@ int main(int argc,char **argv) {
 	while (loop) {
 		if (redraw || redrawln) {
 			if (redraw) {
-				for (vga=vga_alpha_ram,cc=0;cc < (80*vga_height);cc++) *vga++ = 0x1E00 | 177;
+				for (vga=vga_alpha_ram,cc=0;cc < (80*vga_state.vga_height);cc++) *vga++ = 0x1E00 | 177;
 				vga_moveto(0,0);
 				vga_write_color(0x1F);
 				sprintf(tmp,"Adlib FM, %u-voice %s. Use Z & X to adj  F10=PRESET F1=QUIET ",adlib_fm_voices,

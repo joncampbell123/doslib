@@ -177,8 +177,8 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_height;y++) {
-				for (x=0;x < vga_width;x++) {
+			for (y=0;y < vga_state.vga_height;y++) {
+				for (x=0;x < vga_state.vga_width;x++) {
 					*vga++ = 0x1E00 + 177;
 				}
 			}
@@ -198,14 +198,14 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 				vga_write(tmp);
 			}
 			vga_write(which ? " Slave" : " Master");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color(0xC);
 			vga_write("WARNING: This code talks directly to your hard disk controller.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 			vga_write_color(0xC);
 			vga_write("         If you value the data on your hard drive do not run this program.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		if (redraw) {
@@ -222,7 +222,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
 			vga_write("Back to IDE controller main menu");
-			while (vga_pos_x < (mbox.width+mbox.ofsx) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (mbox.width+mbox.ofsx) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			menuboxbound_redraw(&mbox,select);
 		}
@@ -329,7 +329,7 @@ static void interrupt my_ide_irq() {
 
 	/* we CANNOT use sprintf() here. sprintf() doesn't work to well from within an interrupt handler,
 	 * and can cause crashes in 16-bit realmode builds. */
-	i = vga_width*(vga_height-1);
+	i = vga_state.vga_width*(vga_state.vga_height-1);
 	vga_alpha_ram[i++] = 0x1F00 | 'I';
 	vga_alpha_ram[i++] = 0x1F00 | 'R';
 	vga_alpha_ram[i++] = 0x1F00 | 'Q';
@@ -469,8 +469,8 @@ void do_ide_controller(struct ide_controller *ide) {
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_height;y++) {
-				for (x=0;x < vga_width;x++) {
+			for (y=0;y < vga_state.vga_height;y++) {
+				for (x=0;x < vga_state.vga_width;x++) {
 					*vga++ = 0x1E00 + 177;
 				}
 			}
@@ -489,14 +489,14 @@ void do_ide_controller(struct ide_controller *ide) {
 				sprintf(tmp," IRQ %d",ide->irq);
 				vga_write(tmp);
 			}
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color(0xC);
 			vga_write("WARNING: This code talks directly to your hard disk controller.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 			vga_write_color(0xC);
 			vga_write("         If you value the data on your hard drive do not run this program.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		if (redraw) {
@@ -506,23 +506,23 @@ void do_ide_controller(struct ide_controller *ide) {
 			vga_moveto(8,y++);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
 			vga_write("Main menu");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 			y++;
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 0) ? 0x70 : 0x0F);
 			vga_write("Host Reset");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 1) ? 0x70 : 0x0F);
 			vga_write("Tinker with Master device");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 2) ? 0x70 : 0x0F);
 			vga_write("Tinker with Slave device");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_moveto(8,y++);
 			vga_write_color((select == 3) ? 0x70 : 0x0F);
@@ -530,7 +530,7 @@ void do_ide_controller(struct ide_controller *ide) {
 			vga_write(ide->flags.io_irq_enable ? "IRQ" : "polling");
 			vga_write(", switch to ");
 			vga_write((!ide->flags.io_irq_enable) ? "IRQ" : "polling");
-			while (vga_pos_x < (vga_width-8) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -610,8 +610,8 @@ void do_main_menu() {
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_height;y++) {
-				for (x=0;x < vga_width;x++) {
+			for (y=0;y < vga_state.vga_height;y++) {
+				for (x=0;x < vga_state.vga_width;x++) {
 					*vga++ = 0x1E00 + 177;
 				}
 			}
@@ -620,14 +620,14 @@ void do_main_menu() {
 
 			vga_write_color(0x1F);
 			vga_write("        IDE controller test program");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color(0xC);
 			vga_write("WARNING: This code talks directly to your hard disk controller.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 			vga_write_color(0xC);
 			vga_write("         If you value the data on your hard drive do not run this program.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		if (redraw) {

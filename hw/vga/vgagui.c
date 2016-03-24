@@ -74,7 +74,7 @@ void vga_menu_draw_item(VGA_ALPHA_PTR screen,const struct vga_menu_item **scan,u
 	const char *txt = sci->text;
 	unsigned int x,ti=1;
 
-	screen += (i * vga_width) + 1;
+	screen += (i * vga_state.vga_width) + 1;
 	if (txt == (char*)1) {
 		screen[-1] = 204 | color;
 		for (x=0;x < w;x++) screen[x] = 205 | color;
@@ -119,7 +119,7 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 			else l = (unsigned int)strlen(sci->text);
 			if (l > 78) l = 78;
 			if (w < (l+2)) w = (l+2);
-			if (h < (i+2) && (i+2+row) <= vga_height) h = i+2;
+			if (h < (i+2) && (i+2+row) <= vga_state.vga_height) h = i+2;
 		}
 		items = i;
 
@@ -128,22 +128,22 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 #else
 		buf = _fmalloc(w * h * 2);
 #endif
-		screen = vga_alpha_ram + (row * vga_width) + menu->x;
+		screen = vga_alpha_ram + (row * vga_state.vga_width) + menu->x;
 		if (buf != NULL) {
 			/* copy off the screen contents */
 			for (y=0;y < h;y++) {
 				o = w * y;
-				i = vga_width * y;
+				i = vga_state.vga_width * y;
 				for (x=0;x < w;x++,o++,i++) buf[o] = screen[i];
 			}
 
 			/* draw the box */
 			for (y=0;y < (h-1);y++) {
-				o = vga_width * y;
+				o = vga_state.vga_width * y;
 				screen[o+0] = 186 | color;
 				screen[o+w-1] = 186 | color;
 			}
-			o = vga_width * (h-1);
+			o = vga_state.vga_width * (h-1);
 			screen[o+0] = 200 | color;
 			for (x=1;x < (w-1);x++) screen[o+x] = 205 | color;
 			screen[o+w-1] = 188 | color;
@@ -217,7 +217,7 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 			/* copy screen contents back */
 			for (y=0;y < h;y++) {
 				i = w * y;
-				o = vga_width * y;
+				o = vga_state.vga_width * y;
 				for (x=0;x < w;x++,o++,i++) screen[o] = buf[i];
 			}
 
@@ -345,9 +345,9 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 	}
 	w += 4; if (w > 80) w = 80;
 	h += 2; if (h > 25) h = 25;
-	px = (vga_width - w) / 2;
-	py = (vga_height - h) / 2;
-	b->screen = vga_alpha_ram + (py * vga_width) + px;
+	px = (vga_state.vga_width - w) / 2;
+	py = (vga_state.vga_height - h) / 2;
+	b->screen = vga_alpha_ram + (py * vga_state.vga_width) + px;
 	b->x = px;
 	b->y = py;
 	b->w = w;
@@ -361,7 +361,7 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 	if (b->buf != NULL) {
 		/* copy the screen to buffer */
 		for (y=0;y < h;y++) {
-			i = y * vga_width;
+			i = y * vga_state.vga_width;
 			o = y * w;
 			for (x=0;x < w;x++,i++,o++) b->buf[o] = b->screen[i];
 		}
@@ -369,13 +369,13 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 
 	/* draw border */
 	for (y=1;y < (h-1);y++) {
-		o = y * vga_width;
+		o = y * vga_state.vga_width;
 		b->screen[o+0] = 186 | color;
 		b->screen[o+1] = 32 | color;
 		b->screen[o+w-2] = 32 | color;
 		b->screen[o+w-1] = 186 | color;
 	}
-	o = (h-1)*vga_width;
+	o = (h-1)*vga_state.vga_width;
 	for (x=1;x < (w-1);x++) {
 		b->screen[x] = 205 | color;
 		b->screen[x+o] = 205 | color;
@@ -387,7 +387,7 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 
 	x = 0;
 	y = 0;
-	o = vga_width + 2;
+	o = vga_state.vga_width + 2;
 	scan = msg;
 	while (*scan != 0) {
 		if (*scan == '\n') {
@@ -397,7 +397,7 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 			}
 			if (++y >= (h-2)) break;
 			x = 0;
-			o += vga_width;
+			o += vga_state.vga_width;
 		}
 		else if ((unsigned char)(*scan) >= 32) {
 			if (x < (w-4)) b->screen[o+x] = *scan | color;
@@ -412,7 +412,7 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 		}
 		++y;
 		x = 0;
-		o += vga_width;
+		o += vga_state.vga_width;
 	}
 
 	b->w = w;
@@ -428,7 +428,7 @@ void vga_msg_box_destroy(struct vga_msg_box *b) {
 			/* copy screen back */
 			for (y=0;y < b->h;y++) {
 				i = y * b->w;
-				o = y * vga_width;
+				o = y * vga_state.vga_width;
 				for (x=0;x < b->w;x++,i++,o++) b->screen[o] = b->buf[i];
 			}
 

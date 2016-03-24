@@ -70,8 +70,8 @@ void do_drive_misc_tests(struct ide_controller *ide,unsigned char which) {
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_height;y++) {
-				for (x=0;x < vga_width;x++) {
+			for (y=0;y < vga_state.vga_height;y++) {
+				for (x=0;x < vga_state.vga_width;x++) {
 					*vga++ = 0x1E00 + 177;
 				}
 			}
@@ -91,14 +91,14 @@ void do_drive_misc_tests(struct ide_controller *ide,unsigned char which) {
 				vga_write(tmp);
 			}
 			vga_write(which ? " Slave" : " Master");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			vga_write_color(0xC);
 			vga_write("WARNING: This code talks directly to your hard disk controller.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 			vga_write_color(0xC);
 			vga_write("         If you value the data on your hard drive do not run this program.");
-			while (vga_pos_x < vga_width && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		if (redraw) {
@@ -107,7 +107,7 @@ void do_drive_misc_tests(struct ide_controller *ide,unsigned char which) {
 			vga_moveto(mbox.ofsx,mbox.ofsy - 2);
 			vga_write_color((select == -1) ? 0x70 : 0x0F);
 			vga_write("Back to IDE controller main menu");
-			while (vga_pos_x < (mbox.width+mbox.ofsx) && vga_pos_x != 0) vga_writec(' ');
+			while (vga_state.vga_pos_x < (mbox.width+mbox.ofsx) && vga_state.vga_pos_x != 0) vga_writec(' ');
 
 			menuboxbound_redraw(&mbox,select);
 		}

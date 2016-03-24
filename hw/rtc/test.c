@@ -564,7 +564,7 @@ aretry2:		hour = rtc_io_read(5);
 		}
 	}
 
-	vga_moveto(0,vga_height-2);
+	vga_moveto(0,vga_state.vga_height-2);
 	vga_sync_bios_cursor();
 	vga_sync_hw_cursor();
 

@@ -1400,7 +1400,7 @@ void open_mp3() {
 
 #if !defined(TARGET_WINDOWS)
 void vga_write_until(unsigned int x) {
-	while (vga_pos_x < x)
+	while (vga_state.vga_pos_x < x)
 		vga_writec(' ');
 }
 #endif
@@ -1563,9 +1563,9 @@ void prompt_play_mp3(unsigned char rec) {
 						for (;i < 14;i++) vga_writec(' ');
 
 						x += cw;
-						if ((x+cw) > vga_width) {
+						if ((x+cw) > vga_state.vga_width) {
 							x = 0;
-							if (y >= vga_height) break;
+							if (y >= vga_state.vga_height) break;
 							y++;
 						}
 					} while (_dos_findnext(&ft) == 0);

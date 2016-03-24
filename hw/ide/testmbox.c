@@ -33,7 +33,7 @@ void menuboxbound_redraw(struct menuboxbounds *mbox,int select) {
 		vga_moveto(x,y);
 		vga_write_color((select == i) ? 0x70 : 0x0F);
 		vga_write(mbox->item_string[i]);
-		while (vga_pos_x < (x+mbox->col_width) && vga_pos_x != 0) vga_writec(' ');
+		while (vga_state.vga_pos_x < (x+mbox->col_width) && vga_state.vga_pos_x != 0) vga_writec(' ');
 	}
 }
 
@@ -41,8 +41,8 @@ void menuboxbounds_set_def_list(struct menuboxbounds *mbox,unsigned int ofsx,uns
 	mbox->cols = 1;
 	mbox->ofsx = 4;
 	mbox->ofsy = 7;
-	mbox->rows = vga_height - (mbox->ofsy + 1);
-	mbox->width = vga_width - (mbox->ofsx * 2);
+	mbox->rows = vga_state.vga_height - (mbox->ofsy + 1);
+	mbox->width = vga_state.vga_width - (mbox->ofsx * 2);
 	mbox->col_width = mbox->width / mbox->cols;
 }
 

@@ -25,11 +25,11 @@
 void vga_sync_bios_cursor() {
 #ifndef TARGET_WINDOWS
 # if TARGET_MSDOS == 32
-	*((unsigned char*)0x450) = vga_pos_x;
-	*((unsigned char*)0x451) = vga_pos_y;
+	*((unsigned char*)0x450) = vga_state.vga_pos_x;
+	*((unsigned char*)0x451) = vga_state.vga_pos_y;
 # else
-	*((unsigned char far*)MK_FP(0x40,0x50)) = vga_pos_x;
-	*((unsigned char far*)MK_FP(0x40,0x51)) = vga_pos_y;
+	*((unsigned char far*)MK_FP(0x40,0x50)) = vga_state.vga_pos_x;
+	*((unsigned char far*)MK_FP(0x40,0x51)) = vga_state.vga_pos_y;
 # endif
 #endif
 }
