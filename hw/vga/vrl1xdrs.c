@@ -15,7 +15,7 @@
 #include <hw/vga/vrl.h>
 #include <hw/vga/vrl1xdrc.h>
 
-void draw_vrl1_vgax_modexstretch(unsigned int x,unsigned int y,unsigned int xstretch/*1/64 scale 10.6 fixed pt*/,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
+void draw_vrl1_vgax_modexstretch(unsigned int x,unsigned int y,unsigned int xstep/*1/64 scale 10.6 fixed pt*/,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
 #if TARGET_MSDOS == 32
 	unsigned char *draw;
 #else
@@ -34,7 +34,7 @@ void draw_vrl1_vgax_modexstretch(unsigned int x,unsigned int y,unsigned int xstr
 		draw_vrl1_vgax_modex_strip(draw,s);
 
 		/* end of a vertical strip. next line? */
-		fx += xstretch;
+		fx += xstep;
 		if ((++vga_plane) == 4) {
 			vram_offset++;
 			vga_plane = 0;

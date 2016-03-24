@@ -15,9 +15,9 @@
 #include <hw/vga/vrl.h>
 
 #if TARGET_MSDOS == 32
-static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char *draw,unsigned char *s,unsigned int ystretch/*10.6 fixed pt*/) {
+static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char *draw,unsigned char *s,unsigned int ystep/*10.6 fixed pt*/) {
 #else
-static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,unsigned char *s,unsigned int ystretch/*10.6 fixed pt*/) {
+static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,unsigned char *s,unsigned int ystep/*10.6 fixed pt*/) {
 #endif
 	unsigned char run,skip,b;
 	unsigned int fy=0,ym;
@@ -30,7 +30,7 @@ static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,un
 			ym = (unsigned int)skip << 6U;
 			while (fy < ym) {
 				draw += vga_state.vga_stride;
-				fy += ystretch;
+				fy += ystep;
 			}
 			fy -= ym;
 		}
@@ -41,7 +41,7 @@ static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,un
 			while (fy < ym) {
 				*draw = b;
 				draw += vga_state.vga_stride;
-				fy += ystretch;
+				fy += ystep;
 			}
 			fy -= ym;
 		}
@@ -50,7 +50,7 @@ static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,un
 				while (fy < (1 << 6)) {
 					*draw = *s;
 					draw += vga_state.vga_stride;
-					fy += ystretch;
+					fy += ystep;
 				}
 				fy -= 1 << 6;
 				run--;
@@ -60,7 +60,7 @@ static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,un
 	} while (1);
 }
 
-void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xstretch/*1/64 scale 10.6 fixed pt*/,unsigned int ystretch/*1/6 scale 10.6*/,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
+void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xstretch/*1/64 scale 10.6 fixed pt*/,unsigned int ystep/*1/6 scale 10.6*/,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
 #if TARGET_MSDOS == 32
 	unsigned char *draw;
 #else
@@ -76,7 +76,7 @@ void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xst
 		draw = vga_state.vga_graphics_ram + vram_offset;
 		vga_write_sequencer(0x02/*map mask*/,1 << vga_plane);
 		s = data + lineoffs[fx >> 6U];
-		draw_vrl1_vgax_modex_stripystretch(draw,s,ystretch);
+		draw_vrl1_vgax_modex_stripystretch(draw,s,ystep);
 
 		/* end of a vertical strip. next line? */
 		fx += xstretch;
