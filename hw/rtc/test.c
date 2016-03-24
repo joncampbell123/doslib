@@ -182,7 +182,7 @@ int main(int argc,char **argv) {
 
 	while (1) {
 		if (redraw_all) {
-			VGA_ALPHA_PTR a = vga_alpha_ram;
+			VGA_ALPHA_PTR a = vga_state.vga_alpha_ram;
 
 			for (y=0;y < (80*25);y++)
 				*a++ = 0x1E20;

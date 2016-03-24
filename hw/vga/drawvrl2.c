@@ -60,20 +60,20 @@ static inline void draw_vrl_modex_strip(unsigned char far *draw,unsigned char *s
 		run = *s++;
 		if (run == 0xFF) break;
 		skip = *s++;
-		draw += skip * vga_stride;
+		draw += skip * vga_state.vga_stride;
 
 		if (run & 0x80) {
 			b = *s++;
 			while (run > 0x80) {
 				*draw = b;
-				draw += vga_stride;
+				draw += vga_state.vga_stride;
 				run--;
 			}
 		}
 		else {
 			while (run > 0) {
 				*draw = *s++;
-				draw += vga_stride;
+				draw += vga_state.vga_stride;
 				run--;
 			}
 		}
@@ -89,7 +89,7 @@ static inline void draw_vrl_modex_stripystretch(unsigned char far *draw,unsigned
 		skip = *s++;
 		while (skip > 0) {
 			while (fy < (1 << 6)) {
-				draw += vga_stride;
+				draw += vga_state.vga_stride;
 				fy += ystretch;
 			}
 			fy -= 1 << 6;
@@ -101,7 +101,7 @@ static inline void draw_vrl_modex_stripystretch(unsigned char far *draw,unsigned
 			while (run > 0x80) {
 				while (fy < (1 << 6)) {
 					*draw = b;
-					draw += vga_stride;
+					draw += vga_state.vga_stride;
 					fy += ystretch;
 				}
 				fy -= 1 << 6;
@@ -112,7 +112,7 @@ static inline void draw_vrl_modex_stripystretch(unsigned char far *draw,unsigned
 			while (run > 0) {
 				while (fy < (1 << 6)) {
 					*draw = *s;
-					draw += vga_stride;
+					draw += vga_state.vga_stride;
 					fy += ystretch;
 				}
 				fy -= 1 << 6;
@@ -124,14 +124,14 @@ static inline void draw_vrl_modex_stripystretch(unsigned char far *draw,unsigned
 }
 
 void draw_vrl_modex(unsigned int x,unsigned int y,struct vrl_header *hdr,unsigned int *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
-	unsigned int vram_offset = (y * vga_stride) + (x >> 2),sx;
+	unsigned int vram_offset = (y * vga_state.vga_stride) + (x >> 2),sx;
 	unsigned char vga_plane = (x & 3);
 	unsigned char far *draw;
 	unsigned char *s;
 
 	/* draw one by one */
 	for (sx=0;sx < hdr->width;sx++) {
-		draw = vga_graphics_ram + vram_offset;
+		draw = vga_state.vga_graphics_ram + vram_offset;
 		vga_write_sequencer(0x02/*map mask*/,1 << vga_plane);
 		s = data + lineoffs[sx];
 		draw_vrl_modex_strip(draw,s);
@@ -147,15 +147,15 @@ void draw_vrl_modex(unsigned int x,unsigned int y,struct vrl_header *hdr,unsigne
 }
 
 void draw_vrl_modexstretch(unsigned int x,unsigned int y,unsigned int xstretch/*1/64 scale 10.6 fixed pt*/,struct vrl_header *hdr,unsigned int *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
-	unsigned int vram_offset = (y * vga_stride) + (x >> 2),fx=0;
+	unsigned int vram_offset = (y * vga_state.vga_stride) + (x >> 2),fx=0;
 	unsigned char vga_plane = (x & 3);
-	unsigned int limit = vga_stride;
+	unsigned int limit = vga_state.vga_stride;
 	unsigned char far *draw;
 	unsigned char *s;
 
 	/* draw one by one */
 	do {
-		draw = vga_graphics_ram + vram_offset;
+		draw = vga_state.vga_graphics_ram + vram_offset;
 		vga_write_sequencer(0x02/*map mask*/,1 << vga_plane);
 		{
 			unsigned int x = fx >> 6;
@@ -177,15 +177,15 @@ void draw_vrl_modexstretch(unsigned int x,unsigned int y,unsigned int xstretch/*
 }
 
 void draw_vrl_modexystretch(unsigned int x,unsigned int y,unsigned int xstretch/*1/64 scale 10.6 fixed pt*/,unsigned int ystretch/*1/6 scale 10.6*/,struct vrl_header *hdr,unsigned int *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz) {
-	unsigned int vram_offset = (y * vga_stride) + (x >> 2),fx=0;
+	unsigned int vram_offset = (y * vga_state.vga_stride) + (x >> 2),fx=0;
 	unsigned char vga_plane = (x & 3);
-	unsigned int limit = vga_stride;
+	unsigned int limit = vga_state.vga_stride;
 	unsigned char far *draw;
 	unsigned char *s;
 
 	/* draw one by one */
 	do {
-		draw = vga_graphics_ram + vram_offset;
+		draw = vga_state.vga_graphics_ram + vram_offset;
 		vga_write_sequencer(0x02/*map mask*/,1 << vga_plane);
 		{
 			unsigned int x = fx >> 6;

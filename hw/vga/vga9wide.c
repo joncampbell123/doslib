@@ -28,14 +28,14 @@
 void vga_set_9wide(unsigned char en) {
 	unsigned char c;
 
-	if (en == vga_9wide)
+	if (en == vga_state.vga_9wide)
 		return;
 
 	c = vga_read_sequencer(1);
 	c &= 0xFE;
 	c |= en ^ 1;
 	vga_write_sequencer(1,c);
-	vga_9wide = en;
+	vga_state.vga_9wide = en;
 
 	c = inp(0x3CC);
 	c &= 0xF3;

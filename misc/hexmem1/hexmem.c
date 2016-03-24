@@ -316,7 +316,7 @@ int main(int argc,char **argv) {
 	    unsigned char *rdptr = datatmp;
 	    copy_data_to(rdptr,segment,vga_state.vga_height);
 	    for (y=0;y < vga_state.vga_height;y++) {
-		VGA_ALPHA_PTR dst = vga_alpha_ram + (y * vga_state.vga_width);
+		VGA_ALPHA_PTR dst = vga_state.vga_alpha_ram + (y * vga_state.vga_width);
 		for (x=0;x < 16;x++) {
 		    dst[x] =
 		        (unsigned short)hexen[((segment+(y*16ULL))>>(60ULL-(x*4ULL)))&0xFULL]|

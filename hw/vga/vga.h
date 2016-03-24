@@ -5,13 +5,6 @@
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
-struct vgastate_t {
-	unsigned char		vga_pos_x,vga_pos_y,vga_color;
-	unsigned char		vga_width,vga_height;
-	unsigned char		vga_hgc_type;
-	unsigned int		vga_base_3x0;
-};
-
 #if TARGET_MSDOS == 32
 typedef unsigned char *VGA_RAM_PTR;
 typedef uint16_t *VGA_ALPHA_PTR;
@@ -19,6 +12,23 @@ typedef uint16_t *VGA_ALPHA_PTR;
 typedef unsigned char far *VGA_RAM_PTR;
 typedef uint16_t far *VGA_ALPHA_PTR;
 #endif
+
+struct vgastate_t {
+	unsigned char		vga_pos_x,vga_pos_y,vga_color;
+	unsigned char		vga_width,vga_height;
+	unsigned char		vga_hgc_type;
+	unsigned char		vga_stride;
+	uint16_t		vga_base_3x0;
+	uint16_t		vga_flags;
+	uint32_t		vga_ram_base;
+	uint32_t		vga_ram_size;
+	VGA_RAM_PTR		vga_graphics_ram;
+	VGA_RAM_PTR		vga_graphics_ram_fence;
+	VGA_ALPHA_PTR		vga_alpha_ram;
+	VGA_ALPHA_PTR		vga_alpha_ram_fence;
+	unsigned char		vga_alpha_mode:1;
+	unsigned char		vga_9wide:1;
+};
 
 /* vga_flags */
 #define VGA_IS_TANDY			0x02	/* Tandy/PCjr */
@@ -107,19 +117,7 @@ enum { /* color select (text=border color  320x200=background    640x200=foregro
 };
 
 extern struct vgastate_t	vga_state;
-
-extern VGA_RAM_PTR	vga_graphics_ram;
-extern VGA_RAM_PTR	vga_graphics_ram_fence;
-extern VGA_ALPHA_PTR	vga_alpha_ram;
-extern VGA_ALPHA_PTR	vga_alpha_ram_fence;
-
-extern uint32_t		vga_clock_rates[4];
-extern unsigned char	vga_alpha_mode;
-extern unsigned long	vga_ram_base;
-extern unsigned long	vga_ram_size;
-extern unsigned char	vga_stride;
-extern unsigned short	vga_flags;
-extern unsigned char	vga_9wide;
+extern uint32_t			vga_clock_rates[4];
 
 unsigned char int10_getmode();
 void vga_write(const char *msg);

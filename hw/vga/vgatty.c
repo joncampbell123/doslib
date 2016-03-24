@@ -34,18 +34,18 @@ void vga_scroll_up(unsigned char lines) {
 
 	if (lines < vga_state.vga_height) {
 		unsigned char lcopy = vga_state.vga_height - lines;
-		wr = vga_alpha_ram;
-		rd = vga_alpha_ram + (lines * vga_stride);
+		wr = vga_state.vga_alpha_ram;
+		rd = vga_state.vga_alpha_ram + (lines * vga_state.vga_stride);
 		for (row=0;row < lcopy;row++) {
-			for (c=0;c < vga_stride;c++) {
+			for (c=0;c < vga_state.vga_stride;c++) {
 				*wr++ = *rd++;
 			}
 		}
 	}
 
-	wr = vga_alpha_ram + ((vga_state.vga_height - lines) * vga_stride);
+	wr = vga_state.vga_alpha_ram + ((vga_state.vga_height - lines) * vga_state.vga_stride);
 	for (row=0;row < lines;row++) {
-		for (c=0;c < vga_stride;c++)
+		for (c=0;c < vga_state.vga_stride;c++)
 			*wr++ = (vga_state.vga_color << 8) | 0x20;
 	}
 }
@@ -75,7 +75,7 @@ void vga_writec(char c) {
 			vga_cursor_down();
 		}
 
-		vga_alpha_ram[(vga_state.vga_pos_y * vga_stride) + vga_state.vga_pos_x] = c | (vga_state.vga_color << 8);
+		vga_state.vga_alpha_ram[(vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x] = c | (vga_state.vga_color << 8);
 		vga_state.vga_pos_x++;
 	}
 }
@@ -85,8 +85,8 @@ void vga_write(const char *msg) {
 }
 
 void vga_write_sync() { /* sync writing pos with BIOS cursor and hardware */
-	if (vga_alpha_mode) {
-		unsigned int ofs = (vga_state.vga_pos_y * vga_stride) + vga_state.vga_pos_x;
+	if (vga_state.vga_alpha_mode) {
+		unsigned int ofs = (vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x;
 		vga_write_CRTC(0xE,ofs >> 8);
 		vga_write_CRTC(0xF,ofs);
 	}
@@ -96,9 +96,9 @@ void vga_clear() {
 	VGA_ALPHA_PTR wr;
 	unsigned char r,c;
 
-	wr = vga_alpha_ram;
+	wr = vga_state.vga_alpha_ram;
 	for (r=0;r < vga_state.vga_height;r++) {
-		for (c=0;c < vga_stride;c++) {
+		for (c=0;c < vga_state.vga_stride;c++) {
 			*wr++ = 0x0720;
 		}
 	}

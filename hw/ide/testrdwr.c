@@ -370,7 +370,7 @@ void do_drive_readwrite_test_choose_mode(struct ide_controller *ide,unsigned cha
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 
@@ -576,7 +576,7 @@ void do_drive_readwrite_tests(struct ide_controller *ide,unsigned char which) {
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 

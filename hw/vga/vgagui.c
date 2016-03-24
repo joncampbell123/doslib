@@ -32,7 +32,7 @@ int vga_menu_item_nonselectable(const struct vga_menu_item *m) {
 }
 
 void vga_menu_bar_draw() {
-	VGA_ALPHA_PTR vga = vga_alpha_ram + (80*vga_menu_bar.row);
+	VGA_ALPHA_PTR vga = vga_state.vga_alpha_ram + (80*vga_menu_bar.row);
 	const struct vga_menu_bar_item *m = vga_menu_bar.bar;
 	unsigned int x,i,color,colorh,ti;
 	unsigned char hi;
@@ -128,7 +128,7 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 #else
 		buf = _fmalloc(w * h * 2);
 #endif
-		screen = vga_alpha_ram + (row * vga_state.vga_width) + menu->x;
+		screen = vga_state.vga_alpha_ram + (row * vga_state.vga_width) + menu->x;
 		if (buf != NULL) {
 			/* copy off the screen contents */
 			for (y=0;y < h;y++) {
@@ -347,7 +347,7 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 	h += 2; if (h > 25) h = 25;
 	px = (vga_state.vga_width - w) / 2;
 	py = (vga_state.vga_height - h) / 2;
-	b->screen = vga_alpha_ram + (py * vga_state.vga_width) + px;
+	b->screen = vga_state.vga_alpha_ram + (py * vga_state.vga_width) + px;
 	b->x = px;
 	b->y = py;
 	b->w = w;

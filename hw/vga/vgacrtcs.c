@@ -30,7 +30,7 @@
 void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags) {
 	unsigned char c,c2;
 
-	if (!(vga_flags & VGA_IS_VGA))
+	if (!(vga_state.vga_flags & VGA_IS_VGA))
 		return;
 
 	/* sync disable unless told not to */

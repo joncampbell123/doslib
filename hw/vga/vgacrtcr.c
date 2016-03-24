@@ -25,7 +25,7 @@
 void vga_read_crtc_mode(struct vga_mode_params *p) {
 	unsigned char c,c2;
 
-	if (!(vga_flags & VGA_IS_VGA))
+	if (!(vga_state.vga_flags & VGA_IS_VGA))
 		return;
 
 	c = inp(0x3CC);	/* misc out reg */

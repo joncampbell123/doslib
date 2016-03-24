@@ -38,14 +38,14 @@ char *vga_get_buf = NULL;
 void vga_write_state_DEBUG(FILE *f) {
 	unsigned char tmp[128];
 	sprintf(tmp,"VGA=%u EGA=%u CGA=%u MDA=%u MCGA=%u HGC=%u(%u) Tandy/PCjr=%u Amstrad=%u\n",
-			(vga_flags & VGA_IS_VGA) ? 1 : 0,
-			(vga_flags & VGA_IS_EGA) ? 1 : 0,
-			(vga_flags & VGA_IS_CGA) ? 1 : 0,
-			(vga_flags & VGA_IS_MDA) ? 1 : 0,
-			(vga_flags & VGA_IS_MCGA) ? 1 : 0,
-			(vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type,
-			(vga_flags & VGA_IS_TANDY) ? 1 : 0,
-			(vga_flags & VGA_IS_AMSTRAD) ? 1 : 0);
+			(vga_state.vga_flags & VGA_IS_VGA) ? 1 : 0,
+			(vga_state.vga_flags & VGA_IS_EGA) ? 1 : 0,
+			(vga_state.vga_flags & VGA_IS_CGA) ? 1 : 0,
+			(vga_state.vga_flags & VGA_IS_MDA) ? 1 : 0,
+			(vga_state.vga_flags & VGA_IS_MCGA) ? 1 : 0,
+			(vga_state.vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type,
+			(vga_state.vga_flags & VGA_IS_TANDY) ? 1 : 0,
+			(vga_state.vga_flags & VGA_IS_AMSTRAD) ? 1 : 0);
 	if (f == NULL)
 		vga_write(tmp);
 	else
@@ -53,10 +53,10 @@ void vga_write_state_DEBUG(FILE *f) {
 
 	sprintf(tmp,"  3x0 I/O base = 0x%03x  RAM @ 0x%05lx-0x%05lx  ALPHA=%u 9W=%u\n",
 		vga_state.vga_base_3x0,
-		(unsigned long)vga_ram_base,
-		(unsigned long)vga_ram_base+vga_ram_size-1UL,
-		vga_alpha_mode,
-		vga_9wide);
+		(unsigned long)vga_state.vga_ram_base,
+		(unsigned long)vga_state.vga_ram_base+vga_state.vga_ram_size-1UL,
+		vga_state.vga_alpha_mode,
+		vga_state.vga_9wide);
 	if (f == NULL)
 		vga_write(tmp);
 	else
@@ -201,19 +201,19 @@ int main() {
 
 	vga_want_9wide = 0xFF;
 	vga_write_state_DEBUG(stdout);
-	assert(vga_ram_base != 0UL);
-	assert(vga_ram_size != 0UL);
-	assert(vga_graphics_ram != NULL);
-	assert(vga_alpha_ram != NULL);
+	assert(vga_state.vga_ram_base != 0UL);
+	assert(vga_state.vga_ram_size != 0UL);
+	assert(vga_state.vga_graphics_ram != NULL);
+	assert(vga_state.vga_alpha_ram != NULL);
 
 #if defined(TARGET_WINDOWS)
 	int10_setmode(3); /* 80x25 */
 	update_state_from_vga();
 #else
-	if (!vga_alpha_mode) {
+	if (!vga_state.vga_alpha_mode) {
 		int10_setmode(3); /* 80x25 */
 		update_state_from_vga();
-		if (!vga_alpha_mode) {
+		if (!vga_state.vga_alpha_mode) {
 			printf("Unable to determine that the graphics card is in an alphanumeric mode\n");
 			return 1;
 		}
@@ -235,7 +235,7 @@ int main() {
 		vga_write("  s: EGA/VGA split sc F: VGA/EGA font tst\n");
 		vga_write("  x: VGA raster fx    m: VGA modesetting\n");
 		vga_write("  A: Amstrad graphics test\n");
-		if (vga_9wide)
+		if (vga_state.vga_9wide)
 			vga_write("  9: VGA 8-bit wide \n");
 		else
 			vga_write("  9: VGA 9-bit wide \n");
@@ -269,7 +269,7 @@ int main() {
 #ifdef TARGET_WINDOWS
 #elif TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
 #else
-			if (vga_flags & VGA_IS_AMSTRAD) {
+			if (vga_state.vga_flags & VGA_IS_AMSTRAD) {
 				static unsigned char pat[4] = {0x11,0x55,0xEE,0xFF};
 				static unsigned char shf[4] = {2,1,2,0};
 				unsigned int x,y,c,b,s;
@@ -279,15 +279,15 @@ int main() {
 				int10_setmode(6);
 				outp(0x3D8,0x1B); /* graphics mode 2, graphics mode, 80-char mode for completeness, enable video display */
 #if TARGET_MSDOS == 32
-				vga_graphics_ram = (unsigned char*)0xB8000;
-				vga_graphics_ram_fence = vga_graphics_ram + 0x8000;
+				vga_state.vga_graphics_ram = (unsigned char*)0xB8000;
+				vga_state.vga_graphics_ram_fence = vga_state.vga_graphics_ram + 0x8000;
 #else
-				vga_graphics_ram = (unsigned char far*)MK_FP(0xB800,0);
-				vga_graphics_ram_fence = vga_graphics_ram + 0x8000;
+				vga_state.vga_graphics_ram = (unsigned char far*)MK_FP(0xB800,0);
+				vga_state.vga_graphics_ram_fence = vga_state.vga_graphics_ram + 0x8000;
 #endif
 
 				for (y=0;y < 200;y++) {
-					w = vga_graphics_ram + ((y >> 1) * 80) + ((y & 1) * 0x2000);
+					w = vga_state.vga_graphics_ram + ((y >> 1) * 80) + ((y & 1) * 0x2000);
 
 					for (x=0;x < 80;x++) {
 						c = (x >> 2) & 0xF;
@@ -316,7 +316,7 @@ int main() {
 			unsigned char disable=0;
 			struct vga_mode_params mp,omp;
 
-			if (vga_flags & VGA_IS_VGA) {
+			if (vga_state.vga_flags & VGA_IS_VGA) {
 				vga_read_crtc_mode(&mp); omp = mp;
 
 				do {
@@ -601,7 +601,7 @@ int main() {
 							redraw=1;
 							int10_setmode(3);
 							update_state_from_vga();
-							if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+							if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 						}
 					}
 					else if (c == ' ') {
@@ -632,7 +632,7 @@ int main() {
 			/* NOTHING */
 #else
 			/* FIXME: Would these tests actually work on an EGA? */
-			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
 				VGA_RAM_PTR wr;
 				VGA_ALPHA_PTR awr;
 				unsigned int x,y,cc,sino=0,divpt,divpt2;
@@ -641,8 +641,8 @@ int main() {
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
-				h = (vga_flags & VGA_IS_VGA) ? 400 : 350;
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				h = (vga_state.vga_flags & VGA_IS_VGA) ? 400 : 350;
 
 				/* -------------------------------------------------------------------------------- */
 				/* test #1: does your VGA double-buffer the horizontal panning register?            */
@@ -652,7 +652,7 @@ int main() {
 				 * nVidia Geforce:       yes  [rock solid]
 				 * Intel 855GM:          yes  [rock solid]
 				 */
-				awr = vga_alpha_ram;
+				awr = vga_state.vga_alpha_ram;
 				for (y=0;y < (80*25);y++)
 					awr[y] = 0x1E00 | 176;
 
@@ -675,7 +675,7 @@ int main() {
 
 					vga_wait_for_vsync();
 					/* set offset to zero so that VGA chipsets that DO buffer it have a static screen */
-					vga_set_xpan(vga_9wide ? 8 : 0);
+					vga_set_xpan(vga_state.vga_9wide ? 8 : 0);
 					vga_wait_for_vsync_end();
 					for (cc=0;cc < 12;cc++) { /* make sure we're far enough into the active area that our changes do not take effect immediately
 								     on chipsets that DO double buffer */
@@ -688,7 +688,7 @@ int main() {
 						vga_set_xpan(sine[(y+sino)&127]);
 						vga_wait_for_hsync_end();
 					}
-					vga_set_xpan(vga_9wide ? 8 : 0);
+					vga_set_xpan(vga_state.vga_9wide ? 8 : 0);
 					sino++;
 				} while(1);
 
@@ -699,7 +699,7 @@ int main() {
 				 * ATI Radeon:           no  [screen warps]
 				 * Intel:                no  [screen warps---very jumpy possibly due to Fujitsu BIOS]
 				 */
-				awr = vga_alpha_ram;
+				awr = vga_state.vga_alpha_ram;
 				for (y=0;y < (80*25);y++)
 					awr[y] = 0x1E00 | 176;
 
@@ -737,11 +737,11 @@ int main() {
 						vga_write_CRTC(9,sine[(y+sino)&127]);
 						vga_wait_for_hsync_end();
 					}
-					vga_write_CRTC(9,vga_flags & VGA_IS_VGA ? 15 : 13);
+					vga_write_CRTC(9,vga_state.vga_flags & VGA_IS_VGA ? 15 : 13);
 					sino++;
 				} while(1);
 
-				if (vga_flags & VGA_IS_VGA) {
+				if (vga_state.vga_flags & VGA_IS_VGA) {
 					/* now do it in mode 19 */
 					/* DOSBox 0.74:          no  [screen warps]
 					 * ATI Radeon:           no  [screen warps]
@@ -749,7 +749,7 @@ int main() {
 					 */
 					int10_setmode(19);
 					update_state_from_vga();
-					wr = vga_graphics_ram;
+					wr = vga_state.vga_graphics_ram;
 					for (y=0;y < 200;y++) {
 						for (x=0;x < 320;x++) {
 							*wr++ = y ^ x;
@@ -795,7 +795,7 @@ int main() {
 					/* restore mode 3 */
 					int10_setmode(3);
 					update_state_from_vga();
-					if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+					if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 				}
 
 				/* -------------------------------------------------------------------------------- */
@@ -814,7 +814,7 @@ int main() {
 				 * ATI Radeon:           no  [no mirror]
 				 * Intel:                no  [no mirror]
 				 */
-				awr = vga_alpha_ram;
+				awr = vga_state.vga_alpha_ram;
 				for (y=0;y < (80*25*2);y++) /* 2 h/w pages */
 					awr[y] = 0x1E00 | 176;
 
@@ -848,7 +848,7 @@ int main() {
 				/* if it doesn't double-buffer line compare, then we can probably trick
 				 * it into splitting the screen (resetting to address 0) more than once,
 				 * since the card is designed to do so when line count == line compare. */
-				awr = vga_alpha_ram;
+				awr = vga_state.vga_alpha_ram;
 				for (y=0;y < (80*25*2);y++) /* 2 h/w pages */
 					awr[y] = 0x1E00 | 176;
 
@@ -894,12 +894,12 @@ int main() {
 				 * ATI Radeon:                  no
 				 * Intel:                       no
 				 */
-				awr = vga_alpha_ram;
+				awr = vga_state.vga_alpha_ram;
 				for (y=0;y < (80*25);y++) /* 2 h/w pages */
 					awr[y] = 0x1E00 | 176;
 
-				divpt2 = ((15+5) * ((vga_flags & VGA_IS_VGA) ? 16 : 14)) + 1; /* give the VGA chipset time to latch into the offset of the box */
-				divpt = (15 * ((vga_flags & VGA_IS_VGA) ? 16 : 14)) + 1; /* give the VGA chipset time to latch into the offset of the box */
+				divpt2 = ((15+5) * ((vga_state.vga_flags & VGA_IS_VGA) ? 16 : 14)) + 1; /* give the VGA chipset time to latch into the offset of the box */
+				divpt = (15 * ((vga_state.vga_flags & VGA_IS_VGA) ? 16 : 14)) + 1; /* give the VGA chipset time to latch into the offset of the box */
 				vga_moveto(0,0);
 				vga_write_color(0x0E);
 				vga_write("Offset register double-buffer test\n");
@@ -931,13 +931,13 @@ int main() {
 				{
 					unsigned int ofs = (80*15)+(120*5);
 					const char *msg = "This text should be on the left side, and repeating";
-					VGA_ALPHA_PTR w = vga_alpha_ram + ofs;
+					VGA_ALPHA_PTR w = vga_state.vga_alpha_ram + ofs;
 					while (*msg) *w++ = 0x0A00 | *msg++;
 				}
 				{
 					unsigned int ofs = (80*15)+(120*5)+(80*1);
 					const char *msg = "You should not be able to see this text";
-					VGA_ALPHA_PTR w = vga_alpha_ram + ofs;
+					VGA_ALPHA_PTR w = vga_state.vga_alpha_ram + ofs;
 					while (*msg) *w++ = 0x0C00 | *msg++;
 				}
 
@@ -983,9 +983,9 @@ int main() {
 
 					/* also reprogram character ram to turn chars into 1:1 mapping with bits */
 					vga_alpha_switch_to_font_plane();
-					for (x=0;x < 256;x++) vga_graphics_ram[x*32] = x;
+					for (x=0;x < 256;x++) vga_state.vga_graphics_ram[x*32] = x;
 					vga_alpha_switch_from_font_plane();
-					if (vga_flags & VGA_IS_VGA) vga_set_9wide(0);
+					if (vga_state.vga_flags & VGA_IS_VGA) vga_set_9wide(0);
 
 					for (y=0;y < 14;y++) {
 						blobs[y*2 + 0] = rand()%80;
@@ -1003,7 +1003,7 @@ int main() {
 
 						vga_wait_for_vsync();
 						vga_wait_for_vsync_end();
-						awr = vga_alpha_ram;
+						awr = vga_state.vga_alpha_ram;
 						for (y=0;y < 80;y++) awr[y] = 0;
 						for (cc=0;cc < 4;cc++) {
 							vga_wait_for_hsync();
@@ -1070,7 +1070,7 @@ int main() {
 						if ((counter & 1) == 1) check1++;
 						check2++;
 					} while(1);
-					vga_write_CRTC(9,vga_flags & VGA_IS_VGA ? 15 : 13);
+					vga_write_CRTC(9,vga_state.vga_flags & VGA_IS_VGA ? 15 : 13);
 					vga_write_CRTC(0x13,80 / 2);	/* word mode, right? */
 				}
 
@@ -1086,15 +1086,15 @@ int main() {
 #endif
 		}
 		else if (c == '9') {
-			if (vga_flags & VGA_IS_VGA) {
-				if (!vga_alpha_mode) {
+			if (vga_state.vga_flags & VGA_IS_VGA) {
+				if (!vga_state.vga_alpha_mode) {
 					int10_setmode(3);
 					update_state_from_vga();
 				}
 
-				vga_set_9wide(!vga_9wide);
+				vga_set_9wide(!vga_state.vga_9wide);
 				update_state_from_vga();
-				vga_want_9wide = vga_9wide;
+				vga_want_9wide = vga_state.vga_9wide;
 			}
 			else {
 				vga_write("Only VGA may do that\n");
@@ -1104,17 +1104,17 @@ int main() {
 			}
 		}
 		else if (c == 'F') { /* in this test we fuck around with EGA/VGA character RAM */
-			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
-				unsigned int lineheight = (vga_flags & VGA_IS_VGA) ? 16 : 14;
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
+				unsigned int lineheight = (vga_state.vga_flags & VGA_IS_VGA) ? 16 : 14;
 				unsigned int x,y;
 				VGA_ALPHA_PTR wr;
 				VGA_RAM_PTR fr;
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 
-				wr = vga_alpha_ram;
+				wr = vga_state.vga_alpha_ram;
 				for (x=0;x < (80*25);x++) {
 					wr[x] = 0x400 + x;
 				}
@@ -1122,7 +1122,7 @@ int main() {
 
 				vga_alpha_switch_to_font_plane();
 				for (x=0;x < 16;x++) {
-					fr = vga_graphics_ram + (x*32);
+					fr = vga_state.vga_graphics_ram + (x*32);
 					for (y=0;y < lineheight;y++) {
 						vga_wait_for_vsync();
 						fr[y] = 0x55 << (y&1);
@@ -1130,20 +1130,20 @@ int main() {
 					}
 				}
 				for (x=127;x < 256;x++) {
-					fr = vga_graphics_ram + (x*32);
+					fr = vga_state.vga_graphics_ram + (x*32);
 					for (y=0;y < lineheight;y++) {
 						fr[y] = 0x55 << (y&1);
 					}
 				}
 				vga_alpha_switch_from_font_plane();
-				wr = vga_alpha_ram;
+				wr = vga_state.vga_alpha_ram;
 				{
 					const char *msg = "TADAAAAaaaa!";
 					while (*msg) *wr++ = ((unsigned char)(*msg++)) | 0x1A00;
 				}
 				while (getch() != 13);
 				vga_alpha_switch_to_font_plane();
-				fr = vga_graphics_ram;
+				fr = vga_state.vga_graphics_ram;
 				for (x=0;x < (256*32);x++) {
 					/* NTS: XOR and then NOT, make them different to discourage the compiler from optimizing them out */
 					*fr ^= 0xFF;
@@ -1160,7 +1160,7 @@ int main() {
 				 *      mode! Right? Perhaps someday I'll find some EGA hardware to verify this on */
 				{
 					vga_write_CRTC(9,7); /* transition to 80x50 */
-					wr = vga_alpha_ram;
+					wr = vga_state.vga_alpha_ram;
 					for (y=0;y < 50;y++) {
 						for (x=0;x < 80;x++) {
 							*wr++ = (x + 16) | ((y&1) << 11) | (((y>>1)&7) << 8) | ((y>>4) << 12);
@@ -1172,7 +1172,7 @@ int main() {
 					/* in-place convert 8x16 -> 8x8 */
 					for (x=0;x < 256;x++) {
 						unsigned char a,b;
-						fr = vga_graphics_ram + (x*32);
+						fr = vga_state.vga_graphics_ram + (x*32);
 						for (y=1;y < 8;y++) {
 							a = vga_force_read(fr+(y<<1));
 							b = vga_force_read(fr+(y<<1)+1);
@@ -1180,7 +1180,7 @@ int main() {
 						}
 					}
 					/* then make the 2nd set a mirror image */
-					fr = vga_graphics_ram;
+					fr = vga_state.vga_graphics_ram;
 					for (x=0;x < (256*32);x++) {
 						unsigned char c=0,i=fr[x];
 						for (y=0;y < 8;y++) {
@@ -1225,7 +1225,7 @@ int main() {
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only EGA/VGA may do that\n");
@@ -1235,22 +1235,22 @@ int main() {
 			}
 		}
 		else if (c == 's') {
-			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
-				unsigned int lineheight = (vga_flags & VGA_IS_VGA) ? 16 : 14;
-				unsigned int y,h = (vga_flags & VGA_IS_VGA) ? 400 : 350,v,cc;
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
+				unsigned int lineheight = (vga_state.vga_flags & VGA_IS_VGA) ? 16 : 14;
+				unsigned int y,h = (vga_state.vga_flags & VGA_IS_VGA) ? 400 : 350,v,cc;
 				unsigned int charw = 8;
 				unsigned int yofs;
 				VGA_ALPHA_PTR wr;
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA) {
+				if (vga_state.vga_flags & VGA_IS_VGA) {
 					if (vga_want_9wide != 0xFF) {
 						vga_set_9wide(vga_want_9wide);
 						charw = vga_want_9wide ? 9 : 8;
 					}
 					else {
-						charw = vga_9wide ? 9 : 8;
+						charw = vga_state.vga_9wide ? 9 : 8;
 					}
 				}
 
@@ -1266,7 +1266,7 @@ int main() {
 				 *      Intel (855/915/945/etc)        right after vblank [perfect scrolling] */
 
 				vga_set_start_location(80*25); /* show 2nd page */
-				wr = vga_alpha_ram + (80*25);
+				wr = vga_state.vga_alpha_ram + (80*25);
 				{ /* draw pattern on 2nd page */
 					for (y=0;y < (80*25);y++) {
 						wr[y] = y + 0x200;
@@ -1274,9 +1274,9 @@ int main() {
 				}
 				{ /* draw message on first page */
 					const char *msg = "EGA/VGA Split-screen!";
-					wr = vga_alpha_ram;
+					wr = vga_state.vga_alpha_ram;
 					while (*msg) *wr++ = (unsigned char)(*msg++) | 0x1E00;
-					while (wr < (vga_alpha_ram+(80*25))) *wr++ = 0x1FB1;
+					while (wr < (vga_state.vga_alpha_ram+(80*25))) *wr++ = 0x1FB1;
 				}
 				y = 0; v = 1;
 				do { /* loop */
@@ -1333,7 +1333,7 @@ int main() {
 				} while (1);
 
 				y = 0; v = 1;
-				if (vga_flags & VGA_IS_VGA)
+				if (vga_state.vga_flags & VGA_IS_VGA)
 					vga_write_AC(0x10|0x20,vga_read_AC(0x10) | 0x20); /* disable hpen on splitscreen */
 				else
 					vga_write_AC(0x10|0x20,0x20); /* disable hpen on splitscreen */
@@ -1371,7 +1371,7 @@ int main() {
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only EGA/VGA may do that\n");
@@ -1381,14 +1381,14 @@ int main() {
 			}
 		}
 		else if (c == 'S') {
-			if (vga_flags & VGA_IS_EGA) {
+			if (vga_state.vga_flags & VGA_IS_EGA) {
 				uint16_t color16;
 				unsigned char mode,c;
 				volatile VGA_RAM_PTR wr;
 				unsigned int w,h,x,y,v,rv;
 
 				w = 640;
-				if (vga_flags & VGA_IS_VGA) {
+				if (vga_state.vga_flags & VGA_IS_VGA) {
 					mode = 18;
 					h = 480;
 				}
@@ -1407,7 +1407,7 @@ int main() {
 				vga_write_GC(VGA_GC_DATA_ROTATE,	0 | VGA_GC_DATA_ROTATE_OP_NONE); /* rotate=0 op=unmodified */
 				vga_write_GC(VGA_GC_MODE,		0x02);	/* 256=0 CGAstyle=0 odd/even=0 readmode=0 writemode=2 (copy CPU bits to each plane) */
 				{
-					wr = vga_graphics_ram;
+					wr = vga_state.vga_graphics_ram;
 					for (y=0;y < h;y++) {
 						color16 = (y>>3) * 0x101;
 						/* NTS: performance hack: issue 16-bit memory I/O */
@@ -1471,7 +1471,7 @@ int main() {
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only EGA/VGA may do that\n");
@@ -1481,7 +1481,7 @@ int main() {
 			}
 		}
 		else if (c == 'R') {
-			if (vga_flags & VGA_IS_VGA) {
+			if (vga_state.vga_flags & VGA_IS_VGA) {
 				signed char tr,tg,tb,cc,cd;
 				unsigned char r,g,b,*pal;
 				volatile VGA_RAM_PTR wr;
@@ -1495,7 +1495,7 @@ int main() {
 				w = 320; h = (0x10000 / (w/4));
 				x = 0; v = 1;
 
-				wr = vga_graphics_ram;
+				wr = vga_state.vga_graphics_ram;
 				for (y=0;y < h;y++) {
 					*wr++ = y;
 					*wr++ = y;
@@ -1578,7 +1578,7 @@ int main() {
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only VGA may do that\n");
@@ -1588,7 +1588,7 @@ int main() {
 			}
 		}
 		else if (c == 'Y') {
-			if (vga_flags & VGA_IS_VGA) {
+			if (vga_state.vga_flags & VGA_IS_VGA) {
 				volatile VGA_RAM_PTR wr;
 				unsigned int w,h,x,y,v,ii;
 
@@ -1597,7 +1597,7 @@ int main() {
 				vga_enable_256color_modex();
 				w = 320; h = (0x10000 / (w/4));
 
-				wr = vga_graphics_ram;
+				wr = vga_state.vga_graphics_ram;
 				for (y=0;y < h;y++) {
 					*wr++ = y;
 					*wr++ = y;
@@ -1608,7 +1608,7 @@ int main() {
 
 				for (x=16;x < w;x++) {
 					vga_write_sequencer(VGA_SC_MAP_MASK,1 << (x&3));
-					wr = vga_graphics_ram + (x>>2);
+					wr = vga_state.vga_graphics_ram + (x>>2);
 					for (y=0;y < h;y++) {
 						*wr++ = (x^y);
 						wr += (w/4)-1;
@@ -1687,7 +1687,7 @@ int main() {
 				vga_set_stride(w);
 				for (x=0;x < w;x++) {
 					vga_write_sequencer(VGA_SC_MAP_MASK,1 << (x&3));
-					wr = vga_graphics_ram + (x>>2);
+					wr = vga_state.vga_graphics_ram + (x>>2);
 					for (y=0;y < h;y++) {
 						*wr++ = (x^y);
 						wr += (w/4)-1;
@@ -1695,12 +1695,12 @@ int main() {
 				}
 				vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
 				for (y=128;y < h;y += 56) {
-					wr = vga_graphics_ram + ((w>>2)*y);
+					wr = vga_state.vga_graphics_ram + ((w>>2)*y);
 					for (x=0;x < w;x += 4) *wr++ = 63;
 				}
 				vga_write_sequencer(VGA_SC_MAP_MASK,0x8);
 				for (x=256;x < w;x += 56) {
-					wr = vga_graphics_ram + (x>>2);
+					wr = vga_state.vga_graphics_ram + (x>>2);
 					for (y=0;y < h;y++) {
 						*wr++ = 63;
 						wr += (w/4)-1;
@@ -1795,7 +1795,7 @@ int main() {
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only VGA may do that\n");
@@ -1805,7 +1805,7 @@ int main() {
 			}
 		}
 		else if (c == 'X') {
-			if (vga_flags & (VGA_IS_VGA|VGA_IS_MCGA)) {
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_MCGA)) {
 				volatile VGA_RAM_PTR wr;
 				unsigned int w,h,x,y,ii;
 
@@ -1813,7 +1813,7 @@ int main() {
 				update_state_from_vga();
 
 				w = 320; h = 200;
-				wr = vga_graphics_ram;
+				wr = vga_state.vga_graphics_ram;
 
 				for (y=0;y < (h/4);y++) {
 					for (x=0;x < w;x++)
@@ -1866,7 +1866,7 @@ int main() {
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only VGA/MCGA may do that\n");
@@ -1876,14 +1876,14 @@ int main() {
 			}
 		}
 		else if (c == 'W') {
-			if (vga_flags & VGA_IS_EGA) {
+			if (vga_state.vga_flags & VGA_IS_EGA) {
 				uint16_t color16;
 				unsigned char mode,c;
 				unsigned int w,h,x,y;
 				volatile VGA_RAM_PTR wr;
 
 				w = 640;
-				if (vga_flags & VGA_IS_VGA) {
+				if (vga_state.vga_flags & VGA_IS_VGA) {
 					mode = 18;
 					h = 480;
 				}
@@ -1902,7 +1902,7 @@ int main() {
 				vga_write_GC(VGA_GC_DATA_ROTATE,	0 | VGA_GC_DATA_ROTATE_OP_NONE); /* rotate=0 op=unmodified */
 				vga_write_GC(VGA_GC_MODE,		0x02);	/* 256=0 CGAstyle=0 odd/even=0 readmode=0 writemode=2 (copy CPU bits to each plane) */
 				{
-					wr = vga_graphics_ram;
+					wr = vga_state.vga_graphics_ram;
 					for (y=0;y < h;y++) {
 						color16 = (y>>3) * 0x101;
 						/* NTS: performance hack: issue 16-bit memory I/O */
@@ -1924,7 +1924,7 @@ int main() {
 				while (getch() != 13);
 
 				/* VGA only: play with the color palette registers */
-				if (vga_flags & VGA_IS_VGA) {
+				if (vga_state.vga_flags & VGA_IS_VGA) {
 					for (c=0;c < 16;c++) vga_write_AC(c,c);
 					vga_AC_reenable_screen();
 					vga_palette_lseek(0);
@@ -1958,7 +1958,7 @@ int main() {
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only EGA/VGA may do that\n");
@@ -1969,7 +1969,7 @@ int main() {
 
 		}
 		else if (c == 'V') {
-			if (vga_flags & VGA_IS_EGA) {
+			if (vga_state.vga_flags & VGA_IS_EGA) {
 				uint16_t color16;
 				unsigned char mode,color;
 				unsigned int w,h,x,y;
@@ -1988,7 +1988,7 @@ int main() {
 
 				for (mode=13;mode <= 18;mode++) {
 					if (mode == 15 || mode == 17) continue; /* skip mono modes */
-					if (mode == 18 && (vga_flags & VGA_IS_VGA) == 0) continue; /* skip 640x480x16 if not VGA */
+					if (mode == 18 && (vga_state.vga_flags & VGA_IS_VGA) == 0) continue; /* skip 640x480x16 if not VGA */
 
 					if (mode == 13)
 						w = 320;
@@ -2012,7 +2012,7 @@ int main() {
 					vga_write_GC(VGA_GC_DATA_ROTATE,	0 | VGA_GC_DATA_ROTATE_OP_NONE); /* rotate=0 op=unmodified */
 					vga_write_GC(VGA_GC_MODE,		0x02);	/* 256=0 CGAstyle=0 odd/even=0 readmode=0 writemode=2 (copy CPU bits to each plane) */
 					{
-						wr = vga_graphics_ram;
+						wr = vga_state.vga_graphics_ram;
 						for (y=0;y < h;y++) {
 							color16 = (y>>3) * 0x101;
 							/* NTS: performance hack: issue 16-bit memory I/O */
@@ -2027,7 +2027,7 @@ int main() {
 					vga_write_GC(VGA_GC_MODE,		0x02);	/* 256=0 CGAstyle=0 odd/even=0 readmode=0 writemode=2 */
 					vga_write_GC(VGA_GC_DATA_ROTATE,	0 | VGA_GC_DATA_ROTATE_OP_NONE); /* rotate=0 op=none */
 					{
-						wr = vga_graphics_ram;
+						wr = vga_state.vga_graphics_ram;
 						for (y=0;y < h;y++) {
 							vga_write_GC(VGA_GC_BIT_MASK,0x55 << (y & 1));
 							color = y>>4;
@@ -2045,7 +2045,7 @@ int main() {
 					vga_write_GC(VGA_GC_MODE,		0x02);	/* 256=0 CGAstyle=0 odd/even=0 readmode=0 writemode=2 */
 					vga_write_GC(VGA_GC_DATA_ROTATE,	0 | VGA_GC_DATA_ROTATE_OP_AND); /* rotate=0 op=AND */
 					{
-						wr = vga_graphics_ram;
+						wr = vga_state.vga_graphics_ram;
 						for (y=0;y < h;y++) {
 							vga_write_GC(VGA_GC_BIT_MASK,((y&6) == 0 ? 0xFF : 0xC0));
 							color = 1 << ((y>>5)&3);
@@ -2063,7 +2063,7 @@ int main() {
 					vga_write_GC(VGA_GC_MODE,		0x02);	/* 256=0 CGAstyle=0 odd/even=0 readmode=0 writemode=2 */
 					vga_write_GC(VGA_GC_DATA_ROTATE,	0 | VGA_GC_DATA_ROTATE_OP_OR); /* rotate=0 op=OR */
 					{
-						wr = vga_graphics_ram;
+						wr = vga_state.vga_graphics_ram;
 						for (y=0;y < h;y++) {
 							vga_write_GC(VGA_GC_BIT_MASK,((y&6) == 0 ? 0xFF : 0xC0));
 							color = 8 << ((y>>5)&3);
@@ -2081,7 +2081,7 @@ int main() {
 					vga_write_GC(VGA_GC_MODE,		0x02);	/* 256=0 CGAstyle=0 odd/even=0 readmode=0 writemode=2 */
 					vga_write_GC(VGA_GC_DATA_ROTATE,	0 | VGA_GC_DATA_ROTATE_OP_XOR); /* rotate=0 op=XOR */
 					{
-						wr = vga_graphics_ram;
+						wr = vga_state.vga_graphics_ram;
 						for (y=0;y < h;y++) {
 							vga_write_GC(VGA_GC_BIT_MASK,((y&6) == 0 ? 0xFF : 0xC0));
 							for (x=0;x < w;x += 8) {
@@ -2106,7 +2106,7 @@ int main() {
 
 				int10_setmode(3);
 				update_state_from_vga();
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only EGA/VGA may do that\n");
@@ -2118,7 +2118,7 @@ int main() {
 		else if (c == 'P') {
 #if TARGET_MSDOS == 16 && defined(__COMPACT__)
 #else
-			if (vga_flags & VGA_IS_TANDY) {
+			if (vga_state.vga_flags & VGA_IS_TANDY) {
 				/* 160x200x16 */
 				int10_setmode(8);
 				{
@@ -2130,7 +2130,7 @@ int main() {
 						row[y] = ((y * 0x10) / 80) * 0x11;
 
 					for (y=0;y < 80;y++) {
-						wr = vga_graphics_ram + ((160/2) * (y>>1)) + ((y&1) << 13);
+						wr = vga_state.vga_graphics_ram + ((160/2) * (y>>1)) + ((y&1) << 13);
 						for (x=0;x < (160/2);x++) wr[x] = row[x];
 					}
 
@@ -2147,11 +2147,11 @@ int main() {
 					}
 
 					for (y=80;y < 160;) {
-						wr = vga_graphics_ram + ((160/2) * (y>>1)) + ((y&1) << 13);
+						wr = vga_state.vga_graphics_ram + ((160/2) * (y>>1)) + ((y&1) << 13);
 						for (x=0;x < (160/2);x++) wr[x] = row[x];
 						y++;
 
-						wr = vga_graphics_ram + ((160/2) * (y>>1)) + ((y&1) << 13);
+						wr = vga_state.vga_graphics_ram + ((160/2) * (y>>1)) + ((y&1) << 13);
 						for (x=0;x < (160/2);x++) wr[x] = row[x+(160/2)];
 						y++;
 					}
@@ -2173,7 +2173,7 @@ int main() {
 						row[y] = ((y * 0x10) / 160) * 0x11;
 
 					for (y=0;y < 80;y++) {
-						wr = vga_graphics_ram + ((320/2) * (y>>2)) + ((y&3) << 13);
+						wr = vga_state.vga_graphics_ram + ((320/2) * (y>>2)) + ((y&3) << 13);
 						for (x=0;x < (320/2);x++) wr[x] = row[x];
 					}
 
@@ -2190,11 +2190,11 @@ int main() {
 					}
 
 					for (y=80;y < 160;) {
-						wr = vga_graphics_ram + ((320/2) * (y>>2)) + ((y&3) << 13);
+						wr = vga_state.vga_graphics_ram + ((320/2) * (y>>2)) + ((y&3) << 13);
 						for (x=0;x < (320/2);x++) wr[x] = row[x];
 						y++;
 
-						wr = vga_graphics_ram + ((320/2) * (y>>2)) + ((y&3) << 13);
+						wr = vga_state.vga_graphics_ram + ((320/2) * (y>>2)) + ((y&3) << 13);
 						for (x=0;x < (320/2);x++) wr[x] = row[x+(320/2)];
 						y++;
 					}
@@ -2231,7 +2231,7 @@ int main() {
 					}
 
 					for (y=0;y < 80;y++) {
-						wr = vga_alpha_ram + ((640/8) * (y>>2)) + (((y&3) << 13)>>1);
+						wr = vga_state.vga_alpha_ram + ((640/8) * (y>>2)) + (((y&3) << 13)>>1);
 						for (x=0;x < (640/8);x++) wr[x] = row[x];
 					}
 
@@ -2252,11 +2252,11 @@ int main() {
 					}
 
 					for (y=80;y < 160;) {
-						wr = vga_alpha_ram + ((640/8) * (y>>2)) + (((y&3) << 13)>>1);
+						wr = vga_state.vga_alpha_ram + ((640/8) * (y>>2)) + (((y&3) << 13)>>1);
 						for (x=0;x < (640/8);x++) wr[x] = row[x];
 						y++;
 
-						wr = vga_alpha_ram + ((640/8) * (y>>2)) + (((y&3) << 13)>>1);
+						wr = vga_state.vga_alpha_ram + ((640/8) * (y>>2)) + (((y&3) << 13)>>1);
 						for (x=0;x < (640/8);x++) wr[x] = row[x+(640/8)];
 						y++;
 					}
@@ -2270,7 +2270,7 @@ int main() {
 				/* TODO: figure out 640x200x16 */
 
 				int10_setmode(3);
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only Tandy/CGA or compatible may do that\n");
@@ -2281,9 +2281,9 @@ int main() {
 #endif
 		}
 		else if (c == 'D') {
-			if (vga_flags & VGA_IS_CGA) { /* NTS: This test also works on EGA/VGA */
+			if (vga_state.vga_flags & VGA_IS_CGA) { /* NTS: This test also works on EGA/VGA */
 				int10_setmode(4);
-				if ((vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_TANDY)) == 0) /* this part of the test doesn't work on EGA/VGA nor does it work on Tandy/PCjr */
+				if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_TANDY)) == 0) /* this part of the test doesn't work on EGA/VGA nor does it work on Tandy/PCjr */
 					vga_set_cga_palette_and_background(0,0);
 
 				{
@@ -2291,14 +2291,14 @@ int main() {
 					VGA_RAM_PTR wr;
 
 					for (y=0;y < 80;y++) {
-						wr = vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
+						wr = vga_state.vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
 						for (x=0;x < (((320/4)*1)/4);x++) *wr++ = 0;
 						for (   ;x < (((320/4)*2)/4);x++) *wr++ = 0x55;
 						for (   ;x < (((320/4)*3)/4);x++) *wr++ = 0xAA;
 						for (   ;x < (((320/4)*4)/4);x++) *wr++ = 0xFF;
 					}
 					for (;y < 160;y++) {
-						wr = vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
+						wr = vga_state.vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
 						for (x=0;x < (((320/4)*1)/8);x++) *wr++ = 0;
 						for (   ;x < (((320/4)*2)/8);x++) *wr++ = 0x11 << ((y&1)<<1);
 						for (   ;x < (((320/4)*3)/8);x++) *wr++ = 0x55;
@@ -2308,7 +2308,7 @@ int main() {
 						for (   ;x < (((320/4)*8)/8);x++) *wr++ = 0xFF;
 					}
 				}
-				if ((vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_TANDY)) == 0) {/* this part of the test doesn't work on EGA/VGA */
+				if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_TANDY)) == 0) {/* this part of the test doesn't work on EGA/VGA */
 					while (getch() != 13);
 					vga_set_cga_palette_and_background(0,VGA_CGA_PALETTE_CS_BLUE);
 					while (getch() != 13);
@@ -2336,7 +2336,7 @@ int main() {
 						for (y=0;y < 200;y++) {
 							color = (y*0x10)/200;
 							c = color * 0x11;
-							wr = vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
+							wr = vga_state.vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
 							for (x=0;x < (320/4);x++) *wr++ = c;
 						}
 					}
@@ -2365,14 +2365,14 @@ int main() {
 						VGA_RAM_PTR wr;
 
 						for (y=0;y < 80;y++) {
-							wr = vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
+							wr = vga_state.vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
 							for (x=0;x < (((320/4)*1)/4);x++) *wr++ = 0;
 							for (   ;x < (((320/4)*2)/4);x++) *wr++ = 0x55;
 							for (   ;x < (((320/4)*3)/4);x++) *wr++ = 0xAA;
 							for (   ;x < (((320/4)*4)/4);x++) *wr++ = 0xFF;
 						}
 						for (;y < 160;y++) {
-							wr = vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
+							wr = vga_state.vga_graphics_ram + ((320/4) * (y>>1)) + ((y&1) << 13);
 							for (x=0;x < (((320/4)*1)/8);x++) *wr++ = 0;
 							for (   ;x < (((320/4)*2)/8);x++) *wr++ = 0x11 << ((y&1)<<1);
 							for (   ;x < (((320/4)*3)/8);x++) *wr++ = 0x55;
@@ -2386,7 +2386,7 @@ int main() {
 				}
 
 				int10_setmode(3);
-				if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
 				vga_write("Only CGA or compatible may do that\n");
@@ -2396,8 +2396,8 @@ int main() {
 			}
 		}
 		else if (c == '!') {
-			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
-				unsigned char mono = (vga_ram_base == 0xB0000) ? 1 : 0;
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
+				unsigned char mono = (vga_state.vga_ram_base == 0xB0000) ? 1 : 0;
 				unsigned char c;
 
 				vga_clear();
@@ -2456,7 +2456,7 @@ int main() {
 		else if (c == 'H') {
 #if TARGET_MSDOS == 16 && defined(__COMPACT__)
 #else
-			if (vga_flags & VGA_IS_HGC) {
+			if (vga_state.vga_flags & VGA_IS_HGC) {
 				vga_turn_on_hgc();
 				{
 					unsigned char pat;
@@ -2464,19 +2464,19 @@ int main() {
 					VGA_RAM_PTR wr;
 
 					/* clear */
-					wr = vga_graphics_ram;
+					wr = vga_state.vga_graphics_ram;
 					for (x=0;x < 0x8000;x++) *wr++ = 0x00;
 
 					/* draw hatch pattern */
 					for (y=0;y < 348;y++) {
-						wr = vga_graphics_ram + ((y>>2) * (720/8)) + ((y&3) << 13);
+						wr = vga_state.vga_graphics_ram + ((y>>2) * (720/8)) + ((y&3) << 13);
 						pat = 0x55 << (y & 1);
 						for (x=0;x < (720/8);x++) *wr++ = pat;
 					}
 
 					/* and another pattern */
 					for (y=0;y <= 120;y++) {
-						wr = vga_graphics_ram + ((y>>2) * (720/8)) + ((y&3) << 13) + 14;
+						wr = vga_state.vga_graphics_ram + ((y>>2) * (720/8)) + ((y&3) << 13) + 14;
 						pat = (y % 4) == 0 ? 0xFF : 0x88;
 						for (x=0;x < (240/8);x++) *wr++ = pat;
 					}
@@ -2496,10 +2496,10 @@ int main() {
 		else if (c == 'T') {
 			int10_setmode(3);
 			update_state_from_vga();
-			if (vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
+			if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 		}
 		else if (c == 'M') {
-			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
 				vga_switch_to_mono();
 				update_state_from_vga();
 			}
@@ -2511,7 +2511,7 @@ int main() {
 			}
 		}
 		else if (c == 'C') {
-			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
 				vga_switch_to_color();
 				update_state_from_vga();
 			}
@@ -2523,7 +2523,7 @@ int main() {
 			}
 		}
 		else if (c == 'o') {
-			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
 				unsigned char color;
 
 				inp(vga_state.vga_base_3x0+0xA); /* reset flipflop */
@@ -2542,7 +2542,7 @@ int main() {
 #elif TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
 #else
 			write_8254_system_timer(0); /* make sure the timer is in rate generator mode, full counter */
-			if (vga_flags & (VGA_IS_VGA|VGA_IS_EGA|VGA_IS_CGA)) {
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA|VGA_IS_CGA)) {
 				unsigned int b_frame,e_retrace,b_vsync,e_frame_active,e_frame;
 				unsigned int vlines=0;
 				unsigned char b,hex;

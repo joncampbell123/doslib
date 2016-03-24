@@ -91,12 +91,12 @@ static const struct vga_menu_bar_item main_menu_bar[] = {
 };
 
 static void ui_anim(int force) {
-	VGA_ALPHA_PTR wr = vga_alpha_ram + 10;
+	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 10;
 
 	{
 		static const unsigned char anims[] = {'-','/','|','\\'};
 		if (++animator >= 4) animator = 0;
-		wr = vga_alpha_ram + 79;
+		wr = vga_state.vga_alpha_ram + 79;
 		*wr = anims[animator] | 0x1E00;
 	}
 }
@@ -108,7 +108,7 @@ static void my_vga_menu_idle() {
 static char wav_file[256] = {0};
 
 static void draw_irq_indicator() {
-	VGA_ALPHA_PTR wr = vga_alpha_ram;
+	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram;
 	unsigned char i;
 
 	wr[0] = 0x1E00 | 'G';
@@ -1131,8 +1131,8 @@ int main(int argc,char **argv) {
 
 		if (redraw || bkgndredraw) {
 			if (bkgndredraw) {
-				for (vga=vga_alpha_ram,cc=0;cc < (80*1);cc++) *vga++ = 0x1E00 | 32;
-				for (vga=vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+				for (vga=vga_state.vga_alpha_ram,cc=0;cc < (80*1);cc++) *vga++ = 0x1E00 | 32;
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
 				vga_menu_bar_draw();
 				draw_irq_indicator();
 			}

@@ -24,16 +24,16 @@
 static void bios_cls() {
 	VGA_RAM_PTR rp;
 
-	if ((rp=vga_graphics_ram) != NULL) {
+	if ((rp=vga_state.vga_graphics_ram) != NULL) {
 #if TARGET_MSDOS == 16
 		unsigned int i,im;
 
-		im = (FP_SEG(vga_graphics_ram_fence) - FP_SEG(vga_graphics_ram));
+		im = (FP_SEG(vga_state.vga_graphics_ram_fence) - FP_SEG(vga_state.vga_graphics_ram));
 		if (im > 0xFFE) im = 0xFFE;
 		im <<= 4;
-		for (i=0;i < im;i++) vga_graphics_ram[i] = 0;
+		for (i=0;i < im;i++) vga_state.vga_graphics_ram[i] = 0;
 #else
-		while (rp < vga_graphics_ram_fence) *rp++ = 0;
+		while (rp < vga_state.vga_graphics_ram_fence) *rp++ = 0;
 #endif
 	}
 }
@@ -42,7 +42,7 @@ static void v320x200x256_VGA_menu_setpixel_box1() {
 	unsigned int x,y,xm,ym;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	xm = v320x200x256_VGA_state.width/2;
@@ -73,7 +73,7 @@ static void v320x200x256_VGA_menu_setpixel_box1b() {
 	unsigned int x,y,xm,ym;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	xm = v320x200x256_VGA_state.width/2;
@@ -104,7 +104,7 @@ static void v320x200x256_VGA_menu_setpixel_box2overdraw() {
 	unsigned int x,y,xm,ym;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	xm = v320x200x256_VGA_state.width/2;
@@ -139,7 +139,7 @@ static void v320x200x256_VGA_menu_setpixel_box3inv1() {
 	unsigned int x,y,xm,ym;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	xm = v320x200x256_VGA_state.width/2;
@@ -162,7 +162,7 @@ static void v320x200x256_VGA_menu_setpixel_box3rw() {
 	unsigned char p;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	printf("This code is reading, writing, then\n");
@@ -197,7 +197,7 @@ static void v320x200x256_VGA_menu_setpixel_box3rwdisp() {
 	unsigned char p;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	xm = v320x200x256_VGA_state.width/2;
@@ -243,7 +243,7 @@ static void v320x200x256_VGA_menu_setpixel_box3rwzoom() {
 	unsigned char p;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	xm = v320x200x256_VGA_state.width/2;
@@ -312,7 +312,7 @@ static void v320x200x256_VGA_menu_setpixel_drawpcx(unsigned int sx,unsigned int 
 	unsigned int w,h;
 	int fd,c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	/* load PCX into memory */
@@ -422,7 +422,7 @@ static void v320x200x256_VGA_menu_setpixel_drawvrl(unsigned int sx,unsigned int 
 	unsigned int w;
 	int fd;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	/* load PCX into memory */
@@ -501,7 +501,7 @@ static void v320x200x256_VGA_menu_windowing() {
 	unsigned char redraw;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	redraw = 1;
@@ -657,7 +657,7 @@ static void v320x200x256_VGA_menu_setpixel() {
 	unsigned char redraw;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	redraw = 1;
@@ -818,7 +818,7 @@ void v320x200x256_VGA_menu() {
 	unsigned char redraw;
 	int c;
 
-	if ((vga_flags & VGA_IS_VGA) == 0)
+	if ((vga_state.vga_flags & VGA_IS_VGA) == 0)
 		return;
 
 	v320x200x256_VGA_init();

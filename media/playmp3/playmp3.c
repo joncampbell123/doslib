@@ -1053,7 +1053,7 @@ static void interrupt irq_0() { /* timer IRQ */
 }
 
 void draw_irq_indicator() {
-	VGA_ALPHA_PTR wr = vga_alpha_ram;
+	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram;
 	unsigned char i;
 
 	if (sb_card != NULL) {
@@ -1197,7 +1197,7 @@ static void interrupt gus_irq() {
 }
 
 static void load_audio_sb(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
-	VGA_ALPHA_PTR wr = vga_alpha_ram + 80 - 6;
+	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 80 - 6;
 	unsigned int patience=2000;
 	unsigned char load=0;
 	uint16_t prev[6];
@@ -1735,7 +1735,7 @@ static void mad_gus_send(unsigned long ofs,mad_sample_t *src,unsigned long len) 
 }
 
 static void load_audio_gus(uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
-	VGA_ALPHA_PTR wr = vga_alpha_ram + 80 - 6;
+	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 80 - 6;
 	unsigned int patience=2000;
 	unsigned char load=0;
 	uint16_t prev[6];
@@ -1839,7 +1839,7 @@ static void load_audio_gus(uint32_t up_to,uint32_t min,uint32_t max,uint8_t init
 }
 
 static void load_audio_pc_speaker(uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
-	VGA_ALPHA_PTR wr = vga_alpha_ram + 80 - 6;
+	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 80 - 6;
 	unsigned int patience=2000;
 	unsigned char load=0;
 	signed long samp;
@@ -2016,7 +2016,7 @@ static void load_audio_pc_speaker(uint32_t up_to,uint32_t min,uint32_t max,uint8
 }
 
 static void load_audio_dac8(uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
-	VGA_ALPHA_PTR wr = vga_alpha_ram + 80 - 6;
+	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 80 - 6;
 	unsigned int patience=2000;
 	unsigned char load=0;
 	signed long samp;
@@ -2232,7 +2232,7 @@ static void mp3_idle() {
 
 void ui_anim(int force) {
 	unsigned long mp3_position = lseek(mp3_fd,0,SEEK_CUR);
-	VGA_ALPHA_PTR wr = vga_alpha_ram + 10;
+	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 10;
 	const unsigned int width = 70 - 4;
 	const char *card_name = "?";
 	unsigned int i,rem,rem2,cc;
@@ -2311,7 +2311,7 @@ void ui_anim(int force) {
 		msg = temp_str;
 		sprintf(temp_str,"%s %ub %s %5luHz %c @%lu %%%u",card_name,mp3_16bit ? 16 : 8,mp3_stereo ? "ST" : "MO",
 			mp3_sample_rate,mp3_playing ? 'p' : 's',mp3_position,percent);
-		for (wr=vga_alpha_ram+(80*1),cc=0;cc < 36 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
+		for (wr=vga_state.vga_alpha_ram+(80*1),cc=0;cc < 36 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 		if (drv_mode == USE_PC_SPEAKER || drv_mode == USE_LPT_DAC) {
 			sprintf(temp_str," x%.2f",(double)output_amplify / (1 << output_amplify_shr));
 			msg = temp_str;
@@ -2336,7 +2336,7 @@ void ui_anim(int force) {
 	{
 		static const unsigned char anims[] = {'-','/','|','\\'};
 		if (++animator >= 4) animator = 0;
-		wr = vga_alpha_ram + 80 + 79;
+		wr = vga_state.vga_alpha_ram + 80 + 79;
 		*wr = anims[animator] | 0x1E00;
 	}
 }
@@ -2595,7 +2595,7 @@ static void change_param_menu() {
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
-				for (vga=vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
 				ui_anim(1);
 			}
 			vga_moveto(0,4);
@@ -2684,7 +2684,7 @@ static void change_param_menu() {
 					VGA_ALPHA_PTR sco;
 					struct vga_msg_box box;
 					vga_msg_box_create(&box,"Custom sample rate",2,0);
-					sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
+					sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 					sco[i] = c | 0x1E00;
 					temp_str[i++] = c;
 					while (1) {
@@ -2863,7 +2863,7 @@ static void play_with_mixer_sb() {
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
-				for (vga=vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
 				ui_anim(1);
 			}
 			vga_moveto(0,2);
@@ -2960,7 +2960,7 @@ static void play_with_mixer_sb() {
 				VGA_ALPHA_PTR sco;
 				struct vga_msg_box box;
 				vga_msg_box_create(&box,"Custom value",2,0);
-				sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
+				sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 				sco[i] = c | 0x1E00;
 				temp_str[i++] = c;
 				while (1) {
@@ -3362,7 +3362,7 @@ static void help() {
 static void draw_device_info_gus(struct ultrasnd_ctx *cx,int x,int y,int w,int h) {
 	/* clear prior contents */
 	{
-		VGA_ALPHA_PTR p = vga_alpha_ram + (y * vga_state.vga_width) + x;
+		VGA_ALPHA_PTR p = vga_state.vga_alpha_ram + (y * vga_state.vga_width) + x;
 		unsigned int a,b;
 
 		for (b=0;b < h;b++) {
@@ -3394,7 +3394,7 @@ static void draw_device_info_sb(struct sndsb_ctx *cx,int x,int y,int w,int h) {
 
 	/* clear prior contents */
 	{
-		VGA_ALPHA_PTR p = vga_alpha_ram + (y * vga_state.vga_width) + x;
+		VGA_ALPHA_PTR p = vga_state.vga_alpha_ram + (y * vga_state.vga_width) + x;
 		unsigned int a,b;
 
 		for (b=0;b < h;b++) {
@@ -4562,14 +4562,14 @@ int main(int argc,char **argv) {
 			_cli();
 			if (!mp3_playing) update_cfg();
 			if (bkgndredraw) {
-				for (vga=vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
 				draw_irq_indicator();
 				vga_menu_bar_draw();
 			}
 			ui_anim(bkgndredraw);
 			vga_moveto(0,2);
 			vga_write_color(0x1F);
-			for (vga=vga_alpha_ram+(80*2),cc=0;cc < 80;cc++) *vga++ = 0x1F20;
+			for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < 80;cc++) *vga++ = 0x1F20;
 			vga_write("File: ");
 			vga_write(mp3_file);
 			vga_write_sync();

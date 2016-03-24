@@ -21,13 +21,13 @@ void draw_vrl1_vgax_modex(unsigned int x,unsigned int y,struct vrl1_vgax_header 
 #else
 	unsigned char far *draw;
 #endif
-	unsigned int vram_offset = (y * vga_stride) + (x >> 2),sx;
+	unsigned int vram_offset = (y * vga_state.vga_stride) + (x >> 2),sx;
 	unsigned char vga_plane = (x & 3);
 	unsigned char *s;
 
 	/* draw one by one */
 	for (sx=0;sx < hdr->width;sx++) {
-		draw = vga_graphics_ram + vram_offset;
+		draw = vga_state.vga_graphics_ram + vram_offset;
 		vga_write_sequencer(0x02/*map mask*/,1 << vga_plane);
 		s = data + lineoffs[sx];
 		draw_vrl1_vgax_modex_strip(draw,s);

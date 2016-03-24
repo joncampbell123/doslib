@@ -173,7 +173,7 @@ void do_ide_controller_drive(struct ide_controller *ide,unsigned char which) {
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 
@@ -330,17 +330,17 @@ static void interrupt my_ide_irq() {
 	/* we CANNOT use sprintf() here. sprintf() doesn't work to well from within an interrupt handler,
 	 * and can cause crashes in 16-bit realmode builds. */
 	i = vga_state.vga_width*(vga_state.vga_height-1);
-	vga_alpha_ram[i++] = 0x1F00 | 'I';
-	vga_alpha_ram[i++] = 0x1F00 | 'R';
-	vga_alpha_ram[i++] = 0x1F00 | 'Q';
-	vga_alpha_ram[i++] = 0x1F00 | ':';
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter / 100000UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /  10000UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /   1000UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /    100UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /     10UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /       1L) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ' ';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | 'I';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | 'R';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | 'Q';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ':';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter / 100000UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /  10000UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /   1000UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /    100UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /     10UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((ide_irq_counter /       1L) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ' ';
 	ide_irq_counter++;
 
 	if (my_ide_irq_ide != NULL) {
@@ -383,7 +383,7 @@ static void interrupt my_ide_irq() {
 	if (my_ide_irq_ide != NULL) {
 		if (my_ide_irq_ide->irq_fired >= 0xFFFEU) {
 			do_ide_controller_emergency_halt_irq(my_ide_irq_ide);
-			vga_alpha_ram[i+12] = 0x1C00 | '!';
+			vga_state.vga_alpha_ram[i+12] = 0x1C00 | '!';
 			my_ide_irq_ide->irq_fired = ~0; /* make sure the IRQ counter is as large as possible */
 		}
 	}
@@ -465,7 +465,7 @@ void do_ide_controller(struct ide_controller *ide) {
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 
@@ -606,7 +606,7 @@ void do_main_menu() {
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 

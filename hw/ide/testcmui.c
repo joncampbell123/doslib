@@ -202,7 +202,7 @@ int prompt_sector_count() {
 	int c,i=0;
 
 	vga_msg_box_create(&box,"Enter sector count:",2,0);
-	sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
+	sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 	while (1) {
 		c = getch();
 		if (c == 0) c = getch() << 8;
@@ -245,7 +245,7 @@ unsigned long prompt_cdrom_sector_number() {
 	int c,i=0;
 
 	vga_msg_box_create(&box,"Enter CD-ROM sector number:",2,0);
-	sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
+	sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 	while (1) {
 		c = getch();
 		if (c == 0) c = getch() << 8;
@@ -288,7 +288,7 @@ unsigned long prompt_cdrom_sector_count() {
 	int c,i=0;
 
 	vga_msg_box_create(&box,"Enter number of CD-ROM sectors to read at once:",2,0);
-	sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
+	sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 	while (1) {
 		c = getch();
 		if (c == 0) c = getch() << 8;

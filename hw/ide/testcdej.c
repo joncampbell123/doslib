@@ -133,7 +133,7 @@ void do_drive_cdrom_startstop_test(struct ide_controller *ide,unsigned char whic
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 

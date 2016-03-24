@@ -26,12 +26,12 @@
 void vga_set_memory_map(unsigned char c) {
 	unsigned char b;
 
-	if (vga_flags & VGA_IS_VGA) {
+	if (vga_state.vga_flags & VGA_IS_VGA) {
 		b = vga_read_GC(6);
 		vga_write_GC(6,(b & 0xF3) | (c << 2));
 		update_state_vga_memory_map_select(c);
 	}
-	else if (vga_flags & VGA_IS_EGA) {
+	else if (vga_state.vga_flags & VGA_IS_EGA) {
 		/* guessing code because you can't readback regs on EGA */
 		b = int10_getmode();
 		/* INT 10H text modes: set odd/even,   else, set alpha disable */

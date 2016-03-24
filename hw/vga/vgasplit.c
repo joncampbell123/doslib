@@ -30,7 +30,7 @@ void vga_splitscreen(unsigned int v) {
 	/*  TODO: Didn't Mike Abrash or other programming gurus mention a bug or off-by-1 error with the EGA linecount? */
 
 	vga_write_CRTC(0x18,v);
-	if (vga_flags & VGA_IS_VGA) {
+	if (vga_state.vga_flags & VGA_IS_VGA) {
 		c = vga_read_CRTC(0x07);
 		vga_write_CRTC(0x07,(c & (~0x10)) | (((v>>8)&1) << 4));
 		c = vga_read_CRTC(0x09);

@@ -26,7 +26,7 @@ void vga_switch_to_color() {
 	unsigned char moc = 0;
 
 	/* VGA: Easy, read the register, write it back */
-	if (vga_flags & VGA_IS_VGA) {
+	if (vga_state.vga_flags & VGA_IS_VGA) {
 		moc = inp(0x3CC);
 		moc |= 0x01; /* set bit 0, respond to 0x3Dx */
 		outp(0x3C2,moc);
@@ -37,7 +37,7 @@ void vga_switch_to_color() {
 		moc |= 0x0C;	/* bits 2-3 = 11 = B8000 */
 		vga_write_GC(6,moc);
 	}
-	else if (vga_flags & VGA_IS_EGA) {
+	else if (vga_state.vga_flags & VGA_IS_EGA) {
 		/* EGA: We can't read it, but we can write it from our best guess */
 		moc = 0x02|1;	/* VSYNC/HSYNC pos, low page odd/even, 25MHz clock, RAM enable */
 		outp(0x3C2,moc);

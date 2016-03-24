@@ -31,12 +31,12 @@ void vga_relocate_crtc(unsigned char color) {
 	color = (color != 0)?1:0;
 
 	/* VGA: Easy, read the register, write it back */
-	if (vga_flags & VGA_IS_VGA) {
+	if (vga_state.vga_flags & VGA_IS_VGA) {
 		moc = inp(0x3CC);
 		moc &= 0xFE; /* clear bit 0, respond to 0x3Bx */
 		outp(0x3C2,moc | color);
 	}
-	else if (vga_flags & VGA_IS_EGA) {
+	else if (vga_state.vga_flags & VGA_IS_EGA) {
 		/* EGA: We can't read it, but we can write it from our best guess */
 		outp(0x3C2,0x02 | (color?1:0));
 	}

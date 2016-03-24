@@ -27,7 +27,7 @@ struct vrl_header {
 static unsigned char palette[768];
 
 void draw_vrl_modex(unsigned int x,unsigned int y,struct vrl_header *hdr,unsigned char *data,unsigned int datasz) {
-	unsigned int vram_offset = (y * vga_stride) + (x >> 2);
+	unsigned int vram_offset = (y * vga_state.vga_stride) + (x >> 2);
 	unsigned char *fence = data + datasz;
 	unsigned char vga_plane = (x & 3);
 	unsigned char run,skip,b;
@@ -35,26 +35,26 @@ void draw_vrl_modex(unsigned int x,unsigned int y,struct vrl_header *hdr,unsigne
 
 	while (data < fence) {
 		/* start of another vertical strip */
-		draw = vga_graphics_ram + vram_offset;
+		draw = vga_state.vga_graphics_ram + vram_offset;
 		vga_write_sequencer(0x02/*map mask*/,1 << vga_plane);
 
 		while (data < fence) {
 			run = *data++;
 			if (run == 0xFF) break;
 			skip = *data++;
-			draw += skip * vga_stride;
+			draw += skip * vga_state.vga_stride;
 			if (run & 0x80) {
 				b = *data++;
 				while (run > 0x80) {
 					*draw = b;
-					draw += vga_stride;
+					draw += vga_state.vga_stride;
 					run--;
 				}
 			}
 			else {
 				while (run > 0) {
 					*draw = *data++;
-					draw += vga_stride;
+					draw += vga_state.vga_stride;
 					run--;
 				}
 			}

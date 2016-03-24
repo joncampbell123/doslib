@@ -26,7 +26,7 @@ void vga_switch_to_mono() {
 	unsigned char moc = 0;
 
 	/* VGA: Easy, read the register, write it back */
-	if (vga_flags & VGA_IS_VGA) {
+	if (vga_state.vga_flags & VGA_IS_VGA) {
 		moc = inp(0x3CC);
 		moc &= 0xFE; /* clear bit 0, respond to 0x3Bx */
 		outp(0x3C2,moc);
@@ -37,7 +37,7 @@ void vga_switch_to_mono() {
 		moc |= 0x08;	/* bits 2-3 = 10 = B0000 */
 		vga_write_GC(6,moc);
 	}
-	else if (vga_flags & VGA_IS_EGA) {
+	else if (vga_state.vga_flags & VGA_IS_EGA) {
 		/* EGA: We can't read it, but we can write it from our best guess */
 		moc = 0x02;	/* VSYNC/HSYNC pos, low page odd/even, 25MHz clock, RAM enable */
 		outp(0x3C2,moc);

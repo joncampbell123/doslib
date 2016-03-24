@@ -22,66 +22,50 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
-VGA_RAM_PTR	vga_graphics_ram = NULL;
-VGA_RAM_PTR	vga_graphics_ram_fence = NULL;
-VGA_ALPHA_PTR	vga_alpha_ram = NULL;
-VGA_ALPHA_PTR	vga_alpha_ram_fence = NULL;
-
 struct vgastate_t	vga_state;
-
-//unsigned char	vga_pos_x = 0,vga_pos_y = 0,vga_color = 0x7;
-//unsigned char	vga_width = 80,vga_height = 25;
-unsigned char	vga_alpha_mode = 0;
-//unsigned char	vga_hgc_type = 0;
-//unsigned int	vga_base_3x0 = 0;
-unsigned long	vga_ram_base = 0;
-unsigned long	vga_ram_size = 0;
-unsigned char	vga_stride = 80;
-unsigned short	vga_flags = 0;
-unsigned char	vga_9wide = 0;
 
 void vga_sync_hw_cursor() {
 	unsigned int i;
 	i = vga_read_CRTC(0xF);			/* cursor low */
 	i |= vga_read_CRTC(0xE) << 8;		/* cursor high */
-	vga_state.vga_pos_x = i % vga_stride;
-	vga_state.vga_pos_y = i / vga_stride;
+	vga_state.vga_pos_x = i % vga_state.vga_stride;
+	vga_state.vga_pos_y = i / vga_state.vga_stride;
 }
 
 void update_state_vga_memory_map_select(unsigned char c) {
 	switch (c) {
-		case 0: vga_ram_base = 0xA0000; vga_ram_size = 0x20000; break;
-		case 1: vga_ram_base = 0xA0000; vga_ram_size = 0x10000; break;
-		case 2: vga_ram_base = 0xB0000; vga_ram_size = 0x08000; break;
-		case 3: vga_ram_base = 0xB8000; vga_ram_size = 0x08000; break;
+		case 0: vga_state.vga_ram_base = 0xA0000; vga_state.vga_ram_size = 0x20000; break;
+		case 1: vga_state.vga_ram_base = 0xA0000; vga_state.vga_ram_size = 0x10000; break;
+		case 2: vga_state.vga_ram_base = 0xB0000; vga_state.vga_ram_size = 0x08000; break;
+		case 3: vga_state.vga_ram_base = 0xB8000; vga_state.vga_ram_size = 0x08000; break;
 	}
 
 #if defined(TARGET_WINDOWS)
-	if (vga_ram_base == 0xA0000)
-		vga_graphics_ram = (unsigned char FAR*)DisplayDibGetScreenPointerA000();
-	else if (vga_ram_base == 0xB0000)
-		vga_graphics_ram = (unsigned char FAR*)DisplayDibGetScreenPointerB000();
-	else if (vga_ram_base == 0xB8000)
-		vga_graphics_ram = (unsigned char FAR*)DisplayDibGetScreenPointerB800();
+	if (vga_state.vga_ram_base == 0xA0000)
+		vga_state.vga_graphics_ram = (unsigned char FAR*)DisplayDibGetScreenPointerA000();
+	else if (vga_state.vga_ram_base == 0xB0000)
+		vga_state.vga_graphics_ram = (unsigned char FAR*)DisplayDibGetScreenPointerB000();
+	else if (vga_state.vga_ram_base == 0xB8000)
+		vga_state.vga_graphics_ram = (unsigned char FAR*)DisplayDibGetScreenPointerB800();
 	else
-		vga_graphics_ram = (unsigned char FAR*)DisplayDibGetScreenPointerA000();
+		vga_state.vga_graphics_ram = (unsigned char FAR*)DisplayDibGetScreenPointerA000();
 
-	vga_graphics_ram_fence = vga_graphics_ram + vga_ram_size;
-	vga_alpha_ram = (uint16_t FAR*)vga_graphics_ram;
-	vga_alpha_ram_fence = (uint16_t FAR*)vga_graphics_ram_fence;
+	vga_state.vga_graphics_ram_fence = vga_state.vga_graphics_ram + vga_state.vga_ram_size;
+	vga_state.vga_alpha_ram = (uint16_t FAR*)vga_state.vga_graphics_ram;
+	vga_state.vga_alpha_ram_fence = (uint16_t FAR*)vga_state.vga_graphics_ram_fence;
 #else
 # if TARGET_MSDOS == 32
 	/* NTS: According to many sources, 32-bit DOS extenders tend to map the lower 1MB 1:1, so this is safe */
 	/* NTS: If I remember correctly Windows 95 also did this for Win32 applications, for whatever reason! */
-	vga_graphics_ram = (unsigned char*)vga_ram_base;
-	vga_graphics_ram_fence = vga_graphics_ram + vga_ram_size;
-	vga_alpha_ram = (uint16_t*)vga_graphics_ram;
-	vga_alpha_ram_fence = (uint16_t*)vga_graphics_ram_fence;
+	vga_state.vga_graphics_ram = (unsigned char*)vga_state.vga_ram_base;
+	vga_state.vga_graphics_ram_fence = vga_state.vga_graphics_ram + vga_state.vga_ram_size;
+	vga_state.vga_alpha_ram = (uint16_t*)vga_state.vga_graphics_ram;
+	vga_state.vga_alpha_ram_fence = (uint16_t*)vga_state.vga_graphics_ram_fence;
 # else
-	vga_graphics_ram = MK_FP(vga_ram_base>>4,vga_ram_base&0xF);	/* A0000 -> A000:0000 */
-	vga_graphics_ram_fence = MK_FP((vga_ram_base+vga_ram_size)>>4,(vga_ram_base+vga_ram_size)&0xF);
-	vga_alpha_ram = (uint16_t far*)vga_graphics_ram;
-	vga_alpha_ram_fence = (uint16_t far*)vga_graphics_ram_fence;
+	vga_state.vga_graphics_ram = MK_FP(vga_state.vga_ram_base>>4,vga_state.vga_ram_base&0xF);	/* A0000 -> A000:0000 */
+	vga_state.vga_graphics_ram_fence = MK_FP((vga_state.vga_ram_base+vga_state.vga_ram_size)>>4,(vga_state.vga_ram_base+vga_state.vga_ram_size)&0xF);
+	vga_state.vga_alpha_ram = (uint16_t far*)vga_state.vga_graphics_ram;
+	vga_state.vga_alpha_ram_fence = (uint16_t far*)vga_state.vga_graphics_ram_fence;
 # endif
 #endif
 }
@@ -91,12 +75,12 @@ void update_state_from_vga() {
 
 	vga_state.vga_pos_x = 0;
 	vga_state.vga_pos_y = 0;
-	vga_stride = 80;
+	vga_state.vga_stride = 80;
 	vga_state.vga_height = 25;
 	vga_state.vga_width = 80;
-	vga_9wide = 0;
+	vga_state.vga_9wide = 0;
 
-	if (vga_flags & VGA_IS_VGA) { /* VGA only. EGA cards DO have the misc. output reg but it's write-only */
+	if (vga_state.vga_flags & VGA_IS_VGA) { /* VGA only. EGA cards DO have the misc. output reg but it's write-only */
 		/* update state from H/W which I/O port */
 		c = inp(0x3CC);
 		if (c & 1) {
@@ -109,18 +93,18 @@ void update_state_from_vga() {
 		/* now ask the graphics controller where/how VGA memory is mapped */
 		c = vga_read_GC(6);
 		/* bit 0 = alpha disable (if set, graphics) */
-		vga_alpha_mode = ((c & 1) == 0);
+		vga_state.vga_alpha_mode = ((c & 1) == 0);
 		/* bits 2-3 memory map select */
 		update_state_vga_memory_map_select((c>>2)&3);
 
 		/* read the sequencer: are we in 8 or 9 dot mode? */
 		c = vga_read_sequencer(0x1);
-		vga_9wide = (c & 1) == 0;
+		vga_state.vga_9wide = (c & 1) == 0;
 
 		/* read from the CRTC controller the stride, width, and height */
-		vga_stride = vga_read_CRTC(0x13) * 2;	/* "offset" register */
-		if (vga_alpha_mode) {
-			vga_state.vga_width = vga_stride;
+		vga_state.vga_stride = vga_read_CRTC(0x13) * 2;	/* "offset" register */
+		if (vga_state.vga_alpha_mode) {
+			vga_state.vga_width = vga_state.vga_stride;
 			vga_sync_hw_cursor();
 			/* TODO: read vertical blank values and calculate active area, then divide by scan line height, to get alpha height */
 			/* TODO: read horizontal blank values to calculate active area, then visible width */
@@ -129,7 +113,7 @@ void update_state_from_vga() {
 			/* TODO: similar semantics for graphics mode */
 		}
 	}
-	else if (vga_flags & VGA_IS_EGA) {
+	else if (vga_state.vga_flags & VGA_IS_EGA) {
 		/* Well the EGA has similar registers BUT they aren't readable. So we have to
 		 * guess based on other information handed to us */
 
@@ -155,7 +139,7 @@ void update_state_from_vga() {
 		c = int10_getmode();
 		switch (c) {
 			case 0: case 1: case 2: case 3: case 7:
-				vga_alpha_mode = 1;
+				vga_state.vga_alpha_mode = 1;
 
  /* the best we can do is assume B0000 if CRTC is at 3Bx or B8000 if at 3Dx even though it's possible to map at B8000 and 3Bx */
 				if (vga_state.vga_base_3x0 == 0x3B0)
@@ -164,19 +148,19 @@ void update_state_from_vga() {
 					update_state_vga_memory_map_select(3);
 				break;
 			case 4: case 5: case 6:
-				vga_alpha_mode = 0;
+				vga_state.vga_alpha_mode = 0;
 				update_state_vga_memory_map_select(3);
 				break;
 			case 13: case 14: case 15: case 16: case 17: case 18: default:
-				vga_alpha_mode = 0;
+				vga_state.vga_alpha_mode = 0;
 				update_state_vga_memory_map_select(1);
 				break;
 		}
 
 		/* read from the CRTC controller the stride, width, and height */
-		vga_stride = vga_read_CRTC(0x13) * 2;	/* "offset" register */
-		if (vga_alpha_mode) {
-			vga_state.vga_width = vga_stride;
+		vga_state.vga_stride = vga_read_CRTC(0x13) * 2;	/* "offset" register */
+		if (vga_state.vga_alpha_mode) {
+			vga_state.vga_width = vga_state.vga_stride;
 			vga_sync_hw_cursor();
 			/* TODO: read vertical blank values and calculate active area, then divide by scan line height, to get alpha height */
 			/* TODO: read horizontal blank values to calculate active area, then visible width */
@@ -191,19 +175,19 @@ void update_state_from_vga() {
 # if TARGET_MSDOS == 32
 		/* NTS: According to many sources, 32-bit DOS extenders tend to map the lower 1MB 1:1, so this is safe */
 		/* NTS: If I remember correctly Windows 95 also did this for Win32 applications, for whatever reason! */
-		vga_graphics_ram = (unsigned char*)vga_ram_base;
-		vga_graphics_ram_fence = vga_graphics_ram + vga_ram_size;
-		vga_alpha_ram = (uint16_t*)vga_graphics_ram;
-		vga_alpha_ram_fence = (uint16_t*)vga_graphics_ram_fence;
+		vga_state.vga_graphics_ram = (unsigned char*)vga_state.vga_ram_base;
+		vga_state.vga_graphics_ram_fence = vga_state.vga_graphics_ram + vga_state.vga_ram_size;
+		vga_state.vga_alpha_ram = (uint16_t*)vga_state.vga_graphics_ram;
+		vga_state.vga_alpha_ram_fence = (uint16_t*)vga_state.vga_graphics_ram_fence;
 # else
-		vga_graphics_ram = MK_FP(vga_ram_base>>4,vga_ram_base&0xF);	/* A0000 -> A000:0000 */
-		vga_graphics_ram_fence = MK_FP((vga_ram_base+vga_ram_size)>>4,vga_ram_base+vga_ram_size);
-		vga_alpha_ram = (uint16_t far*)vga_graphics_ram;
-		vga_alpha_ram_fence = (uint16_t far*)vga_graphics_ram_fence;
+		vga_state.vga_graphics_ram = MK_FP(vga_state.vga_ram_base>>4,vga_state.vga_ram_base&0xF);	/* A0000 -> A000:0000 */
+		vga_state.vga_graphics_ram_fence = MK_FP((vga_state.vga_ram_base+vga_state.vga_ram_size)>>4,vga_state.vga_ram_base+vga_state.vga_ram_size);
+		vga_state.vga_alpha_ram = (uint16_t far*)vga_state.vga_graphics_ram;
+		vga_state.vga_alpha_ram_fence = (uint16_t far*)vga_state.vga_graphics_ram_fence;
 # endif
 #endif
 	}
-	else if (vga_flags & VGA_IS_CGA) {
+	else if (vga_state.vga_flags & VGA_IS_CGA) {
 		vga_state.vga_base_3x0 = 0x3D0; /* always at 0x3Dx */
 
 		/* TODO: If Tandy, detect state */
@@ -213,20 +197,20 @@ void update_state_from_vga() {
 		c = int10_getmode();
 		switch (c) {
 			case 0: case 1: case 2: case 3: case 7:
-				vga_alpha_mode = 1;
+				vga_state.vga_alpha_mode = 1;
 				break;
 			default:
-				vga_alpha_mode = 0;
+				vga_state.vga_alpha_mode = 0;
 				break;
 		}
 
 		if (c <= 1) {
-			vga_stride = 40;
+			vga_state.vga_stride = 40;
 			vga_state.vga_width = 40;
 		}
 
-		vga_ram_base = 0xB8000;
-		vga_ram_size = 0x08000;
+		vga_state.vga_ram_base = 0xB8000;
+		vga_state.vga_ram_size = 0x08000;
 
 #if defined(TARGET_WINDOWS)
 		/* TODO */
@@ -234,23 +218,23 @@ void update_state_from_vga() {
 # if TARGET_MSDOS == 32
 		/* NTS: According to many sources, 32-bit DOS extenders tend to map the lower 1MB 1:1, so this is safe */
 		/* NTS: If I remember correctly Windows 95 also did this for Win32 applications, for whatever reason! */
-		vga_graphics_ram = (unsigned char*)vga_ram_base;
-		vga_graphics_ram_fence = vga_graphics_ram + vga_ram_size;
-		vga_alpha_ram = (uint16_t*)vga_graphics_ram;
-		vga_alpha_ram_fence = (uint16_t*)vga_graphics_ram_fence;
+		vga_state.vga_graphics_ram = (unsigned char*)vga_state.vga_ram_base;
+		vga_state.vga_graphics_ram_fence = vga_state.vga_graphics_ram + vga_state.vga_ram_size;
+		vga_state.vga_alpha_ram = (uint16_t*)vga_state.vga_graphics_ram;
+		vga_state.vga_alpha_ram_fence = (uint16_t*)vga_state.vga_graphics_ram_fence;
 # else
-		vga_graphics_ram = MK_FP(vga_ram_base>>4,vga_ram_base&0xF);	/* A0000 -> A000:0000 */
-		vga_graphics_ram_fence = MK_FP((vga_ram_base+vga_ram_size)>>4,vga_ram_base+vga_ram_size);
-		vga_alpha_ram = (uint16_t far*)vga_graphics_ram;
-		vga_alpha_ram_fence = (uint16_t far*)vga_graphics_ram_fence;
+		vga_state.vga_graphics_ram = MK_FP(vga_state.vga_ram_base>>4,vga_state.vga_ram_base&0xF);	/* A0000 -> A000:0000 */
+		vga_state.vga_graphics_ram_fence = MK_FP((vga_state.vga_ram_base+vga_state.vga_ram_size)>>4,vga_state.vga_ram_base+vga_state.vga_ram_size);
+		vga_state.vga_alpha_ram = (uint16_t far*)vga_state.vga_graphics_ram;
+		vga_state.vga_alpha_ram_fence = (uint16_t far*)vga_state.vga_graphics_ram_fence;
 # endif
 #endif
 	}
-	else if (vga_flags & VGA_IS_MDA) {
+	else if (vga_state.vga_flags & VGA_IS_MDA) {
 		vga_state.vga_base_3x0 = 0x3B0; /* always at 0x3Bx */
-		vga_alpha_mode = 1; /* stock MDA doesn't have graphics */
-		vga_ram_base = 0xB0000;
-		vga_ram_size = 0x08000;
+		vga_state.vga_alpha_mode = 1; /* stock MDA doesn't have graphics */
+		vga_state.vga_ram_base = 0xB0000;
+		vga_state.vga_ram_size = 0x08000;
 
 		/* Hercules MDA: It would be nice to be able to read bit 2 of the display control,
 		 *               except that the port is write-only. Thanks >:( */
@@ -261,15 +245,15 @@ void update_state_from_vga() {
 # if TARGET_MSDOS == 32
 		/* NTS: According to many sources, 32-bit DOS extenders tend to map the lower 1MB 1:1, so this is safe */
 		/* NTS: If I remember correctly Windows 95 also did this for Win32 applications, for whatever reason! */
-		vga_graphics_ram = (unsigned char*)vga_ram_base;
-		vga_graphics_ram_fence = vga_graphics_ram + vga_ram_size;
-		vga_alpha_ram = (uint16_t*)vga_graphics_ram;
-		vga_alpha_ram_fence = (uint16_t*)vga_graphics_ram_fence;
+		vga_state.vga_graphics_ram = (unsigned char*)vga_state.vga_ram_base;
+		vga_state.vga_graphics_ram_fence = vga_state.vga_graphics_ram + vga_state.vga_ram_size;
+		vga_state.vga_alpha_ram = (uint16_t*)vga_state.vga_graphics_ram;
+		vga_state.vga_alpha_ram_fence = (uint16_t*)vga_state.vga_graphics_ram_fence;
 # else
-		vga_graphics_ram = MK_FP(vga_ram_base>>4,vga_ram_base&0xF);	/* A0000 -> A000:0000 */
-		vga_graphics_ram_fence = MK_FP((vga_ram_base+vga_ram_size)>>4,vga_ram_base+vga_ram_size);
-		vga_alpha_ram = (uint16_t far*)vga_graphics_ram;
-		vga_alpha_ram_fence = (uint16_t far*)vga_graphics_ram_fence;
+		vga_state.vga_graphics_ram = MK_FP(vga_state.vga_ram_base>>4,vga_state.vga_ram_base&0xF);	/* A0000 -> A000:0000 */
+		vga_state.vga_graphics_ram_fence = MK_FP((vga_state.vga_ram_base+vga_state.vga_ram_size)>>4,vga_state.vga_ram_base+vga_state.vga_ram_size);
+		vga_state.vga_alpha_ram = (uint16_t far*)vga_state.vga_graphics_ram;
+		vga_state.vga_alpha_ram_fence = (uint16_t far*)vga_state.vga_graphics_ram_fence;
 # endif
 #endif
 	}
@@ -278,14 +262,14 @@ void update_state_from_vga() {
 int probe_vga() {
 #if defined(TARGET_WINDOWS)
 	/* TODO: More comprehensive tests! */
-	vga_flags |= VGA_IS_VGA | VGA_IS_EGA | VGA_IS_CGA;
+	vga_state.vga_flags |= VGA_IS_VGA | VGA_IS_EGA | VGA_IS_CGA;
 	update_state_from_vga();
 	return 1;
 #else
 	union REGS regs = {0};
 	unsigned char c,c2;
 
-	vga_flags = 0;
+	vga_state.vga_flags = 0;
 	vga_state.vga_base_3x0 = 0;
 
 	/* apparently the best way is to ask the VGA BIOS */
@@ -299,28 +283,28 @@ int probe_vga() {
 #endif
 		if (regs.h.al == 0x1A) {
 			if (regs.h.bl == 1) {
-				vga_flags |= VGA_IS_MDA;
+				vga_state.vga_flags |= VGA_IS_MDA;
 			}
 			else if (regs.h.bl == 2) {
-				vga_flags |= VGA_IS_CGA;
+				vga_state.vga_flags |= VGA_IS_CGA;
 			}
 			else if (regs.h.bl == 4 || regs.h.bl == 5) {
 				/* it's an EGA */
-				vga_flags |= VGA_IS_EGA | VGA_IS_CGA;
+				vga_state.vga_flags |= VGA_IS_EGA | VGA_IS_CGA;
 			}
 			else if (regs.h.bl == 7 || regs.h.bl == 8) {
 				/* VGA, officially */
-				vga_flags |= VGA_IS_VGA | VGA_IS_EGA | VGA_IS_CGA;
+				vga_state.vga_flags |= VGA_IS_VGA | VGA_IS_EGA | VGA_IS_CGA;
 			}
 			else if (regs.h.bl == 10 || regs.h.bl == 11 || regs.h.bl == 12) {
-				vga_flags |= VGA_IS_MCGA | VGA_IS_CGA;
+				vga_state.vga_flags |= VGA_IS_MCGA | VGA_IS_CGA;
 			}
 		}
 	}
 
 	/* if that didn't work, then assume it's not VGA, and probe around a bit */
 	/* are you an EGA? Determine by BIOS */
-	if (vga_flags == 0) {
+	if (vga_state.vga_flags == 0) {
 		regs.w.ax = 0x1200;
 		regs.w.bx = 0xFF10;
 #if TARGET_MSDOS == 32
@@ -329,14 +313,14 @@ int probe_vga() {
 		int86(0x10,&regs,&regs);
 #endif
 		if (regs.h.bh != 0xFF) { /* so, if BH changes the EGA BIOS or higher is present? */
-			vga_flags |= VGA_IS_CGA | VGA_IS_EGA;
+			vga_state.vga_flags |= VGA_IS_CGA | VGA_IS_EGA;
 			/* and BH == 0 if color */
 		}
 	}
 
 	/* hm, okay. how about testing for a CGA? */
 	/* NTS: The CGA is always at port 0x3Dx */
-	if (vga_flags == 0) {
+	if (vga_state.vga_flags == 0) {
 		unsigned int patience = 1000;
 		outp(0x3D4,0xF);
 		c = inp(0x3D5);
@@ -344,7 +328,7 @@ int probe_vga() {
 		while (--patience != 0 && (c2=inp(0x3D5)) != 0xAA);
 		outp(0x3D5,c);
 		if (c2 == 0xAA) {
-			vga_flags |= VGA_IS_CGA;
+			vga_state.vga_flags |= VGA_IS_CGA;
 
 			/* If it looks like a CGA it might be a Tandy/PCjr */
 			/* unfortunately I can't find ANYTHING on
@@ -361,7 +345,7 @@ int probe_vga() {
 #endif
 				if (regs.h.al & 0x80) {
 					if ((regs.w.cflag & 1) == 0) { /* and sound chip is free? CF=0 */
-						vga_flags |= VGA_IS_TANDY;
+						vga_state.vga_flags |= VGA_IS_TANDY;
 					}
 				}
 			}
@@ -378,10 +362,10 @@ int probe_vga() {
 				int86(0x15,&regs,&regs);
 #endif
 				if (regs.w.bx != 0 && !(regs.w.cflag & 1)) {
-					vga_flags |= VGA_IS_AMSTRAD;
+					vga_state.vga_flags |= VGA_IS_AMSTRAD;
 					/* TODO: If I read the Amstrad tech manual correctly, their video hardware also emulates Hercules modes, right? */
 					/* TODO: I get the impression Amstrad graphics do not include Tandy modes, is that correct? */
-					//vga_flags &= ~VGA_IS_TANDY; /* <- if so, uncomment this line */
+					//vga_state.vga_flags &= ~VGA_IS_TANDY; /* <- if so, uncomment this line */
 				}
 			}
 		}
@@ -389,7 +373,7 @@ int probe_vga() {
 
 	/* hm, okay. how about testing for a MDA? */
 	/* NTS: The MDA is always at port 0x3Bx */
-	if (vga_flags == 0) {
+	if (vga_state.vga_flags == 0) {
 		unsigned int patience = 1000;
 		outp(0x3B4,0xF);
 		c = inp(0x3B5);
@@ -397,13 +381,13 @@ int probe_vga() {
 		while (--patience != 0 && (c2=inp(0x3B5)) != 0xAA);
 		outp(0x3B5,c);
 		if (c2 == 0xAA) {
-			vga_flags |= VGA_IS_MDA;
+			vga_state.vga_flags |= VGA_IS_MDA;
 		}
 	}
 
 	/* If it looks like an MDA, then it might be helpful to tell whether it's a
 	 * Hercules graphics card */
-	if (vga_flags & VGA_IS_MDA) {
+	if (vga_state.vga_flags & VGA_IS_MDA) {
 		unsigned char cm,c;
 		unsigned int hsyncs = 0; /* in case we're on a slow machine use hsync count to know when to stop */
 		unsigned int patience = 0xFFFF; /* NTS: 0xFFFF on actual hardware of that era might turn into a considerable and unnecessary pause */
@@ -418,7 +402,7 @@ int probe_vga() {
 			inp(0x80);
 		}
 		if (patience > 0 && (c^cm) & 0x80) { /* if it changed, then HGC */
-			vga_flags |= VGA_IS_HGC;
+			vga_state.vga_flags |= VGA_IS_HGC;
 			vga_state.vga_hgc_type = (c >> 4) & 7;
 			switch ((c>>4)&7) {
 				case 5: case 1: vga_state.vga_hgc_type = (c>>4)&7; break;

@@ -84,28 +84,28 @@ void bios_cls() {
 	unsigned char m;
 
 	m = int10_getmode();
-	if ((rp=vga_graphics_ram) != NULL && !(m <= 3 || m == 7)) {
+	if ((rp=vga_state.vga_graphics_ram) != NULL && !(m <= 3 || m == 7)) {
 #if TARGET_MSDOS == 16
 		unsigned int i,im;
 
-		im = (FP_SEG(vga_graphics_ram_fence) - FP_SEG(vga_graphics_ram));
+		im = (FP_SEG(vga_state.vga_graphics_ram_fence) - FP_SEG(vga_state.vga_graphics_ram));
 		if (im > 0xFFE) im = 0xFFE;
 		im <<= 4;
-		for (i=0;i < im;i++) vga_graphics_ram[i] = 0;
+		for (i=0;i < im;i++) vga_state.vga_graphics_ram[i] = 0;
 #else
-		while (rp < vga_graphics_ram_fence) *rp++ = 0;
+		while (rp < vga_state.vga_graphics_ram_fence) *rp++ = 0;
 #endif
 	}
-	else if ((ap=vga_alpha_ram) != NULL) {
+	else if ((ap=vga_state.vga_alpha_ram) != NULL) {
 #if TARGET_MSDOS == 16
 		unsigned int i,im;
 
-		im = (FP_SEG(vga_alpha_ram_fence) - FP_SEG(vga_alpha_ram));
+		im = (FP_SEG(vga_state.vga_alpha_ram_fence) - FP_SEG(vga_state.vga_alpha_ram));
 		if (im > 0x7FE) im = 0x7FE;
 		im <<= 4 - 1; /* because ptr is type uint16_t */
-		for (i=0;i < im;i++) vga_alpha_ram[i] = 0x0720;
+		for (i=0;i < im;i++) vga_state.vga_alpha_ram[i] = 0x0720;
 #else
-		while (ap < vga_alpha_ram_fence) *ap++ = 0x0720;
+		while (ap < vga_state.vga_alpha_ram_fence) *ap++ = 0x0720;
 #endif
 	}
 	else {
@@ -805,12 +805,12 @@ void flash_vga_pal() {
 	printf("\n");
 
 	/* 320x200x256 mode: draw all 256 colors for ref */
-	if (vga_mode == 19 && vga_graphics_ram != NULL) {
+	if (vga_mode == 19 && vga_state.vga_graphics_ram != NULL) {
 		VGA_RAM_PTR draw;
 		unsigned int x,y;
 
 		for (y=0;y < 8;y++) {
-			draw = vga_graphics_ram + (320 * (200 - 1 - y));
+			draw = vga_state.vga_graphics_ram + (320 * (200 - 1 - y));
 			for (x=0;x < 256;x++) *draw++ = x;
 		}
 	}
@@ -930,12 +930,12 @@ void flash_acp() {
 	printf("\n");
 
 	/* 320x200x256 mode: draw all 256 colors for ref */
-	if (vga_mode == 19 && vga_graphics_ram != NULL) {
+	if (vga_mode == 19 && vga_state.vga_graphics_ram != NULL) {
 		VGA_RAM_PTR draw;
 		unsigned int x,y;
 
 		for (y=0;y < 8;y++) {
-			draw = vga_graphics_ram + (320 * (200 - 1 - y));
+			draw = vga_state.vga_graphics_ram + (320 * (200 - 1 - y));
 			for (x=0;x < 256;x++) *draw++ = x;
 		}
 	}
@@ -1032,7 +1032,7 @@ int main() {
 		return 1;
 	}
 
-	if (!(vga_flags & VGA_IS_VGA)) {
+	if (!(vga_state.vga_flags & VGA_IS_VGA)) {
 		printf("Modesetting + readback of CRTC registers is only supported on VGA\n");
 		return 1;
 	}
@@ -1068,22 +1068,22 @@ int main() {
 			gfx_misc = vga_read_GC(6);
 
 			printf("VGA=%u EGA=%u CGA=%u MDA=%u MCGA=%u HGC=%u(%u)\n",
-					(vga_flags & VGA_IS_VGA) ? 1 : 0,
-					(vga_flags & VGA_IS_EGA) ? 1 : 0,
-					(vga_flags & VGA_IS_CGA) ? 1 : 0,
-					(vga_flags & VGA_IS_MDA) ? 1 : 0,
-					(vga_flags & VGA_IS_MCGA) ? 1 : 0,
-					(vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type);
+				(vga_state.vga_flags & VGA_IS_VGA) ? 1 : 0,
+				(vga_state.vga_flags & VGA_IS_EGA) ? 1 : 0,
+				(vga_state.vga_flags & VGA_IS_CGA) ? 1 : 0,
+				(vga_state.vga_flags & VGA_IS_MDA) ? 1 : 0,
+				(vga_state.vga_flags & VGA_IS_MCGA) ? 1 : 0,
+				(vga_state.vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type);
 			printf("Tandy/PCjr=%u Amstrad=%u IO=%03xh ALPHA=%u\n",
-					(vga_flags & VGA_IS_TANDY) ? 1 : 0,
-					(vga_flags & VGA_IS_AMSTRAD) ? 1 : 0,
-					vga_state.vga_base_3x0,
-					vga_alpha_mode);
+				(vga_state.vga_flags & VGA_IS_TANDY) ? 1 : 0,
+				(vga_state.vga_flags & VGA_IS_AMSTRAD) ? 1 : 0,
+				vga_state.vga_base_3x0,
+				vga_state.vga_alpha_mode);
 
 			printf("RAM 0x%05lx-0x%05lx 9W=%u INT10=%u(0x%02x)\n",
-					(unsigned long)vga_ram_base,
-					(unsigned long)vga_ram_base+vga_ram_size-1UL,
-					vga_9wide,vga_mode,vga_mode);
+					(unsigned long)vga_state.vga_ram_base,
+					(unsigned long)vga_state.vga_ram_base+vga_state.vga_ram_size-1UL,
+					vga_state.vga_9wide,vga_mode,vga_mode);
 
 			printf("Clock=%u div2=%u (%luHZ) pix/clk=%u\n",
 					mp.clock_select,

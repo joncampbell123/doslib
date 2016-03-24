@@ -671,18 +671,18 @@ static void interrupt usb_irq() {
 	uint32_t pending,tmp;
 
 	/* show IRQ activity */
-	(*vga_alpha_ram)++;
+	(*vga_state.vga_alpha_ram)++;
 
 	/* read back what the USB controller says happened */
 	pending = usb_ohci_ci_read_reg(ohci,0x0C/*HcInterruptStatus*/);
-	vga_alpha_ram[1+0] = hexes[(pending>>28UL)&0xFUL] | 0x1E00;
-	vga_alpha_ram[1+1] = hexes[(pending>>24UL)&0xFUL] | 0x1E00;
-	vga_alpha_ram[1+2] = hexes[(pending>>20UL)&0xFUL] | 0x1E00;
-	vga_alpha_ram[1+3] = hexes[(pending>>16UL)&0xFUL] | 0x1E00;
-	vga_alpha_ram[1+4] = hexes[(pending>>12UL)&0xFUL] | 0x1E00;
-	vga_alpha_ram[1+5] = hexes[(pending>> 8UL)&0xFUL] | 0x1E00;
-	vga_alpha_ram[1+6] = hexes[(pending>> 4UL)&0xFUL] | 0x1E00;
-	vga_alpha_ram[1+7] = hexes[(pending>> 0UL)&0xFUL] | 0x1E00;
+	vga_state.vga_alpha_ram[1+0] = hexes[(pending>>28UL)&0xFUL] | 0x1E00;
+	vga_state.vga_alpha_ram[1+1] = hexes[(pending>>24UL)&0xFUL] | 0x1E00;
+	vga_state.vga_alpha_ram[1+2] = hexes[(pending>>20UL)&0xFUL] | 0x1E00;
+	vga_state.vga_alpha_ram[1+3] = hexes[(pending>>16UL)&0xFUL] | 0x1E00;
+	vga_state.vga_alpha_ram[1+4] = hexes[(pending>>12UL)&0xFUL] | 0x1E00;
+	vga_state.vga_alpha_ram[1+5] = hexes[(pending>> 8UL)&0xFUL] | 0x1E00;
+	vga_state.vga_alpha_ram[1+6] = hexes[(pending>> 4UL)&0xFUL] | 0x1E00;
+	vga_state.vga_alpha_ram[1+7] = hexes[(pending>> 0UL)&0xFUL] | 0x1E00;
 
 	/* Frame Number Overflow */
 	if (pending & 32) {
@@ -839,7 +839,7 @@ void main_menu() {
 			fullredraw=0;
 			redraw=1;
 
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			x = vga_state.vga_width * vga_state.vga_height;
 			for (y=0;y < x;y++) vga[y] = 0x0700 | ' ';
 

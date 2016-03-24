@@ -378,24 +378,24 @@ static void interrupt my_floppy_irq() {
 		/* If too many IRQs fired, then unhook the IRQ and use polling from now on. */
 		if (my_floppy_irq_floppy->irq_fired >= 0xFFFEU) {
 			do_floppy_controller_unhook_irq(my_floppy_irq_floppy);
-			vga_alpha_ram[i+12] = 0x1C00 | '!';
+			vga_state.vga_alpha_ram[i+12] = 0x1C00 | '!';
 			my_floppy_irq_floppy->irq_fired = ~0; /* make sure the IRQ counter is as large as possible */
 		}
 	}
 
 	/* we CANNOT use sprintf() here. sprintf() doesn't work to well from within an interrupt handler,
 	 * and can cause crashes in 16-bit realmode builds. */
-	vga_alpha_ram[i++] = 0x1F00 | 'I';
-	vga_alpha_ram[i++] = 0x1F00 | 'R';
-	vga_alpha_ram[i++] = 0x1F00 | 'Q';
-	vga_alpha_ram[i++] = 0x1F00 | ':';
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter / 100000UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /  10000UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /   1000UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /    100UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /     10UL) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /       1L) % 10UL));
-	vga_alpha_ram[i++] = 0x1F00 | ' ';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | 'I';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | 'R';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | 'Q';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ':';
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter / 100000UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /  10000UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /   1000UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /    100UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /     10UL) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ('0' + ((floppy_irq_counter /       1L) % 10UL));
+	vga_state.vga_alpha_ram[i++] = 0x1F00 | ' ';
 
 	floppy_irq_counter++;
 }
@@ -1391,7 +1391,7 @@ signed long prompt_signed_track_number() {
 	int c,i=0;
 
 	vga_msg_box_create(&box,"Enter relative track number:",2,0);
-	sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
+	sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 	while (1) {
 		c = getch();
 		if (c == 0) c = getch() << 8;
@@ -1434,7 +1434,7 @@ unsigned long prompt_track_number() {
 	int c,i=0;
 
 	vga_msg_box_create(&box,"Enter track number:",2,0);
-	sco = vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
+	sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 	while (1) {
 		c = getch();
 		if (c == 0) c = getch() << 8;
@@ -2078,7 +2078,7 @@ void do_floppy_controller_read_tests(struct floppy_controller *fdc) {
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 
@@ -2185,7 +2185,7 @@ void do_floppy_controller_write_tests(struct floppy_controller *fdc) {
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 
@@ -2675,7 +2675,7 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 
@@ -3002,7 +3002,7 @@ void do_main_menu() {
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_alpha_ram;
+			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 

@@ -40,19 +40,19 @@ int v320x200x256_VGA_setvideomode(int width,int height,double hsync,double vsync
 
 static inline void v320x200x256_VGA_update_vis_ptr() {
 #if TARGET_MSDOS == 16
-	uint32_t o = vga_ram_base + v320x200x256_VGA_state.vis_offset + v320x200x256_VGA_state.hpel;
+	uint32_t o = vga_state.vga_ram_base + v320x200x256_VGA_state.vis_offset + v320x200x256_VGA_state.hpel;
 	v320x200x256_VGA_state.vis_ptr = MK_FP(o >> 4UL,o & 0xFUL);
 #else
-	v320x200x256_VGA_state.vis_ptr = vga_graphics_ram + v320x200x256_VGA_state.vis_offset + v320x200x256_VGA_state.hpel;
+	v320x200x256_VGA_state.vis_ptr = vga_state.vga_graphics_ram + v320x200x256_VGA_state.vis_offset + v320x200x256_VGA_state.hpel;
 #endif
 }
 
 static inline void v320x200x256_VGA_update_draw_ptr() {
 #if TARGET_MSDOS == 16
-	uint32_t o = vga_ram_base + v320x200x256_VGA_state.draw_offset;
+	uint32_t o = vga_state.vga_ram_base + v320x200x256_VGA_state.draw_offset;
 	v320x200x256_VGA_state.draw_ptr = MK_FP(o >> 4UL,o & 0xFUL);
 #else
-	v320x200x256_VGA_state.draw_ptr = vga_graphics_ram + v320x200x256_VGA_state.draw_offset;
+	v320x200x256_VGA_state.draw_ptr = vga_state.vga_graphics_ram + v320x200x256_VGA_state.draw_offset;
 #endif
 }
 
