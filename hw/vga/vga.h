@@ -15,9 +15,9 @@ typedef uint16_t far *VGA_ALPHA_PTR;
 
 struct vgastate_t {
 	unsigned char		vga_pos_x,vga_pos_y,vga_color;
-	unsigned char		vga_width,vga_height;
 	unsigned char		vga_hgc_type;
 	unsigned char		vga_stride;
+	uint16_t		vga_width,vga_height;
 	uint16_t		vga_base_3x0;
 	uint16_t		vga_flags;
 	uint32_t		vga_ram_base;
