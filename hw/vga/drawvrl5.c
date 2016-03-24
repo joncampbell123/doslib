@@ -140,7 +140,6 @@ int main(int argc,char **argv) {
 			vga_state.vga_graphics_ram = omemptr;
 
 			/* block copy to visible RAM from offscreen */
-			// TODO: Maybe it would be better for VGA state to have "display stride" vs "draw stride" to avoid saving/restoring like this?
 			vga_setup_wm1_block_copy();
 			o = offscreen_ofs; // source offscreen
 			o2 = (ry * vga_state.vga_stride) + (rx >> 2); // dest visible (original stride)
@@ -222,7 +221,6 @@ int main(int argc,char **argv) {
 			vga_state.vga_graphics_ram = omemptr;
 
 			/* block copy to visible RAM from offscreen */
-			// TODO: Maybe it would be better for VGA state to have "display stride" vs "draw stride" to avoid saving/restoring like this?
 			vga_setup_wm1_block_copy();
 			o = offscreen_ofs; // source offscreen
 			o2 = (ry * vga_state.vga_stride) + (rx >> 2); // dest visible (original stride)
