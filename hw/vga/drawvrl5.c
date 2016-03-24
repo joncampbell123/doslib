@@ -147,6 +147,74 @@ int main(int argc,char **argv) {
 	}
 	while (getch() != 13);
 
+	/* make distinctive pattern offscreen, render sprite, copy onscreen.
+	 * this time, we render the distinctive pattern to another offscreen location and just copy.
+	 * note this version is much faster too! */
+	{
+		const unsigned int offscreen_ofs = 0x4000; /* just below 320x200 display */
+		const unsigned int pattern_ofs = 0x8000;
+		unsigned int i,j,o,o2,x,y,rx,w,h;
+		unsigned char ostride;
+		VGA_RAM_PTR omemptr;
+
+		/* fill pattern offset with a distinctive pattern */
+		for (i=0;i < 320;i++) {
+			o = (i >> 2) + pattern_ofs;
+			vga_write_sequencer(0x02/*map mask*/,1 << (i&3));
+			for (j=0;j < 200;j++,o += vga_state.vga_stride)
+				vga_state.vga_graphics_ram[o] = (i^j)&15; // VRL samples put all colors in first 15!
+		}
+
+		/* starting coords. note: this technique is limited to x coordinates of multiple of 4 */
+		x = 0;
+		y = 0;
+
+		/* do it */
+		ostride = vga_state.vga_stride; // save original stride
+		omemptr = vga_state.vga_graphics_ram; // save original mem ptr
+		while (x < (320 - vrl_header->width) && y < (200 - vrl_header->height)) {
+			/* render box bounds. y does not need modification, but x and width must be multiple of 4 */
+			rx = x & (~3);
+			h = vrl_header->height;
+			w = (x + vrl_header->width + 3 - rx) & (~3);
+
+			/* block copy pattern to where we will draw the sprite */
+			vga_setup_wm1_block_copy();
+			o2 = offscreen_ofs;
+			o = pattern_ofs + (y * vga_state.vga_stride) + (rx >> 2); // source offscreen
+			for (i=0;i < vrl_header->height;i++,o += vga_state.vga_stride,o2 += (w >> 2)) vga_wm1_mem_block_copy(o2,o,w >> 2);
+			/* must restore Write Mode 0/Read Mode 0 for this code to continue drawing normally */
+			vga_restore_rm0wm0();
+
+			/* replace VGA stride with our own and mem ptr. then sprite rendering at this stage is just (0,0) */
+			vga_state.vga_stride = w >> 2;
+			vga_state.vga_graphics_ram = omemptr + offscreen_ofs;
+
+			/* then the sprite. note modding ram ptr means we just draw to (x&3,0) */
+			draw_vrl1_vgax_modex(x&3,0,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+
+			/* restore ptr */
+			vga_state.vga_graphics_ram = omemptr;
+
+			/* block copy to visible RAM from offscreen */
+			// TODO: Maybe it would be better for VGA state to have "display stride" vs "draw stride" to avoid saving/restoring like this?
+			vga_setup_wm1_block_copy();
+			o = offscreen_ofs; // source offscreen
+			o2 = (y * ostride) + (rx >> 2); // dest visible (original stride)
+			for (i=0;i < vrl_header->height;i++,o += vga_state.vga_stride,o2 += ostride) vga_wm1_mem_block_copy(o2,o,w >> 2);
+			/* must restore Write Mode 0/Read Mode 0 for this code to continue drawing normally */
+			vga_restore_rm0wm0();
+
+			/* restore stride */
+			vga_state.vga_stride = ostride;
+
+			/* step */
+			x++;
+			y++;
+		}
+	}
+	while (getch() != 13);
+
 	int10_setmode(3);
 	free(vrl_lineoffs);
 	buffer = NULL;
