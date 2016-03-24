@@ -59,6 +59,27 @@ int main(int argc,char **argv) {
 	int10_setmode(19);
 	update_state_from_vga();
 	vga_enable_256color_modex(); // VGA mode X
+	vga_state.vga_width = 320; // VGA lib currently does not update this
+	vga_state.vga_height = 200; // VGA lib currently does not update this
+
+#if 1 // 320x240 test mode: this is how Project 16 is using our code, enable for test case
+	{
+		struct vga_mode_params cm;
+
+		vga_read_crtc_mode(&cm);
+
+		// 320x240 mode 60Hz
+		cm.vertical_total = 525;
+		cm.vertical_start_retrace = 0x1EA;
+		cm.vertical_end_retrace = 0x1EC;
+		cm.vertical_display_end = 480;
+		cm.vertical_blank_start = 489;
+		cm.vertical_blank_end = 517;
+
+		vga_write_crtc_mode(&cm,0);
+	}
+	vga_state.vga_height = 240; // VGA lib currently does not update this
+#endif
 
 	/* load color palette */
 	fd = open(argv[2],O_RDONLY|O_BINARY);
@@ -80,10 +101,10 @@ int main(int argc,char **argv) {
 		unsigned int i,j,o;
 
 		/* fill screen with a distinctive pattern */
-		for (i=0;i < 320;i++) {
+		for (i=0;i < vga_state.vga_width;i++) {
 			o = i >> 2;
 			vga_write_sequencer(0x02/*map mask*/,1 << (i&3));
-			for (j=0;j < 200;j++,o += vga_state.vga_stride)
+			for (j=0;j < vga_state.vga_height;j++,o += vga_state.vga_stride)
 				vga_state.vga_graphics_ram[o] = (i^j)&15; // VRL samples put all colors in first 15!
 		}
 	}
@@ -91,7 +112,7 @@ int main(int argc,char **argv) {
 
 	/* make distinctive pattern offscreen, render sprite, copy onscreen */
 	{
-		const unsigned int offscreen_ofs = 0x4000;
+		const unsigned int offscreen_ofs = (vga_state.vga_stride * vga_state.vga_height);
 		unsigned int i,j,o,o2,x,y,rx,ry,w,h;
 		unsigned int overdraw = 1;	// how many pixels to "overdraw" so that moving sprites with edge pixels don't leave streaks.
 						// if the sprite's edge pixels are clear anyway, you can set this to 0.
@@ -117,8 +138,8 @@ int main(int argc,char **argv) {
 			else ry = 0;
 			h = vrl_header->height + overdraw + y - ry;
 			w = (x + vrl_header->width + (overdraw*2) + 3 - rx) & (~3);
-			if ((rx+w) > 320) w = 320-rx;
-			if ((ry+h) > 200) h = 200-ry;
+			if ((rx+w) > vga_state.vga_width) w = vga_state.vga_width-rx;
+			if ((ry+h) > vga_state.vga_height) h = vga_state.vga_height-ry;
 
 			/* replace VGA stride with our own and mem ptr. then sprite rendering at this stage is just (0,0) */
 			vga_state.vga_draw_stride = w >> 2;
@@ -153,9 +174,9 @@ int main(int argc,char **argv) {
 			/* step */
 			x += xdir;
 			y += ydir;
-			if (x >= (319 - vrl_header->width) || x >= 319 || x == 0)
+			if (x >= (vga_state.vga_width - 1 - vrl_header->width) || x >= (vga_state.vga_width - 1) || x == 0)
 				xdir = -xdir;
-			if (y >= (199 - vrl_header->height) || y >= 199 || y == 0)
+			if (y >= (vga_state.vga_height - 1 - vrl_header->height) || y >= (vga_state.vga_height - 1) || y == 0)
 				ydir = -ydir;
 		}
 	}
@@ -164,8 +185,8 @@ int main(int argc,char **argv) {
 	 * this time, we render the distinctive pattern to another offscreen location and just copy.
 	 * note this version is much faster too! */
 	{
-		const unsigned int offscreen_ofs = 0x4000;
-		const unsigned int pattern_ofs = 0xC000;
+		const unsigned int offscreen_ofs = (vga_state.vga_stride * vga_state.vga_height);
+		const unsigned int pattern_ofs = 0x10000UL - (vga_state.vga_stride * vga_state.vga_height);
 		unsigned int i,j,o,o2,x,y,rx,ry,w,h;
 		unsigned int overdraw = 1;	// how many pixels to "overdraw" so that moving sprites with edge pixels don't leave streaks.
 						// if the sprite's edge pixels are clear anyway, you can set this to 0.
@@ -173,10 +194,10 @@ int main(int argc,char **argv) {
 		int xdir=1,ydir=1;
 
 		/* fill pattern offset with a distinctive pattern */
-		for (i=0;i < 320;i++) {
+		for (i=0;i < vga_state.vga_width;i++) {
 			o = (i >> 2) + pattern_ofs;
 			vga_write_sequencer(0x02/*map mask*/,1 << (i&3));
-			for (j=0;j < 200;j++,o += vga_state.vga_stride)
+			for (j=0;j < vga_state.vga_height;j++,o += vga_state.vga_stride)
 				vga_state.vga_graphics_ram[o] = (i^j)&15; // VRL samples put all colors in first 15!
 		}
 
@@ -199,8 +220,8 @@ int main(int argc,char **argv) {
 			else ry = 0;
 			h = vrl_header->height + overdraw + y - ry;
 			w = (x + vrl_header->width + (overdraw*2) + 3 - rx) & (~3);
-			if ((rx+w) > 320) w = 320-rx;
-			if ((ry+h) > 200) h = 200-ry;
+			if ((rx+w) > vga_state.vga_width) w = vga_state.vga_width-rx;
+			if ((ry+h) > vga_state.vga_height) h = vga_state.vga_height-ry;
 
 			/* block copy pattern to where we will draw the sprite */
 			vga_setup_wm1_block_copy();
@@ -234,9 +255,9 @@ int main(int argc,char **argv) {
 			/* step */
 			x += xdir;
 			y += ydir;
-			if (x >= (319 - vrl_header->width) || x >= 319 || x == 0)
+			if (x >= (vga_state.vga_width - 1 - vrl_header->width) || x >= (vga_state.vga_width - 1) || x == 0)
 				xdir = -xdir;
-			if (y >= (199 - vrl_header->height) || y >= 199 || y == 0)
+			if (y >= (vga_state.vga_height - 1 - vrl_header->height) || y >= (vga_state.vga_height - 1) || y == 0)
 				ydir = -ydir;
 		}
 	}
@@ -244,7 +265,9 @@ int main(int argc,char **argv) {
 	/* another handy "demo" effect using VGA write mode 1.
 	 * we can take what's on screen and vertically squash it like an old analog TV set turning off. */
 	{
-		uint16_t copy_ofs = 0x4000,display_ofs = 0x0000,blank_line_ofs = 0x8000;
+		unsigned int blank_line_ofs = (vga_state.vga_stride * vga_state.vga_height * 2);
+		unsigned int copy_ofs = (vga_state.vga_stride * vga_state.vga_height);
+		unsigned int display_ofs = 0x0000;
 		unsigned int i,y,soh,doh,dstart;
 		unsigned int dh_blankfill = 8;
 		unsigned int dh_step = 8;
@@ -253,13 +276,13 @@ int main(int argc,char **argv) {
 		/* copy active display (0) to offscreen buffer (0x4000) */
 		vga_state.vga_draw_stride = vga_state.vga_stride;
 		vga_setup_wm1_block_copy();
-		vga_wm1_mem_block_copy(copy_ofs,display_ofs,vga_state.vga_stride * 200);
+		vga_wm1_mem_block_copy(copy_ofs,display_ofs,vga_state.vga_stride * vga_state.vga_height);
 		vga_restore_rm0wm0();
 
 		/* need a blank line as well */
 		for (i=0;i < vga_state.vga_stride;i++) vga_state.vga_graphics_ram[i+blank_line_ofs] = 0;
 
-		sh = dh = 200;
+		sh = dh = vga_state.vga_height;
 		while (dh >= dh_step) {
 			/* stop animating if the user hits ENTER */
 			if (kbhit()) {
@@ -271,7 +294,7 @@ int main(int argc,char **argv) {
 
 			/* what scalefactor to use for stretching? */
 			ystep = (0x10000UL * sh) / dh;
-			dstart = (200 - dh) / 2; // center the squash effect on screen, otherwise it would squash to top of screen
+			dstart = (vga_state.vga_height - dh) / 2; // center the squash effect on screen, otherwise it would squash to top of screen
 			doh = display_ofs;
 			soh = copy_ofs;
 			yf = 0;
@@ -301,7 +324,7 @@ int main(int argc,char **argv) {
 			}
 
 			/* blank lines */
-			while (y < 200 && y < (dh+dstart+dh_blankfill)) {
+			while (y < vga_state.vga_height && y < (dh+dstart+dh_blankfill)) {
 				vga_wm1_mem_block_copy(doh,blank_line_ofs,vga_state.vga_stride);
 				doh += vga_state.vga_stride;
 				y++;
