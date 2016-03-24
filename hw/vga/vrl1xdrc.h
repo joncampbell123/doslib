@@ -1,7 +1,7 @@
 
 #if TARGET_MSDOS == 32
 static inline void draw_vrl1_vgax_modex_strip(unsigned char *draw,unsigned char *s) {
-	const unsigned char stride = vga_state.vga_stride;
+	const unsigned char stride = vga_state.vga_draw_stride;
 
 	__asm {
 		push	edx
@@ -55,7 +55,7 @@ stoploop:	pop	edi
 }
 #else
 static inline void draw_vrl1_vgax_modex_strip(unsigned char far *draw,unsigned char far *s) {
-	const unsigned char stride = vga_state.vga_stride;
+	const unsigned char stride = vga_state.vga_draw_stride;
 
 	__asm {
 		push	es
