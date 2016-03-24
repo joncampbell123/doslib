@@ -142,7 +142,7 @@ int main(int argc,char **argv) {
 			if ((ry+h) > vga_state.vga_height) h = vga_state.vga_height-ry;
 
 			/* replace VGA stride with our own and mem ptr. then sprite rendering at this stage is just (0,0) */
-			vga_state.vga_draw_stride = w >> 2;
+			vga_state.vga_draw_stride_limit = vga_state.vga_draw_stride = w >> 2;
 			vga_state.vga_graphics_ram = omemptr + offscreen_ofs;
 
 			/* first draw pattern corresponding to that part of the screen. this COULD be optimized, obviously, but it's designed for study.
@@ -169,14 +169,14 @@ int main(int argc,char **argv) {
 			vga_restore_rm0wm0();
 
 			/* restore stride */
-			vga_state.vga_draw_stride = vga_state.vga_stride;
+			vga_state.vga_draw_stride_limit = vga_state.vga_draw_stride = vga_state.vga_stride;
 
 			/* step */
 			x += xdir;
 			y += ydir;
-			if (x >= (vga_state.vga_width - 1 - vrl_header->width) || x >= (vga_state.vga_width - 1) || x == 0)
+			if (x >= (vga_state.vga_width - 1) || x == 0)
 				xdir = -xdir;
-			if (y >= (vga_state.vga_height - 1 - vrl_header->height) || y >= (vga_state.vga_height - 1) || y == 0)
+			if (y >= (vga_state.vga_height - 1) || y == 0)
 				ydir = -ydir;
 		}
 	}
@@ -232,7 +232,7 @@ int main(int argc,char **argv) {
 			vga_restore_rm0wm0();
 
 			/* replace VGA stride with our own and mem ptr. then sprite rendering at this stage is just (0,0) */
-			vga_state.vga_draw_stride = w >> 2;
+			vga_state.vga_draw_stride_limit = vga_state.vga_draw_stride = w >> 2;
 			vga_state.vga_graphics_ram = omemptr + offscreen_ofs;
 
 			/* then the sprite. note modding ram ptr means we just draw to (x&3,0) */
@@ -250,14 +250,14 @@ int main(int argc,char **argv) {
 			vga_restore_rm0wm0();
 
 			/* restore stride */
-			vga_state.vga_draw_stride = vga_state.vga_stride;
+			vga_state.vga_draw_stride_limit = vga_state.vga_draw_stride = vga_state.vga_stride;
 
 			/* step */
 			x += xdir;
 			y += ydir;
-			if (x >= (vga_state.vga_width - 1 - vrl_header->width) || x >= (vga_state.vga_width - 1) || x == 0)
+			if (x >= (vga_state.vga_width - 1) || x == 0)
 				xdir = -xdir;
-			if (y >= (vga_state.vga_height - 1 - vrl_header->height) || y >= (vga_state.vga_height - 1) || y == 0)
+			if (y >= (vga_state.vga_height - 1) || y == 0)
 				ydir = -ydir;
 		}
 	}
@@ -274,7 +274,7 @@ int main(int argc,char **argv) {
 		uint32_t sh,dh,yf,ystep;
 
 		/* copy active display (0) to offscreen buffer (0x4000) */
-		vga_state.vga_draw_stride = vga_state.vga_stride;
+		vga_state.vga_draw_stride_limit = vga_state.vga_draw_stride = vga_state.vga_stride;
 		vga_setup_wm1_block_copy();
 		vga_wm1_mem_block_copy(copy_ofs,display_ofs,vga_state.vga_stride * vga_state.vga_height);
 		vga_restore_rm0wm0();
