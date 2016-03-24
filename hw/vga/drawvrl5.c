@@ -137,12 +137,12 @@ int main(int argc,char **argv) {
 			if (y >= overdraw) ry = (y - overdraw);
 			else ry = 0;
 			h = vrl_header->height + overdraw + y - ry;
-			w = (x + vrl_header->width + (overdraw*2) + 3 - rx) & (~3);
+			w = (x + vrl_header->width + (overdraw*2) + 3/*round up*/ - rx) & (~3);
 			if ((rx+w) > vga_state.vga_width) w = vga_state.vga_width-rx;
 			if ((ry+h) > vga_state.vga_height) h = vga_state.vga_height-ry;
 
 			/* replace VGA stride with our own and mem ptr. then sprite rendering at this stage is just (0,0) */
-			vga_state.vga_draw_stride_limit = (vga_state.vga_width + 3 - x) >> 2;
+			vga_state.vga_draw_stride_limit = (vga_state.vga_width + 3/*round up*/ - x) >> 2;
 			vga_state.vga_draw_stride = w >> 2;
 			vga_state.vga_graphics_ram = omemptr + offscreen_ofs;
 
@@ -220,7 +220,7 @@ int main(int argc,char **argv) {
 			if (y >= overdraw) ry = (y - overdraw);
 			else ry = 0;
 			h = vrl_header->height + overdraw + y - ry;
-			w = (x + vrl_header->width + (overdraw*2) + 3 - rx) & (~3);
+			w = (x + vrl_header->width + (overdraw*2) + 3/*round up*/ - rx) & (~3);
 			if ((rx+w) > vga_state.vga_width) w = vga_state.vga_width-rx;
 			if ((ry+h) > vga_state.vga_height) h = vga_state.vga_height-ry;
 
@@ -233,7 +233,7 @@ int main(int argc,char **argv) {
 			vga_restore_rm0wm0();
 
 			/* replace VGA stride with our own and mem ptr. then sprite rendering at this stage is just (0,0) */
-			vga_state.vga_draw_stride_limit = (vga_state.vga_width + 3 - x) >> 2;
+			vga_state.vga_draw_stride_limit = (vga_state.vga_width + 3/*round up*/ - x) >> 2;
 			vga_state.vga_draw_stride = w >> 2;
 			vga_state.vga_graphics_ram = omemptr + offscreen_ofs;
 
