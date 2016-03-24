@@ -228,7 +228,7 @@ int main(int argc,char **argv) {
 			vga_setup_wm1_block_copy();
 			o2 = offscreen_ofs;
 			o = pattern_ofs + (ry * vga_state.vga_stride) + (rx >> 2); // source offscreen
-			for (i=0;i < vrl_header->height;i++,o += vga_state.vga_stride,o2 += (w >> 2)) vga_wm1_mem_block_copy(o2,o,w >> 2);
+			for (i=0;i < h;i++,o += vga_state.vga_stride,o2 += (w >> 2)) vga_wm1_mem_block_copy(o2,o,w >> 2);
 			/* must restore Write Mode 0/Read Mode 0 for this code to continue drawing normally */
 			vga_restore_rm0wm0();
 
@@ -247,7 +247,7 @@ int main(int argc,char **argv) {
 			vga_setup_wm1_block_copy();
 			o = offscreen_ofs; // source offscreen
 			o2 = (ry * vga_state.vga_stride) + (rx >> 2); // dest visible (original stride)
-			for (i=0;i < vrl_header->height;i++,o += vga_state.vga_draw_stride,o2 += vga_state.vga_stride) vga_wm1_mem_block_copy(o2,o,w >> 2);
+			for (i=0;i < h;i++,o += vga_state.vga_draw_stride,o2 += vga_state.vga_stride) vga_wm1_mem_block_copy(o2,o,w >> 2);
 			/* must restore Write Mode 0/Read Mode 0 for this code to continue drawing normally */
 			vga_restore_rm0wm0();
 
