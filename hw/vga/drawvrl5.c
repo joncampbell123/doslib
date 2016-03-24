@@ -91,7 +91,7 @@ int main(int argc,char **argv) {
 
 	/* make distinctive pattern offscreen, render sprite, copy onscreen */
 	{
-		const unsigned int offscreen_ofs = 0x8000; /* middle of VGA RAM */
+		const unsigned int offscreen_ofs = 0x4000;
 		unsigned int i,j,o,o2,x,y,rx,ry,w,h;
 		unsigned int overdraw = 1;	// how many pixels to "overdraw" so that moving sprites with edge pixels don't leave streaks.
 						// if the sprite's edge pixels are clear anyway, you can set this to 0.
@@ -118,6 +118,7 @@ int main(int argc,char **argv) {
 			h = vrl_header->height + overdraw + y - ry;
 			w = (x + vrl_header->width + (overdraw*2) + 3 - rx) & (~3);
 			if ((rx+w) > 320) w = 320-rx;
+			if ((ry+h) > 200) h = 200-ry;
 
 			/* replace VGA stride with our own and mem ptr. then sprite rendering at this stage is just (0,0) */
 			vga_state.vga_draw_stride = w >> 2;
@@ -164,7 +165,7 @@ int main(int argc,char **argv) {
 	 * this time, we render the distinctive pattern to another offscreen location and just copy.
 	 * note this version is much faster too! */
 	{
-		const unsigned int offscreen_ofs = 0x8000; /* middle of VGA RAM */
+		const unsigned int offscreen_ofs = 0x4000;
 		const unsigned int pattern_ofs = 0xC000;
 		unsigned int i,j,o,o2,x,y,rx,ry,w,h;
 		unsigned int overdraw = 1;	// how many pixels to "overdraw" so that moving sprites with edge pixels don't leave streaks.
@@ -200,6 +201,7 @@ int main(int argc,char **argv) {
 			h = vrl_header->height + overdraw + y - ry;
 			w = (x + vrl_header->width + (overdraw*2) + 3 - rx) & (~3);
 			if ((rx+w) > 320) w = 320-rx;
+			if ((ry+h) > 200) h = 200-ry;
 
 			/* block copy pattern to where we will draw the sprite */
 			vga_setup_wm1_block_copy();
