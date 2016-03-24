@@ -241,6 +241,84 @@ int main(int argc,char **argv) {
 		}
 	}
 
+	/* another handy "demo" effect using VGA write mode 1.
+	 * we can take what's on screen and vertically squash it like an old analog TV set turning off. */
+	{
+		uint16_t copy_ofs = 0x4000,display_ofs = 0x0000,blank_line_ofs = 0x8000;
+		unsigned int i,y,soh,doh,dstart;
+		unsigned int dh_blankfill = 8;
+		unsigned int dh_step = 8;
+		uint32_t sh,dh,yf,ystep;
+
+		/* copy active display (0) to offscreen buffer (0x4000) */
+		vga_state.vga_draw_stride = vga_state.vga_stride;
+		vga_setup_wm1_block_copy();
+		vga_wm1_mem_block_copy(copy_ofs,display_ofs,vga_state.vga_stride * 200);
+		vga_restore_rm0wm0();
+
+		/* need a blank line as well */
+		for (i=0;i < vga_state.vga_stride;i++) vga_state.vga_graphics_ram[i+blank_line_ofs] = 0;
+
+		sh = dh = 200;
+		while (dh >= dh_step) {
+			/* stop animating if the user hits ENTER */
+			if (kbhit()) {
+				if (getch() == 13) break;
+			}
+
+			/* wait for vsync end */
+			vga_wait_for_vsync_end();
+
+			/* what scalefactor to use for stretching? */
+			ystep = (0x10000UL * sh) / dh;
+			dstart = (200 - dh) / 2; // center the squash effect on screen, otherwise it would squash to top of screen
+			doh = display_ofs;
+			soh = copy_ofs;
+			yf = 0;
+			y = 0;
+
+			/* for performance, keep VGA in write mode 1 the entire render */
+			vga_setup_wm1_block_copy();
+
+			/* blank lines */
+			if (dstart >= dh_blankfill) y = dstart - dh_blankfill;
+			else y = 0;
+			doh = vga_state.vga_stride * y;
+
+			while (y < dstart) {
+				vga_wm1_mem_block_copy(doh,blank_line_ofs,vga_state.vga_stride);
+				doh += vga_state.vga_stride;
+				y++;
+			}
+
+			/* draw */
+			while (y < (dh+dstart)) {
+				soh = copy_ofs + ((yf >> 16UL) * vga_state.vga_stride);
+				vga_wm1_mem_block_copy(doh,soh,vga_state.vga_stride);
+				doh += vga_state.vga_stride;
+				yf += ystep;
+				y++;
+			}
+
+			/* blank lines */
+			while (y < 200 && y < (dh+dstart+dh_blankfill)) {
+				vga_wm1_mem_block_copy(doh,blank_line_ofs,vga_state.vga_stride);
+				doh += vga_state.vga_stride;
+				y++;
+			}
+
+			/* done */
+			vga_restore_rm0wm0();
+
+			/* wait for vsync */
+			vga_wait_for_vsync();
+
+			/* make it shrink */
+			dh -= dh_step;
+			if (dh < 40) dh_step = 1;
+		}
+	}
+
 	int10_setmode(3);
 	free(vrl_lineoffs);
 	buffer = NULL;
