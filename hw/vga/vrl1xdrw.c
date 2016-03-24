@@ -21,7 +21,7 @@ void draw_vrl1_vgax_modex(unsigned int x,unsigned int y,struct vrl1_vgax_header 
 #else
 	unsigned char far *draw;
 #endif
-	unsigned int vram_offset = (y * vga_state.vga_stride) + (x >> 2),sx;
+	unsigned int vram_offset = (y * vga_state.vga_draw_stride) + (x >> 2),sx;
 	unsigned char vga_plane = (x & 3);
 	unsigned char *s;
 

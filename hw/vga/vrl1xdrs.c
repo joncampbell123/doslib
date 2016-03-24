@@ -22,7 +22,7 @@ void draw_vrl1_vgax_modexstretch(unsigned int x,unsigned int y,unsigned int xste
 	unsigned char far *draw;
 #endif
 	const unsigned int xmax = hdr->width << 6U;
-	unsigned int vram_offset = (y * vga_state.vga_stride) + (x >> 2),fx=0;
+	unsigned int vram_offset = (y * vga_state.vga_draw_stride) + (x >> 2),fx=0;
 	unsigned char vga_plane = (x & 3);
 	unsigned char *s;
 

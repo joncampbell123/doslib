@@ -174,7 +174,7 @@ void v320x200x256_VGA_setwindow(int x,int y,int w,int h,int vwidth) {
 
 		if (i == 0) i = 1;
 		else if (i > 255) i = 255;
-		vga_state.vga_stride = i * 2;
+		vga_state.vga_stride = vga_state.vga_draw_stride = i * 2;
 		v320x200x256_VGA_crtc_state.offset = i;
 		v320x200x256_VGA_state.stride = v320x200x256_VGA_state.virt_width = vga_state.vga_stride << v320x200x256_VGA_state.stride_shift;
 	}

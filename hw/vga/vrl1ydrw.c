@@ -29,7 +29,7 @@ static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,un
 		if (skip > 0) {
 			ym = (unsigned int)skip << 6U;
 			while (fy < ym) {
-				draw += vga_state.vga_stride;
+				draw += vga_state.vga_draw_stride;
 				fy += ystep;
 			}
 			fy -= ym;
@@ -40,7 +40,7 @@ static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,un
 			ym = ((unsigned int)(run - 0x80)) << 6U;
 			while (fy < ym) {
 				*draw = b;
-				draw += vga_state.vga_stride;
+				draw += vga_state.vga_draw_stride;
 				fy += ystep;
 			}
 			fy -= ym;
@@ -49,7 +49,7 @@ static inline void draw_vrl1_vgax_modex_stripystretch(unsigned char far *draw,un
 			while (run > 0) {
 				while (fy < (1 << 6)) {
 					*draw = *s;
-					draw += vga_state.vga_stride;
+					draw += vga_state.vga_draw_stride;
 					fy += ystep;
 				}
 				fy -= 1 << 6;
@@ -67,7 +67,7 @@ void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xst
 	unsigned char far *draw;
 #endif
 	const unsigned int xmax = hdr->width << 6U;
-	unsigned int vram_offset = (y * vga_state.vga_stride) + (x >> 2),fx=0;
+	unsigned int vram_offset = (y * vga_state.vga_draw_stride) + (x >> 2),fx=0;
 	unsigned char vga_plane = (x & 3);
 	unsigned char *s;
 
