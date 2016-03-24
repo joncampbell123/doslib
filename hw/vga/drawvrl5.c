@@ -16,63 +16,6 @@
 
 static unsigned char palette[768];
 
-// TODO move to VGA LIB
-void vga_setup_wm1_block_copy() {
-	vga_write_GC(VGA_GC_MODE,0x40/*256-color mode*/ | 1/*write mode 1*/); // and read mode 0
-	vga_write_sequencer(0x02/*map mask*/,0xF); // all planes enabled
-}
-
-void vga_wm1_mem_block_copy(uint16_t dst,uint16_t src,uint16_t b) {
-	VGA_RAM_PTR vdp,vsp;
-
-	if (b == 0) return;
-	vdp = vga_state.vga_graphics_ram + dst;
-	vsp = vga_state.vga_graphics_ram + src;
-
-#if TARGET_MSDOS == 32
-	__asm {
-		push	esi
-		push	edi
-		push	ecx
-		push	eax
-		cld
-		movzx	ecx,b
-		mov	esi,vsp
-		mov	edi,vdp
-		rep	movsb
-		pop	eax
-		pop	ecx
-		pop	edi
-		pop	esi
-	}
-#else
-	__asm {
-		push	si
-		push	di
-		push	cx
-		push	ax
-		push	ds
-		push	es
-		cld
-		mov	cx,b
-		lds	si,vsp
-		les	di,vdp
-		rep	movsb
-		pop	es
-		pop	ds
-		pop	ax
-		pop	cx
-		pop	di
-		pop	si
-	}
-#endif
-}
-
-void vga_restore_rm0wm0() {
-	vga_write_GC(VGA_GC_MODE,0x40/*256-color mode*/); // read mode 0, write mode 0
-}
-// END TODO
-
 int main(int argc,char **argv) {
 	struct vrl1_vgax_header *vrl_header;
 	vrl1_vgax_offset_t *vrl_lineoffs;

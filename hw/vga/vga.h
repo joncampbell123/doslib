@@ -392,5 +392,9 @@ struct vga_mode_params {
 	unsigned char		sync_enable:1;		/* CRTC[0x17] bit 7 */
 };
 
+void vga_wm1_mem_block_copy(uint16_t dst,uint16_t src,uint16_t b);
+void vga_setup_wm1_block_copy();
+void vga_restore_rm0wm0();
+
 #endif /* __DOSLIB_HW_VGA_VGA_H */
 
