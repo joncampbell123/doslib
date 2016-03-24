@@ -66,7 +66,11 @@ enum {
 
 /* sequencer registers */
 enum {
-	VGA_SC_MAP_MASK=2
+	VGA_SC_RESET=0,
+	VGA_SC_CLOCK_MODE=1,
+	VGA_SC_MAP_MASK=2,
+	VGA_SC_CHARMAP_SELECT=3,
+	VGA_SC_MEM_MODE=4
 };
 
 /* graphics controller registers */
