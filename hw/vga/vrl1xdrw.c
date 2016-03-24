@@ -22,6 +22,7 @@ void draw_vrl1_vgax_modex(unsigned int x,unsigned int y,struct vrl1_vgax_header 
 	unsigned char far *draw;
 #endif
 	unsigned int vram_offset = (y * vga_state.vga_draw_stride) + (x >> 2),sx;
+	unsigned int vramlimit = vga_state.vga_draw_stride;
 	unsigned char vga_plane = (x & 3);
 	unsigned char *s;
 
@@ -34,6 +35,7 @@ void draw_vrl1_vgax_modex(unsigned int x,unsigned int y,struct vrl1_vgax_header 
 
 		/* end of a vertical strip. next line? */
 		if ((++vga_plane) == 4) {
+			if (--vramlimit == 0) break;
 			vram_offset++;
 			vga_plane = 0;
 		}
