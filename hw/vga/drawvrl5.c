@@ -142,7 +142,8 @@ int main(int argc,char **argv) {
 			if ((ry+h) > vga_state.vga_height) h = vga_state.vga_height-ry;
 
 			/* replace VGA stride with our own and mem ptr. then sprite rendering at this stage is just (0,0) */
-			vga_state.vga_draw_stride_limit = vga_state.vga_draw_stride = w >> 2;
+			vga_state.vga_draw_stride_limit = (vga_state.vga_width + 3 - x) >> 2;
+			vga_state.vga_draw_stride = w >> 2;
 			vga_state.vga_graphics_ram = omemptr + offscreen_ofs;
 
 			/* first draw pattern corresponding to that part of the screen. this COULD be optimized, obviously, but it's designed for study.
@@ -232,7 +233,8 @@ int main(int argc,char **argv) {
 			vga_restore_rm0wm0();
 
 			/* replace VGA stride with our own and mem ptr. then sprite rendering at this stage is just (0,0) */
-			vga_state.vga_draw_stride_limit = vga_state.vga_draw_stride = w >> 2;
+			vga_state.vga_draw_stride_limit = (vga_state.vga_width + 3 - x) >> 2;
+			vga_state.vga_draw_stride = w >> 2;
 			vga_state.vga_graphics_ram = omemptr + offscreen_ofs;
 
 			/* then the sprite. note modding ram ptr means we just draw to (x&3,0) */
