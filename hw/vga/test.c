@@ -132,8 +132,6 @@ int main() {
 	unsigned char vga_want_9wide;
 	int c;
 
-	vga_sanity_check(); // will abort() if sizeof() changed between .lib and this program
-
 	probe_dos();
 	detect_windows();
 

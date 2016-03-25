@@ -4,7 +4,6 @@
 
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
-#include <stddef.h>
 
 #if TARGET_MSDOS == 32
 typedef unsigned char *VGA_RAM_PTR;
@@ -15,23 +14,22 @@ typedef uint16_t far *VGA_ALPHA_PTR;
 #endif
 
 struct vgastate_t {
-	unsigned char		vga_pos_x,vga_pos_y;		// +0,+1
-	unsigned char		vga_hgc_type;			// +2
-	unsigned char		vga_stride;			// +3
-	uint16_t		vga_width,vga_height;		// +4,+6
-	uint16_t		vga_base_3x0;			// +8
-	uint16_t		vga_flags;			// +10
-	uint32_t		vga_ram_base;			// +12
-	uint32_t		vga_ram_size;			// +16
-	VGA_RAM_PTR		vga_graphics_ram;		// +20
-	VGA_RAM_PTR		vga_graphics_ram_fence;		// +24
-	VGA_ALPHA_PTR		vga_alpha_ram;			// +28
-	VGA_ALPHA_PTR		vga_alpha_ram_fence;		// +32
-	unsigned char		vga_draw_stride;		// +36
-	unsigned char		vga_draw_stride_limit;		// +37 further X clipping
-	unsigned char		vga_color;			// +38
-	unsigned char		vga_alpha_mode:1;		// +39:0
-	unsigned char		vga_9wide:1;			// +39:1
+	unsigned char		vga_pos_x,vga_pos_y,vga_color;
+	unsigned char		vga_hgc_type;
+	unsigned char		vga_stride;
+	uint16_t		vga_width,vga_height;
+	uint16_t		vga_base_3x0;
+	uint16_t		vga_flags;
+	uint32_t		vga_ram_base;
+	uint32_t		vga_ram_size;
+	VGA_RAM_PTR		vga_graphics_ram;
+	VGA_RAM_PTR		vga_graphics_ram_fence;
+	VGA_ALPHA_PTR		vga_alpha_ram;
+	VGA_ALPHA_PTR		vga_alpha_ram_fence;
+	unsigned char		vga_draw_stride;
+	unsigned char		vga_draw_stride_limit;		// further X clipping
+	unsigned char		vga_alpha_mode:1;
+	unsigned char		vga_9wide:1;
 };
 
 /* vga_flags */
@@ -122,25 +120,6 @@ enum { /* color select (text=border color  320x200=background    640x200=foregro
 
 extern struct vgastate_t	vga_state;
 extern uint32_t			vga_clock_rates[4];
-
-size_t _vga_state_ofs1_lib();
-size_t _vga_state_sizeof_lib();
-void _vga_sanity_fail(uint16_t code);
-
-static inline size_t _vga_state_sizeof_host() {
-	return sizeof(vga_state);
-}
-
-static inline size_t _vga_state_ofs1_host() {
-	return offsetof(struct vgastate_t,vga_graphics_ram);
-}
-
-static inline void vga_sanity_check() {
-	if (_vga_state_sizeof_host() != _vga_state_sizeof_lib())
-		_vga_sanity_fail(100/*sizeof fail*/);
-	if (_vga_state_ofs1_host() != _vga_state_ofs1_lib())
-		_vga_sanity_fail(101/*offsetof fail*/);
-}
 
 unsigned char int10_getmode();
 void vga_write(const char *msg);

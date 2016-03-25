@@ -24,21 +24,6 @@
 
 struct vgastate_t	vga_state;
 
-void _vga_sanity_fail(uint16_t code) {
-#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
-	fprintf(stderr,"VGA sanity check failed code %u\n",code);
-#endif
-	abort();
-}
-
-size_t _vga_state_ofs1_lib() {
-	return offsetof(struct vgastate_t,vga_graphics_ram);
-}
-
-size_t _vga_state_sizeof_lib() {
-	return sizeof(vga_state);
-}
-
 void vga_sync_hw_cursor() {
 	unsigned int i;
 	i = vga_read_CRTC(0xF);			/* cursor low */
