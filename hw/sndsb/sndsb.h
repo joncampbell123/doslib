@@ -206,6 +206,7 @@ enum {
  *              probed like an MPU-401, kills the IDE controller until you reboot the machine. All MPU-401 support code will be
  *              moved to it's own library at a future date. */
 
+#pragma pack(push,4) // dword align, regardless of host program's -zp option, to keep struct consistent
 struct sndsb_ctx {
 	uint16_t			baseio,mpuio,oplio,gameio,aweio;
 	uint16_t			wssio,opl3sax_controlio;
@@ -324,7 +325,9 @@ struct sndsb_ctx {
 	uint8_t				ess_extended_mode:1;	/* if set, ESS chip is in extended mode */
 	uint8_t				timer_tick_signal:1;
 };
+#pragma pack(pop)
 
+#pragma pack(push,1) // regardless of host program's -zp option, to keep struct consistent
 /* runtime "options" that affect sound blaster probing.
  * note that they are only advisory flags to the library.
  * all flags are initialized to zero even prior to init_sndsb() */
@@ -339,6 +342,7 @@ struct sndsb_probe_opts {
 	unsigned char			experimental_ess:1;			/* use ESS extensions even on chips not yet supported /ex-ess */
 	unsigned char			use_dsp_alias:1;			/* probe, initialize and default to alias 22Dh    /sbalias:dsp */
 };
+#pragma pack(pop)
 
 extern struct sndsb_probe_opts		sndsb_probe_options;
 
@@ -352,12 +356,14 @@ extern unsigned char			nmi_32_hooked;
 extern void				(interrupt *nmi_32_old_vec)();
 #endif
 
+#pragma pack(push,1) // regardless of host program's -zp option, to keep struct consistent
 struct sndsb_mixer_control {
 	unsigned char		index;
 	unsigned char		offset:4;
 	unsigned char		length:4;
 	const char*		name;
 };
+#pragma pack(pop)
 
 extern const char *sndsb_dspoutmethod_str[SNDSB_DSPOUTMETHOD_MAX];
 extern struct sndsb_ctx sndsb_card[SNDSB_MAX_CARDS];
