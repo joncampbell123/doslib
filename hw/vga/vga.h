@@ -13,24 +13,27 @@ typedef unsigned char far *VGA_RAM_PTR;
 typedef uint16_t far *VGA_ALPHA_PTR;
 #endif
 
+#pragma pack(push,1) // don't align structure members. we need the struct to be consistent even if other projects use different alignment
 struct vgastate_t {
-	unsigned char		vga_pos_x,vga_pos_y,vga_color;
+	unsigned char		vga_pos_x,vga_pos_y;		// 4 char = 4 byte align
 	unsigned char		vga_hgc_type;
 	unsigned char		vga_stride;
-	uint16_t		vga_width,vga_height;
+	uint16_t		vga_width,vga_height;		// 4 uint16_t = 8 byte align
 	uint16_t		vga_base_3x0;
 	uint16_t		vga_flags;
-	uint32_t		vga_ram_base;
+	uint32_t		vga_ram_base;			// 2 uint32_t = 8 byte align
 	uint32_t		vga_ram_size;
-	VGA_RAM_PTR		vga_graphics_ram;
+	VGA_RAM_PTR		vga_graphics_ram;		// 4 far ptr = 16 byte align
 	VGA_RAM_PTR		vga_graphics_ram_fence;
 	VGA_ALPHA_PTR		vga_alpha_ram;
 	VGA_ALPHA_PTR		vga_alpha_ram_fence;
+	unsigned char		vga_color;			// 4 char (one is bitfield) = 4 byte align
 	unsigned char		vga_draw_stride;
 	unsigned char		vga_draw_stride_limit;		// further X clipping
 	unsigned char		vga_alpha_mode:1;
 	unsigned char		vga_9wide:1;
 };
+#pragma pack(pop)
 
 /* vga_flags */
 #define VGA_IS_TANDY			0x02	/* Tandy/PCjr */
