@@ -4,6 +4,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
+#include <stddef.h>
 
 #if TARGET_MSDOS == 32
 typedef unsigned char *VGA_RAM_PTR;
@@ -122,6 +123,7 @@ enum { /* color select (text=border color  320x200=background    640x200=foregro
 extern struct vgastate_t	vga_state;
 extern uint32_t			vga_clock_rates[4];
 
+size_t _vga_state_ofs1_lib();
 size_t _vga_state_sizeof_lib();
 void _vga_sanity_fail(uint16_t code);
 
@@ -129,9 +131,15 @@ static inline size_t _vga_state_sizeof_host() {
 	return sizeof(vga_state);
 }
 
+static inline size_t _vga_state_ofs1_host() {
+	return offsetof(struct vgastate_t,vga_graphics_ram);
+}
+
 static inline void vga_sanity_check() {
 	if (_vga_state_sizeof_host() != _vga_state_sizeof_lib())
 		_vga_sanity_fail(100/*sizeof fail*/);
+	if (_vga_state_ofs1_host() != _vga_state_ofs1_lib())
+		_vga_sanity_fail(101/*offsetof fail*/);
 }
 
 unsigned char int10_getmode();

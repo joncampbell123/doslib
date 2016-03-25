@@ -31,6 +31,10 @@ void _vga_sanity_fail(uint16_t code) {
 	abort();
 }
 
+size_t _vga_state_ofs1_lib() {
+	return offsetof(struct vgastate_t,vga_graphics_ram);
+}
+
 size_t _vga_state_sizeof_lib() {
 	return sizeof(vga_state);
 }
