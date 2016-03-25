@@ -1,4 +1,7 @@
 
+#ifndef __DOSLIB_HW_VGA_VRL_H
+#define __DOSLIB_HW_VGA_VRL_H
+
 #include <stdint.h>
 
 #pragma pack(push,1)
@@ -24,4 +27,6 @@ vrl1_vgax_offset_t *vrl1_vgax_genlineoffsets(struct vrl1_vgax_header *hdr,unsign
 void draw_vrl1_vgax_modex(unsigned int x,unsigned int y,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz);
 void draw_vrl1_vgax_modexstretch(unsigned int x,unsigned int y,unsigned int xstep/*1/64 scale 10.6 fixed pt*/,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz);
 void draw_vrl1_vgax_modexystretch(unsigned int x,unsigned int y,unsigned int xstep/*1/64 scale 10.6 fixed pt*/,unsigned int ystep/*1/6 scale 10.6*/,struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs/*array hdr->width long*/,unsigned char *data,unsigned int datasz);
+
+#endif //__DOSLIB_HW_VGA_VRL_H
 
