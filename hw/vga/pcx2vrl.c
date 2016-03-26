@@ -155,7 +155,7 @@ int main(int argc,char **argv) {
 		src_pcx_stride = hdr->bytesPerPlaneLine;
 		src_pcx_width = hdr->Xmax + 1 - hdr->Xmin;
 		src_pcx_height = hdr->Ymax + 1 - hdr->Ymin;
-		if (src_pcx_width >= 512 || src_pcx_height >= 256) {
+		if (src_pcx_width >= 512 || src_pcx_height > 256) {
 			fprintf(stderr,"PCX too big\n");
 			return 1;
 		}
@@ -164,7 +164,11 @@ int main(int argc,char **argv) {
 			return 1;
 		}
 
-		out_strip_height = src_pcx_height;
+		if (src_pcx_height > 255)
+			out_strip_height = 255;
+		else
+			out_strip_height = src_pcx_height;
+
 		out_strips = src_pcx_width;
 	}
 

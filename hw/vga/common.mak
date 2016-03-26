@@ -75,6 +75,9 @@ $(TGFX_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_VGAGFX_LIB) $(HW_VGAG
 	@$(COPY) chikyuu.pcx $(SUBDIR)$(HPS)chikyuu.pcx
 	@$(COPY) chikyuu.vrl $(SUBDIR)$(HPS)chikyuu.vrl
 	@$(COPY) chikyuu.pal $(SUBDIR)$(HPS)chikyuu.pal
+	@$(COPY) prussia.pcx $(SUBDIR)$(HPS)prussia.pcx
+	@$(COPY) prussia.vrl $(SUBDIR)$(HPS)prussia.vrl
+	@$(COPY) prussia.pal $(SUBDIR)$(HPS)prussia.pal
 	@$(COPY) 46113319.pcx $(SUBDIR)$(HPS)46113319.pcx
 	@$(COPY) 46113319.vrl $(SUBDIR)$(HPS)46113319.vrl
 	@$(COPY) 46113319.pal $(SUBDIR)$(HPS)46113319.pal
