@@ -17,6 +17,7 @@ DRAWVRL3_EXE = $(SUBDIR)$(HPS)drawvrl3.exe
 TGFX_EXE =     $(SUBDIR)$(HPS)tgfx.exe
 DRAWVRL_EXE =  $(SUBDIR)$(HPS)drawvrl.exe
 PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
+PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.exe
 DRAWVRL2_EXE = $(SUBDIR)$(HPS)drawvrl2.exe
 TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.exe
 TMOTSENG_EXE = $(SUBDIR)$(HPS)tmotseng.exe
@@ -54,7 +55,7 @@ all: lib exe
        
 lib: $(HW_VGA_LIB) $(HW_VGATTY_LIB) $(HW_VGAGUI_LIB) $(HW_VGAGFX_LIB) .symbolic
 	
-exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(PCX2VRL_EXE) $(DRAWVRL_EXE) $(DRAWVRL2_EXE) $(DRAWVRL3_EXE) $(DRAWVRL4_EXE) $(DRAWVRL5_EXE) $(TGFX_EXE) $(VGA240_EXE) .symbolic
+exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(PCX2VRL_EXE) $(PCXSSCUT_EXE) $(DRAWVRL_EXE) $(DRAWVRL2_EXE) $(DRAWVRL3_EXE) $(DRAWVRL4_EXE) $(DRAWVRL5_EXE) $(TGFX_EXE) $(VGA240_EXE) .symbolic
 
 $(TEST_EXE): $(HW_VGATTY_LIB) $(HW_VGATTY_LIB_DEPENDENCIES) $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGATTY_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE)
@@ -142,6 +143,13 @@ $(DRAWVRL4_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)drawvrl
 !ifdef DRAWVRL5_EXE
 $(DRAWVRL5_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)drawvrl5.obj
 	%write tmp.cmd option quiet option map=$(DRAWVRL5_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)drawvrl5.obj name $(DRAWVRL5_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef PCXSSCUT_EXE
+$(PCXSSCUT_EXE): $(SUBDIR)$(HPS)pcxsscut.obj
+	%write tmp.cmd option quiet option map=$(PCXSSCUT_EXE).map system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)pcxsscut.obj name $(PCXSSCUT_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif

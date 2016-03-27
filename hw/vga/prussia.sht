@@ -1,0 +1,180 @@
+# Prussia.PCX demo sprite sheet compiler script
+# (C) 2016 Jonathan Campbell
+
+# *spritesheet declares the section used by the sprite sheet cutting tool
+# 
+# Sprites are declared by name (which becomes the .VRL file) at the + in the form:
+# +NAME@ID
+#
+# Sprite names are meant for temporary use when compiling the sprite sheet into VRLs.
+# At some point a longer name might be provided for use in your code.
+# This will fill the CURRENT WORKING DIRECTORY with .VRL files as directed when you
+# run PCXSSCUT, make sure your makefile does this in a temporary directory when
+# you integrate into your build and that your cleanup commands delete these files,
+# and that your .gitignore does not attempt to commit these files.
+
+# begin spritesheet section
+*spritesheet
+
+# ---------------- PRUSSIA, walking, blue shirt with white cross. Frame 2/3 could be used for standing still
+
+# Prussia, forward, frame 1/3
++PRSBFCW0@10
+xy=0,0
+wh=32,32
+# Prussia, forward, frame 2/3
++PRSBFCW1@11
+xy=32,0
+wh=32,32
+# Prussia, forward, frame 3/3
++PRSBFCW2@12
+xy=64,0
+wh=32,32
+
+# Prussia, left, frame 1/3
++PRSBLCW0@20
+xy=0,32
+wh=32,32
+# Prussia, left, frame 2/3
++PRSBLCW1@21
+xy=32,32
+wh=32,32
+# Prussia, left, frame 3/3
++PRSBLCW2@22
+xy=64,32
+wh=32,32
+
+# Prussia, right, frame 1/3
++PRSBRCW0@30
+xy=0,64
+wh=32,32
+# Prussia, right, frame 2/3
++PRSBRCW1@31
+xy=32,64
+wh=32,32
+# Prussia, right, frame 3/3
++PRSBRCW2@32
+xy=64,64
+wh=32,32
+
+# Prussia, away, frame 1/3
++PRSBACW0@40
+xy=0,96
+wh=32,32
+# Prussia, away, frame 2/3
++PRSBACW1@41
+xy=32,96
+wh=32,32
+# Prussia, away, frame 3/3
++PRSBACW2@42
+xy=64,96
+wh=32,32
+
+# ---------------- PRUSSIA, walking, white shirt with black cross. Frame 2/3 could be used for standing still
+
+# Prussia, forward, frame 1/3
++PRSWFCW0@110
+xy=96,0
+wh=32,32
+# Prussia, forward, frame 2/3
++PRSWFCW1@111
+xy=128,0
+wh=32,32
+# Prussia, forward, frame 3/3
++PRSWFCW2@112
+xy=160,0
+wh=32,32
+
+# Prussia, left, frame 1/3
++PRSWLCW0@120
+xy=96,32
+wh=32,32
+# Prussia, left, frame 2/3
++PRSWLCW1@121
+xy=128,32
+wh=32,32
+# Prussia, left, frame 3/3
++PRSWLCW2@122
+xy=160,32
+wh=32,32
+
+# Prussia, right, frame 1/3
++PRSWRCW0@130
+xy=96,64
+wh=32,32
+# Prussia, right, frame 2/3
++PRSWRCW1@131
+xy=128,64
+wh=32,32
+# Prussia, right, frame 3/3
++PRSWRCW2@132
+xy=160,64
+wh=32,32
+
+# Prussia, away, frame 1/3
++PRSWACW0@140
+xy=96,96
+wh=32,32
+# Prussia, away, frame 2/3
++PRSWACW1@141
+xy=128,96
+wh=32,32
+# Prussia, away, frame 3/3
++PRSWACW2@142
+xy=160,96
+wh=32,32
+
+# ---------------- PRUSSIA, walking, silver armor. Frame 2/3 could be used for standing still
+
+# Prussia, forward, frame 1/3
++PRSAFCW0@210
+xy=0,128
+wh=32,32
+# Prussia, forward, frame 2/3
++PRSAFCW1@211
+xy=32,128
+wh=32,32
+# Prussia, forward, frame 3/3
++PRSAFCW2@212
+xy=64,128
+wh=32,32
+
+# Prussia, left, frame 1/3
++PRSALCW0@220
+xy=0,160
+wh=32,32
+# Prussia, left, frame 2/3
++PRSALCW1@221
+xy=32,160
+wh=32,32
+# Prussia, left, frame 3/3
++PRSALCW2@222
+xy=64,160
+wh=32,32
+
+# Prussia, right, frame 1/3
++PRSARCW0@230
+xy=0,192
+wh=32,32
+# Prussia, right, frame 2/3
++PRSARCW1@231
+xy=32,192
+wh=32,32
+# Prussia, right, frame 3/3
++PRSARCW2@232
+xy=64,192
+wh=32,32
+
+# Prussia, away, frame 1/3
++PRSAACW0@240
+xy=0,224
+wh=32,32
+# Prussia, away, frame 2/3
++PRSAACW1@241
+xy=32,224
+wh=32,32
+# Prussia, away, frame 3/3
++PRSAACW2@242
+xy=64,224
+wh=32,32
+
