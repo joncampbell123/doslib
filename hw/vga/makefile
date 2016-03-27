@@ -12,7 +12,7 @@ vrl:
 	./pcx2vrl -i ed2.pcx      -o ed2.vrl      -tc 0xFF -p ed2.pal
 
 prussiademo: prussia.sht
-	cd dos86l && ../pcxsscut -s ../prussia.sht -i ../prussia.pcx -p prussia.pal -tc 0x84 -y # run from subdirectory where output will not be committed accidentally
+	cd dos86l && ../pcxsscut -s ../prussia.sht -hc prussia.h -hp demoanim_prussia_ -i ../prussia.pcx -p prussia.pal -tc 0x84 -y # run from subdirectory where output will not be committed accidentally
 
 pcx2vrl: pcx2vrl.c
 	$(CC) $(CFLAGS) -o $@ $<

@@ -241,6 +241,8 @@ static void help() {
 	fprintf(stderr,"exit with error if the VRL file already exists.\n");
 	fprintf(stderr,"\n");
 	fprintf(stderr,"pcxsscut [options]\n");
+	fprintf(stderr,"  -hp <string>                 With -hc, prefix for sprite defines\n");
+	fprintf(stderr,"  -hc <filename>               Emit sprite names and IDs to C header\n");
 	fprintf(stderr,"  -s <filename>                File on how to cut the sprite sheet\n");
 	fprintf(stderr,"  -i <filename>                Read image from PCX file\n");
 	fprintf(stderr,"  -tc <index>                  Specify transparency color\n");
@@ -249,7 +251,7 @@ static void help() {
 }
 
 int main(int argc,char **argv) {
-	const char *src_file = NULL,*scr_file = NULL,*pal_file = NULL;
+	const char *src_file = NULL,*scr_file = NULL,*pal_file = NULL,*hdr_file = NULL,*hdr_prefix = NULL;
 	unsigned int x,y,runcount,skipcount,cut;
 	struct pcx_cutregion_t *cutreg;
 	unsigned char y_overwrite = 0;
@@ -267,6 +269,12 @@ int main(int argc,char **argv) {
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
 				return 1;
+			}
+			else if (!strcmp(a,"hp")) {
+				hdr_prefix = argv[i++];
+			}
+			else if (!strcmp(a,"hc")) {
+				hdr_file = argv[i++];
 			}
 			else if (!strcmp(a,"y")) {
 				y_overwrite = 1;
@@ -410,6 +418,36 @@ int main(int argc,char **argv) {
 	if (!parse_script_file(scr_file)) {
 		fprintf(stderr,"Script file (-s) parse error\n");
 		return 1;
+	}
+
+	if (hdr_file != NULL) {
+		FILE *fp;
+
+		fp = fopen(hdr_file,"w");
+		if (fp == NULL) {
+			fprintf(stderr,"Failed to open -hc file\n");
+			return 1;
+		}
+
+		fprintf(fp,"// header file for sprite sheet. AUTO GENERATED, do not edit\n");
+		fprintf(fp,"// \n");
+		fprintf(fp,"// source PCX: %s\n",src_file);
+		fprintf(fp,"// sheet script: %s\n",scr_file);
+		if (pal_file != NULL) fprintf(fp,"// palette file: %s\n",pal_file);
+		fprintf(fp,"\n");
+
+		for (cut=0;cut < cutregions;cut++) {
+			cutreg = cutregion+cut;
+
+			fprintf(fp,"#define %s%s %uU\n",
+				hdr_prefix != NULL ? hdr_prefix : "",
+				cutreg->sprite_name,
+				cutreg->sprite_id);
+		}
+
+		fprintf(fp,"\n");
+		fprintf(fp,"// end list\n");
+		fclose(fp);
 	}
 
 	if (cutregions == 0) {
