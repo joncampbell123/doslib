@@ -25,6 +25,8 @@ int probe_dosbox_id_version_string(char *buf,size_t len) {
 
 	dosbox_id_write_regsel(DOSBOX_ID_REG_VERSION_STRING);
 	dosbox_id_reset_latch();
+	dosbox_id_write_data_nrl_u8(0); // reset string read ptr in DOSBox-X
+	dosbox_id_flush_write();
 
 	while ((i+1) < len) {
 		c = dosbox_id_read_data_nrl_u8();
