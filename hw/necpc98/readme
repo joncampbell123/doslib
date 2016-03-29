@@ -1,0 +1,62 @@
+PC-98 notes.
+
+I am collecting this information here because, unlike standard PC
+hardware, documentation for NEC PC-98 is harder to come by and
+it requires a lot of digging through source code and dark corners
+of the web.
+
+-----------------------------------------------------------------------
+
+How to detect (according to Ralph Brown Interrupt List):
+
+	mov ax,0x1000
+	int 0x1A
+
+If AX != 0x1000 after the call, then it's PC-98. A keen reader of
+Ralph Brown shows that this works because PC-98 AH=0x10 is
+"Printer initialize" (though documentation doesn't say what
+return values are). So essentially, you're detecting PC-98 by
+it's printer. Heh.
+
+This implementation of PC-98 factors in the possibility of nonstandard
+or dodgy American BIOSes returning a different value of AX, not because
+they support PC-98, but perhaps following the pattern of INT 15h where
+unknown calls are met with AH=0x86 and CF=1.
+
+Test cases so far (Jonathan Campbell)
+  - DOSBox 0.74 / DOSBox-X                RESULT: PASS (correctly detects that DOSBox is not PC-98)
+  - Neko Emulator II                      RESULT: PASS (correctly detects PC-98 DOS environment)
+
+------------------------------------------------------------------------
+
+Why bother detecting PC-98?
+
+    * If you know the hardware is PC-98, then you know hardware is not VGA and writing text to
+      memory address 0xB8000 isn't going to show anything on screen. If you're wise, you'll
+      switch output routines or simply exit politely with an error message explaining what's
+      wrong.
+
+    * Sound hardware is different. FM synthesis is available, but (GUESSING!) not at standard
+      Adlib ports 0x388-0x389. There might be more than one FM chip (are you a Touhou Project
+      fan?).
+
+------------------------------------------------------------------------
+
+Video RAM arrangement
+
+** According to FreeBSD (probably referring to Intel 386 systems)
+   https://people.freebsd.org/~kato/pc98-arch.html#videosystem
+
+   0xA0000  Text V-RAM
+   0xA4000  Graphic V-RAM
+   0xC0000  External device
+   0xE0000  Graphic V-RAM
+   0xE4000  BIOS ROM
+
+** Poking around Neko Emulator II with DOS DEBUG.EXE (Jonathan Campbell)
+   0xA0000  Text V-RAM (2 bytes per char)
+   0xA2000  Text attribute RAM (2 bytes per char)
+   0xA4000  ???
+   0xB0000  ???
+   0xC0000  ???
+
