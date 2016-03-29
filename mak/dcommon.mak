@@ -134,6 +134,14 @@ $(HW_ADLIB_LIB):
 	@cd $(HERE)
 !endif
 
+# HW\NECPC98----------------------------------------------------------------------------------
+!ifneq NOW_BUILDING HW_NECPC98_LIB
+$(HW_NECPC98_LIB):
+	@cd $(HW_NECPC98_LIB_DIR)
+	@$(MAKECMD) build lib
+	@cd $(HERE)
+!endif
+
 # HW\IDE==----------------------------------------------------------------------------------
 !ifneq NOW_BUILDING HW_IDE_LIB
 $(HW_IDE_LIB):

@@ -157,6 +157,12 @@ HW_ADLIB_LIB=$(HW_ADLIB_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)adlib.lib
 HW_ADLIB_LIB_DEPENDENCIES=
 HW_ADLIB_LIB_WLINK_LIBRARIES=library $(HW_ADLIB_LIB)
 
+# HW\NECPC98----------------------------------------------------------------------------------
+HW_NECPC98_LIB_DIR=$(REL)$(HPS)hw$(HPS)necpc98
+HW_NECPC98_LIB=$(HW_NECPC98_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)necpc98.lib
+HW_NECPC98_LIB_DEPENDENCIES=
+HW_NECPC98_LIB_WLINK_LIBRARIES=library $(HW_NECPC98_LIB)
+
 # HW\ISAPNP---------------------------------------------------------------------------------
 HW_ISAPNP_LIB_DIR=$(REL)$(HPS)hw$(HPS)isapnp
 HW_ISAPNP_LIB=$(HW_ISAPNP_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)isapnp.lib

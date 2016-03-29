@@ -41,6 +41,7 @@ ide .............. IDE/ATA hard disk and ATAPI CD-ROM code
 isapnp ........... ISA Plug & Play BIOS API and hardware I/O
 mb ............... Motherboard-specific hacking "toys", see README for
                      comprehensive list
+necpc98 .......... Japanese NEC PC-98 support functions
 parport .......... PC parallel (printer) port functions
 pci .............. PCI bus functions
 pcie ............. PCI-Express bus functions
