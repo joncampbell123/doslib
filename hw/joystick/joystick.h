@@ -7,7 +7,7 @@ struct joystick_t {
 	uint16_t		port;		// there is only ONE joystick port!
 	uint8_t			buttons;	// button states (last read), bitfield for buttons 1-4, read from bits 5-8 of the I/O port
 	uint16_t		reading[4];	// joystick readings, in 8254 timer ticks. It is up to *you* to calibrate and make meaning of these values.
-						// furthermore, the values may change scale slightly if this code is run in DOSBox and timed intervals are
+						// furthermore, the values may change scale quite a bit if this code is run in DOSBox and timed intervals are
 						// turned off, and the user changes the CPU cycles count.
 };
 
