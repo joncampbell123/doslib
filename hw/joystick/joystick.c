@@ -79,20 +79,22 @@ void read_joystick_positions(struct joystick_t *joy,uint8_t which/*bitmask*/) {
 }
 
 int probe_joystick(struct joystick_t *joy,uint16_t port) {
-	uint8_t a,b;
+	unsigned int patience = 100; /* 100 ms */
+	uint8_t a;
 
 	if (joy->port == port)
 		return 1;
 
-	a = inp(port);
-	/* trigger some bits, see if they clear */
+	/* trigger a read. bits 0-3 should go from 0 to 1, then eventually go 1 to 0. */
 	outp(port,0xFF);
-	b = inp(port);
+	a = inp(port);
+	while (a == 0xFF) {
+		if (--patience == 0) return 0;
+		t8254_wait(t8254_us2ticks(1000)); /* 1ms */
+		a = inp(port);
+	}
 
-	if (a == 0xFF && b == 0xFF) /* all 0xFF? fail */
-		return 0;
-
-	joystick_update_button_state(joy,b);
+	joystick_update_button_state(joy,a);
 	joy->port = port;
 	return 1;
 }
