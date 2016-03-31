@@ -157,6 +157,12 @@ HW_ADLIB_LIB=$(HW_ADLIB_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)adlib.lib
 HW_ADLIB_LIB_DEPENDENCIES=
 HW_ADLIB_LIB_WLINK_LIBRARIES=library $(HW_ADLIB_LIB)
 
+# HW\JOYSTICK----------------------------------------------------------------------------------
+HW_JOYSTICK_LIB_DIR=$(REL)$(HPS)hw$(HPS)joystick
+HW_JOYSTICK_LIB=$(HW_JOYSTICK_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)joystick.lib
+HW_JOYSTICK_LIB_DEPENDENCIES=
+HW_JOYSTICK_LIB_WLINK_LIBRARIES=library $(HW_JOYSTICK_LIB)
+
 # HW\NECPC98----------------------------------------------------------------------------------
 HW_NECPC98_LIB_DIR=$(REL)$(HPS)hw$(HPS)necpc98
 HW_NECPC98_LIB=$(HW_NECPC98_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)necpc98.lib
