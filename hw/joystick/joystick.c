@@ -44,7 +44,7 @@ void read_joystick_positions(struct joystick_t *joy,uint8_t which/*bitmask*/) {
 		a = inp(joy->port);
 		btn &= a; /* help the host program respond to buttons pushed during this wait loop */
 
-		/* for any bits that change to 1, note the time */
+		/* for any bits that change to 0, note the time */
 		b = (~a) & check;
 		if (b != 0) {
 			for (dc=0,msk=1;dc < 4;dc++,msk<<=1U) {
