@@ -25,7 +25,7 @@
 #include <hw/8259/8259.h>
 
 static volatile unsigned int counter = 0;
-static unsigned int speaker_rate = T8254_REF_CLOCK_HZ / 400;	/* 400Hz */
+static unsigned int speaker_rate = 0;
 static unsigned int max = 0xFFFF;
 
 void (__interrupt __far *prev_irq0)() = NULL;
@@ -160,6 +160,10 @@ int main() {
 		printf("8259 interrupt controller not present. Your computer might be 2010-era hardware that dropped support for it.\n");
 		return 1;
 	}
+
+	printf("8254 base clock: %luHz\n",T8254_REF_CLOCK_HZ);
+
+	speaker_rate = T8254_REF_CLOCK_HZ / 400UL;	/* 400Hz */
 
 	prev_irq0 = _dos_getvect(T8254_IRQ+0x08);
 	_dos_setvect(T8254_IRQ+0x8,irq0);

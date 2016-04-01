@@ -38,3 +38,7 @@
 
 uint32_t t8254_counter[3] = {0x10000,0x10000,0x10000};
 
+#ifdef TARGET_PC98
+uint32_t __T8254_REF_CLOCK_HZ = 0; // will be set on probe function
+#endif
+

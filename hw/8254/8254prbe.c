@@ -37,6 +37,21 @@ int probe_8254() {
 			return (probed_8254_result=0);
 	}
 
+#ifdef TARGET_PC98
+	/* read BIOS data area 0000:0501 to determine what the base clock is. */
+	{
+# if TARGET_MSDOS == 32
+		unsigned char *bp = (unsigned char*)0x501;
+# else
+		unsigned char far *bp = MK_FP(0x0000,0x0501);
+# endif
+		/* bit 7:
+		 *   0 = 5MHz or 10MHz, base clock is 2.4576MHz
+		 *   1 = 8MHz, base clock is 1.9968Mhz */
+		__T8254_REF_CLOCK_HZ = (*bp & 0x80U/*8MHz clock*/) ? 1996800UL : 2457600UL;
+	}
+#endif
+
 	return (probed_8254_result=1);
 }
 
