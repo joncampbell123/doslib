@@ -54,7 +54,7 @@ vga .............. VGA/EGA/CGA/MDA/Tandy/PCjr/Hercules support functions
 
 Build subdirectory naming convention:
 
-    -- MS-DOS --
+    -- MS-DOS IBM PC/XT/AT compatible --
 
     dos86c ........... 16-bit real mode build, compact memory model (8086+)
     dos86s ........... 16-bit real mode build, small memory model (8086+)
@@ -68,6 +68,21 @@ Build subdirectory naming convention:
     dos486f .......... 32-bit protected mode build, flat memory model (assume/optimized for 486+)
     dos586f .......... 32-bit protected mode build, flat memory model (assume/optimized for 586+)
     dos686f .......... 32-bit protected mode build, flat memory model (assume/optimized for 686+)
+
+    -- MS-DOS Japanese NEC PC-98 --
+
+    d9886c ........... 16-bit real mode build, compact memory model (8086+)
+    d9886s ........... 16-bit real mode build, small memory model (8086+)
+    d9886m ........... 16-bit real mode build, medium memory model (8086+)
+    d9886l ........... 16-bit real mode build, large memory model (8086+)
+    d98286c .......... 16-bit real mode build, compact memory model (assume/optimized for 286+)
+    d98286s .......... 16-bit real mode build, small memory model (assume/optimized for 286+)
+    d98286m .......... 16-bit real mode build, medium memory model (assume/optimized for 286+)
+    d98286l .......... 16-bit real mode build, large memory model (assume/optimized for 286+)
+    d98386f .......... 32-bit protected mode build, flat memory model (386 or higher)
+    d98486f .......... 32-bit protected mode build, flat memory model (assume/optimized for 486+)
+    d98586f .......... 32-bit protected mode build, flat memory model (assume/optimized for 586+)
+    d98686f .......... 32-bit protected mode build, flat memory model (assume/optimized for 686+)
 
     -- OS/2 --
 
