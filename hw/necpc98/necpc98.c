@@ -46,7 +46,7 @@ int probe_nec_pc98() {
 	 * FFFF:000F            Reserved                     ROM checksum
 	 *
 	 * Question: I assume the ROM checksum is a 16-bit sum to zero across the BIOS? From where to where? */
-		if (bios_date[0x0] != 0xEB/*JMP FAR*/)
+		if (bios_date[0x0] != 0xEA/*JMP FAR*/)
 			return 0; // Nope. Both platforms would have a JMP FAR at FFFF:0000
 
 		if (bios_date[0x7] == '/' && bios_date[0xA] == '/')
