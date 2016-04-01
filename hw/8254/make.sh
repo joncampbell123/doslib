@@ -9,7 +9,7 @@ dospc98=1 # MS-DOS PC-98
 
 if [ "$1" == "clean" ]; then
 	do_clean
-	rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
+	rm -fv test.dsk test98.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
 	exit 0
 fi
 
@@ -17,6 +17,10 @@ if [ "$1" == "disk" ]; then
 	make_msdos_data_disk test.dsk || exit 1
 	mcopy -i test.dsk dos86c/test.exe ::test86.exe
 	mcopy -i test.dsk dos386f/test.exe ::test386.exe
+	gunzip -c -d ../necpc98/necpc98.fd0.gz >test98.dsk
+	mcopy -i test98.dsk d9886l/test.exe ::test98l.exe
+	mcopy -i test98.dsk d9886s/test.exe ::test98s.exe
+	mcopy -i test98.dsk d98386f/test.exe ::test98f.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
