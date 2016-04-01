@@ -28,11 +28,21 @@
  *          our code overrides what the IRQ is trying to do) */
 
 #define PC_SPEAKER_GATE						0x61
+#define PC_SPEAKER_GATE_MASK					0x03 /* mask prior to shift */
+#define PC_SPEAKER_GATE_SHIFT					0
+
+/* values to use with pc_speaker_set_gate */
+#define PC_SPEAKER_GATE_ON					0x3
+#define PC_SPEAKER_GATE_OFF					0x0
 
 /* 1.19318MHz from which the counter values divide down from */
 #define T8254_REF_CLOCK_HZ					1193180
 
 #define T8254_IRQ						0
+
+#define T8254_TIMER_INTERRUPT_TICK				0
+#define T8254_TIMER_DRAM_REFRESH				1
+#define T8254_TIMER_PC_SPEAKER					2
 
 #define T8254_PORT(x)						((x) + 0x40)
 #define T8254_TIMER_PORT(x)					T8254_PORT(x)
@@ -123,23 +133,24 @@ static inline void write_8254(unsigned char timer,t8254_time_t count,unsigned ch
 }
 
 static inline unsigned char t8254_pc_speaker_read_gate() {
-	return inp(PC_SPEAKER_GATE) & 3;
+	return (inp(PC_SPEAKER_GATE) >> PC_SPEAKER_GATE_SHIFT) & PC_SPEAKER_GATE_MASK;
 }
 
 static inline void t8254_pc_speaker_set_gate(unsigned char m) {
 	unsigned char x;
 
 	x = inp(PC_SPEAKER_GATE);
-	x = (x & ~0x3) | (m & 3);
+	x &= ~(PC_SPEAKER_GATE_MASK << PC_SPEAKER_GATE_SHIFT);
+	x |=  (m & PC_SPEAKER_GATE_MASK) << PC_SPEAKER_GATE_SHIFT;
 	outp(PC_SPEAKER_GATE,x);
 }
 
 static inline void write_8254_system_timer(t8254_time_t max) {
-	write_8254(0,max,T8254_MODE_2_RATE_GENERATOR);
+	write_8254(T8254_TIMER_INTERRUPT_TICK,max,T8254_MODE_2_RATE_GENERATOR);
 }
 
 static inline void write_8254_pc_speaker(t8254_time_t max) {
-	write_8254(2,max,T8254_MODE_3_SQUARE_WAVE_MODE);
+	write_8254(T8254_TIMER_PC_SPEAKER,max,T8254_MODE_3_SQUARE_WAVE_MODE);
 }
 
 #endif /* __HW_8254_8254_H */
