@@ -9,7 +9,7 @@ dospc98=1 # MS-DOS PC98
 
 if [ "$1" == "clean" ]; then
 	do_clean
-	rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
+	rm -fv test.dsk test2.dsk test98.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
 	exit 0
 fi
 
