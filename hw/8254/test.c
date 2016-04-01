@@ -155,6 +155,8 @@ int main() {
 	prev_irq0 = _dos_getvect(T8254_IRQ+0x08);
 	_dos_setvect(T8254_IRQ+0x8,irq0);
 
+	/* TODO: Unmask IRQ 0 on PC-98, because IRQ0 is not always enabled, in fact, it's usually turned off. */
+
 	_cli();
 	write_8254_pc_speaker(speaker_rate);
 	write_8254_system_timer(max);
@@ -223,11 +225,11 @@ int main() {
 				delay_ticks = t8254_us2ticks(z);
 				printf("  %lu = %lu ticks\n",z,delay_ticks);
 
-				if (delay_ticks == 0UL)	cmax = T8254_REF_CLOCK_HZ / 20;
-				else			cmax = T8254_REF_CLOCK_HZ / 20 / delay_ticks;
+				if (delay_ticks == 0UL)	cmax = (unsigned int)(T8254_REF_CLOCK_HZ / 20UL);
+				else			cmax = (unsigned int)(T8254_REF_CLOCK_HZ / 20UL / (unsigned long)delay_ticks);
 				if (cmax == 0) cmax = 1;
 
-				write_8254_pc_speaker(T8254_REF_CLOCK_HZ / 400); /* tick as fast as possible */
+				write_8254_pc_speaker(T8254_REF_CLOCK_HZ / 400UL); /* tick as fast as possible */
 				while (1) {
 					if (kbhit()) {
 						if (getch() == 27) break;

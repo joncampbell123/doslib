@@ -15,12 +15,15 @@ fi
 
 if [ "$1" == "disk" ]; then
 	make_msdos_data_disk test.dsk || exit 1
-	mcopy -i test.dsk dos86c/test.exe ::test86.exe
+	mcopy -i test.dsk dos86l/test.exe ::test86l.exe
+	mcopy -i test.dsk dos86s/test.exe ::test86s.exe
 	mcopy -i test.dsk dos386f/test.exe ::test386.exe
+	mcopy -i test.dsk test1_22.wav ::test1_22.wav
 	gunzip -c -d ../necpc98/necpc98.fd0.gz >test98.dsk
 	mcopy -i test98.dsk d9886l/test.exe ::test98l.exe
 	mcopy -i test98.dsk d9886s/test.exe ::test98s.exe
 	mcopy -i test98.dsk d98386f/test.exe ::test98f.exe
+	mcopy -i test98.dsk test1_22.wav ::test1_22.wav
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then

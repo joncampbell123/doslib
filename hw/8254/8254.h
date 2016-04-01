@@ -27,24 +27,55 @@
  *          PC speaker gate port (and even if they do, the worst that can happen is
  *          our code overrides what the IRQ is trying to do) */
 
-#define PC_SPEAKER_GATE						0x61
-#define PC_SPEAKER_GATE_MASK					0x03 /* mask prior to shift */
-#define PC_SPEAKER_GATE_SHIFT					0
+#ifdef TARGET_PC98
+/* NEC PC-98 */
+# define PC_SPEAKER_GATE					0x35
+# define PC_SPEAKER_GATE_MASK					0x01 /* mask prior to shift */
+# define PC_SPEAKER_GATE_SHIFT					3
 
 /* values to use with pc_speaker_set_gate */
-#define PC_SPEAKER_GATE_ON					0x3
-#define PC_SPEAKER_GATE_OFF					0x0
+# define PC_SPEAKER_GATE_ON					0x1
+# define PC_SPEAKER_GATE_OFF					0x0
+#else
+/* IBM PC/XT/AT */
+# define PC_SPEAKER_GATE					0x61
+# define PC_SPEAKER_GATE_MASK					0x03 /* mask prior to shift */
+# define PC_SPEAKER_GATE_SHIFT					0
 
+/* values to use with pc_speaker_set_gate */
+# define PC_SPEAKER_GATE_ON					0x3
+# define PC_SPEAKER_GATE_OFF					0x0
+#endif
+
+#ifdef TARGET_PC98
+/* NEC PC-98 */
+# define T8254_REF_CLOCK_HZ					(1996800UL) /* FIXME: This varies depending on the base clock which can be 1.9968MHz or 2.4576MHz */
+#else
 /* 1.19318MHz from which the counter values divide down from */
-#define T8254_REF_CLOCK_HZ					1193180
+# define T8254_REF_CLOCK_HZ					(1193180UL)
+#endif
 
+/* IBM PC/XT/AT and PC-98 use the same IRQ */
 #define T8254_IRQ						0
 
-#define T8254_TIMER_INTERRUPT_TICK				0
-#define T8254_TIMER_DRAM_REFRESH				1
-#define T8254_TIMER_PC_SPEAKER					2
+#ifdef TARGET_PC98
+# define T8254_TIMER_INTERRUPT_TICK				0
+# define T8254_TIMER_PC_SPEAKER					1
+# define T8254_TIMER_RS232					2
+#else
+# define T8254_TIMER_INTERRUPT_TICK				0
+# define T8254_TIMER_DRAM_REFRESH				1
+# define T8254_TIMER_PC_SPEAKER					2
+#endif
 
-#define T8254_PORT(x)						((x) + 0x40)
+#ifdef TARGET_PC98
+/* PC-98 I/O ports 71h-77h odd only */
+# define T8254_PORT(x)						(((x) * 2U) + 0x71U)
+#else
+/* IBM PC/XT/AT I/O ports 40h-43h */
+# define T8254_PORT(x)						((x) + 0x40U)
+#endif
+
 #define T8254_TIMER_PORT(x)					T8254_PORT(x)
 #define T8254_CONTROL_PORT					T8254_PORT(3)
 
