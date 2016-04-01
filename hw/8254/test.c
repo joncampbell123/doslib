@@ -22,6 +22,7 @@
 #include <dos.h>
 
 #include <hw/8254/8254.h>
+#include <hw/8259/8259.h>
 
 static volatile unsigned int counter = 0;
 static unsigned int speaker_rate = T8254_REF_CLOCK_HZ / 400;	/* 400Hz */
@@ -30,7 +31,11 @@ static unsigned int max = 0xFFFF;
 void (__interrupt __far *prev_irq0)() = NULL;
 static void __interrupt __far irq0() {
 	counter++;
-	outp(0x20,0x20);
+
+#if T8254_IRQ >= 8
+	p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+#endif
+	p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
 }
 
 #if TARGET_MSDOS == 32
@@ -151,16 +156,23 @@ int main() {
 		printf("Chip not present. Your computer might be 2010-era hardware that dropped support for it.\n");
 		return 1;
 	}
+	if (!probe_8259()) {
+		printf("8259 interrupt controller not present. Your computer might be 2010-era hardware that dropped support for it.\n");
+		return 1;
+	}
 
 	prev_irq0 = _dos_getvect(T8254_IRQ+0x08);
 	_dos_setvect(T8254_IRQ+0x8,irq0);
-
-	/* TODO: Unmask IRQ 0 on PC-98, because IRQ0 is not always enabled, in fact, it's usually turned off. */
 
 	_cli();
 	write_8254_pc_speaker(speaker_rate);
 	write_8254_system_timer(max);
 	_sti();
+
+#ifdef TARGET_PC98
+	/* PC-98 does not have IRQ0 running by default */
+	p8259_unmask(T8254_IRQ);
+#endif
 
 	while (1) {
 		if (kbhit()) {
@@ -273,6 +285,11 @@ int main() {
 		fflush(stdout);
 	}
 	printf("\n");
+
+#ifdef TARGET_PC98
+	/* PC-98 does not have IRQ0 running by default */
+	p8259_mask(T8254_IRQ);
+#endif
 
 	_cli();
 	write_8254_pc_speaker(0);
