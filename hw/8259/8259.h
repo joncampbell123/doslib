@@ -34,11 +34,21 @@
  * expected to wrap your calls with cli/sti functions. Though it is unlikely, leaving interrupts enabled
  * while doing this can cause problems in case the BIOS fiddles with the PIC during an IRQ */
 
-#define P8259_MASTER_DATA		0x20
-#define P8259_MASTER_MASK		0x21
+#ifdef TARGET_PC98
+/* NEC PC-98 0x00,0x02, 0x08,0x0A */
+# define P8259_MASTER_DATA		0x00
+# define P8259_MASTER_MASK		0x02
 
-#define P8259_SLAVE_DATA		0xA0
-#define P8259_SLAVE_MASK		0xA1
+# define P8259_SLAVE_DATA		0x08
+# define P8259_SLAVE_MASK		0x0A
+#else
+/* IBM PC/XT/AT 0x20-0x21, 0xA0-0xA1 */
+# define P8259_MASTER_DATA		0x20
+# define P8259_MASTER_MASK		0x21
+
+# define P8259_SLAVE_DATA		0xA0
+# define P8259_SLAVE_MASK		0xA1
+#endif
 
 /* OCW2 command bits. For most commands you are expected to OR the low 3 bits with the IRQ for the command to take effect on */
 #define P8259_OCW2_ROTATE_AUTO_EOI_CLEAR	(0U << 5U)
@@ -56,7 +66,11 @@ extern unsigned char p8259_slave_present;
 
 /* c = IRQ  which = I/O port */
 static inline unsigned char p8259_irq_to_base_port(unsigned char c,unsigned char which) {
+#ifdef TARGET_PC98
+	return ((c & 8) ? P8259_SLAVE_DATA : P8259_MASTER_DATA) + (which * 2);
+#else
 	return ((c & 8) ? P8259_SLAVE_DATA : P8259_MASTER_DATA) + which;
+#endif
 }
 
 /* c = IRQ. */
