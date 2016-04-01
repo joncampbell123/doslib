@@ -30,6 +30,11 @@ CPULEV6 = 6
 TARGET86 = 386
 !endif
 
+# PC-98 support
+!ifdef PC98
+CFLAGS_1 += -dTARGET_PC98=1
+!endif
+
 # Watcom does not have -fp4 because there's really nothing new to the 486 FPU to code home about
 !ifndef CPULEV3F
 CPULEV3F=$(CPULEV3)
@@ -46,7 +51,11 @@ CPULEV4F=3
 !endif
 
 TARGET_MSDOS = 32
+!ifdef PC98
+SUBDIR   = d98$(TARGET86)$(MMODE)$(DSUFFIX)
+!else
 SUBDIR   = dos$(TARGET86)$(MMODE)$(DSUFFIX)
+!endif
 CC       = wcc386
 LINKER   = wcl386
 LDFLAGS  = # -ldos32a

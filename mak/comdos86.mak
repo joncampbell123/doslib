@@ -40,8 +40,17 @@ ZU_FLAG=-zu
 ZU_FLAG=-zu
 !endif
 
+# PC-98 support
+!ifdef PC98
+CFLAGS_1 += -dTARGET_PC98=1
+!endif
+
 TARGET_MSDOS = 16
+!ifdef PC98
+SUBDIR   = d98$(TARGET86)$(MMODE)$(DSUFFIX)
+!else
 SUBDIR   = dos$(TARGET86)$(MMODE)$(DSUFFIX)
+!endif
 CC       = wcc
 LINKER   = wcl
 WLINK_SYSTEM = dos

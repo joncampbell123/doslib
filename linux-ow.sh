@@ -38,7 +38,7 @@ fi
 # clean up then it should do them after running this subroutine.
 do_clean() {
 	cd "$PROJTOP" || exit 1
-	rm -Rfv dos*86{s,m,c,l,h,f}{,d} win3{0,1}{0,2,3}{s,m,c,l,h,f} win32s{3,4,5,6}{,d} winnt win32 win386 win38631 os2{d,w}{2,3}{l,f}
+	rm -Rfv {dos,d98}*86{s,m,c,l,h,f}{,d} win3{0,1}{0,2,3}{s,m,c,l,h,f} win32s{3,4,5,6}{,d} winnt win32 win386 win38631 os2{d,w}{2,3}{l,f}
 	rm -fv nul.err tmp.cmd *~
 }
 
@@ -71,6 +71,28 @@ make_buildlist() {
 			build_list="$build_list dos86h dos286h"
 		else
 			build_list="$build_list dos86h"
+		fi
+	fi
+
+	# PC-98 target
+	if [ x"$dospc98" == x"1" ]; then
+		if [ x"$dos" == x"1" ]; then
+			# NTS: dos86c/m/l/s and dos286... -> real mode 16-bit code
+			#      dos386f and so on -> protected mode 32-bit code
+			if [ x"$build_everything" == x"1" ]; then
+				build_list="$build_list d9886c d9886l d9886m d9886s d98286c d98286l d98286m d98286s d98386f d98486f d98586f d98686f"
+			else
+				build_list="$build_list d9886c d9886l d9886m d9886s d98386f"
+			fi
+		fi
+
+		# huge memory model support
+		if [ x"$doshuge" == x"1" ]; then
+			if [ x"$build_everything" == x"1" ]; then
+				build_list="$build_list d9886h d98286h"
+			else
+				build_list="$build_list d9886h"
+			fi
 		fi
 	fi
 
