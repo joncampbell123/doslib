@@ -147,6 +147,7 @@ int probe_8237() {
 	int i;
 
 	probe_dos();
+	cpu_probe();
 	detect_windows();
 #if TARGET_MSDOS == 32
 	dos_ltp_probe(); /* needed for DMA transfer code */
@@ -172,10 +173,11 @@ int probe_8237() {
 		/* test DMA channel 2's page register, since it's unlikely the floppy controller
 		 * will be doing anything at this point */
 #ifdef TARGET_PC98
-		unsigned char iop = d8237_page_ioport_map_pc98[2],orig;
+		/* There's no way to test, because page registers are write-only *sigh* so just guess by the CPU in the system instead. */
+		if (cpu_basic_level >= 2/*286 or higher*/)
+			d8237_flags |= D8237_DMA_8BIT_PAGE;
 #else
 		unsigned char iop = d8237_page_ioport_map_xt[2],orig;
-#endif
 		orig = inp(iop);
 		outp(iop,0xFE);
 		if (inp(iop) == 0xFE) {
@@ -185,6 +187,7 @@ int probe_8237() {
 			}
 		}
 		outp(iop,orig);
+#endif
 	}
 
 #ifdef TARGET_PC98
