@@ -88,14 +88,25 @@ extern unsigned char d8237_dma_counter_bits;
 extern uint32_t d8237_dma_address_mask;
 extern uint32_t d8237_dma_counter_mask;
 extern unsigned char *d8237_page_ioport_map;
-extern unsigned char d8237_page_ioport_map_xt[8];
-extern unsigned char d8237_page_ioport_map_at[8];
 extern unsigned char d8237_16bit_ashift;
 extern unsigned char d8237_channels;
 
+#ifdef TARGET_PC98
+extern unsigned char d8237_page_ioport_map_pc98[8];
+#else
+extern unsigned char d8237_page_ioport_map_xt[8];
+extern unsigned char d8237_page_ioport_map_at[8];
+#endif
+
 static inline unsigned char d8237_ioport(unsigned char ch,unsigned char reg) {
+#ifdef TARGET_PC98
+/* 0x01-0x1F odd ports */
+	return 0x01+(reg<<1);
+#else
+/* 0x00-0x0F, 0xC0-0xDF even ports */
 	if (ch & 4)	return 0xC0+(reg<<1);
 	else		return 0x00+reg;
+#endif
 }
 
 static inline unsigned char d8237_page_ioport(unsigned char ch) {

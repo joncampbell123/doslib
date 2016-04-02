@@ -72,8 +72,13 @@ unsigned char d8237_dma_counter_bits = 0;
 uint32_t d8237_dma_address_mask = 0;
 uint32_t d8237_dma_counter_mask = 0;
 unsigned char *d8237_page_ioport_map = NULL;
+
+#ifdef TARGET_PC98
+unsigned char d8237_page_ioport_map_pc98[8] = {0x27,0x21,0x23,0x25, 0x27,0x21,0x23,0x25};
+#else
 unsigned char d8237_page_ioport_map_xt[8] = {0x87,0x83,0x81,0x82, 0x8F,0x8F,0x8F,0x8F}; /* TODO: how to detect PC/XT? */
 unsigned char d8237_page_ioport_map_at[8] = {0x87,0x83,0x81,0x82, 0x8F,0x8B,0x89,0x8A};
+#endif
 
 /* one bit per channel that is 16-bit AND requires address shift (lower 16 bits >> 1) AND the counter is # of WORDs */
 /* in the original implementation we take the lower 16 bits and shift right by 1 for WORD transfers,
@@ -84,6 +89,14 @@ unsigned char d8237_16bit_ashift = 0xF0;
 static int d8237_readwrite_test4(unsigned int bch) {
 	int j,i;
 
+#ifdef TARGET_PC98
+	if (bch & 4)
+		return 0;
+
+	for (j=8;j < 16;j++) {
+		if (inp((j*2)+1) != 0xFF) break; /* found SOMETHING */
+	}
+#else
 	if (bch & 4) {
 		for (j=8;j < 16;j++) {
 			if (inp(0xC0+(j*2)) != 0xFF) break; /* found SOMETHING */
@@ -94,6 +107,7 @@ static int d8237_readwrite_test4(unsigned int bch) {
 			if (inp(j) != 0xFF) break; /* found SOMETHING */
 		}
 	}
+#endif
 
 	if (j != 16) { /* OK. Now go through any DMA channel that still reads 0xFFFF 0xFFFF
 			  and try to modify the value. As for conflicts with active
@@ -157,7 +171,11 @@ int probe_8237() {
 	{
 		/* test DMA channel 2's page register, since it's unlikely the floppy controller
 		 * will be doing anything at this point */
+#ifdef TARGET_PC98
+		unsigned char iop = d8237_page_ioport_map_pc98[2],orig;
+#else
 		unsigned char iop = d8237_page_ioport_map_xt[2],orig;
+#endif
 		orig = inp(iop);
 		outp(iop,0xFE);
 		if (inp(iop) == 0xFE) {
@@ -169,6 +187,10 @@ int probe_8237() {
 		outp(iop,orig);
 	}
 
+#ifdef TARGET_PC98
+	d8237_page_ioport_map = d8237_page_ioport_map_pc98;
+	d8237_channels = 4;
+#else
 	/* test secondary DMA controller */
 	for (i=4;i < 8;) {
 		if (d8237_read_base_lo16(i) != 0xFFFFU) break;
@@ -186,6 +208,7 @@ int probe_8237() {
 		d8237_page_ioport_map = d8237_page_ioport_map_xt;
 		d8237_channels = 4;
 	}
+#endif
 
 	if (d8237_flags & D8237_DMA_8BIT_PAGE)
 		d8237_dma_address_bits = 24;

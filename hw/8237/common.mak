@@ -5,6 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    8237.c
 OBJS =        $(SUBDIR)$(HPS)8237.obj $(SUBDIR)$(HPS)8237rdbs.obj
+TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 
 $(HW_8237_LIB): $(OBJS)
 	wlib -q -b -c $(HW_8237_LIB) -+$(SUBDIR)$(HPS)8237.obj -+$(SUBDIR)$(HPS)8237rdbs.obj
@@ -19,7 +20,12 @@ all: lib exe
 	
 lib: $(HW_8237_LIB) .symbolic
 
-exe: .symbolic
+exe: $(TEST_EXE) .symbolic
+
+$(TEST_EXE): $(HW_8237_LIB) $(HW_8237_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)test.obj $(HW_8237_LIB_WLINK_LIBRARIES) name $(TEST_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 
 clean: .SYMBOLIC
           del $(SUBDIR)$(HPS)*.obj

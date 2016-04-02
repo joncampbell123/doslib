@@ -89,8 +89,8 @@ HW_ACPI_LIB_WLINK_LIBRARIES=library $(HW_ACPI_LIB)
 # HW\8237-----------------------------------------------------------------------------------
 HW_8237_LIB_DIR=$(REL)$(HPS)hw$(HPS)8237
 HW_8237_LIB=$(HW_8237_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)8237.lib
-HW_8237_LIB_DEPENDENCIES=
-HW_8237_LIB_WLINK_LIBRARIES=library $(HW_8237_LIB)
+HW_8237_LIB_DEPENDENCIES=$(HW_DOS_LIB) $(HW_CPU_LIB)
+HW_8237_LIB_WLINK_LIBRARIES=library $(HW_8237_LIB) library $(HW_DOS_LIB) library $(HW_CPU_LIB)
 
 # HW\8250-----------------------------------------------------------------------------------
 HW_8250_LIB_DIR=$(REL)$(HPS)hw$(HPS)8250
