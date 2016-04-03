@@ -12,7 +12,7 @@ win32=1 # Windows 9x/NT/XP/Vista/etc.
 
 if [ "$1" == "clean" ]; then
 	do_clean
-	rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd pcx2vrl pcxsscut vrl2vrs *.o
+	rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd pcx2vrl pcxsscut vrl2vrs vrsdump *.o
 	exit 0
 fi
 
