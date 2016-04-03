@@ -19,11 +19,13 @@ DRAWVRL_EXE =  $(SUBDIR)$(HPS)drawvrl.exe
 ! ifeq MMODE l
 PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
 VRL2VRS_EXE =  $(SUBDIR)$(HPS)vrl2vrs.exe
+VRSDUMP_EXE =  $(SUBDIR)$(HPS)vrsdump.exe
 PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.exe
 ! endif
 ! ifeq MMODE f
 PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
 VRL2VRS_EXE =  $(SUBDIR)$(HPS)vrl2vrs.exe
+VRSDUMP_EXE =  $(SUBDIR)$(HPS)vrsdump.exe
 PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.exe
 ! endif
 DRAWVRL2_EXE = $(SUBDIR)$(HPS)drawvrl2.exe
@@ -63,7 +65,7 @@ all: lib exe
        
 lib: $(HW_VGA_LIB) $(HW_VGATTY_LIB) $(HW_VGAGUI_LIB) $(HW_VGAGFX_LIB) .symbolic
 	
-exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(PCX2VRL_EXE) $(VRL2VRS_EXE) $(PCXSSCUT_EXE) $(DRAWVRL_EXE) $(DRAWVRL2_EXE) $(DRAWVRL3_EXE) $(DRAWVRL4_EXE) $(DRAWVRL5_EXE) $(TGFX_EXE) $(VGA240_EXE) .symbolic
+exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(PCX2VRL_EXE) $(VRL2VRS_EXE) $(PCXSSCUT_EXE) $(DRAWVRL_EXE) $(VRSDUMP_EXE) $(DRAWVRL2_EXE) $(DRAWVRL3_EXE) $(DRAWVRL4_EXE) $(DRAWVRL5_EXE) $(TGFX_EXE) $(VGA240_EXE) .symbolic
 
 $(TEST_EXE): $(HW_VGATTY_LIB) $(HW_VGATTY_LIB_DEPENDENCIES) $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGATTY_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE)
@@ -116,6 +118,13 @@ $(VGA240_EXE): $(SUBDIR)$(HPS)vga240.obj
 !ifdef PCX2VRL_EXE
 $(PCX2VRL_EXE): $(SUBDIR)$(HPS)pcx2vrl.obj
 	%write tmp.cmd option quiet option map=$(PCX2VRL_EXE).map system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)pcx2vrl.obj name $(PCX2VRL_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef VRSDUMP_EXE
+$(VRSDUMP_EXE): $(SUBDIR)$(HPS)vrsdump.obj
+	%write tmp.cmd option quiet option map=$(VRSDUMP_EXE).map system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)vrsdump.obj name $(VRSDUMP_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
