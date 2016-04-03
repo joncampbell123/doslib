@@ -19,12 +19,13 @@ DRAWVRL_EXE =  $(SUBDIR)$(HPS)drawvrl.exe
 ! ifeq MMODE l
 PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
 VRL2VRS_EXE =  $(SUBDIR)$(HPS)vrl2vrs.exe
+PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.exe
 ! endif
 ! ifeq MMODE f
 PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
 VRL2VRS_EXE =  $(SUBDIR)$(HPS)vrl2vrs.exe
-! endif
 PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.exe
+! endif
 DRAWVRL2_EXE = $(SUBDIR)$(HPS)drawvrl2.exe
 TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.exe
 TMOTSENG_EXE = $(SUBDIR)$(HPS)tmotseng.exe
@@ -120,8 +121,8 @@ $(PCX2VRL_EXE): $(SUBDIR)$(HPS)pcx2vrl.obj
 !endif
 
 !ifdef VRL2VRS_EXE
-$(VRL2VRS_EXE): $(SUBDIR)$(HPS)vrl2vrs.obj
-	%write tmp.cmd option quiet option map=$(VRL2VRS_EXE).map system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)vrl2vrs.obj name $(VRL2VRS_EXE)
+$(VRL2VRS_EXE): $(SUBDIR)$(HPS)vrl2vrs.obj $(SUBDIR)$(HPS)comshtps.obj
+	%write tmp.cmd option quiet option map=$(VRL2VRS_EXE).map system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)vrl2vrs.obj file $(SUBDIR)$(HPS)comshtps.obj name $(VRL2VRS_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
@@ -162,8 +163,8 @@ $(DRAWVRL5_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)drawvrl
 !endif
 
 !ifdef PCXSSCUT_EXE
-$(PCXSSCUT_EXE): $(SUBDIR)$(HPS)pcxsscut.obj
-	%write tmp.cmd option quiet option map=$(PCXSSCUT_EXE).map system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)pcxsscut.obj name $(PCXSSCUT_EXE)
+$(PCXSSCUT_EXE): $(SUBDIR)$(HPS)pcxsscut.obj $(SUBDIR)$(HPS)comshtps.obj
+	%write tmp.cmd option quiet option map=$(PCXSSCUT_EXE).map system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)pcxsscut.obj file $(SUBDIR)$(HPS)comshtps.obj name $(PCXSSCUT_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif

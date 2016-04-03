@@ -8,6 +8,39 @@
 //       It is *strongly recommended* that when reading the file information, that the program first validate
 //       the offsets are valid, then, parse the contents cautiously. If that cannot be done for performance
 //       reasons, then you should at least design debug builds of your program to validate it.
+//
+//       VRS files are meant to be loaded into memory as one blob, then for the program to point to the other
+//       sections using the "file offsets" relative to the base of the image. Offsets are 32-bit even if the
+//       intended target is a 16-bit DOS program so that the same format can be used in both 16-bit and 32-bit
+//       MS-DOS code. A warning is helpfully printed by the VRS compiler if the VRS file exceeds 64KB, because
+//       16-bit DOS programs might have trouble handling files larger than that.
+//
+//       Sprites are intended to be located in the file by ID, not by direct index, so that managing sprites
+//       by name and ID are easier in your code than having to worry about whether or not the order changed.
+//       This means you will have to search the sprite ID table for the index, but, your programming job will
+//       be simpler that way and the animator on your team will thank you.
+//
+//       To locate a sprite by ID, read the offset table entry for sprite IDs, seek to that offset, and read
+//       an array of 16-bit unsigned integers until you read a zero or hit the end of the file. *hitting EOF
+//       is to be handled as an ERROR CONDITION*. When you find the sprite ID you want, note the array index,
+//       then use the same array index to look up the file offset of the VRL sprite image data and draw that
+//       sprite on screen. Same ID -> index mapping scheme applies to sprite names.
+//
+//       Animation IDs work the same way, using the index of the ID you seek to look up the file offset to
+//       the animation sequence to follow, and the name of the animation. Animation frame lists end at the
+//       first entry where sprite ID is zero. It is intended that when you hit the end of the frame sequence,
+//       that your game should immediately restart from the first frame in the list to keep the animation
+//       moving. Your game should delay the frames using the number of ticks in the "delay" field. The time
+//       interval associated with delay ticks is up to your game engine and not defined here. If the animation
+//       should stop automatically on a frame, then the frame will have delay == 0.
+//
+//       Event IDs in animation are intended to help your game engine react to specific frames of animation
+//       when they occur. One example is to assign an event ID to the frame of animation where the character's
+//       foot hits the ground when they run, so that the game engine can spawn a dust cloud at his position
+//       to show that the character is running as fast as they can.
+//
+//       All file offsets in this format are absolute. They are always relative to the start of the file,
+//       or when loaded into memory, relative to the base memory address the VRS file was loaded at.
 struct vrs_header {
 	uint8_t			vrs_sig[4];		// +0x00  "VRS1"
 	uint32_t		resident_size;		// +0x04  size of data intended to be resident in memory (i.e. sprite sheets, sprite IDs, animation loops)
