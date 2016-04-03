@@ -13,6 +13,8 @@
 # you integrate into your build and that your cleanup commands delete these files,
 # and that your .gitignore does not attempt to commit these files.
 
+# this format is a bit crap, but we'll improve it as needed. be patient.
+
 # begin spritesheet section
 *spritesheet
 
@@ -177,4 +179,83 @@ wh=32,32
 +PRSAACW2@242
 xy=64,224
 wh=32,32
+
+# begin animation list section. must come after sprite sheet
+*animation
+
+# Prussia, forward, standing and walking animation cycles
++PRSBFCW_STANDING@10
+sprite=PRSBFCW1
+
++PRSBFCW_WALKING@11
+sprite=PRSBFCW0
+delay=20
+-newframe
+sprite=PRSBFCW1
+delay=20
+event=@100         # in this example, signal the game engine the frame is one that can immediately transition to "standing"
+-newframe
+sprite=PRSBFCW2
+delay=20
+-newframe
+sprite=PRSBFCW1
+delay=20
+event=@100         # in this example, signal the game engine the frame is one that can immediately transition to "standing"
+
+# Prussia, left, standing and walking animation cycles
++PRSBLCW_STANDING@20
+sprite=PRSBLCW1
+
++PRSBLCW_WALKING@21
+sprite=PRSBLCW0
+delay=20
+-newframe
+sprite=PRSBLCW1
+delay=20
+event=@100         # in this example, signal the game engine the frame is one that can immediately transition to "standing"
+-newframe
+sprite=PRSBLCW2
+delay=20
+-newframe
+sprite=PRSBLCW1
+delay=20
+event=@100         # in this example, signal the game engine the frame is one that can immediately transition to "standing"
+
+# Prussia, right, standing and walking animation cycles
++PRSBRCW_STANDING@30
+sprite=PRSBRCW1
+
++PRSBRCW_WALKING@31
+sprite=PRSBRCW0
+delay=20
+-newframe
+sprite=PRSBRCW1
+delay=20
+event=@100         # in this example, signal the game engine the frame is one that can immediately transition to "standing"
+-newframe
+sprite=PRSBRCW2
+delay=20
+-newframe
+sprite=PRSBRCW1
+delay=20
+event=@100         # in this example, signal the game engine the frame is one that can immediately transition to "standing"
+
+# Prussia, away, standing and walking animation cycles
++PRSBACW_STANDING@40
+sprite=PRSBACW1
+
++PRSBACW_WALKING@41
+sprite=PRSBACW0
+delay=20
+-newframe
+sprite=PRSBACW1
+delay=20
+event=@100         # in this example, signal the game engine the frame is one that can immediately transition to "standing"
+-newframe
+sprite=PRSBACW2
+delay=20
+-newframe
+sprite=PRSBACW1
+delay=20
+event=@100         # in this example, signal the game engine the frame is one that can immediately transition to "standing"
 
