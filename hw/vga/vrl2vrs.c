@@ -267,7 +267,7 @@ int main(int argc,char **argv) {
 
 	// update header
 	vrshdr.offset_table[VRS_HEADER_OFFSET_ANIMATION_ID_LIST] = foffset;
-	// sprite IDs
+	// animation IDs
 	for (cut=0;cut < animlists;cut++) {
 		struct vrl_animation_list_t *anim;
 
@@ -283,7 +283,7 @@ int main(int argc,char **argv) {
 
 	// update header
 	vrshdr.offset_table[VRS_HEADER_OFFSET_ANIMATION_NAME_LIST] = foffset;
-	// sprite names (TODO: make this optional)
+	// animation names (TODO: make this optional)
 	for (cut=0;cut < animlists;cut++) {
 		struct vrl_animation_list_t *anim;
 		size_t l;
