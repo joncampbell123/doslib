@@ -24,6 +24,7 @@ struct vrs_header	*vrshdr = NULL;
 
 int main(int argc,char **argv) {
 	unsigned long sz,offs;
+	unsigned int entry;
 	int fd;
 
 	if (argc < 2) {
@@ -281,6 +282,171 @@ int main(int argc,char **argv) {
 		else {
 			printf("*Animation name list offset out range!\n");
 			/* error condition */
+		}
+	}
+
+	if ((offs=(unsigned long)vrshdr->offset_table[VRS_HEADER_OFFSET_VRS_LIST]) != 0UL && (offs+4UL) <= sz) {
+		uint32_t *vrl_list_end = (uint32_t*)(fence - 1 + sizeof(uint32_t));
+		char *namelist_fence = NULL,*namelist_scan = NULL;
+		uint32_t *vrl_list = (uint32_t*)(buffer + offs);
+		uint16_t *idlist = NULL,*idlist_end = NULL;
+		struct vrl1_vgax_header *vrl1;
+		char *sprite_name=NULL;
+		uint32_t vrl_offset=0;
+		uint16_t sprite_id=0;
+
+		if ((offs=(unsigned long)vrshdr->offset_table[VRS_HEADER_OFFSET_SPRITE_ID_LIST]) != 0UL) {
+			if ((offs+2UL) <= sz) {
+				idlist = (uint16_t*)(buffer + offs);
+				idlist_end = (uint16_t*)(fence + 1 - sizeof(uint16_t));
+			}
+		}
+
+		if ((offs=(unsigned long)vrshdr->offset_table[VRS_HEADER_OFFSET_SPRITE_NAME_LIST]) != 0UL) {
+			if ((offs+2UL) <= sz) {
+				/* an array of C strings terminated by a NUL string (0x00 0x00) */
+				namelist_scan = (char*)buffer + offs;
+				namelist_fence = (char*)fence;
+			}
+		}
+
+		printf("Sprite summary:\n");
+		for (entry=0;;entry++) {
+			if ((vrl_list+entry) >= vrl_list_end) break;
+
+			vrl_offset = vrl_list[entry];
+			if (vrl_offset == 0) break;
+
+			sprite_name = NULL;
+			sprite_id = 0;
+
+			if (namelist_scan != NULL) {
+				if (*namelist_scan != 0) {
+					sprite_name = namelist_scan;
+					while (namelist_scan < namelist_fence && *namelist_scan != 0) namelist_scan++;
+
+					if (namelist_scan < namelist_fence && *namelist_scan == 0) {
+						namelist_scan++;
+					}
+					else {
+						/* string is not NULL terminated. forget it. */
+						sprite_name = NULL;
+						namelist_scan = NULL;
+					}
+				}
+			}
+
+			if ((buffer+vrl_offset+sizeof(*vrl1)) >= fence) continue;
+			vrl1 = (struct vrl1_vgax_header*)(buffer + vrl_offset);
+
+			if (idlist != NULL) {
+				if ((idlist+entry) < idlist_end)
+					sprite_id = idlist[entry];
+			}
+
+			printf("  [entry %u]\n",entry);
+			if (sprite_id != 0)
+				printf("     Sprite ID: %u\n",sprite_id);
+			if (sprite_name != NULL)
+				printf("     Sprite name: \"%s\"\n",sprite_name);
+
+			if (!memcmp(vrl1->vrl_sig,"VRL1",4)) {
+				char tmp[5];
+
+				memcpy(tmp,vrl1->fmt_sig,4); tmp[4]=0;
+				printf("     Sprite type: %s\n",tmp);
+
+				if (!memcmp(vrl1->fmt_sig,"VGAX",4)) {
+					printf("     Sprite is %u x %u hotspot %d x %d\n",
+						vrl1->width,vrl1->height,vrl1->hotspot_x,vrl1->hotspot_y);
+				}
+			}
+		}
+	}
+
+	if ((offs=(unsigned long)vrshdr->offset_table[VRS_HEADER_OFFSET_ANIMATION_LIST]) != 0UL && (offs+4UL) <= sz) {
+		struct vrs_animation_list_entry_t *anilist,*anilist_end;
+		uint32_t *anim_list_end = (uint32_t*)(fence - 1 + sizeof(uint32_t));
+		uint32_t *anim_list = (uint32_t*)(buffer + offs);
+		char *namelist_fence = NULL,*namelist_scan = NULL;
+		uint16_t *idlist = NULL,*idlist_end = NULL;
+		char *anim_name=NULL;
+		uint32_t anim_offset=0;
+		uint16_t anim_id=0;
+
+		if ((offs=(unsigned long)vrshdr->offset_table[VRS_HEADER_OFFSET_ANIMATION_ID_LIST]) != 0UL) {
+			if ((offs+2UL) <= sz) {
+				idlist = (uint16_t*)(buffer + offs);
+				idlist_end = (uint16_t*)(fence + 1 - sizeof(uint16_t));
+			}
+		}
+
+		if ((offs=(unsigned long)vrshdr->offset_table[VRS_HEADER_OFFSET_ANIMATION_NAME_LIST]) != 0UL) {
+			if ((offs+2UL) <= sz) {
+				/* an array of C strings terminated by a NUL string (0x00 0x00) */
+				namelist_scan = (char*)buffer + offs;
+				namelist_fence = (char*)fence;
+			}
+		}
+
+		printf("Animation summary:\n");
+		for (entry=0;;entry++) {
+			if ((anim_list+entry) >= anim_list_end) break;
+
+			anim_offset = anim_list[entry];
+			if (anim_offset == 0) break;
+
+			anim_name = NULL;
+			anim_id = 0;
+
+			if (namelist_scan != NULL) {
+				if (*namelist_scan != 0) {
+					anim_name = namelist_scan;
+					while (namelist_scan < namelist_fence && *namelist_scan != 0) namelist_scan++;
+
+					if (namelist_scan < namelist_fence && *namelist_scan == 0) {
+						namelist_scan++;
+					}
+					else {
+						/* string is not NULL terminated. forget it. */
+						anim_name = NULL;
+						namelist_scan = NULL;
+					}
+				}
+			}
+
+			if ((buffer+anim_offset+sizeof(*anilist)) >= fence) continue;
+			anilist = (struct vrs_animation_list_entry_t *)(buffer + anim_offset);
+			anilist_end = (struct vrs_animation_list_entry_t *)(fence - 1 + sizeof(*anilist));
+
+			if (idlist != NULL) {
+				if ((idlist+entry) < idlist_end)
+					anim_id = idlist[entry];
+			}
+
+			printf("  [entry %u]\n",entry);
+			if (anim_id != 0)
+				printf("     Animation ID: %u\n",anim_id);
+			if (anim_name != NULL)
+				printf("     Animation name: \"%s\"\n",anim_name);
+
+			printf("     Animation sequence:\n");
+			do {
+				if (anilist > anilist_end) {
+					printf("*ERROR LIST OVERFLOW\n");
+					break;
+				}
+
+				if (anilist->sprite_id == 0)
+					break;
+
+				printf("        Frame:\n");
+				printf("           Sprite ID:      %u\n",anilist->sprite_id);
+				printf("           Delay:          %u ticks\n",anilist->delay);
+				printf("           Event ID:       %u\n",anilist->event_id);
+
+				anilist++;
+			} while (1);
 		}
 	}
 
