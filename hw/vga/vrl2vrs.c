@@ -9,20 +9,11 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "vrl.h"
+
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
-
-#pragma pack(push,1)
-struct vrl_header {
-	uint8_t			vrl_sig[4];		// +0x00  "VRL1"
-	uint8_t			fmt_sig[4];		// +0x04  "VGAX"
-	uint16_t		height;			// +0x08  Sprite height
-	uint16_t		width;			// +0x0A  Sprite width
-	int16_t			hotspot_x;		// +0x0C  Hotspot offset (X) for programmer's reference
-	int16_t			hotspot_y;		// +0x0E  Hotspot offset (Y) for programmer's reference
-};							// =0x10
-#pragma pack(pop)
 
 #pragma pack(push,1)
 // NOTE: VRS sheets intended for use with 16-bit segmented DOS programs must not exceed 64KB in any way.

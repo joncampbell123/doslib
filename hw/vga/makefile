@@ -25,5 +25,5 @@ pcxsscut: pcxsscut.c
 	$(CC) $(CFLAGS) -o $@ $<
 
 clean:
-	rm -v pcx2vrl
+	rm -v pcx2vrl pcxsscut vrl2vrs
 
