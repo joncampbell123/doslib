@@ -10,28 +10,12 @@
 #include <unistd.h>
 
 #include "vrl.h"
+#include "pcxfmt.h"
+#include "comshtps.h"
 
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
-
-#pragma pack(push,1)
-struct pcx_header {
-	uint8_t			manufacturer;		// +0x00  always 0x0A
-	uint8_t			version;		// +0x01  0, 2, 3, or 5
-	uint8_t			encoding;		// +0x02  always 0x01 for RLE
-	uint8_t			bitsPerPlane;		// +0x03  bits per pixel in each color plane (1, 2, 4, 8, 24)
-	uint16_t		Xmin,Ymin,Xmax,Ymax;	// +0x04  window (image dimensions). Pixel count in each dimension is Xmin <= x <= Xmax, Ymin <= y <= Ymax i.e. INCLUSIVE
-	uint16_t		VertDPI,HorzDPI;	// +0x0C  vertical/horizontal resolution in DPI
-	uint8_t			palette[48];		// +0x10  16-color or less color palette
-	uint8_t			reserved;		// +0x40  reserved, set to zero
-	uint8_t			colorPlanes;		// +0x41  number of color planes
-	uint16_t		bytesPerPlaneLine;	// +0x42  number of bytes to read for a single plane's scanline (uncompressed, apparently)
-	uint16_t		palType;		// +0x44  palette type (1 = color)
-	uint16_t		hScrSize,vScrSize;	// +0x46  scrolling?
-	uint8_t			pad[54];		// +0x4A  padding
-};							// =0x80
-#pragma pack(pop)
 
 static unsigned char		transparent_color = 0;
 
@@ -45,184 +29,6 @@ static unsigned int		src_pcx_height = 0;
 static unsigned char		out_strip[(256*3)+16];
 static unsigned int		out_strip_height = 0;
 static unsigned int		out_strips = 0;
-
-struct pcx_cutregion_t {
-	uint16_t		x,y,w,h;
-	uint16_t		sprite_id;
-	char			sprite_name[9];		// 8 chars + NUL
-};
-
-#define MAX_CUTREGIONS		1024
-struct pcx_cutregion_t		cutregion[MAX_CUTREGIONS];
-int				cutregions = 0;
-
-static void chomp(char *line) {
-	char *s = line+strlen(line)-1;
-	while (s >= line && (*s == '\n' || *s == '\r')) *s-- = 0;
-}
-
-static void take_item(struct pcx_cutregion_t *item) {
-	unsigned int i;
-
-	if (cutregions < MAX_CUTREGIONS) {
-		if (item->sprite_id == 0)
-			item->sprite_id = MAX_CUTREGIONS + cutregions; // auto-assign
-		if (item->sprite_name[0] == 0)
-			sprintf(item->sprite_name,"____%04u",item->sprite_id); // auto-assign
-
-		// warn if sprite ID or sprite name already taken!
-		for (i=0;i < cutregions;i++) {
-			if (cutregion[i].sprite_id == item->sprite_id)
-				fprintf(stderr,"WARNING for %s: sprite ID %u already taken by %s\n",
-					item->sprite_name,item->sprite_id,cutregion[i].sprite_name);
-			if (!strcasecmp(cutregion[i].sprite_name,item->sprite_name))
-				fprintf(stderr,"WARNING for %s: sprite name already taken\n",
-					item->sprite_name);
-		}
-
-		if (item->w != 0 && item->h != 0)
-			cutregion[cutregions++] = *item;
-	}
-
-	memset(item,0,sizeof(*item));
-}
-
-static int parse_script_file(const char *path) {
-	unsigned char start_item = 0;
-	unsigned char in_section = 0;
-	struct pcx_cutregion_t item;
-	unsigned char OK = 1;
-	char line[512],*s,*d;
-	FILE *fp;
-
-	fp = fopen(path,"r");
-	if (!fp) return 0;
-
-	memset(&item,0,sizeof(item));
-	while (!feof(fp) && !ferror(fp)) {
-		if (fgets(line,sizeof(line)-1,fp) == NULL) break;
-
-		/* eat the newline at the end. "chomp" refers to the function of the same name in Perl */
-		chomp(line);
-
-		/* begin scanning */
-		s = line;
-		if (*s == 0/*end of string*/ || *s == '#'/*comment*/) continue;
-		while (*s == ' ' || *s == '\t') s++;
-
-		if (*s == '*') { // beginning of section
-			if (start_item) {
-				take_item(&item);
-				start_item = 0;
-			}
-
-			s++;
-			if (!strcmp(s,"spritesheet")) {
-				in_section = 1; // we're in the spritesheet section. this is the part we care about!
-			}
-			else {
-				in_section = 0; // ignore the rest.
-			}
-		}
-		else if (*s == '+') { // starting another item
-			s++;
-			if (in_section) {
-				if (start_item)
-					take_item(&item);
-
-				if (cutregions >= MAX_CUTREGIONS) {
-					fprintf(stderr,"Too many cut regions!\n");
-					OK = 0;
-					break;
-				}
-
-				// New sprite (no ID or name)
-				// +
-				//
-				// New sprite with name (8 char max)
-				// +PRUSSIA
-				//
-				// New sprite with ID
-				// +@400
-				//
-				// New sprite with name and ID
-				// +PRUSSIA@400
-				//
-				// ID part can be octal or hexadecimal according to strtoul() rules
-				// +PRUSSIA@0x158
-				// +PRUSSIA@0777
-				start_item = 1;
-				while (*s == ' ') s++;
-				d = item.sprite_name;
-
-				// sprite name (optional)
-				while (*s != 0 && *s != '@') {
-					if (d < (item.sprite_name+8) && (isdigit(*s) || isalpha(*s) || *s == '_' || *s == '+'))
-						*d++ = *s++;
-					else
-						s++;
-				}
-				*d = 0;//ASCIIZ snip
-				// @sprite ID
-				if (*s == '@') {
-					s++;
-					item.sprite_id = (uint16_t)strtoul(s,&s,0); // whatever base you want, and set 's' to point after number
-				}
-			}
-		}
-		else {
-			if (start_item) {
-				// item params are name=value
-				char *name = s;
-				char *value = strchr(s,'=');
-				if (value != NULL) {
-					*value++ = 0; // snip
-
-					if (!strcmp(name,"xy")) {
-						// xy=x,y
-						item.x = (uint16_t)strtoul(value,&value,0);
-						if (*value == ',') {
-							value++;
-							item.y = (uint16_t)strtoul(value,&value,0);
-						}
-					}
-					else if (!strcmp(name,"wh")) {
-						// wh=w,h
-						item.w = (uint16_t)strtoul(value,&value,0);
-						if (*value == ',') {
-							value++;
-							item.h = (uint16_t)strtoul(value,&value,0);
-						}
-					}
-					else if (!strcmp(name,"x")) {
-						// x=x
-						item.x = (uint16_t)strtoul(value,&value,0);
-					}
-					else if (!strcmp(name,"y")) {
-						// y=y
-						item.y = (uint16_t)strtoul(value,&value,0);
-					}
-					else if (!strcmp(name,"w")) {
-						// w=w
-						item.w = (uint16_t)strtoul(value,&value,0);
-					}
-					else if (!strcmp(name,"h")) {
-						// h=h
-						item.h = (uint16_t)strtoul(value,&value,0);
-					}
-				}
-			}
-		}
-	}
-
-	if (start_item) {
-		take_item(&item);
-		start_item = 0;
-	}
-
-	fclose(fp);
-	return OK;
-}
 
 static void help() {
 	fprintf(stderr,"PCXSSCUT VGA Mode X sprite sheet splitter (C) 2016 Jonathan Campbell\n");
@@ -244,7 +50,7 @@ static void help() {
 int main(int argc,char **argv) {
 	const char *src_file = NULL,*scr_file = NULL,*pal_file = NULL,*hdr_file = NULL,*hdr_prefix = NULL;
 	unsigned int x,y,runcount,skipcount,cut;
-	struct pcx_cutregion_t *cutreg;
+	struct vrl_spritesheetentry_t *cutreg;
 	unsigned char y_overwrite = 0;
 	unsigned char *s,*d,*dfence;
 	struct vrl1_vgax_header hdr;

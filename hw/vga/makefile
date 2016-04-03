@@ -16,14 +16,23 @@ prussiademo:
 	cd dos86l && ../vrl2vrs -s ../prussia.sht -hc prussias.h -hp demoanim_prussia_ -o ../prussia.vrs
 
 pcx2vrl: pcx2vrl.c
-	$(CC) $(CFLAGS) -o $@ $<
+	$(CC) $(CFLAGS) -o $@ $^
 
-vrl2vrs: vrl2vrs.c
-	$(CC) $(CFLAGS) -o $@ $<
+comshtps.o: comshtps.c
+	$(CC) $(CFLAGS) -c -o $@ $^
 
-pcxsscut: pcxsscut.c
-	$(CC) $(CFLAGS) -o $@ $<
+vrl2vrs.o: vrl2vrs.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+vrl2vrs: vrl2vrs.o comshtps.o
+	$(CC) $(CFLAGS) -o $@ $^
+
+pcxsscut.o: pcxsscut.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
+pcxsscut: pcxsscut.o comshtps.o
+	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -v pcx2vrl pcxsscut vrl2vrs
+	rm -v pcx2vrl pcxsscut vrl2vrs *.o
 
