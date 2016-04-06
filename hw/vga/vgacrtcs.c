@@ -28,7 +28,7 @@
  *          that way too, but at least we can read back the "safe" values the BIOS
  *          programmed into the hardware */
 void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags) {
-	unsigned char c,c2;
+	unsigned char c,c2,syncreset=0;
 
 	if (!(vga_state.vga_flags & VGA_IS_VGA))
 		return;
@@ -40,11 +40,16 @@ void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags) {
 	}
 
 	c = inp(0x3CC); /* misc out reg */
+	/* if changing the clock select bits then we need to do a reset of the sequencer */
+	if (p->clock_select != ((c >> 2) & 3)) syncreset=1;
+	/* proceed to change bits */
 	c &= ~((3 << 2) | (1 << 6) | (1 << 7));
 	c |= (p->clock_select&3) << 2;
 	c |= p->hsync_neg << 6;
 	c |= p->vsync_neg << 7;
-	outp(0x3C2,c);
+	if (syncreset) vga_write_sequencer(0,0x01/*SR=0 AR=1 start synchronous reset*/);
+	outp(0x3C2,c); /* misc out */
+	if (syncreset) vga_write_sequencer(0,0x03/*SR=1 AR=1 restart sequencer*/);
 
 	vga_write_sequencer(1,
 		(p->shift_load_rate << 2) |
