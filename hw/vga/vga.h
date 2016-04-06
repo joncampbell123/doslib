@@ -239,7 +239,7 @@ static inline void vga_write_AC(unsigned char i,unsigned char c) {
 }
 
 static inline void vga_set_xpan(unsigned char c) {
-	vga_write_AC(0x13|0x20,c);
+	vga_write_AC(0x13 | VGA_AC_ENABLE,c);
 }
 
 static inline unsigned char vga_read_AC(unsigned char i) {
