@@ -45,7 +45,7 @@ struct vgastate_t {
 #define VGA_IS_MDA			0x80
 #define VGA_IS_AMSTRAD			0x100
 
-/* sequencer index */
+/* attribute controller index, OR with index to enable palette again */
 #define VGA_AC_ENABLE			0x20
 
 /* graphics controller regs */
@@ -76,6 +76,7 @@ enum {
 	VGA_MEMMAP_B8000_32K =			0x3
 };
 
+/* CGA mode byte */
 enum {
 	VGA_CGA_MODE_40WIDE =			0x00,
 	VGA_CGA_MODE_80WIDE =			0x01,
@@ -85,6 +86,32 @@ enum {
 	VGA_CGA_MODE_VIDEO_640 =		0x10,
 	VGA_CGA_MODE_NO_BLINKING =		0x20
 };
+
+/* attribute controller registers */
+enum {
+	VGA_AC_PALETTE_0 =			0x0,
+	VGA_AC_PALETTE_1 =			0x1,
+	VGA_AC_PALETTE_2 =			0x2,
+	VGA_AC_PALETTE_3 =			0x3,
+	VGA_AC_PALETTE_4 =			0x4,
+	VGA_AC_PALETTE_5 =			0x5,
+	VGA_AC_PALETTE_6 =			0x6,
+	VGA_AC_PALETTE_7 =			0x7,
+	VGA_AC_PALETTE_8 =			0x8,
+	VGA_AC_PALETTE_9 =			0x9,
+	VGA_AC_PALETTE_A =			0xA,
+	VGA_AC_PALETTE_B =			0xB,
+	VGA_AC_PALETTE_C =			0xC,
+	VGA_AC_PALETTE_D =			0xD,
+	VGA_AC_PALETTE_E =			0xE,
+	VGA_AC_PALETTE_F =			0xF,
+	VGA_AC_MODE_CONTROL =			0x10,
+	VGA_AC_OVERSCAN_COLOR =			0x11,
+	VGA_AC_COLOR_PLANE_ENABLE =		0x12,
+	VGA_AC_HORIZONTAL_PIXEL_PANNING =	0x13,
+	VGA_AC_COLOR_SELECT =			0x14
+};
+#define VGA_AC_PALETTE(x)			((x)&0xF)
 
 /* sequencer registers */
 enum {
