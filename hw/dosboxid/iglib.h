@@ -24,6 +24,7 @@ extern uint16_t dosbox_id_baseio;
 
 #define DOSBOX_ID_CMD_RESET_LATCH		(0x00U)
 #define DOSBOX_ID_CMD_FLUSH_WRITE		(0x01U)
+#define DOSBOX_ID_CMD_CLEAR_ERROR		(0xFEU)
 #define DOSBOX_ID_CMD_RESET_INTERFACE		(0xFFU)
 
 #define DOSBOX_ID_RESET_DATA_CODE		(0xD05B0C5UL)
