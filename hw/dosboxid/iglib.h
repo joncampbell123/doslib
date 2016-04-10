@@ -11,6 +11,17 @@ extern uint16_t dosbox_id_baseio;
 #define DOSBOX_ID_STATUS			(2U)
 #define DOSBOX_ID_COMMAND			(2U)
 
+/* bits 7-6: register select byte index
+ * bits 5-4: register byte index
+ * bit    1: error
+ * bit    0: busy */
+#define DOSBOX_ID_STATUS_BUSY			(0x01U)
+#define DOSBOX_ID_STATUS_ERROR			(0x02U)
+#define DOSBOX_ID_STATUS_REGBYTE_SHIFT		(4U)
+#define DOSBOX_ID_STATUS_REGBYTE_MASK		(0x03U << DOSBOX_ID_STATUS_REGBYTE_SHIFT)
+#define DOSBOX_ID_STATUS_REGSEL_SHIFT		(6U)
+#define DOSBOX_ID_STATUS_REGSEL_MASK		(0x03U << DOSBOX_ID_STATUS_REGSEL_SHIFT)
+
 #define DOSBOX_ID_CMD_RESET_LATCH		(0x00U)
 #define DOSBOX_ID_CMD_FLUSH_WRITE		(0x01U)
 #define DOSBOX_ID_CMD_RESET_INTERFACE		(0xFFU)
