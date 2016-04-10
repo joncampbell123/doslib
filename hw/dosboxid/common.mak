@@ -9,6 +9,7 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 SSHOT_EXE =   $(SUBDIR)$(HPS)sshot.exe
 VCAP_EXE =    $(SUBDIR)$(HPS)vcap.exe
 WCAP_EXE =    $(SUBDIR)$(HPS)wcap.exe
+KBSTAT_EXE =  $(SUBDIR)$(HPS)kbstat.exe
 
 $(HW_DOSBOXID_LIB): $(OBJS)
 	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)iglib.obj    -+$(SUBDIR)$(HPS)igregio.obj  -+$(SUBDIR)$(HPS)igrselio.obj
@@ -25,7 +26,7 @@ all: lib exe
        
 lib: $(HW_DOSBOXID_LIB) .symbolic
 
-exe: $(TEST_EXE) $(SSHOT_EXE) $(VCAP_EXE) $(WCAP_EXE) .symbolic
+exe: $(TEST_EXE) $(SSHOT_EXE) $(VCAP_EXE) $(WCAP_EXE) $(KBSTAT_EXE) .symbolic
 
 !ifdef TEST_EXE
 $(TEST_EXE): $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
@@ -51,6 +52,13 @@ $(VCAP_EXE): $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)v
 !ifdef WCAP_EXE
 $(WCAP_EXE): $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)wcap.obj $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)wcap.obj $(HW_DOSBOXID_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(WCAP_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef KBSTAT_EXE
+$(KBSTAT_EXE): $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)kbstat.obj $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)kbstat.obj $(HW_DOSBOXID_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(KBSTAT_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
