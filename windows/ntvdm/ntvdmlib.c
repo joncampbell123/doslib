@@ -183,7 +183,7 @@ uint16_t ntvdm_RegisterModule(const char *dll_name,const char *dll_init_routine,
 		else
 			retx = (uint16_t)rc.eax;
 	}
-#elif defined(__LARGE__) || defined(__COMPACT__)
+#elif defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__)
 	/* problem: all three pointers above could be in different segments.
 	 * solution: make a temporary buffer (one segment), copy the strings in */
 	{

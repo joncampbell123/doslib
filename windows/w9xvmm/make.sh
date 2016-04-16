@@ -9,6 +9,7 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 #mv -vn HELLO.ICO hello.ico
 
 dos=1 # MS-DOS
+doshuge=1 # MS-DOS huge
 # TODO: I think it might be possible for a DOS app to poke into VMM space too, especially 32-bit
 # TODO: I think it's possible for a Win16 app to poke into VMM space too
 win30=1 # Windows 3.0
