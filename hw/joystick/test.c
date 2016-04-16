@@ -38,6 +38,8 @@ int main(int argc,char **argv) {
 	}
 	
 	/* most sound cards put the joystick on port 0x201 */
+	/* NTS: Most ISA/PCI sound cards for some reason map the *same* joystick port across I/O ports 0x200-0x207 */
+	/*      It's entirely possible to "discover" 8 joysticks this way when there is really only one attached. */
 	init_joystick(&joy);
 	if (!probe_joystick(&joy,0x201)) {
 		unsigned int i;
