@@ -22,7 +22,12 @@ lib: $(HW_NECPC98_LIB) .symbolic
 
 exe: $(TEST_EXE) .symbolic
 
-$(TEST_EXE): $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
+# FIXME: Need a makefile var here what to run, rather than hard-code the path!! This assumes Linux!
+isjp_cnv.h: isjp_utf.h
+	echo Converting isjp_utf.h
+	../../tool/utf2jis.pl <isjp_utf.h >isjp_cnv.h
+
+$(TEST_EXE): isjp_cnv.h $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
 	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)test.obj $(HW_NECPC98_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TEST_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe

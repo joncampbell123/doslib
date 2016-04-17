@@ -10,6 +10,7 @@
 #
 # TODO: this should be extended to allow UTF-8 to ANY code page conversion!
 my $quot = "";
+my $comment = "";
 my $procsum = "";
 my $line;
 my $out;
@@ -21,7 +22,7 @@ my $tmp1 = ".iconv.tmp1";
 my $tmp2 = ".iconv.tmp2";
 
 # make sure it's known that this is the converted copy!
-print "\xEF\xBB\xBF"; # UTF-8 BOM
+# print "\xEF\xBB\xBF"; # UTF-8 BOM     FIXME: Watcom C does NOT like the UTF-8 BOM!!
 print "/* UTF-8 to SHIFT-JIS string converted copy. Do not edit. Modifications will be lost when converted again. */\n";
 print "\n";
 
@@ -86,11 +87,27 @@ while ($line = <STDIN>) {
 				$i++;
 
 				if ($c eq "\"") { # todo we should allow unicode single char ' ' as well
-					$quot = $c;
-					last;
+					if ($comment eq "") {
+						$quot = $c;
+						last;
+					}
+				}
+				elsif ($c eq "/" && substr($line,$i,1) eq "/") { # C++ style comment begins! // comment
+					$comment = "//";
+				}
+				elsif ($c eq "/" && substr($line,$i,1) eq "*") { # C comment begins /* comment */
+					$comment = "/*";
+				}
+				elsif ($comment eq "/*" && $c eq "*" && substr($line,$i,1) eq "/") { # end of C comment
+					$comment = "";
 				}
 			}
 		}
+	}
+
+	# C++ comments end at EOL
+	if ($comment eq "//") {
+		$comment = "";
 	}
 
 	print "$out\n";
