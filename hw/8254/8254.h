@@ -45,6 +45,10 @@
 /* values to use with pc_speaker_set_gate */
 # define PC_SPEAKER_GATE_ON					0x3
 # define PC_SPEAKER_GATE_OFF					0x0
+
+/* there's more nuance to it if you care to use it */
+# define PC_SPEAKER_OUTPUT_TTL_AND_GATE				0x1 /* the AND gate between counter 2 output and the speaker */
+# define PC_SPEAKER_COUNTER_2_GATE				0x2 /* the GATE line going into counter 2 */
 #endif
 
 #ifdef TARGET_PC98
