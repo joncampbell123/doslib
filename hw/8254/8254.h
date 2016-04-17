@@ -82,6 +82,7 @@ extern uint32_t __T8254_REF_CLOCK_HZ;
 #define T8254_TIMER_PORT(x)					T8254_PORT(x)
 #define T8254_CONTROL_PORT					T8254_PORT(3)
 
+/* Control port mode (M2,M1,M0) */
 #define T8254_MODE_0_INT_ON_TERMINAL_COUNT			0			/* 000 */
 #define T8254_MODE_1_HARDWARE_RETRIGGERABLE_ONE_SHOT		1			/* 001 */
 #define T8254_MODE_2_RATE_GENERATOR				2			/* X10 */
@@ -89,6 +90,13 @@ extern uint32_t __T8254_REF_CLOCK_HZ;
 #define T8254_MODE_4_SOFTWARE_TRIGGERED_STROBE			4			/* 100 */
 #define T8254_MODE_5_HARDWARE_TRIGGERED_STROBE			5			/* 101 */
 
+/* Control port read/write (RW1,RW0) */
+#define T8254_RW_COUNTER_LATCH					0			/* Counter latch (read operation) */
+#define T8254_RW_LSB_ONLY					1			/* Read/write LSB only */
+#define T8254_RW_MSB_ONLY					2			/* Read/write MSB only */
+#define T8254_RW_LSB_THEN_MSB					3			/* Read/write LSB, then MSB */
+
+/* readback bitmask */
 #define T8254_READBACK_COUNT					0x20
 #define T8254_READBACK_STATUS					0x10
 #define T8254_READBACK_TIMER_2					0x08
@@ -130,7 +138,7 @@ static inline t8254_time_t read_8254_ncli(unsigned char timer) {
 	t8254_time_t x;
 
 	if (timer > 2) return 0;
-	outp(T8254_CONTROL_PORT,(timer << 6) | (0 << 4) | 0);	/* latch counter N, counter latch read */
+	outp(T8254_CONTROL_PORT,(timer << 6) | (T8254_RW_COUNTER_LATCH << 4) | 0/*don't care*/); /* latch counter N, counter latch read */
 	x  = (t8254_time_t)inp(T8254_TIMER_PORT(timer));
 	x |= (t8254_time_t)inp(T8254_TIMER_PORT(timer)) << 8U;
 	return x;
@@ -151,7 +159,7 @@ static inline t8254_time_t read_8254(unsigned char timer) {
  *      the same thing to us anyway */
 static inline void write_8254_ncli(unsigned char timer,t8254_time_t count,unsigned char mode) {
 	if (timer > 2) return;
-	outp(T8254_CONTROL_PORT,(timer << 6) | (3 << 4) | (mode << 1)); /* set new time */
+	outp(T8254_CONTROL_PORT,(timer << 6) | (T8254_RW_LSB_THEN_MSB << 4) | (mode << 1)); /* set new time */
 	outp(T8254_TIMER_PORT(timer),count);
 	outp(T8254_TIMER_PORT(timer),count >> 8);
 	/* for our own timing code, keep track of what that count was. we can't read it back from H/W anyway */
