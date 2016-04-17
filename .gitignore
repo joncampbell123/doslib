@@ -7,4 +7,6 @@ tmp1.cmd
 tmp2.cmd
 nul.err
 *~
+.iconv.tmp1
+.iconv.tmp2
 
