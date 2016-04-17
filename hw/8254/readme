@@ -1,3 +1,82 @@
+Low level access library for the Intel 8253/8254 timer.
+
+Code is provided for both IBM PC/XT/AT and NEC PC-9801 MS-DOS targets.
+
+The clock going to the 8253 can be 0 (DC) to 2.6MHz (ref. datasheet).
+For the 8254, the clock can run from 0 (DC) to 8Mhz (8254) or 10MHz (8254-2) (ref. datasheet).
+
+On the IBM PC/XT/AT platform, the 8253/8254 is run at 1.19318MHz. On original
+PC hardware, this clock signal is exactly 1/12th the 14.31816MHz OSC signal
+from the motherboard (dividing 14.31816 by 3 for the CPU then by 4). Counter
+0 is used to drive the timer tick interrupt (IRQ 0), and Counter 2 is used
+to drive the PC speaker. Counter 1 is not defined, but was traditionally used
+as part of the DRAM refresh cycle. On modern hardware, Counter 1 is not used
+and in some cases may not be implemented at all.
+
+On the PC-98 platform, the 8253 is run at 1.9968MHz or 2.4576MHz depending
+on the CPU speed. The CPU is said to run at a multiple of either of these
+two frequencies to run at 5MHz, 8MHz, or 10MHz in early machines. The only
+way to tell which one is in use is to read the BIOS data area. Counter 0
+is used to drive the timer tick interrupt (IRQ 0), however that interrupt
+is not always enabled. Counter 1 is used to drive the PC speaker. Counter 2
+is used to drive the RS-232 serial port.
+
+There is a "select counter" value that is illegal on the 8253, and defined
+as a readback command on the 8254.
+
+The 8253 and 8254 have 3 independent 16-bit counters and 6 programmable counter
+modes for each one. Each counter can operate in BCD or binary mode. In practice,
+the BCD mode is seldom used. A counter value of 0 is treated as 65536 (0x10000)
+in binary and 10000 in BCD.
+
+Counter 0 is usually programmed to run in Mode 2 (Rate Generator) mode with an
+initial count of 65535 or 65536. On IBM PC hardware, this triggers IRQ 0 at a
+rate of 18.2065Hz. If you need IRQ 0 to run faster, then you program the counter
+with a smaller counter value. For sub-millsecond precision, you can poll the
+counter instead to count ticks. Reading the counter and IRQ 0 generation is
+generally the same between IBM PC and PC-98 hardware, except for the clock
+rate.
+
+Counter 2 (IBM PC) or Counter 1 (PC-98) is usually programmed to run in Mode 3
+(Square Wave) in order to generate audible beeping from the PC speaker. The
+output of the counter is used to drive a speaker. A gate is provided for the
+software to stop the counter and/or mute the speaker output.
+
+On IBM PC hardware:
+
+    I/O port 61h:
+
+          bit 0 (W): TTL output ANDed with Counter 2 output. 1=allow output to speaker   0=silence output
+          bit 1 (W): TTL output to Counter 2 gate.           1=allow Counter 2 to cycle  0=stop Counter 2
+          bit 5 (R): TTL output of Counter 2.
+
+On PC-98 hardware:
+
+    I/O port 35h:
+
+          bit 3 (W): TTL output to enable PC speaker (TODO: to AND gate of Counter 2 output? or does this go to Counter 2 gate to start/stop counter?)
+
+
+
+Interrupt-safe and non-cli functions:
+
+Two versions of the read_8254 and write_8254 routines are provided. The
+read_8254/write_8254 functions protect against interference from interrupts
+by clearing interrupts before reading/writing, and then restoring the state
+of the CPU IF (interrupt flag) after reading.
+
+If the interrupt-safe versions are not needed, you may gain some performance
+by using read_8254_ncli/write_8254_ncli.
+
+
+PC speaker gate control:
+
+Additional inline functions are provided to control the PC speaker enable
+and gate bits. Consider using these functions instead of directly coding
+against the I/O port if you want your code to be portable between IBM PC
+and NEC-98 targets.
+
+
 Program notes:
 
 Award BIOS on Pentium PIIX3 motherboard:
