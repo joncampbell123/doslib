@@ -7,15 +7,18 @@
 #include <hw/8254/8254.h>
 
 void t8254_wait(unsigned long ticks) {
-	uint16_t dec;
 	t8254_time_t pr,cr;
+	uint16_t dec;
+
 	if (ticks <= 1) return;
 	ticks--;
+
 	cr = read_8254(0);
 	do {
+		/* NTS: remember the 8254 counts downward, not upward */
 		pr = cr;
 		cr = read_8254(0);
-		if (cr > pr)
+		if (cr > pr) /* when counter reaches zero it resets to the original counter value and begins counting again */
 			dec = (pr + (uint16_t)t8254_counter[0] - cr);
 		else
 			dec = (pr - cr);
