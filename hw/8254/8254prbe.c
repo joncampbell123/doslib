@@ -38,7 +38,7 @@ int probe_8254() {
 	}
 
 #ifdef TARGET_PC98
-	/* read BIOS data area 0000:0501 to determine what the base clock is. */
+	/* NEC PC-98: read BIOS data area 0000:0501 to determine what the base clock is. */
 	{
 # if TARGET_MSDOS == 32
 		unsigned char *bp = (unsigned char*)0x501;
