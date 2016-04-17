@@ -297,7 +297,8 @@ int main() {
 		}
 
 		for (i=0;i <= 2;i++) tick[i] = read_8254(i);
-		printf("\x0D %04x %04x %04x max=%04x count=%04x",tick[0],tick[1],tick[2],max,counter);
+		printf("\x0D %04x %04x %04x max=%04x count=%04x SPKR=%u",tick[0],tick[1],tick[2],
+			max,counter,read_8254_pc_speaker_output()!=0?1:0);
 		fflush(stdout);
 	}
 	printf("\n");

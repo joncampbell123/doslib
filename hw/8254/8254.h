@@ -199,5 +199,17 @@ static inline void write_8254_pc_speaker(t8254_time_t max) {
 	write_8254(T8254_TIMER_PC_SPEAKER,max,T8254_MODE_3_SQUARE_WAVE_MODE);
 }
 
+#ifdef TARGET_PC98
+/* NEC PC-98 */
+/* FIXME: Does the PC-98 have a way to read PC speaker output back like IBM PC? */
+# define read_8254_pc_speaker_output() (0)
+#else
+/* IBM PC/XT/AT */
+static inline uint8_t read_8254_pc_speaker_output() {
+	/* bit 5 of port 61h gives us the output of the counter (prior to the AND gate) */
+	return (inp(PC_SPEAKER_GATE) & 0x20);
+}
+#endif
+
 #endif /* __HW_8254_8254_H */
 
