@@ -207,6 +207,18 @@ int main() {
 				if (on) t8254_pc_speaker_set_gate(0);
 				else t8254_pc_speaker_set_gate(3);
 			}
+			else if (c == '1') {
+#ifndef TARGET_PC98
+				unsigned char v = t8254_pc_speaker_read_gate();
+				t8254_pc_speaker_set_gate(v ^ PC_SPEAKER_OUTPUT_TTL_AND_GATE);
+#endif
+			}
+			else if (c == '2') {
+#ifndef TARGET_PC98
+				unsigned char v = t8254_pc_speaker_read_gate();
+				t8254_pc_speaker_set_gate(v ^ PC_SPEAKER_COUNTER_2_GATE);
+#endif
+			}
 			else if (c == '[') {
 				speaker_rate += 110;
 				if (speaker_rate > (0xFFFF-110) || speaker_rate < 110)
