@@ -29,6 +29,10 @@ static inline void joystick_update_button_state(struct joystick_t *joy,const uin
 	joy->buttons = ((~b) >> 4U) & 0xFU;
 }
 
+static inline void trigger_joystick(struct joystick_t *joy) {
+	outp(joy->port,0xFF);
+}
+
 void init_joystick(struct joystick_t *joy);
 void read_joystick_buttons(struct joystick_t *joy);
 void read_joystick_positions(struct joystick_t *joy,uint8_t which/*bitmask of axes to read*/);

@@ -36,7 +36,7 @@ void read_joystick_positions(struct joystick_t *joy,uint8_t which/*bitmask*/) {
 	if (check == 0) return;
 
 	/* trigger read. axis bits will change to 1 */
-	outp(joy->port,0xFF);
+	trigger_joystick(joy);
 	tc=read_8254(0);
 
 	/* wait for bits to change from 1 to 0 for each axis */
