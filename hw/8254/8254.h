@@ -49,10 +49,11 @@
 
 #ifdef TARGET_PC98
 /* NEC PC-98 */
-/* Unfortunately, the base clock can be one of two frequencies: 1.9968MHz, or 2.4576MHz, depending on whether the CPU is 5MHz, 8MHz, or 10MHz */
+/* The base clock can be one of two frequencies: 1.9968MHz, or 2.4576MHz, depending on whether the CPU is 5MHz, 8MHz, or 10MHz */
 extern uint32_t __T8254_REF_CLOCK_HZ;
-# define T8254_REF_CLOCK_HZ					(__T8254_REF_CLOCK_HZ) /* FIXME: This varies depending on the base clock which can be 1.9968MHz or 2.4576MHz */
+# define T8254_REF_CLOCK_HZ					(__T8254_REF_CLOCK_HZ)
 #else
+/* IBM PC/XT/AT */
 /* 1.19318MHz from which the counter values divide down from */
 # define T8254_REF_CLOCK_HZ					(1193180UL)
 #endif
