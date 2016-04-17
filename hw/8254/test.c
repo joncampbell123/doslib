@@ -297,6 +297,11 @@ int main() {
 		}
 
 		for (i=0;i <= 2;i++) tick[i] = read_8254(i);
+
+		/* BUG: DOSBox/DOSBox-X appear to have a bug where the PC speaker readback toggles
+		 *      regardless of the GATE input to Counter 2. Bring GATE low (setting bit 1
+		 *      of port 61h to 0) is supposed to cause Counter 2 to stop. The AND gate
+		 *      after the output (bit 0 of port 61h) is not supposed to affect the readback. */
 		printf("\x0D %04x %04x %04x max=%04x count=%04x SPKR=%u",tick[0],tick[1],tick[2],
 			max,counter,read_8254_pc_speaker_output()!=0?1:0);
 		fflush(stdout);
