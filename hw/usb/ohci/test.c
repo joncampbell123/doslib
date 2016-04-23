@@ -113,20 +113,20 @@ struct usb_ohci_ci_rhd {
 
 struct usb_ohci_ci_ctx {
 	/* hardware resources */
-	uint64_t	mmio_base;
-	int8_t		IRQ;
+	uint64_t		mmio_base;
+	int8_t			IRQ;
 	/* anything we learn about the controller */
-	uint8_t		bcd_revision;
-	uint8_t		legacy_support:1;		/* OHCI controller contains "Legacy support" I/O */
-	uint8_t		legacy_emulation_active:1;	/* (last checked) OHCI controller is emulating ports 60h and 64h */
-	uint8_t		legacy_irq_enable:1;		/* OHCI controller generates IRQ1/IRQ12 interrupts */
-	uint8_t		legacy_external_irq_enable:1;	/* OHCI controller generates emulation interrupt when keyboard controller signals IRQ */
-	uint8_t		legacy_a20_state:1;		/* The state of the A20 gate */
-	uint8_t		bios_is_using_it:1;		/* whether or not (last checked) the BIOS is using the USB controller */
-	uint8_t		bios_was_using_it:1;		/* whether or not on first init the BIOS was using it (and therefore we must return control when done) */
-	uint8_t		bios_was_using_legacy_support:1;
-	uint8_t		bios_was_using_legacy_external_irq:1;
-	uint8_t		_reserved_1:1;
+	uint8_t			bcd_revision;
+	uint8_t			legacy_support:1;		/* OHCI controller contains "Legacy support" I/O */
+	uint8_t			legacy_emulation_active:1;	/* (last checked) OHCI controller is emulating ports 60h and 64h */
+	uint8_t			legacy_irq_enable:1;		/* OHCI controller generates IRQ1/IRQ12 interrupts */
+	uint8_t			legacy_external_irq_enable:1;	/* OHCI controller generates emulation interrupt when keyboard controller signals IRQ */
+	uint8_t			legacy_a20_state:1;		/* The state of the A20 gate */
+	uint8_t			bios_is_using_it:1;		/* whether or not (last checked) the BIOS is using the USB controller */
+	uint8_t			bios_was_using_it:1;		/* whether or not on first init the BIOS was using it (and therefore we must return control when done) */
+	uint8_t			bios_was_using_legacy_support:1;
+	uint8_t			bios_was_using_legacy_external_irq:1;
+	uint8_t			_reserved_1:7;
 
 	union usb_ohci_ci_hccontrol control;
 
@@ -245,6 +245,7 @@ int usb_ohci_ci_software_online(struct usb_ohci_ci_ctx *c) {
 
 	/* if it kept the state, then we're good */
 	c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+	if (c->control.f.HostControllerFunctionalState == 2/*USBOperational*/) return 0;
 
 	/* root hub */
 	tmp = usb_ohci_ci_read_port_status(c,0/*root hub*/) & 0x00020000UL; /* mask off all but "status change" bits */
