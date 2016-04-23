@@ -1308,14 +1308,14 @@ int main(int argc,char **argv) {
 			printf("Failed to change ownership, function succeeded but BIOS is still using it\n");
 	}
 
+	usb_old_irq = _dos_getvect(irq2int(ohci->IRQ));
+	_dos_setvect(irq2int(ohci->IRQ),usb_irq);
+	p8259_unmask(ohci->IRQ);
+
 	/* software reset the controller */
 	printf("Resetting controller...\n");
 	if (usb_ohci_ci_software_reset(ohci))
 		printf("Controller reset failure\n");
-
-	usb_old_irq = _dos_getvect(irq2int(ohci->IRQ));
-	_dos_setvect(irq2int(ohci->IRQ),usb_irq);
-	p8259_unmask(ohci->IRQ);
 
 	printf("Resuming controller...\n");
 	if (usb_ohci_ci_software_resume(ohci))
