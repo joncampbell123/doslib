@@ -50,6 +50,44 @@ static void help() {
 	printf("   /?                this help\n");
 }
 
+enum {
+	HcRevision =				0x00,
+	HcControl =				0x04,
+	HcCommandStatus =			0x08,
+	HcInterruptStatus =			0x0C,
+	HcInterruptEnable =			0x10,
+	HcInterruptDisable =			0x14,
+	HcHCCA =				0x18,
+	HcPeriodCurrentED =			0x1C,
+	HcControlHeadED =			0x20,
+	HcControlCurrentED =			0x24,
+	HcBulkHeadED =				0x28,
+	HcBulkCurrentED =			0x2C,
+	HcDoneHead =				0x30,
+	HcFmInterval =				0x34,
+	HcFmRemaining =				0x38,
+	HcFmNumber =				0x3C,
+	HcPeriodicStart =			0x40,
+	HcLSThreshold =				0x44,
+	HcRhDescriptorA =			0x48,
+	HcRhDescriptorB =			0x4C,
+	HcRhStatus =				0x50,
+	HcRhPort1Status =			0x54,
+	HcRhPort2Status =			0x58,
+	HcRhPort3Status =			0x5C, /* and so on */
+
+	/* legacy support registers (i.e. what your BIOS calls USB legacy support).
+	 * this is the interface by which your BIOS can fake a PS/2 keyboard and mouse using a USB keyboard and mouse and System Management Mode */
+	HceControl =				0x100,
+	HceInput =				0x104,
+	HceOutput =				0x108,
+	HceStatus =				0x10C
+};
+
+static inline uint32_t HcRhPortStatus(const uint32_t x) {
+	return HcRhStatus + (x * (uint32_t)4);
+}
+
 union usb_ohci_ci_hccontrol {
 	struct {
 		/* HcControl (mmio+0x04) */
@@ -210,14 +248,14 @@ uint32_t usb_ohci_ci_read_port_status(struct usb_ohci_ci_ctx *ohci,uint8_t port)
 	if (ohci == NULL || port > usb_ohci_root_hub_downstream_port_count(ohci))
 		return ~0UL;
 
-	return usb_ohci_ci_read_reg(ohci,0x50+(port*4));
+	return usb_ohci_ci_read_reg(ohci,HcRhPortStatus(port));
 }
 
 void usb_ohci_ci_write_port_status(struct usb_ohci_ci_ctx *ohci,uint8_t port,uint32_t d) {
 	if (ohci == NULL || port > usb_ohci_root_hub_downstream_port_count(ohci))
 		return;
 
-	usb_ohci_ci_write_reg(ohci,0x50+(port*4),d);
+	usb_ohci_ci_write_reg(ohci,HcRhPortStatus(port),d);
 }
 
 int usb_ohci_ci_software_online(struct usb_ohci_ci_ctx *c) {
@@ -233,18 +271,18 @@ int usb_ohci_ci_software_online(struct usb_ohci_ci_ctx *c) {
 	}
 
 	/* don't write resume if the controller is already in resume or operational mode */
-	c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+	c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 	if (c->control.f.HostControllerFunctionalState == 2/*USBOperational*/) return 0;
 
 	/* write it */
 	c->control.f.HostControllerFunctionalState = 2/*USBOperational*/;
-	usb_ohci_ci_write_reg(c,0x04/*HcControl*/,c->control.raw);
+	usb_ohci_ci_write_reg(c,HcControl,c->control.raw);
 
 	/* wait */
 	t8254_wait(t8254_us2ticks(3000/*3ms*/));
 
 	/* if it kept the state, then we're good */
-	c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+	c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 	if (c->control.f.HostControllerFunctionalState == 2/*USBOperational*/) return 0;
 
 	/* root hub */
@@ -273,19 +311,19 @@ int usb_ohci_ci_software_resume(struct usb_ohci_ci_ctx *c) {
 	}
 
 	/* don't write resume if the controller is already in resume or operational mode */
-	c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+	c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 	if (c->control.f.HostControllerFunctionalState == 1/*USBResume*/) return 0;
 	else if (c->control.f.HostControllerFunctionalState == 2/*USBOperational*/) return 0;
 
 	/* write it */
 	c->control.f.HostControllerFunctionalState = 1/*USBResume*/;
-	usb_ohci_ci_write_reg(c,0x04/*HcControl*/,c->control.raw);
+	usb_ohci_ci_write_reg(c,HcControl,c->control.raw);
 
 	/* wait */
 	t8254_wait(t8254_us2ticks(10000/*10ms*/));
 
 	/* if it kept the state, then we're good */
-	c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+	c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 
 	return (c->control.f.HostControllerFunctionalState == 1/*USBResume*/)?0:-1;
 }
@@ -304,10 +342,10 @@ int usb_ohci_ci_set_usb_reset_state(struct usb_ohci_ci_ctx *c) {
 
 	/* write it */
 	c->control.f.HostControllerFunctionalState = 0/*USBReset*/;
-	usb_ohci_ci_write_reg(c,0x04/*HcControl*/,c->control.raw);
+	usb_ohci_ci_write_reg(c,HcControl,c->control.raw);
 
 	if (ret == 0) {
-		c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+		c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 		if (c->control.f.HostControllerFunctionalState != 0/*USBReset*/) {
 			fprintf(stderr,"OHCI: controller did not accept USBReset state\n");
 			ret = -1;
@@ -321,9 +359,9 @@ int usb_ohci_ci_update_root_hub_status(struct usb_ohci_ci_ctx *c) {
 	if (c == NULL) return -1;
 
 	/* Load port info. Note some bits are W/O, we can't read back. */
-	c->RootHubDescriptor.desc_a.raw = usb_ohci_ci_read_reg(c,0x48/*HcRhDescriptorA*/);
-	c->RootHubDescriptor.desc_b.raw = usb_ohci_ci_read_reg(c,0x4C/*HcRhDescriptorB*/);
-	c->RootHubDescriptor.status.raw = usb_ohci_ci_read_reg(c,0x50/*HcRhStatus*/);
+	c->RootHubDescriptor.desc_a.raw = usb_ohci_ci_read_reg(c,HcRhDescriptorA);
+	c->RootHubDescriptor.desc_b.raw = usb_ohci_ci_read_reg(c,HcRhDescriptorB);
+	c->RootHubDescriptor.status.raw = usb_ohci_ci_read_reg(c,HcRhStatus);
 
 	/* Logically since control fields are 16-bit wide, you can only have a max of 15 downstream ports. */
 	if (c->RootHubDescriptor.desc_a.f.NumberDownstreamPorts > 15)
@@ -340,10 +378,10 @@ int usb_ohci_ci_update_frame_status(struct usb_ohci_ci_ctx *c) {
 
 	cpu_flags = get_cpu_flags(); _cli();
 
-	tmp = usb_ohci_ci_read_reg(c,0x38/*HcFmRemaining*/);
+	tmp = usb_ohci_ci_read_reg(c,HcFmRemaining);
 	c->FrameRemaining = tmp & 0x3FFF;
 
-	tmp = usb_ohci_ci_read_reg(c,0x3C/*HcFmNumber*/);
+	tmp = usb_ohci_ci_read_reg(c,HcFmNumber);
 	c->FrameNumber = (tmp & 0xFFFF) | (((uint32_t)c->FrameNumberHi) << 16UL);
 
 	set_cpu_flags(cpu_flags);
@@ -368,7 +406,7 @@ int usb_ohci_ci_software_reset(struct usb_ohci_ci_ctx *c) {
 	}
 
 	/* hit the reset bit */
-	usb_ohci_ci_write_reg(c,0x08/*HcCommandStatus*/,1UL);
+	usb_ohci_ci_write_reg(c,HcCommandStatus,1UL);
 
 	/* wait */
 	t8254_wait(t8254_us2ticks(1000/*1ms*/));
@@ -376,7 +414,7 @@ int usb_ohci_ci_software_reset(struct usb_ohci_ci_ctx *c) {
 	/* wait for the reset bit to clear */
 	patience = 500;
 	do {
-		tmp = usb_ohci_ci_read_reg(c,0x08/*HcCommandStatus*/);
+		tmp = usb_ohci_ci_read_reg(c,HcCommandStatus);
 		if (!(tmp&1UL)) {
 			/* the bit cleared, it's finished resetting */
 			break;
@@ -392,7 +430,7 @@ int usb_ohci_ci_software_reset(struct usb_ohci_ci_ctx *c) {
 	} while (1);
 
 	if (ret == 0) {
-		c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+		c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 		if (!(c->control.f.HostControllerFunctionalState == 3/*USBSuspend*/ || c->control.f.HostControllerFunctionalState == 3/*USBSuspend*/)) {
 			fprintf(stderr,"OHCI: Despite software reset, controller is not in suspend or reset state\n");
 			ret = -1;
@@ -408,21 +446,21 @@ int usb_ohci_ci_software_reset(struct usb_ohci_ci_ctx *c) {
 	c->control.f.RemoteWakeupConnected=0; /* FIXME: OHCI code in Linux kernel does this---do we have to do it? */
 	for (i=0;i < 16;i++) c->port_events[i] = 0;
 	c->irq_events = 0;
-	usb_ohci_ci_write_reg(c,0x04/*HcControl*/,c->control.raw);
-	usb_ohci_ci_write_reg(c,0x14/*HcInterruptDisable*/,0xC000007FUL); /* disable all event interrupts, including Ownership Change and Master */
+	usb_ohci_ci_write_reg(c,HcControl,c->control.raw);
+	usb_ohci_ci_write_reg(c,HcInterruptDisable,0xC000007FUL); /* disable all event interrupts, including Ownership Change and Master */
 
-	tmp = usb_ohci_ci_read_reg(c,0x34/*HcFmInterval*/);
+	tmp = usb_ohci_ci_read_reg(c,HcFmInterval);
 	c->FrameInterval = tmp & 0x3FFF;
 	c->FullSpeedLargestDataPacket = (tmp >> 16) & 0x7FFF;
 
-	tmp = usb_ohci_ci_read_reg(c,0x40/*HcPeriodicStart*/);
+	tmp = usb_ohci_ci_read_reg(c,HcPeriodicStart);
 	c->PeriodicStart = tmp & 0x3FFF;
 
 	/* use this time to set up power management */
-	tmp = usb_ohci_ci_read_reg(c,0x48/*HcRhDescriptorA*/);
+	tmp = usb_ohci_ci_read_reg(c,HcRhDescriptorA);
 	tmp &= ~0x1F00UL;
 	tmp |=  0x0900UL; /* OCPM=1 PSM=1 NPS=0 */
-	usb_ohci_ci_write_reg(c,0x48/*HcRhDescriptorA*/,tmp);
+	usb_ohci_ci_write_reg(c,HcRhDescriptorA,tmp);
 
 	usb_ohci_ci_update_frame_status(c);
 	usb_ohci_ci_update_root_hub_status(c);
@@ -435,10 +473,10 @@ int usb_ohci_ci_update_ownership_status(struct usb_ohci_ci_ctx *c) {
 
 	if (c == NULL) return -1;
 
-	tmp = usb_ohci_ci_read_reg(c,0x00);
+	tmp = usb_ohci_ci_read_reg(c,HcRevision);
 	c->legacy_support = (tmp>>8)&1;
 
-	if (c->legacy_support) tmp = usb_ohci_ci_read_reg(c,0x100);
+	if (c->legacy_support) tmp = usb_ohci_ci_read_reg(c,HceControl);
 	else tmp = 0;
 
 	c->legacy_emulation_active = tmp&1;
@@ -446,7 +484,7 @@ int usb_ohci_ci_update_ownership_status(struct usb_ohci_ci_ctx *c) {
 	c->legacy_external_irq_enable = (tmp>>4)&1;
 	c->legacy_a20_state = (tmp>>8)&1;
 
-	c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+	c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 	c->bios_is_using_it = c->control.f.InterruptRouting;
 	return 0;
 }
@@ -457,10 +495,12 @@ int usb_ohci_ci_learn(struct usb_ohci_ci_ctx *c) {
 
 	if (c == NULL) return -1;
 
-	tmp = usb_ohci_ci_read_reg(c,0x00);
+	tmp = usb_ohci_ci_read_reg(c,HcRevision);
 	c->bcd_revision = tmp&0xFF;
 	if (c->bcd_revision == 0) return -1;
+
 	usb_ohci_ci_update_ownership_status(c);
+
 	/* if the SMM trap is active or the controller was found active, then assume the BIOS was using it */
 	c->bios_was_using_it = c->bios_is_using_it ||
 		(c->control.f.HostControllerFunctionalState != 0/*USBReset*/ &&
@@ -468,11 +508,11 @@ int usb_ohci_ci_learn(struct usb_ohci_ci_ctx *c) {
 	c->bios_was_using_legacy_support = c->legacy_emulation_active && c->legacy_irq_enable;
 	c->bios_was_using_legacy_external_irq = c->legacy_external_irq_enable;
 
-	tmp = usb_ohci_ci_read_reg(c,0x34/*HcFmInterval*/);
+	tmp = usb_ohci_ci_read_reg(c,HcFmInterval);
 	c->FrameInterval = tmp & 0x3FFF;
 	c->FullSpeedLargestDataPacket = (tmp >> 16) & 0x7FFF;
 
-	tmp = usb_ohci_ci_read_reg(c,0x40/*HcPeriodicStart*/);
+	tmp = usb_ohci_ci_read_reg(c,HcPeriodicStart);
 	c->PeriodicStart = tmp & 0x3FFF;
 
 	usb_ohci_ci_update_frame_status(c);
@@ -559,7 +599,7 @@ int usb_ohci_ci_ownership_change(struct usb_ohci_ci_ctx *c,unsigned int bios_own
 	if (c == NULL) return -1;
 	if (!c->legacy_support) return 0;
 
-	c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+	c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 	c->bios_is_using_it = c->control.f.InterruptRouting;
 	if ((c->bios_is_using_it?1:0) == (bios_owner?1:0)) return 0; /* break loop when ownership becomes what we want */
 
@@ -567,17 +607,17 @@ int usb_ohci_ci_ownership_change(struct usb_ohci_ci_ctx *c,unsigned int bios_own
 
 	if (bios_owner && !c->bios_is_using_it) {
 		/* disable all other interrupts */
-		usb_ohci_ci_write_reg(c,0x14/*HcInterruptDisable*/,0x8000007FUL); /* disable all event interrupts, except Ownership Change */
+		usb_ohci_ci_write_reg(c,HcInterruptDisable,0x8000007FUL); /* disable all event interrupts, except Ownership Change */
 	}
 
 	/* enable the Ownership Change interrupt, make sure BIOS responds to it */
-	usb_ohci_ci_write_reg(c,0x10/*HcInterruptEnable*/,(1UL << 30UL)/*Ownership Change Interrupt*/ | (1UL << 31UL)/*Master Interrupt Enable*/);
+	usb_ohci_ci_write_reg(c,HcInterruptEnable,(1UL << 30UL)/*Ownership Change Interrupt*/ | (1UL << 31UL)/*Master Interrupt Enable*/);
 
 	/* forcibly clear interrupt status to ensure it triggers */
-	usb_ohci_ci_write_reg(c,0x0C/*HcInterruptStatus*/,0x7FFFFFFFUL);
+	usb_ohci_ci_write_reg(c,HcInterruptStatus,0x7FFFFFFFUL);
 
 	/* write InterruptStatus to change ownership */
-	usb_ohci_ci_write_reg(c,0x08/*HcCommandStatus*/,1UL << 3UL);
+	usb_ohci_ci_write_reg(c,HcCommandStatus,1UL << 3UL);
 
 	set_cpu_flags(cpu_flags);
 
@@ -585,7 +625,7 @@ int usb_ohci_ci_ownership_change(struct usb_ohci_ci_ctx *c,unsigned int bios_own
 	patience = 150; /* 100ms x 150 = 15 seconds */
 	while (1) {
 		/* the controller will reset the bit when ownership has changed hands */
-		c->control.raw = usb_ohci_ci_read_reg(c,0x04/*HcControl*/);
+		c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 		c->bios_is_using_it = c->control.f.InterruptRouting;
 		if ((c->bios_is_using_it?1:0) == (bios_owner?1:0)) break; /* break loop when ownership becomes what we want */
 
@@ -606,7 +646,7 @@ int usb_ohci_ci_ownership_change(struct usb_ohci_ci_ctx *c,unsigned int bios_own
 	if (!bios_owner && !c->control.f.InterruptRouting) {
 		fprintf(stderr,"OHCI debug: Disabling all interrupts, I own the controller now\n");
 		cpu_flags = get_cpu_flags(); _cli();
-		usb_ohci_ci_write_reg(c,0x14/*HcInterruptDisable*/,0xC000007FUL); /* disable all event interrupts, including Ownership Change */
+		usb_ohci_ci_write_reg(c,HcInterruptDisable,0xC000007FUL); /* disable all event interrupts, including Ownership Change */
 		set_cpu_flags(cpu_flags);
 	}
 
@@ -696,7 +736,7 @@ static void interrupt usb_irq() {
 	(*vga_state.vga_alpha_ram)++;
 
 	/* read back what the USB controller says happened */
-	pending = usb_ohci_ci_read_reg(ohci,0x0C/*HcInterruptStatus*/);
+	pending = usb_ohci_ci_read_reg(ohci,HcInterruptStatus);
 	vga_state.vga_alpha_ram[1+0] = hexes[(pending>>28UL)&0xFUL] | 0x1E00;
 	vga_state.vga_alpha_ram[1+1] = hexes[(pending>>24UL)&0xFUL] | 0x1E00;
 	vga_state.vga_alpha_ram[1+2] = hexes[(pending>>20UL)&0xFUL] | 0x1E00;
@@ -708,7 +748,7 @@ static void interrupt usb_irq() {
 
 	/* Frame Number Overflow */
 	if (pending & 32) {
-		tmp = usb_ohci_ci_read_reg(ohci,0x3C/*HcFmNumber*/);
+		tmp = usb_ohci_ci_read_reg(ohci,HcFmNumber);
 		if (!(tmp & 0x8000)) ohci->FrameNumberHi++; /* if it carried 0xFFFF -> 0x0000 then increment high 16 bits */
 	}
 	/* Root Hub status change.
@@ -734,7 +774,7 @@ static void interrupt usb_irq() {
 
 	/* USB ack */
 	ohci->irq_events |= pending & (~(4UL|32UL));
-	if (pending != 0UL) usb_ohci_ci_write_reg(ohci,0x0C/*HcInterruptStatus*/,pending);
+	if (pending != 0UL) usb_ohci_ci_write_reg(ohci,HcInterruptStatus,pending);
 
 	/* PIC ack */
 	if (ohci->IRQ >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
@@ -989,7 +1029,7 @@ void main_menu() {
 			else if (mitem == &main_menu_port_acknowledge) {
 				if (selector == 0) {
 					/* root hub */
-					usb_ohci_ci_write_reg(ohci,0x50/*HcRhStatus*/,1UL<<17UL);
+					usb_ohci_ci_write_reg(ohci,HcRhStatus,1UL<<17UL);
 					redraw = 1;
 				}
 				else {
@@ -1002,54 +1042,54 @@ void main_menu() {
 			}
 			else if (mitem == &main_menu_port_nps) {
 				if (selector == 0) {
-					tmp = usb_ohci_ci_read_reg(ohci,0x48/*HcRhDescriptorA*/);
+					tmp = usb_ohci_ci_read_reg(ohci,HcRhDescriptorA);
 					tmp ^= 0x200;/*NPS*/
-					usb_ohci_ci_write_reg(ohci,0x48/*HcRhDescriptorA*/,tmp);
+					usb_ohci_ci_write_reg(ohci,HcRhDescriptorA,tmp);
 					usb_ohci_ci_update_root_hub_status(ohci);
 					redraw = 1;
 				}
 			}
 			else if (mitem == &main_menu_port_psm) {
 				if (selector == 0) {
-					tmp = usb_ohci_ci_read_reg(ohci,0x48/*HcRhDescriptorA*/);
+					tmp = usb_ohci_ci_read_reg(ohci,HcRhDescriptorA);
 					tmp ^= 0x100;/*PSM*/
-					usb_ohci_ci_write_reg(ohci,0x48/*HcRhDescriptorA*/,tmp);
+					usb_ohci_ci_write_reg(ohci,HcRhDescriptorA,tmp);
 					usb_ohci_ci_update_root_hub_status(ohci);
 					redraw = 1;
 				}
 			}
 			else if (mitem == &main_menu_port_ocpm) {
 				if (selector == 0) {
-					tmp = usb_ohci_ci_read_reg(ohci,0x48/*HcRhDescriptorA*/);
+					tmp = usb_ohci_ci_read_reg(ohci,HcRhDescriptorA);
 					tmp ^= 0x800;/*OCPM*/
-					usb_ohci_ci_write_reg(ohci,0x48/*HcRhDescriptorA*/,tmp);
+					usb_ohci_ci_write_reg(ohci,HcRhDescriptorA,tmp);
 					usb_ohci_ci_update_root_hub_status(ohci);
 					redraw = 1;
 				}
 			}
 			else if (mitem == &main_menu_port_nocp) {
 				if (selector == 0) {
-					tmp = usb_ohci_ci_read_reg(ohci,0x48/*HcRhDescriptorA*/);
+					tmp = usb_ohci_ci_read_reg(ohci,HcRhDescriptorA);
 					tmp ^= 0x1000;/*NOCP*/
-					usb_ohci_ci_write_reg(ohci,0x48/*HcRhDescriptorA*/,tmp);
+					usb_ohci_ci_write_reg(ohci,HcRhDescriptorA,tmp);
 					usb_ohci_ci_update_root_hub_status(ohci);
 					redraw = 1;
 				}
 			}
 			else if (mitem == &main_menu_port_clear_global_power) {
-				usb_ohci_ci_write_reg(ohci,0x50/*HcRhStatus*/,0x00000001UL/*LPS ClearGlobalPower*/);
+				usb_ohci_ci_write_reg(ohci,HcRhStatus,0x00000001UL/*LPS ClearGlobalPower*/);
 				usb_ohci_ci_update_root_hub_status(ohci);
 				redraw = 1;
 			}
 			else if (mitem == &main_menu_port_set_global_power) {
-				usb_ohci_ci_write_reg(ohci,0x50/*HcRhStatus*/,0x00010000UL/*LPSC SetGlobalPower*/);
+				usb_ohci_ci_write_reg(ohci,HcRhStatus,0x00010000UL/*LPSC SetGlobalPower*/);
 				usb_ohci_ci_update_root_hub_status(ohci);
 				redraw = 1;
 			}
 			else if (mitem == &main_menu_port_toggle_removeable) {
 				if (selector != 0) {
 					ohci->RootHubDescriptor.desc_b.f.DeviceRemovable ^= 1UL << (uint32_t)selector;
-					usb_ohci_ci_write_reg(ohci,0x4C/*HcRhDescriptorB*/,ohci->RootHubDescriptor.desc_b.raw);
+					usb_ohci_ci_write_reg(ohci,HcRhDescriptorB,ohci->RootHubDescriptor.desc_b.raw);
 					usb_ohci_ci_update_root_hub_status(ohci);
 					redraw = 1;
 				}
@@ -1057,7 +1097,7 @@ void main_menu() {
 			else if (mitem == &main_menu_port_toggle_port_power_mask) {
 				if (selector != 0) {
 					ohci->RootHubDescriptor.desc_b.f.PortPowerControlMask ^= 1UL << (uint32_t)selector;
-					usb_ohci_ci_write_reg(ohci,0x4C/*HcRhDescriptorB*/,ohci->RootHubDescriptor.desc_b.raw);
+					usb_ohci_ci_write_reg(ohci,HcRhDescriptorB,ohci->RootHubDescriptor.desc_b.raw);
 					usb_ohci_ci_update_root_hub_status(ohci);
 					redraw = 1;
 				}
@@ -1352,7 +1392,7 @@ int main(int argc,char **argv) {
 		controller would fire an IRQ every 1ms. But an IRQ firing 1000 times/sec seems to cause stack overflows
 		on slower machines under the DOS extender, and stack overflows on 16-bit real mode builds because of
 		the overhead in checking and validating Flat Real Mode. So we leave it off. */
-	usb_ohci_ci_write_reg(ohci,0x10/*HcInterruptEnable*/,0xC0000068); /* enable MIE+OC+RHSC+FNO+RD */
+	usb_ohci_ci_write_reg(ohci,HcInterruptEnable,0xC0000068); /* enable MIE+OC+RHSC+FNO+RD */
 
 	printf(" - Controller state: ");
 	switch (ohci->control.f.HostControllerFunctionalState) {
