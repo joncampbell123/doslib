@@ -79,9 +79,32 @@ enum {
 	/* legacy support registers (i.e. what your BIOS calls USB legacy support).
 	 * this is the interface by which your BIOS can fake a PS/2 keyboard and mouse using a USB keyboard and mouse and System Management Mode */
 	HceControl =				0x100,
-	HceInput =				0x104,
-	HceOutput =				0x108,
+	HceInput =				0x104,		// contains InputData in bits 0-7, data written to I/O ports 60h and 64h
+	HceOutput =				0x108,		// contains OutputData in bits 0-7, the data returned when port 60h is read
 	HceStatus =				0x10C
+};
+
+enum { // HceStatus bits
+	HceStatus_OutputFull =			(1UL << 0UL),	// R/W   HC clears this bit on read of port 60h.
+	HceStatus_InputFull =			(1UL << 1UL),	// R/W   HC sets this bit on write of port 60h and 64h.
+	HceStatus_Flag =			(1UL << 2UL),	// R/W   Nominally used as system flag by software to indicate warm/cold boot
+	HceStatus_CmdData =			(1UL << 3UL),	// R/W   HC clears this bit on write to port 60h, sets this bit on write to port 64h
+	HceStatus_InhibitSwitch =		(1UL << 4UL),	// R/W   Reflects the state of keyboard inhibit. Is set if NOT inhibited.
+	HceStatus_AuxOutputFull =		(1UL << 5UL),	// R/W   IRQ12 is asserted when set to 1 and OutputFull is set and IRQEn set.
+	HceStatus_TimeOut =			(1UL << 6UL),	// R/W   Used to indicate timeout
+	HceStatus_Parity =			(1UL << 7UL)	// R/W   Indicates parity on keyboard/mouse data
+};
+
+enum { // HceControl bits
+	HceControl_EmulationEnable =		(1UL << 0UL),	// R/W   Enable HC for legacy emulation (I/O ports 60h and 64h)
+	HceControl_EmulationInterrupt =		(1UL << 1UL),	// R/O   Emulation interrupt condition
+	HceControl_CharacterPending =		(1UL << 2UL),	// R/W   Emulation interrupt is generated when OutputFull bit of HceStatus is set to 0
+	HceControl_IRQEn =			(1UL << 3UL),	// R/W   If set, HC generates IRQ1/IRQ12 as long as OutputFull is set. IRQ1 if AuxOutputFull == 0, IRQ12 otherwise
+	HceControl_ExternalIRQEn =		(1UL << 4UL),	// R/W   If set, IRQ1 and IRQ12 from keyboard controller causes emulation interrupt
+	HceControl_GateA20Sequence =		(1UL << 5UL),	// R/W   Set by H/C when 0xD1 is written to I/O port 64h, cleared by any other byte
+	HceControl_IRQ1Active =			(1UL << 6UL),	// R/W   IRQ1 from keyboard controller has occured (positive transition)
+	HceControl_IRQ12Active =		(1UL << 7UL),	// R/W   IRQ12 from keyboard controller has occured (positive transition)
+	HceControl_A20State =			(1UL << 8UL)	// R/W   Current state of A20 gate on keyboard controller
 };
 
 static inline uint32_t HcRhPortStatus(const uint32_t x) {
@@ -479,10 +502,10 @@ int usb_ohci_ci_update_ownership_status(struct usb_ohci_ci_ctx *c) {
 	if (c->legacy_support) tmp = usb_ohci_ci_read_reg(c,HceControl);
 	else tmp = 0;
 
-	c->legacy_emulation_active = tmp&1;
-	c->legacy_irq_enable = (tmp>>3)&1;
-	c->legacy_external_irq_enable = (tmp>>4)&1;
-	c->legacy_a20_state = (tmp>>8)&1;
+	c->legacy_emulation_active = (tmp&HceControl_EmulationEnable)?1:0;
+	c->legacy_irq_enable = (tmp&HceControl_IRQEn)?1:0;
+	c->legacy_external_irq_enable = (tmp&HceControl_ExternalIRQEn)?1:0;
+	c->legacy_a20_state = (tmp&HceControl_A20State)?1:0;
 
 	c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 	c->bios_is_using_it = c->control.f.InterruptRouting;
