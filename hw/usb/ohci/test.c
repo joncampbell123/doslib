@@ -66,32 +66,48 @@ union usb_ohci_ci_hccontrol {
 	uint32_t	raw;
 };
 
-union usb_ohci_ci_rhd {
-	struct {
-		uint32_t	NumberDownstreamPorts:8;	/* bit 0-7 */
-		uint32_t	PowerSwitchingMode:1;		/* bit 8 */
-		uint32_t	NoPowerSwitching:1;		/* bit 9 */
-		uint32_t	DeviceType:1;			/* bit 10 */
-		uint32_t	OverCurrentProtectionMode:1;	/* bit 11 */
-		uint32_t	NoOverCurrentProtection:1;	/* bit 12 */
-		uint32_t	_reserved:11;			/* bit 13-23 */
-		uint32_t	PowerOnToGoodTime:8;		/* bit 24-31 */
-
-		uint32_t	DeviceRemovable:16;		/* bit 0-15 bitmask for each port (0=removable 1=not removeable) */
-		uint32_t	PortPowerControlMask:16;	/* bit 16-31 bitmask for each port */
-
-		uint32_t	LocalPowerStatus:1;		/* bit 0 */
-		uint32_t	OverCurrentIndicator:1;		/* bit 1 */
-		uint32_t	_reserved2:13;			/* bit 2-14 */
-		uint32_t	DeviceRemoteWakeupEnable:1;	/* bit 15 */
-		uint32_t	LocalPowerStatusChange:1;	/* bit 16 */
-		uint32_t	OverCurrentIndicatorChange:1;	/* bit 17 */
-		uint32_t	_reserved3:13;			/* bit 18-30 */
-		uint32_t	ClearRemoteWakeupEnable:1;	/* bit 31 */
-	} f;
-	struct {
-		uint32_t	a,b,c;
-	} raw;
+/* HCD = Host Controller Driver (software)
+ * HC = Host Controller (hardware)
+ *
+ * A field marked HCD R/W or W/O means the software can change the bit
+ * A field marked HC R/W or W/O means the hardware can change the bit. */
+struct usb_ohci_ci_rhd {
+	union {
+		struct {
+			/* HcRhDescriptorA (mmio+0x48) */
+			uint32_t	NumberDownstreamPorts:8;	/* bit 0-7    HCD R/O   HC R/O */
+			uint32_t	PowerSwitchingMode:1;		/* bit 8      HCD R/W   HC R/O */
+			uint32_t	NoPowerSwitching:1;		/* bit 9      HCD R/w   HC R/O */
+			uint32_t	DeviceType:1;			/* bit 10     HCD R/O   HC R/O */
+			uint32_t	OverCurrentProtectionMode:1;	/* bit 11     HCD R/W   HC R/O */
+			uint32_t	NoOverCurrentProtection:1;	/* bit 12     HCD R/W   HC R/O */
+			uint32_t	_reserved:11;			/* bit 13-23                   */
+			uint32_t	PowerOnToGoodTime:8;		/* bit 24-31  HCD R/W   HC R/O */
+		} f;
+		uint32_t	raw;
+	} desc_a;
+	union {
+		struct {
+			/* HcRhDescriptorB (mmio+0x4C) */
+			uint32_t	DeviceRemovable:16;		/* bit 0-15 bitmask for each port (0=removable 1=not removeable)   HCD R/W   HC R/O */
+			uint32_t	PortPowerControlMask:16;	/* bit 16-31 bitmask for each port                                 HCD R/W   HC R/O */
+		} f;
+		uint32_t	raw;
+	} desc_b;
+	union {
+		struct {
+			/* HcRhStatus (mmio+0x50) */
+			uint32_t	LocalPowerStatus:1;		/* bit 0      HCD R/W   HC R/O   When HCD writes a (1) this is ClearGlobalPower */
+			uint32_t	OverCurrentIndicator:1;		/* bit 1      HCD R/O   HC R/W */
+			uint32_t	_reserved2:13;			/* bit 2-14                    */
+			uint32_t	DeviceRemoteWakeupEnable:1;	/* bit 15     HCD R/W   HC R/O   When HCD writes a (1) this is SetRemoteWakeupEnable */
+			uint32_t	LocalPowerStatusChange:1;	/* bit 16     HCD R/W   HC R/O   When HCD writes a (1) this is SetGlobalPower */
+			uint32_t	OverCurrentIndicatorChange:1;	/* bit 17     HCD R/W   HC R/W   When HCD writes a (1) this clears the bit */
+			uint32_t	_reserved3:13;			/* bit 18-30                   */
+			uint32_t	ClearRemoteWakeupEnable:1;	/* bit 31     HCD W/O   HC R/O   When HCD writes a (1) this is ClearRemoteWakeupEnable */
+		} f;
+		uint32_t	raw;
+	} status;
 };
 
 struct usb_ohci_ci_ctx {
@@ -122,8 +138,12 @@ struct usb_ohci_ci_ctx {
 	volatile uint32_t	irq_events;
 	volatile uint32_t	port_events[16];	/* NTS: port_events[0] is HcRhStatus */
 
-	union usb_ohci_ci_rhd RootHubDescriptor;
+	struct usb_ohci_ci_rhd	RootHubDescriptor;
 };
+
+static inline unsigned char usb_ohci_root_hub_downstream_port_count(const struct usb_ohci_ci_ctx *c) {
+	return c->RootHubDescriptor.desc_a.f.NumberDownstreamPorts;
+}
 
 struct usb_ohci_ci_ctx *usb_ohci_ci_create() {
 	struct usb_ohci_ci_ctx *r = (struct usb_ohci_ci_ctx *)malloc(sizeof(struct usb_ohci_ci_ctx));
@@ -183,17 +203,17 @@ void usb_ohci_ci_write_reg(struct usb_ohci_ci_ctx *c,uint32_t reg,uint32_t val) 
 	}
 }
 
-/* NTS: USB standard: port 0 is the root hub, ports 1-15 are the actual "ports",
-        and the OS is supposed to do this funky virtualization thing. Right, ok then... */
+/* NTS: USB standard: port 0 is the root hub, ports 1-15 are the actual "ports".
+ *      So a root hub that reports 3 ports means that port 0 is root hub and 1-3 are the ports. */
 uint32_t usb_ohci_ci_read_port_status(struct usb_ohci_ci_ctx *ohci,uint8_t port) {
-	if (ohci == NULL || port > ohci->RootHubDescriptor.f.NumberDownstreamPorts)
+	if (ohci == NULL || port > usb_ohci_root_hub_downstream_port_count(ohci))
 		return ~0UL;
 
 	return usb_ohci_ci_read_reg(ohci,0x50+(port*4));
 }
 
 void usb_ohci_ci_write_port_status(struct usb_ohci_ci_ctx *ohci,uint8_t port,uint32_t d) {
-	if (ohci == NULL || port > ohci->RootHubDescriptor.f.NumberDownstreamPorts)
+	if (ohci == NULL || port > usb_ohci_root_hub_downstream_port_count(ohci))
 		return;
 
 	usb_ohci_ci_write_reg(ohci,0x50+(port*4),d);
@@ -231,7 +251,7 @@ int usb_ohci_ci_software_online(struct usb_ohci_ci_ctx *c) {
 	c->port_events[0] |= tmp; /* note them in our context so the main program can react */
 
 	/* and ports */
-	for (port=1;port < c->RootHubDescriptor.f.NumberDownstreamPorts;port++) {
+	for (port=1;port <= usb_ohci_root_hub_downstream_port_count(c);port++) {
 		tmp = usb_ohci_ci_read_port_status(c,port) & 0x001F0000UL; /* mask off all but "status change" bits */
 		usb_ohci_ci_write_port_status(c,port,tmp); /* write back to clear status in HC */
 		c->port_events[port] |= tmp; /* note them in our context so the main program can react */
@@ -298,14 +318,14 @@ int usb_ohci_ci_set_usb_reset_state(struct usb_ohci_ci_ctx *c) {
 int usb_ohci_ci_update_root_hub_status(struct usb_ohci_ci_ctx *c) {
 	if (c == NULL) return -1;
 
-	/* Load port info */
-	c->RootHubDescriptor.raw.a = usb_ohci_ci_read_reg(c,0x48/*HcRhDescriptorA*/);
-	c->RootHubDescriptor.raw.b = usb_ohci_ci_read_reg(c,0x4C/*HcRhDescriptorB*/);
-	c->RootHubDescriptor.raw.c = usb_ohci_ci_read_reg(c,0x50/*HcRhStatus*/);
+	/* Load port info. Note some bits are W/O, we can't read back. */
+	c->RootHubDescriptor.desc_a.raw = usb_ohci_ci_read_reg(c,0x48/*HcRhDescriptorA*/);
+	c->RootHubDescriptor.desc_b.raw = usb_ohci_ci_read_reg(c,0x4C/*HcRhDescriptorB*/);
+	c->RootHubDescriptor.status.raw = usb_ohci_ci_read_reg(c,0x50/*HcRhStatus*/);
 
-	/* sanitize results */
-	if (c->RootHubDescriptor.f.NumberDownstreamPorts > 15)
-		c->RootHubDescriptor.f.NumberDownstreamPorts = 15;
+	/* Logically since control fields are 16-bit wide, you can only have a max of 15 downstream ports. */
+	if (c->RootHubDescriptor.desc_a.f.NumberDownstreamPorts > 15)
+		c->RootHubDescriptor.desc_a.f.NumberDownstreamPorts = 15;
 
 	return 0;
 }
@@ -703,7 +723,7 @@ static void interrupt usb_irq() {
 		ohci->port_events[0] |= tmp; /* note them in our context so the main program can react */
 
 		/* and ports */
-		for (port=1;port <= ohci->RootHubDescriptor.f.NumberDownstreamPorts;port++) {
+		for (port=1;port <= usb_ohci_root_hub_downstream_port_count(ohci);port++) {
 			tmp = usb_ohci_ci_read_port_status(ohci,port) & 0x001F0000UL; /* mask off all but "status change" bits */
 			usb_ohci_ci_write_port_status(ohci,port,tmp); /* write back to clear status in HC */
 			ohci->port_events[port] |= tmp; /* note them in our context so the main program can react */
@@ -872,28 +892,28 @@ void main_menu() {
 
 			vga_moveto(0,3);
 			sprintf(str_tmp,"Root Hub Descriptor: %02u ports [redraw=%lu]\n",
-				ohci->RootHubDescriptor.f.NumberDownstreamPorts,(unsigned long)(redrawcount++));
+				usb_ohci_root_hub_downstream_port_count(ohci),(unsigned long)(redrawcount++));
 			vga_write(str_tmp);
 
-			sprintf(str_tmp,"PSM=%u NPS=%u OCPM=%u NOCP=%u POTGT=%-3ums\n",
-				ohci->RootHubDescriptor.f.PowerSwitchingMode,
-				ohci->RootHubDescriptor.f.NoPowerSwitching,
-				ohci->RootHubDescriptor.f.OverCurrentProtectionMode,
-				ohci->RootHubDescriptor.f.NoOverCurrentProtection,
-				(unsigned int)ohci->RootHubDescriptor.f.PowerOnToGoodTime * 2U);
+			sprintf(str_tmp,"PSM=%u NPS=%u OCPM=%u NOCP=%u POTGT=%ums\n",
+				ohci->RootHubDescriptor.desc_a.f.PowerSwitchingMode,
+				ohci->RootHubDescriptor.desc_a.f.NoPowerSwitching,
+				ohci->RootHubDescriptor.desc_a.f.OverCurrentProtectionMode,
+				ohci->RootHubDescriptor.desc_a.f.NoOverCurrentProtection,
+				(unsigned int)ohci->RootHubDescriptor.desc_a.f.PowerOnToGoodTime * 2U);
 			vga_write(str_tmp);
 
 			sprintf(str_tmp,"REMOVEABLE=%08lX POWERCTRL=%08lX OCI=%u DRWE=%u OCIC=%u\n",
-				(unsigned long)(ohci->RootHubDescriptor.f.DeviceRemovable),
-				(unsigned long)(ohci->RootHubDescriptor.f.PortPowerControlMask),
-				ohci->RootHubDescriptor.f.OverCurrentIndicator,
-				ohci->RootHubDescriptor.f.DeviceRemoteWakeupEnable,
-				ohci->RootHubDescriptor.f.OverCurrentIndicatorChange);
+				(unsigned long)(ohci->RootHubDescriptor.desc_b.f.DeviceRemovable),
+				(unsigned long)(ohci->RootHubDescriptor.desc_b.f.PortPowerControlMask),
+				ohci->RootHubDescriptor.status.f.OverCurrentIndicator,
+				ohci->RootHubDescriptor.status.f.DeviceRemoteWakeupEnable,
+				ohci->RootHubDescriptor.status.f.OverCurrentIndicatorChange);
 			vga_write(str_tmp);
 
 			vga_write("\n");
 
-			for (port=1;port <= ohci->RootHubDescriptor.f.NumberDownstreamPorts;port++) {
+			for (port=1;port <= usb_ohci_root_hub_downstream_port_count(ohci);port++) {
 				uint32_t ps = usb_ohci_ci_read_port_status(ohci,port);
 
 				if (!(ps&0x00000001UL)) /* not connected: grayed out */
@@ -922,8 +942,8 @@ void main_menu() {
 					(ps&0x00040000UL)?1:0,	/* PSSC */
 					(ps&0x00080000UL)?1:0,	/* OCIC */
 					(ps&0x00100000UL)?1:0,	/* PRSC */
-					(ohci->RootHubDescriptor.f.DeviceRemovable>>port)&1,
-					(ohci->RootHubDescriptor.f.PortPowerControlMask>>port&1));
+					(ohci->RootHubDescriptor.desc_b.f.DeviceRemovable>>port)&1,
+					(ohci->RootHubDescriptor.desc_b.f.PortPowerControlMask>>port&1));
 				vga_write(str_tmp);
 			}
 
@@ -1015,27 +1035,27 @@ void main_menu() {
 				}
 			}
 			else if (mitem == &main_menu_port_clear_global_power) {
-				usb_ohci_ci_write_reg(ohci,0x50/*HcRhStatus*/,0x00000001UL);
+				usb_ohci_ci_write_reg(ohci,0x50/*HcRhStatus*/,0x00000001UL/*LPS ClearGlobalPower*/);
 				usb_ohci_ci_update_root_hub_status(ohci);
 				redraw = 1;
 			}
 			else if (mitem == &main_menu_port_set_global_power) {
-				usb_ohci_ci_write_reg(ohci,0x50/*HcRhStatus*/,0x00010000UL);
+				usb_ohci_ci_write_reg(ohci,0x50/*HcRhStatus*/,0x00010000UL/*LPSC SetGlobalPower*/);
 				usb_ohci_ci_update_root_hub_status(ohci);
 				redraw = 1;
 			}
 			else if (mitem == &main_menu_port_toggle_removeable) {
 				if (selector != 0) {
-					ohci->RootHubDescriptor.f.DeviceRemovable ^= 1UL << (uint32_t)selector;
-					usb_ohci_ci_write_reg(ohci,0x4C/*HcRhDescriptorB*/,ohci->RootHubDescriptor.raw.b);
+					ohci->RootHubDescriptor.desc_b.f.DeviceRemovable ^= 1UL << (uint32_t)selector;
+					usb_ohci_ci_write_reg(ohci,0x4C/*HcRhDescriptorB*/,ohci->RootHubDescriptor.desc_b.raw);
 					usb_ohci_ci_update_root_hub_status(ohci);
 					redraw = 1;
 				}
 			}
 			else if (mitem == &main_menu_port_toggle_port_power_mask) {
 				if (selector != 0) {
-					ohci->RootHubDescriptor.f.PortPowerControlMask ^= 1UL << (uint32_t)selector;
-					usb_ohci_ci_write_reg(ohci,0x4C/*HcRhDescriptorB*/,ohci->RootHubDescriptor.raw.b);
+					ohci->RootHubDescriptor.desc_b.f.PortPowerControlMask ^= 1UL << (uint32_t)selector;
+					usb_ohci_ci_write_reg(ohci,0x4C/*HcRhDescriptorB*/,ohci->RootHubDescriptor.desc_b.raw);
 					usb_ohci_ci_update_root_hub_status(ohci);
 					redraw = 1;
 				}
@@ -1098,12 +1118,12 @@ void main_menu() {
 			if (c == 0) c = getch() << 8;
 
 			if (c == 0x4800) { /* uparrow */
-				if (selector == 0) selector = ohci->RootHubDescriptor.f.NumberDownstreamPorts;
+				if (selector == 0) selector = usb_ohci_root_hub_downstream_port_count(ohci);
 				else selector--;
 				redraw = 1;
 			}
 			else if (c == 0x5000) { /* downarrow */
-				if (selector == ohci->RootHubDescriptor.f.NumberDownstreamPorts) selector = 0;
+				if (selector == usb_ohci_root_hub_downstream_port_count(ohci)) selector = 0;
 				else selector++;
 				redraw = 1;
 			}
@@ -1117,7 +1137,7 @@ int main(int argc,char **argv) {
 	int bus,dev,func;
 	int i,c;
 
-	assert(sizeof(union usb_ohci_ci_rhd) == 12);
+	assert(sizeof(struct usb_ohci_ci_rhd) == 12);
 
 	for (i=1;i < argc;) {
 		char *a = argv[i++];
@@ -1344,26 +1364,26 @@ int main(int argc,char **argv) {
 	usb_ohci_ci_update_root_hub_status(ohci);
 
 	printf(" - Root Hub A=%08lX: %u ports, PSM=%u NPS=%u DT=%u OCPM=%u NOCP=%u POTGT=%u\n",
-		(unsigned long)(ohci->RootHubDescriptor.raw.a),
-		ohci->RootHubDescriptor.f.NumberDownstreamPorts,
-		ohci->RootHubDescriptor.f.PowerSwitchingMode,
-		ohci->RootHubDescriptor.f.NoPowerSwitching,
-		ohci->RootHubDescriptor.f.DeviceType,
-		ohci->RootHubDescriptor.f.OverCurrentProtectionMode,
-		ohci->RootHubDescriptor.f.NoOverCurrentProtection,
-		ohci->RootHubDescriptor.f.PowerOnToGoodTime);
+		(unsigned long)(ohci->RootHubDescriptor.desc_a.raw),
+		usb_ohci_root_hub_downstream_port_count(ohci),
+		ohci->RootHubDescriptor.desc_a.f.PowerSwitchingMode,
+		ohci->RootHubDescriptor.desc_a.f.NoPowerSwitching,
+		ohci->RootHubDescriptor.desc_a.f.DeviceType,
+		ohci->RootHubDescriptor.desc_a.f.OverCurrentProtectionMode,
+		ohci->RootHubDescriptor.desc_a.f.NoOverCurrentProtection,
+		ohci->RootHubDescriptor.desc_a.f.PowerOnToGoodTime);
 	printf(" - Root hub B=%08lX REMOVEABLE=0x%08lX POWER=0x%08lX\n",
-		(unsigned long)(ohci->RootHubDescriptor.raw.b),
-		(unsigned long)(ohci->RootHubDescriptor.f.DeviceRemovable),
-		(unsigned long)(ohci->RootHubDescriptor.f.PortPowerControlMask));
+		(unsigned long)(ohci->RootHubDescriptor.desc_b.raw),
+		(unsigned long)(ohci->RootHubDescriptor.desc_b.f.DeviceRemovable),
+		(unsigned long)(ohci->RootHubDescriptor.desc_b.f.PortPowerControlMask));
 	printf(" - Root hub C=%08lX status LPS=%u OCI=%u DRWE=%u LPSC=%u OCIC=%u CRWE=%u\n",
-		(unsigned long)(ohci->RootHubDescriptor.raw.c),
-		ohci->RootHubDescriptor.f.LocalPowerStatus,
-		ohci->RootHubDescriptor.f.OverCurrentIndicator,
-		ohci->RootHubDescriptor.f.DeviceRemoteWakeupEnable,
-		ohci->RootHubDescriptor.f.LocalPowerStatusChange,
-		ohci->RootHubDescriptor.f.OverCurrentIndicatorChange,
-		ohci->RootHubDescriptor.f.ClearRemoteWakeupEnable);
+		(unsigned long)(ohci->RootHubDescriptor.status.raw),
+		ohci->RootHubDescriptor.status.f.LocalPowerStatus,
+		ohci->RootHubDescriptor.status.f.OverCurrentIndicator,
+		ohci->RootHubDescriptor.status.f.DeviceRemoteWakeupEnable,
+		ohci->RootHubDescriptor.status.f.LocalPowerStatusChange,
+		ohci->RootHubDescriptor.status.f.OverCurrentIndicatorChange,
+		ohci->RootHubDescriptor.status.f.ClearRemoteWakeupEnable);
 
 	printf("Hit ENTER to continue.\n");
 	do {
@@ -1373,7 +1393,7 @@ int main(int argc,char **argv) {
 		}
 	} while (1);
 
-	if (ohci->RootHubDescriptor.f.NumberDownstreamPorts > 7)
+	if (usb_ohci_root_hub_downstream_port_count(ohci) > 7)
 		vga_bios_set_80x50_text();
 
 	vga_menu_bar.bar = main_menu_bar;
@@ -1394,7 +1414,7 @@ int main(int argc,char **argv) {
 	/* restore IRQ. do NOT mask IRQ if the BIOS is involved in any way */
 	_dos_setvect(irq2int(ohci->IRQ),usb_old_irq);
 	if (!ohci->bios_was_using_it && !ohci->bios_is_using_it) p8259_mask(ohci->IRQ);
-	
+
 	/* shutdown process: reset the controller */
 	printf("Resetting controller...\n");
 	if (usb_ohci_ci_software_reset(ohci))
