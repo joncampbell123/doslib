@@ -52,6 +52,8 @@ static void help() {
 
 enum {
 	HcRevision =				0x00,
+	// bits 7-0   HCD R/O   HC R/O   BCD representation of HCI specification implemented by hardware. 0x11 = v1.1  0x10 = v1.0
+	// bit 8      HCD R/O   HC R/O   USB legacy support is implemented (registers 0x100-0x10C), to emulate PS/2 keyboard+mouse from USB.
 	HcControl =				0x04,
 	HcCommandStatus =			0x08,
 	HcInterruptStatus =			0x0C,
@@ -497,7 +499,7 @@ int usb_ohci_ci_update_ownership_status(struct usb_ohci_ci_ctx *c) {
 	if (c == NULL) return -1;
 
 	tmp = usb_ohci_ci_read_reg(c,HcRevision);
-	c->legacy_support = (tmp>>8)&1;
+	c->legacy_support = (tmp&0x100)?1:0; /* bit 8 signifies USB legacy support */
 
 	if (c->legacy_support) tmp = usb_ohci_ci_read_reg(c,HceControl);
 	else tmp = 0;
