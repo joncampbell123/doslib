@@ -52,15 +52,16 @@ static void help() {
 
 union usb_ohci_ci_hccontrol {
 	struct {
-		uint32_t	ControlBulkServiceRatio:2;	/* bit 0-1 */
-		uint32_t	PeriodicListEnable:1;		/* bit 2 */
-		uint32_t	IsochronousEnable:1;		/* bit 3 */
-		uint32_t	ControlListEnable:1;		/* bit 4 */
-		uint32_t	BulkListEnable:1;		/* bit 5 */
-		uint32_t	HostControllerFunctionalState:2;/* bit 6-7 */
-		uint32_t	InterruptRouting:1;		/* bit 8 */
-		uint32_t	RemoteWakeupConnected:1;	/* bit 9 */
-		uint32_t	RemoteWakeupEnable:1;		/* bit 10 */
+		/* HcControl (mmio+0x04) */
+		uint32_t	ControlBulkServiceRatio:2;	/* bit 0-1         HCD R/W   HC R/O  CBSR {0,1,2,3} => {1:1, 2:1, 3:1, 4:1} */
+		uint32_t	PeriodicListEnable:1;		/* bit 2           HCD R/W   HC R/O  Enable processing of periodic list (at next SOF) */
+		uint32_t	IsochronousEnable:1;		/* bit 3           HCD R/W   HC R/O  Enable processing of isosynchronous EDs in periodic list (at next SOF) */
+		uint32_t	ControlListEnable:1;		/* bit 4           HCD R/W   HC R/O  Enable processing of control list (at next SOF) */
+		uint32_t	BulkListEnable:1;		/* bit 5           HCD R/W   HC R/O  Enable processing of bulk list (at next SOF) */
+		uint32_t	HostControllerFunctionalState:2;/* bit 6-7         HCD R/W   HC R/W  HCFS {0,1,2,3} => {UsbReset, UsbResume, UsbOperational, UsbSuspend} */
+		uint32_t	InterruptRouting:1;		/* bit 8           HCD R/W   HC R/O  If set, interrupts go to System Management Interrupt (i.e. BIOS). If clear, normal interrupt. */
+		uint32_t	RemoteWakeupConnected:1;	/* bit 9           HCD R/W   HC R/W  Whether host controller supports remote wakeup, which is set by the BIOS */
+		uint32_t	RemoteWakeupEnable:1;		/* bit 10          HCD R/W   HC R/O */
 		uint32_t	_reserved_:21;			/* bit 11-31 */
 	} f;
 	uint32_t	raw;
