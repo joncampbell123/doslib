@@ -86,27 +86,37 @@ enum {
 	HceStatus =				0x10C
 };
 
-enum { // HceStatus bits
-	HceStatus_OutputFull =			(1UL << 0UL),	// R/W   HC clears this bit on read of port 60h.
-	HceStatus_InputFull =			(1UL << 1UL),	// R/W   HC sets this bit on write of port 60h and 64h.
-	HceStatus_Flag =			(1UL << 2UL),	// R/W   Nominally used as system flag by software to indicate warm/cold boot
-	HceStatus_CmdData =			(1UL << 3UL),	// R/W   HC clears this bit on write to port 60h, sets this bit on write to port 64h
-	HceStatus_InhibitSwitch =		(1UL << 4UL),	// R/W   Reflects the state of keyboard inhibit. Is set if NOT inhibited.
-	HceStatus_AuxOutputFull =		(1UL << 5UL),	// R/W   IRQ12 is asserted when set to 1 and OutputFull is set and IRQEn set.
-	HceStatus_TimeOut =			(1UL << 6UL),	// R/W   Used to indicate timeout
-	HceStatus_Parity =			(1UL << 7UL)	// R/W   Indicates parity on keyboard/mouse data
+union usb_ohci_ci_hcecontrol {
+	struct {
+		/* HceControl (mmio+0x100) */
+		uint32_t	EmulationEnable:1;		/* bit 0           HCD R/W   HC R/W  When set, HC decodes ports 60h and 64h, emulation */
+		uint32_t	EmulationInterrupt:1;		/* bit 1           HCD R/W   HC R/W  Emulation interrupt state */
+		uint32_t	CharacterPending:1;		/* bit 2           HCD R/W   HC R/W  If set, emulation interrupt is generated when OutputFull == 0 */
+		uint32_t	IRQEn:1;			/* bit 3           HCD R/W   HC R/W  When set, IRQ1/IRQ12 is generated as long as OutputFull !+ 0. IRQ12 if AuxOutputFull, else IRQ1 */
+		uint32_t	ExternalIRQEn:1;		/* bit 4           HCD R/W   HC R/W  If set, IRQ1/IRQ12 from keyboard generates emulation interrupt */
+		uint32_t	GateA20Sequence:1;		/* bit 5           HCD R/W   HC R/W  Set by HC when 0xD1 written to port 64h, cleared by any other value */
+		uint32_t	IRQ1Active:1;			/* bit 6           HCD R/W   HC R/W  Indicates positive transition of IRQ1 from keyboard controller */
+		uint32_t	IRQ12Active:1;			/* bit 7           HCD R/W   HC R/W  Indicates positive transition of IRQ12 from keyboard controller */
+		uint32_t	A20State:1;			/* bit 8           HCD R/W   HC R/W  Current state of A20 gate on keyboard controller */
+		uint32_t	_reserved_:23;			/* bit 9-31 */
+	} f;
+	uint32_t	raw;
 };
 
-enum { // HceControl bits
-	HceControl_EmulationEnable =		(1UL << 0UL),	// R/W   Enable HC for legacy emulation (I/O ports 60h and 64h)
-	HceControl_EmulationInterrupt =		(1UL << 1UL),	// R/O   Emulation interrupt condition
-	HceControl_CharacterPending =		(1UL << 2UL),	// R/W   Emulation interrupt is generated when OutputFull bit of HceStatus is set to 0
-	HceControl_IRQEn =			(1UL << 3UL),	// R/W   If set, HC generates IRQ1/IRQ12 as long as OutputFull is set. IRQ1 if AuxOutputFull == 0, IRQ12 otherwise
-	HceControl_ExternalIRQEn =		(1UL << 4UL),	// R/W   If set, IRQ1 and IRQ12 from keyboard controller causes emulation interrupt
-	HceControl_GateA20Sequence =		(1UL << 5UL),	// R/W   Set by H/C when 0xD1 is written to I/O port 64h, cleared by any other byte
-	HceControl_IRQ1Active =			(1UL << 6UL),	// R/W   IRQ1 from keyboard controller has occured (positive transition)
-	HceControl_IRQ12Active =		(1UL << 7UL),	// R/W   IRQ12 from keyboard controller has occured (positive transition)
-	HceControl_A20State =			(1UL << 8UL)	// R/W   Current state of A20 gate on keyboard controller
+union usb_ohci_ci_hcestatus {
+	struct {
+		/* HceStatus (mmio+0x10C) */
+		uint32_t	OutputFull:1;			/* bit 0           HCD R/W   HC R/W  HC clears this bit on read of port 60h */
+		uint32_t	InputFill:1;			/* bit 1           HCD R/W   HC R/W  HC sets this bit on write of port 60h and 64h */
+		uint32_t	Flag:1;				/* bit 2           HCD R/W   HC R/W  Nominally used as system flag by software to indicate warm/cold boot */
+		uint32_t	CmdData:1;			/* bit 3           HCD R/W   HC R/W  HC clears this bit on write to port 60h, sets this bit on write to port 64h */
+		uint32_t	InhibitSwitch:1;		/* bit 4           HCD R/W   HC R/W  Reflects the state of keyboard inhibit. Is set if NOT inhibited */
+		uint32_t	AuxOutputFull:1;		/* bit 5           HCD R/W   HC R/W  IRQ12 is asserted when set to 1 and OutputFull is set and IRQEn set */
+		uint32_t	TimeOut:1;			/* bit 6           HCD R/W   HC R/W  Used to indicate timeout */
+		uint32_t	Parity:1;			/* bit 7           HCD R/W   HC R/W  Indicates parity on keyboard/mouse data */
+		uint32_t	_reserved_:24;			/* bit 8-31 */
+	} f;
+	uint32_t	raw;
 };
 
 static inline uint32_t HcRhPortStatus(const uint32_t x) {
@@ -494,6 +504,7 @@ int usb_ohci_ci_software_reset(struct usb_ohci_ci_ctx *c) {
 }
 
 int usb_ohci_ci_update_ownership_status(struct usb_ohci_ci_ctx *c) {
+	union usb_ohci_ci_hcecontrol ctl;
 	uint32_t tmp;
 
 	if (c == NULL) return -1;
@@ -501,13 +512,13 @@ int usb_ohci_ci_update_ownership_status(struct usb_ohci_ci_ctx *c) {
 	tmp = usb_ohci_ci_read_reg(c,HcRevision);
 	c->legacy_support = (tmp&0x100)?1:0; /* bit 8 signifies USB legacy support */
 
-	if (c->legacy_support) tmp = usb_ohci_ci_read_reg(c,HceControl);
-	else tmp = 0;
+	if (c->legacy_support) ctl.raw = usb_ohci_ci_read_reg(c,HceControl);
+	else ctl.raw = 0;
 
-	c->legacy_emulation_active = (tmp&HceControl_EmulationEnable)?1:0;
-	c->legacy_irq_enable = (tmp&HceControl_IRQEn)?1:0;
-	c->legacy_external_irq_enable = (tmp&HceControl_ExternalIRQEn)?1:0;
-	c->legacy_a20_state = (tmp&HceControl_A20State)?1:0;
+	c->legacy_irq_enable = ctl.f.IRQEn;
+	c->legacy_a20_state = ctl.f.A20State;
+	c->legacy_emulation_active = ctl.f.EmulationEnable;
+	c->legacy_external_irq_enable = ctl.f.ExternalIRQEn;
 
 	c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 	c->bios_is_using_it = c->control.f.InterruptRouting;
