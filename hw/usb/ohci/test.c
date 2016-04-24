@@ -86,6 +86,18 @@ enum {
 	HceStatus =				0x10C
 };
 
+enum { // HcInterruptEnable and HcInterruptDisable
+	HcInterrupt_SO =			(1UL <<  0UL),
+	HcInterrupt_WDH =			(1UL <<  1UL),
+	HcInterrupt_SF =			(1UL <<  2UL),
+	HcInterrupt_RD =			(1UL <<  3UL),
+	HcInterrupt_UE =			(1UL <<  4UL),
+	HcInterrupt_FNO =			(1UL <<  5UL),
+	HcInterrupt_RHSC =			(1UL <<  6UL),
+	HcInterrupt_OC =			(1UL << 30UL),
+	HcInterrupt_MIE =			(1UL << 31UL),
+};
+
 union usb_ohci_ci_hcecontrol {
 	struct {
 		/* HceControl (mmio+0x100) */
@@ -210,7 +222,7 @@ struct usb_ohci_ci_ctx {
 	uint16_t		FrameNumberHi;
 	uint16_t		PeriodicStart;
 	volatile uint32_t	irq_events;
-	volatile uint32_t	port_events[16];	/* NTS: port_events[0] is HcRhStatus */
+	volatile uint16_t	port_events[16];	/* NTS: port_events[0] is HcRhStatus. Upper 16 bits. */
 
 	struct usb_ohci_ci_rhd	RootHubDescriptor;
 };
@@ -294,9 +306,6 @@ void usb_ohci_ci_write_port_status(struct usb_ohci_ci_ctx *ohci,uint8_t port,uin
 }
 
 int usb_ohci_ci_software_online(struct usb_ohci_ci_ctx *c) {
-	unsigned int port;
-	uint32_t tmp;
-
 	if (c == NULL) return -1;
 
 	/* do NOT reset the controller if the BIOS is using it!!! */
@@ -319,18 +328,6 @@ int usb_ohci_ci_software_online(struct usb_ohci_ci_ctx *c) {
 	/* if it kept the state, then we're good */
 	c->control.raw = usb_ohci_ci_read_reg(c,HcControl);
 	if (c->control.f.HostControllerFunctionalState == 2/*USBOperational*/) return 0;
-
-	/* root hub */
-	tmp = usb_ohci_ci_read_port_status(c,0/*root hub*/) & 0x00020000UL; /* mask off all but "status change" bits */
-	usb_ohci_ci_write_port_status(c,0,tmp); /* write back to clear status */
-	c->port_events[0] |= tmp; /* note them in our context so the main program can react */
-
-	/* and ports */
-	for (port=1;port <= usb_ohci_root_hub_downstream_port_count(c);port++) {
-		tmp = usb_ohci_ci_read_port_status(c,port) & 0x001F0000UL; /* mask off all but "status change" bits */
-		usb_ohci_ci_write_port_status(c,port,tmp); /* write back to clear status in HC */
-		c->port_events[port] |= tmp; /* note them in our context so the main program can react */
-	}
 
 	return (c->control.f.HostControllerFunctionalState == 2/*USBOperational*/)?0:-1;
 }
@@ -482,7 +479,7 @@ int usb_ohci_ci_software_reset(struct usb_ohci_ci_ctx *c) {
 	for (i=0;i < 16;i++) c->port_events[i] = 0;
 	c->irq_events = 0;
 	usb_ohci_ci_write_reg(c,HcControl,c->control.raw);
-	usb_ohci_ci_write_reg(c,HcInterruptDisable,0xC000007FUL); /* disable all event interrupts, including Ownership Change and Master */
+	usb_ohci_ci_write_reg(c,HcInterruptDisable,HcInterrupt_SO+HcInterrupt_WDH+HcInterrupt_SF+HcInterrupt_RD+HcInterrupt_UE+HcInterrupt_FNO+HcInterrupt_RHSC+HcInterrupt_OC+HcInterrupt_MIE);
 
 	tmp = usb_ohci_ci_read_reg(c,HcFmInterval);
 	c->FrameInterval = tmp & 0x3FFF;
@@ -643,11 +640,12 @@ int usb_ohci_ci_ownership_change(struct usb_ohci_ci_ctx *c,unsigned int bios_own
 
 	if (bios_owner && !c->bios_is_using_it) {
 		/* disable all other interrupts */
-		usb_ohci_ci_write_reg(c,HcInterruptDisable,0x8000007FUL); /* disable all event interrupts, except Ownership Change */
+		usb_ohci_ci_write_reg(c,HcInterruptDisable,/*HcInterrupt_MIE+*/HcInterrupt_OC+HcInterrupt_RHSC+HcInterrupt_FNO+HcInterrupt_UE+HcInterrupt_RD+HcInterrupt_SF+HcInterrupt_WDH+HcInterrupt_SO); /* disable all event interrupts, except Ownership Change */
+
 	}
 
 	/* enable the Ownership Change interrupt, make sure BIOS responds to it */
-	usb_ohci_ci_write_reg(c,HcInterruptEnable,(1UL << 30UL)/*Ownership Change Interrupt*/ | (1UL << 31UL)/*Master Interrupt Enable*/);
+	usb_ohci_ci_write_reg(c,HcInterruptEnable,HcInterrupt_MIE/*Master Interrupt Enable*/+HcInterrupt_OC/*Ownership Change*/);
 
 	/* forcibly clear interrupt status to ensure it triggers */
 	usb_ohci_ci_write_reg(c,HcInterruptStatus,0x7FFFFFFFUL);
@@ -682,7 +680,7 @@ int usb_ohci_ci_ownership_change(struct usb_ohci_ci_ctx *c,unsigned int bios_own
 	if (!bios_owner && !c->control.f.InterruptRouting) {
 		fprintf(stderr,"OHCI debug: Disabling all interrupts, I own the controller now\n");
 		cpu_flags = get_cpu_flags(); _cli();
-		usb_ohci_ci_write_reg(c,HcInterruptDisable,0xC000007FUL); /* disable all event interrupts, including Ownership Change */
+		usb_ohci_ci_write_reg(c,HcInterruptDisable,HcInterrupt_SO+HcInterrupt_WDH+HcInterrupt_SF+HcInterrupt_RD+HcInterrupt_UE+HcInterrupt_FNO+HcInterrupt_RHSC+HcInterrupt_OC+HcInterrupt_MIE);
 		set_cpu_flags(cpu_flags);
 	}
 
@@ -798,13 +796,13 @@ static void interrupt usb_irq() {
 		/* root hub */
 		tmp = usb_ohci_ci_read_port_status(ohci,0/*root hub*/) & 0x00020000UL; /* mask off all but "status change" bits */
 		usb_ohci_ci_write_port_status(ohci,0,tmp); /* write back to clear status */
-		ohci->port_events[0] |= tmp; /* note them in our context so the main program can react */
+		ohci->port_events[0] |= (uint16_t)(tmp >> 16UL); /* note them in our context so the main program can react */
 
 		/* and ports */
 		for (port=1;port <= usb_ohci_root_hub_downstream_port_count(ohci);port++) {
-			tmp = usb_ohci_ci_read_port_status(ohci,port) & 0x001F0000UL; /* mask off all but "status change" bits */
+			tmp = usb_ohci_ci_read_port_status(ohci,port) & 0xFFFF0000UL; /* mask off all but "status change" bits */
 			usb_ohci_ci_write_port_status(ohci,port,tmp); /* write back to clear status in HC */
-			ohci->port_events[port] |= tmp; /* note them in our context so the main program can react */
+			ohci->port_events[port] |= (uint16_t)(tmp >> 16UL); /* note them in our context so the main program can react */
 		}
 	}
 
@@ -857,11 +855,14 @@ static const struct vga_menu_item main_menu_port_toggle_removeable =
 static const struct vga_menu_item main_menu_port_toggle_port_power_mask =
 	{"Toggle Port Power Mask [port]",		'm',	0,	0};
 
-static const struct vga_menu_item main_menu_port_toggle_port_enable =
-	{"Toggle Port Enable [port]",			'e',	0,	0};
-
 static const struct vga_menu_item main_menu_port_toggle_port_suspend =
 	{"Toggle Port Suspend [port]",			's',	0,	0};
+
+static const struct vga_menu_item main_menu_port_disable =
+	{"Port Disable [port]",				'e',	0,	0};
+
+static const struct vga_menu_item main_menu_port_enable =
+	{"Port Enable [port]",				'e',	0,	0};
 
 static const struct vga_menu_item main_menu_port_enable_port_power =
 	{"Enable Port Power [port]",			'p',	0,	0};
@@ -883,8 +884,9 @@ static const struct vga_menu_item* main_menu_port[] = {
 	&menu_separator,
 	&main_menu_port_toggle_removeable,
 	&main_menu_port_toggle_port_power_mask,
-	&main_menu_port_toggle_port_enable,
 	&main_menu_port_toggle_port_suspend,
+	&main_menu_port_disable,
+	&main_menu_port_enable,
 	&main_menu_port_disable_port_power,
 	&main_menu_port_enable_port_power,
 	&main_menu_port_do_port_reset,
@@ -969,16 +971,20 @@ void main_menu() {
 			vga_write_color(selector == 0 ? 0x70 : 0x07);
 
 			vga_moveto(0,3);
-			sprintf(str_tmp,"Root Hub Descriptor: %02u ports [redraw=%lu]\n",
-				usb_ohci_root_hub_downstream_port_count(ohci),(unsigned long)(redrawcount++));
+			sprintf(str_tmp,"Root Hub: %02u ports [drw=%lu] %08lx %08lx %08lx\n",
+				usb_ohci_root_hub_downstream_port_count(ohci),(unsigned long)(redrawcount++),
+				(unsigned long)ohci->RootHubDescriptor.desc_a.raw,
+				(unsigned long)ohci->RootHubDescriptor.desc_b.raw,
+				(unsigned long)ohci->RootHubDescriptor.status.raw);
 			vga_write(str_tmp);
 
-			sprintf(str_tmp,"PSM=%u NPS=%u OCPM=%u NOCP=%u POTGT=%ums\n",
+			sprintf(str_tmp,"PSM=%u NPS=%u OCPM=%u NOCP=%u POTGT=%ums irq %08lx\n",
 				ohci->RootHubDescriptor.desc_a.f.PowerSwitchingMode,
 				ohci->RootHubDescriptor.desc_a.f.NoPowerSwitching,
 				ohci->RootHubDescriptor.desc_a.f.OverCurrentProtectionMode,
 				ohci->RootHubDescriptor.desc_a.f.NoOverCurrentProtection,
-				(unsigned int)ohci->RootHubDescriptor.desc_a.f.PowerOnToGoodTime * 2U);
+				(unsigned int)ohci->RootHubDescriptor.desc_a.f.PowerOnToGoodTime * 2U,
+				(unsigned long)ohci->irq_events);
 			vga_write(str_tmp);
 
 			sprintf(str_tmp,"REMOVEABLE=%08lX POWERCTRL=%08lX OCI=%u DRWE=%u OCIC=%u\n",
@@ -1003,7 +1009,7 @@ void main_menu() {
 				else
 					vga_write_color(selector == port ? 0x70 : 0x07);
 
-				sprintf(str_tmp,"PORT%d Connected=%u Enabled=%u Suspended=%u OCI=%u Reset=%u Power=%u LowSpeed=%u\n",
+				sprintf(str_tmp,"PORT%d CCS=%u PES=%u PSS=%u POCI=%u PRS=%u PPS=%u LSDA=%u events=%04x\n",
 					port,
 					(ps&0x00000001UL)?1:0,	/* CCS */
 					(ps&0x00000002UL)?1:0,	/* PES */
@@ -1011,17 +1017,14 @@ void main_menu() {
 					(ps&0x00000008UL)?1:0,	/* POCI Overcurrent Indicator */
 					(ps&0x00000010UL)?1:0,	/* PRS */
 					(ps&0x00000100UL)?1:0,	/* PPS */
-					(ps&0x00000200UL)?1:0);	/* LSDA */
+					(ps&0x00000200UL)?1:0,	/* LSDA */
+					(unsigned int)ohci->port_events[port]);
 				vga_write(str_tmp);
 
-				sprintf(str_tmp,"  ConnChg=%u EnChg=%u SuspChg=%u OCIC=%u ResetChg=%u CantRem=%u PerPortPwr=%u\n",
-					(ps&0x00010000UL)?1:0,	/* CSC */
-					(ps&0x00020000UL)?1:0,	/* PESC */
-					(ps&0x00040000UL)?1:0,	/* PSSC */
-					(ps&0x00080000UL)?1:0,	/* OCIC */
-					(ps&0x00100000UL)?1:0,	/* PRSC */
+				sprintf(str_tmp,"  DevRem=%u PortPwrCtl=%u [%08lx]\n",
 					(ohci->RootHubDescriptor.desc_b.f.DeviceRemovable>>port)&1,
-					(ohci->RootHubDescriptor.desc_b.f.PortPowerControlMask>>port&1));
+					(ohci->RootHubDescriptor.desc_b.f.PortPowerControlMask>>port)&1,
+					(unsigned long)ps);
 				vga_write(str_tmp);
 			}
 
@@ -1138,17 +1141,16 @@ void main_menu() {
 					redraw = 1;
 				}
 			}
-			else if (mitem == &main_menu_port_toggle_port_enable) {
+			else if (mitem == &main_menu_port_disable) {
 				if (selector != 0) {
-					tmp = usb_ohci_ci_read_port_status(ohci,selector);
-					if (tmp & 2UL) {
-						/* port is enabled, disable */
-						usb_ohci_ci_write_port_status(ohci,selector,1UL/*ClearPortEnable*/);
-					}
-					else {
-						/* port is disabled, enable */
-						usb_ohci_ci_write_port_status(ohci,selector,2UL/*SetPortEnable*/);
-					}
+					usb_ohci_ci_write_port_status(ohci,selector,1UL/*ClearPortEnable*/);
+					usb_ohci_ci_update_root_hub_status(ohci);
+					redraw = 1;
+				}
+			}
+			else if (mitem == &main_menu_port_enable) {
+				if (selector != 0) {
+					usb_ohci_ci_write_port_status(ohci,selector,2UL/*SetPortEnable*/);
 					usb_ohci_ci_update_root_hub_status(ohci);
 					redraw = 1;
 				}
@@ -1423,12 +1425,8 @@ int main(int argc,char **argv) {
 	if (usb_ohci_ci_software_online(ohci))
 		printf("Controller resume failure\n");
 
-	/* we have the IRQ hooked, it's safe now to enable interrupts */
-	/* NTS: Early versions of this code left the SOF interrupt enabled, which meant that at minimum the USB
-		controller would fire an IRQ every 1ms. But an IRQ firing 1000 times/sec seems to cause stack overflows
-		on slower machines under the DOS extender, and stack overflows on 16-bit real mode builds because of
-		the overhead in checking and validating Flat Real Mode. So we leave it off. */
-	usb_ohci_ci_write_reg(ohci,HcInterruptEnable,0xC0000068); /* enable MIE+OC+RHSC+FNO+RD */
+	/* we have the IRQ hooked, it's safe now to enable interrupts. but don't enable Start Frame interrupt. */
+	usb_ohci_ci_write_reg(ohci,HcInterruptEnable,HcInterrupt_SO+HcInterrupt_WDH/*+HcInterrupt_SF*/+HcInterrupt_RD+HcInterrupt_UE+HcInterrupt_FNO+HcInterrupt_RHSC+HcInterrupt_OC+HcInterrupt_MIE);
 
 	printf(" - Controller state: ");
 	switch (ohci->control.f.HostControllerFunctionalState) {
