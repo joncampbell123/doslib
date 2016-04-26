@@ -44,6 +44,12 @@ software to stop the counter and/or mute the speaker output.
 
 On IBM PC hardware:
 
+    I/O port 40h to 42h:
+          8253/8254 counters 0 to 2, bytewise access.
+
+    I/O port 43h:
+          8253/8254 control port.
+
     I/O port 61h:
 
           bit 0 (W): TTL output ANDed with Counter 2 output. 1=allow output to speaker   0=silence output
@@ -53,8 +59,14 @@ On IBM PC hardware:
 On PC-98 hardware:
 
     I/O port 35h:
-
           bit 3 (W): TTL output to enable "buzzer". 1=stop 0=enable
+
+    I/O port 71h, 73h, 75h:
+          8253/8254 counters 0 to 2, bytewise access.
+
+    I/O port 77h:
+          8253/8254 control port.
+
 
 
 
