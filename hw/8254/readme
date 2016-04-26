@@ -54,7 +54,7 @@ On PC-98 hardware:
 
     I/O port 35h:
 
-          bit 3 (W): TTL output to enable PC speaker (TODO: to AND gate of Counter 2 output? or does this go to Counter 2 gate to start/stop counter?)
+          bit 3 (W): TTL output to enable "buzzer". 1=stop 0=enable
 
 
 

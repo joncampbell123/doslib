@@ -31,6 +31,7 @@
 /* NEC PC-98 */
 # define PC_SPEAKER_GATE					0x35
 # define PC_SPEAKER_GATE_MASK					0x01 /* mask prior to shift */
+# define PC_SPEAKER_GATE_XOR                                    0x01
 # define PC_SPEAKER_GATE_SHIFT					3
 
 /* values to use with pc_speaker_set_gate */
@@ -40,6 +41,7 @@
 /* IBM PC/XT/AT */
 # define PC_SPEAKER_GATE					0x61
 # define PC_SPEAKER_GATE_MASK					0x03 /* mask prior to shift */
+# define PC_SPEAKER_GATE_XOR                                    0x00
 # define PC_SPEAKER_GATE_SHIFT					0
 
 /* values to use with pc_speaker_set_gate */
@@ -179,7 +181,7 @@ static inline void write_8254(unsigned char timer,t8254_time_t count,unsigned ch
 }
 
 static inline unsigned char t8254_pc_speaker_read_gate() {
-	return (inp(PC_SPEAKER_GATE) >> PC_SPEAKER_GATE_SHIFT) & PC_SPEAKER_GATE_MASK;
+	return ((inp(PC_SPEAKER_GATE) >> PC_SPEAKER_GATE_SHIFT) & PC_SPEAKER_GATE_MASK) ^ PC_SPEAKER_GATE_XOR;
 }
 
 static inline void t8254_pc_speaker_set_gate(unsigned char m) {
@@ -187,7 +189,7 @@ static inline void t8254_pc_speaker_set_gate(unsigned char m) {
 
 	x = inp(PC_SPEAKER_GATE);
 	x &= ~(PC_SPEAKER_GATE_MASK << PC_SPEAKER_GATE_SHIFT);
-	x |=  (m & PC_SPEAKER_GATE_MASK) << PC_SPEAKER_GATE_SHIFT;
+	x |=  ((m ^ PC_SPEAKER_GATE_XOR) & PC_SPEAKER_GATE_MASK) << PC_SPEAKER_GATE_SHIFT;
 	outp(PC_SPEAKER_GATE,x);
 }
 
