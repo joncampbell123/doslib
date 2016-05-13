@@ -21,7 +21,7 @@ towards running in a Windows "DOS Box", though that is strongly discouraged.
 
 8042 ............. 8042 keyboard controller (and PS/2 mouse)
 8250 ............. 8250/16450/16550/16750 serial port UART
-8254 ............. 8254 timer chip
+8254 ............. 8253/8254 timer chip
 8259 ............. 8259 programmable interrupt controller
 acpi ............. ACPI BIOS support functions and experiments
 apm .............. APM BIOS support functions
