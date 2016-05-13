@@ -61,10 +61,19 @@ while ($line = <STDIN>) {
 			read(TO,$procret,65536);
 			close(TO);
 
+			$shift_2nd = 0;
 			for ($l=0;$l < length($procret);$l++) {
 				$c = substr($procret,$l,1);
-				if (ord($c) >= 0x80) {
-					$out .= sprintf("\\x%02x",ord($c));
+				$o = ord($c);
+				if ($o < 0x20 || $o >= 0x7F || $shift_2nd) {
+					$out .= sprintf("\\x%02x",$o);
+
+					if (($o >= 0x80 && $o <= 0xA0) || ($o >= 0xE0 && $o <= 0xFF)) {
+						$shift_2nd = 1; # first byte of double-byte
+					}
+					else {
+						$shift_2nd = 0;
+					}
 				}
 				else {
 					$out .= $c;
