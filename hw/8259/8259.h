@@ -41,6 +41,9 @@
 
 # define P8259_SLAVE_DATA		0x08
 # define P8259_SLAVE_MASK		0x0A
+
+/* slave PIC cascades to IRQ 7 on master PIC */
+# define P8259_SLAVE_MASTER_CASCADE_IRQ	7
 #else
 /* IBM PC/XT/AT 0x20-0x21, 0xA0-0xA1 */
 # define P8259_MASTER_DATA		0x20
@@ -48,6 +51,9 @@
 
 # define P8259_SLAVE_DATA		0xA0
 # define P8259_SLAVE_MASK		0xA1
+
+/* slave PIC cascades to IRQ 2 on master PIC */
+# define P8259_SLAVE_MASTER_CASCADE_IRQ	2
 #endif
 
 /* OCW2 command bits. For most commands you are expected to OR the low 3 bits with the IRQ for the command to take effect on */
@@ -104,8 +110,14 @@ static inline unsigned char p8259_read_ISR(unsigned char c) {
 
 static inline unsigned char irq2int(unsigned char c) {
 	c &= 0xF;
+#ifdef TARGET_PC98
+/* NEC PC-98 maps IRQ 0-15 to interrupts 0x08-0x17. Slave PIC cascades to master PIC IRQ 7. */
+	return c+0x08;
+#else
+/* IBM PC/XT/AT maps IRQ 0-7 to interrupts 0x08-0x0F and IRQ 8-15 to interrupts 0x70-0x77. Slave PIC cascades to master PIC IRQ 2. */
 	if (c & 8) return c-8+0x70;
 	return c+0x08;
+#endif
 }
 
 static inline void p8259_unmask(unsigned char c) {
