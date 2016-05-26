@@ -73,11 +73,13 @@ enum {
 	TYPE_8250_MAX
 };
 
+#pragma pack(push,1)
 struct info_8250 {
-	uint8_t		type;
 	uint16_t	port;
+	uint8_t		type;
 	int8_t		irq;
 };
+#pragma pack(pop)
 
 extern const char*		type_8250_strs[TYPE_8250_MAX];
 extern const uint16_t		standard_8250_ports[STANDARD_8250_PORT_COUNT];
