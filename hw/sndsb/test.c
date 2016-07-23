@@ -352,6 +352,8 @@
 #include <hw/sndsb/sndsbpnp.h>
 #endif
 
+static unsigned char force_srate_tc = 0;
+static unsigned char force_srate_4xx = 0;
 static unsigned char assume_dsp_hispeed_doesnt_block = 0;
 static unsigned char always_reset_dsp_to_stop = 0;
 static unsigned char dma_autoinit_override = 0;
@@ -2796,6 +2798,8 @@ static struct vga_menu_item main_menu_device_dsp_alias =
 	{"Alias ports",		'a',	0,	0};
 static struct vga_menu_item main_menu_device_busy_cycle =
 	{"Busy cycle",		'b',	0,	0};
+static struct vga_menu_item main_menu_device_srate_force =
+	{"xxx",		        's',	0,	0};
 #endif
 
 static const struct vga_menu_item* main_menu_device[] = {
@@ -2823,6 +2827,7 @@ static const struct vga_menu_item* main_menu_device[] = {
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_device_dsp_alias,
 	&main_menu_device_busy_cycle,
+    &main_menu_device_srate_force,
 #endif
 	NULL
 };
@@ -3001,6 +3006,13 @@ void update_cfg() {
 		sb_card->poll_ack_when_no_irq ? "Poll ack when no IRQ: On" : "Poll ack when no IRQ: Off";
 	main_menu_playback_wari_hack_alias.text =
 		sb_card->wari_hack_mode ? "Wari Hack Alias: On" : "Wari Hack Alias: Off";
+
+    if (sb_card->srate_force_dsp_4xx)
+        main_menu_device_srate_force.text = "Force srate cmd: Using 4.xx (switch to TC)";
+    else if (sb_card->srate_force_dsp_tc)
+        main_menu_device_srate_force.text = "Force srate cmd: Using TC (switch to Off)";
+    else
+        main_menu_device_srate_force.text = "Force srate cmd: Off (switch to 4.xx)";
 #endif
 }
 
@@ -3190,6 +3202,8 @@ static void help() {
 	printf(" /dmaaio              Allow DMA auto-init override (careful!)\n");
 	printf(" /hinoblk             Assume DSP hispeed modes are non-blocking\n");
 	printf(" /stopres             Always reset DSP to stop playback\n");
+    printf(" /srf4xx              Force SB16 sample rate commands\n");
+    printf(" /srftc               Force SB/SBPro time constant sample rate\n");
 #endif
 
 #if TARGET_MSDOS == 32
@@ -4105,6 +4119,12 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"nd14")) {
 				dma_probe_14 = 0;
 			}
+            else if (!strcmp(a,"srf4xx")) {
+                force_srate_4xx = 1;
+            }
+            else if (!strcmp(a,"srftc")) {
+                force_srate_tc = 1;
+            }
 			else if (!strcmp(a,"stopres")) {
 				always_reset_dsp_to_stop = 1;
 			}
@@ -4426,6 +4446,8 @@ int main(int argc,char **argv) {
 		if (dma_autoinit_override) cx->dsp_autoinit_dma_override = 1;
 		if (assume_dsp_hispeed_doesnt_block) cx->hispeed_blocking = 0;
 		if (always_reset_dsp_to_stop) cx->always_reset_dsp_to_stop = 1;
+        if (force_srate_4xx) cx->srate_force_dsp_4xx = 1;
+        if (force_srate_tc) cx->srate_force_dsp_tc = 1;
 
 		// having IRQ and DMA changes the ideal playback method and capabilities
 		sndsb_update_capabilities(cx);
@@ -4780,6 +4802,28 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
+            else if (mitem == &main_menu_device_srate_force) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+
+                if (sb_card->srate_force_dsp_4xx) {
+                    sb_card->srate_force_dsp_4xx = 0;
+                    sb_card->srate_force_dsp_tc = 1;
+                }
+                else if (sb_card->srate_force_dsp_tc) {
+                    sb_card->srate_force_dsp_4xx = 0;
+                    sb_card->srate_force_dsp_tc = 0;
+                }
+                else {
+                    sb_card->srate_force_dsp_4xx = 1;
+                    sb_card->srate_force_dsp_tc = 0;
+                }
+				update_cfg();
+
+				if (wp) begin_play();
+				bkgndredraw = 1;
+				redraw = 1;
+            }
 			else if (mitem == &main_menu_device_busy_cycle) {
 				// NTS: The user may be testing the busy cycle while the card is playing audio. Do NOT stop playback!
 				//      The test carried out in this function does not send DSP commands, it only polls the DSP.

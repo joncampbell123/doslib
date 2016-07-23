@@ -293,6 +293,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->timer_tick_func = NULL;
 	cx->poll_ack_when_no_irq = 1;
 	cx->reason_not_supported = NULL;
+    cx->srate_force_dsp_4xx = 0;
+    cx->srate_force_dsp_tc = 0;
 	cx->virtualbox_emulation = sndsb_virtualbox_emulation;
 	cx->dsp_alias_port = sndsb_probe_options.use_dsp_alias;
 	cx->dsp_direct_dac_poll_retry_timeout = 16; /* assume at least 16 I/O reads to wait for DSP ready */
@@ -482,7 +484,7 @@ int sndsb_try_base(uint16_t iobase) {
 }
 
 int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned char stereo,unsigned char bit16) {
-	unsigned long lm;
+	unsigned long lm,total_rate;
 
 	if (cx->dsp_playing)
 		return 0;
@@ -629,8 +631,34 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 		cx->chose_autoinit_dsp = cx->dsp_autoinit_command;
 	}
 
+    total_rate = rate * (cx->buffer_stereo ? 2UL : 1UL);
+
+    {
+        int m;
+
+        if (cx->srate_force_dsp_4xx)
+            m = 4;
+        else if (cx->srate_force_dsp_tc)
+            m = 1;
+	    else if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx)
+            m = 0; // don't do anything
+        // auto
+        else if (cx->dsp_adpcm > 0)
+            m = 1;
+        else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx)
+            m = 4;
+        else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx)
+            m = 1;
+        else
+            m = 0;
+
+        if (m == 4)
+            sndsb_write_dsp_outrate(cx,rate);
+        else if (m >= 1)
+            sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,total_rate));
+    }
+
 	if (cx->dsp_adpcm > 0) {
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate));
 		if (stereo || bit16 || cx->dsp_record || cx->goldplay_mode)
 			return 0; /* ADPCM modes do not support stereo or 16 bit nor recording */
 
@@ -645,7 +673,6 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_1xx) {
 		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,rate * (cx->buffer_stereo ? 2UL : 1UL)));
 		cx->chose_autoinit_dsp = 0; /* DSP 1.xx does not support auto-init DSP commands */
 	}
 	else if (cx->ess_extensions && cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx) {
@@ -654,10 +681,6 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	}
 	else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_200 && cx->dsp_play_method <= SNDSB_DSPOUTMETHOD_3xx) {
 		/* DSP 2.00, 2.01+, and DSP 3.xx */
-		unsigned long total_rate = rate * (cx->buffer_stereo ? 2UL : 1UL);
-
-		/* NTS: Apparently, issuing Pause & Resume commands at this stage hard-crashes DOSBox 0.74? */
-		sndsb_write_dsp_timeconst(cx,sndsb_rate_to_time_constant(cx,total_rate));
 
 		/* DSP 2.01 and higher can do "high-speed" DMA transfers up to 44.1KHz */
 		if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_201) {
@@ -684,7 +707,6 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
 		/* DSP 4.xx management is much simpler here */
-		sndsb_write_dsp_outrate(cx,rate);
 	}
 
 	/* auto-init DSP modes require auto-init DMA. if auto-init DMA
