@@ -4205,13 +4205,18 @@ int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
     if (sndsb_sb16asp_set_mode_register(cx,0xF9) < 0) // 0xF9 == ??
         goto fail_need_reset;
 
-    // read value
+    // read value.
+    // Noted on real hardware, is that the read back will return what we last wrote from the above test.
     if ((t1=sndsb_sb16asp_get_register(cx,0x83)) < 0)
         goto fail_need_reset;
 
     // then read the value again and expect all bits to toggle. else the bits fail.
+    // NTS: Actually on real hardware, register 0x83 will only toggle twice, then stop.
+    //      So if we set mode == 0xF9, if the last value we wrote was 0xFF, then we'll
+    //      read back 0xFF (what we wrote), then 0x00, then 0xFF, and then because the
+    //      bits stop toggling, we'll read 0xFF afterwards.
     t2 = t1 ^ 0xFF;
-    for (i=0;i < 8;i++) {
+    for (i=0;i < 2;i++) {
         if ((t1=sndsb_sb16asp_get_register(cx,0x83)) < 0)
             goto fail_need_reset;
 
