@@ -352,6 +352,7 @@
 #include <hw/sndsb/sndsbpnp.h>
 #endif
 
+static unsigned char ignore_asp = 0;
 static unsigned char force_srate_tc = 0;
 static unsigned char force_srate_4xx = 0;
 static unsigned char assume_dsp_hispeed_doesnt_block = 0;
@@ -3204,6 +3205,7 @@ static void help() {
 	printf(" /stopres             Always reset DSP to stop playback\n");
     printf(" /srf4xx              Force SB16 sample rate commands\n");
     printf(" /srftc               Force SB/SBPro time constant sample rate\n");
+    printf(" /noasp               Don't probe SB16 ASP/CSP chip\n");
 #endif
 
 #if TARGET_MSDOS == 32
@@ -4069,6 +4071,166 @@ void fx_vol_dialog() {
 }
 #endif
 
+/* TODO move to library */
+
+/* SB16 ASP set codec parameter */
+int sndsb_sb16asp_set_codec_parameter(struct sndsb_ctx *cx,uint8_t param,uint8_t value) {
+    if (!cx->has_asp_chip)
+        return -1;
+
+    if (sndsb_write_dsp(cx,0x05) < 0) // set codec parameter <value> <param>
+        return -1;
+    if (sndsb_write_dsp(cx,value) < 0)
+        return -1;
+    if (sndsb_write_dsp(cx,param) < 0)
+        return -1;
+
+    return 0;
+}
+
+/* read back parameter index of last set codec param command */
+int sndsb_sb16asp_read_last_codec_parameter(struct sndsb_ctx *cx) {
+    if (!cx->has_asp_chip)
+        return -1;
+
+    if (sndsb_write_dsp(cx,0x03) < 0) // ?? this is what the Linux kernel does... don't know if it's needed
+        return -1;
+
+    return sndsb_read_dsp(cx);
+}
+
+int sndsb_sb16asp_set_mode_register(struct sndsb_ctx *cx,uint8_t val) {
+    if (!cx->has_asp_chip)
+        return -1;
+
+    if (sndsb_write_dsp(cx,0x04) < 0) // set mode register
+        return -1;
+    if (sndsb_write_dsp(cx,val) < 0)
+        return -1;
+
+    return 0;
+}
+
+int sndsb_sb16asp_set_register(struct sndsb_ctx *cx,uint8_t reg,uint8_t val) {
+    if (!cx->has_asp_chip)
+        return -1;
+
+    if (sndsb_write_dsp(cx,0x0E) < 0) // set register
+        return -1;
+    if (sndsb_write_dsp(cx,reg) < 0)
+        return -1;
+    if (sndsb_write_dsp(cx,val) < 0)
+        return -1;
+
+    return 0;
+}
+
+int sndsb_sb16asp_get_register(struct sndsb_ctx *cx,uint8_t reg) {
+    if (!cx->has_asp_chip)
+        return -1;
+
+    if (sndsb_write_dsp(cx,0x0F) < 0) // get register
+        return -1;
+    if (sndsb_write_dsp(cx,reg) < 0)
+        return -1;
+
+    return sndsb_read_dsp(cx);
+}
+
+int sndsb_sb16asp_readwrite_test_register_83(struct sndsb_ctx *cx) {
+    unsigned int i;
+    int val,expect;
+
+    if (!cx->has_asp_chip)
+        return -1;
+
+    // Creative drivers read the value, then toggle the byte and write it, 3-4 times.
+    val = sndsb_sb16asp_get_register(cx,0x83);
+    if (val < 0)
+        return -1;
+
+    for (i=0;i < 4;i++) {
+        expect = val ^ 0xFF;
+        if (sndsb_sb16asp_set_register(cx,0x83,(uint8_t)expect) < 0)
+            return -1;
+
+        val = sndsb_sb16asp_get_register(cx,0x83);
+        if (val != expect)
+            return -1;
+    }
+
+    return 0;
+}
+
+int sndsb_sb16asp_get_version(struct sndsb_ctx *cx) {
+    int val;
+
+    if (!cx->has_asp_chip)
+        return -1;
+
+    if (sndsb_write_dsp(cx,0x08) < 0)
+        return -1;
+    if (sndsb_write_dsp(cx,0x03) < 0)
+        return -1;
+
+    val = sndsb_read_dsp(cx);
+    if (val < 0x10 || val > 0x1F)
+        return -1;
+
+    cx->asp_chip_version_id = (uint8_t)val;
+    return 0;
+}
+
+/* check for Sound Blaster 16 ASP/CSP chip */
+int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
+    unsigned int i;
+
+    if (cx == NULL) return 0;
+    if (cx->probed_asp_chip) return cx->has_asp_chip; // don't probe twice
+    if (cx->dsp_vmaj != 4) return 0; // must be Sound Blaster 16
+    if (cx->is_gallant_sc6600) return 0; // must not be Gallant SC-6600 / Reveal SC-400
+
+    cx->has_asp_chip = 1;
+    cx->probed_asp_chip = 1;
+    cx->asp_chip_version_id = 0;
+
+    if (sndsb_sb16asp_set_codec_parameter(cx,0x00,0x00) < 0)
+        goto fail_need_reset;
+
+    // note this follows the sequence used by Creative's SB16 software, not the order used by the Linux kernel.
+    for (i=0;i < 2;i++) {
+        if (sndsb_sb16asp_set_mode_register(cx,0xFC) < 0) // 0xFC == ??
+            goto fail_need_reset;
+        if (sndsb_sb16asp_set_mode_register(cx,0xFA) < 0) // 0xFA == ??
+            goto fail_need_reset;
+        if (sndsb_sb16asp_readwrite_test_register_83(cx) < 0)
+            goto fail;
+
+        // TODO: Sets mode register to 0xF9, then reads 4 times.
+        //       According to DOSBox-X reading register 0x83 toggles all bits and results in 0xFF, 0x00, etc.
+        //       The Linux kernel doesn't do this test.
+    }
+
+    if (sndsb_sb16asp_set_mode_register(cx,0x00) < 0) // 0x00 == ??
+        goto fail_need_reset;
+
+    if (sndsb_sb16asp_get_version(cx) < 0)
+        goto fail_need_reset;
+
+	sndsb_reset_dsp(cx);
+    return 1;
+fail_need_reset:
+	sndsb_reset_dsp(cx);
+fail:
+    if (sndsb_sb16asp_set_mode_register(cx,0x00) < 0) // 0x00 == ??
+        goto fail_need_reset;
+	sndsb_reset_dsp(cx);
+    cx->has_asp_chip = 0;
+    return 0;
+}
+
+/* END TODO */
+
 int main(int argc,char **argv) {
 	uint32_t sb_irq_pcounter = 0;
 	int i,loop,redraw,bkgndredraw,cc;
@@ -4121,6 +4283,9 @@ int main(int argc,char **argv) {
 			}
             else if (!strcmp(a,"srf4xx")) {
                 force_srate_4xx = 1;
+            }
+            else if (!strcmp(a,"noasp")) {
+                ignore_asp = 1;
             }
             else if (!strcmp(a,"srftc")) {
                 force_srate_tc = 1;
@@ -4485,6 +4650,10 @@ int main(int argc,char **argv) {
 			}
 #endif
 			printf("      '%s'\n",cx->dsp_copyright);
+
+            if (sndsb_check_for_sb16_asp(cx))
+                printf("      CSP/ASP chip detected: version=0x%02x\n",cx->asp_chip_version_id);
+
 			count++;
 		}
 		if (count == 0) {

@@ -245,6 +245,8 @@ struct sndsb_ctx {
 	uint8_t				sbos:1;			/* Gravis SBOS */
 	uint8_t				dsp_playing:1;
 	uint8_t				dsp_prepared:1;
+    uint8_t             has_asp_chip:1;     /* if Sound Blaster 16, whether or not the ASP/CSP chip is present */
+    uint8_t             probed_asp_chip:1;
 	/* options for calling library */
 	uint8_t				always_reset_dsp_to_stop:1;
 	uint8_t				goldplay_mode:1;	/* Goldplay mode: Set DMA transfer length to 1 (2 if stereo) and overwrite the same region of memory from timer.
@@ -294,6 +296,8 @@ struct sndsb_ctx {
 	unsigned short			max_sample_rate_sb_rec;		/* in Hz, maximum recording rate in non-hispeed mode */
 	unsigned short			max_sample_rate_sb_play_dac;	/* in Hz, maximum playback rate through DSP command 0x10 (Direct DAC output) */
 	unsigned short			max_sample_rate_sb_rec_dac;	/* in Hz, maximum recording rate through DSP command 0x20 (Direct DAC input) */
+/* ASP/CSP chip support */
+    uint8_t             asp_chip_version_id;        /* usually 0x10 to 0x1F */
 /* function call. calling application should call this from the timer interrupt (usually IRQ 0) to
  * allow direct DAC and "goldplay" modes to work or other idle maintenance functions. if NULL, do not call. */
 	void				(*timer_tick_func)(struct sndsb_ctx *cx);

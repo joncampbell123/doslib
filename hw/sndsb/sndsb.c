@@ -274,6 +274,9 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	probe_dos();
 	detect_windows();
 
+    cx->asp_chip_version_id = 0;
+    cx->probed_asp_chip = 0;
+    cx->has_asp_chip = 0;
 #if TARGET_MSDOS == 32
 	cx->goldplay_dma = NULL;
 #endif
