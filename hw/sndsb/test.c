@@ -4665,8 +4665,10 @@ int main(int argc,char **argv) {
 #endif
 			printf("      '%s'\n",cx->dsp_copyright);
 
-            if (sndsb_check_for_sb16_asp(cx))
-                printf("      CSP/ASP chip detected: version=0x%02x\n",cx->asp_chip_version_id);
+            if (!ignore_asp) {
+                if (sndsb_check_for_sb16_asp(cx))
+                    printf("      CSP/ASP chip detected: version=0x%02x\n",cx->asp_chip_version_id);
+            }
 
 			count++;
 		}
