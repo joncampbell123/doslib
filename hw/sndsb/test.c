@@ -4158,6 +4158,7 @@ int sndsb_sb16asp_get_version(struct sndsb_ctx *cx) {
 
 /* check for Sound Blaster 16 ASP/CSP chip */
 int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
+    unsigned int i;
     int t1,t2;
 
     if (cx == NULL) return 0;
@@ -4172,25 +4173,33 @@ int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
     if (sndsb_sb16asp_set_codec_parameter(cx,0x00,0x00) < 0)
         goto fail_need_reset;
 
+    // NTS: The Linux kernel has the correct sequence (mode=0xFC, then test register).
+    //      Creative's software seems to do it wrong, not sure how it worked (mode=0xFC then mode=0xFA, then test register).
+    //      On my SB16 ASP, setting mode=0xFA then writing the register allows ONE write, then further writes have no effect (and then this test fails).
+    //      While at the same time, setting mode=0xFC allows the register to change at will.
     if (sndsb_sb16asp_set_mode_register(cx,0xFC) < 0) // 0xFC == ??
         goto fail_need_reset;
-    if (sndsb_sb16asp_set_mode_register(cx,0xFA) < 0) // 0xFA == ??
-        goto fail_need_reset;
 
-    if ((t1=sndsb_sb16asp_get_register(cx,0x83)) < 0)
-        goto fail_need_reset;
-    if (sndsb_sb16asp_set_register(cx,0x83,(uint8_t)(~t1)))
-        goto fail_need_reset;
-    if ((t2=sndsb_sb16asp_get_register(cx,0x83)) < 0)
-        goto fail_need_reset;
-    if (sndsb_sb16asp_set_register(cx,0x83,(uint8_t)t1))
-        goto fail_need_reset;
-    if (t1 != (t2 ^ 0xFF))
-        goto fail;
-    if ((t2=sndsb_sb16asp_get_register(cx,0x83)) < 0)
-        goto fail_need_reset;
-    if (t1 != t2)
-        goto fail;
+    for (i=0;i < 4;i++) {
+        if ((t1=sndsb_sb16asp_get_register(cx,0x83)) < 0)
+            goto fail_need_reset;
+        if (sndsb_sb16asp_set_register(cx,0x83,(uint8_t)(~t1)))
+            goto fail_need_reset;
+        if ((t2=sndsb_sb16asp_get_register(cx,0x83)) < 0)
+            goto fail_need_reset;
+        if (sndsb_sb16asp_set_register(cx,0x83,(uint8_t)t1))
+            goto fail_need_reset;
+        if (t1 != (t2 ^ 0xFF))
+            goto fail;
+        if ((t2=sndsb_sb16asp_get_register(cx,0x83)) < 0)
+            goto fail_need_reset;
+        if (t1 != t2)
+            goto fail;
+    }
+
+    // TODO: What does Creative's DIAGNOSE.EXE accomplish by setting mode == 0xFA?
+
+    // TODO: Is it true from DOSBox ASP emulation that when mode == 0xF9, reading register 0x83 causes all bits to toggle?
 
     if (sndsb_sb16asp_set_mode_register(cx,0x00) < 0) // 0x00 == ??
         goto fail_need_reset;
