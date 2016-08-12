@@ -4137,31 +4137,6 @@ int sndsb_sb16asp_get_register(struct sndsb_ctx *cx,uint8_t reg) {
     return sndsb_read_dsp(cx);
 }
 
-int sndsb_sb16asp_readwrite_test_register_83(struct sndsb_ctx *cx) {
-    unsigned int i;
-    int val,expect;
-
-    if (!cx->has_asp_chip)
-        return -1;
-
-    // Creative drivers read the value, then toggle the byte and write it, 3-4 times.
-    val = sndsb_sb16asp_get_register(cx,0x83);
-    if (val < 0)
-        return -1;
-
-    for (i=0;i < 4;i++) {
-        expect = val ^ 0xFF;
-        if (sndsb_sb16asp_set_register(cx,0x83,(uint8_t)expect) < 0)
-            return -1;
-
-        val = sndsb_sb16asp_get_register(cx,0x83);
-        if (val != expect)
-            return -1;
-    }
-
-    return 0;
-}
-
 int sndsb_sb16asp_get_version(struct sndsb_ctx *cx) {
     int val;
 
@@ -4183,7 +4158,7 @@ int sndsb_sb16asp_get_version(struct sndsb_ctx *cx) {
 
 /* check for Sound Blaster 16 ASP/CSP chip */
 int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
-    unsigned int i;
+    int t1,t2;
 
     if (cx == NULL) return 0;
     if (cx->probed_asp_chip) return cx->has_asp_chip; // don't probe twice
@@ -4197,19 +4172,25 @@ int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
     if (sndsb_sb16asp_set_codec_parameter(cx,0x00,0x00) < 0)
         goto fail_need_reset;
 
-    // note this follows the sequence used by Creative's SB16 software, not the order used by the Linux kernel.
-    for (i=0;i < 2;i++) {
-        if (sndsb_sb16asp_set_mode_register(cx,0xFC) < 0) // 0xFC == ??
-            goto fail_need_reset;
-        if (sndsb_sb16asp_set_mode_register(cx,0xFA) < 0) // 0xFA == ??
-            goto fail_need_reset;
-        if (sndsb_sb16asp_readwrite_test_register_83(cx) < 0)
-            goto fail;
+    if (sndsb_sb16asp_set_mode_register(cx,0xFC) < 0) // 0xFC == ??
+        goto fail_need_reset;
+    if (sndsb_sb16asp_set_mode_register(cx,0xFA) < 0) // 0xFA == ??
+        goto fail_need_reset;
 
-        // TODO: Sets mode register to 0xF9, then reads 4 times.
-        //       According to DOSBox-X reading register 0x83 toggles all bits and results in 0xFF, 0x00, etc.
-        //       The Linux kernel doesn't do this test.
-    }
+    if ((t1=sndsb_sb16asp_get_register(cx,0x83)) < 0)
+        goto fail_need_reset;
+    if (sndsb_sb16asp_set_register(cx,0x83,(uint8_t)(~t1)))
+        goto fail_need_reset;
+    if ((t2=sndsb_sb16asp_get_register(cx,0x83)) < 0)
+        goto fail_need_reset;
+    if (sndsb_sb16asp_set_register(cx,0x83,(uint8_t)t1))
+        goto fail_need_reset;
+    if (t1 != (t2 ^ 0xFF))
+        goto fail;
+    if ((t2=sndsb_sb16asp_get_register(cx,0x83)) < 0)
+        goto fail_need_reset;
+    if (t1 != t2)
+        goto fail;
 
     if (sndsb_sb16asp_set_mode_register(cx,0x00) < 0) // 0x00 == ??
         goto fail_need_reset;
