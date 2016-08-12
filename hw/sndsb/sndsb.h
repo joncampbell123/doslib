@@ -21,12 +21,14 @@
 #define SNDSB_BIO_DSP_READ_STATUS16				0xF
 
 /* DSP commands */
-#define SNDSB_DSPCMD_DSP_STATUS_SB2				0x04 // DSP Status (SB 2.0 to SB Pro 2)
-#define SNDSB_DSPCMD_SB16ASP_SET_MODE_REGISTER			0x04 // According to DOSBox source code
-#define SNDSB_DSPCMD_SB16ASP_SET_CODEC_PARAMETER		0x05 // According to DOSBox source code
-#define SNDSB_DSPCMD_SB16ASP_GET_VERSION			0x08 // According to DOSBox source code
-#define SNDSB_DSPCMD_SB16ASP_SET_REGISTER			0x0E // According to DOSBox source code
-#define SNDSB_DSPCMD_SB16ASP_GET_REGISTER			0x0F // According to DOSBox source code
+#define SNDSB_DSPCMD_SB16ASP_MICROCODE_DOWNLOAD             0x01 // Linux SB16CSP driver
+#define SNDSB_DSPCMD_SB16ASP_GET_CURRENT_CODEC_PARAMETER    0x03 // Linux SB16CSP driver (reads back last written codec parameter index)
+#define SNDSB_DSPCMD_DSP_STATUS_SB2                         0x04 // DSP Status (SB 2.0 to SB Pro 2)
+#define SNDSB_DSPCMD_SB16ASP_SET_MODE_REGISTER              0x04 // According to DOSBox source code / Linux SB16CSP driver
+#define SNDSB_DSPCMD_SB16ASP_SET_CODEC_PARAMETER            0x05 // According to DOSBox source code / Linux SB16CSP driver
+#define SNDSB_DSPCMD_SB16ASP_GET_VERSION                    0x08 // 0x08 0x03  According to DOSBox source code / Linux SB16CSP driver
+#define SNDSB_DSPCMD_SB16ASP_SET_REGISTER                   0x0E // According to DOSBox source code / Linux SB16CSP driver
+#define SNDSB_DSPCMD_SB16ASP_GET_REGISTER                   0x0F // According to DOSBox source code / Linux SB16CSP driver
 #define SNDSB_DSPCMD_DIRECT_DAC_OUT				0x10
 #define SNDSB_DSPCMD_ESS_DIRECT_DAC_OUT_16BIT			0x11 // ESS 1869 16-bit direct DAC output
 #define SNDSB_DSPCMD_DMA_DAC_OUT_8BIT				0x14
