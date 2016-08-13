@@ -444,6 +444,25 @@ int main(int argc,char **argv) {
         else if (!strcmp(line,"shell")) {
             system("COMMAND");
         }
+        else if (!strncmp(line,"f9 ",3)) {
+            int i;
+
+            scan = line+3;
+            while (*scan == ' ') scan++;
+            bval = (unsigned char)strtoul(scan,&scan,0);
+
+            i = sndsb_write_dsp(sb_card,0xF9);
+            if (i >= 0) i = sndsb_write_dsp(sb_card,bval);
+            if (i >= 0) {
+                i = sndsb_read_dsp(sb_card);
+                if (i >= 0) printf("Result: 0x%02x\n",i);
+            }
+            if (i < 0) {
+                printf("Command failed\n");
+                sndsb_reset_dsp(sb_card);
+            }
+        }
+
         else if (!strcmp(line,"help")) {
             printf("exit                    Exit this program\n");
             printf("dspreset                Reset DSP\n");
@@ -457,6 +476,7 @@ int main(int argc,char **argv) {
             printf("getver                  ASP read version\n");
             printf("shell                   Shell to DOS, type exit to return\n");
             printf("dumpregs                ASP dump all registers\n");
+            printf("f9 0xXX                 ASP unknown command 0xF9, index? 0x00\n");
         }
         else {
             printf("Unknown command '%s'\n",line);
