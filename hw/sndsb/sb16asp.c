@@ -148,6 +148,12 @@ int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
     if (sndsb_sb16asp_get_version(cx) < 0)
         goto fail_need_reset;
 
+    // reasonable assumption is 2048 bytes.
+    // caller can ask us to probe deeper to check that.
+    // the probing might not be 100% compatible and it inevitably has to overwrite
+    // some bytes in RAM so unless it matters it's not recommended you carry out the test.
+    cx->asp_chip_ram_size = 2048;
+
 	sndsb_reset_dsp(cx);
     return 1;
 fail_need_reset:

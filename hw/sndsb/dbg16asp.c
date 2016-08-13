@@ -253,10 +253,16 @@ int main(int argc,char **argv) {
 #endif
 			printf("      '%s'\n",cx->dsp_copyright);
 
-            if (sndsb_check_for_sb16_asp(cx))
-                printf("      CSP/ASP chip detected: version=0x%02x\n",cx->asp_chip_version_id);
+            if (sndsb_check_for_sb16_asp(cx)) {
+                printf("      CSP/ASP chip detected: version=0x%02x ",cx->asp_chip_version_id);
 
-			count++;
+                if (sndsb_sb16_asp_ram_test(cx) > 0)
+                    printf("RAM OK\n");
+                else
+                    printf("RAM TEST FAILED\n");
+            }
+
+            count++;
 		}
 		if (count == 0) {
 			printf("No cards found.\n");
