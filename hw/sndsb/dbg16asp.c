@@ -27,6 +27,7 @@
 #include <hw/sndsb/sndsbpnp.h>
 
 static char                 line[256];
+static unsigned char        tmp[512];
 static unsigned char far	devnode_raw[4096];
 
 static struct sndsb_ctx*	sb_card = NULL;
@@ -376,6 +377,40 @@ int main(int argc,char **argv) {
                 c = getch();
             } while (c != 13 && c != 0);
         }
+        else if (!strncmp(line,"getregd ",8)) {
+            unsigned long count,i;
+            unsigned int tmpi=0;
+            FILE *fp;
+            int val;
+
+            scan = line+8;
+            while (*scan == ' ') scan++;
+            bval = (unsigned char)strtoul(scan,&scan,0);
+            while (*scan == ' ') scan++;
+            count = strtoul(scan,&scan,0);
+
+            sprintf(line,"ASPRGD%02X.BIN",bval);
+            fp = fopen(line,"wb");
+            if (fp != NULL) {
+                for (i=0;i < count;i++) {
+                    val = sndsb_sb16asp_get_register(sb_card,bval);
+                    if (val >= 0)
+                        tmp[tmpi++] = (unsigned char)val;
+                    else {
+                        printf("Failed to read register value\n");
+                        sndsb_reset_dsp(sb_card);
+                        break;
+                    }
+
+                    if ((i+1) == count || tmpi == sizeof(tmp)) {
+                        fwrite(tmp,tmpi,1,fp);
+                        tmpi = 0;
+                    }
+                }
+
+                fclose(fp);
+            }
+        }
         else if (!strcmp(line,"readaspparm")) {
             int x = sndsb_sb16asp_read_last_codec_parameter(sb_card);
 
@@ -403,6 +438,7 @@ int main(int argc,char **argv) {
             printf("setreg 0xXX 0xXX        ASP set register reg 0xXX value 0xXX\n");
             printf("getreg 0xXX             ASP read register reg 0xXX\n");
             printf("getregc 0xXX            ASP read register reg 0xXX continously\n");
+            printf("getregd 0xXX 0xXX       ASP read register reg 0xXX dump to file 0xXX bytes\n");
             printf("getver                  ASP read version\n");
         }
         else {
