@@ -462,7 +462,28 @@ int main(int argc,char **argv) {
                 sndsb_reset_dsp(sb_card);
             }
         }
+        else if (!strcmp(line,"dumpf9")) { // I hope this doesn't kill or confuse the ASP
+            unsigned int x,y;
 
+            printf("F9 result map:\n");
+            for (y=0;y < 256;y += 0x10) {
+                printf("%02x: ",(unsigned char)(y));
+                for (x=0;x < 16;x++) {
+                    i = sndsb_write_dsp(sb_card,0xF9);
+                    if (i >= 0) sndsb_write_dsp(sb_card,y+x);
+                    if (i >= 0) i = sndsb_read_dsp(sb_card);
+                    printf("%02x ",(unsigned char)i);
+
+                    if (i < 0) {
+                        y = 256;
+                        x = 16;
+                        break;
+                    }
+                }
+
+                printf("\n");
+            }
+        }
         else if (!strcmp(line,"help")) {
             printf("exit                    Exit this program\n");
             printf("dspreset                Reset DSP\n");
@@ -477,6 +498,7 @@ int main(int argc,char **argv) {
             printf("shell                   Shell to DOS, type exit to return\n");
             printf("dumpregs                ASP dump all registers\n");
             printf("f9 0xXX                 ASP unknown command 0xF9, index? 0x00\n");
+            printf("dumpf9                  ASP dump all unknown command 0xF9\n");
         }
         else {
             printf("Unknown command '%s'\n",line);
