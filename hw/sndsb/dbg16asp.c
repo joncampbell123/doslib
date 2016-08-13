@@ -429,6 +429,9 @@ int main(int argc,char **argv) {
                 sndsb_reset_dsp(sb_card);
             }
         }
+        else if (!strcmp(line,"shell")) {
+            system("COMMAND");
+        }
         else if (!strcmp(line,"help")) {
             printf("exit                    Exit this program\n");
             printf("dspreset                Reset DSP\n");
@@ -440,6 +443,7 @@ int main(int argc,char **argv) {
             printf("getregc 0xXX            ASP read register reg 0xXX continously\n");
             printf("getregd 0xXX 0xXX       ASP read register reg 0xXX dump to file 0xXX bytes\n");
             printf("getver                  ASP read version\n");
+            printf("shell                   Shell to DOS, type exit to return\n");
         }
         else {
             printf("Unknown command '%s'\n",line);
