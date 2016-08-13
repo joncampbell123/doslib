@@ -114,11 +114,11 @@ int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
     if (sndsb_sb16asp_set_codec_parameter(cx,0x00,0x00) < 0)
         goto fail_need_reset;
 
-    // NTS: The Linux kernel has the correct sequence (mode=0xFC, then test register).
-    //      Creative's software seems to do it wrong, not sure how it worked (mode=0xFC then mode=0xFA, then test register).
-    //      On my SB16 ASP, setting mode=0xFA then writing the register allows ONE write, then further writes have no effect (and then this test fails).
-    //      While at the same time, setting mode=0xFC allows the register to change at will.
-    // TODO: What does Creative's DIAGNOSE.EXE accomplish by setting mode == 0xFA?
+    // NTS: We use the Linux kernel sequence (mode=0xFC, read/write 0x83 which in that mode becomes some sort of scratch register)
+    //      Creative Labs DIAGNOSE.EXE instead uses mode == 0xFA and mode == 0xF9 to read/write the first 4 bytes of
+    //      the ASP chip's internal RAM. Specifically, it likes to read 4 bytes, invert the bits, write the new bytes,
+    //      read them back, validate the inverted bits wrote, then invert the bits again and test the original bytes
+    //      come back. We don't do that here.
     if (sndsb_sb16asp_set_mode_register(cx,0xFC) < 0) // 0xFC == ??
         goto fail_need_reset;
 
