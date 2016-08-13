@@ -490,6 +490,13 @@ int main(int argc,char **argv) {
                 printf("\n");
             }
         }
+        else if (!strcmp(line,"proberamsize")) {
+            sb_card->asp_chip_ram_size_probed = 0;
+            if (sndsb_sb16_asp_probe_chip_ram_size(sb_card))
+                printf("RAM size: %u bytes\n",sb_card->asp_chip_ram_size);
+            else
+                printf("Unable to probe RAM size\n");
+        }
         else if (!strcmp(line,"help")) {
             printf("exit                    Exit this program\n");
             printf("dspreset                Reset DSP\n");
@@ -505,6 +512,7 @@ int main(int argc,char **argv) {
             printf("dumpregs                ASP dump all registers\n");
             printf("f9 0xXX                 ASP unknown command 0xF9, index? 0x00\n");
             printf("dumpf9                  ASP dump all unknown command 0xF9\n");
+            printf("proberamsize            ASP test RAM to determine size\n");
         }
         else {
             printf("Unknown command '%s'\n",line);
