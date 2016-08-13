@@ -355,6 +355,27 @@ int main(int argc,char **argv) {
                 sndsb_reset_dsp(sb_card);
             }
         }
+        else if (!strncmp(line,"getregc ",8)) {
+            int i,c;
+
+            scan = line+8;
+            while (*scan == ' ') scan++;
+            bval = (unsigned char)strtoul(scan,&scan,0);
+
+            printf("Hit SPACE to read more bytes, ENTER to return to command line\n");
+
+            do {
+                i = sndsb_sb16asp_get_register(sb_card,bval);
+                if (i >= 0)
+                    printf("Register value: 0x%02x\n",i);
+                else {
+                    printf("Failed to read register value\n");
+                    sndsb_reset_dsp(sb_card);
+                }
+
+                c = getch();
+            } while (c != 13 && c != 0);
+        }
         else if (!strcmp(line,"readaspparm")) {
             int x = sndsb_sb16asp_read_last_codec_parameter(sb_card);
 
@@ -381,6 +402,7 @@ int main(int argc,char **argv) {
             printf("readaspparm             ASP read last codec param\n");
             printf("setreg 0xXX 0xXX        ASP set register reg 0xXX value 0xXX\n");
             printf("getreg 0xXX             ASP read register reg 0xXX\n");
+            printf("getregc 0xXX            ASP read register reg 0xXX continously\n");
             printf("getver                  ASP read version\n");
         }
         else {
