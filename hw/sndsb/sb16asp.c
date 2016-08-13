@@ -109,6 +109,7 @@ int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
 
     cx->has_asp_chip = 1;
     cx->probed_asp_chip = 1;
+    cx->asp_chip_ram_ok = 0;
     cx->asp_chip_version_id = 0;
 
     if (sndsb_sb16asp_set_codec_parameter(cx,0x00,0x00) < 0)
@@ -156,6 +157,82 @@ fail:
         goto fail_need_reset;
 	sndsb_reset_dsp(cx);
     cx->has_asp_chip = 0;
+    return 0;
+}
+
+/* ASP RAM test.
+ * This is the same test procedure used by Creative's DIAGNOSE.EXE utility.
+ * Read the first 4 bytes, inverting all the bits and writing them back in place.
+ * Read them back and confirm our inverted bytes made it safely. Then invert the bits
+ * again, write them back, and read them back to confirm they made it safely. */
+int sndsb_sb16_asp_ram_test(struct sndsb_ctx *cx) {
+    unsigned char tmp[4];
+    unsigned int i;
+    int v;
+
+    if (cx == NULL) return 0;
+    if (!cx->has_asp_chip) return 0;
+
+    cx->asp_chip_ram_ok = 0;
+
+    if (sndsb_sb16asp_set_mode_register(cx,0xFC) < 0) // memory access mode, reset memory index
+        goto fail_reset;
+    if (sndsb_sb16asp_set_mode_register(cx,0xFA) < 0) // memory access mode, increment on write
+        goto fail_reset;
+
+    for (i=0;i < 4;i++) {
+        if ((v=sndsb_sb16asp_get_register(cx,0x83)) < 0)
+            goto fail_reset;
+        v ^= 0xFF;
+        if (sndsb_sb16asp_set_register(cx,0x83,v) < 0)
+            goto fail_reset;
+
+        tmp[i] = (unsigned char)v; // remember what we wrote
+    }
+
+    if (sndsb_sb16asp_set_mode_register(cx,0xFC) < 0) // memory access mode, reset memory index
+        goto fail_reset;
+    if (sndsb_sb16asp_set_mode_register(cx,0xF9) < 0) // memory access mode, increment on read
+        goto fail_reset;
+
+    for (i=0;i < 4;i++) {
+        if ((v=sndsb_sb16asp_get_register(cx,0x83)) < 0)
+            goto fail_reset;
+        if (v != tmp[i])
+            goto fail_reset;
+    }
+
+    if (sndsb_sb16asp_set_mode_register(cx,0xFC) < 0) // memory access mode, reset memory index
+        goto fail_reset;
+    if (sndsb_sb16asp_set_mode_register(cx,0xFA) < 0) // memory access mode, increment on write
+        goto fail_reset;
+
+    for (i=0;i < 4;i++) {
+        v = tmp[i] ^ 0xFF; // invert again
+        if (sndsb_sb16asp_set_register(cx,0x83,v) < 0)
+            goto fail_reset;
+
+        tmp[i] = (unsigned char)v; // remember what we wrote
+    }
+
+    if (sndsb_sb16asp_set_mode_register(cx,0xFC) < 0) // memory access mode, reset memory index
+        goto fail_reset;
+    if (sndsb_sb16asp_set_mode_register(cx,0xF9) < 0) // memory access mode, increment on read
+        goto fail_reset;
+
+    for (i=0;i < 4;i++) {
+        if ((v=sndsb_sb16asp_get_register(cx,0x83)) < 0)
+            goto fail_reset;
+        if (v != tmp[i])
+            goto fail_reset;
+    }
+
+    cx->asp_chip_ram_ok = 1; // it passes!
+    return cx->asp_chip_ram_ok;
+fail_reset:
+    sndsb_reset_dsp(cx);
+    sndsb_sb16asp_set_mode_register(cx,0x00);
+    sndsb_reset_dsp(cx);
     return 0;
 }
 

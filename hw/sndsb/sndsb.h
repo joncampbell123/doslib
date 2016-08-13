@@ -246,6 +246,7 @@ struct sndsb_ctx {
 	uint8_t				dsp_playing:1;
 	uint8_t				dsp_prepared:1;
     uint8_t             has_asp_chip:1;     /* if Sound Blaster 16, whether or not the ASP/CSP chip is present */
+    uint8_t             asp_chip_ram_ok:1;  /* ASP/CSP chip RAM is OK */
     uint8_t             probed_asp_chip:1;
 	/* options for calling library */
 	uint8_t				always_reset_dsp_to_stop:1;

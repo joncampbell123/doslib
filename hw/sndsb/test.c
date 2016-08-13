@@ -4493,8 +4493,14 @@ int main(int argc,char **argv) {
 			printf("      '%s'\n",cx->dsp_copyright);
 
             if (!ignore_asp) {
-                if (sndsb_check_for_sb16_asp(cx))
-                    printf("      CSP/ASP chip detected: version=0x%02x\n",cx->asp_chip_version_id);
+                if (sndsb_check_for_sb16_asp(cx)) {
+                    printf("      CSP/ASP chip detected: version=0x%02x ",cx->asp_chip_version_id);
+
+                    if (sndsb_sb16_asp_ram_test(cx) > 0)
+                        printf("RAM OK\n");
+                    else
+                        printf("RAM TEST FAILED\n");
+                }
             }
 
 			count++;
