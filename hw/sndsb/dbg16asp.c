@@ -290,7 +290,6 @@ int main(int argc,char **argv) {
     if (!sb_card->has_asp_chip) {
         printf("Card does not have ASP chip (that I know of).\n");
         printf("I will allow you to poke at these commands regardless.\n");
-        return 1;
     }
 
     while (loop) {
