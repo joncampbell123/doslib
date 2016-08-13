@@ -140,33 +140,6 @@ int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
             goto fail;
     }
 
-#if 0 // NOPE. This test is not reliable.
-    // The next test is not done by the Linux kernel, but Creative's DIAGNOSE.EXE carries out this test:
-    // Setting mode == 0xF9, then reading (not writing) register 0x83, causes all bits in the register to toggle.
-    // This behavior is confirmed to happen on real hardware (SB16 non-PnP with ASP).
-    if (sndsb_sb16asp_set_mode_register(cx,0xF9) < 0) // 0xF9 == ??
-        goto fail_need_reset;
-
-    // read value.
-    // Noted on real hardware, is that the read back will return what we last wrote from the above test.
-    if ((t1=sndsb_sb16asp_get_register(cx,0x83)) < 0)
-        goto fail_need_reset;
-
-    // then read the value again and expect all bits to toggle. else the bits fail.
-    // NTS: Actually on real hardware, register 0x83 will only toggle twice, then stop.
-    //      So if we set mode == 0xF9, if the last value we wrote was 0xFF, then we'll
-    //      read back 0xFF (what we wrote), then 0x00, then 0xFF, and then because the
-    //      bits stop toggling, we'll read 0xFF afterwards.
-    t2 = t1 ^ 0xFF;
-    for (i=0;i < 2;i++) {
-        if ((t1=sndsb_sb16asp_get_register(cx,0x83)) < 0)
-            goto fail_need_reset;
-
-        if (t1 != t2) goto fail_need_reset;
-        t2 = t1 ^ 0xFF;
-    }
-#endif
-
     // test is done
     if (sndsb_sb16asp_set_mode_register(cx,0x00) < 0) // 0x00 == ??
         goto fail_need_reset;
