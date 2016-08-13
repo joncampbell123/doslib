@@ -429,6 +429,19 @@ int main(int argc,char **argv) {
                 sndsb_reset_dsp(sb_card);
             }
         }
+        else if (!strcmp(line,"dumpregs")) {
+            unsigned int x,y;
+
+            printf("ASP register contents:\n");
+            for (y=0;y < 256;y += 0x10) {
+                printf("%02x: ",(unsigned char)(y));
+                for (x=0;x < 16;x++) {
+                    printf("%02x ",(unsigned char)sndsb_sb16asp_get_register(sb_card,y+x));
+                }
+
+                printf("\n");
+            }
+        }
         else if (!strcmp(line,"shell")) {
             system("COMMAND");
         }
@@ -444,6 +457,7 @@ int main(int argc,char **argv) {
             printf("getregd 0xXX 0xXX       ASP read register reg 0xXX dump to file 0xXX bytes\n");
             printf("getver                  ASP read version\n");
             printf("shell                   Shell to DOS, type exit to return\n");
+            printf("dumpregs                ASP dump all registers\n");
         }
         else {
             printf("Unknown command '%s'\n",line);
