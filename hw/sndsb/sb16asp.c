@@ -140,6 +140,7 @@ int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
             goto fail;
     }
 
+#if 0 // NOPE. This test is not reliable.
     // The next test is not done by the Linux kernel, but Creative's DIAGNOSE.EXE carries out this test:
     // Setting mode == 0xF9, then reading (not writing) register 0x83, causes all bits in the register to toggle.
     // This behavior is confirmed to happen on real hardware (SB16 non-PnP with ASP).
@@ -164,6 +165,7 @@ int sndsb_check_for_sb16_asp(struct sndsb_ctx *cx) {
         if (t1 != t2) goto fail_need_reset;
         t2 = t1 ^ 0xFF;
     }
+#endif
 
     // test is done
     if (sndsb_sb16asp_set_mode_register(cx,0x00) < 0) // 0x00 == ??
