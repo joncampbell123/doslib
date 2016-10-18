@@ -494,11 +494,14 @@ unsigned char sndsb_read_mixer_entry(struct sndsb_ctx *sb,const struct sndsb_mix
 unsigned long sndsb_real_sample_rate(struct sndsb_ctx *cx);
 
 uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit);
+uint32_t sndsb_recommended_16bit_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit);
 
 void sndsb_timer_tick_directi_data(struct sndsb_ctx *cx);
 void sndsb_timer_tick_directi_cmd(struct sndsb_ctx *cx);
 void sndsb_timer_tick_directo_data(struct sndsb_ctx *cx);
 void sndsb_timer_tick_directo_cmd(struct sndsb_ctx *cx);
+
+signed char sndsb_dsp_playback_will_use_dma_channel(struct sndsb_ctx *cx,unsigned long rate,unsigned char stereo,unsigned char bit16);
 
 const char *sndsb_ess_chipset_str(unsigned int c);
 

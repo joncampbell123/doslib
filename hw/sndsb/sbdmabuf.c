@@ -32,16 +32,21 @@
 #endif
 
 int sndsb_assign_dma_buffer(struct sndsb_ctx *cx,struct dma_8237_allocation *dma) {
-	cx->buffer_size = dma->length;
-	cx->buffer_phys = dma->phys;
-	cx->buffer_lin = dma->lin;
+    if (dma != NULL) {
+        cx->buffer_size = dma->length;
+        cx->buffer_phys = dma->phys;
+        cx->buffer_lin = dma->lin;
+    }
+    else {
+        cx->buffer_size = 0;
+        cx->buffer_phys = 0;
+        cx->buffer_lin = NULL;
+    }
+
 	return 1;
 }
 
-uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit) {
-	uint32_t ret = 60UL * 1024UL;
-	if (limit != 0UL && ret > limit) ret = limit;
-
+static uint32_t sndsb_recommended_dma_buffer_size_common_mod(struct sndsb_ctx *ctx,uint32_t ret) {
 	/* Known constraint: Windows 3.1 Creative SB16 drivers don't like it when DOS apps
 	 *                   use too large a DMA buffer. It causes Windows to complain about
 	 *                   "a DOS program violating the integrity of the operating system".
@@ -53,7 +58,19 @@ uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit)
 		if (ret > (4UL * 1024UL)) ret = 4UL * 1024UL;
 	}
 
-	return ret;
+    return ret;
+}
+
+uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit) {
+	uint32_t ret = (64UL * 1024UL) - 16UL;
+	if (limit != 0UL && ret > limit) ret = limit;
+	return sndsb_recommended_dma_buffer_size_common_mod(ctx,ret);
+}
+
+uint32_t sndsb_recommended_16bit_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit) {
+	uint32_t ret = ((d8237_can_do_16bit_128k() ? 128UL : 64UL) * 1024UL) - 16UL;
+	if (limit != 0UL && ret > limit) ret = limit;
+	return sndsb_recommended_dma_buffer_size_common_mod(ctx,ret);
 }
 
 int sndsb_shutdown_dma(struct sndsb_ctx *cx) {
@@ -176,7 +193,7 @@ uint32_t sndsb_read_dma_buffer_position(struct sndsb_ctx *cx) {
 			/* TODO */
 		}
 		else {
-			if (r >= 0xFFFEUL) r = 0; /* FIXME: the 8237 library should have a "is terminal count" function */
+			if (r >= 0x1FFFEUL) r = 0; /* FIXME: the 8237 library should have a "is terminal count" function */
 			if (r >= cx->buffer_dma_started_length) r = cx->buffer_dma_started_length - 1;
 			r = cx->buffer_dma_started_length - (r+1);
 			r += cx->buffer_dma_started;

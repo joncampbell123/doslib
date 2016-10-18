@@ -353,7 +353,13 @@
 #include <hw/sndsb/sndsbpnp.h>
 #endif
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+static unsigned char dmam = 0;
+static   signed char dma128 = 0;
 static unsigned char ignore_asp = 0;
+#endif
+
+static uint32_t      buffer_limit = 0;
 static unsigned char force_srate_tc = 0;
 static unsigned char force_srate_4xx = 0;
 static unsigned char assume_dsp_hispeed_doesnt_block = 0;
@@ -818,7 +824,19 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 				for (i=0;i < (int)how;i++) buffer[cx->buffer_last_io+i] ^= 0x80;
 		}
 
-		rd = _dos_xwrite(wav_fd,buffer + cx->buffer_last_io,how);
+#if TARGET_MSDOS == 32
+        rd = _dos_xwrite(wav_fd,buffer + cx->buffer_last_io,how);
+#else
+        {
+            uint32_t o;
+
+            o  = (uint32_t)FP_SEG(buffer) << 4UL;
+            o += (uint32_t)FP_OFF(buffer);
+            o += cx->buffer_last_io;
+            rd = _dos_xwrite(wav_fd,MK_FP(o >> 4UL,o & 0xFUL),how);
+        }
+#endif
+
 		if (rd <= 0 || (uint32_t)rd < how) {
 			fprintf(stderr,"write() failed, %d < %d\n",
 				rd,(int)how);
@@ -905,12 +923,13 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			}
 		}
 
+		if (how > 16384UL)
+			how = 16384UL;
+
 		if (how == 0UL)
 			break;
 		else if (how > max)
 			how = max;
-		else if (how > 16384UL)
-			how = 16384UL;
 		else if (!bufe && how < min)
 			break;
 
@@ -1076,7 +1095,18 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			}
 
 			assert(cx->buffer_last_io <= cx->buffer_size);
+#if TARGET_MSDOS == 32
 			rd = _dos_xread(wav_fd,buffer + cx->buffer_last_io,how);
+#else
+            {
+                uint32_t o;
+
+                o  = (uint32_t)FP_SEG(buffer) << 4UL;
+                o += (uint32_t)FP_OFF(buffer);
+                o += cx->buffer_last_io;
+                rd = _dos_xread(wav_fd,MK_FP(o >> 4UL,o & 0xFUL),how);
+            }
+#endif
 			if (rd == 0 || rd == -1) {
 				if (!cx->backwards) {
 					wav_position = 0;
@@ -1321,10 +1351,10 @@ static uint32_t last_dma_position = 1;
 static void ui_anim(int force) {
 	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 10;
 	const unsigned int width = 70 - 4;
-	unsigned long temp;
-	unsigned int i,rem,rem2,cc;
+	unsigned long temp,rem,rem2;
 	unsigned int pH,pM,pS,pSS;
 	const char *msg = "DMA:";
+	unsigned int i,cc;
 
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	/* Under Windows, yield every so often. Under Windows NT/2000/XP this prevents
@@ -1527,11 +1557,64 @@ void open_wav_unique_name() {
 	} while (1);
 }
 
+void free_dma_buffer() {
+    if (sb_dma != NULL) {
+        dma_8237_free_buffer(sb_dma);
+        sb_dma = NULL;
+    }
+}
+
+void realloc_dma_buffer() {
+    uint32_t choice;
+    int8_t ch;
+
+    free_dma_buffer();
+
+    ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,wav_sample_rate,wav_stereo,wav_16bit);
+
+    if (ch >= 4)
+        choice = sndsb_recommended_16bit_dma_buffer_size(sb_card,buffer_limit);
+    else
+        choice = sndsb_recommended_dma_buffer_size(sb_card,buffer_limit);
+
+    do {
+        if (ch >= 4)
+            sb_dma = dma_8237_alloc_buffer_dw(choice,16);
+        else
+            sb_dma = dma_8237_alloc_buffer_dw(choice,8);
+
+        if (sb_dma == NULL) choice -= 4096UL;
+    } while (sb_dma == NULL && choice > 4096UL);
+
+    if (!sndsb_assign_dma_buffer(sb_card,sb_dma))
+        return;
+    if (sb_dma == NULL)
+        return;
+}
+
 void begin_play() {
 	unsigned long choice_rate;
 
 	if (wav_playing)
 		return;
+
+    if (sb_dma == NULL)
+        realloc_dma_buffer();
+
+    {
+        int8_t ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,wav_sample_rate,wav_stereo,wav_16bit);
+        if (ch >= 0) {
+            if (sb_dma->dma_width != (ch >= 4 ? 16 : 8))
+                realloc_dma_buffer();
+            if (sb_dma == NULL)
+                return;
+        }
+    }
+
+    if (sb_dma != NULL) {
+        if (!sndsb_assign_dma_buffer(sb_card,sb_dma))
+            return;
+    }
 
 	/* sorry, lock out unimplemented modes */
 	{
@@ -3211,6 +3294,12 @@ static void help() {
     printf(" /srf4xx              Force SB16 sample rate commands\n");
     printf(" /srftc               Force SB/SBPro time constant sample rate\n");
     printf(" /noasp               Don't probe SB16 ASP/CSP chip\n");
+# if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+    printf(" /dma128              Enable 16-bit DMA to span 128KB\n");
+    printf(" /-dma128             Disable 16-bit DMA to span 128KB\n");
+    printf(" /dmam:[u|a|p]        Assume 16-bit DMA masking\n");
+    printf("                          u=unknown a=address p=page\n");
+# endif
 #endif
 
 #if TARGET_MSDOS == 32
@@ -4074,61 +4163,6 @@ void fx_vol_dialog() {
 	}
 	vga_msg_box_destroy(&box);
 }
-
-void realloc_dma(void) {
-    struct dma_8237_allocation *pad_dma = NULL;
-    uint32_t random_pad;
-    uint32_t orig_choice;
-    uint32_t orig_pos;
-
-    if (sb_dma == NULL)
-        return;
-
-    orig_pos = sb_dma->phys;
-    orig_choice = sb_dma->length;
-    if (orig_choice == 0UL)
-        return;
-
-try_again:
-    random_pad  = (uint32_t)read_8254_ncli(T8254_TIMER_INTERRUPT_TICK) & 0xFFFF;
-    random_pad ^= (uint32_t)rand() & 0xFFFF;
-    random_pad  = (random_pad + 0x6E) & 0xFF00;
-    if (random_pad == 0ULL) random_pad++;
-
-    dma_8237_free_buffer(sb_dma); sb_dma = NULL;
-
-    pad_dma = dma_8237_alloc_buffer(random_pad);
-
-    sb_dma = dma_8237_alloc_buffer(orig_choice);
-
-    dma_8237_free_buffer(pad_dma); pad_dma = NULL;
-
-    if (sb_dma == NULL)
-        sb_dma = dma_8237_alloc_buffer(orig_choice);
-
-    if (sb_dma != NULL && sb_dma->phys == orig_pos)
-        goto try_again;
-
-    if (sb_dma != NULL) {
-        if (!sndsb_assign_dma_buffer(sb_card,sb_dma)) {
-	        dma_8237_free_buffer(sb_dma); sb_dma = NULL;
-        }
-    }
-
-    if (sb_dma == NULL) {
-        struct vga_msg_box box;
-        vga_msg_box_create(&box,"Failed to realloc DMA",0,0);
-        while (1) {
-            ui_anim(0);
-            if (kbhit()) {
-                int i = getch();
-                if (i == 0) i = getch() << 8;
-                if (i == 13 || i == 27) break;
-            }
-        }
-        vga_msg_box_destroy(&box);
-    }
-}
 #endif
 
 int main(int argc,char **argv) {
@@ -4136,7 +4170,6 @@ int main(int argc,char **argv) {
 	int i,loop,redraw,bkgndredraw,cc;
 	const struct vga_menu_item *mitem = NULL;
 	unsigned char assume_dma = 0;
-	uint32_t buffer_limit = 0;
 	int disable_probe = 0;
 	int disable_pnp = 0;
 	int disable_env = 0;
@@ -4184,9 +4217,27 @@ int main(int argc,char **argv) {
             else if (!strcmp(a,"srf4xx")) {
                 force_srate_4xx = 1;
             }
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+            else if (!strcmp(a,"dma128")) {
+                dma128 = 1;
+            }
+            else if (!strcmp(a,"-dma128")) {
+                dma128 = -1;
+            }
+            else if (!strncmp(a,"dmam:",5)) {
+                a += 5;
+
+                if (*a == 'u' || *a == 'a' || *a == 'p')
+                    dmam = *a;
+                else
+                    return 1;
+            }
+#endif
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
             else if (!strcmp(a,"noasp")) {
                 ignore_asp = 1;
             }
+#endif
             else if (!strcmp(a,"srftc")) {
                 force_srate_tc = 1;
             }
@@ -4293,9 +4344,26 @@ int main(int argc,char **argv) {
 	if (assume_dma)
 		d8237_flags |= D8237_DMA_PRIMARY | D8237_DMA_SECONDARY;
 
-	printf("DMA available: 0-3=%s 4-7=%s\n",
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+    if (dma128 == 1)
+        d8237_enable_16bit_128kb_dma();
+    else if (dma128 == -1)
+        d8237_disable_16bit_128kb_dma();
+
+    if (dmam == 'u')
+        d8237_16bit_set_unknown_mask();
+    else if (dmam == 'a')
+        d8237_16bit_set_addr_mask();
+    else if (dmam == 'p')
+        d8237_16bit_set_page_mask();
+
+	printf("DMA available: 0-3=%s 4-7=%s mask8=0x%lx mask16=0x%lx 128k=%u\n",
 		d8237_flags&D8237_DMA_PRIMARY?"yes":"no",
-		d8237_flags&D8237_DMA_SECONDARY?"yes":"no");
+		d8237_flags&D8237_DMA_SECONDARY?"yes":"no",
+        d8237_8bit_limit_mask(),
+        d8237_16bit_limit_mask(),
+        d8237_can_do_16bit_128k()?1:0);
+#endif
 
 	if (!probe_8259()) {
 		printf("Cannot init 8259 PIC\n");
@@ -4551,6 +4619,7 @@ int main(int argc,char **argv) {
 #endif
 			printf("      '%s'\n",cx->dsp_copyright);
 
+#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
             if (!ignore_asp) {
                 if (sndsb_check_for_sb16_asp(cx)) {
                     printf("      CSP/ASP chip detected: version=0x%02x ",cx->asp_chip_version_id);
@@ -4561,6 +4630,7 @@ int main(int argc,char **argv) {
                         printf("RAM TEST FAILED\n");
                 }
             }
+#endif
 
 			count++;
 		}
@@ -4589,19 +4659,7 @@ int main(int argc,char **argv) {
 	}
 
 	printf("Allocating sound buffer..."); fflush(stdout);
-	{
-		uint32_t choice = sndsb_recommended_dma_buffer_size(sb_card,buffer_limit);
-
-		do {
-			sb_dma = dma_8237_alloc_buffer(choice);
-			if (sb_dma == NULL) choice -= 4096UL;
-		} while (sb_dma == NULL && choice > 4096UL);
-
-		if (sb_dma == NULL) {
-			printf(" failed\n");
-			return 0;
-		}
-	}
+    realloc_dma_buffer();
 
 	i = int10_getmode();
 	if (i != 3) int10_setmode(3);
@@ -4730,7 +4788,7 @@ int main(int argc,char **argv) {
 #endif
 			else if (mitem == &main_menu_help_about) {
 				struct vga_msg_box box;
-				vga_msg_box_create(&box,"Sound Blaster test program v1.2 for DOS\n\n(C) 2008-2016 Jonathan Campbell\nALL RIGHTS RESERVED\n"
+				vga_msg_box_create(&box,"Sound Blaster test program v1.3 for DOS\n\n(C) 2008-2017 Jonathan Campbell\nALL RIGHTS RESERVED\n"
 #if TARGET_MSDOS == 32
 					"32-bit protected mode version"
 #elif defined(__LARGE__)
@@ -4902,14 +4960,14 @@ int main(int argc,char **argv) {
 				redraw = 1;
             }
             else if (mitem == &main_menu_device_realloc_dma) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-                realloc_dma();
-				if (wp) begin_play();
-				bkgndredraw = 1;
-				redraw = 1;
+                unsigned char wp = wav_playing;
+                if (wp) stop_play();
+                realloc_dma_buffer();
+                if (wp) begin_play();
+                bkgndredraw = 1;
+                redraw = 1;
             }
-			else if (mitem == &main_menu_device_busy_cycle) {
+            else if (mitem == &main_menu_device_busy_cycle) {
 				// NTS: The user may be testing the busy cycle while the card is playing audio. Do NOT stop playback!
 				//      The test carried out in this function does not send DSP commands, it only polls the DSP.
 				measure_dsp_busy_cycle();
@@ -5406,7 +5464,7 @@ int main(int argc,char **argv) {
 	printf("Closing WAV...\n");
 	close_wav();
 	printf("Freeing buffer...\n");
-	dma_8237_free_buffer(sb_dma); sb_dma = NULL;
+    free_dma_buffer();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);

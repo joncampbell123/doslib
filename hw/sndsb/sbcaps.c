@@ -369,6 +369,29 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 
 	/* NTS: Virtualbox supports backwards DMA, it's OK */
 
+    /* Final check: if DMA is involved, warn the user if it crosses a boundary because
+     * playback will produce noise/recording will overwrite data. */
+    if (!cx->goldplay_mode && cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_1xx) {
+        uint32_t limit_mask;
+        int8_t ch;
+
+        ch = sndsb_dsp_playback_will_use_dma_channel(cx,wav_sample_rate,wav_stereo,wav_16bit);
+        if (ch < 0) {
+            MSG("DMA channel used not assigned");
+            return 0;
+        }
+
+        if (ch >= 4)
+            limit_mask = d8237_16bit_limit_mask();
+        else
+            limit_mask = d8237_8bit_limit_mask();
+
+        if ((cx->buffer_phys&(~limit_mask)) != ((cx->buffer_phys+cx->buffer_size-1UL)&~(limit_mask))) {
+            MSG("DMA crosses a boundary, will not play entire buffer");
+            return 0;
+        }
+    }
+
 # if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	cx->reason_not_supported = NULL;
 # endif
