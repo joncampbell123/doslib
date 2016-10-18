@@ -29,6 +29,46 @@
 #define D8237_DMA_82357			0x10
 /* page registers are 8 bits wide */
 #define D8237_DMA_8BIT_PAGE		0x20
+/* 16-bit DMA channels can span a 128K region */
+#define D8237_DMA_16BIT_CANDO_128K 0x40
+
+/* NTS: There is generally no way to detect if the DMA controller can do 16-bit DMA across 128K,
+ *      so for safety reason we assume that's not supported. We leave that up to the calling program
+ *      to determine by other means (user options, motherboard detect, ISA Plug & Play, etc.).
+ *
+ *      The reason for this uncertainty is that, while it's known 16-bit DMA shifts the address bits
+ *      to the left by 1, it's not as understood across chipsets how the chipset deals with the MSB
+ *      (bit 15) or how it allows 128KB to work. There are two theoretical possibilities:
+ *
+ *      1) The DMA controller shifts the address bits to the left by 1, discarding bit 15, then latches
+ *         the remaining bits to bits 1-15 of the ISA bus along with all 8 bits of the page register.
+ *
+ *         This is simpler, but limits the DMA to a 64KB range.
+ *
+ *         This is what Intel's PCI-based motherboard chipsets do according to some datasheets.
+ *
+ *      2) The DMA controller shifts the address bits to the left by 1, latches all 16 as bits 1-16 to
+ *         the ISA bus, then passes the upper 7 bits of the page register as bits 17-23 to the ISA bus.
+ *         Bit 0 of the page register is ignored as part of the process.
+ *
+ *         This is also fairly simple, and it allows the DMA to cover a 128KB range. However it can
+ *         also confuse novice programmers who expect all 8 bits of the page register to be used.
+ *
+ *         This is not confirmed at this time, but supposedly many legacy ISA systems (486 and earlier)
+ *         operate this way.
+ *
+ *      Note that DOSLIB in it's default state will operate with either one because it assigns the page
+ *      and address as follows:
+ *
+ *      page = (physical address >> 16) & 0xFF
+ *      addr = (physical address >> 1) & 0xFFFF
+ *
+ *      note that this puts the 16th bit of the address in both bit 0 of the page register AND in the
+ *      15th bit of the address. thus, whether the DMA controller ignores bit 15 of the address register,
+ *      or bit 0 of the page register, is irrelevent, it works regardless.
+ *
+ *      DOSLIB can be asked by the program to mask either bit when writing to help test what the
+ *      motherboard chipset does. */
 
 /* registers _R_ = read _W_ = write _RW = r/w */
 #define D8237_REG_R_STATUS		0x08
@@ -82,6 +122,11 @@
 #define D8237_STATUS_TC(x)		(0x01 << ((x)&3))
 #define D8237_STATUS_REQ(x)		(0x10 << ((x)&3))
 
+// this library can be asked to mask out the 16th bit of 16-bit DMA addresses to help test
+// which bit the motherboard's DMA controller uses. all address are masked by these variables.
+extern unsigned char d8237_16bit_pagemask;
+extern unsigned short d8237_16bit_addrmask;
+
 extern unsigned char d8237_flags;
 extern unsigned char d8237_dma_address_bits;
 extern unsigned char d8237_dma_counter_bits;
@@ -107,6 +152,48 @@ static inline unsigned char d8237_ioport(unsigned char ch,unsigned char reg) {
 	if (ch & 4)	return 0xC0+(reg<<1);
 	else		return 0x00+reg;
 #endif
+}
+
+static inline unsigned char d8237_can_do_16bit_128k() {
+    return (d8237_flags & D8237_DMA_16BIT_CANDO_128K);
+}
+
+static inline uint32_t d8237_8bit_limit_mask() {
+    return 0xFFFFUL;
+}
+
+uint32_t d8237_16bit_limit_mask();
+
+static inline void d8237_16bit_set_unknown_mask() {
+    // set: unknown DMA controller mapping, therefore, write all bits to addr and mask.
+    //      the 16th bit of the address will end up in both bit 15 of addr and bit 0 of page.
+    d8237_16bit_addrmask = 0xFFFFU;
+    d8237_16bit_pagemask = 0xFFU;
+}
+
+static inline void d8237_16bit_set_addr_mask() {
+    // set: address masking. DMA controller (according to calling program) handles 16-bit
+    //      DMA by shifting addr to left by 1, and discarding bit 15. therefore, zero out
+    //      bit 15 of addr when we write the base.
+    d8237_16bit_addrmask = 0x7FFFU; // discard 15th bit of addr
+    d8237_16bit_pagemask = 0xFFU; // keep bit 0 of page
+}
+
+static inline void d8237_16bit_set_page_mask() {
+    // set: page masking. DMA controller (according to calling program) handles 16-bit
+    //      DMA by shifting addr to left by 1, making bits 0-15 become bits 1-16.
+    //      bit 0 of the page register is ignored.
+    d8237_16bit_addrmask = 0xFFFFU; // keep bit 15 of addr
+    d8237_16bit_pagemask = 0xFEU; // discard bit 0 of page
+}
+
+static inline void d8237_enable_16bit_128kb_dma() {
+    if (d8237_flags & D8237_DMA_SECONDARY)
+        d8237_flags |= D8237_DMA_16BIT_CANDO_128K;
+}
+
+static inline void d8237_disable_16bit_128kb_dma() {
+    d8237_flags &= ~D8237_DMA_16BIT_CANDO_128K;
 }
 
 static inline unsigned char d8237_page_ioport(unsigned char ch) {
@@ -208,18 +295,22 @@ uint32_t d8237_read_count(unsigned char ch);
 void d8237_write_count(unsigned char ch,uint32_t o);
 uint16_t d8237_read_count_lo16(unsigned char ch);
 
+#pragma pack(push,2) // word align, regardless of host program's -zp option, to keep struct consistent
 struct dma_8237_allocation {
-	unsigned char FAR*		lin;		/* linear (program accessible pointer) */
-							/*   16-bit real mode: _fmalloc()'d buffer */
-							/*   32-bit prot mode: dpmi_alloc_dos() in DOS memory, or else allocated linear memory that has been locked and verified sequential in memory */
-	uint32_t			phys;		/* physical memory address */
-	uint32_t			length;		/* length of the buffer */
+    unsigned char FAR*        lin;          /* linear (program accessible pointer) */
+                                            /*   16-bit real mode: _fmalloc()'d buffer */
+                                            /*   32-bit prot mode: dpmi_alloc_dos() in DOS memory, or else allocated linear memory that has been locked and verified sequential in memory */
+    uint32_t            phys;               /* physical memory address */
+    uint32_t            length;             /* length of the buffer */
 #if TARGET_MSDOS == 32
-	uint16_t			dos_selector;	/* if allocated by dpmi_alloc_dos() (nonzero) this is the selector */
-	uint32_t			lin_handle;	/* if allocated by alloc linear handle, memory handle */
+    uint32_t            lin_handle;         /* if allocated by alloc linear handle, memory handle */
+    uint16_t            dos_selector;       /* if allocated by dpmi_alloc_dos() (nonzero) this is the selector */
 #endif
+    uint8_t             dma_width;
 };
+#pragma pack(pop)
 
 void dma_8237_free_buffer(struct dma_8237_allocation *a);
 struct dma_8237_allocation *dma_8237_alloc_buffer(uint32_t len);
+struct dma_8237_allocation *dma_8237_alloc_buffer_dw(uint32_t len,uint8_t dma_width);
 

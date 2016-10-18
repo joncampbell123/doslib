@@ -65,6 +65,10 @@
 #include <hw/8237/8237.h>
 #include <hw/dos/doswin.h>
 
+/* default: no masking */
+unsigned char d8237_16bit_pagemask = 0xFFU;
+unsigned short d8237_16bit_addrmask = 0xFFFFU;
+
 unsigned char d8237_flags = 0;
 unsigned char d8237_channels = 0;
 unsigned char d8237_dma_address_bits = 0;
@@ -78,6 +82,30 @@ unsigned char d8237_page_ioport_map_pc98[8] = {0x27,0x21,0x23,0x25, 0x27,0x21,0x
 #else
 unsigned char d8237_page_ioport_map_xt[8] = {0x87,0x83,0x81,0x82, 0x8F,0x8F,0x8F,0x8F}; /* TODO: how to detect PC/XT? */
 unsigned char d8237_page_ioport_map_at[8] = {0x87,0x83,0x81,0x82, 0x8F,0x8B,0x89,0x8A};
+#endif
+
+#if TARGET_MSDOS == 16
+static void _dos_freemem_wrap(void far *x) {
+    if (x != NULL) _dos_freemem(FP_SEG(x));
+}
+
+static void far *_dos_allocmem_wrap(unsigned long sz) {
+    unsigned segs,res,err;
+
+    if (sz >= 0xBFFFFUL)
+        return NULL;
+
+    if (sz != 0)
+        segs = (unsigned)((sz + 0xFUL) >> 4UL);
+    else
+        segs = 1;
+
+    err = _dos_allocmem(segs,&res);
+    if (err != 0)
+        return NULL;
+
+    return MK_FP(res,0);
+}
 #endif
 
 /* one bit per channel that is 16-bit AND requires address shift (lower 16 bits >> 1) AND the counter is # of WORDs */
@@ -226,12 +254,12 @@ int probe_8237() {
 
 void d8237_write_base(unsigned char ch,uint32_t o) {
 	if (d8237_16bit_ashift & (1<<ch)) {
-		d8237_write_base_lo16(ch,o>>1UL);
-		outp(d8237_page_ioport_map[ch],o >> 16);
+		d8237_write_base_lo16(ch,(o >> 1UL) & d8237_16bit_addrmask);
+		outp(d8237_page_ioport_map[ch],(o >> 16UL) & d8237_16bit_pagemask);
 	}
 	else {
 		d8237_write_base_lo16(ch,o);
-		outp(d8237_page_ioport_map[ch],o >> 16);
+		outp(d8237_page_ioport_map[ch],o >> 16UL);
 	}
 }
 
@@ -270,7 +298,7 @@ void dma_8237_free_buffer(struct dma_8237_allocation *a) {
 				a->lin = NULL;
 			}
 #else
-			_ffree(a->lin);
+            _dos_freemem_wrap(a->lin);
 #endif
 		}
 		a->lin = NULL;
@@ -281,14 +309,32 @@ void dma_8237_free_buffer(struct dma_8237_allocation *a) {
 }
 
 struct dma_8237_allocation *dma_8237_alloc_buffer(uint32_t len) {
+    return dma_8237_alloc_buffer_dw(len,0);
+}
+
+struct dma_8237_allocation *dma_8237_alloc_buffer_dw(uint32_t len,uint8_t dma_width) {
 	struct dma_8237_allocation *a = malloc(sizeof(struct dma_8237_allocation));
 	const unsigned int leeway = 4096;
+    uint32_t limit_mask;
+
 	/* ^ I will remove this leeway value when DOSBox 0.74 no longer has a fucking panic attack
 	 *   over the DMA pointer getting too close to the 64KB boundary edge [FIXME: I believe I
 	 *   did something else to this code to further resolve that, do we still need this leeway value?] */
 	memset(a,0,sizeof(*a));
 
-	if (len >= 0xFFF0UL)
+    /* "dma_width" must be 0, 8, or 16 */
+    if ((dma_width & 7) != 0 || dma_width > 16)
+        goto fail;
+    /* if "dma_width" == 0 then assume 8-bit */
+    if (dma_width == 0)
+        dma_width = 8;
+
+    if (dma_width == 16 && d8237_can_do_16bit_128k())
+        limit_mask = d8237_16bit_limit_mask();
+    else
+        limit_mask = d8237_8bit_limit_mask();
+
+	if (len >= (limit_mask - 0xFUL))
 		goto fail;
 
 	if (a != NULL) {
@@ -316,7 +362,7 @@ struct dma_8237_allocation *dma_8237_alloc_buffer(uint32_t len) {
 							if (phys != (base+o)) break;
 							if (phys > (uint64_t)d8237_dma_address_mask) break;
 							/* if we crossed a DMA boundary, then abort */
-							if (((phys+leeway)&0xFFFF0000UL) != (base&0xFFFF0000UL)) break;
+							if (((phys+leeway)&(~limit_mask)) != (base&(~limit_mask))) break;
 						}
 
 						if (o >= a->length) {
@@ -357,7 +403,7 @@ struct dma_8237_allocation *dma_8237_alloc_buffer(uint32_t len) {
 				a->lin = malloc(len);
 				if (a->lin != NULL) {
 					base = (uint32_t)(a->lin);
-					if ((base&0xFFFF0000) == ((base+len-1)&0xFFFF0000)) {
+					if ((base&(~limit_mask)) == ((base+len-1)&(~limit_mask))) {
 						a->phys = base; /* OK */
 					}
 					else {
@@ -388,7 +434,7 @@ struct dma_8237_allocation *dma_8237_alloc_buffer(uint32_t len) {
 				if (a->lin != NULL) {
 					a->phys = (uint32_t)(a->lin);
 					/* if it crosses a DMA boundary then fail */
-					if ((a->phys&0xFFFF0000UL) != ((a->phys+a->length+leeway)&0xFFFF0000UL)) {
+					if ((a->phys&(~limit_mask)) != ((a->phys+a->length+leeway)&(~limit_mask))) {
 						ok = 0;
 					}
 					else {
@@ -408,25 +454,26 @@ struct dma_8237_allocation *dma_8237_alloc_buffer(uint32_t len) {
 
 		if (a->lin == NULL) goto fail;
 #else
-		a->lin = _fmalloc(len);
+		a->lin = _dos_allocmem_wrap(len);
 		if (a->lin == NULL) goto fail;
 		a->phys = ((uint32_t)FP_SEG(a->lin) << 4UL) + FP_OFF(a->lin);
 		a->length = len;
 
 		/* if it crosses a DMA 64KB boundary, then we have to try again */
-		if ((a->phys & 0xFFFF0000ULL) != ((a->phys + len + leeway) & 0xFFFF0000UL)) {
-			unsigned char FAR *s2 = _fmalloc(len);
+		if ((a->phys & (~limit_mask)) != ((a->phys + len + leeway) & (~limit_mask))) {
+			unsigned char FAR *s2 = _dos_allocmem_wrap(len);
 			if (s2 == NULL) goto fail;
-			_ffree(a->lin);
+			_dos_freemem_wrap(a->lin);
 			a->lin = s2;
 			a->phys = ((uint32_t)FP_SEG(a->lin) << 4UL) + FP_OFF(a->lin);
 			/* if it crosses again, then obviously memory is too fragmented */
-			if ((a->phys & 0xFFFF0000ULL) != ((a->phys + len + leeway) & 0xFFFF0000UL))
+			if ((a->phys & (~limit_mask)) != ((a->phys + len + leeway) & (~limit_mask)))
 				goto fail;
 		}
 #endif
 	}
 
+    a->dma_width = dma_width;
 	return a;
 fail:
 	if (a != NULL) {
@@ -446,7 +493,7 @@ fail:
 		    a->lin = NULL;
 		}
 #else
-		if (a->lin) _ffree(a->lin);
+		if (a->lin) _dos_freemem_wrap(a->lin);
 		a->lin = NULL;
 #endif
 		free(a);
@@ -476,5 +523,14 @@ uint16_t d8237_read_count_lo16(unsigned char ch) {
 	_sti_if_flags(flags);
 
 	return r2;
+}
+
+uint32_t d8237_16bit_limit_mask() {
+    if ((d8237_flags & D8237_DMA_16BIT_CANDO_128K) &&   // DMA controller is said to support 128K
+            d8237_16bit_pagemask == 0xFEU &&                // bit 0 of page register ignored
+            d8237_16bit_addrmask == 0xFFFFU)                // bit 15 of addr register used
+        return 0x1FFFFUL;                               // therefore, DMA range is limited to bits 0-16
+
+    return 0xFFFFUL;
 }
 

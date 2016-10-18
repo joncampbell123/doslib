@@ -29,6 +29,8 @@ int main() {
 		printf("   DMA_82357\n");
 	if (d8237_flags & D8237_DMA_8BIT_PAGE)
 		printf("   DMA_8BIT_PAGE\n");
+    if (d8237_flags & D8237_DMA_16BIT_CANDO_128K)
+        printf("   DMA_16BIT_CANDO_128K\n");
 
 	printf("DMA address bits: %u\n",d8237_dma_address_bits);
 	printf("DMA counter bits: %u\n",d8237_dma_counter_bits);
