@@ -2803,6 +2803,8 @@ static struct vga_menu_item main_menu_device_busy_cycle =
 	{"Busy cycle",		'b',	0,	0};
 static struct vga_menu_item main_menu_device_srate_force =
 	{"xxx",		        's',	0,	0};
+static struct vga_menu_item main_menu_device_realloc_dma =
+	{"Realloc DMA",		'd',	0,	0};
 #endif
 
 static const struct vga_menu_item* main_menu_device[] = {
@@ -2831,6 +2833,7 @@ static const struct vga_menu_item* main_menu_device[] = {
 	&main_menu_device_dsp_alias,
 	&main_menu_device_busy_cycle,
     &main_menu_device_srate_force,
+    &main_menu_device_realloc_dma,
 #endif
 	NULL
 };
@@ -4071,6 +4074,61 @@ void fx_vol_dialog() {
 	}
 	vga_msg_box_destroy(&box);
 }
+
+void realloc_dma(void) {
+    struct dma_8237_allocation *pad_dma = NULL;
+    uint32_t random_pad;
+    uint32_t orig_choice;
+    uint32_t orig_pos;
+
+    if (sb_dma == NULL)
+        return;
+
+    orig_pos = sb_dma->phys;
+    orig_choice = sb_dma->length;
+    if (orig_choice == 0UL)
+        return;
+
+try_again:
+    random_pad  = (uint32_t)read_8254_ncli(T8254_TIMER_INTERRUPT_TICK) & 0xFFFF;
+    random_pad ^= (uint32_t)rand() & 0xFFFF;
+    random_pad  = (random_pad + 0x6E) & 0xFF00;
+    if (random_pad == 0ULL) random_pad++;
+
+    dma_8237_free_buffer(sb_dma); sb_dma = NULL;
+
+    pad_dma = dma_8237_alloc_buffer(random_pad);
+
+    sb_dma = dma_8237_alloc_buffer(orig_choice);
+
+    dma_8237_free_buffer(pad_dma); pad_dma = NULL;
+
+    if (sb_dma == NULL)
+        sb_dma = dma_8237_alloc_buffer(orig_choice);
+
+    if (sb_dma != NULL && sb_dma->phys == orig_pos)
+        goto try_again;
+
+    if (sb_dma != NULL) {
+        if (!sndsb_assign_dma_buffer(sb_card,sb_dma)) {
+	        dma_8237_free_buffer(sb_dma); sb_dma = NULL;
+        }
+    }
+
+    if (sb_dma == NULL) {
+        struct vga_msg_box box;
+        vga_msg_box_create(&box,"Failed to realloc DMA",0,0);
+        while (1) {
+            ui_anim(0);
+            if (kbhit()) {
+                int i = getch();
+                if (i == 0) i = getch() << 8;
+                if (i == 13 || i == 27) break;
+            }
+        }
+        vga_msg_box_destroy(&box);
+    }
+}
 #endif
 
 int main(int argc,char **argv) {
@@ -4839,6 +4897,14 @@ int main(int argc,char **argv) {
                 }
 				update_cfg();
 
+				if (wp) begin_play();
+				bkgndredraw = 1;
+				redraw = 1;
+            }
+            else if (mitem == &main_menu_device_realloc_dma) {
+				unsigned char wp = wav_playing;
+				if (wp) stop_play();
+                realloc_dma();
 				if (wp) begin_play();
 				bkgndredraw = 1;
 				redraw = 1;
