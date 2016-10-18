@@ -1402,13 +1402,14 @@ static void ui_anim(int force) {
 		}
 
 		/* fill */
-		for (;cc < 67;cc++) *wr++ = 0x1F20;
+		for (;cc < 57;cc++) *wr++ = 0x1F20;
 
 		msg = temp_str;
 		temp = sndsb_read_dma_buffer_position(sb_card);
-		sprintf(temp_str,"%05lx/%05lx",
+		sprintf(temp_str,"%05lx/%05lx @%08lx",
 			(unsigned long)temp,
-			(unsigned long)sb_card->buffer_size);
+			(unsigned long)sb_card->buffer_size,
+            (unsigned long)sb_card->buffer_phys + (unsigned long)temp);
 		for (;cc < 80 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 
 		/* finish */
