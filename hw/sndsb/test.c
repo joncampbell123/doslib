@@ -3268,7 +3268,8 @@ static void help() {
 	printf(" /play                Automatically start playing WAV file\n");
 	printf(" /sc=<N>              Automatically pick Nth sound card (first card=1)\n");
 	printf(" /ddac                Force DSP Direct DAC output mode\n");
-	printf(" /16k /8k /4k         Limit DMA buffer to 16k, 8k, or 4k\n");
+	printf(" /96k /64k /63k /32k  Limit DMA buffer to...\n");
+    printf(" /16k /8k /4k         Limit DMA buffer to...\n");
 	printf(" /nomirqp             Disable 'manual' IRQ probing\n");
 	printf(" /noairqp             Disable 'alt' IRQ probing\n");
 	printf(" /nosb16cfg           Don't read configuration from SB16 config byte\n");
@@ -4265,9 +4266,24 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"debug")) {
 				sb_debug = 1;
 			}
-			else if (!strcmp(a,"16k")) {
-				buffer_limit = 16UL * 1024UL;
-			}
+            else if (!strcmp(a,"96k")) {
+                buffer_limit = 96UL * 1024UL;
+            }
+            else if (!strcmp(a,"64k")) {
+                buffer_limit = 64UL * 1024UL;
+            }
+            else if (!strcmp(a,"63k")) {
+                buffer_limit = 63UL * 1024UL;
+            }
+            else if (!strcmp(a,"48k")) {
+                buffer_limit = 48UL * 1024UL;
+            }
+            else if (!strcmp(a,"32k")) {
+                buffer_limit = 32UL * 1024UL;
+            }
+            else if (!strcmp(a,"16k")) {
+                buffer_limit = 16UL * 1024UL;
+            }
 			else if (!strcmp(a,"8k")) {
 				buffer_limit = 8UL * 1024UL;
 			}
