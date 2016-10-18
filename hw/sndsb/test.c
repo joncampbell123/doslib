@@ -1370,7 +1370,7 @@ static void ui_anim(int force) {
 
 		if (wav_playing) temp = playback_live_position();
 		else temp = wav_position;
-		pSS = (unsigned int)(((temp % wav_sample_rate) * 100) / wav_sample_rate);
+		pSS = (unsigned int)(((temp % wav_sample_rate) * 100UL) / wav_sample_rate);
 		temp /= wav_sample_rate;
 		pS = (unsigned int)(temp % 60UL);
 		pM = (unsigned int)((temp / 60UL) % 60UL);
@@ -1457,6 +1457,7 @@ static void open_wav() {
 			 * WORD    nBlockAlign
 			 * WORD    wBitsPerSample */
 			wav_sample_rate = *((uint32_t*)(fmtc + 4));
+            if (wav_sample_rate == 0UL) wav_sample_rate = 1UL;
 			wav_stereo = *((uint16_t*)(fmtc + 2)) > 1;
 			wav_16bit = *((uint16_t*)(fmtc + 14)) > 8;
 			wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
@@ -1939,7 +1940,7 @@ void change_param_menu() {
 			vga_moveto(0,4);
 
 			vga_write_color(selector == 0 ? 0x70 : 0x1F);
-			sprintf(tmp,"Sample rate:   %uHz",wav_sample_rate);
+			sprintf(tmp,"Sample rate:   %luHz",wav_sample_rate);
 			vga_write(tmp);
 			vga_write_until(30);
 			vga_write("\n");
@@ -2057,8 +2058,7 @@ void change_param_menu() {
 							if (i == 0) break;
 							temp_str[i] = 0;
 							wav_sample_rate = strtol(temp_str,NULL,0);
-							if (wav_sample_rate < 2000) wav_sample_rate = 2000;
-							else if (wav_sample_rate > 64000) wav_sample_rate = 64000;
+                            if (wav_sample_rate == 0UL) wav_sample_rate = 1UL;
 							uiredraw=1;
 							break;
 						}
@@ -5281,7 +5281,7 @@ int main(int argc,char **argv) {
 			else if (i == 0x4B00) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
-				wav_position -= wav_sample_rate * 5;
+				wav_position -= wav_sample_rate * 5UL;
 				if ((signed long)wav_position < 0) wav_position = 0;
 				if (wp) begin_play();
 				bkgndredraw = 1;
@@ -5290,7 +5290,7 @@ int main(int argc,char **argv) {
 			else if (i == 0x4D00) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
-				wav_position += wav_sample_rate * 5;
+				wav_position += wav_sample_rate * 5UL;
 				if (wp) begin_play();
 				bkgndredraw = 1;
 				redraw = 1;

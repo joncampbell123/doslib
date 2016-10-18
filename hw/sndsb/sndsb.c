@@ -494,6 +494,8 @@ int sndsb_prepare_dsp_playback(struct sndsb_ctx *cx,unsigned long rate,unsigned 
 
 	if (cx->dsp_playing)
 		return 0;
+    if (rate == 0)
+        return 0;
 
 	cx->dsp_prepared = 1;
 	cx->chose_use_dma = 0;

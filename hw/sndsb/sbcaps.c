@@ -36,6 +36,10 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		MSG("DSP not detected");
 		return 0; /* No DSP, no playback */
 	}
+    if (wav_sample_rate == 0UL) {
+        MSG("Cannot support a sample rate of zero");
+        return 0;
+    }
 	if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_MAX) {
 		MSG("play method out of range");
 		return 0; /* invalid DSP output method */
@@ -44,6 +48,12 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_ra
 		MSG("DMA-based playback, 8-bit PCM, no channel assigned (dma8)");
 		return 0;
 	}
+
+    /* DSP 4.xx sample rate control limited to 16 bits */
+    if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx && wav_sample_rate > 0xFFFFUL) {
+        MSG("Sample rate too high (larger than 16-bit unsigned int)");
+        return 0;
+    }
 
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx && cx->ess_extensions) {
 		/* OK. we can use ESS extensions with flipped sign */

@@ -85,7 +85,7 @@ int sndsb_begin_dsp_playback_s_ESS(struct sndsb_ctx *cx,unsigned short lv) {
 		return 0;
 	}
 
-	if (cx->buffer_rate > 22050) {
+	if (cx->buffer_rate > 22050UL) {
 		/* bit 7: = 1
 		 * bit 6:0: = sample rate divider
 		 *

@@ -461,7 +461,7 @@ static inline int sndsb_recommend_vm_wait(struct sndsb_ctx *cx) {
 
 	/* Microsoft Windows XP and VDMSOUND. Yielding is recommended,
 	 * but you will get very stuttery sound with small block sizes! */
-	if (cx->windows_emulation && cx->buffer_irq_interval < (cx->buffer_rate/4)) return 0;
+	if (cx->windows_emulation && cx->buffer_irq_interval < (cx->buffer_rate/4UL)) return 0;
 
 	/* otherwise, yes. go ahead */
 	return 1;
