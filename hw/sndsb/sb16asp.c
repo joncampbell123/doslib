@@ -234,11 +234,15 @@ int sndsb_sb16_asp_ram_test(struct sndsb_ctx *cx) {
     }
 
     cx->asp_chip_ram_ok = 1; // it passes!
-    return cx->asp_chip_ram_ok;
+    // fall through
+    //
+    // Reset the DSP now.
+    // NTS: If we don't (as tested on an actual SB16 non-PNP with ASP/CSP chip),
+    //      then playback will cycle DMA but no sound will come out of the DSP.
 fail_reset:
     sndsb_reset_dsp(cx);
     sndsb_sb16asp_set_mode_register(cx,0x00);
     sndsb_reset_dsp(cx);
-    return 0;
+    return cx->asp_chip_ram_ok;
 }
 
