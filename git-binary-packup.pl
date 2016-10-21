@@ -56,9 +56,10 @@ if (!( -f "$filename.xz" )) {
 
 	# build the list
 	my $list = '',$fn;
-	open(XX,"for i in dos86s dos86l dos86m dos86c dos386f win32 win302l win313l win32s3 winnt \*.com \*.exe; do find -iname \$i; done |") || die;
+	open(XX,"for i in dos86s dos86l dos86m dos86c dos86h d9886s d9886l d9886m d9886c d9886h dos386f win32 win302l win313l win32s3 winnt \*.com \*.exe; do find -iname \$i; done |") || die;
 	while ($fn = <XX>) {
 		chomp $fn;
+        $fn =~ s/^\.\///; # find puts ./ in front, remove it
 		next unless -d $fn;
 #		print "$fn\n";
 		$list .= "doslib/$fn ";
@@ -66,7 +67,7 @@ if (!( -f "$filename.xz" )) {
 	close(XX);
 	die if $list eq '';
 
-	$x = system("tar --exclude=\\\*.obj --exclude=\\\*.lib --exclude=.git -C .. -cvf $filename $list");
+	$x = system("tar --exclude=\\\*.RES --exclude=\\\*.res --exclude=\\\*.MAP --exclude=\\\*.map --exclude=\\\*.OBJ --exclude=\\\*.obj --exclude=\\\*.LIB --exclude=\\\*.lib --exclude=.git -C .. -cvf $filename $list");
 	die unless $x == 0;
 	print "Packing to XZ\n";
 	$x = system("xz -6e $filename");
