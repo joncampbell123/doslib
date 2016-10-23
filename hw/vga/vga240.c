@@ -104,7 +104,7 @@ void __interrupt __far new_int10(union INTPACK ip) {
 		/* mono or color? */
 		port = (inp(0x3CC)&1)?0x3D4:0x3B4;
 
-		if (ip.h.al <= 3 || ip.h.al == 7) {
+		if ((ip.h.al&0x7F) <= 3 || (ip.h.al&0x7F) == 7) {
 			/* force 8-pixel */
 			if (force89 == 8) {
 				outp(0x3C4,0x01); /* seq, clocking mode reg */
@@ -234,7 +234,7 @@ static void help() {
 	printf("If the program is resident, you can run this program with other options to\n");
 	printf("change configuration at runtime along with /SET\n");
 	printf("\n");
-	printf("(C) 2014 Jonathan Campbell\n");
+	printf("(C) 2014-2016 Jonathan Campbell\n");
 	printf("\n");
 	printf("  /INSTALL           Make the program resident in memory.\n");
 	printf("  /SET               If the program is resident, update settings.\n");
@@ -255,16 +255,19 @@ int resident() {
 	__asm {
 		push	ax
 		push	bx
+        push    cx
 		mov	ax,0xDFA0
 		mov	bx,0x1AC0
+        xor cx,cx               ; CL = 0 install check
 		int	10h
 		mov	a,ax
 		mov	b,bx
+        pop cx
 		pop	bx
 		pop	ax
 	}
 
-	return (a == 0xDFAA && b == 0xCACA);
+	return (a == 0xDFAAU && b == 0xCACAU);
 }
 
 int res_set_opt8(unsigned char func,unsigned char opt) {
@@ -287,6 +290,73 @@ int res_set_opt8(unsigned char func,unsigned char opt) {
 	}
 
 	return (a == 0xDFAA && b == 0xCACA);
+}
+
+void reinit_int10_mode() {
+    unsigned short cur_cx=0,cur_dx=0;
+
+    /* save cursor position.
+     * INT 10h resets cursor to home even if not clearing screen (DOSBox-X behavior too). */
+    __asm {
+            push    ax
+            push    bx
+            push    cx
+            push    dx
+
+            mov     ah,0x03     ; get cursor position and size
+            xor     bx,bx       ; page 0
+            int     10h
+            mov     cur_cx,cx   ; start/end scanline
+            mov     cur_dx,dx   ; row/column position
+
+            pop     dx
+            pop     cx
+            pop     bx
+            pop     ax
+    }
+
+    /* NTS: Get the current video mode, then set the mode we just got with bit 7 set to NOT clear contents.
+     *      This preserves the screen while forcing 60Hz, so that danooct1 no longer has to explain what
+     *      "INT 10h hooked" means (ref https://www.youtube.com/watch?v=Okeyy5jIi9Y) */
+    __asm {
+            push    ax
+            push    bx
+
+            mov     ah,0x0F     ; get video mode
+            int     10h
+
+            xor     ah,ah
+            xor     bx,bx
+            or      al,0x80     ; set bit 7 to tell BIOS not to clear screen contents
+            int	    10h         ; AH=0 set video mode AL=mode | 0x80
+
+            pop     bx
+            pop	    ax
+    }
+
+    /* restore cursor position */
+    __asm {
+            push    ax
+            push    bx
+            push    cx
+            push    dx
+
+            mov     ah,0x01     ; set cursor shape
+            xor     bx,bx       ; page 0
+            mov     cx,cur_cx   ; start/end scanline
+            int     10h
+
+            mov     ah,0x02     ; set cursor position
+            xor     bx,bx       ; page 0
+            mov     dx,cur_dx   ; row/column position
+            int     10h
+
+            pop     dx
+            pop     cx
+            pop     bx
+            pop     ax
+    }
+
 }
 
 int main(int argc,char **argv) {
@@ -364,14 +434,10 @@ int main(int argc,char **argv) {
 		old_int10 = _dos_getvect(0x10);
 		_dos_setvect(0x10,new_int10);
 		_sti();
-		__asm {
-			push	ax
-			mov	ax,3
-			int	10h
-			pop	ax
-		}
-		printf("INT 10h hooked\n"); fflush(stdout);
-		_dos_keep(0,(18000+256)>>4);	/* FIXME! How can an Open Watcom C program autodetect it's true resident size? */
+        reinit_int10_mode();
+
+        printf("INT 10h hooked [VGA240.EXE]. All video modes will be forced to 60Hz.\n"); fflush(stdout);
+		_dos_keep(0,(24000+256)>>4);	/* FIXME! How can an Open Watcom C program autodetect it's true resident size? */
 						/* Examples given by Open Watcom are for .COM programs! */
 	}
 	else if (tolower(*command) == 's') {
@@ -398,15 +464,9 @@ int main(int argc,char **argv) {
 				printf("Failed to set blank align\n");
 				return 1;
 			}
-
 		}
 
-		__asm {
-			push	ax
-			mov	ax,3
-			int	10h
-			pop	ax
-		}
+        reinit_int10_mode();
 	}
 
 	return 0;
