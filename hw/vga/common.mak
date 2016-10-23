@@ -61,6 +61,11 @@ $(HW_VGAGFX_LIB): $(SUBDIR)$(HPS)vgagfx.obj $(SUBDIR)$(HPS)gvg256.obj $(SUBDIR)$
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	$(CC) @tmp.cmd
 
+# VGA240 needs -zu because of interrupt handler
+$(SUBDIR)$(HPS)vga240.obj: vga240.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) -zu $[@
+	$(CC) @tmp.cmd
+
 all: lib exe
        
 lib: $(HW_VGA_LIB) $(HW_VGATTY_LIB) $(HW_VGAGUI_LIB) $(HW_VGAGFX_LIB) .symbolic
