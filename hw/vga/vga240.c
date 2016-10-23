@@ -284,7 +284,7 @@ int resident() {
 	return (a == 0xDFAAU && b == 0xCACAU);
 }
 
-int unhook(unsigned short *res_psp) {
+int unhook(unsigned short far *res_psp) {
 	unsigned int a=0,b=0,c=0;
 
 	__asm {
