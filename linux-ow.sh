@@ -223,7 +223,7 @@ do_wmake() {
 	_x2="$1"; shift
 	cd "$PROJTOP" || return 1
 	mkdir -p "$_x1" || return 1
-	wmake -f "$TOP/mak/$_x1.mak" "TO_BUILD=$_x1" HPS=/ $_x2 REL=$rel $* || return 1
+	wmake -h -e -f "$TOP/mak/$_x1.mak" "TO_BUILD=$_x1" HPS=/ $_x2 REL=$rel $* || return 1
 	return 0
 }
 
@@ -237,7 +237,7 @@ bat_wmake() {
 	dos_rel=`echo "$rel" | sed -e 's/\\//\\\\/g'`
 	cat >>$MAKE_BAT_PATH <<_EOF
 mkdir $_x1
-wmake -f $dos_rel\\mak\\$_x1.mak HPS=\\ $_x2 REL=$dos_rel $*
+wmake -h -e -f $dos_rel\\mak\\$_x1.mak HPS=\\ $_x2 REL=$dos_rel $*
 
 _EOF
 	cat >>$CLEAN_BAT_PATH <<_EOF
