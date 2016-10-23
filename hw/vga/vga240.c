@@ -425,10 +425,46 @@ int main(int argc,char **argv) {
 	}
 
 	if (tolower(*command) == 'i') {
+        unsigned short resident_size = 0;
+
 		if (resident()) {
 			printf("This program is already resident\n");
 			return 1;
 		}
+
+        /* auto-detect the size of this EXE by the MCB preceeding the PSP segment */
+        /* do it BEFORE hooking in case shit goes wrong, then we can safely abort. */
+        /* the purpose of this code is to compensate for Watcom C's lack of useful */
+        /* info at runtime or compile time as to how large we are in memory. */
+        {
+            unsigned short psp_seg=0;
+            unsigned char far *mcb;
+
+            __asm {
+                push    ax
+                push    bx
+                mov     ah,0x51     ; get PSP segment
+                int     21h
+                mov     psp_seg,bx
+                pop     bx
+                pop     ax
+            }
+
+            mcb = MK_FP(psp_seg-1,0);
+
+            /* sanity check */
+            if (!(*mcb == 'M' || *mcb == 'Z')/*looks like MCB*/ ||
+                *((unsigned short far*)(mcb+1)) != psp_seg/*it's MY memory block*/) {
+                printf("Can't figure out my resident size, aborting\n");
+                return 1;
+            }
+
+            resident_size = *((unsigned short far*)(mcb+3)); /* number of paragraphs */
+            if (resident_size < 17) {
+                printf("Resident size is too small, aborting\n");
+                return 1;
+            }
+        }
 
 		_cli();
 		old_int10 = _dos_getvect(0x10);
@@ -436,9 +472,10 @@ int main(int argc,char **argv) {
 		_sti();
         reinit_int10_mode();
 
-        printf("INT 10h hooked [VGA240.EXE]. All video modes will be forced to 60Hz.\n"); fflush(stdout);
-		_dos_keep(0,(24000+256)>>4);	/* FIXME! How can an Open Watcom C program autodetect it's true resident size? */
-						/* Examples given by Open Watcom are for .COM programs! */
+        printf("INT 10h hooked [VGA240.EXE]. Video modes will be forced to 60Hz.\n");
+        printf("Resident size %uKB (%u paragraphs)\n",(resident_size + 0x3FU) >> 6U/*10-4*/,resident_size);
+
+		_dos_keep(0,resident_size);
 	}
 	else if (tolower(*command) == 's') {
 		if (!resident()) {
