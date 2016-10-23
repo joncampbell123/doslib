@@ -30,8 +30,15 @@ CPULEV6 = 6
 TARGET86 = 86
 !endif
 
-# it's safest to assume DS != SS especially interrupt handlers.
+# large and compact model builds must not assume DS != SS.
+# some interrupt handlers call subroutines in this code. if not notified that DS != SS
+# the subroutines will mis-address parameters and screw things up.
+!ifeq MMODE l
 ZU_FLAG=-zu
+!endif
+!ifeq MMODE c
+ZU_FLAG=-zu
+!endif
 
 # PC-98 support
 !ifdef PC98
