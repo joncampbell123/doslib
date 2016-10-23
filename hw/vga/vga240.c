@@ -42,10 +42,13 @@
 
 #include <hw/dos/dos.h>
 
+unsigned short      my_psp = 0;
 unsigned char		force89 = 0; /* 0=dont force    8=force 8    9=force 9 */
 unsigned char		blanking_fix = 1;
 int			blanking_align = 0;
 void			(__interrupt __far *old_int10)();
+
+void reinit_int10_mode();
 
 void __interrupt __far new_int10(union INTPACK ip) {
 	if (ip.w.ax == 0xDFA0 && ip.w.bx == 0x1AC0) {
@@ -72,6 +75,16 @@ void __interrupt __far new_int10(union INTPACK ip) {
 				else
 					blanking_align = ip.h.ch;
 				break;
+            case 0xFF: /* unhook INT 10h */
+                _cli();
+                _dos_setvect(0x10,old_int10);
+                old_int10 = NULL;
+                _sti();
+                reinit_int10_mode();
+				ip.w.ax = 0xDFAA;
+				ip.w.bx = 0xCACA;
+                ip.w.cx = my_psp;
+                break;
 			default:
 				ip.w.ax = 0xDFFF;
 				ip.w.bx = 0xCACA;
@@ -237,6 +250,7 @@ static void help() {
 	printf("(C) 2014-2016 Jonathan Campbell\n");
 	printf("\n");
 	printf("  /INSTALL           Make the program resident in memory.\n");
+    printf("  /UNINSTALL         Remove program from memory.\n");
 	printf("  /SET               If the program is resident, update settings.\n");
 	printf("  /BLANKFIX          Active display is maintained from original mode,\n");
 	printf("                     blanking interval is extended to make 480 lines.\n");
@@ -267,6 +281,29 @@ int resident() {
 		pop	ax
 	}
 
+	return (a == 0xDFAAU && b == 0xCACAU);
+}
+
+int unhook(unsigned short *res_psp) {
+	unsigned int a=0,b=0,c=0;
+
+	__asm {
+		push	ax
+		push	bx
+        push    cx
+		mov	ax,0xDFA0
+		mov	bx,0x1AC0
+        mov cx,0x00FF           ; CL = 0xFF unhook INT 10h
+		int	10h
+		mov	a,ax
+		mov	b,bx
+        mov c,cx
+        pop cx
+		pop	bx
+		pop	ax
+	}
+
+    *res_psp = c;
 	return (a == 0xDFAAU && b == 0xCACAU);
 }
 
@@ -378,6 +415,9 @@ int main(int argc,char **argv) {
 			if (!strcasecmp(a,"i") || !strcasecmp(a,"install")) {
 				command = a;
 			}
+			else if (!strcasecmp(a,"u") || !strcasecmp(a,"uninstall")) {
+				command = a;
+			}
 			else if (!strcasecmp(a,"s") || !strcasecmp(a,"set")) {
 				command = a;
 			}
@@ -459,6 +499,7 @@ int main(int argc,char **argv) {
                 return 1;
             }
 
+            my_psp = psp_seg;
             resident_size = *((unsigned short far*)(mcb+3)); /* number of paragraphs */
             if (resident_size < 17) {
                 printf("Resident size is too small, aborting\n");
@@ -477,6 +518,65 @@ int main(int argc,char **argv) {
 
 		_dos_keep(0,resident_size);
 	}
+    else if (tolower(*command) == 'u') {
+        unsigned char free_ok=0;
+        unsigned short my_psp=0;
+        unsigned short res_psp;
+
+        if (!resident()) {
+            printf("This program is not resident\n");
+            return 1;
+        }
+        if (!unhook(&res_psp)) {
+            printf("Failed to unhook resident portion\n");
+            return 1;
+        }
+
+        if (res_psp == 0) {
+            printf("Unhooked, but unable to locate resident image\n");
+            return 1;
+        }
+
+        /* ask DOS to free it.
+         * temporarily switch current PSP to whatever was given, so we have the permissions */
+        __asm {
+            push    ax
+            push    bx
+            push    cx
+            push    dx
+            push    es
+
+            mov     ah,0x51 ; get current PSP segment (who am I)
+            int     21h
+            mov     my_psp,bx
+
+            mov     ah,0x50 ; set current PSP segment
+            mov     bx,res_psp
+            int     21h
+
+            mov     ah,0x49 ; free memory
+            mov     es,res_psp ; free resident PSP segment
+            int     21h
+            jc      freed_not_ok
+            mov     free_ok,1
+freed_not_ok:
+
+            mov     ah,0x50 ; set current PSP segment
+            mov     bx,my_psp
+            int     21h
+
+            pop     es
+            pop     dx
+            pop     cx
+            pop     bx
+            pop     ax
+        }
+
+        if (!free_ok) {
+            printf("INT 10h unhooked, but unable to remove resident portion.\n");
+            return 1;
+        }
+    }
 	else if (tolower(*command) == 's') {
 		if (!resident()) {
 			printf("This program is not yet installed\n");
