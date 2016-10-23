@@ -477,6 +477,7 @@ int main(int argc,char **argv) {
         /* the purpose of this code is to compensate for Watcom C's lack of useful */
         /* info at runtime or compile time as to how large we are in memory. */
         {
+            unsigned short env_seg=0;
             unsigned short psp_seg=0;
             unsigned char far *mcb;
 
@@ -504,6 +505,17 @@ int main(int argc,char **argv) {
             if (resident_size < 17) {
                 printf("Resident size is too small, aborting\n");
                 return 1;
+            }
+
+            /* while we're at it, free our environment block as well, we don't need it */
+            env_seg = *((unsigned short far*)MK_FP(psp_seg,0x2C));
+            if (env_seg != 0) {
+                if (_dos_freemem(env_seg) == 0) {
+                    *((unsigned short far*)MK_FP(psp_seg,0x2C)) = 0;
+                }
+                else {
+                    printf("WARNING: Unable to free environment block\n");
+                }
             }
         }
 
