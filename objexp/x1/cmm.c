@@ -4,28 +4,30 @@
 #include <conio.h>
 #include <stdint.h>
 
-unsigned int __cdecl callmemaybe(void) {
+#define EXPORTPROC __cdecl far
+
+unsigned int EXPORTPROC callmemaybe(void) {
     return 0x1234U;
 }
 
-unsigned int __cdecl callmenever(void) {
+unsigned int EXPORTPROC callmenever(void) {
     return 0xBADDU;
 }
 
-unsigned int __cdecl callmethis(unsigned int a,unsigned int b) {
+unsigned int EXPORTPROC callmethis(unsigned int a,unsigned int b) {
     unsigned int c = a + b;
     return c - 0x55;
 }
 
-unsigned char __cdecl readtimer(void) {
+unsigned char EXPORTPROC readtimer(void) {
     return inp(0x43);
 }
 
-unsigned char __cdecl readvga(void) {
+unsigned char EXPORTPROC readvga(void) {
     return inp(0x3DA);
 }
 
-unsigned char __cdecl readaport(unsigned int p) {
+unsigned char EXPORTPROC readaport(unsigned int p) {
     return inp(p);
 }
 
