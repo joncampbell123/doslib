@@ -2,9 +2,9 @@
 OBJS =     cmm.obj
 
 CC       = wcc
-CFLAGS   = -zq -ms -s -bt=com -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -zgf -zc -zl -fpi87
+CFLAGS   = -zq -ms -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -zgf -zc -zl -fpi87
 
-all: final.bin
+all: final.exe
 
 header.obj: header.asm
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
@@ -12,11 +12,11 @@ header.obj: header.asm
 .C.OBJ:
 	$(CC) $(CFLAGS) $[@
 
-final.bin: cmm.obj header.obj
-	%write tmp.cmd option quiet system rawbin
+final.exe: cmm.obj header.obj
+	%write tmp.cmd option quiet system dos
 	%write tmp.cmd file header.obj
 	%write tmp.cmd file cmm.obj
-	%write tmp.cmd name final.bin
+	%write tmp.cmd name final.exe
 	%write tmp.cmd option map=final.map
 	@wlink @tmp.cmd
 

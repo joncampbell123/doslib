@@ -4,19 +4,30 @@
 #include <conio.h>
 #include <stdint.h>
 
+const char message[] = "Hello world message";
+
+unsigned int someval = 0x1234;
+unsigned int bssval;
+
 #define EXPORTPROC __cdecl far
+
+const char far * EXPORTPROC get_message(void) {
+    return message;
+}
 
 unsigned int EXPORTPROC callmemaybe(void) {
     return 0x1234U;
 }
 
 unsigned int EXPORTPROC callmenever(void) {
-    return 0xBADDU;
+    return someval + bssval;
 }
 
 unsigned int EXPORTPROC callmethis(unsigned int a,unsigned int b) {
-    unsigned int c = a + b;
-    return c - 0x55;
+    unsigned int c;
+
+    c = a + b;
+    return someval=(c - 0x55);
 }
 
 unsigned char EXPORTPROC readtimer(void) {
