@@ -16,7 +16,7 @@ const char far * EXPORTPROC get_message(void) {
 }
 
 unsigned int EXPORTPROC callmemaybe(void) {
-    return 0x1234U;
+    return bssval=0x1234U;
 }
 
 unsigned int EXPORTPROC callmenever(void) {
