@@ -1,0 +1,163 @@
+Proof of concept "dynamically loadable" code in Watcom C 16-bit DOS.
+
+16-bit DOS does not have DLLs like Windows or shared objects like Linux.
+Often the closest DOS has to a library of code providing services to
+programs is the Terminate and Stay Resident type of program.
+
+This program is a proof of concept loader for a simplified form of DLL
+for DOS. The library is compiled into an EXE which then contains a
+specific signature at the start of the resident image that points to
+additional functions. The EXE is built without the Watcom C runtime,
+and is made so that when run normally from the DOS prompt it quietly
+exits back to DOS.
+
+As a cost of simplicity, there is no dependency tracking or support
+for loading additional files to resolve them. Each EXE library is
+self-contained.
+
+If a library does need external code to work, then it is the responsibility
+of the program loading the library to load the other library and provide
+the addresses of it's data or functions to the first. Arrangements are
+the responsibility of the program using these libraries.
+
+Because the library is an EXE image, loading the image is relatively easy.
+Read the EXE header, validate the header, then load the resident portion
+of the EXE code/data into a DOS segment. Do provide for the "additional
+paragraphs needed" in case the EXE library has a BSS segment for additional
+variables. Read and apply the EXE relocation table. When finished, you have
+an EXE image in memory that you can then search the image for the entry
+point signature and function table.
+
+All functions in these libraries should be FAR procedures (designed to be
+called with "CALL FAR" instruction and will return via RETF). They should
+be the __cdecl calling convention for consistency. They should always be
+compiled with the small memory model (code and data in 64KB). They should
+not use C runtime functions except what the compiler puts inline to the
+code or provides as intrinsic functions. Do not use floating point in the
+code, unless Watcom C is instructed to generate FPU instructions and is
+targeting a CPU known to have a FPU (like the Pentium or higher).
+
+Since the file is a valid EXE image, I assume future testing might allow
+for code compiled with the compact, medium, and large memory models.
+
+-------------------------
+Intended uses
+-------------------------
+
+The simplest and straightforward use of this type of loading is to have
+the files external to the program as *.EXE files. However *.EXE might
+confuse the user between what is to be run and which is loadable, so
+you should probably use a different file extension like *.BIN or *.DLD
+
+It's possible that a program using many libraries will probably end up
+with many tiny *.BIN and *.DLD files, so you may consider writing code
+to pack them into one file, then design the EXE loader to work relative
+to a specific file offset so you can ask it to load any image from within
+the larger file.
+
+Another idea might be to make a custom build step such that you append
+your packed file to your compiled EXE file. As far as the user is concerned,
+your program is one large EXE. Part of the EXE file's design is that not
+all of the file has to be the executable image. The header explicitly
+describes how much (from the beginning) of the file is the EXE header,
+relocation, and resident portion. So when you need to load libraries, you
+can read them from within your own EXE file.
+
+There are several examples of programs using that property of EXE files
+to append additional data, in case you think it's weird:
+
+ - PKZIP self-extracting EXE files (PKZIP decompression program in
+   EXE resident portion with nonresident ZIP archive appended to it)
+
+ - Future Crew Unreal and Second Reality (EXE resident section is
+   small demo loader and all demo part EXEs and data are non-resident
+   data appended to the end with a file structure at the very end
+   to locate everything).
+
+ - Every Windows program, ever (EXE resident section is the
+   "This program requires Microsoft Windows" stub in case you try to
+   run a Windows program from DOS, followed by nonresident data (to DOS
+   anyway) which of course is the Windows executable structure and data)
+
+--------------------------
+Memory organization issues
+--------------------------
+
+Because of the simplicity of this system, there is no memory management
+to compact or organize the segments of these libraries. If you load and
+unload many libraries, there is a risk of memory fragmentation that can
+hinder memory allocation.
+
+However there are some strategies you can use to help reduce that.
+
+1. Load the libraries you need at startup, or all at once, then leave
+   them there.
+
+2. If you do unload a library, only unload the last library you loaded.
+   Don't load some libraries, then unload the first or middle libraries
+   you loaded. Doing that leaves a gap in memory allocation that leads
+   to memory fragmentation.
+
+There are some additional tricks you can use, though their usefulness
+depends on the design of the code in the library.
+
+If the code in the library does not use function pointers within itself,
+or restricts function pointers to near code segment pointers (small
+memory model), you may be able to relocate the image after loading
+if you retain a copy of the EXE relocation table after loading. Then,
+if you need to relocate the library, you can then just copy the EXE
+segment elsewhere and re-use the relocation table to re-adjust all
+segment values used by the EXE. This assumes that nobody else in the
+ecosystem has any far pointers to data or code in that library, which
+if they do, will point to invalid data after moving. So if such a hack
+is to work, your project's design must agree to never retain inside itself
+a pointer to code/data in the EXE image and always ask the EXE image when
+needed for a pointer when it does need it.
+
+-------------------------
+Library memory allocation
+-------------------------
+
+Library images do not have the C runtime. Therefore, they should not
+use malloc/free or any sprintf functions. If storage space is needed,
+then one of several strategies may be used:
+
+- Declare the data/array statically. The compiler will place it in the
+  BSS segment which is respected by the sample code in this EXE loader.
+
+- Use DOS INT 21h to alloc/free memory as needed. Do it *sparingly*.
+  Allocate only what you need. If your work would alloc/free frequently,
+  then consider allocating an average amount and working with data
+  and realloc/free/alloc as little as possible. Remember your allocations
+  are considered part of the main EXE's memory management as far as DOS
+  is concerned.
+
+- Allow the calling program to allocate buffers for you. Then design
+  the API so that these buffers can be provided to you and for your
+  use. Since the allocation may have come from the C runtime's
+  malloc/free functions, do be respectful and provide an API so that
+  the calling program can ask you to let go of them and take them
+  back as well.
+
+-------------------------
+Additional possible hacks
+-------------------------
+
+If your library needs C runtime functions:
+
+- Allow the calling program to provide functions or wrappers to it's
+  C library functions. Perhaps part of the initialization with your
+  library would be to provide function pointers to sprintf, atof,
+  strtoul, etc. so that you can call them safely. But do be aware
+  every compiler has a different calling convention which affects
+  the C library functions. Do not assume that only Open Watcom
+  projects would call your library. It's very possible that this
+  library loading code could be adapted to work with Microsoft's
+  16-bit DOS compiler, or Borland C, all of whom generally have
+  their own calling convention when referring to their C runtime
+  functions.
+
+- Consider writing your own minimal versions. If all your program
+  needs is to print decimal or hexadecimal then write your own,
+  you don't need the full power of sprintf() for that.
+
