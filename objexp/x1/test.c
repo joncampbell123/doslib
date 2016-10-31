@@ -110,6 +110,28 @@ int load_exe(const char *path) {
         }
     }
 
+    /* final check: CLSG at the beginning of the resident image and a valid function call table */
+    {
+        unsigned char far *p = MK_FP(exe_seg,0);
+        unsigned short far *functbl = (unsigned short far*)(p+4UL+2UL);
+        unsigned short numfunc;
+        unsigned int i;
+
+        if (*((unsigned long far*)(p+0)) != 0x47534C43UL) goto fail; // seg:0 = CLSG
+
+        numfunc = *((unsigned short far*)(p+4UL));
+        if (((numfunc*2UL)+4UL+2UL) > exe_len) goto fail;
+
+        /* none of the functions can point outside the EXE resident image. */
+        for (i=0;i < numfunc;i++) {
+            unsigned short fo = functbl[i];
+            if (fo >= exe_len) goto fail;
+        }
+
+        /* the last entry after function table must be 0xFFFF */
+        if (functbl[numfunc] != 0xFFFFU) goto fail;
+    }
+
     if (hdr != NULL) free(hdr);
     close(fd);
     return 1;
