@@ -11,6 +11,19 @@ unsigned int exe_len = 0;
 
 void free_exe(void);
 
+static inline unsigned short exe_func_count(void) {
+    return *((unsigned short*)MK_FP(exe_seg,4));
+}
+
+static inline unsigned short exe_func_ento(const unsigned int i) {
+    return *((unsigned short*)MK_FP(exe_seg,4+2+(i*2U)));
+}
+
+/* NTS: You're supposed to typecast return value into function pointer prototype */
+static inline void far *exe_func_ent(const unsigned int i) {
+    return (void far*)MK_FP(exe_seg,exe_func_ento(i));
+}
+
 int load_exe(const char *path) {
     unsigned char *hdr=NULL;
     unsigned long img_sz=0;
@@ -156,6 +169,13 @@ int main() {
     }
 
     fprintf(stderr,"EXE image loaded to %04x:0000 residentlen=%u\n",exe_seg,exe_len);
+    {
+        unsigned int i,m=exe_func_count();
+
+        fprintf(stderr,"%u functions:\n",m);
+        for (i=0;i < m;i++)
+            fprintf(stderr,"  [%u]: %04x (%Fp)\n",i,exe_func_ento(i),exe_func_ent(i));
+    }
 
     free_exe();
     return 0;
