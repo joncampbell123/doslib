@@ -2,7 +2,7 @@
 OBJS =     cmm.obj
 
 CC       = wcc
-CFLAGS   = -zq -ms -s -bt=com -oilrtm -ecc -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -zgf -zc -zl -fpi87
+CFLAGS   = -zq -ms -s -bt=com -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -zgf -zc -zl -fpi87
 
 all: final.bin
 
