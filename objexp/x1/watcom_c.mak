@@ -1,8 +1,10 @@
 
+HERE = $+$(%cwd)$-
+
 OBJS =     cmm.obj
 
 CC       = wcc
-CFLAGS   = -zq -ml -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -zgf -zc -fpi87 -i../..
+CFLAGS   = -zq -ml -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -zgf -zc -fpi87 -i../.. -dTARGET_MSDOS=16 -dMSDOS=1
 
 all: final.exe test.exe
 
@@ -12,7 +14,12 @@ header.obj: header.asm
 .C.OBJ:
 	$(CC) $(CFLAGS) $[@
 
-test.exe: test.obj
+../../hw/dos/dos86l/dos.lib:
+	@cd ../../hw/dos
+	@./make.sh build lib
+	@cd $(HERE)
+
+test.exe: test.obj ../../hw/dos/dos86l/dos.lib
 	%write tmp.cmd option quiet system dos
 	%write tmp.cmd library ../../hw/dos/dos86l/dos.lib
 	%write tmp.cmd file test.obj
