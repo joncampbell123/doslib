@@ -8,32 +8,42 @@
 
 #define CLSG_EXPORT_PROC __cdecl far
 
-unsigned int exe_seg = 0;
-unsigned int exe_len = 0;
+struct exeload_ctx {
+    unsigned int        base_seg;   // base segment
+    unsigned int        len_seg;    // length in segments (paragraphs)
+};
 
-void free_exe(void);
+#define exeload_ctx_INIT {0,0}
 
-static inline unsigned short exe_func_count(void) {
-    return *((unsigned short*)MK_FP(exe_seg,4));
+struct exeload_ctx      final_exe = exeload_ctx_INIT;
+
+void free_exe(struct exeload_ctx *exe);
+
+static inline unsigned long exe_resident_len(const struct exeload_ctx * const exe) {
+    return (unsigned long)exe->len_seg << 4UL;
 }
 
-static inline unsigned short exe_func_ento(const unsigned int i) {
-    return *((unsigned short*)MK_FP(exe_seg,4+2+(i*2U)));
+static inline unsigned short exe_func_count(const struct exeload_ctx * const exe) {
+    return *((unsigned short*)MK_FP(exe->base_seg,4));
+}
+
+static inline unsigned short exe_func_ento(const struct exeload_ctx * const exe,const unsigned int i) {
+    return *((unsigned short*)MK_FP(exe->base_seg,4+2+(i*2U)));
 }
 
 /* NTS: You're supposed to typecast return value into function pointer prototype */
-static inline void far *exe_func_ent(const unsigned int i) {
-    return (void far*)MK_FP(exe_seg,exe_func_ento(i));
+static inline void far *exe_func_ent(const struct exeload_ctx * const exe,const unsigned int i) {
+    return (void far*)MK_FP(exe->base_seg,exe_func_ento(exe,i));
 }
 
-int load_exe(const char *path) {
+int load_exe(struct exeload_ctx *exe,const char * const path) {
     unsigned char *hdr=NULL;
     unsigned long img_sz=0;
     unsigned long hdr_sz=0;
     unsigned long add_sz=0; // BSS segment
     int fd;
 
-    free_exe();
+    free_exe(exe);
 
     fd = open(path,O_RDONLY|O_BINARY);
     if (fd < 0) return 0;
@@ -59,10 +69,10 @@ int load_exe(const char *path) {
 
         /* additional resident set (BSS segment) */
         add_sz = ((unsigned long) *((unsigned short*)(tmp+10))) << 4UL; /* *16 */
-        if (add_sz > 0xFFFF0UL) goto fail;
+        if (add_sz > 0xA0000UL) goto fail; /* 640KB limit */
 
-        /* this loader only supports EXE images (resident part) up to 64KB */
-        if ((img_sz+add_sz-hdr_sz) >= 0xFFF0UL) goto fail;
+        /* this loader only supports EXE images (resident part) up to 640KB */
+        if ((img_sz+add_sz-hdr_sz) >= 0xA0000UL) goto fail;
 
         /* finish loading EXE header */
         hdr = malloc((unsigned short)hdr_sz);
@@ -79,24 +89,57 @@ int load_exe(const char *path) {
     /* allocate resident section.
      * resident section is resident part of EXE on disk plus BSS segment in memory (additional paragraphs) */
     {
-        unsigned short paras = (unsigned short)((img_sz+add_sz+0xFUL/*round up*/-hdr_sz) >> 4UL); /* NTS: should NOT exceed 64KB we checked farther up! */
-
-        if (_dos_allocmem(paras,&exe_seg) != 0) goto fail;
+        unsigned short paras = (unsigned short)((img_sz+add_sz+0xFUL/*round up*/-hdr_sz) >> 4UL); /* NTS: should never exceed 640KB */
+        if (_dos_allocmem(paras,&exe->base_seg) != 0) goto fail;
+        exe->len_seg = paras;
     }
 
     /* file pointer is just past EXE header, load contents */
     {
+        unsigned int load_seg = exe->base_seg;
+        unsigned long rem = img_sz - hdr_sz;
         unsigned int rd = 0;
 
-        /* NTS: _dos_read() could be useful in small memory model if it took far pointer! */
-        if (_dos_read(fd,(void far*)MK_FP(exe_seg,0),(unsigned short)(img_sz-hdr_sz),&rd) != 0 || rd != (unsigned short)(img_sz-hdr_sz)) goto fail;
-        exe_len = (unsigned short)(img_sz+add_sz-hdr_sz);
+        {
+            const unsigned int maxload = 0x8000U; // 32KB (must be multiple of 16)
+            unsigned int doload;
+
+            while (rem > 0UL) {
+                if (rem > (unsigned long)maxload)
+                    doload = maxload;
+                else
+                    doload = (unsigned int)rem;
+
+                /* NTS: Do not compile the _dos_read() call in small model, because the param is not a far pointer */
+                if (_dos_read(fd,(void far*)MK_FP(load_seg,0),doload,&rd) != 0)
+                    goto fail;
+                if (rd != doload)
+                    goto fail;
+
+                load_seg += doload >> 4UL;
+                rem -= doload;
+            }
+        }
     }
 
     /* need to zero additional size */
     if (add_sz != 0) {
-        unsigned char far *p = (unsigned char far*)MK_FP(exe_seg,img_sz-hdr_sz); /* point at region between end of img and end of segment */
-        _fmemset(p,0,(unsigned short)add_sz);
+        unsigned long rem = add_sz;
+        unsigned long ao = img_sz-hdr_sz;
+        unsigned int zero_seg = exe->base_seg+(ao>>4UL);
+        const unsigned int maxz = 0x8000U;
+        unsigned int doz;
+
+        while (rem > 0UL) {
+            if (rem > (unsigned long)maxz)
+                doz = maxz;
+            else
+                doz = (unsigned int)rem;
+
+            _fmemset(MK_FP(zero_seg,(unsigned int)ao&0xFU),0,doz);
+            zero_seg += doz >> 4UL;
+            rem -= doz;
+        }
     }
 
     /* apply relocation table */
@@ -117,17 +160,17 @@ int load_exe(const char *path) {
 
                 /* range check.
                  * we'll allow relocations in the BSS segment though */
-                if ((of+2UL) > (unsigned long)exe_len) goto fail;
+                if ((of+2UL) > (img_sz+add_sz-hdr_sz)) goto fail;
 
                 /* patch */
-                *((unsigned short far*)MK_FP(exe_seg+s,o)) += exe_seg;
+                *((unsigned short far*)MK_FP(exe->base_seg+s,o)) += exe->base_seg;
             }
         }
     }
 
     /* final check: CLSG at the beginning of the resident image and a valid function call table */
     {
-        unsigned char far *p = MK_FP(exe_seg,0);
+        unsigned char far *p = MK_FP(exe->base_seg,0);
         unsigned short far *functbl = (unsigned short far*)(p+4UL+2UL);
         unsigned short numfunc;
         unsigned int i;
@@ -135,12 +178,12 @@ int load_exe(const char *path) {
         if (*((unsigned long far*)(p+0)) != 0x47534C43UL) goto fail; // seg:0 = CLSG
 
         numfunc = *((unsigned short far*)(p+4UL));
-        if (((numfunc*2UL)+4UL+2UL) > exe_len) goto fail;
+        if (((numfunc*2UL)+4UL+2UL) > (img_sz+add_sz-hdr_sz)) goto fail;
 
         /* none of the functions can point outside the EXE resident image. */
         for (i=0;i < numfunc;i++) {
             unsigned short fo = functbl[i];
-            if (fo >= exe_len) goto fail;
+            if ((unsigned long)fo >= (img_sz+add_sz-hdr_sz)) goto fail;
         }
 
         /* the last entry after function table must be 0xFFFF */
@@ -153,37 +196,38 @@ int load_exe(const char *path) {
 fail:
     if (hdr != NULL) free(hdr);
     close(fd);
-    free_exe();
+    free_exe(exe);
     return 0;
 }
 
-void free_exe(void) {
-    if (exe_seg != 0) {
-        _dos_freemem(exe_seg);
-        exe_seg = 0;
+void free_exe(struct exeload_ctx *exe) {
+    if (exe->base_seg != 0) {
+        _dos_freemem(exe->base_seg);
+        exe->base_seg = 0;
     }
+    exe->len_seg = 0;
 }
 
 int main() {
-    if (!load_exe("final.exe")) {
+    if (!load_exe(&final_exe,"final.exe")) {
         fprintf(stderr,"Load failed\n");
         return 1;
     }
 
-    fprintf(stderr,"EXE image loaded to %04x:0000 residentlen=%u\n",exe_seg,exe_len);
+    fprintf(stderr,"EXE image loaded to %04x:0000 residentlen=%lu\n",final_exe.base_seg,(unsigned long)final_exe.len_seg << 4UL);
     {
-        unsigned int i,m=exe_func_count();
+        unsigned int i,m=exe_func_count(&final_exe);
 
         fprintf(stderr,"%u functions:\n",m);
         for (i=0;i < m;i++)
-            fprintf(stderr,"  [%u]: %04x (%Fp)\n",i,exe_func_ento(i),exe_func_ent(i));
+            fprintf(stderr,"  [%u]: %04x (%Fp)\n",i,exe_func_ento(&final_exe,i),exe_func_ent(&final_exe,i));
     }
 
     /* let's call some! */
     {
         /* index 0:
            const char far * CLSG_EXPORT_PROC get_message(void); */
-        const char far * (CLSG_EXPORT_PROC *get_message)(void) = exe_func_ent(0);
+        const char far * (CLSG_EXPORT_PROC *get_message)(void) = exe_func_ent(&final_exe,0);
         const char far *msg;
 
         fprintf(stderr,"Calling entry 0 (get_message) now.\n");
@@ -194,7 +238,7 @@ int main() {
     {
         /* index 1:
            unsigned int CLSG_EXPORT_PROC callmemaybe(void); */
-        unsigned int (CLSG_EXPORT_PROC *callmemaybe)(void) = exe_func_ent(1);
+        unsigned int (CLSG_EXPORT_PROC *callmemaybe)(void) = exe_func_ent(&final_exe,1);
         unsigned int val;
 
         fprintf(stderr,"Calling entry 1 (callmemaybe) now.\n");
@@ -202,7 +246,7 @@ int main() {
         fprintf(stderr,"Result: %04x\n",val);
     }
 
-    free_exe();
+    free_exe(&final_exe);
     return 0;
 }
 
