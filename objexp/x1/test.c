@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define EXPORTPROC __cdecl far
+#define CLSG_EXPORT_PROC __cdecl far
 
 unsigned int exe_seg = 0;
 unsigned int exe_len = 0;
@@ -182,8 +182,8 @@ int main() {
     /* let's call some! */
     {
         /* index 0:
-           const char far * EXPORTPROC get_message(void); */
-        const char far * (EXPORTPROC *get_message)(void) = exe_func_ent(0);
+           const char far * CLSG_EXPORT_PROC get_message(void); */
+        const char far * (CLSG_EXPORT_PROC *get_message)(void) = exe_func_ent(0);
         const char far *msg;
 
         fprintf(stderr,"Calling entry 0 (get_message) now.\n");
@@ -193,8 +193,8 @@ int main() {
 
     {
         /* index 1:
-           unsigned int EXPORTPROC callmemaybe(void); */
-        unsigned int (EXPORTPROC *callmemaybe)(void) = exe_func_ent(1);
+           unsigned int CLSG_EXPORT_PROC callmemaybe(void); */
+        unsigned int (CLSG_EXPORT_PROC *callmemaybe)(void) = exe_func_ent(1);
         unsigned int val;
 
         fprintf(stderr,"Calling entry 1 (callmemaybe) now.\n");
