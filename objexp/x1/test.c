@@ -18,23 +18,36 @@ struct exeload_ctx {
 struct exeload_ctx      final_exe = exeload_ctx_INIT;
 
 void exeload_free(struct exeload_ctx *exe);
+int exeload_load(struct exeload_ctx *exe,const char * const path);
+int exeload_load_fd(struct exeload_ctx *exe,const int fd/*must be open, you must lseek to EXE header*/);
 
 static inline unsigned long exeload_resident_length(const struct exeload_ctx * const exe) {
     return (unsigned long)exe->len_seg << 4UL;
 }
 
 int exeload_load(struct exeload_ctx *exe,const char * const path) {
+    int fd,ret;
+
+    if (exe == NULL) return 0;
+    exeload_free(exe);
+
+    fd = open(path,O_RDONLY|O_BINARY);
+    if (fd < 0) return 0;
+
+    ret = exeload_load_fd(exe,fd);
+
+    close(fd);
+    return ret;
+}
+
+int exeload_load_fd(struct exeload_ctx *exe,const int fd/*must be open, you must lseek to EXE header*/) {
     unsigned char *hdr=NULL;
     unsigned long img_sz=0;
     unsigned long hdr_sz=0;
     unsigned long add_sz=0; // BSS segment
-    int fd;
 
     if (exe == NULL) return 0;
-
     exeload_free(exe);
-
-    fd = open(path,O_RDONLY|O_BINARY);
     if (fd < 0) return 0;
 
     {
@@ -158,11 +171,9 @@ int exeload_load(struct exeload_ctx *exe,const char * const path) {
     }
 
     if (hdr != NULL) free(hdr);
-    close(fd);
     return 1;
 fail:
     if (hdr != NULL) free(hdr);
-    close(fd);
     exeload_free(exe);
     return 0;
 }
