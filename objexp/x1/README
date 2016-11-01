@@ -38,7 +38,15 @@ code, unless Watcom C is instructed to generate FPU instructions and is
 targeting a CPU known to have a FPU (like the Pentium or higher).
 
 Since the file is a valid EXE image, I assume future testing might allow
-for code compiled with the compact, medium, and large memory models.
+for code compiled with the compact, medium, and large memory models. As
+long as the entry points listed in the EXE are in the same code segment
+as the header, it will work. Entry points are free to call to large model
+code.
+
+The header and entry point functions must exist in the same _TEXT segment.
+The segment values must not differ, or the entry points will be wrong.
+Make sure the entry point routines and header objects exist in the same
+_TEXT segment, CODE class and segment GROUP.
 
 -------------------------
 Intended uses
