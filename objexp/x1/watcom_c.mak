@@ -14,6 +14,7 @@ header.obj: header.asm
 
 test.exe: test.obj
 	%write tmp.cmd option quiet system dos
+	%write tmp.cmd library ../../hw/dos/dos86l/dos.lib
 	%write tmp.cmd file test.obj
 	%write tmp.cmd name test.exe
 	%write tmp.cmd option map=test.map
