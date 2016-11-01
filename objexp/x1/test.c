@@ -204,15 +204,15 @@ int exeload_load_fd(struct exeload_ctx *exe,const int fd/*must be open, you must
         unsigned int i;
 
         if (count != 0) {
-            if (count > 0x4000) goto fail;
-            if (((unsigned long)offs + ((unsigned long)count*4UL)) > hdr_sz) goto fail;
+            if (count >= 0x4000U) goto fail; /* if table would exceed 64KB */
+            if (((unsigned long)offs + ((unsigned long)count*4UL)) > hdr_sz) goto fail; /* if relocation table is outside header (invalid) */
 
             for (i=0;i < count;i++,sopairs += 2) {
                 unsigned short o = sopairs[0];
                 unsigned short s = sopairs[1];
                 unsigned long of = ((unsigned long)s << 4UL) + (unsigned long)o;
 
-                /* range check.
+                /* range check, to avoid corrupting memory around the EXE image.
                  * we'll allow relocations in the BSS segment though */
                 if ((of+2UL) > (img_sz+add_sz-hdr_sz)) goto fail;
 
