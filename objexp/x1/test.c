@@ -23,19 +23,6 @@ static inline unsigned long exe_resident_len(const struct exeload_ctx * const ex
     return (unsigned long)exe->len_seg << 4UL;
 }
 
-static inline unsigned short exe_func_count(const struct exeload_ctx * const exe) {
-    return *((unsigned short*)MK_FP(exe->base_seg,4));
-}
-
-static inline unsigned short exe_func_ento(const struct exeload_ctx * const exe,const unsigned int i) {
-    return *((unsigned short*)MK_FP(exe->base_seg,4+2+(i*2U)));
-}
-
-/* NTS: You're supposed to typecast return value into function pointer prototype */
-static inline void far *exe_func_ent(const struct exeload_ctx * const exe,const unsigned int i) {
-    return (void far*)MK_FP(exe->base_seg,exe_func_ento(exe,i));
-}
-
 int load_exe(struct exeload_ctx *exe,const char * const path) {
     unsigned char *hdr=NULL;
     unsigned long img_sz=0;
@@ -168,28 +155,6 @@ int load_exe(struct exeload_ctx *exe,const char * const path) {
         }
     }
 
-    /* final check: CLSG at the beginning of the resident image and a valid function call table */
-    {
-        unsigned char far *p = MK_FP(exe->base_seg,0);
-        unsigned short far *functbl = (unsigned short far*)(p+4UL+2UL);
-        unsigned short numfunc;
-        unsigned int i;
-
-        if (*((unsigned long far*)(p+0)) != 0x47534C43UL) goto fail; // seg:0 = CLSG
-
-        numfunc = *((unsigned short far*)(p+4UL));
-        if (((numfunc*2UL)+4UL+2UL) > (img_sz+add_sz-hdr_sz)) goto fail;
-
-        /* none of the functions can point outside the EXE resident image. */
-        for (i=0;i < numfunc;i++) {
-            unsigned short fo = functbl[i];
-            if ((unsigned long)fo >= (img_sz+add_sz-hdr_sz)) goto fail;
-        }
-
-        /* the last entry after function table must be 0xFFFF */
-        if (functbl[numfunc] != 0xFFFFU) goto fail;
-    }
-
     if (hdr != NULL) free(hdr);
     close(fd);
     return 1;
@@ -208,9 +173,52 @@ void free_exe(struct exeload_ctx *exe) {
     exe->len_seg = 0;
 }
 
+int exe_clsg_validate_header(const struct exeload_ctx * const exe) {
+    /* CLSG at the beginning of the resident image and a valid function call table */
+    unsigned char far *p = MK_FP(exe->base_seg,0);
+    unsigned short far *functbl = (unsigned short far*)(p+4UL+2UL);
+    unsigned long exe_len = exe_resident_len(exe);
+    unsigned short numfunc;
+    unsigned int i;
+
+    if (*((unsigned long far*)(p+0)) != 0x47534C43UL) return 0; // seg:0 = CLSG
+
+    numfunc = *((unsigned short far*)(p+4UL));
+    if (((numfunc*2UL)+4UL+2UL) > exe_len) return 0;
+
+    /* none of the functions can point outside the EXE resident image. */
+    for (i=0;i < numfunc;i++) {
+        unsigned short fo = functbl[i];
+        if ((unsigned long)fo >= exe_len) return 0;
+    }
+
+    /* the last entry after function table must be 0xFFFF */
+    if (functbl[numfunc] != 0xFFFFU) return 0;
+
+    return 1;
+}
+
+static inline unsigned short exe_func_count(const struct exeload_ctx * const exe) {
+    return *((unsigned short*)MK_FP(exe->base_seg,4));
+}
+
+static inline unsigned short exe_func_ento(const struct exeload_ctx * const exe,const unsigned int i) {
+    return *((unsigned short*)MK_FP(exe->base_seg,4+2+(i*2U)));
+}
+
+/* NTS: You're supposed to typecast return value into function pointer prototype */
+static inline void far *exe_func_ent(const struct exeload_ctx * const exe,const unsigned int i) {
+    return (void far*)MK_FP(exe->base_seg,exe_func_ento(exe,i));
+}
+
 int main() {
     if (!load_exe(&final_exe,"final.exe")) {
         fprintf(stderr,"Load failed\n");
+        return 1;
+    }
+    if (!exe_clsg_validate_header(&final_exe)) {
+        fprintf(stderr,"EXE is not valid CLSG\n");
+        free_exe(&final_exe);
         return 1;
     }
 
