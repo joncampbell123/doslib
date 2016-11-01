@@ -2,18 +2,46 @@
 #include <dos.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #define CLSG_EXPORT_PROC __cdecl far
 
-struct exeload_ctx {
-    unsigned int        base_seg;   // base segment
-    unsigned int        len_seg;    // length in segments (paragraphs)
+#pragma pack(push,1)
+struct exe_dos_header {
+    uint16_t            magic;                      // +0x00 0x5A4D 'MZ'
+    uint16_t            last_block_bytes;           // +0x02 number of bytes in the last block if nonzero, or zero for whole block
+    uint16_t            exe_file_blocks;            // +0x04 number of 512-byte blocks that make up the EXE (resident part + header)
+    uint16_t            number_of_relocations;      // +0x06 number of relocation entries
+    uint16_t            header_size_paragraphs;     // +0x08 header size in paragraphs (16-byte units)
+    uint16_t            min_additional_paragraphs;  // +0x0A minimum additional memory needed in paragraphs
+    uint16_t            max_additional_paragraphs;  // +0x0C maximum additional memory in paragraphs
+    uint16_t            init_stack_segment;         // +0x0E initial stack segment, relative to loaded EXE base
+    uint16_t            init_stack_pointer;         // +0x10 initial stack pointer
+    uint16_t            checksum;                   // +0x12 if nonzero, 16-bit checksum of all words in the file
+    uint16_t            init_instruction_pointer;   // +0x14 initial value of instruction pointer
+    uint16_t            init_code_segment;          // +0x16 initial code segment, relative to loaded EXE base
+    uint16_t            relocation_table_offset;    // +0x18 offset of first relocation table entry
+    uint16_t            overlay_number;             // +0x1A overlay number, 0 if main EXE
+                                                    // =0x1C total header size
 };
 
-#define exeload_ctx_INIT {0,0}
+struct exe_dos_header_ne {
+    struct exe_dos_header   main;                   // +0x00 main EXE header
+    uint32_t                ne_offset;              // +0x1C offset of NE/PE/LE/LX/etc header
+                                                    // =0x20 total header size
+};
+#pragma pack(pop)
+
+struct exeload_ctx {
+    unsigned int                base_seg;           // base segment
+    unsigned int                len_seg;            // length in segments (paragraphs)
+    struct exe_dos_header*      header;             // allocated copy of EXE header. you can free to conserve memory.
+};
+
+#define exeload_ctx_INIT {0,0,NULL}
 
 struct exeload_ctx      final_exe = exeload_ctx_INIT;
 
@@ -23,6 +51,29 @@ int exeload_load_fd(struct exeload_ctx *exe,const int fd/*must be open, you must
 
 static inline unsigned long exeload_resident_length(const struct exeload_ctx * const exe) {
     return (unsigned long)exe->len_seg << 4UL;
+}
+
+static inline unsigned long exeload_file_header_size(const struct exe_dos_header * const header) {
+    return ((unsigned long)(header->header_size_paragraphs)) << 4UL; /* *16 */
+}
+
+static inline unsigned long exeload_file_bss_size(const struct exe_dos_header * const header) {
+    return ((unsigned long)(header->min_additional_paragraphs)) << 4UL; /* *16 */
+}
+
+static inline unsigned long exeload_file_resident_size(const struct exe_dos_header * const header) {
+    unsigned long ret = ((unsigned long)(header->exe_file_blocks)) << 9UL; /* *512 */
+    if (header->last_block_bytes != 0U)
+        ret += (unsigned long)header->last_block_bytes - 512UL;
+
+    return ret;
+}
+
+void exeload_free_header(struct exeload_ctx *exe) {
+    if (exe->header != NULL) {
+        free(exe->header);
+        exe->header = NULL;
+    }
 }
 
 int exeload_load(struct exeload_ctx *exe,const char * const path) {
@@ -41,6 +92,7 @@ int exeload_load(struct exeload_ctx *exe,const char * const path) {
 }
 
 int exeload_load_fd(struct exeload_ctx *exe,const int fd/*must be open, you must lseek to EXE header*/) {
+    struct exe_dos_header *header;
     unsigned char *hdr=NULL;
     unsigned long img_sz=0;
     unsigned long hdr_sz=0;
@@ -50,27 +102,27 @@ int exeload_load_fd(struct exeload_ctx *exe,const int fd/*must be open, you must
     exeload_free(exe);
     if (fd < 0) return 0;
 
+    // keep a local copy so the C compiler doesn't have to keep dereferencing exe->header
+    header = exe->header = malloc(sizeof(*header));
+    if (header == NULL) goto fail;
+
     {
-        char tmp[0x1C];
-        if (read(fd,tmp,0x1C) < 0x1C) goto fail;
-        if (*((unsigned short*)(tmp+0)) != 0x5A4D) goto fail;
+        if (read(fd,header,sizeof(*header)) < sizeof(*header))
+            goto fail;
+
+        if (header->magic != 0x5A4D) goto fail;
 
         /* img_sz = number of blocks part of EXE file */
-        img_sz = ((unsigned long) *((unsigned short*)(tmp+4))) << 9UL; /* *512 */
-        {
-            /* x = number of bytes in the last block that are actually used. 0 means whole block */
-            unsigned short x = *((unsigned short*)(tmp+2));
-            if (x != 0) img_sz += (unsigned long)x - 512UL; /* <- important: unsigned long to ensure x - 512 subtracts due to carry */
-        }
+        img_sz = exeload_file_resident_size(header);
 
         /* EXE header size */
-        hdr_sz = ((unsigned long) *((unsigned short*)(tmp+8))) << 4UL; /* *16 */
+        hdr_sz = exeload_file_header_size(header);
         if (hdr_sz < 0x20UL) goto fail; /* header must be at least 32 bytes */
         if (hdr_sz > 0x8000UL) goto fail; /* header up to 32KB supported */
         if (hdr_sz >= img_sz) goto fail; /* header cannot completely consume EXE file */
 
         /* additional resident set (BSS segment) */
-        add_sz = ((unsigned long) *((unsigned short*)(tmp+10))) << 4UL; /* *16 */
+        add_sz = exeload_file_bss_size(header);
         if (add_sz > 0xA0000UL) goto fail; /* 640KB limit */
 
         /* this loader only supports EXE images (resident part) up to 640KB */
@@ -79,13 +131,13 @@ int exeload_load_fd(struct exeload_ctx *exe,const int fd/*must be open, you must
         /* finish loading EXE header */
         hdr = malloc((unsigned short)hdr_sz);
         if (hdr == NULL) goto fail;
-        memcpy(hdr,tmp,0x1C); /* this is why header must be 20 bytes, also to make valid structure */
+        memcpy(hdr,header,sizeof(*header)); /* this is why header must be 20 bytes, also to make valid structure */
     }
 
     /* finish loading EXE header */
     {
-        unsigned short more = (unsigned short)(hdr_sz - 0x1C); /* hdr_sz >= 0x20 therefore this cannot be zero */
-        if (read(fd,hdr+0x1C,more) < more) goto fail;
+        unsigned short more = (unsigned short)(hdr_sz - sizeof(*header)); /* hdr_sz >= 0x20 therefore this cannot be zero */
+        if (read(fd,hdr+sizeof(*header),more) < more) goto fail;
     }
 
     /* allocate resident section.
@@ -146,9 +198,9 @@ int exeload_load_fd(struct exeload_ctx *exe,const int fd/*must be open, you must
 
     /* apply relocation table */
     {
-        unsigned short offs = *((unsigned short*)(hdr+0x18));
-        unsigned short count = *((unsigned short*)(hdr+0x06));
-        unsigned short *sopairs = ((unsigned short*)(hdr+offs));
+        const unsigned short count = header->number_of_relocations;
+        const unsigned short offs = header->relocation_table_offset;
+        const unsigned short *sopairs = ((const unsigned short*)(hdr+offs));
         unsigned int i;
 
         if (count != 0) {
@@ -185,6 +237,8 @@ void exeload_free(struct exeload_ctx *exe) {
         _dos_freemem(exe->base_seg);
         exe->base_seg = 0;
     }
+
+    exeload_free_header(exe);
     exe->len_seg = 0;
 }
 
