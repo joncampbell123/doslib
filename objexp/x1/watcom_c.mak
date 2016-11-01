@@ -2,7 +2,7 @@
 OBJS =     cmm.obj
 
 CC       = wcc
-CFLAGS   = -zq -ml -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -zgf -zc -fpi87
+CFLAGS   = -zq -ml -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -zgf -zc -fpi87 -i../..
 
 all: final.exe test.exe
 
