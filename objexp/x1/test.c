@@ -17,20 +17,22 @@ struct exeload_ctx {
 
 struct exeload_ctx      final_exe = exeload_ctx_INIT;
 
-void free_exe(struct exeload_ctx *exe);
+void exeload_free(struct exeload_ctx *exe);
 
-static inline unsigned long exe_resident_len(const struct exeload_ctx * const exe) {
+static inline unsigned long exeload_resident_length(const struct exeload_ctx * const exe) {
     return (unsigned long)exe->len_seg << 4UL;
 }
 
-int load_exe(struct exeload_ctx *exe,const char * const path) {
+int exeload_load(struct exeload_ctx *exe,const char * const path) {
     unsigned char *hdr=NULL;
     unsigned long img_sz=0;
     unsigned long hdr_sz=0;
     unsigned long add_sz=0; // BSS segment
     int fd;
 
-    free_exe(exe);
+    if (exe == NULL) return 0;
+
+    exeload_free(exe);
 
     fd = open(path,O_RDONLY|O_BINARY);
     if (fd < 0) return 0;
@@ -161,11 +163,13 @@ int load_exe(struct exeload_ctx *exe,const char * const path) {
 fail:
     if (hdr != NULL) free(hdr);
     close(fd);
-    free_exe(exe);
+    exeload_free(exe);
     return 0;
 }
 
-void free_exe(struct exeload_ctx *exe) {
+void exeload_free(struct exeload_ctx *exe) {
+    if (exe == NULL) return;
+
     if (exe->base_seg != 0) {
         _dos_freemem(exe->base_seg);
         exe->base_seg = 0;
@@ -173,69 +177,73 @@ void free_exe(struct exeload_ctx *exe) {
     exe->len_seg = 0;
 }
 
-int exe_clsg_validate_header(const struct exeload_ctx * const exe) {
-    /* CLSG at the beginning of the resident image and a valid function call table */
-    unsigned char far *p = MK_FP(exe->base_seg,0);
-    unsigned short far *functbl = (unsigned short far*)(p+4UL+2UL);
-    unsigned long exe_len = exe_resident_len(exe);
-    unsigned short numfunc;
-    unsigned int i;
+int exeload_clsg_validate_header(const struct exeload_ctx * const exe) {
+    if (exe == NULL) return 0;
 
-    if (*((unsigned long far*)(p+0)) != 0x47534C43UL) return 0; // seg:0 = CLSG
+    {
+        /* CLSG at the beginning of the resident image and a valid function call table */
+        unsigned char far *p = MK_FP(exe->base_seg,0);
+        unsigned short far *functbl = (unsigned short far*)(p+4UL+2UL);
+        unsigned long exe_len = exeload_resident_length(exe);
+        unsigned short numfunc;
+        unsigned int i;
 
-    numfunc = *((unsigned short far*)(p+4UL));
-    if (((numfunc*2UL)+4UL+2UL) > exe_len) return 0;
+        if (*((unsigned long far*)(p+0)) != 0x47534C43UL) return 0; // seg:0 = CLSG
 
-    /* none of the functions can point outside the EXE resident image. */
-    for (i=0;i < numfunc;i++) {
-        unsigned short fo = functbl[i];
-        if ((unsigned long)fo >= exe_len) return 0;
+        numfunc = *((unsigned short far*)(p+4UL));
+        if (((numfunc*2UL)+4UL+2UL) > exe_len) return 0;
+
+        /* none of the functions can point outside the EXE resident image. */
+        for (i=0;i < numfunc;i++) {
+            unsigned short fo = functbl[i];
+            if ((unsigned long)fo >= exe_len) return 0;
+        }
+
+        /* the last entry after function table must be 0xFFFF */
+        if (functbl[numfunc] != 0xFFFFU) return 0;
     }
-
-    /* the last entry after function table must be 0xFFFF */
-    if (functbl[numfunc] != 0xFFFFU) return 0;
 
     return 1;
 }
 
-static inline unsigned short exe_func_count(const struct exeload_ctx * const exe) {
+static inline unsigned short exeload_clsg_function_count(const struct exeload_ctx * const exe) {
     return *((unsigned short*)MK_FP(exe->base_seg,4));
 }
 
-static inline unsigned short exe_func_ento(const struct exeload_ctx * const exe,const unsigned int i) {
+static inline unsigned short exeload_clsg_function_offset(const struct exeload_ctx * const exe,const unsigned int i) {
     return *((unsigned short*)MK_FP(exe->base_seg,4+2+(i*2U)));
 }
 
 /* NTS: You're supposed to typecast return value into function pointer prototype */
-static inline void far *exe_func_ent(const struct exeload_ctx * const exe,const unsigned int i) {
-    return (void far*)MK_FP(exe->base_seg,exe_func_ento(exe,i));
+static inline void far *exeload_clsg_function_ptr(const struct exeload_ctx * const exe,const unsigned int i) {
+    return (void far*)MK_FP(exe->base_seg,exeload_clsg_function_offset(exe,i));
 }
 
 int main() {
-    if (!load_exe(&final_exe,"final.exe")) {
+    if (!exeload_load(&final_exe,"final.exe")) {
         fprintf(stderr,"Load failed\n");
         return 1;
     }
-    if (!exe_clsg_validate_header(&final_exe)) {
+    if (!exeload_clsg_validate_header(&final_exe)) {
         fprintf(stderr,"EXE is not valid CLSG\n");
-        free_exe(&final_exe);
+        exeload_free(&final_exe);
         return 1;
     }
 
     fprintf(stderr,"EXE image loaded to %04x:0000 residentlen=%lu\n",final_exe.base_seg,(unsigned long)final_exe.len_seg << 4UL);
     {
-        unsigned int i,m=exe_func_count(&final_exe);
+        unsigned int i,m=exeload_clsg_function_count(&final_exe);
 
         fprintf(stderr,"%u functions:\n",m);
         for (i=0;i < m;i++)
-            fprintf(stderr,"  [%u]: %04x (%Fp)\n",i,exe_func_ento(&final_exe,i),exe_func_ent(&final_exe,i));
+            fprintf(stderr,"  [%u]: %04x (%Fp)\n",i,exeload_clsg_function_offset(&final_exe,i),exeload_clsg_function_ptr(&final_exe,i));
     }
 
     /* let's call some! */
     {
         /* index 0:
            const char far * CLSG_EXPORT_PROC get_message(void); */
-        const char far * (CLSG_EXPORT_PROC *get_message)(void) = exe_func_ent(&final_exe,0);
+        const char far * (CLSG_EXPORT_PROC *get_message)(void) = exeload_clsg_function_ptr(&final_exe,0);
         const char far *msg;
 
         fprintf(stderr,"Calling entry 0 (get_message) now.\n");
@@ -246,7 +254,7 @@ int main() {
     {
         /* index 1:
            unsigned int CLSG_EXPORT_PROC callmemaybe(void); */
-        unsigned int (CLSG_EXPORT_PROC *callmemaybe)(void) = exe_func_ent(&final_exe,1);
+        unsigned int (CLSG_EXPORT_PROC *callmemaybe)(void) = exeload_clsg_function_ptr(&final_exe,1);
         unsigned int val;
 
         fprintf(stderr,"Calling entry 1 (callmemaybe) now.\n");
@@ -254,7 +262,7 @@ int main() {
         fprintf(stderr,"Result: %04x\n",val);
     }
 
-    free_exe(&final_exe);
+    exeload_free(&final_exe);
     return 0;
 }
 
