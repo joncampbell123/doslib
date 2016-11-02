@@ -1,0 +1,9 @@
+
+LIBRARY CLSGEXM1
+
+EXPORTS
+    get_message
+    get_value
+    set_value1
+    set_value2
+

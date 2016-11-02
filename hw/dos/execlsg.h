@@ -1,7 +1,7 @@
 
 #include <hw/dos/exeload.h>
 
-#if !defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
+#if !defined(TARGET_OS2) && !defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
 
 #define CLSG_EXPORT_PROC __cdecl far
 

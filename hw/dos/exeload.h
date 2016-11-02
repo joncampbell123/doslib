@@ -1,5 +1,5 @@
 
-#if !defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
+#if !defined(TARGET_OS2) && !defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
 
 #ifndef __HW_DOS_EXELOAD_H
 #define __HW_DOS_EXELOAD_H

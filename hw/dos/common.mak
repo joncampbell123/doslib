@@ -6,6 +6,8 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
+CFLAGS_CLSG = -ms -zl -zq -ml -s -bt=dos -oilrtm -wx -q -zu -zdf -zff -zgf -zc -fpi87
+
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = HW_DOS_LIB
 
@@ -21,6 +23,14 @@ NTVDMLIB_LIB = ..$(HPS)..$(HPS)windows$(HPS)ntvdm$(HPS)$(SUBDIR)$(HPS)ntvdmlib.l
 NTVDMLIB_LIB_WLINK_LIBRARIES = library $(NTVDMLIB_LIB)
 NTVDMVDD_LIB = ..$(HPS)..$(HPS)windows$(HPS)ntvdm$(HPS)$(SUBDIR)$(HPS)ntvdmvdd.lib
 NTVDMVDD_LIB_WLINK_LIBRARIES = library $(NTVDMVDD_LIB)
+!endif
+
+!ifndef TARGET_WINDOWS
+! ifndef TARGET_OS2
+!  ifeq TARGET_MSDOS 16
+CLSGEXM1_DLM = $(SUBDIR)$(HPS)clsgexm1.dlm
+!  endif
+! endif
 !endif
 
 !ifndef TARGET_WINDOWS
@@ -114,7 +124,7 @@ $(SUBDIR)$(HPS)dosntast.obj: dosntast.c
 
 all: lib exe
 
-exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) .symbolic
+exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(CLSGEXM1_DLM) .symbolic
 
 lib: $(DOSNTAST_VDD) $(HW_DOS_LIB) .symbolic
 
@@ -158,6 +168,26 @@ winnt$(HPS)dosntast.vdd: dosntast.c
 $(DOSNTAST_VDD): winnt$(HPS)dosntast.vdd
 	@$(COPY) winnt$(HPS)dosntast.vdd $(DOSNTAST_VDD)
 ! endif
+!endif
+
+!ifdef CLSGEXM1_DLM
+$(CLSGEXM1_DLM): $(SUBDIR)$(HPS)clsgexm1.obj $(SUBDIR)$(HPS)clsgexm1.hdr.obj
+	%write tmp.cmd option quiet system dos
+	%write tmp.cmd file $(SUBDIR)$(HPS)clsgexm1.obj
+	%write tmp.cmd file $(SUBDIR)$(HPS)clsgexm1.hdr.obj
+	%write tmp.cmd name $@
+	%write tmp.cmd option map=$@.map
+	@wlink @tmp.cmd
+
+$(SUBDIR)$(HPS)clsgexm1.hdr.obj: $(SUBDIR)$(HPS)clsgexm1.hdr.asm
+	nasm -o $@ -f obj $(NASMFLAGS) $[@
+
+$(SUBDIR)$(HPS)clsgexm1.hdr.asm: clsgexm1.def
+	../../hw/dos/clsggen.pl --def $[@ --asm $@ --enum $(SUBDIR)$(HPS)clsgexm1.hdr.h
+
+$(SUBDIR)$(HPS)clsgexm1.obj: clsgexm1.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_CLSG) $[@
+	@$(CC) @tmp.cmd
 !endif
 
 !ifdef LOL_EXE
