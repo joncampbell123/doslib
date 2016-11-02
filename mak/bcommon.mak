@@ -436,6 +436,6 @@ HW_USB_OHCI_LIB_WLINK_LIBRARIES=library $(HW_USB_OHCI_LIB)
 # must be given last.
 # must specify small memory model, no library dependencies, no stack checking, no stack frames, DS/FS/GS float, inline floating point.
 # you should use another version of this CFLAGS_CLSG if you're compiling related code for your memory model, so long as your entry
-# points use the small memory model.
-CFLAGS_CLSG = -ms -zl -zq -s -bt=dos -oilrtm -wx -q -zu -zdf -zff -zgf -zc -fpi87
+# points use the small memory model. you must specify the -r switch so that small/medium model code can safely call your routines.
+CFLAGS_CLSG = -ms -zl -zq -s -bt=dos -oilrtm -wx -q -zu -zdf -zff -zgf -zc -fpi87 -r
 
