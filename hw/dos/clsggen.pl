@@ -109,7 +109,12 @@ foreach my $line (<DEF>) {
             }
 
             if (!defined($ord)) {
-                $ord = $last_ordinal + 1;
+                if (defined($last_ordinal)) {
+                    $ord = $last_ordinal + 1;
+                }
+                else {
+                    $ord = 0;
+                }
             }
 
             die unless defined($name) && $name ne "";
