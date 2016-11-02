@@ -27,6 +27,7 @@ NTVDMVDD_LIB_WLINK_LIBRARIES = library $(NTVDMVDD_LIB)
 ! ifndef TARGET_OS2
 !  ifeq TARGET_MSDOS 16
 CLSGEXM1_DLM = $(SUBDIR)$(HPS)clsgexm1.dlm
+CLSGEXT1_EXE = $(SUBDIR)$(HPS)clsgext1.exe
 !  endif
 ! endif
 !endif
@@ -122,7 +123,7 @@ $(SUBDIR)$(HPS)dosntast.obj: dosntast.c
 
 all: lib exe
 
-exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(CLSGEXM1_DLM) .symbolic
+exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) .symbolic
 
 lib: $(DOSNTAST_VDD) $(HW_DOS_LIB) .symbolic
 
@@ -168,11 +169,19 @@ $(DOSNTAST_VDD): winnt$(HPS)dosntast.vdd
 ! endif
 !endif
 
+!ifdef CLSGEXT1_EXE
+$(CLSGEXT1_EXE): $(SUBDIR)$(HPS)clsgext1.obj
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)clsgext1.obj $(HW_DOS_LIB_WLINK_LIBRARIES)
+	%write tmp.cmd option map=$(CLSGEXT1_EXE).map
+	%write tmp.cmd name $(CLSGEXT1_EXE)
+	@wlink @tmp.cmd
+!endif
+
 !ifdef CLSGEXM1_DLM
 $(CLSGEXM1_DLM): $(SUBDIR)$(HPS)clsgexm1.obj $(SUBDIR)$(HPS)clsgexm1.hdr.obj
 	%write tmp.cmd option quiet system dos
+	%write tmp.cmd file $(SUBDIR)$(HPS)clsgexm1.hdr.obj # header must COME FIRST
 	%write tmp.cmd file $(SUBDIR)$(HPS)clsgexm1.obj
-	%write tmp.cmd file $(SUBDIR)$(HPS)clsgexm1.hdr.obj
 	%write tmp.cmd name $@
 	%write tmp.cmd option map=$@.map
 	@wlink @tmp.cmd
