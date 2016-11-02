@@ -190,7 +190,7 @@ $(SUBDIR)$(HPS)clsgexm1.hdr.obj: $(SUBDIR)$(HPS)clsgexm1.hdr.asm
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
 $(SUBDIR)$(HPS)clsgexm1.hdr.asm: clsgexm1.def
-	../../hw/dos/clsggen.pl --def $[@ --asm $@ --enum $(SUBDIR)$(HPS)clsgexm1.hdr.h
+	../../hw/dos/clsggen.pl --def $[@ --asm $@ --enum clsgexm1.h
 
 $(SUBDIR)$(HPS)clsgexm1.obj: clsgexm1.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_CLSG) $[@
