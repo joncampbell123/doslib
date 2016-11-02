@@ -432,3 +432,10 @@ HW_USB_OHCI_LIB=$(HW_USB_OHCI_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)ohci.lib
 HW_USB_OHCI_LIB_DEPENDENCIES=
 HW_USB_OHCI_LIB_WLINK_LIBRARIES=library $(HW_USB_OHCI_LIB)
 
+# CLSG module flags.
+# must be given last.
+# must specify small memory model, no library dependencies, no stack checking, no stack frames, DS/FS/GS float, inline floating point.
+# you should use another version of this CFLAGS_CLSG if you're compiling related code for your memory model, so long as your entry
+# points use the small memory model.
+CFLAGS_CLSG = -ms -zl -zq -s -bt=dos -oilrtm -wx -q -zu -zdf -zff -zgf -zc -fpi87
+

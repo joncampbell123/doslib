@@ -6,8 +6,6 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_CLSG = -ms -zl -zq -ml -s -bt=dos -oilrtm -wx -q -zu -zdf -zff -zgf -zc -fpi87
-
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = HW_DOS_LIB
 
