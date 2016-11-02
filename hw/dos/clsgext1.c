@@ -34,30 +34,35 @@ int main() {
             fprintf(stderr,"  [%u]: %04x (%Fp)\n",i,exeload_clsg_function_offset(&final_exe,i),exeload_clsg_function_ptr(&final_exe,i));
     }
 
-#if 0
     /* let's call some! */
     {
-        /* index 0:
-           const char far * CLSG_EXPORT_PROC get_message(void); */
-        const char far * (CLSG_EXPORT_PROC *get_message)(void) = exeload_clsg_function_ptr(&final_exe,0);
+        /* const char far * CLSG_EXPORT_PROC get_message(void); */
+        const char far * (CLSG_EXPORT_PROC *get_message)(void) = exeload_clsg_function_ptr(&final_exe,CLSGEXM1_get_message);
         const char far *msg;
 
-        fprintf(stderr,"Calling entry 0 (get_message) now.\n");
+        fprintf(stderr,"Calling entry %u (get_message) now.\n",CLSGEXM1_get_message);
         msg = get_message();
         fprintf(stderr,"Result: %Fp = %Fs\n",msg,msg);
     }
 
     {
-        /* index 1:
-           unsigned int CLSG_EXPORT_PROC callmemaybe(void); */
-        unsigned int (CLSG_EXPORT_PROC *callmemaybe)(void) = exeload_clsg_function_ptr(&final_exe,1);
-        unsigned int val;
+        /* unsigned int CLSG_EXPORT_PROC get_value(void);
+           void CLSG_EXPORT_PROC set_value1(const unsigned int v);
+           void CLSG_EXPORT_PROC set_value2(const unsigned int v); */
+        unsigned int (CLSG_EXPORT_PROC *get_value)(void) = exeload_clsg_function_ptr(&final_exe,CLSGEXM1_get_value);
+        void (CLSG_EXPORT_PROC *set_value1)(const unsigned int v) = exeload_clsg_function_ptr(&final_exe,CLSGEXM1_set_value1);
+        void (CLSG_EXPORT_PROC *set_value2)(const unsigned int v) = exeload_clsg_function_ptr(&final_exe,CLSGEXM1_set_value2);
 
-        fprintf(stderr,"Calling entry 1 (callmemaybe) now.\n");
-        val = callmemaybe();
-        fprintf(stderr,"Result: %04x\n",val);
+        fprintf(stderr,"Playing with data + bss values.\n");
+        fprintf(stderr,"Initial data value should be 0x1234,bss value should be 0x0000,value=data+bss\n");
+        fprintf(stderr,"value = %04x\n",get_value());
+        fprintf(stderr,"set value 0xABCD\n");
+        set_value1(0xABCD);
+        fprintf(stderr,"value = %04x\n",get_value());
+        fprintf(stderr,"set bss value 0x1111\n");
+        set_value2(0x1111);
+        fprintf(stderr,"value = %04x\n",get_value());
     }
-#endif
 
     exeload_free(&final_exe);
     return 0;
