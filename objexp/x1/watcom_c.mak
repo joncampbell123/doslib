@@ -8,6 +8,9 @@ CFLAGS   = -zq -ml -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -
 
 all: final.exe test.exe
 
+header.asm: final.def
+	./clsggen.pl --def $[@ --asm $@
+
 header.obj: header.asm
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
