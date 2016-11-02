@@ -241,7 +241,7 @@ if (defined($out_enumname) && $out_enumname ne "" && defined($out_enumbase) && $
             $emit_n = 1;
         }
     }
-    print ENUM "}\n";
+    print ENUM "};\n";
 
     close(ENUM);
 }
