@@ -1,5 +1,5 @@
 
-#if !defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
+#if !defined(TARGET_OS2) && !defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
 
 /* does NOT use C runtime */
 
