@@ -1,6 +1,9 @@
 
 #if !defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
 
+#ifndef __HW_DOS_EXELOAD_H
+#define __HW_DOS_EXELOAD_H
+
 # include <dos.h>
 # include <stdio.h>
 # include <fcntl.h>
@@ -27,6 +30,8 @@ int exeload_load_fd(struct exeload_ctx *exe,const int fd/*must be open, you must
 static inline unsigned long exeload_resident_length(const struct exeload_ctx * const exe) {
     return (unsigned long)exe->len_seg << 4UL;
 }
+
+#endif //__HW_DOS_EXELOAD_H
 
 #endif
 

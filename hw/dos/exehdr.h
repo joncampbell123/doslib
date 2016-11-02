@@ -1,4 +1,7 @@
 
+#ifndef __HW_DOS_EXEHDR_H
+#define __HW_DOS_EXEHDR_H
+
 #include <stdint.h>
 
 #pragma pack(push,1)
@@ -42,4 +45,6 @@ static inline unsigned long exe_dos_header_file_resident_size(const struct exe_d
 
     return ret;
 }
+
+#endif //__HW_DOS_EXEHDR_H
 

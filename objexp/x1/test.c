@@ -8,52 +8,9 @@
 #include <unistd.h>
 
 #include <hw/dos/exeload.h>
-
-#define CLSG_EXPORT_PROC __cdecl far
+#include <hw/dos/execlsg.h>
 
 struct exeload_ctx      final_exe = exeload_ctx_INIT;
-
-int exeload_clsg_validate_header(const struct exeload_ctx * const exe) {
-    if (exe == NULL) return 0;
-
-    {
-        /* CLSG at the beginning of the resident image and a valid function call table */
-        unsigned char far *p = MK_FP(exe->base_seg,0);
-        unsigned short far *functbl = (unsigned short far*)(p+4UL+2UL);
-        unsigned long exe_len = exeload_resident_length(exe);
-        unsigned short numfunc;
-        unsigned int i;
-
-        if (*((unsigned long far*)(p+0)) != 0x47534C43UL) return 0; // seg:0 = CLSG
-
-        numfunc = *((unsigned short far*)(p+4UL));
-        if (((numfunc*2UL)+4UL+2UL) > exe_len) return 0;
-
-        /* none of the functions can point outside the EXE resident image. */
-        for (i=0;i < numfunc;i++) {
-            unsigned short fo = functbl[i];
-            if ((unsigned long)fo >= exe_len) return 0;
-        }
-
-        /* the last entry after function table must be 0xFFFF */
-        if (functbl[numfunc] != 0xFFFFU) return 0;
-    }
-
-    return 1;
-}
-
-static inline unsigned short exeload_clsg_function_count(const struct exeload_ctx * const exe) {
-    return *((unsigned short*)MK_FP(exe->base_seg,4));
-}
-
-static inline unsigned short exeload_clsg_function_offset(const struct exeload_ctx * const exe,const unsigned int i) {
-    return *((unsigned short*)MK_FP(exe->base_seg,4+2+(i*2U)));
-}
-
-/* NTS: You're supposed to typecast return value into function pointer prototype */
-static inline void far *exeload_clsg_function_ptr(const struct exeload_ctx * const exe,const unsigned int i) {
-    return (void far*)MK_FP(exe->base_seg,exeload_clsg_function_offset(exe,i));
-}
 
 int main() {
     if (!exeload_load(&final_exe,"final.exe")) {
