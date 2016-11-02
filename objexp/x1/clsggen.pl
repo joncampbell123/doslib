@@ -1,4 +1,9 @@
 #!/usr/bin/perl
+#
+# Take .DEF file for a CLSG module, parse it, and generate a header.asm
+# to generate the CLSG header in the EXE image.
+#
+# (C) 2016 Jonathan Campbell, ALL RIGHTS RESERVED
 my $out_make_stub_entry = 1;
 my $out_enumname = undef;
 my $out_enumbase = undef;
