@@ -189,11 +189,11 @@ $(CLSGEXM1_DLM): $(SUBDIR)$(HPS)clsgexm1.obj $(SUBDIR)$(HPS)clsgexm1.hdr.obj
 $(SUBDIR)$(HPS)clsgexm1.hdr.obj: $(SUBDIR)$(HPS)clsgexm1.hdr.asm
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
-$(SUBDIR)$(HPS)clsgexm1.hdr.asm: clsgexm1.def
+$(SUBDIR)$(HPS)clsgexm1.hdr.asm clsgexm1.h: clsgexm1.def
 	../../hw/dos/clsggen.pl --def $[@ --asm $@ --enum clsgexm1.h
 
-$(SUBDIR)$(HPS)clsgexm1.obj: clsgexm1.c
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_CLSG) $[@
+$(SUBDIR)$(HPS)clsgexm1.obj: clsgexm1.c $(SUBDIR)$(HPS)clsgexm1.hdr.obj clsgexm1.h
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_CLSG) clsgexm1.c
 	@$(CC) @tmp.cmd
 !endif
 
