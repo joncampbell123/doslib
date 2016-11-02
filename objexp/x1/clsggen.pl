@@ -39,6 +39,7 @@ for ($i=0;$i < @ARGV;) {
             print STDERR "--stub / --no-stub       Generate/Don't generate EXE entry stub\n";
             print STDERR "--enum <file>            Output header file to generate\n";
             print STDERR "--enum-base <name>       Prefix to apply to enum names\n";
+            exit 1;
         }
         else {
             print STDERR "Unknown switch $a\n";
@@ -208,4 +209,35 @@ if ($out_make_stub_entry > 0) {
 }
 
 close(ASM);
+
+if (!defined($out_enumbase) && defined($library) && $library ne '') {
+    $out_enumbase = $library."_";
+}
+
+if (defined($out_enumname) && $out_enumname ne "" && defined($out_enumbase) && $out_enumbase ne '' && defined($library) && $library ne '') {
+    my $emit_n = 1;
+
+    open(ENUM,">",$out_enumname) || die;
+
+    print ENUM "/* C enumeration of functions for library $library */\n";
+
+    print ENUM "enum {\n";
+    for ($ord=0;$ord < @symbols;$ord++) {
+        $name = $symbols[$ord];
+        if (defined($name)) {
+            print ENUM "\t$out_enumbase$name";
+            if ($emit_n) {
+                print ENUM "=$ord";
+                $emit_n = 0;
+            }
+            print ENUM ", /* =$ord */\n";
+        }
+        else {
+            $emit_n = 1;
+        }
+    }
+    print ENUM "}\n";
+
+    close(ENUM);
+}
 
