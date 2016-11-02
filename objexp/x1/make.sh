@@ -3,7 +3,7 @@ rel=../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 if [ "$1" == "clean" ]; then
-	rm -fv *.obj *.lib *.exe *.com *.bin
+    rm -fv *.obj *.lib *.exe *.com *.bin header.asm final.h
 	exit 0
 else
 	wmake -f watcom_c.mak
