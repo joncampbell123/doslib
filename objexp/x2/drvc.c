@@ -39,6 +39,21 @@ struct dosdrv_request_base_t {
     uint16_t                    status;             // +0x03 (return to DOS)
 };                                                  // =0x05
 
+/* dosdrv_request_command_INIT */
+struct dosdrv_request_init_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+    uint8_t                             number_of_units;    // +0x0D
+    void far*                           end_of_driver;      // +0x0E End of driver address / return break address (return to DOS)
+                                                            //       Your init routine fills in the memory address that DOS is supposed
+                                                            //       to free memory at. Bytes at or after this point are freed.
+    union {
+        uint16_t far*                   bios_parameter_block_ptr_array; // +0x12 pointer to array of near pointers to BPBs
+        char far*                       device_equ_value;       // +0x12 pointer to char just past '=' in config.sys device= string (if char device)
+    };
+    uint8_t                             first_unit_drive_number;// +0x16 block device first unit drive number (0=A, 1=B, etc)
+};                                                          // =0x17
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
