@@ -46,3 +46,8 @@ section _END class=END
 global _dosdrv_end
 _dosdrv_end:
 
+; begin of init section i.e. the cutoff point once initialization is finished.
+section _BEGIN class=INITBEGIN
+global _dosdrv_initbegin
+_dosdrv_initbegin:
+

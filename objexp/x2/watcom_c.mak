@@ -22,14 +22,18 @@ drva.obj: drva.asm
 drvc.obj: drvc.c
 	$(CC) $(CFLAGS) -ms -zl $[@
 
-drv.exe: drvc.obj drva.obj
+drvci.obj: drvci.c
+	$(CC) $(CFLAGS) -nt=_INITTEXT -nd=_INIT -nc=INITCODE -g=_INIT_GROUP -ms -zl $[@
+
+drv.exe: drvc.obj drva.obj drvci.obj
 	%write tmp.cmd option quiet system dos
 	%write tmp.cmd file drva.obj
 	%write tmp.cmd file drvc.obj
+	%write tmp.cmd file drvci.obj
 	%write tmp.cmd name drv.exe
 	%write tmp.cmd option map=drv.map
 	# special segment ordering
-	%write tmp.cmd order clname CODE clname DATA segment CONST segment CONST2 segment _DATA clname BSS clname END
+	%write tmp.cmd order clname CODE clname DATA segment CONST segment CONST2 segment _DATA clname BSS clname END clname INITBEGIN clname INITCODE clname INITEND
 	# end segment ordering
 	@wlink @tmp.cmd
 

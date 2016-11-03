@@ -109,11 +109,14 @@ enum {
 #pragma pack(pop)
 
 extern unsigned char _cdecl far                         dosdrv_end;
+extern unsigned char _cdecl far                         dosdrv_initbegin;
 extern struct dosdrv_header_t _cdecl far                dosdrv_header;
 extern struct dosdrv_request_base_t far _cdecl * far    dosdrv_req_ptr;
 
 /* NTS: __saveregs in Watcom C has no effect unless calling convention is watcall */
 #define DOSDEVICE_INTERRUPT_PROC void __watcall __loadds __saveregs far
+
+void INIT_func(void);
 
 /* Interrupt procedure (from DOS). Must return via RETF. Must not have any parameters. Must load DS, save all regs.
  * All interaction with dos is through structure pointer given to strategy routine. */
@@ -126,7 +129,15 @@ DOSDEVICE_INTERRUPT_PROC dosdrv_interrupt(void) {
         volatile unsigned int b = FP_OFF(&dosdrv_end);
     }
 
+    {
+        volatile unsigned int a = FP_SEG(&dosdrv_initbegin);
+        volatile unsigned int b = FP_OFF(&dosdrv_initbegin);
+    }
+
     switch (dosdrv_req_ptr->command) {
+        case dosdrv_request_command_INIT:
+            INIT_func(); // NTS: This code is discarded after successful init!
+            break;
         default:
             /* I don't understand your request */
             dosdrv_req_ptr->status = dosdrv_request_status_flag_ERROR | dosdrv_request_status_code_UNKNOWN_COMMAND;
