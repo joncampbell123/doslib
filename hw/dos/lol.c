@@ -117,7 +117,9 @@ int main() {
 		if (dos_device_first(&denu)) {
 		printf("Device drivers\n"); line++;
 		do {
-			printf("    ATTR=%04Xh entry=%04Xh int=%04Xh %s\n",denu.attr,denu.entry,denu.intent,denu.name);
+			printf("  %04x:%04x  ATTR=%04Xh entry=%04Xh int=%04Xh %s\n",
+                FP_SEG(denu.raw),FP_OFF(denu.raw),
+                denu.attr,denu.entry,denu.intent,denu.name);
 
 			if (++line >= 20) {
 				line -= 20;
