@@ -28,6 +28,9 @@ drv.exe: drvc.obj drva.obj
 	%write tmp.cmd file drvc.obj
 	%write tmp.cmd name drv.exe
 	%write tmp.cmd option map=drv.map
+	# special segment ordering
+	%write tmp.cmd order clname CODE clname DATA segment CONST segment CONST2 segment _DATA segment _END
+	# end segment ordering
 	@wlink @tmp.cmd
 
 clean: .SYMBOLIC
