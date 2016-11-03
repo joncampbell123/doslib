@@ -1,6 +1,7 @@
 
 /* does NOT use C runtime */
 
+#include <i86.h>
 #include <conio.h>
 #include <stdint.h>
 
@@ -104,6 +105,7 @@ enum {
 };
 #pragma pack(pop)
 
+extern unsigned char _cdecl far                         dosdrv_end;
 extern struct dosdrv_header_t _cdecl far                dosdrv_header;
 extern struct dosdrv_request_base_t far _cdecl * far    dosdrv_req_ptr;
 
@@ -115,6 +117,11 @@ extern struct dosdrv_request_base_t far _cdecl * far    dosdrv_req_ptr;
 DOSDEVICE_INTERRUPT_PROC dosdrv_interrupt(void) {
     if (dosdrv_req_ptr->request_length < sizeof(*dosdrv_req_ptr))
         goto not_long_enough;
+
+    {
+        volatile unsigned int a = FP_SEG(&dosdrv_end);
+        volatile unsigned int b = FP_OFF(&dosdrv_end);
+    }
 
     switch (dosdrv_req_ptr->command) {
         default:

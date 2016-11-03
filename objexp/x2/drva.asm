@@ -40,3 +40,9 @@ _exe_normal_entry:
         mov         ax,4C00h        ; if the user tries to run this EXE, terminate
         int         21h
 
+; Watcom's _END symbol acts as expected in C when you access it, but then acts funny
+; when you try to take the address of it. So we have our own.
+section _END class=DATA
+global _dosdrv_end
+_dosdrv_end:
+
