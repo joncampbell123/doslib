@@ -5,6 +5,9 @@
 #include <conio.h>
 #include <stdint.h>
 
+/* put something in BSS */
+int bss_stuff;
+
 #pragma pack(push,1)
 struct dosdrv_header_t {
     unsigned char far*          next_dosdrv;        // +0x00 or 0xFFFF:0xFFFF if last

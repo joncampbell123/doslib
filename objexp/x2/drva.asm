@@ -42,7 +42,7 @@ _exe_normal_entry:
 
 ; Watcom's _END symbol acts as expected in C when you access it, but then acts funny
 ; when you try to take the address of it. So we have our own.
-section _END class=DATA
+section _END class=END
 global _dosdrv_end
 _dosdrv_end:
 
