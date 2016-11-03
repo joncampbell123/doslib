@@ -7,7 +7,6 @@ extern dosdrv_interrupt_                ; <- watcall
 
 global _dosdrv_header
 global _dosdrv_req_ptr
-global _dosdrv_strategy
 
 ; DOS device driver header (must come FIRST)
 _dosdrv_header:
