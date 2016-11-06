@@ -34,6 +34,9 @@ for ($i=0;$i < @ARGV;) {
             $out_enumbase = $ARGV[$i++];
         }
         elsif ($a eq "h" || $a eq "help") {
+            print STDERR "CLSG module header generator.\n";
+            print STDERR "(C) 2016 Jonathan Campbell.";
+            print STDERR "\n";
             print STDERR "--def <file>             Input DEF file to parse\n";
             print STDERR "--asm <file>             Output ASM file to generate\n";
             print STDERR "--stub / --no-stub       Generate/Don't generate EXE entry stub\n";

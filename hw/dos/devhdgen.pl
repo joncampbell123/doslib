@@ -90,6 +90,9 @@ for ($i=0;$i < @ARGV;) {
             $dev_name = $ARGV[$i++];
         }
         elsif ($a eq "h" || $a eq "help") {
+            print STDERR "MS-DOS device driver header generator.\n";
+            print STDERR "(C) 2016 Jonathan Campbell.";
+            print STDERR "\n";
             print STDERR "--asm <file>             Output ASM file to generate\n";
             print STDERR "--stub / --no-stub       Generate/Don't generate EXE entry stub\n";
             print STDERR "--device-attr <x>        Force X to be device attribute word (ex. 0xA800)\n";
