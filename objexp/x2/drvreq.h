@@ -20,7 +20,7 @@ struct dosdrv_request_init_t {
                                                             //       Your init routine fills in the memory address that DOS is supposed
                                                             //       to free memory at. Bytes at or after this point are freed.
     union {
-        uint16_t far*                   bios_parameter_block_ptr_array; // +0x12 pointer to array of near pointers to BPBs
+        uint16_t far*                   bios_parameter_block_ptr_array; // +0x12 pointer to array of near pointers to BPBs (if block device)
         char far*                       device_equ_value;       // +0x12 pointer to char just past '=' in config.sys device= string (if char device)
     };
     uint8_t                             first_unit_drive_number;// +0x16 block device first unit drive number (0=A, 1=B, etc)
