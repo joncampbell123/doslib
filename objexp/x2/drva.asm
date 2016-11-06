@@ -12,14 +12,14 @@ global _dosdrv_req_ptr
 _dosdrv_header:
         dw  0xFFFF,0xFFFF               ; next device ptr
         dw  0xA800                      ; bit 15: 1=character device
-                                        ; bit 14: 0=does not support IOCTL control strings
-                                        ; bit 13: 0=does not support output until busy
+                                        ; bit 14: 1=supports IOCTL control strings
+                                        ; bit 13: 1=supports output until busy
                                         ; bit 11: 1=understands open/close
                                         ; bit  6: 0=does not understand 3.2 functions
                                         ; bit 3:0: 0=not NUL, STDIN, STDOUT, CLOCK, etc.
         dw  _dosdrv_strategy            ; offset of strategy routine
         dw  dosdrv_interrupt_           ; offset of interrupt routine
-        db  'HELLO   '                  ; device name
+        db  'HELLO$  '                  ; device name (8 chars)
         db  0
 
 ; var storage
