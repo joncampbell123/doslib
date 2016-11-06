@@ -164,6 +164,18 @@ struct dosdrv_request_ctrl_info_write_t {
     uint16_t                            byte_count;         // +0x12 Byte count (from DOS), actual bytes transferred (return to DOS)
 };                                                          // =0x14
 
+/* dosdrv_request_command_OPEN_DEVICE */
+struct dosdrv_request_open_device_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+};                                                          // =0x0D
+
+/* dosdrv_request_command_CLOSE_DEVICE */
+struct dosdrv_request_close_device_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+};                                                          // =0x0D
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
