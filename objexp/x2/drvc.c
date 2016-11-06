@@ -7,7 +7,7 @@
 
 #include <hw/dos/drvhead.h>
 #include <hw/dos/drvreq.h>
-#include "drvvar.h"
+#include <hw/dos/drvvar.h>
 
 /* const data we return */
 static const char ret_message[] = "Hello world. This is a test message.\r\nYou should see this on your console as-is, no mistakes.\r\nDOS read this from my driver routine.\r\n";

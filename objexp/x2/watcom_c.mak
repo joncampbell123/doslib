@@ -9,7 +9,7 @@ CFLAGS   = -zq -ml -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -
 all: drv.exe
 
 drva.asm:
-	./devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy
+	../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy
 
 drva.obj: drva.asm
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
