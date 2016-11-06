@@ -29,6 +29,22 @@ struct dosdrv_request_init_t {
 // uint16_t  error_message_flagged;                         // +0x17      What does this field mean?? It's not explained.
 //                                                          // =0x19
 
+/* dosdrv_request_command_MEDIA_CHECK */
+struct dosdrv_request_media_check_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+    uint8_t                             media_id_byte;      // +0x0D Media ID byte (from DOS)
+    int8_t                              change_code;        // +0x0E Change code (return to DOS). -1, 0, or 1
+    void far*                           volume_label;       // +0x0F Volume label address (return to DOS)
+};                                                          // =0x13
+
+// change_code
+enum {
+    dosdrv_request_media_check_change_code_changed = -1,    // -1 (0xFF) disk has been changed
+    dosdrv_request_media_check_change_code_unknown = 0,     // 0 it's not known whether the disk has been changed
+    dosdrv_request_media_check_change_code_unchanged = 1    // 1 disk has not been changed
+};
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
