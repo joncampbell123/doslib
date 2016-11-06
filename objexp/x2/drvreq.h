@@ -176,6 +176,12 @@ struct dosdrv_request_close_device_t {
     uint8_t                             reserved[8];        // +0x05
 };                                                          // =0x0D
 
+/* dosdrv_request_command_REMOVABLE_MEDIA */
+struct dosdrv_request_removable_media_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+};                                                          // =0x0D
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
