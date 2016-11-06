@@ -143,6 +143,18 @@ struct dosdrv_request_write_t {
 //          * Bit 1 of the device attribute word in the header is set
 //          * The 16-bit starting sector number is -1 (0xFFFF)
 
+/* dosdrv_request_command_OUTPUT_STATUS */
+struct dosdrv_request_output_status_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+};                                                          // =0x0D
+
+/* dosdrv_request_command_OUTPUT_FLUSH */
+struct dosdrv_request_output_flush_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+};                                                          // =0x0D
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
