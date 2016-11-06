@@ -63,6 +63,36 @@ struct dosdrv_request_ctrl_info_read_t {
     uint16_t                            byte_count;         // +0x12 Byte count (from DOS), actual bytes transferred (return to DOS)
 };                                                          // =0x14
 
+/* dosdrv_request_command_READ */
+struct dosdrv_request_read_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+    uint8_t                             media_id_byte;      // +0x0D Media ID byte (from DOS)
+    void far*                           buffer_address;     // +0x0E Buffer address (from DOS)
+    union {
+        uint16_t                        byte_count;         // +0x12 Byte count (from DOS), actual bytes transferred (return to DOS), character devices
+        uint16_t                        sector_counnt;      // +0x12 Sector count (from DOS), actual sectors transferred (return to DOS), block devices
+    };                                                      // +0x12 union
+    uint16_t                            starting_sector;    // +0x14 starting sector number (if 16-bit sector read) (from DOS). See notes below.
+    uint32_t                            volume_identifier;  // +0x16 Volume identifier (return to DOS)
+    union {
+        uint32_t                        starting_sector_32; // +0x1A starting sector number (if 32-bit sector read) (from DOS). See notes below.
+        void far*                       volume_label;       // +0x1A volume label address if error 0x0F (return to DOS).
+    };                                                      // +0x1A union
+};                                                          // =0x1E
+// NOTES: 16-bit vs 32-bit sector read
+//
+//        Somewhere between MS-DOS 3.2 and 3.33 Microsoft lifted a 32MB limit with hard drives by changing their
+//        codes to use a 32-bit unsigned integer to address the disk, instead of a 16-bit integer. But, their
+//        request structure already defined the field as 16-bit wide. To accomodate a 32-bit wide sector number,
+//        the volume label address field was repurposed to provide the 32-bit sector number on entry. MS-DOS block
+//        devices should use the 32-bit sector number if:
+//
+//          * A block device
+//          * The drive is 32MB or larger
+//          * Bit 1 of the device attribute word in the header is set
+//          * The 16-bit starting sector number is -1 (0xFFFF)
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
