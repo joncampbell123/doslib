@@ -182,6 +182,15 @@ struct dosdrv_request_removable_media_t {
     uint8_t                             reserved[8];        // +0x05
 };                                                          // =0x0D
 
+/* dosdrv_request_command_OUTPUT_UNTIL_BUSY */
+struct dosdrv_request_output_until_busy_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+    uint8_t                             _unused;            // +0x0D (according to Advanced Assembly Language, Chapter 9, Device Drivers)
+    void far*                           buffer_address;     // +0x0E Buffer address (from DOS)
+    uint16_t                            byte_count;         // +0x12 Byte count (from DOS), actual bytes transferred (return to DOS)
+};                                                          // =0x14
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
