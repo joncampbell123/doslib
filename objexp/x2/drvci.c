@@ -5,8 +5,8 @@
 #include <conio.h>
 #include <stdint.h>
 
-#include "drvhead.h"
-#include "drvreq.h"
+#include <hw/dos/drvhead.h>
+#include <hw/dos/drvreq.h>
 #include "drvvar.h"
 
 static const char hello_world[] = "Hello!\r\nThis is an example device driver that acts as a basic character device.\r\nYou can read and write me through the HELLO$ character device.\r\nHave fun!\r\n\r\n";

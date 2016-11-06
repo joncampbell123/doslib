@@ -5,8 +5,8 @@
 #include <conio.h>
 #include <stdint.h>
 
-#include "drvhead.h"
-#include "drvreq.h"
+#include <hw/dos/drvhead.h>
+#include <hw/dos/drvreq.h>
 #include "drvvar.h"
 
 /* put something in BSS */
