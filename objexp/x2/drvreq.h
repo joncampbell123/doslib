@@ -93,6 +93,13 @@ struct dosdrv_request_read_t {
 //          * Bit 1 of the device attribute word in the header is set
 //          * The 16-bit starting sector number is -1 (0xFFFF)
 
+/* dosdrv_request_command_ND_READ */
+struct dosdrv_request_nd_read_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+    uint8_t                             character;          // +0x0D character (return to DOS)
+};                                                          // =0x0E
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
