@@ -3,7 +3,7 @@ rel=../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 if [ "$1" == "clean" ]; then
-    rm -fv *.obj *.lib *.exe *.com *.bin drv.map win95.dsk
+    rm -fv *.obj *.lib *.exe *.com *.bin drv.map win95.dsk drva.asm
 	exit 0
 elif [ "$1" == "disk" ]; then
 	# bootable win95 rescue disk with test program
