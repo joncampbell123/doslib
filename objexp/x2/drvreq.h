@@ -25,6 +25,9 @@ struct dosdrv_request_init_t {
     };
     uint8_t                             first_unit_drive_number;// +0x16 block device first unit drive number (0=A, 1=B, etc)
 };                                                          // =0x17
+// disputed additional fields (Advanced Assembly Language, chapter 9, Device Drivers)
+// uint16_t  error_message_flagged;                         // +0x17      What does this field mean?? It's not explained.
+//                                                          // =0x19
 
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
