@@ -100,6 +100,18 @@ struct dosdrv_request_nd_read_t {
     uint8_t                             character;          // +0x0D character (return to DOS)
 };                                                          // =0x0E
 
+/* dosdrv_request_command_INPUT_STATUS */
+struct dosdrv_request_input_status_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+};                                                          // =0x0D
+
+/* dosdrv_request_command_INPUT_FLUSH */
+struct dosdrv_request_input_flush_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+};                                                          // =0x0D
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
