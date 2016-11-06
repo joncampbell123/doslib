@@ -9,19 +9,16 @@
 #include <hw/dos/drvreq.h>
 #include "drvvar.h"
 
-/* put something in BSS */
-int bss_stuff;
-
 /* const data we return */
-const char ret_message[] = "Hello world. This is a test message.\r\nYou should see this on your console as-is, no mistakes.\r\nDOS read this from my driver routine.\r\n";
+static const char ret_message[] = "Hello world. This is a test message.\r\nYou should see this on your console as-is, no mistakes.\r\nDOS read this from my driver routine.\r\n";
 
-uint16_t ret_message_pos = 0;
+static uint16_t ret_message_pos = 0;
 
 void INIT_func(void);
-void READ_func(void);
-void WRITE_func(void);
-void OUTPUT_UNTIL_BUSY_func(void);
-void write_out(const unsigned char c);
+static void READ_func(void);
+static void WRITE_func(void);
+static void OUTPUT_UNTIL_BUSY_func(void);
+static void write_out(const unsigned char c);
 
 /* Interrupt procedure (from DOS). Must return via RETF. Must not have any parameters. Must load DS, save all regs.
  * All interaction with dos is through structure pointer given to strategy routine. */
@@ -61,7 +58,7 @@ not_long_enough:
     return;
 }
 
-void READ_func(void) {
+static void READ_func(void) {
 #define readreq ((struct dosdrv_request_read_t far*)dosdrv_req_ptr)
     unsigned short got = 0;
     unsigned short wanted = readreq->byte_count;
@@ -81,7 +78,7 @@ void READ_func(void) {
 #undef readreq
 }
 
-void WRITE_func(void) {
+static void WRITE_func(void) {
 #define writereq ((struct dosdrv_request_write_t far*)dosdrv_req_ptr) 
     unsigned short got = 0;
     unsigned short wanted = writereq->byte_count;
@@ -101,7 +98,7 @@ void WRITE_func(void) {
 #undef writereq
 }
 
-void OUTPUT_UNTIL_BUSY_func(void) {
+static void OUTPUT_UNTIL_BUSY_func(void) {
 #define writereq ((struct dosdrv_request_output_until_busy_t far*)dosdrv_req_ptr) 
     unsigned short got = 0;
     unsigned short wanted = writereq->byte_count;
@@ -121,7 +118,7 @@ void OUTPUT_UNTIL_BUSY_func(void) {
 #undef writereq
 }
 
-void write_out(const unsigned char c) {
+static void write_out(const unsigned char c) {
     __asm {
         push    ax
 
