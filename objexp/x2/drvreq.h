@@ -191,6 +191,40 @@ struct dosdrv_request_output_until_busy_t {
     uint16_t                            byte_count;         // +0x12 Byte count (from DOS), actual bytes transferred (return to DOS)
 };                                                          // =0x14
 
+/* dosdrv_request_command_GENERIC_IOCTL */
+struct dosdrv_request_generic_ioctl_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+    uint8_t                             major_code;         // +0x0D major code (from DOS)
+    uint8_t                             minor_code;         // +0x0E minor code (from DOS)
+    uint16_t                            contents_of_si;     // +0x0F contents of SI (from DOS)
+    uint16_t                            contents_of_di;     // +0x11 contents of DI (from DOS)
+    void far*                           buffer_address;     // +0x13 buffer address (from DOS)
+};                                                          // =0x17
+// for more information see INT 21h AH=0x44 subfunction 0x0C and 0x0D
+
+/* dosdrv_request_command_GET_LOGICAL_DEVICE */
+struct dosdrv_request_get_logical_device_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+};                                                          // =0x0D
+
+/* dosdrv_request_command_SET_LOGICAL_DEVICE */
+struct dosdrv_request_set_logical_device_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+};                                                          // =0x0D
+
+/* dosdrv_request_command_IOCTL_QUERY */
+struct dosdrv_request_ioctl_query_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+    uint8_t                             command;            // +0x0D command in question (from DOS)
+    uint8_t                             minor_code;         // +0x0E minor code in question (from DOS)
+    uint8_t                             reserved2[4];       // +0x0F
+    void far*                           buffer_address;     // +0x13 buffer address (from DOS)
+};                                                          // =0x17
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
