@@ -19,7 +19,7 @@ void INIT_func(void);
 DOSDEVICE_INTERRUPT_PROC dosdrv_interrupt(void) {
     switch (dosdrv_req_ptr->command) {
         case dosdrv_request_command_INIT:
-            if (dosdrv_req_ptr->request_length < sizeof(struct dosdrv_request_init_t))
+            if (dosdrv_req_ptr->request_length < dosdrv_request_init_t_minimum)
                 goto not_long_enough;
 
             INIT_func(); // NTS: This code is discarded after successful init!

@@ -28,6 +28,7 @@ struct dosdrv_request_init_t {
 // disputed additional fields (Advanced Assembly Language, chapter 9, Device Drivers)
 // uint16_t  error_message_flagged;                         // +0x17      What does this field mean?? It's not explained.
 //                                                          // =0x19
+#define dosdrv_request_init_t_minimum   0x17
 
 /* dosdrv_request_command_MEDIA_CHECK */
 struct dosdrv_request_media_check_t {
