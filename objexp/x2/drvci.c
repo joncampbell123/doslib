@@ -9,7 +9,7 @@
 #include "drvreq.h"
 #include "drvvar.h"
 
-static const char hello_world[] = "Hello!\r\n$"; // iNT 21h strings are $ terminated
+static const char hello_world[] = "Hello!\r\nThis is an example device driver that acts as a basic character device.\r\nYou can read and write me through the HELLO$ character device.\r\nHave fun!\r\n\r\n";
 
 void INIT_func(void) {
 // NTS: Watcom C is missing an optimization opportunity here, so define instead
@@ -17,15 +17,23 @@ void INIT_func(void) {
 
     __asm {
         push    ax
+        push    si
         push    ds
-        push    dx
-        mov     dx,seg hello_world
-        mov     ds,dx
-        mov     dx,offset hello_world
-        mov     ah,0x09
-        int     21h
-        pop     dx
+
+        mov     si,seg hello_world
+        mov     ds,si
+        mov     si,offset hello_world
+
+l1:     lodsb
+        or      al,al
+        jz      le
+        mov     ah,0x0E
+        int     10h
+        jmp     l1
+le:
+
         pop     ds
+        pop     si
         pop     ax
     }
 
