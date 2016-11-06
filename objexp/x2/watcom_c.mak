@@ -8,6 +8,9 @@ CFLAGS   = -zq -ml -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=.obj -q -zu -zdf -zff -
 
 all: drv.exe
 
+drva.asm:
+	./devhdgen.pl --asm $@
+
 drva.obj: drva.asm
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
