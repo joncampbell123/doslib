@@ -155,6 +155,15 @@ struct dosdrv_request_output_flush_t {
     uint8_t                             reserved[8];        // +0x05
 };                                                          // =0x0D
 
+/* dosdrv_request_command_CTRL_INFO_WRITE */
+struct dosdrv_request_ctrl_info_write_t {
+    struct dosdrv_request_base_t        base;               // +0x00 (request_base_t)
+    uint8_t                             reserved[8];        // +0x05
+    uint8_t                             media_id_byte;      // +0x0D Media ID byte (from DOS)
+    void far*                           buffer_address;     // +0x0E Buffer address (from DOS)
+    uint16_t                            byte_count;         // +0x12 Byte count (from DOS), actual bytes transferred (return to DOS)
+};                                                          // =0x14
+
 enum {
     dosdrv_request_command_INIT=0x00,               // BLK CHR 2.0+
     dosdrv_request_command_MEDIA_CHECK=0x01,        // BLK     2.0+
