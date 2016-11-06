@@ -2,34 +2,36 @@
 rel=../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
-
-dos=1 # MS-DOS
-
 if [ "$1" == "clean" ]; then
-	do_clean
-	rm -fv test.dsk
+    rm -fv *.obj *.lib *.exe *.com *.bin drv.map win95.dsk drva.asm
 	exit 0
-fi
-
-if [ "$1" == "disk" ]; then
+elif [ "$1" == "disk" ]; then
 	# bootable win95 rescue disk with test program
-	gunzip -c -d test.dsk.gz >test.dsk
-	mcopy -i test.dsk config.sys ::config.sys
-	mcopy -i test.dsk dos86s/hello.sys ::hello.sys
+	gunzip -c -d win95.dsk.gz >win95.dsk
+	mcopy -i win95.dsk drv.exe ::drv.exe
+else
+	wmake -f watcom_c.mak
 fi
 
-if [[ "$1" == "build" || "$1" == "" ]]; then
-	make_buildlist
-	begin_bat
+cat >MAKE.BAT <<_EOF
+@echo off
 
-	what=all
-	if [ x"$2" != x ]; then what="$2"; fi
+rem shut up DOS4G/W
+set DOS4G=quiet
 
-	for name in $build_list; do
-		do_wmake $name "$what" || exit 1
-		bat_wmake $name "$what" || exit 1
-	done
+if "%1" == "clean" call clean.bat
+if "%1" == "clean" goto end
+wmake -f watcom_c.mak
+:end
+_EOF
 
-	end_bat
-fi
+cat >CLEAN.BAT <<_EOF
+@echo off
+
+del *.obj
+del *.exe
+del *.lib
+del *.com
+del foo.gz
+_EOF
 
