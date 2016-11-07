@@ -23,7 +23,7 @@
  * late 1990's hardware, the PnP awareness is required to correctly identify the
  * IRQ associated with the device, such as on older Toshiba laptops that emulate
  * a serial port using the IR infared device on the back. */
- 
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -37,30 +37,31 @@
 #include <hw/8250/8250.h>
 #include <hw/dos/doswin.h>
 
-uint16_t		base_8250_port[MAX_8250_PORTS];
-struct info_8250	info_8250_port[MAX_8250_PORTS];
-unsigned int		base_8250_ports;
-char			inited_8250=0;
+uint16_t            base_8250_port[MAX_8250_PORTS];
+struct info_8250    info_8250_port[MAX_8250_PORTS];
+unsigned int        base_8250_ports;
+char                inited_8250=0;
 
 int already_got_8250_port(uint16_t port) {
-	unsigned int i;
+    unsigned int i;
 
-	for (i=0;i < (unsigned int)base_8250_ports;i++) {
-		if (base_8250_port[i] == port)
-			return 1;
-	}
+    for (i=0;i < (unsigned int)base_8250_ports;i++) {
+        if (base_8250_port[i] == port)
+            return 1;
+    }
 
-	return 0;
+    return 0;
 }
 
 int init_8250() {
-	if (!inited_8250) {
-		memset(base_8250_port,0,sizeof(base_8250_port));
-		base_8250_ports = 0;
-		bios_8250_ports = 0;
-		inited_8250 = 1;
-	}
+    if (!inited_8250) {
+        memset(base_8250_port,0,sizeof(base_8250_port));
+        base_8250_ports = 0;
+        bios_8250_ports = 0;
+        inited_8250 = 1;
+    }
 
-	return 1;
+    return 1;
 }
 
+/* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */
