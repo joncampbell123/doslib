@@ -37,7 +37,7 @@ dos86s/drv.exe: dos86s/drvc.obj dos86s/drva.obj dos86s/drvci.obj
 	%write tmp.cmd file dos86s/drvc.obj
 	%write tmp.cmd file dos86s/drvci.obj
 	%write tmp.cmd name dos86s/drv.exe
-	%write tmp.cmd option map=drv.map
+	%write tmp.cmd option map=dos86s/drv.map
 	# special segment ordering
 	%write tmp.cmd order clname CODE clname DATA segment CONST segment CONST2 segment _DATA clname BSS clname END clname INITBEGIN clname INITCODE clname INITEND
 	# end segment ordering
