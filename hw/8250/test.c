@@ -363,7 +363,7 @@ static void config_fifo(struct info_8250 *uart) {
     }
 }
 
-void irq_bufferout_write(unsigned char c) {
+static void irq_bufferout_write(unsigned char c) {
     _cli();
     while (((irq_bufferout_i+1)%IRQ_BUFFER_SIZE) == irq_bufferout_o) {
         /* try to force transmit interrupt that gets the character out the door */
@@ -559,7 +559,7 @@ static void show_console(struct info_8250 *uart) {
 #ifdef ISAPNP
 static unsigned char devnode_raw[4096];
 
-void pnp_serial_scan() {
+static void pnp_serial_scan() {
     /* most of the time the serial ports are BIOS controlled and on the motherboard.
      * they usually don't even show up in a PnP isolation scan. so we have to use
      * the "get device nodes" functions of the PnP BIOS. */
