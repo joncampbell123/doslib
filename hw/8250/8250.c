@@ -24,18 +24,9 @@
  * IRQ associated with the device, such as on older Toshiba laptops that emulate
  * a serial port using the IR infared device on the back. */
 
-#include <stdio.h>
-#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-#include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <fcntl.h>
-#include <dos.h>
 
-#include <hw/cpu/cpu.h>
-#include <hw/dos/dos.h>
 #include <hw/8250/8250.h>
-#include <hw/dos/doswin.h>
 
 uint16_t            base_8250_port[MAX_8250_PORTS];
 struct info_8250    info_8250_port[MAX_8250_PORTS];

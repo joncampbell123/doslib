@@ -15,8 +15,6 @@
  *          interrupt handlers the calling program should do that. */
 
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-
-#include <hw/cpu/cpu.h>
 #include <stdint.h>
 
 #define MAX_8250_PORTS                          8
