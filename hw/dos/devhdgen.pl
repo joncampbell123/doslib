@@ -231,6 +231,9 @@ print ASM "section _BEGIN class=INITBEGIN\n";
 print ASM "global _dosdrv_initbegin\n";
 print ASM "_dosdrv_initbegin:\n";
 print ASM "\n";
+print ASM "; shut up Watcom\n";
+print ASM "section _STACK class=STACK\n";
+print ASM "\n";
 
 close(ASM);
 

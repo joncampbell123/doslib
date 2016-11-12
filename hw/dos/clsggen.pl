@@ -216,6 +216,10 @@ if ($out_make_stub_entry > 0) {
     print ASM "\n";
 }
 
+print ASM "; shut up Watcom\n";
+print ASM "section _STACK class=STACK\n";
+print ASM "\n";
+
 close(ASM);
 
 if (!defined($out_enumbase) && defined($library) && $library ne '') {
