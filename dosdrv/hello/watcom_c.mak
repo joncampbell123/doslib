@@ -4,7 +4,7 @@ HERE = $+$(%cwd)$-
 OBJS =     drvc.obj
 
 CC       = wcc
-CFLAGS   = -zq -ml -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=dos86s/.obj -q -zu -zdf -zff -zgf -zc -fpi87 -i../.. -dTARGET_MSDOS=16 -dMSDOS=1
+CFLAGS   = -zq -ms -s -bt=dos -oilrtm -fr=nul -wx -0 -fo=dos86s/.obj -q -zu -zdf -zff -zgf -zc -fpi87 -i../.. -dTARGET_MSDOS=16 -dMSDOS=1
 
 all: dos86s dos86s/drv.exe
 
