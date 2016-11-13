@@ -12,7 +12,7 @@ dos86s:
 	mkdir -p dos86s
 
 drva.asm:
-	../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy
+	../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy --no-stack
 
 dos86s/drva.obj: drva.asm
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
