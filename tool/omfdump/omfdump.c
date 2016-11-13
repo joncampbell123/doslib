@@ -134,6 +134,18 @@ static inline unsigned char omfrec_gb(void) {
     return omf_record[omf_recpos++];
 }
 
+static inline unsigned int omfrec_gw(void) {
+    unsigned int v = *((unsigned short*)(omf_record+omf_recpos));
+    omf_recpos += 2;
+    return v;
+}
+
+static inline unsigned long omfrec_gd(void) {
+    unsigned long v = *((uint32_t*)(omf_record+omf_recpos));
+    omf_recpos += 4;
+    return v;
+}
+
 void omfrec_read(char *dst,unsigned int len) {
     if (len > 0) {
         memcpy(dst,omf_record+omf_recpos,len);
@@ -287,6 +299,49 @@ void dump_LNAMES(void) {
     printf("\n");
 }
 
+void dump_PUBDEF(const unsigned char b32) {
+    unsigned int base_segment_index = 0;
+    unsigned int base_group_index = 0;
+    unsigned int base_frame = 0;
+    unsigned long puboff;
+    unsigned int typidx;
+
+    if (b32) {
+        if (omfrec_avail() < 4) return;
+        base_group_index = omfrec_gw();
+        base_segment_index = omfrec_gw();
+    }
+    else {
+        if (omfrec_avail() < 2) return;
+        base_group_index = omfrec_gb();
+        base_segment_index = omfrec_gb();
+    }
+
+    if (omfrec_avail() < 2) return;
+    if (base_segment_index == 0)
+        base_frame = omfrec_gw();
+
+    printf("    PUBDEF%u: basegroupidx=%u basesegidx=%u baseframe=%u\n",
+        b32?32:16,base_group_index,base_segment_index,base_frame);
+
+    while (!omfrec_eof()) {
+        omfrec_get_lenstr(tempstr,sizeof(tempstr));
+
+        if (b32) {
+            if (omfrec_avail() < (4+2)) break;
+            puboff = omfrec_gd();
+            typidx = omfrec_gw();
+        }
+        else {
+            if (omfrec_avail() < (2+1)) break;
+            puboff = omfrec_gw();
+            typidx = omfrec_gb();
+        }
+
+        printf("        '%s' offset=%lu typeidx=%u\n",tempstr,puboff,typidx);
+    }
+}
+
 int main(int argc,char **argv) {
     int i,fd;
     char *a;
@@ -340,6 +395,10 @@ int main(int argc,char **argv) {
                 break;
             case 0x88:/* COMENT */
                 dump_COMENT();
+                break;
+            case 0x90:/* PUBDEF */
+            case 0x91:/* PUBDEF32 */
+                dump_PUBDEF(omf_rectype&1);
                 break;
             case 0x96:/* LNAMES */
                 dump_LNAMES();
