@@ -39,6 +39,37 @@ const char *omf_rectype_to_str(unsigned char rt) {
         case 0x8C:  return "EXTDEF";
         case 0x90:  return "PUBDEF";
         case 0x91:  return "PUBDEF32";
+        case 0x94:  return "LINNUM";
+        case 0x95:  return "LINNUM32";
+        case 0x96:  return "LNAMES";
+        case 0x98:  return "SEGDEF";
+        case 0x99:  return "SEGDEF32";
+        case 0x9A:  return "GRPDEF";
+        case 0x9C:  return "FIXUPP";
+        case 0x9D:  return "FIXUPP32";
+        case 0xA0:  return "LEDATA";
+        case 0xA1:  return "LEDATA32";
+        case 0xA2:  return "LIDATA";
+        case 0xA3:  return "LIDATA32";
+        case 0xB0:  return "COMDEF";
+        case 0xB2:  return "BAKPAT";
+        case 0xB3:  return "BAKPAT32";
+        case 0xB4:  return "LEXTDEF";
+        case 0xB6:  return "LPUBDEF";
+        case 0xB7:  return "LPUBDEF32";
+        case 0xB8:  return "LCOMDEF";
+        case 0xBC:  return "CEXTDEF";
+        case 0xC2:  return "COMDAT";
+        case 0xC3:  return "COMDAT32";
+        case 0xC4:  return "LINSYM";
+        case 0xC5:  return "LINSYM32";
+        case 0xC6:  return "ALIAS";
+        case 0xC8:  return "NBKPAT";
+        case 0xCA:  return "LLNAMES";
+        case 0xCC:  return "VERNUM";
+        case 0xCE:  return "VENDEXT";
+        case 0xF0:  return "LIBHEAD"; // I made up this name
+        case 0xF1:  return "LIBEND"; // I also made up this name
         default:    break;
     }
 
