@@ -11,7 +11,7 @@ CFLAGS   = -zq -ms -s -bt=com -oilrtfm -fr=nul -wx -0 -fo=.obj -dSTDC -q
 all: tdchoose.com
 
 tdchoose.com: tdchoose.obj
-	$(LINKER) -lr -l=com -q -fe=tdchoose.com tdchoose.obj
+	$(LINKER) -lr -l=com -q -fm=tdchoose.map -fe=tdchoose.com tdchoose.obj
 
 clean: .SYMBOLIC
           del *.obj
