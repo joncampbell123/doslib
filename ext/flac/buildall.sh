@@ -35,7 +35,9 @@ call buildall.bat %WHAT%
 cd ..
 
 _EOF
-        elif [ -x make.sh ]; then
+        fi
+
+        if [ -x make.sh ]; then
             ./make.sh $* || exit 1
 
             echo Building: $i
@@ -46,16 +48,6 @@ call make.bat %WHAT%
 cd ..
 
 _EOF
-        else
-            cat >>../buildall.bat <<_EOF
-echo Building: $i
-cd $i
-call buildall.bat %WHAT%
-cd ..
-
-_EOF
-
-            ../buildall.sh $* || exit 1
         fi)
     ) || exit 1
 fi; done
