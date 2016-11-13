@@ -22,6 +22,8 @@ if exist *.exe del *.exe
 _EOF
 for i in *; do if [ -d "$i" ]; then
     (cd $i && (
+        cp -vu ../buildall.sh buildall.sh || exit 1
+
         if [ -x buildall.sh ]; then
             echo Building: $i
             ./buildall.sh $* || exit 1
@@ -53,7 +55,6 @@ cd ..
 
 _EOF
 
-            cp -v ../buildall.sh buildall.sh || exit 1
             ../buildall.sh $* || exit 1
         fi)
     ) || exit 1
