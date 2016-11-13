@@ -228,6 +228,53 @@ void dump_LHEADR(void) {
     printf("    Name of the object in library: \"%s\"\n",tempstr);
 }
 
+const char *omfrec_COMENT_cclass_to_str(unsigned char cc) {
+    switch (cc) {
+        case 0x00:  return "Translator";
+        case 0x01:  return "Intel copyright";
+        case 0x81:  return "Library specifier";
+        case 0x9C:  return "MS-DOS version";
+        case 0x9D:  return "Memory model";
+        case 0x9E:  return "DOSSEG";
+        case 0x9F:  return "Default library search name";
+        case 0xA0:  return "OMF extension";
+        case 0xA1:  return "New OMF extension";
+        case 0xA2:  return "Link Pass Separator";
+        case 0xA3:  return "Library module comment record";
+        case 0xA4:  return "Executable string";
+        case 0xA6:  return "Incremental compilation error";
+        case 0xA7:  return "No segment padding";
+        case 0xA8:  return "Weak extern record";
+        case 0xA9:  return "Lazy extern record";
+        case 0xDA:  return "Comment";
+        case 0xDB:  return "Compiler (pragma)";
+        case 0xDC:  return "Date (pragma)";
+        case 0xDD:  return "Timestamp (pragma)";
+        case 0xDF:  return "User (pragma)";
+        case 0xE9:  return "Dependency file";
+        default:    break;
+    };
+
+    return "?";
+}
+
+void dump_COMENT(void) {
+    unsigned char ctype,cclass;
+
+    /* omf_record+0: Comment Type
+     * omf_record+1: Comment Class
+     * omf_record+2: byte string until end of record */
+    if (omfrec_avail() < 2) return;
+    ctype = omfrec_gb();
+    cclass = omfrec_gb();
+
+    printf("    COMENT Type=0x%02x ( ",ctype);
+    if (ctype & 0x80) printf("No-purge ");
+    if (ctype & 0x40) printf("No-list ");
+    printf(") class=0x%02x (%s): ",cclass,omfrec_COMENT_cclass_to_str(cclass));
+    printf("\n");
+}
+
 int main(int argc,char **argv) {
     int i,fd;
     char *a;
@@ -279,7 +326,9 @@ int main(int argc,char **argv) {
             case 0x82:/* LHEADR */
                 dump_LHEADR();
                 break;
-
+            case 0x88:/* COMENT */
+                dump_COMENT();
+                break;
         }
 
         omfrec_checkrange();
