@@ -167,6 +167,18 @@ static void help(void) {
     fprintf(stderr,"  -i <file>    OMF file to dump\n");
 }
 
+static int omf_lib_next_block(int fd,unsigned long checkofs) {
+    if (lseek(fd,checkofs,SEEK_SET) != checkofs)
+        return 0;
+
+    /* "Libraries under MS-DOS are always multiples of 512-byte blocks" */
+    checkofs = (checkofs + 0x1FFUL) & (~0x1FFUL);
+    if (lseek(fd,checkofs,SEEK_SET) != checkofs)
+        return 0;
+
+    return 1;
+}
+
 static int read_omf_record(int fd) {
     unsigned char sum = 0;
     unsigned int i;
@@ -429,6 +441,9 @@ void dump_LEDATA(const unsigned char b32) {
 }
 
 int main(int argc,char **argv) {
+    unsigned char lasttype;
+    unsigned long lastofs;
+    unsigned int lastlen;
     int i,fd;
     char *a;
 
@@ -464,43 +479,61 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    while (read_omf_record(fd)) {
-        printf("OMF record type=0x%02x (%s: %s) length=%u offset=%lu\n",
-            omf_rectype,
-            omf_rectype_to_str(omf_rectype),
-            omf_rectype_to_str_long(omf_rectype),
-            omf_reclen,
-            omf_recoffs);
+    do {
+        while (read_omf_record(fd)) {
+            lastlen = omf_reclen;
+            lastofs = omf_recoffs;
+            lasttype = omf_rectype;
+            printf("OMF record type=0x%02x (%s: %s) length=%u offset=%lu\n",
+                    omf_rectype,
+                    omf_rectype_to_str(omf_rectype),
+                    omf_rectype_to_str_long(omf_rectype),
+                    omf_reclen,
+                    omf_recoffs);
 
-        switch (omf_rectype) {
-            case 0x80:/* THEADR */
-                dump_THEADR();
-                break;
-            case 0x82:/* LHEADR */
-                dump_LHEADR();
-                break;
-            case 0x88:/* COMENT */
-                dump_COMENT();
-                break;
-            case 0x8C:/* EXTDEF */
-            case 0x8D:/* EXTDEF32 */
-                dump_EXTDEF(omf_rectype&1);
-                break;
-            case 0x90:/* PUBDEF */
-            case 0x91:/* PUBDEF32 */
-                dump_PUBDEF(omf_rectype&1);
-                break;
-            case 0x96:/* LNAMES */
-                dump_LNAMES();
-                break;
-            case 0xA0:/* LEDATA */
-            case 0xA1:/* LEDATA32 */
-                dump_LEDATA(omf_rectype&1);
-                break;
+            switch (omf_rectype) {
+                case 0x80:/* THEADR */
+                    dump_THEADR();
+                    break;
+                case 0x82:/* LHEADR */
+                    dump_LHEADR();
+                    break;
+                case 0x88:/* COMENT */
+                    dump_COMENT();
+                    break;
+                case 0x8C:/* EXTDEF */
+                case 0x8D:/* EXTDEF32 */
+                    dump_EXTDEF(omf_rectype&1);
+                    break;
+                case 0x90:/* PUBDEF */
+                case 0x91:/* PUBDEF32 */
+                    dump_PUBDEF(omf_rectype&1);
+                    break;
+                case 0x96:/* LNAMES */
+                    dump_LNAMES();
+                    break;
+                case 0xA0:/* LEDATA */
+                case 0xA1:/* LEDATA32 */
+                    dump_LEDATA(omf_rectype&1);
+                    break;
+            }
+
+            omfrec_checkrange();
         }
 
-        omfrec_checkrange();
-    }
+        if (lasttype == 0x8A || lasttype == 0x8B) {
+            /* if the last record as MODEND, then advance to the next block in the file
+             * and try to read again (.LIB parsing case). clear lasttype to avoid infinite loops. */
+            lasttype = 0;
+            if (!omf_lib_next_block(fd,lastofs+3UL+(unsigned long)lastlen))
+                break;
+
+            printf("\n* Another .LIB object archive begins...\n\n");
+        }
+        else {
+            break;
+        }
+    } while (1);
 
     close(fd);
     return 0;
