@@ -14,10 +14,10 @@ my $listall = 0;
 my $idx = 0;
 
 if (@ARGV > 0) {
-	$idx = shift(@ARGV) + 0;
+    $idx = shift(@ARGV) + 0;
 }
 else {
-	$listall = 1;
+    $listall = 1;
 }
 
 # TODO: What about .WL6?
@@ -29,17 +29,17 @@ my $start,$end;
 my $len;
 
 if ($listall) {
-	$idx = 0;
-	while (read(HED,$blob,(4 * 2)) == (4 * 2)) {
-		my @a = unpack("VV",$blob);
-		$start = $a[0];
-		$end = $a[1];
-		$len = $end - $start;
-		print "Entry $idx: start=$start len=$len\n";
-		$idx++;
-	}
+    $idx = 0;
+    while (read(HED,$blob,(4 * 2)) == (4 * 2)) {
+        my @a = unpack("VV",$blob);
+        $start = $a[0];
+        $end = $a[1];
+        $len = $end - $start;
+        print "Entry $idx: start=$start len=$len\n";
+        $idx++;
+    }
 
-	exit 0;
+    exit 0;
 }
 
 seek(HED,$idx * 4 * 2,0);

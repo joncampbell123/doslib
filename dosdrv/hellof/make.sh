@@ -5,13 +5,13 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 if [ "$1" == "clean" ]; then
     rm -Rfv dos86s
     rm -fv *.obj *.lib *.exe *.com *.bin drv.map win95.dsk drva.asm
-	exit 0
+    exit 0
 elif [ "$1" == "disk" ]; then
-	# bootable win95 rescue disk with test program
-	gunzip -c -d win95.dsk.gz >win95.dsk
+    # bootable win95 rescue disk with test program
+    gunzip -c -d win95.dsk.gz >win95.dsk
     mcopy -i win95.dsk dos86s/drv.sys ::drv.sys
 else
-	wmake -f watcom_c.mak
+    wmake -f watcom_c.mak
 fi
 
 cat >MAKE.BAT <<_EOF

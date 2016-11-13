@@ -166,7 +166,7 @@ if (!defined($out_asmname) || $out_asmname eq "") {
 
 open(ASM,">",$out_asmname) || die;
 print ASM "; auto-generated code, do not edit\n";
-print ASM "bits 16			; 16-bit real mode\n";
+print ASM "bits 16          ; 16-bit real mode\n";
 print ASM "\n";
 print ASM "section _TEXT class=CODE\n";
 print ASM "\n";

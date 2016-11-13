@@ -15,12 +15,12 @@ my $i,$v,$r;
 
 print "static const uint32_t midikeys_freqs[0x80] = {\n";
 for ($i=0;$i < 0x80;$i++) {
-	$v = (($i - 69) / 12);	# A4 (440Hz) at key 69, 12 semitones per octave
-	$a = 440.0 * (2 ** $v); # 440 * (2 ^ $v)
-	print "\t".sprintf("0x%08x",int($a * 65536));
-	print "," if ($i < 0x7F);
-	print "\t/* key ".$i." = ".$a."Hz */";
-	print "\n";
+    $v = (($i - 69) / 12);  # A4 (440Hz) at key 69, 12 semitones per octave
+    $a = 440.0 * (2 ** $v); # 440 * (2 ^ $v)
+    print "\t".sprintf("0x%08x",int($a * 65536));
+    print "," if ($i < 0x7F);
+    print "\t/* key ".$i." = ".$a."Hz */";
+    print "\n";
 }
 print "}\n";
 
