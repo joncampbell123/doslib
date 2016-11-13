@@ -275,6 +275,18 @@ void dump_COMENT(void) {
     printf("\n");
 }
 
+void dump_LNAMES(void) {
+    /* string records, one after the other, until the end of the record */
+    printf("    LNAMES:");
+
+    while (!omfrec_eof()) {
+        omfrec_get_lenstr(tempstr,sizeof(tempstr));
+        printf(" \"%s\"",tempstr);
+    }
+
+    printf("\n");
+}
+
 int main(int argc,char **argv) {
     int i,fd;
     char *a;
@@ -328,6 +340,9 @@ int main(int argc,char **argv) {
                 break;
             case 0x88:/* COMENT */
                 dump_COMENT();
+                break;
+            case 0x96:/* LNAMES */
+                dump_LNAMES();
                 break;
         }
 
