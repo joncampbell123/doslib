@@ -235,20 +235,23 @@ print ASM "        db  0\n";
 print ASM "\n";
 print ASM "; =================== Strategy routine ==========\n";
 print ASM "_dosdrv_strategy:\n";
-print ASM "        push    ds\n";
 if ($ds_is_cs) {
-    print ASM "        mov     ax,cs\n";
+    print ASM "        mov     [cs:_dosdrv_req_ptr+0],bx ; BYTE ES:BX+0x00 = length of request header\n";
+    print ASM "        mov     [cs:_dosdrv_req_ptr+2],es ; BYTE ES:BX+0x01 = unit number\n";
 }
 else {
+    print ASM "        push    ax\n";
+    print ASM "        push    ds\n";
     print ASM "        mov     ax,seg _dosdrv_req_ptr\n";
+    print ASM "        mov     ds,ax\n";
+    print ASM "        mov     [_dosdrv_req_ptr+0],bx    ; BYTE ES:BX+0x00 = length of request header\n";
+    print ASM "        mov     [_dosdrv_req_ptr+2],es    ; BYTE ES:BX+0x01 = unit number\n";
+    print ASM "        pop     ds\n";
+    print ASM "        pop     ax\n";
 }
-print ASM "        mov     ds,ax\n";
-print ASM "        mov     [_dosdrv_req_ptr+0],bx  ; BYTE ES:BX+0x00 = length of request header\n";
-print ASM "        mov     [_dosdrv_req_ptr+2],es  ; BYTE ES:BX+0x01 = unit number\n";
-print ASM "        pop     ds\n";
-print ASM "        retf                            ; BYTE ES:BX+0x02 = command code\n";
-print ASM "                                        ; WORD ES:BX+0x03 = driver return status word\n";
-print ASM "                                        ;      ES:BX+0x05 = reserved??\n";
+print ASM "        retf                              ; BYTE ES:BX+0x02 = command code\n";
+print ASM "                                          ; WORD ES:BX+0x03 = driver return status word\n";
+print ASM "                                          ;      ES:BX+0x05 = reserved??\n";
 print ASM "\n";
 
 if ($introutine_stub) {
