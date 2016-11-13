@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-$project = `git config --get remote.origin.url | sed -e 's/\\/\$//' | sed -e 's/^.*\\///'`;
+$project = `git config --get remote.origin.url | sed -e 's/\\/\$//' | sed -e 's/^.*\\///' | sed -e 's/\.git$$//'`;
 chomp $project;
 die if $project eq "";
 
