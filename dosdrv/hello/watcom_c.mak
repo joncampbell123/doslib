@@ -4,7 +4,7 @@ HERE = $+$(%cwd)$-
 OBJS =     drvc.obj
 
 CC       = wcc
-CFLAGS   = -zq -ms -s -bt=dos -oilrsm -fr=nul -wx -0 -fo=dos86s/.obj -q -zu -zdp -zff -zgf -zc -fpi87 -i../.. -dTARGET_MSDOS=16 -dMSDOS=1 -dNEAR_DRVVAR
+CFLAGS   = -zq -ms -s -bt=dos -oilrsm -fr=nul -wx -0 -fo=dos86s/.obj -zl -q -zu -zdp -zff -zgf -zc -fpi87 -i../.. -dTARGET_MSDOS=16 -dMSDOS=1 -dNEAR_DRVVAR
 
 all: dos86s dos86s/drv.exe
 
@@ -26,10 +26,10 @@ dos86s/drva.obj: drva.asm
 	@cd $(HERE)
 
 dos86s/drvc.obj: drvc.c
-	$(CC) $(CFLAGS) -ms -zl $[@
+	$(CC) $(CFLAGS) $[@
 
 dos86s/drvci.obj: drvci.c
-	$(CC) $(CFLAGS) -nt=_INITTEXT -nd=_INIT -nc=INITCODE -g=_INIT_GROUP -ms -zl $[@
+	$(CC) $(CFLAGS) -nt=_INITTEXT -nd=_INIT -nc=INITCODE -g=_INIT_GROUP $[@
 
 dos86s/drv.exe: dos86s/drvc.obj dos86s/drva.obj dos86s/drvci.obj
 	%write tmp.cmd option quiet system dos
