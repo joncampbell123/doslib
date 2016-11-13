@@ -5,6 +5,8 @@
 # (C) 2016 Jonathan Campbell, ALL RIGHTS RESERVED
 my $out_make_stack_entry = 0; # FIXME: This isn't quite right
 my $out_make_stub_entry = 1;
+my $introutine_stub = 0;    # if set, generate interrupt routine stub to load DS and near-call "interrupt" routine
+my $introutine_stub_far = 0;# stub should make FAR call
 my $out_asmname = undef;
 my $ds_is_cs = 0;
 my $a;
@@ -45,6 +47,13 @@ for ($i=0;$i < @ARGV;) {
         }
         elsif ($a eq "ds-is-cs") {
             $ds_is_cs = 1;
+        }
+        elsif ($a eq "int-stub") {
+            $introutine_stub = 1;
+        }
+        elsif ($a eq "int-stub-far") {
+            $introutine_stub = 1;
+            $introutine_stub_far = 1;
         }
         elsif ($a eq "stack") {
             $out_make_stack_entry = 1;
@@ -189,7 +198,17 @@ print ASM "\n";
 print ASM "section _TEXT class=CODE\n";
 print ASM "\n";
 
-print ASM "extern dosdrv_interrupt_                ; <- watcall\n";
+if ($introutine_stub) {
+    if ($introutine_stub_far) {
+        print ASM "extern dosdrv_interrupt_far_            ; <- watcall\n";
+    }
+    else {
+        print ASM "extern dosdrv_interrupt_near_           ; <- watcall\n";
+    }
+}
+else {
+    print ASM "extern dosdrv_interrupt_                ; <- watcall\n";
+}
 print ASM "\n";
 print ASM "global _dosdrv_header\n";
 print ASM "global _dosdrv_req_ptr\n";
@@ -205,7 +224,12 @@ print ASM "                                        ; bit 11: 1=understands open/
 print ASM "                                        ; bit  6: 0=does not understand 3.2 functions\n";
 print ASM "                                        ; bit 3:0: 0=not NUL, STDIN, STDOUT, CLOCK, etc.\n";
 print ASM "        dw  _dosdrv_strategy            ; offset of strategy routine\n";
-print ASM "        dw  dosdrv_interrupt_           ; offset of interrupt routine\n";
+if ($introutine_stub) {
+    print ASM "        dw  dosdrv_interrupt_stub_      ; offset of interrupt routine\n";
+}
+else {
+    print ASM "        dw  dosdrv_interrupt_           ; offset of interrupt routine\n";
+}
 print ASM "        db  '".$dev_name_f."'                  ; device name (8 chars)\n";
 print ASM "        db  0\n";
 print ASM "\n";
@@ -226,6 +250,26 @@ print ASM "        retf                            ; BYTE ES:BX+0x02 = command c
 print ASM "                                        ; WORD ES:BX+0x03 = driver return status word\n";
 print ASM "                                        ;      ES:BX+0x05 = reserved??\n";
 print ASM "\n";
+
+if ($introutine_stub) {
+    print ASM "; =================== Interrupt routine =========\n";
+    print ASM "dosdrv_interrupt_stub_:\n";
+    print ASM "        push    ax\n";
+    print ASM "        push    ds\n";
+    print ASM "        mov     ax,cs\n";
+    print ASM "        mov     ds,ax\n";
+    if ($introutine_stub_far) {
+        print ASM "        push    ax\n";
+        print ASM "        call    dosdrv_interrupt_far_\n";
+    }
+    else {
+        print ASM "        call    dosdrv_interrupt_near_\n";
+    }
+    print ASM "        pop     ds\n";
+    print ASM "        pop     ax\n";
+    print ASM "        retf\n";
+    print ASM "\n";
+}
 
 if ($out_make_stub_entry > 0) {
     print ASM "; EXE entry point points here, in case the user foolishly tries to run this EXE\n";

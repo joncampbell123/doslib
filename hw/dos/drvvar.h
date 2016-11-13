@@ -13,5 +13,11 @@ extern struct dosdrv_request_base_t far _cdecl * DOSDRV_NF          dosdrv_req_p
 /* NTS: __saveregs in Watcom C has no effect unless calling convention is watcall */
 #define DOSDEVICE_INTERRUPT_PROC void __watcall __loadds __saveregs far
 
+/* if using far stub */
+#define DOSDEVICE_INTERRUPT_FAR_PROC void __watcall __saveregs far
+
+/* if using near stub */
+#define DOSDEVICE_INTERRUPT_NEAR_PROC void __watcall __saveregs
+
 #undef DOSDRV_NF
 
