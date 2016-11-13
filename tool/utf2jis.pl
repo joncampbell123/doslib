@@ -27,97 +27,97 @@ print "/* UTF-8 to SHIFT-JIS string converted copy. Do not edit. Modifications w
 print "\n";
 
 while ($line = <STDIN>) {
-	chomp $line;
+    chomp $line;
 
-	# eat UTF-8 BOM
-	$line =~ s/^\xEF\xBB\xBF//;
+    # eat UTF-8 BOM
+    $line =~ s/^\xEF\xBB\xBF//;
 
-	$i = 0;
-	$out = "";
-	while ($i < length($line)) {
-		if ($quot ne "") {
-			my $proc = "",$procret = "";
+    $i = 0;
+    $out = "";
+    while ($i < length($line)) {
+        if ($quot ne "") {
+            my $proc = "",$procret = "";
 
-			while ($i < length($line)) {
-				$c = substr($line,$i,1);
-				$proc .= $c;
-				$i++;
+            while ($i < length($line)) {
+                $c = substr($line,$i,1);
+                $proc .= $c;
+                $i++;
 
-				if ($c eq $quot) {
-					$quot = "";
-					last;
-				}
-			}
+                if ($c eq $quot) {
+                    $quot = "";
+                    last;
+                }
+            }
 
-			# run the string through iconv, hex escape, then carry on
-			open(TI,">",$tmp1) || die;
-			print TI $proc;
-			close(TI);
+            # run the string through iconv, hex escape, then carry on
+            open(TI,">",$tmp1) || die;
+            print TI $proc;
+            close(TI);
 
-			# Use GNU iconv to do charset conversion
-			system("iconv -f UTF-8 -t SHIFT-JIS -o '$tmp2' '$tmp1'") == 0 || die;
+            # Use GNU iconv to do charset conversion
+            system("iconv -f UTF-8 -t SHIFT-JIS -o '$tmp2' '$tmp1'") == 0 || die;
 
-			open(TO,"<",$tmp2) || die;
-			read(TO,$procret,65536);
-			close(TO);
+            open(TO,"<",$tmp2) || die;
+            read(TO,$procret,65536);
+            close(TO);
 
-			$shift_2nd = 0;
-			for ($l=0;$l < length($procret);$l++) {
-				$c = substr($procret,$l,1);
-				$o = ord($c);
-				if ($o < 0x20 || $o >= 0x7F || $shift_2nd) {
-					$out .= sprintf("\\x%02x",$o);
+            $shift_2nd = 0;
+            for ($l=0;$l < length($procret);$l++) {
+                $c = substr($procret,$l,1);
+                $o = ord($c);
+                if ($o < 0x20 || $o >= 0x7F || $shift_2nd) {
+                    $out .= sprintf("\\x%02x",$o);
 
-					if (($o >= 0x80 && $o <= 0xA0) || ($o >= 0xE0 && $o <= 0xFF)) {
-						$shift_2nd = 1; # first byte of double-byte
-					}
-					else {
-						$shift_2nd = 0;
-					}
-				}
-				else {
-					$out .= $c;
-				}
-			}
+                    if (($o >= 0x80 && $o <= 0xA0) || ($o >= 0xE0 && $o <= 0xFF)) {
+                        $shift_2nd = 1; # first byte of double-byte
+                    }
+                    else {
+                        $shift_2nd = 0;
+                    }
+                }
+                else {
+                    $out .= $c;
+                }
+            }
 
-			$procsum .= $proc;
-			$procsum .= "\n" if ($quot ne "");
+            $procsum .= $proc;
+            $procsum .= "\n" if ($quot ne "");
 
-			# leave comments indicating the conversion
-			if ($quot eq "") {
-				$out .= "/* UTF-8 to Shift-JIS of \"".substr($procsum,0,length($procsum)-1)."\" */";
-				$procsum = "";
-			}
-		}
-		else {
-			while ($i < length($line)) {
-				$c = substr($line,$i,1);
-				$out .= $c;
-				$i++;
+            # leave comments indicating the conversion
+            if ($quot eq "") {
+                $out .= "/* UTF-8 to Shift-JIS of \"".substr($procsum,0,length($procsum)-1)."\" */";
+                $procsum = "";
+            }
+        }
+        else {
+            while ($i < length($line)) {
+                $c = substr($line,$i,1);
+                $out .= $c;
+                $i++;
 
-				if ($c eq "\"") { # todo we should allow unicode single char ' ' as well
-					if ($comment eq "") {
-						$quot = $c;
-						last;
-					}
-				}
-				elsif ($c eq "/" && substr($line,$i,1) eq "/") { # C++ style comment begins! // comment
-					$comment = "//";
-				}
-				elsif ($c eq "/" && substr($line,$i,1) eq "*") { # C comment begins /* comment */
-					$comment = "/*";
-				}
-				elsif ($comment eq "/*" && $c eq "*" && substr($line,$i,1) eq "/") { # end of C comment
-					$comment = "";
-				}
-			}
-		}
-	}
+                if ($c eq "\"") { # todo we should allow unicode single char ' ' as well
+                    if ($comment eq "") {
+                        $quot = $c;
+                        last;
+                    }
+                }
+                elsif ($c eq "/" && substr($line,$i,1) eq "/") { # C++ style comment begins! // comment
+                    $comment = "//";
+                }
+                elsif ($c eq "/" && substr($line,$i,1) eq "*") { # C comment begins /* comment */
+                    $comment = "/*";
+                }
+                elsif ($comment eq "/*" && $c eq "*" && substr($line,$i,1) eq "/") { # end of C comment
+                    $comment = "";
+                }
+            }
+        }
+    }
 
-	# C++ comments end at EOL
-	if ($comment eq "//") {
-		$comment = "";
-	}
+    # C++ comments end at EOL
+    if ($comment eq "//") {
+        $comment = "";
+    }
 
-	print "$out\n";
+    print "$out\n";
 }

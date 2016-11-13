@@ -4,8 +4,8 @@
 # (C) 2012 Jonathan Campbell
 
 if (@ARGV < 2) {
-	print STDERR "chgnever.pl <version major.minor> <NE image>\n";
-	exit 1;
+    print STDERR "chgnever.pl <version major.minor> <NE image>\n";
+    exit 1;
 }
 
 my $vmaj,$vmin;
@@ -25,8 +25,8 @@ seek(NE,0,0);
 read(NE,$tmp,2);
 
 if ($tmp ne "MZ") {
-	print "Not MS-DOS executable\n";
-	exit 1;
+    print "Not MS-DOS executable\n";
+    exit 1;
 }
 
 seek(NE,0x3C,0);
@@ -37,8 +37,8 @@ print "Extended header at $ne_offset\n";
 seek(NE,$ne_offset,0);
 read(NE,$tmp,2);
 if ($tmp ne "NE") {
-	print "Not an NE image\n";
-	exit 1;
+    print "Not an NE image\n";
+    exit 1;
 }
 
 # ok, patch

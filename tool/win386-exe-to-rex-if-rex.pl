@@ -18,9 +18,9 @@ read(X,$buf,2);
 close(X);
 
 if ($buf eq "MQ") {
-	# it's a .rex file, so it must be named so
-	# so wbind can find it
-	rename($file,$dfile) || die;
+    # it's a .rex file, so it must be named so
+    # so wbind can find it
+    rename($file,$dfile) || die;
 }
 
 exit 0;
