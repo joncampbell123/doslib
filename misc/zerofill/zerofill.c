@@ -7,31 +7,31 @@
 #include <conio.h>
 #include <bios.h>
 #include <dos.h>
-#include <i86.h>	/* for MK_FP */
+#include <i86.h>    /* for MK_FP */
 
 int main(int argc,char **argv) {
-	unsigned long long count=0;
-	char *zeros;
-	size_t len;
-	FILE *fp;
+    unsigned long long count=0;
+    char *zeros;
+    size_t len;
+    FILE *fp;
 
-	fp = fopen("_zero_.bin","ab+");
-	if (fp == NULL) fp = fopen("_zero_.bin","wb");
-	if (fp == NULL) return 1;
+    fp = fopen("_zero_.bin","ab+");
+    if (fp == NULL) fp = fopen("_zero_.bin","wb");
+    if (fp == NULL) return 1;
 
-	len = 32768;
-	zeros = (char*)malloc(len);
-	if (zeros == NULL) return 2;
-	memset(zeros,0,len);
+    len = 32768;
+    zeros = (char*)malloc(len);
+    if (zeros == NULL) return 2;
+    memset(zeros,0,len);
 
-	while (1) {
-		count += (unsigned long long)fwrite(zeros,1,len,fp);
-		printf("\x0D" "%llu   ",count);
-		fflush(stdout);
-	}
+    while (1) {
+        count += (unsigned long long)fwrite(zeros,1,len,fp);
+        printf("\x0D" "%llu   ",count);
+        fflush(stdout);
+    }
 
-	free(zeros);
-	fclose(fp);
-	return 0;
+    free(zeros);
+    fclose(fp);
+    return 0;
 }
 

@@ -9,7 +9,7 @@
 #include <dos.h>
 
 int main(int argc,char **argv) {
-	printf("Hello OS/2\n");
-	return 0;
+    printf("Hello OS/2\n");
+    return 0;
 }
 
