@@ -205,14 +205,14 @@ print ASM "        dw  dosdrv_interrupt_           ; offset of interrupt routine
 print ASM "        db  '".$dev_name_f."'                  ; device name (8 chars)\n";
 print ASM "        db  0\n";
 print ASM "\n";
-print ASM "; var storage\n";
-print ASM "_dosdrv_req_ptr:\n";
-print ASM "        dd  0\n";
-print ASM "\n";
 print ASM "; =================== Strategy routine ==========\n";
 print ASM "_dosdrv_strategy:\n";
-print ASM "        mov     [cs:_dosdrv_req_ptr+0],bx       ; BYTE ES:BX+0x00 = length of request header\n";
-print ASM "        mov     [cs:_dosdrv_req_ptr+2],es       ; BYTE ES:BX+0x01 = unit number\n";
+print ASM "        push    ds\n";
+print ASM "        mov     ax,seg _dosdrv_req_ptr\n";
+print ASM "        mov     ds,ax\n";
+print ASM "        mov     [_dosdrv_req_ptr+0],bx  ; BYTE ES:BX+0x00 = length of request header\n";
+print ASM "        mov     [_dosdrv_req_ptr+2],es  ; BYTE ES:BX+0x01 = unit number\n";
+print ASM "        pop     ds\n";
 print ASM "        retf                            ; BYTE ES:BX+0x02 = command code\n";
 print ASM "                                        ; WORD ES:BX+0x03 = driver return status word\n";
 print ASM "                                        ;      ES:BX+0x05 = reserved??\n";
@@ -227,6 +227,12 @@ if ($out_make_stub_entry > 0) {
     print ASM "\n";
 }
 
+print ASM "section _DATA class=DATA\n";
+print ASM "\n";
+print ASM "; var storage\n";
+print ASM "_dosdrv_req_ptr:\n";
+print ASM "        dd  0\n";
+print ASM "\n";
 print ASM "; Watcom's _END symbol acts as expected in C when you access it, but then acts funny\n";
 print ASM "; when you try to take the address of it. So we have our own.\n";
 print ASM "section _END class=END\n";
