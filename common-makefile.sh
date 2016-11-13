@@ -12,11 +12,11 @@ set DOS4G=quiet
 _EOF
 
 if [ "$SOURCES" != "" ]; then
-	for x in $SOURCES; do
-		cat >>MAKE.BAT <<_EOF
+    for x in $SOURCES; do
+        cat >>MAKE.BAT <<_EOF
 $WCC $SOURCES $WCC_OPTS
 _EOF
-	done
+    done
 fi
 
 cat >>MAKE.BAT <<_EOF
@@ -26,19 +26,19 @@ $WLINK
 _EOF
 
 if [ "$1" == "clean" ]; then
-	rm -fv *.{obj,sym,map,exe}
+    rm -fv *.{obj,sym,map,exe}
 else
-	echo "Compiling `pwd`"
-	if [ "$SOURCES" != "" ]; then
-		# now carry it out
-		for x in $SOURCES; do
-			echo "    cc: $WCC $SOURCES $WCC_OPTS"
-			$WCC $SOURCES $WCC_OPTS || exit 1
-		done
+    echo "Compiling `pwd`"
+    if [ "$SOURCES" != "" ]; then
+        # now carry it out
+        for x in $SOURCES; do
+            echo "    cc: $WCC $SOURCES $WCC_OPTS"
+            $WCC $SOURCES $WCC_OPTS || exit 1
+        done
 
-		echo "    link: $WLINK"
-		$WLINK || exit 1
-	fi
+        echo "    link: $WLINK"
+        $WLINK || exit 1
+    fi
 fi
 
 cat >CLEAN.BAT <<_EOF
