@@ -4,6 +4,7 @@
 # to generate the CLSG header in the EXE image.
 #
 # (C) 2016 Jonathan Campbell, ALL RIGHTS RESERVED
+my $out_make_stack_entry = 0; # FIXME: This isn't quite right
 my $out_make_stub_entry = 1;
 my $out_enumname = undef;
 my $out_enumbase = undef;
@@ -26,6 +27,12 @@ for ($i=0;$i < @ARGV;) {
         }
         elsif ($a eq "no-stub") {
             $out_make_stub_entry = 0;
+        }
+        elsif ($a eq "stack") {
+            $out_make_stack_entry = 1;
+        }
+        elsif ($a eq "no-stack") {
+            $out_make_stack_entry = 0;
         }
         elsif ($a eq "enum") {
             $out_enumname = $ARGV[$i++];
@@ -216,9 +223,11 @@ if ($out_make_stub_entry > 0) {
     print ASM "\n";
 }
 
-print ASM "; shut up Watcom\n";
-print ASM "section _STACK class=STACK\n";
-print ASM "\n";
+if ($out_make_stack_entry > 0) {
+    print ASM "; shut up Watcom\n";
+    print ASM "section _STACK class=STACK\n";
+    print ASM "\n";
+}
 
 close(ASM);
 

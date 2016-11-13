@@ -3,6 +3,7 @@
 # Generate ASM for MS-DOS device driver
 #
 # (C) 2016 Jonathan Campbell, ALL RIGHTS RESERVED
+my $out_make_stack_entry = 0; # FIXME: This isn't quite right
 my $out_make_stub_entry = 1;
 my $out_asmname = undef;
 my $a;
@@ -40,6 +41,12 @@ for ($i=0;$i < @ARGV;) {
         }
         elsif ($a eq "no-stub") {
             $out_make_stub_entry = 0;
+        }
+        elsif ($a eq "stack") {
+            $out_make_stack_entry = 1;
+        }
+        elsif ($a eq "no-stack") {
+            $out_make_stack_entry = 0;
         }
         elsif ($a eq "device-attr") {
             $devtype_force = int($ARGV[$i++]+0);
@@ -231,9 +238,12 @@ print ASM "section _BEGIN class=INITBEGIN\n";
 print ASM "global _dosdrv_initbegin\n";
 print ASM "_dosdrv_initbegin:\n";
 print ASM "\n";
-print ASM "; shut up Watcom\n";
-print ASM "section _STACK class=STACK\n";
-print ASM "\n";
+
+if ($out_make_stack_entry > 0) {
+    print ASM "; shut up Watcom\n";
+    print ASM "section _STACK class=STACK\n";
+    print ASM "\n";
+}
 
 close(ASM);
 
