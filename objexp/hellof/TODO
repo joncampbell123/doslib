@@ -1,0 +1,11 @@
+* Need to find a way for the data and code to be merged together such that
+  data is accessible from CS, and the init code and data are merged together
+  as near pointers.
+
+  I propose: Something to take OMF OBJs and merge them into one big OBJ where
+  everything is stuffed into a code segment, but in a manner we control. Then
+  we feed the big OBJ to the linker.
+
+  (better yet, if we were to write our own linker to make a .COM image or
+   what we need!)
+
