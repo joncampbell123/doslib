@@ -3,8 +3,11 @@ HERE = $+$(%cwd)$-
 
 OBJS =     drvc.obj
 
+# warning: uses compiler switch specific to Hacker's watcom
+#  -zdc    	Load DS from CS
+
 CC       = wcc
-CFLAGS   = -zq -ms -s -bt=com -oilrsm -fr=nul -wx -0 -fo=dos86s/.obj -q -zu -zdp -zff -zgf -zc -fpi87 -i../.. -dTARGET_MSDOS=16 -dMSDOS=1
+CFLAGS   = -zq -ms -s -bt=com -oilrsm -fr=nul -wx -0 -fo=dos86s/.obj -q -zu -zdp -zff -zgf -zc -fpi87 -i../.. -dTARGET_MSDOS=16 -dMSDOS=1 -zdc
 
 all: dos86s dos86s/drv.sys
 
@@ -29,7 +32,7 @@ dos86s/drvc.obj: drvc.c
 	$(CC) $(CFLAGS) -ms -zl $[@
 
 dos86s/drvci.obj: drvci.c
-	$(CC) $(CFLAGS) -nt=_INITTEXT -nd=_INIT -nc=INITCODE -g=_INIT_GROUP -ms -zl $[@
+	$(CC) $(CFLAGS) -ms -zl $[@
 
 dos86s/drv.sys: dos86s/drvc.obj dos86s/drva.obj dos86s/drvci.obj
 	%write tmp.cmd option quiet format dos com # we cannot say "system com" because it drags in CSTARTUP.OBJ
@@ -38,9 +41,6 @@ dos86s/drv.sys: dos86s/drvc.obj dos86s/drva.obj dos86s/drvci.obj
 	%write tmp.cmd file dos86s/drvci.obj
 	%write tmp.cmd name dos86s/drv.sys
 	%write tmp.cmd option map=dos86s/drv.map
-	# special segment ordering
-	%write tmp.cmd order clname CODE clname DATA segment CONST segment CONST2 segment _DATA clname BSS clname END clname INITBEGIN clname INITCODE clname INITEND
-	# end segment ordering
 	@wlink @tmp.cmd
 
 clean: .SYMBOLIC
