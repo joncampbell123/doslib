@@ -112,7 +112,7 @@ const char *omf_rectype_to_str(unsigned char rt) {
 static unsigned char        omf_record[16384];
 static unsigned char        omf_rectype = 0;
 static unsigned long        omf_recoffs = 0;
-static unsigned int         omf_reclen = 0;
+static unsigned int         omf_reclen = 0; // NTS: Does NOT include leading checksum byte
 
 static char*                in_file = NULL;   
 
@@ -131,28 +131,44 @@ static int read_omf_record(int fd) {
 
     omf_rectype = omf_record[0];
     omf_reclen = *((uint16_t*)(omf_record+1));
+    if (omf_reclen == 0)
+        return 0;
     if (omf_reclen > sizeof(omf_record))
         return 0;
 
-    if (omf_reclen > 0) {
-        for (i=0;i < 3;i++)
+    for (i=0;i < 3;i++)
+        sum += omf_record[i];
+
+    if ((unsigned int)read(fd,omf_record,omf_reclen) != omf_reclen)
+        return 0;
+
+    if (omf_record[omf_reclen-1]/* checksum */ != 0) {
+        for (i=0;i < omf_reclen;i++)
             sum += omf_record[i];
 
-        if ((unsigned int)read(fd,omf_record,omf_reclen) != omf_reclen)
+        if (sum != 0) {
+            fprintf(stderr,"* checksum failed sum=0x%02x\n",sum);
             return 0;
-
-        if (omf_record[omf_reclen-1]/* checksum */ != 0) {
-            for (i=0;i < omf_reclen;i++)
-                sum += omf_record[i];
-
-            if (sum != 0) {
-                fprintf(stderr,"* checksum failed sum=0x%02x\n",sum);
-                return 0;
-            }
         }
     }
-
+    omf_reclen--; // exclude checksum byte
     return 1;
+}
+
+void dump_THEADR(void) {
+    unsigned char slen;
+
+    /* omf_record+0: length of the string */
+    /* omf_record+1: ASCII string */
+
+    if (omf_reclen == 0)
+        return;
+
+    slen = omf_record[0];
+    if (slen > (omf_reclen-1)) slen = omf_reclen-1;
+
+    omf_record[slen+1] = 0; // make it ASCIIZ
+    printf("   Name of the object: \"%s\"\n",omf_record+1);
 }
 
 int main(int argc,char **argv) {
@@ -198,6 +214,12 @@ int main(int argc,char **argv) {
             omf_rectype_to_str_long(omf_rectype),
             omf_reclen,
             omf_recoffs);
+
+        switch (omf_rectype) {
+            case 0x80:/* THEADR */
+                dump_THEADR();
+                break;
+        }
     }
 
     close(fd);
