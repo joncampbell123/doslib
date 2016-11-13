@@ -5,7 +5,7 @@ while (my $line = <X>) {
     chomp $line;
     $line =~ s/^\.\///g;
     next if $line =~ m/\.git/i;
-    next if $line =~ m/\.(bat|xxx)$/i;
+    next unless ($line =~ m/^readme/i || $line =~ m/\.(txt|cpp|c|h|cxx|sh|pl)$/i);
     next if $line =~ m/[ \t\\\"\']/;
 
     $c = `grep -c \$'\\t' $line`;
