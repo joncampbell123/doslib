@@ -6,6 +6,7 @@
 my $out_make_stack_entry = 0; # FIXME: This isn't quite right
 my $out_make_stub_entry = 1;
 my $out_asmname = undef;
+my $ds_is_cs = 0;
 my $a;
 
 my $devtype_force = undef;  # allow caller to force-specify device attributes
@@ -41,6 +42,9 @@ for ($i=0;$i < @ARGV;) {
         }
         elsif ($a eq "no-stub") {
             $out_make_stub_entry = 0;
+        }
+        elsif ($a eq "ds-is-cs") {
+            $ds_is_cs = 1;
         }
         elsif ($a eq "stack") {
             $out_make_stack_entry = 1;
@@ -208,7 +212,12 @@ print ASM "\n";
 print ASM "; =================== Strategy routine ==========\n";
 print ASM "_dosdrv_strategy:\n";
 print ASM "        push    ds\n";
-print ASM "        mov     ax,seg _dosdrv_req_ptr\n";
+if ($ds_is_cs) {
+    print ASM "        mov     ax,cs\n";
+}
+else {
+    print ASM "        mov     ax,seg _dosdrv_req_ptr\n";
+}
 print ASM "        mov     ds,ax\n";
 print ASM "        mov     [_dosdrv_req_ptr+0],bx  ; BYTE ES:BX+0x00 = length of request header\n";
 print ASM "        mov     [_dosdrv_req_ptr+2],es  ; BYTE ES:BX+0x01 = unit number\n";
