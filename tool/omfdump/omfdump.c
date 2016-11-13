@@ -109,10 +109,44 @@ const char *omf_rectype_to_str(unsigned char rt) {
     return "?";
 }
 
+static char                 tempstr[257];
+static unsigned char        tempstr_len;
+
 static unsigned char        omf_record[16384];
 static unsigned char        omf_rectype = 0;
 static unsigned long        omf_recoffs = 0;
 static unsigned int         omf_reclen = 0; // NTS: Does NOT include leading checksum byte
+static unsigned int         omf_recpos = 0; // where we are parsing
+
+static inline unsigned int omfrec_eof(void) {
+    return (omf_recpos >= omf_reclen);
+}
+
+static inline unsigned int omfrec_avail(void) {
+    return (omf_reclen - omf_recpos);
+}
+
+void omfrec_end(void) {
+    omf_recpos = omf_reclen;
+}
+
+static inline unsigned char omfrec_gb(void) {
+    return omf_record[omf_recpos++];
+}
+
+void omfrec_read(char *dst,unsigned int len) {
+    if (len > 0) {
+        memcpy(dst,omf_record+omf_recpos,len);
+        omf_recpos += len;
+    }
+}
+
+void omfrec_checkrange(void) {
+    if (omf_recpos > omf_reclen) {
+        fprintf(stderr,"ERROR: Overread occurred\n");
+        abort();
+    }
+}
 
 static char*                in_file = NULL;   
 
@@ -151,24 +185,47 @@ static int read_omf_record(int fd) {
             return 0;
         }
     }
+    omf_recpos=0;
     omf_reclen--; // exclude checksum byte
     return 1;
 }
 
-void dump_THEADR(void) {
-    unsigned char slen;
+unsigned int omfrec_get_lenstr(char * const dst,const size_t dstmax) {
+    unsigned char len;
 
+    if (dstmax == 0)
+        return 0;
+
+    dst[0] = 0;
+    if (omfrec_eof())
+        return 0;
+
+    len = omfrec_gb();
+    if (len > omfrec_avail() || (len+1/*NUL*/) > dstmax) {
+        omfrec_end();
+        return 0;
+    }
+
+    if (len > 0) {
+        omfrec_read(dst,len);
+        dst[len] = 0;
+    }
+
+    return len;
+}
+
+void dump_THEADR(void) {
     /* omf_record+0: length of the string */
     /* omf_record+1: ASCII string */
+    omfrec_get_lenstr(tempstr,sizeof(tempstr));
+    printf("    Name of the object: \"%s\"\n",tempstr);
+}
 
-    if (omf_reclen == 0)
-        return;
-
-    slen = omf_record[0];
-    if (slen > (omf_reclen-1)) slen = omf_reclen-1;
-
-    omf_record[slen+1] = 0; // make it ASCIIZ
-    printf("   Name of the object: \"%s\"\n",omf_record+1);
+void dump_LHEADR(void) {
+    /* omf_record+0: length of the string */
+    /* omf_record+1: ASCII string */
+    omfrec_get_lenstr(tempstr,sizeof(tempstr));
+    printf("    Name of the object in library: \"%s\"\n",tempstr);
 }
 
 int main(int argc,char **argv) {
@@ -219,7 +276,13 @@ int main(int argc,char **argv) {
             case 0x80:/* THEADR */
                 dump_THEADR();
                 break;
+            case 0x82:/* LHEADR */
+                dump_LHEADR();
+                break;
+
         }
+
+        omfrec_checkrange();
     }
 
     close(fd);
