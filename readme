@@ -85,3 +85,16 @@ Using the DOSBox 0.74 emulator:
    Watcom will then compile itself with the performance of a 200MHz
    Pentium II DOS system on modern 2GHz CPUs.
 
+*** Source code formatting ****************************************
+
+As of November 2016 all source changes should be carried out with your
+text editor set to use soft tabs, NOT hard tabs, except for makefiles
+or otherwise required.
+
+You can do this in VIM by adding this to your .vimrc:
+
+set tabstop=4
+set softtabstop=4
+set shiftwidth=4
+set expandtab
+
