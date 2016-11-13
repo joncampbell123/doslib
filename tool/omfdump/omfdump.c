@@ -402,8 +402,8 @@ void dump_PUBDEF(const unsigned char b32) {
 void dump_LEDATA(const unsigned char b32) {
     unsigned long enum_data_offset,doh;
     unsigned int segment_index;
+    unsigned int len,i,colo;
     unsigned char tmp[16];
-    unsigned int len,i;
 
     if (b32) {
         if (omfrec_avail() < (2+4)) return;
@@ -421,14 +421,17 @@ void dump_LEDATA(const unsigned char b32) {
     doh = enum_data_offset;
     while (!omfrec_eof()) {
         len = omfrec_avail();
-        if (len > 16) len = 16;
-        omfrec_read((char*)tmp,len);
+        colo = (unsigned int)(doh&0xFUL);
+        if (len > (16-colo)) len = (16-colo);
+        omfrec_read((char*)tmp+colo,len);
 
         printf("    @0x%08lx: ",doh);
-        for (i=0;i < len;i++) printf("%02X ",tmp[i]);
+        for (i=0;i < colo;i++) printf("   ");
+        for (   ;i < (colo+len);i++) printf("%02X ",tmp[i]);
         for (   ;i <  16;i++) printf("   ");
         printf("  ");
-        for (i=0;i < len;i++) {
+        for (i=0;i < colo;i++) printf(" ");
+        for (   ;i < (colo+len);i++) {
             if (tmp[i] < 32 || tmp[i] >= 127)
                 printf(".");
             else
