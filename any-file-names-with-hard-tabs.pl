@@ -5,6 +5,7 @@ while (my $line = <X>) {
     chomp $line;
     $line =~ s/^\.\///g;
     next if $line =~ m/\.git/i;
+    next if $line =~ m/^ext\//; # ignore the ext dir, 3rd party code
     next unless ($line =~ m/^readme/i || $line =~ m/\.(txt|cpp|c|h|cxx|sh|pl)$/i);
     next if $line =~ m/[ \t\\\"\']/;
 
