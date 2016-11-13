@@ -202,6 +202,25 @@ static int read_omf_record(int fd) {
     return 1;
 }
 
+unsigned int omfrec_get_remstr(char * const dst,const size_t dstmax) {
+    unsigned int len;
+
+    if (dstmax == 0)
+        return 0;
+
+    dst[0] = 0;
+    if (omfrec_eof())
+        return 0;
+
+    len = omfrec_avail();
+    if (len == 0 || len > 255)
+        return 0;
+
+    omfrec_read(dst,len);
+    dst[len] = 0;
+    return len;
+}
+
 unsigned int omfrec_get_lenstr(char * const dst,const size_t dstmax) {
     unsigned char len;
 
@@ -285,6 +304,12 @@ void dump_COMENT(void) {
     if (ctype & 0x40) printf("No-list ");
     printf(") class=0x%02x (%s): ",cclass,omfrec_COMENT_cclass_to_str(cclass));
     printf("\n");
+
+    if (cclass == 0x9F) {
+        /* the rest is the string (no length byte) */
+        omfrec_get_remstr(tempstr,sizeof(tempstr));
+        printf("        Library name: %s\n",tempstr);
+    }
 }
 
 void dump_LNAMES(void) {
