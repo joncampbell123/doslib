@@ -387,6 +387,47 @@ void dump_PUBDEF(const unsigned char b32) {
     }
 }
 
+void dump_LEDATA(const unsigned char b32) {
+    unsigned long enum_data_offset,doh;
+    unsigned int segment_index;
+    unsigned char tmp[16];
+    unsigned int len,i;
+
+    if (b32) {
+        if (omfrec_avail() < (2+4)) return;
+        segment_index = omfrec_gw();
+        enum_data_offset = omfrec_gd();
+    }
+    else {
+        if (omfrec_avail() < (1+2)) return;
+        segment_index = omfrec_gb();
+        enum_data_offset = omfrec_gw();
+    }
+
+    printf("    LEDATA%u: segidx=%u data_offset=%lu\n",b32?32:16,segment_index,enum_data_offset);
+
+    doh = enum_data_offset;
+    while (!omfrec_eof()) {
+        len = omfrec_avail();
+        if (len > 16) len = 16;
+        omfrec_read((char*)tmp,len);
+
+        printf("    @0x%08lx: ",doh);
+        for (i=0;i < len;i++) printf("%02X ",tmp[i]);
+        for (   ;i <  16;i++) printf("   ");
+        printf("  ");
+        for (i=0;i < len;i++) {
+            if (tmp[i] < 32 || tmp[i] >= 127)
+                printf(".");
+            else
+                printf("%c",tmp[i]);
+        }
+        printf("\n");
+
+        doh += (unsigned long)len;
+    }
+}
+
 int main(int argc,char **argv) {
     int i,fd;
     char *a;
@@ -451,6 +492,10 @@ int main(int argc,char **argv) {
                 break;
             case 0x96:/* LNAMES */
                 dump_LNAMES();
+                break;
+            case 0xA0:/* LEDATA */
+            case 0xA1:/* LEDATA32 */
+                dump_LEDATA(omf_rectype&1);
                 break;
         }
 
