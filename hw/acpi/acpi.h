@@ -27,60 +27,60 @@ typedef uint64_t acpi_memaddr_t;
 
 #pragma pack(push,1)
 struct acpi_rsdp_descriptor_v1 { /* ACPI RSDP v1.0 descriptor */
-	char				signature[8];
-	uint8_t				checksum;
-	char				OEM_id[6];
-	uint8_t				revision;
-	uint32_t			rsdt_address;
+    char                signature[8];
+    uint8_t             checksum;
+    char                OEM_id[6];
+    uint8_t             revision;
+    uint32_t            rsdt_address;
 }; /* == 20 bytes */
 
 struct acpi_rsdp_descriptor_v2 { /* ACPI RSDP v2.0 descriptor */
-	/* v1.0 */
-	char				signature[8];
-	uint8_t				checksum;
-	char				OEM_id[6];
-	uint8_t				revision;
-	uint32_t			rsdt_address;
-	/* v2.0 */
-	uint32_t			length;
-	uint64_t			xsdt_address;
-	uint8_t				extended_checksum;
-	uint8_t				reserved[3];
+    /* v1.0 */
+    char                signature[8];
+    uint8_t             checksum;
+    char                OEM_id[6];
+    uint8_t             revision;
+    uint32_t            rsdt_address;
+    /* v2.0 */
+    uint32_t            length;
+    uint64_t            xsdt_address;
+    uint8_t             extended_checksum;
+    uint8_t             reserved[3];
 }; /* == 36 bytes */
 
 struct acpi_rsdt_header {
-	char				signature[4];
-	uint32_t			length;
-	uint8_t				revision;
-	uint8_t				checksum;
-	char				OEM_id[6];
-	char				OEM_table_id[8];
-	uint32_t			OEM_revision;
-	uint32_t			creator_id;
-	uint32_t			creator_revision;
+    char                signature[4];
+    uint32_t            length;
+    uint8_t             revision;
+    uint8_t             checksum;
+    char                OEM_id[6];
+    char                OEM_table_id[8];
+    uint32_t            OEM_revision;
+    uint32_t            creator_id;
+    uint32_t            creator_revision;
 }; /* == 36 bytes */
 
 struct acpi_mcfg_header { /* PCI Express MCFG table */
-	char				signature[4];
-	uint32_t			length;
-	uint8_t				revision;
-	uint8_t				checksum;
-	char				OEM_id[6];
-	char				OEM_table_id[8];
-	uint32_t			OEM_revision;
-	uint32_t			creator_id;
-	uint32_t			creator_revision;
-	/* MCFG specific */
-	uint64_t			_reserved_;
-	/* configuration entries follow, one per range of busses */
+    char                signature[4];
+    uint32_t            length;
+    uint8_t             revision;
+    uint8_t             checksum;
+    char                OEM_id[6];
+    char                OEM_table_id[8];
+    uint32_t            OEM_revision;
+    uint32_t            creator_id;
+    uint32_t            creator_revision;
+    /* MCFG specific */
+    uint64_t            _reserved_;
+    /* configuration entries follow, one per range of busses */
 }; /* == 44 bytes */
 
 struct acpi_mcfg_entry {
-	uint64_t			base_address;
-	uint16_t			pci_segment_group_number;
-	unsigned char			start_pci_bus_number;
-	unsigned char			end_pci_bus_number;
-	uint32_t			_reserved_;
+    uint64_t            base_address;
+    uint16_t            pci_segment_group_number;
+    unsigned char       start_pci_bus_number;
+    unsigned char       end_pci_bus_number;
+    uint32_t            _reserved_;
 }; /* == 16 bytes */
 
 #define acpi_rsdp_descriptor acpi_rsdp_descriptor_v2
@@ -96,11 +96,11 @@ struct acpi_mcfg_entry {
 #define acpi_mem_writew(m,d) acpi_mem_writed(m,(uint16_t)(d))
 #define acpi_mem_writeb(m,d) acpi_mem_writed(m,(uint8_t)(d))
 
-extern unsigned char				acpi_use_rsdt_32;
-extern uint32_t					acpi_rsdp_location;
-extern struct acpi_rsdp_descriptor*		acpi_rsdp;
-extern uint32_t					acpi_rsdt_location;
-extern struct acpi_rsdt_header*			acpi_rsdt; /* RSDT or XSDT */
+extern unsigned char                    acpi_use_rsdt_32;
+extern uint32_t                         acpi_rsdp_location;
+extern struct acpi_rsdp_descriptor*     acpi_rsdp;
+extern uint32_t                         acpi_rsdt_location;
+extern struct acpi_rsdt_header*         acpi_rsdt; /* RSDT or XSDT */
 
 int acpi_probe();
 void acpi_free();
