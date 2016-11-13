@@ -8,31 +8,31 @@ doshuge=1
 dospc98=1 # MS-DOS PC98
 
 if [ "$1" == "clean" ]; then
-	do_clean
-	rm -fv test.dsk v86kern.map
-	exit 0
+    do_clean
+    rm -fv test.dsk v86kern.map
+    exit 0
 fi
 
 if [ "$1" == "disk" ]; then
-	# boot data disk
-	make_msdos_data_disk test.dsk || exit 1
-	mcopy -i test.dsk dos86s/test.exe ::test86.exe
-	mcopy -i test.dsk dos386f/test.exe ::test386.exe
-	mcopy -i test.dsk ../../dos4gw.dat ::dos4gw.exe
+    # boot data disk
+    make_msdos_data_disk test.dsk || exit 1
+    mcopy -i test.dsk dos86s/test.exe ::test86.exe
+    mcopy -i test.dsk dos386f/test.exe ::test386.exe
+    mcopy -i test.dsk ../../dos4gw.dat ::dos4gw.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
-	make_buildlist
-	begin_bat
+    make_buildlist
+    begin_bat
 
-	what=all
-	if [ x"$2" != x ]; then what="$2"; fi
+    what=all
+    if [ x"$2" != x ]; then what="$2"; fi
 
-	for name in $build_list; do
-		do_wmake $name "$what" || exit 1
-		bat_wmake $name "$what" || exit 1
-	done
+    for name in $build_list; do
+        do_wmake $name "$what" || exit 1
+        bat_wmake $name "$what" || exit 1
+    done
 
-	end_bat
+    end_bat
 fi
 
