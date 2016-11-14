@@ -683,6 +683,126 @@ void dump_LEDATA(const unsigned char b32) {
     }
 }
 
+void dump_LIDATA_indent(unsigned int indent) {
+    while (indent-- > 0) printf("    ");
+}
+
+int dump_LIDATA_datablock(const unsigned char b32,const unsigned int indent,unsigned long *doh) {
+    unsigned long repeat_count;
+    unsigned short block_count;
+
+    if (b32) {
+        if (omfrec_avail() < (4+2)) return 0;
+        repeat_count = omfrec_gd();
+        block_count = omfrec_gw();
+    }
+    else {
+        if (omfrec_avail() < (2+2)) return 0;
+        repeat_count = omfrec_gw();
+        block_count = omfrec_gw();
+    }
+
+    dump_LIDATA_indent(indent);
+    if (block_count == 0) {
+        unsigned long repeat_iter;
+        unsigned char rowstart=0;
+        unsigned char count;
+        unsigned char col;
+        unsigned int i,j;
+        unsigned char c;
+        char row[16];
+
+        if (omfrec_eof()) return 0;
+        count = omfrec_gb();
+
+        printf("<content len=%u x %lu>:\n",count,repeat_count);
+
+        /* read into memory */
+        if (count != 0) {
+            if (omfrec_avail() < count) return;
+            omfrec_read(tempstr,count);
+        }
+
+        for (repeat_iter=0;repeat_iter < repeat_count;repeat_iter++) {
+            for (i=0,col=0;i < count;) {
+                if (i == 0 || col == 0) {
+                    j = (unsigned char)((*doh) & 0xFUL);
+                    dump_LIDATA_indent(indent+1);
+                    printf("    @0x%08lx: ",*doh);
+                    while (col < j) {
+                        printf("   ");
+                        col++;
+                    }
+                    rowstart = col;
+                }
+
+                row[col] = tempstr[i];
+                printf("%02X ",row[col]);
+                (*doh)++;
+                col++;
+                i++;
+
+                if (col >= 16 || i == count) {
+                    j = col;
+                    while (j < 16) {
+                        printf("   ");
+                        j++;
+                    }
+
+                    j = 0;
+                    while (j < rowstart) {
+                        printf(" ");
+                        j++;
+                    }
+                    while (j < col) {
+                        c = (unsigned char)row[j];
+                        j++;
+
+                        if (c >= 32 && c < 127)
+                            printf("%c",c);
+                        else
+                            printf(".");
+                    }
+                    printf("\n");
+
+                    rowstart = 0;
+                    col = 0;
+                }
+            }
+        }
+    }
+    else {
+        /* WARNING: untested! */
+        printf("<block x %lu>:\n",repeat_count);
+        return dump_LIDATA_datablock(b32,indent+1,doh);
+    }
+
+    return 1;
+}
+
+void dump_LIDATA(const unsigned char b32) {
+    unsigned long enum_data_offset,doh;
+    unsigned int segment_index;
+    unsigned int len,i,colo;
+    unsigned char tmp[16];
+
+    if (b32) {
+        if (omfrec_avail() < (1+4)) return;
+        segment_index = omfrec_gb();
+        enum_data_offset = omfrec_gd();
+    }
+    else {
+        if (omfrec_avail() < (1+2)) return;
+        segment_index = omfrec_gb();
+        enum_data_offset = omfrec_gw();
+    }
+
+    printf("    LIDATA%u: segidx=%u data_offset=%lu\n",b32?32:16,segment_index,enum_data_offset);
+
+    doh = enum_data_offset;
+    dump_LIDATA_datablock(b32,2,&doh);
+}
+
 int main(int argc,char **argv) {
     unsigned char lasttype;
     unsigned long lastofs;
@@ -769,6 +889,10 @@ int main(int argc,char **argv) {
                 case 0xA0:/* LEDATA */
                 case 0xA1:/* LEDATA32 */
                     dump_LEDATA(omf_rectype&1);
+                    break;
+                case 0xA2:/* LIDATA */
+                case 0xA3:/* LIDATA32 */
+                    dump_LIDATA(omf_rectype&1);
                     break;
             }
 
