@@ -168,11 +168,17 @@ static void help(void) {
 }
 
 static int omf_lib_next_block(int fd,unsigned long checkofs) {
+    unsigned long endoff;
+
     if (lseek(fd,checkofs,SEEK_SET) != checkofs)
         return 0;
 
     /* "Libraries under MS-DOS are always multiples of 512-byte blocks" */
     checkofs = (checkofs + 0x1FFUL) & (~0x1FFUL);
+    endoff = lseek(fd,0,SEEK_END);
+    if (checkofs > endoff)
+        return 0;
+
     if (lseek(fd,checkofs,SEEK_SET) != checkofs)
         return 0;
 
