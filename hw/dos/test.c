@@ -32,6 +32,16 @@
 #endif
 
 int main() {
+	cpu_probe();
+	printf("Your CPU is basically a %s or higher\n",cpu_basic_level_to_string(cpu_basic_level));
+
+	if (cpu_v86_active)
+		printf(" - Your CPU is currently running me in virtual 8086 mode\n");
+	if (cpu_flags & CPU_FLAG_PROTECTED_MODE)
+		printf(" - Your CPU is currently running in protected mode\n");
+	if (cpu_flags & CPU_FLAG_PROTECTED_MODE_32)
+		printf(" - Your CPU is currently running in 32-bit protected mode\n");
+
 	detect_window_enable_ntdvm(); // we care about whether or not we're running in NTVDM.EXE under Windows NT
 	detect_dos_version_enable_win9x_qt_thunk(); // we care about DOS version from Win32 builds
 

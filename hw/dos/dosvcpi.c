@@ -94,11 +94,19 @@ int probe_vcpi() {
 			int	67h
 			mov	err,ah
 
+#if !defined(TINYMODE)
 			mov	ax,seg vcpi_major_version
+#else
+            mov ax,cs
+#endif
 			mov	ds,ax
 			mov	vcpi_major_version,bh
 
+#if !defined(TINYMODE)
 			mov	ax,seg vcpi_minor_version
+#else
+            mov ax,cs
+#endif
 			mov	ds,ax
 			mov	vcpi_minor_version,bl
 
