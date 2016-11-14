@@ -445,8 +445,11 @@ void dump_FIXUPP(const unsigned char b32) {
                 fix_p = (fixdata >> 2) & 1;     /* [2:2] */
                 fix_target = (fixdata & 3);     /* [1:0] */
 
-                printf("            F=%u frame=%u T=%u P=%u Target=%u",
-                    fix_f,  fix_frame,  fix_t,  fix_p,  fix_target);
+                printf("            ");
+                if (fix_f)
+                    printf("F=1 frame=%u",fix_frame);
+                else
+                    printf("F=0 framemethod=%u",fix_frame);
 
                 if (!fix_f && fix_frame < 4) {
                     if (omfrec_eof()) break;
@@ -458,7 +461,10 @@ void dump_FIXUPP(const unsigned char b32) {
                 /* FIXME: WHEN is the Target Datum field prsent???? This is a shitty guess! The OMF spec doesn't say! */
                 // NTS: To the people who wrote the OMF spec: your doc is confusing. The fact I had to read VirtualBox
                 //      source code for clarification means your spec needs clarification.
-                if (!fix_t) {
+                if (fix_t) {
+                    printf(" target=%u",fix_target);
+                }
+                else {
                     if (omfrec_eof()) break;
 
                     c = omfrec_gb();
