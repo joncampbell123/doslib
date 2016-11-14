@@ -619,8 +619,8 @@ void dump_LEDATA(const unsigned char b32) {
     unsigned char tmp[16];
 
     if (b32) {
-        if (omfrec_avail() < (2+4)) return;
-        segment_index = omfrec_gw();
+        if (omfrec_avail() < (1+4)) return;
+        segment_index = omfrec_gb();
         enum_data_offset = omfrec_gd();
     }
     else {
