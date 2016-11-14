@@ -399,6 +399,93 @@ void dump_PUBDEF(const unsigned char b32) {
     }
 }
 
+void dump_SEGDEF(const unsigned char b32) {
+    unsigned char align_f;
+    unsigned char comb_f;
+    unsigned char use32;
+    unsigned char big;
+    unsigned short frame_number;
+    unsigned char offset;
+    unsigned long seg_length;
+    unsigned short segnamidx;
+    unsigned short classnamidx;
+    unsigned short ovlnamidx;
+    unsigned char c;
+
+    if (omfrec_eof()) return;
+    c = omfrec_gb();
+    align_f = (c >> 5) & 7; /* [7:5] = alignment code */
+    comb_f = (c >> 2) & 7;  /* [4:2] = combination code */
+    big = (c >> 1) & 1;     /* [1:1] = "BIG" meaning the segment is 64K or 4GB exactly and seg length == 0 */
+    use32 = (c >> 0) & 1;   /* [0:0] = if set, 32-bit code/data  if clear, 16-bit code/data */
+
+    if (align_f == 0) {
+        if (omfrec_avail() < (2+1)) return;
+        frame_number = omfrec_gw();
+        offset = omfrec_gb();
+    }
+
+    if (b32) {
+        if (omfrec_avail() < (4+1+1+1)) return;
+        seg_length = omfrec_gd();
+        segnamidx = omfrec_gb();
+        classnamidx = omfrec_gb();
+        ovlnamidx = omfrec_gb();
+    }
+    else {
+        if (omfrec_avail() < (2+1+1+1)) return;
+        seg_length = omfrec_gw();
+        segnamidx = omfrec_gb();
+        classnamidx = omfrec_gb();
+        ovlnamidx = omfrec_gb();
+    }
+
+    printf("    SEGDEF%u: USE%u",b32?32:16,use32?32:16);
+    if (big && seg_length == 0) printf(" length=%s(max)",b32?"4GB":"64KB");
+    else printf(" length=%lu",seg_length);
+    printf(" nameidx=%u classidx=%u ovlidx=%u",
+        segnamidx,classnamidx,ovlnamidx);
+    printf("\n");
+
+    switch (align_f) {
+        case 0:
+            printf("        ABSOLUTE frameno=%u offset=%u\n",frame_number,offset);
+            break;
+        case 1:
+            printf("        RELOCATABLE, BYTE ALIGNMENT\n");
+            break;
+        case 2:
+            printf("        RELOCATABLE, WORD (16-bit) ALIGNMENT\n");
+            break;
+        case 3:
+            printf("        RELOCATABLE, PARAGRAPH (16-byte) ALIGNMENT\n");
+            break;
+        case 4:
+            printf("        RELOCATABLE, PAGE ALIGNMENT\n");
+            break;
+        case 5:
+            printf("        RELOCATABLE, DWORD (32-bit) ALIGNMENT\n");
+            break;
+    };
+
+    switch (comb_f) {
+        case 0:
+            printf("        PRIVATE, do not combine with any other segment\n");
+            break;
+        case 2:
+        case 4:
+        case 7:
+            printf("        PUBLIC, combine by appending at aligned offset\n");
+            break;
+        case 5:
+            printf("        STACK, combine by appending at aligned offset\n");
+            break;
+        case 6:
+            printf("        COMMON, combine by overlaying using max size\n");
+            break;
+    };
+}
+
 void dump_LEDATA(const unsigned char b32) {
     unsigned long enum_data_offset,doh;
     unsigned int segment_index;
@@ -514,6 +601,10 @@ int main(int argc,char **argv) {
                     break;
                 case 0x96:/* LNAMES */
                     dump_LNAMES();
+                    break;
+                case 0x98:/* SEGDEF */
+                case 0x99:/* SEGDEF32 */
+                    dump_SEGDEF(omf_rectype&1);
                     break;
                 case 0xA0:/* LEDATA */
                 case 0xA1:/* LEDATA32 */
