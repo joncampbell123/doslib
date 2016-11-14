@@ -32,13 +32,19 @@ int dpmi_private_alloc() {
 	}
 
 	__asm {
+#if !defined(TINYMODE)
 		push	ds
+#endif
 		mov	ah,0x48
+#if !defined(TINYMODE)
 		mov	bx,seg dpmi_private_data_length_paragraphs
 		mov	ds,bx
+#endif
 		mov	bx,dpmi_private_data_length_paragraphs
 		int	21h
+#if !defined(TINYMODE)
 		pop	ds
+#endif
 		jc	fail1
 		mov	sss,ax
 fail1:

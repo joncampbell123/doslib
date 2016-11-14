@@ -49,6 +49,8 @@ l_dpmi_pm_entry		dd	0
 l_dpmi_segs		dw	0,0,0,0
 this_process_psp	dw	0
 
+; WARNING: Tiny model compile NOT YET TESTED
+
 ; void __cdecl dpmi_enter_core(); /* Watcom's inline assembler is too limiting to carry out the DPMI entry and switch back */
 global _dpmi_enter_core
 _dpmi_enter_core:
@@ -60,8 +62,13 @@ _dpmi_enter_core:
 	push		cs
 	push		ss
 	cli
+%ifndef TINYMODE
 	mov		ax,seg _dpmi_entered
 	mov		ds,ax
+%else
+    mov     ax,cs
+    mov     ds,ax
+%endif
 	xor		ax,ax
 	mov		bl,byte [_dpmi_entered]
 	mov		byte [cs:l_dpmi_mode],bl ; the protected mode side of the function needs this
@@ -70,12 +77,18 @@ _dpmi_enter_core:
 	or		al,1		; indicate 32-bit DPMI connection
 .not32_ax:
 	; so: AX=0 if 16-bit setup, AX=1 if 32-bit setup. Now for simplicity set DS==CS
+%ifndef TINYMODE
 	mov		bx,seg _dpmi_private_data_segment	; NTS may be zero if DPMI doesn't need it
 	mov		es,bx
 	mov		es,[es:_dpmi_private_data_segment]	; NTS: ES = DPMI private data. Do not modify between here and call to DPMI entry
+%else
+	mov		es,[_dpmi_private_data_segment]	    ; NTS: ES = DPMI private data. Do not modify between here and call to DPMI entry
+%endif
 
+%ifndef TINYMODE
 	mov		bx,seg _dpmi_entry_point
 	mov		ds,bx
+%endif
 	mov		bx,word [_dpmi_entry_point+0]
 	mov		word [cs:l_dpmi_rm_entry+0],bx
 	mov		bx,word [_dpmi_entry_point+2]
@@ -86,8 +99,10 @@ _dpmi_enter_core:
 	call far	word [cs:l_dpmi_rm_entry]
 	jnc		.entry_ok
 	; ENTRY FAILED. Set entered flag to zero and return
+%ifndef TINYMODE
 	mov		ax,seg _dpmi_entered
 	mov		ds,ax
+%endif
 	mov		byte [_dpmi_entered],0
 	add		sp,4 ; discard saved CS+SS
 	pop		es
@@ -143,38 +158,50 @@ _dpmi_enter_core:
 ; copy results to host variables
 	mov		ax,word [cs:l_dpmi_pm_entry]
 	mov		bx,word [cs:l_dpmi_pm_entry+2]
+%ifndef TINYMODE
 	mov		cx,seg _dpmi_pm_entry
 	mov		ds,cx
+%endif
 	mov		word [_dpmi_pm_entry+0],ax
 	mov		word [_dpmi_pm_entry+2],bx
 
 	mov		ax,word [cs:l_dpmi_rm_entry]
 	mov		bx,word [cs:l_dpmi_rm_entry+2]
 	mov		cx,word [cs:l_dpmi_rm_entry+4]
+%ifndef TINYMODE
 	mov		dx,seg _dpmi_rm_entry
 	mov		ds,dx
+%endif
 	mov		word [_dpmi_rm_entry+0],ax
 	mov		word [_dpmi_rm_entry+2],bx
 	mov		word [_dpmi_rm_entry+4],cx
 
 	mov		ax,word [cs:l_dpmi_segs+0]
+%ifndef TINYMODE
 	mov		dx,seg _dpmi_pm_cs
 	mov		ds,dx
+%endif
 	mov		word [_dpmi_pm_cs],ax
 
 	mov		ax,word [cs:l_dpmi_segs+2]
+%ifndef TINYMODE
 	mov		dx,seg _dpmi_pm_ds
 	mov		ds,dx
+%endif
 	mov		word [_dpmi_pm_ds],ax
 
 	mov		ax,word [cs:l_dpmi_segs+4]
+%ifndef TINYMODE
 	mov		dx,seg _dpmi_pm_es
 	mov		ds,dx
+%endif
 	mov		word [_dpmi_pm_es],ax
 
 	mov		ax,word [cs:l_dpmi_segs+6]
+%ifndef TINYMODE
 	mov		dx,seg _dpmi_pm_ss
 	mov		ds,dx
+%endif
 	mov		word [_dpmi_pm_ss],ax
 
 	; now that DPMI is active, we have to hook real-mode INT 21h
