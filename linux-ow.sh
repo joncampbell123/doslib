@@ -38,7 +38,7 @@ fi
 # clean up then it should do them after running this subroutine.
 do_clean() {
     cd "$PROJTOP" || exit 1
-    rm -Rfv {dos,d98}*86{s,m,c,l,h,f}{,d} win3{0,1}{0,2,3}{s,m,c,l,h,f} win32s{3,4,5,6}{,d} winnt win32 win386 win38631 os2{d,w}{2,3}{l,f}
+    rm -Rfv {dos,d98}*86{t,s,m,c,l,h,f}{,d} win3{0,1}{0,2,3}{s,m,c,l,h,f} win32s{3,4,5,6}{,d} winnt win32 win386 win38631 os2{d,w}{2,3}{l,f}
     rm -fv nul.err tmp.cmd *~
 }
 
@@ -62,6 +62,15 @@ make_buildlist() {
             build_list="$build_list dos86c dos86l dos86m dos86s dos286c dos286l dos286m dos286s dos386f dos486f dos586f dos686f"
         else
             build_list="$build_list dos86c dos86l dos86m dos86s dos386f"
+        fi
+    fi
+
+    # tiny memory model support
+    if [ x"$dostiny" == x"1" ]; then
+        if [ x"$build_everything" == x"1" ]; then
+            build_list="$build_list dos86t dos286t"
+        else
+            build_list="$build_list dos86t"
         fi
     fi
 
