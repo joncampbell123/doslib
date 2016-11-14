@@ -342,21 +342,15 @@ void dump_LNAMES(void) {
     printf("\n");
 }
 
-void dump_EXTDEF(const unsigned char b32) {
+void dump_EXTDEF(void) {
     unsigned int typidx;
 
     printf("    EXTDEF:\n");
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
-        if (b32) {
-            if (omfrec_avail() < 2) return;
-            typidx = omfrec_gw();
-        }
-        else {
-            if (omfrec_avail() < 1) return;
-            typidx = omfrec_gb();
-        }
+        if (omfrec_avail() < 1) return;
+        typidx = omfrec_gb();
 
         printf("        '%s' typidx=%u\n",tempstr,typidx);
     }
@@ -718,8 +712,7 @@ int main(int argc,char **argv) {
                     dump_COMENT();
                     break;
                 case 0x8C:/* EXTDEF */
-                case 0x8D:/* EXTDEF32 */
-                    dump_EXTDEF(omf_rectype&1);
+                    dump_EXTDEF();
                     break;
                 case 0x90:/* PUBDEF */
                 case 0x91:/* PUBDEF32 */
