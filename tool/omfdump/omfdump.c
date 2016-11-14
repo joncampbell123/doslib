@@ -778,7 +778,7 @@ int dump_LIDATA_datablock(const unsigned char b32,const unsigned int indent,unsi
                 if (i == 0 || col == 0) {
                     j = (unsigned char)((*doh) & 0xFUL);
                     dump_LIDATA_indent(indent+1);
-                    printf("    @0x%08lx: ",*doh);
+                    printf("@0x%08lx: ",*doh);
                     while (col < j) {
                         printf("   ");
                         col++;
