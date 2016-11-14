@@ -363,16 +363,9 @@ void dump_PUBDEF(const unsigned char b32) {
     unsigned long puboff;
     unsigned int typidx;
 
-    if (b32) {
-        if (omfrec_avail() < 4) return;
-        base_group_index = omfrec_gw();
-        base_segment_index = omfrec_gw();
-    }
-    else {
-        if (omfrec_avail() < 2) return;
-        base_group_index = omfrec_gb();
-        base_segment_index = omfrec_gb();
-    }
+    if (omfrec_avail() < 2) return;
+    base_group_index = omfrec_gb();
+    base_segment_index = omfrec_gb();
 
     if (omfrec_avail() < 2) return;
     if (base_segment_index == 0)
@@ -385,9 +378,9 @@ void dump_PUBDEF(const unsigned char b32) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
         if (b32) {
-            if (omfrec_avail() < (4+2)) break;
+            if (omfrec_avail() < (4+1)) break;
             puboff = omfrec_gd();
-            typidx = omfrec_gw();
+            typidx = omfrec_gb();
         }
         else {
             if (omfrec_avail() < (2+1)) break;
