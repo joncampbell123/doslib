@@ -399,6 +399,30 @@ void dump_PUBDEF(const unsigned char b32) {
     }
 }
 
+void dump_GRPDEF(const unsigned char b32) {
+    unsigned int grpnamidx;
+    unsigned char index;
+    unsigned char segdefidx;
+
+    if (omfrec_eof()) return;
+    grpnamidx = omfrec_gb();
+    printf("    GRPDEF nameidx=%u:\n",grpnamidx);
+
+    while (!omfrec_eof()) {
+        index = omfrec_gb();
+
+        if (index == 0xFF) {
+            /* segment def index */
+            segdefidx = omfrec_gb();
+            printf("        SEGDEF index=%u\n",segdefidx);
+        }
+        else {
+            printf("* Whoops, don't know how to handle type 0x%02x\n",index);
+            break;
+        }
+    }
+}
+
 void dump_SEGDEF(const unsigned char b32) {
     unsigned char align_f;
     unsigned char comb_f;
@@ -605,6 +629,10 @@ int main(int argc,char **argv) {
                 case 0x98:/* SEGDEF */
                 case 0x99:/* SEGDEF32 */
                     dump_SEGDEF(omf_rectype&1);
+                    break;
+                case 0x9A:/* GRPDEF */
+                case 0x9B:/* GRPDEF32 */
+                    dump_GRPDEF(omf_rectype&1);
                     break;
                 case 0xA0:/* LEDATA */
                 case 0xA1:/* LEDATA32 */
