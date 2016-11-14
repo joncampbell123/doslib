@@ -451,6 +451,28 @@ void dump_FIXUPP(const unsigned char b32) {
                 else
                     printf("F=0 framemethod=%u",fix_frame);
 
+                if (!fix_f) {
+                    // again, if the OMF spec doesn't explain this and I have to read VirtualBox source code
+                    // to get this that says how reliable your spec is.
+                    switch (fix_frame) {
+                        case 0: // F0: segment
+                            printf(" F0:frame=segment");
+                            break;
+                        case 1: // F1: group
+                            printf(" F1:frame=group");
+                            break;
+                        case 2: // F2: external symbol
+                            printf(" F2:frame=external-symbol");
+                            break;
+                        case 4: // F4: frame = source
+                            printf(" F4:frame=source");
+                            break;
+                        case 5: // F5: frame = target
+                            printf(" F5:frame=target");
+                            break;
+                    }
+                }
+
                 if (!fix_f && fix_frame < 4) {
                     if (omfrec_eof()) break;
 
