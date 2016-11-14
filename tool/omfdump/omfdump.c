@@ -769,7 +769,7 @@ int dump_LIDATA_datablock(const unsigned char b32,const unsigned int indent,unsi
 
         /* read into memory */
         if (count != 0) {
-            if (omfrec_avail() < count) return;
+            if (omfrec_avail() < count) return 0;
             omfrec_read(tempstr,count);
         }
 
