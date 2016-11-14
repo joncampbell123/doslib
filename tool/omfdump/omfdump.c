@@ -356,6 +356,20 @@ void dump_EXTDEF(void) {
     }
 }
 
+void dump_LEXTDEF(const unsigned char b32) {
+    unsigned int typidx;
+
+    printf("    LEXTDEF:\n");
+    while (!omfrec_eof()) {
+        omfrec_get_lenstr(tempstr,sizeof(tempstr));
+
+        if (omfrec_avail() < 1) return;
+        typidx = omfrec_gb();
+
+        printf("        '%s' typidx=%u\n",tempstr,typidx);
+    }
+}
+
 void dump_PUBDEF(const unsigned char b32) {
     unsigned int base_segment_index = 0;
     unsigned int base_group_index = 0;
@@ -372,6 +386,42 @@ void dump_PUBDEF(const unsigned char b32) {
         base_frame = omfrec_gw();
 
     printf("    PUBDEF%u: basegroupidx=%u basesegidx=%u baseframe=%u\n",
+        b32?32:16,base_group_index,base_segment_index,base_frame);
+
+    while (!omfrec_eof()) {
+        omfrec_get_lenstr(tempstr,sizeof(tempstr));
+
+        if (b32) {
+            if (omfrec_avail() < (4+1)) break;
+            puboff = omfrec_gd();
+            typidx = omfrec_gb();
+        }
+        else {
+            if (omfrec_avail() < (2+1)) break;
+            puboff = omfrec_gw();
+            typidx = omfrec_gb();
+        }
+
+        printf("        '%s' offset=%lu typeidx=%u\n",tempstr,puboff,typidx);
+    }
+}
+
+void dump_LPUBDEF(const unsigned char b32) {
+    unsigned int base_segment_index = 0;
+    unsigned int base_group_index = 0;
+    unsigned int base_frame = 0;
+    unsigned long puboff;
+    unsigned int typidx;
+
+    if (omfrec_avail() < 2) return;
+    base_group_index = omfrec_gb();
+    base_segment_index = omfrec_gb();
+
+    if (omfrec_avail() < 2) return;
+    if (base_segment_index == 0)
+        base_frame = omfrec_gw();
+
+    printf("    LPUBDEF%u: basegroupidx=%u basesegidx=%u baseframe=%u\n",
         b32?32:16,base_group_index,base_segment_index,base_frame);
 
     while (!omfrec_eof()) {
@@ -893,6 +943,14 @@ int main(int argc,char **argv) {
                 case 0xA2:/* LIDATA */
                 case 0xA3:/* LIDATA32 */
                     dump_LIDATA(omf_rectype&1);
+                    break;
+                case 0xB4:/* LEXTDEF */
+                case 0xB5:/* LEXTDEF32 */
+                    dump_LEXTDEF(omf_rectype&1);
+                    break;
+                case 0xB6:/* LPUBDEF */
+                case 0xB7:/* LPUBDEF32 */
+                    dump_LPUBDEF(omf_rectype&1);
                     break;
             }
 
