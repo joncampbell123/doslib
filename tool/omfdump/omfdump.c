@@ -399,6 +399,102 @@ void dump_PUBDEF(const unsigned char b32) {
     }
 }
 
+void dump_FIXUPP(const unsigned char b32) {
+    unsigned char c;
+
+    printf("    FIXUPP%u:\n",b32?32:16);
+
+    /* whoo, dense structures */
+    while (!omfrec_eof()) {
+        c = omfrec_gb();
+
+        if ((c&0xA0/*0x80+0x20*/) == 0x00/* 0 D 0 x x x x x */) {
+            printf("        * error THREAD records not supported\n");
+            break;
+        }
+        else if (c&0x80) {
+            if (omfrec_eof()) break;
+
+            {
+                unsigned long target_disp;
+                unsigned char fix_f,fix_frame,fix_t,fix_p,fix_target;
+                unsigned char fixdata;
+                unsigned char segrel_fixup = (c >> 6) & 1;
+                unsigned char locat = (c >> 2) & 0xF;
+                unsigned int recoff = ((c & 3U) << 8U) + (unsigned int)omfrec_gb();
+
+                printf("        FIXUP %s loctofix=",segrel_fixup?"SEG-RELATIVE":"SELF-RELATIVE");
+                switch (locat) {
+                    case 0: printf("LOBYTE"); break;
+                    case 1: printf("16BIT-OFFSET"); break;
+                    case 2: printf("16BIT-SEGBASE"); break;
+                    case 3: printf("16SEG:16OFS-FAR-POINTER"); break;
+                    case 4: printf("HIBYTE"); break;
+                    case 5: printf("16BIT-LOADER-OFFSET"); break;
+                    case 9: printf("32BIT-OFFSET"); break;
+                    case 11:printf("16SEG:32OFS-FAR-POINTER"); break;
+                    case 13:printf("32BIT-LOADER-OFFSET"); break;
+                };
+                printf(" datarecofs=%lu",recoff);
+                printf("\n");
+
+                // FIXME: Is "Fix Data" conditional? If so, when does it happen??
+                //        The OMF spec doesn't say! This is a part of the spec
+                //        where the denseness and conditional nature is VERY
+                //        problematic because the OMF spec is very bad at explaining
+                //        WHEN these conditional fields appear.
+                if (omfrec_eof()) break;
+                fixdata = omfrec_gb();
+
+                fix_f = (fixdata >> 7) & 1;     /* [7:7] */
+                fix_frame = (fixdata >> 4) & 7; /* [6:4] */
+                fix_t = (fixdata >> 3) & 1;     /* [3:3] */
+                fix_p = (fixdata >> 2) & 1;     /* [2:2] */
+                fix_target = (fixdata & 3);     /* [1:0] */
+
+                printf("            F=%u frame=%u T=%u P=%u Target=%u",
+                    fix_f,  fix_frame,  fix_t,  fix_p,  fix_target);
+
+                if (!fix_f && fix_frame < 4) {
+                    if (omfrec_eof()) break;
+
+                    c = omfrec_gb();
+                    printf(" framedatum=%u",c);
+                }
+
+                /* FIXME: WHEN is the Target Datum field prsent???? This is a shitty guess! The OMF spec doesn't say! */
+                // NTS: To the people who wrote the OMF spec: your doc is confusing. The fact I had to read VirtualBox
+                //      source code for clarification means your spec needs clarification.
+                if (!fix_t) {
+                    if (omfrec_eof()) break;
+
+                    c = omfrec_gb();
+                    printf(" targetdatum=%u",c);
+                }
+
+                if (!fix_p) {
+                    if (b32) {
+                        if (omfrec_avail() < 4) break;
+                        target_disp = omfrec_gd();
+                    }
+                    else {
+                        if (omfrec_avail() < 4) break;
+                        target_disp = omfrec_gw();
+                    }
+
+                    printf(" targetdisp=%lu",target_disp);
+                }
+
+                printf("\n");
+            }
+        }
+        else {
+            printf("        * error unknown record\n");
+            break;
+        }
+    }
+}
+
 void dump_GRPDEF(const unsigned char b32) {
     unsigned int grpnamidx;
     unsigned char index;
@@ -633,6 +729,10 @@ int main(int argc,char **argv) {
                 case 0x9A:/* GRPDEF */
                 case 0x9B:/* GRPDEF32 */
                     dump_GRPDEF(omf_rectype&1);
+                    break;
+                case 0x9C:/* FIXUPP */
+                case 0x9D:/* FIXUPP32 */
+                    dump_FIXUPP(omf_rectype&1);
                     break;
                 case 0xA0:/* LEDATA */
                 case 0xA1:/* LEDATA32 */
