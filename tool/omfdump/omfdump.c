@@ -489,6 +489,18 @@ void dump_FIXUPP(const unsigned char b32) {
                 else {
                     if (omfrec_eof()) break;
 
+                    switch (fix_target) {
+                        case 0: // T0/T4: Target = segment
+                            printf(" T0:target=segment");
+                            break;
+                        case 1: // T1/T5: Target = segment group
+                            printf(" T0:target=segment-group");
+                            break;
+                        case 2: // T2/T6: Target = external symbol
+                            printf(" T0:target=extern-sym");
+                            break;
+                    };
+
                     c = omfrec_gb();
                     printf(" targetdatum=%u",c);
                 }
