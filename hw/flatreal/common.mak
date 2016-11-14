@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    flatreal.c
 OBJS =        $(SUBDIR)$(HPS)flatreal.obj $(SUBDIR)$(HPS)flatmode.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_FLATREAL_LIB): $(OBJS)
 	wlib -q -b -c $(HW_FLATREAL_LIB) -+$(SUBDIR)$(HPS)flatreal.obj -+$(SUBDIR)$(HPS)flatmode.obj

@@ -9,7 +9,7 @@ NASMFLAGS_THIS =
 C_SOURCE =    cpu.c
 OBJS =        $(SUBDIR)$(HPS)llmemasm.obj $(SUBDIR)$(HPS)llmem.obj
 
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_LLMEM_LIB): $(OBJS)
 	wlib -q -b -c $(HW_LLMEM_LIB) -+$(SUBDIR)$(HPS)llmemasm.obj -+$(SUBDIR)$(HPS)llmem.obj

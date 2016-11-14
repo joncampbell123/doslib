@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    8237.c
 OBJS =        $(SUBDIR)$(HPS)8237.obj $(SUBDIR)$(HPS)8237rdbs.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_8237_LIB): $(OBJS)
 	wlib -q -b -c $(HW_8237_LIB) -+$(SUBDIR)$(HPS)8237.obj -+$(SUBDIR)$(HPS)8237rdbs.obj

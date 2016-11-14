@@ -9,10 +9,10 @@ MAKE_IRQPATCH = 1
 
 C_SOURCE =    8259.c
 OBJS =        $(SUBDIR)$(HPS)8259.obj $(SUBDIR)$(HPS)8259poll.obj $(SUBDIR)$(HPS)8259icw.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 !ifdef MAKE_IRQPATCH
-IRQPATCH_EXE = $(SUBDIR)$(HPS)irqpatch.exe
+IRQPATCH_EXE = $(SUBDIR)$(HPS)irqpatch.$(EXEEXT)
 !endif
 
 $(HW_8259_LIB): $(OBJS)

@@ -5,11 +5,11 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    biosdisk.c
 OBJS =        $(SUBDIR)$(HPS)biosdisk.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 !ifeq TARGET_MSDOS 16
 ! ifndef TARGET_WINDOWS
 !  ifndef TARGET_OS2
-DUMPHDP_EXE = $(SUBDIR)$(HPS)dumphdp.exe
+DUMPHDP_EXE = $(SUBDIR)$(HPS)dumphdp.$(EXEEXT)
 !  endif
 ! endif
 !endif

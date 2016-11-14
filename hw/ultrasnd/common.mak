@@ -5,8 +5,8 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    ultrasnd.c
 OBJS =        $(SUBDIR)$(HPS)ultrasnd.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-TSRS_EXE =    $(SUBDIR)$(HPS)tsrs.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+TSRS_EXE =    $(SUBDIR)$(HPS)tsrs.$(EXEEXT)
 
 $(HW_ULTRASND_LIB): $(OBJS)
 	wlib -q -b -c $(HW_ULTRASND_LIB) -+$(SUBDIR)$(HPS)ultrasnd.obj

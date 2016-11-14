@@ -9,7 +9,7 @@ NASMFLAGS_THIS =
 C_SOURCE =    ohci.c
 OBJS =        $(SUBDIR)$(HPS)ohci.obj
 HW_USB_OHCI_LIB =  $(SUBDIR)$(HPS)ohci.lib
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_USB_OHCI_LIB): $(OBJS)
 	wlib -q -b -c $(HW_USB_OHCI_LIB) -+$(SUBDIR)$(HPS)ohci.obj

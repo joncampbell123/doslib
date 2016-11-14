@@ -9,7 +9,7 @@ NASMFLAGS_THIS =
 C_SOURCE =    pcie.c
 OBJS =        $(SUBDIR)$(HPS)pcie.obj
 HW_PCIE_LIB =  $(SUBDIR)$(HPS)pcie.lib
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_PCIE_LIB): $(OBJS)
 	wlib -q -b -c $(HW_PCIE_LIB) -+$(SUBDIR)$(HPS)pcie.obj

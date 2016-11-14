@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    apm.c
 OBJS =        $(SUBDIR)$(HPS)apm.obj $(SUBDIR)$(HPS)apm.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_APM_LIB): $(OBJS)
 	wlib -q -b -c $(HW_APM_LIB) -+$(SUBDIR)$(HPS)apm.obj

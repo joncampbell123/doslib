@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    floppy.c
 OBJS =        $(SUBDIR)$(HPS)floppy.obj $(SUBDIR)$(HPS)floppy.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_FLOPPY_LIB): $(OBJS)
 	wlib -q -b -c $(HW_FLOPPY_LIB) -+$(SUBDIR)$(HPS)floppy.obj

@@ -5,8 +5,8 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    rtc.c
 OBJS =        $(SUBDIR)$(HPS)rtc.obj $(SUBDIR)$(HPS)rtc.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-CMOS_EXE =    $(SUBDIR)$(HPS)cmos.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+CMOS_EXE =    $(SUBDIR)$(HPS)cmos.$(EXEEXT)
 
 $(HW_RTC_LIB): $(OBJS)
 	wlib -q -b -c $(HW_RTC_LIB) -+$(SUBDIR)$(HPS)rtc.obj

@@ -6,11 +6,11 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 C_SOURCE =    parport.c
 OBJS =        $(SUBDIR)$(HPS)parport.obj
 OBJSPNP =     $(SUBDIR)$(HPS)parpnp.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-TESTPNP_EXE = $(SUBDIR)$(HPS)testpnp.exe
-PRNT_EXE =    $(SUBDIR)$(HPS)prnt.exe
-PRNTPNP_EXE = $(SUBDIR)$(HPS)prntpnp.exe
-SAMPTEST_EXE =$(SUBDIR)$(HPS)samptest.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+TESTPNP_EXE = $(SUBDIR)$(HPS)testpnp.$(EXEEXT)
+PRNT_EXE =    $(SUBDIR)$(HPS)prnt.$(EXEEXT)
+PRNTPNP_EXE = $(SUBDIR)$(HPS)prntpnp.$(EXEEXT)
+SAMPTEST_EXE =$(SUBDIR)$(HPS)samptest.$(EXEEXT)
 
 $(HW_PARPORT_LIB): $(OBJS)
 	wlib -q -b -c $(HW_PARPORT_LIB) -+$(SUBDIR)$(HPS)parport.obj

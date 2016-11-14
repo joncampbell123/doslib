@@ -6,8 +6,8 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 C_SOURCE =    8250.c
 OBJS =        $(SUBDIR)$(HPS)8250.obj $(SUBDIR)$(HPS)8250prob.obj $(SUBDIR)$(HPS)8250bios.obj $(SUBDIR)$(HPS)8250siop.obj $(SUBDIR)$(HPS)8250fifo.obj $(SUBDIR)$(HPS)8250cint.obj $(SUBDIR)$(HPS)8250xien.obj $(SUBDIR)$(HPS)8250rcfg.obj $(SUBDIR)$(HPS)8250baud.obj $(SUBDIR)$(HPS)8250bauc.obj $(SUBDIR)$(HPS)8250tstr.obj $(SUBDIR)$(HPS)8250pstr.obj
 OBJSPNP =     $(SUBDIR)$(HPS)8250pnp.obj $(SUBDIR)$(HPS)8250pnpa.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-TESTPNP_EXE = $(SUBDIR)$(HPS)testpnp.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+TESTPNP_EXE = $(SUBDIR)$(HPS)testpnp.$(EXEEXT)
 
 $(HW_8250_LIB): $(OBJS)
 	wlib -q -b -c $(HW_8250_LIB) -+$(SUBDIR)$(HPS)8250.obj     -+$(SUBDIR)$(HPS)8250prob.obj

@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    smbios.c
 OBJS =        $(SUBDIR)$(HPS)smbios.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_SMBIOS_LIB): $(OBJS)
 	wlib -q -b -c $(HW_SMBIOS_LIB) -+$(SUBDIR)$(HPS)smbios.obj

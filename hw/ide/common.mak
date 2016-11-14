@@ -14,7 +14,7 @@ NO_TEST_EXE=1
 !endif
 
 !ifndef NO_TEST_EXE
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 !endif
 
 $(HW_IDE_LIB): $(OBJS)

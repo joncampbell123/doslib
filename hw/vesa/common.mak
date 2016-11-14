@@ -5,11 +5,11 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    vesa.c
 OBJS =        $(SUBDIR)$(HPS)vesa.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-MODESET_EXE = $(SUBDIR)$(HPS)modeset.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+MODESET_EXE = $(SUBDIR)$(HPS)modeset.$(EXEEXT)
 
 !ifeq TARGET_MSDOS 16
-VESA240_EXE = $(SUBDIR)$(HPS)vesa240.exe
+VESA240_EXE = $(SUBDIR)$(HPS)vesa240.$(EXEEXT)
 !endif
 
 $(HW_VESA_LIB): $(OBJS)

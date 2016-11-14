@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    joystick.c
 OBJS =        $(SUBDIR)$(HPS)joystick.obj $(SUBDIR)$(HPS)joystick.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_JOYSTICK_LIB): $(OBJS)
 	wlib -q -b -c $(HW_JOYSTICK_LIB) -+$(SUBDIR)$(HPS)joystick.obj

@@ -5,13 +5,13 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    iglib.c
 OBJS =        $(SUBDIR)$(HPS)iglib.obj $(SUBDIR)$(HPS)igregio.obj $(SUBDIR)$(HPS)igrselio.obj $(SUBDIR)$(HPS)igprobe.obj $(SUBDIR)$(HPS)igreset.obj $(SUBDIR)$(HPS)igrident.obj $(SUBDIR)$(HPS)igverstr.obj $(SUBDIR)$(HPS)igdbgmsg.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-SSHOT_EXE =   $(SUBDIR)$(HPS)sshot.exe
-VCAP_EXE =    $(SUBDIR)$(HPS)vcap.exe
-WCAP_EXE =    $(SUBDIR)$(HPS)wcap.exe
-KBSTAT_EXE =  $(SUBDIR)$(HPS)kbstat.exe
-KBINJECT_EXE =$(SUBDIR)$(HPS)kbinject.exe
-MSINJECT_EXE =$(SUBDIR)$(HPS)msinject.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+SSHOT_EXE =   $(SUBDIR)$(HPS)sshot.$(EXEEXT)
+VCAP_EXE =    $(SUBDIR)$(HPS)vcap.$(EXEEXT)
+WCAP_EXE =    $(SUBDIR)$(HPS)wcap.$(EXEEXT)
+KBSTAT_EXE =  $(SUBDIR)$(HPS)kbstat.$(EXEEXT)
+KBINJECT_EXE =$(SUBDIR)$(HPS)kbinject.$(EXEEXT)
+MSINJECT_EXE =$(SUBDIR)$(HPS)msinject.$(EXEEXT)
 
 $(HW_DOSBOXID_LIB): $(OBJS)
 	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)iglib.obj    -+$(SUBDIR)$(HPS)igregio.obj  -+$(SUBDIR)$(HPS)igrselio.obj

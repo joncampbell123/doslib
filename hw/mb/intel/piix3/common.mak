@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS)..$(HPS)..
 
 C_SOURCE =    piix3.c
 OBJS =        $(SUBDIR)$(HPS)piix3.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_MB_INTEL_PIIX3_LIB): $(OBJS)
 	wlib -q -b -c $(HW_MB_INTEL_PIIX3_LIB) -+$(SUBDIR)$(HPS)piix3.obj

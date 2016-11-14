@@ -5,7 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    mpu401.c
 OBJS =        $(SUBDIR)$(HPS)mpu401.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_MPU401_LIB): $(OBJS)
 	wlib -q -b -c $(HW_MPU401_LIB) -+$(SUBDIR)$(HPS)mpu401.obj

@@ -6,8 +6,8 @@ NOW_BUILDING = HW_ISAPNP_LIB
 
 C_SOURCE =    isapnp.c
 OBJS =        $(SUBDIR)$(HPS)isapnp.obj $(SUBDIR)$(HPS)isapnp.obj $(SUBDIR)$(HPS)pnpiord.obj $(SUBDIR)$(HPS)pnpiowd.obj $(SUBDIR)$(HPS)pnpirqrd.obj $(SUBDIR)$(HPS)pnpirqwd.obj $(SUBDIR)$(HPS)pnpdmard.obj $(SUBDIR)$(HPS)pnpdmawd.obj $(SUBDIR)$(HPS)pnpdregr.obj $(SUBDIR)$(HPS)pnpdregw.obj $(SUBDIR)$(HPS)pnprdcfg.obj $(SUBDIR)$(HPS)pnpsrdpt.obj $(SUBDIR)$(HPS)pnpprdst.obj $(SUBDIR)$(HPS)pnptagst.obj $(SUBDIR)$(HPS)pnptpris.obj $(SUBDIR)$(HPS)pnpdevct.obj $(SUBDIR)$(HPS)pnpdevds.obj $(SUBDIR)$(HPS)pnptagso.obj $(SUBDIR)$(HPS)pnpinkey.obj $(SUBDIR)$(HPS)pnp32t16.obj $(SUBDIR)$(HPS)pnpirkey.obj $(SUBDIR)$(HPS)pnpwkcsn.obj $(SUBDIR)$(HPS)pnprdtag.obj $(SUBDIR)$(HPS)pnpdevtp.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-DUMP_EXE =    $(SUBDIR)$(HPS)dump.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+DUMP_EXE =    $(SUBDIR)$(HPS)dump.$(EXEEXT)
 
 $(HW_ISAPNP_LIB): $(OBJS)
 	wlib -q -b -c $(HW_ISAPNP_LIB) -+$(SUBDIR)$(HPS)isapnp.obj   -+$(SUBDIR)$(HPS)pnpiord.obj  -+$(SUBDIR)$(HPS)pnpiowd.obj

@@ -4,35 +4,35 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = HW_VGA_LIB
 
-TEST_EXE =     $(SUBDIR)$(HPS)test.exe
+TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 !ifeq TARGET_MSDOS 16
 !ifndef TARGET_WINDOWS
-VGA240_EXE =   $(SUBDIR)$(HPS)vga240.exe
-DRAWVRL3_EXE = $(SUBDIR)$(HPS)drawvrl3.exe
+VGA240_EXE =   $(SUBDIR)$(HPS)vga240.$(EXEEXT)
+DRAWVRL3_EXE = $(SUBDIR)$(HPS)drawvrl3.$(EXEEXT)
 !endif
 !endif
 
 !ifndef TARGET_WINDOWS
-TGFX_EXE =     $(SUBDIR)$(HPS)tgfx.exe
-DRAWVRL_EXE =  $(SUBDIR)$(HPS)drawvrl.exe
+TGFX_EXE =     $(SUBDIR)$(HPS)tgfx.$(EXEEXT)
+DRAWVRL_EXE =  $(SUBDIR)$(HPS)drawvrl.$(EXEEXT)
 ! ifeq MMODE l
-PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
-VRL2VRS_EXE =  $(SUBDIR)$(HPS)vrl2vrs.exe
-VRSDUMP_EXE =  $(SUBDIR)$(HPS)vrsdump.exe
-PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.exe
+PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.$(EXEEXT)
+VRL2VRS_EXE =  $(SUBDIR)$(HPS)vrl2vrs.$(EXEEXT)
+VRSDUMP_EXE =  $(SUBDIR)$(HPS)vrsdump.$(EXEEXT)
+PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.$(EXEEXT)
 ! endif
 ! ifeq MMODE f
-PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.exe
-VRL2VRS_EXE =  $(SUBDIR)$(HPS)vrl2vrs.exe
-VRSDUMP_EXE =  $(SUBDIR)$(HPS)vrsdump.exe
-PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.exe
+PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.$(EXEEXT)
+VRL2VRS_EXE =  $(SUBDIR)$(HPS)vrl2vrs.$(EXEEXT)
+VRSDUMP_EXE =  $(SUBDIR)$(HPS)vrsdump.$(EXEEXT)
+PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.$(EXEEXT)
 ! endif
-DRAWVRL2_EXE = $(SUBDIR)$(HPS)drawvrl2.exe
-TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.exe
-TMOTSENG_EXE = $(SUBDIR)$(HPS)tmotseng.exe
-DRAWVRL4_EXE = $(SUBDIR)$(HPS)drawvrl4.exe
-DRAWVRL5_EXE = $(SUBDIR)$(HPS)drawvrl5.exe
+DRAWVRL2_EXE = $(SUBDIR)$(HPS)drawvrl2.$(EXEEXT)
+TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.$(EXEEXT)
+TMOTSENG_EXE = $(SUBDIR)$(HPS)tmotseng.$(EXEEXT)
+DRAWVRL4_EXE = $(SUBDIR)$(HPS)drawvrl4.$(EXEEXT)
+DRAWVRL5_EXE = $(SUBDIR)$(HPS)drawvrl5.$(EXEEXT)
 !endif
 
 $(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)herc.obj $(SUBDIR)$(HPS)tseng.obj $(SUBDIR)$(HPS)vgach3c0.obj $(SUBDIR)$(HPS)vgastget.obj $(SUBDIR)$(HPS)vgatxt50.obj $(SUBDIR)$(HPS)vgaclks.obj $(SUBDIR)$(HPS)vgabicur.obj $(SUBDIR)$(HPS)vgasetmm.obj $(SUBDIR)$(HPS)vgarcrtc.obj $(SUBDIR)$(HPS)vgasemo.obj $(SUBDIR)$(HPS)vgaseco.obj $(SUBDIR)$(HPS)vgacrtcc.obj $(SUBDIR)$(HPS)vgacrtcr.obj $(SUBDIR)$(HPS)vgacrtcs.obj $(SUBDIR)$(HPS)vgasplit.obj $(SUBDIR)$(HPS)vgamodex.obj $(SUBDIR)$(HPS)vga9wide.obj $(SUBDIR)$(HPS)vgaalfpl.obj $(SUBDIR)$(HPS)vgaselcs.obj $(SUBDIR)$(HPS)vgastloc.obj $(SUBDIR)$(HPS)vrl1xlof.obj $(SUBDIR)$(HPS)vrl1xdrw.obj $(SUBDIR)$(HPS)vrl1ydrw.obj $(SUBDIR)$(HPS)vrl1xdrs.obj $(SUBDIR)$(HPS)vgawm1bc.obj
