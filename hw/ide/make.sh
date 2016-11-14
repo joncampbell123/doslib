@@ -7,6 +7,9 @@ dos=1
 doshuge=1
 dospc98=1 # MS-DOS PC98
 
+# TOO BIG FOR TINY
+#dostiny=1 # MS-DOS tiny model
+
 if [ "$1" == "clean" ]; then
     do_clean
     rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
