@@ -59,6 +59,7 @@ WIN_INCLUDE=-i="$(%WATCOM)/h/win"
 #               Wanna know why? Because apparently Windows 3.0 doesn't maintain SS == DS, which Watcom assumes. So you always need
 #               to specify the -zu and -zw switches. Even for Windows 3.1
 
+EXEEXT=exe
 TARGET_MSDOS = 16
 TARGET_WINDOWS = 30
 SUBDIR   = win30$(TARGET86_1DIGIT)$(MMODE)$(DSUFFIX)

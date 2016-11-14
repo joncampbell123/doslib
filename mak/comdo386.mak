@@ -50,6 +50,7 @@ CPULEV4F=3
 !endif
 !endif
 
+EXEEXT=exe
 TARGET_MSDOS = 32
 !ifdef PC98
 SUBDIR   = d98$(TARGET86)$(MMODE)$(DSUFFIX)

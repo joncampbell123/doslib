@@ -47,8 +47,10 @@ CFLAGS_1 += -dTARGET_PC98=1
 
 !ifdef TINYMODE
 MMODEC=t
+EXEEXT=com
 !else
 MMODEC=$(MMODE)
+EXEEXT=exe
 !endif
 
 TARGET_MSDOS = 16

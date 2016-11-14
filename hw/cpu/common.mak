@@ -25,24 +25,24 @@ NOW_BUILDING = HW_CPU_LIB
 OBJS =        $(SUBDIR)$(HPS)cpuasm.obj $(SUBDIR)$(HPS)cpup3sn.obj $(SUBDIR)$(HPS)cpup3snc.obj $(SUBDIR)$(HPS)cpusse.obj $(SUBDIR)$(HPS)cpu.obj $(SUBDIR)$(HPS)cpuidext.obj $(SUBDIR)$(HPS)gdt_enum.obj $(SUBDIR)$(HPS)libgrind.obj $(SUBDIR)$(HPS)cpurdtsc.obj $(SUBDIR)$(HPS)cpuiopd.obj $(SUBDIR)$(HPS)cpustrlv.obj $(SUBDIR)$(HPS)resetasm.obj $(SUBDIR)$(HPS)cpuid.obj $(SUBDIR)$(HPS)cpurdmsr.obj $(SUBDIR)$(HPS)cpussea.obj
 
 # test programs (MS-DOS and Windows)
-MMX_EXE =     $(SUBDIR)$(HPS)mmx.exe
-SSE_EXE =     $(SUBDIR)$(HPS)sse.exe
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-GRIND_EXE =   $(SUBDIR)$(HPS)grind.exe
-GR_ADD_EXE =  $(SUBDIR)$(HPS)gr_add.exe
-DISPSN_EXE =  $(SUBDIR)$(HPS)dispsn.exe
-SSEOFF_EXE =  $(SUBDIR)$(HPS)sseoff.exe
-GDTLIST_EXE = $(SUBDIR)$(HPS)gdtlist.exe
+MMX_EXE =     $(SUBDIR)$(HPS)mmx.$(EXEEXT)
+SSE_EXE =     $(SUBDIR)$(HPS)sse.$(EXEEXT)
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+GRIND_EXE =   $(SUBDIR)$(HPS)grind.$(EXEEXT)
+GR_ADD_EXE =  $(SUBDIR)$(HPS)gr_add.$(EXEEXT)
+DISPSN_EXE =  $(SUBDIR)$(HPS)dispsn.$(EXEEXT)
+SSEOFF_EXE =  $(SUBDIR)$(HPS)sseoff.$(EXEEXT)
+GDTLIST_EXE = $(SUBDIR)$(HPS)gdtlist.$(EXEEXT)
 !ifndef WIN386
-GDTTAE_EXE =  $(SUBDIR)$(HPS)gdttae.exe
+GDTTAE_EXE =  $(SUBDIR)$(HPS)gdttae.$(EXEEXT)
 !endif
-RDTSC_EXE =   $(SUBDIR)$(HPS)rdtsc.exe
+RDTSC_EXE =   $(SUBDIR)$(HPS)rdtsc.$(EXEEXT)
 
 !ifndef TARGET_WINDOWS
 ! ifndef TARGET_OS2
 # test programs (MS-DOS only)
-RESET_EXE =   $(SUBDIR)$(HPS)reset.exe
-APIC_EXE =    $(SUBDIR)$(HPS)apic.exe
+RESET_EXE =   $(SUBDIR)$(HPS)reset.$(EXEEXT)
+APIC_EXE =    $(SUBDIR)$(HPS)apic.$(EXEEXT)
 ! endif
 !endif
 

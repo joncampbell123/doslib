@@ -27,28 +27,28 @@ NTVDMVDD_LIB_WLINK_LIBRARIES = library $(NTVDMVDD_LIB)
 ! ifndef TARGET_OS2
 !  ifeq TARGET_MSDOS 16
 CLSGEXM1_DLM = $(SUBDIR)$(HPS)clsgexm1.dlm
-CLSGEXT1_EXE = $(SUBDIR)$(HPS)clsgext1.exe
+CLSGEXT1_EXE = $(SUBDIR)$(HPS)clsgext1.$(EXEEXT)
 !  endif
 ! endif
 !endif
 
 !ifndef TARGET_WINDOWS
 ! ifndef TARGET_OS2
-LOL_EXE =     $(SUBDIR)$(HPS)lol.exe
-TESTSMRT_EXE =$(SUBDIR)$(HPS)testsmrt.exe
-NTASTRM_EXE = $(SUBDIR)$(HPS)ntastrm.exe
+LOL_EXE =     $(SUBDIR)$(HPS)lol.$(EXEEXT)
+TESTSMRT_EXE =$(SUBDIR)$(HPS)testsmrt.$(EXEEXT)
+NTASTRM_EXE = $(SUBDIR)$(HPS)ntastrm.$(EXEEXT)
 !  ifeq TARGET_MSDOS 16
-TESTDPMI_EXE =$(SUBDIR)$(HPS)testdpmi.exe
+TESTDPMI_EXE =$(SUBDIR)$(HPS)testdpmi.$(EXEEXT)
 !  endif
-TSTHIMEM_EXE =$(SUBDIR)$(HPS)tsthimem.exe
-TESTBEXT_EXE =$(SUBDIR)$(HPS)testbext.exe
-TESTEMM_EXE = $(SUBDIR)$(HPS)testemm.exe
-TSTBIOM_EXE = $(SUBDIR)$(HPS)tstbiom.exe
-TSTLP_EXE =   $(SUBDIR)$(HPS)tstlp.exe
+TSTHIMEM_EXE =$(SUBDIR)$(HPS)tsthimem.$(EXEEXT)
+TESTBEXT_EXE =$(SUBDIR)$(HPS)testbext.$(EXEEXT)
+TESTEMM_EXE = $(SUBDIR)$(HPS)testemm.$(EXEEXT)
+TSTBIOM_EXE = $(SUBDIR)$(HPS)tstbiom.$(EXEEXT)
+TSTLP_EXE =   $(SUBDIR)$(HPS)tstlp.$(EXEEXT)
 ! endif
 !endif
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-CR3_EXE =     $(SUBDIR)$(HPS)cr3.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+CR3_EXE =     $(SUBDIR)$(HPS)cr3.$(EXEEXT)
 
 !ifndef TARGET_OS2
 # if targeting Win32, then build the DOS NT assistant DLL that DOS versions

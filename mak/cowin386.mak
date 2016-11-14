@@ -70,6 +70,7 @@ TARGET86_1DIGIT=6
 # why is this even necessary? why does dumbshit Watcom insist on including the WINNT headers for Windows 3.1 builds?
 WIN_INCLUDE=-i="$(%WATCOM)/h/win"
 
+EXEEXT=exe
 TARGET_MSDOS = 32
 TARGET_WINDOWS = 30
 WIN386   = 1
