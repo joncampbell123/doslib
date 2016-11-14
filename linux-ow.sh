@@ -95,6 +95,15 @@ make_buildlist() {
             fi
         fi
 
+        # tiny memory model support
+        if [ x"$dostiny" == x"1" ]; then
+            if [ x"$build_everything" == x"1" ]; then
+                build_list="$build_list d9886t d98286t"
+            else
+                build_list="$build_list d9886t"
+            fi
+        fi
+
         # huge memory model support
         if [ x"$doshuge" == x"1" ]; then
             if [ x"$build_everything" == x"1" ]; then
