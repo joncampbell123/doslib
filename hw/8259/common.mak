@@ -32,13 +32,15 @@ exe: $(TEST_EXE) $(IRQPATCH_EXE) .symbolic
 
 !ifdef IRQPATCH_EXE
 $(IRQPATCH_EXE): $(SUBDIR)$(HPS)irqpatch.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)irqpatch.obj name $(IRQPATCH_EXE)
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)irqpatch.obj name $(IRQPATCH_EXE) option map=$(IRQPATCH_EXE).map
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 $(TEST_EXE): $(HW_8259_LIB) $(SUBDIR)$(HPS)test.obj
-	$(LINKER) -q $(LDFLAGS) -fe=$(TEST_EXE) $(SUBDIR)$(HPS)test.obj $(HW_8259_LIB)
+	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE) option map=$(TEST_EXE).map $(HW_8259_LIB_WLINK_LIBRARIES)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 
 clean: .SYMBOLIC
           del $(SUBDIR)$(HPS)*.obj
