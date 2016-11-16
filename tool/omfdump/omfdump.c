@@ -118,6 +118,56 @@ static unsigned long        omf_recoffs = 0;
 static unsigned int         omf_reclen = 0; // NTS: Does NOT include leading checksum byte
 static unsigned int         omf_recpos = 0; // where we are parsing
 
+/* LNAMES collection */
+#define MAX_LNAMES          255
+static char*                omf_LNAMES[MAX_LNAMES];
+static unsigned int         omf_LNAMES_count = 0;
+
+static const char *omf_get_LNAME(const unsigned int i) {
+    if (i == 0 || i > omf_LNAMES_count) // LNAMEs are 1-based
+        return NULL;
+
+    return omf_LNAMES[i-1];
+}
+
+static const char *omf_get_LNAME_safe(const unsigned int i) {
+    const char *r = omf_get_LNAME(i);
+
+    return (r != NULL) ? r : "[ERANGE]";
+}
+
+static void omf_LNAMES_clear(void) {
+    while (omf_LNAMES_count > 0) {
+        omf_LNAMES_count--;
+
+        if (omf_LNAMES[omf_LNAMES_count] != NULL) {
+            free(omf_LNAMES[omf_LNAMES_count]);
+            omf_LNAMES[omf_LNAMES_count] = NULL;
+        }
+    }
+}
+
+static void omf_LNAMES_add(const char *name) {
+    size_t len = strlen(name);
+    char *p;
+
+    if (name == NULL)
+        return;
+    if (omf_LNAMES_count >= MAX_LNAMES)
+        return;
+
+    p = malloc(len+1);
+    if (p == NULL)
+        return;
+
+    memcpy(p,name,len+1);/* name + NUL */
+    omf_LNAMES[omf_LNAMES_count++] = p;
+}
+
+static void omf_reset(void) {
+    omf_LNAMES_clear();
+}
+
 static inline unsigned int omfrec_eof(void) {
     return (omf_recpos >= omf_reclen);
 }
@@ -337,6 +387,7 @@ void dump_LNAMES(void) {
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
         printf(" \"%s\"",tempstr);
+        omf_LNAMES_add(tempstr);
     }
 
     printf("\n");
@@ -585,7 +636,7 @@ void dump_GRPDEF(const unsigned char b32) {
 
     if (omfrec_eof()) return;
     grpnamidx = omfrec_gb();
-    printf("    GRPDEF nameidx=%u:\n",grpnamidx);
+    printf("    GRPDEF nameidx=\"%s\"(%u):\n",omf_get_LNAME_safe(grpnamidx),grpnamidx);
 
     while (!omfrec_eof()) {
         index = omfrec_gb();
@@ -646,8 +697,10 @@ void dump_SEGDEF(const unsigned char b32) {
     printf("    SEGDEF%u: USE%u",b32?32:16,use32?32:16);
     if (big && seg_length == 0) printf(" length=%s(max)",b32?"4GB":"64KB");
     else printf(" length=%lu",seg_length);
-    printf(" nameidx=%u classidx=%u ovlidx=%u",
-        segnamidx,classnamidx,ovlnamidx);
+    printf(" nameidx=\"%s\"(%u) classidx=\"%s\"(%u) ovlidx=\"%s\"(%u)",
+        omf_get_LNAME_safe(segnamidx),      segnamidx,
+        omf_get_LNAME_safe(classnamidx),    classnamidx,
+        omf_get_LNAME_safe(ovlnamidx),      ovlnamidx);
     printf("\n");
 
     switch (align_f) {
@@ -964,6 +1017,7 @@ int main(int argc,char **argv) {
             if (!omf_lib_next_block(fd,lastofs+3UL+(unsigned long)lastlen))
                 break;
 
+            omf_reset();
             printf("\n* Another .LIB object archive begins...\n\n");
         }
         else {
@@ -971,6 +1025,7 @@ int main(int argc,char **argv) {
         }
     } while (1);
 
+    omf_reset();
     close(fd);
     return 0;
 }
