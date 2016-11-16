@@ -164,8 +164,53 @@ static void omf_LNAMES_add(const char *name) {
     omf_LNAMES[omf_LNAMES_count++] = p;
 }
 
+struct omf_SEGDEF_t {
+    unsigned char           nameidx;
+};
+
+#define MAX_SEGDEFS         255
+static struct omf_SEGDEF_t  omf_SEGDEFS[MAX_SEGDEFS];
+static unsigned int         omf_SEGDEFS_count = 0;
+
+static struct omf_SEGDEF_t *omf_SEGDEFS_add(const unsigned char nameidx) {
+    struct omf_SEGDEF_t *rec;
+
+    if (nameidx == 0)
+        return NULL;
+    if (omf_SEGDEFS_count >= MAX_SEGDEFS)
+        return NULL;
+
+    rec = &omf_SEGDEFS[omf_SEGDEFS_count++];
+    memset(rec,0,sizeof(*rec));
+    rec->nameidx = nameidx;
+    return rec;
+}
+
+static struct omf_SEGDEF_t *omf_get_SEGDEF(const unsigned int i) {
+    if (i == 0 || i > omf_SEGDEFS_count)
+        return NULL;
+
+    return &omf_SEGDEFS[i-1];
+}
+
+static const char *omf_get_SEGDEF_name(const unsigned int i) {
+    struct omf_SEGDEF_t *rec = omf_get_SEGDEF(i);
+    unsigned char idx = (rec != NULL) ? rec->nameidx : 0;
+    return omf_get_LNAME(idx);
+}
+
+static const char *omf_get_SEGDEF_name_safe(const unsigned int i) {
+    const char *name = omf_get_SEGDEF_name(i);
+    return (name != NULL) ? name : "[ERANGE]";
+}
+
+static void omf_SEGDEF_clear(void) {
+    omf_SEGDEFS_count = 0;
+}
+
 static void omf_reset(void) {
     omf_LNAMES_clear();
+    omf_SEGDEF_clear();
 }
 
 static inline unsigned int omfrec_eof(void) {
@@ -644,7 +689,7 @@ void dump_GRPDEF(const unsigned char b32) {
         if (index == 0xFF) {
             /* segment def index */
             segdefidx = omfrec_gb();
-            printf("        SEGDEF index=%u\n",segdefidx);
+            printf("        SEGDEF index=\"%s\"(%u)\n",omf_get_SEGDEF_name_safe(segdefidx),segdefidx);
         }
         else {
             printf("* Whoops, don't know how to handle type 0x%02x\n",index);
@@ -654,6 +699,7 @@ void dump_GRPDEF(const unsigned char b32) {
 }
 
 void dump_SEGDEF(const unsigned char b32) {
+    struct omf_SEGDEF_t *segdef;
     unsigned char align_f;
     unsigned char comb_f;
     unsigned char use32;
@@ -740,6 +786,8 @@ void dump_SEGDEF(const unsigned char b32) {
             printf("        COMMON, combine by overlaying using max size\n");
             break;
     };
+
+    segdef = omf_SEGDEFS_add(segnamidx);
 }
 
 void dump_LEDATA(const unsigned char b32) {
