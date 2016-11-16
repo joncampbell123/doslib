@@ -118,6 +118,9 @@ static unsigned long        omf_recoffs = 0;
 static unsigned int         omf_reclen = 0; // NTS: Does NOT include leading checksum byte
 static unsigned int         omf_recpos = 0; // where we are parsing
 
+static unsigned char        last_LEDATA_segment_index = 0;
+static unsigned long        last_LEDATA_data_offset = 0;
+
 /* LNAMES collection */
 #define MAX_LNAMES          255
 static char*                omf_LNAMES[MAX_LNAMES];
@@ -574,7 +577,7 @@ void dump_FIXUPP(const unsigned char b32) {
                     case 11:printf("16SEG:32OFS-FAR-POINTER"); break;
                     case 13:printf("32BIT-LOADER-OFFSET"); break;
                 };
-                printf(" datarecofs=%lu",recoff);
+                printf(" datarecofs=(rel)0x%lX,(abs)0x%lX",recoff,recoff+last_LEDATA_data_offset);
                 printf("\n");
 
                 // FIXME: Is "Fix Data" conditional? If so, when does it happen??
@@ -807,6 +810,8 @@ void dump_LEDATA(const unsigned char b32) {
         enum_data_offset = omfrec_gw();
     }
 
+    last_LEDATA_segment_index = segment_index;
+    last_LEDATA_data_offset = enum_data_offset;
     printf("    LEDATA%u: segidx=\"%s\"(%u) data_offset=%lu\n",b32?32:16,omf_get_SEGDEF_name_safe(segment_index),segment_index,enum_data_offset);
 
     doh = enum_data_offset;
@@ -948,6 +953,8 @@ void dump_LIDATA(const unsigned char b32) {
         enum_data_offset = omfrec_gw();
     }
 
+    last_LEDATA_segment_index = segment_index;
+    last_LEDATA_data_offset = enum_data_offset;
     printf("    LIDATA%u: segidx=\"%s\"(%u) data_offset=%lu\n",b32?32:16,omf_get_SEGDEF_name_safe(segment_index),segment_index,enum_data_offset);
 
     doh = enum_data_offset;
