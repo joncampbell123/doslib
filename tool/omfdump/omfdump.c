@@ -807,7 +807,7 @@ void dump_LEDATA(const unsigned char b32) {
         enum_data_offset = omfrec_gw();
     }
 
-    printf("    LEDATA%u: segidx=%u data_offset=%lu\n",b32?32:16,segment_index,enum_data_offset);
+    printf("    LEDATA%u: segidx=\"%s\"(%u) data_offset=%lu\n",b32?32:16,omf_get_SEGDEF_name_safe(segment_index),segment_index,enum_data_offset);
 
     doh = enum_data_offset;
     while (!omfrec_eof()) {
@@ -948,7 +948,7 @@ void dump_LIDATA(const unsigned char b32) {
         enum_data_offset = omfrec_gw();
     }
 
-    printf("    LIDATA%u: segidx=%u data_offset=%lu\n",b32?32:16,segment_index,enum_data_offset);
+    printf("    LIDATA%u: segidx=\"%s\"(%u) data_offset=%lu\n",b32?32:16,omf_get_SEGDEF_name_safe(segment_index),segment_index,enum_data_offset);
 
     doh = enum_data_offset;
     dump_LIDATA_datablock(b32,2,&doh);
