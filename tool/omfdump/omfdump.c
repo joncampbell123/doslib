@@ -211,9 +211,54 @@ static void omf_SEGDEF_clear(void) {
     omf_SEGDEFS_count = 0;
 }
 
+struct omf_GRPDEF_t {
+    unsigned char           nameidx;
+};
+
+#define MAX_GRPDEFS         255
+static struct omf_GRPDEF_t  omf_GRPDEFS[MAX_GRPDEFS];
+static unsigned int         omf_GRPDEFS_count = 0;
+
+static struct omf_GRPDEF_t *omf_GRPDEFS_add(const unsigned char nameidx) {
+    struct omf_GRPDEF_t *rec;
+
+    if (nameidx == 0)
+        return NULL;
+    if (omf_GRPDEFS_count >= MAX_GRPDEFS)
+        return NULL;
+
+    rec = &omf_GRPDEFS[omf_GRPDEFS_count++];
+    memset(rec,0,sizeof(*rec));
+    rec->nameidx = nameidx;
+    return rec;
+}
+
+static struct omf_GRPDEF_t *omf_get_GRPDEF(const unsigned int i) {
+    if (i == 0 || i > omf_GRPDEFS_count)
+        return NULL;
+
+    return &omf_GRPDEFS[i-1];
+}
+
+static const char *omf_get_GRPDEF_name(const unsigned int i) {
+    struct omf_GRPDEF_t *rec = omf_get_GRPDEF(i);
+    unsigned char idx = (rec != NULL) ? rec->nameidx : 0;
+    return omf_get_LNAME(idx);
+}
+
+static const char *omf_get_GRPDEF_name_safe(const unsigned int i) {
+    const char *name = omf_get_GRPDEF_name(i);
+    return (name != NULL) ? name : "[ERANGE]";
+}
+
+static void omf_GRPDEF_clear(void) {
+    omf_GRPDEFS_count = 0;
+}
+
 static void omf_reset(void) {
     omf_LNAMES_clear();
     omf_SEGDEF_clear();
+    omf_GRPDEF_clear();
 }
 
 static inline unsigned int omfrec_eof(void) {
@@ -627,6 +672,15 @@ void dump_FIXUPP(const unsigned char b32) {
 
                     c = omfrec_gb();
                     printf(" framedatum=%u",c);
+
+                    switch (fix_frame) {
+                        case 0: // segment
+                            printf("(\"%s\")",omf_get_SEGDEF_name_safe(c));
+                            break;
+                        case 1: // group
+                            printf("(\"%s\")",omf_get_GRPDEF_name_safe(c));
+                            break;
+                    }
                 }
 
                 /* FIXME: WHEN is the Target Datum field prsent???? This is a shitty guess! The OMF spec doesn't say! */
@@ -652,6 +706,15 @@ void dump_FIXUPP(const unsigned char b32) {
 
                     c = omfrec_gb();
                     printf(" targetdatum=%u",c);
+
+                    switch (fix_target) {
+                        case 0: // T0/T4: Target = segment
+                            printf("(\"%s\")",omf_get_SEGDEF_name_safe(c));
+                            break;
+                        case 1: // T1/T5: Target = segment group
+                            printf("(\"%s\")",omf_get_GRPDEF_name_safe(c));
+                            break;
+                    };
                 }
 
                 if (!fix_p) {
@@ -685,6 +748,8 @@ void dump_GRPDEF(const unsigned char b32) {
     if (omfrec_eof()) return;
     grpnamidx = omfrec_gb();
     printf("    GRPDEF nameidx=\"%s\"(%u):\n",omf_get_LNAME_safe(grpnamidx),grpnamidx);
+
+    omf_GRPDEFS_add(grpnamidx);
 
     while (!omfrec_eof()) {
         index = omfrec_gb();
