@@ -823,7 +823,7 @@ void dump_LEDATA(const unsigned char b32) {
 
         printf("    @0x%08lx: ",doh);
         for (i=0;i < colo;i++) printf("   ");
-        for (   ;i < (colo+len);i++) printf("%02X ",tmp[i]);
+        for (   ;i < (colo+len);i++) printf("%02X%c",tmp[i],i==7?'-':' ');
         for (   ;i <  16;i++) printf("   ");
         printf("  ");
         for (i=0;i < colo;i++) printf(" ");
@@ -893,7 +893,7 @@ int dump_LIDATA_datablock(const unsigned char b32,const unsigned int indent,unsi
                 }
 
                 row[col] = tempstr[i];
-                printf("%02X ",row[col]);
+                printf("%02X%c",row[col],col==7?'-':' ');
                 (*doh)++;
                 col++;
                 i++;
