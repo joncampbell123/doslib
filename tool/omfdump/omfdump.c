@@ -596,7 +596,7 @@ void dump_PUBDEF(const unsigned char b32) {
             typidx = omfrec_gb();
         }
 
-        printf("        '%s' offset=%lu typeidx=%u\n",tempstr,puboff,typidx);
+        printf("        '%s' offset=%lu(0x%lx) typeidx=%u\n",tempstr,puboff,puboff,typidx);
     }
 }
 
@@ -632,7 +632,7 @@ void dump_LPUBDEF(const unsigned char b32) {
             typidx = omfrec_gb();
         }
 
-        printf("        '%s' offset=%lu typeidx=%u\n",tempstr,puboff,typidx);
+        printf("        '%s' offset=%lu(0x%lx) typeidx=%u\n",tempstr,puboff,puboff,typidx);
     }
 }
 
