@@ -255,10 +255,57 @@ static void omf_GRPDEF_clear(void) {
     omf_GRPDEFS_count = 0;
 }
 
+/* EXTDEF collection */
+#define MAX_EXTDEF          255
+static char*                omf_EXTDEF[MAX_EXTDEF];
+static unsigned int         omf_EXTDEF_count = 0;
+
+static const char *omf_get_EXTDEF(const unsigned int i) {
+    if (i == 0 || i > omf_EXTDEF_count) // EXTDEFs are 1-based
+        return NULL;
+
+    return omf_EXTDEF[i-1];
+}
+
+static const char *omf_get_EXTDEF_safe(const unsigned int i) {
+    const char *r = omf_get_EXTDEF(i);
+
+    return (r != NULL) ? r : "[ERANGE]";
+}
+
+static void omf_EXTDEF_clear(void) {
+    while (omf_EXTDEF_count > 0) {
+        omf_EXTDEF_count--;
+
+        if (omf_EXTDEF[omf_EXTDEF_count] != NULL) {
+            free(omf_EXTDEF[omf_EXTDEF_count]);
+            omf_EXTDEF[omf_EXTDEF_count] = NULL;
+        }
+    }
+}
+
+static void omf_EXTDEF_add(const char *name) {
+    size_t len = strlen(name);
+    char *p;
+
+    if (name == NULL)
+        return;
+    if (omf_EXTDEF_count >= MAX_EXTDEF)
+        return;
+
+    p = malloc(len+1);
+    if (p == NULL)
+        return;
+
+    memcpy(p,name,len+1);/* name + NUL */
+    omf_EXTDEF[omf_EXTDEF_count++] = p;
+}
+
 static void omf_reset(void) {
     omf_LNAMES_clear();
     omf_SEGDEF_clear();
     omf_GRPDEF_clear();
+    omf_EXTDEF_clear();
 }
 
 static inline unsigned int omfrec_eof(void) {
@@ -497,6 +544,8 @@ void dump_EXTDEF(void) {
         typidx = omfrec_gb();
 
         printf("        '%s' typidx=%u\n",tempstr,typidx);
+
+        omf_EXTDEF_add(tempstr);
     }
 }
 
@@ -680,6 +729,9 @@ void dump_FIXUPP(const unsigned char b32) {
                         case 1: // group
                             printf("(\"%s\")",omf_get_GRPDEF_name_safe(c));
                             break;
+                        case 2: // external symbol
+                            printf("(\"%s\")",omf_get_EXTDEF_safe(c));
+                            break;
                     }
                 }
 
@@ -713,6 +765,9 @@ void dump_FIXUPP(const unsigned char b32) {
                             break;
                         case 1: // T1/T5: Target = segment group
                             printf("(\"%s\")",omf_get_GRPDEF_name_safe(c));
+                            break;
+                        case 2: // T2/T6: Target = external symbol
+                            printf("(\"%s\")",omf_get_EXTDEF_safe(c));
                             break;
                     };
                 }
