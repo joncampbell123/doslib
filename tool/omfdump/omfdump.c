@@ -110,7 +110,6 @@ const char *omf_rectype_to_str(unsigned char rt) {
 }
 
 static char                 tempstr[257];
-static unsigned char        tempstr_len;
 
 static unsigned char        omf_record[16384];
 static unsigned char        omf_rectype = 0;
@@ -1061,8 +1060,6 @@ int dump_LIDATA_datablock(const unsigned char b32,const unsigned int indent,unsi
 void dump_LIDATA(const unsigned char b32) {
     unsigned long enum_data_offset,doh;
     unsigned int segment_index;
-    unsigned int len,i,colo;
-    unsigned char tmp[16];
 
     if (b32) {
         if (omfrec_avail() < (1+4)) return;
