@@ -579,8 +579,10 @@ void dump_PUBDEF(const unsigned char b32) {
     if (base_segment_index == 0)
         base_frame = omfrec_gw();
 
-    printf("    PUBDEF%u: basegroupidx=%u basesegidx=%u baseframe=%u\n",
-        b32?32:16,base_group_index,base_segment_index,base_frame);
+    printf("    PUBDEF%u: basegroupidx=\"%s\"(%u) basesegidx=\"%s\"(%u) baseframe=%u\n",
+        b32?32:16,omf_get_GRPDEF_name_safe(base_group_index),base_group_index,
+        omf_get_SEGDEF_name_safe(base_segment_index),base_segment_index,
+        base_frame);
 
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
@@ -615,8 +617,10 @@ void dump_LPUBDEF(const unsigned char b32) {
     if (base_segment_index == 0)
         base_frame = omfrec_gw();
 
-    printf("    LPUBDEF%u: basegroupidx=%u basesegidx=%u baseframe=%u\n",
-        b32?32:16,base_group_index,base_segment_index,base_frame);
+    printf("    LPUBDEF%u: basegroupidx=\"%s\"(%u) basesegidx=\"%s\"(%u) baseframe=%u\n",
+        b32?32:16,omf_get_GRPDEF_name_safe(base_group_index),base_group_index,
+        omf_get_SEGDEF_name_safe(base_segment_index),base_segment_index,
+        base_frame);
 
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
