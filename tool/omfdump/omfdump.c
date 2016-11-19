@@ -800,6 +800,9 @@ void dump_FIXUPP(const unsigned char b32) {
     }
 }
 
+/* NTS: I'm seeing Open Watcom emit .LIB files where more than one GRPDEF can be
+ *      emitted with the same name, different segments listed. This is legal,
+ *      it means you just combine the segment lists together (OMF spec). */
 void dump_GRPDEF(const unsigned char b32) {
     unsigned int grpnamidx;
     unsigned char index;
