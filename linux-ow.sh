@@ -18,12 +18,13 @@ if [ -z "$WATCOM" ]; then
     elif [ -d "/usr/src/open-watcom-v2/rel/binl" ]; then
         export WATCOM=/usr/src/open-watcom-v2/rel
     fi
+
+    export PATH=$WATCOM/binl:$WATCOM/binw:$PATH
 fi
 
 echo "Using: $WATCOM"
 
 export EDPATH=$WATCOM/eddat
-export PATH=$WATCOM/binl:$WATCOM/binw:$PATH
 export "INCLUDE=$WATCOM/h/nt;$WATCOM/h/nt/directx;$WATCOM/h/nt/ddk;$WATCOM/h"
 export HPS=/
 # PROJTOP: top directory of project we are building
