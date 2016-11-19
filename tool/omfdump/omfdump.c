@@ -560,6 +560,8 @@ void dump_LEXTDEF(const unsigned char b32) {
         typidx = omfrec_gb();
 
         printf("        '%s' typidx=%u\n",tempstr,typidx);
+
+        omf_EXTDEF_add(tempstr);
     }
 }
 
