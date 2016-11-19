@@ -116,6 +116,7 @@ static unsigned char        omf_rectype = 0;
 static unsigned long        omf_recoffs = 0;
 static unsigned int         omf_reclen = 0; // NTS: Does NOT include leading checksum byte
 static unsigned int         omf_recpos = 0; // where we are parsing
+static unsigned int         omf_lib_blocksize = 0;
 
 static unsigned char        last_LEDATA_segment_index = 0;
 static unsigned long        last_LEDATA_data_offset = 0;
@@ -359,11 +360,13 @@ static void help(void) {
 static int omf_lib_next_block(int fd,unsigned long checkofs) {
     unsigned long endoff;
 
+    if (omf_lib_blocksize == 0)
+        return 0;
+
     if (lseek(fd,checkofs,SEEK_SET) != checkofs)
         return 0;
 
-    /* "Libraries under MS-DOS are always multiples of 512-byte blocks" */
-    checkofs = (checkofs + 0x1FFUL) & (~0x1FFUL);
+    checkofs = (checkofs + (unsigned long)omf_lib_blocksize - 1UL) & (~((unsigned long)omf_lib_blocksize - 1UL));
     endoff = lseek(fd,0,SEEK_END);
     if (checkofs > endoff)
         return 0;
@@ -1087,6 +1090,25 @@ void dump_LIDATA(const unsigned char b32) {
     dump_LIDATA_datablock(b32,2,&doh);
 }
 
+void dump_LIBHEAD(void) {
+    /* the size of the record determines the block size of the .lib archive.
+     * it SHOULD be a power of 2! */
+    unsigned int fsz = omf_reclen + 1 + 2 + 1;
+
+    if ((fsz & (fsz - 1U)) != 0) {
+        printf("    Unable to determine LIB blocksize (record length %u is not a power of 2)\n",fsz);
+        return;
+    }
+
+    printf("    LIB blocksize is %u bytes\n",fsz);
+    omf_lib_blocksize = fsz;
+}
+
+void dump_LIBEND(void) {
+    printf("    End of LIB archive\n");
+    omf_lib_blocksize = 0;
+}
+
 int main(int argc,char **argv) {
     unsigned char lasttype;
     unsigned long lastofs;
@@ -1185,6 +1207,12 @@ int main(int argc,char **argv) {
                 case 0xB6:/* LPUBDEF */
                 case 0xB7:/* LPUBDEF32 */
                     dump_LPUBDEF(omf_rectype&1);
+                    break;
+                case 0xF0:/* LIBHEAD */
+                    dump_LIBHEAD();
+                    break;
+                case 0xF1:/* LIBEND */
+                    dump_LIBEND();
                     break;
             }
 
