@@ -247,7 +247,7 @@ static const char *omf_get_GRPDEF_name(const unsigned int i) {
 
 static const char *omf_get_GRPDEF_name_safe(const unsigned int i) {
     const char *name = omf_get_GRPDEF_name(i);
-    return (name != NULL) ? name : "[ERANGE]";
+    return (name != NULL) ? name : "[none]";
 }
 
 static void omf_GRPDEF_clear(void) {
