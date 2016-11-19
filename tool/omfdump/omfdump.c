@@ -387,7 +387,7 @@ static int read_omf_record(int fd) {
 
     omf_rectype = omf_record[0];
     omf_reclen = *((uint16_t*)(omf_record+1));
-    if (omf_reclen == 0)
+    if (omf_rectype == 0 || omf_reclen == 0)
         return 0;
     if (omf_reclen > sizeof(omf_record))
         return 0;
@@ -1217,6 +1217,7 @@ int main(int argc,char **argv) {
             }
 
             omfrec_checkrange();
+            if (omf_rectype == 0xF1) break; // stop at LIBEND. there's non-OMF records that usually follow it.
         }
 
         if (lasttype == 0x8A || lasttype == 0x8B) {
