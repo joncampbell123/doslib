@@ -124,7 +124,6 @@ static unsigned char        omf_rectype = 0;
 static unsigned long        omf_recoffs = 0;
 static unsigned int         omf_reclen = 0; // NTS: Does NOT include leading checksum byte
 static unsigned int         omf_recpos = 0; // where we are parsing
-static unsigned int         omf_lib_blocksize = 0;
 
 static unsigned char        last_LEDATA_type = 0;
 static unsigned long        last_LEDATA_ofd_omf_offset = 0;
@@ -674,7 +673,7 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                 unsigned long target_disp = 0;
                 unsigned char fix_f,fix_frame,fix_t,fix_p,fix_target;
                 unsigned char fixdata;
-                unsigned char segrel_fixup = (c >> 6) & 1;
+ //               unsigned char segrel_fixup = (c >> 6) & 1;
                 unsigned char locat = (c >> 2) & 0xF;
                 unsigned int recoff = ((c & 3U) << 8U) + (unsigned int)omfrec_gb();
 
@@ -1056,10 +1055,8 @@ void dump_SEGDEF(const unsigned char b32) {
 }
 
 void dump_LEDATA(const unsigned char b32,const int ofd) {
-    unsigned long enum_data_offset,doh;
+    unsigned long enum_data_offset;
     unsigned int segment_index;
-    unsigned int len,i,colo;
-    unsigned char tmp[16];
 
     if (b32) {
         if (omfrec_avail() < (1+4)) return;
@@ -1081,7 +1078,7 @@ void dump_LEDATA(const unsigned char b32,const int ofd) {
 }
 
 void dump_LIDATA(const unsigned char b32) {
-    unsigned long enum_data_offset,doh;
+    unsigned long enum_data_offset;
     unsigned int segment_index;
 
     if (b32) {
