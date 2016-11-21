@@ -805,7 +805,7 @@ void dump_FIXUPP(const unsigned char b32) {
                         target_disp = omfrec_gw();
                     }
 
-                    printf(" targetdisp=%lu",target_disp);
+                    printf(" targetdisp=%lu(0x%lx)",target_disp,target_disp);
                 }
 
                 printf("\n");
@@ -1245,7 +1245,7 @@ void dump_MODEND(const unsigned char b32) {
                     target_disp = omfrec_gw();
                 }
 
-                printf(" targetdisp=%lu",target_disp);
+                printf(" targetdisp=%lu(0x%lx)",target_disp,target_disp);
             }
 
             printf("\n");
