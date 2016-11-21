@@ -731,6 +731,21 @@ int segbase_patch_LEDATA(unsigned int reco) {
 
         return 0;
     }
+    /* is it "MOV WORD PTR <mrm>,<imm>"? (4 bytes) */
+    else if ((op-1) >= ledata && op[-1] == 0xC7 && *op <= 0x07) {
+        unsigned char rg = *op & 7;
+
+        fprintf(stderr,"        * identified MOV WORD PTR [...],0x%04x\n",*psegval);
+
+        /* change it to "MOV WORD PTR <mrm>,CS" + NOP + NOP (4 bytes) */
+        fprintf(stderr,"        * changing to MOV WORD PTR [...],CS\n");
+        op[-1] = 0x8C;
+        op[ 0] = rg + (1 << 3);
+        op[ 1] = 0x90;
+        op[ 2] = 0x90;
+
+        return 0;
+    }
 
     return -1;
 }
@@ -1492,6 +1507,7 @@ int copy_omf_record(int ofd) {
 }
 
 int main(int argc,char **argv) {
+    char *temp_out = NULL;
     unsigned char lasttype;
     unsigned long lastofs;
     unsigned int lastlen;
@@ -1534,10 +1550,31 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    ofd = open(out_file,O_RDWR|O_CREAT|O_BINARY);
-    if (ofd < 0) {
-        fprintf(stderr,"Failed to open output file %s\n",strerror(errno));
-        return 1;
+    if (!strcmp(in_file,out_file)) {
+        temp_out = strdup(out_file);
+        if (temp_out == NULL)
+            return 1;
+
+        /* change .obj to .obt */
+        {
+            char *x = strrchr(temp_out,'.');
+            if (x == NULL) return 1;
+            if (strcasecmp(x,".obj") != 0) return 1;
+            strcpy(x,".obt");
+        }
+
+        ofd = open(temp_out,O_RDWR|O_CREAT|O_BINARY);
+        if (ofd < 0) {
+            fprintf(stderr,"Failed to open output file %s\n",strerror(errno));
+            return 1;
+        }
+    }
+    else {
+        ofd = open(out_file,O_RDWR|O_CREAT|O_BINARY);
+        if (ofd < 0) {
+            fprintf(stderr,"Failed to open output file %s\n",strerror(errno));
+            return 1;
+        }
     }
 
     while (read_omf_record(fd)) {
@@ -1633,6 +1670,13 @@ int main(int argc,char **argv) {
     omf_reset();
     close(ofd);
     close(fd);
+
+    if (temp_out != NULL) {
+        unlink(out_file);
+        if (rename(temp_out,out_file) < 0)
+            return 1;
+    }
+
     return 0;
 }
 
