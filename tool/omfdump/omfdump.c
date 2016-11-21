@@ -1120,7 +1120,15 @@ void dump_LIBHEAD(void) {
 }
 
 void dump_LIBEND(void) {
+    unsigned int fsz = omf_reclen + 1 + 2 + 1;
+
     printf("    End of LIB archive\n");
+
+    if (omf_lib_blocksize == 0)
+        printf("        * WARNING: LIBEND outside LIBHEAD..LIBEND group\n");
+    else if (fsz != omf_lib_blocksize)
+        printf("        * WARNING: Blocksize not the same size as LIBHEAD\n");
+
     omf_lib_blocksize = 0;
 }
 
