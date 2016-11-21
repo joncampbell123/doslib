@@ -1134,7 +1134,6 @@ void dump_LIBEND(void) {
 
 void dump_MODEND(const unsigned char b32) {
     unsigned char fix_f,fix_frame,fix_t,fix_p,fix_target;
-    unsigned int target_datum;
     unsigned long target_disp;
     unsigned char module_type;
     unsigned char end_data;
