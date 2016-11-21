@@ -288,7 +288,44 @@ struct omf_lnames_context_t *omf_lnames_context_destroy(struct omf_lnames_contex
     return NULL;
 }
 
-struct omf_lnames_context_t*            omf_LNAMEs = NULL;
+struct omf_context_t {
+    struct omf_lnames_context_t         LNAMEs;
+    struct {
+        unsigned int                    verbose:1;
+    } flags;
+};
+
+void omf_context_init(struct omf_context_t * const ctx) {
+    omf_lnames_context_init(&ctx->LNAMEs);
+    ctx->flags.verbose = 0;
+}
+
+void omf_context_free(struct omf_context_t * const ctx) {
+    omf_lnames_context_free(&ctx->LNAMEs);
+}
+
+struct omf_context_t *omf_context_create(void) {
+    struct omf_context_t *ctx;
+
+    ctx = malloc(sizeof(*ctx));
+    if (ctx != NULL) omf_context_init(ctx);
+    return ctx;
+}
+
+struct omf_context_t *omf_context_destroy(struct omf_context_t * const ctx) {
+    if (ctx != NULL) {
+        omf_context_free(ctx);
+        free(ctx);
+    }
+
+    return NULL;
+}
+
+void omf_context_clear(struct omf_context_t * const ctx) {
+    omf_lnames_context_free_names(&ctx->LNAMEs);
+}
+
+struct omf_context_t*                   omf_state = NULL;
 
 struct omf_SEGDEF_t {
     unsigned char           nameidx;
@@ -322,7 +359,7 @@ static struct omf_SEGDEF_t *omf_get_SEGDEF(const unsigned int i) {
 static const char *omf_get_SEGDEF_name(const unsigned int i) {
     struct omf_SEGDEF_t *rec = omf_get_SEGDEF(i);
     unsigned char idx = (rec != NULL) ? rec->nameidx : 0;
-    return omf_lnames_context_get_name(omf_LNAMEs,idx);
+    return omf_lnames_context_get_name(&omf_state->LNAMEs,idx);
 }
 
 static const char *omf_get_SEGDEF_name_safe(const unsigned int i) {
@@ -366,7 +403,7 @@ static struct omf_GRPDEF_t *omf_get_GRPDEF(const unsigned int i) {
 static const char *omf_get_GRPDEF_name(const unsigned int i) {
     struct omf_GRPDEF_t *rec = omf_get_GRPDEF(i);
     unsigned char idx = (rec != NULL) ? rec->nameidx : 0;
-    return omf_lnames_context_get_name(omf_LNAMEs,idx);
+    return omf_lnames_context_get_name(&omf_state->LNAMEs,idx);
 }
 
 static const char *omf_get_GRPDEF_name_safe(const unsigned int i) {
@@ -425,7 +462,7 @@ static void omf_EXTDEF_add(const char *name) {
 }
 
 static void omf_reset(void) {
-    omf_lnames_context_free_names(omf_LNAMEs);
+    omf_context_clear(omf_state);
     omf_SEGDEF_clear();
     omf_GRPDEF_clear();
     omf_EXTDEF_clear();
@@ -495,6 +532,7 @@ static char*                in_file = NULL;
 static void help(void) {
     fprintf(stderr,"omfdump [options]\n");
     fprintf(stderr,"  -i <file>    OMF file to dump\n");
+    fprintf(stderr,"  -v           Verbose mode\n");
 }
 
 static int omf_lib_next_block(int fd,unsigned long checkofs) {
@@ -666,15 +704,17 @@ int dump_LNAMES(void) {
     int idx;
 
     /* string records, one after the other, until the end of the record */
-    printf("    LNAMES:\n");
+    if (omf_state->flags.verbose)
+        printf("    LNAMES:\n");
 
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
-        idx = omf_lnames_context_add_name(omf_LNAMEs,tempstr);
+        idx = omf_lnames_context_add_name(&omf_state->LNAMEs,tempstr);
         if (idx < 0) return -1;
 
-        printf("        [%u] \"%s\"\n",idx,tempstr);
+        if (omf_state->flags.verbose)
+            printf("        [%u] \"%s\"\n",idx,tempstr);
     }
 
     return 0;
@@ -960,7 +1000,7 @@ void dump_GRPDEF(const unsigned char b32) {
 
     if (omfrec_eof()) return;
     grpnamidx = omfrec_gindex();
-    printf("    GRPDEF nameidx=\"%s\"(%u):\n",omf_lnames_context_get_name_safe(omf_LNAMEs,grpnamidx),grpnamidx);
+    printf("    GRPDEF nameidx=\"%s\"(%u):\n",omf_lnames_context_get_name_safe(&omf_state->LNAMEs,grpnamidx),grpnamidx);
 
     omf_GRPDEFS_add(grpnamidx);
 
@@ -1024,9 +1064,9 @@ void dump_SEGDEF(const unsigned char b32) {
     if (big && seg_length == 0) printf(" length=%s(max)",b32?"4GB":"64KB");
     else printf(" length=%lu",seg_length);
     printf(" nameidx=\"%s\"(%u) classidx=\"%s\"(%u) ovlidx=\"%s\"(%u)",
-        omf_lnames_context_get_name_safe(omf_LNAMEs,segnamidx),      segnamidx,
-        omf_lnames_context_get_name_safe(omf_LNAMEs,classnamidx),    classnamidx,
-        omf_lnames_context_get_name_safe(omf_LNAMEs,ovlnamidx),      ovlnamidx);
+        omf_lnames_context_get_name_safe(&omf_state->LNAMEs,segnamidx),      segnamidx,
+        omf_lnames_context_get_name_safe(&omf_state->LNAMEs,classnamidx),    classnamidx,
+        omf_lnames_context_get_name_safe(&omf_state->LNAMEs,ovlnamidx),      ovlnamidx);
     printf("\n");
 
     switch (align_f) {
@@ -1392,6 +1432,7 @@ void dump_MODEND(const unsigned char b32) {
 }
 
 int main(int argc,char **argv) {
+    unsigned char verbose = 0;
     unsigned char lasttype;
     unsigned long lastofs;
     unsigned int lastlen;
@@ -1408,6 +1449,9 @@ int main(int argc,char **argv) {
                 in_file = argv[i++];
                 if (in_file == NULL) return 1;
             }
+            else if (!strcmp(a,"v")) {
+                verbose = 1;
+            }
             else {
                 help();
                 return 1;
@@ -1420,10 +1464,11 @@ int main(int argc,char **argv) {
     }
 
     // prepare parsing
-    if ((omf_LNAMEs=omf_lnames_context_create()) == NULL) {
+    if ((omf_state=omf_context_create()) == NULL) {
         fprintf(stderr,"Failed to init OMF parsing state\n");
         return 1;
     }
+    omf_state->flags.verbose = (verbose > 0);
 
     if (in_file == NULL) {
         help();
@@ -1531,7 +1576,7 @@ int main(int argc,char **argv) {
     } while (1);
 
     omf_reset();
-    omf_LNAMEs = omf_lnames_context_destroy(omf_LNAMEs);
+    omf_state = omf_context_destroy(omf_state);
     close(fd);
     return 0;
 }
