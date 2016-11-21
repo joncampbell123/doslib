@@ -484,20 +484,6 @@ unsigned int omfrec_get_lenstr(char * const dst,const size_t dstmax) {
     return len;
 }
 
-void dump_THEADR(void) {
-    /* omf_record+0: length of the string */
-    /* omf_record+1: ASCII string */
-    omfrec_get_lenstr(tempstr,sizeof(tempstr));
-    printf("    Name of the object: \"%s\"\n",tempstr);
-}
-
-void dump_LHEADR(void) {
-    /* omf_record+0: length of the string */
-    /* omf_record+1: ASCII string */
-    omfrec_get_lenstr(tempstr,sizeof(tempstr));
-    printf("    Name of the object in library: \"%s\"\n",tempstr);
-}
-
 const char *omfrec_COMENT_cclass_to_str(unsigned char cc) {
     switch (cc) {
         case 0x00:  return "Translator";
@@ -528,52 +514,29 @@ const char *omfrec_COMENT_cclass_to_str(unsigned char cc) {
     return "?";
 }
 
-void dump_COMENT(void) {
-    unsigned char ctype,cclass;
-
-    /* omf_record+0: Comment Type
-     * omf_record+1: Comment Class
-     * omf_record+2: byte string until end of record */
-    if (omfrec_avail() < 2) return;
-    ctype = omfrec_gb();
-    cclass = omfrec_gb();
-
-    printf("    COMENT Type=0x%02x ( ",ctype);
-    if (ctype & 0x80) printf("No-purge ");
-    if (ctype & 0x40) printf("No-list ");
-    printf(") class=0x%02x (%s): ",cclass,omfrec_COMENT_cclass_to_str(cclass));
-    printf("\n");
-
-    if (cclass == 0x9F) {
-        /* the rest is the string (no length byte) */
-        omfrec_get_remstr(tempstr,sizeof(tempstr));
-        printf("        Library name: %s\n",tempstr);
-    }
-}
-
 void dump_LNAMES(void) {
     /* string records, one after the other, until the end of the record */
-    printf("    LNAMES:");
+//    printf("    LNAMES:");
 
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
-        printf(" \"%s\"",tempstr);
+//        printf(" \"%s\"",tempstr);
         omf_LNAMES_add(tempstr);
     }
 
-    printf("\n");
+//    printf("\n");
 }
 
 void dump_EXTDEF(void) {
     unsigned int typidx;
 
-    printf("    EXTDEF:\n");
+//    printf("    EXTDEF:\n");
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
         typidx = omfrec_gindex(); // 1 or 2 bytes
 
-        printf("        '%s' typidx=%u\n",tempstr,typidx);
+//        printf("        '%s' typidx=%u\n",tempstr,typidx);
 
         omf_EXTDEF_add(tempstr);
     }
@@ -582,91 +545,15 @@ void dump_EXTDEF(void) {
 void dump_LEXTDEF(const unsigned char b32) {
     unsigned int typidx;
 
-    printf("    LEXTDEF:\n");
+//    printf("    LEXTDEF:\n");
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
         typidx = omfrec_gindex(); // 1 or 2 bytes
 
-        printf("        '%s' typidx=%u\n",tempstr,typidx);
+//        printf("        '%s' typidx=%u\n",tempstr,typidx);
 
         omf_EXTDEF_add(tempstr);
-    }
-}
-
-void dump_PUBDEF(const unsigned char b32) {
-    unsigned int base_segment_index = 0;
-    unsigned int base_group_index = 0;
-    unsigned int base_frame = 0;
-    unsigned long puboff;
-    unsigned int typidx;
-
-    if (omfrec_avail() < 2) return;
-    base_group_index = omfrec_gb();
-    base_segment_index = omfrec_gb();
-
-    if (omfrec_avail() < 2) return;
-    if (base_segment_index == 0)
-        base_frame = omfrec_gw();
-
-    printf("    PUBDEF%u: basegroupidx=\"%s\"(%u) basesegidx=\"%s\"(%u) baseframe=%u\n",
-        b32?32:16,omf_get_GRPDEF_name_safe(base_group_index),base_group_index,
-        omf_get_SEGDEF_name_safe(base_segment_index),base_segment_index,
-        base_frame);
-
-    while (!omfrec_eof()) {
-        omfrec_get_lenstr(tempstr,sizeof(tempstr));
-
-        if (b32) {
-            if (omfrec_avail() < (4+1)) break;
-            puboff = omfrec_gd();
-            typidx = omfrec_gb();
-        }
-        else {
-            if (omfrec_avail() < (2+1)) break;
-            puboff = omfrec_gw();
-            typidx = omfrec_gb();
-        }
-
-        printf("        '%s' offset=%lu(0x%lx) typeidx=%u\n",tempstr,puboff,puboff,typidx);
-    }
-}
-
-void dump_LPUBDEF(const unsigned char b32) {
-    unsigned int base_segment_index = 0;
-    unsigned int base_group_index = 0;
-    unsigned int base_frame = 0;
-    unsigned long puboff;
-    unsigned int typidx;
-
-    if (omfrec_avail() < 2) return;
-    base_group_index = omfrec_gb();
-    base_segment_index = omfrec_gb();
-
-    if (omfrec_avail() < 2) return;
-    if (base_segment_index == 0)
-        base_frame = omfrec_gw();
-
-    printf("    LPUBDEF%u: basegroupidx=\"%s\"(%u) basesegidx=\"%s\"(%u) baseframe=%u\n",
-        b32?32:16,omf_get_GRPDEF_name_safe(base_group_index),base_group_index,
-        omf_get_SEGDEF_name_safe(base_segment_index),base_segment_index,
-        base_frame);
-
-    while (!omfrec_eof()) {
-        omfrec_get_lenstr(tempstr,sizeof(tempstr));
-
-        if (b32) {
-            if (omfrec_avail() < (4+1)) break;
-            puboff = omfrec_gd();
-            typidx = omfrec_gb();
-        }
-        else {
-            if (omfrec_avail() < (2+1)) break;
-            puboff = omfrec_gw();
-            typidx = omfrec_gb();
-        }
-
-        printf("        '%s' offset=%lu(0x%lx) typeidx=%u\n",tempstr,puboff,puboff,typidx);
     }
 }
 
@@ -715,17 +602,16 @@ int segbase_patch_LEDATA(unsigned int reco) {
     op = ledata + reco - 1;
 
     /* DEBUG */
-    fprintf(stderr,"        * opcode byte just before FIXUP: 0x%02X\n",*op);
-    fprintf(stderr,"        * 16-bit word to patch: 0x%04X\n",*psegval);
+//    fprintf(stderr,"        * opcode byte just before FIXUP: 0x%02X\n",*op);
+//    fprintf(stderr,"        * 16-bit word to patch: 0x%04X\n",*psegval);
 
     /* is it "MOV <reg>,<imm>"? (3 bytes) */
     if ((*op & 0xF8) == 0xB8) {
         unsigned char rg = *op & 7;
 
-        fprintf(stderr,"        * identified MOV %s,0x%04x\n",cpu_regs[rg],*psegval);
+        fprintf(stderr,"* patching MOV %s,0x%04x -> MOV %s,CS\n",cpu_regs[rg],*psegval,cpu_regs[rg]);
 
         /* change it to "MOV <reg>,CS" + NOP (3 bytes) */
-        fprintf(stderr,"        * changing to MOV %s,CS\n",cpu_regs[rg]);
         op[0] = 0x8C;
         op[1] = 0xC8 + rg;
         op[2] = 0x90;//NOP
@@ -736,10 +622,9 @@ int segbase_patch_LEDATA(unsigned int reco) {
     else if ((op-1) >= ledata && op[-1] == 0xC7 && *op <= 0x07) {
         unsigned char rg = *op & 7;
 
-        fprintf(stderr,"        * identified MOV WORD PTR [...],0x%04x\n",*psegval);
+        fprintf(stderr,"* patching MOV WORD PTR [...],0x%04x -> ,CS\n",*psegval);
 
         /* change it to "MOV WORD PTR <mrm>,CS" + NOP + NOP (4 bytes) */
-        fprintf(stderr,"        * changing to MOV WORD PTR [...],CS\n");
         op[-1] = 0x8C;
         op[ 0] = rg + (1 << 3);
         op[ 1] = 0x90;
@@ -767,7 +652,7 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
     /* remember where the file pointer is now */
     rec_ofs = lseek(ofd,0,SEEK_CUR);
 
-    printf("    FIXUPP%u:\n",b32?32:16);
+//    printf("    FIXUPP%u:\n",b32?32:16);
 
     /* whoo, dense structures */
     while (!omfrec_eof()) {
@@ -793,20 +678,20 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                 unsigned char locat = (c >> 2) & 0xF;
                 unsigned int recoff = ((c & 3U) << 8U) + (unsigned int)omfrec_gb();
 
-                printf("        FIXUP %s loctofix=",segrel_fixup?"SEG-RELATIVE":"SELF-RELATIVE");
-                switch (locat) {
-                    case 0: printf("LOBYTE"); break;
-                    case 1: printf("16BIT-OFFSET"); break;
-                    case 2: printf("16BIT-SEGBASE"); break;
-                    case 3: printf("16SEG:16OFS-FAR-POINTER"); break;
-                    case 4: printf("HIBYTE"); break;
-                    case 5: printf("16BIT-LOADER-OFFSET"); break;
-                    case 9: printf("32BIT-OFFSET"); break;
-                    case 11:printf("16SEG:32OFS-FAR-POINTER"); break;
-                    case 13:printf("32BIT-LOADER-OFFSET"); break;
-                };
-                printf(" datarecofs=(rel)0x%lX,(abs)0x%lX",recoff,recoff+last_LEDATA_data_offset);
-                printf("\n");
+//                printf("        FIXUP %s loctofix=",segrel_fixup?"SEG-RELATIVE":"SELF-RELATIVE");
+//                switch (locat) {
+//                    case 0: printf("LOBYTE"); break;
+//                    case 1: printf("16BIT-OFFSET"); break;
+//                    case 2: printf("16BIT-SEGBASE"); break;
+//                    case 3: printf("16SEG:16OFS-FAR-POINTER"); break;
+//                    case 4: printf("HIBYTE"); break;
+//                    case 5: printf("16BIT-LOADER-OFFSET"); break;
+//                    case 9: printf("32BIT-OFFSET"); break;
+//                    case 11:printf("16SEG:32OFS-FAR-POINTER"); break;
+//                    case 13:printf("32BIT-LOADER-OFFSET"); break;
+//                };
+//                printf(" datarecofs=(rel)0x%lX,(abs)0x%lX",recoff,recoff+last_LEDATA_data_offset);
+//                printf("\n");
 
                 // FIXME: Is "Fix Data" conditional? If so, when does it happen??
                 //        The OMF spec doesn't say! This is a part of the spec
@@ -822,12 +707,13 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                 fix_p = (fixdata >> 2) & 1;     /* [2:2] */
                 fix_target = (fixdata & 3);     /* [1:0] */
 
-                printf("            FD=0x%02X ",fixdata);
-                if (fix_f)
-                    printf("F=1 frame=%u",fix_frame);
-                else
-                    printf("F=0 framemethod=%u",fix_frame);
+//                printf("            FD=0x%02X ",fixdata);
+//                if (fix_f)
+//                    printf("F=1 frame=%u",fix_frame);
+//                else
+//                    printf("F=0 framemethod=%u",fix_frame);
 
+#if 0
                 if (!fix_f) {
                     // again, if the OMF spec doesn't explain this and I have to read VirtualBox source code
                     // to get this that says how reliable your spec is.
@@ -849,13 +735,15 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                             break;
                     }
                 }
+#endif
 
                 if (!fix_f && fix_frame < 4) {
                     if (omfrec_eof()) break;
 
                     c = frame_datum = omfrec_gindex();
-                    printf(" framedatum=%u",c);
+//                    printf(" framedatum=%u",c);
 
+#if 0
                     switch (fix_frame) {
                         case 0: // segment
                             printf("(\"%s\")",omf_get_SEGDEF_name_safe(c));
@@ -867,17 +755,19 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                             printf("(\"%s\")",omf_get_EXTDEF_safe(c));
                             break;
                     }
+#endif
                 }
 
                 /* FIXME: WHEN is the Target Datum field prsent???? This is a shitty guess! The OMF spec doesn't say! */
                 // NTS: To the people who wrote the OMF spec: your doc is confusing. The fact I had to read VirtualBox
                 //      source code for clarification means your spec needs clarification.
                 if (fix_t) {
-                    printf(" target=%u",fix_target);
+//                    printf(" target=%u",fix_target);
                 }
                 else {
                     if (omfrec_eof()) break;
 
+#if 0
                     switch (fix_target) {
                         case 0: // T0/T4: Target = segment
                             printf(" T0:target=segment");
@@ -889,10 +779,12 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                             printf(" T0:target=extern-sym");
                             break;
                     };
+#endif
 
                     c = target_datum = omfrec_gindex();
-                    printf(" targetdatum=%u",c);
+//                    printf(" targetdatum=%u",c);
 
+#if 0
                     switch (fix_target) {
                         case 0: // T0/T4: Target = segment
                             printf("(\"%s\")",omf_get_SEGDEF_name_safe(c));
@@ -904,6 +796,7 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                             printf("(\"%s\")",omf_get_EXTDEF_safe(c));
                             break;
                     };
+#endif
                 }
 
                 if (!fix_p) {
@@ -916,10 +809,10 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                         target_disp = omfrec_gw();
                     }
 
-                    printf(" targetdisp=%lu(0x%lx)",target_disp,target_disp);
+//                    printf(" targetdisp=%lu(0x%lx)",target_disp,target_disp);
                 }
 
-                printf("\n");
+//                printf("\n");
 
                 /* we care whether or not it's a segment reference.
                  * if it is, we either patch the opcode around it or emit an error */
@@ -972,7 +865,7 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                 // rewind position, moving the omf record contents with it
                 omfrec_backspace_to(beg_pos);
 
-                printf("        * deleting record\n");
+//                printf("        * deleting record\n");
             }
         }
         else {
@@ -1049,7 +942,7 @@ void dump_GRPDEF(const unsigned char b32) {
 
     if (omfrec_eof()) return;
     grpnamidx = omfrec_gindex();
-    printf("    GRPDEF nameidx=\"%s\"(%u):\n",omf_get_LNAME_safe(grpnamidx),grpnamidx);
+//    printf("    GRPDEF nameidx=\"%s\"(%u):\n",omf_get_LNAME_safe(grpnamidx),grpnamidx);
 
     omf_GRPDEFS_add(grpnamidx);
 
@@ -1059,7 +952,7 @@ void dump_GRPDEF(const unsigned char b32) {
         if (index == 0xFF) {
             /* segment def index */
             segdefidx = omfrec_gindex();
-            printf("        SEGDEF index=\"%s\"(%u)\n",omf_get_SEGDEF_name_safe(segdefidx),segdefidx);
+//            printf("        SEGDEF index=\"%s\"(%u)\n",omf_get_SEGDEF_name_safe(segdefidx),segdefidx);
         }
         else {
             printf("* Whoops, don't know how to handle type 0x%02x\n",index);
@@ -1110,6 +1003,7 @@ void dump_SEGDEF(const unsigned char b32) {
         ovlnamidx = omfrec_gindex();
     }
 
+#if 0
     printf("    SEGDEF%u: USE%u",b32?32:16,use32?32:16);
     if (big && seg_length == 0) printf(" length=%s(max)",b32?"4GB":"64KB");
     else printf(" length=%lu",seg_length);
@@ -1156,6 +1050,7 @@ void dump_SEGDEF(const unsigned char b32) {
             printf("        COMMON, combine by overlaying using max size\n");
             break;
     };
+#endif
 
     segdef = omf_SEGDEFS_add(segnamidx);
 }
@@ -1183,129 +1078,6 @@ void dump_LEDATA(const unsigned char b32,const int ofd) {
     last_LEDATA_data_length = omf_reclen - omf_recpos;
     last_LEDATA_segment_index = segment_index;
     last_LEDATA_data_offset = enum_data_offset;
-    printf("    LEDATA%u: segidx=\"%s\"(%u) data_offset=%lu\n",b32?32:16,omf_get_SEGDEF_name_safe(segment_index),segment_index,enum_data_offset);
-    printf("        Will be at %lu in output OBJ (len=%lu)\n",last_LEDATA_ofd_data_offset,last_LEDATA_data_length);
-
-    doh = enum_data_offset;
-    while (!omfrec_eof()) {
-        len = omfrec_avail();
-        colo = (unsigned int)(doh&0xFUL);
-        if (len > (16-colo)) len = (16-colo);
-        omfrec_read((char*)tmp+colo,len);
-
-        printf("    @0x%08lx: ",doh);
-        for (i=0;i < colo;i++) printf("   ");
-        for (   ;i < (colo+len);i++) printf("%02X%c",tmp[i],i==7?'-':' ');
-        for (   ;i <  16;i++) printf("   ");
-        printf("  ");
-        for (i=0;i < colo;i++) printf(" ");
-        for (   ;i < (colo+len);i++) {
-            if (tmp[i] < 32 || tmp[i] >= 127)
-                printf(".");
-            else
-                printf("%c",tmp[i]);
-        }
-        printf("\n");
-
-        doh += (unsigned long)len;
-    }
-}
-
-void dump_LIDATA_indent(unsigned int indent) {
-    while (indent-- > 0) printf("    ");
-}
-
-int dump_LIDATA_datablock(const unsigned char b32,const unsigned int indent,unsigned long *doh) {
-    unsigned long repeat_count;
-    unsigned short block_count;
-
-    if (b32) {
-        if (omfrec_avail() < (4+2)) return 0;
-        repeat_count = omfrec_gd();
-        block_count = omfrec_gw();
-    }
-    else {
-        if (omfrec_avail() < (2+2)) return 0;
-        repeat_count = omfrec_gw();
-        block_count = omfrec_gw();
-    }
-
-    dump_LIDATA_indent(indent);
-    if (block_count == 0) {
-        unsigned long repeat_iter;
-        unsigned char rowstart=0;
-        unsigned char count;
-        unsigned char col;
-        unsigned int i,j;
-        unsigned char c;
-        char row[16];
-
-        if (omfrec_eof()) return 0;
-        count = omfrec_gb();
-
-        printf("<content len=%u x %lu>:\n",count,repeat_count);
-
-        /* read into memory */
-        if (count != 0) {
-            if (omfrec_avail() < count) return 0;
-            omfrec_read(tempstr,count);
-        }
-
-        for (repeat_iter=0;repeat_iter < repeat_count;repeat_iter++) {
-            for (i=0,col=0;i < count;) {
-                if (i == 0 || col == 0) {
-                    j = (unsigned char)((*doh) & 0xFUL);
-                    dump_LIDATA_indent(indent+1);
-                    printf("@0x%08lx: ",*doh);
-                    while (col < j) {
-                        printf("   ");
-                        col++;
-                    }
-                    rowstart = col;
-                }
-
-                row[col] = tempstr[i];
-                printf("%02X%c",row[col],col==7?'-':' ');
-                (*doh)++;
-                col++;
-                i++;
-
-                if (col >= 16 || i == count) {
-                    j = col;
-                    while (j < 16) {
-                        printf("   ");
-                        j++;
-                    }
-
-                    j = 0;
-                    while (j < rowstart) {
-                        printf(" ");
-                        j++;
-                    }
-                    while (j < col) {
-                        c = (unsigned char)row[j];
-                        j++;
-
-                        if (c >= 32 && c < 127)
-                            printf("%c",c);
-                        else
-                            printf(".");
-                    }
-                    printf("\n");
-
-                    rowstart = 0;
-                    col = 0;
-                }
-            }
-        }
-    }
-    else {
-        /* WARNING: untested! */
-        printf("<block x %lu>:\n",repeat_count);
-        return dump_LIDATA_datablock(b32,indent+1,doh);
-    }
-
-    return 1;
 }
 
 void dump_LIDATA(const unsigned char b32) {
@@ -1323,167 +1095,12 @@ void dump_LIDATA(const unsigned char b32) {
         enum_data_offset = omfrec_gw();
     }
 
+    last_LEDATA_type = 0;
+    last_LEDATA_ofd_data_offset = 0;
+    last_LEDATA_ofd_omf_offset = 0;
+    last_LEDATA_data_length = 0;
     last_LEDATA_segment_index = segment_index;
     last_LEDATA_data_offset = enum_data_offset;
-    printf("    LIDATA%u: segidx=\"%s\"(%u) data_offset=%lu\n",b32?32:16,omf_get_SEGDEF_name_safe(segment_index),segment_index,enum_data_offset);
-
-    doh = enum_data_offset;
-    dump_LIDATA_datablock(b32,2,&doh);
-}
-
-void dump_LIBHEAD(void) {
-    /* the size of the record determines the block size of the .lib archive.
-     * it SHOULD be a power of 2! */
-    unsigned int fsz = omf_reclen + 1 + 2 + 1;
-
-    if ((fsz & (fsz - 1U)) != 0) {
-        printf("    Unable to determine LIB blocksize (record length %u is not a power of 2)\n",fsz);
-        return;
-    }
-
-    printf("    LIB blocksize is %u bytes\n",fsz);
-    omf_lib_blocksize = fsz;
-}
-
-void dump_LIBEND(void) {
-    unsigned int fsz = omf_reclen + 1 + 2 + 1;
-
-    printf("    End of LIB archive\n");
-
-    if (omf_lib_blocksize == 0)
-        printf("        * WARNING: LIBEND outside LIBHEAD..LIBEND group\n");
-    else if (fsz != omf_lib_blocksize)
-        printf("        * WARNING: Blocksize not the same size as LIBHEAD\n");
-
-    omf_lib_blocksize = 0;
-}
-
-void dump_MODEND(const unsigned char b32) {
-    unsigned char fix_f,fix_frame,fix_t,fix_p,fix_target;
-    unsigned long target_disp;
-    unsigned char module_type;
-    unsigned char end_data;
-    unsigned int c;
-
-    if (omfrec_eof()) return;
-    module_type = omfrec_gb();
-
-    printf("    MODEND%u: module type 0x%02X [ ",b32?32:16,module_type);
-    if (module_type & 0x80) printf("MAIN ");
-    if (module_type & 0x40) printf("START ");
-    if (module_type & 0x01) printf("RELOC-START ");
-    printf("]\n");
-
-    if (module_type & 0x40) {
-        while (!omfrec_eof()) {
-            end_data = omfrec_gb();
-
-            fix_f = (end_data >> 7) & 1;     /* [7:7] */
-            fix_frame = (end_data >> 4) & 7; /* [6:4] */
-            fix_t = (end_data >> 3) & 1;     /* [3:3] */
-            fix_p = (end_data >> 2) & 1;     /* [2:2] */
-            fix_target = (end_data & 3);     /* [1:0] */
-
-            printf("        ED=0x%02X ",end_data);
-            if (fix_f)
-                printf("F=1 frame=%u",fix_frame);
-            else
-                printf("F=0 framemethod=%u",fix_frame);
-
-            if (!fix_f) {
-                // again, if the OMF spec doesn't explain this and I have to read VirtualBox source code
-                // to get this that says how reliable your spec is.
-                switch (fix_frame) {
-                    case 0: // F0: segment
-                        printf(" F0:frame=segment");
-                        break;
-                    case 1: // F1: group
-                        printf(" F1:frame=group");
-                        break;
-                    case 2: // F2: external symbol
-                        printf(" F2:frame=external-symbol");
-                        break;
-                    case 4: // F4: frame = source
-                        printf(" F4:frame=source");
-                        break;
-                    case 5: // F5: frame = target
-                        printf(" F5:frame=target");
-                        break;
-                }
-            }
-
-            if (!fix_f && fix_frame < 4) {
-                if (omfrec_eof()) break;
-
-                c = omfrec_gindex();
-                printf(" framedatum=%u",c);
-
-                switch (fix_frame) {
-                    case 0: // segment
-                        printf("(\"%s\")",omf_get_SEGDEF_name_safe(c));
-                        break;
-                    case 1: // group
-                        printf("(\"%s\")",omf_get_GRPDEF_name_safe(c));
-                        break;
-                    case 2: // external symbol
-                        printf("(\"%s\")",omf_get_EXTDEF_safe(c));
-                        break;
-                }
-            }
-
-            /* FIXME: WHEN is the Target Datum field prsent???? This is a shitty guess! The OMF spec doesn't say! */
-            // NTS: To the people who wrote the OMF spec: your doc is confusing. The fact I had to read VirtualBox
-            //      source code for clarification means your spec needs clarification.
-            if (fix_t) {
-                printf(" target=%u",fix_target);
-            }
-            else {
-                if (omfrec_eof()) break;
-
-                switch (fix_target) {
-                    case 0: // T0/T4: Target = segment
-                        printf(" T0:target=segment");
-                        break;
-                    case 1: // T1/T5: Target = segment group
-                        printf(" T0:target=segment-group");
-                        break;
-                    case 2: // T2/T6: Target = external symbol
-                        printf(" T0:target=extern-sym");
-                        break;
-                };
-
-                c = omfrec_gindex();
-                printf(" targetdatum=%u",c);
-
-                switch (fix_target) {
-                    case 0: // T0/T4: Target = segment
-                        printf("(\"%s\")",omf_get_SEGDEF_name_safe(c));
-                        break;
-                    case 1: // T1/T5: Target = segment group
-                        printf("(\"%s\")",omf_get_GRPDEF_name_safe(c));
-                        break;
-                    case 2: // T2/T6: Target = external symbol
-                        printf("(\"%s\")",omf_get_EXTDEF_safe(c));
-                        break;
-                };
-            }
-
-            if (!fix_p) {
-                if (b32) {
-                    if (omfrec_avail() < 4) break;
-                    target_disp = omfrec_gd();
-                }
-                else {
-                    if (omfrec_avail() < 2) break;
-                    target_disp = omfrec_gw();
-                }
-
-                printf(" targetdisp=%lu(0x%lx)",target_disp,target_disp);
-            }
-
-            printf("\n");
-        }
-    }
 }
 
 int copy_omf_record(int ofd) {
@@ -1582,29 +1199,28 @@ int main(int argc,char **argv) {
         lastlen = omf_reclen;
         lastofs = omf_recoffs;
         lasttype = omf_rectype;
+
+#if 0
         printf("OMF record type=0x%02x (%s: %s) length=%u offset=%lu\n",
                 omf_rectype,
                 omf_rectype_to_str(omf_rectype),
                 omf_rectype_to_str_long(omf_rectype),
                 omf_reclen,
                 omf_recoffs);
+#endif
 
         switch (omf_rectype) {
             case 0x80:/* THEADR */
-                dump_THEADR();
                 if (copy_omf_record(ofd) < 0) return 1;
                 break;
             case 0x82:/* LHEADR */
-                dump_LHEADR();
                 if (copy_omf_record(ofd) < 0) return 1;
                 break;
             case 0x88:/* COMENT */
-                dump_COMENT();
                 if (copy_omf_record(ofd) < 0) return 1;
                 break;
             case 0x8A:/* MODEND */
             case 0x8B:/* MODEND32 */
-                dump_MODEND(omf_rectype&1);
                 if (copy_omf_record(ofd) < 0) return 1;
                 break;
             case 0x8C:/* EXTDEF */
@@ -1613,7 +1229,6 @@ int main(int argc,char **argv) {
                 break;
             case 0x90:/* PUBDEF */
             case 0x91:/* PUBDEF32 */
-                dump_PUBDEF(omf_rectype&1);
                 if (copy_omf_record(ofd) < 0) return 1;
                 break;
             case 0x96:/* LNAMES */
@@ -1651,7 +1266,6 @@ int main(int argc,char **argv) {
                 break;
             case 0xB6:/* LPUBDEF */
             case 0xB7:/* LPUBDEF32 */
-                dump_LPUBDEF(omf_rectype&1);
                 if (copy_omf_record(ofd) < 0) return 1;
                 break;
             case 0xF0:/* LIBHEAD */
