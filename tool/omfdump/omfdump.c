@@ -533,6 +533,7 @@ static void help(void) {
     fprintf(stderr,"omfdump [options]\n");
     fprintf(stderr,"  -i <file>    OMF file to dump\n");
     fprintf(stderr,"  -v           Verbose mode\n");
+    fprintf(stderr,"  -d           Dump memory state after parsing\n");
 }
 
 static int omf_lib_next_block(int fd,unsigned long checkofs) {
@@ -1431,7 +1432,27 @@ void dump_MODEND(const unsigned char b32) {
     }
 }
 
+void my_dumpstate(void) {
+    unsigned int i;
+    const char *p;
+
+    printf("\n");
+
+    printf("LNAMEs:\n");
+
+    for (i=1;i <= omf_state->LNAMEs.omf_LNAMES_count;i++) {
+        p = omf_lnames_context_get_name(&omf_state->LNAMEs,i);
+
+        if (p != NULL)
+            printf("   [%u]: \"%s\"\n",i,p);
+        else
+            printf("   [%u]: (null)\n",i);
+    }
+}
+
 int main(int argc,char **argv) {
+    unsigned char dumpstate = 0;
+    unsigned char diddump = 0;
     unsigned char verbose = 0;
     unsigned char lasttype;
     unsigned long lastofs;
@@ -1451,6 +1472,9 @@ int main(int argc,char **argv) {
             }
             else if (!strcmp(a,"v")) {
                 verbose = 1;
+            }
+            else if (!strcmp(a,"d")) {
+                dumpstate = 1;
             }
             else {
                 help();
@@ -1561,12 +1585,18 @@ int main(int argc,char **argv) {
         }
 
         if (lasttype == 0x8A || lasttype == 0x8B) {
+            if (dumpstate) {
+                my_dumpstate();
+                diddump = 1;
+            }
+
             /* if the last record as MODEND, then advance to the next block in the file
              * and try to read again (.LIB parsing case). clear lasttype to avoid infinite loops. */
             lasttype = 0;
             if (!omf_lib_next_block(fd,lastofs+3UL+(unsigned long)lastlen))
                 break;
 
+            diddump = 0;
             omf_reset();
             printf("\n* Another .LIB object archive begins...\n\n");
         }
@@ -1574,6 +1604,9 @@ int main(int argc,char **argv) {
             break;
         }
     } while (1);
+
+    if (dumpstate && !diddump)
+        my_dumpstate();
 
     omf_reset();
     omf_state = omf_context_destroy(omf_state);
