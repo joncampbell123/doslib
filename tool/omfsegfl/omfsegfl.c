@@ -1,3 +1,5 @@
+/* FIXME: This code (and omfdump) should be consolidated into a library for
+ *        reading/writing OMF files. */
 /* FIXME: This code needs to be fixed up to process the OMF in two passes.
  *        First pass is to build a list of symbols, SEGDEFs, GRPDEFs in memory.
  *        Second pass is to actually copy and patch the OMF data.

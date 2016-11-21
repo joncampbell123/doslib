@@ -1,3 +1,5 @@
+/* FIXME: This code (and omfsegfl) should be consolidated into a library for
+ *        reading/writing OMF files. */
 
 #include <sys/types.h>
 #include <sys/stat.h>
