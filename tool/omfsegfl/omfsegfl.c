@@ -1,11 +1,11 @@
-/* FIXME: This code needs to be fixed up to process the OMF in two patches.
+/* FIXME: This code needs to be fixed up to process the OMF in two passes.
  *        First pass is to build a list of symbols, SEGDEFs, GRPDEFs in memory.
  *        Second pass is to actually copy and patch the OMF data.
  *
- *        The reason this is important is that on-the-fly patching isn't stable
- *        or a good idea when you don't know where (what segment) the symbol lies,
- *        especially extern symbols, so that we don't end up trying to patch opcodes
- *        in the CONST or DATA segments. */
+ *        This code could copy and patch the data in a much safer manner if it
+ *        first knew where all the PUBDEFs, EXTDEFs, symbols, etc. lie before
+ *        attempting to read and follow FIXUPP entries to patch and remove
+ *        segment references. */
 
 #include <sys/types.h>
 #include <sys/stat.h>
