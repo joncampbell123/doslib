@@ -379,26 +379,6 @@ static void help(void) {
     fprintf(stderr,"  -o <file>    OMF file to write (with hacks)\n");
 }
 
-static int omf_lib_next_block(int fd,unsigned long checkofs) {
-    unsigned long endoff;
-
-    if (omf_lib_blocksize == 0)
-        return 0;
-
-    if (lseek(fd,checkofs,SEEK_SET) != checkofs)
-        return 0;
-
-    checkofs = (checkofs + (unsigned long)omf_lib_blocksize - 1UL) & (~((unsigned long)omf_lib_blocksize - 1UL));
-    endoff = lseek(fd,0,SEEK_END);
-    if (checkofs > endoff)
-        return 0;
-
-    if (lseek(fd,checkofs,SEEK_SET) != checkofs)
-        return 0;
-
-    return 1;
-}
-
 static int read_omf_record(int fd) {
     unsigned char sum = 0;
     unsigned int i;
