@@ -947,6 +947,9 @@ int dump_FIXUPP(const unsigned char b32,const int ofd) {
                         return -1;
                     }
                 }
+                else if (locat == 3/*16 SEG:OFF*/ || locat == 11/*32 SEG:OFF*/) {
+                    return -1;
+                }
             }
 
             if (delete_entry) {
