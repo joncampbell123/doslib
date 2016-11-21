@@ -701,24 +701,51 @@ void dump_COMENT(void) {
     }
 }
 
-int dump_LNAMES(void) {
-    int idx;
+// load OMF LNAMEs from record in memory.
+// return value is -1 if error, 0 if none loaded.
+// if > 0, the return value is the first LNAME index.
+int omf_context_load_LNAMEs(struct omf_context_t * const ctx) {
+    int baseidx = 0,ret;
+
+    /* TODO: Load from context buffer */
 
     /* string records, one after the other, until the end of the record */
-    if (omf_state->flags.verbose)
-        printf("    LNAMES:\n");
-
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
-        idx = omf_lnames_context_add_name(&omf_state->LNAMEs,tempstr);
-        if (idx < 0) return -1;
+        ret = omf_lnames_context_add_name(&ctx->LNAMEs,tempstr);
+        if (ret < 0) return -1;
 
-        if (omf_state->flags.verbose)
-            printf("        [%u] \"%s\"\n",idx,tempstr);
+        if (baseidx == 0)
+            baseidx = ret;
     }
 
-    return 0;
+    return baseidx;
+}
+
+int dump_LNAMES(void) {
+    unsigned int i;
+    const char *p;
+    int baseidx;
+
+    if ((baseidx=omf_context_load_LNAMEs(omf_state)) < 0)
+        return -1;
+
+    if (omf_state->flags.verbose) {
+        printf("    LNAMEs (starting at %u):",baseidx);
+        for (i=baseidx;i <= omf_state->LNAMEs.omf_LNAMES_count;i++) {
+            p = omf_lnames_context_get_name(&omf_state->LNAMEs,i);
+
+            if (p != NULL)
+                printf(" \"%s\"",p);
+            else
+                printf(" (null)");
+        }
+
+        printf("\n");
+    }
+
+    return baseidx;
 }
 
 void dump_EXTDEF(void) {
