@@ -1,3 +1,11 @@
+/* FIXME: This code needs to be fixed up to process the OMF in two patches.
+ *        First pass is to build a list of symbols, SEGDEFs, GRPDEFs in memory.
+ *        Second pass is to actually copy and patch the OMF data.
+ *
+ *        The reason this is important is that on-the-fly patching isn't stable
+ *        or a good idea when you don't know where (what segment) the symbol lies,
+ *        especially extern symbols, so that we don't end up trying to patch opcodes
+ *        in the CONST or DATA segments. */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -118,6 +126,8 @@ static unsigned int         omf_reclen = 0; // NTS: Does NOT include leading che
 static unsigned int         omf_recpos = 0; // where we are parsing
 static unsigned int         omf_lib_blocksize = 0;
 
+static unsigned char        last_LEDATA_type = 0;
+static unsigned long        last_LEDATA_ofd_omf_offset = 0;
 static unsigned long        last_LEDATA_ofd_data_offset = 0;
 static unsigned char        last_LEDATA_segment_index = 0;
 static unsigned long        last_LEDATA_data_length = 0;
@@ -330,6 +340,20 @@ static inline unsigned int omfrec_gw(void) {
     unsigned int v = *((unsigned short*)(omf_record+omf_recpos));
     omf_recpos += 2;
     return v;
+}
+
+static void omfrec_backspace_to(unsigned int p) {
+    unsigned int rem;
+
+    if (p >= omf_recpos)
+        return;
+    if (omf_recpos > omf_reclen)
+        return;
+
+    // p < omf_recpos
+    rem = omfrec_avail(); // could be zero
+    if (rem != 0) memmove(omf_record+p,omf_record+omf_recpos,rem);
+    omf_recpos = p;
 }
 
 static inline unsigned int omfrec_gindex(void) {
@@ -645,13 +669,97 @@ void dump_LPUBDEF(const unsigned char b32) {
     }
 }
 
-void dump_FIXUPP(const unsigned char b32) {
+static unsigned char ledata[1024];
+static unsigned char ledata_loaded = 0;
+
+int load_LEDATA(int ofd) {
+    if (ledata_loaded)
+        return 0;
+    if (last_LEDATA_data_length >= 1024)
+        return -1;
+    if (lseek(ofd,last_LEDATA_ofd_data_offset,SEEK_SET) != last_LEDATA_ofd_data_offset)
+        return -1;
+    if (last_LEDATA_data_length == 0)
+        return 0;
+    if (read(ofd,ledata,last_LEDATA_data_length) != last_LEDATA_data_length)
+        return -1;
+
+    ledata_loaded = 1;
+    return 0;
+}
+
+int range_check_LEDATA(unsigned int reco,unsigned int sz) {
+    if ((reco+sz) > last_LEDATA_data_length)
+        return -1;
+
+    return 0;
+}
+
+const char *cpu_regs[8] = {
+    "AX",   "CX",   "DX",   "BX",
+    "SP",   "BP",   "SI",   "DI"
+};
+
+int segbase_patch_LEDATA(unsigned int reco) {
+    uint16_t *psegval;
+    unsigned char *op;
+
+    if (reco == 0 || (reco+2) > last_LEDATA_data_length)
+        return -1;
+
+    /* one pointer to point AT the 16-bit WORD the linker would patch with segment base */
+    psegval = (uint16_t*)(ledata + reco);
+
+    /* another to examine the opcode surrounding the fixup (this is why we check reco == 0) */
+    op = ledata + reco - 1;
+
+    /* DEBUG */
+    fprintf(stderr,"        * opcode byte just before FIXUP: 0x%02X\n",*op);
+    fprintf(stderr,"        * 16-bit word to patch: 0x%04X\n",*psegval);
+
+    /* is it "MOV <reg>,<imm>"? (3 bytes) */
+    if ((*op & 0xF8) == 0xB8) {
+        unsigned char rg = *op & 7;
+
+        fprintf(stderr,"        * identified MOV %s,0x%04x\n",cpu_regs[rg],*psegval);
+
+        /* change it to "MOV <reg>,CS" + NOP (3 bytes) */
+        fprintf(stderr,"        * changing to MOV %s,CS\n",cpu_regs[rg]);
+        op[0] = 0x8C;
+        op[1] = 0xC8 + rg;
+        op[2] = 0x90;//NOP
+
+        return 0;
+    }
+
+    return -1;
+}
+ 
+int dump_FIXUPP(const unsigned char b32,const int ofd) {
+    unsigned char write_ledata = 0;
+    unsigned long rec_ofs;
     unsigned int c;
+
+    ledata_loaded = 0;
+    if (last_LEDATA_ofd_data_offset == 0UL)
+        return -1;
+    if (last_LEDATA_ofd_omf_offset == 0UL)
+        return -1;
+    if (last_LEDATA_data_length >= 1024UL)
+        return -1;
+
+    /* remember where the file pointer is now */
+    rec_ofs = lseek(ofd,0,SEEK_CUR);
 
     printf("    FIXUPP%u:\n",b32?32:16);
 
     /* whoo, dense structures */
     while (!omfrec_eof()) {
+        unsigned char delete_entry = 0;
+        unsigned int beg_pos = omf_recpos;
+        unsigned int target_datum;
+        unsigned int frame_datum;
+
         c = omfrec_gb();
 
         if ((c&0xA0/*0x80+0x20*/) == 0x00/* 0 D 0 x x x x x */) {
@@ -662,7 +770,7 @@ void dump_FIXUPP(const unsigned char b32) {
             if (omfrec_eof()) break;
 
             {
-                unsigned long target_disp;
+                unsigned long target_disp = 0;
                 unsigned char fix_f,fix_frame,fix_t,fix_p,fix_target;
                 unsigned char fixdata;
                 unsigned char segrel_fixup = (c >> 6) & 1;
@@ -729,7 +837,7 @@ void dump_FIXUPP(const unsigned char b32) {
                 if (!fix_f && fix_frame < 4) {
                     if (omfrec_eof()) break;
 
-                    c = omfrec_gindex();
+                    c = frame_datum = omfrec_gindex();
                     printf(" framedatum=%u",c);
 
                     switch (fix_frame) {
@@ -766,7 +874,7 @@ void dump_FIXUPP(const unsigned char b32) {
                             break;
                     };
 
-                    c = omfrec_gindex();
+                    c = target_datum = omfrec_gindex();
                     printf(" targetdatum=%u",c);
 
                     switch (fix_target) {
@@ -796,6 +904,56 @@ void dump_FIXUPP(const unsigned char b32) {
                 }
 
                 printf("\n");
+
+                /* we care whether or not it's a segment reference.
+                 * if it is, we either patch the opcode around it or emit an error */
+                if (locat == 2/*SEGBASE*/) {
+                    if (!fix_f && fix_frame == 5/*target*/) {
+                        if (!fix_t && fix_target == 2/*extern*/) {
+                            /* TODO: Add symbol to table, because often we first see this extern FIXUPP
+                             *       then later see the LPUBDEF that declares it and the segment it belongs
+                             *       to. If it turns out the extern we just patched was NOT part of DGROUP
+                             *       then we need to print an error. */
+
+                            /* OK, load the LEDATA segment from ofd if not already */
+                            if (load_LEDATA(ofd) < 0) {
+                                fprintf(stderr,"Failed to load LEDATA\n");
+                                return -1;
+                            }
+                            if (range_check_LEDATA(recoff,2) < 0) {
+                                fprintf(stderr,"Range check LEDATA recoff failed\n");
+                                return -1; /* the FIXUPP is 2 bytes */
+                            }
+
+                            /* look at the instruction
+                             *
+                             * FIXME: This is WHY we need to know what segment it belongs to! Then if we know
+                             * it's a data segment we can error out knowing we cannot patch it, and if it's
+                             * a code segment we can patch as expected. */
+                            if (segbase_patch_LEDATA(recoff) < 0) {
+                                fprintf(stderr,"Unable to patch segment SEGBASE\n");
+                                return -1;
+                            }
+                            write_ledata = 1;
+
+                            /* don't carry this entry through */
+                            delete_entry = 1;
+                        }
+                        else {
+                            return -1;
+                        }
+                    }
+                    else {
+                        return -1;
+                    }
+                }
+            }
+
+            if (delete_entry) {
+                // rewind position, moving the omf record contents with it
+                omfrec_backspace_to(beg_pos);
+
+                printf("        * deleting record\n");
             }
         }
         else {
@@ -803,6 +961,63 @@ void dump_FIXUPP(const unsigned char b32) {
             break;
         }
     }
+
+    /* update the LEDATA */
+    if (ledata_loaded && write_ledata) {
+        unsigned int i;
+        unsigned char tmp[16];
+        unsigned char sum = 0;
+        unsigned long len = last_LEDATA_ofd_data_offset - last_LEDATA_ofd_omf_offset;
+
+        if (len == 0 || len >= 16UL)
+            return -1;
+        if (lseek(ofd,last_LEDATA_ofd_omf_offset,SEEK_SET) != last_LEDATA_ofd_omf_offset)
+            return -1;
+        if (read(ofd,tmp,(int)len) != (int)len)
+            return -1;
+
+        for (i=0;i < (int)len;i++)
+            sum += tmp[i];
+
+        if (lseek(ofd,0,SEEK_CUR) != last_LEDATA_ofd_data_offset)
+            return -1;
+
+        if (last_LEDATA_data_length >= 1024UL)
+            return -1;
+
+        for (i=0;i < last_LEDATA_data_length;i++)
+            sum += ledata[i];
+
+        ledata[i] = 0x100 - sum;
+
+        if (write(ofd,ledata,last_LEDATA_data_length+1) != (last_LEDATA_data_length+1))
+            return -1;
+    }
+
+    /* now write the FIXUPP */
+    if (lseek(ofd,rec_ofs,SEEK_SET) != rec_ofs)
+        return -1;
+
+    {
+        unsigned char tmp[3];
+        unsigned char sum;
+        unsigned int i;
+
+        sum = 0;
+
+        tmp[0] = omf_rectype;
+        *((uint16_t*)(tmp+1)) = omf_reclen + 1/*checksum*/;
+        if (write(ofd,tmp,3) != 3) return -1;
+        if (omf_reclen >= sizeof(omf_record)) return -1;
+        for (i=0;i < 3;i++) sum += tmp[i];
+        for (i=0;i < omf_reclen;i++) sum += omf_record[i];
+        omf_record[omf_reclen] = 0x100 - sum; /* checksum */
+
+        if (write(ofd,omf_record,omf_reclen+1) != (omf_reclen+1))
+            return -1;
+    }
+
+    return 0;
 }
 
 /* NTS: I'm seeing Open Watcom emit .LIB files where more than one GRPDEF can be
@@ -943,7 +1158,9 @@ void dump_LEDATA(const unsigned char b32,const int ofd) {
         enum_data_offset = omfrec_gw();
     }
 
+    last_LEDATA_type = b32 ? 32 : 16;
     last_LEDATA_ofd_data_offset = lseek(ofd,0,SEEK_CUR) + 3 + omf_recpos; // where this record WILL BE in the output OBJ
+    last_LEDATA_ofd_omf_offset = lseek(ofd,0,SEEK_CUR);
     last_LEDATA_data_length = omf_reclen - omf_recpos;
     last_LEDATA_segment_index = segment_index;
     last_LEDATA_data_offset = enum_data_offset;
@@ -1374,8 +1591,7 @@ int main(int argc,char **argv) {
                 break;
             case 0x9C:/* FIXUPP */
             case 0x9D:/* FIXUPP32 */
-                dump_FIXUPP(omf_rectype&1);
-                if (copy_omf_record(ofd) < 0) return 1;
+                if (dump_FIXUPP(omf_rectype&1,ofd) < 0) return 1;
                 break;
             case 0xA0:/* LEDATA */
             case 0xA1:/* LEDATA32 */
