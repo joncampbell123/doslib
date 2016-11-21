@@ -330,6 +330,23 @@ static inline unsigned int omfrec_gw(void) {
     return v;
 }
 
+static inline unsigned int omfrec_gindex(void) {
+    // 1 or 2 bytes.
+    // 1 byte if less than 0x80
+    // 2 bytes if more than 0x7F
+    unsigned int t;
+
+    if (omfrec_eof()) return 0;
+    t = omfrec_gb();
+    if (t & 0x80) {
+        t = (t & 0x7F) << 8U;
+        if (omfrec_eof()) return 0;
+        t += omfrec_gb();
+    }
+
+    return t;
+}
+
 static inline unsigned long omfrec_gd(void) {
     unsigned long v = *((uint32_t*)(omf_record+omf_recpos));
     omf_recpos += 4;
@@ -542,8 +559,7 @@ void dump_EXTDEF(void) {
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
-        if (omfrec_avail() < 1) return;
-        typidx = omfrec_gb();
+        typidx = omfrec_gindex(); // 1 or 2 bytes
 
         printf("        '%s' typidx=%u\n",tempstr,typidx);
 
@@ -558,8 +574,7 @@ void dump_LEXTDEF(const unsigned char b32) {
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
-        if (omfrec_avail() < 1) return;
-        typidx = omfrec_gb();
+        typidx = omfrec_gindex(); // 1 or 2 bytes
 
         printf("        '%s' typidx=%u\n",tempstr,typidx);
 
@@ -862,16 +877,16 @@ void dump_SEGDEF(const unsigned char b32) {
     if (b32) {
         if (omfrec_avail() < (4+1+1+1)) return;
         seg_length = omfrec_gd();
-        segnamidx = omfrec_gb();
-        classnamidx = omfrec_gb();
-        ovlnamidx = omfrec_gb();
+        segnamidx = omfrec_gindex();
+        classnamidx = omfrec_gindex();
+        ovlnamidx = omfrec_gindex();
     }
     else {
         if (omfrec_avail() < (2+1+1+1)) return;
         seg_length = omfrec_gw();
-        segnamidx = omfrec_gb();
-        classnamidx = omfrec_gb();
-        ovlnamidx = omfrec_gb();
+        segnamidx = omfrec_gindex();
+        classnamidx = omfrec_gindex();
+        ovlnamidx = omfrec_gindex();
     }
 
     printf("    SEGDEF%u: USE%u",b32?32:16,use32?32:16);
