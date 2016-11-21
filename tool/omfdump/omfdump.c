@@ -659,7 +659,7 @@ void dump_LPUBDEF(const unsigned char b32) {
 }
 
 void dump_FIXUPP(const unsigned char b32) {
-    unsigned char c;
+    unsigned int c;
 
     printf("    FIXUPP%u:\n",b32?32:16);
 
@@ -711,7 +711,7 @@ void dump_FIXUPP(const unsigned char b32) {
                 fix_p = (fixdata >> 2) & 1;     /* [2:2] */
                 fix_target = (fixdata & 3);     /* [1:0] */
 
-                printf("            ");
+                printf("            FD=0x%02X ",fixdata);
                 if (fix_f)
                     printf("F=1 frame=%u",fix_frame);
                 else
@@ -742,7 +742,7 @@ void dump_FIXUPP(const unsigned char b32) {
                 if (!fix_f && fix_frame < 4) {
                     if (omfrec_eof()) break;
 
-                    c = omfrec_gb();
+                    c = omfrec_gindex();
                     printf(" framedatum=%u",c);
 
                     switch (fix_frame) {
@@ -779,7 +779,7 @@ void dump_FIXUPP(const unsigned char b32) {
                             break;
                     };
 
-                    c = omfrec_gb();
+                    c = omfrec_gindex();
                     printf(" targetdatum=%u",c);
 
                     switch (fix_target) {
@@ -801,7 +801,7 @@ void dump_FIXUPP(const unsigned char b32) {
                         target_disp = omfrec_gd();
                     }
                     else {
-                        if (omfrec_avail() < 4) break;
+                        if (omfrec_avail() < 2) break;
                         target_disp = omfrec_gw();
                     }
 
@@ -1124,6 +1124,135 @@ void dump_LIBEND(void) {
     omf_lib_blocksize = 0;
 }
 
+void dump_MODEND(const unsigned char b32) {
+    unsigned char fix_f,fix_frame,fix_t,fix_p,fix_target;
+    unsigned int target_datum;
+    unsigned long target_disp;
+    unsigned char module_type;
+    unsigned char end_data;
+    unsigned int c;
+
+    if (omfrec_eof()) return;
+    module_type = omfrec_gb();
+
+    printf("    MODEND%u: module type 0x%02X [ ",b32?32:16,module_type);
+    if (module_type & 0x80) printf("MAIN ");
+    if (module_type & 0x40) printf("START ");
+    if (module_type & 0x01) printf("RELOC-START ");
+    printf("]\n");
+
+    if (module_type & 0x40) {
+        while (!omfrec_eof()) {
+            end_data = omfrec_gb();
+
+            fix_f = (end_data >> 7) & 1;     /* [7:7] */
+            fix_frame = (end_data >> 4) & 7; /* [6:4] */
+            fix_t = (end_data >> 3) & 1;     /* [3:3] */
+            fix_p = (end_data >> 2) & 1;     /* [2:2] */
+            fix_target = (end_data & 3);     /* [1:0] */
+
+            printf("        ED=0x%02X ",end_data);
+            if (fix_f)
+                printf("F=1 frame=%u",fix_frame);
+            else
+                printf("F=0 framemethod=%u",fix_frame);
+
+            if (!fix_f) {
+                // again, if the OMF spec doesn't explain this and I have to read VirtualBox source code
+                // to get this that says how reliable your spec is.
+                switch (fix_frame) {
+                    case 0: // F0: segment
+                        printf(" F0:frame=segment");
+                        break;
+                    case 1: // F1: group
+                        printf(" F1:frame=group");
+                        break;
+                    case 2: // F2: external symbol
+                        printf(" F2:frame=external-symbol");
+                        break;
+                    case 4: // F4: frame = source
+                        printf(" F4:frame=source");
+                        break;
+                    case 5: // F5: frame = target
+                        printf(" F5:frame=target");
+                        break;
+                }
+            }
+
+            if (!fix_f && fix_frame < 4) {
+                if (omfrec_eof()) break;
+
+                c = omfrec_gindex();
+                printf(" framedatum=%u",c);
+
+                switch (fix_frame) {
+                    case 0: // segment
+                        printf("(\"%s\")",omf_get_SEGDEF_name_safe(c));
+                        break;
+                    case 1: // group
+                        printf("(\"%s\")",omf_get_GRPDEF_name_safe(c));
+                        break;
+                    case 2: // external symbol
+                        printf("(\"%s\")",omf_get_EXTDEF_safe(c));
+                        break;
+                }
+            }
+
+            /* FIXME: WHEN is the Target Datum field prsent???? This is a shitty guess! The OMF spec doesn't say! */
+            // NTS: To the people who wrote the OMF spec: your doc is confusing. The fact I had to read VirtualBox
+            //      source code for clarification means your spec needs clarification.
+            if (fix_t) {
+                printf(" target=%u",fix_target);
+            }
+            else {
+                if (omfrec_eof()) break;
+
+                switch (fix_target) {
+                    case 0: // T0/T4: Target = segment
+                        printf(" T0:target=segment");
+                        break;
+                    case 1: // T1/T5: Target = segment group
+                        printf(" T0:target=segment-group");
+                        break;
+                    case 2: // T2/T6: Target = external symbol
+                        printf(" T0:target=extern-sym");
+                        break;
+                };
+
+                c = omfrec_gindex();
+                printf(" targetdatum=%u",c);
+
+                switch (fix_target) {
+                    case 0: // T0/T4: Target = segment
+                        printf("(\"%s\")",omf_get_SEGDEF_name_safe(c));
+                        break;
+                    case 1: // T1/T5: Target = segment group
+                        printf("(\"%s\")",omf_get_GRPDEF_name_safe(c));
+                        break;
+                    case 2: // T2/T6: Target = external symbol
+                        printf("(\"%s\")",omf_get_EXTDEF_safe(c));
+                        break;
+                };
+            }
+
+            if (!fix_p) {
+                if (b32) {
+                    if (omfrec_avail() < 4) break;
+                    target_disp = omfrec_gd();
+                }
+                else {
+                    if (omfrec_avail() < 2) break;
+                    target_disp = omfrec_gw();
+                }
+
+                printf(" targetdisp=%lu",target_disp);
+            }
+
+            printf("\n");
+        }
+    }
+}
+
 int main(int argc,char **argv) {
     unsigned char lasttype;
     unsigned long lastofs;
@@ -1185,6 +1314,10 @@ int main(int argc,char **argv) {
                 case 0x88:/* COMENT */
                     dump_COMENT();
                     break;
+                case 0x8A:/* MODEND */
+                case 0x8B:/* MODEND32 */
+                    dump_MODEND(omf_rectype&1);
+                    break;
                 case 0x8C:/* EXTDEF */
                     dump_EXTDEF();
                     break;
@@ -1228,6 +1361,9 @@ int main(int argc,char **argv) {
                     break;
                 case 0xF1:/* LIBEND */
                     dump_LIBEND();
+                    break;
+                default:
+                    printf("** do not yet support\n");
                     break;
             }
 
