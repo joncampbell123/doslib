@@ -118,7 +118,9 @@ static unsigned int         omf_reclen = 0; // NTS: Does NOT include leading che
 static unsigned int         omf_recpos = 0; // where we are parsing
 static unsigned int         omf_lib_blocksize = 0;
 
+static unsigned long        last_LEDATA_ofd_data_offset = 0;
 static unsigned char        last_LEDATA_segment_index = 0;
+static unsigned long        last_LEDATA_data_length = 0;
 static unsigned long        last_LEDATA_data_offset = 0;
 
 /* LNAMES collection */
@@ -924,7 +926,7 @@ void dump_SEGDEF(const unsigned char b32) {
     segdef = omf_SEGDEFS_add(segnamidx);
 }
 
-void dump_LEDATA(const unsigned char b32) {
+void dump_LEDATA(const unsigned char b32,const int ofd) {
     unsigned long enum_data_offset,doh;
     unsigned int segment_index;
     unsigned int len,i,colo;
@@ -941,9 +943,12 @@ void dump_LEDATA(const unsigned char b32) {
         enum_data_offset = omfrec_gw();
     }
 
+    last_LEDATA_ofd_data_offset = lseek(ofd,0,SEEK_CUR) + 3 + omf_recpos; // where this record WILL BE in the output OBJ
+    last_LEDATA_data_length = omf_reclen - omf_recpos;
     last_LEDATA_segment_index = segment_index;
     last_LEDATA_data_offset = enum_data_offset;
     printf("    LEDATA%u: segidx=\"%s\"(%u) data_offset=%lu\n",b32?32:16,omf_get_SEGDEF_name_safe(segment_index),segment_index,enum_data_offset);
+    printf("        Will be at %lu in output OBJ (len=%lu)\n",last_LEDATA_ofd_data_offset,last_LEDATA_data_length);
 
     doh = enum_data_offset;
     while (!omfrec_eof()) {
@@ -1374,7 +1379,7 @@ int main(int argc,char **argv) {
                 break;
             case 0xA0:/* LEDATA */
             case 0xA1:/* LEDATA32 */
-                dump_LEDATA(omf_rectype&1);
+                dump_LEDATA(omf_rectype&1,ofd);
                 if (copy_omf_record(ofd) < 0) return 1;
                 break;
             case 0xA2:/* LIDATA */
