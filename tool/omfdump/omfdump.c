@@ -124,11 +124,17 @@ static unsigned char        last_LEDATA_segment_index = 0;
 static unsigned long        last_LEDATA_data_offset = 0;
 
 /* LNAMES collection */
-#define MAX_LNAMES          255
-static char*                omf_LNAMES[MAX_LNAMES];
+static char**               omf_LNAMES = NULL;
 static unsigned int         omf_LNAMES_count = 0;
+#if defined(LINUX)
+static unsigned int         omf_LNAMES_alloc = 32768;   // 128KB 32-bit, 256KB 64-bit
+#else
+static unsigned int         omf_LNAMES_alloc = 1024;    // 2KB small model, 4KB large model
+#endif
 
 static const char *omf_get_LNAME(const unsigned int i) {
+    if (omf_LNAMES == NULL)
+        return NULL;
     if (i == 0 || i > omf_LNAMES_count) // LNAMEs are 1-based
         return NULL;
 
@@ -142,31 +148,59 @@ static const char *omf_get_LNAME_safe(const unsigned int i) {
 }
 
 static void omf_LNAMES_clear(void) {
-    while (omf_LNAMES_count > 0) {
-        omf_LNAMES_count--;
+    if (omf_LNAMES != NULL) {
+        while (omf_LNAMES_count > 0) {
+            omf_LNAMES_count--;
 
-        if (omf_LNAMES[omf_LNAMES_count] != NULL) {
-            free(omf_LNAMES[omf_LNAMES_count]);
-            omf_LNAMES[omf_LNAMES_count] = NULL;
+            if (omf_LNAMES[omf_LNAMES_count] != NULL) {
+                free(omf_LNAMES[omf_LNAMES_count]);
+                omf_LNAMES[omf_LNAMES_count] = NULL;
+            }
         }
+
+        free(omf_LNAMES);
+        omf_LNAMES = NULL;
     }
 }
 
-static void omf_LNAMES_add(const char *name) {
+static int omf_LNAMES_add(const char *name) {
     size_t len = strlen(name);
     char *p;
 
-    if (name == NULL)
-        return;
-    if (omf_LNAMES_count >= MAX_LNAMES)
-        return;
+    if (name == NULL) {
+        errno = EFAULT;
+        return -1;
+    }
+
+    if (omf_LNAMES == NULL) {
+        if (omf_LNAMES_alloc == 0) {
+            errno = ENOSPC;
+            return -1;
+        }
+
+        omf_LNAMES = (char**)malloc(sizeof(char*) * omf_LNAMES_alloc);
+        if (omf_LNAMES == NULL) {
+            errno = ENOMEM;
+            return -1;
+        }
+
+        omf_LNAMES_count = 0;
+    }
+
+    if (omf_LNAMES_count >= omf_LNAMES_alloc) {
+        errno = ENOSPC;
+        return -1;
+    }
 
     p = malloc(len+1);
-    if (p == NULL)
-        return;
+    if (p == NULL) {
+        errno = ENOMEM;
+        return -1;
+    }
 
     memcpy(p,name,len+1);/* name + NUL */
     omf_LNAMES[omf_LNAMES_count++] = p;
+    return 0;
 }
 
 struct omf_SEGDEF_t {

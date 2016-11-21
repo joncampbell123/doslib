@@ -5,7 +5,7 @@ linux-host:
 	mkdir -p linux-host
 
 linux-host/omfdump: omfdump.c
-	gcc -o $@ $<
+	gcc -DLINUX -o $@ $<
 
 clean:
 	rm -f linux-host/omfdump
