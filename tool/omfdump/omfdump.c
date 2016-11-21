@@ -103,8 +103,8 @@ const char *omf_rectype_to_str(unsigned char rt) {
         case 0xCA:  return "LLNAMES";
         case 0xCC:  return "VERNUM";
         case 0xCE:  return "VENDEXT";
-        case 0xF0:  return "LIBHEAD"; // I made up this name
-        case 0xF1:  return "LIBEND"; // I also made up this name
+        case 0xF0:  return "LIBHEAD"; /* I made up this name */
+        case 0xF1:  return "LIBEND"; /* I also made up this name */
         default:    break;
     }
 
@@ -116,92 +116,179 @@ static char                 tempstr[257];
 static unsigned char        omf_record[16384];
 static unsigned char        omf_rectype = 0;
 static unsigned long        omf_recoffs = 0;
-static unsigned int         omf_reclen = 0; // NTS: Does NOT include leading checksum byte
-static unsigned int         omf_recpos = 0; // where we are parsing
+static unsigned int         omf_reclen = 0; /* NTS: Does NOT include leading checksum byte */
+static unsigned int         omf_recpos = 0; /* where we are parsing */
 static unsigned int         omf_lib_blocksize = 0;
 
 static unsigned char        last_LEDATA_segment_index = 0;
 static unsigned long        last_LEDATA_data_offset = 0;
 
 /* LNAMES collection */
-static char**               omf_LNAMES = NULL;
-static unsigned int         omf_LNAMES_count = 0;
+struct omf_lnames_context_t {
+    char**               omf_LNAMES;
+    unsigned int         omf_LNAMES_count;
+    unsigned int         omf_LNAMES_alloc;
+};
+
+void omf_lnames_context_init(struct omf_lnames_context_t * const ctx) {
+    ctx->omf_LNAMES = NULL;
+    ctx->omf_LNAMES_count = 0;
 #if defined(LINUX)
-static unsigned int         omf_LNAMES_alloc = 32768;   // 128KB 32-bit, 256KB 64-bit
+    ctx->omf_LNAMES_alloc = 32768;
 #else
-static unsigned int         omf_LNAMES_alloc = 1024;    // 2KB small model, 4KB large model
+    ctx->omf_LNAMES_alloc = 1024;
 #endif
-
-static const char *omf_get_LNAME(const unsigned int i) {
-    if (omf_LNAMES == NULL)
-        return NULL;
-    if (i == 0 || i > omf_LNAMES_count) // LNAMEs are 1-based
-        return NULL;
-
-    return omf_LNAMES[i-1];
 }
 
-static const char *omf_get_LNAME_safe(const unsigned int i) {
-    const char *r = omf_get_LNAME(i);
+int omf_lnames_context_alloc_names(struct omf_lnames_context_t * const ctx) {
+    if (ctx->omf_LNAMES != NULL)
+        return 0;
 
+    if (ctx->omf_LNAMES_alloc == 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ctx->omf_LNAMES_count = 0;
+    ctx->omf_LNAMES = (char**)malloc(sizeof(char*) * ctx->omf_LNAMES_alloc);
+    if (ctx->omf_LNAMES == NULL)
+        return -1; /* malloc sets errno */
+
+    return 0;
+}
+
+int omf_lnames_context_clear_name(struct omf_lnames_context_t * const ctx,unsigned int i) {
+    if ((i--) == 0) {
+        errno = ERANGE;
+        return -1; /* LNAMEs are indexed 1-based. After this test, i is converted to 0-based index */
+    }
+
+    if (i >= ctx->omf_LNAMES_count) {
+        errno = ERANGE;
+        return -1; /* out of range */
+    }
+
+    if (ctx->omf_LNAMES == NULL)
+        return 0; /* LNAMEs array not allocated */
+
+    if (ctx->omf_LNAMES[i] != NULL) {
+        free(ctx->omf_LNAMES[i]);
+        ctx->omf_LNAMES[i] = NULL;
+    }
+
+    return 0;
+}
+
+const char *omf_lnames_context_get_name(struct omf_lnames_context_t * const ctx,unsigned int i) {
+    if ((i--) == 0) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    if (i >= ctx->omf_LNAMES_count) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    return ctx->omf_LNAMES[i];
+}
+
+const char *omf_lnames_context_get_name_safe(struct omf_lnames_context_t * const ctx,unsigned int i) {
+    const char *r = omf_lnames_context_get_name(ctx,i);
     return (r != NULL) ? r : "[ERANGE]";
 }
 
-static void omf_LNAMES_clear(void) {
-    if (omf_LNAMES != NULL) {
-        while (omf_LNAMES_count > 0) {
-            omf_LNAMES_count--;
-
-            if (omf_LNAMES[omf_LNAMES_count] != NULL) {
-                free(omf_LNAMES[omf_LNAMES_count]);
-                omf_LNAMES[omf_LNAMES_count] = NULL;
-            }
-        }
-
-        free(omf_LNAMES);
-        omf_LNAMES = NULL;
-    }
-}
-
-static int omf_LNAMES_add(const char *name) {
-    size_t len = strlen(name);
-    char *p;
-
+int omf_lnames_context_set_name(struct omf_lnames_context_t * const ctx,unsigned int i,const char *name) {
     if (name == NULL) {
         errno = EFAULT;
         return -1;
     }
 
-    if (omf_LNAMES == NULL) {
-        if (omf_LNAMES_alloc == 0) {
-            errno = ENOSPC;
-            return -1;
-        }
-
-        omf_LNAMES = (char**)malloc(sizeof(char*) * omf_LNAMES_alloc);
-        if (omf_LNAMES == NULL) {
-            errno = ENOMEM;
-            return -1;
-        }
-
-        omf_LNAMES_count = 0;
+    if ((i--) == 0) {
+        errno = ERANGE;
+        return -1; /* LNAMEs are indexed 1-based. After this test, i is converted to 0-based index */
     }
 
-    if (omf_LNAMES_count >= omf_LNAMES_alloc) {
-        errno = ENOSPC;
+    if (i >= ctx->omf_LNAMES_alloc) {
+        errno = ERANGE;
         return -1;
     }
 
-    p = malloc(len+1);
-    if (p == NULL) {
-        errno = ENOMEM;
-        return -1;
+    if (ctx->omf_LNAMES == NULL) {
+        if (omf_lnames_context_alloc_names(ctx) < 0)
+            return -1; /* sets errno */
     }
 
-    memcpy(p,name,len+1);/* name + NUL */
-    omf_LNAMES[omf_LNAMES_count++] = p;
+    while (ctx->omf_LNAMES_count <= i)
+        ctx->omf_LNAMES[ctx->omf_LNAMES_count++] = NULL;
+
+    {
+        size_t len = strlen(name);
+        char *t = malloc(len+1);
+        if (t == NULL) return -1; /* malloc sets errno */
+        memcpy(t,name,len+1); /* copy string + NUL */
+        ctx->omf_LNAMES[i] = t;
+    }
+
     return 0;
 }
+
+int omf_lnames_context_add_name(struct omf_lnames_context_t * const ctx,const char *name) {
+    unsigned int idx;
+
+    if (ctx->omf_LNAMES != NULL)
+        idx = ctx->omf_LNAMES_count + 1;
+    else
+        idx = 1;
+
+    if (omf_lnames_context_set_name(ctx,idx,name) < 0)
+        return -1; /* sets errno */
+
+    return (int)idx;
+}
+
+void omf_lnames_context_clear_names(struct omf_lnames_context_t * const ctx) {
+    char *p;
+
+    while (ctx->omf_LNAMES_count > 0) {
+        --ctx->omf_LNAMES_count;
+        p = ctx->omf_LNAMES[ctx->omf_LNAMES_count];
+        ctx->omf_LNAMES[ctx->omf_LNAMES_count] = NULL;
+        if (p != NULL) free(p);
+    }
+}
+
+void omf_lnames_context_free_names(struct omf_lnames_context_t * const ctx) {
+    if (ctx->omf_LNAMES) {
+        omf_lnames_context_clear_names(ctx);
+        free(ctx->omf_LNAMES);
+        ctx->omf_LNAMES = NULL;
+    }
+    ctx->omf_LNAMES_count = 0;
+}
+
+void omf_lnames_context_free(struct omf_lnames_context_t * const ctx) {
+    omf_lnames_context_free_names(ctx);
+}
+
+struct omf_lnames_context_t *omf_lnames_context_create(void) {
+    struct omf_lnames_context_t *ctx;
+
+    ctx = (struct omf_lnames_context_t*)malloc(sizeof(*ctx));
+    if (ctx != NULL) omf_lnames_context_init(ctx);
+    return ctx;
+}
+
+struct omf_lnames_context_t *omf_lnames_context_destroy(struct omf_lnames_context_t * const ctx) {
+    if (ctx != NULL) {
+        omf_lnames_context_free(ctx);
+        free(ctx);
+    }
+
+    return NULL;
+}
+
+struct omf_lnames_context_t*            omf_LNAMEs = NULL;
 
 struct omf_SEGDEF_t {
     unsigned char           nameidx;
@@ -235,7 +322,7 @@ static struct omf_SEGDEF_t *omf_get_SEGDEF(const unsigned int i) {
 static const char *omf_get_SEGDEF_name(const unsigned int i) {
     struct omf_SEGDEF_t *rec = omf_get_SEGDEF(i);
     unsigned char idx = (rec != NULL) ? rec->nameidx : 0;
-    return omf_get_LNAME(idx);
+    return omf_lnames_context_get_name(omf_LNAMEs,idx);
 }
 
 static const char *omf_get_SEGDEF_name_safe(const unsigned int i) {
@@ -279,7 +366,7 @@ static struct omf_GRPDEF_t *omf_get_GRPDEF(const unsigned int i) {
 static const char *omf_get_GRPDEF_name(const unsigned int i) {
     struct omf_GRPDEF_t *rec = omf_get_GRPDEF(i);
     unsigned char idx = (rec != NULL) ? rec->nameidx : 0;
-    return omf_get_LNAME(idx);
+    return omf_lnames_context_get_name(omf_LNAMEs,idx);
 }
 
 static const char *omf_get_GRPDEF_name_safe(const unsigned int i) {
@@ -297,7 +384,7 @@ static char*                omf_EXTDEF[MAX_EXTDEF];
 static unsigned int         omf_EXTDEF_count = 0;
 
 static const char *omf_get_EXTDEF(const unsigned int i) {
-    if (i == 0 || i > omf_EXTDEF_count) // EXTDEFs are 1-based
+    if (i == 0 || i > omf_EXTDEF_count) /* EXTDEFs are 1-based */
         return NULL;
 
     return omf_EXTDEF[i-1];
@@ -338,7 +425,7 @@ static void omf_EXTDEF_add(const char *name) {
 }
 
 static void omf_reset(void) {
-    omf_LNAMES_clear();
+    omf_lnames_context_free_names(omf_LNAMEs);
     omf_SEGDEF_clear();
     omf_GRPDEF_clear();
     omf_EXTDEF_clear();
@@ -367,9 +454,9 @@ static inline unsigned int omfrec_gw(void) {
 }
 
 static inline unsigned int omfrec_gindex(void) {
-    // 1 or 2 bytes.
-    // 1 byte if less than 0x80
-    // 2 bytes if more than 0x7F
+    /* 1 or 2 bytes.
+       1 byte if less than 0x80
+       2 bytes if more than 0x7F */
     unsigned int t;
 
     if (omfrec_eof()) return 0;
@@ -416,7 +503,7 @@ static int omf_lib_next_block(int fd,unsigned long checkofs) {
     if (omf_lib_blocksize == 0)
         return 0;
 
-    if (lseek(fd,checkofs,SEEK_SET) != checkofs)
+    if ((off_t)lseek(fd,checkofs,SEEK_SET) != (off_t)checkofs)
         return 0;
 
     checkofs = (checkofs + (unsigned long)omf_lib_blocksize - 1UL) & (~((unsigned long)omf_lib_blocksize - 1UL));
@@ -424,7 +511,7 @@ static int omf_lib_next_block(int fd,unsigned long checkofs) {
     if (checkofs > endoff)
         return 0;
 
-    if (lseek(fd,checkofs,SEEK_SET) != checkofs)
+    if ((off_t)lseek(fd,checkofs,SEEK_SET) != (off_t)checkofs)
         return 0;
 
     return 1;
@@ -461,7 +548,7 @@ static int read_omf_record(int fd) {
         }
     }
     omf_recpos=0;
-    omf_reclen--; // exclude checksum byte
+    omf_reclen--; /* exclude checksum byte */
     return 1;
 }
 
@@ -495,7 +582,7 @@ unsigned int omfrec_get_lenstr(char * const dst,const size_t dstmax) {
         return 0;
 
     len = omfrec_gb();
-    if (len > omfrec_avail() || (len+1/*NUL*/) > dstmax) {
+    if (len > omfrec_avail() || (len+1U/*NUL*/) > dstmax) {
         omfrec_end();
         return 0;
     }
@@ -575,17 +662,22 @@ void dump_COMENT(void) {
     }
 }
 
-void dump_LNAMES(void) {
+int dump_LNAMES(void) {
+    int idx;
+
     /* string records, one after the other, until the end of the record */
-    printf("    LNAMES:");
+    printf("    LNAMES:\n");
 
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
-        printf(" \"%s\"",tempstr);
-        omf_LNAMES_add(tempstr);
+
+        idx = omf_lnames_context_add_name(omf_LNAMEs,tempstr);
+        if (idx < 0) return -1;
+
+        printf("        [%u] \"%s\"\n",idx,tempstr);
     }
 
-    printf("\n");
+    return 0;
 }
 
 void dump_EXTDEF(void) {
@@ -595,7 +687,7 @@ void dump_EXTDEF(void) {
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
-        typidx = omfrec_gindex(); // 1 or 2 bytes
+        typidx = omfrec_gindex(); /* 1 or 2 bytes */
 
         printf("        '%s' typidx=%u\n",tempstr,typidx);
 
@@ -606,11 +698,13 @@ void dump_EXTDEF(void) {
 void dump_LEXTDEF(const unsigned char b32) {
     unsigned int typidx;
 
+    (void)b32; /* unused */
+
     printf("    LEXTDEF:\n");
     while (!omfrec_eof()) {
         omfrec_get_lenstr(tempstr,sizeof(tempstr));
 
-        typidx = omfrec_gindex(); // 1 or 2 bytes
+        typidx = omfrec_gindex(); /* 1 or 2 bytes */
 
         printf("        '%s' typidx=%u\n",tempstr,typidx);
 
@@ -730,7 +824,7 @@ void dump_FIXUPP(const unsigned char b32) {
                     case 11:printf("16SEG:32OFS-FAR-POINTER"); break;
                     case 13:printf("32BIT-LOADER-OFFSET"); break;
                 };
-                printf(" datarecofs=(rel)0x%lX,(abs)0x%lX",recoff,recoff+last_LEDATA_data_offset);
+                printf(" datarecofs=(rel)0x%lX,(abs)0x%lX",(unsigned long)recoff,(unsigned long)recoff+last_LEDATA_data_offset);
                 printf("\n");
 
                 // FIXME: Is "Fix Data" conditional? If so, when does it happen??
@@ -862,9 +956,11 @@ void dump_GRPDEF(const unsigned char b32) {
     unsigned int index;
     unsigned char segdefidx;
 
+    (void)b32; // unused
+
     if (omfrec_eof()) return;
     grpnamidx = omfrec_gindex();
-    printf("    GRPDEF nameidx=\"%s\"(%u):\n",omf_get_LNAME_safe(grpnamidx),grpnamidx);
+    printf("    GRPDEF nameidx=\"%s\"(%u):\n",omf_lnames_context_get_name_safe(omf_LNAMEs,grpnamidx),grpnamidx);
 
     omf_GRPDEFS_add(grpnamidx);
 
@@ -884,7 +980,6 @@ void dump_GRPDEF(const unsigned char b32) {
 }
 
 void dump_SEGDEF(const unsigned char b32) {
-    struct omf_SEGDEF_t *segdef;
     unsigned char align_f;
     unsigned char comb_f;
     unsigned char use32;
@@ -929,9 +1024,9 @@ void dump_SEGDEF(const unsigned char b32) {
     if (big && seg_length == 0) printf(" length=%s(max)",b32?"4GB":"64KB");
     else printf(" length=%lu",seg_length);
     printf(" nameidx=\"%s\"(%u) classidx=\"%s\"(%u) ovlidx=\"%s\"(%u)",
-        omf_get_LNAME_safe(segnamidx),      segnamidx,
-        omf_get_LNAME_safe(classnamidx),    classnamidx,
-        omf_get_LNAME_safe(ovlnamidx),      ovlnamidx);
+        omf_lnames_context_get_name_safe(omf_LNAMEs,segnamidx),      segnamidx,
+        omf_lnames_context_get_name_safe(omf_LNAMEs,classnamidx),    classnamidx,
+        omf_lnames_context_get_name_safe(omf_LNAMEs,ovlnamidx),      ovlnamidx);
     printf("\n");
 
     switch (align_f) {
@@ -972,7 +1067,7 @@ void dump_SEGDEF(const unsigned char b32) {
             break;
     };
 
-    segdef = omf_SEGDEFS_add(segnamidx);
+    omf_SEGDEFS_add(segnamidx);
 }
 
 void dump_LEDATA(const unsigned char b32) {
@@ -1324,6 +1419,12 @@ int main(int argc,char **argv) {
         }
     }
 
+    // prepare parsing
+    if ((omf_LNAMEs=omf_lnames_context_create()) == NULL) {
+        fprintf(stderr,"Failed to init OMF parsing state\n");
+        return 1;
+    }
+
     if (in_file == NULL) {
         help();
         return 1;
@@ -1369,7 +1470,7 @@ int main(int argc,char **argv) {
                     dump_PUBDEF(omf_rectype&1);
                     break;
                 case 0x96:/* LNAMES */
-                    dump_LNAMES();
+                    if (dump_LNAMES() < 0) return 1;
                     break;
                 case 0x98:/* SEGDEF */
                 case 0x99:/* SEGDEF32 */
@@ -1430,6 +1531,7 @@ int main(int argc,char **argv) {
     } while (1);
 
     omf_reset();
+    omf_LNAMEs = omf_lnames_context_destroy(omf_LNAMEs);
     close(fd);
     return 0;
 }
