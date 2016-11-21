@@ -823,11 +823,11 @@ void dump_FIXUPP(const unsigned char b32) {
  *      it means you just combine the segment lists together (OMF spec). */
 void dump_GRPDEF(const unsigned char b32) {
     unsigned int grpnamidx;
-    unsigned char index;
+    unsigned int index;
     unsigned char segdefidx;
 
     if (omfrec_eof()) return;
-    grpnamidx = omfrec_gb();
+    grpnamidx = omfrec_gindex();
     printf("    GRPDEF nameidx=\"%s\"(%u):\n",omf_get_LNAME_safe(grpnamidx),grpnamidx);
 
     omf_GRPDEFS_add(grpnamidx);
@@ -837,7 +837,7 @@ void dump_GRPDEF(const unsigned char b32) {
 
         if (index == 0xFF) {
             /* segment def index */
-            segdefidx = omfrec_gb();
+            segdefidx = omfrec_gindex();
             printf("        SEGDEF index=\"%s\"(%u)\n",omf_get_SEGDEF_name_safe(segdefidx),segdefidx);
         }
         else {
@@ -947,12 +947,12 @@ void dump_LEDATA(const unsigned char b32) {
 
     if (b32) {
         if (omfrec_avail() < (1+4)) return;
-        segment_index = omfrec_gb();
+        segment_index = omfrec_gindex();
         enum_data_offset = omfrec_gd();
     }
     else {
         if (omfrec_avail() < (1+2)) return;
-        segment_index = omfrec_gb();
+        segment_index = omfrec_gindex();
         enum_data_offset = omfrec_gw();
     }
 
@@ -1088,12 +1088,12 @@ void dump_LIDATA(const unsigned char b32) {
 
     if (b32) {
         if (omfrec_avail() < (1+4)) return;
-        segment_index = omfrec_gb();
+        segment_index = omfrec_gindex();
         enum_data_offset = omfrec_gd();
     }
     else {
         if (omfrec_avail() < (1+2)) return;
-        segment_index = omfrec_gb();
+        segment_index = omfrec_gindex();
         enum_data_offset = omfrec_gw();
     }
 
