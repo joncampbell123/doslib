@@ -353,6 +353,7 @@ static void omfrec_backspace_to(unsigned int p) {
     // p < omf_recpos
     rem = omfrec_avail(); // could be zero
     if (rem != 0) memmove(omf_record+p,omf_record+omf_recpos,rem);
+    omf_reclen = p + rem;
     omf_recpos = p;
 }
 
