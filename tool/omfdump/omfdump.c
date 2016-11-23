@@ -111,17 +111,188 @@ const char *omf_rectype_to_str(unsigned char rt) {
     return "?";
 }
 
-static char                 tempstr[257];
+//static char                 tempstr[257];
 
-static unsigned char        omf_record[16384];
-static unsigned char        omf_rectype = 0;
-static unsigned long        omf_recoffs = 0;
-static unsigned int         omf_reclen = 0; /* NTS: Does NOT include leading checksum byte */
-static unsigned int         omf_recpos = 0; /* where we are parsing */
-static unsigned int         omf_lib_blocksize = 0;
+struct omf_record_t {
+    unsigned char           rectype;
+    unsigned short          reclen;             // amount of data in data, reclen < data_alloc not including checksum
+    unsigned short          recpos;             // read/write position
+    unsigned char*          data;               // data if != NULL. checksum is at data[reclen]
+    size_t                  data_alloc;         // amount of data allocated if data != NULL or amount TO alloc if data == NULL
 
-static unsigned char        last_LEDATA_segment_index = 0;
-static unsigned long        last_LEDATA_data_offset = 0;
+    unsigned long           rec_file_offset;    // file offset of record (~0UL if undefined)
+};
+
+unsigned char omf_record_is_modend(const struct omf_record_t * const rec) {
+    return ((rec->rectype&0xFE) == 0x8A); // MODEND 0x8A or 0x8B
+}
+
+void omf_record_init(struct omf_record_t * const rec) {
+    rec->rectype = 0;
+    rec->reclen = 0;
+    rec->data = NULL;
+    rec->data_alloc = 4096; // OMF spec says 1024
+    rec->rec_file_offset = (~0UL);
+}
+
+void omf_record_data_free(struct omf_record_t * const rec) {
+    if (rec->data != NULL) {
+        free(rec->data);
+        rec->data = NULL;
+    }
+    rec->reclen = 0;
+    rec->rectype = 0;
+}
+
+int omf_record_data_alloc(struct omf_record_t * const rec,size_t sz) {
+    if (sz > (size_t)0xFF00U) {
+        errno = ERANGE;
+        return -1;
+    }
+
+    if (rec->data != NULL) {
+        if (sz == 0 || sz == rec->data_alloc)
+            return 0;
+
+        errno = EINVAL;//cannot realloc
+        return -1;
+    }
+
+    if (sz == 0) // default?
+        sz = 4096;
+
+    rec->data = malloc(sz);
+    if (rec->data == NULL)
+        return -1; // malloc sets errno
+
+    rec->data_alloc = sz;
+    rec->reclen = 0;
+    rec->recpos = 0;
+    return 0;
+}
+
+void omf_record_clear(struct omf_record_t * const rec) {
+    rec->recpos = 0;
+    rec->reclen = 0;
+}
+
+unsigned short omf_record_lseek(struct omf_record_t * const rec,unsigned short pos) {
+    if (rec->data == NULL)
+        rec->recpos = 0;
+    else if (pos > rec->reclen)
+        rec->recpos = rec->reclen;
+    else
+        rec->recpos = pos;
+
+    return rec->recpos;
+}
+
+size_t omf_record_can_write(const struct omf_record_t * const rec) {
+    if (rec->data == NULL)
+        return 0;
+    if (rec->recpos >= rec->data_alloc)
+        return 0;
+
+    return (size_t)(rec->data_alloc - rec->recpos);
+}
+
+size_t omf_record_data_available(const struct omf_record_t * const rec) {
+    if (rec->data == NULL)
+        return 0;
+    if (rec->recpos >= rec->reclen)
+        return 0;
+
+    return (size_t)(rec->reclen - rec->recpos);
+}
+
+static inline unsigned char omf_record_eof(const struct omf_record_t * const rec) {
+    return (omf_record_data_available(rec) == 0);
+}
+
+unsigned char omf_record_get_byte_fast(struct omf_record_t * const rec) {
+    unsigned char c;
+
+    c = *((unsigned char*)(rec->data + rec->recpos));
+    rec->recpos++;
+    return c;
+}
+
+unsigned char omf_record_get_byte(struct omf_record_t * const rec) {
+    if (rec->data == NULL)
+        return 0xFFU;
+    if ((rec->recpos+1U) > rec->reclen)
+        return 0xFFU;
+
+    return omf_record_get_byte_fast(rec);
+}
+
+unsigned short omf_record_get_word_fast(struct omf_record_t * const rec) {
+    unsigned short c;
+
+    c = *((unsigned short*)(rec->data + rec->recpos));
+    rec->recpos += 2;
+    return c;
+}
+
+unsigned short omf_record_get_word(struct omf_record_t * const rec) {
+    if (rec->data == NULL)
+        return 0xFFFFU;
+    if ((rec->recpos+2U) > rec->reclen)
+        return 0xFFFFU;
+
+    return omf_record_get_word_fast(rec);
+}
+
+unsigned long omf_record_get_dword_fast(struct omf_record_t * const rec) {
+    unsigned long c;
+
+    c = *((unsigned long*)(rec->data + rec->recpos));
+    rec->recpos += 4;
+    return c;
+}
+
+unsigned long omf_record_get_dword(struct omf_record_t * const rec) {
+    if (rec->data == NULL)
+        return 0xFFFFU;
+    if ((rec->recpos+4U) > rec->reclen)
+        return 0xFFFFU;
+
+    return omf_record_get_dword_fast(rec);
+}
+
+unsigned int omf_record_get_index(struct omf_record_t * const rec) {
+    unsigned int t;
+
+    /* 1 or 2 bytes.
+       1 byte if less than 0x80
+       2 bytes if more than 0x7F
+       
+       1 byte encoding (0x00-0x7F)  (value & 0x7F) 
+       2 byte encoding (>0x80)      ((value & 0x7F) | 0x80) (value >> 8)*/
+    if (omf_record_eof(rec)) return 0;
+    t = omf_record_get_byte_fast(rec);
+    if (t & 0x80) {
+        t = (t & 0x7F) << 8U;
+        if (omf_record_eof(rec)) return 0;
+        t += omf_record_get_byte_fast(rec);
+    }
+
+    return t;
+}
+
+void omf_record_free(struct omf_record_t * const rec) {
+    omf_record_data_free(rec);
+}
+
+//static unsigned char        omf_record[16384];
+//static unsigned char        omf_rectype = 0;
+//static unsigned long        omf_recoffs = 0;
+//static unsigned int         omf_reclen = 0; /* NTS: Does NOT include leading checksum byte */
+//static unsigned int         omf_recpos = 0; /* where we are parsing */
+//static unsigned int         omf_lib_blocksize = 0;
+
+//static unsigned char        last_LEDATA_segment_index = 0;
+//static unsigned long        last_LEDATA_data_offset = 0;
 
 /* LNAMES collection */
 struct omf_lnames_context_t {
@@ -289,7 +460,10 @@ struct omf_lnames_context_t *omf_lnames_context_destroy(struct omf_lnames_contex
 }
 
 struct omf_context_t {
+    const char*                         last_error;
     struct omf_lnames_context_t         LNAMEs;
+    struct omf_record_t                 record; // reading, during parsing
+    unsigned short                      library_block_size;// is .LIB archive if nonzero
     struct {
         unsigned int                    verbose:1;
     } flags;
@@ -297,11 +471,15 @@ struct omf_context_t {
 
 void omf_context_init(struct omf_context_t * const ctx) {
     omf_lnames_context_init(&ctx->LNAMEs);
+    omf_record_init(&ctx->record);
+    ctx->last_error = NULL;
     ctx->flags.verbose = 0;
+    ctx->library_block_size = 0;
 }
 
 void omf_context_free(struct omf_context_t * const ctx) {
     omf_lnames_context_free(&ctx->LNAMEs);
+    omf_record_free(&ctx->record);
 }
 
 struct omf_context_t *omf_context_create(void) {
@@ -321,12 +499,20 @@ struct omf_context_t *omf_context_destroy(struct omf_context_t * const ctx) {
     return NULL;
 }
 
+void omf_context_begin_file(struct omf_context_t * const ctx) {
+    omf_record_clear(&ctx->record);
+    ctx->library_block_size = 0;
+}
+
 void omf_context_clear(struct omf_context_t * const ctx) {
     omf_lnames_context_free_names(&ctx->LNAMEs);
+    omf_record_clear(&ctx->record);
+    ctx->library_block_size = 0;
 }
 
 struct omf_context_t*                   omf_state = NULL;
 
+#if 0
 struct omf_SEGDEF_t {
     unsigned char           nameidx;
 };
@@ -460,7 +646,9 @@ static void omf_EXTDEF_add(const char *name) {
     memcpy(p,name,len+1);/* name + NUL */
     omf_EXTDEF[omf_EXTDEF_count++] = p;
 }
+#endif
 
+#if 0
 static void omf_reset(void) {
     omf_context_clear(omf_state);
     omf_SEGDEF_clear();
@@ -526,6 +714,7 @@ void omfrec_checkrange(void) {
         abort();
     }
 }
+#endif
 
 static char*                in_file = NULL;   
 
@@ -536,6 +725,7 @@ static void help(void) {
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
 }
 
+#if 0
 static int omf_lib_next_block(int fd,unsigned long checkofs) {
     unsigned long endoff;
 
@@ -555,42 +745,122 @@ static int omf_lib_next_block(int fd,unsigned long checkofs) {
 
     return 1;
 }
+#endif
 
-static int read_omf_record(int fd) {
-    unsigned char sum = 0;
-    unsigned int i;
+int omf_context_next_lib_module_fd(struct omf_context_t * const ctx,int fd) {
+    unsigned long ofs;
 
-    omf_recoffs = lseek(fd,0,SEEK_CUR);
-    if (read(fd,omf_record,3) != 3)
+    // if the last record was a LIBEND, then stop reading.
+    // non-OMF junk usually follows.
+    if (ctx->record.rectype == 0xF1)
         return 0;
 
-    omf_rectype = omf_record[0];
-    omf_reclen = *((uint16_t*)(omf_record+1));
-    if (omf_rectype == 0 || omf_reclen == 0)
-        return 0;
-    if (omf_reclen > sizeof(omf_record))
-        return 0;
-
-    for (i=0;i < 3;i++)
-        sum += omf_record[i];
-
-    if ((unsigned int)read(fd,omf_record,omf_reclen) != omf_reclen)
-        return 0;
-
-    if (omf_record[omf_reclen-1]/* checksum */ != 0) {
-        for (i=0;i < omf_reclen;i++)
-            sum += omf_record[i];
-
-        if (sum != 0) {
-            fprintf(stderr,"* checksum failed sum=0x%02x\n",sum);
-            return 0;
-        }
+    // if the last record was not a MODEND, then stop reading.
+    if ((ctx->record.rectype&0xFE) != 0x8A) { // Not 0x8A or 0x8B
+        errno = EIO;
+        return -1;
     }
-    omf_recpos=0;
-    omf_reclen--; /* exclude checksum byte */
+
+    // if we don't have a block size, then we cannot advance
+    if (ctx->library_block_size == 0UL)
+        return 0;
+
+    // where does the next block size start?
+    ofs = ctx->record.rec_file_offset + 3 + ctx->record.reclen;
+    ofs += ctx->library_block_size - 1UL;
+    ofs -= ofs % ctx->library_block_size;
+    if (lseek(fd,(off_t)ofs,SEEK_SET) != (off_t)ofs)
+        return 0;
+
+    ctx->record.rec_file_offset = ofs;
+    ctx->record.rectype = 0;
+    ctx->record.reclen = 0;
     return 1;
 }
 
+int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
+    unsigned char sum = 0;
+    unsigned char tmp[3];
+    unsigned int i;
+    int ret;
+
+    // if the last record was a LIBEND, then stop reading.
+    // non-OMF junk usually follows.
+    if (ctx->record.rectype == 0xF1)
+        return 0;
+
+    // if the last record was a MODEND, then stop reading, make caller move to next module with another function
+    if ((ctx->record.rectype&0xFE) == 0x8A) // 0x8A or 0x8B
+        return 0;
+
+    ctx->last_error = NULL;
+    omf_record_clear(&ctx->record);
+    if (ctx->record.data == NULL && omf_record_data_alloc(&ctx->record,0) < 0)
+        return -1; // sets errno
+    if (ctx->record.data_alloc < 16) {
+        ctx->last_error = "Record buffer too small";
+        errno = EINVAL;
+        return -1;
+    }
+
+    ctx->record.rec_file_offset = lseek(fd,0,SEEK_CUR);
+
+    if ((ret=read(fd,tmp,3)) != 3) {
+        if (ret >= 0) {
+            return 0; // EOF
+        }
+
+        ctx->last_error = "Reading OMF record header failed";
+        // read sets errno
+        return -1;
+    }
+    ctx->record.rectype = tmp[0];
+    ctx->record.reclen = *((uint16_t*)(tmp+1)); // length (including checksum)
+    if (ctx->record.rectype == 0 || ctx->record.reclen == 0)
+        return 0;
+    if (ctx->record.reclen > ctx->record.data_alloc) {
+        ctx->last_error = "Reading OMF record failed because record too large for buffer";
+        errno = EOVERFLOW;
+        return -1;
+    }
+    if ((unsigned int)(ret=read(fd,ctx->record.data,ctx->record.reclen)) != (unsigned int)ctx->record.reclen) {
+        ctx->last_error = "Reading OMF record contents failed";
+        if (ret >= 0) errno = EIO;
+        return -1;
+    }
+
+    /* check checksum */
+    if (ctx->record.data[ctx->record.reclen-1] != 0/*optional*/) {
+        for (i=0;i < 3;i++)
+            sum += tmp[i];
+        for (i=0;i < ctx->record.reclen;i++)
+            sum += ctx->record.data[i];
+
+        if (sum != 0) {
+            ctx->last_error = "Reading OMF record checksum failed";
+            errno = EIO;
+            return -1;
+        }
+    }
+
+    /* remember LIBHEAD block size */
+    if (ctx->record.rectype == 0xF0/*LIBHEAD*/) {
+        if (ctx->library_block_size == 0) {
+            // and the length of the record defines the block size that modules within are aligned by
+            ctx->library_block_size = ctx->record.reclen + 3;
+        }
+        else {
+            ctx->last_error = "LIBHEAD defined again";
+            errno = EIO;
+            return -1;
+        }
+    }
+
+    ctx->record.reclen--; // omit checksum from reclen
+    return 1;
+}
+
+#if 0
 unsigned int omfrec_get_remstr(char * const dst,const size_t dstmax) {
     unsigned int len;
 
@@ -633,7 +903,9 @@ unsigned int omfrec_get_lenstr(char * const dst,const size_t dstmax) {
 
     return len;
 }
+#endif
 
+#if 0
 void dump_THEADR(void) {
     /* omf_record+0: length of the string */
     /* omf_record+1: ASCII string */
@@ -1458,6 +1730,7 @@ void dump_MODEND(const unsigned char b32) {
         }
     }
 }
+#endif
 
 void my_dumpstate(void) {
     unsigned int i;
@@ -1481,10 +1754,7 @@ int main(int argc,char **argv) {
     unsigned char dumpstate = 0;
     unsigned char diddump = 0;
     unsigned char verbose = 0;
-    unsigned char lasttype;
-    unsigned long lastofs;
-    unsigned int lastlen;
-    int i,fd;
+    int i,fd,ret;
     char *a;
 
     for (i=1;i < argc;) {
@@ -1532,18 +1802,29 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    do {
-        while (read_omf_record(fd)) {
-            lastlen = omf_reclen;
-            lastofs = omf_recoffs;
-            lasttype = omf_rectype;
-            printf("OMF record type=0x%02x (%s: %s) length=%u offset=%lu\n",
-                    omf_rectype,
-                    omf_rectype_to_str(omf_rectype),
-                    omf_rectype_to_str_long(omf_rectype),
-                    omf_reclen,
-                    omf_recoffs);
+    omf_context_begin_file(omf_state);
 
+    do {
+        do {
+            ret = omf_context_read_fd(omf_state,fd);
+            if (ret <= 0) {
+                if (ret < 0) {
+                    fprintf(stderr,"Error: %s\n",strerror(errno));
+                    if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
+                }
+
+                break;
+            }
+
+            printf("OMF record type=0x%02x (%s: %s) length=%u offset=%lu blocksize=%u\n",
+                    omf_state->record.rectype,
+                    omf_rectype_to_str(omf_state->record.rectype),
+                    omf_rectype_to_str_long(omf_state->record.rectype),
+                    omf_state->record.reclen,
+                    omf_state->record.rec_file_offset,
+                    omf_state->library_block_size);
+
+#if 0
             switch (omf_rectype) {
                 case 0x80:/* THEADR */
                     dump_THEADR();
@@ -1609,23 +1890,18 @@ int main(int argc,char **argv) {
 
             omfrec_checkrange();
             if (omf_rectype == 0xF1) break; // stop at LIBEND. there's non-OMF records that usually follow it.
-        }
+#endif
+        } while (1);
 
-        if (lasttype == 0x8A || lasttype == 0x8B) {
-            if (dumpstate) {
-                my_dumpstate();
-                diddump = 1;
-            }
-
-            /* if the last record as MODEND, then advance to the next block in the file
-             * and try to read again (.LIB parsing case). clear lasttype to avoid infinite loops. */
-            lasttype = 0;
-            if (!omf_lib_next_block(fd,lastofs+3UL+(unsigned long)lastlen))
+        if (omf_record_is_modend(&omf_state->record)) {
+            ret = omf_context_next_lib_module_fd(omf_state,fd);
+            if (ret == 0)
                 break;
-
-            diddump = 0;
-            omf_reset();
-            printf("\n* Another .LIB object archive begins...\n\n");
+            else if (ret < 0) {
+                printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
+                if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
+                break;
+            }
         }
         else {
             break;
@@ -1635,7 +1911,8 @@ int main(int argc,char **argv) {
     if (dumpstate && !diddump)
         my_dumpstate();
 
-    omf_reset();
+//    omf_reset();
+    omf_context_clear(omf_state);
     omf_state = omf_context_destroy(omf_state);
     close(fd);
     return 0;
