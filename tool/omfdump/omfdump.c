@@ -113,6 +113,31 @@ const char *omf_rectype_to_str(unsigned char rt) {
 
 //static char                 tempstr[257];
 
+#define OMF_RECTYPE_THEADR      (0x80)
+
+int cstr_set_n(char ** const p,const char * const str,const size_t strl) {
+    char *x;
+
+    if (*p != NULL) {
+        free(*p);
+        *p = NULL;
+    }
+
+    x = malloc(strl+1);
+    if (x == NULL) return -1;
+    memcpy(x,str,strl);
+    x[strl] = 0;
+    *p = x;
+    return 0;
+}
+
+void cstr_free(char ** const p) {
+    if (*p != NULL) {
+        free(*p);
+        *p = NULL;
+    }
+}
+
 struct omf_record_t {
     unsigned char           rectype;
     unsigned short          reclen;             // amount of data in data, reclen < data_alloc not including checksum
@@ -278,6 +303,38 @@ unsigned int omf_record_get_index(struct omf_record_t * const rec) {
     }
 
     return t;
+}
+
+int omf_record_read_data(unsigned char *dst,unsigned int len,struct omf_record_t *rec) {
+    unsigned int avail;
+
+    avail = omf_record_data_available(rec);
+    if (len > avail) len = avail;
+
+    if (len != 0) {
+        memcpy(dst,rec->data+rec->recpos,len);
+        rec->recpos += len;
+    }
+
+    return len;
+}
+
+int omf_record_get_lenstr(char *dst,const size_t dstmax,struct omf_record_t *rec) {
+    unsigned char len;
+
+    len = omf_record_get_byte(rec);
+    if ((len+1U) > dstmax) {
+        errno = ENOSPC;
+        return -1;
+    }
+
+    if (omf_record_read_data((unsigned char*)dst,len,rec) < len) {
+        errno = EIO;
+        return -1;
+    }
+
+    dst[len] = 0;
+    return len;
 }
 
 void omf_record_free(struct omf_record_t * const rec) {
@@ -464,6 +521,7 @@ struct omf_context_t {
     struct omf_lnames_context_t         LNAMEs;
     struct omf_record_t                 record; // reading, during parsing
     unsigned short                      library_block_size;// is .LIB archive if nonzero
+    char*                               THEADR;
     struct {
         unsigned int                    verbose:1;
     } flags;
@@ -475,11 +533,13 @@ void omf_context_init(struct omf_context_t * const ctx) {
     ctx->last_error = NULL;
     ctx->flags.verbose = 0;
     ctx->library_block_size = 0;
+    ctx->THEADR = NULL;
 }
 
 void omf_context_free(struct omf_context_t * const ctx) {
     omf_lnames_context_free(&ctx->LNAMEs);
     omf_record_free(&ctx->record);
+    cstr_free(&ctx->THEADR);
 }
 
 struct omf_context_t *omf_context_create(void) {
@@ -500,12 +560,15 @@ struct omf_context_t *omf_context_destroy(struct omf_context_t * const ctx) {
 }
 
 void omf_context_begin_file(struct omf_context_t * const ctx) {
+    omf_lnames_context_free_names(&ctx->LNAMEs);
     omf_record_clear(&ctx->record);
     ctx->library_block_size = 0;
+    cstr_free(&ctx->THEADR);
 }
 
 void omf_context_begin_module(struct omf_context_t * const ctx) {
     omf_lnames_context_free_names(&ctx->LNAMEs);
+    cstr_free(&ctx->THEADR);
 }
 
 void omf_context_clear(struct omf_context_t * const ctx) {
@@ -908,6 +971,20 @@ unsigned int omfrec_get_lenstr(char * const dst,const size_t dstmax) {
     return len;
 }
 #endif
+
+static char templstr[255+1/*NUL*/];
+
+int omf_context_parse_THEADR(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
+    int len;
+
+    len = omf_record_get_lenstr(templstr,sizeof(templstr),rec);
+    if (len < 0) return -1;
+
+    if (cstr_set_n(&ctx->THEADR,templstr,len) < 0)
+        return -1;
+
+    return 0;
+}
 
 #if 0
 void dump_THEADR(void) {
@@ -1736,22 +1813,38 @@ void dump_MODEND(const unsigned char b32) {
 }
 #endif
 
+void dump_THEADR(const struct omf_context_t * const ctx) {
+    printf("* THEADR: ");
+    if (ctx->THEADR != NULL)
+        printf("\"%s\"",ctx->THEADR);
+    else
+        printf("(none)\n");
+
+    printf("\n");
+}
+
 void my_dumpstate(void) {
     unsigned int i;
     const char *p;
 
-    printf("\n");
+    printf("OBJ dump state:\n");
 
-    printf("LNAMEs:\n");
+    if (omf_state->THEADR != NULL)
+        printf("* THEADR: \"%s\"\n",omf_state->THEADR);
 
-    for (i=1;i <= omf_state->LNAMEs.omf_LNAMES_count;i++) {
-        p = omf_lnames_context_get_name(&omf_state->LNAMEs,i);
+    if (omf_state->LNAMEs.omf_LNAMES != NULL) {
+        printf("* LNAMEs:\n");
+        for (i=1;i <= omf_state->LNAMEs.omf_LNAMES_count;i++) {
+            p = omf_lnames_context_get_name(&omf_state->LNAMEs,i);
 
-        if (p != NULL)
-            printf("   [%u]: \"%s\"\n",i,p);
-        else
-            printf("   [%u]: (null)\n",i);
+            if (p != NULL)
+                printf("   [%u]: \"%s\"\n",i,p);
+            else
+                printf("   [%u]: (null)\n",i);
+        }
     }
+
+    printf("----END-----\n");
 }
 
 int main(int argc,char **argv) {
@@ -1812,6 +1905,11 @@ int main(int argc,char **argv) {
         ret = omf_context_read_fd(omf_state,fd);
         if (ret == 0) {
             if (omf_record_is_modend(&omf_state->record)) {
+                if (dumpstate && !diddump) {
+                    my_dumpstate();
+                    diddump = 1;
+                }
+
                 ret = omf_context_next_lib_module_fd(omf_state,fd);
                 if (ret < 0) {
                     printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
@@ -1819,6 +1917,7 @@ int main(int argc,char **argv) {
                 }
                 else if (ret > 0) {
                     omf_context_begin_module(omf_state);
+                    diddump = 0;
                     continue;
                 }
             }
@@ -1839,6 +1938,12 @@ int main(int argc,char **argv) {
                 omf_state->record.rec_file_offset,
                 omf_state->library_block_size);
 
+        switch (omf_state->record.rectype) {
+            case OMF_RECTYPE_THEADR:
+                omf_context_parse_THEADR(omf_state,&omf_state->record);
+                if (omf_state->flags.verbose) dump_THEADR(omf_state);
+                break;
+        }
 #if 0
             switch (omf_rectype) {
                 case 0x80:/* THEADR */
@@ -1908,8 +2013,10 @@ int main(int argc,char **argv) {
 #endif
     } while (1);
 
-    if (dumpstate && !diddump)
+    if (dumpstate && !diddump) {
         my_dumpstate();
+        diddump = 1;
+    }
 
 //    omf_reset();
     omf_context_clear(omf_state);
