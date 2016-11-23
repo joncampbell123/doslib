@@ -504,6 +504,10 @@ void omf_context_begin_file(struct omf_context_t * const ctx) {
     ctx->library_block_size = 0;
 }
 
+void omf_context_begin_module(struct omf_context_t * const ctx) {
+    omf_lnames_context_free_names(&ctx->LNAMEs);
+}
+
 void omf_context_clear(struct omf_context_t * const ctx) {
     omf_lnames_context_free_names(&ctx->LNAMEs);
     omf_record_clear(&ctx->record);
@@ -1805,24 +1809,35 @@ int main(int argc,char **argv) {
     omf_context_begin_file(omf_state);
 
     do {
-        do {
-            ret = omf_context_read_fd(omf_state,fd);
-            if (ret <= 0) {
+        ret = omf_context_read_fd(omf_state,fd);
+        if (ret == 0) {
+            if (omf_record_is_modend(&omf_state->record)) {
+                ret = omf_context_next_lib_module_fd(omf_state,fd);
                 if (ret < 0) {
-                    fprintf(stderr,"Error: %s\n",strerror(errno));
+                    printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
                     if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
                 }
-
-                break;
+                else if (ret > 0) {
+                    omf_context_begin_module(omf_state);
+                    continue;
+                }
             }
 
-            printf("OMF record type=0x%02x (%s: %s) length=%u offset=%lu blocksize=%u\n",
-                    omf_state->record.rectype,
-                    omf_rectype_to_str(omf_state->record.rectype),
-                    omf_rectype_to_str_long(omf_state->record.rectype),
-                    omf_state->record.reclen,
-                    omf_state->record.rec_file_offset,
-                    omf_state->library_block_size);
+            break;
+        }
+        else if (ret < 0) {
+            fprintf(stderr,"Error: %s\n",strerror(errno));
+            if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
+            break;
+        }
+
+        printf("OMF record type=0x%02x (%s: %s) length=%u offset=%lu blocksize=%u\n",
+                omf_state->record.rectype,
+                omf_rectype_to_str(omf_state->record.rectype),
+                omf_rectype_to_str_long(omf_state->record.rectype),
+                omf_state->record.reclen,
+                omf_state->record.rec_file_offset,
+                omf_state->library_block_size);
 
 #if 0
             switch (omf_rectype) {
@@ -1891,21 +1906,6 @@ int main(int argc,char **argv) {
             omfrec_checkrange();
             if (omf_rectype == 0xF1) break; // stop at LIBEND. there's non-OMF records that usually follow it.
 #endif
-        } while (1);
-
-        if (omf_record_is_modend(&omf_state->record)) {
-            ret = omf_context_next_lib_module_fd(omf_state,fd);
-            if (ret == 0)
-                break;
-            else if (ret < 0) {
-                printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
-                if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
-                break;
-            }
-        }
-        else {
-            break;
-        }
     } while (1);
 
     if (dumpstate && !diddump)
