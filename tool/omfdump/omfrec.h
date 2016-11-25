@@ -1,4 +1,7 @@
 
+#ifndef _DOSLIB_OMF_OMFREC_H
+#define _DOSLIB_OMF_OMFREC_H
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -52,4 +55,6 @@ void omf_record_free(struct omf_record_t * const rec);
 static inline unsigned char omf_record_eof(const struct omf_record_t * const rec) {
     return (omf_record_data_available(rec) == 0);
 }
+
+#endif //_DOSLIB_OMF_OMFREC_H
 
