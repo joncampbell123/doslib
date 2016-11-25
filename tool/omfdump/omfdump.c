@@ -115,6 +115,8 @@ const char *omf_rectype_to_str(unsigned char rt) {
 
 #define OMF_RECTYPE_THEADR      (0x80)
 
+#define OMF_RECTYPE_LNAMES      (0x96)
+
 int cstr_set_n(char ** const p,const char * const str,const size_t strl) {
     char *x;
 
@@ -426,7 +428,7 @@ const char *omf_lnames_context_get_name_safe(struct omf_lnames_context_t * const
     return (r != NULL) ? r : "[ERANGE]";
 }
 
-int omf_lnames_context_set_name(struct omf_lnames_context_t * const ctx,unsigned int i,const char *name) {
+int omf_lnames_context_set_name(struct omf_lnames_context_t * const ctx,unsigned int i,const char *name,const int namelen) {
     if (name == NULL) {
         errno = EFAULT;
         return -1;
@@ -451,17 +453,20 @@ int omf_lnames_context_set_name(struct omf_lnames_context_t * const ctx,unsigned
         ctx->omf_LNAMES[ctx->omf_LNAMES_count++] = NULL;
 
     {
-        size_t len = strlen(name);
+        size_t len = (namelen >= 0) ? (size_t)namelen : strlen(name);
         char *t = malloc(len+1);
         if (t == NULL) return -1; /* malloc sets errno */
-        memcpy(t,name,len+1); /* copy string + NUL */
+
+        if (len != 0) memcpy(t,name,len); /* copy string */
+        t[len] = 0; /* add NUL */
+
         ctx->omf_LNAMES[i] = t;
     }
 
     return 0;
 }
 
-int omf_lnames_context_add_name(struct omf_lnames_context_t * const ctx,const char *name) {
+int omf_lnames_context_add_name(struct omf_lnames_context_t * const ctx,const char *name,const int namelen) {
     unsigned int idx;
 
     if (ctx->omf_LNAMES != NULL)
@@ -469,7 +474,7 @@ int omf_lnames_context_add_name(struct omf_lnames_context_t * const ctx,const ch
     else
         idx = 1;
 
-    if (omf_lnames_context_set_name(ctx,idx,name) < 0)
+    if (omf_lnames_context_set_name(ctx,idx,name,namelen) < 0)
         return -1; /* sets errno */
 
     return (int)idx;
@@ -984,6 +989,21 @@ int omf_context_parse_THEADR(struct omf_context_t * const ctx,struct omf_record_
         return -1;
 
     return 0;
+}
+
+int omf_context_parse_LNAMES(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
+    int first_entry = ctx->LNAMEs.omf_LNAMES_count + 1; // 1-based, remember?
+    int len;
+
+    while (!omf_record_eof(rec)) {
+        len = omf_record_get_lenstr(templstr,sizeof(templstr),rec);
+        if (len < 0) return -1;
+
+        if (omf_lnames_context_add_name(&ctx->LNAMEs,templstr,len) < 0)
+            return -1;
+    }
+
+    return first_entry;
 }
 
 #if 0
@@ -1813,6 +1833,26 @@ void dump_MODEND(const unsigned char b32) {
 }
 #endif
 
+void dump_LNAMES(const struct omf_context_t * const ctx,unsigned int first_newest) {
+    unsigned int i = first_newest;
+
+    if (i == 0)
+        return;
+
+    printf("LNAMES (from %u): ",i);
+    while (i < (ctx->LNAMEs.omf_LNAMES_count + 1/*based*/)) {
+        const char *p = omf_lnames_context_get_name(&omf_state->LNAMEs,i);
+
+        if (p != NULL)
+            printf(" [%u]: \"%s\"",i,p);
+        else
+            printf(" [%u]: (null)",i);
+
+        i++;
+    }
+    printf("\n");
+}
+
 void dump_THEADR(const struct omf_context_t * const ctx) {
     printf("* THEADR: ");
     if (ctx->THEADR != NULL)
@@ -1939,10 +1979,28 @@ int main(int argc,char **argv) {
                 omf_state->library_block_size);
 
         switch (omf_state->record.rectype) {
-            case OMF_RECTYPE_THEADR:
-                omf_context_parse_THEADR(omf_state,&omf_state->record);
-                if (omf_state->flags.verbose) dump_THEADR(omf_state);
+            case OMF_RECTYPE_THEADR:/*0x80*/
+                if (omf_context_parse_THEADR(omf_state,&omf_state->record) < 0) {
+                    fprintf(stderr,"Error parsing THEADR\n");
+                    return 1;
+                }
+
+                if (omf_state->flags.verbose)
+                    dump_THEADR(omf_state);
+
                 break;
+            case OMF_RECTYPE_LNAMES:/*0x96*/{
+                int first_new_lname;
+
+                if ((first_new_lname=omf_context_parse_LNAMES(omf_state,&omf_state->record)) < 0) {
+                    fprintf(stderr,"Error parsing LNAMES\n");
+                    return 1;
+                }
+
+                if (omf_state->flags.verbose)
+                    dump_LNAMES(omf_state,(unsigned int)first_new_lname);
+
+                } break;
         }
 #if 0
             switch (omf_rectype) {
