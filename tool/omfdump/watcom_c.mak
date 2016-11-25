@@ -17,8 +17,9 @@ dos86s:
 dos86s/omfdump.obj: omfdump.c
 	$(CC) $(CFLAGS) $[@
 
-dos86s/omfdump.exe: dos86s/omfcstr.obj dos86s/omfrec.obj dos86s/omfrecs.obj dos86s/olnames.obj dos86s/omfdump.obj
+dos86s/omfdump.exe: dos86s/omfcstr.obj dos86s/omfrec.obj dos86s/omfrecs.obj dos86s/olnames.obj dos86s/osegdefs.obj dos86s/omfdump.obj
 	%write tmp.cmd option quiet system dos
+	%write tmp.cmd file dos86s/osegdefs.obj
 	%write tmp.cmd file dos86s/olnames.obj
 	%write tmp.cmd file dos86s/omfcstr.obj
 	%write tmp.cmd file dos86s/omfrec.obj
