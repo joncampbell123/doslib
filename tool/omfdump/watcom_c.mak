@@ -17,9 +17,10 @@ dos86s:
 dos86s/omfdump.obj: omfdump.c
 	$(CC) $(CFLAGS) $[@
 
-dos86s/omfdump.exe: dos86s/omfcstr.obj dos86s/omfdump.obj
+dos86s/omfdump.exe: dos86s/omfcstr.obj dos86s/omfrec.obj dos86s/omfdump.obj
 	%write tmp.cmd option quiet system dos
 	%write tmp.cmd file dos86s/omfcstr.obj
+	%write tmp.cmd file dos86s/omfrec.obj
 	%write tmp.cmd file dos86s/omfdump.obj
 	%write tmp.cmd name dos86s/omfdump.exe
 	%write tmp.cmd option map=dos86s/omfdump.map
