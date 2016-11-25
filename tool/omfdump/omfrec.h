@@ -29,6 +29,9 @@
 #define OMF_RECTYPE_GRPDEF      (0x9A)
 #define OMF_RECTYPE_GRPDEF32    (0x9B)
 
+#define OMF_RECTYPE_LEDATA      (0xA0)
+#define OMF_RECTYPE_LEDATA32    (0xA1)
+
 #define OMF_RECTYPE_LEXTDEF     (0xB4)
 #define OMF_RECTYPE_LEXTDEF32   (0xB5)
 

@@ -26,7 +26,37 @@
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
- 
+
+//================================== LEDATA =============================
+
+// this is filled in by a utility function after reading the OMF record from the beginning.
+// the data pointer is valid UNTIL the OMF record is overwritten/rewritten, so take the
+// data right after parsing the header, before you read another OMF record.
+struct omf_ledata_info_t {
+    unsigned int                        segment_index;
+    unsigned long                       enum_data_offset;
+    unsigned long                       data_length;
+    unsigned char*                      data;
+};
+
+int omf_ledata_parse_header(struct omf_ledata_info_t * const info,struct omf_record_t * const rec) {
+    info->data = NULL;
+    info->data_length = 0;
+
+    if (omf_record_eof(rec)) return -1;
+    info->segment_index = omf_record_get_index(rec);
+
+    if (omf_record_eof(rec)) return -1;
+    info->enum_data_offset = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
+
+    // what's left in the record is the data
+    info->data = rec->data + rec->recpos;
+    info->data_length = omf_record_data_available(rec);
+
+    // DONE
+    return 0;
+}
+
 //================================== OMF ================================
 
 char                                    omf_temp_str[255+1/*NUL*/];
@@ -578,6 +608,45 @@ void dump_PUBDEF(const struct omf_context_t * const ctx,unsigned int i) {
     }
 }
 
+void dump_LEDATA(const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info) {
+    unsigned long i,pos;
+    unsigned int col;
+
+    printf("LEDATA segment=\"%s\"(%u) data_offset=0x%lX(%lu) length=0x%lX(%lu)\n",
+        omf_context_get_segdef_name_safe(ctx,info->segment_index),
+        info->segment_index,
+        (unsigned long)info->enum_data_offset,
+        (unsigned long)info->enum_data_offset,
+        (unsigned long)info->data_length,
+        (unsigned long)info->data_length);
+
+    i = 0;
+    col = 0;
+    pos = info->enum_data_offset;
+    while (i < info->data_length) {
+        if (col == 0)
+            printf("    0x%08lX: ",pos & (~0xFUL));
+
+        while (col < (unsigned int)(pos & 0xFUL)) {
+            printf("  %c",col==7?'-':' ');
+            col++;
+        }
+
+        printf("%02X%c",info->data[i],col==7?'-':' ');
+        col++;
+        pos++;
+        i++;
+
+        if (col == 0x10) {
+            printf("\n");
+            col = 0;
+        }
+    }
+
+    if (col != 0)
+        printf("\n");
+}
+
 void my_dumpstate(const struct omf_context_t * const ctx) {
     unsigned int i;
     const char *p;
@@ -787,7 +856,19 @@ int main(int argc,char **argv) {
                     dump_GRPDEF(omf_state,(unsigned int)first_new_grpdef);
 
                 } break;
+            case OMF_RECTYPE_LEDATA:/*0xA0*/
+            case OMF_RECTYPE_LEDATA32:/*0xA1*/{
+                struct omf_ledata_info_t info;
 
+                if (omf_ledata_parse_header(&info,&omf_state->record) < 0) {
+                    fprintf(stderr,"Error parsing LEDATA\n");
+                    return 1;
+                }
+
+                if (omf_state->flags.verbose)
+                    dump_LEDATA(omf_state,&info);
+
+                } break;
         }
 #if 0
             switch (omf_rectype) {
