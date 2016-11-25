@@ -23,25 +23,17 @@ struct omf_lnames_context_t *omf_lnames_context_destroy(struct omf_lnames_contex
 
 // return the lowest valid LNAME index
 static inline unsigned int omf_lnames_context_get_lowest_index(const struct omf_lnames_context_t * const ctx) {
-    if (ctx->omf_LNAMES == NULL)
-        return 0;
-
+    (void)ctx;
     return 1;
 }
 
 // return the highest valid LNAME index
 static inline unsigned int omf_lnames_context_get_highest_index(const struct omf_lnames_context_t * const ctx) {
-    if (ctx->omf_LNAMES == NULL)
-        return 0;
-
     return ctx->omf_LNAMES_count;
 }
 
 // return the index the next LNAME will get after calling add_name()
 static inline unsigned int omf_lnames_context_get_next_add_index(const struct omf_lnames_context_t * const ctx) {
-    if (ctx->omf_LNAMES == NULL)
-        return 0;
-
     return ctx->omf_LNAMES_count + 1;
 }
 
