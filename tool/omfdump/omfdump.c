@@ -887,7 +887,7 @@ int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
         return 0;
     if (ctx->record.reclen > ctx->record.data_alloc) {
         ctx->last_error = "Reading OMF record failed because record too large for buffer";
-        errno = EOVERFLOW;
+        errno = ERANGE;
         return -1;
     }
     if ((unsigned int)(ret=read(fd,ctx->record.data,ctx->record.reclen)) != (unsigned int)ctx->record.reclen) {
