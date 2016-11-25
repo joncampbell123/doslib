@@ -29,7 +29,7 @@
  
 //================================== OMF ================================
 
-char                                    templstr[255+1/*NUL*/];
+char                                    omf_temp_str[255+1/*NUL*/];
 
 struct omf_context_t {
     const char*                         last_error;
@@ -254,10 +254,10 @@ int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
 int omf_context_parse_THEADR(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
     int len;
 
-    len = omf_record_get_lenstr(templstr,sizeof(templstr),rec);
+    len = omf_record_get_lenstr(omf_temp_str,sizeof(omf_temp_str),rec);
     if (len < 0) return -1;
 
-    if (cstr_set_n(&ctx->THEADR,templstr,len) < 0)
+    if (cstr_set_n(&ctx->THEADR,omf_temp_str,len) < 0)
         return -1;
 
     return 0;
@@ -268,10 +268,10 @@ int omf_context_parse_LNAMES(struct omf_context_t * const ctx,struct omf_record_
     int len;
 
     while (!omf_record_eof(rec)) {
-        len = omf_record_get_lenstr(templstr,sizeof(templstr),rec);
+        len = omf_record_get_lenstr(omf_temp_str,sizeof(omf_temp_str),rec);
         if (len < 0) return -1;
 
-        if (omf_lnames_context_add_name(&ctx->LNAMEs,templstr,len) < 0)
+        if (omf_lnames_context_add_name(&ctx->LNAMEs,omf_temp_str,len) < 0)
             return -1;
     }
 
@@ -358,10 +358,10 @@ int omf_context_parse_EXTDEF(struct omf_context_t * const ctx,struct omf_record_
         if (extdef == NULL)
             return -1;
 
-        len = omf_record_get_lenstr(templstr,sizeof(templstr),rec);
+        len = omf_record_get_lenstr(omf_temp_str,sizeof(omf_temp_str),rec);
         if (len < 0) return -1;
 
-        if (omf_extdefs_context_set_extdef_name(&ctx->EXTDEFs,extdef,templstr,len) < 0)
+        if (omf_extdefs_context_set_extdef_name(&ctx->EXTDEFs,extdef,omf_temp_str,len) < 0)
             return -1;
 
         if (omf_record_eof(rec))
@@ -401,10 +401,10 @@ int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_
         if (pubdef == NULL)
             return -1;
 
-        len = omf_record_get_lenstr(templstr,sizeof(templstr),rec);
+        len = omf_record_get_lenstr(omf_temp_str,sizeof(omf_temp_str),rec);
         if (len < 0) return -1;
 
-        if (omf_pubdefs_context_set_pubdef_name(&ctx->PUBDEFs,pubdef,templstr,len) < 0)
+        if (omf_pubdefs_context_set_pubdef_name(&ctx->PUBDEFs,pubdef,omf_temp_str,len) < 0)
             return -1;
 
         if (omf_record_eof(rec))
