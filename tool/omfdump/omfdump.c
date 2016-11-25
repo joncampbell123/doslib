@@ -420,7 +420,7 @@ const char *omf_lnames_context_get_name(const struct omf_lnames_context_t * cons
     return ctx->omf_LNAMES[i];
 }
 
-const char *omf_lnames_context_get_name_safe(struct omf_lnames_context_t * const ctx,unsigned int i) {
+const char *omf_lnames_context_get_name_safe(const struct omf_lnames_context_t * const ctx,unsigned int i) {
     const char *r = omf_lnames_context_get_name(ctx,i);
     return (r != NULL) ? r : "[ERANGE]";
 }
