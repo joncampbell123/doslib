@@ -119,6 +119,9 @@ const char *omf_rectype_to_str(unsigned char rt) {
 
 #define OMF_RECTYPE_LNAMES      (0x96)
 
+#define OMF_RECTYPE_SEGDEF      (0x98)
+#define OMF_RECTYPE_SEGDEF32    (0x99)
+
 //================================== cstr ================================
 
 void cstr_free(char ** const p) {
@@ -352,9 +355,9 @@ void omf_record_free(struct omf_record_t * const rec) {
 
 /* LNAMES collection */
 struct omf_lnames_context_t {
-    char**               omf_LNAMES;
-    unsigned int         omf_LNAMES_count;
-    unsigned int         omf_LNAMES_alloc;
+    char**              omf_LNAMES;
+    unsigned int        omf_LNAMES_count;
+    unsigned int        omf_LNAMES_alloc;
 };
 
 void omf_lnames_context_init(struct omf_lnames_context_t * const ctx) {
@@ -534,6 +537,161 @@ static inline unsigned int omf_lnames_context_get_next_add_index(const struct om
     return ctx->omf_LNAMES_count + 1;
 }
 
+//================================== SEGDEFS ================================
+
+/* SEGDEFS collection */
+#pragma pack(push,1)
+struct omf_segdef_attr_t {
+    union {
+        unsigned char       raw;
+        struct {
+            // NTS: This assumes GCC x86 bitfield order where the LSB comes first
+            unsigned int    use32:1;        // [0:0] aka "P"
+            unsigned int    big_segment:1;  // [1:1] length == 0, 16-bit segment is 64KB, 32-bit segment is 4GB
+            unsigned int    combination:3;  // [4:2]
+            unsigned int    alignment:3;    // [7:5]
+        } f;
+    } f;
+    uint16_t            frame_number;   // <conditional> if alignment == 0 (absolute)
+    uint8_t             offset;         // <conditional> if alignment == 0 (absolute)
+};
+
+struct omf_segdef_t {
+    struct omf_segdef_attr_t        attr;
+    uint32_t                        segment_length;
+    uint16_t                        segment_name_index;
+    uint16_t                        class_name_index;
+    uint16_t                        overlay_name_index;
+};
+#pragma pack(pop)
+
+struct omf_segdefs_context_t {
+    struct omf_segdef_t*            omf_SEGDEFS;
+    unsigned int                    omf_SEGDEFS_count;
+    unsigned int                    omf_SEGDEFS_alloc;
+};
+
+void omf_segdefs_context_init_segdef(struct omf_segdef_t *s) {
+    memset(s,0,sizeof(*s));
+}
+
+void omf_segdefs_context_init(struct omf_segdefs_context_t * const ctx) {
+    ctx->omf_SEGDEFS = NULL;
+    ctx->omf_SEGDEFS_count = 0;
+#if defined(LINUX)
+    ctx->omf_SEGDEFS_alloc = 32768;
+#else
+    ctx->omf_SEGDEFS_alloc = 256;
+#endif
+}
+
+int omf_segdefs_context_alloc_segdefs(struct omf_segdefs_context_t * const ctx) {
+    if (ctx->omf_SEGDEFS != NULL)
+        return 0;
+
+    if (ctx->omf_SEGDEFS_alloc == 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ctx->omf_SEGDEFS_count = 0;
+    ctx->omf_SEGDEFS = (struct omf_segdef_t*)malloc(sizeof(struct omf_segdef_t) * ctx->omf_SEGDEFS_alloc);
+    if (ctx->omf_SEGDEFS == NULL)
+        return -1; /* malloc sets errno */
+
+    return 0;
+}
+
+void omf_segdefs_context_free_entries(struct omf_segdefs_context_t * const ctx) {
+    if (ctx->omf_SEGDEFS) {
+        free(ctx->omf_SEGDEFS);
+        ctx->omf_SEGDEFS = NULL;
+    }
+    ctx->omf_SEGDEFS_count = 0;
+}
+
+void omf_segdefs_context_free(struct omf_segdefs_context_t * const ctx) {
+    omf_segdefs_context_free_entries(ctx);
+}
+
+struct omf_segdefs_context_t *omf_segdefs_context_create(void) {
+    struct omf_segdefs_context_t *ctx;
+
+    ctx = (struct omf_segdefs_context_t*)malloc(sizeof(*ctx));
+    if (ctx != NULL) omf_segdefs_context_init(ctx);
+    return ctx;
+}
+
+struct omf_segdefs_context_t *omf_segdefs_context_destroy(struct omf_segdefs_context_t * const ctx) {
+    if (ctx != NULL) {
+        omf_segdefs_context_free(ctx);
+        free(ctx);
+    }
+
+    return NULL;
+}
+
+// return the lowest valid LNAME index
+static inline unsigned int omf_segdefs_context_get_lowest_index(const struct omf_segdefs_context_t * const ctx) {
+    if (ctx->omf_SEGDEFS == NULL)
+        return 0;
+
+    return 1;
+}
+
+// return the highest valid LNAME index
+static inline unsigned int omf_segdefs_context_get_highest_index(const struct omf_segdefs_context_t * const ctx) {
+    if (ctx->omf_SEGDEFS == NULL)
+        return 0;
+
+    return ctx->omf_SEGDEFS_count;
+}
+
+// return the index the next LNAME will get after calling add_segdef()
+static inline unsigned int omf_segdefs_context_get_next_add_index(const struct omf_segdefs_context_t * const ctx) {
+    if (ctx->omf_SEGDEFS == NULL)
+        return 0;
+
+    return ctx->omf_SEGDEFS_count + 1;
+}
+
+struct omf_segdef_t *omf_segdefs_context_add_segdef(struct omf_segdefs_context_t * const ctx) {
+    struct omf_segdef_t *seg;
+
+    if (omf_segdefs_context_alloc_segdefs(ctx) < 0)
+        return NULL;
+
+    if (ctx->omf_SEGDEFS_count >= ctx->omf_SEGDEFS_alloc) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    seg = ctx->omf_SEGDEFS + ctx->omf_SEGDEFS_count;
+    ctx->omf_SEGDEFS_count++;
+
+    omf_segdefs_context_init_segdef(seg);
+    return seg;
+}
+
+const struct omf_segdef_t *omf_segdefs_context_get_segdef(const struct omf_segdefs_context_t * const ctx,unsigned int i) {
+    if (ctx->omf_SEGDEFS == NULL) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    if ((i--) == 0) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    if (i >= ctx->omf_SEGDEFS_count) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    return ctx->omf_SEGDEFS + i;
+}
+
 //================================== OMF ================================
 
 char                                    templstr[255+1/*NUL*/];
@@ -541,6 +699,7 @@ char                                    templstr[255+1/*NUL*/];
 struct omf_context_t {
     const char*                         last_error;
     struct omf_lnames_context_t         LNAMEs;
+    struct omf_segdefs_context_t        SEGDEFs;
     struct omf_record_t                 record; // reading, during parsing
     unsigned short                      library_block_size;// is .LIB archive if nonzero
     char*                               THEADR;
@@ -550,6 +709,7 @@ struct omf_context_t {
 };
 
 void omf_context_init(struct omf_context_t * const ctx) {
+    omf_segdefs_context_init(&ctx->SEGDEFs);
     omf_lnames_context_init(&ctx->LNAMEs);
     omf_record_init(&ctx->record);
     ctx->last_error = NULL;
@@ -559,6 +719,7 @@ void omf_context_init(struct omf_context_t * const ctx) {
 }
 
 void omf_context_free(struct omf_context_t * const ctx) {
+    omf_segdefs_context_free(&ctx->SEGDEFs);
     omf_lnames_context_free(&ctx->LNAMEs);
     omf_record_free(&ctx->record);
     cstr_free(&ctx->THEADR);
@@ -582,6 +743,7 @@ struct omf_context_t *omf_context_destroy(struct omf_context_t * const ctx) {
 }
 
 void omf_context_begin_file(struct omf_context_t * const ctx) {
+    omf_segdefs_context_free_entries(&ctx->SEGDEFs);
     omf_lnames_context_free_names(&ctx->LNAMEs);
     omf_record_clear(&ctx->record);
     ctx->library_block_size = 0;
@@ -589,11 +751,13 @@ void omf_context_begin_file(struct omf_context_t * const ctx) {
 }
 
 void omf_context_begin_module(struct omf_context_t * const ctx) {
+    omf_segdefs_context_free_entries(&ctx->SEGDEFs);
     omf_lnames_context_free_names(&ctx->LNAMEs);
     cstr_free(&ctx->THEADR);
 }
 
 void omf_context_clear(struct omf_context_t * const ctx) {
+    omf_segdefs_context_free_entries(&ctx->SEGDEFs);
     omf_lnames_context_free_names(&ctx->LNAMEs);
     omf_record_clear(&ctx->record);
     ctx->library_block_size = 0;
@@ -739,6 +903,43 @@ int omf_context_parse_LNAMES(struct omf_context_t * const ctx,struct omf_record_
     return first_entry;
 }
 
+int omf_context_parse_SEGDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
+    int first_entry = omf_segdefs_context_get_next_add_index(&ctx->SEGDEFs);
+    struct omf_segdef_t *segdef = omf_segdefs_context_add_segdef(&ctx->SEGDEFs);
+
+    if (segdef == NULL)
+        return -1;
+
+    // read segment attributes
+    //   alignment      [7:5]
+    //   combination    [4:2]
+    //   big (max)      [1:1]
+    //   use32          [0:0]
+    segdef->attr.f.raw = omf_record_get_byte(rec);
+    // frame number (conditional)
+    if (segdef->attr.f.f.alignment == 0) {
+        segdef->attr.frame_number = omf_record_get_word(rec);
+        segdef->attr.offset = omf_record_get_byte(rec);
+    }
+
+    if (omf_record_eof(rec))
+        return -1;
+
+    if (rec->rectype & 1/*32-bit version*/)
+        segdef->segment_length = omf_record_get_dword(rec);
+    else
+        segdef->segment_length = omf_record_get_word(rec);
+
+    segdef->segment_name_index = omf_record_get_index(rec);
+    segdef->class_name_index = omf_record_get_index(rec);
+
+    if (omf_record_eof(rec))
+        return -1;
+
+    segdef->overlay_name_index = omf_record_get_index(rec);
+    return first_entry;
+}
+
 //================================== PROGRAM ================================
 
 static char*                            in_file = NULL;   
@@ -758,7 +959,7 @@ void dump_LNAMES(const struct omf_context_t * const ctx,unsigned int first_newes
     if (i == 0)
         return;
 
-    printf("LNAMES (from %u): ",i);
+    printf("LNAMES (from %u):",i);
     while (i <= omf_lnames_context_get_highest_index(&ctx->LNAMEs)) {
         const char *p = omf_lnames_context_get_name(&ctx->LNAMEs,i);
 
@@ -782,25 +983,53 @@ void dump_THEADR(const struct omf_context_t * const ctx) {
     printf("\n");
 }
 
-void my_dumpstate(void) {
+void dump_SEGDEF(const struct omf_context_t * const ctx,unsigned int i) {
+    const struct omf_segdef_t *segdef = omf_segdefs_context_get_segdef(&ctx->SEGDEFs,i);
+
+    printf("SEGDEF (%u):\n",i);
+    if (segdef != NULL) {
+        printf("    Alignment=%u combination=%u big=%u frame=%u offset=%u use%u\n",
+            segdef->attr.f.f.alignment,
+            segdef->attr.f.f.combination,
+            segdef->attr.f.f.big_segment,
+            segdef->attr.f.f.use32?32U:16U,
+            segdef->attr.frame_number,
+            segdef->attr.offset);
+        printf("    Length=%lu name=\"%s\"(%u) class=\"%s\"(%u) overlay=\"%s\"(%u)\n",
+            (unsigned long)segdef->segment_length,
+            omf_lnames_context_get_name(&ctx->LNAMEs,segdef->segment_name_index),
+            segdef->segment_name_index,
+            omf_lnames_context_get_name(&ctx->LNAMEs,segdef->class_name_index),
+            segdef->class_name_index,
+            omf_lnames_context_get_name(&ctx->LNAMEs,segdef->overlay_name_index),
+            segdef->overlay_name_index);
+    }
+}
+
+void my_dumpstate(const struct omf_context_t * const ctx) {
     unsigned int i;
     const char *p;
 
     printf("OBJ dump state:\n");
 
-    if (omf_state->THEADR != NULL)
-        printf("* THEADR: \"%s\"\n",omf_state->THEADR);
+    if (ctx->THEADR != NULL)
+        printf("* THEADR: \"%s\"\n",ctx->THEADR);
 
-    if (omf_state->LNAMEs.omf_LNAMES != NULL) {
+    if (ctx->LNAMEs.omf_LNAMES != NULL) {
         printf("* LNAMEs:\n");
-        for (i=1;i <= omf_state->LNAMEs.omf_LNAMES_count;i++) {
-            p = omf_lnames_context_get_name(&omf_state->LNAMEs,i);
+        for (i=1;i <= ctx->LNAMEs.omf_LNAMES_count;i++) {
+            p = omf_lnames_context_get_name(&ctx->LNAMEs,i);
 
             if (p != NULL)
                 printf("   [%u]: \"%s\"\n",i,p);
             else
                 printf("   [%u]: (null)\n",i);
         }
+    }
+
+    if (ctx->SEGDEFs.omf_SEGDEFS != NULL) {
+        for (i=1;i <= ctx->SEGDEFs.omf_SEGDEFS_count;i++)
+            dump_SEGDEF(omf_state,i);
     }
 
     printf("----END-----\n");
@@ -865,7 +1094,7 @@ int main(int argc,char **argv) {
         if (ret == 0) {
             if (omf_record_is_modend(&omf_state->record)) {
                 if (dumpstate && !diddump) {
-                    my_dumpstate();
+                    my_dumpstate(omf_state);
                     diddump = 1;
                 }
 
@@ -920,12 +1149,22 @@ int main(int argc,char **argv) {
                     dump_LNAMES(omf_state,(unsigned int)first_new_lname);
 
                 } break;
+            case OMF_RECTYPE_SEGDEF:/*0x98*/
+            case OMF_RECTYPE_SEGDEF32:/*0x99*/{
+                int first_new_segdef;
+
+                if ((first_new_segdef=omf_context_parse_SEGDEF(omf_state,&omf_state->record)) < 0) {
+                    fprintf(stderr,"Error parsing SEGDEF\n");
+                    return 1;
+                }
+
+                if (omf_state->flags.verbose)
+                    dump_SEGDEF(omf_state,(unsigned int)first_new_segdef);
+
+                } break;
         }
 #if 0
             switch (omf_rectype) {
-                case 0x80:/* THEADR */
-                    dump_THEADR();
-                    break;
                 case 0x82:/* LHEADR */
                     dump_LHEADR();
                     break;
@@ -942,13 +1181,6 @@ int main(int argc,char **argv) {
                 case 0x90:/* PUBDEF */
                 case 0x91:/* PUBDEF32 */
                     dump_PUBDEF(omf_rectype&1);
-                    break;
-                case 0x96:/* LNAMES */
-                    if (dump_LNAMES() < 0) return 1;
-                    break;
-                case 0x98:/* SEGDEF */
-                case 0x99:/* SEGDEF32 */
-                    dump_SEGDEF(omf_rectype&1);
                     break;
                 case 0x9A:/* GRPDEF */
                 case 0x9B:/* GRPDEF32 */
@@ -991,11 +1223,10 @@ int main(int argc,char **argv) {
     } while (1);
 
     if (dumpstate && !diddump) {
-        my_dumpstate();
+        my_dumpstate(omf_state);
         diddump = 1;
     }
 
-//    omf_reset();
     omf_context_clear(omf_state);
     omf_state = omf_context_destroy(omf_state);
     close(fd);
