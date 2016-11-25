@@ -4,8 +4,11 @@ all: linux-host linux-host/omfdump
 linux-host:
 	mkdir -p linux-host
 
-linux-host/omfdump: linux-host/omfdump.o
-	gcc -o $@ $<
+linux-host/omfdump: linux-host/omfcstr.o linux-host/omfdump.o
+	gcc -o $@ $?
+
+linux-host/omfcstr.o: omfcstr.c
+	gcc -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $<
 
 linux-host/omfdump.o: omfdump.c
 	gcc -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $<
