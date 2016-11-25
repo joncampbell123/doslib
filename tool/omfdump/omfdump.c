@@ -47,9 +47,13 @@ struct omf_context_t {
 };
 
 const char *omf_context_get_grpdef_name(const struct omf_context_t * const ctx,unsigned int i) {
-    const struct omf_grpdef_t *grpdef = omf_grpdefs_context_get_grpdef(&ctx->GRPDEFs,i);
-    if (grpdef == NULL) return NULL;
-    return omf_lnames_context_get_name(&ctx->LNAMEs,grpdef->group_name_index);
+    if (i > 0) {
+        const struct omf_grpdef_t *grpdef = omf_grpdefs_context_get_grpdef(&ctx->GRPDEFs,i);
+        if (grpdef == NULL) return NULL;
+        return omf_lnames_context_get_name(&ctx->LNAMEs,grpdef->group_name_index);
+    }
+
+    return ""; // group index == 0 means segment is not part of a group
 }
 
 const char *omf_context_get_grpdef_name_safe(const struct omf_context_t * const ctx,unsigned int i) {
