@@ -22,40 +22,11 @@
 #include "oextdeft.h"
 #include "opubdefs.h"
 #include "opubdeft.h"
+#include "omledata.h"
 
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
-
-//================================== LEDATA =============================
-
-// this is filled in by a utility function after reading the OMF record from the beginning.
-// the data pointer is valid UNTIL the OMF record is overwritten/rewritten, so take the
-// data right after parsing the header, before you read another OMF record.
-struct omf_ledata_info_t {
-    unsigned int                        segment_index;
-    unsigned long                       enum_data_offset;
-    unsigned long                       data_length;
-    unsigned char*                      data;
-};
-
-int omf_ledata_parse_header(struct omf_ledata_info_t * const info,struct omf_record_t * const rec) {
-    info->data = NULL;
-    info->data_length = 0;
-
-    if (omf_record_eof(rec)) return -1;
-    info->segment_index = omf_record_get_index(rec);
-
-    if (omf_record_eof(rec)) return -1;
-    info->enum_data_offset = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
-
-    // what's left in the record is the data
-    info->data = rec->data + rec->recpos;
-    info->data_length = omf_record_data_available(rec);
-
-    // DONE
-    return 0;
-}
 
 //================================== OMF ================================
 
