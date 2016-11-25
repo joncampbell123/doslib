@@ -15,6 +15,8 @@
 #define O_BINARY (0)
 #endif
 
+//================================== OMF rec types strings ================================
+
 const char *omf_rectype_to_str_long(unsigned char rt) {
     switch (rt) {
         case 0x80:  return "Translator Header Record";
@@ -111,7 +113,7 @@ const char *omf_rectype_to_str(unsigned char rt) {
     return "?";
 }
 
-//static char                 tempstr[257];
+//================================== OMF rec types ================================
 
 #define OMF_RECTYPE_THEADR      (0x80)
 
