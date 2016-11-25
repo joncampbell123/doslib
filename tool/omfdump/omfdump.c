@@ -16,6 +16,7 @@
 #include "omfrec.h"
 #include "olnames.h"
 #include "osegdefs.h"
+#include "osegdeft.h"
 #include "ogrpdefs.h"
 #include "oextdefs.h"
 #include "oextdeft.h"
@@ -23,7 +24,7 @@
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
-
+ 
 //================================== OMF ================================
 
 char                                    templstr[255+1/*NUL*/];
@@ -391,8 +392,10 @@ void dump_SEGDEF(const struct omf_context_t * const ctx,unsigned int i) {
 
     printf("SEGDEF (%u):\n",i);
     if (segdef != NULL) {
-        printf("    Alignment=%u combination=%u big=%u frame=%u offset=%u use%u\n",
+        printf("    Alignment=%s(%u) combination=%s(%u) big=%u frame=%u offset=%u use%u\n",
+            omf_segdefs_alignment_to_str(segdef->attr.f.f.alignment),
             segdef->attr.f.f.alignment,
+            omf_segdefs_combination_to_str(segdef->attr.f.f.alignment),
             segdef->attr.f.f.combination,
             segdef->attr.f.f.big_segment,
             segdef->attr.f.f.use32?32U:16U,
