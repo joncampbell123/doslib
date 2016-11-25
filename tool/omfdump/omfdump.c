@@ -46,6 +46,28 @@ struct omf_context_t {
     } flags;
 };
 
+const char *omf_context_get_grpdef_name(const struct omf_context_t * const ctx,unsigned int i) {
+    const struct omf_grpdef_t *grpdef = omf_grpdefs_context_get_grpdef(&ctx->GRPDEFs,i);
+    if (grpdef == NULL) return NULL;
+    return omf_lnames_context_get_name(&ctx->LNAMEs,grpdef->group_name_index);
+}
+
+const char *omf_context_get_grpdef_name_safe(const struct omf_context_t * const ctx,unsigned int i) {
+    const char *r = omf_context_get_grpdef_name(ctx,i);
+    return (r != NULL) ? r : "[ERANGE]";
+}
+
+const char *omf_context_get_segdef_name(const struct omf_context_t * const ctx,unsigned int i) {
+    const struct omf_segdef_t *segdef = omf_segdefs_context_get_segdef(&ctx->SEGDEFs,i);
+    if (segdef == NULL) return NULL;
+    return omf_lnames_context_get_name(&ctx->LNAMEs,segdef->segment_name_index);
+}
+
+const char *omf_context_get_segdef_name_safe(const struct omf_context_t * const ctx,unsigned int i) {
+    const char *r = omf_context_get_segdef_name(ctx,i);
+    return (r != NULL) ? r : "[ERANGE]";
+}
+ 
 void omf_context_init(struct omf_context_t * const ctx) {
     omf_pubdefs_context_init(&ctx->PUBDEFs);
     omf_extdefs_context_init(&ctx->EXTDEFs);
@@ -529,33 +551,13 @@ void dump_PUBDEF(const struct omf_context_t * const ctx,unsigned int i) {
             if (pubdef->name_string != NULL)
                 printf("\"%s\"",pubdef->name_string);
 
-            {
-                const struct omf_grpdef_t *grpdef = omf_grpdefs_context_get_grpdef(&ctx->GRPDEFs,pubdef->group_index);
+            printf(" group=\"%s\"(%u)",
+                omf_context_get_grpdef_name_safe(ctx,pubdef->group_index),
+                pubdef->group_index);
 
-                if (grpdef) {
-                    printf(" group=\"%s\"(%u)",
-                        omf_lnames_context_get_name_safe(&ctx->LNAMEs,grpdef->group_name_index),
-                        pubdef->group_index);
-                }
-                else {
-                    printf(" group=(%u)",
-                        pubdef->group_index);
-                }
-            }
-
-            {
-                const struct omf_segdef_t *segdef = omf_segdefs_context_get_segdef(&ctx->SEGDEFs,pubdef->segment_index);
-
-                if (segdef) {
-                    printf(" segment=\"%s\"(%u)",
-                        omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef->segment_name_index),
-                        pubdef->segment_index);
-                }
-                else {
-                    printf(" segment=(%u)",
-                        pubdef->segment_index);
-                }
-            }
+            printf(" segment=\"%s\"(%u)",
+                omf_context_get_segdef_name_safe(ctx,pubdef->segment_index),
+                pubdef->segment_index);
 
             printf(" offset=0x%lX(%lu)",
                     (unsigned long)pubdef->public_offset,
