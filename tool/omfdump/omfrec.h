@@ -16,6 +16,8 @@
 
 #define OMF_RECTYPE_THEADR      (0x80)
 
+#define OMF_RECTYPE_EXTDEF      (0x8C)
+
 #define OMF_RECTYPE_LNAMES      (0x96)
 
 #define OMF_RECTYPE_SEGDEF      (0x98)
@@ -23,6 +25,9 @@
 
 #define OMF_RECTYPE_GRPDEF      (0x9A)
 #define OMF_RECTYPE_GRPDEF32    (0x9B)
+
+#define OMF_RECTYPE_LEXTDEF     (0xB4)
+#define OMF_RECTYPE_LEXTDEF32   (0xB5)
 
 //================================== records ================================
 

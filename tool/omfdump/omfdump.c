@@ -22,6 +22,161 @@
 #define O_BINARY (0)
 #endif
 
+enum {
+    OMF_EXTDEF_TYPE_GLOBAL=0,
+    OMF_EXTDEF_TYPE_LOCAL
+};
+
+struct omf_extdef_t {
+    char*                           name_string;
+    unsigned int                    type_index;
+    unsigned char                   type;
+};
+
+struct omf_extdefs_context_t {
+    struct omf_extdef_t*            omf_EXTDEFS;
+    unsigned int                    omf_EXTDEFS_count;
+    unsigned int                    omf_EXTDEFS_alloc;
+};
+
+const char *omf_extdef_type_to_string(const unsigned char t) {
+    switch (t) {
+        case OMF_EXTDEF_TYPE_GLOBAL:    return "GLOBAL";
+        case OMF_EXTDEF_TYPE_LOCAL:     return "LOCAL";
+    };
+
+    return "?";
+}
+
+void omf_extdefs_context_init_extdef(struct omf_extdef_t * const ctx) {
+    ctx->type = OMF_EXTDEF_TYPE_LOCAL;
+    ctx->name_string = NULL;
+    ctx->type_index = 0;
+}
+
+void omf_extdefs_context_init(struct omf_extdefs_context_t * const ctx) {
+    ctx->omf_EXTDEFS = NULL;
+    ctx->omf_EXTDEFS_count = 0;
+#if defined(LINUX)
+    ctx->omf_EXTDEFS_alloc = 32768;
+#else
+    ctx->omf_EXTDEFS_alloc = 2048;
+#endif
+}
+
+void omf_extdefs_context_free_entries(struct omf_extdefs_context_t * const ctx) {
+    unsigned int i;
+
+    if (ctx->omf_EXTDEFS) {
+        for (i=0;i < ctx->omf_EXTDEFS_count;i++)
+            cstr_free(&(ctx->omf_EXTDEFS[i].name_string));
+
+        free(ctx->omf_EXTDEFS);
+        ctx->omf_EXTDEFS = NULL;
+    }
+    ctx->omf_EXTDEFS_count = 0;
+}
+
+void omf_extdefs_context_free(struct omf_extdefs_context_t * const ctx) {
+    omf_extdefs_context_free_entries(ctx);
+}
+
+struct omf_extdefs_context_t *omf_extdefs_context_create(void) {
+    struct omf_extdefs_context_t *ctx;
+
+    ctx = (struct omf_extdefs_context_t*)malloc(sizeof(*ctx));
+    if (ctx != NULL) omf_extdefs_context_init(ctx);
+    return ctx;
+}
+
+struct omf_extdefs_context_t *omf_extdefs_context_destroy(struct omf_extdefs_context_t * const ctx) {
+    if (ctx != NULL) {
+        omf_extdefs_context_free(ctx);
+        free(ctx);
+    }
+
+    return NULL;
+}
+
+int omf_extdefs_context_alloc_extdefs(struct omf_extdefs_context_t * const ctx) {
+    if (ctx->omf_EXTDEFS != NULL)
+        return 0;
+
+    if (ctx->omf_EXTDEFS_alloc == 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ctx->omf_EXTDEFS_count = 0;
+    ctx->omf_EXTDEFS = (struct omf_extdef_t*)malloc(sizeof(struct omf_extdef_t) * ctx->omf_EXTDEFS_alloc);
+    if (ctx->omf_EXTDEFS == NULL)
+        return -1; /* malloc sets errno */
+
+    return 0;
+}
+
+struct omf_extdef_t *omf_extdefs_context_add_extdef(struct omf_extdefs_context_t * const ctx) {
+    struct omf_extdef_t *seg;
+
+    if (omf_extdefs_context_alloc_extdefs(ctx) < 0)
+        return NULL;
+
+    if (ctx->omf_EXTDEFS_count >= ctx->omf_EXTDEFS_alloc) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    seg = ctx->omf_EXTDEFS + ctx->omf_EXTDEFS_count;
+    ctx->omf_EXTDEFS_count++;
+
+    omf_extdefs_context_init_extdef(seg);
+    return seg;
+}
+
+const struct omf_extdef_t *omf_extdefs_context_get_extdef(const struct omf_extdefs_context_t * const ctx,unsigned int i) {
+    if (ctx->omf_EXTDEFS == NULL) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    if ((i--) == 0) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    if (i >= ctx->omf_EXTDEFS_count) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    return ctx->omf_EXTDEFS + i;
+}
+
+int omf_extdefs_context_set_extdef_name(struct omf_extdefs_context_t * const ctx,struct omf_extdef_t * const extdef,const char * const name,const size_t namelen) {
+    (void)ctx;
+
+    if (cstr_set_n(&extdef->name_string,name,namelen) < 0)
+        return -1;
+
+    return 0;
+}
+
+// return the lowest valid LNAME index
+static inline unsigned int omf_extdefs_context_get_lowest_index(const struct omf_extdefs_context_t * const ctx) {
+    (void)ctx;
+    return 1;
+}
+
+// return the highest valid LNAME index
+static inline unsigned int omf_extdefs_context_get_highest_index(const struct omf_extdefs_context_t * const ctx) {
+    return ctx->omf_EXTDEFS_count;
+}
+
+// return the index the next LNAME will get after calling add_extdef()
+static inline unsigned int omf_extdefs_context_get_next_add_index(const struct omf_extdefs_context_t * const ctx) {
+    return ctx->omf_EXTDEFS_count + 1;
+}
+
 //================================== OMF ================================
 
 char                                    templstr[255+1/*NUL*/];
@@ -31,6 +186,7 @@ struct omf_context_t {
     struct omf_lnames_context_t         LNAMEs;
     struct omf_segdefs_context_t        SEGDEFs;
     struct omf_grpdefs_context_t        GRPDEFs;
+    struct omf_extdefs_context_t        EXTDEFs;
     struct omf_record_t                 record; // reading, during parsing
     unsigned short                      library_block_size;// is .LIB archive if nonzero
     char*                               THEADR;
@@ -40,6 +196,7 @@ struct omf_context_t {
 };
 
 void omf_context_init(struct omf_context_t * const ctx) {
+    omf_extdefs_context_init(&ctx->EXTDEFs);
     omf_grpdefs_context_init(&ctx->GRPDEFs);
     omf_segdefs_context_init(&ctx->SEGDEFs);
     omf_lnames_context_init(&ctx->LNAMEs);
@@ -51,6 +208,7 @@ void omf_context_init(struct omf_context_t * const ctx) {
 }
 
 void omf_context_free(struct omf_context_t * const ctx) {
+    omf_extdefs_context_free(&ctx->EXTDEFs);
     omf_grpdefs_context_free(&ctx->GRPDEFs);
     omf_segdefs_context_free(&ctx->SEGDEFs);
     omf_lnames_context_free(&ctx->LNAMEs);
@@ -76,6 +234,7 @@ struct omf_context_t *omf_context_destroy(struct omf_context_t * const ctx) {
 }
 
 void omf_context_begin_file(struct omf_context_t * const ctx) {
+    omf_extdefs_context_free_entries(&ctx->EXTDEFs);
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
     omf_segdefs_context_free_entries(&ctx->SEGDEFs);
     omf_lnames_context_free_names(&ctx->LNAMEs);
@@ -85,6 +244,7 @@ void omf_context_begin_file(struct omf_context_t * const ctx) {
 }
 
 void omf_context_begin_module(struct omf_context_t * const ctx) {
+    omf_extdefs_context_free_entries(&ctx->EXTDEFs);
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
     omf_segdefs_context_free_entries(&ctx->SEGDEFs);
     omf_lnames_context_free_names(&ctx->LNAMEs);
@@ -92,6 +252,7 @@ void omf_context_begin_module(struct omf_context_t * const ctx) {
 }
 
 void omf_context_clear(struct omf_context_t * const ctx) {
+    omf_extdefs_context_free_entries(&ctx->EXTDEFs);
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
     omf_segdefs_context_free_entries(&ctx->SEGDEFs);
     omf_lnames_context_free_names(&ctx->LNAMEs);
@@ -303,6 +464,38 @@ int omf_context_parse_GRPDEF(struct omf_context_t * const ctx,struct omf_record_
     return first_entry;
 }
 
+int omf_context_parse_EXTDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
+    int first_entry = omf_extdefs_context_get_next_add_index(&ctx->EXTDEFs);
+    unsigned int type;
+    int len;
+
+    if ((rec->rectype & 0xFE) == OMF_RECTYPE_LEXTDEF/*0xB4*/)
+        type = OMF_EXTDEF_TYPE_LOCAL;
+    else
+        type = OMF_EXTDEF_TYPE_GLOBAL;
+
+    while (!omf_record_eof(rec)) {
+        struct omf_extdef_t *extdef = omf_extdefs_context_add_extdef(&ctx->EXTDEFs);
+
+        if (extdef == NULL)
+            return -1;
+
+        len = omf_record_get_lenstr(templstr,sizeof(templstr),rec);
+        if (len < 0) return -1;
+
+        if (omf_extdefs_context_set_extdef_name(&ctx->EXTDEFs,extdef,templstr,len) < 0)
+            return -1;
+
+        if (omf_record_eof(rec))
+            return -1;
+
+        extdef->type = type;
+        extdef->type_index = omf_record_get_index(rec);
+    }
+
+    return first_entry;
+}
+
 //================================== PROGRAM ================================
 
 static char*                            in_file = NULL;   
@@ -399,6 +592,28 @@ void dump_GRPDEF(const struct omf_context_t * const ctx,unsigned int i) {
     }
 }
 
+void dump_EXTDEF(const struct omf_context_t * const ctx,unsigned int i) {
+    printf("EXTDEF (%u):\n",i);
+
+    while (i <= omf_extdefs_context_get_highest_index(&ctx->EXTDEFs)) {
+        const struct omf_extdef_t *extdef = omf_extdefs_context_get_extdef(&ctx->EXTDEFs,i);
+
+        printf("    [%u] ",i);
+        if (extdef != NULL) {
+            if (extdef->name_string != NULL)
+                printf("\"%s\"",extdef->name_string);
+
+            printf(" typeindex=%u",extdef->type_index);
+            printf(" %s",omf_extdef_type_to_string(extdef->type));
+        }
+        else {
+            printf(" [invalid]\n");
+        }
+        printf("\n");
+        i++;
+    }
+}
+
 void my_dumpstate(const struct omf_context_t * const ctx) {
     unsigned int i;
     const char *p;
@@ -429,6 +644,9 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
         for (i=1;i <= ctx->GRPDEFs.omf_GRPDEFS_count;i++)
             dump_GRPDEF(omf_state,i);
     }
+
+    if (ctx->EXTDEFs.omf_EXTDEFS != NULL)
+        dump_EXTDEF(omf_state,1);
 
     printf("----END-----\n");
 }
@@ -535,6 +753,20 @@ int main(int argc,char **argv) {
                     dump_THEADR(omf_state);
 
                 break;
+            case OMF_RECTYPE_EXTDEF:/*0x8C*/
+            case OMF_RECTYPE_LEXTDEF:/*0xB4*/
+            case OMF_RECTYPE_LEXTDEF32:/*0xB5*/{
+                int first_new_extdef;
+
+                if ((first_new_extdef=omf_context_parse_EXTDEF(omf_state,&omf_state->record)) < 0) {
+                    fprintf(stderr,"Error parsing EXTDEF\n");
+                    return 1;
+                }
+
+                if (omf_state->flags.verbose)
+                    dump_EXTDEF(omf_state,(unsigned int)first_new_extdef);
+
+                } break;
             case OMF_RECTYPE_LNAMES:/*0x96*/{
                 int first_new_lname;
 
@@ -586,9 +818,6 @@ int main(int argc,char **argv) {
                 case 0x8A:/* MODEND */
                 case 0x8B:/* MODEND32 */
                     dump_MODEND(omf_rectype&1);
-                    break;
-                case 0x8C:/* EXTDEF */
-                    dump_EXTDEF();
                     break;
                 case 0x90:/* PUBDEF */
                 case 0x91:/* PUBDEF32 */
