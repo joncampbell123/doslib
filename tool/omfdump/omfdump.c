@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -579,9 +580,17 @@ void dump_PUBDEF(const struct omf_context_t * const ctx,unsigned int i) {
     }
 }
 
+static void print_b(unsigned char c) {
+    if (c >= 32 && c < 127)
+        printf("%c",(char)c);
+    else
+        printf(".");
+}
+
 void dump_LEDATA(const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info) {
-    unsigned long i,pos;
-    unsigned int col;
+    unsigned int col,colstart;
+    unsigned long i,pos,ics;
+    unsigned int ci;
 
     printf("LEDATA segment=\"%s\"(%u) data_offset=0x%lX(%lu) length=0x%lX(%lu)\n",
         omf_context_get_segdef_name_safe(ctx,info->segment_index),
@@ -594,9 +603,12 @@ void dump_LEDATA(const struct omf_context_t * const ctx,const struct omf_ledata_
     i = 0;
     col = 0;
     pos = info->enum_data_offset;
+    colstart = (unsigned int)(pos & 0xFUL);
     while (i < info->data_length) {
-        if (col == 0)
+        if (col == 0) {
             printf("    0x%08lX: ",pos & (~0xFUL));
+            ics = i;
+        }
 
         while (col < (unsigned int)(pos & 0xFUL)) {
             printf("  %c",col==7?'-':' ');
@@ -609,13 +621,46 @@ void dump_LEDATA(const struct omf_context_t * const ctx,const struct omf_ledata_
         i++;
 
         if (col == 0x10) {
+            ci=0;
+            while (ci < colstart) {
+                printf(" ");
+                ci++;
+            }
+
+            assert((ics+ci) >= colstart);
+            while (ci < 16) {
+                print_b(info->data[ics+ci-colstart]);
+                ci++;
+            }
+
+            colstart = 0;
             printf("\n");
             col = 0;
         }
     }
 
-    if (col != 0)
+    if (col != 0) {
+        unsigned int colend = col;
+
+        while (col < 16) {
+            printf("  %c",col==7?'-':' ');
+            col++;
+        }
+
+        ci=0;
+        while (ci < colstart) {
+            printf(" ");
+            ci++;
+        }
+
+        assert((ics+ci) >= colstart);
+        while (ci < colend) {
+            print_b(info->data[ics+ci-colstart]);
+            ci++;
+        }
+
         printf("\n");
+    }
 }
 
 void my_dumpstate(const struct omf_context_t * const ctx) {
