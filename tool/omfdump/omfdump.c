@@ -117,6 +117,8 @@ const char *omf_rectype_to_str(unsigned char rt) {
 
 #define OMF_RECTYPE_LNAMES      (0x96)
 
+//================================== cstr ================================
+
 int cstr_set_n(char ** const p,const char * const str,const size_t strl) {
     char *x;
 
@@ -139,6 +141,8 @@ void cstr_free(char ** const p) {
         *p = NULL;
     }
 }
+
+//================================== records ================================
 
 struct omf_record_t {
     unsigned char           rectype;
@@ -343,15 +347,7 @@ void omf_record_free(struct omf_record_t * const rec) {
     omf_record_data_free(rec);
 }
 
-//static unsigned char        omf_record[16384];
-//static unsigned char        omf_rectype = 0;
-//static unsigned long        omf_recoffs = 0;
-//static unsigned int         omf_reclen = 0; /* NTS: Does NOT include leading checksum byte */
-//static unsigned int         omf_recpos = 0; /* where we are parsing */
-//static unsigned int         omf_lib_blocksize = 0;
-
-//static unsigned char        last_LEDATA_segment_index = 0;
-//static unsigned long        last_LEDATA_data_offset = 0;
+//================================== LNAMES ================================
 
 /* LNAMES collection */
 struct omf_lnames_context_t {
@@ -428,7 +424,7 @@ const char *omf_lnames_context_get_name_safe(struct omf_lnames_context_t * const
     return (r != NULL) ? r : "[ERANGE]";
 }
 
-int omf_lnames_context_set_name(struct omf_lnames_context_t * const ctx,unsigned int i,const char *name,const int namelen) {
+int omf_lnames_context_set_name(struct omf_lnames_context_t * const ctx,unsigned int i,const char *name,const unsigned char namelen) {
     if (name == NULL) {
         errno = EFAULT;
         return -1;
@@ -452,21 +448,13 @@ int omf_lnames_context_set_name(struct omf_lnames_context_t * const ctx,unsigned
     while (ctx->omf_LNAMES_count <= i)
         ctx->omf_LNAMES[ctx->omf_LNAMES_count++] = NULL;
 
-    {
-        size_t len = (namelen >= 0) ? (size_t)namelen : strlen(name);
-        char *t = malloc(len+1);
-        if (t == NULL) return -1; /* malloc sets errno */
-
-        if (len != 0) memcpy(t,name,len); /* copy string */
-        t[len] = 0; /* add NUL */
-
-        ctx->omf_LNAMES[i] = t;
-    }
+    if (cstr_set_n(&ctx->omf_LNAMES[i],name,namelen) < 0)
+        return -1;
 
     return 0;
 }
 
-int omf_lnames_context_add_name(struct omf_lnames_context_t * const ctx,const char *name,const int namelen) {
+int omf_lnames_context_add_name(struct omf_lnames_context_t * const ctx,const char *name,const unsigned char namelen) {
     unsigned int idx;
 
     if (ctx->omf_LNAMES != NULL)
@@ -520,6 +508,8 @@ struct omf_lnames_context_t *omf_lnames_context_destroy(struct omf_lnames_contex
 
     return NULL;
 }
+
+//================================== OMF ================================
 
 struct omf_context_t {
     const char*                         last_error;
@@ -581,6 +571,8 @@ void omf_context_clear(struct omf_context_t * const ctx) {
     omf_record_clear(&ctx->record);
     ctx->library_block_size = 0;
 }
+
+//================================== PROGRAM ================================
 
 struct omf_context_t*                   omf_state = NULL;
 
