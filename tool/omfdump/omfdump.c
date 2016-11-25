@@ -20,6 +20,8 @@
 #include "ogrpdefs.h"
 #include "oextdefs.h"
 #include "oextdeft.h"
+#include "opubdefs.h"
+#include "opubdeft.h"
 
 #ifndef O_BINARY
 #define O_BINARY (0)
@@ -35,6 +37,7 @@ struct omf_context_t {
     struct omf_segdefs_context_t        SEGDEFs;
     struct omf_grpdefs_context_t        GRPDEFs;
     struct omf_extdefs_context_t        EXTDEFs;
+    struct omf_pubdefs_context_t        PUBDEFs;
     struct omf_record_t                 record; // reading, during parsing
     unsigned short                      library_block_size;// is .LIB archive if nonzero
     char*                               THEADR;
@@ -44,6 +47,7 @@ struct omf_context_t {
 };
 
 void omf_context_init(struct omf_context_t * const ctx) {
+    omf_pubdefs_context_init(&ctx->PUBDEFs);
     omf_extdefs_context_init(&ctx->EXTDEFs);
     omf_grpdefs_context_init(&ctx->GRPDEFs);
     omf_segdefs_context_init(&ctx->SEGDEFs);
@@ -56,6 +60,7 @@ void omf_context_init(struct omf_context_t * const ctx) {
 }
 
 void omf_context_free(struct omf_context_t * const ctx) {
+    omf_pubdefs_context_free(&ctx->PUBDEFs);
     omf_extdefs_context_free(&ctx->EXTDEFs);
     omf_grpdefs_context_free(&ctx->GRPDEFs);
     omf_segdefs_context_free(&ctx->SEGDEFs);
@@ -82,6 +87,7 @@ struct omf_context_t *omf_context_destroy(struct omf_context_t * const ctx) {
 }
 
 void omf_context_begin_file(struct omf_context_t * const ctx) {
+    omf_pubdefs_context_free_entries(&ctx->PUBDEFs);
     omf_extdefs_context_free_entries(&ctx->EXTDEFs);
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
     omf_segdefs_context_free_entries(&ctx->SEGDEFs);
@@ -92,6 +98,7 @@ void omf_context_begin_file(struct omf_context_t * const ctx) {
 }
 
 void omf_context_begin_module(struct omf_context_t * const ctx) {
+    omf_pubdefs_context_free_entries(&ctx->PUBDEFs);
     omf_extdefs_context_free_entries(&ctx->EXTDEFs);
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
     omf_segdefs_context_free_entries(&ctx->SEGDEFs);
@@ -100,6 +107,7 @@ void omf_context_begin_module(struct omf_context_t * const ctx) {
 }
 
 void omf_context_clear(struct omf_context_t * const ctx) {
+    omf_pubdefs_context_free_entries(&ctx->PUBDEFs);
     omf_extdefs_context_free_entries(&ctx->EXTDEFs);
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
     omf_segdefs_context_free_entries(&ctx->SEGDEFs);
@@ -344,6 +352,52 @@ int omf_context_parse_EXTDEF(struct omf_context_t * const ctx,struct omf_record_
     return first_entry;
 }
 
+int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
+    int first_entry = omf_pubdefs_context_get_next_add_index(&ctx->PUBDEFs);
+    unsigned int base_segment_index;
+    unsigned int base_group_index;
+    unsigned int type;
+    int len;
+
+    if ((rec->rectype & 0xFE) == OMF_RECTYPE_LPUBDEF/*0xB6*/)
+        type = OMF_PUBDEF_TYPE_LOCAL;
+    else
+        type = OMF_PUBDEF_TYPE_GLOBAL;
+
+    if (omf_record_eof(rec))
+        return -1;
+
+    base_group_index = omf_record_get_index(rec);
+    base_segment_index = omf_record_get_index(rec);
+    if (base_segment_index == 0) {
+        (void)omf_record_get_word(rec); // base frame (ignored)
+    }
+
+    while (!omf_record_eof(rec)) {
+        struct omf_pubdef_t *pubdef = omf_pubdefs_context_add_pubdef(&ctx->PUBDEFs);
+
+        if (pubdef == NULL)
+            return -1;
+
+        len = omf_record_get_lenstr(templstr,sizeof(templstr),rec);
+        if (len < 0) return -1;
+
+        if (omf_pubdefs_context_set_pubdef_name(&ctx->PUBDEFs,pubdef,templstr,len) < 0)
+            return -1;
+
+        if (omf_record_eof(rec))
+            return -1;
+
+        pubdef->group_index = base_group_index;
+        pubdef->segment_index = base_segment_index;
+        pubdef->public_offset = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
+        pubdef->type_index = omf_record_get_index(rec);
+        pubdef->type = type;
+    }
+
+    return first_entry;
+}
+
 //================================== PROGRAM ================================
 
 static char*                            in_file = NULL;   
@@ -464,6 +518,60 @@ void dump_EXTDEF(const struct omf_context_t * const ctx,unsigned int i) {
     }
 }
 
+void dump_PUBDEF(const struct omf_context_t * const ctx,unsigned int i) {
+    printf("PUBDEF (%u):\n",i);
+
+    while (i <= omf_pubdefs_context_get_highest_index(&ctx->PUBDEFs)) {
+        const struct omf_pubdef_t *pubdef = omf_pubdefs_context_get_pubdef(&ctx->PUBDEFs,i);
+
+        printf("    [%u] ",i);
+        if (pubdef != NULL) {
+            if (pubdef->name_string != NULL)
+                printf("\"%s\"",pubdef->name_string);
+
+            {
+                const struct omf_grpdef_t *grpdef = omf_grpdefs_context_get_grpdef(&ctx->GRPDEFs,pubdef->group_index);
+
+                if (grpdef) {
+                    printf(" group=\"%s\"(%u)",
+                        omf_lnames_context_get_name(&ctx->LNAMEs,grpdef->group_name_index),
+                        pubdef->group_index);
+                }
+                else {
+                    printf(" group=(%u)",
+                        pubdef->group_index);
+                }
+            }
+
+            {
+                const struct omf_segdef_t *segdef = omf_segdefs_context_get_segdef(&ctx->SEGDEFs,pubdef->segment_index);
+
+                if (segdef) {
+                    printf(" segment=\"%s\"(%u)",
+                        omf_lnames_context_get_name(&ctx->LNAMEs,segdef->segment_name_index),
+                        pubdef->segment_index);
+                }
+                else {
+                    printf(" segment=(%u)",
+                        pubdef->segment_index);
+                }
+            }
+
+            printf(" offset=0x%lX(%lu)",
+                    (unsigned long)pubdef->public_offset,
+                    (unsigned long)pubdef->public_offset);
+
+            printf(" typeindex=%u",pubdef->type_index);
+            printf(" %s",omf_pubdef_type_to_string(pubdef->type));
+        }
+        else {
+            printf(" [invalid]\n");
+        }
+        printf("\n");
+        i++;
+    }
+}
+
 void my_dumpstate(const struct omf_context_t * const ctx) {
     unsigned int i;
     const char *p;
@@ -497,6 +605,9 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
 
     if (ctx->EXTDEFs.omf_EXTDEFS != NULL)
         dump_EXTDEF(omf_state,1);
+
+    if (ctx->PUBDEFs.omf_PUBDEFS != NULL)
+        dump_PUBDEF(omf_state,1);
 
     printf("----END-----\n");
 }
@@ -615,6 +726,21 @@ int main(int argc,char **argv) {
 
                 if (omf_state->flags.verbose)
                     dump_EXTDEF(omf_state,(unsigned int)first_new_extdef);
+
+                } break;
+            case OMF_RECTYPE_PUBDEF:/*0x90*/
+            case OMF_RECTYPE_PUBDEF32:/*0x91*/
+            case OMF_RECTYPE_LPUBDEF:/*0xB6*/
+            case OMF_RECTYPE_LPUBDEF32:/*0xB7*/{
+                int first_new_pubdef;
+
+                if ((first_new_pubdef=omf_context_parse_PUBDEF(omf_state,&omf_state->record)) < 0) {
+                    fprintf(stderr,"Error parsing PUBDEF\n");
+                    return 1;
+                }
+
+                if (omf_state->flags.verbose)
+                    dump_PUBDEF(omf_state,(unsigned int)first_new_pubdef);
 
                 } break;
             case OMF_RECTYPE_LNAMES:/*0x96*/{

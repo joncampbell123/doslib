@@ -4,7 +4,7 @@ all: linux-host linux-host/omfdump
 linux-host:
 	mkdir -p linux-host
 
-linux-host/omfdump: linux-host/omfcstr.o linux-host/omfrec.o linux-host/omfrecs.o linux-host/olnames.o linux-host/osegdefs.o linux-host/osegdeft.o linux-host/ogrpdefs.o linux-host/oextdefs.o linux-host/oextdeft.o linux-host/omfdump.o
+linux-host/omfdump: linux-host/omfcstr.o linux-host/omfrec.o linux-host/omfrecs.o linux-host/olnames.o linux-host/osegdefs.o linux-host/osegdeft.o linux-host/ogrpdefs.o linux-host/oextdefs.o linux-host/oextdeft.o linux-host/opubdefs.o linux-host/opubdeft.o linux-host/omfdump.o
 	gcc -o $@ $^
 
 linux-host/omfrec.o: omfrec.c
@@ -35,6 +35,12 @@ linux-host/oextdeft.o: oextdeft.c
 	gcc -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $<
 
 linux-host/ogrpdefs.o: ogrpdefs.c
+	gcc -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $<
+
+linux-host/opubdefs.o: opubdefs.c
+	gcc -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $<
+
+linux-host/opubdeft.o: opubdeft.c
 	gcc -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $<
 
 clean:

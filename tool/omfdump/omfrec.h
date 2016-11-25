@@ -18,6 +18,9 @@
 
 #define OMF_RECTYPE_EXTDEF      (0x8C)
 
+#define OMF_RECTYPE_PUBDEF      (0x90)
+#define OMF_RECTYPE_PUBDEF32    (0x91)
+
 #define OMF_RECTYPE_LNAMES      (0x96)
 
 #define OMF_RECTYPE_SEGDEF      (0x98)
@@ -28,6 +31,9 @@
 
 #define OMF_RECTYPE_LEXTDEF     (0xB4)
 #define OMF_RECTYPE_LEXTDEF32   (0xB5)
+
+#define OMF_RECTYPE_LPUBDEF     (0xB6)
+#define OMF_RECTYPE_LPUBDEF32   (0xB7)
 
 //================================== records ================================
 
