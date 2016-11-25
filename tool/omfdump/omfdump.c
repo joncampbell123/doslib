@@ -457,11 +457,11 @@ void dump_SEGDEF(const struct omf_context_t * const ctx,unsigned int i) {
             segdef->attr.offset);
         printf("    Length=%lu name=\"%s\"(%u) class=\"%s\"(%u) overlay=\"%s\"(%u)\n",
             (unsigned long)segdef->segment_length,
-            omf_lnames_context_get_name(&ctx->LNAMEs,segdef->segment_name_index),
+            omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef->segment_name_index),
             segdef->segment_name_index,
-            omf_lnames_context_get_name(&ctx->LNAMEs,segdef->class_name_index),
+            omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef->class_name_index),
             segdef->class_name_index,
-            omf_lnames_context_get_name(&ctx->LNAMEs,segdef->overlay_name_index),
+            omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef->overlay_name_index),
             segdef->overlay_name_index);
     }
 }
@@ -473,7 +473,7 @@ void dump_GRPDEF(const struct omf_context_t * const ctx,unsigned int i) {
     printf("GRPDEF (%u):",i);
     if (grpdef != NULL) {
         printf(" \"%s\"(%u)\n",
-            omf_lnames_context_get_name(&ctx->LNAMEs,grpdef->group_name_index),
+            omf_lnames_context_get_name_safe(&ctx->LNAMEs,grpdef->group_name_index),
             grpdef->group_name_index);
 
         printf("    Contains: ");
@@ -482,7 +482,7 @@ void dump_GRPDEF(const struct omf_context_t * const ctx,unsigned int i) {
 
             if (segdef >= 0) {
                 printf("\"%s\"(%u) ",
-                    omf_lnames_context_get_name(&ctx->LNAMEs,segdef),
+                    omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef),
                     segdef);
             }
             else {
@@ -534,7 +534,7 @@ void dump_PUBDEF(const struct omf_context_t * const ctx,unsigned int i) {
 
                 if (grpdef) {
                     printf(" group=\"%s\"(%u)",
-                        omf_lnames_context_get_name(&ctx->LNAMEs,grpdef->group_name_index),
+                        omf_lnames_context_get_name_safe(&ctx->LNAMEs,grpdef->group_name_index),
                         pubdef->group_index);
                 }
                 else {
@@ -548,7 +548,7 @@ void dump_PUBDEF(const struct omf_context_t * const ctx,unsigned int i) {
 
                 if (segdef) {
                     printf(" segment=\"%s\"(%u)",
-                        omf_lnames_context_get_name(&ctx->LNAMEs,segdef->segment_name_index),
+                        omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef->segment_name_index),
                         pubdef->segment_index);
                 }
                 else {
