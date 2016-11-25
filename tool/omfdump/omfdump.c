@@ -406,7 +406,7 @@ int omf_lnames_context_clear_name(struct omf_lnames_context_t * const ctx,unsign
     return 0;
 }
 
-const char *omf_lnames_context_get_name(struct omf_lnames_context_t * const ctx,unsigned int i) {
+const char *omf_lnames_context_get_name(const struct omf_lnames_context_t * const ctx,unsigned int i) {
     if ((i--) == 0) {
         errno = ERANGE;
         return NULL;
@@ -717,7 +717,7 @@ int omf_context_parse_THEADR(struct omf_context_t * const ctx,struct omf_record_
 }
 
 int omf_context_parse_LNAMES(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
-    int first_entry = ctx->LNAMEs.omf_LNAMES_count + 1; // 1-based, remember?
+    int first_entry = omf_lnames_context_get_next_add_index(&ctx->LNAMEs);
     int len;
 
     while (!omf_record_eof(rec)) {
@@ -751,8 +751,8 @@ void dump_LNAMES(const struct omf_context_t * const ctx,unsigned int first_newes
         return;
 
     printf("LNAMES (from %u): ",i);
-    while (i < (ctx->LNAMEs.omf_LNAMES_count + 1/*based*/)) {
-        const char *p = omf_lnames_context_get_name(&omf_state->LNAMEs,i);
+    while (i <= omf_lnames_context_get_highest_index(&ctx->LNAMEs)) {
+        const char *p = omf_lnames_context_get_name(&ctx->LNAMEs,i);
 
         if (p != NULL)
             printf(" [%u]: \"%s\"",i,p);
