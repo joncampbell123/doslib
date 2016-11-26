@@ -602,6 +602,9 @@ int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_
     return first_entry;
 }
 
+// TODO: move down
+void dump_FIXUPP_entry(const struct omf_context_t * const ctx,const struct omf_fixupp_t * const ent);
+
 int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
     unsigned char fb;
 
@@ -673,66 +676,10 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
         ent.omf_rec_file_offset = ctx->last_LEDATA_rec;
         ent.omf_rec_file_header = ctx->last_LEDATA_hdr;
 
-#if 1
         if (ctx->flags.verbose) {
             printf("FIXUPP:\n");
-            printf("    %s-relative location=%s(%u) frame_method=%s(%u)",
-                ent.segment_relative?"seg":"self",
-                omf_fixupp_location_to_str(ent.location),
-                ent.location,
-                omf_fixupp_frame_method_to_str(ent.frame_method),
-                ent.frame_method);
-
-            if (ent.frame_method == 0/*SEGDEF*/) {
-                printf(" frame_index=\"%s\"(%u)",
-                    omf_context_get_segdef_name_safe(ctx,ent.frame_index),
-                    ent.frame_index);
-            }
-            else if (ent.frame_method == 1/*GRPDEF*/) {
-                printf(" frame_index=\"%s\"(%u)",
-                    omf_context_get_grpdef_name_safe(ctx,ent.frame_index),
-                    ent.frame_index);
-            }
-            else if (ent.frame_method == 2/*EXTDEF*/) {
-                printf(" frame_index=\"%s\"(%u)",
-                    omf_context_get_extdef_name_safe(ctx,ent.frame_index),
-                    ent.frame_index);
-            }
-
-            printf("\n");
-
-            printf("    target_method=\"%s\"(%u)",
-                omf_fixupp_target_method_to_str(ent.target_method),
-                ent.target_method);
-
-            if (ent.target_method == 0/*SEGDEF*/) {
-                printf(" target_index=\"%s\"(%u)",
-                    omf_context_get_segdef_name_safe(ctx,ent.target_index),
-                    ent.target_index);
-            }
-            else if (ent.target_method == 1/*GRPDEF*/) {
-                printf(" target_index=\"%s\"(%u)",
-                    omf_context_get_grpdef_name_safe(ctx,ent.target_index),
-                    ent.target_index);
-            }
-            else if (ent.target_method == 2/*EXTDEF*/) {
-                printf(" target_index=\"%s\"(%u)",
-                    omf_context_get_extdef_name_safe(ctx,ent.target_index),
-                    ent.target_index);
-            }
-
-            printf(" data_rec_ofs=0x%lX(%lu)\n",
-                (unsigned long)ent.data_record_offset,
-                (unsigned long)ent.data_record_offset);
-            printf("    target_displacement=%lu ledata_rec_ofs=0x%lX(%lu)+%u absrecofs=0x%lX(%lu)\n",
-                (unsigned long)ent.target_displacement,
-                (unsigned long)ent.omf_rec_file_offset,
-                (unsigned long)ent.omf_rec_file_offset,
-                (unsigned int)ent.omf_rec_file_header,
-                (unsigned long)ent.omf_rec_file_enoffs + (unsigned long)ent.data_record_offset,
-                (unsigned long)ent.omf_rec_file_enoffs + (unsigned long)ent.data_record_offset);
+            dump_FIXUPP_entry(ctx,&ent);
         }
-#endif
     }
     else {
         struct omf_fixupp_thread_t *thrd;
@@ -757,11 +704,6 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
             thrd->index = omf_record_get_index(rec);
         else
             thrd->index = 0;
-
-#if 1
-        if (ctx->flags.verbose)
-            printf("FIXUPP %s thread %u:\n",fb&0x40?"frame":"thread",fb&3);
-#endif
     }
 
     return 0;
@@ -1023,6 +965,64 @@ void dump_LEDATA(const struct omf_context_t * const ctx,const struct omf_ledata_
 
         printf("\n");
     }
+}
+
+void dump_FIXUPP_entry(const struct omf_context_t * const ctx,const struct omf_fixupp_t * const ent) {
+    printf("    %s-relative location=%s(%u) frame_method=%s(%u)",
+            ent->segment_relative?"seg":"self",
+            omf_fixupp_location_to_str(ent->location),
+            ent->location,
+            omf_fixupp_frame_method_to_str(ent->frame_method),
+            ent->frame_method);
+
+    if (ent->frame_method == 0/*SEGDEF*/) {
+        printf(" frame_index=\"%s\"(%u)",
+                omf_context_get_segdef_name_safe(ctx,ent->frame_index),
+                ent->frame_index);
+    }
+    else if (ent->frame_method == 1/*GRPDEF*/) {
+        printf(" frame_index=\"%s\"(%u)",
+                omf_context_get_grpdef_name_safe(ctx,ent->frame_index),
+                ent->frame_index);
+    }
+    else if (ent->frame_method == 2/*EXTDEF*/) {
+        printf(" frame_index=\"%s\"(%u)",
+                omf_context_get_extdef_name_safe(ctx,ent->frame_index),
+                ent->frame_index);
+    }
+
+    printf("\n");
+
+    printf("    target_method=\"%s\"(%u)",
+            omf_fixupp_target_method_to_str(ent->target_method),
+            ent->target_method);
+
+    if (ent->target_method == 0/*SEGDEF*/) {
+        printf(" target_index=\"%s\"(%u)",
+                omf_context_get_segdef_name_safe(ctx,ent->target_index),
+                ent->target_index);
+    }
+    else if (ent->target_method == 1/*GRPDEF*/) {
+        printf(" target_index=\"%s\"(%u)",
+                omf_context_get_grpdef_name_safe(ctx,ent->target_index),
+                ent->target_index);
+    }
+    else if (ent->target_method == 2/*EXTDEF*/) {
+        printf(" target_index=\"%s\"(%u)",
+                omf_context_get_extdef_name_safe(ctx,ent->target_index),
+                ent->target_index);
+    }
+
+    printf(" data_rec_ofs=0x%lX(%lu)\n",
+            (unsigned long)ent->data_record_offset,
+            (unsigned long)ent->data_record_offset);
+    printf("    target_displacement=%lu ledata_rec_ofs=0x%lX(%lu)+%u absrecofs=0x%lX(%lu)\n",
+            (unsigned long)ent->target_displacement,
+            (unsigned long)ent->omf_rec_file_offset,
+            (unsigned long)ent->omf_rec_file_offset,
+            (unsigned int)ent->omf_rec_file_header,
+            (unsigned long)ent->omf_rec_file_enoffs + (unsigned long)ent->data_record_offset,
+            (unsigned long)ent->omf_rec_file_enoffs + (unsigned long)ent->data_record_offset);
 }
 
 void my_dumpstate(const struct omf_context_t * const ctx) {
