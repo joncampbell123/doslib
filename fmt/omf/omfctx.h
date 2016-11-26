@@ -56,6 +56,7 @@ struct omf_context_t *omf_context_create(void);
 struct omf_context_t *omf_context_destroy(struct omf_context_t * const ctx);
 void omf_context_begin_file(struct omf_context_t * const ctx);
 void omf_context_begin_module(struct omf_context_t * const ctx);
+void omf_context_clear_for_module(struct omf_context_t * const ctx);
 void omf_context_clear(struct omf_context_t * const ctx);
 int omf_context_next_lib_module_fd(struct omf_context_t * const ctx,int fd);
 int omf_context_read_fd(struct omf_context_t * const ctx,int fd);

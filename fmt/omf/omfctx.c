@@ -80,7 +80,7 @@ struct omf_context_t *omf_context_destroy(struct omf_context_t * const ctx) {
     return NULL;
 }
 
-void omf_context_begin_file(struct omf_context_t * const ctx) {
+void omf_context_clear_for_module(struct omf_context_t * const ctx) {
     omf_fixupps_context_free_entries(&ctx->FIXUPPs);
     omf_pubdefs_context_free_entries(&ctx->PUBDEFs);
     omf_extdefs_context_free_entries(&ctx->EXTDEFs);
@@ -88,21 +88,6 @@ void omf_context_begin_file(struct omf_context_t * const ctx) {
     omf_segdefs_context_free_entries(&ctx->SEGDEFs);
     omf_lnames_context_free_names(&ctx->LNAMEs);
     omf_record_clear(&ctx->record);
-    ctx->library_block_size = 0;
-    ctx->last_LEDATA_seg = 0;
-    ctx->last_LEDATA_rec = 0;
-    ctx->last_LEDATA_eno = 0;
-    ctx->last_LEDATA_hdr = 0;
-    cstr_free(&ctx->THEADR);
-}
-
-void omf_context_begin_module(struct omf_context_t * const ctx) {
-    omf_fixupps_context_free_entries(&ctx->FIXUPPs);
-    omf_pubdefs_context_free_entries(&ctx->PUBDEFs);
-    omf_extdefs_context_free_entries(&ctx->EXTDEFs);
-    omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
-    omf_segdefs_context_free_entries(&ctx->SEGDEFs);
-    omf_lnames_context_free_names(&ctx->LNAMEs);
     ctx->last_LEDATA_seg = 0;
     ctx->last_LEDATA_rec = 0;
     ctx->last_LEDATA_eno = 0;
@@ -111,18 +96,16 @@ void omf_context_begin_module(struct omf_context_t * const ctx) {
 }
 
 void omf_context_clear(struct omf_context_t * const ctx) {
-    omf_fixupps_context_free_entries(&ctx->FIXUPPs);
-    omf_pubdefs_context_free_entries(&ctx->PUBDEFs);
-    omf_extdefs_context_free_entries(&ctx->EXTDEFs);
-    omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
-    omf_segdefs_context_free_entries(&ctx->SEGDEFs);
-    omf_lnames_context_free_names(&ctx->LNAMEs);
-    omf_record_clear(&ctx->record);
+    omf_context_clear_for_module(ctx);
     ctx->library_block_size = 0;
-    ctx->last_LEDATA_seg = 0;
-    ctx->last_LEDATA_rec = 0;
-    ctx->last_LEDATA_eno = 0;
-    ctx->last_LEDATA_hdr = 0;
+}
+
+void omf_context_begin_file(struct omf_context_t * const ctx) {
+    omf_context_clear(ctx);
+}
+
+void omf_context_begin_module(struct omf_context_t * const ctx) {
+    omf_context_clear_for_module(ctx);
 }
 
 int omf_context_next_lib_module_fd(struct omf_context_t * const ctx,int fd) {
