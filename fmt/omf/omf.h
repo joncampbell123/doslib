@@ -503,7 +503,16 @@ int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_
 int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_FIXUPP(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 
+void dump_LIDATA(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info,const struct omf_record_t * const rec);
+void dump_FIXUPP_entry(FILE *fp,const struct omf_context_t * const ctx,const struct omf_fixupp_t * const ent);
+void dump_LEDATA(FILE *fp,const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info);
+void dump_FIXUPP(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
+void dump_PUBDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
+void dump_EXTDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
+void dump_SEGDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
+void dump_GRPDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
 void dump_LNAMES(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
+void dump_THEADR(FILE *fp,const struct omf_context_t * const ctx);
 
 #endif //_DOSLIB_OMF_OMFCTX_H
 

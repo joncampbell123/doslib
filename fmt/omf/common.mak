@@ -9,7 +9,7 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = FMT_OMF_LIB
 
-OBJS =        $(SUBDIR)$(HPS)oextdefs.obj $(SUBDIR)$(HPS)oextdeft.obj $(SUBDIR)$(HPS)ofixupps.obj $(SUBDIR)$(HPS)ofixuppt.obj $(SUBDIR)$(HPS)ogrpdefs.obj $(SUBDIR)$(HPS)olnames.obj $(SUBDIR)$(HPS)omfcstr.obj $(SUBDIR)$(HPS)omfctx.obj $(SUBDIR)$(HPS)omfrec.obj $(SUBDIR)$(HPS)omfrecs.obj $(SUBDIR)$(HPS)omledata.obj $(SUBDIR)$(HPS)opubdefs.obj $(SUBDIR)$(HPS)opubdeft.obj $(SUBDIR)$(HPS)osegdefs.obj $(SUBDIR)$(HPS)osegdeft.obj $(SUBDIR)$(HPS)opledata.obj $(SUBDIR)$(HPS)omfctxnm.obj $(SUBDIR)$(HPS)omfctxrf.obj $(SUBDIR)$(HPS)omfctxlf.obj $(SUBDIR)$(HPS)optheadr.obj $(SUBDIR)$(HPS)opextdef.obj $(SUBDIR)$(HPS)opfixupp.obj $(SUBDIR)$(HPS)opgrpdef.obj $(SUBDIR)$(HPS)oppubdef.obj $(SUBDIR)$(HPS)opsegdef.obj $(SUBDIR)$(HPS)oplnames.obj $(SUBDIR)$(HPS)odlnames.obj
+OBJS =        $(SUBDIR)$(HPS)oextdefs.obj $(SUBDIR)$(HPS)oextdeft.obj $(SUBDIR)$(HPS)ofixupps.obj $(SUBDIR)$(HPS)ofixuppt.obj $(SUBDIR)$(HPS)ogrpdefs.obj $(SUBDIR)$(HPS)olnames.obj $(SUBDIR)$(HPS)omfcstr.obj $(SUBDIR)$(HPS)omfctx.obj $(SUBDIR)$(HPS)omfrec.obj $(SUBDIR)$(HPS)omfrecs.obj $(SUBDIR)$(HPS)omledata.obj $(SUBDIR)$(HPS)opubdefs.obj $(SUBDIR)$(HPS)opubdeft.obj $(SUBDIR)$(HPS)osegdefs.obj $(SUBDIR)$(HPS)osegdeft.obj $(SUBDIR)$(HPS)opledata.obj $(SUBDIR)$(HPS)omfctxnm.obj $(SUBDIR)$(HPS)omfctxrf.obj $(SUBDIR)$(HPS)omfctxlf.obj $(SUBDIR)$(HPS)optheadr.obj $(SUBDIR)$(HPS)opextdef.obj $(SUBDIR)$(HPS)opfixupp.obj $(SUBDIR)$(HPS)opgrpdef.obj $(SUBDIR)$(HPS)oppubdef.obj $(SUBDIR)$(HPS)opsegdef.obj $(SUBDIR)$(HPS)oplnames.obj $(SUBDIR)$(HPS)odlnames.obj $(SUBDIR)$(HPS)odextdef.obj $(SUBDIR)$(HPS)odfixupp.obj $(SUBDIR)$(HPS)odgrpdef.obj $(SUBDIR)$(HPS)odledata.obj $(SUBDIR)$(HPS)odlidata.obj $(SUBDIR)$(HPS)odpubdef.obj $(SUBDIR)$(HPS)odsegdef.obj $(SUBDIR)$(HPS)odtheadr.obj
 
 OMFDUMP_EXE = $(SUBDIR)$(HPS)omfdump.$(EXEEXT)
 
@@ -27,7 +27,11 @@ $(FMT_OMF_LIB): $(OBJS)
 	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)opextdef.obj -+$(SUBDIR)$(HPS)opfixupp.obj
 	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)opgrpdef.obj -+$(SUBDIR)$(HPS)oppubdef.obj
 	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)opsegdef.obj -+$(SUBDIR)$(HPS)oplnames.obj
-	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)odlnames.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)odlnames.obj -+$(SUBDIR)$(HPS)odextdef.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)odfixupp.obj -+$(SUBDIR)$(HPS)odgrpdef.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)odledata.obj -+$(SUBDIR)$(HPS)odlidata.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)odpubdef.obj -+$(SUBDIR)$(HPS)odsegdef.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)odtheadr.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
