@@ -29,6 +29,76 @@
 #define O_BINARY (0)
 #endif
 
+//================================== FIXUP ==============================
+
+struct omf_fixupp_t {
+    unsigned int                        segment_relative:1; // M bit
+    unsigned int                        location:4;         // location
+    unsigned int                        frame_method:3;     // frame method
+    unsigned int                        target_method:3;    // target method
+    unsigned int                        _pad_:5;            // [pad]
+    uint16_t                            data_record_offset; // offset in last LEDATA (relative to LEDATA's enum offset)
+    uint16_t                            frame_index;        // frame index (SEGDEF, GRPDEF, etc. according to frame method)
+    uint16_t                            target_index;       // target index (SEGDEF, GRPDEF, etc. according to target method)
+    unsigned long                       target_displacement;
+};
+
+struct omf_fixupp_thread_t {
+    unsigned int                        method:3;           // current method
+    unsigned int                        alloc:1;            // allocated
+    unsigned int                        _pad_:4;
+    unsigned int                        index;              // index (if method 0/1/2)
+};
+
+struct omf_fixupps_context_t {
+    struct omf_fixupp_thread_t          frame_thread[4];    // frame "thread"s
+    struct omf_fixupp_thread_t          target_thread[4];   // target "thread"s
+
+    struct omf_fixupp_t*                omf_FIXUPPS;
+    unsigned int                        omf_FIXUPPS_count;
+    unsigned int                        omf_FIXUPPS_alloc;
+};
+
+void omf_fixupps_clear_thread(struct omf_fixupp_thread_t * const th) {
+    th->method = 0;
+    th->alloc = 0;
+    th->_pad_ = 0;
+    th->index = 0;
+}
+
+void omf_fixupps_clear_threads(struct omf_fixupps_context_t * const ctx) {
+    unsigned int i;
+
+    for (i=0;i < 4;i++) {
+        omf_fixupps_clear_thread(&ctx->frame_thread[i]);
+        omf_fixupps_clear_thread(&ctx->target_thread[i]);
+    }
+}
+
+void omf_fixupps_context_init(struct omf_fixupps_context_t * const ctx) {
+    ctx->omf_FIXUPPS = NULL;
+    ctx->omf_FIXUPPS_count = 0;
+#if defined(LINUX)
+    ctx->omf_FIXUPPS_alloc = 32768;
+#else
+    ctx->omf_FIXUPPS_alloc = 1024;
+#endif
+    omf_fixupps_clear_threads(ctx);
+}
+
+void omf_fixupps_context_free_entries(struct omf_fixupps_context_t * const ctx) {
+    if (ctx->omf_FIXUPPS) {
+        free(ctx->omf_FIXUPPS);
+        ctx->omf_FIXUPPS = NULL;
+    }
+    ctx->omf_FIXUPPS_count = 0;
+    omf_fixupps_clear_threads(ctx);
+}
+
+void omf_fixupps_context_free(struct omf_fixupps_context_t * const ctx) {
+    omf_fixupps_context_free_entries(ctx);
+}
+
 //================================== OMF ================================
 
 char                                    omf_temp_str[255+1/*NUL*/];
@@ -40,6 +110,7 @@ struct omf_context_t {
     struct omf_grpdefs_context_t        GRPDEFs;
     struct omf_extdefs_context_t        EXTDEFs;
     struct omf_pubdefs_context_t        PUBDEFs;
+    struct omf_fixupps_context_t        FIXUPPs;
     struct omf_record_t                 record; // reading, during parsing
     unsigned short                      library_block_size;// is .LIB archive if nonzero
     char*                               THEADR;
@@ -75,6 +146,7 @@ const char *omf_context_get_segdef_name_safe(const struct omf_context_t * const 
 }
  
 void omf_context_init(struct omf_context_t * const ctx) {
+    omf_fixupps_context_init(&ctx->FIXUPPs);
     omf_pubdefs_context_init(&ctx->PUBDEFs);
     omf_extdefs_context_init(&ctx->EXTDEFs);
     omf_grpdefs_context_init(&ctx->GRPDEFs);
@@ -88,6 +160,7 @@ void omf_context_init(struct omf_context_t * const ctx) {
 }
 
 void omf_context_free(struct omf_context_t * const ctx) {
+    omf_fixupps_context_free(&ctx->FIXUPPs);
     omf_pubdefs_context_free(&ctx->PUBDEFs);
     omf_extdefs_context_free(&ctx->EXTDEFs);
     omf_grpdefs_context_free(&ctx->GRPDEFs);
@@ -115,6 +188,7 @@ struct omf_context_t *omf_context_destroy(struct omf_context_t * const ctx) {
 }
 
 void omf_context_begin_file(struct omf_context_t * const ctx) {
+    omf_fixupps_context_free_entries(&ctx->FIXUPPs);
     omf_pubdefs_context_free_entries(&ctx->PUBDEFs);
     omf_extdefs_context_free_entries(&ctx->EXTDEFs);
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
@@ -126,6 +200,7 @@ void omf_context_begin_file(struct omf_context_t * const ctx) {
 }
 
 void omf_context_begin_module(struct omf_context_t * const ctx) {
+    omf_fixupps_context_free_entries(&ctx->FIXUPPs);
     omf_pubdefs_context_free_entries(&ctx->PUBDEFs);
     omf_extdefs_context_free_entries(&ctx->EXTDEFs);
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
@@ -135,6 +210,7 @@ void omf_context_begin_module(struct omf_context_t * const ctx) {
 }
 
 void omf_context_clear(struct omf_context_t * const ctx) {
+    omf_fixupps_context_free_entries(&ctx->FIXUPPs);
     omf_pubdefs_context_free_entries(&ctx->PUBDEFs);
     omf_extdefs_context_free_entries(&ctx->EXTDEFs);
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
@@ -421,6 +497,129 @@ int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_
         pubdef->public_offset = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
         pubdef->type_index = omf_record_get_index(rec);
         pubdef->type = type;
+    }
+
+    return first_entry;
+}
+
+int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
+    unsigned char fb;
+
+    fb = omf_record_get_byte(rec);
+    // THREAD record
+    //   [7:7] 0
+    //   [6:6] D [0=TARGET 1=FRAME]
+    //   [5:5] 0
+    //   [4:2] method
+    //   [1:0] thred (sic)
+    // FIXUP record
+    //   [7:7] 1
+    //   [6:6] M [1=segment relative 0=self-relative]
+    //   [5:2] Location (4-bit field, type of location)
+    //   [1:0] upper 2 bits of data record offset
+    //   -----
+    //   [7:0] lower 8 bits of data record offset
+
+    if (fb & 0x80) {
+        // FIXUP
+        struct omf_fixupp_t ent;
+
+        ent.segment_relative = (fb & 0x40) ? 1 : 0;
+        ent.location = (fb >> 2) & 0xF;
+        ent.data_record_offset = (fb & 3) << 8;
+
+        fb = omf_record_get_byte(rec);
+        ent.data_record_offset += fb;
+
+        fb = omf_record_get_byte(rec); // FIX Data
+        // [7:7] F [1=frame datum by frame thread  0=frame field given]
+        // [6:4] frame field (F=1, this is frame thread  F=0, this is frame method)
+        // [3:3] T [1=target datum by target thread  0=target field given]
+        // [2:2] P [1=target displacement field NOT present  1=present]
+        // [1:0] Targt (T=1, this is target thread  T=0, this is target method)
+        if (fb & 0x80/*F*/) {
+            struct omf_fixupp_thread_t *thrd = &ctx->FIXUPPs.frame_thread[(fb >> 4) & 3];
+
+            ent.frame_method = thrd->method;
+            ent.frame_index = thrd->index;
+        }
+        else {
+            ent.frame_method = (fb >> 4) & 7;
+            if (ent.frame_method <= 2)
+                ent.frame_index = omf_record_get_index(rec);
+            else
+                ent.frame_index = 0;
+        }
+
+        if (fb & 0x08/*T*/) {
+            struct omf_fixupp_thread_t *thrd = &ctx->FIXUPPs.target_thread[fb & 3];
+
+            ent.target_method = thrd->method;
+            ent.target_index = thrd->index;
+        }
+        else {
+            ent.target_method = fb & 3;
+            ent.target_index = omf_record_get_index(rec);
+        }
+
+        if (fb & 0x04/*P*/) {
+            ent.target_displacement = 0;
+        }
+        else {
+            ent.target_displacement = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
+        }
+
+#if 1
+        if (ctx->flags.verbose) {
+            printf("FIXUPP:\n");
+            printf("    segment_relative=%u location=%u frame_method=%u frame_index=%u\n",
+                ent.segment_relative,
+                ent.location,
+                ent.frame_method,
+                ent.frame_index);
+            printf("    target_method=%u target_index=%u target_displacement=%lu\n",
+                ent.target_method,
+                ent.target_index,
+                (unsigned long)ent.target_displacement);
+        }
+#endif
+    }
+    else {
+        struct omf_fixupp_thread_t *thrd;
+
+        // WARNING: NOT TESTED, OPEN WATCOM DOES NOT USE THIS!
+
+        // THREAD
+        if ((fb & 0xA0/*1x10 0000*/) != 0)
+            return -1;
+
+        if (fb & 0x40)/*D bit*/
+            thrd = &ctx->FIXUPPs.frame_thread[fb&3];
+        else
+            thrd = &ctx->FIXUPPs.target_thread[fb&3];
+
+        thrd->alloc = 1;
+        thrd->method = (fb >> 2) & 7;
+        if (thrd->method <= 2)
+            thrd->index = omf_record_get_index(rec);
+        else
+            thrd->index = 0;
+
+#if 1
+        if (ctx->flags.verbose)
+            printf("FIXUPP %s thread %u:\n",fb&0x40?"frame":"thread",fb&3);
+#endif
+    }
+
+    return 0;
+}
+
+int omf_context_parse_FIXUPP(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
+    int first_entry = 0;
+
+    while (!omf_record_eof(rec)) {
+        if (omf_context_parse_FIXUPP_subrecord(ctx,rec) < 0)
+            return -1;
     }
 
     return first_entry;
@@ -872,6 +1071,16 @@ int main(int argc,char **argv) {
                     dump_GRPDEF(omf_state,(unsigned int)first_new_grpdef);
 
                 } break;
+            case OMF_RECTYPE_FIXUPP:/*0x9C*/
+            case OMF_RECTYPE_FIXUPP32:/*0x9D*/{
+                int first_new_fixupp;
+
+                if ((first_new_fixupp=omf_context_parse_FIXUPP(omf_state,&omf_state->record)) < 0) {
+                    fprintf(stderr,"Error parsing FIXUPP\n");
+                    return 1;
+                }
+
+                } break;
             case OMF_RECTYPE_LEDATA:/*0xA0*/
             case OMF_RECTYPE_LEDATA32:/*0xA1*/{
                 struct omf_ledata_info_t info;
@@ -901,10 +1110,6 @@ int main(int argc,char **argv) {
                 case 0x90:/* PUBDEF */
                 case 0x91:/* PUBDEF32 */
                     dump_PUBDEF(omf_rectype&1);
-                    break;
-                case 0x9C:/* FIXUPP */
-                case 0x9D:/* FIXUPP32 */
-                    dump_FIXUPP(omf_rectype&1);
                     break;
                 case 0xA0:/* LEDATA */
                 case 0xA1:/* LEDATA32 */
