@@ -13,8 +13,12 @@ void omf_extdefs_context_init(struct omf_extdefs_context_t * const ctx) {
     ctx->omf_EXTDEFS_count = 0;
 #if defined(LINUX)
     ctx->omf_EXTDEFS_alloc = 32768;
-#else
+#elif defined(__COMPACT__) || defined(__LARGE__) || defined(__HUGE__)
     ctx->omf_EXTDEFS_alloc = 2048;
+#elif defined(__TINY__)
+    ctx->omf_EXTDEFS_alloc = 128;
+#else
+    ctx->omf_EXTDEFS_alloc = 256;
 #endif
 }
 
