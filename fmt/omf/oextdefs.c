@@ -11,7 +11,7 @@ void omf_extdefs_context_init_extdef(struct omf_extdef_t * const ctx) {
 void omf_extdefs_context_init(struct omf_extdefs_context_t * const ctx) {
     ctx->omf_EXTDEFS = NULL;
     ctx->omf_EXTDEFS_count = 0;
-#if defined(LINUX)
+#if defined(LINUX) || TARGET_MSDOS == 32
     ctx->omf_EXTDEFS_alloc = 32768;
 #elif defined(__COMPACT__) || defined(__LARGE__) || defined(__HUGE__)
     ctx->omf_EXTDEFS_alloc = 2048;

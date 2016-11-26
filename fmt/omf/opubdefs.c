@@ -14,7 +14,7 @@ void omf_pubdefs_context_init_pubdef(struct omf_pubdef_t * const ctx) {
 void omf_pubdefs_context_init(struct omf_pubdefs_context_t * const ctx) {
     ctx->omf_PUBDEFS = NULL;
     ctx->omf_PUBDEFS_count = 0;
-#if defined(LINUX)
+#if defined(LINUX) || TARGET_MSDOS == 32
     ctx->omf_PUBDEFS_alloc = 32768;
 #elif defined(__COMPACT__) || defined(__LARGE__) || defined(__HUGE__)
     ctx->omf_PUBDEFS_alloc = 2048;

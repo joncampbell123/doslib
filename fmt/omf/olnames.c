@@ -5,10 +5,14 @@
 void omf_lnames_context_init(struct omf_lnames_context_t * const ctx) {
     ctx->omf_LNAMES = NULL;
     ctx->omf_LNAMES_count = 0;
-#if defined(LINUX)
+#if defined(LINUX) || TARGET_MSDOS == 32
     ctx->omf_LNAMES_alloc = 32768;
-#else
+#elif defined(__COMPACT__) || defined(__LARGE__) || defined(__HUGE__)
     ctx->omf_LNAMES_alloc = 1024;
+#elif defined(__TINY__)
+    ctx->omf_LNAMES_alloc = 256;
+#else
+    ctx->omf_LNAMES_alloc = 512;
 #endif
 }
 

@@ -5,16 +5,24 @@
 void omf_grpdefs_context_init(struct omf_grpdefs_context_t * const ctx) {
     ctx->segdefs = NULL;
     ctx->segdefs_count = 0;
-#if defined(LINUX)
+#if defined(LINUX) || TARGET_MSDOS == 32
     ctx->segdefs_alloc = 32768;
+#elif defined(__COMPACT__) || defined(__LARGE__) || defined(__HUGE__)
+    ctx->segdefs_alloc = 1024;
+#elif defined(__TINY__)
+    ctx->segdefs_alloc = 32;
 #else
     ctx->segdefs_alloc = 128;
 #endif
 
     ctx->omf_GRPDEFS = NULL;
     ctx->omf_GRPDEFS_count = 0;
-#if defined(LINUX)
+#if defined(LINUX) || TARGET_MSDOS == 32
     ctx->omf_GRPDEFS_alloc = 32768;
+#elif defined(__COMPACT__) || defined(__LARGE__) || defined(__HUGE__)
+    ctx->omf_GRPDEFS_alloc = 128;
+#elif defined(__TINY__)
+    ctx->omf_GRPDEFS_alloc = 32;
 #else
     ctx->omf_GRPDEFS_alloc = 64; // "Most linkers limit .. the total GRPDEFS to 31" well then we'll double it :)
 #endif

@@ -9,7 +9,7 @@ void omf_segdefs_context_init_segdef(struct omf_segdef_t *s) {
 void omf_segdefs_context_init(struct omf_segdefs_context_t * const ctx) {
     ctx->omf_SEGDEFS = NULL;
     ctx->omf_SEGDEFS_count = 0;
-#if defined(LINUX)
+#if defined(LINUX) || TARGET_MSDOS == 32
     ctx->omf_SEGDEFS_alloc = 32768;
 #elif defined(__COMPACT__) || defined(__LARGE__) || defined(__HUGE__)
     ctx->omf_SEGDEFS_alloc = 256;

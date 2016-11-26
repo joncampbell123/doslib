@@ -21,7 +21,7 @@ void omf_fixupps_clear_threads(struct omf_fixupps_context_t * const ctx) {
 void omf_fixupps_context_init(struct omf_fixupps_context_t * const ctx) {
     ctx->omf_FIXUPPS = NULL;
     ctx->omf_FIXUPPS_count = 0;
-#if defined(LINUX)
+#if defined(LINUX) || TARGET_MSDOS == 32
     ctx->omf_FIXUPPS_alloc = 32768;
 #elif defined(__COMPACT__) || defined(__LARGE__) || defined(__HUGE__)
     ctx->omf_FIXUPPS_alloc = 2048;
