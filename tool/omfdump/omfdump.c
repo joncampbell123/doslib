@@ -157,6 +157,23 @@ void omf_fixupps_context_init(struct omf_fixupps_context_t * const ctx) {
     omf_fixupps_clear_threads(ctx);
 }
 
+int omf_fixupps_context_alloc_fixupps(struct omf_fixupps_context_t * const ctx) {
+    if (ctx->omf_FIXUPPS != NULL)
+        return 0;
+
+    if (ctx->omf_FIXUPPS_alloc == 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ctx->omf_FIXUPPS_count = 0;
+    ctx->omf_FIXUPPS = (struct omf_fixupp_t*)malloc(sizeof(struct omf_fixupp_t) * ctx->omf_FIXUPPS_alloc);
+    if (ctx->omf_FIXUPPS == NULL)
+        return -1; /* malloc sets errno */
+
+    return 0;
+}
+
 void omf_fixupps_context_free_entries(struct omf_fixupps_context_t * const ctx) {
     if (ctx->omf_FIXUPPS) {
         free(ctx->omf_FIXUPPS);
@@ -168,6 +185,77 @@ void omf_fixupps_context_free_entries(struct omf_fixupps_context_t * const ctx) 
 
 void omf_fixupps_context_free(struct omf_fixupps_context_t * const ctx) {
     omf_fixupps_context_free_entries(ctx);
+}
+
+struct omf_fixupps_context_t *omf_fixupps_context_create(void) {
+    struct omf_fixupps_context_t *ctx;
+
+    ctx = (struct omf_fixupps_context_t*)malloc(sizeof(*ctx));
+    if (ctx != NULL) omf_fixupps_context_init(ctx);
+    return ctx;
+}
+
+struct omf_fixupps_context_t *omf_fixupps_context_destroy(struct omf_fixupps_context_t * const ctx) {
+    if (ctx != NULL) {
+        omf_fixupps_context_free(ctx);
+        free(ctx);
+    }
+
+    return NULL;
+}
+
+struct omf_fixupp_t *omf_fixupps_context_add_fixupp(struct omf_fixupps_context_t * const ctx) {
+    struct omf_fixupp_t *grp;
+
+    if (omf_fixupps_context_alloc_fixupps(ctx) < 0)
+        return NULL;
+
+    if (ctx->omf_FIXUPPS_count >= ctx->omf_FIXUPPS_alloc) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    grp = ctx->omf_FIXUPPS + ctx->omf_FIXUPPS_count;
+    ctx->omf_FIXUPPS_count++;
+
+    // initialize the record for entry
+    memset(grp,0,sizeof(*grp));
+    return grp;
+}
+
+const struct omf_fixupp_t *omf_fixupps_context_get_fixupp(const struct omf_fixupps_context_t * const ctx,unsigned int i) {
+    if (ctx->omf_FIXUPPS == NULL) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    if ((i--) == 0) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    if (i >= ctx->omf_FIXUPPS_count) {
+        errno = ERANGE;
+        return NULL;
+    }
+
+    return ctx->omf_FIXUPPS + i;
+}
+
+// return the lowest valid LNAME index
+static inline unsigned int omf_fixupps_context_get_lowest_index(const struct omf_fixupps_context_t * const ctx) {
+    (void)ctx;
+    return 1;
+}
+
+// return the highest valid LNAME index
+static inline unsigned int omf_fixupps_context_get_highest_index(const struct omf_fixupps_context_t * const ctx) {
+    return ctx->omf_FIXUPPS_count;
+}
+
+// return the index the next LNAME will get after calling add_segdef()
+static inline unsigned int omf_fixupps_context_get_next_add_index(const struct omf_fixupps_context_t * const ctx) {
+    return ctx->omf_FIXUPPS_count + 1;
 }
 
 //================================== OMF ================================
@@ -602,9 +690,6 @@ int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_
     return first_entry;
 }
 
-// TODO: move down
-void dump_FIXUPP_entry(const struct omf_context_t * const ctx,const struct omf_fixupp_t * const ent);
-
 int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
     unsigned char fb;
 
@@ -625,14 +710,18 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
 
     if (fb & 0x80) {
         // FIXUP
-        struct omf_fixupp_t ent;
+        struct omf_fixupp_t *ent;
 
-        ent.segment_relative = (fb & 0x40) ? 1 : 0;
-        ent.location = (fb >> 2) & 0xF;
-        ent.data_record_offset = (fb & 3) << 8;
+        ent = omf_fixupps_context_add_fixupp(&ctx->FIXUPPs);
+        if (ent == NULL)
+            return -1;
+
+        ent->segment_relative = (fb & 0x40) ? 1 : 0;
+        ent->location = (fb >> 2) & 0xF;
+        ent->data_record_offset = (fb & 3) << 8;
 
         fb = omf_record_get_byte(rec);
-        ent.data_record_offset += fb;
+        ent->data_record_offset += fb;
 
         fb = omf_record_get_byte(rec); // FIX Data
         // [7:7] F [1=frame datum by frame thread  0=frame field given]
@@ -643,43 +732,38 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
         if (fb & 0x80/*F*/) {
             struct omf_fixupp_thread_t *thrd = &ctx->FIXUPPs.frame_thread[(fb >> 4) & 3];
 
-            ent.frame_method = thrd->method;
-            ent.frame_index = thrd->index;
+            ent->frame_method = thrd->method;
+            ent->frame_index = thrd->index;
         }
         else {
-            ent.frame_method = (fb >> 4) & 7;
-            if (ent.frame_method <= 2)
-                ent.frame_index = omf_record_get_index(rec);
+            ent->frame_method = (fb >> 4) & 7;
+            if (ent->frame_method <= 2)
+                ent->frame_index = omf_record_get_index(rec);
             else
-                ent.frame_index = 0;
+                ent->frame_index = 0;
         }
 
         if (fb & 0x08/*T*/) {
             struct omf_fixupp_thread_t *thrd = &ctx->FIXUPPs.target_thread[fb & 3];
 
-            ent.target_method = thrd->method;
-            ent.target_index = thrd->index;
+            ent->target_method = thrd->method;
+            ent->target_index = thrd->index;
         }
         else {
-            ent.target_method = fb & 3;
-            ent.target_index = omf_record_get_index(rec);
+            ent->target_method = fb & 3;
+            ent->target_index = omf_record_get_index(rec);
         }
 
         if (fb & 0x04/*P*/) {
-            ent.target_displacement = 0;
+            ent->target_displacement = 0;
         }
         else {
-            ent.target_displacement = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
+            ent->target_displacement = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
         }
 
-        ent.omf_rec_file_enoffs = ctx->last_LEDATA_eno;
-        ent.omf_rec_file_offset = ctx->last_LEDATA_rec;
-        ent.omf_rec_file_header = ctx->last_LEDATA_hdr;
-
-        if (ctx->flags.verbose) {
-            printf("FIXUPP:\n");
-            dump_FIXUPP_entry(ctx,&ent);
-        }
+        ent->omf_rec_file_enoffs = ctx->last_LEDATA_eno;
+        ent->omf_rec_file_offset = ctx->last_LEDATA_rec;
+        ent->omf_rec_file_header = ctx->last_LEDATA_hdr;
     }
     else {
         struct omf_fixupp_thread_t *thrd;
@@ -710,7 +794,7 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
 }
 
 int omf_context_parse_FIXUPP(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
-    int first_entry = 0;
+    int first_entry = omf_fixupps_context_get_next_add_index(&ctx->FIXUPPs);
 
     while (!omf_record_eof(rec)) {
         if (omf_context_parse_FIXUPP_subrecord(ctx,rec) < 0)
@@ -1025,6 +1109,17 @@ void dump_FIXUPP_entry(const struct omf_context_t * const ctx,const struct omf_f
             (unsigned long)ent->omf_rec_file_enoffs + (unsigned long)ent->data_record_offset);
 }
 
+void dump_FIXUPP(const struct omf_context_t * const ctx,unsigned int i) {
+    while (i <= omf_fixupps_context_get_highest_index(&ctx->FIXUPPs)) {
+        const struct omf_fixupp_t *ent = omf_fixupps_context_get_fixupp(&ctx->FIXUPPs,i);
+
+        printf("FIXUPP[%u]:\n",i);
+        if (ent != NULL) dump_FIXUPP_entry(ctx,ent);
+
+        i++;
+    }
+}
+
 void my_dumpstate(const struct omf_context_t * const ctx) {
     unsigned int i;
     const char *p;
@@ -1061,6 +1156,9 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
 
     if (ctx->PUBDEFs.omf_PUBDEFS != NULL)
         dump_PUBDEF(omf_state,1);
+
+    if (ctx->FIXUPPs.omf_FIXUPPS != NULL)
+        dump_FIXUPP(omf_state,1);
 
     printf("----END-----\n");
 }
@@ -1242,6 +1340,9 @@ int main(int argc,char **argv) {
                     fprintf(stderr,"Error parsing FIXUPP\n");
                     return 1;
                 }
+
+                if (omf_state->flags.verbose)
+                    dump_FIXUPP(omf_state,(unsigned int)first_new_fixupp);
 
                 } break;
             case OMF_RECTYPE_LEDATA:/*0xA0*/
