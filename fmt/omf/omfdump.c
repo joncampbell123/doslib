@@ -28,6 +28,8 @@
 #include <fmt/omf/ofixuppt.h>
 #include <fmt/omf/opledata.h>
 #include <fmt/omf/omfctxnm.h>
+#include <fmt/omf/omfctxrf.h>
+#include <fmt/omf/omfctxlf.h>
 #include <fmt/omf/omfctx.h>
 
 #ifndef O_BINARY

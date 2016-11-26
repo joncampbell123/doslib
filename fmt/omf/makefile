@@ -7,7 +7,7 @@ linux-host:
 OMFDUMP = linux-host/omfdump
 
 OMFLIB = linux-host/omf.a
-OMFLIB_DEPS = linux-host/omfcstr.o linux-host/omfctx.o linux-host/omfrec.o linux-host/omfrecs.o linux-host/olnames.o linux-host/osegdefs.o linux-host/osegdeft.o linux-host/ogrpdefs.o linux-host/oextdefs.o linux-host/oextdeft.o linux-host/opubdefs.o linux-host/opubdeft.o linux-host/omledata.o linux-host/ofixupps.o linux-host/ofixuppt.o linux-host/opledata.o linux-host/omfctxnm.o
+OMFLIB_DEPS = linux-host/omfcstr.o linux-host/omfctx.o linux-host/omfrec.o linux-host/omfrecs.o linux-host/olnames.o linux-host/osegdefs.o linux-host/osegdeft.o linux-host/ogrpdefs.o linux-host/oextdefs.o linux-host/oextdeft.o linux-host/opubdefs.o linux-host/opubdeft.o linux-host/omledata.o linux-host/ofixupps.o linux-host/ofixuppt.o linux-host/opledata.o linux-host/omfctxnm.o linux-host/omfctxrf.o linux-host/omfctxlf.o
 
 $(OMFDUMP): linux-host/omfdump.o $(OMFLIB)
 	gcc -o $@ $^

@@ -58,8 +58,6 @@ void omf_context_begin_file(struct omf_context_t * const ctx);
 void omf_context_begin_module(struct omf_context_t * const ctx);
 void omf_context_clear_for_module(struct omf_context_t * const ctx);
 void omf_context_clear(struct omf_context_t * const ctx);
-int omf_context_next_lib_module_fd(struct omf_context_t * const ctx,int fd);
-int omf_context_read_fd(struct omf_context_t * const ctx,int fd);
 int omf_context_parse_THEADR(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_LNAMES(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_SEGDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec);
