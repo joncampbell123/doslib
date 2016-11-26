@@ -31,8 +31,76 @@
 
 //================================== FIXUP ==============================
 
+enum {
+    OMF_FIXUPP_LOCATION_LOBYTE=0,                   // low byte (16-bit offset)
+    OMF_FIXUPP_LOCATION_16BIT_OFFSET=1,             // 16-bit offset
+    OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE=2,       // 16-bit segment base
+    OMF_FIXUPP_LOCATION_16BIT_SEGMENT_OFFSET=3,     // 16:16 far pointer seg:off
+    OMF_FIXUPP_LOCATION_HIBYTE=4,                   // high byte (16-bit offset)
+    OMF_FIXUPP_LOCATION_16BIT_OFFSET_RESOLVED=5,    // basically same as 16BIT_OFFSET
+
+    OMF_FIXUPP_LOCATION_32BIT_OFFSET=9,             // 32-bit offset
+
+    OMF_FIXUPP_LOCATION_32BIT_SEGMENT_OFFSET=11,    // 16:32 far pointer seg:off
+
+    OMF_FIXUPP_LOCATION_32BIT_OFFSET_RESOLVED=13    // basically same as 32BIT_OFFSET
+};
+
+enum {
+    OMF_FIXUPP_FRAME_METHOD_SEGDEF=0,
+    OMF_FIXUPP_FRAME_METHOD_GRPDEF=1,
+    OMF_FIXUPP_FRAME_METHOD_EXTDEF=2,
+
+    OMF_FIXUPP_FRAME_METHOD_PREV_LEDATA=4,          // frame is determined by segmenet index of previous LEDATA
+    OMF_FIXUPP_FRAME_METHOD_TARGET=5                // frame is target segment/group/extdef
+};
+
+enum {
+    OMF_FIXUPP_TARGET_METHOD_SEGDEF=0,
+    OMF_FIXUPP_TARGET_METHOD_GRPDEF=1,
+    OMF_FIXUPP_TARGET_METHOD_EXTDEF=2
+};
+
+const char *omf_fixupp_location_to_str(const unsigned char loc) {
+    switch (loc) {
+        case OMF_FIXUPP_LOCATION_LOBYTE:                return "LOBYTE";
+        case OMF_FIXUPP_LOCATION_16BIT_OFFSET:          return "16BIT-OFFSET";
+        case OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE:    return "16BIT-SEGBASE";
+        case OMF_FIXUPP_LOCATION_16BIT_SEGMENT_OFFSET:  return "16BIT-SEG-OFFSET";
+        case OMF_FIXUPP_LOCATION_HIBYTE:                return "HIBYTE";
+        case OMF_FIXUPP_LOCATION_16BIT_OFFSET_RESOLVED: return "16BIT-OFFSET-RESOLVED";
+        case OMF_FIXUPP_LOCATION_32BIT_OFFSET:          return "32BIT-OFFSET";
+        case OMF_FIXUPP_LOCATION_32BIT_SEGMENT_OFFSET:  return "32BIT-SEG-OFFSET";
+        case OMF_FIXUPP_LOCATION_32BIT_OFFSET_RESOLVED: return "32BIT-OFFSET-RESOLVED";
+    };
+
+    return "?";
+}
+
+const char *omf_fixupp_frame_method_to_str(const unsigned char m) {
+    switch (m) {
+        case OMF_FIXUPP_FRAME_METHOD_SEGDEF:            return "SEGDEF";
+        case OMF_FIXUPP_FRAME_METHOD_GRPDEF:            return "GRPDEF";
+        case OMF_FIXUPP_FRAME_METHOD_EXTDEF:            return "EXTDEF";
+        case OMF_FIXUPP_FRAME_METHOD_PREV_LEDATA:       return "by-LEDATA-segment";
+        case OMF_FIXUPP_FRAME_METHOD_TARGET:            return "by-TARGET";
+    };
+
+    return "?";
+}
+
+const char *omf_fixupp_target_method_to_str(const unsigned char m) {
+    switch (m) {
+        case OMF_FIXUPP_TARGET_METHOD_SEGDEF:           return "SEGDEF";
+        case OMF_FIXUPP_TARGET_METHOD_GRPDEF:           return "GRPDEF";
+        case OMF_FIXUPP_TARGET_METHOD_EXTDEF:           return "EXTDEF";
+    };
+
+    return "?";
+}
+
 struct omf_fixupp_t {
-    unsigned int                        segment_relative:1; // M bit
+    unsigned int                        segment_relative:1; // M bit [1=segment relative 0=self relative]
     unsigned int                        location:4;         // location
     unsigned int                        frame_method:3;     // frame method
     unsigned int                        target_method:3;    // target method
@@ -42,6 +110,8 @@ struct omf_fixupp_t {
     uint16_t                            target_index;       // target index (SEGDEF, GRPDEF, etc. according to target method)
     unsigned long                       target_displacement;
     unsigned long                       omf_rec_file_offset;// file offset of LEDATA record
+    unsigned long                       omf_rec_file_enoffs;
+    unsigned char                       omf_rec_file_header;
 };
 
 struct omf_fixupp_thread_t {
@@ -114,6 +184,9 @@ struct omf_context_t {
     struct omf_fixupps_context_t        FIXUPPs;
     struct omf_record_t                 record; // reading, during parsing
     unsigned short                      library_block_size;// is .LIB archive if nonzero
+    unsigned long                       last_LEDATA_rec;
+    unsigned long                       last_LEDATA_eno;
+    unsigned char                       last_LEDATA_hdr;
     char*                               THEADR;
     struct {
         unsigned int                    verbose:1;
@@ -145,6 +218,17 @@ const char *omf_context_get_segdef_name_safe(const struct omf_context_t * const 
     const char *r = omf_context_get_segdef_name(ctx,i);
     return (r != NULL) ? r : "[ERANGE]";
 }
+
+const char *omf_context_get_extdef_name(const struct omf_context_t * const ctx,unsigned int i) {
+    const struct omf_extdef_t *extdef = omf_extdefs_context_get_extdef(&ctx->EXTDEFs,i);
+    if (extdef == NULL) return NULL;
+    return extdef->name_string;
+}
+
+const char *omf_context_get_extdef_name_safe(const struct omf_context_t * const ctx,unsigned int i) {
+    const char *r = omf_context_get_extdef_name(ctx,i);
+    return (r != NULL) ? r : "[ERANGE]";
+}
  
 void omf_context_init(struct omf_context_t * const ctx) {
     omf_fixupps_context_init(&ctx->FIXUPPs);
@@ -154,6 +238,9 @@ void omf_context_init(struct omf_context_t * const ctx) {
     omf_segdefs_context_init(&ctx->SEGDEFs);
     omf_lnames_context_init(&ctx->LNAMEs);
     omf_record_init(&ctx->record);
+    ctx->last_LEDATA_rec = 0;
+    ctx->last_LEDATA_eno = 0;
+    ctx->last_LEDATA_hdr = 0;
     ctx->last_error = NULL;
     ctx->flags.verbose = 0;
     ctx->library_block_size = 0;
@@ -169,6 +256,9 @@ void omf_context_free(struct omf_context_t * const ctx) {
     omf_lnames_context_free(&ctx->LNAMEs);
     omf_record_free(&ctx->record);
     cstr_free(&ctx->THEADR);
+    ctx->last_LEDATA_rec = 0;
+    ctx->last_LEDATA_eno = 0;
+    ctx->last_LEDATA_hdr = 0;
 }
 
 struct omf_context_t *omf_context_create(void) {
@@ -197,6 +287,9 @@ void omf_context_begin_file(struct omf_context_t * const ctx) {
     omf_lnames_context_free_names(&ctx->LNAMEs);
     omf_record_clear(&ctx->record);
     ctx->library_block_size = 0;
+    ctx->last_LEDATA_rec = 0;
+    ctx->last_LEDATA_eno = 0;
+    ctx->last_LEDATA_hdr = 0;
     cstr_free(&ctx->THEADR);
 }
 
@@ -207,6 +300,9 @@ void omf_context_begin_module(struct omf_context_t * const ctx) {
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
     omf_segdefs_context_free_entries(&ctx->SEGDEFs);
     omf_lnames_context_free_names(&ctx->LNAMEs);
+    ctx->last_LEDATA_rec = 0;
+    ctx->last_LEDATA_eno = 0;
+    ctx->last_LEDATA_hdr = 0;
     cstr_free(&ctx->THEADR);
 }
 
@@ -219,6 +315,9 @@ void omf_context_clear(struct omf_context_t * const ctx) {
     omf_lnames_context_free_names(&ctx->LNAMEs);
     omf_record_clear(&ctx->record);
     ctx->library_block_size = 0;
+    ctx->last_LEDATA_rec = 0;
+    ctx->last_LEDATA_eno = 0;
+    ctx->last_LEDATA_hdr = 0;
 }
 
 int omf_context_next_lib_module_fd(struct omf_context_t * const ctx,int fd) {
@@ -570,22 +669,68 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
             ent.target_displacement = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
         }
 
-        ent.omf_rec_file_offset = rec->rec_file_offset;
+        ent.omf_rec_file_enoffs = ctx->last_LEDATA_eno;
+        ent.omf_rec_file_offset = ctx->last_LEDATA_rec;
+        ent.omf_rec_file_header = ctx->last_LEDATA_hdr;
 
 #if 1
         if (ctx->flags.verbose) {
             printf("FIXUPP:\n");
-            printf("    segment_relative=%u location=%u frame_method=%u frame_index=%u\n",
-                ent.segment_relative,
+            printf("    %s-relative location=%s(%u) frame_method=%s(%u)",
+                ent.segment_relative?"seg":"self",
+                omf_fixupp_location_to_str(ent.location),
                 ent.location,
-                ent.frame_method,
-                ent.frame_index);
-            printf("    target_method=%u target_index=%u data_rec_ofs=0x%lX(%lu) target_displacement=%lu\n",
-                ent.target_method,
-                ent.target_index,
+                omf_fixupp_frame_method_to_str(ent.frame_method),
+                ent.frame_method);
+
+            if (ent.frame_method == 0/*SEGDEF*/) {
+                printf(" frame_index=%s(%u)",
+                    omf_context_get_segdef_name_safe(ctx,ent.frame_index),
+                    ent.frame_index);
+            }
+            else if (ent.frame_method == 1/*GRPDEF*/) {
+                printf(" frame_index=%s(%u)",
+                    omf_context_get_grpdef_name_safe(ctx,ent.frame_index),
+                    ent.frame_index);
+            }
+            else if (ent.frame_method == 2/*EXTDEF*/) {
+                printf(" frame_index=%s(%u)",
+                    omf_context_get_extdef_name_safe(ctx,ent.frame_index),
+                    ent.frame_index);
+            }
+
+            printf("\n");
+
+            printf("    target_method=%s(%u)",
+                omf_fixupp_target_method_to_str(ent.target_method),
+                ent.target_method);
+
+            if (ent.target_method == 0/*SEGDEF*/) {
+                printf(" target_index=%s(%u)",
+                    omf_context_get_segdef_name_safe(ctx,ent.target_index),
+                    ent.target_index);
+            }
+            else if (ent.target_method == 1/*GRPDEF*/) {
+                printf(" target_index=%s(%u)",
+                    omf_context_get_grpdef_name_safe(ctx,ent.target_index),
+                    ent.target_index);
+            }
+            else if (ent.target_method == 2/*EXTDEF*/) {
+                printf(" target_index=%s(%u)",
+                    omf_context_get_extdef_name_safe(ctx,ent.target_index),
+                    ent.target_index);
+            }
+
+            printf(" data_rec_ofs=0x%lX(%lu)\n",
                 (unsigned long)ent.data_record_offset,
-                (unsigned long)ent.data_record_offset,
-                (unsigned long)ent.target_displacement);
+                (unsigned long)ent.data_record_offset);
+            printf("    target_displacement=%lu ledata_rec_ofs=0x%lX(%lu)+%u absrecofs=0x%lX(%lu)\n",
+                (unsigned long)ent.target_displacement,
+                (unsigned long)ent.omf_rec_file_offset,
+                (unsigned long)ent.omf_rec_file_offset,
+                (unsigned int)ent.omf_rec_file_header,
+                (unsigned long)ent.omf_rec_file_enoffs + (unsigned long)ent.data_record_offset,
+                (unsigned long)ent.omf_rec_file_enoffs + (unsigned long)ent.data_record_offset);
         }
 #endif
     }
@@ -598,13 +743,16 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
         if ((fb & 0xA0/*1x10 0000*/) != 0)
             return -1;
 
-        if (fb & 0x40)/*D bit*/
+        if (fb & 0x40)/*D bit*/ {
             thrd = &ctx->FIXUPPs.frame_thread[fb&3];
-        else
+            thrd->method = (fb >> 2) & 7;
+        }
+        else {
             thrd = &ctx->FIXUPPs.target_thread[fb&3];
+            thrd->method = (fb >> 2) & 3;
+        }
 
         thrd->alloc = 1;
-        thrd->method = (fb >> 2) & 7;
         if (thrd->method <= 2)
             thrd->index = omf_record_get_index(rec);
         else
@@ -628,6 +776,16 @@ int omf_context_parse_FIXUPP(struct omf_context_t * const ctx,struct omf_record_
     }
 
     return first_entry;
+}
+
+int omf_context_parse_LEDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec) {
+    if (omf_ledata_parse_header(info,rec) < 0)
+        return -1;
+
+    ctx->last_LEDATA_eno = info->enum_data_offset;
+    ctx->last_LEDATA_rec = rec->rec_file_offset;
+    ctx->last_LEDATA_hdr = rec->recpos;
+    return 0;
 }
 
 //================================== PROGRAM ================================
@@ -1090,7 +1248,7 @@ int main(int argc,char **argv) {
             case OMF_RECTYPE_LEDATA32:/*0xA1*/{
                 struct omf_ledata_info_t info;
 
-                if (omf_ledata_parse_header(&info,&omf_state->record) < 0) {
+                if (omf_context_parse_LEDATA(omf_state,&info,&omf_state->record) < 0) {
                     fprintf(stderr,"Error parsing LEDATA\n");
                     return 1;
                 }
