@@ -684,39 +684,39 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
                 ent.frame_method);
 
             if (ent.frame_method == 0/*SEGDEF*/) {
-                printf(" frame_index=%s(%u)",
+                printf(" frame_index=\"%s\"(%u)",
                     omf_context_get_segdef_name_safe(ctx,ent.frame_index),
                     ent.frame_index);
             }
             else if (ent.frame_method == 1/*GRPDEF*/) {
-                printf(" frame_index=%s(%u)",
+                printf(" frame_index=\"%s\"(%u)",
                     omf_context_get_grpdef_name_safe(ctx,ent.frame_index),
                     ent.frame_index);
             }
             else if (ent.frame_method == 2/*EXTDEF*/) {
-                printf(" frame_index=%s(%u)",
+                printf(" frame_index=\"%s\"(%u)",
                     omf_context_get_extdef_name_safe(ctx,ent.frame_index),
                     ent.frame_index);
             }
 
             printf("\n");
 
-            printf("    target_method=%s(%u)",
+            printf("    target_method=\"%s\"(%u)",
                 omf_fixupp_target_method_to_str(ent.target_method),
                 ent.target_method);
 
             if (ent.target_method == 0/*SEGDEF*/) {
-                printf(" target_index=%s(%u)",
+                printf(" target_index=\"%s\"(%u)",
                     omf_context_get_segdef_name_safe(ctx,ent.target_index),
                     ent.target_index);
             }
             else if (ent.target_method == 1/*GRPDEF*/) {
-                printf(" target_index=%s(%u)",
+                printf(" target_index=\"%s\"(%u)",
                     omf_context_get_grpdef_name_safe(ctx,ent.target_index),
                     ent.target_index);
             }
             else if (ent.target_method == 2/*EXTDEF*/) {
-                printf(" target_index=%s(%u)",
+                printf(" target_index=\"%s\"(%u)",
                     omf_context_get_extdef_name_safe(ctx,ent.target_index),
                     ent.target_index);
             }
