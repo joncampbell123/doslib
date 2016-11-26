@@ -31,26 +31,6 @@ static void help(void) {
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
 }
 
-void dump_LNAMES(const struct omf_context_t * const ctx,unsigned int first_newest) {
-    unsigned int i = first_newest;
-
-    if (i == 0)
-        return;
-
-    printf("LNAMES (from %u):",i);
-    while (i <= omf_lnames_context_get_highest_index(&ctx->LNAMEs)) {
-        const char *p = omf_lnames_context_get_name(&ctx->LNAMEs,i);
-
-        if (p != NULL)
-            printf(" [%u]: \"%s\"",i,p);
-        else
-            printf(" [%u]: (null)",i);
-
-        i++;
-    }
-    printf("\n");
-}
-
 void dump_THEADR(const struct omf_context_t * const ctx) {
     printf("* THEADR: ");
     if (ctx->THEADR != NULL)
@@ -521,7 +501,7 @@ int main(int argc,char **argv) {
                 }
 
                 if (omf_state->flags.verbose)
-                    dump_LNAMES(omf_state,(unsigned int)first_new_lname);
+                    dump_LNAMES(stdout,omf_state,(unsigned int)first_new_lname);
 
                 } break;
             case OMF_RECTYPE_SEGDEF:/*0x98*/

@@ -503,5 +503,7 @@ int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_
 int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_FIXUPP(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 
+void dump_LNAMES(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
+
 #endif //_DOSLIB_OMF_OMFCTX_H
 
