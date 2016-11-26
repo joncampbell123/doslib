@@ -9,7 +9,7 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = FMT_OMF_LIB
 
-OBJS =        $(SUBDIR)$(HPS)oextdefs.obj $(SUBDIR)$(HPS)oextdeft.obj $(SUBDIR)$(HPS)ofixupps.obj $(SUBDIR)$(HPS)ofixuppt.obj $(SUBDIR)$(HPS)ogrpdefs.obj $(SUBDIR)$(HPS)olnames.obj $(SUBDIR)$(HPS)omfcstr.obj $(SUBDIR)$(HPS)omfctx.obj $(SUBDIR)$(HPS)omfrec.obj $(SUBDIR)$(HPS)omfrecs.obj $(SUBDIR)$(HPS)omledata.obj $(SUBDIR)$(HPS)opubdefs.obj $(SUBDIR)$(HPS)opubdeft.obj $(SUBDIR)$(HPS)osegdefs.obj $(SUBDIR)$(HPS)osegdeft.obj $(SUBDIR)$(HPS)opledata.obj
+OBJS =        $(SUBDIR)$(HPS)oextdefs.obj $(SUBDIR)$(HPS)oextdeft.obj $(SUBDIR)$(HPS)ofixupps.obj $(SUBDIR)$(HPS)ofixuppt.obj $(SUBDIR)$(HPS)ogrpdefs.obj $(SUBDIR)$(HPS)olnames.obj $(SUBDIR)$(HPS)omfcstr.obj $(SUBDIR)$(HPS)omfctx.obj $(SUBDIR)$(HPS)omfrec.obj $(SUBDIR)$(HPS)omfrecs.obj $(SUBDIR)$(HPS)omledata.obj $(SUBDIR)$(HPS)opubdefs.obj $(SUBDIR)$(HPS)opubdeft.obj $(SUBDIR)$(HPS)osegdefs.obj $(SUBDIR)$(HPS)osegdeft.obj $(SUBDIR)$(HPS)opledata.obj $(SUBDIR)$(HPS)omfctxnm.obj
 
 OMFDUMP_EXE = $(SUBDIR)$(HPS)omfdump.$(EXEEXT)
 
@@ -22,6 +22,7 @@ $(FMT_OMF_LIB): $(OBJS)
 	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)omledata.obj -+$(SUBDIR)$(HPS)opubdefs.obj
 	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)opubdeft.obj -+$(SUBDIR)$(HPS)osegdefs.obj
 	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)osegdeft.obj -+$(SUBDIR)$(HPS)opledata.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)omfctxnm.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit

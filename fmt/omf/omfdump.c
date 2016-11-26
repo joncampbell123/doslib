@@ -27,6 +27,7 @@
 #include <fmt/omf/ofixupps.h>
 #include <fmt/omf/ofixuppt.h>
 #include <fmt/omf/opledata.h>
+#include <fmt/omf/omfctxnm.h>
 #include <fmt/omf/omfctx.h>
 
 #ifndef O_BINARY

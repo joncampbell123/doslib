@@ -50,12 +50,6 @@ struct omf_context_t {
     } flags;
 };
 
-const char *omf_context_get_grpdef_name(const struct omf_context_t * const ctx,unsigned int i);
-const char *omf_context_get_grpdef_name_safe(const struct omf_context_t * const ctx,unsigned int i);
-const char *omf_context_get_segdef_name(const struct omf_context_t * const ctx,unsigned int i);
-const char *omf_context_get_segdef_name_safe(const struct omf_context_t * const ctx,unsigned int i);
-const char *omf_context_get_extdef_name(const struct omf_context_t * const ctx,unsigned int i);
-const char *omf_context_get_extdef_name_safe(const struct omf_context_t * const ctx,unsigned int i);
 void omf_context_init(struct omf_context_t * const ctx);
 void omf_context_free(struct omf_context_t * const ctx);
 struct omf_context_t *omf_context_create(void);
