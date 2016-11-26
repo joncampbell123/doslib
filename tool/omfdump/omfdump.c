@@ -41,6 +41,7 @@ struct omf_fixupp_t {
     uint16_t                            frame_index;        // frame index (SEGDEF, GRPDEF, etc. according to frame method)
     uint16_t                            target_index;       // target index (SEGDEF, GRPDEF, etc. according to target method)
     unsigned long                       target_displacement;
+    unsigned long                       omf_rec_file_offset;// file offset of LEDATA record
 };
 
 struct omf_fixupp_thread_t {
@@ -569,6 +570,8 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
             ent.target_displacement = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
         }
 
+        ent.omf_rec_file_offset = rec->rec_file_offset;
+
 #if 1
         if (ctx->flags.verbose) {
             printf("FIXUPP:\n");
@@ -577,9 +580,11 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
                 ent.location,
                 ent.frame_method,
                 ent.frame_index);
-            printf("    target_method=%u target_index=%u target_displacement=%lu\n",
+            printf("    target_method=%u target_index=%u data_rec_ofs=0x%lX(%lu) target_displacement=%lu\n",
                 ent.target_method,
                 ent.target_index,
+                (unsigned long)ent.data_record_offset,
+                (unsigned long)ent.data_record_offset,
                 (unsigned long)ent.target_displacement);
         }
 #endif
