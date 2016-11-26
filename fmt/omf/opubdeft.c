@@ -1,5 +1,6 @@
 
-#include <fmt/omf/opubdefs.h>
+#include <fmt/omf/omf.h>
+#include <fmt/omf/omfcstr.h>
 
 const char *omf_pubdef_type_to_string(const unsigned char t) {
     switch (t) {

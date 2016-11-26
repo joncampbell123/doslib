@@ -1,5 +1,6 @@
 
-#include <fmt/omf/ofixupps.h>
+#include <fmt/omf/omf.h>
+#include <fmt/omf/omfcstr.h>
 
 void omf_fixupps_clear_thread(struct omf_fixupp_thread_t * const th) {
     th->method = 0;

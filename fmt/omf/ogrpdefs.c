@@ -1,5 +1,6 @@
 
-#include <fmt/omf/ogrpdefs.h>
+#include <fmt/omf/omf.h>
+#include <fmt/omf/omfcstr.h>
 
 void omf_grpdefs_context_init(struct omf_grpdefs_context_t * const ctx) {
     ctx->segdefs = NULL;

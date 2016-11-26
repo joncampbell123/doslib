@@ -1,5 +1,5 @@
 
-#include <fmt/omf/omfrec.h>
+#include <fmt/omf/omf.h>
 
 unsigned char omf_record_is_modend(const struct omf_record_t * const rec) {
     return ((rec->rectype&0xFE) == 0x8A); // MODEND 0x8A or 0x8B

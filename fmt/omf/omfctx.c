@@ -1,32 +1,6 @@
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <assert.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-
-#include <fmt/omf/omfrecs.h>
+#include <fmt/omf/omf.h>
 #include <fmt/omf/omfcstr.h>
-#include <fmt/omf/omfrec.h>
-#include <fmt/omf/olnames.h>
-#include <fmt/omf/osegdefs.h>
-#include <fmt/omf/osegdeft.h>
-#include <fmt/omf/ogrpdefs.h>
-#include <fmt/omf/oextdefs.h>
-#include <fmt/omf/oextdeft.h>
-#include <fmt/omf/opubdefs.h>
-#include <fmt/omf/opubdeft.h>
-#include <fmt/omf/omledata.h>
-#include <fmt/omf/ofixupps.h>
-#include <fmt/omf/ofixuppt.h>
-#include <fmt/omf/opledata.h>
-#include <fmt/omf/omfctxnm.h>
-#include <fmt/omf/omfctx.h>
 
 char                                    omf_temp_str[255+1/*NUL*/];
  
@@ -106,18 +80,6 @@ void omf_context_begin_file(struct omf_context_t * const ctx) {
 
 void omf_context_begin_module(struct omf_context_t * const ctx) {
     omf_context_clear_for_module(ctx);
-}
-
-int omf_context_parse_THEADR(struct omf_context_t * const ctx,struct omf_record_t * const rec) {
-    int len;
-
-    len = omf_record_get_lenstr(omf_temp_str,sizeof(omf_temp_str),rec);
-    if (len < 0) return -1;
-
-    if (cstr_set_n(&ctx->THEADR,omf_temp_str,len) < 0)
-        return -1;
-
-    return 0;
 }
 
 int omf_context_parse_LNAMES(struct omf_context_t * const ctx,struct omf_record_t * const rec) {

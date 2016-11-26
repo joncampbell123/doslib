@@ -1,5 +1,6 @@
 
-#include <fmt/omf/omfctxnm.h>
+#include <fmt/omf/omf.h>
+#include <fmt/omf/omfcstr.h>
 
 const char *omf_context_get_grpdef_name(const struct omf_context_t * const ctx,unsigned int i) {
     if (i > 0) {

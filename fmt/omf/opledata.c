@@ -1,5 +1,6 @@
 
-#include <fmt/omf/opledata.h>
+#include <fmt/omf/omf.h>
+#include <fmt/omf/omfcstr.h>
 
 static void omf_context_update_last_LEDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,const struct omf_record_t * const rec) {
     ctx->last_LEDATA_eno = info->enum_data_offset;

@@ -1,6 +1,6 @@
 
+#include <fmt/omf/omf.h>
 #include <fmt/omf/omfcstr.h>
-#include <fmt/omf/oextdefs.h>
 
 void omf_extdefs_context_init_extdef(struct omf_extdef_t * const ctx) {
     ctx->type = OMF_EXTDEF_TYPE_LOCAL;
