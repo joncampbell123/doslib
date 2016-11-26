@@ -20,6 +20,7 @@ win38631=1
 if [ "$1" == "clean" ]; then
     do_clean
     rm -fv test.dsk
+    rm -Rfv linux-host
     exit 0
 fi
 
