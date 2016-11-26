@@ -456,6 +456,8 @@ int main(int argc,char **argv) {
                     diddump = 1;
                 }
 
+                printf("----- next module -----\n");
+
                 ret = omf_context_next_lib_module_fd(omf_state,fd);
                 if (ret < 0) {
                     printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
@@ -602,52 +604,6 @@ int main(int argc,char **argv) {
 
                 } break;
         }
-#if 0
-            switch (omf_rectype) {
-                case 0x82:/* LHEADR */
-                    dump_LHEADR();
-                    break;
-                case 0x88:/* COMENT */
-                    dump_COMENT();
-                    break;
-                case 0x8A:/* MODEND */
-                case 0x8B:/* MODEND32 */
-                    dump_MODEND(omf_rectype&1);
-                    break;
-                case 0x90:/* PUBDEF */
-                case 0x91:/* PUBDEF32 */
-                    dump_PUBDEF(omf_rectype&1);
-                    break;
-                case 0xA0:/* LEDATA */
-                case 0xA1:/* LEDATA32 */
-                    dump_LEDATA(omf_rectype&1);
-                    break;
-                case 0xA2:/* LIDATA */
-                case 0xA3:/* LIDATA32 */
-                    dump_LIDATA(omf_rectype&1);
-                    break;
-                case 0xB4:/* LEXTDEF */
-                case 0xB5:/* LEXTDEF32 */
-                    dump_LEXTDEF(omf_rectype&1);
-                    break;
-                case 0xB6:/* LPUBDEF */
-                case 0xB7:/* LPUBDEF32 */
-                    dump_LPUBDEF(omf_rectype&1);
-                    break;
-                case 0xF0:/* LIBHEAD */
-                    dump_LIBHEAD();
-                    break;
-                case 0xF1:/* LIBEND */
-                    dump_LIBEND();
-                    break;
-                default:
-                    printf("** do not yet support\n");
-                    break;
-            }
-
-            omfrec_checkrange();
-            if (omf_rectype == 0xF1) break; // stop at LIBEND. there's non-OMF records that usually follow it.
-#endif
     } while (1);
 
     if (dumpstate && !diddump) {
