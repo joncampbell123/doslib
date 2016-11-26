@@ -1,4 +1,7 @@
 
+#ifndef _DOSLIB_OMF_OMLEDATA_H
+#define _DOSLIB_OMF_OMLEDATA_H
+
 #include "omfrec.h"
 
 // this is filled in by a utility function after reading the OMF record from the beginning.
@@ -17,4 +20,6 @@ int omf_ledata_parse_header(struct omf_ledata_info_t * const info,struct omf_rec
 static inline int omf_lidata_parse_header(struct omf_ledata_info_t * const info,struct omf_record_t * const rec) {
     return omf_ledata_parse_header(info,rec);
 }
+
+#endif //_DOSLIB_OMF_OMLEDATA_H
 

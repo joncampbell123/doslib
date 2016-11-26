@@ -17,7 +17,7 @@ dos86s:
 dos86s/omfdump.obj: omfdump.c
 	$(CC) $(CFLAGS) $[@
 
-dos86s/omfdump.exe: dos86s/omfcstr.obj dos86s/omfrec.obj dos86s/omfrecs.obj dos86s/olnames.obj dos86s/ogrpdefs.obj dos86s/osegdefs.obj dos86s/osegdeft.obj dos86s/oextdefs.obj dos86s/oextdeft.obj dos86s/opubdefs.obj dos86s/opubdeft.obj dos86s/omledata.obj dos86s/ofixupps.obj dos86s/ofixuppt.obj dos86s/omfdump.obj
+dos86s/omfdump.exe: dos86s/omfcstr.obj dos86s/omfrec.obj dos86s/omfrecs.obj dos86s/olnames.obj dos86s/ogrpdefs.obj dos86s/osegdefs.obj dos86s/osegdeft.obj dos86s/oextdefs.obj dos86s/oextdeft.obj dos86s/opubdefs.obj dos86s/opubdeft.obj dos86s/omledata.obj dos86s/ofixupps.obj dos86s/ofixuppt.obj dos86s/omfctx.obj dos86s/omfdump.obj
 	%write tmp.cmd option quiet system dos
 	%write tmp.cmd file dos86s/ofixupps.obj
 	%write tmp.cmd file dos86s/ofixuppt.obj
@@ -31,6 +31,7 @@ dos86s/omfdump.exe: dos86s/omfcstr.obj dos86s/omfrec.obj dos86s/omfrecs.obj dos8
 	%write tmp.cmd file dos86s/osegdefs.obj
 	%write tmp.cmd file dos86s/olnames.obj
 	%write tmp.cmd file dos86s/omfcstr.obj
+	%write tmp.cmd file dos86s/omfctx.obj
 	%write tmp.cmd file dos86s/omfrec.obj
 	%write tmp.cmd file dos86s/omfrecs.obj
 	%write tmp.cmd file dos86s/omfdump.obj

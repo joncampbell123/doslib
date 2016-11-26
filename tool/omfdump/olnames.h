@@ -1,4 +1,7 @@
 
+#ifndef _DOSLIB_OMF_OLNAMES_H
+#define _DOSLIB_OMF_OLNAMES_H
+
 #include "omfrec.h"
 
 /* LNAMES collection */
@@ -36,4 +39,6 @@ static inline unsigned int omf_lnames_context_get_highest_index(const struct omf
 static inline unsigned int omf_lnames_context_get_next_add_index(const struct omf_lnames_context_t * const ctx) {
     return ctx->omf_LNAMES_count + 1;
 }
+
+#endif //_DOSLIB_OMF_OLNAMES_H
 

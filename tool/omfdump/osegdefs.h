@@ -1,4 +1,7 @@
 
+#ifndef _DOSLIB_OMF_OSEGDEFS_H
+#define _DOSLIB_OMF_OSEGDEFS_H
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -86,4 +89,6 @@ static inline unsigned int omf_segdefs_context_get_highest_index(const struct om
 static inline unsigned int omf_segdefs_context_get_next_add_index(const struct omf_segdefs_context_t * const ctx) {
     return ctx->omf_SEGDEFS_count + 1;
 }
+
+#endif //_DOSLIB_OMF_OSEGDEFS_H
 

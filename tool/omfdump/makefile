@@ -4,8 +4,11 @@ all: linux-host linux-host/omfdump
 linux-host:
 	mkdir -p linux-host
 
-linux-host/omfdump: linux-host/omfcstr.o linux-host/omfrec.o linux-host/omfrecs.o linux-host/olnames.o linux-host/osegdefs.o linux-host/osegdeft.o linux-host/ogrpdefs.o linux-host/oextdefs.o linux-host/oextdeft.o linux-host/opubdefs.o linux-host/opubdeft.o linux-host/omledata.o linux-host/ofixupps.o linux-host/ofixuppt.o linux-host/omfdump.o
+linux-host/omfdump: linux-host/omfcstr.o linux-host/omfctx.o linux-host/omfrec.o linux-host/omfrecs.o linux-host/olnames.o linux-host/osegdefs.o linux-host/osegdeft.o linux-host/ogrpdefs.o linux-host/oextdefs.o linux-host/oextdeft.o linux-host/opubdefs.o linux-host/opubdeft.o linux-host/omledata.o linux-host/ofixupps.o linux-host/ofixuppt.o linux-host/omfdump.o
 	gcc -o $@ $^
+
+linux-host/omfctx.o: omfctx.c
+	gcc -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $<
 
 linux-host/omfrec.o: omfrec.c
 	gcc -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $<

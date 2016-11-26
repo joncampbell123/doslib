@@ -1,4 +1,7 @@
 
+#ifndef _DOSLIB_OMF_OEXTDEFS_H
+#define _DOSLIB_OMF_OEXTDEFS_H
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -52,4 +55,6 @@ static inline unsigned int omf_extdefs_context_get_highest_index(const struct om
 static inline unsigned int omf_extdefs_context_get_next_add_index(const struct omf_extdefs_context_t * const ctx) {
     return ctx->omf_EXTDEFS_count + 1;
 }
+
+#endif //_DOSLIB_OMF_OEXTDEFS_H
 
