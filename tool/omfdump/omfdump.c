@@ -272,6 +272,7 @@ struct omf_context_t {
     struct omf_fixupps_context_t        FIXUPPs;
     struct omf_record_t                 record; // reading, during parsing
     unsigned short                      library_block_size;// is .LIB archive if nonzero
+    unsigned short                      last_LEDATA_seg;
     unsigned long                       last_LEDATA_rec;
     unsigned long                       last_LEDATA_eno;
     unsigned char                       last_LEDATA_hdr;
@@ -326,6 +327,7 @@ void omf_context_init(struct omf_context_t * const ctx) {
     omf_segdefs_context_init(&ctx->SEGDEFs);
     omf_lnames_context_init(&ctx->LNAMEs);
     omf_record_init(&ctx->record);
+    ctx->last_LEDATA_seg = 0;
     ctx->last_LEDATA_rec = 0;
     ctx->last_LEDATA_eno = 0;
     ctx->last_LEDATA_hdr = 0;
@@ -344,6 +346,7 @@ void omf_context_free(struct omf_context_t * const ctx) {
     omf_lnames_context_free(&ctx->LNAMEs);
     omf_record_free(&ctx->record);
     cstr_free(&ctx->THEADR);
+    ctx->last_LEDATA_seg = 0;
     ctx->last_LEDATA_rec = 0;
     ctx->last_LEDATA_eno = 0;
     ctx->last_LEDATA_hdr = 0;
@@ -375,6 +378,7 @@ void omf_context_begin_file(struct omf_context_t * const ctx) {
     omf_lnames_context_free_names(&ctx->LNAMEs);
     omf_record_clear(&ctx->record);
     ctx->library_block_size = 0;
+    ctx->last_LEDATA_seg = 0;
     ctx->last_LEDATA_rec = 0;
     ctx->last_LEDATA_eno = 0;
     ctx->last_LEDATA_hdr = 0;
@@ -388,6 +392,7 @@ void omf_context_begin_module(struct omf_context_t * const ctx) {
     omf_grpdefs_context_free_entries(&ctx->GRPDEFs);
     omf_segdefs_context_free_entries(&ctx->SEGDEFs);
     omf_lnames_context_free_names(&ctx->LNAMEs);
+    ctx->last_LEDATA_seg = 0;
     ctx->last_LEDATA_rec = 0;
     ctx->last_LEDATA_eno = 0;
     ctx->last_LEDATA_hdr = 0;
@@ -403,6 +408,7 @@ void omf_context_clear(struct omf_context_t * const ctx) {
     omf_lnames_context_free_names(&ctx->LNAMEs);
     omf_record_clear(&ctx->record);
     ctx->library_block_size = 0;
+    ctx->last_LEDATA_seg = 0;
     ctx->last_LEDATA_rec = 0;
     ctx->last_LEDATA_eno = 0;
     ctx->last_LEDATA_hdr = 0;
@@ -761,6 +767,13 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
             ent->target_displacement = (rec->rectype & 1)/*32-bit*/ ? omf_record_get_dword(rec) : omf_record_get_word(rec);
         }
 
+        /* fixup: if the frame method is F4 (segment index of previous LEDATA record), then
+         *        simplify this code by patching in the LEDATA record's segment index */
+        if (ent->frame_method == 4) {
+            ent->frame_method = 0;/*SEGDEF*/
+            ent->frame_index = ctx->last_LEDATA_seg;
+        }
+
         ent->omf_rec_file_enoffs = ctx->last_LEDATA_eno;
         ent->omf_rec_file_offset = ctx->last_LEDATA_rec;
         ent->omf_rec_file_header = ctx->last_LEDATA_hdr;
@@ -810,6 +823,7 @@ int omf_context_parse_LEDATA(struct omf_context_t * const ctx,struct omf_ledata_
 
     ctx->last_LEDATA_eno = info->enum_data_offset;
     ctx->last_LEDATA_rec = rec->rec_file_offset;
+    ctx->last_LEDATA_seg = info->segment_index;
     ctx->last_LEDATA_hdr = rec->recpos;
     return 0;
 }
