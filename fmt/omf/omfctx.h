@@ -1,4 +1,7 @@
 
+#ifndef _DOSLIB_OMF_OMFCTX_H
+#define _DOSLIB_OMF_OMFCTX_H
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -70,6 +73,6 @@ int omf_context_parse_EXTDEF(struct omf_context_t * const ctx,struct omf_record_
 int omf_context_parse_PUBDEF(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct omf_record_t * const rec);
 int omf_context_parse_FIXUPP(struct omf_context_t * const ctx,struct omf_record_t * const rec);
-int omf_context_parse_LEDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
-int omf_context_parse_LIDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
+
+#endif //_DOSLIB_OMF_OMFCTX_H
 
