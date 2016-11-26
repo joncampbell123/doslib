@@ -35,6 +35,9 @@
 #define OMF_RECTYPE_LEDATA      (0xA0)
 #define OMF_RECTYPE_LEDATA32    (0xA1)
 
+#define OMF_RECTYPE_LIDATA      (0xA2)
+#define OMF_RECTYPE_LIDATA32    (0xA3)
+
 #define OMF_RECTYPE_LEXTDEF     (0xB4)
 #define OMF_RECTYPE_LEXTDEF32   (0xB5)
 

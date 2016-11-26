@@ -601,6 +601,17 @@ int omf_context_parse_LEDATA(struct omf_context_t * const ctx,struct omf_ledata_
     return 0;
 }
 
+int omf_context_parse_LIDATA(struct omf_context_t * const ctx,struct omf_ledata_info_t * const info,struct omf_record_t * const rec) {
+    if (omf_lidata_parse_header(info,rec) < 0)
+        return -1;
+
+    ctx->last_LEDATA_eno = info->enum_data_offset;
+    ctx->last_LEDATA_rec = rec->rec_file_offset;
+    ctx->last_LEDATA_seg = info->segment_index;
+    ctx->last_LEDATA_hdr = rec->recpos;
+    return 0;
+}
+
 //================================== PROGRAM ================================
 
 static char*                            in_file = NULL;   
@@ -760,6 +771,18 @@ static void print_b(unsigned char c) {
         printf("%c",(char)c);
     else
         printf(".");
+}
+
+void dump_LIDATA(const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info,const struct omf_record_t * const rec) {
+    (void)rec;
+
+    printf("LIDATA segment=\"%s\"(%u) data_offset=0x%lX(%lu) clength=0x%lX(%lu)\n",
+        omf_context_get_segdef_name_safe(ctx,info->segment_index),
+        info->segment_index,
+        (unsigned long)info->enum_data_offset,
+        (unsigned long)info->enum_data_offset,
+        (unsigned long)info->data_length,
+        (unsigned long)info->data_length);
 }
 
 void dump_LEDATA(const struct omf_context_t * const ctx,const struct omf_ledata_info_t * const info) {
@@ -1143,6 +1166,19 @@ int main(int argc,char **argv) {
 
                 if (omf_state->flags.verbose)
                     dump_LEDATA(omf_state,&info);
+
+                } break;
+            case OMF_RECTYPE_LIDATA:/*0xA2*/
+            case OMF_RECTYPE_LIDATA32:/*0xA3*/{
+                struct omf_ledata_info_t info;
+
+                if (omf_context_parse_LIDATA(omf_state,&info,&omf_state->record) < 0) {
+                    fprintf(stderr,"Error parsing LIDATA\n");
+                    return 1;
+                }
+
+                if (omf_state->flags.verbose)
+                    dump_LIDATA(omf_state,&info,&omf_state->record);
 
                 } break;
         }

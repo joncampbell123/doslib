@@ -13,3 +13,8 @@ struct omf_ledata_info_t {
 
 int omf_ledata_parse_header(struct omf_ledata_info_t * const info,struct omf_record_t * const rec);
 
+// LIDATA has same header, but data points to blocks
+static inline int omf_lidata_parse_header(struct omf_ledata_info_t * const info,struct omf_record_t * const rec) {
+    return omf_ledata_parse_header(info,rec);
+}
+
