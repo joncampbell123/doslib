@@ -2,7 +2,7 @@
 #ifndef _DOSLIB_OMF_OMLEDATA_H
 #define _DOSLIB_OMF_OMLEDATA_H
 
-#include "omfrec.h"
+#include <fmt/omf/omfrec.h>
 
 // this is filled in by a utility function after reading the OMF record from the beginning.
 // the data pointer is valid UNTIL the OMF record is overwritten/rewritten, so take the

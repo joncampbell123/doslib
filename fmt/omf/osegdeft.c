@@ -1,6 +1,6 @@
 
-#include "osegdefs.h"
-#include "osegdeft.h"
+#include <fmt/omf/osegdefs.h>
+#include <fmt/omf/osegdeft.h>
 
 const char *omf_segdefs_alignment_to_str(const unsigned char a) {
     switch (a) {

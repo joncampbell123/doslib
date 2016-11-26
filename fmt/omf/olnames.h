@@ -2,7 +2,7 @@
 #ifndef _DOSLIB_OMF_OLNAMES_H
 #define _DOSLIB_OMF_OLNAMES_H
 
-#include "omfrec.h"
+#include <fmt/omf/omfrec.h>
 
 /* LNAMES collection */
 struct omf_lnames_context_t {

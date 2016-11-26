@@ -1,6 +1,6 @@
 
-#include "omfcstr.h"
-#include "opubdefs.h"
+#include <fmt/omf/omfcstr.h>
+#include <fmt/omf/opubdefs.h>
 
 void omf_pubdefs_context_init_pubdef(struct omf_pubdef_t * const ctx) {
     ctx->group_index = 0;

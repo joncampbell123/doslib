@@ -1,6 +1,6 @@
 
-#include "ofixupps.h"
-#include "ofixuppt.h"
+#include <fmt/omf/ofixupps.h>
+#include <fmt/omf/ofixuppt.h>
 
 const char *omf_fixupp_location_to_str(const unsigned char loc) {
     switch (loc) {

@@ -1,5 +1,5 @@
 
-#include "oextdefs.h"
+#include <fmt/omf/oextdefs.h>
 
 const char *omf_extdef_type_to_string(const unsigned char t) {
     switch (t) {

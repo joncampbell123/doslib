@@ -1,6 +1,6 @@
 
-#include "omfcstr.h"
-#include "olnames.h"
+#include <fmt/omf/omfcstr.h>
+#include <fmt/omf/olnames.h>
 
 void omf_lnames_context_init(struct omf_lnames_context_t * const ctx) {
     ctx->omf_LNAMES = NULL;

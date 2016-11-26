@@ -12,7 +12,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 
-#include "omfrec.h"
+#include <fmt/omf/omfrec.h>
 
 enum {
     OMF_SEGDEF_ALIGN_ABSOLUTE=0,

@@ -1,5 +1,5 @@
 
-#include "osegdefs.h"
+#include <fmt/omf/osegdefs.h>
 
 void omf_segdefs_context_init_segdef(struct omf_segdef_t *s) {
     memset(s,0,sizeof(*s));
