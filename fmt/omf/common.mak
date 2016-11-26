@@ -1,0 +1,65 @@
+
+# TODO: OS/2 target: What can we #define to tell the header files which OS/2
+#       environment we're doing? (Command prompt app. vs Presentation Manager app vs.
+#       "fullscreen" app.)
+
+# this makefile is included from all the dos*.mak files, do not use directly
+# NTS: HPS is either \ (DOS) or / (Linux)
+
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
+NOW_BUILDING = FMT_OMF_LIB
+
+OBJS =        $(SUBDIR)$(HPS)oextdefs.obj $(SUBDIR)$(HPS)oextdeft.obj $(SUBDIR)$(HPS)ofixupps.obj $(SUBDIR)$(HPS)ofixuppt.obj $(SUBDIR)$(HPS)ogrpdefs.obj $(SUBDIR)$(HPS)olnames.obj $(SUBDIR)$(HPS)omfcstr.obj $(SUBDIR)$(HPS)omfctx.obj $(SUBDIR)$(HPS)omfrec.obj $(SUBDIR)$(HPS)omfrecs.obj $(SUBDIR)$(HPS)omledata.obj $(SUBDIR)$(HPS)opubdefs.obj $(SUBDIR)$(HPS)opubdeft.obj $(SUBDIR)$(HPS)osegdefs.obj $(SUBDIR)$(HPS)osegdeft.obj
+
+OMFDUMP_EXE = $(SUBDIR)$(HPS)omfdump.$(EXEEXT)
+
+$(FMT_OMF_LIB): $(OBJS)
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)oextdefs.obj -+$(SUBDIR)$(HPS)oextdeft.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)ofixupps.obj -+$(SUBDIR)$(HPS)ofixuppt.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)ogrpdefs.obj -+$(SUBDIR)$(HPS)olnames.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)omfcstr.obj  -+$(SUBDIR)$(HPS)omfctx.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)omfrec.obj   -+$(SUBDIR)$(HPS)omfrecs.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)omledata.obj -+$(SUBDIR)$(HPS)opubdefs.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)opubdeft.obj -+$(SUBDIR)$(HPS)osegdefs.obj
+	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)osegdeft.obj
+
+# NTS we have to construct the command line into tmp.cmd because for MS-DOS
+# systems all arguments would exceed the pitiful 128 char command line limit
+.C.OBJ:
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+all: lib exe
+
+exe: $(OMFDUMP_EXE) .symbolic
+
+lib: $(FMT_OMF_LIB) .symbolic
+
+!ifdef OMFDUMP_EXE
+$(OMFDUMP_EXE): $(FMT_OMF_LIB) $(FMT_OMF_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)omfdump.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)omfdump.obj $(FMT_OMF_LIB_WLINK_LIBRARIES)
+	%write tmp.cmd option map=$(OMFDUMP_EXE).map
+! ifdef TARGET_WINDOWS
+!  ifeq TARGET_MSDOS 16
+	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+!  endif
+! endif
+	%write tmp.cmd name $(OMFDUMP_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+! ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(OMFDUMP_EXE)
+	@wbind $(OMFDUMP_EXE) -q -n
+! endif
+! ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(OMFDUMP_EXE)
+! endif
+!endif
+
+clean: .SYMBOLIC
+          del $(SUBDIR)$(HPS)*.obj
+          del $(FMT_OMF_LIB)
+          del tmp.cmd
+          @echo Cleaning done
+

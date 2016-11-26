@@ -432,6 +432,12 @@ HW_USB_OHCI_LIB=$(HW_USB_OHCI_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)ohci.lib
 HW_USB_OHCI_LIB_DEPENDENCIES=
 HW_USB_OHCI_LIB_WLINK_LIBRARIES=library $(HW_USB_OHCI_LIB)
 
+# FMT\OMF----------------------------------------------------------------------------------
+FMT_OMF_LIB_DIR=$(REL)$(HPS)fmt$(HPS)omf
+FMT_OMF_LIB=$(FMT_OMF_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)omf.lib
+FMT_OMF_LIB_DEPENDENCIES=
+FMT_OMF_LIB_WLINK_LIBRARIES=library $(FMT_OMF_LIB)
+
 # CLSG module flags.
 # must be given last.
 # must specify small memory model, no library dependencies, no stack checking, no stack frames, DS/FS/GS float, inline floating point.

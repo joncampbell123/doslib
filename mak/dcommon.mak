@@ -346,6 +346,14 @@ $(HW_USB_OHCI_LIB):
 	@cd $(HERE)
 !endif
 
+# FMT\OMF-----------------------------------------------------------------------------------
+!ifneq NOW_BUILDING FMT_OMF_LIB
+$(FMT_OMF_LIB):
+	@cd $(FMT_OMF_LIB_DIR)
+	@$(MAKECMD) build lib
+	@cd $(HERE)
+!endif
+
 # DEBUG
 !ifndef NOW_BUILDING
 ! error no NOW_BUILDING
