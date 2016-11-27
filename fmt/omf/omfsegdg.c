@@ -495,6 +495,9 @@ int main(int argc,char **argv) {
             case OMF_RECTYPE_LEDATA32:/*0xA1*/
                 /* flush out last LEDATA record if any, store the new one */
                 if (last_ledata.data != NULL) {
+                    if (omf_state->flags.verbose)
+                        fprintf(stderr,"LEDATA flushing out prior for new one\n");
+
                     if (omf_context_record_write_fd(ofd,&last_ledata) < 0) {
                         fprintf(stderr,"Failed to write OMF record\n");
                         return 1;
@@ -506,6 +509,14 @@ int main(int argc,char **argv) {
                 omf_state->record.data_alloc = last_ledata.data_alloc;
                 break;
             default:
+                /* flush out LEDATA (possibly modified) */
+                if (last_ledata.data != NULL) {
+                    if (omf_context_record_write_fd(ofd,&last_ledata) < 0) {
+                        fprintf(stderr,"Failed to write OMF record\n");
+                        return 1;
+                    }
+                    omf_record_free(&last_ledata);
+                }
                 if (omf_context_record_write_fd(ofd,&omf_state->record) < 0) {
                     fprintf(stderr,"Failed to write OMF record\n");
                     return 1;
