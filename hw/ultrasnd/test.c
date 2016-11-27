@@ -911,6 +911,8 @@ int main(int argc,char **argv) {
 					"16-bit real mode (compact model) version"
 #elif defined(__HUGE__)
 					"16-bit real mode (huge model) version"
+#elif defined(__TINY__)
+					"16-bit real mode (tiny model) version"
 #else
 					"16-bit real mode (small model) version"
 #endif
