@@ -81,6 +81,40 @@ int my_fixupp_patch_code_16ofs_fixup(const struct omf_context_t * const ctx,unsi
     return -1;
 }
 
+const struct omf_pubdef_t *lookup_pubdef(const struct omf_context_t * const ctx,const char *name) {
+    const struct omf_pubdef_t *pubdef;
+    unsigned int i;
+
+    for (i=1;i <= omf_pubdefs_context_get_highest_index(&ctx->PUBDEFs);i++) {
+        pubdef = omf_pubdefs_context_get_pubdef(&ctx->PUBDEFs,i);
+        if (pubdef == NULL) continue;
+
+        if (!strcmp(pubdef->name_string,name))
+            return pubdef;
+    }
+
+    return NULL;
+}
+
+int segdef_in_DGROUP(struct omf_context_t * const ctx,unsigned int segment_index,unsigned int GRPDEF_DGROUP) {
+    const struct omf_grpdef_t *grpdef = omf_grpdefs_context_get_grpdef(&ctx->GRPDEFs,GRPDEF_DGROUP);
+    unsigned int si;
+
+    if (grpdef == NULL) return 0;
+
+    for (si=0;si < grpdef->count;si++) {
+        int segdef_i;
+
+        segdef_i = omf_grpdefs_context_get_grpdef_segdef(&ctx->GRPDEFs,grpdef,si);
+        if (segdef_i <= 0) continue;
+
+        if ((unsigned int)segdef_i == segment_index)
+            return 1;
+    }
+
+    return 0;
+}
+
 void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_t *ledata) {
     unsigned int GRPDEF_DGROUP = 0;
     unsigned char update_le_chk = 0;
@@ -148,21 +182,36 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
         // for completeness, we assume all EXTERNs are also in the same DGROUP.
         if (fixupp->frame_method == OMF_FIXUPP_FRAME_METHOD_TARGET) {
             if (fixupp->target_method == OMF_FIXUPP_TARGET_METHOD_EXTDEF) {
-                // good, do it.
+                const char *name = omf_context_get_extdef_name_safe(ctx,fixupp->target_index);
+
+                // wait... sometimes Watcom C will declare if EXTDEF, then declare the same
+                // symbol PUBDEF. if that's the case, then we can validate whether the
+                // extern is within DGROUP.
+                if (name != NULL) {
+                    const struct omf_pubdef_t *pubdef = lookup_pubdef(ctx,name);
+                    if (pubdef) {
+                        if (pubdef->group_index != 0 && pubdef->group_index == GRPDEF_DGROUP) {
+                            // yes, do it
+                        }
+                        else if (pubdef->group_index == 0 && segdef_in_DGROUP(ctx,pubdef->segment_index,GRPDEF_DGROUP)) {
+                            // yes, do it
+                        }
+                        else {
+                            // don't
+                            continue;
+                        }
+                    }
+                }
+
+                // good, do it
             }
             else {
                 // don't
                 continue;
             }
         }
-        else if (fixupp->frame_method == OMF_FIXUPP_FRAME_METHOD_PREV_LEDATA) {
-            // good, do it
-        }
-        else if (fixupp->frame_method == OMF_FIXUPP_FRAME_METHOD_EXTDEF) {
-            // good, do it
-        }
         else if (fixupp->frame_method == OMF_FIXUPP_FRAME_METHOD_GRPDEF) {
-            if (fixupp->frame_index == GRPDEF_DGROUP) {
+            if (GRPDEF_DGROUP != 0 && fixupp->frame_index == GRPDEF_DGROUP) {
                 // yes, do it
             }
             else {
@@ -171,8 +220,14 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
             }
         }
         else if (fixupp->frame_method == OMF_FIXUPP_FRAME_METHOD_SEGDEF) {
-            // don't
-            continue;
+            // only if the SEGDEF is part of DGROUP, yes
+            if (GRPDEF_DGROUP == 0 && segdef_in_DGROUP(ctx,fixupp->frame_index,GRPDEF_DGROUP)) {
+                // yes, do it
+            }
+            else {
+                // don't
+                continue;
+            }
         }
 
         if (fixupp->location == OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE) {
