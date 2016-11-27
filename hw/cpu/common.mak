@@ -82,11 +82,17 @@ $(HW_CPU_LIB): $(OBJS)
 .C.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	$(CC) @tmp.cmd
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
 .ASM.OBJ:
 	nasm -o $@ -f obj $(NASMFLAGS_CON) $[@
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
 	
 lib: $(HW_CPU_LIB) .symbolic
 	

@@ -354,6 +354,19 @@ $(FMT_OMF_LIB):
 	@cd $(HERE)
 !endif
 
+# FMT\OMF\OMFSEGDG utility
+!ifeq HPS /
+$(OMFSEGDG):
+	@cd $(FMT_OMF_LIB_DIR)
+	make
+	@cd $(HERE)
+!else
+$(OMFSEGDG):
+	@cd $(FMT_OMF_LIB_DIR)
+	@$(MAKECMD)
+	@cd $(HERE)
+!endif
+
 # DEBUG
 !ifndef NOW_BUILDING
 ! error no NOW_BUILDING

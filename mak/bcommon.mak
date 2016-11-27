@@ -438,6 +438,13 @@ FMT_OMF_LIB=$(FMT_OMF_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)omf.lib
 FMT_OMF_LIB_DEPENDENCIES=
 FMT_OMF_LIB_WLINK_LIBRARIES=library $(FMT_OMF_LIB)
 
+# FMT\OMF\OMFSEGDG utility
+!ifeq HPS /
+OMFSEGDG=$(REL)$(HPS)fmt$(HPS)omf$(HPS)linux-host$(HPS)omfsegdg
+!else
+OMFSEGDG=$(REL)$(HPS)fmt$(HPS)omf$(HPS)dos386f$(HPS)omfsegdg
+!endif
+
 # CLSG module flags.
 # must be given last.
 # must specify small memory model, no library dependencies, no stack checking, no stack frames, DS/FS/GS float, inline floating point.
