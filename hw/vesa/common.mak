@@ -20,6 +20,9 @@ $(HW_VESA_LIB): $(OBJS)
 .C.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	$(CC) @tmp.cmd
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
 all: lib exe
        

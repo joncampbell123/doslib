@@ -60,6 +60,9 @@ $(HW_VGAGFX_LIB): $(SUBDIR)$(HPS)vgagfx.obj $(SUBDIR)$(HPS)gvg256.obj $(SUBDIR)$
 .C.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	$(CC) @tmp.cmd
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
 # VGA240 needs -zu because of interrupt handler
 $(SUBDIR)$(HPS)vga240.obj: vga240.c

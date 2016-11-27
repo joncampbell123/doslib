@@ -13,10 +13,16 @@ HEXMEM_RES =  $(SUBDIR)$(HPS)hexmem.res
 .C.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	$(CC) @tmp.cmd
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
 $(SUBDIR)$(HPS)helldld1.obj: helldld1.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $[@
 	$(CC) @tmp.cmd
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
 all: lib exe
 
