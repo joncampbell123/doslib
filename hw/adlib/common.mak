@@ -5,9 +5,9 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 
 C_SOURCE =    adlib.c
 OBJS =        $(SUBDIR)$(HPS)adlib.obj $(SUBDIR)$(HPS)adlib.obj
-TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-MIDI_EXE =    $(SUBDIR)$(HPS)midi.exe
-IMFPLAY_EXE = $(SUBDIR)$(HPS)imfplay.exe
+TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
+MIDI_EXE =    $(SUBDIR)$(HPS)midi.$(EXEEXT)
+IMFPLAY_EXE = $(SUBDIR)$(HPS)imfplay.$(EXEEXT)
 
 $(HW_ADLIB_LIB): $(OBJS)
 	wlib -q -b -c $(HW_ADLIB_LIB) -+$(SUBDIR)$(HPS)adlib.obj
