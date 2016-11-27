@@ -526,5 +526,7 @@ int omf_record_write_index(struct omf_record_t * const rec,const unsigned short 
 void omf_record_write_update_reclen(struct omf_record_t * const rec);
 void omf_record_write_update_checksum(struct omf_record_t * const rec);
 
+int omf_context_generate_FIXUPP(struct omf_record_t * const rec,const struct omf_context_t * const ctx,const unsigned char is32bit);
+
 #endif //_DOSLIB_OMF_OMFCTX_H
 
