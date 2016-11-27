@@ -335,7 +335,7 @@
 #include <hw/dos/tgussbos.h>
 #include <hw/dos/tgusumid.h>
 
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
   /* chop features out of the Compact memory model build to ensure all code fits inside 64KB */
   /* don't include FX */
   /* don't include live config */
@@ -353,7 +353,7 @@
 #include <hw/sndsb/sndsbpnp.h>
 #endif
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 static unsigned char dmam = 0;
 static   signed char dma128 = 0;
 static unsigned char ignore_asp = 0;
@@ -430,7 +430,7 @@ static signed char		reduced_irq_interval = 0;
 static unsigned char		sample_rate_timer_clamp = 0;
 static unsigned char		goldplay_samplerate_choice = GOLDRATE_MATCH;
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 /* fun with Creative ADPCM */
 static unsigned char		do_adpcm_ai_warning = 1;
 #endif
@@ -865,14 +865,14 @@ static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 static unsigned char adpcm_do_reset_interval=1;
 static unsigned long adpcm_reset_interval=0;
 static unsigned long adpcm_counter=0;
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
 #else
 static unsigned char adpcm_tmp[4096];
 #endif
 static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
 	unsigned char FAR *buffer = sb_dma->lin;
 	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 80 - 6;
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
 #else
 	unsigned char c;
 #endif
@@ -953,7 +953,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			wav_buffer_filepos = wav_position;
 
 		if (sb_card->dsp_adpcm > 0) {
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
 			break; /* cut */
 #else
 			unsigned int src;
@@ -1343,7 +1343,7 @@ static unsigned long playback_live_position() {
 	return ((unsigned long)xx) / wav_bytes_per_sample;
 }
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static unsigned char dos_vm_yield_counter = 0;
 #endif
 
@@ -1356,7 +1356,7 @@ static void ui_anim(int force) {
 	const char *msg = "DMA:";
 	unsigned int i,cc;
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	/* Under Windows, yield every so often. Under Windows NT/2000/XP this prevents
 	 * NTVDM.EXE from pegging the CPU at 100%, allowing the rest of the OS to run
 	 * smoother. */
@@ -1421,7 +1421,7 @@ static void ui_anim(int force) {
 		for (;cc < 36;cc++) *wr++ = 0x1F20;
 
 		if (sb_card->dsp_adpcm != 0) {
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			msg = sndsb_adpcm_mode_str[sb_card->dsp_adpcm];
 			for (;cc < 52 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 #endif
@@ -1798,7 +1798,7 @@ static const char *dos32_irq_0_warning =
 	"         Enable?";
 #endif
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static int change_alias_idx = 0;
 static unsigned char dsp_alias_had_warned = 0;
 static const char *dsp_alias_warning =
@@ -1808,7 +1808,7 @@ static const char *dsp_alias_warning =
 	"         Enable anyway?";
 #endif
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 void measure_dsp_busy_cycle() {
 	unsigned long time1 = 0,time2 = 0,tlimit;
 	unsigned char timehits = 0;
@@ -2043,7 +2043,7 @@ void change_param_menu() {
 			vga_write_color(selector == 3 ? 0x70 : 0x1F);
 			vga_write(  "Translation:   ");
 			if (sb_card->dsp_adpcm > 0) {
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 				vga_write(sndsb_adpcm_mode_str[sb_card->dsp_adpcm]);
 #endif
 			}
@@ -2761,7 +2761,7 @@ static const struct vga_menu_item main_menu_file_set =
 	{"Set file...",		's',	0,	0};
 static const struct vga_menu_item main_menu_file_quit =
 	{"Quit",		'q',	0,	0};
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static const struct vga_menu_item main_menu_windows_fullscreen =
 	{"Windows fullscreen",	'f',	0,	0};
 #endif
@@ -2769,7 +2769,7 @@ static const struct vga_menu_item main_menu_windows_fullscreen =
 static const struct vga_menu_item* main_menu_file[] = {
 	&main_menu_file_set,
 	&main_menu_file_quit,
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&menu_separator,
 	&main_menu_windows_fullscreen,
 #endif
@@ -2786,7 +2786,7 @@ static const struct vga_menu_item main_menu_playback_params =
 	{"Parameters",		'a',	0,	0};
 static struct vga_menu_item main_menu_playback_reduced_irq =
 	{"xxx",			'i',	0,	0};
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static struct vga_menu_item main_menu_playback_autoinit_adpcm =
 	{"xxx",			'd',	0,	0};
 #endif
@@ -2798,7 +2798,7 @@ static struct vga_menu_item main_menu_playback_dsp_autoinit_dma =
 	{"xxx",			't',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_autoinit_command =
 	{"xxx",			'c',	0,	0};
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static struct vga_menu_item main_menu_playback_noreset_adpcm =
 	{"xxx",			'n',	0,	0};
 static struct vga_menu_item main_menu_playback_timer_clamp =
@@ -2826,14 +2826,14 @@ static const struct vga_menu_item* main_menu_playback[] = {
 	&menu_separator,
 	&main_menu_playback_params,
 	&main_menu_playback_reduced_irq,
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_playback_autoinit_adpcm,
 #endif
 	&main_menu_playback_goldplay,
 	&main_menu_playback_goldplay_mode,
 	&main_menu_playback_dsp_autoinit_dma,
 	&main_menu_playback_dsp_autoinit_command,
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_playback_noreset_adpcm,
 	&main_menu_playback_timer_clamp,
 	&main_menu_playback_force_hispeed,
@@ -2849,13 +2849,13 @@ static const struct vga_menu_item* main_menu_playback[] = {
 
 static const struct vga_menu_item main_menu_device_dsp_reset =
 	{"DSP reset",		'r',	0,	0};
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static const struct vga_menu_item main_menu_device_mixer_reset =
 	{"Mixer reset",		'r',	0,	0};
 #endif
 static const struct vga_menu_item main_menu_device_trigger_irq =
 	{"IRQ test",		't',	0,	0};
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static const struct vga_menu_item main_menu_device_autoinit_stop =
 	{"Exit auto-init",	'x',	0,	0};
 static const struct vga_menu_item main_menu_device_autoinit_stopcont =
@@ -2879,7 +2879,7 @@ static const struct vga_menu_item main_menu_device_choose_sound_card =
 static const struct vga_menu_item main_menu_device_configure_sound_card =
 	{"Configure sound card",'o',	0,	0};
 #endif
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static struct vga_menu_item main_menu_device_dsp_alias =
 	{"Alias ports",		'a',	0,	0};
 static struct vga_menu_item main_menu_device_busy_cycle =
@@ -2892,11 +2892,11 @@ static struct vga_menu_item main_menu_device_realloc_dma =
 
 static const struct vga_menu_item* main_menu_device[] = {
 	&main_menu_device_dsp_reset,
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_device_mixer_reset,
 #endif
 	&main_menu_device_trigger_irq,
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_device_autoinit_stop,
 	&main_menu_device_autoinit_stopcont,
 	&main_menu_device_haltcont_dma,
@@ -2912,7 +2912,7 @@ static const struct vga_menu_item* main_menu_device[] = {
 #ifdef LIVE_CFG
 	&main_menu_device_configure_sound_card,
 #endif
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_device_dsp_alias,
 	&main_menu_device_busy_cycle,
     &main_menu_device_srate_force,
@@ -2926,13 +2926,13 @@ static const struct vga_menu_item main_menu_help_about =
 
 
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 static const struct vga_menu_item main_menu_help_dsp_modes =
 	{"DSP modes",		'd',	0,	0};
 #endif
 static const struct vga_menu_item* main_menu_help[] = {
 	&main_menu_help_about,
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&menu_separator,
 	&main_menu_help_dsp_modes,
 #endif
@@ -2980,7 +2980,7 @@ int confirm_quit() {
 	return confirm_yes_no_dialog("Are you sure you want to exit to DOS?");
 }
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 int adpcm_warning_prompt() {
 	return confirm_yes_no_dialog("Most Sound Blaster clones do not support auto-init ADPCM playback.\nIf nothing plays when enabled, your sound card is one of them.\n\nEnable?");
 }
@@ -3064,7 +3064,7 @@ void update_cfg() {
 		main_menu_playback_goldplay_mode.text =
 			"?";
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	main_menu_playback_autoinit_adpcm.text =
 		sb_card->enable_adpcm_autoinit ? "ADPCM Auto-init: On" : "ADPCM Auto-init: Off";
 #endif
@@ -3074,7 +3074,7 @@ void update_cfg() {
 		sb_card->dsp_autoinit_dma ? "DMA autoinit: On" : "DMA autoinit: Off";
 	main_menu_playback_dsp_autoinit_command.text =
 		sb_card->dsp_autoinit_command ? "DSP playback: auto-init" : "DSP playback: single-cycle";
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	main_menu_playback_force_hispeed.text =
 		sb_card->force_hispeed ? "Force hispeed: On" : "Force hispeed: Off";
 	main_menu_playback_noreset_adpcm.text =
@@ -3107,7 +3107,7 @@ void update_cfg() {
 
 void prompt_play_wav(unsigned char rec) {
 	unsigned char gredraw = 1;
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
 #else
 	struct find_t ft;
 #endif
@@ -3119,7 +3119,7 @@ void prompt_play_wav(unsigned char rec) {
 		memcpy(temp,wav_file,strlen(wav_file)+1);
 		while (!ok) {
 			if (gredraw) {
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
 #else
 				char *cwd;
 #endif
@@ -3134,7 +3134,7 @@ void prompt_play_wav(unsigned char rec) {
 				ui_anim(1);
 				redraw = 1;
 
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
 #else
 				cwd = getcwd(NULL,0);
 				if (cwd) {
@@ -3198,7 +3198,7 @@ void prompt_play_wav(unsigned char rec) {
 					ok = -1;
 				}
 				else if (c == 13) {
-#if TARGET_MSDOS == 16 && (defined(__COMPACT__) || defined(__SMALL__))
+#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
 					ok = 1;
 #else
 					struct stat st;
@@ -3295,7 +3295,7 @@ static void help() {
     printf(" /srf4xx              Force SB16 sample rate commands\n");
     printf(" /srftc               Force SB/SBPro time constant sample rate\n");
     printf(" /noasp               Don't probe SB16 ASP/CSP chip\n");
-# if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+# if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
     printf(" /dma128              Enable 16-bit DMA to span 128KB\n");
     printf(" /-dma128             Disable 16-bit DMA to span 128KB\n");
     printf(" /dmam:[u|a|p]        Assume 16-bit DMA masking\n");
@@ -4218,7 +4218,7 @@ int main(int argc,char **argv) {
             else if (!strcmp(a,"srf4xx")) {
                 force_srate_4xx = 1;
             }
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
             else if (!strcmp(a,"dma128")) {
                 dma128 = 1;
             }
@@ -4234,7 +4234,7 @@ int main(int argc,char **argv) {
                     return 1;
             }
 #endif
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
             else if (!strcmp(a,"noasp")) {
                 ignore_asp = 1;
             }
@@ -4360,7 +4360,7 @@ int main(int argc,char **argv) {
 	if (assume_dma)
 		d8237_flags |= D8237_DMA_PRIMARY | D8237_DMA_SECONDARY;
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
     if (dma128 == 1)
         d8237_enable_16bit_128kb_dma();
     else if (dma128 == -1)
@@ -4394,7 +4394,7 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 	/* it's up to us now to tell it certain minor things */
 	sndsb_detect_virtualbox();		// whether or not we're running in VirtualBox
 	/* sndsb now allows us to keep the EXE small by not referring to extra sound card support */
@@ -4528,7 +4528,7 @@ int main(int argc,char **argv) {
 			printf("Also found one at 0x240\n");
 	}
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	/* There is a known issue with NTVDM.EXE Sound Blaster emulation under Windows XP. Not only
 	 * do we get stuttery audio, but at some random point (1-5 minutes of continuous playback)
 	 * the DOS VM crashes up for some unknown reason (VM is hung). */
@@ -4553,7 +4553,7 @@ int main(int argc,char **argv) {
 		struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
 		if (cx->baseio == 0) continue;
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 		if (!cx->mixer_probed)
 			sndsb_probe_mixer(cx);
 #endif
@@ -4612,7 +4612,7 @@ int main(int argc,char **argv) {
 			struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
 			if (cx->baseio == 0) continue;
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			mixer_str = sndsb_mixer_chip_str(cx->mixer_chip);
 			ess_str = sndsb_ess_chipset_str(cx->ess_chipset);
 #else
@@ -4635,7 +4635,7 @@ int main(int argc,char **argv) {
 #endif
 			printf("      '%s'\n",cx->dsp_copyright);
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__)))
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
             if (!ignore_asp) {
                 if (sndsb_check_for_sb16_asp(cx)) {
                     printf("      CSP/ASP chip detected: version=0x%02x ",cx->asp_chip_version_id);
@@ -4718,7 +4718,7 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	/* please let me know if the user attempts to close my DOS Box */
 	if (dos_close_awareness_available()) {
 		int d;
@@ -4793,7 +4793,7 @@ int main(int argc,char **argv) {
 				t8254_wait(t8254_us2ticks(1000000));
 				vga_msg_box_destroy(&box);
 			}
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_device_mixer_reset) {
 				struct vga_msg_box box;
 				vga_msg_box_create(&box,"Resetting mixer...",0,0);
@@ -4831,7 +4831,7 @@ int main(int argc,char **argv) {
 				}
 				vga_msg_box_destroy(&box);
 			}
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_help_dsp_modes) {
 				int quit = 0;
 				struct vga_msg_box box;
@@ -4938,7 +4938,7 @@ int main(int argc,char **argv) {
 				vga_msg_box_destroy(&box);
 			}
 #endif
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_playback_dsp4_fifo_autoinit) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
@@ -5078,7 +5078,7 @@ int main(int argc,char **argv) {
 				ui_anim(1);
 				if (wp) begin_play();
 			}
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_windows_fullscreen) {
 				/* NTS: Does not seem to work under Windows XP */
 				if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_STANDARD) {
@@ -5154,7 +5154,7 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_playback_autoinit_adpcm) {
 				unsigned char wp = wav_playing;
 				if (do_adpcm_ai_warning) {
@@ -5196,7 +5196,7 @@ int main(int argc,char **argv) {
 				}
 				vga_msg_box_destroy(&box);
 			}
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 			else if (mitem == &main_menu_device_haltcont_dma) {
 				unsigned char wp = wav_playing;
 				struct vga_msg_box box;
@@ -5450,7 +5450,7 @@ int main(int argc,char **argv) {
 			}
 		}
 
-#if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 		/* Windows "close-awareness".
 		 * If the user attempts to close the DOSBox window, Windows will let us know */
 		if (dos_close_awareness_available()) {
