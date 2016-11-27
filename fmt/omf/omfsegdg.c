@@ -232,6 +232,7 @@ int main(int argc,char **argv) {
     unsigned char dumpstate = 0;
     unsigned char diddump = 0;
     unsigned char verbose = 0;
+    unsigned char outself = 0;
     int i,fd,ret,ofd;
     char *a;
 
@@ -279,8 +280,22 @@ int main(int argc,char **argv) {
     }
 
     if (!strcmp(in_file,out_file)) {
-        fprintf(stderr,"Input and output files must be different\n");
-        return 1;
+        // caller wants us to write to a temporary file, then
+        // rename over the input file.
+        outself = 1;
+        out_file = strdup(in_file);
+        if (out_file == NULL) return 1;
+
+        // change something about the output file name string to make it unique
+        {
+            char *ext = strrchr(out_file,'.');
+            if (ext == NULL) return 1;
+
+            if (!strcasecmp(ext,".obj"))
+                strcpy(ext,".obt");
+            else
+                return 1;
+        }
     }
 
     fd = open(in_file,O_RDONLY|O_BINARY);
@@ -289,7 +304,7 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    ofd = open(out_file,O_RDWR|O_BINARY|O_CREAT|O_TRUNC);
+    ofd = open(out_file,O_RDWR|O_BINARY|O_CREAT|O_TRUNC,0644);
     if (ofd < 0) {
         fprintf(stderr,"Failed to open output file %s\n",strerror(errno));
         return 1;
@@ -515,6 +530,22 @@ int main(int argc,char **argv) {
     omf_state = omf_context_destroy(omf_state);
     close(ofd);
     close(fd);
+
+    if (outself) {
+        if (unlink(in_file) < 0) {
+            fprintf(stderr,"Failed to delete file, %s\n",strerror(errno));
+            return 1;
+        }
+        if (rename(out_file,in_file) < 0) {
+            fprintf(stderr,"Failed to rename file, %s\n",strerror(errno));
+            return 1;
+        }
+
+        free(out_file);
+        out_file = NULL;
+        outself = 0;
+    }
+
     return 0;
 }
 
