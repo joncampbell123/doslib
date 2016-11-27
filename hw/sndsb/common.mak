@@ -58,7 +58,7 @@ $(HW_SNDSBPNP_LIB): $(OBJSPNP)
 	$(OMFSEGDG) -i $@ -o $@
 !endif
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
 
 lib: $(HW_SNDSB_LIB) $(HW_SNDSBPNP_LIB) .symbolic
 

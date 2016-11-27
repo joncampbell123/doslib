@@ -16,7 +16,7 @@ $(HW_JOYSTICK_LIB): $(OBJS)
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	@$(CC) @tmp.cmd
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
        
 lib: $(HW_JOYSTICK_LIB) .symbolic
 

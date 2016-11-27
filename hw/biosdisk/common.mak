@@ -26,7 +26,7 @@ $(HW_BIOSDISK_LIB): $(OBJS)
 .ASM.OBJ:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
 
 lib: $(HW_BIOSDISK_LIB) .symbolic
 

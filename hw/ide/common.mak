@@ -29,7 +29,7 @@ $(HW_IDE_LIB): $(OBJS)
 	$(OMFSEGDG) -i $@ -o $@
 !endif
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
        
 lib: $(HW_IDE_LIB) .symbolic
 

@@ -24,7 +24,7 @@ $(HW_DOSBOXID_LIB): $(OBJS)
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
        
 lib: $(HW_DOSBOXID_LIB) .symbolic
 

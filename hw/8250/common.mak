@@ -29,7 +29,7 @@ $(HW_8250PNP_LIB): $(OBJSPNP)
 	$(OMFSEGDG) -i $@ -o $@
 !endif
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
 	
 lib: $(HW_8250_LIB) $(HW_8250PNP_LIB) .symbolic
 	

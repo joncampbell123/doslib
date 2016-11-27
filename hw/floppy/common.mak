@@ -19,7 +19,7 @@ $(HW_FLOPPY_LIB): $(OBJS)
 	$(OMFSEGDG) -i $@ -o $@
 !endif
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
        
 lib: $(HW_FLOPPY_LIB) .symbolic
 

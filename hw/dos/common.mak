@@ -127,7 +127,7 @@ $(SUBDIR)$(HPS)dosntast.obj: dosntast.c
 	$(OMFSEGDG) -i $@ -o $@
 !endif
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
 
 exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) .symbolic
 

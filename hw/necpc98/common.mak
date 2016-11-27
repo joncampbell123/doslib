@@ -19,7 +19,7 @@ $(HW_NECPC98_LIB): $(OBJS)
 	$(OMFSEGDG) -i $@ -o $@
 !endif
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
        
 lib: $(HW_NECPC98_LIB) .symbolic
 
