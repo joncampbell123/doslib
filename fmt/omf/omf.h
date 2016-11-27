@@ -516,6 +516,15 @@ void dump_LNAMES(FILE *fp,const struct omf_context_t * const ctx,unsigned int i)
 void dump_THEADR(FILE *fp,const struct omf_context_t * const ctx);
 
 int omf_context_record_write_fd(const int ofd,const struct omf_record_t * const rec);
+void omf_record_write_byte_fast(struct omf_record_t * const rec,const unsigned char c);
+int omf_record_write_byte(struct omf_record_t * const rec,const unsigned char c);
+void omf_record_write_word_fast(struct omf_record_t * const rec,const unsigned short c);
+int omf_record_write_word(struct omf_record_t * const rec,const unsigned short c);
+void omf_record_write_dword_fast(struct omf_record_t * const rec,const unsigned long c);
+int omf_record_write_dword(struct omf_record_t * const rec,const unsigned long c);
+int omf_record_write_index(struct omf_record_t * const rec,const unsigned short c);
+void omf_record_write_update_reclen(struct omf_record_t * const rec);
+void omf_record_write_update_checksum(struct omf_record_t * const rec);
 
 #endif //_DOSLIB_OMF_OMFCTX_H
 
