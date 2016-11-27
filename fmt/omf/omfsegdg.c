@@ -66,6 +66,7 @@ int my_fixupp_patch_code_16ofs_fixup(const struct omf_context_t * const ctx,unsi
 
 void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_t *ledata) {
     unsigned int GRPDEF_DGROUP = 0;
+    unsigned char update_le_chk = 0;
     struct omf_ledata_info_t info;
     unsigned char is_code = 0;
     unsigned int i;
@@ -167,13 +168,19 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
                 fprintf(stderr,"WARNING: cannot patch 16-bit segbase fixup because segment is not code\n");
             else if (my_fixupp_patch_code_16ofs_fixup(ctx,info.data,fixupp->data_record_offset,info.data_length) < 0)
                 fprintf(stderr,"WARNING: unable to patch 16-bit segbase fixup\n");
-            else
+            else {
                 fixupp->alloc = 0;//it worked
+                update_le_chk = 1;
+            }
         }
         else if (fixupp->location == OMF_FIXUPP_LOCATION_16BIT_SEGMENT_OFFSET) {
             fprintf(stderr,"WARNING: ignoring segment:offset fixup\n");
         }
     }
+
+    // if we changed bytes in LEDATA we have to fix checksum
+    if (update_le_chk)
+        omf_record_write_update_checksum(ledata);
 }
 
 static void help(void) {
