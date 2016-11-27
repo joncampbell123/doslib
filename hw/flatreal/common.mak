@@ -15,9 +15,15 @@ $(HW_FLATREAL_LIB): $(OBJS)
 .C.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	@$(CC) @tmp.cmd
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
 .ASM.OBJ:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
 all: lib exe
 	
