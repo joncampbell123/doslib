@@ -165,6 +165,22 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
         if (fixupp == NULL) continue;
         if (!fixupp->alloc) continue;
 
+        if (fixupp->location == OMF_FIXUPP_LOCATION_16BIT_SEGMENT_OFFSET) {
+            fprintf(stderr,"WARNING: ignoring segment:offset fixup\n");
+            continue;
+        }
+
+        if (fixupp->location != OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE)
+            continue;
+
+        if ((fixupp->data_record_offset+2U) > info.data_length)
+            continue;
+
+        if (!is_code) {
+            fprintf(stderr,"WARNING: cannot patch 16-bit segbase fixup because segment is not code\n");
+            continue;
+        }
+
         // is this a fixup we care about?
         // we're interested in segment fixups that refer to DGROUP.
         // the purpose of this program is to patch .obj files so that instead of
@@ -198,6 +214,7 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
                         }
                         else {
                             // don't
+                            fprintf(stderr,"WARNING: Unable to determine how to patch EXTDEF\n");
                             continue;
                         }
                     }
@@ -207,6 +224,7 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
             }
             else {
                 // don't
+                fprintf(stderr,"WARNING: Target method not EXTDEF\n");
                 continue;
             }
         }
@@ -216,6 +234,7 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
             }
             else {
                 // don't
+                fprintf(stderr,"WARNING: Unable to patch GRPDEF, because it's not DGROUP\n");
                 continue;
             }
         }
@@ -226,27 +245,17 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
             }
             else {
                 // don't
+                fprintf(stderr,"WARNING: Unable to patch SEGDEF, not part of DGROUP\n");
                 continue;
             }
         }
 
-        if (fixupp->location == OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE) {
-            if ((fixupp->data_record_offset+2U) > info.data_length)
-                continue;
-
-            // step back some bytes, and try to recognize the x86 opcode the fixup patches.
-            // Watcom C uses some fairly common opcode patterns for us to work with.
-            if (!is_code)
-                fprintf(stderr,"WARNING: cannot patch 16-bit segbase fixup because segment is not code\n");
-            else if (my_fixupp_patch_code_16ofs_fixup(ctx,info.data,fixupp->data_record_offset,info.data_length) < 0)
-                fprintf(stderr,"WARNING: unable to patch 16-bit segbase fixup\n");
-            else {
-                fixupp->alloc = 0;//it worked
-                update_le_chk = 1;
-            }
+        if (my_fixupp_patch_code_16ofs_fixup(ctx,info.data,fixupp->data_record_offset,info.data_length) == 0) {
+            fixupp->alloc = 0;//it worked
+            update_le_chk = 1;
         }
-        else if (fixupp->location == OMF_FIXUPP_LOCATION_16BIT_SEGMENT_OFFSET) {
-            fprintf(stderr,"WARNING: ignoring segment:offset fixup\n");
+        else {
+            fprintf(stderr,"WARNING: unable to patch 16-bit segbase fixup\n");
         }
     }
 
