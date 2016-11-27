@@ -96,27 +96,35 @@ const struct omf_pubdef_t *lookup_pubdef(const struct omf_context_t * const ctx,
     return NULL;
 }
 
-int segdef_in_DGROUP(struct omf_context_t * const ctx,unsigned int segment_index,unsigned int GRPDEF_DGROUP) {
-    const struct omf_grpdef_t *grpdef = omf_grpdefs_context_get_grpdef(&ctx->GRPDEFs,GRPDEF_DGROUP);
-    unsigned int si;
+int segdef_in_DGROUP(struct omf_context_t * const ctx,unsigned int segment_index) {
+    const struct omf_grpdef_t *grpdef;
+    unsigned int gi,si;
+    const char *name;
 
-    if (grpdef == NULL) return 0;
+    for (gi=1;gi <= omf_grpdefs_context_get_highest_index(&ctx->GRPDEFs);gi++) {
+        name = omf_lnames_context_get_name(&ctx->LNAMEs,gi);
+        if (name == NULL) continue;
 
-    for (si=0;si < grpdef->count;si++) {
-        int segdef_i;
+        if (!strcmp(name,"DGROUP")) {
+            grpdef = omf_grpdefs_context_get_grpdef(&ctx->GRPDEFs,gi);
+            if (grpdef == NULL) continue;
 
-        segdef_i = omf_grpdefs_context_get_grpdef_segdef(&ctx->GRPDEFs,grpdef,si);
-        if (segdef_i <= 0) continue;
+            for (si=0;si < grpdef->count;si++) {
+                int segdef_i;
 
-        if ((unsigned int)segdef_i == segment_index)
-            return 1;
+                segdef_i = omf_grpdefs_context_get_grpdef_segdef(&ctx->GRPDEFs,grpdef,si);
+                if (segdef_i <= 0) continue;
+
+                if ((unsigned int)segdef_i == segment_index)
+                    return 1;
+            }
+        }
     }
 
     return 0;
 }
 
 void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_t *ledata) {
-    unsigned int GRPDEF_DGROUP = 0;
     unsigned char update_le_chk = 0;
     struct omf_ledata_info_t info;
     unsigned char is_code = 0;
@@ -145,18 +153,6 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
             }
         }
     }
-
-    // which GRPDEF is DGROUP?
-    for (i=1;i <= omf_grpdefs_context_get_highest_index(&ctx->GRPDEFs);i++) {
-        const char *n = omf_context_get_grpdef_name(ctx,i);
-        if (n == NULL) continue;
-
-        if (!strcmp(n,"DGROUP"))
-            GRPDEF_DGROUP = i;
-    }
-
-    if (GRPDEF_DGROUP == 0)
-        fprintf(stderr,"WARNING: Unable to locate DGROUP\n");
 
     for (i=1;i <= omf_fixupps_context_get_highest_index(&ctx->FIXUPPs);i++) {
         struct omf_fixupp_t *fixupp;
@@ -206,15 +202,17 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
                 if (name != NULL) {
                     const struct omf_pubdef_t *pubdef = lookup_pubdef(ctx,name);
                     if (pubdef) {
-                        if (pubdef->group_index != 0 && pubdef->group_index == GRPDEF_DGROUP) {
+                        const char *pubdef_group = omf_context_get_grpdef_name_safe(ctx,pubdef->group_index);
+
+                        if (pubdef->group_index != 0 && !strcmp(pubdef_group,"DGROUP")) {
                             // yes, do it
                         }
-                        else if (pubdef->group_index == 0 && segdef_in_DGROUP(ctx,pubdef->segment_index,GRPDEF_DGROUP)) {
+                        else if (pubdef->group_index == 0 && segdef_in_DGROUP(ctx,pubdef->segment_index)) {
                             // yes, do it
                         }
                         else {
                             // don't
-                            fprintf(stderr,"WARNING: Unable to determine how to patch EXTDEF\n");
+                            fprintf(stderr,"WARNING: Unable to determine how to patch EXTDEF by pubdef\n");
                             continue;
                         }
                     }
@@ -229,7 +227,9 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
             }
         }
         else if (fixupp->frame_method == OMF_FIXUPP_FRAME_METHOD_GRPDEF) {
-            if (GRPDEF_DGROUP != 0 && fixupp->frame_index == GRPDEF_DGROUP) {
+            const char *group = omf_context_get_grpdef_name_safe(ctx,fixupp->frame_index);
+
+            if (!strcmp(group,"DGROUP")) {
                 // yes, do it
             }
             else {
@@ -239,8 +239,7 @@ void my_fixupp_patch_segrefs(struct omf_context_t * const ctx,struct omf_record_
             }
         }
         else if (fixupp->frame_method == OMF_FIXUPP_FRAME_METHOD_SEGDEF) {
-            // only if the SEGDEF is part of DGROUP, yes
-            if (GRPDEF_DGROUP == 0 && segdef_in_DGROUP(ctx,fixupp->frame_index,GRPDEF_DGROUP)) {
+            if (segdef_in_DGROUP(ctx,fixupp->frame_index)) {
                 // yes, do it
             }
             else {
