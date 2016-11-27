@@ -45,6 +45,23 @@ int my_fixupp_patch_code_16ofs_fixup(const struct omf_context_t * const ctx,unsi
 
         return 0;
     }
+    // "MOV WORD PTR [reg+disp8],seg symbol"
+    //   which becomes
+    // "MOV WORD PTR [reg+disp8],<imm>"
+    //   change it to
+    // "MOV WORD PTR [reg+disp8],cs" + "NOP" + "NOP" + "NOP"
+    else if (fixup >= 3 && (fixup+3) <= len && base[fixup-3] == 0xC7 && base[fixup-2] >= 0x40 && base[fixup-2] <= 0x47) { // [fixup-1] is displacement
+        if (ctx->flags.verbose)
+            fprintf(stderr,"Patching: MOV WORD PTR [reg+disp8],seg ... to refer to CS\n");
+
+        base[fixup-3] = 0x8C;
+        base[fixup-2] = (1/*mod==1*/ << 6) | (1/*CS*/ << 3) | (base[fixup-2] & 7);
+//      base[fixup-1]    do not overwrite displacement
+        base[fixup+0] = 0x90;
+        base[fixup+1] = 0x90;
+
+        return 0;
+    }
     // "MOV <reg>,seg symbol"
     //   which becomes
     // "MOV <reg>,<imm>"
