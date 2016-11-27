@@ -67,7 +67,7 @@ if (!( -f "$filename.xz" )) {
     close(XX);
     die if $list eq '';
 
-    $x = system("tar --exclude=\\\*.RES --exclude=\\\*.res --exclude=\\\*.MAP --exclude=\\\*.map --exclude=\\\*.OBJ --exclude=\\\*.obj --exclude=\\\*.LIB --exclude=\\\*.lib --exclude=.git -C .. -cvf $filename $list");
+    $x = system("tar --exclude=\\\*.obo --exclude=\\\*.OBO --exclude=\\\*.RES --exclude=\\\*.res --exclude=\\\*.MAP --exclude=\\\*.map --exclude=\\\*.OBJ --exclude=\\\*.obj --exclude=\\\*.LIB --exclude=\\\*.lib --exclude=.git -C .. -cvf $filename $list");
     die unless $x == 0;
     print "Packing to XZ\n";
     $x = system("xz -6e $filename");
