@@ -634,6 +634,7 @@ int main(int argc,char **argv) {
                 return 1;
         }
 
+        unlink(x); // remove previous .obo file, if there
         if (rename(in_file,x) < 0) {
             fprintf(stderr,"Failed to rename file, %s\n",strerror(errno));
             return 1;
