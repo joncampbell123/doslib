@@ -2,6 +2,9 @@
 #include <fmt/omf/omf.h>
 
 void dump_FIXUPP_entry(FILE *fp,const struct omf_context_t * const ctx,const struct omf_fixupp_t * const ent) {
+    if (!ent->alloc)
+        return;
+
     fprintf(fp,"    %s-relative location=%s(%u) frame_method=%s(%u)",
             ent->segment_relative?"seg":"self",
             omf_fixupp_location_to_str(ent->location),

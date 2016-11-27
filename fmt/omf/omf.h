@@ -128,7 +128,8 @@ struct omf_fixupp_t {
     unsigned int                        location:4;         // location
     unsigned int                        frame_method:3;     // frame method
     unsigned int                        target_method:3;    // target method
-    unsigned int                        _pad_:5;            // [pad]
+    unsigned int                        alloc:1;            // if this entry is allocated (you can make an entry disappear by clearing this)
+    unsigned int                        _pad_:4;            // [pad]
     uint16_t                            data_record_offset; // offset in last LEDATA (relative to LEDATA's enum offset)
     uint16_t                            frame_index;        // frame index (SEGDEF, GRPDEF, etc. according to frame method)
     uint16_t                            target_index;       // target index (SEGDEF, GRPDEF, etc. according to target method)
