@@ -515,5 +515,7 @@ void dump_GRPDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i)
 void dump_LNAMES(FILE *fp,const struct omf_context_t * const ctx,unsigned int i);
 void dump_THEADR(FILE *fp,const struct omf_context_t * const ctx);
 
+int omf_context_record_write_fd(const int ofd,const struct omf_record_t * const rec);
+
 #endif //_DOSLIB_OMF_OMFCTX_H
 
