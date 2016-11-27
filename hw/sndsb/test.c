@@ -357,21 +357,21 @@
 static unsigned char dmam = 0;
 static   signed char dma128 = 0;
 static unsigned char ignore_asp = 0;
+static unsigned char force_srate_tc = 0;
+static unsigned char force_srate_4xx = 0;
+static unsigned char always_reset_dsp_to_stop = 0;
+static unsigned char assume_dsp_hispeed_doesnt_block = 0;
+static unsigned char dma_autoinit_override = 0;
+static unsigned char sb_debug = 0;
 #endif
 
 static uint32_t      buffer_limit = 0;
-static unsigned char force_srate_tc = 0;
-static unsigned char force_srate_4xx = 0;
-static unsigned char assume_dsp_hispeed_doesnt_block = 0;
-static unsigned char always_reset_dsp_to_stop = 0;
-static unsigned char dma_autoinit_override = 0;
 static unsigned char force_dma_probe = 0;
 static unsigned char force_irq_probe = 0;
 static unsigned char irq_probe_f2 = 1;
 static unsigned char irq_probe_80 = 1;
 static unsigned char dma_probe_e2 = 1;
 static unsigned char dma_probe_14 = 1;
-static unsigned char sb_debug = 0;
 
 static struct dma_8237_allocation *sb_dma = NULL; /* DMA buffer */
 
@@ -3258,8 +3258,11 @@ void prompt_play_wav(unsigned char rec) {
 }
 
 static void help() {
+#if TARGET_MSDOS == 16 && defined(__TINY__)
+    printf("See source code for options.");
+#else
 	printf("test [options]\n");
-#if !(TARGET_MSDOS == 16 && defined(__COMPACT__)) /* this is too much to cram into a small model EXE */
+# if !(TARGET_MSDOS == 16 && defined(__COMPACT__)) /* this is too much to cram into a small model EXE */
 	printf(" /h /help             This help\n");
 	printf(" /nopnp               Don't scan for ISA Plug & Play devices\n");
 	printf(" /noprobe             Don't probe ISA I/O ports for non PnP devices\n");
@@ -3268,7 +3271,11 @@ static void help() {
 	printf(" /play                Automatically start playing WAV file\n");
 	printf(" /sc=<N>              Automatically pick Nth sound card (first card=1)\n");
 	printf(" /ddac                Force DSP Direct DAC output mode\n");
+#  if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 	printf(" /96k /64k /63k /32k  Limit DMA buffer to...\n");
+#  else
+	printf(" /64k /63k /32k       Limit DMA buffer to...\n");
+#  endif
     printf(" /16k /8k /4k         Limit DMA buffer to...\n");
 	printf(" /nomirqp             Disable 'manual' IRQ probing\n");
 	printf(" /noairqp             Disable 'alt' IRQ probing\n");
@@ -3289,26 +3296,27 @@ static void help() {
 	printf(" /nd14                Don't use DSP command 0x14 to probe DMA\n");
 	printf(" /fip                 Force IRQ probe\n");
 	printf(" /fdp                 Force DMA probe\n");
+#  if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 	printf(" /dmaaio              Allow DMA auto-init override (careful!)\n");
-	printf(" /hinoblk             Assume DSP hispeed modes are non-blocking\n");
 	printf(" /stopres             Always reset DSP to stop playback\n");
+	printf(" /hinoblk             Assume DSP hispeed modes are non-blocking\n");
     printf(" /srf4xx              Force SB16 sample rate commands\n");
     printf(" /srftc               Force SB/SBPro time constant sample rate\n");
     printf(" /noasp               Don't probe SB16 ASP/CSP chip\n");
-# if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
     printf(" /dma128              Enable 16-bit DMA to span 128KB\n");
     printf(" /-dma128             Disable 16-bit DMA to span 128KB\n");
     printf(" /dmam:[u|a|p]        Assume 16-bit DMA masking\n");
     printf("                          u=unknown a=address p=page\n");
+#  endif
 # endif
-#endif
 
-#if TARGET_MSDOS == 32
+# if TARGET_MSDOS == 32
 	printf("The following option affects hooking the NMI interrupt. Hooking is\n");
 	printf("required to work with Gravis Ultrasound SBOS/MEGA-EM SB emulation\n");
 	printf("and to work around problems with common DOS extenders. If not specified,\n");
 	printf("the program will only hook NMI if SBOS/MEGA-EM is resident.\n");
 	printf(" /-nmi or /+nmi       Don't / Do hook NMI interrupt, reflect to real mode.\n");
+# endif
 #endif
 }
 
@@ -4172,7 +4180,9 @@ int main(int argc,char **argv) {
 	const struct vga_menu_item *mitem = NULL;
 	unsigned char assume_dma = 0;
 	int disable_probe = 0;
+#ifdef ISAPNP
 	int disable_pnp = 0;
+#endif
 	int disable_env = 0;
 	int force_ddac = 0;
 	VGA_ALPHA_PTR vga;
@@ -4215,10 +4225,10 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"nd14")) {
 				dma_probe_14 = 0;
 			}
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
             else if (!strcmp(a,"srf4xx")) {
                 force_srate_4xx = 1;
             }
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
             else if (!strcmp(a,"dma128")) {
                 dma128 = 1;
             }
@@ -4238,7 +4248,6 @@ int main(int argc,char **argv) {
             else if (!strcmp(a,"noasp")) {
                 ignore_asp = 1;
             }
-#endif
             else if (!strcmp(a,"srftc")) {
                 force_srate_tc = 1;
             }
@@ -4251,6 +4260,7 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"dmaaio")) {
 				dma_autoinit_override = 1;
 			}
+#endif
 			else if (!strcmp(a,"fip")) {
 				force_irq_probe = 1;
 			}
@@ -4263,12 +4273,14 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"nochain")) {
 				dont_chain_irq = 1;
 			}
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			else if (!strcmp(a,"debug")) {
 				sb_debug = 1;
 			}
             else if (!strcmp(a,"96k")) {
                 buffer_limit = 96UL * 1024UL;
             }
+#endif
             else if (!strcmp(a,"64k")) {
                 buffer_limit = 64UL * 1024UL;
             }
@@ -4290,19 +4302,23 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"4k")) {
 				buffer_limit = 4UL * 1024UL;
 			}
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			else if (!strcmp(a,"-nmi")) {
-#if TARGET_MSDOS == 32
+# if TARGET_MSDOS == 32
 				sndsb_nmi_32_hook = 0;
-#endif
+# endif
 			}
 			else if (!strcmp(a,"+nmi")) {
-#if TARGET_MSDOS == 32
+# if TARGET_MSDOS == 32
 				sndsb_nmi_32_hook = 1;
-#endif
+# endif
 			}
+#endif
+#ifdef ISAPNP
 			else if (!strcmp(a,"nopnp")) {
 				disable_pnp = 1;
 			}
+#endif
 			else if (!strncmp(a,"wav=",4)) {
 				a += 4;
 				strcpy(wav_file,a);
@@ -4559,44 +4575,66 @@ int main(int argc,char **argv) {
 #endif
 
 		if (force_irq_probe) {
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (sb_debug) printf("SB %03x: Forgetting IRQ, forcing probe\n",cx->baseio);
+#endif
 			cx->irq = -1;
 		}
 		if (force_dma_probe) {
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (sb_debug) printf("SB %03x: Forgetting DMA, forcing probe\n",cx->baseio);
+#endif
 			cx->dma8 = cx->dma16 = -1;
 		}
 
 		if (cx->irq < 0 && irq_probe_f2) {
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (sb_debug) printf("SB %03x: Probing IRQ (F2)...\n",cx->baseio);
+#endif
 			sndsb_probe_irq_F2(cx);
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (F2) found IRQ %d\n",cx->baseio,cx->irq);
+#endif
 		}
 		if (cx->irq < 0 && irq_probe_80) {
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (sb_debug) printf("SB %03x: Probing IRQ (80)...\n",cx->baseio);
+#endif
 			sndsb_probe_irq_80(cx);
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (80) found IRQ %d\n",cx->baseio,cx->irq);
+#endif
 		}
 		if (cx->dma8 < 0 && dma_probe_e2) { // NTS: for some cards, this will also set the 16-bit DMA channel
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (sb_debug) printf("SB %03x: Probing DMA (E2)...\n",cx->baseio);
+#endif
 			sndsb_probe_dma8_E2(cx);
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (E2) found DMA %d\n",cx->baseio,cx->dma8);
+#endif
 		}
 		if (cx->dma8 < 0 && dma_probe_14) { // NTS: for some cards, this will also set the 16-bit DMA channel
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (sb_debug) printf("SB %03x: Probing DMA (14)...\n",cx->baseio);
+#endif
 			sndsb_probe_dma8_14(cx);
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (14) found DMA %d\n",cx->baseio,cx->dma8);
+#endif
 		}
 
 		// DMA auto-init override.
 		// WARNING: Single-cycle DSP commands with auto-init DMA can cause problems with SB clones or emulation.
 		//   - Sound Blaster Live! (EMU10K1 PCI cards) will play the audio extra-fast
 		//   - Pro Audio Spectrum cards will have occasional pops and crackles (confirmed on PAS16)
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 		if (dma_autoinit_override) cx->dsp_autoinit_dma_override = 1;
 		if (assume_dsp_hispeed_doesnt_block) cx->hispeed_blocking = 0;
 		if (always_reset_dsp_to_stop) cx->always_reset_dsp_to_stop = 1;
         if (force_srate_4xx) cx->srate_force_dsp_4xx = 1;
         if (force_srate_tc) cx->srate_force_dsp_tc = 1;
+#endif
 
 		// having IRQ and DMA changes the ideal playback method and capabilities
 		sndsb_update_capabilities(cx);
