@@ -28,7 +28,12 @@
 
 static char                 line[256];
 static unsigned char        tmp[512];
-static unsigned char far	devnode_raw[4096];
+
+#if defined(__TINY__)
+static unsigned char devnode_raw[1024]; // NTS: declaring it "far" causes problem with forced CS = DS = DGROUP segref patching
+#else
+static unsigned char far devnode_raw[4096];
+#endif
 
 static struct sndsb_ctx*	sb_card = NULL;
 
