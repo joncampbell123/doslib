@@ -15,8 +15,11 @@ $(HW_MB_INTEL_PIIX3_LIB): $(OBJS)
 .C.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	@$(CC) @tmp.cmd
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
 
 lib: $(HW_MB_INTEL_PIIX3_LIB) .symbolic
 
