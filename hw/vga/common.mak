@@ -68,6 +68,9 @@ $(HW_VGAGFX_LIB): $(SUBDIR)$(HPS)vgagfx.obj $(SUBDIR)$(HPS)gvg256.obj $(SUBDIR)$
 $(SUBDIR)$(HPS)vga240.obj: vga240.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) -zu $[@
 	$(CC) @tmp.cmd
+!ifdef TINYMODE
+	$(OMFSEGDG) -i $@ -o $@
+!endif
 
 all: lib exe
        
