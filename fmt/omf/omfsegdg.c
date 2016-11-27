@@ -528,8 +528,23 @@ int main(int argc,char **argv) {
     close(fd);
 
     if (outself) {
-        if (unlink(in_file) < 0) {
-            fprintf(stderr,"Failed to delete file, %s\n",strerror(errno));
+        char *x = strdup(in_file);
+        if (x == NULL)
+            return 1;
+
+        {
+            char *e = strrchr(x,'.');
+            if (e == NULL)
+                return 1;
+
+            if (!strcasecmp(e,".obj"))
+                strcpy(e,".obo");
+            else
+                return 1;
+        }
+
+        if (rename(in_file,x) < 0) {
+            fprintf(stderr,"Failed to rename file, %s\n",strerror(errno));
             return 1;
         }
         if (rename(out_file,in_file) < 0) {
@@ -537,6 +552,7 @@ int main(int argc,char **argv) {
             return 1;
         }
 
+        free(x);
         free(out_file);
         out_file = NULL;
         outself = 0;
