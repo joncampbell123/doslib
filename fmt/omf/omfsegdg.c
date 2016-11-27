@@ -413,23 +413,6 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"This program does not handle .LIB files\n");
                 return 1;
         }
-
-        // copy OMF records EXCEPT for FIXUPP and LEDATA and MODEND
-        switch (omf_state->record.rectype) {
-            case OMF_RECTYPE_FIXUPP:/*0x9C*/
-            case OMF_RECTYPE_FIXUPP32:/*0x9D*/
-            case OMF_RECTYPE_LEDATA:/*0xA0*/
-            case OMF_RECTYPE_LEDATA32:/*0xA1*/
-            case 0x8A://MODEND
-            case 0x8B://MODEND32
-                break;
-            default:
-                if (omf_context_record_write_fd(ofd,&omf_state->record) < 0) {
-                    fprintf(stderr,"Failed to write OMF record\n");
-                    return 1;
-                }
-                break;
-        }
     } while (1);
 
     if (dumpstate && !diddump) {
@@ -521,6 +504,12 @@ int main(int argc,char **argv) {
                 last_ledata = omf_state->record;//FIXME: the omf context should offer a "take record" to change ownership instead of this
                 omf_record_init(&omf_state->record);
                 omf_state->record.data_alloc = last_ledata.data_alloc;
+                break;
+            default:
+                if (omf_context_record_write_fd(ofd,&omf_state->record) < 0) {
+                    fprintf(stderr,"Failed to write OMF record\n");
+                    return 1;
+                }
                 break;
         }
     } while (1);
