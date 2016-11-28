@@ -67,7 +67,7 @@ int my_fixupp_patch_code_16ofs_fixup(const struct omf_context_t * const ctx,unsi
     // "MOV <reg>,<imm>"
     //   change it to
     // "MOV <reg>,cs" + NOP
-    if (fixup >= 1 && (fixup+2) <= len && (base[fixup-1]&0xF8) == 0xB8) {
+    else if (fixup >= 1 && (fixup+2) <= len && (base[fixup-1]&0xF8) == 0xB8) {
         if (ctx->flags.verbose)
             fprintf(stderr,"Patching: MOV reg,seg ... to refer to CS\n");
 
