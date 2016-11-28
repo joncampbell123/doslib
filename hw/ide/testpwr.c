@@ -281,10 +281,8 @@ static const char *drive_main_power_states_strings[] = {
 };
 
 void do_drive_power_states_test(struct ide_controller *ide,unsigned char which) {
-	VGA_ALPHA_PTR vga;
 	struct menuboxbounds mbox;
 	char backredraw=1;
-	unsigned int x,y;
 	char redraw=1;
 	int select=-1;
 	int c;
@@ -324,16 +322,10 @@ void do_drive_power_states_test(struct ide_controller *ide,unsigned char which) 
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_state.vga_height;y++) {
-				for (x=0;x < vga_state.vga_width;x++) {
-					*vga++ = 0x1E00 + 177;
-				}
-			}
-
+            background_draw();
 			vga_moveto(0,0);
 
 			vga_write_color(0x1F);

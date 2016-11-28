@@ -296,8 +296,6 @@ again:	/* jump point: send execution back here for another sector */
 void do_drive_write_test(struct ide_controller *ide,unsigned char which) {
 	struct menuboxbounds mbox;
 	char backredraw=1;
-	VGA_ALPHA_PTR vga;
-	unsigned int x,y;
 	int select=-1;
 	char redraw=1;
 	int c;
@@ -348,16 +346,10 @@ void do_drive_write_test(struct ide_controller *ide,unsigned char which) {
 
 	while (1) {
 		if (backredraw) {
-			vga = vga_state.vga_alpha_ram;
 			backredraw = 0;
 			redraw = 1;
 
-			for (y=0;y < vga_state.vga_height;y++) {
-				for (x=0;x < vga_state.vga_width;x++) {
-					*vga++ = 0x1E00 + 177;
-				}
-			}
-
+            background_draw();
 			vga_moveto(0,0);
 
 			vga_write_color(0x1F);
