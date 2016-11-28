@@ -10,7 +10,7 @@ extern unsigned char		opt_no_isa_probe;
 extern unsigned char		opt_irq_mask;
 extern unsigned char		opt_irq_chain;
 
-extern char			tmp[1024];
+extern char			tmp[128];
 extern uint16_t			ide_info[256];
 
 #if TARGET_MSDOS == 32

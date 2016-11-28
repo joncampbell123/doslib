@@ -96,7 +96,7 @@ unsigned char			cdrom_read_mode = 12;
 unsigned char			pio_width_warning = 1;
 unsigned char			big_scary_write_test_warning = 1;
 
-char				tmp[1024];
+char				tmp[128];
 uint16_t			ide_info[256];
 #ifdef ISAPNP
 static unsigned char far	devnode_raw[4096];
