@@ -334,3 +334,31 @@ void background_draw(void) {
     }
 }
 
+void header_write(const char * const str,const struct ide_controller * const ide,const int which) {
+    vga_write_color(0x1F);
+    vga_write("        ");
+    vga_write(str);
+    sprintf(tmp," @%X",ide->base_io);
+    vga_write(tmp);
+    if (ide->alt_io != 0) {
+        sprintf(tmp," alt %X",ide->alt_io);
+        vga_write(tmp);
+    }
+    if (ide->irq >= 0) {
+        sprintf(tmp," IRQ %d",ide->irq);
+        vga_write(tmp);
+    }
+
+    if (which >= 0)
+        vga_write(which ? " Slave" : " Master");
+
+    while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
+
+    vga_write_color(0xC);
+    vga_write("WARNING: This code talks directly to your hard disk controller.");
+    while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
+    vga_write_color(0xC);
+    vga_write("         If you value the data on your hard drive do not run this program.");
+    while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
+}
+

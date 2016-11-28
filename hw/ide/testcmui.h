@@ -17,6 +17,7 @@
 #include "testutil.h"
 #include "test.h"
 
+void header_write(const char * const str,const struct ide_controller * const ide,const int which);
 void common_ide_success_or_error_vga_msg_box(struct ide_controller *ide,struct vga_msg_box *vgabox);
 int do_ide_controller_drive_check_select(struct ide_controller *ide,unsigned char which);
 void do_common_show_ide_taskfile(struct ide_controller *ide,unsigned char which);

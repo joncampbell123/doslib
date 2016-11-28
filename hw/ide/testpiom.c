@@ -96,36 +96,9 @@ void do_drive_pio_mode(struct ide_controller *ide,unsigned char which) {
 			redraw = 1;
 
             background_draw();
+
 			vga_moveto(0,0);
-
-			vga_write_color(0x1F);
-			vga_write("        IDE controller ");
-			sprintf(tmp,"@%X",ide->base_io);
-			vga_write(tmp);
-			if (ide->alt_io != 0) {
-				sprintf(tmp," alt %X",ide->alt_io);
-				vga_write(tmp);
-			}
-			if (ide->irq >= 0) {
-				sprintf(tmp," IRQ %d",ide->irq);
-				vga_write(tmp);
-			}
-			vga_write(which ? " Slave" : " Master");
-			vga_write(" << PIO mode");
-			if (ide->pio_width == 33)
-				vga_write(" [32-bit VLB]");
-			else if (ide->pio_width == 32)
-				vga_write(" [32-bit]");
-			else
-				vga_write(" [16-bit]");
-			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
-
-			vga_write_color(0xC);
-			vga_write("WARNING: This code talks directly to your hard disk controller.");
-			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
-			vga_write_color(0xC);
-			vga_write("         If you value the data on your hard drive do not run this program.");
-			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
+            header_write("IDE PIO mode",ide,which);
 		}
 
 		if (redraw) {
