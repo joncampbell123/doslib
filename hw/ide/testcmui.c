@@ -323,3 +323,14 @@ unsigned long prompt_cdrom_sector_count() {
 	return sector;
 }
 
+void background_draw(void) {
+	VGA_ALPHA_PTR vga = vga_state.vga_alpha_ram;
+    unsigned int x,y;
+
+    for (y=0;y < vga_state.vga_height;y++) {
+        for (x=0;x < vga_state.vga_width;x++) {
+            *vga++ = 0x1E00 + 177;
+        }
+    }
+}
+
