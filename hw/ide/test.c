@@ -87,8 +87,12 @@
 
 unsigned char			opt_ignore_smartdrv = 0;
 unsigned char			opt_no_irq = 0;
+#ifdef PCI_SCAN
 unsigned char			opt_no_pci = 0;
+#endif
+#ifdef ISAPNP
 unsigned char			opt_no_isapnp = 0;
+#endif
 unsigned char			opt_no_isa_probe = 0;
 unsigned char			opt_irq_chain = 1;
 
@@ -745,12 +749,16 @@ int parse_argv(int argc,char **argv) {
 			else if (!strcasecmp(a,"noirq")) {
 				opt_no_irq = 1;
 			}
+#ifdef PCI_SCAN
 			else if (!strcasecmp(a,"nopci")) {
 				opt_no_pci = 1;
 			}
+#endif
+#ifdef ISAPNP
 			else if (!strcasecmp(a,"noisapnp")) {
 				opt_no_isapnp = 1;
 			}
+#endif
 			else if (!strcasecmp(a,"noprobe")) {
 				opt_no_isa_probe = 1;
 			}
