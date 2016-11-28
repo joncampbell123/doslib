@@ -194,30 +194,30 @@ int confirm_pio32_warning(struct ide_controller *ide) {
 	return 1;
 }
 
-int prompt_sector_count() {
-	int sector = -1;
+unsigned long prompt_ull(const char *title) {
 	struct vga_msg_box box;
+	unsigned long sector;
 	VGA_ALPHA_PTR sco;
 	char temp_str[16];
 	int c,i=0;
 
-	vga_msg_box_create(&box,"Enter sector count:",2,0);
+	vga_msg_box_create(&box,title,2,0);
 	sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
 	while (1) {
 		c = getch();
 		if (c == 0) c = getch() << 8;
 
 		if (c == 27) {
-			sector = (int)(~0UL);
+			sector = (~0UL);
 			break;
 		}
 		else if (c == 13) {
 			if (i == 0) break;
 			temp_str[i] = 0;
 			if (isdigit(temp_str[0]))
-				sector = (int)strtol(temp_str,NULL,0);
+				sector = strtoul(temp_str,NULL,0);
 			else
-				sector = -1;
+				sector = (~0UL);
 
 			break;
 		}
@@ -235,92 +235,22 @@ int prompt_sector_count() {
 	vga_msg_box_destroy(&box);
 
 	return sector;
+}
+
+int prompt_sector_count() {
+    unsigned long ret;
+
+    ret = prompt_ull("Enter sector count:");
+    if (ret == (~0UL)) return -1;
+    return (int)ret;
 }
 
 unsigned long prompt_cdrom_sector_number() {
-	unsigned long sector = 16;
-	struct vga_msg_box box;
-	VGA_ALPHA_PTR sco;
-	char temp_str[16];
-	int c,i=0;
-
-	vga_msg_box_create(&box,"Enter CD-ROM sector number:",2,0);
-	sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
-	while (1) {
-		c = getch();
-		if (c == 0) c = getch() << 8;
-
-		if (c == 27) {
-			sector = (int)(~0UL);
-			break;
-		}
-		else if (c == 13) {
-			if (i == 0) break;
-			temp_str[i] = 0;
-			if (isdigit(temp_str[0]))
-				sector = strtol(temp_str,NULL,0);
-			else
-				sector = 16;
-
-			break;
-		}
-		else if (isdigit(c)) {
-			if (i < 15) {
-				sco[i] = c | 0x1E00;
-				temp_str[i++] = c;
-			}
-		}
-		else if (c == 8) {
-			if (i > 0) i--;
-			sco[i] = ' ' | 0x1E00;
-		}
-	}
-	vga_msg_box_destroy(&box);
-
-	return sector;
+    return prompt_ull("Enter CD-ROM sector number:");
 }
 
 unsigned long prompt_cdrom_sector_count() {
-	unsigned long sector = 1;
-	struct vga_msg_box box;
-	VGA_ALPHA_PTR sco;
-	char temp_str[16];
-	int c,i=0;
-
-	vga_msg_box_create(&box,"Enter number of CD-ROM sectors to read at once:",2,0);
-	sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
-	while (1) {
-		c = getch();
-		if (c == 0) c = getch() << 8;
-
-		if (c == 27) {
-			sector = (int)(~0UL);
-			break;
-		}
-		else if (c == 13) {
-			if (i == 0) break;
-			temp_str[i] = 0;
-			if (isdigit(temp_str[0]))
-				sector = strtol(temp_str,NULL,0);
-			else
-				sector = 1;
-
-			break;
-		}
-		else if (isdigit(c)) {
-			if (i < 15) {
-				sco[i] = c | 0x1E00;
-				temp_str[i++] = c;
-			}
-		}
-		else if (c == 8) {
-			if (i > 0) i--;
-			sco[i] = ' ' | 0x1E00;
-		}
-	}
-	vga_msg_box_destroy(&box);
-
-	return sector;
+    return prompt_ull("Enter number of CD-ROM sectors to read at once:");
 }
 
 void background_draw(void) {
