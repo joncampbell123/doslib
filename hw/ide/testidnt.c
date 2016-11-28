@@ -31,6 +31,8 @@
 #include "testnop.h"
 #include "testpwr.h"
 
+#if TARGET_MSDOS == 16 && defined(__TINY__)
+#else
 int do_ide_media_card_pass_through(struct ide_controller *ide,unsigned char which,unsigned char enable) {
 	struct ide_taskfile *tsk;
 
@@ -52,6 +54,7 @@ int do_ide_media_card_pass_through(struct ide_controller *ide,unsigned char whic
 	if (ide->last_status&1) return 1;
 	return 0;
 }
+#endif
 
 int do_ide_set_multiple_mode(struct ide_controller *ide,unsigned char which,unsigned char sz) {
 	struct ide_taskfile *tsk;
@@ -98,6 +101,8 @@ int do_ide_identify(unsigned char *info/*512*/,unsigned int sz,struct ide_contro
 	return 0;
 }
 
+#if TARGET_MSDOS == 16 && defined(__TINY__)
+#else
 int do_ide_flush(struct ide_controller *ide,unsigned char which,unsigned char lba48) {
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return -1;
@@ -114,7 +119,10 @@ int do_ide_flush(struct ide_controller *ide,unsigned char which,unsigned char lb
 	if (ide->last_status&1) return 1;
 	return 0;
 }
+#endif
 	
+#if TARGET_MSDOS == 16 && defined(__TINY__)
+#else
 int do_ide_device_diagnostic(struct ide_controller *ide,unsigned char which) {
 	if (do_ide_controller_user_wait_busy_controller(ide) != 0 || do_ide_controller_user_wait_drive_ready(ide) < 0)
 		return -1;
@@ -131,7 +139,10 @@ int do_ide_device_diagnostic(struct ide_controller *ide,unsigned char which) {
 	if (ide->last_status&1) return 1;
 	return 0;
 }
+#endif
 
+#if TARGET_MSDOS == 16 && defined(__TINY__)
+#else
 void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char which,uint16_t *nfo/*512 bytes/256 words*/,unsigned char command) {
 	unsigned char range[512];
 	unsigned char orgl;
@@ -201,6 +212,7 @@ void do_ident_save(const char *basename,struct ide_controller *ide,unsigned char
 	/* OK. hook it again. */
 	do_ide_controller_enable_irq(ide,ide->flags.io_irq_enable);
 }
+#endif
 
 void do_drive_identify_device_test(struct ide_controller *ide,unsigned char which,unsigned char command) {
 	unsigned int x,y,i;
@@ -300,11 +312,14 @@ void do_drive_identify_device_test(struct ide_controller *ide,unsigned char whic
 			do {
 				r=getch();
 				if (r == 's' || r == 'S') {
+#if TARGET_MSDOS == 16 && defined(__TINY__)
+#else
 					vga_write_color(0x0E); vga_clear(); vga_moveto(0,0); 
 					do_ident_save(command == 0xA1 ? "ATAPI" : "ATA",ide,which,info,command);
 					vga_write("\nSaved. Hit ENTER to continue.\n");
 					wait_for_enter_or_escape();
 					break;
+#endif
 				}
 				else if (r == 27 || r == 13) {
 					break;

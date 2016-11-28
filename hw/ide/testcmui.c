@@ -102,6 +102,8 @@ int do_ide_controller_drive_check_select(struct ide_controller *ide,unsigned cha
 }
 
 void do_common_show_ide_taskfile(struct ide_controller *ide,unsigned char which) {
+#if TARGET_MSDOS == 16 && (defined(__TINY__))
+#else
 	struct vga_msg_box vgabox;
 	int c;
 
@@ -151,9 +153,12 @@ void do_common_show_ide_taskfile(struct ide_controller *ide,unsigned char which)
 		wait_for_enter_or_escape();
 		vga_msg_box_destroy(&vgabox);
 	}
+#endif
 }
 
 int confirm_pio32_warning(struct ide_controller *ide) {
+#if TARGET_MSDOS == 16 && (defined(__TINY__))
+#else
 	if (ide->pio_width < 32 && pio_width_warning) {
 		struct vga_msg_box vgabox;
 		char proceed = 1;
@@ -190,6 +195,7 @@ int confirm_pio32_warning(struct ide_controller *ide) {
 
 		return proceed;
 	}
+#endif
 
 	return 1;
 }
