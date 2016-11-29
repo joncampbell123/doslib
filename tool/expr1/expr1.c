@@ -18,6 +18,8 @@ enum {
     PFWHAT_DIV,                 /*     /         */
     PFWHAT_MOD,                 /*     %         */
     PFWHAT_NEG,                 /* 10  -(value)  */
+    PFWHAT_LPARENS,             /*     (         */
+    PFWHAT_RPARENS,             /*     )         */
 
     PFWHAT_MAX
 };
@@ -34,7 +36,9 @@ static const unsigned char what_prec[PFWHAT_MAX] = {
     6,                          /*    MUL */
     6,                          /*    DIV */
     6,                          /*    MOD */
-    7                           /* 10 NEG */
+    7,                          /* 10 NEG */
+    255,                        /*    LPAREMS */
+    255                         /*    RPARENS */
 };
 
 static const char *what_str[PFWHAT_MAX] = {
@@ -48,7 +52,9 @@ static const char *what_str[PFWHAT_MAX] = {
     "*",
     "/",
     "%",
-    "NEG"                       /* 10 */
+    "NEG",                      /* 10 */
+    "(",
+    ")"
 };
 
 struct postfix_t {
@@ -80,7 +86,7 @@ int parse_expr_token(struct postfix_t * const tok,const char **ps,const unsigned
         case '-':
             /* if the previous token was a value, this is subtract.
              * else, it's negate */
-            if (last_what == PFWHAT_VALUE)
+            if (last_what == PFWHAT_VALUE || last_what == PFWHAT_RPARENS)
                 tok->what = PFWHAT_SUB;
             else if (last_what == PFWHAT_NEG)
                 return -1; /* we don't want no double negatives */
@@ -89,54 +95,54 @@ int parse_expr_token(struct postfix_t * const tok,const char **ps,const unsigned
             s++;
             break;
         case '+':
-            if (last_what == PFWHAT_VALUE)
+            if (last_what == PFWHAT_VALUE || last_what == PFWHAT_RPARENS)
                 tok->what = PFWHAT_ADD;
             else
                 return -1;
             s++;
             break;
         case '*':
-            if (last_what == PFWHAT_VALUE)
+            if (last_what == PFWHAT_VALUE || last_what == PFWHAT_RPARENS)
                 tok->what = PFWHAT_MUL;
             else
                 return -1;
             s++;
             break;
         case '/':
-            if (last_what == PFWHAT_VALUE)
+            if (last_what == PFWHAT_VALUE || last_what == PFWHAT_RPARENS)
                 tok->what = PFWHAT_DIV;
             else
                 return -1;
             s++;
             break;
         case '%':
-            if (last_what == PFWHAT_VALUE)
+            if (last_what == PFWHAT_VALUE || last_what == PFWHAT_RPARENS)
                 tok->what = PFWHAT_MOD;
             else
                 return -1;
             s++;
             break;
         case '|':
-            if (last_what == PFWHAT_VALUE)
+            if (last_what == PFWHAT_VALUE || last_what == PFWHAT_RPARENS)
                 tok->what = PFWHAT_OR;
             else
                 return -1;
             s++;
             break;
         case '&':
-            if (last_what == PFWHAT_VALUE)
+            if (last_what == PFWHAT_VALUE || last_what == PFWHAT_RPARENS)
                 tok->what = PFWHAT_AND;
             else
                 return -1;
             break;
         case '^':
-            if (last_what == PFWHAT_VALUE)
+            if (last_what == PFWHAT_VALUE || last_what == PFWHAT_RPARENS)
                 tok->what = PFWHAT_XOR;
             else
                 return -1;
             break;
         case '=':
-            if (last_what == PFWHAT_VALUE) {
+            if (last_what == PFWHAT_VALUE || last_what == PFWHAT_RPARENS) {
                 s++;
                 if (*s == '=') {
                     tok->what = PFWHAT_EQUCMP;
@@ -149,6 +155,14 @@ int parse_expr_token(struct postfix_t * const tok,const char **ps,const unsigned
             else {
                 return -1;
             }
+            break;
+        case '(':
+            tok->what = PFWHAT_LPARENS;
+            s++;
+            break;
+        case ')':
+            tok->what = PFWHAT_RPARENS;
+            s++;
             break;
         default:
             fprintf(stderr,"Unexpected %c\n",*s);
@@ -183,11 +197,33 @@ int parse_expr(struct postfix_expr_t * const expr,const char *s) {
             if (postfix_expr_add(expr,&tok) < 0)
                 return -1;
         }
+        else if (tok.what == PFWHAT_LPARENS) {
+            if (opstk >= 64)
+                return -1;
+
+            op[opstk++] = tok;
+        }
+        else if (tok.what == PFWHAT_RPARENS) {
+            while (opstk > 0) {
+                const struct postfix_t * const top = &op[opstk-1];
+
+                if (top->what == PFWHAT_LPARENS) {
+                    opstk--; /* discard */
+                    break;
+                }
+                else if (postfix_expr_add(expr,top) < 0)
+                    return -1;
+
+                opstk--;
+            }
+        }
         else {
             while (opstk > 0) {
                 const struct postfix_t * const top = &op[opstk-1];
 
-                if (what_prec[tok.what] <= what_prec[top->what]) {
+                if (top->what == PFWHAT_LPARENS)
+                    break;
+                else if (what_prec[tok.what] <= what_prec[top->what]) {
                     if (postfix_expr_add(expr,top) < 0)
                         return -1;
 
@@ -205,7 +241,7 @@ int parse_expr(struct postfix_expr_t * const expr,const char *s) {
         }
 
 #if 0
-        fprintf(stderr,"what=(%s)%u",what_str[tok.what],tok.what);
+        fprintf(stderr,"what=\"%s\"",what_str[tok.what]);
         if (tok.what == PFWHAT_VALUE) fprintf(stderr," value=%lu",tok.value);
         fprintf(stderr,"\n");
 #endif
@@ -216,6 +252,10 @@ int parse_expr(struct postfix_expr_t * const expr,const char *s) {
     while (opstk > 0) {
         const struct postfix_t * const top = &op[opstk-1];
 
+        if (top->what == PFWHAT_LPARENS || top->what == PFWHAT_RPARENS) {
+            fprintf(stderr,"parse error: unbalanced parenthesis\n");
+            return -1;
+        }
         if (postfix_expr_add(expr,top) < 0)
             return -1;
 
