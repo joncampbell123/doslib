@@ -269,6 +269,7 @@ int main(int argc,char **argv) {
             relocentcount = left;
             if (relocentcount > relocentmax) relocentcount = relocentmax;
 
+            assert((relocentcount*4) <= sizeof(relocent));
             if (read(src_fd,relocent,relocentcount*4) != (int)(relocentcount*4))
                 return 1;
 
