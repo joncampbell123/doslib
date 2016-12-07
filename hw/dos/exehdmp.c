@@ -232,7 +232,9 @@ int main(int argc,char **argv) {
             (unsigned long)exe_dos_header_bss_size(&exehdr) -
             (unsigned long)exe_dos_header_file_header_size(&exehdr);
  
-        // user may want to know if CS:IP points outside resident portion
+        // user may want to know if SS:SP points outside resident+BSS portion.
+        // we allow SS:SP to sit right at the first byte past BSS, because then a push
+        // operation brings it within range (some Windows stubs set SS:SP that).
         if (start > end)
             printf("  ! SS:SP points outside resident+MIN BSS portion (%lu > %lu)\n",start,end);
     }
