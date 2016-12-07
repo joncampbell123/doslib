@@ -1,4 +1,5 @@
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -51,10 +52,7 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (sizeof(exehdr) != 0x1C) {
-        fprintf(stderr,"EXE header sizeof error\n");
-        return 1;
-    }
+    assert(sizeof(exehdr) == 0x1C);
 
     if (src_file == NULL) {
         fprintf(stderr,"No source file specified\n");
