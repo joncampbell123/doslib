@@ -82,7 +82,7 @@ int main(int argc,char **argv) {
         exehdr.last_block_bytes);
     printf("    exe_file_blocks:              %u bytes\n",
         exehdr.exe_file_blocks);
-    printf("  * resident size:                %lu bytes\n",
+    printf("  * exe resident size (blocks):   %lu bytes\n",
         (unsigned long)exe_dos_header_file_resident_size(&exehdr));
     printf("    number_of_relocations:        %u entries\n",
         exehdr.number_of_relocations);
@@ -134,6 +134,11 @@ int main(int argc,char **argv) {
     }
 
     if (exe_dos_header_file_resident_size(&exehdr) > exe_dos_header_file_header_size(&exehdr)) {
+        printf("  * resident size:                %lu(blk) - %lu(hdr) bytes = %lu bytes\n",
+            (unsigned long)exe_dos_header_file_resident_size(&exehdr),
+            (unsigned long)exe_dos_header_file_header_size(&exehdr),
+            (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
+            (unsigned long)exe_dos_header_file_header_size(&exehdr));
         printf("  * resident portion:             %lu - %lu bytes (inclusive) = %lu bytes\n",
             (unsigned long)exe_dos_header_file_header_size(&exehdr),
             (unsigned long)exe_dos_header_file_resident_size(&exehdr) - 1UL,
