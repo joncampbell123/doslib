@@ -17,8 +17,16 @@
 static char*                    src_file = NULL;
 static int                      src_fd = -1;
 
+#if defined(LINUX)
+# define relocentmax            8192
+#elif defined(__LARGE__) || defined(__FLAT__)
+# define relocentmax            4096
+#else
+# define relocentmax            64
+#endif
+
 static struct exe_dos_header    exehdr;
-static uint32_t                 relocent[64];
+static uint32_t                 relocent[relocentmax];
 static unsigned int             relocentcount;
 
 static void help(void) {
@@ -259,7 +267,7 @@ int main(int argc,char **argv) {
         printf("  * Relocation table:\n");
         while (left > 0) {
             relocentcount = left;
-            if (relocentcount > 64) relocentcount = 64;
+            if (relocentcount > relocentmax) relocentcount = relocentmax;
 
             if (read(src_fd,relocent,relocentcount*4) != (int)(relocentcount*4))
                 return 1;
