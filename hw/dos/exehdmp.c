@@ -186,6 +186,55 @@ int main(int argc,char **argv) {
             printf("                                    to base_seg+0x%04X:0x%04X\n",
                 (unsigned int)(end>>4UL),(unsigned int)(end&0xFUL));
         }
+
+        // NTS: convert seg:off to offset, mask by 0xFFFFFUL to support COM to EXE conversions
+        //      or somesuch that set the entry point to 0xFFEF:0x100. if you convert that such
+        //      it tricks EXE loading to set CS:IP like a .COM executable.
+        start =
+            (((unsigned long)exehdr.init_code_segment << 4UL) +
+              (unsigned long)exehdr.init_instruction_pointer) & 0xFFFFFUL;
+        printf("  * code pointer file offset:     %lu + %lu = %lu bytes\n",
+            start,
+            (unsigned long)exe_dos_header_file_header_size(&exehdr),
+            (unsigned long)exe_dos_header_file_header_size(&exehdr) + start);
+        printf("                                  base_seg+0x%04X:0x%04X\n",
+            (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
+
+        end =
+            (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
+            (unsigned long)exe_dos_header_file_header_size(&exehdr);
+ 
+        // user may want to know if CS:IP points outside resident portion
+        if (start >= end)
+            printf("  ! CS:IP points outside resident portion (%lu >= %lu)\n",start,end);
+
+        start =
+            (((unsigned long)exehdr.init_stack_segment << 4UL) +
+              (unsigned long)exehdr.init_stack_pointer) & 0xFFFFFUL;
+        printf("  * stack pointer file offset:    %lu + %lu = %lu bytes\n",
+            start,
+            (unsigned long)exe_dos_header_file_header_size(&exehdr),
+            (unsigned long)exe_dos_header_file_header_size(&exehdr) + start);
+        printf("                                  base_seg+0x%04X:0x%04X\n",
+            (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
+
+        end =
+            (unsigned long)exe_dos_header_file_resident_size(&exehdr) +
+            (unsigned long)exe_dos_header_bss_max_size(&exehdr) -
+            (unsigned long)exe_dos_header_file_header_size(&exehdr);
+ 
+        // user may want to know if CS:IP points outside resident portion
+        if (start >= end)
+            printf("  ! SS:SP points outside resident+MAX BSS portion (%lu >= %lu)\n",start,end);
+
+        end =
+            (unsigned long)exe_dos_header_file_resident_size(&exehdr) +
+            (unsigned long)exe_dos_header_bss_size(&exehdr) -
+            (unsigned long)exe_dos_header_file_header_size(&exehdr);
+ 
+        // user may want to know if CS:IP points outside resident portion
+        if (start >= end)
+            printf("  ! SS:SP points outside resident+MIN BSS portion (%lu >= %lu)\n",start,end);
     }
     else {
         printf("  * no resident portion\n");
