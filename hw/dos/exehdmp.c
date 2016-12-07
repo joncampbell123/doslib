@@ -378,7 +378,7 @@ int main(int argc,char **argv) {
     if (exelayout.stack_entry_point_res > exelayout.min_mem_footprint) {
         if (exehdr.min_additional_paragraphs == 0 && exelayout.stack_entry_point_res < (256+exe_dos_layout_range_get_length(&exelayout.run_resident))) {
             printf("  * stack pointer past resident area with no BSS section following it,\n");
-            printf("    but not far enough to be a problem.\n");
+            printf("    but not far enough to be a problem unless low memory pressure.\n");
         }
         else {
             printf("  ! SS:SP points outside minimum memory footprint (%lu > %lu(bytes))\n",
