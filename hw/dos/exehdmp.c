@@ -14,6 +14,136 @@
 #define O_BINARY (0)
 #endif
 
+struct exe_dos_layout_range {
+    uint32_t                    start,end;      // NTS: inclusive byte range, does not exist if start > end
+};
+
+struct exe_dos_layout {
+    struct exe_dos_layout_range     header;             // EXE header. if start == end then struct not initialized.
+    struct exe_dos_layout_range     load_resident;      // EXE portion loaded into memory (resident + EXE header)
+    struct exe_dos_layout_range     run_resident;       // EXE portion left in memory after EXE loading
+    struct exe_dos_layout_range     relocation_table;   // EXE relocation table
+
+    uint32_t                        min_mem_footprint;
+    uint32_t                        max_mem_footprint;
+
+    uint32_t                        code_entry_point_res;   // offset into resident image of CS:IP
+    uint32_t                        code_entry_point_file;  // offset into file of CS:IP
+                                                            // ^ NOTE: 0 if not exist
+
+    uint32_t                        stack_entry_point_res;  // offset into resident image of SS:SP
+                                                            // ^ NOTE: This can (and usually does) point beyond the resident image
+                                                            //         into the "bss" area (defined by min_additional_paragraphs).
+    uint32_t                        stack_entry_point_file; // offset into file of SS:SP
+                                                            // ^ NOTE: 0 if not exist
+                                                            //         For most EXEs this may be zero because SS:SP points beyond
+                                                            //         the resident image into the "bss" area (defined by
+                                                            //         min_additional_paragraphs)
+};
+
+static inline uint32_t exe_dos_layout_range_get_length(const struct exe_dos_layout_range * const r) {
+    if (r->start <= r->end)
+        return r->end + (uint32_t)1UL - r->start;
+
+    return 0;
+}
+
+static inline unsigned int exe_dos_layout_range_is_init(const struct exe_dos_layout_range * const r) {
+    return (r->start <= r->end) ? 1U : 0U;
+}
+
+static inline void exe_dos_layout_range_deinit(struct exe_dos_layout_range * const r) {
+    r->start = (uint32_t)0xFFFFFFFFUL;
+    r->end = 0;
+}
+
+static inline void exe_dos_layout_range_set(struct exe_dos_layout_range * const r,const uint32_t start,const uint32_t end) {
+    r->start = start;
+    r->end = end;
+}
+
+int exe_dos_header_to_layout(struct exe_dos_layout * const lay,const struct exe_dos_header * const hdr) {
+    unsigned long t;
+
+    lay->min_mem_footprint = 0;
+    lay->max_mem_footprint = 0;
+    lay->code_entry_point_res = 0;
+    lay->code_entry_point_file = 0;
+    lay->stack_entry_point_res = 0;
+    lay->stack_entry_point_file = 0;
+    exe_dos_layout_range_deinit(&lay->header);
+    exe_dos_layout_range_deinit(&lay->run_resident);
+    exe_dos_layout_range_deinit(&lay->load_resident);
+    exe_dos_layout_range_deinit(&lay->relocation_table);
+    if (hdr->magic != 0x5A4DU/*MZ*/)
+        return -1;
+
+    t = exe_dos_header_file_header_size(hdr);
+    if (t == 0UL) return -1;
+    exe_dos_layout_range_set(&lay->header,0,t - 1UL);
+
+    /* exit now if EXE header denies it's own size */
+    if (t < 0x1C) return 0;
+
+    /* resident section follows EXE header.
+     * EXE header expresses resident section as EXE header + resident section.
+     * I'm guessing this made the DOS kernel's job easier since it helps dictate
+     * how much to load into memory before beginning to parse the EXE header and
+     * relocation table. */
+    t = exe_dos_header_file_resident_size(hdr);
+    if (t == 0UL) return 0;
+    exe_dos_layout_range_set(&lay->load_resident,0,t - 1UL);
+
+    /* once loaded, the resident portion no longer includes EXE header.
+     * if the resident area is smaller than EXE header then bail now. */
+    if (t <= exe_dos_header_file_header_size(hdr)) return 0;
+    exe_dos_layout_range_set(&lay->run_resident,exe_dos_header_file_header_size(hdr),lay->load_resident.end);
+
+    /* finally, if there is a relocation table, note it.
+     * each relocation is 4 bytes long (32 bits), and stores a (relative SEG):OFF address of a 16-bit WORD that DOS adds the segment base to.
+     * if the EXE header somehow puts the relocation table out of the resident range, well, that's the EXE's stupidity. */
+    if (hdr->number_of_relocations != 0U) {
+        exe_dos_layout_range_set(&lay->relocation_table,
+            hdr->relocation_table_offset,
+            hdr->relocation_table_offset + (hdr->number_of_relocations * 4UL) - 1UL);
+    }
+
+    /* we can determine runtime memory footprint too */
+    lay->min_mem_footprint =
+        exe_dos_layout_range_get_length(&lay->run_resident) +
+        ((uint32_t)(hdr->min_additional_paragraphs) << 4UL);
+    lay->max_mem_footprint =
+        exe_dos_layout_range_get_length(&lay->run_resident) +
+        ((uint32_t)(hdr->max_additional_paragraphs) << 4UL);
+
+    /* we can also pinpoint CS:IP and SS:IP */
+    /* NTS: we mask by 0xFFFFFUL for 16-bit real mode 1MB aliasing.
+     *      some early EXE files are in fact .COM converted to .EXE
+     *      and then the instruction pointer in the header set to
+     *      0xFFEF:0x0100 to set CS:IP up like a .COM executable.
+     *      that only works because of 1MB wraparound and because
+     *      of 16-bit segment registers. */
+    lay->code_entry_point_res =
+        ((uint32_t)((hdr->init_code_segment << 4UL) +
+         (uint32_t)(hdr->init_instruction_pointer))) & 0xFFFFFUL;
+    if (lay->code_entry_point_res <= lay->run_resident.end) {
+        lay->code_entry_point_file =
+            lay->code_entry_point_res + lay->run_resident.start;
+    }
+
+    /* NTS: it doesn't happen often, but the EXE header can define
+     *      SS:SP to point within the resident image at startup. */
+    lay->stack_entry_point_res =
+        ((uint32_t)((hdr->init_stack_segment << 4UL) +
+         (uint32_t)(hdr->init_stack_pointer))) & 0xFFFFFUL;
+    if (lay->stack_entry_point_res <= lay->run_resident.end) {
+        lay->stack_entry_point_file =
+            lay->stack_entry_point_res + lay->run_resident.start;
+    }
+
+    return 0;
+}
+
 static char*                    src_file = NULL;
 static int                      src_fd = -1;
 
@@ -26,6 +156,7 @@ static int                      src_fd = -1;
 #endif
 
 static struct exe_dos_header    exehdr;
+static struct exe_dos_layout    exelayout;
 static uint32_t                 relocent[relocentmax];
 static unsigned int             relocentcount;
 
@@ -36,6 +167,8 @@ static void help(void) {
 int main(int argc,char **argv) {
     char *a;
     int i;
+
+    memset(&exehdr,0,sizeof(exehdr));
 
     for (i=1;i < argc;) {
         a = argv[i++];
@@ -121,47 +254,103 @@ int main(int argc,char **argv) {
     printf("    overlay number:               %u\n",
         exehdr.overlay_number);
 
-    printf("  * exe header portion:           %lu - %lu bytes (inclusive) = %lu bytes\n",
-        0UL,
-        (unsigned long)exe_dos_header_file_header_size(&exehdr) - 1UL,
-        (unsigned long)exe_dos_header_file_header_size(&exehdr));
-
-    if (exehdr.number_of_relocations != 0U) {
-        unsigned long start,end;
-
-        start = (unsigned long)exehdr.relocation_table_offset;
-        end = (unsigned long)exehdr.relocation_table_offset + (exehdr.number_of_relocations * 4UL) - 1UL;
-
-        printf("  * exe relocation table:         %lu - %lu bytes (inclusive) = %lu bytes\n",
-            start,
-            end,
-            end + 1UL - start);
-
-        if (start < 0x1CUL || (end+1UL) > exe_dos_header_file_header_size(&exehdr))
-            printf("  ! WARNING: EXE relocation table lies out of range\n");
+    if (exe_dos_header_to_layout(&exelayout,&exehdr) < 0) {
+        fprintf(stderr,"Unable to determine EXE layout\n");
+        return 1;
     }
 
+    if (exe_dos_layout_range_is_init(&exelayout.header)) {
+        printf("  * exe header portion:           %lu - %lu bytes (inclusive) = %lu bytes\n",
+            (unsigned long)exelayout.header.start,
+            (unsigned long)exelayout.header.end,
+            (unsigned long)exe_dos_layout_range_get_length(&exelayout.header));
+    }
+    else {
+        printf("  ! exe header range not defined\n");
+    }
+
+    if (exe_dos_layout_range_is_init(&exelayout.load_resident)) {
+        printf("  * resident portion (load):      %lu - %lu bytes (inclusive) = %lu bytes\n",
+            (unsigned long)exelayout.load_resident.start,
+            (unsigned long)exelayout.load_resident.end,
+            (unsigned long)exe_dos_layout_range_get_length(&exelayout.load_resident));
+    }
+    else {
+        printf("  ! resident load range not defined\n");
+    }
+
+    if (exe_dos_layout_range_is_init(&exelayout.run_resident)) {
+        printf("  * resident portion (runtime):   %lu - %lu bytes (inclusive) = %lu bytes\n",
+            (unsigned long)exelayout.run_resident.start,
+            (unsigned long)exelayout.run_resident.end,
+            (unsigned long)exe_dos_layout_range_get_length(&exelayout.run_resident));
+    }
+    else {
+        printf("  ! resident load range not defined\n");
+    }
+
+    if (exe_dos_layout_range_is_init(&exelayout.relocation_table)) {
+        printf("  * relocation table:             %lu - %lu bytes (inclusive) = %lu bytes\n",
+            (unsigned long)exelayout.relocation_table.start,
+            (unsigned long)exelayout.relocation_table.end,
+            (unsigned long)exe_dos_layout_range_get_length(&exelayout.relocation_table));
+    }
+
+    printf("  * minimum memory footprint:     %lu bytes\n",
+        (unsigned long)exelayout.min_mem_footprint);
+
+    printf("  * maximum memory footprint:     %lu bytes\n",
+        (unsigned long)exelayout.max_mem_footprint);
+
+    printf("  * code pointer file offset:     %lu(resident) + %lu = %lu(file) bytes\n",
+        (unsigned long)exelayout.code_entry_point_res,
+        (unsigned long)exelayout.run_resident.start,
+       (unsigned long) exelayout.code_entry_point_file);
+    printf("                                  base_seg+0x%04X:0x%04X\n",
+        (unsigned int)(exelayout.code_entry_point_res>>4UL),
+        (unsigned int)(exelayout.code_entry_point_res&0xFUL));
+
+    if (exelayout.code_entry_point_res > exelayout.run_resident.end)
+        printf("  ! CS:IP points outside resident portion (%lu > %lu(last byte))\n",
+            (unsigned long)exelayout.code_entry_point_res,
+            (unsigned long)exelayout.run_resident.end);
+
+    if (exelayout.stack_entry_point_res > exelayout.run_resident.end) {
+        /* most common */
+        printf("  * stack pointer file offset:    %lu(resident) bytes (BSS area beyond resident)\n",
+            (unsigned long)exelayout.stack_entry_point_res);
+    }
+    else {
+        /* less common */
+        printf("  * stack pointer file offset:    %lu(resident) + %lu = %lu(file) bytes\n",
+            (unsigned long)exelayout.stack_entry_point_res,
+            (unsigned long)exelayout.run_resident.start,
+            (unsigned long)exelayout.stack_entry_point_file);
+    }
+    printf("                                  base_seg+0x%04X:0x%04X\n",
+        (unsigned int)(exelayout.stack_entry_point_res>>4UL),
+        (unsigned int)(exelayout.stack_entry_point_res&0xFUL));
+
+    /* we compare > min not >= min because programs typically issue PUSH instructions
+     * at startup which decrement SS:SP then write to stack.
+     *
+     * however, many Windows EXE stubs set min_paragraphs == 0 but SS:SP about 128
+     * bytes past end of resident area, so show some forgiveness if min_paragraphs == 0 */
+    if (exelayout.stack_entry_point_res > exelayout.min_mem_footprint) {
+        if (exehdr.min_additional_paragraphs == 0 && exelayout.stack_entry_point_res < (256+exe_dos_layout_range_get_length(&exelayout.run_resident))) {
+            printf("  * stack pointer past resident area with no BSS section following it,\n");
+            printf("    but not far enough to be a problem.\n");
+        }
+        else {
+            printf("  ! SS:SP points outside minimum memory footprint (%lu > %lu(bytes))\n",
+                (unsigned long)exelayout.stack_entry_point_res,
+                (unsigned long)exelayout.min_mem_footprint);
+        }
+    }
+
+#if 0
     if (exe_dos_header_file_resident_size(&exehdr) > exe_dos_header_file_header_size(&exehdr)) {
         unsigned long start,end,resend;
-
-        printf("  * resident size:                %lu(blk) - %lu(hdr) bytes = %lu bytes\n",
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr),
-            (unsigned long)exe_dos_header_file_header_size(&exehdr),
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
-            (unsigned long)exe_dos_header_file_header_size(&exehdr));
-        printf("  * resident portion:             %lu - %lu bytes (inclusive) = %lu bytes\n",
-            (unsigned long)exe_dos_header_file_header_size(&exehdr),
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) - 1UL,
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
-            (unsigned long)exe_dos_header_file_header_size(&exehdr));
-        printf("  * minimum memory footprint:     %lu bytes\n",
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) +
-            (unsigned long)exe_dos_header_bss_size(&exehdr) -
-            (unsigned long)exe_dos_header_file_header_size(&exehdr));
-        printf("  * maximum memory footprint:     %lu bytes\n",
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) +
-            (unsigned long)exe_dos_header_bss_max_size(&exehdr) -
-            (unsigned long)exe_dos_header_file_header_size(&exehdr));
 
         start =
             0;
@@ -287,6 +476,7 @@ int main(int argc,char **argv) {
             left -= relocentcount;
         }
     }
+#endif
 
     close(src_fd);
     return 0;
