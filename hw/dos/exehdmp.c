@@ -356,7 +356,7 @@ int main(int argc,char **argv) {
 
     if (exelayout.stack_entry_point_res > exelayout.run_resident.end) {
         /* most common */
-        printf("  * stack pointer file offset:    %lu(resident) bytes (BSS area beyond resident)\n",
+        printf("  * stack pointer file offset:    %lu(resident) bytes (BSS beyond resident)\n",
             (unsigned long)exelayout.stack_entry_point_res);
     }
     else {
