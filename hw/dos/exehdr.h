@@ -38,6 +38,12 @@ static inline unsigned long exe_dos_header_bss_size(const struct exe_dos_header 
     return ((unsigned long)(header->min_additional_paragraphs)) << 4UL; /* *16 */
 }
 
+static inline unsigned long exe_dos_header_bss_max_size(const struct exe_dos_header * const header) {
+    return ((unsigned long)(header->max_additional_paragraphs)) << 4UL; /* *16 */
+}
+
+/* NTS: By "resident" size it means resident data AND EXE header.
+ *      To determine the actual resident contents, get this size then subtract EXE header size */
 static inline unsigned long exe_dos_header_file_resident_size(const struct exe_dos_header * const header) {
     unsigned long ret;
 
