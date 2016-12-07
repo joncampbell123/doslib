@@ -280,10 +280,17 @@ int main(int argc,char **argv) {
     }
 
     if (exe_dos_layout_range_is_init(&exelayout.run_resident)) {
+        unsigned long t;
+
         printf("  * resident portion (runtime):   %lu - %lu bytes (inclusive) = %lu bytes\n",
             (unsigned long)exelayout.run_resident.start,
             (unsigned long)exelayout.run_resident.end,
             (unsigned long)exe_dos_layout_range_get_length(&exelayout.run_resident));
+        printf("                             from base_seg+0x%04X:0x%04X (inclusive)\n",
+            0,0);
+        t = exelayout.run_resident.end - exelayout.run_resident.start;
+        printf("                               to base_seg+0x%04X:0x%04X\n",
+            (unsigned int)(t >> 4UL),(unsigned int)(t & 0xFUL));
     }
     else {
         printf("  ! resident load range not defined\n");
@@ -298,14 +305,36 @@ int main(int argc,char **argv) {
 
     printf("  * minimum memory footprint:     %lu bytes\n",
         (unsigned long)exelayout.min_mem_footprint);
+    if (exelayout.min_mem_footprint != 0UL) {
+        unsigned long t,t2;
+
+        t = exe_dos_layout_range_get_length(&exelayout.run_resident);
+        t2 = exelayout.min_mem_footprint - 1UL;
+        if (t2 > 0xFFFFFUL) t2 = 0xFFFFFUL;
+        printf("                             from base_seg+0x%04X:0x%04X (inclusive)\n",
+            (unsigned int)(t >> 4UL),(unsigned int)(t & 0xFUL));
+        printf("                               to base_seg+0x%04X:0x%04X\n",
+            (unsigned int)(t2 >> 4UL),(unsigned int)(t2 & 0xFUL));
+    }
 
     printf("  * maximum memory footprint:     %lu bytes\n",
         (unsigned long)exelayout.max_mem_footprint);
+    if (exelayout.max_mem_footprint != 0UL) {
+        unsigned long t,t2;
+
+        t = exe_dos_layout_range_get_length(&exelayout.run_resident);
+        t2 = exelayout.max_mem_footprint - 1UL;
+        if (t2 > 0xFFFFFUL) t2 = 0xFFFFFUL;
+        printf("                             from base_seg+0x%04X:0x%04X (inclusive)\n",
+            (unsigned int)(t >> 4UL),(unsigned int)(t & 0xFUL));
+        printf("                               to base_seg+0x%04X:0x%04X\n",
+            (unsigned int)(t2 >> 4UL),(unsigned int)(t2 & 0xFUL));
+    }
 
     printf("  * code pointer file offset:     %lu(resident) + %lu = %lu(file) bytes\n",
         (unsigned long)exelayout.code_entry_point_res,
         (unsigned long)exelayout.run_resident.start,
-       (unsigned long) exelayout.code_entry_point_file);
+        (unsigned long)exelayout.code_entry_point_file);
     printf("                                  base_seg+0x%04X:0x%04X\n",
         (unsigned int)(exelayout.code_entry_point_res>>4UL),
         (unsigned int)(exelayout.code_entry_point_res&0xFUL));
@@ -349,103 +378,6 @@ int main(int argc,char **argv) {
     }
 
 #if 0
-    if (exe_dos_header_file_resident_size(&exehdr) > exe_dos_header_file_header_size(&exehdr)) {
-        unsigned long start,end,resend;
-
-        start =
-            0;
-        end =
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
-            (unsigned long)exe_dos_header_file_header_size(&exehdr) - 1UL;
-        printf("  * resident segment range:       from base_seg+0x%04X:0x%04X\n",
-            (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
-        printf("                                    to base_seg+0x%04X:0x%04X\n",
-            (unsigned int)(end>>4UL),(unsigned int)(end&0xFUL));
-
-        start =
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
-            (unsigned long)exe_dos_header_file_header_size(&exehdr);
-        if (exe_dos_header_bss_size(&exehdr) != 0UL) {
-            end =
-                start +
-                (unsigned long)exe_dos_header_bss_size(&exehdr) - 1UL;
-            printf("  * resident bss range (min):     from base_seg+0x%04X:0x%04X\n",
-                (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
-            printf("                                    to base_seg+0x%04X:0x%04X\n",
-                (unsigned int)(end>>4UL),(unsigned int)(end&0xFUL));
-        }
-        if (exe_dos_header_bss_max_size(&exehdr) != 0UL) {
-            end =
-                start +
-                (unsigned long)exe_dos_header_bss_max_size(&exehdr) - 1UL;
-            printf("  * resident bss range (max):     from base_seg+0x%04X:0x%04X\n",
-                (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
-            printf("                                    to base_seg+0x%04X:0x%04X\n",
-                (unsigned int)(end>>4UL),(unsigned int)(end&0xFUL));
-        }
-
-        // NTS: convert seg:off to offset, mask by 0xFFFFFUL to support COM to EXE conversions
-        //      or somesuch that set the entry point to 0xFFEF:0x100. if you convert that such
-        //      it tricks EXE loading to set CS:IP like a .COM executable.
-        start =
-            (((unsigned long)exehdr.init_code_segment << 4UL) +
-              (unsigned long)exehdr.init_instruction_pointer) & 0xFFFFFUL;
-        printf("  * code pointer file offset:     %lu + %lu = %lu bytes\n",
-            start,
-            (unsigned long)exe_dos_header_file_header_size(&exehdr),
-            (unsigned long)exe_dos_header_file_header_size(&exehdr) + start);
-        printf("                                  base_seg+0x%04X:0x%04X\n",
-            (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
-
-        end =
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
-            (unsigned long)exe_dos_header_file_header_size(&exehdr);
-        resend = end;
- 
-        // user may want to know if CS:IP points outside resident portion
-        if (start >= end)
-            printf("  ! CS:IP points outside resident portion (%lu >= %lu)\n",start,end);
-
-        start =
-            (((unsigned long)exehdr.init_stack_segment << 4UL) +
-              (unsigned long)exehdr.init_stack_pointer) & 0xFFFFFUL;
-        if (start < resend) {
-            printf("  * stack pointer file offset:    %lu + %lu = %lu bytes\n",
-                start,
-                (unsigned long)exe_dos_header_file_header_size(&exehdr),
-                (unsigned long)exe_dos_header_file_header_size(&exehdr) + start);
-        }
-        printf("  * stack pointer offset:         base_seg+0x%04X:0x%04X\n",
-            (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
-
-        end =
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) +
-            (unsigned long)exe_dos_header_bss_max_size(&exehdr) -
-            (unsigned long)exe_dos_header_file_header_size(&exehdr);
- 
-        // user may want to know if CS:IP points outside resident portion
-        if (start >= end)
-            printf("  ! SS:SP points outside resident+MAX BSS portion (%lu >= %lu)\n",start,end);
-
-        // if the EXE header says min == 0, act as if min == 4KB.
-        // some Watcom windows stubs set min == 0 then set SS:SP about 64 bytes past min BSS.
-        end =
-            (unsigned long)exe_dos_header_file_resident_size(&exehdr) +
-            (unsigned long)exe_dos_header_bss_size(&exehdr) -
-            (unsigned long)exe_dos_header_file_header_size(&exehdr);
-        if ((unsigned long)exe_dos_header_bss_size(&exehdr) == 0)
-            end += 4096UL;
- 
-        // user may want to know if SS:SP points outside resident+BSS portion.
-        // we allow SS:SP to sit right at the first byte past BSS, because then a push
-        // operation brings it within range (some Windows stubs set SS:SP that).
-        if (start > end)
-            printf("  ! SS:SP points outside resident+MIN BSS portion (%lu > %lu)\n",start,end);
-    }
-    else {
-        printf("  * no resident portion\n");
-    }
-
     if (exehdr.number_of_relocations != 0U) {
         unsigned int left = exehdr.number_of_relocations;
         unsigned int i;
