@@ -387,7 +387,6 @@ int main(int argc,char **argv) {
         }
     }
 
-#if 0
     if (exehdr.number_of_relocations != 0U) {
         unsigned int left = exehdr.number_of_relocations;
         unsigned int i;
@@ -418,7 +417,6 @@ int main(int argc,char **argv) {
             left -= relocentcount;
         }
     }
-#endif
 
     close(src_fd);
     return 0;
