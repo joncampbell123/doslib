@@ -227,10 +227,14 @@ int main(int argc,char **argv) {
         if (start >= end)
             printf("  ! SS:SP points outside resident+MAX BSS portion (%lu >= %lu)\n",start,end);
 
+        // if the EXE header says min == 0, act as if min == 4KB.
+        // some Watcom windows stubs set min == 0 then set SS:SP about 64 bytes past min BSS.
         end =
             (unsigned long)exe_dos_header_file_resident_size(&exehdr) +
             (unsigned long)exe_dos_header_bss_size(&exehdr) -
             (unsigned long)exe_dos_header_file_header_size(&exehdr);
+        if ((unsigned long)exe_dos_header_bss_size(&exehdr) == 0)
+            end += 4096UL;
  
         // user may want to know if SS:SP points outside resident+BSS portion.
         // we allow SS:SP to sit right at the first byte past BSS, because then a push
