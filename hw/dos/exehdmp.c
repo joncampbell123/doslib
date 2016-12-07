@@ -86,6 +86,8 @@ int main(int argc,char **argv) {
         (unsigned long)exe_dos_header_file_resident_size(&exehdr));
     printf("    number_of_relocations:        %u entries\n",
         exehdr.number_of_relocations);
+    printf("  * size of relocation table:     %lu bytes\n",
+        (unsigned long)exehdr.number_of_relocations * 4UL);
     printf("    header_size:                  %u paragraphs\n",
         exehdr.header_size_paragraphs);
     printf("  * header_size:                  %lu bytes\n",
@@ -110,6 +112,26 @@ int main(int argc,char **argv) {
         exehdr.relocation_table_offset);
     printf("    overlay number:               %u\n",
         exehdr.overlay_number);
+
+    printf("  * exe header portion:           %lu - %lu bytes (inclusive) = %lu bytes\n",
+        0UL,
+        (unsigned long)exe_dos_header_file_header_size(&exehdr) - 1UL,
+        (unsigned long)exe_dos_header_file_header_size(&exehdr));
+
+    if (exehdr.number_of_relocations != 0U) {
+        unsigned long start,end;
+
+        start = (unsigned long)exehdr.relocation_table_offset;
+        end = (unsigned long)exehdr.relocation_table_offset + (exehdr.number_of_relocations * 4UL) - 1UL;
+
+        printf("  * exe relocation table:         %lu - %lu bytes (inclusive) = %lu bytes\n",
+            start,
+            end,
+            end + 1UL - start);
+
+        if (start < 0x1CUL || (end+1UL) > exe_dos_header_file_header_size(&exehdr))
+            printf("  ! WARNING: EXE relocation table lies out of range\n");
+    }
 
     if (exe_dos_header_file_resident_size(&exehdr) > exe_dos_header_file_header_size(&exehdr)) {
         printf("  * resident portion:             %lu - %lu bytes (inclusive) = %lu bytes\n",
