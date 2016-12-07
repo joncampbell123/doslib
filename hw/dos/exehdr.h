@@ -39,7 +39,12 @@ static inline unsigned long exe_dos_header_bss_size(const struct exe_dos_header 
 }
 
 static inline unsigned long exe_dos_header_file_resident_size(const struct exe_dos_header * const header) {
-    unsigned long ret = ((unsigned long)(header->exe_file_blocks)) << 9UL; /* *512 */
+    unsigned long ret;
+
+    if (header->exe_file_blocks == 0)
+        return 0;
+
+    ret = ((unsigned long)(header->exe_file_blocks)) << 9UL; /* *512 */
     if (header->last_block_bytes != 0U)
         ret += (unsigned long)header->last_block_bytes - 512UL;
 
