@@ -134,6 +134,8 @@ int main(int argc,char **argv) {
     }
 
     if (exe_dos_header_file_resident_size(&exehdr) > exe_dos_header_file_header_size(&exehdr)) {
+        unsigned long start,end;
+
         printf("  * resident size:                %lu(blk) - %lu(hdr) bytes = %lu bytes\n",
             (unsigned long)exe_dos_header_file_resident_size(&exehdr),
             (unsigned long)exe_dos_header_file_header_size(&exehdr),
@@ -152,6 +154,38 @@ int main(int argc,char **argv) {
             (unsigned long)exe_dos_header_file_resident_size(&exehdr) +
             (unsigned long)exe_dos_header_bss_max_size(&exehdr) -
             (unsigned long)exe_dos_header_file_header_size(&exehdr));
+
+        start =
+            0;
+        end =
+            (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
+            (unsigned long)exe_dos_header_file_header_size(&exehdr) - 1UL;
+        printf("  * resident segment range:       from base_seg+0x%04X:0x%04X\n",
+            (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
+        printf("                                    to base_seg+0x%04X:0x%04X\n",
+            (unsigned int)(end>>4UL),(unsigned int)(end&0xFUL));
+
+        start =
+            (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
+            (unsigned long)exe_dos_header_file_header_size(&exehdr);
+        if (exe_dos_header_bss_size(&exehdr) != 0UL) {
+            end =
+                start +
+                (unsigned long)exe_dos_header_bss_size(&exehdr) - 1UL;
+            printf("  * resident bss range (min):     from base_seg+0x%04X:0x%04X\n",
+                (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
+            printf("                                    to base_seg+0x%04X:0x%04X\n",
+                (unsigned int)(end>>4UL),(unsigned int)(end&0xFUL));
+        }
+        if (exe_dos_header_bss_max_size(&exehdr) != 0UL) {
+            end =
+                start +
+                (unsigned long)exe_dos_header_bss_max_size(&exehdr) - 1UL;
+            printf("  * resident bss range (max):     from base_seg+0x%04X:0x%04X\n",
+                (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
+            printf("                                    to base_seg+0x%04X:0x%04X\n",
+                (unsigned int)(end>>4UL),(unsigned int)(end&0xFUL));
+        }
     }
     else {
         printf("  * no resident portion\n");
