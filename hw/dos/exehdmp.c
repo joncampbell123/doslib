@@ -19,10 +19,10 @@ struct exe_dos_layout_range {
 };
 
 struct exe_dos_layout {
-    struct exe_dos_layout_range     header;             // EXE header. if start == end then struct not initialized.
-    struct exe_dos_layout_range     load_resident;      // EXE portion loaded into memory (resident + EXE header)
-    struct exe_dos_layout_range     run_resident;       // EXE portion left in memory after EXE loading
-    struct exe_dos_layout_range     relocation_table;   // EXE relocation table
+    struct exe_dos_layout_range     header;             // [file offset] EXE header. if start == end then struct not initialized.
+    struct exe_dos_layout_range     load_resident;      // [file offset] EXE portion loaded into memory (resident + EXE header)
+    struct exe_dos_layout_range     run_resident;       // [file offset] EXE portion left in memory after EXE loading
+    struct exe_dos_layout_range     relocation_table;   // [file offset] EXE relocation table
 
     uint32_t                        min_mem_footprint;
     uint32_t                        max_mem_footprint;
@@ -412,6 +412,15 @@ int main(int argc,char **argv) {
                 printf("    base_seg+0x%04X:0x%04X (base_loc+%lu, file_ofs=%lu)\n",
                     segv,ofsv,resof,
                     (unsigned long)exe_dos_header_file_header_size(&exehdr) + resof);
+
+                if ((resof+2UL) > exelayout.min_mem_footprint) {
+                    /* Fatal! */
+                    printf("  ! relocation points outside minimum memory rootprint\n");
+                }
+                else if ((resof+2UL) > exe_dos_layout_range_get_length(&exelayout.run_resident)) {
+                    /* Not fatal, but unusual and noteworthy */
+                    printf("  * relocation points outside resident image into BSS area\n");
+                }
             }
 
             left -= relocentcount;
