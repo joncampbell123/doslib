@@ -233,11 +233,11 @@ $(EXEHDMP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exehdmp.
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 ! ifdef WIN386
-	@$(WIN386_EXE_TO_REX_IF_REX) $(TEST_EXE)
-	@wbind $(TEST_EXE) -q -n
+	@$(WIN386_EXE_TO_REX_IF_REX) $(EXEHDMP_EXE)
+	@wbind $(EXEHDMP_EXE) -q -n
 ! endif
 ! ifdef WIN_NE_SETVER_BUILD
-	$(WIN_NE_SETVER_BUILD) $(TEST_EXE)
+	$(WIN_NE_SETVER_BUILD) $(EXEHDMP_EXE)
 ! endif
 !endif
 
