@@ -57,5 +57,55 @@ static inline unsigned long exe_dos_header_file_resident_size(const struct exe_d
     return ret;
 }
 
+struct exe_dos_layout_range {
+    uint32_t                    start,end;      // NTS: inclusive byte range, does not exist if start > end
+};
+
+struct exe_dos_layout {
+    struct exe_dos_layout_range     header;             // [file offset] EXE header. if start == end then struct not initialized.
+    struct exe_dos_layout_range     load_resident;      // [file offset] EXE portion loaded into memory (resident + EXE header)
+    struct exe_dos_layout_range     run_resident;       // [file offset] EXE portion left in memory after EXE loading
+    struct exe_dos_layout_range     relocation_table;   // [file offset] EXE relocation table
+
+    uint32_t                        min_mem_footprint;
+    uint32_t                        max_mem_footprint;
+
+    uint32_t                        code_entry_point_res;   // offset into resident image of CS:IP
+    uint32_t                        code_entry_point_file;  // offset into file of CS:IP
+                                                            // ^ NOTE: 0 if not exist
+
+    uint32_t                        stack_entry_point_res;  // offset into resident image of SS:SP
+                                                            // ^ NOTE: This can (and usually does) point beyond the resident image
+                                                            //         into the "bss" area (defined by min_additional_paragraphs).
+    uint32_t                        stack_entry_point_file; // offset into file of SS:SP
+                                                            // ^ NOTE: 0 if not exist
+                                                            //         For most EXEs this may be zero because SS:SP points beyond
+                                                            //         the resident image into the "bss" area (defined by
+                                                            //         min_additional_paragraphs)
+};
+
+static inline uint32_t exe_dos_layout_range_get_length(const struct exe_dos_layout_range * const r) {
+    if (r->start <= r->end)
+        return r->end + (uint32_t)1UL - r->start;
+
+    return 0;
+}
+
+static inline unsigned int exe_dos_layout_range_is_init(const struct exe_dos_layout_range * const r) {
+    return (r->start <= r->end) ? 1U : 0U;
+}
+
+static inline void exe_dos_layout_range_deinit(struct exe_dos_layout_range * const r) {
+    r->start = (uint32_t)0xFFFFFFFFUL;
+    r->end = 0;
+}
+
+static inline void exe_dos_layout_range_set(struct exe_dos_layout_range * const r,const uint32_t start,const uint32_t end) {
+    r->start = start;
+    r->end = end;
+}
+
+int exe_dos_header_to_layout(struct exe_dos_layout * const lay,const struct exe_dos_header * const hdr);
+
 #endif //__HW_DOS_EXEHDR_H
 
