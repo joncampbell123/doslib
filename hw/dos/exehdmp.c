@@ -18,6 +18,8 @@ static char*                    src_file = NULL;
 static int                      src_fd = -1;
 
 static struct exe_dos_header    exehdr;
+static uint32_t                 relocent[64];
+static unsigned int             relocentcount;
 
 static void help(void) {
     fprintf(stderr,"EXEHDMP -i <exe file>\n");
@@ -245,6 +247,36 @@ int main(int argc,char **argv) {
     }
     else {
         printf("  * no resident portion\n");
+    }
+
+    if (exehdr.number_of_relocations != 0U) {
+        unsigned int left = exehdr.number_of_relocations;
+        unsigned int i;
+
+        if (lseek(src_fd,exehdr.relocation_table_offset,SEEK_SET) != (off_t)exehdr.relocation_table_offset)
+            return 1;
+
+        printf("  * Relocation table:\n");
+        while (left > 0) {
+            relocentcount = left;
+            if (relocentcount > 64) relocentcount = 64;
+
+            if (read(src_fd,relocent,relocentcount*4) != (int)(relocentcount*4))
+                return 1;
+
+            for (i=0;i < relocentcount;i++) {
+                uint32_t ent = relocent[i];
+                uint16_t segv = (uint16_t)(ent >> 16UL);
+                uint16_t ofsv = (uint16_t)(ent & 0xFFFFUL);
+                unsigned long resof = (((unsigned long)segv << 4UL) + (unsigned long)ofsv) & 0xFFFFFUL;
+
+                printf("    base_seg+0x%04X:0x%04X (base_loc+%lu, file_ofs=%lu)\n",
+                    segv,ofsv,resof,
+                    (unsigned long)exe_dos_header_file_header_size(&exehdr) + resof);
+            }
+
+            left -= relocentcount;
+        }
     }
 
     close(src_fd);
