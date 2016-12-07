@@ -225,6 +225,16 @@ int main(int argc,char **argv) {
         exehdr.exe_file_blocks);
     printf("  * exe resident size (blocks):   %lu bytes\n",
         (unsigned long)exe_dos_header_file_resident_size(&exehdr));
+    printf("                                  ^  x  = %lu x 512 = %lu\n",
+        (unsigned long)exehdr.exe_file_blocks,
+        (unsigned long)exehdr.exe_file_blocks * 512UL);
+    if (exehdr.last_block_bytes != 0U && exehdr.exe_file_blocks != 0U) {
+        printf("                                  ^ (x -= 512) = %lu, last block not full 512 bytes\n",
+            (unsigned long)exehdr.exe_file_blocks * 512UL - 512UL);
+        printf("                                  ^ (x += %lu) = %lu, add last block bytes\n",
+            (unsigned long)exehdr.last_block_bytes,
+            ((unsigned long)exehdr.exe_file_blocks * 512UL) + (unsigned long)exehdr.last_block_bytes - 512UL);
+    }
     printf("    number_of_relocations:        %u entries\n",
         exehdr.number_of_relocations);
     printf("  * size of relocation table:     %lu bytes\n",
