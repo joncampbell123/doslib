@@ -47,9 +47,21 @@ TSTBIOM_EXE = $(SUBDIR)$(HPS)tstbiom.$(EXEEXT)
 TSTLP_EXE =   $(SUBDIR)$(HPS)tstlp.$(EXEEXT)
 ! endif
 !endif
-EXEHDMP_EXE = $(SUBDIR)$(HPS)exehdmp.$(EXEEXT)
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 CR3_EXE =     $(SUBDIR)$(HPS)cr3.$(EXEEXT)
+
+!ifdef TARGET_WINNT
+EXEHDMP_EXE = $(SUBDIR)$(HPS)exehdmp.$(EXEEXT)
+!endif
+!ifdef TARGET_WINDOWS
+! ifeq TARGET_WINDOWS 40
+EXEHDMP_EXE = $(SUBDIR)$(HPS)exehdmp.$(EXEEXT)
+! endif
+!else
+! ifndef TARGET_OS2
+EXEHDMP_EXE = $(SUBDIR)$(HPS)exehdmp.$(EXEEXT)
+! endif
+!endif
 
 !ifndef TARGET_OS2
 # if targeting Win32, then build the DOS NT assistant DLL that DOS versions
