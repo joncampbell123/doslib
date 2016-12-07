@@ -134,7 +134,7 @@ int main(int argc,char **argv) {
     }
 
     if (exe_dos_header_file_resident_size(&exehdr) > exe_dos_header_file_header_size(&exehdr)) {
-        unsigned long start,end;
+        unsigned long start,end,resend;
 
         printf("  * resident size:                %lu(blk) - %lu(hdr) bytes = %lu bytes\n",
             (unsigned long)exe_dos_header_file_resident_size(&exehdr),
@@ -203,6 +203,7 @@ int main(int argc,char **argv) {
         end =
             (unsigned long)exe_dos_header_file_resident_size(&exehdr) -
             (unsigned long)exe_dos_header_file_header_size(&exehdr);
+        resend = end;
  
         // user may want to know if CS:IP points outside resident portion
         if (start >= end)
@@ -211,11 +212,13 @@ int main(int argc,char **argv) {
         start =
             (((unsigned long)exehdr.init_stack_segment << 4UL) +
               (unsigned long)exehdr.init_stack_pointer) & 0xFFFFFUL;
-        printf("  * stack pointer file offset:    %lu + %lu = %lu bytes\n",
-            start,
-            (unsigned long)exe_dos_header_file_header_size(&exehdr),
-            (unsigned long)exe_dos_header_file_header_size(&exehdr) + start);
-        printf("                                  base_seg+0x%04X:0x%04X\n",
+        if (start < resend) {
+            printf("  * stack pointer file offset:    %lu + %lu = %lu bytes\n",
+                start,
+                (unsigned long)exe_dos_header_file_header_size(&exehdr),
+                (unsigned long)exe_dos_header_file_header_size(&exehdr) + start);
+        }
+        printf("  * stack pointer offset:         base_seg+0x%04X:0x%04X\n",
             (unsigned int)(start>>4UL),(unsigned int)(start&0xFUL));
 
         end =
