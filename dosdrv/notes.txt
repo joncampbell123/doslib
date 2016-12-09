@@ -1,0 +1,83 @@
+MS-DOS device driver notes, useful for writing drivers.
+
+- Contrary to most documentation, MS-DOS device drivers can take both .COM and .EXE forms.
+
+  In the most common .COM form, the first 18 bytes consist of a header that contains a
+  link to the next driver (set to 0xFFFF:0xFFFF to indicate no drivers past this point),
+  the attributes, offsets of interrupt and strategy routines, and the name of char
+  devices.
+
+  What is less commonly known, is that drivers can take the .EXE form, where the start
+  of the file is the EXE header, then immediately at the start of the resident image
+  is the MS-DOS device driver header.
+
+  The most common example of the EXE form is MS-DOS's EMM386.EXE expanded memory
+  manager. If you've noticed, EMM386.EXE can be both loaded as a device driver in
+  CONFIG.SYS and run as a standard executable.
+
+  If loaded as a device driver:
+    - Resident portion (just past EXE header) is loaded into memory.
+    - At the very start of the resident portion, MS-DOS header is processed
+      just the same as if a .COM style executable and driver code is executed.
+
+  If loaded as executable:
+    - Resident portion is loaded into memory, code execution starts at CS:IP
+      indicated by EXE header.
+
+- There is no protection against junk or incorrect "headers" in files when
+  loading via CONFIG.SYS
+
+  If you assign an EXE or COM image not intended to run as MS-DOS device driver
+  as a DEVICE= line in CONFIG.SYS, MS-DOS will parse and execute the contents
+  as if MS-DOS device driver, and likely crash.
+
+- The first 4 bytes DO NOT have to be 0xFFFF:0xFFFF
+
+  When MS-DOS loads your device driver it loads the image into memory, then if
+  your init call succeeds, updates the link header of the prior driver to
+  point directly at your driver's header. It does not validate that your driver's
+  "next link" pointer header is 0xFFFF:0xFFFF. The first 4 bytes of your driver
+  can contain any arbitrary bytes, MS-DOS will still load and execute your
+  driver.
+
+  Remember that MS-DOS traverses a singly-linked list of device drivers when
+  looking for a specific one, and the linked list ends when the "next" pointer
+  is 0xFFFF:0xFFFF.
+
+  This makes for some interesting possibilities. For example, it is possible
+  because of this feature to write a single .SYS or .EXE driver image that
+  creates multiple device driver entries in the DOS kernel at once (though your
+  header would have to be patched at runtime to correct the segment value!).
+
+  However this also means that if the linked list provided by your driver never
+  ends in 0xFFFF:0xFFFF that MS-DOS will crash when traversing the linked list
+  to open a device driver.
+
+  If you are going to exploit this feature, it is probably safest to either:
+
+  1) write a .COM/.SYS type driver with the first 4 bytes set to 0xFFFF:0xFFFF,
+     then patch your header from your init routine to add to the linked list
+     your additional drivers
+
+  2) write a .EXE type driver, hard-code the linked list in the EXE resident
+     image, and use the .EXE relocation table to ensure the segment portion
+     of the linked list is patched up with the correct segment value to
+     reflect where your image was loaded into memory. Or, you can set the
+     header's next link to 0xFFFF:0xFFFF and modify it from the INIT routine
+     to add to the list.
+
+- Your init "interrupt" call MUST set the "end of driver" pointer on return.
+  There is no convenient default value there. If you do not set that pointer,
+  MS-DOS will crash on return.
+
+  DOS expects your INIT call to set a field of the request to tell it where
+  the end of your driver is so that it can discard memory past that point.
+
+  The intent is that your driver will set this field to the first byte past
+  the portion that should stay resident so that your init code can run, then
+  discard the init code to conserve memory.
+
+  Testing with Windows 95 and MS-DOS 6.x shows that, for some reason, failure
+  to set this field results in the .SYS/.EXE image causing DOS to crash after
+  return.
+
