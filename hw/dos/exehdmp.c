@@ -17,9 +17,9 @@
 static char*                    src_file = NULL;
 static int                      src_fd = -1;
 
-#if defined(LINUX)
+#if defined(LINUX) || defined(__FLAT__)
 # define relocentmax            8192
-#elif defined(__LARGE__) || defined(__FLAT__)
+#elif defined(__LARGE__)
 # define relocentmax            4096
 #else
 # define relocentmax            64
