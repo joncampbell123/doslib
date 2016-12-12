@@ -181,7 +181,7 @@ $(DOSNTAST_VDD): $(HW_DOS_LIB) $(HW_CPU_LIB) $(NTVDMLIB_LIB) $(NTVDMVDD_LIB) $(S
 ! ifdef DOSNTAST_VDD
 # copy from Win32 dir. Build if necessary
 winnt$(HPS)dosntast.vdd: dosntast.c
-	@$(MAKECMD) build lib winnt
+	@$(MAKECMD) build $@ winnt
 
 $(DOSNTAST_VDD): winnt$(HPS)dosntast.vdd
 	@$(COPY) winnt$(HPS)dosntast.vdd $(DOSNTAST_VDD)
