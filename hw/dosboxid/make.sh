@@ -42,6 +42,7 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
 
     what=all
     if [ x"$2" != x ]; then what="$2"; fi
+    if [ x"$3" != x ]; then build_list="$3"; fi
 
     for name in $build_list; do
         do_wmake $name "$what" || exit 1

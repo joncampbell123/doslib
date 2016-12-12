@@ -3,22 +3,22 @@
 !ifneq NOW_BUILDING HW_VGA_LIB
 $(HW_VGA_LIB):
 	@cd $(HW_VGA_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 
 $(HW_VGATTY_LIB):
 	@cd $(HW_VGATTY_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 
 $(HW_VGAGUI_LIB):
 	@cd $(HW_VGAGUI_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 
 $(HW_VGAGFX_LIB):
 	@cd $(HW_VGAGFX_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -26,7 +26,7 @@ $(HW_VGAGFX_LIB):
 !ifneq NOW_BUILDING HW_CPU_LIB
 $(HW_CPU_LIB):
 	@cd $(HW_CPU_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -34,7 +34,7 @@ $(HW_CPU_LIB):
 !ifneq NOW_BUILDING HW_DOS_LIB
 $(HW_DOS_LIB):
 	@cd $(HW_DOS_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -42,7 +42,7 @@ $(HW_DOS_LIB):
 !ifneq NOW_BUILDING HW_SNDSB_LIB
 $(HW_SNDSB_LIB):
 	@cd $(HW_SNDSB_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -50,7 +50,7 @@ $(HW_SNDSB_LIB):
 !ifneq NOW_BUILDING HW_LLMEM_LIB
 $(HW_LLMEM_LIB):
 	@cd $(HW_LLMEM_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -58,7 +58,7 @@ $(HW_LLMEM_LIB):
 !ifneq NOW_BUILDING HW_8042_LIB
 $(HW_8042_LIB):
 	@cd $(HW_8042_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -66,7 +66,7 @@ $(HW_8042_LIB):
 !ifneq NOW_BUILDING HW_8237_LIB
 $(HW_8237_LIB):
 	@cd $(HW_8237_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -74,7 +74,7 @@ $(HW_8237_LIB):
 !ifneq NOW_BUILDING HW_8250_LIB
 $(HW_8250_LIB):
 	@cd $(HW_8250_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -82,7 +82,7 @@ $(HW_8250_LIB):
 !ifneq NOW_BUILDING HW_8254_LIB
 $(HW_8254_LIB):
 	@cd $(HW_8254_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -90,7 +90,7 @@ $(HW_8254_LIB):
 !ifneq NOW_BUILDING HW_8259_LIB
 $(HW_8259_LIB):
 	@cd $(HW_8259_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -98,7 +98,7 @@ $(HW_8259_LIB):
 !ifneq NOW_BUILDING HW_ACPI_LIB
 $(HW_ACPI_LIB):
 	@cd $(HW_ACPI_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -106,7 +106,7 @@ $(HW_ACPI_LIB):
 !ifneq NOW_BUILDING HW_PCI_LIB
 $(HW_PCI_LIB):
 	@cd $(HW_PCI_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -114,7 +114,7 @@ $(HW_PCI_LIB):
 !ifneq NOW_BUILDING HW_PCIE_LIB
 $(HW_PCIE_LIB):
 	@cd $(HW_PCIE_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -122,7 +122,7 @@ $(HW_PCIE_LIB):
 !ifneq NOW_BUILDING HW_MB_INTEL_PIIX3_LIB
 $(HW_MB_INTEL_PIIX3_LIB):
 	@cd $(HW_MB_INTEL_PIIX3_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -130,7 +130,7 @@ $(HW_MB_INTEL_PIIX3_LIB):
 !ifneq NOW_BUILDING HW_ADLIB_LIB
 $(HW_ADLIB_LIB):
 	@cd $(HW_ADLIB_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -138,7 +138,7 @@ $(HW_ADLIB_LIB):
 !ifneq NOW_BUILDING HW_NECPC98_LIB
 $(HW_NECPC98_LIB):
 	@cd $(HW_NECPC98_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -146,7 +146,7 @@ $(HW_NECPC98_LIB):
 !ifneq NOW_BUILDING HW_IDE_LIB
 $(HW_IDE_LIB):
 	@cd $(HW_IDE_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -154,7 +154,7 @@ $(HW_IDE_LIB):
 !ifneq NOW_BUILDING HW_FLOPPY_LIB
 $(HW_FLOPPY_LIB):
 	@cd $(HW_FLOPPY_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -162,7 +162,7 @@ $(HW_FLOPPY_LIB):
 !ifneq NOW_BUILDING HW_ISAPNP_LIB
 $(HW_ISAPNP_LIB):
 	@cd $(HW_ISAPNP_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -170,7 +170,7 @@ $(HW_ISAPNP_LIB):
 !ifneq NOW_BUILDING HW_ULTRASND_LIB
 $(HW_ULTRASND_LIB):
 	@cd $(HW_ULTRASND_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -178,7 +178,7 @@ $(HW_ULTRASND_LIB):
 !ifneq NOW_BUILDING HW_BIOSDISK_LIB
 $(HW_BIOSDISK_LIB):
 	@cd $(HW_BIOSDISK_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -186,7 +186,7 @@ $(HW_BIOSDISK_LIB):
 !ifneq NOW_BUILDING HW_FLATREAL_LIB
 $(HW_FLATREAL_LIB):
 	@cd $(HW_FLATREAL_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -195,7 +195,7 @@ $(HW_FLATREAL_LIB):
 ! ifdef WINDOWS_NTVDMLIB_LIB
 $(WINDOWS_NTVDMLIB_LIB):
 	@cd $(WINDOWS_NTVDMLIB_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -204,7 +204,7 @@ $(WINDOWS_NTVDMLIB_LIB):
 !ifneq NOW_BUILDING HW_VESA_LIB
 $(HW_VESA_LIB):
 	@cd $(HW_VESA_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -212,7 +212,7 @@ $(HW_VESA_LIB):
 !ifneq NOW_BUILDING WINDOWS_W9XVMM
 $(WINDOWS_W9XVMM_LIB):
 	@cd $(WINDOWS_W9XVMM_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -221,7 +221,7 @@ $(WINDOWS_W9XVMM_LIB):
 ! ifdef EXT_FAAD_LIB
 $(EXT_FAAD_LIB):
 	@cd $(EXT_FAAD_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -231,7 +231,7 @@ $(EXT_FAAD_LIB):
 ! ifdef EXT_LIBOGG_LIB
 $(EXT_LIBOGG_LIB):
 	@cd $(EXT_LIBOGG_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -241,13 +241,13 @@ $(EXT_LIBOGG_LIB):
 ! ifdef EXT_FLAC_LIB
 $(EXT_FLAC_LIB):
 	@cd $(EXT_FLAC_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 ! ifdef EXT_FLAC_EXE
 $(EXT_FLAC_EXE):
 	@cd $(EXT_FLAC_EXE_DIR)
-	@$(MAKECMD) build exe
+	@$(MAKECMD) build exe $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -257,7 +257,7 @@ $(EXT_FLAC_EXE):
 ! ifdef EXT_JPEG_LIB
 $(EXT_JPEG_LIB):
 	@cd $(EXT_JPEG_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -267,7 +267,7 @@ $(EXT_JPEG_LIB):
 ! ifdef EXT_LAME_LIB
 $(EXT_LAME_LIB):
 	@cd $(EXT_LAME_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -277,7 +277,7 @@ $(EXT_LAME_LIB):
 ! ifdef EXT_LIBMAD_LIB
 $(EXT_LIBMAD_LIB):
 	@cd $(EXT_LIBMAD_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -287,7 +287,7 @@ $(EXT_LIBMAD_LIB):
 ! ifdef EXT_SPEEX_LIB
 $(EXT_SPEEX_LIB):
 	@cd $(EXT_SPEEX_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -297,7 +297,7 @@ $(EXT_SPEEX_LIB):
 ! ifdef EXT_VORBIS_LIB
 $(EXT_VORBIS_LIB):
 	@cd $(EXT_VORBIS_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -307,7 +307,7 @@ $(EXT_VORBIS_LIB):
 ! ifdef EXT_ZLIB_LIB
 $(EXT_ZLIB_LIB):
 	@cd $(EXT_ZLIB_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -317,7 +317,7 @@ $(EXT_ZLIB_LIB):
 ! ifdef EXT_BZIP2_LIB
 $(EXT_BZIP2_LIB):
 	@cd $(EXT_BZIP2_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 ! endif
 !endif
@@ -326,7 +326,7 @@ $(EXT_BZIP2_LIB):
 !ifneq NOW_BUILDING WINDOWS_WIN16EB_LIB
 $(WINDOWS_WIN16EB_LIB):
 	@cd $(WINDOWS_WIN16EB_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -334,7 +334,7 @@ $(WINDOWS_WIN16EB_LIB):
 !ifneq NOW_BUILDING WINDOWS_DISPDIB_LIB
 $(WINDOWS_DISPDIB_LIB):
 	@cd $(WINDOWS_DISPDIB_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -342,7 +342,7 @@ $(WINDOWS_DISPDIB_LIB):
 !ifneq NOW_BUILDING HW_USB_OHCI_LIB
 $(HW_USB_OHCI_LIB):
 	@cd $(HW_USB_OHCI_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
@@ -350,7 +350,7 @@ $(HW_USB_OHCI_LIB):
 !ifneq NOW_BUILDING FMT_OMF_LIB
 $(FMT_OMF_LIB):
 	@cd $(FMT_OMF_LIB_DIR)
-	@$(MAKECMD) build lib
+	@$(MAKECMD) build lib $(SUBDIR)
 	@cd $(HERE)
 !endif
 
