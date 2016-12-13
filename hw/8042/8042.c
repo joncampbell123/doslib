@@ -25,27 +25,27 @@
 #include <hw/cpu/cpu.h>
 #include <hw/8042/8042.h>
 
-unsigned char		k8042_flags = 0;
-unsigned char		k8042_last_status = 0;
+unsigned char           k8042_flags = 0;
+unsigned char           k8042_last_status = 0;
 
 /* drain the 8042 buffer entirely */
 void k8042_drain_buffer() {
-	unsigned char c;
+    unsigned char c;
 
-	do {
-		inp(K8042_DATA);
-		c = inp(K8042_STATUS);
-	} while (c&3);
-	k8042_last_status = c;
+    do {
+        inp(K8042_DATA);
+        c = inp(K8042_STATUS);
+    } while (c&3);
+    k8042_last_status = c;
 }
 
 /* probe for the existence of the 8042 controller I/O ports.
  * obviously as a DOS program the ports are there. but someday...
  * it's possible the newer BIOSes will stop emulating it sooner or later. */
 int k8042_probe() {
-	if (inp(K8042_STATUS) == 0xFF)
-		return 0;
+    if (inp(K8042_STATUS) == 0xFF)
+        return 0;
 
-	return 1;
+    return 1;
 }
 
