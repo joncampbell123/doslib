@@ -19,6 +19,7 @@
 #endif
 
 static unsigned char far *codebuf = NULL;
+static unsigned char far *codebuf_base = NULL;
 static unsigned char far *codebuf_fence = NULL;
 
 static int need_patching(unsigned int vec) {
@@ -73,12 +74,16 @@ int main(int argc,char **argv) {
 	printf("IRQ interrupt patching utility to improve interrupt handling\n");
 	printf("for DOS applications that chain to the previous handler.\n");
 
-	codebuf = _fmalloc(0x1000U>>4U); // 4KB
-	if (codebuf == NULL) {
-		printf("Failed to alloc codebuf\n");
-		return 1;
-	}
-	codebuf_fence = (unsigned char far*)MK_FP(FP_SEG(codebuf),FP_OFF(codebuf)+0x1000U);
+    {
+        unsigned segn;
+
+        if (_dos_allocmem(0x1000U>>4U,&segn) != 0) {
+            printf("Failed to alloc codebuf\n");
+            return 1;
+        }
+        codebuf = codebuf_base = (unsigned char far*)MK_FP(segn,0);
+        codebuf_fence = (unsigned char far*)MK_FP(segn,0x1000U);
+    }
 
 	for (irq=3;irq < 8;irq++) {
 		vec = 0x08 + irq;
@@ -102,7 +107,75 @@ int main(int argc,char **argv) {
 		return 0;
 	}
 
-	_dos_keep(0,0); /* discard our code */
-	return 0;
+    {
+        unsigned int sz = (((unsigned int)(codebuf - codebuf_base)) + 0xFU) >> 4U;
+
+        __asm {
+            push    es
+            push    ax
+            push    bx
+            mov     es,word ptr [codebuf+2]     ; segment part
+            mov     bx,sz
+            mov     ah,0x4A                     ; resize memory block
+            int     21h
+            pop     bx
+            pop     ax
+            pop     es
+        }
+    }
+
+    {
+        unsigned short resident_size = 0;
+
+        /* auto-detect the size of this EXE by the MCB preceeding the PSP segment */
+        /* do it BEFORE hooking in case shit goes wrong, then we can safely abort. */
+        /* the purpose of this code is to compensate for Watcom C's lack of useful */
+        /* info at runtime or compile time as to how large we are in memory. */
+        {
+            unsigned short env_seg=0;
+            unsigned short psp_seg=0;
+            unsigned char far *mcb;
+
+            __asm {
+                push    ax
+                push    bx
+                mov     ah,0x51     ; get PSP segment
+                int     21h
+                mov     psp_seg,bx
+                pop     bx
+                pop     ax
+            }
+
+            mcb = MK_FP(psp_seg-1,0);
+
+            /* sanity check */
+            if (!(*mcb == 'M' || *mcb == 'Z')/*looks like MCB*/ ||
+                *((unsigned short far*)(mcb+1)) != psp_seg/*it's MY memory block*/) {
+                printf("Can't figure out my resident size, aborting\n");
+                return 1;
+            }
+
+            resident_size = *((unsigned short far*)(mcb+3)); /* number of paragraphs */
+            if (resident_size < 17) {
+                printf("Resident size is too small, aborting\n");
+                return 1;
+            }
+
+            /* while we're at it, free our environment block as well, we don't need it */
+            env_seg = *((unsigned short far*)MK_FP(psp_seg,0x2C));
+            if (env_seg != 0) {
+                if (_dos_freemem(env_seg) == 0) {
+                    *((unsigned short far*)MK_FP(psp_seg,0x2C)) = 0;
+                }
+                else {
+                    printf("WARNING: Unable to free environment block\n");
+                }
+            }
+        }
+
+		_dos_keep(0,resident_size);
+	}
+
+    return 0;
 }
 
