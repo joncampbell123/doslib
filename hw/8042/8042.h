@@ -140,3 +140,5 @@ static inline unsigned char k8042_write_aux(unsigned char c) {
 
 #endif /* __HW_8042_8042_H */
 
+/* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */
+

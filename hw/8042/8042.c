@@ -49,3 +49,5 @@ int k8042_probe() {
     return 1;
 }
 
+/* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */
+
