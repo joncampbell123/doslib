@@ -49,5 +49,29 @@ int k8042_probe() {
     return 1;
 }
 
+/* NTS: Do not confuse our input with the controller's input. This reflects the controller's input
+ *      meaning: Can we, the host, OUTPUT DATA to the CONTROLLER'S INPUT? */
+unsigned char k8042_wait_for_input_buffer(void) {
+    unsigned int patience = 0xFFFFU;
+    unsigned char c;
+
+    do { c = inp(K8042_STATUS);
+    } while ((c&2) && --patience != 0U);
+    k8042_last_status = c;
+    return (c & 2) == 0;
+}
+
+/* NTS: Do not confue our output with the controller's output. This reflects the controller's output
+ *      meaning: Can we, the host, INPUT DATA from the CONTROLLER'S OUTPUT? */
+unsigned char k8042_wait_for_output(void) {
+    unsigned int patience = 0xFFFFU;
+    unsigned char c;
+
+    do { c = inp(K8042_STATUS);
+    } while ((c&1) == 0 && --patience != 0U);
+    k8042_last_status = c;
+    return (c & 1);
+}
+
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */
 

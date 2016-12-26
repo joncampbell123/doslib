@@ -44,29 +44,8 @@ extern unsigned char                    k8042_last_status;
 
 #define K8042_F_AUX                     0x01
 
-/* NTS: Do not confuse our input with the controller's input. This reflects the controller's input
- *      meaning: Can we, the host, OUTPUT DATA to the CONTROLLER'S INPUT? */
-static inline unsigned char k8042_wait_for_input_buffer() {
-    unsigned int patience = 0xFFFFU;
-    unsigned char c;
-
-    do { c = inp(K8042_STATUS);
-    } while ((c&2) && --patience != 0U);
-    k8042_last_status = c;
-    return (c & 2) == 0;
-}
-
-/* NTS: Do not confue our output with the controller's output. This reflects the controller's output
- *      meaning: Can we, the host, INPUT DATA from the CONTROLLER'S OUTPUT? */
-static inline unsigned char k8042_wait_for_output() {
-    unsigned int patience = 0xFFFFU;
-    unsigned char c;
-
-    do { c = inp(K8042_STATUS);
-    } while ((c&1) == 0 && --patience != 0U);
-    k8042_last_status = c;
-    return (c & 1);
-}
+unsigned char k8042_wait_for_input_buffer(void);
+unsigned char k8042_wait_for_output(void);
 
 static inline unsigned char k8042_is_output_ready() {
     return ((k8042_last_status = inp(K8042_STATUS)) & K8042_STATUS_OUTPUT_FULL);
