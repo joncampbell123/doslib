@@ -35,7 +35,7 @@ void k8042_drain_buffer() {
     do {
         inp(K8042_DATA);
         c = inp(K8042_STATUS);
-    } while (c&3);
+    } while (c & (K8042_STATUS_INPUT_FULL|K8042_STATUS_OUTPUT_FULL));
     k8042_last_status = c;
 }
 
@@ -56,9 +56,9 @@ unsigned char k8042_wait_for_input_buffer(void) {
     unsigned char c;
 
     do { c = inp(K8042_STATUS);
-    } while ((c&2) && --patience != 0U);
+    } while ((c & K8042_STATUS_INPUT_FULL) && --patience != 0U);
     k8042_last_status = c;
-    return (c & 2) == 0;
+    return (c & K8042_STATUS_INPUT_FULL) == 0;
 }
 
 /* NTS: Do not confue our output with the controller's output. This reflects the controller's output
@@ -68,9 +68,9 @@ unsigned char k8042_wait_for_output(void) {
     unsigned char c;
 
     do { c = inp(K8042_STATUS);
-    } while ((c&1) == 0 && --patience != 0U);
+    } while ((c & K8042_STATUS_OUTPUT_FULL) == 0 && --patience != 0U);
     k8042_last_status = c;
-    return (c & 1);
+    return (c & K8042_STATUS_OUTPUT_FULL);
 }
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */
