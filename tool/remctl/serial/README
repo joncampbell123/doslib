@@ -1,0 +1,10 @@
+Remote debugging tool, for MS-DOS, via null modem RS-232 cable.
+
+The client is the Windows/Linux program talking to the DOS system.
+
+The server is the utility or TSR running on the DOS system.
+
+The client is written to talk with the server either through a
+RS-232 null modem cable or through a localhost telnet connection
+opened by a running DOSBox instance (serial1=nullmodem).
+
