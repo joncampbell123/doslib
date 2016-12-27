@@ -8,3 +8,6 @@ The client is written to talk with the server either through a
 RS-232 null modem cable or through a localhost telnet connection
 opened by a running DOSBox instance (serial1=nullmodem).
 
+NOTE: You need to specify "serial1=nullmodem transparent:1" in dosbox.conf
+      to disable handshaking.
+
