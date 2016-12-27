@@ -23,6 +23,7 @@
 
 #include "proto.h"
 
+static int              repeat = -1;
 static int              localhost_port = -1;
 static char*            serial_tty = NULL;
 static int              localhost = 0;
@@ -42,6 +43,7 @@ static void help(void) {
     fprintf(stderr,"  -w                Wait for connection\n");
     fprintf(stderr,"  -c <command>      Command to execute (default: ping)\n");
     fprintf(stderr,"  -d                Debug (dump packets)\n");
+    fprintf(stderr,"  -r <n>            Repeat command N times\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -60,6 +62,11 @@ static int parse_argv(int argc,char **argv) {
             }
             else if (!strcmp(a,"l")) {
                 localhost = 1;
+            }
+            else if (!strcmp(a,"r")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                repeat = atoi(a);
             }
             else if (!strcmp(a,"p")) {
                 a = argv[i++];
@@ -314,28 +321,35 @@ int main(int argc,char **argv) {
         return 1;
 
     if (!strcmp(command,"ping")) {
-        remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_PING);
+        int count = 1;
 
-        strncpy((char*)(cur_pkt.data+cur_pkt.hdr.length),"PING",4);
-        cur_pkt.hdr.length += 4;
+        if (repeat > 1)
+            count = repeat;
 
-        remctl_serial_packet_end(&cur_pkt);
+        while (count-- > 0) {
+            remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_PING);
 
-        if (do_send_packet(&cur_pkt) < 0) {
-            fprintf(stderr,"Failed to send packet\n");
-            return 1;
-        }
+            strncpy((char*)(cur_pkt.data+cur_pkt.hdr.length),"PING",4);
+            cur_pkt.hdr.length += 4;
 
-        alarm(5);
-        if (do_recv_packet(&cur_pkt) < 0) {
-            fprintf(stderr,"Failed to recv packet\n");
-            return 1;
-        }
+            remctl_serial_packet_end(&cur_pkt);
 
-        if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_PING ||
-            memcmp(cur_pkt.data,"PING",4) != 0) {
-            fprintf(stderr,"Ping failed, malformed response\n");
-            return 1;
+            if (do_send_packet(&cur_pkt) < 0) {
+                fprintf(stderr,"Failed to send packet\n");
+                return 1;
+            }
+
+            alarm(5);
+            if (do_recv_packet(&cur_pkt) < 0) {
+                fprintf(stderr,"Failed to recv packet\n");
+                return 1;
+            }
+
+            if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_PING ||
+                memcmp(cur_pkt.data,"PING",4) != 0) {
+                fprintf(stderr,"Ping failed, malformed response\n");
+                return 1;
+            }
         }
     }
     else {
