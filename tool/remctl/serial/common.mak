@@ -24,7 +24,7 @@ exe: $(EXPR1_EXE) .symbolic
 
 !ifdef EXPR1_EXE
 $(EXPR1_EXE): $(SUBDIR)$(HPS)remsrv.obj
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)remsrv.obj $(FMT_OMF_LIB_WLINK_LIBRARIES)
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)remsrv.obj
 	%write tmp.cmd option map=$(EXPR1_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
@@ -46,7 +46,6 @@ $(EXPR1_EXE): $(SUBDIR)$(HPS)remsrv.obj
 
 clean: .SYMBOLIC
           del $(SUBDIR)$(HPS)*.obj
-          del $(FMT_OMF_LIB)
           del tmp.cmd
           @echo Cleaning done
 
