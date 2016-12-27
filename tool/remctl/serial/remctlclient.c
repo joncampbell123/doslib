@@ -28,6 +28,7 @@ static char*            serial_tty = NULL;
 static int              localhost = 0;
 static int              waitconn = 0;
 static char*            command = NULL;
+static int              debug = 0;
 
 static int              conn_fd = -1;
 
@@ -40,6 +41,7 @@ static void help(void) {
     fprintf(stderr,"  -s <dev>          Connect to serial port device\n");
     fprintf(stderr,"  -w                Wait for connection\n");
     fprintf(stderr,"  -c <command>      Command to execute (default: ping)\n");
+    fprintf(stderr,"  -d                Debug (dump packets)\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -77,6 +79,9 @@ static int parse_argv(int argc,char **argv) {
             }
             else if (!strcmp(a,"w")) {
                 waitconn = 1;
+            }
+            else if (!strcmp(a,"d")) {
+                debug = 1;
             }
             else {
                 fprintf(stderr,"Unknown switch %s\n",a);
@@ -196,9 +201,32 @@ void remctl_serial_packet_end(struct remctl_serial_packet * const pkt) {
     pkt->hdr.chksum = 0x100 - sum;
 }
 
+void dump_packet(const struct remctl_serial_packet * const pkt) {
+    unsigned int i;
+
+    fprintf(stderr,"   mark=0x%02x length=%u sequence=%u type=0x%02x('%c') chk=0x%02x\n",
+        pkt->hdr.mark,
+        pkt->hdr.length,
+        pkt->hdr.sequence,
+        pkt->hdr.type,
+        pkt->hdr.type,
+        pkt->hdr.chksum);
+
+    if (pkt->hdr.length != 0) {
+        fprintf(stderr,"        data: ");
+        for (i=0;i < pkt->hdr.length;i++) fprintf(stderr,"%02x ",pkt->data[i]);
+        fprintf(stderr,"\n");
+    }
+}
+
 int do_send_packet(const struct remctl_serial_packet * const pkt) {
     if (conn_fd < 0)
         return -1;
+
+    if (debug) {
+        fprintf(stderr,"Sending packet:\n");
+        dump_packet(pkt);
+    }
 
     if (send(conn_fd,(const void*)(&(pkt->hdr)),sizeof(pkt->hdr),MSG_NOSIGNAL) != sizeof(pkt->hdr)) {
         fprintf(stderr,"Send failed: header\n");
@@ -226,6 +254,7 @@ int do_recv_packet(struct remctl_serial_packet * const pkt) {
         }
     } while (pkt->hdr.mark != REMCTL_SERIAL_MARK);
 
+    /* length is the first field after mark */
     if (recv(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length),MSG_WAITALL) !=
         (sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length))) {
         drop_connection();
@@ -237,6 +266,11 @@ int do_recv_packet(struct remctl_serial_packet * const pkt) {
             drop_connection();
             return -1;
         }
+    }
+
+    if (debug) {
+        fprintf(stderr,"Received packet:\n");
+        dump_packet(pkt);
     }
 
     {
@@ -252,6 +286,9 @@ int do_recv_packet(struct remctl_serial_packet * const pkt) {
             return -1;
         }
     }
+
+    if (pkt->hdr.sequence == 0xFF)
+        cur_pkt_recv_seq = 0xFF;
 
     if (cur_pkt_recv_seq != 0xFF) {
         if (pkt->hdr.sequence != cur_pkt_recv_seq) {
@@ -292,6 +329,12 @@ int main(int argc,char **argv) {
         alarm(5);
         if (do_recv_packet(&cur_pkt) < 0) {
             fprintf(stderr,"Failed to recv packet\n");
+            return 1;
+        }
+
+        if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_PING ||
+            memcmp(cur_pkt.data,"PING",4) != 0) {
+            fprintf(stderr,"Ping failed, malformed response\n");
             return 1;
         }
     }
