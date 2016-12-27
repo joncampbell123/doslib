@@ -32,10 +32,13 @@ static struct remctl_serial_packet      cur_pkt_out = {0};
 static unsigned char                    cur_pkt_out_write = 0;      // from 0 to < sizeof(cur_pkt_out)
 static unsigned char                    cur_pkt_out_seq = 0xFF;
 
+void process_input(void);
+void process_output(void);
+
 /* NOTE: You're supposed to call this function with interrupts disabled,
  *       or from within an interrupt handler in response to the UART's IRQ signal. */
 static void irq_uart_handle_iir(struct info_8250 *uart) {
-    unsigned char reason,c,patience = 8;
+    unsigned char reason,c,patience = 8,act_reason = 0;
 
     /* why the interrupt? */
     /* NOTE: we loop a maximum of 8 times in case the UART we're talking to happens
@@ -53,13 +56,19 @@ static void irq_uart_handle_iir(struct info_8250 *uart) {
             c = inp(uart->port+PORT_8250_MSR);
             /* do what you will with this info */
         }
-        else if (reason == 2) { /* data avail */
-        }
-        else if (reason == 1) { /* transmit empty */
+        else {
+            // 2 = data avail
+            // 1 = transmit empty
+            act_reason = 1;
         }
 
         if (--patience == 0)
             break;
+    }
+
+    if (act_reason) {
+        process_input();
+        process_output();
     }
 }
 
@@ -151,6 +160,7 @@ int process_input_packet(void) {
 
     cur_pkt_in.hdr.mark = 0;
     cur_pkt_in_write = 0;
+    process_output();
     return 0;
 }
 
@@ -295,10 +305,11 @@ void mainloop(void) {
             if (c == 27) {
                 do_exit = 1;
             }
+            else if (c == ' ') {
+                // in case interrupts get wedged, or we're using the UART in a non-IRQ mode, check manually
+                do_check_io();
+            }
         }
-
-        // in case interrupts get wedged, or we're using the UART in a non-IRQ mode, check manually
-        do_check_io();
     }
 }
 
@@ -342,7 +353,7 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (init_isa_pnp_bios() &&find_isa_pnp_bios())
+    if (init_isa_pnp_bios() && find_isa_pnp_bios())
         pnp_serial_scan();
 
     {
@@ -395,6 +406,13 @@ int main(int argc,char **argv) {
         }
     }
 
+    // make sure PIC has acked any pending interrupts to that line
+    if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+    p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+
+    // enable interrupts. must be done HERE, not after force flushing
+    uart_8250_enable_interrupt(uart,0xF);
+
     // force flush pending interrupts
     {
         unsigned int i;
@@ -408,13 +426,6 @@ int main(int argc,char **argv) {
             inp(uart->port+PORT_8250_IER);
         }
     }
-
-    // make sure PIC has acked any pending interrupts to that line
-    if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
-    p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
-
-    // enable interrupts
-    uart_8250_enable_interrupt(uart,0xF);
 
     // main loop
     mainloop();
