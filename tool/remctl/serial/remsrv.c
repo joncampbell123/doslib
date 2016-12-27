@@ -306,7 +306,8 @@ void mainloop(void) {
                 do_exit = 1;
             }
             else if (c == ' ') {
-                // in case interrupts get wedged, or we're using the UART in a non-IRQ mode, check manually
+                // in case interrupts get wedged, or we're using the UART in a non-IRQ mode, check manually.
+                // user can trigger this with spacebar.
                 do_check_io();
             }
         }
