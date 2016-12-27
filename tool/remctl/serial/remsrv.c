@@ -23,6 +23,7 @@
 
 static struct info_8250 *uart = NULL;
 static unsigned long baud_rate = 115200;
+static unsigned char use_interrupts = 1;
 
 static struct remctl_serial_packet      cur_pkt_in = {0};
 static unsigned char                    cur_pkt_in_write = 0;       // from 0 to < sizeof(cur_pkt_in)
@@ -311,10 +312,64 @@ void mainloop(void) {
                 do_check_io();
             }
         }
+
+        // we have to poll here if not using interrupts
+        if (!use_interrupts || uart->irq == -1)
+            do_check_io();
     }
 }
 
+void help(void) {
+    fprintf(stderr,"REMSRV [options]\n");
+    fprintf(stderr,"Server-side end of remote control for DOS\n");
+    fprintf(stderr,"  -noint                 Don't use UART interrupts\n");
+    fprintf(stderr,"  -int                   Use UART interrupts (default)\n");
+    fprintf(stderr,"  -baud <n>              Set BAUD rate\n");
+}
+
+int parse_argv(int argc,char **argv) {
+    char *a;
+    int i=1;
+
+    while (i < argc) {
+        a = argv[i++];
+
+        if (*a == '-') {
+            do { a++; } while (*a == '-');
+
+            if (!strcmp(a,"h") || !strcmp(a,"help")) {
+                help();
+                return 1;
+            }
+            else if (!strcmp(a,"noint")) {
+                use_interrupts = 0;
+            }
+             else if (!strcmp(a,"int")) {
+                use_interrupts = 1;
+            }
+            else if (!strcmp(a,"baud")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                baud_rate = strtoul(a,NULL,0);
+            }
+            else {
+                fprintf(stderr,"Unknown switch %s\n",a);
+                return 1;
+            }
+        }
+        else {
+            fprintf(stderr,"Unexpected argv\n");
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
+    if (parse_argv(argc,argv))
+        return 1;
+
 	cpu_probe();
 	probe_dos();
     detect_windows();
@@ -374,7 +429,9 @@ int main(int argc,char **argv) {
         uart = &info_8250_port[choice];
     }
 
-    if (uart->irq != -1) {
+    if (uart->irq != -1 && use_interrupts) {
+        printf("Using UART interrupt mode\n");
+
         old_irq = _dos_getvect(irq2int(uart->irq));
         _dos_setvect(irq2int(uart->irq),uart_irq);
         if (uart->irq >= 0) {
@@ -407,24 +464,26 @@ int main(int argc,char **argv) {
         }
     }
 
-    // make sure PIC has acked any pending interrupts to that line
-    if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
-    p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+    if (uart->irq != -1 && use_interrupts) {
+        // make sure PIC has acked any pending interrupts to that line
+        if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
 
-    // enable interrupts. must be done HERE, not after force flushing
-    uart_8250_enable_interrupt(uart,0xF);
+        // enable interrupts. must be done HERE, not after force flushing
+        uart_8250_enable_interrupt(uart,0xF);
 
-    // force flush pending interrupts
-    {
-        unsigned int i;
+        // force flush pending interrupts
+        {
+            unsigned int i;
 
-        for (i=0;i < 256 && (inp(uart->port+PORT_8250_IIR) & 1) == 0;i++) {
-            inp(uart->port);
-            inp(uart->port+PORT_8250_MSR);
-            inp(uart->port+PORT_8250_MCR);
-            inp(uart->port+PORT_8250_LSR);
-            inp(uart->port+PORT_8250_IIR);
-            inp(uart->port+PORT_8250_IER);
+            for (i=0;i < 256 && (inp(uart->port+PORT_8250_IIR) & 1) == 0;i++) {
+                inp(uart->port);
+                inp(uart->port+PORT_8250_MSR);
+                inp(uart->port+PORT_8250_MCR);
+                inp(uart->port+PORT_8250_LSR);
+                inp(uart->port+PORT_8250_IIR);
+                inp(uart->port+PORT_8250_IER);
+            }
         }
     }
 
@@ -438,7 +497,7 @@ int main(int argc,char **argv) {
     uart_8250_set_line_control(uart,UART_8250_LCR_8BIT | UART_8250_LCR_PARITY); /* 8 bit 1 stop bit odd parity */
     uart_8250_set_baudrate(uart,uart_8250_baud_to_divisor(uart,9600));
 
-    if (uart->irq != -1) {
+    if (uart->irq != -1 && use_interrupts) {
         _dos_setvect(irq2int(uart->irq),old_irq);
         if (uart->irq >= 0) p8259_mask(uart->irq);
     }

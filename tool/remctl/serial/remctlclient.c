@@ -350,6 +350,8 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"Ping failed, malformed response\n");
                 return 1;
             }
+
+            printf("Ping OK\n");
         }
     }
     else {
