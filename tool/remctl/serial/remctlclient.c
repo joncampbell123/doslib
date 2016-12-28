@@ -33,6 +33,7 @@ static int              waitconn = 0;
 static char*            command = NULL;
 static int              debug = 0;
 static int              stop_bits = 1;
+static int              ioport = -1;
 
 static int              conn_fd = -1;
 
@@ -49,6 +50,7 @@ static void help(void) {
     fprintf(stderr,"  -r <n>            Repeat command N times\n");
     fprintf(stderr,"  -b <rate>         Baud rate\n");
     fprintf(stderr,"  -sb <n>           Stop bits (1 or 2)\n");
+    fprintf(stderr,"  -ioport <n>       I/O port\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -77,6 +79,11 @@ static int parse_argv(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 baud_rate = strtoul(a,NULL,0);
+            }
+            else if (!strcmp(a,"ioport")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                ioport = strtoul(a,NULL,0);
             }
             else if (!strcmp(a,"p")) {
                 a = argv[i++];
@@ -521,6 +528,72 @@ int main(int argc,char **argv) {
         }
 
         printf("Un-halt OK\n");
+    }
+    else if (!strcmp(command,"inp")) {
+        if (ioport < 0 || ioport > 65535) {
+            fprintf(stderr,"I/O port out of range\n");
+            return 1;
+        }
+
+        remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_INPORT);
+
+        cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)(ioport & 0xFF);
+        cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)((ioport >> 8) & 0xFF);
+        cur_pkt.data[cur_pkt.hdr.length++] = 1;
+
+        remctl_serial_packet_end(&cur_pkt);
+
+        if (do_send_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to send packet\n");
+            return 1;
+        }
+
+        alarm(5);
+        if (do_recv_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to recv packet\n");
+            return 1;
+        }
+
+        if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_INPORT ||
+            cur_pkt.data[2] != 1) {
+            fprintf(stderr,"I/O read failed\n");
+            return 1;
+        }
+
+        printf("I/O port 0x%X: got 0x%02x\n",ioport,cur_pkt.data[3]);
+    }
+    else if (!strcmp(command,"inpw")) {
+        if (ioport < 0 || ioport > 65535) {
+            fprintf(stderr,"I/O port out of range\n");
+            return 1;
+        }
+
+        remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_INPORT);
+
+        cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)(ioport & 0xFF);
+        cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)((ioport >> 8) & 0xFF);
+        cur_pkt.data[cur_pkt.hdr.length++] = 2;
+
+        remctl_serial_packet_end(&cur_pkt);
+
+        if (do_send_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to send packet\n");
+            return 1;
+        }
+
+        alarm(5);
+        if (do_recv_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to recv packet\n");
+            return 1;
+        }
+
+        if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_INPORT ||
+            cur_pkt.data[2] != 2) {
+            fprintf(stderr,"I/O read failed\n");
+            return 1;
+        }
+
+        printf("I/O port 0x%X: got 0x%04x\n",ioport,cur_pkt.data[3] + (cur_pkt.data[4] << 8U));
     }
     else {
         fprintf(stderr,"Unknown command\n");

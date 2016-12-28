@@ -20,6 +20,7 @@ struct remctl_serial_packet {
 enum {
     REMCTL_SERIAL_TYPE_ERROR=0x45,
     REMCTL_SERIAL_TYPE_HALT=0x48,       /* halt/un-halt system */
+    REMCTL_SERIAL_TYPE_INPORT=0x49,     /* input from port */
     REMCTL_SERIAL_TYPE_PING=0x50
 };
 

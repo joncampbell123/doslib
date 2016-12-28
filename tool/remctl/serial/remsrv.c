@@ -175,6 +175,8 @@ void end_output_packet(void) {
 }
 
 void handle_packet(void) {
+    unsigned int port,data;
+
     switch (cur_pkt_in.hdr.type) {
         case REMCTL_SERIAL_TYPE_PING:
             begin_output_packet(REMCTL_SERIAL_TYPE_PING);
@@ -187,6 +189,27 @@ void handle_packet(void) {
             begin_output_packet(REMCTL_SERIAL_TYPE_HALT);
             cur_pkt_out.data[0] = halt_system;
             cur_pkt_out.hdr.length = 1;
+            end_output_packet();
+            break;
+        case REMCTL_SERIAL_TYPE_INPORT:
+            begin_output_packet(REMCTL_SERIAL_TYPE_INPORT);
+            memcpy(cur_pkt_out.data,cur_pkt_in.data,8/*big enough*/);
+            cur_pkt_out.hdr.length = 2;
+
+            port = cur_pkt_in.data[0] + (cur_pkt_in.data[1] << 8U);
+
+            // data[2] is the I/O width
+            if (cur_pkt_out.data[2] == 2) {
+                data = inpw(port);
+                cur_pkt_out.data[3] = data & 0xFF;
+                cur_pkt_out.data[4] = (data >> 8U) & 0xFF;
+                cur_pkt_out.hdr.length = 5;
+            }
+            else {
+                cur_pkt_out.data[3] = inp(port);
+                cur_pkt_out.hdr.length = 4;
+            }
+
             end_output_packet();
             break;
         default:
