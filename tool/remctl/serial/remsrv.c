@@ -194,7 +194,7 @@ void handle_packet(void) {
         case REMCTL_SERIAL_TYPE_INPORT:
             begin_output_packet(REMCTL_SERIAL_TYPE_INPORT);
             memcpy(cur_pkt_out.data,cur_pkt_in.data,8/*big enough*/);
-            cur_pkt_out.hdr.length = 2;
+            cur_pkt_out.hdr.length = 3;
 
             port = cur_pkt_in.data[0] + (cur_pkt_in.data[1] << 8U);
 
@@ -217,6 +217,30 @@ void handle_packet(void) {
             else {
                 cur_pkt_out.data[3] = inp(port);
                 cur_pkt_out.hdr.length = 4;
+            }
+
+            end_output_packet();
+            break;
+        case REMCTL_SERIAL_TYPE_OUTPORT:
+            begin_output_packet(REMCTL_SERIAL_TYPE_OUTPORT);
+            memcpy(cur_pkt_out.data,cur_pkt_in.data,8/*big enough*/);
+            cur_pkt_out.hdr.length = 3;
+
+            port = cur_pkt_in.data[0] + (cur_pkt_in.data[1] << 8U);
+
+            // data[2] is the I/O width
+            if (cur_pkt_out.data[2] == 4) {
+                outpd(port,
+                    (unsigned long)cur_pkt_in.data[3] +
+                    ((unsigned long)cur_pkt_in.data[4] << 8UL) +
+                    ((unsigned long)cur_pkt_in.data[5] << 16UL) +
+                    ((unsigned long)cur_pkt_in.data[6] << 24UL));
+            }
+            else if (cur_pkt_out.data[2] == 2) {
+                outpw(port,cur_pkt_in.data[3] + (cur_pkt_in.data[4] << 8U));
+            }
+            else {
+                outp(port,cur_pkt_in.data[3]);
             }
 
             end_output_packet();
