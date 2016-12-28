@@ -61,6 +61,22 @@ static void help(void) {
     fprintf(stderr,"  -mstr <n>         Memory string to write\n");
     fprintf(stderr,"  -data <n>         data value\n");
     fprintf(stderr,"  -o <file>         Output file\n");
+    fprintf(stderr,"\n");
+    fprintf(stderr,"Commands are:\n");
+    fprintf(stderr,"   ping             Ping the server (test connection)\n");
+    fprintf(stderr,"   halt             Halt the system\n");
+    fprintf(stderr,"   unhalt           Un-halt the system\n");
+    fprintf(stderr,"   inp -ioport <n>  I/O port read (byte)\n");
+    fprintf(stderr,"   inpw -ioport <n> I/O port read (word)\n");
+    fprintf(stderr,"   inpd -ioport <n> I/O port read (dword)\n");
+    fprintf(stderr,"                    CAUTION: Do not use if server is not 386 or higher\n");
+    fprintf(stderr,"   outp -ioport <n> -data <n>  I/O port write (byte)\n");
+    fprintf(stderr,"   outpw -ioport <n> -data <n> I/O port write (word)\n");
+    fprintf(stderr,"   outpd -ioport <n> -data <n> I/O port write (dword)\n");
+    fprintf(stderr,"                    CAUTION: Do not use if server is not 386 or higher\n");
+    fprintf(stderr,"   memread -msz <n> -maddr <n> Read server memory\n");
+    fprintf(stderr,"   memwrite -msz <n> -maddr <n> -data <n> Write server memory\n");
+    fprintf(stderr,"   memwrite -maddr <n> -mstr <x> Write server memory with string\n");
 }
 
 static int parse_argv(int argc,char **argv) {
