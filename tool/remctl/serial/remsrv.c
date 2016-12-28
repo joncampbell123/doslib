@@ -24,6 +24,7 @@
 static struct info_8250 *uart = NULL;
 static unsigned long baud_rate = 115200;
 static unsigned char use_interrupts = 1;
+static unsigned char stop_bits = 1;
 
 static struct remctl_serial_packet      cur_pkt_in = {0};
 static unsigned char                    cur_pkt_in_write = 0;       // from 0 to < sizeof(cur_pkt_in)
@@ -325,6 +326,7 @@ void help(void) {
     fprintf(stderr,"  -noint                 Don't use UART interrupts\n");
     fprintf(stderr,"  -int                   Use UART interrupts (default)\n");
     fprintf(stderr,"  -baud <n>              Set BAUD rate\n");
+    fprintf(stderr,"  -s <n>                 Stop bits (1 or 2)\n");
 }
 
 int parse_argv(int argc,char **argv) {
@@ -344,8 +346,15 @@ int parse_argv(int argc,char **argv) {
             else if (!strcmp(a,"noint")) {
                 use_interrupts = 0;
             }
-             else if (!strcmp(a,"int")) {
+            else if (!strcmp(a,"int")) {
                 use_interrupts = 1;
+            }
+            else if (!strcmp(a,"s")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                stop_bits = strtoul(a,NULL,0);
+                if (stop_bits < 1) stop_bits = 1;
+                else if (stop_bits > 2) stop_bits = 2;
             }
             else if (!strcmp(a,"baud")) {
                 a = argv[i++];
@@ -444,7 +453,7 @@ int main(int argc,char **argv) {
     uart_8250_enable_interrupt(uart,0); /* disable interrupts (set IER=0) */
     uart_8250_disable_FIFO(uart);
     uart_8250_set_MCR(uart,3);      /* turn on RTS and DTS */
-    uart_8250_set_line_control(uart,UART_8250_LCR_8BIT | UART_8250_LCR_PARITY); /* 8 bit 1 stop bit odd parity */
+    uart_8250_set_line_control(uart,UART_8250_LCR_8BIT | UART_8250_LCR_PARITY | (stop_bits == 2 ? UART_8250_LCR_TWO_STOP_BITS : 0)); /* 8 bit 1 stop bit odd parity */
     uart_8250_set_baudrate(uart,uart_8250_baud_to_divisor(uart,baud_rate));
 
     // enable FIFO
