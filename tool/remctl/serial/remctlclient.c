@@ -441,6 +441,33 @@ int do_recv_packet(struct remctl_serial_packet * const pkt) {
     return 0;
 }
 
+int do_ping(void) {
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_PING);
+
+    strncpy((char*)(cur_pkt.data+cur_pkt.hdr.length),"PING",4);
+    cur_pkt.hdr.length += 4;
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_PING ||
+        memcmp(cur_pkt.data,"PING",4) != 0) {
+        fprintf(stderr,"Ping failed, malformed response\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
     if (parse_argv(argc,argv))
         return 1;
@@ -455,29 +482,9 @@ int main(int argc,char **argv) {
             count = repeat;
 
         while (count-- > 0) {
-            remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_PING);
-
-            strncpy((char*)(cur_pkt.data+cur_pkt.hdr.length),"PING",4);
-            cur_pkt.hdr.length += 4;
-
-            remctl_serial_packet_end(&cur_pkt);
-
-            if (do_send_packet(&cur_pkt) < 0) {
-                fprintf(stderr,"Failed to send packet\n");
-                return 1;
-            }
-
             alarm(5);
-            if (do_recv_packet(&cur_pkt) < 0) {
-                fprintf(stderr,"Failed to recv packet\n");
-                return 1;
-            }
-
-            if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_PING ||
-                memcmp(cur_pkt.data,"PING",4) != 0) {
-                fprintf(stderr,"Ping failed, malformed response\n");
-                return 1;
-            }
+            if (do_ping() < 0)
+                break;
 
             printf("Ping OK\n");
         }
