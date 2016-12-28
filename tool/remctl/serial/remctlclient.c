@@ -24,12 +24,14 @@
 #include "proto.h"
 
 static int              repeat = -1;
+static int              baud_rate = -1;
 static int              localhost_port = -1;
 static char*            serial_tty = NULL;
 static int              localhost = 0;
 static int              waitconn = 0;
 static char*            command = NULL;
 static int              debug = 0;
+static int              stop_bits = 1;
 
 static int              conn_fd = -1;
 
@@ -44,6 +46,8 @@ static void help(void) {
     fprintf(stderr,"  -c <command>      Command to execute (default: ping)\n");
     fprintf(stderr,"  -d                Debug (dump packets)\n");
     fprintf(stderr,"  -r <n>            Repeat command N times\n");
+    fprintf(stderr,"  -b <rate>         Baud rate\n");
+    fprintf(stderr,"  -sb <n>           Stop bits (1 or 2)\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -68,6 +72,11 @@ static int parse_argv(int argc,char **argv) {
                 if (a == NULL) return 1;
                 repeat = atoi(a);
             }
+            else if (!strcmp(a,"b")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                baud_rate = strtoul(a,NULL,0);
+            }
             else if (!strcmp(a,"p")) {
                 a = argv[i++];
                 if (a == NULL) return 1;
@@ -83,6 +92,13 @@ static int parse_argv(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 serial_tty = a;
+            }
+            else if (!strcmp(a,"sb")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                stop_bits = atoi(a);
+                if (stop_bits < 1) stop_bits = 1;
+                else if (stop_bits > 2) stop_bits = 2;
             }
             else if (!strcmp(a,"w")) {
                 waitconn = 1;
@@ -104,9 +120,16 @@ static int parse_argv(int argc,char **argv) {
     if (command == NULL)
         command = "ping";
 
+    if (baud_rate < 0)
+        baud_rate = 115200;
+
     if (serial_tty != NULL) {
-        fprintf(stderr,"Serial port support not yet implemented\n");
-        return 1;
+        if (!strncmp(serial_tty,"/dev/tty",8)) {
+            /* good */
+        }
+        else {
+            return 1;
+        }
     }
     else if (localhost) {
         if (localhost_port < 0)
@@ -152,6 +175,41 @@ int do_connection(void) {
         sin.sin_addr.s_addr = htonl(0x7F000001UL); /* 127.0.0.1 */
         if (connect(conn_fd,(const struct sockaddr*)(&sin),sizeof(sin)) < 0) {
             fprintf(stderr,"Connect failed, %s\n",strerror(errno));
+            drop_connection();
+            return -1;
+        }
+    }
+    else if (serial_tty != NULL) {
+        struct termios tios;
+
+        conn_fd = open(serial_tty,O_RDWR);
+        if (conn_fd < 0) {
+            fprintf(stderr,"open() failed, %s\n",strerror(errno));
+            drop_connection();
+            return -1;
+        }
+
+        if (tcgetattr(conn_fd,&tios) < 0) {
+            fprintf(stderr,"Failed to get termios info, %s\n",strerror(errno));
+            drop_connection();
+            return -1;
+        }
+        tcflush(conn_fd,TCIOFLUSH);
+        cfmakeraw(&tios);
+        if (cfsetspeed(&tios,baud_rate) < 0) {
+            fprintf(stderr,"Failed to set baud rate, %s\n",strerror(errno));
+            drop_connection();
+            return -1;
+        }
+
+        tios.c_cflag &= ~CSTOPB;
+        if (stop_bits == 2) tios.c_cflag |= CSTOPB;
+        tios.c_lflag &= ~(ECHO|ECHOE|ECHOK|ECHONL|ECHOPRT|ECHOKE);
+        tios.c_cflag &= ~(CSIZE);
+        tios.c_cflag |= CS8;
+
+        if (tcsetattr(conn_fd,TCSANOW,&tios) < 0) {
+            fprintf(stderr,"Failed to set termios info, %s\n",strerror(errno));
             drop_connection();
             return -1;
         }
@@ -235,16 +293,31 @@ int do_send_packet(const struct remctl_serial_packet * const pkt) {
         dump_packet(pkt);
     }
 
-    if (send(conn_fd,(const void*)(&(pkt->hdr)),sizeof(pkt->hdr),MSG_NOSIGNAL) != sizeof(pkt->hdr)) {
-        fprintf(stderr,"Send failed: header\n");
-        drop_connection();
-        return -1;
-    }
+    if (serial_tty) {
+        if (write(conn_fd,(const void*)(&(pkt->hdr)),sizeof(pkt->hdr)) != sizeof(pkt->hdr)) {
+            fprintf(stderr,"Send failed: header\n");
+            drop_connection();
+            return -1;
+        }
 
-    if (pkt->hdr.length != 0 && send(conn_fd,pkt->data,pkt->hdr.length,MSG_NOSIGNAL) != pkt->hdr.length) {
-        fprintf(stderr,"Send failed: data\n");
-        drop_connection();
-        return -1;
+        if (pkt->hdr.length != 0 && write(conn_fd,pkt->data,pkt->hdr.length) != pkt->hdr.length) {
+            fprintf(stderr,"Send failed: data\n");
+            drop_connection();
+            return -1;
+        }
+    }
+    else {
+        if (send(conn_fd,(const void*)(&(pkt->hdr)),sizeof(pkt->hdr),MSG_NOSIGNAL) != sizeof(pkt->hdr)) {
+            fprintf(stderr,"Send failed: header\n");
+            drop_connection();
+            return -1;
+        }
+
+        if (pkt->hdr.length != 0 && send(conn_fd,pkt->data,pkt->hdr.length,MSG_NOSIGNAL) != pkt->hdr.length) {
+            fprintf(stderr,"Send failed: data\n");
+            drop_connection();
+            return -1;
+        }
     }
 
     return 0;
@@ -254,24 +327,48 @@ int do_recv_packet(struct remctl_serial_packet * const pkt) {
     if (conn_fd < 0)
         return -1;
 
-    do {
-        if (recv(conn_fd,&(pkt->hdr.mark),1,MSG_WAITALL) != 1) {
+    if (serial_tty) {
+        do {
+            if (read(conn_fd,&(pkt->hdr.mark),1) != 1) {
+                drop_connection();
+                return -1;
+            }
+        } while (pkt->hdr.mark != REMCTL_SERIAL_MARK);
+
+        /* length is the first field after mark */
+        if (read(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length)) !=
+                (sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length))) {
             drop_connection();
             return -1;
         }
-    } while (pkt->hdr.mark != REMCTL_SERIAL_MARK);
 
-    /* length is the first field after mark */
-    if (recv(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length),MSG_WAITALL) !=
-        (sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length))) {
-        drop_connection();
-        return -1;
+        if (pkt->hdr.length != 0) {
+            if (read(conn_fd,pkt->data,pkt->hdr.length) != pkt->hdr.length) {
+                drop_connection();
+                return -1;
+            }
+        }
     }
+    else {
+        do {
+            if (recv(conn_fd,&(pkt->hdr.mark),1,MSG_WAITALL) != 1) {
+                drop_connection();
+                return -1;
+            }
+        } while (pkt->hdr.mark != REMCTL_SERIAL_MARK);
 
-    if (pkt->hdr.length != 0) {
-        if (recv(conn_fd,pkt->data,pkt->hdr.length,MSG_WAITALL) != pkt->hdr.length) {
+        /* length is the first field after mark */
+        if (recv(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length),MSG_WAITALL) !=
+                (sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length))) {
             drop_connection();
             return -1;
+        }
+
+        if (pkt->hdr.length != 0) {
+            if (recv(conn_fd,pkt->data,pkt->hdr.length,MSG_WAITALL) != pkt->hdr.length) {
+                drop_connection();
+                return -1;
+            }
         }
     }
 
