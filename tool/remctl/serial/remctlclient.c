@@ -595,6 +595,43 @@ int main(int argc,char **argv) {
 
         printf("I/O port 0x%X: got 0x%04x\n",ioport,cur_pkt.data[3] + (cur_pkt.data[4] << 8U));
     }
+    else if (!strcmp(command,"inpd")) {
+        if (ioport < 0 || ioport > 65535) {
+            fprintf(stderr,"I/O port out of range\n");
+            return 1;
+        }
+
+        remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_INPORT);
+
+        cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)(ioport & 0xFF);
+        cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)((ioport >> 8) & 0xFF);
+        cur_pkt.data[cur_pkt.hdr.length++] = 4;
+
+        remctl_serial_packet_end(&cur_pkt);
+
+        if (do_send_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to send packet\n");
+            return 1;
+        }
+
+        alarm(5);
+        if (do_recv_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to recv packet\n");
+            return 1;
+        }
+
+        if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_INPORT ||
+            cur_pkt.data[2] != 4) {
+            fprintf(stderr,"I/O read failed\n");
+            return 1;
+        }
+
+        printf("I/O port 0x%X: got 0x%08lx\n",ioport,
+            (unsigned long)cur_pkt.data[3] +
+            ((unsigned long)cur_pkt.data[4] << 8UL) +
+            ((unsigned long)cur_pkt.data[5] << 16UL) +
+            ((unsigned long)cur_pkt.data[6] << 24UL));
+    }
     else {
         fprintf(stderr,"Unknown command\n");
         return 1;

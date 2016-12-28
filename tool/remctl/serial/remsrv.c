@@ -199,7 +199,16 @@ void handle_packet(void) {
             port = cur_pkt_in.data[0] + (cur_pkt_in.data[1] << 8U);
 
             // data[2] is the I/O width
-            if (cur_pkt_out.data[2] == 2) {
+            if (cur_pkt_out.data[2] == 4) {
+                // WARNING: no check is made whether your CPU is 386 or higher here!
+                unsigned long ldata = inpd(port);
+                cur_pkt_out.data[3] =  ldata & 0xFF;
+                cur_pkt_out.data[4] = (ldata >> 8UL) & 0xFF;
+                cur_pkt_out.data[5] = (ldata >> 16UL) & 0xFF;
+                cur_pkt_out.data[6] = (ldata >> 24UL) & 0xFF;
+                cur_pkt_out.hdr.length = 7;
+            }
+            else if (cur_pkt_out.data[2] == 2) {
                 data = inpw(port);
                 cur_pkt_out.data[3] = data & 0xFF;
                 cur_pkt_out.data[4] = (data >> 8U) & 0xFF;
