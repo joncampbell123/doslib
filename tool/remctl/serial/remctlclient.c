@@ -38,6 +38,7 @@ static unsigned long    memaddr = 0;
 static int              memsz = -1;
 static unsigned long    data = 0;
 static char*            memstr = NULL;
+static char*            output_file = NULL;
 
 static int              conn_fd = -1;
 
@@ -59,6 +60,7 @@ static void help(void) {
     fprintf(stderr,"  -msz <n>          Memory size (how much)\n");
     fprintf(stderr,"  -mstr <n>         Memory string to write\n");
     fprintf(stderr,"  -data <n>         data value\n");
+    fprintf(stderr,"  -o <file>         Output file\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -87,6 +89,11 @@ static int parse_argv(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 memstr = a;
+            }
+            else if (!strcmp(a,"p")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                output_file = a;
             }
             else if (!strcmp(a,"b")) {
                 a = argv[i++];
