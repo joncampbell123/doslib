@@ -282,7 +282,7 @@ void handle_packet(void) {
 #if TARGET_MSDOS == 16
                 /* if any byte in the range extends past FFFF:FFFF (1MB+64KB) then use flat real mode */
                 if ((memaddr+(unsigned long)cur_pkt_in.data[4]-1UL) > 0x10FFEFUL) {
-                    if (!is_v86_mode()) {
+                    if (cpu_basic_level >= 3 && !is_v86_mode()) {
                         if (flatrealmode_setup(FLATREALMODE_4GB)) {
                             for (port=0;port < (unsigned int)cur_pkt_in.data[4];port++)
                                 cur_pkt_out.data[5+port] = flatrealmode_readb((uint32_t)memaddr + (uint32_t)port);
@@ -329,7 +329,7 @@ void handle_packet(void) {
 #if TARGET_MSDOS == 16
                 /* if any byte in the range extends past FFFF:FFFF (1MB+64KB) then use flat real mode */
                 if ((memaddr+(unsigned long)cur_pkt_in.data[4]-1UL) > 0x10FFEFUL) {
-                    if (!is_v86_mode()) {
+                    if (cpu_basic_level >= 3 && !is_v86_mode()) {
                         if (flatrealmode_setup(FLATREALMODE_4GB)) {
                             for (port=0;port < (unsigned int)cur_pkt_in.data[4];port++)
                                 flatrealmode_writeb((uint32_t)memaddr + (uint32_t)port,cur_pkt_in.data[5+port]);
