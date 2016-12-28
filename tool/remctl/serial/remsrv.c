@@ -332,7 +332,7 @@ void handle_packet(void) {
                     if (!is_v86_mode()) {
                         if (flatrealmode_setup(FLATREALMODE_4GB)) {
                             for (port=0;port < (unsigned int)cur_pkt_in.data[4];port++)
-                                flatrealmode_writeb((uint32_t)memaddr + (uint32_t)port,cur_pkt_out.data[5+port]);
+                                flatrealmode_writeb((uint32_t)memaddr + (uint32_t)port,cur_pkt_in.data[5+port]);
                         }
                     }
                 }
