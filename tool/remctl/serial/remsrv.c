@@ -24,6 +24,7 @@
 static struct info_8250 *uart = NULL;
 static unsigned long baud_rate = 115200;
 static unsigned char use_interrupts = 1;
+static unsigned char halt_system = 0;
 static unsigned char stop_bits = 1;
 
 static struct remctl_serial_packet      cur_pkt_in = {0};
@@ -79,6 +80,16 @@ static void irq_uart_handle_iir(struct info_8250 *uart) {
     }
 }
 
+void halt_system_loop(void) {
+    /* interrupts at this point should be disabled */
+    do {
+        uart_waiting_read = 0;
+        uart_waiting_write = 0;
+        process_input();
+        process_output();
+    } while (halt_system);
+}
+
 static void (interrupt *old_timer_irq)() = NULL;
 static void interrupt timer_irq() {
     if (use_interrupts && uart->irq != -1) {
@@ -119,6 +130,9 @@ static void interrupt timer_irq() {
         }
     }
 
+    /* halt here if instructed */
+    if (halt_system) halt_system_loop();
+
     old_timer_irq();
 }
 
@@ -132,6 +146,9 @@ static void interrupt uart_irq() {
     /* ack PIC */
     if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
     p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+
+    /* halt here if instructed */
+    if (halt_system) halt_system_loop();
 }
 
 void begin_output_packet(const unsigned char type) {
@@ -163,6 +180,13 @@ void handle_packet(void) {
             begin_output_packet(REMCTL_SERIAL_TYPE_PING);
             strcpy(cur_pkt_out.data,"PING");
             cur_pkt_out.hdr.length = 4;
+            end_output_packet();
+            break;
+        case REMCTL_SERIAL_TYPE_HALT:
+            halt_system = cur_pkt_in.data[0];
+            begin_output_packet(REMCTL_SERIAL_TYPE_HALT);
+            cur_pkt_out.data[0] = halt_system;
+            cur_pkt_out.hdr.length = 1;
             end_output_packet();
             break;
         default:

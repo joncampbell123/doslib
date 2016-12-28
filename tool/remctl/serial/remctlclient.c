@@ -468,6 +468,60 @@ int main(int argc,char **argv) {
             printf("Ping OK\n");
         }
     }
+    else if (!strcmp(command,"halt")) {
+        remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_HALT);
+
+        cur_pkt.data[cur_pkt.hdr.length] = 1;
+        cur_pkt.hdr.length += 1;
+
+        remctl_serial_packet_end(&cur_pkt);
+
+        if (do_send_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to send packet\n");
+            return 1;
+        }
+
+        alarm(5);
+        if (do_recv_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to recv packet\n");
+            return 1;
+        }
+
+        if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_HALT ||
+            cur_pkt.data[0] != 1) {
+            fprintf(stderr,"Halt failed\n");
+            return 1;
+        }
+
+        printf("Halt OK\n");
+    }
+    else if (!strcmp(command,"unhalt")) {
+        remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_HALT);
+
+        cur_pkt.data[cur_pkt.hdr.length] = 0;
+        cur_pkt.hdr.length += 1;
+
+        remctl_serial_packet_end(&cur_pkt);
+
+        if (do_send_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to send packet\n");
+            return 1;
+        }
+
+        alarm(5);
+        if (do_recv_packet(&cur_pkt) < 0) {
+            fprintf(stderr,"Failed to recv packet\n");
+            return 1;
+        }
+
+        if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_HALT ||
+            cur_pkt.data[0] != 0) {
+            fprintf(stderr,"Un-halt failed\n");
+            return 1;
+        }
+
+        printf("Un-halt OK\n");
+    }
     else {
         fprintf(stderr,"Unknown command\n");
         return 1;
