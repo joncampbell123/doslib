@@ -11,6 +11,7 @@
 /* for connecting to serial port */
 #include <termios.h>
 
+#include <assert.h>
 #include <unistd.h>
 #include <limits.h>
 #include <stdint.h>
@@ -323,27 +324,43 @@ int do_send_packet(const struct remctl_serial_packet * const pkt) {
     return 0;
 }
 
+int read_persistent(const int fd,void *p,int sz) {
+    int rd = 0;
+    int rt;
+
+    while (sz > 0) {
+        rt = read(fd,p,sz);
+        if (rt < 0) return rt;
+        assert(rt <= sz);
+        p = (void*)((char*)p + rt);
+        sz -= rt;
+        rd += rt;
+    }
+
+    return rd;
+}
+
 int do_recv_packet(struct remctl_serial_packet * const pkt) {
     if (conn_fd < 0)
         return -1;
 
     if (serial_tty) {
         do {
-            if (read(conn_fd,&(pkt->hdr.mark),1) != 1) {
+            if (read_persistent(conn_fd,&(pkt->hdr.mark),1) != 1) {
                 drop_connection();
                 return -1;
             }
         } while (pkt->hdr.mark != REMCTL_SERIAL_MARK);
 
         /* length is the first field after mark */
-        if (read(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length)) !=
+        if (read_persistent(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length)) !=
                 (sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length))) {
             drop_connection();
             return -1;
         }
 
         if (pkt->hdr.length != 0) {
-            if (read(conn_fd,pkt->data,pkt->hdr.length) != pkt->hdr.length) {
+            if (read_persistent(conn_fd,pkt->data,pkt->hdr.length) != pkt->hdr.length) {
                 drop_connection();
                 return -1;
             }
