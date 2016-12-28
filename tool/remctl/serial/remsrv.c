@@ -18,6 +18,7 @@
 #include <hw/8250/8250.h>
 #include <hw/8250/8250pnp.h>
 #include <hw/isapnp/isapnp.h>
+#include <hw/flatreal/flatreal.h>
 
 #include "proto.h"
 
@@ -174,6 +175,24 @@ void end_output_packet(void) {
     cur_pkt_out.hdr.chksum = 0x100 - sum;
 }
 
+unsigned char is_v86_mode(void) {
+#if TARGET_MSDOS == 16
+    unsigned int tmp = 0;
+
+    if (cpu_basic_level < 3)
+        return 0;
+
+    __asm {
+        .286
+        smsw    tmp
+    }
+
+    return tmp & 1;
+#else
+    return 0;
+#endif
+}
+
 void handle_packet(void) {
     unsigned int port,data;
 
@@ -260,11 +279,36 @@ void handle_packet(void) {
                     ((unsigned long)cur_pkt_in.data[2] << 16UL) +
                     ((unsigned long)cur_pkt_in.data[3] << 24UL);
 
-                /* TODO: If flat real mode is possible, use that if the mem addr reaches past 1MB boundary */
-                /* use fmemcpy using linear to segmented conversion */
-                _fmemcpy(cur_pkt_out.data+5,
-                    MK_FP((unsigned int)(memaddr >> 4UL),(unsigned int)(memaddr & 0xFUL)),
-                    (unsigned int)cur_pkt_in.data[4]);
+#if TARGET_MSDOS == 16
+                /* if any byte in the range extends past FFFF:FFFF (1MB+64KB) then use flat real mode */
+                if ((memaddr+(unsigned long)cur_pkt_in.data[4]-1UL) > 0x10FFEFUL) {
+                    if (!is_v86_mode()) {
+                        if (flatrealmode_setup(FLATREALMODE_4GB)) {
+                            for (port=0;port < (unsigned int)cur_pkt_in.data[4];port++)
+                                cur_pkt_out.data[5+port] = flatrealmode_readb((uint32_t)memaddr + (uint32_t)port);
+                        }
+                        else {
+                            memset(cur_pkt_out.data+5,'F',(unsigned int)cur_pkt_in.data[4]);
+                        }
+                    }
+                    else {
+                        memset(cur_pkt_out.data+5,'V',(unsigned int)cur_pkt_in.data[4]);
+                    }
+                }
+                else {
+                    unsigned long segv = (unsigned long)memaddr >> 4UL;
+                    unsigned int ofsv = (unsigned int)(memaddr & 0xFUL);
+
+                    if (segv > 0xFFFFUL) {
+                        ofsv = memaddr - 0xFFFF0UL;
+                        segv = 0xFFFFUL;
+                    }
+
+                    /* use fmemcpy using linear to segmented conversion */
+                    _fmemcpy(cur_pkt_out.data+5,
+                        MK_FP((unsigned int)segv,ofsv),(unsigned int)cur_pkt_in.data[4]);
+                }
+#endif
             }
 
             end_output_packet();
