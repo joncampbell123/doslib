@@ -35,6 +35,7 @@
 
 /* Line control register bits */
 #define UART_8250_LCR_8BIT                      (3 << 0)
+#define UART_8250_LCR_TWO_STOP_BITS             (1 << 2)
 #define UART_8250_LCR_PARITY                    (1 << 3)
 #define UART_8250_LCR_PARITY_EVEN               (1 << 4)
 /* set this bit to make register offsets 0&1 the divisor latch */
