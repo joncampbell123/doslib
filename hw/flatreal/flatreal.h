@@ -76,11 +76,15 @@ void flatrealmode_writeb(uint32_t addr,uint8_t c);
 #pragma aux flatrealmode_writeb = \
     ".386p" \
     "push   es" \
+    "push   edx" \
+    "push   eax" \
     "xor    cx,cx" \
     "mov    es,cx" \
     "shl    edx,16" \
-    "and    eax,0xFFFF" \
+    "movzx  eax,ax" \
     "mov    es:[eax+edx],bl" \
+    "pop    eax" \
+    "pop    edx" \
     "pop    es" \
     modify [cx dx] \
     parm [dx ax] [bl]
@@ -89,11 +93,15 @@ void flatrealmode_writew(uint32_t addr,uint16_t c);
 #pragma aux flatrealmode_writew = \
     ".386p" \
     "push   es" \
+    "push   edx" \
+    "push   eax" \
     "xor    cx,cx" \
     "mov    es,cx" \
     "shl    edx,16" \
-    "and    eax,0xFFFF" \
+    "movzx  eax,ax" \
     "mov    es:[eax+edx],bx" \
+    "pop    eax" \
+    "pop    edx" \
     "pop    es" \
     modify [cx dx] \
     parm [dx ax] [bx]
@@ -102,16 +110,24 @@ void flatrealmode_writed(uint32_t addr,uint32_t c);
 #pragma aux flatrealmode_writed = \
     ".386p" \
     "push   es" \
+    "push   edx" \
+    "push   ebx" \
+    "push   eax" \
+    "push   ecx" \
     "push   cx" \
     "xor    cx,cx" \
     "mov    es,cx" \
     "pop    cx" \
     "shl    edx,16" \
-    "and    eax,0xFFFF" \
+    "movzx  eax,ax" \
     "shl    ecx,16" \
-    "and    ebx,0xFFFF" \
+    "movzx  ebx,bx" \
     "add    ebx,ecx" \
+    "pop    ecx" \
     "mov    es:[eax+edx],ebx" \
+    "pop    eax" \
+    "pop    ebx" \
+    "pop    edx" \
     "pop    es" \
     modify [bx cx dx] \
     parm [dx ax] [cx bx]
