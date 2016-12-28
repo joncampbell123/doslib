@@ -37,6 +37,7 @@ static int              ioport = -1;
 static unsigned long    memaddr = 0;
 static int              memsz = -1;
 static unsigned long    data = 0;
+static char*            memstr = NULL;
 
 static int              conn_fd = -1;
 
@@ -56,6 +57,7 @@ static void help(void) {
     fprintf(stderr,"  -ioport <n>       I/O port\n");
     fprintf(stderr,"  -maddr <n>        Memory address\n");
     fprintf(stderr,"  -msz <n>          Memory size (how much)\n");
+    fprintf(stderr,"  -mstr <n>         Memory string to write\n");
     fprintf(stderr,"  -data <n>         data value\n");
 }
 
@@ -80,6 +82,11 @@ static int parse_argv(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 repeat = atoi(a);
+            }
+            else if (!strcmp(a,"mstr")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                memstr = a;
             }
             else if (!strcmp(a,"b")) {
                 a = argv[i++];
@@ -616,6 +623,42 @@ const unsigned char *do_memread(const unsigned char sz,const unsigned long addr)
     return &(cur_pkt.data[5]);
 }
 
+int do_memwrite(const unsigned char sz,const unsigned long addr,const unsigned char *str) {
+    if (sz == 0 || sz > 192)
+        return -1;
+
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_MEMWRITE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)( addr & 0xFF);
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)((addr >> 8UL) & 0xFF);
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)((addr >> 16UL) & 0xFF);
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)((addr >> 24UL) & 0xFF);
+    cur_pkt.data[cur_pkt.hdr.length++] = sz;
+
+    memcpy(cur_pkt.data+cur_pkt.hdr.length,str,sz);
+    cur_pkt.hdr.length += sz;
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_MEMWRITE ||
+        cur_pkt.data[4] != sz) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
     unsigned int i;
 
@@ -741,6 +784,32 @@ int main(int argc,char **argv) {
         printf("Read OK: %u bytes\n",memsz);
         for (i=0;i < (unsigned int)memsz;i++) printf("%02X ",ptr[i]);
         printf("\n");
+    }
+    else if (!strcmp(command,"memwrite")) {
+        alarm(5);
+        if (memstr != NULL) {
+            size_t l = strlen(memstr);
+            if (memsz <= 0 || memsz > (int)l) memsz = l;
+            if (memsz > 192) memsz = 192;
+
+            if (do_memwrite(memsz,memaddr,(unsigned char*)memstr) < 0)
+                return 1;
+        }
+        else {
+            unsigned char tmp[4];
+
+            if (memsz <= 0) memsz = 1;
+            if (memsz > 4) memsz = 4;
+            tmp[0] = (unsigned char)data;
+            tmp[1] = (unsigned char)(data >> 8UL);
+            tmp[2] = (unsigned char)(data >> 16UL);
+            tmp[3] = (unsigned char)(data >> 24UL);
+
+            if (do_memwrite(memsz,memaddr,tmp) < 0)
+                return 1;
+        }
+
+        printf("Wrtie OK: %u bytes\n",memsz);
     }
     else {
         fprintf(stderr,"Unknown command\n");

@@ -23,6 +23,7 @@ enum {
     REMCTL_SERIAL_TYPE_INPORT=0x49,     /* input from port */
     REMCTL_SERIAL_TYPE_OUTPORT=0x4F,    /* output to port */
     REMCTL_SERIAL_TYPE_MEMREAD=0x52,    /* read from memory */
-    REMCTL_SERIAL_TYPE_PING=0x50
+    REMCTL_SERIAL_TYPE_PING=0x50,
+    REMCTL_SERIAL_TYPE_MEMWRITE=0x57    /* write to memory */
 };
 
