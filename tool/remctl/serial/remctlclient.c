@@ -160,6 +160,8 @@ static int parse_argv(int argc,char **argv) {
         baud_rate = 115200;
 
     if (serial_tty != NULL) {
+        /* Motherboard RS-232 ports are usually /dev/ttyS0, /dev/ttyS1, etc.
+         * USB RS-232 ports are usually /dev/ttyUSB0, /dev/ttyUSB1, etc. */
         if (!strncmp(serial_tty,"/dev/tty",8)) {
             /* good */
         }
