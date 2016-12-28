@@ -295,10 +295,63 @@ case ISAPNP_TAG_FIXED_IO_PORT: {
     }
 }
 
+void tsr_exit(void) {
+    unsigned short resident_size = 0;
+
+    /* auto-detect the size of this EXE by the MCB preceeding the PSP segment */
+    /* do it BEFORE hooking in case shit goes wrong, then we can safely abort. */
+    /* the purpose of this code is to compensate for Watcom C's lack of useful */
+    /* info at runtime or compile time as to how large we are in memory. */
+    {
+        unsigned short env_seg=0;
+        unsigned short psp_seg=0;
+        unsigned char far *mcb;
+
+        __asm {
+            push    ax
+            push    bx
+            mov     ah,0x51     ; get PSP segment
+            int     21h
+            mov     psp_seg,bx
+            pop     bx
+            pop     ax
+        }
+
+        mcb = MK_FP(psp_seg-1,0);
+
+        /* sanity check */
+        if (!(*mcb == 'M' || *mcb == 'Z')/*looks like MCB*/ ||
+            *((unsigned short far*)(mcb+1)) != psp_seg/*it's MY memory block*/) {
+            printf("Can't figure out my resident size, aborting\n");
+            abort();
+        }
+
+        resident_size = *((unsigned short far*)(mcb+3)); /* number of paragraphs */
+        if (resident_size < 17) {
+            printf("Resident size is too small, aborting\n");
+            abort();
+        }
+
+        /* while we're at it, free our environment block as well, we don't need it */
+        env_seg = *((unsigned short far*)MK_FP(psp_seg,0x2C));
+        if (env_seg != 0) {
+            if (_dos_freemem(env_seg) == 0) {
+                *((unsigned short far*)MK_FP(psp_seg,0x2C)) = 0;
+            }
+            else {
+                printf("WARNING: Unable to free environment block\n");
+            }
+        }
+    }
+
+    printf("Exiting to TSR\n");
+    _dos_keep(0,resident_size);
+}
+
 static unsigned int do_exit = 0;
 
 void mainloop(void) {
-    printf("Ready\n");
+    printf("Ready. Type shift+S to exit to DOS to run in the background.\n");
 
     while (!do_exit) {
         if (kbhit()) {
@@ -311,6 +364,14 @@ void mainloop(void) {
                 // in case interrupts get wedged, or we're using the UART in a non-IRQ mode, check manually.
                 // user can trigger this with spacebar.
                 do_check_io();
+            }
+            else if (c == 'S') { // shift+S
+                if (!use_interrupts || uart->irq == -1) {
+                    printf("* Background (TSR) mode requires use of UART interrupts\n");
+                }
+                else {
+                    tsr_exit();
+                }
             }
         }
 
