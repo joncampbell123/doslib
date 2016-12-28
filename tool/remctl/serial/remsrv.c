@@ -245,6 +245,30 @@ void handle_packet(void) {
 
             end_output_packet();
             break;
+        case REMCTL_SERIAL_TYPE_MEMREAD:
+            begin_output_packet(REMCTL_SERIAL_TYPE_MEMREAD);
+            memcpy(cur_pkt_out.data,cur_pkt_in.data,8/*big enough*/);
+            cur_pkt_out.hdr.length = 5;
+
+            if (cur_pkt_in.data[4] != 0 && cur_pkt_in.data[4] <= 192) {
+                unsigned long memaddr;
+
+                cur_pkt_out.hdr.length = 5 + (unsigned int)cur_pkt_in.data[4];
+
+                memaddr = ((unsigned long)cur_pkt_in.data[0]) +
+                    ((unsigned long)cur_pkt_in.data[1] << 8UL) +
+                    ((unsigned long)cur_pkt_in.data[2] << 16UL) +
+                    ((unsigned long)cur_pkt_in.data[3] << 24UL);
+
+                /* TODO: If flat real mode is possible, use that if the mem addr reaches past 1MB boundary */
+                /* use fmemcpy using linear to segmented conversion */
+                _fmemcpy(cur_pkt_out.data+5,
+                    MK_FP((unsigned int)(memaddr >> 4UL),(unsigned int)(memaddr & 0xFUL)),
+                    (unsigned int)cur_pkt_in.data[4]);
+            }
+
+            end_output_packet();
+            break;
         default:
             begin_output_packet(REMCTL_SERIAL_TYPE_ERROR);
             cur_pkt_out_seq = 0xFF;
