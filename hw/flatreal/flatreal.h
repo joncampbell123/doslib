@@ -10,11 +10,18 @@ unsigned char flatrealmode_readb(uint32_t addr);
 #pragma aux flatrealmode_readb = \
     ".386p" \
     "push   es" \
+    "push   ecx" \
+    "push   edx" \
+    "push   eax" \
     "xor    cx,cx" \
     "mov    es,cx" \
     "shl    edx,16" \
-    "and    eax,0xFFFF" \
-    "mov    al,es:[eax+edx]" \
+    "movzx  eax,ax" \
+    "lea    ecx,[eax+edx]" \
+    "pop    eax" \
+    "pop    edx" \
+    "mov    al,es:[ecx]" \
+    "pop    ecx" \
     "pop    es" \
     modify [cx dx] \
     parm [dx ax] \
@@ -24,11 +31,18 @@ uint16_t flatrealmode_readw(uint32_t addr);
 #pragma aux flatrealmode_readw = \
     ".386p" \
     "push   es" \
+    "push   ecx" \
+    "push   edx" \
+    "push   eax" \
     "xor    cx,cx" \
     "mov    es,cx" \
     "shl    edx,16" \
-    "and    eax,0xFFFF" \
-    "mov    ax,es:[eax+edx]" \
+    "movzx  eax,ax" \
+    "lea    ecx,[eax+edx]" \
+    "pop    eax" \
+    "pop    edx" \
+    "mov    ax,es:[ecx]" \
+    "pop    ecx" \
     "pop    es" \
     modify [cx dx] \
     parm [dx ax] \
@@ -38,13 +52,21 @@ uint32_t flatrealmode_readd(uint32_t addr);
 #pragma aux flatrealmode_readd = \
     ".386p" \
     "push   es" \
+    "push   ecx" \
+    "push   edx" \
+    "push   eax" \
     "xor    cx,cx" \
     "mov    es,cx" \
     "shl    edx,16" \
-    "and    eax,0xFFFF" \
-    "mov    eax,es:[eax+edx]" \
-    "mov    edx,eax" \
-    "shr    edx,16" \
+    "movzx  eax,ax" \
+    "lea    ecx,[eax+edx]" \
+    "pop    eax" \
+    "pop    edx" \
+    "mov    ecx,es:[ecx]" \
+    "mov    ax,cx" \
+    "shr    ecx,16" \
+    "mov    dx,cx" \
+    "pop    ecx" \
     "pop    es" \
     modify [cx] \
     parm [dx ax] \

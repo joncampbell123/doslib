@@ -33,7 +33,7 @@ global flatrealmode_test_
 flatrealmode_test_:
 		pushf
 		push		ds
-		push		si
+		push		esi
 		push		cx
 
 		; clear interrupts, to ensure IRQ 5 is not mistaken for a GP fault
@@ -66,7 +66,7 @@ _flatrealmode_test_conclude:
 		mov		word [si],cx
 
 		pop		cx
-		pop		si
+		pop		esi
 		pop		ds
 		popf
 		retnative
@@ -82,8 +82,8 @@ global _flatrealmode_force_datasel
 _flatrealmode_force_datasel:
 		push		bp
 		mov		bp,sp
-		pushf
-		pusha
+		pushfd
+		pushad
 
 		mov		ax,cs
 		mov		word [cs:_flatrealmode_force_datasel_j2_hackme+3],ax		; overwrite segment portion of JMP FAR instruction
@@ -163,8 +163,8 @@ _flatrealmode_force_datasel_j2:
 		; discard old GDT
 		add		sp,8
 
-		popa
-		popf
+		popad
+		popfd
 		pop		bp
 		retnative
 %endif
