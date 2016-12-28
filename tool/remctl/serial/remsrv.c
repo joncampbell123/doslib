@@ -326,11 +326,30 @@ void handle_packet(void) {
                     ((unsigned long)cur_pkt_in.data[2] << 16UL) +
                     ((unsigned long)cur_pkt_in.data[3] << 24UL);
 
-                /* TODO: If flat real mode is possible, use that if the mem addr reaches past 1MB boundary */
-                /* use fmemcpy using linear to segmented conversion */
-                _fmemcpy(
-                    MK_FP((unsigned int)(memaddr >> 4UL),(unsigned int)(memaddr & 0xFUL)),
-                    cur_pkt_in.data+5,(unsigned int)cur_pkt_in.data[4]);
+#if TARGET_MSDOS == 16
+                /* if any byte in the range extends past FFFF:FFFF (1MB+64KB) then use flat real mode */
+                if ((memaddr+(unsigned long)cur_pkt_in.data[4]-1UL) > 0x10FFEFUL) {
+                    if (!is_v86_mode()) {
+                        if (flatrealmode_setup(FLATREALMODE_4GB)) {
+                            for (port=0;port < (unsigned int)cur_pkt_in.data[4];port++)
+                                flatrealmode_writeb((uint32_t)memaddr + (uint32_t)port,cur_pkt_out.data[5+port]);
+                        }
+                    }
+                }
+                else {
+                    unsigned long segv = (unsigned long)memaddr >> 4UL;
+                    unsigned int ofsv = (unsigned int)(memaddr & 0xFUL);
+
+                    if (segv > 0xFFFFUL) {
+                        ofsv = memaddr - 0xFFFF0UL;
+                        segv = 0xFFFFUL;
+                    }
+
+                    /* use fmemcpy using linear to segmented conversion */
+                    _fmemcpy(MK_FP((unsigned int)segv,ofsv),
+                        cur_pkt_in.data+5,(unsigned int)cur_pkt_in.data[4]);
+                }
+#endif
             }
 
             end_output_packet();
