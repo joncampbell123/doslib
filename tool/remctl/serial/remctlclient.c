@@ -24,6 +24,10 @@
 
 #include "proto.h"
 
+#ifndef O_BINARY
+#define O_BINARY (0)
+#endif
+
 static int              repeat = -1;
 static int              baud_rate = -1;
 static int              localhost_port = -1;
@@ -35,7 +39,7 @@ static int              debug = 0;
 static int              stop_bits = 1;
 static int              ioport = -1;
 static unsigned long    memaddr = 0;
-static int              memsz = -1;
+static signed long      memsz = -1;
 static unsigned long    data = 0;
 static char*            memstr = NULL;
 static char*            output_file = NULL;
@@ -77,6 +81,7 @@ static void help(void) {
     fprintf(stderr,"   memread -msz <n> -maddr <n> Read server memory\n");
     fprintf(stderr,"   memwrite -msz <n> -maddr <n> -data <n> Write server memory\n");
     fprintf(stderr,"   memwrite -maddr <n> -mstr <x> Write server memory with string\n");
+    fprintf(stderr,"   memdump -msz <n> -maddr <n> -o <file> Dump memory starting at -maddr\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -106,7 +111,7 @@ static int parse_argv(int argc,char **argv) {
                 if (a == NULL) return 1;
                 memstr = a;
             }
-            else if (!strcmp(a,"p")) {
+            else if (!strcmp(a,"o")) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 output_file = a;
@@ -796,17 +801,17 @@ int main(int argc,char **argv) {
     else if (!strcmp(command,"memread")) {
         const unsigned char *ptr;
 
-        if (memsz < 0)
-            memsz = 1;
+        if (memsz < 0L)
+            memsz = 1L;
 
-        if (memsz > 192)
-            memsz = 192;
+        if (memsz > 192L)
+            memsz = 192L;
 
         alarm(5);
         if ((ptr=do_memread(memsz,memaddr)) == NULL)
             return 1;
 
-        printf("Read OK: %u bytes\n",memsz);
+        printf("Read OK: %lu bytes\n",memsz);
         for (i=0;i < (unsigned int)memsz;i++) printf("%02X ",ptr[i]);
         printf("\n");
     }
@@ -814,8 +819,8 @@ int main(int argc,char **argv) {
         alarm(5);
         if (memstr != NULL) {
             size_t l = strlen(memstr);
-            if (memsz <= 0 || memsz > (int)l) memsz = l;
-            if (memsz > 192) memsz = 192;
+            if (memsz <= 0L || memsz > (long)l) memsz = l;
+            if (memsz > 192L) memsz = 192L;
 
             if (do_memwrite(memsz,memaddr,(unsigned char*)memstr) < 0)
                 return 1;
@@ -823,8 +828,8 @@ int main(int argc,char **argv) {
         else {
             unsigned char tmp[4];
 
-            if (memsz <= 0) memsz = 1;
-            if (memsz > 4) memsz = 4;
+            if (memsz <= 0L) memsz = 1L;
+            if (memsz > 4L) memsz = 4L;
             tmp[0] = (unsigned char)data;
             tmp[1] = (unsigned char)(data >> 8UL);
             tmp[2] = (unsigned char)(data >> 16UL);
@@ -834,7 +839,46 @@ int main(int argc,char **argv) {
                 return 1;
         }
 
-        printf("Wrtie OK: %u bytes\n",memsz);
+        printf("Wrtie OK: %lu bytes\n",memsz);
+    }
+    else if (!strcmp(command,"memdump")) {
+        const unsigned char *ptr;
+        unsigned long addr;
+        int do_read;
+        int fd;
+
+        if (output_file == NULL)
+            return 1;
+        if (memsz <= 0)
+            return 1;
+
+        fd = open(output_file,O_BINARY|O_CREAT|O_TRUNC|O_WRONLY,0644);
+        if (fd < 0) {
+            fprintf(stderr,"Cannot open output file %s, %s\n",output_file,strerror(errno));
+            return 1;
+        }
+
+        addr = memaddr;
+        while (memsz > 0) {
+            if (memsz > 192)
+                do_read = 192;
+            else
+                do_read = (int)memsz;
+
+            printf("\x0D" "Reading 0x%08lX + %u bytes",addr,do_read);
+            fflush(stdout);
+
+            if ((ptr=do_memread(do_read,addr)) == NULL)
+                break;
+            if (write(fd,ptr,do_read) != do_read)
+                break;
+
+            memsz -= do_read;
+            addr += do_read;
+        }
+        printf("\n");
+
+        close(fd);
     }
     else {
         fprintf(stderr,"Unknown command\n");
