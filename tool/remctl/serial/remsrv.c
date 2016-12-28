@@ -37,6 +37,9 @@ static unsigned char                    cur_pkt_out_seq = 0xFF;
 void process_input(void);
 void process_output(void);
 
+int uart_waiting_read = 0;
+int uart_waiting_write = 0;
+
 /* NOTE: You're supposed to call this function with interrupts disabled,
  *       or from within an interrupt handler in response to the UART's IRQ signal. */
 static void irq_uart_handle_iir(struct info_8250 *uart) {
@@ -69,9 +72,54 @@ static void irq_uart_handle_iir(struct info_8250 *uart) {
     }
 
     if (act_reason) {
+        uart_waiting_read = 0;
+        uart_waiting_write = 0;
         process_input();
         process_output();
     }
+}
+
+static void (interrupt *old_timer_irq)() = NULL;
+static void interrupt timer_irq() {
+    if (use_interrupts && uart->irq != -1) {
+        unsigned char fix_irq = 0;
+        unsigned int i;
+
+        if (uart_8250_can_read(uart)) {
+            if ((++uart_waiting_read) >= 9) {
+                uart_waiting_read = 0;
+                fix_irq = 1;
+            }
+        }
+        if (uart_8250_can_write(uart)) {
+            if ((++uart_waiting_write) >= 9) {
+                uart_waiting_write = 0;
+                fix_irq = 1;
+            }
+        }
+
+        if (fix_irq) {
+            _cli();
+            p8259_mask(uart->irq);
+
+            if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+
+            uart_8250_enable_interrupt(uart,0x0);
+            uart_8250_set_MCR(uart,3);      /* turn on RTS and DTS */
+            uart_8250_set_line_control(uart,UART_8250_LCR_8BIT | UART_8250_LCR_PARITY | (stop_bits == 2 ? UART_8250_LCR_TWO_STOP_BITS : 0)); /* 8 bit 1 stop bit odd parity */
+            uart_8250_set_baudrate(uart,uart_8250_baud_to_divisor(uart,baud_rate));
+
+            for (i=0;i < 256 && (inp(uart->port+PORT_8250_IIR) & 1) == 0;i++);
+
+            uart_8250_enable_interrupt(uart,0xF);
+            process_input();
+            process_output();
+            p8259_unmask(uart->irq);
+        }
+    }
+
+    old_timer_irq();
 }
 
 static void (interrupt *old_irq)() = NULL;
@@ -502,6 +550,9 @@ int main(int argc,char **argv) {
     if (uart->irq != -1 && use_interrupts) {
         printf("Using UART interrupt mode\n");
 
+        old_timer_irq = _dos_getvect(irq2int(0));
+        _dos_setvect(irq2int(0),timer_irq);
+
         old_irq = _dos_getvect(irq2int(uart->irq));
         _dos_setvect(irq2int(uart->irq),uart_irq);
         if (uart->irq >= 0) {
@@ -570,6 +621,8 @@ int main(int argc,char **argv) {
     if (uart->irq != -1 && use_interrupts) {
         _dos_setvect(irq2int(uart->irq),old_irq);
         if (uart->irq >= 0) p8259_mask(uart->irq);
+
+        _dos_setvect(irq2int(0),old_timer_irq);
     }
 
     return 0;
