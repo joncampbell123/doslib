@@ -117,6 +117,13 @@ static void interrupt my_int28() {
     inside_int28 = 0;
 }
 
+static unsigned char safe_to_use_msdos_fs_io(void) {
+    if (ErrorModeFlag) return 0; /* if MS-DOS is in critical state, NO */
+    if (!InDOSFlag) return 1; /* if MS-DOS says it's safe to enter, YES */
+    if (inside_int28) return 1; /* if inside MS-DOS, but inside INT 28h IDLE call, YES */
+    return 0; /* else, NO */
+}
+
 static void (interrupt *old_timer_irq)() = NULL;
 static void interrupt timer_irq() {
     if (use_interrupts && uart->irq != -1) {
