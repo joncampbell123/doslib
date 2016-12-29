@@ -31,8 +31,8 @@ static unsigned short my_resident_psp = 0;                          // nonzero i
 static unsigned char stop_bits = 1;
 
 static unsigned char far *InDOS_ptr = NULL;                         // MS-DOS InDOS flag
-#define InDOSFlag           (InDOS[0])
-#define ErrorModeFlag       (InDOS[-1])
+#define InDOSFlag           (InDOS_ptr[0])
+#define ErrorModeFlag       (InDOS_ptr[-1])
 
 static unsigned char far *DOS_LOL = NULL;                           // MS-DOS List of Lists (not funny)
 
