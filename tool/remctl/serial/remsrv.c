@@ -26,6 +26,7 @@ static struct info_8250 *uart = NULL;
 static unsigned long baud_rate = 115200;
 static unsigned char use_interrupts = 1;
 static unsigned char halt_system = 0;
+static unsigned char inside_int28 = 0;                              // if within INT 28h
 static unsigned short my_resident_psp = 0;                          // nonzero if resident TSR, else we're still running
 static unsigned char stop_bits = 1;
 
@@ -96,6 +97,24 @@ void halt_system_loop(void) {
         process_input();
         process_output();
     } while (halt_system);
+}
+
+static void (interrupt *old_int28)() = NULL;
+static void interrupt my_int28() {
+    /* chain to previous FIRST, then do our work */
+    old_int28();
+
+    /* OK, do our work. It's safe to do MS-DOS INT 21h from here except console I/O functions AH < 0x0C */
+    inside_int28 = 1;
+    _cli();
+    process_input();
+    process_output();
+
+    /* halt here if instructed */
+    if (halt_system) halt_system_loop();
+
+    /* done */
+    inside_int28 = 0;
 }
 
 static void (interrupt *old_timer_irq)() = NULL;
@@ -768,6 +787,9 @@ int main(int argc,char **argv) {
         uart = &info_8250_port[choice];
     }
 
+    old_int28 = _dos_getvect(0x28);
+    _dos_setvect(0x28,my_int28);
+
     if (uart->irq != -1 && use_interrupts) {
         printf("Using UART interrupt mode\n");
 
@@ -846,6 +868,7 @@ int main(int argc,char **argv) {
         _dos_setvect(irq2int(0),old_timer_irq);
     }
 
+    _dos_setvect(0x28,old_int28);
     return 0;
 }
 
