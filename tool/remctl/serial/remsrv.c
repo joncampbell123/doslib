@@ -26,6 +26,7 @@ static struct info_8250 *uart = NULL;
 static unsigned long baud_rate = 115200;
 static unsigned char use_interrupts = 1;
 static unsigned char halt_system = 0;
+static unsigned short my_resident_psp = 0;                          // nonzero if resident TSR, else we're still running
 static unsigned char stop_bits = 1;
 
 static unsigned char far *InDOS_ptr = NULL;                         // MS-DOS InDOS flag
@@ -559,6 +560,8 @@ void tsr_exit(void) {
             pop     bx
             pop     ax
         }
+
+        my_resident_psp = psp_seg;
 
         mcb = MK_FP(psp_seg-1,0);
 
