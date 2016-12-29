@@ -28,6 +28,12 @@ static unsigned char use_interrupts = 1;
 static unsigned char halt_system = 0;
 static unsigned char stop_bits = 1;
 
+static unsigned char far *InDOS_ptr = NULL;                         // MS-DOS InDOS flag
+#define InDOSFlag           (InDOS[0])
+#define ErrorModeFlag       (InDOS[-1])
+
+static unsigned char far *DOS_LOL = NULL;                           // MS-DOS List of Lists (not funny)
+
 static struct remctl_serial_packet      cur_pkt_in = {0};
 static unsigned char                    cur_pkt_in_write = 0;       // from 0 to < sizeof(cur_pkt_in)
 static unsigned char                    cur_pkt_in_seq = 0xFF;
@@ -703,6 +709,29 @@ int main(int argc,char **argv) {
         printf("Cannot init 8250 library\n");
         return 1;
     }
+
+    /* get the InDOS flag */
+    {
+        unsigned short so=0,oo=0;
+
+        __asm {
+            mov     ah,34h
+            int     21h
+            mov     so,es
+            mov     oo,bx
+        }
+
+        InDOS_ptr = MK_FP(so,oo);
+    }
+
+    /* get the List of Lists */
+    if ((DOS_LOL=dos_list_of_lists()) == NULL) {
+        printf("Unable to obtain List of Lists\n");
+        return 1;
+    }
+
+    printf("InDOS: %04x:%04x\n",FP_SEG(InDOS_ptr),FP_OFF(InDOS_ptr));
+    printf("LOL: %04x:%04x\n",FP_SEG(DOS_LOL),FP_OFF(DOS_LOL));
 
     probe_8250_bios_ports();
 
