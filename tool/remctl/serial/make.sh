@@ -8,7 +8,7 @@ dospc98=1 # MS-DOS PC-98
 
 if [ "$1" == "clean" ]; then
     do_clean
-    rm -fv test.dsk
+    rm -fv test.dsk win95.dsk
     rm -Rfv linux-host
     exit 0
 fi
