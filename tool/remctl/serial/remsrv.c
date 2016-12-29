@@ -25,6 +25,7 @@
 static struct info_8250 *uart = NULL;
 static unsigned long baud_rate = 115200;
 static unsigned char use_interrupts = 1;
+static unsigned char in_packet_handling = 0;                        // if within packet handling loop (reentrancy protection)
 static unsigned char halt_system = 0;
 static unsigned char inside_int28 = 0;                              // if within INT 28h
 static unsigned short my_resident_psp = 0;                          // nonzero if resident TSR, else we're still running
@@ -444,7 +445,12 @@ int process_input_packet(void) {
     if (cur_pkt_out.hdr.mark == REMCTL_SERIAL_MARK)
         return -1;
 
+    /* reentrancy protection: don't process another input packet if already doing one */
+    if (in_packet_handling)
+        return -1;
+
     /* send an error packet if a packet doesn't validate */
+    in_packet_handling = 1;
     if (inpkt_validate()) {
         handle_packet();
     }
@@ -454,6 +460,7 @@ int process_input_packet(void) {
         end_output_packet();
     }
 
+    in_packet_handling = 0;
     cur_pkt_in.hdr.mark = 0;
     cur_pkt_in_write = 0;
     process_output();
@@ -483,6 +490,10 @@ void process_input(void) {
 
 void process_output(void) {
     if (cur_pkt_out.hdr.mark != REMCTL_SERIAL_MARK)
+        return;
+
+    /* reentrancy protection, including against an incomplete output packet */
+    if (in_packet_handling)
         return;
 
     do {
