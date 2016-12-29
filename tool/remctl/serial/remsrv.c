@@ -236,6 +236,30 @@ void handle_packet(void) {
             cur_pkt_out.hdr.length = 1;
             end_output_packet();
             break;
+        case REMCTL_SERIAL_TYPE_DOS:
+            begin_output_packet(REMCTL_SERIAL_TYPE_DOS);
+            memcpy(cur_pkt_out.data,cur_pkt_in.data,8/*big enough*/);
+            cur_pkt_out.hdr.length = 1;
+
+            switch (cur_pkt_in.data[0]) {
+                case REMCTL_SERIAL_TYPE_DOS_LOL:
+                    cur_pkt_out.data[1] = (unsigned char)(FP_OFF(DOS_LOL) >> 0U);
+                    cur_pkt_out.data[2] = (unsigned char)(FP_OFF(DOS_LOL) >> 8U);
+                    cur_pkt_out.data[3] = (unsigned char)(FP_SEG(DOS_LOL) >> 0U);
+                    cur_pkt_out.data[4] = (unsigned char)(FP_SEG(DOS_LOL) >> 8U);
+                    cur_pkt_out.hdr.length = 5;
+                    break;
+                case REMCTL_SERIAL_TYPE_DOS_INDOS:
+                    cur_pkt_out.data[1] = (unsigned char)(FP_OFF(InDOS_ptr) >> 0U);
+                    cur_pkt_out.data[2] = (unsigned char)(FP_OFF(InDOS_ptr) >> 8U);
+                    cur_pkt_out.data[3] = (unsigned char)(FP_SEG(InDOS_ptr) >> 0U);
+                    cur_pkt_out.data[4] = (unsigned char)(FP_SEG(InDOS_ptr) >> 8U);
+                    cur_pkt_out.hdr.length = 5;
+                    break;
+            };
+
+            end_output_packet();
+            break;
         case REMCTL_SERIAL_TYPE_INPORT:
             begin_output_packet(REMCTL_SERIAL_TYPE_INPORT);
             memcpy(cur_pkt_out.data,cur_pkt_in.data,8/*big enough*/);

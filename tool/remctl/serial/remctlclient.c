@@ -82,6 +82,8 @@ static void help(void) {
     fprintf(stderr,"   memwrite -msz <n> -maddr <n> -data <n> Write server memory\n");
     fprintf(stderr,"   memwrite -maddr <n> -mstr <x> Write server memory with string\n");
     fprintf(stderr,"   memdump -msz <n> -maddr <n> -o <file> Dump memory starting at -maddr\n");
+    fprintf(stderr,"   dos_lol          Report MS-DOS List of Lists location\n");
+    fprintf(stderr,"   indos            Report MS-DOS InDOS flag\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -689,6 +691,66 @@ int do_memwrite(const unsigned char sz,const unsigned long addr,const unsigned c
     return 0;
 }
 
+int do_get_dos_lol(unsigned int * const sv,unsigned int * const ov) {
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_DOS);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_DOS_LOL;
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_DOS ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_DOS_LOL) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    *ov =   ((unsigned int)cur_pkt.data[1]      ) +
+            ((unsigned int)cur_pkt.data[2] << 8U);
+    *sv =   ((unsigned int)cur_pkt.data[3]      ) +
+            ((unsigned int)cur_pkt.data[4] << 8U);
+    return 0;
+}
+
+int do_get_indos(unsigned int * const sv,unsigned int * const ov) {
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_DOS);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_DOS_INDOS;
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_DOS ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_DOS_INDOS) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    *ov =   ((unsigned int)cur_pkt.data[1]      ) +
+            ((unsigned int)cur_pkt.data[2] << 8U);
+    *sv =   ((unsigned int)cur_pkt.data[3]      ) +
+            ((unsigned int)cur_pkt.data[4] << 8U);
+    return 0;
+}
+
 int main(int argc,char **argv) {
     unsigned int i;
 
@@ -879,6 +941,24 @@ int main(int argc,char **argv) {
         printf("\n");
 
         close(fd);
+    }
+    else if (!strcmp(command,"dos_lol")) {
+        unsigned int sv,ov;
+
+        alarm(5);
+        if (do_get_dos_lol(&sv,&ov) < 0)
+            return 1;
+
+        printf("MS-DOS List of Lists is at %04x:%04x\n",sv,ov);
+    }
+    else if (!strcmp(command,"indos")) {
+        unsigned int sv,ov;
+
+        alarm(5);
+        if (do_get_indos(&sv,&ov) < 0)
+            return 1;
+
+        printf("MS-DOS InDOS flag is at %04x:%04x\n",sv,ov);
     }
     else {
         fprintf(stderr,"Unknown command\n");
