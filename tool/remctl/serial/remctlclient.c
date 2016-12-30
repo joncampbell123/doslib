@@ -101,6 +101,7 @@ static void help(void) {
     fprintf(stderr,"   read -msz <count> Read count bytes\n");
     fprintf(stderr,"   truncate          Truncate at file pointer\n");
     fprintf(stderr,"   upload -mstr <path> -i <path> Send file from -i to -mstr path\n");
+    fprintf(stderr,"   download -mstr <path> -o <path> Download file from -mstr to -o locally\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -1867,6 +1868,7 @@ int main(int argc,char **argv) {
             wd = read(ifd,tmp,doc);
             if (wd == 0) break;
 
+            alarm(5);
             if ((rwd=do_file_write(tmp,wd)) < 0)
                 break;
 
@@ -1891,6 +1893,97 @@ int main(int argc,char **argv) {
 
         close(ifd);
     }
+    else if (!strcmp(command,"download")) {
+        long file_size,count;
+        unsigned char *str;
+        int ofd,rwd,wd,doc;
+        time_t now,next;
+
+        next = 0;
+
+        if (memstr == NULL) {
+            fprintf(stderr,"need -mstr to contain path to upload from\n");
+            return 1;
+        }
+        if (output_file == NULL) {
+            fprintf(stderr,"need -o to specify local target file\n");
+            return 1;
+        }
+
+        ofd = open(output_file,O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0644);
+        if (ofd < 0) {
+            fprintf(stderr,"Failed to open target file\n");
+            return 1;
+        }
+
+        alarm(5);
+        if (do_file_open(memstr) < 0)
+            return 1;
+
+        if (do_file_seek(&data,0,2/*SEEK_END*/) < 0)
+            return 1;
+
+        count = 0L;
+        file_size = data;
+
+        if (do_file_seek(&data,0,0/*SEEK_SET*/) < 0)
+            return 1;
+
+        while (count < file_size) {
+            now = time(NULL);
+            if (now >= next) {
+                unsigned long percent;
+
+                percent = (count >> 7UL) * 100UL;
+                percent /= ((file_size + 127UL) >> 7UL);
+
+                next = now + 1;
+                printf("\x0D" "Download, %lu%% %lu / %lu... ",
+                    percent,count,file_size);
+                fflush(stdout);
+            }
+
+            if ((file_size - count) > 188)
+                doc = 188;
+            else
+                doc = (int)(file_size - count);
+
+            alarm(5);
+            assert(doc != 0);
+            if ((str=do_file_read(&wd,doc)) == NULL)
+                return 1;
+
+            if (wd == 0) {
+                fprintf(stderr,"Unexpected end of file\n");
+                break;
+            }
+            assert(wd <= doc);
+
+            rwd = write(ofd,str,wd);
+            if (rwd == 0) break;
+
+            if (rwd < wd) {
+                fprintf(stderr,"Remote end incomplete read\n");
+                break;
+            }
+
+            count += wd;
+        }
+
+        alarm(5);
+        if (do_file_close() < 0)
+            return 1;
+
+        if (count != file_size) {
+            printf("Download incomplete\n");
+        }
+        else {
+            printf("Download OK\n");
+        }
+
+        close(ofd);
+    }
+
     else {
         fprintf(stderr,"Unknown command\n");
         return 1;
