@@ -769,6 +769,43 @@ l1:     mov     length,ax
     }
 }
 
+void do_file_truncate_command(void) {
+    unsigned char far *p = (unsigned char far*)cur_pkt_in.data + 2;
+    unsigned short fd = open_file_fd;
+    unsigned short retv = 0;
+
+    if (open_file_fd < 0) {
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.hdr.length = 1;
+        return;
+    }
+
+    __asm {
+        push    ds
+        push    ax
+        push    bx
+        push    cx
+        push    dx
+        mov     ah,0x40                 ; write
+        mov     bx,fd                   ; file handle
+        xor     cx,cx                   ; CX == 0 causes truncate instead of write
+        lds     dx,word ptr [p]
+        int     21h
+        jnc     l1
+        mov     retv,ax
+l1:     pop     dx
+        pop     cx
+        pop     bx
+        pop     ax
+        pop     ds
+    }
+
+    if (retv != 0) {
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.hdr.length = 1;
+    }
+}
+
 void handle_packet(void) {
     unsigned int port,data;
 
@@ -996,8 +1033,11 @@ void handle_packet(void) {
                     case REMCTL_SERIAL_TYPE_FILE_READ:
                         do_file_read_command();
                         break;
-                     case REMCTL_SERIAL_TYPE_FILE_WRITE:
+                    case REMCTL_SERIAL_TYPE_FILE_WRITE:
                         do_file_write_command();
+                        break;
+                    case REMCTL_SERIAL_TYPE_FILE_TRUNCATE:
+                        do_file_truncate_command();
                         break;
                     default:
                         begin_output_packet(REMCTL_SERIAL_TYPE_ERROR);

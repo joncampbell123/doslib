@@ -96,6 +96,7 @@ static void help(void) {
     fprintf(stderr,"   seekcur -data <off> Seek file pointer from cur\n");
     fprintf(stderr,"   seekend -data <off> Seek file pointer from end\n");
     fprintf(stderr,"   read -msz <count> Read count bytes\n");
+    fprintf(stderr,"   truncate          Truncate at file pointer\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -1317,6 +1318,47 @@ retry:
     return cur_pkt.data[1];
 }
 
+int do_file_truncate() {
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_TRUNCATE;
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_TRUNCATE) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 void do_print_dir(void) {
     /* the contents are a MS-DOS FileInfoRec */
     unsigned char *p = cur_pkt.data + 1;
@@ -1717,7 +1759,7 @@ int main(int argc,char **argv) {
                 break;
         }
     }
-     else if (!strcmp(command,"write")) {
+    else if (!strcmp(command,"write")) {
         int count = 1;
         int rd;
 
@@ -1743,6 +1785,20 @@ int main(int argc,char **argv) {
             printf("WRITE result %u/%u bytes\n",rd,(int)memsz);
             if (rd == 0)
                 break;
+        }
+    }
+    else if (!strcmp(command,"truncate")) {
+        int count = 1;
+
+        if (repeat > 1)
+            count = repeat;
+
+        while (count-- > 0) {
+            alarm(5);
+            if (do_file_truncate() < 0)
+                return 1;
+
+            printf("TRUNCATE OK\n");
         }
     }
     else {

@@ -46,6 +46,7 @@ enum {
     REMCTL_SERIAL_TYPE_FILE_OPEN=0x4F,              /* open() a file. ONLY ONE FILE AT A TIME. will close prior file. will not create. */
     REMCTL_SERIAL_TYPE_FILE_PWD=0x50,               /* get current directory */
     REMCTL_SERIAL_TYPE_FILE_RMDIR=0x52,             /* rmdir ASCIIZ */
+    REMCTL_SERIAL_TYPE_FILE_TRUNCATE=0x54,          /* truncate open file to file pointer */
     REMCTL_SERIAL_TYPE_FILE_CLOSE=0x63,             /* close the open file */
     REMCTL_SERIAL_TYPE_FILE_CREATE=0x72,            /* create a new file. will close prior file. */
     REMCTL_SERIAL_TYPE_FILE_READ=0x79,              /* read file */
