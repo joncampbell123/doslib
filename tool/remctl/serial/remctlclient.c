@@ -95,6 +95,7 @@ static void help(void) {
     fprintf(stderr,"   seek -data <off> Seek file pointer\n");
     fprintf(stderr,"   seekcur -data <off> Seek file pointer from cur\n");
     fprintf(stderr,"   seekend -data <off> Seek file pointer from end\n");
+    fprintf(stderr,"   read -msz <count> Read count bytes\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -1218,6 +1219,54 @@ retry:
     return 0;
 }
 
+unsigned char *do_file_read(int * const got_rd,const int do_rd) {
+    if (do_rd > 188)
+        return NULL;
+
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_READ;
+    cur_pkt.data[cur_pkt.hdr.length++] = do_rd;
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return NULL;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return NULL;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return NULL;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_READ) {
+        fprintf(stderr,"I/O write failed\n");
+        return NULL;
+    }
+
+    if (got_rd != NULL)
+        *got_rd = cur_pkt.data[1];
+
+    return (unsigned char*)(cur_pkt.data + 2);
+}
+
 void do_print_dir(void) {
     /* the contents are a MS-DOS FileInfoRec */
     unsigned char *p = cur_pkt.data + 1;
@@ -1591,6 +1640,29 @@ int main(int argc,char **argv) {
             return 1;
 
         printf("SEEK OK, position is %lu\n",data);
+    }
+    else if (!strcmp(command,"read")) {
+        const unsigned char *str;
+        int count = 1;
+        int rd,i;
+
+        if (repeat > 1)
+            count = repeat;
+
+        while (count-- > 0) {
+            alarm(5);
+            if ((str=do_file_read(&rd,memsz)) == NULL)
+                return 1;
+
+            printf("READ result %u/%u bytes\n",rd,(int)memsz);
+            if (rd != 0) {
+                for (i=0;i < rd;i++) printf("%02X ",str[i]);
+                printf("\n");
+            }
+
+            if (rd == 0)
+                break;
+        }
     }
     else {
         fprintf(stderr,"Unknown command\n");
