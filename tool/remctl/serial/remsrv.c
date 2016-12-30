@@ -1128,6 +1128,18 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    /* this program does some serious hackery with MS-DOS, warn the user that system stability
+     * is not guaranteed. */
+    printf("CAUTION: This program allows remote control of the DOS machine in a way useful\n");
+    printf("         for debugging, but slightly dangerous for system stability. This\n");
+    printf("         program allows background filesystem I/O in a way that may conflict\n");
+    printf("         with low level filesystem tools, disk caching drivers, and disk\n");
+    printf("         compression drivers. It is *STRONGLY ADVISED* that you do not run this\n");
+    printf("         program on any system who's filesystem you care about.\n");
+    printf("\n");
+    printf("         USE THIS PROGRAM AT YOUR OWN RISK. Read the README for more info.\n");
+    printf("\n");
+
     printf("InDOS: %04x:%04x\n",FP_SEG(InDOS_ptr),FP_OFF(InDOS_ptr));
     printf("LOL: %04x:%04x\n",FP_SEG(DOS_LOL),FP_OFF(DOS_LOL));
     printf("PSP: %04x\n",my_resident_psp);

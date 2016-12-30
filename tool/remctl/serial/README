@@ -21,3 +21,17 @@ will appear in Linux's /dev directory as /dev/ttyS0, /dev/ttyS1, etc.
 If you are using a USB to serial adapter, then the USB-serial adapter
 will show up in /dev as /dev/ttyUSB0, /dev/ttyUSB1, etc.
 
+CAUTION: This program uses some internal state of MS-DOS to listen to
+         the serial port and enable background filesystem I/O. Due to
+         the non-reentrant nature of MS-DOS, filesystem corruption
+         or system instability may occur in extreme cases where this
+         program is not able to handle background I/O vs MS-DOS
+         reentrancy. The theoretical risk increases with the use of
+         disk caching and disk compression drivers. It is recommended
+         not to use this program on any system where filesystem or
+         system corruption would be damaging, use only on systems
+         that are "disposable" i.e. the DOS system can be reloaded in
+         the event that such corruption occurs.
+
+         Use at your own risk.
+
