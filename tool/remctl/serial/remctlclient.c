@@ -1053,7 +1053,17 @@ void do_print_dir(void) {
 
     printf("%-13s ",szFilespec);
 
-    printf("%-10lu bytes",lSize);
+    printf("%-10lub ",lSize);
+
+    printf("%02u:%02u:%02u ",
+         (rTime >> 11U) & 0x1FU,
+         (rTime >>  5U) & 0x3FU,
+        ((rTime >>  0U) & 0x1FU) * 2U);
+
+    printf("%04u/%02u/%02u ",
+        ((rDate >>  9U) & 0x7FU) + 1980,
+         (rDate >>  5U) & 0x0FU,
+         (rDate >>  0U) & 0x1FU);
 
     printf("\n");
 }
