@@ -93,6 +93,7 @@ static void help(void) {
     fprintf(stderr,"   create -mstr <path> Create file (truncate if exists)\n");
     fprintf(stderr,"   close            Close currently open file\n");
     fprintf(stderr,"   seek -data <off> Seek file pointer\n");
+    fprintf(stderr,"   seekcur -data <off> Seek file pointer from cur\n");
     fprintf(stderr,"   seekend -data <off> Seek file pointer from end\n");
 }
 
@@ -1573,6 +1574,13 @@ int main(int argc,char **argv) {
     else if (!strcmp(command,"seek")) {
         alarm(5);
         if (do_file_seek(&data,data,0/*SEEK_SET*/) < 0)
+            return 1;
+
+        printf("SEEK OK, position is %lu\n",data);
+    }
+    else if (!strcmp(command,"seekcur")) {
+        alarm(5);
+        if (do_file_seek(&data,data,1/*SEEK_CUR*/) < 0)
             return 1;
 
         printf("SEEK OK, position is %lu\n",data);
