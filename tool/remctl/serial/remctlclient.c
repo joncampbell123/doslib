@@ -1267,6 +1267,56 @@ retry:
     return (unsigned char*)(cur_pkt.data + 2);
 }
 
+int do_file_write(const unsigned char * const data,const unsigned int len) {
+    if (len > 188)
+        return -1;
+
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_WRITE;
+    cur_pkt.data[cur_pkt.hdr.length++] = len;
+
+    if (len != 0) {
+        memcpy(cur_pkt.data+cur_pkt.hdr.length,data,len);
+        cur_pkt.hdr.length += len;
+    }
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_WRITE) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    return cur_pkt.data[1];
+}
+
 void do_print_dir(void) {
     /* the contents are a MS-DOS FileInfoRec */
     unsigned char *p = cur_pkt.data + 1;
@@ -1663,6 +1713,34 @@ int main(int argc,char **argv) {
                 printf("\n");
             }
 
+            if (rd == 0)
+                break;
+        }
+    }
+     else if (!strcmp(command,"write")) {
+        int count = 1;
+        int rd;
+
+        if (memstr == NULL) {
+            fprintf(stderr,"need -mstr to contain data\n");
+            return 1;
+        }
+
+        {
+            size_t l = strlen(memstr);
+            if (memsz <= 0L || memsz > (long)l) memsz = l;
+            if (memsz > 192L) memsz = 192L;
+        }
+
+        if (repeat > 1)
+            count = repeat;
+
+        while (count-- > 0) {
+            alarm(5);
+            if ((rd=do_file_write((const unsigned char*)memstr,memsz)) < 0)
+                return 1;
+
+            printf("WRITE result %u/%u bytes\n",rd,(int)memsz);
             if (rd == 0)
                 break;
         }

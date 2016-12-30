@@ -716,6 +716,59 @@ l1:     mov     length,ax
     }
 }
 
+void do_file_write_command(void) {
+    unsigned char far *p = (unsigned char far*)cur_pkt_in.data + 2;
+    unsigned short length = cur_pkt_in.data[1];
+    unsigned short fd = open_file_fd;
+    unsigned short retv = 0;
+
+    if (open_file_fd < 0) {
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.hdr.length = 1;
+        return;
+    }
+
+    if (length == 0) {
+        // write with length == 0 truncates the file. that's not the user's intent.
+        // don't want surprises.
+        cur_pkt_out.data[1] = length;
+        cur_pkt_out.hdr.length = 2 + length;
+        return;
+    }
+
+    __asm {
+        push    ds
+        push    ax
+        push    bx
+        push    cx
+        push    dx
+        mov     ah,0x40                 ; write
+        mov     bx,fd                   ; file handle
+        mov     cx,length
+        lds     dx,word ptr [p]
+        int     21h
+        jnc     l1
+        mov     retv,ax
+l1:     mov     length,ax
+        pop     dx
+        pop     cx
+        pop     bx
+        pop     ax
+        pop     ds
+    }
+
+    if (length > 252) length = 252;
+
+    if (retv != 0) {
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.hdr.length = 1;
+    }
+    else {
+        cur_pkt_out.data[1] = length;
+        cur_pkt_out.hdr.length = 2;
+    }
+}
+
 void handle_packet(void) {
     unsigned int port,data;
 
@@ -942,6 +995,9 @@ void handle_packet(void) {
                         break;
                     case REMCTL_SERIAL_TYPE_FILE_READ:
                         do_file_read_command();
+                        break;
+                     case REMCTL_SERIAL_TYPE_FILE_WRITE:
+                        do_file_write_command();
                         break;
                     default:
                         begin_output_packet(REMCTL_SERIAL_TYPE_ERROR);
