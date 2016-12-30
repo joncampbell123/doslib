@@ -5,6 +5,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <conio.h>
 #include <fcntl.h>
@@ -270,6 +271,40 @@ void restore_psp(void) {
     }
 }
 
+void do_file_chdir_command(void) {
+    cur_pkt_in.data[cur_pkt_in.hdr.length] = 0; // ASCIIZ snip
+
+    {
+        unsigned char far *p = (unsigned char far*)(cur_pkt_in.data + 1);
+        unsigned short retv = 0;
+
+        if (isalpha(p[0]) && p[1] == ':') {
+            unsigned char drv = tolower(p[0]) - 'a';
+
+            __asm {
+                mov     ah,0x0E     ; set default disk
+                mov     dl,drv
+                int     21h
+            }
+        }
+
+        __asm {
+            push    ds
+            mov     ah,0x3B         ; set default dos directory
+            lds     dx,word ptr [p]
+            int     21h
+            jnc     l1
+            mov     retv,ax         ; grab error code
+l1:         pop     ds
+        }
+
+        if (retv != 0) {
+            cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+            cur_pkt_out.hdr.length = 1;
+        }
+    }
+}
+
 void do_file_pwd_command(void) {
     unsigned char curdrv = 'A';
 
@@ -500,6 +535,9 @@ void handle_packet(void) {
                 save_and_switch_psp();
 
                 switch (cur_pkt_in.data[0]) {
+                    case REMCTL_SERIAL_TYPE_FILE_CHDIR:
+                        do_file_chdir_command();
+                        break;
                     case REMCTL_SERIAL_TYPE_FILE_PWD:
                         do_file_pwd_command();
                         break;

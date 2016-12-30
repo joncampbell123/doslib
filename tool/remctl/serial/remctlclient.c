@@ -85,6 +85,7 @@ static void help(void) {
     fprintf(stderr,"   dos_lol          Report MS-DOS List of Lists location\n");
     fprintf(stderr,"   indos            Report MS-DOS InDOS flag\n");
     fprintf(stderr,"   pwd              Report current working path\n");
+    fprintf(stderr,"   chdir -mstr <path> Set current working path (and drive)\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -788,6 +789,54 @@ retry:
     return (const unsigned char*)(cur_pkt.data+1);;
 }
 
+int do_set_chdir(const char * const str) {
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_CHDIR;
+
+    {
+        size_t l = strlen(str);
+        if (l > 190) return -1;
+        memcpy(cur_pkt.data+cur_pkt.hdr.length,str,l);
+        cur_pkt.hdr.length += l;
+    }
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_CHDIR) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
     unsigned int i;
 
@@ -1011,6 +1060,18 @@ int main(int argc,char **argv) {
 
             printf("Current working directory: '%s'\n",str);
         }
+    }
+    else if (!strcmp(command,"chdir")) {
+        if (memstr == NULL) {
+            fprintf(stderr,"need -msz to contain path\n");
+            return 1;
+        }
+
+        alarm(5);
+        if (do_set_chdir(memstr) < 0)
+            return 1;
+
+        printf("CHDIR OK\n");
     }
     else {
         fprintf(stderr,"Unknown command\n");
