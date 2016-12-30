@@ -1646,6 +1646,9 @@ int main(int argc,char **argv) {
         int count = 1;
         int rd,i;
 
+        if (memsz > 188)
+            memsz = 188;
+
         if (repeat > 1)
             count = repeat;
 
