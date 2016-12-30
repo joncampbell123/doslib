@@ -33,6 +33,8 @@ static unsigned short my_resident_psp = 0;                          // nonzero i
 static unsigned short saved_psp = 0;                                // if switched, switch back
 static unsigned char stop_bits = 1;
 
+static unsigned char far *saved_dta = NULL;                         // within TSR, saved DTA
+
 static unsigned char far *InDOS_ptr = NULL;                         // MS-DOS InDOS flag
 #define InDOSFlag           (InDOS_ptr[0])
 #define ErrorModeFlag       (InDOS_ptr[-1])
@@ -76,6 +78,39 @@ void dos_set_psp(const unsigned short psp) {
         mov     ah,0x50     ; set PSP segment
         mov     bx,psp
         int     21h
+        pop     bx
+        pop     ax
+    }
+}
+
+unsigned char far *dos_get_dta(void) {
+    unsigned short so=0,oo=0;
+
+    __asm {
+        push    ax
+        push    bx
+        push    es
+        mov     ah,0x2F             ; get DTA
+        int     21h
+        mov     so,es
+        mov     oo,bx
+        pop     es
+        pop     bx
+        pop     ax
+    }
+
+    return (unsigned char far*)MK_FP(so,oo);
+}
+
+void dos_set_dta(const unsigned char far * const dta) {
+    __asm {
+        push    ax
+        push    bx
+        push    es
+        mov     ah,0x1A             ; set DTA
+        lds     dx,word ptr [dta]   ; DS:DX = dta
+        int     21h
+        pop     es
         pop     bx
         pop     ax
     }
@@ -268,6 +303,18 @@ void restore_psp(void) {
     if (saved_psp != 0) {
         dos_set_psp(saved_psp);
         saved_psp = 0;
+    }
+}
+
+void save_dta(void) {
+    if (saved_dta == NULL)
+        saved_dta = dos_get_dta();
+}
+
+void restore_dta(void) {
+    if (saved_dta != NULL) {
+        dos_set_dta(saved_dta);
+        saved_dta = NULL;
     }
 }
 
@@ -617,6 +664,7 @@ void handle_packet(void) {
 
     /* if we saved the PSP to switch, restore now */
     restore_psp();
+    restore_dta();
 }
 
 int inpkt_validate(void) {
