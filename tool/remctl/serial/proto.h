@@ -47,6 +47,9 @@ enum {
     REMCTL_SERIAL_TYPE_FILE_PWD=0x50,               /* get current directory */
     REMCTL_SERIAL_TYPE_FILE_RMDIR=0x52,             /* rmdir ASCIIZ */
     REMCTL_SERIAL_TYPE_FILE_CLOSE=0x63,             /* close the open file */
-    REMCTL_SERIAL_TYPE_FILE_CREATE=0x72             /* create a new file. will close prior file. */
+    REMCTL_SERIAL_TYPE_FILE_CREATE=0x72,            /* create a new file. will close prior file. */
+    REMCTL_SERIAL_TYPE_FILE_READ=0x79,              /* read file */
+    REMCTL_SERIAL_TYPE_FILE_WRITE=0x7A,             /* write file */
+    REMCTL_SERIAL_TYPE_FILE_SEEK=0x7B               /* seek file pointer */
 };
 

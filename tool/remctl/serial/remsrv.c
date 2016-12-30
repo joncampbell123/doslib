@@ -621,6 +621,55 @@ l1:         pop     ds
     }
 }
 
+void do_file_seek_command(void) {
+    unsigned short fd = open_file_fd;
+    unsigned short retv = 0;
+    unsigned char how = cur_pkt_in.data[1];
+    unsigned long poff =
+        ((unsigned long)cur_pkt_in.data[2] << 0UL) +
+        ((unsigned long)cur_pkt_in.data[3] << 8UL) +
+        ((unsigned long)cur_pkt_in.data[4] << 16UL) +
+        ((unsigned long)cur_pkt_in.data[5] << 24UL);
+
+    if (open_file_fd < 0) {
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.hdr.length = 1;
+    }
+
+    __asm {
+        push    ax
+        push    bx
+        push    cx
+        push    dx
+        mov     ah,0x42                 ; seek
+        mov     al,how                  ; how to seek
+        mov     bx,fd                   ; file handle
+        mov     cx,word ptr poff + 2    ; CX:DX = file pointer
+        mov     dx,word ptr poff
+        int     21h
+        jnc     l1
+        mov     retv,ax
+l1:     mov     word ptr poff + 2,dx  ; if not error, DX:AX is new file pointer
+        mov     word ptr poff,ax
+        pop     dx
+        pop     cx
+        pop     bx
+        pop     ax
+    }
+
+    if (retv != 0) {
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.hdr.length = 1;
+    }
+    else {
+        cur_pkt_out.data[2] = (unsigned char)(poff >> 0UL);
+        cur_pkt_out.data[3] = (unsigned char)(poff >> 8UL);
+        cur_pkt_out.data[4] = (unsigned char)(poff >> 16UL);
+        cur_pkt_out.data[5] = (unsigned char)(poff >> 24UL);
+        cur_pkt_out.hdr.length = 6;
+    }
+}
+
 void handle_packet(void) {
     unsigned int port,data;
 
@@ -841,6 +890,9 @@ void handle_packet(void) {
                         break;
                     case REMCTL_SERIAL_TYPE_FILE_CLOSE:
                         close_open_file();
+                        break;
+                    case REMCTL_SERIAL_TYPE_FILE_SEEK:
+                        do_file_seek_command();
                         break;
                     default:
                         begin_output_packet(REMCTL_SERIAL_TYPE_ERROR);

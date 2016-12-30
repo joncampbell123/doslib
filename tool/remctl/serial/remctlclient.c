@@ -92,6 +92,8 @@ static void help(void) {
     fprintf(stderr,"   open -mstr <path> Open file (fail if exists)\n");
     fprintf(stderr,"   create -mstr <path> Create file (truncate if exists)\n");
     fprintf(stderr,"   close            Close currently open file\n");
+    fprintf(stderr,"   seek -data <off> Seek file pointer\n");
+    fprintf(stderr,"   seekend -data <off> Seek file pointer from end\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -1164,6 +1166,57 @@ retry:
     return 0;
 }
 
+int do_file_seek(unsigned long * const noff,const unsigned long roff,const unsigned char how) {
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_SEEK;
+    cur_pkt.data[cur_pkt.hdr.length++] = how;
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)(roff >> 0UL);
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)(roff >> 8UL);
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)(roff >> 16UL);
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)(roff >> 24UL);
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_SEEK) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    *noff =
+        ((unsigned long)cur_pkt.data[2] << 0UL) +
+        ((unsigned long)cur_pkt.data[3] << 8UL) +
+        ((unsigned long)cur_pkt.data[4] << 16UL) +
+        ((unsigned long)cur_pkt.data[5] << 24UL);
+    return 0;
+}
+
 void do_print_dir(void) {
     /* the contents are a MS-DOS FileInfoRec */
     unsigned char *p = cur_pkt.data + 1;
@@ -1516,6 +1569,20 @@ int main(int argc,char **argv) {
             return 1;
 
         printf("CLOSE OK\n");
+    }
+    else if (!strcmp(command,"seek")) {
+        alarm(5);
+        if (do_file_seek(&data,data,0/*SEEK_SET*/) < 0)
+            return 1;
+
+        printf("SEEK OK, position is %lu\n",data);
+    }
+    else if (!strcmp(command,"seekend")) {
+        alarm(5);
+        if (do_file_seek(&data,data,2/*SEEK_END*/) < 0)
+            return 1;
+
+        printf("SEEK OK, position is %lu\n",data);
     }
     else {
         fprintf(stderr,"Unknown command\n");
