@@ -29,6 +29,7 @@ static unsigned char in_packet_handling = 0;                        // if within
 static unsigned char halt_system = 0;
 static unsigned char inside_int28 = 0;                              // if within INT 28h
 static unsigned short my_resident_psp = 0;                          // nonzero if resident TSR, else we're still running
+static unsigned short saved_psp = 0;                                // if switched, switch back
 static unsigned char stop_bits = 1;
 
 static unsigned char far *InDOS_ptr = NULL;                         // MS-DOS InDOS flag
@@ -50,6 +51,34 @@ void process_output(void);
 
 int uart_waiting_read = 0;
 int uart_waiting_write = 0;
+
+unsigned short dos_get_psp(void) {
+    unsigned short psp=0;
+
+    __asm {
+        push    ax
+        push    bx
+        mov     ah,0x51     ; get PSP segment
+        int     21h
+        mov     psp,bx
+        pop     bx
+        pop     ax
+    }
+
+    return psp;
+}
+
+void dos_set_psp(const unsigned short psp) {
+    __asm {
+        push    ax
+        push    bx
+        mov     ah,0x50     ; set PSP segment
+        mov     bx,psp
+        int     21h
+        pop     bx
+        pop     ax
+    }
+}
 
 /* NOTE: You're supposed to call this function with interrupts disabled,
  *       or from within an interrupt handler in response to the UART's IRQ signal. */
@@ -225,6 +254,20 @@ unsigned char is_v86_mode(void) {
 #else
     return 0;
 #endif
+}
+
+void save_and_switch_psp(void) {
+    if (saved_psp == 0) {
+        saved_psp = dos_get_psp();
+        dos_set_psp(my_resident_psp);
+    }
+}
+
+void restore_psp(void) {
+    if (saved_psp != 0) {
+        dos_set_psp(saved_psp);
+        saved_psp = 0;
+    }
 }
 
 void handle_packet(void) {
@@ -418,6 +461,9 @@ void handle_packet(void) {
             end_output_packet();
             break;
     }
+
+    /* if we saved the PSP to switch, restore now */
+    restore_psp();
 }
 
 int inpkt_validate(void) {
@@ -612,17 +658,7 @@ void tsr_exit(void) {
         unsigned short psp_seg=0;
         unsigned char far *mcb;
 
-        __asm {
-            push    ax
-            push    bx
-            mov     ah,0x51     ; get PSP segment
-            int     21h
-            mov     psp_seg,bx
-            pop     bx
-            pop     ax
-        }
-
-        my_resident_psp = psp_seg;
+        psp_seg = my_resident_psp;
 
         mcb = MK_FP(psp_seg-1,0);
 
@@ -774,6 +810,9 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    /* get my PSP segment */
+    my_resident_psp = dos_get_psp();
+
     /* get the InDOS flag */
     {
         unsigned short so=0,oo=0;
@@ -796,6 +835,7 @@ int main(int argc,char **argv) {
 
     printf("InDOS: %04x:%04x\n",FP_SEG(InDOS_ptr),FP_OFF(InDOS_ptr));
     printf("LOL: %04x:%04x\n",FP_SEG(DOS_LOL),FP_OFF(DOS_LOL));
+    printf("PSP: %04x\n",my_resident_psp);
 
     probe_8250_bios_ports();
 
