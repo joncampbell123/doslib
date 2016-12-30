@@ -107,11 +107,11 @@ void dos_set_dta(const unsigned char far * const dta) {
     __asm {
         push    ax
         push    bx
-        push    es
+        push    ds
         mov     ah,0x1A             ; set DTA
-        lds     dx,word ptr [dta]   ; DS:DX = dta
+        lds     dx,dta              ; DS:DX = dta
         int     21h
-        pop     es
+        pop     ds
         pop     bx
         pop     ax
     }
@@ -317,6 +317,89 @@ void restore_dta(void) {
         dos_set_dta(saved_dta);
         saved_dta = NULL;
     }
+}
+
+int has_output(void) {
+    if (cur_pkt_out.hdr.mark == REMCTL_SERIAL_MARK)
+        return 1;
+
+    return 0;
+}
+
+static unsigned char my_dta[128];
+
+void send_dta_find(void) {
+    /* DOS FileInfoRec occupies DTA bytes 21-42 (43 total) */
+    begin_output_packet(REMCTL_SERIAL_TYPE_FILE);
+    cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_FIND;
+    cur_pkt_out.hdr.length = 1 + (43 - 21);
+    _fmemcpy((unsigned char far*)cur_pkt_out.data + 1,(unsigned char far*)my_dta + 21,43 - 21);
+    end_output_packet();
+
+    while (has_output()) do_process_output();
+}
+
+void do_file_find_command(void) {
+    const char far *spec;
+    unsigned short retv;
+
+    cur_pkt_in.data[cur_pkt_in.hdr.length] = 0; // ASCIIZ snip
+    spec = (const char far*)(cur_pkt_in.data+1);
+
+    /* find functions use the DTA (at least the first one) */
+    save_dta();
+
+    /* use our DTA buffer for file enum */
+    dos_set_dta(my_dta);
+
+    /* start enum */
+    retv = 0;
+    __asm {
+        push    ax
+        push    cx
+        push    dx
+        push    ds
+        mov     ah,0x4E             ; find first
+        lds     dx,word ptr [spec]
+        mov     cx,0x37             ; match archive+dir+sys+hidden+readonly
+        int     21h
+        jnc     l1
+        mov     retv,ax
+l1:     pop     ds
+        pop     dx
+        pop     cx
+        pop     ax
+    }
+
+    if (retv != 0)
+        return;
+
+    send_dta_find();
+
+    spec = (const char far*)my_dta;
+    do {
+        retv = 0;
+        __asm {
+            push    ax
+            push    cx
+            push    dx
+            push    ds
+            mov     ah,0x4F             ; find next
+            lds     dx,word ptr [spec]
+            int     21h
+            jnc     l2
+            mov     retv,ax
+l2:         pop     ds
+            pop     dx
+            pop     cx
+            pop     ax
+        }
+
+        if (retv != 0)
+            return;
+
+        send_dta_find();
+    } while (1);
 }
 
 void do_file_rmdir_command(void) {
@@ -631,6 +714,12 @@ void handle_packet(void) {
                 save_and_switch_psp();
 
                 switch (cur_pkt_in.data[0]) {
+                    case REMCTL_SERIAL_TYPE_FILE_FIND:
+                        do_file_find_command();
+                        begin_output_packet(REMCTL_SERIAL_TYPE_FILE);
+                        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_FINISHED;
+                        cur_pkt_out.hdr.length = 1;
+                        break;
                     case REMCTL_SERIAL_TYPE_FILE_RMDIR:
                         do_file_rmdir_command();
                         break;

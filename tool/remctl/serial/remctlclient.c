@@ -88,6 +88,7 @@ static void help(void) {
     fprintf(stderr,"   chdir -mstr <path> Set current working path (and drive)\n");
     fprintf(stderr,"   mkdir -mstr <path> Set current working path (and drive)\n");
     fprintf(stderr,"   rmdir -mstr <path> Set current working path (and drive)\n");
+    fprintf(stderr,"   dir -mstr <path> Enumerate directory contents\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -935,6 +936,128 @@ retry:
     return 0;
 }
 
+int do_begin_dir(const char * const str) {
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_FIND;
+
+    {
+        size_t l = strlen(str);
+        if (l > 190) return -1;
+        memcpy(cur_pkt.data+cur_pkt.hdr.length,str,l);
+        cur_pkt.hdr.length += l;
+    }
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_FINISHED) {
+        return 0;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_FIND) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    /* got result */
+    return 1;
+}
+
+int do_next_dir() {
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy... at unexpected time\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_FINISHED) {
+        return 0;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_FIND) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    /* got result */
+    return 1;
+}
+
+void do_print_dir(void) {
+    /* the contents are a MS-DOS FileInfoRec */
+    unsigned char *p = cur_pkt.data + 1;
+    unsigned char bAttr = p[0];
+    unsigned short rTime = ((unsigned short)p[1] + ((unsigned short)p[2] << 8U));
+    unsigned short rDate = ((unsigned short)p[3] + ((unsigned short)p[4] << 8U));
+    unsigned long lSize = ((unsigned long)p[5] + ((unsigned long)p[6] << 8UL) +
+        ((unsigned long)p[7] << 16UL) + ((unsigned long)p[8] << 24UL));
+    char *szFilespec = (char*)(p + 9);
+    cur_pkt.data[cur_pkt.hdr.length] = 0;
+
+    if ((bAttr & 0xF) == 0x0F)
+        return;
+
+    if (bAttr & 0x8)
+        printf("  <LABEL> ");
+    else if (bAttr & 0x10)
+        printf("  <DIR>   ");
+    else
+        printf("  <FILE>  ");
+
+    printf("%c%c%c%c ",
+        (bAttr & 0x01) ? 'R' : '-',
+        (bAttr & 0x02) ? 'H' : '-',
+        (bAttr & 0x04) ? 'S' : '-',
+        (bAttr & 0x20) ? 'A' : '-');
+
+    printf("%-13s ",szFilespec);
+
+    printf("%-10lu bytes",lSize);
+
+    printf("\n");
+}
+
 int main(int argc,char **argv) {
     unsigned int i;
 
@@ -1161,7 +1284,7 @@ int main(int argc,char **argv) {
     }
     else if (!strcmp(command,"chdir")) {
         if (memstr == NULL) {
-            fprintf(stderr,"need -msz to contain path\n");
+            fprintf(stderr,"need -mstr to contain path\n");
             return 1;
         }
 
@@ -1173,7 +1296,7 @@ int main(int argc,char **argv) {
     }
     else if (!strcmp(command,"mkdir")) {
         if (memstr == NULL) {
-            fprintf(stderr,"need -msz to contain path\n");
+            fprintf(stderr,"need -mstr to contain path\n");
             return 1;
         }
 
@@ -1185,7 +1308,7 @@ int main(int argc,char **argv) {
     }
     else if (!strcmp(command,"rmdir")) {
         if (memstr == NULL) {
-            fprintf(stderr,"need -msz to contain path\n");
+            fprintf(stderr,"need -mstr to contain path\n");
             return 1;
         }
 
@@ -1194,6 +1317,24 @@ int main(int argc,char **argv) {
             return 1;
 
         printf("CHDIR OK\n");
+    }
+    else if (!strcmp(command,"dir")) {
+        int r;
+
+        if (memstr == NULL) {
+            fprintf(stderr,"need -mstr to contain path (use *.* for current dir)\n");
+            return 1;
+        }
+
+        alarm(5);
+        if ((r=do_begin_dir(memstr)) <= 0)
+            return 1;
+
+        do {
+            do_print_dir();
+        } while ((r=do_next_dir()) > 0);
+
+        printf("* done\n");
     }
     else {
         fprintf(stderr,"Unknown command\n");
