@@ -89,6 +89,9 @@ static void help(void) {
     fprintf(stderr,"   mkdir -mstr <path> Set current working path (and drive)\n");
     fprintf(stderr,"   rmdir -mstr <path> Set current working path (and drive)\n");
     fprintf(stderr,"   dir -mstr <path> Enumerate directory contents\n");
+    fprintf(stderr,"   open -mstr <path> Open file (fail if exists)\n");
+    fprintf(stderr,"   create -mstr <path> Create file (truncate if exists)\n");
+    fprintf(stderr,"   close            Close currently open file\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -1024,6 +1027,143 @@ int do_next_dir() {
     return 1;
 }
 
+int do_file_create(const char * const str) {
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_CREATE;
+
+    {
+        size_t l = strlen(str);
+        if (l > 190) return -1;
+        memcpy(cur_pkt.data+cur_pkt.hdr.length,str,l);
+        cur_pkt.hdr.length += l;
+    }
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_CREATE) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int do_file_open(const char * const str) {
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_OPEN;
+
+    {
+        size_t l = strlen(str);
+        if (l > 190) return -1;
+        memcpy(cur_pkt.data+cur_pkt.hdr.length,str,l);
+        cur_pkt.hdr.length += l;
+    }
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_OPEN) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int do_file_close(void) {
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_CLOSE;
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_CLOSE) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 void do_print_dir(void) {
     /* the contents are a MS-DOS FileInfoRec */
     unsigned char *p = cur_pkt.data + 1;
@@ -1345,6 +1485,37 @@ int main(int argc,char **argv) {
         } while ((r=do_next_dir()) > 0);
 
         printf("* done\n");
+    }
+    else if (!strcmp(command,"open")) {
+        if (memstr == NULL) {
+            fprintf(stderr,"need -mstr to contain path\n");
+            return 1;
+        }
+
+        alarm(5);
+        if (do_file_open(memstr) < 0)
+            return 1;
+
+        printf("OPEN OK\n");
+    }
+    else if (!strcmp(command,"create")) {
+        if (memstr == NULL) {
+            fprintf(stderr,"need -mstr to contain path\n");
+            return 1;
+        }
+
+        alarm(5);
+        if (do_file_create(memstr) < 0)
+            return 1;
+
+        printf("CREATE OK\n");
+    }
+    else if (!strcmp(command,"close")) {
+        alarm(5);
+        if (do_file_close() < 0)
+            return 1;
+
+        printf("CLOSE OK\n");
     }
     else {
         fprintf(stderr,"Unknown command\n");

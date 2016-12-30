@@ -33,6 +33,8 @@ static unsigned short my_resident_psp = 0;                          // nonzero i
 static unsigned short saved_psp = 0;                                // if switched, switch back
 static unsigned char stop_bits = 1;
 
+static int open_file_fd = -1;                                       // currently open file
+
 static unsigned char far *saved_dta = NULL;                         // within TSR, saved DTA
 
 static unsigned char far *InDOS_ptr = NULL;                         // MS-DOS InDOS flag
@@ -164,6 +166,13 @@ void halt_system_loop(void) {
         process_input();
         process_output();
     } while (halt_system);
+}
+
+void close_open_file(void) {
+    if (open_file_fd >= 0) {
+        close(open_file_fd);
+        open_file_fd = -1;
+    }
 }
 
 static void (interrupt *old_int28)() = NULL;
@@ -520,6 +529,98 @@ void do_file_pwd_command(void) {
     cur_pkt_out.data[cur_pkt_out.hdr.length] = 0;
 }
 
+void do_file_open_command(void) {
+    cur_pkt_in.data[cur_pkt_in.hdr.length] = 0; // ASCIIZ snip
+
+    close_open_file();
+
+    /* NTS: use the extended version for it's benefits.
+     *      this limits us to MS-DOS 4.0 or higher, but it's worth it */
+    {
+        unsigned char far *p = (unsigned char far*)(cur_pkt_in.data + 1);
+        unsigned short retv = 0;
+        unsigned short fd = 0;
+
+        __asm {
+            push    ax
+            push    bx
+            push    cx
+            push    dx
+            push    si
+            push    ds
+            mov     ah,0x6C         ; extended open/create
+            mov     bx,0x2002       ; read/write, don't use INT 24h
+            xor     cx,cx           ; normal file
+            mov     dx,0x0001       ; open if exists, fail otherwise
+            lds     si,word ptr [p]
+            int     21h
+            mov     fd,ax           ; grab error code/file handle
+            jnc     l1
+            mov     retv,ax         ; grab error code
+l1:         pop     ds
+            pop     si
+            pop     dx
+            pop     cx
+            pop     bx
+            pop     ax
+        }
+
+        if (retv != 0) {
+            cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+            cur_pkt_out.hdr.length = 1;
+        }
+        else {
+            open_file_fd = fd;
+        }
+    }
+}
+
+void do_file_create_command(void) {
+    cur_pkt_in.data[cur_pkt_in.hdr.length] = 0; // ASCIIZ snip
+
+    close_open_file();
+
+    /* NTS: use the extended version for it's benefits.
+     *      this limits us to MS-DOS 4.0 or higher, but it's worth it */
+    {
+        unsigned char far *p = (unsigned char far*)(cur_pkt_in.data + 1);
+        unsigned short retv = 0;
+        unsigned short fd = 0;
+
+        __asm {
+            push    ax
+            push    bx
+            push    cx
+            push    dx
+            push    si
+            push    ds
+            mov     ah,0x6C         ; extended open/create
+            mov     bx,0x2002       ; read/write, don't use INT 24h
+            xor     cx,cx           ; normal file
+            mov     dx,0x0012       ; create file, truncate if exists
+            lds     si,word ptr [p]
+            int     21h
+            mov     fd,ax           ; grab error code/file handle
+            jnc     l1
+            mov     retv,ax         ; grab error code
+l1:         pop     ds
+            pop     si
+            pop     dx
+            pop     cx
+            pop     bx
+            pop     ax
+        }
+
+        if (retv != 0) {
+            cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+            cur_pkt_out.hdr.length = 1;
+        }
+        else {
+            open_file_fd = fd;
+        }
+    }
+}
+
 void handle_packet(void) {
     unsigned int port,data;
 
@@ -731,6 +832,15 @@ void handle_packet(void) {
                         break;
                     case REMCTL_SERIAL_TYPE_FILE_PWD:
                         do_file_pwd_command();
+                        break;
+                    case REMCTL_SERIAL_TYPE_FILE_OPEN:
+                        do_file_open_command();
+                        break;
+                    case REMCTL_SERIAL_TYPE_FILE_CREATE:
+                        do_file_create_command();
+                        break;
+                    case REMCTL_SERIAL_TYPE_FILE_CLOSE:
+                        close_open_file();
                         break;
                     default:
                         begin_output_packet(REMCTL_SERIAL_TYPE_ERROR);
