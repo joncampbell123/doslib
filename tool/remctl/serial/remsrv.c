@@ -270,6 +270,42 @@ void restore_psp(void) {
     }
 }
 
+void do_file_pwd_command(void) {
+    unsigned char curdrv = 'A';
+
+    __asm {
+        mov     ah,0x19             ; get default drive
+        int     21h
+        add     curdrv,al
+    }
+
+    cur_pkt_out.data[1] = curdrv;
+    cur_pkt_out.data[2] = ':';
+    cur_pkt_out.data[3] = '\\';
+    cur_pkt_out.hdr.length = 4;
+
+    {
+        unsigned char far *p;
+
+        p = (unsigned char far*)cur_pkt_out.data + 4;
+
+        /* NTS: we assume MS-DOS paths cannot be longer than 188 (isn't the limit something like 88?) */
+        __asm {
+            push    ds
+            mov     ah,0x47         ; get current directory
+            xor     dl,dl           ; default drive
+            lds     si,word ptr [p]
+            int     21h
+            pop     ds
+        }
+    }
+
+    while (cur_pkt_out.hdr.length < 190 && cur_pkt_out.data[cur_pkt_out.hdr.length] != 0)
+        cur_pkt_out.hdr.length++;
+
+    cur_pkt_out.data[cur_pkt_out.hdr.length] = 0;
+}
+
 void handle_packet(void) {
     unsigned int port,data;
 
@@ -464,41 +500,9 @@ void handle_packet(void) {
                 save_and_switch_psp();
 
                 switch (cur_pkt_in.data[0]) {
-                    case REMCTL_SERIAL_TYPE_FILE_PWD: {
-                        unsigned char curdrv = 'A';
-
-                        __asm {
-                            mov     ah,0x19             ; get default drive
-                            int     21h
-                            add     curdrv,al
-                        }
-
-                        cur_pkt_out.data[1] = curdrv;
-                        cur_pkt_out.data[2] = ':';
-                        cur_pkt_out.data[3] = '\\';
-                        cur_pkt_out.hdr.length = 4;
-
-                        {
-                            unsigned char far *p;
-
-                            p = (unsigned char far*)cur_pkt_out.data + 4;
-
-                            /* NTS: we assume MS-DOS paths cannot be longer than 188 (isn't the limit something like 88?) */
-                            __asm {
-                                push    ds
-                                mov     ah,0x47         ; get current directory
-                                xor     dl,dl           ; default drive
-                                lds     si,word ptr [p]
-                                int     21h
-                                pop     ds
-                            }
-                        }
-
-                        while (cur_pkt_out.hdr.length < 190 && cur_pkt_out.data[cur_pkt_out.hdr.length] != 0)
-                            cur_pkt_out.hdr.length++;
-
-                        cur_pkt_out.data[cur_pkt_out.hdr.length] = 0;
-                        } break;
+                    case REMCTL_SERIAL_TYPE_FILE_PWD:
+                        do_file_pwd_command();
+                        break;
                     default:
                         begin_output_packet(REMCTL_SERIAL_TYPE_ERROR);
                         cur_pkt_out_seq = 0xFF;
