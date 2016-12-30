@@ -42,6 +42,7 @@ static unsigned long    memaddr = 0;
 static signed long      memsz = -1;
 static unsigned long    data = 0;
 static char*            memstr = NULL;
+static char*            input_file = NULL;
 static char*            output_file = NULL;
 
 static int              conn_fd = -1;
@@ -65,6 +66,7 @@ static void help(void) {
     fprintf(stderr,"  -mstr <n>         Memory string to write\n");
     fprintf(stderr,"  -data <n>         data value\n");
     fprintf(stderr,"  -o <file>         Output file\n");
+    fprintf(stderr,"  -i <file>         Input file\n");
     fprintf(stderr,"\n");
     fprintf(stderr,"Commands are:\n");
     fprintf(stderr,"   ping             Ping the server (test connection)\n");
@@ -125,6 +127,11 @@ static int parse_argv(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 memstr = a;
+            }
+            else if (!strcmp(a,"i")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                input_file = a;
             }
             else if (!strcmp(a,"o")) {
                 a = argv[i++];
