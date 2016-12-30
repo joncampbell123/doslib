@@ -271,6 +271,54 @@ void restore_psp(void) {
     }
 }
 
+void do_file_rmdir_command(void) {
+    cur_pkt_in.data[cur_pkt_in.hdr.length] = 0; // ASCIIZ snip
+
+    {
+        unsigned char far *p = (unsigned char far*)(cur_pkt_in.data + 1);
+        unsigned short retv = 0;
+
+        __asm {
+            push    ds
+            mov     ah,0x3A         ; rmdir
+            lds     dx,word ptr [p]
+            int     21h
+            jnc     l1
+            mov     retv,ax         ; grab error code
+l1:         pop     ds
+        }
+
+        if (retv != 0) {
+            cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+            cur_pkt_out.hdr.length = 1;
+        }
+    }
+}
+
+void do_file_mkdir_command(void) {
+    cur_pkt_in.data[cur_pkt_in.hdr.length] = 0; // ASCIIZ snip
+
+    {
+        unsigned char far *p = (unsigned char far*)(cur_pkt_in.data + 1);
+        unsigned short retv = 0;
+
+        __asm {
+            push    ds
+            mov     ah,0x39         ; mkdir
+            lds     dx,word ptr [p]
+            int     21h
+            jnc     l1
+            mov     retv,ax         ; grab error code
+l1:         pop     ds
+        }
+
+        if (retv != 0) {
+            cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+            cur_pkt_out.hdr.length = 1;
+        }
+    }
+}
+
 void do_file_chdir_command(void) {
     cur_pkt_in.data[cur_pkt_in.hdr.length] = 0; // ASCIIZ snip
 
@@ -535,6 +583,12 @@ void handle_packet(void) {
                 save_and_switch_psp();
 
                 switch (cur_pkt_in.data[0]) {
+                    case REMCTL_SERIAL_TYPE_FILE_RMDIR:
+                        do_file_rmdir_command();
+                        break;
+                    case REMCTL_SERIAL_TYPE_FILE_MKDIR:
+                        do_file_mkdir_command();
+                        break;
                     case REMCTL_SERIAL_TYPE_FILE_CHDIR:
                         do_file_chdir_command();
                         break;
