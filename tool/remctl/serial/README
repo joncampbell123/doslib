@@ -16,10 +16,15 @@ the dos86s version) on the target DOS machine, connect the null-modem cable
 to the primary serial port (ideally, COM1), and then connect the other end
 to your Linux / Windows system.
 
-If your Linux / Windows system has serial ports on the motherboard, they
+If your Linux system has serial ports on the motherboard, they
 will appear in Linux's /dev directory as /dev/ttyS0, /dev/ttyS1, etc.
 If you are using a USB to serial adapter, then the USB-serial adapter
 will show up in /dev as /dev/ttyUSB0, /dev/ttyUSB1, etc.
+
+In Windows, the serial ports (motherboard and USB) appear as UNC paths
+like \\.\COM1. If using cygwin or mingw on Windows, you will need to
+escape the backslashes like this: "\\\\.\\COM1" to specify the UNC
+path properly.
 
 CAUTION: This program uses some internal state of MS-DOS to listen to
          the serial port and enable background filesystem I/O. Due to
