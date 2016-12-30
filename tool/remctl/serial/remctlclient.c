@@ -84,6 +84,7 @@ static void help(void) {
     fprintf(stderr,"   memdump -msz <n> -maddr <n> -o <file> Dump memory starting at -maddr\n");
     fprintf(stderr,"   dos_lol          Report MS-DOS List of Lists location\n");
     fprintf(stderr,"   indos            Report MS-DOS InDOS flag\n");
+    fprintf(stderr,"   pwd              Report current working path\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -751,6 +752,42 @@ int do_get_indos(unsigned int * const sv,unsigned int * const ov) {
     return 0;
 }
 
+const unsigned char *do_get_pwd() {
+retry:
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_FILE_PWD;
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return NULL;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return NULL;
+    }
+
+    /* MS-DOS might be busy at this point... */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_FILE &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY) {
+        fprintf(stderr,"MS-DOS is busy...\n");
+        usleep(10000);
+        goto retry;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_FILE ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_FILE_PWD) {
+        fprintf(stderr,"I/O write failed\n");
+        return NULL;
+    }
+    cur_pkt.data[cur_pkt.hdr.length] = 0;
+    cur_pkt.data[sizeof(cur_pkt.data)-1] = 0;
+    return (const unsigned char*)(cur_pkt.data+1);;
+}
+
 int main(int argc,char **argv) {
     unsigned int i;
 
@@ -959,6 +996,21 @@ int main(int argc,char **argv) {
             return 1;
 
         printf("MS-DOS InDOS flag is at %04x:%04x\n",sv,ov);
+    }
+    else if (!strcmp(command,"pwd")) {
+        const unsigned char *str;
+        int count = 1;
+
+        if (repeat > 1)
+            count = repeat;
+
+        while (count-- > 0) {
+            alarm(5);
+            if ((str=do_get_pwd()) == NULL)
+                return 1;
+
+            printf("Current working directory: '%s'\n",str);
+        }
     }
     else {
         fprintf(stderr,"Unknown command\n");
