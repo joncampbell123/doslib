@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "proto.h"
 
@@ -99,6 +100,7 @@ static void help(void) {
     fprintf(stderr,"   seekend -data <off> Seek file pointer from end\n");
     fprintf(stderr,"   read -msz <count> Read count bytes\n");
     fprintf(stderr,"   truncate          Truncate at file pointer\n");
+    fprintf(stderr,"   upload -mstr <path> -i <path> Send file from -i to -mstr path\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -1807,6 +1809,87 @@ int main(int argc,char **argv) {
 
             printf("TRUNCATE OK\n");
         }
+    }
+    else if (!strcmp(command,"upload")) {
+        unsigned char tmp[256];
+        long file_size,count;
+        int ifd,rwd,wd,doc;
+        time_t now,next;
+
+        next = 0;
+
+        if (memstr == NULL) {
+            fprintf(stderr,"need -mstr to contain path to upload to\n");
+            return 1;
+        }
+        if (input_file == NULL) {
+            fprintf(stderr,"need -i to specify source file\n");
+            return 1;
+        }
+
+        ifd = open(input_file,O_RDONLY|O_BINARY);
+        if (ifd < 0) {
+            fprintf(stderr,"Failed to open source file\n");
+            return 1;
+        }
+        file_size = lseek(ifd,0,SEEK_END);
+        if (file_size < 0L) {
+            fprintf(stderr,"Cannot determine source file size\n");
+            return 1;
+        }
+        lseek(ifd,0,SEEK_SET);
+
+        alarm(5);
+        if (do_file_create(memstr) < 0)
+            return 1;
+
+        count = 0L;
+        while (count < file_size) {
+            now = time(NULL);
+            if (now >= next) {
+                unsigned long percent;
+
+                percent = (count >> 7UL) * 100UL;
+                percent /= ((file_size + 127UL) >> 7UL);
+
+                next = now + 1;
+                printf("\x0D" "Uploading, %lu%% %lu / %lu... ",
+                    percent,count,file_size);
+                fflush(stdout);
+            }
+
+            if ((file_size - count) > 188)
+                doc = 188;
+            else
+                doc = (int)(file_size - count);
+
+            assert(doc != 0);
+            wd = read(ifd,tmp,doc);
+            if (wd == 0) break;
+
+            if ((rwd=do_file_write(tmp,wd)) < 0)
+                break;
+
+            if (rwd < wd) {
+                fprintf(stderr,"Remote end incomplete write\n");
+                break;
+            }
+
+            count += wd;
+        }
+
+        alarm(5);
+        if (do_file_close() < 0)
+            return 1;
+
+        if (count != file_size) {
+            printf("Upload incomplete\n");
+        }
+        else {
+            printf("Upload OK\n");
+        }
+
+        close(ifd);
     }
     else {
         fprintf(stderr,"Unknown command\n");
