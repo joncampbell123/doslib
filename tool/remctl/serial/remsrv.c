@@ -51,6 +51,7 @@ static unsigned char                    cur_pkt_out_seq = 0xFF;
 
 void process_input(void);
 void process_output(void);
+void do_process_output(void);
 
 int uart_waiting_read = 0;
 int uart_waiting_write = 0;
@@ -736,11 +737,15 @@ void process_input(void) {
 }
 
 void process_output(void) {
-    if (cur_pkt_out.hdr.mark != REMCTL_SERIAL_MARK)
-        return;
-
     /* reentrancy protection, including against an incomplete output packet */
     if (in_packet_handling)
+        return;
+
+    do_process_output();
+}
+
+void do_process_output(void) {
+    if (cur_pkt_out.hdr.mark != REMCTL_SERIAL_MARK)
         return;
 
     do {
