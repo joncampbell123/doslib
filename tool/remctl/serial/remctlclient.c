@@ -1626,8 +1626,11 @@ int main(int argc,char **argv) {
             printf("\x0D" "Reading 0x%08lX + %u bytes",addr,do_read);
             fflush(stdout);
 
-            if ((ptr=do_memread(do_read,addr)) == NULL)
-                break;
+            if ((ptr=do_memread(do_read,addr)) == NULL) {
+                fprintf(stderr,"\nReconnecting...\n");
+                do_connect();
+                continue;
+            }
             if (write(fd,ptr,do_read) != do_read)
                 break;
 
@@ -1885,8 +1888,16 @@ int main(int argc,char **argv) {
             wd = read(ifd,tmp,doc);
             if (wd == 0) break;
 
-            if ((rwd=do_file_write(tmp,wd)) < 0)
-                break;
+            if ((rwd=do_file_write(tmp,wd)) < 0) {
+                fprintf(stderr,"\nReconnecting...\n");
+                do_connect(); /* retry */
+
+                /* now, where were we...? */
+                if (do_file_seek(&data,count,0/*SEEK_SET*/) < 0)
+                    return 1;
+
+                continue;
+            }
 
             if (rwd < wd) {
                 fprintf(stderr,"Remote end incomplete write\n");
@@ -1963,8 +1974,16 @@ int main(int argc,char **argv) {
                 doc = (int)(file_size - count);
 
             assert(doc != 0);
-            if ((str=do_file_read(&wd,doc)) == NULL)
-                return 1;
+            if ((str=do_file_read(&wd,doc)) == NULL) {
+                fprintf(stderr,"\nReconnecting...\n");
+                do_connect(); /* retry */
+
+                /* now, where were we...? */
+                if (do_file_seek(&data,count,0/*SEEK_SET*/) < 0)
+                    return 1;
+
+                continue;
+            }
 
             if (wd == 0) {
                 fprintf(stderr,"Unexpected end of file\n");
