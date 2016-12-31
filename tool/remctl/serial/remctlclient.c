@@ -239,6 +239,21 @@ static int parse_argv(int argc,char **argv) {
     return 0;
 }
 
+/* make a file descriptor non-blocking */
+int nonblocking_fd(const int fd) {
+    int x,r;
+
+    x = fcntl(fd,F_GETFL);
+    if (x < 0) return x;
+
+    x |= O_NONBLOCK;
+
+    if ((r=fcntl(fd,F_SETFL,x)) < 0)
+        return r;
+
+    return 0;
+}
+
 void drop_connection(void) {
     if (conn_fd >= 0) {
         close(conn_fd);
@@ -269,6 +284,9 @@ int do_connection(void) {
             drop_connection();
             return -1;
         }
+
+        if (nonblocking_fd(conn_fd) < 0)
+            fprintf(stderr,"WARNING: failed to make socket non-blocking\n");
     }
     else if (serial_tty != NULL) {
         struct termios tios;
@@ -304,6 +322,9 @@ int do_connection(void) {
             drop_connection();
             return -1;
         }
+
+        if (nonblocking_fd(conn_fd) < 0)
+            fprintf(stderr,"WARNING: failed to make socket non-blocking\n");
     }
     else {
         return -1;
@@ -402,6 +423,7 @@ int do_send_packet(const struct remctl_serial_packet * const pkt) {
 }
 
 int read_persistent(const int fd,void *p,int sz) {
+    int patience = 5000; /* 5000 x 1ms = 5 seconds */
     int rd = 0;
     int rt;
 
@@ -409,8 +431,16 @@ int read_persistent(const int fd,void *p,int sz) {
         rt = read(fd,p,sz);
         if (rt < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                if (--patience < 0) {
+                    fprintf(stderr,"Read timeout\n");
+                    if (rd != 0)
+                        break;
+                    else
+                        return -1;
+                }
+
                 /* non-blocking handling */
-                usleep(1000);
+                usleep(1000); /* 1ms */
                 continue;
             }
             return rt;
@@ -449,12 +479,30 @@ int write_persistent(const int fd,const void *p,int sz) {
     return rd;
 }
 
+void reset_packet_io(void) {
+    char tmp[300];
+
+    cur_pkt_recv_seq = 0xFF;
+    cur_pkt_seq=0xFF;
+
+    /* it's likely no response came back because the DOS machine missed a byte
+     * and is waiting for the packet to complete. so to force reset it, we have
+     * to flood it with bytes */
+    /* TODO: We need to do this in a way that deliberately makes sure the partial
+     *       packet checksum does not work, so that it is discarded. */
+    if (conn_fd >= 0) {
+        memset(tmp,0xFF,sizeof(tmp));
+        write_persistent(conn_fd,tmp,sizeof(tmp));
+    }
+}
+
 int do_recv_packet(struct remctl_serial_packet * const pkt) {
     if (conn_fd < 0)
         return -1;
 
     do {
         if (read_persistent(conn_fd,&(pkt->hdr.mark),1) != 1) {
+            reset_packet_io();
             drop_connection();
             return -1;
         }
@@ -463,12 +511,14 @@ int do_recv_packet(struct remctl_serial_packet * const pkt) {
     /* length is the first field after mark */
     if (read_persistent(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length)) !=
             (sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length))) {
+        reset_packet_io();
         drop_connection();
         return -1;
     }
 
     if (pkt->hdr.length != 0) {
         if (read_persistent(conn_fd,pkt->data,pkt->hdr.length) != pkt->hdr.length) {
+            reset_packet_io();
             drop_connection();
             return -1;
         }
@@ -1424,7 +1474,6 @@ int main(int argc,char **argv) {
             count = repeat;
 
         while (count-- > 0) {
-            alarm(5);
             if (do_ping() < 0)
                 break;
 
@@ -1432,14 +1481,12 @@ int main(int argc,char **argv) {
         }
     }
     else if (!strcmp(command,"halt")) {
-        alarm(5);
         if (do_halt(1) < 0)
             return 1;
 
         printf("Halt OK\n");
     }
     else if (!strcmp(command,"unhalt")) {
-        alarm(5);
         if (do_halt(0) < 0)
             return 1;
 
@@ -1451,7 +1498,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_inp(1,&data) < 0)
             return 1;
 
@@ -1463,7 +1509,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_inp(2,&data) < 0)
             return 1;
 
@@ -1475,7 +1520,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_inp(4,&data) < 0)
             return 1;
 
@@ -1487,7 +1531,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_outp(1,data) < 0)
             return 1;
 
@@ -1499,7 +1542,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_outp(2,data) < 0)
             return 1;
 
@@ -1511,7 +1553,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_outp(4,data) < 0)
             return 1;
 
@@ -1526,7 +1567,6 @@ int main(int argc,char **argv) {
         if (memsz > 192L)
             memsz = 192L;
 
-        alarm(5);
         if ((ptr=do_memread(memsz,memaddr)) == NULL)
             return 1;
 
@@ -1535,7 +1575,6 @@ int main(int argc,char **argv) {
         printf("\n");
     }
     else if (!strcmp(command,"memwrite")) {
-        alarm(5);
         if (memstr != NULL) {
             size_t l = strlen(memstr);
             if (memsz <= 0L || memsz > (long)l) memsz = l;
@@ -1602,7 +1641,6 @@ int main(int argc,char **argv) {
     else if (!strcmp(command,"dos_lol")) {
         unsigned int sv,ov;
 
-        alarm(5);
         if (do_get_dos_lol(&sv,&ov) < 0)
             return 1;
 
@@ -1611,7 +1649,6 @@ int main(int argc,char **argv) {
     else if (!strcmp(command,"indos")) {
         unsigned int sv,ov;
 
-        alarm(5);
         if (do_get_indos(&sv,&ov) < 0)
             return 1;
 
@@ -1625,7 +1662,6 @@ int main(int argc,char **argv) {
             count = repeat;
 
         while (count-- > 0) {
-            alarm(5);
             if ((str=do_get_pwd()) == NULL)
                 return 1;
 
@@ -1638,7 +1674,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_set_chdir(memstr) < 0)
             return 1;
 
@@ -1650,7 +1685,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_set_mkdir(memstr) < 0)
             return 1;
 
@@ -1662,7 +1696,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_set_rmdir(memstr) < 0)
             return 1;
 
@@ -1676,7 +1709,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if ((r=do_begin_dir(memstr)) <= 0)
             return 1;
 
@@ -1692,7 +1724,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_file_open(memstr) < 0)
             return 1;
 
@@ -1704,35 +1735,30 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_file_create(memstr) < 0)
             return 1;
 
         printf("CREATE OK\n");
     }
     else if (!strcmp(command,"close")) {
-        alarm(5);
         if (do_file_close() < 0)
             return 1;
 
         printf("CLOSE OK\n");
     }
     else if (!strcmp(command,"seek")) {
-        alarm(5);
         if (do_file_seek(&data,data,0/*SEEK_SET*/) < 0)
             return 1;
 
         printf("SEEK OK, position is %lu\n",data);
     }
     else if (!strcmp(command,"seekcur")) {
-        alarm(5);
         if (do_file_seek(&data,data,1/*SEEK_CUR*/) < 0)
             return 1;
 
         printf("SEEK OK, position is %lu\n",data);
     }
     else if (!strcmp(command,"seekend")) {
-        alarm(5);
         if (do_file_seek(&data,data,2/*SEEK_END*/) < 0)
             return 1;
 
@@ -1750,7 +1776,6 @@ int main(int argc,char **argv) {
             count = repeat;
 
         while (count-- > 0) {
-            alarm(5);
             if ((str=do_file_read(&rd,memsz)) == NULL)
                 return 1;
 
@@ -1783,7 +1808,6 @@ int main(int argc,char **argv) {
             count = repeat;
 
         while (count-- > 0) {
-            alarm(5);
             if ((rd=do_file_write((const unsigned char*)memstr,memsz)) < 0)
                 return 1;
 
@@ -1799,7 +1823,6 @@ int main(int argc,char **argv) {
             count = repeat;
 
         while (count-- > 0) {
-            alarm(5);
             if (do_file_truncate() < 0)
                 return 1;
 
@@ -1835,7 +1858,6 @@ int main(int argc,char **argv) {
         }
         lseek(ifd,0,SEEK_SET);
 
-        alarm(5);
         if (do_file_create(memstr) < 0)
             return 1;
 
@@ -1863,7 +1885,6 @@ int main(int argc,char **argv) {
             wd = read(ifd,tmp,doc);
             if (wd == 0) break;
 
-            alarm(5);
             if ((rwd=do_file_write(tmp,wd)) < 0)
                 break;
 
@@ -1875,7 +1896,6 @@ int main(int argc,char **argv) {
             count += wd;
         }
 
-        alarm(5);
         if (do_file_close() < 0)
             return 1;
 
@@ -1911,7 +1931,6 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        alarm(5);
         if (do_file_open(memstr) < 0)
             return 1;
 
@@ -1943,7 +1962,6 @@ int main(int argc,char **argv) {
             else
                 doc = (int)(file_size - count);
 
-            alarm(5);
             assert(doc != 0);
             if ((str=do_file_read(&wd,doc)) == NULL)
                 return 1;
@@ -1965,7 +1983,6 @@ int main(int argc,char **argv) {
             count += wd;
         }
 
-        alarm(5);
         if (do_file_close() < 0)
             return 1;
 
