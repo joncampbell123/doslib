@@ -375,6 +375,8 @@ void dump_packet(const struct remctl_serial_packet * const pkt) {
     }
 }
 
+int write_persistent(const int fd,const void *p,int sz);
+
 int do_send_packet(const struct remctl_serial_packet * const pkt) {
     if (conn_fd < 0)
         return -1;
@@ -384,31 +386,16 @@ int do_send_packet(const struct remctl_serial_packet * const pkt) {
         dump_packet(pkt);
     }
 
-    if (serial_tty) {
-        if (write(conn_fd,(const void*)(&(pkt->hdr)),sizeof(pkt->hdr)) != sizeof(pkt->hdr)) {
-            fprintf(stderr,"Send failed: header\n");
-            drop_connection();
-            return -1;
-        }
-
-        if (pkt->hdr.length != 0 && write(conn_fd,pkt->data,pkt->hdr.length) != pkt->hdr.length) {
-            fprintf(stderr,"Send failed: data\n");
-            drop_connection();
-            return -1;
-        }
+    if (write_persistent(conn_fd,(const void*)(&(pkt->hdr)),sizeof(pkt->hdr)) != sizeof(pkt->hdr)) {
+        fprintf(stderr,"Send failed: header\n");
+        drop_connection();
+        return -1;
     }
-    else {
-        if (send(conn_fd,(const void*)(&(pkt->hdr)),sizeof(pkt->hdr),MSG_NOSIGNAL) != sizeof(pkt->hdr)) {
-            fprintf(stderr,"Send failed: header\n");
-            drop_connection();
-            return -1;
-        }
 
-        if (pkt->hdr.length != 0 && send(conn_fd,pkt->data,pkt->hdr.length,MSG_NOSIGNAL) != pkt->hdr.length) {
-            fprintf(stderr,"Send failed: data\n");
-            drop_connection();
-            return -1;
-        }
+    if (pkt->hdr.length != 0 && write_persistent(conn_fd,pkt->data,pkt->hdr.length) != pkt->hdr.length) {
+        fprintf(stderr,"Send failed: data\n");
+        drop_connection();
+        return -1;
     }
 
     return 0;
@@ -420,9 +407,41 @@ int read_persistent(const int fd,void *p,int sz) {
 
     while (sz > 0) {
         rt = read(fd,p,sz);
-        if (rt < 0) return rt;
+        if (rt < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                /* non-blocking handling */
+                usleep(1000);
+                continue;
+            }
+            return rt;
+        }
+        if (rt == 0) break; /* EOF */
         assert(rt <= sz);
         p = (void*)((char*)p + rt);
+        sz -= rt;
+        rd += rt;
+    }
+
+    return rd;
+}
+
+int write_persistent(const int fd,const void *p,int sz) {
+    int rd = 0;
+    int rt;
+
+    while (sz > 0) {
+        rt = write(fd,p,sz);
+        if (rt < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                /* non-blocking handling */
+                usleep(1000);
+                continue;
+            }
+            return rt;
+        }
+        if (rt == 0) break; /* EOF */
+        assert(rt <= sz);
+        p = (const void*)((const char*)p + rt);
         sz -= rt;
         rd += rt;
     }
@@ -434,48 +453,24 @@ int do_recv_packet(struct remctl_serial_packet * const pkt) {
     if (conn_fd < 0)
         return -1;
 
-    if (serial_tty) {
-        do {
-            if (read_persistent(conn_fd,&(pkt->hdr.mark),1) != 1) {
-                drop_connection();
-                return -1;
-            }
-        } while (pkt->hdr.mark != REMCTL_SERIAL_MARK);
-
-        /* length is the first field after mark */
-        if (read_persistent(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length)) !=
-                (sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length))) {
+    do {
+        if (read_persistent(conn_fd,&(pkt->hdr.mark),1) != 1) {
             drop_connection();
             return -1;
         }
+    } while (pkt->hdr.mark != REMCTL_SERIAL_MARK);
 
-        if (pkt->hdr.length != 0) {
-            if (read_persistent(conn_fd,pkt->data,pkt->hdr.length) != pkt->hdr.length) {
-                drop_connection();
-                return -1;
-            }
-        }
+    /* length is the first field after mark */
+    if (read_persistent(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length)) !=
+            (sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length))) {
+        drop_connection();
+        return -1;
     }
-    else {
-        do {
-            if (recv(conn_fd,&(pkt->hdr.mark),1,MSG_WAITALL) != 1) {
-                drop_connection();
-                return -1;
-            }
-        } while (pkt->hdr.mark != REMCTL_SERIAL_MARK);
 
-        /* length is the first field after mark */
-        if (recv(conn_fd,&(pkt->hdr.length),sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length),MSG_WAITALL) !=
-                (sizeof(pkt->hdr)-offsetof(struct remctl_serial_packet_header,length))) {
+    if (pkt->hdr.length != 0) {
+        if (read_persistent(conn_fd,pkt->data,pkt->hdr.length) != pkt->hdr.length) {
             drop_connection();
             return -1;
-        }
-
-        if (pkt->hdr.length != 0) {
-            if (recv(conn_fd,pkt->data,pkt->hdr.length,MSG_WAITALL) != pkt->hdr.length) {
-                drop_connection();
-                return -1;
-            }
         }
     }
 
