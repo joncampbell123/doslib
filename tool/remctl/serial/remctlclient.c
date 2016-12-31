@@ -1893,7 +1893,9 @@ int main(int argc,char **argv) {
                 do_connect(); /* retry */
 
                 /* now, where were we...? */
-                if (do_file_seek(&data,count,0/*SEEK_SET*/) < 0)
+                if (lseek(ifd,count,SEEK_SET) != count)
+                    return 1;
+                if (do_file_seek(&data,count,0/*SEEK_SET*/) < 0 || (unsigned long)data != (unsigned long)count)
                     return 1;
 
                 continue;
@@ -1979,7 +1981,7 @@ int main(int argc,char **argv) {
                 do_connect(); /* retry */
 
                 /* now, where were we...? */
-                if (do_file_seek(&data,count,0/*SEEK_SET*/) < 0)
+                if (do_file_seek(&data,count,0/*SEEK_SET*/) < 0 || (unsigned long)data != (unsigned long)count)
                     return 1;
 
                 continue;
