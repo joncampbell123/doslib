@@ -45,7 +45,7 @@ misuse of this program. Please pay attention.
 
 ** Background file I/O permits one handle at a time
 
-Due to the unidirectional nature of this program the REMSRV.EXE program
+Due to the one-to-one nature of this program the REMSRV.EXE program
 only allows one open file at a time.
 
 When opened, the file is held open until closed explicitly, or until
