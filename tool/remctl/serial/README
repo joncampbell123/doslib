@@ -40,3 +40,41 @@ CAUTION: This program uses some internal state of MS-DOS to listen to
 
          Use at your own risk.
 
+The following is a list of potential problems that can arise from the
+misuse of this program. Please pay attention.
+
+** Background file I/O permits one handle at a time
+
+Due to the unidirectional nature of this program the REMSRV.EXE program
+only allows one open file at a time.
+
+When opened, the file is held open until closed explicitly, or until
+implicitly closed by a request to open or create another file.
+
+** Why does DOS list the file that is uploading now, as zero bytes?
+
+When writing a file to extend it, MS-DOS will allocate clusters to
+grow the file but will not update the file's directory entry until
+the file is closed. The file's content length will appear correctly
+once the file is closed on the server side.
+
+** What happens to the file if the upload is interrupted?
+
+If you issue a command to upload, then the upload gets interrupted,
+the file will remain open in the background since nobody has yet
+instructed the server to close the file.
+
+If the upload is interrupted in this manner, you should run the
+remctlclient program with -c close to close the file handle.
+
+** What happens if the system is reset without closing the file?
+
+For the same reason that the file appears zero length while writing,
+resetting the system while a file upload is in progress will result
+in a file listed as zero bytes, even though there is an allocation
+chain for the file.
+
+If the system is reset while uploading, make sure to run CHKDSK.EXE
+or Microsoft Scandisk to reclaim the lost allocation chain and fix
+up the filesystem.
+
