@@ -78,3 +78,26 @@ If the system is reset while uploading, make sure to run CHKDSK.EXE
 or Microsoft Scandisk to reclaim the lost allocation chain and fix
 up the filesystem.
 
+** When is REMSRV.EXE able to read extended memory?
+
+To read extended memory, the CPU must be a 386 or higher and must
+NOT be running in virtual 8086 mode. If virtual 8086 mode is running,
+the program must use special EMM386 API calls to switch modes.
+Given the program runs from an interrupt handler, it is probably
+not a good idea to call EMM386.EXE from an interrupt handler.
+
+Extended memory on a 286 is not supported, because that requires the
+use of the "reset vector" i.e. resetting the CPU then hoping that
+the BIOS returns control to our code. That is also not wise to do
+from an interrupt handler.
+
+If REMSRV.EXE cannot provide extended memory, it will return with
+all bytes set to a single ASCII char (usually 'V' to indicate
+virtual 8086 mode).
+
+Note that the program will be able to read the HMA without using
+flat real mode (the 64KB region just past the 1MB boundary).
+
+Extended memory access may be further limited by the state of the
+A20 gate.
+
