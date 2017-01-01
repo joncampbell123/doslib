@@ -45,6 +45,7 @@ static unsigned long    data = 0;
 static char*            memstr = NULL;
 static char*            input_file = NULL;
 static char*            output_file = NULL;
+static unsigned char    enterkey = 0;
 
 static int              conn_fd = -1;
 
@@ -104,6 +105,7 @@ static void help(void) {
     fprintf(stderr,"   download -mstr <path> -o <path> Download file from -mstr to -o locally\n");
     fprintf(stderr,"   stuffkey -data <code> Stuff code into BIOS keyboard buffer\n");
     fprintf(stderr,"   stuffkey -mstr <string> Stuff ASCII codes into BIOS keyboard buffer\n");
+    fprintf(stderr,"   stuffkey -mstr <string> -enter Stuff ASCII codes, then send ENTER key\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -127,6 +129,9 @@ static int parse_argv(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 repeat = atoi(a);
+            }
+            else if (!strcmp(a,"enter")) {
+                enterkey = 1;
             }
             else if (!strcmp(a,"mstr")) {
                 a = argv[i++];
@@ -2070,11 +2075,21 @@ int main(int argc,char **argv) {
                     return 1;
             }
 
+            if (enterkey) {
+                if (do_stuff_key(13/*ENTER*/) < 0)
+                    return 1;
+            }
+
             printf("STUFF OK\n");
         }
         else if (data != 0) {
             if (do_stuff_key(data) < 0)
                 return 1;
+
+            if (enterkey) {
+                if (do_stuff_key(13/*ENTER*/) < 0)
+                    return 1;
+            }
 
             printf("STUFF OK\n");
         }
