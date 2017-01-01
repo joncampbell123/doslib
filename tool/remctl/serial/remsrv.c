@@ -1262,9 +1262,7 @@ void tsr_exit(void) {
     /* the purpose of this code is to compensate for Watcom C's lack of useful */
     /* info at runtime or compile time as to how large we are in memory. */
     {
-#if 0
         unsigned short env_seg=0;
-#endif
         unsigned short psp_seg=0;
         unsigned char far *mcb;
 
@@ -1285,7 +1283,6 @@ void tsr_exit(void) {
             abort();
         }
 
-#if 0 /* if we're going to exec programs, we need the environment block */
         /* while we're at it, free our environment block as well, we don't need it */
         env_seg = *((unsigned short far*)MK_FP(psp_seg,0x2C));
         if (env_seg != 0) {
@@ -1296,7 +1293,6 @@ void tsr_exit(void) {
                 printf("WARNING: Unable to free environment block\n");
             }
         }
-#endif
     }
 
     printf("Exiting to TSR\n");
