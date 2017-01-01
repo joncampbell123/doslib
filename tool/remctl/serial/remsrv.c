@@ -716,6 +716,43 @@ l1:     mov     length,ax
     }
 }
 
+void do_dos_stuff_bios_keyboard_command(void) {
+    unsigned short head = *((unsigned short far*)MK_FP(0x40,0x1A));
+    unsigned short tail = *((unsigned short far*)MK_FP(0x40,0x1C));
+    unsigned char ascii = cur_pkt_in.data[1];
+    unsigned char scan = cur_pkt_in.data[2];
+
+    if (head < 0x1E || head >= 0x3E) {
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.hdr.length = 1;
+        return;
+    }
+    if (tail < 0x1E || tail >= 0x3E) {
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.hdr.length = 1;
+        return;
+    }
+
+    if (tail == 0x3E)
+        tail = 0x1E;
+
+    if (((head+2-0x1E)&0x1F) == (tail-0x1E)) {
+        /* buffer full */
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.hdr.length = 1;
+        return;
+    }
+
+    *((unsigned char far*)MK_FP(0x40,tail)) = ascii;
+    *((unsigned char far*)MK_FP(0x40,tail+1)) = scan;
+
+    tail += 2;
+    if (tail == 0x3E)
+        tail = 0x1E;
+
+    *((unsigned short far*)MK_FP(0x40,0x1C)) = tail;
+}
+
 void do_file_write_command(void) {
     unsigned char far *p = (unsigned char far*)cur_pkt_in.data + 2;
     unsigned short length = cur_pkt_in.data[1];
@@ -842,6 +879,9 @@ void handle_packet(void) {
                     cur_pkt_out.data[3] = (unsigned char)(FP_SEG(InDOS_ptr) >> 0U);
                     cur_pkt_out.data[4] = (unsigned char)(FP_SEG(InDOS_ptr) >> 8U);
                     cur_pkt_out.hdr.length = 5;
+                    break;
+                case REMCTL_SERIAL_TYPE_DOS_STUFF_BIOS_KEYBOARD:
+                    do_dos_stuff_bios_keyboard_command();
                     break;
             };
 

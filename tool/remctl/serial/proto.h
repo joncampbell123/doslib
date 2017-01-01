@@ -32,7 +32,8 @@ enum {
 /* REMCTL_SERIAL_TYPE_DOS */
 enum {
     REMCTL_SERIAL_TYPE_DOS_LOL=0x4C,    /* return List of Lists pointer */
-    REMCTL_SERIAL_TYPE_DOS_INDOS=0x49   /* return InDOS pointer */
+    REMCTL_SERIAL_TYPE_DOS_INDOS=0x49,  /* return InDOS pointer */
+    REMCTL_SERIAL_TYPE_DOS_STUFF_BIOS_KEYBOARD=0x42 /* stuff scancode into BIOS keyboard buffer */
 };
 
 /* REMCTL_SERIAL_TYPE_FILE */

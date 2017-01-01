@@ -102,6 +102,8 @@ static void help(void) {
     fprintf(stderr,"   truncate          Truncate at file pointer\n");
     fprintf(stderr,"   upload -mstr <path> -i <path> Send file from -i to -mstr path\n");
     fprintf(stderr,"   download -mstr <path> -o <path> Download file from -mstr to -o locally\n");
+    fprintf(stderr,"   stuffkey -data <code> Stuff code into BIOS keyboard buffer\n");
+    fprintf(stderr,"   stuffkey -mstr <string> Stuff ASCII codes into BIOS keyboard buffer\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -1087,6 +1089,40 @@ int do_next_dir() {
     return 1;
 }
 
+int do_stuff_key(const unsigned short code) {
+    remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_DOS);
+
+    cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_DOS_STUFF_BIOS_KEYBOARD;
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)(code >> 0U);
+    cur_pkt.data[cur_pkt.hdr.length++] = (unsigned char)(code >> 8U);
+
+    remctl_serial_packet_end(&cur_pkt);
+
+    if (do_send_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to send packet\n");
+        return -1;
+    }
+
+    if (do_recv_packet(&cur_pkt) < 0) {
+        fprintf(stderr,"Failed to recv packet\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_DOS &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
+        fprintf(stderr,"MS-DOS returned an error\n");
+        return -1;
+    }
+
+    if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_DOS ||
+        cur_pkt.data[0] != REMCTL_SERIAL_TYPE_DOS_STUFF_BIOS_KEYBOARD) {
+        fprintf(stderr,"I/O write failed\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int do_file_create(const char * const str) {
 retry:
     remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_FILE);
@@ -2016,7 +2052,28 @@ int main(int argc,char **argv) {
 
         close(ofd);
     }
+    else if (!strcmp(command,"stuffkey")) {
+        if (memstr != NULL) {
+            unsigned int i;
 
+            for (i=0;memstr[i] != 0;i++) {
+                if (do_stuff_key(memstr[i] & 0xFF) < 0)
+                    return 1;
+            }
+
+            printf("STUFF OK\n");
+        }
+        else if (data != 0) {
+            if (do_stuff_key(data) < 0)
+                return 1;
+
+            printf("STUFF OK\n");
+        }
+        else {
+            fprintf(stderr,"stuffkey needs -data or -mstr\n");
+            return 1;
+        }
+    }
     else {
         fprintf(stderr,"Unknown command\n");
         return 1;
