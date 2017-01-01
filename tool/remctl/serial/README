@@ -101,3 +101,10 @@ flat real mode (the 64KB region just past the 1MB boundary).
 Extended memory access may be further limited by the state of the
 A20 gate.
 
+** Why doesn't stuffing the BIOS keyboard buffer always work?
+
+In order for the "stuff keyboard buffer" command to work, the
+program in question must use either DOS or BIOS INT 16h to
+read keyboard input. If the program talks directly to the
+keyboard controller, the stuff command will have no effect.
+
