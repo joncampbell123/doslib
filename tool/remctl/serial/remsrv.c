@@ -1025,7 +1025,13 @@ void handle_packet(void) {
                         do_file_create_command();
                         break;
                     case REMCTL_SERIAL_TYPE_FILE_CLOSE:
-                        close_open_file();
+                        if (open_file_fd >= 0) {
+                            close_open_file();
+                        }
+                        else {
+                            cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+                            cur_pkt_out.hdr.length = 1;
+                        }
                         break;
                     case REMCTL_SERIAL_TYPE_FILE_SEEK:
                         do_file_seek_command();
