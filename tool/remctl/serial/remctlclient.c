@@ -1090,6 +1090,7 @@ int do_next_dir() {
 }
 
 int do_stuff_key(const unsigned short code) {
+retry:
     remctl_serial_packet_begin(&cur_pkt,REMCTL_SERIAL_TYPE_DOS);
 
     cur_pkt.data[cur_pkt.hdr.length++] = REMCTL_SERIAL_TYPE_DOS_STUFF_BIOS_KEYBOARD;
@@ -1112,6 +1113,14 @@ int do_stuff_key(const unsigned short code) {
         cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR) {
         fprintf(stderr,"MS-DOS returned an error\n");
         return -1;
+    }
+
+    /* the keyboard buffer could be full */
+    if (cur_pkt.hdr.type == REMCTL_SERIAL_TYPE_DOS &&
+        cur_pkt.data[0] == REMCTL_SERIAL_TYPE_FILE_MSDOS_FULL) {
+        fprintf(stderr,"Keyboard buffer is full...\n");
+        usleep(10000);
+        goto retry;
     }
 
     if (cur_pkt.hdr.type != REMCTL_SERIAL_TYPE_DOS ||

@@ -41,6 +41,7 @@ enum {
     REMCTL_SERIAL_TYPE_FILE_MSDOS_IS_BUSY=0x02,     /* response code CTRL+B */
     REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR=0x05,       /* response code CTRL+E */
     REMCTL_SERIAL_TYPE_FILE_MSDOS_FINISHED=0x06,    /* response code CTRL+F */
+    REMCTL_SERIAL_TYPE_FILE_MSDOS_FULL=0x07,        /* response code CTRL+G */
     REMCTL_SERIAL_TYPE_FILE_CHDIR=0x43,             /* chdir ASCIIZ (WARNING: CwD is GLOBAL in MS-DOS, affects application!) */
     REMCTL_SERIAL_TYPE_FILE_FIND=0x46,              /* find (will return multiple packets until end) */
     REMCTL_SERIAL_TYPE_FILE_MKDIR=0x4D,             /* mkdir ASCIIZ */

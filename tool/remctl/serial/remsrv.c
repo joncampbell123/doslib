@@ -738,7 +738,7 @@ void do_dos_stuff_bios_keyboard_command(void) {
 
     if (((head+2-0x1E)&0x1F) == (tail-0x1E)) {
         /* buffer full */
-        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_ERROR;
+        cur_pkt_out.data[0] = REMCTL_SERIAL_TYPE_FILE_MSDOS_FULL;
         cur_pkt_out.hdr.length = 1;
         return;
     }
