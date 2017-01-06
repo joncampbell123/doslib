@@ -14,3 +14,7 @@ vorbis .............. Xiph Vorbis codec library
 vorbtool ............ Xiph Vorbis tools
 zlib ................ ZLIB compression/decompression library
 
+These external libraries are NOT goverened by this project's license.
+They are governed by their own licenses. They are here because of modifications
+to run in the DOS/Windows environment.
+
