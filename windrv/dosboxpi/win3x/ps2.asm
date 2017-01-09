@@ -200,25 +200,20 @@ ps2_int proc	far
 	mov	ah,al
 	xchg	al,bptr device_int[PS2_OLD_STATUS]
 
+    ; See what they're doing here? Shifting previous PS/2 status (button state PP)
+    ; and arranging current PS/2 status (button state BB) so that bits 3-0 contain (PPBB)
+    ; which is then fed to a lookup table to translate them into the button down/up
+    ; event flags that are fed to Windows.
 	mov	cl,2			;B=button, S=sign, P=prev button state
-;					;AX = xxSSxxBB xxxxxxPP
+					    ;AX = xxSSxxBB xxxxxxPP
 	ror	ah,cl			;AX = BBxxSSxx xxxxxxPP
 	rol	ax,cl			;AX = xxSSxxxx xxxxPPBB
-	inc	cx
-	shl	ah,cl			;AX = Sxxxxxxx xxxxPPBB, 'C' is Y sign
-	sbb	ch,ch			;Set sign of Y delta
-	.errnz	PS2_NEG_Y-00100000b
-	mov	cl,bh			;CX = Y delta
-	neg	cx			;They don't know which direction is up
 
-	shl	ah,1
-	sbb	bh,bh			;BX = delta X
-
-	xchg	bx,ax			;Get button deltas
+	xchg	bx,ax			;Get button deltas (because 16-bit code can only use BX/SI/DI for index to memory)
 	and	bx,0000000000001111b
-	mov	bptr device_int[PS2_DATA_FLAG],bh
-	mov	bl,bptr device_int[bx][STATE_XLATE]
-	xchg	ax,bx
+	mov	bptr device_int[PS2_DATA_FLAG],bh       ; <- BH = 0 because of BX &= 0xF, so this is a clever way to zero out the data flag
+	mov	bl,bptr device_int[bx][STATE_XLATE]     ; <- STATE_XLATE[bx] where BX = 00000000`0000PPBB button states
+	xchg	ax,bx                               ; then throw it back into AX where the Windows event callback expects the SF_* flags
 
     push    ax
     push    dx
