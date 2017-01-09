@@ -30,7 +30,7 @@ ASM = masm -v -ML  $(OPT)					# MASM 4.01 & >
 .asm.obj:
 	$(ASM) $*,$@;
 
-mouse:  mouse.drv
+mouse:  dboxmpi.drv
 
 mouse.obj:	mouse.asm mouse.inc
 
@@ -38,12 +38,12 @@ ps2.obj:	ps2.asm mouse.inc
 
 int33h.obj:	int33h.asm mouse.inc
 
-mouse.drv:	mouse.def mouse.obj ps2.obj int33h.obj
+dboxmpi.drv:	mouse.def mouse.obj ps2.obj int33h.obj
       link @mouse.lnk
-      rc mouse.drv
+      rc dboxmpi.drv
       mapsym mouse
-	  copy mouse.drv ..\bin\win30\mouse.drv
-	  copy mouse.drv ..\bin\win31\mouse.drv
+	  copy dboxmpi.drv ..\bin\win30\dboxmpi.drv
+	  copy dboxmpi.drv ..\bin\win31\dboxmpi.drv
 
 clean:
 	del *.obj

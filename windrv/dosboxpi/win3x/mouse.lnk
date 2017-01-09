@@ -1,5 +1,5 @@
 mouse ps2 int33h
-mouse.drv
+dboxmpi.drv
 mouse/map/al:16
 libw /NOD
 mouse.def
