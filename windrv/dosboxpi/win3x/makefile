@@ -42,7 +42,6 @@ dboxmpi.drv:	mouse.def mouse.obj ps2.obj int33h.obj
       link @mouse.lnk
       rc dboxmpi.drv
       mapsym mouse
-	  copy dboxmpi.drv ..\bin\win30\dboxmpi.drv
 	  copy dboxmpi.drv ..\bin\win31\dboxmpi.drv
 
 clean:
