@@ -221,19 +221,14 @@ ps2_int proc	far
 	xchg	ax,bx
 
     push    ax
-    mov     dx,0043h
-    mov     ax,4d55h
+    mov     dx,0043h    ; 0043:4D56 DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED
+    mov     ax,4d56h
     int     3
     call far ptr dosbox_ig_write_regsel
     call far ptr dosbox_ig_read_data
     mov     bx,ax       ; X coordinate in AX (lower 16-bit)
     mov     cx,dx       ; Y coordinate in DX (upper 16-bit)
     pop     ax
-
-    add bx,bx
-    add bx,bx
-    add cx,cx
-    add cx,cx
 
     or  al,001h         ;movement
     or  ah,080h         ;SF_ABSOLUTE
