@@ -7,6 +7,7 @@ C_SOURCE =    iglib.c
 OBJS =        $(SUBDIR)$(HPS)iglib.obj $(SUBDIR)$(HPS)igregio.obj $(SUBDIR)$(HPS)igrselio.obj $(SUBDIR)$(HPS)igprobe.obj $(SUBDIR)$(HPS)igreset.obj $(SUBDIR)$(HPS)igrident.obj $(SUBDIR)$(HPS)igverstr.obj $(SUBDIR)$(HPS)igdbgmsg.obj
 MCR_EXE =     $(SUBDIR)$(HPS)mcr.$(EXEEXT)
 UMC_EXE =     $(SUBDIR)$(HPS)umc.$(EXEEXT)
+UMCN_EXE =    $(SUBDIR)$(HPS)umcn.$(EXEEXT)
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 SSHOT_EXE =   $(SUBDIR)$(HPS)sshot.$(EXEEXT)
 VCAP_EXE =    $(SUBDIR)$(HPS)vcap.$(EXEEXT)
@@ -30,11 +31,18 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_DOSBOXID_LIB) .symbolic
 
-exe: $(TEST_EXE) $(MCR_EXE) $(UMC_EXE) $(SSHOT_EXE) $(VCAP_EXE) $(WCAP_EXE) $(KBSTAT_EXE) $(KBINJECT_EXE) $(MSINJECT_EXE) .symbolic
+exe: $(TEST_EXE) $(MCR_EXE) $(UMC_EXE) $(UMCN_EXE) $(SSHOT_EXE) $(VCAP_EXE) $(WCAP_EXE) $(KBSTAT_EXE) $(KBINJECT_EXE) $(MSINJECT_EXE) .symbolic
 
 !ifdef UMC_EXE
 $(UMC_EXE): $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)umc.obj $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)umc.obj $(HW_DOSBOXID_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(UMC_EXE) option map=$(UMC_EXE).map
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef UMCN_EXE
+$(UMCN_EXE): $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)umcn.obj $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)umcn.obj $(HW_DOSBOXID_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(UMCN_EXE) option map=$(UMCN_EXE).map
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif

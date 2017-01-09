@@ -37,7 +37,8 @@ extern uint16_t dosbox_id_baseio;
 #define DOSBOX_ID_REG_DEBUG_OUT			(0x0000DEB0UL)
 #define DOSBOX_ID_REG_DEBUG_CLEAR		(0x0000DEB1UL)
 
-#define DOSBOX_ID_REG_USER_MOUSE_CURSOR     (0x00434D55UL)
+#define DOSBOX_ID_REG_USER_MOUSE_CURSOR                 (0x00434D55UL)  /* screen coordinates, pixels */
+#define DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED      (0x00434D56UL)  /* screen coordinates, normalized to 0...65535 for Windows 3.x */
 
 #define DOSBOX_ID_REG_RELEASE_MOUSE_CAPTURE (0x0052434DUL)
 
