@@ -231,7 +231,11 @@ ps2_int proc	far
     pop     dx
     pop     ax
 
-    or  al,001h         ;movement
+	mov	dx,bx			;Set movement bit if movement
+	or	dx,cx
+	neg	dx
+	adc	ax,ax
+	
     or  ah,080h         ;SF_ABSOLUTE
 
 	.errnz	SF_MOVEMENT-00000001b
