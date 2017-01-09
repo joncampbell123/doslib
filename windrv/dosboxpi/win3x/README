@@ -31,3 +31,12 @@ should cause the cursor in Windows 3.1 to follow along. While the driver
 is active, clicking the mouse buttons will directly interact with
 Windows 3.1 without triggering the normal DOSBox-X "click to capture"
 behavior.
+
+I do not recommend copying MOUSE.DRV over the stock MOUSE.DRV file
+installed with Windows 3.1, so that you can revert to the stock driver
+by reverting the change to the mouse= line in SYSTEM.INI.
+
+At some point in the future I will change the name of the mouse driver
+file to DBOXMPI.DRV and will provide an OEMSETUP.INF to permit installation
+using the SETUP utility in Windows 3.1
+
