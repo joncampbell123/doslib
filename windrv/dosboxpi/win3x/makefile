@@ -48,4 +48,5 @@ mouse.drv:	mouse.def mouse.obj ps2.obj int33h.obj
 clean:
 	del *.obj
 	del *.lst
+	del *.sym
 

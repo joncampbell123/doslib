@@ -1,4 +1,4 @@
-LIBRARY DBOXMPI
+LIBRARY MOUSE
 
 DESCRIPTION 'DOSBox-X Mouse Pointer Integration driver for Windows 3.x'
 EXETYPE WINDOWS
