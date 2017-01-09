@@ -1,0 +1,9 @@
+DOSBox-X mouse pointer integration driver for Microsoft Windows 3.1
+
+When active, it uses the DOSBox-X integration device to read the absolute
+cursor position of the user's cursor in the DOSBox-X emulator window, and
+maps it to make Windows 3.1 match cursor position. In this way, this
+driver provides the DOSBox-X equivalent of VirtualBox's Guest Additions
+and the mouse pointer integration to allow interaction without having
+to capture the mouse cursor.
+
