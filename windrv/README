@@ -1,0 +1,10 @@
+Windows device drivers.
+
+Most of the code here cannot be independently compiled with DOSLIB.
+It must be compiled using non-free Device Driver Kits.
+
+Perhaps someday the open source world will have headers and tools
+needed to compile Windows device drivers with open source tools.
+
+dosboxpi .............. DOSBox pointer integration
+

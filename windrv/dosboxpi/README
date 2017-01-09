@@ -1,0 +1,20 @@
+Windows device drivers for DOSBox-X pointer integration.
+
+This device driver comes in as a mouse to Windows, and uses
+the DOSBox integration device to read the absolute position
+of the user's cursor within the emulator window. The idea is
+that, much like VirtualBox Guest Additions, the user will
+be able to click and interact with the guest Windows system
+without having to capture the mouse within the emulator
+window.
+
+This source code requires non-free software to compile.
+Microsoft components such as these are required:
+
+ - Microsoft MASM
+ - Microsoft C++ 1.5 (16-bit compiler)
+ - Microsoft Windows 3.1 DDK and Windows 3.1 SDK
+
+Because of the non-free compilation required, binaries
+will be stored in the source tree in the BIN directory.
+
