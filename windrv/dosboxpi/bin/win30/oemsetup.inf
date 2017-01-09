@@ -1,8 +1,8 @@
 [data]
-    Version   = "3.1"
+    Version   = "3.0"
 
 [disks]
-    1 =. ,"DOSBox-X Guest Additions for Windows 3.1 Disk",disk1
+    1 =. ,"DOSBox-X Guest Additions for Windows 3.0 Disk",disk1
 
 [pointing.device]
 ;profile = mouse driver,  description,                                    vmd,  dos mouse driver base name
