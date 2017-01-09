@@ -49,6 +49,8 @@ mouse.drv:	mouse.def mouse.obj ser8250.obj 	\
       link @mouse.lnk
       rc mouse.drv
       mapsym mouse
+	  copy mouse.drv ..\bin\win30\mouse.drv
+	  copy mouse.drv ..\bin\win31\mouse.drv
 
 clean:
 	del *.obj

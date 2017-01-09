@@ -40,3 +40,6 @@ At some point in the future I will change the name of the mouse driver
 file to DBOXMPI.DRV and will provide an OEMSETUP.INF to permit installation
 using the SETUP utility in Windows 3.1
 
+The driver has been successfully tested so far with DOSBox-X and
+Microsoft Windows 3.1 in Standard (286) and Enhanced (386) mode.
+
