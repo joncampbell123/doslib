@@ -646,6 +646,23 @@ dosbox_ig_read_regsel   endp
 ; Input:
 ;   DX:AX  32-bit value to write
 ; Output:
+                		public dosbox_ig_write_data
+dosbox_ig_write_data    proc far
+    push    ax
+    xor     al,al           ; 0x00 = CMD_RESET_LATCH
+    out     02Ah,al         ; port 0x28 + ID_COMMAND
+    pop     ax
+
+    out     029h,ax         ; port 0x28 + ID_DATA (lower half)
+    mov     ax,dx
+    out     029h,ax         ; port 0x28 + ID_DATA (upper half)
+
+    retf
+dosbox_ig_write_data    endp
+
+; Input:
+;   DX:AX  32-bit value to write
+; Output:
                 		public dosbox_ig_write_regsel
 dosbox_ig_write_regsel  proc far
     push    ax
@@ -742,6 +759,15 @@ fail:
 	jmp	short resize_ds
 
 got_mouse:
+
+; tell DOSBox-X to notify us of all mouse movement whether or not mouse is captured
+    mov     dx,00043h       ; 0043:4D56
+    mov     ax,04D56h
+    call far ptr dosbox_ig_write_regsel
+
+    xor     dx,dx
+    mov     ax,1            ; notify as PS/2 mouse events
+    call far ptr dosbox_ig_write_data
 ;
 ;	If running under Windows/386 then tell the Win386 mouse driver what
 ;	type of mouse we found.
