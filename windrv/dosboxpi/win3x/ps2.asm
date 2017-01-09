@@ -412,7 +412,7 @@ delta_y equ	byte ptr [bp+08h]
 	mov	ds,ax
 	mov	al,delta_x
 	mov	ah,delta_y
-	mov	wptr device_int[PS2_DELTA_X],ax
+	mov	wptr device_int[PS2_DELTA_X],ax         ; <- See what they did here? Writing DELTA_X and DELTA_Y (both BYTEs) in one WORD write
 	.errnz	PS2_DELTA_Y-PS2_DELTA_X-1
 	mov	al,status
 	mov	bptr device_int[PS2_STATUS],al
