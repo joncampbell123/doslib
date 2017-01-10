@@ -52,3 +52,10 @@
   better if DOSBox-X reverted to the "click to capture"
   behavior when the driver is shutdown.
 
+- Figure out what Windows 3.0 doesn't like about this driver,
+  and fix it. If that requires a win30 copy of this code,
+  then so be it. The best solution would be to find the
+  Windows 3.0 DDK, but the more likely solution would be to
+  disassemble the Windows 3.0 MOUSE.DRV file and see what
+  it's doing compared to Windows 3.1.
+
