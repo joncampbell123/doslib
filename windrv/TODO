@@ -34,6 +34,14 @@ Future Windows driver ideas:
     think of that??). Specify a BITMAPINFOHEADER describing 640x480 VGA
     16-color mode and you get it.
 
+- DISPDIB.DLL for Windows NT.
+
+  - 16-bit version designed to run under NTVDM.EXE that would implement
+    the API using DirectX and/or Windows GDI, trap VGA I/O and emulate
+    linear and mode X.
+  - 32-bit version designed for Windows 9x/ME games that would implement
+    the API using DirectX and/or Windows GDI.
+
 - User-space utility to poke at mouse drivers in Windows 3.1. Since mouse
   drivers are for the most part a user-mode DLL that talks directly to
   hardware (like a DOS program!), one could conceivably debug these drivers
