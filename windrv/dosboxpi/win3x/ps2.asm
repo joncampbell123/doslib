@@ -688,19 +688,6 @@ ps2_disable	proc	near
 
 	call	unhook_us
 
-;	Restore any possible Int 33h mouse
-
-	test	mouse_flags,MF_INT33H
-	jz	ps2_disable_exit	;No int 33h mouse
-
-	mov	ax,I15_MOUSE_SUBFUNC shl 8 + PS2MSF_SET_SAMPLE
-	mov	bh,PS2M_SAMPLING_100
-	call	IssueInt15		;INT 15H with interrupts disabled
-
-	mov	ax,INT33H_ENABLE	;Enable old mouse driver if it's
-	call	IssueInt33		;  there
-
-ps2_disable_exit:
 	ret
 
 ps2_disable	endp
@@ -729,30 +716,6 @@ IssueInt15 proc near
 	ret
 
 IssueInt15 endp
-
-;------------------------------------------------------------------------
-; IssueInt33:
-;
-; Issue an Int 33h instruction with all interrupts except IRQ 1 & 2 masked
-; off in the master PIC.  See IssueInt15 & modification history for more
-; information.
-;
-; Note: This routine assumes SI is not being passed to/from the interrupt
-;	handler!
-;------------------------------------------------------------------------
-
-IssueInt33 proc near
-
-	push	si			;save entry SI
-	call	DisableInts		;disable ints, old mask retruned in SI
-	push	si			;save old mask
-	int	MOUSE_SYS_VEC
-	pop	si			;get old mask
-	call	EnableInts		;  and restore
-	pop	si
-	ret
-
-IssueInt33 endp
 
 ;------------------------------------------------------------------------
 

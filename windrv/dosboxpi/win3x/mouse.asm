@@ -598,8 +598,7 @@ unhook_no_bios_proc:
 	out	MASK_PORT,al
 	sti
 	mov	al,mouse_flags
-	not	al
-	and	al,MF_INT33H		;'Z' clear if to disable at the device
+	not	al                  ;'Z' clear if to disable at the device
 
 unhook_exit:
 	ret

@@ -83,11 +83,6 @@ SF_ABSOLUTE	equ	8000h		;BX,CX are normalized absolute coords
 ;	Definitions of the flag byte mouse_flags
 
 MF_ENABLED	equ	00000001b	;Mouse is enabled
-MF_INT33H	equ	00000010b	;Int 33h mouse found
-;		equ	00000100b	;
-;		equ	00001000b	;
-;		equ	00010000b	;
-;		equ	00100000b	;
 MF_ON_SLAVEPIC  equ	01000000b	;Mouse is on slave PIC
 MF_MOUSE_EXISTS equ	10000000b	;Mouse was found at boot time
 
