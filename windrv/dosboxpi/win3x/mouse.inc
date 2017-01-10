@@ -11,8 +11,6 @@
 ;                                                                          *
 ;***************************************************************************
 
-extrn	__ROMBIOS	:abs
-
 wptr		equ	word ptr
 bptr		equ	byte ptr
 dptr		equ	dword ptr

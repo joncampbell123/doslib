@@ -36,11 +36,8 @@
 
 	externNP ps2_search
 
-	externA  __WINFLAGS
-
 sBegin	Data
 
-globalW 	WinFlags,__WINFLAGS	;Windows environment flags
 globalB 	vector,-1		;Vector # of mouse interrupt
 globalB 	mask_8259,0FFh		;8259 interrupt enable mask, FF if none
 globalB 	old_8259_mask,0FFh	;Value of mouse irq bit before enable
