@@ -117,6 +117,9 @@ externW IntCS				;CS alias for Data Segment
 externD event_proc			;Mouse event procedure when enabled
 externD bios_proc			;Contents of old interrupt vector
 
+prev_x  dw  0
+prev_y  dw  0
+
 sEnd	Data
 
 
@@ -164,7 +167,6 @@ PS2_START	equ	this word
 	assumes ds,nothing
 	assumes es,nothing
 	assumes ss,nothing
-
 
 PS2_PROC_START	equ	$-PS2_START	;Delta to this procedure
 		.errnz	PS2_PROC_START	;Must be first
@@ -226,16 +228,24 @@ ps2_int proc	far
     pop     dx
     pop     ax
 
-	mov	dx,bx			;Set movement bit if movement
-	or	dx,cx
-	neg	dx
-	adc	ax,ax
-	
-    or  ah,080h         ;SF_ABSOLUTE
+    or      ah,080h     ; SF_ABSOLUTE
 
-	.errnz	SF_MOVEMENT-00000001b
-	jz	ps2_no_data		;Nothing happened
+    mov     dx,bx       ; DX = (BX - prev_x) | (CX - prev_y) = only zero IF neither changed
+    sub     dx,wptr prev_x
+    push    ax
+    mov     ax,cx
+    sub     ax,wptr prev_y
+    or      dx,ax       ; ZF=1 if DX == 0
+    pop     ax
+    jz      did_move
+    inc     ax          ; += SF_MOVEMENT
+did_move:
 
+    or      ax,ax
+	jz	    ps2_no_data		; Nothing happened (AX == 0)
+
+    mov wptr prev_x,bx
+    mov wptr prev_y,cx
 	mov	dx,NUMBER_BUTTONS
         xor     si,si		; 0 ExtraMessageInfo for 3.1
         xor     di,di		; 0 ExtraMessageInfo for 3.1
@@ -284,25 +294,25 @@ page
 
 STATE_XLATE	equ	$-PS2_START	;delta to this table
 
-	db	0			shr 1
-	db	(SF_B1_DOWN)		shr 1
-	db	(SF_B2_DOWN)		shr 1
-	db	(SF_B2_DOWN+SF_B1_DOWN) shr 1
+	db	0			
+	db	(SF_B1_DOWN)		
+	db	(SF_B2_DOWN)		
+	db	(SF_B2_DOWN+SF_B1_DOWN) 
 
-	db	(SF_B1_UP)		shr 1
-	db	0			shr 1
-	db	(SF_B1_UP+SF_B2_DOWN)	shr 1
-	db	(SF_B2_DOWN)		shr 1
+	db	(SF_B1_UP)		
+	db	0			
+	db	(SF_B1_UP+SF_B2_DOWN)	
+	db	(SF_B2_DOWN)		
 
-	db	(SF_B2_UP)		shr 1
-	db	(SF_B1_DOWN+SF_B2_UP)	shr 1
-	db	0			shr 1
-	db	(SF_B1_DOWN)		shr 1
+	db	(SF_B2_UP)		
+	db	(SF_B1_DOWN+SF_B2_UP)	
+	db	0			
+	db	(SF_B1_DOWN)		
 
-	db	(SF_B2_UP+SF_B1_UP)	shr 1
-	db	(SF_B2_UP)		shr 1
-	db	(SF_B1_UP)		shr 1
-	db	0			shr 1
+	db	(SF_B2_UP+SF_B1_UP)	
+	db	(SF_B2_UP)		
+	db	(SF_B1_UP)		
+	db	0			
 
 	.errnz	NUMBER_BUTTONS-2	;Won't work unless a two button mouse
 
