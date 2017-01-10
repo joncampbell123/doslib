@@ -44,3 +44,11 @@
   complete, MASM will no longer be needed to assemble this
   driver.
 
+- Have the driver enable DOSBox-X mouse pointer notification
+  in the Enable function and disable DOSBox-X notification
+  in the Disable function. Currently, it only enables
+  notification from the driver initialization and leaves it
+  on. It stays on even after Windows exits. It would be
+  better if DOSBox-X reverted to the "click to capture"
+  behavior when the driver is shutdown.
+

@@ -1,0 +1,69 @@
+
+Future Windows driver ideas:
+
+- DOSBox pointer integration for Windows 95/98
+
+- VirtualBox pointer integration for Windows 3.1, 95, and 98
+
+- Boche VBE / VirtualBox OMAPI display driver for Windows 3.1, 95, and 98.
+  We could make different versions for each, such that the Windows 3.1
+  version has the minimal functions needed while the Windows 95 version
+  would support mode changes and the Windows 98 version would support the
+  full display driver stack including multiple monitors (VirtualBox can
+  emulate a video card with multiple monitors attached).
+
+  - Can we write something for full WinG acceleration in Windows 3.1?
+  - Full DirectX acceleration in Windows 95 and 98? (2D only, obviously)
+
+  Obviously, the Windows 98 driver would target both Windows 98 and
+  Windows ME. I don't believe much changed between 98 and ME to require
+  different drivers.
+
+- Open source replacement for Windows 3.1/95/98 DISPDIB.DLL. If we can
+  figure out how DISPDIB.DLL kicks out the GDI to enter fullscreen like
+  a DOS application, then we can write a better version than Microsoft's
+  own.
+
+  - Full implementation of existing API
+  - Additional VGA modes (tweaked mode X, 352x480, etc. all the standard
+    DOS hacks) including code that can adjust blanking borders for
+    BITMAPINFOHEADER descriptions smaller than the mode's default.
+  - As an extension, could we also offer SVGA modes? Use VESA BIOS
+    extensions, possible alternate code for Tseng ET4000.
+  - We could offer 16-color and monochome DOS modes (why didn't Microsoft
+    think of that??). Specify a BITMAPINFOHEADER describing 640x480 VGA
+    16-color mode and you get it.
+
+- User-space utility to poke at mouse drivers in Windows 3.1. Since mouse
+  drivers are for the most part a user-mode DLL that talks directly to
+  hardware (like a DOS program!), one could conceivably debug these drivers
+  by loading modules from a user-space application and calling entry points
+  and making notes. The DLL model in Win16 makes this easier, because they
+  all have module name "MOUSE" therefore GetModuleHandle("MOUSE") to
+  detect if any mouse driver is present. The utility could show the module's
+  code and data segments, to confirm they are arranged properly.
+
+  This would be at least better than loading the driver and blindly hoping
+  that Windows doesn't crash, especially if the code in it's present form
+  installs interrupt handlers by copying it's subroutine to an alias of
+  the data segment (Yuck!).
+
+- DOSBox Guest Additions for Windows 3.1, Windows 95, and Windows 98/ME.
+  Unlike VirtualBox Guest Additions I would not require the icon to stay
+  in the system tray, and you would have a Control Panel applet to enable
+  or disable it and configure a lot of other fun stuff. The Windows 3.1
+  version could support the classic "start minimized on the desktop"
+  style of background task.
+
+  - Host/Guest clipboard copy-paste.
+  - DOSBox screenshot trigger.
+  - DOSBox video recording start/stop.
+  - DOSBox audio recording start/stop.
+  - Manual cursor tracking from emulator window (driven by application
+    polling the integration device) in cases where the DBOXMPI.DRV
+    driver is not available. For example, I am unable to get DBOXMPI.DRV
+    to work with Windows 3.0, so enabling that function would enable
+    pointer integration for Windows 3.0 and earlier.
+  - User-friendly install and uninstall. VirtualBox Guest Additions
+    would offer a good role model for this.
+
