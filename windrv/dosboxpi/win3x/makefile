@@ -46,4 +46,5 @@ clean:
 	del *.obj
 	del *.lst
 	del *.sym
+	del *.map
 
