@@ -114,7 +114,7 @@ AFLAGS_DLL = -e=2 -zq -zw -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=windows -wx -fp$(C
 NASMFLAGS_DLL = -DTARGET_MSDOS=32 -DMSDOS=1 -DWIN386=1 -DTARGET86=$(TARGET86) -DTARGET_WINDOWS=$(TARGET_WINDOWS) -DMMODE=$(MMODE) -dWIN386=1 -Dsegment_use=USE32 -I$(REL)/asminc/
 
 # macro to patch the EXE to the proper version
-WIN_NE_SETVER_BUILD = ../../tool/chgnever.pl 3.1
+WIN_NE_SETVER_BUILD = ../../tool/chgnever.pl 3.10
 
 # needed to rename ,exe back to .rex if the "EXE" was actually a .rex file
 WIN386_EXE_TO_REX_IF_REX = ../../tool/win386-exe-to-rex-if-rex.pl
