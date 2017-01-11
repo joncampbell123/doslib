@@ -1,5 +1,5 @@
 
-section text class=CODE
+section _TEXT class=CODE
 
 extern MiniLibMain_
 
@@ -7,7 +7,5 @@ extern MiniLibMain_
 global __DLLstart_
 ..start:
 __DLLstart_:
-    push        cs
-    call        MiniLibMain_
-    retf
+    jmp         MiniLibMain_
 
