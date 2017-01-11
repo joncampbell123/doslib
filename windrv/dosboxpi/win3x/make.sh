@@ -3,16 +3,17 @@ rel=../../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
-win31=1 # Windows 3.1
+win30=1
+win31=1
 
 if [ "$1" == "clean" ]; then
     do_clean
-    rm -Rfv win312l
+    rm -Rfv win300l win312l
     exit 0
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
-    allow_build_list=win312l
+    allow_build_list="win300l win312l"
 
     make_buildlist
     begin_bat
@@ -27,6 +28,7 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
     done
 
     # copy the result into BIN
+    cp -vu win300l/dboxmpi.drv ../bin/win30/dboxmpi.drv
     cp -vu win312l/dboxmpi.drv ../bin/win31/dboxmpi.drv
 
     end_bat

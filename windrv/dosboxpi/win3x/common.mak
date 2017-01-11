@@ -67,19 +67,29 @@ $(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)
 	%write tmp.cmd segment _NDDATA PRELOAD FIXED SHARED
 	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd option alignment=16
+! ifeq TARGET_WINDOWS 30
+	%write tmp.cmd option version=3.0  # FIXME: Is Watcom's linker IGNORING THIS?
+! else
 	%write tmp.cmd option version=3.10  # FIXME: Is Watcom's linker IGNORING THIS?
+! endif
 	%write tmp.cmd option modname=MOUSE
 	%write tmp.cmd option description 'DOSBox-X Mouse Pointer Integration driver for Windows 3.x'
 	%write tmp.cmd export Inquire.1
 	%write tmp.cmd export Enable.2
 	%write tmp.cmd export Disable.3
 	%write tmp.cmd export MouseGetIntVect.4
+! ifeq TARGET_WINDOWS 31
 	%write tmp.cmd export WEP
+! endif
 	%write tmp.cmd name $(DBOXMPI_DRV)
 	@wlink @tmp.cmd
 	@wrc -31 $(DBOXMPI_DRV)
 ! ifdef WIN_NE_SETVER_BUILD
+!  ifeq TARGET_WINDOWS 30
+	../../../tool/chgnever.pl 3.0 $(DBOXMPI_DRV)
+!  else
 	../../../tool/chgnever.pl 3.10 $(DBOXMPI_DRV)
+!  endif
 ! endif
 !endif
 
