@@ -36,11 +36,17 @@ int WINAPI __loadds MouseGetIntVect(void) {
 void WINAPI __loadds Enable(const void far * const EventProc) {
     if (!AssignedEventProc) {
         AssignedEventProc = EventProc;
+
+        dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
+        dosbox_id_write_data(1); /* PS/2 notification */
     }
 }
 
 void WINAPI __loadds Disable(void) {
     if (AssignedEventProc) {
+        dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
+        dosbox_id_write_data(0); /* disable */
+
         AssignedEventProc = NULL;
     }
 }
