@@ -116,9 +116,11 @@ void WINAPI __loadds Disable(void) {
     }
 }
 
+#if TARGET_WINDOWS >= 31
 WORD WINAPI WEP(BOOL bSystemExit) {
     return 1;
 }
+#endif
 
 unsigned short bios_equipment();
 #pragma aux bios_equipment = \
