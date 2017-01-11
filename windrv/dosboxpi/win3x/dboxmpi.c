@@ -25,12 +25,9 @@ typedef MOUSEINFO* PMOUSEINFO;
 typedef MOUSEINFO FAR* LPMOUSEINFO;
 #pragma pack(pop)
 
-MOUSEINFO my_mouseinfo = {0};
+static MOUSEINFO my_mouseinfo = {0};
 
 extern const void far * __based( __segname("_NDDATA") ) AssignedEventProc;
-extern unsigned short __based( __segname("_NDDATA") ) prev_x;
-extern unsigned short __based( __segname("_NDDATA") ) prev_y;
-extern unsigned char __based( __segname("_NDDATA") ) prev_status;
 
 extern void far int15_handler();
 

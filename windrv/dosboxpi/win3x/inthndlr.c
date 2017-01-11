@@ -11,14 +11,15 @@
 #include "mouse.h"
 
 const void far * __based( __segname("_NDDATA") ) AssignedEventProc = NULL;
-unsigned short __based( __segname("_NDDATA") ) prev_x = 0xFFFFU;
-unsigned short __based( __segname("_NDDATA") ) prev_y = 0xFFFFU;
-unsigned char __based( __segname("_NDDATA") ) prev_status = 0;
+
+static unsigned short __based( __segname("_NDDATA") ) prev_x = 0xFFFFU;
+static unsigned short __based( __segname("_NDDATA") ) prev_y = 0xFFFFU;
+static unsigned char __based( __segname("_NDDATA") ) prev_status = 0;
 
 /* mouse button change lookup (PPBB) P=previous button state B=current button state */
 /* this is const (readonly) data, so stick it in with the code segment where Win16
  * protected mode prevents writing to code segments anyway */
-const unsigned char __based( __segname("_CODE") ) mousebutton_lookup[4*4] = {
+static const unsigned char __based( __segname("_CODE") ) mousebutton_lookup[4*4] = {
 // P=00 B=xx
     0,
     SF_B1_DOWN,
