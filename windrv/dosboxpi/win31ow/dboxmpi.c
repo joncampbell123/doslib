@@ -24,7 +24,8 @@ typedef MOUSEINFO FAR* LPMOUSEINFO;
 #pragma pack(pop)
 
 MOUSEINFO my_mouseinfo = {0};
-const void far *AssignedEventProc = NULL;
+
+extern const void far * __based( __segname("_NDDATA") ) AssignedEventProc;
 
 WORD PASCAL __loadds Inquire(LPMOUSEINFO mouseinfo) {
     *mouseinfo = my_mouseinfo;

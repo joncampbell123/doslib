@@ -8,6 +8,7 @@
 
 #include "iglib.h"
 
+const void far * __based( __segname("_NDDATA") ) AssignedEventProc = NULL;
 unsigned short __based( __segname("_NDDATA") ) prev_x = 0xFFFFU;
 unsigned short __based( __segname("_NDDATA") ) prev_y = 0xFFFFU;
 unsigned char __based( __segname("_NDDATA") ) prev_status = 0;
