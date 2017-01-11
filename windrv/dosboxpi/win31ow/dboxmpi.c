@@ -8,6 +8,8 @@
 
 #include "iglib.h"
 
+#include "mouse.h"
+
 #pragma pack(push,1)
 typedef struct MOUSEINFO {
     uint8_t         msExist;
