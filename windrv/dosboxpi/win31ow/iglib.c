@@ -13,7 +13,5 @@
 #include <hw/dos/doswin.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
 
-#include <hw/dosboxid/iglib.h>
-
-uint16_t dosbox_id_baseio = 0x28U;	// Default ports 0x28 - 0x2B
+#include "iglib.h"
 

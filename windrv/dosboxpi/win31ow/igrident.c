@@ -13,7 +13,7 @@
 #include <hw/dos/doswin.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
 
-#include <hw/dosboxid/iglib.h>
+#include "iglib.h"
 
 uint32_t dosbox_id_read_identification() {
 	/* now read the identify register */

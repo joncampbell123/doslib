@@ -10,6 +10,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq 
 NOW_BUILDING = WINDRV_DOSBOXPI_WIN31OW
 
 DISCARDABLE_CFLAGS = -nt=_TEXT -nc=CODE
+NONDISCARDABLE_CFLAGS = -nt=_NDTEXT -nc=NDCODE
 
 DBOXMPI_DRV = $(SUBDIR)$(HPS)dboxmpi.drv
 
@@ -22,6 +23,18 @@ DBOXMPI_DRV = $(SUBDIR)$(HPS)dboxmpi.drv
 .ASM.OBJ:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
 
+$(SUBDIR)$(HPS)inthndlr.obj: inthndlr.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $(NONDISCARDABLE_CFLAGS) $[@
+	@$(CC) @tmp.cmd
+
+$(SUBDIR)$(HPS)igrselio.obj: igrselio.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $(NONDISCARDABLE_CFLAGS) $[@
+	@$(CC) @tmp.cmd
+
+$(SUBDIR)$(HPS)igregio.obj: igregio.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $(NONDISCARDABLE_CFLAGS) $[@
+	@$(CC) @tmp.cmd
+
 all: lib exe
 
 exe: $(DBOXMPI_DRV) .symbolic
@@ -29,7 +42,7 @@ exe: $(DBOXMPI_DRV) .symbolic
 lib: .symbolic
 
 !ifdef DBOXMPI_DRV
-$(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)igprobe.obj $(SUBDIR)$(HPS)igreset.obj $(SUBDIR)$(HPS)igregio.obj $(SUBDIR)$(HPS)igrident.obj $(SUBDIR)$(HPS)igrselio.obj $(SUBDIR)$(HPS)iglib.obj
+$(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)igprobe.obj $(SUBDIR)$(HPS)igreset.obj $(SUBDIR)$(HPS)igregio.obj $(SUBDIR)$(HPS)igrident.obj $(SUBDIR)$(HPS)igrselio.obj $(SUBDIR)$(HPS)iglib.obj $(SUBDIR)$(HPS)inthndlr.obj
 	%write tmp.cmd option quiet
 	%write tmp.cmd file $(SUBDIR)$(HPS)dllentry.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)igprobe.obj
@@ -39,6 +52,7 @@ $(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)
 	%write tmp.cmd file $(SUBDIR)$(HPS)igrselio.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)iglib.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)dboxmpi.obj
+	%write tmp.cmd file $(SUBDIR)$(HPS)inthndlr.obj
 	%write tmp.cmd option map=$(DBOXMPI_DRV).map
 	%write tmp.cmd option osname='Windows 16-bit'
 	%write tmp.cmd libpath %WATCOM%/lib286
@@ -49,6 +63,8 @@ $(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)
 	%write tmp.cmd format windows dll
 	%write tmp.cmd segment TYPE CODE PRELOAD DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD DISCARDABLE SHARED
+	%write tmp.cmd segment _NDTEXT PRELOAD FIXED SHARED
+	%write tmp.cmd segment _NDDATA PRELOAD FIXED SHARED
 	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd option alignment=16
 	%write tmp.cmd option version=3.1

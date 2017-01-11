@@ -13,9 +13,9 @@
 #include <hw/dos/doswin.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
 
-#include <hw/dosboxid/iglib.h>
+#include "iglib.h"
 
-uint32_t dosbox_id_read_data_nrl() {
+static inline uint32_t dosbox_id_read_data_nrl() {
 	uint32_t r;
 
 #if TARGET_MSDOS == 32
@@ -33,7 +33,7 @@ uint32_t dosbox_id_read_data() {
 	return dosbox_id_read_data_nrl();
 }
 
-void dosbox_id_write_data_nrl(const uint32_t val) {
+static inline void dosbox_id_write_data_nrl(const uint32_t val) {
 #if TARGET_MSDOS == 32
 	outpd(DOSBOX_IDPORT(DOSBOX_ID_DATA),val);
 #else

@@ -6,7 +6,7 @@
 
 #include <hw/cpu/cpu.h>
 
-#include <hw/dosboxid/iglib.h>
+#include "iglib.h"
 
 #pragma pack(push,1)
 typedef struct MOUSEINFO {
