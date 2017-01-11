@@ -26,6 +26,10 @@ typedef MOUSEINFO FAR* LPMOUSEINFO;
 MOUSEINFO my_mouseinfo = {0};
 
 extern const void far * __based( __segname("_NDDATA") ) AssignedEventProc;
+extern unsigned short __based( __segname("_NDDATA") ) prev_x;
+extern unsigned short __based( __segname("_NDDATA") ) prev_y;
+extern unsigned char __based( __segname("_NDDATA") ) prev_status;
+extern unsigned char __based( __segname("_NDDATA") ) cur_status;
 
 WORD PASCAL __loadds Inquire(LPMOUSEINFO mouseinfo) {
     *mouseinfo = my_mouseinfo;
