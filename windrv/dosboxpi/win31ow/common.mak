@@ -47,8 +47,8 @@ $(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)
 	%write tmp.cmd option nocaseexact
 	%write tmp.cmd option stack=8k, heapsize=1k
 	%write tmp.cmd format windows dll
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD FIXED SHARED
+	%write tmp.cmd segment TYPE CODE PRELOAD DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD DISCARDABLE SHARED
 	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd option alignment=16
 	%write tmp.cmd option version=3.1
