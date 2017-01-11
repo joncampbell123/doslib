@@ -42,7 +42,7 @@ const unsigned char __based( __segname("_CODE") ) mousebutton_lookup[4*4] = {
     0
 };
 
-void hello() {
-    __asm int 3
+void interrupt int15_handler() {
+    /* TODO: YES!!! This handler works! */
 }
 

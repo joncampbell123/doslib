@@ -33,6 +33,8 @@ extern unsigned short __based( __segname("_NDDATA") ) prev_y;
 extern unsigned char __based( __segname("_NDDATA") ) prev_status;
 extern unsigned char __based( __segname("_NDDATA") ) cur_status;
 
+extern void int15_handler();
+
 WORD PASCAL __loadds Inquire(LPMOUSEINFO mouseinfo) {
     *mouseinfo = my_mouseinfo;
     return sizeof(my_mouseinfo);
@@ -44,7 +46,40 @@ int WINAPI __loadds MouseGetIntVect(void) {
 
 void WINAPI __loadds Enable(const void far * const EventProc) {
     if (!AssignedEventProc) {
+        unsigned char fail=1;
+
         _cli();
+
+        __asm {
+            stc
+
+            mov     ax,0xC205           ; PS/2 initialize
+            mov     bh,3                ; data package size
+            int     15h
+            jc      failed
+
+            mov     ax,0xC201           ; PS/2 reset interface
+            int     15h
+            jc      failed
+
+            mov     ax,0xC207           ; PS/2 set pointing device
+            mov     bx,seg int15_handler
+            mov     es,bx
+            mov     bx,offset int15_handler
+            int     15h
+            jc      failed
+
+            stc
+            mov     ax,0xC200           ; PS/2 enable/disable
+            mov     bh,0x01             ; enable
+            int     15h
+            jc      failed
+
+            mov     fail,0
+failed:
+        }
+
+        if (fail) return;
 
         AssignedEventProc = EventProc;
 
@@ -61,6 +96,18 @@ void WINAPI __loadds Disable(void) {
 
         dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
         dosbox_id_write_data(0); /* disable */
+
+        __asm {
+            stc
+
+            stc
+            mov     ax,0xC200           ; PS/2 enable/disable
+            mov     bh,0x00             ; disable
+            int     15h
+
+            mov     ax,0xC201           ; PS/2 reset interface
+            int     15h
+        }
 
         AssignedEventProc = NULL;
         _sti();
@@ -119,7 +166,7 @@ WORD MiniLibMain(void) {
     /* it exists. fill in the struct. take shortcuts, struct is initialized as zero. */
     my_mouseinfo.msExist = 1;
     my_mouseinfo.msNumButtons = 2;
-    my_mouseinfo.msRate = 30; /* copy Microsoft sample driver's value */
+    my_mouseinfo.msRate = 60;
     return 1;
 }
 
