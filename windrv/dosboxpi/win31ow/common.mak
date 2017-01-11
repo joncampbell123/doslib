@@ -77,6 +77,7 @@ $(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)
 	%write tmp.cmd export WEP
 	%write tmp.cmd name $(DBOXMPI_DRV)
 	@wlink @tmp.cmd
+	@wrc -31 $(DBOXMPI_DRV)
 !endif
 
 clean: .SYMBOLIC

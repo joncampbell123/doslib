@@ -31,9 +31,8 @@ extern const void far * __based( __segname("_NDDATA") ) AssignedEventProc;
 extern unsigned short __based( __segname("_NDDATA") ) prev_x;
 extern unsigned short __based( __segname("_NDDATA") ) prev_y;
 extern unsigned char __based( __segname("_NDDATA") ) prev_status;
-extern unsigned char __based( __segname("_NDDATA") ) cur_status;
 
-extern void int15_handler();
+extern void far int15_handler();
 
 WORD PASCAL __loadds Inquire(LPMOUSEINFO mouseinfo) {
     *mouseinfo = my_mouseinfo;
@@ -45,6 +44,9 @@ int WINAPI __loadds MouseGetIntVect(void) {
 }
 
 void WINAPI __loadds Enable(const void far * const EventProc) {
+    if (EventProc == NULL)
+        return;
+
     if (!AssignedEventProc) {
         unsigned char fail=1;
 
