@@ -50,7 +50,9 @@ const unsigned char __based( __segname("_CODE") ) mousebutton_lookup[4*4] = {
  *   [word4]
  *   [return address segment]       <- BIOS far call to our callback
  *   [return address offset]
- *   [saved AX]                     <- our callback                        <- SS:SP right before near call to this function
+ *   [saved AX]                     <- our callback
+ *   [saved DS]
+ *   [saved ES]                                                         <- SS:SP right before near call to this function
  *
  *   __cdecl passes "right to left", meaning that arguments are pushed onto the stack in that order.
  *
@@ -60,7 +62,7 @@ const unsigned char __based( __segname("_CODE") ) mousebutton_lookup[4*4] = {
  *          __loadds is useless here, because it will only load DGROUP instead.
  *          es: prefixes on memory references are a bit wasteful.
  *   */
-static void __cdecl near int15_handler_C(const unsigned short _ax,const unsigned short _ds,const unsigned short _es,const unsigned short retn,const unsigned short retf,const unsigned short word4,const unsigned short ydata,const unsigned short xdata,const unsigned short status) {
+static void __cdecl near int15_handler_C(const unsigned short _es,const unsigned short _ds,const unsigned short _ax,const unsigned short retn,const unsigned short retf,const unsigned short word4,const unsigned short ydata,const unsigned short xdata,const unsigned short status) {
     unsigned short win_status = SF_ABSOLUTE;
     unsigned short pos_x,pos_y;
 
