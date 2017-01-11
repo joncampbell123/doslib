@@ -1,0 +1,41 @@
+DOSBox-X mouse pointer integration driver for Microsoft Windows 3.1
+
+When active, it uses the DOSBox-X integration device to read the absolute
+cursor position of the user's cursor in the DOSBox-X emulator window, and
+maps it to make Windows 3.1 match cursor position. In this way, this
+driver provides the DOSBox-X equivalent of VirtualBox's Guest Additions
+and the mouse pointer integration to allow interaction without having
+to capture the mouse cursor.
+
+How to manually install:
+
+Take the compiled DBOXMPI.DRV file and copy it to a location on your hard
+drive to "install" it.
+
+Then edit C:\WINDOWS\SYSTEM.INI.
+
+Locate the [boot] section, then the line:
+
+mouse=dboxmpi.drv
+
+Change it to:
+
+mouse=<location of the DOSBox-X dboxmpi.drv file>
+
+For example, if you copied it to \DOSBOX\DBOXMPI.DRV it would become:
+
+mouse=C:\DOSBOX\DBOXMPI.DRV
+
+When you start Windows 3.1, moving the cursor over the DOSBox-X window
+should cause the cursor in Windows 3.1 to follow along. While the driver
+is active, clicking the mouse buttons will directly interact with
+Windows 3.1 without triggering the normal DOSBox-X "click to capture"
+behavior.
+
+The driver has been successfully tested so far with DOSBox-X and
+Microsoft Windows 3.1 in Standard (286) and Enhanced (386) mode.
+
+*** NOTICE: This driver has been superseded by Jonathan's Open Watcom
+based rewrite. This code has been renamed to win31ms for historical
+interest.
+

@@ -24,6 +24,9 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
         bat_wmake $name "$what" || exit 1
     done
 
+    # copy the result into BIN
+    cp -vu win313l/dboxmpi.drv ../bin/win31/dboxmpi.drv
+
     end_bat
 fi
 
