@@ -7,11 +7,13 @@ win31=1 # Windows 3.1
 
 if [ "$1" == "clean" ]; then
     do_clean
-    rm -Rfv win313l
+    rm -Rfv win312l
     exit 0
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
+    allow_build_list=win312l
+
     make_buildlist
     begin_bat
 
@@ -25,7 +27,7 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
     done
 
     # copy the result into BIN
-    cp -vu win313l/dboxmpi.drv ../bin/win31/dboxmpi.drv
+    cp -vu win312l/dboxmpi.drv ../bin/win31/dboxmpi.drv
 
     end_bat
 fi
