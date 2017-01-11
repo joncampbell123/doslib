@@ -9,12 +9,14 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq -zl -zu -zw
 NOW_BUILDING = WINDRV_DOSBOXPI_WIN31OW
 
+DISCARDABLE_CFLAGS = -nt=_TEXT -nc=CODE
+
 DBOXMPI_DRV = $(SUBDIR)$(HPS)dboxmpi.drv
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
 .C.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $[@
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $(DISCARDABLE_CFLAGS) $[@
 	@$(CC) @tmp.cmd
 
 .ASM.OBJ:
