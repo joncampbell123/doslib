@@ -1,0 +1,15 @@
+This is an attempt to re-implement the Windows 3.1
+mouse driver from scratch using NASM and Open Watcom.
+
+I do not approve of the bizarre techniques used by
+Microsoft in their SDK mouse sample source code.
+The NE executable format allows segments and attributes
+for each, I think there are better ways of defining
+interrupts than hacking your data segment to be
+fixed and copying your interrupt handler and state
+into an alias like that.
+
+Note that because of stringent arrangement requirements
+for Windows drivers, other library code is duplicated
+here.
+
