@@ -1,0 +1,57 @@
+
+Notes for future ports of this driver to Windows 2.x and Windows 1.x:
+
+ - Looking at the Windows 1.x and 2.x MOUSE.DRV file, the interface (DLL entry points
+   and structures) are the exact same as the one in Windows 3.x.
+
+ - MouseGetIntVect() first appeared in Windows 2.x. That entry point does not exist
+   in the Windows 1.x MOUSE.DRV file.
+
+ - Windows 2.x and earlier require drivers and DLLs to have a valid 32-bit CRC in the
+   NE header. Neither Windows nor the SETUP program will accept a DRV file with an
+   invalid or zero CRC. Unfortunately, Open Watcom does not fill in the CRC field,
+   nor can I find documentation on what exactly the algorithm they used.
+
+ - NE headers in Windows 1.x and 2.x appear to set application type to 0, but
+   other fields are valid. NE fields at byte offset 0x37 to 0x3F are zeroed out.
+
+ - Windows 1.x and Windows 2.x require SETUP to change configuration because all
+   kernel components are lumped into two large files by the SETUP program. For
+   Windows 1.x, these files are WIN100.BIN and WIN100.OVL. For Windows 2.x, these
+   files are WIN200.BIN and WIN200.OVL. All device drivers selected in the SETUP
+   program are copied into these two files and loaded into memory at runtime.
+   There is no SYSTEM.INI to add or replace drivers.
+
+ - However... the Windows 2.x SETUP program does support the OEMSETUP.INF scheme
+   where 3rd party drivers can be installed from disk. You can take a Windows 3.0
+   OEMSETUP, remove the VXD fields, and then give it to Windows 2.0 SETUP and it
+   will see the device driver listed in the OEMSETUP.INF.
+
+ - Windows 2.x SETUP gets it's list of drivers from SETUP.INF, which is written
+   in a syntax that is very different from later versions of Windows. One could
+   add "DOSBox-X Mouse Pointer Integration" to SETUP.INF if one wanted a DOSBox-X
+   based Windows 2.x install set.
+
+ - You can give Windows 1.x PS/2 mouse support by copying MOUSE.DRV from Windows 2.x
+   and then overwriting MOUSE.DRV on Windows 1.x install disks with it. Run the
+   SETUP program again, select "Microsoft Mouse (bus or serial)" and that driver
+   will be packed into WIN100.BIN. When you run Windows 1.0, the newer driver will
+   detect the PS/2 mouse and feed mouse events to Windows as expected.
+
+ - As far as I can tell, once I satisfy the requirements imposed by Windows 2.x
+   and Windows 1.x, I could theoretically get DOSBox pointer integration working
+   with Windows 2.x and Windows 1.x.
+
+   - I could make an OEMSETUP.INF disk for Windows 2.x, then let SETUP take my
+     driver and pack it into WIN200.OVL and WIN200.BIN.
+
+   - Getting it to work with Windows 1.x would require overwriting MOUSE.DRV and
+     then rerunning SETUP to re-pack drivers and kernel files into WIN100.BIN
+     and WIN100.OVL.
+
+ - Question: at what point did absolute pointer support appear in the mouse
+   interface? When did SF_ABSOLUTE appear in the DDK? I'm concerned that going
+   back far enough the absolute coordinates returned by the driver will probably
+   not be interpreted as absolute coordinates and the mouse cursor will probably
+   not act as expected given DOSBox-X's interaction with the driver.
+
