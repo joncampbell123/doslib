@@ -1,0 +1,11 @@
+[data]
+    Version   = "3.0"
+
+[disks]
+    1 =. ,"DOSLIB drivers for Windows 3.0 Disk",disk1
+
+[pointing.device]
+;profile = mouse driver,  description,                                    vmd,  dos mouse driver base name
+;
+ps2mouse  = 1:ps2mouse.drv, "DOSLIB Standard PS/2 Mouse Driver",          x:*vmd,ps2mouse
+
