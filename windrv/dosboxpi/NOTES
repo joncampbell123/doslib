@@ -55,3 +55,31 @@ Notes for future ports of this driver to Windows 2.x and Windows 1.x:
    not be interpreted as absolute coordinates and the mouse cursor will probably
    not act as expected given DOSBox-X's interaction with the driver.
 
+Notes regarding a Windows 95 version of this driver:
+
+- From a user-space perspective, MOUSE.DRV has exactly the same interface as
+  before (as Windows 3.x, 2.x, etc.) however the MOUSE sample in the Windows 95
+  DDK this time boils down to a MOUSE.DRV that does little more than call into
+  a VXD that does all the work. All the actual work of poking at registers and
+  handling interrupts is in the VXD portion.
+
+  The two are considered part of the overall driver though, which is why you
+  see both the DRV and VXD listed in the Device Manager.
+
+  Open Watcom's linker makes reference to VXD output, let's see if we can
+  actually make VXDs from a Linux host with Open Watcom.
+
+- You *can* force-feed Windows 95 the Windows 3.1 driver by editing SYSTEM.INI,
+  but if you do, it will briefly load to the desktop, then drop back to DOS and
+  do a quick reboot in order to come back up and reinstall the PS/2 mouse driver.
+  Only during that reinstall will the Windows 3.1 driver be active. Once you
+  reboot, Microsoft's stock PS/2 driver is back in force.
+
+- Windows 95 does not recognize Windows 3.x OEMSETUP.INF files.
+
+- In the long term, it may be wisest to develop two drivers. One would be a VXD
+  to manage the "DOSBox Integration Device", which would then offer access through
+  a kernel API. The other would be the mouse driver that would both contain VXD
+  code to handle PS/2 and code to call the DOSBox Integration Device to do the
+  same job as it does now in Windows 3.x.
+
