@@ -83,3 +83,7 @@ Notes regarding a Windows 95 version of this driver:
   code to handle PS/2 and code to call the DOSBox Integration Device to do the
   same job as it does now in Windows 3.x.
 
+- It might be better for Windows 95 to make use of the "Pen computing" driver
+  interfaces for DBOXMPI.DRV instead, however it's not clear if we will still
+  be able to hook and act on the PS/2 mouse interrupt that way to take events.
+
