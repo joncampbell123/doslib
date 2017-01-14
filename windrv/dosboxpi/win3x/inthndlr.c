@@ -73,16 +73,35 @@ static void __cdecl near int15_handler_C(const unsigned short _es,const unsigned
     {
         unsigned long r;
 
-        dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
+        /* read user mouse status.
+         * if the user's cursor is locked (captured), then the PS/2 mouse data is relative motion,
+         * and we would be better off sending relative motion like a PS/2 mouse. absolute motion
+         * is for when mouse capture is NOT active */
+        dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_STATUS);
         r = dosbox_id_read_data();
-        pos_x = (unsigned short)(r & 0xFFFFUL);
-        pos_y = (unsigned short)(r >> 16UL);
 
-        if (((pos_x - prev_x) | (pos_y - prev_y)) != 0) /* if X or Y changed, there's movement */
-            win_status |= SF_MOVEMENT;
+        if (r & DOSBOX_ID_REG_USER_MOUSE_STATUS_CAPTURE) {
+            /* DOSBox-X has captured the user's mouse. Send relative motion. */
+            win_status &= ~SF_ABSOLUTE;
 
-        prev_x = pos_x;
-        prev_y = pos_y;
+            pos_x = (unsigned short)  ((int8_t)xdata); /* sign-extend 8-bit motion */
+            pos_y = (unsigned short) -((int8_t)ydata); /* sign-extend 8-bit motion, flip Y direction */
+
+            if ((pos_x | pos_y) != 0)
+                win_status |= SF_MOVEMENT;
+        }
+        else {
+            dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
+            r = dosbox_id_read_data();
+            pos_x = (unsigned short)(r & 0xFFFFUL);
+            pos_y = (unsigned short)(r >> 16UL);
+
+            if (((pos_x - prev_x) | (pos_y - prev_y)) != 0) /* if X or Y changed, there's movement */
+                win_status |= SF_MOVEMENT;
+
+            prev_x = pos_x;
+            prev_y = pos_y;
+        }
     }
 
     {
