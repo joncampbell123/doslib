@@ -68,6 +68,7 @@ static void __cdecl near int15_handler_C(const unsigned short _es,const unsigned
     unsigned short pos_x,pos_y;
 
     _cli();
+    dosbox_id_push_state(); /* user-space may very well in the middle of working with the DOSBOX IG, save state */
 
     {
         unsigned long r;
@@ -94,6 +95,7 @@ static void __cdecl near int15_handler_C(const unsigned short _es,const unsigned
         win_status |= mousebutton_lookup[lookup];
     }
 
+    dosbox_id_pop_state(); /* restore state, so user-space's work continues uninterrupted */
     _sti();
 
     if ((win_status & ~(SF_ABSOLUTE)) != 0) {

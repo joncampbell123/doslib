@@ -24,6 +24,10 @@
 
 #define DOSBOX_ID_CMD_RESET_LATCH		(0x00U)
 #define DOSBOX_ID_CMD_FLUSH_WRITE		(0x01U)
+#define DOSBOX_ID_CMD_PUSH_STATE        (0x20U)
+#define DOSBOX_ID_CMD_POP_STATE         (0x21U)
+#define DOSBOX_ID_CMD_DISCARD_STATE     (0x22U)
+#define DOSBOX_ID_CMD_DISCARD_ALL_STATE (0x23U)
 #define DOSBOX_ID_CMD_CLEAR_ERROR		(0xFEU)
 #define DOSBOX_ID_CMD_RESET_INTERFACE		(0xFFU)
 
@@ -100,6 +104,22 @@ static inline void dosbox_id_reset_interface() {
 
 static inline void dosbox_id_flush_write() {
 	outp(DOSBOX_IDPORT(DOSBOX_ID_COMMAND),DOSBOX_ID_CMD_FLUSH_WRITE);
+}
+
+static inline void dosbox_id_push_state() {
+	outp(DOSBOX_IDPORT(DOSBOX_ID_COMMAND),DOSBOX_ID_CMD_PUSH_STATE);
+}
+
+static inline void dosbox_id_pop_state() {
+	outp(DOSBOX_IDPORT(DOSBOX_ID_COMMAND),DOSBOX_ID_CMD_POP_STATE);
+}
+
+static inline void dosbox_id_discard_state() {
+	outp(DOSBOX_IDPORT(DOSBOX_ID_COMMAND),DOSBOX_ID_CMD_DISCARD_STATE);
+}
+
+static inline void dosbox_id_discard_all_state() {
+	outp(DOSBOX_IDPORT(DOSBOX_ID_COMMAND),DOSBOX_ID_CMD_DISCARD_ALL_STATE);
 }
 
 uint32_t dosbox_id_read_regsel();
