@@ -34,7 +34,7 @@ exe: $(DBOXMPI_DRV) .symbolic
 lib: .symbolic
 
 !ifdef DBOXMPI_DRV
-$(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)inthndlr.obj
+$(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)inthndlr.obj
 	%write tmp.cmd option quiet
 	%write tmp.cmd file $(SUBDIR)$(HPS)dllentry.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)dboxmpi.obj
