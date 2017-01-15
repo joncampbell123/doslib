@@ -48,6 +48,11 @@ do_clean() {
 make_buildlist() {
     build_list=
 
+    if [ x"$also_build_list" != x ]; then
+        echo "Allow list: $also_build_list"
+        build_list="$also_build_list"
+    fi
+
     # assume DOS target
     if [[ x"$win386" == x"1" || x"$win38631" == x"1" || x"$win30" == x"1" || x"$win31" == x"1" || x"$win32s" == x"1" || x"$winnt" == x"1" || x"$win32" == x"1" || x"$os216" == x"1" || x"$os232" == x"1" ]]; then
         true
