@@ -68,7 +68,7 @@ $(SUBDIR)$(HPS)mcr.obj: mcr.c
 	@$(CC) @tmp.cmd
 
 all: $(OMFSEGDG) lib exe
-       
+
 lib: $(HW_DOSBOXID_LIB) .symbolic
 
 exe: $(TEST_EXE) $(MCR_EXE) $(UMC_EXE) $(UMCN_EXE) $(SSHOT_EXE) $(VCAP_EXE) $(WCAP_EXE) $(KBSTAT_EXE) $(KBINJECT_EXE) $(MSINJECT_EXE) .symbolic
