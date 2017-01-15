@@ -24,6 +24,46 @@ $(HW_DOSBOXID_LIB): $(OBJS)
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
 .C.OBJ:
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
+	@$(CC) @tmp.cmd
+
+msinject.obj: msinject.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+kbinject.obj: kbinject.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+kbstat.obj: kbstat.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+sshot.obj: sshot.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+vcap.obj: vcap.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+wcap.obj: wcap.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+test.obj: test.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+umcn.obj: umcn.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+umc.obj: umc.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	@$(CC) @tmp.cmd
+
+mcr.obj: mcr.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
