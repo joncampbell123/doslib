@@ -10,11 +10,11 @@
 
 #include "mouse.h"
 
-const void far * __based( __segname("_NDDATA") ) AssignedEventProc = NULL;
+const void far *AssignedEventProc = NULL;
 
-static unsigned short __based( __segname("_NDDATA") ) prev_x = 0xFFFFU;
-static unsigned short __based( __segname("_NDDATA") ) prev_y = 0xFFFFU;
-static unsigned char __based( __segname("_NDDATA") ) prev_status = 0;
+static unsigned short prev_x = 0xFFFFU;
+static unsigned short prev_y = 0xFFFFU;
+static unsigned char prev_status = 0;
 
 /* mouse button change lookup (PPBB) P=previous button state B=current button state */
 /* this is const (readonly) data, so stick it in with the code segment where Win16
@@ -52,18 +52,14 @@ static const unsigned char __based( __segname("_CODE") ) mousebutton_lookup[4*4]
  *   [return address segment]       <- BIOS far call to our callback
  *   [return address offset]
  *   [saved AX]                     <- our callback
- *   [saved DS]
+ *   [saved BX]
+ *   [saved CX]
+ *   [saved DX]
  *   [saved ES]                                                         <- SS:SP right before near call to this function
  *
  *   __cdecl passes "right to left", meaning that arguments are pushed onto the stack in that order.
- *
- *   FIXME: How do we convince Watcom to load DS register with segment value of _NDDATA?
- *          Looking at the disassembly output of this function, Watcom seems keen on ignoring DS
- *          and loading ES instead to refer to our local variables in the _NDDATA segment.
- *          __loadds is useless here, because it will only load DGROUP instead.
- *          es: prefixes on memory references are a bit wasteful.
- *   */
-static void __cdecl near int15_handler_C(const unsigned short _es,const unsigned short _ds,const unsigned short _ax,const unsigned short retn,const unsigned short retf,const unsigned short word4,const unsigned short ydata,const unsigned short xdata,const unsigned short status) {
+ */
+static void __cdecl near __loadds int15_handler_C(const unsigned short _es,const unsigned short _dx,const unsigned short _cx,const unsigned short _bx,const unsigned short _ax,const unsigned short retn,const unsigned short retf,const unsigned short word4,const unsigned short ydata,const unsigned short xdata,const unsigned short status) {
     unsigned short win_status = SF_ABSOLUTE;
     unsigned short pos_x,pos_y;
 
@@ -126,7 +122,7 @@ static void __cdecl near int15_handler_C(const unsigned short _es,const unsigned
             mov         dx,2            ; number of buttons
             xor         si,si
             xor         di,di
-            call        dword ptr [es:AssignedEventProc]
+            call        dword ptr [AssignedEventProc]
         }
     }
 }
@@ -134,11 +130,15 @@ static void __cdecl near int15_handler_C(const unsigned short _es,const unsigned
 void __declspec(naked) far int15_handler() {
     __asm {
         push    ax      ; because __cdecl won't preserve AX
-        push    ds      ; <- just in case
+        push    bx      ; or BX
+        push    cx      ; or CX
+        push    dx      ; or DX
         push    es      ; and Watcom won't bother saving ES
         call    int15_handler_C
         pop     es
-        pop     ds
+        pop     dx
+        pop     cx
+        pop     bx
         pop     ax
         retf
     }
