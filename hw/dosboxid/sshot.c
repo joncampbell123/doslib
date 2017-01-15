@@ -28,6 +28,11 @@ int main(int argc,char **argv,char **envp) {
 	probe_dos();
 	detect_windows();
 
+    if (windows_mode == WINDOWS_NT) {
+        printf("This program is not compatible with Windows NT\n");
+        return 1;
+    }
+
 #if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(WIN386)
 #else
 	if (!probe_8254()) {

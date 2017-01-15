@@ -27,6 +27,11 @@ int main(int argc,char **argv,char **envp) {
 	probe_dos();
 	detect_windows();
 
+    if (windows_mode == WINDOWS_NT) {
+        printf("This program is not compatible with Windows NT\n");
+        return 1;
+    }
+
 	if (!probe_dosbox_id()) {
 		printf("DOSBox integration device not found\n");
 		return 1;

@@ -11,8 +11,18 @@ win30=1 # Windows 3.0
 win31=1 # Windows 3.1
 win32=1 # Windows 9x/NT/XP/Vista/etc.
 win32s=1 # Windows 3.1 + Win32s
-win386=1
-win38631=1
+win386=1 # Windows 3.0 + Watcom 386 extender
+win38631=1 # Windows 3.1 + Watcom 386 extender
+
+# WARNING: Test programs that run in the Win32 environment are provided,
+#          but should only be run under Windows 3.1, 95, 98, or ME.
+#          They will not work under Windows NT, because they will use
+#          this library in a form that expects to poke directly at I/O
+#          ports. Additionally, because of the preemptive multitasking
+#          nature of Windows 95/98/ME, the test programs WILL work but
+#          might conflict badly if more than one task is directly poking
+#          at the I/O ports (there is not yet any driver to virtualize
+#          the I/O ports to share across processes).
 
 if [ "$1" == "clean" ]; then
     do_clean
