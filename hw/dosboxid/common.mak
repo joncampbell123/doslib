@@ -27,43 +27,43 @@ $(HW_DOSBOXID_LIB): $(OBJS)
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	@$(CC) @tmp.cmd
 
-msinject.obj: msinject.c
+$(SUBDIR)$(HPS)msinject.obj: msinject.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-kbinject.obj: kbinject.c
+$(SUBDIR)$(HPS)kbinject.obj: kbinject.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-kbstat.obj: kbstat.c
+$(SUBDIR)$(HPS)kbstat.obj: kbstat.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-sshot.obj: sshot.c
+$(SUBDIR)$(HPS)sshot.obj: sshot.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-vcap.obj: vcap.c
+$(SUBDIR)$(HPS)vcap.obj: vcap.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-wcap.obj: wcap.c
+$(SUBDIR)$(HPS)wcap.obj: wcap.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-test.obj: test.c
+$(SUBDIR)$(HPS)test.obj: test.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-umcn.obj: umcn.c
+$(SUBDIR)$(HPS)umcn.obj: umcn.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-umc.obj: umc.c
+$(SUBDIR)$(HPS)umc.obj: umc.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
-mcr.obj: mcr.c
+$(SUBDIR)$(HPS)mcr.obj: mcr.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 
