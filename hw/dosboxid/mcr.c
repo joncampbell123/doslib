@@ -21,8 +21,6 @@
 #endif
 
 int main(int argc,char **argv,char **envp) {
-	char tmp[128];
-
 	probe_dos();
 	detect_windows();
 
