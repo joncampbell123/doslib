@@ -23,6 +23,15 @@ win38631=1 # Windows 3.1 + Watcom 386 extender
 #          might conflict badly if more than one task is directly poking
 #          at the I/O ports (there is not yet any driver to virtualize
 #          the I/O ports to share across processes).
+#
+#          Windows targets should be using a DLL to access this device,
+#          rather than direct linking to this library. The DLL method
+#          would allow the program to use a general API while leaving
+#          the actual communication up to a target-specific method,
+#          be it direct I/O ports in Windows 3.x to a VXD device driver
+#          API in Windows 9x/ME to a kernel driver via DeviceIoControl
+#          in Windows NT. A 16-bit and 32-bit DLL will be provided with
+#          different names for each bitness.
 
 if [ "$1" == "clean" ]; then
     do_clean
