@@ -5,8 +5,7 @@
 #include <conio.h>
 
 #include <hw/cpu/cpu.h>
-
-#include "iglib.h"
+#include <hw/dosboxid/iglib.h>
 
 #include "mouse.h"
 

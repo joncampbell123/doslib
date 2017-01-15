@@ -13,7 +13,7 @@
 #include <hw/dos/doswin.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
 
-#include "iglib.h"
+#include <hw/dosboxid/iglib.h>
 
 int dosbox_id_reset() {
 	uint32_t t1,t2;
