@@ -56,6 +56,7 @@ if [ "$1" == "disk2" ]; then
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
+    also_build_list="win300l win312l"
     make_buildlist
     begin_bat
 
