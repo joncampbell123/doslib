@@ -145,6 +145,15 @@ HW_DOSBOXID_LIB=$(HW_DOSBOXID_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)dosboxid.lib
 HW_DOSBOXID_LIB_DEPENDENCIES=
 HW_DOSBOXID_LIB_WLINK_LIBRARIES=library $(HW_DOSBOXID_LIB)
 
+!ifdef TARGET_WINDOWS
+! ifeq TARGET_MSDOS 16
+!  ifeq MMODE l
+HW_DOSBOXID_LIB_DRV=$(HW_DOSBOXID_LIB_DIR)$(HPS)$(SUBDIR)_drv$(HPS)dosboxid.lib
+HW_DOSBOXID_LIB_DRV_WLINK_LIBRARIES=library $(HW_DOSBOXID_LIB_DRV)
+!  endif
+! endif
+!endif
+
 # HW\MPU401---------------------------------------------------------------------------------
 HW_MPU401_LIB_DIR=$(REL)$(HPS)hw$(HPS)mpu401
 HW_MPU401_LIB=$(HW_MPU401_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)mpu401.lib

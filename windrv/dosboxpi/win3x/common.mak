@@ -27,14 +27,6 @@ $(SUBDIR)$(HPS)inthndlr.obj: inthndlr.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $(NONDISCARDABLE_CFLAGS) $[@
 	@$(CC) @tmp.cmd
 
-$(SUBDIR)$(HPS)igrselio.obj: igrselio.c
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $(NONDISCARDABLE_CFLAGS) $[@
-	@$(CC) @tmp.cmd
-
-$(SUBDIR)$(HPS)igregio.obj: igregio.c
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $(NONDISCARDABLE_CFLAGS) $[@
-	@$(CC) @tmp.cmd
-
 all: lib exe
 
 exe: $(DBOXMPI_DRV) .symbolic
@@ -42,17 +34,12 @@ exe: $(DBOXMPI_DRV) .symbolic
 lib: .symbolic
 
 !ifdef DBOXMPI_DRV
-$(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)igprobe.obj $(SUBDIR)$(HPS)igreset.obj $(SUBDIR)$(HPS)igregio.obj $(SUBDIR)$(HPS)igrident.obj $(SUBDIR)$(HPS)igrselio.obj $(SUBDIR)$(HPS)iglib.obj $(SUBDIR)$(HPS)inthndlr.obj
+$(DBOXMPI_DRV): $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)inthndlr.obj
 	%write tmp.cmd option quiet
 	%write tmp.cmd file $(SUBDIR)$(HPS)dllentry.obj
-	%write tmp.cmd file $(SUBDIR)$(HPS)igprobe.obj
-	%write tmp.cmd file $(SUBDIR)$(HPS)igreset.obj
-	%write tmp.cmd file $(SUBDIR)$(HPS)igregio.obj
-	%write tmp.cmd file $(SUBDIR)$(HPS)igrident.obj
-	%write tmp.cmd file $(SUBDIR)$(HPS)igrselio.obj
-	%write tmp.cmd file $(SUBDIR)$(HPS)iglib.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)dboxmpi.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)inthndlr.obj
+	%write tmp.cmd $(HW_DOSBOXID_LIB_DRV_WLINK_LIBRARIES)
 	%write tmp.cmd option map=$(DBOXMPI_DRV).map
 	%write tmp.cmd option osname='Windows 16-bit'
 	%write tmp.cmd libpath %WATCOM%/lib286

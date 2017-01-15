@@ -158,6 +158,14 @@ $(HW_FLOPPY_LIB):
 	@cd $(HERE)
 !endif
 
+# HW\DOSBOXID---------------------------------------------------------------------------------
+!ifneq NOW_BUILDING HW_DOSBOXID_LIB
+$(HW_DOSBOXID_LIB):
+	@cd $(HW_DOSBOXID_LIB_DIR)
+	@$(MAKECMD) build lib $(SUBDIR)
+	@cd $(HERE)
+!endif
+
 # HW\ISAPNP---------------------------------------------------------------------------------
 !ifneq NOW_BUILDING HW_ISAPNP_LIB
 $(HW_ISAPNP_LIB):

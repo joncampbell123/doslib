@@ -35,6 +35,7 @@ win38631=1 # Windows 3.1 + Watcom 386 extender
 
 if [ "$1" == "clean" ]; then
     do_clean
+    rm -Rfv win3???_drv
     rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
     exit 0
 fi
