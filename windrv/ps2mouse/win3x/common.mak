@@ -6,7 +6,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq -zl -zu -zw
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq -zl -zu -zw -zc
 NOW_BUILDING = WINDRV_PS2MOUSE_WIN31OW
 
 DISCARDABLE_CFLAGS = -nt=_TEXT -nc=CODE
@@ -48,9 +48,8 @@ $(PS2MOUSE_DRV): $(SUBDIR)$(HPS)ps2mouse.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDI
 	%write tmp.cmd option stack=8k, heapsize=1k
 	%write tmp.cmd format windows dll
 	%write tmp.cmd segment TYPE CODE PRELOAD DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD FIXED SHARED
 	%write tmp.cmd segment _NDTEXT PRELOAD FIXED SHARED
-	%write tmp.cmd segment _NDDATA PRELOAD FIXED SHARED
 	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd option alignment=16
 ! ifeq TARGET_WINDOWS 30

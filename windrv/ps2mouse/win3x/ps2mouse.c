@@ -25,7 +25,7 @@ typedef MOUSEINFO FAR* LPMOUSEINFO;
 
 static MOUSEINFO my_mouseinfo = {0};
 
-extern const void far * __based( __segname("_NDDATA") ) AssignedEventProc;
+extern const void far *AssignedEventProc;
 
 extern void far int15_handler();
 
