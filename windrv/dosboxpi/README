@@ -8,13 +8,3 @@ be able to click and interact with the guest Windows system
 without having to capture the mouse within the emulator
 window.
 
-Some of the source code requires non-free software to compile.
-Microsoft components such as these are required:
-
- - Microsoft MASM
- - Microsoft C++ 1.5 (16-bit compiler)
- - Microsoft Windows 3.1 DDK and Windows 3.1 SDK
-
-Other drivers are able to compile using entirely open source
-tools.
-
