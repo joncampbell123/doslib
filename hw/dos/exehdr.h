@@ -22,12 +22,6 @@ struct exe_dos_header {
     uint16_t            overlay_number;             // +0x1A overlay number, 0 if main EXE
                                                     // =0x1C total header size
 };
-
-struct exe_dos_header_ne {
-    struct exe_dos_header   main;                   // +0x00 main EXE header
-    uint32_t                ne_offset;              // +0x1C offset of NE/PE/LE/LX/etc header
-                                                    // =0x20 total header size
-};
 #pragma pack(pop)
 
 static inline unsigned long exe_dos_header_file_header_size(const struct exe_dos_header * const header) {
