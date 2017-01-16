@@ -10,6 +10,10 @@ fi
 if [ "$1" == "disk" ]; then
     make_msdos_data_disk install.dsk || exit 1
 
+    mmd   -i install.dsk                    ::win20
+    mcopy -i install.dsk win20/dboxmpi.drv  ::win20/dboxmpi.drv
+    mcopy -i install.dsk win20/oemsetup.inf ::win20/oemsetup.inf
+
     mmd   -i install.dsk                    ::win30
     mcopy -i install.dsk win30/dboxmpi.drv  ::win30/dboxmpi.drv
     mcopy -i install.dsk win30/oemsetup.inf ::win30/oemsetup.inf
