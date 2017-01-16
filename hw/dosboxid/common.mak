@@ -3,6 +3,7 @@
 NOW_BUILDING = HW_DOSBOXID_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 CFLAGS_THIS_DRV = -fo=$(SUBDIR)_drv$(HPS).obj -s -zl -zc -nt=_TEXT
+CFLAGS_THIS_DRVN = -fo=$(SUBDIR)_drvn$(HPS).obj -s -zl -zc -nt=_TEXT
 CFLAGS_THIS_DRV_ND = -fo=$(SUBDIR)_drv$(HPS).obj -s -zl -zc -nt=_NDTEXT -nc=NDCODE
 
 C_SOURCE =    iglib.c
@@ -30,6 +31,13 @@ $(HW_DOSBOXID_LIB_DRV): $(OBJS)
 	wlib -q -b -c $(HW_DOSBOXID_LIB_DRV) -+$(SUBDIR)_drv$(HPS)igverstr.obj -+$(SUBDIR)_drv$(HPS)igdbgmsg.obj
 !endif
 
+!ifdef HW_DOSBOXID_LIB_DRVN
+$(HW_DOSBOXID_LIB_DRVN): $(OBJS)
+	wlib -q -b -c $(HW_DOSBOXID_LIB_DRVN) -+$(SUBDIR)_drvn$(HPS)iglib.obj    -+$(SUBDIR)_drvn$(HPS)igregio.obj  -+$(SUBDIR)_drvn$(HPS)igrselio.obj
+	wlib -q -b -c $(HW_DOSBOXID_LIB_DRVN) -+$(SUBDIR)_drvn$(HPS)igprobe.obj  -+$(SUBDIR)_drvn$(HPS)igreset.obj  -+$(SUBDIR)_drvn$(HPS)igrident.obj
+	wlib -q -b -c $(HW_DOSBOXID_LIB_DRVN) -+$(SUBDIR)_drvn$(HPS)igverstr.obj -+$(SUBDIR)_drvn$(HPS)igdbgmsg.obj
+!endif
+
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
 .C.OBJ:
@@ -38,6 +46,11 @@ $(HW_DOSBOXID_LIB_DRV): $(OBJS)
 !ifdef HW_DOSBOXID_LIB_DRV
 	mkdir -p $(SUBDIR)_drv
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRV) $[@
+	@$(CC) @tmp.cmd
+!endif
+!ifdef HW_DOSBOXID_LIB_DRVN
+	mkdir -p $(SUBDIR)_drvn
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRVN) $[@
 	@$(CC) @tmp.cmd
 !endif
 
@@ -49,6 +62,11 @@ $(SUBDIR)$(HPS)igregio.obj: igregio.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRV_ND) $[@
 	@$(CC) @tmp.cmd
 !endif
+!ifdef HW_DOSBOXID_LIB_DRVN
+	mkdir -p $(SUBDIR)_drvn
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRVN) $[@
+	@$(CC) @tmp.cmd
+!endif
 
 $(SUBDIR)$(HPS)igrselio.obj: igrselio.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
@@ -56,6 +74,11 @@ $(SUBDIR)$(HPS)igrselio.obj: igrselio.c
 !ifdef HW_DOSBOXID_LIB_DRV
 	mkdir -p $(SUBDIR)_drv
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRV_ND) $[@
+	@$(CC) @tmp.cmd
+!endif
+!ifdef HW_DOSBOXID_LIB_DRVN
+	mkdir -p $(SUBDIR)_drvn
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRVN) $[@
 	@$(CC) @tmp.cmd
 !endif
 
@@ -101,7 +124,7 @@ $(SUBDIR)$(HPS)mcr.obj: mcr.c
 
 all: $(OMFSEGDG) lib exe
 
-lib: $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DRV) .symbolic
+lib: $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DRV) $(HW_DOSBOXID_LIB_DRVN) .symbolic
 
 exe: $(TEST_EXE) $(MCR_EXE) $(UMC_EXE) $(UMCN_EXE) $(SSHOT_EXE) $(VCAP_EXE) $(WCAP_EXE) $(KBSTAT_EXE) $(KBINJECT_EXE) $(MSINJECT_EXE) .symbolic
 

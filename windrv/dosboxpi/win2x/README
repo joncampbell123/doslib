@@ -1,0 +1,15 @@
+Attempted Windows 2.x compatible driver.
+
+Noted:
+ - Windows 3.0 real mode will load the driver,
+   but will not load the driver if booting into
+   standard (286) or enhanced (386) mode.
+
+   I'm guessing Microsoft wisely built Windows 3.0
+   to reject older drivers if not starting up
+   in real mode.
+
+ - Windows 2.x at this time refuses to install
+   the driver (SETUP refuses it). I still think
+   it has something to do with the NE CRC field.
+
