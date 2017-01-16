@@ -34,12 +34,11 @@ exe: $(PS2MOUSE_DRV) .symbolic
 lib: .symbolic
 
 !ifdef PS2MOUSE_DRV
-$(PS2MOUSE_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)ps2mouse.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)inthndlr.obj
+$(PS2MOUSE_DRV): $(SUBDIR)$(HPS)ps2mouse.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)inthndlr.obj
 	%write tmp.cmd option quiet
 	%write tmp.cmd file $(SUBDIR)$(HPS)dllentry.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)ps2mouse.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)inthndlr.obj
-	%write tmp.cmd $(HW_DOSBOXID_LIB_DRV_WLINK_LIBRARIES)
 	%write tmp.cmd option map=$(PS2MOUSE_DRV).map
 	%write tmp.cmd option osname='Windows 16-bit'
 	%write tmp.cmd libpath %WATCOM%/lib286
