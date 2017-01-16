@@ -8,12 +8,12 @@ win31=1
 
 if [ "$1" == "clean" ]; then
     do_clean
-    rm -Rfv win300l win312l
+    rm -Rfv win200l win300l win312l
     exit 0
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
-    allow_build_list="win300l win312l"
+    allow_build_list="win200l win300l win312l"
 
     make_buildlist
     begin_bat
@@ -28,6 +28,8 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
     done
 
     # copy the result into BIN
+    cp -vu win200l/ps2mouse.drv ../bin/win10/ps2mouse.drv
+    cp -vu win200l/ps2mouse.drv ../bin/win20/ps2mouse.drv
     cp -vu win300l/ps2mouse.drv ../bin/win30/ps2mouse.drv
     cp -vu win312l/ps2mouse.drv ../bin/win31/ps2mouse.drv
 

@@ -34,11 +34,12 @@ exe: $(PS2MOUSE_DRV) .symbolic
 lib: .symbolic
 
 !ifdef PS2MOUSE_DRV
-$(PS2MOUSE_DRV): $(SUBDIR)$(HPS)ps2mouse.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)inthndlr.obj
+$(PS2MOUSE_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)ps2mouse.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)inthndlr.obj
 	%write tmp.cmd option quiet
 	%write tmp.cmd file $(SUBDIR)$(HPS)dllentry.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)ps2mouse.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)inthndlr.obj
+	%write tmp.cmd $(HW_DOSBOXID_LIB_DRV_WLINK_LIBRARIES)
 	%write tmp.cmd option map=$(PS2MOUSE_DRV).map
 	%write tmp.cmd option osname='Windows 16-bit'
 	%write tmp.cmd libpath %WATCOM%/lib286
@@ -52,13 +53,25 @@ $(PS2MOUSE_DRV): $(SUBDIR)$(HPS)ps2mouse.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDI
 	%write tmp.cmd segment _NDTEXT PRELOAD FIXED SHARED
 	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd option alignment=16
+! ifeq TARGET_WINDOWS 20
+	%write tmp.cmd option version=2.0  # FIXME: Is Watcom's linker IGNORING THIS?
+! endif
 ! ifeq TARGET_WINDOWS 30
 	%write tmp.cmd option version=3.0  # FIXME: Is Watcom's linker IGNORING THIS?
-! else
+! endif
+! ifeq TARGET_WINDOWS 31
 	%write tmp.cmd option version=3.10  # FIXME: Is Watcom's linker IGNORING THIS?
 ! endif
 	%write tmp.cmd option modname=MOUSE
-	%write tmp.cmd option description 'DOSLIB Standard PS/2 mouse driver for Windows 3.x'
+! ifeq TARGET_WINDOWS 20
+	%write tmp.cmd option description 'DOSLIB PS/2 Mouse driver for Windows 2.0'
+! endif
+! ifeq TARGET_WINDOWS 30
+	%write tmp.cmd option description 'DOSLIB PS/2 Mouse driver for Windows 3.0'
+! endif
+! ifeq TARGET_WINDOWS 31
+	%write tmp.cmd option description 'DOSLIB PS/2 Mouse driver for Windows 3.1'
+! endif
 	%write tmp.cmd export Inquire.1
 	%write tmp.cmd export Enable.2
 	%write tmp.cmd export Disable.3
@@ -70,9 +83,16 @@ $(PS2MOUSE_DRV): $(SUBDIR)$(HPS)ps2mouse.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDI
 	@wlink @tmp.cmd
 	@wrc -31 $(PS2MOUSE_DRV)
 ! ifdef WIN_NE_SETVER_BUILD
+!  ifeq TARGET_WINDOWS 20
+	../../../tool/chgnever.pl 2.0 $(PS2MOUSE_DRV)
+	../../../tool/win2xstubpatch.pl $(PS2MOUSE_DRV)
+	../../../tool/win2xhdrpatch.pl $(PS2MOUSE_DRV)
+	../../../tool/win2xalign512.pl $(PS2MOUSE_DRV)
+!  endif
 !  ifeq TARGET_WINDOWS 30
 	../../../tool/chgnever.pl 3.0 $(PS2MOUSE_DRV)
-!  else
+!  endif
+!  ifeq TARGET_WINDOWS 31
 	../../../tool/chgnever.pl 3.10 $(PS2MOUSE_DRV)
 !  endif
 ! endif

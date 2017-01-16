@@ -11,19 +11,19 @@ if [ "$1" == "disk" ]; then
     make_msdos_data_disk install.dsk || exit 1
 
     mmd   -i install.dsk                    ::win10
-    mcopy -i install.dsk win10/dboxmpi.drv  ::win10/dboxmpi.drv
+    mcopy -i install.dsk win10/ps2mouse.drv  ::win10/ps2mouse.drv
     mcopy -i install.dsk win10/README.TXT   ::win10/readme.txt
 
     mmd   -i install.dsk                    ::win20
-    mcopy -i install.dsk win20/dboxmpi.drv  ::win20/dboxmpi.drv
+    mcopy -i install.dsk win20/ps2mouse.drv  ::win20/ps2mouse.drv
     mcopy -i install.dsk win20/oemsetup.inf ::win20/oemsetup.inf
 
     mmd   -i install.dsk                    ::win30
-    mcopy -i install.dsk win30/dboxmpi.drv  ::win30/dboxmpi.drv
+    mcopy -i install.dsk win30/ps2mouse.drv  ::win30/ps2mouse.drv
     mcopy -i install.dsk win30/oemsetup.inf ::win30/oemsetup.inf
 
     mmd   -i install.dsk                    ::win31
-    mcopy -i install.dsk win31/dboxmpi.drv  ::win31/dboxmpi.drv
+    mcopy -i install.dsk win31/ps2mouse.drv  ::win31/ps2mouse.drv
     mcopy -i install.dsk win31/oemsetup.inf ::win31/oemsetup.inf
 fi
 
