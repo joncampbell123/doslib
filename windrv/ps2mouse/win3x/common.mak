@@ -84,9 +84,9 @@ $(PS2MOUSE_DRV): $(SUBDIR)$(HPS)ps2mouse.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDI
 ! ifdef WIN_NE_SETVER_BUILD
 !  ifeq TARGET_WINDOWS 20
 	../../../tool/chgnever.pl 2.0 $(PS2MOUSE_DRV)
-	../../../tool/win2xstubpatch.pl $(PS2MOUSE_DRV)
 	../../../tool/win2xhdrpatch.pl $(PS2MOUSE_DRV)
 	../../../tool/win2xalign512.pl $(PS2MOUSE_DRV)
+	../../../tool/win2xstubpatch.pl $(PS2MOUSE_DRV)
 !  endif
 !  ifeq TARGET_WINDOWS 30
 	../../../tool/chgnever.pl 3.0 $(PS2MOUSE_DRV)
