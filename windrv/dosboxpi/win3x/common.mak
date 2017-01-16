@@ -53,13 +53,25 @@ $(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dll
 	%write tmp.cmd segment _NDTEXT PRELOAD FIXED SHARED
 	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd option alignment=16
+! ifeq TARGET_WINDOWS 20
+	%write tmp.cmd option version=2.0  # FIXME: Is Watcom's linker IGNORING THIS?
+! endif
 ! ifeq TARGET_WINDOWS 30
 	%write tmp.cmd option version=3.0  # FIXME: Is Watcom's linker IGNORING THIS?
-! else
+! endif
+! ifeq TARGET_WINDOWS 31
 	%write tmp.cmd option version=3.10  # FIXME: Is Watcom's linker IGNORING THIS?
 ! endif
 	%write tmp.cmd option modname=MOUSE
-	%write tmp.cmd option description 'DOSBox-X Mouse Pointer Integration driver for Windows 3.x'
+! ifeq TARGET_WINDOWS 20
+	%write tmp.cmd option description 'DOSBox-X Mouse Pointer Integration driver for Windows 2.0'
+! endif
+! ifeq TARGET_WINDOWS 30
+	%write tmp.cmd option description 'DOSBox-X Mouse Pointer Integration driver for Windows 3.0'
+! endif
+! ifeq TARGET_WINDOWS 31
+	%write tmp.cmd option description 'DOSBox-X Mouse Pointer Integration driver for Windows 3.1'
+! endif
 	%write tmp.cmd export Inquire.1
 	%write tmp.cmd export Enable.2
 	%write tmp.cmd export Disable.3
@@ -71,9 +83,16 @@ $(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dll
 	@wlink @tmp.cmd
 	@wrc -31 $(DBOXMPI_DRV)
 ! ifdef WIN_NE_SETVER_BUILD
+!  ifeq TARGET_WINDOWS 20
+	../../../tool/chgnever.pl 2.0 $(DBOXMPI_DRV)
+	../../../tool/win2xstubpatch.pl $(DBOXMPI_DRV)
+	../../../tool/win2xhdrpatch.pl $(DBOXMPI_DRV)
+	../../../tool/win2xalign512.pl $(DBOXMPI_DRV)
+!  endif
 !  ifeq TARGET_WINDOWS 30
 	../../../tool/chgnever.pl 3.0 $(DBOXMPI_DRV)
-!  else
+!  endif
+!  ifeq TARGET_WINDOWS 31
 	../../../tool/chgnever.pl 3.10 $(DBOXMPI_DRV)
 !  endif
 ! endif
