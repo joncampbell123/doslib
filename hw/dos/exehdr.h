@@ -51,6 +51,14 @@ static inline unsigned long exe_dos_header_file_resident_size(const struct exe_d
     return ret;
 }
 
+static inline int exe_header_can_contain_exe_extension(struct exe_dos_header * const header) {
+    return
+        (header->header_size_paragraphs >= 4) && /* 64 bytes or larger */
+        (header->number_of_relocations == 0 || header->relocation_table_offset >= 0x40); /* relocation table starts at 0x40 or later */
+}
+
+#define EXE_HEADER_EXTENSION_OFFSET     (0x3CUL)
+
 struct exe_dos_layout_range {
     uint32_t                    start,end;      // NTS: inclusive byte range, does not exist if start > end
 };
