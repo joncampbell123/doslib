@@ -130,12 +130,12 @@ for ($seg=0;$seg < $segtablent;$seg++) {
 $tmp = substr($tmp,0,$segment_offset).$nsegtabl.substr($tmp,$segment_offset+length($nsegtabl));
 
 # patch offset to nonresident name table, it's relative to the start of the file not the NE header
-$offset = unpack("v",substr($tmp,0x2C,2));
+$offset = unpack("V",substr($tmp,0x2C,4));
 print "Nonresident name table offset: $offset\n";
 $offset += $adjust;
 print "..new offset: $offset\n";
 
-$tmp = substr($tmp,0,0x2C).pack("v",$offset).substr($tmp,0x2E);
+$tmp = substr($tmp,0,0x2C).pack("V",$offset).substr($tmp,0x30);
 
 # write out
 print NETMP $tmp;
