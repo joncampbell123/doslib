@@ -1,15 +1,10 @@
-Attempted Windows 2.x compatible driver.
+DOSBox mouse pointer integration driver for Windows 2.0.
 
-Noted:
- - Windows 3.0 real mode will load the driver,
-   but will not load the driver if booting into
-   standard (286) or enhanced (386) mode.
+To install, run the Windows setup utility, and reenter all
+your settings. When you get to the mouse settings, select
+"Other" and type in the full path of the DBOXMPI driver
+install files (the DRV file and OEMSETUP.INF). Then
+complete setup.
 
-   I'm guessing Microsoft wisely built Windows 3.0
-   to reject older drivers if not starting up
-   in real mode.
-
- - Windows 2.x at this time refuses to install
-   the driver (SETUP refuses it). I still think
-   it has something to do with the NE CRC field.
-
+When you start Windows 2.x, the mouse cursor should
+interact with DOSBox-X as expected.
