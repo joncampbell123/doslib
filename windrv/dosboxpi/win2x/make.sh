@@ -30,6 +30,9 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
     # copy the result into BIN
     cp -vu win300l/dboxmpi.drv ../bin/win20/dboxmpi.drv
 
+    # this driver also works with Windows 1.0
+    cp -vu win300l/dboxmpi.drv ../bin/win10/dboxmpi.drv
+
     end_bat
 fi
 

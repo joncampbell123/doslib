@@ -1,17 +1,11 @@
-DOSBox mouse pointer integration driver for Windows 2.0.
-
-To install, run the Windows setup utility, and reenter all
-your settings. When you get to the mouse settings, select
-"Other" and type in the full path of the DBOXMPI driver
-install files (the DRV file and OEMSETUP.INF). Then
-complete setup.
-
-When you start Windows 2.x, the mouse cursor should
-interact with DOSBox-X as expected.
+DOSBox mouse pointer integration driver for Windows 1.0.
 
 ==== Windows 1.0 install process ====
 
-This mouse driver is also compatible with Windows 1.0.
+Note that Windows 1.0 does not provide any selection
+screen on setup to install 3rd party drivers. The following
+instructions are a hack that requires modification of the
+install disks.
 
 To install:
 
