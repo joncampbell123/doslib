@@ -64,6 +64,7 @@ $(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dll
 	@wrc -31 $(DBOXMPI_DRV)
 	../../../tool/chgnever.pl 2.0 $(DBOXMPI_DRV)
 	../../../tool/win2xstubpatch.pl $(DBOXMPI_DRV)
+	../../../tool/win2xhdrpatch.pl $(DBOXMPI_DRV)
 !endif
 
 clean: .SYMBOLIC
