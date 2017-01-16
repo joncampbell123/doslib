@@ -86,7 +86,7 @@ print NETMP chr(0) x (512 - $msdos_size);
 read(NE,$tmp,0x1000000);
 
 $shift_align = unpack("v",substr($tmp,0x32,2));
-die if $shift_align > 512;
+die if $shift_align > 9;
 print "NE alignment: ".(1 << $shift_align)."\n";
 
 # locate segment table (we're going to patch it).
