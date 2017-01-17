@@ -38,8 +38,28 @@ struct exe_ne_header {
     uint16_t        fastload_length_sectors;        // +0x3A length (in sectors) of fast-load area
     uint16_t        minimum_code_swap_area_size;    // +0x3C AKA "reserved"
     uint16_t        minimum_windows_version;        // +0x3E expected windows version (i.e. 0x300 = 3.0, 0x30A = 3.10)
-};                                                  // +0x40
+};                                                  // =0x40
 #pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_segment_entry {
+    uint16_t        offset_in_segments;             // +0x00 offset (in sectors) to segment data. zero if no data exists
+    uint16_t        length;                         // +0x02 length (in bytes) of segment data. zero == 64KB if offset != 0
+    uint16_t        flags;                          // +0x04 flags
+    uint16_t        minimum_allocation_size;        // +0x06 minimum allocation size (in bytes). zero == 64KB
+};                                                  // =0x08
+#pragma pack(pop)
+
+/* exe_ne_header_segment_entry->flags */
+#define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA          (1U << 0U)  /* is data segment (else, is code) */
+#define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_ALLOCATED     (1U << 1U)  /* loader has allocated memory (internal runtime state, obviously) */
+#define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_LOADED        (1U << 2U)  /* loader has loaded the segment (internal runtime state, obviously) */
+#define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_MOVEABLE      (1U << 4U)  /* is MOVEABLE (else, FIXED) */
+#define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_SHAREABLE     (1U << 5U)  /* is SHAREABLE (else, NONSHAREABLE) */
+#define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_PRELOAD       (1U << 6U)  /* is PRELOAD (else, LOADONCALL) */
+#define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RO_EX         (1U << 7U)  /* code: EXECUTEONLY   data: READONLY */
+#define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RELOCATIONS   (1U << 8U)  /* segment contains relocation data (follows segment data in file) */
+#define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DISCARDABLE   (1U << 12U) /* is DISCARDABLE */
 
 /* exe_ne_header->other_flags (Windows) */
 #define EXE_NE_HEADER_OTHER_FLAGS_WIN_WIN2X_IN_3X       (1U << 1U)  /* Windows 2.x app that can run in Windows 3.x protected mode */
