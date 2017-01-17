@@ -50,6 +50,62 @@ struct exe_ne_header_segment_entry {
 };                                                  // =0x08
 #pragma pack(pop)
 
+#pragma pack(push,1)
+union exe_ne_header_segment_relocation_entry {
+    struct {
+        unsigned char       reloc_address_type;     // +0x00 relocation address type
+        unsigned char       reloc_type;             // +0x01 relocation type
+        uint16_t            seg_offset;             // +0x02 offset of the relocation in the segment
+        unsigned char       raw5,raw6;              // +0x04 raw bytes
+        unsigned char       raw7,raw8;              // +0x06 raw bytes
+    } r;                                            // =0x08 RAW BYTES base header
+    struct {
+        unsigned char       _pad[4];                // +0x00 pad
+        unsigned char       segment_index;          // +0x04 segment index the reference refs to (not 0xFF)
+        unsigned char       zero;                   // +0x05 is zero
+        uint16_t            seg_offset;             // +0x06 offset into the segment_index this refs to
+    } intref;                                       // =0x08 internal reference (segment index != 0xFF)
+    struct {
+        unsigned char       _pad[4];                // +0x00 pad
+        unsigned char       segment_index;          // +0x04 segment index the reference refs to (0xFF)
+        unsigned char       zero;                   // +0x05 is zero
+        uint16_t            entry_ordinal;          // +0x06 ordinal value in entry table
+    } movintref;                                    // =0x08 movable internal reference (segment index == 0xFF)
+    struct {
+        unsigned char       _pad[4];                // +0x00 pad
+        uint16_t            module_reference_index; // +0x04 index into the module reference table
+        uint16_t            ordinal;                // +0x06 module symbol to refer to by ordinal
+    } ordinal;                                      // =0x08 ordinal reference
+    struct {
+        unsigned char       _pad[4];                // +0x00 pad
+        uint16_t            module_reference_index; // +0x04 index into the module reference table
+        uint16_t            imported_name_offset;   // +0x06 offset into the imported name table
+    } name;                                         // =0x08 name reference
+    struct {
+        unsigned char       _pad[4];                // +0x00 pad
+        uint16_t            fixup;                  // +0x04 fixup type
+        uint16_t            zero;                   // +0x06 is zero
+    } osfixup;                                      // =0x08 name reference
+};                                                  // =0x08
+#pragma pack(pop)
+
+/* exe_ne_header_segment_relocation_entry->r.reloc_type */
+#define EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE         (0x00)
+#define EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL           (0x01)
+#define EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME              (0x02)
+#define EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP                    (0x03)
+#define EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK                       (0x03)
+#define EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE                   (0x04)
+
+/* exe_ne_header_segment_relocation_entry->r.reloc_address_type */
+#define EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET_LOBYTE         (0x00)  /* offset (low 8 bits) */
+#define EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT               (0x02)  /* 16-bit segment */
+#define EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_FAR_POINTER           (0x03)  /* 16:16 segment:offset */
+#define EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET                (0x05)  /* 16-bit offset */
+#define EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_FAR48_POINTER         (0x0B)  /* 16:32 segment:offset */
+#define EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET32              (0x0D)  /* 32-bit offset */
+#define EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_MASK                  (0x0F)
+
 /* exe_ne_header_segment_entry->flags */
 #define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA          (1U << 0U)  /* is data segment (else, is code) */
 #define EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_ALLOCATED     (1U << 1U)  /* loader has allocated memory (internal runtime state, obviously) */
