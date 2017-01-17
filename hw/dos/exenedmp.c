@@ -343,6 +343,115 @@ int main(int argc,char **argv) {
     else if (ne_header.minimum_windows_version == 0x300)
         printf("        * Microsoft Windows 3.0\n");
 
+    if (ne_header.entry_table_offset != 0 && ne_header.entry_table_length != 0 &&
+        lseek(src_fd,ne_header.entry_table_offset + ne_header_offset,SEEK_SET) == (ne_header.entry_table_offset + ne_header_offset)) {
+        unsigned char *scan,*fence,*buf;
+
+        buf = malloc(ne_header.entry_table_length);
+        if (buf != NULL) {
+            if (read(src_fd,buf,ne_header.entry_table_length) != ne_header.entry_table_length) {
+                printf("    ! ERROR. Cannot read entry table\n");
+                free(buf);
+                buf = NULL;
+            }
+        }
+
+        if (buf != NULL) {
+            unsigned char segid;
+            unsigned char flags;
+            unsigned char nument,ent;
+            unsigned short seg_offs;
+            unsigned short int3f;
+            unsigned short ordinal=1;
+
+            printf("    Entry table:\n");
+
+            scan = buf;
+            fence = buf + ne_header.entry_table_length;
+
+            while (scan < fence) {
+                nument = *scan++;
+                if (nument == 0) break;
+                if (scan == fence) break;
+                segid = *scan++;
+
+                printf("        %u entries referring to ",nument);
+                if (segid == 0xFF) {
+                    printf("MOVEABLE segments\n");
+
+                    for (ent=0;ent < nument;ent++) {
+                        if ((scan+6) > fence) break;
+
+                        flags = *scan++;
+                        int3f = *((uint16_t*)scan); scan += 2;
+                        segid = *scan++;
+                        seg_offs = *((uint16_t*)scan); scan += 2;
+
+                        printf("            Ordinal #%d ",ordinal++);
+                        if (flags & 1) printf("EXPORTED ");
+                        if (flags & 2) printf("USES_GLOBAL_SHARED_DATA_SEGMENT ");
+                        if (flags & 0xF8) printf("RING_TRANSITION_STACK_WORDS=%u ",flags >> 3);
+                        printf("\n");
+
+                        printf("                INT 3Fh = 0x%02x 0x%02x\n",int3f & 0xFF,int3f >> 8);
+
+                        printf("                segment #%u : 0x%04x\n",segid,seg_offs);
+                    }
+                }
+                else if (segid == 0xFE) {
+                    printf("CONSTANTS\n");
+
+                    for (ent=0;ent < nument;ent++) {
+                        if ((scan+3) > fence) break;
+
+                        flags = *scan++;
+                        seg_offs = *((uint16_t*)scan); scan += 2;
+
+                        printf("            Ordinal #%d ",ordinal++);
+                        if (flags & 1) printf("EXPORTED ");
+                        if (flags & 2) printf("USES_GLOBAL_SHARED_DATA_SEGMENT ");
+                        if (flags & 0xF8) printf("RING_TRANSITION_STACK_WORDS=%u ",flags >> 3);
+                        printf("\n");
+
+                        printf("                CONSTANT = 0x%04x\n",seg_offs);
+                    }
+                }
+                else if (segid == 0x00) {
+                    printf("UNUSED entry\n");
+
+                    for (ent=0;ent < nument;ent++) {
+                        printf("            Ordinal #%d EMPTY\n",ordinal++);
+                    }
+                }
+                else {
+                    printf("FIXED segment #%u\n",segid);
+
+                    for (ent=0;ent < nument;ent++) {
+                        if ((scan+3) > fence) break;
+
+                        flags = *scan++;
+                        seg_offs = *((uint16_t*)scan); scan += 2;
+
+                        printf("            Ordinal #%d ",ordinal++);
+                        if (flags & 1) printf("EXPORTED ");
+                        if (flags & 2) printf("USES_GLOBAL_SHARED_DATA_SEGMENT ");
+                        if (flags & 0xF8) printf("RING_TRANSITION_STACK_WORDS=%u ",flags >> 3);
+                        printf("\n");
+
+                        printf("                OFFSET = 0x%04x\n",seg_offs);
+                    }
+                }
+
+                if (scan == fence) break;
+            }
+
+            free(buf);
+        }
+        else {
+            printf("    ! ERROR. Cannot allocate memory to read entry table\n");
+        }
+    }
+
     close(src_fd);
     return 0;
 }
