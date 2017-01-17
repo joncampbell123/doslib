@@ -343,6 +343,80 @@ int main(int argc,char **argv) {
     else if (ne_header.minimum_windows_version == 0x300)
         printf("        * Microsoft Windows 3.0\n");
 
+    if (ne_header.segment_table_entries != 0 && ne_header.segment_table_offset != 0 &&
+        lseek(src_fd,ne_header.segment_table_offset + ne_header_offset,SEEK_SET) == (ne_header.segment_table_offset + ne_header_offset)) {
+        struct exe_ne_header_segment_entry segent;
+        unsigned int i;
+
+        assert(sizeof(segent) == 8);
+
+        printf("    Segment table, %u entries:\n",ne_header.segment_table_entries);
+        for (i=0;i < ne_header.segment_table_entries;i++) {
+            if (read(src_fd,&segent,sizeof(segent)) != sizeof(segent))
+                break;
+
+            printf("        Segment #%d:\n",i+1);
+            if (segent.offset_in_segments != 0U) {
+                printf("            Offset: %u segments = %u << %u = %lu bytes\n",
+                    segent.offset_in_segments,
+                    segent.offset_in_segments,
+                    ne_header.sector_shift,
+                    (unsigned long)segent.offset_in_segments << (unsigned long)ne_header.sector_shift);
+            }
+            else {
+                printf("            Offset: None (no data)\n");
+            }
+
+            printf("            Length: %lu bytes\n",
+                (segent.offset_in_segments != 0 && segent.length == 0) ? 0x10000UL : (unsigned long)segent.length);
+            printf("            Flags: 0x%04x",
+                segent.flags);
+
+            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA)
+                printf(" DATA");
+            else
+                printf(" CODE");
+            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_ALLOCATED)
+                printf(" ALLOCATED");
+            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_LOADED)
+                printf(" LOADED");
+            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_MOVEABLE)
+                printf(" MOVEABLE");
+            else
+                printf(" FIXED");
+            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_SHAREABLE)
+                printf(" SHAREABLE");
+            else
+                printf(" NONSHAREABLE");
+            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_PRELOAD)
+                printf(" PRELOAD");
+            else
+                printf(" LOADONCALL");
+            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RELOCATIONS)
+                printf(" HAS_RELOCATIONS");
+            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DISCARDABLE)
+                printf(" DISCARDABLE");
+
+            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA) {
+                if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RO_EX)
+                    printf(" READONLY");
+                else
+                    printf(" READWRITE");
+            }
+            else {
+                if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RO_EX)
+                    printf(" EXECUTEONLY");
+                else
+                    printf(" READONLY");
+            }
+
+            printf("\n");
+
+            printf("            Minimum allocation size: %lu\n",
+                (segent.minimum_allocation_size == 0) ? 0x10000UL : (unsigned long)segent.minimum_allocation_size);
+        }
+    }
+
     if (ne_header.entry_table_offset != 0 && ne_header.entry_table_length != 0 &&
         lseek(src_fd,ne_header.entry_table_offset + ne_header_offset,SEEK_SET) == (ne_header.entry_table_offset + ne_header_offset)) {
         unsigned char *scan,*fence,*buf;
