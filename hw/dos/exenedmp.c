@@ -26,6 +26,7 @@ static void help(void) {
 }
 
 int main(int argc,char **argv) {
+    struct exe_ne_header_segment_entry *ne_segments = NULL;
     struct exe_ne_header ne_header;
     uint32_t ne_header_offset;
     uint32_t file_size;
@@ -343,70 +344,79 @@ int main(int argc,char **argv) {
     else if (ne_header.minimum_windows_version == 0x300)
         printf("        * Microsoft Windows 3.0\n");
 
-    if (ne_header.segment_table_entries != 0 && ne_header.segment_table_offset != 0) {
-        struct exe_ne_header_segment_entry segent;
+    if (ne_header.segment_table_entries != 0 && ne_header.segment_table_offset != 0 &&
+        (unsigned long)lseek(src_fd,ne_header.segment_table_offset + ne_header_offset,SEEK_SET) == ((unsigned long)ne_header.segment_table_offset + ne_header_offset)) {
+        printf("    Segment table, %u entries:\n",ne_header.segment_table_entries);
+
+        assert(sizeof(*ne_segments) == 8);
+        ne_segments = (struct exe_ne_header_segment_entry*)malloc(sizeof(*ne_segments) * ne_header.segment_table_entries);
+        if (ne_segments != NULL) {
+            if ((size_t)read(src_fd,ne_segments,sizeof(*ne_segments) * ne_header.segment_table_entries) !=
+                (sizeof(*ne_segments) * ne_header.segment_table_entries)) {
+                printf("    ! Unable to read segment table\n");
+                free(ne_segments);
+                ne_segments = NULL;
+            }
+        }
+    }
+
+    if (ne_segments != NULL) {
+        struct exe_ne_header_segment_entry *segent;
         unsigned int i;
 
-        assert(sizeof(segent) == 8);
-
-        printf("    Segment table, %u entries:\n",ne_header.segment_table_entries);
         for (i=0;i < ne_header.segment_table_entries;i++) {
-            if ((unsigned long)lseek(src_fd,ne_header.segment_table_offset + ne_header_offset + (i * (unsigned long)sizeof(segent)),SEEK_SET) !=
-                (ne_header.segment_table_offset + ne_header_offset + (i * (unsigned long)sizeof(segent))))
-                break;
-            if (read(src_fd,&segent,sizeof(segent)) != sizeof(segent))
-                break;
+            segent = ne_segments + i; /* C pointer math, becomes (char*)ne_segments + (i * sizeof(*ne_segments)) */
 
             printf("        Segment #%d:\n",i+1);
-            if (segent.offset_in_segments != 0U) {
+            if (segent->offset_in_segments != 0U) {
                 printf("            Offset: %u segments = %u << %u = %lu bytes\n",
-                    segent.offset_in_segments,
-                    segent.offset_in_segments,
+                    segent->offset_in_segments,
+                    segent->offset_in_segments,
                     ne_header.sector_shift,
-                    (unsigned long)segent.offset_in_segments << (unsigned long)ne_header.sector_shift);
+                    (unsigned long)segent->offset_in_segments << (unsigned long)ne_header.sector_shift);
             }
             else {
                 printf("            Offset: None (no data)\n");
             }
 
             printf("            Length: %lu bytes\n",
-                (segent.offset_in_segments != 0 && segent.length == 0) ? 0x10000UL : (unsigned long)segent.length);
+                (segent->offset_in_segments != 0 && segent->length == 0) ? 0x10000UL : (unsigned long)segent->length);
             printf("            Flags: 0x%04x",
-                segent.flags);
+                segent->flags);
 
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA)
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA)
                 printf(" DATA");
             else
                 printf(" CODE");
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_ALLOCATED)
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_ALLOCATED)
                 printf(" ALLOCATED");
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_LOADED)
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_LOADED)
                 printf(" LOADED");
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_MOVEABLE)
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_MOVEABLE)
                 printf(" MOVEABLE");
             else
                 printf(" FIXED");
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_SHAREABLE)
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_SHAREABLE)
                 printf(" SHAREABLE");
             else
                 printf(" NONSHAREABLE");
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_PRELOAD)
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_PRELOAD)
                 printf(" PRELOAD");
             else
                 printf(" LOADONCALL");
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RELOCATIONS)
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RELOCATIONS)
                 printf(" HAS_RELOCATIONS");
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DISCARDABLE)
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DISCARDABLE)
                 printf(" DISCARDABLE");
 
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA) {
-                if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RO_EX)
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA) {
+                if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RO_EX)
                     printf(" READONLY");
                 else
                     printf(" READWRITE");
             }
             else {
-                if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RO_EX)
+                if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RO_EX)
                     printf(" EXECUTEONLY");
                 else
                     printf(" READONLY");
@@ -415,14 +425,14 @@ int main(int argc,char **argv) {
             printf("\n");
 
             printf("            Minimum allocation size: %lu\n",
-                (segent.minimum_allocation_size == 0) ? 0x10000UL : (unsigned long)segent.minimum_allocation_size);
+                (segent->minimum_allocation_size == 0) ? 0x10000UL : (unsigned long)segent->minimum_allocation_size);
 
-            if (segent.flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RELOCATIONS) {
-                if (segent.offset_in_segments != 0 && segent.length != 0) {
+            if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RELOCATIONS) {
+                if (segent->offset_in_segments != 0 && segent->length != 0) {
                     union exe_ne_header_segment_relocation_entry relocent;
                     unsigned long reloc_offset =
-                        ((unsigned long)segent.offset_in_segments << (unsigned long)ne_header.sector_shift) +
-                        (unsigned long)segent.length;
+                        ((unsigned long)segent->offset_in_segments << (unsigned long)ne_header.sector_shift) +
+                        (unsigned long)segent->length;
                     unsigned short reloc_entries;
                     unsigned int relent;
 
@@ -620,6 +630,11 @@ int main(int argc,char **argv) {
         else {
             printf("    ! ERROR. Cannot allocate memory to read entry table\n");
         }
+    }
+
+    if (ne_segments) {
+        free(ne_segments);
+        ne_segments = NULL;
     }
 
     close(src_fd);
