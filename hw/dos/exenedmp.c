@@ -521,6 +521,10 @@ int main(int argc,char **argv) {
                         entries++;
                     }
 
+                    if ((scan + 1) < fence)
+                        printf("      ! Non-resident name table stopped %u bytes early\n",
+                            (unsigned int)(fence - scan));
+
                     if (entries < ne_nonresname_length) {
                         fprintf(stderr,"WARNING: Names parsed are less than expected %u < %u\n",
                             (unsigned int)entries,
