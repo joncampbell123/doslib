@@ -15,6 +15,9 @@
 #define O_BINARY (0)
 #endif
 
+static unsigned char            opt_sort_ordinal = 0;
+static unsigned char            opt_sort_names = 0;
+
 static char*                    src_file = NULL;
 static int                      src_fd = -1;
 
@@ -23,6 +26,8 @@ static struct exe_dos_layout    exelayout;
 
 static void help(void) {
     fprintf(stderr,"EXENEDMP -i <exe file>\n");
+    fprintf(stderr," -sn        Sort names\n");
+    fprintf(stderr," -so        Sort by ordinal\n");
 }
 
 #pragma pack(push,1)
@@ -32,6 +37,21 @@ struct exe_ne_header_nonresident_name_entry {
     uint16_t        ordinal;
 };
 #pragma pack(pop)
+
+static unsigned char *ne_nonresname_sort_by_name_raw = NULL;
+int ne_nonresname_sort_by_name(const void *a,const void *b) {
+    struct exe_ne_header_nonresident_name_entry *ea = (struct exe_ne_header_nonresident_name_entry *)a;
+    struct exe_ne_header_nonresident_name_entry *eb = (struct exe_ne_header_nonresident_name_entry *)b;
+    return strcasecmp(
+        (char*)(ne_nonresname_sort_by_name_raw+ea->offset),
+        (char*)(ne_nonresname_sort_by_name_raw+eb->offset));
+}
+
+int ne_nonresname_sort_by_ordinal(const void *a,const void *b) {
+    struct exe_ne_header_nonresident_name_entry *ea = (struct exe_ne_header_nonresident_name_entry *)a;
+    struct exe_ne_header_nonresident_name_entry *eb = (struct exe_ne_header_nonresident_name_entry *)b;
+    return ea->ordinal - eb->ordinal;
+}
 
 int main(int argc,char **argv) {
     unsigned char *ne_nonresname_raw = NULL;
@@ -56,6 +76,12 @@ int main(int argc,char **argv) {
             if (!strcmp(a,"h") || !strcmp(a,"help")) {
                 help();
                 return 1;
+            }
+            else if (!strcmp(a,"sn")) {
+                opt_sort_names = 1;
+            }
+            else if (!strcmp(a,"so")) {
+                opt_sort_ordinal = 1;
             }
             else if (!strcmp(a,"i")) {
                 src_file = argv[i++];
@@ -503,7 +529,15 @@ int main(int argc,char **argv) {
                         ne_nonresname_length = entries;
                     }
 
-                    /* TODO: Many executables have the ordinals out of order, perhaps offer sorting? */
+                    if (opt_sort_ordinal && ne_nonresname_length > 1) {
+                        /* NTS: Do not sort the module name in entry 0 */
+                        qsort(ne_nonresname+1,ne_nonresname_length-1,sizeof(*ne_nonresname),ne_nonresname_sort_by_ordinal);
+                    }
+                    else if (opt_sort_names && ne_nonresname_length > 1) {
+                        ne_nonresname_sort_by_name_raw = ne_nonresname_raw;
+                        /* NTS: Do not sort the module name in entry 0 */
+                        qsort(ne_nonresname+1,ne_nonresname_length-1,sizeof(*ne_nonresname),ne_nonresname_sort_by_name);
+                    }
                 }
                 else {
                     free(base);
@@ -541,7 +575,7 @@ int main(int argc,char **argv) {
                     printf("        ! WARNING: Module name with ordinal != 0\n");
             }
             else
-                printf("        Ordinal #%d: '%s'\n",ent->ordinal,tmp);
+                printf("        Ordinal #%-5d: '%s'\n",ent->ordinal,tmp);
         }
     }
 
