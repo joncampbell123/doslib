@@ -25,8 +25,19 @@ static void help(void) {
     fprintf(stderr,"EXENEDMP -i <exe file>\n");
 }
 
+#pragma pack(push,1)
+struct exe_ne_header_nonresident_name_entry {
+    uint8_t         length;
+    uint16_t        offset;             // 16-bit because nonresident name table is limited to 64KB
+    uint16_t        ordinal;
+};
+#pragma pack(pop)
+
 int main(int argc,char **argv) {
+    unsigned char *ne_nonresname_raw = NULL;
+    struct exe_ne_header_nonresident_name_entry *ne_nonresname = NULL;
     struct exe_ne_header_segment_entry *ne_segments = NULL;
+    unsigned int ne_nonresname_length = 0;
     struct exe_ne_header ne_header;
     uint32_t ne_header_offset;
     uint32_t file_size;
@@ -411,6 +422,7 @@ int main(int argc,char **argv) {
     if (ne_header.imported_name_table_offset > ne_header.entry_table_offset)
         printf("! WARNING: imported name table offset > entry table offset");
 
+    /* load segment table */
     if (ne_header.segment_table_entries != 0 && ne_header.segment_table_offset != 0 &&
         (unsigned long)lseek(src_fd,ne_header.segment_table_offset + ne_header_offset,SEEK_SET) == ((unsigned long)ne_header.segment_table_offset + ne_header_offset)) {
         assert(sizeof(*ne_segments) == 8);
@@ -422,6 +434,114 @@ int main(int argc,char **argv) {
                 free(ne_segments);
                 ne_segments = NULL;
             }
+        }
+    }
+
+    /* load nonresident name table */
+    if (ne_header.nonresident_name_table_offset != 0 && ne_header.nonresident_name_table_length != 0 &&
+        (unsigned long)lseek(src_fd,ne_header.nonresident_name_table_offset,SEEK_SET) == ne_header.nonresident_name_table_offset) {
+        unsigned char *base,*scan,*fence;
+
+        base = malloc(ne_header.nonresident_name_table_length);
+        if (base != NULL) {
+            if ((unsigned long)read(src_fd,base,ne_header.nonresident_name_table_length) != ne_header.nonresident_name_table_length) {
+                free(base);
+                base = NULL;
+            }
+        }
+
+        if (base != NULL) {
+            unsigned int entries = 0;
+
+            fence = base + ne_header.nonresident_name_table_length;
+            for (scan=base;scan < fence;) {
+                /* uint8_t         LENGTH
+                 * char[length]    TEXT
+                 * uint16_t        ORDINAL */
+                unsigned char len = *scan++; // LENGTH
+                if (len == 0) break;
+                if ((scan+len+2) > fence) break;
+
+                scan += len + 2; // TEXT + ORDINAL
+                entries++;
+            }
+
+            ne_nonresname_length = entries;
+            if (entries != 0) {
+                printf("  * Non-resident name table has %u entries\n",entries);
+
+                ne_nonresname = (struct exe_ne_header_nonresident_name_entry*)malloc(entries * sizeof(*ne_nonresname));
+                if (ne_nonresname != NULL) {
+                    ne_nonresname_length = entries;
+                    ne_nonresname_raw = base;
+
+                    entries = 0;
+                    for (scan=base;scan < fence && entries < ne_nonresname_length;) {
+                        /* uint8_t         LENGTH
+                         * char[length]    TEXT
+                         * uint16_t        ORDINAL */
+                        unsigned char len = *scan++; // LENGTH
+                        if (len == 0) break;
+                        if ((scan+len+2) > fence) break;
+
+                        ne_nonresname[entries].length = len;
+
+                        ne_nonresname[entries].offset = (uint16_t)(scan - base);
+                        scan += len;    // TEXT
+
+                        ne_nonresname[entries].ordinal = *((uint16_t*)scan);
+                        scan += 2;      // ORDINAL
+
+                        entries++;
+                    }
+
+                    if (entries < ne_nonresname_length) {
+                        fprintf(stderr,"WARNING: Names parsed are less than expected %u < %u\n",
+                            (unsigned int)entries,
+                            (unsigned int)ne_nonresname_length);
+
+                        ne_nonresname_length = entries;
+                    }
+
+                    /* TODO: Many executables have the ordinals out of order, perhaps offer sorting? */
+                }
+                else {
+                    free(base);
+                    base = NULL;
+                }
+            }
+            else {
+                free(base);
+                base = NULL;
+            }
+        }
+    }
+
+    /* non-resident name table */
+    if (ne_nonresname != NULL) {
+        struct exe_ne_header_nonresident_name_entry *ent = NULL;
+        char tmp[255+1];
+        unsigned int i;
+
+        printf("    Non-resident name table, %u entries\n",
+            (unsigned int)ne_nonresname_length);
+
+        for (i=0;i < ne_nonresname_length;i++) {
+            ent = ne_nonresname + i;
+
+            assert((ent->offset+ent->length) <= ne_header.nonresident_name_table_length);
+
+            tmp[ent->length] = 0;
+            if (ent->length != 0)
+                memcpy(tmp,ne_nonresname_raw+ent->offset,ent->length);
+
+            if (i == 0) {
+                printf("        Module name: '%s'\n",tmp);
+                if (ent->ordinal != 0)
+                    printf("        ! WARNING: Module name with ordinal != 0\n");
+            }
+            else
+                printf("        Ordinal #%d: '%s'\n",ent->ordinal,tmp);
         }
     }
 
@@ -711,6 +831,15 @@ int main(int argc,char **argv) {
         else {
             printf("    ! ERROR. Cannot allocate memory to read entry table\n");
         }
+    }
+
+    if (ne_nonresname_raw) {
+        free(ne_nonresname_raw);
+        ne_nonresname_raw = NULL;
+    }
+    if (ne_nonresname) {
+        free(ne_nonresname);
+        ne_nonresname = NULL;
     }
 
     if (ne_segments) {
