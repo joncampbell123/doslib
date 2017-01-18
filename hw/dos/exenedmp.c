@@ -346,8 +346,6 @@ int main(int argc,char **argv) {
 
     if (ne_header.segment_table_entries != 0 && ne_header.segment_table_offset != 0 &&
         (unsigned long)lseek(src_fd,ne_header.segment_table_offset + ne_header_offset,SEEK_SET) == ((unsigned long)ne_header.segment_table_offset + ne_header_offset)) {
-        printf("    Segment table, %u entries:\n",ne_header.segment_table_entries);
-
         assert(sizeof(*ne_segments) == 8);
         ne_segments = (struct exe_ne_header_segment_entry*)malloc(sizeof(*ne_segments) * ne_header.segment_table_entries);
         if (ne_segments != NULL) {
@@ -364,6 +362,7 @@ int main(int argc,char **argv) {
         struct exe_ne_header_segment_entry *segent;
         unsigned int i;
 
+        printf("    Segment table, %u entries:\n",ne_header.segment_table_entries);
         for (i=0;i < ne_header.segment_table_entries;i++) {
             segent = ne_segments + i; /* C pointer math, becomes (char*)ne_segments + (i * sizeof(*ne_segments)) */
 
@@ -426,6 +425,16 @@ int main(int argc,char **argv) {
 
             printf("            Minimum allocation size: %lu\n",
                 (segent->minimum_allocation_size == 0) ? 0x10000UL : (unsigned long)segent->minimum_allocation_size);
+        }
+    }
+
+    if (ne_segments != NULL) {
+        struct exe_ne_header_segment_entry *segent;
+        unsigned int i;
+
+        printf("    Segment relocations:\n");
+        for (i=0;i < ne_header.segment_table_entries;i++) {
+            segent = ne_segments + i; /* C pointer math, becomes (char*)ne_segments + (i * sizeof(*ne_segments)) */
 
             if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RELOCATIONS) {
                 if (segent->offset_in_segments != 0 && segent->length != 0) {
@@ -441,6 +450,8 @@ int main(int argc,char **argv) {
                         break;
                     if (read(src_fd,&reloc_entries,2) != 2)
                         break;
+
+                    printf("        Segment #%d:\n",i+1);
                     printf("            Relocation table at: %lu, %u entries\n",reloc_offset,reloc_entries);
                     for (relent=0;relent < reloc_entries;relent++) {
                         if (read(src_fd,&relocent,sizeof(relocent)) != sizeof(relocent))
