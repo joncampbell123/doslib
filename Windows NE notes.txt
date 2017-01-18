@@ -1,0 +1,57 @@
+NE observations:
+
+The primary header is typically defined as starting with NE, 0x40 bytes large.
+
+Segment table offset is 64 (0x40), at least in most NE images I've examined.
+Perhaps this is an undocumented method of determining how large the NE header is.
+It also seems to be the lowest offset in the header, even though nothing says
+that it has to be.
+
+All NE images I can find have the NE fields ordered in a strict order like this:
+
+    Segment table offset:         64 NE-rel (abs 192) bytes
+    Resource table offset:        208 NE-rel (abs 336) bytes
+    Number of resource segments:  0
+    Resident name table offset:   208 NE-rel (abs 336) bytes
+    Module ref. table offset:     234 NE-rel (abs 362) bytes
+    Imported name table offset:   244 NE-rel (abs 372) bytes
+    Entry table offset:           278 NE-rel (abs=406) bytes
+    Entry table length:           7 bytes
+
+    Non-resident name table offset:413 bytes
+    Non-resident name table len:  20 bytes
+
+    Segment table, 18 entries:
+        Segment #1:
+            Offset: 217 segments = 217 << 1 = 434 bytes
+            Length: 634 bytes
+            Flags: 0x1d60 CODE FIXED SHAREABLE PRELOAD HAS_RELOCATIONS DISCARDABLE READONLY
+            Minimum allocation size: 634
+
+Notice that the first segment is often put right after the non-resident name table,
+at an offset the next multiple of a sector according to the sector shift value.
+
+Notice that there are no resource segments in the file, yet the resource table offset
+is nonzero, but the same value as the resident name table offset. This suggests that
+the size of the resource table can be implied from the difference between the offsets.
+
+* TODO: So what does Windows do if the ordering of the fields is different (offsets
+  are in different order but parts contain the same content)?
+
+* NOTE: Even executables from Windows 1.0 have this strict ordering.
+
+So we can figure out:
+
+RESIDENT_NAME_TABLE_SIZE = module_reference_table_offset - resident_name_table_offset
+
+IMPORTED_NAME_TABLE_SIZE = entry_table_offset - imported_name_table_offset
+
+For determining how much NE header to read to handle all resident parts, it seems the
+best way to compute it is:
+
+NE_RESIDENT_PORTION_HEADER_SIZE = non_resident_name_table_offset - ne_header_offset
+
+Assuming no NE images violate the ordering shown above, reading NE_RESIDENT_PORTION_HEADER_SIZE
+bytes would load in one go all the parts of the NE header needed for locating resident portions
+of the header, excluding nonresident portions.
+
