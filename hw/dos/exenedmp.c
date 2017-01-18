@@ -323,6 +323,11 @@ int main(int argc,char **argv) {
     if (ne_header.other_flags & EXE_NE_HEADER_OTHER_FLAGS_WIN_HAS_FASTLOAD)
         printf("        Has a fast-load / gang-load area\n");
 
+    if (ne_header.sector_shift == 0U) {
+        // NTS: One reference suggests that sector_shift == 0 means sector_shift == 9
+        printf("* ERROR: Sector shift is zero\n");
+        return 1;
+    }
     if (ne_header.sector_shift > 16U) {
         printf("* ERROR: Sector shift is too large\n");
         return 1;
