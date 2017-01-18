@@ -349,6 +349,57 @@ int main(int argc,char **argv) {
     else if (ne_header.minimum_windows_version == 0x300)
         printf("        * Microsoft Windows 3.0\n");
 
+    /* this code makes a few assumptions about the header that are used to improve
+     * performance when reading the header. if the header violates those assumptions,
+     * say so NOW */
+    if (ne_header.segment_table_offset < 0x40) { // if the segment table collides with the NE header we want the user to know
+        printf("! WARNING: Segment table collides with the NE header (offset %u < 0x40)\n",
+            ne_header.segment_table_offset);
+    }
+    /* even though the NE header specifies key structures by offset from NE header,
+     * they seem to follow a strict ordering as described in Windows NE notes.txt.
+     * some fields have an offset, not a size, and we assume that we can determine
+     * the size of those fields by the difference between offsets. */
+    /* RESIDENT_NAME_TABLE_SIZE = module_reference_table_offset - resident_name_table_offset */
+    if (ne_header.module_reference_table_offset < ne_header.resident_name_table_offset)
+        printf("! WARNING: Module ref. table offset < Resident name table offset\n");
+    /* IMPORTED_NAME_TABLE_SIZE = entry_table_offset - imported_name_table_offset */
+    if (ne_header.entry_table_offset < ne_header.imported_name_table_offset)
+        printf("! WARNING: Entry table offset < Imported name table offset\n");
+    /* and finally, we assume we can determine the size of the NE header + resident structures by:
+     * 
+     * NE_RESIDENT_PORTION_HEADER_SIZE = non_resident_name_table_offset - ne_header_offset
+     *
+     * and therefore, the NE-relative offsets listed (adjusted to absolute file offset) will be less than the non-resident name table offset.
+     *
+     * I'm guessing that the reason some offsets are NE-relative and some are absolute, is because Microsoft probably
+     * intended to be able to read all the resident portion NE structures at once, before concerning itself with
+     * nonresident portions like the nonresident name table.
+     *
+     * FIXME: Do you suppose some clever NE packing tool might stick the non-resident name table in the MS-DOS stub?
+     *        What does Windows do if you do that? Does Windows make the same assumption/optimization when loading NE executables? */
+    if (ne_header.nonresident_name_table_offset < (ne_header_offset + 0x40UL))
+        printf("! WARNING: Non-resident name table offset too small (would overlap NE header)\n");
+    else {
+        unsigned long min_offset = ne_header.segment_table_offset + (sizeof(struct exe_ne_header_segment_entry) * ne_header.segment_table_entries);
+        if (min_offset < ne_header.resource_table_offset)
+            min_offset = ne_header.resource_table_offset;
+        if (min_offset < ne_header.resident_name_table_offset)
+            min_offset = ne_header.resident_name_table_offset;
+        if (min_offset < (ne_header.module_reference_table_offset+(2UL * ne_header.module_reftable_entries)))
+            min_offset = (ne_header.module_reference_table_offset+(2UL * ne_header.module_reftable_entries));
+        if (min_offset < ne_header.imported_name_table_offset)
+            min_offset = ne_header.imported_name_table_offset;
+        if (min_offset < (ne_header.entry_table_offset+ne_header.entry_table_length))
+            min_offset = (ne_header.entry_table_offset+ne_header.entry_table_length);
+
+        min_offset += ne_header_offset;
+        if (ne_header.nonresident_name_table_offset < min_offset) {
+            printf("! WARNING: Non-resident name table offset overlaps NE resident tables (%lu < %lu)\n",
+                (unsigned long)ne_header.nonresident_name_table_offset,min_offset);
+        }
+    }
+
     if (ne_header.segment_table_entries != 0 && ne_header.segment_table_offset != 0 &&
         (unsigned long)lseek(src_fd,ne_header.segment_table_offset + ne_header_offset,SEEK_SET) == ((unsigned long)ne_header.segment_table_offset + ne_header_offset)) {
         assert(sizeof(*ne_segments) == 8);
@@ -363,6 +414,7 @@ int main(int argc,char **argv) {
         }
     }
 
+    /* dump segment table */
     if (ne_segments != NULL) {
         struct exe_ne_header_segment_entry *segent;
         unsigned int i;
@@ -433,6 +485,7 @@ int main(int argc,char **argv) {
         }
     }
 
+    /* dump segment relocation table */
     if (ne_segments != NULL) {
         struct exe_ne_header_segment_entry *segent;
         unsigned int i;
@@ -539,6 +592,7 @@ int main(int argc,char **argv) {
         }
     }
 
+    /* dump the entry table */
     if (ne_header.entry_table_offset != 0 && ne_header.entry_table_length != 0 &&
         lseek(src_fd,ne_header.entry_table_offset + ne_header_offset,SEEK_SET) == (ne_header.entry_table_offset + ne_header_offset)) {
         unsigned char *scan,*fence,*buf;
