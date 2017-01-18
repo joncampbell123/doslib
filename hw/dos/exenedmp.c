@@ -400,6 +400,17 @@ int main(int argc,char **argv) {
         }
     }
 
+    if (ne_header.segment_table_offset > ne_header.resource_table_offset)
+        printf("! WARNING: segment table offset > resource table offset");
+    if (ne_header.resource_table_offset > ne_header.resident_name_table_offset)
+        printf("! WARNING: resource table offset > resident name table offset");
+    if (ne_header.resident_name_table_offset > ne_header.module_reference_table_offset)
+        printf("! WARNING: resident name table offset > module reference table offset");
+    if (ne_header.module_reference_table_offset > ne_header.imported_name_table_offset)
+        printf("! WARNING: module reference table offset > imported name table offset");
+    if (ne_header.imported_name_table_offset > ne_header.entry_table_offset)
+        printf("! WARNING: imported name table offset > entry table offset");
+
     if (ne_header.segment_table_entries != 0 && ne_header.segment_table_offset != 0 &&
         (unsigned long)lseek(src_fd,ne_header.segment_table_offset + ne_header_offset,SEEK_SET) == ((unsigned long)ne_header.segment_table_offset + ne_header_offset)) {
         assert(sizeof(*ne_segments) == 8);
