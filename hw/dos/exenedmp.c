@@ -36,9 +36,18 @@ static void help(void) {
 struct exe_ne_header_name_entry {
     uint8_t         length;
     uint16_t        offset;             // 16-bit because resident/nonresident name table is limited to 64KB
-    uint16_t        ordinal;
 };
 #pragma pack(pop)
+
+uint16_t ne_name_entry_get_ordinal(unsigned char *base,size_t len,struct exe_ne_header_name_entry * const ent) {
+    assert(((size_t)ent->offset+(size_t)ent->length+(size_t)2) <= len);
+    return *((uint16_t*)(base + ent->offset + ent->length));
+}
+
+unsigned char *ne_name_entry_get_name_base(unsigned char *base,size_t len,struct exe_ne_header_name_entry * const ent) {
+    assert(((size_t)ent->offset+(size_t)ent->length) <= len);
+    return base + ent->offset;
+}
 
 static size_t ne_name_entry_sort_by_name_raw_length = 0;
 static unsigned char *ne_name_entry_sort_by_name_raw = NULL;
@@ -48,8 +57,8 @@ int ne_name_entry_sort_by_name(const void *a,const void *b) {
     unsigned char *pa,*pb;
     unsigned int i;
 
-    pa = (unsigned char*)(ne_name_entry_sort_by_name_raw+ea->offset);
-    pb = (unsigned char*)(ne_name_entry_sort_by_name_raw+eb->offset);
+    pa = ne_name_entry_get_name_base(ne_name_entry_sort_by_name_raw,ne_name_entry_sort_by_name_raw_length,ea);
+    pb = ne_name_entry_get_name_base(ne_name_entry_sort_by_name_raw,ne_name_entry_sort_by_name_raw_length,eb);
 
     for (i=0;i < ea->length && i < eb->length;i++) {
         int diff = (int)pa[i] - (int)pb[i];
@@ -67,7 +76,8 @@ int ne_name_entry_sort_by_name(const void *a,const void *b) {
 int ne_name_entry_sort_by_ordinal(const void *a,const void *b) {
     struct exe_ne_header_name_entry *ea = (struct exe_ne_header_name_entry *)a;
     struct exe_ne_header_name_entry *eb = (struct exe_ne_header_name_entry *)b;
-    return ea->ordinal - eb->ordinal;
+    return ne_name_entry_get_ordinal(ne_name_entry_sort_by_name_raw,ne_name_entry_sort_by_name_raw_length,ea) -
+        ne_name_entry_get_ordinal(ne_name_entry_sort_by_name_raw,ne_name_entry_sort_by_name_raw_length,eb);
 }
 
 ///////////////////
@@ -548,7 +558,6 @@ int main(int argc,char **argv) {
                         ne_nonresname[entries].offset = (uint16_t)(scan - base);
                         scan += len;    // TEXT
 
-                        ne_nonresname[entries].ordinal = *((uint16_t*)scan);
                         scan += 2;      // ORDINAL
 
                         entries++;
@@ -566,13 +575,13 @@ int main(int argc,char **argv) {
                         ne_nonresname_length = entries;
                     }
 
+                    ne_name_entry_sort_by_name_raw = ne_nonresname_raw;
+                    ne_name_entry_sort_by_name_raw_length = ne_header.nonresident_name_table_length;
                     if (opt_sort_ordinal && ne_nonresname_length > 1) {
                         /* NTS: Do not sort the module name in entry 0 */
                         qsort(ne_nonresname+1,ne_nonresname_length-1,sizeof(*ne_nonresname),ne_name_entry_sort_by_ordinal);
                     }
                     else if (opt_sort_names && ne_nonresname_length > 1) {
-                        ne_name_entry_sort_by_name_raw_length = ne_nonresname_length;
-                        ne_name_entry_sort_by_name_raw = ne_nonresname_raw;
                         /* NTS: Do not sort the module name in entry 0 */
                         qsort(ne_nonresname+1,ne_nonresname_length-1,sizeof(*ne_nonresname),ne_name_entry_sort_by_name);
                     }
@@ -641,7 +650,6 @@ int main(int argc,char **argv) {
                         ne_resname[entries].offset = (uint16_t)(scan - base);
                         scan += len;    // TEXT
 
-                        ne_resname[entries].ordinal = *((uint16_t*)scan);
                         scan += 2;      // ORDINAL
 
                         entries++;
@@ -659,13 +667,13 @@ int main(int argc,char **argv) {
                         ne_resname_length = entries;
                     }
 
+                    ne_name_entry_sort_by_name_raw = ne_resname_raw;
+                    ne_name_entry_sort_by_name_raw_length = ne_resname_raw_length;
                     if (opt_sort_ordinal && ne_resname_length > 1) {
                         /* NTS: Do not sort the module name in entry 0 */
                         qsort(ne_resname+1,ne_resname_length-1,sizeof(*ne_resname),ne_name_entry_sort_by_ordinal);
                     }
                     else if (opt_sort_names && ne_resname_length > 1) {
-                        ne_name_entry_sort_by_name_raw_length = ne_resname_length;
-                        ne_name_entry_sort_by_name_raw = ne_resname_raw;
                         /* NTS: Do not sort the module name in entry 0 */
                         qsort(ne_resname+1,ne_resname_length-1,sizeof(*ne_resname),ne_name_entry_sort_by_name);
                     }
@@ -685,6 +693,7 @@ int main(int argc,char **argv) {
     /* non-resident name table */
     if (ne_nonresname != NULL) {
         struct exe_ne_header_name_entry *ent = NULL;
+        uint16_t ordinal;
         char tmp[255+1];
         unsigned int i;
 
@@ -694,7 +703,7 @@ int main(int argc,char **argv) {
         for (i=0;i < ne_nonresname_length;i++) {
             ent = ne_nonresname + i;
 
-            assert((ent->offset+ent->length) <= ne_header.nonresident_name_table_length);
+            ordinal = ne_name_entry_get_ordinal(ne_nonresname_raw,ne_header.nonresident_name_table_length,ent);
 
             tmp[ent->length] = 0;
             if (ent->length != 0)
@@ -702,17 +711,18 @@ int main(int argc,char **argv) {
 
             if (i == 0) {
                 printf("        Module name:    '%s'\n",tmp);
-                if (ent->ordinal != 0)
+                if (ordinal != 0)
                     printf("        ! WARNING: Module name with ordinal != 0\n");
             }
             else
-                printf("        Ordinal #%-5d: '%s'\n",ent->ordinal,tmp);
+                printf("        Ordinal #%-5d: '%s'\n",ordinal,tmp);
         }
     }
 
     /* resident name table */
     if (ne_resname != NULL) {
         struct exe_ne_header_name_entry *ent = NULL;
+        uint16_t ordinal;
         char tmp[255+1];
         unsigned int i;
 
@@ -722,7 +732,7 @@ int main(int argc,char **argv) {
         for (i=0;i < ne_resname_length;i++) {
             ent = ne_resname + i;
 
-            assert((ent->offset+ent->length) <= ne_resname_raw_length);
+            ordinal = ne_name_entry_get_ordinal(ne_resname_raw,ne_resname_raw_length,ent);
 
             tmp[ent->length] = 0;
             if (ent->length != 0)
@@ -730,11 +740,11 @@ int main(int argc,char **argv) {
 
             if (i == 0) {
                 printf("        Module name:    '%s'\n",tmp);
-                if (ent->ordinal != 0)
+                if (ordinal != 0)
                     printf("        ! WARNING: Module name with ordinal != 0\n");
             }
             else
-                printf("        Ordinal #%-5d: '%s'\n",ent->ordinal,tmp);
+                printf("        Ordinal #%-5d: '%s'\n",ordinal,tmp);
         }
     }
 
