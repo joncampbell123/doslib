@@ -32,6 +32,41 @@ static void help(void) {
 
 //////////////////
 
+struct exe_ne_header_segment_reloc_table {
+    union exe_ne_header_segment_relocation_entry*   table;
+    unsigned int                                    length;
+};
+
+void exe_ne_header_segment_reloc_table_init(struct exe_ne_header_segment_reloc_table * const t) {
+    memset(t,0,sizeof(*t));
+}
+
+void exe_ne_header_segment_reloc_table_free_table(struct exe_ne_header_segment_reloc_table * const t) {
+    if (t->table) free(t->table);
+    t->table = NULL;
+    t->length = 0;
+}
+
+size_t exe_ne_header_segment_reloc_table_size(struct exe_ne_header_segment_reloc_table * const t) {
+    if (t->table == NULL) return 0;
+    return t->length * sizeof(*(t->table));
+}
+
+unsigned char *exe_ne_header_segment_reloc_table_alloc_table(struct exe_ne_header_segment_reloc_table * const t,const unsigned int entries) {
+    exe_ne_header_segment_reloc_table_free_table(t);
+    if (entries == 0) return NULL;
+
+    assert(sizeof(*(t->table)) == 8);
+    t->table = malloc(entries * sizeof(*(t->table)));
+    if (t->table == NULL) return NULL;
+    t->length = entries;
+    return (unsigned char*)(t->table); /* <- so that the caller can read the segment table into our array */
+}
+
+void exe_ne_header_segment_reloc_table_free(struct exe_ne_header_segment_reloc_table * const t) {
+    exe_ne_header_segment_reloc_table_free_table(t);
+}
+
 struct exe_ne_header_segment_table {
     struct exe_ne_header_segment_entry* table;
     unsigned int                        length;
@@ -126,18 +161,18 @@ struct exe_ne_header_name_entry {
 };
 #pragma pack(pop)
 
-uint16_t ne_name_entry_get_ordinal(struct exe_ne_header_name_entry_table * const t,struct exe_ne_header_name_entry * const ent) {
+uint16_t ne_name_entry_get_ordinal(const struct exe_ne_header_name_entry_table * const t,const struct exe_ne_header_name_entry * const ent) {
     assert(((size_t)ent->offset+(size_t)ent->length+(size_t)2) <= t->raw_length);
     return *((uint16_t*)(t->raw + ent->offset + ent->length));
 }
 
 /* WARNING: Points at name string, which is NOT terminated by NUL. You will need to copy the string to make it a C-string. */
-unsigned char *ne_name_entry_get_name_base(struct exe_ne_header_name_entry_table * const t,struct exe_ne_header_name_entry * const ent) {
+unsigned char *ne_name_entry_get_name_base(const struct exe_ne_header_name_entry_table * const t,const struct exe_ne_header_name_entry * const ent) {
     assert(((size_t)ent->offset+(size_t)ent->length) <= t->raw_length);
     return t->raw + ent->offset;
 }
 
-void ne_name_entry_get_name(char *dst,size_t dstmax,struct exe_ne_header_name_entry_table * const t,struct exe_ne_header_name_entry * const ent) {
+void ne_name_entry_get_name(char *dst,size_t dstmax,const struct exe_ne_header_name_entry_table * const t,const struct exe_ne_header_name_entry * const ent) {
     size_t cpy;
 
     if (dstmax == 0) return;
@@ -273,8 +308,8 @@ unsigned long exe_ne_header_segment_table_get_relocation_table_offset(const stru
 }
 
 ///////////////////
-void print_name_table(struct exe_ne_header_name_entry_table * const t) {
-    struct exe_ne_header_name_entry *ent = NULL;
+void print_name_table(const struct exe_ne_header_name_entry_table * const t) {
+    const struct exe_ne_header_name_entry *ent = NULL;
     uint16_t ordinal;
     char tmp[255+1];
     unsigned int i;
@@ -297,8 +332,8 @@ void print_name_table(struct exe_ne_header_name_entry_table * const t) {
     }
 }
 
-void print_segment_table(struct exe_ne_header_segment_table * const t) {
-    struct exe_ne_header_segment_entry *segent;
+void print_segment_table(const struct exe_ne_header_segment_table * const t) {
+    const struct exe_ne_header_segment_entry *segent;
     unsigned int i;
 
     if (t->table == NULL || t->length == 0)
@@ -366,6 +401,88 @@ void print_segment_table(struct exe_ne_header_segment_table * const t) {
 
         printf("            Minimum allocation size: %lu\n",
             (segent->minimum_allocation_size == 0) ? 0x10000UL : (unsigned long)segent->minimum_allocation_size);
+    }
+}
+
+void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * const r) {
+    const union exe_ne_header_segment_relocation_entry *relocent;
+    unsigned int relent;
+
+    assert(sizeof(relocent) == 8);
+    for (relent=0;relent < r->length;relent++) {
+        relocent = r->table + relent;
+
+        printf("                At 0x%04x: ",relocent->r.seg_offset);
+        switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
+            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
+                printf("Internal ref");
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
+                printf("Import by ordinal");
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
+                printf("Import by name");
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
+                printf("OSFIXUP");
+                break;
+        }
+        if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE)
+            printf(" (ADDITIVE)");
+        printf(" ");
+
+        switch (relocent->r.reloc_address_type&EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_MASK) {
+            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET_LOBYTE:
+                printf("addr=OFFSET_LOBYTE");
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT:
+                printf("addr=SEGMENT");
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_FAR_POINTER:
+                printf("addr=FAR_POINTER(16:16)");
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET:
+                printf("addr=OFFSET");
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_FAR48_POINTER:
+                printf("addr=FAR_POINTER(16:32)");
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET32:
+                printf("addr=OFFSET32");
+                break;
+            default:
+                printf("addr=0x%02x",relocent->r.reloc_address_type);
+                break;
+        }
+        printf("\n");
+
+        switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
+            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
+                if (relocent->intref.segment_index == 0xFF) {
+                    printf("                    Refers to movable segment, entry ordinal #%d\n",
+                        relocent->movintref.entry_ordinal);
+                }
+                else {
+                    printf("                    Refers to segment #%d : 0x%04x\n",
+                        relocent->intref.segment_index,
+                        relocent->intref.seg_offset);
+                }
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
+                printf("                    Refers to module reference #%d, ordinal %d\n",
+                    relocent->ordinal.module_reference_index,
+                    relocent->ordinal.ordinal);
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
+                printf("                    Refers to module reference #%d, imp name offset %d\n",
+                    relocent->name.module_reference_index,
+                    relocent->name.imported_name_offset);
+                break;
+            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
+                printf("                    OSFIXUP type=0x%04x\n",
+                    relocent->osfixup.fixup);
+                break;
+        }
     }
 }
 
@@ -836,104 +953,46 @@ int main(int argc,char **argv) {
 
     /* segment relocation table */
     {
-        union exe_ne_header_segment_relocation_entry relocent;
+        struct exe_ne_header_segment_reloc_table ne_relocs;
         struct exe_ne_header_segment_entry *segent;
         unsigned long reloc_offset;
         uint16_t reloc_entries;
-        uint16_t relent;
+        unsigned char *base;
         unsigned int i;
 
         printf("    Segment relocations:\n");
 
-        assert(sizeof(relocent) == 8);
+        exe_ne_header_segment_reloc_table_init(&ne_relocs);
         for (i=0;i < ne_segments.length;i++) {
             segent = ne_segments.table + i; /* C pointer math, becomes (char*)ne_segments + (i * sizeof(*ne_segments)) */
             reloc_offset = exe_ne_header_segment_table_get_relocation_table_offset(&ne_segments,segent);
             if (reloc_offset == 0) continue;
 
-            if ((unsigned long)lseek(src_fd,reloc_offset,SEEK_SET) != reloc_offset)
-                break;
-            if (read(src_fd,&reloc_entries,2) != 2)
-                break;
+            /* at the start of the relocation struct, is a 16-bit WORD that indicates how many entries are there,
+             * followed by an array of relocation entries. */
+            if ((unsigned long)lseek(src_fd,reloc_offset,SEEK_SET) != reloc_offset || read(src_fd,&reloc_entries,2) != 2)
+                continue;
 
             printf("        Segment #%d:\n",i+1);
             printf("            Relocation table at: %lu, %u entries\n",reloc_offset,reloc_entries);
-            for (relent=0;relent < reloc_entries;relent++) {
-                if (read(src_fd,&relocent,sizeof(relocent)) != sizeof(relocent))
-                    break;
+            exe_ne_header_segment_reloc_table_free(&ne_relocs);
+            if (reloc_entries == 0) continue;
 
-                printf("                At 0x%04x: ",relocent.r.seg_offset);
-                switch (relocent.r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
-                    case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
-                        printf("Internal ref");
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
-                        printf("Import by ordinal");
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
-                        printf("Import by name");
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
-                        printf("OSFIXUP");
-                        break;
-                }
-                if (relocent.r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE)
-                    printf(" (ADDITIVE)");
-                printf(" ");
+            base = exe_ne_header_segment_reloc_table_alloc_table(&ne_relocs,reloc_entries);
+            if (base == NULL) continue;
 
-                switch (relocent.r.reloc_address_type&EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_MASK) {
-                    case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET_LOBYTE:
-                        printf("addr=OFFSET_LOBYTE");
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT:
-                        printf("addr=SEGMENT");
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_FAR_POINTER:
-                        printf("addr=FAR_POINTER(16:16)");
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET:
-                        printf("addr=OFFSET");
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_FAR48_POINTER:
-                        printf("addr=FAR_POINTER(16:32)");
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET32:
-                        printf("addr=OFFSET32");
-                        break;
-                    default:
-                        printf("addr=0x%02x",relocent.r.reloc_address_type);
-                        break;
-                }
-                printf("\n");
+            {
+                size_t rd = exe_ne_header_segment_reloc_table_size(&ne_relocs);
+                if (rd == 0) continue;
 
-                switch (relocent.r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
-                    case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
-                        if (relocent.intref.segment_index == 0xFF) {
-                            printf("                    Refers to movable segment, entry ordinal #%d\n",
-                                    relocent.movintref.entry_ordinal);
-                        }
-                        else {
-                            printf("                    Refers to segment #%d : 0x%04x\n",
-                                    relocent.intref.segment_index,
-                                    relocent.intref.seg_offset);
-                        }
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
-                        printf("                    Refers to module reference #%d, ordinal %d\n",
-                                relocent.ordinal.module_reference_index,
-                                relocent.ordinal.ordinal);
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
-                        printf("                    Refers to module reference #%d, imp name offset %d\n",
-                                relocent.name.module_reference_index,
-                                relocent.name.imported_name_offset);
-                        break;
-                    case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
-                        printf("                    OSFIXUP type=0x%04x\n",
-                                relocent.osfixup.fixup);
-                        break;
+                if ((size_t)read(src_fd,ne_relocs.table,rd) != rd) {
+                    exe_ne_header_segment_reloc_table_free(&ne_relocs);
+                    continue;
                 }
             }
+
+            print_segment_reloc_table(&ne_relocs);
+            exe_ne_header_segment_reloc_table_free(&ne_relocs);
         }
     }
 
