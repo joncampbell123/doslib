@@ -726,9 +726,11 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t,co
             printf("movable segment #%d : 0x%04x",ment->segid,ment->seg_offs);
             print_entry_table_locate_name_by_ordinal(nonresnames,resnames,i + 1);
             printf("\n");
-            printf("            ");
-            if (ment->flags != 0) print_entry_table_flags(ment->flags);
-            printf("\n");
+            if (ment->flags != 0) {
+                printf("            ");
+                print_entry_table_flags(ment->flags);
+                printf("\n");
+            }
         }
         else if (ent->segment_id == 0xFE) {
             /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
@@ -738,9 +740,11 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t,co
             printf("constant value : 0x%04x",fent->v.seg_offs);
             print_entry_table_locate_name_by_ordinal(nonresnames,resnames,i + 1);
             printf("\n");
-            printf("            ");
-            if (fent->flags != 0) print_entry_table_flags(fent->flags);
-            printf("\n");
+            if (fent->flags != 0) {
+                printf("            ");
+                print_entry_table_flags(fent->flags);
+                printf("\n");
+            }
         }
         else {
             /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
@@ -750,9 +754,11 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t,co
             printf("fixed segment #%d : 0x%04x",ent->segment_id,fent->v.seg_offs);
             print_entry_table_locate_name_by_ordinal(nonresnames,resnames,i + 1);
             printf("\n");
-            printf("            ");
-            if (fent->flags != 0) print_entry_table_flags(fent->flags);
-            printf("\n");
+            if (fent->flags != 0) {
+                printf("            ");
+                print_entry_table_flags(fent->flags);
+                printf("\n");
+            }
         }
     }
 }
