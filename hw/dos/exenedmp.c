@@ -94,9 +94,25 @@ uint16_t ne_name_entry_get_ordinal(struct exe_ne_header_name_entry_table * const
     return *((uint16_t*)(t->raw + ent->offset + ent->length));
 }
 
+/* WARNING: Points at name string, which is NOT terminated by NUL. You will need to copy the string to make it a C-string. */
 unsigned char *ne_name_entry_get_name_base(struct exe_ne_header_name_entry_table * const t,struct exe_ne_header_name_entry * const ent) {
     assert(((size_t)ent->offset+(size_t)ent->length) <= t->raw_length);
     return t->raw + ent->offset;
+}
+
+void ne_name_entry_get_name(char *dst,size_t dstmax,struct exe_ne_header_name_entry_table * const t,struct exe_ne_header_name_entry * const ent) {
+    size_t cpy;
+
+    if (dstmax == 0) return;
+
+    cpy = ent->length;
+    if (cpy > (dstmax - 1)) cpy = dstmax - 1;
+
+    dst[cpy] = 0;
+    if (cpy != 0) {
+        unsigned char *rstr = ne_name_entry_get_name_base(t,ent);
+        memcpy(dst,rstr,cpy);
+    }
 }
 
 static struct exe_ne_header_name_entry_table *ne_name_entry_sort_by_table = NULL;
@@ -223,10 +239,7 @@ void print_name_table(struct exe_ne_header_name_entry_table * const t) {
     for (i=0;i < t->length;i++) {
         ent = t->table + i;
         ordinal = ne_name_entry_get_ordinal(t,ent);
-
-        tmp[ent->length] = 0;
-        if (ent->length != 0)
-            memcpy(tmp,t->raw+ent->offset,ent->length);
+        ne_name_entry_get_name(tmp,sizeof(tmp),t,ent);
 
         if (i == 0) {
             printf("        Module name:    '%s'\n",tmp);
