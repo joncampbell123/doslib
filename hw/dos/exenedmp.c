@@ -694,8 +694,9 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t) {
             struct exe_ne_header_entry_table_movable_segment_entry *ment =
                 (struct exe_ne_header_entry_table_movable_segment_entry*)rawd;
 
-            printf("movable segment #%d : 0x%04x ",ment->segid,ment->seg_offs);
-            print_entry_table_flags(ment->flags);
+            printf("movable segment #%d : 0x%04x\n",ment->segid,ment->seg_offs);
+            printf("            ");
+            if (ment->flags != 0) print_entry_table_flags(ment->flags);
             printf("\n");
         }
         else if (ent->segment_id == 0xFE) {
@@ -703,8 +704,9 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t) {
             struct exe_ne_header_entry_table_fixed_segment_entry *fent =
                 (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
 
-            printf("constant value : 0x%04x ",fent->v.seg_offs);
-            print_entry_table_flags(fent->flags);
+            printf("constant value : 0x%04x\n",fent->v.seg_offs);
+            printf("            ");
+            if (fent->flags != 0) print_entry_table_flags(fent->flags);
             printf("\n");
         }
         else {
@@ -712,8 +714,9 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t) {
             struct exe_ne_header_entry_table_fixed_segment_entry *fent =
                 (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
 
-            printf("fixed segment #%d : 0x%04x ",ent->segment_id,fent->v.seg_offs);
-            print_entry_table_flags(fent->flags);
+            printf("fixed segment #%d : 0x%04x\n",ent->segment_id,fent->v.seg_offs);
+            printf("            ");
+            if (fent->flags != 0) print_entry_table_flags(fent->flags);
             printf("\n");
         }
     }
