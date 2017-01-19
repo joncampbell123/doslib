@@ -32,6 +32,56 @@ static void help(void) {
 
 //////////////////
 
+struct exe_ne_header_name_entry_table {
+    struct exe_ne_header_name_entry*    table;
+    unsigned int                        length;
+    unsigned char*                      raw;
+    size_t                              raw_length;
+    unsigned char                       raw_ownership;
+};
+
+void exe_ne_header_name_entry_table_init(struct exe_ne_header_name_entry_table * const t) {
+    memset(t,0,sizeof(*t));
+}
+
+void exe_ne_header_name_entry_table_free_table(struct exe_ne_header_name_entry_table * const t) {
+    if (t->table) free(t->table);
+    t->table = NULL;
+    t->length = 0;
+}
+
+void exe_ne_header_name_entry_table_free_raw(struct exe_ne_header_name_entry_table * const t) {
+    if (t->raw && t->raw_ownership) free(t->raw);
+    t->raw_length = 0;
+    t->raw = 0;
+}
+
+unsigned char *exe_ne_header_name_entry_table_alloc_raw(struct exe_ne_header_name_entry_table * const t,const size_t length) {
+    if (t->raw != NULL) {
+        if (length == t->raw_length)
+            return t->raw;
+
+        exe_ne_header_name_entry_table_free_raw(t);
+    }
+
+    assert(t->raw == NULL);
+    if (length == 0)
+        return NULL;
+
+    t->raw = malloc(length);
+    if (t->raw == NULL)
+        return NULL;
+
+    t->raw_length = length;
+    t->raw_ownership = 1;
+    return t->raw;
+}
+
+void exe_ne_header_name_entry_table_free(struct exe_ne_header_name_entry_table * const t) {
+    exe_ne_header_name_entry_table_free_table(t);
+    exe_ne_header_name_entry_table_free_raw(t);
+}
+
 #pragma pack(push,1)
 struct exe_ne_header_name_entry {
     uint8_t         length;
@@ -39,26 +89,25 @@ struct exe_ne_header_name_entry {
 };
 #pragma pack(pop)
 
-uint16_t ne_name_entry_get_ordinal(unsigned char *base,size_t len,struct exe_ne_header_name_entry * const ent) {
-    assert(((size_t)ent->offset+(size_t)ent->length+(size_t)2) <= len);
-    return *((uint16_t*)(base + ent->offset + ent->length));
+uint16_t ne_name_entry_get_ordinal(struct exe_ne_header_name_entry_table * const t,struct exe_ne_header_name_entry * const ent) {
+    assert(((size_t)ent->offset+(size_t)ent->length+(size_t)2) <= t->raw_length);
+    return *((uint16_t*)(t->raw + ent->offset + ent->length));
 }
 
-unsigned char *ne_name_entry_get_name_base(unsigned char *base,size_t len,struct exe_ne_header_name_entry * const ent) {
-    assert(((size_t)ent->offset+(size_t)ent->length) <= len);
-    return base + ent->offset;
+unsigned char *ne_name_entry_get_name_base(struct exe_ne_header_name_entry_table * const t,struct exe_ne_header_name_entry * const ent) {
+    assert(((size_t)ent->offset+(size_t)ent->length) <= t->raw_length);
+    return t->raw + ent->offset;
 }
 
-static size_t ne_name_entry_sort_by_name_raw_length = 0;
-static unsigned char *ne_name_entry_sort_by_name_raw = NULL;
+static struct exe_ne_header_name_entry_table *ne_name_entry_sort_by_table = NULL;
 int ne_name_entry_sort_by_name(const void *a,const void *b) {
     struct exe_ne_header_name_entry *ea = (struct exe_ne_header_name_entry *)a;
     struct exe_ne_header_name_entry *eb = (struct exe_ne_header_name_entry *)b;
     unsigned char *pa,*pb;
     unsigned int i;
 
-    pa = ne_name_entry_get_name_base(ne_name_entry_sort_by_name_raw,ne_name_entry_sort_by_name_raw_length,ea);
-    pb = ne_name_entry_get_name_base(ne_name_entry_sort_by_name_raw,ne_name_entry_sort_by_name_raw_length,eb);
+    pa = ne_name_entry_get_name_base(ne_name_entry_sort_by_table,ea);
+    pb = ne_name_entry_get_name_base(ne_name_entry_sort_by_table,eb);
 
     for (i=0;i < ea->length && i < eb->length;i++) {
         int diff = (int)pa[i] - (int)pb[i];
@@ -76,23 +125,123 @@ int ne_name_entry_sort_by_name(const void *a,const void *b) {
 int ne_name_entry_sort_by_ordinal(const void *a,const void *b) {
     struct exe_ne_header_name_entry *ea = (struct exe_ne_header_name_entry *)a;
     struct exe_ne_header_name_entry *eb = (struct exe_ne_header_name_entry *)b;
-    return ne_name_entry_get_ordinal(ne_name_entry_sort_by_name_raw,ne_name_entry_sort_by_name_raw_length,ea) -
-        ne_name_entry_get_ordinal(ne_name_entry_sort_by_name_raw,ne_name_entry_sort_by_name_raw_length,eb);
+    return ne_name_entry_get_ordinal(ne_name_entry_sort_by_table,ea) -
+        ne_name_entry_get_ordinal(ne_name_entry_sort_by_table,eb);
+}
+
+int exe_ne_header_name_entry_table_parse_raw(struct exe_ne_header_name_entry_table * const t) {
+    unsigned char *scan,*base,*fence;
+    unsigned int entries = 0;
+
+    exe_ne_header_name_entry_table_free_table(t);
+    if (t->raw == NULL || t->raw_length == 0)
+        return 0;
+
+    base = t->raw;
+    fence = base + t->raw_length;
+
+    /* how many entries? */
+    for (scan=base;scan < fence;) {
+        /* uint8_t         LENGTH
+         * char[length]    TEXT
+         * uint16_t        ORDINAL */
+        unsigned char len = *scan++; // LENGTH
+        if (len == 0) break;
+        if ((scan+len+2) > fence) break;
+
+        scan += len + 2; // TEXT + ORDINAL
+        entries++;
+    }
+
+    t->table = (struct exe_ne_header_name_entry*)malloc(entries * sizeof(*(t->table)));
+    if (t->table == NULL) {
+        exe_ne_header_name_entry_table_free_table(t);
+        return -1;
+    }
+    t->length = entries;
+
+    /* now scan and index the entries */
+    entries = 0;
+    for (scan=base;scan < fence && entries < t->length;) {
+        /* uint8_t         LENGTH
+         * char[length]    TEXT
+         * uint16_t        ORDINAL */
+        unsigned char len = *scan++; // LENGTH
+        if (len == 0) break;
+        if ((scan+len+2) > fence) break;
+
+        t->table[entries].length = len;
+
+        t->table[entries].offset = (uint16_t)(scan - base);
+        scan += len;    // TEXT
+
+        scan += 2;      // ORDINAL
+
+        entries++;
+    }
+
+    if ((scan + 1) < fence)
+        printf("      ! Name table stopped %u bytes early\n",
+            (unsigned int)(fence - scan));
+
+    if (entries < t->length) {
+        fprintf(stderr,"WARNING: Names parsed are less than expected %u < %u\n",
+            (unsigned int)entries,
+            (unsigned int)t->length);
+
+        t->length = entries;
+    }
+
+    return 0;
+}
+
+void name_entry_table_sort_by_user_options(struct exe_ne_header_name_entry_table * const t) {
+    ne_name_entry_sort_by_table = t;
+    if (t->raw == NULL || t->length <= 1)
+        return;
+
+    if (opt_sort_ordinal) {
+        /* NTS: Do not sort the module name in entry 0 */
+        qsort(t->table+1,t->length-1,sizeof(*(t->table)),ne_name_entry_sort_by_ordinal);
+    }
+    else if (opt_sort_names) {
+        /* NTS: Do not sort the module name in entry 0 */
+        qsort(t->table+1,t->length-1,sizeof(*(t->table)),ne_name_entry_sort_by_name);
+    }
 }
 
 ///////////////////
+void print_name_table(struct exe_ne_header_name_entry_table * const t) {
+    struct exe_ne_header_name_entry *ent = NULL;
+    uint16_t ordinal;
+    char tmp[255+1];
+    unsigned int i;
+
+    if (t->table == NULL || t->length == 0)
+        return;
+
+    for (i=0;i < t->length;i++) {
+        ent = t->table + i;
+        ordinal = ne_name_entry_get_ordinal(t,ent);
+
+        tmp[ent->length] = 0;
+        if (ent->length != 0)
+            memcpy(tmp,t->raw+ent->offset,ent->length);
+
+        if (i == 0) {
+            printf("        Module name:    '%s'\n",tmp);
+            if (ordinal != 0)
+                printf("        ! WARNING: Module name with ordinal != 0\n");
+        }
+        else
+            printf("        Ordinal #%-5d: '%s'\n",ordinal,tmp);
+    }
+}
 
 int main(int argc,char **argv) {
-    unsigned int ne_nonresname_length = 0;
-    unsigned char *ne_nonresname_raw = NULL;
-    struct exe_ne_header_name_entry *ne_nonresname = NULL;
-
-    unsigned int ne_resname_length = 0;
-    unsigned char *ne_resname_raw = NULL;
-    unsigned short ne_resname_raw_length = 0;
-    struct exe_ne_header_name_entry *ne_resname = NULL;
-
     struct exe_ne_header_segment_entry *ne_segments = NULL;
+    struct exe_ne_header_name_entry_table ne_nonresname;
+    struct exe_ne_header_name_entry_table ne_resname;
     struct exe_ne_header ne_header;
     uint32_t ne_header_offset;
     uint32_t file_size;
@@ -101,6 +250,8 @@ int main(int argc,char **argv) {
 
     assert(sizeof(ne_header) == 0x40);
     memset(&exehdr,0,sizeof(exehdr));
+    exe_ne_header_name_entry_table_init(&ne_resname);
+    exe_ne_header_name_entry_table_init(&ne_nonresname);
 
     for (i=1;i < argc;) {
         a = argv[i++];
@@ -483,14 +634,6 @@ int main(int argc,char **argv) {
     if (ne_header.imported_name_table_offset > ne_header.entry_table_offset)
         printf("! WARNING: imported name table offset > entry table offset");
 
-    /* RESIDENT_NAME_TABLE_SIZE = module_reference_table_offset - resident_name_table_offset */
-    if (ne_header.module_reference_table_offset > ne_header.resident_name_table_offset)
-        ne_resname_raw_length = (unsigned short)(ne_header.module_reference_table_offset - ne_header.resident_name_table_offset);
-    else
-        ne_resname_raw_length = 0;
-
-    printf("  * Resident name table length: %u\n",ne_resname_raw_length);
-
     /* load segment table */
     if (ne_header.segment_table_entries != 0 && ne_header.segment_table_offset != 0 &&
         (unsigned long)lseek(src_fd,ne_header.segment_table_offset + ne_header_offset,SEEK_SET) == ((unsigned long)ne_header.segment_table_offset + ne_header_offset)) {
@@ -509,244 +652,47 @@ int main(int argc,char **argv) {
     /* load nonresident name table */
     if (ne_header.nonresident_name_table_offset != 0 && ne_header.nonresident_name_table_length != 0 &&
         (unsigned long)lseek(src_fd,ne_header.nonresident_name_table_offset,SEEK_SET) == ne_header.nonresident_name_table_offset) {
-        unsigned char *base,*scan,*fence;
+        unsigned char *base;
 
-        base = malloc(ne_header.nonresident_name_table_length);
+        base = exe_ne_header_name_entry_table_alloc_raw(&ne_nonresname,ne_header.nonresident_name_table_length);
         if (base != NULL) {
-            if ((unsigned long)read(src_fd,base,ne_header.nonresident_name_table_length) != ne_header.nonresident_name_table_length) {
-                free(base);
-                base = NULL;
-            }
+            if ((unsigned long)read(src_fd,base,ne_nonresname.raw_length) != ne_nonresname.raw_length)
+                exe_ne_header_name_entry_table_free_raw(&ne_nonresname);
         }
 
-        if (base != NULL) {
-            unsigned int entries = 0;
-
-            fence = base + ne_header.nonresident_name_table_length;
-            for (scan=base;scan < fence;) {
-                /* uint8_t         LENGTH
-                 * char[length]    TEXT
-                 * uint16_t        ORDINAL */
-                unsigned char len = *scan++; // LENGTH
-                if (len == 0) break;
-                if ((scan+len+2) > fence) break;
-
-                scan += len + 2; // TEXT + ORDINAL
-                entries++;
-            }
-
-            ne_nonresname_length = entries;
-            if (entries != 0) {
-                printf("  * Non-resident name table has %u entries\n",entries);
-
-                ne_nonresname = (struct exe_ne_header_name_entry*)malloc(entries * sizeof(*ne_nonresname));
-                if (ne_nonresname != NULL) {
-                    ne_nonresname_length = entries;
-                    ne_nonresname_raw = base;
-
-                    entries = 0;
-                    for (scan=base;scan < fence && entries < ne_nonresname_length;) {
-                        /* uint8_t         LENGTH
-                         * char[length]    TEXT
-                         * uint16_t        ORDINAL */
-                        unsigned char len = *scan++; // LENGTH
-                        if (len == 0) break;
-                        if ((scan+len+2) > fence) break;
-
-                        ne_nonresname[entries].length = len;
-
-                        ne_nonresname[entries].offset = (uint16_t)(scan - base);
-                        scan += len;    // TEXT
-
-                        scan += 2;      // ORDINAL
-
-                        entries++;
-                    }
-
-                    if ((scan + 1) < fence)
-                        printf("      ! Non-resident name table stopped %u bytes early\n",
-                            (unsigned int)(fence - scan));
-
-                    if (entries < ne_nonresname_length) {
-                        fprintf(stderr,"WARNING: Names parsed are less than expected %u < %u\n",
-                            (unsigned int)entries,
-                            (unsigned int)ne_nonresname_length);
-
-                        ne_nonresname_length = entries;
-                    }
-
-                    ne_name_entry_sort_by_name_raw = ne_nonresname_raw;
-                    ne_name_entry_sort_by_name_raw_length = ne_header.nonresident_name_table_length;
-                    if (opt_sort_ordinal && ne_nonresname_length > 1) {
-                        /* NTS: Do not sort the module name in entry 0 */
-                        qsort(ne_nonresname+1,ne_nonresname_length-1,sizeof(*ne_nonresname),ne_name_entry_sort_by_ordinal);
-                    }
-                    else if (opt_sort_names && ne_nonresname_length > 1) {
-                        /* NTS: Do not sort the module name in entry 0 */
-                        qsort(ne_nonresname+1,ne_nonresname_length-1,sizeof(*ne_nonresname),ne_name_entry_sort_by_name);
-                    }
-                }
-                else {
-                    free(base);
-                    base = NULL;
-                }
-            }
-            else {
-                free(base);
-                base = NULL;
-            }
-        }
+        exe_ne_header_name_entry_table_parse_raw(&ne_nonresname);
+        name_entry_table_sort_by_user_options(&ne_nonresname);
     }
 
     /* load resident name table */
-    if (ne_header.resident_name_table_offset != 0 && ne_resname_raw_length != 0 &&
+    if (ne_header.resident_name_table_offset != 0 && ne_header.module_reference_table_offset > ne_header.resident_name_table_offset &&
         (unsigned long)lseek(src_fd,ne_header.resident_name_table_offset + ne_header_offset,SEEK_SET) == (ne_header.resident_name_table_offset + ne_header_offset)) {
-        unsigned char *base,*scan,*fence;
+        unsigned int raw_length;
+        unsigned char *base;
 
-        base = malloc(ne_resname_raw_length);
+        /* RESIDENT_NAME_TABLE_SIZE = module_reference_table_offset - resident_name_table_offset */
+        raw_length = (unsigned short)(ne_header.module_reference_table_offset - ne_header.resident_name_table_offset);
+        printf("  * Resident name table length: %u\n",raw_length);
+
+        base = exe_ne_header_name_entry_table_alloc_raw(&ne_resname,raw_length);
         if (base != NULL) {
-            if ((unsigned long)read(src_fd,base,ne_resname_raw_length) != ne_resname_raw_length) {
-                free(base);
-                base = NULL;
-            }
+            if ((unsigned long)read(src_fd,base,ne_resname.raw_length) != ne_resname.raw_length)
+                exe_ne_header_name_entry_table_free_raw(&ne_resname);
         }
 
-        if (base != NULL) {
-            unsigned int entries = 0;
-
-            fence = base + ne_resname_raw_length;
-            for (scan=base;scan < fence;) {
-                /* uint8_t         LENGTH
-                 * char[length]    TEXT
-                 * uint16_t        ORDINAL */
-                unsigned char len = *scan++; // LENGTH
-                if (len == 0) break;
-                if ((scan+len+2) > fence) break;
-
-                scan += len + 2; // TEXT + ORDINAL
-                entries++;
-            }
-
-            ne_resname_length = entries;
-            if (entries != 0) {
-                printf("  * Resident name table has %u entries\n",entries);
-
-                ne_resname = (struct exe_ne_header_name_entry*)malloc(entries * sizeof(*ne_resname));
-                if (ne_resname != NULL) {
-                    ne_resname_length = entries;
-                    ne_resname_raw = base;
-
-                    entries = 0;
-                    for (scan=base;scan < fence && entries < ne_resname_length;) {
-                        /* uint8_t         LENGTH
-                         * char[length]    TEXT
-                         * uint16_t        ORDINAL */
-                        unsigned char len = *scan++; // LENGTH
-                        if (len == 0) break;
-                        if ((scan+len+2) > fence) break;
-
-                        ne_resname[entries].length = len;
-
-                        ne_resname[entries].offset = (uint16_t)(scan - base);
-                        scan += len;    // TEXT
-
-                        scan += 2;      // ORDINAL
-
-                        entries++;
-                    }
-
-                    if ((scan + 1) < fence)
-                        printf("      ! Resident name table stopped %u bytes early\n",
-                            (unsigned int)(fence - scan));
-
-                    if (entries < ne_resname_length) {
-                        fprintf(stderr,"WARNING: Names parsed are less than expected %u < %u\n",
-                            (unsigned int)entries,
-                            (unsigned int)ne_resname_length);
-
-                        ne_resname_length = entries;
-                    }
-
-                    ne_name_entry_sort_by_name_raw = ne_resname_raw;
-                    ne_name_entry_sort_by_name_raw_length = ne_resname_raw_length;
-                    if (opt_sort_ordinal && ne_resname_length > 1) {
-                        /* NTS: Do not sort the module name in entry 0 */
-                        qsort(ne_resname+1,ne_resname_length-1,sizeof(*ne_resname),ne_name_entry_sort_by_ordinal);
-                    }
-                    else if (opt_sort_names && ne_resname_length > 1) {
-                        /* NTS: Do not sort the module name in entry 0 */
-                        qsort(ne_resname+1,ne_resname_length-1,sizeof(*ne_resname),ne_name_entry_sort_by_name);
-                    }
-                }
-                else {
-                    free(base);
-                    base = NULL;
-                }
-            }
-            else {
-                free(base);
-                base = NULL;
-            }
-        }
+        exe_ne_header_name_entry_table_parse_raw(&ne_resname);
+        name_entry_table_sort_by_user_options(&ne_resname);
     }
 
     /* non-resident name table */
-    if (ne_nonresname != NULL) {
-        struct exe_ne_header_name_entry *ent = NULL;
-        uint16_t ordinal;
-        char tmp[255+1];
-        unsigned int i;
-
-        printf("    Non-resident name table, %u entries\n",
-            (unsigned int)ne_nonresname_length);
-
-        for (i=0;i < ne_nonresname_length;i++) {
-            ent = ne_nonresname + i;
-
-            ordinal = ne_name_entry_get_ordinal(ne_nonresname_raw,ne_header.nonresident_name_table_length,ent);
-
-            tmp[ent->length] = 0;
-            if (ent->length != 0)
-                memcpy(tmp,ne_nonresname_raw+ent->offset,ent->length);
-
-            if (i == 0) {
-                printf("        Module name:    '%s'\n",tmp);
-                if (ordinal != 0)
-                    printf("        ! WARNING: Module name with ordinal != 0\n");
-            }
-            else
-                printf("        Ordinal #%-5d: '%s'\n",ordinal,tmp);
-        }
-    }
+    printf("    Non-resident name table, %u entries\n",
+        (unsigned int)ne_nonresname.length);
+    print_name_table(&ne_nonresname);
 
     /* resident name table */
-    if (ne_resname != NULL) {
-        struct exe_ne_header_name_entry *ent = NULL;
-        uint16_t ordinal;
-        char tmp[255+1];
-        unsigned int i;
-
-        printf("    Resident name table, %u entries\n",
-            (unsigned int)ne_resname_length);
-
-        for (i=0;i < ne_resname_length;i++) {
-            ent = ne_resname + i;
-
-            ordinal = ne_name_entry_get_ordinal(ne_resname_raw,ne_resname_raw_length,ent);
-
-            tmp[ent->length] = 0;
-            if (ent->length != 0)
-                memcpy(tmp,ne_resname_raw+ent->offset,ent->length);
-
-            if (i == 0) {
-                printf("        Module name:    '%s'\n",tmp);
-                if (ordinal != 0)
-                    printf("        ! WARNING: Module name with ordinal != 0\n");
-            }
-            else
-                printf("        Ordinal #%-5d: '%s'\n",ordinal,tmp);
-        }
-    }
+    printf("    Resident name table, %u entries\n",
+        (unsigned int)ne_resname.length);
+    print_name_table(&ne_resname);
 
     /* dump segment table */
     if (ne_segments != NULL) {
@@ -1036,24 +982,8 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (ne_nonresname_raw) {
-        free(ne_nonresname_raw);
-        ne_nonresname_raw = NULL;
-    }
-    if (ne_nonresname) {
-        free(ne_nonresname);
-        ne_nonresname = NULL;
-    }
-
-    if (ne_resname_raw) {
-        free(ne_resname_raw);
-        ne_resname_raw = NULL;
-    }
-    if (ne_resname) {
-        free(ne_resname);
-        ne_resname = NULL;
-    }
-
+    exe_ne_header_name_entry_table_free(&ne_nonresname);
+    exe_ne_header_name_entry_table_free(&ne_resname);
     if (ne_segments) {
         free(ne_segments);
         ne_segments = NULL;
