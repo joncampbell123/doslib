@@ -307,6 +307,63 @@ unsigned long exe_ne_header_segment_table_get_relocation_table_offset(const stru
         (unsigned long)s->length;
 }
 
+#pragma pack(push,1)
+struct exe_ne_header_entry_table_entry {
+    uint8_t         segment_id;         // 0x00 = empty  0xFF = movable  0xFE = constant   anything else = segment index
+    uint16_t        offset;             // 16-bit offset to entry
+};
+#pragma pack(pop)
+
+struct exe_ne_header_entry_table_table {
+    struct exe_ne_header_entry_table_entry*     table;
+    unsigned int                                length;
+    unsigned char*                              raw;
+    size_t                                      raw_length;
+    unsigned char                               raw_ownership;
+};
+
+void exe_ne_header_entry_table_table_init(struct exe_ne_header_entry_table_table * const t) {
+    memset(t,0,sizeof(*t));
+}
+
+void exe_ne_header_entry_table_table_free_table(struct exe_ne_header_entry_table_table * const t) {
+    if (t->table) free(t->table);
+    t->table = NULL;
+    t->length = 0;
+}
+
+void exe_ne_header_entry_table_table_free_raw(struct exe_ne_header_entry_table_table * const t) {
+    if (t->raw && t->raw_ownership) free(t->raw);
+    t->raw_length = 0;
+    t->raw = 0;
+}
+
+unsigned char *exe_ne_header_entry_table_table_alloc_raw(struct exe_ne_header_entry_table_table * const t,const size_t length) {
+    if (t->raw != NULL) {
+        if (length == t->raw_length)
+            return t->raw;
+
+        exe_ne_header_entry_table_table_free_raw(t);
+    }
+
+    assert(t->raw == NULL);
+    if (length == 0)
+        return NULL;
+
+    t->raw = malloc(length);
+    if (t->raw == NULL)
+        return NULL;
+
+    t->raw_length = length;
+    t->raw_ownership = 1;
+    return t->raw;
+}
+
+void exe_ne_header_entry_table_table_free(struct exe_ne_header_entry_table_table * const t) {
+    exe_ne_header_entry_table_table_free_table(t);
+    exe_ne_header_entry_table_table_free_raw(t);
+}
+
 ///////////////////
 void print_name_table(const struct exe_ne_header_name_entry_table * const t) {
     const struct exe_ne_header_name_entry *ent = NULL;
@@ -486,7 +543,184 @@ void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * 
     }
 }
 
+void exe_ne_header_entry_table_table_parse_raw(struct exe_ne_header_entry_table_table * const t) {
+    unsigned char nument,seg_id;
+    unsigned char *scan,*fence;
+    unsigned int entries = 0;
+    unsigned int scanst;
+    unsigned int i;
+
+    exe_ne_header_entry_table_table_free_table(t);
+    if (t->raw == NULL || t->raw_length <= 2) return;
+    fence = t->raw + t->raw_length;
+
+    /* 2-BYTE     number, seg_id
+     *     for i in 0 to number
+     *        <entry, length varies by segment type>
+     */
+
+    /* first, how many entries? the "run-length" encoding used for common segment index/type makes this easier. */
+    for (scan=t->raw;scan < fence;) {
+        nument = *scan++;
+        if (nument == 0 || scan >= fence) break;
+        seg_id = *scan++;
+        if (scan >= fence) break;
+
+        if (seg_id == 0x00) {
+            /* nothing to do or skip */
+        }
+        else if (seg_id == 0xFE) {
+            /* constant entries are 3 bytes (BYTE FLAGS + WORD CONSTANT) */
+            scan += (unsigned int)nument * 3U;
+        }
+        else if (seg_id == 0xFF) {
+            /* movable segment refs are 6 bytes */
+            scan += (unsigned int)nument * 6U;
+        }
+        else {
+            /* fixed segment refs are 3 bytes */
+            scan += (unsigned int)nument * 3U;
+        }
+
+        entries += nument;
+    }
+
+    if (entries == 0)
+        return;
+
+    t->table = (struct exe_ne_header_entry_table_entry*)malloc(entries * sizeof(*(t->table)));
+    if (t->table == NULL) return;
+    t->length = entries;
+
+    /* scan and copy indexes to */
+    entries = 0;
+    for (scan=t->raw;scan < fence && entries < t->length;) {
+        nument = *scan++;
+        if (nument == 0 || scan >= fence) break;
+        seg_id = *scan++;
+        if (scan >= fence) break;
+
+        if (seg_id == 0x00)
+            scanst = 0; /* no bytes, empty */
+        else if (seg_id == 0xFE)
+            scanst = 3; /* constant, 3 bytes */
+        else if (seg_id == 0xFF)
+            scanst = 6; /* movable segment ref, 6 bytes */
+        else
+            scanst = 3; /* fixed segment ref, 3 bytes */
+
+        for (i=0;i < nument && entries < t->length && scan < fence;i++,entries++,scan += scanst) {
+            t->table[entries].segment_id = seg_id;
+            t->table[entries].offset = (uint16_t)(scan - t->raw);
+        }
+    }
+
+    if ((scan+1) < fence) {
+        printf("! entry table parsing, came up short by %u bytes\n",
+            (unsigned int)(fence - scan));
+    }
+    if (entries < t->length) {
+        printf("! entry table parsing, came up short by %u entries\n",
+            (unsigned int)(t->length - entries));
+        t->length = entries;
+    }
+}
+
+size_t exe_ne_header_entry_table_table_raw_entry_size(const struct exe_ne_header_entry_table_entry * const ent) {
+    if (ent->segment_id == 0xFF)
+        return 6;
+    else if (ent->segment_id != 0) // 0x01-0xFE
+        return 3;
+
+    return 0;
+}
+
+unsigned char *exe_ne_header_entry_table_table_raw_entry(const struct exe_ne_header_entry_table_table * const t,const struct exe_ne_header_entry_table_entry * const ent) {
+    if (t->raw == NULL || t->raw_length == 0)
+        return NULL;
+
+    if ((ent->offset+exe_ne_header_entry_table_table_raw_entry_size(ent)) > t->raw_length)
+        return NULL;
+
+    return t->raw + ent->offset;
+}
+
+#pragma pack(push,1)
+struct exe_ne_header_entry_table_movable_segment_entry {
+    uint8_t             flags;          // +0x00
+    uint16_t            int3f;          // +0x01
+    uint8_t             segid;          // +0x03
+    uint16_t            seg_offs;       // +0x04
+};                                      // =0x06
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_entry_table_fixed_segment_entry {
+    uint8_t             flags;          // +0x00
+    union {
+        uint16_t        seg_offs;       // +0x01 (fixed segment, segment_id 0x01 to 0xFD)
+        uint16_t        const_value;    // +0x01 (constant value, segment_id 0xFE)
+    } v;
+};                                      // =0x03
+#pragma pack(pop)
+
+void print_entry_table_flags(const uint16_t flags) {
+    if (flags & 1) printf("EXPORTED ");
+    if (flags & 2) printf("USES_GLOBAL_SHARED_DATA_SEGMENT ");
+    if (flags & 0xF8) printf("RING_TRANSITION_STACK_WORDS=%u ",flags >> 3);
+}
+
+void print_entry_table(const struct exe_ne_header_entry_table_table * const t) {
+    const struct exe_ne_header_entry_table_entry *ent;
+    unsigned char *rawd;
+    unsigned int i;
+
+    if (t->table == NULL || t->length == 0)
+        return;
+
+    for (i=0;i < t->length;i++) { /* NTS: ordinal value is i + 1, ordinals are 1-based */
+        ent = t->table + i;
+        rawd = exe_ne_header_entry_table_table_raw_entry(t,ent);
+
+        printf("        Ordinal #%-5d: ",i + 1); /* ordinal value is i + 1, ordinals are 1-based */
+        if (rawd == NULL) {
+            printf("N/A (out of range entry data)\n");
+        }
+        else if (ent->segment_id == 0x00) {
+            printf("EMPTY\n");
+        }
+        else if (ent->segment_id == 0xFF) {
+            /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
+            struct exe_ne_header_entry_table_movable_segment_entry *ment =
+                (struct exe_ne_header_entry_table_movable_segment_entry*)rawd;
+
+            printf("movable segment #%d : 0x%04x ",ment->segid,ment->seg_offs);
+            print_entry_table_flags(ment->flags);
+            printf("\n");
+        }
+        else if (ent->segment_id == 0xFE) {
+            /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
+            struct exe_ne_header_entry_table_fixed_segment_entry *fent =
+                (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
+
+            printf("constant value : 0x%04x ",fent->v.seg_offs);
+            print_entry_table_flags(fent->flags);
+            printf("\n");
+        }
+        else {
+            /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
+            struct exe_ne_header_entry_table_fixed_segment_entry *fent =
+                (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
+
+            printf("fixed segment #%d : 0x%04x ",ent->segment_id,fent->v.seg_offs);
+            print_entry_table_flags(fent->flags);
+            printf("\n");
+        }
+    }
+}
+
 int main(int argc,char **argv) {
+    struct exe_ne_header_entry_table_table ne_entry_table;
     struct exe_ne_header_name_entry_table ne_nonresname;
     struct exe_ne_header_name_entry_table ne_resname;
     struct exe_ne_header_segment_table ne_segments;
@@ -501,6 +735,7 @@ int main(int argc,char **argv) {
     exe_ne_header_segment_table_init(&ne_segments);
     exe_ne_header_name_entry_table_init(&ne_resname);
     exe_ne_header_name_entry_table_init(&ne_nonresname);
+    exe_ne_header_entry_table_table_init(&ne_entry_table);
 
     for (i=1;i < argc;) {
         a = argv[i++];
@@ -936,6 +1171,20 @@ int main(int argc,char **argv) {
         name_entry_table_sort_by_user_options(&ne_resname);
     }
 
+    /* entry table */
+    if (ne_header.entry_table_offset != 0 && ne_header.entry_table_length != 0 &&
+        lseek(src_fd,ne_header.entry_table_offset + ne_header_offset,SEEK_SET) == (ne_header.entry_table_offset + ne_header_offset)) {
+        unsigned char *base;
+
+        base = exe_ne_header_entry_table_table_alloc_raw(&ne_entry_table,ne_header.entry_table_length);
+        if (base != NULL) {
+            if (read(src_fd,base,ne_header.entry_table_length) != ne_header.entry_table_length)
+                exe_ne_header_entry_table_table_free_raw(&ne_entry_table);
+        }
+
+        exe_ne_header_entry_table_table_parse_raw(&ne_entry_table);
+    }
+
     /* non-resident name table */
     printf("    Non-resident name table, %u entries\n",
         (unsigned int)ne_nonresname.length);
@@ -996,116 +1245,12 @@ int main(int argc,char **argv) {
         }
     }
 
-    /* dump the entry table */
-    if (ne_header.entry_table_offset != 0 && ne_header.entry_table_length != 0 &&
-        lseek(src_fd,ne_header.entry_table_offset + ne_header_offset,SEEK_SET) == (ne_header.entry_table_offset + ne_header_offset)) {
-        unsigned char *scan,*fence,*buf;
+    /* entry table */
+    printf("    Entry table, %u entries:\n",
+        (unsigned int)ne_entry_table.length);
+    print_entry_table(&ne_entry_table);
 
-        buf = malloc(ne_header.entry_table_length);
-        if (buf != NULL) {
-            if (read(src_fd,buf,ne_header.entry_table_length) != ne_header.entry_table_length) {
-                printf("    ! ERROR. Cannot read entry table\n");
-                free(buf);
-                buf = NULL;
-            }
-        }
-
-        if (buf != NULL) {
-            unsigned char segid;
-            unsigned char flags;
-            unsigned char nument,ent;
-            unsigned short seg_offs;
-            unsigned short int3f;
-            unsigned short ordinal=1;
-
-            printf("    Entry table:\n");
-
-            scan = buf;
-            fence = buf + ne_header.entry_table_length;
-
-            while (scan < fence) {
-                nument = *scan++;
-                if (nument == 0) break;
-                if (scan == fence) break;
-                segid = *scan++;
-
-                printf("        %u entries referring to ",nument);
-                if (segid == 0xFF) {
-                    printf("MOVEABLE segments\n");
-
-                    for (ent=0;ent < nument;ent++) {
-                        if ((scan+6) > fence) break;
-
-                        flags = *scan++;
-                        int3f = *((uint16_t*)scan); scan += 2;
-                        segid = *scan++;
-                        seg_offs = *((uint16_t*)scan); scan += 2;
-
-                        printf("            Ordinal #%d ",ordinal++);
-                        if (flags & 1) printf("EXPORTED ");
-                        if (flags & 2) printf("USES_GLOBAL_SHARED_DATA_SEGMENT ");
-                        if (flags & 0xF8) printf("RING_TRANSITION_STACK_WORDS=%u ",flags >> 3);
-                        printf("\n");
-
-                        printf("                INT 3Fh = 0x%02x 0x%02x\n",int3f & 0xFF,int3f >> 8);
-
-                        printf("                segment #%u : 0x%04x\n",segid,seg_offs);
-                    }
-                }
-                else if (segid == 0xFE) {
-                    printf("CONSTANTS\n");
-
-                    for (ent=0;ent < nument;ent++) {
-                        if ((scan+3) > fence) break;
-
-                        flags = *scan++;
-                        seg_offs = *((uint16_t*)scan); scan += 2;
-
-                        printf("            Ordinal #%d ",ordinal++);
-                        if (flags & 1) printf("EXPORTED ");
-                        if (flags & 2) printf("USES_GLOBAL_SHARED_DATA_SEGMENT ");
-                        if (flags & 0xF8) printf("RING_TRANSITION_STACK_WORDS=%u ",flags >> 3);
-                        printf("\n");
-
-                        printf("                CONSTANT = 0x%04x\n",seg_offs);
-                    }
-                }
-                else if (segid == 0x00) {
-                    printf("UNUSED entry\n");
-
-                    for (ent=0;ent < nument;ent++) {
-                        printf("            Ordinal #%d EMPTY\n",ordinal++);
-                    }
-                }
-                else {
-                    printf("FIXED segment #%u\n",segid);
-
-                    for (ent=0;ent < nument;ent++) {
-                        if ((scan+3) > fence) break;
-
-                        flags = *scan++;
-                        seg_offs = *((uint16_t*)scan); scan += 2;
-
-                        printf("            Ordinal #%d ",ordinal++);
-                        if (flags & 1) printf("EXPORTED ");
-                        if (flags & 2) printf("USES_GLOBAL_SHARED_DATA_SEGMENT ");
-                        if (flags & 0xF8) printf("RING_TRANSITION_STACK_WORDS=%u ",flags >> 3);
-                        printf("\n");
-
-                        printf("                OFFSET = 0x%04x\n",seg_offs);
-                    }
-                }
-
-                if (scan == fence) break;
-            }
-
-            free(buf);
-        }
-        else {
-            printf("    ! ERROR. Cannot allocate memory to read entry table\n");
-        }
-    }
-
+    exe_ne_header_entry_table_table_free(&ne_entry_table);
     exe_ne_header_name_entry_table_free(&ne_nonresname);
     exe_ne_header_name_entry_table_free(&ne_resname);
     exe_ne_header_segment_table_free(&ne_segments);
