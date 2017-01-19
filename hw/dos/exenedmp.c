@@ -670,7 +670,36 @@ void print_entry_table_flags(const uint16_t flags) {
     if (flags & 0xF8) printf("RING_TRANSITION_STACK_WORDS=%u ",flags >> 3);
 }
 
-void print_entry_table(const struct exe_ne_header_entry_table_table * const t) {
+void print_entry_table_locate_name_by_ordinal(const struct exe_ne_header_name_entry_table * const nonresnames,const struct exe_ne_header_name_entry_table *resnames,const unsigned int ordinal) {
+    char tmp[255+1];
+    unsigned int i;
+
+    if (resnames->table != NULL) {
+        for (i=0;i < resnames->length;i++) {
+            struct exe_ne_header_name_entry *ent = resnames->table + i;
+
+            if (ne_name_entry_get_ordinal(resnames,ent) == ordinal) {
+                ne_name_entry_get_name(tmp,sizeof(tmp),resnames,ent);
+                printf("RESIDENT NAME '%s' ",tmp);
+                return;
+            }
+        }
+    }
+
+    if (nonresnames->table != NULL) {
+        for (i=0;i < nonresnames->length;i++) {
+            struct exe_ne_header_name_entry *ent = nonresnames->table + i;
+
+            if (ne_name_entry_get_ordinal(nonresnames,ent) == ordinal) {
+                ne_name_entry_get_name(tmp,sizeof(tmp),nonresnames,ent);
+                printf(" NONRESIDENT NAME '%s'",tmp);
+                return;
+            }
+        }
+    }
+}
+
+void print_entry_table(const struct exe_ne_header_entry_table_table * const t,const struct exe_ne_header_name_entry_table * const nonresnames,const struct exe_ne_header_name_entry_table *resnames) {
     const struct exe_ne_header_entry_table_entry *ent;
     unsigned char *rawd;
     unsigned int i;
@@ -694,7 +723,9 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t) {
             struct exe_ne_header_entry_table_movable_segment_entry *ment =
                 (struct exe_ne_header_entry_table_movable_segment_entry*)rawd;
 
-            printf("movable segment #%d : 0x%04x\n",ment->segid,ment->seg_offs);
+            printf("movable segment #%d : 0x%04x",ment->segid,ment->seg_offs);
+            print_entry_table_locate_name_by_ordinal(nonresnames,resnames,i + 1);
+            printf("\n");
             printf("            ");
             if (ment->flags != 0) print_entry_table_flags(ment->flags);
             printf("\n");
@@ -704,7 +735,9 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t) {
             struct exe_ne_header_entry_table_fixed_segment_entry *fent =
                 (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
 
-            printf("constant value : 0x%04x\n",fent->v.seg_offs);
+            printf("constant value : 0x%04x",fent->v.seg_offs);
+            print_entry_table_locate_name_by_ordinal(nonresnames,resnames,i + 1);
+            printf("\n");
             printf("            ");
             if (fent->flags != 0) print_entry_table_flags(fent->flags);
             printf("\n");
@@ -714,7 +747,9 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t) {
             struct exe_ne_header_entry_table_fixed_segment_entry *fent =
                 (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
 
-            printf("fixed segment #%d : 0x%04x\n",ent->segment_id,fent->v.seg_offs);
+            printf("fixed segment #%d : 0x%04x",ent->segment_id,fent->v.seg_offs);
+            print_entry_table_locate_name_by_ordinal(nonresnames,resnames,i + 1);
+            printf("\n");
             printf("            ");
             if (fent->flags != 0) print_entry_table_flags(fent->flags);
             printf("\n");
@@ -1251,7 +1286,7 @@ int main(int argc,char **argv) {
     /* entry table */
     printf("    Entry table, %u entries:\n",
         (unsigned int)ne_entry_table.length);
-    print_entry_table(&ne_entry_table);
+    print_entry_table(&ne_entry_table,&ne_nonresname,&ne_resname);
 
     exe_ne_header_entry_table_table_free(&ne_entry_table);
     exe_ne_header_name_entry_table_free(&ne_nonresname);
