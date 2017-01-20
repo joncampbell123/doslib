@@ -285,6 +285,7 @@ $(TEST_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd IMPORT CreateWindow USER.CREATEWINDOW # NTS: This is to test the NE dumper, in order to make an import by name rather than ordinal
 !  endif
 ! endif
 	%write tmp.cmd name $(TEST_EXE)

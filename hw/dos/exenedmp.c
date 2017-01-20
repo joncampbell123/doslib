@@ -654,6 +654,7 @@ void print_segment_table(const struct exe_ne_header_segment_table * const t) {
 void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * const r,struct exe_ne_header_imported_name_table * const ne_imported_name_table) {
     const union exe_ne_header_segment_relocation_entry *relocent;
     unsigned int relent;
+    char tmp2[255+1];
     char tmp[255+1];
 
     assert(sizeof(relocent) == 8);
@@ -723,10 +724,11 @@ void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * 
                     relocent->ordinal.ordinal);
                 break;
             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
+                ne_imported_name_table_entry_get_name(tmp2,sizeof(tmp2),ne_imported_name_table,relocent->name.imported_name_offset);
                 ne_imported_name_table_entry_get_module_ref_name(tmp,sizeof(tmp),ne_imported_name_table,relocent->name.module_reference_index);
-                printf("                    Refers to module reference #%d '%s', imp name offset %d\n",
+                printf("                    Refers to module reference #%d '%s', imp name offset %d '%s'\n",
                     relocent->name.module_reference_index,tmp,
-                    relocent->name.imported_name_offset);
+                    relocent->name.imported_name_offset,tmp2);
                 break;
             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
                 printf("                    OSFIXUP type=0x%04x\n",
