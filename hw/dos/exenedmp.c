@@ -62,6 +62,15 @@ void ne_imported_name_table_entry_get_name(char *dst,size_t dstmax,const struct 
     if (cpy != 0) memcpy(dst,raw,cpy);
 }
 
+void ne_imported_name_table_entry_get_module_ref_name(char *dst,size_t dstmax,const struct exe_ne_header_imported_name_table * const t,const uint16_t index) {
+    if (index == 0 || t->module_ref_table == NULL || index > t->module_ref_table_length) {
+        dst[0] = 0;
+        return;
+    }
+
+    ne_imported_name_table_entry_get_name(dst,dstmax,t,t->module_ref_table[index-1]);
+}
+
 void exe_ne_header_imported_name_table_init(struct exe_ne_header_imported_name_table * const t) {
     memset(t,0,sizeof(*t));
 }
@@ -642,9 +651,10 @@ void print_segment_table(const struct exe_ne_header_segment_table * const t) {
     }
 }
 
-void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * const r) {
+void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * const r,struct exe_ne_header_imported_name_table * const ne_imported_name_table) {
     const union exe_ne_header_segment_relocation_entry *relocent;
     unsigned int relent;
+    char tmp[255+1];
 
     assert(sizeof(relocent) == 8);
     for (relent=0;relent < r->length;relent++) {
@@ -707,13 +717,15 @@ void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * 
                 }
                 break;
             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
-                printf("                    Refers to module reference #%d, ordinal %d\n",
-                    relocent->ordinal.module_reference_index,
+                ne_imported_name_table_entry_get_module_ref_name(tmp,sizeof(tmp),ne_imported_name_table,relocent->ordinal.module_reference_index);
+                printf("                    Refers to module reference #%d '%s', ordinal %d\n",
+                    relocent->ordinal.module_reference_index,tmp,
                     relocent->ordinal.ordinal);
                 break;
             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
-                printf("                    Refers to module reference #%d, imp name offset %d\n",
-                    relocent->name.module_reference_index,
+                ne_imported_name_table_entry_get_module_ref_name(tmp,sizeof(tmp),ne_imported_name_table,relocent->name.module_reference_index);
+                printf("                    Refers to module reference #%d '%s', imp name offset %d\n",
+                    relocent->name.module_reference_index,tmp,
                     relocent->name.imported_name_offset);
                 break;
             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
@@ -1512,7 +1524,7 @@ int main(int argc,char **argv) {
                 }
             }
 
-            print_segment_reloc_table(&ne_relocs);
+            print_segment_reloc_table(&ne_relocs,&ne_imported_name_table);
             exe_ne_header_segment_reloc_table_free(&ne_relocs);
         }
     }
