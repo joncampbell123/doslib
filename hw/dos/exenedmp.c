@@ -38,6 +38,9 @@ struct exe_ne_header_imported_name_table {
     unsigned char*                                  raw;
     size_t                                          raw_length;
     unsigned char                                   raw_ownership;
+    /* module reference table (relies on this data) */
+    uint16_t*                                       module_ref_table;
+    unsigned int                                    module_ref_table_length; /* in entries of type uint16_t */
 };
 
 void ne_imported_name_table_entry_get_name(char *dst,size_t dstmax,const struct exe_ne_header_imported_name_table * const t,const uint16_t offset) {
@@ -63,6 +66,26 @@ void exe_ne_header_imported_name_table_init(struct exe_ne_header_imported_name_t
     memset(t,0,sizeof(*t));
 }
 
+void exe_ne_header_imported_name_table_free_module_ref_table(struct exe_ne_header_imported_name_table * const t) {
+    if (t->module_ref_table) free(t->module_ref_table);
+    t->module_ref_table = NULL;
+    t->module_ref_table_length = 0;
+}
+
+uint16_t *exe_ne_header_imported_name_table_alloc_module_ref_table(struct exe_ne_header_imported_name_table * const t,const size_t entries) {
+    exe_ne_header_imported_name_table_free_module_ref_table(t);
+
+    if (entries == 0)
+        return NULL;
+
+    t->module_ref_table = (uint16_t*)malloc(entries * sizeof(uint16_t));
+    if (t->module_ref_table == NULL)
+        return NULL;
+
+    t->module_ref_table_length = entries;
+    return t->module_ref_table;
+}
+
 void exe_ne_header_imported_name_table_free_table(struct exe_ne_header_imported_name_table * const t) {
     if (t->table) free(t->table);
     t->table = NULL;
@@ -80,6 +103,8 @@ unsigned char *exe_ne_header_imported_name_table_alloc_raw(struct exe_ne_header_
         if (length == t->raw_length)
             return t->raw;
 
+        exe_ne_header_imported_name_table_free_module_ref_table(t);
+        exe_ne_header_imported_name_table_free_table(t);
         exe_ne_header_imported_name_table_free_raw(t);
     }
 
@@ -97,6 +122,7 @@ unsigned char *exe_ne_header_imported_name_table_alloc_raw(struct exe_ne_header_
 }
 
 void exe_ne_header_imported_name_table_free(struct exe_ne_header_imported_name_table * const t) {
+    exe_ne_header_imported_name_table_free_module_ref_table(t);
     exe_ne_header_imported_name_table_free_table(t);
     exe_ne_header_imported_name_table_free_raw(t);
 }
@@ -502,6 +528,19 @@ void print_imported_name_table(const struct exe_ne_header_imported_name_table * 
 
     for (i=0;i < t->length;i++) {
         ne_imported_name_table_entry_get_name(tmp,sizeof(tmp),t,t->table[i]);
+        printf("        '%s'\n",tmp);
+    }
+}
+
+void print_imported_name_table_module_ref_table(const struct exe_ne_header_imported_name_table * const t) {
+    char tmp[255+1];
+    unsigned int i;
+
+    if (t->module_ref_table == NULL || t->module_ref_table_length == 0)
+        return;
+
+    for (i=0;i < t->module_ref_table_length;i++) {
+        ne_imported_name_table_entry_get_name(tmp,sizeof(tmp),t,t->module_ref_table[i]);
         printf("        '%s'\n",tmp);
     }
 }
@@ -1379,6 +1418,21 @@ int main(int argc,char **argv) {
         exe_ne_header_imported_name_table_parse_raw(&ne_imported_name_table);
     }
 
+    /* load module reference table */
+    if (ne_header.module_reference_table_offset != 0 && ne_header.module_reftable_entries != 0 &&
+        (unsigned long)lseek(src_fd,ne_header.module_reference_table_offset + ne_header_offset,SEEK_SET) == (ne_header.module_reference_table_offset + ne_header_offset)) {
+        uint16_t *base;
+
+        printf("  * Module reference table length: %u\n",ne_header.module_reftable_entries * 2);
+
+        base = exe_ne_header_imported_name_table_alloc_module_ref_table(&ne_imported_name_table,ne_header.module_reftable_entries);
+        if (base != NULL) {
+            if ((unsigned long)read(src_fd,base,ne_imported_name_table.module_ref_table_length*sizeof(uint16_t)) !=
+                (ne_imported_name_table.module_ref_table_length*sizeof(uint16_t)))
+                exe_ne_header_imported_name_table_free_module_ref_table(&ne_imported_name_table);
+        }
+    }
+
     /* entry table */
     if (ne_header.entry_table_offset != 0 && ne_header.entry_table_length != 0 &&
         lseek(src_fd,ne_header.entry_table_offset + ne_header_offset,SEEK_SET) == (ne_header.entry_table_offset + ne_header_offset)) {
@@ -1397,6 +1451,11 @@ int main(int argc,char **argv) {
     printf("    Imported name table, %u entries:\n",
         (unsigned int)ne_imported_name_table.length);
     print_imported_name_table(&ne_imported_name_table);
+
+    /* module reference name table */
+    printf("    Module reference name table, %u entries:\n",
+        (unsigned int)ne_imported_name_table.module_ref_table_length);
+    print_imported_name_table_module_ref_table(&ne_imported_name_table);
 
     /* non-resident name table */
     printf("    Non-resident name table, %u entries\n",
