@@ -32,28 +32,24 @@ static void help(void) {
 
 //////////////////
 
-struct exe_ne_header_imported_name_table_entry {
-    uint16_t                                        offset;
-};
-
 struct exe_ne_header_imported_name_table {
-    struct exe_ne_header_imported_name_table_entry* table;
+    uint16_t*                                       table;
     unsigned int                                    length;
     unsigned char*                                  raw;
     size_t                                          raw_length;
     unsigned char                                   raw_ownership;
 };
 
-void ne_imported_name_table_entry_get_name(char *dst,size_t dstmax,const struct exe_ne_header_imported_name_table * const t,const struct exe_ne_header_imported_name_table_entry * const ent) {
+void ne_imported_name_table_entry_get_name(char *dst,size_t dstmax,const struct exe_ne_header_imported_name_table * const t,const uint16_t offset) {
     unsigned char *raw;
     size_t cpy;
 
     dst[0] = 0;
     if (dstmax == 0) return;
     if (t->raw == NULL || t->raw_length == 0) return;
-    if (ent->offset >= t->raw_length) return;
+    if (offset >= t->raw_length) return;
 
-    raw = t->raw + ent->offset;
+    raw = t->raw + offset;
     cpy = *raw++;
     if ((raw+cpy) > (t->raw+t->raw_length)) return;
     if (cpy > (dstmax - 1)) cpy = dstmax - 1;
@@ -127,7 +123,7 @@ int exe_ne_header_imported_name_table_parse_raw(struct exe_ne_header_imported_na
         entries++;
     }
 
-    t->table = (struct exe_ne_header_imported_name_table_entry*)malloc(entries * sizeof(*(t->table)));
+    t->table = (uint16_t*)malloc(entries * sizeof(*(t->table)));
     if (t->table == NULL) {
         exe_ne_header_imported_name_table_free_table(t);
         return -1;
@@ -142,7 +138,7 @@ int exe_ne_header_imported_name_table_parse_raw(struct exe_ne_header_imported_na
         unsigned char len = *scan++; // LENGTH
         if ((scan+len) > fence) break;
 
-        t->table[entries].offset = (uint16_t)((scan-1) - base);
+        t->table[entries] = (uint16_t)((scan-1) - base);
         scan += len;    // TEXT
         entries++;
     }
@@ -505,7 +501,7 @@ void print_imported_name_table(const struct exe_ne_header_imported_name_table * 
         return;
 
     for (i=0;i < t->length;i++) {
-        ne_imported_name_table_entry_get_name(tmp,sizeof(tmp),t,t->table + i);
+        ne_imported_name_table_entry_get_name(tmp,sizeof(tmp),t,t->table[i]);
         printf("        '%s'\n",tmp);
     }
 }
