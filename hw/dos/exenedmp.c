@@ -1586,7 +1586,70 @@ int main(int argc,char **argv) {
                 printf("        rscTypes[...]\n");
 
                 if (typeinfo->rtTypeID & 0x8000) {
-                    printf("            rtTypeID:               INTEGER 0x%04x\n",typeinfo->rtTypeID & 0x7FFF);
+                    printf("            rtTypeID:               ");
+                    switch (typeinfo->rtTypeID & 0x7FFF) {
+                        case 1:
+                            printf("RT_CURSOR");
+                            break;
+                        case 2:
+                            printf("RT_BITMAP");
+                            break;
+                        case 3:
+                            printf("RT_ICON");
+                            break;
+                        case 4:
+                            printf("RT_MENU");
+                            break;
+                        case 5:
+                            printf("RT_DIALOG");
+                            break;
+                        case 6:
+                            printf("RT_STRING");
+                            break;
+                        case 7:
+                            printf("RT_FONTDIR");
+                            break;
+                        case 8:
+                            printf("RT_FONT");
+                            break;
+                        case 9:
+                            printf("RT_ACCELERATOR");
+                            break;
+                        case 10:
+                            printf("RT_RCDATA");
+                            break;
+                        case 11:
+                            printf("RT_MESSAGETABLE");
+                            break;
+                        case 16:
+                            printf("RT_VERSION");
+                            break;
+                        case 17:
+                            printf("RT_DLGINCLUDE");
+                            break;
+                        case 19:
+                            printf("RT_PLUGPLAY");
+                            break;
+                        case 20:
+                            printf("RT_VXD");
+                            break;
+                        case 21:
+                            printf("RT_ANICURSOR");
+                            break;
+                        case 22:
+                            printf("RT_ANIICON");
+                            break;
+                        case 23:
+                            printf("RT_HTML");
+                            break;
+                        case 24:
+                            printf("RT_MANIFEST");
+                            break;
+                        default:
+                            printf("INTEGER 0x%04x",typeinfo->rtTypeID & 0x7FFF);
+                            break;
+                    }
+                    printf("\n");
                 }
                 else {
                     unsigned char *raw = base + typeinfo->rtTypeID;
