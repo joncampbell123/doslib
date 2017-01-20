@@ -615,7 +615,7 @@ void exe_ne_header_entry_table_table_parse_raw(struct exe_ne_header_entry_table_
         }
     }
 
-    if ((scan+1) < fence) {
+    if ((scan+2) < fence) {
         printf("! entry table parsing, came up short by %u bytes\n",
             (unsigned int)(fence - scan));
     }
