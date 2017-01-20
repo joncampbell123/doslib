@@ -165,3 +165,31 @@ union exe_ne_header_segment_relocation_entry {
 #define EXE_NE_HEADER_FLAGS_NON_CONFORMING          (1U << 14U) /* ?? */
 #define EXE_NE_HEADER_FLAGS_DLL                     (1U << 15U) /* not an application, but a DLL. ignore SS:SP, CS:IP is FAR PROC LIBMAIN. */
 
+#pragma pack(push,1)
+struct exe_ne_header_resource_table {
+    uint16_t                    rscAlignShift;      // +0x00
+    /* TYPEINFO rscTypes[]                             +0x02      each entry sizeof(rscTypes) except last which is just the first uint16_t */
+    /* BYTE rscResourceNames[]                         +0x02      array of length + string, until length == 0 */
+};                                                  // =0x02
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_resource_table_typeinfo {
+    uint16_t                    rtTypeID;           // +0x00
+    uint16_t                    rtResourceCount;    // +0x02
+    uint32_t                    rtReserved;         // +0x04
+    /* NAMEINFO rtNameInfo[]                           +0x08 */
+};                                                  // =0x08
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_resource_table_nameinfo {
+    uint16_t                    rnOffset;           // +0x00
+    uint16_t                    rnLength;           // +0x02
+    uint16_t                    rnFlags;            // +0x04
+    uint16_t                    rnID;               // +0x06
+    uint16_t                    rnHandle;           // +0x08
+    uint16_t                    rnUsage;            // +0x0A
+};                                                  // =0x0C
+#pragma pack(pop)
+

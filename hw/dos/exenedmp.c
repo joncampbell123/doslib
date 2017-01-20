@@ -1536,6 +1536,163 @@ int main(int argc,char **argv) {
         (unsigned int)ne_entry_table.length);
     print_entry_table(&ne_entry_table,&ne_nonresname,&ne_resname);
 
+    /* resource table */
+    if (ne_header.resource_table_offset != 0 && ne_header.resident_name_table_offset > ne_header.resource_table_offset &&
+        (unsigned long)lseek(src_fd,ne_header.resource_table_offset + ne_header_offset,SEEK_SET) == (ne_header.resource_table_offset + ne_header_offset)) {
+        unsigned int raw_length;
+        unsigned char *base;
+        unsigned char *scan,*fence;
+        unsigned int ni;
+        char tmp[255+1];
+
+        /* RESOURCE_TABLE_SIZE = resident_name_table_offset - resource_table_offset         (header does not report size, "number of segments" is worthless) */
+        raw_length = (unsigned short)(ne_header.resident_name_table_offset - ne_header.resource_table_offset);
+        printf("  * Resource table length: %u\n",raw_length);
+
+        base = malloc(raw_length);
+        if (base != NULL) {
+            if (read(src_fd,base,raw_length) != raw_length) {
+                free(base);
+                base = NULL;
+            }
+        }
+
+        if (base != NULL) {
+            uint16_t rscAlignShift = 0;
+
+            scan = base;
+            fence = base + raw_length;
+
+            if ((scan+2) <= fence) {
+                rscAlignShift = *((uint16_t*)scan);
+                scan += 2;
+            }
+
+            printf("        rscAlignShift:              %u (%lu bytes)\n",rscAlignShift,1UL << (unsigned long)rscAlignShift);
+
+            while ((scan+2) <= fence) {
+                struct exe_ne_header_resource_table_typeinfo *typeinfo =
+                    (struct exe_ne_header_resource_table_typeinfo*)scan;
+
+                if (typeinfo->rtTypeID == 0) {
+                    scan += 2;
+                    break;
+                }
+                if ((scan+sizeof(*typeinfo)) > fence) {
+                    scan = fence;
+                    break;
+                }
+
+                printf("        rscTypes[...]\n");
+
+                if (typeinfo->rtTypeID & 0x8000) {
+                    printf("            rtTypeID:               INTEGER 0x%04x\n",typeinfo->rtTypeID & 0x7FFF);
+                }
+                else {
+                    unsigned char *raw = base + typeinfo->rtTypeID;
+                    unsigned char len = 0;
+
+                    if (raw < fence)
+                        len = *raw++;
+
+                    tmp[len] = tmp[0] = 0;
+                    if ((raw+len) <= fence)
+                        memcpy(tmp,raw,len);
+
+                    printf("            rtTypeID:               STRING '%s'\n",tmp);
+                }
+
+                printf("            rtResourceCount:        %u\n",typeinfo->rtResourceCount);
+                if (typeinfo->rtReserved != 0UL)
+                    printf("            rtReserved:             0x%08x\n",typeinfo->rtReserved);
+                scan += sizeof(*typeinfo);
+
+                /* rtNameInfo[rtResourceCount] */
+                for (ni=0;ni < typeinfo->rtResourceCount;ni++) {
+                    struct exe_ne_header_resource_table_nameinfo *nameinfo =
+                        (struct exe_ne_header_resource_table_nameinfo*)scan;
+
+                    if ((scan+sizeof(*nameinfo)) > fence) {
+                        scan = fence;
+                        break;
+                    }
+
+                    printf("            rtNameInfo[...]\n");
+                    printf("                rnOffset:           %u sectors (%lu bytes)\n",
+                        nameinfo->rnOffset,
+                        (unsigned long)nameinfo->rnOffset << (unsigned long)rscAlignShift);
+                    printf("                rnLength:           %u bytes\n",
+                        nameinfo->rnLength);
+
+                    printf("                rnFlags:            0x%04x",
+                        nameinfo->rnFlags);
+                    if (nameinfo->rnFlags & 0x10)
+                        printf(" MOVABLE");
+                    else
+                        printf(" FIXED");
+                    if (nameinfo->rnFlags & 0x20)
+                        printf(" SHARABLE");
+                    else
+                        printf(" NONSHAREABLE");
+                    if (nameinfo->rnFlags & 0x40)
+                        printf(" PRELOAD");
+                    else
+                        printf(" LOADONCALL");
+                    printf("\n");
+
+                    if (nameinfo->rnID & 0x8000) {
+                        printf("                rnID:               INTEGER 0x%04x\n",
+                            nameinfo->rnID & 0x7FFF);
+                    }
+                    else {
+                        unsigned char *raw = base + nameinfo->rnID;
+                        unsigned char len = 0;
+
+                        if (raw < fence)
+                            len = *raw++;
+
+                        tmp[len] = tmp[0] = 0;
+                        if ((raw+len) <= fence)
+                            memcpy(tmp,raw,len);
+
+                        printf("                rnID:               STRING '%s'\n",tmp);
+                    }
+
+                    if (nameinfo->rnHandle != 0)
+                        printf("                rnHandle:           0x%04x\n",
+                            nameinfo->rnHandle);
+                    if (nameinfo->rnUsage != 0)
+                        printf("                rnUsage:            0x%04x\n",
+                            nameinfo->rnUsage);
+
+                    scan += sizeof(*nameinfo);
+                }
+            }
+
+            /* rscResourceNames[] */
+            if (scan < fence) {
+                printf("        rscResourceNames[...]\n");
+                while (scan < fence) {
+                    unsigned char len = *scan++;
+
+                    if (len == 0 || scan >= fence) break;
+
+                    tmp[len] = 0;
+                    if (len != 0) memcpy(tmp,scan,len);
+                    scan += len;
+
+                    printf("            '%s'\n",tmp);
+                }
+            }
+
+            if (scan < fence)
+                printf("      * end of Resource Table %u bytes early\n",(unsigned int)(fence - scan));
+
+            free(base);
+            base = NULL;
+        }
+    }
+
     exe_ne_header_imported_name_table_free(&ne_imported_name_table);
     exe_ne_header_entry_table_table_free(&ne_entry_table);
     exe_ne_header_name_entry_table_free(&ne_nonresname);
