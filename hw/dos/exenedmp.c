@@ -44,21 +44,6 @@ struct exe_ne_header_resource_table_t {
     uint16_t                                        resnames_length;
 };
 
-#define exe_ne_header_RT_CURSOR                     0x8001
-#define exe_ne_header_RT_BITMAP                     0x8002
-#define exe_ne_header_RT_ICON                       0x8003
-#define exe_ne_header_RT_MENU                       0x8004
-#define exe_ne_header_RT_DIALOG                     0x8005
-#define exe_ne_header_RT_STRING                     0x8006
-#define exe_ne_header_RT_FONTDIR                    0x8007
-#define exe_ne_header_RT_FONT                       0x8008
-#define exe_ne_header_RT_ACCELERATOR                0x8009
-#define exe_ne_header_RT_RCDATA                     0x800A
-#define exe_ne_header_RT_MESSAGETABLE               0x800B
-#define exe_ne_header_RT_GROUP_CURSOR               0x800C
-#define exe_ne_header_RT_GROUP_ICON                 0x800E
-#define exe_ne_header_RT_VERSION                    0x8010
-
 const char *exe_ne_header_resource_table_typeinfo_TYPEID_INTEGER_name_str(const uint16_t typeID) {
     switch (typeID) {
         case exe_ne_header_RT_CURSOR:               return "RT_CURSOR";
