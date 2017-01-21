@@ -32,6 +32,248 @@ static void help(void) {
 
 //////////////////
 
+struct exe_ne_header_resource_table_t {
+    unsigned char*                                  raw;
+    size_t                                          raw_length;
+    unsigned char                                   raw_ownership;
+
+    uint16_t*                                       typeinfo;
+    uint16_t                                        typeinfo_length;
+
+    uint16_t*                                       resnames;
+    uint16_t                                        resnames_length;
+};
+
+#define exe_ne_header_RT_CURSOR                     0x8001
+#define exe_ne_header_RT_BITMAP                     0x8002
+#define exe_ne_header_RT_ICON                       0x8003
+#define exe_ne_header_RT_MENU                       0x8004
+#define exe_ne_header_RT_DIALOG                     0x8005
+#define exe_ne_header_RT_STRING                     0x8006
+#define exe_ne_header_RT_FONTDIR                    0x8007
+#define exe_ne_header_RT_FONT                       0x8008
+#define exe_ne_header_RT_ACCELERATOR                0x8009
+#define exe_ne_header_RT_RCDATA                     0x800A
+#define exe_ne_header_RT_MESSAGETABLE               0x800B
+#define exe_ne_header_RT_GROUP_CURSOR               0x800C
+#define exe_ne_header_RT_GROUP_ICON                 0x800E
+#define exe_ne_header_RT_VERSION                    0x8010
+
+const char *exe_ne_header_resource_table_typeinfo_TYPEID_INTEGER_name_str(const uint16_t typeID) {
+    switch (typeID) {
+        case exe_ne_header_RT_CURSOR:               return "RT_CURSOR";
+        case exe_ne_header_RT_BITMAP:               return "RT_BITMAP";
+        case exe_ne_header_RT_ICON:                 return "RT_ICON";
+        case exe_ne_header_RT_MENU:                 return "RT_MENU";
+        case exe_ne_header_RT_DIALOG:               return "RT_DIALOG";
+        case exe_ne_header_RT_STRING:               return "RT_STRING";
+        case exe_ne_header_RT_FONTDIR:              return "RT_FONTDIR";
+        case exe_ne_header_RT_FONT:                 return "RT_FONT";
+        case exe_ne_header_RT_ACCELERATOR:          return "RT_ACCELERATOR";
+        case exe_ne_header_RT_RCDATA:               return "RT_RCDATA";
+        case exe_ne_header_RT_MESSAGETABLE:         return "RT_MESSAGETABLE";
+        case exe_ne_header_RT_GROUP_CURSOR:         return "RT_GROUP_CURSOR";
+        case exe_ne_header_RT_GROUP_ICON:           return "RT_GROUP_ICON";
+        case exe_ne_header_RT_VERSION:              return "RT_VERSION";
+        default:                                    break;
+    }
+
+    return NULL;
+}
+
+static inline uint16_t exe_ne_header_resource_table_typeinfo_TYPEID_IS_INTEGER(const uint16_t typeID) {
+    return (typeID & 0x8000U);
+}
+
+static inline uint16_t exe_ne_header_resource_table_typeinfo_TYPEID_AS_INTEGER(const uint16_t typeID) {
+    return (typeID & 0x7FFFU);
+}
+
+static inline uint16_t exe_ne_header_resource_table_typeinfo_RNID_IS_INTEGER(const uint16_t rnID) {
+    return (rnID & 0x8000U);
+}
+
+static inline uint16_t exe_ne_header_resource_table_typeinfo_RNID_AS_INTEGER(const uint16_t rnID) {
+    return (rnID & 0x7FFFU);
+}
+
+void exe_ne_header_resource_table_get_string(char *dst,size_t dstmax,const struct exe_ne_header_resource_table_t * const t,const uint16_t ofs) {
+    unsigned char len;
+    unsigned char *d;
+
+    dst[0] = 0;
+    if (dstmax == 0 || t->raw == NULL) return;
+    if (ofs >= t->raw_length) return;
+    d = t->raw + ofs;
+    len = *d++;
+    if ((d+len) > (t->raw+t->raw_length)) return;
+    if (len > (dstmax-1)) len = dstmax-1;
+    dst[len] = 0;
+    if (len != 0) memcpy(dst,d,len);
+}
+
+static uint16_t exe_ne_header_resource_table_get_shift(const struct exe_ne_header_resource_table_t * const t) {
+    const struct exe_ne_header_resource_table *h = (const struct exe_ne_header_resource_table*)t->raw;
+    if (h == NULL) return 0;
+    return h->rscAlignShift;
+}
+
+void exe_ne_header_resource_table_init(struct exe_ne_header_resource_table_t * const t) {
+    memset(t,0,sizeof(*t));
+}
+
+void exe_ne_header_resource_table_free_resnames(struct exe_ne_header_resource_table_t * const t) {
+    if (t->resnames) free(t->resnames);
+    t->resnames = NULL;
+}
+
+void exe_ne_header_resource_table_free_typeinfo(struct exe_ne_header_resource_table_t * const t) {
+    if (t->typeinfo) free(t->typeinfo);
+    t->typeinfo = NULL;
+}
+
+void exe_ne_header_resource_table_free_raw(struct exe_ne_header_resource_table_t * const t) {
+    if (t->raw && t->raw_ownership) free(t->raw);
+    t->raw_length = 0;
+    t->raw = NULL;
+}
+
+void exe_ne_header_resource_table_free(struct exe_ne_header_resource_table_t * const t) {
+    exe_ne_header_resource_table_free_resnames(t);
+    exe_ne_header_resource_table_free_typeinfo(t);
+    exe_ne_header_resource_table_free_raw(t);
+}
+
+const struct exe_ne_header_resource_table_typeinfo *exe_ne_header_resource_table_get_typeinfo_entry(const struct exe_ne_header_resource_table_t * const t,const unsigned int idx) {
+    if (t->raw == NULL || t->raw_length < sizeof(struct exe_ne_header_resource_table)) return NULL;
+    if (t->typeinfo == NULL) return NULL;
+    if (idx >= t->typeinfo_length) return NULL;
+    return (const struct exe_ne_header_resource_table_typeinfo*)(t->raw + t->typeinfo[idx]);
+}
+
+const struct exe_ne_header_resource_table_nameinfo *exe_ne_header_resource_table_get_typeinfo_nameinfo_entry(const struct exe_ne_header_resource_table_typeinfo * const tinfo,const unsigned int idx) {
+    if (idx >= tinfo->rtResourceCount) return NULL;
+    return ((const struct exe_ne_header_resource_table_nameinfo*)((unsigned char*)tinfo + sizeof(*tinfo))) + idx;
+}
+
+uint16_t exe_ne_header_resource_table_get_resname(const struct exe_ne_header_resource_table_t * const t,const unsigned int idx) {
+    if (t->raw == NULL || t->resnames == NULL) return (uint16_t)(~0U);
+    if (idx >= t->resnames_length) return (uint16_t)(~0U);
+    return t->resnames[idx];
+}
+
+void exe_ne_header_resource_table_parse(struct exe_ne_header_resource_table_t * const t) {
+    unsigned char *scan,*fence,*p;
+    unsigned int entries;
+
+    exe_ne_header_resource_table_free_resnames(t);
+    exe_ne_header_resource_table_free_typeinfo(t);
+    if (t->raw == NULL || t->raw_length < sizeof(struct exe_ne_header_resource_table)) return;
+
+    scan = t->raw;
+    fence = scan + t->raw_length;
+
+    /* step: struct exe_ne_header_resource_table */
+    scan += sizeof(struct exe_ne_header_resource_table);
+    if (scan >= fence) return;
+
+    /* how many: struct exe_ne_header_resource_table_typeinfo */
+    p = scan;
+    entries = 0;
+    while ((scan+2) <= fence) {
+        struct exe_ne_header_resource_table_typeinfo *ti =
+            (struct exe_ne_header_resource_table_typeinfo*)scan;
+
+        if (ti->rtTypeID == 0) {
+            scan += 2;  /* the last entry is rtTypeID == 0, 2 bytes only sizeof(rtTypeID) */
+            break;
+        }
+
+        /* if rtTypeID != 0, then the entry is the full struct size */
+        if ((scan+sizeof(*ti)) > fence) break;
+        scan += sizeof(*ti);
+        scan += sizeof(struct exe_ne_header_resource_table_nameinfo) * ti->rtResourceCount;
+        entries++;
+    }
+
+    if (entries != 0) {
+        t->typeinfo = (uint16_t*)malloc(entries * sizeof(uint16_t));
+        if (t->typeinfo == NULL) return;
+        t->typeinfo_length = entries;
+
+        entries = 0;
+        while ((p+2) <= fence) {
+            struct exe_ne_header_resource_table_typeinfo *ti =
+                (struct exe_ne_header_resource_table_typeinfo*)p;
+
+            if (ti->rtTypeID == 0) {
+                p += 2;  /* the last entry is rtTypeID == 0, 2 bytes only sizeof(rtTypeID) */
+                break;
+            }
+
+            /* if rtTypeID != 0, then the entry is the full struct size */
+            if ((p+sizeof(*ti)) > fence) break;
+            t->typeinfo[entries] = (uint16_t)(p - t->raw);
+            p += sizeof(*ti);
+            p += sizeof(struct exe_ne_header_resource_table_nameinfo) * ti->rtResourceCount;
+            entries++;
+        }
+
+        if (entries < t->typeinfo_length) {
+            printf("! resource typeinfo entries %u too few\n",(unsigned int)(t->typeinfo_length - entries));
+            t->typeinfo_length = entries;
+        }
+    }
+
+    /* how many: resource names */
+    p = scan;
+    entries = 0;
+    while (scan < fence) {
+        unsigned char len = *scan++;
+        if (len == 0) break;
+        scan += len;
+        entries++;
+    }
+
+    if (entries != 0) {
+        t->resnames = (uint16_t*)malloc(entries * sizeof(uint16_t));
+        if (t->resnames == NULL) return;
+        t->resnames_length = entries;
+
+        entries = 0;
+        while (p < fence) {
+            unsigned char len = *p++;
+            if (len == 0) break;
+            t->resnames[entries] = (uint16_t)((p - 1) - t->raw);
+            p += len;
+            entries++;
+        }
+
+        if (entries < t->resnames_length) {
+            printf("! resource resnames entries %u too few\n",(unsigned int)(t->resnames_length - entries));
+            t->resnames_length = entries;
+        }
+    }
+}
+
+unsigned char *exe_ne_header_resource_table_alloc_raw(struct exe_ne_header_resource_table_t * const t,const size_t length) {
+    exe_ne_header_resource_table_free_raw(t);
+
+    assert(t->raw == NULL);
+    if (length == 0)
+        return NULL;
+
+    t->raw = malloc(length);
+    if (t->raw == NULL)
+        return NULL;
+
+    t->raw_length = length;
+    t->raw_ownership = 1;
+    return t->raw;
+}
+
+//////////////////
+
 struct exe_ne_header_imported_name_table {
     uint16_t*                                       table;
     unsigned int                                    length;
@@ -962,6 +1204,7 @@ int main(int argc,char **argv) {
     struct exe_ne_header_imported_name_table ne_imported_name_table;
     struct exe_ne_header_entry_table_table ne_entry_table;
     struct exe_ne_header_name_entry_table ne_nonresname;
+    struct exe_ne_header_resource_table_t ne_resources;
     struct exe_ne_header_name_entry_table ne_resname;
     struct exe_ne_header_segment_table ne_segments;
     struct exe_ne_header ne_header;
@@ -973,6 +1216,7 @@ int main(int argc,char **argv) {
     assert(sizeof(ne_header) == 0x40);
     memset(&exehdr,0,sizeof(exehdr));
     exe_ne_header_segment_table_init(&ne_segments);
+    exe_ne_header_resource_table_init(&ne_resources);
     exe_ne_header_name_entry_table_init(&ne_resname);
     exe_ne_header_name_entry_table_init(&ne_nonresname);
     exe_ne_header_entry_table_table_init(&ne_entry_table);
@@ -1461,6 +1705,25 @@ int main(int argc,char **argv) {
         exe_ne_header_entry_table_table_parse_raw(&ne_entry_table);
     }
 
+    /* resource table */
+    if (ne_header.resource_table_offset != 0 && ne_header.resident_name_table_offset > ne_header.resource_table_offset &&
+        (unsigned long)lseek(src_fd,ne_header.resource_table_offset + ne_header_offset,SEEK_SET) == (ne_header.resource_table_offset + ne_header_offset)) {
+        unsigned int raw_length;
+        unsigned char *base;
+
+        /* RESOURCE_TABLE_SIZE = resident_name_table_offset - resource_table_offset         (header does not report size, "number of segments" is worthless) */
+        raw_length = (unsigned short)(ne_header.resident_name_table_offset - ne_header.resource_table_offset);
+        printf("  * Resource table length: %u\n",raw_length);
+
+        base = exe_ne_header_resource_table_alloc_raw(&ne_resources,raw_length);
+        if (base != NULL) {
+            if ((unsigned int)read(src_fd,base,raw_length) != raw_length)
+                exe_ne_header_resource_table_free_raw(&ne_resources);
+        }
+
+        exe_ne_header_resource_table_parse(&ne_resources);
+    }
+
     /* imported name table */
     printf("    Imported name table, %u entries:\n",
         (unsigned int)ne_imported_name_table.length);
@@ -1536,223 +1799,97 @@ int main(int argc,char **argv) {
         (unsigned int)ne_entry_table.length);
     print_entry_table(&ne_entry_table,&ne_nonresname,&ne_resname);
 
-    /* resource table */
-    if (ne_header.resource_table_offset != 0 && ne_header.resident_name_table_offset > ne_header.resource_table_offset &&
-        (unsigned long)lseek(src_fd,ne_header.resource_table_offset + ne_header_offset,SEEK_SET) == (ne_header.resource_table_offset + ne_header_offset)) {
-        unsigned int raw_length;
-        unsigned char *base;
-        unsigned char *scan,*fence;
-        unsigned int ni;
+    printf("    Resource table, 1 << %u = %lu byte alignment:\n",
+        exe_ne_header_resource_table_get_shift(&ne_resources),
+        1UL << (unsigned long)exe_ne_header_resource_table_get_shift(&ne_resources));
+    printf("        %u TYPEINFO entries\n",ne_resources.typeinfo_length);
+    {
+        const struct exe_ne_header_resource_table_nameinfo *ninfo;
+        const struct exe_ne_header_resource_table_typeinfo *tinfo;
+        const char *rtTypeIDintstr;
         char tmp[255+1];
+        unsigned int ti;
+        unsigned int ni;
 
-        /* RESOURCE_TABLE_SIZE = resident_name_table_offset - resource_table_offset         (header does not report size, "number of segments" is worthless) */
-        raw_length = (unsigned short)(ne_header.resident_name_table_offset - ne_header.resource_table_offset);
-        printf("  * Resource table length: %u\n",raw_length);
+        for (ti=0;ti < ne_resources.typeinfo_length;ti++) {
+            printf("        Typeinfo entry #%d\n",ti+1);
 
-        base = malloc(raw_length);
-        if (base != NULL) {
-            if (read(src_fd,base,raw_length) != raw_length) {
-                free(base);
-                base = NULL;
+            tinfo = exe_ne_header_resource_table_get_typeinfo_entry(&ne_resources,ti);
+            if (tinfo == NULL) {
+                printf("            NULL\n");
+                continue;
+            }
+
+            if (exe_ne_header_resource_table_typeinfo_TYPEID_IS_INTEGER(tinfo->rtTypeID)) {
+                printf("            rtTypeID:   INTEGER 0x%04x",
+                    exe_ne_header_resource_table_typeinfo_TYPEID_AS_INTEGER(tinfo->rtTypeID));
+                rtTypeIDintstr = exe_ne_header_resource_table_typeinfo_TYPEID_INTEGER_name_str(tinfo->rtTypeID);
+                if (rtTypeIDintstr != NULL) printf(" %s",rtTypeIDintstr);
+                printf("\n");
+            }
+            else {
+                exe_ne_header_resource_table_get_string(tmp,sizeof(tmp),&ne_resources,tinfo->rtTypeID);
+                printf("            rtTypeID:   STRING OFFSET 0x%04x '%s'",tinfo->rtTypeID,tmp);
+                printf("\n");
+            }
+
+            printf("            rtResourceCount: %u\n",tinfo->rtResourceCount);
+            for (ni=0;ni < tinfo->rtResourceCount;ni++) {
+                ninfo = exe_ne_header_resource_table_get_typeinfo_nameinfo_entry(tinfo,ni);
+                if (ninfo == NULL) {
+                    printf("                NULL\n");
+                    continue;
+                }
+
+                printf("            Entry #%d:\n",ni+1);
+                printf("                rnOffset:           %u sectors << %u = %lu bytes\n",
+                    ninfo->rnOffset,
+                    exe_ne_header_resource_table_get_shift(&ne_resources),
+                    (unsigned long)ninfo->rnOffset << (unsigned long)exe_ne_header_resource_table_get_shift(&ne_resources));
+                printf("                rnLength:           %u bytes\n",
+                    ninfo->rnLength);
+
+                printf("                rnFlags:            0x%04x",
+                    ninfo->rnFlags);
+                if (ninfo->rnFlags & 0x10)
+                    printf(" MOVABLE");
+                else
+                    printf(" FIXED");
+                if (ninfo->rnFlags & 0x20)
+                    printf(" SHARABLE");
+                else
+                    printf(" NONSHAREABLE");
+                if (ninfo->rnFlags & 0x40)
+                    printf(" PRELOAD");
+                else
+                    printf(" LOADONCALL");
+                printf("\n");
+
+                if (exe_ne_header_resource_table_typeinfo_RNID_IS_INTEGER(ninfo->rnID)) {
+                    printf("                rnID:               INTEGER 0x%04x\n",
+                        exe_ne_header_resource_table_typeinfo_RNID_AS_INTEGER(ninfo->rnID));
+                }
+                else {
+                    exe_ne_header_resource_table_get_string(tmp,sizeof(tmp),&ne_resources,ninfo->rnID);
+                    printf("                rnID:               STRING OFFSET 0x%04x '%s'\n",
+                        ninfo->rnID,tmp);
+                }
+
+                if (ninfo->rnHandle != 0)
+                    printf("                rnHandle:           0x%04x\n",
+                        ninfo->rnHandle);
+                if (ninfo->rnUsage != 0)
+                    printf("                rnUsage:            0x%04x\n",
+                        ninfo->rnUsage);
             }
         }
 
-        if (base != NULL) {
-            uint16_t rscAlignShift = 0;
-
-            scan = base;
-            fence = base + raw_length;
-
-            if ((scan+2) <= fence) {
-                rscAlignShift = *((uint16_t*)scan);
-                scan += 2;
-            }
-
-            printf("        rscAlignShift:              %u (%lu bytes)\n",rscAlignShift,1UL << (unsigned long)rscAlignShift);
-
-            while ((scan+2) <= fence) {
-                struct exe_ne_header_resource_table_typeinfo *typeinfo =
-                    (struct exe_ne_header_resource_table_typeinfo*)scan;
-
-                if (typeinfo->rtTypeID == 0) {
-                    scan += 2;
-                    break;
-                }
-                if ((scan+sizeof(*typeinfo)) > fence) {
-                    scan = fence;
-                    break;
-                }
-
-                printf("        rscTypes[...]\n");
-
-                if (typeinfo->rtTypeID & 0x8000) {
-                    printf("            rtTypeID:               ");
-                    switch (typeinfo->rtTypeID & 0x7FFF) {
-                        case 1:
-                            printf("RT_CURSOR");
-                            break;
-                        case 2:
-                            printf("RT_BITMAP");
-                            break;
-                        case 3:
-                            printf("RT_ICON");
-                            break;
-                        case 4:
-                            printf("RT_MENU");
-                            break;
-                        case 5:
-                            printf("RT_DIALOG");
-                            break;
-                        case 6:
-                            printf("RT_STRING");
-                            break;
-                        case 7:
-                            printf("RT_FONTDIR");
-                            break;
-                        case 8:
-                            printf("RT_FONT");
-                            break;
-                        case 9:
-                            printf("RT_ACCELERATOR");
-                            break;
-                        case 10:
-                            printf("RT_RCDATA");
-                            break;
-                        case 11:
-                            printf("RT_MESSAGETABLE");
-                            break;
-                        case 16:
-                            printf("RT_VERSION");
-                            break;
-                        case 17:
-                            printf("RT_DLGINCLUDE");
-                            break;
-                        case 19:
-                            printf("RT_PLUGPLAY");
-                            break;
-                        case 20:
-                            printf("RT_VXD");
-                            break;
-                        case 21:
-                            printf("RT_ANICURSOR");
-                            break;
-                        case 22:
-                            printf("RT_ANIICON");
-                            break;
-                        case 23:
-                            printf("RT_HTML");
-                            break;
-                        case 24:
-                            printf("RT_MANIFEST");
-                            break;
-                        default:
-                            printf("INTEGER 0x%04x",typeinfo->rtTypeID & 0x7FFF);
-                            break;
-                    }
-                    printf("\n");
-                }
-                else {
-                    unsigned char *raw = base + typeinfo->rtTypeID;
-                    unsigned char len = 0;
-
-                    if (raw < fence)
-                        len = *raw++;
-
-                    tmp[len] = tmp[0] = 0;
-                    if ((raw+len) <= fence)
-                        memcpy(tmp,raw,len);
-
-                    printf("            rtTypeID:               STRING '%s'\n",tmp);
-                }
-
-                printf("            rtResourceCount:        %u\n",typeinfo->rtResourceCount);
-                if (typeinfo->rtReserved != 0UL)
-                    printf("            rtReserved:             0x%08x\n",typeinfo->rtReserved);
-                scan += sizeof(*typeinfo);
-
-                /* rtNameInfo[rtResourceCount] */
-                for (ni=0;ni < typeinfo->rtResourceCount;ni++) {
-                    struct exe_ne_header_resource_table_nameinfo *nameinfo =
-                        (struct exe_ne_header_resource_table_nameinfo*)scan;
-
-                    if ((scan+sizeof(*nameinfo)) > fence) {
-                        scan = fence;
-                        break;
-                    }
-
-                    printf("            rtNameInfo[...]\n");
-                    printf("                rnOffset:           %u sectors (%lu bytes)\n",
-                        nameinfo->rnOffset,
-                        (unsigned long)nameinfo->rnOffset << (unsigned long)rscAlignShift);
-                    printf("                rnLength:           %u bytes\n",
-                        nameinfo->rnLength);
-
-                    printf("                rnFlags:            0x%04x",
-                        nameinfo->rnFlags);
-                    if (nameinfo->rnFlags & 0x10)
-                        printf(" MOVABLE");
-                    else
-                        printf(" FIXED");
-                    if (nameinfo->rnFlags & 0x20)
-                        printf(" SHARABLE");
-                    else
-                        printf(" NONSHAREABLE");
-                    if (nameinfo->rnFlags & 0x40)
-                        printf(" PRELOAD");
-                    else
-                        printf(" LOADONCALL");
-                    printf("\n");
-
-                    if (nameinfo->rnID & 0x8000) {
-                        printf("                rnID:               INTEGER 0x%04x\n",
-                            nameinfo->rnID & 0x7FFF);
-                    }
-                    else {
-                        unsigned char *raw = base + nameinfo->rnID;
-                        unsigned char len = 0;
-
-                        if (raw < fence)
-                            len = *raw++;
-
-                        tmp[len] = tmp[0] = 0;
-                        if ((raw+len) <= fence)
-                            memcpy(tmp,raw,len);
-
-                        printf("                rnID:               STRING '%s'\n",tmp);
-                    }
-
-                    if (nameinfo->rnHandle != 0)
-                        printf("                rnHandle:           0x%04x\n",
-                            nameinfo->rnHandle);
-                    if (nameinfo->rnUsage != 0)
-                        printf("                rnUsage:            0x%04x\n",
-                            nameinfo->rnUsage);
-
-                    scan += sizeof(*nameinfo);
-                }
-            }
-
-            /* rscResourceNames[] */
-            if (scan < fence) {
-                printf("        rscResourceNames[...]\n");
-                while (scan < fence) {
-                    unsigned char len = *scan++;
-
-                    if (len == 0 || scan >= fence) break;
-
-                    tmp[len] = 0;
-                    if (len != 0) memcpy(tmp,scan,len);
-                    scan += len;
-
-                    printf("            '%s'\n",tmp);
-                }
-            }
-
-            if (scan < fence)
-                printf("      * end of Resource Table %u bytes early\n",(unsigned int)(fence - scan));
-
-            free(base);
-            base = NULL;
+        printf("        rscResourceNames, %u entries\n",
+            ne_resources.resnames_length);
+        for (ni=0;ni < ne_resources.resnames_length;ni++) {
+            exe_ne_header_resource_table_get_string(tmp,sizeof(tmp),&ne_resources,
+                exe_ne_header_resource_table_get_resname(&ne_resources,ni));
+            printf("            '%s'\n",tmp);
         }
     }
 
@@ -1760,6 +1897,7 @@ int main(int argc,char **argv) {
     exe_ne_header_entry_table_table_free(&ne_entry_table);
     exe_ne_header_name_entry_table_free(&ne_nonresname);
     exe_ne_header_name_entry_table_free(&ne_resname);
+    exe_ne_header_resource_table_free(&ne_resources);
     exe_ne_header_segment_table_free(&ne_segments);
     close(src_fd);
     return 0;
