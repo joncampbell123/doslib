@@ -440,9 +440,13 @@ int main(int argc,char **argv) {
         const struct exe_ne_header_resource_table_nameinfo *ninfo;
         const struct exe_ne_header_resource_table_typeinfo *tinfo;
         const char *rtTypeIDintstr;
+        const char *file_ext;
+        unsigned long foff;
+        unsigned long fcpy;
         char tmp[255+1];
         unsigned int ti;
         unsigned int ni;
+        int fd;
 
         for (ti=0;ti < ne_resources.typeinfo_length;ti++) {
             printf("        Typeinfo entry #%d\n",ti+1);
@@ -452,6 +456,25 @@ int main(int argc,char **argv) {
                 printf("            NULL\n");
                 continue;
             }
+
+            /* choose file extension by resource type, or .BIN otherwise */
+            switch (tinfo->rtTypeID) {
+                case exe_ne_header_RT_CURSOR:           file_ext = ".cur"; break;
+                case exe_ne_header_RT_BITMAP:           file_ext = ".bmp"; break;
+                case exe_ne_header_RT_ICON:             file_ext = ".ico"; break;
+                case exe_ne_header_RT_MENU:             file_ext = ".men"; break;
+                case exe_ne_header_RT_DIALOG:           file_ext = ".dlg"; break;
+                case exe_ne_header_RT_STRING:           file_ext = ".str"; break;
+                case exe_ne_header_RT_FONTDIR:          file_ext = ".fdr"; break;
+                case exe_ne_header_RT_FONT:             file_ext = ".fon"; break;
+                case exe_ne_header_RT_ACCELERATOR:      file_ext = ".acc"; break;
+                case exe_ne_header_RT_RCDATA:           file_ext = ".rcd"; break;
+                case exe_ne_header_RT_MESSAGETABLE:     file_ext = ".msg"; break;
+                case exe_ne_header_RT_GROUP_CURSOR:     file_ext = ".gcr"; break;
+                case exe_ne_header_RT_GROUP_ICON:       file_ext = ".gic"; break;
+                case exe_ne_header_RT_VERSION:          file_ext = ".ver"; break;
+                default:                                file_ext = ".bin"; break;
+            };
 
             /* NTS: if bit 15 of rtTypeID is set (rtTypeID & 0x8000), rtTypeID is an integer identifier.
              *      otherwise, rtTypeID is an offset to the length + string combo containing the
@@ -517,21 +540,44 @@ int main(int argc,char **argv) {
                         ninfo->rnID,tmp);
                 }
 
-                if (ninfo->rnHandle != 0)
-                    printf("                rnHandle:           0x%04x\n",
-                        ninfo->rnHandle);
-                if (ninfo->rnUsage != 0)
-                    printf("                rnUsage:            0x%04x\n",
-                        ninfo->rnUsage);
-            }
-        }
+                /* then choose file to write */
+                sprintf(tmp,"%04X%04X%s",
+                    (unsigned int)tinfo->rtTypeID,
+                    (unsigned int)ninfo->rnID,
+                    file_ext);
 
-        printf("        rscResourceNames, %u entries\n",
-            ne_resources.resnames_length);
-        for (ni=0;ni < ne_resources.resnames_length;ni++) {
-            exe_ne_header_resource_table_get_string(tmp,sizeof(tmp),&ne_resources,
-                exe_ne_header_resource_table_get_resname(&ne_resources,ni));
-            printf("            '%s'\n",tmp);
+                printf("                Writing to: %s\n",tmp);
+
+                fcpy = (unsigned long)ninfo->rnLength;
+                foff = (unsigned long)ninfo->rnOffset << (unsigned long)exe_ne_header_resource_table_get_shift(&ne_resources);
+                if ((unsigned long)lseek(src_fd,foff,SEEK_SET) != foff) {
+                    printf("                ! Cannot seek to offset\n");
+                    continue;
+                }
+
+                fd = open(tmp,O_CREAT|O_TRUNC|O_WRONLY,0644);
+                if (fd < 0) {
+                    fprintf(stderr,"Unable to write %s, %s\n",tmp,strerror(errno));
+                    return 1;
+                }
+
+                while (fcpy > 0UL) {
+                    int docpy = (fcpy > sizeof(tmp) ? sizeof(tmp) : fcpy);
+                    int rd = read(src_fd,tmp,docpy);
+
+                    if (rd > 0) {
+                        write(fd,tmp,rd);
+                        fcpy -= rd;
+                    }
+
+                    if (rd < docpy) {
+                        fprintf(stderr,"Early EOF on resource\n");
+                        break;
+                    }
+                }
+
+                close(fd);
+            }
         }
     }
 
