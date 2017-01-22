@@ -486,7 +486,7 @@ void dump_ne_res_RT_GROUP_ICON(const unsigned char *data,const size_t len) {
     const struct exe_ne_header_resource_GRICONDIRENTRY *grent;
     const struct exe_ne_header_resource_ICONDIR *hdr;
     const unsigned char *fence = data + len;
-    unsigned int count;
+    unsigned int count = 0;
 
     printf("                RT_GROUP_ICON resource:\n");
 
@@ -562,7 +562,7 @@ void dump_ne_res_RT_GROUP_CURSOR(const unsigned char *data,const size_t len) {
     const struct exe_ne_header_resource_GRCURSORDIRENTRY *grent;
     const struct exe_ne_header_resource_CURSORDIR *hdr;
     const unsigned char *fence = data + len;
-    unsigned int count;
+    unsigned int count = 0;
 
     printf("                RT_GROUP_CURSOR resource:\n");
 
