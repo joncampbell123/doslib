@@ -684,13 +684,13 @@ void dump_ne_res_RT_STRING(const unsigned char *data,const size_t len,const unsi
             char *s = tmp,*f = tmp + length,*n;
             unsigned int lines = 0;
 
-            while (s && s < f) {
-                n = strchr(s,'\n');
-
-                if (n != NULL) {
-                    if (n > s && n[-1] == '\r') n[-1] = 0; // filter MS-DOS CR LF linebreak
-                    *n++ = 0;
-                }
+            while (s < f) {
+                /* scan for newline.
+                 * can be CR LF (Windows 3.1 and higher) or just LF (Windows 3.0) */
+                n = s;
+                while (*n && !(*n == '\r' || *n == '\n')) n++;
+                if (*n == '\r') *n++ = 0;
+                if (*n == '\n') *n++ = 0;
 
                 if (lines != 0)
                     printf("\n                            ");
