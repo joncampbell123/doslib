@@ -422,6 +422,34 @@ unsigned int exe_ne_header_BITMAPINFOHEADER_get_palette_count(const struct exe_n
     return 0;
 }
 
+size_t dump_ne_res_BITMAPINFO_PALETTE(const struct exe_ne_header_BITMAPINFOHEADER *bmphdr,const unsigned char *data,const unsigned char *fence) {
+    unsigned int num_colors = exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
+    const struct exe_ne_header_RGBQUAD *pal = (const struct exe_ne_header_RGBQUAD*)data;
+    const unsigned char *p_data = data;
+    unsigned int palent;
+
+    printf("                      * Number of color palette entries: %u\n",num_colors);
+    if (num_colors != 0 && (data+(sizeof(*pal) * num_colors) <= fence)) {
+        for (palent=0;palent < num_colors;palent++) {
+            if ((palent&3) == 0) {
+                if (palent != 0) printf("\n");
+                printf("                        ");
+            }
+
+            printf("RGBX(0x%02x,0x%02x,0x%02x,0x%02x) ",
+                    pal[palent].rgbRed,
+                    pal[palent].rgbGreen,
+                    pal[palent].rgbBlue,
+                    pal[palent].rgbReserved);
+        }
+
+        printf("\n");
+        data += sizeof(*pal) * num_colors;
+    }
+
+    return (size_t)(data - p_data);
+}
+
 void dump_ne_res_RT_ICON(const unsigned char *data,const size_t len) {
     const unsigned char *fence = data + len;
     const struct exe_ne_header_BITMAPINFOHEADER *bmphdr =
@@ -446,31 +474,7 @@ void dump_ne_res_RT_ICON(const unsigned char *data,const size_t len) {
     if (data >= fence)
         return;
 
-    {
-        unsigned int num_colors = exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
-        const struct exe_ne_header_RGBQUAD *pal = (const struct exe_ne_header_RGBQUAD*)data;
-        unsigned int palent;
-
-        printf("                      * Number of color palette entries: %u\n",num_colors);
-        if (num_colors != 0 && (data+(sizeof(*pal) * num_colors) <= fence)) {
-            for (palent=0;palent < num_colors;palent++) {
-                if ((palent&3) == 0) {
-                    if (palent != 0) printf("\n");
-                    printf("                        ");
-                }
-
-                printf("RGBX(0x%02x,0x%02x,0x%02x,0x%02x) ",
-                    pal[palent].rgbRed,
-                    pal[palent].rgbGreen,
-                    pal[palent].rgbBlue,
-                    pal[palent].rgbReserved);
-            }
-
-            printf("\n");
-            data += sizeof(*pal) * num_colors;
-        }
-    }
-
+    data += dump_ne_res_BITMAPINFO_PALETTE(bmphdr,data,fence);
     assert(data <= fence);
 }
 
@@ -501,31 +505,7 @@ void dump_ne_res_RT_CURSOR(const unsigned char *data,const size_t len) {
     if (data >= fence)
         return;
 
-    {
-        unsigned int num_colors = exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
-        const struct exe_ne_header_RGBQUAD *pal = (const struct exe_ne_header_RGBQUAD*)data;
-        unsigned int palent;
-
-        printf("                      * Number of color palette entries: %u\n",num_colors);
-        if (num_colors != 0 && (data+(sizeof(*pal) * num_colors) <= fence)) {
-            for (palent=0;palent < num_colors;palent++) {
-                if ((palent&3) == 0) {
-                    if (palent != 0) printf("\n");
-                    printf("                        ");
-                }
-
-                printf("RGBX(0x%02x,0x%02x,0x%02x,0x%02x) ",
-                    pal[palent].rgbRed,
-                    pal[palent].rgbGreen,
-                    pal[palent].rgbBlue,
-                    pal[palent].rgbReserved);
-            }
-
-            printf("\n");
-            data += sizeof(*pal) * num_colors;
-        }
-    }
-
+    data += dump_ne_res_BITMAPINFO_PALETTE(bmphdr,data,fence);
     assert(data <= fence);
 }
 
@@ -553,31 +533,7 @@ void dump_ne_res_RT_BITMAP(const unsigned char *data,const size_t len) {
     if (data >= fence)
         return;
 
-    {
-        unsigned int num_colors = exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
-        const struct exe_ne_header_RGBQUAD *pal = (const struct exe_ne_header_RGBQUAD*)data;
-        unsigned int palent;
-
-        printf("                      * Number of color palette entries: %u\n",num_colors);
-        if (num_colors != 0 && (data+(sizeof(*pal) * num_colors) <= fence)) {
-            for (palent=0;palent < num_colors;palent++) {
-                if ((palent&3) == 0) {
-                    if (palent != 0) printf("\n");
-                    printf("                        ");
-                }
-
-                printf("RGBX(0x%02x,0x%02x,0x%02x,0x%02x) ",
-                    pal[palent].rgbRed,
-                    pal[palent].rgbGreen,
-                    pal[palent].rgbBlue,
-                    pal[palent].rgbReserved);
-            }
-
-            printf("\n");
-            data += sizeof(*pal) * num_colors;
-        }
-    }
-
+    data += dump_ne_res_BITMAPINFO_PALETTE(bmphdr,data,fence);
     assert(data <= fence);
 }
 
