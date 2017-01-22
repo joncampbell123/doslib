@@ -974,6 +974,12 @@ int main(int argc,char **argv) {
                 continue;
             }
 
+            /* NTS: if bit 15 of rtTypeID is set (rtTypeID & 0x8000), rtTypeID is an integer identifier.
+             *      otherwise, rtTypeID is an offset to the length + string combo containing the
+             *      identifier as a string. offset is relative to the resource table.
+             *
+             *      there are some standard integer identifiers defined by Windows, such as
+             *      RT_ICON, RT_CURSOR, RT_DIALOG, etc. that define standard resources. */
             if (exe_ne_header_resource_table_typeinfo_TYPEID_IS_INTEGER(tinfo->rtTypeID)) {
                 printf("            rtTypeID:   INTEGER 0x%04x",
                     exe_ne_header_resource_table_typeinfo_TYPEID_AS_INTEGER(tinfo->rtTypeID));
@@ -1019,6 +1025,9 @@ int main(int argc,char **argv) {
                     printf(" LOADONCALL");
                 printf("\n");
 
+                /* NTS: if bit 15 of rnID is set (rnID & 0x8000), rnID is an integer identifier.
+                 *      otherwise, rnID is an offset to the length + string combo containing the
+                 *      identifier as a string. offset is relative to the resource table. */
                 if (exe_ne_header_resource_table_typeinfo_RNID_IS_INTEGER(ninfo->rnID)) {
                     printf("                rnID:               INTEGER 0x%04x\n",
                         exe_ne_header_resource_table_typeinfo_RNID_AS_INTEGER(ninfo->rnID));
