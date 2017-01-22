@@ -317,5 +317,6 @@ struct exe_ne_header_BITMAPINFOHEADER {
 #define exe_ne_header_RT_MESSAGETABLE               0x800B
 #define exe_ne_header_RT_GROUP_CURSOR               0x800C
 #define exe_ne_header_RT_GROUP_ICON                 0x800E
+#define exe_ne_header_RT_NAME_TABLE                 0x800F  /* Not used in Windows 3.1, supported in Windows 3.0 but slow */
 #define exe_ne_header_RT_VERSION                    0x8010
 
