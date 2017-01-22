@@ -508,8 +508,10 @@ int main(int argc,char **argv) {
                     ninfo->rnOffset,
                     exe_ne_header_resource_table_get_shift(&ne_resources),
                     (unsigned long)ninfo->rnOffset << (unsigned long)exe_ne_header_resource_table_get_shift(&ne_resources));
-                printf("                rnLength:           %u bytes\n",
-                    ninfo->rnLength);
+                printf("                rnLength:           %u sectors << %u = %lu bytes\n",
+                    ninfo->rnLength,
+                    exe_ne_header_resource_table_get_shift(&ne_resources),
+                    (unsigned long)ninfo->rnLength << (unsigned long)exe_ne_header_resource_table_get_shift(&ne_resources));
 
                 printf("                rnFlags:            0x%04x",
                     ninfo->rnFlags);
@@ -548,7 +550,7 @@ int main(int argc,char **argv) {
 
                 printf("                Writing to: %s\n",tmp);
 
-                fcpy = (unsigned long)ninfo->rnLength;
+                fcpy = (unsigned long)ninfo->rnLength << (unsigned long)exe_ne_header_resource_table_get_shift(&ne_resources);
                 foff = (unsigned long)ninfo->rnOffset << (unsigned long)exe_ne_header_resource_table_get_shift(&ne_resources);
                 if ((unsigned long)lseek(src_fd,foff,SEEK_SET) != foff) {
                     printf("                ! Cannot seek to offset\n");

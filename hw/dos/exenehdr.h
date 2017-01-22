@@ -184,14 +184,15 @@ struct exe_ne_header_resource_table_typeinfo {
 
 #pragma pack(push,1)
 struct exe_ne_header_resource_table_nameinfo {
-    uint16_t                    rnOffset;           // +0x00
-    uint16_t                    rnLength;           // +0x02
+    uint16_t                    rnOffset;           // +0x00 offset of the resource in segments. offset = rnOffset << rscAlignShift
+    uint16_t                    rnLength;           // +0x02 length of the resource in segments. size = rnLength << rscAlignShift. NOT BYTES!!!!
     uint16_t                    rnFlags;            // +0x04
     uint16_t                    rnID;               // +0x06
     uint16_t                    rnHandle;           // +0x08
     uint16_t                    rnUsage;            // +0x0A
 };                                                  // =0x0C
 #pragma pack(pop)
+// NTS: Microsoft (and everyone else on the net with NE docs) mis-documents rnLength as length in bytes. WRONG!!!!!
 
 #define exe_ne_header_RT_CURSOR                     0x8001
 #define exe_ne_header_RT_BITMAP                     0x8002
