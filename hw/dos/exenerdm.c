@@ -606,6 +606,34 @@ int main(int argc,char **argv) {
                                 dent.dwImageOffset = sizeof(pre) + sizeof(dent);
                                 write(fd,&dent,sizeof(dent));
                             }
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_CURSOR) {
+                                struct exe_ne_header_resource_CURSORDIR pre;
+                                struct exe_ne_header_resource_CURSORDIRENTRY dent;
+                                struct exe_ne_header_BITMAPINFOHEADER *bmp =
+                                    (struct exe_ne_header_BITMAPINFOHEADER*)(tmp + 4);
+
+                                pre.cdReserved = 0;
+                                pre.cdType = 2;
+                                pre.cdCount = 1;
+                                write(fd,&pre,sizeof(pre));
+
+                                dent.bWidth = bmp->biWidth;
+                                dent.bHeight = bmp->biHeight >> 1;      /* remember icons carry image + mask and dwHeight is double the actual height */
+                                dent.bColorCount = 1 << bmp->biBitCount;
+                                dent.bReserved = 0;
+                                dent.wXHotspot = *((uint16_t*)(tmp + 0));
+                                dent.wYHotspot = *((uint16_t*)(tmp + 2));
+                                dent.dwBytesInRes = fcpy - 4;
+                                dent.dwImageOffset = sizeof(pre) + sizeof(dent);
+                                write(fd,&dent,sizeof(dent));
+
+                                if (rd >= 4) {
+                                    rd -= 4;
+                                    fcpy -= 4;
+                                    docpy -= 4;
+                                    memmove(tmp,tmp+4,rd);
+                                }
+                            }
                         }
 
                         write(fd,tmp,rd);
