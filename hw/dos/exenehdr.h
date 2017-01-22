@@ -252,6 +252,17 @@ struct exe_ne_header_resource_CURSORDIRENTRY {
 #pragma pack(pop)
 
 #pragma pack(push,1)
+struct exe_ne_header_resource_GRCURSORDIRENTRY {
+    uint16_t                    wWidth;             // +0x00
+    uint16_t                    wHeight;            // +0x02
+    uint16_t                    wPlanes;            // +0x04
+    uint16_t                    wBitCount;          // +0x06
+    uint32_t                    lBytesInRes;        // +0x08
+    uint16_t                    nID;                // +0x0C NTS: This is the CURSOR rnID, not "wImageIndex into RT_CURSOR group" as early Windows 3.1 mis-documentes it.
+};                                                  // =0x0E
+#pragma pack(pop)
+
+#pragma pack(push,1)
 struct exe_ne_header_RGBQUAD {
     uint8_t                     rgbBlue;            // +0x00
     uint8_t                     rgbGreen;           // +0x01

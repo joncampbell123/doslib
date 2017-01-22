@@ -558,6 +558,47 @@ void dump_ne_res_RT_CURSOR(const unsigned char *data,const size_t len) {
     assert(data <= fence);
 }
 
+void dump_ne_res_RT_GROUP_CURSOR(const unsigned char *data,const size_t len) {
+    const struct exe_ne_header_resource_GRCURSORDIRENTRY *grent;
+    const struct exe_ne_header_resource_CURSORDIR *hdr;
+    const unsigned char *fence = data + len;
+    unsigned int count;
+
+    printf("                RT_GROUP_CURSOR resource:\n");
+
+    /* struct exe_ne_header_resource_CURSORDIR            hdr
+     * truct exe_ne_header_resource_GRCURSORDIRENTRY      entries[idCount] */
+    if ((data+sizeof(*hdr)) > fence) return;
+    hdr = (const struct exe_ne_header_resource_CURSORDIR *)data;
+    data += sizeof(*hdr);
+
+    printf("                    header:\n");
+    printf("                        cdType:         %u\n",hdr->cdType);
+    printf("                        cdCount:        %u\n",hdr->cdCount);
+
+    while (count < hdr->cdCount && (data+sizeof(*grent)) <= fence) {
+        grent = (const struct exe_ne_header_resource_GRCURSORDIRENTRY *)data;
+
+        printf("                    entry:\n");
+        printf("                        wWidth:         %u\n",grent->wWidth);
+        printf("                        wHeight:        %u\n",grent->wHeight);
+        printf("                        wPlanes:        %u\n",grent->wPlanes);
+        printf("                        wBitCount:      %u\n",grent->wBitCount);
+        printf("                        lBytesInRes:    %lu\n",(unsigned long)grent->lBytesInRes);
+        printf("                        nID:            %u\n",grent->nID);
+
+        /* NTS: The Windows 3.1 docs I have mis-document it as "resource table index of RT_CURSOR resource", which is wrong.
+         *      Even more devious, is that this mis-documentation would happen to work regardless because RT_CURSOR resources
+         *      are compiled with sequential IDs anyway starting from 1 and almost every file in Windows 3.1 is compiled
+         *      this way. */
+
+        data += sizeof(*grent);
+        count++;
+    }
+
+    assert(data <= fence);
+}
+
 void dump_ne_res_RT_BITMAP(const unsigned char *data,const size_t len) {
     const unsigned char *fence = data + len;
     const struct exe_ne_header_BITMAPINFOHEADER *bmphdr;
@@ -1308,6 +1349,8 @@ int main(int argc,char **argv) {
                                 dump_ne_res_RT_GROUP_ICON(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_CURSOR)
                                 dump_ne_res_RT_CURSOR(res_raw,(size_t)res_len);
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_GROUP_CURSOR)
+                                dump_ne_res_RT_GROUP_CURSOR(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_BITMAP)
                                 dump_ne_res_RT_BITMAP(res_raw,(size_t)res_len);
                         }
