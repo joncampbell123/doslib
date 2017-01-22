@@ -154,5 +154,14 @@ int exe_ne_header_name_entry_table_parse_raw(struct exe_ne_header_name_entry_tab
 int ne_name_entry_sort_by_name(const void *a,const void *b);
 int ne_name_entry_sort_by_ordinal(const void *a,const void *b);
 
+void exe_ne_header_entry_table_table_init(struct exe_ne_header_entry_table_table * const t);
+void exe_ne_header_entry_table_table_free_table(struct exe_ne_header_entry_table_table * const t);
+void exe_ne_header_entry_table_table_free_raw(struct exe_ne_header_entry_table_table * const t);
+unsigned char *exe_ne_header_entry_table_table_alloc_raw(struct exe_ne_header_entry_table_table * const t,const size_t length);
+void exe_ne_header_entry_table_table_free(struct exe_ne_header_entry_table_table * const t);
+void exe_ne_header_entry_table_table_parse_raw(struct exe_ne_header_entry_table_table * const t);
+size_t exe_ne_header_entry_table_table_raw_entry_size(const struct exe_ne_header_entry_table_entry * const ent);
+unsigned char *exe_ne_header_entry_table_table_raw_entry(const struct exe_ne_header_entry_table_table * const t,const struct exe_ne_header_entry_table_entry * const ent);
+
 extern struct exe_ne_header_name_entry_table *ne_name_entry_sort_by_table;
 
