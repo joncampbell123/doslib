@@ -607,6 +607,15 @@ int main(int argc,char **argv) {
                                 write(fd,&dent,sizeof(dent));
                             }
                             else if (tinfo->rtTypeID == exe_ne_header_RT_CURSOR) {
+                                /* raw resource data for a cursor when in an NE executable:
+                                 *
+                                 * WORD                 hotspot_x
+                                 * WORD                 hotspot_y
+                                 * BITMAPINFOHEADER     cursor bitmapinfo
+                                 * RGBQUAD              cursor palette
+                                 * BYTE[]               cursor bitmap
+                                 *
+                                 */
                                 struct exe_ne_header_resource_CURSORDIR pre;
                                 struct exe_ne_header_resource_CURSORDIRENTRY dent;
                                 struct exe_ne_header_BITMAPINFOHEADER *bmp =
@@ -618,7 +627,7 @@ int main(int argc,char **argv) {
                                 write(fd,&pre,sizeof(pre));
 
                                 dent.bWidth = bmp->biWidth;
-                                dent.bHeight = bmp->biHeight >> 1;      /* remember icons carry image + mask and dwHeight is double the actual height */
+                                dent.bHeight = bmp->biHeight >> 1;      /* remember cursors carry image + mask and dwHeight is double the actual height */
                                 dent.bColorCount = 1 << bmp->biBitCount;
                                 dent.bReserved = 0;
                                 dent.wXHotspot = *((uint16_t*)(tmp + 0));
