@@ -675,7 +675,10 @@ void dump_ne_res_RT_STRING(const unsigned char *data,const size_t len,const unsi
         }
 
         /* RT_STRING resources are supposed to have 16 strings.
-         * Due to resource alignment be prepared to print more if it violates that rule. */
+         * Be prepared to print more if it violates that rule.
+         * Alignment and rounding of resource data offset + size means we could
+         * potentially read enough zeros past the end to count more than 16, but
+         * it's not something to show unless extra strings show up there. */
         if (count < 16 || length != 0)
             printf("                    0x%04x: ",((rnID << 4U) + count) & 0xFFFFU);
 
