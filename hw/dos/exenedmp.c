@@ -482,6 +482,51 @@ void dump_ne_res_RT_ICON(const unsigned char *data,const size_t len) {
     assert(data <= fence);
 }
 
+void dump_ne_res_RT_GROUP_ICON(const unsigned char *data,const size_t len) {
+    const struct exe_ne_header_resource_GRICONDIRENTRY *grent;
+    const struct exe_ne_header_resource_ICONDIR *hdr;
+    const unsigned char *fence = data + len;
+    unsigned int count;
+
+    printf("                RT_GROUP_ICON resource:\n");
+
+    /* struct exe_ne_header_resource_ICONDIR            hdr
+     * truct exe_ne_header_resource_GRICONDIRENTRY      entries[idCount] */
+    if ((data+sizeof(*hdr)) > fence) return;
+    hdr = (const struct exe_ne_header_resource_ICONDIR *)data;
+    data += sizeof(*hdr);
+
+    printf("                    header:\n");
+    printf("                        idType:         %u\n",hdr->idType);
+    printf("                        idCount:        %u\n",hdr->idCount);
+
+    while (count < hdr->idCount && (data+sizeof(*grent)) <= fence) {
+        grent = (const struct exe_ne_header_resource_GRICONDIRENTRY *)data;
+
+        printf("                    entry:\n");
+        printf("                        bWidth:         %u\n",grent->bWidth);
+        printf("                        bHeight:        %u\n",grent->bHeight);
+        printf("                        bColorCount:    %u\n",grent->bColorCount);
+        printf("                        bReserved:      %u\n",grent->bReserved);
+        printf("                        wPlanes:        %u\n",grent->wPlanes);
+        printf("                        wBitCount:      %u\n",grent->wBitCount);
+        printf("                        dwBytesInRes:   %lu\n",(unsigned long)grent->dwBytesInRes);
+        printf("                        nID:            %u\n",grent->nID);
+
+        /* NTS: The Windows 3.1 docs I have mis-document it as "resource table index of RT_ICON resource", which is wrong.
+         *      Even more devious, is that this mis-documentation would happen to work regardless because RT_ICON resources
+         *      are compiled with sequential IDs anyway starting from 1 and almost every file in Windows 3.1 is compiled
+         *      this way.
+         *
+         *      MSDN docs on their site correctly document it as the ID of the RT_ICON resource. */
+
+        data += sizeof(*grent);
+        count++;
+    }
+
+    assert(data <= fence);
+}
+
 void dump_ne_res_RT_CURSOR(const unsigned char *data,const size_t len) {
     const unsigned char *fence = data + len;
     const struct exe_ne_header_BITMAPINFOHEADER *bmphdr;
@@ -1259,6 +1304,8 @@ int main(int argc,char **argv) {
                              *        different format inside the NE resource. */
                             if (tinfo->rtTypeID == exe_ne_header_RT_ICON)
                                 dump_ne_res_RT_ICON(res_raw,(size_t)res_len);
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_GROUP_ICON)
+                                dump_ne_res_RT_GROUP_ICON(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_CURSOR)
                                 dump_ne_res_RT_CURSOR(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_BITMAP)
