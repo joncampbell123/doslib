@@ -117,3 +117,14 @@ uint16_t exe_ne_header_resource_table_get_resname(const struct exe_ne_header_res
 void exe_ne_header_resource_table_parse(struct exe_ne_header_resource_table_t * const t);
 unsigned char *exe_ne_header_resource_table_alloc_raw(struct exe_ne_header_resource_table_t * const t,const size_t length);
 
+void ne_imported_name_table_entry_get_name(char *dst,size_t dstmax,const struct exe_ne_header_imported_name_table * const t,const uint16_t offset);
+void ne_imported_name_table_entry_get_module_ref_name(char *dst,size_t dstmax,const struct exe_ne_header_imported_name_table * const t,const uint16_t index);
+void exe_ne_header_imported_name_table_init(struct exe_ne_header_imported_name_table * const t);
+void exe_ne_header_imported_name_table_free_module_ref_table(struct exe_ne_header_imported_name_table * const t);
+uint16_t *exe_ne_header_imported_name_table_alloc_module_ref_table(struct exe_ne_header_imported_name_table * const t,const size_t entries);
+void exe_ne_header_imported_name_table_free_table(struct exe_ne_header_imported_name_table * const t);
+void exe_ne_header_imported_name_table_free_raw(struct exe_ne_header_imported_name_table * const t);
+unsigned char *exe_ne_header_imported_name_table_alloc_raw(struct exe_ne_header_imported_name_table * const t,const size_t length);
+void exe_ne_header_imported_name_table_free(struct exe_ne_header_imported_name_table * const t);
+int exe_ne_header_imported_name_table_parse_raw(struct exe_ne_header_imported_name_table * const t);
+
