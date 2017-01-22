@@ -19,11 +19,15 @@
 static char*                    src_file = NULL;
 static int                      src_fd = -1;
 
+static unsigned char            opt_pric = 0;
+
 static struct exe_dos_header    exehdr;
 static struct exe_dos_layout    exelayout;
 
 static void help(void) {
     fprintf(stderr,"EXENERDM -i <exe file>\n");
+    fprintf(stderr,"  -pric      Pre-pend a directory structure to ICON and CURSOR resources.\n");
+    fprintf(stderr,"             .ico and .cur files are expected to contain this directory.\n");
 }
 
 int main(int argc,char **argv) {
@@ -51,6 +55,9 @@ int main(int argc,char **argv) {
             else if (!strcmp(a,"i")) {
                 src_file = argv[i++];
                 if (src_file == NULL) return 1;
+            }
+            else if (!strcmp(a,"pric")) {
+                opt_pric = 1;
             }
             else {
                 fprintf(stderr,"Unknown switch %s\n",a);
@@ -443,6 +450,7 @@ int main(int argc,char **argv) {
         const char *file_ext;
         unsigned long foff;
         unsigned long fcpy;
+        unsigned long fcnt;
         char tmp[255+1];
         unsigned int ti;
         unsigned int ni;
@@ -457,11 +465,17 @@ int main(int argc,char **argv) {
                 continue;
             }
 
-            /* choose file extension by resource type, or .BIN otherwise */
+            /* choose file extension by resource type, or .BIN otherwise.
+             * Note that some resources, like RT_ICON and RT_CURSOR, are
+             * not stored using the familiar .ico and .cur extensions because
+             * the file format is expected to carry a "directory" structure
+             * that allows Windows to select one of multiple icons for the
+             * display, unless the user has explicitly instructed us to
+             * prepend a fake directory to the raw data to make it valid. */
             switch (tinfo->rtTypeID) {
-                case exe_ne_header_RT_CURSOR:           file_ext = ".cur"; break;
+                case exe_ne_header_RT_CURSOR:           file_ext = opt_pric?".cur":".rcu"; break;
                 case exe_ne_header_RT_BITMAP:           file_ext = ".bmp"; break;
-                case exe_ne_header_RT_ICON:             file_ext = ".ico"; break;
+                case exe_ne_header_RT_ICON:             file_ext = opt_pric?".ico":".ric"; break;
                 case exe_ne_header_RT_MENU:             file_ext = ".men"; break;
                 case exe_ne_header_RT_DIALOG:           file_ext = ".dlg"; break;
                 case exe_ne_header_RT_STRING:           file_ext = ".str"; break;
@@ -557,19 +571,46 @@ int main(int argc,char **argv) {
                     continue;
                 }
 
-                fd = open(tmp,O_CREAT|O_TRUNC|O_WRONLY,0644);
+                fd = open(tmp,O_CREAT|O_TRUNC|O_WRONLY|O_BINARY,0644);
                 if (fd < 0) {
                     fprintf(stderr,"Unable to write %s, %s\n",tmp,strerror(errno));
                     return 1;
                 }
 
+                fcnt = 0;
                 while (fcpy > 0UL) {
                     int docpy = (fcpy > sizeof(tmp) ? sizeof(tmp) : fcpy);
                     int rd = read(src_fd,tmp,docpy);
 
                     if (rd > 0) {
+                        /* WAIT: If this is an RT_ICON or RT_CURSOR, prepend a header to make it a valid file */
+                        if (opt_pric && fcnt == 0) {
+                            if (tinfo->rtTypeID == exe_ne_header_RT_ICON) {
+                                struct exe_ne_header_resource_ICONDIR pre;
+                                struct exe_ne_header_resource_ICONDIRENTRY dent;
+                                struct exe_ne_header_BITMAPINFOHEADER *bmp =
+                                    (struct exe_ne_header_BITMAPINFOHEADER*)tmp;
+
+                                pre.idReserved = 0;
+                                pre.idType = 1;
+                                pre.idCount = 1;
+                                write(fd,&pre,sizeof(pre));
+
+                                dent.bWidth = bmp->biWidth;
+                                dent.bHeight = bmp->biHeight >> 1;      /* remember icons carry image + mask and dwHeight is double the actual height */
+                                dent.bColorCount = 1 << bmp->biBitCount;
+                                dent.bReserved = 0;
+                                dent.wPlanes = bmp->biPlanes;
+                                dent.wBitCount = bmp->biBitCount;
+                                dent.dwBytesInRes = fcpy;
+                                dent.dwImageOffset = sizeof(pre) + sizeof(dent);
+                                write(fd,&dent,sizeof(dent));
+                            }
+                        }
+
                         write(fd,tmp,rd);
                         fcpy -= rd;
+                        fcnt += rd;
                     }
 
                     if (rd < docpy) {
