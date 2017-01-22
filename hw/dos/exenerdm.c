@@ -486,6 +486,7 @@ int main(int argc,char **argv) {
                 case exe_ne_header_RT_MESSAGETABLE:     file_ext = ".msg"; break;
                 case exe_ne_header_RT_GROUP_CURSOR:     file_ext = ".gcr"; break;
                 case exe_ne_header_RT_GROUP_ICON:       file_ext = ".gic"; break;
+                case exe_ne_header_RT_NAME_TABLE:       file_ext = ".ntb"; break;
                 case exe_ne_header_RT_VERSION:          file_ext = ".ver"; break;
                 default:                                file_ext = ".bin"; break;
             };
