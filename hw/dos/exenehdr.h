@@ -217,6 +217,28 @@ struct exe_ne_header_resource_ICONDIRENTRY {
 #pragma pack(pop)
 
 #pragma pack(push,1)
+struct exe_ne_header_resource_CURSORDIR {
+    uint16_t                    cdReserved;         // +0x00
+    uint16_t                    cdType;             // +0x02
+    uint16_t                    cdCount;            // +0x04
+    /* CURSORDIRENTRY           cdEntries[];           +0x06 */
+};                                                  // =0x06
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_resource_CURSORDIRENTRY {
+    uint8_t                     bWidth;             // +0x00
+    uint8_t                     bHeight;            // +0x01
+    uint8_t                     bColorCount;        // +0x02
+    uint8_t                     bReserved;          // +0x03
+    uint16_t                    wXHotspot;          // +0x04
+    uint16_t                    wYHotspot;          // +0x06
+    uint32_t                    dwBytesInRes;       // +0x08
+    uint32_t                    dwImageOffset;      // +0x0C
+};                                                  // =0x10
+#pragma pack(pop)
+
+#pragma pack(push,1)
 struct exe_ne_header_BITMAPINFOHEADER {
     uint32_t                    biSize;             // +0x00
     int32_t                     biWidth;            // +0x04
