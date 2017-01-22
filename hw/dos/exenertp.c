@@ -27,6 +27,7 @@ const char *exe_ne_header_resource_table_typeinfo_TYPEID_INTEGER_name_str(const 
         case exe_ne_header_RT_MESSAGETABLE:         return "RT_MESSAGETABLE";
         case exe_ne_header_RT_GROUP_CURSOR:         return "RT_GROUP_CURSOR";
         case exe_ne_header_RT_GROUP_ICON:           return "RT_GROUP_ICON";
+        case exe_ne_header_RT_NAME_TABLE:           return "RT_NAME_TABLE";
         case exe_ne_header_RT_VERSION:              return "RT_VERSION";
         default:                                    break;
     }
