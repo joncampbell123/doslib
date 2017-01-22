@@ -354,6 +354,181 @@ void name_entry_table_sort_by_user_options(struct exe_ne_header_name_entry_table
     }
 }
 
+void dump_ne_res_BITMAPINFOHEADER(const struct exe_ne_header_BITMAPINFOHEADER *bmphdr) {
+    const unsigned char *fence = (const unsigned char*)bmphdr + bmphdr->biSize;
+
+    if (((const unsigned char*)bmphdr + sizeof(struct exe_ne_header_BITMAPCOREHEADER)) > fence)
+        return;
+
+    printf("                        biSize:             %lu",
+        (unsigned long)bmphdr->biSize);
+    if (bmphdr->biSize == sizeof(struct exe_ne_header_BITMAPCOREHEADER))
+        printf(" BITMAPCOREHEADER");
+    if (bmphdr->biSize == sizeof(struct exe_ne_header_BITMAPINFOHEADER))
+        printf(" BITMAPINFOHEADER");
+    printf("\n");
+
+    printf("                        biWidth:            %ld\n",
+        (signed long)bmphdr->biWidth);
+    printf("                        biHeight:           %ld\n",
+        (signed long)bmphdr->biHeight);
+    printf("                        biPlanes:           %u\n",
+        (unsigned int)bmphdr->biPlanes);
+    printf("                        biBitCount:         %u\n",
+        (unsigned int)bmphdr->biBitCount);
+
+    if (((const unsigned char*)bmphdr + sizeof(struct exe_ne_header_BITMAPINFOHEADER)) > fence)
+        return;
+
+    printf("                        biCompression:      0x%08lx",
+        (unsigned long)bmphdr->biCompression);
+    if (bmphdr->biCompression == exe_ne_header_BI_RGB)
+        printf(" BI_RGB");
+    if (bmphdr->biCompression == exe_ne_header_BI_RLE8)
+        printf(" BI_RLE8");
+    if (bmphdr->biCompression == exe_ne_header_BI_RLE4)
+        printf(" BI_RLE4");
+    if (bmphdr->biCompression == exe_ne_header_BI_BITFIELDS)
+        printf(" BI_BITFIELDS");
+    if (bmphdr->biCompression == exe_ne_header_BI_JPEG)
+        printf(" BI_JPEG");
+    if (bmphdr->biCompression == exe_ne_header_BI_PNG)
+        printf(" BI_PNG");
+    printf("\n");
+
+    printf("                        biSizeImage:        %lu bytes\n",
+        (unsigned long)bmphdr->biSizeImage);
+    printf("                        biXPelsPerMeter:    %ld\n",
+        (unsigned long)bmphdr->biXPelsPerMeter);
+    printf("                        biYPelsPerMeter:    %ld\n",
+        (unsigned long)bmphdr->biYPelsPerMeter);
+    printf("                        biClrUsed:          %lu\n",
+        (unsigned long)bmphdr->biClrUsed);
+    printf("                        biClrImportant:     %lu\n",
+        (unsigned long)bmphdr->biClrImportant);
+}
+
+unsigned int exe_ne_header_BITMAPINFOHEADER_get_palette_count(const struct exe_ne_header_BITMAPINFOHEADER *bmphdr) {
+    if (bmphdr->biBitCount <= 8) {
+        unsigned int c = 1UL << bmphdr->biBitCount;
+
+        if (bmphdr->biSize >= sizeof(struct exe_ne_header_BITMAPINFOHEADER) && bmphdr->biClrUsed != 0) {
+            if (c > bmphdr->biClrUsed) c = bmphdr->biClrUsed;
+        }
+
+        return c;
+    }
+
+    return 0;
+}
+
+void dump_ne_res_RT_ICON(const unsigned char *data,const size_t len) {
+    const unsigned char *fence = data + len;
+    const struct exe_ne_header_BITMAPINFOHEADER *bmphdr =
+        (const struct exe_ne_header_BITMAPINFOHEADER*)data;
+
+    printf("                RT_ICON resource:\n");
+
+    if (len < 4)
+        return;
+
+    /* BITMAPINFOHEADER         icHeader;
+     * RGBQUAD                  icColors[];
+     * BYTE                     icXOR[];
+     * BYTE                     icAND[]; */
+    printf("                    BITMAPINFOHEADER icHeader: (biHeight reflects image + mask)\n");
+
+    if ((data+bmphdr->biSize) > fence)
+        return;
+
+    dump_ne_res_BITMAPINFOHEADER(bmphdr);
+    data += bmphdr->biSize;
+    if (data >= fence)
+        return;
+
+    {
+        unsigned int num_colors = exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
+        const struct exe_ne_header_RGBQUAD *pal = (const struct exe_ne_header_RGBQUAD*)data;
+        unsigned int palent;
+
+        printf("                      * Number of color palette entries: %u\n",num_colors);
+        if (num_colors != 0 && (data+(sizeof(*pal) * num_colors) <= fence)) {
+            for (palent=0;palent < num_colors;palent++) {
+                if ((palent&3) == 0) {
+                    if (palent != 0) printf("\n");
+                    printf("                        ");
+                }
+
+                printf("RGBX(0x%02x,0x%02x,0x%02x,0x%02x) ",
+                    pal[palent].rgbRed,
+                    pal[palent].rgbGreen,
+                    pal[palent].rgbBlue,
+                    pal[palent].rgbReserved);
+            }
+
+            printf("\n");
+            data += sizeof(*pal) * num_colors;
+        }
+    }
+
+    assert(data <= fence);
+}
+
+void dump_ne_res_RT_CURSOR(const unsigned char *data,const size_t len) {
+    const unsigned char *fence = data + len;
+    const struct exe_ne_header_BITMAPINFOHEADER *bmphdr;
+
+    printf("                RT_CURSOR resource:\n");
+    printf("                    wXHotspot:          %d\n",*((int16_t*)(data+0)));
+    printf("                    wYHotspot:          %d\n",*((int16_t*)(data+2)));
+    data += 4;
+
+    if (len < (4+4))
+        return;
+
+    bmphdr = (const struct exe_ne_header_BITMAPINFOHEADER*)data;
+    /* BITMAPINFOHEADER         icHeader;
+     * RGBQUAD                  icColors[];
+     * BYTE                     icXOR[];
+     * BYTE                     icAND[]; */
+    printf("                    BITMAPINFOHEADER icHeader: (biHeight reflects image + mask)\n");
+
+    if ((data+bmphdr->biSize) > fence)
+        return;
+
+    dump_ne_res_BITMAPINFOHEADER(bmphdr);
+    data += bmphdr->biSize;
+    if (data >= fence)
+        return;
+
+    {
+        unsigned int num_colors = exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
+        const struct exe_ne_header_RGBQUAD *pal = (const struct exe_ne_header_RGBQUAD*)data;
+        unsigned int palent;
+
+        printf("                      * Number of color palette entries: %u\n",num_colors);
+        if (num_colors != 0 && (data+(sizeof(*pal) * num_colors) <= fence)) {
+            for (palent=0;palent < num_colors;palent++) {
+                if ((palent&3) == 0) {
+                    if (palent != 0) printf("\n");
+                    printf("                        ");
+                }
+
+                printf("RGBX(0x%02x,0x%02x,0x%02x,0x%02x) ",
+                    pal[palent].rgbRed,
+                    pal[palent].rgbGreen,
+                    pal[palent].rgbBlue,
+                    pal[palent].rgbReserved);
+            }
+
+            printf("\n");
+            data += sizeof(*pal) * num_colors;
+        }
+    }
+
+    assert(data <= fence);
+}
+
 int main(int argc,char **argv) {
     struct exe_ne_header_imported_name_table ne_imported_name_table;
     struct exe_ne_header_entry_table_table ne_entry_table;
@@ -1046,6 +1221,36 @@ int main(int argc,char **argv) {
                 if (ninfo->rnUsage != 0)
                     printf("                rnUsage:            0x%04x\n",
                         ninfo->rnUsage);
+
+                if (ninfo->rnLength != 0) {
+                    unsigned long res_ofs = (unsigned long)ninfo->rnOffset << (unsigned long)exe_ne_header_resource_table_get_shift(&ne_resources);
+                    unsigned long res_len = (unsigned long)ninfo->rnLength << (unsigned long)exe_ne_header_resource_table_get_shift(&ne_resources);
+                    unsigned char *res_raw = NULL;
+
+                    // impose limits on resource data reading.
+                    // for most formats we only care about the header anyway.
+#if TARGET_MSDOS == 16
+                    // refuse to handle more than 16KB if 16-bit DOS
+                    if (res_len > 0x4000UL) res_len = 0x4000UL;
+#else
+                    // refuse to handle more than 4MB for anything else. nobody's resources are that large anyway.
+                    if (res_len > 0x400000UL) res_len = 0x400000UL;
+#endif
+
+                    res_raw = malloc(res_len);
+                    if (res_raw != NULL) {
+                        if ((unsigned long)lseek(src_fd,res_ofs,SEEK_SET) == res_ofs &&
+                            (unsigned long)read(src_fd,res_raw,res_len) == res_len) {
+
+                            if (tinfo->rtTypeID == exe_ne_header_RT_ICON)
+                                dump_ne_res_RT_ICON(res_raw,(size_t)res_len);
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_CURSOR)
+                                dump_ne_res_RT_CURSOR(res_raw,(size_t)res_len);
+                        }
+
+                        free(res_raw);
+                    }
+                }
             }
         }
 

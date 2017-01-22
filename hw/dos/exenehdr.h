@@ -239,6 +239,25 @@ struct exe_ne_header_resource_CURSORDIRENTRY {
 #pragma pack(pop)
 
 #pragma pack(push,1)
+struct exe_ne_header_RGBQUAD {
+    uint8_t                     rgbBlue;            // +0x00
+    uint8_t                     rgbGreen;           // +0x01
+    uint8_t                     rgbRed;             // +0x02
+    uint8_t                     rgbReserved;        // +0x03
+};                                                  // =0x04
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_BITMAPCOREHEADER {             // such as used in Windows 2.x
+    uint32_t                    biSize;             // +0x00
+    int32_t                     biWidth;            // +0x04
+    int32_t                     biHeight;           // +0x08
+    uint16_t                    biPlanes;           // +0x0C
+    uint16_t                    biBitCount;         // +0x0E
+};                                                  // =0x10
+#pragma pack(pop)
+
+#pragma pack(push,1)
 struct exe_ne_header_BITMAPINFOHEADER {
     uint32_t                    biSize;             // +0x00
     int32_t                     biWidth;            // +0x04
@@ -253,6 +272,13 @@ struct exe_ne_header_BITMAPINFOHEADER {
     uint32_t                    biClrImportant;     // +0x24
 };                                                  // =0x28
 #pragma pack(pop)
+
+#define exe_ne_header_BI_RGB                        0x00000000UL
+#define exe_ne_header_BI_RLE8                       0x00000001UL
+#define exe_ne_header_BI_RLE4                       0x00000002UL
+#define exe_ne_header_BI_BITFIELDS                  0x00000003UL
+#define exe_ne_header_BI_JPEG                       0x00000004UL
+#define exe_ne_header_BI_PNG                        0x00000005UL
 
 #define exe_ne_header_RT_CURSOR                     0x8001
 #define exe_ne_header_RT_BITMAP                     0x8002
