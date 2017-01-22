@@ -748,11 +748,13 @@ void dump_ne_res_RT_NAME_TABLE(const unsigned char *data,const size_t len) {
 
             printf("                        szType:                 '%s'\n",p);
             p += strlen(p)+1;
-            assert((const char*)p <= (const char*)fence);
+            assert((const char*)p <= (const char*)(data+ent->wBytesInEntry));
 
-            printf("                        szID:                   '%s'\n",p);
-            p += strlen(p)+1;
-            assert((const char*)p <= (const char*)fence);
+            if ((const char*)p < (const char*)(data+ent->wBytesInEntry)) {
+                printf("                        szID:                   '%s'\n",p);
+                p += strlen(p)+1;
+                assert((const char*)p <= (const char*)(data+ent->wBytesInEntry));
+            }
         }
 
         data += ent->wBytesInEntry;
