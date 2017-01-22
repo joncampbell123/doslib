@@ -297,6 +297,16 @@ struct exe_ne_header_BITMAPINFOHEADER {
 };                                                  // =0x28
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct exe_ne_header_resource_NAMETABLE {
+    uint16_t                    wBytesInEntry;      // +0x00 bytes in this name table entry
+    uint16_t                    wTypeOrdinal;       // +0x02
+    uint16_t                    wIDOrdinal;         // +0x04
+/*  char                        szType[]               +0x06 */
+/*  char                        szID[]                 +0x06 */
+};                                                  // =0x06
+#pragma pack(pop)
+
 #define exe_ne_header_BI_RGB                        0x00000000UL
 #define exe_ne_header_BI_RLE8                       0x00000001UL
 #define exe_ne_header_BI_RLE4                       0x00000002UL

@@ -712,6 +712,52 @@ void dump_ne_res_RT_STRING(const unsigned char *data,const size_t len,const unsi
     assert(data <= fence);
 }
 
+void dump_ne_res_RT_NAME_TABLE(const unsigned char *data,const size_t len) {
+    const struct exe_ne_header_resource_NAMETABLE *ent;
+    const unsigned char *fence = data + len;
+    const char *p;
+
+    printf("                RT_NAME_TABLE resource:\n");
+
+    while ((data+sizeof(*ent)) < fence) {
+        ent = (const struct exe_ne_header_resource_NAMETABLE*)data;
+        if (ent->wBytesInEntry < sizeof(*ent)) break;
+        if ((data+ent->wBytesInEntry) > fence) break;
+
+        printf("                    entry:\n");
+        printf("                        wBytesInEntry:          %u\n",ent->wBytesInEntry);
+        printf("                        wTypeOrdinal:           0x%04x\n",ent->wTypeOrdinal);
+        printf("                        wIDOrdinal:             0x%04x\n",ent->wIDOrdinal);
+
+        // szType and szID are null-terminated strings.
+        // as a safety precaution, we do not dump strings if the last byte of the entry is nonzero.
+        //
+        // If the high order bit of wTypeOrdinal is set, then szType is just \0
+        // If the high order bit of wIDOrdinal is set, then szID is just \0
+        //
+        // I noticed in every Windows 3.0 installed file under \WINDOWS that all programs use this
+        // name table resource scheme to name their resources, and the resource name part of the
+        // resource segment contains nothing. Only Windows 3.0 uses this mapping scheme to associate
+        // names with resources, Windows 3.1 and later, as well as Windows 2.x and earlier, use the
+        // rscResourceNames portion of the resource segment.
+        if (ent->wBytesInEntry > sizeof(*ent) && data[ent->wBytesInEntry-1] == 0) {
+            p = (const char*)(data + sizeof(*ent));
+
+            printf("                        szType:                 '%s'\n",p);
+            p += strlen(p)+1;
+            assert((const char*)p <= (const char*)fence);
+
+            printf("                        szID:                   '%s'\n",p);
+            p += strlen(p)+1;
+            assert((const char*)p <= (const char*)fence);
+        }
+
+        data += ent->wBytesInEntry;
+    }
+
+    assert(data <= fence);
+}
+
 int main(int argc,char **argv) {
     struct exe_ne_header_imported_name_table ne_imported_name_table;
     struct exe_ne_header_entry_table_table ne_entry_table;
@@ -1438,6 +1484,8 @@ int main(int argc,char **argv) {
                                 dump_ne_res_RT_GROUP_CURSOR(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_STRING)
                                 dump_ne_res_RT_STRING(res_raw,(size_t)res_len,ninfo->rnID);
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_NAME_TABLE)
+                                dump_ne_res_RT_NAME_TABLE(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_BITMAP)
                                 dump_ne_res_RT_BITMAP(res_raw,(size_t)res_len);
                         }
