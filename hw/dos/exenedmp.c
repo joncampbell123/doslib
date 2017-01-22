@@ -10,6 +10,7 @@
 
 #include <hw/dos/exehdr.h>
 #include <hw/dos/exenehdr.h>
+#include <hw/dos/exenepar.h>
 
 #ifndef O_BINARY
 #define O_BINARY (0)
@@ -31,242 +32,6 @@ static void help(void) {
 }
 
 //////////////////
-
-struct exe_ne_header_resource_table_t {
-    unsigned char*                                  raw;
-    size_t                                          raw_length;
-    unsigned char                                   raw_ownership;
-
-    uint16_t*                                       typeinfo;
-    uint16_t                                        typeinfo_length;
-
-    uint16_t*                                       resnames;
-    uint16_t                                        resnames_length;
-};
-
-const char *exe_ne_header_resource_table_typeinfo_TYPEID_INTEGER_name_str(const uint16_t typeID) {
-    switch (typeID) {
-        case exe_ne_header_RT_CURSOR:               return "RT_CURSOR";
-        case exe_ne_header_RT_BITMAP:               return "RT_BITMAP";
-        case exe_ne_header_RT_ICON:                 return "RT_ICON";
-        case exe_ne_header_RT_MENU:                 return "RT_MENU";
-        case exe_ne_header_RT_DIALOG:               return "RT_DIALOG";
-        case exe_ne_header_RT_STRING:               return "RT_STRING";
-        case exe_ne_header_RT_FONTDIR:              return "RT_FONTDIR";
-        case exe_ne_header_RT_FONT:                 return "RT_FONT";
-        case exe_ne_header_RT_ACCELERATOR:          return "RT_ACCELERATOR";
-        case exe_ne_header_RT_RCDATA:               return "RT_RCDATA";
-        case exe_ne_header_RT_MESSAGETABLE:         return "RT_MESSAGETABLE";
-        case exe_ne_header_RT_GROUP_CURSOR:         return "RT_GROUP_CURSOR";
-        case exe_ne_header_RT_GROUP_ICON:           return "RT_GROUP_ICON";
-        case exe_ne_header_RT_VERSION:              return "RT_VERSION";
-        default:                                    break;
-    }
-
-    return NULL;
-}
-
-static inline uint16_t exe_ne_header_resource_table_typeinfo_TYPEID_IS_INTEGER(const uint16_t typeID) {
-    return (typeID & 0x8000U);
-}
-
-static inline uint16_t exe_ne_header_resource_table_typeinfo_TYPEID_AS_INTEGER(const uint16_t typeID) {
-    return (typeID & 0x7FFFU);
-}
-
-static inline uint16_t exe_ne_header_resource_table_typeinfo_RNID_IS_INTEGER(const uint16_t rnID) {
-    return (rnID & 0x8000U);
-}
-
-static inline uint16_t exe_ne_header_resource_table_typeinfo_RNID_AS_INTEGER(const uint16_t rnID) {
-    return (rnID & 0x7FFFU);
-}
-
-void exe_ne_header_resource_table_get_string(char *dst,size_t dstmax,const struct exe_ne_header_resource_table_t * const t,const uint16_t ofs) {
-    unsigned char len;
-    unsigned char *d;
-
-    dst[0] = 0;
-    if (dstmax == 0 || t->raw == NULL) return;
-    if (ofs >= t->raw_length) return;
-    d = t->raw + ofs;
-    len = *d++;
-    if ((d+len) > (t->raw+t->raw_length)) return;
-    if (len > (dstmax-1)) len = dstmax-1;
-    dst[len] = 0;
-    if (len != 0) memcpy(dst,d,len);
-}
-
-static uint16_t exe_ne_header_resource_table_get_shift(const struct exe_ne_header_resource_table_t * const t) {
-    const struct exe_ne_header_resource_table *h = (const struct exe_ne_header_resource_table*)t->raw;
-    if (h == NULL) return 0;
-    return h->rscAlignShift;
-}
-
-void exe_ne_header_resource_table_init(struct exe_ne_header_resource_table_t * const t) {
-    memset(t,0,sizeof(*t));
-}
-
-void exe_ne_header_resource_table_free_resnames(struct exe_ne_header_resource_table_t * const t) {
-    if (t->resnames) free(t->resnames);
-    t->resnames = NULL;
-}
-
-void exe_ne_header_resource_table_free_typeinfo(struct exe_ne_header_resource_table_t * const t) {
-    if (t->typeinfo) free(t->typeinfo);
-    t->typeinfo = NULL;
-}
-
-void exe_ne_header_resource_table_free_raw(struct exe_ne_header_resource_table_t * const t) {
-    if (t->raw && t->raw_ownership) free(t->raw);
-    t->raw_length = 0;
-    t->raw = NULL;
-}
-
-void exe_ne_header_resource_table_free(struct exe_ne_header_resource_table_t * const t) {
-    exe_ne_header_resource_table_free_resnames(t);
-    exe_ne_header_resource_table_free_typeinfo(t);
-    exe_ne_header_resource_table_free_raw(t);
-}
-
-const struct exe_ne_header_resource_table_typeinfo *exe_ne_header_resource_table_get_typeinfo_entry(const struct exe_ne_header_resource_table_t * const t,const unsigned int idx) {
-    if (t->raw == NULL || t->raw_length < sizeof(struct exe_ne_header_resource_table)) return NULL;
-    if (t->typeinfo == NULL) return NULL;
-    if (idx >= t->typeinfo_length) return NULL;
-    return (const struct exe_ne_header_resource_table_typeinfo*)(t->raw + t->typeinfo[idx]);
-}
-
-const struct exe_ne_header_resource_table_nameinfo *exe_ne_header_resource_table_get_typeinfo_nameinfo_entry(const struct exe_ne_header_resource_table_typeinfo * const tinfo,const unsigned int idx) {
-    if (idx >= tinfo->rtResourceCount) return NULL;
-    return ((const struct exe_ne_header_resource_table_nameinfo*)((unsigned char*)tinfo + sizeof(*tinfo))) + idx;
-}
-
-uint16_t exe_ne_header_resource_table_get_resname(const struct exe_ne_header_resource_table_t * const t,const unsigned int idx) {
-    if (t->raw == NULL || t->resnames == NULL) return (uint16_t)(~0U);
-    if (idx >= t->resnames_length) return (uint16_t)(~0U);
-    return t->resnames[idx];
-}
-
-void exe_ne_header_resource_table_parse(struct exe_ne_header_resource_table_t * const t) {
-    unsigned char *scan,*fence,*p;
-    unsigned int entries;
-
-    exe_ne_header_resource_table_free_resnames(t);
-    exe_ne_header_resource_table_free_typeinfo(t);
-    if (t->raw == NULL || t->raw_length < sizeof(struct exe_ne_header_resource_table)) return;
-
-    scan = t->raw;
-    fence = scan + t->raw_length;
-
-    /* step: struct exe_ne_header_resource_table */
-    scan += sizeof(struct exe_ne_header_resource_table);
-    if (scan >= fence) return;
-
-    /* how many: struct exe_ne_header_resource_table_typeinfo */
-    p = scan;
-    entries = 0;
-    while ((scan+2) <= fence) {
-        struct exe_ne_header_resource_table_typeinfo *ti =
-            (struct exe_ne_header_resource_table_typeinfo*)scan;
-
-        if (ti->rtTypeID == 0) {
-            scan += 2;  /* the last entry is rtTypeID == 0, 2 bytes only sizeof(rtTypeID) */
-            break;
-        }
-
-        /* if rtTypeID != 0, then the entry is the full struct size */
-        if ((scan+sizeof(*ti)) > fence) break;
-        scan += sizeof(*ti);
-        scan += sizeof(struct exe_ne_header_resource_table_nameinfo) * ti->rtResourceCount;
-        entries++;
-    }
-
-    if (entries != 0) {
-        t->typeinfo = (uint16_t*)malloc(entries * sizeof(uint16_t));
-        if (t->typeinfo == NULL) return;
-        t->typeinfo_length = entries;
-
-        entries = 0;
-        while ((p+2) <= fence) {
-            struct exe_ne_header_resource_table_typeinfo *ti =
-                (struct exe_ne_header_resource_table_typeinfo*)p;
-
-            if (ti->rtTypeID == 0) {
-                p += 2;  /* the last entry is rtTypeID == 0, 2 bytes only sizeof(rtTypeID) */
-                break;
-            }
-
-            if (entries >= t->typeinfo_length)
-                break;
-
-            /* if rtTypeID != 0, then the entry is the full struct size */
-            if ((p+sizeof(*ti)) > fence) break;
-            t->typeinfo[entries] = (uint16_t)(p - t->raw);
-            p += sizeof(*ti);
-            p += sizeof(struct exe_ne_header_resource_table_nameinfo) * ti->rtResourceCount;
-            entries++;
-        }
-
-        t->typeinfo_length = entries;
-    }
-
-    /* how many: resource names */
-    p = scan;
-    entries = 0;
-    while (scan < fence) {
-        unsigned char len = *scan++;
-        if (len == 0) break;
-        scan += len;
-        entries++;
-    }
-
-    if (entries != 0) {
-        t->resnames = (uint16_t*)malloc(entries * sizeof(uint16_t));
-        if (t->resnames == NULL) return;
-        t->resnames_length = entries;
-
-        entries = 0;
-        while (p < fence) {
-            unsigned char len = *p++;
-            if (len == 0) break;
-            if (entries >= t->resnames_length) break;
-            t->resnames[entries] = (uint16_t)((p - 1) - t->raw);
-            p += len;
-            entries++;
-        }
-
-        t->resnames_length = entries;
-    }
-}
-
-unsigned char *exe_ne_header_resource_table_alloc_raw(struct exe_ne_header_resource_table_t * const t,const size_t length) {
-    exe_ne_header_resource_table_free_raw(t);
-
-    assert(t->raw == NULL);
-    if (length == 0)
-        return NULL;
-
-    t->raw = malloc(length);
-    if (t->raw == NULL)
-        return NULL;
-
-    t->raw_length = length;
-    t->raw_ownership = 1;
-    return t->raw;
-}
-
-//////////////////
-
-struct exe_ne_header_imported_name_table {
-    uint16_t*                                       table;
-    unsigned int                                    length;
-    unsigned char*                                  raw;
-    size_t                                          raw_length;
-    unsigned char                                   raw_ownership;
-    /* module reference table (relies on this data) */
-    uint16_t*                                       module_ref_table;
-    unsigned int                                    module_ref_table_length; /* in entries of type uint16_t */
-};
 
 void ne_imported_name_table_entry_get_name(char *dst,size_t dstmax,const struct exe_ne_header_imported_name_table * const t,const uint16_t offset) {
     unsigned char *raw;
@@ -407,11 +172,6 @@ int exe_ne_header_imported_name_table_parse_raw(struct exe_ne_header_imported_na
 
 //////////////////
 
-struct exe_ne_header_segment_reloc_table {
-    union exe_ne_header_segment_relocation_entry*   table;
-    unsigned int                                    length;
-};
-
 void exe_ne_header_segment_reloc_table_init(struct exe_ne_header_segment_reloc_table * const t) {
     memset(t,0,sizeof(*t));
 }
@@ -441,12 +201,6 @@ unsigned char *exe_ne_header_segment_reloc_table_alloc_table(struct exe_ne_heade
 void exe_ne_header_segment_reloc_table_free(struct exe_ne_header_segment_reloc_table * const t) {
     exe_ne_header_segment_reloc_table_free_table(t);
 }
-
-struct exe_ne_header_segment_table {
-    struct exe_ne_header_segment_entry* table;
-    unsigned int                        length;
-    unsigned int                        sector_shift;
-};
 
 void exe_ne_header_segment_table_init(struct exe_ne_header_segment_table * const t) {
     memset(t,0,sizeof(*t));
@@ -478,14 +232,6 @@ unsigned char *exe_ne_header_segment_table_alloc_table(struct exe_ne_header_segm
 void exe_ne_header_segment_table_free(struct exe_ne_header_segment_table * const t) {
     exe_ne_header_segment_table_free_table(t);
 }
-
-struct exe_ne_header_name_entry_table {
-    struct exe_ne_header_name_entry*    table;
-    unsigned int                        length;
-    unsigned char*                      raw;
-    size_t                              raw_length;
-    unsigned char                       raw_ownership;
-};
 
 void exe_ne_header_name_entry_table_init(struct exe_ne_header_name_entry_table * const t) {
     memset(t,0,sizeof(*t));
@@ -528,13 +274,6 @@ void exe_ne_header_name_entry_table_free(struct exe_ne_header_name_entry_table *
     exe_ne_header_name_entry_table_free_table(t);
     exe_ne_header_name_entry_table_free_raw(t);
 }
-
-#pragma pack(push,1)
-struct exe_ne_header_name_entry {
-    uint8_t         length;
-    uint16_t        offset;             // 16-bit because resident/nonresident name table is limited to 64KB
-};
-#pragma pack(pop)
 
 uint16_t ne_name_entry_get_ordinal(const struct exe_ne_header_name_entry_table * const t,const struct exe_ne_header_name_entry * const ent) {
     assert(((size_t)ent->offset+(size_t)ent->length+(size_t)2) <= t->raw_length);
@@ -671,21 +410,6 @@ unsigned long exe_ne_header_segment_table_get_relocation_table_offset(const stru
         (unsigned long)s->length;
 }
 
-#pragma pack(push,1)
-struct exe_ne_header_entry_table_entry {
-    uint8_t         segment_id;         // 0x00 = empty  0xFF = movable  0xFE = constant   anything else = segment index
-    uint16_t        offset;             // 16-bit offset to entry
-};
-#pragma pack(pop)
-
-struct exe_ne_header_entry_table_table {
-    struct exe_ne_header_entry_table_entry*     table;
-    unsigned int                                length;
-    unsigned char*                              raw;
-    size_t                                      raw_length;
-    unsigned char                               raw_ownership;
-};
-
 void exe_ne_header_entry_table_table_init(struct exe_ne_header_entry_table_table * const t) {
     memset(t,0,sizeof(*t));
 }
@@ -728,7 +452,100 @@ void exe_ne_header_entry_table_table_free(struct exe_ne_header_entry_table_table
     exe_ne_header_entry_table_table_free_raw(t);
 }
 
-///////////////////
+void exe_ne_header_entry_table_table_parse_raw(struct exe_ne_header_entry_table_table * const t) {
+    unsigned char nument,seg_id;
+    unsigned char *scan,*fence;
+    unsigned int entries = 0;
+    unsigned int scanst;
+    unsigned int i;
+
+    exe_ne_header_entry_table_table_free_table(t);
+    if (t->raw == NULL || t->raw_length <= 2) return;
+    fence = t->raw + t->raw_length;
+
+    /* 2-BYTE     number, seg_id
+     *     for i in 0 to number
+     *        <entry, length varies by segment type>
+     */
+
+    /* first, how many entries? the "run-length" encoding used for common segment index/type makes this easier. */
+    for (scan=t->raw;scan < fence;) {
+        nument = *scan++;
+        if (nument == 0 || scan >= fence) break;
+        seg_id = *scan++;
+        if (scan >= fence) break;
+
+        if (seg_id == 0x00) {
+            /* nothing to do or skip */
+        }
+        else if (seg_id == 0xFE) {
+            /* constant entries are 3 bytes (BYTE FLAGS + WORD CONSTANT) */
+            scan += (unsigned int)nument * 3U;
+        }
+        else if (seg_id == 0xFF) {
+            /* movable segment refs are 6 bytes */
+            scan += (unsigned int)nument * 6U;
+        }
+        else {
+            /* fixed segment refs are 3 bytes */
+            scan += (unsigned int)nument * 3U;
+        }
+
+        entries += nument;
+    }
+
+    if (entries == 0)
+        return;
+
+    t->table = (struct exe_ne_header_entry_table_entry*)malloc(entries * sizeof(*(t->table)));
+    if (t->table == NULL) return;
+    t->length = entries;
+
+    /* scan and copy indexes to */
+    entries = 0;
+    for (scan=t->raw;scan < fence && entries < t->length;) {
+        nument = *scan++;
+        if (nument == 0 || scan >= fence) break;
+        seg_id = *scan++;
+        if (scan >= fence) break;
+
+        if (seg_id == 0x00)
+            scanst = 0; /* no bytes, empty */
+        else if (seg_id == 0xFE)
+            scanst = 3; /* constant, 3 bytes */
+        else if (seg_id == 0xFF)
+            scanst = 6; /* movable segment ref, 6 bytes */
+        else
+            scanst = 3; /* fixed segment ref, 3 bytes */
+
+        for (i=0;i < nument && entries < t->length && scan < fence;i++,entries++,scan += scanst) {
+            t->table[entries].segment_id = seg_id;
+            t->table[entries].offset = (uint16_t)(scan - t->raw);
+        }
+    }
+
+    t->length = entries;
+}
+
+size_t exe_ne_header_entry_table_table_raw_entry_size(const struct exe_ne_header_entry_table_entry * const ent) {
+    if (ent->segment_id == 0xFF)
+        return 6;
+    else if (ent->segment_id != 0) // 0x01-0xFE
+        return 3;
+
+    return 0;
+}
+
+unsigned char *exe_ne_header_entry_table_table_raw_entry(const struct exe_ne_header_entry_table_table * const t,const struct exe_ne_header_entry_table_entry * const ent) {
+    if (t->raw == NULL || t->raw_length == 0)
+        return NULL;
+
+    if ((ent->offset+exe_ne_header_entry_table_table_raw_entry_size(ent)) > t->raw_length)
+        return NULL;
+
+    return t->raw + ent->offset;
+}
+
 void print_imported_name_table(const struct exe_ne_header_imported_name_table * const t) {
     char tmp[255+1];
     unsigned int i;
@@ -755,7 +572,6 @@ void print_imported_name_table_module_ref_table(const struct exe_ne_header_impor
     }
 }
 
-///////////////////
 void print_name_table(const struct exe_ne_header_name_entry_table * const t) {
     const struct exe_ne_header_name_entry *ent = NULL;
     uint16_t ordinal;
@@ -938,119 +754,6 @@ void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * 
         }
     }
 }
-
-void exe_ne_header_entry_table_table_parse_raw(struct exe_ne_header_entry_table_table * const t) {
-    unsigned char nument,seg_id;
-    unsigned char *scan,*fence;
-    unsigned int entries = 0;
-    unsigned int scanst;
-    unsigned int i;
-
-    exe_ne_header_entry_table_table_free_table(t);
-    if (t->raw == NULL || t->raw_length <= 2) return;
-    fence = t->raw + t->raw_length;
-
-    /* 2-BYTE     number, seg_id
-     *     for i in 0 to number
-     *        <entry, length varies by segment type>
-     */
-
-    /* first, how many entries? the "run-length" encoding used for common segment index/type makes this easier. */
-    for (scan=t->raw;scan < fence;) {
-        nument = *scan++;
-        if (nument == 0 || scan >= fence) break;
-        seg_id = *scan++;
-        if (scan >= fence) break;
-
-        if (seg_id == 0x00) {
-            /* nothing to do or skip */
-        }
-        else if (seg_id == 0xFE) {
-            /* constant entries are 3 bytes (BYTE FLAGS + WORD CONSTANT) */
-            scan += (unsigned int)nument * 3U;
-        }
-        else if (seg_id == 0xFF) {
-            /* movable segment refs are 6 bytes */
-            scan += (unsigned int)nument * 6U;
-        }
-        else {
-            /* fixed segment refs are 3 bytes */
-            scan += (unsigned int)nument * 3U;
-        }
-
-        entries += nument;
-    }
-
-    if (entries == 0)
-        return;
-
-    t->table = (struct exe_ne_header_entry_table_entry*)malloc(entries * sizeof(*(t->table)));
-    if (t->table == NULL) return;
-    t->length = entries;
-
-    /* scan and copy indexes to */
-    entries = 0;
-    for (scan=t->raw;scan < fence && entries < t->length;) {
-        nument = *scan++;
-        if (nument == 0 || scan >= fence) break;
-        seg_id = *scan++;
-        if (scan >= fence) break;
-
-        if (seg_id == 0x00)
-            scanst = 0; /* no bytes, empty */
-        else if (seg_id == 0xFE)
-            scanst = 3; /* constant, 3 bytes */
-        else if (seg_id == 0xFF)
-            scanst = 6; /* movable segment ref, 6 bytes */
-        else
-            scanst = 3; /* fixed segment ref, 3 bytes */
-
-        for (i=0;i < nument && entries < t->length && scan < fence;i++,entries++,scan += scanst) {
-            t->table[entries].segment_id = seg_id;
-            t->table[entries].offset = (uint16_t)(scan - t->raw);
-        }
-    }
-
-    t->length = entries;
-}
-
-size_t exe_ne_header_entry_table_table_raw_entry_size(const struct exe_ne_header_entry_table_entry * const ent) {
-    if (ent->segment_id == 0xFF)
-        return 6;
-    else if (ent->segment_id != 0) // 0x01-0xFE
-        return 3;
-
-    return 0;
-}
-
-unsigned char *exe_ne_header_entry_table_table_raw_entry(const struct exe_ne_header_entry_table_table * const t,const struct exe_ne_header_entry_table_entry * const ent) {
-    if (t->raw == NULL || t->raw_length == 0)
-        return NULL;
-
-    if ((ent->offset+exe_ne_header_entry_table_table_raw_entry_size(ent)) > t->raw_length)
-        return NULL;
-
-    return t->raw + ent->offset;
-}
-
-#pragma pack(push,1)
-struct exe_ne_header_entry_table_movable_segment_entry {
-    uint8_t             flags;          // +0x00
-    uint16_t            int3f;          // +0x01
-    uint8_t             segid;          // +0x03
-    uint16_t            seg_offs;       // +0x04
-};                                      // =0x06
-#pragma pack(pop)
-
-#pragma pack(push,1)
-struct exe_ne_header_entry_table_fixed_segment_entry {
-    uint8_t             flags;          // +0x00
-    union {
-        uint16_t        seg_offs;       // +0x01 (fixed segment, segment_id 0x01 to 0xFD)
-        uint16_t        const_value;    // +0x01 (constant value, segment_id 0xFE)
-    } v;
-};                                      // =0x03
-#pragma pack(pop)
 
 void print_entry_table_flags(const uint16_t flags) {
     if (flags & 1) printf("EXPORTED ");
