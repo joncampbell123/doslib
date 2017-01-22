@@ -196,6 +196,9 @@ void exe_ne_header_resource_table_parse(struct exe_ne_header_resource_table_t * 
                 break;
             }
 
+            if (entries >= t->typeinfo_length)
+                break;
+
             /* if rtTypeID != 0, then the entry is the full struct size */
             if ((p+sizeof(*ti)) > fence) break;
             t->typeinfo[entries] = (uint16_t)(p - t->raw);
@@ -204,10 +207,7 @@ void exe_ne_header_resource_table_parse(struct exe_ne_header_resource_table_t * 
             entries++;
         }
 
-        if (entries < t->typeinfo_length) {
-            printf("! resource typeinfo entries %u too few\n",(unsigned int)(t->typeinfo_length - entries));
-            t->typeinfo_length = entries;
-        }
+        t->typeinfo_length = entries;
     }
 
     /* how many: resource names */
@@ -229,15 +229,13 @@ void exe_ne_header_resource_table_parse(struct exe_ne_header_resource_table_t * 
         while (p < fence) {
             unsigned char len = *p++;
             if (len == 0) break;
+            if (entries >= t->resnames_length) break;
             t->resnames[entries] = (uint16_t)((p - 1) - t->raw);
             p += len;
             entries++;
         }
 
-        if (entries < t->resnames_length) {
-            printf("! resource resnames entries %u too few\n",(unsigned int)(t->resnames_length - entries));
-            t->resnames_length = entries;
-        }
+        t->resnames_length = entries;
     }
 }
 
@@ -283,7 +281,6 @@ void ne_imported_name_table_entry_get_name(char *dst,size_t dstmax,const struct 
     cpy = *raw++;
     if ((raw+cpy) > (t->raw+t->raw_length)) return;
     if (cpy > (dstmax - 1)) cpy = dstmax - 1;
-
 
     dst[cpy] = 0;
     if (cpy != 0) memcpy(dst,raw,cpy);
@@ -404,19 +401,7 @@ int exe_ne_header_imported_name_table_parse_raw(struct exe_ne_header_imported_na
         scan += len;    // TEXT
         entries++;
     }
-
-    if ((scan + 1) < fence)
-        printf("      ! Imported name table stopped %u bytes early\n",
-            (unsigned int)(fence - scan));
-
-    if (entries < t->length) {
-        fprintf(stderr,"WARNING: Names parsed are less than expected %u < %u\n",
-            (unsigned int)entries,
-            (unsigned int)t->length);
-
-        t->length = entries;
-    }
-
+    t->length = entries;
     return 0;
 }
 
@@ -658,18 +643,7 @@ int exe_ne_header_name_entry_table_parse_raw(struct exe_ne_header_name_entry_tab
         entries++;
     }
 
-    if ((scan + 1) < fence)
-        printf("      ! Name table stopped %u bytes early\n",
-            (unsigned int)(fence - scan));
-
-    if (entries < t->length) {
-        fprintf(stderr,"WARNING: Names parsed are less than expected %u < %u\n",
-            (unsigned int)entries,
-            (unsigned int)t->length);
-
-        t->length = entries;
-    }
-
+    t->length = entries;
     return 0;
 }
 
@@ -1037,15 +1011,7 @@ void exe_ne_header_entry_table_table_parse_raw(struct exe_ne_header_entry_table_
         }
     }
 
-    if ((scan+2) < fence) {
-        printf("! entry table parsing, came up short by %u bytes\n",
-            (unsigned int)(fence - scan));
-    }
-    if (entries < t->length) {
-        printf("! entry table parsing, came up short by %u entries\n",
-            (unsigned int)(t->length - entries));
-        t->length = entries;
-    }
+    t->length = entries;
 }
 
 size_t exe_ne_header_entry_table_table_raw_entry_size(const struct exe_ne_header_entry_table_entry * const ent) {
