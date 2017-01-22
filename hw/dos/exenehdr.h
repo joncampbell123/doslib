@@ -307,6 +307,20 @@ struct exe_ne_header_resource_NAMETABLE {
 };                                                  // =0x06
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct exe_ne_header_resource_ACCELERATOR {
+    uint8_t                     fFlags;             // +0x00
+    uint16_t                    wEvent;             // +0x01
+    uint16_t                    wId;                // +0x03
+};                                                  // =0x05
+#pragma pack(pop)
+
+#define exe_ne_header_ACCELERATOR_FLAGS_NOHILITE_TOPLEVEL       0x02U   // top-level menu item not hilighted when accelerator used
+#define exe_ne_header_ACCELERATOR_FLAGS_SHIFT                   0x04U   // need SHIFT key down to activate
+#define exe_ne_header_ACCELERATOR_FLAGS_CONTROL                 0x08U   // need CTRL key down to activate
+#define exe_ne_header_ACCELERATOR_FLAGS_ALT                     0x10U   // need ALT key down to activate
+#define exe_ne_header_ACCELERATOR_FLAGS_LAST_ENTRY              0x80U   // entry is last entry in table
+
 #define exe_ne_header_BI_RGB                        0x00000000UL
 #define exe_ne_header_BI_RLE8                       0x00000001UL
 #define exe_ne_header_BI_RLE4                       0x00000002UL

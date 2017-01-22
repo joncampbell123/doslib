@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <ctype.h>
 
 #include <hw/dos/exehdr.h>
 #include <hw/dos/exenehdr.h>
@@ -713,6 +714,79 @@ void dump_ne_res_RT_STRING(const unsigned char *data,const size_t len,const unsi
     }
 
     assert(data <= fence);
+}
+
+void dump_ne_res_RT_ACCELERATOR(const unsigned char *data,const size_t len) {
+    const struct exe_ne_header_resource_ACCELERATOR *ent;
+    const unsigned char *fence = data + len;
+
+    printf("                RT_ACCELERATOR resource:\n");
+
+    while ((data+sizeof(*ent)) <= fence) {
+        ent = (const struct exe_ne_header_resource_ACCELERATOR*)data;
+
+        printf("                    entry:\n");
+        printf("                        fFlags:             0x%02x",ent->fFlags);
+        if (ent->fFlags & exe_ne_header_ACCELERATOR_FLAGS_NOHILITE_TOPLEVEL)
+            printf(" NOHILIGHT_TOPLEVEL");
+        if (ent->fFlags & exe_ne_header_ACCELERATOR_FLAGS_SHIFT)
+            printf(" SHIFT");
+        if (ent->fFlags & exe_ne_header_ACCELERATOR_FLAGS_CONTROL)
+            printf(" CTRL");
+        if (ent->fFlags & exe_ne_header_ACCELERATOR_FLAGS_ALT)
+            printf(" ALT");
+        printf("\n");
+
+        printf("                        wEvent:             0x%04x (VK_KEY or ASCII)",ent->wEvent);
+        if ((ent->wEvent >= 'A' && ent->wEvent <= 'Z') ||
+            (ent->wEvent >= 'a' && ent->wEvent <= 'z') ||
+            (ent->wEvent >= '0' && ent->wEvent <= '9') ||
+            (ent->wEvent >=0x21 && ent->wEvent <=0x2F && ent->wEvent != '\'')) {
+            printf(" '%c'-key",toupper((char)ent->wEvent));
+        }
+        else if (ent->wEvent == 0x02)
+            printf(" VK_RBUTTON");
+        else if (ent->wEvent == 0x03)
+            printf(" VK_CANCEL");
+        else if (ent->wEvent == 0x04)
+            printf(" VK_MBUTTON");
+        else if (ent->wEvent == 0x06)
+            printf(" VK_XBUTTON2");
+        else if (ent->wEvent == 0x08)
+            printf(" VK_BACK");
+        else if (ent->wEvent == 0x09)
+            printf(" VK_TAB");
+        else if (ent->wEvent == 0x0C)
+            printf(" VK_CLEAR");
+        else if (ent->wEvent == 0x0D)
+            printf(" VK_RETURN");
+        else if (ent->wEvent == 0x10)
+            printf(" VK_SHIFT");
+        else if (ent->wEvent == 0x11)
+            printf(" VK_CONTROL");
+        else if (ent->wEvent == 0x12)
+            printf(" VK_MENU");
+        else if (ent->wEvent == 0x13)
+            printf(" VK_PAUSE");
+        else if (ent->wEvent == 0x15)
+            printf(" VK_KANA/VK_HANGEUL");
+        else if (ent->wEvent == 0x17)
+            printf(" VK_JUNJA");
+        else if (ent->wEvent == 0x18)
+            printf(" VK_FINAL");
+        else if (ent->wEvent == 0x1B)
+            printf(" VK_ESCAPE");
+        else if (ent->wEvent == 0x20)
+            printf(" VK_SPACE");
+        printf("\n");
+
+        printf("                        wId:                0x%04x\n",ent->wId);
+
+        if (ent->fFlags & exe_ne_header_ACCELERATOR_FLAGS_LAST_ENTRY)
+            break;
+
+        data += sizeof(*ent);
+    }
 }
 
 void dump_ne_res_RT_NAME_TABLE(const unsigned char *data,const size_t len) {
@@ -1491,6 +1565,8 @@ int main(int argc,char **argv) {
                                 dump_ne_res_RT_STRING(res_raw,(size_t)res_len,ninfo->rnID);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_NAME_TABLE)
                                 dump_ne_res_RT_NAME_TABLE(res_raw,(size_t)res_len);
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_ACCELERATOR)
+                                dump_ne_res_RT_ACCELERATOR(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_BITMAP)
                                 dump_ne_res_RT_BITMAP(res_raw,(size_t)res_len);
                         }
