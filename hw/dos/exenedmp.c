@@ -159,7 +159,7 @@ void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * 
     char tmp2[255+1];
     char tmp[255+1];
 
-    assert(sizeof(relocent) == 8);
+    assert(sizeof(*relocent) == 8);
     for (relent=0;relent < r->length;relent++) {
         relocent = r->table + relent;
 
