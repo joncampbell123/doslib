@@ -627,6 +627,91 @@ void dump_ne_res_RT_BITMAP(const unsigned char *data,const size_t len) {
     assert(data <= fence);
 }
 
+void dump_ne_res_RT_STRING(const unsigned char *data,const size_t len,const unsigned int rnID) {
+    const unsigned char *fence = data + len;
+    unsigned int count = 0;
+    unsigned char length;
+    char tmp[255+1];
+
+    /* NTS: Here's something to trip you up:
+     *
+     *      Most Windows resources, when you locate them with the FindResource()
+     *      API and an integer ID, will lookup the ID value you specified directly,
+     *      however according to the Windows 3.1 SDK for RT_STRING:
+     *
+     *          "A string table consists of one or more separate resources containing
+     *           exactly 16 strings."
+     *
+     *          ...
+     *
+     *          "Windows uses a 16-bit identifier to locate a string in a string-table
+     *           resource. Bits 4 through 15 specify the block in which the string
+     *           appears. Bits 0 through 3 specify the location of that string relaive
+     *           to the beginning of the block".
+     *
+     *      "Location of the string" is misleading, they mean the string count relative
+     *      to the first string in the block.
+     *
+     *      If PBRUSH.EXE in Windows 3.1 is any indication, this means that when Windows
+     *      looks up a string, it does something like this:
+     *
+     *      WORD target_rnID = (wanted_ID >> 4)
+     *      BYTE search_index = wanted_ID & 0xF;
+     *
+     *      So if your code looks up string ID 0x123, Windows will load RT_STRING resource
+     *      with rnID = 0x12 and skip 3 strings before returning the next one.
+     */
+
+    printf("                RT_STRING resource:\n");
+
+    while (data < fence) {
+        length = *data++;
+        if ((data+length) > fence) break;
+
+        tmp[length] = 0; /* don't worry, this is why tmp[] is 255+1 bytes */
+        if (length != 0) {
+            memcpy(tmp,data,length);
+            data += length;
+        }
+
+        /* RT_STRING resources are supposed to have 16 strings.
+         * Due to resource alignment be prepared to print more if it violates that rule. */
+        if (count < 16 || length != 0)
+            printf("                    0x%04x: ",((rnID << 4U) + count) & 0xFFFFU);
+
+        if (length != 0) {
+            /* string resources can be multiple-line! */
+            char *s = tmp,*f = tmp + length,*n;
+            unsigned int lines = 0;
+
+            while (s && s < f) {
+                n = strchr(s,'\n');
+
+                if (n != NULL) {
+                    if (n > s && n[-1] == '\r') n[-1] = 0; // filter MS-DOS CR LF linebreak
+                    *n++ = 0;
+                }
+
+                if (lines != 0)
+                    printf("\n                            ");
+
+                printf("'%s'",s);
+
+                s = n;
+                lines++;
+            }
+            printf("\n");
+        }
+        else if (count < 16) {
+            printf("''");
+            printf("\n");
+        }
+        count++;
+    }
+
+    assert(data <= fence);
+}
+
 int main(int argc,char **argv) {
     struct exe_ne_header_imported_name_table ne_imported_name_table;
     struct exe_ne_header_entry_table_table ne_entry_table;
@@ -1351,6 +1436,8 @@ int main(int argc,char **argv) {
                                 dump_ne_res_RT_CURSOR(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_GROUP_CURSOR)
                                 dump_ne_res_RT_GROUP_CURSOR(res_raw,(size_t)res_len);
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_STRING)
+                                dump_ne_res_RT_STRING(res_raw,(size_t)res_len,ninfo->rnID);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_BITMAP)
                                 dump_ne_res_RT_BITMAP(res_raw,(size_t)res_len);
                         }
