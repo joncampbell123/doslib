@@ -272,6 +272,31 @@ struct exe_ne_header_RGBQUAD {
 #pragma pack(pop)
 
 #pragma pack(push,1)
+struct exe_ne_header_BITMAP {                       // the original (pre-Windows 3.x) BITMAP format. names taken from Windows 1.04 SDK.
+    int16_t                     bmType;             // +0x00 must be zero, according to MSDN docs. Windows 1.x SDK doesn't say anything about it.
+    int16_t                     bmWidth;            // +0x02
+    int16_t                     bmHeight;           // +0x04
+    int16_t                     bmWidthBytes;       // +0x06 bytes per scanline aka stride. MSDN says must be multiple of 2 because old Windows assumes WORD alignment.
+    uint8_t                     bmPlanes;           // +0x08
+    uint8_t                     bmBitsPixel;        // +0x09
+};                                                  // =0x0A
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_RTBITMAP {                     // RT_BITMAP resource in Windows 1.x/2.x
+    uint8_t                     rnType;             // +0x00 always 0x02
+    uint8_t                     rnFlags;            // +0x01 flags of some kind (unknown meaning)
+    int16_t                     bmType;             // +0x02 must be zero, according to MSDN docs. Windows 1.x SDK doesn't say anything about it.
+    int16_t                     bmWidth;            // +0x04
+    int16_t                     bmHeight;           // +0x06
+    int16_t                     bmWidthBytes;       // +0x08 bytes per scanline aka stride. MSDN says must be multiple of 2 because old Windows assumes WORD alignment.
+    uint8_t                     bmPlanes;           // +0x0A
+    uint8_t                     bmBitsPixel;        // +0x0B
+    uint32_t                    bmZero;             // +0x0C unknown field, always zero
+};                                                  // =0x10
+#pragma pack(pop)
+
+#pragma pack(push,1)
 struct exe_ne_header_BITMAPCOREHEADER {             // such as used in Windows 2.x
     uint32_t                    biSize;             // +0x00
     int32_t                     biWidth;            // +0x04
