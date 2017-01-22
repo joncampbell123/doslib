@@ -80,3 +80,58 @@ void ne_name_entry_get_name(char *dst,size_t dstmax,const struct exe_ne_header_n
     }
 }
 
+int exe_ne_header_name_entry_table_parse_raw(struct exe_ne_header_name_entry_table * const t) {
+    unsigned char *scan,*base,*fence;
+    unsigned int entries = 0;
+
+    exe_ne_header_name_entry_table_free_table(t);
+    if (t->raw == NULL || t->raw_length == 0)
+        return 0;
+
+    base = t->raw;
+    fence = base + t->raw_length;
+
+    /* how many entries? */
+    for (scan=base;scan < fence;) {
+        /* uint8_t         LENGTH
+         * char[length]    TEXT
+         * uint16_t        ORDINAL */
+        unsigned char len = *scan++; // LENGTH
+        if (len == 0) break;
+        if ((scan+len+2) > fence) break;
+
+        scan += len + 2; // TEXT + ORDINAL
+        entries++;
+    }
+
+    t->table = (struct exe_ne_header_name_entry*)malloc(entries * sizeof(*(t->table)));
+    if (t->table == NULL) {
+        exe_ne_header_name_entry_table_free_table(t);
+        return -1;
+    }
+    t->length = entries;
+
+    /* now scan and index the entries */
+    entries = 0;
+    for (scan=base;scan < fence && entries < t->length;) {
+        /* uint8_t         LENGTH
+         * char[length]    TEXT
+         * uint16_t        ORDINAL */
+        unsigned char len = *scan++; // LENGTH
+        if (len == 0) break;
+        if ((scan+len+2) > fence) break;
+
+        t->table[entries].length = len;
+
+        t->table[entries].offset = (uint16_t)(scan - base);
+        scan += len;    // TEXT
+
+        scan += 2;      // ORDINAL
+
+        entries++;
+    }
+
+    t->length = entries;
+    return 0;
+}
+

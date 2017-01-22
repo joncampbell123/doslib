@@ -43,3 +43,12 @@ void exe_ne_header_segment_table_free(struct exe_ne_header_segment_table * const
     exe_ne_header_segment_table_free_table(t);
 }
 
+unsigned long exe_ne_header_segment_table_get_relocation_table_offset(const struct exe_ne_header_segment_table * const t,
+    const struct exe_ne_header_segment_entry * const s) {
+    if (!(s->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RELOCATIONS)) return 0;
+    if (s->offset_in_segments == 0) return 0;
+
+    return ((unsigned long)s->offset_in_segments << (unsigned long)t->sector_shift) +
+        (unsigned long)s->length;
+}
+

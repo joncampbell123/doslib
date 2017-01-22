@@ -61,61 +61,6 @@ int ne_name_entry_sort_by_ordinal(const void *a,const void *b) {
         ne_name_entry_get_ordinal(ne_name_entry_sort_by_table,eb);
 }
 
-int exe_ne_header_name_entry_table_parse_raw(struct exe_ne_header_name_entry_table * const t) {
-    unsigned char *scan,*base,*fence;
-    unsigned int entries = 0;
-
-    exe_ne_header_name_entry_table_free_table(t);
-    if (t->raw == NULL || t->raw_length == 0)
-        return 0;
-
-    base = t->raw;
-    fence = base + t->raw_length;
-
-    /* how many entries? */
-    for (scan=base;scan < fence;) {
-        /* uint8_t         LENGTH
-         * char[length]    TEXT
-         * uint16_t        ORDINAL */
-        unsigned char len = *scan++; // LENGTH
-        if (len == 0) break;
-        if ((scan+len+2) > fence) break;
-
-        scan += len + 2; // TEXT + ORDINAL
-        entries++;
-    }
-
-    t->table = (struct exe_ne_header_name_entry*)malloc(entries * sizeof(*(t->table)));
-    if (t->table == NULL) {
-        exe_ne_header_name_entry_table_free_table(t);
-        return -1;
-    }
-    t->length = entries;
-
-    /* now scan and index the entries */
-    entries = 0;
-    for (scan=base;scan < fence && entries < t->length;) {
-        /* uint8_t         LENGTH
-         * char[length]    TEXT
-         * uint16_t        ORDINAL */
-        unsigned char len = *scan++; // LENGTH
-        if (len == 0) break;
-        if ((scan+len+2) > fence) break;
-
-        t->table[entries].length = len;
-
-        t->table[entries].offset = (uint16_t)(scan - base);
-        scan += len;    // TEXT
-
-        scan += 2;      // ORDINAL
-
-        entries++;
-    }
-
-    t->length = entries;
-    return 0;
-}
-
 void name_entry_table_sort_by_user_options(struct exe_ne_header_name_entry_table * const t) {
     ne_name_entry_sort_by_table = t;
     if (t->raw == NULL || t->length <= 1)
@@ -129,15 +74,6 @@ void name_entry_table_sort_by_user_options(struct exe_ne_header_name_entry_table
         /* NTS: Do not sort the module name in entry 0 */
         qsort(t->table+1,t->length-1,sizeof(*(t->table)),ne_name_entry_sort_by_name);
     }
-}
-
-unsigned long exe_ne_header_segment_table_get_relocation_table_offset(const struct exe_ne_header_segment_table * const t,
-    const struct exe_ne_header_segment_entry * const s) {
-    if (!(s->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_RELOCATIONS)) return 0;
-    if (s->offset_in_segments == 0) return 0;
-
-    return ((unsigned long)s->offset_in_segments << (unsigned long)t->sector_shift) +
-        (unsigned long)s->length;
 }
 
 void exe_ne_header_entry_table_table_init(struct exe_ne_header_entry_table_table * const t) {
