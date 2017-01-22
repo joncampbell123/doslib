@@ -151,3 +151,8 @@ unsigned char *ne_name_entry_get_name_base(const struct exe_ne_header_name_entry
 void ne_name_entry_get_name(char *dst,size_t dstmax,const struct exe_ne_header_name_entry_table * const t,const struct exe_ne_header_name_entry * const ent);
 int exe_ne_header_name_entry_table_parse_raw(struct exe_ne_header_name_entry_table * const t);
 
+int ne_name_entry_sort_by_name(const void *a,const void *b);
+int ne_name_entry_sort_by_ordinal(const void *a,const void *b);
+
+extern struct exe_ne_header_name_entry_table *ne_name_entry_sort_by_table;
+
