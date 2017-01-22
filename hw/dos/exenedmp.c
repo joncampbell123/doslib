@@ -398,6 +398,10 @@ void dump_ne_res_BITMAPINFOHEADER(const struct exe_ne_header_BITMAPINFOHEADER *b
 
     printf("                        biSizeImage:        %lu bytes\n",
         (unsigned long)bmphdr->biSizeImage);
+
+    /* NTS: Despite Microsoft documentation stating that biSizeImage is used in cursors, icons, bitmaps etc.
+     *      the resources seen in PBRUSH.EXE and other Windows 3.1 files says otherwise (biSizeImage == 0) */
+
     printf("                        biXPelsPerMeter:    %ld\n",
         (unsigned long)bmphdr->biXPelsPerMeter);
     printf("                        biYPelsPerMeter:    %ld\n",
