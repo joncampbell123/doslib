@@ -529,6 +529,58 @@ void dump_ne_res_RT_CURSOR(const unsigned char *data,const size_t len) {
     assert(data <= fence);
 }
 
+void dump_ne_res_RT_BITMAP(const unsigned char *data,const size_t len) {
+    const unsigned char *fence = data + len;
+    const struct exe_ne_header_BITMAPINFOHEADER *bmphdr;
+
+    printf("                RT_BITMAP resource:\n");
+
+    if (len < 4)
+        return;
+
+    bmphdr = (const struct exe_ne_header_BITMAPINFOHEADER*)data;
+    /* BITMAPINFOHEADER         icHeader;
+     * RGBQUAD                  icColors[];
+     * BYTE                     icXOR[];
+     * BYTE                     icAND[]; */
+    printf("                    BITMAPINFOHEADER icHeader:\n");
+
+    if ((data+bmphdr->biSize) > fence)
+        return;
+
+    dump_ne_res_BITMAPINFOHEADER(bmphdr);
+    data += bmphdr->biSize;
+    if (data >= fence)
+        return;
+
+    {
+        unsigned int num_colors = exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
+        const struct exe_ne_header_RGBQUAD *pal = (const struct exe_ne_header_RGBQUAD*)data;
+        unsigned int palent;
+
+        printf("                      * Number of color palette entries: %u\n",num_colors);
+        if (num_colors != 0 && (data+(sizeof(*pal) * num_colors) <= fence)) {
+            for (palent=0;palent < num_colors;palent++) {
+                if ((palent&3) == 0) {
+                    if (palent != 0) printf("\n");
+                    printf("                        ");
+                }
+
+                printf("RGBX(0x%02x,0x%02x,0x%02x,0x%02x) ",
+                    pal[palent].rgbRed,
+                    pal[palent].rgbGreen,
+                    pal[palent].rgbBlue,
+                    pal[palent].rgbReserved);
+            }
+
+            printf("\n");
+            data += sizeof(*pal) * num_colors;
+        }
+    }
+
+    assert(data <= fence);
+}
+
 int main(int argc,char **argv) {
     struct exe_ne_header_imported_name_table ne_imported_name_table;
     struct exe_ne_header_entry_table_table ne_entry_table;
@@ -1242,10 +1294,15 @@ int main(int argc,char **argv) {
                         if ((unsigned long)lseek(src_fd,res_ofs,SEEK_SET) == res_ofs &&
                             (unsigned long)read(src_fd,res_raw,res_len) == res_len) {
 
+                            /* FIXME: Running this code against Windows 2.x executables, it seems
+                             *        that the ICON, CURSOR, and BITMAP resources used an entirely
+                             *        different format inside the NE resource. */
                             if (tinfo->rtTypeID == exe_ne_header_RT_ICON)
                                 dump_ne_res_RT_ICON(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_CURSOR)
                                 dump_ne_res_RT_CURSOR(res_raw,(size_t)res_len);
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_BITMAP)
+                                dump_ne_res_RT_BITMAP(res_raw,(size_t)res_len);
                         }
 
                         free(res_raw);
