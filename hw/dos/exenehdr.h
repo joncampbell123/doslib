@@ -194,6 +194,44 @@ struct exe_ne_header_resource_table_nameinfo {
 #pragma pack(pop)
 // NTS: Microsoft (and everyone else on the net with NE docs) mis-documents rnLength as length in bytes. WRONG!!!!!
 
+#pragma pack(push,1)
+struct exe_ne_header_resource_ICONDIR {
+    uint16_t                    idReserved;         // +0x00
+    uint16_t                    idType;             // +0x02
+    uint16_t                    idCount;            // +0x04
+    /* ICONDIRENTRY             idEntries[];           +0x06 */
+};                                                  // =0x06
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_resource_ICONDIRENTRY {
+    uint8_t                     bWidth;             // +0x00
+    uint8_t                     bHeight;            // +0x01
+    uint8_t                     bColorCount;        // +0x02
+    uint8_t                     bReserved;          // +0x03
+    uint16_t                    wPlanes;            // +0x04
+    uint16_t                    wBitCount;          // +0x06
+    uint32_t                    dwBytesInRes;       // +0x08
+    uint32_t                    dwImageOffset;      // +0x0C
+};                                                  // =0x10
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_BITMAPINFOHEADER {
+    uint32_t                    biSize;             // +0x00
+    int32_t                     biWidth;            // +0x04
+    int32_t                     biHeight;           // +0x08
+    uint16_t                    biPlanes;           // +0x0C
+    uint16_t                    biBitCount;         // +0x0E
+    uint32_t                    biCompression;      // +0x10
+    uint32_t                    biSizeImage;        // +0x14
+    int32_t                     biXPelsPerMeter;    // +0x18
+    int32_t                     biYPelsPerMeter;    // +0x1C
+    uint32_t                    biClrUsed;          // +0x20
+    uint32_t                    biClrImportant;     // +0x24
+};                                                  // =0x28
+#pragma pack(pop)
+
 #define exe_ne_header_RT_CURSOR                     0x8001
 #define exe_ne_header_RT_BITMAP                     0x8002
 #define exe_ne_header_RT_ICON                       0x8003
