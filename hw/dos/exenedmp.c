@@ -31,37 +31,6 @@ static void help(void) {
     fprintf(stderr," -so        Sort by ordinal\n");
 }
 
-void exe_ne_header_segment_table_init(struct exe_ne_header_segment_table * const t) {
-    memset(t,0,sizeof(*t));
-}
-
-void exe_ne_header_segment_table_free_table(struct exe_ne_header_segment_table * const t) {
-    if (t->table) free(t->table);
-    t->table = NULL;
-    t->length = 0;
-}
-
-size_t exe_ne_header_segment_table_size(struct exe_ne_header_segment_table * const t) {
-    if (t->table == NULL) return 0;
-    return t->length * sizeof(*(t->table));
-}
-
-unsigned char *exe_ne_header_segment_table_alloc_table(struct exe_ne_header_segment_table * const t,const unsigned int entries,const unsigned int shift) {
-    exe_ne_header_segment_table_free_table(t);
-    if (entries == 0) return NULL;
-
-    assert(sizeof(*(t->table)) == 8);
-    t->table = malloc(entries * sizeof(*(t->table)));
-    if (t->table == NULL) return NULL;
-    t->length = entries;
-    t->sector_shift = shift;
-    return (unsigned char*)(t->table); /* <- so that the caller can read the segment table into our array */
-}
-
-void exe_ne_header_segment_table_free(struct exe_ne_header_segment_table * const t) {
-    exe_ne_header_segment_table_free_table(t);
-}
-
 void exe_ne_header_name_entry_table_init(struct exe_ne_header_name_entry_table * const t) {
     memset(t,0,sizeof(*t));
 }

@@ -134,3 +134,9 @@ size_t exe_ne_header_segment_reloc_table_size(struct exe_ne_header_segment_reloc
 unsigned char *exe_ne_header_segment_reloc_table_alloc_table(struct exe_ne_header_segment_reloc_table * const t,const unsigned int entries);
 void exe_ne_header_segment_reloc_table_free(struct exe_ne_header_segment_reloc_table * const t);
 
+void exe_ne_header_segment_table_init(struct exe_ne_header_segment_table * const t);
+void exe_ne_header_segment_table_free_table(struct exe_ne_header_segment_table * const t);
+size_t exe_ne_header_segment_table_size(struct exe_ne_header_segment_table * const t);
+unsigned char *exe_ne_header_segment_table_alloc_table(struct exe_ne_header_segment_table * const t,const unsigned int entries,const unsigned int shift);
+void exe_ne_header_segment_table_free(struct exe_ne_header_segment_table * const t);
+
