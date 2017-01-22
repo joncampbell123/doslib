@@ -140,3 +140,12 @@ size_t exe_ne_header_segment_table_size(struct exe_ne_header_segment_table * con
 unsigned char *exe_ne_header_segment_table_alloc_table(struct exe_ne_header_segment_table * const t,const unsigned int entries,const unsigned int shift);
 void exe_ne_header_segment_table_free(struct exe_ne_header_segment_table * const t);
 
+void exe_ne_header_name_entry_table_init(struct exe_ne_header_name_entry_table * const t);
+void exe_ne_header_name_entry_table_free_table(struct exe_ne_header_name_entry_table * const t);
+void exe_ne_header_name_entry_table_free_raw(struct exe_ne_header_name_entry_table * const t);
+unsigned char *exe_ne_header_name_entry_table_alloc_raw(struct exe_ne_header_name_entry_table * const t,const size_t length);
+void exe_ne_header_name_entry_table_free(struct exe_ne_header_name_entry_table * const t);
+uint16_t ne_name_entry_get_ordinal(const struct exe_ne_header_name_entry_table * const t,const struct exe_ne_header_name_entry * const ent);
+unsigned char *ne_name_entry_get_name_base(const struct exe_ne_header_name_entry_table * const t,const struct exe_ne_header_name_entry * const ent);
+void ne_name_entry_get_name(char *dst,size_t dstmax,const struct exe_ne_header_name_entry_table * const t,const struct exe_ne_header_name_entry * const ent);
+
