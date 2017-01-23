@@ -796,9 +796,9 @@ int main(int argc,char **argv) {
 
                                             /* write */
                                             for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++)
-                                                write(fd,img + (y * iwd),iwd);
+                                                write(fd,img + (y * ibufl),iwd);
                                             for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++)
-                                                write(fd,msk + (y * mwd),mwd);
+                                                write(fd,msk + (y * mbufl),mwd);
 
                                             free(img);
                                             free(msk);
@@ -943,9 +943,9 @@ int main(int argc,char **argv) {
 
                                             /* write */
                                             for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++)
-                                                write(fd,img + (y * iwd),iwd);
+                                                write(fd,img + (y * ibufl),iwd);
                                             for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++)
-                                                write(fd,msk + (y * mwd),mwd);
+                                                write(fd,msk + (y * mbufl),mwd);
 
                                             free(img);
                                             free(msk);
