@@ -661,7 +661,7 @@ int main(int argc,char **argv) {
                                                 memset(buf,0,bufl);
                                                 for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++) {
                                                     /* we have to flip the bitmap upside-down as we convert */
-                                                    lseek(src_fd,foff+sizeof(*bmphdr2x)+((bmphdr2x->bmHeight - 1 - y) * rd),SEEK_SET);
+                                                    lseek(src_fd,foff+sizeof(*bmphdr2x)+((abs(bmphdr2x->bmHeight) - 1 - y) * rd),SEEK_SET);
                                                     read(src_fd,buf,rd);
                                                     write(fd,buf,wd);
                                                 }
@@ -698,6 +698,118 @@ int main(int argc,char **argv) {
                             }
                             else if (tinfo->rtTypeID == exe_ne_header_RT_ICON) {
                                 if (exe_ne_header_is_WINOLDICON((const unsigned char*)tmp,docpy)) {
+                                    /* then it is necessary to convert, not just copy, because
+                                     * the alignment rules are different:
+                                     *
+                                     * Windows 1.x/2.x BITMAP:          Requires WORD alignment, DIBs are top-down
+                                     * Windows 3.x BITMAPINFOHEADER:    Requires DWORD alignment, DIBs are bottom-up */
+                                    struct exe_ne_header_resource_ICONDIR pre;
+                                    struct exe_ne_header_resource_ICONDIRENTRY dent;
+                                    struct exe_ne_header_BITMAPINFOHEADER bmphdr3x;
+                                    struct exe_ne_header_RTICONBITMAP *bmphdr2x =
+                                        (struct exe_ne_header_RTICONBITMAP *)tmp;
+                                    struct exe_ne_header_RGBQUAD rgb;
+                                    unsigned int align3xmono;
+                                    unsigned int align3x;
+
+                                    /* Windows 1.x/2.x icons for whatever reason have bits/pixel == 0 and planes == 0,
+                                     * which apparently means monochromatic anyway */
+                                    if (bmphdr2x->bmPlanes == 0)
+                                        bmphdr2x->bmPlanes = 1;
+                                    if (bmphdr2x->bmBitsPixel == 0)
+                                        bmphdr2x->bmBitsPixel = 1;
+
+                                    align3x = (((bmphdr2x->bmBitsPixel * bmphdr2x->bmWidth) + 31) & (~31)) >> 3; // BITMAPINFOHEADER alignment
+                                    align3xmono = ((bmphdr2x->bmWidth + 31) & (~31)) >> 3; // BITMAPINFOHEADER alignment
+                                    if (bmphdr2x->bmPlanes == 1 && bmphdr2x->bmBitsPixel == 1) {
+                                        printf("* Converting BITMAP to BITMAPINFOHEADER\n");
+
+                                        /* reseek file pointer, bitmap bits immediately follow bmphdr2x */
+                                        lseek(src_fd,foff+sizeof(*bmphdr2x),SEEK_SET);
+
+                                        pre.idReserved = 0;
+                                        pre.idType = 1;
+                                        pre.idCount = 1;
+                                        write(fd,&pre,sizeof(pre));
+
+                                        dent.bWidth = bmphdr2x->bmWidth;
+                                        dent.bHeight = bmphdr2x->bmHeight;
+                                        dent.bColorCount = 1 << bmphdr2x->bmBitsPixel;
+                                        dent.bReserved = 0;
+                                        dent.wPlanes = bmphdr2x->bmPlanes;
+                                        dent.wBitCount = bmphdr2x->bmBitsPixel;
+                                        dent.dwBytesInRes = sizeof(bmphdr3x) + (align3x * abs(bmphdr2x->bmHeight)) +
+                                            (align3xmono * abs(bmphdr2x->bmHeight)); // icon + mask
+                                        dent.dwImageOffset = sizeof(pre) + sizeof(dent);
+                                        write(fd,&dent,sizeof(dent));
+
+                                        /* BITMAPINFOHEADER */
+                                        bmphdr3x.biSize = sizeof(bmphdr3x);
+                                        bmphdr3x.biWidth = bmphdr2x->bmWidth;
+                                        bmphdr3x.biHeight = bmphdr2x->bmHeight * 2; // icon + mask
+                                        bmphdr3x.biPlanes = bmphdr2x->bmPlanes;
+                                        bmphdr3x.biBitCount = bmphdr2x->bmBitsPixel;
+                                        bmphdr3x.biCompression = 0;
+                                        bmphdr3x.biSizeImage = (align3x * abs(bmphdr2x->bmHeight)) +
+                                            (align3xmono * abs(bmphdr2x->bmHeight)); // icon + mask
+                                        bmphdr3x.biXPelsPerMeter = 0;
+                                        bmphdr3x.biYPelsPerMeter = 0;
+                                        bmphdr3x.biClrUsed = 0;
+                                        bmphdr3x.biClrImportant = 0;
+                                        write(fd,&bmphdr3x,sizeof(bmphdr3x));
+
+                                        /* color palette */
+                                        if (bmphdr2x->bmBitsPixel == 1) {
+                                            {
+                                                rgb.rgbRed = 0x00; rgb.rgbGreen = 0x00; rgb.rgbBlue = 0x00; rgb.rgbReserved = 0x00;
+                                                write(fd,&rgb,sizeof(rgb));
+                                            }
+                                            {
+                                                rgb.rgbRed = 0xFF; rgb.rgbGreen = 0xFF; rgb.rgbBlue = 0xFF; rgb.rgbReserved = 0x00;
+                                                write(fd,&rgb,sizeof(rgb));
+                                            }
+                                        }
+                                        else {
+                                            /* I'll add 4bpp generation when I see it in the wild */
+                                            printf("! Cannot guess palette\n");
+                                        }
+
+                                        /* NTS: Where Windows 3.x stores the image first, followed by the mask,
+                                         *      Windows 1.x/2.x store the mask first, then the image. Like bitmaps
+                                         *      in Windows 1.x/2.x the DIB is top-down, we convert here to bottom-up. */
+                                        {
+                                            size_t ird = bmphdr2x->bmWidthBytes;
+                                            size_t mrd = ((bmphdr2x->bmWidth + 15) & (~15)) >> 3; /* WORD align requirement */
+                                            size_t iwd = align3x;
+                                            size_t mwd = align3xmono;
+                                            size_t ibufl = (ird > iwd) ? ird : iwd;
+                                            size_t mbufl = (mrd > mwd) ? mrd : mwd;
+                                            unsigned char *img = malloc(ibufl * bmphdr2x->bmHeight);
+                                            unsigned char *msk = malloc(mbufl * bmphdr2x->bmHeight);
+                                            unsigned int y;
+
+                                            /* load */
+                                            for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++)
+                                                read(src_fd,msk + ((abs(bmphdr2x->bmHeight) - 1 - y) * mbufl),mrd);
+                                            for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++)
+                                                read(src_fd,img + ((abs(bmphdr2x->bmHeight) - 1 - y) * ibufl),ird);
+
+                                            /* write */
+                                            for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++)
+                                                write(fd,img + (y * iwd),iwd);
+                                            for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++)
+                                                write(fd,msk + (y * mwd),mwd);
+
+                                            free(img);
+                                            free(msk);
+                                        }
+
+                                        /* DONE */
+                                        break;
+                                    }
+                                    else {
+                                        printf("! Cannot convert BITMAP to BITMAPINFOHEADER, unknown format\n");
+                                    }
                                 }
                                 else {
                                     struct exe_ne_header_resource_ICONDIR pre;
