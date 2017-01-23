@@ -588,6 +588,93 @@ int main(int argc,char **argv) {
                         if (opt_pric && fcnt == 0) {
                             if (tinfo->rtTypeID == exe_ne_header_RT_BITMAP) {
                                 if (exe_ne_header_is_WINOLDBITMAP((const unsigned char*)tmp,docpy)) {
+                                    /* then it is necessary to convert, not just copy, because
+                                     * the alignment rules are different:
+                                     *
+                                     * Windows 1.x/2.x BITMAP:          Requires WORD alignment, DIBs are top-down
+                                     * Windows 3.x BITMAPINFOHEADER:    Requires DWORD alignment, DIBs are bottom-up */
+                                    struct exe_ne_header_BITMAPINFOHEADER bmphdr3x;
+                                    const struct exe_ne_header_RTBITMAP *bmphdr2x =
+                                        (const struct exe_ne_header_RTBITMAP *)tmp;
+                                    unsigned int pal_colors = 1 << bmphdr2x->bmBitsPixel;
+                                    unsigned int align3x = (((bmphdr2x->bmBitsPixel * bmphdr2x->bmWidth) + 31) & (~31)) >> 3; // BITMAPINFOHEADER alignment
+                                    struct exe_ne_header_RGBQUAD rgb;
+                                    unsigned long bboff = 14;
+                                    unsigned char hd[14];
+
+                                    if (bmphdr2x->bmPlanes == 1 && (bmphdr2x->bmBitsPixel == 1 || bmphdr2x->bmBitsPixel == 4)) {
+                                        printf("* Converting BITMAP to BITMAPINFOHEADER\n");
+
+                                        /* reseek file pointer, bitmap bits immediately follow bmphdr2x */
+                                        lseek(src_fd,foff+sizeof(*bmphdr2x),SEEK_SET);
+
+                                        /* generate BMP FILE header */
+                                        bboff += sizeof(bmphdr3x);
+                                        bboff += pal_colors * 4;
+
+                                        memcpy(hd+0,"BM",2);
+                                        *((uint32_t*)(hd+2)) = (align3x * abs(bmphdr2x->bmHeight)) + bboff;
+                                        *((uint16_t*)(hd+6)) = 0;
+                                        *((uint16_t*)(hd+8)) = 0;
+                                        *((uint32_t*)(hd+10)) = bboff;
+                                        write(fd,hd,sizeof(hd));
+
+                                        /* BITMAPINFOHEADER */
+                                        bmphdr3x.biSize = sizeof(bmphdr3x);
+                                        bmphdr3x.biWidth = bmphdr2x->bmWidth;
+                                        bmphdr3x.biHeight = bmphdr2x->bmHeight;
+                                        bmphdr3x.biPlanes = bmphdr2x->bmPlanes;
+                                        bmphdr3x.biBitCount = bmphdr2x->bmBitsPixel;
+                                        bmphdr3x.biCompression = 0;
+                                        bmphdr3x.biSizeImage = align3x * abs(bmphdr2x->bmHeight);
+                                        bmphdr3x.biXPelsPerMeter = 0;
+                                        bmphdr3x.biYPelsPerMeter = 0;
+                                        bmphdr3x.biClrUsed = 0;
+                                        bmphdr3x.biClrImportant = 0;
+                                        write(fd,&bmphdr3x,sizeof(bmphdr3x));
+
+                                        /* color palette */
+                                        if (bmphdr2x->bmBitsPixel == 1) {
+                                            {
+                                                rgb.rgbRed = 0x00; rgb.rgbGreen = 0x00; rgb.rgbBlue = 0x00; rgb.rgbReserved = 0x00;
+                                                write(fd,&rgb,sizeof(rgb));
+                                            }
+                                            {
+                                                rgb.rgbRed = 0xFF; rgb.rgbGreen = 0xFF; rgb.rgbBlue = 0xFF; rgb.rgbReserved = 0x00;
+                                                write(fd,&rgb,sizeof(rgb));
+                                            }
+                                        }
+                                        else {
+                                            /* I'll add 4bpp generation when I see it in the wild */
+                                            printf("! Cannot guess palette\n");
+                                        }
+
+                                        /* copy scanlines */
+                                        {
+                                            size_t rd = bmphdr2x->bmWidthBytes;
+                                            size_t wd = align3x;
+                                            size_t bufl = (rd > wd) ? rd : wd;
+                                            unsigned char *buf = malloc(bufl);
+                                            unsigned int y;
+
+                                            if (buf) {
+                                                memset(buf,0,bufl);
+                                                for (y=0;y < (unsigned int)abs(bmphdr2x->bmHeight);y++) {
+                                                    /* we have to flip the bitmap upside-down as we convert */
+                                                    lseek(src_fd,foff+sizeof(*bmphdr2x)+((bmphdr2x->bmHeight - 1 - y) * rd),SEEK_SET);
+                                                    read(src_fd,buf,rd);
+                                                    write(fd,buf,wd);
+                                                }
+                                                free(buf);
+                                            }
+                                        }
+
+                                        /* DONE */
+                                        break;
+                                    }
+                                    else {
+                                        printf("! Cannot convert BITMAP to BITMAPINFOHEADER, unknown format\n");
+                                    }
                                 }
                                 else {
                                     /* need to add a BITMAPFILEHEADER to make it valid */
