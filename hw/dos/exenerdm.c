@@ -738,8 +738,8 @@ int main(int argc,char **argv) {
                                         dent.bReserved = 0;
                                         dent.wPlanes = bmphdr2x->bmPlanes;
                                         dent.wBitCount = bmphdr2x->bmBitsPixel;
-                                        dent.dwBytesInRes = sizeof(bmphdr3x) + (align3x * abs(bmphdr2x->bmHeight)) +
-                                            (align3xmono * abs(bmphdr2x->bmHeight)); // icon + mask
+                                        dent.dwBytesInRes = sizeof(bmphdr3x) + (4UL << (unsigned long)bmphdr2x->bmBitsPixel) +
+                                            (align3x * abs(bmphdr2x->bmHeight)) + (align3xmono * abs(bmphdr2x->bmHeight)); // icon + mask
                                         dent.dwImageOffset = sizeof(pre) + sizeof(dent);
                                         write(fd,&dent,sizeof(dent));
 
@@ -885,8 +885,8 @@ int main(int argc,char **argv) {
                                         dent.wXHotspot = 0;
                                         dent.wYHotspot = 0;
                                         dent.bColorCount = 0;
-                                        dent.dwBytesInRes = sizeof(bmphdr3x) + (align3x * abs(bmphdr2x->bmHeight)) +
-                                            (align3xmono * abs(bmphdr2x->bmHeight)); // icon + mask
+                                        dent.dwBytesInRes = sizeof(bmphdr3x) + (4UL << (unsigned long)bmphdr2x->bmBitsPixel) +
+                                            (align3x * abs(bmphdr2x->bmHeight)) + (align3xmono * abs(bmphdr2x->bmHeight)); // icon + mask
                                         dent.dwImageOffset = sizeof(pre) + sizeof(dent);
                                         write(fd,&dent,sizeof(dent));
 
