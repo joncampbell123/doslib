@@ -413,20 +413,6 @@ void dump_ne_res_BITMAPINFOHEADER(const struct exe_ne_header_BITMAPINFOHEADER *b
         (unsigned long)bmphdr->biClrImportant);
 }
 
-unsigned int exe_ne_header_BITMAPINFOHEADER_get_palette_count(const struct exe_ne_header_BITMAPINFOHEADER *bmphdr) {
-    if (bmphdr->biBitCount <= 8) {
-        unsigned int c = 1UL << bmphdr->biBitCount;
-
-        if (bmphdr->biSize >= sizeof(struct exe_ne_header_BITMAPINFOHEADER) && bmphdr->biClrUsed != 0) {
-            if (c > bmphdr->biClrUsed) c = bmphdr->biClrUsed;
-        }
-
-        return c;
-    }
-
-    return 0;
-}
-
 size_t dump_ne_res_BITMAPINFO_PALETTE(const struct exe_ne_header_BITMAPINFOHEADER *bmphdr,const unsigned char *data,const unsigned char *fence) {
     unsigned int num_colors = exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
     const struct exe_ne_header_RGBQUAD *pal = (const struct exe_ne_header_RGBQUAD*)data;

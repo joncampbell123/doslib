@@ -15,7 +15,7 @@ bin: linux-host $(BIN_OUT)
 
 lib: linux-host $(LIB_OUT)
 
-DOSLIB_DEPS = linux-host/exehdr.o linux-host/exeneres.o linux-host/exenertp.o linux-host/exeneint.o linux-host/exenesrl.o linux-host/exenestb.o linux-host/exenenet.o linux-host/exenents.o linux-host/exeneent.o linux-host/exenew2x.o
+DOSLIB_DEPS = linux-host/exehdr.o linux-host/exeneres.o linux-host/exenertp.o linux-host/exeneint.o linux-host/exenesrl.o linux-host/exenestb.o linux-host/exenenet.o linux-host/exenents.o linux-host/exeneent.o linux-host/exenew2x.o linux-host/exenebmp.o
 
 linux-host:
 	mkdir -p linux-host
