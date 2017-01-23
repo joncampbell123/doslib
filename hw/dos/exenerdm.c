@@ -586,7 +586,30 @@ int main(int argc,char **argv) {
                     if (rd > 0) {
                         /* WAIT: If this is an RT_ICON or RT_CURSOR, prepend a header to make it a valid file */
                         if (opt_pric && fcnt == 0) {
-                            if (tinfo->rtTypeID == exe_ne_header_RT_ICON) {
+                            if (tinfo->rtTypeID == exe_ne_header_RT_BITMAP) {
+                                if (exe_ne_header_is_WINOLDBITMAP((const unsigned char*)tmp,docpy)) {
+                                }
+                                else {
+                                    /* need to add a BITMAPFILEHEADER to make it valid */
+                                    const struct exe_ne_header_BITMAPINFOHEADER *bmphdr =
+                                        (const struct exe_ne_header_BITMAPINFOHEADER *)tmp;
+                                    unsigned int pal_colors =
+                                        exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
+                                    unsigned long bboff = 14;
+                                    unsigned char hd[14];
+
+                                    bboff += bmphdr->biSize;
+                                    bboff += pal_colors * 4;
+
+                                    memcpy(hd+0,"BM",2);
+                                    *((uint32_t*)(hd+2)) = fcpy + 14;
+                                    *((uint16_t*)(hd+6)) = 0;
+                                    *((uint16_t*)(hd+8)) = 0;
+                                    *((uint32_t*)(hd+10)) = bboff;
+                                    write(fd,hd,sizeof(hd));
+                                }
+                            }
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_ICON) {
                                 struct exe_ne_header_resource_ICONDIR pre;
                                 struct exe_ne_header_resource_ICONDIRENTRY dent;
                                 struct exe_ne_header_BITMAPINFOHEADER *bmp =
