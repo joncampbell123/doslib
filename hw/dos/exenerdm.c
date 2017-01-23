@@ -610,25 +610,29 @@ int main(int argc,char **argv) {
                                 }
                             }
                             else if (tinfo->rtTypeID == exe_ne_header_RT_ICON) {
-                                struct exe_ne_header_resource_ICONDIR pre;
-                                struct exe_ne_header_resource_ICONDIRENTRY dent;
-                                struct exe_ne_header_BITMAPINFOHEADER *bmp =
-                                    (struct exe_ne_header_BITMAPINFOHEADER*)tmp;
+                                if (exe_ne_header_is_WINOLDICON((const unsigned char*)tmp,docpy)) {
+                                }
+                                else {
+                                    struct exe_ne_header_resource_ICONDIR pre;
+                                    struct exe_ne_header_resource_ICONDIRENTRY dent;
+                                    struct exe_ne_header_BITMAPINFOHEADER *bmp =
+                                        (struct exe_ne_header_BITMAPINFOHEADER*)tmp;
 
-                                pre.idReserved = 0;
-                                pre.idType = 1;
-                                pre.idCount = 1;
-                                write(fd,&pre,sizeof(pre));
+                                    pre.idReserved = 0;
+                                    pre.idType = 1;
+                                    pre.idCount = 1;
+                                    write(fd,&pre,sizeof(pre));
 
-                                dent.bWidth = bmp->biWidth;
-                                dent.bHeight = bmp->biHeight >> 1;      /* remember icons carry image + mask and dwHeight is double the actual height */
-                                dent.bColorCount = 1 << bmp->biBitCount;
-                                dent.bReserved = 0;
-                                dent.wPlanes = bmp->biPlanes;
-                                dent.wBitCount = bmp->biBitCount;
-                                dent.dwBytesInRes = fcpy;
-                                dent.dwImageOffset = sizeof(pre) + sizeof(dent);
-                                write(fd,&dent,sizeof(dent));
+                                    dent.bWidth = bmp->biWidth;
+                                    dent.bHeight = bmp->biHeight >> 1;      /* remember icons carry image + mask and dwHeight is double the actual height */
+                                    dent.bColorCount = 1 << bmp->biBitCount;
+                                    dent.bReserved = 0;
+                                    dent.wPlanes = bmp->biPlanes;
+                                    dent.wBitCount = bmp->biBitCount;
+                                    dent.dwBytesInRes = fcpy;
+                                    dent.dwImageOffset = sizeof(pre) + sizeof(dent);
+                                    write(fd,&dent,sizeof(dent));
+                                }
                             }
                             else if (tinfo->rtTypeID == exe_ne_header_RT_CURSOR) {
                                 /* raw resource data for a cursor when in an NE executable:
@@ -640,31 +644,35 @@ int main(int argc,char **argv) {
                                  * BYTE[]               cursor bitmap
                                  *
                                  */
-                                struct exe_ne_header_resource_CURSORDIR pre;
-                                struct exe_ne_header_resource_CURSORDIRENTRY dent;
-                                struct exe_ne_header_BITMAPINFOHEADER *bmp =
-                                    (struct exe_ne_header_BITMAPINFOHEADER*)(tmp + 4);
+                                if (exe_ne_header_is_WINOLDCURSOR((const unsigned char*)tmp,docpy)) {
+                                }
+                                else {
+                                    struct exe_ne_header_resource_CURSORDIR pre;
+                                    struct exe_ne_header_resource_CURSORDIRENTRY dent;
+                                    struct exe_ne_header_BITMAPINFOHEADER *bmp =
+                                        (struct exe_ne_header_BITMAPINFOHEADER*)(tmp + 4);
 
-                                pre.cdReserved = 0;
-                                pre.cdType = 2;
-                                pre.cdCount = 1;
-                                write(fd,&pre,sizeof(pre));
+                                    pre.cdReserved = 0;
+                                    pre.cdType = 2;
+                                    pre.cdCount = 1;
+                                    write(fd,&pre,sizeof(pre));
 
-                                dent.bWidth = bmp->biWidth;
-                                dent.bHeight = bmp->biHeight >> 1;      /* remember cursors carry image + mask and dwHeight is double the actual height */
-                                dent.bColorCount = 1 << bmp->biBitCount;
-                                dent.bReserved = 0;
-                                dent.wXHotspot = *((uint16_t*)(tmp + 0));
-                                dent.wYHotspot = *((uint16_t*)(tmp + 2));
-                                dent.dwBytesInRes = fcpy - 4;
-                                dent.dwImageOffset = sizeof(pre) + sizeof(dent);
-                                write(fd,&dent,sizeof(dent));
+                                    dent.bWidth = bmp->biWidth;
+                                    dent.bHeight = bmp->biHeight >> 1;      /* remember cursors carry image + mask and dwHeight is double the actual height */
+                                    dent.bColorCount = 1 << bmp->biBitCount;
+                                    dent.bReserved = 0;
+                                    dent.wXHotspot = *((uint16_t*)(tmp + 0));
+                                    dent.wYHotspot = *((uint16_t*)(tmp + 2));
+                                    dent.dwBytesInRes = fcpy - 4;
+                                    dent.dwImageOffset = sizeof(pre) + sizeof(dent);
+                                    write(fd,&dent,sizeof(dent));
 
-                                if (rd >= 4) {
-                                    rd -= 4;
-                                    fcpy -= 4;
-                                    docpy -= 4;
-                                    memmove(tmp,tmp+4,rd);
+                                    if (rd >= 4) {
+                                        rd -= 4;
+                                        fcpy -= 4;
+                                        docpy -= 4;
+                                        memmove(tmp,tmp+4,rd);
+                                    }
                                 }
                             }
                         }
