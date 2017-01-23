@@ -297,6 +297,20 @@ struct exe_ne_header_RTBITMAP {                     // RT_BITMAP resource in Win
 #pragma pack(pop)
 
 #pragma pack(push,1)
+struct exe_ne_header_RTICONBITMAP {                 // RT_ICON resource in Windows 1.x/2.x
+    uint8_t                     rnType;             // +0x00 always 0x01
+    uint8_t                     rnFlags;            // +0x01 flags of some kind (unknown meaning)
+    uint16_t                    rnZero;             // +0x02 unknown field, always zero
+    int16_t                     bmType;             // +0x04 must be zero, according to MSDN docs. Windows 1.x SDK doesn't say anything about it.
+    int16_t                     bmWidth;            // +0x06
+    int16_t                     bmHeight;           // +0x08
+    int16_t                     bmWidthBytes;       // +0x0A bytes per scanline aka stride. MSDN says must be multiple of 2 because old Windows assumes WORD alignment.
+    uint8_t                     bmPlanes;           // +0x0C zero for some reason??
+    uint8_t                     bmBitsPixel;        // +0x0D zero for some reason??
+};                                                  // =0x0E
+#pragma pack(pop)
+
+#pragma pack(push,1)
 struct exe_ne_header_BITMAPCOREHEADER {             // such as used in Windows 2.x
     uint32_t                    biSize;             // +0x00
     int32_t                     biWidth;            // +0x04

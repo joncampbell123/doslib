@@ -443,6 +443,23 @@ unsigned int exe_ne_header_is_WINOLDBITMAP(const unsigned char *data/*at least 4
     return 0;
 }
 
+/* given the raw data of an RT_ICON, determine if it's an older Windows 1.x/2.x BITMAP format
+ * rather than a Windows 3.x BITMAPINFOHEADER */
+unsigned int exe_ne_header_is_WINOLDICON(const unsigned char *data/*at least 4 bytes*/,const size_t len) {
+    if (len < 6)
+        return 0;
+
+    /* first byte is always 1
+     * second byte usually zero, but values like 0x01 have been seen.
+     * third-fourth bytes are usually zero, it's not known what they mean. A few ICON files have 0x0002 here.
+     * fifth-sixth bytes are usually zero, and they correspond to the bmType field of the BITMAP structure,
+     * but apparently with RT_ICON resources it can contain some other type of value like 0x001B. */
+    if (data[0] == 0x01 && (data[1] & (0xFF-0x81)) == 0x00)
+        return 1;
+
+    return 0;
+}
+
 size_t dump_ne_res_BITMAPINFO_PALETTE(const struct exe_ne_header_BITMAPINFOHEADER *bmphdr,const unsigned char *data,const unsigned char *fence) {
     unsigned int num_colors = exe_ne_header_BITMAPINFOHEADER_get_palette_count(bmphdr);
     const struct exe_ne_header_RGBQUAD *pal = (const struct exe_ne_header_RGBQUAD*)data;
@@ -473,29 +490,54 @@ size_t dump_ne_res_BITMAPINFO_PALETTE(const struct exe_ne_header_BITMAPINFOHEADE
 
 void dump_ne_res_RT_ICON(const unsigned char *data,const size_t len) {
     const unsigned char *fence = data + len;
-    const struct exe_ne_header_BITMAPINFOHEADER *bmphdr =
-        (const struct exe_ne_header_BITMAPINFOHEADER*)data;
 
     printf("                RT_ICON resource:\n");
 
     if (len < 4)
         return;
 
-    /* BITMAPINFOHEADER         icHeader;
-     * RGBQUAD                  icColors[];
-     * BYTE                     icXOR[];
-     * BYTE                     icAND[]; */
-    printf("                    BITMAPINFOHEADER icHeader: (biHeight reflects image + mask)\n");
+    if (exe_ne_header_is_WINOLDICON(data,len)) {
+        const struct exe_ne_header_RTICONBITMAP *bmphdr =
+            (const struct exe_ne_header_RTICONBITMAP*)data;
 
-    if ((data+bmphdr->biSize) > fence)
-        return;
+        // NTS: We wouldn't be here if rnType != 0x1, rnFlags anything else, rnZero != 0
+        printf("                    BITMAP icHeader (Windows 1.x/2.x):\n");
 
-    dump_ne_res_BITMAPINFOHEADER(bmphdr);
-    data += bmphdr->biSize;
-    if (data >= fence)
-        return;
+        if ((data+sizeof(*bmphdr)) > fence)
+            return;
 
-    data += dump_ne_res_BITMAPINFO_PALETTE(bmphdr,data,fence);
+        if (bmphdr->rnZero != 0)
+            printf("                        rnZero:         0x%04X\n",bmphdr->rnZero);
+        if (bmphdr->bmType != 0)
+            printf("                        bmType:         0x%04X\n",bmphdr->bmType);
+
+        printf("                        bmWidth:        %u\n",bmphdr->bmWidth);
+        printf("                        bmHeight:       %u\n",bmphdr->bmHeight);
+        printf("                        bmWidthBytes:   %u bytes\n",bmphdr->bmWidthBytes);
+        printf("                        bmPlanes:       %u\n",bmphdr->bmPlanes);
+        printf("                        bmBitsPixel:    %u\n",bmphdr->bmBitsPixel);
+    }
+    else {
+        const struct exe_ne_header_BITMAPINFOHEADER *bmphdr =
+            (const struct exe_ne_header_BITMAPINFOHEADER*)data;
+
+        /* BITMAPINFOHEADER         icHeader;
+         * RGBQUAD                  icColors[];
+         * BYTE                     icXOR[];
+         * BYTE                     icAND[]; */
+        printf("                    BITMAPINFOHEADER icHeader: (biHeight reflects image + mask)\n");
+
+        if ((data+bmphdr->biSize) > fence)
+            return;
+
+        dump_ne_res_BITMAPINFOHEADER(bmphdr);
+        data += bmphdr->biSize;
+        if (data >= fence)
+            return;
+
+        data += dump_ne_res_BITMAPINFO_PALETTE(bmphdr,data,fence);
+    }
+
     assert(data <= fence);
 }
 
