@@ -368,6 +368,38 @@ struct exe_ne_header_resource_ACCELERATOR {
 };                                                  // =0x05
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct exe_ne_header_resource_MENU_HEADER {         // RT_MENU
+    uint16_t                    wVersion;           // +0x00 version (0 for Windows 3.0 and later)
+    uint16_t                    wReserved;          // +0x02 must be zero
+};                                                  // =0x04
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_resource_MENU_POPUP_ITEM {     // RT_MENU popup menu item (fItemFlags & MF_POPUP)
+    uint16_t                    fItemFlags;         // +0x00 flags (MF_*) flags you use with the menu API in Windows. MF_POPUP is set for this struct.
+/*  char                        szItemText[];          +0x02 null-terminated string, containing text */
+};                                                  // =0x02
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_resource_MENU_NORMAL_ITEM {    // RT_MENU normal menu item !(fItemFlags & MF_POPUP)
+    uint16_t                    fItemFlags;         // +0x00 flags (MF_*) flags you use with the menu API in Windows. MF_POPUP is NOT set for this struct.
+    uint16_t                    wMenuID;            // +0x02 menu item ID (what is sent to WM_COMMAND)
+/*  char                        szItemText[];          +0x04 null-terminated string, containing text */
+};                                                  // =0x04
+#pragma pack(pop)
+
+#define exe_ne_header_MF_GRAYED                     0x0001
+#define exe_ne_header_MF_DISABLED                   0x0002
+#define exe_ne_header_MF_BITMAP                     0x0004
+#define exe_ne_header_MF_CHECKED                    0x0008
+#define exe_ne_header_MF_POPUP                      0x0010
+#define exe_ne_header_MF_MENUBARBREAK               0x0020
+#define exe_ne_header_MF_MENUBREAK                  0x0040
+#define exe_ne_header_MF_END                        0x0080
+#define exe_ne_header_MF_OWNERDRAW                  0x0100
+
 #define exe_ne_header_ACCELERATOR_FLAGS_NOHILITE_TOPLEVEL       0x02U   // top-level menu item not hilighted when accelerator used
 #define exe_ne_header_ACCELERATOR_FLAGS_SHIFT                   0x04U   // need SHIFT key down to activate
 #define exe_ne_header_ACCELERATOR_FLAGS_CONTROL                 0x08U   // need CTRL key down to activate
