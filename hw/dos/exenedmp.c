@@ -1519,6 +1519,20 @@ void dump_ne_res_RT_VERSION_list(const unsigned char *data,const size_t len,cons
                     case exe_ne_header_VOS_NT_WINDOWS32:    printf("VOS_NT_WINDOWS32"); break;
                 };
                 printf("\n");
+
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("dwFileType:             0x%08lX ",
+                    (unsigned long)fix->dwFileType);
+                switch (fix->dwFileType) {
+                    case exe_ne_header_VFT_UNKNOWN:         printf("VFT_UNKNOWN"); break;
+                    case exe_ne_header_VFT_APP:             printf("VFT_APP"); break;
+                    case exe_ne_header_VFT_DLL:             printf("VFT_DLL"); break;
+                    case exe_ne_header_VFT_DRV:             printf("VFT_DRV"); break;
+                    case exe_ne_header_VFT_FONT:            printf("VFT_FONT"); break;
+                    case exe_ne_header_VFT_VXD:             printf("VFT_VXD"); break;
+                    case exe_ne_header_VFT_STATIC_LIB:      printf("VFT_STATIC_LIB"); break;
+                };
+                printf("\n");
             }
             else {
                 printf("! Unknown variant of struct\n");

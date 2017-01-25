@@ -495,6 +495,14 @@ struct exe_ne_header_resource_VS_FIXEDFILEINFO_WIN31 { // as defined by Windows 
 #define exe_ne_header_VOS_OS232_PM32                0x00030003L
 #define exe_ne_header_VOS_NT_WINDOWS32              0x00040004L
 
+#define exe_ne_header_VFT_UNKNOWN                   0x00000000L
+#define exe_ne_header_VFT_APP                       0x00000001L
+#define exe_ne_header_VFT_DLL                       0x00000002L
+#define exe_ne_header_VFT_DRV                       0x00000003L
+#define exe_ne_header_VFT_FONT                      0x00000004L
+#define exe_ne_header_VFT_VXD                       0x00000005L
+#define exe_ne_header_VFT_STATIC_LIB                0x00000007L
+
 #define exe_ne_header_DS_ABSALIGN                   0x00000001UL
 #define exe_ne_header_DS_SYSMODAL                   0x00000002UL
 #define exe_ne_header_DS_LOCALEDIT                  0x00000020UL
