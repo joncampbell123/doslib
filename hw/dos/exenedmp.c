@@ -1489,6 +1489,36 @@ void dump_ne_res_RT_VERSION_list(const unsigned char *data,const size_t len,cons
                         printf("VS_FF_SPECIALBUILD ");
                     printf("\n");
                 }
+
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("dwFileOS:               0x%08lX ",
+                    (unsigned long)fix->dwFileOS);
+                /* Groan... if only their SDK would make it clear the value is two 16-bit word values combined
+                 * instead of just rattling off constant values. */
+                switch (fix->dwFileOS & 0xFFFF0000UL) {
+                    case exe_ne_header_VOS_UNKNOWN:     printf("VOS_UNKNOWN"); break;
+                    case exe_ne_header_VOS_DOS:         printf("VOS_DOS"); break;
+                    case exe_ne_header_VOS_OS216:       printf("VOS_OS216"); break;
+                    case exe_ne_header_VOS_OS232:       printf("VOS_OS232"); break;
+                    case exe_ne_header_VOS_NT:          printf("VOS_NT"); break;
+                };
+                printf(" + ");
+                switch (fix->dwFileOS & 0x0000FFFFUL) {
+                    case exe_ne_header_VOS__BASE:       printf("VOS__BASE"); break;
+                    case exe_ne_header_VOS__WINDOWS16:  printf("VOS__WINDOWS16"); break;
+                    case exe_ne_header_VOS__PM16:       printf("VOS__PM16"); break;
+                    case exe_ne_header_VOS__PM32:       printf("VOS__PM32"); break;
+                    case exe_ne_header_VOS__WINDOWS32:  printf("VOS__WINDOWS32"); break;
+                };
+                printf(" = ");
+                switch (fix->dwFileOS) {
+                    case exe_ne_header_VOS_DOS_WINDOWS16:   printf("VOS_DOS_WINDOWS16"); break;
+                    case exe_ne_header_VOS_DOS_WINDOWS32:   printf("VOS_DOS_WINDOWS32"); break;
+                    case exe_ne_header_VOS_OS216_PM16:      printf("VOS_OS216_PM16"); break;
+                    case exe_ne_header_VOS_OS232_PM32:      printf("VOS_OS232_PM32"); break;
+                    case exe_ne_header_VOS_NT_WINDOWS32:    printf("VOS_NT_WINDOWS32"); break;
+                };
+                printf("\n");
             }
             else {
                 printf("! Unknown variant of struct\n");
