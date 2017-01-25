@@ -925,19 +925,19 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
     if (len < sizeof(struct exe_ne_header_resource_MENU_HEADER))
         return;
 
-    hdr = (const struct exe_ne_header_resource_MENU_HEADER*)data;
-    data += sizeof(*hdr);
-
     printf("                    MenuHeader:\n");
-    printf("                        wVersion:       0x%04x\n",hdr->wVersion);
-    printf("                        wReserved:      0x%04x\n",hdr->wReserved);
+    hdr = (const struct exe_ne_header_resource_MENU_HEADER*)data;
 
-    if (hdr->wVersion == 0) {
+    if (hdr->wVersion == 0) { /* Windows 3.x menu format */
 #define MAX_DEPTH 16
         const struct exe_ne_header_resource_MENU_NORMAL_ITEM *stack[MAX_DEPTH] = {NULL};
         const char *menu_text;
         int stacksp = -1;
         unsigned int i;
+
+        printf("                        wVersion:       0x%04x\n",hdr->wVersion);
+        printf("                        wReserved:      0x%04x\n",hdr->wReserved);
+        data += sizeof(*hdr);
 
         /* apparently the menu structure is something with a common struct, except one field
          * is missing if MF_POPUP is in the flags field. Each popup menu enters into a deeper level,
@@ -958,7 +958,7 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
          *
          * FIXME: So does that mean the last item has MF_END regardless whether a popup or normal item? MSDN docs don't say.
          *        The examples given only cover when a normal item is last. */
-        printf("                    Windows 3.x or higher menu:\n");
+        printf("                    Windows 3.x menu:\n");
 
         while ((data+2+1) <= fence) { /* enough for menu item + NUL char */
             /* NTS: Remember that the popup item and normal item are ALMOST the same structure.
@@ -1051,11 +1051,134 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
                     stacksp--;
             }
         }
+
+        if (stacksp >= 0)
+            printf("! Menu does not seem to end properly at level=%d\n",stacksp);
 #undef MAX_DEPTH
     }
     else {
-        /* NTS: A quick test against Windows 2.x executables show a different structure of RT_MENU */
-        printf("                      ! Unknown wVersion\n");
+#define MAX_DEPTH 16
+        const struct exe_ne_header_resource_WIN2X_MENU_NORMAL_ITEM *stack[MAX_DEPTH] = {NULL};
+        const char *menu_text;
+        int stacksp = -1;
+        unsigned int i;
+
+        /* apparently the menu structure is something with a common struct, except one field
+         * is missing if MF_POPUP is in the flags field. Each popup menu enters into a deeper level,
+         * until MF_END to leave the popup and resume the popup menu above it.
+         *
+         * POPUP ITEM
+         *   NORMAL ITEM
+         *   NORMAL ITEM
+         *   NORMAL ITEM
+         *   POPUP ITEM
+         *     NORMAL ITEM
+         *     NORMAL ITEM MF_END
+         *   NORMAL ITEM
+         *   POPUP ITEM
+         *     NORMAL ITEM MF_END
+         *   NORMAL ITEM MF_END
+         * (end of menu)
+         *
+         * FIXME: So does that mean the last item has MF_END regardless whether a popup or normal item? MSDN docs don't say.
+         *        The examples given only cover when a normal item is last. */
+        printf("                    Windows 1.x/2.x menu:\n");
+
+        while ((data+2+1) <= fence) { /* enough for menu item + NUL char */
+            /* NTS: Remember that the popup item and normal item are ALMOST the same structure.
+             *      A popup item is missing a field. However, the first 16-bit word (flags)
+             *      sits at the same location. */
+            const struct exe_ne_header_resource_WIN2X_MENU_NORMAL_ITEM *mitem =
+                (const struct exe_ne_header_resource_WIN2X_MENU_NORMAL_ITEM*)data;
+
+            /* FIXME: How is a menu formatted if the last item of a popup is a popup? */
+            if (mitem->fItemFlags & exe_ne_header_MF_POPUP) {
+                /* a popup item is the same as normal item minus the menu ID field */
+                data += 1;
+                if ((data+1) >= fence) break; /* must be enough room for at least a NUL */
+                menu_text = (const char*)data;
+            }
+            else {
+                /* NTS: Entries with fItemFlags == 0 and wMenuID == 0 at topmost level are a
+                 *      subtle hint that we've overrun past the end of the menu into the
+                 *      undefined extra data region caused by resource data+len alignment. */
+                if (stacksp < 0 && mitem->fItemFlags == 0 && mitem->wMenuID == 0)
+                    break;
+
+                /* proceed */
+                data += 1+2; /* flags + menu ID */
+                if ((data+1) >= fence) break; /* must be enough room for at least a NUL */
+                menu_text = (const char*)data;
+            }
+
+            /* scan past string + NUL or end of buffer.
+             * if we hit end of buffer without a NUL, then break out, because this code requires the ending NUL to show it. */
+            while (data < fence && *data != 0) data++;
+            if (data >= fence) break;
+            if (*data == 0) data++;
+
+            printf("L%u ",stacksp + 1);
+            for (i=0;i < (unsigned int)(stacksp + 6 + 1);i++) printf("    ");
+            printf("\"%s\" flags=0x%02x ",menu_text,mitem->fItemFlags);
+            if (!(mitem->fItemFlags & exe_ne_header_MF_POPUP))
+                printf("wMenuID=0x%04x ",mitem->wMenuID);
+
+            if (mitem->fItemFlags & exe_ne_header_MF_GRAYED)
+                printf("MF_GRAYED ");
+            if (mitem->fItemFlags & exe_ne_header_MF_BITMAP)
+                printf("MF_BITMAP ");
+            if (mitem->fItemFlags & exe_ne_header_MF_CHECKED)
+                printf("MF_CHECKED ");
+            if (mitem->fItemFlags & exe_ne_header_MF_POPUP)
+                printf("MF_POPUP ");
+            if (mitem->fItemFlags & exe_ne_header_MF_MENUBARBREAK)
+                printf("MF_MENUBARBREAK ");
+            if (mitem->fItemFlags & exe_ne_header_MF_MENUBREAK)
+                printf("MF_MENUBREAK ");
+            if (mitem->fItemFlags & exe_ne_header_MF_END)
+                printf("MF_END ");
+            if (mitem->fItemFlags & exe_ne_header_MF_OWNERDRAW)
+                printf("MF_OWNERDRAW ");
+
+            /* NTS: I like how Microsoft App Studio (MSVC 1.52c) and SDK documentation implies
+             *      that there's a flag you set to make a menu break, yet none of the binaries
+             *      in the WINDOWS directory use it. They make a menu break instead with a
+             *      NUL string, no menu ID, and no flags. */
+            if (*menu_text == 0/*NUL string*/ && mitem->fItemFlags == 0 && mitem->wMenuID == 0)
+                printf("[implicit MF_MENUBREAK]");
+
+            printf("\n");
+
+            if (mitem->fItemFlags & exe_ne_header_MF_POPUP) {
+                if ((++stacksp) >= MAX_DEPTH) {
+                    /* TOO DEEP! */
+                    printf("! Menu is too deep!\n");
+                    break;
+                }
+
+                assert(stacksp >= 0);
+                stack[stacksp] = mitem;
+            }
+            else if (mitem->fItemFlags & exe_ne_header_MF_END) {
+                /* Guess: If the popup entry that started us also has MF_END, then go up another level.
+                 *        And if that has MF_END, go up. And so on, and so forth. I don't know if this
+                 *        is correct behavior. If I can whip up a dummy NE executable with menus that
+                 *        have popup menus on the last item of a popup, I can verify this. The other
+                 *        possibility is that Microsoft somehow prohibits this in their resource
+                 *        compiler.
+                 * Update: A-ha! Microsoft Visual C++ 1.52's main executable MSVC.EXE has such a popup menu!
+                 *         It's the "Project" menu where the last item "Save Workspace" is a popup menu.
+                 *         Let's make sure it displays correctly */
+                while (stacksp >= 0 && (stack[stacksp]->fItemFlags & exe_ne_header_MF_END))
+                    stacksp--;
+                if (stacksp >= 0)
+                    stacksp--;
+            }
+        }
+
+        if (stacksp >= 0)
+            printf("! Menu does not seem to end properly at level=%d\n",stacksp);
+#undef MAX_DEPTH
     }
 
     assert(data <= fence);

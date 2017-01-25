@@ -390,6 +390,21 @@ struct exe_ne_header_resource_MENU_NORMAL_ITEM {    // RT_MENU normal menu item 
 };                                                  // =0x04
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct exe_ne_header_resource_WIN2X_MENU_POPUP_ITEM { // Windows 2.x RT_MENU popup menu item (fItemFlags & MF_POPUP)
+    uint8_t                     fItemFlags;         // +0x00 flags (MF_*) flags you use with the menu API in Windows. MF_POPUP is set for this struct.
+/*  char                        szItemText[];          +0x02 null-terminated string, containing text */
+};                                                  // =0x02
+#pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_ne_header_resource_WIN2X_MENU_NORMAL_ITEM { // Windows 2.x RT_MENU normal menu item !(fItemFlags & MF_POPUP)
+    uint8_t                     fItemFlags;         // +0x00 flags (MF_*) flags you use with the menu API in Windows. MF_POPUP is NOT set for this struct.
+    uint16_t                    wMenuID;            // +0x02 menu item ID (what is sent to WM_COMMAND)
+/*  char                        szItemText[];          +0x04 null-terminated string, containing text */
+};                                                  // =0x04
+#pragma pack(pop)
+
 #define exe_ne_header_MF_GRAYED                     0x0001
 #define exe_ne_header_MF_DISABLED                   0x0002
 #define exe_ne_header_MF_BITMAP                     0x0004
