@@ -1388,6 +1388,153 @@ void dump_ne_res_RT_DIALOG(const unsigned char *data,const size_t len) {
     assert(data <= fence);
 }
 
+void dump_ne_res_RT_VERSION_list(const unsigned char *data,const size_t len,const struct exe_ne_header_resource_VERSION_BLOCK *parent_blk,const char *parent_szKey,const struct exe_ne_header_resource_VERSION_BLOCK *parent_parent_blk,const char *parent_parent_szKey,const unsigned int level) {
+    const struct exe_ne_header_resource_VERSION_BLOCK *blk;
+    const unsigned char *fence = data + len;
+    const unsigned char *base = data;
+    const unsigned char *abData;
+    const unsigned char *next;
+    char isString = 0;
+    const char *szKey;
+    unsigned int i;
+
+    while (data < fence) {
+        /* Microsoft's SDK says that abData is DWORD-aligned, they don't say anything about
+         * the blocks themselves being DWORD-aligned *sigh* and yet you'll lose track of
+         * blocks easily if you don't do this. */
+        while (data < fence && (((size_t)(data - base)) & 3/*DWORD*/) != 0) data++;
+        if ((data+sizeof(*blk)) > fence) break;
+
+        /* cbBlock, cbValue */
+        blk = (const struct exe_ne_header_resource_VERSION_BLOCK*)data;
+        if (blk->cbBlock <= sizeof(*blk)) break;
+        if ((data+blk->cbBlock) > fence) break;
+        next = data + blk->cbBlock;
+        data += sizeof(*blk);
+        if (data >= fence) break;
+
+        /* szKey field */
+        szKey = (const char*)data;
+        while (data < fence && *data != 0) data++;
+        if (data >= fence) break;
+        if (*data == 0) data++;
+
+        /* start announcing */
+        for (i=0;i < (level + 5);i++) printf("    ");
+        printf("Block: '%s' cbBlock=%u cbValue=%u\n",
+            szKey,blk->cbBlock,blk->cbValue);
+
+        /* "additional zero bytes are appended to the string to align the last byte on a 32-bit boundary"
+           ...or, they could have simply said that additional zero bytes are appended to align abData on
+           a 32-bit boundary, it would make more sense to say that. at least dumping actual RT_VERSION
+           resources from Windows binaries shows that behavior. */
+        while (data < fence && (((size_t)(data - base)) & 3/*DWORD*/) != 0) data++;
+
+        /* abValue field */
+        if ((data+blk->cbValue) > fence) break;
+        abData = (const unsigned char*)data;
+        data += blk->cbValue;
+
+        /* we can assume as string if the parent-parent is StringFileInfo */
+        isString = 0;
+        if (!strcmp(szKey,"VS_VERSION_INFO")) {
+            /* FIXME: What other versions of this structure exist??
+             *        Does the Windows 3.0 variant have fewer fields?
+             *        We don't worry about Windows 1.x and 2.x because they don't appear to have RT_VERSION */
+                const struct exe_ne_header_resource_VS_FIXEDFILEINFO_WIN31 *fix =
+                    (const struct exe_ne_header_resource_VS_FIXEDFILEINFO_WIN31*)abData;
+
+            if (blk->cbValue >= 4) {
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("dwSignature:            0x%08lX\n",(unsigned long)fix->dwSignature);
+            }
+            if (blk->cbValue >= 8 && fix->dwSignature == 0xFEEF04BDUL) {
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("dwStrucVersion:         0x%08lX (%u.%u)\n",(unsigned long)fix->dwStrucVersion,
+                    (unsigned int)(fix->dwStrucVersion >> 16UL),
+                    (unsigned int)(fix->dwStrucVersion & 0xFFFFUL));
+            }
+
+            if (blk->cbValue >= sizeof(struct exe_ne_header_resource_VS_FIXEDFILEINFO_WIN31) && fix->dwSignature == 0xFEEF04BDUL && fix->dwStrucVersion >= 0x29UL) {
+                uint32_t fflags;
+
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("dwFileVersion:          MS 0x%08lX LS 0x%08lX\n",
+                    (unsigned long)fix->dwFileVersionMS,
+                    (unsigned long)fix->dwFileVersionLS);
+
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("dwProductVersion:       MS 0x%08lX LS 0x%08lX\n",
+                    (unsigned long)fix->dwProductVersionMS,
+                    (unsigned long)fix->dwProductVersionLS);
+
+                fflags = fix->dwFileFlags & fix->dwFileFlagsMask;
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("dwFileFlags:            0x%08lX (VALUE) AND 0x%08lX (MASK)\n",
+                    (unsigned long)fix->dwFileFlags,
+                    (unsigned long)fix->dwFileFlagsMask);
+                if (fflags != 0UL) {
+                    for (i=0;i < (level + 5 + 1 + 1);i++) printf("    ");
+                    if (fflags & exe_ne_header_VS_FF_DEBUG)
+                        printf("VS_FF_DEBUG ");
+                    if (fflags & exe_ne_header_VS_FF_INFOINFERRED)
+                        printf("VS_FF_INFOINFERRED ");
+                    if (fflags & exe_ne_header_VS_FF_PATCHED)
+                        printf("VS_FF_PATCHED ");
+                    if (fflags & exe_ne_header_VS_FF_PRERELEASE)
+                        printf("VS_FF_PRERELEASE ");
+                    if (fflags & exe_ne_header_VS_FF_PRIVATEBUILD)
+                        printf("VS_FF_PRIVATEBUILD ");
+                    if (fflags & exe_ne_header_VS_FF_SPECIALBUILD)
+                        printf("VS_FF_SPECIALBUILD ");
+                    printf("\n");
+                }
+            }
+            else {
+                printf("! Unknown variant of struct\n");
+            }
+        }
+        else if (blk->cbValue != 0 && parent_parent_blk != NULL && parent_parent_szKey != NULL && !strcmp(parent_parent_szKey,"StringFileInfo"))
+            isString = 1;
+        else if (blk->cbValue >= 4 && !strcmp(szKey,"Translation") &&
+            parent_blk != NULL && parent_szKey != NULL && !strcmp(parent_szKey,"VarFileInfo")) {
+            /* two 16-bit values.
+             *
+             * uint16_t     language identifier
+             * uint16_t     character-set identifier */
+            for (i=0;i < (level + 5 + 1);i++) printf("    ");
+            printf("Language ID:    0x%04X\n",*((uint16_t*)(abData + 0)));
+            for (i=0;i < (level + 5 + 1);i++) printf("    ");
+            printf("Charset ID:     0x%04X\n",*((uint16_t*)(abData + 2)));
+        }
+
+        if (isString) {
+            const char *szString = (const char*)abData;
+            const char *scan = szString;
+
+            while (scan < (const char*)next && *scan != 0) scan++;
+            if (scan < (const char*)next && *scan == 0) {
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("\"%s\"\n",szString);
+            }
+        }
+
+        /* possible nested block */
+        assert(data <= next);
+        if ((data+sizeof(*blk)) < next)
+            dump_ne_res_RT_VERSION_list(data,(size_t)(next - data),blk,szKey,parent_blk,parent_szKey,level+1U);
+
+        /* next! */
+        data = next;
+    }
+}
+
+void dump_ne_res_RT_VERSION(const unsigned char *data,const size_t len) {
+
+    printf("                RT_VERSION resource:\n");
+    dump_ne_res_RT_VERSION_list(data,len,NULL,NULL,NULL,NULL,0);
+}
+
 int main(int argc,char **argv) {
     struct exe_ne_header_imported_name_table ne_imported_name_table;
     struct exe_ne_header_entry_table_table ne_entry_table;
@@ -2124,6 +2271,8 @@ int main(int argc,char **argv) {
                                 dump_ne_res_RT_MENU(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_DIALOG)
                                 dump_ne_res_RT_DIALOG(res_raw,(size_t)res_len);
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_VERSION)
+                                dump_ne_res_RT_VERSION(res_raw,(size_t)res_len);
                         }
 
                         free(res_raw);

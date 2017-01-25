@@ -441,6 +441,44 @@ struct exe_ne_header_resource_DIALOG_CONTROL {      // RT_DIALOG control element
 };                                                  // =0x0E
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct exe_ne_header_resource_VERSION_BLOCK {       // RT_VERSION block
+    uint16_t                    cbBlock;            // +0x00 size of the complete block, including nested blocks
+    uint16_t                    cbValue;            // +0x02 size of the abValue member of the struct in bytes
+/* char                         szKey[];               +0x02 NUL-terminated string, name of the block */
+/* BYTE                         abValue[];             +0x02 content of the block (NUL-terminated string, array of word values, whatever) */
+};                                                  // =0x02
+#pragma pack(pop)
+// Blocks can be nested, in which case cbBlock is the sum of all nested blocks + cbValue.
+// One or more nested blocks can exist if cbValue and the length of szKey do not fill the complete block.
+
+#pragma pack(push,1)
+struct exe_ne_header_resource_VS_FIXEDFILEINFO_WIN31 { // as defined by Windows 3.1 SDK 
+    uint32_t                    dwSignature;        // +0x00 0xFEEF04BD
+    uint32_t                    dwStrucVersion;     // +0x04 binary version number of this structure. High-order word is major, low-order word is minor [1]
+    uint32_t                    dwFileVersionMS;    // +0x08 high 32-bits of binary version number for the file
+    uint32_t                    dwFileVersionLS;    // +0x0C low 32-bits of binary version number for the file
+    uint32_t                    dwProductVersionMS; // +0x10 high 32-bits of bianry version number for the product
+    uint32_t                    dwProductVersionLS; // +0x14 low 32-bits of binary version number for the product
+    uint32_t                    dwFileFlagsMask;    // +0x18 which bits in dwFileFlags are valid
+    uint32_t                    dwFileFlags;        // +0x1C attributes of the file
+    uint32_t                    dwFileOS;           // +0x20 operating system for which this file is designed
+    uint32_t                    dwFileType;         // +0x24 general type of file
+    uint32_t                    dwFileSubtype;      // +0x28 function of the file
+    uint32_t                    dwFileDateMS;       // +0x2C high 32-bits of binary date/time stamp for the file
+    uint32_t                    dwFileDateLS;       // +0x30 low 32-bits of binary date/time stamp for the file
+};                                                  // =0x34
+#pragma pack(pop)
+// [1] dwStrucVersion
+//       Windows 3.1 SDK:    Must be greater than 0x00000029
+
+#define exe_ne_header_VS_FF_DEBUG                   0x00000001UL
+#define exe_ne_header_VS_FF_PRERELEASE              0x00000002UL
+#define exe_ne_header_VS_FF_PATCHED                 0x00000004UL
+#define exe_ne_header_VS_FF_PRIVATEBUILD            0x00000008UL
+#define exe_ne_header_VS_FF_INFOINFERRED            0x00000010UL
+#define exe_ne_header_VS_FF_SPECIALBUILD            0x00000020UL
+
 #define exe_ne_header_DS_ABSALIGN                   0x00000001UL
 #define exe_ne_header_DS_SYSMODAL                   0x00000002UL
 #define exe_ne_header_DS_LOCALEDIT                  0x00000020UL
