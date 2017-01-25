@@ -1016,6 +1016,13 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
             if (mitem->fItemFlags & exe_ne_header_MF_OWNERDRAW)
                 printf("MF_OWNERDRAW ");
 
+            /* NTS: I like how Microsoft App Studio (MSVC 1.52c) and SDK documentation implies
+             *      that there's a flag you set to make a menu break, yet none of the binaries
+             *      in the WINDOWS directory use it. They make a menu break instead with a
+             *      NUL string, no menu ID, and no flags. */
+            if (*menu_text == 0/*NUL string*/ && mitem->fItemFlags == 0 && mitem->wMenuID == 0)
+                printf("[implicit MF_MENUBREAK]");
+
             printf("\n");
 
             if (mitem->fItemFlags & exe_ne_header_MF_POPUP) {
