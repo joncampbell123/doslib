@@ -1533,6 +1533,17 @@ void dump_ne_res_RT_VERSION_list(const unsigned char *data,const size_t len,cons
                     case exe_ne_header_VFT_STATIC_LIB:      printf("VFT_STATIC_LIB"); break;
                 };
                 printf("\n");
+
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("dwFileSubtype:          0x%08lX\n",
+                    (unsigned long)fix->dwFileSubtype);//TODO enumeration
+
+                // TODO: This is the 64-bit NT timestamp format, something like 100-nanosecond units since Jan 1st, 1601, right?
+                //       Of course, Windows 3.1 binaries have this set to zero.
+                for (i=0;i < (level + 5 + 1);i++) printf("    ");
+                printf("dwFileDate:             0x%08lX%08lX\n",
+                    (unsigned long)fix->dwFileDateMS,
+                    (unsigned long)fix->dwFileDateLS);
             }
             else {
                 printf("! Unknown variant of struct\n");
