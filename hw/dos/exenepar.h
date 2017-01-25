@@ -171,3 +171,5 @@ unsigned int exe_ne_header_is_WINOLDCURSOR(const unsigned char *data/*at least 4
 
 unsigned int exe_ne_header_BITMAPINFOHEADER_get_palette_count(const struct exe_ne_header_BITMAPINFOHEADER *bmphdr);
 
+const char *exe_ne_header_RT_DIALOG_ClassID_to_string(const uint8_t c);
+

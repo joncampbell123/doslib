@@ -26,24 +26,6 @@ static int                      src_fd = -1;
 static struct exe_dos_header    exehdr;
 static struct exe_dos_layout    exelayout;
 
-/////////// MOVE TO LIB
-
-const char *exe_ne_header_RT_DIALOG_ClassID_to_string(const uint8_t c) {
-    switch (c) {
-        case 0x80:  return "Button";
-        case 0x81:  return "Edit";
-        case 0x82:  return "Static";
-        case 0x83:  return "List box";
-        case 0x84:  return "Scroll bar";
-        case 0x85:  return "Combo box";
-        default:    break;
-    }
-
-    return "?";
-}
-
-////////////////////////
-
 static void help(void) {
     fprintf(stderr,"EXENEDMP -i <exe file>\n");
     fprintf(stderr," -sn        Sort names\n");

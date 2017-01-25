@@ -35,3 +35,17 @@ const char *exe_ne_header_resource_table_typeinfo_TYPEID_INTEGER_name_str(const 
     return NULL;
 }
 
+const char *exe_ne_header_RT_DIALOG_ClassID_to_string(const uint8_t c) {
+    switch (c) {
+        case 0x80:  return "Button";
+        case 0x81:  return "Edit";
+        case 0x82:  return "Static";
+        case 0x83:  return "List box";
+        case 0x84:  return "Scroll bar";
+        case 0x85:  return "Combo box";
+        default:    break;
+    }
+
+    return "?";
+}
+
