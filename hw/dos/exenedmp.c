@@ -26,6 +26,24 @@ static int                      src_fd = -1;
 static struct exe_dos_header    exehdr;
 static struct exe_dos_layout    exelayout;
 
+/////////// MOVE TO LIB
+
+const char *exe_ne_header_RT_DIALOG_ClassID_to_string(const uint8_t c) {
+    switch (c) {
+        case 0x80:  return "Button";
+        case 0x81:  return "Edit";
+        case 0x82:  return "Static";
+        case 0x83:  return "List box";
+        case 0x84:  return "Scroll bar";
+        case 0x85:  return "Combo box";
+        default:    break;
+    }
+
+    return "?";
+}
+
+////////////////////////
+
 static void help(void) {
     fprintf(stderr,"EXENEDMP -i <exe file>\n");
     fprintf(stderr," -sn        Sort names\n");
@@ -1184,6 +1202,210 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
     assert(data <= fence);
 }
 
+void dump_ne_res_WSTYLE(const uint32_t lstyle) {
+    if (lstyle & exe_ne_header_DS_ABSALIGN)
+        printf(" DS_ABSALIGN");
+    if (lstyle & exe_ne_header_DS_SYSMODAL)
+        printf(" DS_SYSMODAL");
+    if (lstyle & exe_ne_header_DS_LOCALEDIT)
+        printf(" DS_LOCALEDIT");
+    if (lstyle & exe_ne_header_DS_SETFONT)
+        printf(" DS_SETFONT");
+    if (lstyle & exe_ne_header_DS_MODALFRAME)
+        printf(" DS_MODALFRAME");
+    if (lstyle & exe_ne_header_DS_NOIDLEMSG)
+        printf(" DS_NOIDLEMSG");
+    if (lstyle & exe_ne_header_WS_TABSTOP)
+        printf(" WS_TABSTOP/WS_MAXIMIZEBOX");
+    if (lstyle & exe_ne_header_WS_GROUP)
+        printf(" WS_GROUP/WS_MINIMIZEBOX");
+    if (lstyle & exe_ne_header_WS_THICKFRAME)
+        printf(" WS_THICKFRAME");
+    if (lstyle & exe_ne_header_WS_SYSMENU)
+        printf(" WS_SYSMENU");
+    if (lstyle & exe_ne_header_WS_HSCROLL)
+        printf(" WS_HSCROLL");
+    if (lstyle & exe_ne_header_WS_VSCROLL)
+        printf(" WS_VSCROLL");
+    if (lstyle & exe_ne_header_WS_DLGFRAME)
+        printf(" WS_DLGFRAME");
+    if (lstyle & exe_ne_header_WS_BORDER)
+        printf(" WS_BORDER");
+    if (lstyle & exe_ne_header_WS_CAPTION)
+        printf(" WS_CAPTION");
+    if (lstyle & exe_ne_header_WS_MAXIMIZE)
+        printf(" WS_MAXIMIZE");
+    if (lstyle & exe_ne_header_WS_CLIPCHILDREN)
+        printf(" WS_CLIPCHILDREN");
+    if (lstyle & exe_ne_header_WS_CLIPSIBLINGS)
+        printf(" WS_CLIPSIBLINGS");
+    if (lstyle & exe_ne_header_WS_DISABLED)
+        printf(" WS_DISABLED");
+    if (lstyle & exe_ne_header_WS_VISIBLE)
+        printf(" WS_VISIBLE");
+    if (lstyle & exe_ne_header_WS_MINIMIZE)
+        printf(" WS_MINIMIZE");
+    if (lstyle & exe_ne_header_WS_CHILD)
+        printf(" WS_CHILD");
+    if (lstyle & exe_ne_header_WS_POPUP)
+        printf(" WS_POPUP");
+}
+
+void dump_ne_res_RT_DIALOG(const unsigned char *data,const size_t len) {
+    const struct exe_ne_header_resource_DIALOG_HEADER *hdr;
+    const unsigned char *fence = data + len;
+    unsigned int ctli;
+
+    printf("                RT_DIALOG resource:\n");
+
+    if (len < sizeof(*hdr))
+        return;
+
+    /* NTS: A preliminary look at Windows 2.x binaries shows a same or similar dialog box structure */
+    hdr = (const struct exe_ne_header_resource_DIALOG_HEADER*)data;
+    data += sizeof(*hdr);
+    printf("                    Dialog header:\n");
+    printf("                        lStyle:             0x%08lx",(unsigned long)(hdr->lStyle));
+    dump_ne_res_WSTYLE(hdr->lStyle);
+    printf("\n");
+    printf("                        bNumberOfItems:     %u\n",hdr->bNumberOfItems);
+    printf("                        x:                  %u dialog units\n",hdr->x);
+    printf("                        y:                  %u dialog units\n",hdr->y);
+    printf("                        cx:                 %u dialog units\n",hdr->cx);
+    printf("                        cy:                 %u dialog units\n",hdr->cy);
+    if (data >= fence) return;
+
+    /* szMenuName (null-terminated string) */
+    /* NUL-terminated string: resource by name of RT_MENU resource */
+    /* NUL: no menu */
+    /* 0xFF, uint16_t: resource by ordinal of RT_MENU resource */
+    printf("                        szMenuName:         ");
+    {
+        if (data[0] == 0) {
+            printf("(none)");
+            data++;
+        }
+        else if (data[0] == 0xFF) { // UNTESTED!
+            if ((data+3) > fence) return;
+            printf("RT_MENU ordinal #%d",*((uint16_t*)(data + 3)));
+            data += 3;
+        }
+        else { // UNTESTED!
+            const char *str = (const char*)data;
+            while (data < fence && *data != 0) data++;
+            if (data >= fence) return;
+            if (*data == 0) data++;
+
+            printf("RT_MENU name '%s'",str);
+        }
+    }
+    printf("\n");
+    if (data >= fence) return;
+
+    /* szClassName (null-terminated string) */
+    printf("                        szClassName:        ");
+    {
+        if (data[0] == 0) {
+            printf("(default)");
+            data++;
+        }
+        else { // UNTESTED!
+            const char *str = (const char*)data;
+            while (data < fence && *data != 0) data++;
+            if (data >= fence) return;
+            if (*data == 0) data++;
+
+            printf("'%s'",str);
+        }
+    }
+    printf("\n");
+    if (data >= fence) return;
+
+    /* szCaption (null-terminated string) */
+    printf("                        szCaption:          ");
+    {
+        const char *str = (const char*)data;
+        while (data < fence && *data != 0) data++;
+        if (data >= fence) return;
+        if (*data == 0) data++;
+
+        printf("'%s'",str);
+    }
+    printf("\n");
+    if (data >= fence) return;
+
+    /* these two fields only exist if DS_SETFONT */
+    if (hdr->lStyle & exe_ne_header_DS_SETFONT) {
+        /* uint16_t wPointSize
+         * char szFaceName[]; */
+        if ((data+2+1) > fence) return;
+
+        printf("                        wPointSize:         %u pt\n",*((uint16_t*)data));
+        data += 2;
+        {
+            const char *str = (const char*)data;
+            while (data < fence && *data != 0) data++;
+            if (data >= fence) return;
+            if (*data == 0) data++;
+
+            printf("                        szFaceName:         '%s'\n",str);
+        }
+    }
+
+    /* now list the controls */
+    for (ctli=0;ctli < hdr->bNumberOfItems;ctli++) {
+        const struct exe_ne_header_resource_DIALOG_CONTROL *ctl =
+            (const struct exe_ne_header_resource_DIALOG_CONTROL *)data;
+        data += sizeof(*ctl);
+
+        printf("                    Dialog control:\n");
+        printf("                        x:                  %u dialog units\n",ctl->x);
+        printf("                        y:                  %u dialog units\n",ctl->y);
+        printf("                        cx:                 %u dialog units\n",ctl->cx);
+        printf("                        cy:                 %u dialog units\n",ctl->cy);
+        printf("                        wID:                0x%04x\n",ctl->wID);
+        printf("                        lStyle:             0x%08lx",(unsigned long)ctl->lStyle);
+        dump_ne_res_WSTYLE(ctl->lStyle);
+        printf("\n");
+
+        /* ClassID.
+         *
+         * If (first byte & 0x80) then the class ID is a single byte.
+         * else it's a NUL-terminated string. */
+        if (data >= fence) return;
+        if (*data & 0x80) {
+            unsigned char clas = *data++;
+            printf("                        ClassID:            0x%02x '%s'",clas,exe_ne_header_RT_DIALOG_ClassID_to_string(clas));
+            printf("\n");
+        }
+        else { // UNTESTED
+            const char *str = (const char*)data;
+            while (data < fence && *data != 0) data++;
+            if (data >= fence) return;
+            if (*data == 0) data++;
+
+            printf("                        ClassID:            '%s'\n",str);
+        }
+
+        /* char szText[] */
+        if (data >= fence) return;
+        {
+            const char *str = (const char*)data;
+            while (data < fence && *data != 0) data++;
+            if (data >= fence) return;
+            if (*data == 0) data++;
+
+            printf("                        szText:             '%s'\n",str);
+        }
+
+        /* NTS: This is not mentioned anywhere in the Windows 3.1 SDK, but there is an extra NUL byte here */
+        if (data >= fence) return;
+        if (*data == 0) data++;
+    }
+ 
+    assert(data <= fence);
+}
+
 int main(int argc,char **argv) {
     struct exe_ne_header_imported_name_table ne_imported_name_table;
     struct exe_ne_header_entry_table_table ne_entry_table;
@@ -1918,6 +2140,8 @@ int main(int argc,char **argv) {
                                 dump_ne_res_RT_BITMAP(res_raw,(size_t)res_len);
                             else if (tinfo->rtTypeID == exe_ne_header_RT_MENU)
                                 dump_ne_res_RT_MENU(res_raw,(size_t)res_len);
+                            else if (tinfo->rtTypeID == exe_ne_header_RT_DIALOG)
+                                dump_ne_res_RT_DIALOG(res_raw,(size_t)res_len);
                         }
 
                         free(res_raw);

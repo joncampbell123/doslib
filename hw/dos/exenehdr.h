@@ -405,6 +405,68 @@ struct exe_ne_header_resource_WIN2X_MENU_NORMAL_ITEM { // Windows 2.x RT_MENU no
 };                                                  // =0x04
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct exe_ne_header_resource_DIALOG_HEADER {       // RT_DIALOG header
+    uint32_t                    lStyle;             // +0x00 window style
+    uint8_t                     bNumberOfItems;     // +0x04 number of controls in the dialog
+    uint16_t                    x;                  // +0x05 x-coordinate of the upper left corner of the dialog in dialog units (explanation below)
+    uint16_t                    y;                  // +0x07 y-coordinate of the lower left corner of the dialog in dialog units (explanation below)
+    uint16_t                    cx;                 // +0x09 width of the dialog box in dialog units
+    uint16_t                    cy;                 // +0x0B height of the dialog box in dialog units
+/* char                         szMenuName[]           +0x0D menu resource, or NUL if no menu, or {uint8_t,uint16} = {0xFF,ordinal} to ref by ordinal */
+/* char                         szClassName[]          +0x0D class name for the dialog, or NUL to use default */
+/* char                         szCaption[]            +0x0D dialog box caption, NUL terminated */
+/*          if (lstyle & DS_SETFONT) */
+/* uint16_t                     wPointSize;            +0x0D point size of the font to use with the dialog */
+/* char                         szFaceName[]           +0x0D typeface name of the dialog box font */
+};                                                  // =0x0D
+#pragma pack(pop)
+// dialog units, x-coordinate: unit of measurement based on average char width of font divided by 4.
+// dialog units, y-coordinate: unit of measurement based on char height of font divided by 8
+// x: horizontal distance from the left edge of the parent window
+// y: vertical distance from the top of the parent window
+
+#pragma pack(push,1)
+struct exe_ne_header_resource_DIALOG_CONTROL {      // RT_DIALOG control element
+    uint16_t                    x;                  // +0x00 x-coordinate of upper-left corner of control, dialog units
+    uint16_t                    y;                  // +0x02 y-coordinate of upper-left corner of control, dialog units
+    uint16_t                    cx;                 // +0x04 width of the control, dialog units
+    uint16_t                    cy;                 // +0x06 height of the control, dialog units
+    uint16_t                    wID;                // +0x08 ID of control
+    uint32_t                    lStyle;             // +0x0A control style
+/* union {
+ *  uint8_t                     class;                 +0x0E first byte & 0x80, is class type
+ *  char                        szClass[];             +0x0E string value of class
+ * } */
+};                                                  // =0x0E
+#pragma pack(pop)
+
+#define exe_ne_header_DS_ABSALIGN                   0x00000001UL
+#define exe_ne_header_DS_SYSMODAL                   0x00000002UL
+#define exe_ne_header_DS_LOCALEDIT                  0x00000020UL
+#define exe_ne_header_DS_SETFONT                    0x00000040UL
+#define exe_ne_header_DS_MODALFRAME                 0x00000080UL
+#define exe_ne_header_DS_NOIDLEMSG                  0x00000100UL
+#define exe_ne_header_WS_TABSTOP                    0x00010000UL
+#define exe_ne_header_WS_MAXIMIZEBOX                0x00010000UL
+#define exe_ne_header_WS_GROUP                      0x00020000UL
+#define exe_ne_header_WS_MINIMIZEBOX                0x00020000UL
+#define exe_ne_header_WS_THICKFRAME                 0x00040000UL
+#define exe_ne_header_WS_SYSMENU                    0x00080000UL
+#define exe_ne_header_WS_HSCROLL                    0x00100000UL
+#define exe_ne_header_WS_VSCROLL                    0x00200000UL
+#define exe_ne_header_WS_DLGFRAME                   0x00400000UL
+#define exe_ne_header_WS_BORDER                     0x00800000UL
+#define exe_ne_header_WS_CAPTION                    0x00C00000UL // COMBINED WS_BORDER+WS_DLGFRAME
+#define exe_ne_header_WS_MAXIMIZE                   0x01000000UL
+#define exe_ne_header_WS_CLIPCHILDREN               0x02000000UL
+#define exe_ne_header_WS_CLIPSIBLINGS               0x04000000UL
+#define exe_ne_header_WS_DISABLED                   0x08000000UL
+#define exe_ne_header_WS_VISIBLE                    0x10000000UL
+#define exe_ne_header_WS_MINIMIZE                   0x20000000UL
+#define exe_ne_header_WS_CHILD                      0x40000000UL
+#define exe_ne_header_WS_POPUP                      0x80000000UL
+
 #define exe_ne_header_MF_GRAYED                     0x0001
 #define exe_ne_header_MF_DISABLED                   0x0002
 #define exe_ne_header_MF_BITMAP                     0x0004
