@@ -1439,8 +1439,13 @@ void dump_ne_res_RT_VERSION_list(const unsigned char *data,const size_t len,cons
         isString = 0;
         if (!strcmp(szKey,"VS_VERSION_INFO")) {
             /* FIXME: What other versions of this structure exist??
-             *        Does the Windows 3.0 variant have fewer fields?
+             *        Windows 3.0 binaries generally don't use this, or if they do, they appear to use the same format.
              *        We don't worry about Windows 1.x and 2.x because they don't appear to have RT_VERSION */
+            /* Fun facts:
+             *  - Windows 3.1 binaries DO use this structure, and they set the File and Product major versions to 0x0003000A (3.10).
+             *  - You can differentiate Windows 3.1 from Windows 3.11 by whether or not KRNL386.EXE has a RT_VERSION resource.
+             *  - The Windows 3.11 KRNL386.EXE RT_VERSION resource lists the File and Product major versions as 0x0003000B (3.11),
+             *    where most of the other binaries still have version 0x0003000A (3.10) */
                 const struct exe_ne_header_resource_VS_FIXEDFILEINFO_WIN31 *fix =
                     (const struct exe_ne_header_resource_VS_FIXEDFILEINFO_WIN31*)abData;
 
