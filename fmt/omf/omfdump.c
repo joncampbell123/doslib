@@ -31,6 +31,42 @@ static void help(void) {
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
 }
 
+void dump_COMENT(FILE *fp,struct omf_context_t * const ctx) {
+    unsigned char comment_type;
+    unsigned char comment_class;
+
+    fprintf(fp,"COMENT:\n");
+
+    comment_type = omf_record_get_byte(&ctx->record);
+    comment_class = omf_record_get_byte(&ctx->record);
+    fprintf(fp,"    Comment Type:     0x%02x ",comment_type);
+    if (comment_type & 0x80) fprintf(fp,"NO-PURGE ");
+    if (comment_type & 0x40) fprintf(fp,"NO-LIST ");
+    fprintf(fp,"\n");
+
+    fprintf(fp,"    Comment Class:    0x%02x ",comment_class);
+    if (comment_class == 0xA0) { /* microsoft extension */
+        unsigned char subtype = omf_record_get_byte(&ctx->record);
+
+        switch (subtype) {
+            case 0x01:  fprintf(fp,"IMPDEF"); break;
+            case 0x02:  fprintf(fp,"EXPDEF"); break;
+            case 0x03:  fprintf(fp,"INCDEF"); break;
+            case 0x04:  fprintf(fp,"Protected Memory Library"); break;
+            case 0x05:  fprintf(fp,"LNKDIR"); break;
+            case 0x06:  fprintf(fp,"Big-endian"); break;
+            case 0x07:  fprintf(fp,"PRECOMP"); break;
+        };
+    }
+    else if (comment_class == 0xA1) {
+        fprintf(fp,"New OMF extension");
+    }
+    else if (comment_class == 0xE9) {
+        fprintf(fp,"Dependency file");
+    }
+    fprintf(fp,"\n");
+}
+
 void my_dumpstate(const struct omf_context_t * const ctx) {
     unsigned int i;
     const char *p;
@@ -177,6 +213,10 @@ int main(int argc,char **argv) {
                 if (omf_state->flags.verbose)
                     dump_THEADR(stdout,omf_state);
 
+                break;
+            case OMF_RECTYPE_COMENT:/*0x88*/
+                if (omf_state->flags.verbose)
+                    dump_COMENT(stdout,omf_state);
                 break;
             case OMF_RECTYPE_EXTDEF:/*0x8C*/
             case OMF_RECTYPE_LEXTDEF:/*0xB4*/

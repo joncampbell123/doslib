@@ -73,6 +73,8 @@ enum {
 
 #define OMF_RECTYPE_THEADR      (0x80)
 
+#define OMF_RECTYPE_COMENT      (0x88)
+
 #define OMF_RECTYPE_EXTDEF      (0x8C)
 
 #define OMF_RECTYPE_PUBDEF      (0x90)
