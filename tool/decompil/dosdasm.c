@@ -3,6 +3,7 @@
 #include "minx86dec/opcodes.h"
 #include "minx86dec/coreall.h"
 #include "minx86dec/opcodes_str.h"
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
@@ -15,6 +16,38 @@
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
+
+struct dec_label {
+    uint16_t                    seg_v,ofs_v;
+    uint32_t                    offset;
+    char*                       name;
+};
+
+void cstr_free(char **l) {
+    if (l != NULL) {
+        if (*l != NULL) free(*l);
+        *l = NULL;
+    }
+}
+
+void cstr_copy(char **l,const char *s) {
+    cstr_free(l);
+
+    if (s != NULL) {
+        const size_t len = strlen(s);
+        *l = malloc(len+1);
+        if (*l != NULL)
+            strcpy(*l,s);
+    }
+}
+
+void dec_label_set_name(struct dec_label *l,const char *s) {
+    cstr_copy(&l->name,s);
+}
+
+struct dec_label*               dec_label = NULL;
+size_t                          dec_label_count = 0;
+size_t                          dec_label_alloc = 0;
 
 uint8_t                         dec_buffer[256];
 uint8_t*                        dec_read;
@@ -117,12 +150,33 @@ int refill() {
     return (dec_read < dec_end);
 }
 
+struct dec_label *dec_label_malloc() {
+    if (dec_label == NULL)
+        return NULL;
+
+    if (dec_label_count >= dec_label_alloc)
+        return NULL;
+
+    return dec_label + (dec_label_count++);
+}
+
 int main(int argc,char **argv) {
+    struct dec_label *label;
+    unsigned long dec_ofs;
+    unsigned int labeli;
     uint16_t dec_cs;
     int c;
 
     if (parse_argv(argc,argv))
         return 1;
+
+    dec_label_alloc = 4096;
+    dec_label_count = 0;
+    dec_label = malloc(sizeof(*dec_label) * dec_label_alloc);
+    if (dec_label == NULL) {
+        fprintf(stderr,"Failed to alloc label array\n");
+        return 1;
+    }
 
     src_fd = open(src_file,O_RDONLY|O_BINARY);
     if (src_fd < 0) {
@@ -142,6 +196,7 @@ int main(int argc,char **argv) {
         entry_ip = 0;
         entry_ofs = 0;
         dec_cs = entry_cs;
+        dec_ofs = 0;
 
         printf(".EXE decompile, %lu (0x%lx) resident bytes\n",(unsigned long)img_res_size,(unsigned long)img_res_size);
         printf("CS:IP entry point is %04lx:%04lx (linear 0x%08lx file 0x%08lx)\n",
@@ -149,17 +204,38 @@ int main(int argc,char **argv) {
             (unsigned long)exehdr.init_instruction_pointer,
             ((((unsigned long)exehdr.init_code_segment << 4UL) + (unsigned long)exehdr.init_instruction_pointer) & 0xFFFFFUL),
             ((((unsigned long)exehdr.init_code_segment << 4UL) + (unsigned long)exehdr.init_instruction_pointer) & 0xFFFFFUL) + start_decom);
+
+        if ((label=dec_label_malloc()) != NULL) {
+            dec_label_set_name(label,"Entry point .EXE");
+            label->offset =
+                ((((unsigned long)exehdr.init_code_segment << 4UL) + (unsigned long)exehdr.init_instruction_pointer) & 0xFFFFFUL);
+            label->seg_v =
+                exehdr.init_code_segment;
+            label->ofs_v =
+                exehdr.init_instruction_pointer;
+        }
     }
     else {
         // COM
         start_decom = 0;
         end_decom = lseek(src_fd,0,SEEK_END);
-        entry_cs = 0x0000U;
+        entry_cs = 0xFFF0U;
         entry_ip = 0x0100U;
+        dec_cs = 0xFFF0U;
         entry_ofs = 0;
-        dec_cs = 0;
+        dec_ofs = 0;
 
         printf(".COM decompile\n");
+
+        if ((label=dec_label_malloc()) != NULL) {
+            dec_label_set_name(label,"Entry point .COM");
+            label->offset =
+                0;
+            label->seg_v =
+                entry_cs;
+            label->ofs_v =
+                entry_ip;
+        }
     }
 
     printf("Starting at %lu (0x%08lx), ending at %lu (0x%08lx)\n",
@@ -172,6 +248,7 @@ int main(int argc,char **argv) {
         (unsigned long)entry_ip,
         (unsigned long)entry_ofs);
 
+    labeli = 0;
     current_offset = start_decom;
 	minx86dec_init_state(&dec_st);
     dec_read = dec_end = dec_buffer;
@@ -180,9 +257,29 @@ int main(int argc,char **argv) {
         return 1;
 
     do {
-        uint32_t ip = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() + entry_ip - start_decom - (dec_cs << 4UL);
+        uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() - start_decom;
+        uint32_t ip = ofs + entry_ip - dec_ofs;
+
+        if (labeli < dec_label_count) {
+            label = dec_label + labeli;
+            if (ofs >= label->offset) {
+                labeli++;
+                entry_ip = label->ofs_v;
+                dec_cs = label->seg_v;
+                dec_ofs = ofs;
+
+                printf("Label '%s' at %04lx:%04lx @0x%08lx\n",
+                    label->name ? label->name : "",
+                    (unsigned long)label->seg_v,
+                    (unsigned long)label->ofs_v,
+                    (unsigned long)label->offset);
+
+                ip = ofs + entry_ip - dec_ofs;
+            }
+        }
 
         if (ip >= 0x10000UL) {
+            dec_ofs += 0x10000UL;
             dec_cs += 0x1000UL;
             entry_ip = 0;
             continue;
