@@ -500,6 +500,7 @@ int main(int argc,char **argv) {
     do {
         uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() - start_decom;
         uint32_t ip = ofs + entry_ip - dec_ofs;
+        unsigned char reloc_ann = 0;
         size_t inslen;
 
         if (labeli < dec_label_count) {
@@ -560,16 +561,40 @@ int main(int argc,char **argv) {
 			printf("   ");
 		printf("%-8s ",opcode_string[dec_i.opcode]);
 
-        if ((dec_i.opcode == MXOP_JMP_FAR || dec_i.opcode == MXOP_CALL_FAR) && dec_i.argc == 1 &&
-            dec_i.argv[0].segment == MX86_SEG_IMM && dec_i.argv[0].regtype == MX86_RT_IMM) {
+        if (exereli < exe_relocation_count) {
+            const uint32_t o = exe_relocation[exereli];
 
-            if (dec_i.argv[0].segval != 0)
-                printf("<reloc_base+0x%04x>",dec_i.argv[0].segval);
-            else
-                printf("<reloc_base>");
-            printf(":%04x",dec_i.argv[0].value);
+            if (o >= ofs && o < (ofs + inslen)) {
+                if ((dec_i.opcode == MXOP_JMP_FAR || dec_i.opcode == MXOP_CALL_FAR) && dec_i.argc == 1 &&
+                        dec_i.argv[0].segment == MX86_SEG_IMM && dec_i.argv[0].regtype == MX86_RT_IMM) {
+
+                    if (dec_i.argv[0].segval != 0)
+                        printf("<reloc_base+0x%04x>",dec_i.argv[0].segval);
+                    else
+                        printf("<reloc_base>");
+                    printf(":%04x",dec_i.argv[0].value);
+                    reloc_ann = 1;
+                }
+                if ((dec_i.opcode == MXOP_MOV) && dec_i.argc == 2 &&
+                        dec_i.argv[1].regtype == MX86_RT_IMM) {
+
+                    for (c=0;c < 1;) {
+                        minx86dec_regprint(&dec_i.argv[c],arg_c);
+                        printf("%s",arg_c);
+                        if (++c < dec_i.argc) printf(",");
+                    }
+
+                    if (dec_i.argv[1].value != 0)
+                        printf("<reloc_base+0x%04x>",dec_i.argv[1].value);
+                    else
+                        printf("<reloc_base>");
+
+                    reloc_ann = 1;
+                }
+            }
         }
-        else {
+
+        if (!reloc_ann) {
             for (c=0;c < dec_i.argc;) {
                 minx86dec_regprint(&dec_i.argv[c],arg_c);
                 printf("%s",arg_c);
