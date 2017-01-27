@@ -559,11 +559,23 @@ int main(int argc,char **argv) {
 		for (;c < 8;c++)
 			printf("   ");
 		printf("%-8s ",opcode_string[dec_i.opcode]);
-		for (c=0;c < dec_i.argc;) {
-			minx86dec_regprint(&dec_i.argv[c],arg_c);
-			printf("%s",arg_c);
-			if (++c < dec_i.argc) printf(",");
-		}
+
+        if ((dec_i.opcode == MXOP_JMP_FAR || dec_i.opcode == MXOP_CALL_FAR) && dec_i.argc == 1 &&
+            dec_i.argv[0].segment == MX86_SEG_IMM && dec_i.argv[0].regtype == MX86_RT_IMM) {
+
+            if (dec_i.argv[0].segval != 0)
+                printf("<reloc_base+0x%04x>",dec_i.argv[0].segval);
+            else
+                printf("<reloc_base>");
+            printf(":%04x",dec_i.argv[0].value);
+        }
+        else {
+            for (c=0;c < dec_i.argc;) {
+                minx86dec_regprint(&dec_i.argv[c],arg_c);
+                printf("%s",arg_c);
+                if (++c < dec_i.argc) printf(",");
+            }
+        }
 		if (dec_i.lock) printf("  ; LOCK#");
 		printf("\n");
 
