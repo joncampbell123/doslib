@@ -48,6 +48,8 @@ void dec_label_set_name(struct dec_label *l,const char *s) {
 struct dec_label*               dec_label = NULL;
 size_t                          dec_label_count = 0;
 size_t                          dec_label_alloc = 0;
+unsigned long                   dec_ofs;
+uint16_t                        dec_cs;
 
 uint8_t                         dec_buffer[256];
 uint8_t*                        dec_read;
@@ -57,6 +59,7 @@ struct minx86dec_state          dec_st;
 struct minx86dec_instruction    dec_i;
 minx86_read_ptr_t               iptr;
 uint16_t                        entry_cs,entry_ip;
+uint16_t                        start_cs,start_ip;
 uint32_t                        start_decom,end_decom,entry_ofs;
 uint32_t                        current_offset;
 
@@ -112,6 +115,11 @@ int parse_argv(int argc,char **argv) {
     return 0;
 }
 
+void reset_buffer() {
+    current_offset = 0;
+    dec_read = dec_end = dec_buffer;
+}
+
 int refill() {
     const size_t flush = sizeof(dec_buffer) / 2;
     const size_t padding = 16;
@@ -150,6 +158,24 @@ int refill() {
     return (dec_read < dec_end);
 }
 
+struct dec_label *dec_find_label(const uint32_t ofs) {
+    unsigned int i=0;
+
+    if (dec_label == NULL)
+        return NULL;
+
+    while (i < dec_label_count) {
+        struct dec_label *l = dec_label + i;
+
+        if (l->offset == ofs)
+            return l;
+
+        i++;
+    }
+
+    return NULL;
+}
+
 struct dec_label *dec_label_malloc() {
     if (dec_label == NULL)
         return NULL;
@@ -160,11 +186,28 @@ struct dec_label *dec_label_malloc() {
     return dec_label + (dec_label_count++);
 }
 
+int dec_label_qsortcb(const void *a,const void *b) {
+    const struct dec_label *as = (const struct dec_label*)a;
+    const struct dec_label *bs = (const struct dec_label*)b;
+
+    if (as->offset < bs->offset)
+        return -1;
+    else if (as->offset > bs->offset)
+        return 1;
+
+    return 0;
+}
+
+void dec_label_sort() {
+    if (dec_label == NULL || dec_label_count == 0)
+        return;
+
+    qsort(dec_label,dec_label_count,sizeof(*dec_label),dec_label_qsortcb);
+}
+
 int main(int argc,char **argv) {
     struct dec_label *label;
-    unsigned long dec_ofs;
     unsigned int labeli;
-    uint16_t dec_cs;
     int c;
 
     if (parse_argv(argc,argv))
@@ -238,6 +281,8 @@ int main(int argc,char **argv) {
         }
     }
 
+    start_cs = entry_cs;
+    start_ip = entry_ip;
     printf("Starting at %lu (0x%08lx), ending at %lu (0x%08lx)\n",
         (unsigned long)start_decom,
         (unsigned long)start_decom,
@@ -248,7 +293,115 @@ int main(int argc,char **argv) {
         (unsigned long)entry_ip,
         (unsigned long)entry_ofs);
 
+    /* first pass: CALL + JMP + Jcc ident and label building from it.
+     * for each label, decode until 1024 instructions or a JMP, RET */
+    {
+        unsigned int los = 0;
+        unsigned int inscount;
+
+        while (los < dec_label_count) {
+            label = dec_label + los;
+            entry_ip = label->ofs_v;
+            dec_ofs = label->offset;
+            dec_cs = label->seg_v;
+            inscount = 0;
+
+            reset_buffer();
+            current_offset = label->offset + start_decom;
+            minx86dec_init_state(&dec_st);
+            dec_read = dec_end = dec_buffer;
+            dec_st.data32 = dec_st.addr32 = 0;
+            if ((uint32_t)lseek(src_fd,current_offset,SEEK_SET) != current_offset)
+                return 1;
+
+            printf("* %u/%u 1st pass scan at CS:IP %04x:%04x offset 0x%lx\n",
+                los,(unsigned int)dec_label_count,
+                (unsigned int)dec_cs,(unsigned int)entry_ip,(unsigned long)dec_ofs);
+
+            do {
+                uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() - start_decom;
+                uint32_t ip = ofs + entry_ip - dec_ofs;
+
+                if (!refill()) break;
+
+                minx86dec_set_buffer(&dec_st,dec_read,(int)(dec_end - dec_read));
+                minx86dec_init_instruction(&dec_i);
+                dec_st.ip_value = ip;
+                minx86dec_decodeall(&dec_st,&dec_i);
+                assert(dec_i.end >= dec_read);
+                assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
+
+                printf("%04lX:%04lX @0x%08lX ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value,(unsigned long)(dec_read - dec_buffer) + current_offset_minus_buffer());
+                for (c=0,iptr=dec_i.start;iptr != dec_i.end;c++)
+                    printf("%02X ",*iptr++);
+                for (;c < 8;c++)
+                    printf("   ");
+                printf("%-8s ",opcode_string[dec_i.opcode]);
+                for (c=0;c < dec_i.argc;) {
+                    minx86dec_regprint(&dec_i.argv[c],arg_c);
+                    printf("%s",arg_c);
+                    if (++c < dec_i.argc) printf(",");
+                }
+                if (dec_i.lock) printf("  ; LOCK#");
+                printf("\n");
+
+                dec_read = dec_i.end;
+
+                if ((dec_i.opcode == MXOP_JMP || dec_i.opcode == MXOP_CALL || dec_i.opcode == MXOP_JCXZ ||
+                    (dec_i.opcode >= MXOP_JO && dec_i.opcode <= MXOP_JG)) && dec_i.argc >= 1) {
+                    /* make a label of the target */
+                    /* 1st arg is target offset */
+                    uint32_t toffset = dec_i.argv[0].value;
+                    uint32_t noffset = (((uint32_t)dec_cs << 4UL) + toffset) & 0xFFFFFUL;
+
+                    printf("Target: 0x%04lx @0x%08lx\n",(unsigned long)toffset,(unsigned long)noffset);
+
+                    label = dec_find_label(noffset);
+                    if (label == NULL) {
+                        if ((label=dec_label_malloc()) != NULL) {
+                            if (dec_i.opcode == MXOP_JMP || dec_i.opcode == MXOP_JCXZ ||
+                                (dec_i.opcode >= MXOP_JO && dec_i.opcode <= MXOP_JG))
+                                dec_label_set_name(label,"JMP target");
+                            else if (dec_i.opcode == MXOP_CALL)
+                                dec_label_set_name(label,"CALL target");
+
+                            label->offset =
+                                noffset;
+                            label->seg_v =
+                                dec_cs;
+                            label->ofs_v =
+                                toffset;
+                        }
+                    }
+
+                    if (dec_i.opcode == MXOP_JMP)
+                        break;
+                }
+                else if (dec_i.opcode == MXOP_RET || dec_i.opcode == MXOP_RETF)
+                    break;
+                else if (dec_i.opcode == MXOP_CALL_FAR || dec_i.opcode == MXOP_JMP_FAR)
+                    break;
+
+                if (++inscount >= 1024)
+                    break;
+            } while(1);
+
+            los++;
+        }
+    }
+
+    /* sort labels */
+    dec_label_sort();
+
+    /* second pass: decompilation */
+    entry_ofs = start_decom;
+    entry_cs = start_cs;
+    entry_ip = start_ip;
+    dec_ofs = 0;
+    dec_cs = start_cs;
+    printf("* 2nd pass decompiling now\n");
     labeli = 0;
+    reset_buffer();
     current_offset = start_decom;
 	minx86dec_init_state(&dec_st);
     dec_read = dec_end = dec_buffer;
@@ -261,12 +414,14 @@ int main(int argc,char **argv) {
         uint32_t ip = ofs + entry_ip - dec_ofs;
 
         if (labeli < dec_label_count) {
+            unsigned char dosek = 0;
+
             label = dec_label + labeli;
-            if (ofs >= label->offset) {
+            while (labeli < dec_label_count && ofs >= label->offset) {
                 labeli++;
                 entry_ip = label->ofs_v;
                 dec_cs = label->seg_v;
-                dec_ofs = ofs;
+                dec_ofs = label->offset;
 
                 printf("Label '%s' at %04lx:%04lx @0x%08lx\n",
                     label->name ? label->name : "",
@@ -274,7 +429,18 @@ int main(int argc,char **argv) {
                     (unsigned long)label->ofs_v,
                     (unsigned long)label->offset);
 
-                ip = ofs + entry_ip - dec_ofs;
+                label = dec_label + labeli;
+                dosek = 1;
+           }
+
+            if (dosek) {
+                ofs = dec_ofs;
+                ip = dec_ofs + entry_ip - dec_ofs;
+
+                reset_buffer();
+                current_offset = start_decom + dec_ofs;
+                if ((uint32_t)lseek(src_fd,current_offset,SEEK_SET) != current_offset)
+                    return 1;
             }
         }
 
