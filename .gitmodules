@@ -1,0 +1,3 @@
+[submodule "minx86dec"]
+	path = minx86dec
+	url = https://github.com/joncampbell123/minx86dec.git
