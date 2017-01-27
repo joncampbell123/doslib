@@ -154,10 +154,10 @@ int main(int argc,char **argv) {
         // COM
         start_decom = 0;
         end_decom = lseek(src_fd,0,SEEK_END);
-        entry_cs = 0xFFF0U;
+        entry_cs = 0x0000U;
         entry_ip = 0x0100U;
         entry_ofs = 0;
-        dec_cs = entry_cs;
+        dec_cs = 0;
 
         printf(".COM decompile\n");
     }
@@ -180,11 +180,19 @@ int main(int argc,char **argv) {
         return 1;
 
     do {
+        uint32_t ip = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() + entry_ip - start_decom - (dec_cs << 4UL);
+
+        if (ip >= 0x10000UL) {
+            dec_cs += 0x1000UL;
+            entry_ip = 0;
+            continue;
+        }
+
         if (!refill()) break;
 
         minx86dec_set_buffer(&dec_st,dec_read,(int)(dec_end - dec_read));
         minx86dec_init_instruction(&dec_i);
-		dec_st.ip_value = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() + entry_ip - start_decom;
+		dec_st.ip_value = ip;
 		minx86dec_decodeall(&dec_st,&dec_i);
         assert(dec_i.end >= dec_read);
         assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
