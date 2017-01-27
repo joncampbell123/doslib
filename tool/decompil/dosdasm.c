@@ -222,6 +222,7 @@ void dec_label_sort() {
 
 int main(int argc,char **argv) {
     struct dec_label *label;
+    unsigned int exereli;
     unsigned int labeli;
     int c;
 
@@ -295,6 +296,7 @@ int main(int argc,char **argv) {
                 else {
                     free(exe_relocation);
                     exe_relocation = NULL;
+                    exe_relocation_count = 0;
                 }
             }
         }
@@ -486,6 +488,7 @@ int main(int argc,char **argv) {
     dec_cs = start_cs;
     printf("* 2nd pass decompiling now\n");
     labeli = 0;
+    exereli = 0;
     reset_buffer();
     current_offset = start_decom;
 	minx86dec_init_state(&dec_st);
@@ -558,6 +561,27 @@ int main(int argc,char **argv) {
 		}
 		if (dec_i.lock) printf("  ; LOCK#");
 		printf("\n");
+
+        /* if any part of the instruction is affected by EXE relocations, say so */
+        {
+            size_t inslen = (size_t)(dec_i.end - dec_i.start);
+
+            while (exereli < exe_relocation_count) {
+                const uint32_t o = exe_relocation[exereli];
+
+                if (o >= (ofs + inslen)) break;
+
+                if ((o+(size_t)1) >= ofs) {
+                    printf("             ^ EXE relocation base (WORD) added at +%u bytes (%04x:%04x 0x%08lx)\n",
+                        (unsigned int)(o - ofs),
+                        (unsigned int)dec_cs,
+                        (unsigned int)dec_st.ip_value + (unsigned int)(o - ofs),
+                        (unsigned long)ofs);
+                }
+
+                exereli++;
+            }
+        }
 
         dec_read = dec_i.end;
     } while(1);
