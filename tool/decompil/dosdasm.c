@@ -63,6 +63,9 @@ uint16_t                        start_cs,start_ip;
 uint32_t                        start_decom,end_decom,entry_ofs;
 uint32_t                        current_offset;
 
+uint32_t*                       exe_relocation = NULL;
+size_t                          exe_relocation_count = 0;
+
 struct exe_dos_header           exehdr;
 
 char*                           src_file = NULL;
@@ -257,6 +260,30 @@ int main(int argc,char **argv) {
             label->ofs_v =
                 exehdr.init_instruction_pointer;
         }
+
+        // read the relocation table, if any
+        if (exehdr.number_of_relocations != 0 && exehdr.relocation_table_offset != 0) {
+            exe_relocation_count = exehdr.number_of_relocations;
+            exe_relocation = (uint32_t*)malloc(sizeof(uint32_t) * exe_relocation_count);
+            if (exe_relocation != NULL && lseek(src_fd,exehdr.relocation_table_offset,SEEK_SET) == exehdr.relocation_table_offset) {
+                if ((size_t)read(src_fd,exe_relocation,sizeof(uint32_t) * exe_relocation_count) == (sizeof(uint32_t) * exe_relocation_count)) {
+                    /* then convert seg:off to linear offset in-place */
+                    unsigned int i;
+
+                    for (i=0;i < exe_relocation_count;i++)
+                        exe_relocation[i] = ((exe_relocation[i] >> 16UL) << 4UL) + (exe_relocation[i] & 0xFFFFUL);
+
+                    printf("* EXE entry points at:\n    ");
+                    for (i=0;i < exe_relocation_count;i++)
+                        printf("0x%05lx ",(unsigned long)exe_relocation[i]);
+                    printf("\n");
+                }
+                else {
+                    free(exe_relocation);
+                    exe_relocation = NULL;
+                }
+            }
+        }
     }
     else {
         // COM
@@ -348,7 +375,8 @@ int main(int argc,char **argv) {
                 dec_read = dec_i.end;
 
                 if ((dec_i.opcode == MXOP_JMP || dec_i.opcode == MXOP_CALL || dec_i.opcode == MXOP_JCXZ ||
-                    (dec_i.opcode >= MXOP_JO && dec_i.opcode <= MXOP_JG)) && dec_i.argc >= 1) {
+                    (dec_i.opcode >= MXOP_JO && dec_i.opcode <= MXOP_JG)) && dec_i.argc == 1 &&
+                    dec_i.argv[0].regtype == MX86_RT_IMM) {
                     /* make a label of the target */
                     /* 1st arg is target offset */
                     uint32_t toffset = dec_i.argv[0].value;
@@ -379,8 +407,51 @@ int main(int argc,char **argv) {
                 }
                 else if (dec_i.opcode == MXOP_RET || dec_i.opcode == MXOP_RETF)
                     break;
-                else if (dec_i.opcode == MXOP_CALL_FAR || dec_i.opcode == MXOP_JMP_FAR)
-                    break;
+                else if (dec_i.opcode == MXOP_CALL_FAR || dec_i.opcode == MXOP_JMP_FAR) {
+                    size_t i,inslen;
+
+                    /* if it's affected by an EXE relocation entry (touches the segment part), then we *can* trace it. */
+                    if (exe_relocation) {
+                        inslen = (size_t)(dec_i.end - dec_i.start);
+                        if ((*dec_i.start == 0x9AU || *dec_i.start == 0xEAU) && dec_i.argc == 1 &&
+                            dec_i.argv[0].segment == MX86_SEG_IMM &&
+                            dec_i.argv[0].regtype == MX86_RT_IMM) {
+                            for (i=0;i < exe_relocation_count;i++) {
+                                /* must affect the segment portion */
+                                if ((exe_relocation[i] == (ofs + 1 + 2) && inslen == 5) ||
+                                    (exe_relocation[i] == (ofs + 1 + 4) && inslen == 7)) {
+                                    unsigned long noffset =
+                                        ((unsigned long)dec_i.argv[0].segval << 4UL) + dec_i.argv[0].value;
+                                    printf("Far jmp/call, adjusted by relocation, detected, to %04lx+reloc:%04lx\n",
+                                        (unsigned long)dec_i.argv[0].segval,
+                                        (unsigned long)dec_i.argv[0].value);
+
+                                    label = dec_find_label(noffset);
+                                    if (label == NULL) {
+                                        if ((label=dec_label_malloc()) != NULL) {
+                                            if (dec_i.opcode == MXOP_JMP_FAR)
+                                                dec_label_set_name(label,"JMP FAR target");
+                                            else if (dec_i.opcode == MXOP_CALL_FAR)
+                                                dec_label_set_name(label,"CALL FAR target");
+
+                                            label->offset =
+                                                noffset;
+                                            label->seg_v =
+                                                dec_i.argv[0].segval;
+                                            label->ofs_v =
+                                                dec_i.argv[0].value;
+                                        }
+                                    }
+
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (dec_i.opcode == MXOP_JMP_FAR)
+                        break;
+                }
 
                 if (++inscount >= 1024)
                     break;
