@@ -10,6 +10,8 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include <hw/dos/exehdr.h>
+
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
@@ -25,6 +27,8 @@ uint16_t                        entry_cs,entry_ip;
 uint32_t                        start_decom,end_decom,entry_ofs;
 uint32_t                        current_offset;
 
+struct exe_dos_header           exehdr;
+
 char*                           src_file = NULL;
 int                             src_fd = -1;
 
@@ -38,7 +42,7 @@ static void minx86dec_init_state(struct minx86dec_state *st) {
 
 static void minx86dec_set_buffer(struct minx86dec_state *st,uint8_t *buf,int sz) {
 	st->fence = buf + sz;
-	st->prefetch_fence = st->fence - 16;
+	st->prefetch_fence = dec_buffer + sizeof(dec_buffer) - 16;
 	st->read_ip = buf;
 }
 
@@ -80,8 +84,13 @@ int refill() {
     const size_t padding = 16;
     size_t dlen;
 
-    dlen = (size_t)(dec_end - dec_read);
+    if (dec_end > dec_read)
+        dlen = (size_t)(dec_end - dec_read);
+    else
+        dlen = 0;
+
     if (dec_read >= (dec_buffer+flush)) {
+        assert((dec_read+dlen) <= (dec_buffer+sizeof(dec_buffer)-padding));
         if (dlen != 0) memmove(dec_buffer,dec_read,dlen);
         dec_read = dec_buffer;
         dec_end = dec_buffer + dlen;
@@ -105,10 +114,11 @@ int refill() {
         }
     }
 
-    return (dec_read != dec_end);
+    return (dec_read < dec_end);
 }
 
 int main(int argc,char **argv) {
+    uint16_t dec_cs;
     int c;
 
     if (parse_argv(argc,argv))
@@ -120,8 +130,25 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    if (0) {
-        // TODO: If EXE file...
+    if (lseek(src_fd,0,SEEK_SET) == 0 && read(src_fd,&exehdr,sizeof(exehdr)) == (int)sizeof(exehdr) && exehdr.magic == 0x5A4DU/*MZ*/) {
+        unsigned long img_res_size = exe_dos_header_file_resident_size(&exehdr);
+        unsigned long hdr_size = exe_dos_header_file_header_size(&exehdr);
+        if (img_res_size >= hdr_size) img_res_size -= hdr_size;
+        else img_res_size = 0;
+        // EXE
+        start_decom = hdr_size;
+        end_decom = hdr_size + img_res_size;
+        entry_cs = 0;
+        entry_ip = 0;
+        entry_ofs = 0;
+        dec_cs = entry_cs;
+
+        printf(".EXE decompile, %lu (0x%lx) resident bytes\n",(unsigned long)img_res_size,(unsigned long)img_res_size);
+        printf("CS:IP entry point is %04lx:%04lx (linear 0x%08lx file 0x%08lx)\n",
+            (unsigned long)exehdr.init_code_segment,
+            (unsigned long)exehdr.init_instruction_pointer,
+            ((((unsigned long)exehdr.init_code_segment << 4UL) + (unsigned long)exehdr.init_instruction_pointer) & 0xFFFFFUL),
+            ((((unsigned long)exehdr.init_code_segment << 4UL) + (unsigned long)exehdr.init_instruction_pointer) & 0xFFFFFUL) + start_decom);
     }
     else {
         // COM
@@ -130,7 +157,20 @@ int main(int argc,char **argv) {
         entry_cs = 0xFFF0U;
         entry_ip = 0x0100U;
         entry_ofs = 0;
+        dec_cs = entry_cs;
+
+        printf(".COM decompile\n");
     }
+
+    printf("Starting at %lu (0x%08lx), ending at %lu (0x%08lx)\n",
+        (unsigned long)start_decom,
+        (unsigned long)start_decom,
+        (unsigned long)end_decom,
+        (unsigned long)end_decom);
+    printf("Starting decode CS:IP %04lX:%04lX offset 0x%lx\n",
+        (unsigned long)entry_cs,
+        (unsigned long)entry_ip,
+        (unsigned long)entry_ofs);
 
     current_offset = start_decom;
 	minx86dec_init_state(&dec_st);
@@ -144,12 +184,12 @@ int main(int argc,char **argv) {
 
         minx86dec_set_buffer(&dec_st,dec_read,(int)(dec_end - dec_read));
         minx86dec_init_instruction(&dec_i);
-		dec_st.ip_value = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() + entry_ip;
+		dec_st.ip_value = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() + entry_ip - start_decom;
 		minx86dec_decodeall(&dec_st,&dec_i);
         assert(dec_i.end >= dec_read);
         assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
 
-		printf("0x%04lX  ",(unsigned long)dec_st.ip_value);
+		printf("%04lX:%04lX @0x%08lX ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value,(unsigned long)(dec_read - dec_buffer) + current_offset_minus_buffer());
 		for (c=0,iptr=dec_i.start;iptr != dec_i.end;c++)
 			printf("%02X ",*iptr++);
 		for (;c < 8;c++)
