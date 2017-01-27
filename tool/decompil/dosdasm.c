@@ -189,6 +189,18 @@ struct dec_label *dec_label_malloc() {
     return dec_label + (dec_label_count++);
 }
 
+int exe_relocation_qsort_cb(const void *a,const void *b) {
+    const uint32_t *au = (const uint32_t*)a;
+    const uint32_t *bu = (const uint32_t*)b;
+
+    if (*au < *bu)
+        return -1;
+    else if (*au > *bu)
+        return 1;
+
+    return 0;
+}
+
 int dec_label_qsortcb(const void *a,const void *b) {
     const struct dec_label *as = (const struct dec_label*)a;
     const struct dec_label *bs = (const struct dec_label*)b;
@@ -272,6 +284,8 @@ int main(int argc,char **argv) {
 
                     for (i=0;i < exe_relocation_count;i++)
                         exe_relocation[i] = ((exe_relocation[i] >> 16UL) << 4UL) + (exe_relocation[i] & 0xFFFFUL);
+
+                    qsort(exe_relocation,exe_relocation_count,sizeof(uint32_t),exe_relocation_qsort_cb);
 
                     printf("* EXE entry points at:\n    ");
                     for (i=0;i < exe_relocation_count;i++)
