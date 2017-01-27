@@ -557,22 +557,27 @@ int main(int argc,char **argv) {
 		printf("%04lX:%04lX @0x%08lX ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value,(unsigned long)(dec_read - dec_buffer) + current_offset_minus_buffer());
 		for (c=0,iptr=dec_i.start;iptr != dec_i.end;c++)
 			printf("%02X ",*iptr++);
-		for (;c < 8;c++)
-			printf("   ");
 
-        switch (dec_i.rep) {
-            case MX86_REPE:
-                printf("REP ");
-                printf("%-4s ",opcode_string[dec_i.opcode]);
-                break;
-            case MX86_REPNE:
-                printf("REPNE ");
-                printf("%-2s ",opcode_string[dec_i.opcode]);
-                break;
-            default:
-                printf("%-8s ",opcode_string[dec_i.opcode]);
-                break;
-        };
+        if (dec_i.rep != MX86_REP_NONE) {
+            for (;c < 6;c++)
+                printf("   ");
+
+            switch (dec_i.rep) {
+                case MX86_REPE:
+                    printf("REP   ");
+                    break;
+                case MX86_REPNE:
+                    printf("REPNE ");
+                    break;
+                default:
+                    break;
+            };
+        }
+        else {
+            for (;c < 8;c++)
+                printf("   ");
+        }
+        printf("%-8s ",opcode_string[dec_i.opcode]);
 
         if (exereli < exe_relocation_count) {
             const uint32_t o = exe_relocation[exereli];
