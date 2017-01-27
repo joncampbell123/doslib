@@ -17,7 +17,6 @@ find -name tmp2.cmd -exec rm -fv {} +
 find -name cargs.cmd -exec rm -fv {} +
 ./buildall.sh clean
 find -type l -delete
-find -name Makefile -type f -delete
 find -name \*~ -delete
 find -name tmp.cmd -delete
 find -name tmp1.cmd -delete
