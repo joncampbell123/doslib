@@ -500,6 +500,7 @@ int main(int argc,char **argv) {
     do {
         uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() - start_decom;
         uint32_t ip = ofs + entry_ip - dec_ofs;
+        size_t inslen;
 
         if (labeli < dec_label_count) {
             unsigned char dosek = 0;
@@ -512,14 +513,14 @@ int main(int argc,char **argv) {
                 dec_ofs = label->offset;
 
                 printf("Label '%s' at %04lx:%04lx @0x%08lx\n",
-                    label->name ? label->name : "",
-                    (unsigned long)label->seg_v,
-                    (unsigned long)label->ofs_v,
-                    (unsigned long)label->offset);
+                        label->name ? label->name : "",
+                        (unsigned long)label->seg_v,
+                        (unsigned long)label->ofs_v,
+                        (unsigned long)label->offset);
 
                 label = dec_label + labeli;
                 dosek = 1;
-           }
+            }
 
             if (dosek) {
                 ofs = dec_ofs;
@@ -547,6 +548,10 @@ int main(int argc,char **argv) {
 		minx86dec_decodeall(&dec_st,&dec_i);
         assert(dec_i.end >= dec_read);
         assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
+        inslen = (size_t)(dec_i.end - dec_i.start);
+
+        while (exereli < exe_relocation_count && exe_relocation[exereli] < ofs)
+            exereli++;
 
 		printf("%04lX:%04lX @0x%08lX ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value,(unsigned long)(dec_read - dec_buffer) + current_offset_minus_buffer());
 		for (c=0,iptr=dec_i.start;iptr != dec_i.end;c++)
@@ -563,23 +568,15 @@ int main(int argc,char **argv) {
 		printf("\n");
 
         /* if any part of the instruction is affected by EXE relocations, say so */
-        {
-            size_t inslen = (size_t)(dec_i.end - dec_i.start);
+        if (exereli < exe_relocation_count) {
+            const uint32_t o = exe_relocation[exereli];
 
-            while (exereli < exe_relocation_count) {
-                const uint32_t o = exe_relocation[exereli];
-
-                if (o >= (ofs + inslen)) break;
-
-                if ((o+(size_t)1) >= ofs) {
-                    printf("             ^ EXE relocation base (WORD) added at +%u bytes (%04x:%04x 0x%08lx)\n",
+            if (o >= ofs && o < (ofs + inslen)) {
+                printf("             ^ EXE relocation base (WORD) added at +%u bytes (%04x:%04x 0x%08lx)\n",
                         (unsigned int)(o - ofs),
                         (unsigned int)dec_cs,
                         (unsigned int)dec_st.ip_value + (unsigned int)(o - ofs),
                         (unsigned long)ofs);
-                }
-
-                exereli++;
             }
         }
 
