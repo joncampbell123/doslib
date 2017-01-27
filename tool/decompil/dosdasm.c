@@ -559,7 +559,20 @@ int main(int argc,char **argv) {
 			printf("%02X ",*iptr++);
 		for (;c < 8;c++)
 			printf("   ");
-		printf("%-8s ",opcode_string[dec_i.opcode]);
+
+        switch (dec_i.rep) {
+            case MX86_REPE:
+                printf("REP ");
+                printf("%-4s ",opcode_string[dec_i.opcode]);
+                break;
+            case MX86_REPNE:
+                printf("REPNE ");
+                printf("%-2s ",opcode_string[dec_i.opcode]);
+                break;
+            default:
+                printf("%-8s ",opcode_string[dec_i.opcode]);
+                break;
+        };
 
         if (exereli < exe_relocation_count) {
             const uint32_t o = exe_relocation[exereli];
