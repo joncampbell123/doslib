@@ -7,6 +7,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
@@ -387,6 +388,55 @@ int main(int argc,char **argv) {
         (unsigned long)entry_cs,
         (unsigned long)entry_ip,
         (unsigned long)entry_ofs);
+
+    if (label_file != NULL) {
+        FILE *fp = fopen(label_file,"r");
+        if (fp == NULL) {
+            fprintf(stderr,"Failed to open label file, %s\n",label_file);
+            return 1;
+        }
+
+        while (!feof(fp) && !ferror(fp)) {
+            char *s;
+
+            memset(dec_buffer,0,sizeof(dec_buffer));
+            if (fgets((char*)dec_buffer,sizeof(dec_buffer)-1,fp) == NULL)
+                break;
+
+            s = (char*)dec_buffer;
+            {
+                char *e = s + strlen(s) - 1;
+                while (e > (char*)dec_buffer && (*e == '\r' || *e == '\n')) *e-- = 0;
+            }
+
+            while (*s == ' ') s++;
+            if (*s == ';' || *s == '#') continue;
+
+            // seg:off label
+            if (isxdigit(*s)) {
+                uint16_t so,oo;
+
+                so = (uint16_t)strtoul(s,&s,16);
+                if (*s == ':') {
+                    s++;
+                    oo = (uint16_t)strtoul(s,&s,16);
+                    while (*s == '\t' || *s == ' ') s++;
+
+                    if ((label=dec_label_malloc()) != NULL) {
+                        dec_label_set_name(label,s);
+                        label->offset =
+                            (((unsigned long)so << 4UL) + (unsigned long)oo) & 0xFFFFFUL;
+                        label->seg_v =
+                            so;
+                        label->ofs_v =
+                            oo;
+                    }
+                }
+            }
+        }
+
+        fclose(fp);
+    }
 
     /* first pass: CALL + JMP + Jcc ident and label building from it.
      * for each label, decode until 1024 instructions or a JMP, RET */
