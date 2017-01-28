@@ -54,18 +54,21 @@ CR3_EXE =     $(SUBDIR)$(HPS)cr3.$(EXEEXT)
 EXEHDMP_EXE = $(SUBDIR)$(HPS)exehdmp.$(EXEEXT)
 EXENEDMP_EXE = $(SUBDIR)$(HPS)exenedmp.$(EXEEXT)
 EXENERDM_EXE = $(SUBDIR)$(HPS)exenerdm.$(EXEEXT)
+EXENEEXP_EXE = $(SUBDIR)$(HPS)exeneexp.$(EXEEXT)
 !endif
 !ifdef TARGET_WINDOWS
 ! ifeq TARGET_WINDOWS 40
 EXEHDMP_EXE = $(SUBDIR)$(HPS)exehdmp.$(EXEEXT)
 EXENEDMP_EXE = $(SUBDIR)$(HPS)exenedmp.$(EXEEXT)
 EXENERDM_EXE = $(SUBDIR)$(HPS)exenerdm.$(EXEEXT)
+EXENEEXP_EXE = $(SUBDIR)$(HPS)exeneexp.$(EXEEXT)
 ! endif
 !else
 ! ifndef TARGET_OS2
 EXEHDMP_EXE = $(SUBDIR)$(HPS)exehdmp.$(EXEEXT)
 EXENEDMP_EXE = $(SUBDIR)$(HPS)exenedmp.$(EXEEXT)
 EXENERDM_EXE = $(SUBDIR)$(HPS)exenerdm.$(EXEEXT)
+EXENEEXP_EXE = $(SUBDIR)$(HPS)exeneexp.$(EXEEXT)
 ! endif
 !endif
 
@@ -153,7 +156,7 @@ $(SUBDIR)$(HPS)dosntast.obj: dosntast.c
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENERDM_EXE) .symbolic
+exe: $(TESTSMRT_EXE) $(NTASTRM_EXE) $(TEST_EXE) $(CR3_EXE) $(TESTBEXT_EXE) $(TSTHIMEM_EXE) $(TESTEMM_EXE) $(TSTBIOM_EXE) $(LOL_EXE) $(TSTLP_EXE) $(TESTDPMI_EXE) $(CLSGEXM1_DLM) $(CLSGEXT1_EXE) $(EXEHDMP_EXE) $(EXENEDMP_EXE) $(EXENEEXP_EXE) $(EXENERDM_EXE) .symbolic
 
 lib: $(DOSNTAST_VDD) $(HW_DOS_LIB) .symbolic
 
@@ -282,6 +285,27 @@ $(EXENEDMP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exenedm
 ! endif
 ! ifdef WIN_NE_SETVER_BUILD
 	$(WIN_NE_SETVER_BUILD) $(EXENEDMP_EXE)
+! endif
+!endif
+
+!ifdef EXENEEXP_EXE
+$(EXENEEXP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exeneexp.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) file $(SUBDIR)$(HPS)exeneexp.obj $(HW_DOS_LIB_WLINK_LIBRARIES) name $(EXENEEXP_EXE)
+	%write tmp.cmd option map=$(EXENEEXP_EXE).map
+! ifdef TARGET_WINDOWS
+!  ifeq TARGET_MSDOS 16
+	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+!  endif
+! endif
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+! ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(EXENEEXP_EXE)
+	@wbind $(EXENEEXP_EXE) -q -n
+! endif
+! ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(EXENEEXP_EXE)
 ! endif
 !endif
 
