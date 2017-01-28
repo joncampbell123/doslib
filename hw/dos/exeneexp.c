@@ -81,7 +81,7 @@ void print_entry_table_locate_name_by_ordinal(const struct exe_ne_header_name_en
         }
     }
 
-    printf("\n    ORDINAL.%u.TYPE=?",ordinal);
+    printf("\n    ORDINAL.%u.TYPE=",ordinal);
 }
 
 void print_entry_table(const struct exe_ne_header_entry_table_table * const t,const struct exe_ne_header_name_entry_table * const nonresnames,const struct exe_ne_header_name_entry_table *resnames) {
@@ -109,7 +109,20 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t,co
                 struct exe_ne_header_entry_table_fixed_segment_entry *fent =
                     (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
 
+                if (!(fent->flags & 1)) printf(" private");
                 printf(" constant=0x%04x",fent->v.seg_offs);
+            }
+            else if (ent->segment_id == 0xFF) {
+                struct exe_ne_header_entry_table_movable_segment_entry *ment =
+                    (struct exe_ne_header_entry_table_movable_segment_entry*)rawd;
+
+                if (!(ment->flags & 1)) printf(" private");
+            }
+            else {
+                struct exe_ne_header_entry_table_fixed_segment_entry *fent =
+                    (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
+
+                if (!(fent->flags & 1)) printf(" private");
             }
             printf("\n");
         }
@@ -1535,6 +1548,29 @@ int main(int argc,char **argv) {
             if (ordinal == 0)
                 printf("    DESCRIPTION=%s\n",tmp);
         }
+    }
+
+    /* file it came from */
+    {
+#if defined(TARGET_MSDOS) || defined(TARGET_WINDOWS)
+        char *fname = strrchr(src_file,'\\');
+#else
+        char *fname = strrchr(src_file,'/');
+#endif
+
+        if (fname != NULL)
+            fname++;
+        else
+            fname = src_file;
+
+        printf("    FILE.NAME=%s\n",fname);
+    }
+
+    /* file size */
+    {
+        unsigned long sz = lseek(src_fd,0,SEEK_END);
+
+        printf("    FILE.SIZE=%lu\n",sz);
     }
 
     /* exports */
