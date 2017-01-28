@@ -2,8 +2,9 @@
 EXEHDMP = linux-host/exehdmp
 EXENEDMP = linux-host/exenedmp
 EXENERDM = linux-host/exenerdm
+EXENEEXP = linux-host/exeneexp
 
-BIN_OUT = $(EXEHDMP) $(EXENEDMP) $(EXENERDM)
+BIN_OUT = $(EXEHDMP) $(EXENEDMP) $(EXENERDM) $(EXENEEXP)
 DOSLIB = linux-host/dos.a
 
 LIB_OUT = $(DOSLIB)
@@ -31,6 +32,9 @@ $(EXENEDMP): linux-host/exenedmp.o $(DOSLIB)
 	gcc -o $@ $^
 
 $(EXENERDM): linux-host/exenerdm.o $(DOSLIB)
+	gcc -o $@ $^
+
+$(EXENEEXP): linux-host/exeneexp.o $(DOSLIB)
 	gcc -o $@ $^
 
 linux-host/%.o : %.c
