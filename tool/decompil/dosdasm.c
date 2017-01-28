@@ -68,6 +68,8 @@ size_t                          exe_relocation_count = 0;
 
 struct exe_dos_header           exehdr;
 
+char*                           label_file = NULL;
+
 char*                           src_file = NULL;
 int                             src_fd = -1;
 
@@ -85,6 +87,13 @@ static void minx86dec_set_buffer(struct minx86dec_state *st,uint8_t *buf,int sz)
 	st->read_ip = buf;
 }
 
+void help() {
+    fprintf(stderr,"dosdasm [options]\n");
+    fprintf(stderr,"MS-DOS COM/EXE/SYS decompiler\n");
+    fprintf(stderr,"    -i <file>        File to decompile\n");
+    fprintf(stderr,"    -lf <file>       Text file to define labels\n");
+}
+
 int parse_argv(int argc,char **argv) {
     char *a;
     int i=1;
@@ -98,6 +107,14 @@ int parse_argv(int argc,char **argv) {
             if (!strcmp(a,"i")) {
                 src_file = argv[i++];
                 if (src_file == NULL) return 1;
+            }
+            else if (!strcmp(a,"lf")) {
+                label_file = argv[i++];
+                if (label_file == NULL) return 1;
+            }
+            else if (!strcmp(a,"h") || !strcmp(a,"help")) {
+                help();
+                return 1;
             }
             else {
                 fprintf(stderr,"Unknown switch %s\n",a);
@@ -305,22 +322,57 @@ int main(int argc,char **argv) {
         // COM
         start_decom = 0;
         end_decom = lseek(src_fd,0,SEEK_END);
-        entry_cs = 0xFFF0U;
-        entry_ip = 0x0100U;
-        dec_cs = 0xFFF0U;
-        entry_ofs = 0;
-        dec_ofs = 0;
 
-        printf(".COM decompile\n");
+        // or... maybe a device driver?
+        lseek(src_fd,0,SEEK_SET);
+        read(src_fd,dec_buffer,sizeof(dec_buffer));
+        if (!memcmp(dec_buffer,"\xFF\xFF\xFF\xFF",4)) {
+            printf(".SYS decompile\n");
 
-        if ((label=dec_label_malloc()) != NULL) {
-            dec_label_set_name(label,"Entry point .COM");
-            label->offset =
-                0;
-            label->seg_v =
-                entry_cs;
-            label->ofs_v =
-                entry_ip;
+            entry_cs = 0x0000U;
+            entry_ip = 0x0000U;
+            dec_cs = 0x0000U;
+            entry_ofs = 0;
+            dec_ofs = 0;
+
+            /* word +6 and +8 contain entry points */
+            if ((label=dec_label_malloc()) != NULL) {
+                dec_label_set_name(label,"Entry point .SYS, strategy routine");
+                label->offset =
+                    *((uint16_t*)(dec_buffer+0x006));
+                label->seg_v =
+                    entry_cs;
+                label->ofs_v =
+                    *((uint16_t*)(dec_buffer+0x006));
+            }
+            if ((label=dec_label_malloc()) != NULL) {
+                dec_label_set_name(label,"Entry point .SYS, interrupt routine");
+                label->offset =
+                    *((uint16_t*)(dec_buffer+0x008));
+                label->seg_v =
+                    entry_cs;
+                label->ofs_v =
+                    *((uint16_t*)(dec_buffer+0x008));
+            }
+        }
+        else {
+            printf(".COM decompile\n");
+
+            entry_cs = 0xFFF0U;
+            entry_ip = 0x0100U;
+            dec_cs = 0xFFF0U;
+            entry_ofs = 0;
+            dec_ofs = 0;
+
+            if ((label=dec_label_malloc()) != NULL) {
+                dec_label_set_name(label,"Entry point .COM");
+                label->offset =
+                    0;
+                label->seg_v =
+                    entry_cs;
+                label->ofs_v =
+                    entry_ip;
+            }
         }
     }
 
