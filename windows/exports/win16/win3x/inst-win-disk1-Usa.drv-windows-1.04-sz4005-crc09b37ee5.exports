@@ -1,0 +1,16 @@
+MODULE KEYBOARD
+    DESCRIPTION=KEYBOARD United States, Mexico:1!0!0!2!0!0!AM!PM!$!,!.!/!:!,!!52!1!0!2!0!0!AM!PM!$!,!.!/!:!,
+    FILE.NAME=Usa.drv
+    FILE.SIZE=4005
+    ORDINAL.1.NAME=INQUIRE
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ENABLE
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=DISABLE
+    ORDINAL.3.TYPE=nonresident
+    ORDINAL.4.NAME=TOASCII
+    ORDINAL.4.TYPE=nonresident
+    ORDINAL.5.NAME=ANSITOOEM
+    ORDINAL.5.TYPE=nonresident
+    ORDINAL.6.NAME=OEMTOANSI
+    ORDINAL.6.TYPE=nonresident

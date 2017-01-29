@@ -1,0 +1,9 @@
+MODULE CLOCK
+    DESCRIPTION=Microsoft Windows Clock Application
+    FILE.NAME=Clock.exe
+    FILE.SIZE=7984
+    ORDINAL.1.NAME=ABOUT
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=CLOCKWNDPROC
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.TYPE=empty

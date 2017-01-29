@@ -1,0 +1,8 @@
+MODULE SPOOLER
+    DESCRIPTION=Microsoft Windows Printer Spooler
+    FILE.NAME=Spooler.exe
+    FILE.SIZE=13360
+    ORDINAL.1.NAME=SPOOLERWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident

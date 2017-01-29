@@ -1,0 +1,10 @@
+MODULE MOUSE
+    DESCRIPTION=the Lite-Pen Company - Lightpen
+    FILE.NAME=Lpc.drv
+    FILE.SIZE=2438
+    ORDINAL.1.NAME=INQUIRE
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ENABLE
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=DISABLE
+    ORDINAL.3.TYPE=nonresident

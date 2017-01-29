@@ -1,0 +1,10 @@
+MODULE MOUSE
+    DESCRIPTION=Mouse Systems or VisiOn Mouse (COM2)
+    FILE.NAME=Msmouse2.drv
+    FILE.SIZE=1966
+    ORDINAL.1.NAME=INQUIRE
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ENABLE
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=DISABLE
+    ORDINAL.3.TYPE=nonresident

@@ -1,0 +1,10 @@
+MODULE SBFM
+    DESCRIPTION=midi:Creative Stereo Music Synthesizer Driver 
+    FILE.NAME=SB16FM.DRV
+    FILE.SIZE=4048
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=DRIVERPROC
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=MODMESSAGE
+    ORDINAL.3.TYPE=resident

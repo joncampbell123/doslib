@@ -1,0 +1,6 @@
+MODULE PLAYER
+    DESCRIPTION=(c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
+    FILE.NAME=PLAYER.EXE
+    FILE.SIZE=74496
+    ORDINAL.1.NAME=___EXPORTEDSTUB
+    ORDINAL.1.TYPE=resident

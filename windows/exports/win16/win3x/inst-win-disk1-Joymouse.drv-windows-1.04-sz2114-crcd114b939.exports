@@ -1,0 +1,10 @@
+MODULE MOUSE
+    DESCRIPTION=Kraft Joystick Mouse
+    FILE.NAME=Joymouse.drv
+    FILE.SIZE=2114
+    ORDINAL.1.NAME=INQUIRE
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ENABLE
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=DISABLE
+    ORDINAL.3.TYPE=nonresident
