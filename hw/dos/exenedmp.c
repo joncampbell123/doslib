@@ -767,7 +767,7 @@ void dump_ne_res_RT_STRING(const unsigned char *data,const size_t len,const unsi
             char *s = tmp,*f = tmp + length,*n;
             unsigned int lines = 0;
 
-            while (s < f) {
+            while (s < f && (*s != 0 && s == tmp)) {
                 /* scan for newline.
                  * can be CR LF (Windows 3.1 and higher) or just LF (Windows 3.0) */
                 n = s;
