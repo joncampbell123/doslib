@@ -1,0 +1,8 @@
+MODULE _SETUP
+    DESCRIPTION=InstallSHIELD Resource DLL (c) Stirling Technologies Inc., 1990-1995
+    FILE.NAME=_SETUP.DLL
+    FILE.SIZE=5984
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=___EXPORTEDSTUB
+    ORDINAL.2.TYPE=resident

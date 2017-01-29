@@ -95,7 +95,7 @@ while (my $path = <SCAN>) {
                 $line =~ s/\"$//;
                 $ProductName = $line;
                 $ProductName =~ s/\(TM\)//g;
-                $ProductName =~ s/[\x00-\x1F\x7F-\xFF\$\!\\\{\}\(\)]+//g;
+                $ProductName =~ s/[\x00-\x1F\x7F-\xFF\$\!\\\{\}\(\)\/]+//g;
             }
         }
         elsif ($line =~ m/^Block: *'ProductVersion'/) {
@@ -108,7 +108,7 @@ while (my $path = <SCAN>) {
                 $line =~ s/\"$//;
                 $ProductVersion = $line;
                 $ProductVersion =~ s/\(TM\)//g;
-                $ProductVersion =~ s/[\x00-\x1F\x7F-\xFF\$\!\\\{\}\(\)]+//g;
+                $ProductVersion =~ s/[\x00-\x1F\x7F-\xFF\$\!\\\{\}\(\)\/]+//g;
             }
         }
     }
@@ -120,7 +120,7 @@ while (my $path = <SCAN>) {
     }
 
     my $autosuf = '';
-    my $crc32 = `crc32 $fullpath`; chomp $crc32;
+    my $crc32 = `crc32 \"$fullpath\"`; chomp $crc32;
 
     $autosuf .= "-$version" if $version ne '';
 
@@ -149,7 +149,7 @@ while (my $path = <SCAN>) {
     print "  Exporting to new/$fname\n";
 
     $x = system("../../../hw/dos/linux-host/exeneexp -i \"$fullpath\" >\"new/$fname\"");
-    die unless $x == 0;
+    die "Error ".sprintf("0x%x",$x) unless $x == 0;
 }
 
 close(SCAN);

@@ -1,0 +1,10 @@
+MODULE VBOA300
+    DESCRIPTION=Microsoft Visual Basic Version 3.00 OLE 2 Stub , Copyright (c) 1992-1993 Microsoft Corp.
+    FILE.NAME=VBOA300.DLL
+    FILE.SIZE=13824
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=OLESTUBINIT
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=___EXPORTEDSTUB
+    ORDINAL.3.TYPE=resident
