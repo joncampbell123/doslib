@@ -126,6 +126,9 @@ while (my ($module,$modlistr) = each(%modules)) {
             next if (!(exists $modinfo{'ordinals'}));
             my @ordinals = @{$modinfo{'ordinals'}};
 
+            # this is an opportunity to note when ordinals stop
+            print "\n    ; ------ At this point, no more ordinals in ".$modinfo{'filepath'}."\n" if ((scalar @ordinals) == $i);
+
             my $ordref = $ordinals[$i];
             if (defined($ordref)) {
                 my %ordent = %{$ordref};
