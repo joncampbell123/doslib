@@ -2106,7 +2106,6 @@ MODULE GDI
     ; Ordinal #434 in ./gdi/gdi.windows.3.0me.exports
     ; Ordinal #434 in ./gdi/gdi.windows.3.0.exports
     ; Ordinal #434 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.434.TYPE=empty
     ; Ordinal #434 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.434.TYPE=empty
 
@@ -2116,7 +2115,6 @@ MODULE GDI
     ; Ordinal #435 in ./gdi/gdi.windows.3.0me.exports
     ; Ordinal #435 in ./gdi/gdi.windows.3.0.exports
     ; Ordinal #435 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.435.TYPE=empty
     ; Ordinal #435 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.435.TYPE=empty
 
@@ -2126,7 +2124,6 @@ MODULE GDI
     ; Ordinal #436 in ./gdi/gdi.windows.3.0me.exports
     ; Ordinal #436 in ./gdi/gdi.windows.3.0.exports
     ; Ordinal #436 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.436.TYPE=empty
     ; Ordinal #436 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.436.TYPE=empty
 
@@ -2136,7 +2133,6 @@ MODULE GDI
     ; Ordinal #437 in ./gdi/gdi.windows.3.0me.exports
     ; Ordinal #437 in ./gdi/gdi.windows.3.0.exports
     ; Ordinal #437 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.437.TYPE=empty
     ; Ordinal #437 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.437.TYPE=empty
 
@@ -2146,7 +2142,6 @@ MODULE GDI
     ; Ordinal #438 in ./gdi/gdi.windows.3.0me.exports
     ; Ordinal #438 in ./gdi/gdi.windows.3.0.exports
     ; Ordinal #438 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.438.TYPE=empty
     ; Ordinal #438 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.438.TYPE=empty
 
@@ -2219,7 +2214,6 @@ MODULE GDI
     ; Ordinal #446 in ./gdi/gdi.windows.3.0me.exports
     ; Ordinal #446 in ./gdi/gdi.windows.3.0.exports
     ; Ordinal #446 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.446.TYPE=empty
     ; Ordinal #446 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.446.TYPE=empty
 
@@ -2229,7 +2223,6 @@ MODULE GDI
     ; Ordinal #447 in ./gdi/gdi.windows.3.0me.exports
     ; Ordinal #447 in ./gdi/gdi.windows.3.0.exports
     ; Ordinal #447 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.447.TYPE=empty
     ; Ordinal #447 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.447.TYPE=empty
 
@@ -2239,7 +2232,6 @@ MODULE GDI
     ; Ordinal #448 in ./gdi/gdi.windows.3.0me.exports
     ; Ordinal #448 in ./gdi/gdi.windows.3.0.exports
     ; Ordinal #448 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.448.TYPE=empty
     ; Ordinal #448 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.448.TYPE=empty
 
@@ -2285,7 +2277,6 @@ MODULE GDI
     ORDINAL.453.NAME=
     ; Ordinal #453 in ./gdi/gdi.windows.95.4.00.95.exports
     ; Ordinal #453 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.453.TYPE=empty
     ; Ordinal #453 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.453.TYPE=empty
 
@@ -2295,7 +2286,6 @@ MODULE GDI
     ORDINAL.454.NAME=
     ; Ordinal #454 in ./gdi/gdi.windows.95.4.00.95.exports
     ; Ordinal #454 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.454.TYPE=empty
     ; Ordinal #454 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.454.TYPE=empty
 
@@ -2305,7 +2295,6 @@ MODULE GDI
     ORDINAL.455.NAME=
     ; Ordinal #455 in ./gdi/gdi.windows.95.4.00.95.exports
     ; Ordinal #455 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.455.TYPE=empty
     ; Ordinal #455 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.455.TYPE=empty
 
@@ -2315,7 +2304,6 @@ MODULE GDI
     ORDINAL.456.NAME=
     ; Ordinal #456 in ./gdi/gdi.windows.95.4.00.95.exports
     ; Ordinal #456 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.456.TYPE=empty
     ; Ordinal #456 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.456.TYPE=empty
 
@@ -2325,7 +2313,6 @@ MODULE GDI
     ORDINAL.457.NAME=
     ; Ordinal #457 in ./gdi/gdi.windows.95.4.00.95.exports
     ; Ordinal #457 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.457.TYPE=empty
     ; Ordinal #457 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.457.TYPE=empty
 
@@ -2335,7 +2322,6 @@ MODULE GDI
     ORDINAL.458.NAME=
     ; Ordinal #458 in ./gdi/gdi.windows.95.4.00.95.exports
     ; Ordinal #458 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.458.TYPE=empty
     ; Ordinal #458 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.458.TYPE=empty
 
@@ -2345,7 +2331,6 @@ MODULE GDI
     ORDINAL.459.NAME=
     ; Ordinal #459 in ./gdi/gdi.windows.95.4.00.95.exports
     ; Ordinal #459 in ./gdi/gdi.windows.3.1.exports
-    ORDINAL.459.TYPE=empty
     ; Ordinal #459 in ./gdi/gdi.windows.3.11.exports
     ORDINAL.459.TYPE=empty
 
@@ -9977,7 +9962,6 @@ MODULE KERNEL
     ; Ordinal #142 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.142.NAME=GETPROFILESECTIONNAMES
     ; Ordinal #142 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.142.TYPE=empty
     ; Ordinal #142 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #142 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #142 in ./kernel/kernel.windows.3.0me.386.exports
@@ -9993,7 +9977,6 @@ MODULE KERNEL
     ; Ordinal #143 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.143.NAME=GETPRIVATEPROFILESECTIONNAMES
     ; Ordinal #143 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.143.TYPE=empty
     ; Ordinal #143 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #143 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #143 in ./kernel/kernel.windows.3.0me.386.exports
@@ -10009,7 +9992,6 @@ MODULE KERNEL
     ; Ordinal #144 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.144.NAME=CREATEDIRECTORY
     ; Ordinal #144 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.144.TYPE=empty
     ; Ordinal #144 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #144 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #144 in ./kernel/kernel.windows.3.0me.386.exports
@@ -10025,7 +10007,6 @@ MODULE KERNEL
     ; Ordinal #145 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.145.NAME=REMOVEDIRECTORY
     ; Ordinal #145 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.145.TYPE=empty
     ; Ordinal #145 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #145 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #145 in ./kernel/kernel.windows.3.0me.386.exports
@@ -10041,7 +10022,6 @@ MODULE KERNEL
     ; Ordinal #146 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.146.NAME=DELETEFILE
     ; Ordinal #146 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.146.TYPE=empty
     ; Ordinal #146 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #146 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #146 in ./kernel/kernel.windows.3.0me.386.exports
@@ -10057,7 +10037,6 @@ MODULE KERNEL
     ; Ordinal #147 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.147.NAME=SETLASTERROR
     ; Ordinal #147 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.147.TYPE=empty
     ; Ordinal #147 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #147 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #147 in ./kernel/kernel.windows.3.0me.386.exports
@@ -10073,7 +10052,6 @@ MODULE KERNEL
     ; Ordinal #148 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.148.NAME=GETLASTERROR
     ; Ordinal #148 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.148.TYPE=empty
     ; Ordinal #148 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #148 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #148 in ./kernel/kernel.windows.3.0me.386.exports
@@ -10089,7 +10067,6 @@ MODULE KERNEL
     ; Ordinal #149 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.149.NAME=GETVERSIONEX
     ; Ordinal #149 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.149.TYPE=empty
     ; Ordinal #149 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #149 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #149 in ./kernel/kernel.windows.3.0me.386.exports
@@ -10146,7 +10123,6 @@ MODULE KERNEL
     ORDINAL.152.NAME=GETNUMTASKS
 
     ; Ordinal #153 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.153.TYPE=empty
     ; Ordinal #153 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #153 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #153 in ./kernel/kernel.windows.3.1.286.exports
@@ -10986,7 +10962,6 @@ MODULE KERNEL
     ; Ordinal #208 in ./kernel/kernel.windows.3.0me.8086.exports
     ORDINAL.208.NAME=
     ; Ordinal #208 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.208.TYPE=empty
     ; Ordinal #208 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #208 in ./kernel/kernel.windows.3.11.286.exports
     ; Ordinal #208 in ./kernel/kernel.windows.3.11.386.exports
@@ -11003,7 +10978,6 @@ MODULE KERNEL
     ; Ordinal #209 in ./kernel/kernel.windows.3.0me.8086.exports
     ORDINAL.209.NAME=
     ; Ordinal #209 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.209.TYPE=empty
     ; Ordinal #209 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #209 in ./kernel/kernel.windows.3.11.286.exports
     ; Ordinal #209 in ./kernel/kernel.windows.3.11.386.exports
@@ -11021,10 +10995,8 @@ MODULE KERNEL
     ; Ordinal #210 in ./kernel/kernel.windows.3.0me.8086.exports
     ORDINAL.210.NAME=
     ; Ordinal #210 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.210.TYPE=empty
     ; Ordinal #210 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #210 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.210.TYPE=empty
     ; Ordinal #210 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.210.TYPE=empty
 
@@ -11042,11 +11014,8 @@ MODULE KERNEL
     ; Ordinal #211 in ./kernel/kernel.windows.3.0me.8086.exports
     ORDINAL.211.NAME=
     ; Ordinal #211 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.211.TYPE=empty
     ; Ordinal #211 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.211.TYPE=empty
     ; Ordinal #211 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.211.TYPE=empty
     ; Ordinal #211 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.211.TYPE=empty
 
@@ -11055,1007 +11024,713 @@ MODULE KERNEL
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.3.0me.8086.exports
 
     ; Ordinal #212 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.212.TYPE=empty
     ; Ordinal #212 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #212 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.212.TYPE=empty
     ; Ordinal #212 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.212.TYPE=empty
     ; Ordinal #212 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.212.TYPE=empty
 
     ; Ordinal #213 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.213.NAME=K213
     ; Ordinal #213 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.213.TYPE=empty
     ; Ordinal #213 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.213.TYPE=empty
     ; Ordinal #213 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.213.TYPE=empty
     ; Ordinal #213 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.213.TYPE=empty
 
     ; Ordinal #214 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.214.NAME=K214
     ; Ordinal #214 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.214.TYPE=empty
     ; Ordinal #214 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.214.TYPE=empty
     ; Ordinal #214 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.214.TYPE=empty
     ; Ordinal #214 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.214.TYPE=empty
 
     ; Ordinal #215 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.215.NAME=K215
     ; Ordinal #215 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.215.TYPE=empty
     ; Ordinal #215 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.215.TYPE=empty
     ; Ordinal #215 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.215.TYPE=empty
     ; Ordinal #215 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.215.TYPE=empty
 
     ; Ordinal #216 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.216.NAME=REGENUMKEY
     ; Ordinal #216 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.216.TYPE=empty
     ; Ordinal #216 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.216.TYPE=empty
     ; Ordinal #216 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.216.TYPE=empty
     ; Ordinal #216 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.216.TYPE=empty
 
     ; Ordinal #217 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.217.NAME=REGOPENKEY
     ; Ordinal #217 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.217.TYPE=empty
     ; Ordinal #217 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.217.TYPE=empty
     ; Ordinal #217 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.217.TYPE=empty
     ; Ordinal #217 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.217.TYPE=empty
 
     ; Ordinal #218 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.218.NAME=REGCREATEKEY
     ; Ordinal #218 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.218.TYPE=empty
     ; Ordinal #218 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.218.TYPE=empty
     ; Ordinal #218 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.218.TYPE=empty
     ; Ordinal #218 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.218.TYPE=empty
 
     ; Ordinal #219 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.219.NAME=REGDELETEKEY
     ; Ordinal #219 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.219.TYPE=empty
     ; Ordinal #219 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.219.TYPE=empty
     ; Ordinal #219 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.219.TYPE=empty
     ; Ordinal #219 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.219.TYPE=empty
 
     ; Ordinal #220 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.220.NAME=REGCLOSEKEY
     ; Ordinal #220 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.220.TYPE=empty
     ; Ordinal #220 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.220.TYPE=empty
     ; Ordinal #220 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.220.TYPE=empty
     ; Ordinal #220 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.220.TYPE=empty
 
     ; Ordinal #221 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.221.NAME=REGSETVALUE
     ; Ordinal #221 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.221.TYPE=empty
     ; Ordinal #221 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.221.TYPE=empty
     ; Ordinal #221 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.221.TYPE=empty
     ; Ordinal #221 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.221.TYPE=empty
 
     ; Ordinal #222 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.222.NAME=REGDELETEVALUE
     ; Ordinal #222 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.222.TYPE=empty
     ; Ordinal #222 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.222.TYPE=empty
     ; Ordinal #222 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.222.TYPE=empty
     ; Ordinal #222 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.222.TYPE=empty
 
     ; Ordinal #223 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.223.NAME=REGENUMVALUE
     ; Ordinal #223 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.223.TYPE=empty
     ; Ordinal #223 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.223.TYPE=empty
     ; Ordinal #223 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.223.TYPE=empty
     ; Ordinal #223 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.223.TYPE=empty
 
     ; Ordinal #224 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.224.NAME=REGQUERYVALUE
     ; Ordinal #224 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.224.TYPE=empty
     ; Ordinal #224 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.224.TYPE=empty
     ; Ordinal #224 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.224.TYPE=empty
     ; Ordinal #224 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.224.TYPE=empty
 
     ; Ordinal #225 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.225.NAME=REGQUERYVALUEEX
     ; Ordinal #225 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.225.TYPE=empty
     ; Ordinal #225 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.225.TYPE=empty
     ; Ordinal #225 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.225.TYPE=empty
     ; Ordinal #225 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.225.TYPE=empty
 
     ; Ordinal #226 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.226.NAME=REGSETVALUEEX
     ; Ordinal #226 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.226.TYPE=empty
     ; Ordinal #226 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.226.TYPE=empty
     ; Ordinal #226 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.226.TYPE=empty
     ; Ordinal #226 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.226.TYPE=empty
 
     ; Ordinal #227 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.227.NAME=REGFLUSHKEY
     ; Ordinal #227 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.227.TYPE=empty
     ; Ordinal #227 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.227.TYPE=empty
     ; Ordinal #227 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.227.TYPE=empty
     ; Ordinal #227 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.227.TYPE=empty
 
     ; Ordinal #228 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.228.NAME=K228
     ; Ordinal #228 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.228.TYPE=empty
     ; Ordinal #228 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.228.TYPE=empty
     ; Ordinal #228 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.228.TYPE=empty
     ; Ordinal #228 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.228.TYPE=empty
 
     ; Ordinal #229 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.229.NAME=K229
     ; Ordinal #229 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.229.TYPE=empty
     ; Ordinal #229 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.229.TYPE=empty
     ; Ordinal #229 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.229.TYPE=empty
     ; Ordinal #229 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.229.TYPE=empty
 
     ; Ordinal #230 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.230.NAME=GLOBALSMARTPAGELOCK
     ; Ordinal #230 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.230.TYPE=empty
     ; Ordinal #230 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.230.TYPE=empty
     ; Ordinal #230 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.230.TYPE=empty
     ; Ordinal #230 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.230.TYPE=empty
 
     ; Ordinal #231 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.231.NAME=GLOBALSMARTPAGEUNLOCK
     ; Ordinal #231 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.231.TYPE=empty
     ; Ordinal #231 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.231.TYPE=empty
     ; Ordinal #231 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.231.TYPE=empty
     ; Ordinal #231 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.231.TYPE=empty
 
     ; Ordinal #232 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.232.NAME=REGLOADKEY
     ; Ordinal #232 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.232.TYPE=empty
     ; Ordinal #232 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.232.TYPE=empty
     ; Ordinal #232 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.232.TYPE=empty
     ; Ordinal #232 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.232.TYPE=empty
 
     ; Ordinal #233 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.233.NAME=REGUNLOADKEY
     ; Ordinal #233 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.233.TYPE=empty
     ; Ordinal #233 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.233.TYPE=empty
     ; Ordinal #233 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.233.TYPE=empty
     ; Ordinal #233 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.233.TYPE=empty
 
     ; Ordinal #234 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.234.NAME=REGSAVEKEY
     ; Ordinal #234 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.234.TYPE=empty
     ; Ordinal #234 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.234.TYPE=empty
     ; Ordinal #234 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.234.TYPE=empty
     ; Ordinal #234 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.234.TYPE=empty
 
     ; Ordinal #235 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.235.NAME=INVALIDATENLSCACHE
     ; Ordinal #235 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.235.TYPE=empty
     ; Ordinal #235 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.235.TYPE=empty
     ; Ordinal #235 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.235.TYPE=empty
     ; Ordinal #235 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.235.TYPE=empty
 
     ; Ordinal #236 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.236.NAME=GETPRODUCTNAME
     ; Ordinal #236 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.236.TYPE=empty
     ; Ordinal #236 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.236.TYPE=empty
     ; Ordinal #236 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.236.TYPE=empty
     ; Ordinal #236 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.236.TYPE=empty
 
     ; Ordinal #237 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.237.NAME=K237
     ; Ordinal #237 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.237.TYPE=empty
     ; Ordinal #237 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.237.TYPE=empty
     ; Ordinal #237 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.237.TYPE=empty
     ; Ordinal #237 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.237.TYPE=empty
 
     ; Ordinal #238 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.238.TYPE=empty
     ; Ordinal #238 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #238 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.238.TYPE=empty
     ; Ordinal #238 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.238.TYPE=empty
     ; Ordinal #238 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.238.TYPE=empty
 
     ; Ordinal #239 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.239.TYPE=empty
     ; Ordinal #239 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #239 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.239.TYPE=empty
     ; Ordinal #239 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.239.TYPE=empty
     ; Ordinal #239 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.239.TYPE=empty
 
     ; Ordinal #240 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.240.TYPE=empty
     ; Ordinal #240 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #240 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.240.TYPE=empty
     ; Ordinal #240 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.240.TYPE=empty
     ; Ordinal #240 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.240.TYPE=empty
 
     ; Ordinal #241 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.241.TYPE=empty
     ; Ordinal #241 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #241 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.241.TYPE=empty
     ; Ordinal #241 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.241.TYPE=empty
     ; Ordinal #241 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.241.TYPE=empty
 
     ; Ordinal #242 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.242.TYPE=empty
     ; Ordinal #242 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #242 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.242.TYPE=empty
     ; Ordinal #242 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.242.TYPE=empty
     ; Ordinal #242 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.242.TYPE=empty
 
     ; Ordinal #243 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.243.TYPE=empty
     ; Ordinal #243 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #243 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.243.TYPE=empty
     ; Ordinal #243 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.243.TYPE=empty
     ; Ordinal #243 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.243.TYPE=empty
 
     ; Ordinal #244 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.244.TYPE=empty
     ; Ordinal #244 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #244 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.244.TYPE=empty
     ; Ordinal #244 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.244.TYPE=empty
     ; Ordinal #244 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.244.TYPE=empty
 
     ; Ordinal #245 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.245.TYPE=empty
     ; Ordinal #245 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #245 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.245.TYPE=empty
     ; Ordinal #245 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.245.TYPE=empty
     ; Ordinal #245 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.245.TYPE=empty
 
     ; Ordinal #246 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.246.TYPE=empty
     ; Ordinal #246 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #246 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.246.TYPE=empty
     ; Ordinal #246 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.246.TYPE=empty
     ; Ordinal #246 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.246.TYPE=empty
 
     ; Ordinal #247 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.247.TYPE=empty
     ; Ordinal #247 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #247 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.247.TYPE=empty
     ; Ordinal #247 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.247.TYPE=empty
     ; Ordinal #247 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.247.TYPE=empty
 
     ; Ordinal #248 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.248.TYPE=empty
     ; Ordinal #248 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #248 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.248.TYPE=empty
     ; Ordinal #248 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.248.TYPE=empty
     ; Ordinal #248 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.248.TYPE=empty
 
     ; Ordinal #249 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.249.TYPE=empty
     ; Ordinal #249 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #249 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.249.TYPE=empty
     ; Ordinal #249 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.249.TYPE=empty
     ; Ordinal #249 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.249.TYPE=empty
 
     ; Ordinal #250 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.250.TYPE=empty
     ; Ordinal #250 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #250 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.250.TYPE=empty
     ; Ordinal #250 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.250.TYPE=empty
     ; Ordinal #250 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.250.TYPE=empty
 
     ; Ordinal #251 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.251.TYPE=empty
     ; Ordinal #251 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #251 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.251.TYPE=empty
     ; Ordinal #251 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.251.TYPE=empty
     ; Ordinal #251 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.251.TYPE=empty
 
     ; Ordinal #252 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.252.TYPE=empty
     ; Ordinal #252 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #252 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.252.TYPE=empty
     ; Ordinal #252 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.252.TYPE=empty
     ; Ordinal #252 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.252.TYPE=empty
 
     ; Ordinal #253 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.253.TYPE=empty
     ; Ordinal #253 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #253 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.253.TYPE=empty
     ; Ordinal #253 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.253.TYPE=empty
     ; Ordinal #253 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.253.TYPE=empty
 
     ; Ordinal #254 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.254.TYPE=empty
     ; Ordinal #254 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #254 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.254.TYPE=empty
     ; Ordinal #254 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.254.TYPE=empty
     ; Ordinal #254 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.254.TYPE=empty
 
     ; Ordinal #255 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.255.TYPE=empty
     ; Ordinal #255 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #255 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.255.TYPE=empty
     ; Ordinal #255 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.255.TYPE=empty
     ; Ordinal #255 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.255.TYPE=empty
 
     ; Ordinal #256 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.256.TYPE=empty
     ; Ordinal #256 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #256 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.256.TYPE=empty
     ; Ordinal #256 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.256.TYPE=empty
     ; Ordinal #256 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.256.TYPE=empty
 
     ; Ordinal #257 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.257.TYPE=empty
     ; Ordinal #257 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #257 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.257.TYPE=empty
     ; Ordinal #257 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.257.TYPE=empty
     ; Ordinal #257 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.257.TYPE=empty
 
     ; Ordinal #258 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.258.TYPE=empty
     ; Ordinal #258 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #258 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.258.TYPE=empty
     ; Ordinal #258 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.258.TYPE=empty
     ; Ordinal #258 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.258.TYPE=empty
 
     ; Ordinal #259 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.259.TYPE=empty
     ; Ordinal #259 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #259 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.259.TYPE=empty
     ; Ordinal #259 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.259.TYPE=empty
     ; Ordinal #259 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.259.TYPE=empty
 
     ; Ordinal #260 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.260.TYPE=empty
     ; Ordinal #260 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #260 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.260.TYPE=empty
     ; Ordinal #260 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.260.TYPE=empty
     ; Ordinal #260 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.260.TYPE=empty
 
     ; Ordinal #261 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.261.TYPE=empty
     ; Ordinal #261 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #261 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.261.TYPE=empty
     ; Ordinal #261 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.261.TYPE=empty
     ; Ordinal #261 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.261.TYPE=empty
 
     ; Ordinal #262 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.262.TYPE=empty
     ; Ordinal #262 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #262 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.262.TYPE=empty
     ; Ordinal #262 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.262.TYPE=empty
     ; Ordinal #262 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.262.TYPE=empty
 
     ; Ordinal #263 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.263.TYPE=empty
     ; Ordinal #263 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #263 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.263.TYPE=empty
     ; Ordinal #263 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.263.TYPE=empty
     ; Ordinal #263 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.263.TYPE=empty
 
     ; Ordinal #264 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.264.TYPE=empty
     ; Ordinal #264 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #264 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.264.TYPE=empty
     ; Ordinal #264 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.264.TYPE=empty
     ; Ordinal #264 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.264.TYPE=empty
 
     ; Ordinal #265 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.265.TYPE=empty
     ; Ordinal #265 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #265 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.265.TYPE=empty
     ; Ordinal #265 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.265.TYPE=empty
     ; Ordinal #265 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.265.TYPE=empty
 
     ; Ordinal #266 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.266.TYPE=empty
     ; Ordinal #266 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #266 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.266.TYPE=empty
     ; Ordinal #266 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.266.TYPE=empty
     ; Ordinal #266 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.266.TYPE=empty
 
     ; Ordinal #267 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.267.TYPE=empty
     ; Ordinal #267 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #267 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.267.TYPE=empty
     ; Ordinal #267 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.267.TYPE=empty
     ; Ordinal #267 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.267.TYPE=empty
 
     ; Ordinal #268 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.268.TYPE=empty
     ; Ordinal #268 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #268 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.268.TYPE=empty
     ; Ordinal #268 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.268.TYPE=empty
     ; Ordinal #268 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.268.TYPE=empty
 
     ; Ordinal #269 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.269.TYPE=empty
     ; Ordinal #269 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #269 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.269.TYPE=empty
     ; Ordinal #269 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.269.TYPE=empty
     ; Ordinal #269 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.269.TYPE=empty
 
     ; Ordinal #270 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.270.TYPE=empty
     ; Ordinal #270 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #270 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.270.TYPE=empty
     ; Ordinal #270 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.270.TYPE=empty
     ; Ordinal #270 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.270.TYPE=empty
 
     ; Ordinal #271 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.271.TYPE=empty
     ; Ordinal #271 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #271 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.271.TYPE=empty
     ; Ordinal #271 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.271.TYPE=empty
     ; Ordinal #271 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.271.TYPE=empty
 
     ; Ordinal #272 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.272.TYPE=empty
     ; Ordinal #272 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #272 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.272.TYPE=empty
     ; Ordinal #272 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.272.TYPE=empty
     ; Ordinal #272 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.272.TYPE=empty
 
     ; Ordinal #273 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.273.TYPE=empty
     ; Ordinal #273 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #273 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.273.TYPE=empty
     ; Ordinal #273 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.273.TYPE=empty
     ; Ordinal #273 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.273.TYPE=empty
 
     ; Ordinal #274 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.274.TYPE=empty
     ; Ordinal #274 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #274 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.274.TYPE=empty
     ; Ordinal #274 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.274.TYPE=empty
     ; Ordinal #274 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.274.TYPE=empty
 
     ; Ordinal #275 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.275.TYPE=empty
     ; Ordinal #275 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #275 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.275.TYPE=empty
     ; Ordinal #275 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.275.TYPE=empty
     ; Ordinal #275 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.275.TYPE=empty
 
     ; Ordinal #276 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.276.TYPE=empty
     ; Ordinal #276 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #276 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.276.TYPE=empty
     ; Ordinal #276 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.276.TYPE=empty
     ; Ordinal #276 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.276.TYPE=empty
 
     ; Ordinal #277 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.277.TYPE=empty
     ; Ordinal #277 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #277 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.277.TYPE=empty
     ; Ordinal #277 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.277.TYPE=empty
     ; Ordinal #277 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.277.TYPE=empty
 
     ; Ordinal #278 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.278.TYPE=empty
     ; Ordinal #278 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #278 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.278.TYPE=empty
     ; Ordinal #278 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.278.TYPE=empty
     ; Ordinal #278 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.278.TYPE=empty
 
     ; Ordinal #279 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.279.TYPE=empty
     ; Ordinal #279 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #279 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.279.TYPE=empty
     ; Ordinal #279 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.279.TYPE=empty
     ; Ordinal #279 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.279.TYPE=empty
 
     ; Ordinal #280 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.280.TYPE=empty
     ; Ordinal #280 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #280 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.280.TYPE=empty
     ; Ordinal #280 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.280.TYPE=empty
     ; Ordinal #280 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.280.TYPE=empty
 
     ; Ordinal #281 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.281.TYPE=empty
     ; Ordinal #281 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #281 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.281.TYPE=empty
     ; Ordinal #281 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.281.TYPE=empty
     ; Ordinal #281 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.281.TYPE=empty
 
     ; Ordinal #282 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.282.TYPE=empty
     ; Ordinal #282 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #282 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.282.TYPE=empty
     ; Ordinal #282 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.282.TYPE=empty
     ; Ordinal #282 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.282.TYPE=empty
 
     ; Ordinal #283 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.283.TYPE=empty
     ; Ordinal #283 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #283 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.283.TYPE=empty
     ; Ordinal #283 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.283.TYPE=empty
     ; Ordinal #283 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.283.TYPE=empty
 
     ; Ordinal #284 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.284.TYPE=empty
     ; Ordinal #284 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #284 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.284.TYPE=empty
     ; Ordinal #284 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.284.TYPE=empty
     ; Ordinal #284 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.284.TYPE=empty
 
     ; Ordinal #285 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.285.TYPE=empty
     ; Ordinal #285 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #285 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.285.TYPE=empty
     ; Ordinal #285 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.285.TYPE=empty
     ; Ordinal #285 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.285.TYPE=empty
 
     ; Ordinal #286 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.286.TYPE=empty
     ; Ordinal #286 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #286 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.286.TYPE=empty
     ; Ordinal #286 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.286.TYPE=empty
     ; Ordinal #286 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.286.TYPE=empty
 
     ; Ordinal #287 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.287.TYPE=empty
     ; Ordinal #287 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #287 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.287.TYPE=empty
     ; Ordinal #287 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.287.TYPE=empty
     ; Ordinal #287 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.287.TYPE=empty
 
     ; Ordinal #288 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.288.TYPE=empty
     ; Ordinal #288 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #288 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.288.TYPE=empty
     ; Ordinal #288 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.288.TYPE=empty
     ; Ordinal #288 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.288.TYPE=empty
 
     ; Ordinal #289 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.289.TYPE=empty
     ; Ordinal #289 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #289 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.289.TYPE=empty
     ; Ordinal #289 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.289.TYPE=empty
     ; Ordinal #289 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.289.TYPE=empty
 
     ; Ordinal #290 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.290.TYPE=empty
     ; Ordinal #290 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #290 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.290.TYPE=empty
     ; Ordinal #290 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.290.TYPE=empty
     ; Ordinal #290 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.290.TYPE=empty
 
     ; Ordinal #291 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.291.TYPE=empty
     ; Ordinal #291 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #291 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.291.TYPE=empty
     ; Ordinal #291 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.291.TYPE=empty
     ; Ordinal #291 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.291.TYPE=empty
 
     ; Ordinal #292 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.292.TYPE=empty
     ; Ordinal #292 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #292 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.292.TYPE=empty
     ; Ordinal #292 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.292.TYPE=empty
     ; Ordinal #292 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.292.TYPE=empty
 
     ; Ordinal #293 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.293.TYPE=empty
     ; Ordinal #293 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #293 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.293.TYPE=empty
     ; Ordinal #293 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.293.TYPE=empty
     ; Ordinal #293 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.293.TYPE=empty
 
     ; Ordinal #294 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.294.TYPE=empty
     ; Ordinal #294 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #294 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.294.TYPE=empty
     ; Ordinal #294 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.294.TYPE=empty
     ; Ordinal #294 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.294.TYPE=empty
 
     ; Ordinal #295 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.295.TYPE=empty
     ; Ordinal #295 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #295 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.295.TYPE=empty
     ; Ordinal #295 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.295.TYPE=empty
     ; Ordinal #295 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.295.TYPE=empty
 
     ; Ordinal #296 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.296.TYPE=empty
     ; Ordinal #296 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #296 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.296.TYPE=empty
     ; Ordinal #296 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.296.TYPE=empty
     ; Ordinal #296 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.296.TYPE=empty
 
     ; Ordinal #297 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.297.TYPE=empty
     ; Ordinal #297 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #297 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.297.TYPE=empty
     ; Ordinal #297 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.297.TYPE=empty
     ; Ordinal #297 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.297.TYPE=empty
 
     ; Ordinal #298 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.298.TYPE=empty
     ; Ordinal #298 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #298 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.298.TYPE=empty
     ; Ordinal #298 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.298.TYPE=empty
     ; Ordinal #298 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.298.TYPE=empty
 
     ; Ordinal #299 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.299.TYPE=empty
     ; Ordinal #299 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #299 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.299.TYPE=empty
     ; Ordinal #299 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.299.TYPE=empty
     ; Ordinal #299 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.299.TYPE=empty
 
     ; Ordinal #300 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.300.TYPE=empty
     ; Ordinal #300 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #300 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.300.TYPE=empty
     ; Ordinal #300 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.300.TYPE=empty
     ; Ordinal #300 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.300.TYPE=empty
 
     ; Ordinal #301 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.301.TYPE=empty
     ; Ordinal #301 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #301 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.301.TYPE=empty
     ; Ordinal #301 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.301.TYPE=empty
     ; Ordinal #301 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.301.TYPE=empty
 
     ; Ordinal #302 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.302.TYPE=empty
     ; Ordinal #302 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #302 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.302.TYPE=empty
     ; Ordinal #302 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.302.TYPE=empty
     ; Ordinal #302 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.302.TYPE=empty
 
     ; Ordinal #303 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.303.TYPE=empty
     ; Ordinal #303 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #303 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.303.TYPE=empty
     ; Ordinal #303 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.303.TYPE=empty
     ; Ordinal #303 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.303.TYPE=empty
 
     ; Ordinal #304 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.304.TYPE=empty
     ; Ordinal #304 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #304 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.304.TYPE=empty
     ; Ordinal #304 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.304.TYPE=empty
     ; Ordinal #304 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.304.TYPE=empty
 
     ; Ordinal #305 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.305.TYPE=empty
     ; Ordinal #305 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #305 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.305.TYPE=empty
     ; Ordinal #305 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.305.TYPE=empty
     ; Ordinal #305 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.305.TYPE=empty
 
     ; Ordinal #306 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.306.TYPE=empty
     ; Ordinal #306 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #306 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.306.TYPE=empty
     ; Ordinal #306 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.306.TYPE=empty
     ; Ordinal #306 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.306.TYPE=empty
 
     ; Ordinal #307 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.307.TYPE=empty
     ; Ordinal #307 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #307 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.307.TYPE=empty
     ; Ordinal #307 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.307.TYPE=empty
     ; Ordinal #307 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.307.TYPE=empty
 
     ; Ordinal #308 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.308.TYPE=empty
     ; Ordinal #308 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #308 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.308.TYPE=empty
     ; Ordinal #308 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.308.TYPE=empty
     ; Ordinal #308 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.308.TYPE=empty
 
     ; Ordinal #309 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.309.TYPE=empty
     ; Ordinal #309 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #309 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.309.TYPE=empty
     ; Ordinal #309 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.309.TYPE=empty
     ; Ordinal #309 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.309.TYPE=empty
 
@@ -12074,22 +11749,16 @@ MODULE KERNEL
     ORDINAL.311.NAME=GETSETKERNELDOSPROC
 
     ; Ordinal #312 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.312.TYPE=empty
     ; Ordinal #312 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #312 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.312.TYPE=empty
     ; Ordinal #312 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.312.TYPE=empty
     ; Ordinal #312 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.312.TYPE=empty
 
     ; Ordinal #313 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.313.TYPE=empty
     ; Ordinal #313 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #313 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.313.TYPE=empty
     ; Ordinal #313 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.313.TYPE=empty
     ; Ordinal #313 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.313.TYPE=empty
 
@@ -12116,12 +11785,9 @@ MODULE KERNEL
     ORDINAL.316.NAME=
 
     ; Ordinal #317 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.317.TYPE=empty
     ; Ordinal #317 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #317 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.317.TYPE=empty
     ; Ordinal #317 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.317.TYPE=empty
     ; Ordinal #317 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.317.TYPE=empty
 
@@ -12147,22 +11813,16 @@ MODULE KERNEL
     ORDINAL.320.NAME=ISTASK
 
     ; Ordinal #321 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.321.TYPE=empty
     ; Ordinal #321 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #321 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.321.TYPE=empty
     ; Ordinal #321 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.321.TYPE=empty
     ; Ordinal #321 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.321.TYPE=empty
 
     ; Ordinal #322 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.322.TYPE=empty
     ; Ordinal #322 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #322 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.322.TYPE=empty
     ; Ordinal #322 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.322.TYPE=empty
     ; Ordinal #322 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.322.TYPE=empty
 
@@ -12218,22 +11878,16 @@ MODULE KERNEL
     ORDINAL.329.NAME=
 
     ; Ordinal #330 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.330.TYPE=empty
     ; Ordinal #330 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #330 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.330.TYPE=empty
     ; Ordinal #330 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.330.TYPE=empty
     ; Ordinal #330 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.330.TYPE=empty
 
     ; Ordinal #331 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.331.TYPE=empty
     ; Ordinal #331 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #331 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.331.TYPE=empty
     ; Ordinal #331 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.331.TYPE=empty
     ; Ordinal #331 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.331.TYPE=empty
 
@@ -12245,12 +11899,9 @@ MODULE KERNEL
     ORDINAL.332.NAME=THHOOK
 
     ; Ordinal #333 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.333.TYPE=empty
     ; Ordinal #333 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #333 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.333.TYPE=empty
     ; Ordinal #333 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.333.TYPE=empty
     ; Ordinal #333 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.333.TYPE=empty
 
@@ -12387,11 +12038,8 @@ MODULE KERNEL
     ; Ordinal #352 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.352.NAME=LSTRCATN
     ; Ordinal #352 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.352.TYPE=empty
     ; Ordinal #352 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.352.TYPE=empty
     ; Ordinal #352 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.352.TYPE=empty
     ; Ordinal #352 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.352.TYPE=empty
 
@@ -12426,467 +12074,329 @@ MODULE KERNEL
     ; Ordinal #357 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.357.NAME=
     ; Ordinal #357 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.357.TYPE=empty
     ; Ordinal #357 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.357.TYPE=empty
     ; Ordinal #357 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.357.TYPE=empty
     ; Ordinal #357 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.357.TYPE=empty
 
     ; Ordinal #358 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.358.NAME=
     ; Ordinal #358 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.358.TYPE=empty
     ; Ordinal #358 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.358.TYPE=empty
     ; Ordinal #358 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.358.TYPE=empty
     ; Ordinal #358 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.358.TYPE=empty
 
     ; Ordinal #359 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.359.NAME=
     ; Ordinal #359 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.359.TYPE=empty
     ; Ordinal #359 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.359.TYPE=empty
     ; Ordinal #359 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.359.TYPE=empty
     ; Ordinal #359 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.359.TYPE=empty
 
     ; Ordinal #360 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.360.NAME=OPENFILEEX
     ; Ordinal #360 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.360.TYPE=empty
     ; Ordinal #360 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.360.TYPE=empty
     ; Ordinal #360 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.360.TYPE=empty
     ; Ordinal #360 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.360.TYPE=empty
 
     ; Ordinal #361 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.361.NAME=PIGLET_361
     ; Ordinal #361 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.361.TYPE=empty
     ; Ordinal #361 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.361.TYPE=empty
     ; Ordinal #361 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.361.TYPE=empty
     ; Ordinal #361 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.361.TYPE=empty
 
     ; Ordinal #362 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.362.NAME=
     ; Ordinal #362 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.362.TYPE=empty
     ; Ordinal #362 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.362.TYPE=empty
     ; Ordinal #362 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.362.TYPE=empty
     ; Ordinal #362 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.362.TYPE=empty
 
     ; Ordinal #363 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.363.TYPE=empty
     ; Ordinal #363 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #363 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.363.TYPE=empty
     ; Ordinal #363 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.363.TYPE=empty
     ; Ordinal #363 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.363.TYPE=empty
 
     ; Ordinal #364 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.364.TYPE=empty
     ; Ordinal #364 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #364 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.364.TYPE=empty
     ; Ordinal #364 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.364.TYPE=empty
     ; Ordinal #364 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.364.TYPE=empty
 
     ; Ordinal #365 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.365.NAME=
     ; Ordinal #365 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.365.TYPE=empty
     ; Ordinal #365 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.365.TYPE=empty
     ; Ordinal #365 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.365.TYPE=empty
     ; Ordinal #365 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.365.TYPE=empty
 
     ; Ordinal #366 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.366.TYPE=empty
     ; Ordinal #366 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #366 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.366.TYPE=empty
     ; Ordinal #366 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.366.TYPE=empty
     ; Ordinal #366 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.366.TYPE=empty
 
     ; Ordinal #367 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.367.TYPE=empty
     ; Ordinal #367 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #367 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.367.TYPE=empty
     ; Ordinal #367 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.367.TYPE=empty
     ; Ordinal #367 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.367.TYPE=empty
 
     ; Ordinal #368 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.368.TYPE=empty
     ; Ordinal #368 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #368 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.368.TYPE=empty
     ; Ordinal #368 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.368.TYPE=empty
     ; Ordinal #368 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.368.TYPE=empty
 
     ; Ordinal #369 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.369.TYPE=empty
     ; Ordinal #369 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #369 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.369.TYPE=empty
     ; Ordinal #369 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.369.TYPE=empty
     ; Ordinal #369 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.369.TYPE=empty
 
     ; Ordinal #370 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.370.TYPE=empty
     ; Ordinal #370 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #370 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.370.TYPE=empty
     ; Ordinal #370 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.370.TYPE=empty
     ; Ordinal #370 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.370.TYPE=empty
 
     ; Ordinal #371 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.371.TYPE=empty
     ; Ordinal #371 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #371 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.371.TYPE=empty
     ; Ordinal #371 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.371.TYPE=empty
     ; Ordinal #371 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.371.TYPE=empty
 
     ; Ordinal #372 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.372.TYPE=empty
     ; Ordinal #372 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #372 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.372.TYPE=empty
     ; Ordinal #372 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.372.TYPE=empty
     ; Ordinal #372 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.372.TYPE=empty
 
     ; Ordinal #373 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.373.TYPE=empty
     ; Ordinal #373 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #373 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.373.TYPE=empty
     ; Ordinal #373 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.373.TYPE=empty
     ; Ordinal #373 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.373.TYPE=empty
 
     ; Ordinal #374 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.374.TYPE=empty
     ; Ordinal #374 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #374 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.374.TYPE=empty
     ; Ordinal #374 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.374.TYPE=empty
     ; Ordinal #374 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.374.TYPE=empty
 
     ; Ordinal #375 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.375.TYPE=empty
     ; Ordinal #375 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #375 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.375.TYPE=empty
     ; Ordinal #375 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.375.TYPE=empty
     ; Ordinal #375 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.375.TYPE=empty
 
     ; Ordinal #376 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.376.TYPE=empty
     ; Ordinal #376 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #376 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.376.TYPE=empty
     ; Ordinal #376 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.376.TYPE=empty
     ; Ordinal #376 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.376.TYPE=empty
 
     ; Ordinal #377 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.377.TYPE=empty
     ; Ordinal #377 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #377 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.377.TYPE=empty
     ; Ordinal #377 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.377.TYPE=empty
     ; Ordinal #377 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.377.TYPE=empty
 
     ; Ordinal #378 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.378.TYPE=empty
     ; Ordinal #378 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #378 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.378.TYPE=empty
     ; Ordinal #378 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.378.TYPE=empty
     ; Ordinal #378 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.378.TYPE=empty
 
     ; Ordinal #379 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.379.TYPE=empty
     ; Ordinal #379 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #379 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.379.TYPE=empty
     ; Ordinal #379 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.379.TYPE=empty
     ; Ordinal #379 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.379.TYPE=empty
 
     ; Ordinal #380 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.380.TYPE=empty
     ; Ordinal #380 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #380 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.380.TYPE=empty
     ; Ordinal #380 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.380.TYPE=empty
     ; Ordinal #380 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.380.TYPE=empty
 
     ; Ordinal #381 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.381.TYPE=empty
     ; Ordinal #381 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #381 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.381.TYPE=empty
     ; Ordinal #381 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.381.TYPE=empty
     ; Ordinal #381 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.381.TYPE=empty
 
     ; Ordinal #382 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.382.TYPE=empty
     ; Ordinal #382 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #382 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.382.TYPE=empty
     ; Ordinal #382 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.382.TYPE=empty
     ; Ordinal #382 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.382.TYPE=empty
 
     ; Ordinal #383 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.383.TYPE=empty
     ; Ordinal #383 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #383 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.383.TYPE=empty
     ; Ordinal #383 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.383.TYPE=empty
     ; Ordinal #383 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.383.TYPE=empty
 
     ; Ordinal #384 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.384.TYPE=empty
     ; Ordinal #384 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #384 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.384.TYPE=empty
     ; Ordinal #384 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.384.TYPE=empty
     ; Ordinal #384 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.384.TYPE=empty
 
     ; Ordinal #385 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.385.TYPE=empty
     ; Ordinal #385 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #385 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.385.TYPE=empty
     ; Ordinal #385 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.385.TYPE=empty
     ; Ordinal #385 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.385.TYPE=empty
 
     ; Ordinal #386 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.386.TYPE=empty
     ; Ordinal #386 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #386 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.386.TYPE=empty
     ; Ordinal #386 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.386.TYPE=empty
     ; Ordinal #386 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.386.TYPE=empty
 
     ; Ordinal #387 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.387.TYPE=empty
     ; Ordinal #387 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #387 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.387.TYPE=empty
     ; Ordinal #387 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.387.TYPE=empty
     ; Ordinal #387 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.387.TYPE=empty
 
     ; Ordinal #388 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.388.TYPE=empty
     ; Ordinal #388 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #388 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.388.TYPE=empty
     ; Ordinal #388 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.388.TYPE=empty
     ; Ordinal #388 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.388.TYPE=empty
 
     ; Ordinal #389 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.389.TYPE=empty
     ; Ordinal #389 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #389 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.389.TYPE=empty
     ; Ordinal #389 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.389.TYPE=empty
     ; Ordinal #389 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.389.TYPE=empty
 
     ; Ordinal #390 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.390.TYPE=empty
     ; Ordinal #390 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #390 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.390.TYPE=empty
     ; Ordinal #390 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.390.TYPE=empty
     ; Ordinal #390 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.390.TYPE=empty
 
     ; Ordinal #391 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.391.TYPE=empty
     ; Ordinal #391 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #391 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.391.TYPE=empty
     ; Ordinal #391 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.391.TYPE=empty
     ; Ordinal #391 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.391.TYPE=empty
 
     ; Ordinal #392 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.392.TYPE=empty
     ; Ordinal #392 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #392 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.392.TYPE=empty
     ; Ordinal #392 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.392.TYPE=empty
     ; Ordinal #392 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.392.TYPE=empty
 
     ; Ordinal #393 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.393.TYPE=empty
     ; Ordinal #393 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #393 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.393.TYPE=empty
     ; Ordinal #393 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.393.TYPE=empty
     ; Ordinal #393 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.393.TYPE=empty
 
     ; Ordinal #394 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.394.TYPE=empty
     ; Ordinal #394 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #394 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.394.TYPE=empty
     ; Ordinal #394 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.394.TYPE=empty
     ; Ordinal #394 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.394.TYPE=empty
 
     ; Ordinal #395 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.395.TYPE=empty
     ; Ordinal #395 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #395 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.395.TYPE=empty
     ; Ordinal #395 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.395.TYPE=empty
     ; Ordinal #395 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.395.TYPE=empty
 
     ; Ordinal #396 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.396.TYPE=empty
     ; Ordinal #396 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #396 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.396.TYPE=empty
     ; Ordinal #396 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.396.TYPE=empty
     ; Ordinal #396 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.396.TYPE=empty
 
     ; Ordinal #397 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.397.TYPE=empty
     ; Ordinal #397 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #397 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.397.TYPE=empty
     ; Ordinal #397 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.397.TYPE=empty
     ; Ordinal #397 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.397.TYPE=empty
 
     ; Ordinal #398 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.398.TYPE=empty
     ; Ordinal #398 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #398 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.398.TYPE=empty
     ; Ordinal #398 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.398.TYPE=empty
     ; Ordinal #398 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.398.TYPE=empty
 
     ; Ordinal #399 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.399.TYPE=empty
     ; Ordinal #399 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #399 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.399.TYPE=empty
     ; Ordinal #399 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.399.TYPE=empty
     ; Ordinal #399 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.399.TYPE=empty
 
     ; Ordinal #400 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.400.TYPE=empty
     ; Ordinal #400 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #400 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.400.TYPE=empty
     ; Ordinal #400 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.400.TYPE=empty
     ; Ordinal #400 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.400.TYPE=empty
 
     ; Ordinal #401 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.401.TYPE=empty
     ; Ordinal #401 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #401 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.401.TYPE=empty
     ; Ordinal #401 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.401.TYPE=empty
     ; Ordinal #401 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.401.TYPE=empty
 
     ; Ordinal #402 in ./kernel/kernel.windows.3.1.386.exports
-    ORDINAL.402.TYPE=empty
     ; Ordinal #402 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #402 in ./kernel/kernel.windows.3.1.286.exports
-    ORDINAL.402.TYPE=empty
     ; Ordinal #402 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.402.TYPE=empty
     ; Ordinal #402 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.402.TYPE=empty
 
