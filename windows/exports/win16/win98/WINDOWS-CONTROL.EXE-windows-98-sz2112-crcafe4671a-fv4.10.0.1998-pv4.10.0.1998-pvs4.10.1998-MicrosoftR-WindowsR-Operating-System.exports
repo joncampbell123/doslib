@@ -1,0 +1,4 @@
+MODULE CONTROL
+    DESCRIPTION=Windows Control Panel Applet
+    FILE.NAME=CONTROL.EXE
+    FILE.SIZE=2112
