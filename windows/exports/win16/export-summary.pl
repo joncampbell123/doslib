@@ -164,6 +164,25 @@ while (my ($module,$modlistr) = each(%modules)) {
             }
         }
 
+        # announce what is left after no more ordinals
+        if ($last_nomoreord) {
+            $last_nomoreord = 0;
+
+            print "    ; Modules still to go:\n";
+            for ($modi=0;$modi < @modlist;$modi++) {
+                my $modinfop = $modlist[$modi];
+                my %modinfo = %{$modinfop};
+
+                next if (!(exists $modinfo{'ordinals'}));
+                my @ordinals = @{$modinfo{'ordinals'}};
+
+                my $ordref = $ordinals[$i];
+                if (defined($ordref)) {
+                    print "    ;    ".$modinfo{'filepath'}."\n";
+                }
+            }
+        }
+
         # sort
         @refs = sort refsort @refs;
 
@@ -213,7 +232,7 @@ while (my ($module,$modlistr) = each(%modules)) {
 
             next if !exists($ref{'NAME'}) && !exists($ref{'TYPE'});
 
-            if (@refs > 1 || $last_nomoreord > 0) {
+            if (@refs > 1) {
                 my @modinfo = @{$ref{modinfo}};
                 for ($ri=0;$ri < @modinfo;$ri++) {
                     my %modinf = %{$modinfo[$ri]};
@@ -225,8 +244,6 @@ while (my ($module,$modlistr) = each(%modules)) {
                     print $modinf{'filepath'} if exists $modinf{'filepath'};
                     print "\n";
                 }
-
-                $last_nomoreord = 0;
             }
             else {
                 print "\n" if $last_refs != 0;

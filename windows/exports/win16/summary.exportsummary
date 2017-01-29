@@ -2099,6 +2099,13 @@ MODULE GDI
     ORDINAL.433.TYPE=empty
 
     ; ------ At this point, no more ordinals in ./gdi/gdi.windows.1.04.exports
+    ; Modules still to go:
+    ;    ./gdi/gdi.windows.95.4.00.95.exports
+    ;    ./gdi/gdi.windows.2.03.exports
+    ;    ./gdi/gdi.windows.3.0me.exports
+    ;    ./gdi/gdi.windows.3.0.exports
+    ;    ./gdi/gdi.windows.3.1.exports
+    ;    ./gdi/gdi.windows.3.11.exports
 
     ; Ordinal #434 in ./gdi/gdi.windows.2.03.exports
     ORDINAL.434.NAME=
@@ -2354,6 +2361,12 @@ MODULE GDI
     ORDINAL.461.NAME=
 
     ; ------ At this point, no more ordinals in ./gdi/gdi.windows.2.03.exports
+    ; Modules still to go:
+    ;    ./gdi/gdi.windows.95.4.00.95.exports
+    ;    ./gdi/gdi.windows.3.0me.exports
+    ;    ./gdi/gdi.windows.3.0.exports
+    ;    ./gdi/gdi.windows.3.1.exports
+    ;    ./gdi/gdi.windows.3.11.exports
 
     ; Ordinal #462 in ./gdi/gdi.windows.95.4.00.95.exports
     ; Ordinal #462 in ./gdi/gdi.windows.3.1.exports
@@ -2558,6 +2571,10 @@ MODULE GDI
     ; ------ At this point, no more ordinals in ./gdi/gdi.windows.3.1.exports
 
     ; ------ At this point, no more ordinals in ./gdi/gdi.windows.3.11.exports
+    ; Modules still to go:
+    ;    ./gdi/gdi.windows.95.4.00.95.exports
+    ;    ./gdi/gdi.windows.3.0me.exports
+    ;    ./gdi/gdi.windows.3.0.exports
 
     ; Ordinal #487 in ./gdi/gdi.windows.3.0me.exports
     ; Ordinal #487 in ./gdi/gdi.windows.3.0.exports
@@ -2754,10 +2771,10 @@ MODULE GDI
     ; ------ At this point, no more ordinals in ./gdi/gdi.windows.3.0me.exports
 
     ; ------ At this point, no more ordinals in ./gdi/gdi.windows.3.0.exports
+    ; Modules still to go:
+    ;    ./gdi/gdi.windows.95.4.00.95.exports
 
-    ; Ordinal #519 in ./gdi/gdi.windows.95.4.00.95.exports
     ORDINAL.519.NAME=SELECTCLIPPATH
-
     ORDINAL.520.NAME=STROKEANDFILLPATH
     ORDINAL.521.NAME=STROKEPATH
     ORDINAL.522.NAME=WIDENPATH
@@ -6694,6 +6711,12 @@ MODULE USER
     ; ------ At this point, no more ordinals in ./user/user.windows.3.1.exports
 
     ; ------ At this point, no more ordinals in ./user/user.windows.3.11.exports
+    ; Modules still to go:
+    ;    ./user/user.windows.95.4.00.950.exports
+    ;    ./user/user.windows.3.0.exports
+    ;    ./user/user.windows.3.0me.exports
+    ;    ./user/user.windows.2.03.exports
+    ;    ./user/user.windows.1.04.exports
 
     ; Ordinal #533 in ./user/user.windows.95.4.00.950.exports
     ORDINAL.533.NAME=WNETINITIALIZE
@@ -6712,6 +6735,11 @@ MODULE USER
     ORDINAL.534.NAME=
 
     ; ------ At this point, no more ordinals in ./user/user.windows.1.04.exports
+    ; Modules still to go:
+    ;    ./user/user.windows.95.4.00.950.exports
+    ;    ./user/user.windows.3.0.exports
+    ;    ./user/user.windows.3.0me.exports
+    ;    ./user/user.windows.2.03.exports
 
     ; Ordinal #535 in ./user/user.windows.3.0.exports
     ; Ordinal #535 in ./user/user.windows.3.0me.exports
@@ -6763,6 +6791,10 @@ MODULE USER
     ORDINAL.541.TYPE=empty
 
     ; ------ At this point, no more ordinals in ./user/user.windows.2.03.exports
+    ; Modules still to go:
+    ;    ./user/user.windows.95.4.00.950.exports
+    ;    ./user/user.windows.3.0.exports
+    ;    ./user/user.windows.3.0me.exports
 
     ; Ordinal #542 in ./user/user.windows.3.0.exports
     ; Ordinal #542 in ./user/user.windows.3.0me.exports
@@ -7931,10 +7963,10 @@ MODULE USER
     ; ------ At this point, no more ordinals in ./user/user.windows.3.0.exports
 
     ; ------ At this point, no more ordinals in ./user/user.windows.3.0me.exports
+    ; Modules still to go:
+    ;    ./user/user.windows.95.4.00.950.exports
 
-    ; Ordinal #736 in ./user/user.windows.95.4.00.950.exports
     ORDINAL.736.TYPE=empty
-
     ORDINAL.737.TYPE=empty
     ORDINAL.738.TYPE=empty
     ORDINAL.739.TYPE=empty
@@ -8466,21 +8498,20 @@ MODULE KERNEL
     ORDINAL.103.NAME=NETBIOSCALL
 
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.1.04.exports
-
-    ; Ordinal #104 in ./kernel/kernel.windows.3.1.386.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.3.0.386.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.95.4.00.950.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.3.1.286.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.3.0me.386.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.3.0.8086.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.3.0.286.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.3.11.286.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.2.03.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.3.11.386.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.3.0me.286.exports
-    ; Ordinal #104 in ./kernel/kernel.windows.3.0me.8086.exports
+    ; Modules still to go:
+    ;    ./kernel/kernel.windows.3.1.386.exports
+    ;    ./kernel/kernel.windows.3.0.386.exports
+    ;    ./kernel/kernel.windows.95.4.00.950.exports
+    ;    ./kernel/kernel.windows.3.1.286.exports
+    ;    ./kernel/kernel.windows.3.0me.386.exports
+    ;    ./kernel/kernel.windows.3.0.8086.exports
+    ;    ./kernel/kernel.windows.3.0.286.exports
+    ;    ./kernel/kernel.windows.3.11.286.exports
+    ;    ./kernel/kernel.windows.2.03.exports
+    ;    ./kernel/kernel.windows.3.11.386.exports
+    ;    ./kernel/kernel.windows.3.0me.286.exports
+    ;    ./kernel/kernel.windows.3.0me.8086.exports
     ORDINAL.104.NAME=GETCODEINFO
-
     ORDINAL.105.NAME=GETEXEVERSION
     ORDINAL.106.NAME=SETSWAPAREASIZE
     ORDINAL.107.NAME=SETERRORMODE
@@ -9664,6 +9695,18 @@ MODULE KERNEL
     ORDINAL.209.TYPE=empty
 
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.2.03.exports
+    ; Modules still to go:
+    ;    ./kernel/kernel.windows.3.1.386.exports
+    ;    ./kernel/kernel.windows.3.0.386.exports
+    ;    ./kernel/kernel.windows.95.4.00.950.exports
+    ;    ./kernel/kernel.windows.3.1.286.exports
+    ;    ./kernel/kernel.windows.3.0me.386.exports
+    ;    ./kernel/kernel.windows.3.0.8086.exports
+    ;    ./kernel/kernel.windows.3.0.286.exports
+    ;    ./kernel/kernel.windows.3.11.286.exports
+    ;    ./kernel/kernel.windows.3.11.386.exports
+    ;    ./kernel/kernel.windows.3.0me.286.exports
+    ;    ./kernel/kernel.windows.3.0me.8086.exports
 
     ; Ordinal #210 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.210.NAME=K210
@@ -9687,6 +9730,14 @@ MODULE KERNEL
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.3.0.286.exports
 
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.3.0me.286.exports
+    ; Modules still to go:
+    ;    ./kernel/kernel.windows.3.1.386.exports
+    ;    ./kernel/kernel.windows.95.4.00.950.exports
+    ;    ./kernel/kernel.windows.3.1.286.exports
+    ;    ./kernel/kernel.windows.3.0.8086.exports
+    ;    ./kernel/kernel.windows.3.11.286.exports
+    ;    ./kernel/kernel.windows.3.11.386.exports
+    ;    ./kernel/kernel.windows.3.0me.8086.exports
 
     ; Ordinal #211 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.211.NAME=K211
@@ -9702,12 +9753,13 @@ MODULE KERNEL
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.3.0.8086.exports
 
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.3.0me.8086.exports
+    ; Modules still to go:
+    ;    ./kernel/kernel.windows.3.1.386.exports
+    ;    ./kernel/kernel.windows.95.4.00.950.exports
+    ;    ./kernel/kernel.windows.3.1.286.exports
+    ;    ./kernel/kernel.windows.3.11.286.exports
+    ;    ./kernel/kernel.windows.3.11.386.exports
 
-    ; Ordinal #212 in ./kernel/kernel.windows.3.1.386.exports
-    ; Ordinal #212 in ./kernel/kernel.windows.95.4.00.950.exports
-    ; Ordinal #212 in ./kernel/kernel.windows.3.1.286.exports
-    ; Ordinal #212 in ./kernel/kernel.windows.3.11.286.exports
-    ; Ordinal #212 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.212.TYPE=empty
 
     ; Ordinal #213 in ./kernel/kernel.windows.95.4.00.950.exports
@@ -10212,10 +10264,10 @@ MODULE KERNEL
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.3.11.286.exports
 
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.3.11.386.exports
+    ; Modules still to go:
+    ;    ./kernel/kernel.windows.95.4.00.950.exports
 
-    ; Ordinal #405 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.405.TYPE=empty
-
     ORDINAL.406.NAME=WRITEPRIVATEPROFILESTRUCT
     ORDINAL.407.NAME=GETPRIVATEPROFILESTRUCT
     ORDINAL.408.NAME=
