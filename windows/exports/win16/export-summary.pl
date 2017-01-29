@@ -147,12 +147,6 @@ while (my ($module,$modlistr) = each(%modules)) {
                 push(@{$ordent{modinfo}}, \%modinfo);
                 push(@refs,\%ordent);
             }
-            else {
-                my %ordent = { };
-                $ordent{modinfo} = ( );
-                push(@{$ordent{modinfo}}, \%modinfo);
-                push(@refs,\%ordent);
-            }
         }
 
         # sort
