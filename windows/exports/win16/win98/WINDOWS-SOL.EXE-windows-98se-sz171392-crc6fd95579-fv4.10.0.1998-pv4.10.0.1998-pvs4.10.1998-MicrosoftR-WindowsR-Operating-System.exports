@@ -1,0 +1,4 @@
+MODULE SOL
+    DESCRIPTION=Microsoft Solitaire
+    FILE.NAME=SOL.EXE
+    FILE.SIZE=171392
