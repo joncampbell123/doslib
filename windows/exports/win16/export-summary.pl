@@ -75,7 +75,18 @@ sub refsort {
     # not defined go last
     if (exists($ra{'NAME'}) && exists($rb{'NAME'})) {
         if ($ra{'NAME'} ne '' && $rb{'NAME'} ne '') {
-            return $ra{'NAME'} cmp $rb{'NAME'};
+            my $res = ($ra{'NAME'} cmp $rb{'NAME'});
+            if ($res == 0) {
+                # then sort by constant= field in type
+                my $rat = $ra{'TYPE'};
+                $rat = '' unless defined($rat);
+                my $rbt = $rb{'TYPE'};
+                $rbt = '' unless defined($rbt);
+                $rat =~ s/(nonresident|resident) +//;
+                $rbt =~ s/(nonresident|resident) +//;
+                return ($rat cmp $rbt);
+            }
+            return $res;
         }
         elsif ($ra{'NAME'} ne '') {
             return -1;

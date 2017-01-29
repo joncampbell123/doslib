@@ -8506,22 +8506,14 @@ MODULE KERNEL
     ; Ordinal #113 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #113 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #113 in ./kernel/kernel.windows.3.0me.386.exports
-    ORDINAL.113.NAME=__AHSHIFT
-    ORDINAL.113.TYPE=nonresident constant=0x0003
-    ; Ordinal #113 in ./kernel/kernel.windows.3.0.8086.exports
-    ORDINAL.113.NAME=__AHSHIFT
-    ORDINAL.113.TYPE=nonresident constant=0x000c
     ; Ordinal #113 in ./kernel/kernel.windows.3.0.286.exports
     ; Ordinal #113 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.113.NAME=__AHSHIFT
-    ORDINAL.113.TYPE=nonresident constant=0x0003
-    ; Ordinal #113 in ./kernel/kernel.windows.2.03.exports
-    ORDINAL.113.NAME=__AHSHIFT
-    ORDINAL.113.TYPE=nonresident constant=0x000c
     ; Ordinal #113 in ./kernel/kernel.windows.3.11.386.exports
     ; Ordinal #113 in ./kernel/kernel.windows.3.0me.286.exports
     ORDINAL.113.NAME=__AHSHIFT
     ORDINAL.113.TYPE=nonresident constant=0x0003
+    ; Ordinal #113 in ./kernel/kernel.windows.3.0.8086.exports
+    ; Ordinal #113 in ./kernel/kernel.windows.2.03.exports
     ; Ordinal #113 in ./kernel/kernel.windows.3.0me.8086.exports
     ORDINAL.113.NAME=__AHSHIFT
     ORDINAL.113.TYPE=nonresident constant=0x000c
@@ -8531,22 +8523,14 @@ MODULE KERNEL
     ; Ordinal #114 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #114 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #114 in ./kernel/kernel.windows.3.0me.386.exports
-    ORDINAL.114.NAME=__AHINCR
-    ORDINAL.114.TYPE=nonresident constant=0x0008
-    ; Ordinal #114 in ./kernel/kernel.windows.3.0.8086.exports
-    ORDINAL.114.NAME=__AHINCR
-    ORDINAL.114.TYPE=nonresident constant=0x1000
     ; Ordinal #114 in ./kernel/kernel.windows.3.0.286.exports
     ; Ordinal #114 in ./kernel/kernel.windows.3.11.286.exports
-    ORDINAL.114.NAME=__AHINCR
-    ORDINAL.114.TYPE=nonresident constant=0x0008
-    ; Ordinal #114 in ./kernel/kernel.windows.2.03.exports
-    ORDINAL.114.NAME=__AHINCR
-    ORDINAL.114.TYPE=nonresident constant=0x1000
     ; Ordinal #114 in ./kernel/kernel.windows.3.11.386.exports
     ; Ordinal #114 in ./kernel/kernel.windows.3.0me.286.exports
     ORDINAL.114.NAME=__AHINCR
     ORDINAL.114.TYPE=nonresident constant=0x0008
+    ; Ordinal #114 in ./kernel/kernel.windows.3.0.8086.exports
+    ; Ordinal #114 in ./kernel/kernel.windows.2.03.exports
     ; Ordinal #114 in ./kernel/kernel.windows.3.0me.8086.exports
     ORDINAL.114.NAME=__AHINCR
     ORDINAL.114.TYPE=nonresident constant=0x1000
@@ -9195,25 +9179,21 @@ MODULE KERNEL
     ; Ordinal #177 in ./kernel/kernel.windows.2.03.exports
     ORDINAL.177.TYPE=empty
 
+    ; Ordinal #178 in ./kernel/kernel.windows.3.0.8086.exports
+    ; Ordinal #178 in ./kernel/kernel.windows.3.0me.8086.exports
+    ORDINAL.178.NAME=__WINFLAGS
+    ORDINAL.178.TYPE=nonresident constant=0x0000
     ; Ordinal #178 in ./kernel/kernel.windows.3.1.386.exports
     ; Ordinal #178 in ./kernel/kernel.windows.3.0.386.exports
     ; Ordinal #178 in ./kernel/kernel.windows.95.4.00.950.exports
     ; Ordinal #178 in ./kernel/kernel.windows.3.1.286.exports
     ; Ordinal #178 in ./kernel/kernel.windows.3.0me.386.exports
-    ORDINAL.178.NAME=__WINFLAGS
-    ORDINAL.178.TYPE=nonresident constant=0x0001
-    ; Ordinal #178 in ./kernel/kernel.windows.3.0.8086.exports
-    ORDINAL.178.NAME=__WINFLAGS
-    ORDINAL.178.TYPE=nonresident constant=0x0000
     ; Ordinal #178 in ./kernel/kernel.windows.3.0.286.exports
     ; Ordinal #178 in ./kernel/kernel.windows.3.11.286.exports
     ; Ordinal #178 in ./kernel/kernel.windows.3.11.386.exports
     ; Ordinal #178 in ./kernel/kernel.windows.3.0me.286.exports
     ORDINAL.178.NAME=__WINFLAGS
     ORDINAL.178.TYPE=nonresident constant=0x0001
-    ; Ordinal #178 in ./kernel/kernel.windows.3.0me.8086.exports
-    ORDINAL.178.NAME=__WINFLAGS
-    ORDINAL.178.TYPE=nonresident constant=0x0000
     ; Ordinal #178 in ./kernel/kernel.windows.2.03.exports
     ORDINAL.178.TYPE=empty
 
