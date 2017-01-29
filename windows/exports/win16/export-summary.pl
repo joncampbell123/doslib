@@ -91,6 +91,17 @@ sub refsort {
         return 1;
     }
 
+    # try to match 'empty' type vs non-'empty'
+    if (($ra{'TYPE'} eq "empty") && ($rb{'TYPE'} eq "empty")) {
+        return 0;
+    }
+    elsif (($ra{'TYPE'} eq "empty")) {
+        return -1;
+    }
+    elsif (($rb{'TYPE'} eq "empty")) {
+        return 1;
+    }
+
     return 0;
 }
 
