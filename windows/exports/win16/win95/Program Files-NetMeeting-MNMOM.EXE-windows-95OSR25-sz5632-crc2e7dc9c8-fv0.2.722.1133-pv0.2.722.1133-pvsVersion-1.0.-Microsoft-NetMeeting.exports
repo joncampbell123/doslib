@@ -1,0 +1,6 @@
+MODULE MNMOM
+    DESCRIPTION=Microsoft\256 NetMeeting(TM) Object Manager
+    FILE.NAME=MNMOM.EXE
+    FILE.SIZE=5632
+    ORDINAL.1.NAME=___EXPORTEDSTUB
+    ORDINAL.1.TYPE=resident

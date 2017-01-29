@@ -1,0 +1,6 @@
+MODULE MNMSHCO
+    DESCRIPTION=Application Sharing Core Stub Application.
+    FILE.NAME=MNMSHCO.EXE
+    FILE.SIZE=4416
+    ORDINAL.1.NAME=___EXPORTEDSTUB
+    ORDINAL.1.TYPE=resident

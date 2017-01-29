@@ -1,0 +1,6 @@
+MODULE MNMALP
+    DESCRIPTION=Microsoft\256 NetMeeting(TM) Application Loader Primary.
+    FILE.NAME=MNMALP.EXE
+    FILE.SIZE=5152
+    ORDINAL.1.NAME=___EXPORTEDSTUB
+    ORDINAL.1.TYPE=resident
