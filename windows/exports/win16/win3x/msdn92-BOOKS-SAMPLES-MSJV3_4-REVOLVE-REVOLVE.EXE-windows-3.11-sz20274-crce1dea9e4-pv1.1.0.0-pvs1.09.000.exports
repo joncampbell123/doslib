@@ -1,0 +1,7 @@
+MODULE REVOLVE
+    DESCRIPTION=Demonstrates GPI Transforms (C) Charles Petzold, 1988
+    FILE.NAME=REVOLVE.EXE
+    FILE.SIZE=20274
+    ORDINAL.1.NAME=CLIENTWNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.TYPE=empty

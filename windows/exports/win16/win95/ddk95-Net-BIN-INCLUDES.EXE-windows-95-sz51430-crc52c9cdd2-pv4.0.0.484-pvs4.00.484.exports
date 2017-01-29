@@ -1,0 +1,4 @@
+MODULE includes
+    DESCRIPTION=includes.exe
+    FILE.NAME=INCLUDES.EXE
+    FILE.SIZE=51430

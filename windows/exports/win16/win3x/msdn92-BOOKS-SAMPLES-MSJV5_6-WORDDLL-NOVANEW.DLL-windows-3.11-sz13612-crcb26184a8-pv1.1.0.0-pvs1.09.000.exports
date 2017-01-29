@@ -1,0 +1,22 @@
+MODULE NovaNew
+    DESCRIPTION=Replacement for Winword FileNew
+    FILE.NAME=NOVANEW.DLL
+    FILE.SIZE=13612
+    ORDINAL.1.NAME=NOVANEW
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=FNNEW
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=WEP
+    ORDINAL.3.TYPE=resident
+    ORDINAL.4.NAME=
+    ORDINAL.4.TYPE= private
+    ORDINAL.5.NAME=
+    ORDINAL.5.TYPE= private
+    ORDINAL.6.NAME=
+    ORDINAL.6.TYPE= private
+    ORDINAL.7.NAME=
+    ORDINAL.7.TYPE= private
+    ORDINAL.8.NAME=
+    ORDINAL.8.TYPE= private
+    ORDINAL.9.NAME=
+    ORDINAL.9.TYPE= private

@@ -1,0 +1,10 @@
+MODULE HEAD
+    DESCRIPTION=File Head Program (c) Charles Petzold, 1990
+    FILE.NAME=HEAD.EXE
+    FILE.SIZE=7968
+    ORDINAL.1.NAME=LISTPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=WNDPROC
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=
+    ORDINAL.3.TYPE= private

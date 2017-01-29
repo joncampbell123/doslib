@@ -1,0 +1,10 @@
+MODULE FXPCFX
+    DESCRIPTION=Sonic Foundry's Sound Forge XP Effects Plug-In (C)
+    FILE.NAME=fxpcfx.dll
+    FILE.SIZE=88464
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=___EXPORTEDSTUB
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=SOUNDFORGEPLUGIN
+    ORDINAL.3.TYPE=resident

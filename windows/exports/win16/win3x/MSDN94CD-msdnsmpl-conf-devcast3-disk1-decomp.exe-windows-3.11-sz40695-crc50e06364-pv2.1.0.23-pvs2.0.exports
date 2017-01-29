@@ -1,0 +1,4 @@
+MODULE decomp
+    DESCRIPTION=decomp.exe
+    FILE.NAME=decomp.exe
+    FILE.SIZE=40695

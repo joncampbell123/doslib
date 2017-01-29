@@ -1,0 +1,4 @@
+MODULE LINK386
+    DESCRIPTION=Microsoft 32-bit Linear-Executable Linker
+    FILE.NAME=LINK386.EXE
+    FILE.SIZE=123008

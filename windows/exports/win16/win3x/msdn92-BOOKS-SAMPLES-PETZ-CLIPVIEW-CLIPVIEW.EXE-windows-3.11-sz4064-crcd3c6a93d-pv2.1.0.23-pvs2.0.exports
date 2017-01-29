@@ -1,0 +1,8 @@
+MODULE CLIPVIEW
+    DESCRIPTION=Simple Clipboard Viewer (c) Charles Petzold, 1990
+    FILE.NAME=CLIPVIEW.EXE
+    FILE.SIZE=4064
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private

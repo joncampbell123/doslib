@@ -1,0 +1,6 @@
+MODULE INSTALL
+    DESCRIPTION=CPS Install - Copyright (C) 1994 Central Point Software, Inc.
+    FILE.NAME=INSTALL.EXE
+    FILE.SIZE=22444
+    ORDINAL.1.NAME=INSTALLPROC
+    ORDINAL.1.TYPE=resident

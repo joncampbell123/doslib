@@ -1,0 +1,6 @@
+MODULE litedll
+    DESCRIPTION=d:\o\l30\bin\litedll.dll
+    FILE.NAME=KERNEL.DLL
+    FILE.SIZE=3438
+    ORDINAL.1.NAME=LITE286_EXE
+    ORDINAL.1.TYPE=resident

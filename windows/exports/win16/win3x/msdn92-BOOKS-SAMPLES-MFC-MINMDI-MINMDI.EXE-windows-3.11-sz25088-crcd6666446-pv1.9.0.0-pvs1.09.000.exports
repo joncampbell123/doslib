@@ -1,0 +1,6 @@
+MODULE MINMDI
+    DESCRIPTION=Minimal MDI Sample Foundation Application
+    FILE.NAME=MINMDI.EXE
+    FILE.SIZE=25088
+    ORDINAL.1.NAME=_AFX_VERSION
+    ORDINAL.1.TYPE=resident

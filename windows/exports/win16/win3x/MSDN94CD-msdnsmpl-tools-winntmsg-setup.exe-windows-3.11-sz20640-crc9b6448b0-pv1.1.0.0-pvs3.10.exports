@@ -1,0 +1,12 @@
+MODULE bootstrp
+    DESCRIPTION=MS-Setup bootstrap loader
+    FILE.NAME=setup.exe
+    FILE.SIZE=20640
+    ORDINAL.1.NAME=SETUPSUBCLASS
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=BOOTWNDPROC
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=
+    ORDINAL.3.TYPE= private
+    ORDINAL.4.NAME=
+    ORDINAL.4.TYPE= private

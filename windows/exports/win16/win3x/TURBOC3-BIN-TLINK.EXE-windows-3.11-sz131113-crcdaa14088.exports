@@ -1,0 +1,4 @@
+MODULE tlinkoe
+    DESCRIPTION=tlinkoe.exe
+    FILE.NAME=TLINK.EXE
+    FILE.SIZE=131113

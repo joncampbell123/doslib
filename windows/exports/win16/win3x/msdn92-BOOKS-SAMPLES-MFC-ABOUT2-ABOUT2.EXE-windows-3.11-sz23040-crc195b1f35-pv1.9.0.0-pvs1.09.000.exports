@@ -1,0 +1,6 @@
+MODULE ABOUT2
+    DESCRIPTION=Microsoft Foundation About Box Demo No. 2
+    FILE.NAME=ABOUT2.EXE
+    FILE.SIZE=23040
+    ORDINAL.1.NAME=_AFX_VERSION
+    ORDINAL.1.TYPE=resident

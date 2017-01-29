@@ -1,0 +1,8 @@
+MODULE DRVRAPP
+    DESCRIPTION=Sample application calls INSTDRVR.DLL
+    FILE.NAME=drvrapp.exe
+    FILE.SIZE=17348
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident

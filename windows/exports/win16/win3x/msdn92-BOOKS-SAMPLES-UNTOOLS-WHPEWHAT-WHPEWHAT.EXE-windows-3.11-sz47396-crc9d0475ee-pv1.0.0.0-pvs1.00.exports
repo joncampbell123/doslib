@@ -1,0 +1,18 @@
+MODULE bootstrp
+    DESCRIPTION=MS-Setup bootstrap loader
+    FILE.NAME=WHPEWHAT.EXE
+    FILE.SIZE=47396
+    ORDINAL.1.NAME=BOOTWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private
+    ORDINAL.3.NAME=
+    ORDINAL.3.TYPE= private
+    ORDINAL.4.NAME=
+    ORDINAL.4.TYPE= private
+    ORDINAL.5.NAME=
+    ORDINAL.5.TYPE= private
+    ORDINAL.6.NAME=
+    ORDINAL.6.TYPE= private
+    ORDINAL.7.NAME=
+    ORDINAL.7.TYPE= private

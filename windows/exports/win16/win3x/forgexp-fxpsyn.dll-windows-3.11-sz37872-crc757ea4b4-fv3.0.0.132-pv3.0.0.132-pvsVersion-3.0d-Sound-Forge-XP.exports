@@ -1,0 +1,10 @@
+MODULE FXPSYN
+    DESCRIPTION=Sonic Foundry's Sound Forge XP Synthesis Plug-In
+    FILE.NAME=fxpsyn.dll
+    FILE.SIZE=37872
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=___EXPORTEDSTUB
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=SOUNDFORGEPLUGIN
+    ORDINAL.3.TYPE=resident

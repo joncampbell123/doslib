@@ -1,0 +1,6 @@
+MODULE BACK
+    DESCRIPTION=Back Sample Application
+    FILE.NAME=back.exe
+    FILE.SIZE=5255
+    ORDINAL.1.NAME=___EXPORTEDSTUB
+    ORDINAL.1.TYPE=resident

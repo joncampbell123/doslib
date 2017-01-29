@@ -1,0 +1,4 @@
+MODULE madaxp
+    DESCRIPTION=madaxp.dll
+    FILE.NAME=MADAXP.DLL
+    FILE.SIZE=30900

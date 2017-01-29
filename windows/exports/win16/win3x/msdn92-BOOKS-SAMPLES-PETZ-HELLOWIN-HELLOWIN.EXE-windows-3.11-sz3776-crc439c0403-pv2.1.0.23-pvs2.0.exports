@@ -1,0 +1,8 @@
+MODULE HELLOWIN
+    DESCRIPTION=Hello Windows Program (c) Charles Petzold, 1990
+    FILE.NAME=HELLOWIN.EXE
+    FILE.SIZE=3776
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private

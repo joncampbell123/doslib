@@ -1,0 +1,10 @@
+MODULE WNHB
+    DESCRIPTION=CPS Backup Hard Disk Backup Library - Copyright (c) 1993 Central Point Software, Inc.
+    FILE.NAME=WNHB.DLL
+    FILE.SIZE=14048
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=___EXPORTEDSTUB
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=BACKUPDOSDISK
+    ORDINAL.3.TYPE=nonresident

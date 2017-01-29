@@ -1,0 +1,4 @@
+MODULE MFCREATE
+    DESCRIPTION=Metafile Creation Program (c) Charles Petzold, 1990
+    FILE.NAME=MFCREATE.EXE
+    FILE.SIZE=3456

@@ -1,0 +1,4 @@
+MODULE INT33
+    DESCRIPTION=Protected mode INT 33H mouse driver
+    FILE.NAME=INT33.DLL
+    FILE.SIZE=3161

@@ -1,0 +1,4 @@
+MODULE setup
+    DESCRIPTION=setup.exe
+    FILE.NAME=setup.exe
+    FILE.SIZE=83219

@@ -1,0 +1,4 @@
+MODULE madppc
+    DESCRIPTION=madppc.dll
+    FILE.NAME=MADPPC.DLL
+    FILE.SIZE=56360

@@ -1,0 +1,4 @@
+MODULE madmips
+    DESCRIPTION=madmips.dll
+    FILE.NAME=MADMIPS.DLL
+    FILE.SIZE=30450

@@ -1,0 +1,8 @@
+MODULE SOUNDSRV
+    DESCRIPTION=Microsoft Windows DDE Server Application
+    FILE.NAME=soundsrv.exe
+    FILE.SIZE=674724
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=STDDDECALLBACK
+    ORDINAL.2.TYPE=resident

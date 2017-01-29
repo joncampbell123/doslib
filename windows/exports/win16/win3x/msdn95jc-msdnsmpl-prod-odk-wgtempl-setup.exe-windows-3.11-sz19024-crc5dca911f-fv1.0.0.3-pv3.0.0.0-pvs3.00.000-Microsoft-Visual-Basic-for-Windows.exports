@@ -1,0 +1,8 @@
+MODULE GVBSETUP
+    DESCRIPTION=Microsoft Visual Basic Setup Copyright Microsoft Corp. 1991
+    FILE.NAME=setup.exe
+    FILE.SIZE=19024
+    ORDINAL.1.NAME=GSETUPWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=NETERRORPROC
+    ORDINAL.2.TYPE=nonresident

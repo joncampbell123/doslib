@@ -1,0 +1,4 @@
+MODULE MASM
+    DESCRIPTION=Microsoft Macro Assembler
+    FILE.NAME=masm.exe
+    FILE.SIZE=124448

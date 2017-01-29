@@ -1,0 +1,4 @@
+MODULE ADDHDR
+    DESCRIPTION=Add Windows 3.1 386 Device Driver Information
+    FILE.NAME=ADDHDR.EXE
+    FILE.SIZE=12940

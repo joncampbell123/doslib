@@ -1,0 +1,8 @@
+MODULE DIBIT
+    DESCRIPTION=Manipulates Device Independent Bitmap
+    FILE.NAME=DIBIT.EXE
+    FILE.SIZE=41300
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident

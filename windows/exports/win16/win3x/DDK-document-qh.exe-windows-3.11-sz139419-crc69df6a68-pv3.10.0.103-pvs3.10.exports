@@ -1,0 +1,4 @@
+MODULE QH
+    DESCRIPTION=qh.exe
+    FILE.NAME=qh.exe
+    FILE.SIZE=139419

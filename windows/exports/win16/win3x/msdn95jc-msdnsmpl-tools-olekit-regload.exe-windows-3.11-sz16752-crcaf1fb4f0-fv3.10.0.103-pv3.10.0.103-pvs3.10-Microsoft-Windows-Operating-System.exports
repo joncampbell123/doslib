@@ -1,0 +1,4 @@
+MODULE REGLOAD
+    DESCRIPTION=File Associations Loader
+    FILE.NAME=regload.exe
+    FILE.SIZE=16752

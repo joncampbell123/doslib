@@ -1,0 +1,8 @@
+MODULE GDOSMEM
+    DESCRIPTION=Sample Microsoft Windows Application
+    FILE.NAME=GDOSMEM.EXE
+    FILE.SIZE=34124
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident

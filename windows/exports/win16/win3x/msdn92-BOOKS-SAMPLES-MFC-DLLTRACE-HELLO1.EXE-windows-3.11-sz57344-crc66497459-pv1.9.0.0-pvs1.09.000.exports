@@ -1,0 +1,6 @@
+MODULE HELLO1
+    DESCRIPTION=Hello Microsoft Foundation Classes Windows Application
+    FILE.NAME=HELLO1.EXE
+    FILE.SIZE=57344
+    ORDINAL.1.NAME=_AFX_VERSION
+    ORDINAL.1.TYPE=resident

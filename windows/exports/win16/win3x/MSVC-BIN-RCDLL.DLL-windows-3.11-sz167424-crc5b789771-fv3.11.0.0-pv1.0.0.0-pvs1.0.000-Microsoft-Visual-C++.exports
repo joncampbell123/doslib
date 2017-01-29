@@ -1,0 +1,10 @@
+MODULE RCDLL
+    DESCRIPTION=Microsoft (R) Windows (tm) Resource Compiler Version 3.1
+    FILE.NAME=RCDLL.DLL
+    FILE.SIZE=167424
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE=
+    ORDINAL.3.NAME=___EXPORTEDSTUB
+    ORDINAL.3.TYPE=resident

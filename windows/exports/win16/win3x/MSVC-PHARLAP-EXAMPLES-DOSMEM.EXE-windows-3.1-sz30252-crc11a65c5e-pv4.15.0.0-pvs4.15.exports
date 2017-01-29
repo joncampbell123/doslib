@@ -1,0 +1,6 @@
+MODULE DOSMEM
+    DESCRIPTION=dosmem.exe
+    FILE.NAME=DOSMEM.EXE
+    FILE.SIZE=30252
+    ORDINAL.1.NAME=___GetEmDataSeg
+    ORDINAL.1.TYPE=resident

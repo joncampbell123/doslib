@@ -7,6 +7,8 @@ my $sub_path = shift @ARGV;
 my $version = shift @ARGV;
 my $top = `pwd`; chomp $top;
 
+$sub_path = "" if $sub_path eq ".";
+
 print "Root path: $root_path\n";
 print "Sub path: $sub_path\n";
 print "Version: $version\n";
@@ -143,6 +145,7 @@ while (my $path = <SCAN>) {
 
     my $fname = "$sub_path/$path";
     $fname =~ s/[\/\\]/-/g;
+    $fname =~ s/^-+//;
     $fname .= $autosuf;
     $fname .= ".exports";
 

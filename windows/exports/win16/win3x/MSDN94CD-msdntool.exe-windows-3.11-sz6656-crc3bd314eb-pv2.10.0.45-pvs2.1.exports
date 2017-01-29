@@ -1,0 +1,6 @@
+MODULE MSDNTOOL
+    DESCRIPTION=Microsoft Development Library Access Tool
+    FILE.NAME=msdntool.exe
+    FILE.SIZE=6656
+    ORDINAL.1.NAME=___EXPORTEDSTUB
+    ORDINAL.1.TYPE=resident

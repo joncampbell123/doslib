@@ -1,0 +1,6 @@
+MODULE TIMEACD
+    DESCRIPTION=Microsoft Windows MCI Application
+    FILE.NAME=timeacd.exe
+    FILE.SIZE=74552
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident

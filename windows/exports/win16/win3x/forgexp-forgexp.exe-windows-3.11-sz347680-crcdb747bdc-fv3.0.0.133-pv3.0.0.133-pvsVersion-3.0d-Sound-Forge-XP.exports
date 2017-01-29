@@ -1,0 +1,6 @@
+MODULE FORGEXP
+    DESCRIPTION=Sonic Foundry's Sound Forge XP Application
+    FILE.NAME=forgexp.exe
+    FILE.SIZE=347680
+    ORDINAL.1.NAME=___EXPORTEDSTUB
+    ORDINAL.1.TYPE=resident

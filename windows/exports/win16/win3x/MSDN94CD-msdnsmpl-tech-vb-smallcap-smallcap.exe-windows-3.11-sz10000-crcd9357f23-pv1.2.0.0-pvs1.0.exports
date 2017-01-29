@@ -1,0 +1,4 @@
+MODULE SMALLCAP
+    DESCRIPTION=MemMan
+    FILE.NAME=smallcap.exe
+    FILE.SIZE=10000

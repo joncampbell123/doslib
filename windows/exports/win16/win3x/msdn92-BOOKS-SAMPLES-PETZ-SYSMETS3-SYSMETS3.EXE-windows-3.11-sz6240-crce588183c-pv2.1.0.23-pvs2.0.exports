@@ -1,0 +1,8 @@
+MODULE SYSMETS3
+    DESCRIPTION=System Metrics Display No. 3 (c) Charles Petzold, 1990
+    FILE.NAME=SYSMETS3.EXE
+    FILE.SIZE=6240
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private

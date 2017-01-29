@@ -1,0 +1,6 @@
+MODULE WNSETUP
+    DESCRIPTION=CPS WnSetup, Copyright (c) 1994 Central Point Software, Inc.
+    FILE.NAME=WNSETUP.EXE
+    FILE.SIZE=168672
+    ORDINAL.1.NAME=BLLBRDPROC
+    ORDINAL.1.TYPE=nonresident

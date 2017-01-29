@@ -1,0 +1,4 @@
+MODULE codeview
+    DESCRIPTION=codeview.dll
+    FILE.NAME=CODEVIEW.DLL
+    FILE.SIZE=61418

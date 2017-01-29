@@ -1,0 +1,20 @@
+MODULE DRIVER
+    DESCRIPTION=Device Driver Module for LOGGER Copyright (c) Spark Software Inc. 1991.  All rights reserved.
+    FILE.NAME=DRIVER.DLL
+    FILE.SIZE=10112
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=_INTHANDLER
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=DEVOPEN
+    ORDINAL.3.TYPE=nonresident
+    ORDINAL.4.NAME=DEVCLOSE
+    ORDINAL.4.TYPE=nonresident
+    ORDINAL.5.NAME=DEVREAD
+    ORDINAL.5.TYPE=nonresident
+    ORDINAL.6.NAME=GETDEVERROR
+    ORDINAL.6.TYPE=nonresident
+    ORDINAL.7.NAME=GETNUMUNREADITEMS
+    ORDINAL.7.TYPE=nonresident
+    ORDINAL.8.NAME=___ExportedStub
+    ORDINAL.8.TYPE=resident

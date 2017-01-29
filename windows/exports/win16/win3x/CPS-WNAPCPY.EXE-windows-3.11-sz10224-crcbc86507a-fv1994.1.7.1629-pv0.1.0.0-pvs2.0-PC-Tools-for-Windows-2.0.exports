@@ -1,0 +1,4 @@
+MODULE WNAPCPY2
+    DESCRIPTION=CPS Copy Files Applet - Copyright (C) 1993-1994 Central Point Software, Inc.
+    FILE.NAME=WNAPCPY.EXE
+    FILE.SIZE=10224

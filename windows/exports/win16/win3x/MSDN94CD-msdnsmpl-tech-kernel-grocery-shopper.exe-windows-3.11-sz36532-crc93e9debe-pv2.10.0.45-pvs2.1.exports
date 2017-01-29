@@ -1,0 +1,12 @@
+MODULE SHOPPER
+    DESCRIPTION=Sample application uses services in GROCERY.DLL
+    FILE.NAME=shopper.exe
+    FILE.SIZE=36532
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=BUYSTUFFDLG
+    ORDINAL.3.TYPE=nonresident
+    ORDINAL.4.NAME=MYGROCENUMPROC
+    ORDINAL.4.TYPE=nonresident

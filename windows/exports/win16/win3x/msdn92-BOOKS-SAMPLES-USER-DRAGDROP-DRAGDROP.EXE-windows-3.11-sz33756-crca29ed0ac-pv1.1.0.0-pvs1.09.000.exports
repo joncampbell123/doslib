@@ -1,0 +1,8 @@
+MODULE DRAGDROP
+    DESCRIPTION=Drag and Drop Client Sample Application for Microsoft Windows 3.1
+    FILE.NAME=DRAGDROP.EXE
+    FILE.SIZE=33756
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident

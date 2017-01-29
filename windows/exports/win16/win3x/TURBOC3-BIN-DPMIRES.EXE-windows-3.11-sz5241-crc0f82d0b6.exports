@@ -1,0 +1,4 @@
+MODULE dpmires
+    DESCRIPTION=DPMI install program
+    FILE.NAME=DPMIRES.EXE
+    FILE.SIZE=5241

@@ -1,0 +1,8 @@
+MODULE BLOWUP1
+    DESCRIPTION=Blow Up Mouse Demo Program (c) Charles Petzold, 1990
+    FILE.NAME=BLOWUP1.EXE
+    FILE.SIZE=4256
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private

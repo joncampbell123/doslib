@@ -1,0 +1,8 @@
+MODULE RANDRECT
+    DESCRIPTION=Random Rectangle Drawing Program (c) Charles Petzold, 1990
+    FILE.NAME=RANDRECT.EXE
+    FILE.SIZE=4096
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private

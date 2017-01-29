@@ -1,0 +1,26 @@
+MODULE INSTGRPS
+    DESCRIPTION=Copyright (c) 1993,1994 Advanced Gravis Computer Technology
+    FILE.NAME=INSTGRPS.EXE
+    FILE.SIZE=132608
+    ORDINAL.1.NAME=@pmExit$qi
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=@pmReload$qnzc
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=@pmReplaceItem$qnzc
+    ORDINAL.3.TYPE=resident
+    ORDINAL.4.NAME=@pmDeleteItem$qnzc
+    ORDINAL.4.TYPE=resident
+    ORDINAL.5.NAME=@pmAddItem$qnzct1t1ust1
+    ORDINAL.5.TYPE=resident
+    ORDINAL.6.NAME=@pmShowGroup$qnzcus
+    ORDINAL.6.TYPE=resident
+    ORDINAL.7.NAME=@pmDeleteGroup$qnzc
+    ORDINAL.7.TYPE=resident
+    ORDINAL.8.NAME=@pmCreateGroup$qnzct1
+    ORDINAL.8.TYPE=resident
+    ORDINAL.9.NAME=@INITWNDPROC$QUIUSUSL
+    ORDINAL.9.TYPE=resident
+    ORDINAL.10.NAME=@INITWNDPROC$QPX6HWND__UIUIL
+    ORDINAL.10.TYPE=resident
+    ORDINAL.11.NAME=@STDWNDPROC$QPX6HWND__USUSL
+    ORDINAL.11.TYPE=resident

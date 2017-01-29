@@ -1,0 +1,6 @@
+MODULE GPIDEMO
+    DESCRIPTION=Combines most of the GPI example programs into one
+    FILE.NAME=PMBASIC.EXE
+    FILE.SIZE=32768
+    ORDINAL.1.NAME=BASCLIENTWNDPROC
+    ORDINAL.1.TYPE=resident

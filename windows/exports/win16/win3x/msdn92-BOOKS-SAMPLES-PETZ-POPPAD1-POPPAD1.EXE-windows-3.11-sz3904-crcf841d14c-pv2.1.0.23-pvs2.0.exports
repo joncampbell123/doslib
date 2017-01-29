@@ -1,0 +1,8 @@
+MODULE POPPAD1
+    DESCRIPTION=Popup Editor Version 1 (c) Charles Petzold, 1990
+    FILE.NAME=POPPAD1.EXE
+    FILE.SIZE=3904
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private

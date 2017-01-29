@@ -1,0 +1,10 @@
+MODULE WNHR
+    DESCRIPTION=CPS Backup Hard Disk Restore Library - Copyright (c) 1993 Central Point Software, Inc.
+    FILE.NAME=WNHR.DLL
+    FILE.SIZE=13632
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=___EXPORTEDSTUB
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=RESTOREDOSDISK
+    ORDINAL.3.TYPE=nonresident

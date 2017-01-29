@@ -1,0 +1,12 @@
+MODULE RESVIEW
+    DESCRIPTION=Microsoft Windows 3.1 Display Driver Resource Viewer
+    FILE.NAME=resview.exe
+    FILE.SIZE=11776
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=REPORTCARD
+    ORDINAL.3.TYPE=nonresident
+    ORDINAL.4.NAME=
+    ORDINAL.4.TYPE= private

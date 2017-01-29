@@ -1,0 +1,4 @@
+MODULE NOISE
+    DESCRIPTION=Noise
+    FILE.NAME=noise.exe
+    FILE.SIZE=8721

@@ -1,0 +1,6 @@
+MODULE PALETTE
+    DESCRIPTION=palette -- A Windows 3 Application
+    FILE.NAME=PALETTE.EXE
+    FILE.SIZE=29888
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident

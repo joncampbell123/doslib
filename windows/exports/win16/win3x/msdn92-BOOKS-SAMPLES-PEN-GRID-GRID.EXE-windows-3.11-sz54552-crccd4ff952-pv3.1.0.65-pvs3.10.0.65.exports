@@ -1,0 +1,8 @@
+MODULE GRID
+    DESCRIPTION=Microsoft Grid Sample Application
+    FILE.NAME=GRID.EXE
+    FILE.SIZE=54552
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident

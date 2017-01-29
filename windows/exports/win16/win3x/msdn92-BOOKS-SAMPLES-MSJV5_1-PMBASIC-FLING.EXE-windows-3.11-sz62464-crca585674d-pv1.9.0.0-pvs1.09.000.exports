@@ -1,0 +1,6 @@
+MODULE FLING
+    DESCRIPTION=Flings bitmaps around the Client window 
+    FILE.NAME=FLING.EXE
+    FILE.SIZE=62464
+    ORDINAL.1.NAME=BASCLIENTWNDPROC
+    ORDINAL.1.TYPE=resident

@@ -1,0 +1,8 @@
+MODULE ANNOTATE
+    DESCRIPTION=Simple Microsoft Windows Application
+    FILE.NAME=ANNOTATE.EXE
+    FILE.SIZE=58792
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident

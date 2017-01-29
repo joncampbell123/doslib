@@ -1,0 +1,8 @@
+MODULE ARCS
+    DESCRIPTION=Arc, Chord, and Pie Drawing Program (c) Charles Petzold, 1990
+    FILE.NAME=ARCS.EXE
+    FILE.SIZE=4608
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private

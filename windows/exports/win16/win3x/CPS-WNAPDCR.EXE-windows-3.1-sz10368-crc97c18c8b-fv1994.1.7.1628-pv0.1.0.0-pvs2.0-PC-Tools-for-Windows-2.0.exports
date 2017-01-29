@@ -1,0 +1,4 @@
+MODULE WNAPDCR2
+    DESCRIPTION=CPS Decrypt Files Applet - Copyright (C) 1993-1994 Central Point Software, Inc.
+    FILE.NAME=WNAPDCR.EXE
+    FILE.SIZE=10368

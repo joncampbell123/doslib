@@ -1,0 +1,4 @@
+MODULE MAPSYM
+    DESCRIPTION=MAP File to SYM File Conversion Utility
+    FILE.NAME=MAPSYM.EXE
+    FILE.SIZE=33001

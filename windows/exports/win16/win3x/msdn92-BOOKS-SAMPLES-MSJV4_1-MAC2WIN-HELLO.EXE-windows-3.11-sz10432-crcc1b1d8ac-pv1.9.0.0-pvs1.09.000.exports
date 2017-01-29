@@ -1,0 +1,10 @@
+MODULE HELLO
+    DESCRIPTION=Simple Microsoft Windows Application
+    FILE.NAME=HELLO.EXE
+    FILE.SIZE=10432
+    ORDINAL.1.NAME=HELLOWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=
+    ORDINAL.3.TYPE= private

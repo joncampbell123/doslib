@@ -1,0 +1,4 @@
+MODULE watcom
+    DESCRIPTION=watcom.dll
+    FILE.NAME=WATCOM.DLL
+    FILE.SIZE=65532

@@ -1,0 +1,8 @@
+MODULE MEMORY
+    DESCRIPTION=Sample Microsoft Windows Application
+    FILE.NAME=MEMORY.EXE
+    FILE.SIZE=32780
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident

@@ -1,0 +1,4 @@
+MODULE TEST
+    DESCRIPTION=test
+    FILE.NAME=test.exe
+    FILE.SIZE=7952

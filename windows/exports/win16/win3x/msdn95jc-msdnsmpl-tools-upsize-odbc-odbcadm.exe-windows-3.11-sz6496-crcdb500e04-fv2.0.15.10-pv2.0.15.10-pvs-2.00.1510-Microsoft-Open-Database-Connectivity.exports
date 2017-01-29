@@ -1,0 +1,6 @@
+MODULE ODBCADM
+    DESCRIPTION=Microsoft ODBC Administrator
+    FILE.NAME=odbcadm.exe
+    FILE.SIZE=6496
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident

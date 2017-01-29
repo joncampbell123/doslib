@@ -1,0 +1,8 @@
+MODULE GENERIC
+    DESCRIPTION=Sample Microsoft Windows Application
+    FILE.NAME=GENERIC.EXE
+    FILE.SIZE=7680
+    ORDINAL.1.NAME=?MainWndProc@@ZCJIIIJ@Z
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=?About@@ZCHIIIJ@Z
+    ORDINAL.2.TYPE=resident

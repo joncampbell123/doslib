@@ -1,0 +1,14 @@
+MODULE HeapPeep
+    DESCRIPTION=HeapPeep (requires toolhelp) (c) Chiverton Graphics, Inc. 1991
+    FILE.NAME=HEAPPEEP.EXE
+    FILE.SIZE=34342
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUTDLGPROC
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=___EXPORTEDSTUB
+    ORDINAL.3.TYPE=resident
+    ORDINAL.4.NAME=
+    ORDINAL.4.TYPE= private
+    ORDINAL.5.NAME=
+    ORDINAL.5.TYPE= private

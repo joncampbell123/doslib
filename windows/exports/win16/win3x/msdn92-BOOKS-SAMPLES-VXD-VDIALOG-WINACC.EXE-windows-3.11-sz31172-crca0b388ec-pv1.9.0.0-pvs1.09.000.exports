@@ -1,0 +1,8 @@
+MODULE WINACC
+    DESCRIPTION=Sample Application for Microsoft Windows for use with VDialogD
+    FILE.NAME=WINACC.EXE
+    FILE.SIZE=31172
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=ABOUT
+    ORDINAL.2.TYPE=nonresident

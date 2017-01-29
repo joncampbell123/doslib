@@ -1,0 +1,10 @@
+MODULE CharMap
+    DESCRIPTION=Utility for easily selecting special characters.
+    FILE.NAME=CHARMAP.EXE
+    FILE.SIZE=22016
+    ORDINAL.1.NAME=CHARMAPWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=CHARGRIDWNDPROC
+    ORDINAL.2.TYPE=nonresident
+    ORDINAL.3.NAME=FONTLOADPROC
+    ORDINAL.3.TYPE=nonresident

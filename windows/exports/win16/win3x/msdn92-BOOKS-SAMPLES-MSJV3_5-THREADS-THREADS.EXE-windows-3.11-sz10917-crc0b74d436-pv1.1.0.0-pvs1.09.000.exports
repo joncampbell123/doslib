@@ -1,0 +1,4 @@
+MODULE THREADS
+    DESCRIPTION=Multi-Thread Demo Program by Charles Petzold, 1988
+    FILE.NAME=THREADS.EXE
+    FILE.SIZE=10917

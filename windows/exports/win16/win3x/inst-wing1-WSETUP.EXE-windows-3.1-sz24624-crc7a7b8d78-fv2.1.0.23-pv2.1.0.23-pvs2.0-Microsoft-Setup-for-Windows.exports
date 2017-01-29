@@ -1,0 +1,10 @@
+MODULE bootstrp
+    DESCRIPTION=MS-Setup Loader
+    FILE.NAME=WSETUP.EXE
+    FILE.SIZE=24624
+    ORDINAL.1.NAME=BOOTWNDPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private
+    ORDINAL.3.NAME=
+    ORDINAL.3.TYPE= private

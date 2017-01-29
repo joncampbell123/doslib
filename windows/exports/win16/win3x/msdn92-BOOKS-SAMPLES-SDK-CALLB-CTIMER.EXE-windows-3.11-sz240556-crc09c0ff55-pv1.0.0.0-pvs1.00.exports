@@ -1,0 +1,6 @@
+MODULE CTIMER
+    DESCRIPTION=Hello Microsoft Foundation Classes Windows Application
+    FILE.NAME=CTIMER.EXE
+    FILE.SIZE=240556
+    ORDINAL.1.NAME=_AFX_VERSION
+    ORDINAL.1.TYPE=resident

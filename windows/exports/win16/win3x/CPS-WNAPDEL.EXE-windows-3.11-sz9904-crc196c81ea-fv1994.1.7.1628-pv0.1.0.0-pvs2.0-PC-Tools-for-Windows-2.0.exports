@@ -1,0 +1,4 @@
+MODULE WNAPDEL2
+    DESCRIPTION=CPS Delete Files Applet - Copyright (C) 1993-1994 Central Point Software, Inc.
+    FILE.NAME=WNAPDEL.EXE
+    FILE.SIZE=9904

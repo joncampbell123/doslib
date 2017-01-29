@@ -1,0 +1,8 @@
+MODULE HEXCALC
+    DESCRIPTION=Hexadecimal Calculator (c) Charles Petzold, 1990
+    FILE.NAME=HEXCALC.EXE
+    FILE.SIZE=6192
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private

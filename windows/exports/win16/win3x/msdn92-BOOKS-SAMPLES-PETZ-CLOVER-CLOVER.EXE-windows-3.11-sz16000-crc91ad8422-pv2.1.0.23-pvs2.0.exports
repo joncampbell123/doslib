@@ -1,0 +1,12 @@
+MODULE CLOVER
+    DESCRIPTION=Clover Drawing Using Regions (c) Charles Petzold, 1990
+    FILE.NAME=CLOVER.EXE
+    FILE.SIZE=16000
+    ORDINAL.1.NAME=___EXPORTEDSTUB
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=WNDPROC
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=
+    ORDINAL.3.TYPE= private
+    ORDINAL.4.NAME=
+    ORDINAL.4.TYPE= private

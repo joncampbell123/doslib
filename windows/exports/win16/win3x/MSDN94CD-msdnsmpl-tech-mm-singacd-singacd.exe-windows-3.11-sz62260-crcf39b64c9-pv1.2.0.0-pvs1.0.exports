@@ -1,0 +1,6 @@
+MODULE SINGACD
+    DESCRIPTION=Microsoft Windows MCI Application
+    FILE.NAME=singacd.exe
+    FILE.SIZE=62260
+    ORDINAL.1.NAME=MAINWNDPROC
+    ORDINAL.1.TYPE=nonresident

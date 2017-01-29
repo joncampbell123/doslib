@@ -1,0 +1,14 @@
+MODULE MIDIRec0
+    DESCRIPTION=A minimum stress MIDI Input Port Recording Application
+    FILE.NAME=midirec.exe
+    FILE.SIZE=60214
+    ORDINAL.1.NAME=ABOUTDLGPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=WNDPROC1
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=DRVRINDLGPROC
+    ORDINAL.3.TYPE=resident
+    ORDINAL.4.NAME=DRIVERDLGPROC
+    ORDINAL.4.TYPE=resident
+    ORDINAL.5.NAME=
+    ORDINAL.5.TYPE= private

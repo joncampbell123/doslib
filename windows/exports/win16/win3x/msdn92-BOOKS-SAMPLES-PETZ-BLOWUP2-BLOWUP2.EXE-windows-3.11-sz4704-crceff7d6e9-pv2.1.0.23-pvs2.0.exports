@@ -1,0 +1,8 @@
+MODULE BLOWUP2
+    DESCRIPTION=Capture Screen Image to Clipboard (c) Charles Petzold, 1990
+    FILE.NAME=BLOWUP2.EXE
+    FILE.SIZE=4704
+    ORDINAL.1.NAME=WNDPROC
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=
+    ORDINAL.2.TYPE= private

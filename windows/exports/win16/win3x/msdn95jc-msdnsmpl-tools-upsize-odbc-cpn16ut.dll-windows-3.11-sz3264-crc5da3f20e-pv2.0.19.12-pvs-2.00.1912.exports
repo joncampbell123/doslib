@@ -1,0 +1,12 @@
+MODULE CPN16UT
+    DESCRIPTION=CP 16bit UT Thunk API Library, Copyright(c) Microsoft Corp., 1993-1994
+    FILE.NAME=cpn16ut.dll
+    FILE.SIZE=3264
+    ORDINAL.1.NAME=DMDISPATCH
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=WEP
+    ORDINAL.2.TYPE=resident
+    ORDINAL.3.NAME=LIBMAIN
+    ORDINAL.3.TYPE=resident
+    ORDINAL.4.NAME=___EXPORTEDSTUB
+    ORDINAL.4.TYPE=resident

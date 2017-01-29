@@ -1,0 +1,6 @@
+MODULE BIG
+    DESCRIPTION=big.exe
+    FILE.NAME=BIG.EXE
+    FILE.SIZE=30764
+    ORDINAL.1.NAME=___GetEmDataSeg
+    ORDINAL.1.TYPE=resident
