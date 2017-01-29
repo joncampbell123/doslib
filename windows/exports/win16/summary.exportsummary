@@ -2755,7 +2755,9 @@ MODULE GDI
 
     ; ------ At this point, no more ordinals in ./gdi/gdi.windows.3.0.exports
 
+    ; Ordinal #519 in ./gdi/gdi.windows.95.4.00.95.exports
     ORDINAL.519.NAME=SELECTCLIPPATH
+
     ORDINAL.520.NAME=STROKEANDFILLPATH
     ORDINAL.521.NAME=STROKEPATH
     ORDINAL.522.NAME=WIDENPATH
@@ -7930,7 +7932,9 @@ MODULE USER
 
     ; ------ At this point, no more ordinals in ./user/user.windows.3.0me.exports
 
+    ; Ordinal #736 in ./user/user.windows.95.4.00.950.exports
     ORDINAL.736.TYPE=empty
+
     ORDINAL.737.TYPE=empty
     ORDINAL.738.TYPE=empty
     ORDINAL.739.TYPE=empty
@@ -8462,7 +8466,21 @@ MODULE KERNEL
     ORDINAL.103.NAME=NETBIOSCALL
 
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.1.04.exports
+
+    ; Ordinal #104 in ./kernel/kernel.windows.3.1.386.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.3.0.386.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.95.4.00.950.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.3.1.286.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.3.0me.386.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.3.0.8086.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.3.0.286.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.3.11.286.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.2.03.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.3.11.386.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.3.0me.286.exports
+    ; Ordinal #104 in ./kernel/kernel.windows.3.0me.8086.exports
     ORDINAL.104.NAME=GETCODEINFO
+
     ORDINAL.105.NAME=GETEXEVERSION
     ORDINAL.106.NAME=SETSWAPAREASIZE
     ORDINAL.107.NAME=SETERRORMODE
@@ -9685,6 +9703,11 @@ MODULE KERNEL
 
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.3.0me.8086.exports
 
+    ; Ordinal #212 in ./kernel/kernel.windows.3.1.386.exports
+    ; Ordinal #212 in ./kernel/kernel.windows.95.4.00.950.exports
+    ; Ordinal #212 in ./kernel/kernel.windows.3.1.286.exports
+    ; Ordinal #212 in ./kernel/kernel.windows.3.11.286.exports
+    ; Ordinal #212 in ./kernel/kernel.windows.3.11.386.exports
     ORDINAL.212.TYPE=empty
 
     ; Ordinal #213 in ./kernel/kernel.windows.95.4.00.950.exports
@@ -10190,7 +10213,9 @@ MODULE KERNEL
 
     ; ------ At this point, no more ordinals in ./kernel/kernel.windows.3.11.386.exports
 
+    ; Ordinal #405 in ./kernel/kernel.windows.95.4.00.950.exports
     ORDINAL.405.TYPE=empty
+
     ORDINAL.406.NAME=WRITEPRIVATEPROFILESTRUCT
     ORDINAL.407.NAME=GETPRIVATEPROFILESTRUCT
     ORDINAL.408.NAME=

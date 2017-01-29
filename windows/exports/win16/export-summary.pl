@@ -138,6 +138,7 @@ while (my ($module,$modlistr) = each(%modules)) {
     }
 
     my $last_refs = 0;
+    my $last_nomoreord = 0;
     for ($i=1;$i < $max_ordinals;$i++) {
         my @refs;
 
@@ -149,7 +150,10 @@ while (my ($module,$modlistr) = each(%modules)) {
             my @ordinals = @{$modinfo{'ordinals'}};
 
             # this is an opportunity to note when ordinals stop
-            print "\n    ; ------ At this point, no more ordinals in ".$modinfo{'filepath'}."\n" if ((scalar @ordinals) == $i);
+            if ((scalar @ordinals) == $i) {
+                print "\n    ; ------ At this point, no more ordinals in ".$modinfo{'filepath'}."\n";
+                $last_nomoreord = 1;
+            }
 
             my $ordref = $ordinals[$i];
             if (defined($ordref)) {
@@ -209,7 +213,7 @@ while (my ($module,$modlistr) = each(%modules)) {
 
             next if !exists($ref{'NAME'}) && !exists($ref{'TYPE'});
 
-            if (@refs > 1) {
+            if (@refs > 1 || $last_nomoreord > 0) {
                 my @modinfo = @{$ref{modinfo}};
                 for ($ri=0;$ri < @modinfo;$ri++) {
                     my %modinf = %{$modinfo[$ri]};
@@ -221,6 +225,8 @@ while (my ($module,$modlistr) = each(%modules)) {
                     print $modinf{'filepath'} if exists $modinf{'filepath'};
                     print "\n";
                 }
+
+                $last_nomoreord = 0;
             }
             else {
                 print "\n" if $last_refs != 0;
