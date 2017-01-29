@@ -1,0 +1,8 @@
+MODULE TIMER
+    DESCRIPTION=timer:Timer
+    FILE.NAME=timer.drv
+    FILE.SIZE=4048
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=DRIVERPROC
+    ORDINAL.2.TYPE=resident

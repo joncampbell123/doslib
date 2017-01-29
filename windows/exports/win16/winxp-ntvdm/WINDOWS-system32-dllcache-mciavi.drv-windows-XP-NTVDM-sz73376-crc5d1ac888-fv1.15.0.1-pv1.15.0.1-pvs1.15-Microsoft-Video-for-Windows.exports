@@ -1,0 +1,8 @@
+MODULE MCIAVI
+    DESCRIPTION=AVIVideo:[MCI] Microsoft Video for Windows
+    FILE.NAME=mciavi.drv
+    FILE.SIZE=73376
+    ORDINAL.1.NAME=WEP
+    ORDINAL.1.TYPE=resident
+    ORDINAL.2.NAME=DRIVERPROC
+    ORDINAL.2.TYPE=nonresident

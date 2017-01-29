@@ -1,0 +1,4 @@
+MODULE WOWDEB
+    DESCRIPTION=USA\obj\i386\wowdeb.exe
+    FILE.NAME=wowdeb.exe
+    FILE.SIZE=2736
