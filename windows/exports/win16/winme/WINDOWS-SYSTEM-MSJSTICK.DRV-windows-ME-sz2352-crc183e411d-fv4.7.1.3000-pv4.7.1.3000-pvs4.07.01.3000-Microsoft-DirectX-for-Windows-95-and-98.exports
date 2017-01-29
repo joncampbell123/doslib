@@ -1,0 +1,8 @@
+MODULE MSJSTICK
+    DESCRIPTION=joystick:Microsoft game adapter joystick driver
+    FILE.NAME=MSJSTICK.DRV
+    FILE.SIZE=2352
+    ORDINAL.1.NAME=DRIVERPROC
+    ORDINAL.1.TYPE=nonresident
+    ORDINAL.2.NAME=WEP
+    ORDINAL.2.TYPE=resident
