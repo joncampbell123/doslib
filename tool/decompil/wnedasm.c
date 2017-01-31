@@ -379,6 +379,7 @@ void get_entry_name_by_ordinal(char *tmp,size_t tmplen,const struct exe_ne_heade
 
 void print_relocation_farptr(
     const struct exe_ne_header_imported_name_table *ne_imported_name_table,
+    const struct exe_ne_header_entry_table_table *ne_entry_table,
     const struct exe_ne_header_name_entry_table *ne_nonresname,
     const struct exe_ne_header_name_entry_table *ne_resname,
     const union exe_ne_header_segment_relocation_entry *relocent) {
@@ -394,6 +395,34 @@ void print_relocation_farptr(
                 else
                     printf("entry ordinal #%d",
                             relocent->movintref.entry_ordinal);
+
+                /* ordinal is 1-based */
+                if (relocent->movintref.entry_ordinal > 0 &&
+                    relocent->movintref.entry_ordinal <= ne_entry_table->length) {
+                    struct exe_ne_header_entry_table_entry *ent = ne_entry_table->table + relocent->movintref.entry_ordinal - 1;
+                    unsigned char *rawd = exe_ne_header_entry_table_table_raw_entry(ne_entry_table,ent);
+                    if (rawd != NULL) {
+                        if (ent->segment_id == 0xFF) {
+                            struct exe_ne_header_entry_table_movable_segment_entry *ment =
+                                (struct exe_ne_header_entry_table_movable_segment_entry*)rawd;
+
+                            printf(" -- segment #%d -- 0x%04x : 0x%04x",
+                                    ment->segid,
+                                    ment->segid,
+                                    ment->seg_offs);
+                        }
+                        else {
+                            /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
+                            struct exe_ne_header_entry_table_fixed_segment_entry *fent =
+                                (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
+
+                            printf(" -- segment #%d -- 0x%04x : 0x%04x",
+                                    ent->segment_id,
+                                    ent->segment_id,
+                                    fent->v.seg_offs);
+                        }
+                    }
+                }
             }
             else {
                 printf("segment #%d : 0x%04X",
@@ -1315,7 +1344,7 @@ int main(int argc,char **argv) {
                                     if (o == (ip + 1)) {
                                         if (!(relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE)) {
                                             printf("<");
-                                            print_relocation_farptr(&ne_imported_name_table,&ne_nonresname,&ne_resname,relocent);
+                                            print_relocation_farptr(&ne_imported_name_table,&ne_entry_table,&ne_nonresname,&ne_resname,relocent);
                                             printf(">");
                                         }
 
