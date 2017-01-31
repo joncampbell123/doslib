@@ -359,6 +359,83 @@ void get_entry_name_by_ordinal(char *tmp,size_t tmplen,const struct exe_ne_heade
     }
 }
 
+void print_relocation_segment(
+    const struct exe_ne_header_name_entry_table *ne_nonresname,
+    const struct exe_ne_header_name_entry_table *ne_resname,
+    const union exe_ne_header_segment_relocation_entry *relocent) {
+    // caller has established relocation is 2-byte SEGMENT value.
+    switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
+            if (relocent->intref.segment_index == 0xFF) {
+                get_entry_name_by_ordinal(name_tmp,sizeof(name_tmp),ne_nonresname,ne_resname,relocent->movintref.entry_ordinal);
+
+                if (name_tmp[0] != 0)
+                    printf("segment of entry %s ordinal #%d",
+                            name_tmp,relocent->movintref.entry_ordinal);
+                else
+                    printf("segment of entry ordinal #%d",
+                            relocent->movintref.entry_ordinal);
+            }
+            else {
+                printf("segment #%d=0x%04X",
+                        relocent->intref.segment_index,
+                        relocent->intref.segment_index);
+            }
+            break;
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
+            printf("segment of module reference #%d, ordinal %d",
+                    relocent->ordinal.module_reference_index,
+                    relocent->ordinal.ordinal);
+            break;
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
+            printf("segment of module reference #%d, imp name offset %d",
+                    relocent->name.module_reference_index,
+                    relocent->name.imported_name_offset);
+            break;
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
+            printf("segment of OSFIXUP type=0x%04x ???",
+                    relocent->osfixup.fixup);
+            break;
+    }
+}
+
+void print_relocation_offset(
+    const struct exe_ne_header_name_entry_table *ne_nonresname,
+    const struct exe_ne_header_name_entry_table *ne_resname,
+    const union exe_ne_header_segment_relocation_entry *relocent) {
+    // caller has established relocation is 2-byte SEGMENT value.
+    switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
+            if (relocent->intref.segment_index == 0xFF) {
+                get_entry_name_by_ordinal(name_tmp,sizeof(name_tmp),ne_nonresname,ne_resname,relocent->movintref.entry_ordinal);
+
+                if (name_tmp[0] != 0)
+                    printf("offset of entry %s ordinal #%d",
+                            name_tmp,relocent->movintref.entry_ordinal);
+                else
+                    printf("offset of entry ordinal #%d",
+                            relocent->movintref.entry_ordinal);
+            }
+            else {
+                printf("NOTIMPL");
+            }
+            break;
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
+            printf("offset of module reference #%d, ordinal %d",
+                    relocent->ordinal.module_reference_index,
+                    relocent->ordinal.ordinal);
+            break;
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
+            printf("offset of module reference #%d, imp name offset %d",
+                    relocent->name.module_reference_index,
+                    relocent->name.imported_name_offset);
+            break;
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
+            printf("offset of OSFIXUP type=0x%04x ???",
+                    relocent->osfixup.fixup);
+            break;
+    }
+}
 
 int main(int argc,char **argv) {
     struct exe_ne_header_segment_reloc_table *ne_segment_relocs = NULL;
@@ -981,6 +1058,112 @@ int main(int argc,char **argv) {
                         printf("   ");
                 }
                 printf("%-8s ",opcode_string[dec_i.opcode]);
+
+                if (reloc && reloci < reloc->length) {
+                    const union exe_ne_header_segment_relocation_entry *relocent = reloc->table + reloci;
+                    const uint32_t o = relocent->r.seg_offset;
+
+                    if (o >= ip && o < (ip + inslen)) {
+                        if ((dec_i.opcode == MXOP_JMP_FAR || dec_i.opcode == MXOP_CALL_FAR) && dec_i.argc == 1 &&
+                            dec_i.argv[0].segment == MX86_SEG_IMM && dec_i.argv[0].regtype == MX86_RT_IMM) {
+
+                            switch (relocent->r.reloc_address_type&EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_MASK) {
+                                case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT:
+                                    if (o == (ip + 1 + 2)) { // CALL/JMP FAR segment relocation affecting segment portion
+                                        printf("<");
+                                        print_relocation_segment(&ne_nonresname,&ne_resname,relocent);
+                                        if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
+                                            printf(" + 0x%04x>:0x%04x",
+                                                (unsigned int)dec_i.argv[0].segval,
+                                                (unsigned int)dec_i.argv[0].value);
+                                        }
+                                        else {
+                                            printf(">:0x%04x",
+                                                (unsigned int)dec_i.argv[0].value);
+                                        }
+
+                                        reloc_ann = 1;
+                                    }
+                                    break;
+                            };
+                        }
+                        if ((dec_i.opcode == MXOP_PUSH) && dec_i.argc == 1 &&
+                            dec_i.argv[0].regtype == MX86_RT_IMM) {
+
+                            switch (relocent->r.reloc_address_type&EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_MASK) {
+                                case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT:
+                                    {
+                                        printf("<");
+                                        print_relocation_segment(&ne_nonresname,&ne_resname,relocent);
+                                        if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
+                                            printf(" + 0x%04x>",
+                                                (unsigned int)dec_i.argv[0].value);
+                                        }
+                                        else {
+                                            printf(">");
+                                        }
+                                    }
+                                    break;
+                                case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET:
+                                    {
+                                        printf("<");
+                                        print_relocation_offset(&ne_nonresname,&ne_resname,relocent);
+                                        if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
+                                            printf(" + 0x%04x>",
+                                                (unsigned int)dec_i.argv[0].value);
+                                        }
+                                        else {
+                                            printf(">");
+                                        }
+                                    }
+                                    break;
+                            };
+
+                            reloc_ann = 1;
+                        }
+                        if ((dec_i.opcode == MXOP_MOV || dec_i.opcode == MXOP_ADD || dec_i.opcode == MXOP_SUB ||
+                             dec_i.opcode == MXOP_CMP || dec_i.opcode == MXOP_XOR) && dec_i.argc == 2 &&
+                            dec_i.argv[1].regtype == MX86_RT_IMM) {
+
+                            for (c=0;c < 1;) {
+                                minx86dec_regprint(&dec_i.argv[c],arg_c);
+                                printf("%s",arg_c);
+                                if (++c < dec_i.argc) printf(",");
+                            }
+
+                            switch (relocent->r.reloc_address_type&EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_MASK) {
+                                case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT:
+                                    {
+                                        printf("<");
+                                        print_relocation_segment(&ne_nonresname,&ne_resname,relocent);
+                                        if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
+                                            printf(" + 0x%04x>",
+                                                (unsigned int)dec_i.argv[0].value);
+                                        }
+                                        else {
+                                            printf(">");
+                                        }
+                                    }
+                                    break;
+                                case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET:
+                                    {
+                                        printf("<");
+                                        print_relocation_offset(&ne_nonresname,&ne_resname,relocent);
+                                        if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
+                                            printf(" + 0x%04x>",
+                                                (unsigned int)dec_i.argv[0].value);
+                                        }
+                                        else {
+                                            printf(">");
+                                        }
+                                    }
+                                    break;
+                            };
+
+                            reloc_ann = 1;
+                        }
+                    }
+                }
 
                 if (!reloc_ann) {
                     for (c=0;c < dec_i.argc;) {
