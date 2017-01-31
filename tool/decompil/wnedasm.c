@@ -359,6 +359,46 @@ void get_entry_name_by_ordinal(char *tmp,size_t tmplen,const struct exe_ne_heade
     }
 }
 
+void print_relocation_farptr(
+    const struct exe_ne_header_name_entry_table *ne_nonresname,
+    const struct exe_ne_header_name_entry_table *ne_resname,
+    const union exe_ne_header_segment_relocation_entry *relocent) {
+    // caller has established relocation is 2-byte SEGMENT value.
+    switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
+            if (relocent->intref.segment_index == 0xFF) {
+                get_entry_name_by_ordinal(name_tmp,sizeof(name_tmp),ne_nonresname,ne_resname,relocent->movintref.entry_ordinal);
+
+                if (name_tmp[0] != 0)
+                    printf("entry %s ordinal #%d",
+                            name_tmp,relocent->movintref.entry_ordinal);
+                else
+                    printf("entry ordinal #%d",
+                            relocent->movintref.entry_ordinal);
+            }
+            else {
+                printf("segment #%d : 0x%04X",
+                        relocent->intref.segment_index,
+                        relocent->intref.seg_offset);
+            }
+            break;
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
+            printf("module reference #%d, ordinal %d",
+                    relocent->ordinal.module_reference_index,
+                    relocent->ordinal.ordinal);
+            break;
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
+            printf("module reference #%d, imp name offset %d",
+                    relocent->name.module_reference_index,
+                    relocent->name.imported_name_offset);
+            break;
+        case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
+            printf("OSFIXUP type=0x%04x",
+                    relocent->osfixup.fixup);
+            break;
+    }
+}
+
 void print_relocation_segment(
     const struct exe_ne_header_name_entry_table *ne_nonresname,
     const struct exe_ne_header_name_entry_table *ne_resname,
@@ -1080,6 +1120,17 @@ int main(int argc,char **argv) {
                                         else {
                                             printf(">:0x%04x",
                                                 (unsigned int)dec_i.argv[0].value);
+                                        }
+
+                                        reloc_ann = 1;
+                                    }
+                                    break;
+                                case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_FAR_POINTER:
+                                    if (o == (ip + 1)) {
+                                        if (!(relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE)) {
+                                            printf("<");
+                                            print_relocation_farptr(&ne_nonresname,&ne_resname,relocent);
+                                            printf(">");
                                         }
 
                                         reloc_ann = 1;
