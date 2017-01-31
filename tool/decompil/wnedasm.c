@@ -204,6 +204,20 @@ int dec_label_qsortcb(const void *a,const void *b) {
     return 0;
 }
 
+int ne_segment_relocs_table_qsort(const void *a,const void *b) {
+    const union exe_ne_header_segment_relocation_entry *as =
+        (const union exe_ne_header_segment_relocation_entry *)a;
+    const union exe_ne_header_segment_relocation_entry *bs =
+        (const union exe_ne_header_segment_relocation_entry *)b;
+
+    if (as->r.seg_offset < bs->r.seg_offset)
+        return -1;
+    else if (as->r.seg_offset > bs->r.seg_offset)
+        return 1;
+
+    return 0;
+}
+
 void dec_label_sort() {
     if (dec_label == NULL || dec_label_count == 0)
         return;
@@ -212,6 +226,7 @@ void dec_label_sort() {
 }
 
 int main(int argc,char **argv) {
+    struct exe_ne_header_segment_reloc_table *ne_segment_relocs = NULL;
     struct exe_ne_header_imported_name_table ne_imported_name_table;
     struct exe_ne_header_entry_table_table ne_entry_table;
     struct exe_ne_header_name_entry_table ne_nonresname;
@@ -477,6 +492,58 @@ int main(int argc,char **argv) {
         ne_header.entry_cs,
         ne_header.entry_ip);
 
+    // load and alloc relocations
+    if (ne_segments.length != 0) {
+        unsigned int i;
+
+        ne_segment_relocs = malloc(sizeof(*ne_segment_relocs) * ne_segments.length);
+        if (ne_segment_relocs != NULL) {
+            for (i=0;i < ne_segments.length;i++)
+                exe_ne_header_segment_reloc_table_init(&ne_segment_relocs[i]);
+        }
+    }
+
+    if (ne_segment_relocs) {
+        struct exe_ne_header_segment_entry *segent;
+        unsigned long reloc_offset;
+        uint16_t reloc_entries;
+        unsigned char *base;
+        unsigned int i;
+
+        for (i=0;i < ne_segments.length;i++) {
+            segent = ne_segments.table + i; /* C pointer math, becomes (char*)ne_segments + (i * sizeof(*ne_segments)) */
+            reloc_offset = exe_ne_header_segment_table_get_relocation_table_offset(&ne_segments,segent);
+            if (reloc_offset == 0) continue;
+
+            /* at the start of the relocation struct, is a 16-bit WORD that indicates how many entries are there,
+             * followed by an array of relocation entries. */
+            if ((unsigned long)lseek(src_fd,reloc_offset,SEEK_SET) != reloc_offset || read(src_fd,&reloc_entries,2) != 2)
+                continue;
+
+            if (reloc_entries == 0) continue;
+
+            base = exe_ne_header_segment_reloc_table_alloc_table(&ne_segment_relocs[i],reloc_entries);
+            if (base == NULL) continue;
+
+            {
+                size_t rd = exe_ne_header_segment_reloc_table_size(&ne_segment_relocs[i]);
+                if (rd == 0) continue;
+
+                if ((size_t)read(src_fd,ne_segment_relocs[i].table,rd) != rd) {
+                    exe_ne_header_segment_reloc_table_free(&ne_segment_relocs[i]);
+                    continue;
+                }
+            }
+
+            if (ne_segment_relocs[i].length != 0)
+                qsort(ne_segment_relocs[i].table,ne_segment_relocs[i].length,
+                    sizeof(const union exe_ne_header_segment_relocation_entry *),
+                    ne_segment_relocs_table_qsort);
+
+            printf("* Segment #%u, %u entries\n",i+1,ne_segment_relocs[i].length);
+        }
+    }
+
     if (ne_header.entry_cs >= 1 && ne_header.entry_cs <= ne_segments.length) {
         if ((label=dec_label_malloc()) != NULL) {
             dec_label_set_name(label,"Entry point NE .EXE");
@@ -657,6 +724,15 @@ int main(int argc,char **argv) {
                 dec_read = dec_i.end;
             } while(1);
         }
+    }
+
+    if (ne_segment_relocs) {
+        unsigned int i;
+
+        for (i=0;i < ne_segments.length;i++)
+            exe_ne_header_segment_reloc_table_free(&ne_segment_relocs[i]);
+
+        free(ne_segment_relocs);
     }
 
     exe_ne_header_imported_name_table_free(&ne_imported_name_table);
