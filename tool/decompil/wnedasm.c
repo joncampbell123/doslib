@@ -487,6 +487,50 @@ int main(int argc,char **argv) {
         }
     }
 
+    if (ne_entry_table.table != NULL && ne_entry_table.length != 0) {
+        const struct exe_ne_header_entry_table_entry *ent;
+        unsigned char *rawd;
+        unsigned int i;
+
+        for (i=0;i < ne_entry_table.length;i++) { /* NTS: ordinal value is i + 1, ordinals are 1-based */
+            ent = ne_entry_table.table + i;
+            rawd = exe_ne_header_entry_table_table_raw_entry(&ne_entry_table,ent);
+            if (rawd == NULL) continue;
+            if (ent->segment_id == 0x00) continue;
+
+            if (ent->segment_id == 0xFF) {
+                /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
+                struct exe_ne_header_entry_table_movable_segment_entry *ment =
+                    (struct exe_ne_header_entry_table_movable_segment_entry*)rawd;
+
+                sprintf((char*)dec_buffer,"Entry ordinal #%u",i + 1);
+                if ((label=dec_label_malloc()) != NULL) {
+                    dec_label_set_name(label,(char*)dec_buffer);
+                    label->seg_v =
+                        ment->segid;
+                    label->ofs_v =
+                        ment->seg_offs;
+                }
+            }
+            else if (ent->segment_id == 0xFE) {
+            }
+            else {
+                /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
+                struct exe_ne_header_entry_table_fixed_segment_entry *fent =
+                    (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
+
+                sprintf((char*)dec_buffer,"Entry ordinal #%u",i + 1);
+                if ((label=dec_label_malloc()) != NULL) {
+                    dec_label_set_name(label,(char*)dec_buffer);
+                    label->seg_v =
+                        ent->segment_id;
+                    label->ofs_v =
+                        fent->v.seg_offs;
+                }
+            }
+        }
+    }
+
     // TODO first pass
 
     /* sort labels */
