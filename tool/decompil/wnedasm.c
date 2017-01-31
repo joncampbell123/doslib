@@ -72,6 +72,22 @@ char*                           label_file = NULL;
 char*                           src_file = NULL;
 int                             src_fd = -1;
 
+void dec_free_labels() {
+    unsigned int i=0;
+
+    if (dec_label == NULL)
+        return;
+
+    while (i < dec_label_count) {
+        struct dec_label *l = dec_label + i;
+        cstr_free(&(l->name));
+        i++;
+    }
+
+    free(dec_label);
+    dec_label = NULL;
+}
+
 uint32_t current_offset_minus_buffer() {
     return current_offset - (uint32_t)(dec_end - dec_buffer);
 }
@@ -741,6 +757,7 @@ int main(int argc,char **argv) {
     exe_ne_header_name_entry_table_free(&ne_resname);
     exe_ne_header_resource_table_free(&ne_resources);
     exe_ne_header_segment_table_free(&ne_segments);
+    dec_free_labels();
     close(src_fd);
 	return 0;
 }
