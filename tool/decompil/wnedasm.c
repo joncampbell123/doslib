@@ -612,7 +612,7 @@ int main(int argc,char **argv) {
         unsigned long reloc_offset;
         uint16_t reloc_entries;
         unsigned char *base;
-        unsigned int i;
+        unsigned int i,j;
 
         for (i=0;i < ne_segments.length;i++) {
             segent = ne_segments.table + i; /* C pointer math, becomes (char*)ne_segments + (i * sizeof(*ne_segments)) */
@@ -639,12 +639,124 @@ int main(int argc,char **argv) {
                 }
             }
 
+            printf("* Segment #%u, %u relocations\n",i+1,ne_segment_relocs[i].length);
+
+            /* OK, here's why I tend to be so cyncial about Microsoft formats and documentation.
+             *
+             * If you believe the MSDN documentation or any other documentation out there, all
+             * you have to do is read this nice simple table and follow it to know where to
+             * patch the segment with relocations.
+             *
+             * BUUUUUUT like most Microsoft formats it always turns out what they document is
+             * not all that you need to know to implement it properly AND of course fails to
+             * cover all relocation patch sites AND there's always some requisite undocumented
+             * magic BS you have to do to actually implement properly.
+             *
+             * This is no exception.
+             *
+             * There is absolutely no mention of this in the MSDN documentation I have, nor
+             * on any website covering the New Executable format, but according to what the
+             * WINE developers have painfully dug out and implemented, the relocation table
+             * entry doesn't cover all entry points. Instead, it points to the first CALL FAR
+             * site affected by the relocation, and you're supposed to follow a linked list
+             * using the WORD value you later patch inside the x86 instruction until that
+             * WORD value is 0xFFFF to patch sites with the same entry point.
+             *
+             * So if you think that it's just random chance these relocation entries point
+             * at something like this:
+             *
+             *    CALL FAR 0x0000:0xFFFF
+             *
+             * and sometimes something like this:
+             *
+             *    CALL FAR 0x0000:0x321
+             *
+             * That's why. In the example above, 0x321 would be the offset of another site
+             * to patch with the same relocation. At that location, the WORD value (before
+             * patching) would be the next link in the chain, or 0xFFFF to end the chain.
+             *
+             * For obvious reasons of course, this does not apply to additive relocations.
+             *
+             * That's a pretty crucial detail to leave out, Microsoft!
+             *
+             * I guess it does kind of make sense. If many points in the segment have the
+             * same relocation why make duplicate entries in the table when you can use
+             * the empty bytes of the x86 instruction you're patching to make a linked
+             * list instead? Still, would have been nice to document! */
+            {
+                struct exe_ne_header_segment_reloc_table *reloc = &ne_segment_relocs[i];
+                uint32_t segment_ofs = (uint32_t)segent->offset_in_segments << (uint32_t)ne_segments.sector_shift;
+                union exe_ne_header_segment_relocation_entry *newlist = NULL;
+                size_t newlist_count = 0,newlist_alloc = 0;
+
+                assert(reloc->table != NULL);
+                for (j=0;j < reloc->length;j++) {
+                    union exe_ne_header_segment_relocation_entry *relocent = reloc->table + j;
+                    unsigned long site = segment_ofs + relocent->r.seg_offset;
+                    int patience = 32767; // to prevent runaway lists
+                    uint16_t plink,nlink;
+
+                    printf("    Relocation entry #%u scanning linked list at 0x%04x\n",j+1,relocent->r.seg_offset);
+                    do {
+                        plink = nlink;
+
+                        if ((unsigned long)lseek(src_fd,site,SEEK_SET) != site)
+                            break;
+                        if ((size_t)read(src_fd,&nlink,sizeof(nlink)) != sizeof(nlink))
+                            break;
+                        if (nlink == 0xFFFF || nlink == plink) // end of the list
+                            break;
+                        if (--patience == 0) // in case of runaway lists by corruption
+                            break;
+
+                        printf("        Linked list to 0x%04x\n",nlink);
+                        site = segment_ofs + nlink;
+
+                        /* allocate new list entry */
+                        if (newlist == NULL) {
+                            newlist_count = 0;
+                            newlist_alloc = 1024;
+                            newlist = malloc(newlist_alloc * sizeof(*newlist));
+                            if (newlist == NULL) break;
+                        }
+                        else if (newlist_count >= newlist_alloc) {
+                            size_t nl = newlist_alloc + 4096;
+                            void *np;
+
+                            np = realloc((void*)newlist,nl * sizeof(*newlist));
+                            if (np == NULL) break;
+                            newlist = np;
+                            newlist_alloc = nl;
+                        }
+
+                        assert(newlist != NULL);
+                        assert(newlist_count < newlist_alloc);
+                        newlist[newlist_count] = *relocent;
+                        newlist[newlist_count].r.seg_offset = nlink;
+                        newlist_count++;
+                    } while (1);
+                }
+
+                if (newlist != NULL) {
+                    size_t nl = newlist_count + reloc->length;
+                    void *np;
+
+                    np = realloc((void*)(reloc->table),nl * sizeof(*newlist));
+                    if (np != NULL) {
+                        reloc->table = np;
+                        memcpy(reloc->table + reloc->length,newlist,newlist_count * sizeof(*newlist));
+                        reloc->length += newlist_count;
+                    }
+
+                    free(newlist);
+                }
+            }
+
             if (ne_segment_relocs[i].length != 0)
                 qsort(ne_segment_relocs[i].table,ne_segment_relocs[i].length,
                     sizeof(const union exe_ne_header_segment_relocation_entry *),
                     ne_segment_relocs_table_qsort);
 
-            printf("* Segment #%u, %u relocations\n",i+1,ne_segment_relocs[i].length);
             print_segment_reloc_table(&ne_segment_relocs[i],&ne_imported_name_table);
         }
     }
