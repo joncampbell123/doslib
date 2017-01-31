@@ -179,6 +179,22 @@ int refill() {
     return (dec_read < dec_end);
 }
 
+void dec_free_labels() {
+    unsigned int i=0;
+
+    if (dec_label == NULL)
+        return;
+
+    while (i < dec_label_count) {
+        struct dec_label *l = dec_label + i;
+        cstr_free(&(l->name));
+        i++;
+    }
+
+    free(dec_label);
+    dec_label = NULL;
+}
+
 struct dec_label *dec_find_label(const uint32_t ofs) {
     unsigned int i=0;
 
@@ -743,6 +759,7 @@ int main(int argc,char **argv) {
     } while(1);
 
     close(src_fd);
+    dec_free_labels();
 	return 0;
 }
 
