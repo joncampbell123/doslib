@@ -4,8 +4,9 @@ MINX86DEP = ../../minx86dec/decodeall
 HW_DOS_LIB = ../../hw/dos/linux-host/dos.a
 
 DOSDASM = linux-host/dosdasm
+WNEDASM = linux-host/wnedasm
 
-BIN_OUT = $(DOSDASM)
+BIN_OUT = $(DOSDASM) $(WNEDASM)
 
 # GNU makefile, Linux host
 all: bin lib
@@ -25,6 +26,9 @@ $(HW_DOS_LIB):
 
 $(DOSDASM): linux-host/dosdasm.o $(MINX86DEP) $(HW_DOS_LIB)
 	gcc -o $@ linux-host/dosdasm.o ../../minx86dec/string.o ../../minx86dec/coreall.o $(HW_DOS_LIB)
+
+$(WNEDASM): linux-host/wnedasm.o $(MINX86DEP) $(HW_DOS_LIB)
+	gcc -o $@ linux-host/wnedasm.o ../../minx86dec/string.o ../../minx86dec/coreall.o $(HW_DOS_LIB)
 
 linux-host/%.o : %.c
 	gcc -I../.. -DLINUX -Wall -Wextra -pedantic -std=gnu99 -c -o $@ $^
