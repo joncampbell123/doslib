@@ -1229,8 +1229,13 @@ int main(int argc,char **argv) {
                         switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
                             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
                                 if (relocent->intref.segment_index == 0xFF) {
-                                    printf("                    Refers to movable segment, entry ordinal #%d\n",
+                                    get_entry_name_by_ordinal(name_tmp,sizeof(name_tmp),&ne_nonresname,&ne_resname,relocent->movintref.entry_ordinal);
+
+                                    printf("                    Refers to movable segment, entry ordinal #%d",
                                             relocent->movintref.entry_ordinal);
+                                    if (name_tmp[0] != 0)
+                                        printf(" '%s'",name_tmp);
+                                    printf("\n");
                                 }
                                 else {
                                     printf("                    Refers to segment #%d : 0x%04x\n",
@@ -1239,14 +1244,19 @@ int main(int argc,char **argv) {
                                 }
                                 break;
                             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
-                                printf("                    Refers to module reference #%d, ordinal %d\n",
-                                        relocent->ordinal.module_reference_index,
+                                ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->ordinal.module_reference_index);
+                                printf("                    Refers to module reference #%d '%s', ordinal %d\n",
+                                        relocent->ordinal.module_reference_index,name_tmp,
                                         relocent->ordinal.ordinal);
                                 break;
                             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
-                                printf("                    Refers to module reference #%d, imp name offset %d\n",
-                                        relocent->name.module_reference_index,
+                                ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->ordinal.module_reference_index);
+                                printf("                    Refers to module reference #%d '%s', imp name offset %d",
+                                        relocent->name.module_reference_index,name_tmp,
                                         relocent->name.imported_name_offset);
+                                ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->name.module_reference_index);
+                                printf(" '%s'\n",
+                                        name_tmp);
                                 break;
                             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
                                 printf("                    OSFIXUP type=0x%04x\n",
