@@ -1178,8 +1178,12 @@ int main(int argc,char **argv) {
                             break;
                         else if (dec_i.opcode == MXOP_RET || dec_i.opcode == MXOP_RETF)
                             break;
-                        else if (dec_i.opcode == MXOP_CALL_FAR || dec_i.opcode == MXOP_JMP_FAR)
-                            break;
+                        else if (dec_i.opcode == MXOP_CALL_FAR || dec_i.opcode == MXOP_JMP_FAR) {
+                            // TODO
+
+                            if (dec_i.opcode == MXOP_JMP_FAR)
+                                break;
+                        }
 
                         if (++inscount >= 1024)
                             break;
