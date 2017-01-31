@@ -696,6 +696,11 @@ int main(int argc,char **argv) {
                     int patience = 32767; // to prevent runaway lists
                     uint16_t plink,nlink;
 
+                    /* additive relocations are not subject to this linked list system.
+                     * how could they? unlike non-additive relocations the contents of the instruction do matter! */
+                    if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE)
+                        continue;
+
                     printf("    Relocation entry #%u scanning linked list at 0x%04x\n",j+1,relocent->r.seg_offset);
                     do {
                         plink = nlink;
