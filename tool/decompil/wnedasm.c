@@ -556,7 +556,7 @@ int main(int argc,char **argv) {
                     sizeof(const union exe_ne_header_segment_relocation_entry *),
                     ne_segment_relocs_table_qsort);
 
-            printf("* Segment #%u, %u entries\n",i+1,ne_segment_relocs[i].length);
+            printf("* Segment #%u, %u relocations\n",i+1,ne_segment_relocs[i].length);
         }
     }
 
