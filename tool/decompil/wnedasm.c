@@ -53,7 +53,9 @@ size_t                          dec_label_alloc = 0;
 unsigned long                   dec_ofs;
 uint16_t                        dec_cs;
 
-uint8_t                         dec_buffer[256];
+char                            name_tmp[255+1];
+
+uint8_t                         dec_buffer[512];
 uint8_t*                        dec_read;
 uint8_t*                        dec_end;
 char                            arg_c[101];
@@ -327,6 +329,36 @@ void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * 
         }
     }
 }
+
+void get_entry_name_by_ordinal(char *tmp,size_t tmplen,const struct exe_ne_header_name_entry_table * const nonresnames,const struct exe_ne_header_name_entry_table *resnames,const unsigned int ordinal) {
+    unsigned int i;
+
+    tmp[0] = 0;
+    if (tmplen <= 1) return;
+
+    if (resnames->table != NULL) {
+        for (i=0;i < resnames->length;i++) {
+            struct exe_ne_header_name_entry *ent = resnames->table + i;
+
+            if (ne_name_entry_get_ordinal(resnames,ent) == ordinal) {
+                ne_name_entry_get_name(tmp,tmplen,resnames,ent);
+                return;
+            }
+        }
+    }
+
+    if (nonresnames->table != NULL) {
+        for (i=0;i < nonresnames->length;i++) {
+            struct exe_ne_header_name_entry *ent = nonresnames->table + i;
+
+            if (ne_name_entry_get_ordinal(nonresnames,ent) == ordinal) {
+                ne_name_entry_get_name(tmp,tmplen,nonresnames,ent);
+                return;
+            }
+        }
+    }
+}
+
 
 int main(int argc,char **argv) {
     struct exe_ne_header_segment_reloc_table *ne_segment_relocs = NULL;
@@ -787,12 +819,18 @@ int main(int argc,char **argv) {
             if (rawd == NULL) continue;
             if (ent->segment_id == 0x00) continue;
 
+            get_entry_name_by_ordinal(name_tmp,sizeof(name_tmp),&ne_nonresname,&ne_resname,i + 1);
+
+            if (name_tmp[0] != 0)
+                snprintf((char*)dec_buffer,sizeof(dec_buffer),"Entry %s ordinal #%u",name_tmp,i + 1);
+            else
+                snprintf((char*)dec_buffer,sizeof(dec_buffer),"Entry ordinal #%u",i + 1);
+
             if (ent->segment_id == 0xFF) {
                 /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
                 struct exe_ne_header_entry_table_movable_segment_entry *ment =
                     (struct exe_ne_header_entry_table_movable_segment_entry*)rawd;
 
-                sprintf((char*)dec_buffer,"Entry ordinal #%u",i + 1);
                 if ((label=dec_label_malloc()) != NULL) {
                     dec_label_set_name(label,(char*)dec_buffer);
                     label->seg_v =
@@ -808,7 +846,6 @@ int main(int argc,char **argv) {
                 struct exe_ne_header_entry_table_fixed_segment_entry *fent =
                     (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
 
-                sprintf((char*)dec_buffer,"Entry ordinal #%u",i + 1);
                 if ((label=dec_label_malloc()) != NULL) {
                     dec_label_set_name(label,(char*)dec_buffer);
                     label->seg_v =
