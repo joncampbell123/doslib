@@ -360,6 +360,7 @@ void get_entry_name_by_ordinal(char *tmp,size_t tmplen,const struct exe_ne_heade
 }
 
 void print_relocation_farptr(
+    const struct exe_ne_header_imported_name_table *ne_imported_name_table,
     const struct exe_ne_header_name_entry_table *ne_nonresname,
     const struct exe_ne_header_name_entry_table *ne_resname,
     const union exe_ne_header_segment_relocation_entry *relocent) {
@@ -383,14 +384,19 @@ void print_relocation_farptr(
             }
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
-            printf("module reference #%d, ordinal %d",
-                    relocent->ordinal.module_reference_index,
+            ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),ne_imported_name_table,relocent->ordinal.module_reference_index);
+            printf("module reference #%d '%s', ordinal %d",
+                    relocent->ordinal.module_reference_index,name_tmp,
                     relocent->ordinal.ordinal);
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
-            printf("module reference #%d, imp name offset %d",
-                    relocent->name.module_reference_index,
+            ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),ne_imported_name_table,relocent->ordinal.module_reference_index);
+            printf("module reference #%d '%s', imp name offset %d",
+                    relocent->name.module_reference_index,name_tmp,
                     relocent->name.imported_name_offset);
+
+            ne_imported_name_table_entry_get_name(name_tmp,sizeof(name_tmp),ne_imported_name_table,relocent->name.imported_name_offset);
+            if (name_tmp[0] != 0) printf(" '%s'",name_tmp);
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
             printf("OSFIXUP type=0x%04x",
@@ -1129,7 +1135,7 @@ int main(int argc,char **argv) {
                                     if (o == (ip + 1)) {
                                         if (!(relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE)) {
                                             printf("<");
-                                            print_relocation_farptr(&ne_nonresname,&ne_resname,relocent);
+                                            print_relocation_farptr(&ne_imported_name_table,&ne_nonresname,&ne_resname,relocent);
                                             printf(">");
                                         }
 
@@ -1305,7 +1311,8 @@ int main(int argc,char **argv) {
                                 printf("                    Refers to module reference #%d '%s', imp name offset %d",
                                         relocent->name.module_reference_index,name_tmp,
                                         relocent->name.imported_name_offset);
-                                ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->name.module_reference_index);
+
+                                ne_imported_name_table_entry_get_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->name.imported_name_offset);
                                 printf(" '%s'\n",
                                         name_tmp);
                                 break;
