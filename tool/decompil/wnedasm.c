@@ -195,6 +195,24 @@ int refill() {
     return (dec_read < dec_end);
 }
 
+struct dec_label *dec_find_label(const uint16_t so,const uint16_t oo) {
+    unsigned int i=0;
+
+    if (dec_label == NULL)
+        return NULL;
+
+    while (i < dec_label_count) {
+        struct dec_label *l = dec_label + i;
+
+        if (l->seg_v == so && l->ofs_v == oo)
+            return l;
+
+        i++;
+    }
+
+    return NULL;
+}
+
 struct dec_label *dec_label_malloc() {
     if (dec_label == NULL)
         return NULL;
@@ -980,7 +998,169 @@ int main(int argc,char **argv) {
         }
     }
 
-    // TODO first pass
+    /* first pass: decompilation */
+    {
+        unsigned int los = 0;
+        unsigned int inscount;
+
+        while (los < dec_label_count) {
+            label = dec_label + los;
+            if (label->seg_v == 0) {
+                los++;
+                continue;
+            }
+
+            segmenti = label->seg_v - 1;
+            {
+                const struct exe_ne_header_segment_entry *segent = ne_segments.table + segmenti;
+                uint32_t segment_ofs = (uint32_t)segent->offset_in_segments << (uint32_t)ne_segments.sector_shift;
+                struct exe_ne_header_segment_reloc_table *reloc;
+                uint32_t segment_sz;
+
+                if (segent->offset_in_segments == 0) {
+                    los++;
+                    continue;
+                }
+
+                segment_sz =
+                    (segent->length == 0 ? 0x10000UL : segent->length);
+                dec_cs = segmenti + 1;
+                dec_ofs = 0;
+
+                if ((uint32_t)lseek(src_fd,segment_ofs + label->ofs_v,SEEK_SET) != (segment_ofs + label->ofs_v))
+                    return 1;
+
+                printf("* NE segment #%d (0x%lx bytes @0x%lx) 1st pass\n",
+                        segmenti + 1,(unsigned long)segment_sz,(unsigned long)segment_ofs);
+
+                reloci = 0;
+                inscount = 0;
+                entry_ip = 0;
+                reset_buffer();
+                entry_cs = dec_cs;
+                current_offset = segment_ofs + label->ofs_v;
+                end_decom = segment_ofs + segment_sz;
+                minx86dec_init_state(&dec_st);
+                dec_read = dec_end = dec_buffer;
+                dec_st.data32 = dec_st.addr32 = 0;
+
+                if (ne_segment_relocs)
+                    reloc = &ne_segment_relocs[segmenti];
+                else
+                    reloc = NULL;
+
+                if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA) {
+                }
+                else {
+                    do {
+                        uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() - segment_ofs;
+                        uint32_t ip = ofs + entry_ip - dec_ofs;
+                        size_t inslen;
+
+                        if (!refill()) break;
+
+                        minx86dec_set_buffer(&dec_st,dec_read,(int)(dec_end - dec_read));
+                        minx86dec_init_instruction(&dec_i);
+                        dec_st.ip_value = ip;
+                        minx86dec_decodeall(&dec_st,&dec_i);
+                        assert(dec_i.end >= dec_read);
+                        assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
+                        inslen = (size_t)(dec_i.end - dec_i.start);
+
+                        if (reloc) {
+                            while (reloci < reloc->length && reloc->table[reloci].r.seg_offset < ip)
+                                reloci++;
+                        }
+
+                        printf("%04lX:%04lX @0x%08lX ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value,(unsigned long)(dec_read - dec_buffer) + current_offset_minus_buffer());
+                        for (c=0,iptr=dec_i.start;iptr != dec_i.end;c++)
+                            printf("%02X ",*iptr++);
+
+                        if (dec_i.rep != MX86_REP_NONE) {
+                            for (;c < 6;c++)
+                                printf("   ");
+
+                            switch (dec_i.rep) {
+                                case MX86_REPE:
+                                    printf("REP   ");
+                                    break;
+                                case MX86_REPNE:
+                                    printf("REPNE ");
+                                    break;
+                                default:
+                                    break;
+                            };
+                        }
+                        else {
+                            for (;c < 8;c++)
+                                printf("   ");
+                        }
+                        printf("%-8s ",opcode_string[dec_i.opcode]);
+
+                        for (c=0;c < dec_i.argc;) {
+                            minx86dec_regprint(&dec_i.argv[c],arg_c);
+                            printf("%s",arg_c);
+                            if (++c < dec_i.argc) printf(",");
+                        }
+                        if (dec_i.lock) printf("  ; LOCK#");
+                        printf("\n");
+
+                        /* if any part of the instruction is affected by EXE relocations, say so */
+                        if (reloc && reloci < reloc->length) {
+                            const union exe_ne_header_segment_relocation_entry *relocent = reloc->table + reloci;
+                            const uint32_t o = relocent->r.seg_offset;
+
+                            if (o >= ip && o < (ip + inslen)) {
+                            }
+                        }
+
+                        dec_read = dec_i.end;
+
+                        if ((dec_i.opcode == MXOP_JMP || dec_i.opcode == MXOP_CALL || dec_i.opcode == MXOP_JCXZ ||
+                                (dec_i.opcode >= MXOP_JO && dec_i.opcode <= MXOP_JG)) && dec_i.argc == 1 &&
+                                dec_i.argv[0].regtype == MX86_RT_IMM) {
+                            /* make a label of the target */
+                            /* 1st arg is target offset */
+                            uint32_t toffset = dec_i.argv[0].value;
+                            uint32_t noffset = segment_ofs + toffset;
+
+                            printf("Target: 0x%04lx @0x%08lx\n",(unsigned long)toffset,(unsigned long)noffset);
+
+                            label = dec_find_label(dec_cs,toffset);
+                            if (label == NULL) {
+                                if ((label=dec_label_malloc()) != NULL) {
+                                    if (dec_i.opcode == MXOP_JMP || dec_i.opcode == MXOP_JCXZ ||
+                                            (dec_i.opcode >= MXOP_JO && dec_i.opcode <= MXOP_JG))
+                                        dec_label_set_name(label,"JMP target");
+                                    else if (dec_i.opcode == MXOP_CALL)
+                                        dec_label_set_name(label,"CALL target");
+
+                                    label->seg_v =
+                                        dec_cs;
+                                    label->ofs_v =
+                                        toffset;
+                                }
+                            }
+
+                            if (dec_i.opcode == MXOP_JMP)
+                                break;
+                        }
+                        else if (dec_i.opcode == MXOP_JMP)
+                            break;
+                        else if (dec_i.opcode == MXOP_RET || dec_i.opcode == MXOP_RETF)
+                            break;
+                        else if (dec_i.opcode == MXOP_CALL_FAR || dec_i.opcode == MXOP_JMP_FAR)
+                            break;
+
+                        if (++inscount >= 1024)
+                            break;
+                    } while(1);
+                }
+            }
+
+            los++;
+        }
+    }
 
     /* sort labels */
     dec_label_sort();
