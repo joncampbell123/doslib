@@ -629,7 +629,7 @@ int main(int argc,char **argv) {
 
             if (dosek) {
                 ofs = dec_ofs;
-                ip = dec_ofs + entry_ip - dec_ofs;
+                ip = entry_ip;
 
                 reset_buffer();
                 current_offset = start_decom + dec_ofs;
