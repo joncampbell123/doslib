@@ -293,6 +293,39 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    if (ne_header.nonresident_name_table_offset < (ne_header_offset + 0x40UL))
+        printf("! WARNING: Non-resident name table offset too small (would overlap NE header)\n");
+    else {
+        unsigned long min_offset = ne_header.segment_table_offset + (sizeof(struct exe_ne_header_segment_entry) * ne_header.segment_table_entries);
+        if (min_offset < ne_header.resource_table_offset)
+            min_offset = ne_header.resource_table_offset;
+        if (min_offset < ne_header.resident_name_table_offset)
+            min_offset = ne_header.resident_name_table_offset;
+        if (min_offset < (ne_header.module_reference_table_offset+(2UL * ne_header.module_reftable_entries)))
+            min_offset = (ne_header.module_reference_table_offset+(2UL * ne_header.module_reftable_entries));
+        if (min_offset < ne_header.imported_name_table_offset)
+            min_offset = ne_header.imported_name_table_offset;
+        if (min_offset < (ne_header.entry_table_offset+ne_header.entry_table_length))
+            min_offset = (ne_header.entry_table_offset+ne_header.entry_table_length);
+
+        min_offset += ne_header_offset;
+        if (ne_header.nonresident_name_table_offset < min_offset) {
+            printf("! WARNING: Non-resident name table offset overlaps NE resident tables (%lu < %lu)\n",
+                (unsigned long)ne_header.nonresident_name_table_offset,min_offset);
+        }
+    }
+
+    if (ne_header.segment_table_offset > ne_header.resource_table_offset)
+        printf("! WARNING: segment table offset > resource table offset");
+    if (ne_header.resource_table_offset > ne_header.resident_name_table_offset)
+        printf("! WARNING: resource table offset > resident name table offset");
+    if (ne_header.resident_name_table_offset > ne_header.module_reference_table_offset)
+        printf("! WARNING: resident name table offset > module reference table offset");
+    if (ne_header.module_reference_table_offset > ne_header.imported_name_table_offset)
+        printf("! WARNING: module reference table offset > imported name table offset");
+    if (ne_header.imported_name_table_offset > ne_header.entry_table_offset)
+        printf("! WARNING: imported name table offset > entry table offset");
+
     /* load segment table */
     if (ne_header.segment_table_entries != 0 && ne_header.segment_table_offset != 0 &&
         (unsigned long)lseek(src_fd,ne_header.segment_table_offset + ne_header_offset,SEEK_SET) == ((unsigned long)ne_header.segment_table_offset + ne_header_offset)) {
@@ -309,6 +342,88 @@ int main(int argc,char **argv) {
                 }
             }
         }
+    }
+
+    /* load nonresident name table */
+    if (ne_header.nonresident_name_table_offset != 0 && ne_header.nonresident_name_table_length != 0 &&
+        (unsigned long)lseek(src_fd,ne_header.nonresident_name_table_offset,SEEK_SET) == ne_header.nonresident_name_table_offset) {
+        unsigned char *base;
+
+        printf("  * Nonresident name table length: %u\n",ne_header.nonresident_name_table_length);
+        base = exe_ne_header_name_entry_table_alloc_raw(&ne_nonresname,ne_header.nonresident_name_table_length);
+        if (base != NULL) {
+            if ((unsigned long)read(src_fd,base,ne_nonresname.raw_length) != ne_nonresname.raw_length)
+                exe_ne_header_name_entry_table_free_raw(&ne_nonresname);
+        }
+
+        exe_ne_header_name_entry_table_parse_raw(&ne_nonresname);
+    }
+
+    /* load resident name table */
+    if (ne_header.resident_name_table_offset != 0 && ne_header.module_reference_table_offset > ne_header.resident_name_table_offset &&
+        (unsigned long)lseek(src_fd,ne_header.resident_name_table_offset + ne_header_offset,SEEK_SET) == (ne_header.resident_name_table_offset + ne_header_offset)) {
+        unsigned int raw_length;
+        unsigned char *base;
+
+        /* RESIDENT_NAME_TABLE_SIZE = module_reference_table_offset - resident_name_table_offset */
+        raw_length = (unsigned short)(ne_header.module_reference_table_offset - ne_header.resident_name_table_offset);
+        printf("  * Resident name table length: %u\n",raw_length);
+
+        base = exe_ne_header_name_entry_table_alloc_raw(&ne_resname,raw_length);
+        if (base != NULL) {
+            if ((unsigned long)read(src_fd,base,ne_resname.raw_length) != ne_resname.raw_length)
+                exe_ne_header_name_entry_table_free_raw(&ne_resname);
+        }
+
+        exe_ne_header_name_entry_table_parse_raw(&ne_resname);
+    }
+
+    /* load imported name table */
+    if (ne_header.imported_name_table_offset != 0 && ne_header.entry_table_offset > ne_header.imported_name_table_offset &&
+        (unsigned long)lseek(src_fd,ne_header.imported_name_table_offset + ne_header_offset,SEEK_SET) == (ne_header.imported_name_table_offset + ne_header_offset)) {
+        unsigned int raw_length;
+        unsigned char *base;
+
+        /* IMPORTED_NAME_TABLE_SIZE = entry_table_offset - imported_name_table_offset       (header does not report size of imported name table) */
+        raw_length = (unsigned short)(ne_header.entry_table_offset - ne_header.imported_name_table_offset);
+        printf("  * Imported name table length: %u\n",raw_length);
+
+        base = exe_ne_header_imported_name_table_alloc_raw(&ne_imported_name_table,raw_length);
+        if (base != NULL) {
+            if ((unsigned long)read(src_fd,base,ne_imported_name_table.raw_length) != ne_imported_name_table.raw_length)
+                exe_ne_header_imported_name_table_free_raw(&ne_imported_name_table);
+        }
+
+        exe_ne_header_imported_name_table_parse_raw(&ne_imported_name_table);
+    }
+
+    /* load module reference table */
+    if (ne_header.module_reference_table_offset != 0 && ne_header.module_reftable_entries != 0 &&
+        (unsigned long)lseek(src_fd,ne_header.module_reference_table_offset + ne_header_offset,SEEK_SET) == (ne_header.module_reference_table_offset + ne_header_offset)) {
+        uint16_t *base;
+
+        printf("  * Module reference table length: %u\n",ne_header.module_reftable_entries * 2);
+
+        base = exe_ne_header_imported_name_table_alloc_module_ref_table(&ne_imported_name_table,ne_header.module_reftable_entries);
+        if (base != NULL) {
+            if ((unsigned long)read(src_fd,base,ne_imported_name_table.module_ref_table_length*sizeof(uint16_t)) !=
+                (ne_imported_name_table.module_ref_table_length*sizeof(uint16_t)))
+                exe_ne_header_imported_name_table_free_module_ref_table(&ne_imported_name_table);
+        }
+    }
+
+    /* entry table */
+    if (ne_header.entry_table_offset != 0 && ne_header.entry_table_length != 0 &&
+        lseek(src_fd,ne_header.entry_table_offset + ne_header_offset,SEEK_SET) == (ne_header.entry_table_offset + ne_header_offset)) {
+        unsigned char *base;
+
+        base = exe_ne_header_entry_table_table_alloc_raw(&ne_entry_table,ne_header.entry_table_length);
+        if (base != NULL) {
+            if (read(src_fd,base,ne_header.entry_table_length) != ne_header.entry_table_length)
+                exe_ne_header_entry_table_table_free_raw(&ne_entry_table);
+        }
+
+        exe_ne_header_entry_table_table_parse_raw(&ne_entry_table);
     }
 
     if (label_file != NULL) {
