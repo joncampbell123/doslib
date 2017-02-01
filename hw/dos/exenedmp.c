@@ -1787,17 +1787,17 @@ int main(int argc,char **argv) {
     };
 
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_GLOBAL_INIT)
-        printf("        GLOBAL_INIT\n");
+        printf("            GLOBAL_INIT\n");
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_PROTECTED_MODE_ONLY)
-        printf("        PROTECTED_MODE_ONLY\n");
+        printf("            PROTECTED_MODE_ONLY\n");
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_8086)
-        printf("        Has 8086 instructions\n");
+        printf("            Has 8086 instructions\n");
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_80286)
-        printf("        Has 80286 instructions\n");
+        printf("            Has 80286 instructions\n");
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_80386)
-        printf("        Has 80386 instructions\n");
+        printf("            Has 80386 instructions\n");
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_80x87)
-        printf("        Has 80x87 (FPU) instructions\n");
+        printf("            Has 80x87 (FPU) instructions\n");
 
     printf("        Application type:         %u",
         ((unsigned int)ne_header.flags & EXE_NE_HEADER_FLAGS_APPTYPE_MASK) >> EXE_NE_HEADER_FLAGS_APPTYPE_SHIFT);
@@ -1820,13 +1820,13 @@ int main(int argc,char **argv) {
     };
 
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_FIRST_SEGMENT_CODE_APP_LOAD)
-        printf("        FIRST_SEGMENT_CODE_APP_LOAD / OS2_FAMILY_APP\n");
+        printf("            FIRST_SEGMENT_CODE_APP_LOAD / OS2_FAMILY_APP\n");
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_LINK_ERRORS)
-        printf("        Link errors\n");
+        printf("            Link errors\n");
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_NON_CONFORMING)
-        printf("        Non-conforming\n");
+        printf("            Non-conforming\n");
     if (ne_header.flags & EXE_NE_HEADER_FLAGS_DLL)
-        printf("        DLL or driver\n");
+        printf("            DLL or driver\n");
 
     printf("    AUTODATA segment index:       %u\n",
         ne_header.auto_data_segment_number);
