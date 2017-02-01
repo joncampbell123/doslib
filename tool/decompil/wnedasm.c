@@ -561,9 +561,12 @@ void print_relocation_farptr(
 }
 
 void print_relocation_segment(
+    const struct exe_ne_header_imported_name_table *ne_imported_name_table,
+    const struct exe_ne_header_entry_table_table *ne_entry_table,
     const struct exe_ne_header_name_entry_table *ne_nonresname,
     const struct exe_ne_header_name_entry_table *ne_resname,
-    const union exe_ne_header_segment_relocation_entry *relocent) {
+    const union exe_ne_header_segment_relocation_entry *relocent,
+    const struct mod_symbols_list * const mod_syms) {
     // caller has established relocation is 2-byte SEGMENT value.
     switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
@@ -576,6 +579,29 @@ void print_relocation_segment(
                 else
                     printf("segment of entry ordinal #%d",
                             relocent->movintref.entry_ordinal);
+
+                /* ordinal is 1-based */
+                if (relocent->movintref.entry_ordinal > 0 &&
+                    relocent->movintref.entry_ordinal <= ne_entry_table->length) {
+                    struct exe_ne_header_entry_table_entry *ent = ne_entry_table->table + relocent->movintref.entry_ordinal - 1;
+                    unsigned char *rawd = exe_ne_header_entry_table_table_raw_entry(ne_entry_table,ent);
+                    if (rawd != NULL) {
+                        if (ent->segment_id == 0xFF) {
+                            struct exe_ne_header_entry_table_movable_segment_entry *ment =
+                                (struct exe_ne_header_entry_table_movable_segment_entry*)rawd;
+
+                            printf(" -- segment #%d -- 0x%04x",
+                                    ment->segid,
+                                    ment->segid);
+                        }
+                        else {
+                            /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
+                            printf(" -- segment #%d -- 0x%04x",
+                                    ent->segment_id,
+                                    ent->segment_id);
+                        }
+                    }
+                }
             }
             else {
                 printf("segment #%d=0x%04X",
@@ -584,13 +610,22 @@ void print_relocation_segment(
             }
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
-            printf("segment of module reference #%d, ordinal %d",
+            ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),ne_imported_name_table,relocent->ordinal.module_reference_index);
+            printf("segment of module reference #%d '%s', ordinal %d",
+                    relocent->ordinal.module_reference_index,name_tmp,
+                    relocent->ordinal.ordinal);
+            {
+                const char *sym = mod_symbols_list_lookup(
+                    mod_syms,
                     relocent->ordinal.module_reference_index,
                     relocent->ordinal.ordinal);
+                if (sym != NULL) printf(" '%s'",sym);
+            }
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
-            printf("segment of module reference #%d, imp name offset %d",
-                    relocent->name.module_reference_index,
+            ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),ne_imported_name_table,relocent->ordinal.module_reference_index);
+            printf("segment of module reference #%d '%s', imp name offset %d",
+                    relocent->name.module_reference_index,name_tmp,
                     relocent->name.imported_name_offset);
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
@@ -601,9 +636,12 @@ void print_relocation_segment(
 }
 
 void print_relocation_offset(
+    const struct exe_ne_header_imported_name_table *ne_imported_name_table,
+    const struct exe_ne_header_entry_table_table *ne_entry_table,
     const struct exe_ne_header_name_entry_table *ne_nonresname,
     const struct exe_ne_header_name_entry_table *ne_resname,
-    const union exe_ne_header_segment_relocation_entry *relocent) {
+    const union exe_ne_header_segment_relocation_entry *relocent,
+    const struct mod_symbols_list * const mod_syms) {
     // caller has established relocation is 2-byte SEGMENT value.
     switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
@@ -616,19 +654,52 @@ void print_relocation_offset(
                 else
                     printf("offset of entry ordinal #%d",
                             relocent->movintref.entry_ordinal);
+
+                /* ordinal is 1-based */
+                if (relocent->movintref.entry_ordinal > 0 &&
+                    relocent->movintref.entry_ordinal <= ne_entry_table->length) {
+                    struct exe_ne_header_entry_table_entry *ent = ne_entry_table->table + relocent->movintref.entry_ordinal - 1;
+                    unsigned char *rawd = exe_ne_header_entry_table_table_raw_entry(ne_entry_table,ent);
+                    if (rawd != NULL) {
+                        if (ent->segment_id == 0xFF) {
+                            struct exe_ne_header_entry_table_movable_segment_entry *ment =
+                                (struct exe_ne_header_entry_table_movable_segment_entry*)rawd;
+
+                            printf(" -- 0x%04x",
+                                    ment->seg_offs);
+                        }
+                        else {
+                            /* NTS: raw_entry() function guarantees that the data available is large enough to hold this struct */
+                            struct exe_ne_header_entry_table_fixed_segment_entry *fent =
+                                (struct exe_ne_header_entry_table_fixed_segment_entry*)rawd;
+
+                            printf(" -- 0x%04x",
+                                    fent->v.seg_offs);
+                        }
+                    }
+                }
             }
             else {
                 printf("NOTIMPL");
             }
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
-            printf("offset of module reference #%d, ordinal %d",
+            ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),ne_imported_name_table,relocent->ordinal.module_reference_index);
+            printf("offset of module reference #%d '%s', ordinal %d",
+                    relocent->ordinal.module_reference_index,name_tmp,
+                    relocent->ordinal.ordinal);
+            {
+                const char *sym = mod_symbols_list_lookup(
+                    mod_syms,
                     relocent->ordinal.module_reference_index,
                     relocent->ordinal.ordinal);
+                if (sym != NULL) printf(" '%s'",sym);
+            }
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
-            printf("offset of module reference #%d, imp name offset %d",
-                    relocent->name.module_reference_index,
+            ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),ne_imported_name_table,relocent->ordinal.module_reference_index);
+            printf("offset of module reference #%d '%s', imp name offset %d",
+                    relocent->name.module_reference_index,name_tmp,
                     relocent->name.imported_name_offset);
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
@@ -1579,7 +1650,7 @@ int main(int argc,char **argv) {
                                 case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT:
                                     if (o == (ip + 1 + 2)) { // CALL/JMP FAR segment relocation affecting segment portion
                                         printf("<");
-                                        print_relocation_segment(&ne_nonresname,&ne_resname,relocent);
+                                        print_relocation_segment(&ne_imported_name_table,&ne_entry_table,&ne_nonresname,&ne_resname,relocent,&mod_syms);
                                         if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
                                             printf(" + 0x%04x>:0x%04x",
                                                 (unsigned int)dec_i.argv[0].segval,
@@ -1613,7 +1684,7 @@ int main(int argc,char **argv) {
                                 case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT:
                                     {
                                         printf("<");
-                                        print_relocation_segment(&ne_nonresname,&ne_resname,relocent);
+                                        print_relocation_segment(&ne_imported_name_table,&ne_entry_table,&ne_nonresname,&ne_resname,relocent,&mod_syms);
                                         if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
                                             printf(" + 0x%04x>",
                                                 (unsigned int)dec_i.argv[0].value);
@@ -1626,7 +1697,7 @@ int main(int argc,char **argv) {
                                 case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET:
                                     {
                                         printf("<");
-                                        print_relocation_offset(&ne_nonresname,&ne_resname,relocent);
+                                        print_relocation_offset(&ne_imported_name_table,&ne_entry_table,&ne_nonresname,&ne_resname,relocent,&mod_syms);
                                         if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
                                             printf(" + 0x%04x>",
                                                 (unsigned int)dec_i.argv[0].value);
@@ -1654,7 +1725,7 @@ int main(int argc,char **argv) {
                                 case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT:
                                     {
                                         printf("<");
-                                        print_relocation_segment(&ne_nonresname,&ne_resname,relocent);
+                                        print_relocation_segment(&ne_imported_name_table,&ne_entry_table,&ne_nonresname,&ne_resname,relocent,&mod_syms);
                                         if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
                                             printf(" + 0x%04x>",
                                                 (unsigned int)dec_i.argv[0].value);
@@ -1667,7 +1738,7 @@ int main(int argc,char **argv) {
                                 case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET:
                                     {
                                         printf("<");
-                                        print_relocation_offset(&ne_nonresname,&ne_resname,relocent);
+                                        print_relocation_offset(&ne_imported_name_table,&ne_entry_table,&ne_nonresname,&ne_resname,relocent,&mod_syms);
                                         if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
                                             printf(" + 0x%04x>",
                                                 (unsigned int)dec_i.argv[0].value);
