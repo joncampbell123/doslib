@@ -70,6 +70,7 @@ extern LOADICON
 		mov	[myWNDCLASS_wndProc+2],dx
 
 		; Real-mode windows: update data segment pointer
+		mov	word [myWNDCLASS_classname],myWNDCLASSName
 		mov	[myWNDCLASS_classname+2],ds
 
 		; We need IDI_APPLICATION and IDC_ARROW or Windows 1.0 will not let us create the window class
@@ -102,6 +103,7 @@ extern LOADICON
 		push	ds
 		push	word myWNDCLASS
 		call far REGISTERCLASS				; <-- FIXME: Windows 1.04 fails this call. Why?
+        int3
 		or	ax,ax
 		jz	_exit
 		mov	[myWNDCLASSAtom],ax
@@ -249,8 +251,8 @@ myWNDCLASS:
 		dw	0x0002|0x0001			; CS_HREDRAW|CS_VREDRAW
 	;    WNDPROC	lpfnWndProc			[DWORD = FAR POINTER]
 myWNDCLASS_wndProc:
-		dw	myWndProc
-		dw	seg myWndProc
+		dw	0
+		dw	0
 	;    int	cbClsExtra			[WORD]
 		dw	0
 	;    int	cbWndExtra			[WORD]
@@ -272,8 +274,8 @@ myWNDCLASS_hbrBackground:
 		dw	0
 	;    LPCSTR	lpszClassName			[DWORD = FAR POINTER]
 myWNDCLASS_classname:
-		dw	myWNDCLASSName
-		dw	seg myWNDCLASSName
+		dw	0
+		dw	0
 	;      = 13 WORDs
 
 myWNDCLASSName:	db	"HELLOWORLDASM",0

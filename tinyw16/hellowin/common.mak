@@ -30,8 +30,8 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj ..$(HPS)stub$(HPS)dos86s$(HPS)stub.exe
 	%write tmp.cmd option stub=..$(HPS)stub$(HPS)dos86s$(HPS)stub.exe
 	%write tmp.cmd option stack=4096 option heapsize=1024
 	%write tmp.cmd EXPORT myWndProc.1
-	%write tmp.cmd segment TYPE CODE MOVEABLE SHARED PRELOAD DISCARDABLE READONLY
-	%write tmp.cmd segment TYPE DATA MOVEABLE NONSHARED LOADONCALL READWRITE
+	%write tmp.cmd segment TYPE CODE FIXED SHARED PRELOAD READONLY
+	%write tmp.cmd segment TYPE DATA FIXED SHARED PRELOAD READWRITE
 	%write tmp.cmd name $(HELLO_EXE)
 	@wlink @tmp.cmd
 ! ifdef WIN_NE_SETVER_BUILD
