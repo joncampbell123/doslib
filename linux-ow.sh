@@ -54,7 +54,7 @@ make_buildlist() {
     fi
 
     # assume DOS target
-    if [[ x"$win386" == x"1" || x"$win38631" == x"1" || x"$win20" == x"1" || x"$win30" == x"1" || x"$win31" == x"1" || x"$win32s" == x"1" || x"$winnt" == x"1" || x"$win32" == x"1" || x"$os216" == x"1" || x"$os232" == x"1" ]]; then
+    if [[ x"$win386" == x"1" || x"$win38631" == x"1" || x"$win10" == x"1" || x"$win20" == x"1" || x"$win30" == x"1" || x"$win31" == x"1" || x"$win32s" == x"1" || x"$winnt" == x"1" || x"$win32" == x"1" || x"$os216" == x"1" || x"$os232" == x"1" ]]; then
         true
     else
         if [[ x"$dos" == x"" ]]; then dos=1; fi
@@ -140,6 +140,20 @@ make_buildlist() {
             build_list="$build_list os2d3f"
         else
             build_list="$build_list os2d3f"
+        fi
+    fi
+
+    # NEW: Some portions of this tree produce Win16/Win386 output. Since Windows 3.1/9x/ME sit atop DOS anyway...
+    # NTS: Watcom C doesn't work properly emitting "medium/small" memory model output for Windows 3.1. Do not use it!
+    #      To demonstate how messed up it is, try using even standard C runtime functions--it will still mismatch near/far types
+    if [ x"$win10" == x"1" ]; then
+        # NTS: "win100" = Windows 3.0/8086 target
+        # NTS: "win102" = Windows 3.0/286 target
+        #      "win103" = Windows 3.0/386 target
+        if [ x"$build_everything" == x"1" ]; then
+            build_list="$build_list win100l win100c win102l win102c win103l win103c"
+        else
+            build_list="$build_list win100l win102l"
         fi
     fi
 

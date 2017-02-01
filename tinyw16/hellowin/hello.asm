@@ -148,7 +148,11 @@ extern LOADICON
 
 		; show the window
 		push	word [myHwnd]		; our window handle
-		push	word 5			; SW_SHOW
+%if TARGET_WINDOWS == 10
+		push	word 1			; SHOW_OPENWINDOW (Windows 1.x)
+%else
+		push	word 5			; SW_SHOW (Windows 2.x and higher)
+%endif
 		call far SHOWWINDOW
 
 		; update the window
