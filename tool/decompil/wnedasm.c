@@ -328,7 +328,32 @@ void dec_label_sort() {
     qsort(dec_label,dec_label_count,sizeof(*dec_label),dec_label_qsortcb);
 }
 
-void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * const r,struct exe_ne_header_imported_name_table * const ne_imported_name_table) {
+const char *mod_symbols_list_lookup(
+    const struct mod_symbols_list * const mod_syms,
+    unsigned int mod_ref_idx,unsigned int mod_ordinal) {
+    struct mod_symbol_table *tbl;
+
+    if (mod_ref_idx == 0 || mod_ordinal == 0)
+        return NULL;
+    if (mod_syms == NULL)
+        return NULL;
+    if (mod_syms->length == 0)
+        return NULL;
+    if (mod_ref_idx > mod_syms->length)
+        return NULL;
+
+    tbl = mod_syms->table + mod_ref_idx - 1;
+    if (tbl->table == NULL)
+        return NULL;
+    if (tbl->length == 0)
+        return NULL;
+    if (mod_ordinal > tbl->length)
+        return NULL;
+
+    return tbl->table[mod_ordinal - 1];
+}
+ 
+void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * const r,struct exe_ne_header_imported_name_table * const ne_imported_name_table,const struct mod_symbols_list * const mod_syms) {
     const union exe_ne_header_segment_relocation_entry *relocent;
     unsigned int relent;
     char tmp2[255+1];
@@ -396,9 +421,17 @@ void print_segment_reloc_table(const struct exe_ne_header_segment_reloc_table * 
                 break;
             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
                 ne_imported_name_table_entry_get_module_ref_name(tmp,sizeof(tmp),ne_imported_name_table,relocent->ordinal.module_reference_index);
-                printf("                    Refers to module reference #%d '%s', ordinal %d\n",
+                printf("                    Refers to module reference #%d '%s', ordinal %d",
                     relocent->ordinal.module_reference_index,tmp,
                     relocent->ordinal.ordinal);
+                {
+                    const char *sym = mod_symbols_list_lookup(
+                            mod_syms,
+                            relocent->ordinal.module_reference_index,
+                            relocent->ordinal.ordinal);
+                    if (sym != NULL) printf(" '%s'",sym);
+                }
+                printf("\n");
                 break;
             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
                 ne_imported_name_table_entry_get_name(tmp2,sizeof(tmp2),ne_imported_name_table,relocent->name.imported_name_offset);
@@ -449,7 +482,8 @@ void print_relocation_farptr(
     const struct exe_ne_header_entry_table_table *ne_entry_table,
     const struct exe_ne_header_name_entry_table *ne_nonresname,
     const struct exe_ne_header_name_entry_table *ne_resname,
-    const union exe_ne_header_segment_relocation_entry *relocent) {
+    const union exe_ne_header_segment_relocation_entry *relocent,
+    const struct mod_symbols_list * const mod_syms) {
     // caller has established relocation is 2-byte SEGMENT value.
     switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
@@ -502,6 +536,13 @@ void print_relocation_farptr(
             printf("module reference #%d '%s', ordinal %d",
                     relocent->ordinal.module_reference_index,name_tmp,
                     relocent->ordinal.ordinal);
+            {
+                const char *sym = mod_symbols_list_lookup(
+                    mod_syms,
+                    relocent->ordinal.module_reference_index,
+                    relocent->ordinal.ordinal);
+                if (sym != NULL) printf(" '%s'",sym);
+            }
             break;
         case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
             ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),ne_imported_name_table,relocent->ordinal.module_reference_index);
@@ -1141,7 +1182,7 @@ int main(int argc,char **argv) {
                     sizeof(const union exe_ne_header_segment_relocation_entry *),
                     ne_segment_relocs_table_qsort);
 
-            print_segment_reloc_table(&ne_segment_relocs[i],&ne_imported_name_table);
+            print_segment_reloc_table(&ne_segment_relocs[i],&ne_imported_name_table,&mod_syms);
         }
     }
 
@@ -1556,7 +1597,7 @@ int main(int argc,char **argv) {
                                     if (o == (ip + 1)) {
                                         if (!(relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE)) {
                                             printf("<");
-                                            print_relocation_farptr(&ne_imported_name_table,&ne_entry_table,&ne_nonresname,&ne_resname,relocent);
+                                            print_relocation_farptr(&ne_imported_name_table,&ne_entry_table,&ne_nonresname,&ne_resname,relocent,&mod_syms);
                                             printf(">");
                                         }
 
@@ -1723,9 +1764,17 @@ int main(int argc,char **argv) {
                                 break;
                             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
                                 ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->ordinal.module_reference_index);
-                                printf("                    Refers to module reference #%d '%s', ordinal %d\n",
+                                printf("                    Refers to module reference #%d '%s', ordinal %d",
                                         relocent->ordinal.module_reference_index,name_tmp,
                                         relocent->ordinal.ordinal);
+                                {
+                                    const char *sym = mod_symbols_list_lookup(
+                                        &mod_syms,
+                                        relocent->ordinal.module_reference_index,
+                                        relocent->ordinal.ordinal);
+                                    if (sym != NULL) printf(" '%s'",sym);
+                                }
+                                printf("\n");
                                 break;
                             case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
                                 ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->ordinal.module_reference_index);
