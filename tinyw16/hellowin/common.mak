@@ -29,11 +29,9 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj ..$(HPS)stub$(HPS)dos86s$(HPS)stub.exe
 	%write tmp.cmd option map=$(SUBDIR)$(HPS)hello.map
 	%write tmp.cmd option stub=..$(HPS)stub$(HPS)dos86s$(HPS)stub.exe
 	%write tmp.cmd option stack=4096 option heapsize=1024
-	# NTS: If we ever want this code to run under Windows 1.0 & 2.0, we HAVE to declare the segments MOVEABLE, LOADONCALL, else it won't work
-	# NTS: Real-mode Windows also demands we EXPORT our window proc as PRIVATE NONRESIDENT (RESIDENT seems to crash)
 	%write tmp.cmd EXPORT myWndProc.1
-	%write tmp.cmd segment TYPE CODE MOVEABLE DISCARDABLE LOADONCALL
-	%write tmp.cmd segment TYPE DATA MOVEABLE LOADONCALL
+	%write tmp.cmd segment TYPE CODE MOVEABLE SHARED PRELOAD DISCARDABLE READONLY
+	%write tmp.cmd segment TYPE DATA MOVEABLE NONSHARED LOADONCALL READWRITE
 	%write tmp.cmd name $(HELLO_EXE)
 	@wlink @tmp.cmd
 ! ifdef WIN_NE_SETVER_BUILD
