@@ -1,4 +1,0 @@
-MODULE PATCH
-    DESCRIPTION=..\bin\patch.exe
-    FILE.NAME=PATCH.EXE
-    FILE.SIZE=70983

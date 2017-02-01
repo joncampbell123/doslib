@@ -1,8 +1,0 @@
-MODULE GRAFMENU
-    DESCRIPTION=Demo of Bitmapped Menu Items (c) Charles Petzold, 1990
-    FILE.NAME=GRAFMENU.EXE
-    FILE.SIZE=6736
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

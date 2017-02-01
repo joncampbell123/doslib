@@ -1,8 +1,0 @@
-MODULE TYPE
-    DESCRIPTION=Typing Program (c) Charles Petzold, 1990
-    FILE.NAME=TYPE.EXE
-    FILE.SIZE=5056
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

@@ -1,8 +1,0 @@
-MODULE BITMAP
-    DESCRIPTION=Sample Microsoft Windows Application
-    FILE.NAME=BITMAP.EXE
-    FILE.SIZE=40728
-    ORDINAL.1.NAME=MAINWNDPROC
-    ORDINAL.1.TYPE=nonresident
-    ORDINAL.2.NAME=ABOUT
-    ORDINAL.2.TYPE=nonresident

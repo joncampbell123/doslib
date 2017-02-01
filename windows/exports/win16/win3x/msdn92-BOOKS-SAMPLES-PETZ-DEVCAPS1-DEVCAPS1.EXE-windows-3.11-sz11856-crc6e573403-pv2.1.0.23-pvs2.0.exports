@@ -1,8 +1,0 @@
-MODULE DEVCAPS1
-    DESCRIPTION=Displays Device Capability Info (c) Charles Petzold, 1990
-    FILE.NAME=DEVCAPS1.EXE
-    FILE.SIZE=11856
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

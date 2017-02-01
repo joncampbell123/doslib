@@ -1,4 +1,0 @@
-MODULE compress
-    DESCRIPTION=compress.EXE
-    FILE.NAME=compress.exe
-    FILE.SIZE=25563

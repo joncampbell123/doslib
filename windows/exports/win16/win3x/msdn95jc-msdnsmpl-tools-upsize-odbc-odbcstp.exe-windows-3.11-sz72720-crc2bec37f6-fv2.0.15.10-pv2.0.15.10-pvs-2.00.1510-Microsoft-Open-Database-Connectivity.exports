@@ -1,8 +1,0 @@
-MODULE ODBCSTP
-    DESCRIPTION=Microsoft ODBC Setup
-    FILE.NAME=odbcstp.exe
-    FILE.SIZE=72720
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=nonresident
-    ORDINAL.2.NAME=DLGPROC
-    ORDINAL.2.TYPE=nonresident

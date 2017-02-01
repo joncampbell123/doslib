@@ -1,6 +1,0 @@
-MODULE CPROG5
-    DESCRIPTION=Sample Application for Calling All Memebers Technote
-    FILE.NAME=CPROG5.EXE
-    FILE.SIZE=237432
-    ORDINAL.1.NAME=_AFX_VERSION
-    ORDINAL.1.TYPE=resident

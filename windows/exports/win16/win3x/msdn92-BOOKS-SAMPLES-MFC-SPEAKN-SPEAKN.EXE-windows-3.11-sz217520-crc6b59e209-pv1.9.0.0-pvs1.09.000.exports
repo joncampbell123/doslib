@@ -1,6 +1,0 @@
-MODULE SPEAKN
-    DESCRIPTION=Microsoft Foundation Speak and Spell
-    FILE.NAME=SPEAKN.EXE
-    FILE.SIZE=217520
-    ORDINAL.1.NAME=_AFX_VERSION
-    ORDINAL.1.TYPE=resident

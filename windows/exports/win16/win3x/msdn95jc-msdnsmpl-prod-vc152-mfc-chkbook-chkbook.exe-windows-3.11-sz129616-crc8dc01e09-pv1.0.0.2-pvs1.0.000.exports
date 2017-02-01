@@ -1,6 +1,0 @@
-MODULE CHKBOOK
-    DESCRIPTION=CHKBOOK Windows Application
-    FILE.NAME=chkbook.exe
-    FILE.SIZE=129616
-    ORDINAL.1.NAME=_AFX_VERSION
-    ORDINAL.1.TYPE=resident

@@ -1,8 +1,0 @@
-MODULE DRWATSON
-    DESCRIPTION=System Diagnostic Utility
-    FILE.NAME=drwatson.exe
-    FILE.SIZE=28112
-    ORDINAL.1.NAME=SHERLOCKWNDPROC
-    ORDINAL.1.TYPE=nonresident
-    ORDINAL.2.NAME=SHERLOCKDIALOG
-    ORDINAL.2.TYPE=nonresident

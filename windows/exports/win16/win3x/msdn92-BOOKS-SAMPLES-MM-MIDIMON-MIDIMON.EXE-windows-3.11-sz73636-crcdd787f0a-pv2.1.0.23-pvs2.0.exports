@@ -1,8 +1,0 @@
-MODULE MIDIMON
-    DESCRIPTION=MIDIMon -- A Multimedia Windows Sample Application
-    FILE.NAME=MIDIMON.EXE
-    FILE.SIZE=73636
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=nonresident
-    ORDINAL.2.NAME=ABOUTDLGPROC
-    ORDINAL.2.TYPE=nonresident

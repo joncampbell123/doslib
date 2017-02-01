@@ -1,9 +1,0 @@
-MODULE ZOOMIN
-    DESCRIPTION=Template Microsoft Windows Application
-    FILE.NAME=zoomin.exe
-    FILE.SIZE=6464
-    ORDINAL.1.TYPE=empty
-    ORDINAL.2.NAME=APPWNDPROC
-    ORDINAL.2.TYPE=nonresident
-    ORDINAL.3.NAME=ABOUTDLG
-    ORDINAL.3.TYPE=nonresident

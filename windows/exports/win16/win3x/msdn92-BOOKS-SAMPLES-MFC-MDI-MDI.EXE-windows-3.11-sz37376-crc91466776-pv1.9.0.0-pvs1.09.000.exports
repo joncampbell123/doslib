@@ -1,6 +1,0 @@
-MODULE MDI
-    DESCRIPTION=Microsoft Foundation MDI Sample
-    FILE.NAME=MDI.EXE
-    FILE.SIZE=37376
-    ORDINAL.1.NAME=_AFX_VERSION
-    ORDINAL.1.TYPE=resident

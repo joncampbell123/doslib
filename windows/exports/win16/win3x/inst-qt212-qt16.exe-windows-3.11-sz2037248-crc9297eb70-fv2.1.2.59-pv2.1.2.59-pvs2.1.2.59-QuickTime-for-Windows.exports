@@ -1,8 +1,0 @@
-MODULE QTINSTAL
-    DESCRIPTION=Apple Computer QuickTime for Windows Installation Program
-    FILE.NAME=qt16.exe
-    FILE.SIZE=2037248
-    ORDINAL.1.NAME=_AFX_VERSION
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=___EXPORTEDSTUB
-    ORDINAL.2.TYPE=resident

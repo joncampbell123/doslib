@@ -1,8 +1,0 @@
-MODULE KEYLOOK
-    DESCRIPTION=Key Look Program (c) Charles Petzold, 1990
-    FILE.NAME=KEYLOOK.EXE
-    FILE.SIZE=4800
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

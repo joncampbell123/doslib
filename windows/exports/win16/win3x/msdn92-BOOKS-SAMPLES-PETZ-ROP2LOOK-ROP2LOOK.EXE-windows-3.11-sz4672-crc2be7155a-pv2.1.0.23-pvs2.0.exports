@@ -1,8 +1,0 @@
-MODULE ROP2LOOK
-    DESCRIPTION=ROP2 Demonstration Program (c) Charles Petzold, 1990
-    FILE.NAME=ROP2LOOK.EXE
-    FILE.SIZE=4672
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

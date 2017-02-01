@@ -1,8 +1,0 @@
-MODULE CONNECT
-    DESCRIPTION=Mouse Connect Program (c) Charles Petzold, 1990
-    FILE.NAME=CONNECT.EXE
-    FILE.SIZE=8064
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

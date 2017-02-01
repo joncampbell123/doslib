@@ -1,6 +1,0 @@
-MODULE POSTAPP
-    DESCRIPTION=VPostD Sample VxD for Windows --By: Curtis J. Palmer
-    FILE.NAME=POSTAPP.EXE
-    FILE.SIZE=6128
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident

@@ -1,8 +1,0 @@
-MODULE HLPTAB
-    DESCRIPTION=Help Tab Generator V 1.0 Copyright (c) Microsoft, 1992
-    FILE.NAME=HLPTAB.DLL
-    FILE.SIZE=1048
-    ORDINAL.1.NAME=HLPTAB
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=SETTAB
-    ORDINAL.2.TYPE=resident

@@ -1,8 +1,0 @@
-MODULE GENERIC
-    DESCRIPTION=Sample Microsoft Windows Application
-    FILE.NAME=GENERIC.EXE
-    FILE.SIZE=7680
-    ORDINAL.1.NAME=MAINWNDPROC
-    ORDINAL.1.TYPE=nonresident
-    ORDINAL.2.NAME=ABOUT
-    ORDINAL.2.TYPE=nonresident

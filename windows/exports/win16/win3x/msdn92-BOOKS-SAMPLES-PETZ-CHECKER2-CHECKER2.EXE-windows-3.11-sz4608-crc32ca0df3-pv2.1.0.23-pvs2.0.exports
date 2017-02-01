@@ -1,8 +1,0 @@
-MODULE CHECKER2
-    DESCRIPTION=Mouse Hit-Test Demo Program No. 2 (c) Charles Petzold, 1990
-    FILE.NAME=CHECKER2.EXE
-    FILE.SIZE=4608
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

@@ -1,8 +1,0 @@
-MODULE BEEPER1
-    DESCRIPTION=Timer Demo Program No. 1 (c) Charles Petzold, 1990
-    FILE.NAME=BEEPER1.EXE
-    FILE.SIZE=4032
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

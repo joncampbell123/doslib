@@ -1,6 +1,0 @@
-MODULE TbkNet
-    DESCRIPTION=Asymetrix TbkNet Application
-    FILE.NAME=TBKNET.EXE
-    FILE.SIZE=5360
-    ORDINAL.1.NAME=TBKNETWNDPROC
-    ORDINAL.1.TYPE=nonresident

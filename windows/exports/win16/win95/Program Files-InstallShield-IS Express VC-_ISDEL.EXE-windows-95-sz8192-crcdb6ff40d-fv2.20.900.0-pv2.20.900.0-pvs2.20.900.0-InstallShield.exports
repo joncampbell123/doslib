@@ -1,6 +1,0 @@
-MODULE _DELIS
-    DESCRIPTION=Deleter Process (c) Stirling Technologies, 1990-1995
-    FILE.NAME=_ISDEL.EXE
-    FILE.SIZE=8192
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident

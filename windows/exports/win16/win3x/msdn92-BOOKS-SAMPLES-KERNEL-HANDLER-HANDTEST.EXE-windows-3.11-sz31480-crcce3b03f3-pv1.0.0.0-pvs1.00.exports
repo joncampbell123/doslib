@@ -1,8 +1,0 @@
-MODULE HANDTEST
-    DESCRIPTION=Demonstrates the use of Handler.dll
-    FILE.NAME=HANDTEST.EXE
-    FILE.SIZE=31480
-    ORDINAL.1.NAME=DEMOWNDPROC
-    ORDINAL.1.TYPE=nonresident
-    ORDINAL.2.NAME=ABOUT
-    ORDINAL.2.TYPE=nonresident

@@ -1,8 +1,0 @@
-MODULE MENUDEMO
-    DESCRIPTION=Menu Demonstration Program (c) Charles Petzold, 1990
-    FILE.NAME=MENUDEMO.EXE
-    FILE.SIZE=4640
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

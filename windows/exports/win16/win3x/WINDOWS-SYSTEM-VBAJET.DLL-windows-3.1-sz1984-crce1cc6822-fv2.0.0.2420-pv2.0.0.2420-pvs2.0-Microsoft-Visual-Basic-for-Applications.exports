@@ -1,8 +1,0 @@
-MODULE VBAJET
-    DESCRIPTION=Microsoft Visual Basic for Applications - Expression Service Loader
-    FILE.NAME=VBAJET.DLL
-    FILE.SIZE=1984
-    ORDINAL.1.NAME=VBAGETEXPRSRV
-    ORDINAL.1.TYPE=nonresident
-    ORDINAL.2.NAME=LOADEXPRSRVDLL
-    ORDINAL.2.TYPE=nonresident

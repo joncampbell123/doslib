@@ -1,8 +1,0 @@
-MODULE MMCI
-    DESCRIPTION=Windows Multimedia Class Installer
-    FILE.NAME=MMCI.DLL
-    FILE.SIZE=26016
-    ORDINAL.1.NAME=WEP
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=CLASSINSTALL
-    ORDINAL.2.TYPE=resident

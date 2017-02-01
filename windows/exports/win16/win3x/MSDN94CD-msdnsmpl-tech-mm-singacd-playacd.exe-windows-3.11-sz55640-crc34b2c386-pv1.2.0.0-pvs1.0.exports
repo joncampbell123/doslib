@@ -1,6 +1,0 @@
-MODULE PLAYACD
-    DESCRIPTION=Microsoft Windows MCI Application
-    FILE.NAME=playacd.exe
-    FILE.SIZE=55640
-    ORDINAL.1.NAME=MAINWNDPROC
-    ORDINAL.1.TYPE=nonresident

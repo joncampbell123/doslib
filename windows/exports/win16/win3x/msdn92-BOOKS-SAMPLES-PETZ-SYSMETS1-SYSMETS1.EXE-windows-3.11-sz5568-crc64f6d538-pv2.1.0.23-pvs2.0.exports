@@ -1,8 +1,0 @@
-MODULE SYSMETS1
-    DESCRIPTION=System Metrics Display No. 1 (c) Charles Petzold, 1990
-    FILE.NAME=SYSMETS1.EXE
-    FILE.SIZE=5568
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

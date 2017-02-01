@@ -1,6 +1,0 @@
-MODULE FILEVIEW
-    DESCRIPTION=FileView Microsoft Foundation Classes Windows Application
-    FILE.NAME=FILEVIEW.EXE
-    FILE.SIZE=56832
-    ORDINAL.1.NAME=_AFX_VERSION
-    ORDINAL.1.TYPE=resident

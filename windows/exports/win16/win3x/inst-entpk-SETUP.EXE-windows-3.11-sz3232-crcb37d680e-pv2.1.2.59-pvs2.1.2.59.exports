@@ -1,4 +1,0 @@
-MODULE SETUP
-    DESCRIPTION=Setup stub loader
-    FILE.NAME=SETUP.EXE
-    FILE.SIZE=3232

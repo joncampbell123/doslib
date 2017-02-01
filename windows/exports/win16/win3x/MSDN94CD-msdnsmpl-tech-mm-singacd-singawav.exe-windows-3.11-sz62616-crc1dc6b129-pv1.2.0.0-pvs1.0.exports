@@ -1,6 +1,0 @@
-MODULE SINGAWAV
-    DESCRIPTION=Microsoft Windows MCI Application
-    FILE.NAME=singawav.exe
-    FILE.SIZE=62616
-    ORDINAL.1.NAME=MAINWNDPROC
-    ORDINAL.1.TYPE=nonresident

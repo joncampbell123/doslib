@@ -1,6 +1,0 @@
-MODULE PLAYENU
-    DESCRIPTION=(c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
-    FILE.NAME=PLAYENU.DLL
-    FILE.SIZE=16928
-    ORDINAL.1.NAME=___EXPORTEDSTUB
-    ORDINAL.1.TYPE=resident

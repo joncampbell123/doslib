@@ -1,8 +1,0 @@
-MODULE Mincb
-    DESCRIPTION=Mincb DLL
-    FILE.NAME=mincb.dll
-    FILE.SIZE=5106
-    ORDINAL.1.NAME=WEP
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=MICALLBACK
-    ORDINAL.2.TYPE=resident

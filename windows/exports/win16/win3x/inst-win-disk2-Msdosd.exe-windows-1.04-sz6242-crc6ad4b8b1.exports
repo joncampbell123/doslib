@@ -1,8 +1,0 @@
-MODULE MSDOSD
-    DESCRIPTION=Windows MSDOS Machine Dependent
-    FILE.NAME=Msdosd.exe
-    FILE.SIZE=6242
-    ORDINAL.1.NAME=FORMAT
-    ORDINAL.1.TYPE=nonresident
-    ORDINAL.2.NAME=SYS
-    ORDINAL.2.TYPE=nonresident

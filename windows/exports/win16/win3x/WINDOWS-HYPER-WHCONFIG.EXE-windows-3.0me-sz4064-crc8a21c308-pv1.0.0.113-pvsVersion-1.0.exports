@@ -1,4 +1,0 @@
-MODULE AlterWinHelpIni
-    DESCRIPTION=Alter WinHelp INI File
-    FILE.NAME=WHCONFIG.EXE
-    FILE.SIZE=4064

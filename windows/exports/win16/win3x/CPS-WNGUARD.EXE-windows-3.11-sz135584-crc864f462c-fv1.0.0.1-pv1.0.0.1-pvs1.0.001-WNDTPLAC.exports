@@ -1,6 +1,0 @@
-MODULE WNGUARD
-    DESCRIPTION=CPS Crash Guard - Copyright (C) 1993-1994 Central Point Software, Inc.
-    FILE.NAME=WNGUARD.EXE
-    FILE.SIZE=135584
-    ORDINAL.1.NAME=_AFX_VERSION
-    ORDINAL.1.TYPE=resident

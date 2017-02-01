@@ -1,6 +1,0 @@
-MODULE KEYS
-    DESCRIPTION=keys.exe
-    FILE.NAME=KEYS.EXE
-    FILE.SIZE=31326
-    ORDINAL.1.NAME=___GetEmDataSeg
-    ORDINAL.1.TYPE=resident

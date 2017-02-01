@@ -1,8 +1,0 @@
-MODULE POEPOEM
-    DESCRIPTION=Demo of User-Defined Resource (c) Charles Petzold, 1990
-    FILE.NAME=POEPOEM.EXE
-    FILE.SIZE=6928
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

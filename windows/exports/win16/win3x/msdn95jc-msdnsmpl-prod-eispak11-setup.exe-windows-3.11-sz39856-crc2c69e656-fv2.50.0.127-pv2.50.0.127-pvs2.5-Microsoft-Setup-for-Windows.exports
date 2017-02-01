@@ -1,8 +1,0 @@
-MODULE bootstrp
-    DESCRIPTION=MS-Setup Loader
-    FILE.NAME=setup.exe
-    FILE.SIZE=39856
-    ORDINAL.1.NAME=BOOTWNDPROC
-    ORDINAL.1.TYPE=nonresident
-    ORDINAL.2.NAME=___EXPORTEDSTUB
-    ORDINAL.2.TYPE=resident

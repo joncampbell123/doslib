@@ -1,4 +1,0 @@
-MODULE SETUP
-    DESCRIPTION=Windows for Workgroups 3.11 Resource Kit Setup Application
-    FILE.NAME=setup.exe
-    FILE.SIZE=14256

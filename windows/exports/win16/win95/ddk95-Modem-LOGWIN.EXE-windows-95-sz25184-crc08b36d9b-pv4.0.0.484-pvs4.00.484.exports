@@ -1,4 +1,0 @@
-MODULE LOGWIN
-    DESCRIPTION=Windowed VxD debugging output
-    FILE.NAME=LOGWIN.EXE
-    FILE.SIZE=25184

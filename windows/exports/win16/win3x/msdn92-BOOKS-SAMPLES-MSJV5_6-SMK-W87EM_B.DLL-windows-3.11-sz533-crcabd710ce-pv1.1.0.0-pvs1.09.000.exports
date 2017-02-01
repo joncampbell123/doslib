@@ -1,6 +1,0 @@
-MODULE W87EM_B
-    DESCRIPTION=Microsoft Windows NPX Emulation on OS/2
-    FILE.NAME=W87EM_B.DLL
-    FILE.SIZE=533
-    ORDINAL.1.NAME=__FPMATH
-    ORDINAL.1.TYPE=resident

@@ -1,8 +1,0 @@
-MODULE POPMENU
-    DESCRIPTION=Popup Menu Demonstration Program (c) Charles Petzold, 1990
-    FILE.NAME=POPMENU.EXE
-    FILE.SIZE=4608
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

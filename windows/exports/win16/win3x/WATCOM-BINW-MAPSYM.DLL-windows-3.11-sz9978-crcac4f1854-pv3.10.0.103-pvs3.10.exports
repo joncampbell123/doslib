@@ -1,4 +1,0 @@
-MODULE mapsym
-    DESCRIPTION=mapsym.dll
-    FILE.NAME=MAPSYM.DLL
-    FILE.SIZE=9978

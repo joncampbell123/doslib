@@ -1,4 +1,0 @@
-MODULE dwarf
-    DESCRIPTION=dwarf.dll
-    FILE.NAME=DWARF.DLL
-    FILE.SIZE=123270

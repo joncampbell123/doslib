@@ -1,4 +1,0 @@
-MODULE DFServer
-    DESCRIPTION=Drop File Server Sample Application
-    FILE.NAME=DFSERVER.EXE
-    FILE.SIZE=14352

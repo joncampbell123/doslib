@@ -1,4 +1,0 @@
-MODULE INTERPGL
-    DESCRIPTION=Internat language resource library for Pig Latin
-    FILE.NAME=INTERPGL.DLL
-    FILE.SIZE=5888

@@ -1,6 +1,0 @@
-MODULE MNMNET
-    DESCRIPTION=Microsoft\256 NetMeeting(TM) Network Layer Windows Stub Application.
-    FILE.NAME=MNMNET.EXE
-    FILE.SIZE=4464
-    ORDINAL.1.NAME=___EXPORTEDSTUB
-    ORDINAL.1.TYPE=resident

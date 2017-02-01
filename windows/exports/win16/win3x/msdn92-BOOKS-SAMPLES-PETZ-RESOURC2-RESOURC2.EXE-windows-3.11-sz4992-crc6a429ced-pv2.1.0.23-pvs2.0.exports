@@ -1,8 +1,0 @@
-MODULE RESOURC2
-    DESCRIPTION=Icon and Cursor Demo Program No. 2 (c) Charles Petzold, 1990
-    FILE.NAME=RESOURC2.EXE
-    FILE.SIZE=4992
-    ORDINAL.1.NAME=WNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.NAME=
-    ORDINAL.2.TYPE= private

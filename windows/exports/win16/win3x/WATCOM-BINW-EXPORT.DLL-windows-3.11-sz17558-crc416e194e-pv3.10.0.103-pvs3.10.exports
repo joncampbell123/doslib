@@ -1,4 +1,0 @@
-MODULE export
-    DESCRIPTION=export.dll
-    FILE.NAME=EXPORT.DLL
-    FILE.SIZE=17558

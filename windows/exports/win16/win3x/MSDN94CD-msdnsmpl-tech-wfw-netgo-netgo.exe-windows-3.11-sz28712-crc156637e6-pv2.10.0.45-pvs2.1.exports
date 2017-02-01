@@ -1,4 +1,0 @@
-MODULE NETGO
-    DESCRIPTION=Net Gomuku
-    FILE.NAME=netgo.exe
-    FILE.SIZE=28712

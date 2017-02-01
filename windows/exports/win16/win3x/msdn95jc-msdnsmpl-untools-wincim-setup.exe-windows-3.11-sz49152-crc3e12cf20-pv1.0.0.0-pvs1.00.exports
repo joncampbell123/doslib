@@ -1,7 +1,0 @@
-MODULE SETUP
-    DESCRIPTION=InstallSHIELD Launcher (C) The Stirling Group, 1990, 1991
-    FILE.NAME=setup.exe
-    FILE.SIZE=49152
-    ORDINAL.1.NAME=SETUPWNDPROC
-    ORDINAL.1.TYPE=resident
-    ORDINAL.2.TYPE=empty
