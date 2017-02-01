@@ -1134,15 +1134,6 @@ int main(int argc,char **argv) {
                         if (dec_i.lock) printf("  ; LOCK#");
                         printf("\n");
 
-                        /* if any part of the instruction is affected by EXE relocations, say so */
-                        if (reloc && reloci < reloc->length) {
-                            const union exe_ne_header_segment_relocation_entry *relocent = reloc->table + reloci;
-                            const uint32_t o = relocent->r.seg_offset;
-
-                            if (o >= ip && o < (ip + inslen)) {
-                            }
-                        }
-
                         dec_read = dec_i.end;
 
                         if ((dec_i.opcode == MXOP_JMP || dec_i.opcode == MXOP_CALL || dec_i.opcode == MXOP_JCXZ ||
@@ -1179,7 +1170,47 @@ int main(int argc,char **argv) {
                         else if (dec_i.opcode == MXOP_RET || dec_i.opcode == MXOP_RETF)
                             break;
                         else if (dec_i.opcode == MXOP_CALL_FAR || dec_i.opcode == MXOP_JMP_FAR) {
-                            // TODO
+                            if (reloc && reloci < reloc->length) {
+                                const union exe_ne_header_segment_relocation_entry *relocent = reloc->table + reloci;
+                                const uint32_t o = relocent->r.seg_offset;
+
+                                if (o >= ip && o < (ip + inslen)) {
+                                    if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE) {
+                                    }
+                                    else {
+                                        if ((relocent->r.reloc_address_type&EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_MASK) ==
+                                            EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT) {
+                                            if ((relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) ==
+                                                EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE) {
+                                                if (dec_i.argv[0].segment == MX86_SEG_IMM && dec_i.argv[0].regtype == MX86_RT_IMM) {
+                                                    /* we can and should track internal references.
+                                                     * do not track movable entry ordinal refs, because we already added those entry points to the label list */
+                                                    if (relocent->intref.segment_index != 0xFF) {
+                                                        label = dec_find_label(relocent->intref.segment_index,dec_i.argv[0].value);
+                                                        if (label == NULL) {
+                                                            if ((label=dec_label_malloc()) != NULL) {
+                                                                if (dec_i.opcode == MXOP_JMP_FAR)
+                                                                    dec_label_set_name(label,"JMP FAR target");
+                                                                else if (dec_i.opcode == MXOP_CALL_FAR)
+                                                                    dec_label_set_name(label,"CALL FAR target");
+
+                                                                label->seg_v =
+                                                                    relocent->intref.segment_index;
+                                                                label->ofs_v =
+                                                                    dec_i.argv[0].value;
+
+                                                                printf("Target: 0x%04lx:0x%04lx internal ref, relocation by segment value\n",
+                                                                    (unsigned long)label->seg_v,
+                                                                    (unsigned long)label->ofs_v);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
                             if (dec_i.opcode == MXOP_JMP_FAR)
                                 break;
