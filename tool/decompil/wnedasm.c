@@ -45,6 +45,17 @@
 #define O_BINARY 0
 #endif
 
+struct mod_symbol_table {
+    char**                  table;      // ordinal i is entry i - 1
+    size_t                  length;
+    size_t                  alloc;
+};
+
+struct mod_symbols_list {
+    struct mod_symbol_table*    table;
+    size_t                      length;
+};
+
 struct dec_label {
     uint16_t                    seg_v,ofs_v;
     char*                       name;
@@ -66,6 +77,31 @@ void cstr_copy(char **l,const char *s) {
         if (*l != NULL)
             strcpy(*l,s);
     }
+}
+
+void mod_symbol_table_free(struct mod_symbol_table *t) {
+    unsigned int i;
+
+    if (t->table) {
+        for (i=0;i < t->length;i++) cstr_free(&(t->table[i]));
+        free(t->table);
+    }
+
+    t->table = NULL;
+    t->length = 0;
+    t->alloc = 0;
+}
+
+void mod_symbols_list_free(struct mod_symbols_list *t) {
+    unsigned int i;
+
+    if (t->table) {
+        for (i=0;i < t->length;i++) mod_symbol_table_free(&(t->table[i]));
+        free(t->table);
+    }
+
+    t->table = NULL;
+    t->length = 0;
 }
 
 void dec_label_set_name(struct dec_label *l,const char *s) {
@@ -94,6 +130,7 @@ uint32_t                        current_offset;
 
 struct exe_dos_header           exehdr;
 
+char*                           sym_file = NULL;
 char*                           label_file = NULL;
 
 char*                           src_file = NULL;
@@ -134,6 +171,7 @@ void help() {
     fprintf(stderr,"MS-DOS COM/EXE/SYS decompiler\n");
     fprintf(stderr,"    -i <file>        File to decompile\n");
     fprintf(stderr,"    -lf <file>       Text file to define labels\n");
+    fprintf(stderr,"    -sym <file>      Module symbols file\n");
 }
 
 int parse_argv(int argc,char **argv) {
@@ -153,6 +191,10 @@ int parse_argv(int argc,char **argv) {
             else if (!strcmp(a,"lf")) {
                 label_file = argv[i++];
                 if (label_file == NULL) return 1;
+            }
+            else if (!strcmp(a,"sym")) {
+                sym_file = argv[i++];
+                if (sym_file == NULL) return 1;
             }
             else if (!strcmp(a,"h") || !strcmp(a,"help")) {
                 help();
@@ -563,6 +605,7 @@ int main(int argc,char **argv) {
     struct exe_ne_header_resource_table_t ne_resources;
     struct exe_ne_header_name_entry_table ne_resname;
     struct exe_ne_header_segment_table ne_segments;
+    struct mod_symbols_list mod_syms;
     struct exe_ne_header ne_header;
     uint32_t ne_header_offset;
     struct dec_label *label;
@@ -574,6 +617,7 @@ int main(int argc,char **argv) {
 
     assert(sizeof(ne_header) == 0x40);
     memset(&exehdr,0,sizeof(exehdr));
+    memset(&mod_syms,0,sizeof(mod_syms));
     exe_ne_header_segment_table_init(&ne_segments);
     exe_ne_header_resource_table_init(&ne_resources);
     exe_ne_header_name_entry_table_init(&ne_resname);
@@ -770,6 +814,114 @@ int main(int argc,char **argv) {
         }
 
         exe_ne_header_entry_table_table_parse_raw(&ne_entry_table);
+    }
+
+    if (sym_file != NULL && ne_imported_name_table.length != 0 && ne_imported_name_table.module_ref_table_length != 0) {
+        int current_module_index = -1;
+        char *current_module = NULL;
+        unsigned int i;
+
+        assert(mod_syms.table == NULL && mod_syms.length == 0);
+        mod_syms.length = ne_imported_name_table.module_ref_table_length;
+        mod_syms.table = malloc(sizeof(*mod_syms.table) * mod_syms.length);
+        if (mod_syms.table == NULL) return 1;
+        memset(mod_syms.table,0,sizeof(*mod_syms.table) * mod_syms.length);
+
+        FILE *fp = fopen(sym_file,"r");
+        if (fp == NULL) {
+            fprintf(stderr,"Failed to open sym file, %s\n",sym_file);
+            return 1;
+        }
+
+        while (!feof(fp) && !ferror(fp)) {
+            char *s;
+
+            memset(dec_buffer,0,sizeof(dec_buffer));
+            if (fgets((char*)dec_buffer,sizeof(dec_buffer)-1,fp) == NULL)
+                break;
+
+            s = (char*)dec_buffer;
+            {
+                char *e = s + strlen(s) - 1;
+                while (e > (char*)dec_buffer && (*e == '\r' || *e == '\n')) *e-- = 0;
+            }
+
+            while (*s == ' ' || *s == '\t') s++;
+
+            if (!strncasecmp(s,"module ",7)) {
+                s += 7;
+                while (*s == ' ' || *s == '\t') s++;
+
+                i = 0;
+                current_module_index = -1;
+                cstr_copy(&current_module,s);
+                while (i < ne_imported_name_table.module_ref_table_length) {
+                    ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),
+                        &ne_imported_name_table,i + 1);
+
+                    if (name_tmp[0] != 0 && strcasecmp(name_tmp,current_module) == 0) {
+                        current_module_index = i;
+                        break;
+                    }
+
+                    i++;
+                }
+
+                if (current_module_index >= 0)
+                    printf("Sym file parsing module index %u for '%s'\n",current_module_index + 1,current_module);
+            }
+            else if (current_module_index < 0) {
+            }
+            else if (!strncasecmp(s,"ordinal.",8)) {
+                struct mod_symbol_table *tbl = mod_syms.table + current_module_index;
+                unsigned int ordinal;
+
+                s += 8;
+                ordinal = (unsigned int)strtoul(s,&s,10);
+
+                if (tbl->table == NULL) {
+                    tbl->alloc = 256;
+                    tbl->length = 0;
+                    tbl->table = malloc(sizeof(*tbl->table) * tbl->alloc);
+                    if (tbl->table == NULL) tbl->alloc = tbl->length = 0;
+                }
+                if (tbl->table != NULL) {
+                    if (ordinal != 0 && ordinal <= 8192) {
+                        size_t nl = (ordinal + 255 + 1) & (~255);
+                        if (nl < tbl->alloc) nl = tbl->alloc;
+
+                        if (tbl->alloc < nl) {
+                            void *np = realloc((void*)tbl->table,sizeof(*tbl->table) * nl);
+                            if (np == NULL) break;
+                            tbl->table = np;
+                            tbl->alloc = nl;
+                        }
+
+                        while (tbl->length <= (ordinal - 1))
+                            tbl->table[tbl->length++] = NULL;
+
+                        assert(tbl->length < tbl->alloc);
+                        assert((ordinal - 1) < tbl->alloc);
+                        assert((ordinal - 1) <= tbl->length);
+
+                        if (!strncasecmp(s,".name=",6)) {
+                            s += 6;
+
+                            if (tbl->table[ordinal - 1] != NULL)
+                                printf("* WARNING: symfile redefines ordinal %u in module %s. '%s' to '%s'\n",
+                                    ordinal,current_module,
+                                    tbl->table[ordinal - 1],
+                                    s);
+
+                            cstr_copy(&(tbl->table[ordinal - 1]),s);
+                        }
+                    }
+                }
+            }
+        }
+
+        cstr_free(&current_module);
+        fclose(fp);
     }
 
     if (label_file != NULL) {
@@ -1612,6 +1764,7 @@ int main(int argc,char **argv) {
         free(ne_segment_relocs);
     }
 
+    mod_symbols_list_free(&mod_syms);
     exe_ne_header_imported_name_table_free(&ne_imported_name_table);
     exe_ne_header_entry_table_table_free(&ne_entry_table);
     exe_ne_header_name_entry_table_free(&ne_nonresname);
