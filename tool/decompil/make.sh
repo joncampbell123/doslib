@@ -12,8 +12,10 @@ if [ "$1" == "clean" ]; then
 fi
 
 if [ "$1" == "disk" ]; then
+    true
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
+    true
 fi
 
