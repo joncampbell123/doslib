@@ -5,6 +5,22 @@
  *   MSVIDC.DRV               Windows 3.11 + Video For Windows              "Microsoft Video 1" codec
  *
  * - NE images apparently have 0x10 empty bytes in the first segment
+ *
+ * - Reading WINE source code reveals other ugly NE features that I have yet to see in the wild:
+ *     * "Self loading" executables (ewww). There's a specific structure in segment #1 that
+ *       points the OS into entry points to make this happen, we should decompile that someday.
+ *
+ *     * Iterated segments. My best guess from WINE's implementation someone at Microsoft copied
+ *       the way "iterated segments" are formatted in the OMF object format and put it into the
+ *       NE format.
+ *
+ * - Windows 3.11 OLE2.DLL has entry points that point into a code segment where there's no code,
+ *   but various unknown data. It doesn't seem to have iterated segment data or use "self loading"
+ *   so I can only guess that perhaps OleInitialize() does something funny like decompress
+ *   subroutines into that code segment via a CS to DS alias. We'll see.
+ *
+ * - DISPDIB.DLL as expected appears to make some calls to KERNEL and USER along with some paths
+ *   that call INT 10h directly. There are also plenty of INT 2F AF=0x4F calls in there as well.
  */
 
 #include "minx86dec/types.h"
