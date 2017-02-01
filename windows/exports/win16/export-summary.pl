@@ -116,6 +116,8 @@ sub refsort {
     return 0;
 }
 
+my %mod_official;
+
 while (my ($module,$modlistr) = each(%modules)) {
     print "MODULE $module\n";
 
@@ -259,6 +261,182 @@ while (my ($module,$modlistr) = each(%modules)) {
         }
         $last_refs = $refc;
 
+        # for the decompiler, come up with the "official" name of the symbol.
+        # This code considers Windows 3.1 authoritative on what the names of the symbols are.
+        # Older versions have fewer symbols, though the names hardly change.
+        # Windows 95 and later added some symbols, and took away the names (leaving the ordinals)
+        # of some deprecated APIs.
+        $ofname = undef;
+        $oftype = undef;
+
+        # Windows 3.1x
+        if ((!defined($ofname) && !defined($oftype)) || $ofname eq "" || $ofname eq "__GP" || $ofname eq "___EXPORTEDSTUB" || $ofname eq "WEP" || $oftype eq "empty") {
+            for ($j=0;$j < @refs;$j++) {
+                my %ref = %{$refs[$j]};
+
+                next if !exists($ref{'NAME'}) && !exists($ref{'TYPE'});
+
+                my $match = 0;
+
+                my @modinfo = @{$ref{modinfo}};
+                for ($ri=0;$ri < @modinfo;$ri++) {
+                    my %modinf = %{$modinfo[$ri]};
+
+                    if ($modinf{'filepath'} =~ m/-windows-3\.1/i) {
+                        $match = 1;
+                        last;
+                    }
+                }
+
+                if ($match) {
+                    if ($ref{'TYPE'} ne 'empty') {
+                        if (defined $ref{'NAME'} && $ref{'NAME'} ne '') {
+                            $ofname = $ref{'NAME'};
+                            $oftype = $ref{'TYPE'};
+                        }
+                    }
+                }
+            }
+        }
+
+        # Windows 3.0x
+        if ((!defined($ofname) && !defined($oftype)) || $ofname eq "" || $ofname eq "__GP" || $ofname eq "___EXPORTEDSTUB" || $ofname eq "WEP" || $oftype eq "empty") {
+            for ($j=0;$j < @refs;$j++) {
+                my %ref = %{$refs[$j]};
+
+                next if !exists($ref{'NAME'}) && !exists($ref{'TYPE'});
+
+                my $match = 0;
+
+                my @modinfo = @{$ref{modinfo}};
+                for ($ri=0;$ri < @modinfo;$ri++) {
+                    my %modinf = %{$modinfo[$ri]};
+
+                    if ($modinf{'filepath'} =~ m/-windows-3\.0/i) {
+                        $match = 1;
+                        last;
+                    }
+                }
+
+                if ($match) {
+                    if ($ref{'TYPE'} ne 'empty') {
+                        if (defined $ref{'NAME'} && $ref{'NAME'} ne '') {
+                            $ofname = $ref{'NAME'};
+                            $oftype = $ref{'TYPE'};
+                        }
+                    }
+                }
+            }
+        }
+
+        # Windows 9x/ME
+        if ((!defined($ofname) && !defined($oftype)) || $ofname eq "" || $ofname eq "__GP" || $ofname eq "___EXPORTEDSTUB" || $ofname eq "WEP" || $oftype eq "empty") {
+            for ($j=0;$j < @refs;$j++) {
+                my %ref = %{$refs[$j]};
+
+                next if !exists($ref{'NAME'}) && !exists($ref{'TYPE'});
+
+                my $match = 0;
+
+                my @modinfo = @{$ref{modinfo}};
+                for ($ri=0;$ri < @modinfo;$ri++) {
+                    my %modinf = %{$modinfo[$ri]};
+
+                    if ($modinf{'filepath'} =~ m/-windows-(9|ME)/i) {
+                        $match = 1;
+                        last;
+                    }
+                }
+
+                if ($match) {
+                    if ($ref{'TYPE'} ne 'empty') {
+                        if (defined $ref{'NAME'} && $ref{'NAME'} ne '') {
+                            $ofname = $ref{'NAME'};
+                            $oftype = $ref{'TYPE'};
+                        }
+                    }
+                }
+            }
+        }
+
+        # Windows 2x
+        if ((!defined($ofname) && !defined($oftype)) || $ofname eq "" || $ofname eq "__GP" || $ofname eq "___EXPORTEDSTUB" || $ofname eq "WEP" || $oftype eq "empty") {
+            for ($j=0;$j < @refs;$j++) {
+                my %ref = %{$refs[$j]};
+
+                next if !exists($ref{'NAME'}) && !exists($ref{'TYPE'});
+
+                my $match = 0;
+
+                my @modinfo = @{$ref{modinfo}};
+                for ($ri=0;$ri < @modinfo;$ri++) {
+                    my %modinf = %{$modinfo[$ri]};
+
+                    if ($modinf{'filepath'} =~ m/-windows-2\./i) {
+                        $match = 1;
+                        last;
+                    }
+                }
+
+                if ($match) {
+                    if ($ref{'TYPE'} ne 'empty') {
+                        if (defined $ref{'NAME'} && $ref{'NAME'} ne '') {
+                            $ofname = $ref{'NAME'};
+                            $oftype = $ref{'TYPE'};
+                        }
+                    }
+                }
+            }
+        }
+
+        # Windows 1x
+        if ((!defined($ofname) && !defined($oftype)) || $ofname eq "" || $ofname eq "__GP" || $ofname eq "___EXPORTEDSTUB" || $ofname eq "WEP" || $oftype eq "empty") {
+            for ($j=0;$j < @refs;$j++) {
+                my %ref = %{$refs[$j]};
+
+                next if !exists($ref{'NAME'}) && !exists($ref{'TYPE'});
+
+                my $match = 0;
+
+                my @modinfo = @{$ref{modinfo}};
+                for ($ri=0;$ri < @modinfo;$ri++) {
+                    my %modinf = %{$modinfo[$ri]};
+
+                    if ($modinf{'filepath'} =~ m/-windows-1\./i) {
+                        $match = 1;
+                        last;
+                    }
+                }
+
+                if ($match) {
+                    if ($ref{'TYPE'} ne 'empty') {
+                        if (defined $ref{'NAME'} && $ref{'NAME'} ne '') {
+                            $ofname = $ref{'NAME'};
+                            $oftype = $ref{'TYPE'};
+                        }
+                    }
+                }
+            }
+        }
+
+        {
+            if (!(exists $mod_official{$module})) {
+                $mod_official{$module} = ( );
+            }
+
+            $ofname = '' unless defined($ofname);
+            $oftype = '' unless defined($oftype);
+
+            while ((scalar @{$mod_official{$module}}) <= $i) {
+                push(@{$mod_official{$module}},{ });
+            }
+
+            $mod_official{$module}[$i] = {
+                'NAME' => $ofname,
+                'TYPE' => $oftype
+            };
+        }
+
         # remove modinfo
         for ($j=0;$j < @refs;$j++) {
             $refs[$j]{modinfo} = undef;
@@ -266,4 +444,26 @@ while (my ($module,$modlistr) = each(%modules)) {
         }
     }
 }
+
+# final summary, for decompiler
+open(OSUM,">summary.exportsymbols") || die;
+
+while (my ($module,$modlistr) = each(%mod_official)) {
+    print OSUM "MODULE $module\n";
+
+    my @modlist = @{$modlistr};
+    for ($modi=0;$modi < @modlist;$modi++) {
+        my $modinfop = $modlist[$modi];
+        my %modinfo = %{$modinfop};
+
+        if ($modinfo{'NAME'} ne '') {
+            print OSUM "    ORDINAL.$modi.NAME=".$modinfo{'NAME'}."\n";
+        }
+        elsif ($modinfo{'TYPE'} ne '') {
+            print OSUM "    ORDINAL.$modi.TYPE=".$modinfo{'TYPE'}."\n";
+        }
+    }
+}
+
+close(OSUM);
 
