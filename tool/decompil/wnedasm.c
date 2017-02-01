@@ -1,3 +1,12 @@
+/* NOTES:
+ *
+ * - If you want an example of a NE image that uses "OSFIXUP", the following files might be useful
+ *
+ *   MSVIDC.DRV               Windows 3.11 + Video For Windows              "Microsoft Video 1" codec
+ *
+ * - NE images apparently have 0x10 empty bytes in the first segment
+ */
+
 #include "minx86dec/types.h"
 #include "minx86dec/state.h"
 #include "minx86dec/opcodes.h"
