@@ -315,25 +315,60 @@ int main(int argc,char **argv) {
     //        structure was chosen for 32-bit DOS because OS/2 would run the program in a window
     //        anyway with an API available that mirrors the DOS API?
 
+    printf("    Number of memory pages:         %lu\n",
+            (unsigned long)le_header.number_of_memory_pages);
+    printf("    Initial CS:IP                   segment #%lu (0x%04lx) : 0x%08lx\n",
+            (unsigned long)le_header.initial_object_cs_number,
+            (unsigned long)le_header.initial_object_cs_number,
+            (unsigned long)le_header.initial_eip);
+    printf("    Initial SS:SP                   segment #%lu (0x%04lx) : 0x%08lx\n",
+            (unsigned long)le_header.initial_object_ss_number,
+            (unsigned long)le_header.initial_object_ss_number,
+            (unsigned long)le_header.initial_esp);
+    printf("    Memory page size:               0x%08lx (%lu)\n",
+            (unsigned long)le_header.memory_page_size,
+            (unsigned long)le_header.memory_page_size);
+    printf("    Bytes on last page:             0x%08lx (%lu)\n",
+            (unsigned long)le_header.bytes_on_last_page,
+            (unsigned long)le_header.bytes_on_last_page);
+    printf("    Fixup section size:             0x%08lx (%lu)\n",
+            (unsigned long)le_header.fixup_section_size,
+            (unsigned long)le_header.fixup_section_size);
+    printf("    Fixup section checksum:         0x%08lx\n",
+            (unsigned long)le_header.fixup_section_checksum);
+    printf("    Loader section size:            0x%08lx (%lu)\n",
+            (unsigned long)le_header.loader_section_size,
+            (unsigned long)le_header.loader_section_size);
+    printf("    Loader section checksum:        0x%08lx\n",
+            (unsigned long)le_header.loader_section_checksum);
+    printf("    Offset of object table:         0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.offset_of_object_table,
+            (unsigned long)le_header.offset_of_object_table,
+            (unsigned long)le_header.offset_of_object_table + (unsigned long)le_header_offset,
+            (unsigned long)le_header.offset_of_object_table + (unsigned long)le_header_offset);
+    printf("    Object table entries:           0x%08lx (%lu)\n",
+            (unsigned long)le_header.object_table_entries,
+            (unsigned long)le_header.object_table_entries);
+    printf("    Object page map offset:         0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.object_page_map_offset,
+            (unsigned long)le_header.object_page_map_offset,
+            (unsigned long)le_header.object_page_map_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.object_page_map_offset + (unsigned long)le_header_offset);
+    printf("    Object iterate data map offset: 0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.object_iterate_data_map_offset,
+            (unsigned long)le_header.object_iterate_data_map_offset,
+            (unsigned long)le_header.object_iterate_data_map_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.object_iterate_data_map_offset + (unsigned long)le_header_offset);
+    printf("    Resource table offset:          0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.resource_table_offset,
+            (unsigned long)le_header.resource_table_offset,
+            (unsigned long)le_header.resource_table_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.resource_table_offset + (unsigned long)le_header_offset);
+    printf("    Resource table entries:         0x%08lx (%lu)\n",
+            (unsigned long)le_header.resource_table_entries,
+            (unsigned long)le_header.resource_table_entries);
 #if 0
 struct exe_le_header {
-    uint32_t        number_of_memory_pages;         // +0x14 number of memory pages
-    uint32_t        initial_object_cs_number;       // +0x18
-    uint32_t        initial_eip;                    // +0x1C
-    uint32_t        initial_object_ss_number;       // +0x20
-    uint32_t        initial_esp;                    // +0x24
-    uint32_t        memory_page_size;               // +0x28
-    uint32_t        bytes_on_last_page;             // +0x2C
-    uint32_t        fixup_section_size;             // +0x30
-    uint32_t        fixup_section_checksum;         // +0x34
-    uint32_t        loader_section_size;            // +0x38
-    uint32_t        loader_section_checksum;        // +0x3C
-    uint32_t        offset_of_object_table;         // +0x40
-    uint32_t        object_table_entries;           // +0x44
-    uint32_t        object_page_map_offset;         // +0x48
-    uint32_t        object_iterate_data_map_offset; // +0x4C
-    uint32_t        resource_table_offset;          // +0x50
-    uint32_t        resource_table_entries;         // +0x54
     uint32_t        resident_names_table_offset;    // +0x58
     uint32_t        entry_table_offset;             // +0x5C
     uint32_t        module_directives_table_offset; // +0x60
