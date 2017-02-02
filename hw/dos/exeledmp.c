@@ -106,6 +106,22 @@ struct exe_le_header_object_table_entry {
 };                                                  // =0x18
 #pragma pack(pop)
 
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_READABLE                 (1UL << 0UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_WRITEABLE                (1UL << 1UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE               (1UL << 2UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESOURCE                 (1UL << 3UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_DISCARDABLE              (1UL << 4UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_SHARED                   (1UL << 5UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_PRELOAD                  (1UL << 6UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_INVALID                  (1UL << 7UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_ZEROFILLED               (1UL << 8UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESIDENT                 (1UL << 9UL) /* valid for VDD, PDD, etc */
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESIDENT_LONG_LOCKABLE   (1UL << 10UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_1616ALIAS                (1UL << 12UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT          (1UL << 13UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_CONFORMING               (1UL << 14UL)
+#define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_IO_PRIVILEGE             (1UL << 15UL)
+
 const char *le_cpu_type_to_str(const uint8_t b) {
     switch (b) {
         case 0x01:  return "Intel 80286";
@@ -481,6 +497,25 @@ int main(int argc,char **argv) {
                         (unsigned long)ent.relocation_base_address);
                 printf("        Offset flags:                   0x%08lx\n",
                         (unsigned long)ent.object_flags);
+                /* use a macro, save my wrists */
+#define X(x) if (ent.object_flags & (x)) \
+    printf("            " #x "\n");
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_READABLE);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_WRITEABLE);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESOURCE);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_DISCARDABLE);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_SHARED);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_PRELOAD);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_INVALID);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_ZEROFILLED);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESIDENT);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESIDENT_LONG_LOCKABLE);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_1616ALIAS);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_CONFORMING);
+                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_IO_PRIVILEGE);
+#undef X        /* end macro */
                 printf("        Page map index:                 0x%08lx (%lu)\n",
                         (unsigned long)ent.page_map_index,
                         (unsigned long)ent.page_map_index);
