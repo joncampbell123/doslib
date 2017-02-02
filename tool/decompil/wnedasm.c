@@ -1556,8 +1556,188 @@ int main(int argc,char **argv) {
             reloc = NULL;
 
         if (segent->flags & EXE_NE_HEADER_SEGMENT_ENTRY_FLAGS_DATA) {
-            printf("    * Skipping data segment\n");
-            // TODO: Someday we should hexdump the data segment and point out where relocations affect it, imports, exports, etc.
+            unsigned int col = 0;
+
+            do {
+                uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer() - segment_ofs;
+                uint32_t ip = ofs + entry_ip - dec_ofs;
+
+                while (labeli < dec_label_count) {
+                    label = dec_label + labeli;
+                    if (label->seg_v != dec_cs) {
+                        labeli++;
+                        continue;
+                    }
+                    if (ip < label->ofs_v)
+                        break;
+
+                    labeli++;
+                    ip = label->ofs_v;
+                    dec_cs = label->seg_v;
+                    ofs = segment_ofs + ip;
+
+                    if (col != 0) {
+                        printf("\n");
+                        col = 0;
+                    }
+
+                    printf("Label '%s' at %04lx:%04lx @0x%08lx\n",
+                            label->name ? label->name : "",
+                            (unsigned long)label->seg_v,
+                            (unsigned long)label->ofs_v,
+                            (unsigned long)ofs);
+
+                    label = dec_label + labeli;
+                }
+
+                if (!refill()) break;
+
+                if (reloc) {
+                    while (reloci < reloc->length && reloc->table[reloci].r.seg_offset < ip)
+                        reloci++;
+                }
+
+                /* if any part of the instruction is affected by EXE relocations, say so */
+                if (reloc && reloci < reloc->length) {
+                    const union exe_ne_header_segment_relocation_entry *relocent = reloc->table + reloci;
+                    const uint32_t o = relocent->r.seg_offset;
+
+                    if (o == ip) {
+                        if (col != 0) {
+                            printf("\n");
+                            col = 0;
+                        }
+                        printf("%04lX:%04lX @0x%08lX ",
+                                (unsigned long)dec_cs,
+                                (unsigned long)ip,
+                                (unsigned long)(dec_read - dec_buffer) + current_offset_minus_buffer());
+
+                        printf(" <--- EXE relocation ");
+
+                        switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
+                            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
+                                printf("Internal ref");
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
+                                printf("Import by ordinal");
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
+                                printf("Import by name");
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
+                                printf("OSFIXUP");
+                                break;
+                        }
+                        if (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_ADDITIVE)
+                            printf(" (ADDITIVE)");
+                        printf(" ");
+
+                        switch (relocent->r.reloc_address_type&EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_MASK) {
+                            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET_LOBYTE:
+                                printf("addr=OFFSET_LOBYTE");
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_SEGMENT:
+                                printf("addr=SEGMENT");
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_FAR_POINTER:
+                                printf("addr=FAR_POINTER(16:16)");
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET:
+                                printf("addr=OFFSET");
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_FAR48_POINTER:
+                                printf("addr=FAR_POINTER(16:32)");
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_ADDR_TYPE_OFFSET32:
+                                printf("addr=OFFSET32");
+                                break;
+                            default:
+                                printf("addr=0x%02x",relocent->r.reloc_address_type);
+                                break;
+                        }
+                        printf("\n");
+
+                        switch (relocent->r.reloc_type&EXE_NE_HEADER_SEGMENT_RELOC_TYPE_MASK) {
+                            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_INTERNAL_REFERENCE:
+                                if (relocent->intref.segment_index == 0xFF) {
+                                    get_entry_name_by_ordinal(name_tmp,sizeof(name_tmp),&ne_nonresname,&ne_resname,relocent->movintref.entry_ordinal);
+
+                                    printf("                    Refers to movable segment, entry ordinal #%d",
+                                            relocent->movintref.entry_ordinal);
+                                    if (name_tmp[0] != 0)
+                                        printf(" '%s'",name_tmp);
+                                    printf("\n");
+                                }
+                                else {
+                                    printf("                    Refers to segment #%d : 0x%04x\n",
+                                            relocent->intref.segment_index,
+                                            relocent->intref.seg_offset);
+                                }
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_ORDINAL:
+                                ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->ordinal.module_reference_index);
+                                printf("                    Refers to module reference #%d '%s', ordinal %d",
+                                        relocent->ordinal.module_reference_index,name_tmp,
+                                        relocent->ordinal.ordinal);
+                                {
+                                    const char *sym = mod_symbols_list_lookup(
+                                        &mod_syms,
+                                        relocent->ordinal.module_reference_index,
+                                        relocent->ordinal.ordinal);
+                                    if (sym != NULL) printf(" '%s'",sym);
+                                }
+                                printf("\n");
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_IMPORTED_NAME:
+                                ne_imported_name_table_entry_get_module_ref_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->ordinal.module_reference_index);
+                                printf("                    Refers to module reference #%d '%s', imp name offset %d",
+                                        relocent->name.module_reference_index,name_tmp,
+                                        relocent->name.imported_name_offset);
+
+                                ne_imported_name_table_entry_get_name(name_tmp,sizeof(name_tmp),&ne_imported_name_table,relocent->name.imported_name_offset);
+                                printf(" '%s'\n",
+                                        name_tmp);
+                                break;
+                            case EXE_NE_HEADER_SEGMENT_RELOC_TYPE_OSFIXUP:
+                                printf("                    OSFIXUP type=0x%04x\n",
+                                        relocent->osfixup.fixup);
+                                break;
+                        }
+
+                        col = 0;
+                        printf("                    at +%u bytes (%04x:%04x)\n",
+                                (unsigned int)(o - ip),
+                                (unsigned int)dec_cs,
+                                (unsigned int)dec_st.ip_value + (unsigned int)(o - ip));
+                    }
+                }
+
+                if (col == 0) {
+                    printf("%04lX:%04lX @0x%08lX ",
+                        (unsigned long)dec_cs,
+                        (unsigned long)ip,
+                        (unsigned long)(dec_read - dec_buffer) + current_offset_minus_buffer());
+                }
+
+                while (col < ((unsigned int)(ip & 0xF))) {
+                    printf("   ");
+                    col++;
+                }
+
+                assert(dec_read < dec_end);
+                printf("%02X ",*dec_read++);
+                col++;
+
+                if (col >= 16) {
+                    printf("\n");
+                    col = 0;
+                }
+            } while(1);
+
+            if (col != 0) {
+                printf("\n");
+                col = 0;
+            }
         }
         else {
             do {
