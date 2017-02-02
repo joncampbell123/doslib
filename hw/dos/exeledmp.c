@@ -43,7 +43,7 @@ struct exe_le_header {
     uint32_t        initial_object_ss_number;       // +0x20
     uint32_t        initial_esp;                    // +0x24
     uint32_t        memory_page_size;               // +0x28
-    uint32_t        bytes_on_last_page;             // +0x2C
+    uint32_t        bytes_on_last_page;             // +0x2C Like MS-DOS header, the last page is this long   NTS: LX format defines as PAGE_SHIFT
     uint32_t        fixup_section_size;             // +0x30
     uint32_t        fixup_section_checksum;         // +0x34
     uint32_t        loader_section_size;            // +0x38
