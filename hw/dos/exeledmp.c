@@ -505,7 +505,7 @@ int main(int argc,char **argv) {
                         (unsigned long)ent.virtual_segment_size);
                 printf("        Relocation base address:        0x%08lx\n",
                         (unsigned long)ent.relocation_base_address);
-                printf("        Offset flags:                   0x%08lx\n",
+                printf("        Object flags:                   0x%08lx\n",
                         (unsigned long)ent.object_flags);
                 /* use a macro, save my wrists */
 #define X(x) if (ent.object_flags & (x)) \
