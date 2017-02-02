@@ -489,7 +489,7 @@ int main(int argc,char **argv) {
                 if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
                     break;
 
-                printf("    Entry #%u\n",i);
+                printf("    Entry #%u\n",i + 1);
                 printf("        Virtual segment size:           0x%08lx (%lu)\n",
                         (unsigned long)ent.virtual_segment_size,
                         (unsigned long)ent.virtual_segment_size);
