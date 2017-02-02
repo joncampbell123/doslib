@@ -551,7 +551,7 @@ int main(int argc,char **argv) {
                 printf("    Entry #%u\n",i + 1);
                 printf("        Flags:                          0x%04x\n",
                         (unsigned int)ent.flags);
-                printf("        Page data offset:               %u (%u * %lu + %lu = 0x%08lx (%lu))\n",
+                printf("        Page data offset:               %u (offset (%u * %lu) + data pages offset %lu = file offset 0x%08lx (%lu))\n",
                         (unsigned int)ent.page_data_offset,
                         (unsigned int)ent.page_data_offset - 1U,
                         (unsigned long)le_header.memory_page_size,
