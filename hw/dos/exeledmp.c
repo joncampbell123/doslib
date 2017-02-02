@@ -94,6 +94,14 @@ struct exe_le_header {
 #pragma pack(pop)
 #define EXE_HEADER_LE_HEADER_SIZE           (0xAC)
 #define EXE_LE_SIGNATURE                    (0x454C)
+#define EXE_LX_SIGNATURE                    (0x584C)
+
+static inline uint32_t exe_le_PAGE_SHIFT(const struct exe_le_header * const hdr) {
+    if (hdr->signature == EXE_LX_SIGNATURE)
+        return hdr->bytes_on_last_page;     // LX replaces with PAGE_SHIFT
+
+    return 0;
+}
 
 #define LE_HEADER_MODULE_TYPE_FLAGS_PER_PROCESS_DLL_INIT            (1UL << 2UL)
 #define LE_HEADER_MODULE_TYPE_FLAGS_NO_INTERNAL_FIXUP               (1UL << 4UL)
@@ -129,6 +137,17 @@ struct exe_le_header_object_page_table_entry {
     uint16_t        flags;                          // +0x00 flags
     uint16_t        page_data_offset;               // +0x02 offset from preload page << PAGE_SHIFT, 1-based (so subtract by 1 before shift)
 };                                                  // =0x04
+#pragma pack(pop)
+
+#pragma pack(push,1)
+// NTS: IBM confusingly describes each entry as if one 64-bit word, with bit field markers.
+//      If you actually followed it, you'd think the page data offset were in the upper 32 bits,
+//      and you'd read the fields backwards.
+struct exe_lx_header_object_page_table_entry {
+    uint32_t        page_data_offset;               // +0x00 offset from preload page << PAGE_SHIFT, 1-based (so subtract by 1 before shift)
+    uint16_t        data_size;                      // +0x04 data size
+    uint16_t        flags;                          // +0x06 flags
+};                                                  // =0x08
 #pragma pack(pop)
 
 #define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_READABLE                 (1UL << 0UL)
@@ -315,8 +334,9 @@ int main(int argc,char **argv) {
         fprintf(stderr,"Cannot read LE header\n");
         return 1;
     }
-    if (le_header.signature != EXE_LE_SIGNATURE) { // TODO 'LX'
-        fprintf(stderr,"Not an LE executable\n");
+    if (le_header.signature != EXE_LE_SIGNATURE &&
+        le_header.signature != EXE_LX_SIGNATURE) {
+        fprintf(stderr,"Not an LE/LX executable\n");
         return 1;
     }
 
@@ -553,29 +573,60 @@ int main(int argc,char **argv) {
 
     if (le_header.object_page_map_offset != 0 &&
         le_header.number_of_memory_pages != 0) {
-        unsigned long ofs = le_header.object_page_map_offset + (unsigned long)le_header_offset;
-        struct exe_le_header_object_page_table_entry ent;
-        unsigned int i;
+        if (le_header.signature == EXE_LE_SIGNATURE) {
+            unsigned long ofs = le_header.object_page_map_offset + (unsigned long)le_header_offset;
+            struct exe_le_header_object_page_table_entry ent;
+            unsigned int i;
 
-        printf("* Object page map table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
-        if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
-            for (i=0;i < le_header.number_of_memory_pages;i++) {
-                if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
-                    break;
+            printf("* Object page map table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
+            if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
+                for (i=0;i < le_header.number_of_memory_pages;i++) {
+                    if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
+                        break;
 
-                printf("    Entry #%u\n",i + 1);
-                printf("        Flags:                          0x%04x\n",
-                        (unsigned int)ent.flags);
-                /* FIXME: I like how the LX specification says "the bit definitions for this word are below"
-                 *        and then lists an enumeration of values. So is it a bitfield or a WORD-sized enumeration, guys?
-                 *        Also, all the LE executables I have on hand have this field set to 0. */
-                printf("        Page data offset:               %u (offset (%u * %lu) + data pages offset %lu = file offset 0x%08lx (%lu))\n",
-                        (unsigned int)ent.page_data_offset,
-                        (unsigned int)ent.page_data_offset - 1U,
-                        (unsigned long)le_header.memory_page_size,
-                        (unsigned long)le_header.data_pages_offset,
-                        (((unsigned long)ent.page_data_offset - 1UL) * (unsigned long)le_header.memory_page_size) + le_header.data_pages_offset,
-                        (((unsigned long)ent.page_data_offset - 1UL) * (unsigned long)le_header.memory_page_size) + le_header.data_pages_offset);
+                    printf("    Entry #%u\n",i + 1);
+                    printf("        Flags:                          0x%04x\n",
+                            (unsigned int)ent.flags);
+                    /* FIXME: I like how the LX specification says "the bit definitions for this word are below"
+                     *        and then lists an enumeration of values. So is it a bitfield or a WORD-sized enumeration, guys?
+                     *        Also, all the LE executables I have on hand have this field set to 0. */
+                    printf("        Page data offset:               %u (offset (%u * %lu) + data pages offset %lu = file offset 0x%08lx (%lu))\n",
+                            (unsigned int)ent.page_data_offset,
+                            (unsigned int)ent.page_data_offset - 1U,
+                            (unsigned long)le_header.memory_page_size,
+                            (unsigned long)le_header.data_pages_offset,
+                            (((unsigned long)ent.page_data_offset - 1UL) * (unsigned long)le_header.memory_page_size) + le_header.data_pages_offset,
+                            (((unsigned long)ent.page_data_offset - 1UL) * (unsigned long)le_header.memory_page_size) + le_header.data_pages_offset);
+                }
+            }
+        }
+        else if (le_header.signature == EXE_LX_SIGNATURE) {
+            unsigned long ofs = le_header.object_page_map_offset + (unsigned long)le_header_offset;
+            struct exe_lx_header_object_page_table_entry ent;
+            unsigned int i;
+
+            printf("* Object page map table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
+            if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
+                for (i=0;i < le_header.number_of_memory_pages;i++) {
+                    if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
+                        break;
+
+                    printf("    Entry #%u\n",i + 1);
+                    printf("        Flags:                          0x%04x\n",
+                            (unsigned int)ent.flags);
+                    /* FIXME: I like how the LX specification says "the bit definitions for this word are below"
+                     *        and then lists an enumeration of values. So is it a bitfield or a WORD-sized enumeration, guys?
+                     *        Also, all the LE executables I have on hand have this field set to 0. */
+                    printf("        Data size:                      0x%04x\n",
+                            (unsigned int)ent.data_size);
+                    printf("        Page data offset:               %u (offset (%u << %lu) + data pages offset %lu = file offset 0x%08lx (%lu))\n",
+                            (unsigned int)ent.page_data_offset,
+                            (unsigned int)ent.page_data_offset - 1U,
+                            (unsigned long)exe_le_PAGE_SHIFT(&le_header),
+                            (unsigned long)le_header.data_pages_offset,
+                            (((unsigned long)ent.page_data_offset - 1UL) << (unsigned long)exe_le_PAGE_SHIFT(&le_header)) + le_header.data_pages_offset,
+                            (((unsigned long)ent.page_data_offset - 1UL) << (unsigned long)exe_le_PAGE_SHIFT(&le_header)) + le_header.data_pages_offset);
+                }
             }
         }
     }
