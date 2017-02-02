@@ -367,31 +367,84 @@ int main(int argc,char **argv) {
     printf("    Resource table entries:         0x%08lx (%lu)\n",
             (unsigned long)le_header.resource_table_entries,
             (unsigned long)le_header.resource_table_entries);
-#if 0
-struct exe_le_header {
-    uint32_t        resident_names_table_offset;    // +0x58
-    uint32_t        entry_table_offset;             // +0x5C
-    uint32_t        module_directives_table_offset; // +0x60
-    uint32_t        module_directives_entries;      // +0x64
-    uint32_t        fixup_page_table_offset;        // +0x68
-    uint32_t        fixup_record_table_offset;      // +0x6C
-    uint32_t        imported_modules_name_table_offset;// +0x70
-    uint32_t        imported_modules_count;         // +0x74
-    uint32_t        imported_procedure_name_table_offset;// +0x78
-    uint32_t        per_page_checksum_table_offset; // +0x7C
-    uint32_t        data_pages_offset;              // +0x80 from top of file
-    uint32_t        preload_page_count;             // +0x84
-    uint32_t        nonresident_names_table_offset; // +0x88 from top of file
-    uint32_t        nonresident_names_table_length; // +0x8C
-    uint32_t        nonresident_names_table_checksum;// +0x90
-    uint32_t        automatic_data_object;          // +0x94
-    uint32_t        debug_information_offset;       // +0x98
-    uint32_t        debug_information_length;       // +0x9C
-    uint32_t        preload_instances_pages_number; // +0xA0
-    uint32_t        demand_instances_pages_number;  // +0xA4
-    uint32_t        extra_heap_allocation;          // +0xA8
-};
-#endif
+    printf("    Resident names table offset:    0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.resident_names_table_offset,
+            (unsigned long)le_header.resident_names_table_offset,
+            (unsigned long)le_header.resident_names_table_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.resident_names_table_offset + (unsigned long)le_header_offset);
+    printf("    Entry table offset:             0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.entry_table_offset,
+            (unsigned long)le_header.entry_table_offset,
+            (unsigned long)le_header.entry_table_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.entry_table_offset + (unsigned long)le_header_offset);
+    printf("    Module directives table offset: 0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.module_directives_table_offset,
+            (unsigned long)le_header.module_directives_table_offset,
+            (unsigned long)le_header.module_directives_table_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.module_directives_table_offset + (unsigned long)le_header_offset);
+    printf("    Module directives entries:      0x%08lx (%lu)\n",
+            (unsigned long)le_header.module_directives_entries,
+            (unsigned long)le_header.module_directives_entries);
+    printf("    Fixup page table offset:        0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.fixup_page_table_offset,
+            (unsigned long)le_header.fixup_page_table_offset,
+            (unsigned long)le_header.fixup_page_table_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.fixup_page_table_offset + (unsigned long)le_header_offset);
+    printf("    Fixup record table offset:      0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.fixup_record_table_offset,
+            (unsigned long)le_header.fixup_record_table_offset,
+            (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset);
+    printf("    Imported modules name table ofs:0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.imported_modules_name_table_offset,
+            (unsigned long)le_header.imported_modules_name_table_offset,
+            (unsigned long)le_header.imported_modules_name_table_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.imported_modules_name_table_offset + (unsigned long)le_header_offset);
+    printf("    Imported modules count:         0x%08lx (%lu)\n",
+            (unsigned long)le_header.imported_modules_count,
+            (unsigned long)le_header.imported_modules_count);
+    printf("    Imported proc name table offset:0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.imported_procedure_name_table_offset,
+            (unsigned long)le_header.imported_procedure_name_table_offset,
+            (unsigned long)le_header.imported_procedure_name_table_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.imported_procedure_name_table_offset + (unsigned long)le_header_offset);
+    printf("    Per-page checksum table offset: 0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
+            (unsigned long)le_header.per_page_checksum_table_offset,
+            (unsigned long)le_header.per_page_checksum_table_offset,
+            (unsigned long)le_header.per_page_checksum_table_offset + (unsigned long)le_header_offset,
+            (unsigned long)le_header.per_page_checksum_table_offset + (unsigned long)le_header_offset);
+    printf("    Data pages offset:              0x%08lx (%lu)\n",
+            (unsigned long)le_header.data_pages_offset,
+            (unsigned long)le_header.data_pages_offset);
+    printf("    Preload page count:             0x%08lx (%lu)\n",
+            (unsigned long)le_header.preload_page_count,
+            (unsigned long)le_header.preload_page_count);
+    printf("    Nonresident name table offset:  0x%08lx (%lu)\n",
+            (unsigned long)le_header.nonresident_names_table_offset,
+            (unsigned long)le_header.nonresident_names_table_offset);
+    printf("    Nonresident name table length:  0x%08lx (%lu)\n",
+            (unsigned long)le_header.nonresident_names_table_length,
+            (unsigned long)le_header.nonresident_names_table_length);
+    printf("    Nonresident name table checksum:0x%08lx\n",
+            (unsigned long)le_header.nonresident_names_table_checksum);
+    printf("    Automatic data object:          0x%08lx (%lu)\n",
+            (unsigned long)le_header.automatic_data_object,
+            (unsigned long)le_header.automatic_data_object);
+    printf("    Debug information offset:       0x%08lx (%lu)\n", /* FIXME: Relative to WHAT? */
+            (unsigned long)le_header.debug_information_offset,
+            (unsigned long)le_header.debug_information_offset);
+    printf("    Debug information length:       0x%08lx (%lu)\n",
+            (unsigned long)le_header.debug_information_length,
+            (unsigned long)le_header.debug_information_length);
+    printf("    Preload instances pages number: 0x%08lx (%lu)\n",
+            (unsigned long)le_header.preload_instances_pages_number,
+            (unsigned long)le_header.preload_instances_pages_number);
+    printf("    Demand instances pages number:  0x%08lx (%lu)\n",
+            (unsigned long)le_header.demand_instances_pages_number,
+            (unsigned long)le_header.demand_instances_pages_number);
+    printf("    Extra heap allocation:          0x%08lx (%lu)\n",
+            (unsigned long)le_header.extra_heap_allocation,
+            (unsigned long)le_header.extra_heap_allocation);
 
     close(src_fd);
     return 0;
