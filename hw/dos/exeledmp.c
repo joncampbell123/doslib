@@ -106,6 +106,16 @@ struct exe_le_header_object_table_entry {
 };                                                  // =0x18
 #pragma pack(pop)
 
+#pragma pack(push,1)
+// NTS: I can find the LX definition of this structure, but LE structures remain undocumented.
+//      I had to reverse engineer this from what I observe in an EXE file. The data in LE files
+//      makes no sense unless interpreted this way.
+struct exe_le_header_object_page_table_entry {
+    uint16_t        flags;                          // +0x00 flags
+    uint16_t        page_data_offset;               // +0x02 offset from preload page << PAGE_SHIFT, 1-based (so subtract by 1 before shift)
+};                                                  // =0x04
+#pragma pack(pop)
+
 #define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_READABLE                 (1UL << 0UL)
 #define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_WRITEABLE                (1UL << 1UL)
 #define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE               (1UL << 2UL)
@@ -522,6 +532,32 @@ int main(int argc,char **argv) {
                 printf("        Page map entries:               0x%08lx (%lu)\n",
                         (unsigned long)ent.page_map_entries,
                         (unsigned long)ent.page_map_entries);
+            }
+        }
+    }
+
+    if (le_header.object_page_map_offset != 0 &&
+        le_header.number_of_memory_pages != 0) {
+        unsigned long ofs = le_header.object_page_map_offset + (unsigned long)le_header_offset;
+        struct exe_le_header_object_page_table_entry ent;
+        unsigned int i;
+
+        printf("* Object page map table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
+        if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
+            for (i=0;i < le_header.number_of_memory_pages;i++) {
+                if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
+                    break;
+
+                printf("    Entry #%u\n",i + 1);
+                printf("        Flags:                          0x%04x\n",
+                        (unsigned int)ent.flags);
+                printf("        Page data offset:               %u (%u * %lu + %lu = 0x%08lx (%lu))\n",
+                        (unsigned int)ent.page_data_offset,
+                        (unsigned int)ent.page_data_offset - 1U,
+                        (unsigned long)le_header.memory_page_size,
+                        (unsigned long)le_header.data_pages_offset,
+                        (((unsigned long)ent.page_data_offset - 1UL) * (unsigned long)le_header.memory_page_size) + le_header.data_pages_offset,
+                        (((unsigned long)ent.page_data_offset - 1UL) * (unsigned long)le_header.memory_page_size) + le_header.data_pages_offset);
             }
         }
     }
