@@ -80,6 +80,19 @@ struct exe_le_header {
 #define EXE_HEADER_LE_HEADER_SIZE           (0xAC)
 #define EXE_LE_SIGNATURE                    (0x454C)
 
+#define LE_HEADER_MODULE_TYPE_FLAGS_PER_PROCESS_DLL_INIT            (1U << 2U)
+#define LE_HEADER_MODULE_TYPE_FLAGS_NO_INTERNAL_FIXUP               (1U << 4U)
+#define LE_HEADER_MODULE_TYPE_FLAGS_NO_EXTERNAL_FIXUP               (1U << 5U)
+
+#define LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_MASK               (3U << 8U)
+#define LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_UNKNOWN            (0U << 8U)
+#define LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_INCOMPATIBLE       (1U << 8U)
+#define LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_COMPATIBLE         (2U << 8U)
+#define LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_USES_API           (3U << 8U)
+
+#define LE_HEADER_MODULE_TYPE_FLAGS_MODULE_NOT_LOADABLE             (1U << 13U)
+#define LE_HEADER_MODULE_TYPE_FLAGS_IS_DLL                          (1U << 15U)
+
 const char *le_cpu_type_to_str(const uint8_t b) {
     switch (b) {
         case 0x01:  return "Intel 80286";
@@ -91,6 +104,18 @@ const char *le_cpu_type_to_str(const uint8_t b) {
         case 0x40:  return "MIPS Mark I (R2000/R3000)";
         case 0x41:  return "MIPS Mark II (R6000)";
         case 0x42:  return "MIPS Mark III (R4000)";
+        default:    break;
+    }
+
+    return "";
+}
+
+const char *le_target_operating_system_to_str(const uint8_t b) {
+    switch (b) {
+        case 0x01:  return "OS/2";
+        case 0x02:  return "Windows";
+        case 0x03:  return "DOS 4.x";
+        case 0x04:  return "Windows 386";
         default:    break;
     }
 
@@ -253,12 +278,45 @@ int main(int argc,char **argv) {
     printf("    CPU type:                       0x%02x (%s)\n",
             le_header.cpu_type,
             le_cpu_type_to_str(le_header.cpu_type));
+    printf("    Target operating system:        0x%02x (%s)\n",
+            le_header.target_operating_system,
+            le_target_operating_system_to_str(le_header.target_operating_system));
+    printf("    Module version:                 0x%08lx\n",
+            (unsigned long)le_header.module_version);
+    printf("    Module type flags:              0x%04lx\n",
+            (unsigned long)le_header.module_type_flags);
+    if (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_PER_PROCESS_DLL_INIT)
+        printf("        LE_HEADER_MODULE_TYPE_FLAGS_PER_PROCESS_DLL_INIT\n");
+    if (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_NO_INTERNAL_FIXUP)
+        printf("        LE_HEADER_MODULE_TYPE_FLAGS_NO_INTERNAL_FIXUP\n");
+    if (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_NO_EXTERNAL_FIXUP)
+        printf("        LE_HEADER_MODULE_TYPE_FLAGS_NO_EXTERNAL_FIXUP\n");
+    if (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_MODULE_NOT_LOADABLE)
+        printf("        LE_HEADER_MODULE_TYPE_FLAGS_MODULE_NOT_LOADABLE\n");
+    if (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_IS_DLL)
+        printf("        LE_HEADER_MODULE_TYPE_FLAGS_IS_DLL\n");
+    switch (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_MASK) {
+        case LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_UNKNOWN:
+            printf("        LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_UNKNOWN\n");
+            break;
+        case LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_INCOMPATIBLE:
+            printf("        LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_INCOMPATIBLE\n");
+            break;
+        case LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_COMPATIBLE:
+            printf("        LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_COMPATIBLE\n");
+            break;
+        case LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_USES_API:
+            printf("        LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_USES_API\n");
+            break;
+    };
+    // ^ NTS: I would like to point out how funny it is that so far, every 32-bit DOS program I've
+    //        compiled with Open Watcom has a valid LE header that indicates an OS/2 executable that
+    //        is "compatible with the PM windowing system". I take this to mean that perhaps this
+    //        structure was chosen for 32-bit DOS because OS/2 would run the program in a window
+    //        anyway with an API available that mirrors the DOS API?
+
 #if 0
 struct exe_le_header {
-    uint16_t        cpu_type;                       // +0x08 cpu type (1 = 286, 2 = 386, 3 = 486, 4 = 586, and more)
-    uint16_t        target_operating_system;        // +0x0A target os (1 = OS/2, 2 = windows, 3 = DOS 4.x, 4 = Windows 386)
-    uint32_t        module_version;                 // +0x0C version of the EXE, for differentiating revisions of dynamic linked modules
-    uint32_t        module_type_flags;              // +0x10 module flags (see enum)
     uint32_t        number_of_memory_pages;         // +0x14 number of memory pages
     uint32_t        initial_object_cs_number;       // +0x18
     uint32_t        initial_eip;                    // +0x1C
