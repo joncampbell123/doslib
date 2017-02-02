@@ -562,6 +562,34 @@ int main(int argc,char **argv) {
         }
     }
 
+    if (le_header.fixup_page_table_offset != 0 &&
+        le_header.number_of_memory_pages != 0) {
+        unsigned long ofs = le_header.fixup_page_table_offset + (unsigned long)le_header_offset;
+        unsigned int i;
+        uint32_t ent;
+
+        // NTS: This table has one extra entry, so that you can determine the size of each fixup record entry per segment
+        //      by the difference between each entry. Entries in the fixup record table (and therefore the offsets in this
+        //      table) numerically increase for this reason.
+        printf("* Fixup page table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages + 1UL);
+        if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
+            for (i=0;i <= le_header.number_of_memory_pages;i++) {
+                if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
+                    break;
+
+                if (i == le_header.number_of_memory_pages)
+                    printf("    Entry #%u (end of fixup record table)\n",i + 1);
+                else
+                    printf("    Entry #%u\n",i + 1);
+
+                printf("        Offset:                         %lu + fixup record table at %lu = file offset %lu\n",
+                    (unsigned long)ent,
+                    (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset,
+                    (unsigned long)ent + (unsigned long)le_header_offset + (unsigned long)le_header.fixup_record_table_offset);
+            }
+        }
+    }
+
     close(src_fd);
     return 0;
 }
