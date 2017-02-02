@@ -93,6 +93,17 @@ struct exe_le_header {
 #define LE_HEADER_MODULE_TYPE_FLAGS_MODULE_NOT_LOADABLE             (1U << 13U)
 #define LE_HEADER_MODULE_TYPE_FLAGS_IS_DLL                          (1U << 15U)
 
+#pragma pack(push,1)
+struct exe_le_header_object_table_entry {
+    uint32_t        virtual_segment_size;           // +0x00 in bytes
+    uint32_t        relocation_base_address;        // +0x04 base of relocation, address this object will be loaded to
+    uint32_t        object_flags;                   // +0x08 object flags
+    uint32_t        page_map_index;                 // +0x0C index of first object page  table
+    uint32_t        page_map_entries;               // +0x10 number of object page table entries
+    uint32_t        _reserved;                      // +0x14
+};                                                  // =0x18
+#pragma pack(pop)
+
 const char *le_cpu_type_to_str(const uint8_t b) {
     switch (b) {
         case 0x01:  return "Intel 80286";
@@ -445,6 +456,36 @@ int main(int argc,char **argv) {
     printf("    Extra heap allocation:          0x%08lx (%lu)\n",
             (unsigned long)le_header.extra_heap_allocation,
             (unsigned long)le_header.extra_heap_allocation);
+
+    if (le_header.offset_of_object_table != 0 &&
+        le_header.object_table_entries != 0) {
+        unsigned long ofs = le_header.offset_of_object_table + (unsigned long)le_header_offset;
+        struct exe_le_header_object_table_entry ent;
+        unsigned int i;
+
+        printf("* Object table, %lu entries\n",(unsigned long)le_header.object_table_entries);
+        if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
+            for (i=0;i < le_header.object_table_entries;i++) {
+                if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
+                    break;
+
+                printf("    Entry #%u\n",i);
+                printf("        Virtual segment size:           0x%08lx (%lu)\n",
+                        (unsigned long)ent.virtual_segment_size,
+                        (unsigned long)ent.virtual_segment_size);
+                printf("        Relocation base address:        0x%08lx\n",
+                        (unsigned long)ent.relocation_base_address);
+                printf("        Offset flags:                   0x%08lx\n",
+                        (unsigned long)ent.object_flags);
+                printf("        Page map index:                 0x%08lx (%lu)\n",
+                        (unsigned long)ent.page_map_index,
+                        (unsigned long)ent.page_map_index);
+                printf("        Page map entries:               0x%08lx (%lu)\n",
+                        (unsigned long)ent.page_map_entries,
+                        (unsigned long)ent.page_map_entries);
+            }
+        }
+    }
 
     close(src_fd);
     return 0;
