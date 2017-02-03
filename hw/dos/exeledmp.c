@@ -769,6 +769,9 @@ int main(int argc,char **argv) {
                             if (src & 0x20) {
                                 if (scan >= fence) break;
                                 srcoff_count = *scan++;//number of source offsets
+                                // NTS: This is not used (as far as I can tell) with 32-bit DOS programs, but
+                                //      Windows 386/VXD drivers definitely make use of this method to make
+                                //      multiple fixups to the same target.
                             }
                             else {
                                 srcoff_count = 1;
