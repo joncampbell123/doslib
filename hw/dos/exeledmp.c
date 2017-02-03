@@ -884,6 +884,45 @@ int main(int argc,char **argv) {
         }
     }
 
+    if (le_header.resident_names_table_offset != (uint32_t)0 &&
+        le_header.entry_table_offset != (uint32_t)0 &&
+        le_header.resident_names_table_offset < le_header.entry_table_offset) {
+        uint32_t sz = le_header.entry_table_offset - le_header.resident_names_table_offset;
+        unsigned long ofs = le_header.resident_names_table_offset + le_header_offset;
+
+        if (sz != (uint32_t)0 && sz < (uint32_t)0x10000UL) {
+            unsigned char *base,*scan,*fence,len;
+            unsigned int i,ordinal;
+            char tmp[255+1];
+
+            printf("* Resident names table\n");
+
+            base = malloc(sz);
+            if (base != NULL) {
+                if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs && (uint32_t)read(src_fd,base,sz) == sz) {
+                    scan = base;
+                    fence = base + sz;
+                    while (scan < fence) {
+                        len = *scan++;
+                        if (len == 0) break;
+                        if ((scan + len + 2) > fence) break;
+
+                        if (len != 0) memcpy(tmp,scan,len);
+                        tmp[len] = 0;
+                        scan += len;
+
+                        ordinal = *((uint16_t*)scan);
+                        scan += 2;
+
+                        printf("    \"%s\" ordinal %u\n",
+                            tmp,ordinal);
+                    }
+                }
+                free(base);
+            }
+        }
+    }
+
     if (le_header.entry_table_offset != (uint32_t)0) {
         unsigned long ofs = le_header.entry_table_offset + le_header_offset;
         uint32_t sz = le_exe_header_entry_table_size(&le_header);
