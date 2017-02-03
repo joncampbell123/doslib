@@ -215,6 +215,30 @@ const char *le_target_operating_system_to_str(const uint8_t b) {
     return "";
 }
 
+// the entry table is the only part that can't be determined by any other way than
+// differences in offset. to complicate matters, some fields are set to zero by
+// linkers instead of NE-style where all offsets just match the prior field's offset
+// to signal no table.
+uint32_t le_exe_header_entry_table_size(struct exe_le_header * const h) {
+    // NTS: This searches in header field order, do not re-order.
+    if (h->module_directives_table_offset >= h->entry_table_offset)
+        return h->module_directives_table_offset - h->entry_table_offset;
+    if (h->fixup_page_table_offset >= h->entry_table_offset)
+        return h->fixup_page_table_offset - h->entry_table_offset;
+    if (h->fixup_record_table_offset >= h->entry_table_offset)
+        return h->fixup_record_table_offset - h->entry_table_offset;
+    if (h->imported_modules_name_table_offset >= h->entry_table_offset)
+        return h->imported_modules_name_table_offset - h->entry_table_offset;
+    if (h->imported_procedure_name_table_offset >= h->entry_table_offset)
+        return h->imported_procedure_name_table_offset - h->entry_table_offset;
+    if (h->per_page_checksum_table_offset >= h->entry_table_offset)
+        return h->per_page_checksum_table_offset - h->entry_table_offset;
+    if (h->data_pages_offset >= h->entry_table_offset)
+        return h->data_pages_offset - h->entry_table_offset;
+
+    return 0;
+}
+
 ///////////////
 
 int main(int argc,char **argv) {
@@ -474,6 +498,9 @@ int main(int argc,char **argv) {
             (unsigned long)le_header.entry_table_offset,
             (unsigned long)le_header.entry_table_offset + (unsigned long)le_header_offset,
             (unsigned long)le_header.entry_table_offset + (unsigned long)le_header_offset);
+    printf("  * Entry table size:               0x%08lx (%lu)\n",
+            (unsigned long)le_exe_header_entry_table_size(&le_header),
+            (unsigned long)le_exe_header_entry_table_size(&le_header));
     printf("    Module directives table offset: 0x%08lx (%lu) rel to header, file offset 0x%08lx (%lu)\n",
             (unsigned long)le_header.module_directives_table_offset,
             (unsigned long)le_header.module_directives_table_offset,
