@@ -244,10 +244,27 @@ uint32_t le_exe_header_entry_table_size(struct exe_le_header * const h) {
     return 0;
 }
 
+struct le_header_parseinfo {
+    uint32_t*                   le_fixup_page_table;                /* number_of_page_tables + 1 entries */
+};
+
+void le_header_parseinfo_init(struct le_header_parseinfo * const h) {
+    memset(h,0,sizeof(*h));
+}
+
+void le_header_parseinfo_free_fixup_page_table(struct le_header_parseinfo * const h) {
+    if (h->le_fixup_page_table) free(h->le_fixup_page_table);
+    h->le_fixup_page_table = NULL;
+}
+
+void le_header_parseinfo_free(struct le_header_parseinfo * const h) {
+    le_header_parseinfo_free_fixup_page_table(h);
+}
+
 ///////////////
 
 int main(int argc,char **argv) {
-    uint32_t *le_fixup_page_table = NULL; /* number_of_page_tables + 1 entries */
+    struct le_header_parseinfo le_parser;
     struct exe_le_header le_header;
     uint32_t le_header_offset;
     uint32_t file_size;
@@ -255,6 +272,8 @@ int main(int argc,char **argv) {
     int i;
 
     assert(sizeof(le_header) == EXE_HEADER_LE_HEADER_SIZE);
+    memset(&le_header,0,sizeof(le_header));
+    le_header_parseinfo_init(&le_parser);
     memset(&exehdr,0,sizeof(exehdr));
 
     for (i=1;i < argc;) {
@@ -692,16 +711,16 @@ int main(int argc,char **argv) {
 
         printf("* Fixup page table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages + 1UL);
 
-        le_fixup_page_table = (uint32_t*)malloc(sizeof(uint32_t) * ((unsigned long)le_header.number_of_memory_pages + 1UL));
-        if (le_fixup_page_table != NULL) {
+        le_parser.le_fixup_page_table = (uint32_t*)malloc(sizeof(uint32_t) * ((unsigned long)le_header.number_of_memory_pages + 1UL));
+        if (le_parser.le_fixup_page_table != NULL) {
             // NTS: This table has one extra entry, so that you can determine the size of each fixup record entry per segment
             //      by the difference between each entry. Entries in the fixup record table (and therefore the offsets in this
             //      table) numerically increase for this reason.
             if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs &&
-                (size_t)read(src_fd,le_fixup_page_table,sizeof(uint32_t) * ((unsigned long)le_header.number_of_memory_pages + 1UL)) ==
+                (size_t)read(src_fd,le_parser.le_fixup_page_table,sizeof(uint32_t) * ((unsigned long)le_header.number_of_memory_pages + 1UL)) ==
                 (sizeof(uint32_t) * ((unsigned long)le_header.number_of_memory_pages + 1UL))) {
                 for (i=0;i <= le_header.number_of_memory_pages;i++) {
-                    ent = le_fixup_page_table[i];
+                    ent = le_parser.le_fixup_page_table[i];
 
                     if (i == le_header.number_of_memory_pages)
                         printf("    Page #%u (end of fixup record table)\n",i + 1);
@@ -717,20 +736,20 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (le_fixup_page_table != NULL && le_header.fixup_record_table_offset != 0 && le_header.number_of_memory_pages != 0) {
+    if (le_parser.le_fixup_page_table != NULL && le_header.fixup_record_table_offset != 0 && le_header.number_of_memory_pages != 0) {
         unsigned char *base,*scan,*fence;
         unsigned long ofs,sz;
         unsigned int i;
 
         printf("* Fixup record table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
         for (i=0;i < le_header.number_of_memory_pages;i++) {
-            if (le_fixup_page_table[i+1] < le_fixup_page_table[i]) {
+            if (le_parser.le_fixup_page_table[i+1] < le_parser.le_fixup_page_table[i]) {
                 printf("    ! Skipping invalid entry, next offset < current offset\n");
                 continue;
             }
 
-            ofs = (unsigned long)le_fixup_page_table[i] + (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset;
-            sz = le_fixup_page_table[i+1] - le_fixup_page_table[i];
+            ofs = (unsigned long)le_parser.le_fixup_page_table[i] + (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset;
+            sz = le_parser.le_fixup_page_table[i+1] - le_parser.le_fixup_page_table[i];
             printf("    Page #%u\n",i + 1);
             printf("        Offset:                         0x%08lx (%lu)\n",ofs,ofs);
             printf("        Size:                           0x%08lx (%lu)\n",sz,sz);
@@ -1038,11 +1057,7 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (le_fixup_page_table) {
-        free(le_fixup_page_table);
-        le_fixup_page_table = NULL;
-    }
-
+    le_header_parseinfo_free(&le_parser);
     close(src_fd);
     return 0;
 }
