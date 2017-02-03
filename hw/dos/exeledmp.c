@@ -539,7 +539,7 @@ int main(int argc,char **argv) {
                 if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
                     break;
 
-                printf("    Entry #%u\n",i + 1);
+                printf("    Object #%u\n",i + 1);
                 printf("        Virtual segment size:           0x%08lx (%lu)\n",
                         (unsigned long)ent.virtual_segment_size,
                         (unsigned long)ent.virtual_segment_size);
@@ -589,7 +589,7 @@ int main(int argc,char **argv) {
                     if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
                         break;
 
-                    printf("    Entry #%u\n",i + 1);
+                    printf("    Page #%u\n",i + 1);
                     printf("        Flags:                          0x%04x\n",
                             (unsigned int)ent.flags);
                     /* FIXME: I like how the LX specification says "the bit definitions for this word are below"
@@ -616,7 +616,7 @@ int main(int argc,char **argv) {
                     if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
                         break;
 
-                    printf("    Entry #%u\n",i + 1);
+                    printf("    Page #%u\n",i + 1);
                     printf("        Flags:                          0x%04x\n",
                             (unsigned int)ent.flags);
                     /* FIXME: I like how the LX specification says "the bit definitions for this word are below"
@@ -656,9 +656,9 @@ int main(int argc,char **argv) {
                     ent = le_fixup_page_table[i];
 
                     if (i == le_header.number_of_memory_pages)
-                        printf("    Entry #%u (end of fixup record table)\n",i + 1);
+                        printf("    Page #%u (end of fixup record table)\n",i + 1);
                     else
-                        printf("    Entry #%u\n",i + 1);
+                        printf("    Page #%u\n",i + 1);
 
                     printf("        Offset:                         %lu + fixup record table at %lu = file offset %lu\n",
                             (unsigned long)ent,
@@ -670,6 +670,7 @@ int main(int argc,char **argv) {
     }
 
     if (le_fixup_page_table != NULL && le_header.fixup_record_table_offset != 0 && le_header.number_of_memory_pages != 0) {
+        unsigned char *base,*scan,*fence;
         unsigned long ofs,sz;
         unsigned int i;
 
@@ -682,9 +683,136 @@ int main(int argc,char **argv) {
 
             ofs = (unsigned long)le_fixup_page_table[i] + (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset;
             sz = le_fixup_page_table[i+1] - le_fixup_page_table[i];
-            printf("    Entry #%u\n",i + 1);
+            printf("    Page #%u\n",i + 1);
             printf("        Offset:                         0x%08lx (%lu)\n",ofs,ofs);
             printf("        Size:                           0x%08lx (%lu)\n",sz,sz);
+
+            if (sz != 0UL && sz < 0x40000UL) {
+                base = malloc(sz);
+                if (base != NULL) {
+                    if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs && (unsigned long)read(src_fd,base,sz) == sz) {
+                        scan = base;
+                        fence = base + sz;
+                        while (scan < fence) {
+                            unsigned char src,flags;
+                            int16_t srcoff;
+
+                            /* NTS: srcoff is treated as a signed 16-bit integer for a reason.
+                             *      first, don't forget these relocations are defined per page,
+                             *      not overall the image. second, the LX specification says that,
+                             *      to handle relocations that span pages, a separate fixup
+                             *      record is specified for each page. From what I can see in
+                             *      Watcom 32-bit DOS programs, it just emits a fixup record
+                             *      on the next page with a negative offset.
+                             *
+                             *      Don't forget as a relocation relative to the page, positive
+                             *      values will generally not exceed 4096 (or whatever the page
+                             *      size) */
+
+                            printf("            Entry at +%u (%lu)\n",
+                                (unsigned int)(scan - base),
+                                ((unsigned long)(scan - base)) + ofs);
+
+                            src = *scan++;
+                            if (src == 0 || scan >= fence) break;
+                            flags = *scan++;
+
+                            printf("                Source type:            0x%02X ",src);
+                            switch (src&0xF) {
+                                case 0x2:
+                                    printf("16-bit selector fixup (16 bits)");
+                                    break;
+                                case 0x7:
+                                    printf("32-bit offset fixup (32 bits)");
+                                    break;
+                                case 0x8:
+                                    printf("32-bit self-relative offset fixup (32 bits)");
+                                    break;
+                                default:
+                                src_type_unknown:
+                                    printf("unknown type=0x%X flags=0x%X",src&0xF,src>>4);
+                                    scan = fence;
+                                    break;
+                            };
+                            if (src & 0x10)
+                                printf(" Fix-up to alias");
+                            printf("\n");
+                            if (src & 0xE0) {
+                                printf("                ! Unknown flags set, cannot continue\n");
+                                break;
+                            }
+                            printf("                Source flags:           0x%02X ",flags);
+                            switch (flags&3) {
+                                case 0x0:
+                                    printf("Internal reference");
+                                    break;
+                                case 0x1:
+                                    printf("Imported reference by ordinal");
+                                    break;
+                                case 0x2:
+                                    printf("Imported reference by name");
+                                    break;
+                                case 0x3:
+                                    printf("Internal reference via entry table");
+                                    break;
+                            };
+                            if (flags&4) printf(" ADDITIVE");
+                            if (flags&8) printf(" \"Internal chaining fixup\"");
+                            if (flags&0x10) printf(" \"32-bit target offset\"");
+                            if (flags&0x20) printf(" \"32-bit additive fixup value\"");
+                            if (flags&0x40) printf(" \"16-bit object number/module ordinal\"");
+                            if (flags&0x80) printf(" \"8-bit ordinal\"");
+                            printf("\n");
+
+                            /* NTS: There's a source list format we don't support yet.
+                             *      If I come across an OS/2 application that uses it, I'll implement it. */
+
+                            if ((scan+2) > fence) break;
+                            srcoff = *((int16_t*)scan); scan += 2;
+
+                            printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
+                            if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
+                            printf("\n");
+
+                            if ((flags&3) == 0) { // internal reference
+                                uint16_t object;
+                                uint32_t trgoff;
+
+                                if (flags&0x40) {
+                                    if ((scan+2) > fence) break;
+                                    object = *((uint16_t*)scan); scan += 2;
+                                }
+                                else {
+                                    if ((scan+1) > fence) break;
+                                    object = *scan++;
+                                }
+                                printf("                Target object:          #%u\n",(unsigned int)object);
+
+                                if ((src&0xF) != 0x2) { /* not 16-bit selector fixup */
+                                    if (flags&0x10) { // 32-bit target offset
+                                        if ((scan+4) > fence) break;
+                                        trgoff = *((uint32_t*)scan); scan += 4;
+                                    }
+                                    else { // 16-bit target offset
+                                        if ((scan+2) > fence) break;
+                                        trgoff = *((uint16_t*)scan); scan += 2;
+                                    }
+
+                                    printf("                Target offset:          0x%08lX\n",(unsigned long)trgoff);
+                                }
+                                else {
+                                    trgoff = 0;
+                                }
+                            }
+                            else {
+                                // TODO
+                                break;
+                            }
+                        }
+                    }
+                    free(base);
+                }
+            }
         }
     }
 
