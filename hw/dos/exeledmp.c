@@ -884,6 +884,81 @@ int main(int argc,char **argv) {
         }
     }
 
+    if (le_header.entry_table_offset != (uint32_t)0) {
+        unsigned long ofs = le_header.entry_table_offset + le_header_offset;
+        uint32_t sz = le_exe_header_entry_table_size(&le_header);
+
+        if (sz != (uint32_t)0 && sz < (uint32_t)0x40000UL) {
+            unsigned char *base,*scan,*fence;
+            unsigned int i,ordinal = 1;
+
+            base = malloc(sz);
+            if (base != NULL) {
+                if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs && (uint32_t)read(src_fd,base,sz) == sz) {
+                    scan = base;
+                    fence = base + sz;
+
+                    printf("* Entry table\n");
+                    while (scan < fence) {
+                        unsigned char cnt,typ;
+
+                        cnt = *scan++;
+                        if (cnt == 0 || scan >= fence) break;
+                        typ = *scan++;
+                        if (scan >= fence) break;
+
+                        if (typ == 1) {
+                            uint16_t object,offset;
+                            uint8_t flags;
+
+                            for (i=0;i < cnt;i++,ordinal++) {
+                                if ((scan+2+1+2) > fence) break;
+
+                                object = *((uint16_t*)scan); scan += 2;
+                                flags = *scan++;
+                                offset = *((uint16_t*)scan); scan += 2;
+
+                                printf("    Entry #%u: 16-bit entry point\n",ordinal);
+                                printf("        Object:         #%u\n",object);
+                                printf("        Flags:          %02X ",flags);
+                                if (flags & 1) printf("EXPORTED ");
+                                if (flags & 0xF8) printf("%u parameters ",flags >> 3);
+                                printf("\n");
+                                printf("        Offset:         0x%04x\n",offset);
+                            }
+                        }
+                        else if (typ == 3) {
+                            uint16_t object;
+                            uint32_t offset;
+                            uint8_t flags;
+
+                            for (i=0;i < cnt;i++,ordinal++) {
+                                if ((scan+2+1+4) > fence) break;
+
+                                object = *((uint16_t*)scan); scan += 2;
+                                flags = *scan++;
+                                offset = *((uint32_t*)scan); scan += 4;
+
+                                printf("    Entry #%u: 32-bit entry point\n",ordinal);
+                                printf("        Object:         #%u\n",object);
+                                printf("        Flags:          %02X ",flags);
+                                if (flags & 1) printf("EXPORTED ");
+                                if (flags & 0xF8) printf("%u parameters ",flags >> 3);
+                                printf("\n");
+                                printf("        Offset:         0x%08lx\n",(unsigned long)offset);
+                            }
+                        }
+                        else {
+                            printf("    ! Unknown block cnt=%u typ=0x%02x\n",cnt,typ);
+                            break;
+                        }
+                    }
+                }
+                free(base);
+            }
+        }
+    }
+
     if (le_fixup_page_table) {
         free(le_fixup_page_table);
         le_fixup_page_table = NULL;
