@@ -32,7 +32,12 @@
  *
  * Windows VXDs can carry 16-bit real-mode code that is executed on startup. This
  * is often carried in a third segment that does not have the BIG (32-bit) flag
- * set, and often indicates the need for a 16:16 alias. */
+ * set, and often indicates the need for a 16:16 alias.
+ *
+ * If you examine the entry points and non-resident name table of a Windows 386/VXD driver,
+ * you'll find only one entry point with the name of the driver and _DDB at the end.
+ * I wonder if Windows locates this entry point by ordinal 1 or by DRIVER_NAME + _DDB.
+ * Probably ordinal 1. */
 
 #include <assert.h>
 #include <stdlib.h>
