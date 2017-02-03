@@ -737,10 +737,6 @@ int main(int argc,char **argv) {
                             if (src & 0x10)
                                 printf(" Fix-up to alias");
                             printf("\n");
-                            if (src & 0xE0) {
-                                printf("                ! Unknown flags set, cannot continue\n");
-                                break;
-                            }
                             printf("                Source flags:           0x%02X ",flags);
                             switch (flags&3) {
                                 case 0x0:
@@ -763,6 +759,11 @@ int main(int argc,char **argv) {
                             if (flags&0x40) printf(" \"16-bit object number/module ordinal\"");
                             if (flags&0x80) printf(" \"8-bit ordinal\"");
                             printf("\n");
+
+                            if (src & 0xE0) {
+                                printf("                ! Unknown source flags set, cannot continue\n");
+                                break;
+                            }
 
                             /* NTS: There's a source list format we don't support yet.
                              *      If I come across an OS/2 application that uses it, I'll implement it. */
