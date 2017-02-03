@@ -694,6 +694,7 @@ int main(int argc,char **argv) {
                         scan = base;
                         fence = base + sz;
                         while (scan < fence) {
+                            uint8_t srcoff_count,srcoff_i;
                             unsigned char src,flags;
                             int16_t srcoff;
 
@@ -760,20 +761,28 @@ int main(int argc,char **argv) {
                             if (flags&0x80) printf(" \"8-bit ordinal\"");
                             printf("\n");
 
-                            if (src & 0xE0) {
+                            if (src & 0xC0) { // bits [7:6]
                                 printf("                ! Unknown source flags set, cannot continue\n");
                                 break;
                             }
 
-                            /* NTS: There's a source list format we don't support yet.
-                             *      If I come across an OS/2 application that uses it, I'll implement it. */
+                            if (src & 0x20) {
+                                if (scan >= fence) break;
+                                srcoff_count = *scan++;//number of source offsets
+                            }
+                            else {
+                                srcoff_count = 1;
+                            }
 
-                            if ((scan+2) > fence) break;
-                            srcoff = *((int16_t*)scan); scan += 2;
+                            if (srcoff_count == 1) {
+                                if ((scan+2) > fence) break;
+                                srcoff = *((int16_t*)scan);
+                                scan += 2;
 
-                            printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
-                            if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
-                            printf("\n");
+                                printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
+                                if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
+                                printf("\n");
+                            }
 
                             if ((flags&3) == 0) { // internal reference
                                 uint16_t object;
@@ -807,7 +816,20 @@ int main(int argc,char **argv) {
                             }
                             else {
                                 // TODO
+                                scan = fence;
                                 break;
+                            }
+
+                            for (srcoff_i=0;srcoff_i < srcoff_count;srcoff_i++) {
+                                if (srcoff_count != 1) {
+                                    if ((scan+2) > fence) break;
+                                    srcoff = *((int16_t*)scan);
+                                    scan += 2;
+
+                                    printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
+                                    if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
+                                    printf("\n");
+                                }
                             }
                         }
                     }
