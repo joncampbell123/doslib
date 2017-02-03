@@ -669,6 +669,25 @@ int main(int argc,char **argv) {
         }
     }
 
+    if (le_fixup_page_table != NULL && le_header.fixup_record_table_offset != 0 && le_header.number_of_memory_pages != 0) {
+        unsigned long ofs,sz;
+        unsigned int i;
+
+        printf("* Fixup record table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
+        for (i=0;i < le_header.number_of_memory_pages;i++) {
+            if (le_fixup_page_table[i+1] < le_fixup_page_table[i]) {
+                printf("    ! Skipping invalid entry, next offset < current offset\n");
+                continue;
+            }
+
+            ofs = (unsigned long)le_fixup_page_table[i] + (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset;
+            sz = le_fixup_page_table[i+1] - le_fixup_page_table[i];
+            printf("    Entry #%u\n",i + 1);
+            printf("        Offset:                         0x%08lx (%lu)\n",ofs,ofs);
+            printf("        Size:                           0x%08lx (%lu)\n",sz,sz);
+        }
+    }
+
     if (le_fixup_page_table) {
         free(le_fixup_page_table);
         le_fixup_page_table = NULL;
