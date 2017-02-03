@@ -892,7 +892,7 @@ int main(int argc,char **argv) {
 
         if (sz != (uint32_t)0 && sz < (uint32_t)0x10000UL) {
             unsigned char *base,*scan,*fence,len;
-            unsigned int i,ordinal;
+            unsigned int ordinal;
             char tmp[255+1];
 
             printf("* Resident names table\n");
@@ -920,6 +920,41 @@ int main(int argc,char **argv) {
                 }
                 free(base);
             }
+        }
+    }
+
+    if (le_header.nonresident_names_table_offset != (uint32_t)0 &&
+        le_header.nonresident_names_table_length != (uint32_t)0 &&
+        le_header.nonresident_names_table_length < (uint32_t)0x20000UL) {
+        unsigned char *base,*scan,*fence,len;
+        unsigned int ordinal;
+        char tmp[255+1];
+
+        printf("* Non-resident names table\n");
+
+        base = malloc(le_header.nonresident_names_table_length);
+        if (base != NULL) {
+            if ((unsigned long)lseek(src_fd,le_header.nonresident_names_table_offset,SEEK_SET) == le_header.nonresident_names_table_offset &&
+                (uint32_t)read(src_fd,base,le_header.nonresident_names_table_length) == le_header.nonresident_names_table_length) {
+                scan = base;
+                fence = base + le_header.nonresident_names_table_length;
+                while (scan < fence) {
+                    len = *scan++;
+                    if (len == 0) break;
+                    if ((scan + len + 2) > fence) break;
+
+                    if (len != 0) memcpy(tmp,scan,len);
+                    tmp[len] = 0;
+                    scan += len;
+
+                    ordinal = *((uint16_t*)scan);
+                    scan += 2;
+
+                    printf("    \"%s\" ordinal %u\n",
+                            tmp,ordinal);
+                }
+            }
+            free(base);
         }
     }
 
