@@ -202,6 +202,7 @@ const char *le_target_operating_system_to_str(const uint8_t b) {
 ///////////////
 
 int main(int argc,char **argv) {
+    uint32_t *le_fixup_page_table = NULL; /* number_of_page_tables + 1 entries */
     struct exe_le_header le_header;
     uint32_t le_header_offset;
     uint32_t file_size;
@@ -641,26 +642,36 @@ int main(int argc,char **argv) {
         unsigned int i;
         uint32_t ent;
 
-        // NTS: This table has one extra entry, so that you can determine the size of each fixup record entry per segment
-        //      by the difference between each entry. Entries in the fixup record table (and therefore the offsets in this
-        //      table) numerically increase for this reason.
         printf("* Fixup page table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages + 1UL);
-        if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
-            for (i=0;i <= le_header.number_of_memory_pages;i++) {
-                if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
-                    break;
 
-                if (i == le_header.number_of_memory_pages)
-                    printf("    Entry #%u (end of fixup record table)\n",i + 1);
-                else
-                    printf("    Entry #%u\n",i + 1);
+        le_fixup_page_table = (uint32_t*)malloc(sizeof(uint32_t) * ((unsigned long)le_header.number_of_memory_pages + 1UL));
+        if (le_fixup_page_table != NULL) {
+            // NTS: This table has one extra entry, so that you can determine the size of each fixup record entry per segment
+            //      by the difference between each entry. Entries in the fixup record table (and therefore the offsets in this
+            //      table) numerically increase for this reason.
+            if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs &&
+                (size_t)read(src_fd,le_fixup_page_table,sizeof(uint32_t) * ((unsigned long)le_header.number_of_memory_pages + 1UL)) ==
+                (sizeof(uint32_t) * ((unsigned long)le_header.number_of_memory_pages + 1UL))) {
+                for (i=0;i <= le_header.number_of_memory_pages;i++) {
+                    ent = le_fixup_page_table[i];
 
-                printf("        Offset:                         %lu + fixup record table at %lu = file offset %lu\n",
-                    (unsigned long)ent,
-                    (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset,
-                    (unsigned long)ent + (unsigned long)le_header_offset + (unsigned long)le_header.fixup_record_table_offset);
+                    if (i == le_header.number_of_memory_pages)
+                        printf("    Entry #%u (end of fixup record table)\n",i + 1);
+                    else
+                        printf("    Entry #%u\n",i + 1);
+
+                    printf("        Offset:                         %lu + fixup record table at %lu = file offset %lu\n",
+                            (unsigned long)ent,
+                            (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset,
+                            (unsigned long)ent + (unsigned long)le_header_offset + (unsigned long)le_header.fixup_record_table_offset);
+                }
             }
         }
+    }
+
+    if (le_fixup_page_table) {
+        free(le_fixup_page_table);
+        le_fixup_page_table = NULL;
     }
 
     close(src_fd);
