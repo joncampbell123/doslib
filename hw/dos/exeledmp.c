@@ -583,6 +583,35 @@ void le_header_entry_table_parse(struct le_header_entry_table * const t) {
 
 ///////////////
 
+void print_entry_table_locate_name_by_ordinal(const struct exe_ne_header_name_entry_table * const nonresnames,const struct exe_ne_header_name_entry_table *resnames,const unsigned int ordinal) {
+    char tmp[255+1];
+    unsigned int i;
+
+    if (resnames->table != NULL) {
+        for (i=0;i < resnames->length;i++) {
+            struct exe_ne_header_name_entry *ent = resnames->table + i;
+
+            if (ne_name_entry_get_ordinal(resnames,ent) == ordinal) {
+                ne_name_entry_get_name(tmp,sizeof(tmp),resnames,ent);
+                printf("RESIDENT NAME '%s' ",tmp);
+                return;
+            }
+        }
+    }
+
+    if (nonresnames->table != NULL) {
+        for (i=0;i < nonresnames->length;i++) {
+            struct exe_ne_header_name_entry *ent = nonresnames->table + i;
+
+            if (ne_name_entry_get_ordinal(nonresnames,ent) == ordinal) {
+                ne_name_entry_get_name(tmp,sizeof(tmp),nonresnames,ent);
+                printf("NONRESIDENT NAME '%s' ",tmp);
+                return;
+            }
+        }
+    }
+}
+
 void name_entry_table_sort_by_user_options(struct exe_ne_header_name_entry_table * const t) {
     unsigned int first = 0;
 
@@ -1334,6 +1363,7 @@ int main(int argc,char **argv) {
             if (raw == NULL) continue;
 
             printf("    Ordinal #%u: ",i + 1);
+            print_entry_table_locate_name_by_ordinal(&le_parser.le_nonresident_names,&le_parser.le_resident_names,i + 1);
             if (ent->type == 0)
                 printf("empty\n");
             else if (ent->type == 2) {
