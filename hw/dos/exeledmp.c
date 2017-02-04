@@ -1279,6 +1279,7 @@ int main(int argc,char **argv) {
                             }
                             else {
                                 // TODO
+                                printf("                ! Unknown fixup type %u\n",flags&3);
                                 scan = fence;
                                 break;
                             }
