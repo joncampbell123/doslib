@@ -1041,7 +1041,12 @@ int main(int argc,char **argv) {
                         typ = *scan++;
                         if (scan >= fence) break;
 
-                        if (typ == 1) {
+                        if (typ == 0) {
+                            for (i=0;i < cnt;i++,ordinal++) {
+                                printf("    Entry #%u: empty\n",ordinal);
+                            }
+                        }
+                        else if (typ == 1) {
                             uint16_t object,offset;
                             uint8_t flags;
 
