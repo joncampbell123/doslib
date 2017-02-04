@@ -245,9 +245,10 @@ uint32_t le_exe_header_entry_table_size(struct exe_le_header * const h) {
 }
 
 struct le_header_parseinfo {
-    uint32_t*                   le_fixup_page_table;                /* number_of_memory_pages + 1 entries */
-    uint32_t                    le_header_offset;
-    struct exe_le_header        le_header;
+    struct exe_le_header_object_table_entry*            le_object_table;                    /* [object_table_entries] entries */
+    uint32_t*                                           le_fixup_page_table;                /* [number_of_memory_pages + 1] entries */
+    uint32_t                                            le_header_offset;
+    struct exe_le_header                                le_header;
 };
 
 uint32_t le_header_parseinfo_fixup_page_table_entries(const struct le_header_parseinfo * const h) {
@@ -261,6 +262,11 @@ void le_header_parseinfo_init(struct le_header_parseinfo * const h) {
     memset(h,0,sizeof(*h));
 }
 
+void le_header_parseinfo_free_object_table(struct le_header_parseinfo * const h) {
+    if (h->le_object_table) free(h->le_object_table);
+    h->le_object_table = NULL;
+}
+
 void le_header_parseinfo_free_fixup_page_table(struct le_header_parseinfo * const h) {
     if (h->le_fixup_page_table) free(h->le_fixup_page_table);
     h->le_fixup_page_table = NULL;
@@ -268,10 +274,24 @@ void le_header_parseinfo_free_fixup_page_table(struct le_header_parseinfo * cons
 
 void le_header_parseinfo_free(struct le_header_parseinfo * const h) {
     le_header_parseinfo_free_fixup_page_table(h);
+    le_header_parseinfo_free_object_table(h);
 }
 
 size_t le_header_parseinfo_get_fixup_page_table_buffer_size(struct le_header_parseinfo * const h) {
     return sizeof(uint32_t) * ((unsigned long)h->le_header.number_of_memory_pages + 1UL);
+}
+
+size_t le_header_parseinfo_get_object_table_buffer_size(struct le_header_parseinfo * const h) {
+    return sizeof(struct exe_le_header_object_table_entry) * h->le_header.object_table_entries;
+}
+
+unsigned char *le_header_parseinfo_alloc_object_table(struct le_header_parseinfo * const h) {
+    const size_t sz = le_header_parseinfo_get_object_table_buffer_size(h);
+
+    if (h->le_object_table == NULL)
+        h->le_object_table = (struct exe_le_header_object_table_entry*)malloc(sz);
+
+    return (unsigned char*)(h->le_object_table);
 }
 
 unsigned char *le_header_parseinfo_alloc_fixup_page_table(struct le_header_parseinfo * const h) {
@@ -432,7 +452,7 @@ int main(int argc,char **argv) {
     le_parser.le_header_offset = le_header_offset;
     le_parser.le_header = le_header;
 
-    printf("* LE header at %lu\n",(unsigned long)le_header_offset);
+    printf("* LE header at %lu\n",(unsigned long)le_parser.le_header_offset);
     printf("    Byte order:                     0x%02x (%s-endian)\n",
             le_header.byte_order,
             le_header.byte_order ? "big" : "little");
@@ -617,53 +637,13 @@ int main(int argc,char **argv) {
             (unsigned long)le_header.extra_heap_allocation,
             (unsigned long)le_header.extra_heap_allocation);
 
-    if (le_header.offset_of_object_table != 0 &&
-        le_header.object_table_entries != 0) {
-        unsigned long ofs = le_header.offset_of_object_table + (unsigned long)le_header_offset;
-        struct exe_le_header_object_table_entry ent;
-        unsigned int i;
+    if (le_header.offset_of_object_table != 0 && le_header.object_table_entries != 0) {
+        unsigned long ofs = le_header.offset_of_object_table + (unsigned long)le_parser.le_header_offset;
+        unsigned char *base = le_header_parseinfo_alloc_object_table(&le_parser);
+        size_t readlen = le_header_parseinfo_get_object_table_buffer_size(&le_parser);
 
-        printf("* Object table, %lu entries\n",(unsigned long)le_header.object_table_entries);
-        if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
-            for (i=0;i < le_header.object_table_entries;i++) {
-                if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
-                    break;
-
-                printf("    Object #%u\n",i + 1);
-                printf("        Virtual segment size:           0x%08lx (%lu)\n",
-                        (unsigned long)ent.virtual_segment_size,
-                        (unsigned long)ent.virtual_segment_size);
-                printf("        Relocation base address:        0x%08lx\n",
-                        (unsigned long)ent.relocation_base_address);
-                printf("        Object flags:                   0x%08lx\n",
-                        (unsigned long)ent.object_flags);
-                /* use a macro, save my wrists */
-#define X(x) if (ent.object_flags & (x)) \
-    printf("            " #x "\n");
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_READABLE);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_WRITEABLE);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESOURCE);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_DISCARDABLE);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_SHARED);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_PRELOAD);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_INVALID);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_ZEROFILLED);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESIDENT);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESIDENT_LONG_LOCKABLE);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_1616ALIAS);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_CONFORMING);
-                X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_IO_PRIVILEGE);
-#undef X        /* end macro */
-                printf("        Page map index:                 0x%08lx (%lu)\n",
-                        (unsigned long)ent.page_map_index,
-                        (unsigned long)ent.page_map_index);
-                printf("        Page map entries:               0x%08lx (%lu)\n",
-                        (unsigned long)ent.page_map_entries,
-                        (unsigned long)ent.page_map_entries);
-            }
-        }
+        if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) != ofs || (size_t)read(src_fd,base,readlen) != readlen)
+            le_header_parseinfo_free_object_table(&le_parser);
     }
 
     if (le_header.object_page_map_offset != 0 &&
@@ -737,28 +717,6 @@ int main(int argc,char **argv) {
             //      table) numerically increase for this reason.
             if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) != ofs || (size_t)read(src_fd,le_parser.le_fixup_page_table,readlen) != (size_t)readlen)
                 le_header_parseinfo_free_fixup_page_table(&le_parser);
-        }
-    }
-
-    if (le_parser.le_fixup_page_table != NULL) {
-        unsigned int i,mx;
-        uint32_t ent;
-
-        mx = le_header_parseinfo_fixup_page_table_entries(&le_parser);
-        printf("* Fixup page table, %lu entries\n",(unsigned long)mx);
-
-        for (i=0;i < mx;i++) {
-            ent = le_parser.le_fixup_page_table[i];
-
-            if ((i+1) == mx)
-                printf("    Page #%u (end of fixup record table)\n",i + 1);
-            else
-                printf("    Page #%u\n",i + 1);
-
-            printf("        Offset:                         %lu + fixup record table at %lu = file offset %lu\n",
-                    (unsigned long)ent,
-                    (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset,
-                    (unsigned long)ent + (unsigned long)le_header_offset + (unsigned long)le_header.fixup_record_table_offset);
         }
     }
 
@@ -1080,6 +1038,72 @@ int main(int argc,char **argv) {
                 }
                 free(base);
             }
+        }
+    }
+
+    if (le_parser.le_object_table != NULL) {
+        struct exe_le_header_object_table_entry *ent;
+        unsigned int i;
+
+        printf("* Object table, %lu entries\n",(unsigned long)le_parser.le_header.object_table_entries);
+        for (i=0;i < le_parser.le_header.object_table_entries;i++) {
+            ent = le_parser.le_object_table + i;
+
+            printf("    Object #%u\n",i + 1);
+            printf("        Virtual segment size:           0x%08lx (%lu)\n",
+                    (unsigned long)ent->virtual_segment_size,
+                    (unsigned long)ent->virtual_segment_size);
+            printf("        Relocation base address:        0x%08lx\n",
+                    (unsigned long)ent->relocation_base_address);
+            printf("        Object flags:                   0x%08lx\n",
+                    (unsigned long)ent->object_flags);
+            /* use a macro, save my wrists */
+#define X(x) if (ent->object_flags & (x)) \
+            printf("            " #x "\n");
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_READABLE);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_WRITEABLE);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESOURCE);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_DISCARDABLE);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_SHARED);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_PRELOAD);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_INVALID);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_ZEROFILLED);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESIDENT);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_RESIDENT_LONG_LOCKABLE);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_1616ALIAS);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_CONFORMING);
+            X(LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_IO_PRIVILEGE);
+#undef X        /* end macro */
+            printf("        Page map index:                 0x%08lx (%lu)\n",
+                    (unsigned long)ent->page_map_index,
+                    (unsigned long)ent->page_map_index);
+            printf("        Page map entries:               0x%08lx (%lu)\n",
+                    (unsigned long)ent->page_map_entries,
+                    (unsigned long)ent->page_map_entries);
+        }
+    }
+
+    if (le_parser.le_fixup_page_table != NULL) {
+        unsigned int i,mx;
+        uint32_t ent;
+
+        mx = le_header_parseinfo_fixup_page_table_entries(&le_parser);
+        printf("* Fixup page table, %lu entries\n",(unsigned long)mx);
+
+        for (i=0;i < mx;i++) {
+            ent = le_parser.le_fixup_page_table[i];
+
+            if ((i+1) == mx)
+                printf("    Page #%u (end of fixup record table)\n",i + 1);
+            else
+                printf("    Page #%u\n",i + 1);
+
+            printf("        Offset:                         %lu + fixup record table at %lu = file offset %lu\n",
+                    (unsigned long)ent,
+                    (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset,
+                    (unsigned long)ent + (unsigned long)le_header_offset + (unsigned long)le_header.fixup_record_table_offset);
         }
     }
 
