@@ -44,6 +44,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
+#include <string.h>
 #include <errno.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -656,6 +657,7 @@ void print_name_table(const struct exe_ne_header_name_entry_table * const t) {
 }
 
 int main(int argc,char **argv) {
+    unsigned char is_vxd = 0;
     struct le_header_parseinfo le_parser;
     struct exe_le_header le_header;
     uint32_t le_header_offset;
@@ -1400,6 +1402,61 @@ int main(int argc,char **argv) {
             }
             else {
                 printf("unknown type %02x\n",ent->type);
+            }
+        }
+    }
+
+    if ((le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_IS_DLL) &&
+        (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_NO_EXTERNAL_FIXUP) &&
+        (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_MASK) == LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_UNKNOWN &&
+        le_header.target_operating_system == 0x04 && le_parser.le_entry_table.table != NULL &&
+        le_parser.le_entry_table.length >= 1) {
+        struct le_header_entry_table_entry *ent = le_parser.le_entry_table.table;//ordinal 1
+        unsigned char *raw;
+        char tmp[255+1];
+        unsigned int i;
+
+        tmp[0] = 0;
+        if (tmp[0] == 0 && le_parser.le_resident_names.table != NULL) {
+            for (i=0;i < le_parser.le_resident_names.length;i++) {
+                struct exe_ne_header_name_entry *ent = le_parser.le_resident_names.table + i;
+
+                if (ne_name_entry_get_ordinal(&le_parser.le_resident_names,ent) == 1) {
+                    ne_name_entry_get_name(tmp,sizeof(tmp),&le_parser.le_resident_names,ent);
+                    break;
+                }
+            }
+        }
+
+        if (tmp[0] == 0 && le_parser.le_nonresident_names.table != NULL) {
+            for (i=0;i < le_parser.le_nonresident_names.length;i++) {
+                struct exe_ne_header_name_entry *ent = le_parser.le_nonresident_names.table + i;
+
+                if (ne_name_entry_get_ordinal(&le_parser.le_nonresident_names,ent) == 1) {
+                    ne_name_entry_get_name(tmp,sizeof(tmp),&le_parser.le_nonresident_names,ent);
+                    break;
+                }
+            }
+        }
+
+        raw = le_header_entry_table_get_raw_entry(&le_parser.le_entry_table,0); /* parser makes sure there is sufficient space for struct given type */
+        if (raw != NULL && (ent->type == 3)/*32-bit*/) {
+            uint32_t offset;
+            uint8_t flags;
+
+            flags = *raw++;
+            offset = *((uint32_t*)raw); raw += 4;
+            assert(raw <= (le_parser.le_entry_table.raw+le_parser.le_entry_table.raw_length));
+
+            if (flags & 1/*exported*/) {
+                /* is named, ends in _DDB */
+                char *s = tmp + strlen(tmp) - 4;
+                if (s > tmp && !strcasecmp(s,"_DDB")) {
+                    is_vxd = 1;
+                    printf("* This appears to be a 32-bit Windows 386/VXD driver\n");
+                    printf("    VXD DDB block in Object #%u : 0x%08lx\n",
+                        (unsigned int)ent->object,(unsigned long)offset);
+                }
             }
         }
     }
