@@ -341,17 +341,22 @@ void print_entry_table(const struct exe_ne_header_entry_table_table * const t,co
 }
 
 void name_entry_table_sort_by_user_options(struct exe_ne_header_name_entry_table * const t) {
+    unsigned int first = 0;
+
     ne_name_entry_sort_by_table = t;
     if (t->raw == NULL || t->length <= 1)
         return;
 
+    if (ne_name_entry_get_ordinal(t,&t->table[0]) == 0)
+        first++;
+
     if (opt_sort_ordinal) {
-        /* NTS: Do not sort the module name in entry 0 */
-        qsort(t->table+1,t->length-1,sizeof(*(t->table)),ne_name_entry_sort_by_ordinal);
+        /* NTS: Do not sort the module name in entry 0 IF first entry is zero */
+        qsort(t->table+first,t->length-first,sizeof(*(t->table)),ne_name_entry_sort_by_ordinal);
     }
     else if (opt_sort_names) {
-        /* NTS: Do not sort the module name in entry 0 */
-        qsort(t->table+1,t->length-1,sizeof(*(t->table)),ne_name_entry_sort_by_name);
+        /* NTS: Do not sort the module name in entry 0 IF first entry is zero */
+        qsort(t->table+first,t->length-first,sizeof(*(t->table)),ne_name_entry_sort_by_name);
     }
 }
 

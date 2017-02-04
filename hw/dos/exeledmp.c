@@ -59,6 +59,9 @@
 #define O_BINARY (0)
 #endif
 
+static unsigned char            opt_sort_ordinal = 0;
+static unsigned char            opt_sort_names = 0;
+
 static char*                    src_file = NULL;
 static int                      src_fd = -1;
 
@@ -67,6 +70,8 @@ static struct exe_dos_layout    exelayout;
 
 static void help(void) {
     fprintf(stderr,"EXELEDMP -i <exe file>\n");
+    fprintf(stderr," -sn        Sort names\n");
+    fprintf(stderr," -so        Sort by ordinal\n");
 }
 
 ///////////////
@@ -578,6 +583,26 @@ void le_header_entry_table_parse(struct le_header_entry_table * const t) {
 
 ///////////////
 
+void name_entry_table_sort_by_user_options(struct exe_ne_header_name_entry_table * const t) {
+    unsigned int first = 0;
+
+    ne_name_entry_sort_by_table = t;
+    if (t->raw == NULL || t->length <= 1)
+        return;
+
+    if (ne_name_entry_get_ordinal(t,&t->table[0]) == 0)
+        first++;
+
+    if (opt_sort_ordinal) {
+        /* NTS: Do not sort the module name in entry 0 IF first entry is zero */
+        qsort(t->table+first,t->length-first,sizeof(*(t->table)),ne_name_entry_sort_by_ordinal);
+    }
+    else if (opt_sort_names) {
+        /* NTS: Do not sort the module name in entry 0 IF first entry is zero */
+        qsort(t->table+first,t->length-first,sizeof(*(t->table)),ne_name_entry_sort_by_name);
+    }
+}
+
 void print_name_table(const struct exe_ne_header_name_entry_table * const t) {
     const struct exe_ne_header_name_entry *ent = NULL;
     uint16_t ordinal;
@@ -622,6 +647,12 @@ int main(int argc,char **argv) {
             if (!strcmp(a,"h") || !strcmp(a,"help")) {
                 help();
                 return 1;
+            }
+            else if (!strcmp(a,"sn")) {
+                opt_sort_names = 1;
+            }
+            else if (!strcmp(a,"so")) {
+                opt_sort_ordinal = 1;
             }
             else if (!strcmp(a,"i")) {
                 src_file = argv[i++];
@@ -1156,6 +1187,7 @@ int main(int argc,char **argv) {
         }
 
         exe_ne_header_name_entry_table_parse_raw(&le_parser.le_resident_names);
+        name_entry_table_sort_by_user_options(&le_parser.le_resident_names);
     }
 
     /* load nonresident name table */
@@ -1171,6 +1203,7 @@ int main(int argc,char **argv) {
         }
 
         exe_ne_header_name_entry_table_parse_raw(&le_parser.le_nonresident_names);
+        name_entry_table_sort_by_user_options(&le_parser.le_nonresident_names);
     }
 
     if (le_header.entry_table_offset != (uint32_t)0) {
