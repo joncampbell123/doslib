@@ -1407,7 +1407,6 @@ int main(int argc,char **argv) {
     }
 
     if ((le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_IS_DLL) &&
-        (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_NO_EXTERNAL_FIXUP) &&
         (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_MASK) == LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_UNKNOWN &&
         le_header.target_operating_system == 0x04 && le_parser.le_entry_table.table != NULL &&
         le_parser.le_entry_table.length >= 1) {
