@@ -776,6 +776,7 @@ int main(int argc,char **argv) {
         unsigned long ofs,sz;
         unsigned int i;
 
+        // NTS: The le_fixup_page_table[] array is number_of_memory_pages+1 elements long
         printf("* Fixup record table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
         for (i=0;i < le_header.number_of_memory_pages;i++) {
             if (le_parser.le_fixup_page_table[i+1] < le_parser.le_fixup_page_table[i]) {
