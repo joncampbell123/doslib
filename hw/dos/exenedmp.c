@@ -257,7 +257,7 @@ void print_entry_table_locate_name_by_ordinal(const struct exe_ne_header_name_en
 
             if (ne_name_entry_get_ordinal(resnames,ent) == ordinal) {
                 ne_name_entry_get_name(tmp,sizeof(tmp),resnames,ent);
-                printf("RESIDENT NAME '%s' ",tmp);
+                printf(" RESIDENT NAME '%s' ",tmp);
                 return;
             }
         }
@@ -269,7 +269,7 @@ void print_entry_table_locate_name_by_ordinal(const struct exe_ne_header_name_en
 
             if (ne_name_entry_get_ordinal(nonresnames,ent) == ordinal) {
                 ne_name_entry_get_name(tmp,sizeof(tmp),nonresnames,ent);
-                printf("NONRESIDENT NAME '%s' ",tmp);
+                printf(" NONRESIDENT NAME '%s' ",tmp);
                 return;
             }
         }
