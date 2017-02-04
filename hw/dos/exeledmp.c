@@ -582,6 +582,105 @@ void le_header_entry_table_parse(struct le_header_entry_table * const t) {
     t->length = ordinal;
 }
 
+struct le_vmap_trackio {
+    uint32_t                file_ofs;       // file offset of page
+    uint32_t                page_number;    // page number we are on
+    uint16_t                page_ofs;       // offset within page
+    uint16_t                page_size;      // size of page
+    uint32_t                object;         // object we're reading
+    uint32_t                offset;         // offset within object
+};
+
+int le_segofs_to_trackio(struct le_vmap_trackio * const io,const uint16_t object,const uint32_t offset,const struct le_header_parseinfo * const lep) {
+    const struct exe_le_header_parseinfo_object_page_table_entry *pageent;
+    const struct exe_le_header_object_table_entry *objent;
+
+    if (object == 0 || object > lep->le_header.object_table_entries) return 0;
+    io->object = object;
+    io->offset = offset;
+
+    /* Object number is 1-based, our array is zero based */
+    objent = (const struct exe_le_header_object_table_entry*)(lep->le_object_table + object - 1);
+    io->page_number = objent->page_map_index + (offset / lep->le_header.memory_page_size);
+    if (io->page_number >= (objent->page_map_index + objent->page_map_entries)) return 0;
+    if (io->page_number == 0) return 0;
+    io->page_ofs = offset % lep->le_header.memory_page_size;
+    io->page_size = lep->le_header.memory_page_size;
+
+    /* page numbers are 1-based, our array is zero based */
+    if (io->page_number == 0) return 0;
+    if (io->page_number > lep->le_header.number_of_memory_pages) return 0;
+    pageent = (const struct exe_le_header_parseinfo_object_page_table_entry*)(lep->le_object_page_map_table + io->page_number - 1);
+
+    io->file_ofs = pageent->page_data_offset;
+    return 1;
+}
+
+int le_trackio_read(unsigned char *buf,int len,const int fd,struct le_vmap_trackio * const io,const struct le_header_parseinfo * const lep) {
+    const struct exe_le_header_parseinfo_object_page_table_entry *pageent;
+    unsigned long ofs;
+    int rd = 0;
+    int canrd;
+    int gotrd;
+
+    while (len > 0) {
+        if (io->object == 0 || io->page_number == 0) break;
+
+        if (io->page_ofs < io->page_size) {
+            canrd = (int)(io->page_size - io->page_ofs);
+            if (canrd > len) canrd = len;
+
+            ofs = io->file_ofs + io->page_ofs;
+            if ((unsigned long)lseek(fd,ofs,SEEK_SET) != ofs) break;
+
+            gotrd = read(fd,buf,canrd);
+            if (gotrd <= 0) break;
+
+            io->page_ofs += gotrd;
+            io->offset += gotrd;
+            buf += gotrd;
+            len -= gotrd;
+            rd += gotrd;
+        }
+
+        assert(io->page_ofs <= io->page_size);
+        if (io->page_ofs >= io->page_size) {
+            /* next page */
+            if (io->page_number >= lep->le_header.number_of_memory_pages) break; /* at or past last page */
+            io->page_number++;
+            io->page_ofs = 0;
+
+            /* page numbers are 1-based, our array is zero based */
+            pageent = (const struct exe_le_header_parseinfo_object_page_table_entry*)(lep->le_object_page_map_table + io->page_number - 1);
+            io->file_ofs = pageent->page_data_offset;
+        }
+    }
+
+    return rd;
+}
+
+#pragma pack(push,1)
+// Windows VXD DDB structure (Windows 3.1)
+struct windows_vxd_ddb_win31 {
+    uint32_t                        DDB_Next;               // +0x00 next pointer in memory (0 in file)
+    uint16_t                        DDB_SDK_Version;        // +0x04 SDK version (in this case 3.10)
+    uint16_t                        DDB_Req_Device_Number;  // +0x06 required device number (can be Undefined_Device_ID)
+    uint8_t                         DDB_Dev_Major_Version;  // +0x08
+    uint8_t                         DDB_Dev_Minor_Version;  // +0x09
+    uint16_t                        DDB_Flags;              // +0x0A Flags for init calls complete
+    char                            DDB_Name[8];            // +0x0C Device name (padded with spaces, not NUL terminated)
+    uint32_t                        DDB_Init_Order;         // +0x14 Initialization Order
+    uint32_t                        DDB_Control_Proc;       // +0x18 Offset of control procedure
+    uint32_t                        DDB_V86_API_Proc;       // +0x1C Offset of API procedure or 0
+    uint32_t                        DDB_PM_API_Proc;        // +0x20 Offset of API procedure or 0
+    uint32_t                        DDB_V86_API_CSIP;       // +0x24 CS:IP of API entry point
+    uint32_t                        DDB_PM_API_CSIP;        // +0x28 CS:IP of API entry point
+    uint32_t                        DDB_Reference_Data;     // +0x2C Reference data from real mode
+    uint32_t                        DDB_Service_Table_Ptr;  // +0x30 Pointer to service table
+    uint32_t                        DDB_Service_Table_Size; // +0x34 Number of services
+};                                                          // =0x38
+#pragma pack(pop)
+
 ///////////////
 
 void print_entry_table_locate_name_by_ordinal(const struct exe_ne_header_name_entry_table * const nonresnames,const struct exe_ne_header_name_entry_table *resnames,const unsigned int ordinal) {
@@ -1451,10 +1550,59 @@ int main(int argc,char **argv) {
                 /* is named, ends in _DDB */
                 char *s = tmp + strlen(tmp) - 4;
                 if (s > tmp && !strcasecmp(s,"_DDB")) {
+                    struct windows_vxd_ddb_win31 *ddb_31;
+                    struct le_vmap_trackio io;
+                    unsigned char ddb[256];
+                    char tmp[9];
+                    int rd;
+
                     is_vxd = 1;
                     printf("* This appears to be a 32-bit Windows 386/VXD driver\n");
                     printf("    VXD DDB block in Object #%u : 0x%08lx\n",
                         (unsigned int)ent->object,(unsigned long)offset);
+
+                    if (le_segofs_to_trackio(&io,ent->object,offset,&le_parser)) {
+                        printf("        File offset %lu (0x%lX) (page #%lu at %lu + page offset 0x%lX / 0x%lX)\n",
+                            (unsigned long)io.file_ofs + (unsigned long)io.page_ofs,
+                            (unsigned long)io.file_ofs + (unsigned long)io.page_ofs,
+                            (unsigned long)io.page_number,
+                            (unsigned long)io.file_ofs,
+                            (unsigned long)io.page_ofs,
+                            (unsigned long)io.page_size);
+
+                        // now read it
+                        rd = le_trackio_read(ddb,sizeof(ddb),src_fd,&io,&le_parser);
+                        if (rd >= (int)sizeof(*ddb_31)) {
+                            ddb_31 = (struct windows_vxd_ddb_win31*)ddb;
+
+                            printf("        Windows 386/VXD DDB structure:\n");
+                            printf("            DDB_Next:               0x%08lX\n",(unsigned long)ddb_31->DDB_Next);
+                            printf("            DDB_SDK_Version:        %u.%u (0x%04X)\n",
+                                ddb_31->DDB_SDK_Version>>8,
+                                ddb_31->DDB_SDK_Version&0xFFU,
+                                ddb_31->DDB_SDK_Version);
+                            printf("            DDB_Req_Device_Number:  0x%04x\n",ddb_31->DDB_Req_Device_Number);
+                            printf("            DDB_Dev_*_Version:      %u.%u\n",ddb_31->DDB_Dev_Major_Version,ddb_31->DDB_Dev_Minor_Version);
+                            printf("            DDB_Flags:              0x%04x\n",ddb_31->DDB_Flags);
+
+                            memcpy(tmp,ddb_31->DDB_Name,8); tmp[8] = 0;
+                            printf("            DDB_Name:               \"%s\"\n",tmp);
+
+                            printf("            DDB_Init_Order:         0x%08lx\n",(unsigned long)ddb_31->DDB_Init_Order);
+                            printf("            DDB_Control_Proc:       0x%08lx\n",(unsigned long)ddb_31->DDB_Control_Proc);
+                            printf("            DDB_V86_API_Proc:       0x%08lx\n",(unsigned long)ddb_31->DDB_V86_API_Proc);
+                            printf("            DDB_PM_API_Proc:        0x%08lx\n",(unsigned long)ddb_31->DDB_PM_API_Proc);
+                            printf("            DDB_V86_API_CSIP:       %04X:%04X\n",
+                                (unsigned int)(ddb_31->DDB_V86_API_CSIP >> 16UL),
+                                (unsigned int)(ddb_31->DDB_V86_API_CSIP & 0xFFFFUL));
+                            printf("            DDB_PM_API_CSIP:        %04X:%04X\n",
+                                (unsigned int)(ddb_31->DDB_PM_API_CSIP >> 16UL),
+                                (unsigned int)(ddb_31->DDB_PM_API_CSIP & 0xFFFFUL));
+                            printf("            DDB_Reference_Data:     0x%08lx\n",(unsigned long)ddb_31->DDB_Reference_Data);
+                            printf("            DDB_Service_Table_Ptr:  0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Ptr);
+                            printf("            DDB_Service_Table_Size: 0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Size);
+                        }
+                    }
                 }
             }
         }
