@@ -253,11 +253,72 @@ uint32_t le_exe_header_entry_table_size(struct exe_le_header * const h) {
     return 0;
 }
 
+#pragma pack(push,1)
+struct le_header_entry_table_entry {
+    uint8_t                                                 type;
+    uint16_t                                                object;
+    uint32_t                                                offset;         // into raw
+};
+#pragma pack(pop)
+
+struct le_header_entry_table {
+    unsigned char*                                          raw;
+    size_t                                                  raw_length;
+    struct le_header_entry_table_entry*                     table;
+    size_t                                                  length;
+};
+
+void le_header_entry_table_free_table(struct le_header_entry_table *t) {
+    if (t->table) free(t->table);
+    t->table = NULL;
+    t->length = 0;
+}
+
+void le_header_entry_table_free_raw(struct le_header_entry_table *t) {
+    if (t->raw) free(t->raw);
+    t->raw_length = 0;
+    t->raw = NULL;
+}
+
+void le_header_entry_table_free(struct le_header_entry_table *t) {
+    le_header_entry_table_free_table(t);
+    le_header_entry_table_free_raw(t);
+}
+
+unsigned char *le_header_entry_table_get_raw_entry(struct le_header_entry_table *t,size_t i) {
+    size_t o;
+
+    if (t->table == NULL || t->raw == NULL)
+        return NULL;
+    if (t->length == 0 || t->raw_length == 0)
+        return NULL;
+    if (i >= t->length)
+        return NULL;
+
+    o = t->table[i].offset;
+    if (o >= t->raw_length)
+        return NULL;
+
+    return t->raw + o;
+}
+
+unsigned char *le_header_entry_table_alloc(struct le_header_entry_table *t,size_t sz) {
+    le_header_entry_table_free_table(t);
+    if (t->raw == NULL) {
+        t->raw = malloc(sz);
+        if (t->raw == NULL) return NULL;
+        t->raw_length = sz;
+    }
+
+    return t->raw;
+}
+
 struct le_header_parseinfo {
     struct exe_le_header_parseinfo_object_page_table_entry* le_object_page_map_table;           /* [number_of_memory_pages] entries */
     struct exe_le_header_object_table_entry*                le_object_table;                    /* [object_table_entries] entries */
     uint32_t*                                               le_fixup_page_table;                /* [number_of_memory_pages + 1] entries */
     uint32_t                                                le_header_offset;
+    struct le_header_entry_table                            le_entry_table;
     struct exe_le_header                                    le_header;
 };
 
@@ -289,6 +350,7 @@ void le_header_parseinfo_free_fixup_page_table(struct le_header_parseinfo * cons
 
 void le_header_parseinfo_free(struct le_header_parseinfo * const h) {
     le_header_parseinfo_free_object_page_map_table(h);
+    le_header_entry_table_free(&h->le_entry_table);
     le_header_parseinfo_free_fixup_page_table(h);
     le_header_parseinfo_free_object_table(h);
 }
@@ -399,6 +461,111 @@ unsigned char *le_header_parseinfo_alloc_fixup_page_table(struct le_header_parse
         h->le_fixup_page_table = (uint32_t*)malloc(sz);
 
     return (unsigned char*)(h->le_fixup_page_table);
+}
+
+void le_header_entry_table_parse(struct le_header_entry_table * const t) {
+    struct le_header_entry_table_entry *ent;
+    unsigned char *base,*scan,*fence;
+    unsigned int i,ordinal;
+    unsigned char cnt,typ;
+    uint16_t object;
+
+    le_header_entry_table_free_table(t);
+    if (t->raw == NULL || t->raw_length == 0)
+        return;
+
+    base = t->raw;
+    fence = base + t->raw_length;
+
+    /* first pass: count items */
+    ordinal = 0;
+    scan = base;
+    while (scan < fence) {
+        cnt = *scan++;
+        if (cnt == 0 || scan >= fence) break;
+        typ = *scan++;
+        if (scan >= fence) break;
+
+        if (typ == 0) {
+            ordinal += cnt;
+        }
+        else if (typ == 1) { // 16-bit entry point
+            scan += 2; // OBJECT
+            scan += (1 * 2) * cnt; // (FLAGS + OFFSET) x cnt
+            ordinal += cnt;
+        }
+        else if (typ == 3) { // 32-bit entry point
+            scan += 2; // OBJECT
+            scan += (1 * 4) * cnt; // (FLAGS + OFFSET) x cnt
+            ordinal += cnt;
+        }
+        else {
+            fprintf(stderr,"Entry point parsing: Unknown block cnt=%u typ=0x%02x\n",cnt,typ);
+            break;
+        }
+    }
+
+    if (ordinal == 0)
+        return;
+
+    t->table = (struct le_header_entry_table_entry*)malloc(sizeof(*(t->table)) * ordinal);
+    if (t->table == NULL) return;
+    t->length = ordinal;
+
+    ordinal = 0;
+    scan = base;
+    while (scan < fence) {
+        cnt = *scan++;
+        if (cnt == 0 || scan >= fence) break;
+        typ = *scan++;
+        if (scan >= fence) break;
+
+        if (typ == 0) {
+            for (i=0;i < cnt && ordinal < t->length;i++) {
+                ent = t->table + (ordinal++);
+                ent->type = typ;
+                ent->object = 0;
+                ent->offset = (uint32_t)(scan - base);
+            }
+        }
+        else if (typ == 1) {
+            if ((scan+2) > fence) break;
+            object = *((uint16_t*)scan); scan += 2;
+
+            for (i=0;i < cnt && ordinal < t->length;i++) {
+                if ((scan+1+2) > fence) break;
+
+                ent = t->table + (ordinal++);
+                ent->type = typ;
+                ent->object = object;
+                ent->offset = (uint32_t)(scan - base);
+
+                scan++;             // flags
+                scan += 2;          // offset
+            }
+        }
+        else if (typ == 3) {
+            if ((scan+2) > fence) break;
+            object = *((uint16_t*)scan); scan += 2;
+
+            for (i=0;i < cnt && ordinal < t->length;i++) {
+                if ((scan+1+4) > fence) break;
+
+                ent = t->table + (ordinal++);
+                ent->type = typ;
+                ent->object = object;
+                ent->offset = (uint32_t)(scan - base);
+
+                scan++;             // flags
+                scan += 4;          // offset
+            }
+        }
+        else {
+            break;
+        }
+    }
+
+    t->length = ordinal;
 }
 
 ///////////////
@@ -766,7 +933,7 @@ int main(int argc,char **argv) {
             // NTS: This table has one extra entry, so that you can determine the size of each fixup record entry per segment
             //      by the difference between each entry. Entries in the fixup record table (and therefore the offsets in this
             //      table) numerically increase for this reason.
-            if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) != ofs || (size_t)read(src_fd,le_parser.le_fixup_page_table,readlen) != (size_t)readlen)
+            if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) != ofs || (size_t)read(src_fd,base,readlen) != (size_t)readlen)
                 le_header_parseinfo_free_fixup_page_table(&le_parser);
         }
     }
@@ -1019,87 +1186,20 @@ int main(int argc,char **argv) {
     }
 
     if (le_header.entry_table_offset != (uint32_t)0) {
-        unsigned long ofs = le_header.entry_table_offset + le_header_offset;
-        uint32_t sz = le_exe_header_entry_table_size(&le_header);
+        unsigned long ofs = le_parser.le_header.entry_table_offset + le_parser.le_header_offset;
+        uint32_t readlen = le_exe_header_entry_table_size(&le_parser.le_header);
+        unsigned char *base = le_header_entry_table_alloc(&le_parser.le_entry_table,readlen);
 
-        if (sz != (uint32_t)0 && sz < (uint32_t)0x40000UL) {
-            unsigned char *base,*scan,*fence;
-            unsigned int i,ordinal = 1;
-
-            base = malloc(sz);
-            if (base != NULL) {
-                if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs && (uint32_t)read(src_fd,base,sz) == sz) {
-                    scan = base;
-                    fence = base + sz;
-
-                    printf("* Entry table\n");
-                    while (scan < fence) {
-                        unsigned char cnt,typ;
-
-                        cnt = *scan++;
-                        if (cnt == 0 || scan >= fence) break;
-                        typ = *scan++;
-                        if (scan >= fence) break;
-
-                        if (typ == 0) {
-                            for (i=0;i < cnt;i++,ordinal++) {
-                                printf("    Entry #%u: empty\n",ordinal);
-                            }
-                        }
-                        else if (typ == 1) {
-                            uint16_t object,offset;
-                            uint8_t flags;
-
-                            if ((scan+2) > fence) break;
-                            object = *((uint16_t*)scan); scan += 2;
-
-                            for (i=0;i < cnt;i++,ordinal++) {
-                                if ((scan+1+2) > fence) break;
-
-                                flags = *scan++;
-                                offset = *((uint16_t*)scan); scan += 2;
-
-                                printf("    Entry #%u: 16-bit entry point\n",ordinal);
-                                printf("        Object:         #%u\n",object);
-                                printf("        Flags:          %02X ",flags);
-                                if (flags & 1) printf("EXPORTED ");
-                                if (flags & 0xF8) printf("%u parameters ",flags >> 3);
-                                printf("\n");
-                                printf("        Offset:         0x%04x\n",offset);
-                            }
-                        }
-                        else if (typ == 3) {
-                            uint16_t object;
-                            uint32_t offset;
-                            uint8_t flags;
-
-                            if ((scan+2) > fence) break;
-                            object = *((uint16_t*)scan); scan += 2;
-
-                            for (i=0;i < cnt;i++,ordinal++) {
-                                if ((scan+1+4) > fence) break;
-
-                                flags = *scan++;
-                                offset = *((uint32_t*)scan); scan += 4;
-
-                                printf("    Entry #%u: 32-bit entry point\n",ordinal);
-                                printf("        Object:         #%u\n",object);
-                                printf("        Flags:          %02X ",flags);
-                                if (flags & 1) printf("EXPORTED ");
-                                if (flags & 0xF8) printf("%u parameters ",flags >> 3);
-                                printf("\n");
-                                printf("        Offset:         0x%08lx\n",(unsigned long)offset);
-                            }
-                        }
-                        else {
-                            printf("    ! Unknown block cnt=%u typ=0x%02x\n",cnt,typ);
-                            break;
-                        }
-                    }
-                }
-                free(base);
-            }
+        if (base != NULL) {
+            // NTS: This table has one extra entry, so that you can determine the size of each fixup record entry per segment
+            //      by the difference between each entry. Entries in the fixup record table (and therefore the offsets in this
+            //      table) numerically increase for this reason.
+            if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) != ofs || (size_t)read(src_fd,base,readlen) != (size_t)readlen)
+                le_header_entry_table_free(&le_parser.le_entry_table);
         }
+
+        if (le_parser.le_entry_table.raw != NULL)
+            le_header_entry_table_parse(&le_parser.le_entry_table);
     }
 
     if (le_parser.le_object_table != NULL) {
@@ -1186,6 +1286,60 @@ int main(int argc,char **argv) {
                     (unsigned long)ent,
                     (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset,
                     (unsigned long)ent + (unsigned long)le_header_offset + (unsigned long)le_header.fixup_record_table_offset);
+        }
+    }
+
+    if (le_parser.le_entry_table.table != NULL) {
+        struct le_header_entry_table_entry *ent;
+        unsigned char *raw;
+        unsigned int i,mx;
+
+        mx = le_parser.le_entry_table.length;
+        printf("* Entry table, %lu entries\n",(unsigned long)mx);
+
+        for (i=0;i < mx;i++) {
+            ent = le_parser.le_entry_table.table + i;
+            raw = le_header_entry_table_get_raw_entry(&le_parser.le_entry_table,i); /* parser makes sure there is sufficient space for struct given type */
+            if (raw == NULL) continue;
+
+            printf("    Ordinal #%u: ",i + 1);
+            if (ent->type == 0)
+                printf("empty\n");
+            else if (ent->type == 2) {
+                uint16_t offset;
+                uint8_t flags;
+
+                flags = *raw++;
+                offset = *((uint16_t*)raw); raw += 2;
+                assert(raw <= (le_parser.le_entry_table.raw+le_parser.le_entry_table.raw_length));
+
+                printf("16-bit entry point\n");
+                printf("        Object:         #%u\n",ent->object);
+                printf("        Flags:          %02X ",flags);
+                if (flags & 1) printf("EXPORTED ");
+                if (flags & 0xF8) printf("%u parameters ",flags >> 3);
+                printf("\n");
+                printf("        Offset:         0x%04lx\n",(unsigned long)offset);
+            }
+            else if (ent->type == 3) {
+                uint32_t offset;
+                uint8_t flags;
+
+                flags = *raw++;
+                offset = *((uint32_t*)raw); raw += 4;
+                assert(raw <= (le_parser.le_entry_table.raw+le_parser.le_entry_table.raw_length));
+
+                printf("32-bit entry point\n");
+                printf("        Object:         #%u\n",ent->object);
+                printf("        Flags:          %02X ",flags);
+                if (flags & 1) printf("EXPORTED ");
+                if (flags & 0xF8) printf("%u parameters ",flags >> 3);
+                printf("\n");
+                printf("        Offset:         0x%08lx\n",(unsigned long)offset);
+            }
+            else {
+                printf("unknown type %02x\n",ent->type);
+            }
         }
     }
 
