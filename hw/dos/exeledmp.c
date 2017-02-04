@@ -1050,10 +1050,12 @@ int main(int argc,char **argv) {
                             uint16_t object,offset;
                             uint8_t flags;
 
-                            for (i=0;i < cnt;i++,ordinal++) {
-                                if ((scan+2+1+2) > fence) break;
+                            if ((scan+2) > fence) break;
+                            object = *((uint16_t*)scan); scan += 2;
 
-                                object = *((uint16_t*)scan); scan += 2;
+                            for (i=0;i < cnt;i++,ordinal++) {
+                                if ((scan+1+2) > fence) break;
+
                                 flags = *scan++;
                                 offset = *((uint16_t*)scan); scan += 2;
 
@@ -1071,10 +1073,12 @@ int main(int argc,char **argv) {
                             uint32_t offset;
                             uint8_t flags;
 
-                            for (i=0;i < cnt;i++,ordinal++) {
-                                if ((scan+2+1+4) > fence) break;
+                            if ((scan+2) > fence) break;
+                            object = *((uint16_t*)scan); scan += 2;
 
-                                object = *((uint16_t*)scan); scan += 2;
+                            for (i=0;i < cnt;i++,ordinal++) {
+                                if ((scan+1+4) > fence) break;
+
                                 flags = *scan++;
                                 offset = *((uint32_t*)scan); scan += 4;
 
