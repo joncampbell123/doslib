@@ -756,7 +756,6 @@ void print_name_table(const struct exe_ne_header_name_entry_table * const t) {
 }
 
 int main(int argc,char **argv) {
-    unsigned char is_vxd = 0;
     struct le_header_parseinfo le_parser;
     struct exe_le_header le_header;
     uint32_t le_header_offset;
@@ -1553,10 +1552,10 @@ int main(int argc,char **argv) {
                     struct windows_vxd_ddb_win31 *ddb_31;
                     struct le_vmap_trackio io;
                     unsigned char ddb[256];
+                    unsigned int i;
                     char tmp[9];
                     int rd;
 
-                    is_vxd = 1;
                     printf("* This appears to be a 32-bit Windows 386/VXD driver\n");
                     printf("    VXD DDB block in Object #%u : 0x%08lx\n",
                         (unsigned int)ent->object,(unsigned long)offset);
@@ -1601,6 +1600,26 @@ int main(int argc,char **argv) {
                             printf("            DDB_Reference_Data:     0x%08lx\n",(unsigned long)ddb_31->DDB_Reference_Data);
                             printf("            DDB_Service_Table_Ptr:  0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Ptr);
                             printf("            DDB_Service_Table_Size: 0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Size);
+
+                            // go dump the service table
+                            // NTS: Some VXD drivers indicate a table size, but the offset (ptr) is zero. dumping from that location shows more zeros.
+                            //      What is the meaning of that, exactly? Is it a clever way of defining the table such that the VXD can patch it with
+                            //      entry points later?
+                            //
+                            //      Examples:
+                            //        - Creative Sound Blaster 16 drivers for Windows 3.1 (VSBPD.386)
+                            //        - Microsoft PCI VXD driver (pci.vxd)
+                            if (ddb_31->DDB_Service_Table_Size != 0 && le_segofs_to_trackio(&io,ent->object,ddb_31->DDB_Service_Table_Ptr,&le_parser)) {
+                                uint32_t ptr;
+
+                                printf("            DDB service table:\n");
+                                for (i=0;i < (unsigned int)ddb_31->DDB_Service_Table_Size;i++) {
+                                    if (le_trackio_read((unsigned char*)(&ptr),sizeof(uint32_t),src_fd,&io,&le_parser) != sizeof(uint32_t))
+                                        break;
+
+                                    printf("                0x%08lX\n",(unsigned long)ptr);
+                                }
+                            }
                         }
                     }
                 }
