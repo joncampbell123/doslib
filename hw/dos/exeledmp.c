@@ -51,6 +51,10 @@
 
 #include <hw/dos/exehdr.h>
 
+/* re-use a little code from the NE parser. */
+#include <hw/dos/exenehdr.h>
+#include <hw/dos/exenepar.h>
+
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
@@ -314,6 +318,8 @@ unsigned char *le_header_entry_table_alloc(struct le_header_entry_table *t,size_
 }
 
 struct le_header_parseinfo {
+    struct exe_ne_header_name_entry_table                   le_resident_names;
+    struct exe_ne_header_name_entry_table                   le_nonresident_names;
     struct exe_le_header_parseinfo_object_page_table_entry* le_object_page_map_table;           /* [number_of_memory_pages] entries */
     struct exe_le_header_object_table_entry*                le_object_table;                    /* [object_table_entries] entries */
     uint32_t*                                               le_fixup_page_table;                /* [number_of_memory_pages + 1] entries */
@@ -349,6 +355,8 @@ void le_header_parseinfo_free_fixup_page_table(struct le_header_parseinfo * cons
 }
 
 void le_header_parseinfo_free(struct le_header_parseinfo * const h) {
+    exe_ne_header_name_entry_table_free(&h->le_nonresident_names);
+    exe_ne_header_name_entry_table_free(&h->le_resident_names);
     le_header_parseinfo_free_object_page_map_table(h);
     le_header_entry_table_free(&h->le_entry_table);
     le_header_parseinfo_free_fixup_page_table(h);
@@ -569,6 +577,29 @@ void le_header_entry_table_parse(struct le_header_entry_table * const t) {
 }
 
 ///////////////
+
+void print_name_table(const struct exe_ne_header_name_entry_table * const t) {
+    const struct exe_ne_header_name_entry *ent = NULL;
+    uint16_t ordinal;
+    char tmp[255+1];
+    unsigned int i;
+
+    if (t->table == NULL || t->length == 0)
+        return;
+
+    for (i=0;i < t->length;i++) {
+        ent = t->table + i;
+        ordinal = ne_name_entry_get_ordinal(t,ent);
+        ne_name_entry_get_name(tmp,sizeof(tmp),t,ent);
+
+        /* NTS: LE executables do NOT reserve the first entry for module name,
+         *      at least for nonresident names */
+        if (ordinal == 0)
+            printf("        Module name:    '%s'\n",tmp);
+        else
+            printf("        Ordinal #%-5d: '%s'\n",ordinal,tmp);
+    }
+}
 
 int main(int argc,char **argv) {
     struct le_header_parseinfo le_parser;
@@ -1111,78 +1142,35 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (le_header.resident_names_table_offset != (uint32_t)0 &&
-        le_header.entry_table_offset != (uint32_t)0 &&
-        le_header.resident_names_table_offset < le_header.entry_table_offset) {
+    /* load resident name table */
+    if (le_header.resident_names_table_offset != (uint32_t)0 && le_header.entry_table_offset != (uint32_t)0 &&
+        le_header.resident_names_table_offset < le_header.entry_table_offset &&
+        (unsigned long)lseek(src_fd,le_header.resident_names_table_offset + le_header_offset,SEEK_SET) == (le_header.resident_names_table_offset + le_header_offset)) {
         uint32_t sz = le_header.entry_table_offset - le_header.resident_names_table_offset;
-        unsigned long ofs = le_header.resident_names_table_offset + le_header_offset;
+        unsigned char *base;
 
-        if (sz != (uint32_t)0 && sz < (uint32_t)0x10000UL) {
-            unsigned char *base,*scan,*fence,len;
-            unsigned int ordinal;
-            char tmp[255+1];
-
-            printf("* Resident names table\n");
-
-            base = malloc(sz);
-            if (base != NULL) {
-                if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs && (uint32_t)read(src_fd,base,sz) == sz) {
-                    scan = base;
-                    fence = base + sz;
-                    while (scan < fence) {
-                        len = *scan++;
-                        if (len == 0) break;
-                        if ((scan + len + 2) > fence) break;
-
-                        if (len != 0) memcpy(tmp,scan,len);
-                        tmp[len] = 0;
-                        scan += len;
-
-                        ordinal = *((uint16_t*)scan);
-                        scan += 2;
-
-                        printf("    \"%s\" ordinal %u\n",
-                            tmp,ordinal);
-                    }
-                }
-                free(base);
-            }
+        base = exe_ne_header_name_entry_table_alloc_raw(&le_parser.le_resident_names,sz);
+        if (base != NULL) {
+            if ((unsigned long)read(src_fd,base,sz) != sz)
+                exe_ne_header_name_entry_table_free_raw(&le_parser.le_resident_names);
         }
+
+        exe_ne_header_name_entry_table_parse_raw(&le_parser.le_resident_names);
     }
 
+    /* load nonresident name table */
     if (le_header.nonresident_names_table_offset != (uint32_t)0 &&
         le_header.nonresident_names_table_length != (uint32_t)0 &&
-        le_header.nonresident_names_table_length < (uint32_t)0x20000UL) {
-        unsigned char *base,*scan,*fence,len;
-        unsigned int ordinal;
-        char tmp[255+1];
+        (unsigned long)lseek(src_fd,le_header.nonresident_names_table_offset,SEEK_SET) == le_header.nonresident_names_table_offset) {
+        unsigned char *base;
 
-        printf("* Non-resident names table\n");
-
-        base = malloc(le_header.nonresident_names_table_length);
+        base = exe_ne_header_name_entry_table_alloc_raw(&le_parser.le_nonresident_names,le_header.nonresident_names_table_length);
         if (base != NULL) {
-            if ((unsigned long)lseek(src_fd,le_header.nonresident_names_table_offset,SEEK_SET) == le_header.nonresident_names_table_offset &&
-                (uint32_t)read(src_fd,base,le_header.nonresident_names_table_length) == le_header.nonresident_names_table_length) {
-                scan = base;
-                fence = base + le_header.nonresident_names_table_length;
-                while (scan < fence) {
-                    len = *scan++;
-                    if (len == 0) break;
-                    if ((scan + len + 2) > fence) break;
-
-                    if (len != 0) memcpy(tmp,scan,len);
-                    tmp[len] = 0;
-                    scan += len;
-
-                    ordinal = *((uint16_t*)scan);
-                    scan += 2;
-
-                    printf("    \"%s\" ordinal %u\n",
-                            tmp,ordinal);
-                }
-            }
-            free(base);
+            if ((unsigned long)read(src_fd,base,le_header.nonresident_names_table_length) != le_header.nonresident_names_table_length)
+                exe_ne_header_name_entry_table_free_raw(&le_parser.le_nonresident_names);
         }
+
+        exe_ne_header_name_entry_table_parse_raw(&le_parser.le_nonresident_names);
     }
 
     if (le_header.entry_table_offset != (uint32_t)0) {
@@ -1245,6 +1233,16 @@ int main(int argc,char **argv) {
                     (unsigned long)ent->page_map_entries);
         }
     }
+
+    /* non-resident name table */
+    printf("* Non-resident name table, %u entries\n",
+        (unsigned int)le_parser.le_nonresident_names.length);
+    print_name_table(&le_parser.le_nonresident_names);
+
+    /* resident name table */
+    printf("* Resident name table, %u entries\n",
+        (unsigned int)le_parser.le_resident_names.length);
+    print_name_table(&le_parser.le_resident_names);
 
     if (le_parser.le_object_page_map_table != NULL) {
         unsigned int i;
