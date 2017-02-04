@@ -175,6 +175,15 @@ struct exe_lx_header_object_page_table_entry {
 };                                                  // =0x08
 #pragma pack(pop)
 
+#pragma pack(push,1)
+// parsed form, in parser struct
+struct exe_le_header_parseinfo_object_page_table_entry {
+    uint32_t        page_data_offset;               // +0x00 offset from preload page in bytes
+    uint16_t        data_size;                      // +0x04 data size (from LX, or synthesized from LE)
+    uint16_t        flags;                          // +0x06 flags
+};                                                  // =0x08
+#pragma pack(pop)
+
 #define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_READABLE                 (1UL << 0UL)
 #define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_WRITEABLE                (1UL << 1UL)
 #define LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE               (1UL << 2UL)
@@ -245,10 +254,11 @@ uint32_t le_exe_header_entry_table_size(struct exe_le_header * const h) {
 }
 
 struct le_header_parseinfo {
-    struct exe_le_header_object_table_entry*            le_object_table;                    /* [object_table_entries] entries */
-    uint32_t*                                           le_fixup_page_table;                /* [number_of_memory_pages + 1] entries */
-    uint32_t                                            le_header_offset;
-    struct exe_le_header                                le_header;
+    struct exe_le_header_parseinfo_object_page_table_entry* le_object_page_map_table;           /* [number_of_memory_pages] entries */
+    struct exe_le_header_object_table_entry*                le_object_table;                    /* [object_table_entries] entries */
+    uint32_t*                                               le_fixup_page_table;                /* [number_of_memory_pages + 1] entries */
+    uint32_t                                                le_header_offset;
+    struct exe_le_header                                    le_header;
 };
 
 uint32_t le_header_parseinfo_fixup_page_table_entries(const struct le_header_parseinfo * const h) {
@@ -267,12 +277,18 @@ void le_header_parseinfo_free_object_table(struct le_header_parseinfo * const h)
     h->le_object_table = NULL;
 }
 
+void le_header_parseinfo_free_object_page_map_table(struct le_header_parseinfo * const h) {
+    if (h->le_object_table) free(h->le_object_page_map_table);
+    h->le_object_page_map_table = NULL;
+}
+
 void le_header_parseinfo_free_fixup_page_table(struct le_header_parseinfo * const h) {
     if (h->le_fixup_page_table) free(h->le_fixup_page_table);
     h->le_fixup_page_table = NULL;
 }
 
 void le_header_parseinfo_free(struct le_header_parseinfo * const h) {
+    le_header_parseinfo_free_object_page_map_table(h);
     le_header_parseinfo_free_fixup_page_table(h);
     le_header_parseinfo_free_object_table(h);
 }
@@ -281,8 +297,90 @@ size_t le_header_parseinfo_get_fixup_page_table_buffer_size(struct le_header_par
     return sizeof(uint32_t) * ((unsigned long)h->le_header.number_of_memory_pages + 1UL);
 }
 
+void le_header_parseinfo_finish_read_get_object_page_map_table(struct le_header_parseinfo * const h) {
+    /* the caller read the raw data into memory.
+     * we need to convert it in place to the exe_le_header_parseinfo_object_page_table_entry format.
+     * conversion depend on whether it's the LE or LX format.
+     *
+     * There is NO protection against calling this function twice! */
+    struct exe_le_header_parseinfo_object_page_table_entry *d;
+    unsigned int i;
+
+    if (h->le_header.number_of_memory_pages == 0)
+        return;
+
+    i = h->le_header.number_of_memory_pages - 1;
+    d = (struct exe_le_header_parseinfo_object_page_table_entry*)h->le_object_page_map_table + i;
+
+    /* convert backwards, in place */
+    if (h->le_header.signature == EXE_LE_SIGNATURE) {
+        struct exe_le_header_object_page_table_entry *s =
+            ((struct exe_le_header_object_page_table_entry*)h->le_object_page_map_table) + i;
+
+        assert(sizeof(*s) <= sizeof(*d));
+
+        do {
+            struct exe_le_header_object_page_table_entry se = *s; /* because we're converting in-place */
+
+            d->page_data_offset =
+                (((uint32_t)se.page_data_offset - (uint32_t)1) * (uint32_t)h->le_header.memory_page_size) +
+                (uint32_t)h->le_header.data_pages_offset;
+            d->data_size =
+                (uint16_t)h->le_header.memory_page_size;
+            d->flags =
+                se.flags;
+
+            d--; s--;
+        } while ((i--) != 0);
+    }
+    else if (h->le_header.signature == EXE_LX_SIGNATURE) {
+        uint32_t pshf =
+            (uint32_t)exe_le_PAGE_SHIFT(&h->le_header);
+        struct exe_lx_header_object_page_table_entry *s =
+            ((struct exe_lx_header_object_page_table_entry*)h->le_object_page_map_table) + i;
+
+        assert(sizeof(*s) <= sizeof(*d));
+
+        do {
+            struct exe_lx_header_object_page_table_entry se = *s; /* because we're converting in-place */
+
+            d->page_data_offset =
+                ((uint32_t)se.page_data_offset << pshf) +
+                (uint32_t)h->le_header.data_pages_offset;
+            d->data_size =
+                se.data_size;
+            d->flags =
+                se.flags;
+
+            d--; s--;
+        } while ((i--) != 0);
+    }
+}
+
+size_t le_header_parseinfo_get_object_page_map_table_read_buffer_size(struct le_header_parseinfo * const h) {
+    if (h->le_header.signature == EXE_LE_SIGNATURE)
+        return sizeof(struct exe_le_header_object_page_table_entry) * h->le_header.number_of_memory_pages;
+    else if (h->le_header.signature == EXE_LX_SIGNATURE)
+        return sizeof(struct exe_lx_header_object_page_table_entry) * h->le_header.number_of_memory_pages;
+
+    return 0;
+}
+
+size_t le_header_parseinfo_get_object_page_map_table_buffer_size(struct le_header_parseinfo * const h) {
+    return sizeof(struct exe_le_header_parseinfo_object_page_table_entry) * h->le_header.number_of_memory_pages;
+}
+
 size_t le_header_parseinfo_get_object_table_buffer_size(struct le_header_parseinfo * const h) {
     return sizeof(struct exe_le_header_object_table_entry) * h->le_header.object_table_entries;
+}
+
+unsigned char *le_header_parseinfo_alloc_object_page_map_table(struct le_header_parseinfo * const h) {
+    const size_t sz = le_header_parseinfo_get_object_page_map_table_buffer_size(h);
+
+    if (h->le_object_page_map_table == NULL)
+        h->le_object_page_map_table = (struct exe_le_header_parseinfo_object_page_table_entry*)malloc(sz);
+
+    return (unsigned char*)(h->le_object_page_map_table);
 }
 
 unsigned char *le_header_parseinfo_alloc_object_table(struct le_header_parseinfo * const h) {
@@ -646,64 +744,17 @@ int main(int argc,char **argv) {
             le_header_parseinfo_free_object_table(&le_parser);
     }
 
-    if (le_header.object_page_map_offset != 0 &&
-        le_header.number_of_memory_pages != 0) {
-        if (le_header.signature == EXE_LE_SIGNATURE) {
-            unsigned long ofs = le_header.object_page_map_offset + (unsigned long)le_header_offset;
-            struct exe_le_header_object_page_table_entry ent;
-            unsigned int i;
+    if (le_header.object_page_map_offset != 0 && le_header.number_of_memory_pages != 0) {
+        unsigned long ofs = le_header.object_page_map_offset + (unsigned long)le_parser.le_header_offset;
+        unsigned char *base = le_header_parseinfo_alloc_object_page_map_table(&le_parser);
+        size_t readlen = le_header_parseinfo_get_object_page_map_table_read_buffer_size(&le_parser);
 
-            printf("* Object page map table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
-            if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
-                for (i=0;i < le_header.number_of_memory_pages;i++) {
-                    if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
-                        break;
+        if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) != ofs || (size_t)read(src_fd,base,readlen) != readlen)
+            le_header_parseinfo_free_object_page_map_table(&le_parser);
 
-                    printf("    Page #%u\n",i + 1);
-                    printf("        Flags:                          0x%04x\n",
-                            (unsigned int)ent.flags);
-                    /* FIXME: I like how the LX specification says "the bit definitions for this word are below"
-                     *        and then lists an enumeration of values. So is it a bitfield or a WORD-sized enumeration, guys?
-                     *        Also, all the LE executables I have on hand have this field set to 0. */
-                    printf("        Page data offset:               %u (offset (%u * %lu) + data pages offset %lu = file offset 0x%08lx (%lu))\n",
-                            (unsigned int)ent.page_data_offset,
-                            (unsigned int)ent.page_data_offset - 1U,
-                            (unsigned long)le_header.memory_page_size,
-                            (unsigned long)le_header.data_pages_offset,
-                            (((unsigned long)ent.page_data_offset - 1UL) * (unsigned long)le_header.memory_page_size) + le_header.data_pages_offset,
-                            (((unsigned long)ent.page_data_offset - 1UL) * (unsigned long)le_header.memory_page_size) + le_header.data_pages_offset);
-                }
-            }
-        }
-        else if (le_header.signature == EXE_LX_SIGNATURE) {
-            unsigned long ofs = le_header.object_page_map_offset + (unsigned long)le_header_offset;
-            struct exe_lx_header_object_page_table_entry ent;
-            unsigned int i;
-
-            printf("* Object page map table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
-            if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs) {
-                for (i=0;i < le_header.number_of_memory_pages;i++) {
-                    if ((size_t)read(src_fd,&ent,sizeof(ent)) != sizeof(ent))
-                        break;
-
-                    printf("    Page #%u\n",i + 1);
-                    printf("        Flags:                          0x%04x\n",
-                            (unsigned int)ent.flags);
-                    /* FIXME: I like how the LX specification says "the bit definitions for this word are below"
-                     *        and then lists an enumeration of values. So is it a bitfield or a WORD-sized enumeration, guys?
-                     *        Also, all the LE executables I have on hand have this field set to 0. */
-                    printf("        Data size:                      0x%04x\n",
-                            (unsigned int)ent.data_size);
-                    printf("        Page data offset:               %u (offset (%u << %lu) + data pages offset %lu = file offset 0x%08lx (%lu))\n",
-                            (unsigned int)ent.page_data_offset,
-                            (unsigned int)ent.page_data_offset - 1U,
-                            (unsigned long)exe_le_PAGE_SHIFT(&le_header),
-                            (unsigned long)le_header.data_pages_offset,
-                            (((unsigned long)ent.page_data_offset - 1UL) << (unsigned long)exe_le_PAGE_SHIFT(&le_header)) + le_header.data_pages_offset,
-                            (((unsigned long)ent.page_data_offset - 1UL) << (unsigned long)exe_le_PAGE_SHIFT(&le_header)) + le_header.data_pages_offset);
-                }
-            }
-        }
+        /* "finish" reading by having the library convert the data in-place */
+        if (le_parser.le_object_page_map_table != NULL)
+            le_header_parseinfo_finish_read_get_object_page_map_table(&le_parser);
     }
 
     if (le_header.fixup_page_table_offset != 0 && le_header.number_of_memory_pages != 0) {
@@ -1082,6 +1133,27 @@ int main(int argc,char **argv) {
             printf("        Page map entries:               0x%08lx (%lu)\n",
                     (unsigned long)ent->page_map_entries,
                     (unsigned long)ent->page_map_entries);
+        }
+    }
+
+    if (le_parser.le_object_page_map_table != NULL) {
+        unsigned int i;
+
+        printf("* Object page map table, %lu entries\n",(unsigned long)le_parser.le_header.number_of_memory_pages);
+        for (i=0;i < le_parser.le_header.number_of_memory_pages;i++) {
+            struct exe_le_header_parseinfo_object_page_table_entry *ent =
+                le_parser.le_object_page_map_table + i;
+
+            printf("    Page #%u\n",i + 1);
+            printf("        Flags:                          0x%04x\n",
+                    (unsigned int)ent->flags);
+            /* FIXME: I like how the LX specification says "the bit definitions for this word are below"
+             *        and then lists an enumeration of values. So is it a bitfield or a WORD-sized enumeration, guys?
+             *        Also, all the LE executables I have on hand have this field set to 0. */
+            printf("        Data size:                      0x%04x bytes\n",
+                    (unsigned int)ent->data_size);
+            printf("        Page data offset:               %lu bytes\n",
+                    (unsigned long)ent->page_data_offset);
         }
     }
 
