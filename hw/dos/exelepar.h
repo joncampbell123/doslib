@@ -43,6 +43,21 @@ struct le_vmap_trackio {
     uint32_t                offset;         // offset within object
 };
 
+struct le_header_fixup_record_table {
+    uint32_t                                                file_offset;
+    uint32_t                                                file_length;
+    unsigned char*                                          raw;
+    size_t                                                  raw_length;
+    uint32_t*                                               table;
+    size_t                                                  alloc;
+    size_t                                                  length;
+};
+
+struct le_header_fixup_record_list {
+    struct le_header_fixup_record_table*                    table;
+    size_t                                                  length;
+};
+
 int le_segofs_to_trackio(struct le_vmap_trackio * const io,const uint16_t object,const uint32_t offset,const struct le_header_parseinfo * const lep);
 int le_trackio_read(unsigned char *buf,int len,const int fd,struct le_vmap_trackio * const io,const struct le_header_parseinfo * const lep);
 
@@ -71,4 +86,16 @@ unsigned char *le_header_parseinfo_alloc_fixup_page_table(struct le_header_parse
 
 void le_header_parseinfo_init(struct le_header_parseinfo * const h);
 void le_header_parseinfo_free(struct le_header_parseinfo * const h);
- 
+
+void le_header_fixup_record_table_init(struct le_header_fixup_record_table *t);
+void le_header_fixup_record_table_free_raw(struct le_header_fixup_record_table *t);
+void le_header_fixup_record_table_free_table(struct le_header_fixup_record_table *t);
+size_t le_header_fixup_record_table_get_raw_entry_length(struct le_header_fixup_record_table *t,const size_t i);
+unsigned char *le_header_fixup_record_table_get_raw_entry(struct le_header_fixup_record_table *t,const size_t i);
+unsigned char *le_header_fixup_record_table_alloc_raw(struct le_header_fixup_record_table *t,const size_t len);
+void le_header_fixup_record_table_free(struct le_header_fixup_record_table *t);
+void le_header_fixup_record_list_init(struct le_header_fixup_record_list *l);
+void le_header_fixup_record_list_free(struct le_header_fixup_record_list *l);
+int le_header_fixup_record_list_alloc(struct le_header_fixup_record_list *l,const size_t entries/*number_of_memory_pages*/);
+void le_header_fixup_record_table_parse(struct le_header_fixup_record_table *t);
+
