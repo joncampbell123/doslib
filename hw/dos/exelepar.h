@@ -103,3 +103,5 @@ void le_header_fixup_record_table_parse(struct le_header_fixup_record_table *t);
 
 void le_header_parseinfo_fixup_record_list_setup_prepare_from_page_table(struct le_header_parseinfo * const p);
 
+int le_parser_is_windows_vxd(struct le_header_parseinfo * const p,uint16_t * const object,uint32_t * const offset);
+
