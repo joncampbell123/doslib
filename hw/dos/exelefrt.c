@@ -155,9 +155,7 @@ void le_header_fixup_record_table_parse(struct le_header_fixup_record_table *t) 
         }
         else {
             srcoff_count = 1;
-
             scan += 2; // srcoff
-            if (scan >= fence) break;
         }
 
         if ((flags&3) == 0) { // internal reference
@@ -165,8 +163,6 @@ void le_header_fixup_record_table_parse(struct le_header_fixup_record_table *t) 
                 scan += 2; // object
             else
                 scan += 1; // object
-
-            if (scan >= fence) break;
 
             if ((src&0xF) != 0x2) { /* not 16-bit selector fixup */
                 if (flags&0x10)
@@ -180,10 +176,10 @@ void le_header_fixup_record_table_parse(struct le_header_fixup_record_table *t) 
             break;
         }
 
-        if (src & 0x20) {
+        if (src & 0x20)
             scan += 2 * srcoff_count;
-            if (scan >= fence) break;
-        }
+
+        if (scan > fence) break;
 
         if (t->length >= t->alloc) {
             size_t nl = t->alloc + 2048;
