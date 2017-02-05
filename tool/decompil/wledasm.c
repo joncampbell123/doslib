@@ -110,6 +110,7 @@ uint16_t                        entry_cs,entry_ip;
 uint16_t                        start_cs,start_ip;
 uint32_t                        start_decom,end_decom,entry_ofs;
 uint32_t                        current_offset;
+unsigned char                   is_vxd = 0;
 
 struct exe_dos_header           exehdr;
 
@@ -664,6 +665,8 @@ int main(int argc,char **argv) {
                     printf("            DDB_Service_Table_Ptr:  0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Ptr);
                     printf("            DDB_Service_Table_Size: 0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Size);
 
+                    is_vxd = 1;
+
                     if (ddb_31->DDB_Control_Proc != 0) {
                         label = dec_find_label(object,offset);
                         if (label == NULL) {
@@ -841,8 +844,18 @@ int main(int argc,char **argv) {
                 assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
 
                 printf("%04lX:%04lX  ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
-                for (c=0,iptr=dec_i.start;iptr != dec_i.end;c++)
-                    printf("%02X ",*iptr++);
+
+                {
+                    unsigned char *e = dec_i.end;
+
+                    // INT 20h VXDCALL
+                    if (is_vxd && dec_i.opcode == MXOP_INT && dec_i.argc == 1 &&
+                        dec_i.argv[0].regtype == MX86_RT_IMM && dec_i.argv[0].value == 0x20)
+                        e += 2+2;
+
+                    for (c=0,iptr=dec_i.start;iptr != e;c++)
+                        printf("%02X ",*iptr++);
+                }
 
                 if (dec_i.rep != MX86_REP_NONE) {
                     for (;c < 6;c++)
@@ -863,12 +876,29 @@ int main(int argc,char **argv) {
                     for (;c < 8;c++)
                         printf("   ");
                 }
-                printf("%-8s ",opcode_string[dec_i.opcode]);
 
-                for (c=0;c < (unsigned int)dec_i.argc;) {
-                    minx86dec_regprint(&dec_i.argv[c],arg_c);
-                    printf("%s",arg_c);
-                    if (++c < (unsigned int)dec_i.argc) printf(",");
+                // Special instruction:
+                //   Windows VXDs use INT 20h followed by two WORDs to call other VXDs.
+                if (is_vxd && dec_i.opcode == MXOP_INT && dec_i.argc == 1 &&
+                    dec_i.argv[0].regtype == MX86_RT_IMM && dec_i.argv[0].value == 0x20) {
+                    // INT 20h WORD, WORD
+                    // the decompiler should have set the instruction pointer at the first WORD now.
+                    uint16_t vxd_device,vxd_service;
+
+                    vxd_service = *((uint16_t*)dec_i.end); dec_i.end += 2;
+                    vxd_device = *((uint16_t*)dec_i.end); dec_i.end += 2;
+
+                    printf("VxDCall  Device=0x%04X Service=0x%04X",
+                        vxd_device,vxd_service);
+                }
+                else {
+                    printf("%-8s ",opcode_string[dec_i.opcode]);
+
+                    for (c=0;c < (unsigned int)dec_i.argc;) {
+                        minx86dec_regprint(&dec_i.argv[c],arg_c);
+                        printf("%s",arg_c);
+                        if (++c < (unsigned int)dec_i.argc) printf(",");
+                    }
                 }
                 if (dec_i.lock) printf("  ; LOCK#");
                 printf("\n");
