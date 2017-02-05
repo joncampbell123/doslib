@@ -58,3 +58,9 @@ void le_header_parseinfo_free_object_table(struct le_header_parseinfo * const h)
 size_t le_header_parseinfo_get_object_table_buffer_size(struct le_header_parseinfo * const h);
 unsigned char *le_header_parseinfo_alloc_object_table(struct le_header_parseinfo * const h);
 
+void le_header_parseinfo_free_object_page_map_table(struct le_header_parseinfo * const h);
+void le_header_parseinfo_finish_read_get_object_page_map_table(struct le_header_parseinfo * const h);
+size_t le_header_parseinfo_get_object_page_map_table_read_buffer_size(struct le_header_parseinfo * const h);
+size_t le_header_parseinfo_get_object_page_map_table_buffer_size(struct le_header_parseinfo * const h);
+unsigned char *le_header_parseinfo_alloc_object_page_map_table(struct le_header_parseinfo * const h);
+
