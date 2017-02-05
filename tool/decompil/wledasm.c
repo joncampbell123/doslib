@@ -31,7 +31,9 @@ const char *vxd_device_to_name(const uint16_t id) {
 #if 0
 Parity_Device_ID                EQU     00008h
 Reboot_Device_ID                EQU     00009h
-VDD_Device_ID                   EQU     0000Ah
+#endif
+        case 0x000A:    return "VDD";                   // VDD_Device_ID                   EQU     0000Ah
+#if 0
 VSD_Device_ID                   EQU     0000Bh
 VMD_Device_ID                   EQU     0000Ch
 VKD_Device_ID                   EQU     0000Dh
@@ -650,6 +652,32 @@ const char *vxd_device_VTD_service_names[] = {
     "VTD_Delay"
 };
 
+const char *vxd_device_VDD_service_name[] = {
+    "VDD_Get_Version", /* 0x0000 */
+    "VDD_PIF_State", /* 0x0001 */
+    "VDD_Get_GrabRtn", /* 0x0002 */
+    "VDD_Hide_Cursor", /* 0x0003 */
+    "VDD_Set_VMType", /* 0x0004 */
+    "VDD_Get_ModTime", /* 0x0005 */
+    "VDD_Set_HCurTrk", /* 0x0006 */
+    "VDD_Msg_ClrScrn", /* 0x0007 */
+    "VDD_Msg_ForColor", /* 0x0008 */
+    "VDD_Msg_BakColor", /* 0x0009 */
+    "VDD_Msg_TextOut", /* 0x000A */
+    "VDD_Msg_SetCursPos", /* 0x000B */
+    "VDD_Query_Access", /* 0x000C */
+    "VDD_Check_Update_Soon", /* 0x000D <- end of Windows 3.1 DDK */
+    "VDD_Get_Mini_Dispatch_Table", /* 0x000E <- begin Windows 95 DDK */
+    "VDD_Register_Virtual_Port", /* 0x000F */
+    "VDD_Get_VM_Info", /* 0x0010 */
+    "VDD_Get_Special_VM_IDs", /* 0x0011 */
+    "VDD_Register_Extra_Screen_Selector", /* 0x0012 */
+    "VDD_Takeover_VGA_Port", /* 0x0013 */
+    "VDD_Get_DISPLAYINFO", /* 0x0014 */
+    "VDD_Do_Physical_IO", /* 0x0015 */
+    "VDD_Set_Sleep_Flag_Addr" /* 0x0016 */
+};
+
 const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
 #define X(x) (sid < (sizeof(x)/sizeof(x[0]))) ? x[sid] : "";
     switch (vid) {
@@ -658,6 +686,9 @@ const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
         case 0x0003: return X(vxd_device_VPICD_service_names);  /* VPICD */
         case 0x0004: return X(vxd_device_VDMAD_service_names);  /* VDMAD */
         case 0x0005: return X(vxd_device_VTD_service_names);    /* VTD */
+
+        case 0x000A: return X(vxd_device_VDD_service_name);     /* VDD */
+
         default: break;
     };
 #undef X
