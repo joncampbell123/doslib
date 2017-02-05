@@ -53,7 +53,9 @@ VMPoll_Device_ID                EQU     00018h
 VPROD_Device_ID                 EQU     00019h
 DOSNET_Device_ID                EQU     0001Ah
 VFD_Device_ID                   EQU     0001Bh
-VDD2_Device_ID                  EQU     0001Ch  ; Secondary display adapter
+#endif
+        case 0x001C:    return "VDD2";                  // VDD2_Device_ID                  EQU     0001Ch  ; Secondary display adapter
+#if 0
 WINDEBUG_Device_ID              EQU     0001Dh
 TSRLoad_Device_ID               EQU     0001Eh  ; TSR instance utility ID
 BiosHook_Device_ID              EQU     0001Fh  ; Bios interrupt hooker VxD
@@ -711,6 +713,10 @@ const char *vxd_device_SHELL_service_name[] = {
     "_SHELL_GetDOSAppInfo" /* 0x001B */
 };
 
+const char *vxd_device_VDD2_service_name[] = {
+    "VDD2_Get_Version" /* 0x0000 */
+};
+
 const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
 #define X(x) (sid < (sizeof(x)/sizeof(x[0]))) ? x[sid] : "";
     switch (vid) {
@@ -723,6 +729,8 @@ const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
         case 0x000A: return X(vxd_device_VDD_service_name);     /* VDD */
 
         case 0x0017: return X(vxd_device_SHELL_service_name);   /* SHELL */
+
+        case 0x001C: return X(vxd_device_VDD2_service_name);    /* VDD2 */
 
         default: break;
     };
