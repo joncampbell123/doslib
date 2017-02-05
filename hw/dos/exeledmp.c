@@ -79,35 +79,6 @@ static void help(void) {
 
 ///////////////
 
-const char *le_cpu_type_to_str(const uint8_t b) {
-    switch (b) {
-        case 0x01:  return "Intel 80286";
-        case 0x02:  return "Intel 80386";
-        case 0x03:  return "Intel 80486";
-        case 0x04:  return "Intel 80586";
-        case 0x20:  return "Intel i860 (N10)";
-        case 0x21:  return "Intel N11";
-        case 0x40:  return "MIPS Mark I (R2000/R3000)";
-        case 0x41:  return "MIPS Mark II (R6000)";
-        case 0x42:  return "MIPS Mark III (R4000)";
-        default:    break;
-    }
-
-    return "";
-}
-
-const char *le_target_operating_system_to_str(const uint8_t b) {
-    switch (b) {
-        case 0x01:  return "OS/2";
-        case 0x02:  return "Windows";
-        case 0x03:  return "DOS 4.x";
-        case 0x04:  return "Windows 386";
-        default:    break;
-    }
-
-    return "";
-}
-
 // the entry table is the only part that can't be determined by any other way than
 // differences in offset. to complicate matters, some fields are set to zero by
 // linkers instead of NE-style where all offsets just match the prior field's offset

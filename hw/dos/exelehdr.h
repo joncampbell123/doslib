@@ -146,3 +146,6 @@ static inline uint32_t exe_le_PAGE_SHIFT(const struct exe_le_header * const hdr)
     return 0;
 }
 
+const char *le_cpu_type_to_str(const uint8_t b);
+const char *le_target_operating_system_to_str(const uint8_t b);
+
