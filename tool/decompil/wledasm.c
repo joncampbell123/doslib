@@ -599,6 +599,43 @@ const char *vxd_device_VPICD_service_names[] = {
     "VPICD_VM_SlavePIC_Mask_Change" /* 0x0018 */
 };
 
+const char *vxd_device_VDMAD_service_names[] = {
+    "VDMAD_Get_Version", /* 0x0000 */
+    "VDMAD_Virtualize_Channel", /* 0x0001 */
+    "VDMAD_Get_Region_Info", /* 0x0002 */
+    "VDMAD_Set_Region_Info", /* 0x0003 */
+    "VDMAD_Get_Virt_State", /* 0x0004 */
+    "VDMAD_Set_Virt_State", /* 0x0005 */
+    "VDMAD_Set_Phys_State", /* 0x0006 */
+    "VDMAD_Mask_Channel", /* 0x0007 */
+    "VDMAD_UnMask_Channel", /* 0x0008 */
+    "VDMAD_Lock_DMA_Region", /* 0x0009 */
+    "VDMAD_Unlock_DMA_Region", /* 0x000A */
+    "VDMAD_Scatter_Lock", /* 0x000B */
+    "VDMAD_Scatter_Unlock", /* 0x000C */
+    "VDMAD_Reserve_Buffer_Space", /* 0x000D */
+    "VDMAD_Request_Buffer", /* 0x000E */
+    "VDMAD_Release_Buffer", /* 0x000F */
+    "VDMAD_Copy_To_Buffer", /* 0x0010 */
+    "VDMAD_Copy_From_Buffer", /* 0x0011 */
+    "VDMAD_Default_Handler", /* 0x0012 */
+    "VDMAD_Disable_Translation", /* 0x0013 */
+    "VDMAD_Enable_Translation", /* 0x0014 */
+    "VDMAD_Get_EISA_Adr_Mode", /* 0x0015 */
+    "VDMAD_Set_EISA_Adr_Mode", /* 0x0016 */
+    "VDMAD_Unlock_DMA_Region_No_Dirty", /* 0x0017 <- end Windows 3.1 DDK */
+    "VDMAD_Phys_Mask_Channel", /* 0x0018 <- begin Windows 95 DDK */
+    "VDMAD_Phys_Unmask_Channel", /* 0x0019 */
+    "VDMAD_Service   VDMAD_Unvirtualize_Channel", /* 0x001A */
+    "VDMAD_Set_IO_Address", /* 0x001B */
+    "VDMAD_Service   VDMAD_Get_Phys_Count", /* 0x001C */
+    "VDMAD_Service   VDMAD_Get_Phys_Status", /* 0x001D */
+    "VDMAD_Service   VDMAD_Get_Max_Phys_Page", /* 0x001E */
+    "VDMAD_Service   VDMAD_Set_Channel_Callbacks", /* 0x001F */
+    "VDMAD_Service   VDMAD_Get_Virt_Count", /* 0x0020 */
+    "VDMAD_Service   VDMAD_Set_Virt_Count" /* 0x0021 */
+};
+
 const char *vxd_device_VTD_service_names[] = {
     "VTD_Get_Version",                  // 0x0000
     "VTD_Update_System_Clock",
@@ -619,6 +656,7 @@ const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
         case 0x0001: return X(vxd_device_VMM_service_names);    /* VMM */
         case 0x0002: return X(vxd_device_DEBUG_service_names);  /* DEBUG */
         case 0x0003: return X(vxd_device_VPICD_service_names);  /* VPICD */
+        case 0x0004: return X(vxd_device_VDMAD_service_names);  /* VDMAD */
         case 0x0005: return X(vxd_device_VTD_service_names);    /* VTD */
         default: break;
     };
