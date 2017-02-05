@@ -149,7 +149,213 @@ void print_name_table(const struct exe_ne_header_name_entry_table * const t) {
     }
 }
 
+/////////
+
+struct le_header_fixup_record_table {
+    uint32_t                                                file_offset;
+    uint32_t                                                file_length;
+    unsigned char*                                          raw;
+    size_t                                                  raw_length;
+    uint32_t*                                               table;
+    size_t                                                  alloc;
+    size_t                                                  length;
+};
+
+struct le_header_fixup_record_list {
+    struct le_header_fixup_record_table*                    table;
+    size_t                                                  length;
+};
+
+void le_header_fixup_record_table_init(struct le_header_fixup_record_table *t) {
+    memset(t,0,sizeof(*t));
+}
+
+void le_header_fixup_record_table_free_raw(struct le_header_fixup_record_table *t) {
+    if (t->raw) free(t->raw);
+    t->raw_length = 0;
+    t->raw = NULL;
+}
+
+void le_header_fixup_record_table_free_table(struct le_header_fixup_record_table *t) {
+    if (t->table) free(t->table);
+    t->table = NULL;
+    t->length = 0;
+    t->alloc = 0;
+}
+
+size_t le_header_fixup_record_table_get_raw_entry_length(struct le_header_fixup_record_table *t,const size_t i) {
+    if (t->table == NULL || t->raw == NULL || t->raw_length == 0 || t->length == 0)
+        return 0;
+    if (i >= t->length)
+        return 0;
+    if ((i+1) == t->length)
+        return t->raw_length - t->table[i];
+
+    return t->table[i+1] - t->table[i];
+}
+
+unsigned char *le_header_fixup_record_table_get_raw_entry(struct le_header_fixup_record_table *t,const size_t i) {
+    size_t o;
+
+    if (t->table == NULL || t->raw == NULL || t->raw_length == 0 || t->length == 0)
+        return NULL;
+    if (i >= t->length)
+        return NULL;
+
+    o = t->table[i];
+    if (o >= t->raw_length)
+        return NULL;
+
+    return t->raw + o;
+}
+
+unsigned char *le_header_fixup_record_table_alloc_raw(struct le_header_fixup_record_table *t,const size_t len) {
+    le_header_fixup_record_table_free_raw(t);
+    if (len == 0) return NULL;
+
+    t->raw = malloc(len);
+    if (t->raw == NULL) return NULL;
+    t->raw_length = len;
+
+    return t->raw;
+}
+
+void le_header_fixup_record_table_free(struct le_header_fixup_record_table *t) {
+    le_header_fixup_record_table_free_table(t);
+    le_header_fixup_record_table_free_raw(t);
+}
+
+void le_header_fixup_record_list_init(struct le_header_fixup_record_list *l) {
+    memset(l,0,sizeof(*l));
+}
+
+void le_header_fixup_record_list_free(struct le_header_fixup_record_list *l) {
+    size_t i;
+
+    if (l->table) {
+        for (i=0;i < l->length;i++) le_header_fixup_record_table_free(l->table+i);
+        free(l->table);
+    }
+
+    l->table = NULL;
+    l->length = 0;
+}
+
+int le_header_fixup_record_list_alloc(struct le_header_fixup_record_list *l,const size_t entries/*number_of_memory_pages*/) {
+    size_t i;
+
+    le_header_fixup_record_list_free(l);
+    if (entries == 0) return -1;
+
+    l->table = (struct le_header_fixup_record_table*)malloc(sizeof(*(l->table)) * entries);
+    if (l->table == NULL) return -1;
+    l->length = entries;
+
+    for (i=0;i < entries;i++)
+        le_header_fixup_record_table_init(l->table+i);
+
+    return 0;
+}
+
+void le_header_fixup_record_table_parse(struct le_header_fixup_record_table *t) {
+    unsigned char *base,*scan,*fence,*entry;
+    unsigned char src,flags;
+    uint8_t srcoff_count;
+
+    /* NTS: srcoff is treated as a signed 16-bit integer for a reason.
+     *      first, don't forget these relocations are defined per page,
+     *      not overall the image. second, the LX specification says that,
+     *      to handle relocations that span pages, a separate fixup
+     *      record is specified for each page. From what I can see in
+     *      Watcom 32-bit DOS programs, it just emits a fixup record
+     *      on the next page with a negative offset.
+     *
+     *      Don't forget as a relocation relative to the page, positive
+     *      values will generally not exceed 4096 (or whatever the page
+     *      size) */
+
+    le_header_fixup_record_table_free_table(t);
+    if (t->raw == NULL || t->raw_length == 0) return;
+
+    base = t->raw;
+    fence = t->raw + t->raw_length;
+
+    t->length = 0;
+    t->alloc = 2048;
+    t->table = (uint32_t*)malloc(sizeof(uint32_t) * t->alloc);
+    if (t->table == NULL) return;
+
+    scan = base;
+    while (scan < fence) {
+        entry = scan;
+        src = *scan++;
+        if (src == 0 || scan >= fence) break;
+        flags = *scan++;
+
+        if (src & 0xC0) { // bits [7:6]
+            fprintf(stderr,"! Unknown source flags set, cannot continue (0x%02x)\n",src);
+            break;
+        }
+
+        if (src & 0x20) {
+            if (scan >= fence) break;
+            srcoff_count = *scan++; //number of source offsets. object follows, then array of srcoff
+        }
+        else {
+            srcoff_count = 1;
+
+            scan += 2; // srcoff
+            if (scan >= fence) break;
+        }
+
+        if ((flags&3) == 0) { // internal reference
+            if (flags&0x40)
+                scan += 2; // object
+            else
+                scan += 1; // object
+
+            if (scan >= fence) break;
+
+            if ((src&0xF) != 0x2) { /* not 16-bit selector fixup */
+                if (flags&0x10)
+                    scan += 4; // trgoff 32-bit target offset
+                else // 16-bit target offset
+                    scan += 2; // trgoff 16-bit target offset
+            }
+        }
+        else {
+            fprintf(stderr,"! Unknown flags type %u (0x%02x)\n",flags&3,flags);
+            break;
+        }
+
+        if (src & 0x20) {
+            scan += 2 * srcoff_count;
+            if (scan >= fence) break;
+        }
+
+        if (t->length >= t->alloc) {
+            size_t nl = t->alloc + 2048;
+            void *np;
+
+            np = (void*)realloc((void*)t->table,nl * sizeof(uint32_t));
+            if (np == NULL) break;
+
+            t->alloc = nl;
+            t->table = (uint32_t*)np;
+        }
+
+        assert(t->length < t->alloc);
+        t->table[t->length++] = (uint32_t)(entry - base);
+    }
+}
+
+/////////
+
 int main(int argc,char **argv) {
+    ///
+    struct le_header_fixup_record_list le_fixup_records;
+    ///
+
     struct le_header_parseinfo le_parser;
     struct exe_le_header le_header;
     uint32_t le_header_offset;
@@ -160,6 +366,10 @@ int main(int argc,char **argv) {
     assert(sizeof(le_parser.le_header) == EXE_HEADER_LE_HEADER_SIZE);
     le_header_parseinfo_init(&le_parser);
     memset(&exehdr,0,sizeof(exehdr));
+
+    ///
+    le_header_fixup_record_list_init(&le_fixup_records);
+    ///
 
     for (i=1;i < argc;) {
         a = argv[i++];
@@ -523,177 +733,51 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (le_parser.le_fixup_page_table != NULL && le_header.fixup_record_table_offset != 0 && le_header.number_of_memory_pages != 0) {
-        unsigned char *base,*scan,*fence;
+    if (le_parser.le_fixup_page_table != NULL && le_header.fixup_record_table_offset != 0 && le_header.number_of_memory_pages != 0 &&
+        le_header_fixup_record_list_alloc(&le_fixup_records,le_header.number_of_memory_pages) == 0) {
+        struct le_header_fixup_record_table *frtable;
         unsigned long ofs,sz;
         unsigned int i;
 
         // NTS: The le_fixup_page_table[] array is number_of_memory_pages+1 elements long
-        printf("* Fixup record table, %lu entries\n",(unsigned long)le_header.number_of_memory_pages);
+        assert(le_fixup_records.table != NULL);
+        assert(le_fixup_records.length == le_header.number_of_memory_pages);
         for (i=0;i < le_header.number_of_memory_pages;i++) {
-            if (le_parser.le_fixup_page_table[i+1] < le_parser.le_fixup_page_table[i]) {
-                printf("    ! Skipping invalid entry, next offset < current offset\n");
+            frtable = le_fixup_records.table + i;
+
+            if ((unsigned long)le_parser.le_fixup_page_table[i+1] < (unsigned long)le_parser.le_fixup_page_table[i])
                 continue;
-            }
 
-            ofs = (unsigned long)le_parser.le_fixup_page_table[i] + (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset;
-            sz = le_parser.le_fixup_page_table[i+1] - le_parser.le_fixup_page_table[i];
-            printf("    Page #%u\n",i + 1);
-            printf("        Offset:                         0x%08lx (%lu)\n",ofs,ofs);
-            printf("        Size:                           0x%08lx (%lu)\n",sz,sz);
+            ofs = (unsigned long)le_parser.le_fixup_page_table[i] +
+                  (unsigned long)le_parser.le_header.fixup_record_table_offset +
+                  (unsigned long)le_header_offset;
+            sz = (unsigned long)le_parser.le_fixup_page_table[i+1] -
+                 (unsigned long)le_parser.le_fixup_page_table[i];
 
-            if (sz != 0UL && sz < 0x40000UL) {
-                base = malloc(sz);
-                if (base != NULL) {
-                    if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) == ofs && (unsigned long)read(src_fd,base,sz) == sz) {
-                        scan = base;
-                        fence = base + sz;
-                        while (scan < fence) {
-                            uint8_t srcoff_count,srcoff_i;
-                            unsigned char src,flags;
-                            int16_t srcoff;
+            frtable->file_offset = ofs;
+            frtable->file_length = sz;
+        }
+    }
 
-                            /* NTS: srcoff is treated as a signed 16-bit integer for a reason.
-                             *      first, don't forget these relocations are defined per page,
-                             *      not overall the image. second, the LX specification says that,
-                             *      to handle relocations that span pages, a separate fixup
-                             *      record is specified for each page. From what I can see in
-                             *      Watcom 32-bit DOS programs, it just emits a fixup record
-                             *      on the next page with a negative offset.
-                             *
-                             *      Don't forget as a relocation relative to the page, positive
-                             *      values will generally not exceed 4096 (or whatever the page
-                             *      size) */
+    if (le_fixup_records.table != NULL && le_fixup_records.length != 0) {
+        struct le_header_fixup_record_table *frtable;
+        unsigned char *base;
+        unsigned int i;
 
-                            printf("            Entry at +%u (%lu)\n",
-                                (unsigned int)(scan - base),
-                                ((unsigned long)(scan - base)) + ofs);
+        for (i=0;i < le_header.number_of_memory_pages;i++) {
+            frtable = le_fixup_records.table + i;
 
-                            src = *scan++;
-                            if (src == 0 || scan >= fence) break;
-                            flags = *scan++;
+            if (frtable->file_length == 0) continue;
 
-                            printf("                Source type:            0x%02X ",src);
-                            switch (src&0xF) {
-                                case 0x2:
-                                    printf("16-bit selector fixup (16 bits)");
-                                    break;
-                                case 0x7:
-                                    printf("32-bit offset fixup (32 bits)");
-                                    break;
-                                case 0x8:
-                                    printf("32-bit self-relative offset fixup (32 bits)");
-                                    break;
-                                default:
-                                    printf("unknown type=0x%X flags=0x%X",src&0xF,src>>4);
-                                    scan = fence;
-                                    break;
-                            };
-                            if (src & 0x10)
-                                printf(" Fix-up to alias");
-                            printf("\n");
-                            printf("                Source flags:           0x%02X ",flags);
-                            switch (flags&3) {
-                                case 0x0:
-                                    printf("Internal reference");
-                                    break;
-                                case 0x1:
-                                    printf("Imported reference by ordinal");
-                                    break;
-                                case 0x2:
-                                    printf("Imported reference by name");
-                                    break;
-                                case 0x3:
-                                    printf("Internal reference via entry table");
-                                    break;
-                            };
-                            if (flags&4) printf(" ADDITIVE");
-                            if (flags&8) printf(" \"Internal chaining fixup\"");
-                            if (flags&0x10) printf(" \"32-bit target offset\"");
-                            if (flags&0x20) printf(" \"32-bit additive fixup value\"");
-                            if (flags&0x40) printf(" \"16-bit object number/module ordinal\"");
-                            if (flags&0x80) printf(" \"8-bit ordinal\"");
-                            printf("\n");
+            base = le_header_fixup_record_table_alloc_raw(frtable,frtable->file_length);
+            if (base == NULL) continue;
 
-                            if (src & 0xC0) { // bits [7:6]
-                                printf("                ! Unknown source flags set, cannot continue\n");
-                                break;
-                            }
+            if (!((unsigned long)lseek(src_fd,frtable->file_offset,SEEK_SET) == (unsigned long)frtable->file_offset &&
+                (unsigned long)read(src_fd,base,frtable->file_length) == (unsigned long)frtable->file_length))
+                le_header_fixup_record_table_free_raw(frtable);
 
-                            if (src & 0x20) {
-                                if (scan >= fence) break;
-                                srcoff_count = *scan++;//number of source offsets
-                                // NTS: This is not used (as far as I can tell) with 32-bit DOS programs, but
-                                //      Windows 386/VXD drivers definitely make use of this method to make
-                                //      multiple fixups to the same target.
-                            }
-                            else {
-                                srcoff_count = 1;
-                            }
-
-                            if (srcoff_count == 1) {
-                                if ((scan+2) > fence) break;
-                                srcoff = *((int16_t*)scan);
-                                scan += 2;
-
-                                printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
-                                if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
-                                printf("\n");
-                            }
-
-                            if ((flags&3) == 0) { // internal reference
-                                uint16_t object;
-                                uint32_t trgoff;
-
-                                if (flags&0x40) {
-                                    if ((scan+2) > fence) break;
-                                    object = *((uint16_t*)scan); scan += 2;
-                                }
-                                else {
-                                    if ((scan+1) > fence) break;
-                                    object = *scan++;
-                                }
-                                printf("                Target object:          #%u\n",(unsigned int)object);
-
-                                if ((src&0xF) != 0x2) { /* not 16-bit selector fixup */
-                                    if (flags&0x10) { // 32-bit target offset
-                                        if ((scan+4) > fence) break;
-                                        trgoff = *((uint32_t*)scan); scan += 4;
-                                    }
-                                    else { // 16-bit target offset
-                                        if ((scan+2) > fence) break;
-                                        trgoff = *((uint16_t*)scan); scan += 2;
-                                    }
-
-                                    printf("                Target offset:          0x%08lX\n",(unsigned long)trgoff);
-                                }
-                                else {
-                                    trgoff = 0;
-                                }
-                            }
-                            else {
-                                // TODO
-                                printf("                ! Unknown fixup type %u\n",flags&3);
-                                scan = fence;
-                                break;
-                            }
-
-                            for (srcoff_i=0;srcoff_i < srcoff_count;srcoff_i++) {
-                                if (srcoff_count != 1) {
-                                    if ((scan+2) > fence) break;
-                                    srcoff = *((int16_t*)scan);
-                                    scan += 2;
-
-                                    printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
-                                    if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
-                                    printf("\n");
-                                }
-                            }
-                        }
-                    }
-                    free(base);
-                }
-            }
+            if (frtable->raw != NULL)
+                le_header_fixup_record_table_parse(frtable);
         }
     }
 
@@ -841,6 +925,152 @@ int main(int argc,char **argv) {
                     (unsigned long)ent,
                     (unsigned long)le_header.fixup_record_table_offset + (unsigned long)le_header_offset,
                     (unsigned long)ent + (unsigned long)le_header_offset + (unsigned long)le_header.fixup_record_table_offset);
+        }
+    }
+
+    if (le_fixup_records.table != NULL && le_fixup_records.length != 0 && le_fixup_records.table != NULL) {
+        struct le_header_fixup_record_table *frtable;
+        unsigned char src,flags;
+        unsigned char *rawfence;
+        unsigned int srcoff_i;
+        uint8_t srcoff_count;
+        unsigned char *raw;
+        unsigned int i,ti;
+        int16_t srcoff;
+        size_t rawlen;
+
+        printf("* Fixup record table, %lu entries\n",(unsigned long)le_fixup_records.length);
+        for (i=0;i < le_header.number_of_memory_pages;i++) {
+            frtable = le_fixup_records.table + i;
+ 
+            printf("    Page #%u\n",i + 1);
+            printf("        Offset:                         0x%08lx (%lu)\n",
+                (unsigned long)frtable->file_offset,
+                (unsigned long)frtable->file_offset);
+            printf("        Size:                           0x%08lx (%lu)\n",
+                (unsigned long)frtable->file_length,
+                (unsigned long)frtable->file_length);
+
+            if (frtable->file_length != 0 && (frtable->raw == NULL))
+                printf("        ! Unable to load into memory\n");
+
+            for (ti=0;ti < (unsigned int)frtable->length;ti++) {
+                raw = le_header_fixup_record_table_get_raw_entry(frtable,ti);
+                rawlen = le_header_fixup_record_table_get_raw_entry_length(frtable,ti);
+                if (raw == NULL) {
+                    printf("            ! Unable to read entry %u\n",ti + 1);
+                    continue;
+                }
+                rawfence = raw + rawlen;
+
+                printf("            Entry %u (%zu bytes at rel=%zu file=%lu)\n",
+                    ti + 1,rawlen,(size_t)(raw - frtable->raw),
+                    (unsigned long)(raw - frtable->raw) + (unsigned long)frtable->file_offset);
+
+                // caller ensures the record is long enough
+                src = *raw++;
+                flags = *raw++;
+                printf("                Source type:            0x%02X ",src);
+                switch (src&0xF) {
+                    case 0x2:
+                        printf("16-bit selector fixup (16 bits)");
+                        break;
+                    case 0x7:
+                        printf("32-bit offset fixup (32 bits)");
+                        break;
+                    case 0x8:
+                        printf("32-bit self-relative offset fixup (32 bits)");
+                        break;
+                    default:
+                        printf("Unknown");
+                        continue;
+                };
+                if (src & 0x10)
+                    printf(" Fix-up to alias");
+                printf("\n");
+                printf("                Source flags:           0x%02X ",flags);
+                switch (flags&3) {
+                    case 0x0:
+                        printf("Internal reference");
+                        break;
+                    case 0x1:
+                        printf("Imported reference by ordinal");
+                        break;
+                    case 0x2:
+                        printf("Imported reference by name");
+                        break;
+                    case 0x3:
+                        printf("Internal reference via entry table");
+                        break;
+                };
+                if (flags&4) printf(" ADDITIVE");
+                if (flags&8) printf(" \"Internal chaining fixup\"");
+                if (flags&0x10) printf(" \"32-bit target offset\"");
+                if (flags&0x20) printf(" \"32-bit additive fixup value\"");
+                if (flags&0x40) printf(" \"16-bit object number/module ordinal\"");
+                if (flags&0x80) printf(" \"8-bit ordinal\"");
+                printf("\n");
+
+                if (src & 0xC0) { // bits [7:6]
+                    printf("                ! Unrecognized bits!\n");
+                    continue;
+                }
+
+                if (src & 0x20) {
+                    srcoff_count = *raw++; //number of source offsets. object follows, then array of srcoff
+                }
+                else {
+                    srcoff_count = 1;
+                    srcoff = *((int16_t*)raw); raw += 2;
+                }
+
+                if ((flags&3) == 0) { // internal reference
+                    uint16_t object;
+                    uint32_t trgoff;
+
+                    if (flags&0x40) {
+                        object = *((uint16_t*)raw); raw += 2;
+                    }
+                    else {
+                        object = *raw++;
+                    }
+                    printf("                Target object:          #%u\n",(unsigned int)object);
+
+                    if ((src&0xF) != 0x2) { /* not 16-bit selector fixup */
+                        if (flags&0x10) { // 32-bit target offset
+                            trgoff = *((uint32_t*)raw); raw += 4;
+                        }
+                        else { // 16-bit target offset
+                            trgoff = *((uint16_t*)raw); raw += 2;
+                        }
+
+                        printf("                Target offset:          0x%08lX\n",(unsigned long)trgoff);
+                    }
+                    else {
+                        trgoff = 0;
+                    }
+                }
+                else {
+                    continue;
+                }
+
+                if (src & 0x20) {
+                    for (srcoff_i=0;srcoff_i < srcoff_count;srcoff_i++) {
+                        srcoff = *((int16_t*)raw); raw += 2;
+
+                        printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
+                        if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
+                        printf("\n");
+                    }
+                }
+                else {
+                    printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
+                    if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
+                    printf("\n");
+                }
+
+                assert(raw <= rawfence);
+            }
         }
     }
 
@@ -1021,6 +1251,10 @@ int main(int argc,char **argv) {
             }
         }
     }
+
+    ///
+    le_header_fixup_record_list_free(&le_fixup_records);
+    ///
 
     le_header_parseinfo_free(&le_parser);
     close(src_fd);
