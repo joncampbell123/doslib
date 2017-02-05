@@ -46,7 +46,9 @@ BIOSXlat_Device_ID              EQU     00013h
 VNETBIOS_Device_ID              EQU     00014h
 DOSMGR_Device_ID                EQU     00015h
 WINLOAD_Device_ID               EQU     00016h
-SHELL_Device_ID                 EQU     00017h
+#endif
+        case 0x0017:    return "SHELL";                 // SHELL_Device_ID                 EQU     00017h
+#if 0
 VMPoll_Device_ID                EQU     00018h
 VPROD_Device_ID                 EQU     00019h
 DOSNET_Device_ID                EQU     0001Ah
@@ -678,6 +680,37 @@ const char *vxd_device_VDD_service_name[] = {
     "VDD_Set_Sleep_Flag_Addr" /* 0x0016 */
 };
 
+const char *vxd_device_SHELL_service_name[] = {
+    "SHELL_Get_Version", /* 0x0000 */
+    "SHELL_Resolve_Contention", /* 0x0001 */
+    "SHELL_Event", /* 0x0002 */
+    "SHELL_SYSMODAL_Message", /* 0x0003 */
+    "SHELL_Message", /* 0x0004 */
+    "SHELL_GetVMInfo", /* 0x0005 <- end of Windows 3.1 DDK */
+    "_SHELL_PostMessage", /* 0x0006 <- begin Windows 95 DDK */
+    "_SHELL_ShellExecute", /* 0x0007 */
+    "_SHELL_PostShellMessage", /* 0x0008 */
+    "SHELL_DispatchRing0AppyEvents", /* 0x0009 */
+    "SHELL_Hook_Properties", /* 0x000A */
+    "SHELL_Unhook_Properties", /* 0x000B */
+    "SHELL_Update_User_Activity", /* 0x000C */
+    "_SHELL_QueryAppyTimeAvailable", /* 0x000D */
+    "_SHELL_CallAtAppyTime", /* 0x000E */
+    "_SHELL_CancelAppyTimeEvent", /* 0x000F */
+    "_SHELL_BroadcastSystemMessage", /* 0x0010 */
+    "_SHELL_HookSystemBroadcast", /* 0x0011 */
+    "_SHELL_UnhookSystemBroadcast", /* 0x0012 */
+    "_SHELL_LocalAllocEx", /* 0x0013 */
+    "_SHELL_LocalFree", /* 0x0014 */
+    "_SHELL_LoadLibrary", /* 0x0015 */
+    "_SHELL_FreeLibrary", /* 0x0016 */
+    "_SHELL_GetProcAddress", /* 0x0017 */
+    "_SHELL_CallDll", /* 0x0018 */
+    "_SHELL_SuggestSingleMSDOSMode", /* 0x0019 */
+    "SHELL_CheckHotkeyAllowed", /* 0x001A */
+    "_SHELL_GetDOSAppInfo" /* 0x001B */
+};
+
 const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
 #define X(x) (sid < (sizeof(x)/sizeof(x[0]))) ? x[sid] : "";
     switch (vid) {
@@ -688,6 +721,8 @@ const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
         case 0x0005: return X(vxd_device_VTD_service_names);    /* VTD */
 
         case 0x000A: return X(vxd_device_VDD_service_name);     /* VDD */
+
+        case 0x0017: return X(vxd_device_SHELL_service_name);   /* SHELL */
 
         default: break;
     };
