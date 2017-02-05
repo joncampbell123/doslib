@@ -149,6 +149,66 @@ void print_name_table(const struct exe_ne_header_name_entry_table * const t) {
     }
 }
 
+///
+
+int le_parser_is_windows_vxd(struct le_header_parseinfo * const p,uint16_t * const object,uint32_t * const offset) {
+    if ((p->le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_IS_DLL) &&
+        (p->le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_MASK) == LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_UNKNOWN &&
+        p->le_header.target_operating_system == 0x04/*Windows 386*/ && p->le_entry_table.table != NULL && p->le_entry_table.length >= 1) {
+        struct le_header_entry_table_entry *ent = p->le_entry_table.table;//ordinal 1
+        unsigned char *raw;
+        char tmp[255+1];
+        unsigned int i;
+
+        tmp[0] = 0;
+        if (tmp[0] == 0 && p->le_resident_names.table != NULL) {
+            for (i=0;i < p->le_resident_names.length;i++) {
+                struct exe_ne_header_name_entry *ent = p->le_resident_names.table + i;
+
+                if (ne_name_entry_get_ordinal(&p->le_resident_names,ent) == 1) {
+                    ne_name_entry_get_name(tmp,sizeof(tmp),&p->le_resident_names,ent);
+                    break;
+                }
+            }
+        }
+
+        if (tmp[0] == 0 && p->le_nonresident_names.table != NULL) {
+            for (i=0;i < p->le_nonresident_names.length;i++) {
+                struct exe_ne_header_name_entry *ent = p->le_nonresident_names.table + i;
+
+                if (ne_name_entry_get_ordinal(&p->le_nonresident_names,ent) == 1) {
+                    ne_name_entry_get_name(tmp,sizeof(tmp),&p->le_nonresident_names,ent);
+                    break;
+                }
+            }
+        }
+
+        raw = le_header_entry_table_get_raw_entry(&p->le_entry_table,0/*ordinal 1*/); /* parser makes sure there is sufficient space for struct given type */
+        if (raw != NULL && (ent->type == 3)/*32-bit*/) {
+            uint32_t ent_offset;
+            uint8_t flags;
+
+            flags = *raw++;
+            ent_offset = *((uint32_t*)raw); raw += 4;
+            assert(raw <= (p->le_entry_table.raw+p->le_entry_table.raw_length));
+
+            if (flags & 1/*exported*/) {
+                /* is named, ends in _DDB */
+                char *s = tmp + strlen(tmp) - 4;
+                if (s > tmp && !strcasecmp(s,"_DDB")) {
+                    *object = ent->object;
+                    *offset = ent_offset;
+                    return 1;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+///
+
 int main(int argc,char **argv) {
     struct le_header_parseinfo le_parser;
     struct exe_le_header le_header;
@@ -895,122 +955,81 @@ int main(int argc,char **argv) {
         }
     }
 
-    if ((le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_IS_DLL) &&
-        (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_MASK) == LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_UNKNOWN &&
-        le_header.target_operating_system == 0x04 && le_parser.le_entry_table.table != NULL &&
-        le_parser.le_entry_table.length >= 1) {
-        struct le_header_entry_table_entry *ent = le_parser.le_entry_table.table;//ordinal 1
-        unsigned char *raw;
-        char tmp[255+1];
-        unsigned int i;
+    {
+        /* if this is a Windows VXD, then we want to locate the DDB block for more fun */
+        uint16_t object=0;
+        uint32_t offset=0;
 
-        tmp[0] = 0;
-        if (tmp[0] == 0 && le_parser.le_resident_names.table != NULL) {
-            for (i=0;i < le_parser.le_resident_names.length;i++) {
-                struct exe_ne_header_name_entry *ent = le_parser.le_resident_names.table + i;
+        if (le_parser_is_windows_vxd(&le_parser,&object,&offset)) {
+            struct windows_vxd_ddb_win31 *ddb_31;
+            struct le_vmap_trackio io;
+            unsigned char ddb[256];
+            unsigned int i;
+            char tmp[9];
+            int rd;
 
-                if (ne_name_entry_get_ordinal(&le_parser.le_resident_names,ent) == 1) {
-                    ne_name_entry_get_name(tmp,sizeof(tmp),&le_parser.le_resident_names,ent);
-                    break;
-                }
-            }
-        }
+            printf("* This appears to be a 32-bit Windows 386/VXD driver\n");
+            printf("    VXD DDB block in Object #%u : 0x%08lx\n",
+                (unsigned int)object,(unsigned long)offset);
 
-        if (tmp[0] == 0 && le_parser.le_nonresident_names.table != NULL) {
-            for (i=0;i < le_parser.le_nonresident_names.length;i++) {
-                struct exe_ne_header_name_entry *ent = le_parser.le_nonresident_names.table + i;
+            if (le_segofs_to_trackio(&io,object,offset,&le_parser)) {
+                printf("        File offset %lu (0x%lX) (page #%lu at %lu + page offset 0x%lX / 0x%lX)\n",
+                        (unsigned long)io.file_ofs + (unsigned long)io.page_ofs,
+                        (unsigned long)io.file_ofs + (unsigned long)io.page_ofs,
+                        (unsigned long)io.page_number,
+                        (unsigned long)io.file_ofs,
+                        (unsigned long)io.page_ofs,
+                        (unsigned long)io.page_size);
 
-                if (ne_name_entry_get_ordinal(&le_parser.le_nonresident_names,ent) == 1) {
-                    ne_name_entry_get_name(tmp,sizeof(tmp),&le_parser.le_nonresident_names,ent);
-                    break;
-                }
-            }
-        }
+                // now read it
+                rd = le_trackio_read(ddb,sizeof(ddb),src_fd,&io,&le_parser);
+                if (rd >= (int)sizeof(*ddb_31)) {
+                    ddb_31 = (struct windows_vxd_ddb_win31*)ddb;
 
-        raw = le_header_entry_table_get_raw_entry(&le_parser.le_entry_table,0); /* parser makes sure there is sufficient space for struct given type */
-        if (raw != NULL && (ent->type == 3)/*32-bit*/) {
-            uint32_t offset;
-            uint8_t flags;
+                    printf("        Windows 386/VXD DDB structure:\n");
+                    printf("            DDB_Next:               0x%08lX\n",(unsigned long)ddb_31->DDB_Next);
+                    printf("            DDB_SDK_Version:        %u.%u (0x%04X)\n",
+                            ddb_31->DDB_SDK_Version>>8,
+                            ddb_31->DDB_SDK_Version&0xFFU,
+                            ddb_31->DDB_SDK_Version);
+                    printf("            DDB_Req_Device_Number:  0x%04x\n",ddb_31->DDB_Req_Device_Number);
+                    printf("            DDB_Dev_*_Version:      %u.%u\n",ddb_31->DDB_Dev_Major_Version,ddb_31->DDB_Dev_Minor_Version);
+                    printf("            DDB_Flags:              0x%04x\n",ddb_31->DDB_Flags);
 
-            flags = *raw++;
-            offset = *((uint32_t*)raw); raw += 4;
-            assert(raw <= (le_parser.le_entry_table.raw+le_parser.le_entry_table.raw_length));
+                    memcpy(tmp,ddb_31->DDB_Name,8); tmp[8] = 0;
+                    printf("            DDB_Name:               \"%s\"\n",tmp);
 
-            if (flags & 1/*exported*/) {
-                /* is named, ends in _DDB */
-                char *s = tmp + strlen(tmp) - 4;
-                if (s > tmp && !strcasecmp(s,"_DDB")) {
-                    struct windows_vxd_ddb_win31 *ddb_31;
-                    struct le_vmap_trackio io;
-                    unsigned char ddb[256];
-                    unsigned int i;
-                    char tmp[9];
-                    int rd;
+                    printf("            DDB_Init_Order:         0x%08lx\n",(unsigned long)ddb_31->DDB_Init_Order);
+                    printf("            DDB_Control_Proc:       0x%08lx\n",(unsigned long)ddb_31->DDB_Control_Proc);
+                    printf("            DDB_V86_API_Proc:       0x%08lx\n",(unsigned long)ddb_31->DDB_V86_API_Proc);
+                    printf("            DDB_PM_API_Proc:        0x%08lx\n",(unsigned long)ddb_31->DDB_PM_API_Proc);
+                    printf("            DDB_V86_API_CSIP:       %04X:%04X\n",
+                            (unsigned int)(ddb_31->DDB_V86_API_CSIP >> 16UL),
+                            (unsigned int)(ddb_31->DDB_V86_API_CSIP & 0xFFFFUL));
+                    printf("            DDB_PM_API_CSIP:        %04X:%04X\n",
+                            (unsigned int)(ddb_31->DDB_PM_API_CSIP >> 16UL),
+                            (unsigned int)(ddb_31->DDB_PM_API_CSIP & 0xFFFFUL));
+                    printf("            DDB_Reference_Data:     0x%08lx\n",(unsigned long)ddb_31->DDB_Reference_Data);
+                    printf("            DDB_Service_Table_Ptr:  0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Ptr);
+                    printf("            DDB_Service_Table_Size: 0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Size);
 
-                    printf("* This appears to be a 32-bit Windows 386/VXD driver\n");
-                    printf("    VXD DDB block in Object #%u : 0x%08lx\n",
-                        (unsigned int)ent->object,(unsigned long)offset);
+                    // go dump the service table
+                    // NTS: Some VXD drivers indicate a table size, but the offset (ptr) is zero. dumping from that location shows more zeros.
+                    //      What is the meaning of that, exactly? Is it a clever way of defining the table such that the VXD can patch it with
+                    //      entry points later?
+                    //
+                    //      Examples:
+                    //        - Creative Sound Blaster 16 drivers for Windows 3.1 (VSBPD.386)
+                    //        - Microsoft PCI VXD driver (pci.vxd)
+                    if (ddb_31->DDB_Service_Table_Size != 0 && le_segofs_to_trackio(&io,object,ddb_31->DDB_Service_Table_Ptr,&le_parser)) {
+                        uint32_t ptr;
 
-                    if (le_segofs_to_trackio(&io,ent->object,offset,&le_parser)) {
-                        printf("        File offset %lu (0x%lX) (page #%lu at %lu + page offset 0x%lX / 0x%lX)\n",
-                            (unsigned long)io.file_ofs + (unsigned long)io.page_ofs,
-                            (unsigned long)io.file_ofs + (unsigned long)io.page_ofs,
-                            (unsigned long)io.page_number,
-                            (unsigned long)io.file_ofs,
-                            (unsigned long)io.page_ofs,
-                            (unsigned long)io.page_size);
+                        printf("            DDB service table:\n");
+                        for (i=0;i < (unsigned int)ddb_31->DDB_Service_Table_Size;i++) {
+                            if (le_trackio_read((unsigned char*)(&ptr),sizeof(uint32_t),src_fd,&io,&le_parser) != sizeof(uint32_t))
+                                break;
 
-                        // now read it
-                        rd = le_trackio_read(ddb,sizeof(ddb),src_fd,&io,&le_parser);
-                        if (rd >= (int)sizeof(*ddb_31)) {
-                            ddb_31 = (struct windows_vxd_ddb_win31*)ddb;
-
-                            printf("        Windows 386/VXD DDB structure:\n");
-                            printf("            DDB_Next:               0x%08lX\n",(unsigned long)ddb_31->DDB_Next);
-                            printf("            DDB_SDK_Version:        %u.%u (0x%04X)\n",
-                                ddb_31->DDB_SDK_Version>>8,
-                                ddb_31->DDB_SDK_Version&0xFFU,
-                                ddb_31->DDB_SDK_Version);
-                            printf("            DDB_Req_Device_Number:  0x%04x\n",ddb_31->DDB_Req_Device_Number);
-                            printf("            DDB_Dev_*_Version:      %u.%u\n",ddb_31->DDB_Dev_Major_Version,ddb_31->DDB_Dev_Minor_Version);
-                            printf("            DDB_Flags:              0x%04x\n",ddb_31->DDB_Flags);
-
-                            memcpy(tmp,ddb_31->DDB_Name,8); tmp[8] = 0;
-                            printf("            DDB_Name:               \"%s\"\n",tmp);
-
-                            printf("            DDB_Init_Order:         0x%08lx\n",(unsigned long)ddb_31->DDB_Init_Order);
-                            printf("            DDB_Control_Proc:       0x%08lx\n",(unsigned long)ddb_31->DDB_Control_Proc);
-                            printf("            DDB_V86_API_Proc:       0x%08lx\n",(unsigned long)ddb_31->DDB_V86_API_Proc);
-                            printf("            DDB_PM_API_Proc:        0x%08lx\n",(unsigned long)ddb_31->DDB_PM_API_Proc);
-                            printf("            DDB_V86_API_CSIP:       %04X:%04X\n",
-                                (unsigned int)(ddb_31->DDB_V86_API_CSIP >> 16UL),
-                                (unsigned int)(ddb_31->DDB_V86_API_CSIP & 0xFFFFUL));
-                            printf("            DDB_PM_API_CSIP:        %04X:%04X\n",
-                                (unsigned int)(ddb_31->DDB_PM_API_CSIP >> 16UL),
-                                (unsigned int)(ddb_31->DDB_PM_API_CSIP & 0xFFFFUL));
-                            printf("            DDB_Reference_Data:     0x%08lx\n",(unsigned long)ddb_31->DDB_Reference_Data);
-                            printf("            DDB_Service_Table_Ptr:  0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Ptr);
-                            printf("            DDB_Service_Table_Size: 0x%08lx\n",(unsigned long)ddb_31->DDB_Service_Table_Size);
-
-                            // go dump the service table
-                            // NTS: Some VXD drivers indicate a table size, but the offset (ptr) is zero. dumping from that location shows more zeros.
-                            //      What is the meaning of that, exactly? Is it a clever way of defining the table such that the VXD can patch it with
-                            //      entry points later?
-                            //
-                            //      Examples:
-                            //        - Creative Sound Blaster 16 drivers for Windows 3.1 (VSBPD.386)
-                            //        - Microsoft PCI VXD driver (pci.vxd)
-                            if (ddb_31->DDB_Service_Table_Size != 0 && le_segofs_to_trackio(&io,ent->object,ddb_31->DDB_Service_Table_Ptr,&le_parser)) {
-                                uint32_t ptr;
-
-                                printf("            DDB service table:\n");
-                                for (i=0;i < (unsigned int)ddb_31->DDB_Service_Table_Size;i++) {
-                                    if (le_trackio_read((unsigned char*)(&ptr),sizeof(uint32_t),src_fd,&io,&le_parser) != sizeof(uint32_t))
-                                        break;
-
-                                    printf("                0x%08lX\n",(unsigned long)ptr);
-                                }
-                            }
+                            printf("                0x%08lX\n",(unsigned long)ptr);
                         }
                     }
                 }
