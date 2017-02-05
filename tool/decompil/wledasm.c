@@ -18,6 +18,55 @@
 
 #include <hw/dos/exehdr.h>
 
+const char *vxd_device_to_name(const uint16_t id) {
+    switch (id) {
+        case 0x0000:    return "Undefined";             // Undefined_Device_ID             EQU     00000h
+        case 0x0001:    return "VMM";                   // VMM_Device_ID                   EQU     00001h  ; Used for dynalink table
+        case 0x0002:    return "Debug";                 // Debug_Device_ID                 EQU     00002h
+        case 0x0003:    return "VPICD";                 // VPICD_Device_ID                 EQU     00003h
+        case 0x0004:    return "VDMAD";                 // VDMAD_Device_ID                 EQU     00004h
+        case 0x0005:    return "VTD";                   // VTD_Device_ID                   EQU     00005h
+        case 0x0006:    return "V86MMGR";               // V86MMGR_Device_ID               EQU     00006h
+        case 0x0007:    return "PageSwap";              // PageSwap_Device_ID              EQU     00007h
+#if 0
+Parity_Device_ID                EQU     00008h
+Reboot_Device_ID                EQU     00009h
+VDD_Device_ID                   EQU     0000Ah
+VSD_Device_ID                   EQU     0000Bh
+VMD_Device_ID                   EQU     0000Ch
+VKD_Device_ID                   EQU     0000Dh
+VCD_Device_ID                   EQU     0000Eh
+VPD_Device_ID                   EQU     0000Fh
+BlockDev_Device_ID              EQU     00010h
+VMCPD_Device_ID                 EQU     00011h
+EBIOS_Device_ID                 EQU     00012h
+BIOSXlat_Device_ID              EQU     00013h
+VNETBIOS_Device_ID              EQU     00014h
+DOSMGR_Device_ID                EQU     00015h
+WINLOAD_Device_ID               EQU     00016h
+SHELL_Device_ID                 EQU     00017h
+VMPoll_Device_ID                EQU     00018h
+VPROD_Device_ID                 EQU     00019h
+DOSNET_Device_ID                EQU     0001Ah
+VFD_Device_ID                   EQU     0001Bh
+VDD2_Device_ID                  EQU     0001Ch  ; Secondary display adapter
+WINDEBUG_Device_ID              EQU     0001Dh
+TSRLoad_Device_ID               EQU     0001Eh  ; TSR instance utility ID
+BiosHook_Device_ID              EQU     0001Fh  ; Bios interrupt hooker VxD
+Int13_Device_ID                 EQU     00020h
+PageFile_Device_ID              EQU     00021h  ; Paging File device
+SCSI_Device_ID                  EQU     00022h  ; SCSI device
+MCA_POS_Device_ID               EQU     00023h  ; MCA_POS device
+SCSIFD_Device_ID                EQU     00024h  ; SCSI FastDisk device
+VPEND_Device_ID                 EQU     00025h  ; Pen device
+APM_Device_ID                   EQU     00026h  ; Power Management device
+#endif
+        default: break;
+    };
+
+    return "";
+}
+
 /* re-use a little code from the NE parser. */
 #include <hw/dos/exenehdr.h>
 #include <hw/dos/exenepar.h>
@@ -1050,8 +1099,10 @@ int main(int argc,char **argv) {
                     vxd_service = *((uint16_t*)dec_i.end); dec_i.end += 2;
                     vxd_device = *((uint16_t*)dec_i.end); dec_i.end += 2;
 
-                    printf("VxDCall  Device=0x%04X Service=0x%04X",
-                        vxd_device,vxd_service);
+                    printf("VxDCall  Device=0x%04X '%s' Service=0x%04X",
+                        vxd_device,
+                        vxd_device_to_name(vxd_device),
+                        vxd_service);
                 }
                 else {
                     printf("%-8s ",opcode_string[dec_i.opcode]);
