@@ -664,14 +664,14 @@ const char *vxd_device_VDMAD_service_names[] = {
     "VDMAD_Unlock_DMA_Region_No_Dirty", /* 0x0017 <- end Windows 3.1 DDK */
     "VDMAD_Phys_Mask_Channel", /* 0x0018 <- begin Windows 95 DDK */
     "VDMAD_Phys_Unmask_Channel", /* 0x0019 */
-    "VDMAD_Service   VDMAD_Unvirtualize_Channel", /* 0x001A */
+    "VDMAD_Unvirtualize_Channel", /* 0x001A */
     "VDMAD_Set_IO_Address", /* 0x001B */
-    "VDMAD_Service   VDMAD_Get_Phys_Count", /* 0x001C */
-    "VDMAD_Service   VDMAD_Get_Phys_Status", /* 0x001D */
-    "VDMAD_Service   VDMAD_Get_Max_Phys_Page", /* 0x001E */
-    "VDMAD_Service   VDMAD_Set_Channel_Callbacks", /* 0x001F */
-    "VDMAD_Service   VDMAD_Get_Virt_Count", /* 0x0020 */
-    "VDMAD_Service   VDMAD_Set_Virt_Count" /* 0x0021 */
+    "VDMAD_Get_Phys_Count", /* 0x001C */
+    "VDMAD_Get_Phys_Status", /* 0x001D */
+    "VDMAD_Get_Max_Phys_Page", /* 0x001E */
+    "VDMAD_Set_Channel_Callbacks", /* 0x001F */
+    "VDMAD_Get_Virt_Count", /* 0x0020 */
+    "VDMAD_Set_Virt_Count" /* 0x0021 */
 };
 
 const char *vxd_device_VTD_service_names[] = {
