@@ -23,7 +23,13 @@ struct le_header_entry_table {
     size_t                                                  length;
 };
 
+struct le_header_fixup_record_list {
+    struct le_header_fixup_record_table*                    table;
+    size_t                                                  length;
+};
+
 struct le_header_parseinfo {
+    struct le_header_fixup_record_list                      le_fixup_records;
     struct exe_ne_header_name_entry_table                   le_resident_names;
     struct exe_ne_header_name_entry_table                   le_nonresident_names;
     struct exe_le_header_parseinfo_object_page_table_entry* le_object_page_map_table;           /* [number_of_memory_pages] entries */
@@ -52,11 +58,6 @@ struct le_header_fixup_record_table {
     size_t                                                  alloc;
     size_t                                                  length;
     size_t                                                  raw_length_parsed;
-};
-
-struct le_header_fixup_record_list {
-    struct le_header_fixup_record_table*                    table;
-    size_t                                                  length;
 };
 
 int le_segofs_to_trackio(struct le_vmap_trackio * const io,const uint16_t object,const uint32_t offset,const struct le_header_parseinfo * const lep);
