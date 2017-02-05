@@ -658,6 +658,19 @@ const char *vxd_device_VTD_service_names[] = {
     "VTD_Delay"
 };
 
+const char *vxd_device_PAGESWAP_service_names[] = {
+    "PageSwap_Get_Version", /* 0x0000 */
+    "PageSwap_Test_Create", /* 0x0001 invalid in Windows 95 DDK */
+    "PageSwap_Create", /* 0x0002 invalid in Windows 95 DDK */
+    "PageSwap_Destroy", /* 0x0003 invalid in Windows 95 DDK */
+    "PageSwap_In", /* 0x0004 invalid in Windows 95 DDK */
+    "PageSwap_Out", /* 0x0005 invalid in Windows 95 DDK */
+    "PageSwap_Test_IO_Valid", /* 0x0006 <- end Windows 3.1 DDK */
+    "PageSwap_Read_Or_Write", /* 0x0007 <- begin Windows 95 DDK */
+    "PageSwap_Grow_File", /* 0x0008 */
+    "PageSwap_Init_File" /* 0x0009 */
+};
+
 const char *vxd_device_VDD_service_name[] = {
     "VDD_Get_Version", /* 0x0000 */
     "VDD_PIF_State", /* 0x0001 */
@@ -749,6 +762,8 @@ const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
         case 0x0003: return X(vxd_device_VPICD_service_names);  /* VPICD */
         case 0x0004: return X(vxd_device_VDMAD_service_names);  /* VDMAD */
         case 0x0005: return X(vxd_device_VTD_service_names);    /* VTD */
+
+        case 0x0007: return X(vxd_device_PAGESWAP_service_names);/*PAGESWAP */
 
         case 0x000A: return X(vxd_device_VDD_service_name);     /* VDD */
 
