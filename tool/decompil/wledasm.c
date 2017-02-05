@@ -772,7 +772,9 @@ int main(int argc,char **argv) {
         for (i=0;i < le_parser.le_header.object_table_entries;i++) {
             ent = le_parser.le_object_table + i;
 
-            printf("* LE object #%u\n",i + 1);
+            printf("* LE object #%u (%u-bit)\n",
+                i + 1,
+                (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT) ? 32 : 16);
             if (!(ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE))
                 continue;
 
