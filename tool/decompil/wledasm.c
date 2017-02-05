@@ -786,6 +786,7 @@ int main(int argc,char **argv) {
                 continue;
 
             reset_buffer();
+            labeli = 0;
             dec_ofs = 0;
             entry_ip = 0;
             dec_cs = i + 1;
