@@ -747,6 +747,7 @@ int main(int argc,char **argv) {
         fprintf(stderr,"Failed to alloc label array\n");
         return 1;
     }
+    memset(dec_label,0,sizeof(*dec_label) * dec_label_alloc);
 
     src_fd = open(src_file,O_RDONLY|O_BINARY);
     if (src_fd < 0) {

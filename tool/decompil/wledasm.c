@@ -367,6 +367,7 @@ int main(int argc,char **argv) {
         fprintf(stderr,"Failed to alloc label array\n");
         return 1;
     }
+    memset(dec_label,0,sizeof(*dec_label) * dec_label_alloc);
 
     if (src_file == NULL) {
         fprintf(stderr,"No source file specified\n");
