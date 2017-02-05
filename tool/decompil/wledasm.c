@@ -1214,7 +1214,11 @@ int main(int argc,char **argv) {
 
     assert(sizeof(exehdr) == 0x1C);
 
+#if defined(TARGET_MSDOS) && TARGET_MSDOS == 16
     dec_label_alloc = 4096;
+#else
+    dec_label_alloc = 65536;
+#endif
     dec_label_count = 0;
     dec_label = malloc(sizeof(*dec_label) * dec_label_alloc);
     if (dec_label == NULL) {
