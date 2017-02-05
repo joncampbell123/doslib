@@ -571,7 +571,35 @@ const char *vxd_device_VMM_service_names[] = {
     "_lstrcmpi", /* 0x018E */
     "_strupr", /* 0x018F */
     "Log_Fault_Call_Out", /* 0x0190 */
-    "_AtEventTime" /* 0x0191 */
+    "_AtEventTime", /* 0x0191 <- end of Windows 95 DDK */
+    "_PageOutPages", /* 0x0192 <- begin Windows 98 DDK */
+    "_Call_On_My_Not_Flat_Stack", /* 0x0193 */
+    "_LinRegionLock", /* 0x0194 */
+    "_LinRegionUnLock", /* 0x0195 */
+    "_AttemptingSomethingDangerous", /* 0x0196 */
+    "_Vsprintf", /* 0x0197 */
+    "_Vsprintfw", /* 0x0198 */
+    "Load_FS_Service", /* 0x0199 */
+    "Assert_FS_Service", /* 0x019A */
+    "_Begin_Preemptable_Code", /* 0x019B */
+    "_End_Preemptable_Code", /* 0x019C */
+    "_Get_CPUID_Flags", /* 0x019D */
+    "_RegisterGARTHandler", /* 0x019E */
+    "_GARTReserve", /* 0x019F */
+    "_GARTCommit", /* 0x01A0 */
+    "_GARTUnCommit", /* 0x01A1 */
+    "_GARTFree", /* 0x01A2 */
+    "_GARTMemAttributes", /* 0x01A3 */
+    "VMMCreateThreadEx", /* 0x01A4 */
+    "_FlushCaches", /* 0x01A5 */
+    "Set_Thread_Win32_Pri_NoYield", /* 0x01A6 */
+    "_FlushMappedCacheBlock", /* 0x01A7 */
+    "_ReleaseMappedCacheBlock", /* 0x01A8 */
+    "Run_Preemptable_Events", /* 0x01A9 */
+    "_MMPreSystemExit", /* 0x01AA */
+    "_MMPageFileShutDown", /* 0x01AB */
+    "_Set_Global_Time_Out_Ex", /* 0x01AC */
+    "Query_Thread_Priority" /* 0x01AD */
 };
 
 const char *vxd_device_DEBUG_service_names[] = {
