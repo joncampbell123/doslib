@@ -54,3 +54,7 @@ unsigned char *le_header_entry_table_get_raw_entry(struct le_header_entry_table 
 unsigned char *le_header_entry_table_alloc(struct le_header_entry_table *t,size_t sz);
 void le_header_entry_table_parse(struct le_header_entry_table * const t);
 
+void le_header_parseinfo_free_object_table(struct le_header_parseinfo * const h);
+size_t le_header_parseinfo_get_object_table_buffer_size(struct le_header_parseinfo * const h);
+unsigned char *le_header_parseinfo_alloc_object_table(struct le_header_parseinfo * const h);
+

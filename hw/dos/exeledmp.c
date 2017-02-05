@@ -90,13 +90,8 @@ void le_header_parseinfo_init(struct le_header_parseinfo * const h) {
     memset(h,0,sizeof(*h));
 }
 
-void le_header_parseinfo_free_object_table(struct le_header_parseinfo * const h) {
-    if (h->le_object_table) free(h->le_object_table);
-    h->le_object_table = NULL;
-}
-
 void le_header_parseinfo_free_object_page_map_table(struct le_header_parseinfo * const h) {
-    if (h->le_object_table) free(h->le_object_page_map_table);
+    if (h->le_object_page_map_table) free(h->le_object_page_map_table);
     h->le_object_page_map_table = NULL;
 }
 
@@ -191,10 +186,6 @@ size_t le_header_parseinfo_get_object_page_map_table_buffer_size(struct le_heade
     return sizeof(struct exe_le_header_parseinfo_object_page_table_entry) * h->le_header.number_of_memory_pages;
 }
 
-size_t le_header_parseinfo_get_object_table_buffer_size(struct le_header_parseinfo * const h) {
-    return sizeof(struct exe_le_header_object_table_entry) * h->le_header.object_table_entries;
-}
-
 unsigned char *le_header_parseinfo_alloc_object_page_map_table(struct le_header_parseinfo * const h) {
     const size_t sz = le_header_parseinfo_get_object_page_map_table_buffer_size(h);
 
@@ -202,15 +193,6 @@ unsigned char *le_header_parseinfo_alloc_object_page_map_table(struct le_header_
         h->le_object_page_map_table = (struct exe_le_header_parseinfo_object_page_table_entry*)malloc(sz);
 
     return (unsigned char*)(h->le_object_page_map_table);
-}
-
-unsigned char *le_header_parseinfo_alloc_object_table(struct le_header_parseinfo * const h) {
-    const size_t sz = le_header_parseinfo_get_object_table_buffer_size(h);
-
-    if (h->le_object_table == NULL)
-        h->le_object_table = (struct exe_le_header_object_table_entry*)malloc(sz);
-
-    return (unsigned char*)(h->le_object_table);
 }
 
 unsigned char *le_header_parseinfo_alloc_fixup_page_table(struct le_header_parseinfo * const h) {
