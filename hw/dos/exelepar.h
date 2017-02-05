@@ -101,3 +101,5 @@ void le_header_fixup_record_list_free(struct le_header_fixup_record_list *l);
 int le_header_fixup_record_list_alloc(struct le_header_fixup_record_list *l,const size_t entries/*number_of_memory_pages*/);
 void le_header_fixup_record_table_parse(struct le_header_fixup_record_table *t);
 
+void le_header_parseinfo_fixup_record_list_setup_prepare_from_page_table(struct le_header_parseinfo * const p);
+

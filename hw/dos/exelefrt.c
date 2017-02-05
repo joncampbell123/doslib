@@ -200,3 +200,32 @@ void le_header_fixup_record_table_parse(struct le_header_fixup_record_table *t) 
     t->raw_length_parsed = (uint32_t)(scan - base);
 }
 
+void le_header_parseinfo_fixup_record_list_setup_prepare_from_page_table(struct le_header_parseinfo * const p) {
+    if (p->le_fixup_page_table != NULL && p->le_fixup_records.table == NULL &&
+        p->le_header.fixup_record_table_offset != 0 && p->le_header.number_of_memory_pages != 0 &&
+        le_header_fixup_record_list_alloc(&p->le_fixup_records,p->le_header.number_of_memory_pages) == 0) {
+        struct le_header_fixup_record_table *frtable;
+        unsigned long ofs,sz;
+        unsigned int i;
+
+        // NTS: The le_fixup_page_table[] array is number_of_memory_pages+1 elements long
+        assert(p->le_fixup_records.table != NULL);
+        assert(p->le_fixup_records.length == p->le_header.number_of_memory_pages);
+        for (i=0;i < p->le_header.number_of_memory_pages;i++) {
+            frtable = p->le_fixup_records.table + i;
+
+            if ((unsigned long)p->le_fixup_page_table[i+1] < (unsigned long)p->le_fixup_page_table[i])
+                continue;
+
+            ofs = (unsigned long)p->le_fixup_page_table[i] +
+                (unsigned long)p->le_header.fixup_record_table_offset +
+                (unsigned long)p->le_header_offset;
+            sz = (unsigned long)p->le_fixup_page_table[i+1] -
+                (unsigned long)p->le_fixup_page_table[i];
+
+            frtable->file_offset = ofs;
+            frtable->file_length = sz;
+        }
+    }
+}
+
