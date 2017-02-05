@@ -564,6 +564,13 @@ const char *vxd_device_VMM_service_names[] = {
     "_AtEventTime" /* 0x0191 */
 };
 
+const char *vxd_device_DEBUG_service_names[] = {
+    "DEBUG_Get_Version", /* 0x0000 */
+    "DEBUG_Fault", /* 0x0001 */
+    "DEBUG_CheckFault", /* 0x0002 */
+    "_DEBUG_LoadSyms" /* 0x0003 */
+};
+
 const char *vxd_device_VTD_service_names[] = {
     "VTD_Get_Version",                  // 0x0000
     "VTD_Update_System_Clock",
@@ -581,8 +588,9 @@ const char *vxd_device_VTD_service_names[] = {
 const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
 #define X(x) (sid < (sizeof(x)/sizeof(x[0]))) ? x[sid] : "";
     switch (vid) {
-        case 0x0001: return X(vxd_device_VMM_service_names); /* VMM */
-        case 0x0005: return X(vxd_device_VTD_service_names); /* VTD */
+        case 0x0001: return X(vxd_device_VMM_service_names);    /* VMM */
+        case 0x0002: return X(vxd_device_DEBUG_service_names);  /* DEBUG */
+        case 0x0005: return X(vxd_device_VTD_service_names);    /* VTD */
         default: break;
     };
 #undef X
