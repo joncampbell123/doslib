@@ -159,6 +159,31 @@ SHELL_INIT_ORDER        EQU     0B0000000H
     return "";
 }
 
+const char *vxd_device_VTD_service_names[] = {
+    "VTD_Get_Version",                  // 0x0000
+    "VTD_Update_System_Clock",
+    "VTD_Get_Interrupt_Period",
+    "VTD_Begin_Min_Int_Period",
+    "VTD_End_Min_Int_Period",           // 0x0004
+    "VTD_Disable_Trapping",
+    "VTD_Enable_Trapping",
+    "VTD_Get_Real_Time",                // <- end of Windows 3.1 DDK
+    "VTD_Get_Date_And_Time",            // 0x0008 <- begin Windows 95 DDK
+    "VTD_Adjust_VM_Count",
+    "VTD_Delay"
+};
+
+const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
+#define X(x) (sid < (sizeof(x)/sizeof(x[0]))) ? x[sid] : "";
+    switch (vid) {
+        case 0x0005: return X(vxd_device_VTD_service_names); /* VTD */
+        default: break;
+    };
+#undef X
+
+    return "";
+}
+
 /* re-use a little code from the NE parser. */
 #include <hw/dos/exenehdr.h>
 #include <hw/dos/exenepar.h>
@@ -1191,10 +1216,11 @@ int main(int argc,char **argv) {
                     vxd_service = *((uint16_t*)dec_i.end); dec_i.end += 2;
                     vxd_device = *((uint16_t*)dec_i.end); dec_i.end += 2;
 
-                    printf("VxDCall  Device=0x%04X '%s' Service=0x%04X",
+                    printf("VxDCall  Device=0x%04X '%s' Service=0x%04X '%s'",
                         vxd_device,
                         vxd_device_to_name(vxd_device),
-                        vxd_service);
+                        vxd_service,
+                        vxd_service_to_name(vxd_device,vxd_service));
                 }
                 else {
                     printf("%-8s ",opcode_string[dec_i.opcode]);
