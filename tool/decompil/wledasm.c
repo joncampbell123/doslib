@@ -668,44 +668,35 @@ int main(int argc,char **argv) {
                     is_vxd = 1;
 
                     if (ddb_31->DDB_Control_Proc != 0) {
-                        label = dec_find_label(object,offset);
-                        if (label == NULL) {
-                            if ((label=dec_label_malloc()) != NULL) {
-                                dec_label_set_name(label,"VXD DDB_Control_Proc");
+                        if ((label=dec_label_malloc()) != NULL) {
+                            dec_label_set_name(label,"VXD DDB_Control_Proc");
 
-                                label->seg_v =
-                                    object;
-                                label->ofs_v =
-                                    offset;
-                            }
+                            label->seg_v =
+                                object;
+                            label->ofs_v =
+                                ddb_31->DDB_Control_Proc;
                         }
                     }
 
                     if (ddb_31->DDB_V86_API_Proc != 0) {
-                        label = dec_find_label(object,offset);
-                        if (label == NULL) {
-                            if ((label=dec_label_malloc()) != NULL) {
-                                dec_label_set_name(label,"VXD DDB_V86_API_Proc");
+                        if ((label=dec_label_malloc()) != NULL) {
+                            dec_label_set_name(label,"VXD DDB_V86_API_Proc");
 
-                                label->seg_v =
-                                    object;
-                                label->ofs_v =
-                                    offset;
-                            }
+                            label->seg_v =
+                                object;
+                            label->ofs_v =
+                                ddb_31->DDB_V86_API_Proc;
                         }
                     }
 
                     if (ddb_31->DDB_PM_API_Proc != 0) {
-                        label = dec_find_label(object,offset);
-                        if (label == NULL) {
-                            if ((label=dec_label_malloc()) != NULL) {
-                                dec_label_set_name(label,"VXD DDB_PM_API_Proc");
+                        if ((label=dec_label_malloc()) != NULL) {
+                            dec_label_set_name(label,"VXD DDB_PM_API_Proc");
 
-                                label->seg_v =
-                                    object;
-                                label->ofs_v =
-                                    offset;
-                            }
+                            label->seg_v =
+                                object;
+                            label->ofs_v =
+                                ddb_31->DDB_PM_API_Proc;
                         }
                     }
 
