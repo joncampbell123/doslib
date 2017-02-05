@@ -346,6 +346,7 @@ int main(int argc,char **argv) {
     struct le_vmap_trackio io;
     uint32_t le_header_offset;
     struct dec_label *label;
+    unsigned int labeli;
     uint32_t file_size;
 
     assert(sizeof(le_parser.le_header) == EXE_HEADER_LE_HEADER_SIZE);
@@ -798,7 +799,37 @@ int main(int argc,char **argv) {
             do {
                 uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer();
                 uint32_t ip = ofs + entry_ip - dec_ofs;
+                unsigned char dosek = 0;
                 unsigned int c;
+
+                while (labeli < dec_label_count) {
+                    label = dec_label + labeli;
+                    if (label->seg_v != dec_cs) {
+                        labeli++;
+                        continue;
+                    }
+                    if (ip < label->ofs_v)
+                        break;
+
+                    labeli++;
+                    ip = label->ofs_v;
+                    dec_cs = label->seg_v;
+
+                    printf("Label '%s' at %04lx:%04lx\n",
+                            label->name ? label->name : "",
+                            (unsigned long)label->seg_v,
+                            (unsigned long)label->ofs_v);
+
+                    label = dec_label + labeli;
+                    dosek = 1;
+                }
+
+                if (dosek) {
+                    reset_buffer();
+                    current_offset = ofs;
+                    if (!le_segofs_to_trackio(&io,i + 1,ip,&le_parser))
+                        break;
+                }
 
                 if (!refill(&io,&le_parser)) break;
 
