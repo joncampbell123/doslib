@@ -72,7 +72,9 @@ VPOWERD_DEVICE_ID       EQU     APM_DEVICE_ID
 VXDLDR_DEVICE_ID        EQU     00027H
 NDIS_DEVICE_ID  EQU     00028H
 BIOS_EXT_DEVICE_ID      EQU     00029H
-VWIN32_DEVICE_ID        EQU     0002AH
+#endif
+        case 0x002A:    return "VWIN32";                // VWIN32_DEVICE_ID        EQU     0002AH
+#if 0
 VCOMM_DEVICE_ID EQU     0002BH
 SPOOLER_DEVICE_ID       EQU     0002CH
 WIN32S_DEVICE_ID        EQU     0002DH
@@ -782,6 +784,38 @@ const char *vxd_device_VDD2_service_name[] = {
     "VDD2_Get_Version" /* 0x0000 */
 };
 
+const char *vxd_device_VWIN32_service_name[] = {
+    "VWIN32_Get_Version", /* 0x0000 */
+    "VWIN32_DIOCCompletionRoutine", /* 0x0001 */
+    "_VWIN32_QueueUserApc", /* 0x0002 */
+    "_VWIN32_Get_Thread_Context", /* 0x0003 */
+    "_VWIN32_Set_Thread_Context", /* 0x0004 */
+    "_VWIN32_CopyMem", /* 0x0005 */
+    "_VWIN32_Npx_Exception", /* 0x0006 */
+    "_VWIN32_Emulate_Npx", /* 0x0007 */
+    "_VWIN32_CheckDelayedNpxTrap", /* 0x0008 */
+    "VWIN32_EnterCrstR0", /* 0x0009 */
+    "VWIN32_LeaveCrstR0", /* 0x000A */
+    "_VWIN32_FaultPopup", /* 0x000B */
+    "VWIN32_GetContextHandle", /* 0x000C */
+    "VWIN32_GetCurrentProcessHandle", /* 0x000D */
+    "_VWIN32_SetWin32Event", /* 0x000E */
+    "_VWIN32_PulseWin32Event", /* 0x000F */
+    "_VWIN32_ResetWin32Event", /* 0x0010 */
+    "_VWIN32_WaitSingleObject", /* 0x0011 */
+    "_VWIN32_WaitMultipleObjects", /* 0x0012 */
+    "_VWIN32_CreateRing0Thread", /* 0x0013 */
+    "_VWIN32_CloseVxDHandle", /* 0x0014 */
+    "VWIN32_ActiveTimeBiasSet", /* 0x0015 */
+    "VWIN32_GetCurrentDirectory", /* 0x0016 */
+    "VWIN32_BlueScreenPopup", /* 0x0017 */
+    "VWIN32_TerminateApp", /* 0x0018 */
+    "_VWIN32_QueueKernelAPC", /* 0x0019 */
+    "VWIN32_SysErrorBox", /* 0x001A */
+    "_VWIN32_IsClientWin32", /* 0x001B */
+    "VWIN32_IFSRIPWhenLev2Taken" /* 0x001C */
+};
+
 const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
 #define X(x) (sid < (sizeof(x)/sizeof(x[0]))) ? x[sid] : "";
     switch (vid) {
@@ -800,6 +834,8 @@ const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
         case 0x0017: return X(vxd_device_SHELL_service_name);   /* SHELL */
 
         case 0x001C: return X(vxd_device_VDD2_service_name);    /* VDD2 */
+
+        case 0x002A: return X(vxd_device_VWIN32_service_name);  /* VWIN32 */
 
         default: break;
     };
