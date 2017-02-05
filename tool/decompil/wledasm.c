@@ -749,6 +749,9 @@ int main(int argc,char **argv) {
         }
     }
 
+    /* sort labels */
+    dec_label_sort();
+
     {
         struct dec_label *label;
         unsigned int i;
