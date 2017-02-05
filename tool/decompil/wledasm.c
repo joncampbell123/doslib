@@ -531,16 +531,13 @@ int main(int argc,char **argv) {
     }
 
     if (le_header.initial_object_cs_number != 0) {
-        label = dec_find_label(le_header.initial_object_cs_number,le_header.initial_eip);
-        if (label == NULL) {
-            if ((label=dec_label_malloc()) != NULL) {
-                dec_label_set_name(label,"LE entry point");
+        if ((label=dec_label_malloc()) != NULL) {
+            dec_label_set_name(label,"LE entry point");
 
-                label->seg_v =
-                    le_header.initial_object_cs_number;
-                label->ofs_v =
-                    le_header.initial_eip;
-            }
+            label->seg_v =
+                le_header.initial_object_cs_number;
+            label->ofs_v =
+                le_header.initial_eip;
         }
     }
 
@@ -563,19 +560,16 @@ int main(int argc,char **argv) {
                 offset = *((uint16_t*)raw); raw += 2;
                 assert(raw <= (le_parser.le_entry_table.raw+le_parser.le_entry_table.raw_length));
 
-                label = dec_find_label(ent->object,offset);
-                if (label == NULL) {
-                    if ((label=dec_label_malloc()) != NULL) {
-                        char tmp[256];
+                if ((label=dec_label_malloc()) != NULL) {
+                    char tmp[256];
 
-                        sprintf(tmp,"Entry ordinal #%u",i+1);
-                        dec_label_set_name(label,tmp);
+                    sprintf(tmp,"Entry ordinal #%u",i+1);
+                    dec_label_set_name(label,tmp);
 
-                        label->seg_v =
-                            ent->object;
-                        label->ofs_v =
-                            offset;
-                    }
+                    label->seg_v =
+                        ent->object;
+                    label->ofs_v =
+                        offset;
                 }
             }
             else if (ent->type == 3) {
@@ -586,19 +580,16 @@ int main(int argc,char **argv) {
                 offset = *((uint32_t*)raw); raw += 4;
                 assert(raw <= (le_parser.le_entry_table.raw+le_parser.le_entry_table.raw_length));
 
-                label = dec_find_label(ent->object,offset);
-                if (label == NULL) {
-                    if ((label=dec_label_malloc()) != NULL) {
-                        char tmp[256];
+                if ((label=dec_label_malloc()) != NULL) {
+                    char tmp[256];
 
-                        sprintf(tmp,"Entry ordinal #%u",i+1);
-                        dec_label_set_name(label,tmp);
+                    sprintf(tmp,"Entry ordinal #%u",i+1);
+                    dec_label_set_name(label,tmp);
 
-                        label->seg_v =
-                            ent->object;
-                        label->ofs_v =
-                            offset;
-                    }
+                    label->seg_v =
+                        ent->object;
+                    label->ofs_v =
+                        offset;
                 }
             }
         }
