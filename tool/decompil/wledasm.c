@@ -612,8 +612,11 @@ int main(int argc,char **argv) {
                 (unsigned int)object,(unsigned long)offset);
 
             label = dec_find_label(object,offset);
-            if (label != NULL)
+            if (label != NULL) {
+                label->seg_v = ~0;
+                label->ofs_v = ~0;
                 dec_label_set_name(label,"VXD DDB entry point");
+            }
 
             if (le_segofs_to_trackio(&io,object,offset,&le_parser)) {
                 printf("        File offset %lu (0x%lX) (page #%lu at %lu + page offset 0x%lX / 0x%lX)\n",
@@ -740,7 +743,7 @@ int main(int argc,char **argv) {
 
         while (los < dec_label_count) {
             label = dec_label + los;
-            if (label->seg_v == 0) {
+            if (label->seg_v == 0 || label->seg_v > le_parser.le_header.object_table_entries) {
                 los++;
                 continue;
             }
