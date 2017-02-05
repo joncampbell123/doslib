@@ -33,6 +33,7 @@ void le_header_fixup_record_table_free_table(struct le_header_fixup_record_table
     t->table = NULL;
     t->length = 0;
     t->alloc = 0;
+    t->raw_length_parsed = 0;
 }
 
 size_t le_header_fixup_record_table_get_raw_entry_length(struct le_header_fixup_record_table *t,const size_t i) {
@@ -41,7 +42,7 @@ size_t le_header_fixup_record_table_get_raw_entry_length(struct le_header_fixup_
     if (i >= t->length)
         return 0;
     if ((i+1) == t->length)
-        return t->raw_length - t->table[i];
+        return t->raw_length_parsed - t->table[i];
 
     return t->table[i+1] - t->table[i];
 }
@@ -195,5 +196,7 @@ void le_header_fixup_record_table_parse(struct le_header_fixup_record_table *t) 
         assert(t->length < t->alloc);
         t->table[t->length++] = (uint32_t)(entry - base);
     }
+
+    t->raw_length_parsed = (uint32_t)(scan - base);
 }
 

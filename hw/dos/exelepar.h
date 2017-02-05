@@ -51,6 +51,7 @@ struct le_header_fixup_record_table {
     uint32_t*                                               table;
     size_t                                                  alloc;
     size_t                                                  length;
+    size_t                                                  raw_length_parsed;
 };
 
 struct le_header_fixup_record_list {
