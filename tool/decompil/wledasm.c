@@ -1488,7 +1488,7 @@ int main(int argc,char **argv) {
                 // Special instruction:
                 //   Windows VXDs use INT 20h followed by two WORDs to call other VXDs.
                 if (is_vxd && dec_i.opcode == MXOP_INT && dec_i.argc == 1 &&
-                        dec_i.argv[0].regtype == MX86_RT_IMM && dec_i.argv[0].value == 0x20) {
+                    dec_i.argv[0].regtype == MX86_RT_IMM && dec_i.argv[0].value == 0x20) {
                     // INT 20h WORD, WORD
                     // the decompiler should have set the instruction pointer at the first WORD now.
                     uint16_t vxd_device,vxd_service;
@@ -1496,8 +1496,22 @@ int main(int argc,char **argv) {
                     vxd_service = *((uint16_t*)dec_i.end); dec_i.end += 2;
                     vxd_device = *((uint16_t*)dec_i.end); dec_i.end += 2;
 
-                    printf("VxDCall  Device=0x%04X Service=0x%04X",
-                            vxd_device,vxd_service);
+                    // bit 15 of the service indicates a jmp, not call
+                    if (vxd_service & 0x8000) {
+                        printf("VxDJmp   Device=0x%04X '%s' Service=0x%04X '%s'",
+                            vxd_device,
+                            vxd_device_to_name(vxd_device),
+                            vxd_service & 0x7FFF,
+                            vxd_service_to_name(vxd_device,vxd_service & 0x7FFF));
+                        break;
+                    }
+                    else {
+                        printf("VxDCall  Device=0x%04X '%s' Service=0x%04X '%s'",
+                            vxd_device,
+                            vxd_device_to_name(vxd_device),
+                            vxd_service,
+                            vxd_service_to_name(vxd_device,vxd_service));
+                    }
                 }
                 else {
                     printf("%-8s ",opcode_string[dec_i.opcode]);
@@ -1697,11 +1711,21 @@ int main(int argc,char **argv) {
                     vxd_service = *((uint16_t*)dec_i.end); dec_i.end += 2;
                     vxd_device = *((uint16_t*)dec_i.end); dec_i.end += 2;
 
-                    printf("VxDCall  Device=0x%04X '%s' Service=0x%04X '%s'",
-                        vxd_device,
-                        vxd_device_to_name(vxd_device),
-                        vxd_service,
-                        vxd_service_to_name(vxd_device,vxd_service));
+                    // bit 15 of the service indicates a jmp, not call
+                    if (vxd_service & 0x8000) {
+                        printf("VxDJmp   Device=0x%04X '%s' Service=0x%04X '%s'",
+                            vxd_device,
+                            vxd_device_to_name(vxd_device),
+                            vxd_service & 0x7FFF,
+                            vxd_service_to_name(vxd_device,vxd_service & 0x7FFF));
+                    }
+                    else {
+                        printf("VxDCall  Device=0x%04X '%s' Service=0x%04X '%s'",
+                            vxd_device,
+                            vxd_device_to_name(vxd_device),
+                            vxd_service,
+                            vxd_service_to_name(vxd_device,vxd_service));
+                    }
                 }
                 else {
                     printf("%-8s ",opcode_string[dec_i.opcode]);
