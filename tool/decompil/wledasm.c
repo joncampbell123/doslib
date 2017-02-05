@@ -44,7 +44,9 @@ VMCPD_Device_ID                 EQU     00011h
 EBIOS_Device_ID                 EQU     00012h
 BIOSXlat_Device_ID              EQU     00013h
 VNETBIOS_Device_ID              EQU     00014h
-DOSMGR_Device_ID                EQU     00015h
+#endif
+        case 0x0015:    return "DOSMGR";                // DOSMGR_Device_ID                EQU     00015h
+#if 0
 WINLOAD_Device_ID               EQU     00016h
 #endif
         case 0x0017:    return "SHELL";                 // SHELL_Device_ID                 EQU     00017h
@@ -713,6 +715,28 @@ const char *vxd_device_SHELL_service_name[] = {
     "_SHELL_GetDOSAppInfo" /* 0x001B */
 };
 
+const char *vxd_device_DOSMGR_service_name[] = {
+    "DOSMGR_Get_Version", /* 0x0000 */
+    "_DOSMGR_Set_Exec_VM_Data", /* 0x0001 */
+    "DOSMGR_Copy_VM_Drive_State", /* 0x0002 */
+    "_DOSMGR_Exec_VM", /* 0x0003 */
+    "DOSMGR_Get_IndosPtr", /* 0x0004 */
+    "DOSMGR_Add_Device", /* 0x0005 */
+    "DOSMGR_Remove_Device", /* 0x0006 */
+    "DOSMGR_Instance_Device", /* 0x0007 */
+    "DOSMGR_Get_DOS_Crit_Status", /* 0x0008 */
+    "DOSMGR_Enable_Indos_Polling", /* 0x0009 */
+    "DOSMGR_BackFill_Allowed", /* 0x000A */
+    "DOSMGR_LocalGlobalReg", /* 0x000B <- end Windows 3.1 DDK */
+    "DOSMGR_Init_UMB_Area", /* 0x000C <- begin Windows 95 DDK */
+    "DOSMGR_Begin_V86_App", /* 0x000D */
+    "DOSMGR_End_V86_App", /* 0x000E */
+    "DOSMGR_Alloc_Local_Sys_VM_Mem", /* 0x000F */
+    "DOSMGR_Grow_CDSs", /* 0x0010 */
+    "DOSMGR_Translate_Server_DOS_Call", /* 0x0011 */
+    "DOSMGR_MMGR_PSP_Change_Notifier" /* 0x0012 */
+};
+
 const char *vxd_device_VDD2_service_name[] = {
     "VDD2_Get_Version" /* 0x0000 */
 };
@@ -727,6 +751,8 @@ const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
         case 0x0005: return X(vxd_device_VTD_service_names);    /* VTD */
 
         case 0x000A: return X(vxd_device_VDD_service_name);     /* VDD */
+
+        case 0x0015: return X(vxd_device_DOSMGR_service_name);  /* DOSMGR */
 
         case 0x0017: return X(vxd_device_SHELL_service_name);   /* SHELL */
 
