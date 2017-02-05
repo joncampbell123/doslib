@@ -750,6 +750,169 @@ int main(int argc,char **argv) {
         }
     }
  
+    /* first pass: decompilation */
+    {
+        struct exe_le_header_object_table_entry *ent;
+        unsigned int inscount;
+        unsigned int los = 0;
+
+        while (los < dec_label_count) {
+            label = dec_label + los;
+            if (label->seg_v == 0) {
+                los++;
+                continue;
+            }
+
+            ent = le_parser.le_object_table + label->seg_v - 1;
+            if (!(ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE)) {
+                los++;
+                continue;
+            }
+
+            if (!le_segofs_to_trackio(&io,label->seg_v,label->ofs_v,&le_parser)) {
+                los++;
+                continue;
+            }
+
+            inscount = 0;
+            reset_buffer();
+            dec_ofs = 0;
+            entry_ip = 0;
+            dec_cs = label->seg_v;
+            start_decom = 0;
+            entry_cs = dec_cs;
+            current_offset = label->ofs_v;
+            dec_read = dec_end = dec_buffer;
+            end_decom = ent->virtual_segment_size;
+            refill(&io,&le_parser);
+            minx86dec_init_state(&dec_st);
+            dec_st.data32 = dec_st.addr32 =
+                (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT) ? 1 : 0;
+
+            printf("* NE segment #%d : 0x%04lx 1st pass from '%s'\n",
+                (unsigned int)dec_cs,(unsigned long)label->ofs_v,label->name);
+
+            do {
+                uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer();
+                uint32_t ip = ofs + entry_ip - dec_ofs;
+                unsigned int c;
+
+                if (!refill(&io,&le_parser)) break;
+
+                minx86dec_set_buffer(&dec_st,dec_read,(int)(dec_end - dec_read));
+                minx86dec_init_instruction(&dec_i);
+                dec_st.ip_value = ip;
+                minx86dec_decodeall(&dec_st,&dec_i);
+                assert(dec_i.end >= dec_read);
+                assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
+
+                printf("%04lX:%04lX  ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
+
+                {
+                    unsigned char *e = dec_i.end;
+
+                    // INT 20h VXDCALL
+                    if (is_vxd && dec_i.opcode == MXOP_INT && dec_i.argc == 1 &&
+                            dec_i.argv[0].regtype == MX86_RT_IMM && dec_i.argv[0].value == 0x20)
+                        e += 2+2;
+
+                    for (c=0,iptr=dec_i.start;iptr != e;c++)
+                        printf("%02X ",*iptr++);
+                }
+
+                if (dec_i.rep != MX86_REP_NONE) {
+                    for (;c < 6;c++)
+                        printf("   ");
+
+                    switch (dec_i.rep) {
+                        case MX86_REPE:
+                            printf("REP   ");
+                            break;
+                        case MX86_REPNE:
+                            printf("REPNE ");
+                            break;
+                        default:
+                            break;
+                    };
+                }
+                else {
+                    for (;c < 8;c++)
+                        printf("   ");
+                }
+
+                // Special instruction:
+                //   Windows VXDs use INT 20h followed by two WORDs to call other VXDs.
+                if (is_vxd && dec_i.opcode == MXOP_INT && dec_i.argc == 1 &&
+                        dec_i.argv[0].regtype == MX86_RT_IMM && dec_i.argv[0].value == 0x20) {
+                    // INT 20h WORD, WORD
+                    // the decompiler should have set the instruction pointer at the first WORD now.
+                    uint16_t vxd_device,vxd_service;
+
+                    vxd_service = *((uint16_t*)dec_i.end); dec_i.end += 2;
+                    vxd_device = *((uint16_t*)dec_i.end); dec_i.end += 2;
+
+                    printf("VxDCall  Device=0x%04X Service=0x%04X",
+                            vxd_device,vxd_service);
+                }
+                else {
+                    printf("%-8s ",opcode_string[dec_i.opcode]);
+
+                    for (c=0;c < (unsigned int)dec_i.argc;) {
+                        minx86dec_regprint(&dec_i.argv[c],arg_c);
+                        printf("%s",arg_c);
+                        if (++c < (unsigned int)dec_i.argc) printf(",");
+                    }
+                }
+                if (dec_i.lock) printf("  ; LOCK#");
+                printf("\n");
+
+                dec_read = dec_i.end;
+
+                if ((dec_i.opcode == MXOP_JMP || dec_i.opcode == MXOP_CALL || dec_i.opcode == MXOP_JCXZ ||
+                    (dec_i.opcode >= MXOP_JO && dec_i.opcode <= MXOP_JG)) && dec_i.argc == 1 &&
+                    dec_i.argv[0].regtype == MX86_RT_IMM) {
+                    /* make a label of the target */
+                    /* 1st arg is target offset */
+                    uint32_t toffset = dec_i.argv[0].value;
+
+                    printf("Target: 0x%04lx\n",(unsigned long)toffset);
+
+                    label = dec_find_label(dec_cs,toffset);
+                    if (label == NULL) {
+                        if ((label=dec_label_malloc()) != NULL) {
+                            if (dec_i.opcode == MXOP_JMP || dec_i.opcode == MXOP_JCXZ ||
+                                    (dec_i.opcode >= MXOP_JO && dec_i.opcode <= MXOP_JG))
+                                dec_label_set_name(label,"JMP target");
+                            else if (dec_i.opcode == MXOP_CALL)
+                                dec_label_set_name(label,"CALL target");
+
+                            label->seg_v =
+                                dec_cs;
+                            label->ofs_v =
+                                toffset;
+                        }
+                    }
+
+                    if (dec_i.opcode == MXOP_JMP)
+                        break;
+                }
+                else if (dec_i.opcode == MXOP_JMP)
+                    break;
+                else if (dec_i.opcode == MXOP_RET || dec_i.opcode == MXOP_RETF)
+                    break;
+                else if (dec_i.opcode == MXOP_CALL_FAR || dec_i.opcode == MXOP_JMP_FAR) {
+                    if (dec_i.opcode == MXOP_JMP_FAR)
+                        break;
+                }
+
+                if (++inscount >= 1024)
+                    break;
+            } while(1);
+
+            los++;
+        }
+    }
+
     /* sort labels */
     dec_label_sort();
 
