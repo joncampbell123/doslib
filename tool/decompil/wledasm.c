@@ -362,8 +362,8 @@ void le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const 
         return;
 
     objent = le_parser->le_object_table + object - 1;
-    page_first = data_object_offset / le_parser->le_header.memory_page_size;
-    page_last = (data_object_offset + datlen - 1) / le_parser->le_header.memory_page_size;
+    page_first = (data_object_offset / le_parser->le_header.memory_page_size) + (uint32_t)objent->page_map_index;
+    page_last = ((data_object_offset + datlen - 1) / le_parser->le_header.memory_page_size) + (uint32_t)objent->page_map_index;
 
     for (page=page_first;page <= page_last;page++) { // <- in case the DDB struct spans two pages
         if (page > le_parser->le_fixup_records.length)
@@ -816,8 +816,13 @@ int main(int argc,char **argv) {
 
                         printf("            DDB service table:\n");
                         for (i=0;i < (unsigned int)ddb_31->DDB_Service_Table_Size;i++) {
+                            uint32_t ent_offset = io.offset;
+
                             if (le_trackio_read((unsigned char*)(&ptr),sizeof(uint32_t),src_fd,&io,&le_parser) != sizeof(uint32_t))
                                 break;
+
+                            /* service table entries can also be affected by fixups. */
+                            le_parser_apply_fixup((unsigned char*)(&ptr),sizeof(ptr),object,ent_offset,&le_parser);
 
                             if (ddb_31->DDB_Service_Table_Ptr != 0) {
                                 label = dec_find_label(object,ptr);
