@@ -10,6 +10,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <assert.h>
+#include <stddef.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -665,7 +666,8 @@ int main(int argc,char **argv) {
 
                     is_vxd = 1;
 
-                    if (ddb_31->DDB_Control_Proc != 0) {
+                    if (ddb_31->DDB_Control_Proc != 0 ||
+                        le_parser_apply_fixup((unsigned char*)tmp,4,object,offset+offsetof(struct windows_vxd_ddb_win31,DDB_Control_Proc),&le_parser) > 0) {
                         if ((label=dec_label_malloc()) != NULL) {
                             dec_label_set_name(label,"VXD DDB_Control_Proc");
 
@@ -676,7 +678,8 @@ int main(int argc,char **argv) {
                         }
                     }
 
-                    if (ddb_31->DDB_V86_API_Proc != 0) {
+                    if (ddb_31->DDB_V86_API_Proc != 0 ||
+                        le_parser_apply_fixup((unsigned char*)tmp,4,object,offset+offsetof(struct windows_vxd_ddb_win31,DDB_V86_API_Proc),&le_parser) > 0) {
                         if ((label=dec_label_malloc()) != NULL) {
                             dec_label_set_name(label,"VXD DDB_V86_API_Proc");
 
@@ -687,7 +690,8 @@ int main(int argc,char **argv) {
                         }
                     }
 
-                    if (ddb_31->DDB_PM_API_Proc != 0) {
+                    if (ddb_31->DDB_PM_API_Proc != 0 ||
+                        le_parser_apply_fixup((unsigned char*)tmp,4,object,offset+offsetof(struct windows_vxd_ddb_win31,DDB_PM_API_Proc),&le_parser) > 0) {
                         if ((label=dec_label_malloc()) != NULL) {
                             dec_label_set_name(label,"VXD DDB_PM_API_Proc");
 

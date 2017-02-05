@@ -15,7 +15,7 @@
 #include <hw/dos/exelehdr.h>
 #include <hw/dos/exelepar.h>
 
-void le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const uint16_t object,const uint32_t data_object_offset,struct le_header_parseinfo *le_parser) {
+int le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const uint16_t object,const uint32_t data_object_offset,struct le_header_parseinfo *le_parser) {
     struct exe_le_header_object_table_entry *objent;
     struct le_header_fixup_record_table *frtable;
     unsigned int srcoff_count,srcoff_i;
@@ -27,12 +27,13 @@ void le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const 
     uint16_t srcoff;
     unsigned int ti;
     uint32_t page;
+    int count = 0;
 
     if (datlen == 0)
-        return;
+        return count;
     if (le_parser->le_fixup_records.table == NULL || le_parser->le_fixup_records.length == 0 ||
         le_parser->le_object_table == NULL || object == 0 || object > le_parser->le_header.object_table_entries)
-        return;
+        return count;
 
     objent = le_parser->le_object_table + object - 1;
     page_first = (data_object_offset / le_parser->le_header.memory_page_size) + (uint32_t)objent->page_map_index;
@@ -112,8 +113,10 @@ void le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const 
                                     (((uint32_t)objent->page_map_index - 1) * le_parser->le_header.memory_page_size)) - data_object_offset;
 
                             // if it's within range, and in the same object, patch
-                            if ((soffset+4UL) <= datlen)
+                            if ((soffset+4UL) <= datlen) {
                                 *((uint32_t*)(data+soffset)) = trglinoff;
+                                count++;
+                            }
                         }
                     }
                 }
@@ -125,8 +128,10 @@ void le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const 
                                 (((uint32_t)objent->page_map_index - 1) * le_parser->le_header.memory_page_size)) - data_object_offset;
 
                         // if it's within range, and in the same object, patch
-                        if ((soffset+4UL) <= datlen)
+                        if ((soffset+4UL) <= datlen) {
                             *((uint32_t*)(data+soffset)) = trglinoff;
+                            count++;
+                        }
                     }
                 }
             }
@@ -135,5 +140,7 @@ void le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const 
             }
         }
     }
+
+    return count;
 }
 
