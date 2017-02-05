@@ -46,3 +46,11 @@ struct le_vmap_trackio {
 int le_segofs_to_trackio(struct le_vmap_trackio * const io,const uint16_t object,const uint32_t offset,const struct le_header_parseinfo * const lep);
 int le_trackio_read(unsigned char *buf,int len,const int fd,struct le_vmap_trackio * const io,const struct le_header_parseinfo * const lep);
 
+uint32_t le_exe_header_entry_table_size(struct exe_le_header * const h);
+void le_header_entry_table_free_table(struct le_header_entry_table *t);
+void le_header_entry_table_free_raw(struct le_header_entry_table *t);
+void le_header_entry_table_free(struct le_header_entry_table *t);
+unsigned char *le_header_entry_table_get_raw_entry(struct le_header_entry_table *t,size_t i);
+unsigned char *le_header_entry_table_alloc(struct le_header_entry_table *t,size_t sz);
+void le_header_entry_table_parse(struct le_header_entry_table * const t);
+
