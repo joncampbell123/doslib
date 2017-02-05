@@ -1503,7 +1503,6 @@ int main(int argc,char **argv) {
                             vxd_device_to_name(vxd_device),
                             vxd_service & 0x7FFF,
                             vxd_service_to_name(vxd_device,vxd_service & 0x7FFF));
-                        break;
                     }
                     else {
                         printf("VxDCall  Device=0x%04X '%s' Service=0x%04X '%s'",
