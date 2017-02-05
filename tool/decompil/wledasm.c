@@ -571,6 +571,34 @@ const char *vxd_device_DEBUG_service_names[] = {
     "_DEBUG_LoadSyms" /* 0x0003 */
 };
 
+const char *vxd_device_VPICD_service_names[] = {
+    "VPICD_Get_Version", /* 0x0000 */
+    "VPICD_Virtualize_IRQ", /* 0x0001 */
+    "VPICD_Set_Int_Request", /* 0x0002 */
+    "VPICD_Clear_Int_Request", /* 0x0003 */
+    "VPICD_Phys_EOI", /* 0x0004 */
+    "VPICD_Get_Complete_Status", /* 0x0005 */
+    "VPICD_Get_Status", /* 0x0006 */
+    "VPICD_Test_Phys_Request", /* 0x0007 */
+    "VPICD_Physically_Mask", /* 0x0008 */
+    "VPICD_Physically_Unmask", /* 0x0009 */
+    "VPICD_Set_Auto_Masking", /* 0x000A */
+    "VPICD_Get_IRQ_Complete_Status", /* 0x000B */
+    "VPICD_Convert_Handle_To_IRQ", /* 0x000C */
+    "VPICD_Convert_IRQ_To_Int", /* 0x000D */
+    "VPICD_Convert_Int_To_IRQ", /* 0x000E */
+    "VPICD_Call_When_Hw_Int", /* 0x000F */
+    "VPICD_Force_Default_Owner", /* 0x0010 */
+    "VPICD_Force_Default_Behavior", /* 0x0011 */
+    "VPICD_Auto_Mask_At_Inst_Swap", /* 0x0012 */
+    "VPICD_Begin_Inst_Page_Swap", /* 0x0013 */
+    "VPICD_End_Inst_Page_Swap", /* 0x0014 <- end Windows 3.1 DDK */
+    "VPICD_Virtual_EOI", /* 0x0015 <- begin Windows 95 DDK */
+    "VPICD_Get_Virtualization_Count", /* 0x0016 */
+    "VPICD_Post_Sys_Critical_Init", /* 0x0017 */
+    "VPICD_VM_SlavePIC_Mask_Change" /* 0x0018 */
+};
+
 const char *vxd_device_VTD_service_names[] = {
     "VTD_Get_Version",                  // 0x0000
     "VTD_Update_System_Clock",
@@ -590,6 +618,7 @@ const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
     switch (vid) {
         case 0x0001: return X(vxd_device_VMM_service_names);    /* VMM */
         case 0x0002: return X(vxd_device_DEBUG_service_names);  /* DEBUG */
+        case 0x0003: return X(vxd_device_VPICD_service_names);  /* VPICD */
         case 0x0005: return X(vxd_device_VTD_service_names);    /* VTD */
         default: break;
     };
