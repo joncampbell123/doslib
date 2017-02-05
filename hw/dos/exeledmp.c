@@ -77,23 +77,6 @@ static void help(void) {
     fprintf(stderr," -so        Sort by ordinal\n");
 }
 
-///////////////
-
-void le_header_parseinfo_init(struct le_header_parseinfo * const h) {
-    memset(h,0,sizeof(*h));
-}
-
-void le_header_parseinfo_free(struct le_header_parseinfo * const h) {
-    exe_ne_header_name_entry_table_free(&h->le_nonresident_names);
-    exe_ne_header_name_entry_table_free(&h->le_resident_names);
-    le_header_parseinfo_free_object_page_map_table(h);
-    le_header_entry_table_free(&h->le_entry_table);
-    le_header_parseinfo_free_fixup_page_table(h);
-    le_header_parseinfo_free_object_table(h);
-}
-
-///////////////
-
 void print_entry_table_locate_name_by_ordinal(const struct exe_ne_header_name_entry_table * const nonresnames,const struct exe_ne_header_name_entry_table *resnames,const unsigned int ordinal) {
     char tmp[255+1];
     unsigned int i;

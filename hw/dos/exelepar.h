@@ -69,3 +69,6 @@ void le_header_parseinfo_free_fixup_page_table(struct le_header_parseinfo * cons
 size_t le_header_parseinfo_get_fixup_page_table_buffer_size(struct le_header_parseinfo * const h);
 unsigned char *le_header_parseinfo_alloc_fixup_page_table(struct le_header_parseinfo * const h);
 
+void le_header_parseinfo_init(struct le_header_parseinfo * const h);
+void le_header_parseinfo_free(struct le_header_parseinfo * const h);
+ 
