@@ -43,3 +43,6 @@ struct le_vmap_trackio {
     uint32_t                offset;         // offset within object
 };
 
+int le_segofs_to_trackio(struct le_vmap_trackio * const io,const uint16_t object,const uint32_t offset,const struct le_header_parseinfo * const lep);
+int le_trackio_read(unsigned char *buf,int len,const int fd,struct le_vmap_trackio * const io,const struct le_header_parseinfo * const lep);
+
