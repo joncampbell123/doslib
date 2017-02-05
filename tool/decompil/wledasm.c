@@ -658,6 +658,34 @@ const char *vxd_device_VTD_service_names[] = {
     "VTD_Delay"
 };
 
+const char *vxd_device_V86MMGR_service_names[] = {
+    "V86MMGR_Get_Version", /* 0x0000 */
+    "V86MMGR_Allocate_V86_Pages", /* 0x0001 */
+    "V86MMGR_Set_EMS_XMS_Limits", /* 0x0002 */
+    "V86MMGR_Get_EMS_XMS_Limits", /* 0x0003 */
+    "V86MMGR_Set_Mapping_Info", /* 0x0004 */
+    "V86MMGR_Get_Mapping_Info", /* 0x0005 */
+    "V86MMGR_Xlat_API", /* 0x0006 */
+    "V86MMGR_Load_Client_Ptr", /* 0x0007 */
+    "V86MMGR_Allocate_Buffer", /* 0x0008 */
+    "V86MMGR_Free_Buffer", /* 0x0009 */
+    "V86MMGR_Get_Xlat_Buff_State", /* 0x000A */
+    "V86MMGR_Set_Xlat_Buff_State", /* 0x000B */
+    "V86MMGR_Get_VM_Flat_Sel", /* 0x000C */
+    "V86MMGR_Map_Pages", /* 0x000D */
+    "V86MMGR_Free_Page_Map_Region", /* 0x000E */
+    "V86MMGR_LocalGlobalReg", /* 0x000F */
+    "V86MMGR_GetPgStatus", /* 0x0010 */
+    "V86MMGR_SetLocalA20", /* 0x0011 */
+    "V86MMGR_ResetBasePages", /* 0x0012 */
+    "V86MMGR_SetAvailMapPgs", /* 0x0013 */
+    "V86MMGR_NoUMBInitCalls", /* 0x0014 <- end of Windows 3.1 DDK */
+    "V86MMGR_Get_EMS_XMS_Avail", /* 0x0015 <- begin Windows 95 DDK */
+    "V86MMGR_Toggle_HMA", /* 0x0016 */
+    "V86MMGR_Dev_Init", /* 0x0017 */
+    "V86MMGR_Alloc_UM_Page" /* 0x0018 */
+};
+
 const char *vxd_device_PAGESWAP_service_names[] = {
     "PageSwap_Get_Version", /* 0x0000 */
     "PageSwap_Test_Create", /* 0x0001 invalid in Windows 95 DDK */
@@ -762,7 +790,7 @@ const char *vxd_service_to_name(const uint16_t vid,const uint16_t sid) {
         case 0x0003: return X(vxd_device_VPICD_service_names);  /* VPICD */
         case 0x0004: return X(vxd_device_VDMAD_service_names);  /* VDMAD */
         case 0x0005: return X(vxd_device_VTD_service_names);    /* VTD */
-
+        case 0x0006: return X(vxd_device_V86MMGR_service_names);/* V86MMGR */
         case 0x0007: return X(vxd_device_PAGESWAP_service_names);/*PAGESWAP */
 
         case 0x000A: return X(vxd_device_VDD_service_name);     /* VDD */
