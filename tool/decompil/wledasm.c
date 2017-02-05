@@ -236,7 +236,7 @@ void reset_buffer() {
     dec_read = dec_end = dec_buffer;
 }
 
-int refill() {
+int refill(struct le_vmap_trackio * const io,struct le_header_parseinfo * const p) {
     const size_t flush = sizeof(dec_buffer) / 2;
     const size_t padding = 16;
     size_t dlen;
@@ -262,7 +262,7 @@ int refill() {
                 dlen = (size_t)clen;
 
             if (dlen != 0) {
-                int rd = read(src_fd,dec_end,dlen);
+                int rd = le_trackio_read(dec_end,dlen,src_fd,io,p);
                 if (rd > 0) {
                     dec_end += rd;
                     current_offset += (unsigned long)rd;
@@ -346,9 +346,6 @@ int main(int argc,char **argv) {
     struct le_vmap_trackio io;
     uint32_t le_header_offset;
     struct dec_label *label;
-    unsigned int segmenti;
-    unsigned int reloci;
-    unsigned int labeli;
     uint32_t file_size;
 
     assert(sizeof(le_parser.le_header) == EXE_HEADER_LE_HEADER_SIZE);
@@ -748,7 +745,7 @@ int main(int argc,char **argv) {
             }
         }
     }
-
+ 
     /* sort labels */
     dec_label_sort();
 
@@ -764,6 +761,88 @@ int main(int argc,char **argv) {
                 (unsigned int)label->seg_v,
                 (unsigned long)label->ofs_v,
                 label->name);
+        }
+    }
+
+    /* second pass decompiler */
+    if (le_parser.le_object_table != NULL) {
+        struct exe_le_header_object_table_entry *ent;
+        unsigned int i;
+
+        for (i=0;i < le_parser.le_header.object_table_entries;i++) {
+            ent = le_parser.le_object_table + i;
+
+            printf("* LE object #%u\n",i + 1);
+            if (!(ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE))
+                continue;
+
+            if (!le_segofs_to_trackio(&io,i + 1,0,&le_parser))
+                continue;
+
+            reset_buffer();
+            dec_ofs = 0;
+            entry_ip = 0;
+            dec_cs = i + 1;
+            start_decom = 0;
+            entry_cs = dec_cs;
+            current_offset = 0;
+            dec_read = dec_end = dec_buffer;
+            end_decom = ent->virtual_segment_size;
+            refill(&io,&le_parser);
+            minx86dec_init_state(&dec_st);
+            dec_st.data32 = dec_st.addr32 =
+                (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT) ? 1 : 0;
+
+            do {
+                uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer();
+                uint32_t ip = ofs + entry_ip - dec_ofs;
+                unsigned int c;
+
+                if (!refill(&io,&le_parser)) break;
+
+                minx86dec_set_buffer(&dec_st,dec_read,(int)(dec_end - dec_read));
+                minx86dec_init_instruction(&dec_i);
+                dec_st.ip_value = ip;
+                minx86dec_decodeall(&dec_st,&dec_i);
+                assert(dec_i.end >= dec_read);
+                assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
+
+                printf("%04lX:%04lX  ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
+                for (c=0,iptr=dec_i.start;iptr != dec_i.end;c++)
+                    printf("%02X ",*iptr++);
+
+                if (dec_i.rep != MX86_REP_NONE) {
+                    for (;c < 6;c++)
+                        printf("   ");
+
+                    switch (dec_i.rep) {
+                        case MX86_REPE:
+                            printf("REP   ");
+                            break;
+                        case MX86_REPNE:
+                            printf("REPNE ");
+                            break;
+                        default:
+                            break;
+                    };
+                }
+                else {
+                    for (;c < 8;c++)
+                        printf("   ");
+                }
+                printf("%-8s ",opcode_string[dec_i.opcode]);
+
+                for (c=0;c < (unsigned int)dec_i.argc;) {
+                    minx86dec_regprint(&dec_i.argv[c],arg_c);
+                    printf("%s",arg_c);
+                    if (++c < (unsigned int)dec_i.argc) printf(",");
+                }
+                if (dec_i.lock) printf("  ; LOCK#");
+                printf("\n");
+
+                dec_read = dec_i.end;
+            } while(1);
+
         }
     }
 
