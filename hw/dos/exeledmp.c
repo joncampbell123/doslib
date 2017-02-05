@@ -79,20 +79,8 @@ static void help(void) {
 
 ///////////////
 
-uint32_t le_header_parseinfo_fixup_page_table_entries(const struct le_header_parseinfo * const h) {
-    if (h->le_fixup_page_table != NULL)
-        return h->le_header.number_of_memory_pages + (uint32_t)1;
-
-    return (uint32_t)0;
-}
-
 void le_header_parseinfo_init(struct le_header_parseinfo * const h) {
     memset(h,0,sizeof(*h));
-}
-
-void le_header_parseinfo_free_fixup_page_table(struct le_header_parseinfo * const h) {
-    if (h->le_fixup_page_table) free(h->le_fixup_page_table);
-    h->le_fixup_page_table = NULL;
 }
 
 void le_header_parseinfo_free(struct le_header_parseinfo * const h) {
@@ -102,19 +90,6 @@ void le_header_parseinfo_free(struct le_header_parseinfo * const h) {
     le_header_entry_table_free(&h->le_entry_table);
     le_header_parseinfo_free_fixup_page_table(h);
     le_header_parseinfo_free_object_table(h);
-}
-
-size_t le_header_parseinfo_get_fixup_page_table_buffer_size(struct le_header_parseinfo * const h) {
-    return sizeof(uint32_t) * ((unsigned long)h->le_header.number_of_memory_pages + 1UL);
-}
-
-unsigned char *le_header_parseinfo_alloc_fixup_page_table(struct le_header_parseinfo * const h) {
-    const size_t sz = le_header_parseinfo_get_fixup_page_table_buffer_size(h);
-
-    if (h->le_fixup_page_table == NULL)
-        h->le_fixup_page_table = (uint32_t*)malloc(sz);
-
-    return (unsigned char*)(h->le_fixup_page_table);
 }
 
 ///////////////
