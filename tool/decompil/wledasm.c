@@ -1288,6 +1288,8 @@ int main(int argc,char **argv) {
 
         if ((unsigned long)lseek(src_fd,ofs,SEEK_SET) != ofs || (size_t)read(src_fd,base,readlen) != readlen)
             le_header_parseinfo_free_object_table(&le_parser);
+
+        le_header_object_table_loaded_linear_generate(&le_parser);
     }
 
     if (le_header.object_page_map_offset != 0 && le_header.number_of_memory_pages != 0) {
