@@ -956,7 +956,8 @@ int main(int argc,char **argv) {
                      * NTS: VXDs are loaded into a flat 32-bit address space, so we read as if flat 32-bit */
                     le_parser_apply_fixup(ddb,(size_t)rd,object,offset,&le_parser);
 
-                    printf("        Windows 386/VXD DDB structure (with relocations applied):\n");
+                    printf("        Windows 386/VXD DDB structure (with relocations applied, load base 0x%08lX):\n",
+                            (unsigned long)le_parser.load_base);
                     printf("            DDB_Next:               0x%08lX\n",(unsigned long)ddb_31->DDB_Next);
                     printf("            DDB_SDK_Version:        %u.%u (0x%04X)\n",
                             ddb_31->DDB_SDK_Version>>8,
