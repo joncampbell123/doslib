@@ -1162,6 +1162,24 @@ void dec_label_xlate_32flat(struct dec_label *l,struct le_header_parseinfo *p) {
     l->seg_v = p->le_object_flat_32bit;
 }
 
+/* caller is giving us a label based on the non-relocated seg:off even if it happens to refer to 32-bit flat segment */
+void dec_label_xlate_32flat_always(struct dec_label *l,struct le_header_parseinfo *p) {
+    if (l->seg_v == p->le_object_flat_32bit) {
+        struct exe_le_header_object_table_entry *objent;
+
+        /* this transformation is only applied if object is 32-bit */
+        objent = p->le_object_table + l->seg_v - 1;
+        if (!(objent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT))
+            return;
+
+        /* adjust */
+        l->ofs_v += p->le_object_table_loaded_linear[l->seg_v - 1];
+    }
+    else {
+        dec_label_xlate_32flat(l,p);
+    }
+}
+
 struct dec_label *dec_find_label(const uint16_t so,const uint32_t oo) {
     unsigned int i=0;
 
@@ -1433,7 +1451,7 @@ int main(int argc,char **argv) {
             label->ofs_v =
                 le_header.initial_eip;
 
-            dec_label_xlate_32flat(label,&le_parser);
+            dec_label_xlate_32flat_always(label,&le_parser);
         }
     }
 
