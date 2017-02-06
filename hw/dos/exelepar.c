@@ -44,8 +44,17 @@ void le_header_object_table_loaded_linear_generate(struct le_header_parseinfo * 
 
     cur = 0;
     next = 0;
+    h->le_object_flat_32bit = 0;
     for (i=0;i < h->le_header.object_table_entries;i++) {
         ent = h->le_object_table + i;
+
+        /* the general assumption of this code is that 32-bit segments are loaded into a
+         * flat memory address space. in order for this to work, we have to pick the first
+         * 32-bit segment and base ALL decoding from that segment. */
+        if (h->le_object_flat_32bit == 0) {
+            if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT)
+                h->le_object_flat_32bit = i + 1;
+        }
 
         /* some VXDs have relocation offsets, use them.
          * other VXDs have relocation offsets set to zero (Windows 95 VXDs). fill in our own. */

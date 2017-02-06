@@ -641,6 +641,9 @@ int main(int argc,char **argv) {
                     (unsigned long)ent->page_map_entries,
                     (unsigned long)ent->page_map_entries);
 
+            if (le_parser.le_object_flat_32bit == (i + 1))
+                printf("            * This is the base of 32-bit flat memory addressing\n");
+
             if (le_parser.le_object_table_loaded_linear != NULL)
                 printf("        Chosen load address:            0x%08lx (%lu)\n",
                     (unsigned long)le_parser.le_object_table_loaded_linear[i],
