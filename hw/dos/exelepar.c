@@ -69,7 +69,7 @@ void le_header_object_table_loaded_linear_generate(struct le_header_parseinfo * 
         cur += h->le_header.memory_page_size - 1;
         cur -= cur % h->le_header.memory_page_size;
 
-        h->le_object_table_loaded_linear[i] = cur;
+        h->le_object_table_loaded_linear[i] = cur + h->load_base;
 
         next = cur + ((uint32_t)ent->page_map_entries * (uint32_t)h->le_header.memory_page_size);
     }

@@ -40,6 +40,7 @@ struct le_header_parseinfo {
     struct exe_le_header                                    le_header;
     uint32_t*                                               le_object_table_loaded_linear;      /* [object_table_entries] entries */
     uint32_t                                                le_object_flat_32bit;               /* which segment is the chosen 32-bit segment, or 0 */
+    uint32_t                                                load_base;
 };
 
 struct le_vmap_trackio {

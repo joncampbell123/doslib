@@ -22,16 +22,40 @@ int le_segofs_to_trackio(struct le_vmap_trackio * const io,const uint16_t object
     const struct exe_le_header_parseinfo_object_page_table_entry *pageent;
     const struct exe_le_header_object_table_entry *objent;
 
-    if (object == 0 || object > lep->le_header.object_table_entries) return 0;
-    io->object = object;
-    io->offset = offset;
+    if (object > lep->le_header.object_table_entries) return 0;
+
+    if (object != 0) {
+        io->object = object;
+        io->offset = offset;
+    }
+    else {
+        /* flat 32-bit tracking. object == 0 and offset == linear address in memory */
+        io->object = 0;
+        io->offset = offset;
+
+        /* chosen linear addresses must exist past this point */
+        if (lep->le_object_table_loaded_linear == NULL)
+            return 0;
+
+        /* given the linear address, what object does it correspond to? */
+        io->object = 1;
+        while (io->object <= lep->le_header.object_table_entries && offset < lep->le_object_table_loaded_linear[io->object - 1])
+            io->object++;
+
+        if (io->object > lep->le_header.object_table_entries)
+            return 0; /* didn't find it */
+
+        /* what page does that correspond to? convert "offset" from linear to offset relative to object. */
+        io->offset -= lep->le_object_table_loaded_linear[io->object - 1];
+    }
 
     /* Object number is 1-based, our array is zero based */
-    objent = (const struct exe_le_header_object_table_entry*)(lep->le_object_table + object - 1);
-    io->page_number = objent->page_map_index + (offset / lep->le_header.memory_page_size);
+    /* NTS: If pages in a 32-bit flat map are discontinuous, we will NOT support reading into the gaps */
+    objent = (const struct exe_le_header_object_table_entry*)(lep->le_object_table + io->object - 1);
+    io->page_number = objent->page_map_index + (io->offset / lep->le_header.memory_page_size);
     if (io->page_number >= (objent->page_map_index + objent->page_map_entries)) return 0;
     if (io->page_number == 0) return 0;
-    io->page_ofs = offset % lep->le_header.memory_page_size;
+    io->page_ofs = io->offset % lep->le_header.memory_page_size;
     io->page_size = lep->le_header.memory_page_size;
 
     /* page numbers are 1-based, our array is zero based */

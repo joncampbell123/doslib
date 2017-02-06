@@ -20,6 +20,7 @@ int le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const u
     struct le_header_fixup_record_table *frtable;
     unsigned int srcoff_count,srcoff_i;
     uint32_t page_first,page_last;
+    uint32_t data_linear_offset;
     unsigned char flags,src;
     uint32_t srclinoff;
     unsigned char *raw;
@@ -42,6 +43,7 @@ int le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const u
     objent = le_parser->le_object_table + object - 1;
     page_first = (data_object_offset / le_parser->le_header.memory_page_size) + (uint32_t)objent->page_map_index;
     page_last = ((data_object_offset + datlen - 1) / le_parser->le_header.memory_page_size) + (uint32_t)objent->page_map_index;
+    data_linear_offset = data_object_offset + le_parser->le_object_table_loaded_linear[object - 1];
 
     for (page=page_first;page <= page_last;page++) { // <- in case the DDB struct spans two pages
         uint32_t pagelinoff =
@@ -97,15 +99,10 @@ int le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const u
                 }
 
                 // for this computation, we need to convert target object:offset to linear address
-                if (tobject != 0 && tobject <= le_parser->le_header.object_table_entries) {
-                    if (tobject != 0)
-                        trglinoff = le_parser->le_object_table_loaded_linear[tobject - 1] + trgoff;
-                    else
-                        trglinoff = 0;
-                }
-                else {
+                if (tobject != 0 && tobject <= le_parser->le_header.object_table_entries)
+                    trglinoff = le_parser->le_object_table_loaded_linear[tobject - 1] + trgoff;
+                else
                     trglinoff = 0;
-                }
 
                 if (src & 0x20) {
                     for (srcoff_i=0;srcoff_i < srcoff_count;srcoff_i++) {
@@ -116,7 +113,7 @@ int le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const u
                             srclinoff =
                                 le_parser->le_object_table_loaded_linear[object - 1] + pagelinoff + (uint32_t)srcoff;
                             soffset =
-                                (uint32_t)srclinoff - (uint32_t)data_object_offset;
+                                (uint32_t)srclinoff - (uint32_t)data_linear_offset;
 
                             // if it's within range, and in the same object, patch
                             if ((soffset+4UL) <= datlen) {
@@ -132,7 +129,7 @@ int le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const u
                         srclinoff =
                             le_parser->le_object_table_loaded_linear[object - 1] + pagelinoff + (uint32_t)srcoff;
                         soffset =
-                            (uint32_t)srclinoff - (uint32_t)data_object_offset;
+                            (uint32_t)srclinoff - (uint32_t)data_linear_offset;
 
                         // if it's within range, and in the same object, patch
                         if ((soffset+4UL) <= datlen) {
