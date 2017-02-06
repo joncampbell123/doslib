@@ -39,7 +39,7 @@ int le_segofs_to_trackio(struct le_vmap_trackio * const io,const uint16_t object
 
         /* given the linear address, what object does it correspond to? */
         io->object = 1;
-        while (io->object <= lep->le_header.object_table_entries && offset < lep->le_object_table_loaded_linear[io->object - 1])
+        while (io->object < lep->le_header.object_table_entries && offset >= lep->le_object_table_loaded_linear[io->object])
             io->object++;
 
         if (io->object > lep->le_header.object_table_entries)
