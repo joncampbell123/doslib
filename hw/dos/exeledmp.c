@@ -834,15 +834,19 @@ int main(int argc,char **argv) {
                     for (srcoff_i=0;srcoff_i < srcoff_count;srcoff_i++) {
                         srcoff = *((int16_t*)raw); raw += 2;
 
+                        if ((src&0xF) == 0x7) { // must be 32-bit offset fixup
+                            printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
+                            if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
+                            printf("\n");
+                        }
+                    }
+                }
+                else {
+                    if ((src&0xF) == 0x7) { // must be 32-bit offset fixup
                         printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
                         if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
                         printf("\n");
                     }
-                }
-                else {
-                    printf("                Source offset:          0x%04X (%d)",srcoff&0xFFFFU,(int)srcoff);
-                    if (srcoff < 0) printf(" (continues from previous page)"); /* explain negative numbers to avert user "WTF" responses */
-                    printf("\n");
                 }
 
                 assert(raw <= rawfence);
