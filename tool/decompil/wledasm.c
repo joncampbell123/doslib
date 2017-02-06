@@ -1143,6 +1143,25 @@ int refill(struct le_vmap_trackio * const io,struct le_header_parseinfo * const 
     return (dec_read < dec_end);
 }
 
+void dec_label_xlate_32flat(struct dec_label *l,struct le_header_parseinfo *p) {
+    struct exe_le_header_object_table_entry *objent;
+
+    if (l->seg_v == 0 || l->seg_v > p->le_header.object_table_entries)
+        return;
+    if (l->seg_v == p->le_object_flat_32bit)
+        return;
+
+    /* this transformation is only applied if object is 32-bit */
+    objent = p->le_object_table + l->seg_v - 1;
+    if (!(objent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT))
+        return;
+
+    /* convert to linear address FROM offset value relative to 32-bit address. */
+    l->ofs_v += p->le_object_table_loaded_linear[l->seg_v - 1];
+    l->ofs_v -= p->le_object_table_loaded_linear[p->le_object_flat_32bit - 1];
+    l->seg_v = p->le_object_flat_32bit;
+}
+
 struct dec_label *dec_find_label(const uint16_t so,const uint32_t oo) {
     unsigned int i=0;
 
@@ -1413,6 +1432,8 @@ int main(int argc,char **argv) {
                 le_header.initial_object_cs_number;
             label->ofs_v =
                 le_header.initial_eip;
+
+            dec_label_xlate_32flat(label,&le_parser);
         }
     }
 
@@ -1445,6 +1466,8 @@ int main(int argc,char **argv) {
                         ent->object;
                     label->ofs_v =
                         offset;
+
+                    dec_label_xlate_32flat(label,&le_parser);
                 }
             }
             else if (ent->type == 3) {
@@ -1465,6 +1488,8 @@ int main(int argc,char **argv) {
                         ent->object;
                     label->ofs_v =
                         offset;
+
+                    dec_label_xlate_32flat(label,&le_parser);
                 }
             }
         }
@@ -1551,6 +1576,8 @@ int main(int argc,char **argv) {
                                 object;
                             label->ofs_v =
                                 ddb_31->DDB_Control_Proc;
+
+                            dec_label_xlate_32flat(label,&le_parser);
                         }
                     }
 
@@ -1563,6 +1590,8 @@ int main(int argc,char **argv) {
                                 object;
                             label->ofs_v =
                                 ddb_31->DDB_V86_API_Proc;
+
+                            dec_label_xlate_32flat(label,&le_parser);
                         }
                     }
 
@@ -1575,6 +1604,8 @@ int main(int argc,char **argv) {
                                 object;
                             label->ofs_v =
                                 ddb_31->DDB_PM_API_Proc;
+
+                            dec_label_xlate_32flat(label,&le_parser);
                         }
                     }
 
@@ -1605,6 +1636,8 @@ int main(int argc,char **argv) {
                                             object;
                                         label->ofs_v =
                                             ptr;
+
+                                        dec_label_xlate_32flat(label,&le_parser);
                                     }
                                 }
                             }
@@ -1636,9 +1669,17 @@ int main(int argc,char **argv) {
                 continue;
             }
 
-            if (!le_segofs_to_trackio(&io,label->seg_v,label->ofs_v,&le_parser)) {
-                los++;
-                continue;
+            if (label->seg_v == le_parser.le_object_flat_32bit) {
+                if (!le_segofs_to_trackio(&io,0/*flat*/,label->ofs_v,&le_parser)) {
+                    los++;
+                    continue;
+                }
+            }
+            else {
+                if (!le_segofs_to_trackio(&io,label->seg_v,label->ofs_v,&le_parser)) {
+                    los++;
+                    continue;
+                }
             }
 
             inscount = 0;
@@ -1651,6 +1692,8 @@ int main(int argc,char **argv) {
             current_offset = label->ofs_v;
             dec_read = dec_end = dec_buffer;
             end_decom = ent->virtual_segment_size;
+            if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT)
+                end_decom += le_parser.le_object_table_loaded_linear[label->seg_v - 1];
             refill(&io,&le_parser);
             minx86dec_init_state(&dec_st);
             dec_st.data32 = dec_st.addr32 =
@@ -1673,7 +1716,10 @@ int main(int argc,char **argv) {
                 assert(dec_i.end >= dec_read);
                 assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
 
-                printf("%04lX:%04lX  ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
+                if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT)
+                    printf("%04lX:%08lX  ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
+                else
+                    printf("%04lX:%04lX      ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
 
                 {
                     unsigned char *e = dec_i.end;
@@ -1770,6 +1816,8 @@ int main(int argc,char **argv) {
                                 dec_cs;
                             label->ofs_v =
                                 toffset;
+
+                            dec_label_xlate_32flat(label,&le_parser);
                         }
                     }
 
@@ -1822,22 +1870,39 @@ int main(int argc,char **argv) {
             printf("* LE object #%u (%u-bit)\n",
                 i + 1,
                 (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT) ? 32 : 16);
-            if (!(ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE))
+            if (!(ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_EXECUTABLE)) {
+                printf("    Ignoring data object\n");
                 continue;
+            }
 
-            if (!le_segofs_to_trackio(&io,i + 1,0,&le_parser))
-                continue;
+            if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT) {
+                if (!le_segofs_to_trackio(&io,0/*flat*/,le_parser.le_object_table_loaded_linear[i],&le_parser))
+                    continue;
+            }
+            else {
+                if (!le_segofs_to_trackio(&io,i + 1,0,&le_parser))
+                    continue;
+            }
 
             reset_buffer();
             labeli = 0;
             dec_ofs = 0;
             entry_ip = 0;
-            dec_cs = i + 1;
             start_decom = 0;
-            entry_cs = dec_cs;
-            current_offset = 0;
-            dec_read = dec_end = dec_buffer;
             end_decom = ent->virtual_segment_size;
+
+            if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT) {
+                current_offset = le_parser.le_object_table_loaded_linear[i];
+                end_decom += le_parser.le_object_table_loaded_linear[i];
+                dec_cs = le_parser.le_object_flat_32bit;
+            }
+            else {
+                current_offset = 0;
+                dec_cs = i + 1;
+            }
+
+            entry_cs = dec_cs;
+            dec_read = dec_end = dec_buffer;
             refill(&io,&le_parser);
             minx86dec_init_state(&dec_st);
             dec_st.data32 = dec_st.addr32 =
@@ -1847,6 +1912,7 @@ int main(int argc,char **argv) {
                 uint32_t ofs = (uint32_t)(dec_read - dec_buffer) + current_offset_minus_buffer();
                 uint32_t ip = ofs + entry_ip - dec_ofs;
                 unsigned char dosek = 0;
+                uint32_t label_ip = 0;
                 unsigned int c;
 
                 while (labeli < dec_label_count) {
@@ -1855,12 +1921,19 @@ int main(int argc,char **argv) {
                         labeli++;
                         continue;
                     }
+
+                    if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT) {
+                        if (label->ofs_v < le_parser.le_object_table_loaded_linear[i]) {
+                            labeli++;
+                            continue;
+                        }
+                    }
+
                     if (ip < label->ofs_v)
                         break;
 
                     labeli++;
-                    ip = label->ofs_v;
-                    dec_cs = label->seg_v;
+                    label_ip = label->ofs_v;
 
                     printf("Label '%s' at %04lx:%04lx\n",
                             label->name ? label->name : "",
@@ -1872,10 +1945,17 @@ int main(int argc,char **argv) {
                 }
 
                 if (dosek) {
+                    ip = label_ip;
                     reset_buffer();
                     current_offset = ofs;
-                    if (!le_segofs_to_trackio(&io,i + 1,ip,&le_parser))
-                        break;
+                    if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT) {
+                        if (!le_segofs_to_trackio(&io,0/*flat*/,ip,&le_parser))
+                            break;
+                    }
+                    else {
+                        if (!le_segofs_to_trackio(&io,i + 1,ip,&le_parser))
+                            break;
+                    }
                 }
 
                 if (!refill(&io,&le_parser)) break;
@@ -1887,7 +1967,10 @@ int main(int argc,char **argv) {
                 assert(dec_i.end >= dec_read);
                 assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
 
-                printf("%04lX:%04lX  ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
+                if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT)
+                    printf("%04lX:%08lX  ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
+                else
+                    printf("%04lX:%04lX      ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
 
                 {
                     unsigned char *e = dec_i.end;
