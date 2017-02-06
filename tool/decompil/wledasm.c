@@ -1,4 +1,9 @@
 /* NOTES:
+ *
+ * This isn't documented anywhere, but in some VXDs that have a RCODE segment
+ * (16-bit real-mode initialization code) the LE entry point fields point into
+ * that 16-bit code segment. That's how you find the entry point of the 16-bit
+ * real-mode code of a VXD.
  */
 
 #include "minx86dec/types.h"
@@ -969,6 +974,8 @@ unsigned char                   is_vxd = 0;
 
 struct exe_dos_header           exehdr;
 
+uint32_t                        load_base = 0x00400000;
+
 char*                           sym_file = NULL;
 char*                           label_file = NULL;
 
@@ -1011,6 +1018,7 @@ void help() {
     fprintf(stderr,"    -i <file>        File to decompile\n");
     fprintf(stderr,"    -lf <file>       Text file to define labels\n");
     fprintf(stderr,"    -sym <file>      Module symbols file\n");
+    fprintf(stderr,"    -b <a>           Load base\n");
 }
 
 void print_entry_table_locate_name_by_ordinal(const struct exe_ne_header_name_entry_table * const nonresnames,const struct exe_ne_header_name_entry_table *resnames,const unsigned int ordinal) {
@@ -1067,6 +1075,11 @@ int parse_argv(int argc,char **argv) {
             else if (!strcmp(a,"h") || !strcmp(a,"help")) {
                 help();
                 return 1;
+            }
+            else if (!strcmp(a,"b")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                load_base = (uint32_t)strtoul(a,NULL,0);
             }
             else {
                 fprintf(stderr,"Unknown switch %s\n",a);
@@ -1279,6 +1292,7 @@ int main(int argc,char **argv) {
         return 1;
     }
     le_parser.le_header_offset = le_header_offset;
+    le_parser.load_base = load_base;
     le_parser.le_header = le_header;
 
     if (le_header.offset_of_object_table != 0 && le_header.object_table_entries != 0) {
@@ -1494,10 +1508,12 @@ int main(int argc,char **argv) {
                     ddb_31 = (struct windows_vxd_ddb_win31*)ddb;
 
                     /* the DDB like anything else within the VXD can be patched by LE fixups.
-                     * if we don't do this the DDB will mysteriously show no entry points whatsoever. */
+                     * if we don't do this the DDB will mysteriously show no entry points whatsoever.
+                     * NTS: VXDs are loaded into a flat 32-bit address space, so we read as if flat 32-bit */
                     le_parser_apply_fixup(ddb,(size_t)rd,object,offset,&le_parser);
 
-                    printf("        Windows 386/VXD DDB structure:\n");
+                    printf("        Windows 386/VXD DDB structure (with relocations applied, load base 0x%08lX):\n",
+                            (unsigned long)le_parser.load_base);
                     printf("            DDB_Next:               0x%08lX\n",(unsigned long)ddb_31->DDB_Next);
                     printf("            DDB_SDK_Version:        %u.%u (0x%04X)\n",
                             ddb_31->DDB_SDK_Version>>8,
@@ -1563,14 +1579,7 @@ int main(int argc,char **argv) {
                     }
 
                     // go dump the service table
-                    // NTS: Some VXD drivers indicate a table size, but the offset (ptr) is zero. dumping from that location shows more zeros.
-                    //      What is the meaning of that, exactly? Is it a clever way of defining the table such that the VXD can patch it with
-                    //      entry points later?
-                    //
-                    //      Examples:
-                    //        - Creative Sound Blaster 16 drivers for Windows 3.1 (VSBPD.386)
-                    //        - Microsoft PCI VXD driver (pci.vxd)
-                    if (ddb_31->DDB_Service_Table_Size != 0 && le_segofs_to_trackio(&io,object,ddb_31->DDB_Service_Table_Ptr,&le_parser)) {
+                    if (ddb_31->DDB_Service_Table_Size != 0 && le_segofs_to_trackio(&io,0/*flat 32-bit*/,ddb_31->DDB_Service_Table_Ptr,&le_parser)) {
                         uint32_t ptr;
 
                         printf("            DDB service table:\n");
