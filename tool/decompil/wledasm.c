@@ -1332,6 +1332,9 @@ int main(int argc,char **argv) {
     le_parser.load_base = load_base;
     le_parser.le_header = le_header;
 
+    printf("  * Chosen 32-bit flat base:        0x%08lx (for this dump)\n",
+            (unsigned long)le_parser.load_base);
+
     if (le_header.offset_of_object_table != 0 && le_header.object_table_entries != 0) {
         unsigned long ofs = le_header.offset_of_object_table + (unsigned long)le_parser.le_header_offset;
         unsigned char *base = le_header_parseinfo_alloc_object_table(&le_parser);
