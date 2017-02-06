@@ -38,6 +38,7 @@ struct le_header_parseinfo {
     uint32_t                                                le_header_offset;
     struct le_header_entry_table                            le_entry_table;
     struct exe_le_header                                    le_header;
+    uint32_t*                                               le_object_table_loaded_linear;      /* [object_table_entries] entries */
 };
 
 struct le_vmap_trackio {
@@ -106,4 +107,8 @@ void le_header_parseinfo_fixup_record_list_setup_prepare_from_page_table(struct 
 int le_parser_is_windows_vxd(struct le_header_parseinfo * const p,uint16_t * const object,uint32_t * const offset);
 
 int le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const uint16_t object,const uint32_t data_object_offset,struct le_header_parseinfo *le_parser);
+
+void le_header_object_table_loaded_linear_free(struct le_header_parseinfo * const h);
+void le_header_object_table_loaded_linear_generate(struct le_header_parseinfo * const h);
+uint32_t *le_header_object_table_loaded_linear_alloc(struct le_header_parseinfo * const h);
 
