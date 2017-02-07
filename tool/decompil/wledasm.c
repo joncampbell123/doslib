@@ -2303,9 +2303,102 @@ int main(int argc,char **argv) {
                     fixent = fixup_window.table + fixup_window.read;
                     if (fixent->linear_address >= dec_st.ip_value &&
                         fixent->linear_address < (dec_st.ip_value + inslen)) {
+                        struct le_header_fixup_record_table *frtable;
+                        unsigned char flags,src;
+                        unsigned char *raw;
+
+                        assert(fixent->fixup_rec_page > 0);
+                        assert(fixent->fixup_rec_page <= le_parser.le_header.number_of_memory_pages);
+                        frtable = le_parser.le_fixup_records.table + fixent->fixup_rec_page - 1;
+                        raw = le_header_fixup_record_table_get_raw_entry(frtable,fixent->fixup_rec_index);
+
                         printf("             ^ Relocation at 0x%08lx (+%u bytes from start of instruction)\n",
                                 (unsigned long)fixent->linear_address,
                                 (unsigned int)(fixent->linear_address - dec_st.ip_value));
+
+                        if (raw != NULL) {
+                            src = *raw++;
+                            flags = *raw++;
+
+                            printf("                Source type:            0x%02X ",src);
+                            switch (src&0xF) {
+                                case 0x2:
+                                    printf("16-bit selector fixup (16 bits)");
+                                    break;
+                                case 0x7:
+                                    printf("32-bit offset fixup (32 bits)");
+                                    break;
+                                case 0x8:
+                                    printf("32-bit self-relative offset fixup (32 bits)");
+                                    break;
+                                default:
+                                    printf("Unknown");
+                                    continue;
+                            };
+                            if (src & 0x10)
+                                printf(" Fix-up to alias");
+                            printf("\n");
+
+                            printf("                Source flags:           0x%02X ",flags);
+                            switch (flags&3) {
+                                case 0x0:
+                                    printf("Internal reference");
+                                    break;
+                                case 0x1:
+                                    printf("Imported reference by ordinal");
+                                    break;
+                                case 0x2:
+                                    printf("Imported reference by name");
+                                    break;
+                                case 0x3:
+                                    printf("Internal reference via entry table");
+                                    break;
+                            };
+                            if (flags&4) printf(" ADDITIVE");
+                            if (flags&8) printf(" \"Internal chaining fixup\"");
+                            if (flags&0x10) printf(" \"32-bit target offset\"");
+                            if (flags&0x20) printf(" \"32-bit additive fixup value\"");
+                            if (flags&0x40) printf(" \"16-bit object number/module ordinal\"");
+                            if (flags&0x80) printf(" \"8-bit ordinal\"");
+                            printf("\n");
+
+                            if (src & 0x20)
+                                raw++; //number of source offsets. object follows, then array of srcoff
+                            else
+                                raw += 2; //srcoff
+
+                            if ((flags&3) == 0) { // internal reference
+                                uint32_t trglinoff;
+                                uint16_t tobject;
+                                uint32_t trgoff;
+
+                                if (flags&0x40) {
+                                    tobject = *((uint16_t*)raw); raw += 2;
+                                }
+                                else {
+                                    tobject = *raw++;
+                                }
+
+                                printf("                Target object:          #%u\n",(unsigned int)tobject);
+                                if ((src&0xF) != 0x2) { /* not 16-bit selector fixup */
+                                    if (flags&0x10) { // 32-bit target offset
+                                        trgoff = *((uint32_t*)raw); raw += 4;
+                                    }
+                                    else { // 16-bit target offset
+                                        trgoff = *((uint16_t*)raw); raw += 2;
+                                    }
+
+                                    // for this computation, we need to convert target object:offset to linear address
+                                    if (tobject != 0 && tobject <= le_parser.le_header.object_table_entries)
+                                        trglinoff = le_parser.le_object_table_loaded_linear[tobject - 1] + trgoff;
+                                    else
+                                        trglinoff = 0;
+
+                                    printf("                Target offset:          linear=0x%08lX offset=0x%08lX\n",
+                                        (unsigned long)trglinoff,(unsigned long)trgoff);
+                                }
+                            }
+                        }
                     }
                 }
             } while(1);
