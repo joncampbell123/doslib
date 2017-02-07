@@ -81,7 +81,6 @@ $(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dll
 ! endif
 	%write tmp.cmd name $(DBOXMPI_DRV)
 	@wlink @tmp.cmd
-	@wrc -31 $(DBOXMPI_DRV)
 ! ifdef WIN_NE_SETVER_BUILD
 !  ifeq TARGET_WINDOWS 20
 	../../../tool/chgnever.pl 2.0 $(DBOXMPI_DRV)
