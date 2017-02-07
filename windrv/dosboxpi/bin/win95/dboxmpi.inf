@@ -4,7 +4,7 @@
 [Version]
 Signature="$CHICAGO$"
 Class=Mouse
-Provider=%MS%
+Provider=%DOSBOX%
 
 [DestinationDirs]
 DefaultDestDir = 11        ; LDID_SYS
@@ -17,11 +17,11 @@ Dboxmpi.Copy    = 11
 dboxmpi.drv=91
 
 [Manufacturer]
-%MS%=MS
+%DOSBOX%=DOSBOX
 
 ; Manufacturer Sections
 ; ----------------------------------------
-[MS]
+[DOSBOX]
 %Dboxmpi.Desc%=Dboxmpi
 
 
@@ -50,6 +50,6 @@ system.ini,386Enh,,"mouse="
 
 [Strings]
 DosboxDisk="DOSBox-X Guest Additions Driver Disk"
-MS="Microsoft"
+DOSBOX="DOSBox-X"
 Dboxmpi.Desc="DOSBox-X Mouse Pointer Integration Minidriver"
 
