@@ -1,0 +1,88 @@
+
+#include "ver.h"
+
+#define VER_PRODUCTVERSION_STR      "1.0.0\0"
+#define VER_PRODUCTVERSION          1,0,0,0
+
+#define VER_FILEFLAGSMASK           VS_FFI_FILEFLAGSMASK
+#define VER_FILEOS                  VOS_DOS_WINDOWS16
+#define VER_FILEFLAGS               0
+
+#define VER_COMPANYNAME_STR         "DOSBox-X x86 emulation\0"
+
+#define VER_PRODUCTNAME_STR         "DOSBox-X guest additions\0"
+
+#define VER_LEGALTRADEMARKS_STR     \
+"DOSBox-X is an open source project dedicated to DOS gaming and retro-development.\0"
+
+#define VER_FILETYPE		    VFT_DRV
+#define VER_FILESUBTYPE 	    VFT2_DRV_MOUSE
+#define VER_FILEDESCRIPTION_STR     "DOSBox-X Mouse Pointer Integration Driver"
+#define VER_INTERNALNAME_STR	    "MOUSE"
+#define VER_LEGALCOPYRIGHT_YEARS    "2017"
+#define VER_ORIGINALFILENAME_STR    "DBOXMPI.DRV"
+
+#ifdef RC_INVOKED
+ 
+#ifndef VER_LEGALCOPYRIGHT_STR
+#define VER_LEGALCOPYRIGHT_STR "Copyright \251 " VER_LEGALCOPYRIGHT_YEARS " DOSLIB"
+#endif
+
+#ifndef VER_FILEVERSION
+#define VER_FILEVERSION VER_PRODUCTVERSION
+#endif
+
+#ifndef VER_FILEVERSION_STR
+#define VER_FILEVERSION_STR VER_PRODUCTVERSION_STR
+#endif
+
+#ifndef VER_ORIGINALFILENAME_STR
+#define VER_ORIGINALFILENAME_STR
+#endif
+
+VS_VERSION_INFO VERSIONINFO 
+FILEVERSION    VER_FILEVERSION
+PRODUCTVERSION VER_PRODUCTVERSION
+FILEFLAGSMASK  VER_FILEFLAGSMASK
+FILEFLAGS      VER_FILEFLAGS
+FILEOS         VER_FILEOS
+FILETYPE       VER_FILETYPE
+FILESUBTYPE    VER_FILESUBTYPE
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN 
+            VALUE "CompanyName"     ,VER_COMPANYNAME_STR
+            VALUE "FileDescription" ,VER_FILEDESCRIPTION_STR
+            VALUE "FileVersion"     ,VER_FILEVERSION_STR
+            VALUE "InternalName"    ,VER_INTERNALNAME_STR
+            VALUE "LegalCopyright"  ,VER_LEGALCOPYRIGHT_STR
+            VALUE "OriginalFilename",VER_ORIGINALFILENAME_STR
+            VALUE "ProductName"     ,VER_PRODUCTNAME_STR
+            VALUE "ProductVersion"  ,VER_PRODUCTVERSION_STR
+        END 
+
+#ifdef INTL
+        BLOCK "040904E4"
+        BEGIN 
+            VALUE "CompanyName"     ,VER_COMPANYNAME_STR
+            VALUE "FileDescription" ,VER_FILEDESCRIPTION_STR
+            VALUE "FileVersion"     ,VER_FILEVERSION_STR
+            VALUE "InternalName"    ,VER_INTERNALNAME_STR
+            VALUE "LegalCopyright"  ,VER_LEGALCOPYRIGHT_STR
+            VALUE "OriginalFilename",VER_ORIGINALFILENAME_STR
+            VALUE "ProductName"     ,VER_PRODUCTNAME_STR
+            VALUE "ProductVersion"  ,VER_PRODUCTVERSION_STR
+        END 
+#endif
+    END 
+ 
+    BLOCK "VarFileInfo" 
+    BEGIN 
+        /* the following line should be extended for localized versions */
+        VALUE "Translation", 0x0409, 0x04E4
+    END 
+END 
+
+#endif

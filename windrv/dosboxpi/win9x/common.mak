@@ -33,8 +33,11 @@ exe: $(DBOXMPI_DRV) .symbolic
 
 lib: .symbolic
 
+$(SUBDIR)$(HPS)dboxmpi.res: dboxmpi.rc
+	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)dboxmpi.res  $[@
+
 !ifdef DBOXMPI_DRV
-$(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)inthndlr.obj
+$(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dllentry.obj $(SUBDIR)$(HPS)inthndlr.obj $(SUBDIR)$(HPS)dboxmpi.res
 	%write tmp.cmd option quiet
 	%write tmp.cmd file $(SUBDIR)$(HPS)dllentry.obj
 	%write tmp.cmd file $(SUBDIR)$(HPS)dboxmpi.obj
@@ -48,6 +51,7 @@ $(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dll
 	%write tmp.cmd option nocaseexact
 	%write tmp.cmd option stack=8k, heapsize=1k
 	%write tmp.cmd format windows dll
+	%write tmp.cmd option resource=$(SUBDIR)$(HPS)dboxmpi.res
 	%write tmp.cmd segment TYPE CODE PRELOAD DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD FIXED SHARED
 	%write tmp.cmd segment _NDTEXT PRELOAD FIXED SHARED
@@ -64,7 +68,6 @@ $(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dll
 	%write tmp.cmd export WEP
 	%write tmp.cmd name $(DBOXMPI_DRV)
 	@wlink @tmp.cmd
-	@wrc -31 $(DBOXMPI_DRV)
 	../../../tool/chgnever.pl 4.0 $(DBOXMPI_DRV)
 !endif
 
