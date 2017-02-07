@@ -1,0 +1,60 @@
+; Setup file for sample VMOUSE minidriver
+; Copyright 1993-1995 Microsoft Corporation
+ 
+[Version]
+Signature="$CHICAGO$"
+Class=Mouse
+Provider=%MS%
+
+[DestinationDirs]
+DefaultDestDir = 11        ; LDID_SYS
+Dboxmpi.Copy    = 11
+
+[SourceDisksNames]
+91=%DosboxDisk%,,1
+
+[SourceDisksFiles]
+dboxmpi.drv=91
+
+[Manufacturer]
+%MS%=MS
+
+; Manufacturer Sections
+; ----------------------------------------
+[MS]
+%Dboxmpi.Desc%=Dboxmpi
+
+
+; Install sections
+; ----------------------------------------
+[Dboxmpi]
+DelReg=Prev.DelReg
+AddReg=Dboxmpi.AddReg
+CopyFiles=Dboxmpi.Copy
+UpdateInis=Dboxmpi.Ini
+
+[Prev.DelReg]
+HKR,,DevLoader
+HKR,,MouseDriver
+
+[Dboxmpi.AddReg]
+HKR,,DevLoader
+HKR,,MouseDriver
+
+[Dboxmpi.Copy]
+dboxmpi.drv
+
+[Dboxmpi.Ini]
+system.ini,boot.description,,"mouse.drv=%Dboxmpi.Desc%"
+system.ini,boot,,"mouse.drv=dboxmpi.drv"
+system.ini,386Enh,,"mouse="
+
+
+; ----------------------------------------
+; User-visible Strings
+
+[Strings]
+DosboxDisk="DOSBox-X Guest Additions Driver Disk"
+MS="Microsoft"
+Dboxmpi.Desc="DOSBox-X Mouse Pointer Integration Minidriver"
+

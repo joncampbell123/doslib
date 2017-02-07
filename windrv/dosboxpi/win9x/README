@@ -1,0 +1,9 @@
+Windows 9x/ME driver.
+
+Will eventually become (by Microsoft's example)
+a VXD device driver and a stub MOUSE drv file
+for backwards compatibility with Win16 code.
+
+UNTIL FURTHER NOTICE, DO NOT USE THIS DRIVER
+WITH PRODUCTION WINDOWS 95/98 INSTALLATIONS!
+
