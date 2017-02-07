@@ -1246,7 +1246,97 @@ void dec_label_sort() {
     qsort(dec_label,dec_label_count,sizeof(*dec_label),dec_label_qsortcb);
 }
 
+struct fixup_tracking_window_ent {
+    uint32_t                                    fixup_rec_page;     // page it belongs to
+    uint32_t                                    fixup_rec_index;    // index within page record array
+    uint32_t                                    linear_address;     // linear memory address that relocation is applied to
+};
+
+// table:
+//    0 <= read <= length <= alloc
+struct fixup_tracking_window {
+    struct fixup_tracking_window_ent*           table;
+    size_t                                      read;
+    size_t                                      length;
+    size_t                                      alloc;
+};
+
+void fixup_tracking_window_init(struct fixup_tracking_window *w) {
+    memset(w,0,sizeof(*w));
+}
+
+void fixup_tracking_window_free(struct fixup_tracking_window *w) {
+    if (w->table) free(w->table);
+    w->table = NULL;
+    w->length = 0;
+    w->alloc = 0;
+    w->read = 0;
+}
+
+void fixup_tracking_window_flush(struct fixup_tracking_window *w) {
+    size_t mc;
+
+    if (w->table == NULL) return;
+    if (w->read == 0) return;
+    if (w->read >= w->length) return;
+
+    mc = w->length - w->read;
+    memmove(w->table,w->table + w->read,mc * sizeof(struct fixup_tracking_window_ent));
+    w->length = mc;
+    w->read = 0;
+}
+
+void fixup_tracking_window_lazy_flush(struct fixup_tracking_window *w) {
+    if (w->read >= (w->alloc / 2))
+        fixup_tracking_window_flush(w);
+}
+
+void fixup_tracking_window_alloc(struct fixup_tracking_window *w) {
+    if (w->table == NULL) {
+        w->alloc = 2048;
+        w->table = malloc(w->alloc * sizeof(struct fixup_tracking_window_ent));
+        if (w->table == NULL) return;
+        w->length = 0;
+        w->read = 0;
+    }
+}
+
+struct fixup_tracking_window_ent *fixup_tracking_window_alloc_entry(struct fixup_tracking_window *w) {
+    size_t entry;
+
+    if (w->table == NULL) {
+        fixup_tracking_window_alloc(w);
+        if (w->table == NULL) return NULL;
+    }
+
+    if (w->length >= w->alloc) {
+        fixup_tracking_window_flush(w);
+        if (w->length >= w->alloc) return NULL;
+    }
+    else {
+        fixup_tracking_window_lazy_flush(w);
+    }
+
+    entry = w->length++;
+    return w->table + entry;
+}
+
+int fixup_window_sort(const void *a,const void *b) {
+    const struct fixup_tracking_window_ent *fa =
+        (const struct fixup_tracking_window_ent *)a;
+    const struct fixup_tracking_window_ent *fb =
+        (const struct fixup_tracking_window_ent *)b;
+
+    if (fa->linear_address < fb->linear_address)
+        return -1;
+    if (fa->linear_address > fb->linear_address)
+        return 1;
+
+    return 0;;
+}
+
 int main(int argc,char **argv) {
+    struct fixup_tracking_window fixup_window;
     struct le_header_parseinfo le_parser;
     struct exe_le_header le_header;
     struct le_vmap_trackio io;
@@ -1255,6 +1345,7 @@ int main(int argc,char **argv) {
     unsigned int labeli;
     uint32_t file_size;
 
+    fixup_tracking_window_init(&fixup_window);
     assert(sizeof(le_parser.le_header) == EXE_HEADER_LE_HEADER_SIZE);
     le_header_parseinfo_init(&le_parser);
     memset(&exehdr,0,sizeof(exehdr));
@@ -1470,10 +1561,9 @@ int main(int argc,char **argv) {
             if (raw == NULL) continue;
 
             if (ent->type == 2) {
-                uint16_t offset;
-                uint8_t flags;
+                uint32_t offset;
 
-                flags = *raw++;
+                raw++; /*flags = *raw++ */
                 offset = *((uint16_t*)raw); raw += 2;
                 assert(raw <= (le_parser.le_entry_table.raw+le_parser.le_entry_table.raw_length));
 
@@ -1493,9 +1583,8 @@ int main(int argc,char **argv) {
             }
             else if (ent->type == 3) {
                 uint32_t offset;
-                uint8_t flags;
 
-                flags = *raw++;
+                raw++; /*flags = *raw++ */
                 offset = *((uint32_t*)raw); raw += 4;
                 assert(raw <= (le_parser.le_entry_table.raw+le_parser.le_entry_table.raw_length));
 
@@ -1883,10 +1972,16 @@ int main(int argc,char **argv) {
     /* second pass decompiler */
     if (le_parser.le_object_table != NULL) {
         struct exe_le_header_object_table_entry *ent;
+        struct fixup_tracking_window_ent *fixent;
+        uint32_t page_base;
         unsigned int i;
+        uint32_t page;
+        size_t inslen;
 
         for (i=0;i < le_parser.le_header.object_table_entries;i++) {
             ent = le_parser.le_object_table + i;
+
+            fixup_tracking_window_free(&fixup_window);
 
             printf("* LE object #%u (%u-bit)\n",
                 i + 1,
@@ -1910,16 +2005,19 @@ int main(int argc,char **argv) {
             dec_ofs = 0;
             entry_ip = 0;
             start_decom = 0;
+            page = ent->page_map_index;
             end_decom = ent->virtual_segment_size;
 
             if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT) {
                 current_offset = le_parser.le_object_table_loaded_linear[i];
                 end_decom += le_parser.le_object_table_loaded_linear[i];
+                page_base = le_parser.le_object_table_loaded_linear[i];
                 dec_cs = le_parser.le_object_flat_32bit;
             }
             else {
                 current_offset = 0;
                 dec_cs = i + 1;
+                page_base = 0;
             }
 
             entry_cs = dec_cs;
@@ -1981,12 +2079,150 @@ int main(int argc,char **argv) {
 
                 if (!refill(&io,&le_parser)) break;
 
+                /* track page.
+                 * load new entries slightly ahead (16 bytes) because
+                 * relocations that span pages reach backwards into the prior page.
+                 * since we only read forward, we can free older relocations from memory
+                 * when we load new ones. */
+                if (le_parser.le_fixup_records.table != NULL) {
+                    uint32_t pob = ip + (uint32_t)16 - page_base;
+                    uint32_t po = (pob / (uint32_t)le_parser.le_header.memory_page_size) + ent->page_map_index;
+                    struct le_header_fixup_record_table *frtable;
+                    unsigned int srcoff_count,srcoff_i;
+                    unsigned char flags,src;
+                    uint32_t srclinoff;
+                    unsigned char *raw;
+                    uint16_t srcoff;
+                    uint8_t chk=0;
+                    size_t ti;
+
+                    /* setup */
+
+                    /* free old entries */
+                    fixup_tracking_window_lazy_flush(&fixup_window);
+
+                    /* load new entries */
+                    while (page <= po) {
+                        uint32_t pagelinoff =
+                            ((uint32_t)page - (uint32_t)ent->page_map_index) * (uint32_t)le_parser.le_header.memory_page_size;
+
+                        if (page != 0 && page <= le_parser.le_header.number_of_memory_pages) {
+                            frtable = le_parser.le_fixup_records.table + page - 1;
+                            if (frtable->table != NULL && frtable->length != 0) {
+                                printf("* Loading relocations for page #%u\n",page);
+
+                                chk = 1;
+                                for (ti=0;ti < frtable->length;ti++) {
+                                    raw = le_header_fixup_record_table_get_raw_entry(frtable,ti);
+
+                                    // caller ensures the record is long enough
+                                    src = *raw++;
+                                    flags = *raw++;
+
+                                    if (src & 0xC0)
+                                        continue;
+
+                                    if (src & 0x20) {
+                                        srcoff_count = *raw++; //number of source offsets. object follows, then array of srcoff
+                                    }
+                                    else {
+                                        srcoff_count = 1;
+                                        srcoff = *((int16_t*)raw); raw += 2;
+                                    }
+
+                                    if ((flags&3) == 0) { // internal reference
+                                        if (flags&0x40) {
+                                            raw += 2; /* tobject = *((uint16_t*)raw); */
+                                        }
+                                        else {
+                                            raw++; /* tobject = *raw++; */
+                                        }
+
+                                        if ((src&0xF) != 0x2) { /* not 16-bit selector fixup */
+                                            if (flags&0x10) { // 32-bit target offset
+                                                raw += 4; /* trgoff = *((uint32_t*)raw); */
+                                            }
+                                            else { // 16-bit target offset
+                                                raw += 2; /* trgoff = *((uint16_t*)raw); */
+                                            }
+                                        }
+
+                                        if (src & 0x20) {
+                                            for (srcoff_i=0;srcoff_i < srcoff_count;srcoff_i++) {
+                                                srcoff = *((int16_t*)raw); raw += 2;
+
+                                                if ((src&0xF) == 0x7) { // must be 32-bit offset fixup
+                                                    // what is the relocation relative to the struct we just read?
+                                                    srclinoff =
+                                                        le_parser.le_object_table_loaded_linear[i] + pagelinoff + (uint32_t)srcoff;
+                                                    fixent =
+                                                        fixup_tracking_window_alloc_entry(&fixup_window);
+                                                    if (fixent) {
+                                                        fixent->fixup_rec_page = page;
+                                                        fixent->fixup_rec_index = ti;
+                                                        fixent->linear_address = srclinoff;
+                                                    }
+                                                    else {
+                                                        printf("! unable to alloc reloc tracking\n");
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        else {
+                                            if ((src&0xF) == 0x7) { // must be 32-bit offset fixup
+                                                // what is the relocation relative to the struct we just read?
+                                                srclinoff =
+                                                    le_parser.le_object_table_loaded_linear[i] + pagelinoff + (uint32_t)srcoff;
+                                                fixent =
+                                                    fixup_tracking_window_alloc_entry(&fixup_window);
+                                                if (fixent) {
+                                                    fixent->fixup_rec_page = page;
+                                                    fixent->fixup_rec_index = ti;
+                                                    fixent->linear_address = srclinoff;
+                                                }
+                                                else {
+                                                    printf("! unable to alloc reloc tracking\n");
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+
+                        page++;
+                    }
+
+                    if (chk) {
+                        /* sort entries (past read pointer) so code below can read entry-by-entry.
+                         * ONLY sort the entries yet to be read, not the ones already read. */
+                        assert(fixup_window.table != NULL);
+                        assert(fixup_window.read <= fixup_window.length);
+                        if (fixup_window.read < fixup_window.length) {
+                            qsort(fixup_window.table+fixup_window.read,
+                                  fixup_window.length-fixup_window.read,
+                                  sizeof(*(fixup_window.table)),fixup_window_sort);
+                        }
+                    }
+                }
+
                 minx86dec_set_buffer(&dec_st,dec_read,(int)(dec_end - dec_read));
                 minx86dec_init_instruction(&dec_i);
                 dec_st.ip_value = ip;
                 minx86dec_decodeall(&dec_st,&dec_i);
                 assert(dec_i.end >= dec_read);
                 assert(dec_i.end <= (dec_buffer+sizeof(dec_buffer)));
+                inslen = (size_t)(dec_i.end - dec_i.start);
+
+                /* fixup tracking */
+                while (fixup_window.table != NULL && fixup_window.read < fixup_window.length) {
+                    fixent = fixup_window.table + fixup_window.read;
+                    if (dec_st.ip_value < (fixent->linear_address + inslen)) break;
+                    fixup_window.read++;
+                }
 
                 if (ent->object_flags & LE_HEADER_OBJECT_TABLE_ENTRY_FLAGS_386_BIG_DEFAULT)
                     printf("%04lX:%08lX  ",(unsigned long)dec_cs,(unsigned long)dec_st.ip_value);
@@ -2065,11 +2301,23 @@ int main(int argc,char **argv) {
                 printf("\n");
 
                 dec_read = dec_i.end;
+
+                if (fixup_window.table != NULL && fixup_window.read < fixup_window.length) {
+                    fixent = fixup_window.table + fixup_window.read;
+                    if (fixent->linear_address >= dec_st.ip_value &&
+                        fixent->linear_address < (dec_st.ip_value + inslen)) {
+                        printf("             ^ Relocation at 0x%08lx (+%u bytes from start of instruction)\n",
+                                (unsigned long)fixent->linear_address,
+                                (unsigned int)(fixent->linear_address - dec_st.ip_value));
+                    }
+                }
             } while(1);
 
+            fixup_tracking_window_free(&fixup_window);
         }
     }
 
+    fixup_tracking_window_free(&fixup_window);
     le_header_parseinfo_free(&le_parser);
     dec_free_labels();
     close(src_fd);
