@@ -2186,9 +2186,6 @@ int main(int argc,char **argv) {
                                             }
                                         }
                                     }
-                                    else {
-                                        continue;
-                                    }
                                 }
                             }
                         }
@@ -2220,7 +2217,7 @@ int main(int argc,char **argv) {
                 /* fixup tracking */
                 while (fixup_window.table != NULL && fixup_window.read < fixup_window.length) {
                     fixent = fixup_window.table + fixup_window.read;
-                    if (dec_st.ip_value < (fixent->linear_address + inslen)) break;
+                    if (dec_st.ip_value < fixent->linear_address) break;
                     fixup_window.read++;
                 }
 
