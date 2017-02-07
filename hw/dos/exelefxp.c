@@ -47,7 +47,7 @@ int le_parser_apply_fixup(unsigned char * const data,const size_t datlen,const u
 
     for (page=page_first;page <= page_last;page++) { // <- in case the DDB struct spans two pages
         uint32_t pagelinoff =
-            ((uint32_t)page - (uint32_t)1) * (uint32_t)le_parser->le_header.memory_page_size;
+            ((uint32_t)page - (uint32_t)objent->page_map_index) * (uint32_t)le_parser->le_header.memory_page_size;
 
         if (page > le_parser->le_fixup_records.length)
             break;
