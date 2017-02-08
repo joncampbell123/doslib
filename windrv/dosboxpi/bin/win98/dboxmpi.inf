@@ -49,7 +49,7 @@ system.ini,386Enh,,"mouse="
 ; User-visible Strings
 
 [Strings]
-DosboxDisk="DOSBox-X Guest Additions for Windows 95 Disk"
+DosboxDisk="DOSBox-X Guest Additions for Windows 98 Disk"
 DOSBOX="DOSBox-X"
 Dboxmpi.Desc="DOSBox-X Mouse Pointer Integration"
 

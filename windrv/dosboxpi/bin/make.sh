@@ -32,11 +32,11 @@ if [ "$1" == "disk" ]; then
 
     mmd   -i install.dsk                    ::win98
     mcopy -i install.dsk win98/dboxmpi.drv  ::win98/dboxmpi.drv
-    mcopy -i install.dsk win95/dboxmpi.inf  ::win98/dboxmpi.inf
+    mcopy -i install.dsk win98/dboxmpi.inf  ::win98/dboxmpi.inf
 
     mmd   -i install.dsk                    ::winme
     mcopy -i install.dsk winme/dboxmpi.drv  ::winme/dboxmpi.drv
-    mcopy -i install.dsk win95/dboxmpi.inf  ::winme/dboxmpi.inf
+    mcopy -i install.dsk winme/dboxmpi.inf  ::winme/dboxmpi.inf
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
