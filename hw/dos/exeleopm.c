@@ -51,8 +51,16 @@ void le_header_parseinfo_finish_read_get_object_page_map_table(struct le_header_
             d->page_data_offset =
                 (((uint32_t)se.page_data_offset - (uint32_t)1) * (uint32_t)h->le_header.memory_page_size) +
                 (uint32_t)h->le_header.data_pages_offset;
-            d->data_size =
-                (uint16_t)h->le_header.memory_page_size;
+
+            if (i == (h->le_header.number_of_memory_pages - 1))
+                d->data_size =
+                    (h->le_header.bytes_on_last_page != 0) ? /* <- NTS: Guess based on "last page" behavior of MS-DOS header */
+                    (uint16_t)h->le_header.bytes_on_last_page :
+                    (uint16_t)h->le_header.memory_page_size;
+            else
+                d->data_size =
+                    (uint16_t)h->le_header.memory_page_size;
+
             d->flags =
                 se.flags;
 
