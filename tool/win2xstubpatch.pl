@@ -33,10 +33,10 @@ print "Extended header at $ne_offset\n";
 
 seek(NE,$ne_offset,0);
 read(NE,$tmp,2);
-if ($tmp ne "NE") {
-    print "Not an NE image\n";
-    exit 1;
-}
+#if ($tmp ne "NE") {
+#    print "Not an NE image\n";
+#    exit 1;
+#}
 
 # patch MS-DOS header to include the whole file as resident
 # TODO: Not all Windows 1.x/2.x files include the whole file.
