@@ -1,6 +1,6 @@
 
 # comment this definition out with a "#", if building a non-debugging version
-Debug=-DDEBUG
+#Debug=-DDEBUG
 
 MASMOBJ=masm5 -p -w2 -Mx $(Debug) -I..\include 
 MASMLST=masm5 -l -p -w2 -Mx $(Debug) -I..\include 
