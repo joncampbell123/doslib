@@ -8,9 +8,26 @@
 	INCLUDE VCD.Inc
 	.LIST
 
+;----------------------------------------------
 
 Declare_Virtual_Device DBOXMPI, 3, 0, DBOXMPI_Control, Undefined_Device_ID, Undefined_Init_Order
 
+;----------------------------------------------
+
+VxD_REAL_INIT_SEG
+
+BeginProc Int33_Real_Init
+
+	xor	bx, bx
+	xor	si, si
+	mov	ax, Device_Load_Ok
+	ret
+
+EndProc Int33_Real_Init
+
+VxD_REAL_INIT_ENDS
+
+;----------------------------------------------
 
 VxD_LOCKED_DATA_SEG
 
@@ -18,11 +35,13 @@ VxD_LOCKED_DATA_SEG
 
 VxD_LOCKED_DATA_ENDS
 
+;----------------------------------------------
 
 VxD_ICODE_SEG
 
 VxD_ICODE_ENDS
 
+;----------------------------------------------
 
 VxD_LOCKED_CODE_SEG
 
@@ -43,6 +62,7 @@ EndProc ldummycode
 
 VxD_LOCKED_CODE_ENDS
 
+;----------------------------------------------
 
 VxD_CODE_SEG
 
@@ -56,4 +76,7 @@ EndProc dummycode
 
 VxD_CODE_ENDS
 
-	END
+;----------------------------------------------
+
+	END	Int33_Real_Init ; LE entry point always points to real-mode init code
+

@@ -1,5 +1,0 @@
-int33.obj+vmd.obj+vmdmsg.obj+realmode.obj
-vmd.386 /NOI /NOD /NOP
-vmd.map /MAP
-
-vmd.def
