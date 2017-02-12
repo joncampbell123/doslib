@@ -1,4 +1,7 @@
 #!/bin/bash
+
+../../../../make-lowercase
+
 export WATCOM=/usr/watcom
 
 # Jonathan has started developing with OpenWatcom 2.0 branch. Use it!

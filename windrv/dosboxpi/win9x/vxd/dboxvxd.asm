@@ -31,6 +31,13 @@ DBOXMPI_DDB     dd      0                               ; +0x00 DDB_Next
                 dd      0                               ; +0x34 DDB_Service_Table_Size
                                                         ; =0x38
 
+; NTS: Okay, get this: Microsoft's Linker will ignore all the DD 0's I have written here and put the
+;      VXD description string in it's place. Then Windows will follow the obviously bad pointers
+;      in the struct as a result, and CRASH. XD. Open Watcom's linker has the sanity not to do that!
+
+; NTS: This structure *MUST* exist in a data segment. Windows will consider your VXD "corrupt" if
+;      it sees this structure in a code segment.
+
 _LDATA          ENDS
 
 ;----------------------------------------------
