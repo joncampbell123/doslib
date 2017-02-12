@@ -1,21 +1,22 @@
 
-	.386p
+    bits        32
+    cpu         386
 
 ;----------------------------------------------
 
-_LDATA          SEGMENT DWORD PUBLIC 'CODE'
-                ASSUME  CS:FLAT, DS:FLAT, ES:FLAT, SS:FLAT
+    segment     _LDATA class=CODE align=4 public use32
 
-PUBLIC          DBOXMPI_DDB
+    global      DBOXMPI_DDB
 
-DBOXMPI_DDB     dd      0                               ; +0x00 DDB_Next
+DBOXMPI_DDB:
+                dd      0                               ; +0x00 DDB_Next
                 dw      030Ah                           ; +0x04 DDB_SDK_Version (3.10)
                 dw      0000h                           ; +0x06 DDB_Req_Device_Number (undefined)
                 db      1, 0                            ; +0x08 DDB_Dev_Major/Minor_Version
                 dw      0000h                           ; +0x0A DDB_Flags
                 db      "DBOXMPI "                      ; +0x0C DDB_Name
                 dd      80000000h                       ; +0x14 DDB_Init_Order
-                dd      OFFSET DBOXMPI_Control          ; +0x18 DDB_Control_Proc
+                dd      DBOXMPI_Control                 ; +0x18 DDB_Control_Proc
                 dd      0                               ; +0x1C DDB_V86_API_Proc
                 dd      0                               ; +0x20 DDB_PM_API_Proc
                 dd      0                               ; +0x24 DDB_V86_API_CSIP
@@ -32,26 +33,17 @@ DBOXMPI_DDB     dd      0                               ; +0x00 DDB_Next
 ; NTS: This structure *MUST* exist in a data segment. Windows will consider your VXD "corrupt" if
 ;      it sees this structure in a code segment.
 
-_LDATA          ENDS
-
 ;----------------------------------------------
 
-_LTEXT          SEGMENT DWORD USE32 PUBLIC 'CODE'
-                ASSUME  CS:FLAT, DS:FLAT, ES:FLAT, SS:FLAT
+    segment     _LTEXT class=CODE align=4 public use32
 
-Public          DBOXMPI_Control
+    global      DBOXMPI_Control
 
-DBOXMPI_Control proc near
+DBOXMPI_Control:
 
     int 3
     clc
     ret
 
-DBOXMPI_Control endp
-
-_LTEXT          ENDS
-
 ;----------------------------------------------
-
-	            END
 

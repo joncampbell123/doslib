@@ -2,6 +2,8 @@
 
 ../../../../make-lowercase
 
+nasm -o dboxvxd.obj -f obj dboxvxd.asm || exit 1
+
 export WATCOM=/usr/watcom
 
 # Jonathan has started developing with OpenWatcom 2.0 branch. Use it!
@@ -40,5 +42,4 @@ export DBOXMPI_DDB.1
 name dboxmpi.386
 _EOF
 /usr/src/open-watcom-v2/rel/binl/wlink @tmp.cmd || exit 1
-cp -v dboxmpi.386 dboxmpi.386.watcom
 
