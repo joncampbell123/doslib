@@ -1,6 +1,6 @@
 LIBRARY	 DBOXMPI
 
-DESCRIPTION 'Win386 DBOXMPI Device  (Version 3.0)'
+DESCRIPTION 'DOSBox-X Mouse Pointer Integration driver for Windows 95'
 
 EXETYPE	 DEV386
 
