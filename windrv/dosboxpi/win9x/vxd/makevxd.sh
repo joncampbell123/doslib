@@ -26,10 +26,10 @@ system win_vxd
 option nocaseexact
 segment _LTEXT PRELOAD NONDISCARDABLE
 segment _LDATA PRELOAD NONDISCARDABLE
-segment _ITEXT DISCARDABLE
-segment _IDATA DISCARDABLE
-segment _TEXT  NONDISCARDABLE
-segment _DATA  NONDISCARDABLE
+segment CLASS 'ICODE' DISCARDABLE
+segment CLASS 'ICODE' DISCARDABLE
+segment CLASS 'PCODE' NONDISCARDABLE
+segment CLASS 'PCODE' NONDISCARDABLE
 option nodefaultlibs
 option modname=DBOXMPI
 option description 'DOSBox-X Mouse Pointer Integration driver for Windows 95'
