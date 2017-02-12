@@ -114,3 +114,5 @@ void le_header_object_table_loaded_linear_free(struct le_header_parseinfo * cons
 void le_header_object_table_loaded_linear_generate(struct le_header_parseinfo * const h);
 uint32_t *le_header_object_table_loaded_linear_alloc(struct le_header_parseinfo * const h);
 
+uint32_t le_header_parseinfo_guess_le_header_size(struct le_header_parseinfo * const p);
+
