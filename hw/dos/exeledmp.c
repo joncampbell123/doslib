@@ -503,6 +503,28 @@ int main(int argc,char **argv) {
     printf("  * Chosen 32-bit flat base:        0x%08lx (for this dump)\n",
             (unsigned long)le_parser.load_base);
 
+    /* some variations have longer headers. */
+    {
+        const size_t lesz = le_header_parseinfo_guess_le_header_size(&le_parser);
+
+        if (lesz >= EXE_HEADER_LE_HEADER_SIZE_WINDOWS_VXD &&
+            (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_IS_DLL) &&
+            (le_header.module_type_flags & LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_MASK) == LE_HEADER_MODULE_TYPE_FLAGS_PM_WINDOWING_UNKNOWN &&
+            le_header.target_operating_system == 0x04/*Windows 386*/) {
+            struct exe_le_header_windows_vxd_extra vx;
+
+            printf("  * Additional Windows VXD/386 LE header fields follow,\n");
+            printf("  * they should match the values in the DDB block.\n");
+            printf("  * Windows will NOT load your driver without these fields.\n");
+
+            if ((uint32_t)lseek(src_fd,le_header_offset+EXE_HEADER_LE_HEADER_SIZE,SEEK_SET) == (uint32_t)(le_header_offset+EXE_HEADER_LE_HEADER_SIZE) &&
+                (int)read(src_fd,&vx,sizeof(vx)) == sizeof(vx)) {
+                printf("    DDB_Req_Device_Number:          0x%04x\n",(unsigned int)vx.DDB_Req_Device_Number);
+                printf("    DDB_SDK_Version:                0x%04x\n",(unsigned int)vx.DDB_SDK_Version);
+            }
+        }
+    }
+
     if (le_header.offset_of_object_table != 0 && le_header.object_table_entries != 0) {
         unsigned long ofs = le_header.offset_of_object_table + (unsigned long)le_parser.le_header_offset;
         unsigned char *base = le_header_parseinfo_alloc_object_table(&le_parser);
