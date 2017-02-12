@@ -7,6 +7,9 @@
 
 void vxd_control_proc(void);
 
+/* USEFUL */
+#define VXD_INT3()                  __asm int 3
+
 /* VXD control messages */
 #define Sys_Critical_Init           0x0000
 #define Device_Init                 0x0001
@@ -22,12 +25,29 @@ void vxd_control_proc(void);
 #define VM_Not_Executeable          0x000B
 #define Destroy_VM                  0x000C
 
+/* VXD device IDs */
+#define VMM_Device_ID               0x0001
+
+/* VMM services */
+#define Fatal_Memory_Error          0x00BF
+
 #define VXD_Control_Dispatch(cmsg,cproc) __asm {    \
     __asm cmp     eax,cmsg                          \
     __asm jne     not_##cproc                       \
     __asm jmp     cproc                             \
     __asm not_##cproc:                              \
 }
+
+#define VxDcall(device,service) __asm {             \
+    __asm int     20h                               \
+    __asm dw      service                           \
+    __asm dw      device                            \
+}
+
+#define VxDjmp(device,service)  VxDcall(device,service + 0x8000)
+
+#define VMMcall(service)        VxDcall(VMM_Device_ID,service)
+#define VMMjmp(service)         VxDjmp(VMM_Device_ID,service)
 
 const struct windows_vxd_ddb_win31 __based( __segname("_CODE") ) DBOXMPI_DDB = {
     0,                                                      // +0x00 DDB_Next
@@ -48,16 +68,16 @@ const struct windows_vxd_ddb_win31 __based( __segname("_CODE") ) DBOXMPI_DDB = {
 };
 
 void __declspec(naked) my_sys_critical_init(void) {
+    VXD_INT3();
     __asm {
-        int     3
         clc
         ret
     }
 }
 
 void __declspec(naked) my_sys_critical_exit(void) {
+    VXD_INT3();
     __asm {
-        int     3
         clc
         ret
     }
