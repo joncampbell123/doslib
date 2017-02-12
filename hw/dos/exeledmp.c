@@ -160,6 +160,7 @@ int main(int argc,char **argv) {
     char *a;
     int i;
 
+    assert(sizeof(struct exe_le_header_windows_vxd) == EXE_HEADER_LE_HEADER_SIZE_WINDOWS_VXD);
     assert(sizeof(le_parser.le_header) == EXE_HEADER_LE_HEADER_SIZE);
     le_header_parseinfo_init(&le_parser);
     memset(&exehdr,0,sizeof(exehdr));

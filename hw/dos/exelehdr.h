@@ -1,5 +1,6 @@
 
 #define EXE_HEADER_LE_HEADER_SIZE                                   (0xAC)
+#define EXE_HEADER_LE_HEADER_SIZE_WINDOWS_VXD                       (0xC4)
 #define EXE_LE_SIGNATURE                                            (0x454C)
 #define EXE_LX_SIGNATURE                                            (0x584C)
 
@@ -82,8 +83,28 @@ struct exe_le_header {
     uint32_t        preload_instances_pages_number; // +0xA0
     uint32_t        demand_instances_pages_number;  // +0xA4
     uint32_t        extra_heap_allocation;          // +0xA8
-};                                                  // =0xAC
+};                                                  // =0xAC FIXME: If there are additional fields defined by the standard here, let me know!
 #pragma pack(pop)
+
+#pragma pack(push,1)
+struct exe_le_header_windows_vxd {                  // guess what: Microsoft 386/VXD drivers have additional fields, required by Windows
+    struct exe_le_header s;                         // +0x00 LE header standard fields
+    uint32_t        _unknown_AC;                    // +0xAC ??? (often zero)
+    uint32_t        _unknown_B0;                    // +0xB0 ??? (often zero)
+    uint32_t        _unknown_B4;                    // +0xB4 ??? (often zero)
+    uint32_t        _unknown_B8;                    // +0xB8 ??? (often zero)
+    uint32_t        _unknown_BC;                    // +0xBC ??? (often zero)
+    uint16_t        DDB_Req_Device_Number;          // +0xC0 Copy of VXD DDB block DDB_Req_Device_Number field
+    uint16_t        DDB_SDK_Version;                // +0xC2 copy of VXD DDB block DDB_SDK_Version field
+};                                                  // =0xC4
+#pragma pack(pop)
+/* ^ Note that Microsoft's linker, even if told the output will be a "DEV386" file, leaves the extended fields set to zero.
+ *   You then run an additional tool in the DDK called "ADDHDR.EXE" which reads the DDB block and copies the two DDB fields
+ *   listed above into the extended part of the LE header. Windows will not load your VXD/386 file without these additional
+ *   fields. */
+
+/* maximum bytes you'll need for all variations of the LE header */
+#define exe_le_header_MAX                           (0xC4)
 
 #pragma pack(push,1)
 struct exe_le_header_object_table_entry {
