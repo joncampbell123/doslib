@@ -10,11 +10,9 @@
 
 ;----------------------------------------------
 
-;Declare_Virtual_Device DBOXMPI, 3, 0, DBOXMPI_Control, Undefined_Device_ID, Undefined_Init_Order
+_LDATA          SEGMENT DWORD PUBLIC 'CODE'
 
-VxD_LOCKED_DATA_SEG
-
-PUBLIC DBOXMPI_DDB
+PUBLIC          DBOXMPI_DDB
 
 DBOXMPI_DDB     dd      0                               ; +0x00 DDB_Next
                 dw      030Ah                           ; +0x04 DDB_SDK_Version (3.10)
@@ -33,11 +31,11 @@ DBOXMPI_DDB     dd      0                               ; +0x00 DDB_Next
                 dd      0                               ; +0x34 DDB_Service_Table_Size
                                                         ; =0x38
 
-VxD_LOCKED_DATA_ENDS
+_LDATA          ENDS
 
 ;----------------------------------------------
 
-VxD_LOCKED_CODE_SEG
+_LTEXT          SEGMENT DWORD USE32 PUBLIC 'CODE'
 
 BeginProc DBOXMPI_Control
 
@@ -47,9 +45,9 @@ BeginProc DBOXMPI_Control
 
 EndProc DBOXMPI_Control
 
-VxD_LOCKED_CODE_ENDS
+_LTEXT          ENDS
 
 ;----------------------------------------------
 
-	END
+	            END
 
