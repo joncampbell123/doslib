@@ -1,16 +1,10 @@
 
 	.386p
 
-	.XLIST
-	INCLUDE VMM.Inc
-	INCLUDE Debug.Inc
-	INCLUDE VPICD.Inc
-	INCLUDE VCD.Inc
-	.LIST
-
 ;----------------------------------------------
 
 _LDATA          SEGMENT DWORD PUBLIC 'CODE'
+                ASSUME  CS:FLAT, DS:FLAT, ES:FLAT, SS:FLAT
 
 PUBLIC          DBOXMPI_DDB
 
@@ -21,7 +15,7 @@ DBOXMPI_DDB     dd      0                               ; +0x00 DDB_Next
                 dw      0000h                           ; +0x0A DDB_Flags
                 db      "DBOXMPI "                      ; +0x0C DDB_Name
                 dd      80000000h                       ; +0x14 DDB_Init_Order
-                dd      OFFSET32 DBOXMPI_Control        ; +0x18 DDB_Control_Proc
+                dd      OFFSET DBOXMPI_Control          ; +0x18 DDB_Control_Proc
                 dd      0                               ; +0x1C DDB_V86_API_Proc
                 dd      0                               ; +0x20 DDB_PM_API_Proc
                 dd      0                               ; +0x24 DDB_V86_API_CSIP
@@ -43,6 +37,7 @@ _LDATA          ENDS
 ;----------------------------------------------
 
 _LTEXT          SEGMENT DWORD USE32 PUBLIC 'CODE'
+                ASSUME  CS:FLAT, DS:FLAT, ES:FLAT, SS:FLAT
 
 Public          DBOXMPI_Control
 
