@@ -18,7 +18,6 @@ dboxvxd.obj dboxvxd.lst: dboxvxd.asm
 OBJS = dboxvxd.obj
 
 clean:
-	del dboxmpi.386
 	del *.obj
 	del *.sym
 	del *.map
