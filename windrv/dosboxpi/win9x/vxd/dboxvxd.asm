@@ -37,13 +37,15 @@ _LDATA          ENDS
 
 _LTEXT          SEGMENT DWORD USE32 PUBLIC 'CODE'
 
-BeginProc DBOXMPI_Control
+Public          DBOXMPI_Control
+
+DBOXMPI_Control proc near
 
     int 3
     clc
     ret
 
-EndProc DBOXMPI_Control
+DBOXMPI_Control endp
 
 _LTEXT          ENDS
 
