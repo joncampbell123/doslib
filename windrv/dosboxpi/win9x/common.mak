@@ -9,9 +9,12 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq -zl -zu -zw -zc
 NOW_BUILDING = WINDRV_DOSBOXPI_WIN9XOW
 
+CFLAGS_VXD = -e=2 -zq -zw -mf -oilrtfm -wx -fp3 -3r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=32 -dTARGET86=386 -DMMODE=f -q -bc -zl -zdp
+
 DISCARDABLE_CFLAGS = -nt=_TEXT -nc=CODE
 NONDISCARDABLE_CFLAGS = -nt=_NDTEXT -nc=NDCODE
 
+DBOXMPI_VXD = $(SUBDIR)$(HPS)dboxmpi.vxd
 DBOXMPI_DRV = $(SUBDIR)$(HPS)dboxmpi.drv
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
@@ -29,9 +32,13 @@ $(SUBDIR)$(HPS)inthndlr.obj: inthndlr.c
 
 all: lib exe
 
-exe: $(DBOXMPI_DRV) .symbolic
+exe: $(DBOXMPI_DRV) $(DBOXMPI_VXD) .symbolic
 
 lib: .symbolic
+
+$(SUBDIR)$(HPS)dboxvxd.obj: dboxvxd.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_VXD) -nc=CODE -nt=_LTEXT $[@
+	@wcc386 @tmp.cmd
 
 $(SUBDIR)$(HPS)dboxmpi.res: dboxmpi.rc
 	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)dboxmpi.res  $[@
@@ -69,6 +76,27 @@ $(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dll
 	%write tmp.cmd name $(DBOXMPI_DRV)
 	@wlink @tmp.cmd
 	../../../tool/chgnever.pl 4.0 $(DBOXMPI_DRV)
+!endif
+
+!ifdef DBOXMPI_VXD
+$(DBOXMPI_VXD): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxvxd.obj
+	%write tmp.cmd option quiet
+	%write tmp.cmd system win_vxd
+	%write tmp.cmd file $(SUBDIR)$(HPS)dboxvxd.obj
+	%write tmp.cmd option map=$(DBOXMPI_VXD).map
+	%write tmp.cmd option nocaseexact
+	%write tmp.cmd segment CLASS 'CODE' PRELOAD NONDISCARDABLE
+	%write tmp.cmd segment CLASS 'CODE' PRELOAD NONDISCARDABLE
+	%write tmp.cmd segment CLASS 'ICODE' DISCARDABLE
+	%write tmp.cmd segment CLASS 'ICODE' DISCARDABLE
+	%write tmp.cmd segment CLASS 'PCODE' NONDISCARDABLE
+	%write tmp.cmd segment CLASS 'PCODE' NONDISCARDABLE
+	%write tmp.cmd option nodefaultlibs
+	%write tmp.cmd option modname=DBOXMPI
+	%write tmp.cmd option description 'DOSBox-X Mouse Pointer Integration driver for Windows 95'
+	%write tmp.cmd export DBOXMPI_DDB.1=_DBOXMPI_DDB
+	%write tmp.cmd name $(DBOXMPI_VXD)
+	@wlink @tmp.cmd
 !endif
 
 clean: .SYMBOLIC
