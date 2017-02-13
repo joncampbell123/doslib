@@ -1,4 +1,10 @@
 
+*** NOTICE: This project will not support Windows 10! *************************
+
+This project will explicitly not support Windows 10. Do not submit bug reports
+or patches regarding Windows 10, they will be rejected. Patches and bug reports
+for Windows 8 and earlier are still welcome.
+
 *** NOTICE: Win32s support *****************
 
 The w32imphk library has been completely removed from this source
