@@ -50,6 +50,26 @@ int le_parser_is_windows_vxd(struct le_header_parseinfo * const p,uint16_t * con
             }
         }
 
+        /* HACK: Microsoft DINPUT.VXD put the DDB export in entry #1 but nonresident name ordinal == 0 */
+        if (tmp[0] == 0 && p->le_nonresident_names.table != NULL) {
+            for (i=0;i < p->le_nonresident_names.length;i++) {
+                struct exe_ne_header_name_entry *ent = p->le_nonresident_names.table + i;
+
+                if (ne_name_entry_get_ordinal(&p->le_nonresident_names,ent) == 0) {
+                    ne_name_entry_get_name(tmp,sizeof(tmp),&p->le_nonresident_names,ent);
+
+                    {
+                        char *s = tmp + strlen(tmp) - 4;
+
+                        if (s > tmp && !strcasecmp(s,"_DDB"))
+                            break;
+                        else
+                            tmp[0] = 0;
+                    }
+                }
+            }
+        }
+
         raw = le_header_entry_table_get_raw_entry(&p->le_entry_table,0/*ordinal 1*/); /* parser makes sure there is sufficient space for struct given type */
         if (raw != NULL && (ent->type == 3)/*32-bit*/) {
             uint32_t ent_offset;
