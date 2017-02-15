@@ -1,0 +1,167 @@
+DOS version 5.00
+    Method: 'INT 21h AX=3306h'
+I am running under Windows.
+    Mode: Enhanced
+    Ver:  3.10
+    Method: 'INT 2Fh AX=1600h'
+    Emulation: 'None'
+VXD 'VMM' @ 0x80011A74
+    version=3.10 number=1 v3.10 flags=0x0003
+    Init=0x00000000 Control=0x8000ADFF v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x800116ac
+    win32_ptr=0x000000F2 next=0x800266E4
+VXD 'VPICD' @ 0x800266E4
+    version=3.10 number=3 v3.10 flags=0x0003
+    Init=0x0C000000 Control=0x800256F8 v86=0x80025E0C Pm=0x80025E0C
+    v86()=0x00000000 pm()=0x003B036A data=0x00000000 service_size=0x80026690
+    win32_ptr=0x00000015 next=0x80027BEC
+VXD 'VTD' @ 0x80027BEC
+    version=3.10 number=5 v3.10 flags=0x0003
+    Init=0x14000000 Control=0x80027186 v86=0x8002711B Pm=0x8002711B
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x80027bcc
+    win32_ptr=0x00000008 next=0x8003BCFC
+VXD 'PageFile' @ 0x8003BCFC
+    version=3.10 number=33 v2.0 flags=0x0003
+    Init=0x18000000 Control=0x8003B6A0 v86=0x00000000 Pm=0x8003BBC7
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x8003bce0
+    win32_ptr=0x00000007 next=0x80032810
+VXD 'PageSwap' @ 0x80032810
+    version=3.10 number=7 v2.10 flags=0x0003
+    Init=0x1C000000 Control=0x80031EB8 v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x800327f4
+    win32_ptr=0x00000007 next=0x8003C114
+VXD 'PARITY' @ 0x8003C114
+    version=3.10 number=8 v1.0 flags=0x0003
+    Init=0x20000000 Control=0x8003C06C v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x00000000
+    win32_ptr=0x00000000 next=0x800288A0
+VXD 'Reboot' @ 0x800288A0
+    version=3.10 number=9 v2.0 flags=0x0003
+    Init=0x24000000 Control=0x80027CE4 v86=0x00000000 Pm=0x8002800D
+    v86()=0x00000000 pm()=0x003B0374 data=0x00000000 service_size=0x00000000
+    win32_ptr=0x00000000 next=0x800214D0
+VXD 'VDD' @ 0x800214D0
+    version=3.10 number=10 v2.0 flags=0x0003
+    Init=0x28000000 Control=0x8001B8B4 v86=0x8001EBCE Pm=0x8001EBCE
+    v86()=0x00000000 pm()=0x003B036E data=0x00200000 service_size=0x80021498
+    win32_ptr=0x0000000E next=0x8002A860
+VXD 'VSD' @ 0x8002A860
+    version=3.10 number=11 v2.0 flags=0x0003
+    Init=0x2C000000 Control=0x8002A6EC v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x8002a858
+    win32_ptr=0x00000002 next=0x8003D148
+VXD 'VCD' @ 0x8003D148
+    version=3.10 number=14 v3.10 flags=0x0003
+    Init=0x30000000 Control=0x8003C667 v86=0x00000000 Pm=0x8003C6AF
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x8003d138
+    win32_ptr=0x00000004 next=0x80014ED8
+VXD 'MMD' @ 0x80014ED8
+    version=3.10 number=4133 v3.0 flags=0x0003
+    Init=0x34000000 Control=0x8001487C v86=0x80014EB2 Pm=0x80014EB2
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x80014ed4
+    win32_ptr=0x00000001 next=0x80015774
+VXD 'VMB' @ 0x80015774
+    version=3.0 number=4129 v3.0 flags=0x0003
+    Init=0x34000000 Control=0x800152CC v86=0x80015750 Pm=0x80015750
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x80015770
+    win32_ptr=0x00000001 next=0x80022D48
+VXD 'VMD' @ 0x80022D48
+    version=3.10 number=12 v3.0 flags=0x0003
+    Init=0x34000000 Control=0x80022B04 v86=0x80022C91 Pm=0x80022C91
+    v86()=0x00000000 pm()=0x003B037A data=0xFFFF0400 service_size=0x80022d3c
+    win32_ptr=0x00000003 next=0x80024C34
+VXD 'VKD' @ 0x80024C34
+    version=3.10 number=13 v2.0 flags=0x0003
+    Init=0x38000000 Control=0x80023310 v86=0x00000000 Pm=0x80023846
+    v86()=0x00000000 pm()=0x003B037C data=0x00000000 service_size=0x80024bf8
+    win32_ptr=0x0000000F next=0x8003B658
+VXD 'BLOCKDEV' @ 0x8003B658
+    version=3.10 number=16 v3.10 flags=0x0003
+    Init=0x40000000 Control=0x8003B3A0 v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x8003b63c
+    win32_ptr=0x00000007 next=0x8003C000
+VXD 'VFD' @ 0x8003C000
+    version=3.10 number=27 v2.0 flags=0x0003
+    Init=0x44000000 Control=0x8003BEB0 v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x00000000
+    win32_ptr=0x00000000 next=0x800158A0
+VXD 'CPBVXD' @ 0x800158A0
+    version=3.10 number=9414 v2.0 flags=0x0003
+    Init=0x45000000 Control=0x800157B4 v86=0x800157C0 Pm=0x800157C0
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x8001589c
+    win32_ptr=0x00000001 next=0x800147A0
+VXD 'PharLap' @ 0x800147A0
+    version=3.0 number=10401 v1.97 flags=0x0003
+    Init=0x47FFFF80 Control=0x80014000 v86=0x8001477C Pm=0x8001477C
+    v86()=0x00000000 pm()=0x00000000 data=0x00000020 service_size=0x8001479c
+    win32_ptr=0x00000001 next=0x80013FB0
+VXD 'VMCPD' @ 0x80013FB0
+    version=3.10 number=17 v1.2 flags=0x0003
+    Init=0x48000000 Control=0x80013E14 v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000001 service_size=0x80013fa4
+    win32_ptr=0x00000003 next=0x8003C568
+VXD 'BIOSXLAT' @ 0x8003C568
+    version=3.10 number=19 v1.0 flags=0x0003
+    Init=0x50000000 Control=0x8003C1A8 v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x00000000
+    win32_ptr=0x00000000 next=0x80036654
+VXD 'DOSMGR' @ 0x80036654
+    version=3.10 number=21 v1.0 flags=0x0003
+    Init=0x58000000 Control=0x8003431B v86=0x8003415F Pm=0x00000000
+    v86()=0xFEFC0B57 pm()=0x00000000 data=0x07360000 service_size=0x80036624
+    win32_ptr=0x0000000C next=0x80036E68
+VXD 'VMPOLL' @ 0x80036E68
+    version=3.10 number=24 v3.10 flags=0x0003
+    Init=0x64000000 Control=0x80036C1B v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x80036e5c
+    win32_ptr=0x00000003 next=0x80015B58
+VXD 'VOptD' @ 0x80015B58
+    version=3.10 number=9415 v2.0 flags=0x0003
+    Init=0x80000000 Control=0x80015904 v86=0x00000000 Pm=0x80015A47
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x00000000
+    win32_ptr=0x00000000 next=0x8001B858
+VXD 'VFLATD' @ 0x8001B858
+    version=3.10 number=1117 v1.96 flags=0x0003
+    Init=0x80000000 Control=0x8001B3C8 v86=0x00000000 Pm=0x8001B3E7
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x00000000
+    win32_ptr=0x00000000 next=0x80025348
+VXD 'VTDAPI' @ 0x80025348
+    version=3.0 number=1090 v3.0 flags=0x0003
+    Init=0x80000000 Control=0x8002533A v86=0x00000000 Pm=0x80024F10
+    v86()=0x00000000 pm()=0x003B0376 data=0x00000000 service_size=0x00000000
+    win32_ptr=0x00000000 next=0x8003D6C8
+VXD 'COMBUFF' @ 0x8003D6C8
+    version=3.10 number=0 v1.0 flags=0x0003
+    Init=0x80000000 Control=0x8003D36C v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x00000000
+    win32_ptr=0x00000000 next=0x80043F3C
+VXD 'VSB16' @ 0x80043F3C
+    version=3.10 number=10541 v3.57 flags=0x0003
+    Init=0x80000000 Control=0x8004A6D4 v86=0x8004A706 Pm=0x8004A706
+    v86()=0x00000000 pm()=0x003B0378 data=0x00000000 service_size=0x80043f38
+    win32_ptr=0x00000001 next=0x80015210
+VXD 'CV1' @ 0x80015210
+    version=3.0 number=258 v1.0 flags=0x0003
+    Init=0x81000000 Control=0x80014F7C v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000A31 service_size=0x00000000
+    win32_ptr=0x00000000 next=0x8002A370
+VXD 'VDMAD' @ 0x8002A370
+    version=3.10 number=4 v2.0 flags=0x0003
+    Init=0x90000000 Control=0x80028A24 v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x00000000 service_size=0x8002a310
+    win32_ptr=0x00000018 next=0x80031E64
+VXD 'V86MMGR' @ 0x80031E64
+    version=3.10 number=6 v1.0 flags=0x0003
+    Init=0xA0000000 Control=0x800304FB v86=0x00000000 Pm=0x00000000
+    v86()=0x00000000 pm()=0x00000000 data=0x000C3840 service_size=0x80031e10
+    win32_ptr=0x00000015 next=0x8003B170
+VXD 'SHELL' @ 0x8003B170
+    version=3.10 number=23 v3.0 flags=0x0003
+    Init=0xB0000000 Control=0x80039A86 v86=0x00000000 Pm=0x80038470
+    v86()=0x00000000 pm()=0x003B0372 data=0x00000000 service_size=0x8003b158
+    win32_ptr=0x00000006 next=0x800178A4
+VXD 'W32S' @ 0x800178A4
+    version=3.10 number=45 v2.0 flags=0x0003
+    Init=0xC0000000 Control=0x80015ED1 v86=0x00000000 Pm=0x80015F06
+    v86()=0x00000000 pm()=0x00000000 data=0x00000068 service_size=0x8001789c
+    win32_ptr=0x00000002 next=0x00000000
