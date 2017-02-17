@@ -61,12 +61,15 @@ int parse_argv(int argc,char **argv) {
 uint32_t*           chunkTable = NULL;
 uint32_t            chunkTableEntries = 0;
 
+uint8_t             file_temp[4096];
+
 int main(int argc,char **argv) {
     unsigned char tmp[16];
     uint16_t chunk_size;
     uint16_t num_chunks;
     uint32_t le_offset;
     uint32_t file_size;
+    uint32_t start,end;
     size_t i;
 
     if (parse_argv(argc,argv))
@@ -138,6 +141,24 @@ int main(int argc,char **argv) {
     }
     fprintf(stderr,"}\n");
     fprintf(stderr,"File size (and end of last chunk): %lu\n",(unsigned long)file_size);
+
+    // okay, copy source to dest up to and including W4 header.
+    lseek(src_fd,0,SEEK_SET);
+    lseek(dst_fd,0,SEEK_SET);
+    end = le_offset + (size_t)16;
+    start = 0;
+
+    while (start < end) {
+        size_t cpy = (size_t)end - (size_t)start;
+        if (cpy > sizeof(file_temp)) cpy = sizeof(file_temp);
+
+        if ((size_t)read(src_fd,file_temp,cpy) != cpy)
+            return 1;
+        if ((size_t)write(dst_fd,file_temp,cpy) != cpy)
+            return 1;
+
+        start += cpy;
+    }
 
     free(chunkTable);
     close(dst_fd);
