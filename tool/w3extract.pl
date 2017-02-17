@@ -104,7 +104,7 @@ for ($i=0;$i < $wincount;$i++,$fofs += 16) {
     die unless $dpo >= ($ofs + $len);
     $ex = $dpo - ($ofs + $len);
     print "      * Extra: $ex\n";
-    die unless $ex < $mempgsz;
+    die unless $ex < 65536;
 
     my $extra;
     read(W3,$extra,$ex);
