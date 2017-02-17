@@ -32,7 +32,7 @@ my $winver = unpack("v",substr($raw,2,2));
 print "This is Windows kernel ".sprintf("%u.%u",$winver >> 8,$winver & 0xFF)."\n";
 
 # must be kernel 3.x
-die "Unsupported Windows kernel" unless ($winver >> 8) == 3;
+die "Unsupported Windows kernel" unless (($winver >> 8) == 3 || ($winver >> 8) == 4);
 
 my $wincount = unpack("v",substr($raw,4,2));
 print "There are $wincount files here\n";
