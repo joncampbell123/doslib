@@ -142,10 +142,10 @@ int main(int argc,char **argv) {
     fprintf(stderr,"}\n");
     fprintf(stderr,"File size (and end of last chunk): %lu\n",(unsigned long)file_size);
 
-    // okay, copy source to dest up to and including W4 header.
+    // okay, copy source to dest up to W4 header
     lseek(src_fd,0,SEEK_SET);
     lseek(dst_fd,0,SEEK_SET);
-    end = le_offset + (size_t)16;
+    end = le_offset;
     start = 0;
 
     while (start < end) {
