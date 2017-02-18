@@ -9,7 +9,7 @@ while (my $path = <LS>) {
     chomp $path;
 
     my $module = '';
-    my $modinfo = { };
+    my %modinfo = { };
     my @ordinals = ( );
 
     open(EX,"<","$path") || next;

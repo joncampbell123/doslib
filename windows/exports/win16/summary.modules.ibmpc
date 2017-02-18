@@ -39,39 +39,16 @@ APPEXEC  APPEXEC.DLL   AppExec Custom Command for Mail 3.0
 APPWZLIB APPWZLIB.DLL  MFC AppWizard Resource-only DLL
 APSTUDIO APSTUDIO.EXE  App Studio
 ARCS     ARCS.EXE      Arc, Chord, and Pie Drawing Program (c) Charles Petzold, 1990
-ARIAL    ARIAL.FON     16-bit ODBC driver for Access, Copyright(c) Microsoft Corp., 1994
-ARIAL    ARIAL.FON     Microsoft Windows Kernel Interface Version 3.10
-ARIAL    ARIAL.FON     System Diagnostic Utility
-ARIAL    ARIAL.FOT     (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
-ARIAL    ARIAL.FOT     DDRV oki9:167,240,144;60,144,240;83,120,144;120,144,120;167,120,72;60,72,120
-ARIAL    ARIAL.FOT     KeyTable Canadian Multilingual
-ARIAL    ARIAL.FOT     MSVIDEO: Screen Capture Device Driver for AVI
-ARIAL    ARIAL.FOT     Setup Detect Library
+ARIAL    ARIAL.FON     
+ARIAL    ARIAL.FOT     
 ARIALB   ARIALB.FON    FONTRES 133,96,72 : Arial 8,10 (EGA res)
-ARIALBD  ARIALBD.FON   CPS Viewer Quattro/W Format Library - Copyright (C) 1993-94 Central Point Software, Inc.
-ARIALBD  ARIALBD.FON   FONTRES 133,96,72 : Terminal
-ARIALBD  ARIALBD.FON   Microsoft PACKAGER
-ARIALBD  ARIALBD.FOT   Common Windows Dialogs, Ver. 3.10
-ARIALBD  ARIALBD.FOT   MDI Child Control for Visual Basic
-ARIALBD  ARIALBD.FOT   MSDN Viewer User Interface
-ARIALBD  ARIALBD.FOT   Open Watcom Debugger Trap File
-ARIALBD  ARIALBD.FOT   Setup Detect Library
-ARIALBI  ARIALBI.FON   EFI FUNCTIONS - VIOCALLS EMULATION
-ARIALBI  ARIALBI.FON   Microsoft Pen Windows Sample Application
-ARIALBI  ARIALBI.FON   SHMEM.EXE
-ARIALBI  ARIALBI.FOT   Central Point Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
-ARIALBI  ARIALBI.FOT   EFI FUNCTIONS - KBDCALLS EMULATION
-ARIALBI  ARIALBI.FOT   EMW0W0.exe
-ARIALBI  ARIALBI.FOT   VIDC.CVID:SuperMatch Cinepak Codec
-ARIALI   ARIALI.FON    MS Test Driver (dumb shell) version 1.00.0021
-ARIALI   ARIALI.FON    Microsoft Help 3.0
-ARIALI   ARIALI.FON    Wep4Util.DLL
-ARIALI   ARIALI.FOT    ?
-ARIALI   ARIALI.FOT    Cue Cards API Dll Version 2.0
-ARIALI   ARIALI.FOT    DDRV NEC 3550
-ARIALI   ARIALI.FOT    DDRV PostScript Printer:100,300,300
-ARIALI   ARIALI.FOT    KEYBOARD Norway:47!1!2!2!1!0!AM!PM!KR!.!,!/!.!,
-ARIALS   ARIALS.FOT    SCRNSAVE :CPS Food Fight
+ARIALBD  ARIALBD.FON   
+ARIALBD  ARIALBD.FOT   
+ARIALBI  ARIALBI.FON   
+ARIALBI  ARIALBI.FOT   
+ARIALI   ARIALI.FON    
+ARIALI   ARIALI.FOT    
+ARIALS   ARIALS.FOT    
 ASMCLOCK ASMCLOCK.EXE  Microsoft Windows MASM 6.00 (based on Petzolds DIGCLOCK.C)
 ATIVIDEO ATIVIDEO.QTC  (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
 AUDIOSTA AUDIOSTA.EXE  audiosta copyright (c) Voyetra Technologies 1994
@@ -216,46 +193,22 @@ CONV-WKS LOTUS123.CNV  WKS-Opus Converter Module
 CONV-WP5 WPFT5.CNW     Word For Word conversion module for WordPerfect
 CONV_DBS DBASE.CNV     Ashton-Tate dBase to RTF for Windows Converter Module
 COPUT    OGTWPUT.EXE   OS/2 Gateway FFAPI CourPut (C) Consumers Software 1990
-COUR     COUR.FON      Creative CSP Manager
-COUR     COUR.FON      Creative Integrated Sound Architecture CCITT u-Law CODEC
-COUR     COUR.FON      VER - A Version stamping library
-COUR     COUR.FOT      DAO Library--Copyright (c) Microsoft Corporation, 1993
-COUR     COUR.FOT      FONTRES CONTINUOUSSCALING : Script (All res)
-COUR     COUR.FOT      Microsoft Excel MAPI Translation Layer XLL
-COUR     COUR.FOT      Windows Task Manager 3.1
+COUR     COUR.FON      
+COUR     COUR.FOT      
 COURA    COURA.FON     FONTRES 200,96,48 : Courier 8,10,12 (Set #2)
 COURB    COURB.FON     FONTRES 133,96,72 : Courier 10,12,15 (EGA res)
 COURB    COURB.FON     FONTRES 133,96,72 : Courier 8,10,12 (Set #3)
-COURBD   COURBD.FON    Common Windows Dialogs, Ver. 3.10
-COURBD   COURBD.FON    DDRV TI 850,TI 855:167,120,72;60,72,120:Texas Instruments Printers 120 X 72 DPI
-COURBD   COURBD.FON    Setup Detect Library
-COURBD   COURBD.FOT    (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
-COURBD   COURBD.FOT    Borland C++
-COURBD   COURBD.FOT    KEYBOARD (Enhanced keyboard):
-COURBD   COURBD.FOT    Microsoft Win32S Interface Version 3.10
-COURBD   COURBD.FOT    OLEDEBUG code
-COURBD   COURBD.FOT    sequencer:[MCI] MIDI sequencer
-COURBI   COURBI.FON    KeyTable Belgian
-COURBI   COURBI.FON    Multimedia Sound device driver
-COURBI   COURBI.FON    all the 16-bit parts
-COURBI   COURBI.FOT    MDI Child Control for Visual Basic
-COURBI   COURBI.FOT    OLE Automation Type Information Interfaces
-COURBI   COURBI.FOT    StatBar Application
-COURBI   COURBI.FOT    System Metrics Display (c) Charles Petzold, 1990
-COURBI   COURBI.FOT    all the 16-bit parts
+COURBD   COURBD.FON    
+COURBD   COURBD.FOT    
+COURBI   COURBI.FON    
+COURBI   COURBI.FOT    
 COURC    COURC.FON     FONTRES 83,60,72 : Courier 8,10,12 (Set #4)
 COURD    COURD.FON     FONTRES 167,120,72 : Courier 8,10,12 (Set #5)
 COURE    COURE.FON     FONTRES 100,96,96 : Courier 10,12,15 (VGA res)
 COURE    COURE.FON     FONTRES 100,96,96 : Courier 8,10,12 (Set #6)
 COURF    COURF.FON     FONTRES 100,120,120 : Courier 10,12,15 (8514/a res)
-COURI    COURI.FON     AVIVideo:[MCI] Microsoft Video for Windows
-COURI    COURI.FON     FONTRES CONTINUOUSSCALING : Script (All res)
-COURI    COURI.FON     midi:Ad Lib
-COURI    COURI.FOT     CTREMOTE.exe
-COURI    COURI.FOT     Creative Ms ADPCM Wave Filter
-COURI    COURI.FOT     Fireworks Display
-COURI    COURI.FOT     Microsoft ODBC Control Panel
-COURI    COURI.FOT     Recorder Library
+COURI    COURI.FON     
+COURI    COURI.FOT     
 CPAVDLG  CPAVDLG.DLL   CPS Anti-Virus Dialog Library - Copyright (C) 1993-1994 Central Point Software, Inc.
 CPAVDLGL CPAVDLGL.RSL  CPS Anti-Virus Dialog Resource File - (C) 1993 Central Point Software, Inc.
 CPAVSCAN CPAVSCAN.DLL  CPS Virus Scanning Library - Copyright (C) 1993-1994 Central Point Software, Inc.
@@ -440,8 +393,7 @@ DSKMAINT DSKMAINT.DLL  DSKMAINT - Disk Maintenance
 DTA      DTA.EXE       Microsoft Windows 3.0 Display Test Application
 DWARF    DWARF.DLL     dwarf.dll
 DYNBEDIT DYNBEDIT.EXE  Microsoft Pen Windows Sample Application
-ECDCTRL  ECDCTRL.DLL   Multimedia Windows Joystick Calibration Control Panel Applet
-ECDCTRL  ECDCTRL.DLL   Sound Recorder
+ECDCTRL  ECDCTRL.DLL   
 ED       MSDRAW.EXE    EmbedDraw
 EEW0CAN  EEW0CAN.DLL   eew0can.exe
 EEW0CXX  EEW0CXX.DLL   eew0cxx.exe
@@ -480,8 +432,7 @@ EXTLIST  EXTLIST.VBX   LMIS Extended Selection listbox
 FAXCODEC FAXCODEC.DLL  Microsoft At Work Renderer
 FDAEMON  FDAEMON.EXE   FDaemon lazy-write daemon Copyright (C) 1990-1993 Lantern Corp.
 FEEDER   FEEDER.EXE    FEEDER Module for LOGGER Copyright (c) Spark Software Inc. 1991.  All rights reserved.
-FENCES   FENCES.FOT    Creative CSP Manager
-FENCES   FENCES.FOT    Setup Install Library
+FENCES   FENCES.FOT    
 FILEIO   FILEIO.DLL    File I/O External Factory
 FILESIZE FILESIZE.DLL  FileSize - File Manager Extension - Copyright (c) 1992 by Brent C. Ethington
 FILEVIEW FILEVIEW.EXE  FileView Microsoft Foundation Classes Windows Application
@@ -731,7 +682,7 @@ KERNEL   KRNL386.EXE   Microsoft Windows Kernel Interface Version 3.00
 KERNEL   KRNL386.EXE   Microsoft Windows Kernel Interface Version 3.10
 KERNEL   KRNL386.EXE   Microsoft Windows Kernel Interface Version 4.00
 KERNEL   WIN100.BIN    
-KERNEL   WIN200.BIN    String Routines
+KERNEL   WIN200.BIN    
 KERNEL_B KERNEL_B.DLL  Microsoft Windows Kernel on OS/2
 KEYBOARD ATTKBD.DRV    AT&amp;T Keyboard
 KEYBOARD ATTKBD.DRV    KEYBOARD AT&amp;T 6300 or 6300 PLUS:1!0!0!2!0!0!AM!PM!$!,!.!/!:!,!!52!1!0!2!0!0!AM!PM!$!,!.!/!:!,
@@ -1044,8 +995,7 @@ MSVIDEO  MSVIDEO.DLL   Microsoft Video For Windows APIs
 MSVIDEO  MSVIDEO.NT_   Microsoft Video For Windows APIs
 MSWEBNDI MSWEBNDI.DLL  mswebndi.exe
 MSWORD   WINWORD.EXE   Microsoft Word
-MTEXTRA  MTEXTRA.FOT   MS-Setup Loader
-MTEXTRA  MTEXTRA.FOT   VER - A Version stamping library
+MTEXTRA  MTEXTRA.FOT   
 MULTIPAD MULTIPAD.EXE  Microsoft Windows MDI Notepad
 MULTIPAD MULTIPAD.EXE  Microsoft Windows MDI Notepad App
 MULTIPAL MULTIPAL.EXE  Minimal MDI application
@@ -1516,13 +1466,8 @@ SUPPLY   SUPPLY.EXE    Supply Order Form
 SWADCMPR SWADCMPR.X16  SWADCMPR.exe
 SWAPFILE SWAPFILE.EXE  Windows Swapfile
 SWASTRM  SWASTRM.X16   SWASTRM.exe
-SYMBOL   SYMBOL.FON    Apple Computer QuickTime for Windows Installation Program
-SYMBOL   SYMBOL.FON    CPS System Consultant AUTOEXEC.BAT Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
-SYMBOL   SYMBOL.FON    MicroScroll Custom Control, Kraig Brockschmidt
-SYMBOL   SYMBOL.FOT    DISPLAY:133,96,72:EGA with Monochrome Display
-SYMBOL   SYMBOL.FOT    KeyTable Latin American
-SYMBOL   SYMBOL.FOT    Microsoft Macro Assembler
-SYMBOL   SYMBOL.FOT    wddespy.exe
+SYMBOL   SYMBOL.FON    
+SYMBOL   SYMBOL.FOT    
 SYMBOL   SYMBOLE.FON   FONTRES 100,96,96 : Symbol 8,10,12,14,18,24 (VGA RES)
 SYMBOLB  SYMBOLB.FON   FONTRES 133,96,72 : Symbol 8,10,12,14,18,24 (EGA RES)
 SYMBOLE  SYMBOLE.FON   FONTRES 100,96,96 : Symbol 8,10,12,14,18,24 (VGA RES)
@@ -1605,36 +1550,15 @@ TIMEACD  TIMEACD.EXE   Microsoft Windows MCI Application
 TIMER    TIMER.DRV     timer:Microsoft time services driver
 TIMER    TIMER.DRV     timer:Timer
 TIMERS   TIMERS.EXE    Sample Timer Application
-TIMES    TIMES.FON     DISPLAY : 100, 96, 96 : VGA Color Display
-TIMES    TIMES.FON     MS Schedule+ SPLUS DLL
-TIMES    TIMES.FON     OLE Automation Type Information Interfaces
-TIMES    TIMES.FOT     FONTRES 100,96,96 : Terminal (861) (Set #6)
-TIMES    TIMES.FOT     FONTRES 133,96,72 : Terminal
-TIMES    TIMES.FOT     File Associations Loader
-TIMES    TIMES.FOT     MicroScroll Custom Control, Kraig Brockschmidt
-TIMES    TIMES.FOT     Minesweeper v3.0a
+TIMES    TIMES.FON     
+TIMES    TIMES.FOT     
 TIMESB   TIMESB.FON    FONTRES 133,96,72 : Times New Roman 8,10 (EGA res)
-TIMESBD  TIMESBD.FON   MS Test Driver (dumb shell) version 1.00.0021
-TIMESBD  TIMESBD.FON   Microsoft Help 3.1
-TIMESBD  TIMESBD.FON   OS/2 Gateway FFAPI CourCfg (C) Consumers Software 1990
-TIMESBD  TIMESBD.FOT   MM/Windows Common code library
-TIMESBD  TIMESBD.FOT   Magic Fingers for Windows DLL
-TIMESBD  TIMESBD.FOT   Multimedia Windows Sound control panel
-TIMESBD  TIMESBD.FOT   Win31 CD Media Browser
-TIMESBI  TIMESBI.FON   (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
-TIMESBI  TIMESBI.FON   KeyTable Iceland
-TIMESBI  TIMESBI.FON   Microsoft Windows DDE Server Application
-TIMESBI  TIMESBI.FOT   FONTRES 100,96,96: Small Fonts (VGA res)
-TIMESBI  TIMESBI.FOT   Mouse Hit-Test Demo Program No. 3 (c) Charles Petzold, 1990
-TIMESBI  TIMESBI.FOT   WinG DIB Engine
-TIMESBI  TIMESBI.FOT   makebox.EXE
-TIMESI   TIMESI.FON    CPS File Manager - Copyright (C) 1993-1994 Central Point Software, Inc.
-TIMESI   TIMESI.FON    FONTRES 133,96,72 : Tms Rmn 8,10,12,14,18,24 (Set #3)
-TIMESI   TIMESI.FON    Microsoft LAN Manager API Library, Copyright(c) Microsoft Corp., 1987 - 1990
-TIMESI   TIMESI.FOT    Microsoft Windows Clipboard Viewer
-TIMESI   TIMESI.FOT    Shell DLL to fix ImageMark filters
-TIMESI   TIMESI.FOT    VHOOK.DLL
-TIMESI   TIMESI.FOT    WinG Spinning Cube Demo
+TIMESBD  TIMESBD.FON   
+TIMESBD  TIMESBD.FOT   
+TIMESBI  TIMESBI.FON   
+TIMESBI  TIMESBI.FOT   
+TIMESI   TIMESI.FON    
+TIMESI   TIMESI.FOT    
 TIMEWING TIMEWING.EXE  WinG Timer for windows 3.1
 TLD      TLD.EXE       tld.exe
 TLINKOE  TLINK.EXE     tlinkoe.exe
@@ -1819,14 +1743,8 @@ WING     WING.DLL      WinG High Performance Graphics APIs
 WINGBUG  WINGBUG.EXE   WINGBUG Windows Application
 WINGDE   WINGDE.DLL    WinG DIB Engine
 WINGDIB  WINGDIB.DRV   WinG Driver
-WINGDING WINGDING.FON  MS-Setup bootstrap loader
-WINGDING WINGDING.FON  UltraSound Patch Manager (c) Advanced Gravis 1994 (c) Singular Software, 1992, 1993
-WINGDING WINGDING.FON  wave,midi:Creative Labs Sound Blaster 1.5
-WINGDING WINGDING.FOT  MENUMAGIC App
-WINGDING WINGDING.FOT  Microsoft Windows System configuration module for IBM/PC/XT/AT
-WINGDING WINGDING.FOT  Setup Detect Library
-WINGDING WINGDING.FOT  Typing Program (c) Charles Petzold, 1990
-WINGDING WINGDING.FOT  Windows File System 3.1
+WINGDING WINGDING.FON  
+WINGDING WINGDING.FOT  
 WINGPAL  WINGPAL.WND   WinG Palette Task
 WINHCT   WINHCT.EXE    HCT Shell
 WINHELP  WINHELP.EXE   Microsoft Help 3.0
