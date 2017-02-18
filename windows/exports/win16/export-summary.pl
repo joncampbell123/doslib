@@ -118,7 +118,17 @@ sub refsort {
 
 my %mod_official;
 
+my @modorder = ( );
 while (my ($module,$modlistr) = each(%modules)) {
+    push(@modorder,$module);
+}
+@modorder = sort @modorder;
+
+#while (my ($module,$modlistr) = each(%modules)) {
+for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
+    $module = $modorder[$lmodi];
+    $modlistr = $modules{$module};
+
     print "MODULE $module\n";
 
     my $max_ordinals = 0;
@@ -448,7 +458,11 @@ while (my ($module,$modlistr) = each(%modules)) {
 # final summary, for decompiler
 open(OSUM,">summary.exportsymbols") || die;
 
-while (my ($module,$modlistr) = each(%mod_official)) {
+#while (my ($module,$modlistr) = each(%mod_official)) {
+for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
+    $module = $modorder[$lmodi];
+    $modlistr = $mod_official{$module};
+
     print OSUM "MODULE $module\n";
 
     my @modlist = @{$modlistr};
