@@ -20,7 +20,7 @@ while (my $path = <LS>) {
         $line =~ s/[ \t]+$//;
 
         if ($line =~ s/^MODULE +//) {
-            $module = $line;
+            $module = uc($line);
         }
         elsif ($module ne "") {
             $i = index($line,'=');
