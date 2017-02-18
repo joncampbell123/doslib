@@ -48,7 +48,7 @@ while (my $path = <SCAN>) {
     my $fullpath = "$root_path/$sub_path/$path";
     next unless -f $fullpath;
 
-    next unless $path =~ m/\.(exe|drv|dll|ocx|cpl|acm|qtc)$/i;
+#    next unless $path =~ m/\.(exe|drv|dll|ocx|cpl|acm|qtc)$/i;
     next if $path =~ m/[\'\"\\\!\|\{\}\$]/;
 
     print "\x1B[m";
