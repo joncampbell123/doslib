@@ -594,12 +594,12 @@ for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
 
         # File: 12 chars
         $lin .= $ent[1];
-        while (length($lin) < (8+1+12)) {
+        while (length($lin) < (8+1+12+1)) {
             $lin .= ' ';
         }
 
         # col
-        $lin .= '  ';
+        $lin .= ' ';
 
         # description
         $lin .= $ent[2];

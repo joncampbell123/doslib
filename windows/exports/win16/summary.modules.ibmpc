@@ -33,7 +33,7 @@ ALDWPLS  ALDWPLS.DLL   Proximity Linguistic System DLL (c) Proximity Technology 
 ALDWPLSR ALDWPLSR.RSL  Aldus Proximity Interface External Resources (c) Aldus Corp. 1990
 ALF__54C ALF__54C.FON  FONTRES 100, 96, 96 : AlphaFont 54C
 ALIGNED  ALIGNED.EXE   Windows Edit Control Text Test App
-ALTERWINHELPINI WHCONFIG.EXE  Alter WinHelp INI File
+ALTERWINHELPINI WHCONFIG.EXE Alter WinHelp INI File
 ANNOTATE ANNOTATE.EXE  Simple Microsoft Windows Application
 APP850   APP850.FON    FONTRES 100,96,96:MS-DOS CP 850
 APPEXEC  APPEXEC.DLL   AppExec Custom Command for Mail 3.0
@@ -750,7 +750,7 @@ LINES    LINES.IW      Dancing Lines
 LINGO    CONNECTX.X16  AOL16.exe
 LINK386  LINK386.EXE   Microsoft 32-bit Linear-Executable Linker
 LISTHSCR LISTHSCR.DLL  Windows Horizontal Listbox Scrolling Methods, Kraig Brockschmidt
-LISTHSCROLL LISTHORZ.EXE  Windows Horizontal List Scroll App
+LISTHSCROLL LISTHORZ.EXE Windows Horizontal List Scroll App
 LISTTEST LISTTEST.EXE  OBJ16\listtest.exe
 LITEDLL  GDI.DLL       d:\o\l30\bin\litedll.dll
 LITEDLL  KERNEL.DLL    d:\o\l30\bin\litedll.dll
@@ -858,7 +858,7 @@ MIDIREC0 MIDIREC.EXE   A minimum stress MIDI Input Port Recording Application
 MIGRATE  9XMIG.DLL     Win9X Migration DLL
 MIGRATE  MIGRATE.EXE   MIGRATE for Windows
 MINCB    MINCB.DLL     Mincb DLL
-MINESWEEPER WINMINE.EXE  Minesweeper v3.1
+MINESWEEPER WINMINE.EXE Minesweeper v3.1
 MINMDI   MINMDI.EXE    Minimal MDI Sample Foundation Application
 MINSVR   MINSVR.EXE    Mini OLE Server
 MINSVRMI MINSVRMI.EXE  Mini Demo Server - MI version
@@ -978,11 +978,11 @@ MSCUISTF MSCUISTF.DLL  MS-Setup UI Sample
 MSCUISTF MSCUISTF.DLL  MSIN Setup
 MSCUISTF MSCUISTF.DLL  Setup UI Sample
 MSDETSTF MSDETSTF.DLL  Setup Detect Library
-MSDNHULK.DLL MSDNHULK.DLL  MSDNHULK.exe
+MSDNHULK.DLL MSDNHULK.DLL MSDNHULK.exe
 MSDNTOOL MSDNTOOL.EXE  Microsoft Development Library Access Tool
 MSDOS    MSDOS.EXE     Microsoft Windows MSDOS Executive Application
 MSDOSD   MSDOSD.EXE    Windows MSDOS Machine Dependent
-MSGBLAST.VBX MSGBLAST.VBX  Visual Basic Message Blaster Custom Control ©1992 Ed Staffin
+MSGBLAST.VBX MSGBLAST.VBX Visual Basic Message Blaster Custom Control ©1992 Ed Staffin
 MSGSRV32 MSGSRV32.EXE  Microsoft Windows DOS386 WShell server
 MSIN     MSIN.EXE      Microsoft Information Network Browser
 MSINAPI  MSINAPI.DLL   Microsoft Information Network Browser API
@@ -1156,7 +1156,7 @@ OLE2VBX  MSOLE2.VBX    OLE2 Container Custom Control for Visual Basic
 OLE2VIEW OLE2VIEW.EXE  OLE2VIEW Windows Application
 OLECLI   OLECLI.DLL    OLE Client. support (c) Copyright Microsoft Corp. 1990 - All Rights Reserved
 OLECLI   OLECLI.W31    OLE Client. support (c) Copyright Microsoft Corp. 1990 - All Rights Reserved
-OLECLIENT OLECLIEN.VBX  OLE Client Custom Control for Visual Basic
+OLECLIENT OLECLIEN.VBX OLE Client Custom Control for Visual Basic
 OLEDDE   OLEDDE.DLL    DDEWATCH -- A collection of generic routines
 OLEDEB   OLEDEB.DLL    OLEDEBUG code
 OLESETUP OLESETUP.EXE  A minimum Application
@@ -1210,7 +1210,7 @@ PICKFONT PICKFONT.EXE  Font Picker Program (c) Charles Petzold, 1990
 PICTBUTN PICTBTN.DLL   Picture Control - Copyright 1991-92 by Voyetra Technologies
 PIFEDIT  PIFEDIT.EXE   Program Information File Editor
 PIFMGR   PIFMGR.DLL    Program Information File (PIF) Management Services
-PINWRITER NEC24PIN.DRV  DDRV Pinwriter 24 pin printers:100,360,360;100,360,360
+PINWRITER NEC24PIN.DRV DDRV Pinwriter 24 pin printers:100,360,360;100,360,360
 PIPE     PIPE.EXE      PIPE.EXE
 PKPD     PKPD.DLL      Microsoft Windows 16-bit Pen Kernel PenData support v2.0
 PLAY     VDG.EXE       Microsoft Tutor Play, Copyright (c) Microsoft Corp., 1989-1991
@@ -1808,7 +1808,7 @@ WINHELP  WINHELP.EXE   winhelp.exe
 WINIO_APP ARGS.EXE     WINIO Windows program
 WINIO_APP MEM.EXE      WINIO Windows program
 WINIO_APP MEM_OLD.EXE  WINIO Windows program
-WINIO_APP TESTLIST.EXE  WINIO Windows program
+WINIO_APP TESTLIST.EXE WINIO Windows program
 WINLD    WINLD.FON     FONTRES CONTINUOUSSCALING : MS LineDraw (All res)
 WINMETER NETMETER.EXE  Microsoft Windows for Workgroups CPU usage meter
 WINMINE  WINMINE.EXE   Minesweeper
