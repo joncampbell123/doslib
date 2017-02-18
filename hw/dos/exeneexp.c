@@ -17,6 +17,7 @@
 #define O_BINARY (0)
 #endif
 
+static char*                    src_file_real = NULL;
 static char*                    src_file = NULL;
 static int                      src_fd = -1;
 
@@ -1408,6 +1409,10 @@ int main(int argc,char **argv) {
                 src_file = argv[i++];
                 if (src_file == NULL) return 1;
             }
+            else if (!strcmp(a,"n")) {
+                src_file_real = argv[i++];
+                if (src_file_real == NULL) return 1;
+            }
             else {
                 fprintf(stderr,"Unknown switch %s\n",a);
                 return 1;
@@ -1552,16 +1557,17 @@ int main(int argc,char **argv) {
 
     /* file it came from */
     {
+        char *nn = src_file_real ? src_file_real : src_file;
 #if defined(TARGET_MSDOS) || defined(TARGET_WINDOWS)
-        char *fname = strrchr(src_file,'\\');
+        char *fname = strrchr(nn,'\\');
 #else
-        char *fname = strrchr(src_file,'/');
+        char *fname = strrchr(nn,'/');
 #endif
 
         if (fname != NULL)
             fname++;
         else
-            fname = src_file;
+            fname = nn;
 
         printf("    FILE.NAME=%s\n",fname);
     }
