@@ -48,6 +48,19 @@ while (my $path = <SCAN>) {
     my $fullpath = "$root_path/$sub_path/$path";
     next unless -f $fullpath;
 
+    # we now support mscompressed files
+    my $fullexpath = $fullpath;
+
+    if ($path =~ m/_$/) {
+        $ex = uc(substr($path,rindex($path,'.')));
+        $fullexpath = "$top/tmp.ne";
+
+        print "Expanding file first...\n";
+
+        $x = system("$top/../../../tool/msexpand/linux-host/expand \"$fullpath\" \"$fullexpath\"");
+        next unless $x == 0;
+    }
+
 #    next unless $path =~ m/\.(exe|drv|dll|ocx|cpl|acm|qtc)$/i;
     next if $path =~ m/[\'\"\\\!\|\{\}\$]/;
 
@@ -60,7 +73,7 @@ while (my $path = <SCAN>) {
     print "\x1B[m";
     print "\n";
 
-    open(EXE,"../../../hw/dos/linux-host/exenedmp -i \"$fullpath\" 2>/dev/null |") || die;
+    open(EXE,"../../../hw/dos/linux-host/exenedmp -i \"$fullexpath\" 2>/dev/null |") || die;
 
     my $dwFileVersion,$dwProductVersion;
     my $ProductName,$ProductVersion;
@@ -122,12 +135,12 @@ while (my $path = <SCAN>) {
     }
 
     my $autosuf = '';
-    my $crc32 = `crc32 \"$fullpath\"`; chomp $crc32;
+    my $crc32 = `crc32 \"$fullexpath\"`; chomp $crc32;
 
     $autosuf .= "-$version" if $version ne '';
 
     $autosuf .= "-sz";
-    $autosuf .= -s $fullpath;
+    $autosuf .= -s $fullexpath;
 
     $autosuf .= "-crc";
     $autosuf .= $crc32;
@@ -151,8 +164,10 @@ while (my $path = <SCAN>) {
 
     print "  Exporting to new/$fname\n";
 
-    $x = system("../../../hw/dos/linux-host/exeneexp -i \"$fullpath\" >\"new/$fname\"");
+    $x = system("../../../hw/dos/linux-host/exeneexp -i \"$fullexpath\" >\"new/$fname\"");
     die "Error ".sprintf("0x%x",$x) unless $x == 0;
+
+    unlink $fullexpath if $fullpath ne $fullexpath;
 }
 
 close(SCAN);
