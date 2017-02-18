@@ -975,8 +975,8 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
             /* FIXME: How is a menu formatted if the last item of a popup is a popup? */
             if (mitem->fItemFlags & exe_ne_header_MF_POPUP) {
                 /* a popup item is the same as normal item minus the menu ID field */
+                if ((data+2+1) >= fence) break; /* must be enough room for at least a NUL */
                 data += 2;
-                if ((data+1) >= fence) break; /* must be enough room for at least a NUL */
                 menu_text = (const char*)data;
             }
             else {
@@ -987,8 +987,8 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
                     break;
 
                 /* proceed */
+                if ((data+2+2+1) >= fence) break; /* must be enough room for at least a NUL */
                 data += 2+2; /* flags + menu ID */
-                if ((data+1) >= fence) break; /* must be enough room for at least a NUL */
                 menu_text = (const char*)data;
             }
 
@@ -1099,8 +1099,8 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
             /* FIXME: How is a menu formatted if the last item of a popup is a popup? */
             if (mitem->fItemFlags & exe_ne_header_MF_POPUP) {
                 /* a popup item is the same as normal item minus the menu ID field */
+                if ((data+1+1) >= fence) break; /* must be enough room for at least a NUL */
                 data += 1;
-                if ((data+1) >= fence) break; /* must be enough room for at least a NUL */
                 menu_text = (const char*)data;
             }
             else {
@@ -1111,8 +1111,8 @@ void dump_ne_res_RT_MENU(const unsigned char *data,const size_t len) {
                     break;
 
                 /* proceed */
+                if ((data+1+2+1) >= fence) break; /* must be enough room for at least a NUL */
                 data += 1+2; /* flags + menu ID */
-                if ((data+1) >= fence) break; /* must be enough room for at least a NUL */
                 menu_text = (const char*)data;
             }
 
