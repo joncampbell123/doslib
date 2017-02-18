@@ -164,7 +164,7 @@ while (my $path = <SCAN>) {
 
     print "  Exporting to new/$fname\n";
 
-    $x = system("../../../hw/dos/linux-host/exeneexp -i \"$fullexpath\" >\"new/$fname\"");
+    $x = system("../../../hw/dos/linux-host/exeneexp -i \"$fullpath\" >\"new/$fname\"");
     die "Error ".sprintf("0x%x",$x) unless $x == 0;
 
     unlink $fullexpath if $fullpath ne $fullexpath;
