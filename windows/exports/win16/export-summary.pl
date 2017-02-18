@@ -32,6 +32,18 @@ while (my $path = <LS>) {
                 $modinfo{$name} = $value;
             }
             elsif ($name eq 'FILE.NAME') {
+                $value = uc($value);
+
+                $value =~ s/\.3G_$/.3GR/;
+                $value =~ s/\.AC_$/.ACM/;
+                $value =~ s/\.CP_$/.CPL/;
+                $value =~ s/\.DL_$/.DLL/;
+                $value =~ s/\.DR_$/.DRV/;
+                $value =~ s/\.EX_$/.EXE/;
+                $value =~ s/\.FO_$/.FON/;
+                $value =~ s/\.MM_$/.MMH/;
+                $value =~ s/\.SC_$/.SCR/;
+
                 $modinfo{$name} = $value;
             }
             elsif ($name eq 'FILE.SIZE') {
