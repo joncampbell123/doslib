@@ -180,7 +180,7 @@ CLONEDBG CLONEDBG.DLL  WinDebug API implemented with ToolHelp
 CLOVER   CLOVER.EXE    Clover Drawing Using Regions (c) Charles Petzold, 1990
 CLTEST   CLTEST.EXE    Microsoft OLE client Test App
 CMC      CMC.DLL       CMC on MAPI 1.0
-CMDIALOG CMDIALOG.VB_  Windows Common Dialog Custom Control for Visual Basic
+CMDIALOG CMDIALOG.VBX  Windows Common Dialog Custom Control for Visual Basic
 CMDKINST CMDKINST.EXE  Microsoft Electronic For
 CMTHUNKS CMTHUNKS.DLL  Configuration Manager API thunk library
 COCFG    OAPPDIR.EXE   OS/2 Gateway FFAPI CourCfg (C) Consumers Software 1990
@@ -476,7 +476,7 @@ EXEVIEW  EXEVIEW.EXE   Windows Executable Viewer
 EXPENSE  EXPENSE.EXE   Microsoft Expense Report: 1.0
 EXPERT   EXPERT.EXE    Expertise Planner
 EXPORT   EXPORT.DLL    export.dll
-EXTLIST  EXTLIST.VB_   LMIS Extended Selection listbox
+EXTLIST  EXTLIST.VBX   LMIS Extended Selection listbox
 FAXCODEC FAXCODEC.DLL  Microsoft At Work Renderer
 FDAEMON  FDAEMON.EXE   FDaemon lazy-write daemon Copyright (C) 1990-1993 Lantern Corp.
 FEEDER   FEEDER.EXE    FEEDER Module for LOGGER Copyright (c) Spark Software Inc. 1991.  All rights reserved.
@@ -569,7 +569,6 @@ GRAPH    GRAPH.EXE     Microsoft Graph  (c) 1991  Microsoft Corporation
 GRAPH5   GRAPH5.EXE    Microsoft Graph  (c) 1994  Microsoft Corporation
 GRID     GRID.EXE      Microsoft Grid Sample Application
 GRID     GRID.VBX      Visual Basic Grid Custom Control
-GRID     GRID.VB_      Visual Basic Grid Custom Control
 GRINTL   GRINTL.DLL    Microsoft Graph UI
 GROCERY  GROCERY.DLL   Implements grocery store as server to client apps
 GST_STF0 DCTSETUP.EXE  Shell Component of GUI Setup Toolkit
@@ -841,10 +840,10 @@ MCIVISCA MCIVISCA.DRV  VCR:[MCI] ViSCA VCR
 MCIWAVE  MCIWAVE.DRV   waveaudio:[MCI] Microsoft MCI waveaudio driver
 MCIWAVE  MCIWAVE.DRV   waveaudio:[MCI] Sound
 MCIWAVTS MCIWAVE.EXE   MCI Waveaudio Test
-MCIWNDX  MCIWNDX.VB_   Visual Basic MCIWnd Custom Control
+MCIWNDX  MCIWNDX.VBX   Visual Basic MCIWnd Custom Control
 MDI      MDI.EXE       Microsoft Foundation MDI Sample
 MDIAPP   MDIAPP.EXE    MDI sample application
-MDICHILD MDICHILD.VB_  MDI Child Control for Visual Basic
+MDICHILD MDICHILD.VBX  MDI Child Control for Visual Basic
 MDIDEMO  MDIDEMO.EXE   MDI Demonstration (c) Charles Petzold, 1990
 MEDBITS  MEDBITS.MMH   MMTools Bitmap Resource DLL
 MEDDIBS  MEDDIBS.MMH   DIBS media type DLL
@@ -854,7 +853,7 @@ MEDWAVE  MEDWAVE.MMH   WAVE media Type DLL
 MEFBROWS MEFBROWS.EXE  MS Mail E-Form Browser
 MEFDIAL  MEFDIAL.DLL   Dial support for Phone message
 MEFLIB   MEFLIB.DLL    Calvin Encoding File DLL
-MEFLINK  MEFLINK.VB_   Visual Basic Callback Custom Control
+MEFLINK  MEFLINK.VBX   Visual Basic Callback Custom Control
 MEFPHONE MEFPHONE.EXE  Phone
 MEFROUTE MEFROUTE.EXE  Document Routing E-Form
 MEMORY   MEMORY.EXE    Sample Microsoft Windows Application
@@ -907,7 +906,6 @@ MMMENU   MMMENU.EXE    Multimedia Main Menu
 MMP      MMP.DLL       Multimedia Player DLL
 MMSYSTEM MMSYSTEM.DLL  System APIs for Multimedia
 MMTASK   MMTASK.TSK    Microsoft MultiMedia Task App.
-MMTASK   MMTASK.TS_    Microsoft MultiMedia Task App.
 MMTSTCOM MMTSTCOM.DLL  MM/Windows Common code library
 MMWVAPI  VAPIMPU.DRV   midi:Voyetra MPU type MIDI
 MNMALP   MNMALP.EXE    Microsoft\256 NetMeeting(TM) Application Loader Primary.
@@ -1173,7 +1171,7 @@ OLE2VBX  MSOLE2.VBX    OLE2 Container Custom Control for Visual Basic
 OLE2VIEW OLE2VIEW.EXE  OLE2VIEW Windows Application
 OLECLI   OLECLI.DLL    OLE Client. support (c) Copyright Microsoft Corp. 1990 - All Rights Reserved
 OLECLI   OLECLI.W31    OLE Client. support (c) Copyright Microsoft Corp. 1990 - All Rights Reserved
-OLECLIEN OLECLIEN.VB_  OLE Client Custom Control for Visual Basic
+OLECLIEN OLECLIEN.VBX  OLE Client Custom Control for Visual Basic
 OLEDDE   OLEDDE.DLL    DDEWATCH -- A collection of generic routines
 OLEDEB   OLEDEB.DLL    OLEDEBUG code
 OLESETUP OLESETUP.EXE  A minimum Application
@@ -1221,7 +1219,7 @@ PFMEDIT  PFMEDIT.EXE   Microsoft Windows PFM Editor
 PG306    PG306.DRV     DDRV Olivetti PG 306:100,300,300
 PHBOOK   PHBOOK.EXE    Phone Book Database
 PHONE    PHONE.EXE     Phone Program
-PICCLIP  PICCLIP.VB_   Picture Clipping Custom Control for Visual Basic
+PICCLIP  PICCLIP.VBX   Picture Clipping Custom Control for Visual Basic
 PICKER   PICKER.DLL    Window Picker DLL
 PICKFONT PICKFONT.EXE  Font Picker Program (c) Charles Petzold, 1990
 PICTBUTN PICTBTN.DLL   Picture Control - Copyright 1991-92 by Voyetra Technologies
@@ -1457,8 +1455,8 @@ SOUNDSRV SOUNDSRV.EXE  Microsoft Windows DDE Server Application
 SOUND_B  SOUND_B.DLL   Microsoft Windows Sound Driver on OS/2
 SPEAKN   SPEAKN.EXE    Microsoft Foundation Speak and Spell
 SPELL    SPELL.DLL     Pyramid Spell Checker DLL
-SPIN     SPIN.VB_      Visual Basic Custom Control (Spin)
-SPIN     SPIN.VB_      Visual Basic Spin Custom Control
+SPIN     SPIN.VBX      Visual Basic Custom Control (Spin)
+SPIN     SPIN.VBX      Visual Basic Spin Custom Control
 SPLUS    SPLUS.DLL     MS Schedule+ SPLUS DLL
 SPOOLER  SPOOLER.EXE   Microsoft Windows Printer Spooler
 SPY      SPY.EXE       Windows Spy Application
@@ -1472,7 +1470,7 @@ SS       SS.EXE        SourceSafe Version Control
 SSADMIN  SSADMIN.EXE   SSADMIN.exe
 SSAFE_BB SSAFE_BB.DLL  SSAFE_BB.exe
 SSAPI16  SSAPI16.DLL   SourceSafe Engine
-SSDATA2  SSDATA2.VB_   Sheridan Software Widgets Data Controls v1.0 (27Aug93) - Copyright (c) 1993 Sheridan Software Systems
+SSDATA2  SSDATA2.VBX   Sheridan Software Widgets Data Controls v1.0 (27Aug93) - Copyright (c) 1993 Sheridan Software Systems
 SSDLG    SSDLG.CPL     Multimedia Windows Screen Saver Control Panel
 SSEM     SSEM.EXE      SSEM.EXE
 SSERIFB  SSERIFB.FON   FONTRES 133,96,72 : MS Sans Serif 8,10,12,14,18,24 (EGA res)
@@ -1594,8 +1592,8 @@ THESAURU THES.DLL      Word for Windows v. 2.0 Thesaurus DLL
 THINKJET THINKJET.DRV  DDRV HP ThinkJet (2225 C-D):200,192,96;50,96,192:ThinkJet 192 X 96 DPI
 THINKJET THINKJET.DRV  DDRV THINKJET:100,96,96
 THREADS  THREADS.EXE   Multi-Thread Demo Program by Charles Petzold, 1988
-THREED   THREED.VB_    3D Check/Frame/Option/Command/Panel/Group (PTK/24Sep92) - Copyright (c) 1991, 1992 Sheridan Software Systems, Inc.
-THREED   THREED.VB_    3D Check/Frame/Option/Command/Panel/Group - Copyright (c) 1991, 1992, 1993 Sheridan Software Systems, Inc.
+THREED   THREED.VBX    3D Check/Frame/Option/Command/Panel/Group (PTK/24Sep92) - Copyright (c) 1991, 1992 Sheridan Software Systems, Inc.
+THREED   THREED.VBX    3D Check/Frame/Option/Command/Panel/Group - Copyright (c) 1991, 1992, 1993 Sheridan Software Systems, Inc.
 THSAMPLE THSAMPLE.EXE  TOOLHELP.DLL Sample App
 TI850    TI850.DRV     DDRV TI 850,TI 855:167,120,72;60,72,120:Texas Instruments Printers 120 X 72 DPI
 TI850    TI850.DRV     DDRV TI850:83,60,72,167,120,72
@@ -1830,7 +1828,6 @@ WINGDING WINGDING.FOT  Setup Detect Library
 WINGDING WINGDING.FOT  Typing Program (c) Charles Petzold, 1990
 WINGDING WINGDING.FOT  Windows File System 3.1
 WINGPAL  WINGPAL.WND   WinG Palette Task
-WINGPAL  WINGPAL.WN_   WinG Palette Task
 WINHCT   WINHCT.EXE    HCT Shell
 WINHELP  WINHELP.EXE   Microsoft Help 3.0
 WINHELP  WINHELP.EXE   Microsoft Help 3.07
@@ -1850,12 +1847,10 @@ WINNLS   WINNLS.DLL    WOW REPLACEMENT WINNLS
 WINOLDAP WINOA286.MOD  Microsoft Windows Old Application Support Module (3.00.14.20jan89)
 WINOLDAP WINOA386.MOD  Microsoft WIN386 Old App Support Module V 3.00
 WINOLDAP WINOA386.MOD  Microsoft WIN386 Old App Support Module V 3.10
-WINOLDAP WINOA386.MO_  Microsoft WIN386 Old App Support Module V 3.10
 WINOLDAP WINOLDAP.MOD  Microsoft Windows Old Application Support Module
 WINOLDAP WINOLDAP.MOD  Microsoft Windows Old Application Support Module (3.00.14.20jan89)
 WINOLDAP WINOLDAP.MOD  Microsoft Windows Old Application Support Module (3.10)
 WINOLDAP WINOLDAP.MOD  Microsoft Windows Old Application Support Module (QA.200.03)
-WINOLDAP WINOLDAP.MO_  Microsoft Windows Old Application Support Module (3.10)
 WINPOPUP WINPOPUP.EXE  LAN Manager 3.0 Message Popup for Windows
 WINPOPUP WINPOPUP.EXE  Microsoft Windows Message Popup Application
 WINRFS   WINRFS.DLL    WINRFS - Windows API Rfs support
@@ -2081,7 +2076,7 @@ XBS200   XBS200.DLL    Microsoft (R) dBase ISAM  Version 2.50
 XER4020  XER4020.DRV   DDRV Xerox 4020
 XLMAPI   XLMAPI.XL_    Microsoft Excel MAPI Translation Layer XLL
 XTENSION XTENSION.DLL  File Manager Extension DLL
-YATC     YATC.VB_      Yet Another Tab Control
+YATC     YATC.VBX      Yet Another Tab Control
 YNC      YNC.EXE       ync.exe
 YOMDLL   DPMIMEM.DLL   dpmimem.dll
 ZOOMIN   ZOOMIN.EXE    Template Microsoft Windows Application

@@ -42,7 +42,12 @@ while (my $path = <LS>) {
                 $value =~ s/\.EX_$/.EXE/;
                 $value =~ s/\.FO_$/.FON/;
                 $value =~ s/\.MM_$/.MMH/;
+                $value =~ s/\.MO_$/.MOD/;
+                $value =~ s/\.OC_$/.OCX/;
                 $value =~ s/\.SC_$/.SCR/;
+                $value =~ s/\.TS_$/.TSK/;
+                $value =~ s/\.VB_$/.VBX/;
+                $value =~ s/\.WN_$/.WND/;
 
                 $modinfo{$name} = $value;
             }
