@@ -64,6 +64,31 @@ while (my $path = <LS>) {
 }
 close(LS);
 
+sub text2html {
+    my $s = shift @_;
+    my $r = '';
+    my $i,$c;
+
+    for ($i=0;$i < length($s);$i++) {
+        $c = substr($s,$i,1);
+
+        if ($c eq '<') {
+            $r .= "&lt;";
+        }
+        elsif ($c eq '>') {
+            $r .= "&gt;";
+        }
+        elsif ($c eq '&') {
+            $r .= "&amp;";
+        }
+        else {
+            $r .= $c;
+        }
+    }
+
+    return $r;
+}
+
 sub refsort {
     # try to sort:
     #   named entries first
@@ -480,4 +505,85 @@ for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
 }
 
 close(OSUM);
+
+open(IBMML,">summary.modules.ibmpc") || die;
+
+#while (my ($module,$modlistr) = each(%modules)) {
+for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
+    $module = $modorder[$lmodi];
+    $modlistr = $modules{$module};
+
+    my $max_ordinals = 0;
+    my @modlist = @{$modlistr};
+
+    my @ls = ( );
+    for ($modi=0;$modi < @modlist;$modi++) {
+        my $modinfop = $modlist[$modi];
+        my %modinfo = %{$modinfop};
+        my @ent;
+
+        push(@ent,uc($module));
+        push(@ent,uc($modinfo{'FILE.NAME'}));
+        push(@ent,$modinfo{'DESCRIPTION'});
+
+        push(@ls,[@ent]);
+    }
+
+    @ls = sort {
+        my @sa = @{$a}, @sb = @{$b};
+        my $x;
+
+        $x = $sa[0] cmp $sb[0];
+        return $x if $x != 0;
+
+        $x = $sa[1] cmp $sb[1];
+        return $x if $x != 0;
+
+        $x = $sa[2] cmp $sb[2];
+        return $x if $x != 0;
+
+        return 0;
+    } @ls;
+
+    # unique
+    my @r = ( );
+    my $p0 = '',$p1 = '',$p2 = '';
+    for ($i=0;$i < @ls;$i++) {
+        my @ent = @{$ls[$i]};
+
+        if ($ent[0] ne $p0 || $ent[1] ne $p1 || $ent[2] ne $p2) {
+            push(@r,[@ent]);
+        }
+
+        $p0 = $ent[0];
+        $p1 = $ent[1];
+        $p2 = $ent[2];
+    }
+    @ls = @r;
+
+    # print
+    for ($i=0;$i < @ls;$i++) {
+        my @ent = @{$ls[$i]};
+        my $lin = '';
+
+        # Module: 8 chars
+        $lin .= text2html(substr($ent[0].(' ' x 8),0,8));
+
+        # col
+        $lin .= ' ';
+
+        # File: 12 chars
+        $lin .= text2html(substr($ent[1].(' ' x 11),0,12));
+
+        # col
+        $lin .= '  ';
+
+        # description
+        $lin .= text2html($ent[2]);
+
+        # done
+        print IBMML "$lin\n";
+    }
+}
+close(IBMML);
 
