@@ -588,22 +588,24 @@ for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
         while (length($lin) < 8) {
             $lin .= ' ';
         }
-        $lin  = text2html($lin);
 
         # col
         $lin .= ' ';
 
         # File: 12 chars
-        $lin .= text2html(substr($ent[1].(' ' x 11),0,12));
+        $lin .= $ent[1];
+        while (length($lin) < (8+1+12)) {
+            $lin .= ' ';
+        }
 
         # col
         $lin .= '  ';
 
         # description
-        $lin .= text2html($ent[2]);
+        $lin .= $ent[2];
 
         # done
-        print IBMML "$lin\n";
+        print IBMML text2html($lin)."\n";
     }
 }
 close(IBMML);
