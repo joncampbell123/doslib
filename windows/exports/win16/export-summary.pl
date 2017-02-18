@@ -584,7 +584,11 @@ for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
         my $lin = '';
 
         # Module: 8 chars
-        $lin .= text2html(substr($ent[0].(' ' x 8),0,8));
+        $lin .= $ent[0];
+        while (length($lin) < 8) {
+            $lin .= ' ';
+        }
+        $lin  = text2html($lin);
 
         # col
         $lin .= ' ';

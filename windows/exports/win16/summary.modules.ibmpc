@@ -33,7 +33,7 @@ ALDWPLS  ALDWPLS.DLL   Proximity Linguistic System DLL (c) Proximity Technology 
 ALDWPLSR ALDWPLSR.RSL  Aldus Proximity Interface External Resources (c) Aldus Corp. 1990
 ALF__54C ALF__54C.FON  FONTRES 100, 96, 96 : AlphaFont 54C
 ALIGNED  ALIGNED.EXE   Windows Edit Control Text Test App
-ALTERWIN WHCONFIG.EXE  Alter WinHelp INI File
+ALTERWINHELPINI WHCONFIG.EXE  Alter WinHelp INI File
 ANNOTATE ANNOTATE.EXE  Simple Microsoft Windows Application
 APP850   APP850.FON    FONTRES 100,96,96:MS-DOS CP 850
 APPEXEC  APPEXEC.DLL   AppExec Custom Command for Mail 3.0
@@ -750,7 +750,7 @@ LINES    LINES.IW      Dancing Lines
 LINGO    CONNECTX.X16  AOL16.exe
 LINK386  LINK386.EXE   Microsoft 32-bit Linear-Executable Linker
 LISTHSCR LISTHSCR.DLL  Windows Horizontal Listbox Scrolling Methods, Kraig Brockschmidt
-LISTHSCR LISTHORZ.EXE  Windows Horizontal List Scroll App
+LISTHSCROLL LISTHORZ.EXE  Windows Horizontal List Scroll App
 LISTTEST LISTTEST.EXE  OBJ16\listtest.exe
 LITEDLL  GDI.DLL       d:\o\l30\bin\litedll.dll
 LITEDLL  KERNEL.DLL    d:\o\l30\bin\litedll.dll
@@ -858,7 +858,7 @@ MIDIREC0 MIDIREC.EXE   A minimum stress MIDI Input Port Recording Application
 MIGRATE  9XMIG.DLL     Win9X Migration DLL
 MIGRATE  MIGRATE.EXE   MIGRATE for Windows
 MINCB    MINCB.DLL     Mincb DLL
-MINESWEE WINMINE.EXE   Minesweeper v3.1
+MINESWEEPER WINMINE.EXE   Minesweeper v3.1
 MINMDI   MINMDI.EXE    Minimal MDI Sample Foundation Application
 MINSVR   MINSVR.EXE    Mini OLE Server
 MINSVRMI MINSVRMI.EXE  Mini Demo Server - MI version
@@ -978,11 +978,11 @@ MSCUISTF MSCUISTF.DLL  MS-Setup UI Sample
 MSCUISTF MSCUISTF.DLL  MSIN Setup
 MSCUISTF MSCUISTF.DLL  Setup UI Sample
 MSDETSTF MSDETSTF.DLL  Setup Detect Library
-MSDNHULK MSDNHULK.DLL  MSDNHULK.exe
+MSDNHULK.DLL MSDNHULK.DLL  MSDNHULK.exe
 MSDNTOOL MSDNTOOL.EXE  Microsoft Development Library Access Tool
 MSDOS    MSDOS.EXE     Microsoft Windows MSDOS Executive Application
 MSDOSD   MSDOSD.EXE    Windows MSDOS Machine Dependent
-MSGBLAST MSGBLAST.VBX  Visual Basic Message Blaster Custom Control ©1992 Ed Staffin
+MSGBLAST.VBX MSGBLAST.VBX  Visual Basic Message Blaster Custom Control ©1992 Ed Staffin
 MSGSRV32 MSGSRV32.EXE  Microsoft Windows DOS386 WShell server
 MSIN     MSIN.EXE      Microsoft Information Network Browser
 MSINAPI  MSINAPI.DLL   Microsoft Information Network Browser API
@@ -1156,7 +1156,7 @@ OLE2VBX  MSOLE2.VBX    OLE2 Container Custom Control for Visual Basic
 OLE2VIEW OLE2VIEW.EXE  OLE2VIEW Windows Application
 OLECLI   OLECLI.DLL    OLE Client. support (c) Copyright Microsoft Corp. 1990 - All Rights Reserved
 OLECLI   OLECLI.W31    OLE Client. support (c) Copyright Microsoft Corp. 1990 - All Rights Reserved
-OLECLIEN OLECLIEN.VBX  OLE Client Custom Control for Visual Basic
+OLECLIENT OLECLIEN.VBX  OLE Client Custom Control for Visual Basic
 OLEDDE   OLEDDE.DLL    DDEWATCH -- A collection of generic routines
 OLEDEB   OLEDEB.DLL    OLEDEBUG code
 OLESETUP OLESETUP.EXE  A minimum Application
@@ -1210,7 +1210,7 @@ PICKFONT PICKFONT.EXE  Font Picker Program (c) Charles Petzold, 1990
 PICTBUTN PICTBTN.DLL   Picture Control - Copyright 1991-92 by Voyetra Technologies
 PIFEDIT  PIFEDIT.EXE   Program Information File Editor
 PIFMGR   PIFMGR.DLL    Program Information File (PIF) Management Services
-PINWRITE NEC24PIN.DRV  DDRV Pinwriter 24 pin printers:100,360,360;100,360,360
+PINWRITER NEC24PIN.DRV  DDRV Pinwriter 24 pin printers:100,360,360;100,360,360
 PIPE     PIPE.EXE      PIPE.EXE
 PKPD     PKPD.DLL      Microsoft Windows 16-bit Pen Kernel PenData support v2.0
 PLAY     VDG.EXE       Microsoft Tutor Play, Copyright (c) Microsoft Corp., 1989-1991
@@ -1340,7 +1340,7 @@ RUMOR    RUMOR.EXE     Party Line
 RUNDLL   RUNDLL.EXE    Turn a DLL into an App
 S3_CP3CQ S3_CP3CQ.DLL  DDetect: True for S3 CP3 on Compaqs
 SAMPAPP  HLKSETUP.DLL  Sample App DLL
-SB JUKEB MMJBOX.EXE    SOUND BLASTER's DLL Test Program
+SB JUKEBOX MMJBOX.EXE    SOUND BLASTER's DLL Test Program
 SB15SND  SB15SND.DRV   wave,midi:Creative Sound Blaster 1.5 Wave and Midi
 SB15SND  SB20SND.DRV   wave,midi:Creative Sound Blaster 2.0 Wave and Midi
 SB16SND  SB16SND.DRV   Creative Audio Driver
@@ -1577,7 +1577,7 @@ TESTSERV TESTSERV.EXE  Sample AFX OLE Server Application
 TESTZYZG TESTZYZG.EXE  Windows 3.1 zYzGauge test application
 TETRIS   TETRIS.EXE    Really Cool TETRIS Game for Win3
 TF       TFP.EXE       tf.exe
-THESAURU THES.DLL      Word for Windows v. 2.0 Thesaurus DLL
+THESAURUS THES.DLL      Word for Windows v. 2.0 Thesaurus DLL
 THINKJET THINKJET.DRV  DDRV HP ThinkJet (2225 C-D):200,192,96;50,96,192:ThinkJet 192 X 96 DPI
 THINKJET THINKJET.DRV  DDRV THINKJET:100,96,96
 THREADS  THREADS.EXE   Multi-Thread Demo Program by Charles Petzold, 1988
@@ -1588,7 +1588,7 @@ TI850    TI850.DRV     DDRV TI 850,TI 855:167,120,72;60,72,120:Texas Instruments
 TI850    TI850.DRV     DDRV TI850:83,60,72,167,120,72
 TIBROWSE TIBROWSE.EXE  Type library browser
 TICKTOCK TICKTOCK.EXE  TICKTOCK
-TICTACTI TIC.EXE       TicTactics v1.0
+TICTACTICS TIC.EXE       TicTactics v1.0
 TIFFIMP  TIFFIMP.FLT   TIFF Import Filter (Win3 DIB)
 TIMEACD  TIMEACD.EXE   Microsoft Windows MCI Application
 TIMER    TIMER.DRV     timer:Microsoft time services driver
@@ -1749,8 +1749,8 @@ WDATGEN  WINDAT.EXE    Digital Audio Transport
 WDDESPY  WDDESPY.EXE   wddespy.exe
 WDE      WDE.EXE       wde.exe
 WDIFF    WDIFF.EXE     A diff that runs under windows
-WDMAUDDR WDMAUD.DRV    WDMAUD - MMSystem to CSA audio mapper DLL
-WDMAUDDR WDMDRV.RET    WDMAUD - MMSystem to CSA audio mapper DLL
+WDMAUDDRV WDMAUD.DRV    WDMAUD - MMSystem to CSA audio mapper DLL
+WDMAUDDRV WDMDRV.RET    WDMAUD - MMSystem to CSA audio mapper DLL
 WDVISEX  WDVISEX.EXE   Microsoft Word for Windo
 WEDITCW  WEDITCW.DLL   Open Watcom Editor DLL for Codewright
 WEDITVIW WEDITVIW.DLL  Open Watcom Editor DLL for VIW
@@ -1805,10 +1805,10 @@ WINHELP  WINHELP.EXE   Microsoft Help 3.0
 WINHELP  WINHELP.EXE   Microsoft Help 3.07
 WINHELP  WINHELP.EXE   Microsoft Help 3.1
 WINHELP  WINHELP.EXE   winhelp.exe
-WINIO_AP ARGS.EXE      WINIO Windows program
-WINIO_AP MEM.EXE       WINIO Windows program
-WINIO_AP MEM_OLD.EXE   WINIO Windows program
-WINIO_AP TESTLIST.EXE  WINIO Windows program
+WINIO_APP ARGS.EXE      WINIO Windows program
+WINIO_APP MEM.EXE       WINIO Windows program
+WINIO_APP MEM_OLD.EXE   WINIO Windows program
+WINIO_APP TESTLIST.EXE  WINIO Windows program
 WINLD    WINLD.FON     FONTRES CONTINUOUSSCALING : MS LineDraw (All res)
 WINMETER NETMETER.EXE  Microsoft Windows for Workgroups CPU usage meter
 WINMINE  WINMINE.EXE   Minesweeper
@@ -2037,7 +2037,7 @@ WRKBENCH WRKBENCH.DLL  MMSys Workbench Controller DLL
 WSAMPLEW WSAMPLEW.EXE  WATCOM Sampler
 WSASRV   WSASRV.EXE    Windows Sockets Asynchronous Request Server
 WSCTHUNK WSCTHUNK.DLL  wscthunk.exe
-WSETUP.E WSETUP.EXE    Sound Card Setup
+WSETUP.EXE WSETUP.EXE    Sound Card Setup
 WSPY     WSPY.EXE      wspy.exe
 WSPYHK   WSPYHK.DLL    wspyhk.dll
 WSTRING  WSTRING.DLL   wstring.dll
