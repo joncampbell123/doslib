@@ -3,6 +3,7 @@
 (AME)    ODBC16GT.DLL  ODBC Generic Thunk API library (16-bit), Copyright (c) Microsoft Corp., 1993-1994
 (AME)    ODBC16GT.DLL  ODBC Generic Thunk API library (16-bit), Copyright (c) Microsoft Corp., 1993-1996
 AAPLAY   AAPLAY.DLL    Autodesk Windows Animation Player :&gt; Version 1.01.31 &lt;:
+AAPLAY   AAPLAY.DLL    Autodesk Windows Animation Player :&gt; Version 1.02 &lt;:
 AAVGA    AAVGA.DLL     Autodesk VGA Full Screen Fli Player :&gt; Version 1.01.31 &lt;:
 ABOUT1   ABOUT1.EXE    About Box Demo No. 1 (c) Charles Petzold, 1990
 ABOUT2   ABOUT2.EXE    About Box Demo No. 2 (c) Charles Petzold, 1990
@@ -14,19 +15,66 @@ ACMCMPRS ACMCMPRS.DLL  Microsoft Compressed Audio Stream Handler
 ACMSETUP A1116.EXE     App-wide setup tool
 ACMSETUP ACMSETUP.EXE  App-wide setup tool
 ADDHDR   ADDHDR.EXE    Add Windows 3.1 386 Device Driver Information
+ADDRESS  ADDRESS.EXE   Get Address
+ADIMPORT ADIMPORT.FLT  AFLT Demo Graphics Import=ADIMPORT,ADI
 ALARMCLK ALARMCLK.EXE  Alarm Clock
+ALDFONT  ALDFONTA.FON  FONTRES 200,96,48 : PageMaker Fonts (2:1)
+ALDFONT  ALDFONTB.FON  FONTRES 133,96,72 : PageMaker Fonts (4:3)
+ALDFONT  ALDFONTE.FON  FONTRES 100,96,96 : PageMaker Fonts (1:1)
+ALDFONT  ALDFONTF.FON  FONTRES 100,120,120 : PageMaker Fonts (1:1)
 ALDFS    ALDFS.DLL     Aldus File System, Copyright (C) 1988-90
+ALDFSRES ALDFSRES.RSL  Aldus File System External Resource Library. Copyright (C) 1990.
 ALDIM    ALDIM.DLL     Aldus Imaging System, copyright (C) 1989-90
+ALDIMRES ALDIMRES.RSL  Aldus Image Library External Resource Library. Copyright (C) 1990.
 ALDVM    ALDVM.DLL     Aldus Virtual Machine &amp; Utilities, Copyright (C) 1989-90
+ALDVMRES ALDVMRES.RSL  Aldus Utilities Library External Resource Library. Copyright (C) 1990.
 ALDWPLS  ALDWPLS.DLL   Proximity Linguistic System DLL (c) Proximity Technology Inc., 1989
+ALDWPLSR ALDWPLSR.RSL  Aldus Proximity Interface External Resources (c) Aldus Corp. 1990
+ALF__54C ALF__54C.FON  FONTRES 100, 96, 96 : AlphaFont 54C
 ALIGNED  ALIGNED.EXE   Windows Edit Control Text Test App
 ALTERWIN WHCONFIG.EXE  Alter WinHelp INI File
 ANNOTATE ANNOTATE.EXE  Simple Microsoft Windows Application
+APP850   APP850.FON    FONTRES 100,96,96:MS-DOS CP 850
 APPEXEC  APPEXEC.DLL   AppExec Custom Command for Mail 3.0
 APPWZLIB APPWZLIB.DLL  MFC AppWizard Resource-only DLL
 APSTUDIO APSTUDIO.EXE  App Studio
 ARCS     ARCS.EXE      Arc, Chord, and Pie Drawing Program (c) Charles Petzold, 1990
+ARIAL    ARIAL.FON     16-bit ODBC driver for Access, Copyright(c) Microsoft Corp., 1994
+ARIAL    ARIAL.FON     Microsoft Windows Kernel Interface Version 3.10
+ARIAL    ARIAL.FON     System Diagnostic Utility
+ARIAL    ARIAL.FOT     (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
+ARIAL    ARIAL.FOT     DDRV oki9:167,240,144;60,144,240;83,120,144;120,144,120;167,120,72;60,72,120
+ARIAL    ARIAL.FOT     KeyTable Canadian Multilingual
+ARIAL    ARIAL.FOT     MSVIDEO: Screen Capture Device Driver for AVI
+ARIAL    ARIAL.FOT     Setup Detect Library
+ARIALB   ARIALB.FON    FONTRES 133,96,72 : Arial 8,10 (EGA res)
+ARIALBD  ARIALBD.FON   CPS Viewer Quattro/W Format Library - Copyright (C) 1993-94 Central Point Software, Inc.
+ARIALBD  ARIALBD.FON   FONTRES 133,96,72 : Terminal
+ARIALBD  ARIALBD.FON   Microsoft PACKAGER
+ARIALBD  ARIALBD.FOT   Common Windows Dialogs, Ver. 3.10
+ARIALBD  ARIALBD.FOT   MDI Child Control for Visual Basic
+ARIALBD  ARIALBD.FOT   MSDN Viewer User Interface
+ARIALBD  ARIALBD.FOT   Open Watcom Debugger Trap File
+ARIALBD  ARIALBD.FOT   Setup Detect Library
+ARIALBI  ARIALBI.FON   EFI FUNCTIONS - VIOCALLS EMULATION
+ARIALBI  ARIALBI.FON   Microsoft Pen Windows Sample Application
+ARIALBI  ARIALBI.FON   SHMEM.EXE
+ARIALBI  ARIALBI.FOT   Central Point Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
+ARIALBI  ARIALBI.FOT   EFI FUNCTIONS - KBDCALLS EMULATION
+ARIALBI  ARIALBI.FOT   EMW0W0.exe
+ARIALBI  ARIALBI.FOT   VIDC.CVID:SuperMatch Cinepak Codec
+ARIALI   ARIALI.FON    MS Test Driver (dumb shell) version 1.00.0021
+ARIALI   ARIALI.FON    Microsoft Help 3.0
+ARIALI   ARIALI.FON    Wep4Util.DLL
+ARIALI   ARIALI.FOT    ?
+ARIALI   ARIALI.FOT    Cue Cards API Dll Version 2.0
+ARIALI   ARIALI.FOT    DDRV NEC 3550
+ARIALI   ARIALI.FOT    DDRV PostScript Printer:100,300,300
+ARIALI   ARIALI.FOT    KEYBOARD Norway:47!1!2!2!1!0!AM!PM!KR!.!,!/!.!,
+ARIALS   ARIALS.FOT    SCRNSAVE :CPS Food Fight
 ASMCLOCK ASMCLOCK.EXE  Microsoft Windows MASM 6.00 (based on Petzolds DIGCLOCK.C)
+ATIVIDEO ATIVIDEO.QTC  (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
+AUDIOSTA AUDIOSTA.EXE  audiosta copyright (c) Voyetra Technologies 1994
 AUTOCHK  AUTOCHK.EXE   AutoCheck for Windows
 AUTOINST AUTOINST.EXE  AUTOINST.EXE
 AUTOTEST AUTOTEST.EXE  Sample Microsoft Windows Application
@@ -38,12 +86,14 @@ AVIFILE  AVIFILE.DLL   Microsoft AVI File Read/Write library
 AWDEVL16 AWDEVL16.DLL  Microsoft Fax Device Layer
 AWDO     AWDO.DLL      Open File Dialog DLL
 AWMP     AWMP.DLL      Animation Works Movie Player DLL
+AWMPTSK  AWMPTSK.TSK   Animation Works Movie Player Task
 AWPA     AWPA.EXE      Animation Works Movie Player
 BACK     BACK.EXE      Back Sample Application
 BADAPP   BADAPP.EXE    Bad Windows App (c) 1991, Microsoft Corporation
 BADAPP   BADAPP.EXE    Buggy Example (c) 1992 Bugs R Us
 BALLCLI  BALLCLI.EXE   A DDEML BALLCLI Application
 BALLSRV  BALLSRV.EXE   A DDEML BALLSRV Application
+BCDEMO   BCDEMO.EXE    BTTNCUR.DLL Demonstration (c)1992 Microsoft Corporation
 BEDITDE  BEDITDE.DLL   Microsoft BEDIT DlgEdit Support: Version 1.0
 BEEPER1  BEEPER1.EXE   Timer Demo Program No. 1 (c) Charles Petzold, 1990
 BEEPER2  BEEPER2.EXE   Timer Demo Program No. 2 (c) Charles Petzold, 1990
@@ -55,6 +105,7 @@ BITMAP   BITMAP.EXE    Sample Microsoft Windows Application
 BLANDMDI BLANDMDI.EXE  Minimal MDI application
 BLOWUP1  BLOWUP1.EXE   Blow Up Mouse Demo Program (c) Charles Petzold, 1990
 BLOWUP2  BLOWUP2.EXE   Capture Screen Image to Clipboard (c) Charles Petzold, 1990
+BMPVIEW  BMPVIEW.EXE   BMPVIEW
 BOOTSTRP NETSET16.EXE  MS-Setup Loader
 BOOTSTRP NETSETUP.EXE  MS-Setup Loader
 BOOTSTRP SETUP.EXE     MS-Setup Loader
@@ -63,25 +114,42 @@ BOOTSTRP WHPEWHAT.EXE  MS-Setup bootstrap loader
 BOOTSTRP WSETUP.EXE    MS-Setup Loader
 BOUNCE   BOUNCE.EXE    Bouncing Ball Program (c) Charles Petzold, 1990
 BOUNCER  BOUNCER.EXE   SCRNSAVE :Bounce a bitmap
+BOUNCER  BOUNCER.SCR   SCRNSAVE :Bounce a bitmap
 BROWSE   BROWSER.EXE   NetBIOS Sample Application
 BTNLOOK  BTNLOOK.EXE   Button Look Program (c) Charles Petzold, 1990
+BTRV200  BTRV200.DLL   Microsoft (R) Btrieve ISAM  Version 2.00.13
+BTRV200  BTRV200.DLL   Microsoft (R) Btrieve ISAM  Version 2.50
+BTTNCUR  BTTNCUR.DLL   Windows Interface Buttons &amp; Cursors, (c)1992 Microsoft Corporation
+BUDAPI   BUDAPI.X16    BUDAPI.exe
 BUDAPIXO BUDAPI16.DLL  BUDAPIXO.DLL
+BW       BW.EXE        Browse Watcher
 BWCC     BWCC.DLL      Custom Controls Copyright 1989, 1990, 1991 Borland Intl
 BWCC     BWCC.DLL      Custom Controls Copyright 1989-1993 Borland Intl
+CAL      CAL.EXE       VoyCal Application
 CALC     CALC.EXE      Microsoft Calculator: Developed by Kraig Brockschmidt
 CALC     CALC.EXE      Microsoft Windows Calculator Application
 CALENDAR CALENDAR.EXE  Microsoft Windows Calendar
 CALENDAR CALENDAR.EXE  Microsoft Windows Calendar Program
 CALLBACK CALLBACK.DLL  Low-level callback for MIDI Input
+CANON10E CANON10E.DRV  DDRV Canon Bubble-Jet BJ-10e:100,180,180;100,360,360;67,120,180;150,180,120
+CANON130 CANON130.DRV  DDRV CANON130:100,180,180;100,180,180;67,120,180;133,180,120
+CANON330 CANON330.DRV  DDRV Canon Bubble-Jet BJ-330:100,180,180;200,360,180;50,180,360;67,120,180;150,180,120
+CAN_ADF  CAN_ADF.EXE   SOFT FONT INSTALLER ROUTINE
 CAPSCRN  CAPSCRN.EXE   dos\usa\capscrn.exe
 CARDFILE CARDFILE.EXE  Index Card Handler
 CARDS    CARDS.DLL     Card Display Technology
 CBTLIB2  CBTLIB2.DLL   Microsoft Tutor Library, Copyright (c) Microsoft Corp., 1989-1991
+CBTLIB4  CBTLIB4.DLL   Microsoft Tutor Library, Copyright (c) Microsoft Corp., 1989-1991
 CCAPI200 CCAPI200.DLL  Cue Cards API Dll Version 2.0
 CCARD100 CCARD200.EXE  CueCards run time application v1.0
 CDDEMO   CDDEMO.EXE    Common Dialogs Demonstration
 CFGWIZ   CFGWIZ.DLL    NDISWAN Configuration Wizard
+CGA40850 CGA40850.FON  FONTRES 200,96,48 : Terminal
+CGA40WOA CGA40WOA.FON  FONTRES 200,96,48 : Terminal
+CGA80850 CGA80850.FON  FONTRES 200,96,48 : Terminal
+CGA80WOA CGA80WOA.FON  FONTRES 200,96,48 : Terminal
 CGI_GDI  CGI_GDI.DLL   CGI_GDI DLL - Copyright (c) 1991 System One Software, Inc.
+CGMIMP   CGMIMP.FLT    CGM Graphics Import filter
 CHARMAP  CHARMAP.EXE   Utility for easily selecting special characters.
 CHART    CHART.EXE     Microsoft Foundation Charting Sample
 CHECKER1 CHECKER1.EXE  Mouse Hit-Test Demo Program No. 1 (c) Charles Petzold, 1990
@@ -91,9 +159,15 @@ CHECKERS CHECKERS.EXE  Checkers Version 0.10 (c) 1990, Charles Petzold
 CHECKERS CHECKERS.EXE  Checkers Version 0.30 (c) 1990, Charles Petzold
 CHIPS    CHIPS.EXE     Chips Challenge
 CHKBOOK  CHKBOOK.EXE   CHKBOOK Windows Application
+CHWRKGRP WRKGADM.EXE   Microsoft Access Change Workgroup
 CIM16NET CIM16NET.DLL  16 bit Thunking DLL for Windows95 32 bit access to 16 bit net calls.
+CIRC3    CIRC3.VBX     Visual Basic Circ3 Custom Control
+CIRRUS   CIRRUS.QTC    Sample VHDW Component
+CIT24US  CIT24US.DRV   DDRV CIT24US
+CIT9US   CIT9US.DRV    DDRV CIT9US
 CITOH    CITOH.DRV     DDRV C-Itoh 8510
 CITOH    CITOH.DRV     DDRV C-Itoh 8510: 133,96,72; 75,72,96:CITOH 96 X 72 DPI:  Written by Mitchell London (c) Microsoft Corporation 1987
+CITOH    CITOH.DRV     DDRV CITOH
 CLIDEMO  CLIDEMO.EXE   Microsoft OLE Sample Client Application
 CLIENT   CLIENT.EXE    Client to TRACER
 CLIENT   CLIENT.EXE    Sample Microsoft Windows Application
@@ -106,6 +180,8 @@ CLONEDBG CLONEDBG.DLL  WinDebug API implemented with ToolHelp
 CLOVER   CLOVER.EXE    Clover Drawing Using Regions (c) Charles Petzold, 1990
 CLTEST   CLTEST.EXE    Microsoft OLE client Test App
 CMC      CMC.DLL       CMC on MAPI 1.0
+CMDIALOG CMDIALOG.VB_  Windows Common Dialog Custom Control for Visual Basic
+CMDKINST CMDKINST.EXE  Microsoft Electronic For
 CMTHUNKS CMTHUNKS.DLL  Configuration Manager API thunk library
 COCFG    OAPPDIR.EXE   OS/2 Gateway FFAPI CourCfg (C) Consumers Software 1990
 COCFG    OAPPGET.EXE   OS/2 Gateway FFAPI CourCfg (C) Consumers Software 1990
@@ -121,6 +197,7 @@ COMMCTRL COMMCTRL.DLL  COMMCTRL - Custom controls
 COMMDLG  COMMDLG.DLL   Common Windows Dialogs, Ver. 3.10
 COMMDLG  COMMDLG.DLL   Common Windows Dialogs, Ver. 4.00
 COMPLINC COMPLINC.DLL  Compliance Checking DLL
+COMPOBJ  COMPOBJ.130   Microsoft Component Object Model DLL
 COMPOBJ  COMPOBJ.DLL   Microsoft Component Object Model DLL
 COMPOBJ  COMPOBJ.DLL   WOW REPLACEMENT COMPOBJ
 COMPOBJ  COMPOBJ.DLL   obj\i386\compobj.exe
@@ -133,10 +210,61 @@ CONTROL  CONTROL.EXE   Windows Control Panel
 CONTROL  CONTROL.EXE   Windows Control Panel Applet
 CONTROL  CONTROL.EXE   Windows control panel
 CONTROL  CONTROL3.EXE  Windows Control Panel
+CONV-ASC TXTWLYT.CNV   Word for Windows conversion
+CONV-BIF XLBIFF.CNV    BIFF-Opus Converter Module
+CONV-WKS LOTUS123.CNV  WKS-Opus Converter Module
+CONV-WP5 WPFT5.CNW     Word For Word conversion module for WordPerfect
+CONV_DBS DBASE.CNV     Ashton-Tate dBase to RTF for Windows Converter Module
 COPUT    OGTWPUT.EXE   OS/2 Gateway FFAPI CourPut (C) Consumers Software 1990
+COUR     COUR.FON      Creative CSP Manager
+COUR     COUR.FON      Creative Integrated Sound Architecture CCITT u-Law CODEC
+COUR     COUR.FON      VER - A Version stamping library
+COUR     COUR.FOT      DAO Library--Copyright (c) Microsoft Corporation, 1993
+COUR     COUR.FOT      FONTRES CONTINUOUSSCALING : Script (All res)
+COUR     COUR.FOT      Microsoft Excel MAPI Translation Layer XLL
+COUR     COUR.FOT      Windows Task Manager 3.1
+COURA    COURA.FON     FONTRES 200,96,48 : Courier 8,10,12 (Set #2)
+COURB    COURB.FON     FONTRES 133,96,72 : Courier 10,12,15 (EGA res)
+COURB    COURB.FON     FONTRES 133,96,72 : Courier 8,10,12 (Set #3)
+COURBD   COURBD.FON    Common Windows Dialogs, Ver. 3.10
+COURBD   COURBD.FON    DDRV TI 850,TI 855:167,120,72;60,72,120:Texas Instruments Printers 120 X 72 DPI
+COURBD   COURBD.FON    Setup Detect Library
+COURBD   COURBD.FOT    (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
+COURBD   COURBD.FOT    Borland C++
+COURBD   COURBD.FOT    KEYBOARD (Enhanced keyboard):
+COURBD   COURBD.FOT    Microsoft Win32S Interface Version 3.10
+COURBD   COURBD.FOT    OLEDEBUG code
+COURBD   COURBD.FOT    sequencer:[MCI] MIDI sequencer
+COURBI   COURBI.FON    KeyTable Belgian
+COURBI   COURBI.FON    Multimedia Sound device driver
+COURBI   COURBI.FON    all the 16-bit parts
+COURBI   COURBI.FOT    MDI Child Control for Visual Basic
+COURBI   COURBI.FOT    OLE Automation Type Information Interfaces
+COURBI   COURBI.FOT    StatBar Application
+COURBI   COURBI.FOT    System Metrics Display (c) Charles Petzold, 1990
+COURBI   COURBI.FOT    all the 16-bit parts
+COURC    COURC.FON     FONTRES 83,60,72 : Courier 8,10,12 (Set #4)
+COURD    COURD.FON     FONTRES 167,120,72 : Courier 8,10,12 (Set #5)
+COURE    COURE.FON     FONTRES 100,96,96 : Courier 10,12,15 (VGA res)
+COURE    COURE.FON     FONTRES 100,96,96 : Courier 8,10,12 (Set #6)
+COURF    COURF.FON     FONTRES 100,120,120 : Courier 10,12,15 (8514/a res)
+COURI    COURI.FON     AVIVideo:[MCI] Microsoft Video for Windows
+COURI    COURI.FON     FONTRES CONTINUOUSSCALING : Script (All res)
+COURI    COURI.FON     midi:Ad Lib
+COURI    COURI.FOT     CTREMOTE.exe
+COURI    COURI.FOT     Creative Ms ADPCM Wave Filter
+COURI    COURI.FOT     Fireworks Display
+COURI    COURI.FOT     Microsoft ODBC Control Panel
+COURI    COURI.FOT     Recorder Library
 CPAVDLG  CPAVDLG.DLL   CPS Anti-Virus Dialog Library - Copyright (C) 1993-1994 Central Point Software, Inc.
+CPAVDLGL CPAVDLGL.RSL  CPS Anti-Virus Dialog Resource File - (C) 1993 Central Point Software, Inc.
 CPAVSCAN CPAVSCAN.DLL  CPS Virus Scanning Library - Copyright (C) 1993-1994 Central Point Software, Inc.
+CPBEANIE CPBEANIE.SCR  SCRNSAVE :CPS Beanies
+CPCLOCK  CPCLOCK.SCR   SCRNSAVE :CPS Clock
+CPFOOD   CPFOOD.SCR    SCRNSAVE :CPS Food Fight
+CPFOREST CPFOREST.SCR  SCRNSAVE :CPS Forest
 CPL      CONTROL.EXE   Microsoft Multimedia Control Panel
+CPLSND   SND.CPL       Multimedia Windows Sound control pannel
 CPN16UT  CPN16UT.DLL   CP 16bit UT Thunk API Library, Copyright(c) Microsoft Corp., 1993-1994
 CPP      CPP.EXE       BOSS application
 CPROG1   CPROG1.EXE    Sample application for Calling all Members Technote
@@ -144,13 +272,21 @@ CPROG3   CPROG3.EXE    Sample Program for Calling All Members Technote
 CPROG4   CPROG4.EXE    Sample Application for Calling All Members Technote
 CPROG5   CPROG5.EXE    Sample Application for Calling All Memebers Technote
 CPROG6   CPROG6.EXE    Sample application for Calling All Members Technote
+CPSAND   CPSAND.SCR    SCRNSAVE :CPS Sand Sculptor
+CPSBALLS CPSBALLS.SCR  SCRNSAVE :CPS Super Balls
 CPUMET   CPUMET.EXE    CPUmet (C) Chiverton Graphics, Inc., 1990
 CPUMETE  CPUMETE.EXE   CPUmete (C) Chiverton Graphics, Inc., 1990
 CPUMETER CPUMETER.EXE  CPUmeter (C) Chiverton Graphics, Inc., 1990
+CPWIN386 CPWIN386.CPL  Windows 386 Enhanced Control Panel
+CRAWFORM CRAWFORM.EXE  Ned's Routing E-Form
 CROPDIB  CROPDIB.EXE   CropDIB
 CRUEL    CRUEL.EXE     Cruel solitare game
+CS31BA11 CS31BA11.DRV  wave,aux,mixer:CS31BA11 Business Audio, WSS 2.0 Enhanced
+CS31BACP CS31BAOP.EXE  CS31BA11 Mixer Control Panel
+CS31BAIP CS31BAIP.EXE  CS31BA11 Input Control Panel
 CSPMAN   CSPMAN.DLL    Creative CSP Manager
 CSPMAN   CSPMAN.DLL    Creative CSP Manager for CISA
+CSWIZ    CSWIZ.DLL     Microsoft Access Upsizing Tools Helper DLL
 CTCCW    CTCCW.DLL     Creative Custom Control for Windows
 CTCD     CTCD.EXE      CTCD.exe
 CTIMER   CTIMER.EXE    Hello Microsoft Foundation Classes Windows Application
@@ -158,6 +294,7 @@ CTL3D    CTL3D.DLL     3d control dll
 CTL3DV2  CTL3DV2.DLL   3d control dll
 CTMIDI   CTMIDI.EXE    CTMIDI.exe
 CTMIXER  CTMIXER.EXE   Creative Mixer 4.35, 1991-96
+CTOHWND  CTOHWND.DLL   Prototype Windows DLL
 CTRCC    CTRCC.DLL     Creative Technology Resource Custom Controls DLL
 CTREMOTE CTREMOTE.DLL  CTREMOTE.exe
 CTRES    CTRES.DLL     CTRES DLL
@@ -165,6 +302,8 @@ CTRLTEST CTRLTEST.EXE  Control Test App
 CTWAV    CTWAV.EXE     CTWAV.exe
 CTWAVE   CTWAVE.EXE    Creative WaveStudio: Copyright(c) Creative Technology 1993
 CTWFLT   CTWFLT.DLL    Creative Wave Filter Manager
+CUBE     CUBE.EXE      WinG Spinning Cube Demo
+CURSORS  CURSORS.DLL   DLL containing cursor resources
 CUSTDICT CUSTDICT.DLL  Microsoft Custom Dictionary: Version 1.0
 CUSTRES  CUSTRES.EXE   Custom Resource (c) 1990 By Paul Yao
 CVT16    CVT16.DLL     CVT16.exe
@@ -172,6 +311,7 @@ CVTPAINT CVTPAINT.EXE  Microsoft Windows Paint Conversion Application
 CVW      CVW.EXE       CVW /1
 CVW4     CVW4.EXE      CodeView Windows 4.10.000
 CVWIN    CVWIN.DLL     Blocking Ptrace for Windows
+DAO2016  DAO2016.DLL   DAO Library--Copyright (c) Microsoft Corporation, 1993
 DATAZAP  DATAZAP.DLL   Timex DataLink DLL
 DATZAP16 DATZAP16.DLL  Timex DataLink 16-Bit DLL
 DBNMP3   DBNMP3.DLL    DB-LIBRARY API Library, Copyright(c) Microsoft Corp., 1987,1988,1989 Version 19940126
@@ -208,40 +348,53 @@ DEWCC    DEWCC.DLL     DEWCC.DLL
 DEWSC    DEWSC.DLL     ?
 DFSERVER DFSERVER.EXE  Drop File Server Sample Application
 DFVIEW   DFVIEW.EXE    Microsoft Windows OLE 2.0 DocFile viewer
+DHIO_DH  DHIO_DH.QTC   Copyright (c) 1988-1996 Apple Computer, Inc. All Rights Reserved.
 DIALER   DIALER.EXE    Microsoft Windows Telephony Dialer
+DIALOG   DIALOG.FON    Dialog Fonts
 DIALOG   TBKDLG.DLL    ToolBook Dialog DLL
 DIB      DIB.DRV       Windows 3.0 DIB display driver
 DIBAPI   DIBAPI.DLL    DIB and Bitmap API sample DLL
 DIBENG   DIBENG.DLL    Windows DIB Engine
 DIBIT    DIBIT.EXE     Manipulates Device Independent Bitmap
 DIBVIEW  DIBVIEW.EXE   dibview App
+DICONIX  DICONIX.DRV   DDRV DICONIX:167,120,72;60,72,120;83,120,144;120,144,120;167,240,144;60,144,240
 DIGCLOCK DIGCLOCK.EXE  Digital Clock (c) Charles Petzold, 1990
+DIGITAL  DIGITAL.FON   DIGITAL 100,96,96: Digital Font
 DINDI    DINDI.DLL     bin\DINDI.exe
+DISP     DISP.CPL      Multimedia Control Panel Display Applet
 DISP200  DISP200.DLL   Microsoft DispTest OLE 2 Stub , Copyright (c) 1992-1993 Microsoft Corp.
 DISPDIB  DISPDIB.DLL   VGA 256 Color DIB Display DLL
+DISPLAY  8514.DRV      96 or 120 DPI - IBM 8514 Display Adapter at 1024 by 768
 DISPLAY  ATTDC.DRV     DISPLAY : 120, 72, 80 : Olivetti/AT&amp;T 640x400 Monochrome Display
 DISPLAY  ATTDC.DRV     DISPLAY : 120, 96, 80 : AT&amp;T PC 6300 or PC 6300 PLUS Display Adapter
 DISPLAY  ATTDEB.DRV    DISPLAY : 120, 96, 80 : AT&amp;T Display Enhancement Board
 DISPLAY  ATTDEB.DRV    DISPLAY : 120, 96, 80 : Olivetti/AT&amp;T 640x400 Color Display
 DISPLAY  CGA.DRV       DISPLAY : 200, 96, 48 : IBM (or compatible) Color/Graphics Adapter or COMPAQ Personal Computer
 DISPLAY  COMPAQ.DRV    DISPLAY : 120, 96, 96 : Compaq Portable III 640x400 Plasma Display
+DISPLAY  EGA.DRV       DISPLAY : 133, 96, 72 : EGA (more than 64K) with Enhanced Color Display
 DISPLAY  EGAHIBW.DRV   DISPLAY : 133, 96, 72 : EGA with Enhanced Color Display (Black and White only)
 DISPLAY  EGAHIRES.DRV  DISPLAY : 133, 96, 72 : EGA (more than 64K) with Enhanced Color Display
 DISPLAY  EGALORES.DRV  DISPLAY : 200, 96, 48 : EGA with Enhanced Color Display or Personal Computer Color Display
 DISPLAY  EGAMONO.DRV   DISPLAY : 133, 96, 72 : Enhanced Graphics Adapter (EGA) with Monochrome Personal Computer Display
+DISPLAY  EGAMONO.DRV   DISPLAY:133,96,72:EGA with Monochrome Display
 DISPLAY  FRAMEBUF.DRV  DISPLAY : 100, 96, 96 : Chicago 256 color SVGA display driver.
 DISPLAY  GENIUS.DRV    DISPLAY : 100, 100, 100 : Micro Display Systems GENIUS Graphics Adapter
 DISPLAY  HERCULES.DRV  DISPLAY : 133, 96, 72 : Hercules Graphics Card (or compatible) with Monochrome Display
 DISPLAY  IBMPS230.DRV  DISPLAY : 100, 96, 96 : IBM Personal System/2 Model 30 Monochrome Display
 DISPLAY  IBMPS250.DRV  DISPLAY : 100, 96, 96 : IBM Personal System/2 Model 50 Color Display
 DISPLAY  MCGA256.DRV   DISPLAY : 100, 96, 96 : 640x480x8 color driver.
+DISPLAY  OLIBW.DRV     DISPLAY : 120, 96, 80 : Olivetti/AT&amp;T 640x400 Monochrome Display
+DISPLAY  PLASMA.DRV    DISPLAY : 120, 96, 96 : Compaq Portable III 640x400 Plasma Display
 DISPLAY  S3.DRV        DISPLAY : 100, 96, 96 : DIB Engine based S3 driver.
 DISPLAY  S3MM.DRV      DISPLAY : 100, 96, 96 : DIB Engine based S3 driver.
 DISPLAY  S3VSND.DRV    DISPLAY : 100, 120, 120 : S3 GUI Accelerator Display
 DISPLAY  S3VSND24.DRV  DISPLAY : 100, 96, 96 : S3 True Color driver.
 DISPLAY  S3VSND4.DRV   DISPLAY : 100, 120, 120 : S3 GUI Accelerator Display
 DISPLAY  SUPERVGA.DRV  DISPLAY : 100, 96, 96 : VGA 800x600x4
+DISPLAY  SVGA256.DRV   DISPLAY : 100, 96, 96 : Generic SuperVGA 256 color driver.
 DISPLAY  TANDYDSP.DRV  DISPLAY : 200, 96, 48 : Tandy 1000 640 x 200 4-Color Display
+DISPLAY  TIGA.DRV      DISPLAY : 100, 120, 120 : TIGA HighRes (Best for resolutions larger than 800x600)
+DISPLAY  V7VGA.DRV     DISPLAY : 100, 96, 96 : Multi-resolution 256 color driver.
 DISPLAY  VGA.DRV       DISPLAY : 100, 96, 96 : IBM Personal System/2 Model 50 Color Display
 DISPLAY  VGA.DRV       DISPLAY : 100, 96, 96 : VGA Color Display
 DISPLAY  VGA.DRV       DISPLAY : 100, 96, 96 : VGA Color Display For Windows
@@ -251,38 +404,54 @@ DISPLAY  VGA464.DRV    DISPLAY : 100, 96, 96 : VGA Adapter (800x600 color)
 DISPLAY  VGA468.DRV    DISPLAY : 100, 96, 96 : VGA Adapter (800x600, 256 colors)
 DISPLAY  VGA478.DRV    DISPLAY : 100, 96, 96 : VGA Adapter (1024x768, 256 colors)
 DISPLAY  VGAGRAY.DRV   DISPLAY : 100, 96, 96 : VGA greyscale display driver
+DISPLAY  VGAMONO.DRV   DISPLAY : 100, 96, 96 : IBM Personal System/2 Model 30 Monochrome Display
 DISPLAY  VGAP.DRV      DISPLAY : 100, 96, 96 : VGA Color Display For PenWindows
 DISPLAY  VGAPAL.DRV    DISPLAY : 100, 96, 96 : VGA Color Display
+DISPLAY  XGA.DRV       DISPLAY : 100, 120, 120 : IBM XGA Display Adapter
 DISPTEST DISPTEST.EXE  Microsoft DispTest
 DLCNDI   DLCNDI.DLL    dlcndi.exe
 DLGBOX   DLGBOX.EXE    DLGBOX.EXE
 DLGEDIT  DLGEDIT.EXE   Microsoft Windows Dialog Editor
+DM309    DM309.DRV     DDRV Olivetti DM309 (S)(L)
+DMCOLOR  DMCOLOR.DLL   DDRV Color Library: Color routines for dotmatrix printers
 DMLCLT   DMLCLT.EXE    Sample Microsoft Windows Application
 DMLSRV   DMLSRV.EXE    Sample Microsoft Windows Application
 DMUSIC16 DMUSIC16.DLL  DirectMusic 16-bit sequencer
 DOBJVIEW DOBJVIEW.EXE  IDataObject Viewer Windows Application
+DOGGIE   DOGGIE.EXE    WinG Sprite Demo
+DOSAPP   DOSAPP.FON    FONTRES 100,96,96:MS-DOS CP 437
 DOSCALLS DOSCALLS.DLL  EFI FUNCTIONS - DOSCALLS EMULATION
 DOSMEM   DOSMEM.EXE    dosmem.exe
 DPMIRES  DPMIRES.EXE   DPMI install program
 DRAGDROP DRAGDROP.EXE  Drag and Drop Client Sample Application for Microsoft Windows 3.1
 DRAGON   DRAGON.EXE    Herman's OLE App Series
 DRIVER   DRIVER.DLL    Device Driver Module for LOGGER Copyright (c) Spark Software Inc. 1991.  All rights reserved.
+DRIVERS  DRIVERS.CPL   Multimedia Control Panel Drivers Applet
+DROPOUT  DROPOUT.IW    Dropout
 DRVRAPP  DRVRAPP.EXE   Sample application calls INSTDRVR.DLL
 DRVSPACE DRVSPACE.EXE  DriveSpace (Disk Compression Tool)
 DRWATCOM DRWATCOM.EXE  drwatcom.exe
 DRWATSON DRWATSON.EXE  System Diagnostic Utility
+DRWIMP   DRWIMP.FLT    Shell DLL to fix ImageMark filters
+DSHELL   TEST.EXE      MS Test Driver (dumb shell) version 1.00.0005
 DSHELL   _MSTEST.EXE   MS Test Driver (dumb shell) version 1.00.0021
 DSKAPI16 DSKAPI16.DLL  Sample DLL showing the framework for multiple-segment DLLs.
 DSKMAINT DSKMAINT.DLL  DSKMAINT - Disk Maintenance
 DTA      DTA.EXE       Microsoft Windows 3.0 Display Test Application
 DWARF    DWARF.DLL     dwarf.dll
 DYNBEDIT DYNBEDIT.EXE  Microsoft Pen Windows Sample Application
-ECDCTRL  ECDCTRL.DLL   Play around with AFX.INI
+ECDCTRL  ECDCTRL.DLL   Multimedia Windows Joystick Calibration Control Panel Applet
 ECDCTRL  ECDCTRL.DLL   Sound Recorder
 ED       MSDRAW.EXE    EmbedDraw
 EEW0CAN  EEW0CAN.DLL   eew0can.exe
 EEW0CXX  EEW0CXX.DLL   eew0cxx.exe
 EEW0CXXV EEW0CXXV.DLL  eew0cxxv.exe
+EFORM    EFORM.EXE     E-Form
+EGA40850 EGA40850.FON  FONTRES 133,96,72 : Terminal
+EGA40WOA EGA40WOA.FON  FONTRES 133,96,72 : Terminal
+EGA80850 EGA80850.FON  FONTRES 133,96,72 : Terminal
+EGA80WOA EGA80WOA.FON  FONTRES 133,96,72 : Terminal
+EIS_BB   EIS_BB.DLL    EIS Setup Custom Action DLL
 EMPTYWB  EMPTYWB.DLL   Empty Wastebasket Custom Command for Mail 3.0
 EMW0W0   EMW0W0.DLL    EMW0W0.exe
 EMW0W0V  EMW0W0V.DLL   EMW0W0V.exe
@@ -291,38 +460,76 @@ ENABLE3  ENABLE3.DLL   ACCESS Helper Library
 ENUMFILE ENUMFILE.DLL  Driver file stack provider
 ENUMWND  ENUMWND.EXE   enumwnd.exe
 ENVIRON  ENVIRON.EXE   Environment List Box Program (c) Charles Petzold, 1990
+EPSIMP   EPSIMP.FLT    EPS file Aldus Import Filter DLL
 EPSON    EPSON.DRV     DDRV Epson FX-100,Epson FX-80:167,120,72;60,72,120:Epson 120 X 72 DPI
 EPSON    EPSON.DRV     DDRV Epson FX-80:167,120,72;60,72,120:Epson 120 X 72 DPI
+EPSON24  EPSON24.DRV   DDRV Epson 24 pin printers:100,180,180;67,120,180;150,180,120;200,360,180;50,180,360;100,120,120
+EPSON9   EPSON9.DRV    DDRV EPSON9:167,120,72;60,72,120;83,120,144;120,144,120;167,240,144;60,144,240
 EPSONLQ2 EPSONLQ2.DRV  DDRV Epson LQ 2:100,180,180;200,360,180;67,120,180
 EPSONMX  EPSONMX.DRV   DDRV Epson MX-80 Graftrax:167,120,72;60,72,120:
 EQNEDIT  EQNEDIT.EXE   Equation Editor
+ESCP2    ESCP2.DRV     DDRV Epson 24 pin printers:100,180,180;67,120,180;150,180,120;200,360,180;50,180,360;100,120,120
 EXAMPLE  EX1.EXE       EXAMPLE
 EXAMPLE  EXAMPLE.EXE   EXAMPLE
+EXECJET  EXECJET.DRV   DDRV IBM ExecJet:100,180,180;200,360,180;50,180,360;67,120,180;150,180,120
 EXEVIEW  EXEVIEW.EXE   Windows Executable Viewer
 EXPENSE  EXPENSE.EXE   Microsoft Expense Report: 1.0
+EXPERT   EXPERT.EXE    Expertise Planner
 EXPORT   EXPORT.DLL    export.dll
+EXTLIST  EXTLIST.VB_   LMIS Extended Selection listbox
 FAXCODEC FAXCODEC.DLL  Microsoft At Work Renderer
+FDAEMON  FDAEMON.EXE   FDaemon lazy-write daemon Copyright (C) 1990-1993 Lantern Corp.
 FEEDER   FEEDER.EXE    FEEDER Module for LOGGER Copyright (c) Spark Software Inc. 1991.  All rights reserved.
+FENCES   FENCES.FOT    Creative CSP Manager
+FENCES   FENCES.FOT    Setup Install Library
 FILEIO   FILEIO.DLL    File I/O External Factory
+FILESIZE FILESIZE.DLL  FileSize - File Manager Extension - Copyright (c) 1992 by Brent C. Ethington
 FILEVIEW FILEVIEW.EXE  FileView Microsoft Foundation Classes Windows Application
 FINDCD   FINDCD.EXE    FINDCD.EXE
 FINDER   OSFINDR.EXE   OS/2 PM File Finder - Jerry Weldon - 1988
 FINDER   WFINDER.EXE   Windows File Finder - Kevin P. Welch - 1988
+FINSTALL FINSTALL.DLL  Font Installer
+FIREWORK FIREWORK.IW   Fireworks Display
+FIXFONTS 8514FIX.FON   FONTRES 100,96,96 : Fixedsys for the IBM 8514
+FIXFONTS CGAFIX.FON    FONTRES 200,96,48 : Fixedsys (Set #2)
+FIXFONTS EGAFIX.FON    FONTRES 133,96,72 : Fixedsys (Set #3)
+FIXFONTS LRFIX.FON     FONTRES 100,48,48 : System (Set #3)
+FIXFONTS VGAFIX.FON    FONTRES 100,96,96 : Fixedsys (Set #6)
+FIXFONTS VGAFIX.FON    FONTRES 100,96,96 : System (Set #6)
 FLASH    FLASH.EXE     FLASH
+FLASH    FLASH.EXE     Microsoft Screen Dump Application
 FLING    FLING.EXE     Flings bitmaps around the Client window
 FMEDIT   FMEDIT.DLL    fmedit.dll
+FMUTILS2 FMUTILS.DLL   FMUtils - Copyright (c) 1992 Microsoft Corporation - Written by Brent C. Ethington
 FONTEDIT FONTEDIT.EXE  Microsoft Windows Font Editor
 FONTEST  FONTEST.EXE   Windows Font Test Application
 FONTFX   FONTFX.DLL    Pixellite Font Effects Server DLL
 FONTLIST FONTLIST.EXE  Font Enumeration Program (c) Charles Petzold, 1990
+FONTS    8514SYS.FON   FONTRES 100,96,96 : System (Set #6)
+FONTS    CGASYS.FON    FONTRES 200,96,48 : System (Set #2)
+FONTS    EGASYS.FON    FONTRES 133,96,72 : System (Set #3)
+FONTS    FONTHI.FON    FONTRES 133,96,72 : System (Set #3)
+FONTS    FONTLO.FON    FONTRES 200,96,48 : System (Set #2)
+FONTS    FONTS400.FON  FONTRES 120,96,80 : System, Terminal (Set #3)
+FONTS    FONTSQ.FON    FONTRES 100,96,96 : System (Set #6)
+FONTS    HIFONTS.FON   FONTRES 133,96,72 : System, Terminal (Set #3)
+FONTS    LOFONTS.FON   FONTRES 200,96,48 : System, Terminal (Set #2)
+FONTS    LRSYS.FON     FONTRES 100,48,48 : System (Set #3)
+FONTS    VGASYS.FON    FONTRES 100,96,96 : System (Set #6)
+FORAGE   FORAGE.EXE    c:\h3\bin\forage.exe
 FORGEXP  FORGEXP.EXE   Sonic Foundry's Sound Forge XP Application
 FORM     FORM.DLL      Form Library - Kevin P. Welch
 FORMFEED FORMFEED.EXE  Printer Form Feed Program (c) Charles Petzold, 1990
+FOXMAPI  FOXMAPI.FL_   foxmapi.exe
+FOXTOOLS FOXTOOLS.FL_  FOXTOOLS.EXE
+FRAMEWRK FRAMEWRK.DLL  Framewrk
 FREECELL FREECELL.EXE  FreeCell
 FREEMEM  FREEMEM.EXE   Free Memory Display (c) Charles Petzold, 1990
 FTENGINE FTENGINE.DLL  Retrieval engine dynamic link library $V
 FTUI     FTUI.DLL      MSDN Viewer User Interface
 FTUI     FTUI.DLL      User-interface dynamic link library $V
+FUJI24   FUJI24.DRV    DDRV FUJI24:150,90,60;100,180,180;200,360,180;67,60,90;100,180,180;50,180,360
+FUJI9    FUJI9.DRV     DDRV FUJI9:83,60,72;167,120,72;167,240,144
 FXPAFX   FXPAFX.DLL    Sonic Foundry's Sound Forge XP Effects Plug-In (A)
 FXPBFX   FXPBFX.DLL    Sonic Foundry's Sound Forge XP Effects Plug-In (B)
 FXPCFX   FXPCFX.DLL    Sonic Foundry's Sound Forge XP Effects Plug-In (C)
@@ -337,6 +544,7 @@ GDI      GDI.EXE       Microsoft Windows WOW gdi.exe
 GDI_B    GDI_B.DLL     Microsoft Windows Graphics Device Interface
 GDOSMEM  GDOSMEM.EXE   Sample Microsoft Windows Application
 GENAPP   GENAPP.EXE    GENAPP
+GENDRV   GENDRV.DLL    GENERIC DRIVER PROTOTYPE
 GENERIC  GENERIC.EXE   Sample Microsoft Windows Application
 GENERIC  MINMAX.EXE    MinMax Application
 GENERIC  STATBAR.EXE   StatBar Application
@@ -346,11 +554,22 @@ GLBSSTUB PCVKIT.EXE    STUB.exe
 GLYPH    GLYPH.EXE     Sample Microsoft Windows Application
 GOLF     GOLF.EXE      Golf card game
 GPIDEMO  PMBASIC.EXE   Combines most of the GPI example programs into one
+GRABBER  EGA.3GR       Microsoft WIN386 Grabber Library V 3.10
+GRABBER  HERC.3GR      Microsoft WIN386 Grabber Library V 3.10
+GRABBER  PLASMA.3GR    Microsoft WIN386 Grabber Library V 3.10
+GRABBER  S3911GRB.3GR  Microsoft WIN386 Grabber Library V 3.10
+GRABBER  V7VGA.3GR     Microsoft WIN386 Grabber Library V 3.10
+GRABBER  VGA.3GR       Microsoft WIN386 Grabber Library V 3.10
+GRABBER  VGA.GR3       Microsoft WIN386 Grabber Library V 3.00
+GRABBER  VGA30.3GR     Microsoft WIN386 Grabber Library V 3.10
+GRABBER  VGADIB.3GR    Microsoft WIN386 Grabber Library V 3.10
 GRAFMENU GRAFMENU.EXE  Demo of Bitmapped Menu Items (c) Charles Petzold, 1990
 GRAMMAR  GRAMMAR.DLL   Word for Windows v. 2.0 Grammar Checker DLL
 GRAPH    GRAPH.EXE     Microsoft Graph  (c) 1991  Microsoft Corporation
 GRAPH5   GRAPH5.EXE    Microsoft Graph  (c) 1994  Microsoft Corporation
 GRID     GRID.EXE      Microsoft Grid Sample Application
+GRID     GRID.VBX      Visual Basic Grid Custom Control
+GRID     GRID.VB_      Visual Basic Grid Custom Control
 GRINTL   GRINTL.DLL    Microsoft Graph UI
 GROCERY  GROCERY.DLL   Implements grocery store as server to client apps
 GST_STF0 DCTSETUP.EXE  Shell Component of GUI Setup Toolkit
@@ -358,10 +577,13 @@ GST_STF0 PCTSETUP.EXE  Shell Component of GUI Setup Toolkit
 GUIDGEN  GUIDGEN.EXE   GUIDGEN.exe
 GVBSETUP SETUP.EXE     Microsoft Visual Basic Setup Copyright Microsoft Corp. 1991
 GWAPI    GWAPI.DLL     Microsoft GetWriting API DLL: Version 1.0
+HALFTONE HALFTONE.EXE  WinG Halftoning Sample
 HANDLER  HANDLER.DLL   handler.exe
 HANDTEST HANDTEST.EXE  Demonstrates the use of Handler.dll
+HC       HC30.EXE      MS Help Compiler 3.1
 HC       HC30.EXE      hc.exe
 HC       HC31.EXE      MS Help Compiler 3.1
+HCPARSE  HCPARSE.DLL   Help Project file parser for use with VB
 HCTLIB   HCTLIB.DLL    Common Routines for HCT tests
 HDXDLL   HDXDLL.DLL    Help Index Browser Control
 HEAD     HEAD.EXE      File Head Program (c) Charles Petzold, 1990
@@ -378,26 +600,53 @@ HELLO1   HELLO1.EXE    HELLO1.EXE
 HELLO1   HELLO1.EXE    Hello Microsoft Foundation Classes Windows Application
 HELLOAPP HELLOAPP.EXE  Hello Microsoft Foundation Classes Windows Application
 HELLOWIN HELLOWIN.EXE  Hello Windows Program (c) Charles Petzold, 1990
+HELPDESK HELPDESK.EXE  Help Desk Form
+HELPDRV  HULKDRV.EXE   Help 3.1 Test Tool
 HELPEX   HELPEX.EXE    Context-sensitive Help Application
 HELPHOOK HELPHOOK.EXE  Sample Microsoft Windows Application
 HELPREQ  HELPREQ.EXE   HELPREQ.exe
+HELVA    HELVA.FON     FONTRES 200,96,48 : Helv 8,10,12,14,18,24 (Set #2)
+HELVB    HELVB.FON     FONTRES 133,96,72 : Helv 8,10,12,14,18,24 (Set #3)
+HELVC    HELVC.FON     FONTRES 83,60,72 : Helv 8,10,12,14,18,24 (Set #4)
+HELVD    HELVD.FON     FONTRES 167,120,72 : Helv 8,10,12,14,18,24 (Set #5)
+HELVE    HELVE.FON     FONTRES 100,96,96 : Helv 8,10,12,14,18,24 (Set #6)
+HELVE    HELVE.FON     FONTRES 100,96,96 : Helv 8,10,12,14,18,24 (VGA res)
+HERC850  HERC850.FON   FONTRES 133,96,72 : Terminal
+HERCWOA  HERCWOA.FON   FONTRES 133,96,72 : Terminal
 HEXCALC  HEXCALC.EXE   Hexadecimal Calculator (c) Charles Petzold, 1990
 HFORM    HFORM.EXE     Microsoft Hform: Version 1.0
 HIDCI    HIDCI.DLL     HID Class Installer
 HLPTAB   HLPTAB.DLL    Help Tab Generator V 1.0 Copyright (c) Microsoft, 1992
 HOOK     HOOK.DLL      SPY hook procedures
+HOOK     VOYHOOK.DLL   Msg Hook
 HOOKS    HOOKS.EXE     Sample Hook Application
 HOOKSDLL CUECARD2.DLL  CUECARD2.exe
 HOOKSDLL HOOKSDLL.DLL  hooksdll.exe
 HOTSPOTS HOTSPOTS.EXE  Microsoft Hot Spot Sample Application
 HP       HP.EXE        HeapPeep (does not require toolhelp) (c) Chiverton Graphics, Inc. 1991
 HP7470A  HP7470A.DRV   DDRV HP 7470A : Driver for HP 7470A plotter.
+HPDSKJET HPDSKJET.DRV  DDRV HP DeskJet Printers
+HPGLIMP  HPGLIMP.FLT   Shell DLL to fix ImageMark filters
+HPPCL    HPPCL.DRV     DDRV HP LaserJets and compatibles
 HPPCL    HPPCL.DRV     DDRV PCL / HP LaserJet:100,300,300
 HPPCL    HPPCL.DRV     DDRV PCL/LaserJet:100,300,300
+HPPCL5A  HPPCL5A.DRV   DDRV HP LaserJet III:100,300,300
+HPPCL5E  HPPCL5E.DRV   DDRV HP LaserJet 4: :
+HPPCL5E1 HPPCL5E1.DLL  HPGL/2 portion of core driver
+HPPCL5E2 HPPCL5E2.DLL  DDRV Mono:100,300,300
+HPPCL5E3 HPPCL5E3.DLL  HP TextOut DLL
+HPPCL5E4 HPPCL5E4.DLL  DLL for HP-HYPER, 1991
+HPPCL5MS HPPCL5MS.DRV  DDRV HP LaserJets (Level 5) and compatibles
 HPPLOT   HPPLOT.DRV    DDRV HP Plotter : :
+HULK     HULK.EXE      Microsoft HULK 2.1
+HULKHOOK HULKHOOK.DLL  HULKHOOK.exe
+HULKPAD  HULKPAD.EXE   HULKPAD
 HWAGENT  HWAGENT.DLL   Hardware Troubleshooting Wizard
 HYPH     HYPH.DLL      Word for Windows v. 2.0 Hyphenator DLL
+IBM4019  IBM4019.DRV   DDRV IBM4019 Laser Printer:100,300,300
+IBM5204  IBM5204.DRV   DDRV IBM5204:67,120,180;100,180,180
 IBMCOLOR IBMCOLOR.DRV  DDRV IBM Color Printer (B/W):167,140,84;60,84,140:IBMColor 140 X 84 DPI
+IBMCOLOR IBMCOLOR.DRV  DDRV IBM Color Printer:167,140,84;60,84,140:IBMColor 140 X 84 DPI
 IBMGRX   IBMGRX.DRV    DDRV IBM Graphics,IBM Proprinter,Okidata 92/93 (IBM),Okidata 192/193 (IBM):167,120,72;60,72,120:
 IBMGRX   IBMGRX.DRV    DDRV IBM Graphics,Okidata 92/192 (IBM),Okidata 93/193 (IBM):167,120,72;60,72,120:
 IBMJOY   IBMJOY.DRV    joystick:Microsoft game adapter joystick driver
@@ -407,6 +656,7 @@ ICSSETUP ISSETUP.DLL   Remote Network Access Setup
 IDE      IDE.EXE       Open Watcom IDE
 IDLEWILD IDLEWILD.EXE  Screen Saver Control Panel
 IFFTIFF  IFFTIFF.DLL   ..\ifftiff.exe
+IMAADPCM IMAADPCM.ACM  MSACM.imaadpcm:Microsoft ACM IMA ADPCM Audio CODEC
 IMAGEDIT IMAGEDIT.EXE  Microsoft Windows Image Editor
 IMDRW    IMDRW.DLL     Import DRW DLL - Copyright (c) 1991 System One Software, Inc.
 IMHGL    IMHGL.DLL     Import HPGL DLL - Copyright (c) 1991 System One Software, Inc.
@@ -424,6 +674,7 @@ INPUT    INPUT.EXE     Sample Microsoft Windows Application
 INST16   INST16.DLL    INF Installation Library
 INSTALL  INSTALL.EXE   CPS Install - Copyright (C) 1994 Central Point Software, Inc.
 INSTALL  N3WUNR.EXE    STUB.exe
+INSTALL1 INSTALL1.EXE  INSTALL1.exe
 INSTDRVR INSTDRVR.DLL  Foo[Bar]:This section makes no difference
 INSTGRPS INSTGRPS.EXE  Copyright (c) 1993,1994 Advanced Gravis Computer Technology
 INSTRUCT INSTRUCT.DLL  Miscelaneous Routines
@@ -443,12 +694,36 @@ ISS3_765 ISS3_765.DLL  DDetect: True for S3 765
 ISSET_SE SETUP.EXE     InstallShield Launcher SE v2.1 (C) Stirling Technologies, Inc. 1990-1995
 ITSYTEST ITSY16.EXE    ItsyBits Test App
 ITSYTEST ITSYTEST.EXE  ItsyBits Test App
+IV32QT16 IV32QT16.QTC  Copyright (c) 1993-1995 Intel Corporation.
 IWLIB    IWLIB.DLL     IdleWild Hook
 IYVU9    IYVU9.DLL     VIDC.YVU9:Intel Indeo(TM) Video Raw
 JIGSAW   JIGSAW.EXE    Jigsaw Retained Graphics Sample
+JOYSTICK JOYSTICK.CPL  Multimedia Windows Joystick Calibration Control Panel Applet
 JOYTST   JOYTST.EXE    JoyTst -- A Windows Test App
+JUK      JUKEBOX.EXE   JUKE
 JUSTIFY  JUSTIFY.EXE   Demonstration of Justified Text (c) Charles Petzold, 1990
+KBDBE    KBDBE.DLL     KeyTable Belgian
+KBDCA    KBDCA.DLL     KeyTable Canadian French
+KBDCA    KBDFC.DLL     KeyTable Canadian Multilingual
 KBDCALLS KBDCALLS.DLL  EFI FUNCTIONS - KBDCALLS EMULATION
+KBDDA    KBDDA.DLL     KeyTable Danish
+KBDDV    KBDDV.DLL     KeyTable USA Dvorak
+KBDFR    KBDFR.DLL     KeyTable French
+KBDFS    KBDFI.DLL     KeyTable Finnish
+KBDFS    KBDSW.DLL     KeyTable Swedish
+KBDGR    KBDGR.DLL     KeyTable German
+KBDIC    KBDIC.DLL     KeyTable Iceland
+KBDIT    KBDIT.DLL     KeyTable Italian
+KBDLA    KBDLA.DLL     KeyTable Latin American
+KBDNE    KBDNE.DLL     KeyTable Netherlands
+KBDNO    KBDNO.DLL     KeyTable Norwegian
+KBDPO    KBDPO.DLL     KeyTable Portugese
+KBDSF    KBDSF.DLL     KeyTable Swiss-French
+KBDSG    KBDSG.DLL     KeyTable Swiss-German
+KBDSP    KBDSP.DLL     KeyTable Spanish
+KBDUK    KBDUK.DLL     KeyTable United Kingdom
+KBDUS    KBDUS.DLL     KeyTable USA
+KBDUSX   KBDUSX.DLL    KeyTable USA -- international
 KERNEL   KERNEL.EXE    Microsoft Windows Kernel Interface Version 3.00
 KERNEL   KERNEL.EXE    Microsoft Windows Kernel Interface for 2.x and 3.x
 KERNEL   KRNL286.EXE   Microsoft Windows Kernel Interface Version 3.00
@@ -456,6 +731,8 @@ KERNEL   KRNL286.EXE   Microsoft Windows Kernel Interface Version 3.10
 KERNEL   KRNL386.EXE   Microsoft Windows Kernel Interface Version 3.00
 KERNEL   KRNL386.EXE   Microsoft Windows Kernel Interface Version 3.10
 KERNEL   KRNL386.EXE   Microsoft Windows Kernel Interface Version 4.00
+KERNEL   WIN100.BIN    
+KERNEL   WIN200.BIN    String Routines
 KERNEL_B KERNEL_B.DLL  Microsoft Windows Kernel on OS/2
 KEYBOARD ATTKBD.DRV    AT&amp;T Keyboard
 KEYBOARD ATTKBD.DRV    KEYBOARD AT&amp;T 6300 or 6300 PLUS:1!0!0!2!0!0!AM!PM!$!,!.!/!:!,!!52!1!0!2!0!0!AM!PM!$!,!.!/!:!,
@@ -466,6 +743,7 @@ KEYBOARD ITALY.DRV     KEYBOARD Italy:39!1!3!2!1!0!AM!PM!Lit.!.!,!/!:!,
 KEYBOARD KBDFR.DRV     KEYBOARD France (IBM - Olivetti - Ericsson ...):
 KEYBOARD KBDFS.DRV     KEYBOARD Finnish/Swedish (IBM - Olivetti - Ericsson ...):
 KEYBOARD KBDGR.DRV     KEYBOARD German (IBM - Olivetti - Ericsson ...):
+KEYBOARD KBDHP.DRV     KEYBOARD (Hewlett-Packard Vectra, Envoy or Enhanced keyboard):
 KEYBOARD KBDIT.DRV     KEYBOARD Italy (IBM - Olivetti - Ericsson ...):
 KEYBOARD KBDNE.DRV     KEYBOARD Netherlands (IBM - Olivetti - Ericsson ...):
 KEYBOARD KBDSP.DRV     KEYBOARD Spanish international (IBM - Olivetti - Ericsson ...):
@@ -483,10 +761,23 @@ KEYB_B   KEYB_B.DLL    Microsoft Windows Keyboard Driver on OS/2
 KEYLOOK  KEYLOOK.EXE   Key Look Program (c) Charles Petzold, 1990
 KEYMAP   KEYMAP.EXE    Windows keyboard layout program
 KEYS     KEYS.EXE      keys.exe
+KIOSK    KIOSK.EXE     KIOSK
 KMSTATUS KMSTATUS.EXE  KMSTATUS.EXE
+LANGUAGE LANGDUT.DLL   Microsoft Windows Language Driver
+LANGUAGE LANGENG.DLL   Microsoft Windows Language Driver
+LANGUAGE LANGFRN.DLL   Microsoft Windows Language Driver
+LANGUAGE LANGGER.DLL   Microsoft Windows Language Driver
+LANGUAGE LANGSCA.DLL   Microsoft Windows Language Driver
+LANGUAGE LANGSPA.DLL   Microsoft Windows Language Driver
+LANGUAGE WNCVTL.RSL    CPS Backup Conversion Resource File - Copyright (C) 1993, Central Point Software, Inc.
+LANMAN   LANMAN.DRV    LANMan.drv
 LANMAN21 LANMAN.DRV    win\lm21\lanman21.exe
 LAUNCH16 LAUNCH16.DLL  AOL Information Retriever And Launcher Library
+LBPII    LBPII.DRV     DDRV Canon LBP II:100,300,300
+LBPIII   LBPIII.DRV    DDRV Canon LBP III,Canon LBP 4:100,300,300
 LINEDDA  LINEDDA.EXE   LineDDA Demonstration (c) Charles Petzold, 1990
+LINES    LINES.IW      Dancing Lines
+LINGO    CONNECTX.X16  AOL16.exe
 LINK386  LINK386.EXE   Microsoft 32-bit Linear-Executable Linker
 LISTHSCR LISTHSCR.DLL  Windows Horizontal Listbox Scrolling Methods, Kraig Brockschmidt
 LISTHSCR LISTHORZ.EXE  Windows Horizontal List Scroll App
@@ -499,7 +790,10 @@ LITEDLL  WIN87EM.DLL   d:\o\l30\bin\litedll.dll
 LOG      LOG.DLL       WTDEV Logging Engine
 LOGGER   LOGGER.EXE    LOGGER Copyright (c) Spark Software Inc. 1991.  All rights reserved.
 LOGWIN   LOGWIN.EXE    Windowed VxD debugging output
+LOTUSIMP LOTUSIMP.FLT  PIC Graphics Import filter
 LOWPASS  LOWPASS.EXE   LowPass
+LRHELV   LRHELV.FON    FONTRES 100,48,48 : Helv 5 (320x200 low res)
+LRHELVB  LRHELVB.FON   FONTRES 100,48,48 : Helv 5 (320x200 bold low res)
 LRPCSPY  LRPCSPY.EXE   LRPC Spy Application
 LZEXPAND LZEXPAND.DLL  LZ file decompression DLL
 LZEXPAND LZEXPAND.DLL  Windows file expansion library
@@ -507,12 +801,15 @@ MADAXP   MADAXP.DLL    madaxp.dll
 MADMIPS  MADMIPS.DLL   madmips.dll
 MADPPC   MADPPC.DLL    madppc.dll
 MADX86   MADX86.DLL    madx86.dll
+MAILSPL  MAILSPL.EXE   mailspl.exe
 MAINCP16 MAINCP16.DLL  Windows 3.1 Control Panel Applets
+MAINCPL  MAIN.CPL      Windows 3.1 Control Panel Applets
 MAKE     MAKE.EXE      CPMAKE5.EXE
 MAKE     MAKE.EXE      make.exe
 MAKEAPP  MAKEAPP.EXE   MakeApp Application
 MAKEBOX  MAKEBOX.EXE   makebox.EXE
 MAPI     MAPI.DLL      Extended MAPI 1.0
+MAPI     MAPI.DLL      Microsoft MAPI DLL
 MAPIAPP  MAPIAPP.EXE   MAPIAPP.exe
 MAPIU    MAPIU.DLL     MAPI Utilities wrapper 16
 MAPIX    MAPIX.DLL     MAPI 1.0 compatibility wrapper
@@ -544,10 +841,22 @@ MCIVISCA MCIVISCA.DRV  VCR:[MCI] ViSCA VCR
 MCIWAVE  MCIWAVE.DRV   waveaudio:[MCI] Microsoft MCI waveaudio driver
 MCIWAVE  MCIWAVE.DRV   waveaudio:[MCI] Sound
 MCIWAVTS MCIWAVE.EXE   MCI Waveaudio Test
+MCIWNDX  MCIWNDX.VB_   Visual Basic MCIWnd Custom Control
 MDI      MDI.EXE       Microsoft Foundation MDI Sample
 MDIAPP   MDIAPP.EXE    MDI sample application
+MDICHILD MDICHILD.VB_  MDI Child Control for Visual Basic
 MDIDEMO  MDIDEMO.EXE   MDI Demonstration (c) Charles Petzold, 1990
+MEDBITS  MEDBITS.MMH   MMTools Bitmap Resource DLL
+MEDDIBS  MEDDIBS.MMH   DIBS media type DLL
 MEDIAMAN MEDIAMAN.DLL  MMSys Media Element Manager
+MEDIMP   MEDIMP.MMH    MediaMan Import Filter Support Handler DLL
+MEDWAVE  MEDWAVE.MMH   WAVE media Type DLL
+MEFBROWS MEFBROWS.EXE  MS Mail E-Form Browser
+MEFDIAL  MEFDIAL.DLL   Dial support for Phone message
+MEFLIB   MEFLIB.DLL    Calvin Encoding File DLL
+MEFLINK  MEFLINK.VB_   Visual Basic Callback Custom Control
+MEFPHONE MEFPHONE.EXE  Phone
+MEFROUTE MEFROUTE.EXE  Document Routing E-Form
 MEMORY   MEMORY.EXE    Sample Microsoft Windows Application
 MENU     MENU.EXE      MENUMAGIC App
 MENUDEMO MENUDEMO.EXE  Menu Demonstration Program (c) Charles Petzold, 1990
@@ -566,6 +875,7 @@ MFCOLEUI MFCOLEUI.DLL  OLE 2.0 UI Support Library.
 MFCREATE MFCREATE.EXE  Metafile Creation Program (c) Charles Petzold, 1990
 MFDLL    MFDLL.DLL     Magic Fingers for Windows DLL
 MFRESORC MFRESORC.EXE  Metafile Resource Program (c) Charles Petzold, 1990
+MIDI     MIDI.CPL      Multimedia Windows MIDI Mapper Control Panel
 MIDI     MIDIMAP.DRV   midimapper:MIDI Mapper
 MIDIIN   MIDIIN.DLL    Multimedia MIDI Input Function, Version 0.1
 MIDIIOT  MIDIIOT.EXE   Multimedia Windows MIDI I/O Test Application
@@ -583,17 +893,23 @@ MINSVRMI MINSVRMI.EXE  Mini Demo Server - MI version
 MINTST   MINTST.EXE    MinTst -- A Windows 3 Test App
 MIOCB    MIOCB.DLL     Miocb DLL
 MISC_X   MISC_X.DLL    Misc_X External Factory
+MIX16    MIX16.X16     MIX16.exe
 MIXER    MIXER.EXE     Ultrasound Mixer Panel
+MIXSOUND MIXSOUND.X16  SOUND.exe
 MKTYPLIB MKTYPLIB.EXE  c:\oledisp\rwin16\MKTYPLIB.exe
 ML3XEC16 ML3XEC16.EXE  Exchange 16bit extensions EXE
 MM3DFX   MM3DFX.DRV    mm3dfx:Direct Draw 3Dfx driver
 MM3DFX16 MM3DFX16.DLL  mm3dfx16:Direct Draw driver 3Dfx thunk helper
 MMCI     MMCI.DLL      Windows Multimedia Class Installer
+MMCPL    CONTROL.CPL   WIN3 Control Panel Applets for Multimedia Windows MMCPL
 MMDLG    MMDLG.DLL     Multi-Media Windows Dialogs
 MMMENU   MMMENU.EXE    Multimedia Main Menu
 MMP      MMP.DLL       Multimedia Player DLL
 MMSYSTEM MMSYSTEM.DLL  System APIs for Multimedia
+MMTASK   MMTASK.TSK    Microsoft MultiMedia Task App.
+MMTASK   MMTASK.TS_    Microsoft MultiMedia Task App.
 MMTSTCOM MMTSTCOM.DLL  MM/Windows Common code library
+MMWVAPI  VAPIMPU.DRV   midi:Voyetra MPU type MIDI
 MNMALP   MNMALP.EXE    Microsoft\256 NetMeeting(TM) Application Loader Primary.
 MNMAL_   MNMAL_.DLL    Microsoft\256 NetMeeting(TM) Application Loader CORE Windows DLL.
 MNMAS16  MNMAS16.DLL   16-bit AppSharing code still required for 32-bit port
@@ -624,6 +940,8 @@ MNMUT_   MNMUT_.DLL    Microsoft\256 NetMeeting(TM) Utility Functions Windows DL
 MNMWB_   MNMWB_.DLL    Microsoft\256 NetMeeting(TM) Whiteboard Core.
 MODEMID  MODEMID.EXE   modem id - 94-8-23 Bill Ola Rasmussen
 MODEMUI  MODEMUI.DLL   Windows Modem Properties
+MODERN   MODERN.FON    FONTRES CONTINUOUSSCALING : Modern (All res)
+MODERN   MODERN.FON    FONTRES CONTINUOUSSCALING : Modern (Set #1)
 MONITOR  MONITOR.EXE   MONITOR.EXE
 MORICONS MORICONS.DLL  MS-DOS Application Icons For Windows 3.1
 MOUCALLS MOUCALLS.DLL  286|DOS-Extender MOU API
@@ -632,49 +950,79 @@ MOUSE    ATTMOUSE.DRV  Olivetti/AT&amp;T Keyboard Mouse
 MOUSE    DBOXMPI.DRV   DOSBox-X Mouse Pointer Integration driver for Windows 3.0
 MOUSE    DBOXMPI.DRV   DOSBox-X Mouse Pointer Integration driver for Windows 3.1
 MOUSE    FTG.DRV       FTG Data Systems Lightpen and Single Pixel Board
+MOUSE    HPMOUSE.DRV   HP-HIL devices including HP mice, tablets and touch screens
 MOUSE    JOYMOUSE.DRV  Kraft Joystick Mouse
+MOUSE    KBDMOUSE.DRV  Olivetti/AT&amp;T Keyboard Mouse
 MOUSE    LMOUSE.DRV    LOGITECH Mouse (serial &amp; bus)
+MOUSE    LMOUSE.DRV    Logitech Mouse Driver V2.10MS 01-09-92
 MOUSE    LMOUSE.DRV    Logitech Serial Mouse
 MOUSE    LPC.DRV       the Lite-Pen Company - Lightpen
 MOUSE    MOUSE.DRV     Microsoft Mouse
 MOUSE    MOUSE.DRV     Microsoft Mouse (Bus/Serial)
 MOUSE    MOUSE.DRV     Microsoft Mouse - Version 8.20
 MOUSE    MOUSE.DRV     Microsoft Mouse - Version 9.00
+MOUSE    MSC3BC2.DRV   Mouse Systems 3 Button Mouse on COM2, Windows 3.1
+MOUSE    MSCMOUSE.DRV  Mouse Systems Mouse Driver GNR, Windows 3.1
 MOUSE    MSMOUSE1.DRV  Mouse Systems or VisiOn Mouse (COM1)
 MOUSE    MSMOUSE2.DRV  Mouse Systems or VisiOn Mouse (COM2)
 MOUSE    NOMOUSE.DRV   No pointing device
 MOUSE    YESMOUSE.DRV  Pointing without mouse
+MOUSEMV  MOUSEMV.CBT   Mouse Movement CBT Application
 MOUTCB   MOUTCB.DLL    Moutcb DLL
 MOUTTST  MOUTTST.EXE   MoutTst -- A Windows 3 Test App
+MOVIECDC MOVIECDC.DLL  Movie coder/decoder library 1.2 Copyright (C) 1992-1993 Hutchins Software &amp; Lantern Corp.
 MPLAYER  MPLAYER.EXE   Media Player
+MRBC     MRBC.EXE      c:\h35\nbin\mrbc.exe
 MRBC     MRBC.EXE      d:\HELP3.1\nbin\mrbc.exe
+MSABC200 MSABC200.DLL  Microsoft Access Basic Code library, Version 2.00, Copyright (c) 1987-1993 Microsoft Corp.
 MSACAHBB MSACAHBB.DLL  Custom Action Handler DLL
 MSACM    MSACM.DLL     Microsoft Audio Compression Manager
 MSACMMAP MSACM.DRV     wavemapper:Microsoft Sound Mapper
 MSADLIB  MSADLIB.DRV   midi:Ad Lib
+MSADPCM  MSADPCM.ACM   MSACM.msadpcm:Microsoft ADPCM Audio CODEC
+MSAES110 MSAES110.DLL  Expression Service
+MSAEXP20 MSAEXP20.DLL  MSAEXP20.exe
+MSAFIN   MSAFIN.DLL    DLL of financial functions
+MSAFINX  MSAFINX.DLL   DLL of financial functions and other stuff
+MSAIN200 MSAIN200.DLL  msain200.exe
+MSAJT110 MSAJT110.DLL  Microsoft Access Jet Engine  Version 1.10.0001 (JETBUILD)
+MSAJT112 MSAJT112.DLL  Microsoft (R) V1.x to 2.x map.  Version 1.99.1306 (TRUDY-AN)
+MSAJT200 MSAJT200.DLL  Microsoft Access Jet Engine  Version 2.00.16
 MSAJT200 MSAJT200.DLL  Microsoft Access Jet Engine  Version 2.50
+MSAJU200 MSAJU200.DLL  Microsoft Access Jet Utilities  Version 2.00.15
+MSAJU200 MSAJU200.DLL  Microsoft Access Jet Utilities  Version 2.50
+MSAOLE20 MSAOLE20.DLL  Microsoft Access OLE UI DLL
 MSAREG   MSAREG.EXE    MSAREG.exe
+MSARN200 MSARN200.EXE  Microsoft Access Runtime
 MSCOMSTF MSCOMSTF.DLL  Setup Common Library
 MSCOPTS  MSCOPTS.DLL   Build Tool switches dialogs for MSVC v1.0
 MSCPXLT  MSCPXLT.DLL   MS ODBC Code Page Translator, Copyright(c) Microsoft Corp., 1993-1994
 MSCPYDIS MSCPYDIS.DLL  Setup Copy Disincentive Library
+MSCUISTF MSCUISTF.DLL  MS-Setup UI Sample
 MSCUISTF MSCUISTF.DLL  MSIN Setup
 MSCUISTF MSCUISTF.DLL  Setup UI Sample
 MSDETSTF MSDETSTF.DLL  Setup Detect Library
+MSDNHULK MSDNHULK.DLL  MSDNHULK.exe
 MSDNTOOL MSDNTOOL.EXE  Microsoft Development Library Access Tool
 MSDOS    MSDOS.EXE     Microsoft Windows MSDOS Executive Application
 MSDOSD   MSDOSD.EXE    Windows MSDOS Machine Dependent
+MSGBLAST MSGBLAST.VBX  Visual Basic Message Blaster Custom Control ©1992 Ed Staffin
 MSGSRV32 MSGSRV32.EXE  Microsoft Windows DOS386 WShell server
 MSIN     MSIN.EXE      Microsoft Information Network Browser
 MSINAPI  MSINAPI.DLL   Microsoft Information Network Browser API
 MSINF16H MSINF16H.EXE  MSINF16H.exe
+MSINFO   MSINFO.EXE    Microsoft System Info
 MSINSET  SETUP.EXE     MSIN Setup 1.0
 MSINSSTF MSINSSTF.DLL  Setup Install Library
+MSJETERR MSJETERR.DLL  Microsoft (R) JET Error  Version 2.00.13
+MSJETERR MSJETERR.DLL  Microsoft (R) JET Error  Version 2.50.1108 (JETBLD3)
 MSJETERR MSJETERR.DLL  Microsoft (R) JET Error  Version 2.50.1111 (JETBLD3)
 MSJETINT MSJETINT.DLL  msjetint.exe
 MSJSTICK MSJSTICK.DRV  joystick:Microsoft game adapter joystick driver
 MSMIXMGR MSMIXMGR.DLL  Microsoft Audio Mixer Manager
+MSMPU401 MPU401.DRV    midi:Roland MPU-401
 MSMPU401 MSMPU401.DRV  midi:Roland MPU-401
+MSNET    MSNET.DRV     Windows Network Driver
 MSOLEVBX MSOLEVBX.DLL  OLE2 Container Custom Control for Visual Basic (Support)
 MSOTHUNK MSOTHUNK.DLL  Microsoft Office Lotus Notes 16-bit thunking layer
 MSPCIC   MSPCIC.DLL    MSPCIC PCMCIA Control Panel Support
@@ -683,8 +1031,10 @@ MSPRINT  MSPRINT.DLL   Windows 95 Printer Installer
 MSQUERY  MSQUERY.EXE   Microsoft Query
 MSRLE    MSRLE.DRV     VIDC.MRLE:Microsoft RLE Compressor
 MSSETUP  MSSETUP.DLL   Setup DLL
+MSSFS    MSSFS.DLL     Network Courier service provider DLL
 MSSHLSTF MSSHLSTF.DLL  Setup Frame Library
 MSTCP    MSTCP.DLL     Microsoft TCP/IP
+MSTOOLBR MSTOOLBR.DLL  MSTOOLBR.exe
 MSTOOLS  MSTOOLS.DLL   MSTOOLS - File Manager Extension for MS-DOS 6.22
 MSUILSTF MSUILSTF.DLL  Setup UI Library
 MSVC     MSVC.EXE      Microsoft Visual C++
@@ -693,8 +1043,11 @@ MSVCHELP MSVCHELP.DLL  Help Index DLL
 MSVCVER  MSVCVER.DLL   Microsoft Visual C++ Version Module
 MSVIDC   MSVIDC.DRV    VIDC.MSVC:Microsoft Video 1 Compressor
 MSVIDEO  MSVIDEO.DLL   Microsoft Video For Windows APIs
+MSVIDEO  MSVIDEO.NT_   Microsoft Video For Windows APIs
 MSWEBNDI MSWEBNDI.DLL  mswebndi.exe
 MSWORD   WINWORD.EXE   Microsoft Word
+MTEXTRA  MTEXTRA.FOT   MS-Setup Loader
+MTEXTRA  MTEXTRA.FOT   VER - A Version stamping library
 MULTIPAD MULTIPAD.EXE  Microsoft Windows MDI Notepad
 MULTIPAD MULTIPAD.EXE  Microsoft Windows MDI Notepad App
 MULTIPAL MULTIPAL.EXE  Minimal MDI application
@@ -721,6 +1074,7 @@ MWUNDEL  MWUNDEL.EXE   Microsoft Windows Undelete
 MYNDDE   MYNDDE.DLL    myndde.exe
 MYPAL    MYPAL.EXE     Physical Palette Display
 NAV2VER  NAV2VER.DLL   Navigator/Verity interface
+NAVG     NAVG.QTC      (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
 NAVIGATE NAVIGATE.DLL  MSDN Navigator Application
 NCONN16  NCONN16.DLL   nconn16.exe
 NDDEAPI  NDDEAPI.DLL   NDDEAPI - DDE Shares Api
@@ -730,19 +1084,24 @@ NEC3550  NEC3550.DRV   DDRV NEC 3550
 NECP2    NECP2.DRV     DDRV NEC P2/P3:200,120,60;50,60,120:NEC 120 X 60 DPI
 NET      NET.DLL       Open Watcom Debugger Trap File
 NETAPI   NETAPI.DLL    Microsoft LAN Manager API Library, Copyright(c) Microsoft Corp., 1987 - 1990
+NETAPI   NETAPI20.DLL  Microsoft LAN Manager API Library, Copyright(c) Microsoft Corp., 1987 - 1990
+NETAPP   NETAPP.EXE    NETAPP
 NETDDE   NETDDE.EXE    Microsoft Network DDE Program
 NETDI    NETDI.DLL     Network Device Class Installer
 NETGO    NETGO.EXE     Net Gomuku
 NETOS    NETOS.DLL     Network Detection
 NETSERVW NETSERVW.EXE  Open Watcom Debug Server
 NETWARE  NETWARE.DRV   NETWARE
+NETWARE  NETWARE.DRV   NetWare Device Driver for Microsoft Windows-VeRsIoN=2.00      Release, Build 92-044
 NETWARE  NETWARE.DRV   obj\i386\netware.exe
+NETWARE  NW40.DRV      NetWare for Windows Device Driver-VeRsIoN=3.01, Bld 29Mar93(C) Copyright 1989-1993 Novell, Inc.  All rights reserved.
 NITE3W   NITE3W.EXE    NITE3W Windows Application
 NMP      NMP.DLL       Open Watcom Debugger Trap File
 NMPSERVW NMPSERVW.EXE  Open Watcom Debug Server
 NMW0PCD  NMW0PCD.DLL   NMW0PCD.exe
 NOISE    NOISE.EXE     Noise
 NOPOPUPS NOPOPUPS.EXE  Demonstration of No-Popup Menu (c) Charles Petzold, 1990
+NOTE     SAYIT.EXE     Say It!
 NOTEPAD  NOTEPAD.EXE   Microsoft Windows Notepad Application
 NOTEPAD  NOTEPAD.EXE   Microsoft Windows Notepad Application (c)1989
 NOV      NOV.DLL       Open Watcom Debugger Trap File
@@ -751,10 +1110,17 @@ NOVSERVW NOVSERVW.EXE  Open Watcom Debug Server
 NPCLIENT NPCLIENT.EXE  NPCLIENT.EXE
 NPSERVER NPSERVER.EXE  NPSERVER.EXE
 NW16     NW16.DLL      NW16 - Netware accesss layer for Win32
+NWCALLS  NWCALLS.DLL   NWCalls DLL for Windows
+NWIPXSPX NWIPXSPX.DLL  NWIPXSPX DLL for Windows
 NWIPXSPX NWIPXSPX.DLL  Novell IPX/SPX APIs for Microsoft Windows
+NWLOCALE NWLOCALE.DLL  NWLocale DLL for Windows
 NWNDS    NWNDS.DLL     Microsoft Client for NetWare NDS
+NWNET    NWNET.DLL     NWNet DLL for Windows
 NWNETAPI NWNETAPI.DLL  Accounting Services COPYRIGHT (c) 1990 by Novell, Inc.  All Rights Reserved.
+NWPOPUP  NWPOP40.EXE   NetWare Broadcast Message Module for Microsoft Windows - VeRsIoN=3.00 (930113)
+NWPOPUP  NWPOPUP.EXE   NetWare Broadcast Message Module for Microsoft Windows - VeRsIoN=2.00       Build 92-044
 NWPSERV  NWPSERV.DLL   Print Server Services COPYRIGHT (c) 1990 by Novell, Inc.  All Rights Reserved.
+NWPSRV   NWPSRV.DLL    NWPSRV.DLL
 OC25     OC25.DLL      OLE Custom Control runtime
 OCLIENT  OCLIENT.EXE   Sample AFX OLE Client Application
 ODBC     ODBC.DLL      Windows ODBC Driver Manager API Library, Copyright(c) Microsoft Corp., 1990-1994
@@ -769,34 +1135,67 @@ ODBCSTP  ODBCSTP.EXE   Microsoft ODBC Setup
 ODBCTL16 ODBCTL16.DLL  Open Database Connectivity toolkit, (c) Copyright 1983 Microsoft
 ODDBSE16 ODDBSE16.DLL  oddbse16, Copyright(c) Microsoft Corp., 1994
 ODFOX16  ODFOX16.DLL   odfox16, Copyright(c) Microsoft Corp., 1994
+ODKCD    MSACAHBB.DLL  ODK Compatibility Layer Setup Functions &amp; Bitmaps
+OEMFONTS 8514OEM.FON   FONTRES 100,96,96 : Terminal Font for the IBM 8514
+OEMFONTS CGAOEM.FON    FONTRES 200,96,48 : Terminal (US) (Set #2)
+OEMFONTS EGAOEM.FON    FONTRES 133,96,72 : Terminal (US) (Set #3)
+OEMFONTS FONTHIUS.FON  FONTRES 133,96,72 : Terminal (US) (Set #3)
+OEMFONTS FONTLOUS.FON  FONTRES 200,96,48 : Terminal (US) (Set #2)
+OEMFONTS FONTSQUS.FON  FONTRES 100,96,96 : Terminal (US) (Set #6)
+OEMFONTS LROEM.FON     FONTRES 100,48,48 : System (Set #3)
+OEMFONTS OEM08.FON     FONTRES 200,96,48 : Terminal
+OEMFONTS OEM10.FON     FONTRES 200,96,48 : Terminal
+OEMFONTS VGA850.FON    FONTRES 100,96,96 : Terminal (850) (Set #6)
+OEMFONTS VGA860.FON    FONTRES 100,96,96 : Terminal (860) (Set #6)
+OEMFONTS VGA861.FON    FONTRES 100,96,96 : Terminal (861) (Set #6)
+OEMFONTS VGA863.FON    FONTRES 100,96,96 : Terminal (863) (Set #6)
+OEMFONTS VGA865.FON    FONTRES 100,96,96 : Terminal (865) (Set #6)
+OEMFONTS VGAOEM.FON    FONTRES 100,96,96 : Terminal (US) (Set #6)
+OKI24    OKI24.DRV     DDRV BASE:100,180,180;200,360,180;50,180,360;67,120,180;150,180,120
+OKI9     OKI9.DRV      DDRV oki9:167,240,144;60,144,240;83,120,144;120,144,120;167,120,72;60,72,120
 OKI92    OKI92.DRV     DDRV Okidata 92/93 (Std),Okidata 192/193 (Std): 83, 60, 72; 120, 72, 60 : Okidata Printers (Standard)
+OKI9IBM  OKI9IBM.DRV   DDRV OKI9IBM
+OLE2     OLE2.130      ole2.exe
 OLE2     OLE2.DLL      obj\i386\ole2.exe
 OLE2     OLE2.DLL      objrchic\ole2.exe
 OLE2     OLE2.DLL      ole2.exe
 OLE2     OLE2.DLL      rchic\ole2.exe
 OLE2CONV OLE2CONV.DLL  QuickDraw to GDI Conversion DLL for OLE2
+OLE2DISP OLE2DISP.130  OLE Automation Library
 OLE2DISP OLE2DISP.DLL  OLE Automation Library
 OLE2FREE OLE2FREE.EXE  OLE2FREE.exe
+OLE2NLS  OLE2NLS.130   National Language Support Library
 OLE2NLS  OLE2NLS.DLL   National Language Support Library
+OLE2PROX OLE2PROX.130  ole2prox.exe
 OLE2PROX OLE2PROX.DLL  ole2prox.exe
 OLE2THK  OLE2THK.DLL   ole2thk.exe
+OLE2VBX  MSOLE2.VBX    OLE2 Container Custom Control for Visual Basic
 OLE2VIEW OLE2VIEW.EXE  OLE2VIEW Windows Application
 OLECLI   OLECLI.DLL    OLE Client. support (c) Copyright Microsoft Corp. 1990 - All Rights Reserved
+OLECLI   OLECLI.W31    OLE Client. support (c) Copyright Microsoft Corp. 1990 - All Rights Reserved
+OLECLIEN OLECLIEN.VB_  OLE Client Custom Control for Visual Basic
 OLEDDE   OLEDDE.DLL    DDEWATCH -- A collection of generic routines
 OLEDEB   OLEDEB.DLL    OLEDEBUG code
 OLESETUP OLESETUP.EXE  A minimum Application
 OLESPY   OLESPY.EXE    OLE Spy Application
 OLESVR   OLESVR.DLL    OLE Server. (c) Copyright Microsoft Corp. 1990 - All Rights Reserved
 OPENDLG  OPENDLG.DLL   OS/2 File Dialog Library
+OPENMAIL OPENMAIL.EXE  Open Project Mail
+ORCH     ORCH.EXE      ORCH.EXE copyright (c) Voyetra Technologies 1993
+ORCHENG  ORCHENG.DLL   ORCHENG.dll copyright (c) Voyetra Technologies 1993
 OWNCOMBO OWNCOMBO.EXE  OWNCOMBO App
 OWNER    OWNER.DLL     Owner Display Format Library
 OWNERB   OWNERB.EXE    Owner-Draw Button Sample by NigelT
 PACKAGER PACKAGER.EXE  Microsoft PACKAGER
 PAGE     PAGE.DLL      Page Selection Control - by Kevin P. Welch
 PAINT    PAINT.EXE     Microsoft Paint (c) 1985 Microsoft Corp. by Dan McCabe, et al.
+PAINTJET PAINTJET.DRV  DDRV HP PaintJet:100,90,90;100,180,180
 PALANIM  LOADWING.EXE  WinG Palette Animation Sample
+PALANIM  PALANIM.EXE   WinG Palette Animation Sample
 PALETTE  PALETTE.EXE   Color Palete Utility - (C) Kevin P. Welch 1988
 PALETTE  PALETTE.EXE   palette -- A Windows 3 Application
+PANSON24 PANSON24.DRV  DDRV Panasonic KX-P1123:100,180,180;200,360,180;50,180,360;67,120,180;150,180,120
+PANSON9  PANSON9.DRV   DDRV Panasonic KX-P1180:167,240,144;83,120,144;167,120,72
 PAR      PAR.DLL       Open Watcom Debugger Trap File
 PARSERVW PARSERVW.EXE  Open Watcom Debug Server
 PATCH    PATCH.EXE     ..\bin\patch.exe
@@ -805,25 +1204,39 @@ PATRON   PATRON.EXE    Microsoft OLE Patron Client (c)1992 Microsoft Corp.
 PBRUSH   PBRUSH.DLL    Virtual bitmap manager
 PBRUSHX  PBRUSH.EXE    PC Paintbrush+
 PBX      PBXSRV.EXE    PBX Service
+PCSA     PCSA.DRV      PATHWORKS for Windows 3.0 Network Driver
 PCX2DIB  PCX2DIB.EXE   Convert PCX - DIB
+PCXIMP   PCXIMP.FLT    PC Paintbrush (.PCX) Import Filter
+PDBJET   PDBJET.DLL    Quik Reports Microsoft JET Database DLL (C) Crystal Services 1991-1993
+PDCTJET  PDCTJET.DLL   Crystal Reports Microsoft JET Dictionary DLL (C) Crystal Services 1991-1993
+PDIRJET  PDIRJET.DLL   Crystal Reports Microsoft JET Directory DLL (C) Crystal Services 1991-1993
+PDX200   PDX200.DLL    Microsoft (R) Paradox ISAM  Version 2.00.13
+PDX200   PDX200.DLL    Microsoft (R) Paradox ISAM  Version 2.50
 PEGGED   PEGGED.EXE    Windows Game by Mike Blaylock - 1989
 PEN      MSMOUSE.DRV   :Microsoft Mouse Pen Driver Version 1.0.2701
 PENAPP   PENAPP.EXE    Microsoft Sample Recognizer App: Version 1.0
 PENPAD   PENPAD.EXE    Microsoft MDI Penpad App: Version 1.0
 PENWIN   PENWIN.DLL    :Microsoft Pen Extensions Version 1.0
 PFMEDIT  PFMEDIT.EXE   Microsoft Windows PFM Editor
+PG306    PG306.DRV     DDRV Olivetti PG 306:100,300,300
 PHBOOK   PHBOOK.EXE    Phone Book Database
 PHONE    PHONE.EXE     Phone Program
+PICCLIP  PICCLIP.VB_   Picture Clipping Custom Control for Visual Basic
 PICKER   PICKER.DLL    Window Picker DLL
 PICKFONT PICKFONT.EXE  Font Picker Program (c) Charles Petzold, 1990
+PICTBUTN PICTBTN.DLL   Picture Control - Copyright 1991-92 by Voyetra Technologies
 PIFEDIT  PIFEDIT.EXE   Program Information File Editor
 PIFMGR   PIFMGR.DLL    Program Information File (PIF) Management Services
+PINWRITE NEC24PIN.DRV  DDRV Pinwriter 24 pin printers:100,360,360;100,360,360
 PIPE     PIPE.EXE      PIPE.EXE
 PKPD     PKPD.DLL      Microsoft Windows 16-bit Pen Kernel PenData support v2.0
+PLAY     VDG.EXE       Microsoft Tutor Play, Copyright (c) Microsoft Corp., 1989-1991
+PLAY     WINWORD.CBT   Microsoft Tutor Play, Copyright (c) Microsoft Corp., 1989-1991
 PLAYACD  PLAYACD.EXE   Microsoft Windows MCI Application
 PLAYENU  PLAYENU.DLL   (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
 PLAYER   PLAYER.EXE    (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
 PM4      PM4.EXE       Aldus PageMaker Copyright (C) 1985-1991 Aldus Corporation.
+PM4RES   PM4RES.RSL    PageMaker external resoruce
 PMACCESS PMACCESS.EXE  VIO Application for PMServer (C) RHS, 1990
 PMACCESS PMACCESS.EXE  pmaccess.EXE
 PMAKER   PMAKER.EXE    Copyright (c) 1993 Singular Software
@@ -832,6 +1245,7 @@ PMSERVER PMSERVER.EXE  Clipboard Server (C) RHS, 1989
 PMSERVER PMSERVER.EXE  Clipboard/DDE Server (C) RHS, 1990
 PMSMK_B  PMSMK_B.DLL   PortHole SMK dll
 PMSPL    PMSPL.DLL     Microsoft LAN Manager Spooler APIs, Copyright(c) Microsoft Corp., 1987 - 1990
+PMSPL    PMSPL20.DLL   Microsoft LAN Manager Spooler APIs, Copyright(c) Microsoft Corp., 1987 - 1990
 PNPWPROP PNPWPROP.DLL  Property pages
 PNPWTAPE PNPWTAPE.EXE  PnP tape attachment
 POEPOEM  POEPOEM.EXE   Demo of User-Defined Resource (c) Charles Petzold, 1990
@@ -844,12 +1258,14 @@ POPPAD3  POPPAD3.EXE   Popup Editor Version 3 (c) Charles Petzold, 1990
 POSTAPP  POSTAPP.EXE   VPostD Sample VxD for Windows --By: Curtis J. Palmer
 POSTMAN  POSTMAN.EXE   Postman Chiverton Graphics, Inc. 1991
 POWER    POWER.DRV     APM Installable Driver Version 2.00
+POWER    POWER.DRV     APM Installable driver version 1.05 - 02/20/92
 PP       POWERPNT.EXE  PowerPoint
 PPINDEX  PPINDEX.DLL   PPINDEX.DLL by Travis Pruitt, 1991
 PPPNDI   PPPNDI.DLL    NDISWAN Configuration Wizard
 PPTGRAPH PPTGRAPH.EXE  Windows Graph  (c) 1989  Microsoft Corporation
 PPTVIEW  PPTVIEW.EXE   PowerPoint Viewer
 PRESURE  PRESSURE.EXE  Microsoft Pen Pressure Sample
+PREV     PREV.FON      FONTRES 133,96,72 : Preview fonts
 PRINT1   PRINT1.EXE    Printing Program No. 1 (c) Charles Petzold, 1990
 PRINT2   PRINT2.EXE    Printing Program No. 2 (c) Charles Petzold, 1990
 PRINT3   PRINT3.EXE    Printing Program No. 3 (c) Charles Petzold, 1990
@@ -859,26 +1275,48 @@ PRINTMAN PRINTMAN.EXE  Microsoft Windows Print Manager Version 3.00
 PRINTMAN PRINTMAN.EXE  Print Manager
 PRNTFILE PRNTFILE.EXE  Sample Microsoft Windows Application
 PRNTTEST PRNTTEST.EXE  Microsoft Windows Printer Test Application - Copyright 1990, 1991 by Microsoft Corporation
+PROFDISP PROFDISP.EXE  Profile DIB display
 PROFILEW PROFILEW.EXE  Microsoft (R) Source Profiler 1.30
 PROGMAN  PROGMAN.EXE   Windows Program Manager 3.0
 PROGMAN  PROGMAN.EXE   Windows Program Manager 3.1
 PROJECTR WNTUTR.EXE    Director Player for Windows Projector Skeleton
 PROPRINT PROPRINT.DRV  DDRV IBM Proprinters:167,120,72;83,120,144;60,72,120;120,144,120
+PROPRINT PROPRINT.DRV  DDRV PROPRINT:167,120,72;60,72,120;83,120,144;120,144,120;167,240,144;60,144,240
+PROPRN24 PROPRN24.DRV  DDRV PROPRN24:100,180,180;67,120,180;150,180,120;200,360,180;50,180,360
 PRTSC    PRTSC.EXE     PrtSc Library - (C) Kevin P. Welch, 1988.
+PS1      PS1.DRV       DDRV PS1:100,180,180;200,360,180;50,180,360;67,120,180;150,180,120
 PSCRIPT  PSCRIPT.DRV   DDRV PostScript Printer:100,300,300
+PSN      SSCRIPT.EXE   VoyPresent Application
 PTUTOR   PTUTOR.EXE    PTUTOR.exe
 PT_TOOLS PT_TOOLS.DLL  DLL for Private Tutor: Erick Smith, 1993
+PWSPY    PWLEDIT.EXE   Microsoft Word for Windows Password Cache Viewer
 QCLIENT  QCLIENT.EXE   QCLIENT.EXE
+QCMC     QCMC.QTC      (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
 QH       QH.EXE        qh.exe
 QRYINTL  QRYINTL.DLL   qryintl.exe
 QSERVER  QSERVER.EXE   QSERVER.EXE
+QTCVID   QTCVID.QTC    (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
 QTHNDLR  QTHNDLR.DLL   (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
 QTIM     QTIM.DLL      (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
 QTIMCMGR QTIMCMGR.DLL  (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
 QTINSTAL QT16.EXE      Apple Computer QuickTime for Windows Installation Program
 QTINSTAL QTINSTAL.EXE  Apple Computer QuickTime for Windows Installation Program
+QTIYVU9  QTIYVU9.QTC   Copyright (c) 1993-1994 Intel Corporation.
+QTJPEG   QTJPEG.QTC    (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
+QTMOVIE  QTMOVIE.VBX   (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
 QTNOTIFY QTNOTIFY.EXE  (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
+QTOLD    QTOLD.QTC     Identify Old Quicktime for Windows ToolBox
 QTOLE    QTOLE.DLL     (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
+QTPIC    QTPIC.VBX     (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
+QTRAW    QTRAW.QTC     (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
+QTRLE    QTRLE.QTC     (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
+QTRPZA   QTRPZA.QTC    (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
+QTRT21   QTRT21.QTC    Copyright (c) 1993 Intel Corp, Inc. All Rights Reserved.
+QTSMC    QTSMC.QTC     (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
+QTVHDW   QTVHDW.QTC    (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved.
+QTWCPL   QTW16.CPL     QuickTime for Windows Control Panel
+QUEST16  QUEST16.EXE   QUEST16.exe
+QWIII    QWIII.DRV     DDRV QWIII:100,240,240;100,120,120;100,60,60
 RAINBOW  RAINBOW.DLL   Rainbow Control
 RANDRECT RANDRECT.EXE  Random Rectangle Drawing Program (c) Charles Petzold, 1990
 RASAPI16 RASAPI16.DLL  16-bit Remote Access API
@@ -886,6 +1324,7 @@ RCDLL    RCDLL.DLL     Microsoft (R) Windows (tm) Resource Compiler Version 3.1
 RCSDLL   RCSDLL.DLL    rcsdll.dll
 RECMAIN  RECORDER.EXE  Windows Macro Recorder
 RECORDER RECORDER.DLL  Recorder Library
+REELMGIC REELMGIC.QTC  (c) Copyright 1994-1996 Apple Computer, Inc. All Rights Reserved.
 REGEDIT  REGEDIT.EXE   Registration Info Editor
 REGLOAD  REGLOAD.EXE   File Associations Loader
 RELOC    EXE2BIN.EXE   BINP\RELOC.EXE
@@ -900,14 +1339,20 @@ REVERSI  REVERSI.EXE   Microsoft Windows Reversi Application
 REVOLVE  REVOLVE.EXE   Demonstrates GPI Transforms (C) Charles Petzold, 1988
 RFFWIN   RFFWIN.EXE    RFFWIN.exe
 RFFWIN   RFFWIN2.EXE   RFFWIN2.exe
+RFTDCA   RFTDCA.CNV    DCA-Opus Converter Module
 RICHED   RICHED.DLL    Rich Edit DLL
 RLE      RLE.EXE       RLE player/converter Version 1.2
 RNASETUP RNASETUP.DLL  Remote Network Access Setup
+ROMAN    ROMAN.FON     FONTRES CONTINUOUSSCALING : Roman (All res)
+ROMAN    ROMAN.FON     FONTRES CONTINUOUSSCALING : Roman (Set #1)
 ROP2LOOK ROP2LOOK.EXE  ROP2 Demonstration Program (c) Charles Petzold, 1990
 ROTARY   ROTARY.EXE    Rotray Control Sample by NigelT
+RQUERY   RQUERY.EXE    Remote Query Form
 RSRC16   RSRC16.DLL    Resource Meter thunks
+RUMOR    RUMOR.EXE     Party Line
 RUNDLL   RUNDLL.EXE    Turn a DLL into an App
 S3_CP3CQ S3_CP3CQ.DLL  DDetect: True for S3 CP3 on Compaqs
+SAMPAPP  HLKSETUP.DLL  Sample App DLL
 SB JUKEB MMJBOX.EXE    SOUND BLASTER's DLL Test Program
 SB15SND  SB15SND.DRV   wave,midi:Creative Sound Blaster 1.5 Wave and Midi
 SB15SND  SB20SND.DRV   wave,midi:Creative Sound Blaster 2.0 Wave and Midi
@@ -926,12 +1371,20 @@ SCK16THK SCK16THK.DLL  16-bits thunk to winsock
 SCOOLVM  PBRUSH.DLL    Virtual bitmap manager
 SCP      SCP.DLL       SCP.DLL - Code Page Translation Library
 SCRAMBLE SCRAMBLE.EXE  Screen Scrambler (c) Charles Petzold, 1990
+SCRIPT   SCRIPT.FON    FONTRES CONTINUOUSSCALING : Script (All res)
+SCRIPT   SCRIPT.FON    FONTRES CONTINUOUSSCALING : Script (Set #1)
 SCRNCAP  SCRNCAP.DRV   MSVIDEO: Screen Capture Device Driver for AVI
+SCRNSAVE SCRNSAVE.SCR  SCRNSAVE : Blackness
+SCRNSAVE SCRNSAVE.SCR  SCRNSAVE : Blank Screen
 SCRNSVR  SCRNSVR.EXE   Screen Saver Core
 SDM      SDM.DLL       Standard Dialog Manager
 SELECT   SELECT.DLL    select.exe
+SENDMAIL SENDMAIL.EXE  Send Project Mail
 SEQUENCE SEQUENCE.DLL  SEQUENCE.DLL
 SERIALUI SERIALUI.DLL  Windows Serial Port Properties
+SERIFB   SERIFB.FON    FONTRES 133,96,72 : MS Serif 8,10,12,14,18,24 (EGA res)
+SERIFE   SERIFE.FON    FONTRES 100,96,96 : MS Serif 8,10,12,14,18,24 (VGA res)
+SERIFF   SERIFF.FON    FONTRES 100,120,120 : MS Serif 8,10,12,14,18,24 (8514 res)
 SERVER   SERVER.EXE    Sample Microsoft Windows Application
 SERWVDRV SERWVDRV.DRV  wave: Microsoft Serial Voice Modem Wave Driver
 SETINI   SETINI.EXE    SETINI.exe
@@ -942,9 +1395,14 @@ SETUP    SETUP.EXE     Microsoft Word 2.0 Setup Program
 SETUP    SETUP.EXE     Setup stub loader
 SETUP    SETUP.EXE     Windows for Workgroups 3.11 Resource Kit Setup Application
 SETUP    SETUP.EXE     setup.exe
+SETUP1   SETUP1.EXE    Microsoft Workgroup Temp
 SETUP1   SETUP1.EXE    setup1.exe
 SETUP4   SETUP4.DLL    Win 4.0 specific Setup Public Exported Functions
+SETUPHLP SETUPHLP.DLL  WinG Setup: Setup helper functions
+SETUPKIT SETUPKIT.DLL  SETUPKIT - A Library Installation DLL
 SETUPX   SETUPX.DLL    Setup Public Exported Functions
+SF4019   SF4019.EXE    SOFT FONT INSTALLER ROUTINE
+SFINST   SFINST.EXE    SOFT FONT INSTALLER ROUTINE
 SG10     SG10.DRV      DDRV Star SG-10:167,120,72;60,72,120:Star SG-10 120 X 72 DPI
 SH       SH.EXE        sh.exe
 SHED     SHED.EXE      SHED, Microsoft Corporation, 1990
@@ -958,6 +1416,7 @@ SHOWFONT SHOWFONT.EXE  Font Viewer Utility
 SHOWGDI  SHOWGDI.EXE   Interactive GDI Graphicsn
 SHOWPOP  SHOWPOP.EXE   DDE Population Client (c) Charles Petzold, 1990
 SHUFFLE  SHUFFLE.EXE   SHUFFLE
+SHUFFLE  SHUFFLE.IW    Shuffle
 SHW0     SHW0.DLL      SHW0.exe
 SHW0V    SHW0V.DLL     SHW0V.exe
 SIG      SIG.EXE       SIG.EXE
@@ -968,14 +1427,23 @@ SINGACD  SINGACD.EXE   Microsoft Windows MCI Application
 SINGAWAV SINGAWAV.EXE  Microsoft Windows MCI Application
 SLEUTH   SL.EXE        Sleuth by Michael Geary
 SLEUTH   SLEUTH.EXE    Sleuth by Michael Geary
+SLEXTNS  SL.DLL        SL Enhanced APM Options - Version 1.05 - 02/20/92
 SLOTZ!   SLOTZ.EXE     Slotz!
+SMALLB   SMALLB.FON    FONTRES 133,96,72: Small Fonts (EGA res)
 SMALLCAP SMALLCAP.EXE  MemMan
+SMALLE   SMALLE.FON    FONTRES 100,96,96: Small Fonts (VGA res)
+SMALLF   SMALLF.FON    FONTRES 100,120,120: Small Fonts (8514/a res)
 SMART    SMART.EXE     Smart ALloc Application
 SMARTDLL SMARTDLL.DLL  Demonstrates malloc from a DLL
 SMARTMON SMARTMON.EXE  SmartDrive 4.0 Monitor application
+SND      SND.CPL       Multimedia Windows Sound control panel
 SNDBLST  SB16SND.DRV   wave,midi:CREATIVE SBPW16 Wave and Midi driver
+SNDBLST1 SNDBLST.DRV   wave,midi:Creative Labs Sound Blaster 1.0
 SNDBLST2 SNDBLST2.DRV  wave,midi:Creative Labs Sound Blaster 1.5
+SNDEV    SNDEVENT.EXE  Sound Events Application
+SNDMIXER SB16MIX.CPL   Tandy Multimedia Mixer
 SNOOP    SNOOP.EXE     Microsoft Snoop: Version 1.0
+SOA200   SOA200.DLL    Microsoft Access Data Translation Layer
 SOL      SOL.EXE       Microsoft Solitaire
 SOUND    MMSOUND.DRV   Multimedia Sound device driver
 SOUND    MMSOUND.DRV   Windows Sound Driver
@@ -989,6 +1457,9 @@ SOUNDSRV SOUNDSRV.EXE  Microsoft Windows DDE Server Application
 SOUND_B  SOUND_B.DLL   Microsoft Windows Sound Driver on OS/2
 SPEAKN   SPEAKN.EXE    Microsoft Foundation Speak and Spell
 SPELL    SPELL.DLL     Pyramid Spell Checker DLL
+SPIN     SPIN.VB_      Visual Basic Custom Control (Spin)
+SPIN     SPIN.VB_      Visual Basic Spin Custom Control
+SPLUS    SPLUS.DLL     MS Schedule+ SPLUS DLL
 SPOOLER  SPOOLER.EXE   Microsoft Windows Printer Spooler
 SPY      SPY.EXE       Windows Spy Application
 SPYGLASS SPYGLASS.EXE  SpyGlass - (C) Copyright 1988 - Kevin P. Welch
@@ -1001,20 +1472,36 @@ SS       SS.EXE        SourceSafe Version Control
 SSADMIN  SSADMIN.EXE   SSADMIN.exe
 SSAFE_BB SSAFE_BB.DLL  SSAFE_BB.exe
 SSAPI16  SSAPI16.DLL   SourceSafe Engine
+SSDATA2  SSDATA2.VB_   Sheridan Software Widgets Data Controls v1.0 (27Aug93) - Copyright (c) 1993 Sheridan Software Systems
+SSDLG    SSDLG.CPL     Multimedia Windows Screen Saver Control Panel
 SSEM     SSEM.EXE      SSEM.EXE
+SSERIFB  SSERIFB.FON   FONTRES 133,96,72 : MS Sans Serif 8,10,12,14,18,24 (EGA res)
+SSERIFE  SSERIFE.FON   FONTRES 100,96,96 : MS Sans Serif 8,10,12,14,18,24 (VGA res)
+SSERIFF  SSERIFF.FON   FONTRES 100,120,120 : MS Sans Serif 8,10,12,14,18,24 (8514 res)
 SSEXP    SSEXP.EXE     SSW Windows Application
+SSFLYWIN SSFLYWIN.SCR  SCRNSAVE : Flying Windows
 SSGUI16  SSGUI16.DLL   SSGUI16.exe
 SSINT    SSINT.EXE     SSINT.exe
+SSLISSJU SSLISSJU.SCR  SCRNSAVE : Lissajous Figures
+SSMARQUE SSMARQUE.SCR  SCRNSAVE : Marquee
+SSMELT   SSMELT.SCR    SCRNSAVE : Melt / Slime Screen
+SSMYST   SSMYST.SCR    SCRNSAVE : Mystify
 SSSCC16  SSSCC16.DLL   SSSCC16.exe
+SSSTARS  SSSTARS.SCR   SCRNSAVE : Starfield Simulation
 SSUS     SSUD16.DLL    SSUD16.exe
 SSUS     SSUS16.DLL    SSUS16.exe
 SSVB16   SSVB16.DLL    SSVB16.exe
 SSWLOGIN SSLOGIN.EXE   SSLOGIN.exe
+STARS    STARS.IW      3-D Stars
+STATUS   STATUS.EXE    Assignment Notification
 STD      STD.DLL       Open Watcom Debugger Trap File
+STDOLE   STDOLE.TLB    Standard OLE Type Library
+STFSETUP STFSETUP.EXE  Microsoft Access Setup
 STI_CI   STI_CI.DLL    STI_CI.exe
 STOCK    STOCK.EXE     MSJ Stock App - WMP Version
 STOCK    STOCK.EXE     MSJ Stock Application
 STOCK    STOCK.EXE     Marcs Stock Application
+STORAGE  STORAGE.130   Storage DLL
 STORAGE  STORAGE.DLL   Storage DLL
 STORAGE  STORAGE.DLL   obj\i386\storage.exe
 STRESS   STRESS.DLL    RESOURCE MODIFICATION DLL
@@ -1025,17 +1512,34 @@ STRETCH  STRETCH.EXE   STRETCH
 STRLIB   STRLIB.DLL    DLL for STRPROG Program (c) Charles Petzold, 1990
 STRPROG  STRPROG.EXE   Program using STRLIB DLL (c) Charles Petzold, 1990
 STYLES   STYLES.EXE    styles.exe
+SUBMIT   SUBMIT.EXE    Submit Object
 SUBSEG   SUBSEG.EXE    Sub-Segment Allocation Demo (c) 1990,  Paul Yao
+SUPPLY   SUPPLY.EXE    Supply Order Form
+SWADCMPR SWADCMPR.X16  SWADCMPR.exe
 SWAPFILE SWAPFILE.EXE  Windows Swapfile
+SWASTRM  SWASTRM.X16   SWASTRM.exe
+SYMBOL   SYMBOL.FON    Apple Computer QuickTime for Windows Installation Program
+SYMBOL   SYMBOL.FON    CPS System Consultant AUTOEXEC.BAT Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
+SYMBOL   SYMBOL.FON    MicroScroll Custom Control, Kraig Brockschmidt
+SYMBOL   SYMBOL.FOT    DISPLAY:133,96,72:EGA with Monochrome Display
+SYMBOL   SYMBOL.FOT    KeyTable Latin American
+SYMBOL   SYMBOL.FOT    Microsoft Macro Assembler
+SYMBOL   SYMBOL.FOT    wddespy.exe
+SYMBOL   SYMBOLE.FON   FONTRES 100,96,96 : Symbol 8,10,12,14,18,24 (VGA RES)
+SYMBOLB  SYMBOLB.FON   FONTRES 133,96,72 : Symbol 8,10,12,14,18,24 (EGA RES)
+SYMBOLE  SYMBOLE.FON   FONTRES 100,96,96 : Symbol 8,10,12,14,18,24 (VGA RES)
+SYMBOLF  SYMBOLF.FON   FONTRES 100,120,120 : Symbol 8,10,12,14,18,24 (8514/a RES)
 SYSCLASS SYSCLASS.DLL  SYSCLASS - System Device Class Class Installer
 SYSDETMG SYSDETMG.DLL  System Detection Manager
 SYSEDIT  SYSEDIT.EXE   System Configuration Editor
+SYSMETER SYSMETER.EXE  System Resource Monitor Application - (c) 1991, Microsoft Corporation
 SYSMETS  SYSMETS.EXE   System Metrics Display (c) Charles Petzold, 1990
 SYSMETS1 SYSMETS1.EXE  System Metrics Display No. 1 (c) Charles Petzold, 1990
 SYSMETS2 SYSMETS2.EXE  System Metrics Display No. 2 (c) Charles Petzold, 1990
 SYSMETS3 SYSMETS3.EXE  System Metrics Display No. 3 (c) Charles Petzold, 1990
 SYSSEG   SYSSEG.EXE    Check USER/GDI Heaps (c) 1990 By Paul Yao
 SYSTEM   ATTSYS.DRV    Microsoft Windows System Module for AT&amp;T Computers
+SYSTEM   HPSYSTEM.DRV  Microsoft Windows System configuration module for HP Vectra
 SYSTEM   SYSTEM.DRV    Microsoft Windows System configuration module
 SYSTEM   SYSTEM.DRV    Microsoft Windows System configuration module for IBM/PC/XT/AT
 SYSTEM_B SYSTEM_B.DLL  Microsoft Windows System Configuration Module on OS/2
@@ -1059,7 +1563,9 @@ TBKCOMP  TBKCOMP.DLL   ToolBook Compiler (c) Asymetrix 1990
 TBKDB3   TBKDB3.DLL    TBKDB3.DLL\r\n\xA9 1990 Asymetrix Corporation\r\nVersion 1.0.0\r\nAccess to DBASE3 files via OpenScript
 TBKEDIT  TBKEDIT.DLL   ToolBook Script Editor (c) Asymetrix 1991
 TBKFILE  TBKFILE.DLL   ToolBook File utilities (c) Asymetrix 1990
+TBKICON  TOOLBOOK.ICN  Toolbook Icon Dummy Exe
 TBKMM    TBKMM.DLL     TBKMM.DLL Copyright (c) 1991 Asymetrix Corporation. All rights reserved.\0
+TBKMMWID TBKMMWID.FON  FONTRES 100,96,96 : TBKWidgets 12,24 (VGA Res)
 TBKNET   TBKNET.EXE    Asymetrix TbkNet Application
 TBKUTIL  TBKUTIL.DLL   ToolBook utilities (c) Asymetrix 1990
 TBKWIN   TBKWIN.DLL    ToolBook windows utilities (c) Asymetrix 1990
@@ -1070,6 +1576,7 @@ TCP      TCP.DLL       Open Watcom Debugger Trap File
 TCPSERVW TCPSERVW.EXE  Open Watcom Debug Server
 TDEMOCFG TDEMOCFG.EXE  TDEMOCFG.EXE
 TDOSMEM  TDOSMEM.EXE   Sample Microsoft Windows Application
+TD_TUTOR TD_TUTOR.EXE  TD_TUTOR
 TECHNOTE TECHNOTE.DLL  Technote Navigator a.01
 TELLPROT TELLPROT.EXE  tellprot.exe
 TERMINAL TERMINAL.EXE  Microsoft Windows Application Term
@@ -1082,27 +1589,75 @@ TESTKEYB TESTKEYB.EXE  MIDIKEYB Test Application for Windows with Multimedia V1.
 TESTSERV TESTSERV.EXE  Sample AFX OLE Server Application
 TESTZYZG TESTZYZG.EXE  Windows 3.1 zYzGauge test application
 TETRIS   TETRIS.EXE    Really Cool TETRIS Game for Win3
+TF       TFP.EXE       tf.exe
 THESAURU THES.DLL      Word for Windows v. 2.0 Thesaurus DLL
 THINKJET THINKJET.DRV  DDRV HP ThinkJet (2225 C-D):200,192,96;50,96,192:ThinkJet 192 X 96 DPI
+THINKJET THINKJET.DRV  DDRV THINKJET:100,96,96
 THREADS  THREADS.EXE   Multi-Thread Demo Program by Charles Petzold, 1988
+THREED   THREED.VB_    3D Check/Frame/Option/Command/Panel/Group (PTK/24Sep92) - Copyright (c) 1991, 1992 Sheridan Software Systems, Inc.
+THREED   THREED.VB_    3D Check/Frame/Option/Command/Panel/Group - Copyright (c) 1991, 1992, 1993 Sheridan Software Systems, Inc.
 THSAMPLE THSAMPLE.EXE  TOOLHELP.DLL Sample App
 TI850    TI850.DRV     DDRV TI 850,TI 855:167,120,72;60,72,120:Texas Instruments Printers 120 X 72 DPI
+TI850    TI850.DRV     DDRV TI850:83,60,72,167,120,72
 TIBROWSE TIBROWSE.EXE  Type library browser
 TICKTOCK TICKTOCK.EXE  TICKTOCK
 TICTACTI TIC.EXE       TicTactics v1.0
+TIFFIMP  TIFFIMP.FLT   TIFF Import Filter (Win3 DIB)
 TIMEACD  TIMEACD.EXE   Microsoft Windows MCI Application
 TIMER    TIMER.DRV     timer:Microsoft time services driver
 TIMER    TIMER.DRV     timer:Timer
 TIMERS   TIMERS.EXE    Sample Timer Application
+TIMES    TIMES.FON     DISPLAY : 100, 96, 96 : VGA Color Display
+TIMES    TIMES.FON     MS Schedule+ SPLUS DLL
+TIMES    TIMES.FON     OLE Automation Type Information Interfaces
+TIMES    TIMES.FOT     FONTRES 100,96,96 : Terminal (861) (Set #6)
+TIMES    TIMES.FOT     FONTRES 133,96,72 : Terminal
+TIMES    TIMES.FOT     File Associations Loader
+TIMES    TIMES.FOT     MicroScroll Custom Control, Kraig Brockschmidt
+TIMES    TIMES.FOT     Minesweeper v3.0a
+TIMESB   TIMESB.FON    FONTRES 133,96,72 : Times New Roman 8,10 (EGA res)
+TIMESBD  TIMESBD.FON   MS Test Driver (dumb shell) version 1.00.0021
+TIMESBD  TIMESBD.FON   Microsoft Help 3.1
+TIMESBD  TIMESBD.FON   OS/2 Gateway FFAPI CourCfg (C) Consumers Software 1990
+TIMESBD  TIMESBD.FOT   MM/Windows Common code library
+TIMESBD  TIMESBD.FOT   Magic Fingers for Windows DLL
+TIMESBD  TIMESBD.FOT   Multimedia Windows Sound control panel
+TIMESBD  TIMESBD.FOT   Win31 CD Media Browser
+TIMESBI  TIMESBI.FON   (c) Copyright 1988-1996 Apple Computer, Inc. All Rights Reserved
+TIMESBI  TIMESBI.FON   KeyTable Iceland
+TIMESBI  TIMESBI.FON   Microsoft Windows DDE Server Application
+TIMESBI  TIMESBI.FOT   FONTRES 100,96,96: Small Fonts (VGA res)
+TIMESBI  TIMESBI.FOT   Mouse Hit-Test Demo Program No. 3 (c) Charles Petzold, 1990
+TIMESBI  TIMESBI.FOT   WinG DIB Engine
+TIMESBI  TIMESBI.FOT   makebox.EXE
+TIMESI   TIMESI.FON    CPS File Manager - Copyright (C) 1993-1994 Central Point Software, Inc.
+TIMESI   TIMESI.FON    FONTRES 133,96,72 : Tms Rmn 8,10,12,14,18,24 (Set #3)
+TIMESI   TIMESI.FON    Microsoft LAN Manager API Library, Copyright(c) Microsoft Corp., 1987 - 1990
+TIMESI   TIMESI.FOT    Microsoft Windows Clipboard Viewer
+TIMESI   TIMESI.FOT    Shell DLL to fix ImageMark filters
+TIMESI   TIMESI.FOT    VHOOK.DLL
+TIMESI   TIMESI.FOT    WinG Spinning Cube Demo
+TIMEWING TIMEWING.EXE  WinG Timer for windows 3.1
+TLD      TLD.EXE       tld.exe
 TLINKOE  TLINK.EXE     tlinkoe.exe
 TLW0LOC  TLW0LOC.DLL   TLW0LOC.exe
 TLW0NCL  TLW0NCL.DLL   TLW0NCL.exe
 TMP      MAPSYM32.EXE  TMP.EXE
+TMSRA    TMSRA.FON     FONTRES 200,96,48 : Tms Rmn 8,10,12,14,18,24 (Set #2)
+TMSRB    TMSRB.FON     FONTRES 133,96,72 : Tms Rmn 8,10,12,14,18,24 (Set #3)
+TMSRC    TMSRC.FON     FONTRES 83,60,72 : Tms Rmn 8,10,12,14,18,24 (Set #4)
+TMSRD    TMSRD.FON     FONTRES 167,120,72 : Tms Rmn 8,10,12,14,18,24 (Set #5)
+TMSRE    TMSRE.FON     FONTRES 100,96,96 : Tms Rmn 8,10,12,14,18,24 (Set #6)
+TMSRE    TMSRE.FON     FONTRES 100,96,96 : Tms Rmn 8,10,12,14,18,24 (VGA res)
 TOOLHELP TOOLHELP.DLL  TOOLHELP - Debug/Tool Helper library
 TOOLHELP TOOLHELP.DLL  TOOLHELP for WOW - Debug/Tool Helper library
 TOONAPP  TOONAPP.EXE   TOONAPP
 TOONSAVE TOONSAVE.EXE  SCRNSAVE :Display a WinToon cartoon
+TOONSAVE TOONSAVE.SCR  SCRNSAVE :Display a WinToon cartoon
+TOPDESK  TOPDESK.EXE   TopDesk Application
+TOPHOOK  TOPHOOK.DLL   TopDesk hook dll
 TOSH     TOSH.DRV      DDRV Toshiba P1351:300,180,60;33,60,180:Toshiba 180 X 60 DPI
+TOSHIBA  TOSHIBA.DRV   DDRV Toshiba P351:100,180,180;200,360,180;50,180,360;100,360,360
 TOUR     TOUR.EXE      Tour
 TOURANI  TOURANI.DLL   TOURANI.exe
 TOURSTR  TOURSTR.DLL   Chicago Tour Strings
@@ -1116,9 +1671,12 @@ TRACER   TRACER.EXE    Set Trace flags in AFX.INI
 TRANSBLT TRANSBLT.EXE  Sample Microsoft Windows Application
 TRANSFRM TRANSFRM.EXE  Demonstrates GPI Transforms (C) Charles Petzold, 1988
 TRASH    BURNIT.EXE    Trash: Drop File Client Sample Application
+TRAVEL   TRAVEL.EXE    Travel Form
 TRIQ     TRIQ.EXE      Sample Ball Application
+TSENG    TSENG.QTC     Tseng VHDW Component
 TSP3216S TSP3216S.DLL  tsp3216s.exe
 TTY      TTY.DRV       DDRV Generic / Text Only:167,10,6
+TTY      TTY.DRV       DDRV Generic / Text Only:167,120,72:TTY generic printer
 TTY      TTY.EXE       Windows TTY Sample Application (c) 1991 Microsoft Corporation
 TURTLE   TURTLE.EXE    TURTLE Windows Application
 TWAIN    TWAIN.DLL     TWAIN.exe
@@ -1126,31 +1684,40 @@ TWAIN    TWAIN.DLL     TWAIN_16 Data Source Manager.
 TWUNK_16 TWUNK_16.EXE  TWAIN DDE 16/32 THUNKER 1995
 TWUNK_16 TWUNK_16.EXE  TWUNK_16.exe
 TYPE     TYPE.EXE      Typing Program (c) Charles Petzold, 1990
+TYPELIB  TYPELIB.130   OLE Automation Type Information Interfaces
 TYPELIB  TYPELIB.DLL   OLE Automation Type Information Interfaces
 TYPER    TYPER.EXE     Microsoft OS/2 PM Simple Virtual Typewriter
+UIGUIDE  UIGUIDE.EXE   UIGUIDE
 ULTMPORT ULTMPORT.DRV  MIDI:UltraSound midi port driver
 ULTRASND ULTRASND.DRV  wave,midi,aux:UltraSound audio driver
 UMDM16   UMDM16.DLL    Universal Modem 16-bit thunk layer
 UMDMXFRM UMDMXFRM.DLL  Microsoft Unimodem Audio Transform Module
+UNIDRV   UNIDRV.DLL    DDRV -- Universal Printer Driver Library
 UNITOOL  UNITOOL.EXE   UNITOOL:App For Editing Univeral Printer Driver data files
 UNWISE   UNWISE.EXE    UNWISE.exe
 UPDINIW  UPDINI.EXE    UPDINI.exe
 USER     USER.EXE      Microsoft Windows User Interface
 USER     USER.EXE      Microsoft Windows WOW user.exe
 USER_B   USER_B.DLL    Microsoft Windows User Interface on OS/2
+VAEN2O   VAEN2.OLB     Microsoft Visual Basic for Applications Object Library
 VBAJET   VBAJET.DLL    Microsoft Visual Basic for Applications - Expression Service Loader
 VBAR2    VBAR2.DLL     Microsoft Visual Basic for Applications Runtime for Expression Services
+VBDB300  VBDB300.DLL   Visual Basic Data Access support
 VBDEST   VBDEST.EXE    DEST
 VBOA300  VBOA300.DLL   Microsoft Visual Basic Version 3.00 OLE 2 Stub , Copyright (c) 1992-1993 Microsoft Corp.
 VBRUN100 VBRUN100.DLL  Microsoft Visual Basic Runtime Version 1.00, Copyright (c) 1990-1991 Microsoft Corp.
+VBRUN200 VBRUN200.DLL  Microsoft Visual Basic Runtime Version 2.00, Copyright (c) 1990-1992 Microsoft Corp.
 VBRUN300 VBRUN300.DLL  Microsoft Visual Basic Runtime Version 3.00, Copyright (c) 1990-1993 Microsoft Corp.
 VBSOURCE VBSOURCE.EXE  VBSOURCE
+VCTL     VCTL.DLL      Vcontrol
 VDMSERVW VDMSERVW.EXE  Open Watcom Debug Server
 VECTFONT VECTFONT.EXE  Vector Font Demo Program (C) Charles Petzold, 1988
 VER      VER.DLL       VER - A Version stamping library
 VERINFO  VERINFO.EXE   Version Information
 VERSTAMP VERSTAMP.EXE  Version Stamp Sample Application
+VFATSTAT VFATSTAT.EXE  VFAT Statistics
 VFWWDM   VFWWDM.DRV    MSVIDEO: WDM Video Driver
+VHOOK    VHOOK.DLL     VHOOK.DLL
 VIDCAP   VIDCAP.EXE    Video Capture app
 VIDEDIT  VIDEDIT.EXE   Multimedia Windows AVI File Editor
 VIDX16   VIDX16.DLL    retail\vidx16.exe
@@ -1164,6 +1731,11 @@ VISXUTIL VISXUTIL.DLL  MS Office UA Utilities
 VIX      VIW.EXE       vix.exe
 VLIST    VLIST.DLL     OBJ16\vlist.exe
 VMODCTL  VMODCTL.DLL   vmodctl.exe
+VMP_MM   VMP_MM.DLL    MMWin VMP DLL driver
+VOLHOOK  VOLHOOK.DLL   Volume Hotkey monitor
+VOYEWH   VOYEWH.DLL    The help engine movie and map displayer
+VOYFILE  VOYFILE.DLL   VoyFile Library Copyright (C) 1989-1992 Lantern Corp.
+VSCR     VOY.SCR       SCRNSAVE : Voyetra Audio
 W32SXXXX WIN32S.EXE    WIN32S - 16 bit loader
 W32SYS   W32SYS.DLL    Microsoft Win32S Interface Version 3.10
 W4W04F   WNW4W04F.DLL  Word For Word conversion for Word Star 3.x, 4.0, 5.0
@@ -1188,15 +1760,20 @@ W4W54F   WNW4W54F.DLL  Word For Word conversion for MacWord
 W87EM_B  W87EM_B.DLL   Microsoft Windows NPX Emulation on OS/2
 W95INF16 W95INF16.DLL  INF Installation Library
 WACC     WACC.DLL      wacc.dll
+WAR-BMP  WAR-BMP.DLL   Warheads for Windows BITMAP DLL Copyright (c) 1991 by Eric Lee Steadle &amp; Brian C. Lowe
+WARHEAD  WARHEAD.EXE   Warheads for Windows, (c) 1991 Brian C. Lowe and Eric Lee Steadle
 WATCOM   WATCOM.DLL    watcom.dll
 WATTCTRL WATTCTRL.DLL  MS-WATT interface WATT routines, 1.00.001
 WATTDRVR WATTDRVR.EXE  WATT Test Driver version 1.12.0018 (alpha)
 WATTEVNT WATTEVNT.DLL  WATTEVNT - Copyright Microsoft Corp. 1990-1991
 WATTVIEW WATTVIEW.DLL  Multi-purpose Viewport DLL
 WAVCALLB WAVCALLB.DLL  WavCallb DLL
+WAVELINE WAVELINE.FON  FONTRES 100,96,96 : WaveLine32
 WAVETST  WAVETST.EXE   Multimedia Windows Test Application
 WAVEWRAP WAVEWRAP.DRV  wave: Microsoft Voice Modem Wave Driver Wrapper
+WBMAPI   WBMAPI.DLL    WBMAPI -- simple interface to MAPI for WordBasic
 WBRW     WBRW.EXE      wbrw.exe
+WDATGEN  WINDAT.EXE    Digital Audio Transport
 WDDESPY  WDDESPY.EXE   wddespy.exe
 WDE      WDE.EXE       wde.exe
 WDIFF    WDIFF.EXE     A diff that runs under windows
@@ -1212,14 +1789,23 @@ WFLT0006 WFLT0006.DLL  Creative ALAW Wave Filter
 WFLT0007 WFLT0007.DLL  Creative MULAW Wave Filter
 WFLT0011 WFLT0011.DLL  Creative IMA/DVI ADPCM Wave Filter
 WFLT0200 WFLT0200.DLL  Creative ADPCM Wave Filter
+WFM0006  WFM0006.ACV   Creative Integrated Sound Architecture CCITT A-Law CODEC
+WFM0007  WFM0007.ACV   Creative Integrated Sound Architecture CCITT u-Law CODEC
+WFM0011  WFM0011.ACV   Creative Integrated Sound Architecture  IMA ADPCM Audio CODEC
+WFM0200  WFM0200.ACV   Creative Integrated Sound Architecture Creative ADPCM CODEC
+WFM0201  WFM0201.ACV   Creative Integrated Sound Architecture DecTalk codec
 WFWNET   WFWNET.DRV    WOW REPLACEMENT WFWNET
+WH       WH.EXE        wh.exe
 WHATSIZE WHATSIZE.EXE  What Size is the Window? (c) Charles Petzold, 1990
 WHEAPWLK WHEAPWLK.EXE  wheapwlk.exe
 WHLP16T  WHLP16T.DLL   retail\whlp16t.exe
+WHPE     WHPE.EXE      Help Project Editor
 WIFEMAN  WIFEMAN.DLL   WOW REPLACEMENT Font Driver Manager For WIFE
 WIMGEDIT WIMGEDIT.EXE  wimgedit.exe
 WIN32S16 WIN32S16.DLL  Win32s compatibility dll
 WIN32S16 WIN32S16.DLL  all the 16-bit parts
+WIN38600 W386DLL.EXT   
+WIN38600 WIN386.EXT    
 WIN87EM  WIN87EM.DLL   Microsoft Windows 3.0 Coprocessor/Emulator Library 6.00.11
 WIN87EM  WIN87EM.DLL   Microsoft Windows 3.1 Coprocessor/Emulator Library 7.00.00
 WINACC   WINACC.EXE    Sample Application for Microsoft Windows for use with VDialogD
@@ -1232,8 +1818,19 @@ WINCOM   WINCOM.DLL    MM/Windows Common code library
 WINFILE  WINFILE.EXE   Windows File System 3.0
 WINFILE  WINFILE.EXE   Windows File System 3.1
 WING     WING.DLL      WinG High Performance Graphics APIs
+WINGBUG  WINGBUG.EXE   WINGBUG Windows Application
 WINGDE   WINGDE.DLL    WinG DIB Engine
 WINGDIB  WINGDIB.DRV   WinG Driver
+WINGDING WINGDING.FON  MS-Setup bootstrap loader
+WINGDING WINGDING.FON  UltraSound Patch Manager (c) Advanced Gravis 1994 (c) Singular Software, 1992, 1993
+WINGDING WINGDING.FON  wave,midi:Creative Labs Sound Blaster 1.5
+WINGDING WINGDING.FOT  MENUMAGIC App
+WINGDING WINGDING.FOT  Microsoft Windows System configuration module for IBM/PC/XT/AT
+WINGDING WINGDING.FOT  Setup Detect Library
+WINGDING WINGDING.FOT  Typing Program (c) Charles Petzold, 1990
+WINGDING WINGDING.FOT  Windows File System 3.1
+WINGPAL  WINGPAL.WND   WinG Palette Task
+WINGPAL  WINGPAL.WN_   WinG Palette Task
 WINHCT   WINHCT.EXE    HCT Shell
 WINHELP  WINHELP.EXE   Microsoft Help 3.0
 WINHELP  WINHELP.EXE   Microsoft Help 3.07
@@ -1243,11 +1840,23 @@ WINIO_AP ARGS.EXE      WINIO Windows program
 WINIO_AP MEM.EXE       WINIO Windows program
 WINIO_AP MEM_OLD.EXE   WINIO Windows program
 WINIO_AP TESTLIST.EXE  WINIO Windows program
+WINLD    WINLD.FON     FONTRES CONTINUOUSSCALING : MS LineDraw (All res)
+WINMETER NETMETER.EXE  Microsoft Windows for Workgroups CPU usage meter
 WINMINE  WINMINE.EXE   Minesweeper
 WINMINE  WINMINE.EXE   Minesweeper v3.0a
 WINMM16  WINMM16.DLL   Multi-Media thunks for win32s
 WINNET16 WINNET16.DLL  WINNET16 - Winnet Driver 16 bit Mapper
 WINNLS   WINNLS.DLL    WOW REPLACEMENT WINNLS
+WINOLDAP WINOA286.MOD  Microsoft Windows Old Application Support Module (3.00.14.20jan89)
+WINOLDAP WINOA386.MOD  Microsoft WIN386 Old App Support Module V 3.00
+WINOLDAP WINOA386.MOD  Microsoft WIN386 Old App Support Module V 3.10
+WINOLDAP WINOA386.MO_  Microsoft WIN386 Old App Support Module V 3.10
+WINOLDAP WINOLDAP.MOD  Microsoft Windows Old Application Support Module
+WINOLDAP WINOLDAP.MOD  Microsoft Windows Old Application Support Module (3.00.14.20jan89)
+WINOLDAP WINOLDAP.MOD  Microsoft Windows Old Application Support Module (3.10)
+WINOLDAP WINOLDAP.MOD  Microsoft Windows Old Application Support Module (QA.200.03)
+WINOLDAP WINOLDAP.MO_  Microsoft Windows Old Application Support Module (3.10)
+WINPOPUP WINPOPUP.EXE  LAN Manager 3.0 Message Popup for Windows
 WINPOPUP WINPOPUP.EXE  Microsoft Windows Message Popup Application
 WINRFS   WINRFS.DLL    WINRFS - Windows API Rfs support
 WINSET3  WINSETUP.EXE  WINSETUP.exe
@@ -1262,12 +1871,18 @@ WINT32   WINT32.DLL    wint32.dll
 WINTOON  WINTOON.DLL   WINTOON.exe
 WINTUTOR WINTUTOR.EXE  wintutor.exe
 WINVER   WINVER.EXE    Windows Version program
+WINVER   WINVER._      Windows Version program
 WIN_3D   WIN_3D.DLL    win_3d.dll
+WIPE     WIPE.IW       Screen Wipe
 WMEM     WMEM.EXE      Bogus Windows Memory Display Thing
 WMENU    WMENU.DLL     wmenu.dll
+WMF      WMF.FLT       WMF Import Filter
 WMFDCODE WMFDCODE.EXE  Windows Metafile Decoder - by Dennis R. Crain
+WMFIMP   WMFIMP.FLT    Metafile Dynamic Library Import filter
+WMFSAVER WMFSAVER.EXE  .WMF Saver
 WNABSIO  WNABSIO.DLL   CPS Absolute Disk I/O Library - Copyright (C) 1991-1994 Central Point Software, Inc.
 WNAC     WNAC.EXE      CPS Automator Compiler - Copyright (C) 1993, 1994 Central Point Software, Inc.
+WNAP2L   WNAPL.RSL     CPS File Applets Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNAPASC2 WNAPASC.EXE   CPS Associate File Applet - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNAPCMP2 WNAPCMP.EXE   CPS Compress Files Applet - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNAPCOM2 WNAPCOM.EXE   CPS Compare Files Applet - Copyright (C) 1993-1994 Central Point Software, Inc.
@@ -1292,6 +1907,7 @@ WNAVCC   WNAVCC.DLL    CPS Anti-Virus Custom Control Library - Copyright (C) 199
 WNAVTREE WNAVTREE.DLL  CPS Tree Utilities Library - Copyright (C) 1991-1994 Central Point Software, Inc.
 WNBA1540 WNBA1540.DLL  CP Backup for Windows 3.0 SCSI [Adaptec] Backup Driver by Central Point Software
 WNBA1540 WNBA1640.DLL  CP Backup for Windows 3.0 SCSI [Adaptec] Backup Driver by Central Point Software
+WNBACKL  WNBACKL.RSL   CPS Backup Resource File - Copyright (c) 1993 Central Point Software, Inc.
 WNBACKUP WNBACKUP.EXE  CPS Backup Application - Copyright (c) 1993 Central Point Software, Inc.
 WNBASPI  WNBASPI.DLL   CP Backup for Windows 3.0 SCSI [Adaptec] Backup Driver by Central Point Software
 WNBCE    WNBCE.DLL     CPS Backup SCSI Configuration Library - Copyright (c) 1993 Central Point Software, Inc.
@@ -1299,23 +1915,35 @@ WNBCP    WNBCP.DLL     CPS Backup Compression Library - Copyright (c) 1993 Centr
 WNBFMTR  WNBFMTR.DLL   CPS Backup SCSI Formatter Library - Copyright (c) 1993 Central Point Software, Inc.
 WNBIBMPS WNBIBMPS.DLL  CP Backup for Windows 3.0 SCSI [IBM PS/2 SCSI] Backup Driver by Central Point Software
 WNBSDEV  WNBSDEV.DLL   CP Backup for Windows 3.0 SCSI Device Mapping Layer by Central Point Software
+WNBSEL   WNBSEL.RSL    CPS Backup SCSI Device Resource File - Copyright (c) 1993 Central Point Software, Inc.
 WNCAP    WNCAP.EXE     CPS Screen Capture - Copyright (C) 1993-94 Central Point Software, Inc.
+WNCAPL   WNCAPL.RSL    CPS Screen Capture Resource File - Copyright (C) 1993-94 Central Point Software, Inc.
 WNCG     WNCG.EXE      CPS Code Generator - Copyright (C) 1993,1994 Central Point Software, Inc.
 WNCPAV   WNCPAV.EXE    CPS Anti-Virus - Copyright (C) 1994 Central Point Software, Inc.
+WNCPAVL  WNCPAVL.RSL   CPS Anti-Virus Resource File - Copyright (C) 1993 Central Point Software, Inc.
 WNCPL    WNCPL.EXE     CPS Control Panel - Copyright (C) 1993 Central Point Software, Inc.
+WNCPLL   WNCPLL.RSL    CPS Control Panel Resource File - Copyright (C) 1993 Central Point Software, Inc.
 WNCPS2   WNCPS2.DLL    CPS Shared Technology Library - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNCPS2L  WNCPS2L.RSL   CPS Shared Technology Resource Library - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNCRED   WNCRED2.DLL   wncred.dll - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNCVT    WNCVT.EXE     CPS Backup Conversion - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNDCHK2  WNDCHK2.DLL   CPS Drive Analysis Library - Copyright (C) 1993 Central Point Software, Inc.
+WNDCHK2L WNDCHK2L.RSL  CPS Drive Analysis Library Resource File - Copyright (C) 1993 Central Point Software, Inc.
 WNDE     WNDE.EXE      CPS Dialog Editor - Copyright (C) 1993, 1994 Central Point Software, Inc.
 WNDF     WNDF.DLL      CPS Define Event Library - Copyright (C) 1993,1994 Central Point Software, Inc.
 WNDFIX   WNDFIX.EXE    CPS DiskFix - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNDFIXL  WNDFIXL.RSL   CPS DiskFix Resource File - Copyright (C) 1994 Central Point Software, Inc.
 WNDOSLI1 WNDOSLI1.DLL  CPS Backup File Access Library - Copyright (c) 1993 Central Point Software, Inc.
 WNDRTRE4 WNDRTRE4.DLL  CPS Backup Directory Tree Library - Copyright (c) 1993 Central Point Software, Inc.
+WNEDSK2  WNEDSK.EXE    CPS Build Emergency Disk - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNEDSK2L WNEDSKL.RSL   CPS Build Emergency Disk - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNEMS2   WNEMS2.DLL    CPS Enhanced Menu System Library - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNEMS2L  WNEMS2L.RSL   CPS Enhanced Menu System Library Resource File - Copyright (C) 1993 Central Point Software, Inc.
 WNETBIOS WNETBIOS.DLL  NetBIOS DLL
 WNFB     WNFB.DLL      CPS Backup Floppy Backup Library - Copyright (c) 1993 Central Point Software, Inc.
+WNFBL    WNFBL.RSL     CPS Backup Floppy Resource File - Copyright (c) 1993 Central Point Software, Inc.
 WNFDLG2  WNFDLG2.DLL   CPS File Dialogs Library - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNFDLG2L WNFDLG2L.RSL  CPS File Dialogs Library Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNFL2BM2 WNFL2BM2.DLL  CPS Viewer Vector-to-DIB Format Library - Copyright (C) 1993-94 Central Point Software, Inc.
 WNFLBMP2 WNFLBMP2.DLL  CPS Viewer Bitmap Format Library - Copyright (C) 1993-94 Central Point Software, Inc.
 WNFLCDR2 WNFLCDR2.DLL  CPS Viewer Corel Draw! Format Library - Copyright (C) 1993-94 Central Point Software, Inc.
@@ -1355,11 +1983,14 @@ WNFLWRI2 WNFLWRI2.DLL  CPS Viewer Windows Write Format Library - Copyright (C) 1
 WNFLXLS2 WNFLXLS2.DLL  CPS Viewer Excel Format Library - Copyright (C) 1993-94 Central Point Software, Inc.
 WNFLZIP2 WNFLZIP2.DLL  CPS Viewer Archive File Format Library - Copyright (C) 1993-94 Central Point Software, Inc.
 WNFM2    WNFM.EXE      CPS File Manager - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNFM2L   WNFML.RSL     CPS File Manager Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNFR     WNFR.DLL      CPS Backup Floppy Restore Library - Copyright (c) 1993 Central Point Software, Inc.
 WNFSV2   WNFSV2.DLL    CPS File Services - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNFSVT2  WNFSVT2.EXE   CPS File Services Task - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNFV     WNFV.EXE      CPS File Viewer - Copyright (C) 1993-94 Central Point Software, Inc.
+WNFVL    WNFVL.RSL     CPS File Viewer Resource File - Copyright (C) 1993-94 Central Point Software, Inc.
 WNGUARD  WNGUARD.EXE   CPS Crash Guard - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNGUARDL WNGUARDL.RSL  CPS Crash Guard - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNHA     WNHA.EXE      CPS Hook Manager - Copyright (C) 1993,1994 Central Point Software, Inc.
 WNHB     WNHB.DLL      CPS Backup Hard Disk Backup Library - Copyright (c) 1993 Central Point Software, Inc.
 WNHL     WNHL.DLL      CPS Hook Library - Copyright (C) 1993, 1994 Central Point Software, Inc.
@@ -1367,18 +1998,31 @@ WNHOOK2  WNHOOK2.DLL   CPS WNHOOK - Copyright (C) 1993 Central Point Software, I
 WNHR     WNHR.DLL      CPS Backup Hard Disk Restore Library - Copyright (c) 1993 Central Point Software, Inc.
 WNID     WNID.EXE      CPS Identify - Copyright (C) 1993, 1994 Central Point Software, Inc.
 WNIE     WNIE.EXE      CPS Icon Editor - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNIEL    WNIEL.RSL     CPS Icon Editor Resource Library - Copyright (C) 1993, Central Point Software, Inc.
 WNKEY    WNKEY.DLL     CPS ScriptTools Keyboard Library - Copyright (C) 1993, 1994 Central Point Software, Inc.
 WNKTERM  WNKTERM.EXE   Simple Windows Terminal Program
 WNNC     WNNC.DLL      CPS Backup Encryption Library - Copyright (c) 1993 Central Point Software, Inc.
 WNOPT    WNOPT.EXE     CPS Optimizer - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNOPTL   WNOPTL.RSL    CPS Optimizer Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNOPTMON WNOPTMON.DLL  CPS Optimizer Device Monitor - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNQB     WNQB.DLL      CPS Backup QIC Tape Backup Library - Copyright (c) 1993 Central Point Software, Inc.
 WNQR     WNQR.DLL      CPS Backup QIC Tape Restore Library - Copyright (c) 1993 Central Point Software, Inc.
 WNRPT2   WNRPT2.DLL    Central Point Reporter Library - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNRPT2L  WNRPT2L.RSL   Central Point Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNSC     WNSC.EXE      CPS System Consultant - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNSCAUT  WNSCAUT.RSL   CPS System Consultant AUTOEXEC.BAT Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNSCCON  WNSCCON.RSL   CPS System Consultant CONFIG.SYS Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNSCDEF  WNSCDEF.RSL   CPS System Consultant Default Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNSCL    WNSCL.RSL     CPS System Consultant Main Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNSCREC  WNSCREC.RSL   CPS System Consultant Recommendations Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNSCRIPT WNSCRIPT.EXE  CPS ScriptTools - Copyright (C) 1993, 1994 Central Point Software, Inc.
+WNSCSYS  WNSCSYS.RSL   CPS System Consultant SYSTEM.INI Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNSCWIN  WNSCWIN.RSL   CPS System Consultant WIN.INI Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNSCWNU  WNSCWNU.RSL   CPS System Consultant WNUSER.INI Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNSD2    WNSD.EXE      CPS Scheduler - Copyright (C) 1993-1994 Central Point Software, Inc.
+WNSD2L   WNSDL.RSL     CPS Scheduler Resource File - Copyright (C) 1993-1994 Central Point Software, Inc.
 WNSETUP  WNSETUP.EXE   CPS WnSetup, Copyright (c) 1994 Central Point Software, Inc.
+WNSETUPL WNSETUPL.RSL  CPS WnSetupl - Copyright (C) 1994 Central Point Software, Inc.
 WNSRUN   WNSRUN.EXE    CPS ScriptRunner - Copyright (C) 1993, 1994 Central Point Software, Inc.
 WNSSAV2  WNSSAV2.DLL   CPS Screen Saver Library - Copyright (C) 1993 Central Point Software, Inc.
 WNTB     WNTB.DLL      CPS Backup CPS Tape Backup Library - Copyright (c) 1993 Central Point Software, Inc.
@@ -1397,10 +2041,17 @@ WNVCTBL2 WNVCTBL2.DLL  CPS Viewer Table Category Engine Library - Copyright (C) 
 WNVCTXT2 WNVCTXT2.DLL  CPS Viewer Text Category Engine Library - Copyright (C) 1993-94 Central Point Software, Inc.
 WNVCVEC2 WNVCVEC2.DLL  CPS Viewer Vector Category Engine Library - Copyright (C) 1993-94 Central Point Software, Inc.
 WNVE2    WNVE2.DLL     CPS Viewer Engine Library - Copyright (C) 1993-94 Central Point Software, Inc.
+WNVE2L   WNVE2L.RSL    CPS Viewer Engine Library Resource File - Copyright (C) 1993-94 Central Point Software, Inc.
 WNVF2    WNVF2.DLL     CPS Viewer Virtual File Access Layer Library - Copyright (C) 1993-94 Central Point Software, Inc.
 WORDART  WORDART.EXE   WordArt OLE Server (c) 1991 Microsoft Corporation
+WORDDOS  WORDDOS.CNV   MSWord-Opus Converter Module
+WORDMAC  WORDMAC.CNV   MacWord-Opus Converter Module
+WORDWIN1 WORDWIN1.CNV  WinWord-RTF Converter Module
 WOWDEB   WOWDEB.EXE    USA\obj\i386\wowdeb.exe
 WOWEXEC  WOWEXEC.EXE   USA\obj\i386\wowexec.exe
+WPFT5I   WPFT5I.CNW    WordPerfect Converter (C) Microsoft Corp, 1991
+WPGEXP   WPGEXP.FLT    Shell DLL to fix ImageMark filters
+WPGIMP   WPGIMP.FLT    Shell DLL to fix ImageMark filters
 WPHELP   WPHELP.DLL    WordPerfect Help for Microsoft Word
 WPROF    WPROFW.EXE    wprof.exe
 WPS      WIN31PS.EXE   Windows Process Status Utility
@@ -1411,10 +2062,12 @@ WPSUNIRE WPSUNIRE.DLL  Windows Printing System unified resource executor
 WR       WR.DLL        wr.dll
 WRE      WRE.EXE       wre.exe
 WRITE    WRITE.EXE     Microsoft WRITE
+WRITWIN  WRITWIN.CNV   WinWrite-RTF for Windows Converter Module
 WRKBENCH WRKBENCH.DLL  MMSys Workbench Controller DLL
 WSAMPLEW WSAMPLEW.EXE  WATCOM Sampler
 WSASRV   WSASRV.EXE    Windows Sockets Asynchronous Request Server
 WSCTHUNK WSCTHUNK.DLL  wscthunk.exe
+WSETUP.E WSETUP.EXE    Sound Card Setup
 WSPY     WSPY.EXE      wspy.exe
 WSPYHK   WSPYHK.DLL    wspyhk.dll
 WSTRING  WSTRING.DLL   wstring.dll
@@ -1423,9 +2076,12 @@ WV       WDW.EXE       wv.exe
 WVERIFY  WVERIFY.EXE   Wverify
 WXSRVR   WXSRVR.EXE    WXSRVR.exe
 WZOOM    WZOOM.EXE     wzoom.exe
+XBS200   XBS200.DLL    Microsoft (R) dBase ISAM  Version 2.00.13
 XBS200   XBS200.DLL    Microsoft (R) dBase ISAM  Version 2.50
 XER4020  XER4020.DRV   DDRV Xerox 4020
+XLMAPI   XLMAPI.XL_    Microsoft Excel MAPI Translation Layer XLL
 XTENSION XTENSION.DLL  File Manager Extension DLL
+YATC     YATC.VB_      Yet Another Tab Control
 YNC      YNC.EXE       ync.exe
 YOMDLL   DPMIMEM.DLL   dpmimem.dll
 ZOOMIN   ZOOMIN.EXE    Template Microsoft Windows Application
