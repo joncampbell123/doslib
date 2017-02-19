@@ -740,3 +740,121 @@ for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
 }
 close(IBMML);
 
+open(IBMML,">summary.modulesymnames.ibmpc") || die;
+
+my @final = ( );
+
+#while (my ($module,$modlistr) = each(%modules)) {
+for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
+    $module = $modorder[$lmodi];
+    $modlistr = $modules{$module};
+
+    my @modlist = @{$modlistr};
+
+    my $max_ordinals = 0;
+    my @modlist = @{$modlistr};
+    for ($modi=0;$modi < @modlist;$modi++) {
+        my $modinfop = $modlist[$modi];
+        my %modinfo = %{$modinfop};
+
+        if (exists $modinfo{'ordinals'}) {
+            my @ordinals = @{$modinfo{'ordinals'}};
+            $max_ordinals = @ordinals if $max_ordinals < @ordinals;
+        }
+    }
+
+    next if $max_ordinals <= 1;
+
+    for ($i=1;$i < $max_ordinals;$i++) {
+        for ($modi=0;$modi < @modlist;$modi++) {
+            my $modinfop = $modlist[$modi];
+            my %modinfo = %{$modinfop};
+            my @ent = ( );
+
+            next if (!(exists $modinfo{'ordinals'}));
+            my @ordinals = @{$modinfo{'ordinals'}};
+
+            my $ordref = $ordinals[$i];
+            if (defined($ordref)) {
+                my %ref = %{$ordref};
+
+                $nam = exists $ref{'NAME'} ? $ref{'NAME'} : "";
+                $typ = exists $ref{'TYPE'} ? $ref{'TYPE'} : "";
+
+                next if $nam eq '';
+                next if $typ eq '';
+
+                push(@ent,$nam);
+                push(@ent,$module);
+                push(@ent,$i);
+
+                push(@final,[@ent]);
+            }
+        }
+    }
+}
+
+    @final = sort {
+        my @sa = @{$a}, @sb = @{$b};
+        my $x;
+
+        $x = $sa[0] cmp $sb[0];
+        return $x if $x != 0;
+
+        $x = $sa[1] cmp $sb[1];
+        return $x if $x != 0;
+
+        $x = $sa[2] cmp $sb[2];
+        return $x if $x != 0;
+
+        return 0;
+    } @final;
+
+    # unique
+    my @r = ( );
+    my $p0 = '',$p1 = '',$p2 = '';
+    for ($i=0;$i < @final;$i++) {
+        my @ent = @{$final[$i]};
+
+        if ($ent[0] ne $p0 || $ent[1] ne $p1 || $ent[2] ne $p2) {
+            push(@r,[@ent]);
+        }
+
+        $p0 = $ent[0];
+        $p1 = $ent[1];
+        $p2 = $ent[2];
+    }
+    @final = @r;
+
+    # print
+    for ($i=0;$i < @final;$i++) {
+        my @ent = @{$final[$i]};
+        my $lin = '';
+
+        # Name: 60 chars
+        $lin .= $ent[0];
+        while (length($lin) < 60) {
+            $lin .= ' ';
+        }
+
+        # col
+        $lin .= ' ';
+
+        # Module: 10 chars
+        $lin .= $ent[1];
+        while (length($lin) < (60+1+10+1)) {
+            $lin .= ' ';
+        }
+
+        # col
+        $lin .= ' ';
+
+        # ordinal
+        $lin .= $ent[2];
+
+        # done
+        print IBMML text2html($lin)."\n";
+    }
+
+close(IBMML);
+
