@@ -610,3 +610,133 @@ for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
 }
 close(IBMML);
 
+open(IBMML,">summary.modulesyms.ibmpc") || die;
+
+#while (my ($module,$modlistr) = each(%modules)) {
+for ($lmodi=0;$lmodi < @modorder;$lmodi++) {
+    $module = $modorder[$lmodi];
+    $modlistr = $modules{$module};
+
+    my @modlist = @{$modlistr};
+
+    my $max_ordinals = 0;
+    my @modlist = @{$modlistr};
+    for ($modi=0;$modi < @modlist;$modi++) {
+        my $modinfop = $modlist[$modi];
+        my %modinfo = %{$modinfop};
+
+        if (exists $modinfo{'ordinals'}) {
+            my @ordinals = @{$modinfo{'ordinals'}};
+            $max_ordinals = @ordinals if $max_ordinals < @ordinals;
+        }
+    }
+
+    next if $max_ordinals <= 1;
+
+    for ($i=1;$i < $max_ordinals;$i++) {
+        my @refs;
+
+        for ($modi=0;$modi < @modlist;$modi++) {
+            my $modinfop = $modlist[$modi];
+            my %modinfo = %{$modinfop};
+
+            next if (!(exists $modinfo{'ordinals'}));
+            my @ordinals = @{$modinfo{'ordinals'}};
+
+            my $ordref = $ordinals[$i];
+            if (defined($ordref)) {
+                my %ordent = %{$ordref};
+                $ordent{modinfo} = ( );
+                push(@{$ordent{modinfo}}, \%modinfo);
+                push(@refs,\%ordent);
+            }
+        }
+
+        # sort
+        @refs = sort refsort @refs;
+
+        # combine like items
+        for ($j=0;($j+1) < @refs;) {
+            my %ra = %{$refs[$j]};
+            my %rb = %{$refs[$j+1]};
+
+            my $raname = $ra{'NAME'};
+            $raname = 'ZZZZUNDEFINEDxxxxxxx' unless defined($raname);
+            my $rbname = $rb{'NAME'};
+            $rbname = 'ZZZZUNDEFINEDxxxxxxx' unless defined($rbname);
+
+            my $ratype = $ra{'TYPE'};
+            $ratype = '' unless defined($ratype);
+            my $rbtype = $rb{'TYPE'};
+            $rbtype = '' unless defined($rbtype);
+            $ratype =~ s/(nonresident|resident) +//;
+            $rbtype =~ s/(nonresident|resident) +//;
+
+            if ($raname eq $rbname && $ratype eq $rbtype) {
+                # remove like item, combine $j and $j+1 modinfo
+                my @f;
+
+                for ($k=0;$k < @refs;$k++) {
+                    if ($k == ($j+1)) {
+                        my %ra = %{$refs[$j]}; # previous
+                        my %rb = %{$refs[$k]}; # current (one to NOT copy)
+                        push(@{$ra{modinfo}},@{$rb{modinfo}});
+                    }
+                    else {
+                        push(@f,$refs[$k]);
+                    }
+                }
+
+                @refs = @f;
+            }
+            else {
+                $j++;
+            }
+        }
+
+        # print it out
+        my $emitted = 0;
+        for ($j=0;$j < @refs;$j++) {
+            my %ref = %{$refs[$j]};
+            my $lin = '';
+
+            next if !exists($ref{'NAME'}) && !exists($ref{'TYPE'});
+
+            {
+                $nam = exists $ref{'NAME'} ? $ref{'NAME'} : '';
+                $typ = exists $ref{'TYPE'} ? $ref{'TYPE'} : '';
+
+                next if ($nam eq ''     && $emitted > 0);
+                next if ($typ eq 'type' && $emitted > 0);
+                $nam = "(empty)" if $typ eq 'type';
+                $nam = "(no name)" if $nam eq '';
+
+                # Module: 8 chars
+                $lin .= $module;
+                while (length($lin) < 8) {
+                    $lin .= ' ';
+                }
+
+                # col
+                $lin .= ' ';
+
+                # ordinal
+                $lin .= $i;
+                while (length($lin) < (8+1+5)) {
+                    $lin .= ' ';
+                }
+
+                # col
+                $lin .= ' ';
+
+                # name
+                $lin .= $nam;
+
+                print IBMML text2html($lin)."\n";
+                $emitted++;
+            }
+        }
+    }
+}
+close(IBMML);
+
