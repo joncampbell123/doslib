@@ -205,6 +205,16 @@ void __declspec(naked) my_sys_vm_terminate(void) {
     }
 }
 
+/* NOTED:
+ *   I just noticed in the Windows 3.1 DDK that Microsoft declares _LDATA (data) and _LTEXT (code)
+ *   as both class 'CODE'. That means code and data are combined together. Both are declared as if
+ *   readonly executable in the LE header.
+ *
+ *   In fact, Windows 3.1 seems to ignore VxDs that have non-code LE objects, like all of it must
+ *   be declared as if code.
+ *
+ *   This is Watcom's biggest problem making VxDs, because Watcom wants to declare data in a
+ *   separate segment from code and report it as data in the LE header. */
 void __declspec(naked) vxd_control_proc(void) {
     VXD_Control_Dispatch(Sys_Critical_Init, my_sys_critical_init);
     VXD_Control_Dispatch(Sys_Critical_Exit, my_sys_critical_exit);
