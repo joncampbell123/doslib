@@ -14,8 +14,11 @@ void vxd_control_proc(void);
 #define VXD_INT3()                  __asm int 3
 
 /* CPU register access */
+static uint32_t getEBX();
 #pragma aux getEBX = \
     value [ebx];
+
+static uint32_t getEDX();
 #pragma aux getEDX = \
     value [edx];
 
@@ -201,9 +204,11 @@ void __declspec(naked) my_sys_vm_init(void) {
  * Exit:
  *   CF = 0 */
 void __cdecl my_set_device_focus(void) {
-    if (Focus_VM_Handle != getEBX()) {
-        Focus_VM_Handle = getEBX();
-        if (getEBX() == System_VM_Handle) {
+    const uint32_t VM_Handle = getEBX(); /* <- grab EBX before further code overwrites it */
+
+    if (Focus_VM_Handle != VM_Handle) {
+        Focus_VM_Handle = VM_Handle;
+        if (VM_Handle == System_VM_Handle) {
             dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
             dosbox_id_write_data(1); /* PS/2 notification */
         }
