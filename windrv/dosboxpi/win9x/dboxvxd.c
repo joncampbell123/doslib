@@ -120,22 +120,6 @@ void __declspec(naked) my_sys_critical_init(void) {
     VXD_RET();
 }
 
-/* VxD control message Sys_Critical_Exit.
- *
- * Entry:
- *   EAX = Sys_Critical_Exit
- *
- * Exit:
- *   Carry flag = clear if success, set if failure
- *
- * Notes:
- *   Do not use Simulate_Int or Exec_Int at this stage. */
-void __declspec(naked) my_sys_critical_exit(void) {
-    /* success */
-    VXD_CF_SUCCESS();
-    VXD_RET();
-}
-
 /* VxD control message Device_Init.
  *
  * Entry:
@@ -148,6 +132,10 @@ void __declspec(naked) my_sys_critical_exit(void) {
 void __cdecl my_device_init(void) {
     if (!probe_dosbox_id())
         goto fail;
+
+/* do it */
+    dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
+    dosbox_id_write_data(1); /* PS/2 notification */
 
 /* success */
     VXD_CF_SUCCESS();
@@ -194,20 +182,6 @@ void __declspec(naked) my_sys_vm_init(void) {
     VXD_RET();
 }
 
-/* VxD control message VM_Init.
- *
- * Entry:
- *   EAX = VM_Init
- *   EBX = handle of new VM
- *
- * Exit:
- *   Carry flag = clear if success, set if failure */
-void __declspec(naked) my_vm_init(void) {
-    /* success */
-    VXD_CF_SUCCESS();
-    VXD_RET();
-}
-
 /* VxD control message Sys_VM_Terminate.
  *
  * Entry:
@@ -216,13 +190,17 @@ void __declspec(naked) my_vm_init(void) {
  *
  * Exit:
  *   Carry flag = clear if success, set if failure */
-void __declspec(naked) my_sys_vm_terminate(void) {
+void __cdecl my_sys_vm_terminate(void) {
+    if (System_VM_Handle != 0) {
+        dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
+        dosbox_id_write_data(0); /* disable */
+    }
+
 /* system VM is shutting down, so lose track of it now */
     __asm mov System_VM_Handle,0
 
     /* success */
     VXD_CF_SUCCESS();
-    VXD_RET();
 }
 
 /* NOTED:
@@ -237,12 +215,10 @@ void __declspec(naked) my_sys_vm_terminate(void) {
  *   separate segment from code and report it as data in the LE header. */
 void __declspec(naked) vxd_control_proc(void) {
     VXD_Control_Dispatch(Sys_Critical_Init, my_sys_critical_init);
-    VXD_Control_Dispatch(Sys_Critical_Exit, my_sys_critical_exit);
     VXD_Control_Dispatch(Sys_VM_Terminate, my_sys_vm_terminate);
     VXD_Control_Dispatch(Init_Complete, my_init_complete);
     VXD_Control_Dispatch(Sys_VM_Init, my_sys_vm_init);
     VXD_Control_Dispatch(Device_Init, my_device_init);
-    VXD_Control_Dispatch(VM_Init, my_vm_init);
     VXD_CF_SUCCESS();
     VXD_RET();
 }
