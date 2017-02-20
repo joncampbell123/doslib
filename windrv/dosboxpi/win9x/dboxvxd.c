@@ -63,7 +63,9 @@ void vxd_control_proc(void);
 #define VMMcall(service)        VxDcall(VMM_Device_ID,service)
 #define VMMjmp(service)         VxDjmp(VMM_Device_ID,service)
 
-const struct windows_vxd_ddb_win31 __based( __segname("_CODE") ) DBOXMPI_DDB = {
+#define VxD_DATA                 __based( __segname("_CODE") )
+
+const struct windows_vxd_ddb_win31 VxD_DATA DBOXMPI_DDB = {
     0,                                                      // +0x00 DDB_Next
     0x030A,                                                 // +0x04 DDB_SDK_Version
     0x0000,                                                 // +0x06 DDB_Req_Device_Number (Undefined_Device_ID)
