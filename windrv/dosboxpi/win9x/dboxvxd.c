@@ -89,7 +89,10 @@ const struct windows_vxd_ddb_win31 __based( __segname("_CODE") ) DBOXMPI_DDB = {
  *   ESI = Pointer to command tail retrived from PSP of WIN386.EXE
  *
  * Exit:
- *   Carry flag = clear if success, set if failure */
+ *   Carry flag = clear if success, set if failure
+ *
+ * Notes:
+ *   Do not use Simulate_Int or Exec_Int at this stage. */
 void __declspec(naked) my_sys_critical_init(void) {
     /* success */
     __asm {
@@ -104,7 +107,10 @@ void __declspec(naked) my_sys_critical_init(void) {
  *   EAX = Sys_Critical_Exit
  *
  * Exit:
- *   Carry flag = clear if success, set if failure */
+ *   Carry flag = clear if success, set if failure
+ *
+ * Notes:
+ *   Do not use Simulate_Int or Exec_Int at this stage. */
 void __declspec(naked) my_sys_critical_exit(void) {
     /* success */
     __asm {
@@ -138,7 +144,11 @@ void __declspec(naked) my_device_init(void) {
  *   ESI = Pointer to command tail retrieved from PSP of WIN386.EXE
  *
  * Exit:
- *   Carry flag = clear if success, set if failure */
+ *   Carry flag = clear if success, set if failure
+ *
+ * Notes:
+ *   The system will send this message out just before releasing it's
+ *   INIT pages and taking the instance snapshot. */
 void __declspec(naked) my_init_complete(void) {
     /* success */
     __asm {
