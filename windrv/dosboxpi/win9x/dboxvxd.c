@@ -21,6 +21,9 @@ void vxd_control_proc(void);
 #define VXD_CF_SUCCESS()            __asm clc
 #define VXD_CF_FAILURE()            __asm stc
 
+/* you must put this at the end of your function if it's declared __declspec(naked) */
+#define VXD_RET()                   __asm ret
+
 /* VXD control messages */
 #define Sys_Critical_Init           0x0000
 #define Device_Init                 0x0001
@@ -76,6 +79,8 @@ void vxd_control_proc(void);
 
 #define VxD_DATA                __based( __segname("_CODE") )
 
+typedef uint32_t vxd_vm_handle_t;
+
 const struct windows_vxd_ddb_win31 VxD_DATA DBOXMPI_DDB = {
     0,                                                      // +0x00 DDB_Next
     0x030A,                                                 // +0x04 DDB_SDK_Version
@@ -94,6 +99,9 @@ const struct windows_vxd_ddb_win31 VxD_DATA DBOXMPI_DDB = {
     0x00000000UL                                            // +0x34 DDB_Service_Table_Size
 };
 
+/* keep track of the system VM */
+vxd_vm_handle_t VxD_DATA System_VM_Handle = 0;
+
 /* VxD control message Sys_Critical_Init.
  *
  * Entry:
@@ -108,10 +116,8 @@ const struct windows_vxd_ddb_win31 VxD_DATA DBOXMPI_DDB = {
  *   Do not use Simulate_Int or Exec_Int at this stage. */
 void __declspec(naked) my_sys_critical_init(void) {
     /* success */
-    __asm {
-        clc
-        ret
-    }
+    VXD_CF_SUCCESS();
+    VXD_RET();
 }
 
 /* VxD control message Sys_Critical_Exit.
@@ -126,10 +132,8 @@ void __declspec(naked) my_sys_critical_init(void) {
  *   Do not use Simulate_Int or Exec_Int at this stage. */
 void __declspec(naked) my_sys_critical_exit(void) {
     /* success */
-    __asm {
-        clc
-        ret
-    }
+    VXD_CF_SUCCESS();
+    VXD_RET();
 }
 
 /* VxD control message Device_Init.
@@ -169,10 +173,8 @@ fail:
  *   INIT pages and taking the instance snapshot. */
 void __declspec(naked) my_init_complete(void) {
     /* success */
-    __asm {
-        clc
-        ret
-    }
+    VXD_CF_SUCCESS();
+    VXD_RET();
 }
 
 /* VxD control message Sys_VM_Init.
@@ -184,11 +186,12 @@ void __declspec(naked) my_init_complete(void) {
  * Exit:
  *   Carry flag = clear if success, set if failure */
 void __declspec(naked) my_sys_vm_init(void) {
+    /* keep track of the System VM so we can make absolute pointer integration exclusive to it */
+    __asm mov System_VM_Handle,ebx
+
     /* success */
-    __asm {
-        clc
-        ret
-    }
+    VXD_CF_SUCCESS();
+    VXD_RET();
 }
 
 /* VxD control message VM_Init.
@@ -201,10 +204,8 @@ void __declspec(naked) my_sys_vm_init(void) {
  *   Carry flag = clear if success, set if failure */
 void __declspec(naked) my_vm_init(void) {
     /* success */
-    __asm {
-        clc
-        ret
-    }
+    VXD_CF_SUCCESS();
+    VXD_RET();
 }
 
 /* VxD control message Sys_VM_Terminate.
@@ -216,11 +217,12 @@ void __declspec(naked) my_vm_init(void) {
  * Exit:
  *   Carry flag = clear if success, set if failure */
 void __declspec(naked) my_sys_vm_terminate(void) {
+/* system VM is shutting down, so lose track of it now */
+    __asm mov System_VM_Handle,0
+
     /* success */
-    __asm {
-        clc
-        ret
-    }
+    VXD_CF_SUCCESS();
+    VXD_RET();
 }
 
 /* NOTED:
@@ -241,9 +243,7 @@ void __declspec(naked) vxd_control_proc(void) {
     VXD_Control_Dispatch(Sys_VM_Init, my_sys_vm_init);
     VXD_Control_Dispatch(Device_Init, my_device_init);
     VXD_Control_Dispatch(VM_Init, my_vm_init);
-    __asm {
-        clc
-        ret
-    }
+    VXD_CF_SUCCESS();
+    VXD_RET();
 }
 
