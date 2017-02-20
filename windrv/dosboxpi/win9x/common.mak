@@ -36,6 +36,9 @@ exe: $(DBOXMPI_DRV) $(DBOXMPI_VXD) .symbolic
 
 lib: .symbolic
 
+../../../hw/dosboxid/win32_vxd/dosboxid.lib:
+	cd ../../../hw/dosboxid && ./make.sh build lib win32
+
 $(SUBDIR)$(HPS)dboxvxd.obj: dboxvxd.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_VXD) $[@
 	@wcc386 @tmp.cmd
@@ -79,7 +82,7 @@ $(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dll
 !endif
 
 !ifdef DBOXMPI_VXD
-$(DBOXMPI_VXD): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxvxd.obj
+$(DBOXMPI_VXD): $(HW_DOSBOXID_LIB) ../../../hw/dosboxid/win32_vxd/dosboxid.lib $(SUBDIR)$(HPS)dboxvxd.obj
 	%write tmp.cmd option quiet
 	%write tmp.cmd system win_vxd
 	%write tmp.cmd file $(SUBDIR)$(HPS)dboxvxd.obj
