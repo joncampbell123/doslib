@@ -204,7 +204,10 @@ void __declspec(naked) my_sys_vm_init(void) {
  * Exit:
  *   CF = 0 */
 void __cdecl my_set_device_focus(void) {
-    const uint32_t VM_Handle = getEBX(); /* <- grab EBX before further code overwrites it */
+    /* NTS: Grab registers, stick in const variables. Watcom's optimizer is smart enough
+     *      in the best case scenario to boil this down to direct register work until
+     *      the register is overwritten */
+    const uint32_t VM_Handle = getEBX();
 
     if (Focus_VM_Handle != VM_Handle) {
         Focus_VM_Handle = VM_Handle;
