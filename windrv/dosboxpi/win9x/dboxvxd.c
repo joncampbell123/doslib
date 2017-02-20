@@ -212,7 +212,7 @@ void __declspec(naked) vxd_control_proc(void) {
     VXD_Control_Dispatch(Init_Complete, my_init_complete);
     VXD_Control_Dispatch(Sys_VM_Init, my_sys_vm_init);
     VXD_Control_Dispatch(Device_Init, my_device_init);
-    VXD_Control_Dispatch(Sys_VM_Init, my_vm_init);
+    VXD_Control_Dispatch(VM_Init, my_vm_init);
     __asm {
         clc
         ret

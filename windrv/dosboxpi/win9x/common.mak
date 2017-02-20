@@ -37,7 +37,7 @@ exe: $(DBOXMPI_DRV) $(DBOXMPI_VXD) .symbolic
 lib: .symbolic
 
 $(SUBDIR)$(HPS)dboxvxd.obj: dboxvxd.c
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_VXD) -nc=CODE -nt=_LTEXT $[@
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_VXD) $[@
 	@wcc386 @tmp.cmd
 
 $(SUBDIR)$(HPS)dboxmpi.res: dboxmpi.rc
@@ -86,10 +86,7 @@ $(DBOXMPI_VXD): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxvxd.obj
 	%write tmp.cmd option map=$(DBOXMPI_VXD).map
 	%write tmp.cmd option nocaseexact
 	%write tmp.cmd segment CLASS 'CODE' PRELOAD NONDISCARDABLE
-	%write tmp.cmd segment CLASS 'CODE' PRELOAD NONDISCARDABLE
 	%write tmp.cmd segment CLASS 'ICODE' DISCARDABLE
-	%write tmp.cmd segment CLASS 'ICODE' DISCARDABLE
-	%write tmp.cmd segment CLASS 'PCODE' NONDISCARDABLE
 	%write tmp.cmd segment CLASS 'PCODE' NONDISCARDABLE
 	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd option modname=DBOXMPI
