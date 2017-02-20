@@ -13,6 +13,12 @@ void vxd_control_proc(void);
 /* USEFUL */
 #define VXD_INT3()                  __asm int 3
 
+/* CPU register access */
+#pragma aux getEBX = \
+    value [ebx];
+#pragma aux getEDX = \
+    value [edx];
+
 /* VxD C function exit macros.
  * these are related to control messages and some calls where success is signalled
  * by clearing the Carry flag (CF=0) and failure is setting the Carry flag (CF=1).
@@ -101,6 +107,7 @@ const struct windows_vxd_ddb_win31 VxD_DATA DBOXMPI_DDB = {
 
 /* keep track of the system VM */
 vxd_vm_handle_t VxD_DATA System_VM_Handle = 0;
+vxd_vm_handle_t VxD_DATA Focus_VM_Handle = 0;
 
 /* VxD control message Sys_Critical_Init.
  *
@@ -182,6 +189,33 @@ void __declspec(naked) my_sys_vm_init(void) {
     VXD_RET();
 }
 
+/* VxD control message Set_Device_Focus.
+ *
+ * Entry:
+ *   EAX = Sys_Device_Focus
+ *   EBX = Virtual machine handle
+ *   EDX = Virtual device to recieve focus, or 0 for all
+ *   ESI = Flags
+ *   EDI = AssocVM
+ *
+ * Exit:
+ *   CF = 0 */
+void __cdecl my_set_device_focus(void) {
+    if (Focus_VM_Handle != getEBX()) {
+        Focus_VM_Handle = getEBX();
+        if (getEBX() == System_VM_Handle) {
+            dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
+            dosbox_id_write_data(1); /* PS/2 notification */
+        }
+        else {
+            dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
+            dosbox_id_write_data(0); /* disable */
+        }
+    }
+
+    VXD_CF_SUCCESS();
+}
+
 /* VxD control message Sys_VM_Terminate.
  *
  * Entry:
@@ -216,6 +250,7 @@ void __cdecl my_sys_vm_terminate(void) {
 void __declspec(naked) vxd_control_proc(void) {
     VXD_Control_Dispatch(Sys_Critical_Init, my_sys_critical_init);
     VXD_Control_Dispatch(Sys_VM_Terminate, my_sys_vm_terminate);
+    VXD_Control_Dispatch(Set_Device_Focus, my_set_device_focus);
     VXD_Control_Dispatch(Init_Complete, my_init_complete);
     VXD_Control_Dispatch(Sys_VM_Init, my_sys_vm_init);
     VXD_Control_Dispatch(Device_Init, my_device_init);
