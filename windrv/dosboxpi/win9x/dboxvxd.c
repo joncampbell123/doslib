@@ -246,6 +246,13 @@ void __cdecl my_sys_vm_terminate(void) {
 }
 
 /* NOTED:
+ *   Watcom C appears to have a bug where functions declared with __declspec(naked) can make
+ *   function calls to non-naked functions, but the compiler will neither throw an error nor
+ *   generate the function call. if() statements appear to have the same effect.
+ *
+ *   To work around this, we declare those functions as __cdecl, which incurs 12 bytes of stack
+ *   overhead when the prologue/epilogue saves EBX and two other registers */
+/* NOTED:
  *   I just noticed in the Windows 3.1 DDK that Microsoft declares _LDATA (data) and _LTEXT (code)
  *   as both class 'CODE'. That means code and data are combined together. Both are declared as if
  *   readonly executable in the LE header.
