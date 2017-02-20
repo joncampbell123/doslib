@@ -2,6 +2,7 @@
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = HW_DOSBOXID_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
+CFLAGS_THIS_VXD = -fo=$(SUBDIR)_vxd$(HPS).obj -s -zl -zc -nt=_TEXT -e=2 -zq -zw -mf -oilrtfm -wx -fp3 -3r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=32 -dTARGET86=386 -DMMODE=f -q -bc -zl -zdp -dTARGET_VXD=1
 CFLAGS_THIS_DRV = -fo=$(SUBDIR)_drv$(HPS).obj -s -zl -zc -nt=_TEXT
 CFLAGS_THIS_DRVN = -fo=$(SUBDIR)_drvn$(HPS).obj -s -zl -zc -nt=_TEXT
 CFLAGS_THIS_DRV_ND = -fo=$(SUBDIR)_drv$(HPS).obj -s -zl -zc -nt=_NDTEXT -nc=NDCODE
@@ -24,6 +25,13 @@ $(HW_DOSBOXID_LIB): $(OBJS)
 	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)igprobe.obj  -+$(SUBDIR)$(HPS)igreset.obj  -+$(SUBDIR)$(HPS)igrident.obj
 	wlib -q -b -c $(HW_DOSBOXID_LIB) -+$(SUBDIR)$(HPS)igverstr.obj -+$(SUBDIR)$(HPS)igdbgmsg.obj
 
+!ifdef HW_DOSBOXID_LIB_VXD
+$(HW_DOSBOXID_LIB_VXD): $(OBJS)
+	wlib -q -b -c $(HW_DOSBOXID_LIB_VXD) -+$(SUBDIR)_vxd$(HPS)iglib.obj    -+$(SUBDIR)_vxd$(HPS)igregio.obj  -+$(SUBDIR)_vxd$(HPS)igrselio.obj
+	wlib -q -b -c $(HW_DOSBOXID_LIB_VXD) -+$(SUBDIR)_vxd$(HPS)igprobe.obj  -+$(SUBDIR)_vxd$(HPS)igreset.obj  -+$(SUBDIR)_vxd$(HPS)igrident.obj
+	wlib -q -b -c $(HW_DOSBOXID_LIB_VXD) -+$(SUBDIR)_vxd$(HPS)igverstr.obj -+$(SUBDIR)_vxd$(HPS)igdbgmsg.obj
+!endif
+
 !ifdef HW_DOSBOXID_LIB_DRV
 $(HW_DOSBOXID_LIB_DRV): $(OBJS)
 	wlib -q -b -c $(HW_DOSBOXID_LIB_DRV) -+$(SUBDIR)_drv$(HPS)iglib.obj    -+$(SUBDIR)_drv$(HPS)igregio.obj  -+$(SUBDIR)_drv$(HPS)igrselio.obj
@@ -43,6 +51,11 @@ $(HW_DOSBOXID_LIB_DRVN): $(OBJS)
 .C.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	@$(CC) @tmp.cmd
+!ifdef HW_DOSBOXID_LIB_VXD
+	mkdir -p $(SUBDIR)_vxd
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_THIS_VXD) $[@
+	@$(CC) @tmp.cmd
+!endif
 !ifdef HW_DOSBOXID_LIB_DRV
 	mkdir -p $(SUBDIR)_drv
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRV) $[@
@@ -57,6 +70,11 @@ $(HW_DOSBOXID_LIB_DRVN): $(OBJS)
 $(SUBDIR)$(HPS)igregio.obj: igregio.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	@$(CC) @tmp.cmd
+!ifdef HW_DOSBOXID_LIB_VXD
+	mkdir -p $(SUBDIR)_vxd
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_THIS_VXD) $[@
+	@$(CC) @tmp.cmd
+!endif
 !ifdef HW_DOSBOXID_LIB_DRV
 	mkdir -p $(SUBDIR)_drv
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRV_ND) $[@
@@ -71,6 +89,11 @@ $(SUBDIR)$(HPS)igregio.obj: igregio.c
 $(SUBDIR)$(HPS)igrselio.obj: igrselio.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
 	@$(CC) @tmp.cmd
+!ifdef HW_DOSBOXID_LIB_VXD
+	mkdir -p $(SUBDIR)_vxd
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_THIS_VXD) $[@
+	@$(CC) @tmp.cmd
+!endif
 !ifdef HW_DOSBOXID_LIB_DRV
 	mkdir -p $(SUBDIR)_drv
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $(CFLAGS_THIS_DRV_ND) $[@
@@ -124,7 +147,7 @@ $(SUBDIR)$(HPS)mcr.obj: mcr.c
 
 all: $(OMFSEGDG) lib exe
 
-lib: $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_DRV) $(HW_DOSBOXID_LIB_DRVN) .symbolic
+lib: $(HW_DOSBOXID_LIB) $(HW_DOSBOXID_LIB_VXD) $(HW_DOSBOXID_LIB_DRV) $(HW_DOSBOXID_LIB_DRVN) .symbolic
 
 exe: $(TEST_EXE) $(MCR_EXE) $(UMC_EXE) $(UMCN_EXE) $(SSHOT_EXE) $(VCAP_EXE) $(WCAP_EXE) $(KBSTAT_EXE) $(KBINJECT_EXE) $(MSINJECT_EXE) .symbolic
 

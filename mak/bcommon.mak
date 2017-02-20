@@ -156,6 +156,14 @@ HW_DOSBOXID_LIB_DRVN_WLINK_LIBRARIES=library $(HW_DOSBOXID_LIB_DRVN)
 !  endif
 ! endif
 !endif
+!ifdef TARGET_WINDOWS
+! ifeq TARGET_MSDOS 32
+!  ifeq MMODE f
+HW_DOSBOXID_LIB_VXD=$(HW_DOSBOXID_LIB_DIR)$(HPS)$(SUBDIR)_vxd$(HPS)dosboxid.lib
+HW_DOSBOXID_LIB_VXD_WLINK_LIBRARIES=library $(HW_DOSBOXID_LIB_VXD)
+!  endif
+! endif
+!endif
 
 # HW\MPU401---------------------------------------------------------------------------------
 HW_MPU401_LIB_DIR=$(REL)$(HPS)hw$(HPS)mpu401

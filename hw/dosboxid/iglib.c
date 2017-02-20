@@ -15,5 +15,5 @@
 
 #include <hw/dosboxid/iglib.h>
 
-uint16_t dosbox_id_baseio = 0x28U;	// Default ports 0x28 - 0x2B
+uint16_t DOSBOXID_VAR dosbox_id_baseio = 0x28U;	// Default ports 0x28 - 0x2B
 

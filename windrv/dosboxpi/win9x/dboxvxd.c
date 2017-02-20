@@ -63,7 +63,7 @@ void vxd_control_proc(void);
 #define VMMcall(service)        VxDcall(VMM_Device_ID,service)
 #define VMMjmp(service)         VxDjmp(VMM_Device_ID,service)
 
-#define VxD_DATA                 __based( __segname("_CODE") )
+#define VxD_DATA                __based( __segname("_CODE") )
 
 const struct windows_vxd_ddb_win31 VxD_DATA DBOXMPI_DDB = {
     0,                                                      // +0x00 DDB_Next
@@ -130,12 +130,16 @@ void __declspec(naked) my_sys_critical_exit(void) {
  *
  * Exit:
  *   Carry flag = clear if success, set if failure */
-void __declspec(naked) my_device_init(void) {
-    /* success */
-    __asm {
-        clc
-        ret
-    }
+void __cdecl my_device_init(void) {
+    if (!probe_dosbox_id())
+        goto fail;
+
+success:
+    __asm clc       ; NTS this works because the calling convention and prologue/epilogue does not save/modify flags
+    return;
+fail:
+    __asm stc       ; NTS this works because the calling convention and prologue/epilogue does not save/modify flags
+    return;
 }
 
 /* VxD control message Init_Complete.

@@ -83,6 +83,7 @@ $(DBOXMPI_VXD): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxvxd.obj
 	%write tmp.cmd option quiet
 	%write tmp.cmd system win_vxd
 	%write tmp.cmd file $(SUBDIR)$(HPS)dboxvxd.obj
+	%write tmp.cmd library ../../../hw/dosboxid/win32_vxd/dosboxid.lib
 	%write tmp.cmd option map=$(DBOXMPI_VXD).map
 	%write tmp.cmd option nocaseexact
 	%write tmp.cmd segment CLASS 'CODE' PRELOAD NONDISCARDABLE

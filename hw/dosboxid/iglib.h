@@ -2,7 +2,15 @@
 #ifndef __DOSLIB_HW_IDE_DOSBOXIGLIB_H
 #define __DOSLIB_HW_IDE_DOSBOXIGLIB_H
 
-extern uint16_t dosbox_id_baseio;
+/* In order to be usable as part of a VxD, code must be combined with data.
+ * In Watcom C we can do this by declaring all global variables __based on _CODE. */
+#ifdef TARGET_VXD
+# define DOSBOXID_VAR __based( __segname("_CODE") )
+#else
+# define DOSBOXID_VAR
+#endif
+
+extern uint16_t DOSBOXID_VAR dosbox_id_baseio;
 
 #define DOSBOX_IDPORT(x)			(dosbox_id_baseio+(x))
 
