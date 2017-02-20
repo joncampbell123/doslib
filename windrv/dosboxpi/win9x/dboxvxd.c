@@ -149,6 +149,7 @@ void __cdecl my_device_init(void) {
     VXD_CF_SUCCESS();
     return;
 fail:
+    /* indicate failure. Windows will unload this VxD without complaint and continue on. */
     VXD_CF_FAILURE();
     return;
 }
