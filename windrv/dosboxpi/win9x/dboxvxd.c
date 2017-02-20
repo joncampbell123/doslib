@@ -1,14 +1,25 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdio.h>
 
 #include <hw/dos/exelehdr.h>
+
+#include <hw/dosboxid/iglib.h>
 
 void vxd_control_proc(void);
 
 /* USEFUL */
 #define VXD_INT3()                  __asm int 3
+
+/* VxD C function exit macros.
+ * these are related to control messages and some calls where success is signalled
+ * by clearing the Carry flag (CF=0) and failure is setting the Carry flag (CF=1).
+ * These macros work even from within __cdecl functions because the calling convention
+ * and prologue/epilogue do not change flags */
+#define VXD_CF_SUCCESS()            __asm clc
+#define VXD_CF_FAILURE()            __asm stc
 
 /* VXD control messages */
 #define Sys_Critical_Init           0x0000
@@ -134,11 +145,11 @@ void __cdecl my_device_init(void) {
     if (!probe_dosbox_id())
         goto fail;
 
-success:
-    __asm clc       ; NTS this works because the calling convention and prologue/epilogue does not save/modify flags
+/* success */
+    VXD_CF_SUCCESS();
     return;
 fail:
-    __asm stc       ; NTS this works because the calling convention and prologue/epilogue does not save/modify flags
+    VXD_CF_FAILURE();
     return;
 }
 
