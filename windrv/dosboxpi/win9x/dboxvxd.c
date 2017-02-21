@@ -112,11 +112,20 @@ const struct windows_vxd_ddb_win31 VxD_DATA DBOXMPI_DDB = {
 vxd_vm_handle_t VxD_DATA System_VM_Handle = 0;
 vxd_vm_handle_t VxD_DATA Focus_VM_Handle = 0;
 
+/* try to hack ASM register access into C prototype */
+/* VxD control messages appear to have some consistent pattern with their registers, which we represent here.
+ * Watcom C won't let us specify a protocol with no return value. But, The Windows DDK samples imply
+ * that Windows expects us to trash EAX anyway at least. */
+#pragma aux VxDctrlmsgProcEBSDdi "__vxd_ctrlmsg_EBSDdi__*" \
+    parm [eax] [ebx] [esi] [edx] [edi] \
+    value [eax] \
+    modify exact [eax ebx ecx edx esi edi ebp fs gs]
+
 /* VxD control message Sys_Critical_Init.
  *
  * Entry:
  *   EAX = Sys_Critical_Init
- *   EBX = handle of Sysem VM
+ *   EBX = handle of System VM
  *   ESI = Pointer to command tail retrived from PSP of WIN386.EXE
  *
  * Exit:
@@ -124,10 +133,14 @@ vxd_vm_handle_t VxD_DATA Focus_VM_Handle = 0;
  *
  * Notes:
  *   Do not use Simulate_Int or Exec_Int at this stage. */
-void __declspec(naked) my_sys_critical_init(void) {
-    /* success */
+#pragma aux (VxDctrlmsgProcEBSDdi) my_sys_critical_init /* EAX,EBX,ESI,EDX,EDI */
+void my_sys_critical_init(
+    /*EAX*/const uint32_t p_msg/*Sys_Critical_Init*/,
+    /*EBX*/const uint32_t p_System_VM_Handle,
+    /*ESI*/const uint32_t p_win386_psp_command_tail) {
+    /* keep track of the System VM so we can make absolute pointer integration exclusive to it */
+    System_VM_Handle = p_System_VM_Handle;
     VXD_CF_SUCCESS();
-    VXD_RET();
 }
 
 /* VxD control message Device_Init.
@@ -139,7 +152,13 @@ void __declspec(naked) my_sys_critical_init(void) {
  *
  * Exit:
  *   Carry flag = clear if success, set if failure */
-void __cdecl my_device_init(void) {
+#pragma aux (VxDctrlmsgProcEBSDdi) my_device_init /* EAX,EBX,ESI,EDX,EDI */
+void my_device_init(
+    /*EAX*/const uint32_t p_msg/*Device_Init*/,
+    /*EBX*/const uint32_t p_System_VM_Handle,
+    /*ESI*/const uint32_t p_win386_psp_command_tail) {
+
+    System_VM_Handle = p_System_VM_Handle;
     if (!probe_dosbox_id())
         goto fail;
 
@@ -153,7 +172,6 @@ void __cdecl my_device_init(void) {
 fail:
     /* indicate failure. Windows will unload this VxD without complaint and continue on. */
     VXD_CF_FAILURE();
-    return;
 }
 
 /* VxD control message Init_Complete.
@@ -169,10 +187,10 @@ fail:
  * Notes:
  *   The system will send this message out just before releasing it's
  *   INIT pages and taking the instance snapshot. */
-void __declspec(naked) my_init_complete(void) {
+#pragma aux (VxDctrlmsgProcEBSDdi) my_init_complete /* EAX,EBX,ESI,EDX,EDI */
+void my_init_complete(void) {
     /* success */
     VXD_CF_SUCCESS();
-    VXD_RET();
 }
 
 /* VxD control message Sys_VM_Init.
@@ -183,13 +201,10 @@ void __declspec(naked) my_init_complete(void) {
  *
  * Exit:
  *   Carry flag = clear if success, set if failure */
-void __declspec(naked) my_sys_vm_init(void) {
-    /* keep track of the System VM so we can make absolute pointer integration exclusive to it */
-    __asm mov System_VM_Handle,ebx
-
+#pragma aux (VxDctrlmsgProcEBSDdi) my_sys_vm_init /* EAX,EBX,ESI,EDX,EDI */
+void my_sys_vm_init(void) {
     /* success */
     VXD_CF_SUCCESS();
-    VXD_RET();
 }
 
 /* VxD control message Set_Device_Focus.
@@ -197,21 +212,25 @@ void __declspec(naked) my_sys_vm_init(void) {
  * Entry:
  *   EAX = Sys_Device_Focus
  *   EBX = Virtual machine handle
- *   EDX = Virtual device to recieve focus, or 0 for all
  *   ESI = Flags
+ *   EDX = Virtual device to recieve focus, or 0 for all
  *   EDI = AssocVM
  *
  * Exit:
  *   CF = 0 */
-void __cdecl my_set_device_focus(void) {
+#pragma aux (VxDctrlmsgProcEBSDdi) my_set_device_focus /* EAX,EBX,ESI,EDX,EDI */
+void my_set_device_focus(
+    /*EAX*/const uint32_t p_msg/*Device_Init*/,
+    /*EBX*/const uint32_t p_VM_Handle,
+    /*ESI*/const uint32_t p_Flags,
+    /*EDX*/const uint32_t p_virtDevFocus,
+    /*EDI*/const uint32_t p_AssocVM) {
     /* NTS: Grab registers, stick in const variables. Watcom's optimizer is smart enough
      *      in the best case scenario to boil this down to direct register work until
      *      the register is overwritten */
-    const uint32_t VM_Handle = getEBX();
-
-    if (Focus_VM_Handle != VM_Handle) {
-        Focus_VM_Handle = VM_Handle;
-        if (VM_Handle == System_VM_Handle) {
+    if (Focus_VM_Handle != p_VM_Handle) {
+        Focus_VM_Handle = p_VM_Handle;
+        if (p_VM_Handle == System_VM_Handle) {
             dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
             dosbox_id_write_data(1); /* PS/2 notification */
         }
@@ -232,14 +251,15 @@ void __cdecl my_set_device_focus(void) {
  *
  * Exit:
  *   Carry flag = clear if success, set if failure */
-void __cdecl my_sys_vm_terminate(void) {
-    if (System_VM_Handle != 0) {
+#pragma aux (VxDctrlmsgProcEBSDdi) my_sys_vm_terminate /* EAX,EBX,ESI,EDX,EDI */
+void my_sys_vm_terminate(
+    /*EAX*/const uint32_t p_msg/*Sys_VM_Terminate*/,
+    /*EBX*/const uint32_t p_System_VM_Handle) {
+    if (System_VM_Handle == p_System_VM_Handle) {
         dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
         dosbox_id_write_data(0); /* disable */
+        System_VM_Handle = 0;
     }
-
-/* system VM is shutting down, so lose track of it now */
-    __asm mov System_VM_Handle,0
 
     /* success */
     VXD_CF_SUCCESS();
