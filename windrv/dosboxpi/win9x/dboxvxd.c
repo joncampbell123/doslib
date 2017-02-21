@@ -139,7 +139,7 @@ uint32_t Get_Cur_VM_Handle(void);
     "dw 0x0002" /* service */ \
     "dw 0x0001" /* device  */ \
     parm [ebx] \
-    modify exact [ebx]
+    modify exact []
 void Test_Cur_VM_Handle(const uint32_t vm_handle);
 
 /* VMM Get_Sys_VM_Handle (device=0x0001 service=0x0003)
@@ -172,7 +172,7 @@ uint32_t Get_Sys_VM_Handle(void);
     "dw 0x0004" /* service */ \
     "dw 0x0001" /* device  */ \
     parm [ebx] \
-    modify exact [ebx]
+    modify exact []
 void Test_Sys_VM_Handle(const uint32_t vm_handle);
 
 #define VxD_DATA                __based( __segname("_CODE") )
