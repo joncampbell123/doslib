@@ -222,6 +222,25 @@ uint32_t Get_Sys_VM_Handle(void);
     modify exact []
 void Test_Sys_VM_Handle(const uint32_t vm_handle);
 
+/* VMM Validate_VM_Handle (device=0x0001 service=0x0005)
+ * In:
+ *   EBX = VM handle to test
+ * Out:
+ *   CF = set if not valid
+ *
+ * Since Watcom C offers no way for pragma aux to indicate CF is return value,
+ * you will have to call this function and then from __asm branch based on CF.
+ * This code relies on the compiler's smartness to know what registers are
+ * modified inline by __asm to assume that our modification of EBX will be
+ * accounted for by register allocation. */
+#pragma aux Validate_VM_Handle = \
+    "int 20h" \
+    "dw 0x0005" /* service */ \
+    "dw 0x0001" /* device  */ \
+    parm [ebx] \
+    modify exact []
+void Validate_VM_Handle(const uint32_t vm_handle);
+
 #define VxD_DATA                __based( __segname("_CODE") )
 
 typedef uint32_t vxd_vm_handle_t;
