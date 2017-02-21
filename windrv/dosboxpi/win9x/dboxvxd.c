@@ -138,7 +138,6 @@ void my_sys_critical_init(
     /*EAX*/const uint32_t p_msg/*Sys_Critical_Init*/,
     /*EBX*/const uint32_t p_System_VM_Handle,
     /*ESI*/const uint32_t p_win386_psp_command_tail) {
-    /* keep track of the System VM so we can make absolute pointer integration exclusive to it */
     System_VM_Handle = p_System_VM_Handle;
     VXD_CF_SUCCESS();
 }
@@ -157,8 +156,6 @@ void my_device_init(
     /*EAX*/const uint32_t p_msg/*Device_Init*/,
     /*EBX*/const uint32_t p_System_VM_Handle,
     /*ESI*/const uint32_t p_win386_psp_command_tail) {
-
-    System_VM_Handle = p_System_VM_Handle;
     if (!probe_dosbox_id())
         goto fail;
 
@@ -225,9 +222,6 @@ void my_set_device_focus(
     /*ESI*/const uint32_t p_Flags,
     /*EDX*/const uint32_t p_virtDevFocus,
     /*EDI*/const uint32_t p_AssocVM) {
-    /* NTS: Grab registers, stick in const variables. Watcom's optimizer is smart enough
-     *      in the best case scenario to boil this down to direct register work until
-     *      the register is overwritten */
     if (Focus_VM_Handle != p_VM_Handle) {
         Focus_VM_Handle = p_VM_Handle;
         if (p_VM_Handle == System_VM_Handle) {
