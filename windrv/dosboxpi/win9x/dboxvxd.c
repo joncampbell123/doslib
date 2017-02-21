@@ -14,13 +14,29 @@ void vxd_control_proc(void);
 #define VXD_INT3()                  __asm int 3
 
 /* CPU register access */
+static uint32_t getEAX();
+#pragma aux getEAX = \
+    value [eax];
+
 static uint32_t getEBX();
 #pragma aux getEBX = \
     value [ebx];
 
+static uint32_t getECX();
+#pragma aux getECX = \
+    value [ecx];
+
 static uint32_t getEDX();
 #pragma aux getEDX = \
     value [edx];
+
+static uint32_t getESI();
+#pragma aux getESI = \
+    value [esi];
+
+static uint32_t getEDI();
+#pragma aux getEDI = \
+    value [edi];
 
 /* VxD C function exit macros.
  * these are related to control messages and some calls where success is signalled
@@ -92,6 +108,37 @@ static uint32_t getEDX();
 
 #define VMMcall(service)        VxDcall(VMM_Device_ID,service)
 #define VMMjmp(service)         VxDjmp(VMM_Device_ID,service)
+
+/* Some VXD calls return error code via CF or result via ZF.
+ * Watcom C pragma aux cannot provide those flags as return value.
+ * So we instead use 386 instructions SETC and SETZ to fill AL with
+ * flag value and return that.
+ *
+ * If the Open Watcom v2 devs take up my suggestion for new compiler
+ * intrinsics then this extra step will no longer be necessary.
+ * The instrinsics, if used within an if() statement, would become a single
+ * conditional jump statement that tests for a specific CPU flag, thus
+ * allowing if/then/else blocks to work with ASM-like CF/ZF return status.
+ *
+ * The 386 instructions SETcc do not modify FLAGS, therefore these inline
+ * asm functions can be repeated for the same result assuming nothing else
+ * changes the flags. */
+/* NTS: SETC can fill in any register/memory address. It would be nice
+ *      if we could do GCC __asm__ style placeholders to let the compiler
+ *      choose the CPU register instead of taking AL */
+#pragma aux __x86_ZF = \
+    "setz al" \
+    parm [] \
+    value [al] \
+    modify exact [al]
+uint8_t __x86_ZF(void);
+
+#pragma aux __x86_CF = \
+    "setc al" \
+    parm [] \
+    value [al] \
+    modify exact [al]
+uint8_t __x86_CF(void);
 
 /* VMM Get_VMM_Version (device=0x0001 service=0x0000)
  * In:
