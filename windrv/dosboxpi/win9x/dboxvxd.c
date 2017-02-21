@@ -123,6 +123,25 @@ uint16_t Get_VMM_Version(void);
     modify exact []
 uint32_t Get_Cur_VM_Handle(void);
 
+/* VMM Test_Cur_VM_Handle (device=0x0001 service=0x0002)
+ * In:
+ *   EBX = VM handle to test
+ * Out:
+ *   ZF = set if handle matches currently running VM
+ *
+ * Since Watcom C offers no way for pragma aux to indicate ZF is return value,
+ * you will have to call this function and then from __asm branch based on ZF.
+ * This code relies on the compiler's smartness to know what registers are
+ * modified inline by __asm to assume that our modification of EBX will be
+ * accounted for by register allocation. */
+#pragma aux Test_Cur_VM_Handle = \
+    "int 20h" \
+    "dw 0x0002" /* service */ \
+    "dw 0x0001" /* device  */ \
+    parm [ebx] \
+    modify exact [ebx]
+void Test_Cur_VM_Handle(const uint32_t vm_handle);
+
 #define VxD_DATA                __based( __segname("_CODE") )
 
 typedef uint32_t vxd_vm_handle_t;
