@@ -109,6 +109,20 @@ static uint32_t getEDX();
     modify exact [eax ecx]
 uint16_t Get_VMM_Version(void);
 
+/* VMM Get_Cur_VM_Handle (device=0x0001 service=0x0001)
+ * In:
+ *   (none)
+ * Out:
+ *   EBX = VM handle */
+#pragma aux Get_Cur_VM_Handle = \
+    "int 20h" \
+    "dw 0x0001" /* service */ \
+    "dw 0x0001" /* device  */ \
+    parm [] \
+    value [ebx] \
+    modify exact []
+uint32_t Get_Cur_VM_Handle(void);
+
 #define VxD_DATA                __based( __segname("_CODE") )
 
 typedef uint32_t vxd_vm_handle_t;
