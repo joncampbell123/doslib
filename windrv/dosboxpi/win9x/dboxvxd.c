@@ -291,7 +291,7 @@ vxd_vm_handle_t VxD_DATA Focus_VM_Handle = 0;
 /* VxD control messages appear to have some consistent pattern with their registers, which we represent here.
  * Watcom C won't let us specify a protocol with no return value. But, The Windows DDK samples imply
  * that Windows expects us to trash EAX anyway at least. */
-#pragma aux VxDctrlmsgProcEBSDdi "__vxd_ctrlmsg_EBSDdi__*" \
+#pragma aux VxDctrlmsgProcEABSDdi "__vxd_ctrlmsg_EABSDdi__*" \
     parm [eax] [ebx] [esi] [edx] [edi] \
     value [eax] \
     modify exact [eax ebx ecx edx esi edi ebp fs gs]
@@ -308,7 +308,7 @@ vxd_vm_handle_t VxD_DATA Focus_VM_Handle = 0;
  *
  * Notes:
  *   Do not use Simulate_Int or Exec_Int at this stage. */
-#pragma aux (VxDctrlmsgProcEBSDdi) my_sys_critical_init /* EAX,EBX,ESI,EDX,EDI */
+#pragma aux (VxDctrlmsgProcEABSDdi) my_sys_critical_init /* EAX,EBX,ESI,EDX,EDI */
 void my_sys_critical_init(
     /*EAX*/const uint32_t p_msg/*Sys_Critical_Init*/,
     /*EBX*/const uint32_t p_System_VM_Handle,
@@ -326,7 +326,7 @@ void my_sys_critical_init(
  *
  * Exit:
  *   Carry flag = clear if success, set if failure */
-#pragma aux (VxDctrlmsgProcEBSDdi) my_device_init /* EAX,EBX,ESI,EDX,EDI */
+#pragma aux (VxDctrlmsgProcEABSDdi) my_device_init /* EAX,EBX,ESI,EDX,EDI */
 void my_device_init(
     /*EAX*/const uint32_t p_msg/*Device_Init*/,
     /*EBX*/const uint32_t p_System_VM_Handle,
@@ -359,7 +359,7 @@ fail:
  * Notes:
  *   The system will send this message out just before releasing it's
  *   INIT pages and taking the instance snapshot. */
-#pragma aux (VxDctrlmsgProcEBSDdi) my_init_complete /* EAX,EBX,ESI,EDX,EDI */
+#pragma aux (VxDctrlmsgProcEABSDdi) my_init_complete /* EAX,EBX,ESI,EDX,EDI */
 void my_init_complete(void) {
     /* success */
     VXD_CF_SUCCESS();
@@ -373,7 +373,7 @@ void my_init_complete(void) {
  *
  * Exit:
  *   Carry flag = clear if success, set if failure */
-#pragma aux (VxDctrlmsgProcEBSDdi) my_sys_vm_init /* EAX,EBX,ESI,EDX,EDI */
+#pragma aux (VxDctrlmsgProcEABSDdi) my_sys_vm_init /* EAX,EBX,ESI,EDX,EDI */
 void my_sys_vm_init(void) {
     /* success */
     VXD_CF_SUCCESS();
@@ -390,7 +390,7 @@ void my_sys_vm_init(void) {
  *
  * Exit:
  *   CF = 0 */
-#pragma aux (VxDctrlmsgProcEBSDdi) my_set_device_focus /* EAX,EBX,ESI,EDX,EDI */
+#pragma aux (VxDctrlmsgProcEABSDdi) my_set_device_focus /* EAX,EBX,ESI,EDX,EDI */
 void my_set_device_focus(
     /*EAX*/const uint32_t p_msg/*Device_Init*/,
     /*EBX*/const uint32_t p_VM_Handle,
@@ -420,7 +420,7 @@ void my_set_device_focus(
  *
  * Exit:
  *   Carry flag = clear if success, set if failure */
-#pragma aux (VxDctrlmsgProcEBSDdi) my_sys_vm_terminate /* EAX,EBX,ESI,EDX,EDI */
+#pragma aux (VxDctrlmsgProcEABSDdi) my_sys_vm_terminate /* EAX,EBX,ESI,EDX,EDI */
 void my_sys_vm_terminate(
     /*EAX*/const uint32_t p_msg/*Sys_VM_Terminate*/,
     /*EBX*/const uint32_t p_System_VM_Handle) {
@@ -451,7 +451,7 @@ void my_sys_vm_terminate(
  *
  *   This is Watcom's biggest problem making VxDs, because Watcom wants to declare data in a
  *   separate segment from code and report it as data in the LE header. */
-#pragma aux (VxDctrlmsgProcEBSDdi) vxd_control_proc /* EAX,EBX,ESI,EDX,EDI */
+#pragma aux (VxDctrlmsgProcEABSDdi) vxd_control_proc /* EAX,EBX,ESI,EDX,EDI */
 void vxd_control_proc(void) {
     VXD_Control_Dispatch(Sys_Critical_Init, my_sys_critical_init);
     VXD_Control_Dispatch(Sys_VM_Terminate, my_sys_vm_terminate);
