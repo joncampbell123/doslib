@@ -142,6 +142,39 @@ uint32_t Get_Cur_VM_Handle(void);
     modify exact [ebx]
 void Test_Cur_VM_Handle(const uint32_t vm_handle);
 
+/* VMM Get_Sys_VM_Handle (device=0x0001 service=0x0003)
+ * In:
+ *   (none)
+ * Out:
+ *   EBX = VM handle */
+#pragma aux Get_Sys_VM_Handle = \
+    "int 20h" \
+    "dw 0x0003" /* service */ \
+    "dw 0x0001" /* device  */ \
+    parm [] \
+    value [ebx] \
+    modify exact []
+uint32_t Get_Sys_VM_Handle(void);
+
+/* VMM Test_Sys_VM_Handle (device=0x0001 service=0x0004)
+ * In:
+ *   EBX = VM handle to test
+ * Out:
+ *   ZF = set if handle matches system VM
+ *
+ * Since Watcom C offers no way for pragma aux to indicate ZF is return value,
+ * you will have to call this function and then from __asm branch based on ZF.
+ * This code relies on the compiler's smartness to know what registers are
+ * modified inline by __asm to assume that our modification of EBX will be
+ * accounted for by register allocation. */
+#pragma aux Test_Sys_VM_Handle = \
+    "int 20h" \
+    "dw 0x0004" /* service */ \
+    "dw 0x0001" /* device  */ \
+    parm [ebx] \
+    modify exact [ebx]
+void Test_Sys_VM_Handle(const uint32_t vm_handle);
+
 #define VxD_DATA                __based( __segname("_CODE") )
 
 typedef uint32_t vxd_vm_handle_t;
