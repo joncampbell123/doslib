@@ -64,6 +64,15 @@ static uint32_t getEDX();
 
 /* VXD device IDs */
 #define VMM_Device_ID               0x0001
+#define snr_Get_VMM_Version             0x0000
+#define snr_Get_Cur_VM_Handle           0x0001
+#define snr_Test_Cur_VM_Handle          0x0002
+#define snr_Get_Sys_VM_Handle           0x0003
+#define snr_Test_Sys_VM_Handle          0x0004
+#define snr_Validate_VM_Handle          0x0005
+#define Debug_Device_ID             0x0002
+#define VPICD_Device_ID             0x0003
+#define VDMAD_Device_ID             0x0004
 
 /* VMM services */
 #define Fatal_Memory_Error          0x00BF
@@ -83,6 +92,22 @@ static uint32_t getEDX();
 
 #define VMMcall(service)        VxDcall(VMM_Device_ID,service)
 #define VMMjmp(service)         VxDjmp(VMM_Device_ID,service)
+
+/* VMM Get_VMM_Version (device=0x0001 service=0x0000)
+ * In:
+ *   (none)
+ * Out:
+ *   AH = major version
+ *   AL = minor version
+ *   ECX = debug revision (ignored here) */
+#pragma aux Get_VMM_Version = \
+    "int 20h" \
+    "dw 0x0000" /* service */ \
+    "dw 0x0001" /* device  */ \
+    parm [] \
+    value [ax] \
+    modify exact [eax ecx]
+uint16_t Get_VMM_Version(void);
 
 #define VxD_DATA                __based( __segname("_CODE") )
 
