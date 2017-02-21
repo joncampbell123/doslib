@@ -241,6 +241,26 @@ void Test_Sys_VM_Handle(const uint32_t vm_handle);
     modify exact []
 void Validate_VM_Handle(const uint32_t vm_handle);
 
+/* VMM Get_VMM_Reenter_Count (device=0x0001 service=0x0006)
+ * In:
+ *   none
+ * Out:
+ *   ECX = number of times the VMM has been re-entered
+ *
+ * Use this function in cases where VMM reentrancy may happen
+ * (such as page fault, interrupt, exception, etc). If nonzero,
+ * you may only call asynchronous VMM services. If you need to
+ * call synchronous services you should schedule an event to do
+ * it later. */
+#pragma aux Get_VMM_Reenter_Count = \
+    "int 20h" \
+    "dw 0x0006" /* service */ \
+    "dw 0x0001" /* device  */ \
+    parm [] \
+    value [ecx] \
+    modify exact [ecx]
+uint32_t Get_VMM_Reenter_Count(void);
+
 #define VxD_DATA                __based( __segname("_CODE") )
 
 typedef uint32_t vxd_vm_handle_t;
