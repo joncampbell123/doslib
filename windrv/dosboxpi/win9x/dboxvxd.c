@@ -70,9 +70,7 @@ static uint32_t getEDX();
 
 #define VXD_Control_Dispatch(cmsg,cproc) __asm {    \
     __asm cmp     eax,cmsg                          \
-    __asm jne     not_##cproc                       \
-    __asm jmp     cproc                             \
-    __asm not_##cproc:                              \
+    __asm jz      cproc                             \
 }
 
 #define VxDcall(device,service) __asm {             \
@@ -276,14 +274,15 @@ void my_sys_vm_terminate(
  *
  *   This is Watcom's biggest problem making VxDs, because Watcom wants to declare data in a
  *   separate segment from code and report it as data in the LE header. */
-void __declspec(naked) vxd_control_proc(void) {
+#pragma aux (VxDctrlmsgProcEBSDdi) vxd_control_proc /* EAX,EBX,ESI,EDX,EDI */
+void vxd_control_proc(void) {
     VXD_Control_Dispatch(Sys_Critical_Init, my_sys_critical_init);
     VXD_Control_Dispatch(Sys_VM_Terminate, my_sys_vm_terminate);
     VXD_Control_Dispatch(Set_Device_Focus, my_set_device_focus);
     VXD_Control_Dispatch(Init_Complete, my_init_complete);
     VXD_Control_Dispatch(Sys_VM_Init, my_sys_vm_init);
     VXD_Control_Dispatch(Device_Init, my_device_init);
+    /* fall through if none of the messages match */
     VXD_CF_SUCCESS();
-    VXD_RET();
 }
 
