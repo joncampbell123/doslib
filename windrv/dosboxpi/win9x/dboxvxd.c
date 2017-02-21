@@ -258,7 +258,7 @@ void Validate_VM_Handle(const uint32_t vm_handle);
     "dw 0x0001" /* device  */ \
     parm [] \
     value [ecx] \
-    modify exact [ecx]
+    modify exact []
 uint32_t Get_VMM_Reenter_Count(void);
 
 #define VxD_DATA                __based( __segname("_CODE") )
