@@ -18,6 +18,36 @@ start:
     mov     [ireg_si],si
     mov     [ireg_di],di
 
+    mov     si,regs_str
+    call    puts
+
+    mov     ax,[ireg_ax]
+    call    puthex16
+    call    putspc
+
+    mov     ax,[ireg_bx]
+    call    puthex16
+    call    putspc
+
+    mov     ax,[ireg_cx]
+    call    puthex16
+    call    putspc
+
+    mov     ax,[ireg_dx]
+    call    puthex16
+    call    putspc
+
+    mov     ax,[ireg_si]
+    call    puthex16
+    call    putspc
+
+    mov     ax,[ireg_di]
+    call    puthex16
+    call    putspc
+
+    mov     si,crlf
+    call    puts
+
     mov     ah,0x08
     mov     dl,[bios_drive]
     xor     di,di
@@ -44,6 +74,8 @@ cannot_query_drive:
             db      'Query failed',0
 ok_str:
             db      'OK',0
+regs_str:
+            db      'AX/BX/CX/DX/SI/DI ',0
 crlf:
             db      13,10,0
 hexes:
@@ -73,6 +105,21 @@ putse:
     pop     si
     pop     bx
     pop     ax
+    ret
+
+putc:
+    push    ax
+    push    bx
+    xor     bx,bx
+    mov     ah,0x0E
+    int     10h
+    pop     bx
+    pop     ax
+    ret
+
+putspc:
+    mov     al,' '
+    call    putc
     ret
 
 puthex: ; print AL
