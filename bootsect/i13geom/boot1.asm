@@ -46,6 +46,36 @@ printregloop:
 query_drive_ok:
 
 ;--------------------------------------------------
+    mov     si,query_str
+    call    puts
+
+    mov     al,dl               ; number of drives
+    call    puthex
+    call    putspc
+
+    mov     al,dh               ; number of heads - 1
+    inc     al
+    call    puthex
+    call    putspc
+
+    push    cx
+    mov     ax,cx               ; number of cyls (upper two bits [9:8] in CL[7:6] and lower 8 in CH)
+    xchg    al,ah
+    mov     cl,6
+    shr     ah,cl               ; AH = bits [9:8] as [1:0] AL = bits [7:0]
+    inc     ax
+    call    puthex16
+    call    putspc
+    pop     cx
+
+    mov     al,cl
+    and     al,0x3F
+    call    puthex
+
+    mov     si,crlf
+    call    puts
+
+;--------------------------------------------------
     mov     si,ok_str
     jmp     err_str
 
@@ -65,6 +95,8 @@ ok_str:
             db      'OK',0
 regs_str:
             db      'AX/BX/CX/DX/SI/DI ',0
+query_str:
+            db      'drives/heads/cyls/sects ',0
 crlf:
             db      13,10,0
 hexes:
