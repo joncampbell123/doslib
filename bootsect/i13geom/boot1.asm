@@ -18,36 +18,23 @@ start:
     mov     [ireg_si],si
     mov     [ireg_di],di
 
+;--------------------------------------------------
     mov     si,regs_str
     call    puts
 
-    mov     ax,[ireg_ax]
+    mov     si,ireg_ax
+    mov     cx,6
+printregloop:
+    lodsw                   ; mov ax,[si]; add si,2
     call    puthex16
     call    putspc
-
-    mov     ax,[ireg_bx]
-    call    puthex16
-    call    putspc
-
-    mov     ax,[ireg_cx]
-    call    puthex16
-    call    putspc
-
-    mov     ax,[ireg_dx]
-    call    puthex16
-    call    putspc
-
-    mov     ax,[ireg_si]
-    call    puthex16
-    call    putspc
-
-    mov     ax,[ireg_di]
-    call    puthex16
-    call    putspc
+    dec     cx
+    jnz     printregloop
 
     mov     si,crlf
     call    puts
 
+;--------------------------------------------------
     mov     ah,0x08
     mov     dl,[bios_drive]
     xor     di,di
@@ -58,9 +45,11 @@ start:
     jmp     err_str
 query_drive_ok:
 
+;--------------------------------------------------
     mov     si,ok_str
     jmp     err_str
 
+;--------------------------------------------------
 ireg_ax:    dw      0
 ireg_bx:    dw      0
 ireg_cx:    dw      0
