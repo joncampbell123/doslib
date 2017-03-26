@@ -75,3 +75,44 @@ putse:
     pop     ax
     ret
 
+puthex: ; print AL
+    push    ax
+    push    bx
+    push    cx
+    mov     cx,2
+
+puthexl:
+    push    cx
+    mov     cl,4
+    rol     al,cl
+
+    push    ax
+    mov     bx,hexes
+    and     al,0x0F
+    xlat
+    xor     bx,bx
+    mov     ah,0x0E
+    int     10h
+    pop     ax
+    pop     cx
+
+    dec     cx
+    jnz     puthexl
+
+    pop     cx
+    pop     bx
+    pop     ax
+    ret
+
+puthex16: ; print AX
+    push    ax
+
+    xchg    al,ah
+    call    puthex
+
+    xchg    al,ah
+    call    puthex
+
+    pop     ax
+    ret
+
