@@ -2449,31 +2449,60 @@ int main() {
                     redraw = 0;
                 }
 
-                /* NTS: to hammer the CGA harder, use 16-bit write */
-                __asm {
-                    push    cx
-                    push    si
-                    push    di
-                    push    ds
-                    mov     ax,hammer
-                    mov     di,wrofs
-                    mov     cx,1000
-                    mov     si,0xB800
-                    mov     ds,si
-                    pushf
-                    cli
+                if (write16) {
+                    /* NTS: to hammer the CGA harder, use 16-bit write */
+                    __asm {
+                            push    cx
+                            push    si
+                            push    di
+                            push    ds
+                            mov     ax,hammer
+                            mov     di,wrofs
+                            mov     cx,1000
+                            mov     si,0xB800
+                            mov     ds,si
+                            pushf
+                            cli
 
-hammerloop:         mov     [di],ax     ; WHAM!
-                    mov     [di],ax     ; WHAM!
-                    mov     [di],ax     ; WHAM!
-                    mov     [di],ax     ; WHAM!
-                    loop    hammerloop
+hammerloop16:               mov     [di],ax     ; WHAM!
+                            mov     [di],ax     ; WHAM!
+                            mov     [di],ax     ; WHAM!
+                            mov     [di],ax     ; WHAM!
+                            loop    hammerloop16
 
-                    popf
-                    pop     ds
-                    pop     di
-                    pop     si
-                    pop     cx
+                            popf
+                            pop     ds
+                            pop     di
+                            pop     si
+                            pop     cx
+                    }
+                }
+                else {
+                    __asm {
+                            push    cx
+                            push    si
+                            push    di
+                            push    ds
+                            mov     ax,hammer
+                            mov     di,wrofs
+                            mov     cx,1000
+                            mov     si,0xB800
+                            mov     ds,si
+                            pushf
+                            cli
+
+hammerloop8:                mov     [di],al     ; WHAM!
+                            mov     [di],al     ; WHAM!
+                            mov     [di],al     ; WHAM!
+                            mov     [di],al     ; WHAM!
+                            loop    hammerloop8
+
+                            popf
+                            pop     ds
+                            pop     di
+                            pop     si
+                            pop     cx
+                    }
                 }
             } while(1);
         }
