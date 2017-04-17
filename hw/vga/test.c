@@ -2398,9 +2398,11 @@ int main() {
 		}
         else if (c == '@') {
             unsigned char c = 219; /* solid block */
+            unsigned char write16 = 1;
             unsigned char redraw = 1;
+            unsigned short wrofs = 0;
             unsigned short hammer;
-            char tmp[16];
+            char tmp[32];
 
             vga_clear();
             vga_moveto(0,0);
@@ -2425,6 +2427,15 @@ int main() {
                         redraw=1;
                         c++;
                     }
+                    else if (ch == '8') {
+                        write16 ^= 1;
+                        redraw=1;
+                    }
+                    else if (ch == 'o') {
+                        wrofs++;
+                        wrofs &= 7;
+                        redraw=1;
+                    }
                 }
 
                 if (redraw) {
@@ -2433,17 +2444,22 @@ int main() {
                     vga_moveto(0,6);
                     vga_write("Writing char ");
                     vga_write(tmp);
+                    sprintf(tmp," %u-bit +%u ",write16?16:8,wrofs);
+                    vga_write(tmp);
                     redraw = 0;
                 }
 
                 /* NTS: to hammer the CGA harder, use 16-bit write */
                 __asm {
+                    push    cx
+                    push    si
+                    push    di
                     push    ds
                     mov     ax,hammer
+                    mov     di,wrofs
                     mov     cx,1000
-                    mov     di,0xB800
-                    mov     ds,di
-                    xor     di,di
+                    mov     si,0xB800
+                    mov     ds,si
                     pushf
                     cli
 
@@ -2455,6 +2471,9 @@ hammerloop:         mov     [di],ax     ; WHAM!
 
                     popf
                     pop     ds
+                    pop     di
+                    pop     si
+                    pop     cx
                 }
             } while(1);
         }
