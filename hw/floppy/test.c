@@ -121,8 +121,11 @@ struct floppy_controller		floppy_standard_isa[2] = {
 	{0x370, 6,   2}
 };
 
+int8_t                  floppy_controllers_enable_2nd = 1;
+
 struct floppy_controller *floppy_get_standard_isa_port(int x) {
 	if (x < 0 || x >= (sizeof(floppy_standard_isa)/sizeof(floppy_standard_isa[0]))) return NULL;
+    if (x != 0 && !floppy_controllers_enable_2nd) return NULL;
 	return &floppy_standard_isa[x];
 }
 
@@ -3089,10 +3092,50 @@ void do_main_menu() {
 	}
 }
 
+static void help(void) {
+    fprintf(stderr,"test [options]\n");
+    fprintf(stderr," -h --help     Show this help\n");
+    fprintf(stderr," -1            First controller only\n");
+}
+
+static int parse_argv(int argc,char **argv) {
+    char *a;
+    int i;
+
+    for (i=1;i < argc;) {
+        a = argv[i++];
+
+        if (*a == '-') {
+            do { a++; } while (*a == '-');
+
+            if (!strcmp(a,"h") || !strcmp(a,"help")) {
+                help();
+                return 1;
+            }
+            else if (!strcmp(a,"1")) {
+                floppy_controllers_enable_2nd = 0;
+            }
+            else {
+                fprintf(stderr,"Unknown switch '%s'\n",a);
+                return 1;
+            }
+        }
+        else {
+            fprintf(stderr,"Unknown switch '%s'\n",a);
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
 	struct floppy_controller *reffdc;
 	struct floppy_controller *newfdc;
 	int i;
+
+    if (parse_argv(argc,argv))
+        return 1;
 
 	/* we take a GUI-based approach (kind of) */
 	if (!probe_vga()) {
