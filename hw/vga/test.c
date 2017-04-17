@@ -240,6 +240,7 @@ int main() {
 		else
 			vga_write("  9: VGA 9-bit wide \n");
 		vga_write("  z: Measurements     o: Change overscan\n");
+        vga_write("  @: CGA snow test\n");
 
 		vga_write("ESC: quit\n");
 		vga_write_sync();
@@ -2395,6 +2396,68 @@ int main() {
 				while (getch() != 13);
 			}
 		}
+        else if (c == '@') {
+            unsigned char c = 219; /* solid block */
+            unsigned char redraw = 1;
+            unsigned short hammer;
+            char tmp[16];
+
+            vga_clear();
+            vga_moveto(0,0);
+            vga_write_color(7);
+            vga_write("If your card is CGA in 80x25 text mode,\n");
+            vga_write("you should see snow on your screen.\n");
+            vga_write("Hit ESC at any time to stop.\n");
+            vga_write("Use - and = to change the char written.\n");
+
+            do {
+                if (kbhit()) {
+                    int ch;
+
+                    if ((ch=getch()) == 27)
+                        break;
+
+                    if (ch == '-') {
+                        redraw=1;
+                        c--;
+                    }
+                    else if (ch == '=') {
+                        redraw=1;
+                        c++;
+                    }
+                }
+
+                if (redraw) {
+                    hammer = (unsigned short)c | ((unsigned short)c << 8U);
+                    sprintf(tmp,"0x%02x",c);
+                    vga_moveto(0,6);
+                    vga_write("Writing char ");
+                    vga_write(tmp);
+                    redraw = 0;
+                }
+
+                /* NTS: to hammer the CGA harder, use 16-bit write */
+                __asm {
+                    push    ds
+                    mov     ax,hammer
+                    mov     cx,1000
+                    mov     di,0xB800
+                    mov     ds,di
+                    xor     di,di
+                    pushf
+                    cli
+
+hammerloop:         mov     [di],ax     ; WHAM!
+                    mov     [di],ax     ; WHAM!
+                    mov     [di],ax     ; WHAM!
+                    mov     [di],ax     ; WHAM!
+                    loop    hammerloop
+
+                    popf
+                    pop     ds
+                }
+            } while(1);
+        }
 		else if (c == '!') {
 			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) {
 				unsigned char mono = (vga_state.vga_ram_base == 0xB0000) ? 1 : 0;
