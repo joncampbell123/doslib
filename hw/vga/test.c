@@ -260,8 +260,8 @@ int main() {
 				int10_setmode(c);
 				update_state_from_vga();
 				if (c > 3) {
-					do { c=getch(); } while (!(c == 13 || c == 10));
-					int10_setmode(3);
+					do { c=getch(); } while (!(c == 13 || c == 10 || c == ' '));
+                    if (c != ' ') int10_setmode(3);
 					update_state_from_vga();
 				}
 			}
