@@ -25,6 +25,7 @@
 
 static struct info_8250 *uart = NULL;
 static unsigned long baud_rate = 115200;
+static unsigned long ic_delay_counter = 0;
 static unsigned char use_interrupts = 1;
 static unsigned char in_packet_handling = 0;                        // if within packet handling loop (reentrancy protection)
 static unsigned char halt_system = 0;
@@ -182,6 +183,16 @@ static void interrupt my_int28() {
 
     /* OK, do our work. It's safe to do MS-DOS INT 21h from here except console I/O functions AH < 0x0C */
     inside_int28 = 1;
+
+    if (ic_delay_counter != 0UL) {
+        unsigned long c = ic_delay_counter;
+
+        _sti();
+        while ((--c) != 0UL) {
+            __asm nop
+        }
+    }
+
     _cli();
     process_input();
     process_output();
@@ -1379,6 +1390,8 @@ void help(void) {
     fprintf(stderr,"  -int                   Use UART interrupts (default)\n");
     fprintf(stderr,"  -baud <n>              Set BAUD rate\n");
     fprintf(stderr,"  -s <n>                 Stop bits (1 or 2)\n");
+    fprintf(stderr,"  -ic <n>                Software delay during INT 28h\n");
+    fprintf(stderr,"                         (for slow machines use 8000-16000)\n");
 }
 
 int parse_argv(int argc,char **argv) {
@@ -1394,6 +1407,11 @@ int parse_argv(int argc,char **argv) {
             if (!strcmp(a,"h") || !strcmp(a,"help")) {
                 help();
                 return 1;
+            }
+            else if (!strcmp(a,"ic")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                ic_delay_counter = strtoul(a,NULL,0);
             }
             else if (!strcmp(a,"noint")) {
                 use_interrupts = 0;
