@@ -22,6 +22,8 @@ int main() {
      *      We don't want to cause any condition where the 6845 row counter runs off beyond 8 (and up through 31 back around to 0) */
     unsigned short row=8 + 1; /* cannot be zero, multiple of 8 + 1 */
     unsigned short rowheight=8; /* RECOMMENDED!! Multiple of 8 */
+    unsigned short rowa=8;
+    unsigned short rowad=0;
     unsigned short vtadj = (rowheight / 2) - 1; /* adjust to vtotal because text rows become graphics */
 
     printf("WARNING: Make sure you run this on CGA hardware!\n");
@@ -69,13 +71,7 @@ int main() {
             // by reading port 64h and 60h in this way we can break out of the loop reliably when the user
             // hits a key on the keyboard, regardless whether the keyboard controller is AT or PC/XT hardware.
 
-            if (c == 0x39/*SPACE*/) {
-                if ((row+rowheight) < 190) row += 8;
-            }
-            else if (c == 0x0F/*TAB*/) {
-                if (row > 8) row -= 8;
-            }
-            else if (c != 0 && (c & 0x80) == 0)
+            if (c != 0 && (c & 0x80) == 0)
                 break;
         }
 
@@ -181,6 +177,16 @@ countup4:       in          al,dx       ; wait for hsync end
 
                 pop         dx
                 pop         cx
+        }
+
+        if (++rowad == 60) {/* assume 60Hz */
+            rowad = 0;
+            row += rowa;
+
+            if ((row+rowheight) >= 190)
+                rowa = -8;
+            else if (row <= 9)
+                rowa = 8;
         }
     } while(1);
 
