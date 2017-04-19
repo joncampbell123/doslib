@@ -16,6 +16,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
+#include <hw/8259/8259.h>
 #include <hw/vga/vgatty.h>
 #include <hw/dos/doswin.h>
 
@@ -240,7 +241,7 @@ int main() {
 		else
 			vga_write("  9: VGA 9-bit wide \n");
 		vga_write("  z: Measurements     o: Change overscan\n");
-        vga_write("  @: CGA snow test\n");
+        vga_write("  @: CGA snow test    #. CGA mode scan fx\n");
 
 		vga_write("ESC: quit\n");
 		vga_write_sync();
@@ -2396,6 +2397,125 @@ int main() {
 				while (getch() != 13);
 			}
 		}
+        else if (c == '#') {
+			if ((vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_EGA)) || !(vga_state.vga_flags & VGA_IS_CGA)) {
+				vga_write("Only CGA or compatible may do that\n");
+				vga_write_sync();
+				vga_sync_bios_cursor();
+				while (getch() != 13);
+            }
+            else {
+                unsigned short row=1; /* cannot be zero */
+                unsigned short rowa=1;
+                unsigned short rowheight=30;
+
+				int10_setmode(4); /* set to 40x25 for this one */
+                update_state_from_vga();
+
+                vga_clear();
+                vga_moveto(0,0);
+                vga_write_color(7);
+                vga_write("40x25 mode select raster fx test.\n");
+                vga_write("Hit ESC at any time to stop.\n");
+
+                _cli();
+                do {
+                    if (inp(0x64) & 1) { // NTS: This is clever because on IBM PC hardware port 64h is an alias of 60h.
+                        unsigned char c = inp(0x60); // chances are the scancode has bit 0 set.
+
+                        if (c != 0 && (c & 0x80) == 0)
+                            break;
+                    }
+
+                    {
+                        unsigned char x = inp(0x61) & 0x7F;
+                        outp(0x61,x | 0x80);
+                        outp(0x61,x);
+
+                        outp(0x20,P8259_OCW2_SPECIFIC_EOI | 1); // IRQ1
+                    }
+
+                    __asm {
+                        push        cx
+                        push        dx
+
+                        ; wait for vsync
+                        mov         dx,3DAh
+wvsync:                 in          al,dx
+                        test        al,8
+                        jz          wvsync
+
+                        ; wait for vsync end
+wvsyncend:              in          al,dx
+                        test        al,8
+                        jnz         wvsyncend
+
+                        ; okay, change background color
+                        mov         dx,3D9h
+                        mov         al,00h
+                        out         dx,al
+
+                        ; count scanlines
+                        mov         dx,3DAh
+                        mov         cx,row
+countup1:               in          al,dx       ; wait for hsync
+                        test        al,1
+                        jz          countup1
+
+countup2:               in          al,dx       ; wait for hsync end
+                        test        al,1        
+                        jnz         countup2
+                        loop        countup1    ; count rows
+
+                        ; okay, change background color
+                        mov         dx,3D9h
+                        mov         al,01h
+                        out         dx,al
+
+                        ; count scanlines again
+                        mov         dx,3DAh
+                        mov         cx,rowheight
+countup3:               in          al,dx       ; wait for hsync
+                        test        al,1
+                        jz          countup3
+
+countup4:               in          al,dx       ; wait for hsync end
+                        test        al,1        
+                        jnz         countup4
+                        loop        countup3    ; count rows
+
+                        ; okay, change background color
+                        mov         dx,3D9h
+                        mov         al,00h
+                        out         dx,al
+
+                        pop         dx
+                        pop         cx
+                    }
+
+                    row += rowa;
+                    if ((row+rowheight) >= 198)
+                        rowa = ~0;
+                    else if (row == 1)
+                        rowa = 1;
+                } while(1);
+
+                {
+                    unsigned char x = inp(0x61) & 0x7F;
+                    outp(0x61,x | 0x80);
+                    outp(0x61,x);
+
+                    outp(0x20,P8259_OCW2_SPECIFIC_EOI | 1); // IRQ1
+                }
+
+                _sti();
+
+                while (kbhit()) getch();
+
+				int10_setmode(3);
+                update_state_from_vga();
+            }
+        }
         else if (c == '@') {
             unsigned char c = 219; /* solid block */
             unsigned char write16 = 1;
