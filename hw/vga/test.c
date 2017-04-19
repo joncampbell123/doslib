@@ -2409,7 +2409,7 @@ int main() {
                 unsigned short rowa=1;
                 unsigned short rowheight=30;
 
-				int10_setmode(4); /* set to 40x25 for this one */
+				int10_setmode(1); /* set to 40x25 for this one */
                 update_state_from_vga();
 
                 vga_clear();
@@ -2417,6 +2417,24 @@ int main() {
                 vga_write_color(7);
                 vga_write("40x25 mode select raster fx test.\n");
                 vga_write("Hit ESC at any time to stop.\n");
+
+                /* we also need to fill the remainder of RAM with something */
+                vga_write("\n");
+                {
+                    unsigned int x,y;
+
+                    for (y=0;y < 16;y++) {
+                        for (x=0;x < 39;x++) {
+                            vga_writec((x+y)|0x20);
+                        }
+
+                        vga_write("\n");
+                    }
+                }
+
+                /* the 640x200 portion isn't going to show anything unless we set port 3D9h to set foreground to white.
+                 * this will also mean the border will be white for text mode, but, meh */
+                outp(0x3D9,0x0F);
 
                 _cli();
                 do {
@@ -2450,9 +2468,9 @@ wvsyncend:              in          al,dx
                         test        al,8
                         jnz         wvsyncend
 
-                        ; okay, change background color
-                        mov         dx,3D9h
-                        mov         al,00h
+                        ; okay, change mode
+                        mov         dx,3D8h
+                        mov         al,28h
                         out         dx,al
 
                         ; count scanlines
@@ -2467,9 +2485,9 @@ countup2:               in          al,dx       ; wait for hsync end
                         jnz         countup2
                         loop        countup1    ; count rows
 
-                        ; okay, change background color
-                        mov         dx,3D9h
-                        mov         al,01h
+                        ; okay, change mode to 640x200 but with colorburst on (bit 2 = 0 therefore 0x1E & (~4))
+                        mov         dx,3D8h
+                        mov         al,1Ah
                         out         dx,al
 
                         ; count scanlines again
@@ -2484,9 +2502,9 @@ countup4:               in          al,dx       ; wait for hsync end
                         jnz         countup4
                         loop        countup3    ; count rows
 
-                        ; okay, change background color
-                        mov         dx,3D9h
-                        mov         al,00h
+                        ; okay, change mode back
+                        mov         dx,3D8h
+                        mov         al,28h
                         out         dx,al
 
                         pop         dx
@@ -2509,7 +2527,6 @@ countup4:               in          al,dx       ; wait for hsync end
                 }
 
                 _sti();
-
                 while (kbhit()) getch();
 
 				int10_setmode(3);
