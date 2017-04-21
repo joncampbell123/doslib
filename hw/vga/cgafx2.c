@@ -20,7 +20,7 @@ int main() {
     /* NTS: In this demo, the row start and height must be a multiple of 8.
      *      Because 40x25 text mode, which has a rowheight of 8, and 640x200 2-color mode, with a rowheight of 2.
      *      We don't want to cause any condition where the 6845 row counter runs off beyond 8 (and up through 31 back around to 0) */
-    unsigned short row=8 + 1; /* cannot be zero, multiple of 8 + 1 */
+    unsigned short row=8; /* cannot be zero, multiple of 8 */
     unsigned short rowheight=8; /* RECOMMENDED!! Multiple of 8 */
     unsigned short rowa=8;
     unsigned short rowad=0;
@@ -115,9 +115,9 @@ wvsync:         in          al,dx
                 test        al,8
                 jz          wvsync
 
-                ; wait for vsync end
+                ; wait for (vsync | blank) end
 wvsyncend:      in          al,dx
-                test        al,8
+                test        al,9        ; 8 (vsync) | 1 (blank)
                 jnz         wvsyncend
 
                 ; okay, change mode

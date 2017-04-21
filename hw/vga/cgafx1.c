@@ -88,9 +88,9 @@ wvsync:         in          al,dx
                 test        al,8
                 jz          wvsync
 
-                ; wait for vsync end
+                ; wait for (vsync | blank) end
 wvsyncend:      in          al,dx
-                test        al,8
+                test        al,9        ; 8 (vsync) | 1 (blank)
                 jnz         wvsyncend
 
                 ; okay, change mode
