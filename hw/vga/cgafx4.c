@@ -93,8 +93,8 @@ int main() {
     unsigned short rowa=1;
     unsigned short rowad=0;
     unsigned short vtadj = (rowheight / 2) - 1; /* adjust to vtotal because text rows become graphics */
-    unsigned short row1;
-    unsigned char rc1;
+    unsigned short row1,row2,row3;
+    unsigned char rc1,rc2,rc3;
 
     printf("WARNING: Make sure you run this on CGA hardware!\n");
     printf("Hit ENTER to continue, any other key to exit\n");
@@ -153,20 +153,6 @@ int main() {
             outp(0x20,P8259_OCW2_SPECIFIC_EOI | 1); // IRQ1
         }
 
-        {
-            /* because we're changing row height, we need to adjust vtotal/vdisplay to keep normal timing */
-//            unsigned int n_rows = ((0x1F/*total*/ + 1) * 8) + 6/*adjust*/; /* = 262 lines aka one normal NTSC field */
-            unsigned int rc = 0x1F + 1 + vtadj;
-
-            /* program the new vtotal/vadjust to make the video timing stable */
-            outp(0x3D4,0x04); /* vtotal */
-            outp(0x3D5,rc-1);
-            outp(0x3D4,0x07); /* vsyncpos */
-            outp(0x3D5,rc-1-3);
-            outp(0x3D4,0x06); /* vdisplay */
-            outp(0x3D5,rc-1-3-3);
-        }
-
         /* begin */
         __asm {
                 push        cx
@@ -175,6 +161,10 @@ int main() {
 
         row1 = row - 1;
         rc1 = row1 & 7;                 /* predict what the 6845 row scanline counter will be on the scan line PRIOR to our raster effect */
+        row2 = rowheight - 1;           /* number of scanlines to wait for row effect. again, want to change char height on last line */
+        rc2 = row2 & 1;                 /* predict what the 6845 row scanline counter will be on the scan line PRIOR to ending our raster effect */
+        rc3 = 7 - ((row + rowheight) & 7); /* and then decide the character row height - 1 just after the effect to keep total scanlines sane */
+        row3 = rc3 + 1;
 
         __ASM_SETCHARMAXLINE(7);        /* 8 lines */
         __ASM_WAITFORVSYNC();
@@ -186,14 +176,36 @@ int main() {
 
         __ASM_SETMODESEL(0x1A);         /* 640x200 2-color graphics with colorburst enabled */
         __ASM_SETCHARMAXLINE(1);        /* 2 lines */
-        __ASM_WAITLINES(waitv2,rowheight);
+        __ASM_WAITLINES(waitv2,row2);   /* rowheight - 1 */
+        __ASM_SETCHARMAXLINE(rc2);      /* write our prediction to char row height to make sure it matches, reset row scanline counter to 0 */
+        __ASM_WAITLINE();               /* wait one more scanline */
 
         __ASM_SETMODESEL(0x28);         /* 40x25 text */
+        __ASM_SETCHARMAXLINE(rc3);      /* make the text row just enough scanlines to even it out */
+        __ASM_WAITLINES(waitv1,row3);   /* wait just that many scanlines */
         __ASM_SETCHARMAXLINE(7);        /* 8 lines */
 
         __asm {
                 pop         dx
                 pop         cx
+        }
+
+        /* do this AFTER to make sure we use the time between our effect and end of display to keep things stable */
+        {
+            /* because we're changing row height, we need to adjust vtotal/vdisplay to keep normal timing */
+//            unsigned int n_rows = ((0x1F/*total*/ + 1) * 8) + 6/*adjust*/; /* = 262 lines aka one normal NTSC field */
+            unsigned int rc = 0x1F + 1 + vtadj;
+
+            /* hack, fix this later */
+            if ((row & 7) != 0) rc++;
+
+            /* program the new vtotal/vadjust to make the video timing stable */
+            outp(0x3D4,0x04); /* vtotal */
+            outp(0x3D5,rc-1);
+            outp(0x3D4,0x07); /* vsyncpos */
+            outp(0x3D5,rc-1-3);
+            outp(0x3D4,0x06); /* vdisplay */
+            outp(0x3D5,rc-1-3-3);
         }
 
         if (++rowad == 60) {/* assume 60Hz */
