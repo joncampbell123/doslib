@@ -208,6 +208,15 @@ int main() {
             outp(0x3D5,rc-1-3-3);
         }
 
+#ifdef FAST_MOVEMENT
+        rowad = 0;
+        row += rowa;
+
+        if ((row+rowheight) >= 190)
+            rowa = -1;
+        else if (row <= 9)
+            rowa = 1;
+#else
         if (++rowad == 60) {/* assume 60Hz */
             rowad = 0;
             row += rowa;
@@ -217,6 +226,7 @@ int main() {
             else if (row <= 9)
                 rowa = 1;
         }
+#endif
     } while(1);
 
     {
