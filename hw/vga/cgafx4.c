@@ -164,6 +164,9 @@ int main() {
         row2 = rowheight - 1;           /* number of scanlines to wait for row effect. again, want to change char height on last line */
         rc2 = row2 & 1;                 /* predict what the 6845 row scanline counter will be on the scan line PRIOR to ending our raster effect */
         rc3 = 7 - ((row + rowheight) & 7); /* and then decide the character row height - 1 just after the effect to keep total scanlines sane */
+#ifdef ANTI_JUMP_ADJUST
+        if (row & 7) rc3 += 8;          /* try to prevent the text below the raster effect from "jumping" when not starting on 8-line boundaries */
+#endif
         row3 = rc3 + 1;
 
         __ASM_SETCHARMAXLINE(7);        /* 8 lines */
@@ -196,8 +199,12 @@ int main() {
 //            unsigned int n_rows = ((0x1F/*total*/ + 1) * 8) + 6/*adjust*/; /* = 262 lines aka one normal NTSC field */
             unsigned int rc = 0x1F + 1 + vtadj;
 
+#ifdef ANTI_JUMP_ADJUST
+            /* don't need the hack */
+#else
             /* hack, fix this later */
             if ((row & 7) != 0) rc++;
+#endif
 
             /* program the new vtotal/vadjust to make the video timing stable */
             outp(0x3D4,0x04); /* vtotal */
@@ -212,18 +219,18 @@ int main() {
         rowad = 0;
         row += rowa;
 
-        if ((row+rowheight) >= 190)
+        if ((row+rowheight) >= 180) /* the vtotal/vadjust code takes too long to go beyond this point without glitches */
             rowa = -1;
-        else if (row <= 9)
+        else if (row <= 2)
             rowa = 1;
 #else
         if (++rowad == 60) {/* assume 60Hz */
             rowad = 0;
             row += rowa;
 
-            if ((row+rowheight) >= 190)
+            if ((row+rowheight) >= 180) /* the vtotal/vadjust code takes too long to go beyond this point without glitches */
                 rowa = -1;
-            else if (row <= 9)
+            else if (row <= 2)
                 rowa = 1;
         }
 #endif
