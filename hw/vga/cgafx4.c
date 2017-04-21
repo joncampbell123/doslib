@@ -89,7 +89,7 @@ int main() {
      *      Because 40x25 text mode, which has a rowheight of 8, and 640x200 2-color mode, with a rowheight of 2.
      *      We don't want to cause any condition where the 6845 row counter runs off beyond 8 (and up through 31 back around to 0) */
     unsigned short row=8; /* cannot be <= 1, multiple of 8 */
-    unsigned short rowheight=8; /* RECOMMENDED!! Multiple of 8 */
+    unsigned short rowheight=16; /* RECOMMENDED!! Multiple of 8. Should not exceed about 16. */
     unsigned short rowa=1;
     unsigned short rowad=0;
     unsigned short vtadj = (rowheight / 2) - 1; /* adjust to vtotal because text rows become graphics */
