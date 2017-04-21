@@ -358,12 +358,29 @@ static int current_sectcount = 2;		/* two sectors */
 static unsigned char allow_multitrack = 1;	/* set MT bit */
 static unsigned char mfm_mode = 1;		/* set bit to indicate MFM (not FM) */
 
+static void (interrupt *my_irq0_old_irq)() = NULL;
 static void (interrupt *my_floppy_old_irq)() = NULL;
 static struct floppy_controller *my_floppy_irq_floppy = NULL;
 static unsigned long floppy_irq_counter = 0;
 static int my_floppy_irq_number = -1;
 
 void do_floppy_controller_unhook_irq(struct floppy_controller *fdc);
+
+static void interrupt my_irq0() {
+    /* we need to manipulate the BIOS data area to prevent the BIOS from turning off the motor behind our backs */
+    /* target values:
+     *   40:3F  diskette motor status
+     *   40:40  motor shutoff counter */
+#if TARGET_MSDOS == 32
+    *((unsigned char*)0x43F) = 0x00; /* motors are off */
+    *((unsigned char*)0x440) = 0x7F; /* keep motor shutoff counter nonzero */
+#else
+    *((unsigned char far*)MK_FP(0x40,0x3F)) = 0x00; /* motors are off */
+    *((unsigned char far*)MK_FP(0x40,0x40)) = 0x7F; /* keep motor shutoff counter nonzero */
+#endif
+
+    my_irq0_old_irq();
+}
 
 static void interrupt my_floppy_irq() {
 	int i;
@@ -3003,6 +3020,9 @@ void do_main_menu() {
 	int select=-1;
 	int c;
 
+    my_irq0_old_irq = _dos_getvect(irq2int(0));
+    _dos_setvect(irq2int(0),my_irq0);
+
 	while (1) {
 		if (backredraw) {
 			vga = vga_state.vga_alpha_ram;
@@ -3090,6 +3110,8 @@ void do_main_menu() {
 			redraw = 1;
 		}
 	}
+
+    _dos_setvect(irq2int(0),my_irq0_old_irq);
 }
 
 static void help(void) {
