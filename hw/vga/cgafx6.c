@@ -93,6 +93,10 @@ int main() {
     unsigned short row=8; /* cannot be <= 1, multiple of 8 */
     unsigned short rowa=1;
     unsigned short rowad=0;
+    unsigned short curoff=(40*4); // cursor on 5th row
+#ifdef SPLITOFF
+    unsigned short splitoff=(40*3); // splitscreen start on 3rd scanline, at test pattern
+#endif
     unsigned short row1,row2;
     unsigned char rc1,rc2,rn1,rn2;
 
@@ -125,9 +129,9 @@ int main() {
 
     /* this effect is more convincing if we can move the hardware cursor higher on the screen */
     outp(0x3D4,0x0E);
-    outp(0x3D5,0x00);
+    outp(0x3D5,curoff >> 8);
     outp(0x3D4,0x0F);
-    outp(0x3D5,0x00);
+    outp(0x3D5,curoff);
 
     /* the 640x200 portion isn't going to show anything unless we set port 3D9h to set foreground to white.
      * this will also mean the border will be white for text mode, but, meh */
@@ -196,6 +200,13 @@ int main() {
         outp(0x3D4,0x07); /* vsyncpos (value minus 1) */
         outp(0x3D5,0x7F); /* move it out of the way */
 
+#ifdef SPLITOFF
+        outp(0x3D4,0x0C); /* start address */
+        outp(0x3D5,splitoff >> 8);
+        outp(0x3D4,0x0D); /* start address */
+        outp(0x3D5,splitoff);
+#endif
+
         __ASM_WAITLINES(waitv1,row1);   /* wait until the scanline BEFORE the raster effect */
 //        __ASM_SETCHARMAXLINE(rc1);      /* write our prediction to char row height to make sure it matches, causing the 6845 to reset row scanline counter to 0 */
         __ASM_WAITLINE();               /* wait one more scanline */
@@ -227,6 +238,13 @@ int main() {
         outp(0x3D5,rn2-6);
         outp(0x3D4,0x07); /* vsyncpos (value minus 1) */
         outp(0x3D5,rn2-1-3);
+
+#ifdef SPLITOFF
+        outp(0x3D4,0x0C); /* start address */
+        outp(0x3D5,0x00);
+        outp(0x3D4,0x0D); /* start address */
+        outp(0x3D5,0x00);
+#endif
 
         __asm {
                 pop         dx
