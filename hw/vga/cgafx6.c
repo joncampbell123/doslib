@@ -93,8 +93,8 @@ int main() {
     unsigned short row=8; /* cannot be <= 1, multiple of 8 */
     unsigned short rowa=1;
     unsigned short rowad=0;
-    unsigned short row1;
-    unsigned char rc1,rn1,rn2;
+    unsigned short row1,row2;
+    unsigned char rc1,rc2,rn1,rn2;
 
     printf("WARNING: Make sure you run this on CGA hardware!\n");
     printf("Hit ENTER to continue, any other key to exit\n");
@@ -173,6 +173,11 @@ int main() {
 
         rn2 = (262 - 6 - row) >> 3;     /* number of scanlines to complete the picture */
 
+        row2 = 192 - row;               /* number of rows to end of screen */
+        rc2 = row2 & 7;                 /* character row scanline */
+        row2--;                         /* apparently our scanline wait misses a scanline at the splitscreen point */
+        rn2++;
+
         __ASM_SETCHARMAXLINE(7);        /* 8 lines */
         __ASM_WAITFORVSYNCBEGIN();
         __ASM_WAITFORVSYNCEND();
@@ -194,12 +199,28 @@ int main() {
         __ASM_WAITLINES(waitv1,row1);   /* wait until the scanline BEFORE the raster effect */
 //        __ASM_SETCHARMAXLINE(rc1);      /* write our prediction to char row height to make sure it matches, causing the 6845 to reset row scanline counter to 0 */
         __ASM_WAITLINE();               /* wait one more scanline */
+                                        /* FIXME: On the CGA hardware I have, the vtotal wraparound seems to make our
+                                         *        scanline wait function count two scanlines. Perhaps the 6845 gets
+                                         *        a bit confused, and doesn't clear the blanking bit for the start of
+                                         *        the new scanline? */
 
-        __ASM_SETCHARMAXLINE(7);        /* 8 lines */
+//        __ASM_SETCHARMAXLINE(7);        /* 8 lines */
+
+//        __ASM_SETMODESEL(0x1A);         /* 640x200 2-color graphics with colorburst enabled [DEBUG] */
 
         /* setup vtotal to complete the display normally */
         outp(0x3D4,0x04); /* vtotal (value minus 1) */
         outp(0x3D5,rn2-1);
+
+        __ASM_WAITLINES(waitv2,row2);   /* wait until the scanline BEFORE the raster effect */
+        __ASM_SETCHARMAXLINE(rc2);      /* write our prediction to char row height to make sure it matches, causing the 6845 to reset row scanline counter to 0 */
+        __ASM_WAITLINE();               /* wait one more scanline */
+
+        __ASM_SETCHARMAXLINE(7);        /* 8 lines */
+
+//        __ASM_SETMODESEL(0x28);         /* 40x25 text [DEBUG] */
+
+        /* NTS: This I/O sequence takes too long on an 8088 to execute within one scanline */
         outp(0x3D4,0x05); /* vadjust */
         outp(0x3D5,0x06);
         outp(0x3D4,0x06); /* vdisplay */
