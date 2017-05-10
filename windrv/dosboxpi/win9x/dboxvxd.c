@@ -153,18 +153,50 @@ void dosbox_id_write_data(const uint32_t val) {
 
 /* VXD device IDs */
 #define VMM_Device_ID               0x0001
-#define snr_Get_VMM_Version             0x0000
-#define snr_Get_Cur_VM_Handle           0x0001
-#define snr_Test_Cur_VM_Handle          0x0002
-#define snr_Get_Sys_VM_Handle           0x0003
-#define snr_Test_Sys_VM_Handle          0x0004
-#define snr_Validate_VM_Handle          0x0005
+#define VMM_snr_Get_VMM_Device_ID       0x0000
 #define Debug_Device_ID             0x0002
 #define VPICD_Device_ID             0x0003
 #define VDMAD_Device_ID             0x0004
 
-/* VMM services */
-#define Fatal_Memory_Error          0x00BF
+#define VXD_STRINGIFY2(x)   #x
+#define VXD_STRINGIFY(x)    VXD_STRINGIFY2(x)
+
+/* VMM Get_VMM_Version
+ *
+ * in:
+ *   none
+ *
+ * out:
+ *   AH, AL = major, minor version number
+ *   ECX = debug development revision number */
+#define Get_VMM_Version_raw(ax,ecx)                                             \
+    __asm__ (                                                                   \
+        "int    $0x20\n"                                                        \
+        ".word  " VXD_STRINGIFY(VMM_snr_Get_VMM_Device_ID) "\n"                 \
+        ".word  " VXD_STRINGIFY(VMM_Device_ID) "\n"                             \
+        : /* outputs */ "=a" (ax), "=c" (ecx)                                   \
+        : /* inputs */                                                          \
+        : /* clobbered */)
+
+typedef struct Get_VMM_Version__response {
+    unsigned short int  version;                /* EAX */
+    unsigned int        debug_dev_rev;          /* ECX */
+} Get_VMM_Version__response;
+
+/* GCC's optimizer will turn the struct return into the register access we need. */
+static inline Get_VMM_Version__response Get_VMM_Version(void) { /* returns only AX */
+    register Get_VMM_Version__response r;
+
+    Get_VMM_Version_raw(r.version,r.debug_dev_rev);
+
+    return r;
+}
+
+static inline unsigned short int Get_VMM_Version__ax(void) { /* returns only AX */
+    return Get_VMM_Version().version;
+}
+
+/* useful macros */
 
 static inline void VXD_CF_SUCCESS(void) {
     __asm__ __volatile__ ("clc");
@@ -236,6 +268,9 @@ void my_sys_critical_init(void) {
  * Exit:
  *   Carry flag = clear if success, set if failure */
 void my_device_init(void) {
+    if (Get_VMM_Version__ax() < 0x30A)
+        goto fail;
+
     if (!probe_dosbox_id())
         goto fail;
 
