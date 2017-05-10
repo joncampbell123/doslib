@@ -1,0 +1,21 @@
+/* Script for ld -r: link without relocation */
+OUTPUT_FORMAT("elf32-i386", "elf32-i386",
+	      "elf32-i386")
+OUTPUT_ARCH(i386)
+/* WARNING: This is a hack. It forces all code and data and bss into one
+   .text segment because of the weird quirky model of a Windows 3.x VXD.
+   all sections, even code, are loaded as read-write in a flat address
+   space. some structures, like the DDB, must exist in code. */
+SECTIONS
+{
+  /* Read-only sections, merged into text segment: */
+  .text         0 :
+  {
+    *(.text .stub)
+    *(.data.rel.ro)
+    *(.rodata)
+    *(.data)
+    *(.bss)
+  } =0x90909090
+}
+

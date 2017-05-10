@@ -7,9 +7,13 @@
 # NTS: HPS is either \ (DOS) or / (Linux)
 
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq -zl -zu -zw -zc
+CFLAGS_THIS_GCC = -I.. -I../../.. -nostdlib -O3 -Os -fomit-frame-pointer -fno-exceptions -fPIC
+
 NOW_BUILDING = WINDRV_DOSBOXPI_WIN9XOW
 
 CFLAGS_VXD = -e=2 -zq -zw -mf -oilrtfm -wx -fp3 -3r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=32 -dTARGET86=386 -DMMODE=f -q -bc -zl -zdp
+
+CFLAGS_VXD_GCC = -march=i386 -DTARGET_MSDOS=32 -DTARGET_WINDOWS=32 -DTARGET86=386 -DMMODE=f
 
 DISCARDABLE_CFLAGS = -nt=_TEXT -nc=CODE
 NONDISCARDABLE_CFLAGS = -nt=_NDTEXT -nc=NDCODE
@@ -39,9 +43,14 @@ lib: .symbolic
 ../../../hw/dosboxid/win32_vxd/dosboxid.lib:
 	cd ../../../hw/dosboxid && ./make.sh build lib win32
 
-$(SUBDIR)$(HPS)dboxvxd.obj: dboxvxd.c
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_VXD) $[@
-	@wcc386 @tmp.cmd
+$(SUBDIR)$(HPS)dboxvxd.o: dboxvxd.c
+	%write tmp.cmd $(CFLAGS_THIS_GCC) $(CFLAGS_VXD_GCC) $[@
+	@$(GCC32) -E -o $(SUBDIR)/dboxvxd.pp -c @tmp.cmd
+	%write tmp.cmd $(CFLAGS_THIS_GCC) $(CFLAGS_VXD_GCC) $[@
+	@$(GCC32) -o $(SUBDIR)/dboxvxd.int.o -c @tmp.cmd
+	@strip --strip-debug --strip-unneeded -R .comment -R .note.GNU-stack -R .eh_frame $(SUBDIR)/dboxvxd.int.o
+	# ready to puke yet?
+	@ld -m elf_i386 -r -o win313l/dboxvxd.o win313l/dboxvxd.int.o -T vxdld.ldscript
 
 $(SUBDIR)$(HPS)dboxmpi.res: dboxmpi.rc
 	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)dboxmpi.res  $[@
@@ -82,10 +91,10 @@ $(DBOXMPI_DRV): $(HW_DOSBOXID_LIB) $(SUBDIR)$(HPS)dboxmpi.obj $(SUBDIR)$(HPS)dll
 !endif
 
 !ifdef DBOXMPI_VXD
-$(DBOXMPI_VXD): $(HW_DOSBOXID_LIB) ../../../hw/dosboxid/win32_vxd/dosboxid.lib $(SUBDIR)$(HPS)dboxvxd.obj
+$(DBOXMPI_VXD): $(HW_DOSBOXID_LIB) ../../../hw/dosboxid/win32_vxd/dosboxid.lib $(SUBDIR)$(HPS)dboxvxd.o
 	%write tmp.cmd option quiet
 	%write tmp.cmd system win_vxd
-	%write tmp.cmd file $(SUBDIR)$(HPS)dboxvxd.obj
+	%write tmp.cmd file $(SUBDIR)$(HPS)dboxvxd.o
 	%write tmp.cmd library ../../../hw/dosboxid/win32_vxd/dosboxid.lib
 	%write tmp.cmd option map=$(DBOXMPI_VXD).map
 	%write tmp.cmd option nocaseexact
@@ -95,9 +104,11 @@ $(DBOXMPI_VXD): $(HW_DOSBOXID_LIB) ../../../hw/dosboxid/win32_vxd/dosboxid.lib $
 	%write tmp.cmd option nodefaultlibs
 	%write tmp.cmd option modname=DBOXMPI
 	%write tmp.cmd option description 'DOSBox-X Mouse Pointer Integration driver for Windows 95'
-	%write tmp.cmd export DBOXMPI_DDB.1=_DBOXMPI_DDB
+	%write tmp.cmd export DBOXMPI_DDB.1=DBOXMPI_DDB
 	%write tmp.cmd name $(DBOXMPI_VXD)
 	@wlink @tmp.cmd
+	# using GCC object files seems to throw off Watcom's ability to link it's code to VXD properly
+	../../../tool/fixvxdsdkver.pl  $(DBOXMPI_VXD) 0x0000 0x030A
 !endif
 
 clean: .SYMBOLIC
