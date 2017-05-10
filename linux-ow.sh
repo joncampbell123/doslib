@@ -35,6 +35,16 @@ if [ x"$TOP" == x ]; then
     sleep 1
 fi
 
+# how to invoke 32-bit GCC
+if [ -z "$GCC32" ]; then
+    x=`uname -m`
+    if [ "$x" == "x86_64" ]; then
+        GCC32="gcc -m32"
+    elif [[ "$x" == "i386" || "$x" == "i486" || "$x" == "i586" || "$x" == "i686" ]]; then
+        GCC32=gcc
+    fi
+fi
+
 # script should call this when run with "clean" command. if it has it's own build steps to
 # clean up then it should do them after running this subroutine.
 do_clean() {
@@ -275,7 +285,13 @@ do_wmake() {
     _x2="$1"; shift
     cd "$PROJTOP" || return 1
     mkdir -p "$_x1" || return 1
-    wmake -h -e -f "$TOP/mak/$_x1.mak" "TO_BUILD=$_x1" HPS=/ $_x2 REL=$rel $* || return 1
+    opts=( )
+
+    if [ -n "$GCC32" ]; then
+        opts+=("GCC32=$GCC32")
+    fi
+
+    wmake -h -e -f "$TOP/mak/$_x1.mak" "${opts[@]}" "TO_BUILD=$_x1" HPS=/ $_x2 REL=$rel $* || return 1
     return 0
 }
 
