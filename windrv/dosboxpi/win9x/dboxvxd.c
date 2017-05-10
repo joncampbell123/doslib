@@ -130,6 +130,8 @@ void dosbox_id_write_data(const uint32_t val) {
         ".word  " VXD_STRINGIFY(srv) "\n"                                       \
         ".word  " VXD_STRINGIFY(dev) "\n"
 
+typedef uint32_t vxd_vm_handle_t;
+
 /* VXD control messages */
 #define Sys_Critical_Init           0x0000
 #define Device_Init                 0x0001
@@ -162,6 +164,7 @@ void dosbox_id_write_data(const uint32_t val) {
 /* VXD device IDs */
 #define VMM_Device_ID               0x0001
 #define VMM_snr_Get_VMM_Device_ID       0x0000
+#define VMM_snr_Get_Cur_VM_Handle       0x0001
 #define Debug_Device_ID             0x0002
 #define VPICD_Device_ID             0x0003
 #define VDMAD_Device_ID             0x0004
@@ -201,6 +204,29 @@ static inline Get_VMM_Version__response Get_VMM_Version(void) { /* returns only 
 static inline unsigned short int Get_VMM_Version__ax(void) { /* returns only AX */
     return Get_VMM_Version().version;
 }
+
+/*==============================================================*/
+
+/* VMM Get_Cur_VM_Handle
+ *
+ * in:
+ *   none
+ *
+ * out:
+ *   EBX = Handle of the current VM */
+
+static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
+    register vxd_vm_handle_t r;
+
+    __asm__ (                                                                   \
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Cur_VM_Handle)                    \
+        : /* outputs */ "=b" (r)                                                \
+        : /* inputs */                                                          \
+        : /* clobbered */);
+
+    return r;
+}
+
 /*==============================================================*/
 
 /* useful macros */
@@ -220,8 +246,6 @@ static inline void VXD_CF_FAILURE(void) {
         : /*outputs*/                           \
         : /*inputs*/  /*%0*/ "i" (ctrlmsg)      \
         : /*clobbers*/       "cc")
-
-typedef uint32_t vxd_vm_handle_t;
 
 const struct windows_vxd_ddb_win31 DBOXMPI_DDB = {
     0,                                                      // +0x00 DDB_Next
