@@ -122,6 +122,14 @@ void dosbox_id_write_data(const uint32_t val) {
 # define VXD_INT3()                 __asm int 3
 #endif
 
+#define VXD_STRINGIFY2(x)   #x
+#define VXD_STRINGIFY(x)    VXD_STRINGIFY2(x)
+
+#define VXD_AsmCall(dev,srv) \
+        "int    $0x20\n"                                                        \
+        ".word  " VXD_STRINGIFY(srv) "\n"                                       \
+        ".word  " VXD_STRINGIFY(dev) "\n"
+
 /* VXD control messages */
 #define Sys_Critical_Init           0x0000
 #define Device_Init                 0x0001
@@ -158,9 +166,6 @@ void dosbox_id_write_data(const uint32_t val) {
 #define VPICD_Device_ID             0x0003
 #define VDMAD_Device_ID             0x0004
 
-#define VXD_STRINGIFY2(x)   #x
-#define VXD_STRINGIFY(x)    VXD_STRINGIFY2(x)
-
 /* VMM Get_VMM_Version
  *
  * in:
@@ -171,9 +176,7 @@ void dosbox_id_write_data(const uint32_t val) {
  *   ECX = debug development revision number */
 #define Get_VMM_Version_raw(ax,ecx)                                             \
     __asm__ (                                                                   \
-        "int    $0x20\n"                                                        \
-        ".word  " VXD_STRINGIFY(VMM_snr_Get_VMM_Device_ID) "\n"                 \
-        ".word  " VXD_STRINGIFY(VMM_Device_ID) "\n"                             \
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_VMM_Device_ID)                    \
         : /* outputs */ "=a" (ax), "=c" (ecx)                                   \
         : /* inputs */                                                          \
         : /* clobbered */)
