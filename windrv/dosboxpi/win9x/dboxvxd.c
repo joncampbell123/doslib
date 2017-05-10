@@ -166,6 +166,8 @@ void dosbox_id_write_data(const uint32_t val) {
 #define VPICD_Device_ID             0x0003
 #define VDMAD_Device_ID             0x0004
 
+/*==============================================================*/
+
 /* VMM Get_VMM_Version
  *
  * in:
@@ -195,9 +197,11 @@ static inline Get_VMM_Version__response Get_VMM_Version(void) { /* returns only 
     return r;
 }
 
+/* GCC's optimizer will turn the struct return into the register access we need. */
 static inline unsigned short int Get_VMM_Version__ax(void) { /* returns only AX */
     return Get_VMM_Version().version;
 }
+/*==============================================================*/
 
 /* useful macros */
 
