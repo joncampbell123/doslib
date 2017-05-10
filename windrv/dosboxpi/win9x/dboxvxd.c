@@ -130,6 +130,22 @@ void dosbox_id_write_data(const uint32_t val) {
         ".word  " VXD_STRINGIFY(srv) "\n"                                       \
         ".word  " VXD_STRINGIFY(dev) "\n"
 
+static inline void VXD_CF_SUCCESS(void) {
+    __asm__ __volatile__ ("clc");
+}
+
+static inline void VXD_CF_FAILURE(void) {
+    __asm__ __volatile__ ("stc");
+}
+
+#define VXD_CONTROL_DISPATCH(ctrlmsg, ctrlfunc) \
+    __asm__ __volatile__ (                      \
+        "cmp    %0,%%eax\n"                     \
+        "jz     " #ctrlfunc "\n"                \
+        : /*outputs*/                           \
+        : /*inputs*/  /*%0*/ "i" (ctrlmsg)      \
+        : /*clobbers*/       "cc")
+
 typedef uint32_t vxd_vm_handle_t;
 
 /* VXD control messages */
@@ -228,24 +244,6 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 }
 
 /*==============================================================*/
-
-/* useful macros */
-
-static inline void VXD_CF_SUCCESS(void) {
-    __asm__ __volatile__ ("clc");
-}
-
-static inline void VXD_CF_FAILURE(void) {
-    __asm__ __volatile__ ("stc");
-}
-
-#define VXD_CONTROL_DISPATCH(ctrlmsg, ctrlfunc) \
-    __asm__ __volatile__ (                      \
-        "cmp    %0,%%eax\n"                     \
-        "jz     " #ctrlfunc "\n"                \
-        : /*outputs*/                           \
-        : /*inputs*/  /*%0*/ "i" (ctrlmsg)      \
-        : /*clobbers*/       "cc")
 
 const struct windows_vxd_ddb_win31 DBOXMPI_DDB = {
     0,                                                      // +0x00 DDB_Next
