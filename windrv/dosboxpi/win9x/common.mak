@@ -7,7 +7,7 @@
 # NTS: HPS is either \ (DOS) or / (Linux)
 
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq -zl -zu -zw -zc
-CFLAGS_THIS_GCC = -I.. -I../../.. -nostdlib -O3 -Os -fomit-frame-pointer -fno-exceptions -fPIC
+CFLAGS_THIS_GCC = -I.. -I../../.. -nostdlib -O3 -Os -fomit-frame-pointer -fno-exceptions -fno-pic
 
 NOW_BUILDING = WINDRV_DOSBOXPI_WIN9XOW
 
