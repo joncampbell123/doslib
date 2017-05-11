@@ -267,6 +267,11 @@ const struct windows_vxd_ddb_win31 DBOXMPI_DDB = {
 vxd_vm_handle_t System_VM_Handle = 0;
 vxd_vm_handle_t Focus_VM_Handle = 0;
 
+inline static unsigned int VXD_GETEBX(void) {
+    register unsigned int r asm("ebx");
+    return r;
+}
+
 /* VxD control message Sys_Critical_Init.
  *
  * Entry:
@@ -280,7 +285,7 @@ vxd_vm_handle_t Focus_VM_Handle = 0;
  * Notes:
  *   Do not use Simulate_Int or Exec_Int at this stage. */
 void my_sys_critical_init(void) {
-    const register int sysvm_handle asm("ebx");
+    const register unsigned int sysvm_handle = VXD_GETEBX();
 
     System_VM_Handle = sysvm_handle;
 
