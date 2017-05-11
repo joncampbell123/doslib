@@ -8,6 +8,7 @@
 #define VMM_snr_Get_Sys_VM_Handle           0x0003
 #define VMM_snr_Test_Sys_VM_Handle          0x0004
 #define VMM_snr_Validate_VM_Handle          0x0005
+#define VMM_snr_Get_VMM_Reenter_Count       0x0006
 
 /*==============================================================*/
 
@@ -183,6 +184,29 @@ static inline _Bool Validate_VM_Handle(const vxd_vm_handle_t vm_handle) {
         : /* inputs */ "b" (vm_handle)                                          \
         : /* clobbered */);
 #endif
+
+    return r;
+}
+
+/*==============================================================*/
+
+/* VMM Get_VMM_Reenter_Count
+ *
+ * in:
+ *   none
+ *
+ * out:
+ *   ECX = Number of times the VMM has been re-entered. If nonzero, use only
+ *         asynchronous calls. */
+
+static inline uint32_t Get_VMM_Reenter_Count(void) {
+    register uint32_t r;
+
+    __asm__ (                                                                   \
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_VMM_Reenter_Count)                \
+        : /* outputs */ "=c" (r)                                                \
+        : /* inputs */                                                          \
+        : /* clobbered */);
 
     return r;
 }
