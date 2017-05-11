@@ -31,7 +31,7 @@ typedef struct Get_VMM_Version__response {
 } Get_VMM_Version__response;
 
 /* GCC's optimizer will turn the struct return into the register access we need. */
-static inline Get_VMM_Version__response Get_VMM_Version(void) { /* returns only AX */
+static inline Get_VMM_Version__response Get_VMM_Version(void) { /* returns via struct, all contents */
     register Get_VMM_Version__response r;
 
     Get_VMM_Version_raw(r.version,r.debug_dev_rev);
