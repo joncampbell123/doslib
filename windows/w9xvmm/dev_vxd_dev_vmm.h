@@ -39,11 +39,6 @@ static inline Get_VMM_Version__response Get_VMM_Version(void) { /* returns via s
     return r;
 }
 
-/* GCC's optimizer will turn the struct return into the register access we need. */
-static inline unsigned short int Get_VMM_Version__ax(void) { /* returns only AX */
-    return Get_VMM_Version().version;
-}
-
 /*==============================================================*/
 
 /* VMM Get_Cur_VM_Handle

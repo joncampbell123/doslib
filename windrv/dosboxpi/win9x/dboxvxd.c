@@ -156,7 +156,7 @@ void my_sys_critical_init(void) {
  * Exit:
  *   Carry flag = clear if success, set if failure */
 void my_device_init(void) {
-    if (Get_VMM_Version__ax() < 0x30A)
+    if (Get_VMM_Version().version < 0x30A)
         goto fail;
 
     if (!probe_dosbox_id())
