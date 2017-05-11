@@ -74,7 +74,7 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vm_handle) {
     register _Bool r;
 
-#if (__GNUC__ >= 6 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 7)
+#ifdef GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT
     /* GCC 6.x with support for returning CPU flags */
     __asm__ (                                                                   \
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Test_Cur_VM_Handle)                   \
@@ -130,7 +130,7 @@ static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
 static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vm_handle) {
     register _Bool r;
 
-#if (__GNUC__ >= 6 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 7)
+#ifdef GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT
     /* GCC 6.x with support for returning CPU flags */
     __asm__ (                                                                   \
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Test_Sys_VM_Handle)                   \
@@ -167,7 +167,7 @@ static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vm_handle) {
 static inline _Bool Validate_VM_Handle(const vxd_vm_handle_t vm_handle) {
     register _Bool r;
 
-#if (__GNUC__ >= 6 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 7)
+#ifdef GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT
     /* GCC 6.x with support for returning CPU flags */
     __asm__ (                                                                   \
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Validate_VM_Handle)                   \

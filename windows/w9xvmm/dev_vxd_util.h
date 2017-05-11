@@ -35,3 +35,7 @@ inline static unsigned int VXD_GETEBX(void) {
     return r;
 }
 
+#if (__GNUC__ >= 6 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 7)
+# define GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT
+#endif
+
