@@ -181,6 +181,7 @@ typedef uint32_t vxd_vm_handle_t;
 #define VMM_Device_ID               0x0001
 #define VMM_snr_Get_VMM_Device_ID       0x0000
 #define VMM_snr_Get_Cur_VM_Handle       0x0001
+#define VMM_snr_Test_Cur_VM_Handle      0x0002
 #define Debug_Device_ID             0x0002
 #define VPICD_Device_ID             0x0003
 #define VDMAD_Device_ID             0x0004
@@ -238,6 +239,33 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Cur_VM_Handle)                    \
         : /* outputs */ "=b" (r)                                                \
         : /* inputs */                                                          \
+        : /* clobbered */);
+
+    return r;
+}
+
+/*==============================================================*/
+
+/* VMM Test_Cur_VM_Handle
+ *
+ * in:
+ *   EBX = VM handle to test
+ *
+ * out:
+ *   ZF = set if handle is for the current VM, clear if not */
+
+static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vm_handle) {
+    /* TODO: It is said that GCC 6.1.0 added support for __asm__ to mark CPU flags as output:
+     * https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html */
+    register _Bool r;
+
+    /* GCC 4.x compatible inline ASM. GCC 4.x doesn't support storing ZF flag into result,
+     * therefore we have to use setz */
+    __asm__ (                                                                   \
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Test_Cur_VM_Handle)                   \
+        "setzb %%al"                                                            \
+        : /* outputs */ "=a" (r)                                                \
+        : /* inputs */ "b" (vm_handle)                                          \
         : /* clobbered */);
 
     return r;
