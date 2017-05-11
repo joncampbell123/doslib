@@ -1,6 +1,7 @@
 /* NOTE: Because of our ASM interfacing needs, you must compile this with
  *       GCC, not Open Watcom. */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
