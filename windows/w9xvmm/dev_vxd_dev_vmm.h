@@ -7,6 +7,7 @@
 #define VMM_snr_Test_Cur_VM_Handle          0x0002
 #define VMM_snr_Get_Sys_VM_Handle           0x0003
 #define VMM_snr_Test_Sys_VM_Handle          0x0004
+#define VMM_snr_Validate_VM_Handle          0x0005
 
 /*==============================================================*/
 
@@ -141,6 +142,43 @@ static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vm_handle) {
     __asm__ (                                                                   \
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Test_Sys_VM_Handle)                   \
         "setzb %%al"                                                            \
+        : /* outputs */ "=a" (r)                                                \
+        : /* inputs */ "b" (vm_handle)                                          \
+        : /* clobbered */);
+#endif
+
+    return r;
+}
+
+/*==============================================================*/
+
+/* VMM Validate_VM_Handle
+ *
+ * in:
+ *   EBX = VM handle to test
+ *
+ * out:
+ *   CF = set if handle is NOT valid, clear if valid
+ *
+ * Return value:
+ *   Nonzero if valid, zero if not valid */
+
+static inline _Bool Validate_VM_Handle(const vxd_vm_handle_t vm_handle) {
+    register _Bool r;
+
+#if (__GNUC__ >= 6 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 7)
+    /* GCC 6.x with support for returning CPU flags */
+    __asm__ (                                                                   \
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Validate_VM_Handle)                   \
+        : /* outputs */ "=@ccnc" (r)                                            \
+        : /* inputs */ "b" (vm_handle)                                          \
+        : /* clobbered */);
+#else
+    /* GCC 4.x compatible inline ASM. GCC 4.x doesn't support storing CF flag into result,
+     * therefore we have to use setz */
+    __asm__ (                                                                   \
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Validate_VM_Handle)                   \
+        "setncb %%al"                                                           \
         : /* outputs */ "=a" (r)                                                \
         : /* inputs */ "b" (vm_handle)                                          \
         : /* clobbered */);
