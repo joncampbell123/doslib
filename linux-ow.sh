@@ -38,6 +38,16 @@ fi
 # how to invoke 32-bit GCC
 if [ -z "$GCC32" ]; then
     x=`uname -m`
+
+    p=~/src/gcc-7.1.0-i386-cc-build/bin/i386-elf-gcc
+    if [ -x "$p" ]; then
+        GCC32="$p"
+    fi
+fi
+
+# how to invoke 32-bit GCC
+if [ -z "$GCC32" ]; then
+    x=`uname -m`
     if [ "$x" == "x86_64" ]; then
         GCC32="gcc -m32"
     elif [[ "$x" == "i386" || "$x" == "i486" || "$x" == "i586" || "$x" == "i686" ]]; then
