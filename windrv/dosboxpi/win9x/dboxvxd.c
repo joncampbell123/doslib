@@ -264,10 +264,16 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
  *   ZF = set if handle is for the current VM, clear if not */
 
 static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vm_handle) {
-    /* TODO: It is said that GCC 6.1.0 added support for __asm__ to mark CPU flags as output:
-     * https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html */
     register _Bool r;
 
+#if (__GNUC__ >= 6 && __GNUC_MINOR__ >= 1) || (__GNUC__ >= 7)
+    /* GCC 6.x with support for returning CPU flags */
+    __asm__ (                                                                   \
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Test_Cur_VM_Handle)                   \
+        : /* outputs */ "=@ccz" (r)                                             \
+        : /* inputs */ "b" (vm_handle)                                          \
+        : /* clobbered */);
+#else
     /* GCC 4.x compatible inline ASM. GCC 4.x doesn't support storing ZF flag into result,
      * therefore we have to use setz */
     __asm__ (                                                                   \
@@ -276,6 +282,7 @@ static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vm_handle) {
         : /* outputs */ "=a" (r)                                                \
         : /* inputs */ "b" (vm_handle)                                          \
         : /* clobbered */);
+#endif
 
     return r;
 }
