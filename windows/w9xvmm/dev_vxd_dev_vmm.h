@@ -18,13 +18,6 @@
  * out:
  *   AH, AL = major, minor version number
  *   ECX = debug development revision number */
-#define Get_VMM_Version_raw(ax,ecx)                                             \
-    __asm__ (                                                                   \
-        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_VMM_Device_ID)                    \
-        : /* outputs */ "=a" (ax), "=c" (ecx)                                   \
-        : /* inputs */                                                          \
-        : /* clobbered */)
-
 typedef struct Get_VMM_Version__response {
     unsigned short int  version;                /*  AX */
     unsigned int        debug_dev_rev;          /* ECX */
@@ -34,7 +27,12 @@ typedef struct Get_VMM_Version__response {
 static inline Get_VMM_Version__response Get_VMM_Version(void) { /* returns via struct, all contents */
     register Get_VMM_Version__response r;
 
-    Get_VMM_Version_raw(r.version,r.debug_dev_rev);
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_VMM_Device_ID)
+        : /* outputs */ "=a" (r.version),
+                        "=c" (r.debug_dev_rev)
+        : /* inputs */ /* none */
+        : /* clobbered */ /* none */);
 
     return r;
 }
