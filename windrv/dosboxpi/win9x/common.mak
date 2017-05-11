@@ -47,10 +47,10 @@ $(SUBDIR)$(HPS)dboxvxd.o: dboxvxd.c
 	%write tmp.cmd $(CFLAGS_THIS_GCC) $(CFLAGS_VXD_GCC) $[@
 	@$(GCC32) -E -o $(SUBDIR)/dboxvxd.pp -c @tmp.cmd
 	%write tmp.cmd $(CFLAGS_THIS_GCC) $(CFLAGS_VXD_GCC) $[@
-	$(GCC32) -o $(SUBDIR)/dboxvxd.int.o -c @tmp.cmd
+	@$(GCC32) -o $(SUBDIR)/dboxvxd.int.o -c @tmp.cmd
 	@strip --strip-debug --strip-unneeded -R .comment -R .note.GNU-stack -R .eh_frame $(SUBDIR)/dboxvxd.int.o
 	# ready to puke yet?
-	@ld -m elf_i386 -r -o win313l/dboxvxd.o win313l/dboxvxd.int.o -T vxdld.ldscript
+	@$(GCCLD32) -m elf_i386 -r -o win313l/dboxvxd.o win313l/dboxvxd.int.o -T vxdld.ldscript
 
 $(SUBDIR)$(HPS)dboxmpi.res: dboxmpi.rc
 	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)dboxmpi.res  $[@

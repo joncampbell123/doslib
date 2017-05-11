@@ -40,8 +40,10 @@ if [ -z "$GCC32" ]; then
     x=`uname -m`
 
     p=~/src/gcc-7.1.0-i386-cc-build/bin/i386-elf-gcc
+    l=~/src/gcc-7.1.0-i386-cc-build/bin/i386-elf-ld
     if [ -x "$p" ]; then
         GCC32="$p"
+        if [ -x "$l" ]; then GCCLD32="$l"; fi
     fi
 fi
 
@@ -52,6 +54,16 @@ if [ -z "$GCC32" ]; then
         GCC32="gcc -m32"
     elif [[ "$x" == "i386" || "$x" == "i486" || "$x" == "i586" || "$x" == "i686" ]]; then
         GCC32=gcc
+    fi
+fi
+
+# how to invoke 32-bit GCC
+if [ -z "$GCCLD32" ]; then
+    x=`uname -m`
+    if [ "$x" == "x86_64" ]; then
+        GCCLD32="i386-pc-linux-gnu-ld"
+    elif [[ "$x" == "i386" || "$x" == "i486" || "$x" == "i586" || "$x" == "i686" ]]; then
+        GCCLD32=ld
     fi
 fi
 
@@ -299,6 +311,9 @@ do_wmake() {
 
     if [ -n "$GCC32" ]; then
         opts+=("GCC32=$GCC32")
+    fi
+    if [ -n "$GCCLD32" ]; then
+        opts+=("GCCLD32=$GCCLD32")
     fi
 
     wmake -h -e -f "$TOP/mak/$_x1.mak" "${opts[@]}" "TO_BUILD=$_x1" HPS=/ $_x2 REL=$rel $* || return 1
