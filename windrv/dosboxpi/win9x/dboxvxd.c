@@ -289,7 +289,7 @@ vxd_vm_handle_t Focus_VM_Handle = 0;
  * Notes:
  *   Do not use Simulate_Int or Exec_Int at this stage. */
 void my_sys_critical_init(void) {
-    const register unsigned int sysvm_handle = VXD_GETEBX();
+    const register vxd_vm_handle_t sysvm_handle = VXD_GETEBX();
 
     System_VM_Handle = sysvm_handle;
 
@@ -342,7 +342,7 @@ fail:
  * Exit:
  *   Carry flag = clear if success, set if failure */
 void my_sys_vm_init(void) {
-    const register int sysvm_handle asm("ebx");
+    const register vxd_vm_handle_t sysvm_handle = VXD_GETEBX();
 
     System_VM_Handle = sysvm_handle;
 
@@ -361,7 +361,7 @@ void my_sys_vm_init(void) {
  * Exit:
  *   CF = 0 */
 void my_set_device_focus(void) {
-    const register int vm_handle asm("ebx");
+    const register vxd_vm_handle_t vm_handle = VXD_GETEBX();
 
     if (Focus_VM_Handle != vm_handle) {
         Focus_VM_Handle = vm_handle;
