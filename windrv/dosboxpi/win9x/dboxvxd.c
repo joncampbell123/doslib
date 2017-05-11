@@ -11,6 +11,14 @@
 #include <hw/dos/exelehdr.h>
 #include <hw/dosboxid/iglib.h>
 
+#include <windows/w9xvmm/dev_vxd_util.h>
+#include <windows/w9xvmm/dev_vxd_types.h>
+#include <windows/w9xvmm/dev_vxd_ctrl_msg.h>
+#include <windows/w9xvmm/dev_vxd_dev_vmm.h>
+#include <windows/w9xvmm/dev_vxd_dev_debug.h>
+#include <windows/w9xvmm/dev_vxd_dev_vpicd.h>
+#include <windows/w9xvmm/dev_vxd_dev_vdmad.h>
+
 void vxd_control_proc(void);
 
 #if 1
@@ -95,80 +103,6 @@ void dosbox_id_write_data(const uint32_t val) {
 }
 
 #endif
-
-
-/* USEFUL */
-#if defined(__GNUC__)
-# define VXD_INT3()                 __asm__ __volatile__ ("int $3")
-#else
-# define VXD_INT3()                 __asm int 3
-#endif
-
-#define VXD_STRINGIFY2(x)   #x
-#define VXD_STRINGIFY(x)    VXD_STRINGIFY2(x)
-
-#define VXD_AsmCall(dev,srv) \
-        "int    $0x20\n"                                                        \
-        ".word  " VXD_STRINGIFY(srv) "\n"                                       \
-        ".word  " VXD_STRINGIFY(dev) "\n"
-
-static inline void VXD_CF_SUCCESS(void) {
-    __asm__ __volatile__ ("clc");
-}
-
-static inline void VXD_CF_FAILURE(void) {
-    __asm__ __volatile__ ("stc");
-}
-
-#define VXD_CONTROL_DISPATCH(ctrlmsg, ctrlfunc) \
-    __asm__ __volatile__ (                      \
-        "cmp    %0,%%eax\n"                     \
-        "jz     " #ctrlfunc "\n"                \
-        : /*outputs*/                           \
-        : /*inputs*/  /*%0*/ "i" (ctrlmsg)      \
-        : /*clobbers*/       "cc")
-
-typedef uint32_t vxd_vm_handle_t;
-
-/* VXD control messages */
-#define Sys_Critical_Init           0x0000
-#define Device_Init                 0x0001
-#define Init_Complete               0x0002
-#define Sys_VM_Init                 0x0003
-#define Sys_VM_Terminate            0x0004
-#define System_Exit                 0x0005
-#define Sys_Critical_Exit           0x0006
-#define Create_VM                   0x0007
-#define VM_Critical_Init            0x0008
-#define VM_Init                     0x0009
-#define VM_Terminate                0x000A
-#define VM_Not_Executeable          0x000B
-#define Destroy_VM                  0x000C
-#define VM_Suspend                  0x000D
-#define VM_Resume                   0x000E
-#define Set_Device_Focus            0x000F
-#define Begin_Message_Mode          0x0010
-#define End_Message_Mode            0x0011
-#define Reboot_Processor            0x0012
-#define Query_Destroy               0x0013
-#define Debug_Query                 0x0014
-#define Begin_PM_App                0x0015
-#define End_PM_App                  0x0016
-#define Device_Reboot_Notify        0x0017
-#define Crit_Reboot_Notify          0x0018
-#define Close_VM_Notify             0x0019
-#define Power_Event                 0x001A
-
-/* VXD device IDs */
-#define VMM_Device_ID               0x0001
-#define VMM_snr_Get_VMM_Device_ID       0x0000
-#define VMM_snr_Get_Cur_VM_Handle       0x0001
-#define VMM_snr_Test_Cur_VM_Handle      0x0002
-#define VMM_snr_Get_Sys_VM_Handle       0x0003
-#define VMM_snr_Test_Sys_VM_Handle      0x0004
-#define Debug_Device_ID             0x0002
-#define VPICD_Device_ID             0x0003
-#define VDMAD_Device_ID             0x0004
 
 /*==============================================================*/
 
@@ -341,11 +275,6 @@ const struct windows_vxd_ddb_win31 DBOXMPI_DDB = {
 /* keep track of the system VM */
 vxd_vm_handle_t System_VM_Handle = 0;
 vxd_vm_handle_t Focus_VM_Handle = 0;
-
-inline static unsigned int VXD_GETEBX(void) {
-    register unsigned int r asm("ebx");
-    return r;
-}
 
 /* VxD control message Sys_Critical_Init.
  *
