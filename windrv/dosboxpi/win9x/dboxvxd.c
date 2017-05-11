@@ -122,7 +122,7 @@ void dosbox_id_write_data(const uint32_t val) {
         : /* clobbered */)
 
 typedef struct Get_VMM_Version__response {
-    unsigned short int  version;                /* EAX */
+    unsigned short int  version;                /*  AX */
     unsigned int        debug_dev_rev;          /* ECX */
 } Get_VMM_Version__response;
 
