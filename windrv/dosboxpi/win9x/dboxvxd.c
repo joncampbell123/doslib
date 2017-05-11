@@ -6,36 +6,9 @@
 #include <string.h>
 #include <stdio.h>
 
+#include <hw/cpu/gccioport.h>
+
 #include <hw/dos/exelehdr.h>
-
-#if 1
-
-static inline uint8_t inp(const uint16_t port) {
-    register uint8_t data;
-
-    __asm__ __volatile__ ("inb %%dx,%%al" : /* outputs */ "=a" (data) : /* inputs */ "d" (port));
-
-    return data;
-}
-
-static inline void outp(const uint16_t port,const uint8_t data) {
-    __asm__ __volatile__ ("outb %%al,%%dx" : /* no output */ : /* inputs */ "d" (port), "a" (data));
-}
-
-static inline uint32_t inpd(const uint16_t port) {
-    register uint32_t data;
-
-    __asm__ __volatile__ ("inl %%dx,%%eax" : /* outputs */ "=a" (data) : /* inputs */ "d" (port));
-
-    return data;
-}
-
-static inline void outpd(const uint16_t port,const uint32_t data) {
-    __asm__ __volatile__ ("outl %%eax,%%dx" : /* no output */ : /* inputs */ "d" (port), "a" (data));
-}
-
-#endif
-
 #include <hw/dosboxid/iglib.h>
 
 void vxd_control_proc(void);
