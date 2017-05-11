@@ -9,6 +9,14 @@
 
 #if 1
 
+static inline uint8_t inp(const uint16_t port) {
+    register uint8_t data;
+
+    __asm__ __volatile__ ("inb %%dx,%%al" : /* outputs */ "=a" (data) : /* inputs */ "d" (port));
+
+    return data;
+}
+
 static inline void outp(const uint16_t port,const uint8_t data) {
     __asm__ __volatile__ ("outb %%al,%%dx" : /* no output */ : /* inputs */ "d" (port), "a" (data));
 }
