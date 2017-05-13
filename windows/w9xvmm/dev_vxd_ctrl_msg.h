@@ -108,14 +108,40 @@
 
 /* VxD control message Sys_VM_Terminate.
  *
+ * Meaning:
+ *   The System VM is terminating. This is sent after all other virtual machines
+ *   have terminated, and only when the system is terminating normally.
+ *
  * Entry:
  *   EAX = Sys_VM_Terminate
  *   EBX = handle of System VM
  *
  * Exit:
- *   Carry flag = clear if success, set if failure */
+ *   Carry flag = clear if success, set if failure.
+ *   According to documentation, you must set CF=0. */
 #define Sys_VM_Terminate            0x0004
 
+/* VxD control message System_Exit.
+ *
+ * Meaning:
+ *   The system is terminating normally, or as a result of a crash.
+ *   Interrupts are enabled while VxDs process this message.
+ *
+ * Entry:
+ *   EAX = System_Exit
+ *   EBX = handle of System VM
+ *
+ * Exit:
+ *   Carry flag = clear if success, set if failure.
+ *   According to documentation, you must set CF=0.
+ *
+ * Notes:
+ *   Must not call Simulate_Int or Exec_Int service, but may modify
+ *   the system virtual machine memory to restore system state to
+ *   allow Windows to exit without problems.
+ *
+ *   The system restores the instance snapshot before sending this
+ *   message. */
 #define System_Exit                 0x0005
 
 #define Sys_Critical_Exit           0x0006
