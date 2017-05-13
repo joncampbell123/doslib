@@ -234,9 +234,79 @@
  */
 #define VM_Init                     0x0009
 
+/* VxD control message VM_Terminate.
+ *
+ * Meaning:
+ *   The system is terminating the specified VM. This is only
+ *   sent when the VM is being terminated normally. This is
+ *   the first stage of Destroy_VM.
+ *
+ * Entry:
+ *   EAX = VM_Terminate
+ *   EBX = VM handle
+ *
+ * Exit:
+ *   CF = 0
+ *
+ * Note:
+ *   Virtual device can use Simulate_Int or Exec_int
+ *   in the specified virtual machine within this call.
+ */
 #define VM_Terminate                0x000A
 
+/* VxD control message VM_Not_Executeable.
+ *
+ * Meaning:
+ *   The system is telling the virtual device the VM is no longer
+ *   capable of detecting. If the VM is running, VM_Terminate is
+ *   not called and this is sent first instead. This is the second
+ *   stage of Destroy_VM.
+ *
+ * Entry:
+ *   EAX = VM_Not_Executeable
+ *   EBX = VM handle
+ *   EDX = Flags
+ *
+ * Flags:
+ *   The reason the virtual machine is no longer executable.
+ *   It can be one of the following values.
+ *
+ *      VME_Crashed                 Virtual machine has crashed.
+ *
+ *      VME_Nuked                   Virtual machine was destroyed while active.
+ *
+ *      VME_CreateFail              Some device failed Create_VM
+ *
+ *      VME_CrInitFail              Some device failed VM_Critical_Init
+ *
+ *      VME_InitFail                Some device failed VM_Init
+ *
+ * Exit:
+ *   CF = 0
+ *
+ * Note:
+ *   Virtual device can not use Simulate_Int or Exec_int
+ *   in the specified virtual machine within this call.
+ */
 #define VM_Not_Executeable          0x000B
+
+#  define VME_Crashed_Bit               0UL
+#  define VME_Crashed                   (1UL << VME_Crashed_Bit)
+
+#  define VNE_Nuked_Bit                 1UL
+#  define VNE_Nuked                     (1UL << VNE_Nuked_Bit)
+
+#  define VNE_CreateFail_Bit            2UL
+#  define VNE_CreateFail                (1UL << VNE_CreateFail_Bit)
+
+#  define VNE_CrInitFail_Bit            3UL
+#  define VNE_CrInitFail                (1UL << VNE_CrInitFail_Bit)
+
+#  define VNE_InitFail_Bit              4UL
+#  define VNE_InitFail                  (1UL << VNE_InitFail_Bit)
+
+#  define VNE_Closed_Bit                5UL
+#  define VNE_Closed                    (1UL << VNE_Closed_Bit)
 
 #define Destroy_VM                  0x000C
 
