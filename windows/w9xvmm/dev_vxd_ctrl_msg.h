@@ -446,6 +446,23 @@
  *   CF = 0 */
 #define Reboot_Processor            0x0012
 
+/* VxD control message Query_Destroy.
+ *
+ * Meaning:
+ *   The system is asking virtual machines to display a warning message if destroying
+ *   the VM will disrupt the virtual device. This call should set CF true if it will,
+ *   and it should also use SHELL_Message to display a message to the user.
+ *
+ *   The system will send this message before attempting to destroy a VM that has not
+ *   terminated normally.
+ *
+ * Entry:
+ *   EAX = Query_Destroy
+ *   EBX = VM handle
+ *
+ * Exit:
+ *   Carry flag = clear if success, set if destruction of the VM will disrupt the virtual device.
+ */
 #define Query_Destroy               0x0013
 
 #define Debug_Query                 0x0014
