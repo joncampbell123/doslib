@@ -330,8 +330,48 @@
  */
 #define Destroy_VM                  0x000C
 
+/* VxD control message VM_Suspend.
+ *
+ * Meaning:
+ *   The system is suspending execution of the virtual machine.
+ *   The virtual device should unlock and release resources as
+ *   appropriate for the VM.
+ *
+ * Entry:
+ *   EAX = VM_Suspend
+ *   EBX = VM handle
+ *
+ * Exit:
+ *   CF = 0
+ *
+ * Note:
+ *   The virtual machine remains suspended until explicitly
+ *   resumed.
+ *
+ *   You can check the CB_VM_Status field to see whether or
+ *   not the VM is suspended.
+ */
 #define VM_Suspend                  0x000D
 
+/* VxD control message VM_Resume.
+ *
+ * Meaning:
+ *   The virtual machine is resuming from suspended state.
+ *   The virtual device should lock any resources it needs
+ *   and prepare data structures to start running again.
+ *
+ * Entry:
+ *   EAX = VM_Resume
+ *   EBX = VM handle
+ *
+ * Exit:
+ *   Carry flag = clear if success, set if failure.
+ *   Failure (CF=1) prevents resuming the a VM.
+ *
+ * Note:
+ *   The system will never send VM_Resume without first
+ *   calling VM_Suspend first (according to docs)
+ */
 #define VM_Resume                   0x000E
 
 /* VxD control message Set_Device_Focus.
