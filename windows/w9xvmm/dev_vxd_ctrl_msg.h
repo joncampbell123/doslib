@@ -144,6 +144,24 @@
  *   message. */
 #define System_Exit                 0x0005
 
+/* VxD control message Sys_Critical_Exit.
+ *
+ * Meaning:
+ *   The system is terminating normally, or as a result of a crash.
+ *   Interrupts are disabled while VxDs process this message.
+ *   VxDs should reset their hardware to allow for a return to the
+ *   state that it existed in before Windows started.
+ *
+ * Entry:
+ *   EAX = Sys_Critical_Exit
+ *
+ * Exit:
+ *   Carry flag = clear if success, set if failure.
+ *   According to documentation, you must set CF=0.
+ *
+ * Notes:
+ *   Must not call Simulate_Int or Exec_Int service.
+ */
 #define Sys_Critical_Exit           0x0006
 
 #define Create_VM                   0x0007
