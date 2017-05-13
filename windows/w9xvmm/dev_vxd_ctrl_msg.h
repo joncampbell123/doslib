@@ -72,7 +72,11 @@
  *
  * Exit:
  *   Carry flag = clear if success, set if failure.
- *   If failure (CF=1), Windows will abort loading this VxD and continue normally. */
+ *   If failure (CF=1), Windows will abort loading this VxD and continue normally.
+ *
+ * Notes from Windows 95 DDK:
+ *   For dynamically loaded VxDs, EBX does not contain a VM handle [FIXME: What does it contain then?]
+ */
 #define Device_Init                 0x0001
 
 /* VxD control message Init_Complete.
