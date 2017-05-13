@@ -508,8 +508,33 @@
 #  define BPA_32_Bit_Flag               1UL
 #  define BPA_32_Bit                    1UL
 
+/* VxD control message End_PM_App.
+ *
+ * Meaning:
+ *
+ * Entry:
+ *   EAX = End_PM_App
+ *   EBX = VM handle
+ *   EDI = pointer to Application Control Block
+ *
+ * Exit:
+ *   CF = 0
+ */
 #define End_PM_App                  0x0016
 
+/* VxD control message Device_Reboot_Notify.
+ *
+ * Meaning:
+ *   The system VM is notifying all virtual devices that the
+ *   system is about to restart. Virtual devices should prepare
+ *   by cleaning up data, resetting devices, etc. Interrupts
+ *   are enabled.
+ *
+ * Entry:
+ *   EAX = Device_Reboot_Notify
+ *
+ * Exit:
+ *   CF = 0 */
 #define Device_Reboot_Notify        0x0017
 
 /* VxD control message Crit_Reboot_Notify.
