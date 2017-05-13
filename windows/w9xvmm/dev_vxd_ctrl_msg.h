@@ -308,6 +308,26 @@
 #  define VNE_Closed_Bit                5UL
 #  define VNE_Closed                    (1UL << VNE_Closed_Bit)
 
+/* VxD control message Destroy_VM.
+ *
+ * Meaning:
+ *   The system has destroyed the VM. This is the final step
+ *   in destroying a VM.
+ *
+ * Entry:
+ *   EAX = Destroy_VM
+ *   EBX = VM handle
+ *
+ * Exit:
+ *   CF = 0
+ *
+ * Note:
+ *   Virtual device can not use Simulate_Int or Exec_int
+ *   in the specified virtual machine within this call.
+ *
+ *   The time between VM_Not_Executeable and this call
+ *   can be considerable, don't assume it's quick.
+ */
 #define Destroy_VM                  0x000C
 
 #define VM_Suspend                  0x000D
