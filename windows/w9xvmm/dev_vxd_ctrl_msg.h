@@ -1,5 +1,10 @@
 
-/* VXD control messages */
+/* VXD control messages.
+ * Windows 3.1 DDK level.
+ * Messages for Windows 95 and higher are defined elsewhere.
+ *
+ * FIXME: I don't have the Windows 3.0 DDK, I don't know at what point new messages were
+ *        added to Windows 3.1 and which ones originally existed in Windows 3.0 */
 
 /* Common VxD Control message register layout.
  * This register/parameter layout is set in stone
@@ -613,4 +618,6 @@
 #  define PWR_SUSPENDREQUEST            (1U)
 #  define PWR_SUSPENDRESUME             (2U)
 #  define PWR_CRITICALRESUME            (3U)
+
+/* ====== END OF WINDOWS 3.1 DDK ====== */
 
