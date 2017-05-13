@@ -604,6 +604,17 @@
  *
  *   PWR_FAIL                               Virtual device failed to process event
  *
+ * Notes from the Windows 95 DDK:
+ *   Only the virtual power device (VPOWERD) is permitted to send this message to drivers.
+ *   [FIXME: Yeah, but does it enforce that policy?]
+ *
+ *   Microsoft clarifies that *EDI is initialized to PWR_OK and devices should only overwrite
+ *   it with PWR_FAIL on failure, else, leave it alone, so that another device's PWR_FAIL
+ *   is not overwritten with success.
+ *
+ *   Windows 95 sends this message for compat. with Windows 3.1 device drivers and Windows 95
+ *   drivers should use VPOWERD_Register_Power_Handler to be notified of changes in power state.
+ *
  * Exit:
  *   CF = 0 */
 #define Power_Event                 0x001A
