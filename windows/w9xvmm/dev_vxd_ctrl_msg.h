@@ -29,6 +29,11 @@
  * quickly as possible the minimum tasks needed to prepare the device for
  * enabled interrupts.
  *
+ * "Devices that have a critical function that needs initializing before
+ * interrupts are enabled should do it at Sys_Critical_Init. Devices which
+ * REQUIRE a certain range of V86 pages to operate (such as the VDD video
+ * memory) should claim them at Sys_Critical_Init."
+ *
  * Entry:
  *   EAX = Sys_Critical_Init
  *   EBX = handle of System VM
@@ -61,7 +66,8 @@
  *   ESI = Pointer to command tail retrieved from PSP of WIN386.EXE
  *
  * Exit:
- *   Carry flag = clear if success, set if failure */
+ *   Carry flag = clear if success, set if failure.
+ *   If failure (CF=1), Windows will abort loading this VxD and continue normally. */
 #define Device_Init                 0x0001
 
 /* VxD control message Init_Complete.
@@ -71,6 +77,9 @@
  *   Virtual devices that use virtual 8086 memory might use this
  *   time to search for available pages A0h to 100h
  *   (adapter ROM A0000-FFFFF) when processing this message.
+ *
+ * "Init_Complete is the final phase of device init called just before the
+ * WIN386 INIT pages are released and the Instance snapshot is taken."
  *
  * Entry:
  *   EAX = Init_Complete
@@ -84,7 +93,8 @@
  *   The system will send this message out just before releasing it's
  *   INIT pages and taking the instance snapshot.
  *
- *   Signalling failure (CF=1) causes Windows to unload the virtual device */
+ *   Signalling failure (CF=1) causes Windows to unload the virtual device
+ *   and continue normally. */
 #define Init_Complete               0x0002
 
 /* VxD control message Sys_VM_Init.
