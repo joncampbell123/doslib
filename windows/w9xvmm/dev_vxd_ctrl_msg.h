@@ -66,6 +66,12 @@
 
 /* VxD control message Init_Complete.
  *
+ * Meaning:
+ *   System and virtual devices have initialized successfully.
+ *   Virtual devices that use virtual 8086 memory might use this
+ *   time to search for available pages A0h to 100h
+ *   (adapter ROM A0000-FFFFF) when processing this message.
+ *
  * Entry:
  *   EAX = Init_Complete
  *   EBX = handle of System VM
@@ -76,17 +82,28 @@
  *
  * Notes:
  *   The system will send this message out just before releasing it's
- *   INIT pages and taking the instance snapshot. */
+ *   INIT pages and taking the instance snapshot.
+ *
+ *   Signalling failure (CF=1) causes Windows to unload the virtual device */
 #define Init_Complete               0x0002
 
 /* VxD control message Sys_VM_Init.
+ *
+ * Meaning:
+ *   The System VM wants the virtual device to initialize the state of
+ *   the software in the system virtual machine. For example, a virtual
+ *   display device would issue INT 10H to set the initial display mode
+ *   at this time.
  *
  * Entry:
  *   EAX = Sys_VM_Init
  *   EBX = handle of System VM
  *
  * Exit:
- *   Carry flag = clear if success, set if failure */
+ *   Carry flag = clear if success, set if failure.
+ *
+ * Notes:
+ *   Failure (CF=1) here will cause Windows to immediately exit. */
 #define Sys_VM_Init                 0x0003
 
 /* VxD control message Sys_VM_Terminate.
