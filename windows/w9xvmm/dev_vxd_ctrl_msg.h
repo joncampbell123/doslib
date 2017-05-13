@@ -1,6 +1,25 @@
 
 /* VXD control messages */
 
+/* Common VxD Control message register layout.
+ * This register/parameter layout is set in stone
+ * by the VMM VxD call System_Control:
+ *
+ * EAX = Message                System control message
+ * EBX = VM                     VM handle (if needed by message)
+ * ESI = Param1                 message-specific parameter
+ * EDI = Param2                 message-specific parameter
+ * EDX = Param3                 message-specific parameter
+ *
+ * These registers are passes as-is to the VxD control procedure.
+ *
+ * Nothing is mentioned about register preservation by the DDK, and
+ * all samples seem to indicate that you can freely destroy and overwrite
+ * these registers with no consequences within your VxD control
+ * procedure. Apparently Win386 will restore them when you return
+ * when it then goes on to call the next VxD control proc in the chain.
+ */
+
 /* VxD control message Sys_Critical_Init.
  *
  * Entry:
@@ -85,10 +104,18 @@
  *
  * Entry:
  *   EAX = Sys_Device_Focus
- *   EBX = Virtual machine handle
- *   ESI = Flags
+ *   EBX = Virtual machine handle (VID). If zero, all virtual devices recieve the focus.
+ *   ESI = Flags. How to set the focus if the VID parameter is zero.
  *   EDX = Virtual device to recieve focus, or 0 for all
  *   EDI = AssocVM
+ *
+ * Flags (ESI) meaning:
+ *   1 = Used by the virtual shell to determine which virtual machine to set focus for.
+ *       If this value is given, AssocVM parameter may specify a virtual machine.
+ *
+ * AssocVM (EDI) meaning:
+ *   Specifies a handle identifying a virtual machine associated with a problem, or
+ *   zero if no such machine. This parameter is only used if Flags is 1.
  *
  * Exit:
  *   CF = 0 */
