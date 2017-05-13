@@ -552,7 +552,26 @@
  *   CF = 0 */
 #define Crit_Reboot_Notify          0x0018
 
+/* VxD control message Close_VM_Notify.
+ *
+ * Meaning:
+ *
+ * Entry:
+ *   EAX = Close_VM_Notify
+ *   EBX = VM handle
+ *   EDX = Flags
+ *
+ * Flags:
+ *   CVNF_Crit_CLose                The virtual machine has not released the critical section
+ *
+ * Exit:
+ *   Carry flag = clear if success, set if failure.
+ *   Signal failure if the virtual device cannot support the termination of the VM.
+ */
 #define Close_VM_Notify             0x0019
+
+#  define CVNF_Crit_Close_Bit           0UL
+#  define CVNF_Crit_Close               (1UL << CVNF_Crit_Close_Bit)
 
 #define Power_Event                 0x001A
 
