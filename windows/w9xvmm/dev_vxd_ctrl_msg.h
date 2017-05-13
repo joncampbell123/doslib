@@ -159,7 +159,19 @@
  *   allow Windows to exit without problems.
  *
  *   The system restores the instance snapshot before sending this
- *   message. */
+ *   message.
+ *
+ * Notes from Windows 95 DDK:
+ *   The virtual device may not access pageable data at this time
+ *   because the swap file might be invalid or in a bad state if
+ *   the system is crashing down instead of stopping normally.
+ *
+ *   If a device needs pageable data during this message, it should
+ *   lock the data during Sys_VM_Terminate. But, if the system is
+ *   crashing Sys_VM_Terminate will not be called. Virtual devices
+ *   should be prepared to skip steps involving pageable data if
+ *   it was never notified of Sys_VM_Terminate.
+ */
 #define System_Exit                 0x0005
 
 /* VxD control message Sys_Critical_Exit.
@@ -196,6 +208,11 @@
  * Exit:
  *   Carry flag = clear if success, set if failure.
  *   Failure (CF=1) prevents the creation of a VM.
+ *
+ * Notes:
+ *   The Windows 95 DDK clarifies that this is called "out of context",
+ *   meaning the VM has not yet started. Most devices will act on
+ *   VM_Init instead.
  */
 #define Create_VM                   0x0007
 
