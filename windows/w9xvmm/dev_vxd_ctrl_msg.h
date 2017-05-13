@@ -488,6 +488,10 @@
  *
  * Exit:
  *   CF = 0
+ *
+ * Notes:
+ *   Windows 95: handler for this message must not exist in pageable memory. It should
+ *   be placed in a Debug_Only code segment.
  */
 #define Debug_Query                 0x0014
 
