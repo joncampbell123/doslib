@@ -402,8 +402,34 @@
  *   CF = 0 */
 #define Set_Device_Focus            0x000F
 
+/* VxD control message Begin_Message_Mode.
+ *
+ * Meaning:
+ *   The system is calling display, keyboard, mouse, etc. devices
+ *   to prepare to display messages and read input from the keyboard.
+ *
+ *   "The system sends this message if Windows cannot display the
+ *   requested warning or error message." Huh??
+ *
+ * Entry:
+ *   EAX = Begin_Message_Mode
+ *   EBX = VM handle
+ *
+ * Exit:
+ *   CF = 0 */
 #define Begin_Message_Mode          0x0010
 
+/* VxD control message End_Message_Mode.
+ *
+ * Meaning:
+ *   The system is calling for the virtual device to end message mode processing.
+ *
+ * Entry:
+ *   EAX = End_Message_Mode
+ *   EBX = VM handle
+ *
+ * Exit:
+ *   CF = 0 */
 #define End_Message_Mode            0x0011
 
 #define Reboot_Processor            0x0012
