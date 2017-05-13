@@ -81,6 +81,8 @@
  * "Init_Complete is the final phase of device init called just before the
  * WIN386 INIT pages are released and the Instance snapshot is taken."
  *
+ * After this call, initialization code and data are discarded.
+ *
  * Entry:
  *   EAX = Init_Complete
  *   EBX = handle of System VM
@@ -121,6 +123,7 @@
  * Meaning:
  *   The System VM is terminating. This is sent after all other virtual machines
  *   have terminated, and only when the system is terminating normally.
+ *   This message is NOT sent in the case of an abnormal exit such as a crash.
  *
  * Entry:
  *   EAX = Sys_VM_Terminate
