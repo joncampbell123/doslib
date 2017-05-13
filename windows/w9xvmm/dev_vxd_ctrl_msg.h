@@ -486,7 +486,27 @@
  */
 #define Debug_Query                 0x0014
 
+/* VxD control message Begin_PM_App.
+ *
+ * Meaning:
+ *
+ * Entry:
+ *   EAX = Begin_PM_App
+ *   EBX = VM handle
+ *   EDX = Flags
+ *   EDI = pointer to Application Control Block
+ *
+ * Flags:
+ *   BPA_32_bit                     Application has 32-bit segments. Else, it only has 16-bit segments.
+ *
+ * Exit:
+ *   Carry flag = clear if success, set if failure.
+ *   Signal failure if the virtual device cannot support the protected mode application
+ */
 #define Begin_PM_App                0x0015
+
+#  define BPA_32_Bit_Flag               1UL
+#  define BPA_32_Bit                    1UL
 
 #define End_PM_App                  0x0016
 
