@@ -12,7 +12,10 @@
 
 #include <windows/w9xvmm/dev_vxd_util.h>
 #include <windows/w9xvmm/dev_vxd_types.h>
+
 #include <windows/w9xvmm/dev_vxd_ctrl_msg.h>
+#include <windows/w9xvmm/dev_vxd_ctrl_msg_95.h>
+
 #include <windows/w9xvmm/dev_vxd_dev_vmm.h>
 #include <windows/w9xvmm/dev_vxd_dev_debug.h>
 #include <windows/w9xvmm/dev_vxd_dev_vpicd.h>
