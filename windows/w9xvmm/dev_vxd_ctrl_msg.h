@@ -465,6 +465,25 @@
  */
 #define Query_Destroy               0x0013
 
+/* VxD control message Debug_Query.
+ *
+ * Meaning:
+ *   The virtual device should enable it's debugging commands, if any.
+ *   It should display a list of debugging commands [how?] then read the debugging
+ *   device for command input from the user.
+ *
+ *   The system will send this message when the user enters a virtual-device command
+ *   at the WDEB386 prompt (a period followed by the name of the virtual device).
+ *
+ *   This is intended for use only with debug builds of the virtual device. Release
+ *   builds should not include debugging support.
+ *
+ * Entry:
+ *   EAX = Debug_Query
+ *
+ * Exit:
+ *   CF = 0
+ */
 #define Debug_Query                 0x0014
 
 #define Begin_PM_App                0x0015
