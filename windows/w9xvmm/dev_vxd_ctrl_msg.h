@@ -432,6 +432,18 @@
  *   CF = 0 */
 #define End_Message_Mode            0x0011
 
+/* VxD control message Reboot_Processor.
+ *
+ * Meaning:
+ *   If the virtual device can reboot the computer, it should do so.
+ *   Windows will call each device with this message until one device
+ *   does so.
+ *
+ * Entry:
+ *   EAX = Reboot_Processor
+ *
+ * Exit:
+ *   CF = 0 */
 #define Reboot_Processor            0x0012
 
 #define Query_Destroy               0x0013
@@ -444,6 +456,19 @@
 
 #define Device_Reboot_Notify        0x0017
 
+/* VxD control message Crit_Reboot_Notify.
+ *
+ * Meaning:
+ *   The system VM is notifying all virtual devices that the
+ *   system is about to restart. Virtual devices should prepare
+ *   by cleaning up data, resetting devices, etc. Interrupts
+ *   are disabled.
+ *
+ * Entry:
+ *   EAX = Crit_Reboot_Notify
+ *
+ * Exit:
+ *   CF = 0 */
 #define Crit_Reboot_Notify          0x0018
 
 #define Close_VM_Notify             0x0019
