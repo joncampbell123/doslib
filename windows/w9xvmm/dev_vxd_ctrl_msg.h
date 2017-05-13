@@ -582,6 +582,7 @@
  *   EBX = 0
  *   ESI = Event notification message
  *   EDI = Pointer to DWORD return value.
+ *   EDX = undefined (must be preserved)
  *
  * Note:
  *   Return DWORD by *((DWORD*)EDI) = return value
