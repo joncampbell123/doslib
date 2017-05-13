@@ -177,10 +177,61 @@
  */
 #define Sys_Critical_Exit           0x0006
 
+/* VxD control message Create_VM.
+ *
+ * Meaning:
+ *   The system is creating a new VM. Virtual devices can use this
+ *   call to initialize data associated with the virtual machine
+ *   such as data in the control block for the new VM.
+ *
+ * Entry:
+ *   EAX = Create_VM
+ *   EBX = New VM handle
+ *
+ * Exit:
+ *   Carry flag = clear if success, set if failure.
+ *   Failure (CF=1) prevents the creation of a VM.
+ */
 #define Create_VM                   0x0007
 
+/* VxD control message VM_Critical_Init.
+ *
+ * Meaning:
+ *   The virtual device should initialize itself for the new
+ *   virtual machine. Interrupts are disabled during this call.
+ *
+ * Entry:
+ *   EAX = VM_Critical_Init
+ *   EBX = New VM handle
+ *
+ * Exit:
+ *   Carry flag = clear if success, set if failure.
+ *   Failure (CF=1) prevents the creation of a VM.
+ *
+ * Note:
+ *   Virtual device must not use Simulate_Int or Exec_int
+ *   in the specified virtual machine within this call.
+ */
 #define VM_Critical_Init            0x0008
 
+/* VxD control message VM_Init.
+ *
+ * Meaning:
+ *   The virtual device should initialize itself for the new
+ *   virtual machine. Interrupts are enabled during this call.
+ *
+ * Entry:
+ *   EAX = VM_Init
+ *   EBX = New VM handle
+ *
+ * Exit:
+ *   Carry flag = clear if success, set if failure.
+ *   Failure (CF=1) prevents the creation of a VM.
+ *
+ * Note:
+ *   Virtual device can use Simulate_Int or Exec_int
+ *   in the specified virtual machine within this call.
+ */
 #define VM_Init                     0x0009
 
 #define VM_Terminate                0x000A
@@ -194,6 +245,13 @@
 #define VM_Resume                   0x000E
 
 /* VxD control message Set_Device_Focus.
+ *
+ * Meaning:
+ *   Focus is changing to the specified virtual machine.
+ *
+ *   The virtual device can use this time to carry out steps
+ *   such as disabling I/O trapping for the virtual machine
+ *   if that virtual machine "owns" the device.
  *
  * Entry:
  *   EAX = Sys_Device_Focus
