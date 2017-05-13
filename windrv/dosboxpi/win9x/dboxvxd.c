@@ -168,20 +168,6 @@ fail:
     VXD_CF_FAILURE();
 }
 
-/* VxD control message Init_Complete.
- *
- * Entry:
- *   EAX = Init_Complete
- *   EBX = handle of System VM
- *   ESI = Pointer to command tail retrieved from PSP of WIN386.EXE
- *
- * Exit:
- *   Carry flag = clear if success, set if failure
- *
- * Notes:
- *   The system will send this message out just before releasing it's
- *   INIT pages and taking the instance snapshot. */
-
 /* VxD control message Sys_VM_Init.
  *
  * Entry:
