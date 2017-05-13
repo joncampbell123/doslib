@@ -22,6 +22,13 @@
 
 /* VxD control message Sys_Critical_Init.
  *
+ * Meaning: Virtual devices initializing. Interrupts are disabled at this time.
+ *          Windows is starting.
+ *
+ * The system sends this message to direct virtual devices to carry out as
+ * quickly as possible the minimum tasks needed to prepare the device for
+ * enabled interrupts.
+ *
  * Entry:
  *   EAX = Sys_Critical_Init
  *   EBX = handle of System VM
@@ -35,6 +42,18 @@
 #define Sys_Critical_Init           0x0000
 
 /* VxD control message Device_Init.
+ *
+ * Meaning: Virtual devices initializing. Interrupts are enabled at this time.
+ *
+ * The virtual device should initialize itself. This is when the virtual device
+ * should allocate memory for a device-specific section in the control block,
+ * allocate other memory, hook interrupts and I/O ports, and specify instance
+ * data.
+ *
+ * The virtual device should allocate a device-specific section in the control
+ * block of the system VM and initialize the section here.
+ *
+ * The VxD can call Simulate_Int and Exec_Int from this call.
  *
  * Entry:
  *   EAX = Device_Init
