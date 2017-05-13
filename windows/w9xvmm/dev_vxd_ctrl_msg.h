@@ -573,5 +573,43 @@
 #  define CVNF_Crit_Close_Bit           0UL
 #  define CVNF_Crit_Close               (1UL << CVNF_Crit_Close_Bit)
 
+/* VxD control message Power_Event.
+ *
+ * Meaning:
+ *
+ * Entry:
+ *   EAX = Power_Event
+ *   EBX = 0
+ *   ESI = Event notification message
+ *   EDI = Pointer to DWORD return value.
+ *
+ * Note:
+ *   Return DWORD by *((DWORD*)EDI) = return value
+ *
+ * Event notification message:
+ *   PWR_SUSPENDREQUEST                     Suspend operation
+ *
+ *   PWR_SUSPENDRESUME                      Resume after suspend
+ *
+ *   PWR_CRITICALRESUME                     Resume critical operations after suspend
+ *
+ * Return value *EDI:
+ *   PWR_OK                                 Virtual device processed successfully
+ *
+ *   PWR_FAIL                               Virtual device failed to process event
+ *
+ * Exit:
+ *   CF = 0 */
 #define Power_Event                 0x001A
+
+/* NTS: If I read the DDK headers right, PWR_FAIL is defined as -1,
+ *      which in 16-bit code becomes 0xFFFF,
+ *      and in 32-bit code becomes 0xFFFFFFFF.
+ *      Does that cause problems? */
+#  define PWR_OK                        (1U)
+#  define PWR_FAIL                      ((unsigned int)(-1L))
+
+#  define PWR_SUSPENDREQUEST            (1U)
+#  define PWR_SUSPENDRESUME             (2U)
+#  define PWR_CRITICALRESUME            (3U)
 
