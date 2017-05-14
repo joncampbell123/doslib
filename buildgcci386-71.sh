@@ -4,8 +4,6 @@ instpath="$top/gcc-7.1.0-i386-cc-build"
 
 wget -c ftp://ftp.gnu.org/pub/gnu/binutils/binutils-2.28.tar.bz2 ftp://ftp.gnu.org/pub/gnu/gcc/gcc-7.1.0/gcc-7.1.0.tar.bz2 || exit 1
 
-if false; then #DEBUG
-
 rm -Rf "$instpath" || exit 1
 mkdir -p "$instpath" || exit 1
 
@@ -19,8 +17,6 @@ cd "binutils-2.28-build" || exit 1
 make -j5 >/dev/null || exit 1
 make install >/dev/null || exit 1
 cd "$top" || exit 1
-
-fi #DEBUG
 
 # gcc
 cd "$top" || exit 1
