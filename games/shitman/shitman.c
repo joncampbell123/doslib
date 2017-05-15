@@ -179,13 +179,13 @@ void DisplayGIF(const char *path,unsigned int how) {
 
     gif = DGifOpenFileName(path,&err);
     if (gif == NULL) {
-        DEBUG("DGifOpenFileName failed, err=%d",err);
+        DEBUG("DGifOpenFileName failed, err=%d %s",err,GifErrorString(gif->Error));
         return;
     }
 
     /* TODO: How do we read only the first image? */
     if (DGifSlurp(gif) != GIF_OK) {
-        DEBUG("DGifSlurp failed Error=%u",gif->Error);
+        DEBUG("DGifSlurp failed Error=%u %s",gif->Error,GifErrorString(gif->Error));
         DGifCloseFile(gif,&err);
         return;
     }
@@ -276,7 +276,7 @@ void DisplayGIF(const char *path,unsigned int how) {
     }
 
     if (DGifCloseFile(gif,&err) != GIF_OK)
-        DEBUG("DGifCloseFile failed, err=%d",err);
+        DEBUG("DGifCloseFile failed, err=%d %s",err,GifErrorString(err));
 }
 
 int main(int argc,char **argv) {
