@@ -1,6 +1,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stddef.h>
 #include <unistd.h>
 
 #include <hw/dos/dos.h>
@@ -11,9 +14,96 @@
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
 
+FILE *debug_log = NULL;
+
+void DEBUG(const char *fmt,...) {
+    va_list va;
+
+    if (debug_log == NULL) return;
+
+    va_start(va,fmt);
+    vfprintf(debug_log,fmt,va);
+    va_end(va);
+    fprintf(debug_log,"\n");
+}
+
+uint16_t dos_get_freemem(void) {
+    uint16_t r = 0;
+
+    __asm {
+        mov     ah,0x48         ; allocate memory
+        mov     bx,0xFFFF       ; way beyond actual memory, obviously. we want it to fail.
+        int     21h             ; result should be CF=1, AX=8, BX=size of largest block
+        mov     r,bx
+    }
+
+    return r;
+}
+
+uint16_t bios_get_total_mem(void) {
+    uint16_t r = 0;
+
+    __asm {
+        int     12h
+        mov     r,ax
+    }
+
+    return r;
+}
+
+void DEBUG_PRINT_MEM_STATE(void) {
+    uint16_t r = dos_get_freemem();
+    uint16_t b = bios_get_total_mem();
+
+    DEBUG("MS-DOS largest available free block: %lu bytes (%uKB)",
+        (unsigned long)r << 4UL,(unsigned int)((unsigned long)r >> (10UL - 4UL)));
+    DEBUG("Total conventional memory: %lu bytes (%uKB)",
+        (unsigned long)b << 10UL,(unsigned int)b);
+
+#if TARGET_MSDOS == 32
+    {
+        uint32_t buf[0x30/4];
+        unsigned char *p=(unsigned char*)buf;
+
+        memset(buf,0,sizeof(buf));
+
+        __asm {
+            mov     eax,0x0500      ; DPMI get memory info
+            push    ds
+            pop     es
+            mov     edi,p
+            int     31h
+        }
+
+        DEBUG("DPMI largest available free block: %lu bytes (%luKB)",
+            (unsigned long)buf[0x00/4],
+            (unsigned long)buf[0x00/4] >> 10UL);
+
+        DEBUG("DPMI free pages: %lu bytes (%luKB)",
+            (unsigned long)buf[0x14/4] << 12UL,
+            (unsigned long)buf[0x14/4] << 2UL);
+
+        DEBUG("DPMI total pages: %lu bytes (%luKB)",
+            (unsigned long)buf[0x18/4] << 12UL,
+            (unsigned long)buf[0x18/4] << 2UL);
+    }
+#endif
+}
+
+void init_debug_log(void) {
+    if (debug_log == NULL) {
+        debug_log = fopen("debug.txt","w");
+        if (debug_log == NULL) return;
+        setbuf(debug_log,NULL); /* NO BUFFERING */
+
+        DEBUG("==DEBUG LOG STARTED==");
+    }
+}
+
 int initial_sys_check(void) {
     /*============================*/
     probe_dos();
+    DEBUG("MS-DOS version: %u.%u",dos_version>>8,dos_version&0xFF);
     if (dos_version < 0x500) {
         puts("MS-DOS 5.00 or higher required");
         return 0;
@@ -27,6 +117,7 @@ int initial_sys_check(void) {
     /*============================*/
 #if TARGET_MSDOS == 16
     cpu_probe();
+    DEBUG("CPU: %s",cpu_basic_level_str[cpu_basic_level]);
     if (cpu_basic_level < CPU_286) {
         puts("286 or higher required");
         return 0;
@@ -57,10 +148,16 @@ int initial_sys_check(void) {
 		return 0;
     }
 
+    /* NTS: In the future, if needed, 16-bit builds will also make use of EMS/XMS memory.
+     *      But that's far off into the future. */
+    DEBUG_PRINT_MEM_STATE();
+
     return 1; /* OK */
 }
 
 int main(int argc,char **argv) {
+    init_debug_log();
+
     if (!initial_sys_check())
         return 1;
 
