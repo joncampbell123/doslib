@@ -48,6 +48,7 @@ $(SHITMAN_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_DOS_LIB) $(HW_DOS_
 clean: .SYMBOLIC
           del $(SUBDIR)$(HPS)*.obj
           del $(FMT_OMF_LIB)
+		  del DEBUG.TXT
           del tmp.cmd
           @echo Cleaning done
 
