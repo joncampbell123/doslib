@@ -476,43 +476,6 @@ DGifGetLine(GifFileType *GifFile, GifPixelType *Line, size_t LineLen)
 }
 
 /******************************************************************************
- Put one pixel (Pixel) into GIF file.
-******************************************************************************/
-int
-DGifGetPixel(GifFileType *GifFile, GifPixelType Pixel)
-{
-    GifByteType *Dummy;
-    GifFilePrivateType *Private = (GifFilePrivateType *) GifFile->Private;
-
-    if (!IS_READABLE(Private)) {
-        /* This file was NOT open for reading: */
-        GifFile->Error = D_GIF_ERR_NOT_READABLE;
-        return GIF_ERROR;
-    }
-    if (--Private->PixelCount > 0xffff0000UL)
-    {
-        GifFile->Error = D_GIF_ERR_DATA_TOO_BIG;
-        return GIF_ERROR;
-    }
-
-    if (DGifDecompressLine(GifFile, &Pixel, 1) == GIF_OK) {
-        if (Private->PixelCount == 0) {
-            /* We probably won't be called any more, so let's clean up
-             * everything before we return: need to flush out all the
-             * rest of image until an empty block (size 0)
-             * detected. We use GetCodeNext.
-	     */
-            do
-                if (DGifGetCodeNext(GifFile, &Dummy) == GIF_ERROR)
-                    return GIF_ERROR;
-            while (Dummy != NULL) ;
-        }
-        return GIF_OK;
-    } else
-        return GIF_ERROR;
-}
-
-/******************************************************************************
  Get an extension block (see GIF manual) from GIF file. This routine only
  returns the first data block, and DGifGetExtensionNext should be called
  after this one until NULL extension is returned.
@@ -689,29 +652,6 @@ DGifGetWord(GifFileType *GifFile, GifWord *Word)
 
     *Word = (GifWord)UNSIGNED_LITTLE_ENDIAN(c[0], c[1]);
     return GIF_OK;
-}
-
-/******************************************************************************
- Get the image code in compressed form.  This routine can be called if the
- information needed to be piped out as is. Obviously this is much faster
- than decoding and encoding again. This routine should be followed by calls
- to DGifGetCodeNext, until NULL block is returned.
- The block should NOT be freed by the user (not dynamically allocated).
-******************************************************************************/
-int
-DGifGetCode(GifFileType *GifFile, int *CodeSize, GifByteType **CodeBlock)
-{
-    GifFilePrivateType *Private = (GifFilePrivateType *)GifFile->Private;
-
-    if (!IS_READABLE(Private)) {
-        /* This file was NOT open for reading: */
-        GifFile->Error = D_GIF_ERR_NOT_READABLE;
-        return GIF_ERROR;
-    }
-
-    *CodeSize = Private->BitsPerPixel;
-
-    return DGifGetCodeNext(GifFile, CodeBlock);
 }
 
 /******************************************************************************
@@ -939,43 +879,6 @@ DGifGetPrefixChar(GifPrefixType *Prefix, int Code, int ClearCode)
         Code = Prefix[Code];
     }
     return Code;
-}
-
-/******************************************************************************
- Interface for accessing the LZ codes directly. Set Code to the real code
- (12bits), or to -1 if EOF code is returned.
-******************************************************************************/
-int
-DGifGetLZCodes(GifFileType *GifFile, int *Code)
-{
-    GifByteType *CodeBlock;
-    GifFilePrivateType *Private = (GifFilePrivateType *)GifFile->Private;
-
-    if (!IS_READABLE(Private)) {
-        /* This file was NOT open for reading: */
-        GifFile->Error = D_GIF_ERR_NOT_READABLE;
-        return GIF_ERROR;
-    }
-
-    if (DGifDecompressInput(GifFile, Code) == GIF_ERROR)
-        return GIF_ERROR;
-
-    if (*Code == Private->EOFCode) {
-        /* Skip rest of codes (hopefully only NULL terminating block): */
-        do {
-            if (DGifGetCodeNext(GifFile, &CodeBlock) == GIF_ERROR)
-                return GIF_ERROR;
-        } while (CodeBlock != NULL) ;
-
-        *Code = -1;
-    } else if (*Code == Private->ClearCode) {
-        /* We need to start over again: */
-        Private->RunningCode = Private->EOFCode + 1;
-        Private->RunningBits = Private->BitsPerPixel + 1;
-        Private->MaxCode1 = 1 << Private->RunningBits;
-    }
-
-    return GIF_OK;
 }
 
 /******************************************************************************
