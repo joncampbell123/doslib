@@ -187,8 +187,28 @@ typedef struct GIFLoader {
     GIFColor*               global_color_table;
 } GIFLoader;
 
+typedef struct GIFImage {
+    uint16_t                left,top,width,height;
+    union {
+        struct {
+            unsigned int    size_of_local_color_table:3;    /* bits 2-0 */
+            unsigned int    reserved:2;                     /* bits 4-3 */
+            unsigned int    sort_flag:1;                    /* bits 5-5 */
+            unsigned int    interlace_flag:1;               /* bits 6-6 */
+            unsigned int    local_color_table:1;            /* bits 7-7 */
+        } f;
+        unsigned char       raw;
+    } pf;
+    GIFColor*               local_color_table;
+    unsigned char*          image;
+} GIFImage;
+
 unsigned int GIFLoader_global_color_table_size(GIFLoader *g) {
     return 1U << (g->pf.f.size_of_global_color_table + 1U);
+}
+
+unsigned int GIFImage_local_color_table_size(GIFImage *i) {
+    return 1U << (i->pf.f.size_of_local_color_table + 1U);
 }
 
 void GIFLoader_closefile(GIFLoader *g) {
@@ -293,17 +313,170 @@ GIFLoader *GIFLoader_free(GIFLoader *g) {
     return NULL;
 }
 
+GIFImage *GIFImage_alloc(void) {
+    GIFImage *i = malloc(sizeof(*i));
+    if (i == NULL) return NULL;
+
+    memset(i,0,sizeof(*i));
+
+    return i;
+}
+
+void GIFImage_free_image(GIFImage *i) {
+    if (i->image) {
+        free(i->image);
+        i->image = NULL;
+    }
+}
+        
+void GIFImage_free_color_table(GIFImage *i) {
+    if (i->local_color_table) {
+        free(i->local_color_table);
+        i->local_color_table = NULL;
+    }
+}
+
+GIFImage *GIFImage_free(GIFImage *i) {
+    if (i != NULL) {
+        GIFImage_free_image(i);
+        GIFImage_free_color_table(i);
+        free(i);
+    }
+
+    return NULL;
+}
+
+int GIFLoader_getimage(GIFLoader *g,GIFImage **pImg) {
+    unsigned char tmp[16];
+
+    *pImg = GIFImage_free(*pImg);
+
+    do {
+        if (read(g->fd,tmp,1) != 1)
+            break;
+
+        if (tmp[0] == 0x21) {
+            /* extension */
+            if (read(g->fd,tmp+1,1) != 1)
+                break;
+
+            if (tmp[1] == 0xF9) { /* Graphic Control Extension */
+                if (read(g->fd,tmp+2,1) != 1) /* block size */
+                    break;
+
+                if (tmp[2] > 4) {
+                    DEBUG("GIFLoader_getimage graphic control ext too large, 0x%02X",tmp[2]);
+                    break;
+                }
+
+                if (read(g->fd,tmp+3,tmp[2]+1) != (tmp[2]+1))
+                    break;
+                if (tmp[3+tmp[2]] != 0) /* must have block terminator */
+                    break;
+            }
+            else {
+                DEBUG("GIFLoader_getimage unknown extension block byte 0x%02X",tmp[1]);
+                break;
+            }
+        }
+        else if (tmp[0] == 0x2C) {
+            GIFImage *i;
+
+            /* Image descriptor */
+            if (read(g->fd,tmp+1,9) != 9)
+                break;
+
+            i = GIFImage_alloc();
+            if (i == NULL)
+                break;
+
+            i->left = *((uint16_t*)(tmp+1));            /* +0x01 left */
+            i->top = *((uint16_t*)(tmp+3));             /* +0x03 top */
+            i->width = *((uint16_t*)(tmp+5));           /* +0x05 width */
+            i->height = *((uint16_t*)(tmp+7));          /* +0x07 height */
+            i->pf.raw = tmp[9];                         /* +0x09 packed fields */
+
+            DEBUG("GIF: Image descriptor %u x %u starting at %u x %u",
+                i->width,i->height,i->left,i->top);
+
+            if (i->pf.f.local_color_table) {
+                unsigned int size = GIFImage_local_color_table_size(i);
+                unsigned int bc = size * sizeof(GIFColor);
+
+                DEBUG("GIF: Local color table is %u colors",size);
+
+                i->local_color_table = malloc(sizeof(GIFColor) * size);
+                if (i->local_color_table == NULL) {
+                    DEBUG("Failed to alloc GIF local color table");
+                    GIFImage_free(i);
+                    break;
+                }
+
+                if (read(g->fd,i->local_color_table,bc) != bc) {
+                    DEBUG("Failed to read GIF local color table");
+                    GIFImage_free(i);
+                    break;
+                }
+            }
+
+            if (i->width == 0 || i->height == 0) {
+                GIFImage_free(i);
+                break;
+            }
+
+            {
+                unsigned long sz =
+                    (unsigned long)i->width *
+                    (unsigned long)i->height;
+
+#if TARGET_MSDOS == 16
+                if (sz > 0xFFF0UL) {
+                    DEBUG("GIF image too large (16-bit 64KB limit)");
+                    GIFImage_free(i);
+                    break;
+                }
+#else
+                if (sz > 0xFFFFFUL) {
+                    DEBUG("GIF image too large (32-bit 1MB limit)");
+                    GIFImage_free(i);
+                    break;
+                }
+#endif
+
+                i->image = malloc(sz);
+                if (i->image == NULL) {
+                    DEBUG("Unable to allocate GIF image memory");
+                    GIFImage_free(i);
+                    break;
+                }
+            }
+        }
+        else {
+            DEBUG("GIFLoader_getimage unknown block byte 0x%02X",tmp[0]);
+            break;
+        }
+    } while (1);
+
+    errno = ENOENT;
+    return -1;
+}
+
 void DisplayGIF(const char *path) {
     GIFLoader *gif;
+    GIFImage *img;
 
     DEBUG("DisplayGIF: %s",path);
 
     gif = GIFLoader_alloc();
     if (gif == NULL) FAIL("GIFLoader_alloc failed");
 
-    if (GIFLoader_openfile(gif,path) < 0) FAIL("GIFLoader_alloc unable to open file");
+    if (GIFLoader_openfile(gif,path) < 0) FAIL("GIFLoader_openfile unable to open file");
+
+    img = NULL;
+    if (GIFLoader_getimage(gif,&img) < 0) FAIL("GIFLoader_getimage failed");
 
     GIFLoader_free(gif);
+    GIFImage_free(img);
 }
 
 int main(int argc,char **argv) {
