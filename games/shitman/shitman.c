@@ -247,8 +247,8 @@ void DisplayGIF(const char *path,unsigned int how) {
     }
 
     {
-        unsigned long waitper = t8254_us2ticks(10000); /* 10ms */
-        unsigned int patience = 400;
+        unsigned long waitper = t8254_us2ticks(100000); /* 100ms */
+        unsigned int patience = 50;
         int c;
 
         /* wait for space, enter, or 4 seconds */
@@ -258,7 +258,6 @@ void DisplayGIF(const char *path,unsigned int how) {
                 if (c == 13 || c == ' ') break;
             }
 
-            /* wait 10ms */
             t8254_wait(waitper);
         } while (--patience != 0);
     }
