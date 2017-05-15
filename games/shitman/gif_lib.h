@@ -201,7 +201,7 @@ GifFileType *DGifOpen(void *userPtr, InputFunc readFunc, int *Error);    /* new 
 int DGifGetScreenDesc(GifFileType *GifFile);
 int DGifGetRecordType(GifFileType *GifFile, GifRecordType *GifType);
 int DGifGetImageDesc(GifFileType *GifFile);
-int DGifGetLine(GifFileType *GifFile, GifPixelType *GifLine, int GifLineLen);
+int DGifGetLine(GifFileType *GifFile, GifPixelType *GifLine, size_t GifLineLen);
 int DGifGetPixel(GifFileType *GifFile, GifPixelType GifPixel);
 int DGifGetComment(GifFileType *GifFile, char *GifComment);
 int DGifGetExtension(GifFileType *GifFile, int *GifExtCode,

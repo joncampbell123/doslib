@@ -35,7 +35,7 @@ two modules will be linked.  Preserve this property!
 static int DGifGetWord(GifFileType *GifFile, GifWord *Word);
 static int DGifSetupDecompress(GifFileType *GifFile);
 static int DGifDecompressLine(GifFileType *GifFile, GifPixelType *Line,
-                              int LineLen);
+                              size_t LineLen);
 static int DGifGetPrefixChar(GifPrefixType *Prefix, int Code, int ClearCode);
 static int DGifDecompressInput(GifFileType *GifFile, int *Code);
 static int DGifBufferedInput(GifFileType *GifFile, GifByteType *Buf,
@@ -439,7 +439,7 @@ DGifGetImageDesc(GifFileType *GifFile)
  Get one full scanned line (Line) of length LineLen from GIF file.
 ******************************************************************************/
 int
-DGifGetLine(GifFileType *GifFile, GifPixelType *Line, int LineLen)
+DGifGetLine(GifFileType *GifFile, GifPixelType *Line, size_t LineLen)
 {
     GifByteType *Dummy;
     GifFilePrivateType *Private = (GifFilePrivateType *) GifFile->Private;
@@ -799,9 +799,9 @@ DGifSetupDecompress(GifFileType *GifFile)
  order the complete the whole image.
 ******************************************************************************/
 static int
-DGifDecompressLine(GifFileType *GifFile, GifPixelType *Line, int LineLen)
+DGifDecompressLine(GifFileType *GifFile, GifPixelType *Line, size_t LineLen)
 {
-    int i = 0;
+    size_t i = 0;
     int j, CrntCode, EOFCode, ClearCode, CrntPrefix, LastCode, StackPtr;
     GifByteType *Stack, *Suffix;
     GifPrefixType *Prefix;
