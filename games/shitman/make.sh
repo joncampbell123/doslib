@@ -9,7 +9,7 @@ if [ "$1" == "clean" ]; then
     do_clean
     rm -fv test.dsk
     rm -Rfv linux-host
-    rm -v DEBUG.TXT
+    rm -fv DEBUG.TXT
     exit 0
 fi
 
