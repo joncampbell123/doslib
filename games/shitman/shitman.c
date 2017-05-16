@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include <malloc.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -366,6 +367,9 @@ int main(int argc,char **argv) {
     DisplayGIF("title3.gif",DisplayGIF_FADEIN);
 
     int10_setmode(0x3); /* text mode */
+    DEBUG_PRINT_MEM_STATE();
+    DEBUG("Running heap shrink...");
+    _heapshrink();
     DEBUG_PRINT_MEM_STATE();
     return 0;
 }
