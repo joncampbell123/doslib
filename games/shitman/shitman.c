@@ -165,6 +165,69 @@ int initial_sys_check(void) {
     return 1; /* OK */
 }
 
+/* Mode X page flipping/panning support.
+ * REMEMBER: A "byte" in mode X is 4 pixels wide because of VGA planar layout.
+ * WARNING: Do not set offset beyond such that the screen will exceed 64KB. */
+uint16_t modex_vis_offset = 0;
+uint16_t modex_draw_offset = 0;
+uint16_t modex_draw_width = 0;
+uint16_t modex_draw_height = 0;
+uint16_t modex_draw_stride = 0; /* in 4-byte pixels NOT pixels */
+
+void modex_init(void) {
+    modex_vis_offset = modex_draw_offset = 0;
+    modex_draw_width = 320;
+    modex_draw_height = 200;
+    modex_draw_stride = modex_draw_width / 4U;
+}
+
+void xbitblt_nc(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsigned int bits_stride,unsigned char *bits) {
+    uint16_t o = (y * modex_draw_stride) + (x >> 2) + modex_draw_offset;
+    unsigned char b = 1U << (x & 3U);
+    unsigned char *src;
+    unsigned int ch;
+    VGA_RAM_PTR wp;
+
+    /* assume w != 0 && h != 0 */
+    /* assume x < modex_draw_width && y < modex_draw_height */
+    /* assume (x+w) <= modex_draw_width && (y+h) <= modex_draw_height */
+    /* assume bits != NULL */
+    /* render vertical strip-wise because of Mode X */
+    do {
+	    vga_write_sequencer(VGA_SC_MAP_MASK,b);
+        wp = vga_state.vga_graphics_ram + o;
+        src = bits;
+        ch = h;
+
+        do {
+            *wp = *src;
+            wp += modex_draw_stride;
+            src += bits_stride;
+        } while ((--ch) != 0);
+
+        bits++;
+        if ((b <<= 1U) == 0x10U) {
+            b = 0x01U;
+            o++;
+        }
+    } while ((--w) != 0);
+}
+
+void xbitblt(int x,int y,int w,int h,unsigned char *bits) {
+    unsigned int orig_w = w;
+
+    /* NTS: We render in Mode X at all times */
+    /* Assume: bits != NULL */
+    if (x < 0) { bits += -x;          w += x; x = 0; }
+    if (y < 0) { bits += -y * orig_w; h += y; y = 0; }
+    if (w <= 0 || h <= 0) return;
+    if (((uint16_t)(x+w)) > modex_draw_width) w = modex_draw_width - x;
+    if (((uint16_t)(y+h)) > modex_draw_height) h = modex_draw_height - y;
+    if (w <= 0 || h <= 0) return;
+
+    xbitblt_nc((unsigned int)x,(unsigned int)y,(unsigned int)w,(unsigned int)h,orig_w,bits);
+}
+
 #define DisplayGIF_FADEIN       (1U << 0U)
 
 static inline unsigned char fadein_cap(unsigned char fade,unsigned char v) {
@@ -212,12 +275,7 @@ void DisplayGIF(const char *path,unsigned int how) {
     {
         SavedImage *img = &gif->SavedImages[0];
 
-        // FIXME
-#if TARGET_MSDOS == 16
-        _fmemcpy(vga_state.vga_graphics_ram,img->RasterBits,320*200);
-#else
-        memcpy(vga_state.vga_graphics_ram,img->RasterBits,320*200);
-#endif
+        xbitblt(img->ImageDesc.Left,img->ImageDesc.Top,img->ImageDesc.Width,img->ImageDesc.Height,img->RasterBits);
     }
 
     {
@@ -300,6 +358,8 @@ int main(int argc,char **argv) {
 
     int10_setmode(0x13); /* 320x200x256-color */
     update_state_from_vga();
+    vga_enable_256color_modex();
+    modex_init();
 
     DisplayGIF("title1.gif",DisplayGIF_FADEIN);
     DisplayGIF("title2.gif",DisplayGIF_FADEIN);
