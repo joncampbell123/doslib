@@ -20,6 +20,93 @@
 
 FILE *debug_log = NULL;
 
+void release_timer(void);
+
+void DEBUG(const char *fmt,...) {
+    va_list va;
+
+    if (debug_log == NULL) return;
+
+    va_start(va,fmt);
+    vfprintf(debug_log,fmt,va);
+    va_end(va);
+    fprintf(debug_log,"\n");
+}
+
+void FAIL(const char *msg) {
+    DEBUG("FAIL: %s",msg);
+    release_timer();
+    int10_setmode(0x3); /* text mode */
+    puts(msg);
+    exit(1);
+}
+
+/* color palette slots */
+#define MAX_PAL_SLOTS       8
+
+#pragma pack(push,1)
+typedef struct PalColor {
+    uint8_t     r,g,b;          // already scaled to 0-63
+} PalColor;
+#pragma pack(pop)
+
+typedef struct PalSlot {
+    PalColor    pal[256];
+} PalSlot;
+
+PalSlot         pal_slots[MAX_PAL_SLOTS];
+
+/* async palette animation */
+typedef struct AsyncPal {
+    uint8_t     slot;           // which palette slot
+    uint8_t     first;          // first color in palette to copy
+    uint16_t    count;          // how many colors to copy
+    uint8_t     first_target;   // first color in hardware palette to copy
+    uint8_t     anim;           // what animation to do
+    uint8_t     anim_p[2];      // depends on animation
+} AsyncPal;
+
+enum {
+    ASYNC_PAL_ANIM_NONE=0,      // no animation, finish right away
+    ASYNC_PAL_ANIM_FADE         // fade in/out. anim_p[0] is fade value 0-63. anim_p[1] is fade addition value, 1-63 to fade in, 0xFF-0x80 to fade out.
+};
+
+typedef struct AsyncVPan {
+    uint16_t    start;          // display offset (given directly to CRTC)
+    uint16_t    end;            // stop panning here
+    uint16_t    adjust;         // after panning, start += adjust. event ends when start == end
+} AsyncVPan;
+
+/* async event in general to do from vsync timer IRQ */
+typedef struct AsyncEvent {
+    uint8_t     what;
+    union {
+        AsyncPal    pal;
+        AsyncVPan   vpan;
+        uint16_t    wait;
+    } e;
+} AsyncEvent;
+
+enum {
+    ASYNC_EVENT_STOP=0,         // stop processing
+    ASYNC_EVENT_WAIT,           // wait for vertical retrace counts given in e.wait (e.wait)
+    ASYNC_EVENT_PALETTE,        // palette animation (e.pal)
+    ASYNC_EVENT_VPAN            // change display start address (e.vpan)
+};
+
+#define MAX_ASYNC_EVENT         64
+
+/* async queue, processed by vsync timer.
+ * do not add to queue unless interrupts disabled. */
+unsigned int    async_event_index = 0;
+unsigned int    async_event_write = 0;
+AsyncEvent      async_events[MAX_ASYNC_EVENT];
+
+/* allow palette animation while doing another async event at the same time */
+unsigned int    async_event_palette_index = ~0U;
+/* allow panning while doing another async event */
+unsigned int    async_event_vpan_index = ~0U;
+
 /* measurement of VGA refresh rate */
 uint16_t vga_refresh_timer_ticks = 0;
 uint16_t timer_irq0_chain_add = 0;
@@ -31,6 +118,74 @@ uint32_t timer_irq0_ticksvsync = 0;
 
 void interrupt (*old_timer_irq)() = NULL;
 
+static inline unsigned char fadein_cap(unsigned char fade,unsigned char v) {
+    return (v > fade) ? fade : v;
+}
+
+/* do not call from interrupt */
+AsyncEvent *next_async(void) {
+    if (async_event_write >= MAX_ASYNC_EVENT)
+        FAIL("Too many async events");
+
+    return &async_events[async_event_write];
+}
+
+void next_async_finish(void) {
+    async_event_write++;
+}
+
+void flush_async(void) {
+    _cli();
+    async_event_write = async_event_index = 0;
+    _sti();
+}
+
+void do_async_irq_pal(void) {
+    // assume index != ~0U and valid
+    AsyncEvent *ev = &async_events[async_event_palette_index];
+    PalSlot *p = &pal_slots[ev->e.pal.slot];
+    PalColor *scp = &(p->pal[ev->e.pal.first]);
+    unsigned int c;
+
+    vga_palette_lseek(ev->e.pal.first_target);
+
+    switch (ev->e.pal.anim) {
+        case ASYNC_PAL_ANIM_NONE:
+            for (c=0;c < ev->e.pal.count;c++,scp++)
+                vga_palette_write(scp->r,scp->g,scp->b);
+            break;
+        case ASYNC_PAL_ANIM_FADE: {
+            const unsigned char fade = ev->e.pal.anim_p[0];
+
+            for (c=0;c < ev->e.pal.count;c++,scp++)
+                vga_palette_write(fadein_cap(fade,scp->r),fadein_cap(fade,scp->g),fadein_cap(fade,scp->b));
+
+            ev->e.pal.anim_p[0] += ev->e.pal.anim_p[1];
+            if (fade < 64) return; // not yet done. we're done when fade < 0 or fade > 63
+            } break;
+    }
+
+    // done, cancel
+    async_event_palette_index = ~0U;
+}
+
+void do_async_irq_vpan(void) {
+    // assume index != ~0U and valid
+    AsyncEvent *ev = &async_events[async_event_vpan_index];
+
+    // reprogram CRTC offset
+    vga_set_start_location(ev->e.vpan.start);
+
+    // panning?
+    if (ev->e.vpan.start != ev->e.vpan.end) {
+        ev->e.vpan.start += ev->e.vpan.adjust;
+        return;
+    }
+
+    // done, cancel
+    async_event_vpan_index = ~0U;
+}
+
 void interrupt timer_irq(void) {
     uint16_t padd;
 
@@ -39,6 +194,31 @@ void interrupt timer_irq(void) {
 
     /* vertical retrace */
     timer_irq0_ticksvsync++;
+    while (async_event_index < async_event_write) {
+        AsyncEvent *ev = &async_events[async_event_index];
+
+        switch (ev->what) {
+            case ASYNC_EVENT_STOP:
+                async_event_index = async_event_write = 0;
+                goto async_end;
+            case ASYNC_EVENT_WAIT:
+                if (ev->e.wait == 0) async_event_index++;
+                else ev->e.wait--;
+                goto async_end;
+            case ASYNC_EVENT_PALETTE: /* copy the index, allow it to happen while doing another event */
+                async_event_palette_index = async_event_index++;
+                break;
+            case ASYNC_EVENT_VPAN: /* copy the index, allow it to happen while doing another event */
+                async_event_vpan_index = async_event_index++;
+                break;
+        }
+    }
+async_end:
+
+    if (async_event_palette_index != ~0U)
+        do_async_irq_pal();
+    if (async_event_vpan_index != ~0U)
+        do_async_irq_vpan();
 
     /* chain at 18.2Hz */
     padd = timer_irq0_chain_counter;
@@ -75,25 +255,6 @@ void release_timer(void) {
     old_timer_irq = NULL;
 
     _sti();
-}
-
-void DEBUG(const char *fmt,...) {
-    va_list va;
-
-    if (debug_log == NULL) return;
-
-    va_start(va,fmt);
-    vfprintf(debug_log,fmt,va);
-    va_end(va);
-    fprintf(debug_log,"\n");
-}
-
-void FAIL(const char *msg) {
-    DEBUG("FAIL: %s",msg);
-    release_timer();
-    int10_setmode(0x3); /* text mode */
-    puts(msg);
-    exit(1);
 }
 
 uint16_t dos_get_freemem(void) {
@@ -304,10 +465,6 @@ void xbitblt(int x,int y,int w,int h,unsigned char *bits) {
 
 #define DisplayGIF_FADEIN       (1U << 0U)
 
-static inline unsigned char fadein_cap(unsigned char fade,unsigned char v) {
-    return (v > fade) ? fade : v;
-}
-
 void DisplayGIF(const char *path,unsigned int how) {
     GifFileType *gif;
     int err;
@@ -337,6 +494,7 @@ void DisplayGIF(const char *path,unsigned int how) {
         return;
     }
 
+    flush_async();
     { /* blank VGA palette */
         unsigned int i;
 
@@ -352,30 +510,32 @@ void DisplayGIF(const char *path,unsigned int how) {
         xbitblt(img->ImageDesc.Left,img->ImageDesc.Top,img->ImageDesc.Width,img->ImageDesc.Height,img->RasterBits);
     }
 
+    /* schedule palette fade in. take palette slot 0 */
     {
         ColorMapObject *c = gif->SColorMap;
-        unsigned int i,fade;
+        AsyncEvent *ae;
 
-        fade = (how & DisplayGIF_FADEIN) ? 0 : 64;
-
-        do {
+        {
             GifColorType *color = c->Colors;
+            unsigned int i = c->ColorCount;
 
-            vga_wait_for_vsync_end();
+            for (i=0;i < c->ColorCount;i++) {
+                pal_slots[0].pal[i].r = color[i].Red >> 2;
+                pal_slots[0].pal[i].g = color[i].Green >> 2;
+                pal_slots[0].pal[i].b = color[i].Blue >> 2;
+            }
+        }
 
-            vga_palette_lseek(0);
-
-            i = c->ColorCount;
-            do {
-                vga_palette_write(
-                        fadein_cap(fade,color->Red>>2),
-                        fadein_cap(fade,color->Green>>2),
-                        fadein_cap(fade,color->Blue>>2));
-                color++;
-            } while (--i != 0);
-
-            vga_wait_for_vsync();
-        } while ((fade += 2) < 64);
+        ae = next_async();
+        ae->what = ASYNC_EVENT_PALETTE;
+        ae->e.pal.slot = 0;
+        ae->e.pal.first = 0;
+        ae->e.pal.first_target = 0;
+        ae->e.pal.count = c->ColorCount;
+        ae->e.pal.anim = (how & DisplayGIF_FADEIN) ? ASYNC_PAL_ANIM_FADE : ASYNC_PAL_ANIM_NONE;
+        ae->e.pal.anim_p[0] = 2; // start at 2
+        ae->e.pal.anim_p[1] = 2; // step by 2
+        next_async_finish();
     }
 
     {
@@ -396,28 +556,18 @@ void DisplayGIF(const char *path,unsigned int how) {
 
     if (how & DisplayGIF_FADEIN) {
         ColorMapObject *c = gif->SColorMap;
-        unsigned int i,fade;
+        AsyncEvent *ae;
 
-        fade = 60;
-
-        do {
-            GifColorType *color = c->Colors;
-
-            vga_wait_for_vsync_end();
-
-            vga_palette_lseek(0);
-
-            i = c->ColorCount;
-            do {
-                vga_palette_write(
-                        fadein_cap(fade,color->Red>>2),
-                        fadein_cap(fade,color->Green>>2),
-                        fadein_cap(fade,color->Blue>>2));
-                color++;
-            } while (--i != 0);
-
-            vga_wait_for_vsync();
-        } while ((fade -= 4) != 0);
+        ae = next_async();
+        ae->what = ASYNC_EVENT_PALETTE;
+        ae->e.pal.slot = 0;
+        ae->e.pal.first = 0;
+        ae->e.pal.first_target = 0;
+        ae->e.pal.count = c->ColorCount;
+        ae->e.pal.anim = (how & DisplayGIF_FADEIN) ? ASYNC_PAL_ANIM_FADE : ASYNC_PAL_ANIM_NONE;
+        ae->e.pal.anim_p[0] = 60; // start at 60
+        ae->e.pal.anim_p[1] = -4; // step by -4
+        next_async_finish();
     }
 
     if (DGifCloseFile(gif,&err) != GIF_OK)
