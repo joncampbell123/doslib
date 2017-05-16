@@ -27,11 +27,18 @@ uint16_t timer_irq0_chain_counter = 0;
 
 uint32_t timer_irq0_ticks = 0;
 uint32_t timer_irq0_ticks18 = 0;
+uint32_t timer_irq0_ticksvsync = 0;
 
 void interrupt (*old_timer_irq)() = NULL;
 
 void interrupt timer_irq(void) {
     uint16_t padd;
+
+    /* count ticks */
+    timer_irq0_ticks++;
+
+    /* vertical retrace */
+    timer_irq0_ticksvsync++;
 
     /* chain at 18.2Hz */
     padd = timer_irq0_chain_counter;
@@ -42,7 +49,6 @@ void interrupt timer_irq(void) {
         old_timer_irq();
     }
     else {
-        timer_irq0_ticks++;
 		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
     }
 }
@@ -476,7 +482,10 @@ int main(int argc,char **argv) {
     DisplayGIF("title3.gif",DisplayGIF_FADEIN);
 
     release_timer();
-    DEBUG("Timer ticks: %lu ticks / %lu @ 18.2Hz",(unsigned long)timer_irq0_ticks,(unsigned long)timer_irq0_ticks18);
+    DEBUG("Timer ticks: %lu ticks / %lu vsync / %lu @ 18.2Hz",
+        (unsigned long)timer_irq0_ticks,
+        (unsigned long)timer_irq0_ticksvsync,
+        (unsigned long)timer_irq0_ticks18);
     int10_setmode(0x3); /* text mode */
     DEBUG_PRINT_MEM_STATE();
     DEBUG("Running heap shrink...");
