@@ -99,6 +99,21 @@ void DEBUG_PRINT_MEM_STATE(void) {
             (unsigned long)buf[0x18/4] << 2UL);
     }
 #endif
+
+    /* Open Watcom specific */
+    {
+        struct _heapinfo h_info;
+
+        DEBUG("Walking heap:");
+        h_info._pentry = NULL;
+        for (;;) {
+            if (_heapwalk(&h_info) != _HEAPOK) break;
+            DEBUG(" - %s block at %Fp of size %u (0x%X) bytes",
+                (h_info._useflag ? "USED" : "FREE"),
+                h_info._pentry,h_info._size,h_info._size);
+        }
+        DEBUG("--Done");
+    }
 }
 
 void init_debug_log(void) {
@@ -369,6 +384,8 @@ int main(int argc,char **argv) {
     int10_setmode(0x3); /* text mode */
     DEBUG_PRINT_MEM_STATE();
     DEBUG("Running heap shrink...");
+    _heapshrink();
+    _heapmin();
     _heapshrink();
     DEBUG_PRINT_MEM_STATE();
     return 0;
