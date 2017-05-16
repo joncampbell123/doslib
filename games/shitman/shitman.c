@@ -20,6 +20,57 @@
 
 FILE *debug_log = NULL;
 
+/* measurement of VGA refresh rate */
+uint16_t vga_refresh_timer_ticks = 0;
+uint16_t timer_irq0_chain_add = 0;
+uint16_t timer_irq0_chain_counter = 0;
+
+uint32_t timer_irq0_ticks = 0;
+uint32_t timer_irq0_ticks18 = 0;
+
+void interrupt (*old_timer_irq)() = NULL;
+
+void interrupt timer_irq(void) {
+    uint16_t padd;
+
+    /* chain at 18.2Hz */
+    padd = timer_irq0_chain_counter;
+    timer_irq0_chain_counter += timer_irq0_chain_add;
+    timer_irq0_chain_counter &= 0xFFFFU;
+    if (timer_irq0_chain_counter < padd) {
+        timer_irq0_ticks18++;
+        old_timer_irq();
+    }
+    else {
+        timer_irq0_ticks++;
+		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+    }
+}
+
+void setup_timer(void) {
+    if (old_timer_irq != NULL) return;
+
+    _cli();
+
+    write_8254_system_timer(timer_irq0_chain_add);
+    old_timer_irq = _dos_getvect(irq2int(0));
+    _dos_setvect(irq2int(0),timer_irq);
+
+    _sti();
+}
+
+void release_timer(void) {
+    if (old_timer_irq == NULL) return;
+
+    _cli();
+
+    write_8254_system_timer(0);
+    _dos_setvect(irq2int(0),old_timer_irq);
+    old_timer_irq = NULL;
+
+    _sti();
+}
+
 void DEBUG(const char *fmt,...) {
     va_list va;
 
@@ -33,6 +84,7 @@ void DEBUG(const char *fmt,...) {
 
 void FAIL(const char *msg) {
     DEBUG("FAIL: %s",msg);
+    release_timer();
     int10_setmode(0x3); /* text mode */
     puts(msg);
     exit(1);
@@ -180,9 +232,6 @@ int initial_sys_check(void) {
 
     return 1; /* OK */
 }
-
-/* measurement of VGA refresh rate */
-uint16_t vga_refresh_timer_ticks = 0;
 
 /* Mode X page flipping/panning support.
  * REMEMBER: A "byte" in mode X is 4 pixels wide because of VGA planar layout.
@@ -418,10 +467,16 @@ int main(int argc,char **argv) {
 
     vga_refresh_rate_measure();
 
+    /* setup timer. we will use it for async video panning and later, music */
+    timer_irq0_chain_add = vga_refresh_timer_ticks;
+    setup_timer();
+
     DisplayGIF("title1.gif",DisplayGIF_FADEIN);
     DisplayGIF("title2.gif",DisplayGIF_FADEIN);
     DisplayGIF("title3.gif",DisplayGIF_FADEIN);
 
+    release_timer();
+    DEBUG("Timer ticks: %lu ticks / %lu @ 18.2Hz",(unsigned long)timer_irq0_ticks,(unsigned long)timer_irq0_ticks18);
     int10_setmode(0x3); /* text mode */
     DEBUG_PRINT_MEM_STATE();
     DEBUG("Running heap shrink...");
