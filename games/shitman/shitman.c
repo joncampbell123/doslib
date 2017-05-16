@@ -594,6 +594,19 @@ void vga_refresh_rate_measure(void) {
         (double)T8254_REF_CLOCK_HZ / (double)vga_refresh_timer_ticks);
 }
 
+void timer_sync_to_vrefresh(void) {
+    _cli();
+    /* make the IRQ 0 timer count to zero and stop */
+	write_8254(T8254_TIMER_INTERRUPT_TICK,16,T8254_MODE_1_HARDWARE_RETRIGGERABLE_ONE_SHOT);
+    /* wait for vsync */
+    vga_wait_for_vsync();
+    vga_wait_for_vsync_end();
+    vga_wait_for_vsync();
+    /* start it again. */
+    write_8254_system_timer(timer_irq0_chain_add);
+    _sti();
+}
+
 void blank_vga_palette(void) {
     unsigned int i;
 
@@ -654,6 +667,7 @@ void TitleSequence(void) {
     flush_async();
     blank_vga_palette();
     modex_init();
+    timer_sync_to_vrefresh(); /* make sure the timer tick happens at vsync */
 
     /* take title1.gif, load to 0x0000 on screen, palette slot 0 */
     modex_draw_offset = 0;
