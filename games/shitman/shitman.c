@@ -181,6 +181,9 @@ int initial_sys_check(void) {
     return 1; /* OK */
 }
 
+/* measurement of VGA refresh rate */
+uint16_t vga_refresh_timer_ticks = 0;
+
 /* Mode X page flipping/panning support.
  * REMEMBER: A "byte" in mode X is 4 pixels wide because of VGA planar layout.
  * WARNING: Do not set offset beyond such that the screen will exceed 64KB. */
@@ -366,6 +369,42 @@ void DisplayGIF(const char *path,unsigned int how) {
         DEBUG("DGifCloseFile failed, err=%d %s",err,GifErrorString(err));
 }
 
+void vga_refresh_rate_measure(void) {
+    /* WARNING: This code assumes the refresh rate is >= 20Hz */
+    unsigned long counter = 0;
+    unsigned int frames;
+    t8254_time_t pt,ct;
+
+    vga_refresh_timer_ticks = (uint16_t)(T8254_REF_CLOCK_HZ / 70UL); /* reasonable default */
+
+    DEBUG("VGA: measuring refresh rate");
+
+    // Need to reprogram timer to normal 18.2Hz full range for this test
+    _cli();
+    write_8254_system_timer(0);
+    vga_wait_for_vsync();
+    vga_wait_for_vsync_end();
+    ct = read_8254_ncli(0);
+    for (frames=0;frames < 60;frames++) {
+        vga_wait_for_vsync();
+        vga_wait_for_vsync_end();
+
+        pt = ct;
+        ct = read_8254_ncli(0);
+
+        counter += (unsigned long)((pt - ct) & 0xFFFFU); // NTS: remember, it counts DOWN
+    }
+    _sti();
+    DEBUG("VGA measurement: %u frames, %lu ticks",
+        frames,counter);
+
+    vga_refresh_timer_ticks = (uint16_t)(counter / (unsigned long)frames);
+
+    DEBUG("VGA refresh rate: %u ticks (%.3ffps)",
+        vga_refresh_timer_ticks,
+        (double)T8254_REF_CLOCK_HZ / (double)vga_refresh_timer_ticks);
+}
+
 int main(int argc,char **argv) {
     init_debug_log();
 
@@ -376,6 +415,8 @@ int main(int argc,char **argv) {
     update_state_from_vga();
     vga_enable_256color_modex();
     modex_init();
+
+    vga_refresh_rate_measure();
 
     DisplayGIF("title1.gif",DisplayGIF_FADEIN);
     DisplayGIF("title2.gif",DisplayGIF_FADEIN);
