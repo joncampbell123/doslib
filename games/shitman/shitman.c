@@ -84,14 +84,21 @@ typedef struct AsyncEvent {
         AsyncPal    pal;
         AsyncVPan   vpan;
         uint16_t    wait;
+        uint16_t    wait_complete;
     } e;
 } AsyncEvent;
+
+enum {
+    ASYNC_WAIT_COMPLETE_PALETTE=0x0001U,
+    ASYNC_WAIT_COMPLETE_VPAN=0x0002U
+};
 
 enum {
     ASYNC_EVENT_STOP=0,         // stop processing
     ASYNC_EVENT_WAIT,           // wait for vertical retrace counts given in e.wait (e.wait)
     ASYNC_EVENT_PALETTE,        // palette animation (e.pal)
-    ASYNC_EVENT_VPAN            // change display start address (e.vpan)
+    ASYNC_EVENT_VPAN,           // change display start address (e.vpan)
+    ASYNC_EVENT_WAIT_COMPLETE   // wait for panning or palette animation to complete
 };
 
 #define MAX_ASYNC_EVENT         64
@@ -130,6 +137,14 @@ AsyncEvent *next_async(void) {
     return &async_events[async_event_write];
 }
 
+AsyncEvent *current_active_async(void) {
+    return &async_events[async_event_index];
+}
+
+unsigned int async_has_finished(void) {
+    return (async_event_index == async_event_write);
+}
+
 void next_async_finish(void) {
     async_event_write++;
 }
@@ -155,13 +170,13 @@ void do_async_irq_pal(void) {
                 vga_palette_write(scp->r,scp->g,scp->b);
             break;
         case ASYNC_PAL_ANIM_FADE: {
-            const unsigned char fade = ev->e.pal.anim_p[0];
+            unsigned char fade = ev->e.pal.anim_p[0];
 
             for (c=0;c < ev->e.pal.count;c++,scp++)
                 vga_palette_write(fadein_cap(fade,scp->r),fadein_cap(fade,scp->g),fadein_cap(fade,scp->b));
 
-            ev->e.pal.anim_p[0] += ev->e.pal.anim_p[1];
-            if (fade < 64) return; // not yet done. we're done when fade < 0 or fade > 63
+            fade = ev->e.pal.anim_p[0] += ev->e.pal.anim_p[1];
+            if (fade <= 64) return; // not yet done. we're done when fade < 0 or fade > 63
             } break;
     }
 
@@ -210,6 +225,14 @@ void interrupt timer_irq(void) {
                 break;
             case ASYNC_EVENT_VPAN: /* copy the index, allow it to happen while doing another event */
                 async_event_vpan_index = async_event_index++;
+                break;
+            case ASYNC_EVENT_WAIT_COMPLETE:
+                if ((ev->e.wait_complete & ASYNC_WAIT_COMPLETE_PALETTE) && async_event_palette_index != ~0U) goto async_end;
+                if ((ev->e.wait_complete & ASYNC_WAIT_COMPLETE_VPAN) && async_event_vpan_index != ~0U) goto async_end;
+                async_event_index++;
+                break;
+            default:
+                async_event_index++;
                 break;
         }
     }
@@ -463,9 +486,18 @@ void xbitblt(int x,int y,int w,int h,unsigned char *bits) {
     xbitblt_nc((unsigned int)x,(unsigned int)y,(unsigned int)w,(unsigned int)h,orig_w,bits);
 }
 
-#define DisplayGIF_FADEIN       (1U << 0U)
+GifFileType *FreeGIF(GifFileType *gif) {
+    int err;
 
-void DisplayGIF(const char *path,unsigned int how) {
+    if (gif) {
+        if (DGifCloseFile(gif,&err) != GIF_OK)
+            DEBUG("DGifCloseFile failed, err=%d %s",err,GifErrorString(err));
+    }
+
+    return NULL;
+}
+
+GifFileType *LoadGIF(const char *path) {
     GifFileType *gif;
     int err;
 
@@ -474,104 +506,56 @@ void DisplayGIF(const char *path,unsigned int how) {
     gif = DGifOpenFileName(path,&err);
     if (gif == NULL) {
         DEBUG("DGifOpenFileName failed, err=%d %s",err,GifErrorString(gif->Error));
-        return;
+        return NULL;
     }
 
     /* TODO: How do we read only the first image? */
     if (DGifSlurp(gif) != GIF_OK) {
         DEBUG("DGifSlurp failed Error=%u %s",gif->Error,GifErrorString(gif->Error));
         DGifCloseFile(gif,&err);
-        return;
+        return NULL;
     }
     if (gif->ImageCount == 0) {
         DEBUG("No GIF images");
         DGifCloseFile(gif,&err);
-        return;
-    }
-    if (gif->SColorMap == NULL) {
-        DEBUG("No colormap");
-        DGifCloseFile(gif,&err);
-        return;
+        return NULL;
     }
 
-    flush_async();
-    { /* blank VGA palette */
+    return gif;
+}
+
+/* NTS: Does NOT load the color palette */
+void DrawGIF(int x,int y,GifFileType *gif,unsigned int index) {
+    if (gif == NULL) return;
+    if (index >= gif->ImageCount) return;
+
+    {
+        SavedImage *img = &gif->SavedImages[index];
+
+        if (img->RasterBits == NULL) return;
+        xbitblt(img->ImageDesc.Left+x,img->ImageDesc.Top+y,img->ImageDesc.Width,img->ImageDesc.Height,img->RasterBits);
+    }
+}
+
+/* load GIF global palette into palette slot for async palette load */
+void GIF_GlobalColorTableToPaletteSlot(unsigned int slot,GifFileType *gif) {
+    if (gif == NULL) return;
+    if (slot >= MAX_PAL_SLOTS) return;
+    if (gif->SColorMap == NULL) return;
+
+    {
+        ColorMapObject *c = gif->SColorMap;
+        GifColorType *color = c->Colors;
         unsigned int i;
 
-        vga_palette_lseek(0);
-        for (i=0;i < 256;i++) vga_palette_write(0,0,0);
-    }
+        if (c->Colors == 0) return;
 
-    /* assume gif->SavedImages != NULL
-     * assume gif->SavedImages[0] != NULL */
-    {
-        SavedImage *img = &gif->SavedImages[0];
-
-        xbitblt(img->ImageDesc.Left,img->ImageDesc.Top,img->ImageDesc.Width,img->ImageDesc.Height,img->RasterBits);
-    }
-
-    /* schedule palette fade in. take palette slot 0 */
-    {
-        ColorMapObject *c = gif->SColorMap;
-        AsyncEvent *ae;
-
-        {
-            GifColorType *color = c->Colors;
-            unsigned int i = c->ColorCount;
-
-            for (i=0;i < c->ColorCount;i++) {
-                pal_slots[0].pal[i].r = color[i].Red >> 2;
-                pal_slots[0].pal[i].g = color[i].Green >> 2;
-                pal_slots[0].pal[i].b = color[i].Blue >> 2;
-            }
+        for (i=0;i < c->ColorCount;i++) {
+            pal_slots[slot].pal[i].r = color[i].Red >> 2;
+            pal_slots[slot].pal[i].g = color[i].Green >> 2;
+            pal_slots[slot].pal[i].b = color[i].Blue >> 2;
         }
-
-        ae = next_async();
-        ae->what = ASYNC_EVENT_PALETTE;
-        ae->e.pal.slot = 0;
-        ae->e.pal.first = 0;
-        ae->e.pal.first_target = 0;
-        ae->e.pal.count = c->ColorCount;
-        ae->e.pal.anim = (how & DisplayGIF_FADEIN) ? ASYNC_PAL_ANIM_FADE : ASYNC_PAL_ANIM_NONE;
-        ae->e.pal.anim_p[0] = 2; // start at 2
-        ae->e.pal.anim_p[1] = 2; // step by 2
-        next_async_finish();
     }
-
-    {
-        unsigned long waitper = t8254_us2ticks(100000); /* 100ms */
-        unsigned int patience = 50;
-        int c;
-
-        /* wait for space, enter, or 4 seconds */
-        do {
-            if (kbhit()) {
-                c = getch();
-                if (c == 13 || c == ' ') break;
-            }
-
-            t8254_wait(waitper);
-        } while (--patience != 0);
-    }
-
-    if (how & DisplayGIF_FADEIN) {
-        ColorMapObject *c = gif->SColorMap;
-        AsyncEvent *ae;
-
-        ae = next_async();
-        ae->what = ASYNC_EVENT_PALETTE;
-        ae->e.pal.slot = 0;
-        ae->e.pal.first = 0;
-        ae->e.pal.first_target = 0;
-        ae->e.pal.count = c->ColorCount;
-        ae->e.pal.anim = (how & DisplayGIF_FADEIN) ? ASYNC_PAL_ANIM_FADE : ASYNC_PAL_ANIM_NONE;
-        ae->e.pal.anim_p[0] = 60; // start at 60
-        ae->e.pal.anim_p[1] = -4; // step by -4
-        next_async_finish();
-    }
-
-    if (DGifCloseFile(gif,&err) != GIF_OK)
-        DEBUG("DGifCloseFile failed, err=%d %s",err,GifErrorString(err));
 }
 
 void vga_refresh_rate_measure(void) {
@@ -610,6 +594,139 @@ void vga_refresh_rate_measure(void) {
         (double)T8254_REF_CLOCK_HZ / (double)vga_refresh_timer_ticks);
 }
 
+void blank_vga_palette(void) {
+    unsigned int i;
+
+    vga_palette_lseek(0);
+    for (i=0;i < 256;i++) vga_palette_write(0,0,0);
+}
+
+void TitleSequenceAsyncScheduleSlide(unsigned char slot,uint16_t offset) {
+    AsyncEvent *ev;
+
+    ev = next_async();
+    memset(ev,0,sizeof(*ev));
+    ev->what = ASYNC_EVENT_VPAN;
+    ev->e.vpan.start = ev->e.vpan.end = offset;
+    ev->e.vpan.adjust = 0;
+    next_async_finish();
+
+    ev = next_async();
+    memset(ev,0,sizeof(*ev));
+    ev->what = ASYNC_EVENT_PALETTE;
+    ev->e.pal.first = ev->e.pal.first_target = 0;
+    ev->e.pal.count = 256;
+    ev->e.pal.slot = slot;
+    ev->e.pal.anim = ASYNC_PAL_ANIM_FADE;
+    ev->e.pal.anim_p[0] = 2;
+    ev->e.pal.anim_p[1] = 2;
+    next_async_finish();
+
+    ev = next_async();
+    memset(ev,0,sizeof(*ev));
+    ev->what = ASYNC_EVENT_WAIT;
+    ev->e.wait = 70 * 4; // 4 seconds
+    next_async_finish();
+
+    ev = next_async();
+    memset(ev,0,sizeof(*ev));
+    ev->what = ASYNC_EVENT_PALETTE;
+    ev->e.pal.first = ev->e.pal.first_target = 0;
+    ev->e.pal.count = 256;
+    ev->e.pal.slot = slot;
+    ev->e.pal.anim = ASYNC_PAL_ANIM_FADE;
+    ev->e.pal.anim_p[0] = 60;
+    ev->e.pal.anim_p[1] = -4;
+    next_async_finish();
+
+    ev = next_async();
+    memset(ev,0,sizeof(*ev));
+    ev->what = ASYNC_EVENT_WAIT_COMPLETE;
+    ev->e.wait_complete = ASYNC_WAIT_COMPLETE_PALETTE | ASYNC_WAIT_COMPLETE_VPAN;
+    next_async_finish();
+}
+
+void TitleSequence(void) {
+    unsigned char hurry=0;
+    GifFileType *gif;
+    int c;
+
+    flush_async();
+    blank_vga_palette();
+    modex_init();
+
+    /* take title1.gif, load to 0x0000 on screen, palette slot 0 */
+    modex_draw_offset = 0;
+    gif = LoadGIF("title1.gif");
+    GIF_GlobalColorTableToPaletteSlot(0,gif);
+    DrawGIF(0,0,gif,0);
+    FreeGIF(gif);
+
+    TitleSequenceAsyncScheduleSlide(/*slot*/0,/*offset*/modex_draw_offset);
+
+    if (kbhit()) {
+        c = getch();
+        if (c == 27) goto user_abort;
+        else if (c == 13 || c == ' ') hurry = 1;
+    }
+
+    /* take title2.gif, load to 0x4000 on screen, palette slot 1 */
+    modex_draw_offset = 0x4000;
+    gif = LoadGIF("title2.gif");
+    GIF_GlobalColorTableToPaletteSlot(1,gif);
+    DrawGIF(0,0,gif,0);
+    FreeGIF(gif);
+
+    TitleSequenceAsyncScheduleSlide(/*slot*/1,/*offset*/modex_draw_offset);
+
+    if (kbhit()) {
+        c = getch();
+        if (c == 27) goto user_abort;
+        else if (c == 13 || c == ' ') hurry = 1;
+    }
+
+    /* take title3.gif, load to 0x8000 on screen, palette slot 2 */
+    modex_draw_offset = 0x8000;
+    gif = LoadGIF("title3.gif");
+    GIF_GlobalColorTableToPaletteSlot(2,gif);
+    DrawGIF(0,0,gif,0);
+    FreeGIF(gif);
+
+    TitleSequenceAsyncScheduleSlide(/*slot*/2,/*offset*/modex_draw_offset);
+
+    if (kbhit()) {
+        c = getch();
+        if (c == 27) goto user_abort;
+        else if (c == 13 || c == ' ') hurry = 1;
+    }
+
+    /* let it play out, then exit when done */
+    do {
+        if (kbhit()) {
+            c = getch();
+            if (c == 27) break;
+            else if (c == 13 || c == ' ') hurry = 1;
+        }
+
+        if (hurry) {
+            _cli();
+            if (!async_has_finished()) {
+                /* WARNING: current_active_async() will not return valid event if all finished */
+                AsyncEvent *ev = current_active_async();
+
+                if (ev->what == ASYNC_EVENT_WAIT) {
+                    ev->e.wait = 0; /* hurry up */
+                    hurry = 0;
+                }
+            }
+            _sti();
+        }
+    } while (!async_has_finished());
+
+user_abort:
+    flush_async();
+}
+
 int main(int argc,char **argv) {
     init_debug_log();
 
@@ -627,9 +744,8 @@ int main(int argc,char **argv) {
     timer_irq0_chain_add = vga_refresh_timer_ticks;
     setup_timer();
 
-    DisplayGIF("title1.gif",DisplayGIF_FADEIN);
-    DisplayGIF("title2.gif",DisplayGIF_FADEIN);
-    DisplayGIF("title3.gif",DisplayGIF_FADEIN);
+    /* title sequence. will exit when animation ends or user hits a key */
+    TitleSequence();
 
     release_timer();
     DEBUG("Timer ticks: %lu ticks / %lu vsync / %lu @ 18.2Hz",
