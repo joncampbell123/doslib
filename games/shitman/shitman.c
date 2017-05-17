@@ -867,12 +867,91 @@ void FNTBlob_transpose_pixels(FNTBlob *b,unsigned char base) {/*NTS: base must b
     }
 }
 
+enum {
+	UTF8ERR_INVALID=-1L,
+	UTF8ERR_NO_ROOM=-2L
+};
+
+#ifndef UNICODE_BOM
+#define UNICODE_BOM 0xFEFF
+#endif
+
+long utf8_decode(const char **ptr,const char *fence) {
+	const char *p = *ptr;
+	int uchar_size=1;
+	long ret = 0,c;
+
+	if (!p) return UTF8ERR_NO_ROOM;
+	if (p >= fence) return UTF8ERR_NO_ROOM;
+
+	ret = (unsigned char)(*p);
+	if (ret >= 0xFE) { p++; return UTF8ERR_INVALID; }
+	else if (ret >= 0xFC) uchar_size=6;
+	else if (ret >= 0xF8) uchar_size=5;
+	else if (ret >= 0xF0) uchar_size=4;
+	else if (ret >= 0xE0) uchar_size=3;
+	else if (ret >= 0xC0) uchar_size=2;
+	else if (ret >= 0x80) { p++; return UTF8ERR_INVALID; }
+
+	if ((p+uchar_size) > fence)
+		return UTF8ERR_NO_ROOM;
+
+	switch (uchar_size) {
+		case 1:	p++;
+			break;
+		case 2:	ret = (ret&0x1F)<<6; p++;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= c&0x3F;
+			break;
+		case 3:	ret = (ret&0xF)<<12; p++;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<6;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= c&0x3F;
+			break;
+		case 4:	ret = (ret&0x7)<<18; p++;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<12;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<6;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= c&0x3F;
+			break;
+		case 5:	ret = (ret&0x3)<<24; p++;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<18;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<12;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<6;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= c&0x3F;
+			break;
+		case 6:	ret = (ret&0x1)<<30; p++;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<24;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<18;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<12;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= (c&0x3F)<<6;
+			c = (unsigned char)(*p++); if ((c&0xC0) != 0x80) return UTF8ERR_INVALID;
+			ret |= c&0x3F;
+			break;
+	};
+
+	*ptr = p;
+	return ret;
+}
+
 void font_str_bitblt(FNTBlob *b,int cx,int *x,int *y,const char *str/*NTS: Will be UTF-8*/) {
-    uint32_t id;
+    long id;
 
     while (*str != 0) {
-        id = (uint32_t)((unsigned char)(*str++));
-        font_bitblt(b,cx,x,y,id);
+        id = utf8_decode(&str,str+32);
+        if (id < 0L) break;
+        font_bitblt(b,cx,x,y,(uint32_t)id);
     }
 }
 
