@@ -1040,6 +1040,12 @@ void GIF_GlobalColorTableToPaletteSlot(unsigned int slot,GifFileType *gif) {
     }
 }
 
+void load_all_fonts(void) {
+    /* load fonts */
+    loadFont(&font22_fnt,"font22.fnt","font22.gif");
+    loadFont(&font40_fnt,"font40.fnt","font40.gif");
+}
+
 void vga_refresh_rate_measure(void) {
     /* WARNING: This code assumes the refresh rate is >= 20Hz */
     unsigned long counter = 0;
@@ -1196,6 +1202,9 @@ void TitleSequence(void) {
         else if (c == 13 || c == ' ') hurry = 1;
     }
 
+    /* while we're waiting, now would be a good time to load fonts */
+    load_all_fonts();
+
     /* let it play out, then exit when done */
     do {
         if (kbhit()) {
@@ -1242,10 +1251,7 @@ int main(int argc,char **argv) {
 
     /* title sequence. will exit when animation ends or user hits a key */
     TitleSequence();
-
-    /* load fonts */
-    loadFont(&font22_fnt,"font22.fnt","font22.gif");
-    loadFont(&font40_fnt,"font40.fnt","font40.gif");
+    load_all_fonts();
 
     /* print on screen */
     {
