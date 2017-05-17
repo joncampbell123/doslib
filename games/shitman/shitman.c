@@ -721,6 +721,15 @@ void modex_init(void) {
     modex_draw_stride = modex_draw_width / 4U;
 }
 
+enum {
+    BITBLT_BLOCK=0,
+    BITBLT_NOBLACK,
+
+    BITBLT_MAX
+};
+
+unsigned char xbitblt_nc_mode = BITBLT_BLOCK;
+
 void xbitblt_nc(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsigned int bits_stride,unsigned char *bits) {
     uint16_t o = (y * modex_draw_stride) + (x >> 2) + modex_draw_offset;
     unsigned char b = 1U << (x & 3U);
@@ -753,6 +762,49 @@ void xbitblt_nc(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsi
     } while ((--w) != 0);
 }
 
+void xbitblt_nc_noblack(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsigned int bits_stride,unsigned char *bits) {
+    uint16_t o = (y * modex_draw_stride) + (x >> 2) + modex_draw_offset;
+    unsigned char b = 1U << (x & 3U);
+    unsigned char *src;
+    unsigned int ch;
+    VGA_RAM_PTR wp;
+
+    /* assume w != 0 && h != 0 */
+    /* assume x < modex_draw_width && y < modex_draw_height */
+    /* assume (x+w) <= modex_draw_width && (y+h) <= modex_draw_height */
+    /* assume bits != NULL */
+    /* render vertical strip-wise because of Mode X */
+    do {
+	    vga_write_sequencer(VGA_SC_MAP_MASK,b);
+        wp = vga_state.vga_graphics_ram + o;
+        src = bits;
+        ch = h;
+
+        do {
+            if (*src != 0) *wp = *src;
+            wp += modex_draw_stride;
+            src += bits_stride;
+        } while ((--ch) != 0);
+
+        bits++;
+        if ((b <<= 1U) == 0x10U) {
+            b = 0x01U;
+            o++;
+        }
+    } while ((--w) != 0);
+}
+
+typedef void (*xbitblt_nc_func)(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsigned int bits_stride,unsigned char *bits);
+
+static xbitblt_nc_func xbitblt_nc_functable[BITBLT_MAX] = {
+    xbitblt_nc,
+    xbitblt_nc_noblack
+};
+
+void xbitblt_setbltmode(unsigned char mode) {
+    xbitblt_nc_mode = mode;
+}
+
 void xbitblts(int x,int y,int w,int h,unsigned int stride,unsigned char *bits) {
     /* NTS: We render in Mode X at all times */
     /* Assume: bits != NULL */
@@ -763,7 +815,7 @@ void xbitblts(int x,int y,int w,int h,unsigned int stride,unsigned char *bits) {
     if (((uint16_t)(y+h)) > modex_draw_height) h = modex_draw_height - y;
     if (w <= 0 || h <= 0) return;
 
-    xbitblt_nc((unsigned int)x,(unsigned int)y,(unsigned int)w,(unsigned int)h,stride,bits);
+    xbitblt_nc_functable[xbitblt_nc_mode]((unsigned int)x,(unsigned int)y,(unsigned int)w,(unsigned int)h,stride,bits);
 }
 
 void xbitblt(int x,int y,int w,int h,unsigned char *bits) {
@@ -794,6 +846,24 @@ void font_bitblt(FNTBlob *b,int cx/*left edge of box*/,int *x,int *y,uint32_t id
         xbitblts(*x + fc->xoffset,*y + fc->yoffset,fc->w,fc->h,b->img->ImageDesc.Width,rasterptr);
 
         *x += fc->xadvance;
+    }
+}
+
+void FNTBlob_transpose_pixels(FNTBlob *b,unsigned char base) {/*NTS: base must be a multiple of 4*/
+    unsigned char *p,*f;
+
+    if (b == NULL || b->img == NULL)
+        return;
+    if (b->img->RasterBits == NULL)
+        return;
+
+    p = b->img->RasterBits;
+    f = p + b->img->ImageDesc.Width * b->img->ImageDesc.Height;
+
+    while (p < f) {
+        unsigned char c = *p & 3;
+        if (c != 0) c += base;
+        *p++ = c;
     }
 }
 
@@ -1091,20 +1161,17 @@ int main(int argc,char **argv) {
         int x,y;
 
         modex_init();
-	    vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
-#if TARGET_MSDOS == 16
-        _fmemset(vga_state.vga_graphics_ram,0,(320/4)*200);
-#else
-        memset(vga_state.vga_graphics_ram,0,(320/4)*200);
-#endif
         vga_set_start_location(0);
 
-        vga_palette_lseek(0);
+        vga_palette_lseek(192);
+        FNTBlob_transpose_pixels(font22_fnt,192);
+        FNTBlob_transpose_pixels(font40_fnt,192);
         for (i=0;i < 4;i++) vga_palette_write((i*255)/3,(i*255)/3,(i*255)/3);
 
         x = 40;
         y = 40;
 
+        xbitblt_setbltmode(BITBLT_NOBLACK);
         font_str_bitblt(font40_fnt,40,&x,&y,"Hello world\nHow are you?\n");
         font_str_bitblt(font22_fnt,40,&x,&y,"Can you read this?\n'Cause I know I can!");
 
