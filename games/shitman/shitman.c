@@ -49,6 +49,7 @@ typedef struct FNTBlob {
     GifFileType*            gif;
     SavedImage*             img;
     unsigned char           ascii_lookup[127-32]; /* quick lookup for common ASCII chars 0xFF = no such entry */
+    int                     y_adj; /* rendering offset due to a/r correction */
 } FNTBlob;
 
 unsigned char *FNTBlob_get_block(FNTBlob *b,unsigned int block,size_t *sz) {
@@ -212,6 +213,7 @@ int FNTBlob_load(FNTBlob *b,const char *path) {
     int fd;
 
     FNTBlob_free_raw(b);
+    b->y_adj = 0;
 
     fd = open(path,O_RDONLY | O_BINARY);
     if (fd < 0) return -1;
@@ -261,6 +263,17 @@ int FNTBlob_load(FNTBlob *b,const char *path) {
         b->block_ofs[2-1] == (size_t)0 ||
         b->block_ofs[4-1] == (size_t)0)
         goto fail;
+
+    /* BMFont params need correction for VGA 320x200 non-square pixels */
+    {
+        FNTBlob_common *c = FNTBlob_get_common(b);
+        if (c != NULL) {
+            int shave = (c->lineHeight * 3) / 16;
+
+            b->y_adj = -shave;
+            c->lineHeight -= shave;
+        }
+    }
 
     return 0;
 fail:
@@ -843,7 +856,7 @@ void font_bitblt(FNTBlob *b,int cx/*left edge of box*/,int *x,int *y,uint32_t id
         rasterptr += fc->y * b->img->ImageDesc.Width;
         rasterptr += fc->x;
 
-        xbitblts(*x + fc->xoffset,*y + fc->yoffset,fc->w,fc->h,b->img->ImageDesc.Width,rasterptr);
+        xbitblts(*x + fc->xoffset,*y + fc->yoffset + b->y_adj,fc->w,fc->h,b->img->ImageDesc.Width,rasterptr);
 
         *x += fc->xadvance;
     }
