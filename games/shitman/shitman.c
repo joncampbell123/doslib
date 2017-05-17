@@ -471,19 +471,21 @@ void xbitblt_nc(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsi
     } while ((--w) != 0);
 }
 
-void xbitblt(int x,int y,int w,int h,unsigned char *bits) {
-    unsigned int orig_w = w;
-
+void xbitblts(int x,int y,int w,int h,unsigned int stride,unsigned char *bits) {
     /* NTS: We render in Mode X at all times */
     /* Assume: bits != NULL */
     if (x < 0) { bits += -x;          w += x; x = 0; }
-    if (y < 0) { bits += -y * orig_w; h += y; y = 0; }
+    if (y < 0) { bits += -y * stride; h += y; y = 0; }
     if (w <= 0 || h <= 0) return;
     if (((uint16_t)(x+w)) > modex_draw_width) w = modex_draw_width - x;
     if (((uint16_t)(y+h)) > modex_draw_height) h = modex_draw_height - y;
     if (w <= 0 || h <= 0) return;
 
-    xbitblt_nc((unsigned int)x,(unsigned int)y,(unsigned int)w,(unsigned int)h,orig_w,bits);
+    xbitblt_nc((unsigned int)x,(unsigned int)y,(unsigned int)w,(unsigned int)h,stride,bits);
+}
+
+void xbitblt(int x,int y,int w,int h,unsigned char *bits) {
+    xbitblts(x,y,w,h,(unsigned int)w,bits); // stride == w
 }
 
 GifFileType *FreeGIF(GifFileType *gif) {
