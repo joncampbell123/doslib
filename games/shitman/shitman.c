@@ -770,6 +770,42 @@ void xbitblt(int x,int y,int w,int h,unsigned char *bits) {
     xbitblts(x,y,w,h,(unsigned int)w,bits); // stride == w
 }
 
+void font_bitblt(FNTBlob *b,int cx/*left edge of box*/,int *x,int *y,uint32_t id) {
+    if (b->img == NULL || b->gif == NULL)
+        return;
+
+    if (id == '\n') {
+        FNTBlob_common *c = FNTBlob_get_common(b);
+        if (c == NULL) return;
+
+        *x = cx;
+        *y += c->lineHeight;
+    }
+    else {
+        unsigned char *rasterptr;
+        FNTBlob_chars *fc = FNTBlob_find_char(b,id);
+        if (fc == NULL) return;
+
+        rasterptr = b->img->RasterBits;
+        if (rasterptr == NULL) return;
+        rasterptr += fc->y * b->img->ImageDesc.Width;
+        rasterptr += fc->x;
+
+        xbitblts(*x + fc->xoffset,*y + fc->yoffset,fc->w,fc->h,b->img->ImageDesc.Width,rasterptr);
+
+        *x += fc->xadvance;
+    }
+}
+
+void font_str_bitblt(FNTBlob *b,int cx,int *x,int *y,const char *str/*NTS: Will be UTF-8*/) {
+    uint32_t id;
+
+    while (*str != 0) {
+        id = (uint32_t)((unsigned char)(*str++));
+        font_bitblt(b,cx,x,y,id);
+    }
+}
+
 GifFileType *FreeGIF(GifFileType *gif) {
     int err;
 
@@ -1045,9 +1081,35 @@ int main(int argc,char **argv) {
     /* title sequence. will exit when animation ends or user hits a key */
     TitleSequence();
 
-    /* main menu */
+    /* load fonts */
     loadFont(&font22_fnt,"font22.fnt","font22.gif");
     loadFont(&font40_fnt,"font40.fnt","font40.gif");
+
+    /* print on screen */
+    {
+        unsigned int i;
+        int x,y;
+
+        modex_init();
+	    vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
+#if TARGET_MSDOS == 16
+        _fmemset(vga_state.vga_graphics_ram,0,(320/4)*200);
+#else
+        memset(vga_state.vga_graphics_ram,0,(320/4)*200);
+#endif
+        vga_set_start_location(0);
+
+        vga_palette_lseek(0);
+        for (i=0;i < 4;i++) vga_palette_write((i*255)/3,(i*255)/3,(i*255)/3);
+
+        x = 40;
+        y = 40;
+
+        font_str_bitblt(font40_fnt,40,&x,&y,"Hello world\nHow are you?\n");
+        font_str_bitblt(font22_fnt,40,&x,&y,"Can you read this?\n'Cause I know I can!");
+
+        getch();
+    }
 
     release_timer();
     unloadFont(&font40_fnt);
