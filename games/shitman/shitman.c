@@ -1232,8 +1232,26 @@ void font_prep_palette_at(const unsigned char palidx,
     }
 }
 
+void font_prep_palette_slot_at(const unsigned char slot,unsigned char palidx,
+    const unsigned char bg_r,const unsigned char bg_g,const unsigned char bg_b,
+    const unsigned char fg_r,const unsigned char fg_g,const unsigned char fg_b) {
+    unsigned char r,g,b;
+    unsigned int i;
+
+    for (i=0;i < 4;i++) {
+        r = bg_r + ((((char)fg_r - (char)bg_r) * i) / 3);
+        g = bg_g + ((((char)fg_g - (char)bg_g) * i) / 3);
+        b = bg_b + ((((char)fg_b - (char)bg_b) * i) / 3);
+
+        pal_slots[slot].pal[palidx].r = r >> 2;
+        pal_slots[slot].pal[palidx].g = g >> 2;
+        pal_slots[slot].pal[palidx].b = b >> 2;
+        palidx++;
+    }
+}
+
 void font_prep_xbitblt_at(unsigned char palidx) {
-    xbitblt_setbltbias(192);
+    xbitblt_setbltbias(palidx);
     xbitblt_setbltmode(BITBLT_NOBLACK_BIAS);
 }
 
@@ -1435,6 +1453,13 @@ user_abort:
 
 void MenuPhase(void) {
     _Bool menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
+    const unsigned char brown_title_box[3] = { 142U, 78U, 0U }; /* shit brown */
+    const unsigned char brown_title_base = 1; /* 7-color gradient start */
+    const unsigned char yellow_title_box[3] = { 255U, 251U, 68U }; /* piss yellow */
+    const unsigned char yellow_title_base = 8; /* 7-color gradient start */
+    const unsigned char font_base_white_on_brown = 15; /* 4-color gradient */
+    const unsigned char font_base_yellow_on_brown = 19; /* 4-color gradient */
+    const unsigned char font_base_brown_on_black = 23; /* 4-color gradient */
     AsyncEvent *ev;
     int c;
 
@@ -1446,13 +1471,38 @@ void MenuPhase(void) {
 
     /* init palette */
     {
-        unsigned int i;
+        unsigned int i,j;
 
-        for (i=0;i < 256;i++) {
-            pal_slots[0].pal[i].r =
-            pal_slots[0].pal[i].g =
-            pal_slots[0].pal[i].b = i & 63;
+        i = 0; /* background, black */
+        pal_slots[0].pal[i].r =
+        pal_slots[0].pal[i].g =
+        pal_slots[0].pal[i].b = 0;
+
+        i = brown_title_base;
+        for (j=0;j < 7;j++) {
+            pal_slots[0].pal[i+j].r = ((unsigned int)brown_title_box[0] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].g = ((unsigned int)brown_title_box[1] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].b = ((unsigned int)brown_title_box[2] * (j+1U)) >> (3U+2U);
         }
+
+        i = yellow_title_base;
+        for (j=0;j < 7;j++) {
+            pal_slots[0].pal[i+j].r = ((unsigned int)yellow_title_box[0] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].g = ((unsigned int)yellow_title_box[1] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].b = ((unsigned int)yellow_title_box[2] * (j+1U)) >> (3U+2U);
+        }
+
+        font_prep_palette_slot_at(/*slot*/0,font_base_white_on_brown,
+            /* background */brown_title_box[0],brown_title_box[1],brown_title_box[2],
+            /* foreground */255,255,255);
+
+        font_prep_palette_slot_at(/*slot*/0,font_base_yellow_on_brown,
+            /* background */brown_title_box[0],brown_title_box[1],brown_title_box[2],
+            /* foreground */yellow_title_box[0],yellow_title_box[1],yellow_title_box[2]);
+
+        font_prep_palette_slot_at(/*slot*/0,font_base_brown_on_black,
+            /* background */0,0,0,
+            /* foreground */brown_title_box[0],brown_title_box[1],brown_title_box[2]);
     }
 
     /* menu loop */
@@ -1504,7 +1554,6 @@ void MenuPhase(void) {
                 /* blank the screen, pan to 0x0000 */
                 blank_vga_palette();
                 vga_set_start_location(0);
-                xbltbox(0,0,319,199,0);
 
                 {
                     /* schedule fade in */
@@ -1523,6 +1572,26 @@ void MenuPhase(void) {
         }
 
         if (fullredraw) {
+            const unsigned int title_y[2] = {20,80};
+            const unsigned int title_text_x = 90/*FIXME: Need a way to center text*/, title_text_y = 26;
+            const unsigned int subtitle_text_x = 30/*FIXME: Need a way to center text*/;
+            unsigned int i;
+            int x,y;
+
+            xbltbox(0,0,319,199,0); // black background
+
+            xbltbox(0,title_y[0]+6,319,title_y[1]-6,brown_title_base+6/*brighest tone*/);
+            for (i=0;i < 6;i++) xbltrect(-1,title_y[0]+i,319+1,title_y[1]-i,brown_title_base+i);
+
+            x = title_text_x;
+            y = title_text_y;
+            font_prep_xbitblt_at(font_base_yellow_on_brown);
+            font_str_bitblt(font40_fnt,0,&x,&y,"Shit Man\n");
+
+            x = subtitle_text_x;
+            font_prep_xbitblt_at(font_base_white_on_brown);
+            font_str_bitblt(font22_fnt,0,&x,&y,"The start of a shitty adventure");
+
             fullredraw = 0;
             menu_init = 1;
             redraw = 0;
