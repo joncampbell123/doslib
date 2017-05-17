@@ -41,6 +41,288 @@ void FAIL(const char *msg) {
     exit(1);
 }
 
+/* font FNT blob */
+typedef struct FNTBlob {
+    unsigned char*          raw;
+    size_t                  raw_length;
+    size_t                  block_ofs[5+1-1]; /* start from 1, up to 5 inclusive */
+    GifFileType*            gif;
+    SavedImage*             img;
+    unsigned char           ascii_lookup[127-32]; /* quick lookup for common ASCII chars 0xFF = no such entry */
+} FNTBlob;
+
+unsigned char *FNTBlob_get_block(FNTBlob *b,unsigned int block,size_t *sz) {
+    unsigned char *p;
+    size_t o;
+
+    if (b == NULL || block < 1 || block > 5 || sz == NULL)
+        return NULL;
+    if (b->raw == NULL)
+        return NULL;
+
+    o = b->block_ofs[block-1];
+    if (o == 0)
+        return NULL;
+
+    p = b->raw + o;
+    *sz = (size_t) *((uint32_t*)(p-4));
+    return p;
+}
+
+#pragma pack(push,1)
+typedef struct FNTBlob_info {
+    int16_t             fontSize;           // +0x00
+    uint8_t             bitField;           // +0x02
+    uint8_t             charSet;            // +0x03
+    uint16_t            stretchH;           // +0x04
+    uint8_t             aa;                 // +0x06
+    uint8_t             paddingUp;          // +0x07
+    uint8_t             paddingRight;       // +0x08
+    uint8_t             paddingDown;        // +0x09
+    uint8_t             paddingLeft;        // +0x0A
+    uint8_t             spacingHoriz;       // +0x0B
+    uint8_t             spacingVert;        // +0x0C
+    uint8_t             outline;            // +0x0D
+    // don't care beyond this point
+} FNTBlob_info;
+
+typedef struct FNTBlob_common {
+    uint16_t            lineHeight;         // +0x00
+    uint16_t            base;               // +0x02
+    uint16_t            scaleW;             // +0x04
+    uint16_t            scaleH;             // +0x06
+    uint16_t            pages;              // +0x08
+    uint8_t             bitField;           // +0x0A
+    uint8_t             alphaChnl;          // +0x0B
+    uint8_t             redChnl;            // +0x0C
+    uint8_t             greenChnl;          // +0x0D
+    uint8_t             blueChnl;           // +0x0E
+} FNTBlob_common;
+
+typedef struct FNTBlob_chars {
+    uint32_t            id;                 // +0x00
+    uint16_t            x;                  // +0x04
+    uint16_t            y;                  // +0x06
+    uint16_t            w;                  // +0x08
+    uint16_t            h;                  // +0x0A
+    int16_t             xoffset;            // +0x0C
+    int16_t             yoffset;            // +0x0E
+    int16_t             xadvance;           // +0x10
+    uint8_t             page;               // +0x12
+    uint8_t             chnl;               // +0x13
+} FNTBlob_chars;                            // =0x14
+#pragma pack(pop)
+
+FNTBlob_info *FNTBlob_get_info(FNTBlob *b) {
+    size_t sz;
+    unsigned char *p = FNTBlob_get_block(b,/*info*/1,&sz);
+    if (p == NULL || sz < sizeof(FNTBlob_info)) return NULL;
+
+    return (FNTBlob_info*)p;
+}
+
+FNTBlob_common *FNTBlob_get_common(FNTBlob *b) {
+    size_t sz;
+    unsigned char *p = FNTBlob_get_block(b,/*common*/2,&sz);
+    if (p == NULL || sz < sizeof(FNTBlob_common)) return NULL;
+
+    return (FNTBlob_common*)p;
+}
+
+FNTBlob_chars *FNTBlob_get_chars(FNTBlob *b,FNTBlob_chars **fence) {
+    size_t sz;
+    unsigned char *p = FNTBlob_get_block(b,/*chars*/4,&sz);
+    if (p == NULL || sz < sizeof(FNTBlob_chars)) return NULL;
+    *fence = (FNTBlob_chars*)(p+sz);
+    return (FNTBlob_chars*)p;
+}
+
+FNTBlob_chars *FNTBlob_find_char(FNTBlob *b,uint32_t id) {
+    FNTBlob_chars *cf;
+    FNTBlob_chars *c = FNTBlob_get_chars(b,&cf);
+    if (c == NULL) return NULL;
+
+    if (id >= 32 && id <= 127) {
+        if (b->ascii_lookup[id-32] != 0xFF)
+            return c + b->ascii_lookup[id-32];
+    }
+
+    for (;c < cf;c++) {
+        if (c->id == id)
+            return c;
+    }
+
+    return NULL; /* not found */
+}
+
+void FNTBlob_ascii_lookup_build(FNTBlob *b) {
+    FNTBlob_chars *fc,*fb;
+    unsigned int c;
+
+    /* quick lookup for ASCII chars 32-127 because linear scan is slow */
+    fb = FNTBlob_get_chars(b,&fc);
+    for (c=32;c < 127;c++) {
+        b->ascii_lookup[c-32] = 0xFF;
+
+        fc = FNTBlob_find_char(b,c);
+        if (fc != NULL)
+            b->ascii_lookup[c-32] = (unsigned char)(fc - fb);
+    }
+}
+
+FNTBlob *FNTBlob_alloc(void) {
+    FNTBlob *b = malloc(sizeof(*b));
+    if (b == NULL) return NULL;
+    memset(b,0,sizeof(*b));
+    return b;
+}
+
+void FNTBlob_free_gif(FNTBlob *b) {
+    int err;
+
+    if (b->gif != NULL) {
+        DGifCloseFile(b->gif,&err);
+        b->gif = NULL;
+    }
+    b->img = NULL;
+}
+
+void FNTBlob_free_raw(FNTBlob *b) {
+    unsigned int i;
+
+    if (b->raw) free(b->raw);
+    b->raw_length = 0;
+    b->raw = NULL;
+
+    for (i=0;i < (5-1);i++) b->block_ofs[i] = 0;
+}
+
+FNTBlob *FNTBlob_free(FNTBlob *b) {
+    if (b != NULL) {
+        FNTBlob_free_raw(b);
+        FNTBlob_free_gif(b);
+        free(b);
+    }
+
+    return NULL;
+}
+
+int FNTBlob_load(FNTBlob *b,const char *path) {
+    off_t fsz;
+    int fd;
+
+    FNTBlob_free_raw(b);
+
+    fd = open(path,O_RDONLY | O_BINARY);
+    if (fd < 0) return -1;
+    fsz = lseek(fd,0,SEEK_END);
+    if (fsz < 8 || fsz > 32768UL) {
+        close(fd);
+        return -1;
+    }
+
+    lseek(fd,0,SEEK_SET);
+
+    b->raw = malloc(fsz);
+    if (b->raw == NULL) {
+        close(fd);
+        return -1;
+    }
+    b->raw_length = (size_t)fsz;
+    read(fd,b->raw,b->raw_length);
+    close(fd);
+
+    /* BMF\x03 */
+    if (memcmp(b->raw,"BMF\x03",4)) goto fail;
+
+    /* for each block */
+    {
+        unsigned char *p = b->raw + 4;
+        unsigned char *f = b->raw + b->raw_length;
+        unsigned char blocktype;
+        uint32_t blocksize;
+
+        while ((p+1+4) <= f) {
+            blocktype = *p++;
+            blocksize = *((uint32_t*)p); p += 4;
+
+            if (blocktype < 1 || blocktype > 5)
+                goto fail;
+            if ((p+blocksize) > f)
+                goto fail;
+
+            b->block_ofs[blocktype-1] = (size_t)(p - b->raw);
+            p += blocksize;
+        }
+    }
+
+    /* block type 1, 2, and 4 are REQUIRED */
+    if (b->block_ofs[1-1] == (size_t)0 ||
+        b->block_ofs[2-1] == (size_t)0 ||
+        b->block_ofs[4-1] == (size_t)0)
+        goto fail;
+
+    return 0;
+fail:
+    FNTBlob_free_raw(b);
+    return -1;
+}
+
+FNTBlob*                    font22_fnt = NULL;
+FNTBlob*                    font40_fnt = NULL;
+
+int loadFont(FNTBlob **fnt,const char *fnt_path,const char *gif_path) {
+    int err;
+
+    if (*fnt == NULL) {
+        *fnt = FNTBlob_alloc();
+        if (*fnt == NULL) return -1;
+    }
+
+    if ((*fnt)->raw == NULL && fnt_path != NULL) {
+        DEBUG("Loading font FNT=%s",fnt_path);
+
+        if (FNTBlob_load(*fnt,fnt_path) < 0) {
+            DEBUG("Font load FNT=%s failed",fnt_path);
+            return -1;
+        }
+
+        FNTBlob_ascii_lookup_build(*fnt);
+    }
+
+    if ((*fnt)->gif == NULL && gif_path != NULL) {
+        DEBUG("Loading font GIF=%s",gif_path);
+
+        (*fnt)->gif = DGifOpenFileName(gif_path,&err);
+        if ((*fnt)->gif == NULL) {
+            DEBUG("Font load GIF=%s failed",gif_path);
+            return -1;
+        }
+
+        /* TODO: How do we read only the first image? */
+        if (DGifSlurp((*fnt)->gif) != GIF_OK) {
+            DEBUG("DGifSlurp failed Error=%u %s",(*fnt)->gif->Error,GifErrorString((*fnt)->gif->Error));
+            DGifCloseFile((*fnt)->gif,&err);
+            (*fnt)->gif = NULL;
+            return -1;
+        }
+        if ((*fnt)->gif->ImageCount == 0) {
+            DEBUG("No GIF images");
+            DGifCloseFile((*fnt)->gif,&err);
+            (*fnt)->gif = NULL;
+            return -1;
+        }
+
+        (*fnt)->img = &((*fnt)->gif->SavedImages[0]);
+    }
+
+    return 0;
+}
+
+void unloadFont(FNTBlob **fnt) {
+    if (*fnt != NULL) *fnt = FNTBlob_free(*fnt);
+}
+
 /* color palette slots */
 #define MAX_PAL_SLOTS       8
 
@@ -763,7 +1045,13 @@ int main(int argc,char **argv) {
     /* title sequence. will exit when animation ends or user hits a key */
     TitleSequence();
 
+    /* main menu */
+    loadFont(&font22_fnt,"font22.fnt","font22.gif");
+    loadFont(&font40_fnt,"font40.fnt","font40.gif");
+
     release_timer();
+    unloadFont(&font40_fnt);
+    unloadFont(&font22_fnt);
     DEBUG("Timer ticks: %lu ticks / %lu vsync / %lu @ 18.2Hz",
         (unsigned long)timer_irq0_ticks,
         (unsigned long)timer_irq0_ticksvsync,
