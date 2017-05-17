@@ -268,10 +268,8 @@ int FNTBlob_load(FNTBlob *b,const char *path) {
     {
         FNTBlob_common *c = FNTBlob_get_common(b);
         if (c != NULL) {
-            int shave = (c->lineHeight * 3) / 16;
-
-            b->y_adj = -shave;
-            c->lineHeight -= shave;
+            b->y_adj = -((c->base * 33) / (160 * 2));
+            c->lineHeight = (c->lineHeight * 134) / 160;
         }
     }
 
