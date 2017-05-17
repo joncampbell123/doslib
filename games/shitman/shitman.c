@@ -1139,6 +1139,35 @@ void font_str_bitblt(FNTBlob *b,int cx,int *x,int *y,const char *str/*NTS: Will 
     }
 }
 
+void font_str_bitblt_center(FNTBlob *b,int cx,int center_x,const int top_y,const char *str/*NTS: Will be UTF-8*/) {
+    int x,y = top_y;
+    long id;
+
+    {
+        const char *scan = str;
+        int w = 0;
+
+        while (*scan != 0) {
+            id = utf8_decode(&scan,scan+32);
+            if (id < 0L) break;
+
+            {
+                FNTBlob_chars *fc = FNTBlob_find_char(b,id);
+                if (fc != NULL)
+                    w += fc->xadvance;
+            }
+        }
+
+        x = center_x - (w / 2);
+    }
+
+    while (*str != 0) {
+        id = utf8_decode(&str,str+32);
+        if (id < 0L) break;
+        font_bitblt(b,center_x,&x,&y,(uint32_t)id);
+    }
+}
+
 GifFileType *FreeGIF(GifFileType *gif) {
     int err;
 
@@ -1573,24 +1602,19 @@ void MenuPhase(void) {
 
         if (fullredraw) {
             const unsigned int title_y[2] = {20,80};
-            const unsigned int title_text_x = 90/*FIXME: Need a way to center text*/, title_text_y = 26;
-            const unsigned int subtitle_text_x = 30/*FIXME: Need a way to center text*/;
+            const unsigned int title_text_x = 160/*center pt*/, title_text_y = 26, subtitle_text_y = title_text_y + 28;
             unsigned int i;
-            int x,y;
 
             xbltbox(0,0,319,199,0); // black background
 
             xbltbox(0,title_y[0]+6,319,title_y[1]-6,brown_title_base+6/*brighest tone*/);
             for (i=0;i < 6;i++) xbltrect(-1,title_y[0]+i,319+1,title_y[1]-i,brown_title_base+i);
 
-            x = title_text_x;
-            y = title_text_y;
             font_prep_xbitblt_at(font_base_yellow_on_brown);
-            font_str_bitblt(font40_fnt,0,&x,&y,"Shit Man\n");
+            font_str_bitblt_center(font40_fnt,0,title_text_x,title_text_y,"Shit Man\n");
 
-            x = subtitle_text_x;
             font_prep_xbitblt_at(font_base_white_on_brown);
-            font_str_bitblt(font22_fnt,0,&x,&y,"The start of a shitty adventure");
+            font_str_bitblt_center(font22_fnt,0,title_text_x,subtitle_text_y,"The start of a shitty adventure");
 
             fullredraw = 0;
             menu_init = 1;
