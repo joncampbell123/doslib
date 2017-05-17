@@ -451,6 +451,10 @@ AsyncEvent *current_active_async(void) {
     return &async_events[async_event_index];
 }
 
+unsigned int async_available_slot(void) {
+    return (async_event_write < MAX_ASYNC_EVENT);
+}
+
 unsigned int async_has_finished(void) {
     return (async_event_index == async_event_write);
 }
