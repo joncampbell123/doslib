@@ -336,6 +336,12 @@ void unloadFont(FNTBlob **fnt) {
     if (*fnt != NULL) *fnt = FNTBlob_free(*fnt);
 }
 
+/* flag slots */
+#define MAX_FLAG_SLOTS      32
+typedef uint8_t FlagSlot;
+
+FlagSlot        flag_slots[MAX_FLAG_SLOTS];
+
 /* color palette slots */
 #define MAX_PAL_SLOTS       8
 
@@ -372,14 +378,20 @@ typedef struct AsyncVPan {
     uint16_t    adjust;         // after panning, start += adjust. event ends when start == end
 } AsyncVPan;
 
+typedef struct AsyncSetFlag {
+    uint8_t     slot;
+    uint8_t     value;
+} AsyncSetFlag;
+
 /* async event in general to do from vsync timer IRQ */
 typedef struct AsyncEvent {
     uint8_t     what;
     union {
-        AsyncPal    pal;
-        AsyncVPan   vpan;
-        uint16_t    wait;
-        uint16_t    wait_complete;
+        AsyncPal        pal;
+        AsyncVPan       vpan;
+        uint16_t        wait;
+        uint16_t        wait_complete;
+        AsyncSetFlag    setflag;
     } e;
 } AsyncEvent;
 
@@ -393,7 +405,8 @@ enum {
     ASYNC_EVENT_WAIT,           // wait for vertical retrace counts given in e.wait (e.wait)
     ASYNC_EVENT_PALETTE,        // palette animation (e.pal)
     ASYNC_EVENT_VPAN,           // change display start address (e.vpan)
-    ASYNC_EVENT_WAIT_COMPLETE   // wait for panning or palette animation to complete
+    ASYNC_EVENT_WAIT_COMPLETE,  // wait for panning or palette animation to complete
+    ASYNC_EVENT_SET_FLAG        // set flag
 };
 
 #define MAX_ASYNC_EVENT         64
@@ -524,6 +537,10 @@ void interrupt timer_irq(void) {
             case ASYNC_EVENT_WAIT_COMPLETE:
                 if ((ev->e.wait_complete & ASYNC_WAIT_COMPLETE_PALETTE) && async_event_palette_index != ~0U) goto async_end;
                 if ((ev->e.wait_complete & ASYNC_WAIT_COMPLETE_VPAN) && async_event_vpan_index != ~0U) goto async_end;
+                async_event_index++;
+                break;
+            case ASYNC_EVENT_SET_FLAG:
+                flag_slots[ev->e.setflag.slot] = ev->e.setflag.value;
                 async_event_index++;
                 break;
             default:
@@ -1102,7 +1119,7 @@ void blank_vga_palette(void) {
     for (i=0;i < 256;i++) vga_palette_write(0,0,0);
 }
 
-void TitleSequenceAsyncScheduleSlide(unsigned char slot,uint16_t offset) {
+void TitleSequenceAsyncScheduleSlide(unsigned char slot,uint16_t offset,uint8_t flag) {
     AsyncEvent *ev;
 
     ev = next_async();
@@ -1145,6 +1162,13 @@ void TitleSequenceAsyncScheduleSlide(unsigned char slot,uint16_t offset) {
     ev->what = ASYNC_EVENT_WAIT_COMPLETE;
     ev->e.wait_complete = ASYNC_WAIT_COMPLETE_PALETTE | ASYNC_WAIT_COMPLETE_VPAN;
     next_async_finish();
+
+    ev = next_async();
+    memset(ev,0,sizeof(*ev));
+    ev->what = ASYNC_EVENT_SET_FLAG;
+    ev->e.setflag.slot = 0;
+    ev->e.setflag.value = flag;
+    next_async_finish();
 }
 
 void TitleSequence(void) {
@@ -1157,6 +1181,9 @@ void TitleSequence(void) {
     modex_init();
     timer_sync_to_vrefresh(); /* make sure the timer tick happens at vsync */
 
+    /* we use flag slot 0 for title sequence steps. reset now */
+    flag_slots[0] = 0;
+
     /* take title1.gif, load to 0x0000 on screen, palette slot 0 */
     modex_draw_offset = 0;
     gif = LoadGIF("title1.gif");
@@ -1164,7 +1191,7 @@ void TitleSequence(void) {
     DrawGIF(0,0,gif,0);
     FreeGIF(gif);
 
-    TitleSequenceAsyncScheduleSlide(/*slot*/0,/*offset*/modex_draw_offset);
+    TitleSequenceAsyncScheduleSlide(/*slot*/0,/*offset*/modex_draw_offset,'0');
 
     if (kbhit()) {
         c = getch();
@@ -1179,7 +1206,7 @@ void TitleSequence(void) {
     DrawGIF(0,0,gif,0);
     FreeGIF(gif);
 
-    TitleSequenceAsyncScheduleSlide(/*slot*/1,/*offset*/modex_draw_offset);
+    TitleSequenceAsyncScheduleSlide(/*slot*/1,/*offset*/modex_draw_offset,'1');
 
     if (kbhit()) {
         c = getch();
@@ -1194,7 +1221,7 @@ void TitleSequence(void) {
     DrawGIF(0,0,gif,0);
     FreeGIF(gif);
 
-    TitleSequenceAsyncScheduleSlide(/*slot*/2,/*offset*/modex_draw_offset);
+    TitleSequenceAsyncScheduleSlide(/*slot*/2,/*offset*/modex_draw_offset,'2');
 
     if (kbhit()) {
         c = getch();
