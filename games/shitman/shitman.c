@@ -1150,6 +1150,21 @@ void load_all_fonts(void) {
     loadFont(&font40_fnt,"font40.fnt","font40.gif");
 }
 
+void font_prep_palette_at(const unsigned char palidx,
+    const unsigned char bg_r,const unsigned char bg_g,const unsigned char bg_b,
+    const unsigned char fg_r,const unsigned char fg_g,const unsigned char fg_b) {
+    unsigned char r,g,b;
+    unsigned int i;
+
+    vga_palette_lseek(palidx);
+    for (i=0;i < 4;i++) {
+        r = bg_r + ((((char)fg_r - (char)bg_r) * i) / 3);
+        g = bg_g + ((((char)fg_g - (char)bg_g) * i) / 3);
+        b = bg_b + ((((char)fg_b - (char)bg_b) * i) / 3);
+        vga_palette_write(r>>2,g>>2,b>>2);
+    }
+}
+
 void vga_refresh_rate_measure(void) {
     /* WARNING: This code assumes the refresh rate is >= 20Hz */
     unsigned long counter = 0;
@@ -1369,14 +1384,12 @@ int main(int argc,char **argv) {
 
     /* print on screen */
     {
-        unsigned int i;
         int x,y;
 
         modex_init();
         vga_set_start_location(0);
 
-        vga_palette_lseek(192);
-        for (i=0;i < 4;i++) vga_palette_write((i*255)/3,(i*255)/3,(i*255)/3);
+        font_prep_palette_at(/*palette index*/192,/*background*/0,0,0,/*foreground*/255,255,255); /* white on black */
 
         x = 40;
         y = 40;
