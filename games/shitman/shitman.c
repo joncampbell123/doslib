@@ -499,6 +499,14 @@ void flush_async(void) {
     _sti();
 }
 
+void halt_async(void) {
+    _cli();
+    async_event_write = async_event_index = 0;
+    async_event_palette_index = ~0U;
+    async_event_vpan_index = ~0U;
+    _sti();
+}
+
 void do_async_irq_pal(void) {
     // assume index != ~0U and valid
     AsyncEvent *ev = &async_events[async_event_palette_index];
@@ -1212,7 +1220,7 @@ void TitleSequence(void) {
     GifFileType *gif;
     int c;
 
-    flush_async();
+    halt_async();
     blank_vga_palette();
     modex_init();
     timer_sync_to_vrefresh(); /* make sure the timer tick happens at vsync */
@@ -1292,7 +1300,7 @@ void TitleSequence(void) {
     } while (!async_has_finished());
 
 user_abort:
-    flush_async();
+    halt_async();
 }
 
 int main(int argc,char **argv) {
