@@ -18,6 +18,16 @@
 
 #include "gif_lib.h"
 
+enum {
+    GAME_TITLE=0,               // 0
+    GAME_MENU,
+    GAME_EXIT
+};
+
+unsigned char game_running_state = GAME_TITLE;
+unsigned char game_running_state_stack[8];
+unsigned char game_running_state_stack_sp=0;
+
 FILE *debug_log = NULL;
 
 void release_timer(void);
@@ -39,6 +49,28 @@ void FAIL(const char *msg) {
     int10_setmode(0x3); /* text mode */
     puts(msg);
     exit(1);
+}
+
+void game_running_state_push(void) {
+    if (game_running_state_stack_sp >= sizeof(game_running_state_stack))
+        FAIL("Game running state stack overrun");
+
+    game_running_state_stack[game_running_state_stack_sp++] = game_running_state;
+}
+
+void game_running_state_set(const unsigned char state) {
+    game_running_state = state;
+}
+
+unsigned char game_running_state_stack_is_empty(void) {
+    return (game_running_state_stack_sp == 0);
+}
+
+void game_running_state_pop(void) {
+    if (game_running_state_stack_sp == 0)
+        FAIL("Game running state stack underrun");
+
+    game_running_state_set(game_running_state_stack[--game_running_state_stack_sp]);
 }
 
 /* font FNT blob */
@@ -966,22 +998,57 @@ void font_bitblt(FNTBlob *b,int cx/*left edge of box*/,int *x,int *y,uint32_t id
     }
 }
 
-void FNTBlob_transpose_pixels(FNTBlob *b,unsigned char base) {/*NTS: base must be a multiple of 4*/
-    unsigned char *p,*f;
+/* fill x1 <= x <= x2 and y1 <= y <= y2 */
+void xbltbox(int x1,int y1,int x2,int y2,unsigned char color) { // filled rectangle, inclusive
+    unsigned int y,xrem,xs;
+    VGA_RAM_PTR cwp,wp;
+    unsigned char b;
 
-    if (b == NULL || b->img == NULL)
-        return;
-    if (b->img->RasterBits == NULL)
-        return;
+    if (x1 >= modex_draw_width || y1 >= modex_draw_height) return;
+    if (x2 < 0 || y2 < 0) return;
 
-    p = b->img->RasterBits;
-    f = p + b->img->ImageDesc.Width * b->img->ImageDesc.Height;
+    if (x1 < 0) x1 = 0;
+    if (y1 < 0) y1 = 0;
+    if (x2 >= modex_draw_width) x2 = modex_draw_width - 1;
+    if (y2 >= modex_draw_height) y2 = modex_draw_height - 1;
 
-    while (p < f) {
-        unsigned char c = *p & 3;
-        if (c != 0) c += base;
-        *p++ = c;
+    /* assume x1 <= x2 */
+    /* assume y1 <= y2 */
+
+    /* column-wise rendering, VGA Mode X optimal */
+    {
+        uint16_t co;
+
+        co = modex_draw_offset + ((unsigned int)y1 * modex_draw_stride) + (((unsigned int)x1) >> 2);
+        wp = vga_state.vga_graphics_ram + co;
     }
+
+    xs = x2 + 1 - x1;
+    do {
+        xrem = (xs & 0xFFFC) ? (4 - (x1 & 3)) : xs;
+
+        b = ((1 << xrem) - 1) << ((unsigned int)x1 & 3);
+	    vga_write_sequencer(VGA_SC_MAP_MASK,b);
+
+        /* draw the column */
+        for (y=y1,cwp=wp;y <= y2;y++,cwp+=modex_draw_stride) *cwp = color;
+
+        /* advance */
+        xs -= xrem;
+        if (xs == 0) break;
+        x1 = 0;
+        wp++;
+    } while (1);
+
+    /* left edge */
+}
+
+/* draw border x == x1 || x == x2 || y == y1 || y == y2 */
+void xbltrect(int x1,int y1,int x2,int y2,unsigned char color) { // rectangle border, inclusive
+    xbltbox(x1,y1,x1,y2,color);     // left
+    xbltbox(x2,y1,x2,y2,color);     // right
+    xbltbox(x1+1,y1,x2-1,y1,color); // top
+    xbltbox(x1+1,y2,x2-1,y2,color); // bottom
 }
 
 enum {
@@ -1366,6 +1433,126 @@ user_abort:
     halt_async();
 }
 
+void MenuPhase(void) {
+    _Bool menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
+    AsyncEvent *ev;
+    int c;
+
+    /* load fonts, if not resident in memory */
+    load_all_fonts();
+
+    /* if other phases left async animations running, halt them now */
+    halt_async();
+
+    /* init palette */
+    {
+        unsigned int i;
+
+        for (i=0;i < 256;i++) {
+            pal_slots[0].pal[i].r =
+            pal_slots[0].pal[i].g =
+            pal_slots[0].pal[i].b = i & 63;
+        }
+    }
+
+    /* menu loop */
+    modex_init();
+    do {
+        /* menu transition and fullredraw:
+         *   leave fullredraw set, leave transition set. if menu was inited, fade out and wait for fade out. blank screen, vpan to 0.
+         *   code after block will detect fullredraw == 1, redraw all, clear flag. clear user control flag.
+         *
+         * menu transition and !fullredraw:
+         *   clear transition. schedule fade in. */
+        if (menu_transition) {
+            if (!fullredraw) {
+                fullredraw = 1;
+                userctrl = 0;
+
+                halt_async();
+
+                if (menu_init) {
+                    /* schedule fade out */
+                    ev = next_async();
+                    memset(ev,0,sizeof(*ev));
+                    ev->what = ASYNC_EVENT_PALETTE;
+                    ev->e.pal.first = ev->e.pal.first_target = 0;
+                    ev->e.pal.count = 256;
+                    ev->e.pal.slot = 0; /* slot 0 */
+                    ev->e.pal.anim = ASYNC_PAL_ANIM_FADE;
+                    ev->e.pal.anim_p[0] = 60;
+                    ev->e.pal.anim_p[1] = -4;
+                    next_async_finish();
+
+                    ev = next_async();
+                    memset(ev,0,sizeof(*ev));
+                    ev->what = ASYNC_EVENT_WAIT_COMPLETE;
+                    ev->e.wait_complete = ASYNC_WAIT_COMPLETE_PALETTE;
+                    next_async_finish();
+
+                    menu_init = 0;
+
+                    while (!async_has_finished());
+                }
+            }
+            else {
+                userctrl = 1;
+                menu_transition = 0;
+
+                halt_async();
+
+                /* blank the screen, pan to 0x0000 */
+                blank_vga_palette();
+                vga_set_start_location(0);
+                xbltbox(0,0,319,199,0);
+
+                {
+                    /* schedule fade in */
+                    ev = next_async();
+                    memset(ev,0,sizeof(*ev));
+                    ev->what = ASYNC_EVENT_PALETTE;
+                    ev->e.pal.first = ev->e.pal.first_target = 0;
+                    ev->e.pal.count = 256;
+                    ev->e.pal.slot = 0; /* slot 0 */
+                    ev->e.pal.anim = ASYNC_PAL_ANIM_FADE;
+                    ev->e.pal.anim_p[0] = 2;
+                    ev->e.pal.anim_p[1] = 2;
+                    next_async_finish();
+                }
+            }
+        }
+
+        if (fullredraw) {
+            fullredraw = 0;
+            menu_init = 1;
+            redraw = 0;
+        }
+
+        if (exiting)
+            running = 0;
+
+        if (userctrl) {
+            if (kbhit()) {
+                c = getch();
+
+                if (c == 27) {
+                    /* ok. fade out */
+                    menu_transition = 1;
+                    exiting = 1;
+                }
+            }
+        }
+    } while (running);
+
+    while (!async_has_finished());
+
+    /* decide how to exit */
+    if (game_running_state_stack_is_empty()) {
+        game_running_state_push();
+        game_running_state_set(GAME_EXIT);
+    }
+}
+
 int main(int argc,char **argv) {
     init_debug_log();
 
@@ -1383,28 +1570,27 @@ int main(int argc,char **argv) {
     timer_irq0_chain_add = vga_refresh_timer_ticks;
     setup_timer();
 
-    /* title sequence. will exit when animation ends or user hits a key */
-    TitleSequence();
-    load_all_fonts();
-
-    /* print on screen */
-    {
-        int x,y;
-
-        modex_init();
-        vga_set_start_location(0);
-
-        font_prep_palette_at(/*palette index*/192,/*background*/0,0,0,/*foreground*/255,255,255); /* white on black */
-        font_prep_xbitblt_at(/*palette index*/192);
-
-        x = 40;
-        y = 40;
-
-        font_str_bitblt(font40_fnt,40,&x,&y,"Hello world\nHow are you?\n");
-        font_str_bitblt(font22_fnt,40,&x,&y,"Can you read this?\n'Cause I know I can!");
-
-        getch();
-    }
+    /* loop. start in title, drop to menu. */
+    game_running_state_set(GAME_MENU);
+    game_running_state_push();
+    game_running_state_set(GAME_TITLE);
+    do {
+        switch (game_running_state) {
+            case GAME_TITLE:
+                TitleSequence();
+                game_running_state_pop();
+                break;
+            case GAME_MENU:
+                MenuPhase(); /* may push/pop and set state as needed */
+                break;
+            case GAME_EXIT:
+                goto game_exit;
+            default:
+                DEBUG("WARNING: Invalid game state %u",game_running_state);
+                goto game_exit;
+        }
+    } while (1);
+game_exit:
 
     release_timer();
     unloadFont(&font40_fnt);
