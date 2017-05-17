@@ -437,8 +437,12 @@ static inline unsigned char fadein_cap(unsigned char fade,unsigned char v) {
     return (v > fade) ? fade : v;
 }
 
+void async_flush(void);
+
 /* do not call from interrupt */
 AsyncEvent *next_async(void) {
+    if (async_event_write >= MAX_ASYNC_EVENT)
+        async_flush();
     if (async_event_write >= MAX_ASYNC_EVENT)
         FAIL("Too many async events");
 
@@ -455,6 +459,40 @@ unsigned int async_has_finished(void) {
 
 void next_async_finish(void) {
     async_event_write++;
+}
+
+void async_flush(void) {
+    unsigned int minx;
+    int c;
+
+    _cli();
+
+    if (async_event_index > async_event_write)
+        FAIL("Async event index > Async event write");
+
+    minx = async_event_index;
+    if (async_event_palette_index != ~0U &&
+        minx > async_event_palette_index)
+        minx = async_event_palette_index;
+    if (async_event_vpan_index != ~0U &&
+        minx > async_event_vpan_index)
+        minx = async_event_vpan_index;
+
+    c = async_event_write - minx;
+    if (c < 0) c = 0;
+
+    if (async_event_palette_index != ~0U)
+        async_event_palette_index -= minx;
+    if (async_event_vpan_index != ~0U)
+        async_event_vpan_index -= minx;
+
+    if (c != 0 && minx != 0)
+        memmove(&async_events[0],&async_events[minx],c * sizeof(AsyncEvent));
+
+    async_event_index -= minx;
+    async_event_write -= minx;
+
+    _sti();
 }
 
 void flush_async(void) {
