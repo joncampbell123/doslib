@@ -802,10 +802,12 @@ void modex_init(void) {
 enum {
     BITBLT_BLOCK=0,
     BITBLT_NOBLACK,
+    BITBLT_NOBLACK_BIAS,        // i.e. for fonts
 
     BITBLT_MAX
 };
 
+unsigned char xbitblt_nc_bias = 0;
 unsigned char xbitblt_nc_mode = BITBLT_BLOCK;
 
 void xbitblt_nc(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsigned int bits_stride,unsigned char *bits) {
@@ -872,15 +874,52 @@ void xbitblt_nc_noblack(unsigned int x,unsigned int y,unsigned int w,unsigned in
     } while ((--w) != 0);
 }
 
+void xbitblt_nc_noblack_bias(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsigned int bits_stride,unsigned char *bits) {
+    uint16_t o = (y * modex_draw_stride) + (x >> 2) + modex_draw_offset;
+    unsigned char b = 1U << (x & 3U);
+    unsigned char *src;
+    unsigned int ch;
+    VGA_RAM_PTR wp;
+
+    /* assume w != 0 && h != 0 */
+    /* assume x < modex_draw_width && y < modex_draw_height */
+    /* assume (x+w) <= modex_draw_width && (y+h) <= modex_draw_height */
+    /* assume bits != NULL */
+    /* render vertical strip-wise because of Mode X */
+    do {
+	    vga_write_sequencer(VGA_SC_MAP_MASK,b);
+        wp = vga_state.vga_graphics_ram + o;
+        src = bits;
+        ch = h;
+
+        do {
+            if (*src != 0) *wp = *src + xbitblt_nc_bias;
+            wp += modex_draw_stride;
+            src += bits_stride;
+        } while ((--ch) != 0);
+
+        bits++;
+        if ((b <<= 1U) == 0x10U) {
+            b = 0x01U;
+            o++;
+        }
+    } while ((--w) != 0);
+}
+
 typedef void (*xbitblt_nc_func)(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsigned int bits_stride,unsigned char *bits);
 
 static xbitblt_nc_func xbitblt_nc_functable[BITBLT_MAX] = {
-    xbitblt_nc,
-    xbitblt_nc_noblack
+    xbitblt_nc,                     // BLOCK
+    xbitblt_nc_noblack,             // NOBLACK
+    xbitblt_nc_noblack_bias         // NOBLACK_BIAS
 };
 
 void xbitblt_setbltmode(unsigned char mode) {
     xbitblt_nc_mode = mode;
+}
+
+void xbitblt_setbltbias(unsigned char bias) {
+    xbitblt_nc_bias = bias;
 }
 
 void xbitblts(int x,int y,int w,int h,unsigned int stride,unsigned char *bits) {
@@ -1337,14 +1376,13 @@ int main(int argc,char **argv) {
         vga_set_start_location(0);
 
         vga_palette_lseek(192);
-        FNTBlob_transpose_pixels(font22_fnt,192);
-        FNTBlob_transpose_pixels(font40_fnt,192);
         for (i=0;i < 4;i++) vga_palette_write((i*255)/3,(i*255)/3,(i*255)/3);
 
         x = 40;
         y = 40;
 
-        xbitblt_setbltmode(BITBLT_NOBLACK);
+        xbitblt_setbltbias(192);
+        xbitblt_setbltmode(BITBLT_NOBLACK_BIAS);
         font_str_bitblt(font40_fnt,40,&x,&y,"Hello world\nHow are you?\n");
         font_str_bitblt(font22_fnt,40,&x,&y,"Can you read this?\n'Cause I know I can!");
 
