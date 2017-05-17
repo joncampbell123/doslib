@@ -1165,6 +1165,11 @@ void font_prep_palette_at(const unsigned char palidx,
     }
 }
 
+void font_prep_xbitblt_at(unsigned char palidx) {
+    xbitblt_setbltbias(192);
+    xbitblt_setbltmode(BITBLT_NOBLACK_BIAS);
+}
+
 void vga_refresh_rate_measure(void) {
     /* WARNING: This code assumes the refresh rate is >= 20Hz */
     unsigned long counter = 0;
@@ -1390,12 +1395,11 @@ int main(int argc,char **argv) {
         vga_set_start_location(0);
 
         font_prep_palette_at(/*palette index*/192,/*background*/0,0,0,/*foreground*/255,255,255); /* white on black */
+        font_prep_xbitblt_at(/*palette index*/192);
 
         x = 40;
         y = 40;
 
-        xbitblt_setbltbias(192);
-        xbitblt_setbltmode(BITBLT_NOBLACK_BIAS);
         font_str_bitblt(font40_fnt,40,&x,&y,"Hello world\nHow are you?\n");
         font_str_bitblt(font22_fnt,40,&x,&y,"Can you read this?\n'Cause I know I can!");
 
