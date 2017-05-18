@@ -1145,7 +1145,7 @@ void font_str_bitblt_center(FNTBlob *b,int cx,int center_x,const int top_y,const
 
     {
         const char *scan = str;
-        int w = 0;
+        int w = 0,rw = 0;
 
         while (*scan != 0) {
             id = utf8_decode(&scan,scan+32);
@@ -1153,11 +1153,14 @@ void font_str_bitblt_center(FNTBlob *b,int cx,int center_x,const int top_y,const
 
             {
                 FNTBlob_chars *fc = FNTBlob_find_char(b,id);
-                if (fc != NULL)
+                if (fc != NULL) {
+                    rw = w + fc->w;
                     w += fc->xadvance;
+                }
             }
         }
 
+        if (w < rw) w = rw;
         x = center_x - (w / 2);
     }
 
