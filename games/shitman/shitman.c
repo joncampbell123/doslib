@@ -1816,6 +1816,10 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
     MenuPhaseDrawItemBlit(m,menu_top_offset,menu_h,tmp_offset,menuScroll);
 }
 
+menu_item *menuList = main_menu;
+int menuScroll = 0;
+int menuItem = 0;
+
 void MenuPhase(void) {
     _Bool menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
     _Bool scheduled_fadein = 0;
@@ -1835,14 +1839,11 @@ void MenuPhase(void) {
     const unsigned int title_text_x = 160/*center pt*/, title_text_y = 4, subtitle_text_y = title_text_y + 28;
     const unsigned int menu_top_offset = ((320/4)*menu_top[0]);
     const unsigned int tmp_offset = ((320/4)*200);
-    menu_item *menuList = main_menu;
     uint32_t prev_vsync_tick = 0;
     int scrollingSpeed = 0;
     int scrollingItem = 0;
     int scrollingTo = 0;
     int menu_items = 0;
-    int menuScroll = 0;
-    int menuItem = 0;
     AsyncEvent *ev;
     int c;
 
@@ -1857,6 +1858,7 @@ void MenuPhase(void) {
     menu_item_find_enabled_item(menuList,menu_items,&menuItem,1/*step forward*/,0);
     menu_item_scroll_to_item(menuList,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll,0);
     if (menuItem >= 0) menuList[menuItem].f.hilighted = 1;
+    scrollingTo = menuScroll;
 
     /* init palette */
     {
