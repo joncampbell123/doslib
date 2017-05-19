@@ -1816,12 +1816,17 @@ void xbltcopyfx(int x,int y,int w,int h,uint16_t src_vo,uint16_t src_stride) {
     xbltcopyfx_nc(x,y,w,h,src_vo,src_stride);
 }
 
+static const unsigned char menuScrollAccelTable[] = { 0, 1, 3, 6, 10, 14, 19 }; /* per unit of 10 pixels */
+static const unsigned char menu_brown_title_box[3] = { 142U, 78U, 0U }; /* shit brown */
+static const unsigned char menu_brown_title_base = 1; /* 7-color gradient start */
+static const unsigned char menu_yellow_title_box[3] = { 255U, 251U, 68U }; /* piss yellow */
+static const unsigned char menu_yellow_title_base = 8; /* 7-color gradient start */
+static const unsigned char menu_font_base_white_on_brown = 15; /* 4-color gradient */
+static const unsigned char menu_font_base_yellow_on_brown = 19; /* 4-color gradient */
+static const unsigned char menu_font_base_brown_on_black = 23; /* 4-color gradient */
+static const unsigned char menu_font_base_gray_on_black = 27; /* 4-color gradient */
+
 void MenuPhaseDrawItemRender(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
-    const unsigned char brown_title_base = 1; /* 7-color gradient start */
-    const unsigned char font_base_white_on_brown = 15; /* 4-color gradient */
-    const unsigned char font_base_brown_on_black = 23; /* 4-color gradient */
-    const unsigned char font_base_gray_on_black = 27; /* 4-color gradient */
- 
     /* menu item coordinates are relative to menu_top_offset on the screen */
     modex_draw_offset = tmp_offset;
     modex_draw_width = (m->p.w + 3) & ~3;
@@ -1831,14 +1836,14 @@ void MenuPhaseDrawItemRender(menu_item *m,unsigned int menu_top_offset,const uns
     xbltbox(
         0,0,
         m->p.w - 1,m->p.h - 1,
-        m->f.hilighted ? (brown_title_base+6) : 0);
+        m->f.hilighted ? (menu_brown_title_base+6) : 0);
 
     if (m->f.hilighted)
-        font_prep_xbitblt_at(font_base_white_on_brown);
+        font_prep_xbitblt_at(menu_font_base_white_on_brown);
     else if (m->f.disabled)
-        font_prep_xbitblt_at(font_base_brown_on_black);
+        font_prep_xbitblt_at(menu_font_base_brown_on_black);
     else
-        font_prep_xbitblt_at(font_base_gray_on_black);
+        font_prep_xbitblt_at(menu_font_base_gray_on_black);
 
     font_str_bitblt_center(font22_fnt,0,m->p.w/2U,0,m->text);
 }
@@ -1873,25 +1878,15 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
 }
 
 void MenuPhase(void) {
-    _Bool menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
-    _Bool scheduled_fadein = 0;
+    _Bool scheduled_fadein = 0,menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
     signed char scrollredraw = 0;
-    const unsigned char menuScrollAccelTable[] = { 0, 1, 3, 6, 10, 14, 19 }; /* per unit of 10 pixels */
-    const unsigned char brown_title_box[3] = { 142U, 78U, 0U }; /* shit brown */
-    const unsigned char brown_title_base = 1; /* 7-color gradient start */
-    const unsigned char yellow_title_box[3] = { 255U, 251U, 68U }; /* piss yellow */
-    const unsigned char yellow_title_base = 8; /* 7-color gradient start */
-    const unsigned char font_base_white_on_brown = 15; /* 4-color gradient */
-    const unsigned char font_base_yellow_on_brown = 19; /* 4-color gradient */
-    const unsigned char font_base_brown_on_black = 23; /* 4-color gradient */
-    const unsigned char font_base_gray_on_black = 27; /* 4-color gradient */
-    const unsigned char menu_left = 80,menu_right = 239;
-    const unsigned char menu_top[2] = { 61, 181 };
-    const unsigned int title_y[2] = {0,60};
-    const unsigned int title_text_x = 160/*center pt*/, title_text_y = 4, subtitle_text_y = title_text_y + 28;
-    const unsigned int menu_top_offset = ((320/4)*menu_top[0]);
-    const unsigned int tmp_offset = ((320/4)*200);
-    uint32_t prev_vsync_tick = 0;
+    unsigned char menu_left = 80,menu_right = 239;
+    unsigned char menu_top[2] = { 61, 181 };
+    unsigned int title_y[2] = {0,60};
+    unsigned int title_text_x = 160/*center pt*/, title_text_y = 4, subtitle_text_y = title_text_y + 28;
+    unsigned int menu_top_offset = ((320/4)*menu_top[0]);
+    unsigned int tmp_offset = ((320/4)*200);
+    uint32_t scroll_vsync_tick = 0;
     int16_t scrollingSpeed = 0;
     int16_t scrollingItem = 0;
     int16_t scrollingTo = 0;
@@ -1922,33 +1917,33 @@ void MenuPhase(void) {
         pal_slots[0].pal[i].g =
         pal_slots[0].pal[i].b = 0;
 
-        i = brown_title_base;
+        i = menu_brown_title_base;
         for (j=0;j < 7;j++) {
-            pal_slots[0].pal[i+j].r = ((unsigned int)brown_title_box[0] * (j+1U)) >> (3U+2U);
-            pal_slots[0].pal[i+j].g = ((unsigned int)brown_title_box[1] * (j+1U)) >> (3U+2U);
-            pal_slots[0].pal[i+j].b = ((unsigned int)brown_title_box[2] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].r = ((unsigned int)menu_brown_title_box[0] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].g = ((unsigned int)menu_brown_title_box[1] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].b = ((unsigned int)menu_brown_title_box[2] * (j+1U)) >> (3U+2U);
         }
 
-        i = yellow_title_base;
+        i = menu_yellow_title_base;
         for (j=0;j < 7;j++) {
-            pal_slots[0].pal[i+j].r = ((unsigned int)yellow_title_box[0] * (j+1U)) >> (3U+2U);
-            pal_slots[0].pal[i+j].g = ((unsigned int)yellow_title_box[1] * (j+1U)) >> (3U+2U);
-            pal_slots[0].pal[i+j].b = ((unsigned int)yellow_title_box[2] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].r = ((unsigned int)menu_yellow_title_box[0] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].g = ((unsigned int)menu_yellow_title_box[1] * (j+1U)) >> (3U+2U);
+            pal_slots[0].pal[i+j].b = ((unsigned int)menu_yellow_title_box[2] * (j+1U)) >> (3U+2U);
         }
 
-        font_prep_palette_slot_at(/*slot*/0,font_base_white_on_brown,
-            /* background */brown_title_box[0],brown_title_box[1],brown_title_box[2],
+        font_prep_palette_slot_at(/*slot*/0,menu_font_base_white_on_brown,
+            /* background */menu_brown_title_box[0],menu_brown_title_box[1],menu_brown_title_box[2],
             /* foreground */255,255,255);
 
-        font_prep_palette_slot_at(/*slot*/0,font_base_yellow_on_brown,
-            /* background */brown_title_box[0],brown_title_box[1],brown_title_box[2],
-            /* foreground */yellow_title_box[0],yellow_title_box[1],yellow_title_box[2]);
+        font_prep_palette_slot_at(/*slot*/0,menu_font_base_yellow_on_brown,
+            /* background */menu_brown_title_box[0],menu_brown_title_box[1],menu_brown_title_box[2],
+            /* foreground */menu_yellow_title_box[0],menu_yellow_title_box[1],menu_yellow_title_box[2]);
 
-        font_prep_palette_slot_at(/*slot*/0,font_base_brown_on_black,
+        font_prep_palette_slot_at(/*slot*/0,menu_font_base_brown_on_black,
             /* background */0,0,0,
-            /* foreground */brown_title_box[0],brown_title_box[1],brown_title_box[2]);
+            /* foreground */menu_brown_title_box[0],menu_brown_title_box[1],menu_brown_title_box[2]);
 
-        font_prep_palette_slot_at(/*slot*/0,font_base_gray_on_black,
+        font_prep_palette_slot_at(/*slot*/0,menu_font_base_gray_on_black,
             /* background */0,0,0,
             /* foreground */160,160,160);
     }
@@ -2014,16 +2009,16 @@ void MenuPhase(void) {
 
             xbltbox(0,0,319,199,0); // black background
 
-            xbltbox(0,title_y[0]+6,319,title_y[1]-6,brown_title_base+6/*brighest tone*/);
-            for (i=0;i < 6;i++) xbltrect(-1,title_y[0]+i,319+1,title_y[1]-i,brown_title_base+i);
+            xbltbox(0,title_y[0]+6,319,title_y[1]-6,menu_brown_title_base+6/*brighest tone*/);
+            for (i=0;i < 6;i++) xbltrect(-1,title_y[0]+i,319+1,title_y[1]-i,menu_brown_title_base+i);
 
-            font_prep_xbitblt_at(font_base_yellow_on_brown);
+            font_prep_xbitblt_at(menu_font_base_yellow_on_brown);
             font_str_bitblt_center(font40_fnt,0,title_text_x,title_text_y,"Shit Man\n");
 
-            font_prep_xbitblt_at(font_base_white_on_brown);
+            font_prep_xbitblt_at(menu_font_base_white_on_brown);
             font_str_bitblt_center(font22_fnt,0,title_text_x,subtitle_text_y,"The start of a shitty adventure");
 
-            font_prep_xbitblt_at(font_base_gray_on_black);
+            font_prep_xbitblt_at(menu_font_base_gray_on_black);
             font_str_bitblt_center(font18_fnt,0,160,199 - 15,"\xC2\xA9"/*Copyright symbol, UTF-8*/ " 2017 DOSLIB, Hackipedia");
 
             for (i=0;i < menu_items;i++)
@@ -2051,7 +2046,7 @@ void MenuPhase(void) {
             redraw = 0;
         }
         else if (scrollredraw != 0) {
-            if (prev_vsync_tick != timer_irq0_ticksvsync) {
+            if (scroll_vsync_tick != timer_irq0_ticksvsync) {
                 int renderItem = -1;
 
                 modex_init();
@@ -2112,7 +2107,7 @@ void MenuPhase(void) {
                     MenuPhaseDrawItemBlit(menuList+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
                 }
 
-                prev_vsync_tick = timer_irq0_ticksvsync;
+                scroll_vsync_tick = timer_irq0_ticksvsync;
             }
         }
 
