@@ -1827,6 +1827,9 @@ void MenuPhase(void) {
             font_prep_xbitblt_at(font_base_white_on_brown);
             font_str_bitblt_center(font22_fnt,0,title_text_x,subtitle_text_y,"The start of a shitty adventure");
 
+            font_prep_xbitblt_at(font_base_gray_on_black);
+            font_str_bitblt_center(font22_fnt,0,160,181,"\xC2\xA9"/*Copyright symbol, UTF-8*/ " 2017 DOSLIB, Hackipedia");
+
             for (i=0;i < menu_items;i++)
                 MenuPhaseDrawItem(menu+i,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
 
