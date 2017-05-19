@@ -1601,24 +1601,42 @@ void menu_item_layout(menu_item *m,int left_x,int right_x,int top_y,int *items) 
         *items = i;
 }
 
-void menu_item_find_enabled_item(menu_item *m,int items,int *sel,int step) {
+#define FIND_ENABLED_WRAP       1U
+
+void menu_item_find_enabled_item(menu_item *m,int items,int *sel,int step,unsigned int flags) {
     do {
         menu_item *s = m + *sel;
 
         if (s->f.disabled)
             *sel += step;
 
-        if ((*sel) >= items)
-            *sel = 0;
-        else if ((*sel) < 0)
-            *sel = items - 1;
+        if ((*sel) >= items) {
+            if (flags & FIND_ENABLED_WRAP)
+                *sel = 0;
+            else {
+                /* search the other way */
+                *sel = items - 1;
+                step = -step;
+            }
+        }
+        else if ((*sel) < 0) {
+            if (flags & FIND_ENABLED_WRAP)
+                *sel = items - 1;
+            else {
+                /* search the other way */
+                step = -step;
+                *sel = 0;
+            }
+        }
 
         if (!s->f.disabled)
             break;
     } while (1);
 }
 
-void menu_item_scroll_to_item(menu_item *m,int items,int select,int menu_h,int *scroll) {
+#define SCROLL_TO_ITEM_ONELINE      1U
+
+void menu_item_scroll_to_item(menu_item *m,int items,int select,int menu_h,int *scroll,unsigned int flags) {
     int adj;
 
     if (select < 0 || select >= items)
@@ -1626,12 +1644,38 @@ void menu_item_scroll_to_item(menu_item *m,int items,int select,int menu_h,int *
 
     m += select;
 
-    if (m->p.y < *scroll)
-        *scroll = m->p.y;
+    if (m->p.y < *scroll) {
+        if (flags & SCROLL_TO_ITEM_ONELINE)
+            (*scroll)--;
+        else
+            *scroll = m->p.y;
+    }
     else {
         adj = (m->p.y + m->p.h - *scroll) - menu_h;
-        if (adj > 0) *scroll += adj;
+        if (flags & SCROLL_TO_ITEM_ONELINE) {
+            if (adj > 0) (*scroll)++;
+        }
+        else {
+            if (adj > 0) *scroll += adj;
+        }
     }
+}
+
+void xbltcopyfxr_nc(unsigned int x,unsigned int y,unsigned int w,unsigned int h,uint16_t src_vo,uint16_t src_stride) {
+    uint16_t dst_vo = modex_draw_offset + (y * modex_draw_stride) + (x >> 2U);
+
+    /* VGA block copy (write mode 1) */
+    w = (w + 3U) >> 2U;
+    vga_setup_wm1_block_copy();
+    dst_vo += modex_draw_stride * (h - 1);
+    src_vo += src_stride * (h - 1);
+    do {
+        vga_wm1_mem_block_copy(dst_vo,src_vo,w);
+        dst_vo -= modex_draw_stride;
+        src_vo -= src_stride;
+    } while ((--h) != 0);
+    /* must restore Write Mode 0/Read Mode 0 for this code to continue drawing normally */
+    vga_restore_rm0wm0();
 }
 
 void xbltcopyfx_nc(unsigned int x,unsigned int y,unsigned int w,unsigned int h,uint16_t src_vo,uint16_t src_stride) {
@@ -1647,6 +1691,23 @@ void xbltcopyfx_nc(unsigned int x,unsigned int y,unsigned int w,unsigned int h,u
     } while ((--h) != 0);
     /* must restore Write Mode 0/Read Mode 0 for this code to continue drawing normally */
     vga_restore_rm0wm0();
+}
+
+/* fast Mode-X VGA RAM to VGA RAM bitblt */
+void xbltcopyfxr(int x,int y,int w,int h,uint16_t src_vo,uint16_t src_stride) {
+    /* assume: src_stride is in VGA Mode X bytes (groups of 4 pixels) */
+    /* assume: x is 4 pixel aligned (x & 3) == 0 */
+    /* assume: w is 4 pixel aligned (w & 3) == 0 */
+    /* NTS: We render in Mode X at all times */
+    /* Assume: bits != NULL */
+    if (x < 0) { src_vo += -x >> 2;         w += x; x = 0; }
+    if (y < 0) { src_vo += -y * src_stride; h += y; y = 0; }
+    if (w <= 0 || h <= 0) return;
+    if (((uint16_t)(x+w)) > modex_draw_width) w = modex_draw_width - x;
+    if (((uint16_t)(y+h)) > modex_draw_height) h = modex_draw_height - y;
+    if (w <= 0 || h <= 0) return;
+
+    xbltcopyfxr_nc(x,y,w,h,src_vo,src_stride);
 }
 
 /* fast Mode-X VGA RAM to VGA RAM bitblt */
@@ -1666,18 +1727,17 @@ void xbltcopyfx(int x,int y,int w,int h,uint16_t src_vo,uint16_t src_stride) {
     xbltcopyfx_nc(x,y,w,h,src_vo,src_stride);
 }
 
-void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
+void MenuPhaseDrawItemRender(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
     const unsigned char brown_title_base = 1; /* 7-color gradient start */
     const unsigned char font_base_white_on_brown = 15; /* 4-color gradient */
     const unsigned char font_base_brown_on_black = 23; /* 4-color gradient */
     const unsigned char font_base_gray_on_black = 27; /* 4-color gradient */
-    unsigned int src_stride;
  
     /* menu item coordinates are relative to menu_top_offset on the screen */
     modex_draw_offset = tmp_offset;
     modex_draw_width = (m->p.w + 3) & ~3;
     modex_draw_height = menu_h;
-    modex_draw_stride = src_stride = modex_draw_width / 4U;
+    modex_draw_stride = modex_draw_width / 4U;
 
     xbltbox(
         0,0,
@@ -1692,7 +1752,15 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
         font_prep_xbitblt_at(font_base_gray_on_black);
 
     font_str_bitblt_center(font22_fnt,0,m->p.w/2U,0,m->text);
+}
  
+void MenuPhaseDrawItemBlit(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
+    unsigned int src_stride;
+ 
+    /* menu item coordinates are relative to menu_top_offset on the screen */
+    modex_draw_width = (m->p.w + 3) & ~3;
+    modex_draw_stride = src_stride = modex_draw_width / 4U;
+
     /* menu item coordinates are relative to menu_top_offset on the screen */
     modex_draw_offset = menu_top_offset;
     modex_draw_width = 320;
@@ -1710,9 +1778,16 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
         src_stride);
 }
 
+void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
+    MenuPhaseDrawItemRender(m,menu_top_offset,menu_h,tmp_offset,menuScroll);
+    MenuPhaseDrawItemBlit(m,menu_top_offset,menu_h,tmp_offset,menuScroll);
+}
+
 void MenuPhase(void) {
     _Bool menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
     _Bool scheduled_fadein = 0;
+    signed char scrollredraw = 0;
+    const unsigned char menuScrollAccelTable[] = { 0, 1, 3, 6, 10, 14, 19 }; /* per unit of 10 pixels */
     const unsigned char brown_title_box[3] = { 142U, 78U, 0U }; /* shit brown */
     const unsigned char brown_title_base = 1; /* 7-color gradient start */
     const unsigned char yellow_title_box[3] = { 255U, 251U, 68U }; /* piss yellow */
@@ -1727,7 +1802,11 @@ void MenuPhase(void) {
     const unsigned int title_text_x = 160/*center pt*/, title_text_y = 4, subtitle_text_y = title_text_y + 28;
     const unsigned int menu_top_offset = ((320/4)*menu_top[0]);
     const unsigned int tmp_offset = ((320/4)*200);
+    uint32_t prev_vsync_tick = 0;
     menu_item *menu = main_menu;
+    int scrollingSpeed = 0;
+    int scrollingItem = 0;
+    int scrollingTo = 0;
     int menu_items = 0;
     int menuScroll = 0;
     int menuItem = 0;
@@ -1742,8 +1821,8 @@ void MenuPhase(void) {
 
     /* figure out each menu item's place on the screen */
     menu_item_layout(menu,menu_left,menu_right,0,&menu_items);
-    menu_item_find_enabled_item(menu,menu_items,&menuItem,1/*step forward*/);
-    menu_item_scroll_to_item(menu,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll);
+    menu_item_find_enabled_item(menu,menu_items,&menuItem,1/*step forward*/,0);
+    menu_item_scroll_to_item(menu,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll,0);
     menu[menuItem].f.hilighted = 1;
 
     /* init palette */
@@ -1878,9 +1957,75 @@ void MenuPhase(void) {
                 next_async_finish();
             }
 
+            scrollredraw = 0;
             fullredraw = 0;
             menu_init = 1;
             redraw = 0;
+        }
+        else if (scrollredraw != 0) {
+            if (prev_vsync_tick != timer_irq0_ticksvsync) {
+                int renderItem = -1;
+
+                modex_init();
+
+                if (scrollingSpeed > 19) scrollingSpeed = 19;
+
+                if (scrollredraw > 0) {
+                    if ((menuScroll+scrollingSpeed) > scrollingTo)
+                        scrollingSpeed = scrollingTo - menuScroll;
+
+                    /* scroll up */
+                    xbltcopyfx(
+                        menu_left,
+                        menu_top[0],
+                        menu_right + 1 - menu_left,
+                        menu_top[1] + 1 - menu_top[0] - scrollingSpeed,
+                        menu_top_offset + (menu_left >> 2U) + modex_draw_stride*scrollingSpeed,
+                        modex_draw_stride);
+
+                    menuScroll += scrollingSpeed;
+                    if (menuScroll == scrollingTo)
+                        scrollredraw = 0;
+                    else if (scrollingItem < menu_items) {
+                        menu_item *m = menu + scrollingItem;
+                        if ((m->p.y+m->p.h-menuScroll) <= (menu_top[1] + 1 - menu_top[0]))
+                            renderItem = scrollingItem + 1;
+                    }
+                }
+                else {
+                    if ((menuScroll-scrollingSpeed) < scrollingTo)
+                        scrollingSpeed = menuScroll - scrollingTo;
+
+                    /* scroll down */
+                    xbltcopyfxr(
+                        menu_left,
+                        menu_top[0] + scrollingSpeed,
+                        menu_right + 1 - menu_left,
+                        menu_top[1] + 1 - menu_top[0] - scrollingSpeed,
+                        menu_top_offset + (menu_left >> 2U),
+                        modex_draw_stride);
+
+                    menuScroll -= scrollingSpeed;
+                    if (menuScroll == scrollingTo)
+                        scrollredraw = 0;
+                    else if (scrollingItem > 0) {
+                        menu_item *m = menu + scrollingItem;
+                        if ((m->p.y-menuScroll) >= 0)
+                            renderItem = scrollingItem - 1;
+                    }
+                }
+
+                /* blit the pre-rendered item scrolling onto the screen */
+                MenuPhaseDrawItemBlit(menu+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+
+                if (renderItem >= 0) {
+                    scrollingItem = renderItem;
+                    MenuPhaseDrawItemRender(menu+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                    MenuPhaseDrawItemBlit(menu+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                }
+
+                prev_vsync_tick = timer_irq0_ticksvsync;
+            }
         }
 
         if (exiting)
@@ -1900,7 +2045,6 @@ void MenuPhase(void) {
                     c = getch();
 
                     if (c == 0x48/*UP arrow*/ || c == 0x50/*DOWN arrow*/) {
-                        int oldScroll = menuScroll;
                         int oldItem = menuItem;
 
                         if (menuItem >= 0)
@@ -1915,24 +2059,35 @@ void MenuPhase(void) {
                                 adj = 1;
 
                             menuItem += adj;
-                            menu_item_find_enabled_item(menu,menu_items,&menuItem,adj);
-                            menu_item_scroll_to_item(menu,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll);
+                            menu_item_find_enabled_item(menu,menu_items,&menuItem,adj,0);
+                            menu_item_scroll_to_item(menu,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&scrollingTo,0);
                         }
 
                         if (menuItem >= 0)
                             menu[menuItem].f.hilighted = 1;
 
-                        if (oldScroll != menuScroll) {
-                            unsigned int i;
+                        if (menuScroll != scrollingTo) {
+                            unsigned char accel;
 
-                            for (i=0;i < menu_items;i++)
-                                MenuPhaseDrawItem(menu+i,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                            if (!scrollredraw)
+                                scrollingItem = oldItem; /* item to redraw while scrolling, only if not already */
+
+                            scrollredraw = (scrollingTo > menuScroll) ? 1 : -1;
+                            scrollingSpeed = 1;
+                            accel = (abs(scrollingTo - menuScroll) / 10);
+                            if (accel >= sizeof(menuScrollAccelTable)) accel = sizeof(menuScrollAccelTable) - 1;
+                            scrollingSpeed += menuScrollAccelTable[accel];
                         }
-                        else if (menuItem != oldItem) {
+                        if (menuItem != oldItem) {
                             if (oldItem >= 0)
                                 MenuPhaseDrawItem(menu+oldItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
                             if (menuItem >= 0)
                                 MenuPhaseDrawItem(menu+menuItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                        }
+
+                        if (scrollredraw) {
+                            /* pre-render the item, so scrolling can draw it properly */
+                            MenuPhaseDrawItemRender(menu+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
                         }
                     }
                 }
