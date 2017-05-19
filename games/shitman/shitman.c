@@ -1476,12 +1476,32 @@ user_abort:
     halt_async();
 }
 
+typedef void (*menu_cmd_t)(void);
+
+enum {
+    MENU_CMD_EXIT=0,                            // 0
+
+    MENU_CMD_MAX
+};
+
+void menu_cmd_exit(void) {
+    DEBUG("menu_cmd_exit");
+
+    game_running_state_push();
+    game_running_state_set(GAME_EXIT);
+}
+
+menu_cmd_t menu_command_func[MENU_CMD_MAX] = {
+    menu_cmd_exit                               // 0
+};
+
 typedef struct menu_item {
     struct {
         unsigned int        disabled:1;
         unsigned int        hilighted:1;
     } f;
 
+    int16_t                 command;        /* index into callback */
     const char*             text;
 
     struct {
@@ -1496,6 +1516,7 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "Hello" /* text */
     },
     {
@@ -1503,6 +1524,7 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "World" /* text */
     },
     {
@@ -1510,6 +1532,7 @@ menu_item main_menu[] = {
             1, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "Can't touch this" /* text */
     },
     {
@@ -1517,6 +1540,7 @@ menu_item main_menu[] = {
             1, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "Help me" /* text */
     },
     {
@@ -1524,6 +1548,7 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "Quit" /* text */
     },
     {
@@ -1531,6 +1556,7 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        MENU_CMD_EXIT, /* command */
         "Exit" /* text */
     },
     {
@@ -1538,6 +1564,7 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "There are" /* text */
     },
     {
@@ -1545,6 +1572,7 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "Deliberately" /* text */
     },
     {
@@ -1552,6 +1580,7 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "Too many" /* text */
     },
     {
@@ -1559,6 +1588,7 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "Items here" /* text */
     },
     {
@@ -1566,6 +1596,7 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "To test" /* text */
     },
     {
@@ -1573,10 +1604,12 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
+        -1,     /* command */
         "This code" /* text */
     },
     {
         { 0 },
+        -1,     /* command */
         NULL
     }
 };
@@ -2037,8 +2070,22 @@ void MenuPhase(void) {
 
                 if (c == 27) {
                     /* ok. fade out */
+                    if (menuItem >= 0)
+                        menu[menuItem].f.hilighted = 0;
+
+                    menuItem = -1;
                     menu_transition = 1;
+                    userctrl = 0;
                     exiting = 1;
+                }
+                else if (c == 13) {
+                    /* take selection */
+                    if (menuItem >= 0) {
+                        menu[menuItem].f.hilighted = 0;
+                        menu_transition = 1;
+                        userctrl = 0;
+                        exiting = 1;
+                    }
                 }
                 else if (c == 0) {
                     /* extended */
@@ -2096,11 +2143,13 @@ void MenuPhase(void) {
     } while (running);
 
     while (!async_has_finished());
+    halt_async();
 
-    /* decide how to exit */
-    if (game_running_state_stack_is_empty()) {
-        game_running_state_push();
-        game_running_state_set(GAME_EXIT);
+    if (menuItem < 0)
+        game_running_state_pop();
+    else {
+        const int i = menu[menuItem].command;
+        if (i >= 0) menu_command_func[i]();
     }
 }
 
@@ -2122,6 +2171,8 @@ int main(int argc,char **argv) {
     setup_timer();
 
     /* loop. start in title, drop to menu. */
+    game_running_state_set(GAME_EXIT);
+    game_running_state_push();
     game_running_state_set(GAME_MENU);
     game_running_state_push();
     game_running_state_set(GAME_TITLE);
