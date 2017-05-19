@@ -1483,6 +1483,144 @@ user_abort:
     halt_async();
 }
 
+typedef struct menu_item {
+    struct {
+        unsigned int        disabled:1;
+        unsigned int        hilighted:1;
+    } f;
+
+    const char*             text;
+
+    struct {
+        int                 x,y;            /* screen coordinates, y-adjusted by scroll */
+        unsigned int        w,h;            /* width and height, not including x+w and y+h */
+    } p;
+} menu_item;
+
+menu_item main_menu[] = {
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        "Hello" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        "World" /* text */
+    },
+    {
+        {/*f*/
+            1, /* disabled */
+            0  /* hilighted */
+        },
+        "Can't touch this" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0 /* hilighted */
+        },
+        "Quit" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0 /* hilighted */
+        },
+        "Exit" /* text */
+    },
+    {
+        { 0 },
+        NULL
+    }
+};
+
+void menu_item_layout(menu_item *m,int left_x,int right_x,int top_y,int *items) {
+    FNTBlob_common *com = FNTBlob_get_common(font22_fnt);
+    unsigned int i = 0;
+
+    if (left_x >= right_x || com == NULL)
+        return;
+
+    for (;m->text != NULL;m++,i++) {
+        m->p.x = left_x;
+        m->p.w = right_x + 1 - left_x;
+        m->p.y = top_y;
+        m->p.h = com->lineHeight;
+
+        top_y += com->lineHeight;
+    }
+
+    if (items != NULL)
+        *items = i;
+}
+
+void menu_item_find_enabled_item(menu_item *m,int items,int *sel,int step) {
+    do {
+        menu_item *s = m + *sel;
+
+        if (s->f.disabled)
+            *sel += step;
+
+        if ((*sel) >= items)
+            *sel = 0;
+        else if ((*sel) < 0)
+            *sel = items - 1;
+
+        if (!s->f.disabled)
+            break;
+    } while (1);
+}
+
+void menu_item_scroll_to_item(menu_item *m,int items,int select,int menu_h,int *scroll) {
+    int adj;
+
+    if (select < 0 || select >= items)
+        return;
+
+    m += select;
+
+    if (m->p.y < *scroll)
+        *scroll = m->p.y;
+    else {
+        adj = (m->p.y + m->p.h - *scroll) - menu_h;
+        if (adj > 0) *scroll += adj;
+    }
+}
+
+void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
+    const unsigned char brown_title_base = 1; /* 7-color gradient start */
+    const unsigned char font_base_white_on_brown = 15; /* 4-color gradient */
+    const unsigned char font_base_brown_on_black = 23; /* 4-color gradient */
+    const unsigned char font_base_gray_on_black = 27; /* 4-color gradient */
+ 
+    /* menu item coordinates are relative to menu_top_offset on the screen */
+    modex_draw_offset = menu_top_offset + (m->p.x >> 2U);
+    modex_draw_width = (m->p.w + 3) & ~3;
+    modex_draw_height = menu_h;
+    modex_draw_stride = 320U / 4U;
+
+    xbltbox(
+        (m->p.x & 3),
+        m->p.y - menuScroll,
+        (m->p.x & 3) + m->p.w - 1,
+        m->p.y + m->p.h - 1 - menuScroll,
+        m->f.hilighted ? (brown_title_base+6) : 0);
+
+    if (m->f.hilighted)
+        font_prep_xbitblt_at(font_base_white_on_brown);
+    else if (m->f.disabled)
+        font_prep_xbitblt_at(font_base_brown_on_black);
+    else
+        font_prep_xbitblt_at(font_base_gray_on_black);
+
+    font_str_bitblt_center(font22_fnt,(m->p.x & 3),(m->p.x & 3) + (m->p.w/2U),m->p.y,m->text);
+}
+
 void MenuPhase(void) {
     _Bool menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
     const unsigned char brown_title_box[3] = { 142U, 78U, 0U }; /* shit brown */
@@ -1492,6 +1630,17 @@ void MenuPhase(void) {
     const unsigned char font_base_white_on_brown = 15; /* 4-color gradient */
     const unsigned char font_base_yellow_on_brown = 19; /* 4-color gradient */
     const unsigned char font_base_brown_on_black = 23; /* 4-color gradient */
+    const unsigned char font_base_gray_on_black = 27; /* 4-color gradient */
+    const unsigned char menu_left = 80,menu_right = 239;
+    const unsigned char menu_top[2] = { 88, 189 };
+    const unsigned int title_y[2] = {20,80};
+    const unsigned int title_text_x = 160/*center pt*/, title_text_y = 26, subtitle_text_y = title_text_y + 28;
+    const unsigned int menu_top_offset = ((320/4)*menu_top[0]);
+    const unsigned int tmp_offset = ((320/4)*200);
+    menu_item *menu = main_menu;
+    int menu_items = 0;
+    int menuScroll = 0;
+    int menuItem = 0;
     AsyncEvent *ev;
     int c;
 
@@ -1500,6 +1649,12 @@ void MenuPhase(void) {
 
     /* if other phases left async animations running, halt them now */
     halt_async();
+
+    /* figure out each menu item's place on the screen */
+    menu_item_layout(menu,menu_left,menu_right,0,&menu_items);
+    menu_item_find_enabled_item(menu,menu_items,&menuItem,1/*step forward*/);
+    menu_item_scroll_to_item(menu,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll);
+    menu[menuItem].f.hilighted = 1;
 
     /* init palette */
     {
@@ -1535,6 +1690,10 @@ void MenuPhase(void) {
         font_prep_palette_slot_at(/*slot*/0,font_base_brown_on_black,
             /* background */0,0,0,
             /* foreground */brown_title_box[0],brown_title_box[1],brown_title_box[2]);
+
+        font_prep_palette_slot_at(/*slot*/0,font_base_gray_on_black,
+            /* background */0,0,0,
+            /* foreground */160,160,160);
     }
 
     /* menu loop */
@@ -1604,9 +1763,9 @@ void MenuPhase(void) {
         }
 
         if (fullredraw) {
-            const unsigned int title_y[2] = {20,80};
-            const unsigned int title_text_x = 160/*center pt*/, title_text_y = 26, subtitle_text_y = title_text_y + 28;
             unsigned int i;
+
+            modex_init();
 
             xbltbox(0,0,319,199,0); // black background
 
@@ -1618,6 +1777,9 @@ void MenuPhase(void) {
 
             font_prep_xbitblt_at(font_base_white_on_brown);
             font_str_bitblt_center(font22_fnt,0,title_text_x,subtitle_text_y,"The start of a shitty adventure");
+
+            for (i=0;i < menu_items;i++)
+                MenuPhaseDrawItem(menu+i,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
 
             fullredraw = 0;
             menu_init = 1;
@@ -1635,6 +1797,34 @@ void MenuPhase(void) {
                     /* ok. fade out */
                     menu_transition = 1;
                     exiting = 1;
+                }
+                else if (c == 0) {
+                    /* extended */
+                    c = getch();
+
+                    if (c == 0x48/*UP arrow*/ || c == 0x50/*DOWN arrow*/) {
+                        if (menuItem >= 0) {
+                            menu[menuItem].f.hilighted = 0;
+                            MenuPhaseDrawItem(menu+menuItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                        }
+
+                        {
+                            int adj;
+
+                            if (c == 0x48)
+                                adj = -1;
+                            else
+                                adj = 1;
+
+                            menuItem += adj;
+                            menu_item_find_enabled_item(menu,menu_items,&menuItem,adj);
+                        }
+
+                        if (menuItem >= 0) {
+                            menu[menuItem].f.hilighted = 1;
+                            MenuPhaseDrawItem(menu+menuItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                        }
+                    }
                 }
             }
         }
