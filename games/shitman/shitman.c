@@ -1634,23 +1634,54 @@ void menu_item_scroll_to_item(menu_item *m,int items,int select,int menu_h,int *
     }
 }
 
+void xbltcopyfx_nc(unsigned int x,unsigned int y,unsigned int w,unsigned int h,uint16_t src_vo,uint16_t src_stride) {
+    uint16_t dst_vo = modex_draw_offset + (y * modex_draw_stride) + (x >> 2U);
+
+    /* VGA block copy (write mode 1) */
+    w = (w + 3U) >> 2U;
+    vga_setup_wm1_block_copy();
+    do {
+        vga_wm1_mem_block_copy(dst_vo,src_vo,w);
+        dst_vo += modex_draw_stride;
+        src_vo += src_stride;
+    } while ((--h) != 0);
+    /* must restore Write Mode 0/Read Mode 0 for this code to continue drawing normally */
+    vga_restore_rm0wm0();
+}
+
+/* fast Mode-X VGA RAM to VGA RAM bitblt */
+void xbltcopyfx(int x,int y,int w,int h,uint16_t src_vo,uint16_t src_stride) {
+    /* assume: src_stride is in VGA Mode X bytes (groups of 4 pixels) */
+    /* assume: x is 4 pixel aligned (x & 3) == 0 */
+    /* assume: w is 4 pixel aligned (w & 3) == 0 */
+    /* NTS: We render in Mode X at all times */
+    /* Assume: bits != NULL */
+    if (x < 0) { src_vo += -x >> 2;         w += x; x = 0; }
+    if (y < 0) { src_vo += -y * src_stride; h += y; y = 0; }
+    if (w <= 0 || h <= 0) return;
+    if (((uint16_t)(x+w)) > modex_draw_width) w = modex_draw_width - x;
+    if (((uint16_t)(y+h)) > modex_draw_height) h = modex_draw_height - y;
+    if (w <= 0 || h <= 0) return;
+
+    xbltcopyfx_nc(x,y,w,h,src_vo,src_stride);
+}
+
 void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
     const unsigned char brown_title_base = 1; /* 7-color gradient start */
     const unsigned char font_base_white_on_brown = 15; /* 4-color gradient */
     const unsigned char font_base_brown_on_black = 23; /* 4-color gradient */
     const unsigned char font_base_gray_on_black = 27; /* 4-color gradient */
+    unsigned int src_stride;
  
     /* menu item coordinates are relative to menu_top_offset on the screen */
-    modex_draw_offset = menu_top_offset + (m->p.x >> 2U);
+    modex_draw_offset = tmp_offset;
     modex_draw_width = (m->p.w + 3) & ~3;
     modex_draw_height = menu_h;
-    modex_draw_stride = 320U / 4U;
+    modex_draw_stride = src_stride = modex_draw_width / 4U;
 
     xbltbox(
-        (m->p.x & 3),
-        m->p.y - menuScroll,
-        (m->p.x & 3) + m->p.w - 1,
-        m->p.y + m->p.h - 1 - menuScroll,
+        0,0,
+        m->p.w - 1,m->p.h - 1,
         m->f.hilighted ? (brown_title_base+6) : 0);
 
     if (m->f.hilighted)
@@ -1660,7 +1691,23 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
     else
         font_prep_xbitblt_at(font_base_gray_on_black);
 
-    font_str_bitblt_center(font22_fnt,(m->p.x & 3),(m->p.x & 3) + (m->p.w/2U),m->p.y - menuScroll,m->text);
+    font_str_bitblt_center(font22_fnt,0,m->p.w/2U,0,m->text);
+ 
+    /* menu item coordinates are relative to menu_top_offset on the screen */
+    modex_draw_offset = menu_top_offset;
+    modex_draw_width = 320;
+    modex_draw_height = menu_h;
+    modex_draw_stride = 320U / 4U;
+
+    xbltcopyfx(
+        /* dest */
+        m->p.x,
+        m->p.y - menuScroll,
+        m->p.w,
+        m->p.h,
+        /* src */
+        tmp_offset,
+        src_stride);
 }
 
 void MenuPhase(void) {
