@@ -1521,17 +1521,66 @@ menu_item main_menu[] = {
     },
     {
         {/*f*/
+            1, /* disabled */
+            0  /* hilighted */
+        },
+        "Help me" /* text */
+    },
+    {
+        {/*f*/
             0, /* disabled */
-            0 /* hilighted */
+            0  /* hilighted */
         },
         "Quit" /* text */
     },
     {
         {/*f*/
             0, /* disabled */
-            0 /* hilighted */
+            0  /* hilighted */
         },
         "Exit" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        "There are" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        "Deliberately" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        "Too many" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        "Items here" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        "To test" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        "This code" /* text */
     },
     {
         { 0 },
@@ -1618,7 +1667,7 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
     else
         font_prep_xbitblt_at(font_base_gray_on_black);
 
-    font_str_bitblt_center(font22_fnt,(m->p.x & 3),(m->p.x & 3) + (m->p.w/2U),m->p.y,m->text);
+    font_str_bitblt_center(font22_fnt,(m->p.x & 3),(m->p.x & 3) + (m->p.w/2U),m->p.y - menuScroll,m->text);
 }
 
 void MenuPhase(void) {
@@ -1632,7 +1681,7 @@ void MenuPhase(void) {
     const unsigned char font_base_brown_on_black = 23; /* 4-color gradient */
     const unsigned char font_base_gray_on_black = 27; /* 4-color gradient */
     const unsigned char menu_left = 80,menu_right = 239;
-    const unsigned char menu_top[2] = { 88, 189 };
+    const unsigned char menu_top[2] = { 88, 179 };
     const unsigned int title_y[2] = {20,80};
     const unsigned int title_text_x = 160/*center pt*/, title_text_y = 26, subtitle_text_y = title_text_y + 28;
     const unsigned int menu_top_offset = ((320/4)*menu_top[0]);
@@ -1803,10 +1852,11 @@ void MenuPhase(void) {
                     c = getch();
 
                     if (c == 0x48/*UP arrow*/ || c == 0x50/*DOWN arrow*/) {
-                        if (menuItem >= 0) {
+                        int oldScroll = menuScroll;
+                        int oldItem = menuItem;
+
+                        if (menuItem >= 0)
                             menu[menuItem].f.hilighted = 0;
-                            MenuPhaseDrawItem(menu+menuItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
-                        }
 
                         {
                             int adj;
@@ -1818,11 +1868,23 @@ void MenuPhase(void) {
 
                             menuItem += adj;
                             menu_item_find_enabled_item(menu,menu_items,&menuItem,adj);
+                            menu_item_scroll_to_item(menu,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll);
                         }
 
-                        if (menuItem >= 0) {
+                        if (menuItem >= 0)
                             menu[menuItem].f.hilighted = 1;
-                            MenuPhaseDrawItem(menu+menuItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+
+                        if (oldScroll != menuScroll) {
+                            unsigned int i;
+
+                            for (i=0;i < menu_items;i++)
+                                MenuPhaseDrawItem(menu+i,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                        }
+                        else if (menuItem != oldItem) {
+                            if (oldItem >= 0)
+                                MenuPhaseDrawItem(menu+oldItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                            if (menuItem >= 0)
+                                MenuPhaseDrawItem(menu+menuItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
                         }
                     }
                 }
