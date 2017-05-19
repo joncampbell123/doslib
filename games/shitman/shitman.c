@@ -296,15 +296,6 @@ int FNTBlob_load(FNTBlob *b,const char *path) {
         b->block_ofs[4-1] == (size_t)0)
         goto fail;
 
-    /* BMFont params need correction for VGA 320x200 non-square pixels */
-    {
-        FNTBlob_common *c = FNTBlob_get_common(b);
-        if (c != NULL) {
-            b->y_adj = -((c->base * 33) / (160 * 2));
-            c->lineHeight = (c->lineHeight * 134) / 160;
-        }
-    }
-
     return 0;
 fail:
     FNTBlob_free_raw(b);
@@ -1683,9 +1674,9 @@ void MenuPhase(void) {
     const unsigned char font_base_brown_on_black = 23; /* 4-color gradient */
     const unsigned char font_base_gray_on_black = 27; /* 4-color gradient */
     const unsigned char menu_left = 80,menu_right = 239;
-    const unsigned char menu_top[2] = { 88, 179 };
-    const unsigned int title_y[2] = {20,80};
-    const unsigned int title_text_x = 160/*center pt*/, title_text_y = 26, subtitle_text_y = title_text_y + 28;
+    const unsigned char menu_top[2] = { 61, 181 };
+    const unsigned int title_y[2] = {0,60};
+    const unsigned int title_text_x = 160/*center pt*/, title_text_y = 4, subtitle_text_y = title_text_y + 28;
     const unsigned int menu_top_offset = ((320/4)*menu_top[0]);
     const unsigned int tmp_offset = ((320/4)*200);
     menu_item *menu = main_menu;
