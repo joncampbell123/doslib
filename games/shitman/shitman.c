@@ -24,9 +24,52 @@ enum {
     GAME_EXIT
 };
 
+typedef struct menu_item {
+    struct {
+        unsigned int        disabled:1;
+        unsigned int        hilighted:1;
+    } f;
+
+    int16_t                 command;        /* index into callback */
+    const char*             text;
+
+    struct {
+        int                 x,y;            /* screen coordinates, y-adjusted by scroll */
+        unsigned int        w,h;            /* width and height, not including x+w and y+h */
+    } p;
+} menu_item;
+
+typedef struct GameState {
+    unsigned char           state;
+    union {
+        struct {
+            unsigned char   menuListIdent;
+            int16_t         menuScroll;
+            int16_t         menuItem;
+        } menu;
+    } u;
+} GameState;
+
+extern menu_item main_menu[];
+
+enum {
+    MENULIST_MAIN=0,        // 0
+
+    MENULIST_MAX
+};
+
+menu_item *menuLists[MENULIST_MAX] = {
+    main_menu               // 0
+};
+
 unsigned char game_running_state = GAME_TITLE;
-unsigned char game_running_state_stack[8];
 unsigned char game_running_state_stack_sp=0;
+GameState game_running_state_stack[8];
+
+unsigned char menuListIdent = MENULIST_MAIN;
+menu_item *menuList = NULL;
+int16_t menuScroll = 0;
+int16_t menuItem = 0;
 
 FILE *debug_log = NULL;
 
@@ -52,10 +95,18 @@ void FAIL(const char *msg) {
 }
 
 void game_running_state_push(void) {
+    GameState *gs;
+
     if (game_running_state_stack_sp >= sizeof(game_running_state_stack))
         FAIL("Game running state stack overrun");
 
-    game_running_state_stack[game_running_state_stack_sp++] = game_running_state;
+    gs = &game_running_state_stack[game_running_state_stack_sp++];
+    gs->state = game_running_state;
+    if (game_running_state == GAME_MENU) {
+        gs->u.menu.menuListIdent = menuListIdent;
+        gs->u.menu.menuScroll = menuScroll;
+        gs->u.menu.menuItem = menuItem;
+    }
 }
 
 void game_running_state_set(const unsigned char state) {
@@ -67,10 +118,30 @@ unsigned char game_running_state_stack_is_empty(void) {
 }
 
 void game_running_state_pop(void) {
+    GameState *gs;
+
     if (game_running_state_stack_sp == 0)
         FAIL("Game running state stack underrun");
 
-    game_running_state_set(game_running_state_stack[--game_running_state_stack_sp]);
+    gs = &game_running_state_stack[--game_running_state_stack_sp];
+    game_running_state_set(gs->state);
+
+    if (game_running_state == GAME_MENU) {
+        menuListIdent = gs->u.menu.menuListIdent;
+        menuScroll = gs->u.menu.menuScroll;
+        menuItem = gs->u.menu.menuItem;
+        menuList = menuLists[menuListIdent];
+    }
+}
+
+void MenuSet(const unsigned char ident,int index) {
+    menuListIdent = ident;
+    menuList = menuLists[menuListIdent];
+
+    if (index >= 0)
+        menuItem = index;
+    else
+        menuItem = 0; // default
 }
 
 /* font FNT blob */
@@ -1495,21 +1566,6 @@ menu_cmd_t menu_command_func[MENU_CMD_MAX] = {
     menu_cmd_exit                               // 0
 };
 
-typedef struct menu_item {
-    struct {
-        unsigned int        disabled:1;
-        unsigned int        hilighted:1;
-    } f;
-
-    int16_t                 command;        /* index into callback */
-    const char*             text;
-
-    struct {
-        int                 x,y;            /* screen coordinates, y-adjusted by scroll */
-        unsigned int        w,h;            /* width and height, not including x+w and y+h */
-    } p;
-} menu_item;
-
 menu_item main_menu[] = {
     {
         {/*f*/
@@ -1614,7 +1670,7 @@ menu_item main_menu[] = {
     }
 };
 
-void menu_item_layout(menu_item *m,int left_x,int right_x,int top_y,int *items) {
+void menu_item_layout(menu_item *m,int left_x,int right_x,int top_y,int16_t *items) {
     FNTBlob_common *com = FNTBlob_get_common(font22_fnt);
     unsigned int i = 0;
 
@@ -1636,7 +1692,7 @@ void menu_item_layout(menu_item *m,int left_x,int right_x,int top_y,int *items) 
 
 #define FIND_ENABLED_WRAP       1U
 
-void menu_item_find_enabled_item(menu_item *m,int items,int *sel,int step,unsigned int flags) {
+void menu_item_find_enabled_item(menu_item *m,int items,int16_t *sel,int step,unsigned int flags) {
     do {
         menu_item *s = m + *sel;
 
@@ -1669,7 +1725,7 @@ void menu_item_find_enabled_item(menu_item *m,int items,int *sel,int step,unsign
 
 #define SCROLL_TO_ITEM_ONELINE      1U
 
-void menu_item_scroll_to_item(menu_item *m,int items,int select,int menu_h,int *scroll,unsigned int flags) {
+void menu_item_scroll_to_item(menu_item *m,int items,int select,int menu_h,int16_t *scroll,unsigned int flags) {
     int adj;
 
     if (select < 0 || select >= items)
@@ -1816,10 +1872,6 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
     MenuPhaseDrawItemBlit(m,menu_top_offset,menu_h,tmp_offset,menuScroll);
 }
 
-menu_item *menuList = main_menu;
-int menuScroll = 0;
-int menuItem = 0;
-
 void MenuPhase(void) {
     _Bool menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
     _Bool scheduled_fadein = 0;
@@ -1840,10 +1892,10 @@ void MenuPhase(void) {
     const unsigned int menu_top_offset = ((320/4)*menu_top[0]);
     const unsigned int tmp_offset = ((320/4)*200);
     uint32_t prev_vsync_tick = 0;
-    int scrollingSpeed = 0;
-    int scrollingItem = 0;
-    int scrollingTo = 0;
-    int menu_items = 0;
+    int16_t scrollingSpeed = 0;
+    int16_t scrollingItem = 0;
+    int16_t scrollingTo = 0;
+    int16_t menu_items = 0;
     AsyncEvent *ev;
     int c;
 
@@ -1854,6 +1906,7 @@ void MenuPhase(void) {
     halt_async();
 
     /* figure out each menu item's place on the screen */
+    menuList = menuLists[menuListIdent];
     menu_item_layout(menuList,menu_left,menu_right,0,&menu_items);
     menu_item_find_enabled_item(menuList,menu_items,&menuItem,1/*step forward*/,0);
     menu_item_scroll_to_item(menuList,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll,0);
@@ -2175,9 +2228,13 @@ int main(int argc,char **argv) {
     /* loop. start in title, drop to menu. */
     game_running_state_set(GAME_EXIT);
     game_running_state_push();
+
     game_running_state_set(GAME_MENU);
+    MenuSet(MENULIST_MAIN,-1);
     game_running_state_push();
+
     game_running_state_set(GAME_TITLE);
+
     do {
         switch (game_running_state) {
             case GAME_TITLE:
