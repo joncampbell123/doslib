@@ -1712,6 +1712,7 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
 
 void MenuPhase(void) {
     _Bool menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
+    _Bool scheduled_fadein = 0;
     const unsigned char brown_title_box[3] = { 142U, 78U, 0U }; /* shit brown */
     const unsigned char brown_title_base = 1; /* 7-color gradient start */
     const unsigned char yellow_title_box[3] = { 255U, 251U, 68U }; /* piss yellow */
@@ -1835,19 +1836,7 @@ void MenuPhase(void) {
                 blank_vga_palette();
                 vga_set_start_location(0);
 
-                {
-                    /* schedule fade in */
-                    ev = next_async();
-                    memset(ev,0,sizeof(*ev));
-                    ev->what = ASYNC_EVENT_PALETTE;
-                    ev->e.pal.first = ev->e.pal.first_target = 0;
-                    ev->e.pal.count = 256;
-                    ev->e.pal.slot = 0; /* slot 0 */
-                    ev->e.pal.anim = ASYNC_PAL_ANIM_FADE;
-                    ev->e.pal.anim_p[0] = 2;
-                    ev->e.pal.anim_p[1] = 2;
-                    next_async_finish();
-                }
+                scheduled_fadein = 1;
             }
         }
 
@@ -1872,6 +1861,22 @@ void MenuPhase(void) {
 
             for (i=0;i < menu_items;i++)
                 MenuPhaseDrawItem(menu+i,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+
+            if (scheduled_fadein) {
+                scheduled_fadein = 0;
+
+                /* schedule fade in */
+                ev = next_async();
+                memset(ev,0,sizeof(*ev));
+                ev->what = ASYNC_EVENT_PALETTE;
+                ev->e.pal.first = ev->e.pal.first_target = 0;
+                ev->e.pal.count = 256;
+                ev->e.pal.slot = 0; /* slot 0 */
+                ev->e.pal.anim = ASYNC_PAL_ANIM_FADE;
+                ev->e.pal.anim_p[0] = 2;
+                ev->e.pal.anim_p[1] = 2;
+                next_async_finish();
+            }
 
             fullredraw = 0;
             menu_init = 1;
