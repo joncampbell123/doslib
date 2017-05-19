@@ -1835,8 +1835,8 @@ void MenuPhase(void) {
     const unsigned int title_text_x = 160/*center pt*/, title_text_y = 4, subtitle_text_y = title_text_y + 28;
     const unsigned int menu_top_offset = ((320/4)*menu_top[0]);
     const unsigned int tmp_offset = ((320/4)*200);
+    menu_item *menuList = main_menu;
     uint32_t prev_vsync_tick = 0;
-    menu_item *menu = main_menu;
     int scrollingSpeed = 0;
     int scrollingItem = 0;
     int scrollingTo = 0;
@@ -1853,10 +1853,10 @@ void MenuPhase(void) {
     halt_async();
 
     /* figure out each menu item's place on the screen */
-    menu_item_layout(menu,menu_left,menu_right,0,&menu_items);
-    menu_item_find_enabled_item(menu,menu_items,&menuItem,1/*step forward*/,0);
-    menu_item_scroll_to_item(menu,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll,0);
-    menu[menuItem].f.hilighted = 1;
+    menu_item_layout(menuList,menu_left,menu_right,0,&menu_items);
+    menu_item_find_enabled_item(menuList,menu_items,&menuItem,1/*step forward*/,0);
+    menu_item_scroll_to_item(menuList,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll,0);
+    if (menuItem >= 0) menuList[menuItem].f.hilighted = 1;
 
     /* init palette */
     {
@@ -1972,7 +1972,7 @@ void MenuPhase(void) {
             font_str_bitblt_center(font18_fnt,0,160,199 - 15,"\xC2\xA9"/*Copyright symbol, UTF-8*/ " 2017 DOSLIB, Hackipedia");
 
             for (i=0;i < menu_items;i++)
-                MenuPhaseDrawItem(menu+i,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                MenuPhaseDrawItem(menuList+i,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
 
             if (scheduled_fadein) {
                 scheduled_fadein = 0;
@@ -2020,7 +2020,7 @@ void MenuPhase(void) {
                     if (menuScroll == scrollingTo)
                         scrollredraw = 0;
                     else if (scrollingItem < menu_items) {
-                        menu_item *m = menu + scrollingItem;
+                        menu_item *m = menuList + scrollingItem;
                         if ((m->p.y+m->p.h-menuScroll) <= (menu_top[1] + 1 - menu_top[0]))
                             renderItem = scrollingItem + 1;
                     }
@@ -2042,19 +2042,19 @@ void MenuPhase(void) {
                     if (menuScroll == scrollingTo)
                         scrollredraw = 0;
                     else if (scrollingItem > 0) {
-                        menu_item *m = menu + scrollingItem;
+                        menu_item *m = menuList + scrollingItem;
                         if ((m->p.y-menuScroll) >= 0)
                             renderItem = scrollingItem - 1;
                     }
                 }
 
                 /* blit the pre-rendered item scrolling onto the screen */
-                MenuPhaseDrawItemBlit(menu+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                MenuPhaseDrawItemBlit(menuList+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
 
                 if (renderItem >= 0) {
                     scrollingItem = renderItem;
-                    MenuPhaseDrawItemRender(menu+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
-                    MenuPhaseDrawItemBlit(menu+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                    MenuPhaseDrawItemRender(menuList+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                    MenuPhaseDrawItemBlit(menuList+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
                 }
 
                 prev_vsync_tick = timer_irq0_ticksvsync;
@@ -2071,7 +2071,7 @@ void MenuPhase(void) {
                 if (c == 27) {
                     /* ok. fade out */
                     if (menuItem >= 0)
-                        menu[menuItem].f.hilighted = 0;
+                        menuList[menuItem].f.hilighted = 0;
 
                     menuItem = -1;
                     menu_transition = 1;
@@ -2081,7 +2081,7 @@ void MenuPhase(void) {
                 else if (c == 13) {
                     /* take selection */
                     if (menuItem >= 0) {
-                        menu[menuItem].f.hilighted = 0;
+                        menuList[menuItem].f.hilighted = 0;
                         menu_transition = 1;
                         userctrl = 0;
                         exiting = 1;
@@ -2095,7 +2095,7 @@ void MenuPhase(void) {
                         int oldItem = menuItem;
 
                         if (menuItem >= 0)
-                            menu[menuItem].f.hilighted = 0;
+                            menuList[menuItem].f.hilighted = 0;
 
                         {
                             int adj;
@@ -2106,12 +2106,12 @@ void MenuPhase(void) {
                                 adj = 1;
 
                             menuItem += adj;
-                            menu_item_find_enabled_item(menu,menu_items,&menuItem,adj,0);
-                            menu_item_scroll_to_item(menu,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&scrollingTo,0);
+                            menu_item_find_enabled_item(menuList,menu_items,&menuItem,adj,0);
+                            menu_item_scroll_to_item(menuList,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&scrollingTo,0);
                         }
 
                         if (menuItem >= 0)
-                            menu[menuItem].f.hilighted = 1;
+                            menuList[menuItem].f.hilighted = 1;
 
                         if (menuScroll != scrollingTo) {
                             unsigned char accel;
@@ -2127,14 +2127,14 @@ void MenuPhase(void) {
                         }
                         if (menuItem != oldItem) {
                             if (oldItem >= 0)
-                                MenuPhaseDrawItem(menu+oldItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                                MenuPhaseDrawItem(menuList+oldItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
                             if (menuItem >= 0)
-                                MenuPhaseDrawItem(menu+menuItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                                MenuPhaseDrawItem(menuList+menuItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
                         }
 
                         if (scrollredraw) {
                             /* pre-render the item, so scrolling can draw it properly */
-                            MenuPhaseDrawItemRender(menu+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
+                            MenuPhaseDrawItemRender(menuList+scrollingItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
                         }
                     }
                 }
@@ -2148,7 +2148,7 @@ void MenuPhase(void) {
     if (menuItem < 0)
         game_running_state_pop();
     else {
-        const int i = menu[menuItem].command;
+        const int i = menuList[menuItem].command;
         if (i >= 0) menu_command_func[i]();
     }
 }
