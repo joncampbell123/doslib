@@ -311,6 +311,7 @@ fail:
     return -1;
 }
 
+FNTBlob*                    font18_fnt = NULL;
 FNTBlob*                    font22_fnt = NULL;
 FNTBlob*                    font40_fnt = NULL;
 
@@ -1245,6 +1246,7 @@ void GIF_GlobalColorTableToPaletteSlot(unsigned int slot,GifFileType *gif) {
 
 void load_all_fonts(void) {
     /* load fonts */
+    loadFont(&font18_fnt,"font18.fnt","font18.gif");
     loadFont(&font22_fnt,"font22.fnt","font22.gif");
     loadFont(&font40_fnt,"font40.fnt","font40.gif");
 }
@@ -1828,7 +1830,7 @@ void MenuPhase(void) {
             font_str_bitblt_center(font22_fnt,0,title_text_x,subtitle_text_y,"The start of a shitty adventure");
 
             font_prep_xbitblt_at(font_base_gray_on_black);
-            font_str_bitblt_center(font22_fnt,0,160,181,"\xC2\xA9"/*Copyright symbol, UTF-8*/ " 2017 DOSLIB, Hackipedia");
+            font_str_bitblt_center(font18_fnt,0,160,199 - 15,"\xC2\xA9"/*Copyright symbol, UTF-8*/ " 2017 DOSLIB, Hackipedia");
 
             for (i=0;i < menu_items;i++)
                 MenuPhaseDrawItem(menu+i,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
@@ -1946,6 +1948,7 @@ game_exit:
     release_timer();
     unloadFont(&font40_fnt);
     unloadFont(&font22_fnt);
+    unloadFont(&font18_fnt);
     DEBUG("Timer ticks: %lu ticks / %lu vsync / %lu @ 18.2Hz",
         (unsigned long)timer_irq0_ticks,
         (unsigned long)timer_irq0_ticksvsync,
