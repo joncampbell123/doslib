@@ -996,7 +996,7 @@ void xbltbox(int x1,int y1,int x2,int y2,unsigned char color) { // filled rectan
     VGA_RAM_PTR cwp,wp;
     unsigned char b;
 
-    if (x1 >= modex_draw_width || y1 >= modex_draw_height) return;
+    if (x1 >= (int)modex_draw_width || y1 >= (int)modex_draw_height) return;
     if (x2 < 0 || y2 < 0) return;
 
     if (x1 < 0) x1 = 0;
