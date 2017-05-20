@@ -1759,6 +1759,70 @@ menu_item story_menu[] = {
         "before he shits himself." /* text */
     },
     {
+        {/*f*/
+            1, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "That's it." /* text */
+    },
+    {
+        {/*f*/
+            1, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "That's the story." /* text */
+    },
+     {
+        {/*f*/
+            1, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "I warned you this game was shit." /* text */
+    },
+    {
+        {/*f*/
+            1, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "You can stop reading now." /* text */
+    },
+    {
         { 0 },
         -1,     /* command */
         NULL
@@ -2045,21 +2109,41 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
 }
 
 void MenuPhase(void) {
+    unsigned int title_y[2];
+    unsigned char menu_top[2];
+    unsigned int menu_top_offset;
     _Bool scheduled_fadein = 0,menu_init = 0,menu_transition = 1,fullredraw = 1,redraw = 1,running = 1,exiting = 0,userctrl = 0;
-    signed char scrollredraw = 0;
-    unsigned char menu_left = 80,menu_right = 239;
-    unsigned char menu_top[2] = { 61, 181 };
-    unsigned int title_y[2] = {0,60};
+    unsigned short menu_left = 80,menu_right = 239;
     unsigned int title_text_x = 160/*center pt*/, title_text_y = 4, subtitle_text_y = title_text_y + 28;
-    unsigned int menu_top_offset = ((320/4)*menu_top[0]);
     unsigned int tmp_offset = ((320/4)*200);
     uint32_t scroll_vsync_tick = 0;
+    signed char scrollredraw = 0;
     int16_t scrollingSpeed = 0;
     int16_t scrollingItem = 0;
     int16_t scrollingTo = 0;
     int16_t menu_items = 0;
     AsyncEvent *ev;
     int c;
+
+    if (menuListIdent == MENULIST_MAIN) {
+        title_y[0] = 0;
+        title_y[1] = 60;
+        menu_top[0] = 61;
+        menu_top[1] = 181;
+    }
+    else {
+        title_y[0] = 0;
+        title_y[1] = 44;
+        menu_top[0] = 45;
+        menu_top[1] = 181;
+    }
+
+    if (menuListIdent == MENULIST_STORY) {
+        menu_left = 0;
+        menu_right = 319;
+    }
+
+    menu_top_offset = ((320/4)*menu_top[0]);
 
     /* load fonts, if not resident in memory */
     load_all_fonts();
@@ -2179,11 +2263,34 @@ void MenuPhase(void) {
             xbltbox(0,title_y[0]+6,319,title_y[1]-6,menu_brown_title_base+6/*brighest tone*/);
             for (i=0;i < 6;i++) xbltrect(-1,title_y[0]+i,319+1,title_y[1]-i,menu_brown_title_base+i);
 
-            font_prep_xbitblt_at(menu_font_base_yellow_on_brown);
-            font_str_bitblt_center(font40_fnt,0,title_text_x,title_text_y,"Shit Man\n");
+            if (menuListIdent == MENULIST_MAIN) {
+                font_prep_xbitblt_at(menu_font_base_yellow_on_brown);
+                font_str_bitblt_center(font40_fnt,0,title_text_x,title_text_y,"Shit Man\n");
 
-            font_prep_xbitblt_at(menu_font_base_white_on_brown);
-            font_str_bitblt_center(font22_fnt,0,title_text_x,subtitle_text_y,"The start of a shitty adventure");
+                font_prep_xbitblt_at(menu_font_base_white_on_brown);
+                font_str_bitblt_center(font22_fnt,0,title_text_x,subtitle_text_y,"The start of a shitty adventure");
+            }
+            else {
+                const char *msg;
+
+                switch (menuListIdent) {
+                    case MENULIST_NEW_GAME:
+                        msg = "New game";
+                        break;
+                    case MENULIST_STORY:
+                        msg = "Story";
+                        break;
+                    case MENULIST_SETTINGS:
+                        msg = "Settings";
+                        break;
+                    default:
+                        msg = "?";
+                        break;
+                };
+
+                font_prep_xbitblt_at(menu_font_base_yellow_on_brown);
+                font_str_bitblt_center(font40_fnt,0,title_text_x,title_text_y,msg);
+            }
 
             font_prep_xbitblt_at(menu_font_base_gray_on_black);
             font_str_bitblt_center(font18_fnt,0,160,199 - 15,"\xC2\xA9"/*Copyright symbol, UTF-8*/ " 2017 DOSLIB, Hackipedia");
