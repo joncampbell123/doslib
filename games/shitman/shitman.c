@@ -1495,6 +1495,7 @@ void TitleSequence(void) {
     blank_vga_palette();
     modex_init();
     timer_sync_to_vrefresh(); /* make sure the timer tick happens at vsync */
+    xbitblt_setbltmode(BITBLT_BLOCK);
 
     /* we use flag slot 0 for title sequence steps. reset now */
     flag_slots[0] = 0;
