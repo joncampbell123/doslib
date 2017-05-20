@@ -51,15 +51,24 @@ typedef struct GameState {
 } GameState;
 
 extern menu_item main_menu[];
+extern menu_item new_game_menu[];
+extern menu_item story_menu[];
+extern menu_item settings_menu[];
 
 enum {
     MENULIST_MAIN=0,        // 0
+    MENULIST_NEW_GAME,
+    MENULIST_STORY,
+    MENULIST_SETTINGS,
 
     MENULIST_MAX
 };
 
 menu_item *menuLists[MENULIST_MAX] = {
-    main_menu               // 0
+    main_menu,              // 0
+    new_game_menu,
+    story_menu,
+    settings_menu
 };
 
 unsigned char game_running_state = GAME_TITLE;
@@ -1551,19 +1560,57 @@ typedef void (*menu_cmd_t)(void);
 
 enum {
     MENU_CMD_EXIT=0,                            // 0
+    MENU_CMD_NEW_GAME,
+    MENU_CMD_QUIT_GAME,
+    MENU_CMD_STORY,
+    MENU_CMD_SETTINGS,
+
+    MENU_CMD_NEW_GAME_EASY,                     // 5
+    MENU_CMD_NEW_GAME_MEDIUM,
+    MENU_CMD_NEW_GAME_HARD,
 
     MENU_CMD_MAX
 };
 
 void menu_cmd_exit(void) {
-    DEBUG("menu_cmd_exit");
-
     game_running_state_push();
     game_running_state_set(GAME_EXIT);
 }
 
+void menu_cmd_new_game(void) {
+    game_running_state_push();
+    game_running_state_set(GAME_MENU);
+    MenuSet(MENULIST_NEW_GAME,-1);
+}
+
+void menu_cmd_quit_game(void) {
+}
+
+void menu_cmd_story(void) {
+    game_running_state_push();
+    game_running_state_set(GAME_MENU);
+    MenuSet(MENULIST_STORY,-1);
+}
+
+void menu_cmd_settings(void) {
+    game_running_state_push();
+    game_running_state_set(GAME_MENU);
+    MenuSet(MENULIST_SETTINGS,-1);
+}
+
+void menu_cmd_new_game_diffselect(void) {
+}
+
 menu_cmd_t menu_command_func[MENU_CMD_MAX] = {
-    menu_cmd_exit                               // 0
+    menu_cmd_exit,                              // 0
+    menu_cmd_new_game,
+    menu_cmd_quit_game,
+    menu_cmd_story,
+    menu_cmd_settings,
+
+    menu_cmd_new_game_diffselect,               // 5
+    menu_cmd_new_game_diffselect, 
+    menu_cmd_new_game_diffselect
 };
 
 menu_item main_menu[] = {
@@ -1572,40 +1619,32 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
-        -1,     /* command */
-        "Hello" /* text */
-    },
-    {
-        {/*f*/
-            0, /* disabled */
-            0  /* hilighted */
-        },
-        -1,     /* command */
-        "World" /* text */
+        MENU_CMD_NEW_GAME, /* command */
+        "New game" /* text */
     },
     {
         {/*f*/
             1, /* disabled */
             0  /* hilighted */
         },
-        -1,     /* command */
-        "Can't touch this" /* text */
-    },
-    {
-        {/*f*/
-            1, /* disabled */
-            0  /* hilighted */
-        },
-        -1,     /* command */
-        "Help me" /* text */
+        MENU_CMD_QUIT_GAME, /* command */
+        "Quit game" /* text */
     },
     {
         {/*f*/
             0, /* disabled */
             0  /* hilighted */
         },
-        -1,     /* command */
-        "Quit" /* text */
+        MENU_CMD_STORY, /* command */
+        "Story" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        MENU_CMD_SETTINGS, /* command */
+        "Settings" /* text */
     },
     {
         {/*f*/
@@ -1613,55 +1652,183 @@ menu_item main_menu[] = {
             0  /* hilighted */
         },
         MENU_CMD_EXIT, /* command */
-        "Exit" /* text */
+        "Quit this shit" /* text */
+    },
+    {
+        { 0 },
+        -1,     /* command */
+        NULL
+    }
+};
+
+menu_item new_game_menu[] = {
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        MENU_CMD_NEW_GAME_EASY, /* command */
+        "Easy difficulty" /* text */
     },
     {
         {/*f*/
             0, /* disabled */
             0  /* hilighted */
         },
-        -1,     /* command */
-        "There are" /* text */
+        MENU_CMD_NEW_GAME_MEDIUM, /* command */
+        "Medium difficulty" /* text */
     },
     {
         {/*f*/
             0, /* disabled */
             0  /* hilighted */
         },
+        MENU_CMD_NEW_GAME_HARD, /* command */
+        "Hard difficulty" /* text */
+    },
+    {
+        { 0 },
         -1,     /* command */
-        "Deliberately" /* text */
+        NULL
+    }
+};
+
+menu_item story_menu[] = {
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Shit man has a problem." /* text */
     },
     {
         {/*f*/
             0, /* disabled */
             0  /* hilighted */
         },
-        -1,     /* command */
-        "Too many" /* text */
+        -1, /* command */
+        "He ate too many burritos," /* text */
     },
     {
         {/*f*/
             0, /* disabled */
             0  /* hilighted */
         },
-        -1,     /* command */
-        "Items here" /* text */
+        -1, /* command */
+        "and now he really needs" /* text */
     },
     {
         {/*f*/
             0, /* disabled */
             0  /* hilighted */
         },
-        -1,     /* command */
-        "To test" /* text */
+        -1, /* command */
+        "to go to the bathroom." /* text */
+    },
+    {
+        {/*f*/
+            1, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "" /* text */
     },
     {
         {/*f*/
             0, /* disabled */
             0  /* hilighted */
         },
+        -1, /* command */
+        "Your task is to guide" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Shitman to the toilet" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "before he shits himself." /* text */
+    },
+    {
+        { 0 },
         -1,     /* command */
-        "This code" /* text */
+        NULL
+    }
+};
+
+menu_item settings_menu[] = {
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Setting #1" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Setting #2" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Setting #3" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Setting #4" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Setting #5" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Setting #6" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Setting #7" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        "Setting #8" /* text */
     },
     {
         { 0 },
