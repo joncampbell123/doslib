@@ -842,6 +842,9 @@ int initial_sys_check(void) {
     }
     detect_windows();
     if (windows_mode != WINDOWS_NONE) {
+        /* our vsync timer tricks will likely not work within a Windows DOS box.
+         * Windows 95 will likely complain about our use of the timer and prompt the
+         * user to reboot into MS-DOS mode. */
         puts("Running from within Windows is not supported");
         return 0;
     }
