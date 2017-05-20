@@ -2512,6 +2512,10 @@ void MenuPhase(void) {
                                 menu_item_scroll_to_item(menuList,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&scrollingTo,0);
 
                                 if (storymode) {
+                                    /* Story mode: not only are we hiding the hilighter, but we're also
+                                     * forcing the screen to scroll if the user ever hits the up/down arrow keys.
+                                     * The way to do that here is to execute the menuItem += adj until we cause
+                                     * the screen to scroll OR until we hit either end of the menu. */
                                     if (menuItem > 0 && (menuItem+1) < menu_items) {
                                         if (scrollingTo == oldScroll) {
                                             oldItem = menuItem;
@@ -2542,7 +2546,7 @@ void MenuPhase(void) {
                             if (accel >= sizeof(menuScrollAccelTable)) accel = sizeof(menuScrollAccelTable) - 1;
                             scrollingSpeed += menuScrollAccelTable[accel];
                         }
-                        if (menuItem != oldItem) {
+                        if (menuItem != oldItem && !storymode) {
                             if (oldItem >= 0)
                                 MenuPhaseDrawItem(menuList+oldItem,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
                             if (menuItem >= 0)
