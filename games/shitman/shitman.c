@@ -2183,6 +2183,7 @@ void MenuPhaseDrawItem(menu_item *m,unsigned int menu_top_offset,const unsigned 
 }
 
 void MenuPhase(void) {
+    _Bool storymode = 0;
     unsigned int title_y[2];
     unsigned char menu_top[2];
     unsigned int menu_top_offset;
@@ -2215,6 +2216,7 @@ void MenuPhase(void) {
     if (menuListIdent == MENULIST_STORY) {
         menu_left = 0;
         menu_right = 319;
+        storymode = 1;
     }
 
     menu_top_offset = ((320/4)*menu_top[0]);
@@ -2230,7 +2232,7 @@ void MenuPhase(void) {
     menu_item_layout(menuList,menu_left,menu_right,0,&menu_items);
     menu_item_find_enabled_item(menuList,menu_items,&menuItem,1/*step forward*/,0);
     menu_item_scroll_to_item(menuList,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&menuScroll,0);
-    if (menuItem >= 0) menuList[menuItem].f.hilighted = 1;
+    if (menuItem >= 0 && !storymode) menuList[menuItem].f.hilighted = 1;
     scrollingTo = menuScroll;
 
     /* init palette */
@@ -2468,7 +2470,7 @@ void MenuPhase(void) {
 
                 if (c == 27) {
                     /* ok. fade out */
-                    if (menuItem >= 0)
+                    if (menuItem >= 0 && !storymode)
                         menuList[menuItem].f.hilighted = 0;
 
                     menuItem = -1;
@@ -2478,7 +2480,7 @@ void MenuPhase(void) {
                 }
                 else if (c == 13) {
                     /* take selection */
-                    if (menuItem >= 0) {
+                    if (menuItem >= 0 && !storymode) {
                         menuList[menuItem].f.hilighted = 0;
                         menu_transition = 1;
                         userctrl = 0;
@@ -2490,9 +2492,10 @@ void MenuPhase(void) {
                     c = getch();
 
                     if (c == 0x48/*UP arrow*/ || c == 0x50/*DOWN arrow*/) {
+                        int oldScroll = scrollingTo;
                         int oldItem = menuItem;
 
-                        if (menuItem >= 0)
+                        if (menuItem >= 0 && !storymode)
                             menuList[menuItem].f.hilighted = 0;
 
                         {
@@ -2503,12 +2506,28 @@ void MenuPhase(void) {
                             else
                                 adj = 1;
 
-                            menuItem += adj;
-                            menu_item_find_enabled_item(menuList,menu_items,&menuItem,adj,0);
-                            menu_item_scroll_to_item(menuList,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&scrollingTo,0);
+                            do {
+                                menuItem += adj;
+                                menu_item_find_enabled_item(menuList,menu_items,&menuItem,adj,0);
+                                menu_item_scroll_to_item(menuList,menu_items,menuItem,menu_top[1] + 1 - menu_top[0],&scrollingTo,0);
+
+                                if (storymode) {
+                                    if (menuItem > 0 && (menuItem+1) < menu_items) {
+                                        if (scrollingTo == oldScroll) {
+                                            oldItem = menuItem;
+                                            continue;
+                                        }
+                                    }
+
+                                    break;
+                                }
+                                else {
+                                    break;
+                                }
+                            } while (1);
                         }
 
-                        if (menuItem >= 0)
+                        if (menuItem >= 0 && !storymode)
                             menuList[menuItem].f.hilighted = 1;
 
                         if (menuScroll != scrollingTo) {
