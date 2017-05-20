@@ -31,6 +31,7 @@ typedef struct menu_item {
     } f;
 
     int16_t                 command;        /* index into callback */
+    unsigned char           fontnum;
     const char*             text;
 
     struct {
@@ -385,6 +386,20 @@ fail:
 FNTBlob*                    font18_fnt = NULL;
 FNTBlob*                    font22_fnt = NULL;
 FNTBlob*                    font40_fnt = NULL;
+
+enum {
+    FONT_18=0,
+    FONT_22,
+    FONT_40,
+
+    MAX_FONT
+};
+
+FNTBlob**                   font_fnts[MAX_FONT] = {
+    &font18_fnt,
+    &font22_fnt,
+    &font40_fnt
+};
 
 int loadFont(FNTBlob **fnt,const char *fnt_path,const char *gif_path) {
     int err;
@@ -1622,7 +1637,8 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
-        MENU_CMD_NEW_GAME, /* command */
+        MENU_CMD_NEW_GAME,  /* command */
+        FONT_22,            /* font */
         "New game" /* text */
     },
     {
@@ -1631,6 +1647,7 @@ menu_item main_menu[] = {
             0  /* hilighted */
         },
         MENU_CMD_QUIT_GAME, /* command */
+        FONT_22,            /* font */
         "Quit game" /* text */
     },
     {
@@ -1638,7 +1655,8 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
-        MENU_CMD_STORY, /* command */
+        MENU_CMD_STORY,     /* command */
+        FONT_22,            /* font */
         "Story" /* text */
     },
     {
@@ -1646,7 +1664,8 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
-        MENU_CMD_SETTINGS, /* command */
+        MENU_CMD_SETTINGS,  /* command */
+        FONT_22,            /* font */
         "Settings" /* text */
     },
     {
@@ -1654,12 +1673,14 @@ menu_item main_menu[] = {
             0, /* disabled */
             0  /* hilighted */
         },
-        MENU_CMD_EXIT, /* command */
-        "Quit this shit" /* text */
+        MENU_CMD_EXIT,      /* command */
+        FONT_22,            /* font */
+        "Quit this shit"    /* text */
     },
     {
         { 0 },
         -1,     /* command */
+        FONT_22,            /* font */
         NULL
     }
 };
@@ -1671,6 +1692,7 @@ menu_item new_game_menu[] = {
             0  /* hilighted */
         },
         MENU_CMD_NEW_GAME_EASY, /* command */
+        FONT_22,            /* font */
         "Easy difficulty" /* text */
     },
     {
@@ -1679,6 +1701,7 @@ menu_item new_game_menu[] = {
             0  /* hilighted */
         },
         MENU_CMD_NEW_GAME_MEDIUM, /* command */
+        FONT_22,            /* font */
         "Medium difficulty" /* text */
     },
     {
@@ -1687,11 +1710,13 @@ menu_item new_game_menu[] = {
             0  /* hilighted */
         },
         MENU_CMD_NEW_GAME_HARD, /* command */
+        FONT_22,            /* font */
         "Hard difficulty" /* text */
     },
     {
         { 0 },
         -1,     /* command */
+        FONT_22,            /* font */
         NULL
     }
 };
@@ -1703,6 +1728,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Shit man has a problem." /* text */
     },
     {
@@ -1711,6 +1737,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "He ate too many burritos," /* text */
     },
     {
@@ -1719,6 +1746,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "and now he really needs" /* text */
     },
     {
@@ -1727,6 +1755,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "to go to the bathroom." /* text */
     },
     {
@@ -1735,6 +1764,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_18,            /* font */
         "" /* text */
     },
     {
@@ -1743,6 +1773,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Your task is to guide" /* text */
     },
     {
@@ -1751,6 +1782,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Shitman to the toilet" /* text */
     },
     {
@@ -1759,6 +1791,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "before he shits himself." /* text */
     },
     {
@@ -1767,6 +1800,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_18,            /* font */
         "" /* text */
     },
     {
@@ -1775,6 +1809,25 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_40,            /* font */
+        "The End" /* text */
+    },
+    {
+        {/*f*/
+            1, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        FONT_18,            /* font */
+        "" /* text */
+    },
+    {
+        {/*f*/
+            0, /* disabled */
+            0  /* hilighted */
+        },
+        -1, /* command */
+        FONT_18,            /* font */
         "That's it." /* text */
     },
     {
@@ -1783,6 +1836,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_18,            /* font */
         "" /* text */
     },
     {
@@ -1791,6 +1845,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_18,            /* font */
         "That's the story." /* text */
     },
      {
@@ -1799,6 +1854,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_18,            /* font */
         "" /* text */
     },
     {
@@ -1807,7 +1863,8 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
-        "I warned you this game was shit." /* text */
+        FONT_18,            /* font */
+        "I warned you this game is shit." /* text */
     },
     {
         {/*f*/
@@ -1815,6 +1872,7 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_18,            /* font */
         "" /* text */
     },
     {
@@ -1823,11 +1881,13 @@ menu_item story_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_18,            /* font */
         "You can stop reading now." /* text */
     },
     {
         { 0 },
         -1,     /* command */
+        FONT_18,            /* font */
         NULL
     }
 };
@@ -1839,6 +1899,7 @@ menu_item settings_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Setting #1" /* text */
     },
     {
@@ -1847,6 +1908,7 @@ menu_item settings_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Setting #2" /* text */
     },
     {
@@ -1855,6 +1917,7 @@ menu_item settings_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Setting #3" /* text */
     },
     {
@@ -1863,6 +1926,7 @@ menu_item settings_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Setting #4" /* text */
     },
     {
@@ -1871,6 +1935,7 @@ menu_item settings_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Setting #5" /* text */
     },
     {
@@ -1879,6 +1944,7 @@ menu_item settings_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Setting #6" /* text */
     },
     {
@@ -1887,6 +1953,7 @@ menu_item settings_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Setting #7" /* text */
     },
     {
@@ -1895,23 +1962,27 @@ menu_item settings_menu[] = {
             0  /* hilighted */
         },
         -1, /* command */
+        FONT_22,            /* font */
         "Setting #8" /* text */
     },
     {
         { 0 },
         -1,     /* command */
+        FONT_22,            /* font */
         NULL
     }
 };
 
 void menu_item_layout(menu_item *m,int left_x,int right_x,int top_y,int16_t *items) {
-    FNTBlob_common *com = FNTBlob_get_common(font22_fnt);
+    FNTBlob_common *com;
     unsigned int i = 0;
 
-    if (left_x >= right_x || com == NULL)
+    if (left_x >= right_x)
         return;
 
     for (;m->text != NULL;m++,i++) {
+        com = FNTBlob_get_common(*font_fnts[m->fontnum]);
+
         m->p.x = left_x;
         m->p.w = right_x + 1 - left_x;
         m->p.y = top_y;
@@ -2079,7 +2150,7 @@ void MenuPhaseDrawItemRender(menu_item *m,unsigned int menu_top_offset,const uns
     else
         font_prep_xbitblt_at(menu_font_base_gray_on_black);
 
-    font_str_bitblt_center(font22_fnt,0,m->p.w/2U,0,m->text);
+    font_str_bitblt_center(*font_fnts[m->fontnum],0,m->p.w/2U,0,m->text);
 }
  
 void MenuPhaseDrawItemBlit(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
