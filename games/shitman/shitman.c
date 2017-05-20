@@ -2191,6 +2191,8 @@ void MenuPhase(void) {
     unsigned short menu_left = 80,menu_right = 239;
     unsigned int title_text_x = 160/*center pt*/, title_text_y = 4, subtitle_text_y = title_text_y + 28;
     unsigned int tmp_offset = ((320/4)*200);
+    uint32_t menu_user_input_timeout = 0;
+    uint32_t menu_last_user_input = 0;
     uint32_t scroll_vsync_tick = 0;
     signed char scrollredraw = 0;
     int16_t scrollingSpeed = 0;
@@ -2276,6 +2278,8 @@ void MenuPhase(void) {
     }
 
     /* menu loop */
+    menu_last_user_input = timer_irq0_ticksvsync;
+    menu_user_input_timeout = 70 * 10; // 10 seconds on main screen, before timing out and going back to title
     modex_init();
     do {
         /* menu transition and fullredraw:
@@ -2396,7 +2400,7 @@ void MenuPhase(void) {
             redraw = 0;
         }
         else if (scrollredraw != 0) {
-            if (scroll_vsync_tick != timer_irq0_ticksvsync) {
+            if (scroll_vsync_tick != timer_irq0_ticksvsync) { /* FIXME: should access timer tick var from function that clears interrupts */
                 int renderItem = -1;
 
                 modex_init();
@@ -2467,6 +2471,7 @@ void MenuPhase(void) {
         if (userctrl) {
             if (kbhit()) {
                 c = getch();
+                menu_last_user_input = timer_irq0_ticksvsync;
 
                 if (c == 27) {
                     /* ok. fade out */
@@ -2561,12 +2566,41 @@ void MenuPhase(void) {
                 }
             }
         }
+
+        if (menuListIdent == MENULIST_MAIN && !exiting && running && userctrl) {
+            if (timer_irq0_ticksvsync >= (menu_last_user_input+menu_user_input_timeout)) {
+                menu_last_user_input = timer_irq0_ticksvsync;
+
+                /* if the game state below us is the exit game state, then time out,
+                 * push our state and enter title sequence again */
+                if (game_running_state_stack_sp > 0) {
+                    GameState *st = &game_running_state_stack[game_running_state_stack_sp-1];
+
+                    if (st->state == GAME_EXIT) {
+                        DEBUG("Main menu timeout, running title sequence again");
+
+                        /* ok. fade out */
+                        if (menuItem >= 0)
+                            menuList[menuItem].f.hilighted = 0;
+
+                        menuItem = -2;
+                        menu_transition = 1;
+                        userctrl = 0;
+                        exiting = 1;
+                    }
+                }
+            }
+        }
     } while (running);
 
     while (!async_has_finished());
     halt_async();
 
-    if (menuItem < 0)
+    if (menuItem == -2) { // timeout, run the title again
+        game_running_state_push();
+        game_running_state_set(GAME_TITLE);
+    }
+    else if (menuItem < 0)
         game_running_state_pop();
     else {
         const int i = menuList[menuItem].command;
