@@ -934,6 +934,10 @@ int initial_sys_check(void) {
     /* NTS: In the future, if needed, 16-bit builds will also make use of EMS/XMS memory.
      *      But that's far off into the future. */
     DEBUG_PRINT_MEM_STATE();
+    _heapshrink();
+    _heapmin();
+    _heapshrink();
+    DEBUG_PRINT_MEM_STATE();
 
     return 1; /* OK */
 }
