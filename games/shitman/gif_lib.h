@@ -50,22 +50,9 @@ typedef struct GifImageDesc {
     ColorMapObject *ColorMap;           /* The local color map */
 } GifImageDesc;
 
-typedef struct ExtensionBlock {
-    int ByteCount;
-    GifByteType *Bytes; /* on malloc(3) heap */
-    int Function;       /* The block function code */
-#define CONTINUE_EXT_FUNC_CODE    0x00    /* continuation subblock */
-#define COMMENT_EXT_FUNC_CODE     0xfe    /* comment */
-#define GRAPHICS_EXT_FUNC_CODE    0xf9    /* graphics control (GIF89) */
-#define PLAINTEXT_EXT_FUNC_CODE   0x01    /* plaintext */
-#define APPLICATION_EXT_FUNC_CODE 0xff    /* application block */
-} ExtensionBlock;
-
 typedef struct SavedImage {
     GifImageDesc ImageDesc;
     GifByteType *RasterBits;         /* on malloc(3) heap */
-    int ExtensionBlockCount;         /* Count of extensions before image */    
-    ExtensionBlock *ExtensionBlocks; /* Extensions before image */    
 } SavedImage;
 
 typedef struct GifFileType {
@@ -77,8 +64,6 @@ typedef struct GifFileType {
     int ImageCount;                  /* Number of current image (both APIs) */
     GifImageDesc Image;              /* Current image (low-level API) */
     SavedImage *SavedImages;         /* Image sequence (high-level API) */
-    int ExtensionBlockCount;         /* Count extensions past last image */
-    ExtensionBlock *ExtensionBlocks; /* Extensions past last image */    
     int Error;			     /* Last error condition reported */
     void *UserData;                  /* hook to attach user data (TVT) */
     void *Private;                   /* Don't mess with this! */
