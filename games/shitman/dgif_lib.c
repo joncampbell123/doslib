@@ -16,6 +16,8 @@ two modules will be linked.  Preserve this property!
 #include <stdio.h>
 #include <string.h>
 
+#include "dbmalloc.h"
+
 #ifdef _WIN32
 #include <io.h>
 #endif /* _WIN32 */

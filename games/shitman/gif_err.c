@@ -6,6 +6,8 @@ gif_err.c - handle error reporting for the GIF library.
 
 #include <stdio.h>
 
+#include "dbmalloc.h"
+
 #include "gif_lib.h"
 #include "gif_lib_private.h"
 

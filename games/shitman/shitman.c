@@ -16,6 +16,39 @@
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
 
+void DEBUG(const char *fmt,...);
+
+void *debug_realloc(void *ip,size_t sz) {
+    void *p;
+
+    p = realloc(ip,sz);
+    DEBUG("REALLOC(%Fp,%zu) = %Fp",ip,sz,p);
+    return p;
+}
+
+void *debug_calloc(size_t n,size_t sz) {
+    void *p;
+
+    p = calloc(n,sz);
+    DEBUG("CALLOC(%zu x %zu) = %Fp",n,sz,p);
+    return p;
+}
+
+void *debug_malloc(size_t sz) {
+    void *p;
+
+    p = malloc(sz);
+    DEBUG("MALLOC(%zu) = %Fp",sz,p);
+    return p;
+}
+
+void debug_free(void *p) {
+    DEBUG("FREE(%Fp)",p);
+    free(p);
+}
+
+#include "dbmalloc.h"
+
 #include "gif_lib.h"
 
 enum {
