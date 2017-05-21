@@ -402,27 +402,15 @@ int DGifCloseFile(GifFileType *GifFile, int *ErrorCode) {
 
     Private = (GifFilePrivateType *) GifFile->Private;
 
-    if (!IS_READABLE(Private)) {
-        /* This file was NOT open for reading: */
-        if (ErrorCode != NULL)
-            *ErrorCode = D_GIF_ERR_NOT_READABLE;
-        free((char *)GifFile->Private);
-        free(GifFile);
-        return GIF_ERROR;
-    }
-
     if (Private->File && (fclose(Private->File) != 0)) {
         if (ErrorCode != NULL)
             *ErrorCode = D_GIF_ERR_CLOSE_FAILED;
-        free((char *)GifFile->Private);
-        free(GifFile);
-        return GIF_ERROR;
     }
 
-    free((char *)GifFile->Private);
     free(GifFile);
     if (ErrorCode != NULL)
         *ErrorCode = D_GIF_SUCCEEDED;
+
     return GIF_OK;
 }
 

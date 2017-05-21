@@ -1362,11 +1362,25 @@ void GIF_GlobalColorTableToPaletteSlot(unsigned int slot,GifFileType *gif) {
     }
 }
 
+void TitleGifFreeAll(void);
+
 void load_all_fonts(void) {
+    int retry = 3;
+    int fail;
+
     /* load fonts */
-    loadFont(&font18_fnt,"font18.fnt","font18.gif");
-    loadFont(&font22_fnt,"font22.fnt","font22.gif");
-    loadFont(&font40_fnt,"font40.fnt","font40.gif");
+again:
+    fail = 0;
+    if (loadFont(&font18_fnt,"font18.fnt","font18.gif") < 0) fail++;
+    if (loadFont(&font22_fnt,"font22.fnt","font22.gif") < 0) fail++;
+    if (loadFont(&font40_fnt,"font40.fnt","font40.gif") < 0) fail++;
+
+    if (fail != 0) {
+        if (--retry == 0) FAIL("Unable to load fonts");
+        DEBUG("Unable to load all fonts. Freeing other resident GIFs, will try again");
+        TitleGifFreeAll();
+        goto again;
+    }
 }
 
 void font_prep_palette_at(const unsigned char palidx,
@@ -1525,14 +1539,16 @@ const char *title_gif_path[TITLE_GIF_MAX] = {
 
 GifFileType *title_gif[TITLE_GIF_MAX] = { NULL };
 
-static void TitleGifLoad(unsigned int slot) {
+static unsigned int TitleGifLoad(unsigned int slot) {
     if (slot >= TITLE_GIF_MAX)
         FAIL("title gif slot out of range");
 
     if (title_gif[slot] == NULL) {
         if ((title_gif[slot] = LoadGIF(title_gif_path[slot])) == NULL)
-            return;
+            return 0;
     }
+
+    return 1;
 }
 
 static void TitleGifFree(unsigned int slot) {
@@ -1565,7 +1581,20 @@ void TitleSequence(void) {
 
     for (i=0;i < TITLE_GIF_MAX;i++) {
         modex_draw_offset = 0x4000U * i;
-        TitleGifLoad(/*gif slot*/i);
+        if (!TitleGifLoad(/*gif slot*/i)) {
+            DEBUG("Failed to load GIF slot %u (%s)",i,title_gif_path[i]);
+            /* try freeing the previous GIF */
+            if (i == 0)
+                goto user_abort;
+            else {
+                DEBUG("Freeing GIF slot %u (%s), which by now has been rendered to screen",i,title_gif_path[i]);
+                TitleGifFree(i-1);
+                if (!TitleGifLoad(/*gif slot*/i)) {
+                    DEBUG("Freeing previous GIF didn't help. Sorry");
+                    break;
+                }
+            }
+        }
 
         GIF_GlobalColorTableToPaletteSlot(/*slot*/i,/*gif*/title_gif[i]);
         DrawGIF(0,0,title_gif[i],0);
