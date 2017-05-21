@@ -32,15 +32,16 @@ typedef unsigned char GifByteType;
 typedef unsigned int GifPrefixType;
 typedef int GifWord;
 
+#pragma pack(push,1)
 typedef struct GifColorType {
     GifByteType Red, Green, Blue;
 } GifColorType;
+#pragma pack(pop)
 
 typedef struct ColorMapObject {
-    int ColorCount;
-    int BitsPerPixel;
-    bool SortFlag;
-    GifColorType *Colors;    /* on malloc(3) heap */
+    unsigned short ColorCount;
+    unsigned char BitsPerPixel;
+    GifColorType Colors[256];    /* on malloc(3) heap */
 } ColorMapObject;
 
 typedef struct GifImageDesc {

@@ -55,7 +55,7 @@ static int DGifGetCode(GifFileType *GifFile, int *GifCodeSize,
                 GifByteType **GifCodeBlock);
 static int DGifGetCodeNext(GifFileType *GifFile, GifByteType **GifCodeBlock);
 
-static int GifBitSize(int n);
+static unsigned char GifBitSize(int n);
 
 static ColorMapObject *GifMakeMapObject(int ColorCount,
                                      const GifColorType *ColorMap);
@@ -218,7 +218,7 @@ static int DGifGetScreenDesc(GifFileType *GifFile) {
         }
 
         /* Get the global color map: */
-        GifFile->SColorMap->SortFlag = SortFlag;
+//        GifFile->SColorMap->SortFlag = SortFlag;
         for (i = 0; i < GifFile->SColorMap->ColorCount; i++) {
             /* coverity[check_return] */
             if (READ(GifFile, Buf, 3) != 3) {
@@ -571,9 +571,10 @@ static int DGifGetCodeNext(GifFileType *GifFile, GifByteType **CodeBlock) {
  Setup the LZ decompression for this image:
 ******************************************************************************/
 static int DGifSetupDecompress(GifFileType *GifFile) {
-    int i, BitsPerPixel;
+    int i;
     GifByteType CodeSize;
     GifPrefixType *Prefix;
+    unsigned char BitsPerPixel;
     GifFilePrivateType *Private = (GifFilePrivateType *)GifFile->Private;
 
     /* coverity[check_return] */
@@ -847,7 +848,7 @@ static int DGifBufferedInput(GifFileType *GifFile, GifByteType *Buf, GifByteType
  first to initialize I/O.  Its inverse is EGifSpew().
 *******************************************************************************/
 int DGifSlurp(GifFileType *GifFile) {
-    size_t ImageSize;
+    uint32_t ImageSize;
     GifRecordType RecordType;
     SavedImage *sp;
     GifByteType *ExtData;
@@ -868,11 +869,11 @@ int DGifSlurp(GifFileType *GifFile) {
                         sp->ImageDesc.Width > (INT_MAX / sp->ImageDesc.Height)) {
                     return GIF_ERROR;
                 }
-                ImageSize = sp->ImageDesc.Width * sp->ImageDesc.Height;
+                ImageSize = (uint32_t)sp->ImageDesc.Width * (uint32_t)sp->ImageDesc.Height;
 
-                if (ImageSize > (SIZE_MAX / sizeof(GifPixelType))) {
+                if (ImageSize > (uint32_t)(SIZE_MAX / sizeof(GifPixelType)))
                     return GIF_ERROR;
-                }
+
                 sp->RasterBits = (unsigned char *)reallocarray(NULL, ImageSize,
                         sizeof(GifPixelType));
 
@@ -943,8 +944,8 @@ int DGifSlurp(GifFileType *GifFile) {
 ******************************************************************************/
 
 /* return smallest bitfield size n will fit in */
-static int GifBitSize(int n) {
-    register int i;
+static unsigned char GifBitSize(int n) {
+    register unsigned char i;
 
     for (i = 1; i <= 8; i++)
         if ((1 << i) >= n)
@@ -975,15 +976,8 @@ static ColorMapObject *GifMakeMapObject(int ColorCount, const GifColorType *Colo
         return ((ColorMapObject *) NULL);
     }
 
-    Object->Colors = (GifColorType *)calloc(ColorCount, sizeof(GifColorType));
-    if (Object->Colors == (GifColorType *) NULL) {
-        free(Object);
-        return ((ColorMapObject *) NULL);
-    }
-
     Object->ColorCount = ColorCount;
     Object->BitsPerPixel = GifBitSize(ColorCount);
-    Object->SortFlag = false;
 
     if (ColorMap != NULL) {
         memcpy((char *)Object->Colors,
