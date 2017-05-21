@@ -1366,7 +1366,14 @@ void GIF_GlobalColorTableToPaletteSlot(unsigned int slot,GifFileType *gif) {
     }
 }
 
-void TitleGifFreeAll(void);
+void GifSlotFreeAll(void);
+void GifSlotFreeOne(void);
+
+void unload_all_fonts(void) {
+    unloadFont(&font40_fnt);
+    unloadFont(&font22_fnt);
+    unloadFont(&font18_fnt);
+}
 
 void load_all_fonts(void) {
     int retry = 3;
@@ -1382,7 +1389,7 @@ again:
     if (fail != 0) {
         if (--retry == 0) FAIL("Unable to load fonts");
         DEBUG("Unable to load all fonts. Freeing other resident GIFs, will try again");
-        TitleGifFreeAll();
+        GifSlotFreeOne();
         goto again;
     }
 }
@@ -1533,6 +1540,8 @@ void TitleSequenceAsyncScheduleSlide(unsigned char slot,uint16_t offset,uint8_t 
     next_async_finish();
 }
 
+#define GIF_SLOT_MAX 32
+
 #define TITLE_GIF_MAX 3
 
 const char *title_gif_path[TITLE_GIF_MAX] = {
@@ -1541,38 +1550,61 @@ const char *title_gif_path[TITLE_GIF_MAX] = {
     "title3.gif"
 };
 
-GifFileType *title_gif[TITLE_GIF_MAX] = { NULL };
+GifFileType *gif_slot[GIF_SLOT_MAX] = { NULL };
+const char *gif_slot_path[GIF_SLOT_MAX] = { NULL };
 
-static unsigned int TitleGifLoad(unsigned int slot) {
-    if (slot >= TITLE_GIF_MAX)
-        FAIL("title gif slot out of range");
+static unsigned int GifSlotLoad(unsigned int slot,const char *path) {
+    if (slot >= GIF_SLOT_MAX)
+        FAIL("gif slot out of range");
 
-    if (title_gif[slot] == NULL) {
-        if ((title_gif[slot] = LoadGIF(title_gif_path[slot])) == NULL)
+    if (gif_slot[slot] == NULL) {
+        DEBUG("Loading %s into GIF slot %u",path,slot);
+        if ((gif_slot[slot] = LoadGIF(path)) == NULL)
             return 0;
+
+        gif_slot_path[slot] = path;
     }
 
     return 1;
 }
 
-static void TitleGifFree(unsigned int slot) {
-    if (slot >= TITLE_GIF_MAX)
-        FAIL("title gif slot out of range");
+static void GifSlotFree(unsigned int slot) {
+    if (slot >= GIF_SLOT_MAX)
+        FAIL("gif slot out of range");
 
-    title_gif[slot] = FreeGIF(title_gif[slot]);
+    if (gif_slot[slot] != NULL) {
+        DEBUG("Freeing %s from GIF slot %u",gif_slot_path[slot],slot);
+        gif_slot[slot] = FreeGIF(gif_slot[slot]);
+    }
+
+    gif_slot_path[slot] = NULL;
 }
 
-void TitleGifFreeAll(void) {
+void GifSlotFreeAll(void) {
     unsigned int i;
 
-    for (i=0;i < TITLE_GIF_MAX;i++)
-        TitleGifFree(i);
+    for (i=0;i < GIF_SLOT_MAX;i++)
+        GifSlotFree(i);
+}
+
+void GifSlotFreeOne(void) {
+    unsigned int i;
+
+    for (i=0;i < GIF_SLOT_MAX;i++) {
+        if (gif_slot[i] != NULL) {
+            GifSlotFree(i);
+            break;
+        }
+    }
 }
 
 void TitleSequence(void) {
+    unsigned int gif_free = ~0;
     unsigned char hurry = 0;
     unsigned int i;
     int c;
+
+    DEBUG("Starting title sequence");
 
     halt_async();
     blank_vga_palette();
@@ -1585,25 +1617,40 @@ void TitleSequence(void) {
 
     for (i=0;i < TITLE_GIF_MAX;i++) {
         modex_draw_offset = 0x4000U * i;
-        if (!TitleGifLoad(/*gif slot*/i)) {
+load_try_again:
+        if (!GifSlotLoad(/*gif slot*/i,title_gif_path[i])) {
             DEBUG("Failed to load GIF slot %u (%s)",i,title_gif_path[i]);
-            /* try freeing the previous GIF */
-            if (i == 0)
-                goto user_abort;
-            else {
-                DEBUG("Freeing GIF slot %u (%s), which by now has been rendered to screen",i,title_gif_path[i]);
-                TitleGifFree(i-1);
-                if (!TitleGifLoad(/*gif slot*/i)) {
-                    DEBUG("Freeing previous GIF didn't help. Sorry");
+
+            while (gif_free != ~0) {
+                if (gif_slot[gif_free] != NULL) {
+                    DEBUG("Freeing GIF slot %u (%s), which by now has been rendered to screen",gif_free,title_gif_path[gif_free]);
+                    GifSlotFree(gif_free);
                     break;
                 }
             }
+
+            if (gif_free == ~0) {
+                DEBUG("Unloading fonts to free up memory");
+                unload_all_fonts();
+            }
+            else {
+                if ((++gif_free) >= TITLE_GIF_MAX) gif_free = ~0;
+                goto load_try_again;
+            }
+
+            if (!GifSlotLoad(/*gif slot*/i,title_gif_path[i])) {
+                DEBUG("Didn't help. Sorry");
+                break;
+            }
         }
 
-        GIF_GlobalColorTableToPaletteSlot(/*slot*/i,/*gif*/title_gif[i]);
-        DrawGIF(0,0,title_gif[i],0);
+        GIF_GlobalColorTableToPaletteSlot(/*slot*/i,/*gif*/gif_slot[i]);
+        DrawGIF(0,0,gif_slot[i],0);
 
         TitleSequenceAsyncScheduleSlide(/*slot*/i,/*offset*/modex_draw_offset,'0' + i);
+
+        if (gif_free == ~0)
+            gif_free = i;
 
         if (kbhit()) {
             c = getch();
@@ -2270,6 +2317,8 @@ void MenuPhase(void) {
     AsyncEvent *ev;
     int c;
 
+    DEBUG("Starting menu phase, menuListIdent=%u menuItem=%d",menuListIdent,menuItem);
+
     if (menuListIdent == MENULIST_MAIN) {
         title_y[0] = 0;
         title_y[1] = 60;
@@ -2732,10 +2781,8 @@ int main(int argc,char **argv) {
 game_exit:
 
     release_timer();
-    unloadFont(&font40_fnt);
-    unloadFont(&font22_fnt);
-    unloadFont(&font18_fnt);
-    TitleGifFreeAll();
+    unload_all_fonts();
+    GifSlotFreeAll();
     DEBUG("Timer ticks: %lu ticks / %lu vsync / %lu @ 18.2Hz",
         (unsigned long)timer_irq0_ticks,
         (unsigned long)timer_irq0_ticksvsync,
