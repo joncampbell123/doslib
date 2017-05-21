@@ -30,9 +30,7 @@ two modules will be linked.  Preserve this property!
 
 /* avoid extra function call in case we use fread (TVT) */
 #define READ(_gif,_buf,_len)                                     \
-  (((GifFilePrivateType*)_gif->Private)->Read ?                   \
-    ((GifFilePrivateType*)_gif->Private)->Read(_gif,_buf,_len) : \
-    fread(_buf,1,_len,((GifFilePrivateType*)_gif->Private)->File))
+  (fread(_buf,1,_len,((GifFilePrivateType*)_gif->Private)->File))
 
 static int DGifGetWord(GifFileType *GifFile, GifWord *Word);
 static int DGifSetupDecompress(GifFileType *GifFile);
@@ -56,7 +54,6 @@ static int DGifGetExtensionNext(GifFileType *GifFile, GifByteType **GifExtension
 static int DGifGetCode(GifFileType *GifFile, int *GifCodeSize,
                 GifByteType **GifCodeBlock);
 static int DGifGetCodeNext(GifFileType *GifFile, GifByteType **GifCodeBlock);
-static int DGifGetLZCodes(GifFileType *GifFile, int *GifCode);
 
 static int GifBitSize(int n);
 
@@ -72,8 +69,6 @@ static SavedImage *GifMakeSavedImage(GifFileType *GifFile,
 static void GifFreeSavedImages(GifFileType *GifFile);
 
 static GifFileType *DGifOpenFileHandle(int GifFileHandle, int *Error);
-
-static GifFileType *DGifOpen(void *userPtr, InputFunc readFunc, int *Error);    /* new one (TVT) */
 
 /******************************************************************************
   Open a new GIF file for read, given by its name.
@@ -141,7 +136,6 @@ GifFileType *DGifOpenFileHandle(int FileHandle, int *Error) {
     Private->FileHandle = FileHandle;
     Private->File = f;
     Private->FileState = FILE_STATE_READ;
-    Private->Read = NULL;        /* don't use alternate input method (TVT) */
     GifFile->UserData = NULL;    /* TVT */
     /*@=mustfreeonly@*/
 

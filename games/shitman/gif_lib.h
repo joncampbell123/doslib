@@ -28,7 +28,6 @@ extern "C" {
 #define GIF89_STAMP "GIF89a"        /* First chars in file - GIF stamp.  */
 
 typedef unsigned char GifPixelType;
-typedef unsigned char *GifRowType;
 typedef unsigned char GifByteType;
 typedef unsigned int GifPrefixType;
 typedef int GifWord;
@@ -79,29 +78,9 @@ typedef enum {
     TERMINATE_RECORD_TYPE   /* Begin with ';' */
 } GifRecordType;
 
-/* func type to read gif data from arbitrary sources (TVT) */
-typedef int (*InputFunc) (GifFileType *, GifByteType *, int);
-
-/* func type to write gif data to arbitrary targets.
- * Returns count of bytes written. (MRB)
- */
-typedef int (*OutputFunc) (GifFileType *, const GifByteType *, int);
-
 /******************************************************************************
  GIF89 structures
 ******************************************************************************/
-
-typedef struct GraphicsControlBlock {
-    int DisposalMode;
-#define DISPOSAL_UNSPECIFIED      0       /* No disposal specified. */
-#define DISPOSE_DO_NOT            1       /* Leave image in place */
-#define DISPOSE_BACKGROUND        2       /* Set area too background color */
-#define DISPOSE_PREVIOUS          3       /* Restore to previous content */
-    bool UserInputFlag;      /* User confirmation required before disposal */
-    int DelayTime;           /* pre-display delay in 0.01sec units */
-    int TransparentColor;    /* Palette index for transparency, -1 if none */
-#define NO_TRANSPARENT_COLOR	-1
-} GraphicsControlBlock;
 
 /******************************************************************************
  GIF encoding routines
