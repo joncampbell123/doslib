@@ -43,6 +43,21 @@ static int DGifDecompressInput(GifFileType *GifFile, int *Code);
 static int DGifBufferedInput(GifFileType *GifFile, GifByteType *Buf,
                              GifByteType *NextByte);
 
+/* These are legacy.  You probably do not want to call them directly */
+int DGifGetScreenDesc(GifFileType *GifFile);
+int DGifGetRecordType(GifFileType *GifFile, GifRecordType *GifType);
+int DGifGetImageDesc(GifFileType *GifFile);
+int DGifGetLine(GifFileType *GifFile, GifPixelType *GifLine, size_t GifLineLen);
+int DGifGetPixel(GifFileType *GifFile, GifPixelType GifPixel);
+int DGifGetComment(GifFileType *GifFile, char *GifComment);
+int DGifGetExtension(GifFileType *GifFile, int *GifExtCode,
+                     GifByteType **GifExtension);
+int DGifGetExtensionNext(GifFileType *GifFile, GifByteType **GifExtension);
+int DGifGetCode(GifFileType *GifFile, int *GifCodeSize,
+                GifByteType **GifCodeBlock);
+int DGifGetCodeNext(GifFileType *GifFile, GifByteType **GifCodeBlock);
+int DGifGetLZCodes(GifFileType *GifFile, int *GifCode);
+
 /******************************************************************************
  Open a new GIF file for read, given by its name.
  Returns dynamically allocated GifFileType pointer which serves as the GIF
@@ -533,55 +548,6 @@ DGifGetExtensionNext(GifFileType *GifFile, GifByteType ** Extension)
         *Extension = NULL;
 
     return GIF_OK;
-}
-
-/******************************************************************************
- Extract a Graphics Control Block from raw extension data
-******************************************************************************/
-
-int DGifExtensionToGCB(const size_t GifExtensionLength,
-		       const GifByteType *GifExtension,
-		       GraphicsControlBlock *GCB)
-{
-    if (GifExtensionLength != 4) {
-	return GIF_ERROR;
-    }
-
-    GCB->DisposalMode = (GifExtension[0] >> 2) & 0x07;
-    GCB->UserInputFlag = (GifExtension[0] & 0x02) != 0;
-    GCB->DelayTime = UNSIGNED_LITTLE_ENDIAN(GifExtension[1], GifExtension[2]);
-    if (GifExtension[0] & 0x01)
-	GCB->TransparentColor = (int)GifExtension[3];
-    else
-	GCB->TransparentColor = NO_TRANSPARENT_COLOR;
-
-    return GIF_OK;
-}
-
-/******************************************************************************
- Extract the Graphics Control Block for a saved image, if it exists.
-******************************************************************************/
-
-int DGifSavedExtensionToGCB(GifFileType *GifFile,
-			    int ImageIndex, GraphicsControlBlock *GCB)
-{
-    int i;
-
-    if (ImageIndex < 0 || ImageIndex > GifFile->ImageCount - 1)
-	return GIF_ERROR;
-
-    GCB->DisposalMode = DISPOSAL_UNSPECIFIED;
-    GCB->UserInputFlag = false;
-    GCB->DelayTime = 0;
-    GCB->TransparentColor = NO_TRANSPARENT_COLOR;
-
-    for (i = 0; i < GifFile->SavedImages[ImageIndex].ExtensionBlockCount; i++) {
-	ExtensionBlock *ep = &GifFile->SavedImages[ImageIndex].ExtensionBlocks[i];
-	if (ep->Function == GRAPHICS_EXT_FUNC_CODE)
-	    return DGifExtensionToGCB(ep->ByteCount, ep->Bytes, GCB);
-    }
-
-    return GIF_ERROR;
 }
 
 /******************************************************************************
