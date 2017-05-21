@@ -128,10 +128,8 @@ typedef struct GraphicsControlBlock {
 
 /* Main entry points */
 GifFileType *DGifOpenFileName(const char *GifFileName, int *Error);
-GifFileType *DGifOpenFileHandle(int GifFileHandle, int *Error);
+int DGifCloseFile(GifFileType * GifFile, int *ErrorCode);
 int DGifSlurp(GifFileType * GifFile);
-GifFileType *DGifOpen(void *userPtr, InputFunc readFunc, int *Error);    /* new one (TVT) */
-    int DGifCloseFile(GifFileType * GifFile, int *ErrorCode);
 
 #define D_GIF_SUCCEEDED          0
 #define D_GIF_ERR_OPEN_FAILED    101    /* And DGif possible errors. */
@@ -166,27 +164,9 @@ extern const char *GifErrorString(int ErrorCode);     /* new in 2012 - ESR */
  Color map handling from gif_alloc.c
 ******************************************************************************/
 
-extern ColorMapObject *GifMakeMapObject(int ColorCount,
-                                     const GifColorType *ColorMap);
-extern void GifFreeMapObject(ColorMapObject *Object);
-extern int GifBitSize(int n);
-
-extern void *
-reallocarray(void *optr, size_t nmemb, size_t size);
-
 /******************************************************************************
  Support for the in-core structures allocation (slurp mode).              
 ******************************************************************************/
-
-extern int GifAddExtensionBlock(int *ExtensionBlock_Count,
-				ExtensionBlock **ExtensionBlocks, 
-				int Function, 
-				unsigned int Len, unsigned char ExtData[]);
-extern void GifFreeExtensions(int *ExtensionBlock_Count,
-			      ExtensionBlock **ExtensionBlocks);
-extern SavedImage *GifMakeSavedImage(GifFileType *GifFile,
-                                  const SavedImage *CopyFrom);
-extern void GifFreeSavedImages(GifFileType *GifFile);
 
 /******************************************************************************
  5.x functions for GIF89 graphics control blocks

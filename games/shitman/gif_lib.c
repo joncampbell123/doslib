@@ -8,22 +8,22 @@ two modules will be linked.  Preserve this property!
 
 *****************************************************************************/
 
+#include <sys/types.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <stdint.h>
-#include <fcntl.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <string.h>
+#include <stdio.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "dbmalloc.h"
 
-#ifdef _WIN32
-#include <io.h>
-#endif /* _WIN32 */
-
 #include "gif_lib.h"
 #include "gif_lib_private.h"
+
+#define MAX(x, y)    (((x) > (y)) ? (x) : (y))
 
 /* compose unsigned little endian value */
 #define UNSIGNED_LITTLE_ENDIAN(lo, hi)	((lo) | ((hi) << 8))
@@ -44,19 +44,42 @@ static int DGifBufferedInput(GifFileType *GifFile, GifByteType *Buf,
                              GifByteType *NextByte);
 
 /* These are legacy.  You probably do not want to call them directly */
-int DGifGetScreenDesc(GifFileType *GifFile);
-int DGifGetRecordType(GifFileType *GifFile, GifRecordType *GifType);
-int DGifGetImageDesc(GifFileType *GifFile);
-int DGifGetLine(GifFileType *GifFile, GifPixelType *GifLine, size_t GifLineLen);
-int DGifGetPixel(GifFileType *GifFile, GifPixelType GifPixel);
-int DGifGetComment(GifFileType *GifFile, char *GifComment);
-int DGifGetExtension(GifFileType *GifFile, int *GifExtCode,
+static int DGifGetScreenDesc(GifFileType *GifFile);
+static int DGifGetRecordType(GifFileType *GifFile, GifRecordType *GifType);
+static int DGifGetImageDesc(GifFileType *GifFile);
+static int DGifGetLine(GifFileType *GifFile, GifPixelType *GifLine, size_t GifLineLen);
+static int DGifGetPixel(GifFileType *GifFile, GifPixelType GifPixel);
+static int DGifGetComment(GifFileType *GifFile, char *GifComment);
+static int DGifGetExtension(GifFileType *GifFile, int *GifExtCode,
                      GifByteType **GifExtension);
-int DGifGetExtensionNext(GifFileType *GifFile, GifByteType **GifExtension);
-int DGifGetCode(GifFileType *GifFile, int *GifCodeSize,
+static int DGifGetExtensionNext(GifFileType *GifFile, GifByteType **GifExtension);
+static int DGifGetCode(GifFileType *GifFile, int *GifCodeSize,
                 GifByteType **GifCodeBlock);
-int DGifGetCodeNext(GifFileType *GifFile, GifByteType **GifCodeBlock);
-int DGifGetLZCodes(GifFileType *GifFile, int *GifCode);
+static int DGifGetCodeNext(GifFileType *GifFile, GifByteType **GifCodeBlock);
+static int DGifGetLZCodes(GifFileType *GifFile, int *GifCode);
+
+static int GifBitSize(int n);
+
+static ColorMapObject *GifMakeMapObject(int ColorCount,
+                                     const GifColorType *ColorMap);
+static void GifFreeMapObject(ColorMapObject *Object);
+
+static void *
+reallocarray(void *optr, size_t nmemb, size_t size);
+
+static int GifAddExtensionBlock(int *ExtensionBlock_Count,
+				ExtensionBlock **ExtensionBlocks, 
+				int Function, 
+				unsigned int Len, unsigned char ExtData[]);
+static void GifFreeExtensions(int *ExtensionBlock_Count,
+			      ExtensionBlock **ExtensionBlocks);
+static SavedImage *GifMakeSavedImage(GifFileType *GifFile,
+                                  const SavedImage *CopyFrom);
+static void GifFreeSavedImages(GifFileType *GifFile);
+
+static GifFileType *DGifOpenFileHandle(int GifFileHandle, int *Error);
+
+static GifFileType *DGifOpen(void *userPtr, InputFunc readFunc, int *Error);    /* new one (TVT) */
 
 /******************************************************************************
  Open a new GIF file for read, given by its name.
@@ -169,6 +192,7 @@ DGifOpenFileHandle(int FileHandle, int *Error)
     return GifFile;
 }
 
+#if 0
 /******************************************************************************
  GifFileType constructor with user supplied input function (TVT)
 ******************************************************************************/
@@ -244,12 +268,13 @@ DGifOpen(void *userData, InputFunc readFunc, int *Error)
 
     return GifFile;
 }
+#endif
 
 /******************************************************************************
  This routine should be called before any other DGif calls. Note that
  this routine is called automatically from DGif file open routines.
 ******************************************************************************/
-int
+static int
 DGifGetScreenDesc(GifFileType *GifFile)
 {
     int BitsPerPixel;
@@ -312,7 +337,7 @@ DGifGetScreenDesc(GifFileType *GifFile)
 /******************************************************************************
  This routine should be called before any attempt to read an image.
 ******************************************************************************/
-int
+static int
 DGifGetRecordType(GifFileType *GifFile, GifRecordType* Type)
 {
     GifByteType Buf;
@@ -353,7 +378,7 @@ DGifGetRecordType(GifFileType *GifFile, GifRecordType* Type)
  This routine should be called before any attempt to read an image.
  Note it is assumed the Image desc. header has been read.
 ******************************************************************************/
-int
+static int
 DGifGetImageDesc(GifFileType *GifFile)
 {
     unsigned int BitsPerPixel;
@@ -455,7 +480,7 @@ DGifGetImageDesc(GifFileType *GifFile)
 /******************************************************************************
  Get one full scanned line (Line) of length LineLen from GIF file.
 ******************************************************************************/
-int
+static int
 DGifGetLine(GifFileType *GifFile, GifPixelType *Line, size_t LineLen)
 {
     GifByteType *Dummy;
@@ -499,7 +524,7 @@ DGifGetLine(GifFileType *GifFile, GifPixelType *Line, size_t LineLen)
  The Extension should NOT be freed by the user (not dynamically allocated).
  Note it is assumed the Extension description header has been read.
 ******************************************************************************/
-int
+static int
 DGifGetExtension(GifFileType *GifFile, int *ExtCode, GifByteType **Extension)
 {
     GifByteType Buf;
@@ -526,7 +551,7 @@ DGifGetExtension(GifFileType *GifFile, int *ExtCode, GifByteType **Extension)
  routine should be called until NULL Extension is returned.
  The Extension should NOT be freed by the user (not dynamically allocated).
 ******************************************************************************/
-int
+static int
 DGifGetExtensionNext(GifFileType *GifFile, GifByteType ** Extension)
 {
     GifByteType Buf;
@@ -627,7 +652,7 @@ DGifGetWord(GifFileType *GifFile, GifWord *Word)
  called until NULL block is returned.
  The block should NOT be freed by the user (not dynamically allocated).
 ******************************************************************************/
-int
+static int
 DGifGetCodeNext(GifFileType *GifFile, GifByteType **CodeBlock)
 {
     GifByteType Buf;
@@ -1061,3 +1086,262 @@ DGifSlurp(GifFileType *GifFile)
 }
 
 /* end */
+/*****************************************************************************
+
+ GIF construction tools
+
+****************************************************************************/
+
+/******************************************************************************
+ Miscellaneous utility functions                          
+******************************************************************************/
+
+/* return smallest bitfield size n will fit in */
+static int
+GifBitSize(int n)
+{
+    register int i;
+
+    for (i = 1; i <= 8; i++)
+        if ((1 << i) >= n)
+            break;
+    return (i);
+}
+
+/******************************************************************************
+  Color map object functions                              
+******************************************************************************/
+
+/*
+ * Allocate a color map of given size; initialize with contents of
+ * ColorMap if that pointer is non-NULL.
+ */
+static ColorMapObject *
+GifMakeMapObject(int ColorCount, const GifColorType *ColorMap)
+{
+    ColorMapObject *Object;
+
+    /*** FIXME: Our ColorCount has to be a power of two.  Is it necessary to
+     * make the user know that or should we automatically round up instead? */
+    if (ColorCount != (1 << GifBitSize(ColorCount))) {
+        return ((ColorMapObject *) NULL);
+    }
+    
+    Object = (ColorMapObject *)malloc(sizeof(ColorMapObject));
+    if (Object == (ColorMapObject *) NULL) {
+        return ((ColorMapObject *) NULL);
+    }
+
+    Object->Colors = (GifColorType *)calloc(ColorCount, sizeof(GifColorType));
+    if (Object->Colors == (GifColorType *) NULL) {
+	free(Object);
+        return ((ColorMapObject *) NULL);
+    }
+
+    Object->ColorCount = ColorCount;
+    Object->BitsPerPixel = GifBitSize(ColorCount);
+    Object->SortFlag = false;
+
+    if (ColorMap != NULL) {
+        memcpy((char *)Object->Colors,
+               (char *)ColorMap, ColorCount * sizeof(GifColorType));
+    }
+
+    return (Object);
+}
+
+/*******************************************************************************
+Free a color map object
+*******************************************************************************/
+static void
+GifFreeMapObject(ColorMapObject *Object)
+{
+    if (Object != NULL) {
+        (void)free(Object->Colors);
+        (void)free(Object);
+    }
+}
+
+/******************************************************************************
+ Extension record functions                              
+******************************************************************************/
+static int
+GifAddExtensionBlock(int *ExtensionBlockCount,
+		     ExtensionBlock **ExtensionBlocks,
+		     int Function,
+		     unsigned int Len,
+		     unsigned char ExtData[])
+{
+    ExtensionBlock *ep;
+
+    if (*ExtensionBlocks == NULL)
+        *ExtensionBlocks=(ExtensionBlock *)malloc(sizeof(ExtensionBlock));
+    else {
+        ExtensionBlock* ep_new = (ExtensionBlock *)reallocarray
+				 (*ExtensionBlocks, (*ExtensionBlockCount + 1),
+                                      sizeof(ExtensionBlock));
+        if( ep_new == NULL )
+            return (GIF_ERROR);
+        *ExtensionBlocks = ep_new;
+    }
+
+    if (*ExtensionBlocks == NULL)
+        return (GIF_ERROR);
+
+    ep = &(*ExtensionBlocks)[(*ExtensionBlockCount)++];
+
+    ep->Function = Function;
+    ep->ByteCount=Len;
+    ep->Bytes = (GifByteType *)malloc(ep->ByteCount);
+    if (ep->Bytes == NULL)
+        return (GIF_ERROR);
+
+    if (ExtData != NULL) {
+        memcpy(ep->Bytes, ExtData, Len);
+    }
+
+    return (GIF_OK);
+}
+
+static void
+GifFreeExtensions(int *ExtensionBlockCount,
+		  ExtensionBlock **ExtensionBlocks)
+{
+    ExtensionBlock *ep;
+
+    if (*ExtensionBlocks == NULL)
+        return;
+
+    for (ep = *ExtensionBlocks;
+	 ep < (*ExtensionBlocks + *ExtensionBlockCount); 
+	 ep++)
+        (void)free((char *)ep->Bytes);
+    (void)free((char *)*ExtensionBlocks);
+    *ExtensionBlocks = NULL;
+    *ExtensionBlockCount = 0;
+}
+
+/******************************************************************************
+ Image block allocation functions                          
+******************************************************************************/
+
+static void
+GifFreeSavedImages(GifFileType *GifFile)
+{
+    SavedImage *sp;
+
+    if ((GifFile == NULL) || (GifFile->SavedImages == NULL)) {
+        return;
+    }
+    for (sp = GifFile->SavedImages;
+         sp < GifFile->SavedImages + GifFile->ImageCount; sp++) {
+        if (sp->ImageDesc.ColorMap != NULL) {
+            GifFreeMapObject(sp->ImageDesc.ColorMap);
+            sp->ImageDesc.ColorMap = NULL;
+        }
+
+        if (sp->RasterBits != NULL)
+            free((char *)sp->RasterBits);
+	
+	GifFreeExtensions(&sp->ExtensionBlockCount, &sp->ExtensionBlocks);
+    }
+    free((char *)GifFile->SavedImages);
+    GifFile->SavedImages = NULL;
+}
+
+/* end */
+/*****************************************************************************
+
+gif_err.c - handle error reporting for the GIF library.
+
+****************************************************************************/
+
+/*****************************************************************************
+ Return a string description of  the last GIF error
+*****************************************************************************/
+const char *
+GifErrorString(int ErrorCode)
+{
+    const char *Err;
+
+    switch (ErrorCode) {
+      case D_GIF_ERR_OPEN_FAILED:
+        Err = "Failed to open given file";
+        break;
+      case D_GIF_ERR_READ_FAILED:
+        Err = "Failed to read from given file";
+        break;
+      case D_GIF_ERR_NOT_GIF_FILE:
+        Err = "Data is not in GIF format";
+        break;
+      case D_GIF_ERR_NO_SCRN_DSCR:
+        Err = "No screen descriptor detected";
+        break;
+      case D_GIF_ERR_NO_IMAG_DSCR:
+        Err = "No Image Descriptor detected";
+        break;
+      case D_GIF_ERR_NO_COLOR_MAP:
+        Err = "Neither global nor local color map";
+        break;
+      case D_GIF_ERR_WRONG_RECORD:
+        Err = "Wrong record type detected";
+        break;
+      case D_GIF_ERR_DATA_TOO_BIG:
+        Err = "Number of pixels bigger than width * height";
+        break;
+      case D_GIF_ERR_NOT_ENOUGH_MEM:
+        Err = "Failed to allocate required memory";
+        break;
+      case D_GIF_ERR_CLOSE_FAILED:
+        Err = "Failed to close given file";
+        break;
+      case D_GIF_ERR_NOT_READABLE:
+        Err = "Given file was not opened for read";
+        break;
+      case D_GIF_ERR_IMAGE_DEFECT:
+        Err = "Image is defective, decoding aborted";
+        break;
+      case D_GIF_ERR_EOF_TOO_SOON:
+        Err = "Image EOF detected before image complete";
+        break;
+      default:
+        Err = NULL;
+        break;
+    }
+    return Err;
+}
+
+/* end */
+/*	$OpenBSD: reallocarray.c,v 1.1 2014/05/08 21:43:49 deraadt Exp $	*/
+/*
+ * Copyright (c) 2008 Otto Moerbeek <otto@drijf.net>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+/*
+ * This is sqrt(SIZE_MAX+1), as s1*s2 <= SIZE_MAX
+ * if both s1 < MUL_NO_OVERFLOW and s2 < MUL_NO_OVERFLOW
+ */
+#define MUL_NO_OVERFLOW	((size_t)1 << (sizeof(size_t) * 4))
+
+static void *
+reallocarray(void *optr, size_t nmemb, size_t size)
+{
+	if ((nmemb >= MUL_NO_OVERFLOW || size >= MUL_NO_OVERFLOW) &&
+	    nmemb > 0 && SIZE_MAX / nmemb < size) {
+		errno = ENOMEM;
+		return NULL;
+	}
+	return realloc(optr, size * nmemb);
+}
