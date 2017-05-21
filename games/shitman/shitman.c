@@ -22,7 +22,7 @@ void *debug_realloc(void *ip,size_t sz) {
     void *p;
 
     p = realloc(ip,sz);
-    DEBUG("REALLOC(%Fp,%zu) = %Fp",ip,sz,p);
+    DEBUG("REALLOC(%Fp,%zu) = %Fp",(void far*)ip,sz,(void far*)p);
     return p;
 }
 
@@ -30,7 +30,7 @@ void *debug_calloc(size_t n,size_t sz) {
     void *p;
 
     p = calloc(n,sz);
-    DEBUG("CALLOC(%zu x %zu) = %Fp",n,sz,p);
+    DEBUG("CALLOC(%zu x %zu) = %Fp",n,sz,(void far*)p);
     return p;
 }
 
@@ -38,12 +38,12 @@ void *debug_malloc(size_t sz) {
     void *p;
 
     p = malloc(sz);
-    DEBUG("MALLOC(%zu) = %Fp",sz,p);
+    DEBUG("MALLOC(%zu) = %Fp",sz,(void far*)p);
     return p;
 }
 
 void debug_free(void *p) {
-    DEBUG("FREE(%Fp)",p);
+    DEBUG("FREE(%Fp)",(void far*)p);
     free(p);
 }
 
@@ -1515,9 +1515,43 @@ void TitleSequenceAsyncScheduleSlide(unsigned char slot,uint16_t offset,uint8_t 
     next_async_finish();
 }
 
+#define TITLE_GIF_MAX 3
+
+const char *title_gif_path[TITLE_GIF_MAX] = {
+    "title1.gif",
+    "title2.gif",
+    "title3.gif"
+};
+
+GifFileType *title_gif[TITLE_GIF_MAX] = { NULL };
+
+static void TitleGifLoad(unsigned int slot) {
+    if (slot >= TITLE_GIF_MAX)
+        FAIL("title gif slot out of range");
+
+    if (title_gif[slot] == NULL) {
+        if ((title_gif[slot] = LoadGIF(title_gif_path[slot])) == NULL)
+            return;
+    }
+}
+
+static void TitleGifFree(unsigned int slot) {
+    if (slot >= TITLE_GIF_MAX)
+        FAIL("title gif slot out of range");
+
+    title_gif[slot] = FreeGIF(title_gif[slot]);
+}
+
+void TitleGifFreeAll(void) {
+    unsigned int i;
+
+    for (i=0;i < TITLE_GIF_MAX;i++)
+        TitleGifFree(i);
+}
+
 void TitleSequence(void) {
-    unsigned char hurry=0;
-    GifFileType *gif;
+    unsigned char hurry = 0;
+    unsigned int i;
     int c;
 
     halt_async();
@@ -1529,49 +1563,20 @@ void TitleSequence(void) {
     /* we use flag slot 0 for title sequence steps. reset now */
     flag_slots[0] = 0;
 
-    /* take title1.gif, load to 0x0000 on screen, palette slot 0 */
-    modex_draw_offset = 0;
-    gif = LoadGIF("title1.gif");
-    GIF_GlobalColorTableToPaletteSlot(0,gif);
-    DrawGIF(0,0,gif,0);
-    FreeGIF(gif);
+    for (i=0;i < TITLE_GIF_MAX;i++) {
+        modex_draw_offset = 0x4000U * i;
+        TitleGifLoad(/*gif slot*/i);
 
-    TitleSequenceAsyncScheduleSlide(/*slot*/0,/*offset*/modex_draw_offset,'0');
+        GIF_GlobalColorTableToPaletteSlot(/*slot*/i,/*gif*/title_gif[i]);
+        DrawGIF(0,0,title_gif[i],0);
 
-    if (kbhit()) {
-        c = getch();
-        if (c == 27) goto user_abort;
-        else if (c == 13 || c == ' ') hurry = 1;
-    }
+        TitleSequenceAsyncScheduleSlide(/*slot*/i,/*offset*/modex_draw_offset,'0' + i);
 
-    /* take title2.gif, load to 0x4000 on screen, palette slot 1 */
-    modex_draw_offset = 0x4000;
-    gif = LoadGIF("title2.gif");
-    GIF_GlobalColorTableToPaletteSlot(1,gif);
-    DrawGIF(0,0,gif,0);
-    FreeGIF(gif);
-
-    TitleSequenceAsyncScheduleSlide(/*slot*/1,/*offset*/modex_draw_offset,'1');
-
-    if (kbhit()) {
-        c = getch();
-        if (c == 27) goto user_abort;
-        else if (c == 13 || c == ' ') hurry = 1;
-    }
-
-    /* take title3.gif, load to 0x8000 on screen, palette slot 2 */
-    modex_draw_offset = 0x8000;
-    gif = LoadGIF("title3.gif");
-    GIF_GlobalColorTableToPaletteSlot(2,gif);
-    DrawGIF(0,0,gif,0);
-    FreeGIF(gif);
-
-    TitleSequenceAsyncScheduleSlide(/*slot*/2,/*offset*/modex_draw_offset,'2');
-
-    if (kbhit()) {
-        c = getch();
-        if (c == 27) goto user_abort;
-        else if (c == 13 || c == ' ') hurry = 1;
+        if (kbhit()) {
+            c = getch();
+            if (c == 27) goto user_abort;
+            else if (c == 13 || c == ' ') hurry = 1;
+        }
     }
 
     /* while we're waiting, now would be a good time to load fonts */
@@ -2687,6 +2692,7 @@ game_exit:
     unloadFont(&font40_fnt);
     unloadFont(&font22_fnt);
     unloadFont(&font18_fnt);
+    TitleGifFreeAll();
     DEBUG("Timer ticks: %lu ticks / %lu vsync / %lu @ 18.2Hz",
         (unsigned long)timer_irq0_ticks,
         (unsigned long)timer_irq0_ticksvsync,
@@ -2698,6 +2704,7 @@ game_exit:
     _heapmin();
     _heapshrink();
     DEBUG_PRINT_MEM_STATE();
+    _heapchk();
     return 0;
 }
 

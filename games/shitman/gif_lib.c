@@ -763,6 +763,8 @@ int DGifSlurp(GifFileType *GifFile) {
     GifByteType *ExtData;
     int ExtFunction;
 
+    GifFilePrivateType *Private = (GifFilePrivateType *)GifFile->Private;
+
     do {
         if (DGifGetRecordType(GifFile, &RecordType) == GIF_ERROR)
             return (GIF_ERROR);
@@ -826,6 +828,12 @@ int DGifSlurp(GifFileType *GifFile) {
                 break;
         }
     } while (RecordType != TERMINATE_RECORD_TYPE);
+
+    if (Private->File && (fclose(Private->File) != 0)) {
+        GifFile->Error = D_GIF_ERR_CLOSE_FAILED;
+        return GIF_ERROR;
+    }
+    Private->File = NULL;
 
     /* Sanity check for corrupted file */
     if (GifFile->SavedImages.RasterBits == NULL) {
