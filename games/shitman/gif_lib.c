@@ -64,7 +64,6 @@ reallocarray(void *optr, size_t nmemb, size_t size);
 
 static SavedImage *GifMakeSavedImage(GifFileType *GifFile,
                                   const SavedImage *CopyFrom);
-static void GifFreeSavedImages(GifFileType *GifFile);
 
 static GifFileType *DGifOpenFileHandle(int GifFileHandle, int *Error);
 
@@ -107,9 +106,6 @@ GifFileType *DGifOpenFileHandle(int FileHandle, int *Error) {
     }
 
     /*@i1@*/memset(GifFile, '\0', sizeof(GifFileType));
-
-    /* Belt and suspenders, in case the null pointer isn't zero */
-    GifFile->SavedImages = NULL;
 
     Private = (GifFilePrivateType *)calloc(1, sizeof(GifFilePrivateType));
     if (Private == NULL) {
@@ -270,7 +266,6 @@ static int DGifGetImageDesc(GifFileType *GifFile) {
     unsigned int BitsPerPixel;
     GifByteType Buf[3];
     GifFilePrivateType *Private = (GifFilePrivateType *)GifFile->Private;
-    SavedImage *sp;
 
     if (!IS_READABLE(Private)) {
         /* This file was NOT open for reading: */
@@ -296,28 +291,12 @@ static int DGifGetImageDesc(GifFileType *GifFile) {
         return GIF_ERROR;
     }
 
-    if (GifFile->SavedImages) {
-        SavedImage* new_saved_images =
-            (SavedImage *)reallocarray(GifFile->SavedImages,
-                    (GifFile->ImageCount + 1), sizeof(SavedImage));
-        if (new_saved_images == NULL) {
-            GifFile->Error = D_GIF_ERR_NOT_ENOUGH_MEM;
-            return GIF_ERROR;
-        }
-        GifFile->SavedImages = new_saved_images;
-    } else {
-        if ((GifFile->SavedImages =
-                    (SavedImage *) malloc(sizeof(SavedImage))) == NULL) {
-            GifFile->Error = D_GIF_ERR_NOT_ENOUGH_MEM;
-            return GIF_ERROR;
-        }
+    if (GifFile->SavedImages.RasterBits != NULL) {
+        GifFile->Error = D_GIF_ERR_READ_FAILED;
+        return GIF_ERROR;
     }
 
-    sp = &GifFile->SavedImages[GifFile->ImageCount];
-    memcpy(&sp->ImageDesc, &GifFile->Image, sizeof(GifImageDesc));
-    sp->RasterBits = (unsigned char *)NULL;
-
-    GifFile->ImageCount++;
+    memcpy(&GifFile->SavedImages.ImageDesc, &GifFile->Image, sizeof(GifImageDesc));
 
     Private->PixelCount = (long)GifFile->Image.Width *
         (long)GifFile->Image.Height;
@@ -427,9 +406,9 @@ int DGifCloseFile(GifFileType *GifFile, int *ErrorCode) {
     if (GifFile == NULL || GifFile->Private == NULL)
         return GIF_ERROR;
 
-    if (GifFile->SavedImages) {
-        GifFreeSavedImages(GifFile);
-        GifFile->SavedImages = NULL;
+    if (GifFile->SavedImages.RasterBits) {
+        free(GifFile->SavedImages.RasterBits);
+        GifFile->SavedImages.RasterBits = NULL;
     }
 
     Private = (GifFilePrivateType *) GifFile->Private;
@@ -804,7 +783,7 @@ int DGifSlurp(GifFileType *GifFile) {
                 if (DGifGetImageDesc(GifFile) == GIF_ERROR)
                     return (GIF_ERROR);
 
-                sp = &GifFile->SavedImages[GifFile->ImageCount - 1];
+                sp = &GifFile->SavedImages;
                 ImageSize = (uint32_t)sp->ImageDesc.Width * (uint32_t)sp->ImageDesc.Height;
 
                 if (ImageSize == 0 || ImageSize > (uint32_t)(0x7FFFFFFF / sizeof(GifPixelType)))
@@ -860,7 +839,7 @@ int DGifSlurp(GifFileType *GifFile) {
     } while (RecordType != TERMINATE_RECORD_TYPE);
 
     /* Sanity check for corrupted file */
-    if (GifFile->ImageCount == 0) {
+    if (GifFile->SavedImages.RasterBits == NULL) {
         GifFile->Error = D_GIF_ERR_NO_IMAG_DSCR;
         return(GIF_ERROR);
     }
@@ -890,21 +869,6 @@ Free a color map object
 /******************************************************************************
  Image block allocation functions                          
 ******************************************************************************/
-
-static void GifFreeSavedImages(GifFileType *GifFile) {
-    SavedImage *sp;
-
-    if ((GifFile == NULL) || (GifFile->SavedImages == NULL))
-        return;
-
-    for (sp = GifFile->SavedImages;sp < GifFile->SavedImages + GifFile->ImageCount; sp++) {
-        if (sp->RasterBits != NULL)
-            free((char *)sp->RasterBits);
-    }
-
-    free((char *)GifFile->SavedImages);
-    GifFile->SavedImages = NULL;
-}
 
 /* end */
 /*****************************************************************************

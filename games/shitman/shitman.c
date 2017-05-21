@@ -469,14 +469,14 @@ int loadFont(FNTBlob **fnt,const char *fnt_path,const char *gif_path) {
             (*fnt)->gif = NULL;
             return -1;
         }
-        if ((*fnt)->gif->ImageCount == 0) {
-            DEBUG("No GIF images");
+        if ((*fnt)->gif->SavedImages.RasterBits == NULL) {
+            DEBUG("No GIF image");
             DGifCloseFile((*fnt)->gif,&err);
             (*fnt)->gif = NULL;
             return -1;
         }
 
-        (*fnt)->img = &((*fnt)->gif->SavedImages[0]);
+        (*fnt)->img = &((*fnt)->gif->SavedImages);
     }
 
     return 0;
@@ -1323,8 +1323,8 @@ GifFileType *LoadGIF(const char *path) {
         DGifCloseFile(gif,&err);
         return NULL;
     }
-    if (gif->ImageCount == 0) {
-        DEBUG("No GIF images");
+    if (gif->SavedImages.RasterBits == NULL) {
+        DEBUG("No GIF image");
         DGifCloseFile(gif,&err);
         return NULL;
     }
@@ -1335,10 +1335,10 @@ GifFileType *LoadGIF(const char *path) {
 /* NTS: Does NOT load the color palette */
 void DrawGIF(int x,int y,GifFileType *gif,unsigned int index) {
     if (gif == NULL) return;
-    if (index >= gif->ImageCount) return;
+    if (index > 0) return;
 
     {
-        SavedImage *img = &gif->SavedImages[index];
+        SavedImage *img = &gif->SavedImages;
 
         if (img->RasterBits == NULL) return;
         xbitblt(img->ImageDesc.Left+x,img->ImageDesc.Top+y,img->ImageDesc.Width,img->ImageDesc.Height,img->RasterBits);
