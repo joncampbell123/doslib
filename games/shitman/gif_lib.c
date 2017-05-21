@@ -864,14 +864,9 @@ int DGifSlurp(GifFileType *GifFile) {
                     return (GIF_ERROR);
 
                 sp = &GifFile->SavedImages[GifFile->ImageCount - 1];
-                /* Allocate memory for the image */
-                if (sp->ImageDesc.Width < 0 && sp->ImageDesc.Height < 0 &&
-                        sp->ImageDesc.Width > (INT_MAX / sp->ImageDesc.Height)) {
-                    return GIF_ERROR;
-                }
                 ImageSize = (uint32_t)sp->ImageDesc.Width * (uint32_t)sp->ImageDesc.Height;
 
-                if (ImageSize > (uint32_t)(SIZE_MAX / sizeof(GifPixelType)))
+                if (ImageSize == 0 || ImageSize > (uint32_t)(0x7FFFFFFF / sizeof(GifPixelType)))
                     return GIF_ERROR;
 
                 sp->RasterBits = (unsigned char *)reallocarray(NULL, ImageSize,

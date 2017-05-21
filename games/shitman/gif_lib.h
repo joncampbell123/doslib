@@ -29,8 +29,8 @@ extern "C" {
 
 typedef unsigned char GifPixelType;
 typedef unsigned char GifByteType;
-typedef unsigned int GifPrefixType;
-typedef int GifWord;
+typedef unsigned short GifPrefixType;
+typedef unsigned short GifWord;
 
 #pragma pack(push,1)
 typedef struct GifColorType {
@@ -38,17 +38,21 @@ typedef struct GifColorType {
 } GifColorType;
 #pragma pack(pop)
 
+#pragma pack(push,1)
 typedef struct ColorMapObject {
     unsigned short ColorCount;
     unsigned char BitsPerPixel;
     GifColorType Colors[256];    /* on malloc(3) heap */
 } ColorMapObject;
+#pragma pack(pop)
 
+#pragma pack(push,1)
 typedef struct GifImageDesc {
     GifWord Left, Top, Width, Height;   /* Current image dimensions. */
     bool Interlace;                     /* Sequential/Interlaced lines. */
     ColorMapObject *ColorMap;           /* The local color map */
 } GifImageDesc;
+#pragma pack(pop)
 
 typedef struct SavedImage {
     GifImageDesc ImageDesc;
