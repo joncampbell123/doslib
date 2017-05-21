@@ -54,11 +54,14 @@ typedef struct GifImageDesc {
 } GifImageDesc;
 #pragma pack(pop)
 
+#pragma pack(push,1)
 typedef struct SavedImage {
     GifImageDesc ImageDesc;
     GifByteType *RasterBits;         /* on malloc(3) heap */
 } SavedImage;
+#pragma pack(pop)
 
+#pragma pack(push,1)
 typedef struct GifFileType {
     GifWord SWidth, SHeight;         /* Size of virtual canvas */
     GifWord SBackGroundColor;        /* Background color for virtual canvas */
@@ -69,6 +72,7 @@ typedef struct GifFileType {
     signed short int Error;			 /* Last error condition reported */
     void *Private;                   /* Don't mess with this! */
 } GifFileType;
+#pragma pack(pop)
 
 typedef enum {
     UNDEFINED_RECORD_TYPE,
