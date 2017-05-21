@@ -67,6 +67,8 @@ static SavedImage *GifMakeSavedImage(GifFileType *GifFile,
 
 static GifFileType *DGifOpenFileHandle(int GifFileHandle, int *Error);
 
+static GifFilePrivateType GifPrivate;
+
 /******************************************************************************
   Open a new GIF file for read, given by its name.
   Returns dynamically allocated GifFileType pointer which serves as the GIF
@@ -92,9 +94,9 @@ GifFileType *DGifOpenFileName(const char *FileName, int *Error) {
  info record.
 ******************************************************************************/
 GifFileType *DGifOpenFileHandle(int FileHandle, int *Error) {
+    GifFilePrivateType *Private = &GifPrivate;
     char Buf[GIF_STAMP_LEN + 1];
     GifFileType *GifFile;
-    GifFilePrivateType *Private;
     FILE *f;
 
     GifFile = (GifFileType *)malloc(sizeof(GifFileType));
@@ -107,15 +109,6 @@ GifFileType *DGifOpenFileHandle(int FileHandle, int *Error) {
 
     /*@i1@*/memset(GifFile, '\0', sizeof(GifFileType));
 
-    Private = (GifFilePrivateType *)calloc(1, sizeof(GifFilePrivateType));
-    if (Private == NULL) {
-        if (Error != NULL)
-            *Error = D_GIF_ERR_NOT_ENOUGH_MEM;
-        (void)close(FileHandle);
-        free((char *)GifFile);
-        return NULL;
-    }
-
     /*@i1@*/memset(Private, '\0', sizeof(GifFilePrivateType));
 
 #if defined(_WIN32) || defined(TARGET_MSDOS)
@@ -125,7 +118,7 @@ GifFileType *DGifOpenFileHandle(int FileHandle, int *Error) {
     f = fdopen(FileHandle, "rb");    /* Make it into a stream: */
 
     /*@-mustfreeonly@*/
-    GifFile->Private = (void *)Private;
+    GifFile->Private = Private;
     Private->FileHandle = FileHandle;
     Private->File = f;
     Private->FileState = FILE_STATE_READ;
