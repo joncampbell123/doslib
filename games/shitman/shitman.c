@@ -1553,9 +1553,14 @@ const char *title_gif_path[TITLE_GIF_MAX] = {
 GifFileType *gif_slot[GIF_SLOT_MAX] = { NULL };
 const char *gif_slot_path[GIF_SLOT_MAX] = { NULL };
 
-static unsigned int GifSlotLoad(unsigned int slot,const char *path) {
+void GifSlotFree(unsigned int slot);
+
+unsigned int GifSlotLoad(unsigned int slot,const char *path) {
     if (slot >= GIF_SLOT_MAX)
         FAIL("gif slot out of range");
+
+    if (gif_slot_path[slot] != path) /* I'm too cheap to do a strcmp */
+        GifSlotFree(slot);
 
     if (gif_slot[slot] == NULL) {
         DEBUG("Loading %s into GIF slot %u",path,slot);
@@ -1568,7 +1573,7 @@ static unsigned int GifSlotLoad(unsigned int slot,const char *path) {
     return 1;
 }
 
-static void GifSlotFree(unsigned int slot) {
+void GifSlotFree(unsigned int slot) {
     if (slot >= GIF_SLOT_MAX)
         FAIL("gif slot out of range");
 
