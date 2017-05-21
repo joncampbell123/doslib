@@ -43,7 +43,6 @@ typedef struct GifFilePrivateType {
     GifByteType Stack[LZ_MAX_CODE]; /* Decoded pixels are stacked here. */
     GifByteType Suffix[LZ_MAX_CODE + 1];    /* So we can trace the codes. */
     GifPrefixType Prefix[LZ_MAX_CODE + 1];
-    bool gif89;
 } GifFilePrivateType;
 
 #endif /* _GIF_LIB_PRIVATE_H */

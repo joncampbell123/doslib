@@ -161,10 +161,6 @@ GifFileType *DGifOpenFileHandle(int FileHandle, int *Error) {
     }
 
     GifFile->Error = 0;
-
-    /* What version of GIF? */
-    Private->gif89 = (Buf[GIF_VERSION_POS] == '9');
-
     return GifFile;
 }
 
