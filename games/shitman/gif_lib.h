@@ -61,19 +61,14 @@ typedef struct SavedImage {
 
 typedef struct GifFileType {
     GifWord SWidth, SHeight;         /* Size of virtual canvas */
-    GifWord SColorResolution;        /* How many colors can we generate? */
     GifWord SBackGroundColor;        /* Background color for virtual canvas */
-    GifByteType AspectByte;	     /* Used to compute pixel aspect ratio */
     ColorMapObject *SColorMap;       /* Global colormap, NULL if nonexistent. */
-    int ImageCount;                  /* Number of current image (both APIs) */
+    unsigned char ImageCount;        /* Number of current image (both APIs) */
     GifImageDesc Image;              /* Current image (low-level API) */
     SavedImage *SavedImages;         /* Image sequence (high-level API) */
-    int Error;			     /* Last error condition reported */
-    void *UserData;                  /* hook to attach user data (TVT) */
+    signed short int Error;			 /* Last error condition reported */
     void *Private;                   /* Don't mess with this! */
 } GifFileType;
-
-#define GIF_ASPECT_RATIO(n)	((n)+15.0/64.0)
 
 typedef enum {
     UNDEFINED_RECORD_TYPE,

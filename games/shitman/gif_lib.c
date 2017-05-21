@@ -136,7 +136,6 @@ GifFileType *DGifOpenFileHandle(int FileHandle, int *Error) {
     Private->FileHandle = FileHandle;
     Private->File = f;
     Private->FileState = FILE_STATE_READ;
-    GifFile->UserData = NULL;    /* TVT */
     /*@=mustfreeonly@*/
 
     /* Let's see if this is a GIF file: */
@@ -203,11 +202,9 @@ static int DGifGetScreenDesc(GifFileType *GifFile) {
         GifFile->SColorMap = NULL;
         return GIF_ERROR;
     }
-    GifFile->SColorResolution = (((Buf[0] & 0x70) + 1) >> 4) + 1;
     SortFlag = (Buf[0] & 0x08) != 0;
     BitsPerPixel = (Buf[0] & 0x07) + 1;
     GifFile->SBackGroundColor = Buf[1];
-    GifFile->AspectByte = Buf[2]; 
     if (Buf[0] & 0x80) {    /* Do we have global color map? */
         int i;
 
