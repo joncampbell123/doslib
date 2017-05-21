@@ -863,7 +863,7 @@ void DEBUG_PRINT_MEM_STATE(void) {
         for (;;) {
             if (_heapwalk(&h_info) != _HEAPOK) break;
             DEBUG(" - %s block at %Fp of size %u (0x%X) bytes",
-                (h_info._useflag ? "USED" : "FREE"),
+                (h_info._useflag == _USEDENTRY ? "USED" : "FREE"),
                 h_info._pentry,h_info._size,h_info._size);
         }
         DEBUG("--Done");
