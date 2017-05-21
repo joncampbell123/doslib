@@ -2547,6 +2547,16 @@ void MenuPhase(void) {
                     userctrl = 0;
                     exiting = 1;
                 }
+                else if (c == 't') {
+                    /* debug option, main menu only, trigger title again */
+                    if (menuItem >= 0 && !storymode) {
+                        menuList[menuItem].f.hilighted = 0;
+                        menu_transition = 1;
+                        menuItem = -2;
+                        userctrl = 0;
+                        exiting = 1;
+                    }
+                }
                 else if (c == 13) {
                     /* take selection */
                     if (menuItem >= 0 && !storymode) {
