@@ -50,7 +50,6 @@ typedef struct ColorMapObject {
 typedef struct GifImageDesc {
     GifWord Left, Top, Width, Height;   /* Current image dimensions. */
     bool Interlace;                     /* Sequential/Interlaced lines. */
-    ColorMapObject *ColorMap;           /* The local color map */
 } GifImageDesc;
 #pragma pack(pop)
 

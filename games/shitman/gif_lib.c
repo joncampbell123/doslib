@@ -296,41 +296,15 @@ static int DGifGetImageDesc(GifFileType *GifFile) {
         return GIF_ERROR;
     if (READ(GifFile, Buf, 1) != 1) {
         GifFile->Error = D_GIF_ERR_READ_FAILED;
-        GifFreeMapObject(GifFile->Image.ColorMap);
-        GifFile->Image.ColorMap = NULL;
         return GIF_ERROR;
     }
     BitsPerPixel = (Buf[0] & 0x07) + 1;
     GifFile->Image.Interlace = (Buf[0] & 0x40) ? true : false;
 
-    /* Setup the colormap */
-    if (GifFile->Image.ColorMap) {
-        GifFreeMapObject(GifFile->Image.ColorMap);
-        GifFile->Image.ColorMap = NULL;
-    }
     /* Does this image have local color map? */
     if (Buf[0] & 0x80) {
-        unsigned int i;
-
-        GifFile->Image.ColorMap = GifMakeMapObject(1 << BitsPerPixel, NULL);
-        if (GifFile->Image.ColorMap == NULL) {
-            GifFile->Error = D_GIF_ERR_NOT_ENOUGH_MEM;
-            return GIF_ERROR;
-        }
-
-        /* Get the image local color map: */
-        for (i = 0; i < GifFile->Image.ColorMap->ColorCount; i++) {
-            /* coverity[check_return] */
-            if (READ(GifFile, Buf, 3) != 3) {
-                GifFreeMapObject(GifFile->Image.ColorMap);
-                GifFile->Error = D_GIF_ERR_READ_FAILED;
-                GifFile->Image.ColorMap = NULL;
-                return GIF_ERROR;
-            }
-            GifFile->Image.ColorMap->Colors[i].Red = Buf[0];
-            GifFile->Image.ColorMap->Colors[i].Green = Buf[1];
-            GifFile->Image.ColorMap->Colors[i].Blue = Buf[2];
-        }
+        GifFile->Error = D_GIF_ERR_READ_FAILED;
+        return GIF_ERROR;
     }
 
     if (GifFile->SavedImages) {
@@ -352,15 +326,6 @@ static int DGifGetImageDesc(GifFileType *GifFile) {
 
     sp = &GifFile->SavedImages[GifFile->ImageCount];
     memcpy(&sp->ImageDesc, &GifFile->Image, sizeof(GifImageDesc));
-    if (GifFile->Image.ColorMap != NULL) {
-        sp->ImageDesc.ColorMap = GifMakeMapObject(
-                GifFile->Image.ColorMap->ColorCount,
-                GifFile->Image.ColorMap->Colors);
-        if (sp->ImageDesc.ColorMap == NULL) {
-            GifFile->Error = D_GIF_ERR_NOT_ENOUGH_MEM;
-            return GIF_ERROR;
-        }
-    }
     sp->RasterBits = (unsigned char *)NULL;
 
     GifFile->ImageCount++;
@@ -472,11 +437,6 @@ int DGifCloseFile(GifFileType *GifFile, int *ErrorCode) {
 
     if (GifFile == NULL || GifFile->Private == NULL)
         return GIF_ERROR;
-
-    if (GifFile->Image.ColorMap) {
-        GifFreeMapObject(GifFile->Image.ColorMap);
-        GifFile->Image.ColorMap = NULL;
-    }
 
     if (GifFile->SColorMap) {
         GifFreeMapObject(GifFile->SColorMap);
@@ -996,19 +956,14 @@ static void GifFreeMapObject(ColorMapObject *Object) {
 static void GifFreeSavedImages(GifFileType *GifFile) {
     SavedImage *sp;
 
-    if ((GifFile == NULL) || (GifFile->SavedImages == NULL)) {
+    if ((GifFile == NULL) || (GifFile->SavedImages == NULL))
         return;
-    }
-    for (sp = GifFile->SavedImages;
-            sp < GifFile->SavedImages + GifFile->ImageCount; sp++) {
-        if (sp->ImageDesc.ColorMap != NULL) {
-            GifFreeMapObject(sp->ImageDesc.ColorMap);
-            sp->ImageDesc.ColorMap = NULL;
-        }
 
+    for (sp = GifFile->SavedImages;sp < GifFile->SavedImages + GifFile->ImageCount; sp++) {
         if (sp->RasterBits != NULL)
             free((char *)sp->RasterBits);
     }
+
     free((char *)GifFile->SavedImages);
     GifFile->SavedImages = NULL;
 }
