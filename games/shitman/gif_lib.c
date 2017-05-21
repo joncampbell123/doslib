@@ -55,8 +55,6 @@ static int DGifGetCode(GifFileType *GifFile, int *GifCodeSize,
                 GifByteType **GifCodeBlock);
 static int DGifGetCodeNext(GifFileType *GifFile, GifByteType **GifCodeBlock);
 
-static unsigned char GifBitSize(int n);
-
 static ColorMapObject *GifMakeMapObject(int ColorCount,
                                      const GifColorType *ColorMap);
 static void GifFreeMapObject(ColorMapObject *Object);
@@ -112,7 +110,6 @@ GifFileType *DGifOpenFileHandle(int FileHandle, int *Error) {
 
     /* Belt and suspenders, in case the null pointer isn't zero */
     GifFile->SavedImages = NULL;
-    GifFile->SColorMap = NULL;
 
     Private = (GifFilePrivateType *)calloc(1, sizeof(GifFilePrivateType));
     if (Private == NULL) {
@@ -198,8 +195,6 @@ static int DGifGetScreenDesc(GifFileType *GifFile) {
 
     if (READ(GifFile, Buf, 3) != 3) {
         GifFile->Error = D_GIF_ERR_READ_FAILED;
-        GifFreeMapObject(GifFile->SColorMap);
-        GifFile->SColorMap = NULL;
         return GIF_ERROR;
     }
     SortFlag = (Buf[0] & 0x08) != 0;
@@ -208,28 +203,22 @@ static int DGifGetScreenDesc(GifFileType *GifFile) {
     if (Buf[0] & 0x80) {    /* Do we have global color map? */
         int i;
 
-        GifFile->SColorMap = GifMakeMapObject(1 << BitsPerPixel, NULL);
-        if (GifFile->SColorMap == NULL) {
-            GifFile->Error = D_GIF_ERR_NOT_ENOUGH_MEM;
-            return GIF_ERROR;
-        }
+        GifFile->SColorMap.ColorCount = 1 << BitsPerPixel;
+        GifFile->SColorMap.BitsPerPixel = BitsPerPixel;
 
         /* Get the global color map: */
-//        GifFile->SColorMap->SortFlag = SortFlag;
-        for (i = 0; i < GifFile->SColorMap->ColorCount; i++) {
+        for (i = 0; i < GifFile->SColorMap.ColorCount; i++) {
             /* coverity[check_return] */
             if (READ(GifFile, Buf, 3) != 3) {
-                GifFreeMapObject(GifFile->SColorMap);
-                GifFile->SColorMap = NULL;
                 GifFile->Error = D_GIF_ERR_READ_FAILED;
                 return GIF_ERROR;
             }
-            GifFile->SColorMap->Colors[i].Red = Buf[0];
-            GifFile->SColorMap->Colors[i].Green = Buf[1];
-            GifFile->SColorMap->Colors[i].Blue = Buf[2];
+            GifFile->SColorMap.Colors[i].Red = Buf[0];
+            GifFile->SColorMap.Colors[i].Green = Buf[1];
+            GifFile->SColorMap.Colors[i].Blue = Buf[2];
         }
     } else {
-        GifFile->SColorMap = NULL;
+        GifFile->SColorMap.ColorCount = 0;
     }
 
     return GIF_OK;
@@ -437,11 +426,6 @@ int DGifCloseFile(GifFileType *GifFile, int *ErrorCode) {
 
     if (GifFile == NULL || GifFile->Private == NULL)
         return GIF_ERROR;
-
-    if (GifFile->SColorMap) {
-        GifFreeMapObject(GifFile->SColorMap);
-        GifFile->SColorMap = NULL;
-    }
 
     if (GifFile->SavedImages) {
         GifFreeSavedImages(GifFile);
@@ -895,59 +879,13 @@ int DGifSlurp(GifFileType *GifFile) {
  Miscellaneous utility functions                          
 ******************************************************************************/
 
-/* return smallest bitfield size n will fit in */
-static unsigned char GifBitSize(int n) {
-    register unsigned char i;
-
-    for (i = 1; i <= 8; i++)
-        if ((1 << i) >= n)
-            break;
-
-    return (i);
-}
-
 /******************************************************************************
   Color map object functions                              
 ******************************************************************************/
 
-/*
- * Allocate a color map of given size; initialize with contents of
- * ColorMap if that pointer is non-NULL.
- */
-static ColorMapObject *GifMakeMapObject(int ColorCount, const GifColorType *ColorMap) {
-    ColorMapObject *Object;
-
-    /*** FIXME: Our ColorCount has to be a power of two.  Is it necessary to
-     * make the user know that or should we automatically round up instead? */
-    if (ColorCount != (1 << GifBitSize(ColorCount))) {
-        return ((ColorMapObject *) NULL);
-    }
-
-    Object = (ColorMapObject *)malloc(sizeof(ColorMapObject));
-    if (Object == (ColorMapObject *) NULL) {
-        return ((ColorMapObject *) NULL);
-    }
-
-    Object->ColorCount = ColorCount;
-    Object->BitsPerPixel = GifBitSize(ColorCount);
-
-    if (ColorMap != NULL) {
-        memcpy((char *)Object->Colors,
-                (char *)ColorMap, ColorCount * sizeof(GifColorType));
-    }
-
-    return (Object);
-}
-
 /*******************************************************************************
 Free a color map object
 *******************************************************************************/
-static void GifFreeMapObject(ColorMapObject *Object) {
-    if (Object != NULL) {
-        (void)free(Object->Colors);
-        (void)free(Object);
-    }
-}
 
 /******************************************************************************
  Image block allocation functions                          

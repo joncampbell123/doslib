@@ -64,7 +64,7 @@ typedef struct SavedImage {
 typedef struct GifFileType {
     GifWord SWidth, SHeight;         /* Size of virtual canvas */
     GifWord SBackGroundColor;        /* Background color for virtual canvas */
-    ColorMapObject *SColorMap;       /* Global colormap, NULL if nonexistent. */
+    ColorMapObject SColorMap;        /* Global colormap, NULL if nonexistent. */
     unsigned char ImageCount;        /* Number of current image (both APIs) */
     GifImageDesc Image;              /* Current image (low-level API) */
     SavedImage *SavedImages;         /* Image sequence (high-level API) */

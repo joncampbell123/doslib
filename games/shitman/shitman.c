@@ -1349,16 +1349,12 @@ void DrawGIF(int x,int y,GifFileType *gif,unsigned int index) {
 void GIF_GlobalColorTableToPaletteSlot(unsigned int slot,GifFileType *gif) {
     if (gif == NULL) return;
     if (slot >= MAX_PAL_SLOTS) return;
-    if (gif->SColorMap == NULL) return;
 
     {
-        ColorMapObject *c = gif->SColorMap;
-        GifColorType *color = c->Colors;
+        GifColorType *color = gif->SColorMap.Colors;
         unsigned int i;
 
-        if (c->Colors == 0) return;
-
-        for (i=0;i < c->ColorCount;i++) {
+        for (i=0;i < gif->SColorMap.ColorCount;i++) {
             pal_slots[slot].pal[i].r = color[i].Red >> 2;
             pal_slots[slot].pal[i].g = color[i].Green >> 2;
             pal_slots[slot].pal[i].b = color[i].Blue >> 2;
