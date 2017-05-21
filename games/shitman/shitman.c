@@ -2313,7 +2313,7 @@ void MenuPhase(void) {
 
     /* menu loop */
     menu_last_user_input = timer_irq0_ticksvsync;
-    menu_user_input_timeout = 70 * 10; // 10 seconds on main screen, before timing out and going back to title
+    menu_user_input_timeout = 70 * 30; // 30 seconds on main screen, before timing out and going back to title
     modex_init();
     do {
         /* menu transition and fullredraw:
