@@ -1540,8 +1540,6 @@ void TitleSequenceAsyncScheduleSlide(unsigned char slot,uint16_t offset,uint8_t 
     next_async_finish();
 }
 
-#define GIF_SLOT_MAX 32
-
 #define TITLE_GIF_MAX 3
 
 const char *title_gif_path[TITLE_GIF_MAX] = {
@@ -1549,6 +1547,8 @@ const char *title_gif_path[TITLE_GIF_MAX] = {
     "title2.gif",
     "title3.gif"
 };
+
+#define GIF_SLOT_MAX 32
 
 GifFileType *gif_slot[GIF_SLOT_MAX] = { NULL };
 const char *gif_slot_path[GIF_SLOT_MAX] = { NULL };
