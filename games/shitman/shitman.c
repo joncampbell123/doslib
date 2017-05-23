@@ -416,10 +416,6 @@ fail:
     return -1;
 }
 
-FNTBlob*                    font18_fnt = NULL;
-FNTBlob*                    font22_fnt = NULL;
-FNTBlob*                    font40_fnt = NULL;
-
 enum {
     FONT_18=0,
     FONT_22,
@@ -428,11 +424,11 @@ enum {
     MAX_FONT
 };
 
-FNTBlob**                   font_fnts[MAX_FONT] = {
-    &font18_fnt,
-    &font22_fnt,
-    &font40_fnt
-};
+FNTBlob*                    font_fnts[MAX_FONT] = { NULL };
+
+#define font18_fnt          (font_fnts[FONT_18])
+#define font22_fnt          (font_fnts[FONT_22])
+#define font40_fnt          (font_fnts[FONT_40])
 
 int loadFont(FNTBlob **fnt,const char *fnt_path,const char *gif_path) {
     int err;
@@ -2101,7 +2097,7 @@ void menu_item_layout(menu_item *m,int left_x,int right_x,int top_y,int16_t *ite
         return;
 
     for (;m->text != NULL;m++,i++) {
-        com = FNTBlob_get_common(*font_fnts[m->fontnum]);
+        com = FNTBlob_get_common(font_fnts[m->fontnum]);
 
         m->p.x = left_x;
         m->p.w = right_x + 1 - left_x;
@@ -2270,7 +2266,7 @@ void MenuPhaseDrawItemRender(menu_item *m,unsigned int menu_top_offset,const uns
     else
         font_prep_xbitblt_at(menu_font_base_gray_on_black);
 
-    font_str_bitblt_center(*font_fnts[m->fontnum],0,m->p.w/2U,0,m->text);
+    font_str_bitblt_center(font_fnts[m->fontnum],0,m->p.w/2U,0,m->text);
 }
  
 void MenuPhaseDrawItemBlit(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
