@@ -317,13 +317,6 @@ void FNTBlob_ascii_lookup_build(FNTBlob *b) {
     }
 }
 
-FNTBlob *FNTBlob_alloc(void) {
-    FNTBlob *b = malloc(sizeof(*b));
-    if (b == NULL) return NULL;
-    memset(b,0,sizeof(*b));
-    return b;
-}
-
 void FNTBlob_free_gif(FNTBlob *b) {
     int err;
 
@@ -344,14 +337,9 @@ void FNTBlob_free_raw(FNTBlob *b) {
     for (i=0;i < (5-1);i++) b->block_ofs[i] = 0;
 }
 
-FNTBlob *FNTBlob_free(FNTBlob *b) {
-    if (b != NULL) {
-        FNTBlob_free_raw(b);
-        FNTBlob_free_gif(b);
-        free(b);
-    }
-
-    return NULL;
+void FNTBlob_unload(FNTBlob *b) {
+    FNTBlob_free_raw(b);
+    FNTBlob_free_gif(b);
 }
 
 int FNTBlob_load(FNTBlob *b,const char *path) {
@@ -424,62 +412,71 @@ enum {
     MAX_FONT
 };
 
-FNTBlob*                    font_fnts[MAX_FONT] = { NULL };
+const char *font_fnts_path[MAX_FONT][2] = {
+    /* FNT */               /* GIF */
+    { "font18.fnt",         "font18.gif" },
+    { "font22.fnt",         "font22.gif" },
+    { "font40.fnt",         "font40.gif" }
+};
+
+FNTBlob font_fnts[MAX_FONT]; /* not initialized at startup */
+
+void initFonts(void) {
+    memset(font_fnts,0,sizeof(font_fnts));
+}
 
 #define font18_fnt          (font_fnts[FONT_18])
 #define font22_fnt          (font_fnts[FONT_22])
 #define font40_fnt          (font_fnts[FONT_40])
 
-int loadFont(FNTBlob **fnt,const char *fnt_path,const char *gif_path) {
+int loadFont(FNTBlob *fnt,const char *fnt_path,const char *gif_path) {
     int err;
 
-    if (*fnt == NULL) {
-        *fnt = FNTBlob_alloc();
-        if (*fnt == NULL) return -1;
-    }
-
-    if ((*fnt)->raw == NULL && fnt_path != NULL) {
+    if (fnt->raw == NULL && fnt_path != NULL) {
         DEBUG("Loading font FNT=%s",fnt_path);
 
-        if (FNTBlob_load(*fnt,fnt_path) < 0) {
+        if (FNTBlob_load(fnt,fnt_path) < 0) {
             DEBUG("Font load FNT=%s failed",fnt_path);
             return -1;
         }
 
-        FNTBlob_ascii_lookup_build(*fnt);
+        FNTBlob_ascii_lookup_build(fnt);
     }
 
-    if ((*fnt)->gif == NULL && gif_path != NULL) {
+    if (fnt->gif == NULL && gif_path != NULL) {
         DEBUG("Loading font GIF=%s",gif_path);
 
-        (*fnt)->gif = DGifOpenFileName(gif_path,&err);
-        if ((*fnt)->gif == NULL) {
+        fnt->gif = DGifOpenFileName(gif_path,&err);
+        if (fnt->gif == NULL) {
             DEBUG("Font load GIF=%s failed",gif_path);
             return -1;
         }
 
         /* TODO: How do we read only the first image? */
-        if (DGifSlurp((*fnt)->gif) != GIF_OK) {
-            DEBUG("DGifSlurp failed Error=%u %s",(*fnt)->gif->Error,GifErrorString((*fnt)->gif->Error));
-            DGifCloseFile((*fnt)->gif,&err);
-            (*fnt)->gif = NULL;
+        if (DGifSlurp(fnt->gif) != GIF_OK) {
+            DEBUG("DGifSlurp failed Error=%u %s",fnt->gif->Error,GifErrorString(fnt->gif->Error));
+            DGifCloseFile(fnt->gif,&err);
+            fnt->gif = NULL;
             return -1;
         }
-        if ((*fnt)->gif->SavedImages.RasterBits == NULL) {
+        if (fnt->gif->SavedImages.RasterBits == NULL) {
             DEBUG("No GIF image");
-            DGifCloseFile((*fnt)->gif,&err);
-            (*fnt)->gif = NULL;
+            DGifCloseFile(fnt->gif,&err);
+            fnt->gif = NULL;
             return -1;
         }
 
-        (*fnt)->img = &((*fnt)->gif->SavedImages);
+        fnt->img = &(fnt->gif->SavedImages);
     }
 
     return 0;
 }
 
-void unloadFont(FNTBlob **fnt) {
-    if (*fnt != NULL) *fnt = FNTBlob_free(*fnt);
+void unloadFont(unsigned int i) {
+    if (i >= MAX_FONT)
+        FAIL("unloadFont out of range");
+
+    FNTBlob_unload(&font_fnts[i]);
 }
 
 /* flag slots */
@@ -1366,27 +1363,28 @@ void GifSlotFreeAll(void);
 void GifSlotFreeOne(void);
 
 void unload_all_fonts(void) {
-    unloadFont(&font40_fnt);
-    unloadFont(&font22_fnt);
-    unloadFont(&font18_fnt);
+    unsigned int i;
+
+    for (i=0;i < MAX_FONT;i++)
+        unloadFont(i);
 }
 
 void load_all_fonts(void) {
+    unsigned int i;
     int retry = 3;
-    int fail;
 
     /* load fonts */
+    for (i=0;i < MAX_FONT;i++) {
 again:
-    fail = 0;
-    if (loadFont(&font18_fnt,"font18.fnt","font18.gif") < 0) fail++;
-    if (loadFont(&font22_fnt,"font22.fnt","font22.gif") < 0) fail++;
-    if (loadFont(&font40_fnt,"font40.fnt","font40.gif") < 0) fail++;
-
-    if (fail != 0) {
-        if (--retry == 0) FAIL("Unable to load fonts");
-        DEBUG("Unable to load all fonts. Freeing other resident GIFs, will try again");
-        GifSlotFreeOne();
-        goto again;
+        if (loadFont(
+                &font_fnts[i],
+                font_fnts_path[i][0],
+                font_fnts_path[i][1]) < 0) {
+            if (--retry == 0) FAIL("Unable to load fonts");
+            DEBUG("Unable to load all fonts. Freeing other resident GIFs, will try again");
+            GifSlotFreeOne();
+            goto again;
+        }
     }
 }
 
@@ -2097,7 +2095,7 @@ void menu_item_layout(menu_item *m,int left_x,int right_x,int top_y,int16_t *ite
         return;
 
     for (;m->text != NULL;m++,i++) {
-        com = FNTBlob_get_common(font_fnts[m->fontnum]);
+        com = FNTBlob_get_common(&font_fnts[m->fontnum]);
 
         m->p.x = left_x;
         m->p.w = right_x + 1 - left_x;
@@ -2266,7 +2264,7 @@ void MenuPhaseDrawItemRender(menu_item *m,unsigned int menu_top_offset,const uns
     else
         font_prep_xbitblt_at(menu_font_base_gray_on_black);
 
-    font_str_bitblt_center(font_fnts[m->fontnum],0,m->p.w/2U,0,m->text);
+    font_str_bitblt_center(&font_fnts[m->fontnum],0,m->p.w/2U,0,m->text);
 }
  
 void MenuPhaseDrawItemBlit(menu_item *m,unsigned int menu_top_offset,const unsigned char menu_h,unsigned int tmp_offset,int menuScroll) {
@@ -2463,10 +2461,10 @@ void MenuPhase(void) {
 
             if (menuListIdent == MENULIST_MAIN) {
                 font_prep_xbitblt_at(menu_font_base_yellow_on_brown);
-                font_str_bitblt_center(font40_fnt,0,title_text_x,title_text_y,"Shit Man\n");
+                font_str_bitblt_center(&font40_fnt,0,title_text_x,title_text_y,"Shit Man\n");
 
                 font_prep_xbitblt_at(menu_font_base_white_on_brown);
-                font_str_bitblt_center(font22_fnt,0,title_text_x,subtitle_text_y,"The start of a shitty adventure");
+                font_str_bitblt_center(&font22_fnt,0,title_text_x,subtitle_text_y,"The start of a shitty adventure");
             }
             else {
                 const char *msg;
@@ -2487,11 +2485,11 @@ void MenuPhase(void) {
                 };
 
                 font_prep_xbitblt_at(menu_font_base_yellow_on_brown);
-                font_str_bitblt_center(font40_fnt,0,title_text_x,title_text_y,msg);
+                font_str_bitblt_center(&font40_fnt,0,title_text_x,title_text_y,msg);
             }
 
             font_prep_xbitblt_at(menu_font_base_gray_on_black);
-            font_str_bitblt_center(font18_fnt,0,160,199 - 15,"\xC2\xA9"/*Copyright symbol, UTF-8*/ " 2017 DOSLIB, Hackipedia");
+            font_str_bitblt_center(&font18_fnt,0,160,199 - 15,"\xC2\xA9"/*Copyright symbol, UTF-8*/ " 2017 DOSLIB, Hackipedia");
 
             for (i=0;i < menu_items;i++)
                 MenuPhaseDrawItem(menuList+i,menu_top_offset,menu_top[1] + 1 - menu_top[0],tmp_offset,menuScroll);
@@ -2742,6 +2740,7 @@ int main(int argc,char **argv) {
     if (!initial_sys_check())
         return 1;
 
+    initFonts();
     int10_setmode(0x13); /* 320x200x256-color */
     update_state_from_vga();
     vga_enable_256color_modex();
