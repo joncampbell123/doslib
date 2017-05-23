@@ -586,10 +586,11 @@ void async_flush(void);
 
 /* do not call from interrupt */
 AsyncEvent *next_async(void) {
-    if (async_event_write >= MAX_ASYNC_EVENT)
+    if (async_event_write >= MAX_ASYNC_EVENT) {
         async_flush();
-    if (async_event_write >= MAX_ASYNC_EVENT)
-        FAIL("Too many async events");
+        if (async_event_write >= MAX_ASYNC_EVENT)
+            FAIL("Too many async events");
+    }
 
     return &async_events[async_event_write];
 }
