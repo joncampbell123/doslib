@@ -98,7 +98,7 @@ enum {
     MENULIST_MAX
 };
 
-menu_item *menuLists[MENULIST_MAX] = {
+static menu_item * const menuLists[MENULIST_MAX] = {
     main_menu,              // 0
     new_game_menu,
     story_menu,
@@ -412,7 +412,7 @@ enum {
     MAX_FONT
 };
 
-const char *font_fnts_path[MAX_FONT][2] = {
+static const char *font_fnts_path[MAX_FONT][2] = {
     /* FNT */               /* GIF */
     { "font18.fnt",         "font18.gif" },
     { "font22.fnt",         "font22.gif" },
@@ -1060,7 +1060,7 @@ void xbitblt_nc_noblack_bias(unsigned int x,unsigned int y,unsigned int w,unsign
 
 typedef void (*xbitblt_nc_func)(unsigned int x,unsigned int y,unsigned int w,unsigned int h,unsigned int bits_stride,unsigned char *bits);
 
-static xbitblt_nc_func xbitblt_nc_functable[BITBLT_MAX] = {
+static const xbitblt_nc_func xbitblt_nc_functable[BITBLT_MAX] = {
     xbitblt_nc,                     // BLOCK
     xbitblt_nc_noblack,             // NOBLACK
     xbitblt_nc_noblack_bias         // NOBLACK_BIAS
@@ -1536,7 +1536,7 @@ void TitleSequenceAsyncScheduleSlide(unsigned char slot,uint16_t offset,uint8_t 
 
 #define TITLE_GIF_MAX 3
 
-const char *title_gif_path[TITLE_GIF_MAX] = {
+static const char * const title_gif_path[TITLE_GIF_MAX] = {
     "title1.gif",
     "title2.gif",
     "title3.gif"
@@ -1544,8 +1544,13 @@ const char *title_gif_path[TITLE_GIF_MAX] = {
 
 #define GIF_SLOT_MAX 32
 
-GifFileType *gif_slot[GIF_SLOT_MAX] = { NULL };
-const char *gif_slot_path[GIF_SLOT_MAX] = { NULL };
+GifFileType *gif_slot[GIF_SLOT_MAX];
+const char *gif_slot_path[GIF_SLOT_MAX];
+
+void GifSlotInit(void) {
+    memset(gif_slot,0,sizeof(gif_slot));
+    memset(gif_slot_path,0,sizeof(gif_slot_path));
+}
 
 void GifSlotFree(unsigned int slot);
 
@@ -1733,7 +1738,7 @@ void menu_cmd_settings(void) {
 void menu_cmd_new_game_diffselect(void) {
 }
 
-menu_cmd_t menu_command_func[MENU_CMD_MAX] = {
+static const menu_cmd_t menu_command_func[MENU_CMD_MAX] = {
     menu_cmd_exit,                              // 0
     menu_cmd_new_game,
     menu_cmd_quit_game,
@@ -2741,6 +2746,7 @@ int main(int argc,char **argv) {
         return 1;
 
     initFonts();
+    GifSlotInit();
     int10_setmode(0x13); /* 320x200x256-color */
     update_state_from_vga();
     vga_enable_256color_modex();
