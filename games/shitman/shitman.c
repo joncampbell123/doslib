@@ -18,6 +18,7 @@
 
 void DEBUG(const char *fmt,...);
 
+#if defined(MEM_DEBUG)
 void *debug_realloc(void *ip,size_t sz) {
     void *p;
 
@@ -46,6 +47,7 @@ void debug_free(void *p) {
     DEBUG("FREE(%Fp)",(void far*)p);
     free(p);
 }
+#endif
 
 #include "dbmalloc.h"
 
@@ -156,7 +158,7 @@ void game_running_state_set(const unsigned char state) {
     game_running_state = state;
 }
 
-unsigned char game_running_state_stack_is_empty(void) {
+static inline unsigned char game_running_state_stack_is_empty(void) {
     return (game_running_state_stack_sp == 0);
 }
 
