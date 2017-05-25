@@ -181,7 +181,7 @@ int main() {
             s = *((unsigned short far*)(p+8));
             printf("- CP/M compatibility CALL FAR to %04X:%04X\n",s,o);
 
-            /* the pointer is always F01D:FEEE or F01D:FEF0 for some odd reason.
+            /* the pointer is always F01D:FEEE (from DEBUG.COM) or F01D:FEF0 (when running a program) for some odd reason.
              * it always points at a JMP FAR instruction. */
             {
                 unsigned char far *j = MK_FP(s,o);
