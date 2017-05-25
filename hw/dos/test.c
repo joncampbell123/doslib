@@ -166,6 +166,45 @@ int main() {
 			vcpi_minor_version);
 	}
 
+#if TARGET_MSDOS == 16 && !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+    {
+        /* handy! Open Watcom headers have a handy _psp pointer we can use! */
+        unsigned char far *p = MK_FP(_psp,0);
+
+        printf("My PSP segment is at: %Fp\n",p);
+
+        /* show where the mysterious CP/M compat. call goes */
+        if (p[5] == 0x9A) {
+            unsigned short s,o;
+
+            o = *((unsigned short far*)(p+6));
+            s = *((unsigned short far*)(p+8));
+            printf("- CP/M compatibility CALL FAR to %04X:%04X\n",s,o);
+
+            /* the pointer is always F01D:FEEE or F01D:FEF0 for some odd reason.
+             * it always points at a JMP FAR instruction. */
+            {
+                unsigned char far *j = MK_FP(s,o);
+
+                if (*j == 0xEA) {
+                    unsigned short js,jo;
+
+                    jo = *((unsigned short far*)(j+1));
+                    js = *((unsigned short far*)(j+3));
+                    printf("- ...which points to a JMP FAR to %04X:%04X\n",js,jo);
+                }
+            }
+        }
+        else if (p[5] == 0xEA) { /* DOSBox encodes a JMP to bullshit this part */
+            unsigned short s,o;
+
+            o = *((unsigned short*)(p+6));
+            s = *((unsigned short*)(p+8));
+            printf("- CP/M compatibility JMP FAR to %04X:%04X\n",s,o);
+        }
+    }
+#endif
+
 #ifdef WINFCON_STOCK_WIN_MAIN
 	{
 		char c;
