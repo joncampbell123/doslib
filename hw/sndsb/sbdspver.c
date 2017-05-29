@@ -32,20 +32,18 @@
 #endif
 
 int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
-	int a,b;
+    unsigned char tmp[2];
 
 	if (!sndsb_write_dsp(cx,SNDSB_DSPCMD_GET_VERSION))
 		return 0;
 
-	if ((a=sndsb_read_dsp(cx)) < 0)
-		return 0;
-	if ((b=sndsb_read_dsp(cx)) < 0)
-		return 0;
-	if (a == 0xFF || b == 0xFF)
+    if (sndsb_bread_dsp(cx,tmp,2) != 2)
+        return 0;
+	if (tmp[0] == 0xFF || tmp[1] == 0xFF)
 		return 0;
 
-	cx->dsp_vmaj = (uint8_t)a;
-	cx->dsp_vmin = (uint8_t)b;
+	cx->dsp_vmaj = (uint8_t)tmp[0];
+	cx->dsp_vmin = (uint8_t)tmp[1];
 	DEBUG(fprintf(stdout,"sndsb_query_dsp_version() == v%u.%u\n",a,b));
 	return 1;
 }
