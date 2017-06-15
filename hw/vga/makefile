@@ -40,5 +40,5 @@ pcxsscut: pcxsscut.o comshtps.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -v pcx2vrl pcxsscut vrl2vrs vrsdump *.o
+	rm -fv pcx2vrl pcxsscut vrl2vrs vrsdump vrldbg *.o
 
