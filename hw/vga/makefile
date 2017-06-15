@@ -2,7 +2,7 @@
 CC ?= gcc
 CFLAGS ?= -Wall -std=gnu99
 
-all: pcx2vrl pcxsscut vrl2vrs vrsdump
+all: pcx2vrl pcxsscut vrl2vrs vrsdump vrldbg
 
 vrl:
 	./pcx2vrl -i 46113319.pcx -o 46113319.vrl -tc 0x0F -p 46113319.pal
@@ -28,6 +28,9 @@ vrl2vrs: vrl2vrs.o comshtps.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 vrsdump: vrsdump.c
+	$(CC) $(CFLAGS) -o $@ $^
+
+vrldbg: vrldbg.c
 	$(CC) $(CFLAGS) -o $@ $^
 
 pcxsscut.o: pcxsscut.c
