@@ -283,6 +283,12 @@ int main(int argc,char **argv) {
 					s = scan_s;
 				}
 
+                if (runcount == 0 && y >= out_strip_height) {
+                    /* avoid encoding strips with zero length just to skip to end of column */
+                    d = stripstart;
+                    break;
+                }
+
 				if (runcount == 0 && skipcount == 0) {
 					d = stripstart;
 				}

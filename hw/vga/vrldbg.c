@@ -156,12 +156,8 @@ struct vrl1_vgax_header {
             }
         } while(1);
 
-        if (y != 0) {
-            if (y > hdr->height)
-                printf("* warning: y coordinate y=%u overruns height of VRL height=%u\n",(unsigned int)y,(unsigned int)hdr->height);
-            else if (y < hdr->height)
-                printf("* warning: y coordinate y=%u underruns height of VRL height=%u\n",(unsigned int)y,(unsigned int)hdr->height);
-        }
+        if (y > hdr->height)
+            printf("* warning: y coordinate y=%u overruns height of VRL height=%u\n",(unsigned int)y,(unsigned int)hdr->height);
     }
 
     if (raw < fence) {
