@@ -28,8 +28,9 @@ static void help() {
 }
 
 int main(int argc,char **argv) {
+    unsigned char *base,*raw,*fence;
     struct vrl1_vgax_header *hdr;
-    unsigned char *raw;
+    unsigned int x,y,cc;
     size_t rawlen;
     long l;
     int fd;
@@ -45,11 +46,12 @@ int main(int argc,char **argv) {
     if (l < 16 || l > VRL_MAX_SIZE) return 1;
     rawlen = (size_t)l;
 
-    raw = malloc(rawlen);
+    base = raw = malloc(rawlen);
     if (raw == NULL) return 1;
     if (lseek(fd,0,SEEK_SET) != 0) return 1;
     if (read(fd,raw,rawlen) != rawlen) return 1;
     close(fd);
+    fence = raw + rawlen;
 
     hdr = (struct vrl1_vgax_header*)raw;
     if (memcmp(hdr->vrl_sig,"VRL1",4)) return 1;
@@ -75,7 +77,98 @@ struct vrl1_vgax_header {
     printf("  hotspot_x:        %d pixels\n",hdr->hotspot_x);
     printf("  hotspot_y:        %d pixels\n",hdr->hotspot_y);
 
-    free(raw);
+    /* strips are encoded in column order, top to bottom.
+     * each column ends with a special code, which is a cue to begin the next column and decode more.
+     * each strip has a length and a skip count. the skip count is there to allow for sprite
+     * transparency by skipping pixels.
+     *
+     * the organization of this format is optimized for display on VGA hardware in "mode x"
+     * unchained 256-color mode (where the planar memory organization of the VGA is exposed) */
+    raw = base + sizeof(*hdr);
+    for (x=0;x < hdr->width;x++) {/* for each column */
+        printf("Begin column x=%u\n",x);
+        y=0;
+
+        if (raw >= fence) {
+            printf("* unexpected end of data\n");
+            break;
+        }
+
+        /* each column is a series of vertical strips with a two byte header, until
+         * the first occurrence where the first byte is 0xFF. */
+        do {
+            if (raw >= fence) {
+                printf("* unexpected end of data in column x=%u at y=%u\n",x,y);
+                break;
+            }
+
+            if (*raw == 0xFF) {/* end of column */
+                raw++;
+                break;
+            }
+
+            if (*raw >= 0x80) { /* single-color run */
+                if ((raw+3) > fence) {
+                    printf("* unexpected end of data in column x=%u at y=%u with %u byte(s) left\n",x,y,(unsigned int)(fence-raw));
+                    break;
+                }
+
+                {
+                    /* <run length + 0x80)> <skip length> <color value> */
+                    unsigned char strip_len = (*raw++) - 0x80;
+                    unsigned char skip_len = (*raw++);
+                    unsigned char color = (*raw++);
+
+                    printf("  y=%u. after skip, y=%u. single-color strip length=%u + skip=%u with color=0x%02x\n",
+                        y,y+skip_len,strip_len,skip_len,color);
+
+                    y += strip_len + skip_len;
+                }
+            }
+            else { /* copy strip */
+                if ((raw+2) > fence) {
+                    printf("* unexpected end of data in column x=%u at y=%u with %u byte(s) left\n",x,y,(unsigned int)(fence-raw));
+                    break;
+                }
+
+                {
+                    /* <run length> <skip length> [strip of pixels] */
+                    unsigned char strip_len = (*raw++);
+                    unsigned char skip_len = (*raw++);
+
+                    printf("  y=%u. after skip, y=%u. strip length=%u + skip=%u\n",
+                        y,y+skip_len,strip_len,skip_len);
+
+                    if ((raw+strip_len) > fence) {
+                        printf("* unexpected end of data in strip x=%u at y=%u with %u byte(s) left\n",x,y,(unsigned int)(fence-raw));
+                        break;
+                    }
+
+                    if (strip_len != 0) {
+                        printf("    pixels: ");
+                        for (cc=0;cc < strip_len;cc++) printf("0x%02x ",raw[cc]);
+                        printf("\n");
+                    }
+
+                    y += strip_len + skip_len;
+                    raw += strip_len;
+                }
+            }
+        } while(1);
+
+        if (y != 0) {
+            if (y > hdr->height)
+                printf("* warning: y coordinate y=%u overruns height of VRL height=%u\n",(unsigned int)y,(unsigned int)hdr->height);
+            else if (y < hdr->height)
+                printf("* warning: y coordinate y=%u underruns height of VRL height=%u\n",(unsigned int)y,(unsigned int)hdr->height);
+        }
+    }
+
+    if (raw < fence) {
+        printf("* warning: %u bytes remain after decoding\n",(unsigned int)(fence-raw));
+    }
+
+    free(base);
 	return 0;
 }
 
