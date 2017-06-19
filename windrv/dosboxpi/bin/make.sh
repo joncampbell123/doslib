@@ -4,7 +4,8 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
 if [ "$1" == "clean" ]; then
-    true
+    rm -fv win??/*.drv
+    rm -fv win??/*.vxd
 fi
 
 if [ "$1" == "disk" ]; then
