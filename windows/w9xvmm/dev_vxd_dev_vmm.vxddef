@@ -1,0 +1,6 @@
+%header
+
+VXDDEVNAME      VMM
+DeviceID        0x0001
+MinWinVer       3.0
+
