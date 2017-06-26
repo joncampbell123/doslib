@@ -231,6 +231,8 @@ description     mov ebx,VM ; current VM handle
 description     mov edx,RefData ; reference data pointer
 description     mov ebp,crs ; pointer to a Client_Reg_Struc
 description     call [EventCallback]
+description
+description     You can cancel a scheduled event using Cancel_Global_Event
 async           yes
 
 in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
@@ -244,6 +246,8 @@ out             ESI                     .                       ; event handle
 byname          Schedule_VM_Event
 description     Schedule an event for the specified virtual machine. The system will carry out a task switch
 description     to the virtual machine before calling the event callback procedure.
+description
+description     You can cancel a scheduled event using Cancel_VM_Event
 async           yes
 
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle to schedule event
@@ -251,5 +255,36 @@ in              ESI=void*const          EventCallback           ; pointer to cal
 in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
 
 out             ESI                     .                       ; event handle
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Call_Global_Event
+description     Call the event callback procedure immediately, or schedule a global event if the virtual device
+description     is processing a hardware interrupt that interrupted the VMM.
+description
+description     You can cancel the event (if scheduled) using Cancel_Global_Event.
+async           yes
+
+in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
+
+out             ESI                     .                       ; event handle, or 0 if procedure was called immediately without scheduling.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Call_VM_Event
+description     Call the event callback procedure immediately, or schedule a VM event if the virtual device
+description     is processing a hardware interrupt that interrupted the VMM.
+description
+description     You can cancel the event (if scheduled) using Cancel_VM_Event.
+async           yes
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
+
+out             ESI                     .                       ; event handle, or 0 if procedure was called immediately without scheduling.
 %enddef
 

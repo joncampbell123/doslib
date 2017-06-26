@@ -909,6 +909,8 @@ static inline void Call_When_VM_Returns(const int32_t timeout/*eax*/,const void*
 /*   mov edx,RefData ; reference data pointer                                                  */
 /*   mov ebp,crs ; pointer to a Client_Reg_Struc                                               */
 /*   call [EventCallback]                                                                      */
+/*                                                                                             */
+/*   You can cancel a scheduled event using Cancel_Global_Event                                */
 
 /* inputs: */
 /*   ESI = eventcallback (pointer to callback procedure (32-bit flat)) */
@@ -939,6 +941,8 @@ static inline uint32_t Schedule_Global_Event(const void*const eventcallback/*esi
 /* description: */
 /*   Schedule an event for the specified virtual machine. The system will carry out a task switch */
 /*   to the virtual machine before calling the event callback procedure.                          */
+/*                                                                                                */
+/*   You can cancel a scheduled event using Cancel_VM_Event                                       */
 
 /* inputs: */
 /*   EBX = vm (VM handle to schedule event) */
@@ -956,6 +960,71 @@ static inline uint32_t Schedule_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const v
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Schedule_VM_Event)
+        : /* outputs */ "=S" (r)
+        : /* inputs */ "b" (vm), "S" (eventcallback), "d" (refdata)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Call_Global_Event (VMMCall dev=0x0001 serv=0x0010) */
+
+/* description: */
+/*   Call the event callback procedure immediately, or schedule a global event if the virtual device */
+/*   is processing a hardware interrupt that interrupted the VMM.                                    */
+/*                                                                                                   */
+/*   You can cancel the event (if scheduled) using Cancel_Global_Event.                              */
+
+/* inputs: */
+/*   ESI = eventcallback (pointer to callback procedure (32-bit flat)) */
+/*   EDX = refdata (pointer to reference data to pass to callback) */
+
+/* outputs: */
+/*   ESI = event handle, or 0 if procedure was called immediately without scheduling. */
+
+/* asynchronous: */
+/*   yes */
+
+static inline uint32_t Call_Global_Event(const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_Global_Event)
+        : /* outputs */ "=S" (r)
+        : /* inputs */ "S" (eventcallback), "d" (refdata)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Call_VM_Event (VMMCall dev=0x0001 serv=0x0011) */
+
+/* description: */
+/*   Call the event callback procedure immediately, or schedule a VM event if the virtual device */
+/*   is processing a hardware interrupt that interrupted the VMM.                                */
+/*                                                                                               */
+/*   You can cancel the event (if scheduled) using Cancel_VM_Event.                              */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+/*   ESI = eventcallback (pointer to callback procedure (32-bit flat)) */
+/*   EDX = refdata (pointer to reference data to pass to callback) */
+
+/* outputs: */
+/*   ESI = event handle, or 0 if procedure was called immediately without scheduling. */
+
+/* asynchronous: */
+/*   yes */
+
+static inline uint32_t Call_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_VM_Event)
         : /* outputs */ "=S" (r)
         : /* inputs */ "b" (vm), "S" (eventcallback), "d" (refdata)
         : /* clobbered */
