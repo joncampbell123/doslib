@@ -1,17 +1,42 @@
 /* auto-generated from dev_vxd_dev_vmm.vxddef, do not edit. */
 
-/* Windows Virtual Machine Manager */
-/*  */
-/* This is "built in" to the kernel and is a core device of the Windows system. */
-/*  */
-/* File location (Windows 3.0/3.1): C:\WINDOWS\SYSTEM\WIN386.EXE */
-/* File location (Windows 95/98/ME): C:\WINDOWS\SYSTEM\VMM32.VXD */
-/*  */
-/* References: */
-/*  */
-/* * Windows 3.1 DDK (CD-ROM drive D) D:\386\INCLUDE\VMM.INC */
-/* - "VMM.INC - Include file for Virtual Machine Manager" */
-/* - "Version 1.00 - 05-May-1988 - By RAL" */
+/* Windows Virtual Machine Manager                                                 */
+/*                                                                                 */
+/* This is "built in" to the kernel and is a core device of the Windows system.    */
+/*                                                                                 */
+/* File location (Windows 3.0/3.1): C:\WINDOWS\SYSTEM\WIN386.EXE                   */
+/* File location (Windows 95/98/ME): C:\WINDOWS\SYSTEM\VMM32.VXD                   */
+/*                                                                                 */
+/* Note that in both cases, the VMM does not exist as a standalone VxD device      */
+/* but as code "built in" to the Windows kernel. VMM32.VXD and WIN386.EXE are      */
+/* executables containing the kernel and a packed structure containing the         */
+/* VxD device drivers in a "pre-digested" form. The VxD drivers contained within   */
+/* do not contain the MS-DOS header, but start with the LE header. The LE header   */
+/* is modified slightly to change one of the fields to instead indicate resident   */
+/* length. This packed structure is known as 'W3' and 'W4', referring to the       */
+/* extended header pointed to by the MS-DOS header. The 'W3' header is merely      */
+/* a list of the VxDs and where they exist elsewhere in the same EXE               */
+/* (Windows 3.0/3.1). The 'W4' header is the same format, but with compression     */
+/* applied to any part of the EXE past the W4 header to compress both the list     */
+/* and the VxDs contained elsewhere (Windows 95/98/ME). These built-in VxDs        */
+/* provide both core devices as well as the "base drivers" that allow Windows      */
+/* to function in the absence of external VxD drivers. Such drivers can be         */
+/* referenced in SYSTEM.INI as "device=*vxdname" rather than "device=VXDFILE.VXD". */
+/*                                                                                 */
+/* For more information on the W3 and W4 formats, see DOSLIB tools:                */
+/* - tool/w3list.pl (show contents of W3 header)                                   */
+/* - tool/w3extract.pl (extract devices from W3 pack)                              */
+/* - tool/w4tow3/w4tow3.c (decompress/convert W4 to W3 format)                     */
+/*                                                                                 */
+/* References:                                                                     */
+/*                                                                                 */
+/* * Windows 3.1 DDK (CD-ROM drive D) D:\386\INCLUDE\VMM.INC                       */
+/* - "VMM.INC - Include file for Virtual Machine Manager"                          */
+/* - "Version 1.00 - 05-May-1988 - By RAL"                                         */
+/*                                                                                 */
+/* * Windows Undocumented File Formats - Working Inside 16- and 32-bit Windows     */
+/* - Pete Davis and Mike Wallace                                                   */
+/* - R&D Books (C) 1997                                                            */
 
 /* VXD device ID. Combine with service call ID when using VMMCall/VMMJmp */
 #define VMM_Device_ID                                    0x0001

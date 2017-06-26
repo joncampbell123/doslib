@@ -10,11 +10,36 @@ description
 description     File location (Windows 3.0/3.1): C:\WINDOWS\SYSTEM\WIN386.EXE
 description     File location (Windows 95/98/ME): C:\WINDOWS\SYSTEM\VMM32.VXD
 description
+description     Note that in both cases, the VMM does not exist as a standalone VxD device
+description     but as code "built in" to the Windows kernel. VMM32.VXD and WIN386.EXE are
+description     executables containing the kernel and a packed structure containing the
+description     VxD device drivers in a "pre-digested" form. The VxD drivers contained within
+description     do not contain the MS-DOS header, but start with the LE header. The LE header
+description     is modified slightly to change one of the fields to instead indicate resident
+description     length. This packed structure is known as 'W3' and 'W4', referring to the
+description     extended header pointed to by the MS-DOS header. The 'W3' header is merely
+description     a list of the VxDs and where they exist elsewhere in the same EXE
+description     (Windows 3.0/3.1). The 'W4' header is the same format, but with compression
+description     applied to any part of the EXE past the W4 header to compress both the list
+description     and the VxDs contained elsewhere (Windows 95/98/ME). These built-in VxDs
+description     provide both core devices as well as the "base drivers" that allow Windows
+description     to function in the absence of external VxD drivers. Such drivers can be
+description     referenced in SYSTEM.INI as "device=*vxdname" rather than "device=VXDFILE.VXD".
+description
+description     For more information on the W3 and W4 formats, see DOSLIB tools:
+description     - tool/w3list.pl (show contents of W3 header)
+description     - tool/w3extract.pl (extract devices from W3 pack)
+description     - tool/w4tow3/w4tow3.c (decompress/convert W4 to W3 format)
+description
 description     References:
 description
 description     * Windows 3.1 DDK (CD-ROM drive D) D:\386\INCLUDE\VMM.INC
 description     - "VMM.INC - Include file for Virtual Machine Manager"
 description     - "Version 1.00 - 05-May-1988 - By RAL"
+description
+description     * Windows Undocumented File Formats - Working Inside 16- and 32-bit Windows
+description     - Pete Davis and Mike Wallace
+description     - R&D Books (C) 1997
 
 %endheader
 

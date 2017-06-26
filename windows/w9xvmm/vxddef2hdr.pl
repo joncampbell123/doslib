@@ -171,8 +171,15 @@ print "\n";
 if ($description ne "") {
     my @a = split(/\n/,$description);
 
+    my $maxcol = 0;
+
     for ($i=0;$i < @a;$i++) {
-        print "/* ".$a[$i]." */\n";
+        $len = length($a[$i]);
+        $maxcol = $len if $maxcol < $len;
+    }
+
+    for ($i=0;$i < @a;$i++) {
+        print "/* ".substr($a[$i].(' ' x $maxcol),0,$maxcol)." */\n";
     }
 
     print "\n";
