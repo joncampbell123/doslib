@@ -4,3 +4,76 @@ VXDDEVNAME      VMM
 DeviceID        0x0001
 MinWinVer       3.0
 
+%endheader
+
+#--------------------------------------
+%defcall
+byname          Get_VMM_Version
+description     Return VMM version
+
+# no inputs
+
+out             AX      version                                 ; major, minor (example: 0x030A = 3.10)
+out             ECX     debug_dev_rev                           ; debug development revision number
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Cur_VM_Handle
+description     Return current VM handle
+
+# no inputs
+
+out             EBX     vmhandle                                ; Handle of the current VM
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Test_Cur_VM_Handle
+description     Test whether VM handle is current VM
+
+in              EBX     vmhandle                                ; VM handle to test
+
+out             ZF      .                                       ; ZF set if vm handle matches
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Sys_VM_Handle
+description     Return system VM handle
+
+# no inputs
+
+out             EBX     vmhandle                                ; Handle of the system VM
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Test_Sys_VM_Handle
+description     Test whether VM handle is system VM
+
+in              EBX     vmhandle                                ; VM handle to test
+
+out             ZF      .                                       ; ZF set if vm handle matches
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Validate_VM_Handle
+description     Verify that the VM handle is valid
+
+in              EBX     vmhandle                                ; VM handle to test
+
+out             !CF     .                                       ; CF is set if NOT valid, clear if valid. Return value should invert sense.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_VMM_Reenter_Count
+description     Return the number of times the VMM has been reentered. If nonzero, use only asynchronous calls.
+
+# no inputs
+
+out             ECX     .                                       ; number of times VMM has been reentered
+%enddef
+

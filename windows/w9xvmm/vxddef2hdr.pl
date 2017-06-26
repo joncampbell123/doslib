@@ -9,6 +9,8 @@
 # to compile dev_vxd_dev_vmm.vxdcalls and dev_vxd_dev_vmm.vxddef
 #
 # spits header to stdout
+use Data::Dumper;
+
 my $basename = shift @ARGV;
 die "Need basename" unless defined($basename);
 
@@ -40,6 +42,7 @@ while (my $line = <DEF>) {
 
     if ($line =~ s/^%[ \t]*//) {
         $section = lc($line); # s/// modified it in place
+        last if $section eq "endheader";
         next;
     }
 
@@ -145,6 +148,212 @@ if (@calls > 0) {
     }
 
     print "\n";
+}
+
+# function defs
+my %funcdef;
+while (my $line = <DEF>) {
+    chomp $line;
+    $line =~ s/^[ \t]*//; # eat leading whitespace
+    $line =~ s/[ \t]*#.*$//; # eat comments
+    $line =~ s/[ \t]*$//; # eat trailing whitespace
+    next if $line eq "";
+
+    if ($line =~ s/^%[ \t]*//) {
+        $section = lc($line); # s/// modified it in place
+
+        if ($section eq "enddef") {
+            #print Dumper(\%funcdef);
+
+            # check: we allow '.' as an output struct member IF it's the only output
+            if (exists($funcdef{struct})) {
+                my %x = %{$funcdef{struct}};
+
+                if (exists($x{'.'})) {
+                    die "only one output allowed if default '.' output is defined" if (scalar(keys %x) > 1);
+                }
+            }
+
+            # okay, generate the code
+            my $serviceid = undef;
+            my $funcname = undef;
+            if (exists($funcdef{byname})) {
+                $funcname = $funcdef{byname};
+
+                for ($i=0;$i < @calls;$i++) {
+                    my $r = $calls[$i];
+                    my @ar = @{$r};
+
+                    if ($ar[2] eq $funcname) {
+                        $serviceid = $ar[1];
+                        last;
+                    }
+                }
+
+                die "cannot locate service id for $funcname" unless defined($serviceid);
+            }
+            else {
+                die "Cannot determine name for function";
+            }
+
+            # emit
+            print "/*-------------------------------------------------------------*/\n";
+            print "/* $vxddevname $funcname (VMMCall dev=$deviceid serv=$serviceid) */\n";
+            print "\n";
+            if (exists($funcdef{description})) {
+                my @b = split(/\n/,$funcdef{description});
+                print "/* description: */\n";
+                for ($i=0;$i < @b;$i++) {
+                    print "/*   ".$b[$i]." */\n";
+                }
+                print "\n";
+            }
+            if (exists($funcdef{in})) {
+                my %f = %{$funcdef{in}};
+                print "/* inputs: */\n";
+                while (($key,$value) = each %f) {
+                    print "/*   ".uc($key)." = ".$value." ";
+                    if (exists($funcdef{incomment})) {
+                        if (exists($funcdef{incomment}{$key})) {
+                            print "(".$funcdef{incomment}{$key}.") ";
+                        }
+                    }
+                    print "*/\n";
+                }
+                print "\n";
+            }
+            if (exists($funcdef{out})) {
+                my %f = %{$funcdef{out}};
+                print "/* outputs: */\n";
+                while (($key,$value) = each %f) {
+                    if ($value eq '.') {
+                        print "/*   ".uc($key)." = ";
+                        if (exists($funcdef{outcomment})) {
+                            if (exists($funcdef{outcomment}{$key})) {
+                                print $funcdef{outcomment}{$key}." ";
+                            }
+                        }
+                        print "*/\n";
+                    }
+                    else {
+                        print "/*   ".uc($key)." = ".$value." ";
+                        if (exists($funcdef{outcomment})) {
+                            if (exists($funcdef{outcomment}{$key})) {
+                                print "(".$funcdef{outcomment}{$key}.") ";
+                            }
+                        }
+                        print "*/\n";
+                    }
+                }
+                print "\n";
+            }
+
+            print "\n";
+
+            # start again
+            undef %funcdef;
+        }
+
+        next;
+    }
+
+    if ($section eq "defcall") {
+        my @a = split(/[ \t]+/,$line);
+
+        next if @a < 1;
+
+        if ($a[0] eq "byname") {
+            $funcdef{byname} = $a[1];
+        }
+        elsif ($a[0] eq "description") {
+            if (exists($funcdef{description})) {
+                $funcdef{description} .= "\n";
+            }
+            else {
+                $funcdef{description} = "";
+            }
+
+            for ($i=1;$i < @a;$i++) {
+                $funcdef{description} .= " " if $i > 1;
+                $funcdef{description} .= $a[$i];
+            }
+        }
+        elsif ($a[0] eq "in") {
+            $i = index($line,';');
+            my $comment = '';
+            if ($i >= 0) {
+                $comment = substr($line,$i+1);
+                $comment =~ s/^[ \t]+//;
+                $line = substr($line,0,$i);
+            }
+            my @a = split(/[ \t]+/,$line);
+
+            if (!exists($funcdef{in})) {
+                $funcdef{in} = { };
+            }
+
+            if (!exists($funcdef{param})) {
+                $funcdef{param} = { };
+            }
+
+            if (!exists($funcdef{paramcomment})) {
+                $funcdef{paramcomment} = { };
+            }
+
+# the name '.' is allowed to mean no name if it's the ONLY return value
+# out             AX        version                                 ; major, minor (example: 0x030A = 3.10)
+# out             register  name                                    ; comment
+            $a[1] = lc($a[1]);
+            $a[2] = lc($a[2]);
+
+            die "register $a[1] already allocated" if exists($funcdef{in}{$a[1]});
+            die "param already has name $a[2]" if exists($funcdef{param}{$a[2]});
+
+            $funcdef{in}{$a[1]} = $a[2];
+            $funcdef{param}{$a[2]} = $a[1];
+            $funcdef{incomment}{$a[1]} = $comment;
+            $funcdef{paramcomment}{$a[2]} = $comment;
+        }
+        elsif ($a[0] eq "out") {
+            $i = index($line,';');
+            my $comment = '';
+            if ($i >= 0) {
+                $comment = substr($line,$i+1);
+                $comment =~ s/^[ \t]+//;
+                $line = substr($line,0,$i);
+            }
+            my @a = split(/[ \t]+/,$line);
+
+            if (!exists($funcdef{out})) {
+                $funcdef{out} = { };
+            }
+
+            if (!exists($funcdef{struct})) {
+                $funcdef{struct} = { };
+            }
+
+            if (!exists($funcdef{structcomment})) {
+                $funcdef{structcomment} = { };
+            }
+
+# the name '.' is allowed to mean no name if it's the ONLY return value
+# out             AX        version                                 ; major, minor (example: 0x030A = 3.10)
+# out             register  name                                    ; comment
+            $a[1] = lc($a[1]);
+            $a[2] = lc($a[2]);
+
+            die "register $a[1] already allocated" if exists($funcdef{out}{$a[1]});
+            die "struct already has name $a[2]" if exists($funcdef{struct}{$a[2]});
+
+            $funcdef{out}{$a[1]} = $a[2];
+            $funcdef{struct}{$a[2]} = $a[1];
+            $funcdef{outcomment}{$a[1]} = $comment;
+            $funcdef{structcomment}{$a[2]} = $comment;
+        }
+        else {
+            die "Unknown defcall $a[0]";
+        }
+    }
 }
 
 close(DEF);
