@@ -213,6 +213,11 @@ if (@calls > 0) {
     print "\n";
 }
 
+print "/* NOTE: Some VxD calls are defined static inline to return a struct. As long as you simply read the */\n";
+print "/*       structure members, GCC's optimizer will boil it down to direct register access of the values */\n";
+print "/*       returned by the call and direct testing of the CPU flags. */\n";
+print "\n";
+
 # function defs
 print "#if defined(__GNUC__) /* GCC only, for now */\n";
 print "# if defined(GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT) /* we require GCC 6.1 or higher with support for CPU flags as output */\n";

@@ -478,6 +478,10 @@
 #define VMM_snr__MPEnterSingleProcessor                      0x01B1    /* ver 4.90+ */
 #define VMM_snr__MPLeaveSingleProcessor                      0x01B2    /* ver 4.90+ */
 
+/* NOTE: Some VxD calls are defined static inline to return a struct. As long as you simply read the */
+/*       structure members, GCC's optimizer will boil it down to direct register access of the values */
+/*       returned by the call and direct testing of the CPU flags. */
+
 #if defined(__GNUC__) /* GCC only, for now */
 # if defined(GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT) /* we require GCC 6.1 or higher with support for CPU flags as output */
 /*-------------------------------------------------------------*/
