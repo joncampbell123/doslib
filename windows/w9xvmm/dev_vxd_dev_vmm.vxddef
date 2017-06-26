@@ -24,7 +24,7 @@ description     Return current VM handle
 
 # no inputs
 
-out             EBX     vmhandle                                ; Handle of the current VM
+out             EBX     .                                       ; Handle of the current VM
 %enddef
 
 #--------------------------------------
@@ -44,7 +44,7 @@ description     Return system VM handle
 
 # no inputs
 
-out             EBX     vmhandle                                ; Handle of the system VM
+out             EBX     .                                       ; Handle of the system VM
 %enddef
 
 #--------------------------------------

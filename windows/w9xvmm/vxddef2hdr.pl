@@ -122,6 +122,22 @@ if (open(CALLS,"<",$callsname)) {
 my $padname = 8;
 $maxnamelen += $padname;
 
+sub reg2type($) {
+    my $v = shift @_;
+
+    $v =~ s/^\!//; # remove !
+
+    return "_Bool" if $v =~ m/^(zf|cf)$/i;
+
+    return "uint8_t" if $v =~ m/^(al|ah|bl|bh|cl|ch|dl|dh)$/i;
+
+    return "uint16_t" if $v =~ m/^(ax|bx|cx|dx|si|di|bp)$/i;
+
+    return "uint32_t" if $v =~ m/^(eax|ebx|ecx|edx|esi|edi|ebp)$/i;
+
+    return "unsigned int";
+}
+
 print "/* VXD device ID. Combine with service call ID when using VMMCall/VMMJmp */\n";
 $x = $vxddevname."_Device_ID".(' ' x $maxnamelen);
 print "#define ".substr($x,0,$maxnamelen)." ".$deviceid."\n";
@@ -222,6 +238,11 @@ while (my $line = <DEF>) {
                 }
                 print "\n";
             }
+            else {
+                print "/* inputs: */\n";
+                print "/*   None */\n";
+                print "\n";
+            }
             if (exists($funcdef{out})) {
                 my %f = %{$funcdef{out}};
                 print "/* outputs: */\n";
@@ -247,6 +268,60 @@ while (my $line = <DEF>) {
                 }
                 print "\n";
             }
+            else {
+                print "/* outputs: */\n";
+                print "/*   None */\n";
+                print "\n";
+            }
+
+            my $params = "void";
+            if (exists($funcdef{in})) {
+                my %f = %{$funcdef{in}};
+                my $fc = 0;
+                while (($key,$value) = each %f) {
+                    $params = "" if $fc == 0;
+
+                    $ptype = "const ".reg2type($key);
+
+                    $params .= "," unless $params eq "";
+                    $params .= $ptype." ".$value."/*".$key."*/";
+
+                    $fc++;
+                }
+            }
+
+            my $rettype = "void";
+            if (exists($funcdef{out})) {
+                if (exists($funcdef{struct}{'.'})) {
+                    $ptype = reg2type($funcdef{struct}{'.'});
+
+                    $rettype = $ptype;
+                }
+                else {
+                    # declare a struct of the same name, as return value.
+                    # GCC is smart enough to optimize access to members down
+                    # to direct register access.
+                    $structname = $funcname."__response";
+
+                    print "typedef struct $structname {\n";
+
+                    my %f = %{$funcdef{struct}};
+                    while (($key,$value) = each %f) {
+                        print "    ".reg2type($value);
+                        print " ".$key;
+                        print "; /* ".uc($value)." */";
+                        print "\n";
+                    }
+
+                    print "} $structname;\n";
+                    print "\n";
+
+                    $rettype = $structname;
+                }
+            }
+
+            print "static inline $rettype $funcname($params) {\n";
+            print "}\n";
 
             print "\n";
 
