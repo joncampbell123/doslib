@@ -374,8 +374,10 @@ while (my $line = <DEF>) {
             }
 
             print "static inline $rettype $funcname($params) {\n";
-            print "    register $rettype r;\n";
-            print "\n";
+            if ($rettype ne "void") {
+                print "    register $rettype r;\n";
+                print "\n";
+            }
             print "    __asm__ (\n";
             print "        VXD_AsmCall(".$vxddevname."_Device_ID,".$vxddevname."_snr_".$funcname.")\n";
             print "        : /* outputs */";
@@ -408,9 +410,13 @@ while (my $line = <DEF>) {
             print "        : /* clobbered */";
             print "\n";
  
-            print "    );\n\n";
+            print "    );\n";
 
-            print "    return r;\n";
+            if ($rettype ne "void") {
+                print "\n";
+                print "    return r;\n";
+            }
+
             print "}\n";
 
             print "\n";

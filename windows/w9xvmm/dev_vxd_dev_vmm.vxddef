@@ -87,3 +87,25 @@ description     Return the number of times the VMM has been reentered. If nonzer
 out             ECX     .                                       ; number of times VMM has been reentered
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Begin_Reentrant_Execution
+description     Start reentrant execution. You can use this when hooking VMM faults (reentrant processor faults)
+description     in order to call non-asynchronous VMM or virtual device services or execute a virtual machine.
+description     Do not use this service to avoid scheduling events on hardware interrupts.
+
+# no inputs
+
+out             ECX     .                                       ; old reentrancy count
+
+return          unsigned int containing old reentrancy count, which must be saved and given to End_Reentrancy_Execution later on.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          End_Reentrant_Execution
+description     Ends reentrant execution, after Begin_Reentrant_Execution.
+
+in              ECX     reentrancy_count                        ; reentrancy count returned by Begin_Reentrant_Execution
+%enddef
+

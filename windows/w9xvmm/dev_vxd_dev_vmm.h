@@ -636,5 +636,56 @@ static inline uint32_t Get_VMM_Reenter_Count(void) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Begin_Reentrant_Execution (VMMCall dev=0x0001 serv=0x0007) */
+
+/* description: */
+/*   Start reentrant execution. You can use this when hooking VMM faults (reentrant processor faults) */
+/*   in order to call non-asynchronous VMM or virtual device services or execute a virtual machine. */
+/*   Do not use this service to avoid scheduling events on hardware interrupts. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   ECX = old reentrancy count */
+
+/* returns: */
+/*   unsigned int containing old reentrancy count, which must be saved and given to End_Reentrancy_Execution later on. */
+
+static inline uint32_t Begin_Reentrant_Execution(void) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Begin_Reentrant_Execution)
+        : /* outputs */ "=c" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM End_Reentrant_Execution (VMMCall dev=0x0001 serv=0x0008) */
+
+/* description: */
+/*   Ends reentrant execution, after Begin_Reentrant_Execution. */
+
+/* inputs: */
+/*   ECX = reentrancy_count (reentrancy count returned by Begin_Reentrant_Execution) */
+
+/* outputs: */
+/*   None */
+
+static inline void End_Reentrant_Execution(const uint32_t reentrancy_count/*ecx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_End_Reentrant_Execution)
+        : /* outputs */
+        : /* inputs */ "c" (reentrancy_count)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
