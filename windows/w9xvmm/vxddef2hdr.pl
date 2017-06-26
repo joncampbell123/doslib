@@ -122,6 +122,25 @@ if (open(CALLS,"<",$callsname)) {
 my $padname = 8;
 $maxnamelen += $padname;
 
+sub reg2gccspec($) {
+    my $v = shift @_;
+
+    return "\@ccz" if $v =~ m/^zf$/i;
+    return "\@ccnz" if $v =~ m/^\!zf$/i;
+
+    return "\@ccc" if $v =~ m/^cf$/i;
+    return "\@ccnc" if $v =~ m/^\!cf$/i;
+
+    return "a" if $v =~ m/^(al|ax|eax)$/i;
+    return "b" if $v =~ m/^(bl|bx|ebx)$/i;
+    return "c" if $v =~ m/^(cl|cx|ecx)$/i;
+    return "d" if $v =~ m/^(dl|dx|edx)$/i;
+    return "S" if $v =~ m/^(si|esi)$/i;
+    return "D" if $v =~ m/^(di|edi)$/i;
+
+    return "";
+}
+
 sub reg2type($) {
     my $v = shift @_;
 
@@ -290,18 +309,21 @@ while (my $line = <DEF>) {
                 }
             }
 
+            $directreg = 0;
             my $rettype = "void";
             if (exists($funcdef{out})) {
                 if (exists($funcdef{struct}{'.'})) {
                     $ptype = reg2type($funcdef{struct}{'.'});
 
                     $rettype = $ptype;
+                    $directreg = 1;
                 }
                 else {
                     # declare a struct of the same name, as return value.
                     # GCC is smart enough to optimize access to members down
                     # to direct register access.
                     $structname = $funcname."__response";
+                    $directreg = 0;
 
                     print "typedef struct $structname {\n";
 
@@ -321,6 +343,43 @@ while (my $line = <DEF>) {
             }
 
             print "static inline $rettype $funcname($params) {\n";
+            print "    register $rettype r;\n";
+            print "\n";
+            print "    __asm__ (\n";
+            print "        VXD_AsmCall(".$vxddevname."_Device_ID,".$vxddevname."_snr_".$funcname.")\n";
+            print "        : /* outputs */";
+            if ($directreg) {
+                print " \"=".reg2gccspec($funcdef{struct}{'.'})."\" (r)";
+            }
+            elsif (exists($funcdef{out})) {
+                my %f = %{$funcdef{out}};
+                $fc = 0;
+                while (($key,$value) = each %f) {
+                    print "," if $fc > 0;
+                    print " \"=".reg2gccspec($key)."\" (r.$value)";
+                    $fc++;
+                }
+            }
+            print "\n";
+
+            print "        : /* inputs */";
+            if (exists($funcdef{in})) {
+                my %f = %{$funcdef{in}};
+                my $fc = 0;
+                while (($key,$value) = each %f) {
+                    print "," if $fc > 0;
+                    print " \"".reg2gccspec($key)."\" ($value)";
+                    $fc++;
+                }
+            }
+            print "\n";
+
+            print "        : /* clobbered */";
+            print "\n";
+ 
+            print "    );\n\n";
+
+            print "    return r;\n";
             print "}\n";
 
             print "\n";
