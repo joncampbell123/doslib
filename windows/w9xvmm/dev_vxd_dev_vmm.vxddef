@@ -132,3 +132,28 @@ description     Remove a virtual 8086 break point installed with Install_V86_Bre
 in              EAX=void*const          breakpoint_address      ; V86 address to remove break point from
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Allocate_V86_Call_Back
+description     Install a callback procedure for virtual 8086 mode applications can call to execute code in
+description     a virtual device.
+
+in              EDX=void*const          reference_data_ptr      ; points to reference data to pass to callback procedure
+in              ESI=void*const          callback_procedure_ptr  ; points to callback procedure to call
+
+out             CF                      error                   ; if success, CF=0 and EAX=realmode ptr. if failure, CF=1
+out             EAX                     realmode_cb_addr        ; if CF=0, segment:offset of real-mode callback address
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Allocate_PM_Call_Back
+description     Install a callback procedure for protected mode applications to call to execute code in a virtual device.
+
+in              EDX=void*const          reference_data_ptr      ; points to reference data to pass to callback procedure
+in              ESI=void*const          callback_procedure_ptr  ; points to callback procedure to call
+
+out             CF                      error                   ; if success, CF=0 and EAX=realmode ptr. if failure, CF=1
+out             EAX                     cb_addr                 ; if CF=0, address of callback procedure
+%enddef
+

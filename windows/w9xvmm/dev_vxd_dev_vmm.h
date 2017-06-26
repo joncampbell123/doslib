@@ -739,5 +739,70 @@ static inline void Remove_V86_Break_Point(const void*const breakpoint_address/*e
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Allocate_V86_Call_Back (VMMCall dev=0x0001 serv=0x000B) */
+
+/* description: */
+/*   Install a callback procedure for virtual 8086 mode applications can call to execute code in */
+/*   a virtual device. */
+
+/* inputs: */
+/*   EDX = reference_data_ptr (points to reference data to pass to callback procedure) */
+/*   ESI = callback_procedure_ptr (points to callback procedure to call) */
+
+/* outputs: */
+/*   CF = error (if success, CF=0 and EAX=realmode ptr. if failure, CF=1) */
+/*   EAX = realmode_cb_addr (if CF=0, segment:offset of real-mode callback address) */
+
+typedef struct Allocate_V86_Call_Back__response {
+    _Bool error; /* CF */
+    uint32_t realmode_cb_addr; /* EAX */
+} Allocate_V86_Call_Back__response;
+
+static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void*const reference_data_ptr/*edx*/,const void*const callback_procedure_ptr/*esi*/) {
+    register Allocate_V86_Call_Back__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Allocate_V86_Call_Back)
+        : /* outputs */ "=@ccc" (r.error), "=a" (r.realmode_cb_addr)
+        : /* inputs */ "d" (reference_data_ptr), "S" (callback_procedure_ptr)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Allocate_PM_Call_Back (VMMCall dev=0x0001 serv=0x000C) */
+
+/* description: */
+/*   Install a callback procedure for protected mode applications to call to execute code in a virtual device. */
+
+/* inputs: */
+/*   EDX = reference_data_ptr (points to reference data to pass to callback procedure) */
+/*   ESI = callback_procedure_ptr (points to callback procedure to call) */
+
+/* outputs: */
+/*   CF = error (if success, CF=0 and EAX=realmode ptr. if failure, CF=1) */
+/*   EAX = cb_addr (if CF=0, address of callback procedure) */
+
+typedef struct Allocate_PM_Call_Back__response {
+    _Bool error; /* CF */
+    uint32_t cb_addr; /* EAX */
+} Allocate_PM_Call_Back__response;
+
+static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void*const reference_data_ptr/*edx*/,const void*const callback_procedure_ptr/*esi*/) {
+    register Allocate_PM_Call_Back__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Allocate_PM_Call_Back)
+        : /* outputs */ "=@ccc" (r.error), "=a" (r.cb_addr)
+        : /* inputs */ "d" (reference_data_ptr), "S" (callback_procedure_ptr)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
