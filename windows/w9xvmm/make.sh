@@ -26,6 +26,10 @@ if [ "$1" == "clean" ]; then
     exit 0
 fi
 
+if [ "$1" == "vxddef" ]; then
+    ./vxddef2hdr.pl dev_vxd_dev_vmm >dev_vxd_dev_vmm.h || exit 1
+fi
+
 if [ "$1" == "disk" ]; then
     # boot data disk
     make_msdos_data_disk test.dsk || exit 1
