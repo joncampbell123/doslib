@@ -321,10 +321,10 @@ while (my $line = <DEF>) {
                 if (exists($funcdef{struct}{'.'})) {
                     $ptype = $funcdef{structtype}{'.'};
                     if (defined($ptype) && $ptype ne "") {
-                        $ptype = "const ".$ptype;
+                        $ptype = $ptype;
                     }
                     else {
-                        $ptype = "const ".reg2type($funcdef{struct}{'.'});
+                        $ptype = reg2type($funcdef{struct}{'.'});
                     }
 
                     $rettype = $ptype;
