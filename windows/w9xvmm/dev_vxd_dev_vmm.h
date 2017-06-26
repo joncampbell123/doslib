@@ -705,7 +705,7 @@ static inline void End_Reentrant_Execution(const uint32_t reentrancy_count/*ecx*
 /* returns: */
 /*   Bool, true if success, false if failure (not installed) */
 
-static inline _Bool Install_V86_Break_Point(const void*const pointer_to_ref_data/*edx*/,const void*const breakpoint_address/*eax*/,const void*const callback_address/*esi*/) {
+static inline _Bool Install_V86_Break_Point(const void*const breakpoint_address/*eax*/,const void*const pointer_to_ref_data/*edx*/,const void*const callback_address/*esi*/) {
     register _Bool r;
 
     __asm__ (

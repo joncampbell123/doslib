@@ -308,7 +308,13 @@ while (my $line = <DEF>) {
             if (exists($funcdef{in})) {
                 my %f = %{$funcdef{in}};
                 my $fc = 0;
-                while (($key,$value) = each %f) {
+
+                my @pord = split(/ +/,$funcdef{paramorder});
+
+                for ($i=0;$i < @pord;$i++) {
+                    $key = $pord[$i];
+                    $value = $f{$key};
+
                     $params = "" if $fc == 0;
 
                     $ptype = $funcdef{paramtype}{$value};
@@ -350,8 +356,13 @@ while (my $line = <DEF>) {
 
                     print "typedef struct $structname {\n";
 
+                    my @sord = split(/ +/,$funcdef{structorder});
+
                     my %f = %{$funcdef{struct}};
-                    while (($key,$value) = each %f) {
+                    for ($i=0;$i < @sord;$i++) {
+                        $key = $sord[$i];
+                        $value = $f{$key};
+
                         $ptype = $funcdef{structtype}{$key};
                         if (defined($ptype) && $ptype ne "") {
                             $ptype = $ptype;
@@ -480,6 +491,10 @@ while (my $line = <DEF>) {
                 $funcdef{param} = { };
             }
 
+            if (!exists($funcdef{paramorder})) {
+                $funcdef{paramorder} = "";
+            }
+
             if (!exists($funcdef{paramcomment})) {
                 $funcdef{paramcomment} = { };
             }
@@ -500,6 +515,9 @@ while (my $line = <DEF>) {
 
             die "register $a[1] already allocated" if exists($funcdef{in}{$a[1]});
             die "param already has name $a[2]" if exists($funcdef{param}{$a[2]});
+
+            $funcdef{paramorder} .= " " if $funcdef{paramorder} ne "";
+            $funcdef{paramorder} .= $a[1];
 
             $funcdef{in}{$a[1]} = $a[2];
             $funcdef{param}{$a[2]} = $a[1];
@@ -525,6 +543,10 @@ while (my $line = <DEF>) {
                 $funcdef{struct} = { };
             }
 
+            if (!exists($funcdef{structorder})) {
+                $funcdef{structorder} = "";
+            }
+
             if (!exists($funcdef{structcomment})) {
                 $funcdef{structcomment} = { };
             }
@@ -545,6 +567,9 @@ while (my $line = <DEF>) {
 
             die "register $a[1] already allocated" if exists($funcdef{out}{$a[1]});
             die "struct already has name $a[2]" if exists($funcdef{struct}{$a[2]});
+
+            $funcdef{structorder} .= " " if $funcdef{structorder} ne "";
+            $funcdef{structorder} .= $a[2];
 
             $funcdef{out}{$a[1]} = $a[2];
             $funcdef{struct}{$a[2]} = $a[1];
