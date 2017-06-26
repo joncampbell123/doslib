@@ -483,6 +483,9 @@ static inline Get_VMM_Version__response Get_VMM_Version(void) {
 /* outputs: */
 /*   EBX = Handle of the current VM */
 
+/* returns: */
+/*   Current VM handle */
+
 static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
     register vxd_vm_handle_t r;
 
@@ -507,6 +510,9 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 
 /* outputs: */
 /*   ZF = ZF set if vm handle matches */
+
+/* returns: */
+/*   Boolean value. True if VM handle matches, false if not. */
 
 static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
     register _Bool r;
@@ -533,6 +539,9 @@ static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
 /* outputs: */
 /*   EBX = Handle of the system VM */
 
+/* returns: */
+/*   System VM handle */
+
 static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
     register vxd_vm_handle_t r;
 
@@ -558,6 +567,9 @@ static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
 /* outputs: */
 /*   ZF = ZF set if vm handle matches */
 
+/* returns: */
+/*   Boolean value. True if VM handle matches the one given, false if not. */
+
 static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
     register _Bool r;
 
@@ -582,6 +594,9 @@ static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
 
 /* outputs: */
 /*   !CF = CF is set if NOT valid, clear if valid. Return value should invert sense. */
+
+/* returns: */
+/*   Boolean value. True if VM handle is valid, false if invalid. */
 
 static inline _Bool Validate_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
     register _Bool r;

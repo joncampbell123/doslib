@@ -295,6 +295,15 @@ while (my $line = <DEF>) {
                 print "\n";
             }
 
+            if (exists($funcdef{return})) {
+                my @f = split(/\n/,$funcdef{return});
+                print "/* returns: */\n";
+                for ($i=0;$i < @f;$i++) {
+                    print "/*   ".$f[$i]." */\n";
+                }
+                print "\n";
+            }
+
             my $params = "void";
             if (exists($funcdef{in})) {
                 my %f = %{$funcdef{in}};
@@ -418,7 +427,20 @@ while (my $line = <DEF>) {
 
         next if @a < 1;
 
-        if ($a[0] eq "byname") {
+        if ($a[0] eq "return") {
+            if (exists($funcdef{return})) {
+                $funcdef{return} .= "\n";
+            }
+            else {
+                $funcdef{return} = "";
+            }
+
+            for ($i=1;$i < @a;$i++) {
+                $funcdef{return} .= " " if $i > 1;
+                $funcdef{return} .= $a[$i];
+            }
+        }
+        elsif ($a[0] eq "byname") {
             $funcdef{byname} = $a[1];
         }
         elsif ($a[0] eq "description") {

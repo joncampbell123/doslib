@@ -25,6 +25,8 @@ description     Return current VM handle
 # no inputs
 
 out             EBX=vxd_vm_handle_t     .                       ; Handle of the current VM
+
+return          Current VM handle
 %enddef
 
 #--------------------------------------
@@ -35,6 +37,8 @@ description     Test whether VM handle is current VM
 in              EBX=vxd_vm_handle_t     vmhandle                ; VM handle to test
 
 out             ZF                      .                       ; ZF set if vm handle matches
+
+return          Boolean value. True if VM handle matches, false if not.
 %enddef
 
 #--------------------------------------
@@ -45,6 +49,8 @@ description     Return system VM handle
 # no inputs
 
 out             EBX=vxd_vm_handle_t     .                       ; Handle of the system VM
+
+return          System VM handle
 %enddef
 
 #--------------------------------------
@@ -55,6 +61,8 @@ description     Test whether VM handle is system VM
 in              EBX=vxd_vm_handle_t     vmhandle                ; VM handle to test
 
 out             ZF                      .                       ; ZF set if vm handle matches
+
+return          Boolean value. True if VM handle matches the one given, false if not.
 %enddef
 
 #--------------------------------------
@@ -65,6 +73,8 @@ description     Verify that the VM handle is valid
 in              EBX=vxd_vm_handle_t     vmhandle                ; VM handle to test
 
 out             !CF                     .                       ; CF is set if NOT valid, clear if valid. Return value should invert sense.
+
+return          Boolean value. True if VM handle is valid, false if invalid.
 %enddef
 
 #--------------------------------------
