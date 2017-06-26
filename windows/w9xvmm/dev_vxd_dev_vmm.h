@@ -881,5 +881,39 @@ static inline void Call_When_VM_Returns(const int32_t timeout/*eax*/,const void*
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Schedule_Global_Event (VMMCall dev=0x0001 serv=0x000E) */
+
+/* description: */
+/*   Schedule a global event, which does not require a specific virtual machine to process it. */
+/*   The system does not switch tasks before calling the procedure.                            */
+/*                                                                                             */
+/*   The callback can carry out any actions and use any VMM services. It is called like this:  */
+/*                                                                                             */
+/*   mov ebx,VM ; current VM handle                                                            */
+/*   mov edx,RefData ; reference data pointer                                                  */
+/*   mov ebp,crs ; pointer to a Client_Reg_Struc                                               */
+/*   call [EventCallback]                                                                      */
+
+/* inputs: */
+/*   ESI = eventcallback (pointer to callback procedure (32-bit flat)) */
+/*   EDX = refdata (pointer to reference data to pass to callback) */
+
+/* outputs: */
+/*   ESI = event handle */
+
+static inline uint32_t Schedule_Global_Event(const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Schedule_Global_Event)
+        : /* outputs */ "=S" (r)
+        : /* inputs */ "S" (eventcallback), "d" (refdata)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

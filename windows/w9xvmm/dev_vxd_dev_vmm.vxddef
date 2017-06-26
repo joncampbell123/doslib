@@ -214,3 +214,22 @@ in              EDX=void*const          RefData                 ; pointer to ref
 in              ESI=void*const          Callback                ; callback procedure (32-bit flat)
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Schedule_Global_Event
+description     Schedule a global event, which does not require a specific virtual machine to process it.
+description     The system does not switch tasks before calling the procedure.
+description
+description     The callback can carry out any actions and use any VMM services. It is called like this:
+description
+description     mov ebx,VM ; current VM handle
+description     mov edx,RefData ; reference data pointer
+description     mov ebp,crs ; pointer to a Client_Reg_Struc
+description     call [EventCallback]
+
+in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
+
+out             ESI                     .                       ; event handle
+%enddef
+
