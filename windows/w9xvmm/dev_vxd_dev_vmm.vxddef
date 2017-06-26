@@ -3,6 +3,18 @@
 VXDDEVNAME      VMM
 DeviceID        0x0001
 MinWinVer       3.0
+description     Windows Virtual Machine Manager
+description
+description     This is "built in" to the kernel and is a core device of the Windows system.
+description
+description     File location (Windows 3.0/3.1): C:\WINDOWS\SYSTEM\WIN386.EXE
+description     File location (Windows 95/98/ME): C:\WINDOWS\SYSTEM\VMM32.VXD
+description
+description     References:
+description
+description     * Windows 3.1 DDK (CD-ROM drive D) D:\386\INCLUDE\VMM.INC
+description     - "VMM.INC - Include file for Virtual Machine Manager"
+description     - "Version 1.00 - 05-May-1988 - By RAL"
 
 %endheader
 

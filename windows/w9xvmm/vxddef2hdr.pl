@@ -26,6 +26,7 @@ my $section = undef;
 my $vxddevname = undef;
 my $deviceid = undef;
 my $minwinver = undef;
+my $description = "";
 
 my $maxnamelen = 0;
 
@@ -63,6 +64,13 @@ while (my $line = <DEF>) {
         elsif ($try eq "minwinver") {
             $minwinver = $a[1];
             die "invalid min win ver $minwinver" unless $minwinver =~ m/^[34]\.[0-9]+$/;
+        }
+        elsif ($try eq "description") {
+            $description .= "\n" if $description ne "";
+            for ($i=1;$i < @a;$i++) {
+                $description .= " " if $i > 1;
+                $description .= $a[$i];
+            }
         }
     }
 }
@@ -155,6 +163,19 @@ sub reg2type($) {
     return "uint32_t" if $v =~ m/^(eax|ebx|ecx|edx|esi|edi|ebp)$/i;
 
     return "unsigned int";
+}
+
+print "/* auto-generated from $defname, do not edit. */\n";
+print "\n";
+
+if ($description ne "") {
+    my @a = split(/\n/,$description);
+
+    for ($i=0;$i < @a;$i++) {
+        print "/* ".$a[$i]." */\n";
+    }
+
+    print "\n";
 }
 
 print "/* VXD device ID. Combine with service call ID when using VMMCall/VMMJmp */\n";
