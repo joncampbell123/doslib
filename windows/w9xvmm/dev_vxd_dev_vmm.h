@@ -915,5 +915,33 @@ static inline uint32_t Schedule_Global_Event(const void*const eventcallback/*esi
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Schedule_VM_Event (VMMCall dev=0x0001 serv=0x000F) */
+
+/* description: */
+/*   Schedule an event for the specified virtual machine. The system will carry out a task switch */
+/*   to the virtual machine before calling the event callback procedure.                          */
+
+/* inputs: */
+/*   EBX = vm (VM handle to schedule event) */
+/*   ESI = eventcallback (pointer to callback procedure (32-bit flat)) */
+/*   EDX = refdata (pointer to reference data to pass to callback) */
+
+/* outputs: */
+/*   ESI = event handle */
+
+static inline uint32_t Schedule_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Schedule_VM_Event)
+        : /* outputs */ "=S" (r)
+        : /* inputs */ "b" (vm), "S" (eventcallback), "d" (refdata)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

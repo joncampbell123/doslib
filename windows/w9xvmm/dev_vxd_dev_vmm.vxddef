@@ -233,3 +233,16 @@ in              EDX=void*const          RefData                 ; pointer to ref
 out             ESI                     .                       ; event handle
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Schedule_VM_Event
+description     Schedule an event for the specified virtual machine. The system will carry out a task switch
+description     to the virtual machine before calling the event callback procedure.
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle to schedule event
+in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
+
+out             ESI                     .                       ; event handle
+%enddef
+
