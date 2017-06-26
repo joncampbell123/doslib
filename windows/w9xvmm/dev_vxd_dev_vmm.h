@@ -34,9 +34,14 @@
 /* - "VMM.INC - Include file for Virtual Machine Manager"                          */
 /* - "Version 1.00 - 05-May-1988 - By RAL"                                         */
 /*                                                                                 */
+/* * Windows 95 DDK (installed in C:\DDK95) C:\DDK95\INC32\VMM.INC                 */
+/* - (C) 1993-1995 Microsoft                                                       */
+/*                                                                                 */
 /* * Windows Undocumented File Formats - Working Inside 16- and 32-bit Windows     */
 /* - Pete Davis and Mike Wallace                                                   */
 /* - R&D Books (C) 1997                                                            */
+/*                                                                                 */
+/* This DOSLIB header file (C) 2016-2017 Jonathan Campbell                         */
 
 /* VXD device ID. Combine with service call ID when using VMMCall/VMMJmp */
 #define VMM_Device_ID                                    0x0001
