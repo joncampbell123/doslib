@@ -55,8 +55,8 @@ description     Return VMM version
 
 # no inputs
 
-out             AX      version                                 ; major, minor (example: 0x030A = 3.10)
-out             ECX     debug_dev_rev                           ; debug development revision number
+out             AX      version                                 ; AH=Major AL=Minor (example: 0x030A = 3.10)
+out             ECX     Debug                                   ; debug development revision number
 %enddef
 
 #--------------------------------------
@@ -76,7 +76,7 @@ return          Current VM handle
 byname          Test_Cur_VM_Handle
 description     Test whether VM handle is current VM
 
-in              EBX=vxd_vm_handle_t     vmhandle                ; VM handle to test
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle to test
 
 out             ZF                      .                       ; ZF set if vm handle matches
 
@@ -100,7 +100,7 @@ return          System VM handle
 byname          Test_Sys_VM_Handle
 description     Test whether VM handle is system VM
 
-in              EBX=vxd_vm_handle_t     vmhandle                ; VM handle to test
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle to test
 
 out             ZF                      .                       ; ZF set if vm handle matches
 
@@ -112,7 +112,7 @@ return          Boolean value. True if VM handle matches the one given, false if
 byname          Validate_VM_Handle
 description     Verify that the VM handle is valid
 
-in              EBX=vxd_vm_handle_t     vmhandle                ; VM handle to test
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle to test
 
 out             !CF                     .                       ; CF is set if NOT valid, clear if valid. Return value should invert sense.
 
@@ -148,7 +148,7 @@ return          unsigned int containing old reentrancy count, which must be save
 byname          End_Reentrant_Execution
 description     Ends reentrant execution, after Begin_Reentrant_Execution.
 
-in              ECX     reentrancy_count                        ; reentrancy count returned by Begin_Reentrant_Execution
+in              ECX     Count                                   ; reentrancy count returned by Begin_Reentrant_Execution
 %enddef
 
 #--------------------------------------
@@ -157,9 +157,9 @@ byname          Install_V86_Break_Point
 description     Insert a break point in virtual 8086 memory of the current virtual machine, and
 description     insert a breakpoint callback procedure to receive control when the break point happens.
 
-in              EAX=void*const          breakpoint_address      ; V86 address to place the break point
-in              EDX=void*const          pointer_to_ref_data     ; pointer to reference data to be passed to callback procedure
-in              ESI=void*const          callback_address        ; pointer to callback procedure to install (32-bit offset)
+in              EAX=void*const          BreakAddr               ; V86 address to place the break point
+in              EDX=void*const          RefData                 ; pointer to reference data to be passed to callback procedure
+in              ESI=void*const          Callback                ; pointer to callback procedure to install (32-bit offset)
 
 out             !CF                     .                       ; success (CF clear) or failure (CF set)
 
@@ -171,7 +171,7 @@ return          Bool, true if success, false if failure (not installed)
 byname          Remove_V86_Break_Point
 description     Remove a virtual 8086 break point installed with Install_V86_Break_Point in the current VM
 
-in              EAX=void*const          breakpoint_address      ; V86 address to remove break point from
+in              EAX=void*const          BreakAddr               ; V86 address to remove break point from
 %enddef
 
 #--------------------------------------
@@ -180,11 +180,11 @@ byname          Allocate_V86_Call_Back
 description     Install a callback procedure for virtual 8086 mode applications can call to execute code in
 description     a virtual device.
 
-in              EDX=void*const          reference_data_ptr      ; points to reference data to pass to callback procedure
-in              ESI=void*const          callback_procedure_ptr  ; points to callback procedure to call
+in              EDX=void*const          RefData                 ; points to reference data to pass to callback procedure
+in              ESI=void*const          Callback                ; points to callback procedure to call
 
 out             CF                      error                   ; if success, CF=0 and EAX=realmode ptr. if failure, CF=1
-out             EAX                     realmode_cb_addr        ; if CF=0, segment:offset of real-mode callback address
+out             EAX                     CallbackAddr            ; if CF=0, segment:offset of real-mode callback address
 %enddef
 
 #--------------------------------------
@@ -192,11 +192,11 @@ out             EAX                     realmode_cb_addr        ; if CF=0, segme
 byname          Allocate_PM_Call_Back
 description     Install a callback procedure for protected mode applications to call to execute code in a virtual device.
 
-in              EDX=void*const          reference_data_ptr      ; points to reference data to pass to callback procedure
-in              ESI=void*const          callback_procedure_ptr  ; points to callback procedure to call
+in              EDX=void*const          RefData                 ; points to reference data to pass to callback procedure
+in              ESI=void*const          Callback                ; points to callback procedure to call
 
 out             CF                      error                   ; if success, CF=0 and EAX=realmode ptr. if failure, CF=1
-out             EAX                     cb_addr                 ; if CF=0, address of callback procedure
+out             EAX                     CallbackAddr            ; if CF=0, address of callback procedure
 %enddef
 
 #--------------------------------------

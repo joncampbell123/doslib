@@ -499,12 +499,12 @@
 /*   None */
 
 /* outputs: */
-/*   AX = version (major, minor (example: 0x030A = 3.10)) */
-/*   ECX = debug_dev_rev (debug development revision number) */
+/*   AX = version (AH=Major AL=Minor (example: 0x030A = 3.10)) */
+/*   ECX = debug (debug development revision number) */
 
 typedef struct Get_VMM_Version__response {
     uint16_t version; /* AX */
-    uint32_t debug_dev_rev; /* ECX */
+    uint32_t debug; /* ECX */
 } Get_VMM_Version__response;
 
 static inline Get_VMM_Version__response Get_VMM_Version(void) {
@@ -512,7 +512,7 @@ static inline Get_VMM_Version__response Get_VMM_Version(void) {
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_VMM_Version)
-        : /* outputs */ "=a" (r.version), "=c" (r.debug_dev_rev)
+        : /* outputs */ "=a" (r.version), "=c" (r.debug)
         : /* inputs */
         : /* clobbered */
     );
@@ -555,7 +555,7 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 /*   Test whether VM handle is current VM */
 
 /* inputs: */
-/*   EBX = vmhandle (VM handle to test) */
+/*   EBX = vm (VM handle to test) */
 
 /* outputs: */
 /*   ZF = ZF set if vm handle matches */
@@ -563,13 +563,13 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 /* returns: */
 /*   Boolean value. True if VM handle matches, false if not. */
 
-static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
+static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Test_Cur_VM_Handle)
         : /* outputs */ "=@ccz" (r)
-        : /* inputs */ "b" (vmhandle)
+        : /* inputs */ "b" (vm)
         : /* clobbered */
     );
 
@@ -611,7 +611,7 @@ static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
 /*   Test whether VM handle is system VM */
 
 /* inputs: */
-/*   EBX = vmhandle (VM handle to test) */
+/*   EBX = vm (VM handle to test) */
 
 /* outputs: */
 /*   ZF = ZF set if vm handle matches */
@@ -619,13 +619,13 @@ static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
 /* returns: */
 /*   Boolean value. True if VM handle matches the one given, false if not. */
 
-static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
+static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Test_Sys_VM_Handle)
         : /* outputs */ "=@ccz" (r)
-        : /* inputs */ "b" (vmhandle)
+        : /* inputs */ "b" (vm)
         : /* clobbered */
     );
 
@@ -639,7 +639,7 @@ static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
 /*   Verify that the VM handle is valid */
 
 /* inputs: */
-/*   EBX = vmhandle (VM handle to test) */
+/*   EBX = vm (VM handle to test) */
 
 /* outputs: */
 /*   !CF = CF is set if NOT valid, clear if valid. Return value should invert sense. */
@@ -647,13 +647,13 @@ static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
 /* returns: */
 /*   Boolean value. True if VM handle is valid, false if invalid. */
 
-static inline _Bool Validate_VM_Handle(const vxd_vm_handle_t vmhandle/*ebx*/) {
+static inline _Bool Validate_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Validate_VM_Handle)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "b" (vmhandle)
+        : /* inputs */ "b" (vm)
         : /* clobbered */
     );
 
@@ -722,16 +722,16 @@ static inline uint32_t Begin_Reentrant_Execution(void) {
 /*   Ends reentrant execution, after Begin_Reentrant_Execution. */
 
 /* inputs: */
-/*   ECX = reentrancy_count (reentrancy count returned by Begin_Reentrant_Execution) */
+/*   ECX = count (reentrancy count returned by Begin_Reentrant_Execution) */
 
 /* outputs: */
 /*   None */
 
-static inline void End_Reentrant_Execution(const uint32_t reentrancy_count/*ecx*/) {
+static inline void End_Reentrant_Execution(const uint32_t count/*ecx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_End_Reentrant_Execution)
         : /* outputs */
-        : /* inputs */ "c" (reentrancy_count)
+        : /* inputs */ "c" (count)
         : /* clobbered */
     );
 }
@@ -744,9 +744,9 @@ static inline void End_Reentrant_Execution(const uint32_t reentrancy_count/*ecx*
 /*   insert a breakpoint callback procedure to receive control when the break point happens. */
 
 /* inputs: */
-/*   EAX = breakpoint_address (V86 address to place the break point) */
-/*   EDX = pointer_to_ref_data (pointer to reference data to be passed to callback procedure) */
-/*   ESI = callback_address (pointer to callback procedure to install (32-bit offset)) */
+/*   EAX = breakaddr (V86 address to place the break point) */
+/*   EDX = refdata (pointer to reference data to be passed to callback procedure) */
+/*   ESI = callback (pointer to callback procedure to install (32-bit offset)) */
 
 /* outputs: */
 /*   !CF = success (CF clear) or failure (CF set) */
@@ -754,13 +754,13 @@ static inline void End_Reentrant_Execution(const uint32_t reentrancy_count/*ecx*
 /* returns: */
 /*   Bool, true if success, false if failure (not installed) */
 
-static inline _Bool Install_V86_Break_Point(const void*const breakpoint_address/*eax*/,const void*const pointer_to_ref_data/*edx*/,const void*const callback_address/*esi*/) {
+static inline _Bool Install_V86_Break_Point(const void*const breakaddr/*eax*/,const void*const refdata/*edx*/,const void*const callback/*esi*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Install_V86_Break_Point)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "a" (breakpoint_address), "d" (pointer_to_ref_data), "S" (callback_address)
+        : /* inputs */ "a" (breakaddr), "d" (refdata), "S" (callback)
         : /* clobbered */
     );
 
@@ -774,16 +774,16 @@ static inline _Bool Install_V86_Break_Point(const void*const breakpoint_address/
 /*   Remove a virtual 8086 break point installed with Install_V86_Break_Point in the current VM */
 
 /* inputs: */
-/*   EAX = breakpoint_address (V86 address to remove break point from) */
+/*   EAX = breakaddr (V86 address to remove break point from) */
 
 /* outputs: */
 /*   None */
 
-static inline void Remove_V86_Break_Point(const void*const breakpoint_address/*eax*/) {
+static inline void Remove_V86_Break_Point(const void*const breakaddr/*eax*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Remove_V86_Break_Point)
         : /* outputs */
-        : /* inputs */ "a" (breakpoint_address)
+        : /* inputs */ "a" (breakaddr)
         : /* clobbered */
     );
 }
@@ -796,25 +796,25 @@ static inline void Remove_V86_Break_Point(const void*const breakpoint_address/*e
 /*   a virtual device.                                                                           */
 
 /* inputs: */
-/*   EDX = reference_data_ptr (points to reference data to pass to callback procedure) */
-/*   ESI = callback_procedure_ptr (points to callback procedure to call) */
+/*   EDX = refdata (points to reference data to pass to callback procedure) */
+/*   ESI = callback (points to callback procedure to call) */
 
 /* outputs: */
 /*   CF = error (if success, CF=0 and EAX=realmode ptr. if failure, CF=1) */
-/*   EAX = realmode_cb_addr (if CF=0, segment:offset of real-mode callback address) */
+/*   EAX = callbackaddr (if CF=0, segment:offset of real-mode callback address) */
 
 typedef struct Allocate_V86_Call_Back__response {
     _Bool error; /* CF */
-    uint32_t realmode_cb_addr; /* EAX */
+    uint32_t callbackaddr; /* EAX */
 } Allocate_V86_Call_Back__response;
 
-static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void*const reference_data_ptr/*edx*/,const void*const callback_procedure_ptr/*esi*/) {
+static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void*const refdata/*edx*/,const void*const callback/*esi*/) {
     register Allocate_V86_Call_Back__response r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Allocate_V86_Call_Back)
-        : /* outputs */ "=@ccc" (r.error), "=a" (r.realmode_cb_addr)
-        : /* inputs */ "d" (reference_data_ptr), "S" (callback_procedure_ptr)
+        : /* outputs */ "=@ccc" (r.error), "=a" (r.callbackaddr)
+        : /* inputs */ "d" (refdata), "S" (callback)
         : /* clobbered */
     );
 
@@ -828,25 +828,25 @@ static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void
 /*   Install a callback procedure for protected mode applications to call to execute code in a virtual device. */
 
 /* inputs: */
-/*   EDX = reference_data_ptr (points to reference data to pass to callback procedure) */
-/*   ESI = callback_procedure_ptr (points to callback procedure to call) */
+/*   EDX = refdata (points to reference data to pass to callback procedure) */
+/*   ESI = callback (points to callback procedure to call) */
 
 /* outputs: */
 /*   CF = error (if success, CF=0 and EAX=realmode ptr. if failure, CF=1) */
-/*   EAX = cb_addr (if CF=0, address of callback procedure) */
+/*   EAX = callbackaddr (if CF=0, address of callback procedure) */
 
 typedef struct Allocate_PM_Call_Back__response {
     _Bool error; /* CF */
-    uint32_t cb_addr; /* EAX */
+    uint32_t callbackaddr; /* EAX */
 } Allocate_PM_Call_Back__response;
 
-static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void*const reference_data_ptr/*edx*/,const void*const callback_procedure_ptr/*esi*/) {
+static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void*const refdata/*edx*/,const void*const callback/*esi*/) {
     register Allocate_PM_Call_Back__response r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Allocate_PM_Call_Back)
-        : /* outputs */ "=@ccc" (r.error), "=a" (r.cb_addr)
-        : /* inputs */ "d" (reference_data_ptr), "S" (callback_procedure_ptr)
+        : /* outputs */ "=@ccc" (r.error), "=a" (r.callbackaddr)
+        : /* inputs */ "d" (refdata), "S" (callback)
         : /* clobbered */
     );
 
