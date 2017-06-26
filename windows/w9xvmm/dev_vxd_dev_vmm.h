@@ -687,5 +687,57 @@ static inline void End_Reentrant_Execution(const uint32_t reentrancy_count/*ecx*
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Install_V86_Break_Point (VMMCall dev=0x0001 serv=0x0009) */
+
+/* description: */
+/*   Insert a break point in virtual 8086 memory of the current virtual machine, and */
+/*   insert a breakpoint callback procedure to receive control when the break point happens. */
+
+/* inputs: */
+/*   EDX = pointer_to_ref_data (pointer to reference data to be passed to callback procedure) */
+/*   EAX = breakpoint_address (V86 address to place the break point) */
+/*   ESI = callback_address (pointer to callback procedure to install (32-bit offset)) */
+
+/* outputs: */
+/*   !CF = success (CF clear) or failure (CF set) */
+
+/* returns: */
+/*   Bool, true if success, false if failure (not installed) */
+
+static inline _Bool Install_V86_Break_Point(const void*const pointer_to_ref_data/*edx*/,const void*const breakpoint_address/*eax*/,const void*const callback_address/*esi*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Install_V86_Break_Point)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "d" (pointer_to_ref_data), "a" (breakpoint_address), "S" (callback_address)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Remove_V86_Break_Point (VMMCall dev=0x0001 serv=0x000A) */
+
+/* description: */
+/*   Remove a virtual 8086 break point installed with Install_V86_Break_Point in the current VM */
+
+/* inputs: */
+/*   EAX = breakpoint_address (V86 address to remove break point from) */
+
+/* outputs: */
+/*   None */
+
+static inline void Remove_V86_Break_Point(const void*const breakpoint_address/*eax*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Remove_V86_Break_Point)
+        : /* outputs */
+        : /* inputs */ "a" (breakpoint_address)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
