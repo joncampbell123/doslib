@@ -535,6 +535,9 @@ static inline Get_VMM_Version__response Get_VMM_Version(void) {
 /* returns: */
 /*   Current VM handle */
 
+/* asynchronous: */
+/*   yes */
+
 static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
     register vxd_vm_handle_t r;
 
@@ -562,6 +565,9 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 
 /* returns: */
 /*   Boolean value. True if VM handle matches, false if not. */
+
+/* asynchronous: */
+/*   yes */
 
 static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
     register _Bool r;
@@ -591,6 +597,9 @@ static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
 /* returns: */
 /*   System VM handle */
 
+/* asynchronous: */
+/*   yes */
+
 static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
     register vxd_vm_handle_t r;
 
@@ -619,6 +628,9 @@ static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
 /* returns: */
 /*   Boolean value. True if VM handle matches the one given, false if not. */
 
+/* asynchronous: */
+/*   yes */
+
 static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
     register _Bool r;
 
@@ -646,6 +658,9 @@ static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
 
 /* returns: */
 /*   Boolean value. True if VM handle is valid, false if invalid. */
+
+/* asynchronous: */
+/*   yes */
 
 static inline _Bool Validate_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
     register _Bool r;
@@ -902,6 +917,9 @@ static inline void Call_When_VM_Returns(const int32_t timeout/*eax*/,const void*
 /* outputs: */
 /*   ESI = event handle */
 
+/* asynchronous: */
+/*   yes */
+
 static inline uint32_t Schedule_Global_Event(const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
     register uint32_t r;
 
@@ -929,6 +947,9 @@ static inline uint32_t Schedule_Global_Event(const void*const eventcallback/*esi
 
 /* outputs: */
 /*   ESI = event handle */
+
+/* asynchronous: */
+/*   yes */
 
 static inline uint32_t Schedule_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
     register uint32_t r;

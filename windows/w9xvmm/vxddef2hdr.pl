@@ -351,6 +351,23 @@ while (my $line = <DEF>) {
                 print "\n";
             }
 
+            if (exists($funcdef{async})) {
+                my $maxcol = 0;
+                my @b = split(/\n/,$funcdef{async});
+                print "/* asynchronous: */\n";
+
+                for ($i=0;$i < @b;$i++) {
+                    $len = length($b[$i]);
+                    $maxcol = $len if $maxcol < $len;
+                }
+
+                for ($i=0;$i < @b;$i++) {
+                    print "/*   ".substr($b[$i].(' ' x $maxcol),0,$maxcol)." */\n";
+                }
+
+                print "\n";
+            }
+
             my $params = "void";
             if (exists($funcdef{in})) {
                 my %f = %{$funcdef{in}};
@@ -524,6 +541,19 @@ while (my $line = <DEF>) {
             for ($i=1;$i < @a;$i++) {
                 $funcdef{description} .= " " if $i > 1;
                 $funcdef{description} .= $a[$i];
+            }
+        }
+        elsif ($a[0] eq "async") {
+            if (exists($funcdef{async})) {
+                $funcdef{async} .= "\n";
+            }
+            else {
+                $funcdef{async} = "";
+            }
+
+            for ($i=1;$i < @a;$i++) {
+                $funcdef{async} .= " " if $i > 1;
+                $funcdef{async} .= $a[$i];
             }
         }
         elsif ($a[0] eq "in") {

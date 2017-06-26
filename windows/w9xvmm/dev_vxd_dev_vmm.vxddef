@@ -63,6 +63,7 @@ out             ECX     Debug                                   ; debug developm
 %defcall
 byname          Get_Cur_VM_Handle
 description     Return current VM handle
+async           yes
 
 # no inputs
 
@@ -75,6 +76,7 @@ return          Current VM handle
 %defcall
 byname          Test_Cur_VM_Handle
 description     Test whether VM handle is current VM
+async           yes
 
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle to test
 
@@ -87,6 +89,7 @@ return          Boolean value. True if VM handle matches, false if not.
 %defcall
 byname          Get_Sys_VM_Handle
 description     Return system VM handle
+async           yes
 
 # no inputs
 
@@ -99,6 +102,7 @@ return          System VM handle
 %defcall
 byname          Test_Sys_VM_Handle
 description     Test whether VM handle is system VM
+async           yes
 
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle to test
 
@@ -111,6 +115,7 @@ return          Boolean value. True if VM handle matches the one given, false if
 %defcall
 byname          Validate_VM_Handle
 description     Verify that the VM handle is valid
+async           yes
 
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle to test
 
@@ -226,6 +231,7 @@ description     mov ebx,VM ; current VM handle
 description     mov edx,RefData ; reference data pointer
 description     mov ebp,crs ; pointer to a Client_Reg_Struc
 description     call [EventCallback]
+async           yes
 
 in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
 in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
@@ -238,6 +244,7 @@ out             ESI                     .                       ; event handle
 byname          Schedule_VM_Event
 description     Schedule an event for the specified virtual machine. The system will carry out a task switch
 description     to the virtual machine before calling the event callback procedure.
+async           yes
 
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle to schedule event
 in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
