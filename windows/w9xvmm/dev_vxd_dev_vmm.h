@@ -681,8 +681,8 @@ static inline uint32_t Get_VMM_Reenter_Count(void) {
 
 /* description: */
 /*   Start reentrant execution. You can use this when hooking VMM faults (reentrant processor faults) */
-/*   in order to call non-asynchronous VMM or virtual device services or execute a virtual machine. */
-/*   Do not use this service to avoid scheduling events on hardware interrupts. */
+/*   in order to call non-asynchronous VMM or virtual device services or execute a virtual machine.   */
+/*   Do not use this service to avoid scheduling events on hardware interrupts.                       */
 
 /* inputs: */
 /*   None */
@@ -731,7 +731,7 @@ static inline void End_Reentrant_Execution(const uint32_t reentrancy_count/*ecx*
 /* VMM Install_V86_Break_Point (VMMCall dev=0x0001 serv=0x0009) */
 
 /* description: */
-/*   Insert a break point in virtual 8086 memory of the current virtual machine, and */
+/*   Insert a break point in virtual 8086 memory of the current virtual machine, and         */
 /*   insert a breakpoint callback procedure to receive control when the break point happens. */
 
 /* inputs: */
@@ -784,7 +784,7 @@ static inline void Remove_V86_Break_Point(const void*const breakpoint_address/*e
 
 /* description: */
 /*   Install a callback procedure for virtual 8086 mode applications can call to execute code in */
-/*   a virtual device. */
+/*   a virtual device.                                                                           */
 
 /* inputs: */
 /*   EDX = reference_data_ptr (points to reference data to pass to callback procedure) */

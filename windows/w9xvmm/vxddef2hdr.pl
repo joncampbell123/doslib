@@ -266,11 +266,19 @@ while (my $line = <DEF>) {
             print "/* $vxddevname $funcname (VMMCall dev=$deviceid serv=$serviceid) */\n";
             print "\n";
             if (exists($funcdef{description})) {
+                my $maxcol = 0;
                 my @b = split(/\n/,$funcdef{description});
                 print "/* description: */\n";
+
                 for ($i=0;$i < @b;$i++) {
-                    print "/*   ".$b[$i]." */\n";
+                    $len = length($b[$i]);
+                    $maxcol = $len if $maxcol < $len;
                 }
+
+                for ($i=0;$i < @b;$i++) {
+                    print "/*   ".substr($b[$i].(' ' x $maxcol),0,$maxcol)." */\n";
+                }
+
                 print "\n";
             }
             if (exists($funcdef{in})) {
