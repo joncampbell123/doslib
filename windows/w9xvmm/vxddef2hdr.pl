@@ -218,6 +218,11 @@ print "/*       structure members, GCC's optimizer will boil it down to direct r
 print "/*       returned by the call and direct testing of the CPU flags. */\n";
 print "\n";
 
+print "/* NOTE: Some VxD calls may be listed as 'asynchronous', which is Microsoft's term to mean a VxD call */\n";
+print "/*       that can be safely called from a hardware (asynchronous) interrupt. Non-asynchronous calls are */\n";
+print "/*       not reentrant and can cause problems if called in a reentrant manner. */\n";
+print "\n";
+
 # function defs
 print "#if defined(__GNUC__) /* GCC only, for now */\n";
 print "# if defined(GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT) /* we require GCC 6.1 or higher with support for CPU flags as output */\n";

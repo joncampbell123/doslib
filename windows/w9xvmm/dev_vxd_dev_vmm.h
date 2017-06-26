@@ -487,6 +487,10 @@
 /*       structure members, GCC's optimizer will boil it down to direct register access of the values */
 /*       returned by the call and direct testing of the CPU flags. */
 
+/* NOTE: Some VxD calls may be listed as 'asynchronous', which is Microsoft's term to mean a VxD call */
+/*       that can be safely called from a hardware (asynchronous) interrupt. Non-asynchronous calls are */
+/*       not reentrant and can cause problems if called in a reentrant manner. */
+
 #if defined(__GNUC__) /* GCC only, for now */
 # if defined(GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT) /* we require GCC 6.1 or higher with support for CPU flags as output */
 /*-------------------------------------------------------------*/
