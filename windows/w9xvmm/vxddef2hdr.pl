@@ -300,7 +300,13 @@ while (my $line = <DEF>) {
                 while (($key,$value) = each %f) {
                     $params = "" if $fc == 0;
 
-                    $ptype = "const ".reg2type($key);
+                    $ptype = $funcdef{paramtype}{$value};
+                    if (defined($ptype) && $ptype ne "") {
+                        $ptype = "const ".$ptype;
+                    }
+                    else {
+                        $ptype = "const ".reg2type($key);
+                    }
 
                     $params .= "," unless $params eq "";
                     $params .= $ptype." ".$value."/*".$key."*/";
@@ -313,7 +319,13 @@ while (my $line = <DEF>) {
             my $rettype = "void";
             if (exists($funcdef{out})) {
                 if (exists($funcdef{struct}{'.'})) {
-                    $ptype = reg2type($funcdef{struct}{'.'});
+                    $ptype = $funcdef{structtype}{'.'};
+                    if (defined($ptype) && $ptype ne "") {
+                        $ptype = "const ".$ptype;
+                    }
+                    else {
+                        $ptype = "const ".reg2type($funcdef{struct}{'.'});
+                    }
 
                     $rettype = $ptype;
                     $directreg = 1;
@@ -329,7 +341,15 @@ while (my $line = <DEF>) {
 
                     my %f = %{$funcdef{struct}};
                     while (($key,$value) = each %f) {
-                        print "    ".reg2type($value);
+                        $ptype = $funcdef{structtype}{$key};
+                        if (defined($ptype) && $ptype ne "") {
+                            $ptype = $ptype;
+                        }
+                        else {
+                            $ptype = reg2type($value);
+                        }
+
+                        print "    ".$ptype;
                         print " ".$key;
                         print "; /* ".uc($value)." */";
                         print "\n";
@@ -434,6 +454,14 @@ while (my $line = <DEF>) {
                 $funcdef{paramcomment} = { };
             }
 
+            my $type = '';
+
+            $i = index($a[1],'=');
+            if ($i >= 0) {
+                $type = substr($a[1],$i+1);
+                $a[1] = substr($a[1],0,$i);
+            }
+
 # the name '.' is allowed to mean no name if it's the ONLY return value
 # out             AX        version                                 ; major, minor (example: 0x030A = 3.10)
 # out             register  name                                    ; comment
@@ -447,6 +475,7 @@ while (my $line = <DEF>) {
             $funcdef{param}{$a[2]} = $a[1];
             $funcdef{incomment}{$a[1]} = $comment;
             $funcdef{paramcomment}{$a[2]} = $comment;
+            $funcdef{paramtype}{$a[2]} = $type;
         }
         elsif ($a[0] eq "out") {
             $i = index($line,';');
@@ -470,6 +499,14 @@ while (my $line = <DEF>) {
                 $funcdef{structcomment} = { };
             }
 
+            my $type = '';
+
+            $i = index($a[1],'=');
+            if ($i >= 0) {
+                $type = substr($a[1],$i+1);
+                $a[1] = substr($a[1],0,$i);
+            }
+
 # the name '.' is allowed to mean no name if it's the ONLY return value
 # out             AX        version                                 ; major, minor (example: 0x030A = 3.10)
 # out             register  name                                    ; comment
@@ -483,6 +520,7 @@ while (my $line = <DEF>) {
             $funcdef{struct}{$a[2]} = $a[1];
             $funcdef{outcomment}{$a[1]} = $comment;
             $funcdef{structcomment}{$a[2]} = $comment;
+            $funcdef{structtype}{$a[2]} = $type;
         }
         else {
             die "Unknown defcall $a[0]";

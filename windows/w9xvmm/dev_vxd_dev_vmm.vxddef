@@ -24,7 +24,7 @@ description     Return current VM handle
 
 # no inputs
 
-out             EBX     .                                       ; Handle of the current VM
+out             EBX=vxd_vm_handle_t     .                       ; Handle of the current VM
 %enddef
 
 #--------------------------------------
@@ -32,9 +32,9 @@ out             EBX     .                                       ; Handle of the 
 byname          Test_Cur_VM_Handle
 description     Test whether VM handle is current VM
 
-in              EBX     vmhandle                                ; VM handle to test
+in              EBX=vxd_vm_handle_t     vmhandle                ; VM handle to test
 
-out             ZF      .                                       ; ZF set if vm handle matches
+out             ZF                      .                       ; ZF set if vm handle matches
 %enddef
 
 #--------------------------------------
@@ -44,7 +44,7 @@ description     Return system VM handle
 
 # no inputs
 
-out             EBX     .                                       ; Handle of the system VM
+out             EBX=vxd_vm_handle_t     .                       ; Handle of the system VM
 %enddef
 
 #--------------------------------------
@@ -52,9 +52,9 @@ out             EBX     .                                       ; Handle of the 
 byname          Test_Sys_VM_Handle
 description     Test whether VM handle is system VM
 
-in              EBX     vmhandle                                ; VM handle to test
+in              EBX=vxd_vm_handle_t     vmhandle                ; VM handle to test
 
-out             ZF      .                                       ; ZF set if vm handle matches
+out             ZF                      .                       ; ZF set if vm handle matches
 %enddef
 
 #--------------------------------------
@@ -62,9 +62,9 @@ out             ZF      .                                       ; ZF set if vm h
 byname          Validate_VM_Handle
 description     Verify that the VM handle is valid
 
-in              EBX     vmhandle                                ; VM handle to test
+in              EBX=vxd_vm_handle_t     vmhandle                ; VM handle to test
 
-out             !CF     .                                       ; CF is set if NOT valid, clear if valid. Return value should invert sense.
+out             !CF                     .                       ; CF is set if NOT valid, clear if valid. Return value should invert sense.
 %enddef
 
 #--------------------------------------
