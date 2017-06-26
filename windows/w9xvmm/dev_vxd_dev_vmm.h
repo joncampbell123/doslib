@@ -735,8 +735,8 @@ static inline void End_Reentrant_Execution(const uint32_t reentrancy_count/*ecx*
 /*   insert a breakpoint callback procedure to receive control when the break point happens. */
 
 /* inputs: */
-/*   EDX = pointer_to_ref_data (pointer to reference data to be passed to callback procedure) */
 /*   EAX = breakpoint_address (V86 address to place the break point) */
+/*   EDX = pointer_to_ref_data (pointer to reference data to be passed to callback procedure) */
 /*   ESI = callback_address (pointer to callback procedure to install (32-bit offset)) */
 
 /* outputs: */
@@ -751,7 +751,7 @@ static inline _Bool Install_V86_Break_Point(const void*const breakpoint_address/
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Install_V86_Break_Point)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "d" (pointer_to_ref_data), "a" (breakpoint_address), "S" (callback_address)
+        : /* inputs */ "a" (breakpoint_address), "d" (pointer_to_ref_data), "S" (callback_address)
         : /* clobbered */
     );
 

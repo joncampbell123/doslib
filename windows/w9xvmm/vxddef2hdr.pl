@@ -284,7 +284,13 @@ while (my $line = <DEF>) {
             if (exists($funcdef{in})) {
                 my %f = %{$funcdef{in}};
                 print "/* inputs: */\n";
-                while (($key,$value) = each %f) {
+
+                my @pord = split(/ +/,$funcdef{paramorder});
+
+                for ($i=0;$i < @pord;$i++) {
+                    $key = $pord[$i];
+                    $value = $f{$key};
+
                     print "/*   ".uc($key)." = ".$value." ";
                     if (exists($funcdef{incomment})) {
                         if (exists($funcdef{incomment}{$key})) {
@@ -446,7 +452,13 @@ while (my $line = <DEF>) {
             if (exists($funcdef{in})) {
                 my %f = %{$funcdef{in}};
                 my $fc = 0;
-                while (($key,$value) = each %f) {
+
+                my @pord = split(/ +/,$funcdef{paramorder});
+
+                for ($i=0;$i < @pord;$i++) {
+                    $key = $pord[$i];
+                    $value = $f{$key};
+
                     print "," if $fc > 0;
                     print " \"".reg2gccspec($key)."\" ($value)";
                     $fc++;
