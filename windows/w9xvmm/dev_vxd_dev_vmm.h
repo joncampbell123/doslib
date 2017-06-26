@@ -853,5 +853,33 @@ static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void*c
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Call_When_VM_Returns (VMMCall dev=0x0001 serv=0x000D) */
+
+/* description: */
+/*   Install a callback procedure to receive control when a virtual machine executes the IRET instruction for  */
+/*   the current interrupt.                                                                                    */
+/*                                                                                                             */
+/*   if TimeOut is positive, callback is called if VM does not execute IRET within the timeout period.         */
+/*   if TimeOut is negative, callabck is called when timeout occurs and again when IRET is executed by the VM. */
+/*   if TimeOut is zero, timeout is ignored.                                                                   */
+
+/* inputs: */
+/*   EAX = timeout (number of milliseconds for timeout. see description for details.) */
+/*   EDX = refdata (pointer to reference data to pass to callback) */
+/*   ESI = callback (callback procedure (32-bit flat)) */
+
+/* outputs: */
+/*   None */
+
+static inline void Call_When_VM_Returns(const int32_t timeout/*eax*/,const void*const refdata/*edx*/,const void*const callback/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_VM_Returns)
+        : /* outputs */
+        : /* inputs */ "a" (timeout), "d" (refdata), "S" (callback)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

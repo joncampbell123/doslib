@@ -199,3 +199,18 @@ out             CF                      error                   ; if success, CF
 out             EAX                     cb_addr                 ; if CF=0, address of callback procedure
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Call_When_VM_Returns
+description     Install a callback procedure to receive control when a virtual machine executes the IRET instruction for
+description     the current interrupt.
+description
+description     if TimeOut is positive, callback is called if VM does not execute IRET within the timeout period.
+description     if TimeOut is negative, callabck is called when timeout occurs and again when IRET is executed by the VM.
+description     if TimeOut is zero, timeout is ignored.
+
+in              EAX=int32_t             TimeOut                 ; number of milliseconds for timeout. see description for details.
+in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
+in              ESI=void*const          Callback                ; callback procedure (32-bit flat)
+%enddef
+
