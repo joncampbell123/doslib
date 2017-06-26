@@ -438,6 +438,8 @@
 #define VMM_snr__MPEnterSingleProcessor                      0x01B1    /* ver 4.90+ */
 #define VMM_snr__MPLeaveSingleProcessor                      0x01B2    /* ver 4.90+ */
 
+#if defined(__GNUC__) /* GCC only, for now */
+# if defined(GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT) /* we require GCC 6.1 or higher with support for CPU flags as output */
 /*-------------------------------------------------------------*/
 /* VMM Get_VMM_Version (VMMCall dev=0x0001 serv=0x0000) */
 
@@ -619,3 +621,5 @@ static inline uint32_t Get_VMM_Reenter_Count(void) {
     return r;
 }
 
+# endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
+#endif /*defined(__GNUC__)*/

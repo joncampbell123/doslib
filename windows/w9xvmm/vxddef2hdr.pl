@@ -186,6 +186,8 @@ if (@calls > 0) {
 }
 
 # function defs
+print "#if defined(__GNUC__) /* GCC only, for now */\n";
+print "# if defined(GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT) /* we require GCC 6.1 or higher with support for CPU flags as output */\n";
 my %funcdef;
 while (my $line = <DEF>) {
     chomp $line;
@@ -527,6 +529,8 @@ while (my $line = <DEF>) {
         }
     }
 }
+print "# endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/\n";
+print "#endif /*defined(__GNUC__)*/\n";
 
 close(DEF);
 
