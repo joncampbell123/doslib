@@ -1192,5 +1192,33 @@ static inline const void* Get_NMI_Handler_Addr(void) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Set_NMI_Handler_Addr (VMMCall dev=0x0001 serv=0x0017) WINVER=3.0+ */
+
+/* description: */
+/*   Set the Non-Maskable Interrupt vector to point to the specified handler.                    */
+/*   The NMI handler is forbidden to call any virtual device or VMM services and                 */
+/*   it must restrict itself to access only local data in the VxD_LOCKED_DATA_SEG segment.       */
+/*   A virtual device that needs to use VMM services from NMI should instead use Hook_NMI_Event. */
+/*                                                                                               */
+/*   The handler must NOT execute the IRET instruction. It must jump to the previous NMI handler */
+/*   that it retrieved from Get_NMI_Handler_Addr. x86 architecture design dictates that the CPU  */
+/*   ignores additional NMIs until it executes the IRET instruction.                             */
+
+/* inputs: */
+/*   ESI = nmi (pointer to NMI handler) */
+
+/* outputs: */
+/*   None */
+
+static inline void Set_NMI_Handler_Addr(const void* const nmi/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_NMI_Handler_Addr)
+        : /* outputs */
+        : /* inputs */ "S" (nmi)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

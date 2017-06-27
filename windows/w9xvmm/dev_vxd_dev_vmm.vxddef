@@ -380,3 +380,18 @@ description     Return the address of the current Non-Maskable Interrupt handler
 out             ESI=const+void*         .                       ; pointer to current NMI handler
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Set_NMI_Handler_Addr
+description     Set the Non-Maskable Interrupt vector to point to the specified handler.
+description     The NMI handler is forbidden to call any virtual device or VMM services and
+description     it must restrict itself to access only local data in the VxD_LOCKED_DATA_SEG segment.
+description     A virtual device that needs to use VMM services from NMI should instead use Hook_NMI_Event.
+description
+description     The handler must NOT execute the IRET instruction. It must jump to the previous NMI handler
+description     that it retrieved from Get_NMI_Handler_Addr. x86 architecture design dictates that the CPU
+description     ignores additional NMIs until it executes the IRET instruction.
+
+in              ESI=const+void*         nmi                     ; pointer to NMI handler
+%enddef
+
