@@ -235,9 +235,10 @@ while (my $line = <DEF>) {
     next if $line eq "";
 
     if ($line =~ s/^%[ \t]*//) {
+        $was_section = $section;
         $section = lc($line); # s/// modified it in place
 
-        if ($section eq "enddef") {
+        if ($section eq "enddef" && $was_section eq "defcall") {
             #print Dumper(\%funcdef);
 
             # check: we allow '.' as an output struct member IF it's the only output
@@ -509,6 +510,11 @@ while (my $line = <DEF>) {
 
             # start again
             undef %funcdef;
+        }
+        elsif ($section eq "defcall" || $section eq "defconstbitfield") {
+        }
+        else {
+            die "I don't know section $section from $was_section";
         }
 
         next;
