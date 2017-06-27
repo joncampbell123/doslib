@@ -1481,5 +1481,36 @@ static inline void End_Critical_Section(void) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM End_Crit_And_Suspend (VMMCall dev=0x0001 serv=0x0021) WINVER=3.0+ */
+
+/* description: */
+/*   Release the critical section and immediately suspend the current virtual machine.                         */
+/*   If the claim count is not 1 (and therefore the call will not release the section), the function will fail */
+/*   and not change the claim count and return an error. If the system cannot suspend the virtual machine,     */
+/*   then it will return an error.                                                                             */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   !CF = CF set if error (not released), CF clear if success */
+
+/* returns: */
+/*   Bool true if success, false if error */
+
+static inline _Bool End_Crit_And_Suspend(void) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_End_Crit_And_Suspend)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

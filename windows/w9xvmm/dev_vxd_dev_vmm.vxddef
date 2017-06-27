@@ -527,3 +527,16 @@ description     Releasing the critical section also lowers the execution priorit
 description     and may cause a task switch if a higher-priority non-suspended virtual machine is waiting.
 %enddef
 
+#--------------------------------------
+%defcall
+byname          End_Crit_And_Suspend
+description     Release the critical section and immediately suspend the current virtual machine.
+description     If the claim count is not 1 (and therefore the call will not release the section), the function will fail
+description     and not change the claim count and return an error. If the system cannot suspend the virtual machine,
+description     then it will return an error.
+
+out             !CF                     .                       ; CF set if error (not released), CF clear if success
+
+return          Bool true if success, false if error
+%enddef
+
