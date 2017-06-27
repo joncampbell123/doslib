@@ -288,3 +288,20 @@ in              EDX=void*const          RefData                 ; pointer to ref
 out             ESI                     .                       ; event handle, or 0 if procedure was called immediately without scheduling.
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Cancel_Global_Event
+description     Cancel a global event previously scheduled by Schedule_Global_Event or Call_Global_Event
+
+in              ESI                     Event                   ; Event handle, or 0 if no event should be cancelled.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Cancel_VM_Event
+description     Cancel a VM event previously scheduled by Schedule_VM_Event or Call_VM_Event
+
+in              EBX                     VM                      ; VM handle
+in              ESI                     Event                   ; Event handle, or 0 if no event should be cancelled.
+%enddef
+

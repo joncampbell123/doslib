@@ -1037,5 +1037,48 @@ static inline uint32_t Call_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void*
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Cancel_Global_Event (VMMCall dev=0x0001 serv=0x0012) */
+
+/* description: */
+/*   Cancel a global event previously scheduled by Schedule_Global_Event or Call_Global_Event */
+
+/* inputs: */
+/*   ESI = event (Event handle, or 0 if no event should be cancelled.) */
+
+/* outputs: */
+/*   None */
+
+static inline void Cancel_Global_Event(const uint32_t event/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_Global_Event)
+        : /* outputs */
+        : /* inputs */ "S" (event)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Cancel_VM_Event (VMMCall dev=0x0001 serv=0x0013) */
+
+/* description: */
+/*   Cancel a VM event previously scheduled by Schedule_VM_Event or Call_VM_Event */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+/*   ESI = event (Event handle, or 0 if no event should be cancelled.) */
+
+/* outputs: */
+/*   None */
+
+static inline void Cancel_VM_Event(const uint32_t vm/*ebx*/,const uint32_t event/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_VM_Event)
+        : /* outputs */
+        : /* inputs */ "b" (vm), "S" (event)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
