@@ -1512,5 +1512,48 @@ static inline _Bool End_Crit_And_Suspend(void) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Claim_Critical_Section (VMMCall dev=0x0001 serv=0x0022) WINVER=3.0+ */
+
+/* description: */
+/*   Increment the critical section claim count by the specified amount (as if calling Begin_Critical_Section by that many times) */
+
+/* inputs: */
+/*   EAX = claims (how much to increment. zero is valid, but ignored) */
+/*   ECX = flags (Block_* constants) */
+
+/* outputs: */
+/*   None */
+
+static inline void Claim_Critical_Section(uint32_t const claims/*eax*/,uint32_t const flags/*ecx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Claim_Critical_Section)
+        : /* outputs */
+        : /* inputs */ "a" (claims), "c" (flags)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Release_Critical_Section (VMMCall dev=0x0001 serv=0x0023) WINVER=3.0+ */
+
+/* description: */
+/*   Decrement the critical section claim count by the specified amount (as if calling End_Critical_Section by that many times) */
+
+/* inputs: */
+/*   ECX = claims (how much to decrement. zero is valid, but ignored) */
+
+/* outputs: */
+/*   None */
+
+static inline void Release_Critical_Section(uint32_t const claims/*ecx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Release_Critical_Section)
+        : /* outputs */
+        : /* inputs */ "c" (claims)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

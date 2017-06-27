@@ -540,3 +540,20 @@ out             !CF                     .                       ; CF set if erro
 return          Bool true if success, false if error
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Claim_Critical_Section
+description     Increment the critical section claim count by the specified amount (as if calling Begin_Critical_Section by that many times)
+
+in              EAX                     Claims                  ; how much to increment. zero is valid, but ignored
+in              ECX                     Flags                   ; Block_* constants
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Release_Critical_Section
+description     Decrement the critical section claim count by the specified amount (as if calling End_Critical_Section by that many times)
+
+in              ECX                     Claims                  ; how much to decrement. zero is valid, but ignored
+%enddef
+
