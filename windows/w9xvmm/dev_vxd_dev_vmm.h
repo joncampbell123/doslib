@@ -1809,5 +1809,56 @@ static inline _Bool Resume_VM(vxd_vm_handle_t const vm/*ebx*/) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM No_Fail_Resume_VM (VMMCall dev=0x0001 serv=0x002D) WINVER=3.0+ */
+
+/* description: */
+/*   Resume execution of a virtual machine suspended by Suspend_VM.                                      */
+/*   If the virtual machine cannot be resumed for any reason, the system will notify the user and handle */
+/*   the error automatically, resuming the virtual machine when there is sufficient memory available.    */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   None */
+
+static inline void No_Fail_Resume_VM(vxd_vm_handle_t const vm/*ebx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_No_Fail_Resume_VM)
+        : /* outputs */
+        : /* inputs */ "b" (vm)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Nuke_VM (VMMCall dev=0x0001 serv=0x002E) WINVER=3.0+ */
+
+/* description: */
+/*   Close a virtual machine that has not yet terminated.                                              */
+/*   This call will never return if the VM handle is the current VM or system VM.                      */
+/*   If the VM handle specified is the system VM, the service will close Windows and return to MS-DOS. */
+/*                                                                                                     */
+/*   This is typically used by the virtual shell service to close a virtual machine when the user      */
+/*   chooses the Terminate button from the virtual machine's Settings dialog box.                      */
+/*                                                                                                     */
+/*   Use with caution.                                                                                 */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   None */
+
+static inline void Nuke_VM(vxd_vm_handle_t const vm/*ebx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Nuke_VM)
+        : /* outputs */
+        : /* inputs */ "b" (vm)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

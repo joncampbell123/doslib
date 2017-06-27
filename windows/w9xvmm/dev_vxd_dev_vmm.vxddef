@@ -667,3 +667,28 @@ out             !CF                     .                       ; CF set if erro
 return          Bool true if success, false if error
 %enddef
 
+#--------------------------------------
+%defcall
+byname          No_Fail_Resume_VM
+description     Resume execution of a virtual machine suspended by Suspend_VM.
+description     If the virtual machine cannot be resumed for any reason, the system will notify the user and handle
+description     the error automatically, resuming the virtual machine when there is sufficient memory available.
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Nuke_VM
+description     Close a virtual machine that has not yet terminated.
+description     This call will never return if the VM handle is the current VM or system VM.
+description     If the VM handle specified is the system VM, the service will close Windows and return to MS-DOS.
+description
+description     This is typically used by the virtual shell service to close a virtual machine when the user
+description     chooses the Terminate button from the virtual machine's Settings dialog box.
+description
+description     Use with caution.
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+%enddef
+
