@@ -7,13 +7,13 @@
 # NTS: HPS is either \ (DOS) or / (Linux)
 
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq -zl -zu -zw -zc
-CFLAGS_THIS_GCC = -I.. -I../../.. -nostdlib -O3 -Os -fomit-frame-pointer -fno-exceptions -fno-pic -std=gnu99 -ffreestanding -fno-hosted
+CFLAGS_THIS_GCC = -I.. -I../../.. -nostdlib -O3 -Os -fomit-frame-pointer -fno-exceptions -fno-pic -std=gnu99 -ffreestanding -fno-hosted -Wall -pedantic
 
 NOW_BUILDING = WINDRV_DOSBOXPI_WIN9XOW
 
 CFLAGS_VXD = -e=2 -zq -zw -mf -oilrtfm -wx -fp3 -3r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=32 -dTARGET86=386 -DMMODE=f -q -bc -zl -zdp
 
-CFLAGS_VXD_GCC = -march=i386 -DTARGET_MSDOS=32 -DTARGET_WINDOWS=32 -DTARGET86=386 -DMMODE=f
+CFLAGS_VXD_GCC = -march=i386 -DTARGET_MSDOS=32 -DTARGET_WINDOWS=32 -DTARGET86=386 -DMMODE=f -Wall -pedantic
 
 DISCARDABLE_CFLAGS = -nt=_TEXT -nc=CODE
 NONDISCARDABLE_CFLAGS = -nt=_NDTEXT -nc=NDCODE
