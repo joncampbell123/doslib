@@ -1427,7 +1427,7 @@ static inline void Adjust_Exec_Priority(int32_t const priorityboost/*eax*/,vxd_v
 #define Block_Svc_Ints_Bit           0x00000001U /* 1U << 0U bit[0] Service interrupts in the virtual machine even if the virtual machine is blocked */
 #define Block_Svc_If_Ints_Locked_Bit 0x00000002U /* 1U << 1U bit[1] Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set. */
 #define Block_Enable_Ints_Bit        0x00000004U /* 1U << 2U bit[2] Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints_Bit | Svc_If_Ints_Locked_Bit) is set */
-#define Block_Poll_Bit               0x00000008U /* 1U << 3U bit[3] Reserved, do not use */
+#define Block_Poll_Bit               0x00000008U /* 1U << 3U bit[3] Do not switch away from the blocked virtual machine unless another machine has higher priority. */
 
 /*-------------------------------------------------------------*/
 /* VMM Begin_Critical_Section (VMMCall dev=0x0001 serv=0x001F) WINVER=3.0+ */
@@ -1628,6 +1628,49 @@ static inline Create_Semaphore__response Create_Semaphore(uint32_t const tokenco
 static inline void Destroy_Semaphore(uint32_t const semaphore/*eax*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Destroy_Semaphore)
+        : /* outputs */
+        : /* inputs */ "a" (semaphore)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Wait_Semaphore (VMMCall dev=0x0001 serv=0x0027) WINVER=3.0+ */
+
+/* description: */
+/*   Block the current virtual machine (wait) until the semaphore is signaled using Signal_Semaphore service. */
+
+/* inputs: */
+/*   EAX = semaphore (semaphore handle to wait on) */
+/*   ECX = flags (Block_* constants) */
+
+/* outputs: */
+/*   None */
+
+static inline void Wait_Semaphore(uint32_t const semaphore/*eax*/,uint32_t const flags/*ecx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Wait_Semaphore)
+        : /* outputs */
+        : /* inputs */ "a" (semaphore), "c" (flags)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Signal_Semaphore (VMMCall dev=0x0001 serv=0x0028) WINVER=3.0+ */
+
+/* description: */
+/*   Unblocks the virtual machine (if any) waiting on the semaphore. */
+
+/* inputs: */
+/*   EAX = semaphore (semaphore handle) */
+
+/* outputs: */
+/*   None */
+
+static inline void Signal_Semaphore(uint32_t const semaphore/*eax*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Signal_Semaphore)
         : /* outputs */
         : /* inputs */ "a" (semaphore)
         : /* clobbered */

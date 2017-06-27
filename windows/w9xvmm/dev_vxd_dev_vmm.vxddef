@@ -500,7 +500,7 @@ description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1553
 def     Block_Svc_Ints_Bit              0                             ; Service interrupts in the virtual machine even if the virtual machine is blocked
 def     Block_Svc_If_Ints_Locked_Bit    1                             ; Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set.
 def     Block_Enable_Ints_Bit           2                             ; Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints_Bit | Svc_If_Ints_Locked_Bit) is set
-def     Block_Poll_Bit                  3                             ; Reserved, do not use
+def     Block_Poll_Bit                  3                             ; Do not switch away from the blocked virtual machine unless another machine has higher priority.
 %enddef
 
 #--------------------------------------
@@ -588,5 +588,22 @@ byname          Destroy_Semaphore
 description     Destroy the specified semaphore.
 
 in              EAX                     Semaphore               ; semaphore handle to delete
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Wait_Semaphore
+description     Block the current virtual machine (wait) until the semaphore is signaled using Signal_Semaphore service.
+
+in              EAX                     Semaphore               ; semaphore handle to wait on
+in              ECX                     Flags                   ; Block_* constants
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Signal_Semaphore
+description     Unblocks the virtual machine (if any) waiting on the semaphore.
+
+in              EAX                     Semaphore               ; semaphore handle
 %enddef
 
