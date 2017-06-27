@@ -692,3 +692,43 @@ description     Use with caution.
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Crash_Cur_VM
+description     Abruptly terminate (abort) the current VM.
+description     A virtual device should call this function when a catastrophic error has occured,
+description     such as executing an illegal instruction or attempting to program the hardware
+description     in a way incompatible with the device virtualization.
+description
+description     If the system VM is the current VM, Windows will exit with a fatal error without
+description     explicitly crashing the other VMs.
+description
+description     This call does not return.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Execution_Focus
+description     Return the handle of the virtual machine that currently has the execution focus,
+description     also known as the foreground virtual machine.
+
+out             EBX=vxd_vm_handle_t     .                       ; handle of foreground VM
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_Execution_Focus
+description     Assign execution focus to the specified virtual machine (make it the foreground VM).
+description     The foreground VM will then execute with it's foreground priority. If the VM has
+description     exclusive execution priority then it will become the only VM to receive time slices.
+description     When a virtual machine receives the execution focus, the system suspends all other
+description     virtual machines except the system virtual machine and background virtual machines.
+description     Only the system VM can assign the execution focus to other VMs. A non-system VM
+description     can only assign the execution focus to itself.
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+out             !CF                     .                       ; CF set if focus cannot be set, clear otherwise
+
+return          Bool true if focus was set, false otherwise
+%enddef
+

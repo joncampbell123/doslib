@@ -1860,5 +1860,94 @@ static inline void Nuke_VM(vxd_vm_handle_t const vm/*ebx*/) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Crash_Cur_VM (VMMCall dev=0x0001 serv=0x002F) WINVER=3.0+ */
+
+/* description: */
+/*   Abruptly terminate (abort) the current VM.                                        */
+/*   A virtual device should call this function when a catastrophic error has occured, */
+/*   such as executing an illegal instruction or attempting to program the hardware    */
+/*   in a way incompatible with the device virtualization.                             */
+/*                                                                                     */
+/*   If the system VM is the current VM, Windows will exit with a fatal error without  */
+/*   explicitly crashing the other VMs.                                                */
+/*                                                                                     */
+/*   This call does not return.                                                        */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Crash_Cur_VM(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Crash_Cur_VM)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Get_Execution_Focus (VMMCall dev=0x0001 serv=0x0030) WINVER=3.0+ */
+
+/* description: */
+/*   Return the handle of the virtual machine that currently has the execution focus, */
+/*   also known as the foreground virtual machine.                                    */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EBX = handle of foreground VM */
+
+static inline vxd_vm_handle_t Get_Execution_Focus(void) {
+    register vxd_vm_handle_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Execution_Focus)
+        : /* outputs */ "=b" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Set_Execution_Focus (VMMCall dev=0x0001 serv=0x0031) WINVER=3.0+ */
+
+/* description: */
+/*   Assign execution focus to the specified virtual machine (make it the foreground VM). */
+/*   The foreground VM will then execute with it's foreground priority. If the VM has     */
+/*   exclusive execution priority then it will become the only VM to receive time slices. */
+/*   When a virtual machine receives the execution focus, the system suspends all other   */
+/*   virtual machines except the system virtual machine and background virtual machines.  */
+/*   Only the system VM can assign the execution focus to other VMs. A non-system VM      */
+/*   can only assign the execution focus to itself.                                       */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   !CF = CF set if focus cannot be set, clear otherwise */
+
+/* returns: */
+/*   Bool true if focus was set, false otherwise */
+
+static inline _Bool Set_Execution_Focus(vxd_vm_handle_t const vm/*ebx*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_Execution_Focus)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "b" (vm)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
