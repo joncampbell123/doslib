@@ -49,6 +49,23 @@ description     This DOSLIB header file (C) 2016-2017 Jonathan Campbell
 %endheader
 
 #--------------------------------------
+%defconstbitfield
+description     Scheduler boost values (*_Boost)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1524 SCHEDULER BOOST VALUES binary EQUates
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     Reserved_Low_Boost          0                             ; Reserved for use by the system
+def     Cur_Run_VM_Boost            2                             ; Used by time-slice scheduler to force a VM to run for it's allotted time-slice
+def     Low_Pri_Device_Boost        4                             ; For events that need timely processing, but are not time critical
+def     High_Pri_Device_Boost       12                            ; For events that need timely processing, but should not circumvent operations that have a critical section boost
+def     Critical_Section_Boost      20                            ; Used by the system for virtual machines specified in a call to Begin_Critical_Section
+def     Time_Critical_Boost         22                            ; For events that MUST be processed even with another VM is in a critical section (example: VPICD when simulating hardware interrupts)
+def     Reserved_High_Boost         30                            ; Reserved for use by the system
+%enddef
+
+#--------------------------------------
 %defcall
 byname          Get_VMM_Version
 description     Return VMM version

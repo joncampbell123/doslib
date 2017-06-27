@@ -238,7 +238,81 @@ while (my $line = <DEF>) {
         $was_section = $section;
         $section = lc($line); # s/// modified it in place
 
-        if ($section eq "enddef" && $was_section eq "defcall") {
+        if ($section eq "enddef" && $was_section eq "defconstbitfield") {
+            print "/*-------------------------------------------------------------*/\n";
+            if (exists($funcdef{description})) {
+                my $maxcol = 0;
+                my @b = split(/\n/,$funcdef{description});
+                print "/* description: */\n";
+
+                for ($i=0;$i < @b;$i++) {
+                    $len = length($b[$i]);
+                    $maxcol = $len if $maxcol < $len;
+                }
+
+                for ($i=0;$i < @b;$i++) {
+                    print "/*   ".substr($b[$i].(' ' x $maxcol),0,$maxcol)." */\n";
+                }
+            }
+
+            if (exists($funcdef{bf})) {
+                my @cord = split(/ +/,$funcdef{bforder});
+
+                my $maxconst = 0;
+
+                for ($i=0;$i < @cord;$i++) {
+                    $const = $cord[$i];
+                    $length = length($const);
+                    $maxconst = $length if $maxconst < $length;
+                }
+
+                for ($i=0;$i < @cord;$i++) {
+                    $const = $cord[$i];
+                    $bitpos = $funcdef{bf}{$const};
+                    $bitwidth = $funcdef{bfwidth}{$const};
+                    $comment = $funcdef{bfcomment}{$const};
+                    $bitval = $funcdef{bfval}{$const};
+
+                    die "Invalid $bitwidth == 0" if $bitwidth == 0;
+                    die "Bit value out of range, $bitval > ".((1 << $bitwidth) - 1) if $bitval > ((1 << $bitwidth) - 1);
+
+                    $suffix = "U";
+                    $suffix = "UL" if (($bitwidth+$bitpos) >= 32);
+
+                    if ($bitwidth > 2) {
+                        $bwstr = sprintf("0x%X",$bitval).$suffix;
+                    }
+                    else {
+                        $bwstr = $bitval.$suffix;
+                    }
+
+                    if ($suffix eq "UL") {
+                        $bvalue = sprintf("0x%016X",$bitval << $bitpos).$suffix;
+                    }
+                    else {
+                        $bvalue = sprintf("0x%08X",$bitval << $bitpos).$suffix;
+                    }
+
+                    print "#define ".substr($const.(' 'x$maxconst),0,$maxconst)." $bvalue ";
+                    print "/* $bwstr << $bitpos".$suffix." ";
+                    if ($bitwidth > 1) {
+                        print "bits[".($bitpos+$bitwidth-1).":".$bitpos."] ";
+                    }
+                    else {
+                        print "bit[".$bitpos."] ";
+                    }
+                    print "$comment " if (defined($comment) && $comment ne '');
+                    print "*/";
+                    print "\n";
+                }
+            }
+
+            print "\n";
+
+            # start again
+            undef %funcdef;
+        }
+        elsif ($section eq "enddef" && $was_section eq "defcall") {
             #print Dumper(\%funcdef);
 
             # check: we allow '.' as an output struct member IF it's the only output
@@ -520,7 +594,73 @@ while (my $line = <DEF>) {
         next;
     }
 
-    if ($section eq "defcall") {
+    if ($section eq "defconstbitfield") {
+        my @a = split(/[ \t]+/,$line);
+
+        next if @a < 1;
+
+        if ($a[0] eq "def") {
+            $i = index($line,';');
+            my $comment = '';
+            if ($i >= 0) {
+                $comment = substr($line,$i+1);
+                $comment =~ s/^[ \t]+//;
+                $line = substr($line,0,$i);
+            }
+            my @a = split(/[ \t]+/,$line);
+
+            if (!exists($funcdef{bf})) {
+                $funcdef{bf} = { };
+            }
+            if (!exists($funcdef{bforder})) {
+                $funcdef{bforder} = "";
+            }
+
+            # def constant bitpos [bitwidth, or 1 if not given]
+            my $constname = $a[1];
+            my $bitpos = $a[2];
+            my $bitwidth = 1;
+            my $bitval = undef;
+            $bitwidth = $a[3] if (defined($a[3]) && $a[3] ne '');
+            $bitval = $a[4] if (defined($a[4]) && $a[4] ne '');
+
+            die "invalid constant $constname" unless $constname =~ m/^[0-9a-zA-Z_]+$/i;
+            die "invalid bitpos $bitpos" unless $bitpos =~ m/^\d+$/i;
+            die "invalid bitwidth $bitwidth" unless ($bitwidth eq '' || $bitwidth =~ m/^\d+$/i);
+            $bitwidth = 1 if $bitwidth eq '';
+            $bitwidth = int($bitwidth + 0);
+            $bitpos = int($bitpos + 0);
+
+            $bitval = ((1 << $bitwidth) - 1) unless defined($bitval);
+
+            die "$constname already defined" if exists($funcdef{bf}{$constname});
+
+            $funcdef{bforder} .= ' ' if $funcdef{bforder} ne '';
+            $funcdef{bforder} .= $constname;
+
+            $funcdef{bf}{$constname} = $bitpos;
+            $funcdef{bfwidth}{$constname} = $bitwidth;
+            $funcdef{bfcomment}{$constname} = $comment;
+            $funcdef{bfval}{$constname} = $bitval;
+        }
+        elsif ($a[0] eq "description") {
+            if (exists($funcdef{description})) {
+                $funcdef{description} .= "\n";
+            }
+            else {
+                $funcdef{description} = "";
+            }
+
+            for ($i=1;$i < @a;$i++) {
+                $funcdef{description} .= " " if $i > 1;
+                $funcdef{description} .= $a[$i];
+            }
+        }
+        else {
+            die "Don't know what $a[0] is";
+        }
+    }
+    elsif ($section eq "defcall") {
         my @a = split(/[ \t]+/,$line);
 
         next if @a < 1;

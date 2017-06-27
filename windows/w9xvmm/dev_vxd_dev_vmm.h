@@ -494,6 +494,19 @@
 #if defined(__GNUC__) /* GCC only, for now */
 # if defined(GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT) /* we require GCC 6.1 or higher with support for CPU flags as output */
 /*-------------------------------------------------------------*/
+/* description: */
+/*   Scheduler boost values (*_Boost)                                                                 */
+/*                                                                                                    */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1524 SCHEDULER BOOST VALUES binary EQUates */
+#define Reserved_Low_Boost     0x00000001U /* 1U << 0U bit[0] Reserved for use by the system */
+#define Cur_Run_VM_Boost       0x00000004U /* 1U << 2U bit[2] Used by time-slice scheduler to force a VM to run for it's allotted time-slice */
+#define Low_Pri_Device_Boost   0x00000010U /* 1U << 4U bit[4] For events that need timely processing, but are not time critical */
+#define High_Pri_Device_Boost  0x00001000U /* 1U << 12U bit[12] For events that need timely processing, but should not circumvent operations that have a critical section boost */
+#define Critical_Section_Boost 0x00100000U /* 1U << 20U bit[20] Used by the system for virtual machines specified in a call to Begin_Critical_Section */
+#define Time_Critical_Boost    0x00400000U /* 1U << 22U bit[22] For events that MUST be processed even with another VM is in a critical section (example: VPICD when simulating hardware interrupts) */
+#define Reserved_High_Boost    0x40000000U /* 1U << 30U bit[30] Reserved for use by the system */
+
+/*-------------------------------------------------------------*/
 /* VMM Get_VMM_Version (VMMCall dev=0x0001 serv=0x0000) */
 
 /* description: */
