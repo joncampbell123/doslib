@@ -467,10 +467,10 @@ while (my $line = <DEF>) {
 
                     $ptype = $funcdef{paramtype}{$value};
                     if (defined($ptype) && $ptype ne "") {
-                        $ptype = "const ".$ptype;
+                        $ptype = $ptype." const";
                     }
                     else {
-                        $ptype = "const ".reg2type($key);
+                        $ptype = reg2type($key)." const";
                     }
 
                     $params .= "," unless $params eq "";

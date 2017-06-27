@@ -586,7 +586,7 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 /* asynchronous: */
 /*   yes */
 
-static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
+static inline _Bool Test_Cur_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
     register _Bool r;
 
     __asm__ (
@@ -648,7 +648,7 @@ static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
 /* asynchronous: */
 /*   yes */
 
-static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
+static inline _Bool Test_Sys_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
     register _Bool r;
 
     __asm__ (
@@ -679,7 +679,7 @@ static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
 /* asynchronous: */
 /*   yes */
 
-static inline _Bool Validate_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
+static inline _Bool Validate_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
     register _Bool r;
 
     __asm__ (
@@ -759,7 +759,7 @@ static inline uint32_t Begin_Reentrant_Execution(void) {
 /* outputs: */
 /*   None */
 
-static inline void End_Reentrant_Execution(const uint32_t count/*ecx*/) {
+static inline void End_Reentrant_Execution(uint32_t const count/*ecx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_End_Reentrant_Execution)
         : /* outputs */
@@ -904,7 +904,7 @@ static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void* 
 /* outputs: */
 /*   None */
 
-static inline void Call_When_VM_Returns(const int32_t timeout/*eax*/,const void* const refdata/*edx*/,const void* const callback/*esi*/) {
+static inline void Call_When_VM_Returns(int32_t const timeout/*eax*/,const void* const refdata/*edx*/,const void* const callback/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_VM_Returns)
         : /* outputs */
@@ -972,7 +972,7 @@ static inline uint32_t Schedule_Global_Event(const void* const eventcallback/*es
 /* asynchronous: */
 /*   yes */
 
-static inline uint32_t Schedule_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
+static inline uint32_t Schedule_VM_Event(vxd_vm_handle_t const vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
     register uint32_t r;
 
     __asm__ (
@@ -1037,7 +1037,7 @@ static inline uint32_t Call_Global_Event(const void* const eventcallback/*esi*/,
 /* asynchronous: */
 /*   yes */
 
-static inline uint32_t Call_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
+static inline uint32_t Call_VM_Event(vxd_vm_handle_t const vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
     register uint32_t r;
 
     __asm__ (
@@ -1063,7 +1063,7 @@ static inline uint32_t Call_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void*
 /* outputs: */
 /*   None */
 
-static inline void Cancel_Global_Event(const uint32_t event/*esi*/) {
+static inline void Cancel_Global_Event(uint32_t const event/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_Global_Event)
         : /* outputs */
@@ -1086,7 +1086,7 @@ static inline void Cancel_Global_Event(const uint32_t event/*esi*/) {
 /* outputs: */
 /*   None */
 
-static inline void Cancel_VM_Event(const uint32_t vm/*ebx*/,const uint32_t event/*esi*/) {
+static inline void Cancel_VM_Event(uint32_t const vm/*ebx*/,uint32_t const event/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_VM_Event)
         : /* outputs */
@@ -1129,7 +1129,7 @@ static inline void Cancel_VM_Event(const uint32_t vm/*ebx*/,const uint32_t event
 /* outputs: */
 /*   ESI = event handle, or 0 if procedure was called immediately. */
 
-static inline uint32_t Call_Priority_VM_Event(const int32_t priorityboost/*eax*/,const vxd_vm_handle_t vm/*ebx*/,const uint32_t flags/*ecx*/,const void* const refdata/*edx*/,const void* const eventcallback/*esi*/,const uint32_t timeout/*edi*/) {
+static inline uint32_t Call_Priority_VM_Event(int32_t const priorityboost/*eax*/,vxd_vm_handle_t const vm/*ebx*/,uint32_t const flags/*ecx*/,const void* const refdata/*edx*/,const void* const eventcallback/*esi*/,uint32_t const timeout/*edi*/) {
     register uint32_t r;
 
     __asm__ (
@@ -1158,7 +1158,7 @@ static inline uint32_t Call_Priority_VM_Event(const int32_t priorityboost/*eax*/
 /* outputs: */
 /*   None */
 
-static inline void Cancel_Priority_VM_Event(const uint32_t event/*esi*/) {
+static inline void Cancel_Priority_VM_Event(uint32_t const event/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_Priority_VM_Event)
         : /* outputs */
