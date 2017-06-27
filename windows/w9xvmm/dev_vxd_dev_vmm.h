@@ -1313,5 +1313,44 @@ static inline void Disable_VM_Ints(void) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Map_Flat (VMMCall dev=0x0001 serv=0x001C) WINVER=3.0+ */
+
+/* description: */
+/*   Convert a segment:offset or selector:offset pair to a linear address only for the current virtual machine.                          */
+/*   The segment is converted as a V86 segment, or protected mode selector, depending on the execution state of the virtual machine.     */
+/*   If the virtual machine is running 32-bit protected mode code, then the full 32 bits of the register are used.                       */
+/*   For 16-bit protected mode and V86 code, only the lower 16 bits are used.                                                            */
+/*                                                                                                                                       */
+/*   The parameter in this function is the full 16-bit contents of register AX, which contains the two 8-bit values stored in AH and AL. */
+/*   AH is SegOffset, the byte offset from the start of the Client_Reg_Struc structure to the segment/selector register to convert.      */
+/*   AL is OffOffset, the byte offset from the start of the Client_Reg_Struc structure to the register with the offset to convert.       */
+/*   If AL is -1 (0xFF), then 0 is used as the offset of the address to convert (NOT the offset into the Client_Reg_Struc)               */
+/*                                                                                                                                       */
+/*   To form the parameter correctly for this function:                                                                                  */
+/*                                                                                                                                       */
+/*   Map_Flat((SegOffset << 8) + OffOffset);                                                                                             */
+/*                                                                                                                                       */
+/*   The linear address returned is the ring-0 linear address that corresponds to the segment:offset address specified.                  */
+
+/* inputs: */
+/*   AX = segoffoffset (AX = [AH,AL] 16-bit value, AH=SegOffset AL=OffOffset) */
+
+/* outputs: */
+/*   EAX = linear address, or -1 (0xFFFFFFFF) if invalid */
+
+static inline uint32_t Map_Flat(uint16_t const segoffoffset/*ax*/) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Map_Flat)
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "a" (segoffoffset)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

@@ -432,3 +432,27 @@ byname          Disable_VM_Ints
 description     Disable interrupts for the current virtual machine. It has the same effect as if the VM had executed the CLI instruction.
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Map_Flat
+description     Convert a segment:offset or selector:offset pair to a linear address only for the current virtual machine.
+description     The segment is converted as a V86 segment, or protected mode selector, depending on the execution state of the virtual machine.
+description     If the virtual machine is running 32-bit protected mode code, then the full 32 bits of the register are used.
+description     For 16-bit protected mode and V86 code, only the lower 16 bits are used.
+description
+description     The parameter in this function is the full 16-bit contents of register AX, which contains the two 8-bit values stored in AH and AL.
+description     AH is SegOffset, the byte offset from the start of the Client_Reg_Struc structure to the segment/selector register to convert.
+description     AL is OffOffset, the byte offset from the start of the Client_Reg_Struc structure to the register with the offset to convert.
+description     If AL is -1 (0xFF), then 0 is used as the offset of the address to convert (NOT the offset into the Client_Reg_Struc)
+description
+description     To form the parameter correctly for this function:
+description
+description     Map_Flat((SegOffset << 8) + OffOffset);
+description
+description     The linear address returned is the ring-0 linear address that corresponds to the segment:offset address specified.
+
+in              AX                      SegOffOffset            ; AX = [AH,AL] 16-bit value, AH=SegOffset AL=OffOffset
+
+out             EAX                     .                       ; linear address, or -1 (0xFFFFFFFF) if invalid
+%enddef
+
