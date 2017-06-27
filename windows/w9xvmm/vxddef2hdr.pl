@@ -327,6 +327,7 @@ while (my $line = <DEF>) {
             # okay, generate the code
             my $serviceid = undef;
             my $funcname = undef;
+            my $winver = undef;
             if (exists($funcdef{byname})) {
                 $funcname = $funcdef{byname};
 
@@ -336,6 +337,7 @@ while (my $line = <DEF>) {
 
                     if ($ar[2] eq $funcname) {
                         $serviceid = $ar[1];
+                        $winver = $ar[0];
                         last;
                     }
                 }
@@ -348,7 +350,9 @@ while (my $line = <DEF>) {
 
             # emit
             print "/*-------------------------------------------------------------*/\n";
-            print "/* $vxddevname $funcname (VMMCall dev=$deviceid serv=$serviceid) */\n";
+            print "/* $vxddevname $funcname (VMMCall dev=$deviceid serv=$serviceid) ";
+            print "WINVER=$winver " if (defined($winver) && $winver ne '');
+            print "*/\n";
             print "\n";
             if (exists($funcdef{description})) {
                 my $maxcol = 0;

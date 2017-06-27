@@ -507,7 +507,7 @@
 #define Reserved_High_Boost    0x40000000U /* 1U << 30U bit[30] Reserved for use by the system */
 
 /*-------------------------------------------------------------*/
-/* VMM Get_VMM_Version (VMMCall dev=0x0001 serv=0x0000) */
+/* VMM Get_VMM_Version (VMMCall dev=0x0001 serv=0x0000) WINVER=3.0+ */
 
 /* description: */
 /*   Return VMM version */
@@ -538,7 +538,7 @@ static inline Get_VMM_Version__response Get_VMM_Version(void) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Get_Cur_VM_Handle (VMMCall dev=0x0001 serv=0x0001) */
+/* VMM Get_Cur_VM_Handle (VMMCall dev=0x0001 serv=0x0001) WINVER=3.0+ */
 
 /* description: */
 /*   Return current VM handle */
@@ -569,7 +569,7 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Test_Cur_VM_Handle (VMMCall dev=0x0001 serv=0x0002) */
+/* VMM Test_Cur_VM_Handle (VMMCall dev=0x0001 serv=0x0002) WINVER=3.0+ */
 
 /* description: */
 /*   Test whether VM handle is current VM */
@@ -600,7 +600,7 @@ static inline _Bool Test_Cur_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Get_Sys_VM_Handle (VMMCall dev=0x0001 serv=0x0003) */
+/* VMM Get_Sys_VM_Handle (VMMCall dev=0x0001 serv=0x0003) WINVER=3.0+ */
 
 /* description: */
 /*   Return system VM handle */
@@ -631,7 +631,7 @@ static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Test_Sys_VM_Handle (VMMCall dev=0x0001 serv=0x0004) */
+/* VMM Test_Sys_VM_Handle (VMMCall dev=0x0001 serv=0x0004) WINVER=3.0+ */
 
 /* description: */
 /*   Test whether VM handle is system VM */
@@ -662,7 +662,7 @@ static inline _Bool Test_Sys_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Validate_VM_Handle (VMMCall dev=0x0001 serv=0x0005) */
+/* VMM Validate_VM_Handle (VMMCall dev=0x0001 serv=0x0005) WINVER=3.0+ */
 
 /* description: */
 /*   Verify that the VM handle is valid */
@@ -693,7 +693,7 @@ static inline _Bool Validate_VM_Handle(const vxd_vm_handle_t vm/*ebx*/) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Get_VMM_Reenter_Count (VMMCall dev=0x0001 serv=0x0006) */
+/* VMM Get_VMM_Reenter_Count (VMMCall dev=0x0001 serv=0x0006) WINVER=3.0+ */
 
 /* description: */
 /*   Return the number of times the VMM has been reentered. If nonzero, use only asynchronous calls. */
@@ -718,7 +718,7 @@ static inline uint32_t Get_VMM_Reenter_Count(void) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Begin_Reentrant_Execution (VMMCall dev=0x0001 serv=0x0007) */
+/* VMM Begin_Reentrant_Execution (VMMCall dev=0x0001 serv=0x0007) WINVER=3.0+ */
 
 /* description: */
 /*   Start reentrant execution. You can use this when hooking VMM faults (reentrant processor faults) */
@@ -748,7 +748,7 @@ static inline uint32_t Begin_Reentrant_Execution(void) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM End_Reentrant_Execution (VMMCall dev=0x0001 serv=0x0008) */
+/* VMM End_Reentrant_Execution (VMMCall dev=0x0001 serv=0x0008) WINVER=3.0+ */
 
 /* description: */
 /*   Ends reentrant execution, after Begin_Reentrant_Execution. */
@@ -769,7 +769,7 @@ static inline void End_Reentrant_Execution(const uint32_t count/*ecx*/) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Install_V86_Break_Point (VMMCall dev=0x0001 serv=0x0009) */
+/* VMM Install_V86_Break_Point (VMMCall dev=0x0001 serv=0x0009) WINVER=3.0+ */
 
 /* description: */
 /*   Insert a break point in virtual 8086 memory of the current virtual machine, and         */
@@ -800,7 +800,7 @@ static inline _Bool Install_V86_Break_Point(const void*const breakaddr/*eax*/,co
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Remove_V86_Break_Point (VMMCall dev=0x0001 serv=0x000A) */
+/* VMM Remove_V86_Break_Point (VMMCall dev=0x0001 serv=0x000A) WINVER=3.0+ */
 
 /* description: */
 /*   Remove a virtual 8086 break point installed with Install_V86_Break_Point in the current VM */
@@ -821,7 +821,7 @@ static inline void Remove_V86_Break_Point(const void*const breakaddr/*eax*/) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Allocate_V86_Call_Back (VMMCall dev=0x0001 serv=0x000B) */
+/* VMM Allocate_V86_Call_Back (VMMCall dev=0x0001 serv=0x000B) WINVER=3.0+ */
 
 /* description: */
 /*   Install a callback procedure for virtual 8086 mode applications can call to execute code in */
@@ -854,7 +854,7 @@ static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Allocate_PM_Call_Back (VMMCall dev=0x0001 serv=0x000C) */
+/* VMM Allocate_PM_Call_Back (VMMCall dev=0x0001 serv=0x000C) WINVER=3.0+ */
 
 /* description: */
 /*   Install a callback procedure for protected mode applications to call to execute code in a virtual device. */
@@ -886,7 +886,7 @@ static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void*c
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Call_When_VM_Returns (VMMCall dev=0x0001 serv=0x000D) */
+/* VMM Call_When_VM_Returns (VMMCall dev=0x0001 serv=0x000D) WINVER=3.0+ */
 
 /* description: */
 /*   Install a callback procedure to receive control when a virtual machine executes the IRET instruction for  */
@@ -914,7 +914,7 @@ static inline void Call_When_VM_Returns(const int32_t timeout/*eax*/,const void*
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Schedule_Global_Event (VMMCall dev=0x0001 serv=0x000E) */
+/* VMM Schedule_Global_Event (VMMCall dev=0x0001 serv=0x000E) WINVER=3.0+ */
 
 /* description: */
 /*   Schedule a global event, which does not require a specific virtual machine to process it. */
@@ -953,7 +953,7 @@ static inline uint32_t Schedule_Global_Event(const void*const eventcallback/*esi
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Schedule_VM_Event (VMMCall dev=0x0001 serv=0x000F) */
+/* VMM Schedule_VM_Event (VMMCall dev=0x0001 serv=0x000F) WINVER=3.0+ */
 
 /* description: */
 /*   Schedule an event for the specified virtual machine. The system will carry out a task switch */
@@ -986,7 +986,7 @@ static inline uint32_t Schedule_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const v
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Call_Global_Event (VMMCall dev=0x0001 serv=0x0010) */
+/* VMM Call_Global_Event (VMMCall dev=0x0001 serv=0x0010) WINVER=3.0+ */
 
 /* description: */
 /*   Call the event callback procedure immediately, or schedule a global event if the virtual device */
@@ -1018,7 +1018,7 @@ static inline uint32_t Call_Global_Event(const void*const eventcallback/*esi*/,c
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Call_VM_Event (VMMCall dev=0x0001 serv=0x0011) */
+/* VMM Call_VM_Event (VMMCall dev=0x0001 serv=0x0011) WINVER=3.0+ */
 
 /* description: */
 /*   Call the event callback procedure immediately, or schedule a VM event if the virtual device */
@@ -1051,7 +1051,7 @@ static inline uint32_t Call_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void*
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Cancel_Global_Event (VMMCall dev=0x0001 serv=0x0012) */
+/* VMM Cancel_Global_Event (VMMCall dev=0x0001 serv=0x0012) WINVER=3.0+ */
 
 /* description: */
 /*   Cancel a global event previously scheduled by Schedule_Global_Event or Call_Global_Event */
@@ -1072,7 +1072,7 @@ static inline void Cancel_Global_Event(const uint32_t event/*esi*/) {
 }
 
 /*-------------------------------------------------------------*/
-/* VMM Cancel_VM_Event (VMMCall dev=0x0001 serv=0x0013) */
+/* VMM Cancel_VM_Event (VMMCall dev=0x0001 serv=0x0013) WINVER=3.0+ */
 
 /* description: */
 /*   Cancel a VM event previously scheduled by Schedule_VM_Event or Call_VM_Event */
@@ -1105,7 +1105,7 @@ static inline void Cancel_VM_Event(const uint32_t vm/*ebx*/,const uint32_t event
 #define PEF_Time_Out          0x00000010U /* 1U << 4U bit[4] Use timeout value in EDI (Windows 3.1 or higher) */
 
 /*-------------------------------------------------------------*/
-/* VMM Call_Priority_VM_Event (VMMCall dev=0x0001 serv=0x0014) */
+/* VMM Call_Priority_VM_Event (VMMCall dev=0x0001 serv=0x0014) WINVER=3.0+ */
 
 /* description: */
 /*   Calls the callback procedure immediately, or schedules a priority event for the specified virtual machine.   */
