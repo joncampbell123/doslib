@@ -571,3 +571,22 @@ in              ESI=const+void*         CritSecCallback         ; pointer to cal
 in              EDX=const+void*         RefData                 ; pointer to reference data to pass to callback
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Create_Semaphore
+description     Allocate and initialize a new semaphore.
+
+in              ECX                     TokenCount              ; initial token count
+
+out             EAX                     Semaphore               ; semaphore handle if CF=0
+out             CF                      error                   ; CF set if error, CF clear if success
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Destroy_Semaphore
+description     Destroy the specified semaphore.
+
+in              EAX                     Semaphore               ; semaphore handle to delete
+%enddef
+

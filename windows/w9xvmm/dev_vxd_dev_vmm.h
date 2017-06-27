@@ -1582,5 +1582,57 @@ static inline void Call_When_Not_Critical(const void* const critseccallback/*esi
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Create_Semaphore (VMMCall dev=0x0001 serv=0x0025) WINVER=3.0+ */
+
+/* description: */
+/*   Allocate and initialize a new semaphore. */
+
+/* inputs: */
+/*   ECX = tokencount (initial token count) */
+
+/* outputs: */
+/*   CF = error (CF set if error, CF clear if success) */
+/*   EAX = semaphore (semaphore handle if CF=0) */
+
+typedef struct Create_Semaphore__response {
+    uint32_t semaphore; /* EAX */
+    _Bool error; /* CF */
+} Create_Semaphore__response;
+
+static inline Create_Semaphore__response Create_Semaphore(uint32_t const tokencount/*ecx*/) {
+    register Create_Semaphore__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Create_Semaphore)
+        : /* outputs */ "=@ccc" (r.error), "=a" (r.semaphore)
+        : /* inputs */ "c" (tokencount)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Destroy_Semaphore (VMMCall dev=0x0001 serv=0x0026) WINVER=3.0+ */
+
+/* description: */
+/*   Destroy the specified semaphore. */
+
+/* inputs: */
+/*   EAX = semaphore (semaphore handle to delete) */
+
+/* outputs: */
+/*   None */
+
+static inline void Destroy_Semaphore(uint32_t const semaphore/*eax*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Destroy_Semaphore)
+        : /* outputs */
+        : /* inputs */ "a" (semaphore)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
