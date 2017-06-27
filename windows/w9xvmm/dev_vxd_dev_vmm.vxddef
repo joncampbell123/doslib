@@ -480,3 +480,12 @@ out             CX                      SegSel                  ; segment/select
 out             EDX                     Offset                  ; address offset
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Adjust_Exec_Priority
+description     Raise or lower the execution priority of the specified virtual machine.
+
+in              EAX=int32_t             PriorityBoost           ; *_Boost constant value
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+%enddef
+

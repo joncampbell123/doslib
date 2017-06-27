@@ -1397,5 +1397,27 @@ static inline Map_Lin_To_VM_Addr__response Map_Lin_To_VM_Addr(const void* const 
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Adjust_Exec_Priority (VMMCall dev=0x0001 serv=0x001E) WINVER=3.0+ */
+
+/* description: */
+/*   Raise or lower the execution priority of the specified virtual machine. */
+
+/* inputs: */
+/*   EAX = priorityboost (*_Boost constant value) */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   None */
+
+static inline void Adjust_Exec_Priority(int32_t const priorityboost/*eax*/,vxd_vm_handle_t const vm/*ebx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Adjust_Exec_Priority)
+        : /* outputs */
+        : /* inputs */ "a" (priorityboost), "b" (vm)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
