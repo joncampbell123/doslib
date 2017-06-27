@@ -507,6 +507,17 @@
 #define Reserved_High_Boost    0x40000000U /* 1U << 30U bit[30] Reserved for use by the system */
 
 /*-------------------------------------------------------------*/
+/* description: */
+/*   Flags for Call_Priority_VM_Event (PEF_*)                                                            */
+/*                                                                                                       */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1537 FLAGS FOR CALL_PRIORITY_VM_EVENT EQUates */
+#define PEF_Wait_For_STI_Bit  0x00000001U /* 1U << 0U bit[0] Callback procedure is not called until VM enables interrupts */
+#define PEF_Wait_Not_Crit_Bit 0x00000002U /* 1U << 1U bit[1] Callback procedure is not called until VM is not in a critical section or time-critical operation */
+#define PEF_Dont_Unboost_Bit  0x00000004U /* 1U << 2U bit[2] Priority of the VM is not reduced after return from callback */
+#define PEF_Always_Sched_Bit  0x00000008U /* 1U << 3U bit[3] Event is always scheduled, callback is never called immediately */
+#define PEF_Time_Out          0x00000010U /* 1U << 4U bit[4] Use timeout value in EDI (Windows 3.1 or higher) */
+
+/*-------------------------------------------------------------*/
 /* VMM Get_VMM_Version (VMMCall dev=0x0001 serv=0x0000) */
 
 /* description: */
