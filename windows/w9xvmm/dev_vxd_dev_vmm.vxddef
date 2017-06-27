@@ -607,3 +607,15 @@ description     Unblocks the virtual machine (if any) waiting on the semaphore.
 in              EAX                     Semaphore               ; semaphore handle
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Get_Crit_Section_Status
+description     Returns the claim count and owner of the critical section.
+description     If the claim count is zero, it returns VM == Current VM and Claims == 0.
+async           no
+
+out             EBX=vxd_vm_handle_t     VM                      ; VM handle of owner
+out             ECX                     Claims                  ; number of times claimed
+out             CF                      high_priority           ; CF set if priority is Critical_Section_Boost or higher
+%enddef
+

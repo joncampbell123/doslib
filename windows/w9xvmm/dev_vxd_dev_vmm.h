@@ -1677,5 +1677,42 @@ static inline void Signal_Semaphore(uint32_t const semaphore/*eax*/) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Get_Crit_Section_Status (VMMCall dev=0x0001 serv=0x0029) WINVER=3.0+ */
+
+/* description: */
+/*   Returns the claim count and owner of the critical section.               */
+/*   If the claim count is zero, it returns VM == Current VM and Claims == 0. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EBX = vm (VM handle of owner) */
+/*   ECX = claims (number of times claimed) */
+/*   CF = high_priority (CF set if priority is Critical_Section_Boost or higher) */
+
+/* asynchronous: */
+/*   no */
+
+typedef struct Get_Crit_Section_Status__response {
+    vxd_vm_handle_t vm; /* EBX */
+    uint32_t claims; /* ECX */
+    _Bool high_priority; /* CF */
+} Get_Crit_Section_Status__response;
+
+static inline Get_Crit_Section_Status__response Get_Crit_Section_Status(void) {
+    register Get_Crit_Section_Status__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Crit_Section_Status)
+        : /* outputs */ "=b" (r.vm), "=c" (r.claims), "=@ccc" (r.high_priority)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
