@@ -1949,5 +1949,95 @@ static inline _Bool Set_Execution_Focus(vxd_vm_handle_t const vm/*ebx*/) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* description: */
+/*   Status flags in VM control block (VMStat_*)               */
+/*                                                             */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 448 */
+#define VMStat_Exclusive_Bit       0x00000001U /* 1U << 0U bit[0] VM is in exclusive mode */
+#define VMStat_Background_Bit      0x00000002U /* 1U << 1U bit[1] VM runs in background */
+#define VMStat_Creating_Bit        0x00000004U /* 1U << 2U bit[2] VM is in the process of creation */
+#define VMStat_Suspended_Bit       0x00000008U /* 1U << 3U bit[3] VM is suspended (not scheduled) */
+#define VMStat_Not_Executeable_Bit 0x00000010U /* 1U << 4U bit[4] VM is not executable (partially destroyed) */
+#define VMStat_PM_Exec_Bit         0x00000020U /* 1U << 5U bit[5] VM is running protected-mode application */
+#define VMStat_PM_App_Bit          0x00000040U /* 1U << 6U bit[6] Protected mode application is present in VM */
+#define VMStat_PM_Use32_Bit        0x00000080U /* 1U << 7U bit[7] Protected-mode application is 32-bit */
+#define VMStat_VxD_Exec_Bit        0x00000100U /* 1U << 8U bit[8] "Call from VxD" */
+#define VMStat_High_Pri_Back_Bit   0x00000200U /* 1U << 9U bit[9] High-priority background */
+#define VMStat_Blocked_Bit         0x00000400U /* 1U << 10U bit[10] VM is blocked on semaphore */
+#define VMStat_Awakening_Bit       0x00000800U /* 1U << 11U bit[11] "Woke up after blocked" (FIXME: Woke? Awakening?) */
+#define VMStat_PageableV86Bit      0x00001000U /* 1U << 12U bit[12] A part of the virtual 8086 VM is pageable */
+#define VMStat_V86IntsLockedBit    0x00002000U /* 1U << 13U bit[13] "Rest of V86 is locked" */
+#define VMStat_TS_Sched_Bit        0x00004000U /* 1U << 14U bit[14] Scheduled by time-slicer */
+#define VMStat_Idle_Bit            0x00008000U /* 1U << 15U bit[15] VM has released time */
+#define VMStat_Closing_Bit         0x00010000U /* 1U << 16U bit[16] VM is closing (Close_VM called for VM) */
+#define VMStat_Use32_Mask          0x00000180U /* 3U << 7U bits[8:7] VMStat_PM_Use32 | VMStat_VxD_Exec */
+
+/*-------------------------------------------------------------*/
+/* VMM Get_Time_Slice_Priority (VMMCall dev=0x0001 serv=0x0032) WINVER=3.0+ */
+
+/* description: */
+/*   Return the time-slice execution flags, foreground and background priorities, and percent of CPU usage for a specific virtual machine. */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   ECX = foreground (foreground time-slice priority (hi WORD is always 0)) */
+/*   EDX = background (background time-slice priority (hi WORD is always 0)) */
+/*   EAX = flags (Status flags from the CB_VM_Status field of the VM control block (VMStat_*)) */
+/*   ESI = cputime (percentage of total CPU time used (or, maximum time the VM can run?? docs are a bit confusing.)) */
+
+typedef struct Get_Time_Slice_Priority__response {
+    uint32_t flags; /* EAX */
+    uint32_t foreground; /* ECX */
+    uint32_t background; /* EDX */
+    uint32_t cputime; /* ESI */
+} Get_Time_Slice_Priority__response;
+
+static inline Get_Time_Slice_Priority__response Get_Time_Slice_Priority(vxd_vm_handle_t const vm/*ebx*/) {
+    register Get_Time_Slice_Priority__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Time_Slice_Priority)
+        : /* outputs */ "=c" (r.foreground), "=d" (r.background), "=a" (r.flags), "=S" (r.cputime)
+        : /* inputs */ "b" (vm)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Set_Time_Slice_Priority (VMMCall dev=0x0001 serv=0x0033) WINVER=3.0+ */
+
+/* description: */
+/*   Set the time-slice execution flags, foreground and background priorities for a specific virtual machine. */
+
+/* inputs: */
+/*   EAX = flags (status flags (VMStat_*)) */
+/*   EBX = vm (VM handle) */
+/*   ECX = foreground (foreground time-slice priority) */
+/*   EDX = background (background time-slice priority) */
+
+/* outputs: */
+/*   !CF = CF set if failure, clear if success */
+
+/* returns: */
+/*   Bool, true if success, false if failure */
+
+static inline _Bool Set_Time_Slice_Priority(uint32_t const flags/*eax*/,vxd_vm_handle_t const vm/*ebx*/,uint32_t const foreground/*ecx*/,uint32_t const background/*edx*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_Time_Slice_Priority)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "a" (flags), "b" (vm), "c" (foreground), "d" (background)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

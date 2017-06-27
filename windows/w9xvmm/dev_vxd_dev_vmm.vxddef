@@ -732,3 +732,58 @@ out             !CF                     .                       ; CF set if focu
 return          Bool true if focus was set, false otherwise
 %enddef
 
+#--------------------------------------
+%defconstbitfield
+description     Status flags in VM control block (VMStat_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 448
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     VMStat_Exclusive_Bit        0                             ; VM is in exclusive mode
+def     VMStat_Background_Bit       1                             ; VM runs in background
+def     VMStat_Creating_Bit         2                             ; VM is in the process of creation
+def     VMStat_Suspended_Bit        3                             ; VM is suspended (not scheduled)
+def     VMStat_Not_Executeable_Bit  4                             ; VM is not executable (partially destroyed)
+def     VMStat_PM_Exec_Bit          5                             ; VM is running protected-mode application
+def     VMStat_PM_App_Bit           6                             ; Protected mode application is present in VM
+def     VMStat_PM_Use32_Bit         7                             ; Protected-mode application is 32-bit
+def     VMStat_VxD_Exec_Bit         8                             ; "Call from VxD"
+def     VMStat_High_Pri_Back_Bit    9                             ; High-priority background
+def     VMStat_Blocked_Bit          10                            ; VM is blocked on semaphore
+def     VMStat_Awakening_Bit        11                            ; "Woke up after blocked" (FIXME: Woke? Awakening?)
+def     VMStat_PageableV86Bit       12                            ; A part of the virtual 8086 VM is pageable
+def     VMStat_V86IntsLockedBit     13                            ; "Rest of V86 is locked"
+def     VMStat_TS_Sched_Bit         14                            ; Scheduled by time-slicer
+def     VMStat_Idle_Bit             15                            ; VM has released time
+def     VMStat_Closing_Bit          16                            ; VM is closing (Close_VM called for VM)
+
+def     VMStat_Use32_Mask           7           2                 ; VMStat_PM_Use32 | VMStat_VxD_Exec
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Time_Slice_Priority
+description     Return the time-slice execution flags, foreground and background priorities, and percent of CPU usage for a specific virtual machine.
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+out             EAX                     Flags                   ; Status flags from the CB_VM_Status field of the VM control block (VMStat_*)
+out             ECX                     Foreground              ; foreground time-slice priority (hi WORD is always 0)
+out             EDX                     Background              ; background time-slice priority (hi WORD is always 0)
+out             ESI                     CPUTime                 ; percentage of total CPU time used (or, maximum time the VM can run?? docs are a bit confusing.)
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_Time_Slice_Priority
+description     Set the time-slice execution flags, foreground and background priorities for a specific virtual machine.
+
+in              EAX                     Flags                   ; status flags (VMStat_*)
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+in              ECX                     Foreground              ; foreground time-slice priority
+in              EDX                     Background              ; background time-slice priority
+out             !CF                     .                       ; CF set if failure, clear if success
+
+return          Bool, true if success, false if failure
+%enddef
+
