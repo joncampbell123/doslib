@@ -1271,5 +1271,47 @@ static inline void Call_When_VM_Ints_Enabled(const void* const refdata/*edx*/,co
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Enable_VM_Ints (VMMCall dev=0x0001 serv=0x001A) WINVER=3.0+ */
+
+/* description: */
+/*   Enable interrupts for the current virtual machine. It has the same effect as if the VM had executed the STI instruction. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Enable_VM_Ints(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Enable_VM_Ints)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Disable_VM_Ints (VMMCall dev=0x0001 serv=0x001B) WINVER=3.0+ */
+
+/* description: */
+/*   Disable interrupts for the current virtual machine. It has the same effect as if the VM had executed the CLI instruction. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Disable_VM_Ints(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Disable_VM_Ints)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

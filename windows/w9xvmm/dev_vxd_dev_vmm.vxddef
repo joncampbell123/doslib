@@ -420,3 +420,15 @@ in              EDX=const+void*         RefData                 ; pointer to ref
 in              ESI=const+void*         Callback                ; pointer to callback function
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Enable_VM_Ints
+description     Enable interrupts for the current virtual machine. It has the same effect as if the VM had executed the STI instruction.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Disable_VM_Ints
+description     Disable interrupts for the current virtual machine. It has the same effect as if the VM had executed the CLI instruction.
+%enddef
+
