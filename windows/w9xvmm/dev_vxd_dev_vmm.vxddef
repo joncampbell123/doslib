@@ -456,3 +456,27 @@ in              AX                      SegOffOffset            ; AX = [AH,AL] 1
 out             EAX                     .                       ; linear address, or -1 (0xFFFFFFFF) if invalid
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Map_Lin_To_VM_Addr
+description     Convert a 32-bit ring-0 linear address to a V86 or protected mode address appropriate
+description     for the current execution mode of the current virtual machine.
+description
+description     If the execution state of the virtual machine is V86 mode, then the returned pair is a segment:offset value.
+description     This call will fail in V86 mode if the linear address is outside the 1MB limit of the
+description     current virtual machine's 1MB virtual 8086 mode address space.
+description
+description     If the execution state of the virtual machine is protected mode, then the
+description     returned pair is a selector:offset value produced by creating a new entry in the
+description     virtual machine's LDT (Local Descriptor Table).
+description
+description     A device must never free a selector returned by this service. There is no function to free the mapping. Use this function sparingly.
+
+in              EAX=const+void*         LineAddr                ; Linear address to convert
+in              ECX                     Limit                   ; segment limit in bytes - 1 (a value of 0 means 1 byte long)
+
+out             CF                      error                   ; CF set if error, clear if success
+out             CX                      SegSel                  ; segment/selector if success
+out             EDX                     Offset                  ; address offset
+%enddef
+

@@ -1352,5 +1352,50 @@ static inline uint32_t Map_Flat(uint16_t const segoffoffset/*ax*/) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Map_Lin_To_VM_Addr (VMMCall dev=0x0001 serv=0x001D) WINVER=3.0+ */
+
+/* description: */
+/*   Convert a 32-bit ring-0 linear address to a V86 or protected mode address appropriate                                                */
+/*   for the current execution mode of the current virtual machine.                                                                       */
+/*                                                                                                                                        */
+/*   If the execution state of the virtual machine is V86 mode, then the returned pair is a segment:offset value.                         */
+/*   This call will fail in V86 mode if the linear address is outside the 1MB limit of the                                                */
+/*   current virtual machine's 1MB virtual 8086 mode address space.                                                                       */
+/*                                                                                                                                        */
+/*   If the execution state of the virtual machine is protected mode, then the                                                            */
+/*   returned pair is a selector:offset value produced by creating a new entry in the                                                     */
+/*   virtual machine's LDT (Local Descriptor Table).                                                                                      */
+/*                                                                                                                                        */
+/*   A device must never free a selector returned by this service. There is no function to free the mapping. Use this function sparingly. */
+
+/* inputs: */
+/*   EAX = lineaddr (Linear address to convert) */
+/*   ECX = limit (segment limit in bytes - 1 (a value of 0 means 1 byte long)) */
+
+/* outputs: */
+/*   CX = segsel (segment/selector if success) */
+/*   CF = error (CF set if error, clear if success) */
+/*   EDX = offset (address offset) */
+
+typedef struct Map_Lin_To_VM_Addr__response {
+    _Bool error; /* CF */
+    uint16_t segsel; /* CX */
+    uint32_t offset; /* EDX */
+} Map_Lin_To_VM_Addr__response;
+
+static inline Map_Lin_To_VM_Addr__response Map_Lin_To_VM_Addr(const void* const lineaddr/*eax*/,uint32_t const limit/*ecx*/) {
+    register Map_Lin_To_VM_Addr__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Map_Lin_To_VM_Addr)
+        : /* outputs */ "=c" (r.segsel), "=@ccc" (r.error), "=d" (r.offset)
+        : /* inputs */ "a" (lineaddr), "c" (limit)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
