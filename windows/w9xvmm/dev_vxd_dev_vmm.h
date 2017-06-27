@@ -1714,5 +1714,100 @@ static inline Get_Crit_Section_Status__response Get_Crit_Section_Status(void) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Call_When_Task_Switched (VMMCall dev=0x0001 serv=0x002A) WINVER=3.0+ */
+
+/* description: */
+/*   Install a task-switched callback procedure that is called whenever the system carries out a task switch.  */
+/*   Use this service sparingly and optimize the callback procedure for speed.                                 */
+/*   For use by virtual devices that must save the state of a hardware device every time a task switch occurs. */
+/*   Virtual devices can install any number of callback procedures. The system calls each one in the order     */
+/*   installed until all have been called.                                                                     */
+
+/* inputs: */
+/*   ESI = taskswitchcallback (pointer to callback) */
+
+/* outputs: */
+/*   None */
+
+static inline void Call_When_Task_Switched(const void* const taskswitchcallback/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_Task_Switched)
+        : /* outputs */
+        : /* inputs */ "S" (taskswitchcallback)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Suspend_VM (VMMCall dev=0x0001 serv=0x002B) WINVER=3.0+ */
+
+/* description: */
+/*   Suspend the execution of a specific virtual machine.                                                               */
+/*   An error occurs if the virtual machine is in a critical section or the VM specified is the system virtual machine. */
+/*   This call increments the suspend count of the virtual machine. If the suspend count was zero, then                 */
+/*   the virtual machine is suspended and virtual devices are notified of the suspension. Otherwise,                    */
+/*   Suspend_VM only increments the value with no other effects.                                                        */
+/*                                                                                                                      */
+/*   Suspending the VM sets the CB_VM_Status field of the virtual machine's control block.                              */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   !CF = CF set if not suspended (failure), clear if success */
+
+/* returns: */
+/*   Bool true if suspended, false if failure */
+
+static inline _Bool Suspend_VM(vxd_vm_handle_t const vm/*ebx*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Suspend_VM)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "b" (vm)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Resume_VM (VMMCall dev=0x0001 serv=0x002C) WINVER=3.0+ */
+
+/* description: */
+/*   Resume execution of a virtual machine suspended by Suspend_VM.                                    */
+/*   This call decrements the suspend count of the virtual machine. If the suspend count becomes zero, */
+/*   then the virtual machine is placed into the ready-process queue. The system will task switch to   */
+/*   the resumed VM if the virtual machine has a higher priority than the current virtual machine.     */
+/*                                                                                                     */
+/*   The system notifies every virtual device of the request to resume. Any virtual device can deny    */
+/*   the request, which causes this service to return with CF set and the suspend count left at 1.     */
+/*                                                                                                     */
+/*   TODO: What does this return if the suspend count is greater than 1 and no other error occurs??    */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   !CF = CF set if not resumed, clear if resumed */
+
+/* returns: */
+/*   Bool true if resumed, false if failure */
+
+static inline _Bool Resume_VM(vxd_vm_handle_t const vm/*ebx*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Resume_VM)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "b" (vm)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

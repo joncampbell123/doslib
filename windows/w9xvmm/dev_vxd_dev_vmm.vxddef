@@ -619,3 +619,51 @@ out             ECX                     Claims                  ; number of time
 out             CF                      high_priority           ; CF set if priority is Critical_Section_Boost or higher
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Call_When_Task_Switched
+description     Install a task-switched callback procedure that is called whenever the system carries out a task switch.
+description     Use this service sparingly and optimize the callback procedure for speed.
+description     For use by virtual devices that must save the state of a hardware device every time a task switch occurs.
+description     Virtual devices can install any number of callback procedures. The system calls each one in the order
+description     installed until all have been called.
+
+in              ESI=const+void*         TaskSwitchCallback      ; pointer to callback
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Suspend_VM
+description     Suspend the execution of a specific virtual machine.
+description     An error occurs if the virtual machine is in a critical section or the VM specified is the system virtual machine.
+description     This call increments the suspend count of the virtual machine. If the suspend count was zero, then
+description     the virtual machine is suspended and virtual devices are notified of the suspension. Otherwise,
+description     Suspend_VM only increments the value with no other effects.
+description
+description     Suspending the VM sets the CB_VM_Status field of the virtual machine's control block.
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+out             !CF                     .                       ; CF set if not suspended (failure), clear if success
+
+return          Bool true if suspended, false if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Resume_VM
+description     Resume execution of a virtual machine suspended by Suspend_VM.
+description     This call decrements the suspend count of the virtual machine. If the suspend count becomes zero,
+description     then the virtual machine is placed into the ready-process queue. The system will task switch to
+description     the resumed VM if the virtual machine has a higher priority than the current virtual machine.
+description
+description     The system notifies every virtual device of the request to resume. Any virtual device can deny
+description     the request, which causes this service to return with CF set and the suspend count left at 1.
+description
+description     TODO: What does this return if the suspend count is greater than 1 and no other error occurs??
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+out             !CF                     .                       ; CF set if not resumed, clear if resumed
+
+return          Bool true if resumed, false if failure
+%enddef
+
