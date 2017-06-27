@@ -407,3 +407,16 @@ description     NMI event procedures can be interrupted by another NMI, reentran
 in              ESI=const+void*         NmiProc                 ; pointer to NMI event handler
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Call_When_VM_Ints_Enabled
+description     Install a callback procedure that the system calls whenever the virtual machine enables interrupts.
+description     The callback is called immediately if interrupts are already enabled. Virtual devices use this to
+description     receive notification when the virtual machine enables interrupts.
+description
+description     It is usually more convenient to use Call_Priority_VM_Event, but this call is faster.
+
+in              EDX=const+void*         RefData                 ; pointer to reference data to pass to callback
+in              ESI=const+void*         Callback                ; pointer to callback function
+%enddef
+

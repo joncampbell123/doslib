@@ -1245,5 +1245,31 @@ static inline void Hook_NMI_Event(const void* const nmiproc/*esi*/) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Call_When_VM_Ints_Enabled (VMMCall dev=0x0001 serv=0x0019) WINVER=3.0+ */
+
+/* description: */
+/*   Install a callback procedure that the system calls whenever the virtual machine enables interrupts. */
+/*   The callback is called immediately if interrupts are already enabled. Virtual devices use this to   */
+/*   receive notification when the virtual machine enables interrupts.                                   */
+/*                                                                                                       */
+/*   It is usually more convenient to use Call_Priority_VM_Event, but this call is faster.               */
+
+/* inputs: */
+/*   EDX = refdata (pointer to reference data to pass to callback) */
+/*   ESI = callback (pointer to callback function) */
+
+/* outputs: */
+/*   None */
+
+static inline void Call_When_VM_Ints_Enabled(const void* const refdata/*edx*/,const void* const callback/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_VM_Ints_Enabled)
+        : /* outputs */
+        : /* inputs */ "d" (refdata), "S" (callback)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
