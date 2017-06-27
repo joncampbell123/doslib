@@ -66,21 +66,6 @@ def     Reserved_High_Boost         30                            ; Reserved for
 %enddef
 
 #--------------------------------------
-%defconstbitfield
-description     Flags for Call_Priority_VM_Event (PEF_*)
-description
-description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1537 FLAGS FOR CALL_PRIORITY_VM_EVENT EQUates
-
-#                                               default=1   default=(1<<width)-1
-#       constant                    bit number  bit width   value   comment
-def     PEF_Wait_For_STI_Bit        0                             ; Callback procedure is not called until VM enables interrupts
-def     PEF_Wait_Not_Crit_Bit       1                             ; Callback procedure is not called until VM is not in a critical section or time-critical operation
-def     PEF_Dont_Unboost_Bit        2                             ; Priority of the VM is not reduced after return from callback
-def     PEF_Always_Sched_Bit        3                             ; Event is always scheduled, callback is never called immediately
-def     PEF_Time_Out                4                             ; Use timeout value in EDI (Windows 3.1 or higher)
-%enddef
-
-#--------------------------------------
 %defcall
 byname          Get_VMM_Version
 description     Return VMM version
@@ -335,6 +320,21 @@ description     Cancel a VM event previously scheduled by Schedule_VM_Event or C
 
 in              EBX                     VM                      ; VM handle
 in              ESI                     Event                   ; Event handle, or 0 if no event should be cancelled.
+%enddef
+
+#--------------------------------------
+%defconstbitfield
+description     Flags for Call_Priority_VM_Event (PEF_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1537 FLAGS FOR CALL_PRIORITY_VM_EVENT EQUates
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     PEF_Wait_For_STI_Bit        0                             ; Callback procedure is not called until VM enables interrupts
+def     PEF_Wait_Not_Crit_Bit       1                             ; Callback procedure is not called until VM is not in a critical section or time-critical operation
+def     PEF_Dont_Unboost_Bit        2                             ; Priority of the VM is not reduced after return from callback
+def     PEF_Always_Sched_Bit        3                             ; Event is always scheduled, callback is never called immediately
+def     PEF_Time_Out                4                             ; Use timeout value in EDI (Windows 3.1 or higher)
 %enddef
 
 #--------------------------------------
