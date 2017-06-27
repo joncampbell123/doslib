@@ -309,6 +309,7 @@ out             ESI                     .                       ; event handle, 
 %defcall
 byname          Cancel_Global_Event
 description     Cancel a global event previously scheduled by Schedule_Global_Event or Call_Global_Event
+description     A virtual device must not attempt to cancel an event where the callback function has already been called.
 
 in              ESI                     Event                   ; Event handle, or 0 if no event should be cancelled.
 %enddef
@@ -317,6 +318,7 @@ in              ESI                     Event                   ; Event handle, 
 %defcall
 byname          Cancel_VM_Event
 description     Cancel a VM event previously scheduled by Schedule_VM_Event or Call_VM_Event
+description     A virtual device must not attempt to cancel an event where the callback function has already been called.
 
 in              EBX                     VM                      ; VM handle
 in              ESI                     Event                   ; Event handle, or 0 if no event should be cancelled.
@@ -356,5 +358,17 @@ in              ESI=void*const          EventCallback           ; pointer to cal
 in              EDI                     TimeOut                 ; timeout in milliseconds IFF PEF_Time_Out is specified.
 
 out             ESI                     .                       ; event handle, or 0 if procedure was called immediately.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Cancel_Priority_VM_Event
+description     Cancels an event previously schedule by Call_Priority_VM_Event.
+description     A virtual device must not attempt to cancel an event where the callback function has already been called.
+description     Any priority boost will be cancelled even if PEF_Dont_Unboost_Bit was specified when the event was created.
+description     Do NOT use this call to cancel events scheduled using the Call_VM_Event or Schedule_VM_Event services, for
+description     those types of events you must use Cancel_VM_Event.
+
+in              ESI                     Event                   ; event handle, or 0 if nothing to cancel
 %enddef
 

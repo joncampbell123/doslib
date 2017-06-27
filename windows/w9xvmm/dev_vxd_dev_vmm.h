@@ -1054,7 +1054,8 @@ static inline uint32_t Call_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void*
 /* VMM Cancel_Global_Event (VMMCall dev=0x0001 serv=0x0012) WINVER=3.0+ */
 
 /* description: */
-/*   Cancel a global event previously scheduled by Schedule_Global_Event or Call_Global_Event */
+/*   Cancel a global event previously scheduled by Schedule_Global_Event or Call_Global_Event                  */
+/*   A virtual device must not attempt to cancel an event where the callback function has already been called. */
 
 /* inputs: */
 /*   ESI = event (Event handle, or 0 if no event should be cancelled.) */
@@ -1075,7 +1076,8 @@ static inline void Cancel_Global_Event(const uint32_t event/*esi*/) {
 /* VMM Cancel_VM_Event (VMMCall dev=0x0001 serv=0x0013) WINVER=3.0+ */
 
 /* description: */
-/*   Cancel a VM event previously scheduled by Schedule_VM_Event or Call_VM_Event */
+/*   Cancel a VM event previously scheduled by Schedule_VM_Event or Call_VM_Event                              */
+/*   A virtual device must not attempt to cancel an event where the callback function has already been called. */
 
 /* inputs: */
 /*   EBX = vm (VM handle) */
@@ -1138,6 +1140,31 @@ static inline uint32_t Call_Priority_VM_Event(const int32_t priorityboost/*eax*/
     );
 
     return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Cancel_Priority_VM_Event (VMMCall dev=0x0001 serv=0x0015) WINVER=3.0+ */
+
+/* description: */
+/*   Cancels an event previously schedule by Call_Priority_VM_Event.                                             */
+/*   A virtual device must not attempt to cancel an event where the callback function has already been called.   */
+/*   Any priority boost will be cancelled even if PEF_Dont_Unboost_Bit was specified when the event was created. */
+/*   Do NOT use this call to cancel events scheduled using the Call_VM_Event or Schedule_VM_Event services, for  */
+/*   those types of events you must use Cancel_VM_Event.                                                         */
+
+/* inputs: */
+/*   ESI = event (event handle, or 0 if nothing to cancel) */
+
+/* outputs: */
+/*   None */
+
+static inline void Cancel_Priority_VM_Event(const uint32_t event/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_Priority_VM_Event)
+        : /* outputs */
+        : /* inputs */ "S" (event)
+        : /* clobbered */
+    );
 }
 
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
