@@ -662,8 +662,8 @@ description
 description     TODO: What does this return if the suspend count is greater than 1 and no other error occurs??
 
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle
-out             !CF                     .                       ; CF set if not resumed, clear if resumed
+out             !CF                     .                       ; CF set if error, clear if success
 
-return          Bool true if resumed, false if failure
+return          Bool true if success, false if error
 %enddef
 

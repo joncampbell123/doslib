@@ -1791,10 +1791,10 @@ static inline _Bool Suspend_VM(vxd_vm_handle_t const vm/*ebx*/) {
 /*   EBX = vm (VM handle) */
 
 /* outputs: */
-/*   !CF = CF set if not resumed, clear if resumed */
+/*   !CF = CF set if error, clear if success */
 
 /* returns: */
-/*   Bool true if resumed, false if failure */
+/*   Bool true if success, false if error */
 
 static inline _Bool Resume_VM(vxd_vm_handle_t const vm/*ebx*/) {
     register _Bool r;
