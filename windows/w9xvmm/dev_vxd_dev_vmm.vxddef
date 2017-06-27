@@ -395,3 +395,15 @@ description     ignores additional NMIs until it executes the IRET instruction.
 in              ESI=const+void*         nmi                     ; pointer to NMI handler
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Hook_NMI_Event
+description     Install a Non-Maskable Interrupt event procedure. Event procedures are called in install
+description     order after the last handler in the NMI handler chain has been executed. Event procedures
+description     are allowed to make VMM calls that are not permitted in NMI handlers.
+description
+description     NMI event procedures can be interrupted by another NMI, reentrancy is possible.
+
+in              ESI=const+void*         NmiProc                 ; pointer to NMI event handler
+%enddef
+

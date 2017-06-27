@@ -1220,5 +1220,30 @@ static inline void Set_NMI_Handler_Addr(const void* const nmi/*esi*/) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Hook_NMI_Event (VMMCall dev=0x0001 serv=0x0018) WINVER=3.0+ */
+
+/* description: */
+/*   Install a Non-Maskable Interrupt event procedure. Event procedures are called in install  */
+/*   order after the last handler in the NMI handler chain has been executed. Event procedures */
+/*   are allowed to make VMM calls that are not permitted in NMI handlers.                     */
+/*                                                                                             */
+/*   NMI event procedures can be interrupted by another NMI, reentrancy is possible.           */
+
+/* inputs: */
+/*   ESI = nmiproc (pointer to NMI event handler) */
+
+/* outputs: */
+/*   None */
+
+static inline void Hook_NMI_Event(const void* const nmiproc/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_NMI_Event)
+        : /* outputs */
+        : /* inputs */ "S" (nmiproc)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
