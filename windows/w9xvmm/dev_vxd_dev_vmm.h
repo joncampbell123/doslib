@@ -1419,5 +1419,67 @@ static inline void Adjust_Exec_Priority(int32_t const priorityboost/*eax*/,vxd_v
     );
 }
 
+/*-------------------------------------------------------------*/
+/* description: */
+/*   Flags for Begin_Critical_Section (Block_*)                 */
+/*                                                              */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1553 */
+#define Block_Svc_Ints_Bit           0x00000001U /* 1U << 0U bit[0] Service interrupts in the virtual machine even if the virtual machine is blocked */
+#define Block_Svc_If_Ints_Locked_Bit 0x00000002U /* 1U << 1U bit[1] Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set. */
+#define Block_Enable_Ints_Bit        0x00000004U /* 1U << 2U bit[2] Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints_Bit | Svc_If_Ints_Locked_Bit) is set */
+#define Block_Poll_Bit               0x00000008U /* 1U << 3U bit[3] Reserved, do not use */
+
+/*-------------------------------------------------------------*/
+/* VMM Begin_Critical_Section (VMMCall dev=0x0001 serv=0x001F) WINVER=3.0+ */
+
+/* description: */
+/*   Cause the current virtual machine to enter a critical section.                                   */
+/*   Only one virtual machine can own the critical section at a time.                                 */
+/*   This call will block until the critical section is available.                                    */
+/*   The system maintains a count of critical section claim calls.                                    */
+/*   The critical section is only released when the count is reduced to zero by End_Critical_Section. */
+/*   Claiming the critical section boosts the priority of the current VM by Critical_Section_Boost.   */
+/*   While in a critical section, the system will task switch only if the virtual machine blocks      */
+/*   on a semaphore or the other task has a time-critical operation.                                  */
+
+/* inputs: */
+/*   ECX = flags (flags for service. See Block_* constants.) */
+
+/* outputs: */
+/*   None */
+
+static inline void Begin_Critical_Section(uint32_t const flags/*ecx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Begin_Critical_Section)
+        : /* outputs */
+        : /* inputs */ "c" (flags)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM End_Critical_Section (VMMCall dev=0x0001 serv=0x0020) WINVER=3.0+ */
+
+/* description: */
+/*   Release the critical section if claim count is reduced to zero.                                            */
+/*   Calling this function decrements the claim count, and releases the critical section if the result is zero. */
+/*   Releasing the critical section also lowers the execution priority of the current virtual machine,          */
+/*   and may cause a task switch if a higher-priority non-suspended virtual machine is waiting.                 */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void End_Critical_Section(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_End_Critical_Section)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

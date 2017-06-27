@@ -489,3 +489,41 @@ in              EAX=int32_t             PriorityBoost           ; *_Boost consta
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle
 %enddef
 
+#--------------------------------------
+%defconstbitfield
+description     Flags for Begin_Critical_Section (Block_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1553
+
+#                                                   default=1   default=(1<<width)-1
+#       constant                        bit number  bit width   value   comment
+def     Block_Svc_Ints_Bit              0                             ; Service interrupts in the virtual machine even if the virtual machine is blocked
+def     Block_Svc_If_Ints_Locked_Bit    1                             ; Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set.
+def     Block_Enable_Ints_Bit           2                             ; Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints_Bit | Svc_If_Ints_Locked_Bit) is set
+def     Block_Poll_Bit                  3                             ; Reserved, do not use
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Begin_Critical_Section
+description     Cause the current virtual machine to enter a critical section.
+description     Only one virtual machine can own the critical section at a time.
+description     This call will block until the critical section is available.
+description     The system maintains a count of critical section claim calls.
+description     The critical section is only released when the count is reduced to zero by End_Critical_Section.
+description     Claiming the critical section boosts the priority of the current VM by Critical_Section_Boost.
+description     While in a critical section, the system will task switch only if the virtual machine blocks
+description     on a semaphore or the other task has a time-critical operation.
+
+in              ECX                     Flags                   ; flags for service. See Block_* constants.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          End_Critical_Section
+description     Release the critical section if claim count is reduced to zero.
+description     Calling this function decrements the claim count, and releases the critical section if the result is zero.
+description     Releasing the critical section also lowers the execution priority of the current virtual machine,
+description     and may cause a task switch if a higher-priority non-suspended virtual machine is waiting.
+%enddef
+
