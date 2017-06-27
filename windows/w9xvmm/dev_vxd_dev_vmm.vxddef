@@ -557,3 +557,17 @@ description     Decrement the critical section claim count by the specified amou
 in              ECX                     Claims                  ; how much to decrement. zero is valid, but ignored
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Call_When_Not_Critical
+description     Install a critical section callback to be called when a virtual device releases the critical section.
+description     The callback is not executed until the current VM's execution priority is less than Critical_Section_Boost
+description     even if the current virtual machine is not in a critical section, so that virtual devices can release
+description     a critical section and process any simulated interrupts before the system calls the callback procedure.
+description     Any number of callbacks can be installed, but the system will only call the most recent callback, and then
+description     remove it from the list.
+
+in              ESI=const+void*         CritSecCallback         ; pointer to callback procedure
+in              EDX=const+void*         RefData                 ; pointer to reference data to pass to callback
+%enddef
+

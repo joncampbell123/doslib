@@ -1555,5 +1555,32 @@ static inline void Release_Critical_Section(uint32_t const claims/*ecx*/) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Call_When_Not_Critical (VMMCall dev=0x0001 serv=0x0024) WINVER=3.0+ */
+
+/* description: */
+/*   Install a critical section callback to be called when a virtual device releases the critical section.      */
+/*   The callback is not executed until the current VM's execution priority is less than Critical_Section_Boost */
+/*   even if the current virtual machine is not in a critical section, so that virtual devices can release      */
+/*   a critical section and process any simulated interrupts before the system calls the callback procedure.    */
+/*   Any number of callbacks can be installed, but the system will only call the most recent callback, and then */
+/*   remove it from the list.                                                                                   */
+
+/* inputs: */
+/*   ESI = critseccallback (pointer to callback procedure) */
+/*   EDX = refdata (pointer to reference data to pass to callback) */
+
+/* outputs: */
+/*   None */
+
+static inline void Call_When_Not_Critical(const void* const critseccallback/*esi*/,const void* const refdata/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_Not_Critical)
+        : /* outputs */
+        : /* inputs */ "S" (critseccallback), "d" (refdata)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
