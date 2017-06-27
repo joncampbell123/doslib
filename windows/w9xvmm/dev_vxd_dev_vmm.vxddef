@@ -305,3 +305,24 @@ in              EBX                     VM                      ; VM handle
 in              ESI                     Event                   ; Event handle, or 0 if no event should be cancelled.
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Call_Priority_VM_Event
+description     Calls the callback procedure immediately, or schedules a priority event for the specified virtual machine.
+description     Scheduling is done if the virtual device is processing a hardware interrupt that interrupted the VMM,
+description     or the current virtual machine is not the specified VM, or if the Flags parameter specifies the
+description     PEF_Always_Sched value.
+description
+description     PriorityBoost must be a value limited such that when added to the VM's current execution priority the result
+description     is within range of Reserved_Low_Boost to Reserved_High_Boost.
+
+in              EAX=int32_t             PriorityBoost           ; positive, 0, or negative priority boost for the VM.
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+in              ECX                     Flags                   ; how to carry out the event. See PEF_* constants, ORed together.
+in              EDX=void*const          RefData                 ; pointer to reference data for callback
+in              ESI=void*const          EventCallback           ; pointer to callback
+in              EDI                     TimeOut                 ; timeout in milliseconds IFF PEF_Time_Out is specified.
+
+out             ESI                     .                       ; event handle, or 0 if procedure was called immediately.
+%enddef
+

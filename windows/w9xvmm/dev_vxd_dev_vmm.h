@@ -1080,5 +1080,41 @@ static inline void Cancel_VM_Event(const uint32_t vm/*ebx*/,const uint32_t event
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Call_Priority_VM_Event (VMMCall dev=0x0001 serv=0x0014) */
+
+/* description: */
+/*   Calls the callback procedure immediately, or schedules a priority event for the specified virtual machine.   */
+/*   Scheduling is done if the virtual device is processing a hardware interrupt that interrupted the VMM,        */
+/*   or the current virtual machine is not the specified VM, or if the Flags parameter specifies the              */
+/*   PEF_Always_Sched value.                                                                                      */
+/*                                                                                                                */
+/*   PriorityBoost must be a value limited such that when added to the VM's current execution priority the result */
+/*   is within range of Reserved_Low_Boost to Reserved_High_Boost.                                                */
+
+/* inputs: */
+/*   EAX = priorityboost (positive, 0, or negative priority boost for the VM.) */
+/*   EBX = vm (VM handle) */
+/*   ECX = flags (how to carry out the event. See PEF_* constants, ORed together.) */
+/*   EDX = refdata (pointer to reference data for callback) */
+/*   ESI = eventcallback (pointer to callback) */
+/*   EDI = timeout (timeout in milliseconds IFF PEF_Time_Out is specified.) */
+
+/* outputs: */
+/*   ESI = event handle, or 0 if procedure was called immediately. */
+
+static inline uint32_t Call_Priority_VM_Event(const int32_t priorityboost/*eax*/,const vxd_vm_handle_t vm/*ebx*/,const uint32_t flags/*ecx*/,const void*const refdata/*edx*/,const void*const eventcallback/*esi*/,const uint32_t timeout/*edi*/) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_Priority_VM_Event)
+        : /* outputs */ "=S" (r)
+        : /* inputs */ "a" (priorityboost), "b" (vm), "c" (flags), "d" (refdata), "S" (eventcallback), "D" (timeout)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
