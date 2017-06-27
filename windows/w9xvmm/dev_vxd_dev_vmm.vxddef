@@ -179,9 +179,9 @@ byname          Install_V86_Break_Point
 description     Insert a break point in virtual 8086 memory of the current virtual machine, and
 description     insert a breakpoint callback procedure to receive control when the break point happens.
 
-in              EAX=void*const          BreakAddr               ; V86 address to place the break point
-in              EDX=void*const          RefData                 ; pointer to reference data to be passed to callback procedure
-in              ESI=void*const          Callback                ; pointer to callback procedure to install (32-bit offset)
+in              EAX=void*+const         BreakAddr               ; V86 address to place the break point
+in              EDX=void*+const         RefData                 ; pointer to reference data to be passed to callback procedure
+in              ESI=void*+const         Callback                ; pointer to callback procedure to install (32-bit offset)
 
 out             !CF                     .                       ; success (CF clear) or failure (CF set)
 
@@ -193,7 +193,7 @@ return          Bool, true if success, false if failure (not installed)
 byname          Remove_V86_Break_Point
 description     Remove a virtual 8086 break point installed with Install_V86_Break_Point in the current VM
 
-in              EAX=void*const          BreakAddr               ; V86 address to remove break point from
+in              EAX=void*+const         BreakAddr               ; V86 address to remove break point from
 %enddef
 
 #--------------------------------------
@@ -202,8 +202,8 @@ byname          Allocate_V86_Call_Back
 description     Install a callback procedure for virtual 8086 mode applications can call to execute code in
 description     a virtual device.
 
-in              EDX=void*const          RefData                 ; points to reference data to pass to callback procedure
-in              ESI=void*const          Callback                ; points to callback procedure to call
+in              EDX=void*+const         RefData                 ; points to reference data to pass to callback procedure
+in              ESI=void*+const         Callback                ; points to callback procedure to call
 
 out             CF                      error                   ; if success, CF=0 and EAX=realmode ptr. if failure, CF=1
 out             EAX                     CallbackAddr            ; if CF=0, segment:offset of real-mode callback address
@@ -214,8 +214,8 @@ out             EAX                     CallbackAddr            ; if CF=0, segme
 byname          Allocate_PM_Call_Back
 description     Install a callback procedure for protected mode applications to call to execute code in a virtual device.
 
-in              EDX=void*const          RefData                 ; points to reference data to pass to callback procedure
-in              ESI=void*const          Callback                ; points to callback procedure to call
+in              EDX=void*+const         RefData                 ; points to reference data to pass to callback procedure
+in              ESI=void*+const         Callback                ; points to callback procedure to call
 
 out             CF                      error                   ; if success, CF=0 and EAX=realmode ptr. if failure, CF=1
 out             EAX                     CallbackAddr            ; if CF=0, address of callback procedure
@@ -232,8 +232,8 @@ description     if TimeOut is negative, callabck is called when timeout occurs a
 description     if TimeOut is zero, timeout is ignored.
 
 in              EAX=int32_t             TimeOut                 ; number of milliseconds for timeout. see description for details.
-in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
-in              ESI=void*const          Callback                ; callback procedure (32-bit flat)
+in              EDX=void*+const         RefData                 ; pointer to reference data to pass to callback
+in              ESI=void*+const         Callback                ; callback procedure (32-bit flat)
 %enddef
 
 #--------------------------------------
@@ -252,8 +252,8 @@ description
 description     You can cancel a scheduled event using Cancel_Global_Event
 async           yes
 
-in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
-in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
+in              ESI=void*+const         EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=void*+const         RefData                 ; pointer to reference data to pass to callback
 
 out             ESI                     .                       ; event handle
 %enddef
@@ -268,8 +268,8 @@ description     You can cancel a scheduled event using Cancel_VM_Event
 async           yes
 
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle to schedule event
-in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
-in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
+in              ESI=void*+const         EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=void*+const         RefData                 ; pointer to reference data to pass to callback
 
 out             ESI                     .                       ; event handle
 %enddef
@@ -283,8 +283,8 @@ description
 description     You can cancel the event (if scheduled) using Cancel_Global_Event.
 async           yes
 
-in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
-in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
+in              ESI=void*+const         EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=void*+const         RefData                 ; pointer to reference data to pass to callback
 
 out             ESI                     .                       ; event handle, or 0 if procedure was called immediately without scheduling.
 %enddef
@@ -299,8 +299,8 @@ description     You can cancel the event (if scheduled) using Cancel_VM_Event.
 async           yes
 
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle
-in              ESI=void*const          EventCallback           ; pointer to callback procedure (32-bit flat)
-in              EDX=void*const          RefData                 ; pointer to reference data to pass to callback
+in              ESI=void*+const         EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=void*+const         RefData                 ; pointer to reference data to pass to callback
 
 out             ESI                     .                       ; event handle, or 0 if procedure was called immediately without scheduling.
 %enddef
@@ -353,8 +353,8 @@ description     is within range of Reserved_Low_Boost to Reserved_High_Boost.
 in              EAX=int32_t             PriorityBoost           ; positive, 0, or negative priority boost for the VM.
 in              EBX=vxd_vm_handle_t     VM                      ; VM handle
 in              ECX                     Flags                   ; how to carry out the event. See PEF_* constants, ORed together.
-in              EDX=void*const          RefData                 ; pointer to reference data for callback
-in              ESI=void*const          EventCallback           ; pointer to callback
+in              EDX=void*+const         RefData                 ; pointer to reference data for callback
+in              ESI=void*+const         EventCallback           ; pointer to callback
 in              EDI                     TimeOut                 ; timeout in milliseconds IFF PEF_Time_Out is specified.
 
 out             ESI                     .                       ; event handle, or 0 if procedure was called immediately.
@@ -370,5 +370,13 @@ description     Do NOT use this call to cancel events scheduled using the Call_V
 description     those types of events you must use Cancel_VM_Event.
 
 in              ESI                     Event                   ; event handle, or 0 if nothing to cancel
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_NMI_Handler_Addr
+description     Return the address of the current Non-Maskable Interrupt handler
+
+out             ESI=const+void*         .                       ; pointer to current NMI handler
 %enddef
 

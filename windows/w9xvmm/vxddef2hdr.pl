@@ -742,6 +742,7 @@ while (my $line = <DEF>) {
             $i = index($a[1],'=');
             if ($i >= 0) {
                 $type = substr($a[1],$i+1);
+                $type =~ s/\+/ /g;
                 $a[1] = substr($a[1],0,$i);
             }
 
@@ -794,6 +795,7 @@ while (my $line = <DEF>) {
             $i = index($a[1],'=');
             if ($i >= 0) {
                 $type = substr($a[1],$i+1);
+                $type =~ s/\+/ /g;
                 $a[1] = substr($a[1],0,$i);
             }
 

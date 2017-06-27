@@ -786,7 +786,7 @@ static inline void End_Reentrant_Execution(const uint32_t count/*ecx*/) {
 /* returns: */
 /*   Bool, true if success, false if failure (not installed) */
 
-static inline _Bool Install_V86_Break_Point(const void*const breakaddr/*eax*/,const void*const refdata/*edx*/,const void*const callback/*esi*/) {
+static inline _Bool Install_V86_Break_Point(const void* const breakaddr/*eax*/,const void* const refdata/*edx*/,const void* const callback/*esi*/) {
     register _Bool r;
 
     __asm__ (
@@ -811,7 +811,7 @@ static inline _Bool Install_V86_Break_Point(const void*const breakaddr/*eax*/,co
 /* outputs: */
 /*   None */
 
-static inline void Remove_V86_Break_Point(const void*const breakaddr/*eax*/) {
+static inline void Remove_V86_Break_Point(const void* const breakaddr/*eax*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Remove_V86_Break_Point)
         : /* outputs */
@@ -840,7 +840,7 @@ typedef struct Allocate_V86_Call_Back__response {
     uint32_t callbackaddr; /* EAX */
 } Allocate_V86_Call_Back__response;
 
-static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void*const refdata/*edx*/,const void*const callback/*esi*/) {
+static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void* const refdata/*edx*/,const void* const callback/*esi*/) {
     register Allocate_V86_Call_Back__response r;
 
     __asm__ (
@@ -872,7 +872,7 @@ typedef struct Allocate_PM_Call_Back__response {
     uint32_t callbackaddr; /* EAX */
 } Allocate_PM_Call_Back__response;
 
-static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void*const refdata/*edx*/,const void*const callback/*esi*/) {
+static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void* const refdata/*edx*/,const void* const callback/*esi*/) {
     register Allocate_PM_Call_Back__response r;
 
     __asm__ (
@@ -904,7 +904,7 @@ static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void*c
 /* outputs: */
 /*   None */
 
-static inline void Call_When_VM_Returns(const int32_t timeout/*eax*/,const void*const refdata/*edx*/,const void*const callback/*esi*/) {
+static inline void Call_When_VM_Returns(const int32_t timeout/*eax*/,const void* const refdata/*edx*/,const void* const callback/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_VM_Returns)
         : /* outputs */
@@ -939,7 +939,7 @@ static inline void Call_When_VM_Returns(const int32_t timeout/*eax*/,const void*
 /* asynchronous: */
 /*   yes */
 
-static inline uint32_t Schedule_Global_Event(const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
+static inline uint32_t Schedule_Global_Event(const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
     register uint32_t r;
 
     __asm__ (
@@ -972,7 +972,7 @@ static inline uint32_t Schedule_Global_Event(const void*const eventcallback/*esi
 /* asynchronous: */
 /*   yes */
 
-static inline uint32_t Schedule_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
+static inline uint32_t Schedule_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
     register uint32_t r;
 
     __asm__ (
@@ -1004,7 +1004,7 @@ static inline uint32_t Schedule_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const v
 /* asynchronous: */
 /*   yes */
 
-static inline uint32_t Call_Global_Event(const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
+static inline uint32_t Call_Global_Event(const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
     register uint32_t r;
 
     __asm__ (
@@ -1037,7 +1037,7 @@ static inline uint32_t Call_Global_Event(const void*const eventcallback/*esi*/,c
 /* asynchronous: */
 /*   yes */
 
-static inline uint32_t Call_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void*const eventcallback/*esi*/,const void*const refdata/*edx*/) {
+static inline uint32_t Call_VM_Event(const vxd_vm_handle_t vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
     register uint32_t r;
 
     __asm__ (
@@ -1129,7 +1129,7 @@ static inline void Cancel_VM_Event(const uint32_t vm/*ebx*/,const uint32_t event
 /* outputs: */
 /*   ESI = event handle, or 0 if procedure was called immediately. */
 
-static inline uint32_t Call_Priority_VM_Event(const int32_t priorityboost/*eax*/,const vxd_vm_handle_t vm/*ebx*/,const uint32_t flags/*ecx*/,const void*const refdata/*edx*/,const void*const eventcallback/*esi*/,const uint32_t timeout/*edi*/) {
+static inline uint32_t Call_Priority_VM_Event(const int32_t priorityboost/*eax*/,const vxd_vm_handle_t vm/*ebx*/,const uint32_t flags/*ecx*/,const void* const refdata/*edx*/,const void* const eventcallback/*esi*/,const uint32_t timeout/*edi*/) {
     register uint32_t r;
 
     __asm__ (
@@ -1165,6 +1165,31 @@ static inline void Cancel_Priority_VM_Event(const uint32_t event/*esi*/) {
         : /* inputs */ "S" (event)
         : /* clobbered */
     );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Get_NMI_Handler_Addr (VMMCall dev=0x0001 serv=0x0016) WINVER=3.0+ */
+
+/* description: */
+/*   Return the address of the current Non-Maskable Interrupt handler */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   ESI = pointer to current NMI handler */
+
+static inline const void* Get_NMI_Handler_Addr(void) {
+    register const void* r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_NMI_Handler_Addr)
+        : /* outputs */ "=S" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
 }
 
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
