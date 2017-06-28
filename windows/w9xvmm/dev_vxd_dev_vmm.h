@@ -2778,12 +2778,12 @@ static inline void* _HeapAllocate(uint32_t const nbytes/*__cdecl0*/,uint32_t con
     register void* r;
 
     __asm__ (
-        "pushl %2\n"
-        "pushl %1\n"
+        "push %2\n"
+        "push %1\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__HeapAllocate)
         "addl $8,%%esp\n"
         : /* outputs */ "=a" (r)
-        : /* inputs */ "g" ((uint32_t)nbytes), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (nbytes), "g" (flags)
         : /* clobbered */
     );
 
@@ -2813,13 +2813,13 @@ static inline void* _HeapReAllocate(void* const hAddress/*__cdecl0*/,uint32_t co
     register void* r;
 
     __asm__ (
-        "pushl %3\n"
-        "pushl %2\n"
-        "pushl %1\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__HeapReAllocate)
         "addl $12,%%esp\n"
         : /* outputs */ "=a" (r)
-        : /* inputs */ "g" ((uint32_t)hAddress), "g" ((uint32_t)nbytes), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (hAddress), "g" (nbytes), "g" (flags)
         : /* clobbered */
     );
 
@@ -2844,12 +2844,12 @@ static inline uint32_t _HeapFree(void* const hAddress/*__cdecl0*/,uint32_t const
     register uint32_t r;
 
     __asm__ (
-        "pushl %2\n"
-        "pushl %1\n"
+        "push %2\n"
+        "push %1\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__HeapFree)
         "addl $8,%%esp\n"
         : /* outputs */ "=a" (r)
-        : /* inputs */ "g" ((uint32_t)hAddress), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (hAddress), "g" (flags)
         : /* clobbered */
     );
 
@@ -2874,12 +2874,12 @@ static inline uint32_t _HeapGetSize(void* const hAddress/*__cdecl0*/,uint32_t co
     register uint32_t r;
 
     __asm__ (
-        "pushl %2\n"
-        "pushl %1\n"
+        "push %2\n"
+        "push %1\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__HeapGetSize)
         "addl $8,%%esp\n"
         : /* outputs */ "=a" (r)
-        : /* inputs */ "g" ((uint32_t)hAddress), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (hAddress), "g" (flags)
         : /* clobbered */
     );
 
@@ -2974,18 +2974,18 @@ static inline _PageAllocate__response _PageAllocate(uint32_t const nPages/*__cde
     register _PageAllocate__response r;
 
     __asm__ (
-        "pushl %9\n"
-        "pushl %8\n"
-        "pushl %7\n"
-        "pushl %6\n"
-        "pushl %5\n"
-        "pushl %4\n"
-        "pushl %3\n"
-        "pushl %2\n"
+        "push %9\n"
+        "push %8\n"
+        "push %7\n"
+        "push %6\n"
+        "push %5\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__PageAllocate)
         "addl $32,%%esp\n"
         : /* outputs */ "=d" (r.Address), "=a" (r.Handle)
-        : /* inputs */ "g" ((uint32_t)nPages), "g" ((uint32_t)pType), "g" ((uint32_t)VM), "g" ((uint32_t)AlignMask), "g" ((uint32_t)minPhys), "g" ((uint32_t)maxPhys), "g" ((uint32_t)PhysAddr), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (nPages), "g" (pType), "g" (VM), "g" (AlignMask), "g" (minPhys), "g" (maxPhys), "g" (PhysAddr), "g" (flags)
         : /* clobbered */
     );
 
@@ -3021,13 +3021,13 @@ static inline _PageReAllocate__response _PageReAllocate(uint32_t const hMem/*__c
     register _PageReAllocate__response r;
 
     __asm__ (
-        "pushl %4\n"
-        "pushl %3\n"
-        "pushl %2\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__PageReAllocate)
         "addl $12,%%esp\n"
         : /* outputs */ "=d" (r.Address), "=a" (r.Handle)
-        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)nPages), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (hMem), "g" (nPages), "g" (flags)
         : /* clobbered */
     );
 
@@ -3056,12 +3056,12 @@ static inline uint32_t _PageFree(uint32_t const hMem/*__cdecl0*/,uint32_t const 
     register uint32_t r;
 
     __asm__ (
-        "pushl %2\n"
-        "pushl %1\n"
+        "push %2\n"
+        "push %1\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__PageFree)
         "addl $8,%%esp\n"
         : /* outputs */ "=a" (r)
-        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (hMem), "g" (flags)
         : /* clobbered */
     );
 
@@ -3094,14 +3094,14 @@ static inline uint32_t _PageLock(uint32_t const hMem/*__cdecl0*/,uint32_t const 
     register uint32_t r;
 
     __asm__ (
-        "pushl %4\n"
-        "pushl %3\n"
-        "pushl %2\n"
-        "pushl %1\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__PageLock)
         "addl $16,%%esp\n"
         : /* outputs */ "=a" (r)
-        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)nPages), "g" ((uint32_t)PageOff), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (hMem), "g" (nPages), "g" (PageOff), "g" (flags)
         : /* clobbered */
     );
 
@@ -3131,14 +3131,14 @@ static inline uint32_t _PageUnLock(uint32_t const hMem/*__cdecl0*/,uint32_t cons
     register uint32_t r;
 
     __asm__ (
-        "pushl %4\n"
-        "pushl %3\n"
-        "pushl %2\n"
-        "pushl %1\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__PageUnLock)
         "addl $16,%%esp\n"
         : /* outputs */ "=a" (r)
-        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)nPages), "g" ((uint32_t)PageOff), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (hMem), "g" (nPages), "g" (PageOff), "g" (flags)
         : /* clobbered */
     );
 
@@ -3168,12 +3168,12 @@ static inline _PageGetSizeAddr__response _PageGetSizeAddr(uint32_t const hMem/*_
     register _PageGetSizeAddr__response r;
 
     __asm__ (
-        "pushl %3\n"
-        "pushl %2\n"
+        "push %3\n"
+        "push %2\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__PageGetSizeAddr)
         "addl $8,%%esp\n"
         : /* outputs */ "=d" (r.Address), "=a" (r.Pages)
-        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)flags)
+        : /* inputs */ "g" (hMem), "g" (flags)
         : /* clobbered */
     );
 
@@ -3204,11 +3204,11 @@ static inline _PageGetAllocInfo__response _PageGetAllocInfo(uint32_t const flags
     register _PageGetAllocInfo__response r;
 
     __asm__ (
-        "pushl %2\n"
+        "push %2\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr__PageGetAllocInfo)
         "addl $4,%%esp\n"
         : /* outputs */ "=d" (r.Lockable), "=a" (r.Free)
-        : /* inputs */ "g" ((uint32_t)flags)
+        : /* inputs */ "g" (flags)
         : /* clobbered */
     );
 

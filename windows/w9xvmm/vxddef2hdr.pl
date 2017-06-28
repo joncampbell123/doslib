@@ -624,7 +624,7 @@ while (my $line = <DEF>) {
                     $value = $f{$key};
 
                     if ($key =~ m/^__cdecl/) {
-                        push(@pushes,"pushl %".$gccindex);
+                        push(@pushes,"push %".$gccindex);
                         $cdecl_pop += 4;
 
                         # also validate that the order matches what was given in the "cdecl" directive
@@ -684,7 +684,7 @@ while (my $line = <DEF>) {
                     print "," if $fc > 0;
 
                     if ($key =~ m/^__cdecl/) {
-                        print " \"g\" ((uint32_t)$value)";
+                        print " \"g\" ($value)";
                         $cdecl_base++;
                     }
                     else {
