@@ -2886,5 +2886,66 @@ static inline uint32_t _HeapGetSize(void* const hAddress/*__cdecl0*/,uint32_t co
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _PageAllocate (VMMCall dev=0x0001 serv=0x0053) WINVER=3.0+ */
+
+/* description: */
+/*   Allocate a block of memory consisting of the specified number of pages.                                                   */
+/*   This service reserves linear address space, and depending on flags, may also map to physical memory and lock them.        */
+/*   This service returns both a memory handle and linear memory address.                                                      */
+/*                                                                                                                             */
+/*   The VM handle must be zero if using PG_SYS. It is only used if the page type is PG_VM and PG_HOOKED.                      */
+/*                                                                                                                             */
+/*   AlignMask could be thought of as an mask against the PAGE number (not the linear address).                                */
+/*   Consider the following table of examples against (linear >> 12):                                                          */
+/*   - 0x00000000 4KB alignment no constraint                                                                                  */
+/*   - 0x00000001 8KB alignment constraint: ((linear >> 12) & 1) == 0                                                          */
+/*   - 0x00000003 16KB alignment constraint: ((linear >> 12) & 3) == 0                                                         */
+/*   - 0x00000007 32KB alignment constraint: ((linear >> 12) & 7) == 0                                                         */
+/*   and so on, for any power of 2 alignment.                                                                                  */
+/*   The documentation seems to specify (not very well) that this alignment is applied to choosing the PHYSICAL memory address */
+/*   of the block, not to choosing the LINEAR memory address.                                                                  */
+
+/* inputs: */
+/*   __CDECL0 = nPages (number of pages to allocate. must not be zero) */
+/*   __CDECL1 = pType (page type (PG_*) enumeration) */
+/*   __CDECL2 = VM (VM handle in which to allocate pages) */
+/*   __CDECL3 = AlignMask (alignment mask that defines acceptable starting page alignment) */
+/*   __CDECL4 = minPhys (minimum acceptable physical page number (if PageUseAlign)) */
+/*   __CDECL5 = maxPhys (maximum acceptable physical page number (if PageUseAlign)) */
+/*   __CDECL6 = PhysAddr (pointer to uint32_t to receive physical address of memory block (if PageUseAlign)) */
+/*   __CDECL7 = flags (operation flags, bitfield) */
+
+/* outputs: */
+/*   EDX = Address (ring-0 address of memory block, or 0 if error) */
+/*   EAX = Handle (memory handle, or 0 if error) */
+
+typedef struct _PageAllocate__response {
+    uint32_t Handle; /* EAX */
+    void* Address; /* EDX */
+} _PageAllocate__response;
+
+static inline _PageAllocate__response _PageAllocate(uint32_t const nPages/*__cdecl0*/,uint32_t const pType/*__cdecl1*/,vxd_vm_handle_t const VM/*__cdecl2*/,uint32_t const AlignMask/*__cdecl3*/,uint32_t const minPhys/*__cdecl4*/,uint32_t const maxPhys/*__cdecl5*/,uint32_t* const PhysAddr/*__cdecl6*/,uint32_t const flags/*__cdecl7*/) {
+    register _PageAllocate__response r;
+
+    __asm__ (
+        "pushl %9\n"
+        "pushl %8\n"
+        "pushl %7\n"
+        "pushl %6\n"
+        "pushl %5\n"
+        "pushl %4\n"
+        "pushl %3\n"
+        "pushl %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageAllocate)
+        "addl $32,%%esp\n"
+        : /* outputs */ "=d" (r.Address), "=a" (r.Handle)
+        : /* inputs */ "g" ((uint32_t)nPages), "g" ((uint32_t)pType), "g" ((uint32_t)VM), "g" ((uint32_t)AlignMask), "g" ((uint32_t)minPhys), "g" ((uint32_t)maxPhys), "g" ((uint32_t)PhysAddr), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

@@ -1158,3 +1158,37 @@ in              __cdecl                         flags                   ; flags.
 out             EAX                             .                       ; size in bytes of block, or zero if error
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _PageAllocate
+description     Allocate a block of memory consisting of the specified number of pages.
+description     This service reserves linear address space, and depending on flags, may also map to physical memory and lock them.
+description     This service returns both a memory handle and linear memory address.
+description
+description     The VM handle must be zero if using PG_SYS. It is only used if the page type is PG_VM and PG_HOOKED.
+description
+description     AlignMask could be thought of as an mask against the PAGE number (not the linear address).
+description     Consider the following table of examples against (linear >> 12):
+description     - 0x00000000    4KB alignment       no constraint
+description     - 0x00000001    8KB alignment       constraint: ((linear >> 12) & 1) == 0
+description     - 0x00000003    16KB alignment      constraint: ((linear >> 12) & 3) == 0
+description     - 0x00000007    32KB alignment      constraint: ((linear >> 12) & 7) == 0
+description     and so on, for any power of 2 alignment.
+description     The documentation seems to specify (not very well) that this alignment is applied to choosing the PHYSICAL memory address
+description     of the block, not to choosing the LINEAR memory address.
+
+cdecl           nPages, pType, VM, AlignMask, minPhys, maxPhys, PhysAddr, flags
+
+in              __cdecl                         nPages                  ; number of pages to allocate. must not be zero
+in              __cdecl                         pType                   ; page type (PG_*) enumeration
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle in which to allocate pages
+in              __cdecl                         AlignMask               ; alignment mask that defines acceptable starting page alignment
+in              __cdecl                         minPhys                 ; minimum acceptable physical page number (if PageUseAlign)
+in              __cdecl                         maxPhys                 ; maximum acceptable physical page number (if PageUseAlign)
+in              __cdecl=uint32_t*               PhysAddr                ; pointer to uint32_t to receive physical address of memory block (if PageUseAlign)
+in              __cdecl                         flags                   ; operation flags, bitfield
+
+out             EAX                             Handle                  ; memory handle, or 0 if error
+out             EDX=void*                       Address                 ; ring-0 address of memory block, or 0 if error
+%enddef
+
