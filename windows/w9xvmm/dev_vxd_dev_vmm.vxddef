@@ -252,10 +252,10 @@ description
 description     You can cancel a scheduled event using Cancel_Global_Event
 async           yes
 
-in              ESI=const+void*         EventCallback           ; pointer to callback procedure (32-bit flat)
-in              EDX=const+void*         RefData                 ; pointer to reference data to pass to callback
+in              ESI=const+void*                     EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=const+void*                     RefData                 ; pointer to reference data to pass to callback
 
-out             ESI                     .                       ; event handle
+out             ESI=vxd_global_event_handle_t       .                       ; event handle
 %enddef
 
 #--------------------------------------
@@ -283,10 +283,10 @@ description
 description     You can cancel the event (if scheduled) using Cancel_Global_Event.
 async           yes
 
-in              ESI=const+void*         EventCallback           ; pointer to callback procedure (32-bit flat)
-in              EDX=const+void*         RefData                 ; pointer to reference data to pass to callback
+in              ESI=const+void*                     EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=const+void*                     RefData                 ; pointer to reference data to pass to callback
 
-out             ESI                     .                       ; event handle, or 0 if procedure was called immediately without scheduling.
+out             ESI=vxd_global_event_handle_t       .                       ; event handle, or 0 if procedure was called immediately without scheduling.
 %enddef
 
 #--------------------------------------
@@ -311,7 +311,7 @@ byname          Cancel_Global_Event
 description     Cancel a global event previously scheduled by Schedule_Global_Event or Call_Global_Event
 description     A virtual device must not attempt to cancel an event where the callback function has already been called.
 
-in              ESI                     Event                   ; Event handle, or 0 if no event should be cancelled.
+in              ESI=vxd_global_event_handle_t       Event                   ; Event handle, or 0 if no event should be cancelled.
 %enddef
 
 #--------------------------------------
