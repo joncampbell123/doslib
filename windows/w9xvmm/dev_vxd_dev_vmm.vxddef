@@ -1159,6 +1159,40 @@ out             EAX                             .                       ; size i
 %enddef
 
 #--------------------------------------
+%defconstbitfield
+description     Page operation flags (Page*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 665
+description
+description     PageMAPFreePhysReg + _PageAllocate restriction:
+description     Must set page type to PG_SYS. VM, AlignMask, min/max phys, and physptr must be zero.
+description     A free phsyical region cannot be reallocated or freed. These exist for the duration of
+description     the Windows session. Available only initialization, and only in Windows 3.1 or later.
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     PageZeroInit                0                             ; Fill with zeros on allocate
+def     PageUseAlign                1                             ; Allocate according to alignment and physical addresse range specified. Only available during initialization. Must be used with PageFixed.
+def     PageContig                  2                             ; Allocate contiguous physical pages to create the memory block. Must be used with PageUseAlign.
+def     PageFixed                   3                             ; Lock the allocated pages in memory at a fixed linear address, prevent pages from being unlocked or moved.
+def     PageDEBUGNulFault           4                             ; ???
+def     PageZeroReInit              5                             ; TODO
+def     PageNoCopy                  6                             ; TODO
+def     PageLocked                  7                             ; Lock the allocated pages in memory. Pages can be unlocked using _PageUnlock
+def     PageLockedIfDP              8                             ; Lock the allocated pages in memory only if the virtual pageswap device uses MS-DOS or BIOS functions.
+def     PageSetV86Pageable          9                             ; TODO
+def     PageClearV86Pageable        10                            ; TODO
+def     PageSetV86IntsLocked        11                            ; TODO
+def     PageClearV86IntsLocked      12                            ; TODO
+def     PageMarkPageOut             13                            ; TODO
+def     PagePDPSetBase              14                            ; TODO
+def     PagePDPClearBase            15                            ; TODO
+def     PageDiscard                 16                            ; TODO
+def     PagePDPQueryDirty           17                            ; TODO
+def     PageMapFreePhysReg          18                            ; Allocate a free physical region that a virtual device can use to map physical pages. READ DESCRIPTION FOR DETAILS! (Windows 3.1)
+%enddef
+
+#--------------------------------------
 %defcall
 byname          _PageAllocate
 description     Allocate a block of memory consisting of the specified number of pages.

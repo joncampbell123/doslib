@@ -2887,6 +2887,36 @@ static inline uint32_t _HeapGetSize(void* const hAddress/*__cdecl0*/,uint32_t co
 }
 
 /*-------------------------------------------------------------*/
+/* description: */
+/*   Page operation flags (Page*)                                                           */
+/*                                                                                          */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 665                              */
+/*                                                                                          */
+/*   PageMAPFreePhysReg + _PageAllocate restriction:                                        */
+/*   Must set page type to PG_SYS. VM, AlignMask, min/max phys, and physptr must be zero.   */
+/*   A free phsyical region cannot be reallocated or freed. These exist for the duration of */
+/*   the Windows session. Available only initialization, and only in Windows 3.1 or later.  */
+#define PageZeroInit           0x00000001U /* 1U << 0U bit[0] Fill with zeros on allocate */
+#define PageUseAlign           0x00000002U /* 1U << 1U bit[1] Allocate according to alignment and physical addresse range specified. Only available during initialization. Must be used with PageFixed. */
+#define PageContig             0x00000004U /* 1U << 2U bit[2] Allocate contiguous physical pages to create the memory block. Must be used with PageUseAlign. */
+#define PageFixed              0x00000008U /* 1U << 3U bit[3] Lock the allocated pages in memory at a fixed linear address, prevent pages from being unlocked or moved. */
+#define PageDEBUGNulFault      0x00000010U /* 1U << 4U bit[4] ??? */
+#define PageZeroReInit         0x00000020U /* 1U << 5U bit[5] TODO */
+#define PageNoCopy             0x00000040U /* 1U << 6U bit[6] TODO */
+#define PageLocked             0x00000080U /* 1U << 7U bit[7] Lock the allocated pages in memory. Pages can be unlocked using _PageUnlock */
+#define PageLockedIfDP         0x00000100U /* 1U << 8U bit[8] Lock the allocated pages in memory only if the virtual pageswap device uses MS-DOS or BIOS functions. */
+#define PageSetV86Pageable     0x00000200U /* 1U << 9U bit[9] TODO */
+#define PageClearV86Pageable   0x00000400U /* 1U << 10U bit[10] TODO */
+#define PageSetV86IntsLocked   0x00000800U /* 1U << 11U bit[11] TODO */
+#define PageClearV86IntsLocked 0x00001000U /* 1U << 12U bit[12] TODO */
+#define PageMarkPageOut        0x00002000U /* 1U << 13U bit[13] TODO */
+#define PagePDPSetBase         0x00004000U /* 1U << 14U bit[14] TODO */
+#define PagePDPClearBase       0x00008000U /* 1U << 15U bit[15] TODO */
+#define PageDiscard            0x00010000U /* 1U << 16U bit[16] TODO */
+#define PagePDPQueryDirty      0x00020000U /* 1U << 17U bit[17] TODO */
+#define PageMapFreePhysReg     0x00040000U /* 1U << 18U bit[18] Allocate a free physical region that a virtual device can use to map physical pages. READ DESCRIPTION FOR DETAILS! (Windows 3.1) */
+
+/*-------------------------------------------------------------*/
 /* VMM _PageAllocate (VMMCall dev=0x0001 serv=0x0053) WINVER=3.0+ */
 
 /* description: */
