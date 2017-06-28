@@ -270,16 +270,10 @@ while (my $line = <DEF>) {
 
                 for ($i=0;$i < @cord;$i++) {
                     $const = $cord[$i];
-                    $value = $funcdef{bf}{$const};
+                    $pvalue = $value = $funcdef{bf}{$const};
+                    $ovalue = $value = $funcdef{bfo}{$const};
                     $valshift = $funcdef{bfshift}{$const};
                     $comment = $funcdef{bfcomment}{$const};
-
-                    if ($value =~ m/^0/) {
-                        $pvalue = oct($value);
-                    }
-                    else {
-                        $pvalue = int($value);
-                    }
 
                     if ($pvalue > 0xFFFFFFFF) {
                         $psuffix = "ULL";
@@ -292,7 +286,7 @@ while (my $line = <DEF>) {
                     }
 
                     print "#define ".substr($const.(' 'x$maxconst),0,$maxconst)." ".sprintf("0x%08X",$pvalue << $valshift).$psuffix." ";
-                    print "/* $value ";
+                    print "/* $ovalue ";
                     print " << $valshift " if $valshift > 0;
                     print "$comment " if (defined($comment) && $comment ne '');
                     print "*/";
@@ -758,10 +752,26 @@ while (my $line = <DEF>) {
             $valshift = $a[3] if (defined($a[3]) && $a[3] ne '');
 
             die "invalid constant $constname" unless $constname =~ m/^[0-9a-zA-Z_]+$/i;
-            die "invalid value $value" unless $value =~ m/^[0-9a-fA-Fx]+$/i;
+            die "invalid value $value" unless ($value eq '' || $value =~ m/^[0-9a-fA-Fx]+$/i);
             die "invalid valueshift $valshift" unless ($valshift eq '' || $valshift =~ m/^\d+$/i);
             $valshift = 0 if $valshift eq '';
             $valshift = int($valshift + 0);
+
+            $ovalue = $value;
+
+            if ($value eq '') {
+                $value = $funcdef{nextenum};
+                $value = 0 if (!defined($value) || $value eq '');
+                $ovalue = $value;
+            }
+            elsif ($value =~ m/^0/) {
+                $value = oct($value);
+            }
+            else {
+                $value = int($value);
+            }
+
+            $funcdef{nextenum} = $value + 1;
 
             die "$constname already defined" if exists($funcdef{bf}{$constname});
 
@@ -769,6 +779,7 @@ while (my $line = <DEF>) {
             $funcdef{bforder} .= $constname;
 
             $funcdef{bf}{$constname} = $value;
+            $funcdef{bfo}{$constname} = $ovalue;
             $funcdef{bfcomment}{$constname} = $comment;
             $funcdef{bfshift}{$constname} = $valshift;
         }
