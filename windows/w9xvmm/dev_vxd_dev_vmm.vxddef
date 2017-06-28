@@ -981,3 +981,103 @@ in              CX                              Segment                 ; segmen
 in              EDX                             Offset                  ; offset
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Simulate_Int
+description     Simulate an interrupt in the current virtual machine.
+description     First, hook procedures set by the Hook_V86_Int_Chain service are called.
+description     If no hook procedure services the interrupt, this service pushes an IRET
+description     frame using the client CS, IP, and Flags onto the stack. When execution
+description     resumes, the virtual machine carries out the simulated interrupt and
+description     executes the V86 mode interrupt routine.
+description
+description     The virtual PIC device uses this service to simulate hardware interrupts.
+description     Other virtual devices might use the Exec_Int service to do the same.
+description
+description     If the virtual machine is in protected mode, then the service will simulate
+description     a protected mode interrupt. Undesireable effects may occur if a protected
+description     mode virtual machine then attempts to reflect the interrupt to V86 mode.
+
+in              EAX                             Interrupt               ; Interrupt number
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Simulate_Iret
+description     Simulate a return from an interrupt, by popping the top three words from the stack
+description     and storing them into Client_Flags, Client_CS, and Client_IP.
+description     The words are 32-bit if the segment is 32-bit, and 16-bit if the segment is 16-bit.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Simulate_Far_Call
+description     Simulate a far call to a procedure in the current virtual machine.
+description     Save the Client_CS and Client_IP registers to the stack, and set them to the new address.
+description     When the virtual machine resumes, it will execute the procedure.
+description     If the procedure is in a 16-bit segment, the high WORD of the offset must be zero.
+
+in              CX                              Segment                 ; segment of procedure
+in              EDX                             Offset                  ; offset of procedure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Simulate_Far_Jmp
+description     Simulate a far jmp to a procedure in the current virtual machine.
+description     Set the Client_CS and Client_IP registers to the new address.
+description     When the virtual machine resumes, it will execute the procedure.
+description     If the procedure is in a 16-bit segment, the high WORD of the offset must be zero.
+
+in              CX                              Segment                 ; segment of procedure
+in              EDX                             Offset                  ; offset of procedure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Simulate_Far_Ret
+description     Simulate a far return in the current virtual machine.
+description     Pop two words off the stack and restore to Client_CS and Client_IP (as if RETF).
+description     The words are 32-bit if the segment is 32-bit, else the words are 16-bit.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Simulate_Far_Ret_N
+description     Simulate a far return in the current virtual machine.
+description     Pop two words off the stack and restore to Client_CS and Client_IP (as if RETF).
+description     The words are 32-bit if the segment is 32-bit, else the words are 16-bit.
+description     Then, the number of Bytes specifies are popped.
+
+in              EAX                             Bytes                   ; number of bytes pop from stack
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Build_Int_Stack_Frame
+description     Prepare an interrupt stack frame in the current virtual machine.
+description     Save the Client_CS, Client_IP, and Client_Flags on the stack, and then
+description     Client_CS and Client_IP to the procedure.
+
+in              CX                              Segment                 ; segment of procedure
+in              EDX                             Offset                  ; offset of procedure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Simulate_Push
+description     Push a word onto the stack in the virtual machine.
+description     The word is 32-bit if a 32-bit stack, else a 16-bit word.
+
+in              EAX                             Value                   ; value to push
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Simulate_Pop
+description     Pop a word off the stack in the virtual machine.
+description     The word is 32-bit if a 32-bit stack, else a 16-bit word.
+
+out             EAX                             .                       ; value popped of the stack
+%enddef
+

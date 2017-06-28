@@ -2523,5 +2523,230 @@ static inline void Set_PM_Int_Vector(uint32_t const Interrupt/*eax*/,uint16_t co
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Simulate_Int (VMMCall dev=0x0001 serv=0x0046) WINVER=3.0+ */
+
+/* description: */
+/*   Simulate an interrupt in the current virtual machine.                       */
+/*   First, hook procedures set by the Hook_V86_Int_Chain service are called.    */
+/*   If no hook procedure services the interrupt, this service pushes an IRET    */
+/*   frame using the client CS, IP, and Flags onto the stack. When execution     */
+/*   resumes, the virtual machine carries out the simulated interrupt and        */
+/*   executes the V86 mode interrupt routine.                                    */
+/*                                                                               */
+/*   The virtual PIC device uses this service to simulate hardware interrupts.   */
+/*   Other virtual devices might use the Exec_Int service to do the same.        */
+/*                                                                               */
+/*   If the virtual machine is in protected mode, then the service will simulate */
+/*   a protected mode interrupt. Undesireable effects may occur if a protected   */
+/*   mode virtual machine then attempts to reflect the interrupt to V86 mode.    */
+
+/* inputs: */
+/*   EAX = Interrupt (Interrupt number) */
+
+/* outputs: */
+/*   None */
+
+static inline void Simulate_Int(uint32_t const Interrupt/*eax*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Simulate_Int)
+        : /* outputs */
+        : /* inputs */ "a" (Interrupt)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Simulate_Iret (VMMCall dev=0x0001 serv=0x0047) WINVER=3.0+ */
+
+/* description: */
+/*   Simulate a return from an interrupt, by popping the top three words from the stack  */
+/*   and storing them into Client_Flags, Client_CS, and Client_IP.                       */
+/*   The words are 32-bit if the segment is 32-bit, and 16-bit if the segment is 16-bit. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Simulate_Iret(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Simulate_Iret)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Simulate_Far_Call (VMMCall dev=0x0001 serv=0x0048) WINVER=3.0+ */
+
+/* description: */
+/*   Simulate a far call to a procedure in the current virtual machine.                        */
+/*   Save the Client_CS and Client_IP registers to the stack, and set them to the new address. */
+/*   When the virtual machine resumes, it will execute the procedure.                          */
+/*   If the procedure is in a 16-bit segment, the high WORD of the offset must be zero.        */
+
+/* inputs: */
+/*   CX = Segment (segment of procedure) */
+/*   EDX = Offset (offset of procedure) */
+
+/* outputs: */
+/*   None */
+
+static inline void Simulate_Far_Call(uint16_t const Segment/*cx*/,uint32_t const Offset/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Simulate_Far_Call)
+        : /* outputs */
+        : /* inputs */ "c" (Segment), "d" (Offset)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Simulate_Far_Jmp (VMMCall dev=0x0001 serv=0x0049) WINVER=3.0+ */
+
+/* description: */
+/*   Simulate a far jmp to a procedure in the current virtual machine.                  */
+/*   Set the Client_CS and Client_IP registers to the new address.                      */
+/*   When the virtual machine resumes, it will execute the procedure.                   */
+/*   If the procedure is in a 16-bit segment, the high WORD of the offset must be zero. */
+
+/* inputs: */
+/*   CX = Segment (segment of procedure) */
+/*   EDX = Offset (offset of procedure) */
+
+/* outputs: */
+/*   None */
+
+static inline void Simulate_Far_Jmp(uint16_t const Segment/*cx*/,uint32_t const Offset/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Simulate_Far_Jmp)
+        : /* outputs */
+        : /* inputs */ "c" (Segment), "d" (Offset)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Simulate_Far_Ret (VMMCall dev=0x0001 serv=0x004A) WINVER=3.0+ */
+
+/* description: */
+/*   Simulate a far return in the current virtual machine.                            */
+/*   Pop two words off the stack and restore to Client_CS and Client_IP (as if RETF). */
+/*   The words are 32-bit if the segment is 32-bit, else the words are 16-bit.        */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Simulate_Far_Ret(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Simulate_Far_Ret)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Simulate_Far_Ret_N (VMMCall dev=0x0001 serv=0x004B) WINVER=3.0+ */
+
+/* description: */
+/*   Simulate a far return in the current virtual machine.                            */
+/*   Pop two words off the stack and restore to Client_CS and Client_IP (as if RETF). */
+/*   The words are 32-bit if the segment is 32-bit, else the words are 16-bit.        */
+/*   Then, the number of Bytes specifies are popped.                                  */
+
+/* inputs: */
+/*   EAX = Bytes (number of bytes pop from stack) */
+
+/* outputs: */
+/*   None */
+
+static inline void Simulate_Far_Ret_N(uint32_t const Bytes/*eax*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Simulate_Far_Ret_N)
+        : /* outputs */
+        : /* inputs */ "a" (Bytes)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Build_Int_Stack_Frame (VMMCall dev=0x0001 serv=0x004C) WINVER=3.0+ */
+
+/* description: */
+/*   Prepare an interrupt stack frame in the current virtual machine.       */
+/*   Save the Client_CS, Client_IP, and Client_Flags on the stack, and then */
+/*   Client_CS and Client_IP to the procedure.                              */
+
+/* inputs: */
+/*   CX = Segment (segment of procedure) */
+/*   EDX = Offset (offset of procedure) */
+
+/* outputs: */
+/*   None */
+
+static inline void Build_Int_Stack_Frame(uint16_t const Segment/*cx*/,uint32_t const Offset/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Build_Int_Stack_Frame)
+        : /* outputs */
+        : /* inputs */ "c" (Segment), "d" (Offset)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Simulate_Push (VMMCall dev=0x0001 serv=0x004D) WINVER=3.0+ */
+
+/* description: */
+/*   Push a word onto the stack in the virtual machine.        */
+/*   The word is 32-bit if a 32-bit stack, else a 16-bit word. */
+
+/* inputs: */
+/*   EAX = Value (value to push) */
+
+/* outputs: */
+/*   None */
+
+static inline void Simulate_Push(uint32_t const Value/*eax*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Simulate_Push)
+        : /* outputs */
+        : /* inputs */ "a" (Value)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Simulate_Pop (VMMCall dev=0x0001 serv=0x004E) WINVER=3.0+ */
+
+/* description: */
+/*   Pop a word off the stack in the virtual machine.          */
+/*   The word is 32-bit if a 32-bit stack, else a 16-bit word. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EAX = value popped of the stack */
+
+static inline uint32_t Simulate_Pop(void) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Simulate_Pop)
+        : /* outputs */ "=a" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
