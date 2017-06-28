@@ -162,6 +162,8 @@ sub reg2type($) {
 
     return "uint32_t" if $v =~ m/^(eax|ebx|ecx|edx|esi|edi|ebp)$/i;
 
+    return "uint32_t" if $v =~ m/^__cdecl/i;
+
     return "unsigned int";
 }
 
@@ -452,6 +454,7 @@ while (my $line = <DEF>) {
                 print "\n";
             }
 
+            $gccindex = 0;
             my $params = "void";
             if (exists($funcdef{in})) {
                 my %f = %{$funcdef{in}};
@@ -492,6 +495,8 @@ while (my $line = <DEF>) {
                         $ptype = reg2type($funcdef{struct}{'.'});
                     }
 
+                    $gccindex++; # %0, %1, etc. count outputs too
+
                     $rettype = $ptype;
                     $directreg = 1;
                 }
@@ -519,6 +524,8 @@ while (my $line = <DEF>) {
                             $ptype = reg2type($value);
                         }
 
+                        $gccindex++; # %0, %1, etc. count outputs too
+
                         print "    ".$ptype;
                         print " ".$key;
                         print "; /* ".uc($value)." */";
@@ -538,7 +545,48 @@ while (my $line = <DEF>) {
                 print "\n";
             }
             print "    __asm__ (\n";
+
+            my $cdecl_base = $gccindex;
+            my $cdecl_pop = 0;
+
+            if (exists($funcdef{in})) {
+                my %f = %{$funcdef{in}};
+
+                my @pushes = ( );
+                my @pord = split(/ +/,$funcdef{paramorder});
+
+                for ($i=0;$i < @pord;$i++) {
+                    $key = $pord[$i];
+                    $value = $f{$key};
+
+                    if ($key =~ m/^__cdecl/) {
+                        push(@pushes,"pushl %".$gccindex);
+                        $cdecl_pop += 4;
+                        $gccindex++;
+                    }
+                }
+
+                # NTS: __cdecl pushes parameters right to left
+                #
+                #    a b c
+                #
+                #    becomes
+                #
+                #    push c
+                #    push b
+                #    push a
+                for ($i=@pushes-1;$i >= 0;$i--) {
+                    $what = $pushes[$i];
+                    print "        \"$what\\n\"\n";
+                }
+            }
+ 
             print "        VXD_AsmCall(".$vxddevname."_Device_ID,".$vxddevname."_snr_".$funcname.")\n";
+
+            if ($cdecl_pop > 0) {
+                print "        \"addl \$".$cdecl_pop.",%%esp\\n\"\n";
+            }
+
             print "        : /* outputs */";
             if ($directreg) {
                 print " \"=".reg2gccspec($funcdef{struct}{'.'})."\" (r)";
@@ -566,7 +614,15 @@ while (my $line = <DEF>) {
                     $value = $f{$key};
 
                     print "," if $fc > 0;
-                    print " \"".reg2gccspec($key)."\" ($value)";
+
+                    if ($key =~ m/^__cdecl/) {
+                        print " \"g\" ((uint32_t)$value)";
+                        $cdecl_base++;
+                    }
+                    else {
+                        print " \"".reg2gccspec($key)."\" ($value)";
+                    }
+
                     $fc++;
                 }
             }
@@ -711,6 +767,13 @@ while (my $line = <DEF>) {
                 $funcdef{async} .= $a[$i];
             }
         }
+        elsif ($a[0] eq "cdecl") {
+            $funcdef{cdecl} = "";
+            for ($i=1;$i < @a;$i++) {
+                $funcdef{cdecl} .= " " if $i > 1;
+                $funcdef{cdecl} .= $a[$i];
+            }
+        }
         elsif ($a[0] eq "in") {
             $i = index($line,';');
             my $comment = '';
@@ -755,12 +818,22 @@ while (my $line = <DEF>) {
             die "register $a[1] already allocated" if exists($funcdef{in}{$a[1]});
             die "param already has name $a[2]" if exists($funcdef{param}{$a[2]});
 
+            if ($a[1] eq "__cdecl") {
+                $x = $funcdef{cdeclindex};
+                $x = 0 unless defined($x);
+
+                $a[1] .= $x;
+
+                $x++;
+                $funcdef{cdeclindex} = $x;
+            }
+
             $funcdef{paramorder} .= " " if $funcdef{paramorder} ne "";
             $funcdef{paramorder} .= $a[1];
-
-            $funcdef{in}{$a[1]} = $a[2];
-            $funcdef{param}{$a[2]} = $a[1];
             $funcdef{incomment}{$a[1]} = $comment;
+            $funcdef{in}{$a[1]} = $a[2];
+
+            $funcdef{param}{$a[2]} = $a[1];
             $funcdef{paramcomment}{$a[2]} = $comment;
             $funcdef{paramtype}{$a[2]} = $type;
         }
@@ -803,6 +876,7 @@ while (my $line = <DEF>) {
 # out             AX        version                                 ; major, minor (example: 0x030A = 3.10)
 # out             register  name                                    ; comment
             $a[1] = lc($a[1]);
+            die "__cdecl not allowed for output" if $a[1] eq "__cdecl";
 #            $a[2] = lc($a[2]);
 
             die "register $a[1] already allocated" if exists($funcdef{out}{$a[1]});

@@ -2748,5 +2748,47 @@ static inline uint32_t Simulate_Pop(void) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* description: */
+/*   Heap allocation flags                                     */
+/*                                                             */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 626 */
+#define HeapZeroInit   0x00000001U /* 1U << 0U bit[0] Fill the memory block with zeros */
+#define HeapZeroReInit 0x00000002U /* 1U << 1U bit[1] Fill all bytes, new and existing, with zeros */
+#define HeapNoCopy     0x00000004U /* 1U << 2U bit[2] Do not preserve the existing byte contents. Else, the system will copy old contents to new contents. */
+
+/*-------------------------------------------------------------*/
+/* VMM _HeapAllocate (VMMCall dev=0x0001 serv=0x004F) WINVER=3.0+ */
+
+/* description: */
+/*   Allocate a block of memory from the heap.                                                                                                */
+/*   Allocated memory is aligned on doubleword (32-bit) boundaries, however the block size does not have to be a multiple of 4.               */
+/*   The system does not provide protection against overrunning the buffer into an adjacent block of memory,                                  */
+/*   that is the virtual device's job to enforce.                                                                                             */
+/*   The system does not offer any compaction of the heap. Virtual devices must not use the heap in any way that causes severe fragmentation. */
+
+/* inputs: */
+/*   __CDECL0 = nbytes (size in bytes to allocate. must not be zero.) */
+/*   __CDECL1 = flags (allocation flags. Heap* constants.) */
+
+/* outputs: */
+/*   EAX = address of memory block */
+
+static inline void* _HeapAllocate(uint32_t const nbytes/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register void* r;
+
+    __asm__ (
+        "pushl %2\n"
+        "pushl %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__HeapAllocate)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" ((uint32_t)nbytes), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

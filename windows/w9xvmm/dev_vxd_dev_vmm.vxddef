@@ -1081,3 +1081,33 @@ description     The word is 32-bit if a 32-bit stack, else a 16-bit word.
 out             EAX                             .                       ; value popped of the stack
 %enddef
 
+#--------------------------------------
+%defconstbitfield
+description     Heap allocation flags
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 626
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     HeapZeroInit                0                             ; Fill the memory block with zeros
+def     HeapZeroReInit              1                             ; Fill all bytes, new and existing, with zeros
+def     HeapNoCopy                  2                             ; Do not preserve the existing byte contents. Else, the system will copy old contents to new contents.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _HeapAllocate
+description     Allocate a block of memory from the heap.
+description     Allocated memory is aligned on doubleword (32-bit) boundaries, however the block size does not have to be a multiple of 4.
+description     The system does not provide protection against overrunning the buffer into an adjacent block of memory,
+description     that is the virtual device's job to enforce.
+description     The system does not offer any compaction of the heap. Virtual devices must not use the heap in any way that causes severe fragmentation.
+
+cdecl           nbytes, flags                                           ; parameters pushed onto the stack
+
+in              __cdecl                         nbytes                  ; size in bytes to allocate. must not be zero.
+in              __cdecl                         flags                   ; allocation flags. Heap* constants.
+
+out             EAX=void*                       .                       ; address of memory block
+%enddef
+
