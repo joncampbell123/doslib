@@ -787,3 +787,91 @@ out             !CF                     .                       ; CF set if fail
 return          Bool, true if success, false if failure
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Get_Time_Slice_Granularity
+description     Return the current time-slice granularity, the minimum millseconds a virtual machine runs before being rescheduled.
+
+out             EAX                     .                       ; minimum time-slice in millseconds
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_Time_Slice_Granularity
+description     Set the minimum time-slice granularity, the minimum milliseconds a virtual machine runs before being rescheduled.
+
+in              EAX                     Time                    ; minimum time-slice in milliseconds
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Time_Slice_Info
+description     Return information about the number of virtual machines currently scheduled by the time-slicer, and number that are idle.
+async           yes
+
+out             EAX                     Scheduled               ; number of virtual machines scheduled
+out             EBX                     Current                 ; handle of currently scheduled virtual machine
+out             ECX                     Idle                    ; number of idle virtual machines
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Adjust_Execution_Time
+description     Adjust the amount of execution time a virtual machine is granted with each time slice.
+description     The effect is the same on all virtual machines regardless of their time-slot priority.
+
+in              EAX                     Time                    ; number of milliseconds
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Release_Time_Slice
+description     Discard remaining time in the current time-slice, and start a new time slice for the next virtual machine in the time-slice queue.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Wake_Up_VM
+description     Restore an idle virtual machine, allowing the system to schedule the VM for subsequent time-slices.
+description     A VM is idle if it has called Release_Time_Slice or has set the VMStat_Idle flag in the CB_VM_Status field of the control block.
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Call_When_Idle
+description     Install a system-wide callback procedure to call when the kernel signals that Windows is idle and all other VMs are idle.
+
+in              ESI=const+void*         IdleCallback            ; pointer to idle callback
+
+out             !CF                     .                       ; CF set if not installed, clear if installed
+
+return          Bool, true if installed, false if not installed
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Next_VM_Handle
+description     Return the handle of the next virtual machine in the VM list maintained by the system.
+description     Each VM only appears once, but no particular order is guaranteed.
+description     The list is circular, so you must check for and stop when the first value comes back around.
+
+in              EBX=vxd_vm_handle_t     VM                      ; VM handle
+
+out             EBX=vxd_vm_handle_t     .                       ; next VM handle
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_Global_Time_Out
+description     Schedule a time-out to occur after the specified number of milliseconds have elapsed.
+
+in              EAX                             Time                    ; number of milliseconds to time-out
+in              EDX=const+void*                 RefData                 ; pointer to reference data to pass to callback
+in              ESI=const+void*                 TimeOutCallback         ; pointer to callback procedure
+
+out             ESI=vxd_timeout_handle_t        .                       ; timeout handle
+%enddef
+

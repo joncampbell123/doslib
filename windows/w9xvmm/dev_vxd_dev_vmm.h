@@ -2039,5 +2039,235 @@ static inline _Bool Set_Time_Slice_Priority(uint32_t const flags/*eax*/,vxd_vm_h
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Get_Time_Slice_Granularity (VMMCall dev=0x0001 serv=0x0034) WINVER=3.0+ */
+
+/* description: */
+/*   Return the current time-slice granularity, the minimum millseconds a virtual machine runs before being rescheduled. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EAX = minimum time-slice in millseconds */
+
+static inline uint32_t Get_Time_Slice_Granularity(void) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Time_Slice_Granularity)
+        : /* outputs */ "=a" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Set_Time_Slice_Granularity (VMMCall dev=0x0001 serv=0x0035) WINVER=3.0+ */
+
+/* description: */
+/*   Set the minimum time-slice granularity, the minimum milliseconds a virtual machine runs before being rescheduled. */
+
+/* inputs: */
+/*   EAX = time (minimum time-slice in milliseconds) */
+
+/* outputs: */
+/*   None */
+
+static inline void Set_Time_Slice_Granularity(uint32_t const time/*eax*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_Time_Slice_Granularity)
+        : /* outputs */
+        : /* inputs */ "a" (time)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Get_Time_Slice_Info (VMMCall dev=0x0001 serv=0x0036) WINVER=3.0+ */
+
+/* description: */
+/*   Return information about the number of virtual machines currently scheduled by the time-slicer, and number that are idle. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EBX = current (handle of currently scheduled virtual machine) */
+/*   ECX = idle (number of idle virtual machines) */
+/*   EAX = scheduled (number of virtual machines scheduled) */
+
+/* asynchronous: */
+/*   yes */
+
+typedef struct Get_Time_Slice_Info__response {
+    uint32_t scheduled; /* EAX */
+    uint32_t current; /* EBX */
+    uint32_t idle; /* ECX */
+} Get_Time_Slice_Info__response;
+
+static inline Get_Time_Slice_Info__response Get_Time_Slice_Info(void) {
+    register Get_Time_Slice_Info__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Time_Slice_Info)
+        : /* outputs */ "=b" (r.current), "=c" (r.idle), "=a" (r.scheduled)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Adjust_Execution_Time (VMMCall dev=0x0001 serv=0x0037) WINVER=3.0+ */
+
+/* description: */
+/*   Adjust the amount of execution time a virtual machine is granted with each time slice. */
+/*   The effect is the same on all virtual machines regardless of their time-slot priority. */
+
+/* inputs: */
+/*   EAX = time (number of milliseconds) */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   None */
+
+static inline void Adjust_Execution_Time(uint32_t const time/*eax*/,vxd_vm_handle_t const vm/*ebx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Adjust_Execution_Time)
+        : /* outputs */
+        : /* inputs */ "a" (time), "b" (vm)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Release_Time_Slice (VMMCall dev=0x0001 serv=0x0038) WINVER=3.0+ */
+
+/* description: */
+/*   Discard remaining time in the current time-slice, and start a new time slice for the next virtual machine in the time-slice queue. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Release_Time_Slice(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Release_Time_Slice)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Wake_Up_VM (VMMCall dev=0x0001 serv=0x0039) WINVER=3.0+ */
+
+/* description: */
+/*   Restore an idle virtual machine, allowing the system to schedule the VM for subsequent time-slices.                              */
+/*   A VM is idle if it has called Release_Time_Slice or has set the VMStat_Idle flag in the CB_VM_Status field of the control block. */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   None */
+
+static inline void Wake_Up_VM(vxd_vm_handle_t const vm/*ebx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Wake_Up_VM)
+        : /* outputs */
+        : /* inputs */ "b" (vm)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Call_When_Idle (VMMCall dev=0x0001 serv=0x003A) WINVER=3.0+ */
+
+/* description: */
+/*   Install a system-wide callback procedure to call when the kernel signals that Windows is idle and all other VMs are idle. */
+
+/* inputs: */
+/*   ESI = idlecallback (pointer to idle callback) */
+
+/* outputs: */
+/*   !CF = CF set if not installed, clear if installed */
+
+/* returns: */
+/*   Bool, true if installed, false if not installed */
+
+static inline _Bool Call_When_Idle(const void* const idlecallback/*esi*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_Idle)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "S" (idlecallback)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Get_Next_VM_Handle (VMMCall dev=0x0001 serv=0x003B) WINVER=3.0+ */
+
+/* description: */
+/*   Return the handle of the next virtual machine in the VM list maintained by the system.       */
+/*   Each VM only appears once, but no particular order is guaranteed.                            */
+/*   The list is circular, so you must check for and stop when the first value comes back around. */
+
+/* inputs: */
+/*   EBX = vm (VM handle) */
+
+/* outputs: */
+/*   EBX = next VM handle */
+
+static inline vxd_vm_handle_t Get_Next_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
+    register vxd_vm_handle_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Next_VM_Handle)
+        : /* outputs */ "=b" (r)
+        : /* inputs */ "b" (vm)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Set_Global_Time_Out (VMMCall dev=0x0001 serv=0x003C) WINVER=3.0+ */
+
+/* description: */
+/*   Schedule a time-out to occur after the specified number of milliseconds have elapsed. */
+
+/* inputs: */
+/*   EAX = time (number of milliseconds to time-out) */
+/*   EDX = refdata (pointer to reference data to pass to callback) */
+/*   ESI = timeoutcallback (pointer to callback procedure) */
+
+/* outputs: */
+/*   ESI = timeout handle */
+
+static inline vxd_timeout_handle_t Set_Global_Time_Out(uint32_t const time/*eax*/,const void* const refdata/*edx*/,const void* const timeoutcallback/*esi*/) {
+    register vxd_timeout_handle_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_Global_Time_Out)
+        : /* outputs */ "=S" (r)
+        : /* inputs */ "a" (time), "d" (refdata), "S" (timeoutcallback)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
