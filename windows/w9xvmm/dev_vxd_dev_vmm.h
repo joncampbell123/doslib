@@ -2269,5 +2269,111 @@ static inline vxd_timeout_handle_t Set_Global_Time_Out(uint32_t const time/*eax*
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Set_VM_Time_Out (VMMCall dev=0x0001 serv=0x003D) WINVER=3.0+ */
+
+/* description: */
+/*   Schedule a time-out to occur after the virtual machine has run for the specified number of milliseconds have elapsed. */
+
+/* inputs: */
+/*   EAX = time (number of milliseconds to time-out) */
+/*   EBX = vm (VM handle) */
+/*   EDX = refdata (pointer to reference data to provide to callback) */
+/*   ESI = timeoutcallback (pointer to callback function) */
+
+/* outputs: */
+/*   ESI = timeout handle */
+
+static inline vxd_timeout_handle_t Set_VM_Time_Out(uint32_t const time/*eax*/,vxd_vm_handle_t const vm/*ebx*/,const void* const refdata/*edx*/,const void* const timeoutcallback/*esi*/) {
+    register vxd_timeout_handle_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_VM_Time_Out)
+        : /* outputs */ "=S" (r)
+        : /* inputs */ "a" (time), "b" (vm), "d" (refdata), "S" (timeoutcallback)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Cancel_Time_Out (VMMCall dev=0x0001 serv=0x003E) WINVER=3.0+ */
+
+/* description: */
+/*   Cancel a time-out scheduled using Set_Global_Time_Out or Set_VM_Time_Out. */
+
+/* inputs: */
+/*   ESI = timeout (timeout handle) */
+
+/* outputs: */
+/*   None */
+
+static inline void Cancel_Time_Out(vxd_timeout_handle_t const timeout/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_Time_Out)
+        : /* outputs */
+        : /* inputs */ "S" (timeout)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Get_System_Time (VMMCall dev=0x0001 serv=0x003F) WINVER=3.0+ */
+
+/* description: */
+/*   Return the time in milliseconds since Windows started. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EAX = time in milliseconds since Windows started */
+
+/* asynchronous: */
+/*   yes */
+
+static inline uint32_t Get_System_Time(void) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_System_Time)
+        : /* outputs */ "=a" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Get_VM_Exec_Time (VMMCall dev=0x0001 serv=0x0040) WINVER=3.0+ */
+
+/* description: */
+/*   Return the time in milliseconds the VM has run (execution time since creation). */
+/*   A newly created VM has a time of zero.                                          */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EAX = execution time of VM */
+
+/* asynchronous: */
+/*   yes */
+
+static inline uint32_t Get_VM_Exec_Time(void) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_VM_Exec_Time)
+        : /* outputs */ "=a" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

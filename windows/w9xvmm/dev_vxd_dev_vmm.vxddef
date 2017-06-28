@@ -875,3 +875,43 @@ in              ESI=const+void*                 TimeOutCallback         ; pointe
 out             ESI=vxd_timeout_handle_t        .                       ; timeout handle
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Set_VM_Time_Out
+description     Schedule a time-out to occur after the virtual machine has run for the specified number of milliseconds have elapsed.
+
+in              EAX                             Time                    ; number of milliseconds to time-out
+in              EBX=vxd_vm_handle_t             VM                      ; VM handle
+in              EDX=const+void*                 RefData                 ; pointer to reference data to provide to callback
+in              ESI=const+void*                 TimeOutCallback         ; pointer to callback function
+
+out             ESI=vxd_timeout_handle_t        .                       ; timeout handle
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Cancel_Time_Out
+description     Cancel a time-out scheduled using Set_Global_Time_Out or Set_VM_Time_Out.
+
+in              ESI=vxd_timeout_handle_t        TimeOut                 ; timeout handle
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_System_Time
+description     Return the time in milliseconds since Windows started.
+async           yes
+
+out             EAX                             .                       ; time in milliseconds since Windows started
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_VM_Exec_Time
+description     Return the time in milliseconds the VM has run (execution time since creation).
+description     A newly created VM has a time of zero.
+async           yes
+
+out             EAX                             .                       ; execution time of VM
+%enddef
+
