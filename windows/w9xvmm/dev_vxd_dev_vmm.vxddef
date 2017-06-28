@@ -1193,6 +1193,24 @@ def     PageMapFreePhysReg          18                            ; Allocate a f
 %enddef
 
 #--------------------------------------
+%defconstenum
+description     Page types for page allocation functions (PG_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2427
+
+#       constant                    value
+def     PG_VM                       0                             ; TODO
+def     PG_SYS                      1                             ; TODO
+def     PG_RESERVED1                2                             ; TODO
+def     PG_PRIVATE                  3                             ; TODO
+def     PG_RESERVED2                4                             ; TODO
+def     PG_RELOCK                   5                             ; TODO
+def     PG_INSTANCE                 6                             ; TODO
+def     PG_HOOKED                   7                             ; TODO
+def     PG_IGNORE                   0xFFFFFFFF                    ; TODO
+%enddef
+
+#--------------------------------------
 %defcall
 byname          _PageAllocate
 description     Allocate a block of memory consisting of the specified number of pages.

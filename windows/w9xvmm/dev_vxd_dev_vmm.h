@@ -2917,6 +2917,21 @@ static inline uint32_t _HeapGetSize(void* const hAddress/*__cdecl0*/,uint32_t co
 #define PageMapFreePhysReg     0x00040000U /* 1U << 18U bit[18] Allocate a free physical region that a virtual device can use to map physical pages. READ DESCRIPTION FOR DETAILS! (Windows 3.1) */
 
 /*-------------------------------------------------------------*/
+/* description: */
+/*   Page types for page allocation functions (PG_*)            */
+/*                                                              */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2427 */
+#define PG_VM        0x00000000UL /* 0 TODO */
+#define PG_SYS       0x00000001UL /* 1 TODO */
+#define PG_RESERVED1 0x00000002UL /* 2 TODO */
+#define PG_PRIVATE   0x00000003UL /* 3 TODO */
+#define PG_RESERVED2 0x00000004UL /* 4 TODO */
+#define PG_RELOCK    0x00000005UL /* 5 TODO */
+#define PG_INSTANCE  0x00000006UL /* 6 TODO */
+#define PG_HOOKED    0x00000007UL /* 7 TODO */
+#define PG_IGNORE    0xFFFFFFFFUL /* 0xFFFFFFFF TODO */
+
+/*-------------------------------------------------------------*/
 /* VMM _PageAllocate (VMMCall dev=0x0001 serv=0x0053) WINVER=3.0+ */
 
 /* description: */
