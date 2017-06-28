@@ -1129,8 +1129,8 @@ static inline void Cancel_VM_Event(uint32_t const vm/*ebx*/,vxd_vm_event_handle_
 /* outputs: */
 /*   ESI = event handle, or 0 if procedure was called immediately. */
 
-static inline uint32_t Call_Priority_VM_Event(int32_t const priorityboost/*eax*/,vxd_vm_handle_t const vm/*ebx*/,uint32_t const flags/*ecx*/,const void* const refdata/*edx*/,const void* const eventcallback/*esi*/,uint32_t const timeout/*edi*/) {
-    register uint32_t r;
+static inline vxd_priority_vm_event_handle_t Call_Priority_VM_Event(int32_t const priorityboost/*eax*/,vxd_vm_handle_t const vm/*ebx*/,uint32_t const flags/*ecx*/,const void* const refdata/*edx*/,const void* const eventcallback/*esi*/,uint32_t const timeout/*edi*/) {
+    register vxd_priority_vm_event_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_Priority_VM_Event)
@@ -1158,7 +1158,7 @@ static inline uint32_t Call_Priority_VM_Event(int32_t const priorityboost/*eax*/
 /* outputs: */
 /*   None */
 
-static inline void Cancel_Priority_VM_Event(uint32_t const event/*esi*/) {
+static inline void Cancel_Priority_VM_Event(vxd_priority_vm_event_handle_t const event/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_Priority_VM_Event)
         : /* outputs */

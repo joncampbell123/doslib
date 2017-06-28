@@ -350,14 +350,14 @@ description
 description     PriorityBoost must be a value limited such that when added to the VM's current execution priority the result
 description     is within range of Reserved_Low_Boost to Reserved_High_Boost.
 
-in              EAX=int32_t             PriorityBoost           ; positive, 0, or negative priority boost for the VM.
-in              EBX=vxd_vm_handle_t     VM                      ; VM handle
-in              ECX                     Flags                   ; how to carry out the event. See PEF_* constants, ORed together.
-in              EDX=const+void*         RefData                 ; pointer to reference data for callback
-in              ESI=const+void*         EventCallback           ; pointer to callback
-in              EDI                     TimeOut                 ; timeout in milliseconds IFF PEF_Time_Out is specified.
+in              EAX=int32_t                         PriorityBoost           ; positive, 0, or negative priority boost for the VM.
+in              EBX=vxd_vm_handle_t                 VM                      ; VM handle
+in              ECX                                 Flags                   ; how to carry out the event. See PEF_* constants, ORed together.
+in              EDX=const+void*                     RefData                 ; pointer to reference data for callback
+in              ESI=const+void*                     EventCallback           ; pointer to callback
+in              EDI                                 TimeOut                 ; timeout in milliseconds IFF PEF_Time_Out is specified.
 
-out             ESI                     .                       ; event handle, or 0 if procedure was called immediately.
+out             ESI=vxd_priority_vm_event_handle_t  .                       ; event handle, or 0 if procedure was called immediately.
 %enddef
 
 #--------------------------------------
@@ -369,7 +369,7 @@ description     Any priority boost will be cancelled even if PEF_Dont_Unboost_Bi
 description     Do NOT use this call to cancel events scheduled using the Call_VM_Event or Schedule_VM_Event services, for
 description     those types of events you must use Cancel_VM_Event.
 
-in              ESI                     Event                   ; event handle, or 0 if nothing to cancel
+in              ESI=vxd_priority_vm_event_handle_t  Event                   ; event handle, or 0 if nothing to cancel
 %enddef
 
 #--------------------------------------
