@@ -915,3 +915,69 @@ async           yes
 out             EAX                             .                       ; execution time of VM
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Hook_V86_Int_Chain
+description     Install a hook procedure the system calls when the specific interrupt happens.
+description     Virtual devices use this service to monitor software interrupts and simulated hardware interrupts in V86 mode.
+description     This call is only available during initialization.
+
+in              EAX                             Interrupt               ; Interrupt number to hook
+in              ESI=const+void*                 HookProc                ; pointer to hook procedure
+
+out             !CF                             .                       ; CF set if not installed, clear if installed
+
+return          Bool true if installed, false if not.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_V86_Int_Vector
+description     Return the address of the real-mode interrupt vector in the current virtual machine.
+
+in              EAX                             Interrupt               ; Interrupt number to retrieve
+
+out             CX                              Segment                 ; segment address of interrupt routine
+out             EDX                             Offset                  ; offset of interrupt routine (high WORD is zero)
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_V86_Int_Vector
+description     Set the real-mode interrupt vector to the specified real-mode address.
+description
+description     This affects only the current virtual machine, unless called before Sys_VM_Init, in which case
+description     the change becomes the default interrupt table for every virtual machine.
+
+in              EAX                             Interrupt               ; Interrupt number to set
+in              CX                              Segment                 ; segment of address
+in              EDX                             Offset                  ; offset of address
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_PM_Int_Vector
+description     Return the address of the protected-mode interupt vector in the current virtual machine.
+description     If the code segment is 16-bit, the high WORD of the offset is zero.
+
+in              EAX                             Interrupt               ; Interrupt nummber to set
+
+out             CX                              Segment                 ; segment selector
+out             EDX                             Offset                  ; offset
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_PM_Int_Vector
+description     Set the protected-mode interrupt vector to the specified address.
+description
+description     This affects only the current virtual machine, unless called before Sys_VM_Init, in which case
+description     the change becomes the default interrupt table for every virtual machine.
+description     Unless changed, the default protected-mode interrupt vector is a procedure that reflects the
+description     interrupt to V86 mode.
+
+in              EAX                             Interrupt               ; Interrupt number to set
+in              CX                              Segment                 ; segment selector
+in              EDX                             Offset                  ; offset
+%enddef
+

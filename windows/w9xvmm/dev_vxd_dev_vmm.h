@@ -2375,5 +2375,153 @@ static inline uint32_t Get_VM_Exec_Time(void) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Hook_V86_Int_Chain (VMMCall dev=0x0001 serv=0x0041) WINVER=3.0+ */
+
+/* description: */
+/*   Install a hook procedure the system calls when the specific interrupt happens.                                 */
+/*   Virtual devices use this service to monitor software interrupts and simulated hardware interrupts in V86 mode. */
+/*   This call is only available during initialization.                                                             */
+
+/* inputs: */
+/*   EAX = interrupt (Interrupt number to hook) */
+/*   ESI = hookproc (pointer to hook procedure) */
+
+/* outputs: */
+/*   !CF = CF set if not installed, clear if installed */
+
+/* returns: */
+/*   Bool true if installed, false if not. */
+
+static inline _Bool Hook_V86_Int_Chain(uint32_t const interrupt/*eax*/,const void* const hookproc/*esi*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_V86_Int_Chain)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "a" (interrupt), "S" (hookproc)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Get_V86_Int_Vector (VMMCall dev=0x0001 serv=0x0042) WINVER=3.0+ */
+
+/* description: */
+/*   Return the address of the real-mode interrupt vector in the current virtual machine. */
+
+/* inputs: */
+/*   EAX = interrupt (Interrupt number to retrieve) */
+
+/* outputs: */
+/*   CX = segment (segment address of interrupt routine) */
+/*   EDX = offset (offset of interrupt routine (high WORD is zero)) */
+
+typedef struct Get_V86_Int_Vector__response {
+    uint16_t segment; /* CX */
+    uint32_t offset; /* EDX */
+} Get_V86_Int_Vector__response;
+
+static inline Get_V86_Int_Vector__response Get_V86_Int_Vector(uint32_t const interrupt/*eax*/) {
+    register Get_V86_Int_Vector__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_V86_Int_Vector)
+        : /* outputs */ "=c" (r.segment), "=d" (r.offset)
+        : /* inputs */ "a" (interrupt)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Set_V86_Int_Vector (VMMCall dev=0x0001 serv=0x0043) WINVER=3.0+ */
+
+/* description: */
+/*   Set the real-mode interrupt vector to the specified real-mode address.                         */
+/*                                                                                                  */
+/*   This affects only the current virtual machine, unless called before Sys_VM_Init, in which case */
+/*   the change becomes the default interrupt table for every virtual machine.                      */
+
+/* inputs: */
+/*   EAX = interrupt (Interrupt number to set) */
+/*   CX = segment (segment of address) */
+/*   EDX = offset (offset of address) */
+
+/* outputs: */
+/*   None */
+
+static inline void Set_V86_Int_Vector(uint32_t const interrupt/*eax*/,uint16_t const segment/*cx*/,uint32_t const offset/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_V86_Int_Vector)
+        : /* outputs */
+        : /* inputs */ "a" (interrupt), "c" (segment), "d" (offset)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Get_PM_Int_Vector (VMMCall dev=0x0001 serv=0x0044) WINVER=3.0+ */
+
+/* description: */
+/*   Return the address of the protected-mode interupt vector in the current virtual machine. */
+/*   If the code segment is 16-bit, the high WORD of the offset is zero.                      */
+
+/* inputs: */
+/*   EAX = interrupt (Interrupt nummber to set) */
+
+/* outputs: */
+/*   CX = segment (segment selector) */
+/*   EDX = offset (offset) */
+
+typedef struct Get_PM_Int_Vector__response {
+    uint16_t segment; /* CX */
+    uint32_t offset; /* EDX */
+} Get_PM_Int_Vector__response;
+
+static inline Get_PM_Int_Vector__response Get_PM_Int_Vector(uint32_t const interrupt/*eax*/) {
+    register Get_PM_Int_Vector__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_PM_Int_Vector)
+        : /* outputs */ "=c" (r.segment), "=d" (r.offset)
+        : /* inputs */ "a" (interrupt)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Set_PM_Int_Vector (VMMCall dev=0x0001 serv=0x0045) WINVER=3.0+ */
+
+/* description: */
+/*   Set the protected-mode interrupt vector to the specified address.                              */
+/*                                                                                                  */
+/*   This affects only the current virtual machine, unless called before Sys_VM_Init, in which case */
+/*   the change becomes the default interrupt table for every virtual machine.                      */
+/*   Unless changed, the default protected-mode interrupt vector is a procedure that reflects the   */
+/*   interrupt to V86 mode.                                                                         */
+
+/* inputs: */
+/*   EAX = interrupt (Interrupt number to set) */
+/*   CX = segment (segment selector) */
+/*   EDX = offset (offset) */
+
+/* outputs: */
+/*   None */
+
+static inline void Set_PM_Int_Vector(uint32_t const interrupt/*eax*/,uint16_t const segment/*cx*/,uint32_t const offset/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_PM_Int_Vector)
+        : /* outputs */
+        : /* inputs */ "a" (interrupt), "c" (segment), "d" (offset)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
