@@ -555,6 +555,11 @@ while (my $line = <DEF>) {
                 my @pushes = ( );
                 my @pord = split(/ +/,$funcdef{paramorder});
 
+                my @cdeclv = ( );
+                if (exists($funcdef{cdecl})) {
+                    @cdeclv = split(/ +/,$funcdef{cdecl});
+                }
+
                 for ($i=0;$i < @pord;$i++) {
                     $key = $pord[$i];
                     $value = $f{$key};
@@ -562,6 +567,10 @@ while (my $line = <DEF>) {
                     if ($key =~ m/^__cdecl/) {
                         push(@pushes,"pushl %".$gccindex);
                         $cdecl_pop += 4;
+
+                        # also validate that the order matches what was given in the "cdecl" directive
+                        die "cdecl input order must match cdecl specification. ".$cdeclv[$gccindex-$cdecl_base]." vs ".$value if $cdeclv[$gccindex-$cdecl_base] ne $value;
+
                         $gccindex++;
                     }
                 }
@@ -770,6 +779,9 @@ while (my $line = <DEF>) {
         elsif ($a[0] eq "cdecl") {
             $funcdef{cdecl} = "";
             for ($i=1;$i < @a;$i++) {
+                $a[$i] =~ s/,[ \t]*$//;
+                $a[$i] =~ s/^[ \t]*//;
+
                 $funcdef{cdecl} .= " " if $i > 1;
                 $funcdef{cdecl} .= $a[$i];
             }
