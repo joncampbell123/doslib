@@ -3034,5 +3034,186 @@ static inline _PageReAllocate__response _PageReAllocate(uint32_t const hMem/*__c
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _PageFree (VMMCall dev=0x0001 serv=0x0055) WINVER=3.0+ */
+
+/* description: */
+/*   Free the specified memory block.                                                        */
+/*   The hMem memory handle must have been created by _PageAllocate or _PageReAllocate.      */
+/*   Virtual devices that allocate PG_VM or PG_HOOKED pages must free the pages when the     */
+/*   virtual machine is destroyed. PG_SYS pages do not need to be freed when Windows exists. */
+/*   If a virtual device maps a memory block into V86 address space (_MapIntoV86) it should  */
+/*   unmap the memory block before attempting to free it.                                    */
+
+/* inputs: */
+/*   __CDECL0 = hMem (handle of memory to free) */
+/*   __CDECL1 = flags (operation flags. must be zero) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _PageFree(uint32_t const hMem/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "pushl %2\n"
+        "pushl %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageFree)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _PageLock (VMMCall dev=0x0001 serv=0x0056) WINVER=3.0+ */
+
+/* description: */
+/*   Lock one or more pages in the specified memory block                                                                 */
+/*   This call has no effect on pages locked using the PageFixed value. Such memory is always locked.                     */
+/*   Virtual devices must not assume that the requested pages can always be locked.                                       */
+/*   Each page in a memory block has a lock count. Locking the page increments the count, unlocking decrements the count. */
+/*   When the lock count reaches zero, the page is unlocked.                                                              */
+/*   Devices should not leave handles locked when not needed.                                                             */
+/*                                                                                                                        */
+/*   This call will error out if the sum of nPages and PageOff is greater than the number of pages in the memory block.   */
+
+/* inputs: */
+/*   __CDECL0 = hMem (handle of memory to lock) */
+/*   __CDECL1 = nPages (number of pages to lock) */
+/*   __CDECL2 = PageOff (offset in pages from the start of the memory block) */
+/*   __CDECL3 = flags (operating flags (Page* constants)) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _PageLock(uint32_t const hMem/*__cdecl0*/,uint32_t const nPages/*__cdecl1*/,uint32_t const PageOff/*__cdecl2*/,uint32_t const flags/*__cdecl3*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "pushl %4\n"
+        "pushl %3\n"
+        "pushl %2\n"
+        "pushl %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageLock)
+        "addl $16,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)nPages), "g" ((uint32_t)PageOff), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _PageUnLock (VMMCall dev=0x0001 serv=0x0057) WINVER=3.0+ */
+
+/* description: */
+/*   Unlock one or more pages in the specified memory block                                                             */
+/*                                                                                                                      */
+/*   If PageMarkPageOut is specified, the pages are marked for immediate swapping if the lock count falls to zero.      */
+/*                                                                                                                      */
+/*   This call will error out if the sum of nPages and PageOff is greater than the number of pages in the memory block. */
+
+/* inputs: */
+/*   __CDECL0 = hMem (handle of memory to lock) */
+/*   __CDECL1 = nPages (number of pages to lock) */
+/*   __CDECL2 = PageOff (offset in pages from the start of the memory block) */
+/*   __CDECL3 = flags (operating flags (Page* constants)) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _PageUnLock(uint32_t const hMem/*__cdecl0*/,uint32_t const nPages/*__cdecl1*/,uint32_t const PageOff/*__cdecl2*/,uint32_t const flags/*__cdecl3*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "pushl %4\n"
+        "pushl %3\n"
+        "pushl %2\n"
+        "pushl %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageUnLock)
+        "addl $16,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)nPages), "g" ((uint32_t)PageOff), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _PageGetSizeAddr (VMMCall dev=0x0001 serv=0x0058) WINVER=3.0+ */
+
+/* description: */
+/*   Return the size and linear ring-0 address of an existing block of memory */
+
+/* inputs: */
+/*   __CDECL0 = hMem (handle of memory to examine) */
+/*   __CDECL1 = flags (operating flags, must be zero) */
+
+/* outputs: */
+/*   EDX = Address (ring-0 linear address of memory block, or 0 if error) */
+/*   EAX = Pages (number of pages, or 0 if error) */
+
+typedef struct _PageGetSizeAddr__response {
+    uint32_t Pages; /* EAX */
+    void* Address; /* EDX */
+} _PageGetSizeAddr__response;
+
+static inline _PageGetSizeAddr__response _PageGetSizeAddr(uint32_t const hMem/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register _PageGetSizeAddr__response r;
+
+    __asm__ (
+        "pushl %3\n"
+        "pushl %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageGetSizeAddr)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=d" (r.Address), "=a" (r.Pages)
+        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _PageGetAllocInfo (VMMCall dev=0x0001 serv=0x0059) WINVER=3.0+ */
+
+/* description: */
+/*   Return the size in pages of the largest linear address block allocatable, and also as allocated as locked or fixed.      */
+/*   There is no guarantee that a virtual machine can allocate all free pages as returned by this function.                   */
+/*   It is also possible (mentioned in the docs) that the number of free pages can be less than the number of lockable pages. */
+
+/* inputs: */
+/*   __CDECL0 = flags (operating flags, must be zero) */
+
+/* outputs: */
+/*   EDX = Lockable (count of lockable pages) */
+/*   EAX = Free (count of free pages) */
+
+typedef struct _PageGetAllocInfo__response {
+    uint32_t Free; /* EAX */
+    uint32_t Lockable; /* EDX */
+} _PageGetAllocInfo__response;
+
+static inline _PageGetAllocInfo__response _PageGetAllocInfo(uint32_t const flags/*__cdecl0*/) {
+    register _PageGetAllocInfo__response r;
+
+    __asm__ (
+        "pushl %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageGetAllocInfo)
+        "addl $4,%%esp\n"
+        : /* outputs */ "=d" (r.Lockable), "=a" (r.Free)
+        : /* inputs */ "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

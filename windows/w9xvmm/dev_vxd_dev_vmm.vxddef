@@ -1264,3 +1264,91 @@ out             EAX                             Handle                  ; new me
 out             EDX=void*                       Address                 ; new ring-0 address of memory block, or 0 if error
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _PageFree
+description     Free the specified memory block.
+description     The hMem memory handle must have been created by _PageAllocate or _PageReAllocate.
+description     Virtual devices that allocate PG_VM or PG_HOOKED pages must free the pages when the
+description     virtual machine is destroyed. PG_SYS pages do not need to be freed when Windows exists.
+description     If a virtual device maps a memory block into V86 address space (_MapIntoV86) it should
+description     unmap the memory block before attempting to free it.
+
+cdecl           hMem, flags
+
+in              __cdecl                         hMem                    ; handle of memory to free
+in              __cdecl                         flags                   ; operation flags. must be zero
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _PageLock
+description     Lock one or more pages in the specified memory block
+description     This call has no effect on pages locked using the PageFixed value. Such memory is always locked.
+description     Virtual devices must not assume that the requested pages can always be locked.
+description     Each page in a memory block has a lock count. Locking the page increments the count, unlocking decrements the count.
+description     When the lock count reaches zero, the page is unlocked.
+description     Devices should not leave handles locked when not needed.
+description
+description     This call will error out if the sum of nPages and PageOff is greater than the number of pages in the memory block.
+
+cdecl           hMem, nPages, PageOff, flags
+
+in              __cdecl                         hMem                    ; handle of memory to lock
+in              __cdecl                         nPages                  ; number of pages to lock
+in              __cdecl                         PageOff                 ; offset in pages from the start of the memory block
+in              __cdecl                         flags                   ; operating flags (Page* constants)
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _PageUnLock
+description     Unlock one or more pages in the specified memory block
+description
+description     If PageMarkPageOut is specified, the pages are marked for immediate swapping if the lock count falls to zero.
+description
+description     This call will error out if the sum of nPages and PageOff is greater than the number of pages in the memory block.
+
+cdecl           hMem, nPages, PageOff, flags
+
+in              __cdecl                         hMem                    ; handle of memory to lock
+in              __cdecl                         nPages                  ; number of pages to lock
+in              __cdecl                         PageOff                 ; offset in pages from the start of the memory block
+in              __cdecl                         flags                   ; operating flags (Page* constants)
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _PageGetSizeAddr
+description     Return the size and linear ring-0 address of an existing block of memory
+
+cdecl           hMem, flags
+
+in              __cdecl                         hMem                    ; handle of memory to examine
+in              __cdecl                         flags                   ; operating flags, must be zero
+
+out             EAX                             Pages                   ; number of pages, or 0 if error
+out             EDX=void*                       Address                 ; ring-0 linear address of memory block, or 0 if error
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _PageGetAllocInfo
+description     Return the size in pages of the largest linear address block allocatable, and also as allocated as locked or fixed.
+description     There is no guarantee that a virtual machine can allocate all free pages as returned by this function.
+description     It is also possible (mentioned in the docs) that the number of free pages can be less than the number of lockable pages.
+
+cdecl           flags
+
+in              __cdecl                         flags                   ; operating flags, must be zero
+
+out             EAX                             Free                    ; count of free pages
+out             EDX                             Lockable                ; count of lockable pages
+%enddef
+
