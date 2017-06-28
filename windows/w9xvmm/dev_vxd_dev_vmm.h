@@ -2992,5 +2992,47 @@ static inline _PageAllocate__response _PageAllocate(uint32_t const nPages/*__cde
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _PageReAllocate (VMMCall dev=0x0001 serv=0x0054) WINVER=3.0+ */
+
+/* description: */
+/*   Reallocate, and possibly reinitialize an existing memory block.                    */
+/*   This call can increase or decrease the number of pages in the memory block.        */
+/*   The hMem memory handle must have been created by _PageAllocate or _PageReAllocate. */
+/*                                                                                      */
+/*   If successful, the old memory block is freed and invalid. If not successful,       */
+/*   the new block is not allocated and the old memory block remains valid.             */
+
+/* inputs: */
+/*   __CDECL0 = hMem (handle of memory to reallocate) */
+/*   __CDECL1 = nPages (number of pages in the reallocated memory block. must not be zero.) */
+/*   __CDECL2 = flags (operation flags (Page* constants)) */
+
+/* outputs: */
+/*   EDX = Address (new ring-0 address of memory block, or 0 if error) */
+/*   EAX = Handle (new memory handle, or 0 if error) */
+
+typedef struct _PageReAllocate__response {
+    uint32_t Handle; /* EAX */
+    void* Address; /* EDX */
+} _PageReAllocate__response;
+
+static inline _PageReAllocate__response _PageReAllocate(uint32_t const hMem/*__cdecl0*/,uint32_t const nPages/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register _PageReAllocate__response r;
+
+    __asm__ (
+        "pushl %4\n"
+        "pushl %3\n"
+        "pushl %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageReAllocate)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=d" (r.Address), "=a" (r.Handle)
+        : /* inputs */ "g" ((uint32_t)hMem), "g" ((uint32_t)nPages), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
