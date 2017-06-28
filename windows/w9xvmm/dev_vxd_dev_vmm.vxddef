@@ -1352,3 +1352,42 @@ out             EAX                             Free                    ; count 
 out             EDX                             Lockable                ; count of lockable pages
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _GetFreePageCount
+description     Return the number of pages in the free list.
+
+cdecl           flags
+
+in              __cdecl                         flags                   ; operating flags, must be zero
+
+out             EAX                             FreePages               ; number of free pages
+out             EDX                             LockablePages           ; number of lockable pages
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _GetSysPageCount
+description     Return the current number of system pages (pages allocated as PG_SYS).
+
+cdecl           flags
+
+in              __cdecl                         flags                   ; operating flags, must be zero
+
+out             EAX                             .                       ; number of pages allocated as PG_SYS
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _GetVMPgCount
+description     Return the current count of pages allocated to a specific virtual machine.
+
+cdecl           VM, flags
+
+in              __cdecl                         VM                      ; virtual machine handle
+in              __cdecl                         flags                   ; operating flags, must be zero
+
+out             EAX                             TotalPages              ; total pages allocated to the virtual machine, or 0 if error
+out             EDX                             NotMappedIn1MB          ; total pages allocated but not mapped into the 1MB V86 address space, or 0 if error
+%enddef
+

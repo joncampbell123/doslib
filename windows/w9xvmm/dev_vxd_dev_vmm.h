@@ -3215,5 +3215,100 @@ static inline _PageGetAllocInfo__response _PageGetAllocInfo(uint32_t const flags
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _GetFreePageCount (VMMCall dev=0x0001 serv=0x005A) WINVER=3.0+ */
+
+/* description: */
+/*   Return the number of pages in the free list. */
+
+/* inputs: */
+/*   __CDECL0 = flags (operating flags, must be zero) */
+
+/* outputs: */
+/*   EDX = LockablePages (number of lockable pages) */
+/*   EAX = FreePages (number of free pages) */
+
+typedef struct _GetFreePageCount__response {
+    uint32_t FreePages; /* EAX */
+    uint32_t LockablePages; /* EDX */
+} _GetFreePageCount__response;
+
+static inline _GetFreePageCount__response _GetFreePageCount(uint32_t const flags/*__cdecl0*/) {
+    register _GetFreePageCount__response r;
+
+    __asm__ (
+        "push %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetFreePageCount)
+        "addl $4,%%esp\n"
+        : /* outputs */ "=d" (r.LockablePages), "=a" (r.FreePages)
+        : /* inputs */ "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _GetSysPageCount (VMMCall dev=0x0001 serv=0x005B) WINVER=3.0+ */
+
+/* description: */
+/*   Return the current number of system pages (pages allocated as PG_SYS). */
+
+/* inputs: */
+/*   __CDECL0 = flags (operating flags, must be zero) */
+
+/* outputs: */
+/*   EAX = number of pages allocated as PG_SYS */
+
+static inline uint32_t _GetSysPageCount(uint32_t const flags/*__cdecl0*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetSysPageCount)
+        "addl $4,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _GetVMPgCount (VMMCall dev=0x0001 serv=0x005C) WINVER=3.0+ */
+
+/* description: */
+/*   Return the current count of pages allocated to a specific virtual machine. */
+
+/* inputs: */
+/*   __CDECL0 = VM (virtual machine handle) */
+/*   __CDECL1 = flags (operating flags, must be zero) */
+
+/* outputs: */
+/*   EDX = NotMappedIn1MB (total pages allocated but not mapped into the 1MB V86 address space, or 0 if error) */
+/*   EAX = TotalPages (total pages allocated to the virtual machine, or 0 if error) */
+
+typedef struct _GetVMPgCount__response {
+    uint32_t TotalPages; /* EAX */
+    uint32_t NotMappedIn1MB; /* EDX */
+} _GetVMPgCount__response;
+
+static inline _GetVMPgCount__response _GetVMPgCount(uint32_t const VM/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register _GetVMPgCount__response r;
+
+    __asm__ (
+        "push %3\n"
+        "push %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetVMPgCount)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=d" (r.NotMappedIn1MB), "=a" (r.TotalPages)
+        : /* inputs */ "g" (VM), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
