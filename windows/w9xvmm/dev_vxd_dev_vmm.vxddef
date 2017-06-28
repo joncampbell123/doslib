@@ -267,11 +267,11 @@ description
 description     You can cancel a scheduled event using Cancel_VM_Event
 async           yes
 
-in              EBX=vxd_vm_handle_t     VM                      ; VM handle to schedule event
-in              ESI=const+void*         EventCallback           ; pointer to callback procedure (32-bit flat)
-in              EDX=const+void*         RefData                 ; pointer to reference data to pass to callback
+in              EBX=vxd_vm_handle_t                 VM                      ; VM handle to schedule event
+in              ESI=const+void*                     EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=const+void*                     RefData                 ; pointer to reference data to pass to callback
 
-out             ESI                     .                       ; event handle
+out             ESI=vxd_vm_event_handle_t           .                       ; event handle
 %enddef
 
 #--------------------------------------
@@ -298,11 +298,11 @@ description
 description     You can cancel the event (if scheduled) using Cancel_VM_Event.
 async           yes
 
-in              EBX=vxd_vm_handle_t     VM                      ; VM handle
-in              ESI=const+void*         EventCallback           ; pointer to callback procedure (32-bit flat)
-in              EDX=const+void*         RefData                 ; pointer to reference data to pass to callback
+in              EBX=vxd_vm_handle_t                 VM                      ; VM handle
+in              ESI=const+void*                     EventCallback           ; pointer to callback procedure (32-bit flat)
+in              EDX=const+void*                     RefData                 ; pointer to reference data to pass to callback
 
-out             ESI                     .                       ; event handle, or 0 if procedure was called immediately without scheduling.
+out             ESI=vxd_vm_event_handle_t           .                       ; event handle, or 0 if procedure was called immediately without scheduling.
 %enddef
 
 #--------------------------------------
@@ -320,8 +320,8 @@ byname          Cancel_VM_Event
 description     Cancel a VM event previously scheduled by Schedule_VM_Event or Call_VM_Event
 description     A virtual device must not attempt to cancel an event where the callback function has already been called.
 
-in              EBX                     VM                      ; VM handle
-in              ESI                     Event                   ; Event handle, or 0 if no event should be cancelled.
+in              EBX                                 VM                      ; VM handle
+in              ESI=vxd_vm_event_handle_t           Event                   ; Event handle, or 0 if no event should be cancelled.
 %enddef
 
 #--------------------------------------

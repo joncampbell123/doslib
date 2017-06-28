@@ -972,8 +972,8 @@ static inline vxd_global_event_handle_t Schedule_Global_Event(const void* const 
 /* asynchronous: */
 /*   yes */
 
-static inline uint32_t Schedule_VM_Event(vxd_vm_handle_t const vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
-    register uint32_t r;
+static inline vxd_vm_event_handle_t Schedule_VM_Event(vxd_vm_handle_t const vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
+    register vxd_vm_event_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Schedule_VM_Event)
@@ -1037,8 +1037,8 @@ static inline vxd_global_event_handle_t Call_Global_Event(const void* const even
 /* asynchronous: */
 /*   yes */
 
-static inline uint32_t Call_VM_Event(vxd_vm_handle_t const vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
-    register uint32_t r;
+static inline vxd_vm_event_handle_t Call_VM_Event(vxd_vm_handle_t const vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
+    register vxd_vm_event_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_VM_Event)
@@ -1086,7 +1086,7 @@ static inline void Cancel_Global_Event(vxd_global_event_handle_t const event/*es
 /* outputs: */
 /*   None */
 
-static inline void Cancel_VM_Event(uint32_t const vm/*ebx*/,uint32_t const event/*esi*/) {
+static inline void Cancel_VM_Event(uint32_t const vm/*ebx*/,vxd_vm_event_handle_t const event/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_VM_Event)
         : /* outputs */
