@@ -2772,7 +2772,7 @@ static inline uint32_t Simulate_Pop(void) {
 /*   __CDECL1 = flags (allocation flags. Heap* constants.) */
 
 /* outputs: */
-/*   EAX = address of memory block */
+/*   EAX = address of memory block, or zero if failure */
 
 static inline void* _HeapAllocate(uint32_t const nbytes/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
     register void* r;
@@ -2784,6 +2784,102 @@ static inline void* _HeapAllocate(uint32_t const nbytes/*__cdecl0*/,uint32_t con
         "addl $8,%%esp\n"
         : /* outputs */ "=a" (r)
         : /* inputs */ "g" ((uint32_t)nbytes), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _HeapReAllocate (VMMCall dev=0x0001 serv=0x0050) WINVER=3.0+ */
+
+/* description: */
+/*   Reallocate or reinitialize an existing memory block.                             */
+/*   If reallocation succeeds, the old memory address is no longer valid.             */
+/*   If reallocation fails, the old memory block is not freed and is still valid.     */
+/*   Thus, it works much the same way as the C library function realloc().            */
+/*                                                                                    */
+/*   hAddress MUST have been previously returned by _HeapAllocate or _HeapReAllocate. */
+
+/* inputs: */
+/*   __CDECL0 = hAddress (address of the memory block) */
+/*   __CDECL1 = nbytes (size in bytes to allocate. must not be zero.) */
+/*   __CDECL2 = flags (allocation flags. Heap* constants.) */
+
+/* outputs: */
+/*   EAX = address of memory block, or zero if failure */
+
+static inline void* _HeapReAllocate(void* const hAddress/*__cdecl0*/,uint32_t const nbytes/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register void* r;
+
+    __asm__ (
+        "pushl %3\n"
+        "pushl %2\n"
+        "pushl %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__HeapReAllocate)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" ((uint32_t)hAddress), "g" ((uint32_t)nbytes), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _HeapFree (VMMCall dev=0x0001 serv=0x0051) WINVER=3.0+ */
+
+/* description: */
+/*   Free an existing memory block of heap.                                           */
+/*   hAddress MUST have been previously returned by _HeapAllocate or _HeapReAllocate. */
+
+/* inputs: */
+/*   __CDECL0 = hAddress (address of the memory block) */
+/*   __CDECL1 = flags (flags. must be zero.) */
+
+/* outputs: */
+/*   EAX = nonzero if freed, zero if not freed */
+
+static inline uint32_t _HeapFree(void* const hAddress/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "pushl %2\n"
+        "pushl %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__HeapFree)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" ((uint32_t)hAddress), "g" ((uint32_t)flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _HeapGetSize (VMMCall dev=0x0001 serv=0x0052) WINVER=3.0+ */
+
+/* description: */
+/*   Return the size of an existing block of heap.                                    */
+/*   hAddress MUST have been previously returned by _HeapAllocate or _HeapReAllocate. */
+
+/* inputs: */
+/*   __CDECL0 = hAddress (address of memory block) */
+/*   __CDECL1 = flags (flags. must be zero.) */
+
+/* outputs: */
+/*   EAX = size in bytes of block, or zero if error */
+
+static inline uint32_t _HeapGetSize(void* const hAddress/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "pushl %2\n"
+        "pushl %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__HeapGetSize)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" ((uint32_t)hAddress), "g" ((uint32_t)flags)
         : /* clobbered */
     );
 

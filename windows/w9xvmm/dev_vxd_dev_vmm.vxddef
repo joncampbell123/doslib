@@ -1108,6 +1108,53 @@ cdecl           nbytes, flags                                           # parame
 in              __cdecl                         nbytes                  ; size in bytes to allocate. must not be zero.
 in              __cdecl                         flags                   ; allocation flags. Heap* constants.
 
-out             EAX=void*                       .                       ; address of memory block
+out             EAX=void*                       .                       ; address of memory block, or zero if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _HeapReAllocate
+description     Reallocate or reinitialize an existing memory block.
+description     If reallocation succeeds, the old memory address is no longer valid.
+description     If reallocation fails, the old memory block is not freed and is still valid.
+description     Thus, it works much the same way as the C library function realloc().
+description
+description     hAddress MUST have been previously returned by _HeapAllocate or _HeapReAllocate.
+
+cdecl           hAddress, nbytes, flags
+
+in              __cdecl=void*                   hAddress                ; address of the memory block
+in              __cdecl                         nbytes                  ; size in bytes to allocate. must not be zero.
+in              __cdecl                         flags                   ; allocation flags. Heap* constants.
+
+out             EAX=void*                       .                       ; address of memory block, or zero if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _HeapFree
+description     Free an existing memory block of heap.
+description     hAddress MUST have been previously returned by _HeapAllocate or _HeapReAllocate.
+
+cdecl           hAddress, flags
+
+in              __cdecl=void*                   hAddress                ; address of the memory block
+in              __cdecl                         flags                   ; flags. must be zero.
+
+out             EAX                             .                       ; nonzero if freed, zero if not freed
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _HeapGetSize
+description     Return the size of an existing block of heap.
+description     hAddress MUST have been previously returned by _HeapAllocate or _HeapReAllocate.
+
+cdecl           hAddress, flags
+
+in              __cdecl=void*                   hAddress                ; address of memory block
+in              __cdecl                         flags                   ; flags. must be zero.
+
+out             EAX                             .                       ; size in bytes of block, or zero if error
 %enddef
 
