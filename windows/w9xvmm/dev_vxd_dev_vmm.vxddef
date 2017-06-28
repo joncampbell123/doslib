@@ -576,10 +576,10 @@ in              EDX=const+void*         RefData                 ; pointer to ref
 byname          Create_Semaphore
 description     Allocate and initialize a new semaphore.
 
-in              ECX                     TokenCount              ; initial token count
+in              ECX                             TokenCount              ; initial token count
 
-out             EAX                     Semaphore               ; semaphore handle if CF=0
-out             CF                      error                   ; CF set if error, CF clear if success
+out             EAX=vxd_semaphore_handle_t      Semaphore               ; semaphore handle if CF=0
+out             CF                              error                   ; CF set if error, CF clear if success
 %enddef
 
 #--------------------------------------
@@ -587,7 +587,7 @@ out             CF                      error                   ; CF set if erro
 byname          Destroy_Semaphore
 description     Destroy the specified semaphore.
 
-in              EAX                     Semaphore               ; semaphore handle to delete
+in              EAX=vxd_semaphore_handle_t      Semaphore               ; semaphore handle to delete
 %enddef
 
 #--------------------------------------
@@ -595,8 +595,8 @@ in              EAX                     Semaphore               ; semaphore hand
 byname          Wait_Semaphore
 description     Block the current virtual machine (wait) until the semaphore is signaled using Signal_Semaphore service.
 
-in              EAX                     Semaphore               ; semaphore handle to wait on
-in              ECX                     Flags                   ; Block_* constants
+in              EAX=vxd_semaphore_handle_t      Semaphore               ; semaphore handle to wait on
+in              ECX                             Flags                   ; Block_* constants
 %enddef
 
 #--------------------------------------
@@ -604,7 +604,7 @@ in              ECX                     Flags                   ; Block_* consta
 byname          Signal_Semaphore
 description     Unblocks the virtual machine (if any) waiting on the semaphore.
 
-in              EAX                     Semaphore               ; semaphore handle
+in              EAX=vxd_semaphore_handle_t      Semaphore               ; semaphore handle
 %enddef
 
 #--------------------------------------

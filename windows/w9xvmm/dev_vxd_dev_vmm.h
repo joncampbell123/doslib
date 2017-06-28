@@ -1596,7 +1596,7 @@ static inline void Call_When_Not_Critical(const void* const critseccallback/*esi
 /*   EAX = semaphore (semaphore handle if CF=0) */
 
 typedef struct Create_Semaphore__response {
-    uint32_t semaphore; /* EAX */
+    vxd_semaphore_handle_t semaphore; /* EAX */
     _Bool error; /* CF */
 } Create_Semaphore__response;
 
@@ -1625,7 +1625,7 @@ static inline Create_Semaphore__response Create_Semaphore(uint32_t const tokenco
 /* outputs: */
 /*   None */
 
-static inline void Destroy_Semaphore(uint32_t const semaphore/*eax*/) {
+static inline void Destroy_Semaphore(vxd_semaphore_handle_t const semaphore/*eax*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Destroy_Semaphore)
         : /* outputs */
@@ -1647,7 +1647,7 @@ static inline void Destroy_Semaphore(uint32_t const semaphore/*eax*/) {
 /* outputs: */
 /*   None */
 
-static inline void Wait_Semaphore(uint32_t const semaphore/*eax*/,uint32_t const flags/*ecx*/) {
+static inline void Wait_Semaphore(vxd_semaphore_handle_t const semaphore/*eax*/,uint32_t const flags/*ecx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Wait_Semaphore)
         : /* outputs */
@@ -1668,7 +1668,7 @@ static inline void Wait_Semaphore(uint32_t const semaphore/*eax*/,uint32_t const
 /* outputs: */
 /*   None */
 
-static inline void Signal_Semaphore(uint32_t const semaphore/*eax*/) {
+static inline void Signal_Semaphore(vxd_semaphore_handle_t const semaphore/*eax*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Signal_Semaphore)
         : /* outputs */
