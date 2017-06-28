@@ -517,11 +517,11 @@
 
 /* outputs: */
 /*   AX = version (AH=Major AL=Minor (example: 0x030A = 3.10)) */
-/*   ECX = debug (debug development revision number) */
+/*   ECX = Debug (debug development revision number) */
 
 typedef struct Get_VMM_Version__response {
     uint16_t version; /* AX */
-    uint32_t debug; /* ECX */
+    uint32_t Debug; /* ECX */
 } Get_VMM_Version__response;
 
 static inline Get_VMM_Version__response Get_VMM_Version(void) {
@@ -529,7 +529,7 @@ static inline Get_VMM_Version__response Get_VMM_Version(void) {
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_VMM_Version)
-        : /* outputs */ "=a" (r.version), "=c" (r.debug)
+        : /* outputs */ "=a" (r.version), "=c" (r.Debug)
         : /* inputs */
         : /* clobbered */
     );
@@ -575,7 +575,7 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 /*   Test whether VM handle is current VM */
 
 /* inputs: */
-/*   EBX = vm (VM handle to test) */
+/*   EBX = VM (VM handle to test) */
 
 /* outputs: */
 /*   ZF = ZF set if vm handle matches */
@@ -586,13 +586,13 @@ static inline vxd_vm_handle_t Get_Cur_VM_Handle(void) {
 /* asynchronous: */
 /*   yes */
 
-static inline _Bool Test_Cur_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
+static inline _Bool Test_Cur_VM_Handle(vxd_vm_handle_t const VM/*ebx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Test_Cur_VM_Handle)
         : /* outputs */ "=@ccz" (r)
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 
@@ -637,7 +637,7 @@ static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
 /*   Test whether VM handle is system VM */
 
 /* inputs: */
-/*   EBX = vm (VM handle to test) */
+/*   EBX = VM (VM handle to test) */
 
 /* outputs: */
 /*   ZF = ZF set if vm handle matches */
@@ -648,13 +648,13 @@ static inline vxd_vm_handle_t Get_Sys_VM_Handle(void) {
 /* asynchronous: */
 /*   yes */
 
-static inline _Bool Test_Sys_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
+static inline _Bool Test_Sys_VM_Handle(vxd_vm_handle_t const VM/*ebx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Test_Sys_VM_Handle)
         : /* outputs */ "=@ccz" (r)
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 
@@ -668,7 +668,7 @@ static inline _Bool Test_Sys_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
 /*   Verify that the VM handle is valid */
 
 /* inputs: */
-/*   EBX = vm (VM handle to test) */
+/*   EBX = VM (VM handle to test) */
 
 /* outputs: */
 /*   !CF = CF is set if NOT valid, clear if valid. Return value should invert sense. */
@@ -679,13 +679,13 @@ static inline _Bool Test_Sys_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
 /* asynchronous: */
 /*   yes */
 
-static inline _Bool Validate_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
+static inline _Bool Validate_VM_Handle(vxd_vm_handle_t const VM/*ebx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Validate_VM_Handle)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 
@@ -754,16 +754,16 @@ static inline uint32_t Begin_Reentrant_Execution(void) {
 /*   Ends reentrant execution, after Begin_Reentrant_Execution. */
 
 /* inputs: */
-/*   ECX = count (reentrancy count returned by Begin_Reentrant_Execution) */
+/*   ECX = Count (reentrancy count returned by Begin_Reentrant_Execution) */
 
 /* outputs: */
 /*   None */
 
-static inline void End_Reentrant_Execution(uint32_t const count/*ecx*/) {
+static inline void End_Reentrant_Execution(uint32_t const Count/*ecx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_End_Reentrant_Execution)
         : /* outputs */
-        : /* inputs */ "c" (count)
+        : /* inputs */ "c" (Count)
         : /* clobbered */
     );
 }
@@ -776,9 +776,9 @@ static inline void End_Reentrant_Execution(uint32_t const count/*ecx*/) {
 /*   insert a breakpoint callback procedure to receive control when the break point happens. */
 
 /* inputs: */
-/*   EAX = breakaddr (V86 address to place the break point) */
-/*   EDX = refdata (pointer to reference data to be passed to callback procedure) */
-/*   ESI = callback (pointer to callback procedure to install (32-bit offset)) */
+/*   EAX = BreakAddr (V86 address to place the break point) */
+/*   EDX = RefData (pointer to reference data to be passed to callback procedure) */
+/*   ESI = Callback (pointer to callback procedure to install (32-bit offset)) */
 
 /* outputs: */
 /*   !CF = success (CF clear) or failure (CF set) */
@@ -786,13 +786,13 @@ static inline void End_Reentrant_Execution(uint32_t const count/*ecx*/) {
 /* returns: */
 /*   Bool, true if success, false if failure (not installed) */
 
-static inline _Bool Install_V86_Break_Point(const void* const breakaddr/*eax*/,const void* const refdata/*edx*/,const void* const callback/*esi*/) {
+static inline _Bool Install_V86_Break_Point(const void* const BreakAddr/*eax*/,const void* const RefData/*edx*/,const void* const Callback/*esi*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Install_V86_Break_Point)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "a" (breakaddr), "d" (refdata), "S" (callback)
+        : /* inputs */ "a" (BreakAddr), "d" (RefData), "S" (Callback)
         : /* clobbered */
     );
 
@@ -806,16 +806,16 @@ static inline _Bool Install_V86_Break_Point(const void* const breakaddr/*eax*/,c
 /*   Remove a virtual 8086 break point installed with Install_V86_Break_Point in the current VM */
 
 /* inputs: */
-/*   EAX = breakaddr (V86 address to remove break point from) */
+/*   EAX = BreakAddr (V86 address to remove break point from) */
 
 /* outputs: */
 /*   None */
 
-static inline void Remove_V86_Break_Point(const void* const breakaddr/*eax*/) {
+static inline void Remove_V86_Break_Point(const void* const BreakAddr/*eax*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Remove_V86_Break_Point)
         : /* outputs */
-        : /* inputs */ "a" (breakaddr)
+        : /* inputs */ "a" (BreakAddr)
         : /* clobbered */
     );
 }
@@ -828,25 +828,25 @@ static inline void Remove_V86_Break_Point(const void* const breakaddr/*eax*/) {
 /*   a virtual device.                                                                           */
 
 /* inputs: */
-/*   EDX = refdata (points to reference data to pass to callback procedure) */
-/*   ESI = callback (points to callback procedure to call) */
+/*   EDX = RefData (points to reference data to pass to callback procedure) */
+/*   ESI = Callback (points to callback procedure to call) */
 
 /* outputs: */
 /*   CF = error (if success, CF=0 and EAX=realmode ptr. if failure, CF=1) */
-/*   EAX = callbackaddr (if CF=0, segment:offset of real-mode callback address) */
+/*   EAX = CallbackAddr (if CF=0, segment:offset of real-mode callback address) */
 
 typedef struct Allocate_V86_Call_Back__response {
     _Bool error; /* CF */
-    uint32_t callbackaddr; /* EAX */
+    uint32_t CallbackAddr; /* EAX */
 } Allocate_V86_Call_Back__response;
 
-static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void* const refdata/*edx*/,const void* const callback/*esi*/) {
+static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void* const RefData/*edx*/,const void* const Callback/*esi*/) {
     register Allocate_V86_Call_Back__response r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Allocate_V86_Call_Back)
-        : /* outputs */ "=@ccc" (r.error), "=a" (r.callbackaddr)
-        : /* inputs */ "d" (refdata), "S" (callback)
+        : /* outputs */ "=@ccc" (r.error), "=a" (r.CallbackAddr)
+        : /* inputs */ "d" (RefData), "S" (Callback)
         : /* clobbered */
     );
 
@@ -860,25 +860,25 @@ static inline Allocate_V86_Call_Back__response Allocate_V86_Call_Back(const void
 /*   Install a callback procedure for protected mode applications to call to execute code in a virtual device. */
 
 /* inputs: */
-/*   EDX = refdata (points to reference data to pass to callback procedure) */
-/*   ESI = callback (points to callback procedure to call) */
+/*   EDX = RefData (points to reference data to pass to callback procedure) */
+/*   ESI = Callback (points to callback procedure to call) */
 
 /* outputs: */
 /*   CF = error (if success, CF=0 and EAX=realmode ptr. if failure, CF=1) */
-/*   EAX = callbackaddr (if CF=0, address of callback procedure) */
+/*   EAX = CallbackAddr (if CF=0, address of callback procedure) */
 
 typedef struct Allocate_PM_Call_Back__response {
     _Bool error; /* CF */
-    uint32_t callbackaddr; /* EAX */
+    uint32_t CallbackAddr; /* EAX */
 } Allocate_PM_Call_Back__response;
 
-static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void* const refdata/*edx*/,const void* const callback/*esi*/) {
+static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void* const RefData/*edx*/,const void* const Callback/*esi*/) {
     register Allocate_PM_Call_Back__response r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Allocate_PM_Call_Back)
-        : /* outputs */ "=@ccc" (r.error), "=a" (r.callbackaddr)
-        : /* inputs */ "d" (refdata), "S" (callback)
+        : /* outputs */ "=@ccc" (r.error), "=a" (r.CallbackAddr)
+        : /* inputs */ "d" (RefData), "S" (Callback)
         : /* clobbered */
     );
 
@@ -897,18 +897,18 @@ static inline Allocate_PM_Call_Back__response Allocate_PM_Call_Back(const void* 
 /*   if TimeOut is zero, timeout is ignored.                                                                   */
 
 /* inputs: */
-/*   EAX = timeout (number of milliseconds for timeout. see description for details.) */
-/*   EDX = refdata (pointer to reference data to pass to callback) */
-/*   ESI = callback (callback procedure (32-bit flat)) */
+/*   EAX = TimeOut (number of milliseconds for timeout. see description for details.) */
+/*   EDX = RefData (pointer to reference data to pass to callback) */
+/*   ESI = Callback (callback procedure (32-bit flat)) */
 
 /* outputs: */
 /*   None */
 
-static inline void Call_When_VM_Returns(int32_t const timeout/*eax*/,const void* const refdata/*edx*/,const void* const callback/*esi*/) {
+static inline void Call_When_VM_Returns(int32_t const TimeOut/*eax*/,const void* const RefData/*edx*/,const void* const Callback/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_VM_Returns)
         : /* outputs */
-        : /* inputs */ "a" (timeout), "d" (refdata), "S" (callback)
+        : /* inputs */ "a" (TimeOut), "d" (RefData), "S" (Callback)
         : /* clobbered */
     );
 }
@@ -930,8 +930,8 @@ static inline void Call_When_VM_Returns(int32_t const timeout/*eax*/,const void*
 /*   You can cancel a scheduled event using Cancel_Global_Event                                */
 
 /* inputs: */
-/*   ESI = eventcallback (pointer to callback procedure (32-bit flat)) */
-/*   EDX = refdata (pointer to reference data to pass to callback) */
+/*   ESI = EventCallback (pointer to callback procedure (32-bit flat)) */
+/*   EDX = RefData (pointer to reference data to pass to callback) */
 
 /* outputs: */
 /*   ESI = event handle */
@@ -939,13 +939,13 @@ static inline void Call_When_VM_Returns(int32_t const timeout/*eax*/,const void*
 /* asynchronous: */
 /*   yes */
 
-static inline vxd_global_event_handle_t Schedule_Global_Event(const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
+static inline vxd_global_event_handle_t Schedule_Global_Event(const void* const EventCallback/*esi*/,const void* const RefData/*edx*/) {
     register vxd_global_event_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Schedule_Global_Event)
         : /* outputs */ "=S" (r)
-        : /* inputs */ "S" (eventcallback), "d" (refdata)
+        : /* inputs */ "S" (EventCallback), "d" (RefData)
         : /* clobbered */
     );
 
@@ -962,9 +962,9 @@ static inline vxd_global_event_handle_t Schedule_Global_Event(const void* const 
 /*   You can cancel a scheduled event using Cancel_VM_Event                                       */
 
 /* inputs: */
-/*   EBX = vm (VM handle to schedule event) */
-/*   ESI = eventcallback (pointer to callback procedure (32-bit flat)) */
-/*   EDX = refdata (pointer to reference data to pass to callback) */
+/*   EBX = VM (VM handle to schedule event) */
+/*   ESI = EventCallback (pointer to callback procedure (32-bit flat)) */
+/*   EDX = RefData (pointer to reference data to pass to callback) */
 
 /* outputs: */
 /*   ESI = event handle */
@@ -972,13 +972,13 @@ static inline vxd_global_event_handle_t Schedule_Global_Event(const void* const 
 /* asynchronous: */
 /*   yes */
 
-static inline vxd_vm_event_handle_t Schedule_VM_Event(vxd_vm_handle_t const vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
+static inline vxd_vm_event_handle_t Schedule_VM_Event(vxd_vm_handle_t const VM/*ebx*/,const void* const EventCallback/*esi*/,const void* const RefData/*edx*/) {
     register vxd_vm_event_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Schedule_VM_Event)
         : /* outputs */ "=S" (r)
-        : /* inputs */ "b" (vm), "S" (eventcallback), "d" (refdata)
+        : /* inputs */ "b" (VM), "S" (EventCallback), "d" (RefData)
         : /* clobbered */
     );
 
@@ -995,8 +995,8 @@ static inline vxd_vm_event_handle_t Schedule_VM_Event(vxd_vm_handle_t const vm/*
 /*   You can cancel the event (if scheduled) using Cancel_Global_Event.                              */
 
 /* inputs: */
-/*   ESI = eventcallback (pointer to callback procedure (32-bit flat)) */
-/*   EDX = refdata (pointer to reference data to pass to callback) */
+/*   ESI = EventCallback (pointer to callback procedure (32-bit flat)) */
+/*   EDX = RefData (pointer to reference data to pass to callback) */
 
 /* outputs: */
 /*   ESI = event handle, or 0 if procedure was called immediately without scheduling. */
@@ -1004,13 +1004,13 @@ static inline vxd_vm_event_handle_t Schedule_VM_Event(vxd_vm_handle_t const vm/*
 /* asynchronous: */
 /*   yes */
 
-static inline vxd_global_event_handle_t Call_Global_Event(const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
+static inline vxd_global_event_handle_t Call_Global_Event(const void* const EventCallback/*esi*/,const void* const RefData/*edx*/) {
     register vxd_global_event_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_Global_Event)
         : /* outputs */ "=S" (r)
-        : /* inputs */ "S" (eventcallback), "d" (refdata)
+        : /* inputs */ "S" (EventCallback), "d" (RefData)
         : /* clobbered */
     );
 
@@ -1027,9 +1027,9 @@ static inline vxd_global_event_handle_t Call_Global_Event(const void* const even
 /*   You can cancel the event (if scheduled) using Cancel_VM_Event.                              */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
-/*   ESI = eventcallback (pointer to callback procedure (32-bit flat)) */
-/*   EDX = refdata (pointer to reference data to pass to callback) */
+/*   EBX = VM (VM handle) */
+/*   ESI = EventCallback (pointer to callback procedure (32-bit flat)) */
+/*   EDX = RefData (pointer to reference data to pass to callback) */
 
 /* outputs: */
 /*   ESI = event handle, or 0 if procedure was called immediately without scheduling. */
@@ -1037,13 +1037,13 @@ static inline vxd_global_event_handle_t Call_Global_Event(const void* const even
 /* asynchronous: */
 /*   yes */
 
-static inline vxd_vm_event_handle_t Call_VM_Event(vxd_vm_handle_t const vm/*ebx*/,const void* const eventcallback/*esi*/,const void* const refdata/*edx*/) {
+static inline vxd_vm_event_handle_t Call_VM_Event(vxd_vm_handle_t const VM/*ebx*/,const void* const EventCallback/*esi*/,const void* const RefData/*edx*/) {
     register vxd_vm_event_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_VM_Event)
         : /* outputs */ "=S" (r)
-        : /* inputs */ "b" (vm), "S" (eventcallback), "d" (refdata)
+        : /* inputs */ "b" (VM), "S" (EventCallback), "d" (RefData)
         : /* clobbered */
     );
 
@@ -1058,16 +1058,16 @@ static inline vxd_vm_event_handle_t Call_VM_Event(vxd_vm_handle_t const vm/*ebx*
 /*   A virtual device must not attempt to cancel an event where the callback function has already been called. */
 
 /* inputs: */
-/*   ESI = event (Event handle, or 0 if no event should be cancelled.) */
+/*   ESI = Event (Event handle, or 0 if no event should be cancelled.) */
 
 /* outputs: */
 /*   None */
 
-static inline void Cancel_Global_Event(vxd_global_event_handle_t const event/*esi*/) {
+static inline void Cancel_Global_Event(vxd_global_event_handle_t const Event/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_Global_Event)
         : /* outputs */
-        : /* inputs */ "S" (event)
+        : /* inputs */ "S" (Event)
         : /* clobbered */
     );
 }
@@ -1080,17 +1080,17 @@ static inline void Cancel_Global_Event(vxd_global_event_handle_t const event/*es
 /*   A virtual device must not attempt to cancel an event where the callback function has already been called. */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
-/*   ESI = event (Event handle, or 0 if no event should be cancelled.) */
+/*   EBX = VM (VM handle) */
+/*   ESI = Event (Event handle, or 0 if no event should be cancelled.) */
 
 /* outputs: */
 /*   None */
 
-static inline void Cancel_VM_Event(uint32_t const vm/*ebx*/,vxd_vm_event_handle_t const event/*esi*/) {
+static inline void Cancel_VM_Event(uint32_t const VM/*ebx*/,vxd_vm_event_handle_t const Event/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_VM_Event)
         : /* outputs */
-        : /* inputs */ "b" (vm), "S" (event)
+        : /* inputs */ "b" (VM), "S" (Event)
         : /* clobbered */
     );
 }
@@ -1119,23 +1119,23 @@ static inline void Cancel_VM_Event(uint32_t const vm/*ebx*/,vxd_vm_event_handle_
 /*   is within range of Reserved_Low_Boost to Reserved_High_Boost.                                                */
 
 /* inputs: */
-/*   EAX = priorityboost (positive, 0, or negative priority boost for the VM.) */
-/*   EBX = vm (VM handle) */
-/*   ECX = flags (how to carry out the event. See PEF_* constants, ORed together.) */
-/*   EDX = refdata (pointer to reference data for callback) */
-/*   ESI = eventcallback (pointer to callback) */
-/*   EDI = timeout (timeout in milliseconds IFF PEF_Time_Out is specified.) */
+/*   EAX = PriorityBoost (positive, 0, or negative priority boost for the VM.) */
+/*   EBX = VM (VM handle) */
+/*   ECX = Flags (how to carry out the event. See PEF_* constants, ORed together.) */
+/*   EDX = RefData (pointer to reference data for callback) */
+/*   ESI = EventCallback (pointer to callback) */
+/*   EDI = TimeOut (timeout in milliseconds IFF PEF_Time_Out is specified.) */
 
 /* outputs: */
 /*   ESI = event handle, or 0 if procedure was called immediately. */
 
-static inline vxd_priority_vm_event_handle_t Call_Priority_VM_Event(int32_t const priorityboost/*eax*/,vxd_vm_handle_t const vm/*ebx*/,uint32_t const flags/*ecx*/,const void* const refdata/*edx*/,const void* const eventcallback/*esi*/,uint32_t const timeout/*edi*/) {
+static inline vxd_priority_vm_event_handle_t Call_Priority_VM_Event(int32_t const PriorityBoost/*eax*/,vxd_vm_handle_t const VM/*ebx*/,uint32_t const Flags/*ecx*/,const void* const RefData/*edx*/,const void* const EventCallback/*esi*/,uint32_t const TimeOut/*edi*/) {
     register vxd_priority_vm_event_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_Priority_VM_Event)
         : /* outputs */ "=S" (r)
-        : /* inputs */ "a" (priorityboost), "b" (vm), "c" (flags), "d" (refdata), "S" (eventcallback), "D" (timeout)
+        : /* inputs */ "a" (PriorityBoost), "b" (VM), "c" (Flags), "d" (RefData), "S" (EventCallback), "D" (TimeOut)
         : /* clobbered */
     );
 
@@ -1153,16 +1153,16 @@ static inline vxd_priority_vm_event_handle_t Call_Priority_VM_Event(int32_t cons
 /*   those types of events you must use Cancel_VM_Event.                                                         */
 
 /* inputs: */
-/*   ESI = event (event handle, or 0 if nothing to cancel) */
+/*   ESI = Event (event handle, or 0 if nothing to cancel) */
 
 /* outputs: */
 /*   None */
 
-static inline void Cancel_Priority_VM_Event(vxd_priority_vm_event_handle_t const event/*esi*/) {
+static inline void Cancel_Priority_VM_Event(vxd_priority_vm_event_handle_t const Event/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_Priority_VM_Event)
         : /* outputs */
-        : /* inputs */ "S" (event)
+        : /* inputs */ "S" (Event)
         : /* clobbered */
     );
 }
@@ -1231,16 +1231,16 @@ static inline void Set_NMI_Handler_Addr(const void* const nmi/*esi*/) {
 /*   NMI event procedures can be interrupted by another NMI, reentrancy is possible.           */
 
 /* inputs: */
-/*   ESI = nmiproc (pointer to NMI event handler) */
+/*   ESI = NmiProc (pointer to NMI event handler) */
 
 /* outputs: */
 /*   None */
 
-static inline void Hook_NMI_Event(const void* const nmiproc/*esi*/) {
+static inline void Hook_NMI_Event(const void* const NmiProc/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_NMI_Event)
         : /* outputs */
-        : /* inputs */ "S" (nmiproc)
+        : /* inputs */ "S" (NmiProc)
         : /* clobbered */
     );
 }
@@ -1256,17 +1256,17 @@ static inline void Hook_NMI_Event(const void* const nmiproc/*esi*/) {
 /*   It is usually more convenient to use Call_Priority_VM_Event, but this call is faster.               */
 
 /* inputs: */
-/*   EDX = refdata (pointer to reference data to pass to callback) */
-/*   ESI = callback (pointer to callback function) */
+/*   EDX = RefData (pointer to reference data to pass to callback) */
+/*   ESI = Callback (pointer to callback function) */
 
 /* outputs: */
 /*   None */
 
-static inline void Call_When_VM_Ints_Enabled(const void* const refdata/*edx*/,const void* const callback/*esi*/) {
+static inline void Call_When_VM_Ints_Enabled(const void* const RefData/*edx*/,const void* const Callback/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_VM_Ints_Enabled)
         : /* outputs */
-        : /* inputs */ "d" (refdata), "S" (callback)
+        : /* inputs */ "d" (RefData), "S" (Callback)
         : /* clobbered */
     );
 }
@@ -1334,18 +1334,18 @@ static inline void Disable_VM_Ints(void) {
 /*   The linear address returned is the ring-0 linear address that corresponds to the segment:offset address specified.                  */
 
 /* inputs: */
-/*   AX = segoffoffset (AX = [AH,AL] 16-bit value, AH=SegOffset AL=OffOffset) */
+/*   AX = SegOffOffset (AX = [AH,AL] 16-bit value, AH=SegOffset AL=OffOffset) */
 
 /* outputs: */
 /*   EAX = linear address, or -1 (0xFFFFFFFF) if invalid */
 
-static inline uint32_t Map_Flat(uint16_t const segoffoffset/*ax*/) {
+static inline uint32_t Map_Flat(uint16_t const SegOffOffset/*ax*/) {
     register uint32_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Map_Flat)
         : /* outputs */ "=a" (r)
-        : /* inputs */ "a" (segoffoffset)
+        : /* inputs */ "a" (SegOffOffset)
         : /* clobbered */
     );
 
@@ -1370,27 +1370,27 @@ static inline uint32_t Map_Flat(uint16_t const segoffoffset/*ax*/) {
 /*   A device must never free a selector returned by this service. There is no function to free the mapping. Use this function sparingly. */
 
 /* inputs: */
-/*   EAX = lineaddr (Linear address to convert) */
-/*   ECX = limit (segment limit in bytes - 1 (a value of 0 means 1 byte long)) */
+/*   EAX = LineAddr (Linear address to convert) */
+/*   ECX = Limit (segment limit in bytes - 1 (a value of 0 means 1 byte long)) */
 
 /* outputs: */
-/*   CX = segsel (segment/selector if success) */
+/*   CX = SegSel (segment/selector if success) */
 /*   CF = error (CF set if error, clear if success) */
-/*   EDX = offset (address offset) */
+/*   EDX = Offset (address offset) */
 
 typedef struct Map_Lin_To_VM_Addr__response {
     _Bool error; /* CF */
-    uint16_t segsel; /* CX */
-    uint32_t offset; /* EDX */
+    uint16_t SegSel; /* CX */
+    uint32_t Offset; /* EDX */
 } Map_Lin_To_VM_Addr__response;
 
-static inline Map_Lin_To_VM_Addr__response Map_Lin_To_VM_Addr(const void* const lineaddr/*eax*/,uint32_t const limit/*ecx*/) {
+static inline Map_Lin_To_VM_Addr__response Map_Lin_To_VM_Addr(const void* const LineAddr/*eax*/,uint32_t const Limit/*ecx*/) {
     register Map_Lin_To_VM_Addr__response r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Map_Lin_To_VM_Addr)
-        : /* outputs */ "=c" (r.segsel), "=@ccc" (r.error), "=d" (r.offset)
-        : /* inputs */ "a" (lineaddr), "c" (limit)
+        : /* outputs */ "=c" (r.SegSel), "=@ccc" (r.error), "=d" (r.Offset)
+        : /* inputs */ "a" (LineAddr), "c" (Limit)
         : /* clobbered */
     );
 
@@ -1404,17 +1404,17 @@ static inline Map_Lin_To_VM_Addr__response Map_Lin_To_VM_Addr(const void* const 
 /*   Raise or lower the execution priority of the specified virtual machine. */
 
 /* inputs: */
-/*   EAX = priorityboost (*_Boost constant value) */
-/*   EBX = vm (VM handle) */
+/*   EAX = PriorityBoost (*_Boost constant value) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
 /*   None */
 
-static inline void Adjust_Exec_Priority(int32_t const priorityboost/*eax*/,vxd_vm_handle_t const vm/*ebx*/) {
+static inline void Adjust_Exec_Priority(int32_t const PriorityBoost/*eax*/,vxd_vm_handle_t const VM/*ebx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Adjust_Exec_Priority)
         : /* outputs */
-        : /* inputs */ "a" (priorityboost), "b" (vm)
+        : /* inputs */ "a" (PriorityBoost), "b" (VM)
         : /* clobbered */
     );
 }
@@ -1443,16 +1443,16 @@ static inline void Adjust_Exec_Priority(int32_t const priorityboost/*eax*/,vxd_v
 /*   on a semaphore or the other task has a time-critical operation.                                  */
 
 /* inputs: */
-/*   ECX = flags (flags for service. See Block_* constants.) */
+/*   ECX = Flags (flags for service. See Block_* constants.) */
 
 /* outputs: */
 /*   None */
 
-static inline void Begin_Critical_Section(uint32_t const flags/*ecx*/) {
+static inline void Begin_Critical_Section(uint32_t const Flags/*ecx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Begin_Critical_Section)
         : /* outputs */
-        : /* inputs */ "c" (flags)
+        : /* inputs */ "c" (Flags)
         : /* clobbered */
     );
 }
@@ -1519,17 +1519,17 @@ static inline _Bool End_Crit_And_Suspend(void) {
 /*   Increment the critical section claim count by the specified amount (as if calling Begin_Critical_Section by that many times) */
 
 /* inputs: */
-/*   EAX = claims (how much to increment. zero is valid, but ignored) */
-/*   ECX = flags (Block_* constants) */
+/*   EAX = Claims (how much to increment. zero is valid, but ignored) */
+/*   ECX = Flags (Block_* constants) */
 
 /* outputs: */
 /*   None */
 
-static inline void Claim_Critical_Section(uint32_t const claims/*eax*/,uint32_t const flags/*ecx*/) {
+static inline void Claim_Critical_Section(uint32_t const Claims/*eax*/,uint32_t const Flags/*ecx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Claim_Critical_Section)
         : /* outputs */
-        : /* inputs */ "a" (claims), "c" (flags)
+        : /* inputs */ "a" (Claims), "c" (Flags)
         : /* clobbered */
     );
 }
@@ -1541,16 +1541,16 @@ static inline void Claim_Critical_Section(uint32_t const claims/*eax*/,uint32_t 
 /*   Decrement the critical section claim count by the specified amount (as if calling End_Critical_Section by that many times) */
 
 /* inputs: */
-/*   ECX = claims (how much to decrement. zero is valid, but ignored) */
+/*   ECX = Claims (how much to decrement. zero is valid, but ignored) */
 
 /* outputs: */
 /*   None */
 
-static inline void Release_Critical_Section(uint32_t const claims/*ecx*/) {
+static inline void Release_Critical_Section(uint32_t const Claims/*ecx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Release_Critical_Section)
         : /* outputs */
-        : /* inputs */ "c" (claims)
+        : /* inputs */ "c" (Claims)
         : /* clobbered */
     );
 }
@@ -1567,17 +1567,17 @@ static inline void Release_Critical_Section(uint32_t const claims/*ecx*/) {
 /*   remove it from the list.                                                                                   */
 
 /* inputs: */
-/*   ESI = critseccallback (pointer to callback procedure) */
-/*   EDX = refdata (pointer to reference data to pass to callback) */
+/*   ESI = CritSecCallback (pointer to callback procedure) */
+/*   EDX = RefData (pointer to reference data to pass to callback) */
 
 /* outputs: */
 /*   None */
 
-static inline void Call_When_Not_Critical(const void* const critseccallback/*esi*/,const void* const refdata/*edx*/) {
+static inline void Call_When_Not_Critical(const void* const CritSecCallback/*esi*/,const void* const RefData/*edx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_Not_Critical)
         : /* outputs */
-        : /* inputs */ "S" (critseccallback), "d" (refdata)
+        : /* inputs */ "S" (CritSecCallback), "d" (RefData)
         : /* clobbered */
     );
 }
@@ -1589,24 +1589,24 @@ static inline void Call_When_Not_Critical(const void* const critseccallback/*esi
 /*   Allocate and initialize a new semaphore. */
 
 /* inputs: */
-/*   ECX = tokencount (initial token count) */
+/*   ECX = TokenCount (initial token count) */
 
 /* outputs: */
 /*   CF = error (CF set if error, CF clear if success) */
-/*   EAX = semaphore (semaphore handle if CF=0) */
+/*   EAX = Semaphore (semaphore handle if CF=0) */
 
 typedef struct Create_Semaphore__response {
-    vxd_semaphore_handle_t semaphore; /* EAX */
+    vxd_semaphore_handle_t Semaphore; /* EAX */
     _Bool error; /* CF */
 } Create_Semaphore__response;
 
-static inline Create_Semaphore__response Create_Semaphore(uint32_t const tokencount/*ecx*/) {
+static inline Create_Semaphore__response Create_Semaphore(uint32_t const TokenCount/*ecx*/) {
     register Create_Semaphore__response r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Create_Semaphore)
-        : /* outputs */ "=@ccc" (r.error), "=a" (r.semaphore)
-        : /* inputs */ "c" (tokencount)
+        : /* outputs */ "=@ccc" (r.error), "=a" (r.Semaphore)
+        : /* inputs */ "c" (TokenCount)
         : /* clobbered */
     );
 
@@ -1620,16 +1620,16 @@ static inline Create_Semaphore__response Create_Semaphore(uint32_t const tokenco
 /*   Destroy the specified semaphore. */
 
 /* inputs: */
-/*   EAX = semaphore (semaphore handle to delete) */
+/*   EAX = Semaphore (semaphore handle to delete) */
 
 /* outputs: */
 /*   None */
 
-static inline void Destroy_Semaphore(vxd_semaphore_handle_t const semaphore/*eax*/) {
+static inline void Destroy_Semaphore(vxd_semaphore_handle_t const Semaphore/*eax*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Destroy_Semaphore)
         : /* outputs */
-        : /* inputs */ "a" (semaphore)
+        : /* inputs */ "a" (Semaphore)
         : /* clobbered */
     );
 }
@@ -1641,17 +1641,17 @@ static inline void Destroy_Semaphore(vxd_semaphore_handle_t const semaphore/*eax
 /*   Block the current virtual machine (wait) until the semaphore is signaled using Signal_Semaphore service. */
 
 /* inputs: */
-/*   EAX = semaphore (semaphore handle to wait on) */
-/*   ECX = flags (Block_* constants) */
+/*   EAX = Semaphore (semaphore handle to wait on) */
+/*   ECX = Flags (Block_* constants) */
 
 /* outputs: */
 /*   None */
 
-static inline void Wait_Semaphore(vxd_semaphore_handle_t const semaphore/*eax*/,uint32_t const flags/*ecx*/) {
+static inline void Wait_Semaphore(vxd_semaphore_handle_t const Semaphore/*eax*/,uint32_t const Flags/*ecx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Wait_Semaphore)
         : /* outputs */
-        : /* inputs */ "a" (semaphore), "c" (flags)
+        : /* inputs */ "a" (Semaphore), "c" (Flags)
         : /* clobbered */
     );
 }
@@ -1663,16 +1663,16 @@ static inline void Wait_Semaphore(vxd_semaphore_handle_t const semaphore/*eax*/,
 /*   Unblocks the virtual machine (if any) waiting on the semaphore. */
 
 /* inputs: */
-/*   EAX = semaphore (semaphore handle) */
+/*   EAX = Semaphore (semaphore handle) */
 
 /* outputs: */
 /*   None */
 
-static inline void Signal_Semaphore(vxd_semaphore_handle_t const semaphore/*eax*/) {
+static inline void Signal_Semaphore(vxd_semaphore_handle_t const Semaphore/*eax*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Signal_Semaphore)
         : /* outputs */
-        : /* inputs */ "a" (semaphore)
+        : /* inputs */ "a" (Semaphore)
         : /* clobbered */
     );
 }
@@ -1688,16 +1688,16 @@ static inline void Signal_Semaphore(vxd_semaphore_handle_t const semaphore/*eax*
 /*   None */
 
 /* outputs: */
-/*   EBX = vm (VM handle of owner) */
-/*   ECX = claims (number of times claimed) */
+/*   EBX = VM (VM handle of owner) */
+/*   ECX = Claims (number of times claimed) */
 /*   CF = high_priority (CF set if priority is Critical_Section_Boost or higher) */
 
 /* asynchronous: */
 /*   no */
 
 typedef struct Get_Crit_Section_Status__response {
-    vxd_vm_handle_t vm; /* EBX */
-    uint32_t claims; /* ECX */
+    vxd_vm_handle_t VM; /* EBX */
+    uint32_t Claims; /* ECX */
     _Bool high_priority; /* CF */
 } Get_Crit_Section_Status__response;
 
@@ -1706,7 +1706,7 @@ static inline Get_Crit_Section_Status__response Get_Crit_Section_Status(void) {
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Crit_Section_Status)
-        : /* outputs */ "=b" (r.vm), "=c" (r.claims), "=@ccc" (r.high_priority)
+        : /* outputs */ "=b" (r.VM), "=c" (r.Claims), "=@ccc" (r.high_priority)
         : /* inputs */
         : /* clobbered */
     );
@@ -1725,16 +1725,16 @@ static inline Get_Crit_Section_Status__response Get_Crit_Section_Status(void) {
 /*   installed until all have been called.                                                                     */
 
 /* inputs: */
-/*   ESI = taskswitchcallback (pointer to callback) */
+/*   ESI = TaskSwitchCallback (pointer to callback) */
 
 /* outputs: */
 /*   None */
 
-static inline void Call_When_Task_Switched(const void* const taskswitchcallback/*esi*/) {
+static inline void Call_When_Task_Switched(const void* const TaskSwitchCallback/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_Task_Switched)
         : /* outputs */
-        : /* inputs */ "S" (taskswitchcallback)
+        : /* inputs */ "S" (TaskSwitchCallback)
         : /* clobbered */
     );
 }
@@ -1752,7 +1752,7 @@ static inline void Call_When_Task_Switched(const void* const taskswitchcallback/
 /*   Suspending the VM sets the CB_VM_Status field of the virtual machine's control block.                              */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
 /*   !CF = CF set if not suspended (failure), clear if success */
@@ -1760,13 +1760,13 @@ static inline void Call_When_Task_Switched(const void* const taskswitchcallback/
 /* returns: */
 /*   Bool true if suspended, false if failure */
 
-static inline _Bool Suspend_VM(vxd_vm_handle_t const vm/*ebx*/) {
+static inline _Bool Suspend_VM(vxd_vm_handle_t const VM/*ebx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Suspend_VM)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 
@@ -1788,7 +1788,7 @@ static inline _Bool Suspend_VM(vxd_vm_handle_t const vm/*ebx*/) {
 /*   TODO: What does this return if the suspend count is greater than 1 and no other error occurs??    */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
 /*   !CF = CF set if error, clear if success */
@@ -1796,13 +1796,13 @@ static inline _Bool Suspend_VM(vxd_vm_handle_t const vm/*ebx*/) {
 /* returns: */
 /*   Bool true if success, false if error */
 
-static inline _Bool Resume_VM(vxd_vm_handle_t const vm/*ebx*/) {
+static inline _Bool Resume_VM(vxd_vm_handle_t const VM/*ebx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Resume_VM)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 
@@ -1818,16 +1818,16 @@ static inline _Bool Resume_VM(vxd_vm_handle_t const vm/*ebx*/) {
 /*   the error automatically, resuming the virtual machine when there is sufficient memory available.    */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
 /*   None */
 
-static inline void No_Fail_Resume_VM(vxd_vm_handle_t const vm/*ebx*/) {
+static inline void No_Fail_Resume_VM(vxd_vm_handle_t const VM/*ebx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_No_Fail_Resume_VM)
         : /* outputs */
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 }
@@ -1846,16 +1846,16 @@ static inline void No_Fail_Resume_VM(vxd_vm_handle_t const vm/*ebx*/) {
 /*   Use with caution.                                                                                 */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
 /*   None */
 
-static inline void Nuke_VM(vxd_vm_handle_t const vm/*ebx*/) {
+static inline void Nuke_VM(vxd_vm_handle_t const VM/*ebx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Nuke_VM)
         : /* outputs */
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 }
@@ -1928,7 +1928,7 @@ static inline vxd_vm_handle_t Get_Execution_Focus(void) {
 /*   can only assign the execution focus to itself.                                       */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
 /*   !CF = CF set if focus cannot be set, clear otherwise */
@@ -1936,13 +1936,13 @@ static inline vxd_vm_handle_t Get_Execution_Focus(void) {
 /* returns: */
 /*   Bool true if focus was set, false otherwise */
 
-static inline _Bool Set_Execution_Focus(vxd_vm_handle_t const vm/*ebx*/) {
+static inline _Bool Set_Execution_Focus(vxd_vm_handle_t const VM/*ebx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_Execution_Focus)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 
@@ -1980,28 +1980,28 @@ static inline _Bool Set_Execution_Focus(vxd_vm_handle_t const vm/*ebx*/) {
 /*   Return the time-slice execution flags, foreground and background priorities, and percent of CPU usage for a specific virtual machine. */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
-/*   ECX = foreground (foreground time-slice priority (hi WORD is always 0)) */
-/*   EDX = background (background time-slice priority (hi WORD is always 0)) */
-/*   EAX = flags (Status flags from the CB_VM_Status field of the VM control block (VMStat_*)) */
-/*   ESI = cputime (percentage of total CPU time used (or, maximum time the VM can run?? docs are a bit confusing.)) */
+/*   ECX = Foreground (foreground time-slice priority (hi WORD is always 0)) */
+/*   EDX = Background (background time-slice priority (hi WORD is always 0)) */
+/*   EAX = Flags (Status flags from the CB_VM_Status field of the VM control block (VMStat_*)) */
+/*   ESI = CPUTime (percentage of total CPU time used (or, maximum time the VM can run?? docs are a bit confusing.)) */
 
 typedef struct Get_Time_Slice_Priority__response {
-    uint32_t flags; /* EAX */
-    uint32_t foreground; /* ECX */
-    uint32_t background; /* EDX */
-    uint32_t cputime; /* ESI */
+    uint32_t Flags; /* EAX */
+    uint32_t Foreground; /* ECX */
+    uint32_t Background; /* EDX */
+    uint32_t CPUTime; /* ESI */
 } Get_Time_Slice_Priority__response;
 
-static inline Get_Time_Slice_Priority__response Get_Time_Slice_Priority(vxd_vm_handle_t const vm/*ebx*/) {
+static inline Get_Time_Slice_Priority__response Get_Time_Slice_Priority(vxd_vm_handle_t const VM/*ebx*/) {
     register Get_Time_Slice_Priority__response r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Time_Slice_Priority)
-        : /* outputs */ "=c" (r.foreground), "=d" (r.background), "=a" (r.flags), "=S" (r.cputime)
-        : /* inputs */ "b" (vm)
+        : /* outputs */ "=c" (r.Foreground), "=d" (r.Background), "=a" (r.Flags), "=S" (r.CPUTime)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 
@@ -2015,10 +2015,10 @@ static inline Get_Time_Slice_Priority__response Get_Time_Slice_Priority(vxd_vm_h
 /*   Set the time-slice execution flags, foreground and background priorities for a specific virtual machine. */
 
 /* inputs: */
-/*   EAX = flags (status flags (VMStat_*)) */
-/*   EBX = vm (VM handle) */
-/*   ECX = foreground (foreground time-slice priority) */
-/*   EDX = background (background time-slice priority) */
+/*   EAX = Flags (status flags (VMStat_*)) */
+/*   EBX = VM (VM handle) */
+/*   ECX = Foreground (foreground time-slice priority) */
+/*   EDX = Background (background time-slice priority) */
 
 /* outputs: */
 /*   !CF = CF set if failure, clear if success */
@@ -2026,13 +2026,13 @@ static inline Get_Time_Slice_Priority__response Get_Time_Slice_Priority(vxd_vm_h
 /* returns: */
 /*   Bool, true if success, false if failure */
 
-static inline _Bool Set_Time_Slice_Priority(uint32_t const flags/*eax*/,vxd_vm_handle_t const vm/*ebx*/,uint32_t const foreground/*ecx*/,uint32_t const background/*edx*/) {
+static inline _Bool Set_Time_Slice_Priority(uint32_t const Flags/*eax*/,vxd_vm_handle_t const VM/*ebx*/,uint32_t const Foreground/*ecx*/,uint32_t const Background/*edx*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_Time_Slice_Priority)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "a" (flags), "b" (vm), "c" (foreground), "d" (background)
+        : /* inputs */ "a" (Flags), "b" (VM), "c" (Foreground), "d" (Background)
         : /* clobbered */
     );
 
@@ -2071,16 +2071,16 @@ static inline uint32_t Get_Time_Slice_Granularity(void) {
 /*   Set the minimum time-slice granularity, the minimum milliseconds a virtual machine runs before being rescheduled. */
 
 /* inputs: */
-/*   EAX = time (minimum time-slice in milliseconds) */
+/*   EAX = Time (minimum time-slice in milliseconds) */
 
 /* outputs: */
 /*   None */
 
-static inline void Set_Time_Slice_Granularity(uint32_t const time/*eax*/) {
+static inline void Set_Time_Slice_Granularity(uint32_t const Time/*eax*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_Time_Slice_Granularity)
         : /* outputs */
-        : /* inputs */ "a" (time)
+        : /* inputs */ "a" (Time)
         : /* clobbered */
     );
 }
@@ -2095,17 +2095,17 @@ static inline void Set_Time_Slice_Granularity(uint32_t const time/*eax*/) {
 /*   None */
 
 /* outputs: */
-/*   EBX = current (handle of currently scheduled virtual machine) */
-/*   ECX = idle (number of idle virtual machines) */
-/*   EAX = scheduled (number of virtual machines scheduled) */
+/*   EBX = Current (handle of currently scheduled virtual machine) */
+/*   ECX = Idle (number of idle virtual machines) */
+/*   EAX = Scheduled (number of virtual machines scheduled) */
 
 /* asynchronous: */
 /*   yes */
 
 typedef struct Get_Time_Slice_Info__response {
-    uint32_t scheduled; /* EAX */
-    uint32_t current; /* EBX */
-    uint32_t idle; /* ECX */
+    uint32_t Scheduled; /* EAX */
+    uint32_t Current; /* EBX */
+    uint32_t Idle; /* ECX */
 } Get_Time_Slice_Info__response;
 
 static inline Get_Time_Slice_Info__response Get_Time_Slice_Info(void) {
@@ -2113,7 +2113,7 @@ static inline Get_Time_Slice_Info__response Get_Time_Slice_Info(void) {
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Time_Slice_Info)
-        : /* outputs */ "=b" (r.current), "=c" (r.idle), "=a" (r.scheduled)
+        : /* outputs */ "=b" (r.Current), "=c" (r.Idle), "=a" (r.Scheduled)
         : /* inputs */
         : /* clobbered */
     );
@@ -2129,17 +2129,17 @@ static inline Get_Time_Slice_Info__response Get_Time_Slice_Info(void) {
 /*   The effect is the same on all virtual machines regardless of their time-slot priority. */
 
 /* inputs: */
-/*   EAX = time (number of milliseconds) */
-/*   EBX = vm (VM handle) */
+/*   EAX = Time (number of milliseconds) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
 /*   None */
 
-static inline void Adjust_Execution_Time(uint32_t const time/*eax*/,vxd_vm_handle_t const vm/*ebx*/) {
+static inline void Adjust_Execution_Time(uint32_t const Time/*eax*/,vxd_vm_handle_t const VM/*ebx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Adjust_Execution_Time)
         : /* outputs */
-        : /* inputs */ "a" (time), "b" (vm)
+        : /* inputs */ "a" (Time), "b" (VM)
         : /* clobbered */
     );
 }
@@ -2173,16 +2173,16 @@ static inline void Release_Time_Slice(void) {
 /*   A VM is idle if it has called Release_Time_Slice or has set the VMStat_Idle flag in the CB_VM_Status field of the control block. */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
 /*   None */
 
-static inline void Wake_Up_VM(vxd_vm_handle_t const vm/*ebx*/) {
+static inline void Wake_Up_VM(vxd_vm_handle_t const VM/*ebx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Wake_Up_VM)
         : /* outputs */
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 }
@@ -2194,7 +2194,7 @@ static inline void Wake_Up_VM(vxd_vm_handle_t const vm/*ebx*/) {
 /*   Install a system-wide callback procedure to call when the kernel signals that Windows is idle and all other VMs are idle. */
 
 /* inputs: */
-/*   ESI = idlecallback (pointer to idle callback) */
+/*   ESI = IdleCallback (pointer to idle callback) */
 
 /* outputs: */
 /*   !CF = CF set if not installed, clear if installed */
@@ -2202,13 +2202,13 @@ static inline void Wake_Up_VM(vxd_vm_handle_t const vm/*ebx*/) {
 /* returns: */
 /*   Bool, true if installed, false if not installed */
 
-static inline _Bool Call_When_Idle(const void* const idlecallback/*esi*/) {
+static inline _Bool Call_When_Idle(const void* const IdleCallback/*esi*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Call_When_Idle)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "S" (idlecallback)
+        : /* inputs */ "S" (IdleCallback)
         : /* clobbered */
     );
 
@@ -2224,18 +2224,18 @@ static inline _Bool Call_When_Idle(const void* const idlecallback/*esi*/) {
 /*   The list is circular, so you must check for and stop when the first value comes back around. */
 
 /* inputs: */
-/*   EBX = vm (VM handle) */
+/*   EBX = VM (VM handle) */
 
 /* outputs: */
 /*   EBX = next VM handle */
 
-static inline vxd_vm_handle_t Get_Next_VM_Handle(vxd_vm_handle_t const vm/*ebx*/) {
+static inline vxd_vm_handle_t Get_Next_VM_Handle(vxd_vm_handle_t const VM/*ebx*/) {
     register vxd_vm_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Next_VM_Handle)
         : /* outputs */ "=b" (r)
-        : /* inputs */ "b" (vm)
+        : /* inputs */ "b" (VM)
         : /* clobbered */
     );
 
@@ -2249,20 +2249,20 @@ static inline vxd_vm_handle_t Get_Next_VM_Handle(vxd_vm_handle_t const vm/*ebx*/
 /*   Schedule a time-out to occur after the specified number of milliseconds have elapsed. */
 
 /* inputs: */
-/*   EAX = time (number of milliseconds to time-out) */
-/*   EDX = refdata (pointer to reference data to pass to callback) */
-/*   ESI = timeoutcallback (pointer to callback procedure) */
+/*   EAX = Time (number of milliseconds to time-out) */
+/*   EDX = RefData (pointer to reference data to pass to callback) */
+/*   ESI = TimeOutCallback (pointer to callback procedure) */
 
 /* outputs: */
 /*   ESI = timeout handle */
 
-static inline vxd_timeout_handle_t Set_Global_Time_Out(uint32_t const time/*eax*/,const void* const refdata/*edx*/,const void* const timeoutcallback/*esi*/) {
+static inline vxd_timeout_handle_t Set_Global_Time_Out(uint32_t const Time/*eax*/,const void* const RefData/*edx*/,const void* const TimeOutCallback/*esi*/) {
     register vxd_timeout_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_Global_Time_Out)
         : /* outputs */ "=S" (r)
-        : /* inputs */ "a" (time), "d" (refdata), "S" (timeoutcallback)
+        : /* inputs */ "a" (Time), "d" (RefData), "S" (TimeOutCallback)
         : /* clobbered */
     );
 
@@ -2276,21 +2276,21 @@ static inline vxd_timeout_handle_t Set_Global_Time_Out(uint32_t const time/*eax*
 /*   Schedule a time-out to occur after the virtual machine has run for the specified number of milliseconds have elapsed. */
 
 /* inputs: */
-/*   EAX = time (number of milliseconds to time-out) */
-/*   EBX = vm (VM handle) */
-/*   EDX = refdata (pointer to reference data to provide to callback) */
-/*   ESI = timeoutcallback (pointer to callback function) */
+/*   EAX = Time (number of milliseconds to time-out) */
+/*   EBX = VM (VM handle) */
+/*   EDX = RefData (pointer to reference data to provide to callback) */
+/*   ESI = TimeOutCallback (pointer to callback function) */
 
 /* outputs: */
 /*   ESI = timeout handle */
 
-static inline vxd_timeout_handle_t Set_VM_Time_Out(uint32_t const time/*eax*/,vxd_vm_handle_t const vm/*ebx*/,const void* const refdata/*edx*/,const void* const timeoutcallback/*esi*/) {
+static inline vxd_timeout_handle_t Set_VM_Time_Out(uint32_t const Time/*eax*/,vxd_vm_handle_t const VM/*ebx*/,const void* const RefData/*edx*/,const void* const TimeOutCallback/*esi*/) {
     register vxd_timeout_handle_t r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_VM_Time_Out)
         : /* outputs */ "=S" (r)
-        : /* inputs */ "a" (time), "b" (vm), "d" (refdata), "S" (timeoutcallback)
+        : /* inputs */ "a" (Time), "b" (VM), "d" (RefData), "S" (TimeOutCallback)
         : /* clobbered */
     );
 
@@ -2304,16 +2304,16 @@ static inline vxd_timeout_handle_t Set_VM_Time_Out(uint32_t const time/*eax*/,vx
 /*   Cancel a time-out scheduled using Set_Global_Time_Out or Set_VM_Time_Out. */
 
 /* inputs: */
-/*   ESI = timeout (timeout handle) */
+/*   ESI = TimeOut (timeout handle) */
 
 /* outputs: */
 /*   None */
 
-static inline void Cancel_Time_Out(vxd_timeout_handle_t const timeout/*esi*/) {
+static inline void Cancel_Time_Out(vxd_timeout_handle_t const TimeOut/*esi*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Cancel_Time_Out)
         : /* outputs */
-        : /* inputs */ "S" (timeout)
+        : /* inputs */ "S" (TimeOut)
         : /* clobbered */
     );
 }
@@ -2384,8 +2384,8 @@ static inline uint32_t Get_VM_Exec_Time(void) {
 /*   This call is only available during initialization.                                                             */
 
 /* inputs: */
-/*   EAX = interrupt (Interrupt number to hook) */
-/*   ESI = hookproc (pointer to hook procedure) */
+/*   EAX = Interrupt (Interrupt number to hook) */
+/*   ESI = HookProc (pointer to hook procedure) */
 
 /* outputs: */
 /*   !CF = CF set if not installed, clear if installed */
@@ -2393,13 +2393,13 @@ static inline uint32_t Get_VM_Exec_Time(void) {
 /* returns: */
 /*   Bool true if installed, false if not. */
 
-static inline _Bool Hook_V86_Int_Chain(uint32_t const interrupt/*eax*/,const void* const hookproc/*esi*/) {
+static inline _Bool Hook_V86_Int_Chain(uint32_t const Interrupt/*eax*/,const void* const HookProc/*esi*/) {
     register _Bool r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_V86_Int_Chain)
         : /* outputs */ "=@ccnc" (r)
-        : /* inputs */ "a" (interrupt), "S" (hookproc)
+        : /* inputs */ "a" (Interrupt), "S" (HookProc)
         : /* clobbered */
     );
 
@@ -2413,24 +2413,24 @@ static inline _Bool Hook_V86_Int_Chain(uint32_t const interrupt/*eax*/,const voi
 /*   Return the address of the real-mode interrupt vector in the current virtual machine. */
 
 /* inputs: */
-/*   EAX = interrupt (Interrupt number to retrieve) */
+/*   EAX = Interrupt (Interrupt number to retrieve) */
 
 /* outputs: */
-/*   CX = segment (segment address of interrupt routine) */
-/*   EDX = offset (offset of interrupt routine (high WORD is zero)) */
+/*   CX = Segment (segment address of interrupt routine) */
+/*   EDX = Offset (offset of interrupt routine (high WORD is zero)) */
 
 typedef struct Get_V86_Int_Vector__response {
-    uint16_t segment; /* CX */
-    uint32_t offset; /* EDX */
+    uint16_t Segment; /* CX */
+    uint32_t Offset; /* EDX */
 } Get_V86_Int_Vector__response;
 
-static inline Get_V86_Int_Vector__response Get_V86_Int_Vector(uint32_t const interrupt/*eax*/) {
+static inline Get_V86_Int_Vector__response Get_V86_Int_Vector(uint32_t const Interrupt/*eax*/) {
     register Get_V86_Int_Vector__response r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_V86_Int_Vector)
-        : /* outputs */ "=c" (r.segment), "=d" (r.offset)
-        : /* inputs */ "a" (interrupt)
+        : /* outputs */ "=c" (r.Segment), "=d" (r.Offset)
+        : /* inputs */ "a" (Interrupt)
         : /* clobbered */
     );
 
@@ -2447,18 +2447,18 @@ static inline Get_V86_Int_Vector__response Get_V86_Int_Vector(uint32_t const int
 /*   the change becomes the default interrupt table for every virtual machine.                      */
 
 /* inputs: */
-/*   EAX = interrupt (Interrupt number to set) */
-/*   CX = segment (segment of address) */
-/*   EDX = offset (offset of address) */
+/*   EAX = Interrupt (Interrupt number to set) */
+/*   CX = Segment (segment of address) */
+/*   EDX = Offset (offset of address) */
 
 /* outputs: */
 /*   None */
 
-static inline void Set_V86_Int_Vector(uint32_t const interrupt/*eax*/,uint16_t const segment/*cx*/,uint32_t const offset/*edx*/) {
+static inline void Set_V86_Int_Vector(uint32_t const Interrupt/*eax*/,uint16_t const Segment/*cx*/,uint32_t const Offset/*edx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_V86_Int_Vector)
         : /* outputs */
-        : /* inputs */ "a" (interrupt), "c" (segment), "d" (offset)
+        : /* inputs */ "a" (Interrupt), "c" (Segment), "d" (Offset)
         : /* clobbered */
     );
 }
@@ -2471,24 +2471,24 @@ static inline void Set_V86_Int_Vector(uint32_t const interrupt/*eax*/,uint16_t c
 /*   If the code segment is 16-bit, the high WORD of the offset is zero.                      */
 
 /* inputs: */
-/*   EAX = interrupt (Interrupt nummber to set) */
+/*   EAX = Interrupt (Interrupt nummber to set) */
 
 /* outputs: */
-/*   CX = segment (segment selector) */
-/*   EDX = offset (offset) */
+/*   CX = Segment (segment selector) */
+/*   EDX = Offset (offset) */
 
 typedef struct Get_PM_Int_Vector__response {
-    uint16_t segment; /* CX */
-    uint32_t offset; /* EDX */
+    uint16_t Segment; /* CX */
+    uint32_t Offset; /* EDX */
 } Get_PM_Int_Vector__response;
 
-static inline Get_PM_Int_Vector__response Get_PM_Int_Vector(uint32_t const interrupt/*eax*/) {
+static inline Get_PM_Int_Vector__response Get_PM_Int_Vector(uint32_t const Interrupt/*eax*/) {
     register Get_PM_Int_Vector__response r;
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_PM_Int_Vector)
-        : /* outputs */ "=c" (r.segment), "=d" (r.offset)
-        : /* inputs */ "a" (interrupt)
+        : /* outputs */ "=c" (r.Segment), "=d" (r.Offset)
+        : /* inputs */ "a" (Interrupt)
         : /* clobbered */
     );
 
@@ -2507,18 +2507,18 @@ static inline Get_PM_Int_Vector__response Get_PM_Int_Vector(uint32_t const inter
 /*   interrupt to V86 mode.                                                                         */
 
 /* inputs: */
-/*   EAX = interrupt (Interrupt number to set) */
-/*   CX = segment (segment selector) */
-/*   EDX = offset (offset) */
+/*   EAX = Interrupt (Interrupt number to set) */
+/*   CX = Segment (segment selector) */
+/*   EDX = Offset (offset) */
 
 /* outputs: */
 /*   None */
 
-static inline void Set_PM_Int_Vector(uint32_t const interrupt/*eax*/,uint16_t const segment/*cx*/,uint32_t const offset/*edx*/) {
+static inline void Set_PM_Int_Vector(uint32_t const Interrupt/*eax*/,uint16_t const Segment/*cx*/,uint32_t const Offset/*edx*/) {
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_PM_Int_Vector)
         : /* outputs */
-        : /* inputs */ "a" (interrupt), "c" (segment), "d" (offset)
+        : /* inputs */ "a" (Interrupt), "c" (Segment), "d" (Offset)
         : /* clobbered */
     );
 }

@@ -750,7 +750,7 @@ while (my $line = <DEF>) {
 # out             AX        version                                 ; major, minor (example: 0x030A = 3.10)
 # out             register  name                                    ; comment
             $a[1] = lc($a[1]);
-            $a[2] = lc($a[2]);
+#            $a[2] = lc($a[2]);
 
             die "register $a[1] already allocated" if exists($funcdef{in}{$a[1]});
             die "param already has name $a[2]" if exists($funcdef{param}{$a[2]});
@@ -803,7 +803,7 @@ while (my $line = <DEF>) {
 # out             AX        version                                 ; major, minor (example: 0x030A = 3.10)
 # out             register  name                                    ; comment
             $a[1] = lc($a[1]);
-            $a[2] = lc($a[2]);
+#            $a[2] = lc($a[2]);
 
             die "register $a[1] already allocated" if exists($funcdef{out}{$a[1]});
             die "struct already has name $a[2]" if exists($funcdef{struct}{$a[2]});
