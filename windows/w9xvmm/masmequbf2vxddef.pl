@@ -5,7 +5,10 @@
 # STDIN = file with EQUates
 # STDOUT = vxddef definitions without %defconst...
 
-print "# constant bitpos bitwidth bitval\n";
+print  "#                                                           default=1   default=(1<<width)-1\n";
+print  "#       constant                                bit number  bit width   value   comment\n";
+#       0       8                                       48          60          72      80
+#       0       8       16      24      32      40      48      56      64      72      80      88
 
 while (my $line = <STDIN>) {
     chomp $line;
@@ -40,11 +43,13 @@ while (my $line = <STDIN>) {
             $x++;
         }
 
-        print "def $name $bitpos";
+        print substr("def".(' 'x8),0,8);
+        print substr($name.(' 'x40),0,40);
+        print substr($bitpos.(' 'x12),0,12);
         if ($bitwidth > 1) {
-            print " $bitwidth";
+            print substr($bitwidth,(' 'x12),0,12);
             if ($bitval != ((1 << $bitwidth) - 1)) {
-                print " $bitval";
+                print substr($bitval.(' 'x8),0,8);
             }
         }
         print "\n";
