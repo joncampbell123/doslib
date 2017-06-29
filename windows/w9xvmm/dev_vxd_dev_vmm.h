@@ -1215,11 +1215,16 @@ static inline void Cancel_VM_Event(uint32_t const VM/*ebx*/,vxd_vm_event_handle_
 /*   Flags for Call_Priority_VM_Event (PEF_*)                                                            */
 /*                                                                                                       */
 /*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1537 FLAGS FOR CALL_PRIORITY_VM_EVENT EQUates */
-#define PEF_Wait_For_STI  0x00000001U /* 1U << 0U bit[0] Callback procedure is not called until VM enables interrupts */
-#define PEF_Wait_Not_Crit 0x00000002U /* 1U << 1U bit[1] Callback procedure is not called until VM is not in a critical section or time-critical operation */
-#define PEF_Dont_Unboost  0x00000004U /* 1U << 2U bit[2] Priority of the VM is not reduced after return from callback */
-#define PEF_Always_Sched  0x00000008U /* 1U << 3U bit[3] Event is always scheduled, callback is never called immediately */
-#define PEF_Time_Out      0x00000010U /* 1U << 4U bit[4] Use timeout value in EDI (Windows 3.1 or higher) */
+#define PEF_Wait_For_STI      0x00000001U /* 1U << 0U bit[0] Callback procedure is not called until VM enables interrupts */
+#define PEF_Wait_For_STI_Bit  0
+#define PEF_Wait_Not_Crit     0x00000002U /* 1U << 1U bit[1] Callback procedure is not called until VM is not in a critical section or time-critical operation */
+#define PEF_Wait_Not_Crit_Bit 1
+#define PEF_Dont_Unboost      0x00000004U /* 1U << 2U bit[2] Priority of the VM is not reduced after return from callback */
+#define PEF_Dont_Unboost_Bit  2
+#define PEF_Always_Sched      0x00000008U /* 1U << 3U bit[3] Event is always scheduled, callback is never called immediately */
+#define PEF_Always_Sched_Bit  3
+#define PEF_Time_Out          0x00000010U /* 1U << 4U bit[4] Use timeout value in EDI (Windows 3.1 or higher) */
+#define PEF_Time_Out_Bit      4
 
 /*-------------------------------------------------------------*/
 /* VMM Call_Priority_VM_Event (VMMCall dev=0x0001 serv=0x0014) WINVER=3.0+ */
@@ -1539,10 +1544,14 @@ static inline void Adjust_Exec_Priority(int32_t const PriorityBoost/*eax*/,vxd_v
 /*   Flags for Begin_Critical_Section (Block_*)                 */
 /*                                                              */
 /*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1553 */
-#define Block_Svc_Ints           0x00000001U /* 1U << 0U bit[0] Service interrupts in the virtual machine even if the virtual machine is blocked */
-#define Block_Svc_If_Ints_Locked 0x00000002U /* 1U << 1U bit[1] Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set. */
-#define Block_Enable_Ints        0x00000004U /* 1U << 2U bit[2] Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints | Svc_If_Ints_Locked) is set */
-#define Block_Poll               0x00000008U /* 1U << 3U bit[3] Do not switch away from the blocked virtual machine unless another machine has higher priority. */
+#define Block_Svc_Ints               0x00000001U /* 1U << 0U bit[0] Service interrupts in the virtual machine even if the virtual machine is blocked */
+#define Block_Svc_Ints_Bit           0
+#define Block_Svc_If_Ints_Locked     0x00000002U /* 1U << 1U bit[1] Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set. */
+#define Block_Svc_If_Ints_Locked_Bit 1
+#define Block_Enable_Ints            0x00000004U /* 1U << 2U bit[2] Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints | Svc_If_Ints_Locked) is set */
+#define Block_Enable_Ints_Bit        2
+#define Block_Poll                   0x00000008U /* 1U << 3U bit[3] Do not switch away from the blocked virtual machine unless another machine has higher priority. */
+#define Block_Poll_Bit               3
 
 /*-------------------------------------------------------------*/
 /* VMM Begin_Critical_Section (VMMCall dev=0x0001 serv=0x001F) WINVER=3.0+ */

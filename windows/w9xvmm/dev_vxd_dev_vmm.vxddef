@@ -446,6 +446,8 @@ description     Flags for Call_Priority_VM_Event (PEF_*)
 description
 description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1537 FLAGS FOR CALL_PRIORITY_VM_EVENT EQUates
 
+bitdefsuffix    _Bit
+
 #                                               default=1   default=(1<<width)-1
 #       constant                    bit number  bit width   value   comment
 def     PEF_Wait_For_STI            0                             ; Callback procedure is not called until VM enables interrupts
@@ -610,6 +612,8 @@ in              EBX=vxd_vm_handle_t     VM                      ; VM handle
 description     Flags for Begin_Critical_Section (Block_*)
 description
 description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1553
+
+bitdefsuffix    _Bit
 
 #                                                   default=1   default=(1<<width)-1
 #       constant                        bit number  bit width   value   comment
