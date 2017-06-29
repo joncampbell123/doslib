@@ -231,16 +231,26 @@ print "# if defined(GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT) /* we require GCC 6.1 or 
 my %funcdef;
 while (my $line = <DEF>) {
     chomp $line;
+    $oline = $line;
     $line =~ s/^[ \t]*//; # eat leading whitespace
     $line =~ s/[ \t]*#.*$//; # eat comments
     $line =~ s/[ \t]*$//; # eat trailing whitespace
-    next if $line eq "";
+
+    if ($section eq "defcode") {
+    }
+    else {
+        next if $line eq "";
+    }
 
     if ($line =~ s/^%[ \t]*//) {
         $was_section = $section;
         $section = lc($line); # s/// modified it in place
 
-        if ($section eq "enddef" && $was_section eq "defconstenum") {
+        if ($section eq "enddef" && $was_section eq "defcode") {
+            print "/*-------------------------------------------------------------*/\n";
+            print "\n";
+        }
+        elsif ($section eq "enddef" && $was_section eq "defconstenum") {
             print "/*-------------------------------------------------------------*/\n";
             if (exists($funcdef{description})) {
                 my $maxcol = 0;
@@ -715,6 +725,9 @@ while (my $line = <DEF>) {
         }
         elsif ($section eq "defcall" || $section eq "defconstbitfield" || $section eq "defconstenum") {
         }
+        elsif ($section eq "defcode") {
+            print "/*-------------------------------------------------------------*/\n";
+        }
         else {
             die "I don't know section $section from $was_section";
         }
@@ -722,7 +735,10 @@ while (my $line = <DEF>) {
         next;
     }
 
-    if ($section eq "defconstenum") {
+    if ($section eq "defcode") {
+        print "$oline\n";
+    }
+    elsif ($section eq "defconstenum") {
         my @a = split(/[ \t]+/,$line);
 
         next if @a < 1;
