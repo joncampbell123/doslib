@@ -448,10 +448,10 @@ description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1537 FLAGS
 
 #                                               default=1   default=(1<<width)-1
 #       constant                    bit number  bit width   value   comment
-def     PEF_Wait_For_STI_Bit        0                             ; Callback procedure is not called until VM enables interrupts
-def     PEF_Wait_Not_Crit_Bit       1                             ; Callback procedure is not called until VM is not in a critical section or time-critical operation
-def     PEF_Dont_Unboost_Bit        2                             ; Priority of the VM is not reduced after return from callback
-def     PEF_Always_Sched_Bit        3                             ; Event is always scheduled, callback is never called immediately
+def     PEF_Wait_For_STI            0                             ; Callback procedure is not called until VM enables interrupts
+def     PEF_Wait_Not_Crit           1                             ; Callback procedure is not called until VM is not in a critical section or time-critical operation
+def     PEF_Dont_Unboost            2                             ; Priority of the VM is not reduced after return from callback
+def     PEF_Always_Sched            3                             ; Event is always scheduled, callback is never called immediately
 def     PEF_Time_Out                4                             ; Use timeout value in EDI (Windows 3.1 or higher)
 %enddef
 
@@ -613,10 +613,10 @@ description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1553
 
 #                                                   default=1   default=(1<<width)-1
 #       constant                        bit number  bit width   value   comment
-def     Block_Svc_Ints_Bit              0                             ; Service interrupts in the virtual machine even if the virtual machine is blocked
-def     Block_Svc_If_Ints_Locked_Bit    1                             ; Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set.
-def     Block_Enable_Ints_Bit           2                             ; Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints_Bit | Svc_If_Ints_Locked_Bit) is set
-def     Block_Poll_Bit                  3                             ; Do not switch away from the blocked virtual machine unless another machine has higher priority.
+def     Block_Svc_Ints                  0                             ; Service interrupts in the virtual machine even if the virtual machine is blocked
+def     Block_Svc_If_Ints_Locked        1                             ; Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set.
+def     Block_Enable_Ints               2                             ; Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints | Svc_If_Ints_Locked) is set
+def     Block_Poll                      3                             ; Do not switch away from the blocked virtual machine unless another machine has higher priority.
 %enddef
 
 #--------------------------------------
@@ -856,23 +856,23 @@ description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 448
 
 #                                               default=1   default=(1<<width)-1
 #       constant                    bit number  bit width   value   comment
-def     VMStat_Exclusive_Bit        0                             ; VM is in exclusive mode
-def     VMStat_Background_Bit       1                             ; VM runs in background
-def     VMStat_Creating_Bit         2                             ; VM is in the process of creation
-def     VMStat_Suspended_Bit        3                             ; VM is suspended (not scheduled)
-def     VMStat_Not_Executeable_Bit  4                             ; VM is not executable (partially destroyed)
-def     VMStat_PM_Exec_Bit          5                             ; VM is running protected-mode application
-def     VMStat_PM_App_Bit           6                             ; Protected mode application is present in VM
-def     VMStat_PM_Use32_Bit         7                             ; Protected-mode application is 32-bit
-def     VMStat_VxD_Exec_Bit         8                             ; "Call from VxD"
-def     VMStat_High_Pri_Back_Bit    9                             ; High-priority background
-def     VMStat_Blocked_Bit          10                            ; VM is blocked on semaphore
-def     VMStat_Awakening_Bit        11                            ; "Woke up after blocked" (FIXME: Woke? Awakening?)
-def     VMStat_PageableV86Bit       12                            ; A part of the virtual 8086 VM is pageable
-def     VMStat_V86IntsLockedBit     13                            ; "Rest of V86 is locked"
-def     VMStat_TS_Sched_Bit         14                            ; Scheduled by time-slicer
-def     VMStat_Idle_Bit             15                            ; VM has released time
-def     VMStat_Closing_Bit          16                            ; VM is closing (Close_VM called for VM)
+def     VMStat_Exclusive            0                             ; VM is in exclusive mode
+def     VMStat_Background           1                             ; VM runs in background
+def     VMStat_Creating             2                             ; VM is in the process of creation
+def     VMStat_Suspended            3                             ; VM is suspended (not scheduled)
+def     VMStat_Not_Executeable      4                             ; VM is not executable (partially destroyed)
+def     VMStat_PM_Exec              5                             ; VM is running protected-mode application
+def     VMStat_PM_App               6                             ; Protected mode application is present in VM
+def     VMStat_PM_Use32             7                             ; Protected-mode application is 32-bit
+def     VMStat_VxD_Exec             8                             ; "Call from VxD"
+def     VMStat_High_Pri_Back        9                             ; High-priority background
+def     VMStat_Blocked              10                            ; VM is blocked on semaphore
+def     VMStat_Awakening            11                            ; "Woke up after blocked" (FIXME: Woke? Awakening?)
+def     VMStat_PageableV86          12                            ; A part of the virtual 8086 VM is pageable
+def     VMStat_V86IntsLocked        13                            ; "Rest of V86 is locked"
+def     VMStat_TS_Sched             14                            ; Scheduled by time-slicer
+def     VMStat_Idle                 15                            ; VM has released time
+def     VMStat_Closing              16                            ; VM is closing (Close_VM called for VM)
 
 def     VMStat_Use32_Mask           7           2                 ; VMStat_PM_Use32 | VMStat_VxD_Exec
 %enddef
@@ -1563,11 +1563,14 @@ description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2401
 
 #                                               default=1   default=(1<<width)-1
 #       constant                    bit number  bit width   value   comment
-def     P_PRESBit                   0                             ; page present
-def     P_WRITEBit                  1                             ; write access bit
-def     P_USERBit                   2                             ; access bit for user mode
-def     P_ACCBit                    5                             ; page accessed bit
-def     P_DIRTYBit                  6                             ; page dirty bit
+def     P_PRES                      0                             ; page present
+def     P_WRITE                     1                             ; write access bit
+def     P_USER                      2                             ; access bit for user mode
+def     P_ACC                       5                             ; page accessed bit
+def     P_DIRTY                     6                             ; page dirty bit
+%enddef
+%defcode
+#define P_AVAIL         (P_PRES+P_WRITE+P_USER) /* avail to everyone & present */
 %enddef
 
 #--------------------------------------

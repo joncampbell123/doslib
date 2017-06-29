@@ -1215,11 +1215,11 @@ static inline void Cancel_VM_Event(uint32_t const VM/*ebx*/,vxd_vm_event_handle_
 /*   Flags for Call_Priority_VM_Event (PEF_*)                                                            */
 /*                                                                                                       */
 /*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1537 FLAGS FOR CALL_PRIORITY_VM_EVENT EQUates */
-#define PEF_Wait_For_STI_Bit  0x00000001U /* 1U << 0U bit[0] Callback procedure is not called until VM enables interrupts */
-#define PEF_Wait_Not_Crit_Bit 0x00000002U /* 1U << 1U bit[1] Callback procedure is not called until VM is not in a critical section or time-critical operation */
-#define PEF_Dont_Unboost_Bit  0x00000004U /* 1U << 2U bit[2] Priority of the VM is not reduced after return from callback */
-#define PEF_Always_Sched_Bit  0x00000008U /* 1U << 3U bit[3] Event is always scheduled, callback is never called immediately */
-#define PEF_Time_Out          0x00000010U /* 1U << 4U bit[4] Use timeout value in EDI (Windows 3.1 or higher) */
+#define PEF_Wait_For_STI  0x00000001U /* 1U << 0U bit[0] Callback procedure is not called until VM enables interrupts */
+#define PEF_Wait_Not_Crit 0x00000002U /* 1U << 1U bit[1] Callback procedure is not called until VM is not in a critical section or time-critical operation */
+#define PEF_Dont_Unboost  0x00000004U /* 1U << 2U bit[2] Priority of the VM is not reduced after return from callback */
+#define PEF_Always_Sched  0x00000008U /* 1U << 3U bit[3] Event is always scheduled, callback is never called immediately */
+#define PEF_Time_Out      0x00000010U /* 1U << 4U bit[4] Use timeout value in EDI (Windows 3.1 or higher) */
 
 /*-------------------------------------------------------------*/
 /* VMM Call_Priority_VM_Event (VMMCall dev=0x0001 serv=0x0014) WINVER=3.0+ */
@@ -1539,10 +1539,10 @@ static inline void Adjust_Exec_Priority(int32_t const PriorityBoost/*eax*/,vxd_v
 /*   Flags for Begin_Critical_Section (Block_*)                 */
 /*                                                              */
 /*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 1553 */
-#define Block_Svc_Ints_Bit           0x00000001U /* 1U << 0U bit[0] Service interrupts in the virtual machine even if the virtual machine is blocked */
-#define Block_Svc_If_Ints_Locked_Bit 0x00000002U /* 1U << 1U bit[1] Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set. */
-#define Block_Enable_Ints_Bit        0x00000004U /* 1U << 2U bit[2] Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints_Bit | Svc_If_Ints_Locked_Bit) is set */
-#define Block_Poll_Bit               0x00000008U /* 1U << 3U bit[3] Do not switch away from the blocked virtual machine unless another machine has higher priority. */
+#define Block_Svc_Ints           0x00000001U /* 1U << 0U bit[0] Service interrupts in the virtual machine even if the virtual machine is blocked */
+#define Block_Svc_If_Ints_Locked 0x00000002U /* 1U << 1U bit[1] Service interrupts in the virtual machine even if the virtual machine is blocked and the VMStat_V86IntsLocked flag is set. */
+#define Block_Enable_Ints        0x00000004U /* 1U << 2U bit[2] Service interrupts in the virtual machine even if the virtual machine does not currently have interrupts enabled. Force interrupts to be enabled. Only relevant if (Svc_Ints | Svc_If_Ints_Locked) is set */
+#define Block_Poll               0x00000008U /* 1U << 3U bit[3] Do not switch away from the blocked virtual machine unless another machine has higher priority. */
 
 /*-------------------------------------------------------------*/
 /* VMM Begin_Critical_Section (VMMCall dev=0x0001 serv=0x001F) WINVER=3.0+ */
@@ -2069,24 +2069,24 @@ static inline _Bool Set_Execution_Focus(vxd_vm_handle_t const VM/*ebx*/) {
 /*   Status flags in VM control block (VMStat_*)               */
 /*                                                             */
 /*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 448 */
-#define VMStat_Exclusive_Bit       0x00000001U /* 1U << 0U bit[0] VM is in exclusive mode */
-#define VMStat_Background_Bit      0x00000002U /* 1U << 1U bit[1] VM runs in background */
-#define VMStat_Creating_Bit        0x00000004U /* 1U << 2U bit[2] VM is in the process of creation */
-#define VMStat_Suspended_Bit       0x00000008U /* 1U << 3U bit[3] VM is suspended (not scheduled) */
-#define VMStat_Not_Executeable_Bit 0x00000010U /* 1U << 4U bit[4] VM is not executable (partially destroyed) */
-#define VMStat_PM_Exec_Bit         0x00000020U /* 1U << 5U bit[5] VM is running protected-mode application */
-#define VMStat_PM_App_Bit          0x00000040U /* 1U << 6U bit[6] Protected mode application is present in VM */
-#define VMStat_PM_Use32_Bit        0x00000080U /* 1U << 7U bit[7] Protected-mode application is 32-bit */
-#define VMStat_VxD_Exec_Bit        0x00000100U /* 1U << 8U bit[8] "Call from VxD" */
-#define VMStat_High_Pri_Back_Bit   0x00000200U /* 1U << 9U bit[9] High-priority background */
-#define VMStat_Blocked_Bit         0x00000400U /* 1U << 10U bit[10] VM is blocked on semaphore */
-#define VMStat_Awakening_Bit       0x00000800U /* 1U << 11U bit[11] "Woke up after blocked" (FIXME: Woke? Awakening?) */
-#define VMStat_PageableV86Bit      0x00001000U /* 1U << 12U bit[12] A part of the virtual 8086 VM is pageable */
-#define VMStat_V86IntsLockedBit    0x00002000U /* 1U << 13U bit[13] "Rest of V86 is locked" */
-#define VMStat_TS_Sched_Bit        0x00004000U /* 1U << 14U bit[14] Scheduled by time-slicer */
-#define VMStat_Idle_Bit            0x00008000U /* 1U << 15U bit[15] VM has released time */
-#define VMStat_Closing_Bit         0x00010000U /* 1U << 16U bit[16] VM is closing (Close_VM called for VM) */
-#define VMStat_Use32_Mask          0x00000180U /* 3U << 7U bits[8:7] VMStat_PM_Use32 | VMStat_VxD_Exec */
+#define VMStat_Exclusive       0x00000001U /* 1U << 0U bit[0] VM is in exclusive mode */
+#define VMStat_Background      0x00000002U /* 1U << 1U bit[1] VM runs in background */
+#define VMStat_Creating        0x00000004U /* 1U << 2U bit[2] VM is in the process of creation */
+#define VMStat_Suspended       0x00000008U /* 1U << 3U bit[3] VM is suspended (not scheduled) */
+#define VMStat_Not_Executeable 0x00000010U /* 1U << 4U bit[4] VM is not executable (partially destroyed) */
+#define VMStat_PM_Exec         0x00000020U /* 1U << 5U bit[5] VM is running protected-mode application */
+#define VMStat_PM_App          0x00000040U /* 1U << 6U bit[6] Protected mode application is present in VM */
+#define VMStat_PM_Use32        0x00000080U /* 1U << 7U bit[7] Protected-mode application is 32-bit */
+#define VMStat_VxD_Exec        0x00000100U /* 1U << 8U bit[8] "Call from VxD" */
+#define VMStat_High_Pri_Back   0x00000200U /* 1U << 9U bit[9] High-priority background */
+#define VMStat_Blocked         0x00000400U /* 1U << 10U bit[10] VM is blocked on semaphore */
+#define VMStat_Awakening       0x00000800U /* 1U << 11U bit[11] "Woke up after blocked" (FIXME: Woke? Awakening?) */
+#define VMStat_PageableV86     0x00001000U /* 1U << 12U bit[12] A part of the virtual 8086 VM is pageable */
+#define VMStat_V86IntsLocked   0x00002000U /* 1U << 13U bit[13] "Rest of V86 is locked" */
+#define VMStat_TS_Sched        0x00004000U /* 1U << 14U bit[14] Scheduled by time-slicer */
+#define VMStat_Idle            0x00008000U /* 1U << 15U bit[15] VM has released time */
+#define VMStat_Closing         0x00010000U /* 1U << 16U bit[16] VM is closing (Close_VM called for VM) */
+#define VMStat_Use32_Mask      0x00000180U /* 3U << 7U bits[8:7] VMStat_PM_Use32 | VMStat_VxD_Exec */
 
 /*-------------------------------------------------------------*/
 /* VMM Get_Time_Slice_Priority (VMMCall dev=0x0001 serv=0x0032) WINVER=3.0+ */
@@ -3534,11 +3534,15 @@ static inline uint32_t _TestGlobalV86Mem(const void* const VMLinAddr/*__cdecl0*/
 /*   Page table entry bits (PG_*)                               */
 /*                                                              */
 /*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2401 */
-#define P_PRESBit  0x00000001U /* 1U << 0U bit[0] page present */
-#define P_WRITEBit 0x00000002U /* 1U << 1U bit[1] write access bit */
-#define P_USERBit  0x00000004U /* 1U << 2U bit[2] access bit for user mode */
-#define P_ACCBit   0x00000020U /* 1U << 5U bit[5] page accessed bit */
-#define P_DIRTYBit 0x00000040U /* 1U << 6U bit[6] page dirty bit */
+#define P_PRES  0x00000001U /* 1U << 0U bit[0] page present */
+#define P_WRITE 0x00000002U /* 1U << 1U bit[1] write access bit */
+#define P_USER  0x00000004U /* 1U << 2U bit[2] access bit for user mode */
+#define P_ACC   0x00000020U /* 1U << 5U bit[5] page accessed bit */
+#define P_DIRTY 0x00000040U /* 1U << 6U bit[6] page dirty bit */
+
+/*-------------------------------------------------------------*/
+#define P_AVAIL         (P_PRES+P_WRITE+P_USER) /* avail to everyone & present */
+/*-------------------------------------------------------------*/
 
 /*-------------------------------------------------------------*/
 /* VMM _ModifyPageBits (VMMCall dev=0x0001 serv=0x0060) WINVER=3.0+ */
