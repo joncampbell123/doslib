@@ -3425,5 +3425,109 @@ static inline _GetVMPgCount__response _GetVMPgCount(uint32_t const VM/*__cdecl0*
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _MapIntoV86 (VMMCall dev=0x0001 serv=0x005D) WINVER=3.0+ */
+
+/* description: */
+/*   Map one or more pages of a memory block into the V86 address space of the specified virtual machine. */
+
+/* inputs: */
+/*   __CDECL0 = hMem (memory block handle (from _PageAllocate, _PageReAllocate)) */
+/*   __CDECL1 = VM (VM handle to map it into) */
+/*   __CDECL2 = VMLinPgNum (linear page number of V86 address to map to. must be in the range 0x10 through 0x10F inclusive.) */
+/*   __CDECL3 = nPages (number of pages to map) */
+/*   __CDECL4 = PageOff (offset in pages from start of memory block to first page to map) */
+/*   __CDECL5 = flags (operation flags (Page* constants)) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _MapIntoV86(uint32_t const hMem/*__cdecl0*/,vxd_vm_handle_t const VM/*__cdecl1*/,uint32_t const VMLinPgNum/*__cdecl2*/,uint32_t const nPages/*__cdecl3*/,uint32_t const PageOff/*__cdecl4*/,uint32_t const flags/*__cdecl5*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %6\n"
+        "push %5\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__MapIntoV86)
+        "addl $24,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (hMem), "g" (VM), "g" (VMLinPgNum), "g" (nPages), "g" (PageOff), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _PhysIntoV86 (VMMCall dev=0x0001 serv=0x005E) WINVER=3.0+ */
+
+/* description: */
+/*   Map the specified phsyical pages into the V86 address space.                                                   */
+/*   Devices use this to associate physical device memory (such as video memory) with a particular virtual machine. */
+
+/* inputs: */
+/*   __CDECL0 = PhysPage (Physical page number of the start of the region to map (phys addr >> 12)) */
+/*   __CDECL1 = VM (VM handle to map it into) */
+/*   __CDECL2 = VMLinPgNum (linear page number of V86 address to map to. must be in the range 0x10 through 0x10F inclusive.) */
+/*   __CDECL3 = nPages (number of pages to map) */
+/*   __CDECL4 = flags (operation flags (Page* constants)) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _PhysIntoV86(uint32_t const PhysPage/*__cdecl0*/,vxd_vm_handle_t const VM/*__cdecl1*/,uint32_t const VMLinPgNum/*__cdecl2*/,uint32_t const nPages/*__cdecl3*/,uint32_t const flags/*__cdecl4*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %5\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PhysIntoV86)
+        "addl $20,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (PhysPage), "g" (VM), "g" (VMLinPgNum), "g" (nPages), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _TestGlobalV86Mem (VMMCall dev=0x0001 serv=0x005F) WINVER=3.0+ */
+
+/* description: */
+/*   Test whether a virtual 8086 address range is global, local, or instanced. */
+
+/* inputs: */
+/*   __CDECL0 = VMLinAddr (ring-0 linear address of the first byte of V86 address range (NOT real-mode seg:offset)) */
+/*   __CDECL1 = nBytes (size in bytes of the V86 address range) */
+/*   __CDECL2 = flags (operation flags (Page* constants)) */
+
+/* outputs: */
+/*   EAX = 0=local mem/invalid V86  1=global mem  2=local and global  3=global, also includes instance data */
+
+static inline uint32_t _TestGlobalV86Mem(const void* const VMLinAddr/*__cdecl0*/,uint32_t const nBytes/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__TestGlobalV86Mem)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (VMLinAddr), "g" (nBytes), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

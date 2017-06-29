@@ -1507,3 +1507,51 @@ out             EAX                             TotalPages              ; total 
 out             EDX                             NotMappedIn1MB          ; total pages allocated but not mapped into the 1MB V86 address space, or 0 if error
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _MapIntoV86
+description     Map one or more pages of a memory block into the V86 address space of the specified virtual machine.
+
+cdecl           hMem, VM, VMLinPgNum, nPages, PageOff, flags
+
+in              __cdecl                         hMem                    ; memory block handle (from _PageAllocate, _PageReAllocate)
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle to map it into
+in              __cdecl                         VMLinPgNum              ; linear page number of V86 address to map to. must be in the range 0x10 through 0x10F inclusive.
+in              __cdecl                         nPages                  ; number of pages to map
+in              __cdecl                         PageOff                 ; offset in pages from start of memory block to first page to map
+in              __cdecl                         flags                   ; operation flags (Page* constants)
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _PhysIntoV86
+description     Map the specified phsyical pages into the V86 address space.
+description     Devices use this to associate physical device memory (such as video memory) with a particular virtual machine.
+
+cdecl           PhysPage, VM, VMLinPgNum, nPages, flags
+
+in              __cdecl                         PhysPage                ; Physical page number of the start of the region to map (phys addr >> 12)
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle to map it into
+in              __cdecl                         VMLinPgNum              ; linear page number of V86 address to map to. must be in the range 0x10 through 0x10F inclusive.
+in              __cdecl                         nPages                  ; number of pages to map
+in              __cdecl                         flags                   ; operation flags (Page* constants)
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _TestGlobalV86Mem
+description     Test whether a virtual 8086 address range is global, local, or instanced.
+
+cdecl           VMLinAddr, nBytes, flags
+
+in              __cdecl=const+void*             VMLinAddr               ; ring-0 linear address of the first byte of V86 address range (NOT real-mode seg:offset)
+in              __cdecl                         nBytes                  ; size in bytes of the V86 address range
+in              __cdecl                         flags                   ; operation flags (Page* constants)
+
+out             EAX                             .                       ; 0=local mem/invalid V86  1=global mem  2=local and global  3=global, also includes instance data
+%enddef
+
