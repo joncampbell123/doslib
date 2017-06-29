@@ -3529,5 +3529,57 @@ static inline uint32_t _TestGlobalV86Mem(const void* const VMLinAddr/*__cdecl0*/
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* description: */
+/*   Page table entry bits (PG_*)                               */
+/*                                                              */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2401 */
+#define P_PRESBit  0x00000001U /* 1U << 0U bit[0] page present */
+#define P_WRITEBit 0x00000002U /* 1U << 1U bit[1] write access bit */
+#define P_USERBit  0x00000004U /* 1U << 2U bit[2] access bit for user mode */
+#define P_ACCBit   0x00000020U /* 1U << 5U bit[5] page accessed bit */
+#define P_DIRTYBit 0x00000040U /* 1U << 6U bit[6] page dirty bit */
+
+/*-------------------------------------------------------------*/
+/* VMM _ModifyPageBits (VMMCall dev=0x0001 serv=0x0060) WINVER=3.0+ */
+
+/* description: */
+/*   Modifies the page attribute bits associated with PG_HOOKED pages in the v86 address space of a virtual machine. */
+/*   You are only allowed to modify P_PRES, P_WRITE, and P_USER bits through bitAND and bitOR.                       */
+/*   Page attribute bits are modified as follows: attr = (attr & bitAND) | bitOR.                                    */
+
+/* inputs: */
+/*   __CDECL0 = VM (VM handle) */
+/*   __CDECL1 = VMLinPgNum (linear page number of the first page to modify. all pages must be in the first 1MB of V86 space, at or above the first page of the VM, and at or below page 0x10F) */
+/*   __CDECL2 = nPages (number of pages to modify) */
+/*   __CDECL3 = bitAND (AND mask for the page attribute bits. All bits except P_PRES, P_WRITE, and P_USER must be set to 1.) */
+/*   __CDECL4 = bitOR (OR mask for the page attribute bits. All bits except P_PRES, P_WRITE, and P_USER must be set to 0.) */
+/*   __CDECL5 = pType (Page type) */
+/*   __CDECL6 = flags (operation flags. must be zero) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _ModifyPageBits(vxd_vm_handle_t const VM/*__cdecl0*/,uint32_t const VMLinPgNum/*__cdecl1*/,uint32_t const nPages/*__cdecl2*/,uint32_t const bitAND/*__cdecl3*/,uint32_t const bitOR/*__cdecl4*/,uint32_t const pType/*__cdecl5*/,uint32_t const flags/*__cdecl6*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %7\n"
+        "push %6\n"
+        "push %5\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__ModifyPageBits)
+        "addl $28,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (VM), "g" (VMLinPgNum), "g" (nPages), "g" (bitAND), "g" (bitOR), "g" (pType), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

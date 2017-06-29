@@ -1555,3 +1555,38 @@ in              __cdecl                         flags                   ; operat
 out             EAX                             .                       ; 0=local mem/invalid V86  1=global mem  2=local and global  3=global, also includes instance data
 %enddef
 
+#--------------------------------------
+%defconstbitfield
+description     Page table entry bits (PG_*)
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2401
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     P_PRESBit                   0                             ; page present
+def     P_WRITEBit                  1                             ; write access bit
+def     P_USERBit                   2                             ; access bit for user mode
+def     P_ACCBit                    5                             ; page accessed bit
+def     P_DIRTYBit                  6                             ; page dirty bit
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _ModifyPageBits
+description     Modifies the page attribute bits associated with PG_HOOKED pages in the v86 address space of a virtual machine.
+description     You are only allowed to modify P_PRES, P_WRITE, and P_USER bits through bitAND and bitOR.
+description     Page attribute bits are modified as follows: attr = (attr & bitAND) | bitOR.
+
+cdecl           VM, VMLinPgNum, nPages, bitAND, bitOR, pType, flags
+
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle
+in              __cdecl                         VMLinPgNum              ; linear page number of the first page to modify. all pages must be in the first 1MB of V86 space, at or above the first page of the VM, and at or below page 0x10F
+in              __cdecl                         nPages                  ; number of pages to modify
+in              __cdecl                         bitAND                  ; AND mask for the page attribute bits. All bits except P_PRES, P_WRITE, and P_USER must be set to 1.
+in              __cdecl                         bitOR                   ; OR mask for the page attribute bits. All bits except P_PRES, P_WRITE, and P_USER must be set to 0.
+in              __cdecl                         pType                   ; Page type
+in              __cdecl                         flags                   ; operation flags. must be zero
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
