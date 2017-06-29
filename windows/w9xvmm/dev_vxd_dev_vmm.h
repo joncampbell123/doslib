@@ -494,6 +494,14 @@
 #if defined(__GNUC__) /* GCC only, for now */
 # if defined(GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT) /* we require GCC 6.1 or higher with support for CPU flags as output */
 /*-------------------------------------------------------------*/
+/*
+
+  "The following structures are pointed to by EBP when VxD routines are entered,
+   both for VxD control calls and traps(I/O traps, software INT traps, etc.).
+   The first structure as DWORD values, the second WORD values and the last
+   has BYTE values." -- Windows 3.1 DDK VMM.INC
+
+ */
 #pragma pack(push,1)
 /* struct Client_Reg_Struc */
 typedef struct Client_Reg_Struc {
