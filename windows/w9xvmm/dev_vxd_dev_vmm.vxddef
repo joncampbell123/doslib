@@ -1604,3 +1604,40 @@ in              __cdecl                         flags                   ; operat
 out             EAX                             .                       ; nonzero if success, zero if failure
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _CopyPageTable
+description     Copy one or more page table entries to a buffer.
+description     Virtual devices such as the virtual DMA device use this service to analyze the mapping of linear to physical addresses.
+description     Page numbers must be in the range 0 to 0xFFFFF inclusive. Page numbers 0 to 0x10F inclusive specify the V86 address space.
+description
+description     The system copies the page table entries into the buffer given. It does not re-copy if changes are later made to the page tables,
+description     so no guarantees are made that the information will remain accurate as time advances past the copy operation.
+
+cdecl           LinPgNum, nPages, PageBuf, flags
+
+in              __cdecl                         LinPgNum                ; Number of first page to begin at, for copying page table entries
+in              __cdecl                         nPages                  ; number of pages
+in              __cdecl=uint32_t*               PageBuf                 ; buffer to place page table entries
+in              __cdecl                         flags                   ; operation flags. must be zero
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _LinMapIntoV86
+description     Map one or more pages into the virtual 8086 address space of a virtual machine.
+
+cdecl           HLinPgNum, VM, VMLinPgNum, nPages, flags
+
+in              __cdecl                         HLinPgNum               ; linear page number of the first page to map
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle
+in              __cdecl                         VMLinPgNum              ; linear page number of an address in V86 address space, must be within 0x10 to 0x10F inclusive
+in              __cdecl                         nPages                  ; number of pages to map
+in              __cdecl                         flags                   ; operating flags. must be zero
+
+out             EAX                             mapped                  ; nonzero if success, fail if zero
+out             EDX                             v86mapaddr              ; "if success, EDX contains the V86 address to which the pages are mapped"
+%enddef
+

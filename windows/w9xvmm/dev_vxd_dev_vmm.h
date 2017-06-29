@@ -3616,5 +3616,84 @@ static inline uint32_t _ModifyPageBits(vxd_vm_handle_t const VM/*__cdecl0*/,uint
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _CopyPageTable (VMMCall dev=0x0001 serv=0x0061) WINVER=3.0+ */
+
+/* description: */
+/*   Copy one or more page table entries to a buffer.                                                                                  */
+/*   Virtual devices such as the virtual DMA device use this service to analyze the mapping of linear to physical addresses.           */
+/*   Page numbers must be in the range 0 to 0xFFFFF inclusive. Page numbers 0 to 0x10F inclusive specify the V86 address space.        */
+/*                                                                                                                                     */
+/*   The system copies the page table entries into the buffer given. It does not re-copy if changes are later made to the page tables, */
+/*   so no guarantees are made that the information will remain accurate as time advances past the copy operation.                     */
+
+/* inputs: */
+/*   __CDECL0 = LinPgNum (Number of first page to begin at, for copying page table entries) */
+/*   __CDECL1 = nPages (number of pages) */
+/*   __CDECL2 = PageBuf (buffer to place page table entries) */
+/*   __CDECL3 = flags (operation flags. must be zero) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _CopyPageTable(uint32_t const LinPgNum/*__cdecl0*/,uint32_t const nPages/*__cdecl1*/,uint32_t* const PageBuf/*__cdecl2*/,uint32_t const flags/*__cdecl3*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__CopyPageTable)
+        "addl $16,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (LinPgNum), "g" (nPages), "g" (PageBuf), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _LinMapIntoV86 (VMMCall dev=0x0001 serv=0x0062) WINVER=3.0+ */
+
+/* description: */
+/*   Map one or more pages into the virtual 8086 address space of a virtual machine. */
+
+/* inputs: */
+/*   __CDECL0 = HLinPgNum (linear page number of the first page to map) */
+/*   __CDECL1 = VM (VM handle) */
+/*   __CDECL2 = VMLinPgNum (linear page number of an address in V86 address space, must be within 0x10 to 0x10F inclusive) */
+/*   __CDECL3 = nPages (number of pages to map) */
+/*   __CDECL4 = flags (operating flags. must be zero) */
+
+/* outputs: */
+/*   EDX = v86mapaddr ("if success, EDX contains the V86 address to which the pages are mapped") */
+/*   EAX = mapped (nonzero if success, fail if zero) */
+
+typedef struct _LinMapIntoV86__response {
+    uint32_t mapped; /* EAX */
+    uint32_t v86mapaddr; /* EDX */
+} _LinMapIntoV86__response;
+
+static inline _LinMapIntoV86__response _LinMapIntoV86(uint32_t const HLinPgNum/*__cdecl0*/,vxd_vm_handle_t const VM/*__cdecl1*/,uint32_t const VMLinPgNum/*__cdecl2*/,uint32_t const nPages/*__cdecl3*/,uint32_t const flags/*__cdecl4*/) {
+    register _LinMapIntoV86__response r;
+
+    __asm__ (
+        "push %6\n"
+        "push %5\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__LinMapIntoV86)
+        "addl $20,%%esp\n"
+        : /* outputs */ "=d" (r.v86mapaddr), "=a" (r.mapped)
+        : /* inputs */ "g" (HLinPgNum), "g" (VM), "g" (VMLinPgNum), "g" (nPages), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
