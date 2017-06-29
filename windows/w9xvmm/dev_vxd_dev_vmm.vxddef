@@ -856,6 +856,7 @@ description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 448
 
 #                                               default=1   default=(1<<width)-1
 #       constant                    bit number  bit width   value   comment
+bitdefsuffix    _Bit
 def     VMStat_Exclusive            0                             ; VM is in exclusive mode
 def     VMStat_Background           1                             ; VM runs in background
 def     VMStat_Creating             2                             ; VM is in the process of creation
@@ -868,12 +869,15 @@ def     VMStat_VxD_Exec             8                             ; "Call from V
 def     VMStat_High_Pri_Back        9                             ; High-priority background
 def     VMStat_Blocked              10                            ; VM is blocked on semaphore
 def     VMStat_Awakening            11                            ; "Woke up after blocked" (FIXME: Woke? Awakening?)
+bitdefsuffix    Bit
 def     VMStat_PageableV86          12                            ; A part of the virtual 8086 VM is pageable
 def     VMStat_V86IntsLocked        13                            ; "Rest of V86 is locked"
+bitdefsuffix    _Bit
 def     VMStat_TS_Sched             14                            ; Scheduled by time-slicer
 def     VMStat_Idle                 15                            ; VM has released time
 def     VMStat_Closing              16                            ; VM is closing (Close_VM called for VM)
 
+bitdefsuffix
 def     VMStat_Use32_Mask           7           2                 ; VMStat_PM_Use32 | VMStat_VxD_Exec
 %enddef
 
@@ -1560,6 +1564,9 @@ out             EAX                             .                       ; 0=loca
 description     Page table entry bits (PG_*)
 description
 description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2401
+
+# constants have <name>, bit position constants have <name>Bit
+bitdefsuffix    Bit
 
 #                                               default=1   default=(1<<width)-1
 #       constant                    bit number  bit width   value   comment

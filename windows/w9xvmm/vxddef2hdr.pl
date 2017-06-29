@@ -334,6 +334,14 @@ while (my $line = <DEF>) {
                 for ($i=0;$i < @cord;$i++) {
                     $const = $cord[$i];
                     $length = length($const);
+
+                    my $suffix = undef;
+                    if (exists($funcdef{bitdefsuffix})) {
+                        $suffix = $funcdef{bitdefsuffix}{$const};
+                    }
+                    $suffix = '' unless defined($suffix);
+                    $length += length($suffix);
+
                     $maxconst = $length if $maxconst < $length;
                 }
 
@@ -375,6 +383,17 @@ while (my $line = <DEF>) {
                     print "$comment " if (defined($comment) && $comment ne '');
                     print "*/";
                     print "\n";
+
+                    my $suffix = undef;
+                    if (exists($funcdef{bitdefsuffix})) {
+                        $suffix = $funcdef{bitdefsuffix}{$const};
+                    }
+                    $suffix = '' unless defined($suffix);
+
+                    if ($suffix ne '') {
+                        print "#define ".substr($const.$suffix.(' 'x$maxconst),0,$maxconst)." $bitpos";
+                        print "\n";
+                    }
                 }
             }
 
@@ -837,6 +856,9 @@ while (my $line = <DEF>) {
             if (!exists($funcdef{bforder})) {
                 $funcdef{bforder} = "";
             }
+            if (!exists($funcdef{bitdefsuffix})) {
+                $funcdef{bitdefsuffix} = { };
+            }
 
             # def constant bitpos [bitwidth, or 1 if not given]
             my $constname = $a[1];
@@ -860,6 +882,8 @@ while (my $line = <DEF>) {
             $funcdef{bforder} .= ' ' if $funcdef{bforder} ne '';
             $funcdef{bforder} .= $constname;
 
+            $funcdef{bitdefsuffix}{$constname} = $funcdef{bitdefsuffixcurrent};
+
             $funcdef{bf}{$constname} = $bitpos;
             $funcdef{bfwidth}{$constname} = $bitwidth;
             $funcdef{bfcomment}{$constname} = $comment;
@@ -877,6 +901,9 @@ while (my $line = <DEF>) {
                 $funcdef{description} .= " " if $i > 1;
                 $funcdef{description} .= $a[$i];
             }
+        }
+        elsif ($a[0] eq "bitdefsuffix") {
+            $funcdef{bitdefsuffixcurrent} = $a[1];
         }
         else {
             die "Don't know what $a[0] is";
