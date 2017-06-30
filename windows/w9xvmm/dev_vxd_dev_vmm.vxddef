@@ -1743,3 +1743,22 @@ in              __cdecl                         flags                   ; operat
 out             EAX                             .                       ; nonzero if successful, zero if failure
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _GetNulPageHandle
+description     Return the memory handle of the system nul page. This page is used to occupy regions
+description     of the address space which are unused but for which it is not desireable to cause a
+description     page fault when accessed. It can be mapped to multiple locations, the contents are
+description     always random.
+
+out             EAX                             .                       ; handle of system nul page
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _GetFirstV86Page
+description     Return page number of the first page in the current virtual machine
+
+out             EAX                             .                       ; first page of V86 memory
+%enddef
+

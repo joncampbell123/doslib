@@ -3917,5 +3917,58 @@ static inline uint32_t _PageDiscardPages(uint32_t const LinPgNum/*__cdecl0*/,vxd
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _GetNulPageHandle (VMMCall dev=0x0001 serv=0x006A) WINVER=3.0+ */
+
+/* description: */
+/*   Return the memory handle of the system nul page. This page is used to occupy regions */
+/*   of the address space which are unused but for which it is not desireable to cause a  */
+/*   page fault when accessed. It can be mapped to multiple locations, the contents are   */
+/*   always random.                                                                       */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EAX = handle of system nul page */
+
+static inline uint32_t _GetNulPageHandle(void) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetNulPageHandle)
+        : /* outputs */ "=a" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _GetFirstV86Page (VMMCall dev=0x0001 serv=0x006B) WINVER=3.0+ */
+
+/* description: */
+/*   Return page number of the first page in the current virtual machine */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EAX = first page of V86 memory */
+
+static inline uint32_t _GetFirstV86Page(void) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetFirstV86Page)
+        : /* outputs */ "=a" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
