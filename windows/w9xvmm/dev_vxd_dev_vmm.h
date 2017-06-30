@@ -3822,5 +3822,100 @@ static inline uint32_t _GetV86PageableArray(vxd_vm_handle_t const VM/*__cdecl0*/
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _PageCheckLinRange (VMMCall dev=0x0001 serv=0x0067) WINVER=3.0+ */
+
+/* description: */
+/*   Determine whether all bytes in a specific range of linear addresses are valid.                                                   */
+/*   Virtual devices use this call to validate an address range before specifying the range to LinPageLock and LinMapIntoV86 service. */
+
+/* inputs: */
+/*   __CDECL0 = HLinPgNum (linear page number of the first page) */
+/*   __CDECL1 = nPages (number of pages) */
+/*   __CDECL2 = flags (operating flags, must be zero) */
+
+/* outputs: */
+/*   EAX = number of actual pages that are valid. zero if none are valid */
+
+static inline uint32_t _PageCheckLinRange(uint32_t const HLinPgNum/*__cdecl0*/,uint32_t const nPages/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageCheckLinRange)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (HLinPgNum), "g" (nPages), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _PageOutDirtyPages (VMMCall dev=0x0001 serv=0x0068) WINVER=3.0+ */
+
+/* description: */
+/*   Flush dirty pages. Used by the virtual pageswap service to prevent too many dirty pages from accumulating. */
+
+/* inputs: */
+/*   __CDECL0 = nPages (number of pages) */
+/*   __CDECL1 = flags (operating flags (Page*)) */
+
+/* outputs: */
+/*   EAX = count of dirty pages */
+
+static inline uint32_t _PageOutDirtyPages(uint32_t const nPages/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageOutDirtyPages)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (nPages), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _PageDiscardPages (VMMCall dev=0x0001 serv=0x0069) WINVER=3.0+ */
+
+/* description: */
+/*   Mark pages as no longer in use, allowing the system to discard the pages.                                */
+/*   Accessing the page after this call does not cause the system to read the contents of the page from swap. */
+
+/* inputs: */
+/*   __CDECL0 = LinPgNum (linear page number of the first page) */
+/*   __CDECL1 = VM (VM handle) */
+/*   __CDECL2 = nPages (number of pages) */
+/*   __CDECL3 = flags (operating flags (Page*)) */
+
+/* outputs: */
+/*   EAX = nonzero if successful, zero if failure */
+
+static inline uint32_t _PageDiscardPages(uint32_t const LinPgNum/*__cdecl0*/,vxd_vm_handle_t const VM/*__cdecl1*/,uint32_t const nPages/*__cdecl2*/,uint32_t const flags/*__cdecl3*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__PageDiscardPages)
+        "addl $16,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (LinPgNum), "g" (VM), "g" (nPages), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

@@ -1699,3 +1699,47 @@ in              __cdecl                         flags                   ; operat
 out             EAX                             .                       ; nonzero if success, fail if zero
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _PageCheckLinRange
+description     Determine whether all bytes in a specific range of linear addresses are valid.
+description     Virtual devices use this call to validate an address range before specifying the range to LinPageLock and LinMapIntoV86 service.
+
+cdecl           HLinPgNum, nPages, flags
+
+in              __cdecl                         HLinPgNum               ; linear page number of the first page
+in              __cdecl                         nPages                  ; number of pages
+in              __cdecl                         flags                   ; operating flags, must be zero
+
+out             EAX                             .                       ; number of actual pages that are valid. zero if none are valid
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _PageOutDirtyPages
+description     Flush dirty pages. Used by the virtual pageswap service to prevent too many dirty pages from accumulating.
+
+cdecl           nPages, flags
+
+in              __cdecl                         nPages                  ; number of pages
+in              __cdecl                         flags                   ; operating flags (Page*)
+
+out             EAX                             .                       ; count of dirty pages
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _PageDiscardPages
+description     Mark pages as no longer in use, allowing the system to discard the pages.
+description     Accessing the page after this call does not cause the system to read the contents of the page from swap.
+
+cdecl           LinPgNum, VM, nPages, flags
+
+in              __cdecl                         LinPgNum                ; linear page number of the first page
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle
+in              __cdecl                         nPages                  ; number of pages
+in              __cdecl                         flags                   ; operating flags (Page*)
+
+out             EAX                             .                       ; nonzero if successful, zero if failure
+%enddef
+
