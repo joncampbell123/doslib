@@ -3757,5 +3757,70 @@ static inline uint32_t _LinPageUnLock(uint32_t const HLinPgNum/*__cdecl0*/,uint3
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _SetResetV86Pageable (VMMCall dev=0x0001 serv=0x0065) WINVER=3.0+ */
+
+/* description: */
+/*   Modify the locking and unlocking behavior associated with a range of V86 memory. */
+
+/* inputs: */
+/*   __CDECL0 = VM (VM handle) */
+/*   __CDECL1 = VMLinPgNum (linear page number of the first page) */
+/*   __CDECL2 = nPages (number of pages) */
+/*   __CDECL3 = flags (operating flags. (Page*)) */
+
+/* outputs: */
+/*   EAX = nonzero if success, fail if zero */
+
+static inline uint32_t _SetResetV86Pageable(vxd_vm_handle_t const VM/*__cdecl0*/,uint32_t const VMLinPgNum/*__cdecl1*/,uint32_t const nPages/*__cdecl2*/,uint32_t const flags/*__cdecl3*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__SetResetV86Pageable)
+        "addl $16,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (VM), "g" (VMLinPgNum), "g" (nPages), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _GetV86PageableArray (VMMCall dev=0x0001 serv=0x0066) WINVER=3.0+ */
+
+/* description: */
+/*   Return a copy of the bit array of pages who's behavior has been modified using the _SetResetV86Pageable service. */
+/*   Virtual devices can use this to determine whether pages have had locking behavior modified.                      */
+
+/* inputs: */
+/*   __CDECL0 = VM (VM handle) */
+/*   __CDECL1 = ArrayBuf (pointer to buffer to receive 0x100-bit (32-byte) array) */
+/*   __CDECL2 = flags (operating flags. (Page*)) */
+
+/* outputs: */
+/*   EAX = nonzero if success, fail if zero */
+
+static inline uint32_t _GetV86PageableArray(vxd_vm_handle_t const VM/*__cdecl0*/,uint8_t* const ArrayBuf/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetV86PageableArray)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (VM), "g" (ArrayBuf), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

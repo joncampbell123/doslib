@@ -1669,3 +1669,33 @@ in              __cdecl                         flags                   ; operat
 out             EAX                             .                       ; nonzero if success, fail if zero
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _SetResetV86Pageable
+description     Modify the locking and unlocking behavior associated with a range of V86 memory.
+
+cdecl           VM, VMLinPgNum, nPages, flags
+
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle
+in              __cdecl                         VMLinPgNum              ; linear page number of the first page
+in              __cdecl                         nPages                  ; number of pages
+in              __cdecl                         flags                   ; operating flags. (Page*)
+
+out             EAX                             .                       ; nonzero if success, fail if zero
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _GetV86PageableArray
+description     Return a copy of the bit array of pages who's behavior has been modified using the _SetResetV86Pageable service.
+description     Virtual devices can use this to determine whether pages have had locking behavior modified.
+
+cdecl           VM, ArrayBuf, flags
+
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle
+in              __cdecl=uint8_t*                ArrayBuf                ; pointer to buffer to receive 0x100-bit (32-byte) array
+in              __cdecl                         flags                   ; operating flags. (Page*)
+
+out             EAX                             .                       ; nonzero if success, fail if zero
+%enddef
+
