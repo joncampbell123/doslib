@@ -3695,5 +3695,67 @@ static inline _LinMapIntoV86__response _LinMapIntoV86(uint32_t const HLinPgNum/*
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _LinPageLock (VMMCall dev=0x0001 serv=0x0063) WINVER=3.0+ */
+
+/* description: */
+/*   Lock one or more pages starting at the linear page number */
+
+/* inputs: */
+/*   __CDECL0 = HLinPgNum (linear page number of the first page) */
+/*   __CDECL1 = nPages (number of pages) */
+/*   __CDECL2 = flags (operating flags. (Page*)) */
+
+/* outputs: */
+/*   EAX = nonzero if success, fail if zero */
+
+static inline uint32_t _LinPageLock(uint32_t const HLinPgNum/*__cdecl0*/,uint32_t const nPages/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__LinPageLock)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (HLinPgNum), "g" (nPages), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _LinPageUnLock (VMMCall dev=0x0001 serv=0x0064) WINVER=3.0+ */
+
+/* description: */
+/*   Unlock one or more pages starting at the linear page number */
+
+/* inputs: */
+/*   __CDECL0 = HLinPgNum (linear page number of the first page) */
+/*   __CDECL1 = nPages (number of pages) */
+/*   __CDECL2 = flags (operating flags. (Page*)) */
+
+/* outputs: */
+/*   EAX = nonzero if success, fail if zero */
+
+static inline uint32_t _LinPageUnLock(uint32_t const HLinPgNum/*__cdecl0*/,uint32_t const nPages/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__LinPageUnLock)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (HLinPgNum), "g" (nPages), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

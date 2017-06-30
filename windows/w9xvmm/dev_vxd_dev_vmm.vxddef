@@ -1641,3 +1641,31 @@ out             EAX                             mapped                  ; nonzer
 out             EDX                             v86mapaddr              ; "if success, EDX contains the V86 address to which the pages are mapped"
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _LinPageLock
+description     Lock one or more pages starting at the linear page number
+
+cdecl           HLinPgNum, nPages, flags
+
+in              __cdecl                         HLinPgNum               ; linear page number of the first page
+in              __cdecl                         nPages                  ; number of pages
+in              __cdecl                         flags                   ; operating flags. (Page*)
+
+out             EAX                             .                       ; nonzero if success, fail if zero
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _LinPageUnLock
+description     Unlock one or more pages starting at the linear page number
+
+cdecl           HLinPgNum, nPages, flags
+
+in              __cdecl                         HLinPgNum               ; linear page number of the first page
+in              __cdecl                         nPages                  ; number of pages
+in              __cdecl                         flags                   ; operating flags. (Page*)
+
+out             EAX                             .                       ; nonzero if success, fail if zero
+%enddef
+
