@@ -4224,5 +4224,65 @@ static inline uint32_t _DeAssign_Device_V86_Pages(uint32_t const VMLinrPage/*__c
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _Get_Device_V86_Pages_Array (VMMCall dev=0x0001 serv=0x0074) WINVER=3.0+ */
+
+/* description: */
+/*   Retrive a copy of the assignment array used by the _Assign_Device_V86_Pages and _DeAssign_Device_V86_Pages.        */
+/*   Virtual devices can use this to determine which regions of the V86 address space are currently assigned.           */
+/*                                                                                                                      */
+/*   The meaning of each bit is whether or not the page is assigned.                                                    */
+/*   The global array does not indicate whether the page is assigned locally.                                           */
+/*   A page is available for global assignment only if neither global nor locally assigned.                             */
+/*   A virtual device must check both global and local array to determine if a page is available for global assignment. */
+
+/* inputs: */
+/*   __CDECL0 = VM (VM handle, or 0 for global assignment array) */
+/*   __CDECL1 = ArrayBuf (pointer to a 36-byte (0x110-bit) buffer that receives the assignment array) */
+/*   __CDECL2 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EAX = nonzero if successful, zero if not */
+
+static inline uint32_t _Get_Device_V86_Pages_Array(vxd_vm_handle_t const VM/*__cdecl0*/,void* const ArrayBuf/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__Get_Device_V86_Pages_Array)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (VM), "g" (ArrayBuf), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM MMGR_SetNULPageAddr (VMMCall dev=0x0001 serv=0x0075) WINVER=3.0+ */
+
+/* description: */
+/*   Set the physical address of the system nul page.                                          */
+/*   For exclusive use by the virtual V86MMGR device, called during the Init_Complete message, */
+/*   to set the address of a known nonexistent page in the system.                             */
+
+/* inputs: */
+/*   EAX = PhysAddr (physical page address (page number << 12) of system nul page) */
+
+/* outputs: */
+/*   None */
+
+static inline void MMGR_SetNULPageAddr(uint32_t const PhysAddr/*eax*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_MMGR_SetNULPageAddr)
+        : /* outputs */
+        : /* inputs */ "a" (PhysAddr)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

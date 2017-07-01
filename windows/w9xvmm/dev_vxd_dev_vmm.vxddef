@@ -1891,3 +1891,33 @@ in              __cdecl                         flags                   ; operat
 out             EAX                             .                       ; nonzero if successful, zero if not
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _Get_Device_V86_Pages_Array
+description     Retrive a copy of the assignment array used by the _Assign_Device_V86_Pages and _DeAssign_Device_V86_Pages.
+description     Virtual devices can use this to determine which regions of the V86 address space are currently assigned.
+description
+description     The meaning of each bit is whether or not the page is assigned.
+description     The global array does not indicate whether the page is assigned locally.
+description     A page is available for global assignment only if neither global nor locally assigned.
+description     A virtual device must check both global and local array to determine if a page is available for global assignment.
+
+cdecl           VM, ArrayBuf, flags
+
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle, or 0 for global assignment array
+in              __cdecl=void*                   ArrayBuf                ; pointer to a 36-byte (0x110-bit) buffer that receives the assignment array
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX                             .                       ; nonzero if successful, zero if not
+%enddef
+
+#--------------------------------------
+%defcall
+byname          MMGR_SetNULPageAddr
+description     Set the physical address of the system nul page.
+description     For exclusive use by the virtual V86MMGR device, called during the Init_Complete message,
+description     to set the address of a known nonexistent page in the system.
+
+in              EAX                             PhysAddr                ; physical page address (page number << 12) of system nul page
+%enddef
+
