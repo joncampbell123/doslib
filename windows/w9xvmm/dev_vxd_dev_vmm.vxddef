@@ -1849,3 +1849,45 @@ in              __cdecl                         flags                   ; oprati
 out             EAX                             .                       ; page out count, if GSPOC_F_Get is given in flags
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Hook_V86_Page
+description     Install a callback procedure to handle faults for the specified page.
+description     Virtual devices, such as the virtual display device, use this to detect when certain address ranges are accessed.
+
+in              EAX                             PageNum                 ; page number, must be between the last v86 page and 0xFF inclusive
+in              ESI=const+void*                 Callback                ; pointer to callback procedure
+
+out             !CF                             .                       ; clear if success, set if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _Assign_Device_V86_Pages
+description     Assign to a virtual device one or more pages of the V86 address space.
+
+cdecl           VMLinrPage, nPages, VM, flags
+
+in              __cdecl                         VMLinrPage              ; Linear page number of the first page of V86 address space to assign. Must be 0 to 0x10F inclusive
+in              __cdecl                         nPages                  ; number of pages to assign
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle to assign to, or zero to apply to all virtual machines
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX                             .                       ; nonzero if successful, zero if not
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _DeAssign_Device_V86_Pages
+description     Unassign a region in the V86 address space assigned by _Assign_Device_V86_Pages
+
+cdecl           VMLinrPage, nPages, VM, flags
+
+in              __cdecl                         VMLinrPage              ; Linear page number of the first page of V86 address space to assign. Must be 0 to 0x10F inclusive
+in              __cdecl                         nPages                  ; number of pages to assign
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle to assign to, or zero to apply to all virtual machines
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX                             .                       ; nonzero if successful, zero if not
+%enddef
+

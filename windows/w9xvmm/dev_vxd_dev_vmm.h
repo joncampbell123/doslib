@@ -4131,5 +4131,98 @@ static inline uint32_t _GetSetPageOutCount(uint32_t const NewCount/*__cdecl0*/,u
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Hook_V86_Page (VMMCall dev=0x0001 serv=0x0071) WINVER=3.0+ */
+
+/* description: */
+/*   Install a callback procedure to handle faults for the specified page.                                             */
+/*   Virtual devices, such as the virtual display device, use this to detect when certain address ranges are accessed. */
+
+/* inputs: */
+/*   EAX = PageNum (page number, must be between the last v86 page and 0xFF inclusive) */
+/*   ESI = Callback (pointer to callback procedure) */
+
+/* outputs: */
+/*   !CF = clear if success, set if failure */
+
+static inline _Bool Hook_V86_Page(uint32_t const PageNum/*eax*/,const void* const Callback/*esi*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_V86_Page)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "a" (PageNum), "S" (Callback)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _Assign_Device_V86_Pages (VMMCall dev=0x0001 serv=0x0072) WINVER=3.0+ */
+
+/* description: */
+/*   Assign to a virtual device one or more pages of the V86 address space. */
+
+/* inputs: */
+/*   __CDECL0 = VMLinrPage (Linear page number of the first page of V86 address space to assign. Must be 0 to 0x10F inclusive) */
+/*   __CDECL1 = nPages (number of pages to assign) */
+/*   __CDECL2 = VM (VM handle to assign to, or zero to apply to all virtual machines) */
+/*   __CDECL3 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EAX = nonzero if successful, zero if not */
+
+static inline uint32_t _Assign_Device_V86_Pages(uint32_t const VMLinrPage/*__cdecl0*/,uint32_t const nPages/*__cdecl1*/,vxd_vm_handle_t const VM/*__cdecl2*/,uint32_t const flags/*__cdecl3*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__Assign_Device_V86_Pages)
+        "addl $16,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (VMLinrPage), "g" (nPages), "g" (VM), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _DeAssign_Device_V86_Pages (VMMCall dev=0x0001 serv=0x0073) WINVER=3.0+ */
+
+/* description: */
+/*   Unassign a region in the V86 address space assigned by _Assign_Device_V86_Pages */
+
+/* inputs: */
+/*   __CDECL0 = VMLinrPage (Linear page number of the first page of V86 address space to assign. Must be 0 to 0x10F inclusive) */
+/*   __CDECL1 = nPages (number of pages to assign) */
+/*   __CDECL2 = VM (VM handle to assign to, or zero to apply to all virtual machines) */
+/*   __CDECL3 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EAX = nonzero if successful, zero if not */
+
+static inline uint32_t _DeAssign_Device_V86_Pages(uint32_t const VMLinrPage/*__cdecl0*/,uint32_t const nPages/*__cdecl1*/,vxd_vm_handle_t const VM/*__cdecl2*/,uint32_t const flags/*__cdecl3*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__DeAssign_Device_V86_Pages)
+        "addl $16,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (VMLinrPage), "g" (nPages), "g" (VM), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
