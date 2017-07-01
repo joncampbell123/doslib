@@ -545,7 +545,7 @@ typedef struct Client_Reg_Struc {
     uint16_t        Client_Alt_GS;                  /* +0x0068  */
     uint16_t        __unnamed_106;                  /* +0x006A  */
 } Client_Reg_Struc;
-/* end Client_Reg_Struc */
+/* end Client_Reg_Struc (total 0x006C bytes) */
 
 /* struct Client_Word_Reg_Struc */
 typedef struct Client_Word_Reg_Struc {
@@ -572,11 +572,7 @@ typedef struct Client_Word_Reg_Struc {
     uint16_t        __unnamed_46;                   /* +0x002E (padding) */
     uint16_t        Client_SP;                      /* +0x0030 SP */
     uint16_t        __unnamed_50;                   /* +0x0032  */
-    uint32_t        __unnamed_52;                   /* +0x0034  */
-    uint32_t        __unnamed_56;                   /* +0x0038  */
-    uint32_t        __unnamed_60;                   /* +0x003C  */
-    uint32_t        __unnamed_64;                   /* +0x0040  */
-    uint32_t        __unnamed_68;                   /* +0x0044  */
+    uint32_t        __unnamed_52[5];                /* +0x0034  */
     uint16_t        Client_Alt_IP;                  /* +0x0048  */
     uint16_t        __unnamed_74;                   /* +0x004A  */
     uint32_t        __unnamed_76;                   /* +0x004C  */
@@ -584,14 +580,11 @@ typedef struct Client_Word_Reg_Struc {
     uint16_t        __unnamed_82;                   /* +0x0052  */
     uint16_t        Client_Alt_SP;                  /* +0x0054  */
 } Client_Word_Reg_Struc;
-/* end Client_Word_Reg_Struc */
+/* end Client_Word_Reg_Struc (total 0x0056 bytes) */
 
 /* struct Client_Byte_Reg_Struc */
 typedef struct Client_Byte_Reg_Struc {
-    uint32_t        __unnamed_0;                    /* +0x0000 EDI, ESI, EBP, ESP at pushall */
-    uint32_t        __unnamed_4;                    /* +0x0004 EDI, ESI, EBP, ESP at pushall */
-    uint32_t        __unnamed_8;                    /* +0x0008 EDI, ESI, EBP, ESP at pushall */
-    uint32_t        __unnamed_12;                   /* +0x000C EDI, ESI, EBP, ESP at pushall */
+    uint32_t        __unnamed_0[4];                 /* +0x0000 EDI, ESI, EBP, ESP at pushall */
     uint8_t         Client_BL;                      /* +0x0010 Client's BL */
     uint8_t         Client_BH;                      /* +0x0011 Client's BH */
     uint16_t        __unnamed_18;                   /* +0x0012 (padding) */
@@ -604,7 +597,7 @@ typedef struct Client_Byte_Reg_Struc {
     uint8_t         Client_AL;                      /* +0x001C Client's AL */
     uint8_t         Client_AH;                      /* +0x001D Client's AH */
 } Client_Byte_Reg_Struc;
-/* end Client_Byte_Reg_Struc */
+/* end Client_Byte_Reg_Struc (total 0x001E bytes) */
 #pragma pack(pop)
 /*-------------------------------------------------------------*/
 
@@ -4053,6 +4046,87 @@ static inline void _SelectorMapFlat(vxd_vm_handle_t const VM/*__cdecl0*/,uint32_
         : /* inputs */ "g" (VM), "g" (Selector), "g" (flags)
         : /* clobbered */
     );
+}
+
+/*-------------------------------------------------------------*/
+/*
+
+    Data structure for _GetDemandPageInfo
+
+ */
+/* struct DemandInfoStruc */
+typedef struct DemandInfoStruc {
+    uint32_t        DILin_Total_Count;              /* +0x0000 # pages in linear address space */
+    uint32_t        DIPhys_Count;                   /* +0x0004 Count of phys pages */
+    uint32_t        DIFree_Count;                   /* +0x0008 Count of free phys pages */
+    uint32_t        DIUnlock_Count;                 /* +0x000C Count of unlocked Phys Pages */
+    uint32_t        DILinear_Base_Addr;             /* +0x0010 Base of pageable address space */
+    uint32_t        DILin_Total_Free;               /* +0x0014 Total Count of free linear pages */
+    uint32_t        DIReserved[10];                 /* +0x0018 Resvd for expansion */
+} DemandInfoStruc;
+/* end DemandInfoStruc (total 0x0040 bytes) */
+/*-------------------------------------------------------------*/
+
+/*-------------------------------------------------------------*/
+/* VMM _GetDemandPageInfo (VMMCall dev=0x0001 serv=0x006F) WINVER=3.0+ */
+
+/* description: */
+/*   Retrieve information used for demand paging, copying the information to the specified structure. */
+/*   For exclusive use by the virtual paging device.                                                  */
+
+/* inputs: */
+/*   __CDECL0 = DemandInfo (structure to fill) */
+/*   __CDECL1 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   None */
+
+static inline void _GetDemandPageInfo(DemandInfoStruc* const DemandInfo/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    __asm__ (
+        "push %1\n"
+        "push %0\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetDemandPageInfo)
+        "addl $8,%%esp\n"
+        : /* outputs */
+        : /* inputs */ "g" (DemandInfo), "g" (flags)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* description: */
+/*   Flags for _GetSetPageOutCount                             */
+/*                                                             */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 718 */
+#define GSPOC_F_Get 0x00000001U /* 1U << 0U bit[0] Return the current value of the page out count, NewCount is ignored */
+
+/*-------------------------------------------------------------*/
+/* VMM _GetSetPageOutCount (VMMCall dev=0x0001 serv=0x0070) WINVER=3.0+ */
+
+/* description: */
+/*   Set or return the page out count. For exclusive use by the virtual paging device. */
+
+/* inputs: */
+/*   __CDECL0 = NewCount (new page out count, if GSPOC_F_Get is NOT set in flags) */
+/*   __CDECL1 = flags (oprating flags, GSPOC_F_*) */
+
+/* outputs: */
+/*   EAX = page out count, if GSPOC_F_Get is given in flags */
+
+static inline uint32_t _GetSetPageOutCount(uint32_t const NewCount/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetSetPageOutCount)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (NewCount), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
 }
 
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
