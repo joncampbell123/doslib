@@ -4054,6 +4054,7 @@ static inline void _SelectorMapFlat(vxd_vm_handle_t const VM/*__cdecl0*/,uint32_
     Data structure for _GetDemandPageInfo
 
  */
+#pragma pack(push,1)
 /* struct DemandInfoStruc */
 typedef struct DemandInfoStruc {
     uint32_t        DILin_Total_Count;              /* +0x0000 # pages in linear address space */
@@ -4065,6 +4066,7 @@ typedef struct DemandInfoStruc {
     uint32_t        DIReserved[10];                 /* +0x0018 Resvd for expansion */
 } DemandInfoStruc;
 /* end DemandInfoStruc (total 0x0040 bytes) */
+#pragma pack(pop)
 /*-------------------------------------------------------------*/
 
 /*-------------------------------------------------------------*/
