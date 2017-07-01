@@ -90,35 +90,50 @@ while (my $line = <STDIN>) {
                 die "struct member def must be ? in $line" unless $a[1] eq "?";
             }
 
-            do {
-                $sz = d2sz($a[0]);
-                print "    ".substr(sztotypedef($sz).(' 'x15),0,15)." ".substr("__unnamed_$offset;".(' 'x31),0,31);
-                print " /* +".sprintf("0x%04X",$offset)." $comment */";
-                print "\n";
+            die "Invalid count" unless $count > 0;
 
-                $offset += $sz;
-                $count--;
-            } while ($count > 0);
-        }
-        elsif ($a[1] =~ m/^d[bwdq]$/i) {
-            # named def
-            die "struct member def must be ? in $line" unless $a[2] eq "?";
+            my $suff = '';
+            $suff = "[$count]" if $count > 1;
 
-            die "Invalid struct member ".$a[0] unless $a[0] =~ m/^[0-9a-zA-Z_]+$/i;
-
-            $sz = d2sz($a[1]);
-            print "    ".substr(sztotypedef($sz).(' 'x15),0,15)." ".substr($a[0].";".(' 'x31),0,31);
+            $sz = d2sz($a[0]);
+            print "    ".substr(sztotypedef($sz).(' 'x15),0,15)." ".substr("__unnamed_$offset".$suff.";".(' 'x31),0,31);
             print " /* +".sprintf("0x%04X",$offset)." $comment */";
             print "\n";
 
-            $offset += $sz;
+            $offset += $sz * $count;
+        }
+        elsif ($a[1] =~ m/^d[bwdq]$/i) {
+            # named def
+            $count = 1;
+
+            if ($a[2] eq "?") {
+            }
+            elsif ($a[2] =~ m/^\d+$/ && $a[3] eq "dup" && ($a[4] eq "?" || $a[4] eq "(?)")) { # 5 dup ?
+                $count = int($a[2]);
+            }
+            else {
+                die "struct member def must be ? in $line" unless $a[2] eq "?";
+            }
+
+            die "Invalid count" unless $count > 0;
+            die "Invalid struct member ".$a[0] unless $a[0] =~ m/^[0-9a-zA-Z_]+$/i;
+
+            my $suff = '';
+            $suff = "[$count]" if $count > 1;
+
+            $sz = d2sz($a[1]);
+            print "    ".substr(sztotypedef($sz).(' 'x15),0,15)." ".substr($a[0].$suff.";".(' 'x31),0,31);
+            print " /* +".sprintf("0x%04X",$offset)." $comment */";
+            print "\n";
+
+            $offset += $sz * $count;
         }
         elsif ($a[0] eq $name && $a[1] eq "ends") {
             $mode = '';
 
             print "} $name;\n";
 
-            print "/* end $name */\n";
+            print "/* end $name (total ".sprintf("0x%04X",$offset)." bytes) */\n";
             print "\n";
         }
         else {
