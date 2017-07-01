@@ -3970,5 +3970,90 @@ static inline uint32_t _GetFirstV86Page(void) {
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _MapPhysToLinear (VMMCall dev=0x0001 serv=0x006C) WINVER=3.0+ */
+
+/* description: */
+/*   Return the linear address of the first byte in the specified range of physical addresses */
+
+/* inputs: */
+/*   __CDECL0 = PhysAddr (32-bit physical address of the start of the region to examine) */
+/*   __CDECL1 = nBytes (length of bytes of physical region) */
+/*   __CDECL2 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EAX = ring-0 linear address of first byte of physical region, or 0xFFFFFFFF if not addressable */
+
+static inline void* _MapPhysToLinear(uint32_t const PhysAddr/*__cdecl0*/,uint32_t const nBytes/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register void* r;
+
+    __asm__ (
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__MapPhysToLinear)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (PhysAddr), "g" (nBytes), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _GetAppFlatDSAlias (VMMCall dev=0x0001 serv=0x006D) WINVER=3.0+ */
+
+/* description: */
+/*   Return a ring-3, read-only, GDT selector that provides access to the same memory as the system's ring-0 data segment selector.      */
+/*   Virtual devices can use this service to support protected-mode APIs that let protected-mode applications read from the same memory. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   EAX = read-only GDT selector */
+
+static inline uint32_t _GetAppFlatDSAlias(void) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetAppFlatDSAlias)
+        : /* outputs */ "=a" (r)
+        : /* inputs */
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _SelectorMapFlat (VMMCall dev=0x0001 serv=0x006E) WINVER=3.0+ */
+
+/* description: */
+/*   Return the base address of the specified GDT or LDT selector.                                 */
+/*   Address mapper code can use this to convert segment:offset pointers to flat linear addresses. */
+
+/* inputs: */
+/*   __CDECL0 = VM (VM handle) */
+/*   __CDECL1 = Selector (GDT or LDT selector) */
+/*   __CDECL2 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   None */
+
+static inline void _SelectorMapFlat(vxd_vm_handle_t const VM/*__cdecl0*/,uint32_t const Selector/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    __asm__ (
+        "push %2\n"
+        "push %1\n"
+        "push %0\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__SelectorMapFlat)
+        "addl $12,%%esp\n"
+        : /* outputs */
+        : /* inputs */ "g" (VM), "g" (Selector), "g" (flags)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

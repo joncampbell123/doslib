@@ -1762,3 +1762,39 @@ description     Return page number of the first page in the current virtual mach
 out             EAX                             .                       ; first page of V86 memory
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _MapPhysToLinear
+description     Return the linear address of the first byte in the specified range of physical addresses
+
+cdecl           PhysAddr, nBytes, flags
+
+in              __cdecl                         PhysAddr                ; 32-bit physical address of the start of the region to examine
+in              __cdecl                         nBytes                  ; length of bytes of physical region
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX=void*                       .                       ; ring-0 linear address of first byte of physical region, or 0xFFFFFFFF if not addressable
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _GetAppFlatDSAlias
+description     Return a ring-3, read-only, GDT selector that provides access to the same memory as the system's ring-0 data segment selector.
+description     Virtual devices can use this service to support protected-mode APIs that let protected-mode applications read from the same memory.
+
+out             EAX                             .                       ; read-only GDT selector
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _SelectorMapFlat
+description     Return the base address of the specified GDT or LDT selector.
+description     Address mapper code can use this to convert segment:offset pointers to flat linear addresses.
+
+cdecl           VM, Selector, flags
+
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle
+in              __cdecl                         Selector                ; GDT or LDT selector
+in              __cdecl                         flags                   ; operation flags, must be zero
+%enddef
+
