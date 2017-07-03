@@ -4284,5 +4284,143 @@ static inline void MMGR_SetNULPageAddr(uint32_t const PhysAddr/*eax*/) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM _Allocate_GDT_Selector (VMMCall dev=0x0001 serv=0x0076) WINVER=3.0+ */
+
+/* description: */
+/*   Create a selector and add it to the Global Descriptor Table. */
+
+/* inputs: */
+/*   __CDECL0 = DescDWORD1 (High DWORD of the descriptor (high 16 bits of base addr, high 4 bits of limit, status, type)) */
+/*   __CDECL1 = DescDWORD2 (Low DWORD of the descriptor (low 16 bits of base addr, limit)) */
+/*   __CDECL2 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EDX = SelCount (selector for GDT (low 16 bits) and size of GDT (upper 16 bits)) */
+/*   EAX = GDTSel (selector for the GDT, or zero if failure) */
+
+typedef struct _Allocate_GDT_Selector__response {
+    uint32_t GDTSel; /* EAX */
+    uint32_t SelCount; /* EDX */
+} _Allocate_GDT_Selector__response;
+
+static inline _Allocate_GDT_Selector__response _Allocate_GDT_Selector(uint32_t const DescDWORD1/*__cdecl0*/,uint32_t const DescDWORD2/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register _Allocate_GDT_Selector__response r;
+
+    __asm__ (
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__Allocate_GDT_Selector)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=d" (r.SelCount), "=a" (r.GDTSel)
+        : /* inputs */ "g" (DescDWORD1), "g" (DescDWORD2), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _Free_GDT_Selector (VMMCall dev=0x0001 serv=0x0077) WINVER=3.0+ */
+
+/* description: */
+/*   Free a GDT selector previously allocated using the Allocate_GDT_Selector service. */
+
+/* inputs: */
+/*   __CDECL0 = Selector (Selector to free (allocated by Allocate_GDT_Selector)) */
+/*   __CDECL1 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _Free_GDT_Selector(uint32_t const Selector/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__Free_GDT_Selector)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (Selector), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _Allocate_LDT_Selector (VMMCall dev=0x0001 serv=0x0078) WINVER=3.0+ */
+
+/* description: */
+/*   Create a selector and add it to the Local Descriptor Table of a virtual machine. */
+
+/* inputs: */
+/*   __CDECL0 = VM (VM handle) */
+/*   __CDECL1 = DescDWORD1 (High DWORD of the descriptor (high 16 bits of base addr, high 4 bits of limit, status, type)) */
+/*   __CDECL2 = DescDWORD2 (Low DWORD of the descriptor (low 16 bits of base addr, limit)) */
+/*   __CDECL3 = Count (number of contiguous LDT selectors to allocate if flags param does not specify ALDTSpecSel) */
+/*   __CDECL4 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EDX = SelCount (selector for LDT (low 16 bits) and size of LDT (upper 16 bits)) */
+/*   EAX = Selector (Selector of LDT (first one, if multiple allocated) or zero if error) */
+
+typedef struct _Allocate_LDT_Selector__response {
+    uint32_t Selector; /* EAX */
+    uint32_t SelCount; /* EDX */
+} _Allocate_LDT_Selector__response;
+
+static inline _Allocate_LDT_Selector__response _Allocate_LDT_Selector(vxd_vm_handle_t const VM/*__cdecl0*/,uint32_t const DescDWORD1/*__cdecl1*/,uint32_t const DescDWORD2/*__cdecl2*/,uint32_t const Count/*__cdecl3*/,uint32_t const flags/*__cdecl4*/) {
+    register _Allocate_LDT_Selector__response r;
+
+    __asm__ (
+        "push %6\n"
+        "push %5\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__Allocate_LDT_Selector)
+        "addl $20,%%esp\n"
+        : /* outputs */ "=d" (r.SelCount), "=a" (r.Selector)
+        : /* inputs */ "g" (VM), "g" (DescDWORD1), "g" (DescDWORD2), "g" (Count), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _Free_LDT_Selector (VMMCall dev=0x0001 serv=0x0079) WINVER=3.0+ */
+
+/* description: */
+/*   Free a LDT selector previously allocated using the Allocate_LDT_Selector service. */
+
+/* inputs: */
+/*   __CDECL0 = VM (VM handle) */
+/*   __CDECL1 = Selector (Selector to free) */
+/*   __CDECL2 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _Free_LDT_Selector(vxd_vm_handle_t const VM/*__cdecl0*/,uint32_t const Selector/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__Free_LDT_Selector)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (VM), "g" (Selector), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

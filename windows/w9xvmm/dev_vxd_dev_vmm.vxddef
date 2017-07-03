@@ -1921,3 +1921,62 @@ description     to set the address of a known nonexistent page in the system.
 in              EAX                             PhysAddr                ; physical page address (page number << 12) of system nul page
 %enddef
 
+#--------------------------------------
+%defcall
+byname          _Allocate_GDT_Selector
+description     Create a selector and add it to the Global Descriptor Table.
+
+cdecl           DescDWORD1, DescDWORD2, flags
+
+in              __cdecl                         DescDWORD1              ; High DWORD of the descriptor (high 16 bits of base addr, high 4 bits of limit, status, type)
+in              __cdecl                         DescDWORD2              ; Low DWORD of the descriptor (low 16 bits of base addr, limit)
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX                             GDTSel                  ; selector for the GDT, or zero if failure
+out             EDX                             SelCount                ; selector for GDT (low 16 bits) and size of GDT (upper 16 bits)
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _Free_GDT_Selector
+description     Free a GDT selector previously allocated using the Allocate_GDT_Selector service.
+
+cdecl           Selector, flags
+
+in              __cdecl                         Selector                ; Selector to free (allocated by Allocate_GDT_Selector)
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _Allocate_LDT_Selector
+description     Create a selector and add it to the Local Descriptor Table of a virtual machine.
+
+cdecl           VM, DescDWORD1, DescDWORD2, Count, flags
+
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle
+in              __cdecl                         DescDWORD1              ; High DWORD of the descriptor (high 16 bits of base addr, high 4 bits of limit, status, type)
+in              __cdecl                         DescDWORD2              ; Low DWORD of the descriptor (low 16 bits of base addr, limit)
+in              __cdecl                         Count                   ; number of contiguous LDT selectors to allocate if flags param does not specify ALDTSpecSel
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX                             Selector                ; Selector of LDT (first one, if multiple allocated) or zero if error
+out             EDX                             SelCount                ; selector for LDT (low 16 bits) and size of LDT (upper 16 bits)
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _Free_LDT_Selector
+description     Free a LDT selector previously allocated using the Allocate_LDT_Selector service.
+
+cdecl           VM, Selector, flags
+
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle
+in              __cdecl                         Selector                ; Selector to free
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
