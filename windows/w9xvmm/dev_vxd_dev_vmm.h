@@ -4422,5 +4422,169 @@ static inline uint32_t _Free_LDT_Selector(vxd_vm_handle_t const VM/*__cdecl0*/,u
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* description: */
+/*   Flags for _BuildDescriptorDWORDs                          */
+/*                                                             */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 740 */
+#define BDDExplicitDPL 0x00000001U /* 1U << 0U bit[0] Use DPL bits in the DESCType param */
+
+/*-------------------------------------------------------------*/
+/* VMM _BuildDescriptorDWORDs (VMMCall dev=0x0001 serv=0x007A) WINVER=3.0+ */
+
+/* description: */
+/*   Build a descriptor parameter used in calls to _Allocate_GDT_Selector and _Allocate_LDT_Selector. */
+/*                                                                                                    */
+/*   flags:                                                                                           */
+/*   - BDDExplicitDPL: use the DPL bits in the DESCType parameter. If not specified, the call will    */
+/*   - set the DPL bits to the value of the RPL bits for protected applications.                      */
+
+/* inputs: */
+/*   __CDECL0 = DESCBase (32-bit base address) */
+/*   __CDECL1 = DESCLimit (20-bit limit for the descriptor) */
+/*   __CDECL2 = DESCType (present bit, DPL, type (only low 8 bits valid, others must be zero)) */
+/*   __CDECL3 = DESCSize (granularity, big/default. only bits 4-7 are valid, others must be zero) */
+/*   __CDECL4 = flags (operation flags) */
+
+/* outputs: */
+/*   EDX = desc_hi (high DWORD of descriptor) */
+/*   EAX = desc_lo (low DWORD of descriptor) */
+
+typedef struct _BuildDescriptorDWORDs__response {
+    uint32_t desc_lo; /* EAX */
+    uint32_t desc_hi; /* EDX */
+} _BuildDescriptorDWORDs__response;
+
+static inline _BuildDescriptorDWORDs__response _BuildDescriptorDWORDs(uint32_t const DESCBase/*__cdecl0*/,uint32_t const DESCLimit/*__cdecl1*/,uint32_t const DESCType/*__cdecl2*/,uint32_t const DESCSize/*__cdecl3*/,uint32_t const flags/*__cdecl4*/) {
+    register _BuildDescriptorDWORDs__response r;
+
+    __asm__ (
+        "push %6\n"
+        "push %5\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__BuildDescriptorDWORDs)
+        "addl $20,%%esp\n"
+        : /* outputs */ "=d" (r.desc_hi), "=a" (r.desc_lo)
+        : /* inputs */ "g" (DESCBase), "g" (DESCLimit), "g" (DESCType), "g" (DESCSize), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _GetDescriptor (VMMCall dev=0x0001 serv=0x007B) WINVER=3.0+ */
+
+/* description: */
+/*   Retrieve a copy of the descriptor associated with the given LDT or GDT selector. */
+
+/* inputs: */
+/*   __CDECL0 = Selector (GDT or LDT selector) */
+/*   __CDECL1 = VM (virtual machine handle to which the LDT belongs, ignored if GDT) */
+/*   __CDECL2 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EDX = desc_hi (high DWORD of descriptor) */
+/*   EAX = desc_lo (low DWORD of descriptor) */
+
+typedef struct _GetDescriptor__response {
+    uint32_t desc_lo; /* EAX */
+    uint32_t desc_hi; /* EDX */
+} _GetDescriptor__response;
+
+static inline _GetDescriptor__response _GetDescriptor(uint32_t const Selector/*__cdecl0*/,vxd_vm_handle_t const VM/*__cdecl1*/,uint32_t const flags/*__cdecl2*/) {
+    register _GetDescriptor__response r;
+
+    __asm__ (
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__GetDescriptor)
+        "addl $12,%%esp\n"
+        : /* outputs */ "=d" (r.desc_hi), "=a" (r.desc_lo)
+        : /* inputs */ "g" (Selector), "g" (VM), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM _SetDescriptor (VMMCall dev=0x0001 serv=0x007C) WINVER=3.0+ */
+
+/* description: */
+/*   Set the descriptor for the given LDT or GDT selector. */
+
+/* inputs: */
+/*   __CDECL0 = Selector (GDT or LDT descriptor) */
+/*   __CDECL1 = VM (virtual machine handle to which the LDT belongs, ignored if GDT) */
+/*   __CDECL2 = DescDWORD1 (low DWORD of descriptor) */
+/*   __CDECL3 = DescDWORD2 (high DWORD of descriptor) */
+/*   __CDECL4 = flags (operation flags, must be zero) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure */
+
+static inline uint32_t _SetDescriptor(uint32_t const Selector/*__cdecl0*/,vxd_vm_handle_t const VM/*__cdecl1*/,uint32_t const DescDWORD1/*__cdecl2*/,uint32_t const DescDWORD2/*__cdecl3*/,uint32_t const flags/*__cdecl4*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %5\n"
+        "push %4\n"
+        "push %3\n"
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__SetDescriptor)
+        "addl $20,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (Selector), "g" (VM), "g" (DescDWORD1), "g" (DescDWORD2), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* description: */
+/*   Flags for _MMGR_Toggle_HMA                                */
+/*                                                             */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 754 */
+#define MMGRHMAPhysical 0x00000001U /* 1U << 0U bit[0] */
+#define MMGRHMAEnable   0x00000002U /* 1U << 1U bit[1] */
+#define MMGRHMADisable  0x00000004U /* 1U << 2U bit[2] */
+#define MMGRHMAQuery    0x00000008U /* 1U << 3U bit[3] */
+
+/*-------------------------------------------------------------*/
+/* VMM _MMGR_Toggle_HMA (VMMCall dev=0x0001 serv=0x007D) WINVER=3.0+ */
+
+/* description: */
+/*   Enable or disable the high memory area.                                                            */
+/*   For use by the V86MMGR XMS device to control the state of the HMA for a specified virtual machine. */
+
+/* inputs: */
+/*   __CDECL0 = VM (VM handle) */
+/*   __CDECL1 = flags (operation flags (MMGRHMA*)) */
+
+/* outputs: */
+/*   EAX = nonzero if success, zero if failure. if MMGRHMAQuery is specified, nonzero if HMA enabled, zero if disabled. */
+
+static inline uint32_t _MMGR_Toggle_HMA(vxd_vm_handle_t const VM/*__cdecl0*/,uint32_t const flags/*__cdecl1*/) {
+    register uint32_t r;
+
+    __asm__ (
+        "push %2\n"
+        "push %1\n"
+        VXD_AsmCall(VMM_Device_ID,VMM_snr__MMGR_Toggle_HMA)
+        "addl $8,%%esp\n"
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "g" (VM), "g" (flags)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

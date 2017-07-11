@@ -1980,3 +1980,94 @@ in              __cdecl                         flags                   ; operat
 out             EAX                             .                       ; nonzero if success, zero if failure
 %enddef
 
+#--------------------------------------
+%defconstbitfield
+description     Flags for _BuildDescriptorDWORDs
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 740
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     BDDExplicitDPL              0                             ; Use DPL bits in the DESCType param
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _BuildDescriptorDWORDs
+description     Build a descriptor parameter used in calls to _Allocate_GDT_Selector and _Allocate_LDT_Selector.
+description
+description     flags:
+description     - BDDExplicitDPL: use the DPL bits in the DESCType parameter. If not specified, the call will
+description     -                 set the DPL bits to the value of the RPL bits for protected applications.
+
+cdecl           DESCBase, DESCLimit, DESCType, DESCSize, flags
+
+in              __cdecl                         DESCBase                ; 32-bit base address
+in              __cdecl                         DESCLimit               ; 20-bit limit for the descriptor
+in              __cdecl                         DESCType                ; present bit, DPL, type (only low 8 bits valid, others must be zero)
+in              __cdecl                         DESCSize                ; granularity, big/default. only bits 4-7 are valid, others must be zero
+in              __cdecl                         flags                   ; operation flags
+
+out             EAX                             desc_lo                 ; low DWORD of descriptor
+out             EDX                             desc_hi                 ; high DWORD of descriptor
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _GetDescriptor
+description     Retrieve a copy of the descriptor associated with the given LDT or GDT selector.
+
+cdecl           Selector, VM, flags
+
+in              __cdecl                         Selector                ; GDT or LDT selector
+in              __cdecl=vxd_vm_handle_t         VM                      ; virtual machine handle to which the LDT belongs, ignored if GDT
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX                             desc_lo                 ; low DWORD of descriptor
+out             EDX                             desc_hi                 ; high DWORD of descriptor
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _SetDescriptor
+description     Set the descriptor for the given LDT or GDT selector.
+
+cdecl           Selector, VM, DescDWORD1, DescDWORD2, flags
+
+in              __cdecl                         Selector                ; GDT or LDT descriptor
+in              __cdecl=vxd_vm_handle_t         VM                      ; virtual machine handle to which the LDT belongs, ignored if GDT
+in              __cdecl                         DescDWORD1              ; low DWORD of descriptor
+in              __cdecl                         DescDWORD2              ; high DWORD of descriptor
+in              __cdecl                         flags                   ; operation flags, must be zero
+
+out             EAX                             .                       ; nonzero if success, zero if failure
+%enddef
+
+#--------------------------------------
+%defconstbitfield
+description     Flags for _MMGR_Toggle_HMA
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 754
+
+#                                                           default=1   default=(1<<width)-1
+#       constant                                bit number  bit width   value   comment
+def     MMGRHMAPhysical                         0           
+def     MMGRHMAEnable                           1           
+def     MMGRHMADisable                          2           
+def     MMGRHMAQuery                            3           
+%enddef
+
+#--------------------------------------
+%defcall
+byname          _MMGR_Toggle_HMA
+description     Enable or disable the high memory area.
+description     For use by the V86MMGR XMS device to control the state of the HMA for a specified virtual machine.
+
+cdecl           VM, flags
+
+in              __cdecl=vxd_vm_handle_t         VM                      ; VM handle
+in              __cdecl                         flags                   ; operation flags (MMGRHMA*)
+
+out             EAX                             .                       ; nonzero if success, zero if failure. if MMGRHMAQuery is specified, nonzero if HMA enabled, zero if disabled.
+%enddef
+
