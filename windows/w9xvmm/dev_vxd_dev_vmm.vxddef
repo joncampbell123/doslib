@@ -2176,3 +2176,18 @@ description     This service may only be called within a nested execution block 
 in              EAX                             Interrupt               ; interrupt number to execute
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Resume_Exec
+description     Immediately execute the current virtual machine.
+description     This service may only be called within a nested execution block created by Begin_Nest_Exec or Begin_Nest_V86_Exec.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          End_Nest_Exec
+description     End a nested execution block.
+description
+description     On return, Client_CS and Client_IP contain the original values saved when the nested execution block was created.
+%enddef
+

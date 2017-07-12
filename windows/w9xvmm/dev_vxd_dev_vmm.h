@@ -4817,5 +4817,50 @@ static inline void Exec_Int(uint32_t const Interrupt/*eax*/) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Resume_Exec (VMMCall dev=0x0001 serv=0x0085) WINVER=3.0+ */
+
+/* description: */
+/*   Immediately execute the current virtual machine.                                                                   */
+/*   This service may only be called within a nested execution block created by Begin_Nest_Exec or Begin_Nest_V86_Exec. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Resume_Exec(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Resume_Exec)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM End_Nest_Exec (VMMCall dev=0x0001 serv=0x0086) WINVER=3.0+ */
+
+/* description: */
+/*   End a nested execution block.                                                                                     */
+/*                                                                                                                     */
+/*   On return, Client_CS and Client_IP contain the original values saved when the nested execution block was created. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void End_Nest_Exec(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_End_Nest_Exec)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
