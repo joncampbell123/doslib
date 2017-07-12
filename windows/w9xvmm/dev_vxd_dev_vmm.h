@@ -4735,5 +4735,87 @@ static inline Hook_VMM_Fault__response Hook_VMM_Fault(uint32_t const Interrupt/*
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Begin_Nest_V86_Exec (VMMCall dev=0x0001 serv=0x0082) WINVER=3.0+ */
+
+/* description: */
+/*   Set the current virtual machine to V86 mode and prepare the virtual machine for nested execution.                 */
+/*   Virtual machines use this service to call software in the virtual machine.                                        */
+/*                                                                                                                     */
+/*   On return, the Client_CS and Client_IP registers point to a break point used by the nested execution services.    */
+/*                                                                                                                     */
+/*   This service saves the current execution mode of the virtual machine, which End_Nest_Exec later restores.         */
+/*                                                                                                                     */
+/*   This service should only be used by the virtual devices that convert protected-mode calls into V86 calls.         */
+/*   The virtual MS-DOS manager uses this for example to map INT 21h calls from protected mode into calls in V86 mode. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Begin_Nest_V86_Exec(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Begin_Nest_V86_Exec)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Begin_Nest_Exec (VMMCall dev=0x0001 serv=0x0083) WINVER=3.0+ */
+
+/* description: */
+/*   Starts a nested execution block. Virtual devices use these services to call software in the virtual machine.       */
+/*                                                                                                                      */
+/*   On return, the Client_CS and Client_IP registers point to a break point used by the nested execution services.     */
+/*                                                                                                                      */
+/*   If the call changes the virtual machine registers, the changes are reflected in the client state.                  */
+/*   Before creating the nested execution block, a virtual device should save the client state using Save_Client_State. */
+/*   After ending the execution block, the virtual device should restore the client state using Restore_Client_State.   */
+/*                                                                                                                      */
+/*   This service forces the virtual machine into protected mode if there is a protected mode application running in    */
+/*   the current virtual machine, otherwise the virtual machine remains in V86 mode. End_Nest_Exec will restore the     */
+/*   virtual machine to the mode it was running prior to Begin_Nest_Exec.                                               */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Begin_Nest_Exec(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Begin_Nest_Exec)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Exec_Int (VMMCall dev=0x0001 serv=0x0084) WINVER=3.0+ */
+
+/* description: */
+/*   Simulates the specified interrupt and resumes execution of the virtual machine.                                    */
+/*   This service may only be called within a nested execution block created by Begin_Nest_Exec or Begin_Nest_V86_Exec. */
+
+/* inputs: */
+/*   EAX = Interrupt (interrupt number to execute) */
+
+/* outputs: */
+/*   None */
+
+static inline void Exec_Int(uint32_t const Interrupt/*eax*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Exec_Int)
+        : /* outputs */
+        : /* inputs */ "a" (Interrupt)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

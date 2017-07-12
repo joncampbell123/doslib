@@ -2137,3 +2137,42 @@ out             !CF                             Success                 ; carry 
 out             ESI=const+void*                 Previous                ; previous fault handler, if any, or zero if none was installed
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Begin_Nest_V86_Exec
+description     Set the current virtual machine to V86 mode and prepare the virtual machine for nested execution.
+description     Virtual machines use this service to call software in the virtual machine.
+description
+description     On return, the Client_CS and Client_IP registers point to a break point used by the nested execution services.
+description
+description     This service saves the current execution mode of the virtual machine, which End_Nest_Exec later restores.
+description
+description     This service should only be used by the virtual devices that convert protected-mode calls into V86 calls.
+description     The virtual MS-DOS manager uses this for example to map INT 21h calls from protected mode into calls in V86 mode.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Begin_Nest_Exec
+description     Starts a nested execution block. Virtual devices use these services to call software in the virtual machine.
+description
+description     On return, the Client_CS and Client_IP registers point to a break point used by the nested execution services.
+description
+description     If the call changes the virtual machine registers, the changes are reflected in the client state.
+description     Before creating the nested execution block, a virtual device should save the client state using Save_Client_State.
+description     After ending the execution block, the virtual device should restore the client state using Restore_Client_State.
+description
+description     This service forces the virtual machine into protected mode if there is a protected mode application running in
+description     the current virtual machine, otherwise the virtual machine remains in V86 mode. End_Nest_Exec will restore the
+description     virtual machine to the mode it was running prior to Begin_Nest_Exec.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Exec_Int
+description     Simulates the specified interrupt and resumes execution of the virtual machine.
+description     This service may only be called within a nested execution block created by Begin_Nest_Exec or Begin_Nest_V86_Exec.
+
+in              EAX                             Interrupt               ; interrupt number to execute
+%enddef
+
