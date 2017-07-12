@@ -2093,6 +2093,8 @@ description     Install a fault handler for V86 mode.
 description     Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle.
 description     The VMM will install it's own fault handlers after the Sys_Critical_Init control message.
 description     Virtual devices will install their own after Sys_Critical_Init.
+description
+description     Do not use this service to install a fault handler for the Non-Maskable Interrupt, or for hardware interrupts.
 
 in              EAX                             Interrupt               ; interrupt number
 in              ESI=const+void*                 FaultProc               ; points to a fault handler
@@ -2108,6 +2110,8 @@ description     Install a fault handler for protected mode.
 description     Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle.
 description     The VMM will install it's own fault handlers after the Sys_Critical_Init control message.
 description     Virtual devices will install their own after Sys_Critical_Init.
+description
+description     Do not use this service to install a fault handler for the Non-Maskable Interrupt, or for hardware interrupts.
 
 in              EAX                             Interrupt               ; interrupt number
 in              ESI=const+void*                 FaultProc               ; points to a fault handler
@@ -2123,6 +2127,8 @@ description     Install a fault handler for the VMM.
 description     Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle.
 description     The VMM will install it's own fault handlers after the Sys_Critical_Init control message.
 description     Virtual devices will install their own after Sys_Critical_Init.
+description
+description     Do not use this service to install a fault handler for the Non-Maskable Interrupt, or for hardware interrupts.
 
 in              EAX                             Interrupt               ; interrupt number
 in              ESI=const+void*                 FaultProc               ; points to a fault handler

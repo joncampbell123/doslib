@@ -4632,6 +4632,8 @@ static inline Get_Fault_Hook_Addrs__response Get_Fault_Hook_Addrs(uint32_t const
 /*   Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle. */
 /*   The VMM will install it's own fault handlers after the Sys_Critical_Init control message.                                                         */
 /*   Virtual devices will install their own after Sys_Critical_Init.                                                                                   */
+/*                                                                                                                                                     */
+/*   Do not use this service to install a fault handler for the Non-Maskable Interrupt, or for hardware interrupts.                                    */
 
 /* inputs: */
 /*   EAX = Interrupt (interrupt number) */
@@ -4667,6 +4669,8 @@ static inline Hook_V86_Fault__response Hook_V86_Fault(uint32_t const Interrupt/*
 /*   Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle. */
 /*   The VMM will install it's own fault handlers after the Sys_Critical_Init control message.                                                         */
 /*   Virtual devices will install their own after Sys_Critical_Init.                                                                                   */
+/*                                                                                                                                                     */
+/*   Do not use this service to install a fault handler for the Non-Maskable Interrupt, or for hardware interrupts.                                    */
 
 /* inputs: */
 /*   EAX = Interrupt (interrupt number) */
@@ -4702,6 +4706,8 @@ static inline Hook_PM_Fault__response Hook_PM_Fault(uint32_t const Interrupt/*ea
 /*   Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle. */
 /*   The VMM will install it's own fault handlers after the Sys_Critical_Init control message.                                                         */
 /*   Virtual devices will install their own after Sys_Critical_Init.                                                                                   */
+/*                                                                                                                                                     */
+/*   Do not use this service to install a fault handler for the Non-Maskable Interrupt, or for hardware interrupts.                                    */
 
 /* inputs: */
 /*   EAX = Interrupt (interrupt number) */
