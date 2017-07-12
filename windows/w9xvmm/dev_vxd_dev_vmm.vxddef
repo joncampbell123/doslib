@@ -2071,3 +2071,63 @@ in              __cdecl                         flags                   ; operat
 out             EAX                             .                       ; nonzero if success, zero if failure. if MMGRHMAQuery is specified, nonzero if HMA enabled, zero if disabled.
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Get_Fault_Hook_Addrs
+description     Return addresses of the V86 mode, protected-mode, and VMM fault handlers for a specific fault
+
+in              EAX                             Interrupt               ; interrupt number
+
+out             !CF                             Success                 ; CF=0 if success, CF=1 if error
+out             EDX                             FaultHandler_V86        ; address of V86 fault handler, or zero if none installed
+out             ESI                             FaultHandler_PM         ; address of protected mode fault handler, or zero if none installed
+out             EDI                             FaultHandler_VMM        ; address of VMM fault handler, or zero if none installed
+
+return          Success==1 if success, handler addresses
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Hook_V86_Fault
+description     Install a fault handler for V86 mode.
+description     Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle.
+description     The VMM will install it's own fault handlers after the Sys_Critical_Init control message.
+description     Virtual devices will install their own after Sys_Critical_Init.
+
+in              EAX                             Interrupt               ; interrupt number
+in              ESI=const+void*                 FaultProc               ; points to a fault handler
+
+out             !CF                             Success                 ; carry set if not installed
+out             ESI=const+void*                 Previous                ; previous fault handler, if any, or zero if none was installed
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Hook_PM_Fault
+description     Install a fault handler for protected mode.
+description     Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle.
+description     The VMM will install it's own fault handlers after the Sys_Critical_Init control message.
+description     Virtual devices will install their own after Sys_Critical_Init.
+
+in              EAX                             Interrupt               ; interrupt number
+in              ESI=const+void*                 FaultProc               ; points to a fault handler
+
+out             !CF                             Success                 ; carry set if not installed
+out             ESI=const+void*                 Previous                ; previous fault handler, if any, or zero if none was installed
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Hook_VMM_Fault
+description     Install a fault handler for the VMM.
+description     Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle.
+description     The VMM will install it's own fault handlers after the Sys_Critical_Init control message.
+description     Virtual devices will install their own after Sys_Critical_Init.
+
+in              EAX                             Interrupt               ; interrupt number
+in              ESI=const+void*                 FaultProc               ; points to a fault handler
+
+out             !CF                             Success                 ; carry set if not installed
+out             ESI=const+void*                 Previous                ; previous fault handler, if any, or zero if none was installed
+%enddef
+

@@ -4586,5 +4586,148 @@ static inline uint32_t _MMGR_Toggle_HMA(vxd_vm_handle_t const VM/*__cdecl0*/,uin
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Get_Fault_Hook_Addrs (VMMCall dev=0x0001 serv=0x007E) WINVER=3.0+ */
+
+/* description: */
+/*   Return addresses of the V86 mode, protected-mode, and VMM fault handlers for a specific fault */
+
+/* inputs: */
+/*   EAX = Interrupt (interrupt number) */
+
+/* outputs: */
+/*   !CF = Success (CF=0 if success, CF=1 if error) */
+/*   EDI = FaultHandler_VMM (address of VMM fault handler, or zero if none installed) */
+/*   EDX = FaultHandler_V86 (address of V86 fault handler, or zero if none installed) */
+/*   ESI = FaultHandler_PM (address of protected mode fault handler, or zero if none installed) */
+
+/* returns: */
+/*   Success==1 if success, handler addresses */
+
+typedef struct Get_Fault_Hook_Addrs__response {
+    _Bool Success; /* !CF */
+    uint32_t FaultHandler_V86; /* EDX */
+    uint32_t FaultHandler_PM; /* ESI */
+    uint32_t FaultHandler_VMM; /* EDI */
+} Get_Fault_Hook_Addrs__response;
+
+static inline Get_Fault_Hook_Addrs__response Get_Fault_Hook_Addrs(uint32_t const Interrupt/*eax*/) {
+    register Get_Fault_Hook_Addrs__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Fault_Hook_Addrs)
+        : /* outputs */ "=@ccnc" (r.Success), "=D" (r.FaultHandler_VMM), "=d" (r.FaultHandler_V86), "=S" (r.FaultHandler_PM)
+        : /* inputs */ "a" (Interrupt)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Hook_V86_Fault (VMMCall dev=0x0001 serv=0x007F) WINVER=3.0+ */
+
+/* description: */
+/*   Install a fault handler for V86 mode.                                                                                                             */
+/*   Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle. */
+/*   The VMM will install it's own fault handlers after the Sys_Critical_Init control message.                                                         */
+/*   Virtual devices will install their own after Sys_Critical_Init.                                                                                   */
+
+/* inputs: */
+/*   EAX = Interrupt (interrupt number) */
+/*   ESI = FaultProc (points to a fault handler) */
+
+/* outputs: */
+/*   !CF = Success (carry set if not installed) */
+/*   ESI = Previous (previous fault handler, if any, or zero if none was installed) */
+
+typedef struct Hook_V86_Fault__response {
+    _Bool Success; /* !CF */
+    const void* Previous; /* ESI */
+} Hook_V86_Fault__response;
+
+static inline Hook_V86_Fault__response Hook_V86_Fault(uint32_t const Interrupt/*eax*/,const void* const FaultProc/*esi*/) {
+    register Hook_V86_Fault__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_V86_Fault)
+        : /* outputs */ "=@ccnc" (r.Success), "=S" (r.Previous)
+        : /* inputs */ "a" (Interrupt), "S" (FaultProc)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Hook_PM_Fault (VMMCall dev=0x0001 serv=0x0080) WINVER=3.0+ */
+
+/* description: */
+/*   Install a fault handler for protected mode.                                                                                                       */
+/*   Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle. */
+/*   The VMM will install it's own fault handlers after the Sys_Critical_Init control message.                                                         */
+/*   Virtual devices will install their own after Sys_Critical_Init.                                                                                   */
+
+/* inputs: */
+/*   EAX = Interrupt (interrupt number) */
+/*   ESI = FaultProc (points to a fault handler) */
+
+/* outputs: */
+/*   !CF = Success (carry set if not installed) */
+/*   ESI = Previous (previous fault handler, if any, or zero if none was installed) */
+
+typedef struct Hook_PM_Fault__response {
+    _Bool Success; /* !CF */
+    const void* Previous; /* ESI */
+} Hook_PM_Fault__response;
+
+static inline Hook_PM_Fault__response Hook_PM_Fault(uint32_t const Interrupt/*eax*/,const void* const FaultProc/*esi*/) {
+    register Hook_PM_Fault__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_PM_Fault)
+        : /* outputs */ "=@ccnc" (r.Success), "=S" (r.Previous)
+        : /* inputs */ "a" (Interrupt), "S" (FaultProc)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Hook_VMM_Fault (VMMCall dev=0x0001 serv=0x0081) WINVER=3.0+ */
+
+/* description: */
+/*   Install a fault handler for the VMM.                                                                                                              */
+/*   Typically a virtual device will use this during Sys_Critical_Init to handle faults (usually GPF) that the VMM's own fault handlers cannot handle. */
+/*   The VMM will install it's own fault handlers after the Sys_Critical_Init control message.                                                         */
+/*   Virtual devices will install their own after Sys_Critical_Init.                                                                                   */
+
+/* inputs: */
+/*   EAX = Interrupt (interrupt number) */
+/*   ESI = FaultProc (points to a fault handler) */
+
+/* outputs: */
+/*   !CF = Success (carry set if not installed) */
+/*   ESI = Previous (previous fault handler, if any, or zero if none was installed) */
+
+typedef struct Hook_VMM_Fault__response {
+    _Bool Success; /* !CF */
+    const void* Previous; /* ESI */
+} Hook_VMM_Fault__response;
+
+static inline Hook_VMM_Fault__response Hook_VMM_Fault(uint32_t const Interrupt/*eax*/,const void* const FaultProc/*esi*/) {
+    register Hook_VMM_Fault__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_VMM_Fault)
+        : /* outputs */ "=@ccnc" (r.Success), "=S" (r.Previous)
+        : /* inputs */ "a" (Interrupt), "S" (FaultProc)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
