@@ -4862,5 +4862,99 @@ static inline void End_Nest_Exec(void) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Allocate_PM_App_CB_Area (VMMCall dev=0x0001 serv=0x0087) WINVER=3.0+ */
+
+/* description: */
+/*   Allocate space in the control block of the current virtual machine for a protected-mode application control block.                    */
+/*   This call is only available during initialization (of the VM?).                                                                       */
+/*   This call returns the offset from the beginning of the virtual machine control block to the protected-mode application control block. */
+
+/* inputs: */
+/*   ECX = Size (number of bytes to reserve) */
+
+/* outputs: */
+/*   EAX = offset of application control block */
+
+static inline uint32_t Allocate_PM_App_CB_Area(uint32_t const Size/*ecx*/) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Allocate_PM_App_CB_Area)
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "c" (Size)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Get_Cur_PM_App_CB (VMMCall dev=0x0001 serv=0x0088) WINVER=3.0+ */
+
+/* description: */
+/*   Return a pointer to the application control block for a protected-mode application. */
+
+/* inputs: */
+/*   EBX = VM (handle of VM running protected mode application) */
+
+/* outputs: */
+/*   EDI = address of application control block */
+
+static inline void* Get_Cur_PM_App_CB(vxd_vm_handle_t const VM/*ebx*/) {
+    register void* r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Get_Cur_PM_App_CB)
+        : /* outputs */ "=D" (r)
+        : /* inputs */ "b" (VM)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Set_V86_Exec_Mode (VMMCall dev=0x0001 serv=0x0089) WINVER=3.0+ */
+
+/* description: */
+/*   Force the current virtual machine into V86 mode. If already in V86 mode, this call has no effect. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Set_V86_Exec_Mode(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_V86_Exec_Mode)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Set_PM_Exec_Mode (VMMCall dev=0x0001 serv=0x008A) WINVER=3.0+ */
+
+/* description: */
+/*   Force the current virtual machine into protected mode. If already in protected mode, this call has no effect. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Set_PM_Exec_Mode(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Set_PM_Exec_Mode)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

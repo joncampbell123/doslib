@@ -2191,3 +2191,37 @@ description
 description     On return, Client_CS and Client_IP contain the original values saved when the nested execution block was created.
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Allocate_PM_App_CB_Area
+description     Allocate space in the control block of the current virtual machine for a protected-mode application control block.
+description     This call is only available during initialization (of the VM?).
+description     This call returns the offset from the beginning of the virtual machine control block to the protected-mode application control block.
+
+in              ECX                             Size                    ; number of bytes to reserve
+
+out             EAX                             .                       ; offset of application control block
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Get_Cur_PM_App_CB
+description     Return a pointer to the application control block for a protected-mode application.
+
+in              EBX=vxd_vm_handle_t             VM                      ; handle of VM running protected mode application
+
+out             EDI=void*                       .                       ; address of application control block
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_V86_Exec_Mode
+description     Force the current virtual machine into V86 mode. If already in V86 mode, this call has no effect.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Set_PM_Exec_Mode
+description     Force the current virtual machine into protected mode. If already in protected mode, this call has no effect.
+%enddef
+
