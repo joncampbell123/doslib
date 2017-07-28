@@ -1,7 +1,7 @@
 
 EXPAND = linux-host/expand
 
-MSPACK = ../../ext/libmspack/.libs/libmspack.a
+MSPACK = ../../ext/libmspack/linux-host/lib/libmspack.a
 
 BIN_OUT = $(EXPAND)
 
@@ -22,7 +22,7 @@ $(EXPAND): linux-host/expand.o $(MSPACK)
 	gcc -o $@ linux-host/expand.o $(MSPACK)
 
 linux-host/%.o : %.c
-	gcc -I../.. -I../../ext/libmspack/mspack -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -c -o $@ $^
+	gcc -I../.. -I../../ext/libmspack/linux-host/include -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -c -o $@ $^
 
 clean:
 	rm -f linux-host/expand linux-host/*.o linux-host/*.a
