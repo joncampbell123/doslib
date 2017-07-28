@@ -5,4 +5,5 @@ if [[ !( -f Makefile ) ]]; then
     ./configure "--prefix=$dst" --enable-static --disable-shared || exit 1
 fi
 make -j5 || exit 1
+make install || exit 1
 
