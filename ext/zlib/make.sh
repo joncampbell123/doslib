@@ -8,6 +8,7 @@ doshuge=1
 
 if [ "$1" == "clean" ]; then
 	do_clean
+    rm -Rfv linux-host
 	rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
 	exit 0
 fi
