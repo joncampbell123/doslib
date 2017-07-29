@@ -363,6 +363,120 @@ int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
     return 0;
 }
 
+int zip_deflate(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
+    size_t inbuffer_sz = 32768,outbuffer_sz = 32768;
+    char *inbuffer,*outbuffer;
+    unsigned long total = 0;
+    zipcrc_t crc32;
+    z_stream z;
+    int src_fd;
+    size_t wd;
+    int rd;
+
+    crc32 = zipcrc_init();
+
+    memset(&z,0,sizeof(z));
+    assert(list->in_path != NULL);
+
+    lfh->uncompressed_size = list->file_size;
+    if (list->file_size == 0)
+        return 0; // nothing to do
+
+    src_fd = open(list->in_path,O_RDONLY|O_BINARY);
+    if (src_fd < 0) {
+        fprintf(stderr,"Cannot open %s, %s\n",list->in_path,strerror(errno));
+        return -1;
+    }
+
+    outbuffer = malloc(outbuffer_sz);
+    inbuffer = malloc(inbuffer_sz);
+    if (inbuffer == NULL || outbuffer == NULL) {
+        fprintf(stderr,"out of memory\n");
+        close(src_fd);
+        return -1;
+    }
+
+    if (deflateInit2(&z,deflate_mode,Z_DEFLATED,-15/*window, raw*/,8/*memlevel*/,Z_DEFAULT_STRATEGY) != Z_OK) {
+        fprintf(stderr,"out of memory\n");
+        close(src_fd);
+        return -1;
+    }
+
+    while ((rd=read(src_fd,inbuffer,inbuffer_sz)) > 0) {
+        crc32 = zipcrc_update(crc32,inbuffer,rd);
+
+        z.avail_in = rd;
+        z.next_in = (unsigned char*)inbuffer;
+        while (z.avail_in > 0) {
+            char *pin = (char*)z.next_in;
+
+            z.next_out = (unsigned char*)outbuffer;
+            z.avail_out = outbuffer_sz;
+
+            if (deflate(&z,Z_NO_FLUSH) != Z_OK) {
+                fprintf(stderr,"deflate() error\n");
+                break;
+            }
+
+            assert((char*)z.next_out >= outbuffer);
+            assert((char*)z.next_out <= (outbuffer+outbuffer_sz));
+            wd = (size_t)((char*)z.next_out - (char*)outbuffer);
+            if (wd > 0) {
+                if ((size_t)write(zip_fd,outbuffer,wd) != wd) {
+                    fprintf(stderr,"write error\n");
+                    break;
+                }
+
+                total += wd;
+            }
+            else if ((char*)z.next_in == pin) {
+                fprintf(stderr,"zlib locked up\n");
+                break;
+            }
+        }
+    }
+
+    do {
+        int x;
+
+        z.avail_in = 0;
+        z.next_in = (unsigned char*)inbuffer;
+        z.avail_out = outbuffer_sz;
+        z.next_out = (unsigned char*)outbuffer;
+
+        x = deflate(&z,Z_FINISH);
+
+        assert((char*)z.next_out >= outbuffer);
+        assert((char*)z.next_out <= (outbuffer+outbuffer_sz));
+        wd = (size_t)((char*)z.next_out - (char*)outbuffer);
+        if (wd > 0) {
+            if ((size_t)write(zip_fd,outbuffer,wd) != wd) {
+                fprintf(stderr,"write error\n");
+                break;
+            }
+
+            total += wd;
+        }
+
+        if (x == Z_STREAM_END)
+            break;
+        else if (x != Z_OK) {
+            fprintf(stderr,"zlib Z_FINISH error\n");
+            break;
+        }
+    } while (1);
+
+    if (deflateEnd(&z) != Z_OK)
+        fprintf(stderr,"deflateEnd() error\n");
+
+    lfh->crc32 = list->crc32 = zipcrc_finalize(crc32);
+    list->compressed_size = lfh->compressed_size = total;
+    close(src_fd);
+    free(inbuffer);
+    free(outbuffer);
+    return 0;
+}
+
 static int parse(int argc,char **argv) {
     unsigned int zip_cdir_total_count = 0;
     unsigned int zip_cdir_last_count = 0;
@@ -787,8 +901,8 @@ static int parse(int argc,char **argv) {
             /* store, if a file */
             if (!(list->attr & ATTR_DOS_DIR)) {
                 if (lhdr.compression_method == 8) {
-                    fprintf(stderr,"Deflate not impl yet\n"); // TODO
-                    return 1;
+                    if (zip_deflate(&lhdr,list))
+                        return 1;
                 }
                 else if (lhdr.compression_method == 0) {
                     if (zip_store(&lhdr,list))
