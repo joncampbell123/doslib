@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <dirent.h>
 #include <stdio.h>
 #include <ctype.h>
 #include <assert.h>
@@ -353,6 +354,147 @@ static int parse(int argc,char **argv) {
     if (zip_path == NULL) {
         fprintf(stderr,"Must specify ZIP file: --zip\n");
         return 1;
+    }
+    if (file_list_head == NULL) {
+        fprintf(stderr,"Nothing to add\n");
+        return 1;
+    }
+
+    if (recurse) {
+        struct in_file *list;
+        struct dirent *d;
+        size_t sl;
+        DIR *dir;
+
+        for (list=file_list_head;list;list=list->next) {
+            if (list->attr & ATTR_DOS_DIR) {
+                printf("Scanning: %s\n",list->in_path);
+
+                dir = opendir(list->in_path);
+                if (dir == NULL) {
+                    fprintf(stderr,"Unable to open dir %s\n",list->in_path);
+                    return 1;
+                }
+
+                while ((d=readdir(dir)) != NULL) {
+                    if (d->d_name[0] == '.') continue;
+
+                    sl = snprintf(ic_tmp,sizeof(ic_tmp),"%s/%s",list->in_path,d->d_name);
+                    if (sl >= sizeof(ic_tmp)) {
+                        fprintf(stderr,"Cannot recurse, new path too long\n");
+                        return 1;
+                    }
+
+                    if (lstat(ic_tmp,&st)) {
+                        fprintf(stderr,"Cannot stat %s, %s\n",ic_tmp,strerror(errno));
+                        return 1;
+                    }
+                    if (!(S_ISREG(st.st_mode) || S_ISDIR(st.st_mode))) {
+                        fprintf(stderr,"Skipping non-file non-directory %s\n",ic_tmp);
+                        continue;
+                    }
+                    if (st.st_size >= (off_t)((2UL << 31UL) - (1UL << 28UL))) { /* 2GB - 256MB */
+                        fprintf(stderr,"Skipping file %s, too large\n",ic_tmp);
+                        continue;
+                    }
+
+                    {
+                        char *t,*ft;
+                        struct in_file *f = in_file_alloc();
+
+                        if (f == NULL) {
+                            fprintf(stderr,"Out of memory\n");
+                            return 1;
+                        }
+
+                        if (S_ISDIR(st.st_mode)) {
+                            f->attr = ATTR_DOS_DIR;
+                        }
+                        else {
+                            f->file_size = (unsigned long)st.st_size;
+                            f->attr = 0;
+                        }
+
+                        if (in_file_set_in_path(f,ic_tmp) == NULL) {
+                            fprintf(stderr,"out of memory\n");
+                            return 1;
+                        }
+
+                        /* now pick the ZIP name */
+                        t = strdup(ic_tmp);
+                        if (t == NULL) return 1;
+
+                        /* (in case of future porting to MS-DOS) convert backwards slashes to forward slashes */
+                        {
+                            char *ss;
+                            for (ss=t;*ss!=0;ss++) {
+                                if (*ss == '\\')
+                                    *ss = '/';
+                            }
+                        }
+
+                        /* prevent absolute paths */
+                        ft = t;
+                        while (*ft == '/') ft++;
+
+                        /* NO single or double dots! */
+                        {
+                            char *ss = ft,*n;
+                            size_t chk;
+
+                            while (*ss != 0) {
+                                n = strchr(ss,'/');
+                                if (n)
+                                    chk = (size_t)(n-ss);
+                                else
+                                    chk = strlen(ss);
+
+                                if ((chk == 1 && !strncmp(ss,".",  chk)) ||
+                                    (chk == 2 && !strncmp(ss,"..", chk))) {
+                                    fprintf(stderr,". or .. not allowed in the path\n");
+                                    return 1;
+                                }
+
+                                ss += chk;
+                                if (*ss == '/') ss++;
+                            }
+                        }
+
+                        if (ic != (iconv_t)-1) {
+                            size_t inleft = strlen(ft);
+                            size_t outleft = sizeof(ic_tmp)-1;
+                            char *out = ic_tmp,*in = ft;
+                            int ret;
+
+                            ret = iconv(ic,&in,&inleft,&out,&outleft);
+                            if (ret == -1 || inleft != (size_t)0 || outleft == (size_t)0) {
+                                fprintf(stderr,"file name conversion error. ret=%d inleft=%zu outleft=%zu\n",ret,inleft,outleft);
+                                return 1;
+                            }
+                            assert(out >= ic_tmp);
+                            assert(out < (ic_tmp+sizeof(ic_tmp)));
+                            *out = 0;
+
+                            if (in_file_set_zip_name(f,ic_tmp) == NULL) {
+                                fprintf(stderr,"out of memory\n");
+                                return 1;
+                            }
+                        }
+                        else {
+                            if (in_file_set_zip_name(f,ft) == NULL) {
+                                fprintf(stderr,"out of memory\n");
+                                return 1;
+                            }
+                        }
+
+                        free(t);
+                        file_list_append(f);
+                    }
+                }
+
+                closedir(dir);
+            }
+        }
     }
 
     {
