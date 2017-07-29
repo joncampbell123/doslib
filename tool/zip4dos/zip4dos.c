@@ -166,14 +166,14 @@ struct disk_info        disk[DISK_MAX];
 int                     disk_count = 0;
 
 int disk_current_number(void) {
-    return disk_count;
+    return disk_count - 1;
 }
 
 struct disk_info *disk_get(int n) {
-    if (n <= 0 || n > DISK_MAX)
+    if (n < 0 || n >= DISK_MAX)
         abort(); /* should not happen */
 
-    return &disk[n-1];
+    return &disk[n];
 }
 
 struct disk_info *disk_current(void) {
@@ -313,6 +313,45 @@ int parse_unit_amount(unsigned long *out,const char *s) {
     }
 
     return 1;
+}
+
+int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
+    size_t buffer_sz = 16384; /* should be good */
+    unsigned long total = 0;
+    char *buffer;
+    int src_fd;
+    int rd;
+
+    assert(list->in_path != NULL);
+
+    if (list->file_size == 0)
+        return 0; // nothing to do
+
+    src_fd = open(list->in_path,O_RDONLY|O_BINARY);
+    if (src_fd < 0) {
+        fprintf(stderr,"Cannot open %s, %s\n",list->in_path,strerror(errno));
+        return -1;
+    }
+
+    buffer = malloc(buffer_sz);
+    if (buffer == NULL) {
+        fprintf(stderr,"out of memory\n");
+        close(src_fd);
+        return -1;
+    }
+
+    while ((rd=read(src_fd,buffer,buffer_sz)) > 0) {
+        assert(zip_fd >= 0);
+        if (write(zip_fd,buffer,rd) != rd)
+            return 1;
+
+        total += (unsigned long)rd;
+    }
+
+    lfh->compressed_size = total;
+    close(src_fd);
+    free(buffer);
+    return 0;
 }
 
 static int parse(int argc,char **argv) {
@@ -731,6 +770,21 @@ static int parse(int argc,char **argv) {
                 if (write(zip_fd,list->zip_name,lhdr.filename_length) != lhdr.filename_length)
                     return 1;
             }
+
+            /* store, if a file */
+            if (!(list->attr & ATTR_DOS_DIR)) {
+                if (lhdr.compression_method == 8) {
+                    fprintf(stderr,"Deflate not impl yet\n"); // TODO
+                    return 1;
+                }
+                else if (lhdr.compression_method == 0) {
+                    if (zip_store(&lhdr,list))
+                        return 1;
+                }
+                else {
+                    abort();
+                }
+            }
         }
     }
 
@@ -762,6 +816,7 @@ static int parse(int argc,char **argv) {
             chdr.disk_number_start = list->disk_number;
             chdr.internal_file_attributes = 0;
             chdr.external_file_attributes = list->attr;
+            chdr.relative_offset_of_local_header = list->disk_offset;
 
             if (list->data_descriptor)
                 chdr.general_purpose_bit_flag |= (1 << 3);
