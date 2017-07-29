@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <ctype.h>
+#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -31,17 +32,61 @@ static void help(void) {
     fprintf(stderr,"If only -oc is specified, -ic is assumed from your locale.\n");
     fprintf(stderr,"If targeting US MS-DOS systems, you can use -oc CP437.\n");
     fprintf(stderr,"If targeting Japanese PC-98, use -oc CP932 or -oc SHIFT-JIS.\n");
+    fprintf(stderr,"You will need to specify -ic and/or -oc before listing files to archive.\n");
     fprintf(stderr,"\n");
     fprintf(stderr,"For simplistic reasons, this code only supports Deflate compression\n");
     fprintf(stderr,"with no password protection.\n");
 }
 
-const char *zip_path = NULL;
+void clear_string(char **a) {
+    if (*a != NULL) {
+        free(*a);
+        *a = NULL;
+    }
+}
+
+char *set_string(char **a,const char *s) {
+    clear_string(a);
+
+    if (s != NULL) {
+        assert(*a == NULL);
+        *a = strdup(s);
+    }
+
+    return *a;
+}
+
+struct in_file {
+    char*               in_path;
+    char*               zip_name;
+    unsigned long       file_size;
+    struct in_file*     next;
+} in_file;
+
+struct in_file *in_file_alloc(void) {
+    return (struct in_file*)calloc(1,sizeof(struct in_file));
+}
+
+void in_file_set_in_path(struct in_file *f,char *s) {
+    set_string(&f->in_path,s);
+}
+
+void in_file_set_zip_name(struct in_file *f,char *s) {
+    set_string(&f->zip_name,s);
+}
+
+void in_file_free(struct in_file *f) {
+    clear_string(&f->in_path);
+    clear_string(&f->zip_name);
+    f->file_size = 0;
+}
+
+char *zip_path = NULL;
 unsigned long spanning_size = 0;
 int deflate_mode = 5; /* default deflate mode */
 _Bool recurse = 0;
-const char *codepage_in = NULL;
-const char *codepage_out = NULL;
+char *codepage_in = NULL;
+char *codepage_out = NULL;
 
 int parse_unit_amount(unsigned long *out,const char *s) {
     if (!isdigit(*s))
@@ -70,6 +115,7 @@ int parse_unit_amount(unsigned long *out,const char *s) {
 }
 
 static int parse(int argc,char **argv) {
+    iconv_t ic = (iconv_t)-1;
     char *a;
     int i;
 
@@ -102,16 +148,24 @@ static int parse(int argc,char **argv) {
                 if (!parse_unit_amount(&spanning_size,a)) return 1;
             }
             else if (!strcmp(a,"ic")) {
-                if (codepage_in != NULL) return 1;
                 a = argv[i++];
                 if (a == NULL) return 1;
-                codepage_in = strdup(a);
+                set_string(&codepage_in,a);
+
+                if (ic != (iconv_t)-1) {
+                    iconv_close(ic);
+                    ic = (iconv_t)-1;
+                }
             }
             else if (!strcmp(a,"oc")) {
-                if (codepage_out != NULL) return 1;
                 a = argv[i++];
                 if (a == NULL) return 1;
-                codepage_out = strdup(a);
+                set_string(&codepage_out,a);
+
+                if (ic != (iconv_t)-1) {
+                    iconv_close(ic);
+                    ic = (iconv_t)-1;
+                }
             }
             else if (isdigit(*a)) {
                 deflate_mode = (int)strtol(a,(char**)(&a),10);
@@ -125,7 +179,24 @@ static int parse(int argc,char **argv) {
         }
         else {
             /* file to archive */
+            if (ic == (iconv_t)-1 && (codepage_out != NULL || codepage_in != NULL)) {
+                if (codepage_out != NULL && codepage_in == NULL) {
+                    codepage_in = strdup("UTF-8");
+                    if (codepage_in == NULL) return 1;
+                }
+
+                ic = iconv_open(codepage_out,codepage_in);
+                if (ic == (iconv_t)-1) {
+                    fprintf(stderr,"Unable to open character encoding conversion from '%s' to '%s', '%s'\n",codepage_in,codepage_out,strerror(errno));
+                    return 1;
+                }
+            }
         }
+    }
+
+    if (ic != (iconv_t)-1) {
+        iconv_close(ic);
+        ic = (iconv_t)-1;
     }
 
     if (zip_path == NULL) {
@@ -133,14 +204,7 @@ static int parse(int argc,char **argv) {
         return 1;
     }
 
-    if (codepage_out != NULL && codepage_in == NULL) {
-        codepage_in = strdup("UTF-8");
-        if (codepage_in == NULL) return 1;
-    }
-
     fprintf(stderr,"Writing to ZIP archive: %s (deflate level %d)\n",zip_path,deflate_mode);
-    if (codepage_in != NULL) fprintf(stderr,"Input codepage: %s\n",codepage_in);
-    if (codepage_out != NULL) fprintf(stderr,"Output codepage: %s\n",codepage_out);
 
     return 0;
 }
