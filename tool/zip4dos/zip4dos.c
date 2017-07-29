@@ -208,6 +208,7 @@ struct in_file {
     unsigned long       disk_offset;    /* offset relative to starting disk of local file header */
     unsigned long       compressed_size;
     unsigned short      msdos_time,msdos_date;
+    uint32_t            crc32;
     struct in_file*     next;
 
     _Bool               data_descriptor;/* write data descriptor after file */
@@ -329,6 +330,7 @@ int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
 
     assert(list->in_path != NULL);
 
+    lfh->uncompressed_size = list->file_size;
     if (list->file_size == 0)
         return 0; // nothing to do
 
@@ -354,8 +356,8 @@ int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
         total += (unsigned long)rd;
     }
 
-    lfh->crc32 = zipcrc_finalize(crc32);
-    lfh->compressed_size = total;
+    lfh->crc32 = list->crc32 = zipcrc_finalize(crc32);
+    list->compressed_size = lfh->compressed_size = total;
     close(src_fd);
     free(buffer);
     return 0;
@@ -752,13 +754,17 @@ static int parse(int argc,char **argv) {
             /* some fields we'll go back and write later */
             lhdr.filename_length = strlen(list->zip_name);
 
+            /* data descriptors are valid ONLY for deflate */
+            if (lhdr.compression_method != 8)
+                list->data_descriptor = 0;
+
             if (!list->data_descriptor)
                 lhdr.uncompressed_size = list->file_size;
-            else
+            else {
                 lhdr.general_purpose_bit_flag |= (1 << 3);
-
-            if (lhdr.compression_method == 0)
-                list->compressed_size = lhdr.compressed_size = lhdr.uncompressed_size;
+                lhdr.uncompressed_size = 0;
+                lhdr.compressed_size = 0;
+            }
 
             /* get writing! */
             if (!zip_out_open())
@@ -793,7 +799,23 @@ static int parse(int argc,char **argv) {
                 }
 
                 if (list->data_descriptor) {
-                    /* TODO */
+                    uint32_t x;
+
+                    /* write a data descriptor */
+                    assert((lhdr.general_purpose_bit_flag & 8) != 0);
+
+                    /* Um.... question: Why have a CRC-32 field if apparently PKZip and InfoZip require this to be zero?? */
+                    lhdr.crc32 = list->crc32 = x = 0;
+                    if (write(zip_fd,&x,4) != 4)
+                        return 1;
+
+                    x = lhdr.compressed_size;
+                    if (write(zip_fd,&x,4) != 4)
+                        return 1;
+
+                    x = lhdr.uncompressed_size;
+                    if (write(zip_fd,&x,4) != 4)
+                        return 1;
                 }
                 else {
                     /* go back and write the lhdr again */
@@ -837,6 +859,7 @@ static int parse(int argc,char **argv) {
             chdr.internal_file_attributes = 0;
             chdr.external_file_attributes = list->attr;
             chdr.relative_offset_of_local_header = list->disk_offset;
+            chdr.crc32 = list->crc32;
 
             if (list->data_descriptor)
                 chdr.general_purpose_bit_flag |= (1 << 3);
