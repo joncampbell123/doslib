@@ -355,15 +355,14 @@ static int parse(int argc,char **argv) {
         return 1;
     }
 
-    fprintf(stderr,"Writing to ZIP archive: %s (deflate level %d)\n",zip_path,deflate_mode);
-
     {
         struct in_file *list;
 
         for (list=file_list_head;list;list=list->next) {
             assert(list->in_path != NULL);
             assert(list->zip_name != NULL);
-            fprintf(stderr,"Writing '%s' as '%s' (%lu bytes)\n",list->in_path,list->zip_name,list->file_size);
+            printf("%s: %s\n",
+                deflate_mode==0?"Storing":"Deflating",list->in_path);
         }
     }
 
