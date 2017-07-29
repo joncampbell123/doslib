@@ -802,7 +802,7 @@ static int parse(int argc,char **argv) {
                     uint32_t x;
 
                     /* write a data descriptor */
-                    assert((lhdr.general_purpose_bit_flag & 8) != 0);
+                    assert((lhdr.general_purpose_bit_flag & (1 << 3)) != 0);
 
                     /* Um.... question: Why have a CRC-32 field if apparently PKZip and InfoZip require this to be zero?? */
                     lhdr.crc32 = list->crc32 = x = 0;
@@ -844,6 +844,9 @@ static int parse(int argc,char **argv) {
             chdr.version_made_by = 0;                   /* MS-DOS */
             chdr.version_needed_to_extract = 20;        /* PKZIP 2.0 or higher */
             chdr.general_purpose_bit_flag = (0 << 1);   /* just lie and say that "normal" deflate was used */
+
+            if (list->data_descriptor)
+                chdr.general_purpose_bit_flag |= (1 << 3);
 
             if (deflate_mode > 0)
                 chdr.compression_method = 8; /* deflate */
