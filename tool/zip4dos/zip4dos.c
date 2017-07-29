@@ -999,7 +999,7 @@ static int parse(int argc,char **argv) {
             lhdr.version_needed_to_extract = 20;        /* PKZIP 2.0 or higher */
             lhdr.general_purpose_bit_flag = (0 << 1);   /* just lie and say that "normal" deflate was used */
 
-            if (deflate_mode > 0)
+            if (deflate_mode > 0 && !(list->attr & ATTR_DOS_DIR))
                 lhdr.compression_method = 8; /* deflate */
             else
                 lhdr.compression_method = 0; /* stored (no compression) */
@@ -1107,7 +1107,7 @@ static int parse(int argc,char **argv) {
             if (list->data_descriptor)
                 chdr.general_purpose_bit_flag |= (1 << 3);
 
-            if (deflate_mode > 0)
+            if (deflate_mode > 0 && !(list->attr & ATTR_DOS_DIR))
                 chdr.compression_method = 8; /* deflate */
             else
                 chdr.compression_method = 0; /* stored (no compression) */
