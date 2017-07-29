@@ -122,6 +122,8 @@ static void help(void) {
     fprintf(stderr,"  -s <size>                Generate spanning ZIP archives\n");
     fprintf(stderr,"  -ic <charset>            File names on host use this charset\n");
     fprintf(stderr,"  -oc <charset>            File names for target use this charset\n");
+    fprintf(stderr,"  -t+                      Add trailing data descriptor\n");
+    fprintf(stderr,"  -t-                      Don't write trailing descriptor\n");
     fprintf(stderr,"\n");
     fprintf(stderr,"Spanning size can be specified in bytes, or with K, M, G, suffix.\n");
     fprintf(stderr,"With spanning, the zip file must have .zip suffix, which will be changed\n");
@@ -270,6 +272,7 @@ int deflate_mode = 5; /* default deflate mode */
 _Bool recurse = 0;
 char *codepage_in = NULL;
 char *codepage_out = NULL;
+int trailing_data_descriptor = -1;
 
 unsigned long zip_out_pos(void) {
     if (zip_fd >= 0)
@@ -535,6 +538,12 @@ static int parse(int argc,char **argv) {
                     ic = (iconv_t)-1;
                 }
             }
+            else if (!strcmp(a,"t+")) {
+                trailing_data_descriptor = 1;
+            }
+            else if (!strcmp(a,"t-")) {
+                trailing_data_descriptor = 0;
+            }
             else if (isdigit(*a)) {
                 deflate_mode = (int)strtol(a,(char**)(&a),10);
                 if (deflate_mode < 0 || deflate_mode > 9) return 1;
@@ -681,6 +690,10 @@ static int parse(int argc,char **argv) {
         fprintf(stderr,"Nothing to add\n");
         return 1;
     }
+
+    /* default */
+    if (trailing_data_descriptor < 0)
+        trailing_data_descriptor = 0;
 
     if (recurse) {
         struct in_file *list;
