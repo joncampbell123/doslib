@@ -1,22 +1,10 @@
 /* NTS:
  *
- * I think I need to explain why I would waste my time writing this.
- *
- * InfoZIP.
- *
- * As useful as the tool is, it has the flaw that it makes ZIP archives
- * for use with Unix/Linux, not MS-DOS. The other reason is that it makes
- * ZIP archives that generally work with PKUNZIP.EXE, except that the
- * spanning mode doesn't work with PKUNZIP.EXE.
- *
- * As a bonus, this code uses GNU libiconv to allow you to host your
- * files in UTF-8 but convert filenames to a codepage that DOS supports.
- * The most common cases given in the help text is converting the file
- * names to US MS-DOS CP437, or Japanese PC-98 CP932/Shift-JIS, or any
- * other MS-DOS code page of your choice.
- *
- * If it's not clear, this ZIP archiver is focused on generating ZIP
- * archives that work with PKUNZIP v2.x and MS-DOS. */
+ * Spanning support does not work. I'm not sure how to make a valid spanning archive that PKUNZIP.EXE likes.
+ * Also what InfoZip considers spanning is different from the floppy-by-floppy kind of spanning that PKZIP.EXE
+ * does, as each floppy contains the same ZIP file name. I'm out of patience with this project. At this point,
+ * I'm happy to have made a ZIP archiver that can auto-convert the names to DOS code pages. 
+ */
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -119,16 +107,16 @@ static void help(void) {
     fprintf(stderr,"  -1                       Fast compression\n");
     fprintf(stderr,"  -9                       Better compression\n");
     fprintf(stderr,"  -r                       Recurse into directories\n");
-    fprintf(stderr,"  -s <size>                Generate spanning ZIP archives\n");
+//    fprintf(stderr,"  -s <size>                Generate spanning ZIP archives\n");
     fprintf(stderr,"  -ic <charset>            File names on host use this charset\n");
     fprintf(stderr,"  -oc <charset>            File names for target use this charset\n");
     fprintf(stderr,"  -t+                      Add trailing data descriptor\n");
     fprintf(stderr,"  -t-                      Don't write trailing descriptor\n");
     fprintf(stderr,"\n");
-    fprintf(stderr,"Spanning size can be specified in bytes, or with K, M, G, suffix.\n");
-    fprintf(stderr,"With spanning, the zip file must have .zip suffix, which will be changed\n");
-    fprintf(stderr,"per fragment to z01, z02, etc.\n");
-    fprintf(stderr,"\n");
+//    fprintf(stderr,"Spanning size can be specified in bytes, or with K, M, G, suffix.\n");
+//    fprintf(stderr,"With spanning, the zip file must have .zip suffix, which will be changed\n");
+//    fprintf(stderr,"per fragment to z01, z02, etc.\n");
+//    fprintf(stderr,"\n");
     fprintf(stderr,"No changes are made to the filename if neither -ic or -oc are specified.\n");
     fprintf(stderr,"If only -oc is specified, -ic is assumed from your locale.\n");
     fprintf(stderr,"If targeting US MS-DOS systems, you can use -oc CP437.\n");
@@ -632,11 +620,11 @@ static int parse(int argc,char **argv) {
             else if (!strcmp(a,"r")) {
                 recurse = 1;
             }
-            else if (!strcmp(a,"s")) {
-                a = argv[i++];
-                if (a == NULL) return 1;
-                if (!parse_unit_amount(&spanning_size,a)) return 1;
-            }
+//            else if (!strcmp(a,"s")) {
+//                a = argv[i++];
+//                if (a == NULL) return 1;
+//                if (!parse_unit_amount(&spanning_size,a)) return 1;
+//            }
             else if (!strcmp(a,"ic")) {
                 a = argv[i++];
                 if (a == NULL) return 1;
