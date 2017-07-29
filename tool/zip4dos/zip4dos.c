@@ -21,6 +21,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <stdint.h>
+#include <endian.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -35,6 +37,74 @@
 
 #include "zlib.h"
 #include "iconv.h"
+
+#ifndef O_BINARY
+#define O_BINARY (0)
+#endif
+
+#pragma pack(push,1)
+# define PKZIP_LOCAL_FILE_HEADER_SIG        (0x04034B50UL)
+
+struct pkzip_local_file_header_main { /* PKZIP APPNOTE 2.0: General Format of a ZIP file section A */
+    uint32_t                sig;                            /* 4 bytes  +0x00 0x04034B50 = 'PK\x03\x04' */
+    uint16_t                version_needed_to_extract;      /* 2 bytes  +0x04 version needed to extract */
+    uint16_t                general_purpose_bit_flag;       /* 2 bytes  +0x06 general purpose bit flag */
+    uint16_t                compression_method;             /* 2 bytes  +0x08 compression method */
+    uint16_t                last_mod_file_time;             /* 2 bytes  +0x0A */
+    uint16_t                last_mod_file_date;             /* 2 bytes  +0x0C */
+    uint32_t                crc32;                          /* 4 bytes  +0x0E */
+    uint32_t                compressed_size;                /* 4 bytes  +0x12 */
+    uint32_t                uncompressed_size;              /* 4 bytes  +0x16 */
+    uint16_t                filename_length;                /* 2 bytes  +0x1A */
+    uint16_t                extra_field_length;             /* 2 bytes  +0x1C */
+};                                                          /*          =0x1E */
+/* filename and extra field follow, then file data */
+#pragma pack(pop)
+
+#pragma pack(push,1)
+# define PKZIP_CENTRAL_DIRECTORY_HEADER_SIG (0x02014B50UL)
+
+struct pkzip_central_directory_header_main { /* PKZIP APPNOTE 2.0: General Format of a ZIP file section C */
+    uint32_t                sig;                            /* 4 bytes  +0x00 0x02014B50 = 'PK\x01\x02' */
+    uint16_t                version_made_by;                /* 2 bytes  +0x04 version made by */
+    uint16_t                version_needed_to_extract;      /* 2 bytes  +0x06 version needed to extract */
+    uint16_t                general_purpose_bit_flag;       /* 2 bytes  +0x08 general purpose bit flag */
+    uint16_t                compression_method;             /* 2 bytes  +0x0A compression method */
+    uint16_t                last_mod_file_time;             /* 2 bytes  +0x0C */
+    uint16_t                last_mod_file_date;             /* 2 bytes  +0x0E */
+    uint32_t                crc32;                          /* 4 bytes  +0x10 */
+    uint32_t                compressed_size;                /* 4 bytes  +0x14 */
+    uint32_t                uncompressed_size;              /* 4 bytes  +0x18 */
+    uint16_t                filename_length;                /* 2 bytes  +0x1C */
+    uint16_t                extra_field_length;             /* 2 bytes  +0x1E */
+    uint16_t                file_comment_length;            /* 2 bytes  +0x20 */
+    uint16_t                disk_number_start;              /* 2 bytes  +0x22 */
+    uint16_t                internal_file_attributes;       /* 2 bytes  +0x24 */
+    uint32_t                external_file_attributes;       /* 4 bytes  +0x26 */
+    uint32_t                relative_offset_of_local_header;/* 4 bytes  +0x2A */
+};                                                          /*          =0x2E */
+/* filename and extra field follow, then file data */
+#pragma pack(pop)
+
+#pragma pack(push,1)
+# define PKZIP_CENTRAL_DIRECTORY_END_SIG    (0x06054B50UL)
+
+struct pkzip_central_directory_header_end { /* PKZIP APPNOTE 2.0: General Format of a ZIP file section C */
+    uint32_t                sig;                            /* 4 bytes  +0x00 0x06054B50 = 'PK\x05\x06' */
+    uint16_t                number_of_this_disk;            /* 2 bytes  +0x04 */
+    uint16_t                number_of_disk_with_start_of_central_directory;
+                                                            /* 2 bytes  +0x06 */
+    uint16_t                total_number_of_entries_of_central_dir_on_this_disk;
+                                                            /* 2 bytes  +0x08 */
+    uint16_t                total_number_of_entries_of_central_dir;
+                                                            /* 2 bytes  +0x0A */
+    uint32_t                size_of_central_directory;      /* 4 bytes  +0x0C */
+    uint32_t                offset_of_central_directory_from_start_disk;
+                                                            /* 4 bytes  +0x10 */
+    uint16_t                zipfile_comment_length;         /* 2 bytes  +0x14 */
+};                                                          /*          =0x16 */
+/* filename and extra field follow, then file data */
+#pragma pack(pop)
 
 static char ic_tmp[PATH_MAX];
 
@@ -83,10 +153,13 @@ char *set_string(char **a,const char *s) {
     return *a;
 }
 
+int                     zip_fd = -1;
+unsigned char           zip_cdir_start_disk = 0;
+
 #define DISK_MAX        99
 
 struct disk_info {
-    unsigned long       byte_count;     /* byte offset of overall ZIP archive, start of disk */
+    unsigned long       byte_count;     /* byte offset of overall ZIP archive, at start of disk */
 } disk_info;
 
 struct disk_info        disk[DISK_MAX];
@@ -96,9 +169,16 @@ int disk_current_number(void) {
     return disk_count;
 }
 
+struct disk_info *disk_get(int n) {
+    if (n <= 0 || n > DISK_MAX)
+        abort(); /* should not happen */
+
+    return &disk[n-1];
+}
+
 struct disk_info *disk_current(void) {
     if (disk_count <= 0 || disk_count > DISK_MAX)
-        return NULL;
+        abort(); /* should not happen */
 
     return &disk[disk_count-1];
 }
@@ -122,7 +202,13 @@ struct in_file {
     unsigned char       attr;           /* MS-DOS attributes */
     unsigned char       disk_number;    /* disk number the file starts on */
     unsigned long       file_size;
+    unsigned long       abs_offset;     /* absolute offset (from start of ZIP archive) of local file header */
+    unsigned long       disk_offset;    /* offset relative to starting disk of local file header */
+    unsigned long       compressed_size;
+    unsigned short      msdos_time,msdos_date;
     struct in_file*     next;
+
+    _Bool               data_descriptor;/* write data descriptor after file */
 } in_file;
 
 struct in_file *in_file_alloc(void) {
@@ -182,6 +268,27 @@ _Bool recurse = 0;
 char *codepage_in = NULL;
 char *codepage_out = NULL;
 
+unsigned long zip_out_pos(void) {
+    if (zip_fd >= 0)
+        return (unsigned long)lseek(zip_fd,0,SEEK_CUR);
+
+    return 0UL;
+}
+
+int zip_out_open(void) {
+    if (zip_fd < 0)
+        zip_fd = open(zip_path,O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0644);
+
+    return (zip_fd >= 0);
+}
+
+void zip_out_close(void) {
+    if (zip_fd >= 0) {
+        close(zip_fd);
+        zip_fd = -1;
+    }
+}
+
 int parse_unit_amount(unsigned long *out,const char *s) {
     if (!isdigit(*s))
         return 0;
@@ -209,6 +316,10 @@ int parse_unit_amount(unsigned long *out,const char *s) {
 }
 
 static int parse(int argc,char **argv) {
+    unsigned int zip_cdir_total_count = 0;
+    unsigned int zip_cdir_last_count = 0;
+    unsigned long zip_cdir_byte_count = 0;
+    unsigned long zip_cdir_offset = 0;
     iconv_t ic = (iconv_t)-1;
     struct stat st;
     char *a;
@@ -571,6 +682,7 @@ static int parse(int argc,char **argv) {
     }
 
     {
+        struct pkzip_local_file_header_main lhdr;
         struct in_file *list;
 
         for (list=file_list_head;list;list=list->next) {
@@ -578,9 +690,131 @@ static int parse(int argc,char **argv) {
             assert(list->zip_name != NULL);
             printf("%s: %s\n",
                 deflate_mode==0?"Storing":"Deflating",list->in_path);
+
+            memset(&lhdr,0,sizeof(lhdr));
+            lhdr.sig = PKZIP_LOCAL_FILE_HEADER_SIG;
+            lhdr.version_needed_to_extract = 20;        /* PKZIP 2.0 or higher */
+            lhdr.general_purpose_bit_flag = (0 << 1);   /* just lie and say that "normal" deflate was used */
+
+            if (deflate_mode > 0)
+                lhdr.compression_method = 8; /* deflate */
+            else
+                lhdr.compression_method = 0; /* stored (no compression) */
+
+            lhdr.last_mod_file_time = list->msdos_time;
+            lhdr.last_mod_file_date = list->msdos_date;
+            /* some fields we'll go back and write later */
+            lhdr.filename_length = strlen(list->zip_name);
+
+            if (!list->data_descriptor)
+                lhdr.uncompressed_size = list->file_size;
+            else
+                lhdr.general_purpose_bit_flag |= (1 << 3);
+
+            if (lhdr.compression_method == 0)
+                list->compressed_size = lhdr.compressed_size = lhdr.uncompressed_size;
+
+            /* get writing! */
+            if (!zip_out_open())
+                return 1;
+
+            /* write local file header */
+            assert(zip_fd >= 0);
+            list->disk_number = disk_current_number();
+            list->disk_offset = zip_out_pos();
+            list->abs_offset = disk_current()->byte_count + list->disk_offset;
+            assert(sizeof(lhdr) == 30);
+            if (write(zip_fd,&lhdr,sizeof(lhdr)) != sizeof(lhdr))
+                return 1;
+
+            if (lhdr.filename_length != 0) {
+                if (write(zip_fd,list->zip_name,lhdr.filename_length) != lhdr.filename_length)
+                    return 1;
+            }
         }
     }
 
+    /* write central directory */
+    {
+        struct pkzip_central_directory_header_main chdr;
+        struct in_file *list;
+
+        for (list=file_list_head;list;list=list->next) {
+            assert(list->in_path != NULL);
+            assert(list->zip_name != NULL);
+
+            memset(&chdr,0,sizeof(chdr));
+            chdr.sig = PKZIP_CENTRAL_DIRECTORY_HEADER_SIG;
+            chdr.version_made_by = 0;                   /* MS-DOS */
+            chdr.version_needed_to_extract = 20;        /* PKZIP 2.0 or higher */
+            chdr.general_purpose_bit_flag = (0 << 1);   /* just lie and say that "normal" deflate was used */
+
+            if (deflate_mode > 0)
+                chdr.compression_method = 8; /* deflate */
+            else
+                chdr.compression_method = 0; /* stored (no compression) */
+
+            chdr.last_mod_file_time = list->msdos_time;
+            chdr.last_mod_file_date = list->msdos_date;
+            chdr.compressed_size = list->compressed_size;
+            chdr.uncompressed_size = list->file_size;
+            chdr.filename_length = strlen(list->zip_name);
+            chdr.disk_number_start = list->disk_number;
+            chdr.internal_file_attributes = 0;
+            chdr.external_file_attributes = list->attr;
+
+            if (list->data_descriptor)
+                chdr.general_purpose_bit_flag |= (1 << 3);
+
+            /* get writing! */
+            if (!zip_out_open())
+                return 1;
+
+            if (list == file_list_head) {
+                zip_cdir_start_disk = disk_current_number();
+                zip_cdir_offset = disk_current()->byte_count + zip_out_pos();
+            }
+
+            /* write file header */
+            assert(zip_fd >= 0);
+ 
+            assert(sizeof(chdr) == 46);
+            zip_cdir_byte_count += sizeof(chdr);
+            if (write(zip_fd,&chdr,sizeof(chdr)) != sizeof(chdr))
+                return 1;
+
+            if (chdr.filename_length != 0) {
+                zip_cdir_byte_count += chdr.filename_length;
+                if (write(zip_fd,list->zip_name,chdr.filename_length) != chdr.filename_length)
+                    return 1;
+            }
+
+            zip_cdir_last_count++;
+            zip_cdir_total_count++;
+        }
+    }
+
+    {
+        struct pkzip_central_directory_header_end ehdr;
+
+        memset(&ehdr,0,sizeof(ehdr));
+        ehdr.sig = PKZIP_CENTRAL_DIRECTORY_END_SIG;
+        ehdr.number_of_disk_with_start_of_central_directory = zip_cdir_start_disk;
+        ehdr.number_of_this_disk = disk_current_number();
+        ehdr.total_number_of_entries_of_central_dir_on_this_disk = zip_cdir_last_count;
+        ehdr.total_number_of_entries_of_central_dir = zip_cdir_total_count;
+        ehdr.size_of_central_directory = zip_cdir_byte_count;
+        ehdr.offset_of_central_directory_from_start_disk = zip_cdir_offset - disk_get(zip_cdir_start_disk)->byte_count;
+
+        /* write file header */
+        assert(zip_fd >= 0);
+
+        assert(sizeof(ehdr) == 22);
+        if (write(zip_fd,&ehdr,sizeof(ehdr)) != sizeof(ehdr))
+            return 1;
+    }
+
+    zip_out_close();
     clear_string(&codepage_out);
     clear_string(&codepage_in);
     clear_string(&zip_path);
