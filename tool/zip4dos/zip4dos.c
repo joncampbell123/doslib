@@ -994,11 +994,6 @@ static int parse(int argc,char **argv) {
             printf("%s: %s\n",
                 deflate_mode==0?"Storing":"Deflating",list->in_path);
 
-#if 0
-            /* TEST */
-            list->data_descriptor = 1;
-#endif
-
             memset(&lhdr,0,sizeof(lhdr));
             lhdr.sig = PKZIP_LOCAL_FILE_HEADER_SIG;
             lhdr.version_needed_to_extract = 20;        /* PKZIP 2.0 or higher */
@@ -1015,7 +1010,9 @@ static int parse(int argc,char **argv) {
             lhdr.filename_length = strlen(list->zip_name);
 
             /* data descriptors are valid ONLY for deflate */
-            if (lhdr.compression_method != 8)
+            if (lhdr.compression_method == 8)
+                list->data_descriptor = (trailing_data_descriptor > 0);
+            else
                 list->data_descriptor = 0;
 
             if (!list->data_descriptor)
@@ -1078,6 +1075,8 @@ static int parse(int argc,char **argv) {
                         return 1;
                 }
                 else {
+                    assert(spanning_size == 0);
+
                     /* go back and write the lhdr again */
                     if ((unsigned long)lseek(zip_fd,list->disk_offset,SEEK_SET) != list->disk_offset)
                         return 1;
