@@ -321,7 +321,7 @@ static int parse(int argc,char **argv) {
 
                     ret = iconv(ic,&in,&inleft,&out,&outleft);
                     if (ret == -1 || inleft != (size_t)0 || outleft == (size_t)0) {
-                        fprintf(stderr,"file name conversion error. ret=%d inleft=%zu outleft=%zu\n",ret,inleft,outleft);
+                        fprintf(stderr,"file name conversion error from '%s'. ret=%d inleft=%zu outleft=%zu\n",ft,ret,inleft,outleft);
                         return 1;
                     }
                     assert(out >= ic_tmp);
@@ -365,6 +365,19 @@ static int parse(int argc,char **argv) {
         struct dirent *d;
         size_t sl;
         DIR *dir;
+
+        if (ic == (iconv_t)-1 && (codepage_out != NULL || codepage_in != NULL)) {
+            if (codepage_out != NULL && codepage_in == NULL) {
+                codepage_in = strdup("UTF-8");
+                if (codepage_in == NULL) return 1;
+            }
+
+            ic = iconv_open(codepage_out,codepage_in);
+            if (ic == (iconv_t)-1) {
+                fprintf(stderr,"Unable to open character encoding conversion from '%s' to '%s', '%s'\n",codepage_in,codepage_out,strerror(errno));
+                return 1;
+            }
+        }
 
         for (list=file_list_head;list;list=list->next) {
             if (list->attr & ATTR_DOS_DIR) {
@@ -468,7 +481,7 @@ static int parse(int argc,char **argv) {
 
                             ret = iconv(ic,&in,&inleft,&out,&outleft);
                             if (ret == -1 || inleft != (size_t)0 || outleft == (size_t)0) {
-                                fprintf(stderr,"file name conversion error. ret=%d inleft=%zu outleft=%zu\n",ret,inleft,outleft);
+                                fprintf(stderr,"file name conversion error from '%s'. ret=%d inleft=%zu outleft=%zu\n",ft,ret,inleft,outleft);
                                 return 1;
                             }
                             assert(out >= ic_tmp);
@@ -495,6 +508,11 @@ static int parse(int argc,char **argv) {
                 closedir(dir);
             }
         }
+    }
+
+    if (ic != (iconv_t)-1) {
+        iconv_close(ic);
+        ic = (iconv_t)-1;
     }
 
     {
