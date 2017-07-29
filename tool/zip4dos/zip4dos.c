@@ -336,12 +336,11 @@ int parse_unit_amount(unsigned long *out,const char *s) {
     return 1;
 }
 
-int zip_out_rename_to_span(int disk_number) {
+char *zip_out_get_span_name(int disk_number) {
     char *a;
 
     assert(zip_path != NULL);
-
-    if (disk_number < 0 || disk_number >= 99) return 0;
+    if (disk_number < 0 || disk_number >= 99) return NULL;
 
     a = strdup(zip_path);
     if (a == NULL) return 0;
@@ -350,7 +349,7 @@ int zip_out_rename_to_span(int disk_number) {
     char *x = strrchr(a,'.');
     if (x == NULL) {
         free(a);
-        return 0;
+        return NULL;
     }
 
     if (!strcasecmp(x,".zip")) {
@@ -360,8 +359,14 @@ int zip_out_rename_to_span(int disk_number) {
     }
     else {
         free(a);
-        return 0;
+        return NULL;
     }
+
+    return a;
+}
+
+int zip_out_rename_to_span(int disk_number) {
+    char *a = zip_out_get_span_name(disk_number);
 
     fprintf(stderr,"Renaming: '%s' to '%s'\n",zip_path,a);
     if (rename(zip_path,a)) {
@@ -811,12 +816,8 @@ static int parse(int argc,char **argv) {
     }
 
     /* default */
-    if (trailing_data_descriptor < 0) {
-        if (spanning_size > 0)
-            trailing_data_descriptor = 1;
-        else
-            trailing_data_descriptor = 0;
-    }
+    if (trailing_data_descriptor < 0)
+        trailing_data_descriptor = 0;
 
     if (recurse) {
         struct in_file *list;
@@ -1075,13 +1076,27 @@ static int parse(int argc,char **argv) {
                         return 1;
                 }
                 else {
-                    assert(spanning_size == 0);
+                    int write_fd=zip_fd,alt_fd=-1;
+
+                    /* access disk if necessary */
+                    if (list->disk_number != disk_current_number()) {
+                        char *nn = zip_out_get_span_name(list->disk_number);
+                        if (nn == NULL) return 1;
+                        write_fd = alt_fd = open(nn,O_RDWR|O_BINARY);
+                        if (alt_fd < 0) return 1;
+                        free(nn);
+                    }
 
                     /* go back and write the lhdr again */
-                    if ((unsigned long)lseek(zip_fd,list->disk_offset,SEEK_SET) != list->disk_offset)
+                    if ((unsigned long)lseek(write_fd,list->disk_offset,SEEK_SET) != list->disk_offset)
                         return 1;
-                    if (write(zip_fd,&lhdr,sizeof(lhdr)) != sizeof(lhdr))
+                    if (write(write_fd,&lhdr,sizeof(lhdr)) != sizeof(lhdr))
                         return 1;
+
+                    if (alt_fd >= 0) {
+                        close(alt_fd);
+                        alt_fd = -1;
+                    }
 
                     lseek(zip_fd,0,SEEK_END);
                 }
