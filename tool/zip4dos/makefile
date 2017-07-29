@@ -3,6 +3,7 @@ ZIP4DOS = linux-host/zip4dos
 
 ICONV = ../../ext/libiconv/linux-host/lib/libiconv.a
 ZLIB = ../../ext/zlib/linux-host/libz.a
+ZIPCRC = linux-host/zipcrc.o
 
 BIN_OUT = $(ZIP4DOS)
 
@@ -22,8 +23,8 @@ $(ZLIB):
 $(ICONV):
 	cd ../../ext/libiconv && ./make.sh
 
-$(ZIP4DOS): linux-host/zip4dos.o $(ZLIB) $(ICONV)
-	gcc -o $@ linux-host/zip4dos.o $(ZLIB) $(ICONV)
+$(ZIP4DOS): linux-host/zip4dos.o $(ZLIB) $(ICONV) $(ZIPCRC)
+	gcc -o $@ linux-host/zip4dos.o $(ZLIB) $(ICONV) $(ZIPCRC)
 
 linux-host/%.o : %.c
 	gcc -I../.. -I../../ext/zlib -I../../ext/libiconv/linux-host/include -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -c -o $@ $^

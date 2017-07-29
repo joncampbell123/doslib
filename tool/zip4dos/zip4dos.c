@@ -38,6 +38,8 @@
 #include "zlib.h"
 #include "iconv.h"
 
+#include "zipcrc.h"
+
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
@@ -318,9 +320,12 @@ int parse_unit_amount(unsigned long *out,const char *s) {
 int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
     size_t buffer_sz = 16384; /* should be good */
     unsigned long total = 0;
+    zipcrc_t crc32;
     char *buffer;
     int src_fd;
     int rd;
+
+    crc32 = zipcrc_init();
 
     assert(list->in_path != NULL);
 
@@ -345,9 +350,11 @@ int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
         if (write(zip_fd,buffer,rd) != rd)
             return 1;
 
+        crc32 = zipcrc_update(crc32,buffer,rd);
         total += (unsigned long)rd;
     }
 
+    lfh->crc32 = zipcrc_finalize(crc32);
     lfh->compressed_size = total;
     close(src_fd);
     free(buffer);
@@ -783,6 +790,19 @@ static int parse(int argc,char **argv) {
                 }
                 else {
                     abort();
+                }
+
+                if (list->data_descriptor) {
+                    /* TODO */
+                }
+                else {
+                    /* go back and write the lhdr again */
+                    if ((unsigned long)lseek(zip_fd,list->disk_offset,SEEK_SET) != list->disk_offset)
+                        return 1;
+                    if (write(zip_fd,&lhdr,sizeof(lhdr)) != sizeof(lhdr))
+                        return 1;
+
+                    lseek(zip_fd,0,SEEK_END);
                 }
             }
         }
