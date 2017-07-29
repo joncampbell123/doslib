@@ -1,3 +1,22 @@
+/* NTS:
+ *
+ * I think I need to explain why I would waste my time writing this.
+ *
+ * InfoZIP.
+ *
+ * As useful as the tool is, it has the flaw that it makes ZIP archives
+ * for use with Unix/Linux, not MS-DOS. The other reason is that it makes
+ * ZIP archives that generally work with PKUNZIP.EXE, except that the
+ * spanning mode doesn't work with PKUNZIP.EXE.
+ *
+ * As a bonus, this code uses GNU libiconv to allow you to host your
+ * files in UTF-8 but convert filenames to a codepage that DOS supports.
+ * The most common cases given in the help text is converting the file
+ * names to US MS-DOS CP437, or Japanese PC-98 CP932/Shift-JIS, or any
+ * other MS-DOS code page of your choice.
+ *
+ * If it's not clear, this ZIP archiver is focused on generating ZIP
+ * archives that work with PKUNZIP v2.x and MS-DOS. */
 
 #include <sys/types.h>
 #include <sys/stat.h>
