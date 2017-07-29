@@ -317,10 +317,10 @@ int parse_unit_amount(unsigned long *out,const char *s) {
     *out = strtoull(s,(char**)(&s),10);
 
     /* suffix, if any */
-    if (*out != 0) {
-        char c = tolower(*out++);
+    if (*s != 0) {
+        char c = tolower(*s++);
 
-        if (*out != 0)
+        if (*s != 0)
             return 0;
 
         if (c == 'k')
@@ -329,10 +329,110 @@ int parse_unit_amount(unsigned long *out,const char *s) {
             *out <<= 20ULL;
         else if (c == 'g')
             *out <<= 30ULL;
-        return 0;
+        else
+            return 0;
     }
 
     return 1;
+}
+
+int zip_out_rename_to_span(int disk_number) {
+    char *a;
+
+    assert(zip_path != NULL);
+
+    if (disk_number < 0 || disk_number >= 99) return 0;
+
+    a = strdup(zip_path);
+    if (a == NULL) return 0;
+
+    /* replace .zip with .z01, .z02, etc. */
+    char *x = strrchr(a,'.');
+    if (x == NULL) {
+        free(a);
+        return 0;
+    }
+
+    if (!strcasecmp(x,".zip")) {
+/*                     0123 */
+        x[2] = (char)(disk_number / 10) + '0';
+        x[3] = (char)(disk_number % 10) + '0';
+    }
+    else {
+        free(a);
+        return 0;
+    }
+
+    fprintf(stderr,"Renaming: '%s' to '%s'\n",zip_path,a);
+    if (rename(zip_path,a)) {
+        fprintf(stderr,"Failed to rename '%s' to '%s', %s\n",zip_path,a,strerror(errno));
+        free(a);
+        return 0;
+    }
+
+    free(a);
+    return 1;
+}
+
+ssize_t zip_write_and_span(int fd,const void *buf,size_t count) {
+    unsigned long t,pos = zip_out_pos();
+    size_t towrite = 0;
+    ssize_t wd = 0;
+    ssize_t w;
+
+    while (count > 0) {
+        if (spanning_size > 0) {
+            t = spanning_size;
+            if (t >= pos)
+                t -= pos;
+            else
+                t = 0;
+
+            if (t > count)
+                t = count;
+
+            towrite = (size_t)t;
+        }
+        else {
+            towrite = count;
+        }
+
+        if (towrite != 0) {
+            assert(fd >= 0);
+            w = write(fd,buf,towrite);
+            if (w <= 0) break;
+        }
+        else {
+            w = 0;
+        }
+
+        wd += w;
+        count -= (size_t)w;
+        buf = (const void*)((const char*)buf + w);
+
+        if (spanning_size > 0) {
+            pos = zip_out_pos();
+            if (pos >= spanning_size) {
+                unsigned long disk_pos = zip_out_pos();
+                unsigned long disk_abs = disk_current()->byte_count;
+
+                zip_out_close();
+                if (!zip_out_rename_to_span(disk_current_number()))
+                    return -1;
+
+                {
+                    struct disk_info *d = disk_new();
+                    if (d == NULL) return -1;
+                    d->byte_count = disk_pos + disk_abs;
+                }
+
+                if (!zip_out_open())
+                    return -1;
+            }
+        }
+    }
+
+    return wd;
 }
 
 int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
@@ -366,7 +466,7 @@ int zip_store(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
 
     while ((rd=read(src_fd,buffer,buffer_sz)) > 0) {
         assert(zip_fd >= 0);
-        if (write(zip_fd,buffer,rd) != rd)
+        if (zip_write_and_span(zip_fd,buffer,rd) != rd)
             return 1;
 
         crc32 = zipcrc_update(crc32,buffer,rd);
@@ -439,7 +539,7 @@ int zip_deflate(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
             assert((char*)z.next_out <= (outbuffer+outbuffer_sz));
             wd = (size_t)((char*)z.next_out - (char*)outbuffer);
             if (wd > 0) {
-                if ((size_t)write(zip_fd,outbuffer,wd) != wd) {
+                if ((size_t)zip_write_and_span(zip_fd,outbuffer,wd) != wd) {
                     fprintf(stderr,"write error\n");
                     break;
                 }
@@ -467,7 +567,7 @@ int zip_deflate(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
         assert((char*)z.next_out <= (outbuffer+outbuffer_sz));
         wd = (size_t)((char*)z.next_out - (char*)outbuffer);
         if (wd > 0) {
-            if ((size_t)write(zip_fd,outbuffer,wd) != wd) {
+            if ((size_t)zip_write_and_span(zip_fd,outbuffer,wd) != wd) {
                 fprintf(stderr,"write error\n");
                 break;
             }
@@ -711,8 +811,12 @@ static int parse(int argc,char **argv) {
     }
 
     /* default */
-    if (trailing_data_descriptor < 0)
-        trailing_data_descriptor = 0;
+    if (trailing_data_descriptor < 0) {
+        if (spanning_size > 0)
+            trailing_data_descriptor = 1;
+        else
+            trailing_data_descriptor = 0;
+    }
 
     if (recurse) {
         struct in_file *list;
