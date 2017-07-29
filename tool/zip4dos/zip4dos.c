@@ -853,6 +853,11 @@ static int parse(int argc,char **argv) {
             printf("%s: %s\n",
                 deflate_mode==0?"Storing":"Deflating",list->in_path);
 
+#if 0
+            /* TEST */
+            list->data_descriptor = 1;
+#endif
+
             memset(&lhdr,0,sizeof(lhdr));
             lhdr.sig = PKZIP_LOCAL_FILE_HEADER_SIG;
             lhdr.version_needed_to_extract = 20;        /* PKZIP 2.0 or higher */
@@ -919,7 +924,7 @@ static int parse(int argc,char **argv) {
                     assert((lhdr.general_purpose_bit_flag & (1 << 3)) != 0);
 
                     /* Um.... question: Why have a CRC-32 field if apparently PKZip and InfoZip require this to be zero?? */
-                    lhdr.crc32 = list->crc32 = x = 0;
+                    x = lhdr.crc32;
                     if (write(zip_fd,&x,4) != 4)
                         return 1;
 
