@@ -157,6 +157,20 @@ char *set_string(char **a,const char *s) {
     return *a;
 }
 
+char *strdup_plus_slash(const char *s) {
+    size_t l = strlen(s);
+    char *r;
+
+    r = malloc(l/*string*/ + 1/*slash*/ + 1/*NUL*/);
+    if (r != NULL) {
+        if (l != 0) memcpy(r,s,l);
+        r[l+0] = '/';
+        r[l+1] = 0;
+    }
+
+    return r;
+}
+
 int                     zip_fd = -1;
 unsigned char           zip_cdir_start_disk = 0;
 
@@ -605,7 +619,12 @@ static int parse(int argc,char **argv) {
                 }
 
                 /* now pick the ZIP name */
-                t = strdup(a);
+                /* PKZIP undocumented behavior (or not mentioned in APPNOTE) is that directories are stored with '/' at the end of the name */
+                if (f->attr & ATTR_DOS_DIR)
+                    t = strdup_plus_slash(a);
+                else
+                    t = strdup(a);
+
                 if (t == NULL) return 1;
 
                 /* (in case of future porting to MS-DOS) convert backwards slashes to forward slashes */
@@ -769,7 +788,12 @@ static int parse(int argc,char **argv) {
                         }
 
                         /* now pick the ZIP name */
-                        t = strdup(ic_tmp);
+                        /* PKZIP undocumented behavior (or not mentioned in APPNOTE) is that directories are stored with '/' at the end of the name */
+                        if (f->attr & ATTR_DOS_DIR)
+                            t = strdup_plus_slash(ic_tmp);
+                        else
+                            t = strdup(ic_tmp);
+
                         if (t == NULL) return 1;
 
                         /* (in case of future porting to MS-DOS) convert backwards slashes to forward slashes */
