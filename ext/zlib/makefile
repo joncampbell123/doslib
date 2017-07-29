@@ -1,7 +1,7 @@
 
 EXAMPLE = linux-host/example
 MINIGZIP = linux-host/minigzip
-ZLIB = linux-host/zlib.a
+ZLIB = linux-host/libz.a
 
 BIN_OUT = $(MINIGZIP) $(EXAMPLE)
 
