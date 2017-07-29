@@ -83,12 +83,44 @@ char *set_string(char **a,const char *s) {
     return *a;
 }
 
+#define DISK_MAX        99
+
+struct disk_info {
+    unsigned long       byte_count;     /* byte offset of overall ZIP archive, start of disk */
+} disk_info;
+
+struct disk_info        disk[DISK_MAX];
+int                     disk_count = 0;
+
+int disk_current_number(void) {
+    return disk_count;
+}
+
+struct disk_info *disk_current(void) {
+    if (disk_count <= 0 || disk_count > DISK_MAX)
+        return NULL;
+
+    return &disk[disk_count-1];
+}
+
+struct disk_info *disk_new(void) {
+    struct disk_info *d;
+
+    if (disk_count >= DISK_MAX)
+        return NULL;
+
+    d = &disk[disk_count++];
+    memset(d,0,sizeof(*d));
+    return d;
+}
+
 #define ATTR_DOS_DIR    0x10            /* MS-DOS directory */
 
 struct in_file {
     char*               in_path;
     char*               zip_name;
     unsigned char       attr;           /* MS-DOS attributes */
+    unsigned char       disk_number;    /* disk number the file starts on */
     unsigned long       file_size;
     struct in_file*     next;
 } in_file;
@@ -108,9 +140,7 @@ char *in_file_set_zip_name(struct in_file *f,char *s) {
 void in_file_free(struct in_file *f) {
     clear_string(&f->in_path);
     clear_string(&f->zip_name);
-    f->file_size = 0;
-    f->attr = 0;
-    f->next = NULL;
+    memset(f,0,sizeof(*f));
 }
 
 struct in_file *file_list_head = NULL;
@@ -532,6 +562,12 @@ static int parse(int argc,char **argv) {
     if (ic != (iconv_t)-1) {
         iconv_close(ic);
         ic = (iconv_t)-1;
+    }
+
+    {
+        struct disk_info *d = disk_new();
+        if (d == NULL) return 1;
+        d->byte_count = 0;
     }
 
     {
