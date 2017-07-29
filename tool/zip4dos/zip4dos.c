@@ -354,8 +354,8 @@ char *zip_out_get_span_name(int disk_number) {
 
     if (!strcasecmp(x,".zip")) {
 /*                     0123 */
-        x[2] = (char)(disk_number / 10) + '0';
-        x[3] = (char)(disk_number % 10) + '0';
+        x[2] = (char)((disk_number + 1) / 10) + '0';
+        x[3] = (char)((disk_number + 1) % 10) + '0';
     }
     else {
         free(a);
