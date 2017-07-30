@@ -838,9 +838,22 @@ static int parse(int argc,char **argv) {
         return 1;
     }
 
-    /* default */
-    if (trailing_data_descriptor < 0)
-        trailing_data_descriptor = 0;
+    /* default, off, UNLESS spanning ZIP archives.
+     * The reason we default ON for spanning ZIP archives is that
+     * PKUNZIP.EXE 2.5 gets confused by ZIP archives spanning floppies IF
+     * the trailing data descriptor is not there. I guess the assumption is
+     * that, if the ZIP was written across floppies in a spanning mode, then
+     * it has to use the trailing data descriptor since it can't go back a floppy
+     * and rewrite the local header.
+     *
+     * We can avoid a lot of "CRC error" and "inconsistent header" errors from PKUNZIP.EXE
+     * by making the trailing data descriptor default. */
+    if (trailing_data_descriptor < 0) {
+        if (spanning_size > 0)
+            trailing_data_descriptor = 1;
+        else
+            trailing_data_descriptor = 0;
+    }
 
     if (recurse) {
         struct in_file *list;
