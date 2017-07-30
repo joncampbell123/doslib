@@ -323,9 +323,13 @@ int zip_out_open(void) {
 
 void zip_out_header_finish(void) {
     if (data_start != 0) {
-        unsigned long fsz = zip_out_pos_abs() - data_start;
         unsigned int i,m,u;
+        unsigned long fsz;
         char tmp[512];
+
+        lseek(zip_fd,0,SEEK_END);
+        fsz = zip_out_pos_abs() - data_start;
+        fprintf(stderr,"Finishing up file %lu bytes\n",fsz);
 
         assert(zip_fd >= 0);
 
@@ -378,6 +382,8 @@ void zip_out_header_finish(void) {
             if (tor > 512) tor = 512;
             write(zip_fd,tmp,tor);
         }
+        if (zip_out_pos_abs() > spanning_size)
+            fprintf(stderr,"Spanning ended up going over by %lu bytes!\n",(unsigned long)zip_out_pos_abs() - spanning_size);
 
         fat_start = 0;
         data_start = 0;
