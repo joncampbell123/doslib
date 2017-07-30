@@ -283,20 +283,6 @@ char *codepage_in = NULL;
 char *codepage_out = NULL;
 int trailing_data_descriptor = -1;
 
-unsigned long zip_out_pos(void) {
-    if (zip_fd >= 0)
-        return (unsigned long)lseek(zip_fd,0,SEEK_CUR);
-
-    return 0UL;
-}
-
-int zip_out_open(void) {
-    if (zip_fd < 0)
-        zip_fd = open(zip_path,O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0644);
-
-    return (zip_fd >= 0);
-}
-
 unsigned int fat_start = 0;
 unsigned int data_start = 0;
 unsigned int total_clusters = 0;
@@ -310,9 +296,34 @@ unsigned int number_of_fats = 1;
 unsigned int fat_sectors = 0;
 unsigned int media_desc = 0;
 
+unsigned long zip_out_pos_abs(void) {
+    if (zip_fd >= 0)
+        return (unsigned long)lseek(zip_fd,0,SEEK_CUR);
+
+    return 0UL;
+}
+
+unsigned long zip_out_pos(void) {
+    if (zip_fd >= 0) {
+        unsigned long p = zip_out_pos_abs();
+        if (p >= data_start) p -= data_start;
+        else p = 0;
+        return p;
+    }
+
+    return 0UL;
+}
+
+int zip_out_open(void) {
+    if (zip_fd < 0)
+        zip_fd = open(zip_path,O_RDWR|O_CREAT|O_TRUNC|O_BINARY,0644);
+
+    return (zip_fd >= 0);
+}
+
 void zip_out_header_finish(void) {
     if (data_start != 0) {
-        unsigned long fsz = zip_out_pos() - data_start;
+        unsigned long fsz = zip_out_pos_abs() - data_start;
         unsigned int i,m,u;
         char tmp[512];
 
@@ -362,8 +373,8 @@ void zip_out_header_finish(void) {
         // fill to end
         memset(tmp,0,sizeof(tmp));
         lseek(zip_fd,0,SEEK_END);
-        while (zip_out_pos() < spanning_size) {
-            unsigned long tor = spanning_size - zip_out_pos();
+        while (zip_out_pos_abs() < spanning_size) {
+            unsigned long tor = spanning_size - zip_out_pos_abs();
             if (tor > 512) tor = 512;
             write(zip_fd,tmp,tor);
         }
@@ -378,7 +389,7 @@ int zip_out_header(void) {
      * that includes a segmented ZIP and volume labels to match.
      * so the "header" is really just the first dozen sectors of an MS-DOS formatted floppy
      * up to the point that the ZIP archive begins. */
-    if (spanning_size > 0 && zip_out_pos() == 0) {
+    if (spanning_size > 0 && zip_out_pos_abs() == 0) {
         char tmp[512];
         unsigned int C,H,S;
         unsigned int it;
@@ -444,7 +455,7 @@ int zip_out_header(void) {
         assert(zip_fd >= 0);
         write(zip_fd,tmp,512);
 
-        fat_start = zip_out_pos();
+        fat_start = zip_out_pos_abs();
         {
             unsigned char *FAT = malloc(512 * fat_sectors);
 
@@ -485,18 +496,18 @@ int zip_out_header(void) {
             ent[11] = 0x08; // volume label
         }
 
-        archive_zip_offset = zip_out_pos();
+        archive_zip_offset = zip_out_pos_abs();
         write(zip_fd,tmp,32+32);
 
         /* fill to data start */
         memset(tmp,0,sizeof(tmp));
-        while (zip_out_pos() < data_start) {
-            unsigned long tor = data_start - zip_out_pos();
+        while (zip_out_pos_abs() < data_start) {
+            unsigned long tor = data_start - zip_out_pos_abs();
             if (tor > 512) tor = 512;
             write(zip_fd,tmp,tor);
         }
 
-        if (zip_out_pos() > data_start)
+        if (zip_out_pos_abs() > data_start)
             fprintf(stderr,"WARNING: header too large\n");
     }
 
@@ -587,7 +598,7 @@ int zip_out_rename_to_span(int disk_number) {
 }
 
 ssize_t zip_write_and_span(int fd,const void *buf,size_t count) {
-    unsigned long t,pos = zip_out_pos();
+    unsigned long t,pos = zip_out_pos_abs();
     size_t towrite = 0;
     ssize_t wd = 0;
     ssize_t w;
@@ -623,9 +634,9 @@ ssize_t zip_write_and_span(int fd,const void *buf,size_t count) {
         buf = (const void*)((const char*)buf + w);
 
         if (spanning_size > 0) {
-            pos = zip_out_pos();
+            pos = zip_out_pos_abs();
             if (pos >= spanning_size) {
-                unsigned long disk_pos = zip_out_pos();
+                unsigned long disk_pos = zip_out_pos_abs();
                 unsigned long disk_abs = disk_current()->byte_count;
 
                 zip_out_close();
@@ -641,7 +652,7 @@ ssize_t zip_write_and_span(int fd,const void *buf,size_t count) {
                 if (!zip_out_open())
                     return -1;
 
-                if (spanning_size > 0 && zip_out_pos() == 0) {
+                if (spanning_size > 0 && zip_out_pos_abs() == 0) {
                     if (!zip_out_header())
                         return 1;
                 }
@@ -1275,7 +1286,7 @@ static int parse(int argc,char **argv) {
         if (!zip_out_open())
             return 1;
 
-        if (spanning_size > 0 && zip_out_pos() == 0) {
+        if (spanning_size > 0 && zip_out_pos_abs() == 0) {
             if (!zip_out_header())
                 return 1;
         }
@@ -1331,7 +1342,7 @@ static int parse(int argc,char **argv) {
             if (!zip_out_open())
                 return 1;
 
-            if (spanning_size > 0 && zip_out_pos() == 0) {
+            if (spanning_size > 0 && zip_out_pos_abs() == 0) {
                 if (!zip_out_header())
                     return 1;
             }
@@ -1395,7 +1406,8 @@ static int parse(int argc,char **argv) {
                     }
 
                     /* go back and write the lhdr again */
-                    if ((unsigned long)lseek(write_fd,list->disk_offset,SEEK_SET) != list->disk_offset)
+                    /* WARNING: If spanning floppies we assume the same MS-DOS fat format and data_start */
+                    if ((unsigned long)lseek(write_fd,list->disk_offset + data_start,SEEK_SET) != (list->disk_offset + data_start))
                         return 1;
                     if (write(write_fd,&lhdr,sizeof(lhdr)) != sizeof(lhdr))
                         return 1;
@@ -1421,7 +1433,7 @@ static int parse(int argc,char **argv) {
             assert(list->zip_name != NULL);
 
             if (spanning_size > 0) {
-                if (zip_out_pos() >= spanning_size) {
+                if (zip_out_pos_abs() >= spanning_size) {
                     unsigned long disk_pos = zip_out_pos();
                     unsigned long disk_abs = disk_current()->byte_count;
 
@@ -1438,7 +1450,7 @@ static int parse(int argc,char **argv) {
                     if (!zip_out_open())
                         return 1;
 
-                    if (spanning_size > 0 && zip_out_pos() == 0) {
+                    if (spanning_size > 0 && zip_out_pos_abs() == 0) {
                         if (!zip_out_header())
                             return 1;
                     }
@@ -1477,7 +1489,7 @@ static int parse(int argc,char **argv) {
             if (!zip_out_open())
                 return 1;
 
-            if (spanning_size > 0 && zip_out_pos() == 0) {
+            if (spanning_size > 0 && zip_out_pos_abs() == 0) {
                 if (!zip_out_header())
                     return 1;
             }
