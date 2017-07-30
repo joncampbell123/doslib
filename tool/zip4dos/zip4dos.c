@@ -33,6 +33,8 @@
 #define O_BINARY (0)
 #endif
 
+extern unsigned char msdos_floppy_nonboot[512];
+
 #pragma pack(push,1)
 # define PKZIP_LOCAL_FILE_HEADER_SIG        (0x04034B50UL)
 
@@ -117,6 +119,10 @@ static void help(void) {
     fprintf(stderr,"Spanning size can be specified in bytes, or with K, M, G, suffix.\n");
     fprintf(stderr,"With spanning, the zip file must have .zip suffix, which will be changed\n");
     fprintf(stderr,"per fragment to z01, z02, etc.\n");
+    fprintf(stderr,"\n");
+    fprintf(stderr,"The spanning format generated is that of floppy disk images, which can be\n");
+    fprintf(stderr,"written to floppy disks and then fed to PKUNZIP.EXE disk-by-disk during\n");
+    fprintf(stderr,"extraction.\n");
     fprintf(stderr,"\n");
     fprintf(stderr,"No changes are made to the filename if neither -ic or -oc are specified.\n");
     fprintf(stderr,"If only -oc is specified, -ic is assumed from your locale.\n");
