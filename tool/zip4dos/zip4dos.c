@@ -289,6 +289,7 @@ unsigned int total_clusters = 0;
 unsigned int total_log_sectors = 0;
 unsigned int total_data_sectors = 0;
 unsigned int reserved_sectors = 1;
+unsigned int root_dir_entries = 16;
 unsigned int sectors_per_cluster = 1;
 unsigned int archive_zip_offset = 0;
 unsigned int root_dir_sectors = 1;
@@ -323,7 +324,7 @@ int zip_out_open(void) {
 
 void zip_out_header_finish(void) {
     if (data_start != 0) {
-        unsigned int i,m,u;
+        unsigned int i,m,u,it;
         unsigned long fsz;
         char tmp[512];
 
@@ -370,7 +371,9 @@ void zip_out_header_finish(void) {
             }
 
             lseek(zip_fd,fat_start,SEEK_SET);
-            write(zip_fd,FAT,512 * fat_sectors);
+            for (it=0;it < number_of_fats;it++) {
+                write(zip_fd,FAT,512 * fat_sectors);
+            }
             free(FAT);
         }
 
@@ -400,7 +403,10 @@ int zip_out_header(void) {
         unsigned int C,H,S;
         unsigned int it;
 
-        unsigned int root_dir_entries = (root_dir_sectors * 512UL) / 32UL;                   // one sector / (bytes per root dir entry)
+        number_of_fats = 2;
+        reserved_sectors = 1;
+        root_dir_sectors = 14;
+        sectors_per_cluster = 1;
 
         if (spanning_size >= (1440UL*1024UL)) {
             /* 1.44MB */
@@ -427,6 +433,7 @@ int zip_out_header(void) {
             abort();
         }
 
+        root_dir_entries = (root_dir_sectors * 512UL) / 32UL;                   // one sector / (bytes per root dir entry)
         total_log_sectors = C * H * S;
         total_data_sectors = total_log_sectors - reserved_sectors - root_dir_sectors;
         total_clusters = total_data_sectors / sectors_per_cluster;
