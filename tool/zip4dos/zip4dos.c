@@ -1173,7 +1173,7 @@ static int parse(int argc,char **argv) {
 
             memset(&chdr,0,sizeof(chdr));
             chdr.sig = PKZIP_CENTRAL_DIRECTORY_HEADER_SIG;
-            chdr.version_made_by = 0;                   /* MS-DOS */
+            chdr.version_made_by = (0 << 8) + 25;       /* MS-DOS + PKZIP 2.5 */
             chdr.version_needed_to_extract = 20;        /* PKZIP 2.0 or higher */
             chdr.general_purpose_bit_flag = (0 << 1);   /* just lie and say that "normal" deflate was used */
 
