@@ -730,8 +730,6 @@ int zip_deflate(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
     assert(list->in_path != NULL);
 
     lfh->uncompressed_size = list->file_size;
-    if (list->file_size == 0)
-        return 0; // nothing to do
 
     src_fd = open(list->in_path,O_RDONLY|O_BINARY);
     if (src_fd < 0) {
