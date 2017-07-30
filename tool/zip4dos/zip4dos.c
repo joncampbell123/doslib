@@ -297,8 +297,217 @@ int zip_out_open(void) {
     return (zip_fd >= 0);
 }
 
+unsigned int fat_start = 0;
+unsigned int data_start = 0;
+unsigned int total_clusters = 0;
+unsigned int total_log_sectors = 0;
+unsigned int total_data_sectors = 0;
+unsigned int reserved_sectors = 1;
+unsigned int sectors_per_cluster = 1;
+unsigned int archive_zip_offset = 0;
+unsigned int root_dir_sectors = 1;
+unsigned int number_of_fats = 1;
+unsigned int fat_sectors = 0;
+unsigned int media_desc = 0;
+
+void zip_out_header_finish(void) {
+    if (data_start != 0) {
+        unsigned long fsz = zip_out_pos() - data_start;
+        unsigned int i,m,u;
+        char tmp[512];
+
+        assert(zip_fd >= 0);
+
+        /* go back and write in the size of the "file" in the root dir */
+        lseek(zip_fd,archive_zip_offset,SEEK_SET);
+        read(zip_fd,tmp,32);
+
+        // starting cluster already filled in. update file size.
+        *((uint32_t*)(tmp+0x1C)) = fsz;
+
+        lseek(zip_fd,archive_zip_offset,SEEK_SET);
+        write(zip_fd,tmp,32);
+
+        // now make a FAT chain
+        {
+            unsigned char *FAT = malloc(512 * fat_sectors);
+
+            if (FAT == NULL) return;
+            lseek(zip_fd,fat_start,SEEK_SET);
+            read(zip_fd,FAT,512 * fat_sectors);
+
+            // how many clusters?
+            u = 512 * sectors_per_cluster;
+            m = ((fsz + u - 1U) / u) + 2;
+            for (i=2;i < m;i++) {
+                unsigned int o = ((i >> 1U) * 3U) + (i & 1U);
+                unsigned int os = (i & 1U) * 4U;
+                unsigned int om = 0xFFFU << os;
+                uint16_t ent;
+
+                if ((i+1U) == m)
+                    ent = 0xFF8;    /* last cluster */
+                else
+                    ent = i + 1;    /* next cluster */
+
+                *((uint16_t*)(FAT+o)) &= ~om;
+                *((uint16_t*)(FAT+o)) |= ent << os;
+            }
+
+            lseek(zip_fd,fat_start,SEEK_SET);
+            write(zip_fd,FAT,512 * fat_sectors);
+            free(FAT);
+        }
+
+        // fill to end
+        memset(tmp,0,sizeof(tmp));
+        lseek(zip_fd,0,SEEK_END);
+        while (zip_out_pos() < spanning_size) {
+            unsigned long tor = spanning_size - zip_out_pos();
+            if (tor > 512) tor = 512;
+            write(zip_fd,tmp,tor);
+        }
+
+        fat_start = 0;
+        data_start = 0;
+    }
+}
+
+int zip_out_header(void) {
+    /* explanation: our spanning mode uses the PKZIP floppy method.
+     * that includes a segmented ZIP and volume labels to match.
+     * so the "header" is really just the first dozen sectors of an MS-DOS formatted floppy
+     * up to the point that the ZIP archive begins. */
+    if (spanning_size > 0 && zip_out_pos() == 0) {
+        char tmp[512];
+        unsigned int C,H,S;
+        unsigned int it;
+
+        unsigned int root_dir_entries = (root_dir_sectors * 512UL) / 32UL;                   // one sector / (bytes per root dir entry)
+
+        if (spanning_size >= (1440UL*1024UL)) {
+            /* 1.44MB */
+            C = 80;
+            H = 2;
+            S = 18;
+            media_desc = 0xF0;
+        }
+        else if (spanning_size >= (1200UL*1024UL)) {
+            /* 1.2MB */
+            C = 80;
+            H = 2;
+            S = 15;
+            media_desc = 0xF9;
+        }
+        else if (spanning_size >= (720UL*1024UL)) {
+            /* 720KB */
+            C = 80;
+            H = 2;
+            S = 9;
+            media_desc = 0xF9;
+        }
+        else {
+            abort();
+        }
+
+        total_log_sectors = C * H * S;
+        total_data_sectors = total_log_sectors - reserved_sectors - root_dir_sectors;
+        total_clusters = total_data_sectors / sectors_per_cluster;
+        for (it=0;it < 3;it++) {
+            unsigned long fatsz = (((unsigned long)total_clusters + 1UL) / 2UL) * 3UL; // FAT12
+            fat_sectors = (fatsz + 511UL) / 512UL;
+            total_data_sectors = total_log_sectors - reserved_sectors - root_dir_sectors;
+            total_data_sectors -= fat_sectors * number_of_fats;
+            total_clusters = total_data_sectors / sectors_per_cluster;
+        }
+
+        data_start = reserved_sectors + (fat_sectors * number_of_fats) + root_dir_sectors;
+        data_start *= 512UL;
+
+        /* copy boot sector, we're going to mod it */
+        memcpy(tmp,msdos_floppy_nonboot,512);
+
+        /* mod the BPB */
+        *((uint16_t*)(tmp+0x00B)) = 512;                            /* bytes per logical sector */
+        *((uint8_t*) (tmp+0x00D)) = sectors_per_cluster;            /* sectors per cluster */
+        *((uint16_t*)(tmp+0x00E)) = reserved_sectors;               /* reserved sectors */
+        *((uint8_t*) (tmp+0x010)) = number_of_fats;                 /* number of file alloc. tables */
+        *((uint16_t*)(tmp+0x011)) = root_dir_entries;               /* number of root dir entries */
+        *((uint16_t*)(tmp+0x013)) = total_log_sectors;              /* total logical sectors (of the entire disk) */
+        *((uint8_t*) (tmp+0x015)) = media_desc;                     /* media descriptor */
+        *((uint16_t*)(tmp+0x016)) = fat_sectors;                    /* sectors per FAT */
+        *((uint16_t*)(tmp+0x018)) = S;
+        *((uint8_t*) (tmp+0x01A)) = H;
+        *((uint32_t*)(tmp+0x01C)) = 0;
+        *((uint32_t*)(tmp+0x020)) = 0;
+
+        assert(zip_fd >= 0);
+        write(zip_fd,tmp,512);
+
+        fat_start = zip_out_pos();
+        {
+            unsigned char *FAT = malloc(512 * fat_sectors);
+
+            if (FAT == NULL) return 1;
+            memset(FAT,0,512 * fat_sectors);
+
+            // media byte + filler
+            FAT[0] = media_desc;
+            FAT[1] = 0xFF;
+            FAT[2] = 0xFF;
+
+            // zip_out_close() will write a FAT chain for how much was actually written
+
+            for (it=0;it < number_of_fats;it++) {
+                write(zip_fd,FAT,512 * fat_sectors);
+            }
+
+            free(FAT);
+        }
+
+        /* root directory (last bit). ZIP file and volume label */
+        memset(tmp,0,32*2);
+        {
+            unsigned char *ent = (unsigned char*)tmp + 0;
+
+            //          <---8+3--->
+            memcpy(ent,"ARCHIVE ZIP",11);
+            ent[11] = 0x00; // normal file
+            *((uint16_t*)(tmp+26)) = 2; // starting cluster
+            // zip_out_close() will update size later
+        }
+
+        {
+            unsigned char *ent = (unsigned char*)tmp + 32;
+
+            // volume label 11 char (based on PKZIP)
+            sprintf((char*)ent,"PKBACK# %03u",disk_current_number()+1);
+            ent[11] = 0x08; // volume label
+        }
+
+        archive_zip_offset = zip_out_pos();
+        write(zip_fd,tmp,32+32);
+
+        /* fill to data start */
+        memset(tmp,0,sizeof(tmp));
+        while (zip_out_pos() < data_start) {
+            unsigned long tor = data_start - zip_out_pos();
+            if (tor > 512) tor = 512;
+            write(zip_fd,tmp,tor);
+        }
+
+        if (zip_out_pos() > data_start)
+            fprintf(stderr,"WARNING: header too large\n");
+    }
+
+    return 1;
+}
+
 void zip_out_close(void) {
     if (zip_fd >= 0) {
+        if (spanning_size > 0)
+            zip_out_header_finish();
+
         close(zip_fd);
         zip_fd = -1;
     }
@@ -431,6 +640,11 @@ ssize_t zip_write_and_span(int fd,const void *buf,size_t count) {
 
                 if (!zip_out_open())
                     return -1;
+
+                if (spanning_size > 0 && zip_out_pos() == 0) {
+                    if (!zip_out_header())
+                        return 1;
+                }
             }
         }
     }
@@ -830,6 +1044,32 @@ static int parse(int argc,char **argv) {
         }
     }
 
+    if (spanning_size > 0)
+        spanning_size -= spanning_size & 0x1FFU;
+
+    if (1/*TODO*/) {
+        /* when writing as disk images, the spanning size must match that of a floppy disk */
+        if (spanning_size > (512UL*80UL*2UL*18UL)) {
+            fprintf(stderr,"For a floppy, spanning size is too big. Try 1440k.\n");
+            return 1;
+        }
+        else if (spanning_size > (512UL*80UL*2UL*15UL)) { /* 1.44MB, larger than 1.2MB */
+            spanning_size = (512UL*80UL*2UL*18UL);
+        }
+        else if (spanning_size > (512UL*80UL*1UL*18UL)) { /* 1.2MB, larger than 720KB */
+            spanning_size = (512UL*80UL*2UL*15UL);
+        }
+        else if (spanning_size > (512UL*80UL*1UL*16UL)) { /* 720KB, larger than 640KB */
+            spanning_size = (512UL*80UL*1UL*18UL);
+        }
+        else {
+            fprintf(stderr,"For a floppy, spanning size is too small. Try 1440k.\n");
+        }
+    }
+
+    if (spanning_size > 0)
+        fprintf(stderr,"Spanning size: %luKB\n",spanning_size / 1024UL);
+
     if (ic != (iconv_t)-1) {
         iconv_close(ic);
         ic = (iconv_t)-1;
@@ -1035,6 +1275,11 @@ static int parse(int argc,char **argv) {
         if (!zip_out_open())
             return 1;
 
+        if (spanning_size > 0 && zip_out_pos() == 0) {
+            if (!zip_out_header())
+                return 1;
+        }
+
         {
             /* the first segment of spanned ZIP archives have a special signature at the start */
             uint32_t x = 0x08074B50UL; /* PK\x07\x08 */
@@ -1085,6 +1330,11 @@ static int parse(int argc,char **argv) {
             /* get writing! */
             if (!zip_out_open())
                 return 1;
+
+            if (spanning_size > 0 && zip_out_pos() == 0) {
+                if (!zip_out_header())
+                    return 1;
+            }
 
             /* write local file header */
             assert(zip_fd >= 0);
@@ -1187,6 +1437,11 @@ static int parse(int argc,char **argv) {
 
                     if (!zip_out_open())
                         return 1;
+
+                    if (spanning_size > 0 && zip_out_pos() == 0) {
+                        if (!zip_out_header())
+                            return 1;
+                    }
                 }
             }
 
@@ -1221,6 +1476,11 @@ static int parse(int argc,char **argv) {
             /* get writing! */
             if (!zip_out_open())
                 return 1;
+
+            if (spanning_size > 0 && zip_out_pos() == 0) {
+                if (!zip_out_header())
+                    return 1;
+            }
 
             if (list == file_list_head) {
                 zip_cdir_start_disk = disk_current_number();
