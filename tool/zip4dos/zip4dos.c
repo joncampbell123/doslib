@@ -1011,6 +1011,19 @@ static int parse(int argc,char **argv) {
         d->byte_count = 0;
     }
 
+    if (spanning_size > 0) {
+        /* get writing! */
+        if (!zip_out_open())
+            return 1;
+
+        {
+            /* the first segment of spanned ZIP archives have a special signature at the start */
+            uint32_t x = 0x08074B50UL; /* PK\x07\x08 */
+
+            write(zip_fd,&x,4);
+        }
+    }
+
     {
         struct pkzip_local_file_header_main lhdr;
         struct in_file *list;
@@ -1088,7 +1101,6 @@ static int parse(int argc,char **argv) {
                     /* write a data descriptor */
                     assert((lhdr.general_purpose_bit_flag & (1 << 3)) != 0);
 
-                    /* Um.... question: Why have a CRC-32 field if apparently PKZip and InfoZip require this to be zero?? */
                     x = lhdr.crc32;
                     if (write(zip_fd,&x,4) != 4)
                         return 1;
