@@ -9,6 +9,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
+#include <time.h>
 #include <stdint.h>
 #include <endian.h>
 #include <dirent.h>
@@ -587,6 +588,34 @@ int zip_deflate(struct pkzip_local_file_header_main *lfh,struct in_file *list) {
     return 0;
 }
 
+uint16_t stat2msdostime(struct stat *st) {
+    struct tm *tm = localtime(&st->st_mtime);
+    assert(tm != NULL);
+
+    return
+        (tm->tm_hour << 11U) +
+        (tm->tm_min  <<  5U) +
+        (tm->tm_sec  >>  1U);
+}
+
+uint16_t stat2msdosdate(struct stat *st) {
+    struct tm *tm = localtime(&st->st_mtime);
+    assert(tm != NULL);
+
+    tm->tm_year += 1900;
+    if (tm->tm_year < 1980)
+        tm->tm_year = 1980;
+    else if (tm->tm_year > (1980+127))
+        tm->tm_year = 1980+127;
+
+    tm->tm_mon++;
+
+    return
+        (((tm->tm_year - 1980U) & 0x7FU) << 9U) +
+          (tm->tm_mon                    << 5U) +
+           tm->tm_mday;
+}
+
 static int parse(int argc,char **argv) {
     unsigned int zip_cdir_total_count = 0;
     unsigned int zip_cdir_last_count = 0;
@@ -783,6 +812,9 @@ static int parse(int argc,char **argv) {
                     }
                 }
 
+                f->msdos_time = stat2msdostime(&st);
+                f->msdos_date = stat2msdosdate(&st);
+
                 free(t);
                 file_list_append(f);
             }
@@ -951,6 +983,9 @@ static int parse(int argc,char **argv) {
                                 return 1;
                             }
                         }
+
+                        f->msdos_time = stat2msdostime(&st);
+                        f->msdos_date = stat2msdosdate(&st);
 
                         free(t);
                         file_list_append(f);
