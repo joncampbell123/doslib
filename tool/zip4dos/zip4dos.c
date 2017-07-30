@@ -108,16 +108,16 @@ static void help(void) {
     fprintf(stderr,"  -1                       Fast compression\n");
     fprintf(stderr,"  -9                       Better compression\n");
     fprintf(stderr,"  -r                       Recurse into directories\n");
-//    fprintf(stderr,"  -s <size>                Generate spanning ZIP archives\n");
+    fprintf(stderr,"  -s <size>                Generate spanning ZIP archives (see options)\n");
     fprintf(stderr,"  -ic <charset>            File names on host use this charset\n");
     fprintf(stderr,"  -oc <charset>            File names for target use this charset\n");
     fprintf(stderr,"  -t+                      Add trailing data descriptor\n");
     fprintf(stderr,"  -t-                      Don't write trailing descriptor\n");
     fprintf(stderr,"\n");
-//    fprintf(stderr,"Spanning size can be specified in bytes, or with K, M, G, suffix.\n");
-//    fprintf(stderr,"With spanning, the zip file must have .zip suffix, which will be changed\n");
-//    fprintf(stderr,"per fragment to z01, z02, etc.\n");
-//    fprintf(stderr,"\n");
+    fprintf(stderr,"Spanning size can be specified in bytes, or with K, M, G, suffix.\n");
+    fprintf(stderr,"With spanning, the zip file must have .zip suffix, which will be changed\n");
+    fprintf(stderr,"per fragment to z01, z02, etc.\n");
+    fprintf(stderr,"\n");
     fprintf(stderr,"No changes are made to the filename if neither -ic or -oc are specified.\n");
     fprintf(stderr,"If only -oc is specified, -ic is assumed from your locale.\n");
     fprintf(stderr,"If targeting US MS-DOS systems, you can use -oc CP437.\n");
@@ -334,7 +334,9 @@ char *zip_out_get_span_name(int disk_number) {
     a = strdup(zip_path);
     if (a == NULL) return 0;
 
-    /* replace .zip with .z01, .z02, etc. */
+    /* replace .zip with .d01, .d02, etc. */
+    /* we'll change to doing .z01, .z02, etc. when we support split archives properly,
+     * until then we only support generating disk images. */
     char *x = strrchr(a,'.');
     if (x == NULL) {
         free(a);
@@ -343,6 +345,7 @@ char *zip_out_get_span_name(int disk_number) {
 
     if (!strcasecmp(x,".zip")) {
 /*                     0123 */
+        x[1] = (char)'d';
         x[2] = (char)((disk_number + 1) / 10) + '0';
         x[3] = (char)((disk_number + 1) % 10) + '0';
     }
@@ -649,11 +652,11 @@ static int parse(int argc,char **argv) {
             else if (!strcmp(a,"r")) {
                 recurse = 1;
             }
-//            else if (!strcmp(a,"s")) {
-//                a = argv[i++];
-//                if (a == NULL) return 1;
-//                if (!parse_unit_amount(&spanning_size,a)) return 1;
-//            }
+            else if (!strcmp(a,"s")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                if (!parse_unit_amount(&spanning_size,a)) return 1;
+            }
             else if (!strcmp(a,"ic")) {
                 a = argv[i++];
                 if (a == NULL) return 1;
@@ -1136,6 +1139,26 @@ static int parse(int argc,char **argv) {
             assert(list->in_path != NULL);
             assert(list->zip_name != NULL);
 
+            if (spanning_size > 0) {
+                if (zip_out_pos() >= spanning_size) {
+                    unsigned long disk_pos = zip_out_pos();
+                    unsigned long disk_abs = disk_current()->byte_count;
+
+                    zip_out_close();
+                    if (!zip_out_rename_to_span(disk_current_number()))
+                        return -1;
+
+                    {
+                        struct disk_info *d = disk_new();
+                        if (d == NULL) return 1;
+                        d->byte_count = disk_pos + disk_abs;
+                    }
+
+                    if (!zip_out_open())
+                        return 1;
+                }
+            }
+
             memset(&chdr,0,sizeof(chdr));
             chdr.sig = PKZIP_CENTRAL_DIRECTORY_HEADER_SIG;
             chdr.version_made_by = 0;                   /* MS-DOS */
@@ -1210,6 +1233,12 @@ static int parse(int argc,char **argv) {
         assert(sizeof(ehdr) == 22);
         if (write(zip_fd,&ehdr,sizeof(ehdr)) != sizeof(ehdr))
             return 1;
+    }
+
+    if (disk_current_number() > 0) {
+        zip_out_close();
+        if (!zip_out_rename_to_span(disk_current_number()))
+            return -1;
     }
 
     zip_out_close();
