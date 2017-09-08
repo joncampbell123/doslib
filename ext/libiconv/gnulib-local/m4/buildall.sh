@@ -7,9 +7,11 @@
 #      but keeps the CR LF DOS endings for the DOS batch files.
 
 for i in *; do if [ -d "$i" ]; then
-    (cd $i && (
-        cp -v -u ../buildall.sh buildall.sh || exit 1
+    if [ -x "$i/buildall.sh" ]; then
+        cp -v -u buildall.sh "$i/buildall.sh" || exit 1
+    fi
 
+    (cd $i && (
         if [ -x buildall.sh ]; then
             ./buildall.sh $* || exit 1
         fi
