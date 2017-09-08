@@ -4,6 +4,8 @@ if [[ !( -f Makefile ) ]]; then
     dst="`pwd`/linux-host"
     ./configure "--prefix=$dst" --enable-static --disable-shared --enable-extra-encodings || exit 1
 fi
-make -j5 || exit 1
-make install || exit 1
+if [[ !( -f linux-host/lib/libiconv.a ) ]]; then
+    make -j5 || exit 1
+    make install || exit 1
+fi
 

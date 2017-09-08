@@ -8,6 +8,7 @@
 #include <mspack.h>
 
 static const char *ERROR(void *x) {
+    (void)x;
 	return "ERROR";
 }
 

@@ -11,12 +11,10 @@ for i in *; do if [ -d "$i" ]; then
         cp -v -u ../buildall.sh buildall.sh || exit 1
 
         if [ -x buildall.sh ]; then
-            echo Building: $i
             ./buildall.sh $* || exit 1
         fi
 
         if [ -x make.sh ]; then
-            echo Building: $i
             ./make.sh $* || exit 1
         fi)
     ) || exit 1

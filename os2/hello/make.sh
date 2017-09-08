@@ -30,7 +30,6 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
     if [ x"$2" != x ]; then what="$2"; fi
 
     for name in $build_list; do
-        echo Building $name
         do_wmake $name "$what" || exit 1
         bat_wmake $name "$what" || exit 1
     done

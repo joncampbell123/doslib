@@ -22,8 +22,6 @@ if [ -z "$WATCOM" ]; then
     export PATH=$WATCOM/binl:$WATCOM/binw:$PATH
 fi
 
-echo "Using: $WATCOM"
-
 export EDPATH=$WATCOM/eddat
 export "INCLUDE=$WATCOM/h/nt;$WATCOM/h/nt/directx;$WATCOM/h/nt/ddk;$WATCOM/h"
 export HPS=/
@@ -81,7 +79,6 @@ make_buildlist() {
     build_list=
 
     if [ x"$also_build_list" != x ]; then
-        echo "Allow list: $also_build_list"
         build_list="$also_build_list"
     fi
 
@@ -264,11 +261,9 @@ make_buildlist() {
     fi
 
     if [ x"$allow_build_list" != x ]; then
-        echo "Allow list: $allow_build_list"
         build_list="$allow_build_list"
     fi
     if [ x"$parent_build_list" != x ]; then
-        echo "Parent list: $parent_build_list"
         build_list="$parent_build_list"
     fi
 
