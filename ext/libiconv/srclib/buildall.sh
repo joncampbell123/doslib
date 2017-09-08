@@ -8,7 +8,7 @@
 
 for i in *; do if [ -d "$i" ]; then
     (cd $i && (
-        cp -vu ../buildall.sh buildall.sh || exit 1
+        cp -v -u ../buildall.sh buildall.sh || exit 1
 
         if [ -x buildall.sh ]; then
             echo Building: $i
