@@ -1,6 +1,8 @@
 #!/bin/bash
 #
 # Clean up the tree
+(cd minx86dec && (git clean -dfx; git reset --hard))
+git clean -dfx; git reset --hard
 find -name \*~ -delete
 true
 
