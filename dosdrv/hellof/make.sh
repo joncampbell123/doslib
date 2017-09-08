@@ -11,28 +11,6 @@ elif [ "$1" == "disk" ]; then
     gunzip -c -d win95.dsk.gz >win95.dsk
     mcopy -i win95.dsk dos86s/drv.sys ::drv.sys
 else
-    wmake -f watcom_c.mak
+    wmake -h -f watcom_c.mak
 fi
-
-cat >MAKE.BAT <<_EOF
-@echo off
-
-rem shut up DOS4G/W
-set DOS4G=quiet
-
-if "%1" == "clean" call clean.bat
-if "%1" == "clean" goto end
-wmake -f watcom_c.mak
-:end
-_EOF
-
-cat >CLEAN.BAT <<_EOF
-@echo off
-
-del *.obj
-del *.exe
-del *.lib
-del *.com
-del foo.gz
-_EOF
 
