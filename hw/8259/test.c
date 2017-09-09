@@ -65,7 +65,16 @@ void polltest() {
 				case 5:		just_int86(0x0D,&regs,&regs); break;
 				case 6:		just_int86(0x0E,&regs,&regs); break;
 				case 7:		just_int86(0x0F,&regs,&regs); break;
-
+#ifdef TARGET_PC98 /* NEC-98 */
+				case 8:		just_int86(0x10,&regs,&regs); break;
+				case 9:		just_int86(0x11,&regs,&regs); break;
+				case 10:	just_int86(0x12,&regs,&regs); break;
+				case 11:	just_int86(0x13,&regs,&regs); break;
+				case 12:	just_int86(0x14,&regs,&regs); break;
+				case 13:	just_int86(0x15,&regs,&regs); break;
+				case 14:	just_int86(0x16,&regs,&regs); break;
+				case 15:	just_int86(0x17,&regs,&regs); break;
+#else /* IBM PC/XT/AT */
 				case 8:		just_int86(0x70,&regs,&regs); break;
 				case 9:		just_int86(0x71,&regs,&regs); break;
 				case 10:	just_int86(0x72,&regs,&regs); break;
@@ -74,6 +83,7 @@ void polltest() {
 				case 13:	just_int86(0x75,&regs,&regs); break;
 				case 14:	just_int86(0x76,&regs,&regs); break;
 				case 15:	just_int86(0x77,&regs,&regs); break;
+#endif
 			};
 		}
 
