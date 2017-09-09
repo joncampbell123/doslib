@@ -37,6 +37,8 @@
 
 unsigned char			pci_cfg_probed = 0;
 unsigned char			pci_cfg = PCI_CFG_NONE;
+unsigned char           pci_cfg_presence_filtering = 0; /* if enabled, we refuse I/O to PCI bus/device combinations we know
+                                                           don't exist as a concession to shitty PCI bus implementations */
 uint32_t			pci_bios_protmode_entry_point = 0;
 uint8_t				pci_bios_hw_characteristics = 0;
 uint16_t			pci_bios_interface_level = 0;
@@ -56,6 +58,7 @@ void __cdecl			pci_bios_write_dword_16(uint16_t bx,uint16_t di,uint32_t data);
 /* NTS: Programming experience tells me that depite what this bitfield arrangement
  *      suggests, most PCI devices ignore bits 0-1 of the register number and expect
  *      you to offset the read from the 0xCFC register instead. */
+unsigned char pci_type1_refuse = 0;
 void pci_type1_select(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg) {
 	outpd(0xCF8,0x80000000UL |
 		(((uint32_t)bus)  << 16UL) |
@@ -82,6 +85,88 @@ uint32_t pci_read_cfg_TYPE1(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,ui
 
 	return ~0UL;
 }
+
+#ifdef TARGET_PC98
+uint32_t pci_read_cfg_TYPE1_pc(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint8_t size) {
+    /* PCI bus handling on NEC-PC9821 requires some additional work.
+     * The systems I've tested on so far appear to let the bus float instead of returning 0xFFFFFFFF
+     * for undefined devices. Some additional filtering is required to weed out valid devices from
+     * undefined devices. Since this can cause overhead, we only do this for the Vendor and Device
+     * fields of the PCI configuration space. */
+    uint32_t r = pci_read_cfg_TYPE1(bus,card,func,reg,size);
+
+    if (pci_cfg_presence_filtering) {
+        if (reg == 0 && size >= 2) { /* within device ID or vendor ID fields */
+            uint32_t ors[0x40U>>2U],ands[0x40U>>2U];
+            unsigned int i,j;
+            uint32_t r2;
+
+            /* holy shit the NEC PC-9821 has the worst PCI chipset I've ever written code for.
+             * the only excuse I can think of is that this is early 486 PCI chipset crap and
+             * that the drivers written for Windows 3.1 probably whitelisted the device IDs
+             * to avoid trouble. Blegh. I can only imagine the random surprises that would
+             * result when the end user upgraded to Windows 95.
+             *
+             * here's what we do to detect:
+             *
+             * repeatedly read the configuration space by DWORD from 0x00 to 0x3F.
+             * for each value we read:
+             *
+             *   ors[reg>>2] |= r2
+             *   ands[reg>>2] &= r2
+             *
+             * if the values are consistent, ors[i] == ands[i].
+             * else, the random garbage will give different values. */
+            for (j=0;j < (0x40U>>2U);j++) {
+                ands[j] = 0xFFFFFFFFUL;
+                ors[j] = 0;
+            }
+
+            /* do it 512 times to be absolutely sure.
+             * 128 times is not enough.
+             * 256 times is not enough.
+             * anything less than 512 times and when we enumerate past all valid devices,
+             * the garbage becomes consistent enough to make false positives.
+             *
+             * anyone who complains that this makes PCI enumeration too slow should understand
+             * this is the only way to get a proper enumeration of the PCI bus without garbage
+             * devices showing up.
+             *
+             * this is the price to pay when the difference between a PCI device and nothing
+             * is random and unpredictable data. Yuck. Blegh. Barf.
+             *
+             * PCI devices don't normally change device ID, vendor ID, status, command, cache
+             * lines, BARs, or anything else in the first 0x40 while reading. If they do,
+             * in an environment like MS-DOS where nothing usually changes that, then there's
+             * something wrong with the PCI device and it deserves to be ignored. >:[ */
+            for (j=0;j < 512;j++) {
+                if ((j&3U) == 0U) {
+                    /* prime the PCI bus with a known working device and register.
+                     * not doing this means that when the bus floats as high as it goes,
+                     * the test below will give false positives because the data is consistent again. */
+                    pci_read_cfg_TYPE1(/*bus*/0,/*card*/0,/*func*/0,/*reg*/j&0x3FU,2/*DWORD*/);
+                }
+
+                for (i=0;i < 0x40;i += 4) {
+                    r2 = pci_read_cfg_TYPE1(bus,card,func,i,2/*DWORD*/);
+                    ors[i>>2U] |= r2;
+                    ands[i>>2U] &= r2;
+                }
+            }
+
+            /* is it consistent? */
+            for (j=0;j < (0x40U>>2U);j++) {
+                if (ors[j] != ands[j])
+                    goto filter_out;
+            }
+        }
+    }
+
+    return r;
+filter_out:
+    return (uint32_t)0xFFFFFFFFUL;
+}
+#endif
 
 #ifndef TARGET_PC98
 /* WARNING: I have no hardware to verify this works */
@@ -247,6 +332,17 @@ void pci_probe_for_last_bus() {
 		/* if we already know there's something there, then stop */
 		if (id[bus] != ~0UL) break;
 
+#ifdef TARGET_PC98
+        /* if we're working with shit PC-9821 PCI bus hardware it's highly unlikely
+         * there's anything past bus 1, let alone bus 0. probing is slowed down as
+         * it is trying to differentiate between real devices and garbage on the PCI
+         * bus. don't waste our time. */
+        if (pci_cfg_presence_filtering && bus > 1) {
+            bus--;
+            continue;
+        }
+#endif
+
 		/* nothing found there. let's scan */
 		for (card=0;card < 32;card++) {
 			id[bus] = pci_read_cfgl(bus,card,0,0x00);
@@ -331,6 +427,16 @@ int pci_probe(int preference) {
 			break;
 	}
 
+#ifdef TARGET_PC98
+    /* Presence filtering for NEC PC-9821: Their PCI bus implementation isn't so good when it comes
+     * to undefined devices, at least on 486 systems. Rather than do what Intel systems do, and
+     * return 0xFFFFFFFF, they let the bus float and read back whatever random value it floats to.
+     * Undefined vendor IDs either read back 0x0000 or random values up to 0xFFE1. To prevent the
+     * host application from enumerating junk devices, we need to enable presence filtering and
+     * return 0xFFFF for these devices. */
+    pci_cfg_presence_filtering = 1;
+#endif
+
 	pci_cfg_probed = 1;
 	return pci_cfg;
 }
@@ -338,7 +444,7 @@ int pci_probe(int preference) {
 #ifdef TARGET_PC98
 uint32_t (*pci_read_cfg_array[PCI_CFG_MAX])(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint8_t size) = {
 	pci_read_cfg_NOTIMPL,		/* NONE */
-	pci_read_cfg_TYPE1,		/* TYPE1 */
+	pci_read_cfg_TYPE1_pc,		/* TYPE1 */
 	pci_read_cfg_NOTIMPL,		/* BIOS */
 	pci_read_cfg_NOTIMPL,		/* BIOS1 */
 	pci_read_cfg_NOTIMPL		/* TYPE2 */

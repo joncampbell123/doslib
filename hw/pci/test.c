@@ -106,6 +106,7 @@ int main(int argc,char **argv) {
 	}
 	printf("  Last bus:                 %d\n",pci_bios_last_bus);
 	printf("  Bus decode bits:          %d\n",pci_bus_decode_bits);
+    printf("  Presence filtering:       %d (%s)\n",pci_cfg_presence_filtering,pci_cfg_presence_filtering?"yes":"no");
 
 	/* then enumerate the bus */
 	{
