@@ -23,7 +23,7 @@ enum {
 
 extern unsigned char			pci_cfg;
 extern unsigned char			pci_cfg_probed;
-extern unsigned char            pci_cfg_presence_filtering;
+extern signed char            pci_cfg_presence_filtering;
 extern uint32_t				pci_bios_protmode_entry_point;
 extern uint8_t				pci_bios_hw_characteristics;
 extern uint16_t				pci_bios_interface_level;

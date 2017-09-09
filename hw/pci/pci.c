@@ -37,7 +37,7 @@
 
 unsigned char			pci_cfg_probed = 0;
 unsigned char			pci_cfg = PCI_CFG_NONE;
-unsigned char           pci_cfg_presence_filtering = 0; /* if enabled, we refuse I/O to PCI bus/device combinations we know
+signed char             pci_cfg_presence_filtering = -1;/* if enabled, we refuse I/O to PCI bus/device combinations we know
                                                            don't exist as a concession to shitty PCI bus implementations */
 uint32_t			pci_bios_protmode_entry_point = 0;
 uint8_t				pci_bios_hw_characteristics = 0;
@@ -95,7 +95,7 @@ uint32_t pci_read_cfg_TYPE1_pc(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg
      * fields of the PCI configuration space. */
     uint32_t r = pci_read_cfg_TYPE1(bus,card,func,reg,size);
 
-    if (pci_cfg_presence_filtering) {
+    if (pci_cfg_presence_filtering > 0) {
         if (reg == 0 && size >= 2) { /* within device ID or vendor ID fields */
             uint32_t ors[0x40U>>2U],ands[0x40U>>2U];
             unsigned int i,j;
@@ -337,7 +337,7 @@ void pci_probe_for_last_bus() {
          * there's anything past bus 1, let alone bus 0. probing is slowed down as
          * it is trying to differentiate between real devices and garbage on the PCI
          * bus. don't waste our time. */
-        if (pci_cfg_presence_filtering && bus > 1) {
+        if (pci_cfg_presence_filtering > 0 && bus > 1) {
             bus--;
             continue;
         }
@@ -434,7 +434,11 @@ int pci_probe(int preference) {
      * Undefined vendor IDs either read back 0x0000 or random values up to 0xFFE1. To prevent the
      * host application from enumerating junk devices, we need to enable presence filtering and
      * return 0xFFFF for these devices. */
-    pci_cfg_presence_filtering = 1;
+    if (pci_cfg_presence_filtering < 0)
+        pci_cfg_presence_filtering = 1;
+#else
+    if (pci_cfg_presence_filtering < 0)
+        pci_cfg_presence_filtering = 0;
 #endif
 
 	pci_cfg_probed = 1;

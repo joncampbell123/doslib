@@ -28,6 +28,8 @@ static void help() {
 #ifndef TARGET_PC98
 	printf("   /t2               Prefer Type 2 (0xCxxx) access\n");
 #endif
+    printf("   /pf               Enable presence filtering (for crap PCI busses)\n");
+    printf("   /pf-              Disable presence filtering\n");
 	printf("   /d                Dump config space too\n");
 }
 
@@ -64,6 +66,12 @@ int main(int argc,char **argv) {
 				pref = PCI_CFG_TYPE2;
 			}
 #endif
+            else if (!strcmp(a,"pf")) {
+                pci_cfg_presence_filtering = 1;
+            }
+	        else if (!strcmp(a,"pf-")) {
+                pci_cfg_presence_filtering = 0;
+            }
 			else {
 				printf("Unknown switch '%s'\n",a);
 				help();
@@ -106,7 +114,7 @@ int main(int argc,char **argv) {
 	}
 	printf("  Last bus:                 %d\n",pci_bios_last_bus);
 	printf("  Bus decode bits:          %d\n",pci_bus_decode_bits);
-    printf("  Presence filtering:       %d (%s)\n",pci_cfg_presence_filtering,pci_cfg_presence_filtering?"yes":"no");
+    printf("  Presence filtering:       %d (%s)\n",pci_cfg_presence_filtering,pci_cfg_presence_filtering > 0 ? "yes" : "no");
 
 	/* then enumerate the bus */
 	{
