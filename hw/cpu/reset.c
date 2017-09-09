@@ -36,6 +36,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/8042/8042.h>
 #include <hw/8254/8254.h>
+#include <hw/8259/8259.h>
 
 enum {
 	RESET_ANY=0,		/* try any reset method */
@@ -51,6 +52,8 @@ enum {
 enum {
 	RECOV_IBM_286_BIOS=0
 };
+
+int recovery = -1;
 
 /* NTS: Surprisingly, jumping to the BIOS entry point on PC-98 doesn't work.
  *      The BIOS isn't written to handle that case. It just hangs. */
@@ -76,7 +79,11 @@ static void help() {
 	fprintf(stderr,"Optionally, you can also request that this program try one of several\n");
 	fprintf(stderr,"methods of resuming control of the CPU after reset, instead of actually\n");
 	fprintf(stderr,"causing the whole system to reboot.\n");
+#ifdef TARGET_PC98
+    fprintf(stderr,"    /rc:286     PC-9801 286 reset vector recovery\n");
+#else
 	fprintf(stderr,"    /rc:286     IBM 286 BIOS reset vector recovery\n");
+#endif
 	fprintf(stderr,"\n");
 	fprintf(stderr,"Override switches---USE AT YOUR OWN RISK:\n");
 	fprintf(stderr,"    /rc:v86     Force recovery testing even if virtual 8086 mode is active\n");
@@ -87,8 +94,16 @@ void reset_f0h() {
     /* TODO: Apparently PC-9801/9821 supports a 286 reset vector as well, if you
      *       set SHUT1 and SHUT0 to 0 and fill in a vector. SHUT1 and SHUT0 set to 1
      *       is normal reboot. */
-    outp(0x37,0x0F);    // SHUT0=1
-    outp(0x37,0x0B);    // SHUT1=1
+
+    if (recovery == RECOV_IBM_286_BIOS) {
+        outp(0x37,0x0E);    // SHUT0=0
+        outp(0x37,0x0A);    // SHUT1=0
+    }
+    else {
+        outp(0x37,0x0F);    // SHUT0=1
+        outp(0x37,0x0B);    // SHUT1=1
+    }
+
     outp(0xF0,0x00);    // trigger CPU reset
 }
 #endif
@@ -175,7 +190,11 @@ jmp_buf recjmp;
 #if TARGET_MSDOS == 16
 void bios_reset_cb_e();
 void bios_reset_cb() {
+#ifdef TARGET_PC98
+	*((unsigned short far*)MK_FP(0xA000,0x0002)) = 0x31;
+#else
 	*((unsigned short far*)MK_FP(0xB800,0x0002)) = 0x1F31;
+#endif
 	longjmp(recjmp,1);
 }
 #endif
@@ -184,7 +203,6 @@ int main(int argc,char **argv) {
 #if TARGET_MSDOS == 16
 	unsigned char pic_a_mask,pic_b_mask;
 #endif
-	int recovery = -1;
 	int rec_v86 = 0;
 	int how = -1;
 	int keyb = 0;
@@ -316,20 +334,30 @@ int main(int argc,char **argv) {
 			mov	segds,ax
 		}
 
-		pic_a_mask = inp(0x21);
-		pic_b_mask = inp(0xA1);
-		
+		pic_a_mask = inp(P8259_MASTER_MASK);
+		pic_b_mask = inp(P8259_SLAVE_MASK);
+
+#ifdef TARGET_PC98
+        /* FIXME: This isn't working */
+		*((unsigned short far*)MK_FP(0x40,0x04)) = FP_OFF(bios_reset_cb_e);
+		*((unsigned short far*)MK_FP(0x40,0x06)) = FP_SEG(bios_reset_cb_e);
+#else
 		*((unsigned short far*)MK_FP(0x40,0x67)) = FP_OFF(bios_reset_cb_e);
 		*((unsigned short far*)MK_FP(0x40,0x69)) = FP_SEG(bios_reset_cb_e);
+#endif
+
 		/* store DS somewhere where our reset routine can find it */
 		*((unsigned short far*)MK_FP(0x50,0x04)) = FP_OFF(bios_reset_cb);
 		*((unsigned short far*)MK_FP(0x50,0x06)) = FP_SEG(bios_reset_cb);
 		*((unsigned short far*)MK_FP(0x50,0x08)) = segp;
 		*((unsigned short far*)MK_FP(0x50,0x0A)) = segs;
 		*((unsigned short far*)MK_FP(0x50,0x0C)) = segds;
+
+#ifndef TARGET_PC98
 		/* now write the CMOS to tell the BIOS what we're doing */
 		outp(0x70,0x0F);
 		outp(0x71,0x0A);
+#endif
 	}
 #endif
 
@@ -406,12 +434,17 @@ int main(int argc,char **argv) {
 
 #if TARGET_MSDOS == 16
 	if (recovery == RECOV_IBM_286_BIOS) {
+#ifndef TARGET_PC98
 		/* clear the CMOS flag */
 		outp(0x70,0x0F);
 		outp(0x71,0x00);
+#endif
+
 		/* restore the PIC mask */
-		outp(0x21,pic_a_mask);
-		outp(0xA1,pic_b_mask);
+		outp(P8259_MASTER_MASK,pic_a_mask);
+		outp(P8259_SLAVE_MASK,pic_b_mask);
+
+#ifndef TARGET_PC98
 		/* depending on the BIOS, we may be responsible for reenabling the keyboard
 		   and turning the clock lines back on */
 		if (how == RESET_KEYBOARD) {
@@ -429,6 +462,7 @@ int main(int argc,char **argv) {
 			k8042_write_command(0xAE);
 			k8042_drain_buffer();
 		}
+#endif
 	}
 #endif
 
