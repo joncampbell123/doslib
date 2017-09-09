@@ -44,22 +44,29 @@ enum {
 	RESET_PIIX_SOFT,	/* reset via port 0xCF9 (Intel PIIX soft-reset) */
 	RESET_PIIX_HARD,	/* reset via port 0xCF9 (Intel PIIX hard-reset) */
 	RESET_8086_ENTRY,	/* soft "reset" real-mode jump to 0xFFFF:0x0000 */
-	RESET_TRIPLE_FAULT	/* reset by intentionally causing a triple fault */
+	RESET_TRIPLE_FAULT, /* reset by intentionally causing a triple fault */
+    RESET_F0h           /* reset by port 37h and F0h (PC-9801/PC-9821) */
 };
 
 enum {
 	RECOV_IBM_286_BIOS=0
 };
 
+/* NTS: Surprisingly, jumping to the BIOS entry point on PC-98 doesn't work.
+ *      The BIOS isn't written to handle that case. It just hangs. */
 static void help() {
 	fprintf(stderr,"reset [options]\n");
 	fprintf(stderr,"Demonstrates causing a CPU reset by various methods\n");
 	fprintf(stderr,"\n");
+#ifdef TARGET_PC98
+    fprintf(stderr,"    /f0         Use port 37h and F0h (recommended)\n");
+#else
 	fprintf(stderr,"    /92         Use port 92h (recommended)\n");
 	fprintf(stderr,"    /k          Use keyboard controller\n");
 	fprintf(stderr,"    /piix:s     Intel PIIX port CF9h (soft)\n");
 	fprintf(stderr,"    /piix:h     Intel PIIX port CF9h (hard)\n");
 	fprintf(stderr,"    /8086       8086-style jump to BIOS entry point\n");
+#endif
 	fprintf(stderr,"    /tf         Cause CPU triple fault\n");
 	fprintf(stderr,"    /any        Try all methods listed above\n");
 	fprintf(stderr,"\n");
@@ -75,6 +82,18 @@ static void help() {
 	fprintf(stderr,"    /rc:v86     Force recovery testing even if virtual 8086 mode is active\n");
 }
 
+#ifdef TARGET_PC98
+void reset_f0h() {
+    /* TODO: Apparently PC-9801/9821 supports a 286 reset vector as well, if you
+     *       set SHUT1 and SHUT0 to 0 and fill in a vector. SHUT1 and SHUT0 set to 1
+     *       is normal reboot. */
+    outp(0x37,0x0F);    // SHUT0=1
+    outp(0x37,0x0B);    // SHUT1=1
+    outp(0xF0,0x00);    // trigger CPU reset
+}
+#endif
+
+#ifndef TARGET_PC98
 void reset_92h() {
 	unsigned char c;
 
@@ -144,11 +163,12 @@ void reset_piix_hard() {
 	outp(0xCF9,6); /* hard reset */
 }
 
+void reset_8086_entry();
+#endif
+
 void reset_triple_fault() {
 	/* TODO */
 }
-
-void reset_8086_entry();
 
 jmp_buf recjmp;
 
@@ -181,7 +201,10 @@ int main(int argc,char **argv) {
 		if (*a == '/' || *a == '-') {
 			do { a++; } while (*a == '/' || *a == '-');
 
-			if (!strcmp(a,"92")) {
+            if (0) {
+            }
+#ifndef TARGET_PC98
+            else if (!strcmp(a,"92")) {
 				how = RESET_92h;
 			}
 			else if (!strcmp(a,"k")) {
@@ -196,12 +219,18 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"8086")) {
 				how = RESET_8086_ENTRY;
 			}
+#endif
 			else if (!strcmp(a,"tf")) {
 				how = RESET_TRIPLE_FAULT;
 			}
 			else if (!strcmp(a,"any")) {
 				how = RESET_ANY;
 			}
+#ifdef TARGET_PC98
+            else if (!strcmp(a,"f0")) {
+                how = RESET_F0h;
+            }
+#endif
 			else if (!strcmp(a,"rc:286")) {
 				recovery = RECOV_IBM_286_BIOS;
 			}
@@ -311,6 +340,7 @@ int main(int argc,char **argv) {
 	}
 	else {
 		if (how == RESET_ANY) {
+#ifndef TARGET_PC98
 			reset_92h();
 			t8254_wait(t8254_us2ticks(250000));
 			reset_keyboard();
@@ -319,12 +349,20 @@ int main(int argc,char **argv) {
 			t8254_wait(t8254_us2ticks(250000));
 			reset_piix_hard();
 			t8254_wait(t8254_us2ticks(250000));
+#endif
+#ifdef TARGET_PC98
+            reset_f0h();
+			t8254_wait(t8254_us2ticks(250000));
+#endif
 			reset_triple_fault();
 			t8254_wait(t8254_us2ticks(250000));
+#ifndef TARGET_PC98
 #if TARGET_MSDOS == 16
 			reset_8086_entry(); /* <- unless on ancient hardware, this is least likely to work */
 #endif
+#endif
 		}
+#ifndef TARGET_PC98
 		else if (how == RESET_92h) {
 			reset_92h();
 		}
@@ -337,13 +375,21 @@ int main(int argc,char **argv) {
 		else if (how == RESET_PIIX_HARD) {
 			reset_piix_hard();
 		}
+#endif
+#ifdef TARGET_PC98
+        else if (how == RESET_F0h) {
+            reset_f0h();
+        }
+#endif
 		else if (how == RESET_TRIPLE_FAULT) {
 			reset_triple_fault();
 		}
+#ifndef TARGET_PC98
 #if TARGET_MSDOS == 16
 		else if (how == RESET_8086_ENTRY) {
 			reset_8086_entry();
 		}
+#endif
 #endif
 
 		/* We need a small pause here, some ancient 386 motherboards

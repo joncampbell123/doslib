@@ -32,10 +32,12 @@
 %endif
 
 %if TARGET_MSDOS == 16
+%ifndef TARGET_PC98 ; this doesn't work on PC-98
 global reset_8086_entry_
 reset_8086_entry_:
 	cli
 	jmp		0xFFFF:0x0000
+%endif
 %endif
 
 %if TARGET_MSDOS == 16
