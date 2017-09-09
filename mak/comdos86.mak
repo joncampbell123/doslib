@@ -85,6 +85,9 @@ CFLAGS386 += -zdp -zc -g=DGROUP -nt=_TEXT -nc=CODE -DTINYMODE=1 -D__TINY__=1 -zt
 CFLAGS386_TO_586 += -zdp -zc -g=DGROUP -nt=_TEXT -nc=CODE -DTINYMODE=1 -D__TINY__=1 -zt=65535
 CFLAGS386_TO_686 += -zdp -zc -g=DGROUP -nt=_TEXT -nc=CODE -DTINYMODE=1 -D__TINY__=1 -zt=65535
 !endif
+!ifdef PC98
+NASMFLAGS += -DTARGET_PC98=1
+!endif
 
 # NTS: MS-DOS is console based, no difference
 CFLAGS_CON = $(CFLAGS)
