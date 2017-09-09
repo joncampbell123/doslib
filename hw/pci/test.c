@@ -20,10 +20,14 @@ static void help() {
 	printf("test [options]\n");
 	printf("Test PCI access library\n");
 	printf("   /?                this help\n");
+#ifndef TARGET_PC98
 	printf("   /b                Prefer BIOS access\n");
 	printf("   /b1               Prefer BIOS 1.x access\n");
+#endif
 	printf("   /t1               Prefer Type 1 (0xCF8-0xCFF) access\n");
+#ifndef TARGET_PC98
 	printf("   /t2               Prefer Type 2 (0xCxxx) access\n");
+#endif
 	printf("   /d                Dump config space too\n");
 }
 
@@ -44,18 +48,22 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"d")) {
 				dumpraw = 1;
 			}
+#ifndef TARGET_PC98
 			else if (!strcmp(a,"b")) {
 				pref = PCI_CFG_BIOS;
 			}
 			else if (!strcmp(a,"b1")) {
 				pref = PCI_CFG_BIOS1;
 			}
+#endif
 			else if (!strcmp(a,"t1")) {
 				pref = PCI_CFG_TYPE1;
 			}
+#ifndef TARGET_PC98
 			else if (!strcmp(a,"t2")) {
 				pref = PCI_CFG_TYPE2;
 			}
+#endif
 			else {
 				printf("Unknown switch '%s'\n",a);
 				help();
@@ -82,6 +90,7 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 	printf("Found PCI BUS, code %d\n",pci_cfg);
+#ifndef TARGET_PC98
 	if (pci_cfg == PCI_CFG_BIOS) {
 		printf("  32-bit entry point:       0x%08lx\n",(unsigned long)pci_bios_protmode_entry_point);
 		printf("  Hardware charactistics:   0x%02x\n",(unsigned int)pci_bios_hw_characteristics);
@@ -90,6 +99,7 @@ int main(int argc,char **argv) {
 	if (pci_cfg == PCI_CFG_BIOS1) {
 		printf("  PCI BIOS 1.xx interface\n");
 	}
+#endif
 	if (pci_bios_last_bus == -1) {
 		printf("  Autodetecting PCI bus count...\n");
 		pci_probe_for_last_bus();

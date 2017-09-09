@@ -10,6 +10,8 @@
 ; NTS: We use NASM (Netwide Assembler) to achieve our goals here because WASM (Watcom Assembler) sucks.
 ;      I'll consider using their assembler when they get a proper conditional macro system in place.
 
+%ifndef TARGET_PC98 ; NOT for PC-98
+
 ; handy memory model defines
 %include "_memmodl.inc"
 
@@ -131,4 +133,6 @@ _pci_bios_write_dword_16:
 ; we must explicitly defined _DATA and _TEXT to become part of the program's code and data,
 ; else this code will not work correctly
 group DGROUP _DATA
+
+%endif ; TARGET_PC98
 

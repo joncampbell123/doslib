@@ -43,12 +43,14 @@ uint16_t			pci_bios_interface_level = 0;
 uint8_t				pci_bus_decode_bits = 0;	/* which bus bits the hardware actually bothers to compare against */
 int16_t				pci_bios_last_bus = 0;
 
+#ifndef TARGET_PC98
 /* external assembly language functions */
 int				try_pci_bios2();
 int				try_pci_bios1();
-#if TARGET_MSDOS == 16
+# if TARGET_MSDOS == 16
 uint32_t __cdecl		pci_bios_read_dword_16(uint16_t bx,uint16_t di);
 void __cdecl			pci_bios_write_dword_16(uint16_t bx,uint16_t di,uint32_t data);
+# endif
 #endif
 
 /* NTS: Programming experience tells me that depite what this bitfield arrangement
@@ -62,11 +64,13 @@ void pci_type1_select(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg) {
 		 ((uint32_t)(reg & 0xFC)));
 }
 
+#ifndef TARGET_PC98
 void pci_type2_select(uint8_t bus,uint8_t func) {
 	/* FIXME: Is this right? Documentation is sparse and hard to come by... */
 	outp(0xCF8,0x80 | (func << 1));
 	outp(0xCFA,bus);
 }
+#endif
 
 uint32_t pci_read_cfg_TYPE1(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint8_t size) {
 	pci_type1_select(bus,card,func,reg);
@@ -79,6 +83,7 @@ uint32_t pci_read_cfg_TYPE1(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,ui
 	return ~0UL;
 }
 
+#ifndef TARGET_PC98
 /* WARNING: I have no hardware to verify this works */
 uint32_t pci_read_cfg_TYPE2(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint8_t size) {
 	const uint16_t pt = 0xC000 + (card << 8) + reg;
@@ -91,7 +96,9 @@ uint32_t pci_read_cfg_TYPE2(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,ui
 
 	return ~0UL;
 }
+#endif
 
+#ifndef TARGET_PC98
 uint32_t pci_read_cfg_BIOS(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint8_t size) {
 	static const uint32_t msks[3] = {0xFFUL,0xFFFFUL,0xFFFFFFFFUL};
 	union REGS regs;
@@ -126,6 +133,7 @@ uint32_t pci_read_cfg_BIOS(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uin
 	return regs.w.cx & msks[size];
 #endif
 }
+#endif
 
 uint32_t pci_read_cfg_NOTIMPL(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint8_t size) {
 	return ~0UL;
@@ -140,6 +148,7 @@ void pci_write_cfg_TYPE1(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint3
 	}
 }
 
+#ifndef TARGET_PC98
 /* WARNING: I have no hardware to verify this works */
 void pci_write_cfg_TYPE2(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint32_t data,uint8_t size) {
 	const uint16_t pt = 0xC000 + (card << 8) + reg;
@@ -150,7 +159,9 @@ void pci_write_cfg_TYPE2(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint3
 		case 0: outp(pt,data);
 	}
 }
+#endif
 
+#ifndef TARGET_PC98
 void pci_write_cfg_BIOS(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint32_t data,uint8_t size) {
 	union REGS regs;
 	
@@ -179,6 +190,7 @@ void pci_write_cfg_BIOS(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint32
 	int86(0x1A,&regs,&regs);
 #endif
 }
+#endif
 
 void pci_write_cfg_NOTIMPL(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint32_t data,uint8_t size) {
 }
@@ -251,9 +263,11 @@ void pci_probe_for_last_bus() {
 
 int try_pci_type2() {
 	int ret = 0;
+#ifndef TARGET_PC98
 	outp(0xCF8,0);
 	outp(0xCFA,0);
 	if (inp(0xCF8) == 0 && inp(0xCFA) == 0) ret = 1;
+#endif
 	return ret;
 }
 
@@ -288,6 +302,7 @@ int pci_probe(int preference) {
 		case PCI_CFG_TYPE1:
 			if (try_pci_type1()) pci_cfg = PCI_CFG_TYPE1;
 			break;
+#ifndef TARGET_PC98
 		case PCI_CFG_BIOS:
 			if (try_pci_bios2()) pci_cfg = PCI_CFG_BIOS;
 			break;
@@ -297,10 +312,12 @@ int pci_probe(int preference) {
 		case PCI_CFG_BIOS1:
 			if (try_pci_bios1()) pci_cfg = PCI_CFG_BIOS1;
 			break;
+#endif
 		default:
 			if (pci_cfg == PCI_CFG_NONE) { /* Type 1? This is most common, and widely supported */
 				if (try_pci_type1()) pci_cfg = PCI_CFG_TYPE1;
 			}
+#ifndef TARGET_PC98
 			if (pci_cfg == PCI_CFG_NONE) {
 				if (try_pci_bios2()) pci_cfg = PCI_CFG_BIOS;
 			}
@@ -310,6 +327,7 @@ int pci_probe(int preference) {
 			if (pci_cfg == PCI_CFG_NONE) {
 				if (try_pci_bios1()) pci_cfg = PCI_CFG_BIOS1;
 			}
+#endif
 			break;
 	}
 
@@ -317,6 +335,15 @@ int pci_probe(int preference) {
 	return pci_cfg;
 }
 
+#ifdef TARGET_PC98
+uint32_t (*pci_read_cfg_array[PCI_CFG_MAX])(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint8_t size) = {
+	pci_read_cfg_NOTIMPL,		/* NONE */
+	pci_read_cfg_TYPE1,		/* TYPE1 */
+	pci_read_cfg_NOTIMPL,		/* BIOS */
+	pci_read_cfg_NOTIMPL,		/* BIOS1 */
+	pci_read_cfg_NOTIMPL		/* TYPE2 */
+};
+#else
 uint32_t (*pci_read_cfg_array[PCI_CFG_MAX])(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint8_t size) = {
 	pci_read_cfg_NOTIMPL,		/* NONE */
 	pci_read_cfg_TYPE1,		/* TYPE1 */
@@ -324,7 +351,17 @@ uint32_t (*pci_read_cfg_array[PCI_CFG_MAX])(uint8_t bus,uint8_t card,uint8_t fun
 	pci_read_cfg_NOTIMPL,		/* BIOS1 */
 	pci_read_cfg_TYPE2		/* TYPE2 */
 };
+#endif
 
+#ifdef TARGET_PC98
+void (*pci_write_cfg_array[PCI_CFG_MAX])(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint32_t data,uint8_t size) = {
+	pci_write_cfg_NOTIMPL,		/* NONE */
+	pci_write_cfg_TYPE1,		/* TYPE1 */
+	pci_write_cfg_NOTIMPL,		/* BIOS */
+	pci_write_cfg_NOTIMPL,		/* BIOS1 */
+	pci_write_cfg_NOTIMPL		/* TYPE2 */
+};
+#else
 void (*pci_write_cfg_array[PCI_CFG_MAX])(uint8_t bus,uint8_t card,uint8_t func,uint8_t reg,uint32_t data,uint8_t size) = {
 	pci_write_cfg_NOTIMPL,		/* NONE */
 	pci_write_cfg_TYPE1,		/* TYPE1 */
@@ -332,6 +369,7 @@ void (*pci_write_cfg_array[PCI_CFG_MAX])(uint8_t bus,uint8_t card,uint8_t func,u
 	pci_write_cfg_NOTIMPL,		/* BIOS1 */
 	pci_write_cfg_TYPE2		/* TYPE2 */
 };
+#endif
 
 uint8_t pci_probe_device_functions(uint8_t bus,uint8_t dev) {
 	uint8_t funcs=8,f;
