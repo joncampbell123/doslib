@@ -12,6 +12,7 @@
 #include <math.h>
 #include <dos.h>
 
+#include <hw/8259/8259.h>
 #include <hw/dos/dos.h>
 
 #if TARGET_MSDOS == 32
@@ -53,12 +54,14 @@ static void patch_irq(unsigned int vec,unsigned int irq) {
 	*codebuf++ = 0x50;		// PUSH AX
 	*codebuf++ = 0xB0;		// MOV AL,20
 	*codebuf++ = 0x20;
-	if (irq >= 8) {
+
+    if (irq >= 8) {
 	*codebuf++ = 0xE6;		// OUT A0,AL
-	*codebuf++ = 0xA0;
+	*codebuf++ = P8259_SLAVE_DATA;
 	}
 	*codebuf++ = 0xE6;		// OUT 20,AL
-	*codebuf++ = 0x20;
+	*codebuf++ = P8259_MASTER_DATA;
+
 	*codebuf++ = 0x58;		// POP AX
 	*codebuf++ = 0xCF;		// IRET
 
@@ -85,6 +88,16 @@ int main(int argc,char **argv) {
         codebuf_fence = (unsigned char far*)MK_FP(segn,0x1000U);
     }
 
+#ifdef TARGET_PC98 /* NEC-98 */
+	for (irq=3;irq < 16;irq++) {
+		vec = 0x08 + irq;
+		if (need_patching(vec)) {
+			printf("Patching IRQ %u with PIC-friendly code\n",irq);
+			patch_irq(vec,irq);
+			patched++;
+		}
+	}
+#else /* IBM PC/XT/AT */
 	for (irq=3;irq < 8;irq++) {
 		vec = 0x08 + irq;
 		if (need_patching(vec)) {
@@ -101,6 +114,7 @@ int main(int argc,char **argv) {
 			patched++;
 		}
 	}
+#endif
 
 	if (patched == 0) {
 		printf("No IRQs patched.\n");
