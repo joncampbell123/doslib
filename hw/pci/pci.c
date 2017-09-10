@@ -433,9 +433,12 @@ int pci_probe(int preference) {
      * return 0xFFFFFFFF, they let the bus float and read back whatever random value it floats to.
      * Undefined vendor IDs either read back 0x0000 or random values up to 0xFFE1. To prevent the
      * host application from enumerating junk devices, we need to enable presence filtering and
-     * return 0xFFFF for these devices. */
+     * return 0xFFFF for these devices.
+     *
+     * The good news is that by the time PC-9821 moved onto the Pentium, this issue was resolved
+     * and normal probing can be used. */
     if (pci_cfg_presence_filtering < 0)
-        pci_cfg_presence_filtering = 1;
+        pci_cfg_presence_filtering = (cpu_basic_level < 5); /* enable IF the CPU is a 486 or lower */
 #else
     if (pci_cfg_presence_filtering < 0)
         pci_cfg_presence_filtering = 0;
