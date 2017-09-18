@@ -29,86 +29,86 @@
 
 #ifdef TARGET_PC98
 /* NEC PC-98 */
-# define PC_SPEAKER_GATE					0x35
-# define PC_SPEAKER_GATE_MASK					0x01 /* mask prior to shift */
-# define PC_SPEAKER_GATE_XOR                                    0x01
-# define PC_SPEAKER_GATE_SHIFT					3
+# define PC_SPEAKER_GATE                        0x35
+# define PC_SPEAKER_GATE_MASK                   0x01 /* mask prior to shift */
+# define PC_SPEAKER_GATE_XOR                    0x01
+# define PC_SPEAKER_GATE_SHIFT                  3
 
 /* values to use with pc_speaker_set_gate */
-# define PC_SPEAKER_GATE_ON					0x1
-# define PC_SPEAKER_GATE_OFF					0x0
+# define PC_SPEAKER_GATE_ON                     0x1
+# define PC_SPEAKER_GATE_OFF                    0x0
 #else
 /* IBM PC/XT/AT */
-# define PC_SPEAKER_GATE					0x61
-# define PC_SPEAKER_GATE_MASK					0x03 /* mask prior to shift */
-# define PC_SPEAKER_GATE_XOR                                    0x00
-# define PC_SPEAKER_GATE_SHIFT					0
+# define PC_SPEAKER_GATE                        0x61
+# define PC_SPEAKER_GATE_MASK                   0x03 /* mask prior to shift */
+# define PC_SPEAKER_GATE_XOR                    0x00
+# define PC_SPEAKER_GATE_SHIFT                  0
 
 /* values to use with pc_speaker_set_gate */
-# define PC_SPEAKER_GATE_ON					0x3
-# define PC_SPEAKER_GATE_OFF					0x0
+# define PC_SPEAKER_GATE_ON                     0x3
+# define PC_SPEAKER_GATE_OFF                    0x0
 
 /* there's more nuance to it if you care to use it */
-# define PC_SPEAKER_OUTPUT_TTL_AND_GATE				0x1 /* the AND gate between counter 2 output and the speaker */
-# define PC_SPEAKER_COUNTER_2_GATE				0x2 /* the GATE line going into counter 2 */
+# define PC_SPEAKER_OUTPUT_TTL_AND_GATE         0x1 /* the AND gate between counter 2 output and the speaker */
+# define PC_SPEAKER_COUNTER_2_GATE              0x2 /* the GATE line going into counter 2 */
 #endif
 
 #ifdef TARGET_PC98
 /* NEC PC-98 */
 /* The base clock can be one of two frequencies: 1.9968MHz, or 2.4576MHz, depending on whether the CPU is 5MHz, 8MHz, or 10MHz */
 extern uint32_t __T8254_REF_CLOCK_HZ;
-# define T8254_REF_CLOCK_HZ					(__T8254_REF_CLOCK_HZ)
+# define T8254_REF_CLOCK_HZ                     (__T8254_REF_CLOCK_HZ)
 #else
 /* IBM PC/XT/AT */
 /* 1.19318MHz from which the counter values divide down from */
-# define T8254_REF_CLOCK_HZ					(1193180UL)
+# define T8254_REF_CLOCK_HZ                     (1193180UL)
 #endif
 
 /* IBM PC/XT/AT and PC-98 use the same IRQ */
-#define T8254_IRQ						0
+#define T8254_IRQ                               0
 
 #ifdef TARGET_PC98
-# define T8254_TIMER_INTERRUPT_TICK				0
-# define T8254_TIMER_PC_SPEAKER					1
-# define T8254_TIMER_RS232					2
+# define T8254_TIMER_INTERRUPT_TICK             0
+# define T8254_TIMER_PC_SPEAKER                 1
+# define T8254_TIMER_RS232                      2
 #else
-# define T8254_TIMER_INTERRUPT_TICK				0
-# define T8254_TIMER_DRAM_REFRESH				1
-# define T8254_TIMER_PC_SPEAKER					2
+# define T8254_TIMER_INTERRUPT_TICK             0
+# define T8254_TIMER_DRAM_REFRESH               1
+# define T8254_TIMER_PC_SPEAKER                 2
 #endif
 
 #ifdef TARGET_PC98
 /* PC-98 I/O ports 71h-77h odd only */
-# define T8254_PORT(x)						(((x) * 2U) + 0x71U)
+# define T8254_PORT(x)                          (((x) * 2U) + 0x71U)
 #else
 /* IBM PC/XT/AT I/O ports 40h-43h */
-# define T8254_PORT(x)						((x) + 0x40U)
+# define T8254_PORT(x)                          ((x) + 0x40U)
 #endif
 
-#define T8254_TIMER_PORT(x)					T8254_PORT(x)
-#define T8254_CONTROL_PORT					T8254_PORT(3)
+#define T8254_TIMER_PORT(x)                     T8254_PORT(x)
+#define T8254_CONTROL_PORT                      T8254_PORT(3)
 
 /* Control port mode (M2,M1,M0) */
-#define T8254_MODE_0_INT_ON_TERMINAL_COUNT			0			/* 000 */
-#define T8254_MODE_1_HARDWARE_RETRIGGERABLE_ONE_SHOT		1			/* 001 */
-#define T8254_MODE_2_RATE_GENERATOR				2			/* X10 */
-#define T8254_MODE_3_SQUARE_WAVE_MODE				3			/* X11 */
-#define T8254_MODE_4_SOFTWARE_TRIGGERED_STROBE			4			/* 100 */
-#define T8254_MODE_5_HARDWARE_TRIGGERED_STROBE			5			/* 101 */
+#define T8254_MODE_0_INT_ON_TERMINAL_COUNT                  0           /* 000 */
+#define T8254_MODE_1_HARDWARE_RETRIGGERABLE_ONE_SHOT        1           /* 001 */
+#define T8254_MODE_2_RATE_GENERATOR                         2           /* X10 */
+#define T8254_MODE_3_SQUARE_WAVE_MODE                       3           /* X11 */
+#define T8254_MODE_4_SOFTWARE_TRIGGERED_STROBE              4           /* 100 */
+#define T8254_MODE_5_HARDWARE_TRIGGERED_STROBE              5           /* 101 */
 
 /* Control port read/write (RW1,RW0) */
-#define T8254_RW_COUNTER_LATCH					0			/* Counter latch (read operation) */
-#define T8254_RW_LSB_ONLY					1			/* Read/write LSB only */
-#define T8254_RW_MSB_ONLY					2			/* Read/write MSB only */
-#define T8254_RW_LSB_THEN_MSB					3			/* Read/write LSB, then MSB */
+#define T8254_RW_COUNTER_LATCH                              0           /* Counter latch (read operation) */
+#define T8254_RW_LSB_ONLY                                   1           /* Read/write LSB only */
+#define T8254_RW_MSB_ONLY                                   2           /* Read/write MSB only */
+#define T8254_RW_LSB_THEN_MSB                               3           /* Read/write LSB, then MSB */
 
 /* readback bitmask */
-#define T8254_READBACK_COUNT					0x20
-#define T8254_READBACK_STATUS					0x10
-#define T8254_READBACK_TIMER_2					0x08
-#define T8254_READBACK_TIMER_1					0x04
-#define T8254_READBACK_TIMER_0					0x02
-#define T8254_READBACK_ALL					0x3E
+#define T8254_READBACK_COUNT                                0x20
+#define T8254_READBACK_STATUS                               0x10
+#define T8254_READBACK_TIMER_2                              0x08
+#define T8254_READBACK_TIMER_1                              0x04
+#define T8254_READBACK_TIMER_0                              0x02
+#define T8254_READBACK_ALL                                  0x3E
 
 /* this represents one counter value in the 8254/8253 chipset library, including the
  * value the chip reloads on finishing countdown.
