@@ -816,6 +816,21 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    /* right away, issue OPL3 commands to key off all notes as fast as possible */
+    {
+        struct imf_entry ent;
+        unsigned int i;
+
+        assert(sizeof(ent) == 4);
+
+        ent.delay = 1;
+        for (i=0;i < 9;i++) {
+            ent.reg = 0xB0 + i;
+            ent.data = 0x00;        /* KEY OFF, block number 0 */
+            write(imf_fd,&ent,sizeof(ent));
+        }
+    }
+
 	write_8254_system_timer(T8254_REF_CLOCK_HZ / 100); /* tick faster at 100Hz please */
 	irq0_cnt = 0;
 	irq0_add = 182;
