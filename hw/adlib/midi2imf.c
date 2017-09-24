@@ -28,6 +28,15 @@
 #include <hw/8259/8259.h>
 #include <hw/adlib/adlib.h>
 
+int imf_fd = -1;
+
+#pragma pack(push,1)
+struct imf_entry {
+	uint8_t		reg,data;
+	uint16_t	delay;
+};
+#pragma pack(pop)
+
 /* one per OPL channel */
 struct midi_note {
 	unsigned char		note_number;
@@ -775,9 +784,9 @@ int main(int argc,char **argv) {
 	unsigned long ptick;
 	int i,c;
 
-	printf("ADLIB FM test program\n");
-	if (argc < 2) {
-		printf("You must specify a MIDI file to play\n");
+	printf("MIDI to IMF converter\n");
+	if (argc < 3) {
+		printf("MIDI2IMF <source .mid file> <output .imf file>\n");
 		return 1;
 	}
 
@@ -800,6 +809,12 @@ int main(int argc,char **argv) {
 		printf("Failed to load MIDI\n");
 		return 1;
 	}
+
+    imf_fd = open(argv[2],O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0644);
+    if (imf_fd < 0) {
+        printf("Failed to open IMF\n");
+        return 1;
+    }
 
 	write_8254_system_timer(T8254_REF_CLOCK_HZ / 100); /* tick faster at 100Hz please */
 	irq0_cnt = 0;
@@ -859,6 +874,7 @@ int main(int argc,char **argv) {
 		midi_trk[i].read = NULL;
 	}
 
+    close(imf_fd);
 	return 0;
 }
 
