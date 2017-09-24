@@ -29,6 +29,7 @@
 #include <hw/adlib/adlib.h>
 
 int imf_fd = -1;
+int imf_ticks_per_quarter_note = 700;
 
 #pragma pack(push,1)
 struct imf_entry {
