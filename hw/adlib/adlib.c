@@ -57,10 +57,9 @@ struct adlib_fm_channel adlib_fm_preset_violin_opl2 = {
 };
 
 struct adlib_fm_channel adlib_fm_preset_piano = {
-	.mod = {0,	0,	1,	1,	1,	1,	42,	10,	4,	2,	3,	0,
-		4,	456,	1,	1,	1,	1,	4,	0,	0},
-	.car = {0,	0,	1,	1,	1,	1,	63,	10,	1,	8,	3,	0,
-		4,	456,	1,	1,	1,	1,	0,	0,	0}
+/*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
+    .mod = {0,  0,  1,  1,  1,  1,  45, 10, 4,  2,  3,  0,  4,  456,1,  1,  1,  1,  4,  0,  0},
+    .car = {0,  0,  0,  1,  1,  1,  63, 10, 1,  8,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  0}
 };
 
 struct adlib_fm_channel adlib_fm_preset_harpsichord = {
