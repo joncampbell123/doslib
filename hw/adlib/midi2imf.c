@@ -557,6 +557,7 @@ void midi_tick() {
 		}
 
 		if (eof >= midi_trk_count) {
+            fprintf(stderr,"MIDI EOF. Restarting\n");
 			adlib_shut_up();
 			midi_reset_tracks();
 			midi_reset_channels();
