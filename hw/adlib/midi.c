@@ -741,34 +741,12 @@ void adlib_shut_up() {
 	}
 
 	for (i=0;i < adlib_fm_voices;i++) {
-		struct adlib_fm_operator *f;
-
 		midi_notes[i].busy = 0;
 		midi_notes[i].note_channel = 0;
 
-		f = &adlib_fm[i].mod;
-		f->mod_multiple = 1;
-		f->total_level = 63 - 16;
-		f->attack_rate = 15;
-		f->decay_rate = 4;
-		f->sustain_level = 0;
-		f->release_rate = 8;
-		f->f_number = 400;
-		f->sustain = 1;
-		f->octave = 4;
-		f->key_on = 0;
-
-		f = &adlib_fm[i].car;
-		f->mod_multiple = 1;
-		f->total_level = 63 - 16;
-		f->attack_rate = 15;
-		f->decay_rate = 4;
-		f->sustain_level = 0;
-		f->release_rate = 8;
-		f->f_number = 0;
-		f->sustain = 1;
-		f->octave = 0;
-		f->key_on = 0;
+        /* default "piano" */
+        adlib_fm[i].mod = adlib_fm_preset_piano.mod;
+        adlib_fm[i].car = adlib_fm_preset_piano.car;
 	}
 
 	adlib_apply_all();
