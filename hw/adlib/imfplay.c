@@ -102,14 +102,12 @@ void interrupt irq0() {
 
 void imf_tick() {
 	if (imf_delay_countdown == 0) {
-		do {
-			adlib_write(imf_play_ptr->reg,imf_play_ptr->data);
-			imf_delay_countdown = imf_play_ptr->delay;
-			imf_play_ptr++;
-			if (imf_play_ptr == imf_music_end)
-				imf_play_ptr = imf_music;
-		} while (imf_delay_countdown == 0);
-	}
+        adlib_write(imf_play_ptr->reg,imf_play_ptr->data);
+        imf_delay_countdown = imf_play_ptr->delay;
+        imf_play_ptr++;
+        if (imf_play_ptr == imf_music_end)
+            imf_play_ptr = imf_music;
+    }
 	else {
 		imf_delay_countdown--;
 	}
