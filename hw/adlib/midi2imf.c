@@ -502,8 +502,8 @@ void midi_tick_track(unsigned int i) {
 
                                 fprintf(stderr,"MIDI track %u: Temp change to %lu microseconds per quarter note\n",i,t->us_per_quarter_note);
 
-								if (1/*TODO: If format 0 or format 1*/) {
-									/* Ugh. Unless format 2, the tempo applies to all tracks */
+                                /* tempo changes affect all tracks */
+								{
 									int j;
 
 									for (j=0;j < midi_trk_count;j++) {
