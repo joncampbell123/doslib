@@ -34,6 +34,7 @@ struct midi_note {
 	unsigned char		note_velocity;
 	unsigned char		note_track;	/* from what MIDI track */
 	unsigned char		note_channel;	/* from what MIDI channel */
+    unsigned char       note_program;
 	unsigned int		busy:1;		/* if occupied */
 };
 
@@ -297,6 +298,40 @@ static void drop_fm_note(struct midi_channel *ch,unsigned char key) {
 	}
 }
 
+static void change_fm_instrument(struct midi_note *note,unsigned int instrument) {
+    unsigned char i = (unsigned char)(note - midi_notes);
+    unsigned char upd = 0;
+
+    switch (instrument) {
+        case 1: /* Acoustic piano */
+            adlib_fm[i].mod = adlib_fm_preset_piano.mod;
+            adlib_fm[i].car = adlib_fm_preset_piano.car;
+            upd = 1;
+            break;
+
+        case 57: /* Trumpet */
+            adlib_fm[i].mod = adlib_fm_preset_trumpet.mod;
+            adlib_fm[i].car = adlib_fm_preset_trumpet.car;
+            upd = 1;
+            break;
+ 
+        default:
+            adlib_fm[i].mod = adlib_fm_preset_piano.mod;
+            adlib_fm[i].car = adlib_fm_preset_piano.car;
+            upd = 1;
+            fprintf(stderr,"FM instrument change: nothing for %u\n",instrument);
+            break;
+    }
+
+    if (upd) {
+        struct adlib_fm_operator *f;
+        unsigned short op;
+
+        f = &adlib_fm[i].mod; op = adlib_voice_to_op[i];   adlib_update_operator(op,f);
+        f = &adlib_fm[i].car; op = adlib_voice_to_op[i]+3; adlib_update_operator(op,f);
+    }
+}
+
 static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
 	struct midi_note *note = get_fm_note(t,ch,key,/*do_alloc*/0);
 	uint32_t freq = midi_note_freq(ch,key);
@@ -311,8 +346,8 @@ static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *c
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-	adlib_fm[ach].mod.sustain_level = vel >> 3;
+//	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+//	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 1;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -335,15 +370,19 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 		if (note == NULL) return;
 	}
 
+    if (note->note_program != ch->program)
+        change_fm_instrument(note,ch->program + 1);
+
 	note->busy = 1;
 	note->note_number = key;
 	note->note_velocity = vel;
+    note->note_program = ch->program;
 	note->note_track = (unsigned int)(t - midi_trk);
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-	adlib_fm[ach].mod.sustain_level = vel >> 3;
+//	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+//	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 1;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -358,8 +397,8 @@ static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsig
 	note->busy = 0;
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-	adlib_fm[ach].mod.sustain_level = vel >> 3;
+//	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+//	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 0;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -743,6 +782,7 @@ void adlib_shut_up() {
 	for (i=0;i < adlib_fm_voices;i++) {
 		midi_notes[i].busy = 0;
 		midi_notes[i].note_channel = 0;
+        midi_notes[i].note_program = 0;
 
         /* default "piano" */
         adlib_fm[i].mod = adlib_fm_preset_piano.mod;
