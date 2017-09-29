@@ -430,7 +430,7 @@ void midi_tick_track(unsigned int i) {
 
 			/* read pointer should be pointing at MIDI event bytes, just after the time delay */
 			b = midi_trk_read(t);
-			if (b&0x80) {
+			if (b&0x80) { /* MIDI status byte */
 				if (b < 0xF8) {
 					if (b >= 0xF0)
 						t->last_status = 0;
@@ -440,11 +440,11 @@ void midi_tick_track(unsigned int i) {
 				if (b != 0x00 && ((b&0xF8) != 0xF0))
 					c = midi_trk_read(t);
 			}
-			else {
-				/* blegh. last status */
+			else { /* MIDI "running status" -- Status has not changed */
 				c = b;
 				b = t->last_status;
 			}
+
 			switch (b>>4) {
 				case 0x8: { /* note off */
 					d = midi_trk_read(t);
