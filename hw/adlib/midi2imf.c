@@ -481,16 +481,16 @@ void midi_tick_track(unsigned int i) {
 					if (b == 0xFF) {
 						if (c == 0x7F) { /* c=type d=len */
 							unsigned long len = midi_trk_read_delta(t);
-//							fprintf(stderr,"Type 0x7F len=%lu %p/%p/%p\n",len,t->raw,t->read,t->fence);
-							if (len < 512UL) {
-								/* unknown */
-								midi_trk_skip(t,len);
-							}
-							else {
-								midi_trk_end(t);
-							}
-						}
-						else if (c < 0x7F) {
+
+                            if (len < 512UL) {
+                                /* unknown */
+                                midi_trk_skip(t,len);
+                            }
+                            else {
+                                midi_trk_end(t);
+                            }
+                        }
+                        else if (c < 0x7F) {
 							d = midi_trk_read(t);
 
 							if (c == 0x51 && d >= 3) {
@@ -509,9 +509,6 @@ void midi_tick_track(unsigned int i) {
 									}
 								}
 							}
-							else {
-//								fprintf(stderr,"Type 0x%02x len=%lu %p/%p/%p\n",c,d,t->raw,t->read,t->fence);
-							}
 
 							midi_trk_skip(t,d);
 						}
@@ -521,8 +518,8 @@ void midi_tick_track(unsigned int i) {
 					}
 					else {
 						unsigned long len = midi_trk_read_delta(t);
-//						fprintf(stderr,"Sysex len=%lu %p/%p/%p\n",len,t->raw,t->read,t->fence);
-						midi_trk_skip(t,len);
+
+                        midi_trk_skip(t,len);
 					}
 					} break;
 				default:
@@ -566,7 +563,6 @@ void midi_tick() {
 
 /* WARNING: subroutine call in interrupt handler. make sure you compile with -zu flag for large/compact memory models */
 void interrupt irq0() {
-//	midi_tick();
 	irq0_ticks++;
 	if ((irq0_cnt += irq0_add) >= irq0_max) {
 		irq0_cnt -= irq0_max;
