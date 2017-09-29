@@ -417,9 +417,9 @@ void midi_tick_track(unsigned int i) {
 		return;
 	}
 
-	t->us_tick_cnt_mtpq += 10000UL * (unsigned long)ticks_per_quarter_note;
-	while (t->us_tick_cnt_mtpq >= t->us_per_quarter_note) {
-		t->us_tick_cnt_mtpq -= t->us_per_quarter_note;
+	t->us_tick_cnt_mtpq += 1000000UL * (unsigned long)ticks_per_quarter_note;
+	while (t->us_tick_cnt_mtpq >= (t->us_per_quarter_note * (unsigned long long)imf_ticks_per_quarter_note)) {
+		t->us_tick_cnt_mtpq -= t->us_per_quarter_note * (unsigned long long)imf_ticks_per_quarter_note;
 		cnt++;
 
 		while (t->wait == 0) {
@@ -832,10 +832,10 @@ int main(int argc,char **argv) {
         }
     }
 
-	write_8254_system_timer(T8254_REF_CLOCK_HZ / 100); /* tick faster at 100Hz please */
+	write_8254_system_timer(T8254_REF_CLOCK_HZ / imf_ticks_per_quarter_note); /* tick faster at IMF tick rate please */
 	irq0_cnt = 0;
 	irq0_add = 182;
-	irq0_max = 1000; /* about 18.2Hz */
+	irq0_max = 10 * imf_ticks_per_quarter_note; /* about 18.2Hz */
 	old_irq0 = _dos_getvect(8);/*IRQ0*/
 	_dos_setvect(8,irq0);
 
