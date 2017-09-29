@@ -72,10 +72,15 @@ struct adlib_fm_channel adlib_fm_preset_harpsichord = {
 /* NTS: adjust the modulator total level value to vary between muted (27) and open (47) with
  *      further adjustment if you want to mimick the change in sound when you blow harder */
 struct adlib_fm_channel adlib_fm_preset_horn = {
-	.mod = {0,	0,	1,	0,	1,	0,	47,	6,	1,	1,	7,	0,
-		4,	514,	1,	1,	1,	1,	0,	0,	0},
-	.car = {0,	0,	1,	0,	1,	0,	47,	8,	2,	2,	7,	0,
-		4,	456,	1,	1,	1,	1,	0,	0,	0}
+/*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
+    .mod = {0,	0,	1,	0,	1,	0,	47,	6,	1,	1,	7,	0,  4,	514,1,	1,	1,	1,	0,	0,	0},
+    .car = {0,	0,	1,	0,	1,	0,	47,	8,	2,	2,	7,	0,  4,	456,1,	1,	1,	1,	0,	0,	0}
+};
+
+struct adlib_fm_channel adlib_fm_preset_trumpet = {
+/*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
+    .mod = {0,	0,	1,	0,	1,	0,	47,	6,	1,	1,	7,	0,  4,	514,1,	1,	1,	1,	0,	0,	0},
+    .car = {0,	0,	1,	0,	1,	0,	47,	8,	2,	2,	7,	0,  4,	456,1,	1,	1,	1,	0,	0,	0}
 };
 
 struct adlib_fm_channel adlib_fm_preset_deep_bass_drum = {
