@@ -1,3 +1,4 @@
+/* TODO: Throw away, re-copy from MIDI player code later */
 /* midi.c
  *
  * Adlib OPL2/OPL3 FM synthesizer chipset test program.
