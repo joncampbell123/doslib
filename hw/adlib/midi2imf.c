@@ -495,9 +495,12 @@ void midi_tick_track(unsigned int i) {
 
 							if (c == 0x51 && d >= 3) {
 								d -= 3;
+
 								t->us_per_quarter_note = ((unsigned long)midi_trk_read(t)<<16UL)+
 									((unsigned long)midi_trk_read(t)<<8UL)+
 									((unsigned long)midi_trk_read(t)<<0UL);
+
+                                fprintf(stderr,"MIDI track %u: Temp change to %lu microseconds per quarter note\n",i,t->us_per_quarter_note);
 
 								if (1/*TODO: If format 0 or format 1*/) {
 									/* Ugh. Unless format 2, the tempo applies to all tracks */
