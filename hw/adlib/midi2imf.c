@@ -500,7 +500,7 @@ void midi_tick_track(unsigned int i) {
 									((unsigned long)midi_trk_read(t)<<8UL)+
 									((unsigned long)midi_trk_read(t)<<0UL);
 
-                                fprintf(stderr,"MIDI track %u: Temp change to %lu microseconds per quarter note\n",i,t->us_per_quarter_note);
+                                fprintf(stderr,"MIDI track %u: Tempo change to %lu microseconds per quarter note\n",i,t->us_per_quarter_note);
 
                                 /* tempo changes affect all tracks */
 								{
