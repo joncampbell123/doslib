@@ -1,8 +1,24 @@
 # do not run directly, use make.sh
 
 CFLAGS_1 =
+
+CFLAGS_OPT=-oilrb
+
+# favor code size
+CFLAGS_OPT=$(CFLAGS_OPT) -os
+
+!ifdef DEBUG
+# traceable stack frames
+CFLAGS_OPT=$(CFLAGS_OPT) -of
+!endif
+
 !ifndef DEBUG
-DEBUG = -d0
+# if not debugging, remove stack frame checks
+CFLAGS_1=$(CFLAGS_1) -s
+!endif
+
+!ifndef DEBUG
+CFLAGS_DEBUG = -d0
 DSUFFIX =
 !else
 DSUFFIX = d
@@ -70,11 +86,11 @@ WLINK_SYSTEM = dos
 WLINK_CON_SYSTEM = dos
 !endif
 
-CFLAGS   = -e=2 $(ZU_FLAG) -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
-CFLAGS386= -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
-CFLAGS386_TO_586= -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
-CFLAGS386_TO_686= -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
-AFLAGS   = -e=2 -zq -m$(MMODE) $(DEBUG) $(CFLAGS_1) -bt=dos -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
+CFLAGS   = -e=2 $(ZU_FLAG) -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
+CFLAGS386= -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
+CFLAGS386_TO_586= -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV5) -$(CPULEV5) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
+CFLAGS386_TO_686= -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV6) -$(CPULEV6) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
+AFLAGS   = -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
 NASMFLAGS= -DTARGET_MSDOS=16 -DMSDOS=1 -DTARGET86=$(TARGET86) -DMMODE=$(MMODE) -Dsegment_use=USE16 -I$(REL)/asminc/
 
 !ifdef TINYMODE
