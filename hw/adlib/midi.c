@@ -346,8 +346,8 @@ static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *c
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-//	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-//	adlib_fm[ach].mod.sustain_level = vel >> 3;
+	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 1;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -381,8 +381,8 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-//	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-//	adlib_fm[ach].mod.sustain_level = vel >> 3;
+	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 1;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -397,8 +397,8 @@ static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsig
 	note->busy = 0;
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-//	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-//	adlib_fm[ach].mod.sustain_level = vel >> 3;
+	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+	adlib_fm[ach].mod.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 0;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
