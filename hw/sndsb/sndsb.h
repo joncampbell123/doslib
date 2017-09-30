@@ -214,7 +214,7 @@ enum {
 
 #pragma pack(push,4) // dword align, regardless of host program's -zp option, to keep struct consistent
 struct sndsb_ctx {
-	uint16_t			baseio,mpuio,oplio,gameio,aweio;
+	uint16_t			baseio,mpuio,oplio,gameio,aweio,dspio; /* dspio = baseio or dspio = baseio+1 */
 	uint16_t			wssio,opl3sax_controlio;
 	int8_t				dma8,dma16,irq;
 	uint8_t				dsp_adpcm;
@@ -429,6 +429,7 @@ int sndsb_ess_write_controller(struct sndsb_ctx *cx,int reg,unsigned char value)
 void sndsb_irq_continue(struct sndsb_ctx *cx,unsigned char c);
 void sndsb_update_capabilities(struct sndsb_ctx *cx);
 unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx);
+void sndsb_update_dspio(struct sndsb_ctx *cx);
 
 int sndsb_bread_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms,unsigned char *buf,int count);
 int sndsb_bwrite_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms,const unsigned char *buf,int count);

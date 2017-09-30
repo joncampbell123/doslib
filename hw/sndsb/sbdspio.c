@@ -33,8 +33,8 @@
 
 int sndsb_read_dsp(struct sndsb_ctx * const cx) {
     /* TODO: convert this to use cx->dspio_adj_base so we don't compute baseio+READ_STATUS+alias every time */
-    const unsigned int status_port = cx->baseio+SNDSB_BIO_DSP_READ_STATUS+(cx->dsp_alias_port?1:0);
-    const unsigned int read_data_port = cx->baseio+SNDSB_BIO_DSP_READ_DATA+(cx->dsp_alias_port?1:0);
+    const unsigned int status_port = cx->dspio+SNDSB_BIO_DSP_READ_STATUS;
+    const unsigned int read_data_port = cx->dspio+SNDSB_BIO_DSP_READ_DATA;
     register unsigned char c; /* encourage C/C++ optimizer to convert c = inp() ... return c to just return inp() */
 
     /* check and test in the negative, not the affirmative,
@@ -94,8 +94,8 @@ int sndsb_read_dsp(struct sndsb_ctx * const cx) {
 
 int sndsb_write_dsp(struct sndsb_ctx * const cx,const uint8_t d) {
     /* TODO: convert this to use cx->dspio_adj_base so we don't compute baseio+READ_STATUS+alias every time */
-    const unsigned int status_port = cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0);
-    const unsigned int write_data_port = cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0);
+    const unsigned int status_port = cx->dspio+SNDSB_BIO_DSP_WRITE_STATUS;
+    const unsigned int write_data_port = cx->dspio+SNDSB_BIO_DSP_WRITE_DATA;
 
     DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
 

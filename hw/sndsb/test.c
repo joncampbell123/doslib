@@ -1968,7 +1968,8 @@ void change_alias_menu() {
 				switch (selector) {
 					case 0:	/* sample rate */
 						sb_card->dsp_alias_port ^= 1;
-						break;
+                        sndsb_update_dspio(sb_card);
+                        break;
 				};
 				update_cfg();
 				uiredraw=1;
@@ -1977,6 +1978,7 @@ void change_alias_menu() {
 				switch (selector) {
 					case 0:	/* sample rate */
 						sb_card->dsp_alias_port ^= 1;
+                        sndsb_update_dspio(sb_card);
 						break;
 				};
 				update_cfg();
@@ -1993,8 +1995,10 @@ void change_alias_menu() {
 		   On real hardware, even with the recovery method the machine remains hung :( */
 		if (confirm_yes_no_dialog(dsp_alias_warning))
 			dsp_alias_had_warned = 1;
-		else
+		else {
 			sb_card->dsp_alias_port = 0;
+            sndsb_update_dspio(sb_card);
+        }
 	}
 
 	change_param_idx = selector;

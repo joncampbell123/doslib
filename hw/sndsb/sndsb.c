@@ -453,6 +453,10 @@ int sndsb_determine_ideal_dsp_play_method(struct sndsb_ctx *cx) {
 	return 1;
 }
 
+void sndsb_update_dspio(struct sndsb_ctx *cx) {
+    cx->dspio = cx->baseio + (cx->dsp_alias_port?1:0);
+}
+
 /* this is for taking a base address and probing the I/O ports there to see if something like a SB DSP is there. */
 /* it is STRONGLY recommended that you don't do this unless you try only 0x220 or 0x240 and you know that nothing
  * else important is there */
@@ -477,6 +481,7 @@ int sndsb_try_base(uint16_t iobase) {
 	DEBUG(fprintf(stdout,"sndsb_try_base(0x%03X)\n",iobase));
 
 	cx->baseio = iobase;
+    sndsb_update_dspio(cx);
 	cx->dma8 = cx->dma16 = cx->irq = -1; /* NTS: zero HERE, the init card routine might figure them out */
 	if (!sndsb_init_card(cx)) {
 		DEBUG(fprintf(stdout,"failed to init card\n"));
