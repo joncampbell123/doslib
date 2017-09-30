@@ -300,30 +300,41 @@ static void drop_fm_note(struct midi_channel *ch,unsigned char key) {
 
 static void change_fm_instrument(struct midi_note *note,unsigned int instrument) {
     unsigned char i = (unsigned char)(note - midi_notes);
-    unsigned char upd = 0;
 
     switch (instrument) {
         case 1: /* Acoustic piano */
             adlib_fm[i].mod = adlib_fm_preset_piano.mod;
             adlib_fm[i].car = adlib_fm_preset_piano.car;
-            upd = 1;
+            break;
+
+        case 3: /* Electric Grand Piano */
+
+        case 5: /* Electric Piano 1 */
+            adlib_fm[i].mod = adlib_fm_preset_piano_electric.mod;
+            adlib_fm[i].car = adlib_fm_preset_piano_electric.car;
+            break;
+        case 6: /* Electric Piano 2 */
+            adlib_fm[i].mod = adlib_fm_preset_piano_electric_2.mod;
+            adlib_fm[i].car = adlib_fm_preset_piano_electric_2.car;
+            break;
+        case 7: /* Harpsichord */
+            adlib_fm[i].mod = adlib_fm_preset_harpsichord.mod;
+            adlib_fm[i].car = adlib_fm_preset_harpsichord.car;
             break;
 
         case 57: /* Trumpet */
             adlib_fm[i].mod = adlib_fm_preset_trumpet.mod;
             adlib_fm[i].car = adlib_fm_preset_trumpet.car;
-            upd = 1;
             break;
  
         default:
             adlib_fm[i].mod = adlib_fm_preset_piano.mod;
             adlib_fm[i].car = adlib_fm_preset_piano.car;
-            upd = 1;
             fprintf(stderr,"FM instrument change: nothing for %u\n",instrument);
             break;
     }
 
-    if (upd) {
+    {
         struct adlib_fm_operator *f;
         unsigned short op;
 
@@ -346,8 +357,8 @@ static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *c
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-	adlib_fm[ach].mod.sustain_level = vel >> 3;
+	adlib_fm[ach].car.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+	adlib_fm[ach].car.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 1;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -381,8 +392,8 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-	adlib_fm[ach].mod.sustain_level = vel >> 3;
+	adlib_fm[ach].car.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+	adlib_fm[ach].car.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 1;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -397,8 +408,8 @@ static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsig
 	note->busy = 0;
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
 	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-	adlib_fm[ach].mod.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-	adlib_fm[ach].mod.sustain_level = vel >> 3;
+	adlib_fm[ach].car.attack_rate = vel >> 3; /* 0-127 to 0-15 */
+	adlib_fm[ach].car.sustain_level = vel >> 3;
 	adlib_fm[ach].mod.key_on = 0;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
