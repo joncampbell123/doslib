@@ -22,6 +22,8 @@ CFLAGS_1=$(CFLAGS_1) -s
 
 !ifndef DEBUG
 CFLAGS_DEBUG = -d0
+!else
+CFLAGS_DEBUG = -d9
 !endif
 
 !ifndef CPULEV0
