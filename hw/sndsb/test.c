@@ -627,7 +627,7 @@ static void fx_proc(unsigned char FAR *d,unsigned int samp) {
 }
 #endif /* INCLUDE_FX */
 
-void stop_play();
+static void stop_play();
 
 static void draw_irq_indicator() {
 	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram;
@@ -1498,7 +1498,7 @@ static void open_wav() {
 	}
 }
 
-void open_wav_unique_name() {
+static void open_wav_unique_name() {
 	int patience = 1000;
 	char *p,*q;
 
@@ -1557,14 +1557,14 @@ void open_wav_unique_name() {
 	} while (1);
 }
 
-void free_dma_buffer() {
+static void free_dma_buffer() {
     if (sb_dma != NULL) {
         dma_8237_free_buffer(sb_dma);
         sb_dma = NULL;
     }
 }
 
-void realloc_dma_buffer() {
+static void realloc_dma_buffer() {
     uint32_t choice;
     int8_t ch;
 
@@ -1592,7 +1592,7 @@ void realloc_dma_buffer() {
         return;
 }
 
-void begin_play() {
+static void begin_play() {
 	unsigned long choice_rate;
 
 	if (wav_playing)
@@ -1733,7 +1733,7 @@ void begin_play() {
 	_sti();
 }
 
-void stop_play() {
+static void stop_play() {
 	if (!wav_playing) return;
 	draw_irq_indicator();
 	if (!wav_record) {
@@ -1809,7 +1809,7 @@ static const char *dsp_alias_warning =
 #endif
 
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-void measure_dsp_busy_cycle() {
+static void measure_dsp_busy_cycle() {
 	unsigned long time1 = 0,time2 = 0,tlimit;
 	unsigned char timehits = 0;
 	t8254_time_t pr,cr,dl;
@@ -1918,7 +1918,7 @@ void measure_dsp_busy_cycle() {
 	} while (!(c == 13 || c == 27));
 }
 
-void change_alias_menu() {
+static void change_alias_menu() {
 	unsigned char loop=1;
 	unsigned char redraw=1;
 	unsigned char uiredraw=1;
@@ -2005,7 +2005,7 @@ void change_alias_menu() {
 }
 #endif
 
-void change_param_menu() {
+static void change_param_menu() {
 	unsigned char loop=1;
 	unsigned char redraw=1;
 	unsigned char uiredraw=1;
@@ -2299,7 +2299,7 @@ void change_param_menu() {
 #ifdef SB_MIXER
 static unsigned char ess688_not_present_init=1;
 static unsigned char ess688_not_present[0x100];
-void play_with_ess() {
+static void play_with_ess() {
 	unsigned char bb;
 	unsigned char loop=1;
 	unsigned char redraw=1;
@@ -2450,7 +2450,7 @@ void play_with_ess() {
 	}
 }
 
-void play_with_mixer() {
+static void play_with_mixer() {
 	signed short visrows=25-(4+1);
 	signed short visy=4;
 	signed char mixer=-1;
@@ -2979,7 +2979,7 @@ static void my_vga_menu_idle() {
 	ui_anim(0);
 }
 
-int confirm_quit() {
+static int confirm_quit() {
 	/* FIXME: Why does this cause Direct DSP playback to horrifically slow down? */
 	return confirm_yes_no_dialog("Are you sure you want to exit to DOS?");
 }
@@ -2990,7 +2990,7 @@ int adpcm_warning_prompt() {
 }
 #endif
 
-void update_cfg() {
+static void update_cfg() {
 	unsigned int r;
 
 	wav_sample_rate_by_timer_ticks = T8254_REF_CLOCK_HZ / wav_sample_rate;
@@ -3109,7 +3109,7 @@ void update_cfg() {
 #endif
 }
 
-void prompt_play_wav(unsigned char rec) {
+static void prompt_play_wav(unsigned char rec) {
 	unsigned char gredraw = 1;
 #if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
 #else
@@ -3325,7 +3325,7 @@ static void help() {
 }
 
 #ifdef CARD_INFO_AND_CHOOSER
-void draw_device_info(struct sndsb_ctx *cx,int x,int y,int w,int h) {
+static void draw_device_info(struct sndsb_ctx *cx,int x,int y,int w,int h) {
 	int row = 2;
 
 	/* clear prior contents */
@@ -3388,7 +3388,7 @@ void draw_device_info(struct sndsb_ctx *cx,int x,int y,int w,int h) {
 	}
 }
 
-void show_device_info() {
+static void show_device_info() {
 	int c,rows=2,cols=70;
 	struct vga_msg_box box;
 
@@ -3414,7 +3414,7 @@ void show_device_info() {
 	vga_msg_box_destroy(&box);
 }
 
-void draw_sound_card_choice(unsigned int x,unsigned int y,unsigned int w,struct sndsb_ctx *cx,int sel) {
+static void draw_sound_card_choice(unsigned int x,unsigned int y,unsigned int w,struct sndsb_ctx *cx,int sel) {
 	const char *msg = cx->dsp_copyright;
 
 	vga_moveto(x,y);
@@ -3449,8 +3449,8 @@ static const signed char sb16_pnp_dma16[] = { -1,0,1,3,5,6,7 };
 static const signed char ess_688_irq[] = { -1,5,7,9,10 }; /* NTS: The datasheet says 2/9/"all others". Since PCs map IRQ 2 to IRQ 9 we'll just say "IRQ 9" */
 static const signed char ess_688_dma[] = { -1,0,1,3 };
 
-signed char ess_688_map_to_dma[4] = {-1, 0, 1, 3}; /* NTS: Not sure what the datasheet means by "all others" when value == 0x0 */
-signed char ess_688_map_to_irq[8] = { 9, 5, 7, 10}; /* NTS: Doesn't seem to be a way to say "no IRQ". value == 0x0 is 2/9/"all others" and IRQ 2 on ISA is mapped to IRQ 9, so.. */
+static signed char ess_688_map_to_dma[4] = {-1, 0, 1, 3}; /* NTS: Not sure what the datasheet means by "all others" when value == 0x0 */
+static signed char ess_688_map_to_irq[8] = { 9, 5, 7, 10}; /* NTS: Doesn't seem to be a way to say "no IRQ". value == 0x0 is 2/9/"all others" and IRQ 2 on ISA is mapped to IRQ 9, so.. */
 
 struct conf_list_item {
 	unsigned char	etype;
@@ -3502,7 +3502,7 @@ static struct conf_list_item sb16_pnp[] = {
 	{ET_SCHAR,	ER_DMA16,	0,	sizeof(sb16_pnp_dma16),		(void*)sb16_pnp_dma16}
 };
 
-void conf_item_index_lookup(struct conf_list_item *item,int val) {
+static void conf_item_index_lookup(struct conf_list_item *item,int val) {
 	if (item->etype == ET_SCHAR) {
 		item->setting = 0;
 		while (item->setting < item->listlen && ((signed char*)(item->list))[item->setting] != val)
@@ -3518,7 +3518,7 @@ void conf_item_index_lookup(struct conf_list_item *item,int val) {
 		item->setting = 0;
 }
 
-int conf_sound_card_list(const char *title,struct conf_list_item *list,const int list_items,int width) {
+static int conf_sound_card_list(const char *title,struct conf_list_item *list,const int list_items,int width) {
 	struct conf_list_item *li;
 	unsigned char redraw = 1;
 	unsigned char sel = 0,i;
@@ -3635,7 +3635,7 @@ int conf_sound_card_list(const char *title,struct conf_list_item *list,const int
 	return (c == 13);
 }
 
-void conf_sound_card() {
+static void conf_sound_card() {
 	/* VDMSOUND emulates the mixer byte that reports config, but it gets confused when you change it */
 	if (sb_card->vdmsound) {
 	}
@@ -3967,7 +3967,7 @@ void conf_sound_card() {
 	}
 }
 
-void choose_sound_card() {
+static void choose_sound_card() {
 	int c,rows=3+1+SNDSB_MAX_CARDS,cols=70,sel=0,i;
 	unsigned char wp = wav_playing;
 	struct sndsb_ctx *card;
@@ -4045,7 +4045,7 @@ void choose_sound_card() {
 #endif
 
 #ifdef INCLUDE_FX
-void fx_reset() {
+static void fx_reset() {
 	fx_volume = 256;
 	fx_echo_delay = 0;
 	fx_echo_free();
@@ -4055,7 +4055,7 @@ void fx_reset() {
 	}
 }
 
-void fx_vol_echo() {
+static void fx_vol_echo() {
 	struct vga_msg_box box;
 	unsigned char redraw=1;
 	int c;
@@ -4116,7 +4116,7 @@ void fx_vol_echo() {
 	vga_msg_box_destroy(&box);
 }
 
-void fx_vol_dialog() {
+static void fx_vol_dialog() {
 	struct vga_msg_box box;
 	unsigned char redraw=1;
 	int c;
