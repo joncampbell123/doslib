@@ -22,9 +22,6 @@ CFLAGS_1=$(CFLAGS_1) -s
 
 !ifndef DEBUG
 CFLAGS_DEBUG = -d0
-DSUFFIX =
-!else
-DSUFFIX = d
 !endif
 
 !ifndef CPULEV0

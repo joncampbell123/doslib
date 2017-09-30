@@ -19,9 +19,6 @@ CFLAGS_1=$(CFLAGS_1) -s
 
 !ifndef DEBUG
 CFLAGS_DEBUG = -d0
-DSUFFIX =
-!else
-DSUFFIX = d
 !endif
 
 !ifndef CPULEV0
@@ -71,9 +68,9 @@ EXEEXT=exe
 
 TARGET_MSDOS = 16
 !ifdef PC98
-SUBDIR   = d98$(TARGET86)$(MMODEC)$(DSUFFIX)
+SUBDIR   = d98$(TARGET86)$(MMODEC)
 !else
-SUBDIR   = dos$(TARGET86)$(MMODEC)$(DSUFFIX)
+SUBDIR   = dos$(TARGET86)$(MMODEC)
 !endif
 CC       = wcc
 LINKER   = wcl

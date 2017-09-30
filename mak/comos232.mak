@@ -3,9 +3,6 @@
 CFLAGS_1 =
 !ifndef DEBUG
 DEBUG = -d0
-DSUFFIX =
-!else
-DSUFFIX = d
 !endif
 
 !ifndef CPULEV0
@@ -58,7 +55,7 @@ OS2_INCLUDE=-i="$(%WATCOM)/h/os2"
 EXEEXT=exe
 TARGET_MSDOS = 32
 TARGET_OS2 = 20
-SUBDIR   = os2d$(TARGET86_1DIGIT)$(MMODE)$(DSUFFIX)
+SUBDIR   = os2d$(TARGET86_1DIGIT)$(MMODE)
 RC       = wrc
 CC       = wcc386
 LINKER   = wcl386
