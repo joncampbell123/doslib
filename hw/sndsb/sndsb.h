@@ -7,6 +7,10 @@
 #include <hw/dos/doswin.h>
 #include <stdint.h>
 
+/* generous I/O countdown for 1/4th of a second timeout.
+ * A lesser value would be more accurate given a typical 8.333MHz ISA bus and 8 cycles per I/O read */
+#define SNDSB_IO_COUNTDOWN                                      (8500000UL / 8UL / 4UL)
+
 #define SNDSB_MAX_CARDS                                         4
 
 /* Sound Blaster I/O ports */
@@ -393,12 +397,12 @@ void free_sndsb();
 void sndsb_free_card(struct sndsb_ctx *c);
 struct sndsb_ctx *sndsb_try_blaster_var();
 const char *sndsb_mixer_chip_str(uint8_t c);
-int sndsb_read_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms);
+int sndsb_read_dsp(struct sndsb_ctx *cx);
 int sndsb_reset_dsp(struct sndsb_ctx *cx);
 int sndsb_read_mixer(struct sndsb_ctx *cx,uint8_t i);
 void sndsb_write_mixer(struct sndsb_ctx *cx,uint8_t i,uint8_t d);
 int sndsb_probe_mixer(struct sndsb_ctx *cx);
-int sndsb_write_dsp_timeout(struct sndsb_ctx *cx,uint8_t d,unsigned long timeout_ms);
+int sndsb_write_dsp(struct sndsb_ctx *cx,uint8_t d);
 int sndsb_write_dsp_timeconst(struct sndsb_ctx *cx,uint8_t tc);
 int sndsb_query_dsp_version(struct sndsb_ctx *cx);
 int sndsb_init_card(struct sndsb_ctx *cx);
@@ -448,16 +452,8 @@ static inline struct sndsb_ctx *sndsb_index_to_ctx(unsigned char c) {
 	return sndsb_card + c;
 }
 
-static inline int sndsb_write_dsp(struct sndsb_ctx *cx,uint8_t d) {
-	return sndsb_write_dsp_timeout(cx,d,25000UL);
-}
-
 static inline int sndsb_bwrite_dsp(struct sndsb_ctx *cx,const unsigned char *buf,int count) {
 	return sndsb_bwrite_dsp_timeout(cx,25000UL,buf,count);
-}
-
-static inline int sndsb_read_dsp(struct sndsb_ctx *cx) {
-	return sndsb_read_dsp_timeout(cx,250000UL);
 }
 
 static inline int sndsb_bread_dsp(struct sndsb_ctx *cx,unsigned char *buf,int count) {

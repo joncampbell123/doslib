@@ -49,16 +49,16 @@ int sndsb_ess_read_controller(struct sndsb_ctx *cx,int reg) {
 	/* "Reading the data buffer of the ESS 1869: Command C0h is used to read
 	 * the ES1869 controller registers used for Extended mode. Send C0h
 	 * followed by the register number, Axh or Bxh. */
-	if (!sndsb_write_dsp_timeout(cx,0xC0,20000UL)) return -1;
-	if (!sndsb_write_dsp_timeout(cx,reg,20000UL)) return -1;
+	if (!sndsb_write_dsp(cx,0xC0)) return -1;
+	if (!sndsb_write_dsp(cx,reg)) return -1;
 	return sndsb_read_dsp(cx);
 }
 
 int sndsb_ess_write_controller(struct sndsb_ctx *cx,int reg,unsigned char value) {
 	if (reg < 0xA0 || reg >= 0xC0) return -1;
 	if (sndsb_ess_set_extended_mode(cx,1) == 0) return -1;
-	if (!sndsb_write_dsp_timeout(cx,reg,20000UL)) return -1;
-	if (!sndsb_write_dsp_timeout(cx,value,20000UL)) return -1;
+	if (!sndsb_write_dsp(cx,reg)) return -1;
+	if (!sndsb_write_dsp(cx,value)) return -1;
 	return 0;
 }
 

@@ -31,45 +31,48 @@
 # define DEBUG(x)
 #endif
 
-int sndsb_read_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms) {
-	unsigned int patience = (unsigned int)(timeout_ms >> 4UL);
-	unsigned long pause = t8254_us2ticks(16);
-	int c = -1;
+int sndsb_read_dsp(struct sndsb_ctx * const cx) {
+    /* TODO: convert this to use cx->dspio_adj_base so we don't compute baseio+READ_STATUS+alias every time */
+    const unsigned int status_port = cx->baseio+SNDSB_BIO_DSP_READ_STATUS+(cx->dsp_alias_port?1:0);
+    const unsigned int read_data_port = cx->baseio+SNDSB_BIO_DSP_READ_DATA+(cx->dsp_alias_port?1:0);
+    register unsigned int pa_hi = (unsigned int)(SNDSB_IO_COUNTDOWN >> 16UL) + 1U;
+    register unsigned char c; /* encourage C/C++ optimizer to convert c = inp() ... return c to just return inp() */
 
-	do {
-		if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS+(cx->dsp_alias_port?1:0)) & 0x80) { /* data available? */
-			c = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
-			break;
-		}
+    do {
+        unsigned int pa_lo = (unsigned int)(SNDSB_IO_COUNTDOWN & 0xFFFFUL);
 
-		if (patience-- == 0) {
-			DEBUG(fprintf(stdout,"sndsb_read_dsp() read timeout\n"));
-			return -1;
-		}
-		t8254_wait(pause);
-	} while (1);
+        do {
+            if (inp(status_port) & 0x80) {/* data available? */
+                c = inp(read_data_port);
+                DEBUG(fprintf(stdout,"sndsb_read_dsp() == 0x%02X\n",c));
+                return c;
+            }
+        } while (--pa_lo != 0U);
+    } while (--pa_hi != 0U);
 
-	DEBUG(fprintf(stdout,"sndsb_read_dsp() == 0x%02X\n",c));
-	return c;
+    DEBUG(fprintf(stdout,"sndsb_read_dsp() read timeout\n"));
+    return -1;
 }
 
-int sndsb_write_dsp_timeout(struct sndsb_ctx *cx,uint8_t d,unsigned long timeout_ms) {
-	unsigned int patience = (unsigned int)(timeout_ms >> 4UL);
-	unsigned long pause = t8254_us2ticks(16);
+int sndsb_write_dsp(struct sndsb_ctx * const cx,const uint8_t d) {
+    /* TODO: convert this to use cx->dspio_adj_base so we don't compute baseio+READ_STATUS+alias every time */
+    const unsigned int status_port = cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0);
+    const unsigned int write_data_port = cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0);
+    register unsigned int pa_hi = (unsigned int)(SNDSB_IO_COUNTDOWN >> 16UL) + 1U;
 
 	DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
-	do {
-		if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0)) & 0x80) == 0) {
-			outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),d);
-			return 1;
-		}
 
-		if (patience-- == 0) {
-			DEBUG(fprintf(stdout,"sndsb_write_dsp() write timeout\n"));
-			return -1;
-		}
-		t8254_wait(pause);
-	} while (1);
+    do {
+        register unsigned int pa_lo = (unsigned int)(SNDSB_IO_COUNTDOWN & 0xFFFFUL);
+
+        do {
+            if ((inp(status_port) & 0x80) == 0) {
+                outp(write_data_port,d);
+                return 1;
+            }
+        } while (--pa_lo != 0U);
+    } while (--pa_hi != 0U);
+
 	DEBUG(fprintf(stdout,"sndsb_write_dsp() timeout\n"));
 	return 0;
 }
