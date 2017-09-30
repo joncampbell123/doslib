@@ -64,14 +64,20 @@ struct adlib_fm_channel adlib_fm_preset_piano = {
 
 struct adlib_fm_channel adlib_fm_preset_piano_electric = {
 /*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
-    .mod = {0,  0,  1,  1,  3,  0,  15, 15, 0, 15,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  2},
-    .car = {0,  0,  1,  1,  1,  0,  63, 15, 0, 15,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  1}
+    .mod = {0,  0,  1,  1,  3,  0,  15, 15, 0,  15,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  2},
+    .car = {0,  0,  1,  1,  1,  0,  63, 15, 0,  15,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  1}
 };
 
 struct adlib_fm_channel adlib_fm_preset_piano_electric_2 = {
 /*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
-    .mod = {0,  0,  1,  1,  4,  0,  26, 15, 0, 15,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  2},
-    .car = {0,  0,  1,  1,  1,  0,  63, 15, 0, 15,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  1}
+    .mod = {0,  0,  1,  1,  4,  0,  26, 15, 0,  15,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  2},
+    .car = {0,  0,  1,  1,  1,  0,  63, 15, 0,  15,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  1}
+};
+
+struct adlib_fm_channel adlib_fm_preset_overdrive_guitar = {
+/*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
+    .mod = {0,  0,  1,  0,  1,  1,  63,  7, 6,   1,  9,  0,  4,  456,1,  1,  1,  1,  0,  0,  1},
+    .car = {0,  0,  1,  0,  4,  1,  63, 15, 0,   0,  8,  0,  4,  456,1,  1,  1,  1,  0,  0,  1}
 };
 
 struct adlib_fm_channel adlib_fm_preset_harpsichord = {
