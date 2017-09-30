@@ -291,6 +291,11 @@ do_wmake() {
     mkdir -p "$_x1" || return 1
     opts=( )
 
+    # allow "DEBUG=1 ./buildall.sh"
+    if [ -n "$DEBUG" ]; then
+        opts+=("DEBUG=1")
+    fi
+
     if [ -n "$GCC32" ]; then
         opts+=("GCC32=$GCC32")
     fi
