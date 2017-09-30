@@ -11,9 +11,9 @@
 
 #include <hw/dos/dos.h>
 #include <hw/dos/dosbox.h>
-#include <hw/8237/8237.h>		/* 8237 DMA */
-#include <hw/8254/8254.h>		/* 8254 timer */
-#include <hw/8259/8259.h>		/* 8259 PIC interrupts */
+#include <hw/8237/8237.h>       /* 8237 DMA */
+#include <hw/8254/8254.h>       /* 8254 timer */
+#include <hw/8259/8259.h>       /* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
 #include <hw/dos/doswin.h>
 #include <hw/dos/tgusmega.h>
@@ -35,20 +35,58 @@ int sndsb_read_dsp(struct sndsb_ctx * const cx) {
     /* TODO: convert this to use cx->dspio_adj_base so we don't compute baseio+READ_STATUS+alias every time */
     const unsigned int status_port = cx->baseio+SNDSB_BIO_DSP_READ_STATUS+(cx->dsp_alias_port?1:0);
     const unsigned int read_data_port = cx->baseio+SNDSB_BIO_DSP_READ_DATA+(cx->dsp_alias_port?1:0);
-    register unsigned int pa_hi = (unsigned int)(SNDSB_IO_COUNTDOWN >> 16UL) + 1U;
     register unsigned char c; /* encourage C/C++ optimizer to convert c = inp() ... return c to just return inp() */
 
-    do {
-        unsigned int pa_lo = (unsigned int)(SNDSB_IO_COUNTDOWN & 0xFFFFUL);
+    /* check and test in the negative, not the affirmative,
+     * to encourage Open Watcom C to generate something like:
+     *
+     * L$1:
+     * in al,dx
+     * test al,80h
+     * jnz code_to_read_data_port
+     * dec patience
+     * jnz L$1
+     *
+     * Open Watcom does not have GCC's likely/unlikely macros,
+     * therefore the only way to encourage this is to write the
+     * if() statement to test for what we think is most likely
+     * to happen. */
+
+    {
+#if TARGET_MSDOS == 32
+        register unsigned int patience = (unsigned int)(SNDSB_IO_COUNTDOWN);
 
         do {
-            if (inp(status_port) & 0x80) {/* data available? */
+            if (!(inp(status_port) & 0x80)) {/* data NOT available? */
+                if (--patience == 0U)
+                    break;
+            }
+            else {
                 c = inp(read_data_port);
                 DEBUG(fprintf(stdout,"sndsb_read_dsp() == 0x%02X\n",c));
                 return c;
             }
-        } while (--pa_lo != 0U);
-    } while (--pa_hi != 0U);
+        } while (1);
+#else
+        register unsigned int pa_hi = (unsigned int)(SNDSB_IO_COUNTDOWN >> 16UL) + 1U;
+
+        do {
+            register unsigned int pa_lo = (unsigned int)(SNDSB_IO_COUNTDOWN & 0xFFFFUL);
+
+            do {
+                if (!(inp(status_port) & 0x80)) {/* data NOT available? */
+                    if (--pa_lo == 0U)
+                        break; /* from inner while loop, to check and loop while --pa_hi != 0U */
+                }
+                else {
+                    c = inp(read_data_port);
+                    DEBUG(fprintf(stdout,"sndsb_read_dsp() == 0x%02X\n",c));
+                    return c;
+                }
+            } while (1);
+        } while (--pa_hi != 0U);
+#endif
+    }
 
     DEBUG(fprintf(stdout,"sndsb_read_dsp() read timeout\n"));
     return -1;
@@ -58,22 +96,59 @@ int sndsb_write_dsp(struct sndsb_ctx * const cx,const uint8_t d) {
     /* TODO: convert this to use cx->dspio_adj_base so we don't compute baseio+READ_STATUS+alias every time */
     const unsigned int status_port = cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0);
     const unsigned int write_data_port = cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0);
-    register unsigned int pa_hi = (unsigned int)(SNDSB_IO_COUNTDOWN >> 16UL) + 1U;
 
-	DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
+    DEBUG(fprintf(stdout,"sndsb_write_dsp(0x%02X)\n",d));
 
-    do {
-        register unsigned int pa_lo = (unsigned int)(SNDSB_IO_COUNTDOWN & 0xFFFFUL);
+    /* check and test in the negative, not the affirmative,
+     * to encourage Open Watcom C to generate something like:
+     *
+     * L$1:
+     * in al,dx
+     * test al,80h
+     * jnz code_to_write_data_port
+     * dec patience
+     * jnz L$1
+     *
+     * Open Watcom does not have GCC's likely/unlikely macros,
+     * therefore the only way to encourage this is to write the
+     * if() statement to test for what we think is most likely
+     * to happen. */
+
+    {
+#if TARGET_MSDOS == 32
+        register unsigned int patience = (unsigned int)(SNDSB_IO_COUNTDOWN);
 
         do {
-            if ((inp(status_port) & 0x80) == 0) {
+            if (!(inp(status_port) & 0x80)) {/* data NOT available? */
+                if (--patience == 0U)
+                    break;
+            }
+            else {
                 outp(write_data_port,d);
                 return 1;
             }
-        } while (--pa_lo != 0U);
-    } while (--pa_hi != 0U);
+        } while (1);
+#else
+        register unsigned int pa_hi = (unsigned int)(SNDSB_IO_COUNTDOWN >> 16UL) + 1U;
 
-	DEBUG(fprintf(stdout,"sndsb_write_dsp() timeout\n"));
-	return 0;
+        do {
+            register unsigned int pa_lo = (unsigned int)(SNDSB_IO_COUNTDOWN & 0xFFFFUL);
+
+            do {
+                if (!(inp(status_port) & 0x80)) {/* data NOT available? */
+                    if (--pa_lo == 0U)
+                        break;
+                }
+                else {
+                    outp(write_data_port,d);
+                    return 1;
+                }
+            } while (1);
+        } while (--pa_hi != 0U);
+#endif
+    }
+
+    DEBUG(fprintf(stdout,"sndsb_write_dsp() timeout\n"));
+    return 0;
 }
 
