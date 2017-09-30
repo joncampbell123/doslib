@@ -350,6 +350,9 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	if (!sndsb_reset_dsp(cx)) return 0;
 	if (!sndsb_query_dsp_version(cx)) return 0; // FIXME: Do all Sound Blaster cards support this? Are there any shitty SB clones that don't?
 
+    /* Sanity check */
+	if (cx->dsp_vmaj == 0xFF || cx->dsp_vmin == 0xFF) return 0;
+
 	/* Gravis Ultrasound SBOS, when unloaded, might leave the read data port at 0xAA which
 	 * we then read back as DSP version 0xAA 0xAA. */
 	if (cx->dsp_vmaj == 0xAA && cx->dsp_vmin == 0xAA) return 0;

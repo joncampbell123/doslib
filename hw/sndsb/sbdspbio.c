@@ -31,55 +31,35 @@
 # define DEBUG(x)
 #endif
 
-int sndsb_bread_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms,unsigned char *buf,int count) {
-	unsigned long pause = t8254_us2ticks(16);
-	int c = 0;
+unsigned int sndsb_bread_dsp(struct sndsb_ctx * const cx,unsigned char *buf,unsigned int count) {
+	register unsigned int readcount = 0;
+    register int c;
 
-    while ((count--) > 0) {
-	    unsigned int patience = (unsigned int)(timeout_ms >> 4UL);
-
-        do {
-            if (inp(cx->baseio+SNDSB_BIO_DSP_READ_STATUS+(cx->dsp_alias_port?1:0)) & 0x80) { /* data available? */
-                *buf++ = inp(cx->baseio+SNDSB_BIO_DSP_READ_DATA);
-                c++;
-                break;
-            }
-
-            if (patience-- == 0) {
-                if (c == 0) return -1;
-                break;
-            }
-
-            t8254_wait(pause);
-        } while (1);
+    while ((count--) != 0U) {
+        if ((c=sndsb_read_dsp(cx)) >= 0) {
+            *buf++ = (unsigned char)c;
+            readcount++;
+        }
+        else {
+            break;
+        }
     }
 
-	return c;
+	return readcount;
 }
 
-int sndsb_bwrite_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms,const unsigned char *buf,int count) {
-	unsigned long pause = t8254_us2ticks(16);
-    int c = 0;
+unsigned int sndsb_bwrite_dsp(struct sndsb_ctx * const cx,const unsigned char *buf,unsigned int count) {
+    register unsigned int writecount = 0;
 
     while ((count--) > 0) {
-        do {
-            unsigned int patience = (unsigned int)(timeout_ms >> 4UL);
-
-            if ((inp(cx->baseio+SNDSB_BIO_DSP_WRITE_STATUS+(cx->dsp_alias_port?1:0)) & 0x80) == 0) {
-                outp(cx->baseio+SNDSB_BIO_DSP_WRITE_DATA+(cx->dsp_alias_port?1:0),*buf++);
-                c++;
-                break;
-            }
-
-            if (patience-- == 0) {
-                if (c == 0) return -1;
-                break;
-            }
-
-            t8254_wait(pause);
-        } while (1);
+        if (sndsb_write_dsp(cx,*buf++)) {
+            writecount++;
+        }
+        else {
+            break;
+        }
     }
 
-	return c;
+	return writecount;
 }
 

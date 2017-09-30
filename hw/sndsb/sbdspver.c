@@ -39,8 +39,6 @@ int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
 
     if (sndsb_bread_dsp(cx,tmp,2) != 2)
         return 0;
-	if (tmp[0] == 0xFF || tmp[1] == 0xFF)
-		return 0;
 
 	cx->dsp_vmaj = (uint8_t)tmp[0];
 	cx->dsp_vmin = (uint8_t)tmp[1];

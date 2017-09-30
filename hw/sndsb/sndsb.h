@@ -431,8 +431,8 @@ void sndsb_update_capabilities(struct sndsb_ctx *cx);
 unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx);
 void sndsb_update_dspio(struct sndsb_ctx *cx);
 
-int sndsb_bread_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms,unsigned char *buf,int count);
-int sndsb_bwrite_dsp_timeout(struct sndsb_ctx *cx,unsigned long timeout_ms,const unsigned char *buf,int count);
+unsigned int sndsb_bread_dsp(struct sndsb_ctx * const cx,unsigned char *buf,unsigned int count);
+unsigned int sndsb_bwrite_dsp(struct sndsb_ctx * const cx,const unsigned char *buf,unsigned int count);
 
 const struct sndsb_mixer_control *sndsb_get_mixer_controls(struct sndsb_ctx *card,signed short *count,signed char override);
 
@@ -451,14 +451,6 @@ static inline unsigned char sndsb_ctx_to_index(struct sndsb_ctx *c) {
 
 static inline struct sndsb_ctx *sndsb_index_to_ctx(unsigned char c) {
 	return sndsb_card + c;
-}
-
-static inline int sndsb_bwrite_dsp(struct sndsb_ctx *cx,const unsigned char *buf,int count) {
-	return sndsb_bwrite_dsp_timeout(cx,25000UL,buf,count);
-}
-
-static inline int sndsb_bread_dsp(struct sndsb_ctx *cx,unsigned char *buf,int count) {
-	return sndsb_bread_dsp_timeout(cx,250000UL,buf,count);
 }
 
 static inline int sndsb_recommend_vm_wait(struct sndsb_ctx *cx) {
