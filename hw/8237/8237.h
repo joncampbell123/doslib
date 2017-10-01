@@ -96,7 +96,7 @@
 /* bits 0-1 = which channel to set
  * bit 2 = 1=mask channel 0=unmask channel */
 #define D8237_MASK_CHANNEL(x)       ((x)&3)
-#define D8237_MASK_SET          0x04
+#define D8237_MASK_SET              0x04
 
 /* mode register */
 #define D8237_MODER_CHANNEL(x)      ((x)&3)
@@ -116,11 +116,12 @@
 
 /* request register */
 #define D8237_REQR_CHANNEL(x)       ((x)&3)
-#define D8237_REQR_SET          0x04
+#define D8237_REQR_SET              0x04
 
-/* status register */
-#define D8237_STATUS_TC(x)      (0x01 << ((x)&3))
-#define D8237_STATUS_REQ(x)     (0x10 << ((x)&3))
+/* status register bitmasks */
+/* NOTE: Reading the status register clears the TC bits. Read once to a var and process each bit from there. */
+#define D8237_STATUS_TC(x)          (0x01 << ((x)&3))
+#define D8237_STATUS_REQ(x)         (0x10 << ((x)&3))
 
 // this library can be asked to mask out the 16th bit of 16-bit DMA addresses to help test
 // which bit the motherboard's DMA controller uses. all address are masked by these variables.
