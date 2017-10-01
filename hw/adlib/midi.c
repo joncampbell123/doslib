@@ -327,7 +327,8 @@ static void change_fm_instrument(struct midi_note *note,unsigned int instrument)
             adlib_fm[i].car = adlib_fm_preset_overdrive_guitar.car;
             break;
 
-        case 35: /* Electric Bass */
+        case 34: /* Electric Bass (finger) */
+        case 35: /* Electric Bass (pick) */
             adlib_fm[i].mod = adlib_fm_preset_electric_bass.mod;
             adlib_fm[i].car = adlib_fm_preset_electric_bass.car;
             break;
