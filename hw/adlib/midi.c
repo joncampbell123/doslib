@@ -396,9 +396,12 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 
 	/* HACK: Ignore percussion */
 	if ((ch->program >= 8 && ch->program <= 15)/*Chromatic percussion*/ ||
-		(ch->program >= 112 && ch->program <= 119)/*Percussive*/ ||
-		ch == &midi_ch[9]/*MIDI channel 10 (DAMN YOU 1-BASED COUNTING)*/)
+		(ch->program >= 112 && ch->program <= 119)/*Percussive*/)
 		return;
+
+    /* MIDI channel 10 percussion */
+    if (ch == &midi_ch[9]/*MIDI channel 10 (DAMN YOU 1-BASED COUNTING)*/)
+        return;
 
 	if (note == NULL) {
 		/* then we'll have to knock one off to make room */
