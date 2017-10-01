@@ -258,6 +258,7 @@ int main(int argc,char **argv) {
 				vga_write("Choose an instrument to load into the channel:\n");
 				vga_write(" 1. Violin     2. Piano     3. Harpsichord     4. Horn      5. Deep bass drum\n");
 				vga_write(" 6. Small drum 7. Electric Piano  8. Overdrive guitar  9. Electric bass\n");
+                vga_write(" 0. Lead 1 square\n");
 				vga_write_sync();
 
 				c = getch();
@@ -282,6 +283,8 @@ int main(int argc,char **argv) {
 					adlib_fm[selector] = adlib_fm_preset_overdrive_guitar;
 				else if (c == '9')
 					adlib_fm[selector] = adlib_fm_preset_electric_bass;
+				else if (c == '0')
+					adlib_fm[selector] = adlib_fm_preset_synth_lead_1_square;
 
 				adlib_update_groupA0(selector,&adlib_fm[selector]);
 				adlib_update_groupC0(selector,&adlib_fm[selector]);

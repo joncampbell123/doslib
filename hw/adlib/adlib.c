@@ -86,6 +86,18 @@ struct adlib_fm_channel adlib_fm_preset_electric_bass = {
     .car = {0,  0,  0,  0,  0,  1,  63, 10, 5,   3,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  0}
 };
 
+struct adlib_fm_channel adlib_fm_preset_synth_chiff_lead = {
+/*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
+    .mod = {0,  0,  1,  0,  1,  0,  47, 15, 6,   5,  4,  0,  4,  456,1,  1,  1,  1,  6,  0,  3},
+    .car = {0,  0,  1,  0,  1,  0,  50, 15, 6,   3,  4,  0,  4,  456,1,  1,  1,  1,  0,  0,  0}
+};
+
+struct adlib_fm_channel adlib_fm_preset_synth_lead_1_square = {
+/*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
+    .mod = {0,  0,  1,  0,  0,  0,  40, 15, 0,   7,  7,  0,  4,  456,1,  1,  1,  1,  6,  0,  2},
+    .car = {0,  0,  1,  0,  0,  0,  52, 15, 0,   7,  7,  0,  4,  456,1,  1,  1,  1,  0,  0,  3}
+};
+
 struct adlib_fm_channel adlib_fm_preset_harpsichord = {
 	.mod = {0,	0,	1,	1,	1,	1,	42,	10,	3,	2,	3,	0,
 		4,	456,	1,	1,	1,	1,	2,	0,	3},

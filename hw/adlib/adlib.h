@@ -119,6 +119,8 @@ extern struct adlib_fm_channel      adlib_fm_preset_piano_electric;
 extern struct adlib_fm_channel      adlib_fm_preset_piano_electric_2;
 extern struct adlib_fm_channel      adlib_fm_preset_overdrive_guitar;
 extern struct adlib_fm_channel      adlib_fm_preset_electric_bass;
+extern struct adlib_fm_channel      adlib_fm_preset_synth_chiff_lead;
+extern struct adlib_fm_channel      adlib_fm_preset_synth_lead_1_square;
 
 /* NTS: I have a Creative CT1350B card where we really do have to wait at least
  *      33us per I/O access, because the OPL2 chip on it really is that slow.

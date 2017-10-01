@@ -337,6 +337,16 @@ static void change_fm_instrument(struct midi_note *note,unsigned int instrument)
             adlib_fm[i].mod = adlib_fm_preset_trumpet.mod;
             adlib_fm[i].car = adlib_fm_preset_trumpet.car;
             break;
+
+        case 81: /* Lead 1 (square) */
+            adlib_fm[i].mod = adlib_fm_preset_synth_lead_1_square.mod;
+            adlib_fm[i].car = adlib_fm_preset_synth_lead_1_square.car;
+            break;
+
+        case 84: /* Lead 4 (chiff) */
+            adlib_fm[i].mod = adlib_fm_preset_synth_chiff_lead.mod;
+            adlib_fm[i].car = adlib_fm_preset_synth_chiff_lead.car;
+            break;
  
         default:
             adlib_fm[i].mod = adlib_fm_preset_piano.mod;
