@@ -135,10 +135,9 @@ struct adlib_fm_channel adlib_fm_preset_deep_bass_drum = {
 /* NTS: You can simulate hitting software or harder by adjusting the modulator total volume
  *      as well as raising or lowering the frequency */
 struct adlib_fm_channel adlib_fm_preset_small_drum = {
-	.mod = {0,	0,	0,	1,	1,	1,	54,	15,	10,	15,	15,	0,
-		3,	456,	1,	1,	1,	1,	1,	0,	0},
-	.car = {0,	0,	1,	1,	1,	1,	63,	15,	7,	15,	15,	0,
-		3,	456,	1,	1,	1,	1,	1,	0,	0}
+/*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
+	.mod = {0,	0,	0,	1,	1,	1,	54,	15,	10,	15,	15,	0,  2,	456,	1,	1,	1,	1,	1,	0,	0},
+	.car = {0,	0,	1,	1,	1,	1,	52,	15,	7,	15,	15,	0,  2,	456,	1,	1,	1,	1,	1,	0,	0}
 };
 
 unsigned char adlib_read(unsigned short i) {
