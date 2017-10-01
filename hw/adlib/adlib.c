@@ -80,6 +80,12 @@ struct adlib_fm_channel adlib_fm_preset_overdrive_guitar = {
     .car = {0,  0,  1,  0,  4,  1,  63, 15, 0,   0,  8,  0,  4,  456,1,  1,  1,  1,  0,  0,  1}
 };
 
+struct adlib_fm_channel adlib_fm_preset_electric_bass = {
+/*          AM  VIB SUS KSR MM  LKS TL  AR  DR  SL  RR  KO  OCT FN  CHA CHB CHC CHD FB  CON WF */
+    .mod = {0,  0,  0,  0,  0,  1,  52, 10, 3,   2,  3,  0,  4,  456,1,  1,  1,  1,  6,  0,  0},
+    .car = {0,  0,  0,  0,  0,  1,  63, 10, 5,   3,  3,  0,  4,  456,1,  1,  1,  1,  0,  0,  0}
+};
+
 struct adlib_fm_channel adlib_fm_preset_harpsichord = {
 	.mod = {0,	0,	1,	1,	1,	1,	42,	10,	3,	2,	3,	0,
 		4,	456,	1,	1,	1,	1,	2,	0,	3},
