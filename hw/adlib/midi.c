@@ -301,6 +301,8 @@ static void drop_fm_note(struct midi_channel *ch,unsigned char key) {
 static void change_fm_instrument(struct midi_note *note,unsigned int instrument) {
     unsigned char i = (unsigned char)(note - midi_notes);
 
+    // instruments, 1 to 128
+    // percussion hack, 129 to 256
     switch (instrument) {
         case 1: /* Acoustic piano */
             adlib_fm[i].mod = adlib_fm_preset_piano.mod;
@@ -352,11 +354,24 @@ static void change_fm_instrument(struct midi_note *note,unsigned int instrument)
             adlib_fm[i].mod = adlib_fm_preset_synth_chiff_lead.mod;
             adlib_fm[i].car = adlib_fm_preset_synth_chiff_lead.car;
             break;
- 
+
+        // percussion
+        case 129+36: /* bass drum */
+            adlib_fm[i].mod = adlib_fm_preset_small_drum.mod;
+            adlib_fm[i].car = adlib_fm_preset_small_drum.car;
+            break;
+
         default:
-            adlib_fm[i].mod = adlib_fm_preset_piano.mod;
-            adlib_fm[i].car = adlib_fm_preset_piano.car;
-            fprintf(stderr,"FM instrument change: nothing for %u\n",instrument);
+            if (instrument >= 129) {
+                adlib_fm[i].mod = adlib_fm_preset_small_drum.mod;
+                adlib_fm[i].car = adlib_fm_preset_small_drum.car;
+                fprintf(stderr,"FM instrument change: nothing for %u (percussion %u)\n",instrument,instrument-129);
+            }
+            else {
+                adlib_fm[i].mod = adlib_fm_preset_piano.mod;
+                adlib_fm[i].car = adlib_fm_preset_piano.car;
+                fprintf(stderr,"FM instrument change: nothing for %u\n",instrument);
+            }
             break;
     }
 
@@ -382,9 +397,13 @@ static inline void on_key_aftertouch(struct midi_track *t,struct midi_channel *c
 	note->note_track = (unsigned int)(t - midi_trk);
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
-	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-	adlib_fm[ach].car.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-	adlib_fm[ach].car.sustain_level = vel >> 3;
+
+    if (note->note_program >= 112) {
+    }
+    else {
+        adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
+    }
+
 	adlib_fm[ach].mod.key_on = 1;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
@@ -401,7 +420,7 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 
     /* MIDI channel 10 percussion */
     if (ch == &midi_ch[9]/*MIDI channel 10 (DAMN YOU 1-BASED COUNTING)*/)
-        return;
+        ch->program = key + 128;
 
 	if (note == NULL) {
 		/* then we'll have to knock one off to make room */
@@ -420,11 +439,16 @@ static inline void on_key_on(struct midi_track *t,struct midi_channel *ch,unsign
 	note->note_track = (unsigned int)(t - midi_trk);
 	note->note_channel = (unsigned int)(ch - midi_ch);
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
-	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-	adlib_fm[ach].car.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-	adlib_fm[ach].car.sustain_level = vel >> 3;
-	adlib_fm[ach].mod.key_on = 1;
-	adlib_update_groupA0(ach,&adlib_fm[ach]);
+
+    if (note->note_program >= 112) {
+        /* change_fm_instrument already set it */
+    }
+    else {
+        adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
+    }
+
+    adlib_fm[ach].mod.key_on = 1;
+    adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
 
 static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsigned char key,unsigned char vel) {
@@ -436,9 +460,13 @@ static inline void on_key_off(struct midi_track *t,struct midi_channel *ch,unsig
 
 	note->busy = 0;
 	ach = (unsigned int)(note - midi_notes); /* which FM channel? */
-	adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
-	adlib_fm[ach].car.attack_rate = vel >> 3; /* 0-127 to 0-15 */
-	adlib_fm[ach].car.sustain_level = vel >> 3;
+
+    if (note->note_program >= 112) {
+    }
+    else {
+        adlib_freq_to_fm_op(&adlib_fm[ach].mod,(double)freq / 65536);
+    }
+
 	adlib_fm[ach].mod.key_on = 0;
 	adlib_update_groupA0(ach,&adlib_fm[ach]);
 }
