@@ -343,6 +343,11 @@ static void change_fm_instrument(struct midi_note *note,unsigned int instrument)
             adlib_fm[i].car = adlib_fm_preset_synth_lead_1_square.car;
             break;
 
+        case 82: /* Lead 2 (sawtooth) */
+            adlib_fm[i].mod = adlib_fm_preset_synth_lead_2_sawtooth.mod;
+            adlib_fm[i].car = adlib_fm_preset_synth_lead_2_sawtooth.car;
+            break;
+
         case 84: /* Lead 4 (chiff) */
             adlib_fm[i].mod = adlib_fm_preset_synth_chiff_lead.mod;
             adlib_fm[i].car = adlib_fm_preset_synth_chiff_lead.car;
