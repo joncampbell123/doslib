@@ -79,7 +79,7 @@
 #define D8237_REG_W_CLEAR_FLIPFLOP  0x0C
 #define D8237_REG_R_TEMPORARY       0x0D
 #define D8237_REG_W_MASTER_CLEAR    0x0D
-#define D8237_REG_W_CLEAR_MASK      0x0E
+#define D8237_REG_W_CLEAR_MASK      0x0E /* Does not appear in original 8237/8237-2 datasheet */
 #define D8237_REG_W_WRITE_ALL_MASK  0x0F
 
 /* command register bits */
