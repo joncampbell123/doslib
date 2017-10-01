@@ -791,9 +791,18 @@ void adlib_shut_up() {
 		struct adlib_fm_operator *f;
 		f = &adlib_fm[i].mod;
 		f->ch_a = f->ch_b = f->ch_c = f->ch_d = 1;
+        f->total_level = 0;
+        f->decay_rate = 0xF;
+        f->release_rate = 0xF;
+
 		f = &adlib_fm[i].car;
 		f->ch_a = f->ch_b = f->ch_c = f->ch_d = 1;
+        f->total_level = 0;
+        f->decay_rate = 0xF;
+        f->release_rate = 0xF;
 	}
+
+	adlib_apply_all();
 
 	for (i=0;i < adlib_fm_voices;i++) {
 		midi_notes[i].busy = 0;
