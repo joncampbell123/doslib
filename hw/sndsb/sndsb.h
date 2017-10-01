@@ -8,8 +8,24 @@
 #include <stdint.h>
 
 /* generous I/O countdown for 1/4th of a second timeout.
- * A lesser value would be more accurate given a typical 8.333MHz ISA bus and 8 cycles per I/O read */
-#define SNDSB_IO_COUNTDOWN                                      (8500000UL / 8UL / 4UL)
+ * A lesser value would be more accurate given a typical 8.333MHz ISA bus and 8 cycles per I/O read.
+ * But Open Watcom's generated code has some additional instructions between the I/O read, but,
+ * modern processors past the 486 are fast at executing instructions. So, this is probably good enough
+ * for all systems that have Sound Blaster cards in an ISA slot (or PCI emulation).
+ *
+ * (8500000UL / 8UL / 4UL) = 265625UL */
+#define SNDSB_IO_COUNTDOWN                                      265625UL
+
+/* 16-bit builds can countdown just as fast if we can break the countdown into two 16-bit
+ * values that fit in the 8086 registers. Then pick the two 16-bit values so that the
+ * inner and outer loops can iterate without the inner loop having to worry about a
+ * different count for the last outer iteration (to simplify the code)
+ *
+ * 265625 = 5 x 5 x 5 x 5 x 5 x 5 x 17
+ *
+ * 265625 = 5 x 53125 */
+#define SNDSB_IO_COUNTDOWN_16HI                                 5
+#define SNDSB_IO_COUNTDOWN_16LO                                 53125
 
 #define SNDSB_MAX_CARDS                                         4
 

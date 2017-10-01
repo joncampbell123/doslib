@@ -67,10 +67,10 @@ int sndsb_read_dsp(struct sndsb_ctx * const cx) {
             }
         } while (1);
 #else
-        register unsigned int pa_hi = (unsigned int)(SNDSB_IO_COUNTDOWN >> 16UL) + 1U;
+        register unsigned int pa_hi = SNDSB_IO_COUNTDOWN_16HI;
 
         do {
-            register unsigned int pa_lo = (unsigned int)(SNDSB_IO_COUNTDOWN & 0xFFFFUL);
+            register unsigned int pa_lo = SNDSB_IO_COUNTDOWN_16LO;
 
             do {
                 if (!(inp(status_port) & 0x80)) {/* data NOT available? */
@@ -127,10 +127,10 @@ int sndsb_write_dsp(struct sndsb_ctx * const cx,const uint8_t d) {
             }
         } while (1);
 #else
-        register unsigned int pa_hi = (unsigned int)(SNDSB_IO_COUNTDOWN >> 16UL) + 1U;
+        register unsigned int pa_hi = SNDSB_IO_COUNTDOWN_16HI;
 
         do {
-            register unsigned int pa_lo = (unsigned int)(SNDSB_IO_COUNTDOWN & 0xFFFFUL);
+            register unsigned int pa_lo = SNDSB_IO_COUNTDOWN_16LO;
 
             do {
                 if (!(inp(status_port) & 0x80)) {/* data NOT available? */
