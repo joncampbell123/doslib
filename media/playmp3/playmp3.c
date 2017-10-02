@@ -524,7 +524,6 @@ void stop_play() {
 	if (waveOut != NULL) {
 		waveOutReset(waveOut);
 
-        /* Now we can do it */
 		for (i=0;i < WAVEOUT_RINGSIZE;i++) {
 			while (waveOutHdr[i].dwFlags & WHDR_INQUEUE) {
 				Yield();
@@ -545,8 +544,6 @@ void stop_play() {
 			memset(&waveOutHdr[i],0,sizeof(WAVEHDR));
 		}
 
-        /* Windows 3.1 + Win32s: Doesn't mean it actually stopped playing.
-         * You'll find your buffers still marked INQUEUE. */
 		while (waveOutClose(waveOut) == WAVERR_STILLPLAYING)
             Yield();
 
