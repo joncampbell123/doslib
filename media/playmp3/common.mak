@@ -55,9 +55,6 @@ $(PLAYMP3_EXE): $(WIN_W9XVMM_LIB) $(EXT_ZLIB_LIB) $(EXT_FLAC_LIB) $(EXT_SPEEX_LI
 ! endif
 	%write tmp.cmd name $(PLAYMP3_EXE)
 	@wlink @tmp.cmd
-! ifndef TARGET_WINDOWS # UPX compressed EXEs do NOT work with Windows 3.1 Win32s
-	upx --best $(PLAYMP3_EXE) # Apparently the MP3 and AAC libraries bloat the EXE out to 600KB
-! endif
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 
 ! ifdef M4ATOAAC_EXE
