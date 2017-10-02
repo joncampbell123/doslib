@@ -3107,10 +3107,6 @@ static const struct vga_menu_item* main_menu_playback_other[] = {
 	NULL
 };
 
-static const struct vga_menu_item main_menu_device_dsp_reset =
-	{"DSP reset",		'r',	0,	0};
-static const struct vga_menu_item main_menu_device_mixer_reset =
-	{"Mixer reset",		'r',	0,	0};
 static const struct vga_menu_item main_menu_device_mixer_controls =
 	{"Mixer controls",	'm',	0,	0};
 static const struct vga_menu_item main_menu_device_info =
@@ -3124,8 +3120,6 @@ static const struct vga_menu_item main_menu_device_gus_timer_test =
 	{"GUS timer test",	't',	0,	0};
 
 static const struct vga_menu_item* main_menu_device_sb[] = {
-	&main_menu_device_dsp_reset,
-	&main_menu_device_mixer_reset,
 	&main_menu_device_mixer_controls,
 	&main_menu_device_info,
 	&main_menu_device_choose_sound_card,
@@ -4314,25 +4308,6 @@ int main(int argc,char **argv) {
 				if (mp3_playing) {
 					stop_play();
 					redraw = 1;
-				}
-			}
-			else if (mitem == &main_menu_device_dsp_reset) {
-				if (sb_card != NULL) {
-					struct vga_msg_box box;
-					vga_msg_box_create(&box,"Resetting DSP...",0,0);
-					stop_play();
-					sndsb_reset_dsp(sb_card);
-					t8254_wait(t8254_us2ticks(1000000));
-					vga_msg_box_destroy(&box);
-				}
-			}
-			else if (mitem == &main_menu_device_mixer_reset) {
-				if (sb_card != NULL) {
-					struct vga_msg_box box;
-					vga_msg_box_create(&box,"Resetting mixer...",0,0);
-					sndsb_reset_mixer(sb_card);
-					t8254_wait(t8254_us2ticks(1000000));
-					vga_msg_box_destroy(&box);
 				}
 			}
 			else if (mitem == &main_menu_help_about) {
