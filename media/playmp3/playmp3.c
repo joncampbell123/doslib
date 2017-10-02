@@ -2679,44 +2679,6 @@ static void change_param_menu() {
 
 			if (c == 27 || c == 13)
 				loop = 0;
-			else if (isdigit(c)) {
-				if (selector == 0) { /* sample rate, allow typing in sample rate */
-					int i=0;
-					VGA_ALPHA_PTR sco;
-					struct vga_msg_box box;
-					vga_msg_box_create(&box,"Custom sample rate",2,0);
-					sco = vga_state.vga_alpha_ram + ((box.y+2) * vga_state.vga_width) + box.x + 2;
-					sco[i] = c | 0x1E00;
-					temp_str[i++] = c;
-					while (1) {
-						c = getch();
-						if (c == 0) c = getch() << 8;
-
-						if (c == 27)
-							break;
-						else if (c == 13) {
-							if (i == 0) break;
-							temp_str[i] = 0;
-							mp3_sample_rate = strtol(temp_str,NULL,0);
-							if (mp3_sample_rate < 2000) mp3_sample_rate = 2000;
-							else if (mp3_sample_rate > 64000) mp3_sample_rate = 64000;
-							uiredraw=1;
-							break;
-						}
-						else if (isdigit(c)) {
-							if (i < 5) {
-								sco[i] = c | 0x1E00;
-								temp_str[i++] = c;
-							}
-						}
-						else if (c == 8) {
-							if (i > 0) i--;
-							sco[i] = ' ' | 0x1E00;
-						}
-					}
-					vga_msg_box_destroy(&box);
-				}
-			}
 			else if (c == 0x4800) { /* up arrow */
 				if (selector > 0) selector--;
 				else selector=4;
