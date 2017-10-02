@@ -3114,11 +3114,6 @@ static const struct vga_menu_item main_menu_device_info =
 static const struct vga_menu_item main_menu_device_choose_sound_card =
 	{"Choose sound card",	'c',	0,	0};
 
-static const struct vga_menu_item main_menu_device_gus_reset_tinker =
-	{"GUS reset tinker",	'r',	0,	0};
-static const struct vga_menu_item main_menu_device_gus_timer_test =
-	{"GUS timer test",	't',	0,	0};
-
 static const struct vga_menu_item* main_menu_device_sb[] = {
 	&main_menu_device_mixer_controls,
 	&main_menu_device_info,
@@ -3129,8 +3124,6 @@ static const struct vga_menu_item* main_menu_device_sb[] = {
 static const struct vga_menu_item* main_menu_device_gus[] = {
 	&main_menu_device_info,
 	&main_menu_device_choose_sound_card,
-	&main_menu_device_gus_reset_tinker,
-	&main_menu_device_gus_timer_test,
 	NULL
 };
 
@@ -3360,8 +3353,6 @@ static void show_device_info_sb() {
 	vga_msg_box_destroy(&box);
 }
 
-static void do_gus_timer_test();
-
 static void show_device_info_gus() {
 	unsigned char old_oldwaittc = dont_wait_gus_dma_tc;
 	unsigned long p_gus_timer_ticks = 0;
@@ -3415,8 +3406,6 @@ static void show_device_info_gus() {
 				else
 					begin_play();
 			}
-			else if (c == 't')
-				do_gus_timer_test();
 			else if (c == 's') {
 				slowmode ^= 1;
 				if (slowmode)
@@ -3541,137 +3530,6 @@ static void choose_sound_card_sb() {
 	}
 
 	vga_msg_box_destroy(&box);
-}
-
-static void do_gus_timer_test() {
-	_cli();
-	if (gus_timer_ctl == 0) {
-		// start
-		gus_timer_ctl = 0x04;
-
-		ultrasnd_stop_timers(gus_card);
-		outp(gus_card->port+0x008,0x04); /* select "timer stuff" */
-		outp(gus_card->port+0x009,0xE0);
-		outp(gus_card->port+0x009,0x80);
-		outp(gus_card->port+0x009,0x60);
-		outp(gus_card->port+0x009,0x20/*mask timer 2 */ | 0x01/*enable timer 1*/);
-		ultrasnd_select_write(gus_card,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
-		ultrasnd_select_write(gus_card,0x46,0x00); /* load timer 1 (0xFF * 80us = 20ms) */
-		ultrasnd_select_write(gus_card,0x47,0x00); /* load timer 2 (0xFF * 320us = 80ms) */
-	}
-	else {
-		// stop
-		gus_timer_ctl = 0;
-		ultrasnd_stop_timers(gus_card);
-	}
-	_sti();
-}
-
-static void do_gus_reset_tinker() {
-	int c,rows=3+3,cols=78;
-	unsigned char active_voices = 0;
-	unsigned char reset_reg = 0;
-	unsigned char fredraw = 1;
-	unsigned char redraw = 1;
-	struct vga_msg_box box;
-
-	vga_msg_box_create(&box,"",rows,cols); /* 3 rows 70 cols */
-
-	while (1) {
-		ui_anim(0);
-
-		if (redraw || fredraw) {
-			_cli();
-
-			active_voices = ultrasnd_select_read(gus_card,0x8E);
-			/* BUGFIX: DOSBox/DOSBox-X does not emulate reading back the active voices register */
-			if (active_voices == 0) active_voices = 0xE0 | (gus_card->active_voices - 1); /* fake it */
-
-			reset_reg = ultrasnd_select_read(gus_card,0x4C);
-
-			_sti();
-
-			if (fredraw) {
-				vga_moveto(box.x+2,box.y+1);
-				vga_write_color(0x1E);
-				vga_write("GUS reset register:");
-
-				vga_moveto(box.x+34,box.y+1);
-				vga_write_color(0x1E);
-				vga_write("Active voices:");
-
-				vga_moveto(box.x+2,box.y+3);
-				vga_write_color(0x1E);
-				vga_write("Play with the register by pressing 0-7 on the keyboard to toggle bits.");
-
-				vga_moveto(box.x+2,box.y+4);
-				vga_write_color(0x1E);
-				vga_write("Up/Down arrow keys to play with Active Voices. May cause audio to stop.");
-
-				vga_moveto(box.x+2,box.y+5);
-				vga_write_color(0x1E);
-				vga_write("The GF1 chip is not meant to change Active voices realtime, some glitches");
-
-				vga_moveto(box.x+2,box.y+6);
-				vga_write_color(0x1E);
-				vga_write("may occur if you do. The GF1 is not stable below about 4-5 voices.");
-			}
-
-			sprintf(temp_str,"0x%02x",reset_reg);
-			vga_moveto(box.x+2+21,box.y+1);
-			vga_write_color(0x1F);
-			vga_write(temp_str);
-
-			sprintf(temp_str,"0x%02x",active_voices);
-			vga_moveto(box.x+2+48,box.y+1);
-			vga_write_color(0x1F);
-			vga_write(temp_str);
-
-			fredraw = 0;
-			redraw = 0;
-		}
-
-		if (kbhit()) {
-			c = getch();
-			if (c == 0) c = getch() << 8;
-
-			if (c == 27) {
-				break;
-			}
-			else if (c == 13) {
-			}
-			else if (c == 0x4800) { //up
-				_cli();
-				active_voices--;
-				gus_card->active_voices = (active_voices & 0x1F) + 1;
-				if (gus_card->active_voices != 32) ultrasnd_stop_voice(gus_card,gus_card->active_voices);
-				for (c=0;c < 256 && (ultrasnd_select_read(gus_card,0x8F) & 0xC0) != 0xC0;) c++; // eat all voice interrupts. the GF1 has problems clearing them out once we cut off the voice!
-				ultrasnd_select_write(gus_card,0x0E,active_voices);
-				redraw = 1;
-				_sti();
-			}
-			else if (c == 0x5000) { //down
-				_cli();
-				active_voices++;
-				ultrasnd_select_write(gus_card,0x0E,active_voices);
-				gus_card->active_voices = (active_voices & 0x1F) + 1;
-				if (gus_card->active_voices != 1) ultrasnd_stop_voice(gus_card,gus_card->active_voices - 1);
-				for (c=0;c < 256 && (ultrasnd_select_read(gus_card,0x8F) & 0xC0) != 0xC0;) c++; // eat all voice interrupts. the GF1 has problems clearing them out once we cut off the voice!
-				redraw = 1;
-				_sti();
-			}
-			else if (c >= '0' && c <= '7') {
-				_cli();
-				reset_reg ^= (1 << (c - '0'));
-				ultrasnd_select_write(gus_card,0x4C,reset_reg);
-				redraw = 1;
-				_sti();
-			}
-		}
-	}
-
-	vga_msg_box_destroy(&box);
-
 }
 
 static void choose_sound_card_gus() {
@@ -4370,12 +4228,6 @@ int main(int argc,char **argv) {
 			else if (mitem == &main_menu_device_choose_sound_card) {
 				if (sb_card != NULL) choose_sound_card_sb();
 				else if (gus_card != NULL) choose_sound_card_gus();
-			}
-			else if (mitem == &main_menu_device_gus_reset_tinker) {
-				if (gus_card != NULL) do_gus_reset_tinker();
-			}
-			else if (mitem == &main_menu_device_gus_timer_test) {
-				if (gus_card != NULL) do_gus_timer_test();
 			}
 		}
 
