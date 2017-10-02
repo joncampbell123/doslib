@@ -124,13 +124,6 @@ int				change_param_idx = 0;
 
 void				(interrupt *old_irq_0)() = NULL;
 
-const unsigned short param_preset_rates[PARAM_PRESET_RATES] = {
-	4000,	5512,	5675,	6000,
-	8000,	11025,	11111,	12000,
-	16000,	22050,	22222,	24000,
-	32000,	44100,	48000,	54000,
-	58000};
-
 const char *dos32_irq_0_warning =
 	"WARNING: The timer is made to run at the sample rate. Depending on your\n"
 	"         DOS extender there may be enough overhead to overwhelm the CPU\n"

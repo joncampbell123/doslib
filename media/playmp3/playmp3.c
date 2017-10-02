@@ -2588,8 +2588,8 @@ static void change_param_menu() {
 	unsigned char uiredraw=1;
 	unsigned char selector=change_param_idx;
 	unsigned char oldmethod=sb_card != NULL ? sb_card->dsp_play_method : 0;
-	unsigned int cc,ra;
 	VGA_ALPHA_PTR vga;
+	unsigned int cc;
 	char tmp[128];
 
 	while (loop) {
@@ -2725,12 +2725,6 @@ static void change_param_menu() {
 			else if (c == 0x4B00) { /* left arrow */
 				switch (selector) {
 					case 0:	/* sample rate */
-						ra = param_preset_rates[0];
-						for (cc=0;cc < (sizeof(param_preset_rates)/sizeof(param_preset_rates[0]));cc++) {
-							if (param_preset_rates[cc] < mp3_sample_rate)
-								ra = param_preset_rates[cc];
-						}
-						mp3_sample_rate = ra;
 						break;
 					case 1:	/* stereo/mono */
 						mp3_stereo = !mp3_stereo;
@@ -2769,11 +2763,6 @@ static void change_param_menu() {
 			else if (c == 0x4D00) { /* right arrow */
 				switch (selector) {
 					case 0:	/* sample rate */
-						for (cc=0;cc < ((sizeof(param_preset_rates)/sizeof(param_preset_rates[0]))-1);) {
-							if (param_preset_rates[cc] > mp3_sample_rate) break;
-							cc++;
-						}
-						mp3_sample_rate = param_preset_rates[cc];
 						break;
 					case 1:	/* stereo/mono */
 						mp3_stereo = !mp3_stereo;
