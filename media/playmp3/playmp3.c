@@ -944,10 +944,7 @@ static unsigned char			gus_active = 14;
 
 static unsigned char			drv_mode = 0;
 static int				sc_idx = -1;
-static unsigned char			goldplay_mode = 0;
 static signed char			reduced_irq_interval = 0;
-static unsigned char			sample_rate_timer_clamp = 0;
-static unsigned char			goldplay_samplerate_choice = GOLDRATE_MATCH;
 static void				(interrupt *old_irq)() = NULL;
 static unsigned char			old_irq_masked = 0;
 
@@ -2346,24 +2343,7 @@ void begin_play() {
 	if (mp3_playing || mp3_fd < 0) return;
 
 	if (sb_card != NULL) { /* Sound Blaster */
-		unsigned long choice_rate = sample_rate_timer_clamp ? mp3_sample_rate_by_timer : mp3_sample_rate;
-		if (goldplay_mode) {
-			if (goldplay_samplerate_choice == GOLDRATE_DOUBLE)
-				choice_rate *= 2;
-			else if (goldplay_samplerate_choice == GOLDRATE_MAX) {
-				/* basically the maximum the DSP will run at */
-				if (sb_card->dsp_play_method <= SNDSB_DSPOUTMETHOD_200)
-					choice_rate = 22050;
-				else if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_201)
-					choice_rate = 44100;
-				else if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx)
-					choice_rate = mp3_stereo ? 22050 : 44100;
-				else if (sb_card->pnp_name == NULL)
-					choice_rate = 44100; /* Most clones and non-PnP SB16 cards max out at 44.1KHz */
-				else
-					choice_rate = 48000; /* SB16 ViBRA (PnP-era) cards max out at 48Khz */
-			}
-		}
+		unsigned long choice_rate = mp3_sample_rate;
 
 		update_cfg();
 		irq_0_watchdog_reset();
@@ -2385,12 +2365,6 @@ void begin_play() {
 			irq_0_count = 0;
 			irq_0_adv = 182UL;		/* 18.2Hz */
 			irq_0_max = nr * 10UL;		/* sample rate */
-		}
-		else if (sb_card->goldplay_mode) {
-			write_8254_system_timer(mp3_sample_rate_by_timer_ticks);
-			irq_0_count = 0;
-			irq_0_adv = 182UL;		/* 18.2Hz */
-			irq_0_max = (T8254_REF_CLOCK_HZ / mp3_sample_rate_by_timer_ticks) * 10UL;
 		}
 
 		draw_irq_indicator();
@@ -2531,7 +2505,7 @@ void stop_play() {
 
 	if (sb_card != NULL) { /* Sound Blaster */
 		_cli();
-		if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || sb_card->goldplay_mode) {
+		if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
 			irq_0_count = 0;
 			irq_0_adv = 1;
 			irq_0_max = 1;
@@ -3101,12 +3075,6 @@ static void play_with_mixer_sb() {
 
 static struct vga_menu_item main_menu_playback_reduced_irq =
 	{"xxx",			'i',	0,	0};
-static struct vga_menu_item main_menu_playback_goldplay =
-	{"xxx",			'g',	0,	0};
-static struct vga_menu_item main_menu_playback_goldplay_mode =
-	{"xxx",			'm',	0,	0};
-static struct vga_menu_item main_menu_playback_timer_clamp =
-	{"xxx",			0,	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_autoinit_dma =
 	{"xxx",			't',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_autoinit_command =
@@ -3118,9 +3086,6 @@ static const struct vga_menu_item* main_menu_playback_sb[] = {
 	&menu_separator,
 	&main_menu_playback_params,
 	&main_menu_playback_reduced_irq,
-	&main_menu_playback_goldplay,
-	&main_menu_playback_goldplay_mode,
-	&main_menu_playback_timer_clamp,
 	&main_menu_playback_dsp_autoinit_dma,
 	&main_menu_playback_dsp_autoinit_command,
 	NULL
@@ -3226,12 +3191,7 @@ static void my_vga_menu_idle() {
 static void update_cfg() {
 	unsigned int r;
 
-	mp3_sample_rate_by_timer_ticks = t8254_us2ticks(1000000 / mp3_sample_rate);
-	if (mp3_sample_rate_by_timer_ticks == 0) mp3_sample_rate_by_timer_ticks = 1;
-	mp3_sample_rate_by_timer = T8254_REF_CLOCK_HZ / mp3_sample_rate_by_timer_ticks;
-
 	if (sb_card != NULL) {
-		sb_card->goldplay_mode = goldplay_mode;
 		sb_card->dsp_adpcm = 0;
 		sb_card->dsp_record = 0;
 		r = mp3_sample_rate;
@@ -3258,30 +3218,6 @@ static void update_cfg() {
 		main_menu_playback_reduced_irq.text =
 			"IRQ interval: tiny";
 
-	if (goldplay_samplerate_choice == GOLDRATE_MATCH)
-		main_menu_playback_goldplay_mode.text =
-			"Goldplay sample rate: Match";
-	else if (goldplay_samplerate_choice == GOLDRATE_DOUBLE)
-		main_menu_playback_goldplay_mode.text =
-			"Goldplay sample rate: Double";
-	else if (goldplay_samplerate_choice == GOLDRATE_MAX)
-		main_menu_playback_goldplay_mode.text =
-			"Goldplay sample rate: Max";
-	else
-		main_menu_playback_goldplay_mode.text =
-			"?";
-
-	if (sb_card != NULL) {
-		main_menu_playback_goldplay.text =
-			goldplay_mode ? "Goldplay mode: On" : "Goldplay mode: Off";
-	}
-	else {
-		main_menu_playback_goldplay.text =
-			"--";
-	}
-
-	main_menu_playback_timer_clamp.text =
-		sample_rate_timer_clamp ? "Clamp samplerate to timer: On" : "Clamp samplerate to timer: Off";
 	main_menu_playback_dsp_autoinit_dma.text =
 		sb_card->dsp_autoinit_dma ? "DMA autoinit: On" : "DMA autoinit: Off";
 	main_menu_playback_dsp_autoinit_command.text =
@@ -4414,34 +4350,6 @@ int main(int argc,char **argv) {
 				}
 				vga_msg_box_destroy(&box);
 			}
-			else if (mitem == &main_menu_playback_goldplay) {
-				if (sb_card != NULL) {
-					unsigned char wp = mp3_playing;
-					if (wp) stop_play();
-					goldplay_mode = !goldplay_mode;
-					if (!irq_0_had_warned && goldplay_mode) {
-						/* NOTE TO SELF: It can overwhelm the UI in DOSBox too, but DOSBox seems able to
-						   recover if you manage to hit CTRL+F12 to speed up the CPU cycles in the virtual machine.
-						   On real hardware, even with the recovery method the machine remains hung :( */
-						if (confirm_yes_no_dialog(dos32_irq_0_warning))
-							irq_0_had_warned = 1;
-						else
-							goldplay_mode = 0;
-					}
-					update_cfg();
-					if (wp) begin_play();
-				}
-			}
-			else if (mitem == &main_menu_playback_goldplay_mode) {
-				if (sb_card != NULL) {
-					unsigned char wp = mp3_playing;
-					if (wp) stop_play();
-					if (++goldplay_samplerate_choice > GOLDRATE_MAX)
-						goldplay_samplerate_choice = GOLDRATE_MATCH;
-					update_cfg();
-					if (wp) begin_play();
-				}
-			}
 			else if (mitem == &main_menu_playback_dsp_autoinit_dma) {
 				unsigned char wp = mp3_playing;
 				if (wp) stop_play();
@@ -4455,15 +4363,6 @@ int main(int argc,char **argv) {
 				sb_card->dsp_autoinit_command = !sb_card->dsp_autoinit_command;
 				update_cfg();
 				if (wp) begin_play();
-			}
-			else if (mitem == &main_menu_playback_timer_clamp) {
-				if (sb_card != NULL) {
-					unsigned char wp = mp3_playing;
-					if (wp) stop_play();
-					sample_rate_timer_clamp = !sample_rate_timer_clamp;
-					update_cfg();
-					if (wp) begin_play();
-				}
 			}
 			else if (mitem == &main_menu_playback_reduced_irq) {
 				if (sb_card != NULL) {

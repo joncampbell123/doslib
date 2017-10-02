@@ -41,8 +41,6 @@ int				mp3_fd = -1;
 char				mp3_file[130] = {0};
 unsigned char			mp3_stereo = 0,mp3_16bit = 0,mp3_bytes_per_sample = 1;
 unsigned long			mp3_data_offset = 44,mp3_data_length = 0,mp3_sample_rate = 8000;
-unsigned long			mp3_sample_rate_by_timer_ticks = 1;
-unsigned long			mp3_sample_rate_by_timer = 1;
 unsigned long			mp3_smallstep = 128*1024;
 unsigned char			mp3_playing = 0;
 
