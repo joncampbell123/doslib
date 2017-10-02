@@ -450,13 +450,6 @@ void ui_anim(int force) {
 	last_file_offset = mp3_position;
 }
 
-void CALLBACK waveOutCallback(HWAVEOUT hwo,UINT uMsg,DWORD dwInstance,DWORD dwParam1,DWORD dwParam2) {
-	if (uMsg == WOM_DONE) {
-		WAVEHDR *hdr = (WAVEHDR*)dwParam1;
-		hdr->dwFlags |= WHDR_DONE; /* Perhaps Windows does this already, but just make sure */
-	}
-}
-
 void begin_play() {
 	MMRESULT res;
 	int blksiz;
@@ -474,7 +467,7 @@ void begin_play() {
 	waveOutFmt.nAvgBytesPerSec = waveOutFmt.nSamplesPerSec * waveOutFmt.nBlockAlign;
 	waveOutFmt.wBitsPerSample = (mp3_16bit ? 16 : 8);
 	waveOutFmt.cbSize = 0;
-	if ((res=waveOutOpen(&waveOut,WAVE_MAPPER,&waveOutFmt,(DWORD)waveOutCallback,0,CALLBACK_FUNCTION|WAVE_ALLOWSYNC)) != 0) {
+	if ((res=waveOutOpen(&waveOut,WAVE_MAPPER,&waveOutFmt,0,0,WAVE_ALLOWSYNC)) != 0) {
 		char tmp[256];
 		tmp[0]=0;
 		waveOutGetErrorText(res,tmp,sizeof(tmp)-1);
@@ -521,13 +514,18 @@ void stop_play() {
 
 	if (!mp3_playing) return;
 
+    /* NTS: This code absolutely makes sure that everything stopped because Windows APIs
+     *      have traditionally given me reason to assume that things don't go quite as
+     *      described by MSDN docs especially Windows 3.1 */
+    /* NTS: We do NOT use a callback function because we don't need it. Also, Windows 3.1
+     *      with Win32s seems to have issues with callback functions. Not during runtime,
+     *      but if the program exits just after stopping WAVE playback. It causes a weird
+     *      crash in the Program Manager for some reason. */
 	if (waveOut != NULL) {
-		waveOutPause(waveOut);
 		waveOutReset(waveOut);
+
+        /* Now we can do it */
 		for (i=0;i < WAVEOUT_RINGSIZE;i++) {
-			/* Microsoft Windows 3.1 + Win32s: Apparently we have to wait for WINMM16.DLL
-			 * to actually stop, or our code continues execution past termination and
-			 * Program Manager crashes. Wait... what? */
 			while (waveOutHdr[i].dwFlags & WHDR_INQUEUE) {
 				Yield();
 				if (PeekMessage(&msg,NULL,0,0,PM_REMOVE)) {
@@ -536,16 +534,22 @@ void stop_play() {
 				}
 			}
 
-			if (waveOutHdr[i].dwFlags & WHDR_PREPARED)
-				waveOutUnprepareHeader(waveOut,&waveOutHdr[i],sizeof(WAVEHDR));
+			if (waveOutHdr[i].dwFlags & WHDR_PREPARED) {
+				while (waveOutUnprepareHeader(waveOut,&waveOutHdr[i],sizeof(WAVEHDR)) == WAVERR_STILLPLAYING)
+                    Yield();
+            }
 
 			if (waveOutHdr[i].lpData)
 				free(waveOutHdr[i].lpData);
 
 			memset(&waveOutHdr[i],0,sizeof(WAVEHDR));
 		}
-		waveOutRestart(waveOut);
-		waveOutClose(waveOut);
+
+        /* Windows 3.1 + Win32s: Doesn't mean it actually stopped playing.
+         * You'll find your buffers still marked INQUEUE. */
+		while (waveOutClose(waveOut) == WAVERR_STILLPLAYING)
+            Yield();
+
 		waveOut = NULL;
 	}
 
