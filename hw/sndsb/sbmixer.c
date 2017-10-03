@@ -1,35 +1,16 @@
 
-#include <stdio.h>
-#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <malloc.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <dos.h>
-
-#include <hw/dos/dos.h>
-#include <hw/dos/dosbox.h>
-#include <hw/8237/8237.h>		/* 8237 DMA */
-#include <hw/8254/8254.h>		/* 8254 timer */
-#include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
-#include <hw/dos/doswin.h>
-#include <hw/dos/tgusmega.h>
-#include <hw/dos/tgussbos.h>
 
-/* Windows 9x VxD enumeration */
-#include <windows/w9xvmm/vxd_enum.h>
-
-unsigned char sndsb_test_write_mixer(struct sndsb_ctx *cx,uint8_t i,uint8_t d) {
+unsigned char sndsb_test_write_mixer(struct sndsb_ctx * const cx,const uint8_t i,const uint8_t d) {
 	unsigned char o,c;
+
 	o = sndsb_read_mixer(cx,i); sndsb_write_mixer(cx,i,d);
 	c = sndsb_read_mixer(cx,i); sndsb_write_mixer(cx,i,o);
+
 	return c;
 }
 
-int sndsb_reset_mixer(struct sndsb_ctx *cx) {
+int sndsb_reset_mixer(struct sndsb_ctx * const cx) {
 	if (cx->baseio == 0)
 		return 0;
 
@@ -40,7 +21,7 @@ int sndsb_reset_mixer(struct sndsb_ctx *cx) {
 /* NTS: If DOSBox's emulation is correct, 0xFF is not necessarily what is returned for
  *      unknown registers, therefore it's not an accurate way to probe the chipset.
  *      DOSBox for example seems to return 0x0A. */
-int sndsb_probe_mixer(struct sndsb_ctx *cx) {
+int sndsb_probe_mixer(struct sndsb_ctx * const cx) {
 	cx->mixer_probed = 1;
 	cx->mixer_chip = 0;
 
