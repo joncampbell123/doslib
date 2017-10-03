@@ -1,39 +1,11 @@
 
-#include <stdio.h>
-#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <malloc.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <dos.h>
 
-#include <hw/dos/dos.h>
-#include <hw/dos/dosbox.h>
-#include <hw/8237/8237.h>		/* 8237 DMA */
-#include <hw/8254/8254.h>		/* 8254 timer */
-#include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
-#include <hw/dos/doswin.h>
-#include <hw/dos/tgusmega.h>
-#include <hw/dos/tgussbos.h>
 
-/* Windows 9x VxD enumeration */
-#include <windows/w9xvmm/vxd_enum.h>
+void sndsb_read_sb16_irqdma_resources(struct sndsb_ctx * const cx) {
+	const unsigned char irqm = sndsb_read_mixer(cx,0x80);
+	const unsigned char dmam = sndsb_read_mixer(cx,0x81);
 
-/* uncomment this to enable debugging messages */
-//#define DBG
-
-#if defined(DBG)
-# define DEBUG(x) (x)
-#else
-# define DEBUG(x)
-#endif
-
-void sndsb_read_sb16_irqdma_resources(struct sndsb_ctx *cx) {
-	unsigned char irqm = sndsb_read_mixer(cx,0x80);
-	unsigned char dmam = sndsb_read_mixer(cx,0x81);
 	if (cx->irq < 0 && irqm != 0xFF && irqm != 0x00) {
 		if (irqm & 8)		cx->irq = 10;
 		else if (irqm & 4)	cx->irq = 7;
@@ -42,7 +14,8 @@ void sndsb_read_sb16_irqdma_resources(struct sndsb_ctx *cx) {
 
 		cx->do_not_probe_irq = 1;
 	}
-	if (dmam != 0xFF && dmam != 0x00) {
+
+    if (dmam != 0xFF && dmam != 0x00) {
 		if (cx->dma8 < 0) {
 			if (dmam & 8)		cx->dma8 = 3;
 			else if (dmam & 2)	cx->dma8 = 1;
