@@ -3075,10 +3075,6 @@ static void play_with_mixer_sb() {
 
 static struct vga_menu_item main_menu_playback_reduced_irq =
 	{"xxx",			'i',	0,	0};
-static struct vga_menu_item main_menu_playback_dsp_autoinit_dma =
-	{"xxx",			't',	0,	0};
-static struct vga_menu_item main_menu_playback_dsp_autoinit_command =
-	{"xxx",			'c',	0,	0};
 
 static const struct vga_menu_item* main_menu_playback_sb[] = {
 	&main_menu_playback_play,
@@ -3086,8 +3082,6 @@ static const struct vga_menu_item* main_menu_playback_sb[] = {
 	&menu_separator,
 	&main_menu_playback_params,
 	&main_menu_playback_reduced_irq,
-	&main_menu_playback_dsp_autoinit_dma,
-	&main_menu_playback_dsp_autoinit_command,
 	NULL
 };
 
@@ -3204,11 +3198,6 @@ static void update_cfg() {
 	else /* -1 */
 		main_menu_playback_reduced_irq.text =
 			"IRQ interval: tiny";
-
-	main_menu_playback_dsp_autoinit_dma.text =
-		sb_card->dsp_autoinit_dma ? "DMA autoinit: On" : "DMA autoinit: Off";
-	main_menu_playback_dsp_autoinit_command.text =
-		sb_card->dsp_autoinit_command ? "DSP playback: auto-init" : "DSP playback: single-cycle";
 }
 
 static void help() {
@@ -4182,20 +4171,6 @@ int main(int argc,char **argv) {
 					}
 				}
 				vga_msg_box_destroy(&box);
-			}
-			else if (mitem == &main_menu_playback_dsp_autoinit_dma) {
-				unsigned char wp = mp3_playing;
-				if (wp) stop_play();
-				sb_card->dsp_autoinit_dma = !sb_card->dsp_autoinit_dma;
-				update_cfg();
-				if (wp) begin_play();
-			}
-			else if (mitem == &main_menu_playback_dsp_autoinit_command) {
-				unsigned char wp = mp3_playing;
-				if (wp) stop_play();
-				sb_card->dsp_autoinit_command = !sb_card->dsp_autoinit_command;
-				update_cfg();
-				if (wp) begin_play();
 			}
 			else if (mitem == &main_menu_playback_reduced_irq) {
 				if (sb_card != NULL) {
