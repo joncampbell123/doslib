@@ -23,8 +23,9 @@
 #include <windows/w9xvmm/vxd_enum.h>
 
 struct sndsb_ctx *sndsb_try_blaster_var() {
-	int A=-1,I=-1,D=-1,H=-1,P=-1;
+    signed char D=-1,H=-1,I=-1;
 	struct sndsb_ctx *e;
+	int A=-1,P=-1;
 	char *s;
 
 	if (sndsb_card_blaster != NULL)
@@ -39,29 +40,18 @@ struct sndsb_ctx *sndsb_try_blaster_var() {
 			continue;
 		}
 
-		if (*s == 'A') {
-			s++;
-			A = strtol(s,&s,16);
-		}
-		else if (*s == 'P') {
-			s++;
-			P = strtol(s,&s,16);
-		}
-		else if (*s == 'I') {
-			s++;
-			I = strtol(s,&s,10);
-		}
-		else if (*s == 'D') {
-			s++;
-			D = strtol(s,&s,10);
-		}
-		else if (*s == 'H') {
-			s++;
-			H = strtol(s,&s,10);
-		}
+		if (*s == 'A')
+			A = strtol(++s,&s,16);
+		else if (*s == 'P')
+			P = strtol(++s,&s,16);
+		else if (*s == 'I')
+			I = strtol(++s,&s,10);
+		else if (*s == 'D')
+			D = strtol(++s,&s,10);
+		else if (*s == 'H')
+			H = strtol(++s,&s,10);
 		else {
 			while (*s && *s != ' ') s++;
-			while (*s == ' ') s++;
 		}
 	}
 
@@ -71,22 +61,13 @@ struct sndsb_ctx *sndsb_try_blaster_var() {
 	if (sndsb_by_base(A) != NULL)
 		return 0;
 
-	e = sndsb_alloc_card();
+	e = sndsb_alloc_card(); /* init and free functions zero this struct */
 	if (e == NULL) return NULL;
-#if TARGET_MSDOS == 32
-	e->goldplay_dma = NULL;
-#endif
-	e->is_gallant_sc6600 = 0;
 	e->baseio = (uint16_t)A;
 	e->mpuio = (uint16_t)(P > 0 ? P : 0);
 	e->dma8 = (int8_t)D;
 	e->dma16 = (int8_t)H;
 	e->irq = (int8_t)I;
-	e->dsp_vmaj = 0;
-	e->dsp_vmin = 0;
-	e->mixer_ok = 0;
-	e->mixer_probed = 0;
-	e->dsp_ok = 0;
 	return (sndsb_card_blaster=e);
 }
 
