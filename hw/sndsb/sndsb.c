@@ -347,6 +347,8 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	cx->max_sample_rate_sb_play_dac = 23000;
 	cx->max_sample_rate_sb_rec_dac = 13000;
 
+    sndsb_update_dspio(cx);
+
 	if (!sndsb_reset_dsp(cx)) return 0;
 	if (!sndsb_query_dsp_version(cx)) return 0; // FIXME: Do all Sound Blaster cards support this? Are there any shitty SB clones that don't?
 
