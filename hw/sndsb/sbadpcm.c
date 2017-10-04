@@ -7,13 +7,6 @@ static unsigned char        adpcm_step = 0;
 static unsigned char        adpcm_error = 0;
 static unsigned char        adpcm_lim = 0;
 
-const char* sndsb_adpcm_mode_str[4] = {
-    "none",
-    "ADPCM 4-bit",
-    "ADPCM 2.6-bit",
-    "ADPCM 2-bit"
-};
-
 /* NTS: This is the best documentation I could fine regarding the Sound Blaster ADPCM format.
  *      Tables and method taken from DOSBox 0.74 SB emulation. The information on multimedia.cx's
  *      Wiki is wrong. */
