@@ -2,8 +2,15 @@
 #ifndef __DOSLIB_HW_VGA_VGA_H
 #define __DOSLIB_HW_VGA_VGA_H
 
+#include <conio.h>
+
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
+
+#ifndef DOSLIB_REDEFINE_INP
+# define DOSLIB_REDEFINE_INP
+# include <hw/cpu/liteio.h>
+#endif
 
 #if TARGET_MSDOS == 32
 typedef unsigned char *VGA_RAM_PTR;
