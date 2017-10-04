@@ -1,37 +1,10 @@
 
-#include <stdio.h>
-#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <malloc.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <dos.h>
+#include <conio.h>
 
-#include <hw/dos/dos.h>
-#include <hw/dos/dosbox.h>
 #include <hw/8237/8237.h>		/* 8237 DMA */
-#include <hw/8254/8254.h>		/* 8254 timer */
-#include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
-#include <hw/dos/doswin.h>
-#include <hw/dos/tgusmega.h>
-#include <hw/dos/tgussbos.h>
 
-/* Windows 9x VxD enumeration */
-#include <windows/w9xvmm/vxd_enum.h>
-
-/* uncomment this to enable debugging messages */
-//#define DBG
-
-#if defined(DBG)
-# define DEBUG(x) (x)
-#else
-# define DEBUG(x)
-#endif
-
-int sndsb_assign_dma_buffer(struct sndsb_ctx *cx,struct dma_8237_allocation *dma) {
+int sndsb_assign_dma_buffer(struct sndsb_ctx * const cx,const struct dma_8237_allocation * const dma) {
     if (dma != NULL) {
         cx->buffer_size = dma->length;
         cx->buffer_phys = dma->phys;
@@ -46,7 +19,7 @@ int sndsb_assign_dma_buffer(struct sndsb_ctx *cx,struct dma_8237_allocation *dma
 	return 1;
 }
 
-static uint32_t sndsb_recommended_dma_buffer_size_common_mod(struct sndsb_ctx *ctx,uint32_t ret) {
+static uint32_t sndsb_recommended_dma_buffer_size_common_mod(struct sndsb_ctx * const ctx,uint32_t ret) {
 	/* Known constraint: Windows 3.1 Creative SB16 drivers don't like it when DOS apps
 	 *                   use too large a DMA buffer. It causes Windows to complain about
 	 *                   "a DOS program violating the integrity of the operating system".
@@ -61,19 +34,19 @@ static uint32_t sndsb_recommended_dma_buffer_size_common_mod(struct sndsb_ctx *c
     return ret;
 }
 
-uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit) {
+uint32_t sndsb_recommended_dma_buffer_size(struct sndsb_ctx * const ctx,uint32_t limit) {
 	uint32_t ret = (64UL * 1024UL) - 16UL;
 	if (limit != 0UL && ret > limit) ret = limit;
 	return sndsb_recommended_dma_buffer_size_common_mod(ctx,ret);
 }
 
-uint32_t sndsb_recommended_16bit_dma_buffer_size(struct sndsb_ctx *ctx,uint32_t limit) {
+uint32_t sndsb_recommended_16bit_dma_buffer_size(struct sndsb_ctx * const ctx,uint32_t limit) {
 	uint32_t ret = ((d8237_can_do_16bit_128k() ? 128UL : 64UL) * 1024UL) - 16UL;
 	if (limit != 0UL && ret > limit) ret = limit;
 	return sndsb_recommended_dma_buffer_size_common_mod(ctx,ret);
 }
 
-int sndsb_shutdown_dma(struct sndsb_ctx *cx) {
+int sndsb_shutdown_dma(struct sndsb_ctx * const cx) {
 	unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
 	if ((signed char)ch == -1) return 0;
 	/* set up the DMA channel */
@@ -81,7 +54,7 @@ int sndsb_shutdown_dma(struct sndsb_ctx *cx) {
 	return 1;
 }
 
-int sndsb_setup_dma(struct sndsb_ctx *cx) {
+int sndsb_setup_dma(struct sndsb_ctx * const cx) {
 	unsigned char ch = cx->buffer_16bit ? cx->dma16 : cx->dma8;
 	unsigned char dma_mode = D8237_MODER_MODESEL_SINGLE;
 
@@ -168,7 +141,7 @@ int sndsb_setup_dma(struct sndsb_ctx *cx) {
 	return 1;
 }
 
-uint32_t sndsb_read_dma_buffer_position(struct sndsb_ctx *cx) {
+uint32_t sndsb_read_dma_buffer_position(struct sndsb_ctx * const cx) {
 	uint32_t r;
 
 	/* the program is asking for DMA position. If we're doing the Windows springwait hack,

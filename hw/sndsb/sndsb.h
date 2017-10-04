@@ -444,7 +444,7 @@ int sndsb_stop_dsp_playback(struct sndsb_ctx *cx);
 void sndsb_send_buffer_again(struct sndsb_ctx *cx);
 int sndsb_determine_ideal_dsp_play_method(struct sndsb_ctx *cx);
 int sndsb_submit_buffer(struct sndsb_ctx *cx,unsigned char FAR *ptr,uint32_t phys,uint32_t len,uint32_t user,uint8_t loop);
-int sndsb_assign_dma_buffer(struct sndsb_ctx *cx,struct dma_8237_allocation *dma);
+int sndsb_assign_dma_buffer(struct sndsb_ctx * const cx,const struct dma_8237_allocation * const dma);
 unsigned char sndsb_rate_to_time_constant(struct sndsb_ctx *cx,unsigned long rate);
 unsigned int sndsb_ess_set_extended_mode(struct sndsb_ctx *cx,int enable);
 int sndsb_ess_read_controller(struct sndsb_ctx *cx,int reg);

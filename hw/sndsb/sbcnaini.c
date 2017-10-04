@@ -1,7 +1,7 @@
 
 #include <hw/sndsb/sndsb.h>
 
-int sndsb_continue_autoinit_mode(struct sndsb_ctx *cx) {
+int sndsb_continue_autoinit_mode(struct sndsb_ctx * const cx) {
     if (!cx->dsp_playing) return 1;
     if (!cx->chose_autoinit_dsp) return 1;
     if (cx->is_gallant_sc6600) return 0; // Reveal SC400 cards do not support Continue auto-init DMA

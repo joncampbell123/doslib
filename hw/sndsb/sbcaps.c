@@ -119,7 +119,7 @@ int sndsb_dsp_out_method_can_do(struct sndsb_ctx * const cx,const unsigned long 
 }
 
 /* output method is supported (as in, recommended) */
-int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample_rate,unsigned char wav_stereo,unsigned char wav_16bit) {
+int sndsb_dsp_out_method_supported(struct sndsb_ctx * const cx,const unsigned long wav_sample_rate,const unsigned char wav_stereo,const unsigned char wav_16bit) {
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 # define MSG(x) cx->reason_not_supported = x
 #else
