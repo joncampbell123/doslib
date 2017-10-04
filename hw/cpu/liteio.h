@@ -1,3 +1,6 @@
+#ifndef DOSLIB_LITEIO_H
+#define DOSLIB_LITEIO_H
+
 /* these macros are needed for Open Watcom at this time
  * only because of a weird unsigned int zero extension
  * bug with inp(), considering inp() does an 8-bit
@@ -26,4 +29,6 @@ uint32_t inpd_x(const unsigned short port);
 #  define inpd(x) inpd_x(x)
 # endif
 #endif
+
+#endif /* DOSLIB_LITEIO_H */
 
