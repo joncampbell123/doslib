@@ -602,6 +602,9 @@ extern const signed char sndsb_adpcm_4bit_adjustmap[32];
 extern const signed char sndsb_adpcm_2_6bit_scalemap[40];
 extern const signed char sndsb_adpcm_2_6bit_adjustmap[20];
 
+extern const signed char sndsb_adpcm_2bit_scalemap[24];
+extern const signed char sndsb_adpcm_2bit_adjustmap[12];
+
 #if TARGET_MSDOS == 32
 int sb_nmi_32_auto_choose_hook();
 #endif
