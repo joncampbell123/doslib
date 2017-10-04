@@ -596,8 +596,11 @@ int sndsb_continue_autoinit_mode(struct sndsb_ctx *cx);
 int sndsb_halt_dma(struct sndsb_ctx *cx);
 int sndsb_continue_dma(struct sndsb_ctx *cx);
 
-const signed char sndsb_adpcm_4bit_scalemap[64];
-const signed char sndsb_adpcm_4bit_adjustmap[32];
+extern const signed char sndsb_adpcm_4bit_scalemap[64];
+extern const signed char sndsb_adpcm_4bit_adjustmap[32];
+
+extern const signed char sndsb_adpcm_2_6bit_scalemap[40];
+extern const signed char sndsb_adpcm_2_6bit_adjustmap[20];
 
 #if TARGET_MSDOS == 32
 int sb_nmi_32_auto_choose_hook();
