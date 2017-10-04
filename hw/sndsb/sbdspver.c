@@ -10,7 +10,7 @@
 # define DEBUG(x)
 #endif
 
-int sndsb_query_dsp_version(struct sndsb_ctx *cx) {
+int sndsb_query_dsp_version(struct sndsb_ctx * const cx) {
     unsigned char tmp[2];
 
 	if (!sndsb_write_dsp(cx,SNDSB_DSPCMD_GET_VERSION))

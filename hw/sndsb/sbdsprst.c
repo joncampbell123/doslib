@@ -13,7 +13,7 @@
 # define DEBUG(x)
 #endif
 
-int sndsb_reset_dsp(struct sndsb_ctx *cx) {
+int sndsb_reset_dsp(struct sndsb_ctx * const cx) {
 	if (cx->baseio == 0) {
 		DEBUG(fprintf(stdout,"BUG: sndsb baseio == 0\n"));
 		return 0;

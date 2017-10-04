@@ -3,7 +3,7 @@
 
 #include <hw/sndsb/sndsb.h>
 
-struct sndsb_ctx *sndsb_try_blaster_var() {
+struct sndsb_ctx *sndsb_try_blaster_var(void) {
     signed char D=-1,H=-1,I=-1;
     struct sndsb_ctx *e;
     int A=-1,P=-1;

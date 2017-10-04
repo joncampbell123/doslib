@@ -412,12 +412,12 @@ extern unsigned char            sndsb_adpcm_lim;
 
 struct sndsb_ctx *sndsb_by_base(uint16_t x);
 struct sndsb_ctx *sndsb_by_irq(int8_t x);
-struct sndsb_ctx *sndsb_by_dma(uint16_t x);
+struct sndsb_ctx *sndsb_by_dma(int8_t x);
 struct sndsb_ctx *sndsb_alloc_card();
 int init_sndsb();
 void free_sndsb();
-void sndsb_free_card(struct sndsb_ctx *c);
-struct sndsb_ctx *sndsb_try_blaster_var();
+void sndsb_free_card(struct sndsb_ctx * const c);
+struct sndsb_ctx *sndsb_try_blaster_var(void);
 const char *sndsb_mixer_chip_str(const uint8_t c);
 unsigned char sndsb_test_write_mixer(struct sndsb_ctx * const cx,const uint8_t i,const uint8_t d);
 int sndsb_read_dsp(struct sndsb_ctx *cx);
