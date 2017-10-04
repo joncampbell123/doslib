@@ -1,16 +1,4 @@
 
-#include <stdio.h>
-#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <unistd.h>
-#include <malloc.h>
-#include <direct.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <dos.h>
-
 #include <hw/sndsb/sndsb.h>
 #include <hw/sndsb/sb16asp.h>
 
@@ -40,7 +28,7 @@ int sndsb_sb16asp_read_last_codec_parameter(struct sndsb_ctx * const cx) {
     return sndsb_read_dsp(cx);
 }
 
-int sndsb_sb16asp_set_mode_register(struct sndsb_ctx *const cx,const uint8_t val) {
+int sndsb_sb16asp_set_mode_register(struct sndsb_ctx * const cx,const uint8_t val) {
     if (!cx->has_asp_chip)
         return -1;
 
@@ -66,7 +54,7 @@ int sndsb_sb16asp_set_register(struct sndsb_ctx * const cx,const uint8_t reg,con
     return 0;
 }
 
-int sndsb_sb16asp_get_register(struct sndsb_ctx *const cx,const uint8_t reg) {
+int sndsb_sb16asp_get_register(struct sndsb_ctx * const cx,const uint8_t reg) {
     if (!cx->has_asp_chip)
         return -1;
 

@@ -1,20 +1,8 @@
 
-#include <stdio.h>
-#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <unistd.h>
-#include <malloc.h>
-#include <direct.h>
-#include <ctype.h>
-#include <fcntl.h>
-#include <dos.h>
-
 #include <hw/sndsb/sndsb.h>
 #include <hw/sndsb/sb16asp.h>
 
-int sndsb_sb16_asp_probe_chip_ram_size(struct sndsb_ctx *cx) {
+int sndsb_sb16_asp_probe_chip_ram_size(struct sndsb_ctx * const cx) {
     unsigned char pattern[32],old[32];
     unsigned long count=0;
     unsigned int i;
