@@ -6,7 +6,12 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 RCFLAGS_THIS = -i=.. -i..$(HPS)..
 
 HELLO_EXE =  $(SUBDIR)$(HPS)hello.exe
+
+!ifeq TARGET_WINDOWS 20
+# Open Watcom cannot yet compile Windows 1.x/2.x compatible resources
+!else
 HELLO_RES =  $(SUBDIR)$(HPS)hello.res
+!endif
 
 !ifndef WIN386
 HELLDLL1_EXE =  $(SUBDIR)$(HPS)HELLDLL1.EXE
@@ -34,8 +39,10 @@ lib: $(HELLDLD1_DLL) $(HELLDLD1_LIB) .symbolic
 
 exe: $(HELLO_EXE) $(HELLDLL1_EXE) .symbolic
 
+!ifdef HELLO_RES
 $(HELLO_RES): hello.rc
 	$(RC) $(RCFLAGS_THIS) $(RCFLAGS) -fo=$(SUBDIR)$(HPS)hello.res  $[@
+!endif
 
 !ifdef HELLDLL1_RES
 $(HELLDLL1_RES): helldll1.rc
@@ -46,10 +53,13 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES)
 	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)hello.obj
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+# NTS: Real-mode Windows will NOT run our program unless segments are MOVEABLE DISCARDABLE. Especially Windows 2.x and 3.0.
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !endif
+!ifdef HELLO_RES
 	%write tmp.cmd op resource=$(HELLO_RES) name $(HELLO_EXE)
+!endif
 	@wlink @tmp.cmd
 !ifdef WIN386
 	@$(WIN386_EXE_TO_REX_IF_REX) $(HELLO_EXE)

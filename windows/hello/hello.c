@@ -32,7 +32,9 @@ HWND		hwndMain;
 const char*	WndProcClass = "HELLOWINDOWS";
 const char*	HelloWorldText = "Hello world!";
 HINSTANCE	myInstance;
+#if TARGET_WINDOWS >= 30
 HICON		AppIcon;
+#endif
 
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
 FARPROC WndProc_MPI;
@@ -84,7 +86,9 @@ WindowProcType WndProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 
 			BeginPaint(hwnd,&ps);
 			TextOut(ps.hdc,0,0,HelloWorldText,strlen(HelloWorldText));
+#if TARGET_WINDOWS >= 30
 			DrawIcon(ps.hdc,5,20,AppIcon);
+#endif
 			EndPaint(hwnd,&ps);
 		}
 
@@ -108,9 +112,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	myInstance = hInstance;
 
+#if TARGET_WINDOWS >= 30
 	/* FIXME: Windows 3.0 Real Mode: Why are we unable to load our own Application Icon? */
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
 	if (!AppIcon) MessageBox(NULL,"Unable to load app icon","Oops!",MB_OK);
+#endif
 
 #ifdef WIN16_NEEDS_MAKEPROCINSTANCE
 	WndProc_MPI = MakeProcInstance((FARPROC)WndProc,hInstance);
@@ -132,7 +138,11 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 		wnd.cbClsExtra = 0;
 		wnd.cbWndExtra = 0;
 		wnd.hInstance = hInstance;
+#if TARGET_WINDOWS >= 30
 		wnd.hIcon = AppIcon;
+#else
+        wnd.hIcon = NULL;
+#endif
 		wnd.hCursor = NULL;
 		wnd.hbrBackground = NULL;
 		wnd.lpszMenuName = NULL;
