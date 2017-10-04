@@ -2,10 +2,17 @@
  *          enable/disable interrupts (cli/sti). To avoid contention with
  *          interrupt handlers the calling program should do that. */
 
+#include <conio.h>
+
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/dos/doswin.h>
 #include <stdint.h>
+
+#ifndef DOSLIB_REDEFINE_INP
+# define DOSLIB_REDEFINE_INP
+# include <hw/cpu/liteio.h>
+#endif
 
 /* generous I/O countdown for 1/4th of a second timeout.
  * A lesser value would be more accurate given a typical 8.333MHz ISA bus and 8 cycles per I/O read.
