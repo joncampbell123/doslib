@@ -25,7 +25,7 @@ unsigned char sndsb_encode_adpcm_2_6bit(const unsigned char samp,const unsigned 
     else if (sndsb_adpcm_pred > 0xFF) sndsb_adpcm_pred = 0xFF;
     sndsb_adpcm_step += sndsb_adpcm_2_6bit_adjustmap[(sndsb_adpcm_step*4)+(sdelta&3)];
     if ((signed char)sndsb_adpcm_step < 0) sndsb_adpcm_step = 0;
-    if (sndsb_adpcm_step > 5) sndsb_adpcm_step = 5;
+    if (sndsb_adpcm_step > 4) sndsb_adpcm_step = 4;
     return (unsigned char)sdelta;
 }
 
