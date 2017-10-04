@@ -1,26 +1,5 @@
 
-#include <stdio.h>
-#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <malloc.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <dos.h>
-
-#include <hw/dos/dos.h>
-#include <hw/dos/dosbox.h>
-#include <hw/8237/8237.h>		/* 8237 DMA */
-#include <hw/8254/8254.h>		/* 8254 timer */
-#include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
-#include <hw/dos/doswin.h>
-#include <hw/dos/tgusmega.h>
-#include <hw/dos/tgussbos.h>
-
-/* Windows 9x VxD enumeration */
-#include <windows/w9xvmm/vxd_enum.h>
 
 static int			adpcm_pred = 128;
 static signed char		adpcm_last = 0;
@@ -38,7 +17,7 @@ const char* sndsb_adpcm_mode_str[4] = {
 /* NTS: This is the best documentation I could fine regarding the Sound Blaster ADPCM format.
  *      Tables and method taken from DOSBox 0.74 SB emulation. The information on multimedia.cx's
  *      Wiki is wrong. */
-unsigned char sndsb_encode_adpcm_4bit(unsigned char samp) {
+unsigned char sndsb_encode_adpcm_4bit(const unsigned char samp) {
 	static const signed char scaleMap[64] = {
 		0,  1,  2,  3,  4,  5,  6,  7,  0,  -1,  -2,  -3,  -4,  -5,  -6,  -7,
 		1,  3,  5,  7,  9, 11, 13, 15, -1,  -3,  -5,  -7,  -9, -11, -13, -15,
@@ -74,7 +53,7 @@ unsigned char sndsb_encode_adpcm_4bit(unsigned char samp) {
 /* NTS: This is the best documentation I could fine regarding the Sound Blaster ADPCM format.
  *      Tables and method taken from DOSBox 0.74 SB emulation. The information on multimedia.cx's
  *      Wiki is wrong. */
-unsigned char sndsb_encode_adpcm_2bit(unsigned char samp) {
+unsigned char sndsb_encode_adpcm_2bit(const unsigned char samp) {
 	static const signed char scaleMap[24] = {
 		0,  1,  0,  -1,  1,  3,  -1,  -3,
 		2,  6, -2,  -6,  4, 12,  -4, -12,
@@ -118,7 +97,7 @@ unsigned char sndsb_encode_adpcm_2bit(unsigned char samp) {
 /* NTS: This is the best documentation I could fine regarding the Sound Blaster ADPCM format.
  *      Tables and method taken from DOSBox 0.74 SB emulation. The information on multimedia.cx's
  *      Wiki is wrong. */
-unsigned char sndsb_encode_adpcm_2_6bit(unsigned char samp,unsigned char b2) {
+unsigned char sndsb_encode_adpcm_2_6bit(const unsigned char samp,const unsigned char b2) {
 	static const signed char scaleMap[40] = {
 		0,  1,  2,  3,  0,  -1,  -2,  -3,
 		1,  3,  5,  7, -1,  -3,  -5,  -7,
@@ -157,7 +136,7 @@ unsigned char sndsb_encode_adpcm_2_6bit(unsigned char samp,unsigned char b2) {
 	return (unsigned char)sdelta;
 }
 
-void sndsb_encode_adpcm_set_reference(unsigned char c,unsigned char mode) {
+void sndsb_encode_adpcm_set_reference(const unsigned char c,const unsigned char mode) {
 	adpcm_pred = c;
 	adpcm_step = 0;
 	if (mode == ADPCM_4BIT)
@@ -174,7 +153,7 @@ void sndsb_encode_adpcm_set_reference(unsigned char c,unsigned char mode) {
    it resets the step value to max. Yes, even in auto-init
    ADPCM mode. Failure to follow this results in audible
    "fluttering" once per IRQ. */
-void sndsb_encode_adpcm_reset_wo_ref(unsigned char mode) {
+void sndsb_encode_adpcm_reset_wo_ref(const unsigned char mode) {
 	if (mode == ADPCM_4BIT)
 		adpcm_step = 3;
 	else if (mode == ADPCM_2_6BIT)
