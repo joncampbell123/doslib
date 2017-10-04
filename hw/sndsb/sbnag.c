@@ -1,28 +1,7 @@
 
-#include <stdio.h>
-#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <malloc.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <dos.h>
-
-#include <hw/dos/dos.h>
-#include <hw/dos/dosbox.h>
-#include <hw/8237/8237.h>		/* 8237 DMA */
-#include <hw/8254/8254.h>		/* 8254 timer */
-#include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
-#include <hw/dos/doswin.h>
-#include <hw/dos/tgusmega.h>
-#include <hw/dos/tgussbos.h>
 
-/* Windows 9x VxD enumeration */
-#include <windows/w9xvmm/vxd_enum.h>
-
-unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx) {
+unsigned int sndsb_will_dsp_nag(struct sndsb_ctx * const cx) {
 	if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
 		return 0;
 
@@ -40,7 +19,7 @@ unsigned int sndsb_will_dsp_nag(struct sndsb_ctx *cx) {
 
 /* general main loop idle function. does nothing, unless we're playing with no IRQ,
  * in which case we're expected to poll IRQ status */
-void sndsb_main_idle(struct sndsb_ctx *cx) {
+void sndsb_main_idle(struct sndsb_ctx * const cx) {
 	unsigned int oflags;
 
 	oflags = get_cpu_flags();
