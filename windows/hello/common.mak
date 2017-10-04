@@ -69,6 +69,10 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES)
 !ifdef WIN_NE_SETVER_BUILD
 	$(WIN_NE_SETVER_BUILD) $(HELLO_EXE)
 !endif
+!ifeq TARGET_WINDOWS 20
+	../../tool/win2xhdrpatch.pl $(HELLO_EXE)
+	../../tool/win2xstubpatch.pl $(HELLO_EXE)
+!endif
 
 !ifdef HELLDLL1_EXE
 $(HELLDLL1_EXE): $(SUBDIR)$(HPS)helldll1.obj $(HELLDLL1_RES)
