@@ -1,30 +1,12 @@
 
-#include <stdio.h>
-#include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <malloc.h>
-#include <assert.h>
-#include <fcntl.h>
-#include <dos.h>
+#include <conio.h>
 
-#include <hw/dos/dos.h>
-#include <hw/dos/dosbox.h>
-#include <hw/8237/8237.h>		/* 8237 DMA */
-#include <hw/8254/8254.h>		/* 8254 timer */
-#include <hw/8259/8259.h>		/* 8259 PIC interrupts */
+#include <hw/8237/8237.h>
 #include <hw/sndsb/sndsb.h>
-#include <hw/dos/doswin.h>
-#include <hw/dos/tgusmega.h>
-#include <hw/dos/tgussbos.h>
-
-/* Windows 9x VxD enumeration */
-#include <windows/w9xvmm/vxd_enum.h>
 
 /* we can do output method. if we can't, then don't bother playing, because it flat out won't work.
  * if we can, then you want to check if it's supported, because if it's not, you may get weird results, but nothing catastrophic. */
-int sndsb_dsp_out_method_can_do(struct sndsb_ctx *cx,unsigned long wav_sample_rate,unsigned char wav_stereo,unsigned char wav_16bit) {
+int sndsb_dsp_out_method_can_do(struct sndsb_ctx * const cx,const unsigned long wav_sample_rate,const unsigned char wav_stereo,const unsigned char wav_16bit) {
 #if !(TARGET_MSDOS == 16 && (defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 # define MSG(x) cx->reason_not_supported = x
 #else
@@ -153,6 +135,7 @@ int sndsb_dsp_out_method_supported(struct sndsb_ctx *cx,unsigned long wav_sample
 		return 0;
 	}
 	if (cx->dsp_alias_port && cx->dsp_vmaj > 2) {
+        /* NTS: Not strictly true: ESS688 chips emulate at least 22Dh alias of 22Ch */
 		MSG("DSP alias I/O ports only exist on original Sound Blaster\nDSP 1.xx and 2.xx");
 		return 0;
 	}
