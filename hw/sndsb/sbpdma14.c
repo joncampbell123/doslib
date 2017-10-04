@@ -5,6 +5,10 @@
 #include <hw/8259/8259.h>       /* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
 
+/* this MUST follow conio.h */
+#define DOSLIB_REDEFINE_INP
+#include <hw/cpu/liteio.h>
+
 /* Try to detect DMA channel, by playing silent audio blocks via DMA and
  * watching whether or not the DMA pointer moves. This method is most likely
  * to work on both Creative hardware and SB clones. */

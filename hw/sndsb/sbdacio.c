@@ -1,6 +1,10 @@
 
 #include <hw/sndsb/sndsb.h>
 
+/* this MUST follow conio.h */
+#define DOSLIB_REDEFINE_INP
+#include <hw/cpu/liteio.h>
+
 static inline void sndsb_timer_tick_directio_post_read(const unsigned short port,unsigned short count) {
 	while (count-- != 0) inp(port);
 }

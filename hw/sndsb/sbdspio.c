@@ -1,6 +1,10 @@
 
 #include <hw/sndsb/sndsb.h>
 
+/* this MUST follow conio.h */
+#define DOSLIB_REDEFINE_INP
+#include <hw/cpu/liteio.h>
+
 /* uncomment this to enable debugging messages */
 //#define DBG
 

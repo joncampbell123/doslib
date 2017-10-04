@@ -5,6 +5,10 @@
 #include <hw/8259/8259.h>       /* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
 
+/* this MUST follow conio.h */
+#define DOSLIB_REDEFINE_INP
+#include <hw/cpu/liteio.h>
+
 // bizarre pattern table, copied from DOSBox source code.
 // converted from signed int to unsigned char for space.
 //
