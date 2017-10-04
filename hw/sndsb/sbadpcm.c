@@ -1,11 +1,11 @@
 
 #include <hw/sndsb/sndsb.h>
 
-static int                  adpcm_pred = 128;
-static signed char          adpcm_last = 0;
-static unsigned char        adpcm_step = 0;
-static unsigned char        adpcm_error = 0;
-static unsigned char        adpcm_lim = 0;
+int                     sndsb_adpcm_pred = 128;
+signed char             sndsb_adpcm_last = 0;
+unsigned char           sndsb_adpcm_step = 0;
+unsigned char           sndsb_adpcm_error = 0;
+unsigned char           sndsb_adpcm_lim = 0;
 
 /* NTS: This is the best documentation I could fine regarding the Sound Blaster ADPCM format.
  *      Tables and method taken from DOSBox 0.74 SB emulation. The information on multimedia.cx's
@@ -23,23 +23,23 @@ unsigned char sndsb_encode_adpcm_4bit(const unsigned char samp) {
         -1, 0, 0, 0, 0, 1, 1, 1,
         -1, 0, 0, 0, 0, 0, 0, 0
     };
-    signed int sdelta = (signed int)((signed char)(samp - adpcm_pred));
+    signed int sdelta = (signed int)((signed char)(samp - sndsb_adpcm_pred));
     unsigned char sign = 0;
 
-    sdelta = (sdelta * 2) + (adpcm_step < 3 ? adpcm_error : 0);
-    adpcm_error = sdelta & ((1 << (adpcm_step + 1)) - 1);
-    sdelta >>= adpcm_step+1;
+    sdelta = (sdelta * 2) + (sndsb_adpcm_step < 3 ? sndsb_adpcm_error : 0);
+    sndsb_adpcm_error = sdelta & ((1 << (sndsb_adpcm_step + 1)) - 1);
+    sdelta >>= sndsb_adpcm_step+1;
     if (sdelta < 0) {
         sdelta = -sdelta;
         sign = 8;
     }
     if (sdelta > 7) sdelta = 7;
-    adpcm_pred += scaleMap[(adpcm_step*16)+sign+sdelta];
-    if (adpcm_pred < 0) adpcm_pred = 0;
-    else if (adpcm_pred > 0xFF) adpcm_pred = 0xFF;
-    adpcm_step += adjustMap[(adpcm_step*8)+sdelta];
-    if ((signed char)adpcm_step < 0) adpcm_step = 0;
-    if (adpcm_step > 3) adpcm_step = 3;
+    sndsb_adpcm_pred += scaleMap[(sndsb_adpcm_step*16)+sign+sdelta];
+    if (sndsb_adpcm_pred < 0) sndsb_adpcm_pred = 0;
+    else if (sndsb_adpcm_pred > 0xFF) sndsb_adpcm_pred = 0xFF;
+    sndsb_adpcm_step += adjustMap[(sndsb_adpcm_step*8)+sdelta];
+    if ((signed char)sndsb_adpcm_step < 0) sndsb_adpcm_step = 0;
+    if (sndsb_adpcm_step > 3) sndsb_adpcm_step = 3;
     return (unsigned char)sdelta | sign;
 }
 
@@ -60,12 +60,12 @@ unsigned char sndsb_encode_adpcm_2bit(const unsigned char samp) {
         -1, 1, -1, 1,
         -1, 1, -1, 0
     };
-    signed int sdelta = (signed int)((signed char)(samp - adpcm_pred));
+    signed int sdelta = (signed int)((signed char)(samp - sndsb_adpcm_pred));
     unsigned char sign = 0;
 
-    sdelta = (sdelta * 2) + (adpcm_step == 0 ? adpcm_error : 0);
-    adpcm_error = sdelta & ((1 << adpcm_step) - 1);
-    sdelta >>= adpcm_step+1;
+    sdelta = (sdelta * 2) + (sndsb_adpcm_step == 0 ? sndsb_adpcm_error : 0);
+    sndsb_adpcm_error = sdelta & ((1 << sndsb_adpcm_step) - 1);
+    sdelta >>= sndsb_adpcm_step+1;
 
     if (sdelta < 0) {
         sdelta = -sdelta;
@@ -73,17 +73,17 @@ unsigned char sndsb_encode_adpcm_2bit(const unsigned char samp) {
     }
 
     /* "ring" suppression */
-    if (adpcm_step == 5 && sdelta == 1 && adpcm_last == 3 && sign == 0)
+    if (sndsb_adpcm_step == 5 && sdelta == 1 && sndsb_adpcm_last == 3 && sign == 0)
         sdelta = 0;
 
     if (sdelta > 1) sdelta = 1;
-    adpcm_last = sdelta + sign;
-    adpcm_pred += scaleMap[(adpcm_step*4)+sign+sdelta];
-    if (adpcm_pred < 0) adpcm_pred = 0;
-    else if (adpcm_pred > 0xFF) adpcm_pred = 0xFF;
-    adpcm_step += adjustMap[(adpcm_step*2)+sdelta];
-    if ((signed char)adpcm_step < 0) adpcm_step = 0;
-    if (adpcm_step > 5) adpcm_step = 5;
+    sndsb_adpcm_last = sdelta + sign;
+    sndsb_adpcm_pred += scaleMap[(sndsb_adpcm_step*4)+sign+sdelta];
+    if (sndsb_adpcm_pred < 0) sndsb_adpcm_pred = 0;
+    else if (sndsb_adpcm_pred > 0xFF) sndsb_adpcm_pred = 0xFF;
+    sndsb_adpcm_step += adjustMap[(sndsb_adpcm_step*2)+sdelta];
+    if ((signed char)sndsb_adpcm_step < 0) sndsb_adpcm_step = 0;
+    if (sndsb_adpcm_step > 5) sndsb_adpcm_step = 5;
     return (unsigned char)sdelta | sign;
 }
 
@@ -105,12 +105,12 @@ unsigned char sndsb_encode_adpcm_2_6bit(const unsigned char samp,const unsigned 
         -1, 0, 0, 1,
         -1, 0, 0, 0
     };
-    signed int sdelta = (signed int)((signed char)(samp - adpcm_pred));
+    signed int sdelta = (signed int)((signed char)(samp - sndsb_adpcm_pred));
     unsigned char sign = 0;
 
-    sdelta = (sdelta * 2) + (adpcm_step < 2 ? adpcm_error : 0);
-    adpcm_error = sdelta & ((1 << (adpcm_step + (b2 ? 2 : 1))) - 1);
-    sdelta >>= adpcm_step+1;
+    sdelta = (sdelta * 2) + (sndsb_adpcm_step < 2 ? sndsb_adpcm_error : 0);
+    sndsb_adpcm_error = sdelta & ((1 << (sndsb_adpcm_step + (b2 ? 2 : 1))) - 1);
+    sdelta >>= sndsb_adpcm_step+1;
 
     if (sdelta < 0) {
         sdelta = -sdelta;
@@ -120,24 +120,24 @@ unsigned char sndsb_encode_adpcm_2_6bit(const unsigned char samp,const unsigned 
     if (sdelta > 3) sdelta = 3;
     sdelta += sign;
     if (b2) sdelta &= 0x6;
-    adpcm_pred += scaleMap[(adpcm_step*8)+sdelta];
-    if (adpcm_pred < 0) adpcm_pred = 0;
-    else if (adpcm_pred > 0xFF) adpcm_pred = 0xFF;
-    adpcm_step += adjustMap[(adpcm_step*4)+(sdelta&3)];
-    if ((signed char)adpcm_step < 0) adpcm_step = 0;
-    if (adpcm_step > 5) adpcm_step = 5;
+    sndsb_adpcm_pred += scaleMap[(sndsb_adpcm_step*8)+sdelta];
+    if (sndsb_adpcm_pred < 0) sndsb_adpcm_pred = 0;
+    else if (sndsb_adpcm_pred > 0xFF) sndsb_adpcm_pred = 0xFF;
+    sndsb_adpcm_step += adjustMap[(sndsb_adpcm_step*4)+(sdelta&3)];
+    if ((signed char)sndsb_adpcm_step < 0) sndsb_adpcm_step = 0;
+    if (sndsb_adpcm_step > 5) sndsb_adpcm_step = 5;
     return (unsigned char)sdelta;
 }
 
 void sndsb_encode_adpcm_set_reference(const unsigned char c,const unsigned char mode) {
-    adpcm_pred = c;
-    adpcm_step = 0;
+    sndsb_adpcm_pred = c;
+    sndsb_adpcm_step = 0;
     if (mode == ADPCM_4BIT)
-        adpcm_lim = 5;
+        sndsb_adpcm_lim = 5;
     else if (mode == ADPCM_2_6BIT)
-        adpcm_lim = 3;
+        sndsb_adpcm_lim = 3;
     else if (mode == ADPCM_2BIT)
-        adpcm_lim = 1;
+        sndsb_adpcm_lim = 1;
 }
 
 /* undocumented and not properly emulated by DOSBox either:
@@ -148,10 +148,10 @@ void sndsb_encode_adpcm_set_reference(const unsigned char c,const unsigned char 
    "fluttering" once per IRQ. */
 void sndsb_encode_adpcm_reset_wo_ref(const unsigned char mode) {
     if (mode == ADPCM_4BIT)
-        adpcm_step = 3;
+        sndsb_adpcm_step = 3;
     else if (mode == ADPCM_2_6BIT)
-        adpcm_step = 4;
+        sndsb_adpcm_step = 4;
     else
-        adpcm_step = 5; /* FIXME: Testing by ear seems to favor this one. Is this correct? */
+        sndsb_adpcm_step = 5; /* FIXME: Testing by ear seems to favor this one. Is this correct? */
 }
 

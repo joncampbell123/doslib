@@ -404,6 +404,12 @@ extern const char* sndsb_adpcm_mode_str[4];
 extern struct sndsb_ctx *sndsb_card_blaster;
 extern int sndsb_card_next;
 
+extern int                      sndsb_adpcm_pred;
+extern signed char              sndsb_adpcm_last;
+extern unsigned char            sndsb_adpcm_step;
+extern unsigned char            sndsb_adpcm_error;
+extern unsigned char            sndsb_adpcm_lim;
+
 struct sndsb_ctx *sndsb_by_base(uint16_t x);
 struct sndsb_ctx *sndsb_by_irq(int8_t x);
 struct sndsb_ctx *sndsb_by_dma(uint16_t x);
