@@ -11,15 +11,11 @@
 #include <fcntl.h>
 #include <dos.h>
 
-#include <hw/vga/vga.h>
 #include <hw/dos/dos.h>
 #include <hw/8237/8237.h>		/* 8237 DMA */
 #include <hw/8254/8254.h>		/* 8254 timer */
 #include <hw/8259/8259.h>		/* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
-#include <hw/sndsb/sb16asp.h>
-#include <hw/vga/vgagui.h>
-#include <hw/vga/vgatty.h>
 #include <hw/dos/doswin.h>
 #include <hw/dos/tgusmega.h>
 #include <hw/dos/tgussbos.h>
@@ -110,9 +106,6 @@ static void interrupt sb_irq() {
 
 static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
 	unsigned char FAR *buffer = sb_dma->lin;
-	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 80 - 6;
-	unsigned char load=0;
-	uint16_t prev[6];
 	int rd,i,bufe=0;
 	uint32_t how;
 
@@ -162,22 +155,6 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			how = max;
 		else if (!bufe && how < min)
 			break;
-
-		if (!load) {
-			load = 1;
-			prev[0] = wr[0];
-			wr[0] = '[' | 0x0400;
-			prev[1] = wr[1];
-			wr[1] = 'L' | 0x0400;
-			prev[2] = wr[2];
-			wr[2] = 'O' | 0x0400;
-			prev[3] = wr[3];
-			wr[3] = 'A' | 0x0400;
-			prev[4] = wr[4];
-			wr[4] = 'D' | 0x0400;
-			prev[5] = wr[5];
-			wr[5] = ']' | 0x0400;
-		}
 
 		if (cx->buffer_last_io == 0)
 			wav_buffer_filepos = wav_position;
@@ -266,11 +243,6 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 
 	if (cx->buffer_last_io == 0)
 		wav_buffer_filepos = wav_position;
-
-	if (load) {
-		for (i=0;i < 6;i++)
-			wr[i] = prev[i];
-	}
 }
 
 #define DMA_WRAP_DEBUG
@@ -394,6 +366,8 @@ static void open_wav() {
 			wav_data_length -= wav_data_length % wav_bytes_per_sample;
 		}
 	}
+
+	update_cfg();
 }
 
 static void free_dma_buffer() {
@@ -502,30 +476,8 @@ static void stop_play() {
 	_sti();
 }
 
-static const struct vga_menu_item main_menu_file_set =
-	{"Set file...",		's',	0,	0};
-static const struct vga_menu_item main_menu_file_quit =
-	{"Quit",		'q',	0,	0};
-
-static const struct vga_menu_item* main_menu_file[] = {
-	&main_menu_file_set,
-	&main_menu_file_quit,
-	NULL
-};
-
-static const struct vga_menu_bar_item main_menu_bar[] = {
-    /* name                 key     scan    x       w       id */
-    {" File ",              'F',    0x21,   0,  6,  &main_menu_file}, /* ALT-F */
-    {NULL,                  0,      0x00,   0,  0,  0}
-};
-
-static void my_vga_menu_idle() {
-    wav_idle();
-}
-
 static int confirm_quit() {
-	/* FIXME: Why does this cause Direct DSP playback to horrifically slow down? */
-	return confirm_yes_no_dialog("Are you sure you want to exit to DOS?");
+	return 1;
 }
 
 static void update_cfg() {
@@ -541,170 +493,14 @@ static void update_cfg() {
         sb_card->buffer_size / wav_bytes_per_sample;
 }
 
-static void prompt_play_wav(unsigned char rec) {
-	unsigned char gredraw = 1;
-#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
-#else
-	struct find_t ft;
-#endif
-
-	{
-		const char *rp;
-		char temp[sizeof(wav_file)];
-		int cursor = strlen(wav_file),i,c,redraw=1,ok=0;
-		memcpy(temp,wav_file,strlen(wav_file)+1);
-		while (!ok) {
-			if (gredraw) {
-#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
-#else
-				char *cwd;
-#endif
-
-				gredraw = 0;
-				vga_clear();
-				vga_moveto(0,4);
-				vga_write_color(0x07);
-				vga_write("Enter WAV file path:\n");
-				vga_write_sync();
-				redraw = 1;
-
-#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
-#else
-				cwd = getcwd(NULL,0);
-				if (cwd) {
-					vga_moveto(0,6);
-					vga_write_color(0x0B);
-					vga_write(cwd);
-					vga_write_sync();
-				}
-
-				if (_dos_findfirst("*.*",_A_NORMAL|_A_RDONLY,&ft) == 0) {
-					int x=0,y=7,cw = 14,i;
-					char *ex;
-
-					do {
-						ex = strrchr(ft.name,'.');
-						if (!ex) ex = "";
-
-						if (ft.attrib&_A_SUBDIR) {
-							vga_write_color(0x0F);
-						}
-						else if (!strcasecmp(ex,".wav")) {
-							vga_write_color(0x1E);
-						}
-						else {
-							vga_write_color(0x07);
-						}
-						vga_moveto(x,y);
-						for (i=0;i < 13 && ft.name[i] != 0;) vga_writec(ft.name[i++]);
-						for (;i < 14;i++) vga_writec(' ');
-
-						x += cw;
-						if ((x+cw) > vga_state.vga_width) {
-							x = 0;
-							if (y >= vga_state.vga_height) break;
-							y++;
-						}
-					} while (_dos_findnext(&ft) == 0);
-
-					_dos_findclose(&ft);
-				}
-#endif
-			}
-			if (redraw) {
-				rp = (const char*)temp;
-				vga_moveto(0,5);
-				vga_write_color(0x0E);
-				for (i=0;i < 80;i++) {
-					if (*rp != 0)	vga_writec(*rp++);
-					else		vga_writec(' ');	
-				}
-				vga_moveto(cursor,5);
-				vga_write_sync();
-				redraw=0;
-			}
-
-			if (kbhit()) {
-				c = getch();
-				if (c == 0) c = getch() << 8;
-
-				if (c == 27) {
-					ok = -1;
-				}
-				else if (c == 13) {
-#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
-					ok = 1;
-#else
-					struct stat st;
-
-					if (isalpha(temp[0]) && temp[1] == ':' && temp[2] == 0) {
-						unsigned int total;
-
-						_dos_setdrive(tolower(temp[0])+1-'a',&total);
-						temp[0] = 0;
-						gredraw = 1;
-						cursor = 0;
-					}
-					else if (stat(temp,&st) == 0) {
-						if (S_ISDIR(st.st_mode)) {
-							chdir(temp);
-							temp[0] = 0;
-							gredraw = 1;
-							cursor = 0;
-						}
-						else {
-							ok = 1;
-						}
-					}
-					else {
-						ok = 1;
-					}
-#endif
-				}
-				else if (c == 8) {
-					if (cursor != 0) {
-						temp[--cursor] = 0;
-						redraw = 1;
-					}
-				}
-				else if (c >= 32 && c < 256) {
-					if (cursor < 79) {
-						temp[cursor++] = (char)c;
-						temp[cursor  ] = (char)0;
-						redraw = 1;
-					}
-				}
-			}
-		}
-
-		if (ok == 1) {
-			unsigned char wp = wav_playing;
-			stop_play();
-			close_wav();
-			memcpy(wav_file,temp,strlen(temp)+1);
-			open_wav();
-			if (wp) begin_play();
-		}
-	}
-}
-
 static void help() {
-#if TARGET_MSDOS == 16 && defined(__TINY__)
-    printf("See source code for options.");
-#else
-	printf("test [options]\n");
-# if !(TARGET_MSDOS == 16 && defined(__COMPACT__)) /* this is too much to cram into a small model EXE */
+	printf("dosamp [options] <file>\n");
 	printf(" /h /help             This help\n");
-# endif
-#endif
 }
 
-int main(int argc,char **argv) {
-	int i,loop,redraw,bkgndredraw,cc;
-	const struct vga_menu_item *mitem = NULL;
-	VGA_ALPHA_PTR vga;
+static int parse_argv(int argc,char **argv) {
+    int i;
 
-	printf("Sound Blaster test program\n");
 	for (i=1;i < argc;) {
 		char *a = argv[i++];
 
@@ -714,23 +510,34 @@ int main(int argc,char **argv) {
 
 			if (!strcmp(a,"h") || !strcmp(a,"help")) {
 				help();
-				return 1;
+				return 0;
 			}
 			else {
-				help();
-				return 1;
-			}
-		}
+                return 0;
+            }
+        }
+        else {
+            size_t l = strlen(a);
+            if (l >= sizeof(wav_file)) return 0;
+            strcpy(wav_file,a);
+        }
 	}
 
-	if (!probe_vga()) {
-		printf("Cannot init VGA\n");
-		return 1;
-	}
+    if (wav_file[0] == 0) {
+        printf("You must specify a file to play\n");
+        return 0;
+    }
 
-	if (!probe_8237())
-		printf("WARNING: Cannot init 8237 DMA\n");
+    return 1;
+}
 
+int main(int argc,char **argv) {
+	int i,loop,redraw,bkgndredraw;
+
+    if (!parse_argv(argc,argv))
+        return 1;
+
+	probe_8237();
 	if (!probe_8259()) {
 		printf("Cannot init 8259 PIC\n");
 		return 1;
@@ -829,9 +636,6 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-	i = int10_getmode();
-	if (i != 3) int10_setmode(3);
-
 	if (sb_card->irq != -1) {
 		old_irq_masked = p8259_is_masked(sb_card->irq);
 		if (vector_is_iret(irq2int(sb_card->irq)))
@@ -841,46 +645,16 @@ int main(int argc,char **argv) {
 		_dos_setvect(irq2int(sb_card->irq),sb_irq);
 		p8259_unmask(sb_card->irq);
 	}
-	
-	vga_write_color(0x07);
-	vga_clear();
 
 	loop=1;
 	redraw=1;
 	bkgndredraw=1;
-	vga_menu_bar.bar = main_menu_bar;
-	vga_menu_bar.sel = -1;
-	vga_menu_bar.row = 0;
-	vga_menu_idle = my_vga_menu_idle;
-	update_cfg();
+
+    open_wav();
+    begin_play();
 
 	while (loop) {
         wav_idle();
-
-		if ((mitem = vga_menu_bar_keymon()) != NULL) {
-			/* act on it */
-			if (mitem == &main_menu_file_quit) {
-				if (confirm_quit()) {
-					loop = 0;
-					break;
-				}
-			}
-			else if (mitem == &main_menu_file_set) {
-				prompt_play_wav(0);
-				bkgndredraw = 1;
-				redraw = 1;
-			}
-		}
-
-		if (redraw || bkgndredraw) {
-			if (bkgndredraw) {
-				for (vga=vga_state.vga_alpha_ram+(80*1),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
-				vga_menu_bar_draw();
-			}
-
-			bkgndredraw = 0;
-			redraw = 0;
-		}
 
 		if (kbhit()) {
 			i = getch();
@@ -900,7 +674,6 @@ int main(int argc,char **argv) {
 	}
 
 	_sti();
-	vga_write_sync();
 	stop_play();
 	close_wav();
     free_dma_buffer();
