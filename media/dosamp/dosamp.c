@@ -39,26 +39,6 @@
 #include <hw/sndsb/sndsbpnp.h>
 #endif
 
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-static unsigned char dmam = 0;
-static   signed char dma128 = 0;
-static unsigned char ignore_asp = 0;
-static unsigned char force_srate_tc = 0;
-static unsigned char force_srate_4xx = 0;
-static unsigned char always_reset_dsp_to_stop = 0;
-static unsigned char assume_dsp_hispeed_doesnt_block = 0;
-static unsigned char dma_autoinit_override = 0;
-static unsigned char sb_debug = 0;
-#endif
-
-static uint32_t      buffer_limit = 0;
-static unsigned char force_dma_probe = 0;
-static unsigned char force_irq_probe = 0;
-static unsigned char irq_probe_f2 = 1;
-static unsigned char irq_probe_80 = 1;
-static unsigned char dma_probe_e2 = 1;
-static unsigned char dma_probe_14 = 1;
-
 static struct dma_8237_allocation *sb_dma = NULL; /* DMA buffer */
 
 static struct sndsb_ctx*	sb_card = NULL;
@@ -106,20 +86,9 @@ static unsigned char far	devnode_raw[4096];
 static char			wav_file[130] = {0};
 static unsigned char		wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
 static unsigned long		wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
-static unsigned long		wav_sample_rate_by_timer_ticks = 1;
-static unsigned long		wav_sample_rate_by_timer = 1;
-static unsigned char		dont_sb_idle = 0;
 static unsigned char		dont_chain_irq = 0;
 static unsigned char		wav_playing = 0;
-static unsigned char		wav_record = 0;
 static signed char		reduced_irq_interval = 0;
-static unsigned char		sample_rate_timer_clamp = 0;
-static unsigned char		goldplay_samplerate_choice = GOLDRATE_MATCH;
-
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-/* fun with Creative ADPCM */
-static unsigned char		do_adpcm_ai_warning = 1;
-#endif
 
 static volatile unsigned char	IRQ_anim = 0;
 
@@ -257,131 +226,9 @@ static void interrupt sb_irq() {
 	}
 }
 
-static void save_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
-	unsigned char FAR *buffer = sb_dma->lin;
-	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 80 - 6;
-	unsigned char load=0;
-	uint16_t prev[6];
-	int rd,i,bufe=0;
-	uint32_t how;
-
-	/* caller should be rounding! */
-	assert((up_to & 3UL) == 0UL);
-	if (up_to >= cx->buffer_size) return;
-	if (cx->buffer_size < 32) return;
-	if (cx->backwards) return; /* NTS: When we do support backwards DMA recording, this code will need to reverse the audio then write forwards in WAV */
-	if (cx->buffer_last_io == up_to) return;
-	if (sb_card->dsp_adpcm != 0) return;
-	if (max == 0) max = cx->buffer_size/4;
-	if (max < 16) return;
-	lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
-
-	if (cx->buffer_last_io == 0)
-		wav_buffer_filepos = wav_position;
-
-	while (max > 0UL) {
-		/* the most common "hang" apparently is when IRQ 0 triggers too much
-		   and then somehow execution gets stuck here */
-		if (irq_0_watchdog < 16UL)
-			break;
-
-		if (up_to < cx->buffer_last_io) {
-			how = (cx->buffer_size - cx->buffer_last_io); /* from last IO to end of buffer */
-			bufe = 1;
-		}
-		else {
-			if (up_to <= 8UL) break;
-			how = ((up_to-8UL) - cx->buffer_last_io); /* from last IO to up_to */
-			bufe = 0;
-		}
-
-		if (how > max)
-			how = max;
-		else if (how > 16384UL)
-			how = 16384UL;
-		else if (!bufe && how < min)
-			break;
-		else if (how == 0UL)
-			break;
-
-		if (!load) {
-			load = 1;
-			prev[0] = wr[0];
-			wr[0] = '[' | 0x0400;
-			prev[1] = wr[1];
-			wr[1] = 'S' | 0x0400;
-			prev[2] = wr[2];
-			wr[2] = 'A' | 0x0400;
-			prev[3] = wr[3];
-			wr[3] = 'V' | 0x0400;
-			prev[4] = wr[4];
-			wr[4] = 'E' | 0x0400;
-			prev[5] = wr[5];
-			wr[5] = ']' | 0x0400;
-		}
-
-		if (cx->buffer_last_io == 0)
-			wav_buffer_filepos = wav_position;
-
-		if (sb_card->audio_data_flipped_sign) {
-			if (wav_16bit)
-				for (i=0;i < ((int)how-1);i += 2) buffer[cx->buffer_last_io+i+1] ^= 0x80;
-			else
-				for (i=0;i < (int)how;i++) buffer[cx->buffer_last_io+i] ^= 0x80;
-		}
-
-#if TARGET_MSDOS == 32
-        rd = _dos_xwrite(wav_fd,buffer + cx->buffer_last_io,how);
-#else
-        {
-            uint32_t o;
-
-            o  = (uint32_t)FP_SEG(buffer) << 4UL;
-            o += (uint32_t)FP_OFF(buffer);
-            o += cx->buffer_last_io;
-            rd = _dos_xwrite(wav_fd,MK_FP(o >> 4UL,o & 0xFUL),how);
-        }
-#endif
-
-		if (rd <= 0 || (uint32_t)rd < how) {
-			fprintf(stderr,"write() failed, %d < %d\n",
-				rd,(int)how);
-			stop_play();
-			break;
-		}
-
-		assert((cx->buffer_last_io+((uint32_t)rd)) <= cx->buffer_size);
-		wav_position += (uint32_t)rd / wav_bytes_per_sample;
-		cx->buffer_last_io += (uint32_t)rd;
-
-		assert(cx->buffer_last_io <= cx->buffer_size);
-		if (cx->buffer_last_io == cx->buffer_size) cx->buffer_last_io = 0;
-		max -= (uint32_t)rd;
-	}
-
-	if (cx->buffer_last_io == 0)
-		wav_buffer_filepos = wav_position;
-
-	if (load) {
-		for (i=0;i < 6;i++)
-			wr[i] = prev[i];
-	}
-}
-
-static unsigned char adpcm_do_reset_interval=1;
-static unsigned long adpcm_reset_interval=0;
-static unsigned long adpcm_counter=0;
-#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
-#else
-static unsigned char adpcm_tmp[4096];
-#endif
 static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
 	unsigned char FAR *buffer = sb_dma->lin;
 	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + 80 - 6;
-#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
-#else
-	unsigned char c;
-#endif
 	unsigned char load=0;
 	uint16_t prev[6];
 	int rd,i,bufe=0;
@@ -458,119 +305,8 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 		if (cx->buffer_last_io == 0)
 			wav_buffer_filepos = wav_position;
 
-		if (sb_card->dsp_adpcm > 0) {
-#if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
-			break; /* cut */
-#else
-			unsigned int src;
-
-			/* FIXME: Would be neat to demonstrate ADPCM playback with backwards DMA */
-			if (cx->backwards) break;
-
-			/* 16-bit mode: avoid integer overflow below */
-			if (how > 2048)
-				how = 2048;
-
-			/* ADPCM encoding does mono 8-bit only */
-			if (initial) {
-				/* reference byte */
-				rd = _dos_xread(wav_fd,buffer + cx->buffer_last_io,1);
-				sndsb_encode_adpcm_set_reference(buffer[cx->buffer_last_io],sb_card->dsp_adpcm);
-				cx->buffer_last_io++;
-				adpcm_counter++;
-				wav_position++;
-				initial = 0;
-				max--;
-				how--;
-			}
-
-			/* number of samples */
-			if (sb_card->dsp_adpcm == ADPCM_4BIT)
-				src = how * 2;
-			else if (sb_card->dsp_adpcm == ADPCM_2_6BIT)
-				src = how * 3;
-			else if (sb_card->dsp_adpcm == ADPCM_2BIT)
-				src = how * 4;
-
-			if (src > sizeof(adpcm_tmp)) {
-				src = sizeof(adpcm_tmp);
-				if (sb_card->dsp_adpcm == ADPCM_2_6BIT)
-					src -= src % 3;
-			}
-
-			rd = read(wav_fd,adpcm_tmp,src);
-			if (rd == 0 || rd == -1) {
-				wav_position = 0;
-				lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
-				rd = read(wav_fd,adpcm_tmp,src);
-				if (rd == 0 || rd == -1) {
-#if TARGET_MSDOS == 32
-					memset(adpcm_tmp,128,src);
-#else
-					_fmemset(adpcm_tmp,128,src);
-#endif
-					rd = src;
-				}
-			}
-
-			wav_position += (uint32_t)rd;
-			if (sb_card->dsp_adpcm == ADPCM_4BIT) {
-				rd /= 2;
-				for (i=0;i < rd;i++) {
-					c  = sndsb_encode_adpcm_4bit(adpcm_tmp[(i*2)  ]) << 4;
-					c |= sndsb_encode_adpcm_4bit(adpcm_tmp[(i*2)+1]);
-					buffer[cx->buffer_last_io+i] = c;
-
-					if (adpcm_reset_interval != 0) {
-						if (++adpcm_counter >= adpcm_reset_interval) {
-							adpcm_counter -= adpcm_reset_interval;
-							sndsb_encode_adpcm_reset_wo_ref(sb_card->dsp_adpcm);
-						}
-					}
-				}
-			}
-			else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) {
-				rd /= 3;
-				for (i=0;i < rd;i++) {
-					c  = sndsb_encode_adpcm_2_6bit(adpcm_tmp[(i*3)  ],0) << 5;
-					c |= sndsb_encode_adpcm_2_6bit(adpcm_tmp[(i*3)+1],0) << 2;
-					c |= sndsb_encode_adpcm_2_6bit(adpcm_tmp[(i*3)+2],1) >> 1;
-					buffer[cx->buffer_last_io+i] = c;
-
-					if (adpcm_reset_interval != 0) {
-						if (++adpcm_counter >= adpcm_reset_interval) {
-							adpcm_counter -= adpcm_reset_interval;
-							sndsb_encode_adpcm_reset_wo_ref(sb_card->dsp_adpcm);
-						}
-					}
-				}
-			}
-			else if (sb_card->dsp_adpcm == ADPCM_2BIT) {
-				rd /= 4;
-				for (i=0;i < rd;i++) {
-					c  = sndsb_encode_adpcm_2bit(adpcm_tmp[(i*4)  ]) << 6;
-					c |= sndsb_encode_adpcm_2bit(adpcm_tmp[(i*4)+1]) << 4;
-					c |= sndsb_encode_adpcm_2bit(adpcm_tmp[(i*4)+2]) << 2;
-					c |= sndsb_encode_adpcm_2bit(adpcm_tmp[(i*4)+3]);
-					buffer[cx->buffer_last_io+i] = c;
-
-					if (adpcm_reset_interval != 0) {
-						if (++adpcm_counter >= adpcm_reset_interval) {
-							adpcm_counter -= adpcm_reset_interval;
-							sndsb_encode_adpcm_reset_wo_ref(sb_card->dsp_adpcm);
-						}
-					}
-				}
-			}
-			else {
-				abort();
-			}
-
-			cx->buffer_last_io += (uint32_t)rd;
-#endif
-		}
-		else {
-			uint32_t oa,adj;
+        {
+            uint32_t oa,adj;
 
 			oa = cx->buffer_last_io;
 			if (cx->backwards) {
@@ -660,98 +396,6 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	}
 }
 
-static void rec_vu(uint32_t pos) {
-	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram + (vga_state.vga_width * (vga_state.vga_height - 1));
-	const unsigned int leeway = 256;
-	unsigned int x,L=0,R=0,max;
-	uint16_t sample;
-
-	if (pos == (~0UL)) {
-		for (x=0;x < (unsigned int)vga_state.vga_width;x++)
-			wr[x] = 0x1E00 | 177;
-
-		return;
-	}
-
-	/* caller should be sample-aligning the position! */
-	assert((pos & 3UL) == 0UL);
-
-	if ((pos+(leeway*wav_bytes_per_sample)) < sb_card->buffer_size) {
-		if (wav_16bit) {
-			int16_t FAR *ptr = (int16_t FAR*)(sb_dma->lin + pos);
-			max = 32767;
-			if (wav_stereo) {
-				/* 16-bit PCM stereo */
-				for (x=0;x < leeway;x++) {
-					sample = ptr[x*2];
-					if (sb_card->audio_data_flipped_sign) sample = abs((uint16_t)sample - 32768);
-					else sample = abs((int16_t)sample);
-					if (L < sample) L = sample;
-
-					sample = ptr[x*2 + 1];
-					if (sb_card->audio_data_flipped_sign) sample = abs((uint16_t)sample - 32768);
-					else sample = abs((int16_t)sample);
-					if (R < sample) R = sample;
-				}
-			}
-			else {
-				/* 16-bit PCM mono */
-				for (x=0;x < leeway;x++) {
-					sample = ptr[x];
-					if (sb_card->audio_data_flipped_sign) sample = abs((uint16_t)sample - 32768);
-					else sample = abs((int16_t)sample);
-					if (L < sample) L = sample;
-				}
-			}
-		}
-		else {
-			max = 127;
-			if (wav_stereo) {
-				/* 8-bit PCM stereo */
-				for (x=0;x < leeway;x++) {
-					sample = sb_dma->lin[x*2 + pos];
-					if (sb_card->audio_data_flipped_sign) sample = abs((signed char)sample);
-					else sample = abs((int)sample - 128);
-					if (L < sample) L = sample;
-
-					sample = sb_dma->lin[x*2 + 1 + pos];
-					if (sb_card->audio_data_flipped_sign) sample = abs((signed char)sample);
-					else sample = abs((int)sample - 128);
-					if (R < sample) R = sample;
-				}
-			}
-			else {
-				/* 8-bit PCM mono */
-				for (x=0;x < leeway;x++) {
-					sample = sb_dma->lin[x + pos];
-					if (sb_card->audio_data_flipped_sign) sample = abs((signed char)sample);
-					else sample = abs((int)sample - 128);
-					if (L < sample) L = sample;
-				}
-			}
-		}
-
-		L = (unsigned int)(((unsigned long)L * 80UL) / (unsigned long)max);
-		if (wav_stereo)
-			R = (unsigned int)(((unsigned long)R * 80UL) / (unsigned long)max);
-		else
-			R = L;
-
-		if (L > 80) L = 80;
-		if (R > 80) R = 80;
-		for (x=0;x < 80;x++) {
-			if (x < L && x < R)
-				wr[x] = 0x0F00 | 219;
-			else if (x < L)
-				wr[x] = 0x0F00 | 223;
-			else if (x < R)
-				wr[x] = 0x0F00 | 220;
-			else
-				wr[x] = 0x0F00 | 32;
-		}
-	}
-}
-
 #define DMA_WRAP_DEBUG
 
 static void wav_idle() {
@@ -768,7 +412,7 @@ static void wav_idle() {
 	 * to poll the sound card's IRQ status and handle it directly so playback
 	 * continues to work. if we don't, playback will halt on actual Creative
 	 * Sound Blaster 16 hardware until it gets the I/O read to ack the IRQ */
-	if (!dont_sb_idle) sndsb_main_idle(sb_card);
+	sndsb_main_idle(sb_card);
 
 	_cli();
 #ifdef DMA_WRAP_DEBUG
@@ -804,19 +448,9 @@ static void wav_idle() {
 	pos &= (~3UL); /* round down */
 	_sti();
 
-	if (wav_record) {
-		/* read audio samples just behind DMA and render as VU meter */
-		rec_vu(pos);
-
-		/* write to disk */
-		save_audio(sb_card,pos,min(wav_sample_rate/4,4096)/*min*/,
-			sb_card->buffer_size/2/*max*/,0/*first block*/);
-	}
-	else {
-		/* load from disk */
-		load_audio(sb_card,pos,min(wav_sample_rate/8,4096)/*min*/,
-			sb_card->buffer_size/4/*max*/,0/*first block*/);
-	}
+    /* load from disk */
+    load_audio(sb_card,pos,min(wav_sample_rate/8,4096)/*min*/,
+        sb_card->buffer_size/4/*max*/,0/*first block*/);
 }
 
 static void update_cfg();
@@ -908,7 +542,7 @@ static void ui_anim(int force) {
 
 		msg = temp_str;
 		sprintf(temp_str,"%ub %s %5luHz @%c%u:%02u:%02u.%02u",wav_16bit ? 16 : 8,wav_stereo ? "ST" : "MO",
-			wav_sample_rate,wav_playing ? (wav_record ? 'r' : 'p') : 's',pH,pM,pS,pSS);
+			wav_sample_rate,wav_playing ? (0 ? 'r' : 'p') : 's',pH,pM,pS,pSS);
 		for (wr=vga_state.vga_alpha_ram+(80*1),cc=0;cc < 29 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 		for (;cc < 29;cc++) *wr++ = 0x1F20;
 		msg = sndsb_dspoutmethod_str[sb_card->dsp_play_method];
@@ -998,65 +632,6 @@ static void open_wav() {
 	}
 }
 
-static void open_wav_unique_name() {
-	int patience = 1000;
-	char *p,*q;
-
-	if (wav_fd >= 0) close(wav_fd);
-	wav_fd = -1;
-
-	do {
-		p = strrchr(wav_file,'.');
-		if (p == NULL) p = wav_file + strlen(wav_file) - 1;
-		else if (p > wav_file) p--;
-
-		if (p == wav_file) {
-			strcpy(wav_file,"untitled.wav");
-		}
-		else if (p >= wav_file) {
-			if (!isdigit(*p)) {
-				*p = '0';
-				break;
-			}
-			else if (*p == '9') {
-				*p = '0';
-				/* carry the 1 */
-				for (q=p-1;q >= wav_file;q--) {
-					if (isdigit(*q)) {
-						if (*q == '9') {
-							*q = '0';
-							continue;
-						}
-						else {
-							(*q)++;
-						}
-					}
-					else {
-						*q = '0';
-						break;
-					}
-				}
-			}
-			else {
-				(*p)++;
-			}
-		}
-
-		/* if the file already exists, then reject the name */
-		if ((wav_fd = open(wav_file,O_RDONLY|O_BINARY)) >= 0) {
-			close(wav_fd);
-			wav_fd = -1;
-		}
-		/* unless we are able to create the file, we don't want it */
-		else if ((wav_fd = open(wav_file,O_RDWR|O_BINARY|O_CREAT|O_EXCL|O_TRUNC,0644)) >= 0) {
-			break; /* works for me */
-		}
-
-		if (--patience == 0)
-			break;
-	} while (1);
-}
-
 static void free_dma_buffer() {
     if (sb_dma != NULL) {
         dma_8237_free_buffer(sb_dma);
@@ -1073,9 +648,9 @@ static void realloc_dma_buffer() {
     ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,wav_sample_rate,wav_stereo,wav_16bit);
 
     if (ch >= 4)
-        choice = sndsb_recommended_16bit_dma_buffer_size(sb_card,buffer_limit);
+        choice = sndsb_recommended_16bit_dma_buffer_size(sb_card,0);
     else
-        choice = sndsb_recommended_dma_buffer_size(sb_card,buffer_limit);
+        choice = sndsb_recommended_dma_buffer_size(sb_card,0);
 
     do {
         if (ch >= 4)
@@ -1116,57 +691,10 @@ static void begin_play() {
             return;
     }
 
-	/* sorry, lock out unimplemented modes */
-	{
-		const char *why = NULL;
-		int i;
-
-		if (sb_card->backwards && sb_card->dsp_adpcm != 0)
-			why = "Backwards playback and ADPCM not implemented";
-		else if (sb_card->backwards && wav_record) /* NTS: When we do support this, code will need to reverse audio before writing to WAV */
-			why = "Backwards recording not implemented";
-
-		if (why) {
-			struct vga_msg_box box;
-			vga_msg_box_create(&box,why,0,0);
-			while (1) {
-				ui_anim(0);
-				if (kbhit()) {
-					i = getch();
-					if (i == 0) i = getch() << 8;
-					if (i == 13 || i == 27) break;
-				}
-			}
-			vga_msg_box_destroy(&box);
-
-			return;
-		}
-	}
-
-	if (wav_record)
-		open_wav_unique_name();
-
 	if (wav_fd < 0)
 		return;
 
-	choice_rate = sample_rate_timer_clamp ? wav_sample_rate_by_timer : wav_sample_rate;
-	if (sb_card->goldplay_mode) {
-		if (goldplay_samplerate_choice == GOLDRATE_DOUBLE)
-			choice_rate *= 2;
-		else if (goldplay_samplerate_choice == GOLDRATE_MAX) {
-			/* basically the maximum the DSP will run at */
-			if (sb_card->dsp_play_method <= SNDSB_DSPOUTMETHOD_200)
-				choice_rate = 22050;
-			else if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_201)
-				choice_rate = 44100;
-			else if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_3xx)
-				choice_rate = wav_stereo ? 22050 : 44100;
-			else if (sb_card->pnp_name == NULL)
-				choice_rate = 44100; /* Most clones and non-PnP SB16 cards max out at 44.1KHz */
-			else
-				choice_rate = 48000; /* SB16 ViBRA (PnP-era) cards max out at 48Khz */
-		}
-	}
+	choice_rate = wav_sample_rate;
 
 	update_cfg();
 	irq_0_watchdog_reset();
@@ -1175,31 +703,7 @@ static void begin_play() {
 
 	sndsb_setup_dma(sb_card);
 
-	if (!wav_record)
-		load_audio(sb_card,sb_card->buffer_size/2,0/*min*/,0/*max*/,1/*first block*/);
-	else { /* create RIFF structure for recording */
-		uint32_t dw;
-		uint16_t w;
-
-		write(wav_fd,"RIFF",4);
-		dw = 44 - 8;			write(wav_fd,&dw,4);
-		write(wav_fd,"WAVEfmt ",8);
-		dw = 0x10;			write(wav_fd,&dw,4);
-
-		w = 1; /* PCM */		write(wav_fd,&w,2);
-		w = wav_stereo ? 2 : 1;		write(wav_fd,&w,2);
-		dw = wav_sample_rate;		write(wav_fd,&dw,4);
-		dw = wav_sample_rate * wav_bytes_per_sample;
-						write(wav_fd,&dw,4);
-		w = wav_bytes_per_sample;	write(wav_fd,&w,2);
-		w = wav_16bit ? 16 : 8;		write(wav_fd,&w,2);
-
-		write(wav_fd,"data",4);
-		dw = 0;				write(wav_fd,&dw,4);
-
-		wav_data_offset = 44;
-		wav_position = 0;
-	}
+    load_audio(sb_card,sb_card->buffer_size/2,0/*min*/,0/*max*/,1/*first block*/);
 
 	/* make sure the IRQ is acked */
 	if (sb_card->irq >= 8) {
@@ -1223,12 +727,6 @@ static void begin_play() {
 		irq_0_adv = 182UL;		/* 18.2Hz */
 		irq_0_max = nr * 10UL;		/* sample rate */
 	}
-	else if (sb_card->goldplay_mode) {
-		write_8254_system_timer(wav_sample_rate_by_timer_ticks);
-		irq_0_count = 0;
-		irq_0_adv = 182UL;		/* 18.2Hz */
-		irq_0_max = wav_sample_rate_by_timer * 10UL;
-	}
 	wav_playing = 1;
 	_sti();
 }
@@ -1236,13 +734,12 @@ static void begin_play() {
 static void stop_play() {
 	if (!wav_playing) return;
 	draw_irq_indicator();
-	if (!wav_record) {
-		wav_position = playback_live_position();
-		wav_position -= wav_position % (unsigned long)wav_bytes_per_sample;
-	}
+
+    wav_position = playback_live_position();
+    wav_position -= wav_position % (unsigned long)wav_bytes_per_sample;
 
 	_cli();
-	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT || sb_card->goldplay_mode) {
+	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT) {
 		irq_0_count = 0;
 		irq_0_adv = 1;
 		irq_0_max = 1;
@@ -1253,26 +750,6 @@ static void stop_play() {
 	_sti();
 
 	ui_anim(1);
-	if (wav_fd >= 0 && wav_record) {
-		uint32_t dw;
-
-		unsigned long len = lseek(wav_fd,0,SEEK_END);
-
-		lseek(wav_fd,4,SEEK_SET);
-		dw = len - 8; write(wav_fd,&dw,4);
-
-		lseek(wav_fd,40,SEEK_SET);
-		dw = len - 44; write(wav_fd,&dw,4);
-
-		close(wav_fd);
-		wav_fd = -1;
-
-		wav_fd = open(wav_file,O_RDONLY|O_BINARY);
-		wav_data_offset = 44;
-		wav_data_length = len - 44;
-		wav_position = 0;
-		rec_vu(~0UL);
-	}
 }
 
 static void vga_write_until(unsigned int x) {
@@ -1296,213 +773,6 @@ static const char *dos32_irq_0_warning =
 	"         DOS extender there may be enough overhead to overwhelm the CPU\n"
 	"         and possibly cause a crash.\n"
 	"         Enable?";
-#endif
-
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-static int change_alias_idx = 0;
-static unsigned char dsp_alias_had_warned = 0;
-static const char *dsp_alias_warning =
-	"WARNING: DSP alias port will not work unless you are using an original\n"
-	"         Sound Blaster (DSP 1.xx or 2.xx) and NOT a clone. See the\n"
-	"         README file for more information.\n"
-	"         Enable anyway?";
-#endif
-
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-static void measure_dsp_busy_cycle() {
-	unsigned long time1 = 0,time2 = 0,tlimit;
-	unsigned char timehits = 0;
-	t8254_time_t pr,cr,dl;
-	unsigned char pc,cc;
-	unsigned int i;
-	int c;
-
-	vga_write_color(0x07);
-	vga_clear();
-	vga_moveto(0,0);
-	vga_write("Testing DSP busy cycle... please wait\n");
-
-	_cli();
-
-	pc = inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS);
-	pr = read_8254(0);
-	tlimit = t8254_us2ticks(1000000);
-
-	time1 = 0;
-	while (time1 < tlimit) {
-		for (i=0;i < 1024;i++) {
-			cc = inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS);
-			if ((cc&0x80) != (pc&0x80)) break;
-			pc = cc;
-		}
-
-		cr = read_8254(0);
-		dl = pr - cr; /* we expect rollover. remember the 8254 counts DOWN */
-		pr = cr;
-		time1 += dl;
-
-		if ((cc&0x80) != (pc&0x80)) {
-			break;
-		}
-	}
-
-	time1 = 0;
-	while (time1 < tlimit) {
-		for (i=0;i < 1024;i++) {
-			cc = inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS);
-			if ((cc&0x80) != (pc&0x80)) break;
-			pc = cc;
-		}
-
-		cr = read_8254(0);
-		dl = pr - cr; /* we expect rollover. remember the 8254 counts DOWN */
-		pr = cr;
-		time1 += dl;
-
-		if ((cc&0x80) != (pc&0x80)) {
-			timehits |= 1;
-			break;
-		}
-	}
-
-	pc = cc;
-	pr = cr;
-	while (time2 < tlimit) {
-		for (i=0;i < 1024;i++) {
-			cc = inp(sb_card->baseio+SNDSB_BIO_DSP_WRITE_STATUS);
-			if ((cc&0x80) != (pc&0x80)) break;
-			pc = cc;
-		}
-
-		cr = read_8254(0);
-		dl = pr - cr; /* we expect rollover. remember the 8254 counts DOWN */
-		pr = cr;
-		time2 += dl;
-
-		if ((cc&0x80) != (pc&0x80)) {
-			timehits |= 2;
-			break;
-		}
-	}
-
-	_sti();
-
-	vga_write_color(0x07);
-	vga_write("DSP busy cycle measurements:\n");
-
-	if (timehits & 1) {
-		vga_write("Time to first transition: ");
-		sprintf(temp_str,"%.6f sec\n",(double)time1 / T8254_REF_CLOCK_HZ);
-		vga_write(temp_str);
-	}
-	else {
-		vga_write("Time to first transition could not be measured\n");
-	}
-
-	if (timehits & 2) {
-		vga_write("Time to second transition: ");
-		sprintf(temp_str,"%.6f sec\n",(double)time2 / T8254_REF_CLOCK_HZ);
-		vga_write(temp_str);
-	}
-	else {
-		vga_write("Time to second transition could not be measured\n");
-	}
-
-	vga_write("\n");
-	vga_write("Explanation: On some Creative Sound Blaster cards the DSP's busy bit (port 22Ch)\n");
-	vga_write("             cycles on/off by itself. This can be seen by software when polling.\n");
-	vga_write_sync();
-
-	do {
-		c = getch();
-	} while (!(c == 13 || c == 27));
-}
-
-static void change_alias_menu() {
-	unsigned char loop=1;
-	unsigned char redraw=1;
-	unsigned char uiredraw=1;
-	unsigned char selector=change_alias_idx;
-	VGA_ALPHA_PTR vga;
-	unsigned int cc;
-	char tmp[128];
-
-	while (loop) {
-		if (redraw || uiredraw) {
-			_cli();
-			if (redraw) {
-				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
-				ui_anim(1);
-			}
-			vga_moveto(0,4);
-
-			vga_write_color(selector == 0 ? 0x70 : 0x1F);
-			sprintf(tmp,"DSP alias:     %u",sb_card->dsp_alias_port);
-			vga_write(tmp);
-			vga_write_until(30);
-			vga_write("\n");
-
-			vga_write_sync();
-			_sti();
-			redraw = 0;
-			uiredraw = 0;
-		}
-
-		if (kbhit()) {
-			int c = getch();
-			if (c == 0) c = getch() << 8;
-
-			if (c == 27 || c == 13)
-				loop = 0;
-			else if (c == 0x4800) { /* up arrow */
-//				if (selector > 0) selector--;
-//				else selector=0;
-				uiredraw=1;
-			}
-			else if (c == 0x5000) { /* down arrow */
-//				if (selector < -1) selector++;
-//				else selector=0;
-				uiredraw=1;
-			}
-			else if (c == 0x4B00) { /* left arrow */
-				switch (selector) {
-					case 0:	/* sample rate */
-						sb_card->dsp_alias_port ^= 1;
-                        sndsb_update_dspio(sb_card);
-                        break;
-				};
-				update_cfg();
-				uiredraw=1;
-			}
-			else if (c == 0x4D00) { /* right arrow */
-				switch (selector) {
-					case 0:	/* sample rate */
-						sb_card->dsp_alias_port ^= 1;
-                        sndsb_update_dspio(sb_card);
-						break;
-				};
-				update_cfg();
-				uiredraw=1;
-			}
-		}
-
-		ui_anim(0);
-	}
-
-	if (!dsp_alias_had_warned && sb_card->dsp_alias_port) {
-		/* NOTE TO SELF: It can overwhelm the UI in DOSBox too, but DOSBox seems able to
-		   recover if you manage to hit CTRL+F12 to speed up the CPU cycles in the virtual machine.
-		   On real hardware, even with the recovery method the machine remains hung :( */
-		if (confirm_yes_no_dialog(dsp_alias_warning))
-			dsp_alias_had_warned = 1;
-		else {
-			sb_card->dsp_alias_port = 0;
-            sndsb_update_dspio(sb_card);
-        }
-	}
-
-	change_param_idx = selector;
-}
 #endif
 
 static void change_param_menu() {
@@ -1800,39 +1070,21 @@ static const struct vga_menu_item main_menu_file_set =
 	{"Set file...",		's',	0,	0};
 static const struct vga_menu_item main_menu_file_quit =
 	{"Quit",		'q',	0,	0};
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-static const struct vga_menu_item main_menu_windows_fullscreen =
-	{"Windows fullscreen",	'f',	0,	0};
-#endif
 
 static const struct vga_menu_item* main_menu_file[] = {
 	&main_menu_file_set,
 	&main_menu_file_quit,
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-	&menu_separator,
-	&main_menu_windows_fullscreen,
-#endif
 	NULL
 };
 
 static const struct vga_menu_item main_menu_playback_play =
 	{"Play",		'p',	0,	0};
-static const struct vga_menu_item main_menu_playback_record =
-	{"Record",		'r',	0,	0};
 static const struct vga_menu_item main_menu_playback_stop =
 	{"Stop",		's',	0,	0};
 static const struct vga_menu_item main_menu_playback_params =
 	{"Parameters",		'a',	0,	0};
 static struct vga_menu_item main_menu_playback_reduced_irq =
 	{"xxx",			'i',	0,	0};
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-static struct vga_menu_item main_menu_playback_autoinit_adpcm =
-	{"xxx",			'd',	0,	0};
-#endif
-static struct vga_menu_item main_menu_playback_goldplay =
-	{"xxx",			'g',	0,	0};
-static struct vga_menu_item main_menu_playback_goldplay_mode =
-	{"xxx",			'm',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_autoinit_dma =
 	{"xxx",			't',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp_autoinit_command =
@@ -1842,46 +1094,22 @@ static struct vga_menu_item main_menu_playback_noreset_adpcm =
 	{"xxx",			'n',	0,	0};
 static struct vga_menu_item main_menu_playback_timer_clamp =
 	{"xxx",			0,	0,	0};
-static struct vga_menu_item main_menu_playback_force_hispeed =
-	{"xxx",			'h',	0,	0};
-static struct vga_menu_item main_menu_playback_flip_sign =
-	{"xxx",			'l',	0,	0};
 static struct vga_menu_item main_menu_playback_dsp4_fifo_autoinit =
 	{"xxx",			'f',	0,	0};
-static struct vga_menu_item main_menu_playback_dsp4_fifo_single =
-	{"xxx",			'e',	0,	0};
-static struct vga_menu_item main_menu_playback_dsp_nag_mode =
-	{"xxx",			'o',	0,	0};
-static struct vga_menu_item main_menu_playback_dsp_poll_ack_no_irq =
-	{"xxx",			'q',	0,	0};
-static struct vga_menu_item main_menu_playback_wari_hack_alias =
-	{"xxx",			'w',	0,	0};
 #endif
 
 static const struct vga_menu_item* main_menu_playback[] = {
 	&main_menu_playback_play,
-	&main_menu_playback_record,
 	&main_menu_playback_stop,
 	&menu_separator,
 	&main_menu_playback_params,
 	&main_menu_playback_reduced_irq,
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-	&main_menu_playback_autoinit_adpcm,
-#endif
-	&main_menu_playback_goldplay,
-	&main_menu_playback_goldplay_mode,
 	&main_menu_playback_dsp_autoinit_dma,
 	&main_menu_playback_dsp_autoinit_command,
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
 	&main_menu_playback_noreset_adpcm,
 	&main_menu_playback_timer_clamp,
-	&main_menu_playback_force_hispeed,
-	&main_menu_playback_flip_sign,
 	&main_menu_playback_dsp4_fifo_autoinit,
-	&main_menu_playback_dsp4_fifo_single,
-	&main_menu_playback_dsp_nag_mode,
-	&main_menu_playback_dsp_poll_ack_no_irq,
-	&main_menu_playback_wari_hack_alias,
 #endif
 	NULL
 };
@@ -1903,10 +1131,6 @@ static const struct vga_menu_item main_menu_device_haltcont_dma =
 	{"Halt & continue DMA",	'h',	0,	0};
 #endif
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-static struct vga_menu_item main_menu_device_dsp_alias =
-	{"Alias ports",		'a',	0,	0};
-static struct vga_menu_item main_menu_device_busy_cycle =
-	{"Busy cycle",		'b',	0,	0};
 static struct vga_menu_item main_menu_device_srate_force =
 	{"xxx",		        's',	0,	0};
 static struct vga_menu_item main_menu_device_realloc_dma =
@@ -1925,8 +1149,6 @@ static const struct vga_menu_item* main_menu_device[] = {
 	&main_menu_device_haltcont_dma,
 #endif
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-	&main_menu_device_dsp_alias,
-	&main_menu_device_busy_cycle,
     &main_menu_device_srate_force,
     &main_menu_device_realloc_dma,
 #endif
@@ -1978,18 +1200,11 @@ int adpcm_warning_prompt() {
 static void update_cfg() {
 	unsigned int r;
 
-	wav_sample_rate_by_timer_ticks = T8254_REF_CLOCK_HZ / wav_sample_rate;
-	if (wav_sample_rate_by_timer_ticks == 0) wav_sample_rate_by_timer_ticks = 1;
-	wav_sample_rate_by_timer = T8254_REF_CLOCK_HZ / wav_sample_rate_by_timer_ticks;
-
 	sb_card->dsp_adpcm = sb_card->dsp_adpcm;
-	sb_card->dsp_record = wav_record;
 	r = wav_sample_rate;
 	if (sb_card->dsp_adpcm == ADPCM_4BIT) r /= 2;
 	else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) r /= 3;
 	else if (sb_card->dsp_adpcm == ADPCM_2BIT) r /= 4;
-	adpcm_counter = 0;
-	adpcm_reset_interval = 0;
 	if (sb_card->dsp_adpcm > 0) {
 		if (sb_card->dsp_adpcm == ADPCM_4BIT)
 			sb_card->buffer_irq_interval = wav_sample_rate / 2;
@@ -2012,9 +1227,6 @@ static void update_cfg() {
 				sb_card->buffer_irq_interval % 3;
 		else if (sb_card->dsp_adpcm == ADPCM_2BIT)
 			sb_card->buffer_irq_interval &= ~3UL;
-
-		if (adpcm_do_reset_interval)
-			adpcm_reset_interval = sb_card->buffer_irq_interval;
 	}
 	else {
 		sb_card->buffer_irq_interval = r;
@@ -2040,50 +1252,13 @@ static void update_cfg() {
 		main_menu_playback_reduced_irq.text =
 			"IRQ interval: tiny";
 
-	if (goldplay_samplerate_choice == GOLDRATE_MATCH)
-		main_menu_playback_goldplay_mode.text =
-			"Goldplay sample rate: Match";
-	else if (goldplay_samplerate_choice == GOLDRATE_DOUBLE)
-		main_menu_playback_goldplay_mode.text =
-			"Goldplay sample rate: Double";
-	else if (goldplay_samplerate_choice == GOLDRATE_MAX)
-		main_menu_playback_goldplay_mode.text =
-			"Goldplay sample rate: Max";
-	else
-		main_menu_playback_goldplay_mode.text =
-			"?";
-
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-	main_menu_playback_autoinit_adpcm.text =
-		sb_card->enable_adpcm_autoinit ? "ADPCM Auto-init: On" : "ADPCM Auto-init: Off";
-#endif
-	main_menu_playback_goldplay.text =
-		sb_card->goldplay_mode ? "Goldplay mode: On" : "Goldplay mode: Off";
 	main_menu_playback_dsp_autoinit_dma.text =
 		sb_card->dsp_autoinit_dma ? "DMA autoinit: On" : "DMA autoinit: Off";
 	main_menu_playback_dsp_autoinit_command.text =
 		sb_card->dsp_autoinit_command ? "DSP playback: auto-init" : "DSP playback: single-cycle";
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-	main_menu_playback_force_hispeed.text =
-		sb_card->force_hispeed ? "Force hispeed: On" : "Force hispeed: Off";
-	main_menu_playback_noreset_adpcm.text =
-		adpcm_do_reset_interval ? "ADPCM reset step/interval: On" : "ADPCM reset step/interval: Off";
-	main_menu_playback_timer_clamp.text =
-		sample_rate_timer_clamp ? "Clamp samplerate to timer: On" : "Clamp samplerate to timer: Off";
-	main_menu_playback_flip_sign.text =
-		sb_card->audio_data_flipped_sign ? "Flipped sign: On" : "Flipped sign: Off";
 	main_menu_playback_dsp4_fifo_autoinit.text =
 		sb_card->dsp_4xx_fifo_autoinit ? "DSP 4.xx autoinit FIFO: On" : "DSP 4.xx autoinit FIFO: Off";
-	main_menu_playback_dsp4_fifo_single.text =
-		sb_card->dsp_4xx_fifo_single_cycle ? "DSP 4.xx single FIFO: On" : "DSP 4.xx single FIFO: Off";
-	main_menu_playback_dsp_nag_mode.text =
-		sb_card->dsp_nag_mode ?
-			(sb_card->dsp_nag_hispeed ? "DSP nag mode: All" : "DSP nag mode: Non-highspeed")
-			: "DSP nag mode: Off";
-	main_menu_playback_dsp_poll_ack_no_irq.text =
-		sb_card->poll_ack_when_no_irq ? "Poll ack when no IRQ: On" : "Poll ack when no IRQ: Off";
-	main_menu_playback_wari_hack_alias.text =
-		sb_card->wari_hack_mode ? "Wari Hack Alias: On" : "Wari Hack Alias: Off";
 
     if (sb_card->srate_force_dsp_4xx)
         main_menu_device_srate_force.text = "Force srate cmd: Using 4.xx (switch to TC)";
@@ -2292,10 +1467,6 @@ static void help() {
     printf(" /srf4xx              Force SB16 sample rate commands\n");
     printf(" /srftc               Force SB/SBPro time constant sample rate\n");
     printf(" /noasp               Don't probe SB16 ASP/CSP chip\n");
-    printf(" /dma128              Enable 16-bit DMA to span 128KB\n");
-    printf(" /-dma128             Disable 16-bit DMA to span 128KB\n");
-    printf(" /dmam:[u|a|p]        Assume 16-bit DMA masking\n");
-    printf("                          u=unknown a=address p=page\n");
 #  endif
 # endif
 
@@ -2345,97 +1516,8 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"adma")) {
 				assume_dma = 1;
 			}
-			else if (!strcmp(a,"sbalias:dsp")) {
-				sndsb_probe_options.use_dsp_alias = 1;
-			}
-			else if (!strcmp(a,"nif2")) {
-				irq_probe_f2 = 0;
-			}
-			else if (!strcmp(a,"ni80")) {
-				irq_probe_80 = 0;
-			}
-			else if (!strcmp(a,"nde2")) {
-				dma_probe_e2 = 0;
-			}
-			else if (!strcmp(a,"nd14")) {
-				dma_probe_14 = 0;
-			}
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-            else if (!strcmp(a,"srf4xx")) {
-                force_srate_4xx = 1;
-            }
-            else if (!strcmp(a,"dma128")) {
-                dma128 = 1;
-            }
-            else if (!strcmp(a,"-dma128")) {
-                dma128 = -1;
-            }
-            else if (!strncmp(a,"dmam:",5)) {
-                a += 5;
-
-                if (*a == 'u' || *a == 'a' || *a == 'p')
-                    dmam = *a;
-                else
-                    return 1;
-            }
-#endif
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-            else if (!strcmp(a,"noasp")) {
-                ignore_asp = 1;
-            }
-            else if (!strcmp(a,"srftc")) {
-                force_srate_tc = 1;
-            }
-			else if (!strcmp(a,"stopres")) {
-				always_reset_dsp_to_stop = 1;
-			}
-			else if (!strcmp(a,"hinoblk")) {
-				assume_dsp_hispeed_doesnt_block = 1;
-			}
-			else if (!strcmp(a,"dmaaio")) {
-				dma_autoinit_override = 1;
-			}
-#endif
-			else if (!strcmp(a,"fip")) {
-				force_irq_probe = 1;
-			}
-			else if (!strcmp(a,"fdp")) {
-				force_dma_probe = 1;
-			}
-			else if (!strcmp(a,"noidle")) {
-				dont_sb_idle = 1;
-			}
 			else if (!strcmp(a,"nochain")) {
 				dont_chain_irq = 1;
-			}
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			else if (!strcmp(a,"debug")) {
-				sb_debug = 1;
-			}
-            else if (!strcmp(a,"96k")) {
-                buffer_limit = 96UL * 1024UL;
-            }
-#endif
-            else if (!strcmp(a,"64k")) {
-                buffer_limit = 64UL * 1024UL;
-            }
-            else if (!strcmp(a,"63k")) {
-                buffer_limit = 63UL * 1024UL;
-            }
-            else if (!strcmp(a,"48k")) {
-                buffer_limit = 48UL * 1024UL;
-            }
-            else if (!strcmp(a,"32k")) {
-                buffer_limit = 32UL * 1024UL;
-            }
-            else if (!strcmp(a,"16k")) {
-                buffer_limit = 16UL * 1024UL;
-            }
-			else if (!strcmp(a,"8k")) {
-				buffer_limit = 8UL * 1024UL;
-			}
-			else if (!strcmp(a,"4k")) {
-				buffer_limit = 4UL * 1024UL;
 			}
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
 			else if (!strcmp(a,"-nmi")) {
@@ -2512,18 +1594,6 @@ int main(int argc,char **argv) {
 		d8237_flags |= D8237_DMA_PRIMARY | D8237_DMA_SECONDARY;
 
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-    if (dma128 == 1)
-        d8237_enable_16bit_128kb_dma();
-    else if (dma128 == -1)
-        d8237_disable_16bit_128kb_dma();
-
-    if (dmam == 'u')
-        d8237_16bit_set_unknown_mask();
-    else if (dmam == 'a')
-        d8237_16bit_set_addr_mask();
-    else if (dmam == 'p')
-        d8237_16bit_set_page_mask();
-
 	printf("DMA available: 0-3=%s 4-7=%s mask8=0x%lx mask16=0x%lx 128k=%u\n",
 		d8237_flags&D8237_DMA_PRIMARY?"yes":"no",
 		d8237_flags&D8237_DMA_SECONDARY?"yes":"no",
@@ -2709,67 +1779,14 @@ int main(int argc,char **argv) {
 			sndsb_probe_mixer(cx);
 #endif
 
-		if (force_irq_probe) {
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (sb_debug) printf("SB %03x: Forgetting IRQ, forcing probe\n",cx->baseio);
-#endif
-			cx->irq = -1;
-		}
-		if (force_dma_probe) {
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (sb_debug) printf("SB %03x: Forgetting DMA, forcing probe\n",cx->baseio);
-#endif
-			cx->dma8 = cx->dma16 = -1;
-		}
-
-		if (cx->irq < 0 && irq_probe_f2) {
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (sb_debug) printf("SB %03x: Probing IRQ (F2)...\n",cx->baseio);
-#endif
+		if (cx->irq < 0)
 			sndsb_probe_irq_F2(cx);
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (F2) found IRQ %d\n",cx->baseio,cx->irq);
-#endif
-		}
-		if (cx->irq < 0 && irq_probe_80) {
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (sb_debug) printf("SB %03x: Probing IRQ (80)...\n",cx->baseio);
-#endif
+		if (cx->irq < 0)
 			sndsb_probe_irq_80(cx);
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (cx->irq >= 0 && sb_debug) printf("SB %03x: Probing (80) found IRQ %d\n",cx->baseio,cx->irq);
-#endif
-		}
-		if (cx->dma8 < 0 && dma_probe_e2) { // NTS: for some cards, this will also set the 16-bit DMA channel
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (sb_debug) printf("SB %03x: Probing DMA (E2)...\n",cx->baseio);
-#endif
+		if (cx->dma8 < 0)
 			sndsb_probe_dma8_E2(cx);
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (E2) found DMA %d\n",cx->baseio,cx->dma8);
-#endif
-		}
-		if (cx->dma8 < 0 && dma_probe_14) { // NTS: for some cards, this will also set the 16-bit DMA channel
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (sb_debug) printf("SB %03x: Probing DMA (14)...\n",cx->baseio);
-#endif
+		if (cx->dma8 < 0)
 			sndsb_probe_dma8_14(cx);
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-			if (cx->dma8 >= 0 && sb_debug) printf("SB %03x: Probing (14) found DMA %d\n",cx->baseio,cx->dma8);
-#endif
-		}
-
-		// DMA auto-init override.
-		// WARNING: Single-cycle DSP commands with auto-init DMA can cause problems with SB clones or emulation.
-		//   - Sound Blaster Live! (EMU10K1 PCI cards) will play the audio extra-fast
-		//   - Pro Audio Spectrum cards will have occasional pops and crackles (confirmed on PAS16)
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-		if (dma_autoinit_override) cx->dsp_autoinit_dma_override = 1;
-		if (assume_dsp_hispeed_doesnt_block) cx->hispeed_blocking = 0;
-		if (always_reset_dsp_to_stop) cx->always_reset_dsp_to_stop = 1;
-        if (force_srate_4xx) cx->srate_force_dsp_4xx = 1;
-        if (force_srate_tc) cx->srate_force_dsp_tc = 1;
-#endif
 
 		// having IRQ and DMA changes the ideal playback method and capabilities
 		sndsb_update_capabilities(cx);
@@ -2807,19 +1824,6 @@ int main(int argc,char **argv) {
 			}
 #endif
 			printf("      '%s'\n",cx->dsp_copyright);
-
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__)))
-            if (!ignore_asp) {
-                if (sndsb_check_for_sb16_asp(cx)) {
-                    printf("      CSP/ASP chip detected: version=0x%02x ",cx->asp_chip_version_id);
-
-                    if (sndsb_sb16_asp_ram_test(cx) > 0)
-                        printf("RAM OK\n");
-                    else
-                        printf("RAM TEST FAILED\n");
-                }
-            }
-#endif
 
 			count++;
 		}
@@ -2876,7 +1880,6 @@ int main(int argc,char **argv) {
 
 	loop=1;
 	redraw=1;
-	wav_record=0;
 	bkgndredraw=1;
 	vga_menu_bar.bar = main_menu_bar;
 	vga_menu_bar.sel = -1;
@@ -2929,24 +1932,9 @@ int main(int argc,char **argv) {
 			else if (mitem == &main_menu_file_set) {
 				prompt_play_wav(0);
 				bkgndredraw = 1;
-				wav_record = 0;
 				redraw = 1;
 			}
 			else if (mitem == &main_menu_playback_play) {
-				if (wav_record) {
-					stop_play();
-					wav_record = 0;
-				}
-				if (!wav_playing) {
-					begin_play();
-					redraw = 1;
-				}
-			}
-			else if (mitem == &main_menu_playback_record) {
-				if (!wav_record) {
-					stop_play();
-					wav_record = 1;
-				}
 				if (!wav_playing) {
 					begin_play();
 					redraw = 1;
@@ -3120,14 +2108,6 @@ int main(int argc,char **argv) {
 				ui_anim(1);
 				if (wp) begin_play();
 			}
-			else if (mitem == &main_menu_device_dsp_alias) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				change_alias_menu();
-				if (wp) begin_play();
-				bkgndredraw = 1;
-				redraw = 1;
-			}
             else if (mitem == &main_menu_device_srate_force) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
@@ -3150,150 +2130,6 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
             }
-            else if (mitem == &main_menu_device_realloc_dma) {
-                unsigned char wp = wav_playing;
-                if (wp) stop_play();
-                realloc_dma_buffer();
-                if (wp) begin_play();
-                bkgndredraw = 1;
-                redraw = 1;
-            }
-            else if (mitem == &main_menu_device_busy_cycle) {
-				// NTS: The user may be testing the busy cycle while the card is playing audio. Do NOT stop playback!
-				//      The test carried out in this function does not send DSP commands, it only polls the DSP.
-				measure_dsp_busy_cycle();
-				bkgndredraw = 1;
-				redraw = 1;
-			}
-			else if (mitem == &main_menu_playback_wari_hack_alias) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				sb_card->wari_hack_mode = !sb_card->wari_hack_mode;
-				update_cfg();
-				ui_anim(1);
-				if (wp) begin_play();
-			}
-			else if (mitem == &main_menu_playback_dsp_poll_ack_no_irq) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				sb_card->poll_ack_when_no_irq = !sb_card->poll_ack_when_no_irq;
-				update_cfg();
-				ui_anim(1);
-				if (wp) begin_play();
-			}
-			else if (mitem == &main_menu_playback_dsp_nag_mode) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				if (sb_card->dsp_nag_mode && sb_card->dsp_nag_hispeed) {
-					sb_card->dsp_nag_mode = sb_card->dsp_nag_hispeed = 0;
-				}
-				else if (sb_card->dsp_nag_mode) {
-					sb_card->dsp_nag_mode = sb_card->dsp_nag_hispeed = 1;
-				}
-				else {
-					sb_card->dsp_nag_hispeed = 0;
-					sb_card->dsp_nag_mode = 1;
-				}
-				update_cfg();
-				ui_anim(1);
-				if (wp) begin_play();
-			}
-			else if (mitem == &main_menu_playback_dsp4_fifo_single) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				sb_card->dsp_4xx_fifo_single_cycle = !sb_card->dsp_4xx_fifo_single_cycle;
-				update_cfg();
-				ui_anim(1);
-				if (wp) begin_play();
-			}
-			else if (mitem == &main_menu_playback_force_hispeed) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				sb_card->force_hispeed = !sb_card->force_hispeed;
-				update_cfg();
-				ui_anim(1);
-				if (wp) begin_play();
-			}
-			else if (mitem == &main_menu_playback_flip_sign) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				sb_card->audio_data_flipped_sign = !sb_card->audio_data_flipped_sign;
-				update_cfg();
-				ui_anim(1);
-				if (wp) begin_play();
-			}
-#endif
-			else if (mitem == &main_menu_playback_goldplay) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				sb_card->goldplay_mode = !sb_card->goldplay_mode;
-#if TARGET_MSDOS == 32
-				if (!irq_0_had_warned && sb_card->goldplay_mode) {
-					/* NOTE TO SELF: It can overwhelm the UI in DOSBox too, but DOSBox seems able to
-					   recover if you manage to hit CTRL+F12 to speed up the CPU cycles in the virtual machine.
-					   On real hardware, even with the recovery method the machine remains hung :( */
-					if (confirm_yes_no_dialog(dos32_irq_0_warning))
-						irq_0_had_warned = 1;
-					else
-						sb_card->goldplay_mode = 0;
-				}
-#endif
-				update_cfg();
-				ui_anim(1);
-				if (wp) begin_play();
-			}
-			else if (mitem == &main_menu_playback_goldplay_mode) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				if (++goldplay_samplerate_choice > GOLDRATE_MAX)
-					goldplay_samplerate_choice = GOLDRATE_MATCH;
-				update_cfg();
-				ui_anim(1);
-				if (wp) begin_play();
-			}
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-			else if (mitem == &main_menu_windows_fullscreen) {
-				/* NTS: Does not seem to work under Windows XP */
-				if (windows_mode == WINDOWS_ENHANCED || windows_mode == WINDOWS_STANDARD) {
-					__asm {
-						mov	ax,0x168B
-						xor	bx,bx
-						int	0x2F
-					}
-				}
-				else {
-					struct vga_msg_box box;
-
-					vga_msg_box_create(&box,
-						windows_mode == WINDOWS_NONE ?
-						"Windows is not running" :
-						"Windows NT not supported"
-						,0,0);
-					while (1) {
-						ui_anim(0);
-						if (kbhit()) {
-							i = getch();
-							if (i == 0) i = getch() << 8;
-							if (i == 13 || i == 27) break;
-						}
-					}
-					vga_msg_box_destroy(&box);
-				}
-			}
-			else if (mitem == &main_menu_playback_noreset_adpcm) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				adpcm_do_reset_interval = !adpcm_do_reset_interval;
-				update_cfg();
-				if (wp) begin_play();
-			}
-			else if (mitem == &main_menu_playback_timer_clamp) {
-				unsigned char wp = wav_playing;
-				if (wp) stop_play();
-				sample_rate_timer_clamp = !sample_rate_timer_clamp;
-				update_cfg();
-				if (wp) begin_play();
-			}
 #endif
 			else if (mitem == &main_menu_playback_dsp_autoinit_dma) {
 				unsigned char wp = wav_playing;
@@ -3327,24 +2163,6 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
-#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
-			else if (mitem == &main_menu_playback_autoinit_adpcm) {
-				unsigned char wp = wav_playing;
-				if (do_adpcm_ai_warning) {
-					if (adpcm_warning_prompt()) {
-						do_adpcm_ai_warning = 0;
-						if (wp) stop_play();
-						sb_card->enable_adpcm_autoinit ^= 1;
-						if (wp) begin_play();
-					}
-				}
-				else {
-					if (wp) stop_play();
-					sb_card->enable_adpcm_autoinit ^= 1;
-					if (wp) begin_play();
-				}
-			}
-#endif
 			else if (mitem == &main_menu_device_trigger_irq) {
 				unsigned char wp = wav_playing;
 				struct vga_msg_box box;
@@ -3552,11 +2370,9 @@ int main(int argc,char **argv) {
 				}
 			}
 			else if (i == ' ') {
-				if (!wav_record) {
-					if (wav_playing) stop_play();
-					else begin_play();
-				}
-			}
+                if (wav_playing) stop_play();
+                else begin_play();
+            }
 			else if (i == 0x4B00) {
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
