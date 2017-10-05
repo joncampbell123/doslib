@@ -20,6 +20,8 @@
 #include <hw/dos/tgusmega.h>
 #include <hw/dos/tgussbos.h>
 #include <hw/dos/tgusumid.h>
+#include <hw/isapnp/isapnp.h>
+#include <hw/sndsb/sndsbpnp.h>
 
 static struct dma_8237_allocation *sb_dma = NULL; /* DMA buffer */
 
@@ -550,6 +552,10 @@ int main(int argc,char **argv) {
 		printf("Cannot init library\n");
 		return 1;
 	}
+	if (!init_isa_pnp_bios()) {
+		printf("Cannot init ISA PnP\n");
+		return 1;
+	}
 
     /* we want to know if certain emulation TSRs exist */
     gravis_mega_em_detect(&megaem_info);
@@ -561,6 +567,70 @@ int main(int argc,char **argv) {
 	sndsb_enable_sb16_support();		// SB16 support
 	sndsb_enable_sc400_support();		// SC400 support
 	sndsb_enable_ess_audiodrive_support();	// ESS AudioDrive support
+
+    /* Plug & Play scan */
+    if (find_isa_pnp_bios()) {
+        const unsigned int devnode_raw_sz = 4096U;
+        unsigned char *devnode_raw = malloc(devnode_raw_sz);
+
+        if (devnode_raw != NULL) {
+            unsigned char csn,node=0,numnodes=0xFF,data[192];
+            unsigned int j,nodesize=0;
+            const char *whatis = NULL;
+
+            memset(data,0,sizeof(data));
+            if (isa_pnp_bios_get_pnp_isa_cfg(data) == 0) {
+                struct isapnp_pnp_isa_cfg *nfo = (struct isapnp_pnp_isa_cfg*)data;
+                isapnp_probe_next_csn = nfo->total_csn;
+                isapnp_read_data = nfo->isa_pnp_port;
+            }
+
+            /* enumerate device nodes reported by the BIOS */
+            if (isa_pnp_bios_number_of_sysdev_nodes(&numnodes,&nodesize) == 0 && numnodes != 0xFF && nodesize <= devnode_raw_sz) {
+                for (node=0;node != 0xFF;) {
+                    struct isa_pnp_device_node far *devn;
+                    unsigned char this_node;
+
+                    /* apparently, start with 0. call updates node to
+                     * next node number, or 0xFF to signify end */
+                    this_node = node;
+                    if (isa_pnp_bios_get_sysdev_node(&node,devnode_raw,ISA_PNP_BIOS_GET_SYSDEV_NODE_CTRL_NOW) != 0) break;
+
+                    devn = (struct isa_pnp_device_node far*)devnode_raw;
+                    if (isa_pnp_is_sound_blaster_compatible_id(devn->product_id,&whatis)) {
+                        if (sndsb_try_isa_pnp_bios(devn->product_id,this_node,devn,devnode_raw_sz) > 0)
+                            printf("PnP: Found %s\n",whatis);
+                    }
+                }
+            }
+
+            /* enumerate the ISA bus directly */
+            if (isapnp_read_data != 0) {
+                for (csn=1;csn < 255;csn++) {
+                    isa_pnp_init_key();
+                    isa_pnp_wake_csn(csn);
+
+                    isa_pnp_write_address(0x06); /* CSN */
+                    if (isa_pnp_read_data() == csn) {
+                        /* apparently doing this lets us read back the serial and vendor ID in addition to resource data */
+                        /* if we don't, then we only read back the resource data */
+                        isa_pnp_init_key();
+                        isa_pnp_wake_csn(csn);
+
+                        for (j=0;j < 9;j++) data[j] = isa_pnp_read_config();
+
+                        if (isa_pnp_is_sound_blaster_compatible_id(*((uint32_t*)data),&whatis)) {
+                            if (sndsb_try_isa_pnp(*((uint32_t*)data),csn) > 0)
+                                printf("PnP: Found %s\n",whatis);
+                        }
+                    }
+
+                    /* return back to "wait for key" state */
+                    isa_pnp_write_data_register(0x02,0x02);	/* bit 1: set -> return to Wait For Key state (or else a Pentium Pro system I own eventually locks up and hangs) */
+                }
+            }
+        }
+    }
 
     /* Non-plug & play scan */
 	if (sndsb_try_blaster_var() != NULL) {
