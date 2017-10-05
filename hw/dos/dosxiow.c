@@ -28,10 +28,10 @@
 #include <hw/dos/doswin.h>
 
 #if TARGET_MSDOS == 32
-int _dos_xread(int fd,void *buffer,int bsz) { /* NTS: The DOS extender takes care of translation here for us */
+int _dos_xwrite(int fd,void *buffer,int bsz) { /* NTS: The DOS extender takes care of translation here for us */
 	int rd = -1;
 	__asm {
-		mov	ah,0x3F
+		mov	ah,0x40
 		mov	ebx,fd
 		mov	ecx,bsz
 		mov	edx,buffer
@@ -44,10 +44,10 @@ int _dos_xread(int fd,void *buffer,int bsz) { /* NTS: The DOS extender takes car
 	return rd;
 }
 #else
-int _dos_xread(int fd,void far *buffer,int bsz) {
+int _dos_xwrite(int fd,void far *buffer,int bsz) {
 	int rd = -1;
 	__asm {
-		mov	ah,0x3F
+		mov	ah,0x40
 		mov	bx,fd
 		mov	cx,bsz
 		mov	dx,word ptr [buffer+0]
