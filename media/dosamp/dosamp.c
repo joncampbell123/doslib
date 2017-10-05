@@ -338,38 +338,77 @@ static void close_wav() {
 static void open_wav() {
 	char tmp[64];
 
-	wav_position = 0;
 	if (wav_fd < 0) {
+        uint32_t riff_length,scan,len;
+
+	    wav_position = 0;
+		wav_data_offset = 0;
+		wav_data_length = 0;
+        wav_sample_rate = 0;
+        wav_bytes_per_sample = 0;
 		if (strlen(wav_file) < 1) return;
+
 		wav_fd = open(wav_file,O_RDONLY|O_BINARY);
 		if (wav_fd < 0) return;
-		wav_data_offset = 0;
-		wav_data_length = (unsigned long)lseek(wav_fd,0,SEEK_END);
-		lseek(wav_fd,0,SEEK_SET);
-		read(wav_fd,tmp,sizeof(tmp));
 
-		/* FIXME: This is a dumb quick and dirty WAVE header reader */
-		if (!memcmp(tmp,"RIFF",4) && !memcmp(tmp+8,"WAVEfmt ",8) && wav_data_length > 44) {
-			unsigned char *fmtc = tmp + 20;
-			/* fmt chunk at 12, where 'fmt '@12 and length of fmt @ 16, fmt data @ 20, 16 bytes long */
-			/* WORD    wFormatTag
-			 * WORD    nChannels
-			 * DWORD   nSamplesPerSec
-			 * DWORD   nAvgBytesPerSec
-			 * WORD    nBlockAlign
-			 * WORD    wBitsPerSample */
-			wav_sample_rate = *((uint32_t*)(fmtc + 4));
-            if (wav_sample_rate == 0UL) wav_sample_rate = 1UL;
-			wav_stereo = *((uint16_t*)(fmtc + 2)) > 1;
-			wav_16bit = *((uint16_t*)(fmtc + 14)) > 8;
-			wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
-			wav_data_offset = 44;
-			wav_data_length -= 44;
-			wav_data_length -= wav_data_length % wav_bytes_per_sample;
-		}
+        if (lseek(wav_fd,0,SEEK_SET) != 0) goto fail;
+
+        /* first, the RIFF:WAVE chunk */
+        /* 3 DWORDS: 'RIFF' <length> 'WAVE' */
+        if (read(wav_fd,tmp,12) != 12) goto fail;
+        if (memcmp(tmp+0,"RIFF",4) || memcmp(tmp+8,"WAVE",4)) goto fail;
+
+        scan = 12;
+        riff_length = *((uint32_t*)(tmp+4));
+        if (riff_length <= 44) goto fail;
+        riff_length -= 4; /* the length includes the 'WAVE' marker */
+
+        while ((scan+8UL) <= riff_length) {
+            /* RIFF chunks */
+            /* 2 WORDS: <fourcc> <length> */
+            if (lseek(wav_fd,scan,SEEK_SET) != scan) goto fail;
+            if (read(wav_fd,tmp,8) != 8) goto fail;
+            len = *((uint32_t*)(tmp+4));
+
+            /* process! */
+            if (!memcmp(tmp,"fmt ",4)) {
+                if (len >= 16 && len <= sizeof(tmp)) {
+                    if (read(wav_fd,tmp,len) == len) {
+#if 0
+                        typedef struct tWAVEFORMATEX {
+                            WORD  wFormatTag;               /* +0 */
+                            WORD  nChannels;                /* +2 */
+                            DWORD nSamplesPerSec;           /* +4 */
+                            DWORD nAvgBytesPerSec;          /* +8 */
+                            WORD  nBlockAlign;              /* +12 */
+                            WORD  wBitsPerSample;           /* +14 */
+                        } WAVEFORMATEX;
+#endif
+                        wav_sample_rate = *((uint32_t*)(tmp + 4));
+                        wav_stereo = *((uint16_t*)(tmp + 2)) > 1;
+                        wav_16bit = *((uint16_t*)(tmp + 14)) > 8;
+                        wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
+                    }
+                }
+            }
+            else if (!memcmp(tmp,"data",4)) {
+                wav_data_offset = scan + 8UL;
+                wav_data_length = len;
+            }
+
+            /* next! */
+            scan += len + 8UL;
+        }
+
+        if (wav_sample_rate == 0UL || wav_data_length == 0UL) goto fail;
 	}
 
 	update_cfg();
+    return;
+fail:
+    /* assume wav_fd >= 0 */
+    close(wav_fd);
+    wav_fd = -1;
 }
 
 static void free_dma_buffer() {
