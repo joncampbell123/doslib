@@ -609,19 +609,23 @@ int main(int argc,char **argv) {
 			printf("No cards found.\n");
 			return 1;
 		}
+        else if (count > 1) {
+            printf("-----------\n");
+            printf("Which card?: "); fflush(stdout);
 
-        printf("-----------\n");
-		printf("Which card?: "); fflush(stdout);
+            i = getch();
+            printf("\n");
+            if (i == 27) return 0;
+            if (i == 13 || i == 10) i = '1';
+            sc_idx = i - '0';
 
-		i = getch();
-		printf("\n");
-		if (i == 27) return 0;
-		if (i == 13 || i == 10) i = '1';
-		sc_idx = i - '0';
-
-        if (sc_idx < 1 || sc_idx > SNDSB_MAX_CARDS) {
-            printf("Sound card index out of range\n");
-            return 1;
+            if (sc_idx < 1 || sc_idx > SNDSB_MAX_CARDS) {
+                printf("Sound card index out of range\n");
+                return 1;
+            }
+        }
+        else { /* count == 1 */
+            sc_idx = 1;
         }
 
         sb_card = &sndsb_card[sc_idx-1];
