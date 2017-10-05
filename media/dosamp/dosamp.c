@@ -306,28 +306,6 @@ static void wav_idle() {
 
 static void update_cfg();
 
-static unsigned long playback_live_position() {
-	signed long xx = (signed long)sndsb_read_dma_buffer_position(sb_card);
-
-	if (sb_card->backwards) {
-		if (sb_card->buffer_last_io >= (unsigned long)xx)
-			xx += sb_card->buffer_size;
-
-		xx -= sb_card->buffer_size; /* because we started from the end */
-	}
-	else {
-		if (sb_card->buffer_last_io <= (unsigned long)xx)
-			xx -= sb_card->buffer_size;
-	}
-
-	if (sb_card->dsp_adpcm == ADPCM_4BIT) xx *= 2;
-	else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) xx *= 3;
-	else if (sb_card->dsp_adpcm == ADPCM_2BIT) xx *= 4;
-	xx += wav_buffer_filepos * wav_bytes_per_sample;
-	if (xx < 0) xx += wav_data_length;
-	return ((unsigned long)xx) / wav_bytes_per_sample;
-}
-
 static void close_wav() {
 	if (wav_fd >= 0) {
 		close(wav_fd);
@@ -508,17 +486,10 @@ static void begin_play() {
 static void stop_play() {
 	if (!wav_playing) return;
 
-    wav_position = playback_live_position();
-    wav_position -= wav_position % (unsigned long)wav_bytes_per_sample;
-
 	_cli();
 	sndsb_stop_dsp_playback(sb_card);
 	wav_playing = 0;
 	_sti();
-}
-
-static int confirm_quit() {
-	return 1;
 }
 
 static void update_cfg() {
@@ -774,11 +745,9 @@ int main(int argc,char **argv) {
 			if (i == 0) i = getch() << 8;
 
 			if (i == 27) {
-				if (confirm_quit()) {
-					loop = 0;
-					break;
-				}
-			}
+                loop = 0;
+                break;
+            }
 			else if (i == ' ') {
                 if (wav_playing) stop_play();
                 else begin_play();
