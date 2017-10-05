@@ -63,16 +63,6 @@ static unsigned char		wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
 static unsigned long		wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
 static unsigned char		wav_playing = 0;
 
-static inline unsigned char xdigit2int(char c) {
-	if (c >= '0' && c <= '9')
-		return (unsigned char)(c - '0');
-	else if (c >= 'a' && c <= 'f')
-		return (unsigned char)(c - 'a' + 10);
-	else if (c >= 'A' && c <= 'F')
-		return (unsigned char)(c - 'A' + 10);
-	return 0;
-}
-
 static void stop_play();
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
