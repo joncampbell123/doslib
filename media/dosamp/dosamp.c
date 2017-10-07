@@ -261,7 +261,7 @@ static const struct dosamp_file_source dosamp_file_source_priv_file_fd_init = {
     .p.file_fd.fd =                     -1
 };
 
-struct dosamp_file_source dosamp_FAR * dosamp_FAR dosamp_file_source_file_fd_open(const char * const path,const unsigned int flags/*O_RDONLY, etc*/,const unsigned int mode_t) {
+struct dosamp_file_source dosamp_FAR * dosamp_FAR dosamp_file_source_file_fd_open(const char * const path) {
     struct dosamp_file_source dosamp_FAR * inst;
     struct stat st;
 
@@ -278,7 +278,7 @@ struct dosamp_file_source dosamp_FAR * dosamp_FAR dosamp_file_source_file_fd_ope
     if (!S_ISREG(st.st_mode)) goto fail; /* not a file: fail */
     inst->file_size = (dosamp_file_off_t)st.st_size;
 
-    inst->p.file_fd.fd = open(path,flags|O_BINARY,mode_t);
+    inst->p.file_fd.fd = open(path,O_RDONLY|O_BINARY);
     if (inst->p.file_fd.fd < 0) goto fail;
 
     /* TODO: For Linux, and other OSes where we can fully identify a file
@@ -562,7 +562,7 @@ static int open_wav() {
         wav_bytes_per_sample = 0;
 		if (strlen(wav_file) < 1) return -1;
 
-        wav_source = dosamp_file_source_file_fd_open(wav_file,O_RDONLY,0);
+        wav_source = dosamp_file_source_file_fd_open(wav_file);
         if (wav_source == NULL) return -1;
         dosamp_file_source_addref(wav_source);
 
