@@ -339,7 +339,9 @@ struct wav_cbr_t {
 struct wav_cbr_t                        file_codec;
 struct wav_cbr_t                        play_codec;
 
-static unsigned long                    wav_data_offset = 44,wav_data_length = 0,wav_position = 0;
+static unsigned long                    wav_data_offset = 44;
+static unsigned long                    wav_data_length = 0;/* in samples */;
+static unsigned long                    wav_position = 0,wav_buffer_data_offset = 0;/* in samples */
 static unsigned char                    wav_playing = 0;
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
@@ -438,6 +440,9 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			how = max;
 		else if (!bufe && how < min)
 			break;
+
+        if (cx->buffer_last_io == 0)
+            wav_buffer_data_offset = wav_position;
 
         {
             uint32_t oa,adj;
@@ -649,6 +654,11 @@ static int open_wav() {
         if (file_codec.sample_rate == 0UL || wav_data_length == 0UL) goto fail;
 	}
 
+    /* convert length to samples */
+    wav_data_length /= file_codec.bytes_per_block;
+    wav_data_length *= file_codec.samples_per_block;
+
+    /* apply */
 	update_cfg();
     return 0;
 fail:
@@ -729,6 +739,8 @@ static int begin_play() {
         sb_card->buffer_size -= sb_card->buffer_size % adj;
         if (sb_card->buffer_size == 0UL) return -1;
     }
+
+    wav_buffer_data_offset = wav_position;
 
 	if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,/*16-bit*/file_codec.bits_per_sample > 8))
 		return -1;
@@ -813,7 +825,59 @@ static int parse_argv(int argc,char **argv) {
     return 1;
 }
 
+void display_idle_time(void) {
+	signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
+
+    if (pos < 0L) pos = 0L;
+    else if (pos > sb_card->buffer_size) pos = sb_card->buffer_size;
+}
+
+void display_idle_buffer(void) {
+	signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
+    signed long apos = (signed long)sb_card->buffer_last_io;
+    const unsigned char bar_width = 40;
+    unsigned char i,posi,aposi;
+
+    if (pos < 0L) pos = 0L;
+    else if (pos > sb_card->buffer_size) pos = sb_card->buffer_size;
+
+    if (apos < 0L) apos = 0L;
+    else if (apos > sb_card->buffer_size) apos = sb_card->buffer_size;
+
+    if (sb_card->buffer_size != 0UL) {
+        posi = (unsigned char)((pos * (unsigned long)(bar_width - 1U)) / (unsigned long)sb_card->buffer_size);
+        aposi = (unsigned char)((apos * (unsigned long)(bar_width - 1U)) / (unsigned long)sb_card->buffer_size);
+    }
+    else {
+        posi = 255U;
+        aposi = 255U;
+    }
+
+    printf("\x0D");
+
+    for (i=0;i < bar_width;i++) {
+        if (i == posi)
+            printf("p");
+        else if (i == aposi)
+            printf("a");
+        else
+            printf("-");
+    }
+
+    printf(" a=%6ld/p=%6ld/b=%6ld/irq=%lu",apos,pos,(signed long)sb_card->buffer_size,(unsigned long)sb_card->irq_counter);
+
+    fflush(stdout);
+}
+
+void display_idle(unsigned char disp) {
+    switch (disp) {
+        case 1:     display_idle_time(); break;
+        case 2:     display_idle_buffer(); break;
+    }
+}
+
 int main(int argc,char **argv) {
+    unsigned char disp=1;
 	int i,loop;
 
     if (!parse_argv(argc,argv))
@@ -1008,8 +1072,11 @@ int main(int argc,char **argv) {
     else if (begin_play() < 0)
         printf("Failed to start playback\n");
     else {
+        printf("Hit ESC to stop playback. Use 1-9 keys for other status.\n");
+
         while (loop) {
             wav_idle();
+            display_idle(disp);
 
             if (kbhit()) {
                 i = getch();
@@ -1018,6 +1085,14 @@ int main(int argc,char **argv) {
                 if (i == 27) {
                     loop = 0;
                     break;
+                }
+                else if (i >= '0' && i <= '9') {
+                    unsigned char nd = (unsigned char)(i-'0');
+
+                    if (disp != nd) {
+                        printf("\n");
+                        disp = nd;
+                    }
                 }
                 else if (i == ' ') {
                     if (wav_playing) stop_play();
