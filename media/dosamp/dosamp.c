@@ -814,7 +814,7 @@ static int parse_argv(int argc,char **argv) {
 }
 
 int main(int argc,char **argv) {
-	int i,loop,redraw,bkgndredraw;
+	int i,loop;
 
     if (!parse_argv(argc,argv))
         return 1;
@@ -1002,10 +1002,7 @@ int main(int argc,char **argv) {
 		p8259_unmask(sb_card->irq);
 	}
 
-	loop=1;
-	redraw=1;
-	bkgndredraw=1;
-
+	loop = 1;
     if (open_wav() < 0)
         printf("Failed to open file\n");
     else if (begin_play() < 0)
