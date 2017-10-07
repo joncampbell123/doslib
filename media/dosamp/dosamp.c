@@ -173,11 +173,16 @@ static unsigned int dosamp_file_source_file_fd_read(struct dosamp_file_source * 
 
     if (count > 0) {
 #ifdef dosamp_file_source_buffer_ptr_t_FAR
+        /* NTS: For 16-bit MS-DOS we must call MS-DOS read() directly instead of using the C runtime because
+         *      the read() function in Open Watcom takes only a near pointer in small and compact memory models. */
         rd = _dos_xread(inst->p.file_fd.fd,buf,count);
 #else
         rd = read(inst->p.file_fd.fd,buf,count);
 #endif
-        if (rd < 0) return dosamp_file_io_err; /* also sets errno */
+        /* TODO: Open Watcom C always returns -1 on error (I checked the C runtime source to verify this)
+         *       The _dos_xread() function in DOSLIB also returns -1 on error (note the SBB BX,BX and OR AX,BX in that code to enforce this when CF=1).
+         *       For other OSes like Win32 and Linux we can't assume the same behavior. */
+        if (rd == -1) return dosamp_file_io_err; /* also sets errno */
         inst->file_pos += (unsigned int)rd;
     }
 
