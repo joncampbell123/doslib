@@ -341,7 +341,9 @@ struct wav_cbr_t                        play_codec;
 
 static unsigned long                    wav_data_offset = 44;
 static unsigned long                    wav_data_length = 0;/* in samples */;
-static unsigned long                    wav_position = 0,wav_buffer_data_offset = 0;/* in samples */
+static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
+static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
+static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
 static unsigned char                    wav_playing = 0;
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
@@ -441,9 +443,6 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 		else if (!bufe && how < min)
 			break;
 
-        if (cx->buffer_last_io == 0)
-            wav_buffer_data_offset = wav_position;
-
         {
             uint32_t oa,adj;
 
@@ -516,6 +515,23 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	}
 }
 
+void update_wav_play_delay(uint32_t dma_pos/*in bytes*/) {
+    signed long delay;
+
+    /* DMA trails our "last IO" pointer */
+    delay  = (signed long)sb_card->buffer_last_io;
+    delay -= (signed long)dma_pos;
+    if (delay < 0L) delay += (signed long)sb_card->buffer_size;
+
+    /* guard against inconcievable cases */
+    if (delay < 0L) delay = 0L;
+    if (delay >= (signed long)sb_card->buffer_size) delay = (signed long)sb_card->buffer_size;
+
+    /* convert to samples */
+    wav_play_delay_bytes = (unsigned long)delay;
+    wav_play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
+}
+
 #define DMA_WRAP_DEBUG
 
 static void wav_idle() {
@@ -565,12 +581,20 @@ static void wav_idle() {
 		else pos -= leeway;
 	}
 #endif
-	pos &= (~3UL); /* round down */
+    /* round down because DMA does not care about sample boundaries.
+     * it's entirely possible 'pos' is in the middle of a 16-bit sample
+     * or between L and R of a stereo PCM stream.
+     *
+     * we're not the only one who assumes otherwise, experience says that
+     * certain ISA sound cards in Windows 98 have the same problem with
+     * DirectX and circular sound buffers when you query the current position.  */
+	pos &= (~3UL);
 	_sti();
 
     /* load from disk */
     load_audio(sb_card,pos,min(file_codec.sample_rate/8,4096)/*min*/,
         sb_card->buffer_size/4/*max*/,0/*first block*/);
+    update_wav_play_delay(pos);
 }
 
 static void update_cfg();
@@ -711,6 +735,9 @@ static int begin_play() {
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
         return -1;
 
+    /* reset state */
+    wav_play_delay = 0;
+
     /* alloc DMA buffer.
      * if already allocated, then realloc if changing from 8-bit to 16-bit DMA */
     if (sb_dma == NULL)
@@ -740,14 +767,13 @@ static int begin_play() {
         if (sb_card->buffer_size == 0UL) return -1;
     }
 
-    wav_buffer_data_offset = wav_position;
-
 	if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,/*16-bit*/file_codec.bits_per_sample > 8))
 		return -1;
 
 	sndsb_setup_dma(sb_card);
 
     load_audio(sb_card,sb_card->buffer_size/2,0/*min*/,0/*max*/,1/*first block*/);
+    update_wav_play_delay(0/*DMA hasn't started yet*/);
 
 	/* make sure the IRQ is acked */
 	if (sb_card->irq >= 8) {
@@ -835,7 +861,7 @@ void display_idle_time(void) {
 void display_idle_buffer(void) {
 	signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
     signed long apos = (signed long)sb_card->buffer_last_io;
-    const unsigned char bar_width = 40;
+    const unsigned char bar_width = 30;
     unsigned char i,posi,aposi;
 
     if (pos < 0L) pos = 0L;
@@ -864,7 +890,7 @@ void display_idle_buffer(void) {
             printf("-");
     }
 
-    printf(" a=%6ld/p=%6ld/b=%6ld/irq=%lu",apos,pos,(signed long)sb_card->buffer_size,(unsigned long)sb_card->irq_counter);
+    printf(" a=%6ld/p=%6ld/b=%6ld/d=%6lu/irq=%lu",apos,pos,(signed long)sb_card->buffer_size,(unsigned long)wav_play_delay_bytes,(unsigned long)sb_card->irq_counter);
 
     fflush(stdout);
 }
