@@ -324,7 +324,7 @@ fail:
 
 static dosamp_file_source_t             wav_source = NULL;
 
-static char                             wav_file[130] = {0};
+static char*                            wav_file = NULL;
 
 static unsigned char                    wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
 static unsigned long                    wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
@@ -588,6 +588,7 @@ static int open_wav() {
 		wav_data_length = 0;
         wav_sample_rate = 0;
         wav_bytes_per_sample = 0;
+        if (wav_file == NULL) return -1;
 		if (strlen(wav_file) < 1) return -1;
 
         wav_source = dosamp_file_source_file_fd_open(wav_file);
@@ -777,13 +778,12 @@ static int parse_argv(int argc,char **argv) {
             }
         }
         else {
-            size_t l = strlen(a);
-            if (l >= sizeof(wav_file)) return 0;
-            strcpy(wav_file,a);
+            if (wav_file != NULL) return 0;
+            wav_file = strdup(a);
         }
 	}
 
-    if (wav_file[0] == 0) {
+    if (wav_file == NULL) {
         printf("You must specify a file to play\n");
         return 0;
     }
