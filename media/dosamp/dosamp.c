@@ -339,7 +339,7 @@ struct wav_cbr_t {
 struct wav_cbr_t                        file_codec;
 struct wav_cbr_t                        play_codec;
 
-static unsigned long                    wav_data_offset = 44,wav_data_length = 0,wav_position = 0,wav_buffer_filepos = 0;
+static unsigned long                    wav_data_offset = 44,wav_data_length = 0,wav_position = 0;
 static unsigned char                    wav_playing = 0;
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
@@ -406,9 +406,6 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 
 	wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
 
-	if (cx->buffer_last_io == 0)
-		wav_buffer_filepos = wav_position;
-
 	while (max > 0UL) {
 		if (cx->backwards) {
 			if (up_to > cx->buffer_last_io) {
@@ -441,9 +438,6 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			how = max;
 		else if (!bufe && how < min)
 			break;
-
-		if (cx->buffer_last_io == 0)
-			wav_buffer_filepos = wav_position;
 
         {
             uint32_t oa,adj;
@@ -515,9 +509,6 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 		}
 		max -= (uint32_t)rd;
 	}
-
-	if (cx->buffer_last_io == 0)
-		wav_buffer_filepos = wav_position;
 }
 
 #define DMA_WRAP_DEBUG
