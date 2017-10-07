@@ -1,5 +1,10 @@
 
 #include <stdio.h>
+#ifdef LINUX
+#include <endian.h>
+#else
+#include <hw/cpu/endian.h>
+#endif
 #ifndef LINUX
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <direct.h>
@@ -26,6 +31,17 @@
 #include <hw/dos/tgusumid.h>
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+
+#pragma pack(push,1)
+typedef struct windows_WAVEFORMATPCM {
+    uint16_t    wFormatTag;             /* +0 */
+    uint16_t    nChannels;              /* +2 */
+    uint32_t    nSamplesPerSec;         /* +4 */
+    uint32_t    nAvgBytesPerSec;        /* +8 */
+    uint16_t    nBlockAlign;            /* +12 */
+    uint16_t    wBitsPerSample;         /* +14 */
+} windows_WAVEFORMATPCM;                /* =16 */
+#pragma pack(pop)
 
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
@@ -597,21 +613,13 @@ static int open_wav() {
 
             /* process! */
             if (!memcmp(tmp,"fmt ",4)) {
-                if (len >= 16 && len <= sizeof(tmp)) {
+                if (len >= sizeof(windows_WAVEFORMATPCM)/*16*/ && len <= sizeof(tmp)) {
                     if (wav_source->read(wav_source,tmp,len) == len) {
-#if 0
-                        typedef struct tWAVEFORMATEX {
-                            WORD  wFormatTag;               /* +0 */
-                            WORD  nChannels;                /* +2 */
-                            DWORD nSamplesPerSec;           /* +4 */
-                            DWORD nAvgBytesPerSec;          /* +8 */
-                            WORD  nBlockAlign;              /* +12 */
-                            WORD  wBitsPerSample;           /* +14 */
-                        } WAVEFORMATEX;
-#endif
-                        wav_sample_rate = *((uint32_t*)(tmp + 4));
-                        wav_stereo = *((uint16_t*)(tmp + 2)) > 1;
-                        wav_16bit = *((uint16_t*)(tmp + 14)) > 8;
+                        windows_WAVEFORMATPCM *wfx = (windows_WAVEFORMATPCM*)tmp;
+
+                        wav_sample_rate = le32toh(wfx->nSamplesPerSec);
+                        wav_stereo = le16toh(wfx->nChannels) > 1;
+                        wav_16bit = le16toh(wfx->wBitsPerSample) > 8;
                         wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
                     }
                 }
