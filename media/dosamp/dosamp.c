@@ -27,6 +27,20 @@
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
 
+/* this code won't work with the TINY memory model for awhile. sorry. */
+#ifdef __TINY__
+# error Open Watcom C tiny memory model not supported
+#endif
+
+/* making the API use FAR CALL function pointers will allow future development
+ * where file access and media playback code can exist in external DLLs, whether
+ * 16-bit or 32-bit code */
+#if TARGET_MSDOS == 32 && !defined(WIN386)
+# define dosamp_FAR
+#else
+# define dosamp_FAR far
+#endif
+
 #if TARGET_MSDOS == 32
 static inline unsigned char *dosamp_ptr_add_normalize(unsigned char * const p,const unsigned int o) {
     return p + o;
@@ -70,13 +84,6 @@ static const unsigned int               dosamp_file_io_maxb = UINT_MAX - 1U;
 static const unsigned int               dosamp_file_io_err = UINT_MAX;
 #endif
 
-#if TARGET_MSDOS == 32 && !defined(WIN386)
-typedef unsigned char*                  dosamp_file_source_buffer_ptr_t;
-#else
-# define dosamp_file_source_buffer_ptr_t_FAR
-typedef unsigned char far*              dosamp_file_source_buffer_ptr_t;
-#endif
-
 #if TARGET_MSDOS == 32
 # if defined(TARGET_WINDOWS) && !defined(WIN386)
 /* 32-bit Windows and later can support files >= 4GB */
@@ -113,21 +120,21 @@ typedef struct dosamp_file_source {
     int                                 open_flags; /* O_RDONLY, O_WRONLY, O_RDWR, etc. used to open file or 0 if closed */
     int64_t                             file_size;  /* file size in bytes (if known) or -1LL */
     int64_t                             file_pos;   /* file pointer or -1LL if not known */
-    void                                (*free)(struct dosamp_file_source * const inst); /* free the file source */
-    int                                 (*close)(struct dosamp_file_source * const inst); /* call this to close the file */
-    unsigned int                        (*read)(struct dosamp_file_source * const inst,dosamp_file_source_buffer_ptr_t buf,unsigned int count); /* read function */
-    unsigned int                        (*write)(struct dosamp_file_source * const inst,const dosamp_file_source_buffer_ptr_t buf,unsigned int count); /* write function */
-    dosamp_file_off_t                   (*seek)(struct dosamp_file_source * const inst,dosamp_file_off_t pos); /* seek function */
+    void                                (dosamp_FAR * free)(struct dosamp_file_source dosamp_FAR * const inst); /* free the file source */
+    int                                 (dosamp_FAR * close)(struct dosamp_file_source dosamp_FAR * const inst); /* call this to close the file */
+    unsigned int                        (dosamp_FAR * read)(struct dosamp_file_source dosamp_FAR * const inst,void dosamp_FAR *buf,unsigned int count); /* read function */
+    unsigned int                        (dosamp_FAR * write)(struct dosamp_file_source dosamp_FAR * const inst,const void dosamp_FAR *buf,unsigned int count); /* write function */
+    dosamp_file_off_t                   (dosamp_FAR * seek)(struct dosamp_file_source dosamp_FAR * const inst,dosamp_file_off_t pos); /* seek function */
     union {
         struct dosamp_file_source_priv_file_fd      file_fd;
     } p;
 };
 
-static inline unsigned int dosamp_file_source_addref(struct dosamp_file_source * const inst) {
+static inline unsigned int dosamp_FAR dosamp_file_source_addref(struct dosamp_file_source dosamp_FAR * const inst) {
     return ++(inst->refcount);
 }
 
-unsigned int dosamp_file_source_release(struct dosamp_file_source * const inst) {
+unsigned int dosamp_FAR dosamp_file_source_release(struct dosamp_file_source dosamp_FAR * const inst) {
     if (inst->refcount != 0)
         inst->refcount--;
     // TODO: else, debug message if refcount == 0
@@ -135,7 +142,23 @@ unsigned int dosamp_file_source_release(struct dosamp_file_source * const inst) 
     return inst->refcount;
 }
 
-struct dosamp_file_source *dosamp_file_source_alloc(const struct dosamp_file_source * const inst_template) {
+unsigned int dosamp_FAR dosamp_file_source_autofree(struct dosamp_file_source dosamp_FAR * dosamp_FAR * inst) {
+    unsigned int r = 0;
+
+    /* assume inst != NULL */
+    if (*inst != NULL) {
+        r = (*inst)->refcount;
+        if (r == 0) {
+            (*inst)->close(*inst);
+            (*inst)->free(*inst);
+            *inst = NULL;
+        }
+    }
+
+    return r;
+}
+
+struct dosamp_file_source dosamp_FAR * dosamp_FAR dosamp_file_source_alloc(const struct dosamp_file_source dosamp_FAR * const inst_template) {
     struct dosamp_file_source *inst;
 
     if ((inst=malloc(sizeof(*inst))) != NULL)
@@ -144,13 +167,17 @@ struct dosamp_file_source *dosamp_file_source_alloc(const struct dosamp_file_sou
     return inst;
 }
 
-void dosamp_file_source_free(struct dosamp_file_source * const inst) {
+void dosamp_FAR dosamp_file_source_free(struct dosamp_file_source dosamp_FAR * const inst) {
     /* the reason we have a common free() is to enable pooling of structs in the future */
     /* ASSUME: inst != NULL */
+#if TARGET_MSDOS == 16
+    _ffree(inst);
+#else
     free(inst);
+#endif
 }
 
-static int dosamp_file_source_file_fd_close(struct dosamp_file_source * const inst) {
+static int dosamp_FAR dosamp_file_source_file_fd_close(struct dosamp_file_source dosamp_FAR * const inst) {
     /* ASSUME: inst != NULL */
     if (inst->p.file_fd.fd >= 0) {
         close(inst->p.file_fd.fd);
@@ -160,19 +187,19 @@ static int dosamp_file_source_file_fd_close(struct dosamp_file_source * const in
     return 0;/*success*/
 }
 
-static void dosamp_file_source_file_fd_free(struct dosamp_file_source * const inst) {
+static void dosamp_FAR dosamp_file_source_file_fd_free(struct dosamp_file_source dosamp_FAR * const inst) {
     dosamp_file_source_file_fd_close(inst);
     dosamp_file_source_free(inst);
 }
 
-static unsigned int dosamp_file_source_file_fd_read(struct dosamp_file_source * const inst,dosamp_file_source_buffer_ptr_t buf,unsigned int count) {
+static unsigned int dosamp_FAR dosamp_file_source_file_fd_read(struct dosamp_file_source dosamp_FAR * const inst,void dosamp_FAR * buf,unsigned int count) {
     int rd = 0;
 
     if (inst->p.file_fd.fd < 0 || count > dosamp_file_io_maxb)
         return dosamp_file_io_err;
 
     if (count > 0) {
-#ifdef dosamp_file_source_buffer_ptr_t_FAR
+#if TARGET_MSDOS == 16
         /* NTS: For 16-bit MS-DOS we must call MS-DOS read() directly instead of using the C runtime because
          *      the read() function in Open Watcom takes only a near pointer in small and compact memory models. */
         rd = _dos_xread(inst->p.file_fd.fd,buf,count);
@@ -189,12 +216,12 @@ static unsigned int dosamp_file_source_file_fd_read(struct dosamp_file_source * 
     return (unsigned int)rd;
 }
 
-static unsigned int dosamp_file_source_file_fd_write(struct dosamp_file_source * const inst,const dosamp_file_source_buffer_ptr_t buf,unsigned int count) {
+static unsigned int dosamp_FAR dosamp_file_source_file_fd_write(struct dosamp_file_source dosamp_FAR * const inst,const void dosamp_FAR * buf,unsigned int count) {
     errno = EIO; /* not implemented */
     return dosamp_file_io_err;
 }
 
-static dosamp_file_off_t dosamp_file_source_file_fd_seek(struct dosamp_file_source * const inst,dosamp_file_off_t pos) {
+static dosamp_file_off_t dosamp_FAR dosamp_file_source_file_fd_seek(struct dosamp_file_source dosamp_FAR * const inst,dosamp_file_off_t pos) {
     off_t r;
 
     if (inst->p.file_fd.fd < 0 || pos == dosamp_file_io_err)
@@ -222,8 +249,8 @@ static const struct dosamp_file_source dosamp_file_source_priv_file_fd_init = {
     .p.file_fd.fd =                     -1
 };
 
-struct dosamp_file_source *dosamp_file_source_file_fd_open(const char * const path,const unsigned int flags/*O_RDONLY, etc*/,const unsigned int mode_t) {
-    struct dosamp_file_source *inst;
+struct dosamp_file_source dosamp_FAR * dosamp_FAR dosamp_file_source_file_fd_open(const char * const path,const unsigned int flags/*O_RDONLY, etc*/,const unsigned int mode_t) {
+    struct dosamp_file_source dosamp_FAR * inst;
     struct stat st;
 
     if (path == NULL) return NULL;
@@ -249,13 +276,13 @@ struct dosamp_file_source *dosamp_file_source_file_fd_open(const char * const pa
 
     return inst;
 fail_fd:
-    dosamp_file_source_file_fd_close(inst);
 fail:
-    dosamp_file_source_file_fd_free(inst);
+    inst->close(inst);
+    inst->free(inst);
     return NULL;
 }
 
-static struct dosamp_file_source*       wav_source = NULL;
+static struct dosamp_file_source dosamp_FAR *wav_source = NULL;
 
 static char                             wav_file[130] = {0};
 
@@ -510,7 +537,7 @@ static void close_wav() {
 	}
 }
 
-static void open_wav() {
+static int open_wav() {
 	char tmp[64];
 
 	if (wav_source == NULL) {
@@ -521,10 +548,11 @@ static void open_wav() {
 		wav_data_length = 0;
         wav_sample_rate = 0;
         wav_bytes_per_sample = 0;
-		if (strlen(wav_file) < 1) return;
+		if (strlen(wav_file) < 1) return -1;
 
         wav_source = dosamp_file_source_file_fd_open(wav_file,O_RDONLY,0);
-        if (wav_source == NULL) return;
+        if (wav_source == NULL) return -1;
+        dosamp_file_source_addref(wav_source);
 
         /* first, the RIFF:WAVE chunk */
         /* 3 DWORDS: 'RIFF' <length> 'WAVE' */
@@ -574,16 +602,15 @@ static void open_wav() {
         }
 
         if (wav_sample_rate == 0UL || wav_data_length == 0UL) goto fail;
-
-        dosamp_file_source_addref(wav_source);
 	}
 
 	update_cfg();
-    return;
+    return 0;
 fail:
-    wav_source->close(wav_source);
-    wav_source->free(wav_source);
+    dosamp_file_source_release(wav_source);
+    dosamp_file_source_autofree(&wav_source);
     wav_source = NULL;
+    return -1;
 }
 
 static void free_dma_buffer() {
@@ -925,26 +952,30 @@ int main(int argc,char **argv) {
 	redraw=1;
 	bkgndredraw=1;
 
-    open_wav();
-    begin_play();
+    if (open_wav() < 0) {
+        printf("Failed to open file\n");
+    }
+    else {
+        begin_play();
 
-	while (loop) {
-        wav_idle();
+        while (loop) {
+            wav_idle();
 
-		if (kbhit()) {
-			i = getch();
-			if (i == 0) i = getch() << 8;
+            if (kbhit()) {
+                i = getch();
+                if (i == 0) i = getch() << 8;
 
-			if (i == 27) {
-                loop = 0;
-                break;
+                if (i == 27) {
+                    loop = 0;
+                    break;
+                }
+                else if (i == ' ') {
+                    if (wav_playing) stop_play();
+                    else begin_play();
+                }
             }
-			else if (i == ' ') {
-                if (wav_playing) stop_play();
-                else begin_play();
-            }
-		}
-	}
+        }
+    }
 
 	_sti();
 	stop_play();

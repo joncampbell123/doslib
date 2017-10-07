@@ -5,7 +5,6 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 
 dos=1
 doshuge=1
-dostiny=1 # MS-DOS tiny model
 
 if [ "$1" == "clean" ]; then
     do_clean
