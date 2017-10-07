@@ -339,6 +339,8 @@ struct wav_cbr_t {
 struct wav_cbr_t                        file_codec;
 struct wav_cbr_t                        play_codec;
 
+static unsigned long                    wav_play_dma_position = 0;
+static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_data_offset = 44;
 static unsigned long                    wav_data_length = 0;/* in samples */;
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
@@ -528,8 +530,17 @@ void update_wav_play_delay(uint32_t dma_pos/*in bytes*/) {
     if (delay >= (signed long)sb_card->buffer_size) delay = (signed long)sb_card->buffer_size;
 
     /* convert to samples */
+    wav_play_dma_position = dma_pos;
     wav_play_delay_bytes = (unsigned long)delay;
     wav_play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
+}
+
+void update_play_position(void) {
+    signed long pos;
+
+    pos = wav_position - wav_play_delay;
+    if (pos < 0L) pos = 0L;
+    wav_play_position = (unsigned long)pos;
 }
 
 #define DMA_WRAP_DEBUG
@@ -595,6 +606,7 @@ static void wav_idle() {
     load_audio(sb_card,pos,min(file_codec.sample_rate/8,4096)/*min*/,
         sb_card->buffer_size/4/*max*/,0/*first block*/);
     update_wav_play_delay(pos);
+    update_play_position();
 }
 
 static void update_cfg();
@@ -774,6 +786,7 @@ static int begin_play() {
 
     load_audio(sb_card,sb_card->buffer_size/2,0/*min*/,0/*max*/,1/*first block*/);
     update_wav_play_delay(0/*DMA hasn't started yet*/);
+    update_play_position();
 
 	/* make sure the IRQ is acked */
 	if (sb_card->irq >= 8) {
@@ -852,10 +865,44 @@ static int parse_argv(int argc,char **argv) {
 }
 
 void display_idle_time(void) {
-	signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
+    unsigned long w,f;
+    unsigned char hour,min,sec,centisec;
+    unsigned char percent;
 
-    if (pos < 0L) pos = 0L;
-    else if (pos > sb_card->buffer_size) pos = sb_card->buffer_size;
+    /* to stay within numerical limits of unsigned long, divide into whole and fraction by sample rate */
+    w = wav_play_position / (unsigned long)play_codec.sample_rate;
+    f = wav_play_position % (unsigned long)play_codec.sample_rate;
+
+    /* we can then turn the whole part into HH:MM:SS */
+    sec = (unsigned char)(w % 60UL); w /= 60UL;
+    min = (unsigned char)(w % 60UL); w /= 60UL;
+    hour = (unsigned char)w; /* don't bother modulus, WAV files couldn't possibly represent things that long */
+
+    /* and then use the more limited numeric range to turn the fractional part into centiseconds */
+    centisec = (unsigned char)((f * 100UL) / (unsigned long)play_codec.sample_rate);
+
+    /* also provide the user some information on the length of the WAV */
+    {
+        unsigned long m,d;
+
+        m = wav_play_position;
+        d = wav_data_length;
+
+        while ((m|d) >= 0x100000UL) {
+            m >>= 1UL;
+            d >>= 1UL;
+        }
+
+        if (d == 0UL) d = 1UL;
+
+        percent = (unsigned char)((m * 100UL) / d);
+    }
+
+    /* TODO: If you look at a raw stream of positions, the position at start of playback will briefly
+     *       flash at a value roughly that of the buffer size. */
+    printf("\x0D");
+    printf("%02u:%02u:%02u.%02u %%%02u %lu / %lu ",hour,min,sec,centisec,percent,wav_play_position,wav_data_length);
+    fflush(stdout);
 }
 
 void display_idle_buffer(void) {
