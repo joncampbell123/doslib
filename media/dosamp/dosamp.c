@@ -339,7 +339,7 @@ struct wav_cbr_t {
 struct wav_cbr_t                        file_codec;
 struct wav_cbr_t                        play_codec;
 
-static unsigned char                    wav_stereo = 0,wav_16bit = 0;
+static unsigned char                    wav_16bit = 0;
 static unsigned long                    wav_data_offset = 44,wav_data_length = 0,wav_position = 0,wav_buffer_filepos = 0;
 static unsigned char                    wav_playing = 0;
 
@@ -402,7 +402,6 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	if (cx->buffer_size < 32) return;
 	if (cx->buffer_last_io == up_to) return;
 
-	if (sb_card->dsp_adpcm > 0 && (wav_16bit || wav_stereo)) return;
 	if (max == 0) max = cx->buffer_size/4;
 	if (max < 16) return;
 
@@ -643,7 +642,6 @@ static int open_wav() {
                                         ((file_codec.bits_per_sample + 7U) >> 3U) *
                                         file_codec.number_of_channels;
 
-                                    wav_stereo = file_codec.number_of_channels > 1;
                                     wav_16bit = file_codec.bits_per_sample > 8;
                                 }
                             }
@@ -685,7 +683,7 @@ static void realloc_dma_buffer() {
 
     free_dma_buffer();
 
-    ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,file_codec.sample_rate,wav_stereo,wav_16bit);
+    ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,wav_16bit);
 
     if (ch >= 4)
         choice = sndsb_recommended_16bit_dma_buffer_size(sb_card,0);
@@ -720,7 +718,7 @@ static void begin_play() {
         realloc_dma_buffer();
 
     {
-        int8_t ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,file_codec.sample_rate,wav_stereo,wav_16bit);
+        int8_t ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,wav_16bit);
         if (ch >= 0) {
             if (sb_dma->dma_width != (ch >= 4 ? 16 : 8))
                 realloc_dma_buffer();
@@ -740,7 +738,7 @@ static void begin_play() {
 	choice_rate = file_codec.sample_rate;
 
 	update_cfg();
-	if (!sndsb_prepare_dsp_playback(sb_card,choice_rate,wav_stereo,wav_16bit))
+	if (!sndsb_prepare_dsp_playback(sb_card,choice_rate,/*stereo*/file_codec.number_of_channels > 1,wav_16bit))
 		return;
 
 	sndsb_setup_dma(sb_card);
