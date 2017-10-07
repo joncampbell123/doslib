@@ -496,5 +496,9 @@ static inline void detect_dos_version_enable_win9x_qt_thunk() {
 
 uint32_t dos_linear_to_phys_vcpi(uint32_t pn);
 
+#if !defined(TARGET_WINDOWS) && !defined(WIN386) && !defined(TARGET_OS2)
+int vector_is_iret(const unsigned char vector);
+#endif
+
 #endif /* __HW_DOS_DOS_H */
 
