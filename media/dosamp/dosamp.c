@@ -687,14 +687,13 @@ static void realloc_dma_buffer() {
         if (sb_dma == NULL) choice -= 4096UL;
     } while (sb_dma == NULL && choice > 4096UL);
 
+    /* NTS: We WANT to call sndsb_assign_dma_buffer with sb_dma == NULL if it happens because it tells the Sound Blaster library to cancel it's copy as well */
     if (!sndsb_assign_dma_buffer(sb_card,sb_dma))
-        return;
-    if (sb_dma == NULL)
         return;
 }
 
 static void begin_play() {
-	unsigned long choice_rate;
+    int8_t ch;
 
 	if (wav_playing)
 		return;
@@ -702,31 +701,36 @@ static void begin_play() {
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
         return;
 
+    /* alloc DMA buffer.
+     * if already allocated, then realloc if changing from 8-bit to 16-bit DMA */
     if (sb_dma == NULL)
         realloc_dma_buffer();
+    else {
+        ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,
+            /*rate*/file_codec.sample_rate,
+            /*stereo*/file_codec.number_of_channels > 1,
+            /*16-bit*/file_codec.bits_per_sample > 8);
 
-    {
-        int8_t ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,/*16-bit*/file_codec.bits_per_sample > 8);
-        if (ch >= 0) {
-            if (sb_dma->dma_width != (ch >= 4 ? 16 : 8))
-                realloc_dma_buffer();
-            if (sb_dma == NULL)
-                return;
-        }
+        if (ch >= 0 && sb_dma->dma_width != (ch >= 4 ? 16 : 8))
+            realloc_dma_buffer();
     }
 
-    if (sb_dma != NULL) {
-        if (!sndsb_assign_dma_buffer(sb_card,sb_dma))
-            return;
-    }
-
-	if (wav_source == NULL)
+    if (sb_dma == NULL)
+        return;
+    if (wav_source == NULL)
 		return;
 
-	choice_rate = file_codec.sample_rate;
+    /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
+     * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
+    {
+        uint32_t adj = 2UL * (unsigned long)play_codec.bytes_per_block;
 
-	update_cfg();
-	if (!sndsb_prepare_dsp_playback(sb_card,choice_rate,/*stereo*/file_codec.number_of_channels > 1,/*16-bit*/file_codec.bits_per_sample > 8))
+        sb_card->buffer_size = sb_dma->length;
+        sb_card->buffer_size -= sb_card->buffer_size % adj;
+        if (sb_card->buffer_size == 0UL) return;
+    }
+
+	if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,/*16-bit*/file_codec.bits_per_sample > 8))
 		return;
 
 	sndsb_setup_dma(sb_card);
@@ -735,12 +739,14 @@ static void begin_play() {
 
 	/* make sure the IRQ is acked */
 	if (sb_card->irq >= 8) {
-		p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
-		p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+		p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7)); /* IRQ */
+		p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2); /* IRQ cascade */
 	}
 	else if (sb_card->irq >= 0) {
-		p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+		p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq); /* IRQ */
 	}
+
+    /* unmask the IRQ, prepare */
 	if (sb_card->irq >= 0)
 		p8259_unmask(sb_card->irq);
 
