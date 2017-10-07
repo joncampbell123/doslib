@@ -639,6 +639,8 @@ int main(int argc,char **argv) {
                     isa_pnp_write_data_register(0x02,0x02);	/* bit 1: set -> return to Wait For Key state (or else a Pentium Pro system I own eventually locks up and hangs) */
                 }
             }
+
+            free(devnode_raw);
         }
     }
 
