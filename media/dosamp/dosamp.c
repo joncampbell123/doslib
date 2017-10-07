@@ -289,8 +289,8 @@ static const struct dosamp_file_source dosamp_file_source_priv_file_fd_init = {
  *        where WE open the file and hand the DLL the file source object, and it doesn't have to care
  *        about opening, but that would then prevent future media code that may have to read from multiple
  *        files. */
-struct dosamp_file_source dosamp_FAR * dosamp_FAR dosamp_file_source_file_fd_open(const char * const path) {
-    struct dosamp_file_source dosamp_FAR * inst;
+dosamp_file_source_t dosamp_file_source_file_fd_open(const char * const path) {
+    dosamp_file_source_t inst;
     struct stat st;
 
     if (path == NULL) return NULL;
