@@ -858,18 +858,18 @@ void display_idle_time(void) {
         m = wav_play_position;
         d = wav_data_length;
 
+        /* it's a percentage from 0 to 99, we don't need high precision for large files */
         while ((m|d) >= 0x100000UL) {
-            m >>= 1UL;
-            d >>= 1UL;
+            m >>= 4UL;
+            d >>= 4UL;
         }
 
+        /* we don't want divide by zero */
         if (d == 0UL) d = 1UL;
 
         percent = (unsigned char)((m * 100UL) / d);
     }
 
-    /* TODO: If you look at a raw stream of positions, the position at start of playback will briefly
-     *       flash at a value roughly that of the buffer size. */
     printf("\x0D");
     printf("%02u:%02u:%02u.%02u %%%02u %lu / %lu ",hour,min,sec,centisec,percent,wav_play_position,wav_data_length);
     fflush(stdout);
