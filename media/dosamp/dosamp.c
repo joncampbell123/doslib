@@ -339,8 +339,8 @@ struct wav_cbr_t {
 struct wav_cbr_t                        file_codec;
 struct wav_cbr_t                        play_codec;
 
-static unsigned char                    wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
-static unsigned long                    wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
+static unsigned char                    wav_stereo = 0,wav_16bit = 0;
+static unsigned long                    wav_data_offset = 44,wav_data_length = 0,wav_position = 0,wav_buffer_filepos = 0;
 static unsigned char                    wav_playing = 0;
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
@@ -406,7 +406,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	if (max == 0) max = cx->buffer_size/4;
 	if (max < 16) return;
 
-	wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample));
+	wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
 
 	if (cx->buffer_last_io == 0)
 		wav_buffer_filepos = wav_position;
@@ -462,17 +462,17 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 					abort();
 				}
 
-				adj = (uint32_t)how / wav_bytes_per_sample;
+				adj = (uint32_t)how / file_codec.bytes_per_block;
 				if (wav_position >= adj) wav_position -= adj;
 				else if (wav_position != 0UL) wav_position = 0;
 				else {
 					wav_position = wav_source->file_size;
 					if (wav_position >= adj) wav_position -= adj;
 					else if (wav_position != 0UL) wav_position = 0;
-					wav_position /= wav_bytes_per_sample;
+					wav_position /= file_codec.bytes_per_block;
 				}
 
-				wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample));
+				wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
 			}
 
 			assert(cx->buffer_last_io <= cx->buffer_size);
@@ -480,7 +480,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			if (rd == 0 || rd == -1) {
 				if (!cx->backwards) {
 					wav_position = 0;
-					wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample));
+					wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
 					rd = wav_source->read(wav_source,dosamp_ptr_add_normalize(buffer,cx->buffer_last_io),how);
 					if (rd == 0 || rd == -1) {
 						/* hmph, fine */
@@ -507,7 +507,7 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 
 			if (!cx->backwards) {
 				cx->buffer_last_io += (uint32_t)rd;
-				wav_position += (uint32_t)rd / wav_bytes_per_sample;
+				wav_position += (uint32_t)rd / file_codec.bytes_per_block;
 			}
 		}
 
@@ -575,7 +575,7 @@ static void wav_idle() {
 	_sti();
 
     /* load from disk */
-    load_audio(sb_card,pos,min(wav_sample_rate/8,4096)/*min*/,
+    load_audio(sb_card,pos,min(file_codec.sample_rate/8,4096)/*min*/,
         sb_card->buffer_size/4/*max*/,0/*first block*/);
 }
 
@@ -599,8 +599,6 @@ static int open_wav() {
 	    wav_position = 0;
 		wav_data_offset = 0;
 		wav_data_length = 0;
-        wav_sample_rate = 0;
-        wav_bytes_per_sample = 0;
         if (wav_file == NULL) return -1;
 		if (strlen(wav_file) < 1) return -1;
 
@@ -631,8 +629,6 @@ static int open_wav() {
                     if (wav_source->read(wav_source,tmp,len) == len) {
                         windows_WAVEFORMATPCM *wfx = (windows_WAVEFORMATPCM*)tmp;
 
-                        wav_sample_rate = 0;
-
                         file_codec.number_of_channels = le16toh(wfx->nChannels);
                         file_codec.bits_per_sample = le16toh(wfx->wBitsPerSample);
                         file_codec.sample_rate = le32toh(wfx->nSamplesPerSec);
@@ -647,10 +643,8 @@ static int open_wav() {
                                         ((file_codec.bits_per_sample + 7U) >> 3U) *
                                         file_codec.number_of_channels;
 
-                                    wav_sample_rate = file_codec.sample_rate;
                                     wav_stereo = file_codec.number_of_channels > 1;
                                     wav_16bit = file_codec.bits_per_sample > 8;
-                                    wav_bytes_per_sample = file_codec.bytes_per_block;
                                 }
                             }
                         }
@@ -666,7 +660,7 @@ static int open_wav() {
             scan += len + 8UL;
         }
 
-        if (wav_sample_rate == 0UL || wav_data_length == 0UL) goto fail;
+        if (file_codec.sample_rate == 0UL || wav_data_length == 0UL) goto fail;
 	}
 
 	update_cfg();
@@ -691,7 +685,7 @@ static void realloc_dma_buffer() {
 
     free_dma_buffer();
 
-    ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,wav_sample_rate,wav_stereo,wav_16bit);
+    ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,file_codec.sample_rate,wav_stereo,wav_16bit);
 
     if (ch >= 4)
         choice = sndsb_recommended_16bit_dma_buffer_size(sb_card,0);
@@ -726,7 +720,7 @@ static void begin_play() {
         realloc_dma_buffer();
 
     {
-        int8_t ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,wav_sample_rate,wav_stereo,wav_16bit);
+        int8_t ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,file_codec.sample_rate,wav_stereo,wav_16bit);
         if (ch >= 0) {
             if (sb_dma->dma_width != (ch >= 4 ? 16 : 8))
                 realloc_dma_buffer();
@@ -743,7 +737,7 @@ static void begin_play() {
 	if (wav_source == NULL)
 		return;
 
-	choice_rate = wav_sample_rate;
+	choice_rate = file_codec.sample_rate;
 
 	update_cfg();
 	if (!sndsb_prepare_dsp_playback(sb_card,choice_rate,wav_stereo,wav_16bit))
@@ -782,7 +776,7 @@ static void stop_play() {
 }
 
 static void update_cfg() {
-    sb_card->buffer_irq_interval = sb_card->buffer_size / wav_bytes_per_sample;
+    sb_card->buffer_irq_interval = sb_card->buffer_size / file_codec.bytes_per_block;
 
     /* TODO: at some point we'll support on-the-fly conversion to what the sound card supports */
     play_codec = file_codec;
