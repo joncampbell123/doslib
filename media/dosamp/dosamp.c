@@ -401,8 +401,8 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	int rd,i,bufe=0;
 	uint32_t how;
 
-	/* caller should be rounding! */
-	assert((up_to & 3UL) == 0UL);
+	up_to &= ~3UL;
+
 	if (up_to >= cx->buffer_size) return;
 	if (cx->buffer_size < 32) return;
 	if (cx->buffer_last_io == up_to) return;
@@ -543,14 +543,8 @@ void update_play_position(void) {
     wav_play_position = (unsigned long)pos;
 }
 
-#define DMA_WRAP_DEBUG
-
 static void wav_idle() {
-	const unsigned int leeway = sb_card->buffer_size / 100;
 	uint32_t pos;
-#ifdef DMA_WRAP_DEBUG
-	uint32_t pos2;
-#endif
 
 	if (!wav_playing || wav_source == NULL)
 		return;
@@ -562,44 +556,7 @@ static void wav_idle() {
 	sndsb_main_idle(sb_card);
 
 	_cli();
-#ifdef DMA_WRAP_DEBUG
-	pos2 = sndsb_read_dma_buffer_position(sb_card);
-#endif
 	pos = sndsb_read_dma_buffer_position(sb_card);
-#ifdef DMA_WRAP_DEBUG
-	if (sb_card->backwards) {
-		if (pos2 < 0x1000 && pos >= (sb_card->buffer_size-0x1000)) {
-			/* normal DMA wrap-around, no problem */
-		}
-		else {
-			if (pos > pos2)	fprintf(stderr,"DMA glitch! 0x%04lx 0x%04lx\n",pos,pos2);
-			else		pos = max(pos,pos2);
-		}
-
-		pos += leeway;
-		if (pos >= sb_card->buffer_size) pos -= sb_card->buffer_size;
-	}
-	else {
-		if (pos < 0x1000 && pos2 >= (sb_card->buffer_size-0x1000)) {
-			/* normal DMA wrap-around, no problem */
-		}
-		else {
-			if (pos < pos2)	fprintf(stderr,"DMA glitch! 0x%04lx 0x%04lx\n",pos,pos2);
-			else		pos = min(pos,pos2);
-		}
-
-		if (pos < leeway) pos += sb_card->buffer_size - leeway;
-		else pos -= leeway;
-	}
-#endif
-    /* round down because DMA does not care about sample boundaries.
-     * it's entirely possible 'pos' is in the middle of a 16-bit sample
-     * or between L and R of a stereo PCM stream.
-     *
-     * we're not the only one who assumes otherwise, experience says that
-     * certain ISA sound cards in Windows 98 have the same problem with
-     * DirectX and circular sound buffers when you query the current position.  */
-	pos &= (~3UL);
 	_sti();
 
     /* load from disk */
