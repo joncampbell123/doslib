@@ -43,6 +43,8 @@ typedef struct windows_WAVEFORMATPCM {
 } windows_WAVEFORMATPCM;                /* =16 */
 #pragma pack(pop)
 
+#define windows_WAVE_FORMAT_PCM         0x0001
+
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
 # error Open Watcom C tiny memory model not supported
@@ -325,6 +327,17 @@ fail:
 static dosamp_file_source_t             wav_source = NULL;
 
 static char*                            wav_file = NULL;
+
+struct wav_cbr_t {
+    uint32_t                            sample_rate;
+    uint16_t                            number_of_channels;
+    uint16_t                            bits_per_sample;
+    uint16_t                            bytes_per_block;
+    uint16_t                            samples_per_block;
+};
+
+struct wav_cbr_t                        file_codec;
+struct wav_cbr_t                        play_codec;
 
 static unsigned char                    wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
 static unsigned long                    wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
@@ -618,10 +631,29 @@ static int open_wav() {
                     if (wav_source->read(wav_source,tmp,len) == len) {
                         windows_WAVEFORMATPCM *wfx = (windows_WAVEFORMATPCM*)tmp;
 
-                        wav_sample_rate = le32toh(wfx->nSamplesPerSec);
-                        wav_stereo = le16toh(wfx->nChannels) > 1;
-                        wav_16bit = le16toh(wfx->wBitsPerSample) > 8;
-                        wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
+                        wav_sample_rate = 0;
+
+                        file_codec.number_of_channels = le16toh(wfx->nChannels);
+                        file_codec.bits_per_sample = le16toh(wfx->wBitsPerSample);
+                        file_codec.sample_rate = le32toh(wfx->nSamplesPerSec);
+                        file_codec.bytes_per_block = le16toh(wfx->nBlockAlign);
+                        file_codec.samples_per_block = 1;
+
+                        if (file_codec.sample_rate >= 1000UL && file_codec.sample_rate <= 96000UL) {
+                            if (le16toh(wfx->wFormatTag) == windows_WAVE_FORMAT_PCM) {
+                                if ((file_codec.bits_per_sample >= 8U && file_codec.bits_per_sample <= 16U) &&
+                                    (file_codec.number_of_channels >= 1U && file_codec.number_of_channels <= 2U)) {
+                                    file_codec.bytes_per_block =
+                                        ((file_codec.bits_per_sample + 7U) >> 3U) *
+                                        file_codec.number_of_channels;
+
+                                    wav_sample_rate = file_codec.sample_rate;
+                                    wav_stereo = file_codec.number_of_channels > 1;
+                                    wav_16bit = file_codec.bits_per_sample > 8;
+                                    wav_bytes_per_sample = file_codec.bytes_per_block;
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -750,8 +782,10 @@ static void stop_play() {
 }
 
 static void update_cfg() {
-    sb_card->dsp_adpcm = 0;
     sb_card->buffer_irq_interval = sb_card->buffer_size / wav_bytes_per_sample;
+
+    /* TODO: at some point we'll support on-the-fly conversion to what the sound card supports */
+    play_codec = file_codec;
 }
 
 static void help() {
