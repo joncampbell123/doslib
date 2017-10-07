@@ -346,6 +346,7 @@ static unsigned long                    wav_data_length = 0;/* in samples */;
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
 static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
 static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
+static unsigned char                    wav_play_empty = 0;/* if set, buffer is empty. else, audio data is there */
 static unsigned char                    wav_playing = 0;
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
@@ -506,7 +507,10 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 			if (!cx->backwards) {
 				cx->buffer_last_io += (uint32_t)rd;
 				wav_position += (uint32_t)rd / file_codec.bytes_per_block;
-			}
+
+                /* no longer empty! */
+                wav_play_empty = 0;
+            }
 		}
 
 		assert(cx->buffer_last_io <= cx->buffer_size);
@@ -523,7 +527,15 @@ void update_wav_play_delay(uint32_t dma_pos/*in bytes*/) {
     /* DMA trails our "last IO" pointer */
     delay  = (signed long)sb_card->buffer_last_io;
     delay -= (signed long)dma_pos;
+
+    /* delay == 0 is a special case.
+     * if wav_play_empty, then it means there's no delay.
+     * else, it means there's one whole buffer's worth delay.
+     * we HAVE to make this distinction because this code is
+     * written to load new audio data RIGHT BEHIND the DMA position
+     * which could easily lead to buffer_last_io == DMA position! */
     if (delay < 0L) delay += (signed long)sb_card->buffer_size;
+    else if (delay == 0L && !wav_play_empty) delay = (signed long)sb_card->buffer_size;
 
     /* guard against inconcievable cases */
     if (delay < 0L) delay = 0L;
@@ -706,6 +718,7 @@ static int begin_play() {
 
     /* reset state */
     wav_play_delay = 0;
+    wav_play_empty = 1;
 
     /* alloc DMA buffer.
      * if already allocated, then realloc if changing from 8-bit to 16-bit DMA */
