@@ -1,12 +1,16 @@
 
 #include <stdio.h>
+#ifndef LINUX
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
+#include <direct.h>
+#endif
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <unistd.h>
 #include <malloc.h>
-#include <direct.h>
+#include <limits.h>
+#include <errno.h>
 #include <ctype.h>
 #include <fcntl.h>
 #include <dos.h>
@@ -23,15 +27,236 @@
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
 
-static struct dma_8237_allocation*      sb_dma = NULL; /* DMA buffer */
+#if TARGET_MSDOS == 32
+static inline unsigned char *dosamp_ptr_add_normalize(unsigned char * const p,const unsigned int o) {
+    return p + o;
+}
 
+static inline const unsigned char *dosamp_cptr_add_normalize(const unsigned char * const p,const unsigned int o) {
+    return p + o;
+}
+#else
+static inline uint32_t dosamp_ptr_to_linear(const unsigned char far * const p) {
+    return ((unsigned long)FP_SEG(p) << 4UL) + (unsigned long)FP_OFF(p);
+}
+
+static inline unsigned char far *dosamp_linear_to_ptr(const uint32_t p) {
+    const unsigned short s = (unsigned short)((unsigned long)p >> 4UL);
+    const unsigned short o = (unsigned short)((unsigned long)p & 0xFUL);
+
+    return (unsigned char far*)MK_FP(s,o);
+}
+
+static inline unsigned char far *dosamp_ptr_add_normalize(unsigned char far * const p,const unsigned int o) {
+    return (unsigned char far*)dosamp_linear_to_ptr(dosamp_ptr_to_linear(p) + o);
+}
+
+static inline const unsigned char far *dosamp_cptr_add_normalize(const unsigned char far * const p,const unsigned int o) {
+    return (const unsigned char far*)dosamp_linear_to_ptr(dosamp_ptr_to_linear(p) + o);
+}
+#endif
+
+/* ISA DMA buffer */
+static struct dma_8237_allocation*      sb_dma = NULL;
+
+/* Sound Blaster sound card */
 static struct sndsb_ctx*	            sb_card = NULL;
 
-static int                  wav_fd = -1;
-static char                 wav_file[130] = {0};
-static unsigned char        wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
-static unsigned long        wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
-static unsigned char        wav_playing = 0;
+#if TARGET_MSDOS == 32
+static const unsigned int               dosamp_file_io_maxb = (unsigned int)INT_MAX - 1U;
+static const unsigned int               dosamp_file_io_err = UINT_MAX;
+#else
+static const unsigned int               dosamp_file_io_maxb = UINT_MAX - 1U;
+static const unsigned int               dosamp_file_io_err = UINT_MAX;
+#endif
+
+#if TARGET_MSDOS == 32 && !defined(WIN386)
+typedef unsigned char*                  dosamp_file_source_buffer_ptr_t;
+#else
+# define dosamp_file_source_buffer_ptr_t_FAR
+typedef unsigned char far*              dosamp_file_source_buffer_ptr_t;
+#endif
+
+#if TARGET_MSDOS == 32
+# if defined(TARGET_WINDOWS) && !defined(WIN386)
+/* 32-bit Windows and later can support files >= 4GB */
+typedef uint64_t                        dosamp_file_off_t;
+static const dosamp_file_off_t          dosamp_file_off_max = ULLONG_MAX - 1ULL;
+static const dosamp_file_off_t          dosamp_file_off_err = ULLONG_MAX;
+# else
+/* 32-bit MS-DOS is limited to 2GB or less (4GB if FAT32) */
+typedef uint32_t                        dosamp_file_off_t;
+static const dosamp_file_off_t          dosamp_file_off_max = ULONG_MAX - 1UL;
+static const dosamp_file_off_t          dosamp_file_off_err = ULONG_MAX;
+# endif
+#else
+/* 16-bit MS-DOS and Windows is limited to 2GB or less (4GB if FAT32) */
+typedef uint32_t                        dosamp_file_off_t;
+static const dosamp_file_off_t          dosamp_file_off_max = ULONG_MAX - 1UL;
+static const dosamp_file_off_t          dosamp_file_off_err = ULONG_MAX;
+#endif
+
+enum {
+    dosamp_file_source_id_null = 0,
+    dosamp_file_source_id_file_fd = 1
+};
+
+/* obj_id == dosamp_file_source_id_file_fd.
+ * must be sizeof() <= sizeof(private) */
+typedef struct dosamp_file_source_priv_file_fd {
+    int                                 fd;
+};
+
+typedef struct dosamp_file_source {
+    unsigned int                        obj_id;     /* what exactly this is */
+    volatile unsigned int               refcount;   /* reference count. will NOT auto-free when zero. */
+    int                                 open_flags; /* O_RDONLY, O_WRONLY, O_RDWR, etc. used to open file or 0 if closed */
+    int64_t                             file_size;  /* file size in bytes (if known) or -1LL */
+    int64_t                             file_pos;   /* file pointer or -1LL if not known */
+    void                                (*free)(struct dosamp_file_source * const inst); /* free the file source */
+    int                                 (*close)(struct dosamp_file_source * const inst); /* call this to close the file */
+    unsigned int                        (*read)(struct dosamp_file_source * const inst,dosamp_file_source_buffer_ptr_t buf,unsigned int count); /* read function */
+    unsigned int                        (*write)(struct dosamp_file_source * const inst,const dosamp_file_source_buffer_ptr_t buf,unsigned int count); /* write function */
+    dosamp_file_off_t                   (*seek)(struct dosamp_file_source * const inst,dosamp_file_off_t pos); /* seek function */
+    union {
+        struct dosamp_file_source_priv_file_fd      file_fd;
+    } p;
+};
+
+static inline unsigned int dosamp_file_source_addref(struct dosamp_file_source * const inst) {
+    return ++(inst->refcount);
+}
+
+unsigned int dosamp_file_source_release(struct dosamp_file_source * const inst) {
+    if (inst->refcount != 0)
+        inst->refcount--;
+    // TODO: else, debug message if refcount == 0
+
+    return inst->refcount;
+}
+
+struct dosamp_file_source *dosamp_file_source_alloc(const struct dosamp_file_source * const inst_template) {
+    struct dosamp_file_source *inst;
+
+    if ((inst=malloc(sizeof(*inst))) != NULL)
+        *inst = *inst_template;
+
+    return inst;
+}
+
+void dosamp_file_source_free(struct dosamp_file_source * const inst) {
+    /* the reason we have a common free() is to enable pooling of structs in the future */
+    /* ASSUME: inst != NULL */
+    free(inst);
+}
+
+static int dosamp_file_source_file_fd_close(struct dosamp_file_source * const inst) {
+    /* ASSUME: inst != NULL */
+    if (inst->p.file_fd.fd >= 0) {
+        close(inst->p.file_fd.fd);
+        inst->p.file_fd.fd = -1;
+    }
+
+    return 0;/*success*/
+}
+
+static void dosamp_file_source_file_fd_free(struct dosamp_file_source * const inst) {
+    dosamp_file_source_file_fd_close(inst);
+    dosamp_file_source_free(inst);
+}
+
+static unsigned int dosamp_file_source_file_fd_read(struct dosamp_file_source * const inst,dosamp_file_source_buffer_ptr_t buf,unsigned int count) {
+    int rd = 0;
+
+    if (inst->p.file_fd.fd < 0 || count > dosamp_file_io_maxb)
+        return dosamp_file_io_err;
+
+    if (count > 0) {
+#ifdef dosamp_file_source_buffer_ptr_t_FAR
+        rd = _dos_xread(inst->p.file_fd.fd,buf,count);
+#else
+        rd = read(inst->p.file_fd.fd,buf,count);
+#endif
+        if (rd < 0) return dosamp_file_io_err; /* also sets errno */
+        inst->file_pos += (unsigned int)rd;
+    }
+
+    return (unsigned int)rd;
+}
+
+static unsigned int dosamp_file_source_file_fd_write(struct dosamp_file_source * const inst,const dosamp_file_source_buffer_ptr_t buf,unsigned int count) {
+    errno = EIO; /* not implemented */
+    return dosamp_file_io_err;
+}
+
+static dosamp_file_off_t dosamp_file_source_file_fd_seek(struct dosamp_file_source * const inst,dosamp_file_off_t pos) {
+    off_t r;
+
+    if (inst->p.file_fd.fd < 0 || pos == dosamp_file_io_err)
+        return dosamp_file_off_err;
+
+    if (pos > dosamp_file_off_max)
+        pos = dosamp_file_off_max;
+
+    r = lseek(inst->p.file_fd.fd,(off_t)pos,SEEK_SET);
+    if (r == (off_t)-1L)
+        return dosamp_file_off_err;
+
+    return (inst->file_pos = (dosamp_file_off_t)r);
+}
+ 
+static const struct dosamp_file_source dosamp_file_source_priv_file_fd_init = {
+    .obj_id =                           dosamp_file_source_id_file_fd,
+    .file_size =                        -1LL,
+    .file_pos =                         0,
+    .free =                             dosamp_file_source_file_fd_free,
+    .close =                            dosamp_file_source_file_fd_close,
+    .read =                             dosamp_file_source_file_fd_read,
+    .write =                            dosamp_file_source_file_fd_write,
+    .seek =                             dosamp_file_source_file_fd_seek,
+    .p.file_fd.fd =                     -1
+};
+
+struct dosamp_file_source *dosamp_file_source_file_fd_open(const char * const path,const unsigned int flags/*O_RDONLY, etc*/,const unsigned int mode_t) {
+    struct dosamp_file_source *inst;
+    struct stat st;
+
+    if (path == NULL) return NULL;
+    if (*path == 0) return NULL;
+
+    inst = dosamp_file_source_alloc(&dosamp_file_source_priv_file_fd_init);
+    if (inst == NULL) return NULL;
+
+    /* TODO: #ifdef this code out so that it only applies to MS-DOS and Windows.
+     *       C runtimes in MS-DOS and Windows cannot identify much about a file
+     *       from it's handle but can sufficiently identify from the path. */
+    if (stat(path,&st)) goto fail; /* cannot stat: fail */
+    if (!S_ISREG(st.st_mode)) goto fail; /* not a file: fail */
+    inst->file_size = (dosamp_file_off_t)st.st_size;
+
+    inst->p.file_fd.fd = open(path,flags|O_BINARY,mode_t);
+    if (inst->p.file_fd.fd < 0) goto fail;
+
+    /* TODO: For Linux, and other OSes where we can fully identify a file
+     *       from it's handle, use fstat() and check S_ISREG() and such HERE */
+
+    if (lseek(inst->p.file_fd.fd,0,SEEK_SET) != 0) goto fail_fd; /* cannot lseek: fail */
+
+    return inst;
+fail_fd:
+    dosamp_file_source_file_fd_close(inst);
+fail:
+    dosamp_file_source_file_fd_free(inst);
+    return NULL;
+}
+
+static struct dosamp_file_source*       wav_source = NULL;
+
+static char                             wav_file[130] = {0};
+
+static unsigned char                    wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
+static unsigned long                    wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
+static unsigned char                    wav_playing = 0;
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
  * instability in the event the IRQ fires while, say, executing a routine
@@ -78,7 +303,11 @@ static void interrupt sb_irq() {
 }
 
 static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
-	unsigned char FAR *buffer = sb_dma->lin;
+#if TARGET_MSDOS == 32
+	unsigned char *buffer = sb_dma->lin;
+#else
+	unsigned char far *buffer = sb_dma->lin;
+#endif
 	int rd,i,bufe=0;
 	uint32_t how;
 
@@ -91,7 +320,8 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 	if (sb_card->dsp_adpcm > 0 && (wav_16bit || wav_stereo)) return;
 	if (max == 0) max = cx->buffer_size/4;
 	if (max < 16) return;
-	lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
+
+	wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample));
 
 	if (cx->buffer_last_io == 0)
 		wav_buffer_filepos = wav_position;
@@ -151,33 +381,22 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 				if (wav_position >= adj) wav_position -= adj;
 				else if (wav_position != 0UL) wav_position = 0;
 				else {
-					wav_position = lseek(wav_fd,0,SEEK_END);
+					wav_position = wav_source->file_size;
 					if (wav_position >= adj) wav_position -= adj;
 					else if (wav_position != 0UL) wav_position = 0;
 					wav_position /= wav_bytes_per_sample;
 				}
 
-				lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
+				wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample));
 			}
 
 			assert(cx->buffer_last_io <= cx->buffer_size);
-#if TARGET_MSDOS == 32
-			rd = _dos_xread(wav_fd,buffer + cx->buffer_last_io,how);
-#else
-            {
-                uint32_t o;
-
-                o  = (uint32_t)FP_SEG(buffer) << 4UL;
-                o += (uint32_t)FP_OFF(buffer);
-                o += cx->buffer_last_io;
-                rd = _dos_xread(wav_fd,MK_FP(o >> 4UL,o & 0xFUL),how);
-            }
-#endif
+            rd = wav_source->read(wav_source,dosamp_ptr_add_normalize(buffer,cx->buffer_last_io),how);
 			if (rd == 0 || rd == -1) {
 				if (!cx->backwards) {
 					wav_position = 0;
-					lseek(wav_fd,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample),SEEK_SET);
-					rd = _dos_xread(wav_fd,buffer + cx->buffer_last_io,how);
+					wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)wav_bytes_per_sample));
+					rd = wav_source->read(wav_source,dosamp_ptr_add_normalize(buffer,cx->buffer_last_io),how);
 					if (rd == 0 || rd == -1) {
 						/* hmph, fine */
 #if TARGET_MSDOS == 32
@@ -227,7 +446,7 @@ static void wav_idle() {
 	uint32_t pos2;
 #endif
 
-	if (!wav_playing || wav_fd < 0)
+	if (!wav_playing || wav_source == NULL)
 		return;
 
 	/* if we're playing without an IRQ handler, then we'll want this function
@@ -278,16 +497,18 @@ static void wav_idle() {
 static void update_cfg();
 
 static void close_wav() {
-	if (wav_fd >= 0) {
-		close(wav_fd);
-		wav_fd = -1;
+	if (wav_source != NULL) {
+        dosamp_file_source_release(wav_source);
+        wav_source->close(wav_source);
+        wav_source->free(wav_source);
+        wav_source = NULL;
 	}
 }
 
 static void open_wav() {
 	char tmp[64];
 
-	if (wav_fd < 0) {
+	if (wav_source == NULL) {
         uint32_t riff_length,scan,len;
 
 	    wav_position = 0;
@@ -297,14 +518,12 @@ static void open_wav() {
         wav_bytes_per_sample = 0;
 		if (strlen(wav_file) < 1) return;
 
-		wav_fd = open(wav_file,O_RDONLY|O_BINARY);
-		if (wav_fd < 0) return;
-
-        if (lseek(wav_fd,0,SEEK_SET) != 0) goto fail;
+        wav_source = dosamp_file_source_file_fd_open(wav_file,O_RDONLY,0);
+        if (wav_source == NULL) return;
 
         /* first, the RIFF:WAVE chunk */
         /* 3 DWORDS: 'RIFF' <length> 'WAVE' */
-        if (read(wav_fd,tmp,12) != 12) goto fail;
+        if (wav_source->read(wav_source,tmp,12) != 12) goto fail;
         if (memcmp(tmp+0,"RIFF",4) || memcmp(tmp+8,"WAVE",4)) goto fail;
 
         scan = 12;
@@ -315,14 +534,14 @@ static void open_wav() {
         while ((scan+8UL) <= riff_length) {
             /* RIFF chunks */
             /* 2 WORDS: <fourcc> <length> */
-            if (lseek(wav_fd,scan,SEEK_SET) != scan) goto fail;
-            if (read(wav_fd,tmp,8) != 8) goto fail;
+            if (wav_source->seek(wav_source,scan) != scan) goto fail;
+            if (wav_source->read(wav_source,tmp,8) != 8) goto fail;
             len = *((uint32_t*)(tmp+4));
 
             /* process! */
             if (!memcmp(tmp,"fmt ",4)) {
                 if (len >= 16 && len <= sizeof(tmp)) {
-                    if (read(wav_fd,tmp,len) == len) {
+                    if (wav_source->read(wav_source,tmp,len) == len) {
 #if 0
                         typedef struct tWAVEFORMATEX {
                             WORD  wFormatTag;               /* +0 */
@@ -350,14 +569,16 @@ static void open_wav() {
         }
 
         if (wav_sample_rate == 0UL || wav_data_length == 0UL) goto fail;
+
+        dosamp_file_source_addref(wav_source);
 	}
 
 	update_cfg();
     return;
 fail:
-    /* assume wav_fd >= 0 */
-    close(wav_fd);
-    wav_fd = -1;
+    wav_source->close(wav_source);
+    wav_source->free(wav_source);
+    wav_source = NULL;
 }
 
 static void free_dma_buffer() {
@@ -422,7 +643,7 @@ static void begin_play() {
             return;
     }
 
-	if (wav_fd < 0)
+	if (wav_source == NULL)
 		return;
 
 	choice_rate = wav_sample_rate;
