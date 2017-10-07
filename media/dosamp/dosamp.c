@@ -23,45 +23,43 @@
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
 
-static struct dma_8237_allocation *sb_dma = NULL; /* DMA buffer */
+static struct dma_8237_allocation*      sb_dma = NULL; /* DMA buffer */
 
-static struct sndsb_ctx*	sb_card = NULL;
+static struct sndsb_ctx*	            sb_card = NULL;
 
 /*============================TODO: move to library=============================*/
 static int vector_is_iret(const unsigned char vector) {
-	const unsigned char far *p;
-	uint32_t rvector;
+    const unsigned char far *p;
+    uint32_t rvector;
 
 #if TARGET_MSDOS == 32
-	rvector = ((uint32_t*)0)[vector];
-	if (rvector == 0) return 0;
-	p = (const unsigned char*)(((rvector >> 16UL) << 4UL) + (rvector & 0xFFFFUL));
+    rvector = ((uint32_t*)0)[vector];
+    if (rvector == 0) return 0;
+    p = (const unsigned char*)(((rvector >> 16UL) << 4UL) + (rvector & 0xFFFFUL));
 #else
-	rvector = *((uint32_t far*)MK_FP(0,(vector*4)));
-	if (rvector == 0) return 0;
-	p = (const unsigned char far*)MK_FP(rvector>>16UL,rvector&0xFFFFUL);
+    rvector = *((uint32_t far*)MK_FP(0,(vector*4)));
+    if (rvector == 0) return 0;
+    p = (const unsigned char far*)MK_FP(rvector>>16UL,rvector&0xFFFFUL);
 #endif
 
-	if (*p == 0xCF) {
-		// IRET. Yep.
-		return 1;
-	}
-	else if (p[0] == 0xFE && p[1] == 0x38) {
-		// DOSBox callback. Probably not going to ACK the interrupt.
-		return 1;
-	}
+    if (*p == 0xCF) {
+        // IRET. Yep.
+        return 1;
+    }
+    else if (p[0] == 0xFE && p[1] == 0x38) {
+        // DOSBox callback. Probably not going to ACK the interrupt.
+        return 1;
+    }
 
-	return 0;
+    return 0;
 }
 /*==============================================================================*/
 
-static int			wav_fd = -1;
-static char			wav_file[130] = {0};
-static unsigned char		wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
-static unsigned long		wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
-static unsigned char		wav_playing = 0;
-
-static void stop_play();
+static int                  wav_fd = -1;
+static char                 wav_file[130] = {0};
+static unsigned char        wav_stereo = 0,wav_16bit = 0,wav_bytes_per_sample = 1;
+static unsigned long        wav_data_offset = 44,wav_data_length = 0,wav_sample_rate = 8000,wav_position = 0,wav_buffer_filepos = 0;
+static unsigned char        wav_playing = 0;
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
  * instability in the event the IRQ fires while, say, executing a routine
@@ -69,41 +67,42 @@ static void stop_play();
  * 16-bit real mode Large and Compact memory models! Without -zu, minor
  * memory corruption in the DOS kernel will result and the system will
  * hang and/or crash. */
-unsigned char old_irq_masked = 0;
-static void (interrupt *old_irq)() = NULL;
+unsigned char               old_irq_masked = 0;
+static void                 (interrupt *old_irq)() = NULL;
+
 static void interrupt sb_irq() {
-	unsigned char c;
+    unsigned char c;
 
-	sb_card->irq_counter++;
+    sb_card->irq_counter++;
 
-	/* ack soundblaster DSP if DSP was the cause of the interrupt */
-	/* NTS: Experience says if you ack the wrong event on DSP 4.xx it
-	   will just re-fire the IRQ until you ack it correctly...
-	   or until your program crashes from stack overflow, whichever
-	   comes first */
-	c = sndsb_interrupt_reason(sb_card);
-	sndsb_interrupt_ack(sb_card,c);
+    /* ack soundblaster DSP if DSP was the cause of the interrupt */
+    /* NTS: Experience says if you ack the wrong event on DSP 4.xx it
+       will just re-fire the IRQ until you ack it correctly...
+       or until your program crashes from stack overflow, whichever
+       comes first */
+    c = sndsb_interrupt_reason(sb_card);
+    sndsb_interrupt_ack(sb_card,c);
 
-	/* FIXME: The sndsb library should NOT do anything in
-	   send_buffer_again() if it knows playback has not started! */
-	/* for non-auto-init modes, start another buffer */
-	if (wav_playing) sndsb_irq_continue(sb_card,c);
+    /* FIXME: The sndsb library should NOT do anything in
+       send_buffer_again() if it knows playback has not started! */
+    /* for non-auto-init modes, start another buffer */
+    if (wav_playing) sndsb_irq_continue(sb_card,c);
 
-	/* NTS: we assume that if the IRQ was masked when we took it, that we must not
-	 *      chain to the previous IRQ handler. This is very important considering
-	 *      that on most DOS systems an IRQ is masked for a very good reason---the
-	 *      interrupt handler doesn't exist! In fact, the IRQ vector could easily
-	 *      be unitialized or 0000:0000 for it! CALLing to that address is obviously
-	 *      not advised! */
-	if (old_irq_masked || old_irq == NULL) {
-		/* ack the interrupt ourself, do not chain */
-		if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
-		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
-	}
-	else {
-		/* chain to the previous IRQ, who will acknowledge the interrupt */
-		old_irq();
-	}
+    /* NTS: we assume that if the IRQ was masked when we took it, that we must not
+     *      chain to the previous IRQ handler. This is very important considering
+     *      that on most DOS systems an IRQ is masked for a very good reason---the
+     *      interrupt handler doesn't exist! In fact, the IRQ vector could easily
+     *      be unitialized or 0000:0000 for it! CALLing to that address is obviously
+     *      not advised! */
+    if (old_irq_masked || old_irq == NULL) {
+        /* ack the interrupt ourself, do not chain */
+        if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+        p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+    }
+    else {
+        /* chain to the previous IRQ, who will acknowledge the interrupt */
+        old_irq();
+    }
 }
 
 static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
