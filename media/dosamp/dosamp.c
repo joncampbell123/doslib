@@ -166,6 +166,7 @@ unsigned int dosamp_FAR dosamp_file_source_autofree(dosamp_file_source_ptr_t ins
 dosamp_file_source_t dosamp_FAR dosamp_file_source_alloc(const_dosamp_file_source_t const inst_template) {
     dosamp_file_source_t inst;
 
+    /* the reason we have a common alloc() is to enable pooling of structs in the future */
 #if TARGET_MSDOS == 16
     inst = _fmalloc(sizeof(*inst));
 #else
