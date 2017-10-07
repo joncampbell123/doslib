@@ -261,6 +261,18 @@ static const struct dosamp_file_source dosamp_file_source_priv_file_fd_init = {
     .p.file_fd.fd =                     -1
 };
 
+/* FIXME: Possible API problem: Someday when we hand a pointer to this function off to external DLLs
+ *        the "path" member will have to be const char dosamp_FAR * in order to accept C-strings from
+ *        other data segments in 16-bit memory models, or else nobody except ourselves or anyone with
+ *        with the same DGROUP segment will be able to use this function. The problem is that in all
+ *        but the large memory models Open Watcom C's open() function takes only const char * (near).
+ *        If Open Watcom's C runtime actually does have an _open() or variant that takes a const char FAR *
+ *        path string in all 16-bit memory models that would solve this problem.
+ *
+ *        Then again, I suppose the ABI between us and those future DLLs could simply be defined instead
+ *        where WE open the file and hand the DLL the file source object, and it doesn't have to care
+ *        about opening, but that would then prevent future media code that may have to read from multiple
+ *        files. */
 struct dosamp_file_source dosamp_FAR * dosamp_FAR dosamp_file_source_file_fd_open(const char * const path) {
     struct dosamp_file_source dosamp_FAR * inst;
     struct stat st;
