@@ -493,21 +493,13 @@ static void stop_play() {
 }
 
 static void update_cfg() {
-	unsigned int r;
-
-	sb_card->dsp_adpcm = sb_card->dsp_adpcm;
-	r = wav_sample_rate;
-	if (sb_card->dsp_adpcm == ADPCM_4BIT) r /= 2;
-	else if (sb_card->dsp_adpcm == ADPCM_2_6BIT) r /= 3;
-	else if (sb_card->dsp_adpcm == ADPCM_2BIT) r /= 4;
-
-    sb_card->buffer_irq_interval =
-        sb_card->buffer_size / wav_bytes_per_sample;
+    sb_card->dsp_adpcm = 0;
+    sb_card->buffer_irq_interval = sb_card->buffer_size / wav_bytes_per_sample;
 }
 
 static void help() {
-	printf("dosamp [options] <file>\n");
-	printf(" /h /help             This help\n");
+    printf("dosamp [options] <file>\n");
+    printf(" /h /help             This help\n");
 }
 
 static int parse_argv(int argc,char **argv) {
