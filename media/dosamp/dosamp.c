@@ -114,27 +114,32 @@ typedef struct dosamp_file_source_priv_file_fd {
     int                                 fd;
 };
 
+typedef struct dosamp_file_source;
+typedef struct dosamp_file_source dosamp_FAR * dosamp_file_source_t;
+typedef struct dosamp_file_source dosamp_FAR * dosamp_FAR * dosamp_file_source_ptr_t;
+typedef const struct dosamp_file_source dosamp_FAR * const_dosamp_file_source_t;
+
 typedef struct dosamp_file_source {
     unsigned int                        obj_id;     /* what exactly this is */
     volatile unsigned int               refcount;   /* reference count. will NOT auto-free when zero. */
     int                                 open_flags; /* O_RDONLY, O_WRONLY, O_RDWR, etc. used to open file or 0 if closed */
     int64_t                             file_size;  /* file size in bytes (if known) or -1LL */
     int64_t                             file_pos;   /* file pointer or -1LL if not known */
-    void                                (dosamp_FAR * free)(struct dosamp_file_source dosamp_FAR * const inst); /* free the file source */
-    int                                 (dosamp_FAR * close)(struct dosamp_file_source dosamp_FAR * const inst); /* call this to close the file */
-    unsigned int                        (dosamp_FAR * read)(struct dosamp_file_source dosamp_FAR * const inst,void dosamp_FAR *buf,unsigned int count); /* read function */
-    unsigned int                        (dosamp_FAR * write)(struct dosamp_file_source dosamp_FAR * const inst,const void dosamp_FAR *buf,unsigned int count); /* write function */
-    dosamp_file_off_t                   (dosamp_FAR * seek)(struct dosamp_file_source dosamp_FAR * const inst,dosamp_file_off_t pos); /* seek function */
+    void                                (dosamp_FAR * free)(dosamp_file_source_t const inst); /* free the file source */
+    int                                 (dosamp_FAR * close)(dosamp_file_source_t const inst); /* call this to close the file */
+    unsigned int                        (dosamp_FAR * read)(dosamp_file_source_t const inst,void dosamp_FAR *buf,unsigned int count); /* read function */
+    unsigned int                        (dosamp_FAR * write)(dosamp_file_source_t const inst,const void dosamp_FAR *buf,unsigned int count); /* write function */
+    dosamp_file_off_t                   (dosamp_FAR * seek)(dosamp_file_source_t const inst,dosamp_file_off_t pos); /* seek function */
     union {
         struct dosamp_file_source_priv_file_fd      file_fd;
     } p;
 };
 
-static inline unsigned int dosamp_FAR dosamp_file_source_addref(struct dosamp_file_source dosamp_FAR * const inst) {
+static inline unsigned int dosamp_FAR dosamp_file_source_addref(dosamp_file_source_t const inst) {
     return ++(inst->refcount);
 }
 
-unsigned int dosamp_FAR dosamp_file_source_release(struct dosamp_file_source dosamp_FAR * const inst) {
+unsigned int dosamp_FAR dosamp_file_source_release(dosamp_file_source_t const inst) {
     if (inst->refcount != 0)
         inst->refcount--;
     // TODO: else, debug message if refcount == 0
@@ -142,7 +147,7 @@ unsigned int dosamp_FAR dosamp_file_source_release(struct dosamp_file_source dos
     return inst->refcount;
 }
 
-unsigned int dosamp_FAR dosamp_file_source_autofree(struct dosamp_file_source dosamp_FAR * dosamp_FAR * inst) {
+unsigned int dosamp_FAR dosamp_file_source_autofree(dosamp_file_source_ptr_t inst) {
     unsigned int r = 0;
 
     /* assume inst != NULL */
@@ -158,16 +163,22 @@ unsigned int dosamp_FAR dosamp_file_source_autofree(struct dosamp_file_source do
     return r;
 }
 
-struct dosamp_file_source dosamp_FAR * dosamp_FAR dosamp_file_source_alloc(const struct dosamp_file_source dosamp_FAR * const inst_template) {
-    struct dosamp_file_source *inst;
+dosamp_file_source_t dosamp_FAR dosamp_file_source_alloc(const_dosamp_file_source_t const inst_template) {
+    dosamp_file_source_t inst;
 
-    if ((inst=malloc(sizeof(*inst))) != NULL)
+#if TARGET_MSDOS == 16
+    inst = _fmalloc(sizeof(*inst));
+#else
+    inst = malloc(sizeof(*inst));
+#endif
+
+    if (inst != NULL)
         *inst = *inst_template;
 
     return inst;
 }
 
-void dosamp_FAR dosamp_file_source_free(struct dosamp_file_source dosamp_FAR * const inst) {
+void dosamp_FAR dosamp_file_source_free(dosamp_file_source_t const inst) {
     /* the reason we have a common free() is to enable pooling of structs in the future */
     /* ASSUME: inst != NULL */
 #if TARGET_MSDOS == 16
@@ -177,7 +188,7 @@ void dosamp_FAR dosamp_file_source_free(struct dosamp_file_source dosamp_FAR * c
 #endif
 }
 
-static int dosamp_FAR dosamp_file_source_file_fd_close(struct dosamp_file_source dosamp_FAR * const inst) {
+static int dosamp_FAR dosamp_file_source_file_fd_close(dosamp_file_source_t const inst) {
     /* ASSUME: inst != NULL */
     if (inst->p.file_fd.fd >= 0) {
         close(inst->p.file_fd.fd);
@@ -187,12 +198,12 @@ static int dosamp_FAR dosamp_file_source_file_fd_close(struct dosamp_file_source
     return 0;/*success*/
 }
 
-static void dosamp_FAR dosamp_file_source_file_fd_free(struct dosamp_file_source dosamp_FAR * const inst) {
+static void dosamp_FAR dosamp_file_source_file_fd_free(dosamp_file_source_t const inst) {
     dosamp_file_source_file_fd_close(inst);
     dosamp_file_source_free(inst);
 }
 
-static unsigned int dosamp_FAR dosamp_file_source_file_fd_read(struct dosamp_file_source dosamp_FAR * const inst,void dosamp_FAR * buf,unsigned int count) {
+static unsigned int dosamp_FAR dosamp_file_source_file_fd_read(dosamp_file_source_t const inst,void dosamp_FAR * buf,unsigned int count) {
     int rd = 0;
 
     if (inst->p.file_fd.fd < 0 || count > dosamp_file_io_maxb)
@@ -216,12 +227,12 @@ static unsigned int dosamp_FAR dosamp_file_source_file_fd_read(struct dosamp_fil
     return (unsigned int)rd;
 }
 
-static unsigned int dosamp_FAR dosamp_file_source_file_fd_write(struct dosamp_file_source dosamp_FAR * const inst,const void dosamp_FAR * buf,unsigned int count) {
+static unsigned int dosamp_FAR dosamp_file_source_file_fd_write(dosamp_file_source_t const inst,const void dosamp_FAR * buf,unsigned int count) {
     errno = EIO; /* not implemented */
     return dosamp_file_io_err;
 }
 
-static dosamp_file_off_t dosamp_FAR dosamp_file_source_file_fd_seek(struct dosamp_file_source dosamp_FAR * const inst,dosamp_file_off_t pos) {
+static dosamp_file_off_t dosamp_FAR dosamp_file_source_file_fd_seek(dosamp_file_source_t const inst,dosamp_file_off_t pos) {
     off_t r;
 
     if (inst->p.file_fd.fd < 0 || pos == dosamp_file_io_err)
@@ -282,7 +293,7 @@ fail:
     return NULL;
 }
 
-static struct dosamp_file_source dosamp_FAR *wav_source = NULL;
+static dosamp_file_source_t             wav_source = NULL;
 
 static char                             wav_file[130] = {0};
 
