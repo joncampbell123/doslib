@@ -146,20 +146,31 @@ struct dosamp_time_source               dosamp_time_source_8254 = {
     .poll =                             dosamp_time_source_8254_poll
 };
 
+static uint64_t ts_rdtsc_prev;
+
 int dosamp_FAR dosamp_time_source_rdtsc_close(dosamp_time_source_t inst) {
     inst->open_flags = 0;
+    ts_rdtsc_prev = 0;
     return 0;
 }
 
 int dosamp_FAR dosamp_time_source_rdtsc_open(dosamp_time_source_t inst) {
     inst->open_flags = (unsigned int)(-1);
+    ts_rdtsc_prev = cpu_rdtsc();
     return 0;
 }
 
 unsigned long long dosamp_FAR dosamp_time_source_rdtsc_poll(dosamp_time_source_t inst) {
+    uint64_t t;
+
     if (inst->open_flags == 0) return 0UL;
 
-    inst->counter = cpu_rdtsc();
+    t = cpu_rdtsc();
+
+    inst->counter += t - ts_rdtsc_prev;
+
+    ts_rdtsc_prev = t;
+
     return inst->counter;
 }
 
