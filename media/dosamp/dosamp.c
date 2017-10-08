@@ -524,7 +524,7 @@ static void interrupt sb_irq() {
     }
 }
 
-static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
+static void load_audio(uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
 #if TARGET_MSDOS == 32
 	unsigned char *buffer = sb_dma->lin;
 #else
@@ -535,34 +535,34 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 
 	up_to &= ~3UL;
 
-	if (up_to >= cx->buffer_size) return;
-	if (cx->buffer_size < 32) return;
-	if (cx->buffer_last_io == up_to) return;
+	if (up_to >= sb_card->buffer_size) return;
+	if (sb_card->buffer_size < 32) return;
+	if (sb_card->buffer_last_io == up_to) return;
 
-	if (max == 0) max = cx->buffer_size/4;
+	if (max == 0) max = sb_card->buffer_size/4;
 	if (max < 16) return;
 
 	wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
 
 	while (max > 0UL) {
-		if (cx->backwards) {
-			if (up_to > cx->buffer_last_io) {
-				how = cx->buffer_last_io;
-				if (how == 0) how = cx->buffer_size - up_to;
+		if (sb_card->backwards) {
+			if (up_to > sb_card->buffer_last_io) {
+				how = sb_card->buffer_last_io;
+				if (how == 0) how = sb_card->buffer_size - up_to;
 				bufe = 1;
 			}
 			else {
-				how = (cx->buffer_last_io - up_to);
+				how = (sb_card->buffer_last_io - up_to);
 				bufe = 0;
 			}
 		}
 		else {
-			if (up_to < cx->buffer_last_io) {
-				how = (cx->buffer_size - cx->buffer_last_io); /* from last IO to end of buffer */
+			if (up_to < sb_card->buffer_last_io) {
+				how = (sb_card->buffer_size - sb_card->buffer_last_io); /* from last IO to end of buffer */
 				bufe = 1;
 			}
 			else {
-				how = (up_to - cx->buffer_last_io); /* from last IO to up_to */
+				how = (up_to - sb_card->buffer_last_io); /* from last IO to up_to */
 				bufe = 0;
 			}
 		}
@@ -580,13 +580,13 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
         {
             uint32_t oa,adj;
 
-			oa = cx->buffer_last_io;
-			if (cx->backwards) {
-				if (cx->buffer_last_io == 0) {
-					cx->buffer_last_io = cx->buffer_size - how;
+			oa = sb_card->buffer_last_io;
+			if (sb_card->backwards) {
+				if (sb_card->buffer_last_io == 0) {
+					sb_card->buffer_last_io = sb_card->buffer_size - how;
 				}
-				else if (cx->buffer_last_io >= how) {
-					cx->buffer_last_io -= how;
+				else if (sb_card->buffer_last_io >= how) {
+					sb_card->buffer_last_io -= how;
 				}
 				else {
 					abort();
@@ -605,19 +605,19 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 				wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
 			}
 
-			assert(cx->buffer_last_io <= cx->buffer_size);
-            rd = wav_source->read(wav_source,dosamp_ptr_add_normalize(buffer,cx->buffer_last_io),how);
+			assert(sb_card->buffer_last_io <= sb_card->buffer_size);
+            rd = wav_source->read(wav_source,dosamp_ptr_add_normalize(buffer,sb_card->buffer_last_io),how);
 			if (rd == 0 || rd == -1) {
-				if (!cx->backwards) {
+				if (!sb_card->backwards) {
 					wav_position = 0;
 					wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
-					rd = wav_source->read(wav_source,dosamp_ptr_add_normalize(buffer,cx->buffer_last_io),how);
+					rd = wav_source->read(wav_source,dosamp_ptr_add_normalize(buffer,sb_card->buffer_last_io),how);
 					if (rd == 0 || rd == -1) {
 						/* hmph, fine */
 #if TARGET_MSDOS == 32
-						memset(buffer+cx->buffer_last_io,128,how);
+						memset(buffer+sb_card->buffer_last_io,128,how);
 #else
-						_fmemset(buffer+cx->buffer_last_io,128,how);
+						_fmemset(buffer+sb_card->buffer_last_io,128,how);
 #endif
 						rd = (int)how;
 					}
@@ -627,16 +627,16 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
 				}
 			}
 
-			assert((cx->buffer_last_io+((uint32_t)rd)) <= cx->buffer_size);
+			assert((sb_card->buffer_last_io+((uint32_t)rd)) <= sb_card->buffer_size);
 			if (sb_card->audio_data_flipped_sign) {
 				if (file_codec.bits_per_sample > 8)
-					for (i=0;i < (rd-1);i += 2) buffer[cx->buffer_last_io+i+1] ^= 0x80;
+					for (i=0;i < (rd-1);i += 2) buffer[sb_card->buffer_last_io+i+1] ^= 0x80;
 				else
-					for (i=0;i < rd;i++) buffer[cx->buffer_last_io+i] ^= 0x80;
+					for (i=0;i < rd;i++) buffer[sb_card->buffer_last_io+i] ^= 0x80;
 			}
 
-			if (!cx->backwards) {
-				cx->buffer_last_io += (uint32_t)rd;
+			if (!sb_card->backwards) {
+				sb_card->buffer_last_io += (uint32_t)rd;
 				wav_position += (uint32_t)rd / file_codec.bytes_per_block;
 
                 /* no longer empty! */
@@ -644,9 +644,9 @@ static void load_audio(struct sndsb_ctx *cx,uint32_t up_to,uint32_t min,uint32_t
             }
 		}
 
-		assert(cx->buffer_last_io <= cx->buffer_size);
-		if (!cx->backwards) {
-			if (cx->buffer_last_io == cx->buffer_size) cx->buffer_last_io = 0;
+		assert(sb_card->buffer_last_io <= sb_card->buffer_size);
+		if (!sb_card->backwards) {
+			if (sb_card->buffer_last_io == sb_card->buffer_size) sb_card->buffer_last_io = 0;
 		}
 		max -= (uint32_t)rd;
 	}
@@ -703,7 +703,7 @@ static void wav_idle() {
 	_sti();
 
     /* load from disk */
-    load_audio(sb_card,pos,min(file_codec.sample_rate/8,4096)/*min*/,
+    load_audio(pos,min(file_codec.sample_rate/8,4096)/*min*/,
         sb_card->buffer_size/4/*max*/,0/*first block*/);
     update_wav_play_delay(pos);
     update_play_position();
@@ -885,7 +885,7 @@ static int begin_play() {
 
 	sndsb_setup_dma(sb_card);
 
-    load_audio(sb_card,sb_card->buffer_size/2,0/*min*/,0/*max*/,1/*first block*/);
+    load_audio(sb_card->buffer_size/2,0/*min*/,0/*max*/,1/*first block*/);
     update_wav_play_delay(0/*DMA hasn't started yet*/);
     update_play_position();
 
