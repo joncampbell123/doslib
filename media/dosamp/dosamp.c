@@ -942,45 +942,58 @@ void display_idle_timesource(void) {
     fflush(stdout);
 }
 
+static unsigned long display_time_wait_next = 0;
+
 void display_idle_time(void) {
     unsigned long w,f;
     unsigned char hour,min,sec,centisec;
     unsigned char percent;
 
-    /* to stay within numerical limits of unsigned long, divide into whole and fraction by sample rate */
-    w = wav_play_position / (unsigned long)play_codec.sample_rate;
-    f = wav_play_position % (unsigned long)play_codec.sample_rate;
+    /* display time, but not too often. keep the rate limited. */
+    time_source->poll(time_source);
 
-    /* we can then turn the whole part into HH:MM:SS */
-    sec = (unsigned char)(w % 60UL); w /= 60UL;
-    min = (unsigned char)(w % 60UL); w /= 60UL;
-    hour = (unsigned char)w; /* don't bother modulus, WAV files couldn't possibly represent things that long */
+    /* update only if 1/10th of a second has passed */
+    if (time_source->counter >= display_time_wait_next) {
+        display_time_wait_next += time_source->clock_rate / 20UL; /* 20fps rate (approx, I'm not picky) */
 
-    /* and then use the more limited numeric range to turn the fractional part into centiseconds */
-    centisec = (unsigned char)((f * 100UL) / (unsigned long)play_codec.sample_rate);
+        if (display_time_wait_next < time_source->counter)
+            display_time_wait_next = time_source->counter;
 
-    /* also provide the user some information on the length of the WAV */
-    {
-        unsigned long m,d;
+        /* to stay within numerical limits of unsigned long, divide into whole and fraction by sample rate */
+        w = wav_play_position / (unsigned long)play_codec.sample_rate;
+        f = wav_play_position % (unsigned long)play_codec.sample_rate;
 
-        m = wav_play_position;
-        d = wav_data_length;
+        /* we can then turn the whole part into HH:MM:SS */
+        sec = (unsigned char)(w % 60UL); w /= 60UL;
+        min = (unsigned char)(w % 60UL); w /= 60UL;
+        hour = (unsigned char)w; /* don't bother modulus, WAV files couldn't possibly represent things that long */
 
-        /* it's a percentage from 0 to 99, we don't need high precision for large files */
-        while ((m|d) >= 0x100000UL) {
-            m >>= 4UL;
-            d >>= 4UL;
+        /* and then use the more limited numeric range to turn the fractional part into centiseconds */
+        centisec = (unsigned char)((f * 100UL) / (unsigned long)play_codec.sample_rate);
+
+        /* also provide the user some information on the length of the WAV */
+        {
+            unsigned long m,d;
+
+            m = wav_play_position;
+            d = wav_data_length;
+
+            /* it's a percentage from 0 to 99, we don't need high precision for large files */
+            while ((m|d) >= 0x100000UL) {
+                m >>= 4UL;
+                d >>= 4UL;
+            }
+
+            /* we don't want divide by zero */
+            if (d == 0UL) d = 1UL;
+
+            percent = (unsigned char)((m * 100UL) / d);
         }
 
-        /* we don't want divide by zero */
-        if (d == 0UL) d = 1UL;
-
-        percent = (unsigned char)((m * 100UL) / d);
+        printf("\x0D");
+        printf("%02u:%02u:%02u.%02u %%%02u %lu / %lu ",hour,min,sec,centisec,percent,wav_play_position,wav_data_length);
+        fflush(stdout);
     }
-
-    printf("\x0D");
-    printf("%02u:%02u:%02u.%02u %%%02u %lu / %lu ",hour,min,sec,centisec,percent,wav_play_position,wav_data_length);
-    fflush(stdout);
 }
 
 void display_idle_buffer(void) {
