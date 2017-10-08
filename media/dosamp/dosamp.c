@@ -913,11 +913,24 @@ static int begin_play() {
 }
 
 static void stop_play() {
+	uint32_t pos;
+
 	if (!wav_playing) return;
 
 	_cli();
-	sndsb_stop_dsp_playback(sb_card);
-	wav_playing = 0;
+	pos = sndsb_read_dma_buffer_position(sb_card);
+    update_wav_play_delay(pos);
+    update_play_position();
+    wav_position = wav_play_position;
+
+    sndsb_stop_dsp_playback(sb_card);
+
+    wav_play_empty = 1;
+	pos = sndsb_read_dma_buffer_position(sb_card);
+    sb_card->buffer_last_io = pos;
+    update_wav_play_delay(pos);
+    update_play_position();
+    wav_playing = 0;
 	_sti();
 }
 
