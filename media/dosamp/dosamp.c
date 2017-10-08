@@ -63,7 +63,8 @@ typedef struct windows_WAVEFORMATPCM {
 
 enum {
     dosamp_time_source_id_null = 0,                 /* null */
-    dosamp_time_source_id_8254 = 1                  /* MS-DOS / Windows 3.x 8254 PIT timer */
+    dosamp_time_source_id_8254 = 1,                 /* MS-DOS / Windows 3.x 8254 PIT timer */
+    dosamp_time_source_id_rdtsc = 2                 /* Pentium RDTSC */
 };
 
 struct dosamp_time_source;
@@ -143,6 +144,34 @@ struct dosamp_time_source               dosamp_time_source_8254 = {
     .close =                            dosamp_time_source_8254_close,
     .open =                             dosamp_time_source_8254_open,
     .poll =                             dosamp_time_source_8254_poll
+};
+
+int dosamp_FAR dosamp_time_source_rdtsc_close(dosamp_time_source_t inst) {
+    inst->open_flags = 0;
+    return 0;
+}
+
+int dosamp_FAR dosamp_time_source_rdtsc_open(dosamp_time_source_t inst) {
+    inst->open_flags = (unsigned int)(-1);
+    return 0;
+}
+
+unsigned long long dosamp_FAR dosamp_time_source_rdtsc_poll(dosamp_time_source_t inst) {
+    if (inst->open_flags == 0) return 0UL;
+
+    inst->counter = cpu_rdtsc();
+    return inst->counter;
+}
+
+struct dosamp_time_source               dosamp_time_source_rdtsc = {
+    .obj_id =                           dosamp_time_source_id_rdtsc,
+    .open_flags =                       0,
+    .clock_rate =                       0,
+    .counter =                          0,
+    .poll_requirement =                 0, /* counter is 64-bit */
+    .close =                            dosamp_time_source_rdtsc_close,
+    .open =                             dosamp_time_source_rdtsc_open,
+    .poll =                             dosamp_time_source_rdtsc_poll
 };
 
 #if TARGET_MSDOS == 32
@@ -929,7 +958,9 @@ void display_idle_timesource(void) {
     printf("\x0D");
 
     if (time_source == &dosamp_time_source_8254)
-        printf("8254-pit ");
+        printf("8254-PIT ");
+    else if (time_source == &dosamp_time_source_rdtsc)
+        printf("RDTSC ");
     else
         printf("? ");
 
@@ -1081,6 +1112,7 @@ int calibrate_rdtsc(void) {
 
     printf("RDTSC clock rate: %lluHz\n",rcc);
 
+    dosamp_time_source_rdtsc.clock_rate = rcc;
     return 0;
 }
 
@@ -1123,9 +1155,8 @@ int main(int argc,char **argv) {
 	if (cpu_flags & CPU_FLAG_CPUID) {
         if (cpu_cpuid_features.a.raw[2] & 0x10) {
             /* RDTSC is available. We just have to figure out how fast it runs. */
-            if (calibrate_rdtsc() >= 0) {
-                /* TODO */
-            }
+            if (calibrate_rdtsc() >= 0)
+                time_source = &dosamp_time_source_rdtsc;
         }
     }
 
