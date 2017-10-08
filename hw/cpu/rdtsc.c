@@ -176,6 +176,13 @@ int main() {
 		return 1;
 	}
 
+    /* DOSBox-X and most motherboards leave the PIT in a mode that counts down by 2.
+     * Our code sets the counter and puts it in a mode that counts down by 1.
+     * We have to do this or our wait functions exit in half the time (which explains
+     * why testing this code in DOSBox-X often comes up with RDTSC running at 2x
+     * normal speed. */
+    write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
+
 	printf("Measuring CPU speed (relative to 8254 timer)\n");
 
 	_cli();
