@@ -524,7 +524,7 @@ static void interrupt sb_irq() {
     }
 }
 
-static void load_audio(uint32_t up_to,uint32_t min,uint32_t max,uint8_t initial) { /* load audio up to point or max */
+static void load_audio(uint32_t up_to,uint32_t min,uint32_t max) { /* load audio up to point or max */
 #if TARGET_MSDOS == 32
 	unsigned char *buffer = sb_dma->lin;
 #else
@@ -704,7 +704,7 @@ static void wav_idle() {
 
     /* load from disk */
     load_audio(pos,min(file_codec.sample_rate/8,4096)/*min*/,
-        sb_card->buffer_size/4/*max*/,0/*first block*/);
+        sb_card->buffer_size/4/*max*/);
     update_wav_play_delay(pos);
     update_play_position();
 }
@@ -885,7 +885,7 @@ static int begin_play() {
 
 	sndsb_setup_dma(sb_card);
 
-    load_audio(sb_card->buffer_size/2,0/*min*/,0/*max*/,1/*first block*/);
+    load_audio(sb_card->buffer_size/2,0/*min*/,0/*max*/);
     update_wav_play_delay(0/*DMA hasn't started yet*/);
     update_play_position();
 
