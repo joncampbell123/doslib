@@ -1048,6 +1048,7 @@ int main(int argc,char **argv) {
     if (!parse_argv(argc,argv))
         return 1;
 
+	cpu_probe();
 	probe_8237();
 	if (!probe_8259()) {
 		printf("Cannot init 8259 PIC\n");
