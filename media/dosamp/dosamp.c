@@ -478,6 +478,8 @@ static unsigned long                    wav_data_length = 0;/* in samples */;
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
 static unsigned long                    wav_play_load_block_size = 0;
 static unsigned long                    wav_play_min_load_size = 0;
+static unsigned long                    wav_write_counter = 0;/* at buffer_last_io, bytes written since play start */
+static unsigned long                    wav_play_counter = 0;/* at dma position, bytes played since play start */
 static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
 static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
 static unsigned char                    wav_play_empty = 0;/* if set, buffer is empty. else, audio data is there */
@@ -565,6 +567,7 @@ unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
 
     if (want != 0) {
         /* advance I/O. caller MUST fill in the buffer. */
+        wav_write_counter += want;
         sb_card->buffer_last_io += want;
         if (sb_card->buffer_last_io >= sb_card->buffer_size)
             sb_card->buffer_last_io = 0;
@@ -675,6 +678,11 @@ void update_wav_play_delay() {
     /* convert to samples */
     wav_play_delay_bytes = (unsigned long)delay;
     wav_play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
+
+    /* play position is calculated here */
+    wav_play_counter = wav_write_counter;
+    if (wav_play_counter >= wav_play_delay_bytes) wav_play_counter -= wav_play_delay_bytes;
+    else wav_play_counter = 0;
 }
 
 void update_play_position(void) {
@@ -872,6 +880,7 @@ static int begin_play() {
         return -1;
 
     /* reset state */
+    wav_write_counter = 0;
     wav_play_delay = 0;
     wav_play_empty = 1;
 
@@ -983,6 +992,7 @@ static void stop_play() {
     sb_card->buffer_last_io = pos;
     update_wav_play_delay(pos);
     update_play_position();
+    wav_write_counter = 0;
     wav_playing = 0;
 	_sti();
 
@@ -1111,41 +1121,17 @@ void display_idle_time(void) {
 void display_idle_buffer(void) {
 	signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
     signed long apos = (signed long)sb_card->buffer_last_io;
-    const unsigned char bar_width = 25;
-    unsigned char i,posi,aposi;
-
-    if (pos < 0L) pos = 0L;
-    else if (pos > sb_card->buffer_size) pos = sb_card->buffer_size;
-
-    if (apos < 0L) apos = 0L;
-    else if (apos > sb_card->buffer_size) apos = sb_card->buffer_size;
-
-    if (sb_card->buffer_size != 0UL) {
-        posi = (unsigned char)((pos * (unsigned long)(bar_width - 1U)) / (unsigned long)sb_card->buffer_size);
-        aposi = (unsigned char)((apos * (unsigned long)(bar_width - 1U)) / (unsigned long)sb_card->buffer_size);
-    }
-    else {
-        posi = 255U;
-        aposi = 255U;
-    }
 
     printf("\x0D");
 
-    for (i=0;i < bar_width;i++) {
-        if (i == posi)
-            printf("p");
-        else if (i == aposi)
-            printf("a");
-        else
-            printf("-");
-    }
-
-    printf(" a=%6ld/p=%6ld/b=%6ld/d=%6lu/cw=%6lu/irq=%lu",
+    printf("a=%6ld/p=%6ld/b=%6ld/d=%6lu/cw=%6lu/wp=%8lu/pp=%8lu/irq=%lu",
         apos,
         pos,
         (signed long)sb_card->buffer_size,
         (unsigned long)wav_play_delay_bytes,
         (unsigned long)can_write(),
+        (unsigned long)wav_write_counter,
+        (unsigned long)wav_play_counter,
         (unsigned long)sb_card->irq_counter);
 
     fflush(stdout);
