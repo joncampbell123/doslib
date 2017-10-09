@@ -1460,6 +1460,12 @@ int calibrate_rdtsc(void) {
     return 0;
 }
 
+void free_sound_blaster_support(void) {
+    free_dma_buffer();
+    sndsb_free_card(sb_card);
+    free_sndsb(); /* will also de-ref/unhook the NMI reflection */
+}
+
 int probe_for_sound_blaster(void) {
     unsigned int i;
 
@@ -1752,15 +1758,11 @@ int main(int argc,char **argv) {
 	_sti();
 	stop_play();
 	close_wav();
-    free_dma_buffer();
     tmpbuffer_free();
 
-	sndsb_free_card(sb_card);
-	free_sndsb(); /* will also de-ref/unhook the NMI reflection */
+    free_sound_blaster_support();
 
-    /* open the time source */
     time_source->close(time_source);
-
 	return 0;
 }
 
