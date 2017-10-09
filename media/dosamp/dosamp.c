@@ -876,8 +876,11 @@ void update_play_position(void) {
 
     r = rebase_find(wav_play_counter);
 
-    if (r != NULL)
-        wav_play_position = ((wav_play_counter - r->event_at) / play_codec.bytes_per_block) + r->wav_position;
+    if (r != NULL) {
+        wav_play_position =
+            ((unsigned long long)(((wav_play_counter - r->event_at) / play_codec.bytes_per_block) *
+                (unsigned long long)resample_step) >> 16ULL) + r->wav_position;
+    }
     else if (wav_playing)
         wav_play_position = 0;
     else
@@ -1029,7 +1032,7 @@ static void realloc_dma_buffer() {
 
     free_dma_buffer();
 
-    ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,/*16-bit*/file_codec.bits_per_sample > 8);
+    ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8);
 
     if (ch >= 4)
         choice = sndsb_recommended_16bit_dma_buffer_size(sb_card,0);
@@ -1170,6 +1173,9 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
         return -1;
     }
 
+    /* PCM recalc */
+    d->bytes_per_block = ((d->bits_per_sample+7U)/8U) * d->number_of_channels;
+
     {
         unsigned long long tmp;
 
@@ -1180,7 +1186,7 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
         resample_frac = 0;
     }
 
-    if (resample_frac == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
+    if (resample_step == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
         resample_on = 0;
     else
         resample_on = 1;
@@ -1459,8 +1465,8 @@ void display_idle_time(void) {
             display_time_wait_next = time_source->counter;
 
         /* to stay within numerical limits of unsigned long, divide into whole and fraction by sample rate */
-        w = wav_play_position / (unsigned long)play_codec.sample_rate;
-        f = wav_play_position % (unsigned long)play_codec.sample_rate;
+        w = wav_play_position / (unsigned long)file_codec.sample_rate;
+        f = wav_play_position % (unsigned long)file_codec.sample_rate;
 
         /* we can then turn the whole part into HH:MM:SS */
         sec = (unsigned char)(w % 60UL); w /= 60UL;
@@ -1468,7 +1474,7 @@ void display_idle_time(void) {
         hour = (unsigned char)w; /* don't bother modulus, WAV files couldn't possibly represent things that long */
 
         /* and then use the more limited numeric range to turn the fractional part into centiseconds */
-        centisec = (unsigned char)((f * 100UL) / (unsigned long)play_codec.sample_rate);
+        centisec = (unsigned char)((f * 100UL) / (unsigned long)file_codec.sample_rate);
 
         /* also provide the user some information on the length of the WAV */
         {
@@ -1836,28 +1842,28 @@ int main(int argc,char **argv) {
                     unsigned char wp = wav_playing;
 
                     if (wp) stop_play();
-                    move_pos(-((signed long)play_codec.sample_rate)); /* -1 sec */
+                    move_pos(-((signed long)file_codec.sample_rate)); /* -1 sec */
                     if (wp) begin_play();
                 }
                 else if (i == ']') {
                     unsigned char wp = wav_playing;
 
                     if (wp) stop_play();
-                    move_pos(play_codec.sample_rate); /* 1 sec */
+                    move_pos(file_codec.sample_rate); /* 1 sec */
                     if (wp) begin_play();
                 }
                 else if (i == '{') {
                     unsigned char wp = wav_playing;
 
                     if (wp) stop_play();
-                    move_pos(-((signed long)play_codec.sample_rate * 30L)); /* -30 sec */
+                    move_pos(-((signed long)file_codec.sample_rate * 30L)); /* -30 sec */
                     if (wp) begin_play();
                 }
                 else if (i == '}') {
                     unsigned char wp = wav_playing;
 
                     if (wp) stop_play();
-                    move_pos(play_codec.sample_rate * 30L); /* 30 sec */
+                    move_pos(file_codec.sample_rate * 30L); /* 30 sec */
                     if (wp) begin_play();
                 }
                 else if (i == ' ') {
