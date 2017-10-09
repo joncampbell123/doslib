@@ -483,6 +483,12 @@ static unsigned long                    wav_play_delay = 0;/* in samples. delay 
 static unsigned char                    wav_play_empty = 0;/* if set, buffer is empty. else, audio data is there */
 static unsigned char                    wav_playing = 0;
 
+void update_wav_dma_position(void) {
+    _cli();
+    wav_play_dma_position = sndsb_read_dma_buffer_position(sb_card);
+    _sti();
+}
+
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
  * instability in the event the IRQ fires while, say, executing a routine
  * in the DOS kernel, you must compile this code with the -zu flag in
@@ -689,9 +695,7 @@ static void wav_idle() {
 	 * Sound Blaster 16 hardware until it gets the I/O read to ack the IRQ */
 	sndsb_main_idle(sb_card);
 
-	_cli();
-    wav_play_dma_position = sndsb_read_dma_buffer_position(sb_card);
-	_sti();
+    update_wav_dma_position();
     update_wav_play_delay();
 
     /* load more from disk */
@@ -881,7 +885,7 @@ static int begin_play() {
 		return -1;
 
 	sndsb_setup_dma(sb_card);
-    wav_play_dma_position = sndsb_read_dma_buffer_position(sb_card);
+    update_wav_dma_position();
     update_wav_play_delay();
 
     /* minimum buffer until loading again (100ms) */
