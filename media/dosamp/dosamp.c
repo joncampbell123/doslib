@@ -491,6 +491,7 @@ static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. de
 static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
 static unsigned char                    wav_play_empty = 0;/* if set, buffer is empty. else, audio data is there */
 static unsigned char                    wav_playing = 0;
+static unsigned char                    wav_prepared = 0;
 
 void update_wav_dma_position(void) {
     _cli();
@@ -542,9 +543,14 @@ static void interrupt sb_irq() {
     }
 }
 
+void update_wav_play_delay();
+
 /* this depends on keeping the "play delay" up to date */
 uint32_t can_write(void) { /* in bytes */
     uint32_t x;
+
+    update_wav_dma_position();
+    update_wav_play_delay();
 
     x = sb_card->buffer_size;
     if (x >= wav_play_delay_bytes) x -= wav_play_delay_bytes;
@@ -581,6 +587,10 @@ unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
 
         /* now that audio has been written, buffer is no longer empty */
         wav_play_empty = 0;
+
+        /* update */
+        update_wav_dma_position();
+        update_wav_play_delay();
     }
 
     /* return ptr */
@@ -749,6 +759,12 @@ unsigned char dosamp_FAR * tmpbuffer_get(uint32_t *sz) {
     return tmpbuffer;
 }
 
+void card_poll(void) {
+	sndsb_main_idle(sb_card);
+    update_wav_dma_position();
+    update_wav_play_delay();
+}
+
 unsigned char use_mmap_write = 1;
 
 static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
@@ -891,24 +907,15 @@ static void wav_idle() {
 	if (!wav_playing || wav_source == NULL)
 		return;
 
-	/* if we're playing without an IRQ handler, then we'll want this function
-	 * to poll the sound card's IRQ status and handle it directly so playback
-	 * continues to work. if we don't, playback will halt on actual Creative
-	 * Sound Blaster 16 hardware until it gets the I/O read to ack the IRQ */
-	sndsb_main_idle(sb_card);
-
-    update_wav_dma_position();
-    update_wav_play_delay();
+    /* update card state */
+    card_poll();
 
     /* load more from disk */
     if (!stuck_test) load_audio(wav_play_load_block_size);
 
     /* update info */
-    update_wav_play_delay();
     update_play_position();
 }
-
-static void update_cfg();
 
 static void close_wav() {
 	if (wav_source != NULL) {
@@ -994,8 +1001,7 @@ static int open_wav() {
     wav_data_length /= file_codec.bytes_per_block;
     wav_data_length *= file_codec.samples_per_block;
 
-    /* apply */
-	update_cfg();
+    /* done */
     return 0;
 fail:
     dosamp_file_source_release(wav_source);
@@ -1064,20 +1070,8 @@ void unhook_irq(void) {
     }
 }
 
-static int begin_play() {
+int sb_check_dma_buffer(void) {
     int8_t ch;
-
-	if (wav_playing)
-		return 0;
-
-	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
-        return -1;
-
-    /* reset state */
-    wav_rebase_clear();
-    wav_write_counter = 0;
-    wav_play_delay = 0;
-    wav_play_empty = 1;
 
     /* alloc DMA buffer.
      * if already allocated, then realloc if changing from 8-bit to 16-bit DMA */
@@ -1095,14 +1089,9 @@ static int begin_play() {
 
     if (sb_dma == NULL)
         return -1;
-    if (wav_source == NULL)
-		return -1;
 
-    /* get the file pointer ready */
-    wav_position_to_file_pointer();
-
-    /* make a rebase event */
-    wav_rebase_position_event();
+	if (!sndsb_assign_dma_buffer(sb_card,sb_dma))
+        return -1;
 
     /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
      * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
@@ -1114,7 +1103,24 @@ static int begin_play() {
         if (sb_card->buffer_size == 0UL) return -1;
     }
 
-    /* hook IRQ */
+    return 0;
+}
+
+int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
+    *d = *s; // TODO: In the future we'll support format conversion
+    return 0;
+}
+
+int prepare_play(void) {
+    if (wav_prepared)
+        return 0;
+
+	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
+        return -1;
+
+    if (sb_check_dma_buffer() < 0)
+        return -1;
+
     hook_irq();
 
     /* prepare DSP */
@@ -1126,27 +1132,42 @@ static int begin_play() {
 	sndsb_setup_dma(sb_card);
     update_wav_dma_position();
     update_wav_play_delay();
+    wav_prepared = 1;
+    return 0;
+}
 
-    /* minimum buffer until loading again (100ms) */
-    wav_play_min_load_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
+int unprepare_play(void) {
+    if (wav_prepared) {
+        sndsb_stop_dsp_playback(sb_card);
+        wav_prepared = 0;
+    }
 
-    /* no more than 1/4 the buffer */
-    if (wav_play_min_load_size > (sb_card->buffer_size / 4UL))
-        wav_play_min_load_size = (sb_card->buffer_size / 4UL);
+    unhook_irq();
+    return 0;
+}
 
-    /* how much to load per call (100ms per call) */
-    wav_play_load_block_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
+uint32_t play_buffer_size(void) {
+    return sb_card->buffer_size;
+}
 
-    /* no more than half the buffer */
-    if (wav_play_load_block_size > (sb_card->buffer_size / 2UL))
-        wav_play_load_block_size = (sb_card->buffer_size / 2UL);
+uint32_t set_irq_interval(uint32_t x) {
+    uint32_t t;
 
-    /* preroll */
-    load_audio(wav_play_load_block_size);
+    if (x != 0UL) {
+        /* minimum */
+        t = ((play_codec.sample_rate + 127UL) / 128UL) * play_codec.bytes_per_block;
+        if (x < t) x = t;
+        if (x > sb_card->buffer_size) x = sb_card->buffer_size;
+    }
+    else {
+        x = sb_card->buffer_size;
+    }
 
-    update_wav_play_delay();
-    update_play_position();
+    sb_card->buffer_irq_interval = x;
+    return sb_card->buffer_irq_interval;
+}
 
+int start_sound_card(void) {
 	/* make sure the IRQ is acked */
 	if (sb_card->irq >= 8) {
 		p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7)); /* IRQ */
@@ -1165,6 +1186,77 @@ static int begin_play() {
 		return -1;
     }
 
+    return 0;
+}
+
+int stop_sound_card(void) {
+    _cli();
+    update_wav_dma_position();
+    update_wav_play_delay();
+    _sti();
+
+    sndsb_stop_dsp_playback(sb_card);
+    return 0;
+}
+
+static int begin_play() {
+	if (wav_playing)
+		return 0;
+
+    if (wav_source == NULL)
+		return -1;
+
+    /* reset state */
+    wav_rebase_clear();
+    wav_write_counter = 0;
+    wav_play_delay = 0;
+    wav_play_empty = 1;
+
+    /* get the file pointer ready */
+    wav_position_to_file_pointer();
+
+    /* make a rebase event */
+    wav_rebase_position_event();
+
+    /* choose output vs input */
+    if (negotiate_play_format(&play_codec,&file_codec) < 0) {
+        unprepare_play();
+        return -1;
+    }
+
+    /* prepare the sound card (buffer, DMA, etc.) */
+    if (prepare_play() < 0) {
+        unprepare_play();
+        return -1;
+    }
+
+    /* set IRQ interval (card will pick closest and sanitize it) */
+    set_irq_interval(play_buffer_size());
+
+    /* minimum buffer until loading again (100ms) */
+    wav_play_min_load_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
+
+    /* no more than 1/4 the buffer */
+    if (wav_play_min_load_size > (sb_card->buffer_size / 4UL))
+        wav_play_min_load_size = (sb_card->buffer_size / 4UL);
+
+    /* how much to load per call (100ms per call) */
+    wav_play_load_block_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
+
+    /* no more than half the buffer */
+    if (wav_play_load_block_size > (sb_card->buffer_size / 2UL))
+        wav_play_load_block_size = (sb_card->buffer_size / 2UL);
+
+    /* preroll */
+    load_audio(wav_play_load_block_size);
+    update_play_position();
+
+    /* go! */
+    if (start_sound_card() < 0) {
+        unprepare_play();
+        return -1;
+    }
+
 	_cli();
 	wav_playing = 1;
 	_sti();
@@ -1175,25 +1267,16 @@ static int begin_play() {
 static void stop_play() {
 	if (!wav_playing) return;
 
-	_cli();
-    update_wav_dma_position();
-    update_wav_play_delay();
-    update_play_position();
+    /* stop */
+    stop_sound_card();
+    unprepare_play();
+
     wav_position = wav_play_position;
+    update_play_position();
 
-    sndsb_stop_dsp_playback(sb_card);
-
+	_cli();
     wav_playing = 0;
 	_sti();
-
-    unhook_irq();
-}
-
-static void update_cfg() {
-    sb_card->buffer_irq_interval = sb_card->buffer_size / file_codec.bytes_per_block;
-
-    /* TODO: at some point we'll support on-the-fly conversion to what the sound card supports */
-    play_codec = file_codec;
 }
 
 static void help() {
@@ -1574,13 +1657,6 @@ int main(int argc,char **argv) {
         if (sb_card->baseio == 0)
             return 1;
     }
-
-    realloc_dma_buffer();
-
-	if (!sndsb_assign_dma_buffer(sb_card,sb_dma)) {
-		printf("Cannot assign DMA buffer\n");
-		return 1;
-	}
 
 	loop = 1;
     if (open_wav() < 0)
