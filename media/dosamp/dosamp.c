@@ -493,6 +493,12 @@ static unsigned char                    wav_play_empty = 0;/* if set, buffer is 
 static unsigned char                    wav_playing = 0;
 static unsigned char                    wav_prepared = 0;
 
+static const unsigned long              resample_100 = 1UL << 16UL;
+
+static unsigned long                    resample_step = 0; /* 16.16 resampling step */
+static unsigned long                    resample_frac = 0;
+static unsigned char                    resample_on = 0;
+
 void update_wav_dma_position(void) {
     _cli();
     wav_play_dma_position = sndsb_read_dma_buffer_position(sb_card);
@@ -1163,6 +1169,21 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
 
         return -1;
     }
+
+    {
+        unsigned long long tmp;
+
+        tmp  = (unsigned long long)s->sample_rate << 16ULL;
+        tmp /= (unsigned long long)d->sample_rate;
+
+        resample_step = (unsigned long)tmp;
+        resample_frac = 0;
+    }
+
+    if (resample_frac == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
+        resample_on = 0;
+    else
+        resample_on = 1;
 
     return 0;
 }
