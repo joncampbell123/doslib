@@ -1485,6 +1485,7 @@ int main(int argc,char **argv) {
 		printf("Cannot init ISA PnP\n");
 		return 1;
 	}
+    find_isa_pnp_bios();
 
     /* for now, always use 8254 PIT as time source */
     time_source = &dosamp_time_source_8254;
@@ -1522,7 +1523,7 @@ int main(int argc,char **argv) {
 	sndsb_enable_ess_audiodrive_support();	// ESS AudioDrive support
 
     /* Plug & Play scan */
-    if (find_isa_pnp_bios()) {
+    if (has_isa_pnp_bios()) {
         const unsigned int devnode_raw_sz = 4096U;
         unsigned char *devnode_raw = malloc(devnode_raw_sz);
 
