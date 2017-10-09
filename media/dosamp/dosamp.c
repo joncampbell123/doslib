@@ -1079,9 +1079,9 @@ int sb_check_dma_buffer(void) {
         realloc_dma_buffer();
     else {
         ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,
-            /*rate*/file_codec.sample_rate,
-            /*stereo*/file_codec.number_of_channels > 1,
-            /*16-bit*/file_codec.bits_per_sample > 8);
+            /*rate*/play_codec.sample_rate,
+            /*stereo*/play_codec.number_of_channels > 1,
+            /*16-bit*/play_codec.bits_per_sample > 8);
 
         if (ch >= 0 && sb_dma->dma_width != (ch >= 4 ? 16 : 8))
             realloc_dma_buffer();
@@ -1107,10 +1107,25 @@ int sb_check_dma_buffer(void) {
 }
 
 int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
+    int r;
+
     /* by default, use source format */
     *d = *s;
 
     /* TODO: Later we should support 5.1 surround to mono/stereo conversion, 24-bit PCM support, etc. */
+
+    /* stereo -> mono conversion if needed (if DSP doesn't support stereo) */
+	if (d->number_of_channels == 2 && sb_card->dsp_vmaj < 3) d->number_of_channels = 1;
+
+    /* 16-bit -> 8-bit if needed (if DSP doesn't support 16-bit) */
+    if (d->bits_per_sample == 16) {
+        if (sb_card->is_gallant_sc6600 && sb_card->dsp_vmaj < 3) /* SC400 and DSP version less than 3.xx */
+            d->bits_per_sample = 8;
+        else if (sb_card->dsp_vmaj < 4) /* DSP version less than 4.xx */
+            d->bits_per_sample = 8;
+        else if (sb_card->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx) /* if playback not DSP 4.xx */
+            d->bits_per_sample = 8;
+    }
 
     if (d->number_of_channels < 1 || d->number_of_channels > 2) /* SB is mono or stereo, nothing else. */
         return -1;
@@ -1122,9 +1137,29 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
     sb_card->buffer_phys = 0;
 
     /* we'll follow the recommendations on what is supported by the DSP. no hacks. */
-    if (!sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0)) {
+    r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
+    if (!r) {
+        /* we already made concessions for channels/bits, so try sample rate */
+        d->sample_rate = 44100;
+        r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
+    }
+    if (!r) {
+        /* we already made concessions for channels/bits, so try sample rate */
+        d->sample_rate = 22050;
+        r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
+    }
+    if (!r) {
+        /* we already made concessions for channels/bits, so try sample rate */
+        d->sample_rate = 11025;
+        r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
+    }
+    if (!r) {
         if (sb_card->reason_not_supported != NULL && *(sb_card->reason_not_supported) != 0)
-            printf("Negotiation failed (SB):\n    %s\n",sb_card->reason_not_supported);
+            printf("Negotiation failed (SB) even with %luHz %u-channel %u-bit:\n    %s\n",
+                d->sample_rate,
+                d->number_of_channels,
+                d->bits_per_sample,
+                sb_card->reason_not_supported);
 
         return -1;
     }
@@ -1160,7 +1195,7 @@ int prepare_play(void) {
     hook_irq();
 
     /* prepare DSP */
-	if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,/*16-bit*/file_codec.bits_per_sample > 8)) {
+	if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8)) {
         unhook_irq();
 		return -1;
     }
