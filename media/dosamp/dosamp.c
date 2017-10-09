@@ -480,8 +480,13 @@ static unsigned long                    wav_data_length = 0;/* in samples */;
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
 static unsigned long                    wav_play_load_block_size = 0;
 static unsigned long                    wav_play_min_load_size = 0;
+
+/* NTS: If long-term playback is desired (long enough to overflow these variables)
+ *      you should "extend" them by tracking their previous values and then adding
+ *      to a "high half" when they wrap around. */
 static unsigned long                    wav_write_counter = 0;/* at buffer_last_io, bytes written since play start */
 static unsigned long                    wav_play_counter = 0;/* at dma position, bytes played since play start */
+
 static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
 static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
 static unsigned char                    wav_play_empty = 0;/* if set, buffer is empty. else, audio data is there */
@@ -609,6 +614,91 @@ int wav_position_to_file_pointer(void) {
     return 0;
 }
 
+/* the reason I added "written/played" accounting is to make it possible
+ * to robustly follow playback and act on events relative to playback.
+ * such as, knowing that at such and such playback time, we looped the
+ * WAV file back or switched to a new one. */
+struct audio_playback_rebase_t {
+    unsigned long           event_at;       /* playback time byte count */
+    unsigned long           wav_position;   /* starting WAV position to count from using playback time */
+};
+
+#define MAX_REBASE                  32
+
+struct audio_playback_rebase_t      wav_rebase_events[MAX_REBASE];
+unsigned char                       wav_rebase_read=0,wav_rebase_write=0;
+
+void wav_rebase_clear(void) {
+    wav_rebase_read = 0;
+    wav_rebase_write = 0;
+}
+
+void rebase_flush_old(unsigned long before) {
+    int howmany;
+
+    howmany = (int)wav_rebase_write - (int)wav_rebase_read;
+    if (howmany < 0) howmany += MAX_REBASE;
+
+    /* flush all but one */
+    while (wav_rebase_read != wav_rebase_write && howmany > 1) {
+        if (wav_rebase_events[wav_rebase_read].event_at >= before)
+            break;
+
+        howmany--;
+        wav_rebase_read++;
+        if (wav_rebase_read >= MAX_REBASE) wav_rebase_read = 0;
+    }
+}
+
+struct audio_playback_rebase_t *rebase_find(unsigned long event) {
+    struct audio_playback_rebase_t *r = NULL;
+    unsigned char i = wav_rebase_read;
+
+    while (i != wav_rebase_write) {
+        if (event >= wav_rebase_events[i].event_at)
+            r = &wav_rebase_events[i];
+        else
+            break;
+
+        i++;
+        if (i >= MAX_REBASE) i = 0;
+    }
+
+    return r;
+}
+
+struct audio_playback_rebase_t *rebase_add(void) {
+    unsigned char i = wav_rebase_write;
+
+    {
+        unsigned char j = i + 1;
+        if (j >= MAX_REBASE) j -= MAX_REBASE;
+        if (j == wav_rebase_read) {
+            /* well then we just throw the oldest event away */
+            wav_rebase_read++;
+            if (wav_rebase_read >= MAX_REBASE) wav_rebase_read = 0;
+        }
+        wav_rebase_write = j;
+    }
+
+    {
+        struct audio_playback_rebase_t *p = &wav_rebase_events[i];
+
+        memset(p,0,sizeof(*p));
+        return p;
+    }
+}
+
+void wav_rebase_position_event(void) {
+    /* make a rebase event */
+    struct audio_playback_rebase_t *r = rebase_add();
+
+    if (r != NULL) {
+        r->event_at = wav_write_counter;
+        r->wav_position = wav_position;
+    }
+}
+
 static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
     unsigned char dosamp_FAR * ptr;
     dosamp_file_off_t rem;
@@ -630,6 +720,7 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
         /* if we're at the end, seek back around and start again */
         if (rem == 0UL) {
             if (wav_rewind() < 0) break;
+            wav_rebase_position_event();
             continue;
         }
 
@@ -638,7 +729,7 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
 
         /* get the write pointer. towrite is guaranteed to be block aligned */
         ptr = mmap_write(&towrite,rem);
-        if (ptr == NULL || towrite == 0) return;
+        if (ptr == NULL || towrite == 0) break;
 
         /* read */
         rem = wav_source->file_pos + towrite; /* expected result pos */
@@ -647,6 +738,7 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
                 break;
             if (wav_file_pointer_to_position() < 0)
                 break;
+            wav_rebase_position_event();
             if (wav_position_to_file_pointer() < 0)
                 break;
         }
@@ -688,11 +780,14 @@ void update_wav_play_delay() {
 }
 
 void update_play_position(void) {
-    signed long pos;
+    struct audio_playback_rebase_t *r;
 
-    pos = wav_position - wav_play_delay;
-    if (pos < 0L) pos = 0L;
-    wav_play_position = (unsigned long)pos;
+    r = rebase_find(wav_play_counter);
+
+    if (r != NULL)
+        wav_play_position = (wav_play_counter + r->wav_position - r->event_at) / play_codec.bytes_per_block;
+    else
+        wav_play_position = 0;
 }
 
 static void wav_idle() {
@@ -882,6 +977,7 @@ static int begin_play() {
         return -1;
 
     /* reset state */
+    wav_rebase_clear();
     wav_write_counter = 0;
     wav_play_delay = 0;
     wav_play_empty = 1;
@@ -907,6 +1003,9 @@ static int begin_play() {
 
     /* get the file pointer ready */
     wav_position_to_file_pointer();
+
+    /* make a rebase event */
+    wav_rebase_position_event();
 
     /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
      * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
@@ -997,6 +1096,7 @@ static void stop_play() {
     wav_write_counter = 0;
     wav_playing = 0;
 	_sti();
+    wav_rebase_clear();
 
     unhook_irq();
 }
