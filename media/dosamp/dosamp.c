@@ -836,21 +836,37 @@ static void realloc_dma_buffer() {
         return;
 }
 
+void hook_irq(void) {
+    if (sb_card->irq != -1) {
+        if (old_irq == NULL) {
+            old_irq_masked = p8259_is_masked(sb_card->irq);
+            if (vector_is_iret(irq2int(sb_card->irq)))
+                old_irq_masked = 1;
+
+            old_irq = _dos_getvect(irq2int(sb_card->irq));
+            _dos_setvect(irq2int(sb_card->irq),sb_irq);
+            /* if the IRQ is still masked, keep it that way until we begin playback */
+        }
+    }
+}
+
+void unhook_irq(void) {
+    if (old_irq != NULL) {
+        if (sb_card->irq >= 0 && old_irq_masked)
+            p8259_mask(sb_card->irq);
+
+        if (sb_card->irq != -1 && old_irq != NULL)
+            _dos_setvect(irq2int(sb_card->irq),old_irq);
+
+        old_irq = NULL;
+    }
+}
+
 static int begin_play() {
     int8_t ch;
 
 	if (wav_playing)
 		return 0;
-
-	if (sb_card->irq != -1) {
-		old_irq_masked = p8259_is_masked(sb_card->irq);
-		if (vector_is_iret(irq2int(sb_card->irq)))
-			old_irq_masked = 1;
-
-		old_irq = _dos_getvect(irq2int(sb_card->irq));
-		_dos_setvect(irq2int(sb_card->irq),sb_irq);
-        /* but keep the IRQ masked until playback */
-	}
 
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
         return -1;
@@ -891,8 +907,14 @@ static int begin_play() {
         if (sb_card->buffer_size == 0UL) return -1;
     }
 
-	if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,/*16-bit*/file_codec.bits_per_sample > 8))
+    /* hook IRQ */
+    hook_irq();
+
+    /* prepare DSP */
+	if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/file_codec.sample_rate,/*stereo*/file_codec.number_of_channels > 1,/*16-bit*/file_codec.bits_per_sample > 8)) {
+        unhook_irq();
 		return -1;
+    }
 
 	sndsb_setup_dma(sb_card);
     update_wav_dma_position();
@@ -931,8 +953,10 @@ static int begin_play() {
 	if (sb_card->irq >= 0)
 		p8259_unmask(sb_card->irq);
 
-	if (!sndsb_begin_dsp_playback(sb_card))
+	if (!sndsb_begin_dsp_playback(sb_card)) {
+        unhook_irq();
 		return -1;
+    }
 
 	_cli();
 	wav_playing = 1;
@@ -962,11 +986,7 @@ static void stop_play() {
     wav_playing = 0;
 	_sti();
 
-	if (sb_card->irq >= 0 && old_irq_masked)
-		p8259_mask(sb_card->irq);
-
-	if (sb_card->irq != -1 && old_irq != NULL)
-		_dos_setvect(irq2int(sb_card->irq),old_irq);
+    unhook_irq();
 }
 
 static void update_cfg() {
