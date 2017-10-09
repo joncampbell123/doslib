@@ -34,6 +34,8 @@
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
 
+static char                 stuck_test = 0;
+
 #pragma pack(push,1)
 typedef struct windows_WAVEFORMATPCM {
     uint16_t    wFormatTag;             /* +0 */
@@ -707,7 +709,7 @@ static void wav_idle() {
     update_wav_play_delay();
 
     /* load more from disk */
-    load_audio(wav_play_load_block_size);
+    if (!stuck_test) load_audio(wav_play_load_block_size);
 
     /* update info */
     update_wav_play_delay();
@@ -1411,6 +1413,9 @@ int main(int argc,char **argv) {
                 if (i == 27) {
                     loop = 0;
                     break;
+                }
+                else if (i == 's') {
+                    stuck_test = !stuck_test;
                 }
                 else if (i >= '0' && i <= '9') {
                     unsigned char nd = (unsigned char)(i-'0');
