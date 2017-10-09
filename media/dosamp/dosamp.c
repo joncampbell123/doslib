@@ -738,6 +738,7 @@ void wav_rebase_position_event(void) {
     }
 }
 
+static unsigned char dosamp_FAR * tmpbuffer2 = NULL;
 static unsigned char dosamp_FAR * tmpbuffer = NULL;
 static size_t tmpbuffer_sz = 4096;
 
@@ -749,6 +750,14 @@ void tmpbuffer_free(void) {
         _ffree(tmpbuffer);
 #endif
         tmpbuffer = NULL;
+    }
+    if (tmpbuffer2 != NULL) {
+#if TARGET_MSDOS == 32
+        free(tmpbuffer2);
+#else
+        _ffree(tmpbuffer2);
+#endif
+        tmpbuffer2 = NULL;
     }
 }
 
@@ -763,6 +772,19 @@ unsigned char dosamp_FAR * tmpbuffer_get(uint32_t *sz) {
 
     if (sz != NULL) *sz = tmpbuffer_sz;
     return tmpbuffer;
+}
+
+unsigned char dosamp_FAR * tmpbuffer2_get(uint32_t *sz) {
+    if (tmpbuffer2 == NULL) {
+#if TARGET_MSDOS == 32
+        tmpbuffer2 = malloc(tmpbuffer_sz);
+#else
+        tmpbuffer2 = _fmalloc(tmpbuffer_sz);
+#endif
+    }
+
+    if (sz != NULL) *sz = tmpbuffer_sz;
+    return tmpbuffer2;
 }
 
 void card_poll(void) {
