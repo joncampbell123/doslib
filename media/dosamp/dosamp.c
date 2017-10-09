@@ -604,7 +604,13 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
         if (ptr == NULL || towrite == 0) return;
 
         /* read */
-        wav_source->read(wav_source,ptr,towrite);
+        rem = wav_source->file_pos + towrite; /* expected result pos */
+        if (wav_source->read(wav_source,ptr,towrite) != towrite) {
+            if (wav_source->seek(wav_source,rem) != rem) {
+                wav_position = 0;
+                if (wav_source->seek(wav_source,(dosamp_file_off_t)wav_data_offset) != (dosamp_file_off_t)wav_data_offset) break;
+            }
+        }
 
         /* adjust */
         wav_position = wav_source->file_pos / play_codec.bytes_per_block;
