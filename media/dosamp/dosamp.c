@@ -652,12 +652,12 @@ static void load_audio(uint32_t up_to,uint32_t min,uint32_t max) { /* load audio
 	}
 }
 
-void update_wav_play_delay(uint32_t dma_pos/*in bytes*/) {
+void update_wav_play_delay() {
     signed long delay;
 
     /* DMA trails our "last IO" pointer */
     delay  = (signed long)sb_card->buffer_last_io;
-    delay -= (signed long)dma_pos;
+    delay -= (signed long)wav_play_dma_position;
 
     /* delay == 0 is a special case.
      * if wav_play_empty, then it means there's no delay.
@@ -673,7 +673,6 @@ void update_wav_play_delay(uint32_t dma_pos/*in bytes*/) {
     if (delay >= (signed long)sb_card->buffer_size) delay = (signed long)sb_card->buffer_size;
 
     /* convert to samples */
-    wav_play_dma_position = dma_pos;
     wav_play_delay_bytes = (unsigned long)delay;
     wav_play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
 }
@@ -687,8 +686,6 @@ void update_play_position(void) {
 }
 
 static void wav_idle() {
-	uint32_t pos;
-
 	if (!wav_playing || wav_source == NULL)
 		return;
 
@@ -699,13 +696,13 @@ static void wav_idle() {
 	sndsb_main_idle(sb_card);
 
 	_cli();
-	pos = sndsb_read_dma_buffer_position(sb_card);
+    wav_play_dma_position = sndsb_read_dma_buffer_position(sb_card);
 	_sti();
 
     /* load from disk */
-    load_audio(pos,min(file_codec.sample_rate/8,4096)/*min*/,
+    load_audio(wav_play_dma_position,min(file_codec.sample_rate/8,4096)/*min*/,
         sb_card->buffer_size/4/*max*/);
-    update_wav_play_delay(pos);
+    update_wav_play_delay();
     update_play_position();
 }
 
@@ -884,9 +881,12 @@ static int begin_play() {
 		return -1;
 
 	sndsb_setup_dma(sb_card);
+    wav_play_dma_position = sndsb_read_dma_buffer_position(sb_card);
 
+    /* preroll */
     load_audio(sb_card->buffer_size/2,0/*min*/,0/*max*/);
-    update_wav_play_delay(0/*DMA hasn't started yet*/);
+
+    update_wav_play_delay();
     update_play_position();
 
 	/* make sure the IRQ is acked */
