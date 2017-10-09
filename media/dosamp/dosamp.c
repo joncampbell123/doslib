@@ -475,6 +475,8 @@ static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_data_offset = 44;
 static unsigned long                    wav_data_length = 0;/* in samples */;
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
+static unsigned long                    wav_play_load_block_size = 0;
+static unsigned long                    wav_play_min_load_size = 0;
 static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
 static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
 static unsigned char                    wav_play_empty = 0;/* if set, buffer is empty. else, audio data is there */
@@ -524,132 +526,69 @@ static void interrupt sb_irq() {
     }
 }
 
-static void load_audio(uint32_t up_to,uint32_t min,uint32_t max) { /* load audio up to point or max */
-#if TARGET_MSDOS == 32
-	unsigned char *buffer = sb_dma->lin;
-#else
-	unsigned char far *buffer = sb_dma->lin;
-#endif
-	int rd,i,bufe=0;
-	uint32_t how;
+/* this depends on keeping the "play delay" up to date */
+uint32_t can_write(void) { /* in bytes */
+    uint32_t x;
 
-	up_to &= ~3UL;
+    x = sb_card->buffer_size;
+    if (x >= wav_play_delay_bytes) x -= wav_play_delay_bytes;
+    else x = 0;
 
-	if (up_to >= sb_card->buffer_size) return;
-	if (sb_card->buffer_size < 32) return;
-	if (sb_card->buffer_last_io == up_to) return;
+    return x;
+}
 
-	if (max == 0) max = sb_card->buffer_size/4;
-	if (max < 16) return;
+unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
+    uint32_t m;
 
-	wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
+    if (sb_card->buffer_last_io > sb_card->buffer_size) return NULL;
 
-	while (max > 0UL) {
-		if (sb_card->backwards) {
-			if (up_to > sb_card->buffer_last_io) {
-				how = sb_card->buffer_last_io;
-				if (how == 0) how = sb_card->buffer_size - up_to;
-				bufe = 1;
-			}
-			else {
-				how = (sb_card->buffer_last_io - up_to);
-				bufe = 0;
-			}
-		}
-		else {
-			if (up_to < sb_card->buffer_last_io) {
-				how = (sb_card->buffer_size - sb_card->buffer_last_io); /* from last IO to end of buffer */
-				bufe = 1;
-			}
-			else {
-				how = (up_to - sb_card->buffer_last_io); /* from last IO to up_to */
-				bufe = 0;
-			}
-		}
+    m = sb_card->buffer_size - sb_card->buffer_last_io;
+    if (want > m) want = m;
+    *howmuch = want;
 
-		if (how > 16384UL)
-			how = 16384UL;
+    return dosamp_ptr_add_normalize(sb_dma->lin,sb_card->buffer_last_io);;
+}
 
-		if (how == 0UL)
-			break;
-		else if (how > max)
-			how = max;
-		else if (!bufe && how < min)
-			break;
+void mmap_write_complete(uint32_t count) {
+    sb_card->buffer_last_io += count;
+    if (sb_card->buffer_last_io >= sb_card->buffer_size)
+        sb_card->buffer_last_io = 0;
+}
 
-        {
-            uint32_t oa,adj;
+static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
+    unsigned char dosamp_FAR * ptr;
+    unsigned int rd;
+    uint32_t towrite;
+    uint32_t avail;
 
-			oa = sb_card->buffer_last_io;
-			if (sb_card->backwards) {
-				if (sb_card->buffer_last_io == 0) {
-					sb_card->buffer_last_io = sb_card->buffer_size - how;
-				}
-				else if (sb_card->buffer_last_io >= how) {
-					sb_card->buffer_last_io -= how;
-				}
-				else {
-					abort();
-				}
+    avail = can_write();
 
-				adj = (uint32_t)how / file_codec.bytes_per_block;
-				if (wav_position >= adj) wav_position -= adj;
-				else if (wav_position != 0UL) wav_position = 0;
-				else {
-					wav_position = wav_source->file_size;
-					if (wav_position >= adj) wav_position -= adj;
-					else if (wav_position != 0UL) wav_position = 0;
-					wav_position /= file_codec.bytes_per_block;
-				}
+    if (howmuch > avail) howmuch = avail;
+    if (howmuch < wav_play_min_load_size) return; /* don't want to incur too much DOS I/O */
 
-				wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
-			}
+    while (howmuch > 0) {
+        ptr = mmap_write(&towrite,howmuch);
+        towrite -= towrite % play_codec.bytes_per_block;
+        if (ptr == NULL || towrite == 0) return;
 
-			assert(sb_card->buffer_last_io <= sb_card->buffer_size);
-            rd = wav_source->read(wav_source,dosamp_ptr_add_normalize(buffer,sb_card->buffer_last_io),how);
-			if (rd == 0 || rd == -1) {
-				if (!sb_card->backwards) {
-					wav_position = 0;
-					wav_source->seek(wav_source,wav_data_offset + (wav_position * (unsigned long)file_codec.bytes_per_block));
-					rd = wav_source->read(wav_source,dosamp_ptr_add_normalize(buffer,sb_card->buffer_last_io),how);
-					if (rd == 0 || rd == -1) {
-						/* hmph, fine */
-#if TARGET_MSDOS == 32
-						memset(buffer+sb_card->buffer_last_io,128,how);
-#else
-						_fmemset(buffer+sb_card->buffer_last_io,128,how);
-#endif
-						rd = (int)how;
-					}
-				}
-				else {
-					rd = (int)how;
-				}
-			}
+again:  rd = wav_source->read(wav_source,ptr,towrite);
+        if (rd == dosamp_file_io_err || rd == 0 || (rd % play_codec.bytes_per_block) != 0) {
+            off_t ofs;
 
-			assert((sb_card->buffer_last_io+((uint32_t)rd)) <= sb_card->buffer_size);
-			if (sb_card->audio_data_flipped_sign) {
-				if (file_codec.bits_per_sample > 8)
-					for (i=0;i < (rd-1);i += 2) buffer[sb_card->buffer_last_io+i+1] ^= 0x80;
-				else
-					for (i=0;i < rd;i++) buffer[sb_card->buffer_last_io+i] ^= 0x80;
-			}
+            wav_position = 0;
+            ofs = (off_t)wav_data_offset;
+            if (wav_source->seek(wav_source,(dosamp_file_off_t)ofs) != (dosamp_file_off_t)ofs)
+                return;
 
-			if (!sb_card->backwards) {
-				sb_card->buffer_last_io += (uint32_t)rd;
-				wav_position += (uint32_t)rd / file_codec.bytes_per_block;
+            goto again;
+        }
+        towrite = rd;
 
-                /* no longer empty! */
-                wav_play_empty = 0;
-            }
-		}
-
-		assert(sb_card->buffer_last_io <= sb_card->buffer_size);
-		if (!sb_card->backwards) {
-			if (sb_card->buffer_last_io == sb_card->buffer_size) sb_card->buffer_last_io = 0;
-		}
-		max -= (uint32_t)rd;
-	}
+        wav_play_empty = 0;
+        mmap_write_complete(towrite);
+        wav_position = wav_source->file_pos;
+        howmuch -= towrite;
+    }
 }
 
 void update_wav_play_delay() {
@@ -698,10 +637,12 @@ static void wav_idle() {
 	_cli();
     wav_play_dma_position = sndsb_read_dma_buffer_position(sb_card);
 	_sti();
+    update_wav_play_delay();
 
-    /* load from disk */
-    load_audio(wav_play_dma_position,min(file_codec.sample_rate/8,4096)/*min*/,
-        sb_card->buffer_size/4/*max*/);
+    /* load more from disk */
+    load_audio(wav_play_load_block_size);
+
+    /* update info */
     update_wav_play_delay();
     update_play_position();
 }
@@ -867,6 +808,18 @@ static int begin_play() {
     if (wav_source == NULL)
 		return -1;
 
+    /* get the file pointer ready */
+    {
+        off_t ofs = (off_t)wav_data_offset + ((off_t)wav_position * (off_t)play_codec.bytes_per_block);
+
+        if (wav_source->seek(wav_source,(dosamp_file_off_t)ofs) != (dosamp_file_off_t)ofs) {
+            wav_position = 0;
+            ofs = (off_t)wav_data_offset;
+            if (wav_source->seek(wav_source,(dosamp_file_off_t)ofs) != (dosamp_file_off_t)ofs)
+                return -1;
+        }
+    }
+
     /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
      * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
     {
@@ -882,9 +835,24 @@ static int begin_play() {
 
 	sndsb_setup_dma(sb_card);
     wav_play_dma_position = sndsb_read_dma_buffer_position(sb_card);
+    update_wav_play_delay();
+
+    /* minimum buffer until loading again (100ms) */
+    wav_play_min_load_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
+
+    /* no more than 1/4 the buffer */
+    if (wav_play_min_load_size > (sb_card->buffer_size / 4UL))
+        wav_play_min_load_size = (sb_card->buffer_size / 4UL);
+
+    /* how much to load per call (100ms per call) */
+    wav_play_load_block_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
+
+    /* no more than half the buffer */
+    if (wav_play_load_block_size > (sb_card->buffer_size / 2UL))
+        wav_play_load_block_size = (sb_card->buffer_size / 2UL);
 
     /* preroll */
-    load_audio(sb_card->buffer_size/2,0/*min*/,0/*max*/);
+    load_audio(wav_play_load_block_size);
 
     update_wav_play_delay();
     update_play_position();
@@ -1056,7 +1024,7 @@ void display_idle_time(void) {
 void display_idle_buffer(void) {
 	signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
     signed long apos = (signed long)sb_card->buffer_last_io;
-    const unsigned char bar_width = 30;
+    const unsigned char bar_width = 25;
     unsigned char i,posi,aposi;
 
     if (pos < 0L) pos = 0L;
@@ -1085,7 +1053,13 @@ void display_idle_buffer(void) {
             printf("-");
     }
 
-    printf(" a=%6ld/p=%6ld/b=%6ld/d=%6lu/irq=%lu",apos,pos,(signed long)sb_card->buffer_size,(unsigned long)wav_play_delay_bytes,(unsigned long)sb_card->irq_counter);
+    printf(" a=%6ld/p=%6ld/b=%6ld/d=%6lu/cw=%6lu/irq=%lu",
+        apos,
+        pos,
+        (signed long)sb_card->buffer_size,
+        (unsigned long)wav_play_delay_bytes,
+        (unsigned long)can_write(),
+        (unsigned long)sb_card->irq_counter);
 
     fflush(stdout);
 }
