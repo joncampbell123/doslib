@@ -473,6 +473,7 @@ struct wav_cbr_t                        play_codec;
 static unsigned long                    wav_play_dma_position = 0;
 static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_data_offset = 44;
+static unsigned long                    wav_data_length_bytes = 0;
 static unsigned long                    wav_data_length = 0;/* in samples */;
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
 static unsigned long                    wav_play_load_block_size = 0;
@@ -538,26 +539,41 @@ uint32_t can_write(void) { /* in bytes */
 }
 
 unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
+    uint32_t ret_pos;
     uint32_t m;
 
+    /* simpify I/O by only allowing a write that does not wrap around */
+
+    /* determine how much can be written */
     if (sb_card->buffer_last_io > sb_card->buffer_size) return NULL;
 
     m = sb_card->buffer_size - sb_card->buffer_last_io;
     if (want > m) want = m;
+
+    /* but, must be aligned to the block alignment of the format */
+    want -= want % play_codec.bytes_per_block;
+
+    /* this is what we will return */
     *howmuch = want;
+    ret_pos = sb_card->buffer_last_io;
 
-    return dosamp_ptr_add_normalize(sb_dma->lin,sb_card->buffer_last_io);;
-}
+    if (want != 0) {
+        /* advance I/O. caller MUST fill in the buffer. */
+        sb_card->buffer_last_io += want;
+        if (sb_card->buffer_last_io >= sb_card->buffer_size)
+            sb_card->buffer_last_io = 0;
 
-void mmap_write_complete(uint32_t count) {
-    sb_card->buffer_last_io += count;
-    if (sb_card->buffer_last_io >= sb_card->buffer_size)
-        sb_card->buffer_last_io = 0;
+        /* now that audio has been written, buffer is no longer empty */
+        wav_play_empty = 0;
+    }
+
+    /* return ptr */
+    return dosamp_ptr_add_normalize(sb_dma->lin,ret_pos);
 }
 
 static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
     unsigned char dosamp_FAR * ptr;
-    unsigned int rd;
+    dosamp_file_off_t rem;
     uint32_t towrite;
     uint32_t avail;
 
@@ -567,26 +583,31 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
     if (howmuch < wav_play_min_load_size) return; /* don't want to incur too much DOS I/O */
 
     while (howmuch > 0) {
-        ptr = mmap_write(&towrite,howmuch);
-        towrite -= towrite % play_codec.bytes_per_block;
+        rem = wav_data_length_bytes + wav_data_offset;
+        if (wav_source->file_pos <= rem)
+            rem -= wav_source->file_pos;
+        else
+            rem = 0;
+
+        /* if we're at the end, seek back around and start again */
+        if (rem == 0UL) {
+            wav_position = 0;
+            if (wav_source->seek(wav_source,(dosamp_file_off_t)wav_data_offset) != (dosamp_file_off_t)wav_data_offset) break;
+            continue;
+        }
+
+        /* limit to how much we need */
+        if (rem > howmuch) rem = howmuch;
+
+        /* get the write pointer. towrite is guaranteed to be block aligned */
+        ptr = mmap_write(&towrite,rem);
         if (ptr == NULL || towrite == 0) return;
 
-again:  rd = wav_source->read(wav_source,ptr,towrite);
-        if (rd == dosamp_file_io_err || rd == 0 || (rd % play_codec.bytes_per_block) != 0) {
-            off_t ofs;
+        /* read */
+        wav_source->read(wav_source,ptr,towrite);
 
-            wav_position = 0;
-            ofs = (off_t)wav_data_offset;
-            if (wav_source->seek(wav_source,(dosamp_file_off_t)ofs) != (dosamp_file_off_t)ofs)
-                return;
-
-            goto again;
-        }
-        towrite = rd;
-
-        wav_play_empty = 0;
-        mmap_write_complete(towrite);
-        wav_position = wav_source->file_pos;
+        /* adjust */
+        wav_position = wav_source->file_pos / play_codec.bytes_per_block;
         howmuch -= towrite;
     }
 }
@@ -718,6 +739,7 @@ static int open_wav() {
             }
             else if (!memcmp(tmp,"data",4)) {
                 wav_data_offset = scan + 8UL;
+                wav_data_length_bytes = len;
                 wav_data_length = len;
             }
 
@@ -725,7 +747,7 @@ static int open_wav() {
             scan += len + 8UL;
         }
 
-        if (file_codec.sample_rate == 0UL || wav_data_length == 0UL) goto fail;
+        if (file_codec.sample_rate == 0UL || wav_data_length == 0UL || wav_data_length_bytes == 0UL) goto fail;
 	}
 
     /* convert length to samples */
