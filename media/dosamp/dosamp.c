@@ -785,7 +785,7 @@ void update_play_position(void) {
     r = rebase_find(wav_play_counter);
 
     if (r != NULL)
-        wav_play_position = (wav_play_counter + r->wav_position - r->event_at) / play_codec.bytes_per_block;
+        wav_play_position = ((wav_play_counter - r->event_at) / play_codec.bytes_per_block) + r->wav_position;
     else
         wav_play_position = 0;
 }
@@ -1076,27 +1076,18 @@ static int begin_play() {
 }
 
 static void stop_play() {
-	uint32_t pos;
-
 	if (!wav_playing) return;
 
 	_cli();
-	pos = sndsb_read_dma_buffer_position(sb_card);
-    update_wav_play_delay(pos);
+    update_wav_dma_position();
+    update_wav_play_delay();
     update_play_position();
     wav_position = wav_play_position;
 
     sndsb_stop_dsp_playback(sb_card);
 
-    wav_play_empty = 1;
-	pos = sndsb_read_dma_buffer_position(sb_card);
-    sb_card->buffer_last_io = pos;
-    update_wav_play_delay(pos);
-    update_play_position();
-    wav_write_counter = 0;
     wav_playing = 0;
 	_sti();
-    wav_rebase_clear();
 
     unhook_irq();
 }
