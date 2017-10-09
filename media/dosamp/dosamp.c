@@ -842,6 +842,16 @@ static int begin_play() {
 	if (wav_playing)
 		return 0;
 
+	if (sb_card->irq != -1) {
+		old_irq_masked = p8259_is_masked(sb_card->irq);
+		if (vector_is_iret(irq2int(sb_card->irq)))
+			old_irq_masked = 1;
+
+		old_irq = _dos_getvect(irq2int(sb_card->irq));
+		_dos_setvect(irq2int(sb_card->irq),sb_irq);
+        /* but keep the IRQ masked until playback */
+	}
+
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
         return -1;
 
@@ -951,6 +961,12 @@ static void stop_play() {
     update_play_position();
     wav_playing = 0;
 	_sti();
+
+	if (sb_card->irq >= 0 && old_irq_masked)
+		p8259_mask(sb_card->irq);
+
+	if (sb_card->irq != -1 && old_irq != NULL)
+		_dos_setvect(irq2int(sb_card->irq),old_irq);
 }
 
 static void update_cfg() {
@@ -1370,16 +1386,6 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-	if (sb_card->irq != -1) {
-		old_irq_masked = p8259_is_masked(sb_card->irq);
-		if (vector_is_iret(irq2int(sb_card->irq)))
-			old_irq_masked = 1;
-
-		old_irq = _dos_getvect(irq2int(sb_card->irq));
-		_dos_setvect(irq2int(sb_card->irq),sb_irq);
-		p8259_unmask(sb_card->irq);
-	}
-
 	loop = 1;
     if (open_wav() < 0)
         printf("Failed to open file\n");
@@ -1420,12 +1426,6 @@ int main(int argc,char **argv) {
 	stop_play();
 	close_wav();
     free_dma_buffer();
-
-	if (sb_card->irq >= 0 && old_irq_masked)
-		p8259_mask(sb_card->irq);
-
-	if (sb_card->irq != -1)
-		_dos_setvect(irq2int(sb_card->irq),old_irq);
 
 	sndsb_free_card(sb_card);
 	free_sndsb(); /* will also de-ref/unhook the NMI reflection */
