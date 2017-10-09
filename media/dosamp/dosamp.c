@@ -587,6 +587,29 @@ unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
     return dosamp_ptr_add_normalize(sb_dma->lin,ret_pos);
 }
 
+/* non-mmap write (much like OSS or ALSA in Linux where you do not have direct access to the hardware buffer) */
+unsigned int buffer_write(const unsigned char dosamp_FAR * buf,unsigned int len) {
+    unsigned char dosamp_FAR * dst;
+    unsigned int r = 0;
+    uint32_t todo;
+
+    while (len > 0) {
+        dst = mmap_write(&todo,(uint32_t)len);
+        if (dst == NULL || todo == 0) break;
+
+#if TARGET_MSDOS == 16
+        _fmemcpy(dst,dosamp_cptr_add_normalize(buf,r),todo);
+#else
+        memcpy(dst,buf+r,todo);
+#endif
+
+        len -= todo;
+        r += todo;
+    }
+
+    return r;
+}
+
 int wav_rewind(void) {
     wav_position = 0;
     if (wav_source->seek(wav_source,(dosamp_file_off_t)wav_data_offset) != (dosamp_file_off_t)wav_data_offset) return -1;
@@ -699,6 +722,35 @@ void wav_rebase_position_event(void) {
     }
 }
 
+static unsigned char dosamp_FAR * tmpbuffer = NULL;
+static size_t tmpbuffer_sz = 4096;
+
+void tmpbuffer_free(void) {
+    if (tmpbuffer != NULL) {
+#if TARGET_MSDOS == 32
+        free(tmpbuffer);
+#else
+        _ffree(tmpbuffer);
+#endif
+        tmpbuffer = NULL;
+    }
+}
+
+unsigned char dosamp_FAR * tmpbuffer_get(uint32_t *sz) {
+    if (tmpbuffer == NULL) {
+#if TARGET_MSDOS == 32
+        tmpbuffer = malloc(tmpbuffer_sz);
+#else
+        tmpbuffer = _fmalloc(tmpbuffer_sz);
+#endif
+    }
+
+    if (sz != NULL) *sz = tmpbuffer_sz;
+    return tmpbuffer;
+}
+
+unsigned char use_mmap_write = 1;
+
 static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
     unsigned char dosamp_FAR * ptr;
     dosamp_file_off_t rem;
@@ -727,9 +779,21 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
         /* limit to how much we need */
         if (rem > howmuch) rem = howmuch;
 
-        /* get the write pointer. towrite is guaranteed to be block aligned */
-        ptr = mmap_write(&towrite,rem);
-        if (ptr == NULL || towrite == 0) break;
+        if (use_mmap_write) {
+            /* get the write pointer. towrite is guaranteed to be block aligned */
+            ptr = mmap_write(&towrite,rem);
+            if (ptr == NULL || towrite == 0) break;
+        }
+        else {
+            /* prepare the temp buffer, limit ourself to it */
+            ptr = tmpbuffer_get(&towrite);
+            if (ptr == NULL) break;
+
+            if (rem > towrite) rem = towrite;
+            rem -= rem % play_codec.bytes_per_block;
+            if (rem == 0) break;
+            towrite = rem;
+        }
 
         /* read */
         rem = wav_source->file_pos + towrite; /* expected result pos */
@@ -740,6 +804,12 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
                 break;
             wav_rebase_position_event();
             if (wav_position_to_file_pointer() < 0)
+                break;
+        }
+
+        /* non-mmap write: send temp buffer to sound card */
+        if (!use_mmap_write) {
+            if (buffer_write(ptr,towrite) != towrite)
                 break;
         }
 
@@ -1535,6 +1605,10 @@ int main(int argc,char **argv) {
                 else if (i == 's') {
                     stuck_test = !stuck_test;
                 }
+                else if (i == 'M') {
+                    use_mmap_write = !use_mmap_write;
+                    printf("%s mmap write\n",use_mmap_write?"Using":"Not using");
+                }
                 else if (i >= '0' && i <= '9') {
                     unsigned char nd = (unsigned char)(i-'0');
 
@@ -1583,6 +1657,7 @@ int main(int argc,char **argv) {
 	stop_play();
 	close_wav();
     free_dma_buffer();
+    tmpbuffer_free();
 
 	sndsb_free_card(sb_card);
 	free_sndsb(); /* will also de-ref/unhook the NMI reflection */
