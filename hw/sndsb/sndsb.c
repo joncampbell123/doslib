@@ -848,7 +848,7 @@ int sndsb_begin_dsp_playback(struct sndsb_ctx *cx) {
 		}
 	}
 	else if (cx->dsp_play_method == SNDSB_DSPOUTMETHOD_4xx) {
-		unsigned long lv = (cx->buffer_irq_interval * (cx->buffer_stereo?2:1)) - 1;
+		unsigned long lv = ((unsigned long)cx->buffer_irq_interval * (unsigned long)(cx->buffer_stereo?2:1)) - 1UL;
 
 		if (lv > 65535UL) lv = 65535UL;
 
