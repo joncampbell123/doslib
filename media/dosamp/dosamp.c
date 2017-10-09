@@ -786,8 +786,35 @@ void update_play_position(void) {
 
     if (r != NULL)
         wav_play_position = ((wav_play_counter - r->event_at) / play_codec.bytes_per_block) + r->wav_position;
-    else
+    else if (wav_playing)
         wav_play_position = 0;
+    else
+        wav_play_position = wav_position;
+}
+
+void clear_remapping(void) {
+    wav_rebase_clear();
+}
+
+void move_pos(signed long adj) {
+    if (wav_playing)
+        return;
+
+    clear_remapping();
+    if (adj < 0L) {
+        adj = -adj;
+        if (wav_position >= (unsigned long)adj)
+            wav_position -= (unsigned long)adj;
+        else
+            wav_position = 0;
+    }
+    else if (adj > 0L) {
+        wav_position += (unsigned long)adj;
+        if (wav_position >= wav_data_length)
+            wav_position = wav_data_length;
+    }
+
+    update_play_position();
 }
 
 static void wav_idle() {
@@ -1515,6 +1542,34 @@ int main(int argc,char **argv) {
                         printf("\n");
                         disp = nd;
                     }
+                }
+                else if (i == '[') {
+                    unsigned char wp = wav_playing;
+
+                    if (wp) stop_play();
+                    move_pos(-((signed long)play_codec.sample_rate)); /* -1 sec */
+                    if (wp) begin_play();
+                }
+                else if (i == ']') {
+                    unsigned char wp = wav_playing;
+
+                    if (wp) stop_play();
+                    move_pos(play_codec.sample_rate); /* 1 sec */
+                    if (wp) begin_play();
+                }
+                else if (i == '{') {
+                    unsigned char wp = wav_playing;
+
+                    if (wp) stop_play();
+                    move_pos(-((signed long)play_codec.sample_rate * 30L)); /* -30 sec */
+                    if (wp) begin_play();
+                }
+                else if (i == '}') {
+                    unsigned char wp = wav_playing;
+
+                    if (wp) stop_play();
+                    move_pos(play_codec.sample_rate * 30L); /* 30 sec */
+                    if (wp) begin_play();
                 }
                 else if (i == ' ') {
                     if (wav_playing) stop_play();
