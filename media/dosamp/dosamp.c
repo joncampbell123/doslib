@@ -1140,11 +1140,13 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
 
     /* 16-bit -> 8-bit if needed (if DSP doesn't support 16-bit) */
     if (d->bits_per_sample == 16) {
-        if (sb_card->is_gallant_sc6600 && sb_card->dsp_vmaj < 3) /* SC400 and DSP version less than 3.xx */
-            d->bits_per_sample = 8;
-        else if (sb_card->dsp_vmaj < 4) /* DSP version less than 4.xx */
-            d->bits_per_sample = 8;
-        else if (sb_card->dsp_play_method < SNDSB_DSPOUTMETHOD_4xx) /* if playback not DSP 4.xx */
+        if (sb_card->is_gallant_sc6600 && sb_card->dsp_vmaj >= 3) /* SC400 and DSP version 3.xx or higher: OK */
+            { }
+        else if (sb_card->ess_extensions && sb_card->dsp_vmaj >= 2) /* ESS688 and DSP version 2.xx or higher: OK */
+            { }
+        else if (sb_card->dsp_vmaj >= 4) /* DSP version 4.xx or higher (SB16): OK */
+            { }
+        else
             d->bits_per_sample = 8;
     }
 
