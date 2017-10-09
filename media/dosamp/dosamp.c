@@ -1116,6 +1116,16 @@ void disable_autoinit(void) {
     sb_card->dsp_autoinit_command = 0;
 }
 
+int prepare_buffer(void) {
+    if (sb_check_dma_buffer() < 0)
+        return -1;
+
+	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
+        return -1;
+
+    return 0;
+}
+
 int prepare_play(void) {
     if (wav_prepared)
         return 0;
@@ -1157,6 +1167,9 @@ uint32_t play_buffer_size(void) {
 
 uint32_t set_irq_interval(uint32_t x) {
     uint32_t t;
+
+    /* you cannot set IRQ interval once prepared */
+    if (wav_prepared) return sb_card->buffer_irq_interval;
 
     /* keep it sample aligned */
     x -= x % play_codec.bytes_per_block;
@@ -1232,8 +1245,8 @@ static int begin_play() {
         return -1;
     }
 
-    /* prepare the sound card (buffer, DMA, etc.) */
-    if (prepare_play() < 0) {
+    /* prepare buffer */
+    if (prepare_buffer() < 0) {
         unprepare_play();
         return -1;
     }
@@ -1254,6 +1267,12 @@ static int begin_play() {
     /* no more than half the buffer */
     if (wav_play_load_block_size > (sb_card->buffer_size / 2UL))
         wav_play_load_block_size = (sb_card->buffer_size / 2UL);
+
+    /* prepare the sound card (buffer, DMA, etc.) */
+    if (prepare_play() < 0) {
+        unprepare_play();
+        return -1;
+    }
 
     /* preroll */
     load_audio(wav_play_load_block_size);
