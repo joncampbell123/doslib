@@ -1107,7 +1107,28 @@ int sb_check_dma_buffer(void) {
 }
 
 int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
-    *d = *s; // TODO: In the future we'll support format conversion
+    /* by default, use source format */
+    *d = *s;
+
+    /* TODO: Later we should support 5.1 surround to mono/stereo conversion, 24-bit PCM support, etc. */
+
+    if (d->number_of_channels < 1 || d->number_of_channels > 2) /* SB is mono or stereo, nothing else. */
+        return -1;
+    if (d->bits_per_sample < 8 || d->bits_per_sample > 16) /* SB is 8-bit. SB16 and ESS688 is 16-bit. */
+        return -1;
+
+    /* HACK! */
+    sb_card->buffer_size = 1;
+    sb_card->buffer_phys = 0;
+
+    /* we'll follow the recommendations on what is supported by the DSP. no hacks. */
+    if (!sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0)) {
+        if (sb_card->reason_not_supported != NULL && *(sb_card->reason_not_supported) != 0)
+            printf("Negotiation failed (SB):\n    %s\n",sb_card->reason_not_supported);
+
+        return -1;
+    }
+
     return 0;
 }
 
