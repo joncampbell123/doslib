@@ -635,7 +635,7 @@ int wav_rewind(void) {
 int wav_file_pointer_to_position(void) {
     if (wav_source->file_pos >= wav_data_offset) {
         wav_position = wav_source->file_pos - wav_data_offset;
-        wav_position /= play_codec.bytes_per_block;
+        wav_position /= file_codec.bytes_per_block;
     }
     else {
         wav_position = 0;
@@ -645,7 +645,7 @@ int wav_file_pointer_to_position(void) {
 }
 
 int wav_position_to_file_pointer(void) {
-    off_t ofs = (off_t)wav_data_offset + ((off_t)wav_position * (off_t)play_codec.bytes_per_block);
+    off_t ofs = (off_t)wav_data_offset + ((off_t)wav_position * (off_t)file_codec.bytes_per_block);
 
     if (wav_source->seek(wav_source,(dosamp_file_off_t)ofs) != (dosamp_file_off_t)ofs)
         return wav_rewind();
@@ -773,7 +773,7 @@ void card_poll(void) {
 
 unsigned char use_mmap_write = 1;
 
-static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
+static void load_audio_exact(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
     unsigned char dosamp_FAR * ptr;
     dosamp_file_off_t rem;
     uint32_t towrite;
@@ -839,6 +839,18 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
         wav_position = wav_source->file_pos / play_codec.bytes_per_block;
         howmuch -= towrite;
     }
+}
+
+static void load_audio_resample(uint32_t howmuch/*in bytes*/) {
+    /* TODO */
+    load_audio_exact(howmuch);
+}
+
+static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
+    if (resample_on)
+        load_audio_resample(howmuch);
+    else
+        load_audio_exact(howmuch);
 }
 
 void update_wav_play_delay() {
