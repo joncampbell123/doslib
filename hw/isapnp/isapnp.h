@@ -310,5 +310,9 @@ unsigned int isa_pnp_bios_read_escd(unsigned char far *a);
 #define ISAPNP_ID_FMATCH(id,a,b,c)	(ISAPNP_ID(a,b,c,0,0,0,0) == ((id) & 0x0000FF7FUL))
 #define ISAPNP_ID_LMATCH(id,h)		(ISAPNP_ID(0,0,0,(h>>12)&0xF,(h>>8)&0xF,(h>>4)&0xF,h&0xF) == ((id) & 0xFFFF0000UL))
 
+static inline unsigned int has_isa_pnp_bios() {
+    return isa_pnp_bios_offset != 0;
+}
+
 #endif /* __ISAPNP_ISAPNP_H */
 
