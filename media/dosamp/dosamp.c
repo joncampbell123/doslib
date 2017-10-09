@@ -1158,6 +1158,9 @@ uint32_t play_buffer_size(void) {
 uint32_t set_irq_interval(uint32_t x) {
     uint32_t t;
 
+    /* keep it sample aligned */
+    x -= x % play_codec.bytes_per_block;
+
     if (x != 0UL) {
         /* minimum */
         t = ((play_codec.sample_rate + 127UL) / 128UL) * play_codec.bytes_per_block;
