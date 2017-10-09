@@ -1111,6 +1111,11 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
     return 0;
 }
 
+void disable_autoinit(void) {
+    sb_card->dsp_autoinit_dma = 0;
+    sb_card->dsp_autoinit_command = 0;
+}
+
 int prepare_play(void) {
     if (wav_prepared)
         return 0;
@@ -1704,8 +1709,17 @@ int main(int argc,char **argv) {
                     loop = 0;
                     break;
                 }
-                else if (i == 's') {
+                else if (i == 'S') {
                     stuck_test = !stuck_test;
+                    printf("Stuck test %s\n",stuck_test?"on":"off");
+                }
+                else if (i == 'A') {
+                    unsigned char wp = wav_playing;
+
+                    if (wp) stop_play();
+                    disable_autoinit();
+                    printf("Disabled auto-init\n");
+                    if (wp) begin_play();
                 }
                 else if (i == 'M') {
                     use_mmap_write = !use_mmap_write;
