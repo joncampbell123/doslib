@@ -571,6 +571,33 @@ unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
     return dosamp_ptr_add_normalize(sb_dma->lin,ret_pos);
 }
 
+int wav_rewind(void) {
+    wav_position = 0;
+    if (wav_source->seek(wav_source,(dosamp_file_off_t)wav_data_offset) != (dosamp_file_off_t)wav_data_offset) return -1;
+    return 0;
+}
+
+int wav_file_pointer_to_position(void) {
+    if (wav_source->file_pos >= wav_data_offset) {
+        wav_position = wav_source->file_pos - wav_data_offset;
+        wav_position /= play_codec.bytes_per_block;
+    }
+    else {
+        wav_position = 0;
+    }
+
+    return 0;
+}
+
+int wav_position_to_file_pointer(void) {
+    off_t ofs = (off_t)wav_data_offset + ((off_t)wav_position * (off_t)play_codec.bytes_per_block);
+
+    if (wav_source->seek(wav_source,(dosamp_file_off_t)ofs) != (dosamp_file_off_t)ofs)
+        return wav_rewind();
+
+    return 0;
+}
+
 static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
     unsigned char dosamp_FAR * ptr;
     dosamp_file_off_t rem;
@@ -591,8 +618,7 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
 
         /* if we're at the end, seek back around and start again */
         if (rem == 0UL) {
-            wav_position = 0;
-            if (wav_source->seek(wav_source,(dosamp_file_off_t)wav_data_offset) != (dosamp_file_off_t)wav_data_offset) break;
+            if (wav_rewind() < 0) break;
             continue;
         }
 
@@ -606,10 +632,12 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
         /* read */
         rem = wav_source->file_pos + towrite; /* expected result pos */
         if (wav_source->read(wav_source,ptr,towrite) != towrite) {
-            if (wav_source->seek(wav_source,rem) != rem) {
-                wav_position = 0;
-                if (wav_source->seek(wav_source,(dosamp_file_off_t)wav_data_offset) != (dosamp_file_off_t)wav_data_offset) break;
-            }
+            if (wav_source->seek(wav_source,rem) != rem)
+                break;
+            if (wav_file_pointer_to_position() < 0)
+                break;
+            if (wav_position_to_file_pointer() < 0)
+                break;
         }
 
         /* adjust */
@@ -837,16 +865,7 @@ static int begin_play() {
 		return -1;
 
     /* get the file pointer ready */
-    {
-        off_t ofs = (off_t)wav_data_offset + ((off_t)wav_position * (off_t)play_codec.bytes_per_block);
-
-        if (wav_source->seek(wav_source,(dosamp_file_off_t)ofs) != (dosamp_file_off_t)ofs) {
-            wav_position = 0;
-            ofs = (off_t)wav_data_offset;
-            if (wav_source->seek(wav_source,(dosamp_file_off_t)ofs) != (dosamp_file_off_t)ofs)
-                return -1;
-        }
-    }
+    wav_position_to_file_pointer();
 
     /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
      * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
