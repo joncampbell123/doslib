@@ -1460,56 +1460,13 @@ int calibrate_rdtsc(void) {
     return 0;
 }
 
-int main(int argc,char **argv) {
-    unsigned char disp=1;
-	int i,loop;
+int probe_for_sound_blaster(void) {
+    unsigned int i;
 
-    if (!parse_argv(argc,argv))
-        return 1;
-
-	cpu_probe();
-	probe_8237();
-	if (!probe_8259()) {
-		printf("Cannot init 8259 PIC\n");
-		return 1;
-	}
-	if (!probe_8254()) {
-		printf("Cannot init 8254 timer\n");
-		return 1;
-	}
-	if (!init_sndsb()) {
+    if (!init_sndsb()) {
 		printf("Cannot init library\n");
-		return 1;
+		return -1;
 	}
-	if (!init_isa_pnp_bios()) {
-		printf("Cannot init ISA PnP\n");
-		return 1;
-	}
-    find_isa_pnp_bios();
-
-    /* for now, always use 8254 PIT as time source */
-    time_source = &dosamp_time_source_8254;
-
-    /* NTS: When using the PIT source we NEED to do this, or else DOSBox-X (and possibly
-     *      many other motherboards) will leave the PIT in a mode that produces the correct
-     *      IRQ 0 rate but counts down twice as fast. We need the PIT to count down by 1,
-     *      not by 2, in order to keep time. */
-    write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
-
-    /* we can use the Time Stamp Counter on Pentium or higher systems that offer it */
-	if (cpu_flags & CPU_FLAG_CPUID) {
-        if (cpu_cpuid_features.a.raw[2] & 0x10) {
-            /* RDTSC is available. We just have to figure out how fast it runs. */
-            if (calibrate_rdtsc() >= 0)
-                time_source = &dosamp_time_source_rdtsc;
-        }
-    }
-
-    /* open the time source */
-    if (time_source->open(time_source) < 0) {
-        printf("Cannot open time source\n");
-        return 1;
-    }
 
     /* we want to know if certain emulation TSRs exist */
     gravis_mega_em_detect(&megaem_info);
@@ -1588,17 +1545,17 @@ int main(int argc,char **argv) {
         }
     }
 
-    /* Non-plug & play scan */
+    /* Non-plug & play scan: BLASTER environment variable */
 	if (sndsb_try_blaster_var() != NULL) {
 		if (!sndsb_init_card(sndsb_card_blaster))
 			sndsb_free_card(sndsb_card_blaster);
 	}
 
-    /* Most SB cards exist at 220h or 240h */
+    /* Non-plug & play scan: Most SB cards exist at 220h or 240h */
     sndsb_try_base(0x220);
     sndsb_try_base(0x240);
 
-    /* now let the user choose */
+    /* further probing, for IRQ and DMA and other capabilities */
 	for (i=0;i < SNDSB_MAX_CARDS;i++) {
 		struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
 		if (cx->baseio == 0) continue;
@@ -1617,6 +1574,68 @@ int main(int argc,char **argv) {
 		sndsb_determine_ideal_dsp_play_method(cx);
 	}
 
+    /* OK. done */
+    return 0;
+}
+
+int main(int argc,char **argv) {
+    unsigned char disp=1;
+	int i,loop;
+
+    if (!parse_argv(argc,argv))
+        return 1;
+
+	cpu_probe();
+	probe_8237();
+	if (!probe_8259()) {
+		printf("Cannot init 8259 PIC\n");
+		return 1;
+	}
+	if (!probe_8254()) {
+		printf("Cannot init 8254 timer\n");
+		return 1;
+	}
+	if (!init_isa_pnp_bios()) {
+		printf("Cannot init ISA PnP\n");
+		return 1;
+	}
+    find_isa_pnp_bios();
+
+    /* for now, always use 8254 PIT as time source */
+    time_source = &dosamp_time_source_8254;
+
+    /* NTS: When using the PIT source we NEED to do this, or else DOSBox-X (and possibly
+     *      many other motherboards) will leave the PIT in a mode that produces the correct
+     *      IRQ 0 rate but counts down twice as fast. We need the PIT to count down by 1,
+     *      not by 2, in order to keep time. */
+    write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
+
+    /* we can use the Time Stamp Counter on Pentium or higher systems that offer it */
+	if (cpu_flags & CPU_FLAG_CPUID) {
+        if (cpu_cpuid_features.a.raw[2] & 0x10) {
+            /* RDTSC is available. We just have to figure out how fast it runs. */
+            if (calibrate_rdtsc() >= 0)
+                time_source = &dosamp_time_source_rdtsc;
+        }
+    }
+
+    /* open the time source */
+    if (time_source->open(time_source) < 0) {
+        printf("Cannot open time source\n");
+        return 1;
+    }
+
+    /* PROBE: Sound Blaster.
+     * Will return 0 if scan done, -1 if a serious problem happened.
+     * A return value of 0 doesn't mean any cards were found. */
+    if (probe_for_sound_blaster() < 0) {
+        printf("Serious error while probing for Sound Blaster\n");
+        return 1;
+    }
+
+    /* now let the user choose.
+     * TODO: At some point, when we have abstracted ourself away from the Sound Blaster library
+     *       we can list a different array of abstract sound card device objects. */
 	{
 		unsigned char count = 0;
         int sc_idx = -1;
