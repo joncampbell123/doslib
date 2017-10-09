@@ -100,7 +100,7 @@ int sndsb_write_dsp(struct sndsb_ctx * const cx,const uint8_t d) {
         register unsigned int patience = (unsigned int)(SNDSB_IO_COUNTDOWN);
 
         do {
-            if (!(inp(status_port) & 0x80)) {/* data NOT available? */
+            if (inp(status_port) & 0x80) {/* DSP busy? */
                 if (--patience == 0U)
                     break;
             }
@@ -116,7 +116,7 @@ int sndsb_write_dsp(struct sndsb_ctx * const cx,const uint8_t d) {
             register unsigned int pa_lo = SNDSB_IO_COUNTDOWN_16LO;
 
             do {
-                if (!(inp(status_port) & 0x80)) {/* data NOT available? */
+                if (inp(status_port) & 0x80) {/* DSP busy? */
                     if (--pa_lo == 0U)
                         break;
                 }
@@ -129,7 +129,7 @@ int sndsb_write_dsp(struct sndsb_ctx * const cx,const uint8_t d) {
 #endif
     }
 
-    DEBUG(fprintf(stdout,"sndsb_write_dsp() timeout\n"));
+    DEBUG(fprintf(stdout,"sndsb_write_dsp() timeout i=%02X p=%03X\n",inp(status_port),status_port));
     return 0;
 }
 
