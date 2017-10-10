@@ -923,7 +923,7 @@ int convert_rdbuf_fill(void) {
 
             /* read */
             rem = wav_source->file_pos + towrite; /* expected result pos */
-            if (wav_source->read(wav_source,buf,towrite) != towrite) {
+            if (wav_source->read(wav_source,dosamp_ptr_add_normalize(buf,convert_rdbuf_len),towrite) != towrite) {
                 if (wav_source->seek(wav_source,rem) != rem)
                     return -1;
                 if (wav_file_pointer_to_position() < 0)
@@ -934,8 +934,7 @@ int convert_rdbuf_fill(void) {
             }
 
             wav_file_pointer_to_position();
-            convert_rdbuf_len += xx;
-            buf += xx;
+            convert_rdbuf_len += towrite;
         }
 
         assert(convert_rdbuf_len <= bufsz);
