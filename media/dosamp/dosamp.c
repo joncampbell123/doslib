@@ -498,11 +498,13 @@ static unsigned char                    wav_playing = 0;
 static unsigned char                    wav_prepared = 0;
 
 #if TARGET_MSDOS == 32
+typedef signed long long                resample_intermediate_t;
 static const unsigned char              resample_100_shift = 32;
 static const unsigned long long         resample_100 = 1ULL << 32ULL;
 static unsigned long long               resample_step = 0; /* 16.16 resampling step */
 static unsigned long long               resample_frac = 0;
 #else
+typedef signed long                     resample_intermediate_t;
 static const unsigned char              resample_100_shift = 16;
 static const unsigned long              resample_100 = 1UL << 16UL;
 static unsigned long                    resample_step = 0; /* 16.16 resampling step */
@@ -1023,7 +1025,7 @@ unsigned char use_mmap_write = 1;
 
 uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples) {
     uint8_t dosamp_FAR *src = dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
-    signed long tmp;
+    resample_intermediate_t tmp;
     uint32_t r = 0;
 
     if (resample_counter == 0) {
@@ -1051,9 +1053,9 @@ uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t sampl
             src++;
         }
         else {
-            tmp = (signed long)resample_c[0] - (signed long)resample_p[0];
-            tmp *= (signed long)resample_frac;
-            tmp >>= 16L;
+            tmp = (resample_intermediate_t)resample_c[0] - (resample_intermediate_t)resample_p[0];
+            tmp *= (resample_intermediate_t)resample_frac;
+            tmp >>= (resample_intermediate_t)resample_100_shift;
             tmp += resample_p[0];
             *dst++ = (uint8_t)((tmp ^ 0x8000UL) >> 8UL);
             samples--;
@@ -1068,7 +1070,7 @@ uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t sampl
 
 uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t samples) {
     uint8_t dosamp_FAR *src = dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
-    signed long tmp;
+    resample_intermediate_t tmp;
     uint32_t r = 0;
 
     if (resample_counter == 0) {
@@ -1100,15 +1102,15 @@ uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t sam
             src += 2;
         }
         else {
-            tmp = (signed long)resample_c[0] - (signed long)resample_p[0];
-            tmp *= (signed long)resample_frac;
-            tmp >>= 16L;
+            tmp = (resample_intermediate_t)resample_c[0] - (resample_intermediate_t)resample_p[0];
+            tmp *= (resample_intermediate_t)resample_frac;
+            tmp >>= (resample_intermediate_t)resample_100_shift;
             tmp += resample_p[0];
             *dst++ = (uint8_t)((tmp ^ 0x8000UL) >> 8UL);
 
-            tmp = (signed long)resample_c[1] - (signed long)resample_p[1];
-            tmp *= (signed long)resample_frac;
-            tmp >>= 16L;
+            tmp = (resample_intermediate_t)resample_c[1] - (resample_intermediate_t)resample_p[1];
+            tmp *= (resample_intermediate_t)resample_frac;
+            tmp >>= (resample_intermediate_t)resample_100_shift;
             tmp += resample_p[1];
             *dst++ = (uint8_t)((tmp ^ 0x8000UL) >> 8UL);
 
@@ -1124,7 +1126,7 @@ uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t sam
 
 uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samples) {
     int16_t dosamp_FAR *src = (int16_t dosamp_FAR *)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
-    signed long tmp;
+    resample_intermediate_t tmp;
     uint32_t r = 0;
 
     if (resample_counter == 0) {
@@ -1152,9 +1154,9 @@ uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samp
             src++;
         }
         else {
-            tmp = (signed long)resample_c[0] - (signed long)resample_p[0];
-            tmp *= (signed long)resample_frac;
-            tmp >>= 16L;
+            tmp = (resample_intermediate_t)resample_c[0] - (resample_intermediate_t)resample_p[0];
+            tmp *= (resample_intermediate_t)resample_frac;
+            tmp >>= (resample_intermediate_t)resample_100_shift;
             tmp += resample_p[0];
             *dst++ = (int16_t)tmp;
             samples--;
@@ -1169,7 +1171,7 @@ uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samp
 
 uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t samples) {
     int16_t dosamp_FAR *src = (int16_t dosamp_FAR *)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
-    signed long tmp;
+    resample_intermediate_t tmp;
     uint32_t r = 0;
 
     if (resample_counter == 0) {
@@ -1201,15 +1203,15 @@ uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t sa
             src += 2;
         }
         else {
-            tmp = (signed long)resample_c[0] - (signed long)resample_p[0];
-            tmp *= (signed long)resample_frac;
-            tmp >>= 16L;
+            tmp = (resample_intermediate_t)resample_c[0] - (resample_intermediate_t)resample_p[0];
+            tmp *= (resample_intermediate_t)resample_frac;
+            tmp >>= (resample_intermediate_t)resample_100_shift;
             tmp += resample_p[0];
             *dst++ = (int16_t)tmp;
 
-            tmp = (signed long)resample_c[1] - (signed long)resample_p[1];
-            tmp *= (signed long)resample_frac;
-            tmp >>= 16L;
+            tmp = (resample_intermediate_t)resample_c[1] - (resample_intermediate_t)resample_p[1];
+            tmp *= (resample_intermediate_t)resample_frac;
+            tmp >>= (resample_intermediate_t)resample_100_shift;
             tmp += resample_p[1];
             *dst++ = (int16_t)tmp;
 
