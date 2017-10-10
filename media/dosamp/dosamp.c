@@ -1722,12 +1722,12 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
     d->bytes_per_block = ((d->bits_per_sample+7U)/8U) * d->number_of_channels;
 
     {
-        unsigned long long tmp;
+        resample_intermediate_t tmp;
 
-        tmp  = (unsigned long long)s->sample_rate << (unsigned long long)resample_100_shift;
-        tmp /= (unsigned long long)d->sample_rate;
+        tmp  = (resample_intermediate_t)s->sample_rate << (resample_intermediate_t)resample_100_shift;
+        tmp /= (resample_intermediate_t)d->sample_rate;
 
-        resample_step = (unsigned long)tmp;
+        resample_step = tmp;
         resample_frac = 0;
     }
 
