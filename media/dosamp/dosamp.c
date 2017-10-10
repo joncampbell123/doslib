@@ -2021,7 +2021,7 @@ void display_idle_time(void) {
         }
 
         printf("\x0D");
-        printf("%02u:%02u:%02u.%02u %%%02u %lu/%lu as %lu-Hz %u-ch %u-bit/samp ",
+        printf("%02u:%02u:%02u.%02u %%%02u %lu/%lu as %lu-Hz %u-ch %u-bit ",
             hour,min,sec,centisec,percent,wav_play_position,wav_data_length,
             (unsigned long)play_codec.sample_rate,
             (unsigned int)play_codec.number_of_channels,
