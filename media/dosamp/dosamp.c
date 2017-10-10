@@ -499,6 +499,8 @@ static unsigned char                    wav_prepared = 0;
 
 static const unsigned long              resample_100 = 1UL << 16UL;
 
+static unsigned long                    resample_counter = 0;
+static int16_t                          resample_p[2],resample_c[2];
 static unsigned long                    resample_step = 0; /* 16.16 resampling step */
 static unsigned long                    resample_frac = 0;
 static unsigned char                    resample_on = 0;
@@ -636,9 +638,13 @@ int wav_rewind(void) {
     return 0;
 }
 
+static size_t convert_rdbuf_len = 0;
+static size_t convert_rdbuf_pos = 0;
+
 int wav_file_pointer_to_position(void) {
     if (wav_source->file_pos >= wav_data_offset) {
-        wav_position = wav_source->file_pos - wav_data_offset;
+        wav_position  = wav_source->file_pos - wav_data_offset;
+        wav_position += convert_rdbuf_pos - convert_rdbuf_len;
         wav_position /= file_codec.bytes_per_block;
     }
     else {
@@ -744,8 +750,6 @@ void wav_rebase_position_event(void) {
 
 static unsigned char dosamp_FAR * convert_rdbuf = NULL;
 static size_t convert_rdbuf_sz = 4096;
-static size_t convert_rdbuf_len = 0;
-static size_t convert_rdbuf_pos = 0;
 
 static unsigned char dosamp_FAR * tmpbuffer = NULL;
 static size_t tmpbuffer_sz = 4096;
@@ -802,6 +806,11 @@ unsigned char dosamp_FAR * convert_rdbuf_get(uint32_t *sz) {
 void convert_rdbuf_clear(void) {
     convert_rdbuf_len = 0;
     convert_rdbuf_pos = 0;
+    resample_counter = 0;
+    resample_p[0] = 0;
+    resample_p[1] = 0;
+    resample_c[0] = 0;
+    resample_c[1] = 0;
 }
 
 void card_poll(void) {
@@ -957,9 +966,210 @@ int convert_rdbuf_fill(void) {
 
 unsigned char use_mmap_write = 1;
 
+uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples) {
+    uint8_t dosamp_FAR *src = dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
+    signed long tmp;
+    uint32_t r = 0;
+
+    if (resample_counter == 0) {
+        if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
+        resample_p[0] = ((int16_t)(*src) - 0x80) << 8;
+        convert_rdbuf_pos++;
+        resample_counter++;
+        src++;
+    }
+    if (resample_counter == 1) {
+        if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
+        resample_c[0] = ((int16_t)(*src) - 0x80) << 8;
+        convert_rdbuf_pos++;
+        resample_counter++;
+        src++;
+    }
+
+    while (samples > 0) {
+        if (resample_frac >= resample_100) {
+            if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
+            resample_frac -= resample_100;
+            resample_p[0] = resample_c[0];
+            resample_c[0] = ((int16_t)(*src) - 0x80) << 8;
+            convert_rdbuf_pos++;
+            src++;
+        }
+        else {
+            tmp = (signed long)resample_c[0] - (signed long)resample_p[0];
+            tmp *= (signed long)resample_frac;
+            tmp >>= 16L;
+            tmp += resample_p[0];
+            *dst++ = (uint8_t)((tmp ^ 0x8000UL) >> 8UL);
+            samples--;
+            r++;
+
+            resample_frac += resample_step;
+        }
+    }
+
+    return r;
+}
+
+uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t samples) {
+    uint8_t dosamp_FAR *src = dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
+    signed long tmp;
+    uint32_t r = 0;
+
+    if (resample_counter == 0) {
+        if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
+        resample_p[0] = ((int16_t)(src[0]) - 0x80) << 8;
+        resample_p[1] = ((int16_t)(src[1]) - 0x80) << 8;
+        convert_rdbuf_pos += 2;
+        resample_counter++;
+        src += 2;
+    }
+    if (resample_counter == 1) {
+        if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
+        resample_c[0] = ((int16_t)(src[0]) - 0x80) << 8;
+        resample_c[1] = ((int16_t)(src[1]) - 0x80) << 8;
+        convert_rdbuf_pos += 2;
+        resample_counter++;
+        src += 2;
+    }
+
+    while (samples > 0) {
+        if (resample_frac >= resample_100) {
+            if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
+            resample_frac -= resample_100;
+            resample_p[0] = resample_c[0];
+            resample_p[1] = resample_c[1];
+            resample_c[0] = ((int16_t)(src[0]) - 0x80) << 8;
+            resample_c[1] = ((int16_t)(src[1]) - 0x80) << 8;
+            convert_rdbuf_pos += 2;
+            src += 2;
+        }
+        else {
+            tmp = (signed long)resample_c[0] - (signed long)resample_p[0];
+            tmp *= (signed long)resample_frac;
+            tmp >>= 16L;
+            tmp += resample_p[0];
+            *dst++ = (uint8_t)((tmp ^ 0x8000UL) >> 8UL);
+
+            tmp = (signed long)resample_c[1] - (signed long)resample_p[1];
+            tmp *= (signed long)resample_frac;
+            tmp >>= 16L;
+            tmp += resample_p[1];
+            *dst++ = (uint8_t)((tmp ^ 0x8000UL) >> 8UL);
+
+            samples--;
+            r++;
+
+            resample_frac += resample_step;
+        }
+    }
+
+    return r;
+}
+
+uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samples) {
+    int16_t dosamp_FAR *src = (int16_t dosamp_FAR *)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
+    signed long tmp;
+    uint32_t r = 0;
+
+    if (resample_counter == 0) {
+        if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
+        resample_p[0] = *src;
+        convert_rdbuf_pos += 2;
+        resample_counter++;
+        src++;
+    }
+    if (resample_counter == 1) {
+        if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
+        resample_c[0] = *src;
+        convert_rdbuf_pos += 2;
+        resample_counter++;
+        src++;
+    }
+
+    while (samples > 0) {
+        if (resample_frac >= resample_100) {
+            if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
+            resample_frac -= resample_100;
+            resample_p[0] = resample_c[0];
+            resample_c[0] = *src;
+            convert_rdbuf_pos += 2;
+            src++;
+        }
+        else {
+            tmp = (signed long)resample_c[0] - (signed long)resample_p[0];
+            tmp *= (signed long)resample_frac;
+            tmp >>= 16L;
+            tmp += resample_p[0];
+            *dst++ = (int16_t)tmp;
+            samples--;
+            r++;
+
+            resample_frac += resample_step;
+        }
+    }
+
+    return r;
+}
+
+uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t samples) {
+    int16_t dosamp_FAR *src = (int16_t dosamp_FAR *)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
+    signed long tmp;
+    uint32_t r = 0;
+
+    if (resample_counter == 0) {
+        if ((convert_rdbuf_pos+4UL) > convert_rdbuf_len) return r;
+        resample_p[0] = src[0];
+        resample_p[1] = src[1];
+        convert_rdbuf_pos += 4;
+        resample_counter++;
+        src += 2;
+    }
+    if (resample_counter == 1) {
+        if ((convert_rdbuf_pos+4UL) > convert_rdbuf_len) return r;
+        resample_c[0] = src[0];
+        resample_c[1] = src[1];
+        convert_rdbuf_pos += 4;
+        resample_counter++;
+        src += 2;
+    }
+
+    while (samples > 0) {
+        if (resample_frac >= resample_100) {
+            if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
+            resample_frac -= resample_100;
+            resample_p[0] = resample_c[0];
+            resample_p[1] = resample_c[1];
+            resample_c[0] = src[0];
+            resample_c[1] = src[1];
+            convert_rdbuf_pos += 4;
+            src += 2;
+        }
+        else {
+            tmp = (signed long)resample_c[0] - (signed long)resample_p[0];
+            tmp *= (signed long)resample_frac;
+            tmp >>= 16L;
+            tmp += resample_p[0];
+            *dst++ = (int16_t)tmp;
+
+            tmp = (signed long)resample_c[1] - (signed long)resample_p[1];
+            tmp *= (signed long)resample_frac;
+            tmp >>= 16L;
+            tmp += resample_p[1];
+            *dst++ = (int16_t)tmp;
+
+            samples--;
+            r++;
+
+            resample_frac += resample_step;
+        }
+    }
+
+    return r;
+}
+
 static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
     unsigned char dosamp_FAR * ptr;
-    uint32_t towrite;
     uint32_t dop,bsz;
     uint32_t avail;
 
@@ -973,19 +1183,35 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
         ptr = tmpbuffer_get(&bsz);
         if (ptr == NULL || bsz == 0) break;
         if (convert_rdbuf_fill() < 0) break;
+        if (bsz > howmuch) bsz = howmuch;
+        bsz -= play_codec.bytes_per_block;
 
-        towrite = convert_rdbuf_len - convert_rdbuf_pos;
-        if (towrite > howmuch) towrite = howmuch;
-        towrite -= towrite % play_codec.bytes_per_block;
-        if (towrite == 0) break;
+        if (play_codec.bits_per_sample > 8) {
+            if (play_codec.number_of_channels == 2)
+                dop = convert_rdbuf_resample_to_16_stereo((int16_t dosamp_FAR*)ptr,bsz / 4UL);
+            else
+                dop = convert_rdbuf_resample_to_16_mono((int16_t dosamp_FAR*)ptr,bsz / 2UL);
+        }
+        else {
+            if (play_codec.number_of_channels == 2)
+                dop = convert_rdbuf_resample_to_8_stereo((uint8_t dosamp_FAR*)ptr,bsz / 2UL);
+            else
+                dop = convert_rdbuf_resample_to_8_mono((uint8_t dosamp_FAR*)ptr,bsz);
+        }
 
-        if (buffer_write(dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos),towrite) != towrite)
-            break;
-
-        convert_rdbuf_pos += towrite;
         assert(convert_rdbuf_pos <= convert_rdbuf_len);
-        howmuch -= towrite;
-        avail -= towrite;
+
+        if (dop != 0) {
+            dop *= play_codec.bytes_per_block;
+            if (buffer_write(ptr,dop) != dop)
+                break;
+
+            howmuch -= dop;
+            avail -= dop;
+        }
+        else {
+            break;
+        }
     }
 }
 
