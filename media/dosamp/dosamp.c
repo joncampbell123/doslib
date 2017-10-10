@@ -851,6 +851,42 @@ void convert_rdbuf_stereo2mono_ip_u8(uint32_t samples) {
     assert(convert_rdbuf_len <= convert_rdbuf_sz);
 }
 
+void convert_rdbuf_mono2stereo_ip_u8(uint32_t samples) {
+    /* in-place mono to stereo conversion (up to convert_rdbuf_len)
+     * from file_codec channels (1) to play_codec channels (2).
+     * due to data expansion we process backwards. */
+    uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)convert_rdbuf + (samples * 2UL) - 1;
+    uint8_t dosamp_FAR * sp = (uint8_t dosamp_FAR *)convert_rdbuf + samples - 1;
+    uint32_t i = samples;
+
+    while (i-- != 0UL) {
+        *buf-- = *sp;
+        *buf-- = *sp;
+        sp--;
+    }
+
+    convert_rdbuf_len = samples * 2UL;
+    assert(convert_rdbuf_len <= convert_rdbuf_sz);
+}
+
+void convert_rdbuf_mono2stereo_ip_s16(uint32_t samples) {
+    /* in-place mono to stereo conversion (up to convert_rdbuf_len)
+     * from file_codec channels (1) to play_codec channels (2).
+     * due to data expansion we process backwards. */
+    int16_t dosamp_FAR * buf = (int16_t dosamp_FAR *)convert_rdbuf + (samples * 2UL) - 1;
+    int16_t dosamp_FAR * sp = (int16_t dosamp_FAR *)convert_rdbuf + samples - 1;
+    uint32_t i = samples;
+
+    while (i-- != 0UL) {
+        *buf-- = *sp;
+        *buf-- = *sp;
+        sp--;
+    }
+
+    convert_rdbuf_len = samples * 2UL * 2UL;
+    assert(convert_rdbuf_len <= convert_rdbuf_sz);
+}
+
 void convert_rdbuf_stereo2mono_ip_s16(uint32_t samples) {
     /* in-place stereo to mono conversion (up to convert_rdbuf_len)
      * from file_codec channels (2) to play_codec channels (1) */
@@ -874,6 +910,15 @@ void convert_rdbuf_stereo2mono_ip(uint32_t samples) {
         convert_rdbuf_stereo2mono_ip_u8(samples);
     else if (file_codec.bits_per_sample >= 16)
         convert_rdbuf_stereo2mono_ip_s16(samples);
+}
+
+void convert_rdbuf_mono2stereo_ip(uint32_t samples) {
+    /* in-place mono to stereo conversion (up to convert_rdbuf_len)
+     * from file_codec channels (1) to play_codec channels (2) */
+    if (file_codec.bits_per_sample <= 8)
+        convert_rdbuf_mono2stereo_ip_u8(samples);
+    else if (file_codec.bits_per_sample >= 16)
+        convert_rdbuf_mono2stereo_ip_s16(samples);
 }
 
 int convert_rdbuf_fill(void) {
@@ -953,12 +998,14 @@ int convert_rdbuf_fill(void) {
         /* channel conversion */
         if (file_codec.number_of_channels == 2 && play_codec.number_of_channels == 1)
             convert_rdbuf_stereo2mono_ip(samples);
+        else if (file_codec.number_of_channels == 1 && play_codec.number_of_channels == 2)
+            convert_rdbuf_mono2stereo_ip(samples);
 
         /* bit conversion */
         if (file_codec.bits_per_sample == 16 && play_codec.bits_per_sample == 8)
             convert_rdbuf_16_to_8_ip(samples);
 
-        assert(convert_rdbuf_len <= bufsz);
+        assert(convert_rdbuf_len <= of);
     }
 
     return 0;
