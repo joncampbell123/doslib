@@ -829,19 +829,38 @@ void card_poll(void) {
     update_wav_play_delay();
 }
 
+void convert_rdbuf_8_to_16_ip(uint32_t samples) {
+    /* in-place 16-bit to 8-bit conversion (up to convert_rdbuf_len)
+     * from file_codec (8) to play_codec (16). this must happen AFTER
+     * channel conversion, therefore use play_codec.number_of_channels.
+     * due to data expansion, this converts backwards in place. */
+    uint32_t total_samples = samples * (uint32_t)play_codec.number_of_channels;
+    int16_t dosamp_FAR * buf = (int16_t dosamp_FAR *)convert_rdbuf + total_samples - 1;
+    uint8_t dosamp_FAR * sp = (uint8_t dosamp_FAR *)convert_rdbuf + total_samples - 1;
+    uint32_t i = samples * (uint32_t)play_codec.number_of_channels;
+
+    while (i-- != 0UL) {
+        *buf-- = (int16_t)(((uint16_t)((*sp--) ^ 0x80U)) << 8U);
+    }
+
+    convert_rdbuf_len = total_samples * 2;
+    assert(convert_rdbuf_len <= convert_rdbuf_sz);
+}
+
 void convert_rdbuf_16_to_8_ip(uint32_t samples) {
     /* in-place 16-bit to 8-bit conversion (up to convert_rdbuf_len)
      * from file_codec (16) to play_codec (8). this must happen AFTER
      * channel conversion, therefore use play_codec.number_of_channels */
+    uint32_t total_samples = samples * (uint32_t)play_codec.number_of_channels;
     uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)convert_rdbuf;
     int16_t dosamp_FAR * sp = (int16_t dosamp_FAR *)convert_rdbuf;
-    uint32_t i = samples * (uint32_t)play_codec.number_of_channels;
+    uint32_t i = total_samples;
 
     while (i-- != 0UL) {
         *buf++ = (uint8_t)((((uint16_t)(*sp++)) ^ 0x8000) >> 8U);
     }
 
-    convert_rdbuf_len = samples * (uint32_t)play_codec.number_of_channels;
+    convert_rdbuf_len = total_samples;
     assert(convert_rdbuf_len <= convert_rdbuf_sz);
 }
 
@@ -1014,6 +1033,8 @@ int convert_rdbuf_fill(void) {
         /* bit conversion */
         if (file_codec.bits_per_sample == 16 && play_codec.bits_per_sample == 8)
             convert_rdbuf_16_to_8_ip(samples);
+        else if (file_codec.bits_per_sample == 8 && play_codec.bits_per_sample == 16)
+            convert_rdbuf_8_to_16_ip(samples);
 
         assert(convert_rdbuf_len <= of);
     }
@@ -1225,16 +1246,6 @@ uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t sa
     return r;
 }
 
-/* FIXME: We have 16-bit to 8-bit conversion, but no 8-bit to 16-bit conversion.
- *        This is not an issue now with Sound Blaster but it will be an issue in
- *        the future when we deal with AC'97 and HD Audio sound cards where the
- *        sample rate is fixed in hardware and we're expected to resample in
- *        software. Modern sound cards tend to be either fixed to one sample rate
- *        or selectable between 2 or 3 common fixed rates (32KHz, 44.1KHz, and 48KHz).
- *        If the HD Audio chipset connects to HDMI, we may also gain the ability to
- *        send 96KHz. I doubt these chipsets waste their silicon upconverting 8-bit
- *        PCM either. That's the impression I get from ALSA in Linux on my laptop
- *        anyway. --J.C. */
 static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
     unsigned char dosamp_FAR * ptr;
     uint32_t dop,bsz;
