@@ -976,13 +976,16 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
 
         towrite = convert_rdbuf_len - convert_rdbuf_pos;
         if (towrite > howmuch) towrite = howmuch;
+        towrite -= towrite % play_codec.bytes_per_block;
+        if (towrite == 0) break;
 
-        if (buffer_write(convert_rdbuf+convert_rdbuf_pos,towrite) != towrite)
+        if (buffer_write(dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos),towrite) != towrite)
             break;
 
         convert_rdbuf_pos += towrite;
         assert(convert_rdbuf_pos <= convert_rdbuf_len);
         howmuch -= towrite;
+        avail -= towrite;
     }
 }
 
