@@ -36,6 +36,7 @@
 
 static unsigned long        prefer_rate = 0;
 static unsigned char        prefer_channels = 0;
+static unsigned char        prefer_bits = 0;
 
 static char                 stuck_test = 0;
 
@@ -1349,6 +1350,7 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
 
     /* allow overwrite */
     if (prefer_rate != 0) d->sample_rate = prefer_rate;
+    if (prefer_bits != 0) d->bits_per_sample = prefer_bits;
     if (prefer_channels != 0) d->number_of_channels = prefer_channels;
 
     /* TODO: Later we should support 5.1 surround to mono/stereo conversion, 24-bit PCM support, etc. */
@@ -1645,6 +1647,11 @@ static int parse_argv(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 prefer_channels = atoi(a);
+            }
+            else if (!strcmp(a,"ab")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                prefer_bits = atoi(a);
             }
             else if (!strcmp(a,"ar")) {
                 a = argv[i++];
