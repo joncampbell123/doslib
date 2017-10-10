@@ -497,12 +497,20 @@ static unsigned char                    wav_play_empty = 0;/* if set, buffer is 
 static unsigned char                    wav_playing = 0;
 static unsigned char                    wav_prepared = 0;
 
+#if TARGET_MSDOS == 32
+static const unsigned char              resample_100_shift = 32;
+static const unsigned long long         resample_100 = 1ULL << 32ULL;
+static unsigned long long               resample_step = 0; /* 16.16 resampling step */
+static unsigned long long               resample_frac = 0;
+#else
+static const unsigned char              resample_100_shift = 16;
 static const unsigned long              resample_100 = 1UL << 16UL;
+static unsigned long                    resample_step = 0; /* 16.16 resampling step */
+static unsigned long                    resample_frac = 0;
+#endif
 
 static unsigned long                    resample_counter = 0;
 static int16_t                          resample_p[2],resample_c[2];
-static unsigned long                    resample_step = 0; /* 16.16 resampling step */
-static unsigned long                    resample_frac = 0;
 static unsigned char                    resample_on = 0;
 
 void update_wav_dma_position(void) {
@@ -1408,7 +1416,7 @@ void update_play_position(void) {
     if (r != NULL) {
         wav_play_position =
             ((unsigned long long)(((wav_play_counter - r->event_at) / play_codec.bytes_per_block) *
-                (unsigned long long)resample_step) >> 16ULL) + r->wav_position;
+                (unsigned long long)resample_step) >> (unsigned long long)resample_100_shift) + r->wav_position;
     }
     else if (wav_playing)
         wav_play_position = 0;
@@ -1721,7 +1729,7 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
     {
         unsigned long long tmp;
 
-        tmp  = (unsigned long long)s->sample_rate << 16ULL;
+        tmp  = (unsigned long long)s->sample_rate << (unsigned long long)resample_100_shift;
         tmp /= (unsigned long long)d->sample_rate;
 
         resample_step = (unsigned long)tmp;
