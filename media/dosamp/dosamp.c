@@ -1241,33 +1241,56 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
         if (ptr == NULL || bsz == 0) break;
         if (convert_rdbuf_fill() < 0) break;
         if (bsz > howmuch) bsz = howmuch;
-        bsz -= play_codec.bytes_per_block;
+        bsz -= bsz % play_codec.bytes_per_block;
 
-        if (play_codec.bits_per_sample > 8) {
-            if (play_codec.number_of_channels == 2)
-                dop = convert_rdbuf_resample_to_16_stereo((int16_t dosamp_FAR*)ptr,bsz / 4UL);
+        if (resample_step == resample_100) {
+            /* don't do full resampling if no resampling needed */
+            if (convert_rdbuf_pos < convert_rdbuf_len)
+                dop = convert_rdbuf_len - convert_rdbuf_pos;
             else
-                dop = convert_rdbuf_resample_to_16_mono((int16_t dosamp_FAR*)ptr,bsz / 2UL);
-        }
-        else {
-            if (play_codec.number_of_channels == 2)
-                dop = convert_rdbuf_resample_to_8_stereo((uint8_t dosamp_FAR*)ptr,bsz / 2UL);
-            else
-                dop = convert_rdbuf_resample_to_8_mono((uint8_t dosamp_FAR*)ptr,bsz);
-        }
+                dop = 0;
 
-        assert(convert_rdbuf_pos <= convert_rdbuf_len);
+            if (dop > bsz) dop = bsz;
 
-        if (dop != 0) {
-            dop *= play_codec.bytes_per_block;
-            if (buffer_write(ptr,dop) != dop)
+            dop -= dop % play_codec.bytes_per_block;
+            if (dop == 0)
                 break;
 
+            if (buffer_write(dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos),dop) != dop)
+                break;
+
+            convert_rdbuf_pos += dop;
+            assert(convert_rdbuf_pos <= convert_rdbuf_len);
             howmuch -= dop;
             avail -= dop;
         }
         else {
-            break;
+            if (play_codec.bits_per_sample > 8) {
+                if (play_codec.number_of_channels == 2)
+                    dop = convert_rdbuf_resample_to_16_stereo((int16_t dosamp_FAR*)ptr,bsz / 4UL);
+                else
+                    dop = convert_rdbuf_resample_to_16_mono((int16_t dosamp_FAR*)ptr,bsz / 2UL);
+            }
+            else {
+                if (play_codec.number_of_channels == 2)
+                    dop = convert_rdbuf_resample_to_8_stereo((uint8_t dosamp_FAR*)ptr,bsz / 2UL);
+                else
+                    dop = convert_rdbuf_resample_to_8_mono((uint8_t dosamp_FAR*)ptr,bsz);
+            }
+
+            assert(convert_rdbuf_pos <= convert_rdbuf_len);
+
+            if (dop != 0) {
+                dop *= play_codec.bytes_per_block;
+                if (buffer_write(ptr,dop) != dop)
+                    break;
+
+                howmuch -= dop;
+                avail -= dop;
+            }
+            else {
+                break;
+            }
         }
     }
 }
