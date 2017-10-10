@@ -937,6 +937,8 @@ int convert_rdbuf_fill(void) {
             buf += xx;
         }
 
+        assert(convert_rdbuf_len <= bufsz);
+
         samples = (uint32_t)convert_rdbuf_len / (uint32_t)file_codec.bytes_per_block;
 
         /* channel conversion */
