@@ -1215,6 +1215,16 @@ uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t sa
     return r;
 }
 
+/* FIXME: We have 16-bit to 8-bit conversion, but no 8-bit to 16-bit conversion.
+ *        This is not an issue now with Sound Blaster but it will be an issue in
+ *        the future when we deal with AC'97 and HD Audio sound cards where the
+ *        sample rate is fixed in hardware and we're expected to resample in
+ *        software. Modern sound cards tend to be either fixed to one sample rate
+ *        or selectable between 2 or 3 common fixed rates (32KHz, 44.1KHz, and 48KHz).
+ *        If the HD Audio chipset connects to HDMI, we may also gain the ability to
+ *        send 96KHz. I doubt these chipsets waste their silicon upconverting 8-bit
+ *        PCM either. That's the impression I get from ALSA in Linux on my laptop
+ *        anyway. --J.C. */
 static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
     unsigned char dosamp_FAR * ptr;
     uint32_t dop,bsz;
