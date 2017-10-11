@@ -497,16 +497,22 @@ static unsigned char                    wav_play_empty = 0;/* if set, buffer is 
 static unsigned char                    wav_playing = 0;
 static unsigned char                    wav_prepared = 0;
 
+/* NTS: Unlike GCC, Open Watcom doesn't cue into the declaration as "static const" that
+ *      it can optimize the code by baking the static const into the immediate form of
+ *      x86 instructions. Therefore optimization of that form requires the use of
+ *      #define macros instead. Making Open Watcom allocate memory for the constants
+ *      and then use the memory locations for what could be optimized slows this code
+ *      down. */
 #if TARGET_MSDOS == 32
+# define resample_100_shift             (32)
+# define resample_100                   (1ULL << 32ULL)
 typedef signed long long                resample_intermediate_t;
-static const unsigned char              resample_100_shift = 32;
-static const unsigned long long         resample_100 = 1ULL << 32ULL;
 static unsigned long long               resample_step = 0; /* 16.16 resampling step */
 static unsigned long long               resample_frac = 0;
 #else
+# define resample_100_shift             (16)
+# define resample_100                   (1UL << 16UL)
 typedef signed long                     resample_intermediate_t;
-static const unsigned char              resample_100_shift = 16;
-static const unsigned long              resample_100 = 1UL << 16UL;
 static unsigned long                    resample_step = 0; /* 16.16 resampling step */
 static unsigned long                    resample_frac = 0;
 #endif
