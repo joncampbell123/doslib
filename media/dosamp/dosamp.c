@@ -1728,12 +1728,18 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
     d->bytes_per_block = ((d->bits_per_sample+7U)/8U) * d->number_of_channels;
 
     {
-        resample_intermediate_t tmp;
+        /* NTS: Always compute with uint64_t even on 16-bit builds.
+         *      This gives us the precision we need to compute the resample step value.
+         *      Also remember that on 16-bit builds the resample intermediate type is
+         *      32 bits wide, and the shift is 16. As signed integers, that means that
+         *      this code will produce the wrong value when sample rates >= 32768Hz are
+         *      involved unless we do the math in 64-bit wide integers. */
+        uint64_t tmp;
 
-        tmp  = (resample_intermediate_t)s->sample_rate << (resample_intermediate_t)resample_100_shift;
-        tmp /= (resample_intermediate_t)d->sample_rate;
+        tmp  = (uint64_t)s->sample_rate << (uint64_t)resample_100_shift;
+        tmp /= (uint64_t)d->sample_rate;
 
-        resample_step = tmp;
+        resample_step = (resample_intermediate_t)tmp;
         resample_frac = 0;
     }
 
