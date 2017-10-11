@@ -2025,7 +2025,7 @@ static unsigned long display_time_wait_next = 0;
 void display_idle_time(void) {
     unsigned long w,f;
     unsigned char hour,min,sec,centisec;
-    unsigned char percent;
+    unsigned short percent;
 
     /* display time, but not too often. keep the rate limited. */
     time_source->poll(time_source);
@@ -2057,7 +2057,7 @@ void display_idle_time(void) {
             d = wav_data_length;
 
             /* it's a percentage from 0 to 99, we don't need high precision for large files */
-            while ((m|d) >= 0x100000UL) {
+            while ((m|d) >= 0x10000UL) {
                 m >>= 4UL;
                 d >>= 4UL;
             }
@@ -2065,12 +2065,12 @@ void display_idle_time(void) {
             /* we don't want divide by zero */
             if (d == 0UL) d = 1UL;
 
-            percent = (unsigned char)((m * 100UL) / d);
+            percent = (unsigned short)((m * 1000UL) / d);
         }
 
         printf("\x0D");
-        printf("%02u:%02u:%02u.%02u %%%02u %lu/%lu as %lu-Hz %u-ch %u-bit ",
-            hour,min,sec,centisec,percent,wav_play_position,wav_data_length,
+        printf("%02u:%02u:%02u.%02u %%%02u.%u %lu/%lu as %lu-Hz %u-ch %u-bit ",
+            hour,min,sec,centisec,percent/10U,percent%10U,wav_play_position,wav_data_length,
             (unsigned long)play_codec.sample_rate,
             (unsigned int)play_codec.number_of_channels,
             (unsigned int)play_codec.bits_per_sample);
