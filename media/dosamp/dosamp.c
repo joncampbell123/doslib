@@ -875,6 +875,37 @@ void convert_rdbuf_8_to_16_ip(uint32_t samples) {
      * channel conversion, therefore use play_codec.number_of_channels.
      * due to data expansion, this converts backwards in place. */
     uint32_t total_samples = samples * (uint32_t)play_codec.number_of_channels;
+
+#if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
+    /* DS:SI = convert_rdbuf + samples + samples - 1
+     * ES:DI = convert_rdbuf + samples + samples + samples + samples - 1
+     * CX = samples
+     */
+    __asm {
+        push    ds
+        push    es
+        std                         ; scan backwards
+        lds     si,convert_rdbuf
+        mov     di,si
+        push    ds
+        pop     es
+        mov     cx,word ptr total_samples
+        add     si,cx
+        add     di,cx
+        add     di,cx
+        dec     si
+        sub     di,2
+l1:     lodsb
+        mov     ah,al
+        xor     al,al
+        xor     ah,0x80
+        stosw
+        loop    l1
+        pop     es
+        pop     ds
+        cld
+    }
+#else
     int16_t dosamp_FAR * buf = (int16_t dosamp_FAR *)convert_rdbuf + total_samples - 1;
     uint8_t dosamp_FAR * sp = (uint8_t dosamp_FAR *)convert_rdbuf + total_samples - 1;
     uint32_t i = samples * (uint32_t)play_codec.number_of_channels;
@@ -882,6 +913,7 @@ void convert_rdbuf_8_to_16_ip(uint32_t samples) {
     while (i-- != 0UL) {
         *buf-- = (int16_t)(((uint16_t)((*sp--) ^ 0x80U)) << 8U);
     }
+#endif
 
     convert_rdbuf_len = total_samples * 2;
     assert(convert_rdbuf_len <= convert_rdbuf_sz);
