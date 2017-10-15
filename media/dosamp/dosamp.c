@@ -1072,7 +1072,14 @@ static unsigned int resample_interpolate_asm86(unsigned int c,unsigned int p,uns
  * EAX ^= ESI  (convert to absolute... well almost... not quite NEG but close enough... off by 1 at most)
  * EDX:EAX = EAX * ECX
  * EDX ^= ESI
- * EDX += EBX */
+ * EDX += EBX
+ *
+ * NTS: SBB is "subtract with borrow" which is equivalent to "SUB dest, src + Carry Flag".
+ *      "SUB dest, src" will set CF if dest < src at the time of execution (because it carries and becomes negative)
+ *      So we use SBB to subtract ESI by itself to that ESI either becomes zero (CF=0) or -1 (CF=1). On the x86,
+ *      -1 is 0xFFFFFFFF (all bits set). We XOR the value by ESI as a cheap way to get the absolute value of the
+ *      result we just computed. Except... it's not quite the absolute value (for negative results, the value is
+ *      off by 1) but to the human ear the difference is inaudible anyway. */
 #pragma aux resample_interpolate_asm86 = \
     "sub    eax,ebx" \
     "sbb    esi,esi" \
