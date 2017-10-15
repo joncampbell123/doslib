@@ -1494,7 +1494,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
     }
 
     if (!prefer_no_clamp)
-        clamp_if_behind(play_codec.sample_rate / 10);
+        clamp_if_behind(wav_play_min_load_size);
 }
 
 static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
@@ -1565,7 +1565,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
     }
 
     if (!prefer_no_clamp)
-        clamp_if_behind(play_codec.sample_rate / 10);
+        clamp_if_behind(wav_play_min_load_size);
 }
 
 static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
