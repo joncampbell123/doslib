@@ -877,8 +877,8 @@ void convert_rdbuf_8_to_16_ip(uint32_t samples) {
     uint32_t total_samples = samples * (uint32_t)play_codec.number_of_channels;
 
 #if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
-    /* DS:SI = convert_rdbuf + samples + samples - 1
-     * ES:DI = convert_rdbuf + samples + samples + samples + samples - 1
+    /* DS:SI = convert_rdbuf + total_samples - 1
+     * ES:DI = convert_rdbuf + total_samples + total_samples - 1
      * CX = samples
      */
     __asm {
