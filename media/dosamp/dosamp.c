@@ -1050,7 +1050,7 @@ int convert_rdbuf_fill(void) {
 
 unsigned char use_mmap_write = 1;
 
-static inline int resample_interpolate(const unsigned int channel) {
+static inline int resample_interpolate_generic(const unsigned int channel) {
     resample_intermediate_t tmp;
 
     tmp = (resample_intermediate_t)resample_c[channel] - (resample_intermediate_t)resample_p[channel];
@@ -1059,6 +1059,14 @@ static inline int resample_interpolate(const unsigned int channel) {
     tmp += resample_p[channel];
 
     return (int)tmp;
+}
+
+static inline int resample_interpolate8(const unsigned int channel) {
+    return (int)resample_interpolate_generic(channel);
+}
+
+static inline int resample_interpolate16(const unsigned int channel) {
+    return (int)resample_interpolate_generic(channel);
 }
 
 uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples) {
@@ -1090,7 +1098,7 @@ uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t sampl
             src++;
         }
         else {
-            *dst++ = (uint8_t)resample_interpolate(0);
+            *dst++ = (uint8_t)resample_interpolate8(0);
             samples--;
             r++;
 
@@ -1134,8 +1142,8 @@ uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t sam
             src += 2;
         }
         else {
-            *dst++ = (uint8_t)resample_interpolate(0);
-            *dst++ = (uint8_t)resample_interpolate(1);
+            *dst++ = (uint8_t)resample_interpolate8(0);
+            *dst++ = (uint8_t)resample_interpolate8(1);
 
             samples--;
             r++;
@@ -1176,7 +1184,7 @@ uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samp
             src++;
         }
         else {
-            *dst++ = (int16_t)resample_interpolate(0);
+            *dst++ = (int16_t)resample_interpolate16(0);
 
             samples--;
             r++;
@@ -1221,8 +1229,8 @@ uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t sa
             src += 2;
         }
         else {
-            *dst++ = (int16_t)resample_interpolate(0);
-            *dst++ = (int16_t)resample_interpolate(1);
+            *dst++ = (int16_t)resample_interpolate16(0);
+            *dst++ = (int16_t)resample_interpolate16(1);
 
             samples--;
             r++;
