@@ -1061,7 +1061,38 @@ static inline int resample_interpolate_generic(const unsigned int channel) {
     return (int)tmp;
 }
 
-#if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
+#if defined(__WATCOMC__) && defined(__386__) && TARGET_MSDOS == 32
+/* Watcom C + MS-DOS/Windows 32-bit target for 386 or higher */
+static unsigned int resample_interpolate_asm86(unsigned int c,unsigned int p,unsigned int f);
+/* This algorithm works ONLY if the values are unsigned.
+ *
+ * EAX = c, EBX = p, ECX = f
+ * EAX -= EBX
+ * ESI = 0 if EAX >= 0, 0xFFFFFFFF if EAX < 0
+ * EAX ^= ESI  (convert to absolute... well almost... not quite NEG but close enough... off by 1 at most)
+ * EDX:EAX = EAX * ECX
+ * EDX ^= ESI
+ * EDX += EBX */
+#pragma aux resample_interpolate_asm86 = \
+    "sub    eax,ebx" \
+    "sbb    esi,esi" \
+    "xor    eax,esi" \
+    "mul    ecx" \
+    "xor    edx,esi" \
+    "add    edx,ebx" \
+    parm [eax] [ebx] [ecx] \
+    value [edx] \
+    modify [edx eax esi]
+
+static inline int resample_interpolate8(const unsigned int channel) {
+    return (int)resample_interpolate_asm86((unsigned int)resample_c[channel],(unsigned int)resample_p[channel],(unsigned int)resample_frac);
+}
+
+static inline int resample_interpolate16(const unsigned int channel) {
+    /* this only works IF we make the 16-bit PCM unsigned */
+    return (int)(resample_interpolate_asm86((unsigned int)resample_c[channel] ^ 0x80000000U,(unsigned int)resample_p[channel] ^ 0x80000000U,(unsigned int)resample_frac) ^ 0x80000000U);
+}
+#elif defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
 /* Watcom C + MS-DOS/Windows 16-bit target for 8086 or higher */
 static unsigned int resample_interpolate_asm86(unsigned int c,unsigned int p,unsigned int f);
 /* This algorithm works ONLY if the values are unsigned.
@@ -1093,6 +1124,7 @@ static inline int resample_interpolate16(const unsigned int channel) {
     return (int)(resample_interpolate_asm86((unsigned int)resample_c[channel] ^ 0x8000U,(unsigned int)resample_p[channel] ^ 0x8000U,(unsigned int)resample_frac) ^ 0x8000U);
 }
 #else
+/* generic */
 static inline int resample_interpolate8(const unsigned int channel) {
     return (int)resample_interpolate_generic(channel);
 }
