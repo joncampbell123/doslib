@@ -859,12 +859,35 @@ void convert_rdbuf_16_to_8_ip(uint32_t samples) {
      * channel conversion, therefore use play_codec.number_of_channels */
     uint32_t total_samples = samples * (uint32_t)play_codec.number_of_channels;
     uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)convert_rdbuf;
-    int16_t dosamp_FAR * sp = (int16_t dosamp_FAR *)convert_rdbuf;
-    uint32_t i = total_samples;
 
-    while (i-- != 0UL) {
-        *buf++ = (uint8_t)((((uint16_t)(*sp++)) ^ 0x8000) >> 8U);
+#if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
+    __asm {
+        push    ds
+        push    es
+        cld
+        lds     si,buf
+        mov     di,si
+        push    ds
+        pop     es
+        mov     cx,word ptr total_samples
+l1:     lodsw               ; AX = 16-bit sample
+        mov     al,ah       ; AL = (AX >> 8) ^ 0x80
+        xor     al,0x80
+        stosb
+        loop    l1
+        pop     es
+        pop     ds
     }
+#else
+    {
+        int16_t dosamp_FAR * sp = (int16_t dosamp_FAR *)convert_rdbuf;
+        uint32_t i = total_samples;
+
+        while (i-- != 0UL) {
+            *buf++ = (uint8_t)((((uint16_t)(*sp++)) ^ 0x8000) >> 8U);
+        }
+    }
+#endif
 
     convert_rdbuf_len = total_samples;
     assert(convert_rdbuf_len <= convert_rdbuf_sz);
