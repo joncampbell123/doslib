@@ -37,6 +37,7 @@
 static unsigned long        prefer_rate = 0;
 static unsigned char        prefer_channels = 0;
 static unsigned char        prefer_bits = 0;
+static unsigned char        prefer_no_clamp = 0;
 
 static char                 stuck_test = 0;
 
@@ -490,6 +491,7 @@ static unsigned long                    wav_play_min_load_size = 0;
  *      to a "high half" when they wrap around. */
 static unsigned long                    wav_write_counter = 0;/* at buffer_last_io, bytes written since play start */
 static unsigned long                    wav_play_counter = 0;/* at dma position, bytes played since play start */
+static unsigned long                    wav_play_counter_prev = 0;/* at dma position, bytes played since play start */
 
 static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
 static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
@@ -571,7 +573,39 @@ static void interrupt sb_irq() {
     }
 }
 
+void update_play_position();
 void update_wav_play_delay();
+
+/* detect playback underruns, and force write pointer forward to compensate if so.
+ * caller will direct us how many bytes into the future to set the write pointer,
+ * since nobody can INSTANTLY write audio to the playback pointer.
+ *
+ * This way, the playback program can use this to force the write pointer forward
+ * if underrun to at least ensure the next audio written will be immediately audible.
+ * Without this, upon underrun, the written audio may not be heard until the play
+ * pointer has gone through the entire buffer again. */
+int clamp_if_behind(uint32_t ahead_in_bytes) {
+    int res = 0;
+
+    update_play_position();
+    update_wav_play_delay();
+
+    if (wav_play_counter < wav_play_counter_prev) {
+        sb_card->buffer_last_io = wav_play_dma_position;
+        sb_card->buffer_last_io += ahead_in_bytes;
+        sb_card->buffer_last_io -= sb_card->buffer_last_io % play_codec.bytes_per_block;
+        if (sb_card->buffer_last_io >= sb_card->buffer_size)
+            sb_card->buffer_last_io -= sb_card->buffer_size;
+        if (sb_card->buffer_last_io >= sb_card->buffer_size)
+            sb_card->buffer_last_io  = 0;
+
+        res = 1;
+        update_play_position();
+        update_wav_play_delay();
+    }
+
+    return res;
+}
 
 /* this depends on keeping the "play delay" up to date */
 uint32_t can_write(void) { /* in bytes */
@@ -1458,6 +1492,9 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
             }
         }
     }
+
+    if (!prefer_no_clamp)
+        clamp_if_behind(play_codec.sample_rate / 10);
 }
 
 static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
@@ -1526,6 +1563,9 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
         wav_file_pointer_to_position();
         howmuch -= towrite;
     }
+
+    if (!prefer_no_clamp)
+        clamp_if_behind(play_codec.sample_rate / 10);
 }
 
 static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
@@ -1563,6 +1603,9 @@ void update_wav_play_delay() {
     wav_play_counter = wav_write_counter;
     if (wav_play_counter >= wav_play_delay_bytes) wav_play_counter -= wav_play_delay_bytes;
     else wav_play_counter = 0;
+
+    if (wav_play_counter_prev < wav_play_counter)
+        wav_play_counter_prev = wav_play_counter;
 }
 
 void update_play_position(void) {
@@ -2026,7 +2069,9 @@ static int begin_play() {
     /* reset state */
     convert_rdbuf_clear();
     wav_rebase_clear();
+    wav_play_counter_prev = 0;
     wav_write_counter = 0;
+    wav_play_counter = 0;
     wav_play_delay = 0;
     wav_play_empty = 1;
 
@@ -2136,6 +2181,9 @@ static int parse_argv(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 prefer_rate = atol(a);
+            }
+            else if (!strcmp(a,"nc")) {
+                prefer_no_clamp = 1;
             }
             else {
                 return 0;
