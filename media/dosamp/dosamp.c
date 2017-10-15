@@ -975,7 +975,6 @@ void convert_rdbuf_mono2stereo_ip_u8(uint32_t samples) {
      * ES:DI = convert_rdbuf + samples + samples - 1
      * CX = samples
      */
-    __asm int 3
     __asm {
         push    ds
         push    es
@@ -998,7 +997,6 @@ l1:     lodsb
         pop     ds
         cld
     }
-    __asm int 3
 #else
     /* in-place mono to stereo conversion (up to convert_rdbuf_len)
      * from file_codec channels (1) to play_codec channels (2).
