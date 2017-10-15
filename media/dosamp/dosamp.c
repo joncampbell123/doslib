@@ -1017,6 +1017,37 @@ l1:     lodsb
 }
 
 void convert_rdbuf_mono2stereo_ip_s16(uint32_t samples) {
+#if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
+    /* DS:SI = convert_rdbuf + samples + samples - 1
+     * ES:DI = convert_rdbuf + samples + samples + samples + samples - 1
+     * CX = samples
+     */
+    __asm {
+        push    ds
+        push    es
+        std                         ; scan backwards
+        lds     si,convert_rdbuf
+        mov     di,si
+        push    ds
+        pop     es
+        mov     cx,word ptr samples
+        push    cx
+        add     cx,cx               ; CX *= 2
+        add     si,cx               ; SI += samples * 2 (CX)
+        add     di,cx               ; DI += samples * 4 (CX * 2)
+        add     di,cx
+        pop     cx
+        sub     si,2
+        sub     di,2
+l1:     lodsw
+        stosw
+        stosw
+        loop    l1
+        pop     es
+        pop     ds
+        cld
+    }
+#else
     /* in-place mono to stereo conversion (up to convert_rdbuf_len)
      * from file_codec channels (1) to play_codec channels (2).
      * due to data expansion we process backwards. */
@@ -1029,6 +1060,7 @@ void convert_rdbuf_mono2stereo_ip_s16(uint32_t samples) {
         *buf-- = *sp;
         sp--;
     }
+#endif
 
     convert_rdbuf_len = samples * 2UL * 2UL;
     assert(convert_rdbuf_len <= convert_rdbuf_sz);
