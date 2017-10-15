@@ -1061,6 +1061,38 @@ static inline int resample_interpolate_generic(const unsigned int channel) {
     return (int)tmp;
 }
 
+#if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
+/* Watcom C + MS-DOS/Windows 16-bit target for 8086 or higher */
+static unsigned int resample_interpolate_asm86(unsigned int c,unsigned int p,unsigned int f);
+/* This algorithm works ONLY if the values are unsigned.
+ *
+ * AX = c, BX = p, CX = f
+ * AX -= BX
+ * SI = 0 if AX >= 0, 0xFFFF if AX < 0
+ * AX ^= SI  (convert to absolute... well almost... not quite NEG but close enough... off by 1 at most)
+ * DX:AX = AX * CX
+ * DX ^= SI
+ * DX += BX */
+#pragma aux resample_interpolate_asm86 = \
+    "sub    ax,bx" \
+    "sbb    si,si" \
+    "xor    ax,si" \
+    "mul    cx" \
+    "xor    dx,si" \
+    "add    dx,bx" \
+    parm [ax] [bx] [cx] \
+    value [dx] \
+    modify [dx ax si]
+
+static inline int resample_interpolate8(const unsigned int channel) {
+    return (int)resample_interpolate_asm86((unsigned int)resample_c[channel],(unsigned int)resample_p[channel],(unsigned int)resample_frac);
+}
+
+static inline int resample_interpolate16(const unsigned int channel) {
+    /* this only works IF we make the 16-bit PCM unsigned */
+    return (int)(resample_interpolate_asm86((unsigned int)resample_c[channel] ^ 0x8000U,(unsigned int)resample_p[channel] ^ 0x8000U,(unsigned int)resample_frac) ^ 0x8000U);
+}
+#else
 static inline int resample_interpolate8(const unsigned int channel) {
     return (int)resample_interpolate_generic(channel);
 }
@@ -1068,6 +1100,7 @@ static inline int resample_interpolate8(const unsigned int channel) {
 static inline int resample_interpolate16(const unsigned int channel) {
     return (int)resample_interpolate_generic(channel);
 }
+#endif
 
 uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples) {
     uint8_t dosamp_FAR *src = dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
