@@ -1955,6 +1955,16 @@ void disable_autoinit(void) {
     sb_card->dsp_autoinit_command = 0;
 }
 
+void silence_buffer(void) {
+    if (sb_dma->lin != NULL) {
+#if TARGET_MSDOS == 16
+        _fmemset(sb_dma->lin,play_codec.bits_per_sample == 8 ? 128 : 0,sb_card->buffer_size);
+#else
+        memset(sb_dma->lin,play_codec.bits_per_sample == 8 ? 128 : 0,sb_card->buffer_size);
+#endif
+    }
+}
+
 int prepare_buffer(void) {
     if (sb_check_dma_buffer() < 0)
         return -1;
@@ -2092,6 +2102,9 @@ static int begin_play() {
         unprepare_play();
         return -1;
     }
+
+    /* zero the buffer */
+    silence_buffer();
 
     /* set IRQ interval (card will pick closest and sanitize it) */
     set_irq_interval(play_buffer_size());
