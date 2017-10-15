@@ -1988,6 +1988,10 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
     sb_card->buffer_size = 1;
     sb_card->buffer_phys = 0;
 
+    /* SB specific: I know from experience and calculations that Sound Blaster cards don't go below 4000Hz */
+    if (d->sample_rate < 4000)
+        d->sample_rate = 4000;
+
     /* we'll follow the recommendations on what is supported by the DSP. no hacks. */
     r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
     if (!r) {
