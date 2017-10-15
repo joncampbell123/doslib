@@ -874,13 +874,39 @@ void convert_rdbuf_stereo2mono_ip_u8(uint32_t samples) {
     /* in-place stereo to mono conversion (up to convert_rdbuf_len)
      * from file_codec channels (2) to play_codec channels (1) */
     uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)convert_rdbuf;
-    uint8_t dosamp_FAR * sp = buf;
-    uint32_t i = samples;
 
-    while (i-- != 0UL) {
-        *buf++ = (uint8_t)(((unsigned int)sp[0] + (unsigned int)sp[1] + 1U) >> 1U);
-        sp += 2;
+#if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
+    __asm {
+        push    ds
+        push    es
+        cld
+        lds     si,buf
+        mov     di,si
+        push    ds
+        pop     es
+        mov     cx,word ptr samples
+l1:     lodsw               ; AX = two samples
+        mov     bh,ah       ; BH = second sample, AL = first sample
+        xor     ah,ah       ; AH = 0
+        add     al,bh       ; first sample + second sample
+        adc     ah,0        ; (carry)
+        shr     ax,1        ; AX >>= 1
+        stosb               ; store one sample
+        loop    l1
+        pop     es
+        pop     ds
     }
+#else
+    {
+        uint8_t dosamp_FAR * sp = buf;
+        uint32_t i = samples;
+
+        while (i-- != 0UL) {
+            *buf++ = (uint8_t)(((unsigned int)sp[0] + (unsigned int)sp[1] + 1U) >> 1U);
+            sp += 2;
+        }
+    }
+#endif
 
     convert_rdbuf_len = samples;
     assert(convert_rdbuf_len <= convert_rdbuf_sz);
