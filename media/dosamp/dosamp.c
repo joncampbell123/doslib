@@ -2618,11 +2618,13 @@ int main(int argc,char **argv) {
     write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
 
     /* we can use the Time Stamp Counter on Pentium or higher systems that offer it */
-	if (cpu_flags & CPU_FLAG_CPUID) {
-        if (cpu_cpuid_features.a.raw[2] & 0x10) {
-            /* RDTSC is available. We just have to figure out how fast it runs. */
-            if (calibrate_rdtsc() >= 0)
-                time_source = &dosamp_time_source_rdtsc;
+    if (cpu_flags & CPU_FLAG_CPUID) {
+        if (!(cpu_flags & CPU_FLAG_DONT_USE_RDTSC)) {
+            if (cpu_cpuid_features.a.raw[2] & 0x10/*RDTSC*/) {
+                /* RDTSC is available. We just have to figure out how fast it runs. */
+                if (calibrate_rdtsc() >= 0)
+                    time_source = &dosamp_time_source_rdtsc;
+            }
         }
     }
 
