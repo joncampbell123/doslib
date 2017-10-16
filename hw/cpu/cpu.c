@@ -154,7 +154,32 @@ void cpu_probe() {
 	}
 #endif
 
-	/* Don't try to read CR4 on pre-Pentium CPUs, it will cause a crash. */
+    /* FIXME: Prior to adding this check I had no problem with reading CR4 on later
+     *        versions (post 1993) revisions of the 80486. It was only on older
+     *        (pre 1993) version of the 80486 that reading CR4 caused a fault and
+     *        crash.
+     *
+     *        When exactly did the change-over happen?
+     *
+     *        I'm guessing it happened probably at the same time that later 80486
+     *        processors gained the CPUID instruction.
+     *
+     *        But I'm not sure.
+     *
+     *        Also we can't assume clone 80486's from other companies act the same
+     *        way. But if CPUID is around we could report it available if and only
+     *        if the vendor string is "GenuineIntel" I suppose.
+     *
+     *        Until I can pin down when it's legal to do it, we assume CR4 exists
+     *        only on Pentium or higher.
+     *
+     *        Not only is this needed to detect if SSE is enabled, but it is also
+     *        needed by the DOSLTP library to detect certain characteristics about
+     *        paging.
+     *
+     *        We will also need to read CR4 to determine if, as possibly ring-3
+     *        user-space code, whether we're allowed to use the RDTSC instruction. */
+    /* Don't try to read CR4 on pre-Pentium CPUs, it will cause a crash. */
 	if (cpu_basic_level >= 5)
 		cpu_flags |= CPU_FLAG_CR4_EXISTS;
 
