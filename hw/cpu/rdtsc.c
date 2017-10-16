@@ -59,6 +59,12 @@ int main() {
 		return 1;
 	}
 
+    if (cpu_flags & CPU_FLAG_DONT_USE_RDTSC) {
+        printf(" - Your CPU does support RDTSC but it's not recommended in this environment.\n");
+        printf("   This is usually due to running a 16-bit build in pure DOS under EMM386.EXE.\n");
+        return 1;
+    }
+
 #if defined(TARGET_OS2)
 # if TARGET_MSDOS == 32
 	/* OS/2 32-bit: We can use DosQuerySysInfo() */

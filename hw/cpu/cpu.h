@@ -118,7 +118,7 @@ extern char				cpu_cpuid_vendor[13];
 extern struct cpu_cpuid_features	cpu_cpuid_features;
 extern signed char			cpu_basic_level;
 extern uint32_t				cpu_cpuid_max;
-extern unsigned char			cpu_flags;
+extern unsigned short			cpu_flags;
 extern uint16_t				cpu_tmp1;
 
 /* compatability */
@@ -138,6 +138,9 @@ extern uint16_t				cpu_tmp1;
  *                          Win32 and 32-bit DOS, obviously. If set, PROTECTED_MODE is also set. */
 #define CPU_FLAG_DONT_WRITE_RDTSC	(1 << 6)
 #define CPU_FLAG_CR4_EXISTS		(1 << 7)
+/* There are some v86-based environments where the CPU has RDTSC but we can't use it because
+ * the v86 monitor doesn't have it enabled for user-mode use (Windows 95 EMM386.EXE). */
+#define CPU_FLAG_DONT_USE_RDTSC (1 << 8)
 
 void cpu_probe();
 int cpu_basic_probe(); /* external assembly language function */

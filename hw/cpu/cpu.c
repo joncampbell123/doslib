@@ -59,7 +59,7 @@ char				cpu_cpuid_vendor[13]={0};
 struct cpu_cpuid_features	cpu_cpuid_features = {0};
 signed char			cpu_basic_level = -1;
 uint32_t			cpu_cpuid_max = 0;
-unsigned char			cpu_flags = 0;
+unsigned short			cpu_flags = 0;
 uint16_t			cpu_tmp1 = 0;
 
 void cpu_probe() {
@@ -157,5 +157,18 @@ void cpu_probe() {
 	/* Don't try to read CR4 on pre-Pentium CPUs, it will cause a crash. */
 	if (cpu_basic_level >= 5)
 		cpu_flags |= CPU_FLAG_CR4_EXISTS;
+
+    /* Don't use RDTSC in Virtual 8086 mode because EMM386.EXE may not have enabled it
+     * and may not be prepared to handle the Invalid Opcode exception that occurs when
+     * you try it.
+     *
+     * 32-bit DOS applications are not affected by this flaw.
+     *
+     * TODO: What combinations of MS-DOS and EMM386.EXE have this flaw? */
+#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2) && TARGET_MSDOS == 16
+    if (cpu_v86_active) {
+        cpu_flags |= CPU_FLAG_DONT_USE_RDTSC;
+    }
+#endif
 }
 
