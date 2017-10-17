@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <assert.h>
 #include <fcntl.h>
@@ -39,30 +40,59 @@ static ULONG GetMsCount() {
 }
 #endif
 
-int main() {
+int main(int argc,char *argv[],char *envp[]) {
 	rdtsc_t start,measure,ticks_per_sec;
+    unsigned char force = 0;
 	double t;
 	int c;
+
+    {
+        int i = 1;
+        char *a;
+
+        while (i < argc) {
+            a = argv[i++];
+
+            if (*a == '-') {
+                do { a++; } while (*a == '-');
+
+                if (!strcmp(a,"f") || !strcmp(a,"force"))
+                    force = 1;
+                else
+                    return 1;
+            }
+            else {
+                return 1;
+            }
+        }
+    }
 
 	cpu_probe();
 	printf("Your CPU is basically a %s or higher\n",cpu_basic_level_to_string(cpu_basic_level));
 	if (cpu_v86_active)
 		printf(" - Your CPU is currently running me in virtual 8086 mode\n");
 
-	if (!(cpu_flags & CPU_FLAG_CPUID)) {
-		printf(" - Your CPU doesn't support CPUID, how can it support RDTSC?\n");
-		return 1;
-	}
+    if (force) {
+        printf(" - You're forcing me to use RDTSC. I may crash if your CPU doesn't\n");
+        printf("   support it or the environment doesn't enable it.\n");
+        printf("   OK! Here we go....!\n");
+    }
+    else {
+        if (!(cpu_flags & CPU_FLAG_CPUID)) {
+            printf(" - Your CPU doesn't support CPUID, how can it support RDTSC?\n");
+            return 1;
+        }
 
-	if (!(cpu_cpuid_features.a.raw[2] & 0x10)) {
-		printf(" - Your CPU does not support RDTSC\n");
-		return 1;
-	}
+        if (!(cpu_cpuid_features.a.raw[2] & 0x10)) {
+            printf(" - Your CPU does not support RDTSC\n");
+            return 1;
+        }
 
-    if (cpu_flags & CPU_FLAG_DONT_USE_RDTSC) {
-        printf(" - Your CPU does support RDTSC but it's not recommended in this environment.\n");
-        printf("   This is usually due to running a 16-bit build in pure DOS under EMM386.EXE.\n");
-        return 1;
+        if (cpu_flags & CPU_FLAG_DONT_USE_RDTSC) {
+            printf(" - Your CPU does support RDTSC but it's not recommended in this environment.\n");
+            printf("   This is usually due to running a 16-bit build in pure DOS under EMM386.EXE.\n");
+            return 1;
+        }
     }
 
 #if defined(TARGET_OS2)
