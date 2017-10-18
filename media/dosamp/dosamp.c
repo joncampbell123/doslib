@@ -38,20 +38,22 @@
 #include "dosamp.h"
 #include "timesrc.h"
 
-/* 8254 time source */
-extern struct dosamp_time_source                dosamp_time_source_8254;
-
-static unsigned long        prefer_rate = 0;
-static unsigned char        prefer_channels = 0;
-static unsigned char        prefer_bits = 0;
-static unsigned char        prefer_no_clamp = 0;
-
-static char                 stuck_test = 0;
-
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
 # error Open Watcom C tiny memory model not supported
 #endif
+
+/* 8254 time source */
+extern struct dosamp_time_source                dosamp_time_source_8254;
+
+/* DOSAMP state and user state */
+static unsigned long                            prefer_rate = 0;
+static unsigned char                            prefer_channels = 0;
+static unsigned char                            prefer_bits = 0;
+static unsigned char                            prefer_no_clamp = 0;
+
+/* DOSAMP debug state */
+static char                                     stuck_test = 0;
 
 static uint64_t ts_rdtsc_prev;
 
