@@ -125,11 +125,16 @@ static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
 
-static resample_whole_count_element_t   resample_step = 0; /* fixed point step (where 1.0 == resample_100) */
-static resample_whole_count_element_t   resample_frac = 0;
+/* resampler state */
+struct resampler_state_t {
+    resample_whole_count_element_t      step; /* fixed point step (where 1.0 == resample_100) */
+    resample_whole_count_element_t      frac;
+    int16_t                             p[resample_max_channels];
+    int16_t                             c[resample_max_channels];
+    unsigned char                       counter; /* only to count the first two samples through to init resampler */
+};
 
-static unsigned char                    resample_counter = 0; /* only to count the first two samples through to init resampler */
-static int16_t                          resample_p[resample_max_channels],resample_c[resample_max_channels];
+struct resampler_state_t                resample_state;
 
 void update_wav_dma_position(void) {
     _cli();
@@ -464,11 +469,11 @@ unsigned char dosamp_FAR * convert_rdbuf_get(uint32_t *sz) {
 void convert_rdbuf_clear(void) {
     convert_rdbuf_len = 0;
     convert_rdbuf_pos = 0;
-    resample_counter = 0;
-    resample_p[0] = 0;
-    resample_p[1] = 0;
-    resample_c[0] = 0;
-    resample_c[1] = 0;
+    resample_state.counter = 0;
+    resample_state.p[0] = 0;
+    resample_state.p[1] = 0;
+    resample_state.c[0] = 0;
+    resample_state.c[1] = 0;
 }
 
 void card_poll(void) {
@@ -862,10 +867,10 @@ int convert_rdbuf_fill(void) {
 static inline int resample_interpolate_generic(const unsigned int channel) {
     resample_intermediate_t tmp;
 
-    tmp = (resample_intermediate_t)resample_c[channel] - (resample_intermediate_t)resample_p[channel];
-    tmp *= (resample_intermediate_t)resample_frac;
+    tmp = (resample_intermediate_t)resample_state.c[channel] - (resample_intermediate_t)resample_state.p[channel];
+    tmp *= (resample_intermediate_t)resample_state.frac;
     tmp >>= (resample_intermediate_t)resample_100_shift;
-    tmp += resample_p[channel];
+    tmp += resample_state.p[channel];
 
     return (int)tmp;
 }
@@ -901,12 +906,12 @@ static unsigned int resample_interpolate_asm86(unsigned int c,unsigned int p,uns
     modify [edx eax esi]
 
 static inline int resample_interpolate8(const unsigned int channel) {
-    return (int)resample_interpolate_asm86((unsigned int)resample_c[channel],(unsigned int)resample_p[channel],(unsigned int)resample_frac);
+    return (int)resample_interpolate_asm86((unsigned int)resample_state.c[channel],(unsigned int)resample_state.p[channel],(unsigned int)resample_state.frac);
 }
 
 static inline int resample_interpolate16(const unsigned int channel) {
     /* this only works IF we make the 16-bit PCM unsigned */
-    return (int)(resample_interpolate_asm86((unsigned int)resample_c[channel] ^ 0x80000000U,(unsigned int)resample_p[channel] ^ 0x80000000U,(unsigned int)resample_frac) ^ 0x80000000U);
+    return (int)(resample_interpolate_asm86((unsigned int)resample_state.c[channel] ^ 0x80000000U,(unsigned int)resample_state.p[channel] ^ 0x80000000U,(unsigned int)resample_state.frac) ^ 0x80000000U);
 }
 #elif defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
 /* Watcom C + MS-DOS/Windows 16-bit target for 8086 or higher */
@@ -932,12 +937,12 @@ static unsigned int resample_interpolate_asm86(unsigned int c,unsigned int p,uns
     modify [dx ax si]
 
 static inline int resample_interpolate8(const unsigned int channel) {
-    return (int)resample_interpolate_asm86((unsigned int)resample_c[channel],(unsigned int)resample_p[channel],(unsigned int)resample_frac);
+    return (int)resample_interpolate_asm86((unsigned int)resample_state.c[channel],(unsigned int)resample_state.p[channel],(unsigned int)resample_state.frac);
 }
 
 static inline int resample_interpolate16(const unsigned int channel) {
     /* this only works IF we make the 16-bit PCM unsigned */
-    return (int)(resample_interpolate_asm86((unsigned int)resample_c[channel] ^ 0x8000U,(unsigned int)resample_p[channel] ^ 0x8000U,(unsigned int)resample_frac) ^ 0x8000U);
+    return (int)(resample_interpolate_asm86((unsigned int)resample_state.c[channel] ^ 0x8000U,(unsigned int)resample_state.p[channel] ^ 0x8000U,(unsigned int)resample_state.frac) ^ 0x8000U);
 }
 #else
 /* generic */
@@ -954,27 +959,27 @@ uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t sampl
     uint8_t dosamp_FAR *src = dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
     uint32_t r = 0;
 
-    if (resample_counter == 0) {
+    if (resample_state.counter == 0) {
         if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
-        resample_p[0] = *src;
+        resample_state.p[0] = *src;
         convert_rdbuf_pos++;
-        resample_counter++;
+        resample_state.counter++;
         src++;
     }
-    if (resample_counter == 1) {
+    if (resample_state.counter == 1) {
         if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
-        resample_c[0] = *src;
+        resample_state.c[0] = *src;
         convert_rdbuf_pos++;
-        resample_counter++;
+        resample_state.counter++;
         src++;
     }
 
     while (samples > 0) {
-        if (resample_frac >= resample_100) {
+        if (resample_state.frac >= resample_100) {
             if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
-            resample_frac -= resample_100;
-            resample_p[0] = resample_c[0];
-            resample_c[0] = *src;
+            resample_state.frac -= resample_100;
+            resample_state.p[0] = resample_state.c[0];
+            resample_state.c[0] = *src;
             convert_rdbuf_pos++;
             src++;
         }
@@ -983,7 +988,7 @@ uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t sampl
             samples--;
             r++;
 
-            resample_frac += resample_step;
+            resample_state.frac += resample_state.step;
         }
     }
 
@@ -994,31 +999,31 @@ uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t sam
     uint8_t dosamp_FAR *src = dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
     uint32_t r = 0;
 
-    if (resample_counter == 0) {
+    if (resample_state.counter == 0) {
         if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-        resample_p[0] = src[0];
-        resample_p[1] = src[1];
+        resample_state.p[0] = src[0];
+        resample_state.p[1] = src[1];
         convert_rdbuf_pos += 2;
-        resample_counter++;
+        resample_state.counter++;
         src += 2;
     }
-    if (resample_counter == 1) {
+    if (resample_state.counter == 1) {
         if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-        resample_c[0] = src[0];
-        resample_c[1] = src[1];
+        resample_state.c[0] = src[0];
+        resample_state.c[1] = src[1];
         convert_rdbuf_pos += 2;
-        resample_counter++;
+        resample_state.counter++;
         src += 2;
     }
 
     while (samples > 0) {
-        if (resample_frac >= resample_100) {
+        if (resample_state.frac >= resample_100) {
             if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-            resample_frac -= resample_100;
-            resample_p[0] = resample_c[0];
-            resample_p[1] = resample_c[1];
-            resample_c[0] = src[0];
-            resample_c[1] = src[1];
+            resample_state.frac -= resample_100;
+            resample_state.p[0] = resample_state.c[0];
+            resample_state.p[1] = resample_state.c[1];
+            resample_state.c[0] = src[0];
+            resample_state.c[1] = src[1];
             convert_rdbuf_pos += 2;
             src += 2;
         }
@@ -1029,7 +1034,7 @@ uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t sam
             samples--;
             r++;
 
-            resample_frac += resample_step;
+            resample_state.frac += resample_state.step;
         }
     }
 
@@ -1040,27 +1045,27 @@ uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samp
     int16_t dosamp_FAR *src = (int16_t dosamp_FAR *)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
     uint32_t r = 0;
 
-    if (resample_counter == 0) {
+    if (resample_state.counter == 0) {
         if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-        resample_p[0] = *src;
+        resample_state.p[0] = *src;
         convert_rdbuf_pos += 2;
-        resample_counter++;
+        resample_state.counter++;
         src++;
     }
-    if (resample_counter == 1) {
+    if (resample_state.counter == 1) {
         if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-        resample_c[0] = *src;
+        resample_state.c[0] = *src;
         convert_rdbuf_pos += 2;
-        resample_counter++;
+        resample_state.counter++;
         src++;
     }
 
     while (samples > 0) {
-        if (resample_frac >= resample_100) {
+        if (resample_state.frac >= resample_100) {
             if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
-            resample_frac -= resample_100;
-            resample_p[0] = resample_c[0];
-            resample_c[0] = *src;
+            resample_state.frac -= resample_100;
+            resample_state.p[0] = resample_state.c[0];
+            resample_state.c[0] = *src;
             convert_rdbuf_pos += 2;
             src++;
         }
@@ -1070,7 +1075,7 @@ uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samp
             samples--;
             r++;
 
-            resample_frac += resample_step;
+            resample_state.frac += resample_state.step;
         }
     }
 
@@ -1081,31 +1086,31 @@ uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t sa
     int16_t dosamp_FAR *src = (int16_t dosamp_FAR *)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
     uint32_t r = 0;
 
-    if (resample_counter == 0) {
+    if (resample_state.counter == 0) {
         if ((convert_rdbuf_pos+4UL) > convert_rdbuf_len) return r;
-        resample_p[0] = src[0];
-        resample_p[1] = src[1];
+        resample_state.p[0] = src[0];
+        resample_state.p[1] = src[1];
         convert_rdbuf_pos += 4;
-        resample_counter++;
+        resample_state.counter++;
         src += 2;
     }
-    if (resample_counter == 1) {
+    if (resample_state.counter == 1) {
         if ((convert_rdbuf_pos+4UL) > convert_rdbuf_len) return r;
-        resample_c[0] = src[0];
-        resample_c[1] = src[1];
+        resample_state.c[0] = src[0];
+        resample_state.c[1] = src[1];
         convert_rdbuf_pos += 4;
-        resample_counter++;
+        resample_state.counter++;
         src += 2;
     }
 
     while (samples > 0) {
-        if (resample_frac >= resample_100) {
+        if (resample_state.frac >= resample_100) {
             if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-            resample_frac -= resample_100;
-            resample_p[0] = resample_c[0];
-            resample_p[1] = resample_c[1];
-            resample_c[0] = src[0];
-            resample_c[1] = src[1];
+            resample_state.frac -= resample_100;
+            resample_state.p[0] = resample_state.c[0];
+            resample_state.p[1] = resample_state.c[1];
+            resample_state.c[0] = src[0];
+            resample_state.c[1] = src[1];
             convert_rdbuf_pos += 4;
             src += 2;
         }
@@ -1116,7 +1121,7 @@ uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t sa
             samples--;
             r++;
 
-            resample_frac += resample_step;
+            resample_state.frac += resample_state.step;
         }
     }
 
@@ -1141,7 +1146,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
         if (bsz > howmuch) bsz = howmuch;
         bsz -= bsz % play_codec.bytes_per_block;
 
-        if (resample_step == resample_100) {
+        if (resample_state.step == resample_100) {
             /* don't do full resampling if no resampling needed */
             if (convert_rdbuf_pos < convert_rdbuf_len)
                 dop = convert_rdbuf_len - convert_rdbuf_pos;
@@ -1315,7 +1320,7 @@ void update_play_position(void) {
     if (r != NULL) {
         wav_play_position =
             ((unsigned long long)(((wav_state.play_counter - r->event_at) / play_codec.bytes_per_block) *
-                (unsigned long long)resample_step) >> (unsigned long long)resample_100_shift) + r->wav_position;
+                (unsigned long long)resample_state.step) >> (unsigned long long)resample_100_shift) + r->wav_position;
     }
     else if (wav_state.playing)
         wav_play_position = 0;
@@ -1808,11 +1813,11 @@ int resampler_init(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) 
         tmp  = (uint64_t)s->sample_rate << (uint64_t)resample_100_shift;
         tmp /= (uint64_t)d->sample_rate;
 
-        resample_step = (resample_intermediate_t)tmp;
-        resample_frac = 0;
+        resample_state.step = (resample_intermediate_t)tmp;
+        resample_state.frac = 0;
     }
 
-    if (resample_step == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
+    if (resample_state.step == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
         resample_on = 0;
     else
         resample_on = 1;
