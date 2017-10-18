@@ -6,3 +6,7 @@ uint32_t convert_ip_stereo2mono(uint32_t samples,void dosamp_FAR * const proc_bu
 uint32_t convert_ip_stereo2mono_u8(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max);
 uint32_t convert_ip_stereo2mono_s16(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max);
 
+uint32_t convert_ip_mono2stereo(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max,const uint8_t bits_per_sample);
+uint32_t convert_ip_mono2stereo_u8(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max);
+uint32_t convert_ip_mono2stereo_s16(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max);
+
