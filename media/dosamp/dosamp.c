@@ -1427,19 +1427,21 @@ static int open_wav() {
                     if (wav_source->read(wav_source,tmp,len) == len) {
                         windows_WAVEFORMATPCM *wfx = (windows_WAVEFORMATPCM*)tmp;
 
-                        file_codec.number_of_channels = le16toh(wfx->nChannels);
-                        file_codec.bits_per_sample = le16toh(wfx->wBitsPerSample);
-                        file_codec.sample_rate = le32toh(wfx->nSamplesPerSec);
-                        file_codec.bytes_per_block = le16toh(wfx->nBlockAlign);
-                        file_codec.samples_per_block = 1;
+                        if (le16toh(wfx->nChannels) < 256U && le16toh(wfx->wBitsPerSample) < 256U) {
+                            file_codec.number_of_channels = le16toh(wfx->nChannels);
+                            file_codec.bits_per_sample = le16toh(wfx->wBitsPerSample);
+                            file_codec.sample_rate = le32toh(wfx->nSamplesPerSec);
+                            file_codec.bytes_per_block = le16toh(wfx->nBlockAlign);
+                            file_codec.samples_per_block = 1;
 
-                        if (file_codec.sample_rate >= 1000UL && file_codec.sample_rate <= 96000UL) {
-                            if (le16toh(wfx->wFormatTag) == windows_WAVE_FORMAT_PCM) {
-                                if ((file_codec.bits_per_sample >= 8U && file_codec.bits_per_sample <= 16U) &&
-                                    (file_codec.number_of_channels >= 1U && file_codec.number_of_channels <= 2U)) {
-                                    file_codec.bytes_per_block =
-                                        ((file_codec.bits_per_sample + 7U) >> 3U) *
-                                        file_codec.number_of_channels;
+                            if (file_codec.sample_rate >= 1000UL && file_codec.sample_rate <= 96000UL) {
+                                if (le16toh(wfx->wFormatTag) == windows_WAVE_FORMAT_PCM) {
+                                    if ((file_codec.bits_per_sample >= 8U && file_codec.bits_per_sample <= 16U) &&
+                                        (file_codec.number_of_channels >= 1U && file_codec.number_of_channels <= 2U)) {
+                                        file_codec.bytes_per_block =
+                                            ((file_codec.bits_per_sample + 7U) >> 3U) *
+                                            file_codec.number_of_channels;
+                                    }
                                 }
                             }
                         }
