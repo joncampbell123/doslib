@@ -1893,19 +1893,11 @@ static void free_dma_buffer() {
     }
 }
 
-static int realloc_dma_buffer() {
-    uint32_t choice;
-    int8_t ch;
-
-    free_dma_buffer();
-
-    ch = soundcard_will_use_isa_dma_channel();
-    if (ch < 0) return 0; /* nothing to do */
-
-    if (ch >= 4)
-        choice = sndsb_recommended_16bit_dma_buffer_size(sb_card,0);
-    else
-        choice = sndsb_recommended_dma_buffer_size(sb_card,0);
+static int alloc_dma_buffer(uint32_t choice,int8_t ch) {
+    if (ch < 0)
+        return 0;
+    if (sb_dma != NULL)
+        return 0;
 
     do {
         if (ch >= 4)
@@ -1919,7 +1911,33 @@ static int realloc_dma_buffer() {
     if (sb_dma == NULL)
         return -1;
 
-    /* associate DMA buffer with sound card */
+    return 0;
+}
+
+uint32_t soundcard_recommended_isa_dma_buffer_size(uint32_t limit/*no limit == 0*/) {
+    if (soundcard_will_use_isa_dma_channel() >= 4)
+        return sndsb_recommended_16bit_dma_buffer_size(sb_card,limit);
+    else
+        return sndsb_recommended_dma_buffer_size(sb_card,limit);
+}
+
+static int realloc_dma_buffer() {
+    uint32_t choice;
+    int8_t ch;
+
+    free_dma_buffer();
+
+    ch = soundcard_will_use_isa_dma_channel();
+    if (ch < 0)
+        return 0; /* nothing to do */
+
+    choice = soundcard_recommended_isa_dma_buffer_size(/*no limit*/0);
+    if (choice == 0)
+        return -1;
+
+    if (alloc_dma_buffer(choice,ch) < 0)
+        return -1;
+
     if (soundcard_assign_isa_dma_buffer(sb_dma) < 0) {
         free_dma_buffer();
         return -1;
@@ -2770,6 +2788,42 @@ int main(int argc,char **argv) {
                         printf("\n");
                         disp = nd;
                     }
+                }
+                else if (i == '^') { /* shift-6 */
+                    unsigned char wp = wav_state.playing;
+
+                    if (wp) stop_play();
+
+                    if (prefer_rate < 4000)
+                        prefer_rate = 4000;
+                    else if (prefer_rate < 6000)
+                        prefer_rate = 6000;
+                    else if (prefer_rate < 8000)
+                        prefer_rate = 8000;
+                    else if (prefer_rate < 11025)
+                        prefer_rate = 11025;
+                    else if (prefer_rate < 22050)
+                        prefer_rate = 22050;
+                    else if (prefer_rate < 44100)
+                        prefer_rate = 44100;
+                    else
+                        prefer_rate = 0;
+
+                    if (wp) begin_play();
+                }
+                else if (i == '&') { /* shift-7 */
+                    unsigned char wp = wav_state.playing;
+
+                    if (wp) stop_play();
+
+                    if (prefer_channels < 1)
+                        prefer_channels = 1;
+                    else if (prefer_channels < 2)
+                        prefer_channels = 2;
+                    else
+                        prefer_channels = 0;
+
+                    if (wp) begin_play();
                 }
                 else if (i == '*') { /* shift-8 */
                     unsigned char wp = wav_state.playing;
