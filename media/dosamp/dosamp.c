@@ -45,6 +45,7 @@
 
 /* 8254 time source */
 extern struct dosamp_time_source                dosamp_time_source_8254;
+extern struct dosamp_time_source                dosamp_time_source_rdtsc;
 
 /* DOSAMP state and user state */
 static unsigned long                            prefer_rate = 0;
@@ -54,45 +55,6 @@ static unsigned char                            prefer_no_clamp = 0;
 
 /* DOSAMP debug state */
 static char                                     stuck_test = 0;
-
-static uint64_t ts_rdtsc_prev;
-
-int dosamp_FAR dosamp_time_source_rdtsc_close(dosamp_time_source_t inst) {
-    inst->open_flags = 0;
-    ts_rdtsc_prev = 0;
-    return 0;
-}
-
-int dosamp_FAR dosamp_time_source_rdtsc_open(dosamp_time_source_t inst) {
-    inst->open_flags = (unsigned int)(-1);
-    ts_rdtsc_prev = cpu_rdtsc();
-    return 0;
-}
-
-unsigned long long dosamp_FAR dosamp_time_source_rdtsc_poll(dosamp_time_source_t inst) {
-    uint64_t t;
-
-    if (inst->open_flags == 0) return 0UL;
-
-    t = cpu_rdtsc();
-
-    inst->counter += t - ts_rdtsc_prev;
-
-    ts_rdtsc_prev = t;
-
-    return inst->counter;
-}
-
-struct dosamp_time_source               dosamp_time_source_rdtsc = {
-    .obj_id =                           dosamp_time_source_id_rdtsc,
-    .open_flags =                       0,
-    .clock_rate =                       0,
-    .counter =                          0,
-    .poll_requirement =                 0, /* counter is 64-bit */
-    .close =                            dosamp_time_source_rdtsc_close,
-    .open =                             dosamp_time_source_rdtsc_open,
-    .poll =                             dosamp_time_source_rdtsc_poll
-};
 
 #if TARGET_MSDOS == 32
 static inline unsigned char *dosamp_ptr_add_normalize(unsigned char * const p,const unsigned int o) {
