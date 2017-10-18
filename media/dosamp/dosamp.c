@@ -1965,16 +1965,11 @@ int sb_check_dma_buffer(void) {
     if (sb_dma == NULL)
         return -1;
 
-    /* FIXME: Why is this needed? */
-    if (soundcard_assign_isa_dma_buffer(sb_dma) < 0) {
-        free_dma_buffer();
-        return -1;
-    }
-
     return 0;
 }
 
 int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
+    uint32_t osz,oph;
     int r;
 
     /* by default, use source format */
@@ -2008,8 +2003,8 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
         return -1;
 
     /* HACK! */
-    sb_card->buffer_size = 1;
-    sb_card->buffer_phys = 0;
+    osz = sb_card->buffer_size; sb_card->buffer_size = 1;
+    oph = sb_card->buffer_phys; sb_card->buffer_phys = 0;
 
     /* SB specific: I know from experience and calculations that Sound Blaster cards don't go below 4000Hz */
     if (d->sample_rate < 4000)
@@ -2032,6 +2027,11 @@ int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * co
         d->sample_rate = 11025;
         r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
     }
+
+    /* HACK! */
+    sb_card->buffer_size = osz;
+    sb_card->buffer_phys = oph;
+
     if (!r) {
         if (sb_card->reason_not_supported != NULL && *(sb_card->reason_not_supported) != 0)
             printf("Negotiation failed (SB) even with %luHz %u-channel %u-bit:\n    %s\n",
@@ -2097,9 +2097,6 @@ int prepare_play(void) {
         return 0;
 
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
-        return -1;
-
-    if (sb_check_dma_buffer() < 0)
         return -1;
 
     hook_irq();
