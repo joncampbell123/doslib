@@ -479,6 +479,8 @@ struct wav_cbr_t                        play_codec;
 
 struct wav_state_t {
     uint32_t                            dma_position;
+    uint32_t                            play_delay_bytes;/* in bytes. delay from wav_position to where sound card is playing now. */
+    uint32_t                            play_delay;/* in samples. delay from wav_position to where sound card is playing now. */
     uint64_t                            write_counter;
     uint64_t                            play_counter;
     uint64_t                            play_counter_prev;
@@ -500,9 +502,6 @@ static unsigned long                    wav_data_length = 0;/* in samples */;
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
 static unsigned long                    wav_play_load_block_size = 0;
 static unsigned long                    wav_play_min_load_size = 0;
-
-static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
-static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
 
 /* NTS: Unlike GCC, Open Watcom doesn't cue into the declaration as "static const" that
  *      it can optimize the code by baking the static const into the immediate form of
@@ -620,7 +619,7 @@ uint32_t can_write(void) { /* in bytes */
     update_wav_play_delay();
 
     x = sb_card->buffer_size;
-    if (x >= wav_play_delay_bytes) x -= wav_play_delay_bytes;
+    if (x >= wav_state.play_delay_bytes) x -= wav_state.play_delay_bytes;
     else x = 0;
 
     return x;
@@ -1694,12 +1693,12 @@ void update_wav_play_delay() {
     if (delay >= (signed long)sb_card->buffer_size) delay = (signed long)sb_card->buffer_size;
 
     /* convert to samples */
-    wav_play_delay_bytes = (unsigned long)delay;
-    wav_play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
+    wav_state.play_delay_bytes = (unsigned long)delay;
+    wav_state.play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
 
     /* play position is calculated here */
     wav_state.play_counter = wav_state.write_counter;
-    if (wav_state.play_counter >= wav_play_delay_bytes) wav_state.play_counter -= wav_play_delay_bytes;
+    if (wav_state.play_counter >= wav_state.play_delay_bytes) wav_state.play_counter -= wav_state.play_delay_bytes;
     else wav_state.play_counter = 0;
 
     if (wav_state.play_counter_prev < wav_state.play_counter)
@@ -2184,7 +2183,7 @@ static int begin_play() {
     wav_state.play_counter_prev = 0;
     wav_state.write_counter = 0;
     wav_state.play_counter = 0;
-    wav_play_delay = 0;
+    wav_state.play_delay = 0;
     wav_state.play_empty = 1;
 
     /* get the file pointer ready */
@@ -2407,7 +2406,7 @@ void display_idle_buffer(void) {
         apos,
         pos,
         (signed long)sb_card->buffer_size,
-        (unsigned long)wav_play_delay_bytes,
+        (unsigned long)wav_state.play_delay_bytes,
         (unsigned long)can_write(),
         (unsigned long)wav_state.write_counter,
         (unsigned long)wav_state.play_counter,
