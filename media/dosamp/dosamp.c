@@ -479,6 +479,7 @@ struct wav_cbr_t                        play_codec;
 
 struct wav_state_t {
     uint32_t                            dma_position;
+    unsigned int                        play_empty:1;
 };
 
 static struct wav_state_t               wav_state;
@@ -504,7 +505,6 @@ static unsigned long                    wav_play_counter_prev = 0;/* at dma posi
 
 static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
 static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
-static unsigned char                    wav_play_empty = 0;/* if set, buffer is empty. else, audio data is there */
 static unsigned char                    wav_playing = 0;
 static unsigned char                    wav_prepared = 0;
 
@@ -657,7 +657,7 @@ unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
             sb_card->buffer_last_io = 0;
 
         /* now that audio has been written, buffer is no longer empty */
-        wav_play_empty = 0;
+        wav_state.play_empty = 0;
 
         /* update */
         update_wav_dma_position();
@@ -1685,13 +1685,13 @@ void update_wav_play_delay() {
     delay -= (signed long)wav_state.dma_position;
 
     /* delay == 0 is a special case.
-     * if wav_play_empty, then it means there's no delay.
+     * if wav_state.play_empty, then it means there's no delay.
      * else, it means there's one whole buffer's worth delay.
      * we HAVE to make this distinction because this code is
      * written to load new audio data RIGHT BEHIND the DMA position
      * which could easily lead to buffer_last_io == DMA position! */
     if (delay < 0L) delay += (signed long)sb_card->buffer_size;
-    else if (delay == 0L && !wav_play_empty) delay = (signed long)sb_card->buffer_size;
+    else if (delay == 0L && !wav_state.play_empty) delay = (signed long)sb_card->buffer_size;
 
     /* guard against inconcievable cases */
     if (delay < 0L) delay = 0L;
@@ -2189,7 +2189,7 @@ static int begin_play() {
     wav_write_counter = 0;
     wav_play_counter = 0;
     wav_play_delay = 0;
-    wav_play_empty = 1;
+    wav_state.play_empty = 1;
 
     /* get the file pointer ready */
     wav_position_to_file_pointer();
