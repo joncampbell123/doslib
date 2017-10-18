@@ -2049,27 +2049,6 @@ int set_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s)
     /* PCM recalc */
     d->bytes_per_block = ((d->bits_per_sample+7U)/8U) * d->number_of_channels;
 
-    {
-        /* NTS: Always compute with uint64_t even on 16-bit builds.
-         *      This gives us the precision we need to compute the resample step value.
-         *      Also remember that on 16-bit builds the resample intermediate type is
-         *      32 bits wide, and the shift is 16. As signed integers, that means that
-         *      this code will produce the wrong value when sample rates >= 32768Hz are
-         *      involved unless we do the math in 64-bit wide integers. */
-        uint64_t tmp;
-
-        tmp  = (uint64_t)s->sample_rate << (uint64_t)resample_100_shift;
-        tmp /= (uint64_t)d->sample_rate;
-
-        resample_step = (resample_intermediate_t)tmp;
-        resample_frac = 0;
-    }
-
-    if (resample_step == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
-        resample_on = 0;
-    else
-        resample_on = 1;
-
     return 0;
 }
 
@@ -2186,6 +2165,34 @@ int stop_sound_card(void) {
     return 0;
 }
 
+int resampler_init(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
+    if (d->sample_rate == 0 || s->sample_rate == 0)
+        return -1;
+
+    {
+        /* NTS: Always compute with uint64_t even on 16-bit builds.
+         *      This gives us the precision we need to compute the resample step value.
+         *      Also remember that on 16-bit builds the resample intermediate type is
+         *      32 bits wide, and the shift is 16. As signed integers, that means that
+         *      this code will produce the wrong value when sample rates >= 32768Hz are
+         *      involved unless we do the math in 64-bit wide integers. */
+        uint64_t tmp;
+
+        tmp  = (uint64_t)s->sample_rate << (uint64_t)resample_100_shift;
+        tmp /= (uint64_t)d->sample_rate;
+
+        resample_step = (resample_intermediate_t)tmp;
+        resample_frac = 0;
+    }
+
+    if (resample_step == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
+        resample_on = 0;
+    else
+        resample_on = 1;
+
+    return 0;
+}
+
 static int begin_play() {
 	if (wav_state.playing)
 		return 0;
@@ -2210,6 +2217,12 @@ static int begin_play() {
 
     /* choose output vs input */
     if (set_play_format(&play_codec,&file_codec) < 0) {
+        unprepare_play();
+        return -1;
+    }
+
+    /* based on sound card's choice vs source format, reconfigure resampler */
+    if (resampler_init(&play_codec,&file_codec) < 0) {
         unprepare_play();
         return -1;
     }
