@@ -487,10 +487,13 @@ void card_poll(void) {
     update_wav_play_delay();
 }
 
-void convert_rdbuf_stereo2mono_ip_u8(uint32_t samples) {
+uint32_t convert_rdbuf_stereo2mono_ip_u8(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
     /* in-place stereo to mono conversion (up to convert_rdbuf_len)
      * from file_codec channels (2) to play_codec channels (1) */
-    uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)convert_rdbuf;
+    uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)proc_buf;
+
+    /* buffer range check (stereo to mono) */
+    assert((samples*(uint32_t)2U) <= buf_max);
 
 #if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
     __asm {
@@ -525,14 +528,16 @@ l1:     lodsw               ; AX = two samples
     }
 #endif
 
-    convert_rdbuf_len = samples;
-    assert(convert_rdbuf_len <= convert_rdbuf_sz);
+    return samples;
 }
 
-void convert_rdbuf_mono2stereo_ip_u8(uint32_t samples) {
+uint32_t convert_rdbuf_mono2stereo_ip_u8(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
+    /* buffer range check */
+    assert((samples * (uint32_t)2U) <= buf_max);
+
 #if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
-    /* DS:SI = convert_rdbuf + samples - 1
-     * ES:DI = convert_rdbuf + samples + samples - 2
+    /* DS:SI = proc_buf + samples - 1
+     * ES:DI = proc_buf + samples + samples - 2
      * CX = samples
      *
      * ...
@@ -545,7 +550,7 @@ void convert_rdbuf_mono2stereo_ip_u8(uint32_t samples) {
         push    ds
         push    es
         std                         ; scan backwards
-        lds     si,convert_rdbuf
+        lds     si,proc_buf
         mov     di,si
         push    ds
         pop     es
@@ -564,35 +569,39 @@ l1:     lodsb
         cld
     }
 #else
-    /* in-place mono to stereo conversion (up to convert_rdbuf_len)
-     * from file_codec channels (1) to play_codec channels (2).
-     * due to data expansion we process backwards. */
-    uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)convert_rdbuf + (samples * 2UL) - 1;
-    uint8_t dosamp_FAR * sp = (uint8_t dosamp_FAR *)convert_rdbuf + samples - 1;
-    uint32_t i = samples;
+    {
+        /* in-place mono to stereo conversion (up to proc_buf_len)
+         * from file_codec channels (1) to play_codec channels (2).
+         * due to data expansion we process backwards. */
+        uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)proc_buf + (samples * 2UL) - 1;
+        uint8_t dosamp_FAR * sp = (uint8_t dosamp_FAR *)proc_buf + samples - 1;
+        uint32_t i = samples;
 
-    while (i-- != 0UL) {
-        *buf-- = *sp;
-        *buf-- = *sp;
-        sp--;
+        while (i-- != 0UL) {
+            *buf-- = *sp;
+            *buf-- = *sp;
+            sp--;
+        }
     }
 #endif
 
-    convert_rdbuf_len = samples * 2UL;
-    assert(convert_rdbuf_len <= convert_rdbuf_sz);
+    return (uint32_t)samples * (uint32_t)2U;
 }
 
-void convert_rdbuf_mono2stereo_ip_s16(uint32_t samples) {
+uint32_t convert_rdbuf_mono2stereo_ip_s16(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
+    /* buffer range check */
+    assert((samples * (uint32_t)4U) <= buf_max);
+
 #if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
-    /* DS:SI = convert_rdbuf + samples + samples - 1
-     * ES:DI = convert_rdbuf + samples + samples + samples + samples - 1
+    /* DS:SI = proc_buf + samples + samples - 1
+     * ES:DI = proc_buf + samples + samples + samples + samples - 1
      * CX = samples
      */
     __asm {
         push    ds
         push    es
         std                         ; scan backwards
-        lds     si,convert_rdbuf
+        lds     si,proc_buf
         mov     di,si
         push    ds
         pop     es
@@ -614,28 +623,32 @@ l1:     lodsw
         cld
     }
 #else
-    /* in-place mono to stereo conversion (up to convert_rdbuf_len)
-     * from file_codec channels (1) to play_codec channels (2).
-     * due to data expansion we process backwards. */
-    int16_t dosamp_FAR * buf = (int16_t dosamp_FAR *)convert_rdbuf + (samples * 2UL) - 1;
-    int16_t dosamp_FAR * sp = (int16_t dosamp_FAR *)convert_rdbuf + samples - 1;
-    uint32_t i = samples;
+    {
+        /* in-place mono to stereo conversion (up to proc_buf_len)
+         * from file_codec channels (1) to play_codec channels (2).
+         * due to data expansion we process backwards. */
+        int16_t dosamp_FAR * buf = (int16_t dosamp_FAR *)proc_buf + (samples * 2UL) - 1;
+        int16_t dosamp_FAR * sp = (int16_t dosamp_FAR *)proc_buf + samples - 1;
+        uint32_t i = samples;
 
-    while (i-- != 0UL) {
-        *buf-- = *sp;
-        *buf-- = *sp;
-        sp--;
+        while (i-- != 0UL) {
+            *buf-- = *sp;
+            *buf-- = *sp;
+            sp--;
+        }
     }
 #endif
 
-    convert_rdbuf_len = samples * 2UL * 2UL;
-    assert(convert_rdbuf_len <= convert_rdbuf_sz);
+    return (uint32_t)samples * (uint32_t)4U;
 }
 
-void convert_rdbuf_stereo2mono_ip_s16(uint32_t samples) {
+uint32_t convert_rdbuf_stereo2mono_ip_s16(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
     /* in-place stereo to mono conversion (up to convert_rdbuf_len)
      * from file_codec channels (2) to play_codec channels (1) */
     int16_t dosamp_FAR * buf = (int16_t dosamp_FAR *)convert_rdbuf;
+
+    /* buffer range check */
+    assert((samples * (uint32_t)4U) <= buf_max);
 
 #if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
     /* NTS: SAR = Shift Arithmetic Right (signed shift, fill in upper bits with sign bit) */
@@ -671,26 +684,29 @@ l1:     lodsw               ; BX = one sample >> 1
     }
 #endif
 
-    convert_rdbuf_len = samples * 2UL;
-    assert(convert_rdbuf_len <= convert_rdbuf_sz);
+    return samples * (uint32_t)2U;
 }
 
-void convert_rdbuf_stereo2mono_ip(uint32_t samples) {
+uint32_t convert_rdbuf_stereo2mono_ip(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
     /* in-place stereo to mono conversion (up to convert_rdbuf_len)
      * from file_codec channels (2) to play_codec channels (1) */
     if (file_codec.bits_per_sample <= 8)
-        convert_rdbuf_stereo2mono_ip_u8(samples);
+        return convert_rdbuf_stereo2mono_ip_u8(samples,proc_buf,buf_max);
     else if (file_codec.bits_per_sample >= 16)
-        convert_rdbuf_stereo2mono_ip_s16(samples);
+        return convert_rdbuf_stereo2mono_ip_s16(samples,proc_buf,buf_max);
+
+    return 0;
 }
 
-void convert_rdbuf_mono2stereo_ip(uint32_t samples) {
+uint32_t convert_rdbuf_mono2stereo_ip(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
     /* in-place mono to stereo conversion (up to convert_rdbuf_len)
      * from file_codec channels (1) to play_codec channels (2) */
     if (file_codec.bits_per_sample <= 8)
-        convert_rdbuf_mono2stereo_ip_u8(samples);
+        return convert_rdbuf_mono2stereo_ip_u8(samples,proc_buf,buf_max);
     else if (file_codec.bits_per_sample >= 16)
-        convert_rdbuf_mono2stereo_ip_s16(samples);
+        return convert_rdbuf_mono2stereo_ip_s16(samples,proc_buf,buf_max);
+
+    return 0;
 }
 
 int convert_rdbuf_fill(void) {
@@ -769,9 +785,9 @@ int convert_rdbuf_fill(void) {
 
         /* channel conversion */
         if (file_codec.number_of_channels == 2 && play_codec.number_of_channels == 1)
-            convert_rdbuf_stereo2mono_ip(samples);
+            convert_rdbuf_len = convert_rdbuf_stereo2mono_ip(samples,convert_rdbuf,of);
         else if (file_codec.number_of_channels == 1 && play_codec.number_of_channels == 2)
-            convert_rdbuf_mono2stereo_ip(samples);
+            convert_rdbuf_len = convert_rdbuf_mono2stereo_ip(samples,convert_rdbuf,of);
 
         /* bit conversion */
         if (file_codec.bits_per_sample == 16 && play_codec.bits_per_sample == 8)
