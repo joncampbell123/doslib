@@ -621,8 +621,14 @@ l1:     lodsw               ; AX = two samples
 void convert_rdbuf_mono2stereo_ip_u8(uint32_t samples) {
 #if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
     /* DS:SI = convert_rdbuf + samples - 1
-     * ES:DI = convert_rdbuf + samples + samples - 1
+     * ES:DI = convert_rdbuf + samples + samples - 2
      * CX = samples
+     *
+     * ...
+     *
+     * b = (BYTE)DS:SI      SI--
+     * w = b | (b << 8)
+     * ES:DI = (WORD)w      DI -= 2
      */
     __asm {
         push    ds
@@ -637,7 +643,7 @@ void convert_rdbuf_mono2stereo_ip_u8(uint32_t samples) {
         add     di,cx
         add     di,cx
         dec     si
-        dec     di
+        sub     di,2
 l1:     lodsb
         mov     ah,al
         stosw
