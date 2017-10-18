@@ -575,14 +575,7 @@ int convert_rdbuf_fill(void) {
 #elif defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
 # include "rs86ow.h"
 #else
-/* generic */
-static inline int resample_interpolate8(const unsigned int channel) {
-    return (int)resample_interpolate_generic(channel);
-}
-
-static inline int resample_interpolate16(const unsigned int channel) {
-    return (int)resample_interpolate_generic(channel);
-}
+# include "rsgenric.h"
 #endif
 
 uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples) {
