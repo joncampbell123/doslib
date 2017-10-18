@@ -21,6 +21,17 @@ typedef unsigned long                   resample_whole_count_element_t; /* whole
 
 #define resample_max_channels           (2)
 
+/* resampler state */
+struct resampler_state_t {
+    resample_whole_count_element_t      step; /* fixed point step (where 1.0 == resample_100) */
+    resample_whole_count_element_t      frac;
+    int16_t                             p[resample_max_channels];
+    int16_t                             c[resample_max_channels];
+    unsigned char                       counter; /* only to count the first two samples through to init resampler */
+};
+
+extern struct resampler_state_t         resample_state;
+
 static inline int resample_interpolate_generic(const unsigned int channel) {
     resample_intermediate_t tmp;
 

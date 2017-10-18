@@ -126,15 +126,6 @@ static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
 
-/* resampler state */
-struct resampler_state_t {
-    resample_whole_count_element_t      step; /* fixed point step (where 1.0 == resample_100) */
-    resample_whole_count_element_t      frac;
-    int16_t                             p[resample_max_channels];
-    int16_t                             c[resample_max_channels];
-    unsigned char                       counter; /* only to count the first two samples through to init resampler */
-};
-
 void resampler_state_reset(struct resampler_state_t *r) {
     r->counter = 0;
     r->p[0] = 0;
@@ -580,78 +571,9 @@ int convert_rdbuf_fill(void) {
 }
 
 #if defined(__WATCOMC__) && defined(__386__) && TARGET_MSDOS == 32
-/* Watcom C + MS-DOS/Windows 32-bit target for 386 or higher */
-static unsigned int resample_interpolate_asm86(unsigned int c,unsigned int p,unsigned int f);
-/* This algorithm works ONLY if the values are unsigned.
- *
- * EAX = c, EBX = p, ECX = f
- * EAX -= EBX
- * ESI = 0 if EAX >= 0, 0xFFFFFFFF if EAX < 0
- * EAX ^= ESI  (convert to absolute... well almost... not quite NEG but close enough... off by 1 at most)
- * EAX -= ESI  (this corrects the inversion to act like NEG)
- * EDX:EAX = EAX * ECX
- * EDX ^= ESI
- * EDX += EBX
- *
- * NTS: SBB is "subtract with borrow" which is equivalent to "SUB dest, src + Carry Flag".
- *      "SUB dest, src" will set CF if dest < src at the time of execution (because it carries and becomes negative)
- *      So we use SBB to subtract ESI by itself to that ESI either becomes zero (CF=0) or -1 (CF=1). On the x86,
- *      -1 is 0xFFFFFFFF (all bits set). We XOR the value by ESI as a cheap way to get the absolute value of the
- *      result we just computed. But that's not QUITE the absolute value, so we subtract EAX by ESI so the result
- *      is the same as the NEG instruction. In this way, we accomplish a conditional negate. */
-#pragma aux resample_interpolate_asm86 = \
-    "sub    eax,ebx" \
-    "sbb    esi,esi" \
-    "xor    eax,esi" \
-    "sub    eax,esi" \
-    "mul    ecx" \
-    "xor    edx,esi" \
-    "add    edx,ebx" \
-    parm [eax] [ebx] [ecx] \
-    value [edx] \
-    modify [edx eax esi]
-
-static inline int resample_interpolate8(const unsigned int channel) {
-    return (int)resample_interpolate_asm86((unsigned int)resample_state.c[channel],(unsigned int)resample_state.p[channel],(unsigned int)resample_state.frac);
-}
-
-static inline int resample_interpolate16(const unsigned int channel) {
-    /* this only works IF we make the 16-bit PCM unsigned */
-    return (int)(resample_interpolate_asm86((unsigned int)resample_state.c[channel] ^ 0x80000000U,(unsigned int)resample_state.p[channel] ^ 0x80000000U,(unsigned int)resample_state.frac) ^ 0x80000000U);
-}
+# include "rs386ow.h"
 #elif defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
-/* Watcom C + MS-DOS/Windows 16-bit target for 8086 or higher */
-static unsigned int resample_interpolate_asm86(unsigned int c,unsigned int p,unsigned int f);
-/* This algorithm works ONLY if the values are unsigned.
- *
- * AX = c, BX = p, CX = f
- * AX -= BX
- * SI = 0 if AX >= 0, 0xFFFF if AX < 0
- * AX ^= SI  (convert to absolute... well almost... not quite NEG but close enough... off by 1 at most)
- * AX -= SI  (correct the negative value so the result is like NEG)
- * DX:AX = AX * CX
- * DX ^= SI
- * DX += BX */
-#pragma aux resample_interpolate_asm86 = \
-    "sub    ax,bx" \
-    "sbb    si,si" \
-    "xor    ax,si" \
-    "sub    ax,si" \
-    "mul    cx" \
-    "xor    dx,si" \
-    "add    dx,bx" \
-    parm [ax] [bx] [cx] \
-    value [dx] \
-    modify [dx ax si]
-
-static inline int resample_interpolate8(const unsigned int channel) {
-    return (int)resample_interpolate_asm86((unsigned int)resample_state.c[channel],(unsigned int)resample_state.p[channel],(unsigned int)resample_state.frac);
-}
-
-static inline int resample_interpolate16(const unsigned int channel) {
-    /* this only works IF we make the 16-bit PCM unsigned */
-    return (int)(resample_interpolate_asm86((unsigned int)resample_state.c[channel] ^ 0x8000U,(unsigned int)resample_state.p[channel] ^ 0x8000U,(unsigned int)resample_state.frac) ^ 0x8000U);
-}
+# include "rs86ow.h"
 #else
 /* generic */
 static inline int resample_interpolate8(const unsigned int channel) {
