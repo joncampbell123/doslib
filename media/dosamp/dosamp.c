@@ -76,9 +76,9 @@ static dosamp_time_source_t                     time_source = NULL;
 /* ISA DMA buffer */
 static struct dma_8237_allocation*              isa_dma = NULL;
 
-static dosamp_file_source_t             wav_source = NULL;
-
-static char*                            wav_file = NULL;
+/* chosen file to play */
+static dosamp_file_source_t                     wav_source = NULL;
+static char*                                    wav_file = NULL;
 
 struct wav_cbr_t {
     uint32_t                            sample_rate;
