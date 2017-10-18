@@ -133,7 +133,7 @@ static unsigned long                    wav_play_min_load_size = 0;/*minimum "ca
 # define resample_100_shift             (32)
 # define resample_100                   (1ULL << 32ULL)
 typedef signed long long                resample_intermediate_t;
-static unsigned long long               resample_step = 0; /* 16.16 resampling step */
+static unsigned long long               resample_step = 0; /* 32.32 resampling step */
 static unsigned long long               resample_frac = 0;
 #else
 # define resample_100_shift             (16)
