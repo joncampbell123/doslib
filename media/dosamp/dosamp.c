@@ -495,11 +495,13 @@ void wav_state_init(void) {
     memset(&wav_state,0,sizeof(wav_state));
 }
 
-static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_data_offset = 44;
 static unsigned long                    wav_data_length_bytes = 0;
 static unsigned long                    wav_data_length = 0;/* in samples */;
+
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
+static unsigned long                    wav_play_position = 0L;
+
 static unsigned long                    wav_play_load_block_size = 0;
 static unsigned long                    wav_play_min_load_size = 0;
 
