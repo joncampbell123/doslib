@@ -1791,6 +1791,11 @@ int resampler_init(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) 
     if (d->sample_rate == 0 || s->sample_rate == 0)
         return -1;
 
+    if (d->number_of_channels == 0 || s->number_of_channels == 0)
+        return -1;
+    if (d->number_of_channels > resample_max_channels || s->number_of_channels > resample_max_channels)
+        return -1;
+
     {
         /* NTS: Always compute with uint64_t even on 16-bit builds.
          *      This gives us the precision we need to compute the resample step value.

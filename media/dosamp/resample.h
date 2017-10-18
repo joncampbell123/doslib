@@ -19,3 +19,5 @@ typedef unsigned int                    resample_counting_element_t; /* one half
 typedef unsigned long                   resample_whole_count_element_t; /* whole + fraction, fixed pt */
 #endif
 
+#define resample_max_channels           (2)
+
