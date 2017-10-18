@@ -1883,7 +1883,7 @@ int soundcard_assign_isa_dma_buffer(struct dma_8237_allocation *dma) {
 
 static void free_dma_buffer() {
     if (sb_dma != NULL) {
-        soundcard_assign_isa_dma_buffer(NULL);
+        soundcard_assign_isa_dma_buffer(NULL); /* disassociate DMA buffer from sound card */
         dma_8237_free_buffer(sb_dma);
         sb_dma = NULL;
     }
@@ -1911,6 +1911,10 @@ static int realloc_dma_buffer() {
         if (sb_dma == NULL) choice -= 4096UL;
     } while (sb_dma == NULL && choice >= 4096UL);
 
+    if (sb_dma == NULL)
+        return -1;
+
+    /* associate DMA buffer with sound card */
     if (soundcard_assign_isa_dma_buffer(sb_dma) < 0) {
         free_dma_buffer();
         return -1;
