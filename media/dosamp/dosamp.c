@@ -1881,6 +1881,10 @@ int soundcard_assign_isa_dma_buffer(struct dma_8237_allocation *dma) {
     return 0;
 }
 
+int8_t soundcard_will_use_isa_dma_channel(void) {
+    return sndsb_dsp_playback_will_use_dma_channel(sb_card,play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8);
+}
+
 static void free_dma_buffer() {
     if (sb_dma != NULL) {
         soundcard_assign_isa_dma_buffer(NULL); /* disassociate DMA buffer from sound card */
@@ -1895,7 +1899,8 @@ static int realloc_dma_buffer() {
 
     free_dma_buffer();
 
-    ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8);
+    ch = soundcard_will_use_isa_dma_channel();
+    if (ch < 0) return 0; /* nothing to do */
 
     if (ch >= 4)
         choice = sndsb_recommended_16bit_dma_buffer_size(sb_card,0);
@@ -1957,11 +1962,7 @@ int sb_check_dma_buffer(void) {
     if (sb_dma == NULL)
         realloc_dma_buffer();
     else {
-        ch = sndsb_dsp_playback_will_use_dma_channel(sb_card,
-            /*rate*/play_codec.sample_rate,
-            /*stereo*/play_codec.number_of_channels > 1,
-            /*16-bit*/play_codec.bits_per_sample > 8);
-
+        ch = soundcard_will_use_isa_dma_channel();
         if (ch >= 0 && sb_dma->dma_width != (ch >= 4 ? 16 : 8))
             realloc_dma_buffer();
     }
@@ -2769,6 +2770,20 @@ int main(int argc,char **argv) {
                         printf("\n");
                         disp = nd;
                     }
+                }
+                else if (i == '*') { /* shift-8 */
+                    unsigned char wp = wav_state.playing;
+
+                    if (wp) stop_play();
+
+                    if (prefer_bits < 8)
+                        prefer_bits = 8;
+                    else if (prefer_bits < 16)
+                        prefer_bits = 16;
+                    else
+                        prefer_bits = 0;
+
+                    if (wp) begin_play();
                 }
                 else if (i == '[') {
                     unsigned char wp = wav_state.playing;
