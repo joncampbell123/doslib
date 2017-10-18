@@ -495,7 +495,7 @@ void convert_rdbuf_8_to_16_ip(uint32_t samples) {
 
 #if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
     /* DS:SI = convert_rdbuf + total_samples - 1
-     * ES:DI = convert_rdbuf + total_samples + total_samples - 1
+     * ES:DI = convert_rdbuf + total_samples + total_samples - 2
      * CX = samples
      */
     __asm {
@@ -507,11 +507,11 @@ void convert_rdbuf_8_to_16_ip(uint32_t samples) {
         push    ds
         pop     es
         mov     cx,word ptr total_samples
-        add     si,cx
-        add     di,cx
-        add     di,cx
-        dec     si
-        sub     di,2
+        dec     cx                  ; CX = total samples - 1
+        add     si,cx               ; therefore SI = convert_rdbuf + total_samples - 1
+        add     di,cx               ; therefore DI = convert_rdbuf + (total_samples - 1) + (total_samples - 1)
+        add     di,cx               ; ...or....... = convert_rdbuf + total_samples + total_samples - 2
+        inc     cx                  ; restore CX
 l1:     lodsb
         mov     ah,al
         xor     al,al
