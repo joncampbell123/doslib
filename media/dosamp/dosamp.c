@@ -1968,9 +1968,12 @@ int sb_check_dma_buffer(void) {
     return 0;
 }
 
-int negotiate_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
+int set_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
     uint32_t osz,oph;
     int r;
+
+    /* API check: d != s */
+    if (d == s) return -1;
 
     /* by default, use source format */
     *d = *s;
@@ -2206,7 +2209,7 @@ static int begin_play() {
     wav_rebase_position_event();
 
     /* choose output vs input */
-    if (negotiate_play_format(&play_codec,&file_codec) < 0) {
+    if (set_play_format(&play_codec,&file_codec) < 0) {
         unprepare_play();
         return -1;
     }
