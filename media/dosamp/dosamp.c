@@ -45,7 +45,9 @@
 
 /* 8254 time source */
 extern struct dosamp_time_source                dosamp_time_source_8254;
+
 extern struct dosamp_time_source                dosamp_time_source_rdtsc;
+int dosamp_time_source_rdtsc_available(const dosamp_time_source_t clk);
 
 /* DOSAMP state and user state */
 static unsigned long                            prefer_rate = 0;
@@ -2339,48 +2341,6 @@ void display_idle(unsigned char disp) {
     }
 }
 
-int calibrate_rdtsc(void) {
-    unsigned long long ts_prev,ts_cur,tcc=0,rcc=0;
-    rdtsc_t rd_prev,rd_cur;
-
-    /* if we can't open the current time source then exit */
-    if (time_source->open(time_source) < 0)
-        return -1;
-
-    /* announce (or the user will complain about 1-second delays at startup) */
-    printf("Your CPU offers RDTSC instruction, calibrating RDTSC clock...\n");
-
-    /* begin */
-    ts_cur = time_source->poll(time_source);
-    rd_cur = cpu_rdtsc();
-
-    /* wait for one tick, because we may have just started in the middle of a clock tick */
-    do {
-        ts_prev = ts_cur; ts_cur = time_source->poll(time_source);
-        rd_prev = rd_cur; rd_cur = cpu_rdtsc();
-    } while (ts_cur == ts_prev);
-
-    /* time for 1 second */
-    do {
-        tcc += ts_cur - ts_prev;
-        rcc += rd_cur - rd_prev;
-        ts_prev = ts_cur; ts_cur = time_source->poll(time_source);
-        rd_prev = rd_cur; rd_cur = cpu_rdtsc();
-    } while (tcc < time_source->clock_rate);
-
-    /* close current time source */
-    time_source->close(time_source);
-
-    /* reject if out of range, or less precision than current time source */
-    if (rcc < 10000000ULL) return -1; /* Pentium processors started at 60MHz, we expect at least 10MHz precision */
-    if (rcc < time_source->clock_rate) return -1; /* RDTSC must provide more precision than current source */
-
-    printf("RDTSC clock rate: %lluHz\n",rcc);
-
-    dosamp_time_source_rdtsc.clock_rate = rcc;
-    return 0;
-}
-
 void free_sound_blaster_support(void) {
     free_dma_buffer();
     sndsb_free_card(sb_card);
@@ -2530,25 +2490,18 @@ int main(int argc,char **argv) {
 	}
     find_isa_pnp_bios();
 
-    /* for now, always use 8254 PIT as time source */
+    /* pick initial time source. */
     time_source = &dosamp_time_source_8254;
 
     /* NTS: When using the PIT source we NEED to do this, or else DOSBox-X (and possibly
      *      many other motherboards) will leave the PIT in a mode that produces the correct
      *      IRQ 0 rate but counts down twice as fast. We need the PIT to count down by 1,
-     *      not by 2, in order to keep time. */
+     *      not by 2, in order to keep time. MS-DOS only. */
     write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
 
     /* we can use the Time Stamp Counter on Pentium or higher systems that offer it */
-    if (cpu_flags & CPU_FLAG_CPUID) {
-        if (!(cpu_flags & CPU_FLAG_DONT_USE_RDTSC)) {
-            if (cpu_cpuid_features.a.raw[2] & 0x10/*RDTSC*/) {
-                /* RDTSC is available. We just have to figure out how fast it runs. */
-                if (calibrate_rdtsc() >= 0)
-                    time_source = &dosamp_time_source_rdtsc;
-            }
-        }
-    }
+    if (dosamp_time_source_rdtsc_available(time_source))
+        time_source = &dosamp_time_source_rdtsc;
 
     /* open the time source */
     if (time_source->open(time_source) < 0) {
