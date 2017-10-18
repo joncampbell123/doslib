@@ -39,6 +39,7 @@
 #include "timesrc.h"
 #include "dosptrnm.h"
 #include "filesrc.h"
+#include "resample.h"
 
 /*====================Sound Blaster Specific=======================*/
 /* section off from main dosamp.c.
@@ -68,6 +69,7 @@ static unsigned char                            prefer_no_clamp = 0;
 /* DOSAMP debug state */
 static char                                     stuck_test = 0;
 static unsigned char                            use_mmap_write = 1;
+static unsigned char                            resample_on = 0;
 
 /* chosen time source.
  * NTS: Don't forget that by design, some time sources (8254 for example)
@@ -123,32 +125,11 @@ static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
 
-/* NTS: Unlike GCC, Open Watcom doesn't cue into the declaration as "static const" that
- *      it can optimize the code by baking the static const into the immediate form of
- *      x86 instructions. Therefore optimization of that form requires the use of
- *      #define macros instead. Making Open Watcom allocate memory for the constants
- *      and then use the memory locations for what could be optimized slows this code
- *      down. */
-#if TARGET_MSDOS == 32
-# define resample_100_shift             (32)
-# define resample_100                   (1ULL << 32ULL)
-typedef signed long long                resample_intermediate_t;
-typedef unsigned long                   resample_counting_element_t; /* one half of the fraction (size of a CPU register, usually) */
-typedef unsigned long long              resample_whole_count_element_t; /* whole + fraction, fixed pt */
-#else
-# define resample_100_shift             (16)
-# define resample_100                   (1UL << 16UL)
-typedef signed long                     resample_intermediate_t;
-typedef unsigned int                    resample_counting_element_t; /* one half of the fraction (size of a CPU register, usually) */
-typedef unsigned long                   resample_whole_count_element_t; /* whole + fraction, fixed pt */
-#endif
-
 static resample_whole_count_element_t   resample_step = 0; /* fixed point step (where 1.0 == resample_100) */
 static resample_whole_count_element_t   resample_frac = 0;
 
-static unsigned long                    resample_counter = 0;
+static unsigned char                    resample_counter = 0; /* only to count the first two samples through to init resampler */
 static int16_t                          resample_p[2],resample_c[2];
-static unsigned char                    resample_on = 0;
 
 void update_wav_dma_position(void) {
     _cli();
