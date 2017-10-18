@@ -598,17 +598,6 @@ l1:     lodsw
     return (uint32_t)samples * (uint32_t)4U;
 }
 
-uint32_t convert_rdbuf_stereo2mono_ip(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
-    /* in-place stereo to mono conversion (up to convert_rdbuf_len)
-     * from file_codec channels (2) to play_codec channels (1) */
-    if (file_codec.bits_per_sample <= 8)
-        return convert_rdbuf_stereo2mono_ip_u8(samples,proc_buf,buf_max);
-    else if (file_codec.bits_per_sample >= 16)
-        return convert_rdbuf_stereo2mono_ip_s16(samples,proc_buf,buf_max);
-
-    return 0;
-}
-
 uint32_t convert_rdbuf_mono2stereo_ip(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
     /* in-place mono to stereo conversion (up to convert_rdbuf_len)
      * from file_codec channels (1) to play_codec channels (2) */
@@ -696,7 +685,7 @@ int convert_rdbuf_fill(void) {
 
         /* channel conversion */
         if (file_codec.number_of_channels == 2 && play_codec.number_of_channels == 1)
-            convert_rdbuf_len = convert_rdbuf_stereo2mono_ip(samples,convert_rdbuf,of);
+            convert_rdbuf_len = convert_ip_stereo2mono(samples,convert_rdbuf,of,file_codec.bits_per_sample);
         else if (file_codec.number_of_channels == 1 && play_codec.number_of_channels == 2)
             convert_rdbuf_len = convert_rdbuf_mono2stereo_ip(samples,convert_rdbuf,of);
 

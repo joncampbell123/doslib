@@ -42,7 +42,7 @@
 #include "resample.h"
 #include "cvip.h"
 
-uint32_t convert_rdbuf_stereo2mono_ip_u8(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
+uint32_t convert_ip_stereo2mono_u8(uint32_t samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
     /* in-place stereo to mono conversion (up to convert_rdbuf_len)
      * from file_codec channels (2) to play_codec channels (1) */
     uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)proc_buf;
