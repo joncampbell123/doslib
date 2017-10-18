@@ -67,6 +67,7 @@ static unsigned char                            prefer_no_clamp = 0;
 
 /* DOSAMP debug state */
 static char                                     stuck_test = 0;
+static unsigned char                            use_mmap_write = 1;
 
 /* chosen time source.
  * NTS: Don't forget that by design, some time sources (8254 for example)
@@ -873,8 +874,6 @@ int convert_rdbuf_fill(void) {
 
     return 0;
 }
-
-unsigned char use_mmap_write = 1;
 
 static inline int resample_interpolate_generic(const unsigned int channel) {
     resample_intermediate_t tmp;
