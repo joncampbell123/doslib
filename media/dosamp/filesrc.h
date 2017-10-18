@@ -5,30 +5,30 @@ enum {
 };
 
 #if TARGET_MSDOS == 32
-static const unsigned int               dosamp_file_io_maxb = (unsigned int)INT_MAX - 1U;
-static const unsigned int               dosamp_file_io_err = UINT_MAX;
+# define dosamp_file_io_maxb            ((unsigned int) (INT_MAX - 1U))
+# define dosamp_file_io_err             ((unsigned int) (UINT_MAX))
 #else
-static const unsigned int               dosamp_file_io_maxb = UINT_MAX - 1U;
-static const unsigned int               dosamp_file_io_err = UINT_MAX;
+# define dosamp_file_io_maxb            ((unsigned int) (UINT_MAX - 1U))
+# define dosamp_file_io_err             ((unsigned int) (UINT_MAX))
 #endif
 
 #if TARGET_MSDOS == 32
 # if defined(TARGET_WINDOWS) && !defined(WIN386)
 /* 32-bit Windows and later can support files >= 4GB */
 typedef uint64_t                        dosamp_file_off_t;
-static const dosamp_file_off_t          dosamp_file_off_max = ULLONG_MAX - 1ULL;
-static const dosamp_file_off_t          dosamp_file_off_err = ULLONG_MAX;
+#  define dosamp_file_off_max           ((dosamp_file_off_t) (ULLONG_MAX - 1ULL))
+#  define dosamp_file_off_err           ((dosamp_file_off_t) (ULLONG_MAX))
 # else
 /* 32-bit MS-DOS is limited to 2GB or less (4GB if FAT32) */
 typedef uint32_t                        dosamp_file_off_t;
-static const dosamp_file_off_t          dosamp_file_off_max = ULONG_MAX - 1UL;
-static const dosamp_file_off_t          dosamp_file_off_err = ULONG_MAX;
+#  define dosamp_file_off_max           ((dosamp_file_off_t) (ULONG_MAX - 1UL))
+#  define dosamp_file_off_err           ((dosamp_file_off_t) (ULONG_MAX))
 # endif
 #else
 /* 16-bit MS-DOS and Windows is limited to 2GB or less (4GB if FAT32) */
 typedef uint32_t                        dosamp_file_off_t;
-static const dosamp_file_off_t          dosamp_file_off_max = ULONG_MAX - 1UL;
-static const dosamp_file_off_t          dosamp_file_off_err = ULONG_MAX;
+# define dosamp_file_off_max            ((dosamp_file_off_t) (ULONG_MAX - 1UL))
+# define dosamp_file_off_err            ((dosamp_file_off_t) (ULONG_MAX))
 #endif
 
 /* obj_id == dosamp_file_source_id_file_fd.
