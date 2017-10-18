@@ -39,6 +39,17 @@
 #include "timesrc.h"
 #include "dosptrnm.h"
 
+/*====================Sound Blaster Specific=======================*/
+/* section off from main dosamp.c.
+ * will eventually become it's own module of code
+ * through a more generic interface that would enable the use of
+ * other sound cards. */
+
+/* Sound Blaster sound card */
+static struct sndsb_ctx*                        sb_card = NULL;
+
+/*====================End Sound Blaster Specific=======================*/
+
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
 # error Open Watcom C tiny memory model not supported
@@ -66,9 +77,6 @@ static dosamp_time_source_t                     time_source = NULL;
 
 /* ISA DMA buffer */
 static struct dma_8237_allocation*              isa_dma = NULL;
-
-/* Sound Blaster sound card */
-static struct sndsb_ctx*                sb_card = NULL;
 
 #if TARGET_MSDOS == 32
 static const unsigned int               dosamp_file_io_maxb = (unsigned int)INT_MAX - 1U;
