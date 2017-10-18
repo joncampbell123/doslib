@@ -503,7 +503,7 @@ unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
     }
 
     /* return ptr */
-    return dosamp_ptr_add_normalize(sb_dma->lin,ret_pos);
+    return dosamp_ptr_add_normalize(sb_card->buffer_lin,ret_pos);
 }
 
 /* non-mmap write (much like OSS or ALSA in Linux where you do not have direct access to the hardware buffer) */
@@ -1919,11 +1919,11 @@ void disable_autoinit(void) {
 }
 
 void silence_buffer(void) {
-    if (sb_dma->lin != NULL) {
+    if (sb_card->buffer_lin != NULL) {
 #if TARGET_MSDOS == 16
-        _fmemset(sb_dma->lin,play_codec.bits_per_sample == 8 ? 128 : 0,sb_card->buffer_size);
+        _fmemset(sb_card->buffer_lin,play_codec.bits_per_sample == 8 ? 128 : 0,sb_card->buffer_size);
 #else
-        memset(sb_dma->lin,play_codec.bits_per_sample == 8 ? 128 : 0,sb_card->buffer_size);
+        memset(sb_card->buffer_lin,play_codec.bits_per_sample == 8 ? 128 : 0,sb_card->buffer_size);
 #endif
     }
 }
