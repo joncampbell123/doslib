@@ -480,6 +480,8 @@ struct wav_cbr_t                        play_codec;
 struct wav_state_t {
     uint32_t                            dma_position;
     unsigned int                        play_empty:1;
+    unsigned int                        prepared:1;
+    unsigned int                        playing:1;
 };
 
 static struct wav_state_t               wav_state;
@@ -505,8 +507,6 @@ static unsigned long                    wav_play_counter_prev = 0;/* at dma posi
 
 static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
 static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
-static unsigned char                    wav_playing = 0;
-static unsigned char                    wav_prepared = 0;
 
 /* NTS: Unlike GCC, Open Watcom doesn't cue into the declaration as "static const" that
  *      it can optimize the code by baking the static const into the immediate form of
@@ -563,7 +563,7 @@ static void interrupt sb_irq() {
     /* FIXME: The sndsb library should NOT do anything in
        send_buffer_again() if it knows playback has not started! */
     /* for non-auto-init modes, start another buffer */
-    if (wav_playing) sndsb_irq_continue(sb_card,c);
+    if (wav_state.playing) sndsb_irq_continue(sb_card,c);
 
     /* NTS: we assume that if the IRQ was masked when we took it, that we must not
      *      chain to the previous IRQ handler. This is very important considering
@@ -1720,7 +1720,7 @@ void update_play_position(void) {
             ((unsigned long long)(((wav_play_counter - r->event_at) / play_codec.bytes_per_block) *
                 (unsigned long long)resample_step) >> (unsigned long long)resample_100_shift) + r->wav_position;
     }
-    else if (wav_playing)
+    else if (wav_state.playing)
         wav_play_position = 0;
     else
         wav_play_position = wav_position;
@@ -1731,7 +1731,7 @@ void clear_remapping(void) {
 }
 
 void move_pos(signed long adj) {
-    if (wav_playing)
+    if (wav_state.playing)
         return;
 
     clear_remapping();
@@ -1752,7 +1752,7 @@ void move_pos(signed long adj) {
 }
 
 static void wav_idle() {
-	if (!wav_playing || wav_source == NULL)
+	if (!wav_state.playing || wav_source == NULL)
 		return;
 
     /* update card state */
@@ -2082,7 +2082,7 @@ int prepare_buffer(void) {
 }
 
 int prepare_play(void) {
-    if (wav_prepared)
+    if (wav_state.prepared)
         return 0;
 
 	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
@@ -2102,14 +2102,14 @@ int prepare_play(void) {
 	sndsb_setup_dma(sb_card);
     update_wav_dma_position();
     update_wav_play_delay();
-    wav_prepared = 1;
+    wav_state.prepared = 1;
     return 0;
 }
 
 int unprepare_play(void) {
-    if (wav_prepared) {
+    if (wav_state.prepared) {
         sndsb_stop_dsp_playback(sb_card);
-        wav_prepared = 0;
+        wav_state.prepared = 0;
     }
 
     unhook_irq();
@@ -2124,7 +2124,7 @@ uint32_t set_irq_interval(uint32_t x) {
     uint32_t t;
 
     /* you cannot set IRQ interval once prepared */
-    if (wav_prepared) return sb_card->buffer_irq_interval;
+    if (wav_state.prepared) return sb_card->buffer_irq_interval;
 
     /* keep it sample aligned */
     x -= x % play_codec.bytes_per_block;
@@ -2176,7 +2176,7 @@ int stop_sound_card(void) {
 }
 
 static int begin_play() {
-	if (wav_playing)
+	if (wav_state.playing)
 		return 0;
 
     if (wav_source == NULL)
@@ -2246,14 +2246,14 @@ static int begin_play() {
     }
 
 	_cli();
-	wav_playing = 1;
+	wav_state.playing = 1;
 	_sti();
 
     return 0;
 }
 
 static void stop_play() {
-	if (!wav_playing) return;
+	if (!wav_state.playing) return;
 
     /* stop */
     stop_sound_card();
@@ -2263,7 +2263,7 @@ static void stop_play() {
     update_play_position();
 
 	_cli();
-    wav_playing = 0;
+    wav_state.playing = 0;
 	_sti();
 }
 
@@ -2723,7 +2723,7 @@ int main(int argc,char **argv) {
                     printf("Stuck test %s\n",stuck_test?"on":"off");
                 }
                 else if (i == 'A') {
-                    unsigned char wp = wav_playing;
+                    unsigned char wp = wav_state.playing;
 
                     if (wp) stop_play();
                     disable_autoinit();
@@ -2743,35 +2743,35 @@ int main(int argc,char **argv) {
                     }
                 }
                 else if (i == '[') {
-                    unsigned char wp = wav_playing;
+                    unsigned char wp = wav_state.playing;
 
                     if (wp) stop_play();
                     move_pos(-((signed long)file_codec.sample_rate)); /* -1 sec */
                     if (wp) begin_play();
                 }
                 else if (i == ']') {
-                    unsigned char wp = wav_playing;
+                    unsigned char wp = wav_state.playing;
 
                     if (wp) stop_play();
                     move_pos(file_codec.sample_rate); /* 1 sec */
                     if (wp) begin_play();
                 }
                 else if (i == '{') {
-                    unsigned char wp = wav_playing;
+                    unsigned char wp = wav_state.playing;
 
                     if (wp) stop_play();
                     move_pos(-((signed long)file_codec.sample_rate * 30L)); /* -30 sec */
                     if (wp) begin_play();
                 }
                 else if (i == '}') {
-                    unsigned char wp = wav_playing;
+                    unsigned char wp = wav_state.playing;
 
                     if (wp) stop_play();
                     move_pos(file_codec.sample_rate * 30L); /* 30 sec */
                     if (wp) begin_play();
                 }
                 else if (i == ' ') {
-                    if (wav_playing) stop_play();
+                    if (wav_state.playing) stop_play();
                     else begin_play();
                 }
             }
