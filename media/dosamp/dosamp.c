@@ -22,9 +22,9 @@
 
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
-#include <hw/8237/8237.h>		/* 8237 DMA */
-#include <hw/8254/8254.h>		/* 8254 timer */
-#include <hw/8259/8259.h>		/* 8259 PIC interrupts */
+#include <hw/8237/8237.h>       /* 8237 DMA */
+#include <hw/8254/8254.h>       /* 8254 timer */
+#include <hw/8259/8259.h>       /* 8259 PIC interrupts */
 #include <hw/sndsb/sndsb.h>
 #include <hw/cpu/cpurdtsc.h>
 #include <hw/dos/doswin.h>
@@ -68,7 +68,7 @@ static dosamp_time_source_t                     time_source = NULL;
 static struct dma_8237_allocation*              isa_dma = NULL;
 
 /* Sound Blaster sound card */
-static struct sndsb_ctx*	            sb_card = NULL;
+static struct sndsb_ctx*                sb_card = NULL;
 
 #if TARGET_MSDOS == 32
 static const unsigned int               dosamp_file_io_maxb = (unsigned int)INT_MAX - 1U;
@@ -711,7 +711,7 @@ void convert_rdbuf_clear(void) {
 }
 
 void card_poll(void) {
-	sndsb_main_idle(sb_card);
+    sndsb_main_idle(sb_card);
     update_wav_dma_position();
     update_wav_play_delay();
 }
@@ -1590,8 +1590,8 @@ void move_pos(signed long adj) {
 }
 
 static void wav_idle() {
-	if (!wav_state.playing || wav_source == NULL)
-		return;
+    if (!wav_state.playing || wav_source == NULL)
+        return;
 
     /* update card state */
     card_poll();
@@ -1604,25 +1604,25 @@ static void wav_idle() {
 }
 
 static void close_wav() {
-	if (wav_source != NULL) {
+    if (wav_source != NULL) {
         dosamp_file_source_release(wav_source);
         wav_source->close(wav_source);
         wav_source->free(wav_source);
         wav_source = NULL;
-	}
+    }
 }
 
 static int open_wav() {
-	char tmp[64];
+    char tmp[64];
 
-	if (wav_source == NULL) {
+    if (wav_source == NULL) {
         uint32_t riff_length,scan,len;
 
-	    wav_position = 0;
-		wav_data_offset = 0;
-		wav_data_length = 0;
+        wav_position = 0;
+        wav_data_offset = 0;
+        wav_data_length = 0;
         if (wav_file == NULL) return -1;
-		if (strlen(wav_file) < 1) return -1;
+        if (strlen(wav_file) < 1) return -1;
 
         wav_source = dosamp_file_source_file_fd_open(wav_file);
         if (wav_source == NULL) return -1;
@@ -1681,7 +1681,7 @@ static int open_wav() {
         }
 
         if (file_codec.sample_rate == 0UL || wav_data_length == 0UL || wav_data_length_bytes == 0UL) goto fail;
-	}
+    }
 
     /* convert length to samples */
     wav_data_length /= file_codec.bytes_per_block;
@@ -1847,7 +1847,7 @@ int set_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s)
     /* TODO: Later we should support 5.1 surround to mono/stereo conversion, 24-bit PCM support, etc. */
 
     /* stereo -> mono conversion if needed (if DSP doesn't support stereo) */
-	if (d->number_of_channels == 2 && sb_card->dsp_vmaj < 3) d->number_of_channels = 1;
+    if (d->number_of_channels == 2 && sb_card->dsp_vmaj < 3) d->number_of_channels = 1;
 
     /* 16-bit -> 8-bit if needed (if DSP doesn't support 16-bit) */
     if (d->bits_per_sample == 16) {
@@ -1939,18 +1939,18 @@ int prepare_play(void) {
     if (wav_state.prepared)
         return 0;
 
-	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
+    if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
         return -1;
 
     hook_irq();
 
     /* prepare DSP */
-	if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8)) {
+    if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8)) {
         unhook_irq();
-		return -1;
+        return -1;
     }
 
-	sndsb_setup_dma(sb_card);
+    sndsb_setup_dma(sb_card);
     update_wav_dma_position();
     update_wav_play_delay();
     wav_state.prepared = 1;
@@ -1995,22 +1995,22 @@ uint32_t set_irq_interval(uint32_t x) {
 }
 
 int start_sound_card(void) {
-	/* make sure the IRQ is acked */
-	if (sb_card->irq >= 8) {
-		p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7)); /* IRQ */
-		p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2); /* IRQ cascade */
-	}
-	else if (sb_card->irq >= 0) {
-		p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq); /* IRQ */
-	}
+    /* make sure the IRQ is acked */
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7)); /* IRQ */
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2); /* IRQ cascade */
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq); /* IRQ */
+    }
 
     /* unmask the IRQ, prepare */
-	if (sb_card->irq >= 0)
-		p8259_unmask(sb_card->irq);
+    if (sb_card->irq >= 0)
+        p8259_unmask(sb_card->irq);
 
-	if (!sndsb_begin_dsp_playback(sb_card)) {
+    if (!sndsb_begin_dsp_playback(sb_card)) {
         unhook_irq();
-		return -1;
+        return -1;
     }
 
     return 0;
@@ -2055,11 +2055,11 @@ int resampler_init(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) 
 }
 
 static int begin_play() {
-	if (wav_state.playing)
-		return 0;
+    if (wav_state.playing)
+        return 0;
 
     if (wav_source == NULL)
-		return -1;
+        return -1;
 
     /* reset state */
     convert_rdbuf_clear();
@@ -2130,15 +2130,15 @@ static int begin_play() {
         return -1;
     }
 
-	_cli();
-	wav_state.playing = 1;
-	_sti();
+    _cli();
+    wav_state.playing = 1;
+    _sti();
 
     return 0;
 }
 
 static void stop_play() {
-	if (!wav_state.playing) return;
+    if (!wav_state.playing) return;
 
     /* stop */
     stop_sound_card();
@@ -2147,9 +2147,9 @@ static void stop_play() {
     wav_position = wav_play_position;
     update_play_position();
 
-	_cli();
+    _cli();
     wav_state.playing = 0;
-	_sti();
+    _sti();
 }
 
 static void help() {
@@ -2160,17 +2160,17 @@ static void help() {
 static int parse_argv(int argc,char **argv) {
     int i;
 
-	for (i=1;i < argc;) {
-		char *a = argv[i++];
+    for (i=1;i < argc;) {
+        char *a = argv[i++];
 
-		if (*a == '-' || *a == '/') {
-			unsigned char m = *a++;
-			while (*a == m) a++;
+        if (*a == '-' || *a == '/') {
+            unsigned char m = *a++;
+            while (*a == m) a++;
 
-			if (!strcmp(a,"h") || !strcmp(a,"help")) {
-				help();
-				return 0;
-			}
+            if (!strcmp(a,"h") || !strcmp(a,"help")) {
+                help();
+                return 0;
+            }
             else if (!strcmp(a,"ac")) {
                 a = argv[i++];
                 if (a == NULL) return 1;
@@ -2197,7 +2197,7 @@ static int parse_argv(int argc,char **argv) {
             if (wav_file != NULL) return 0;
             wav_file = strdup(a);
         }
-	}
+    }
 
     if (wav_file == NULL) {
         printf("You must specify a file to play\n");
@@ -2287,7 +2287,7 @@ void display_idle_time(void) {
 }
 
 void display_idle_buffer(void) {
-	signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
+    signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
     signed long apos = (signed long)sb_card->buffer_last_io;
 
     printf("\x0D");
@@ -2323,20 +2323,20 @@ int probe_for_sound_blaster(void) {
     unsigned int i;
 
     if (!init_sndsb()) {
-		printf("Cannot init library\n");
-		return -1;
-	}
+        printf("Cannot init library\n");
+        return -1;
+    }
 
     /* we want to know if certain emulation TSRs exist */
     gravis_mega_em_detect(&megaem_info);
     gravis_sbos_detect();
 
-	/* it's up to us now to tell it certain minor things */
-	sndsb_detect_virtualbox();		// whether or not we're running in VirtualBox
-	/* sndsb now allows us to keep the EXE small by not referring to extra sound card support */
-	sndsb_enable_sb16_support();		// SB16 support
-	sndsb_enable_sc400_support();		// SC400 support
-	sndsb_enable_ess_audiodrive_support();	// ESS AudioDrive support
+    /* it's up to us now to tell it certain minor things */
+    sndsb_detect_virtualbox();      // whether or not we're running in VirtualBox
+    /* sndsb now allows us to keep the EXE small by not referring to extra sound card support */
+    sndsb_enable_sb16_support();        // SB16 support
+    sndsb_enable_sc400_support();       // SC400 support
+    sndsb_enable_ess_audiodrive_support();  // ESS AudioDrive support
 
     /* Plug & Play scan */
     if (has_isa_pnp_bios()) {
@@ -2396,7 +2396,7 @@ int probe_for_sound_blaster(void) {
                     }
 
                     /* return back to "wait for key" state */
-                    isa_pnp_write_data_register(0x02,0x02);	/* bit 1: set -> return to Wait For Key state (or else a Pentium Pro system I own eventually locks up and hangs) */
+                    isa_pnp_write_data_register(0x02,0x02); /* bit 1: set -> return to Wait For Key state (or else a Pentium Pro system I own eventually locks up and hangs) */
                 }
             }
 
@@ -2405,33 +2405,33 @@ int probe_for_sound_blaster(void) {
     }
 
     /* Non-plug & play scan: BLASTER environment variable */
-	if (sndsb_try_blaster_var() != NULL) {
-		if (!sndsb_init_card(sndsb_card_blaster))
-			sndsb_free_card(sndsb_card_blaster);
-	}
+    if (sndsb_try_blaster_var() != NULL) {
+        if (!sndsb_init_card(sndsb_card_blaster))
+            sndsb_free_card(sndsb_card_blaster);
+    }
 
     /* Non-plug & play scan: Most SB cards exist at 220h or 240h */
     sndsb_try_base(0x220);
     sndsb_try_base(0x240);
 
     /* further probing, for IRQ and DMA and other capabilities */
-	for (i=0;i < SNDSB_MAX_CARDS;i++) {
-		struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
-		if (cx->baseio == 0) continue;
+    for (i=0;i < SNDSB_MAX_CARDS;i++) {
+        struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
+        if (cx->baseio == 0) continue;
 
-		if (cx->irq < 0)
-			sndsb_probe_irq_F2(cx);
-		if (cx->irq < 0)
-			sndsb_probe_irq_80(cx);
-		if (cx->dma8 < 0)
-			sndsb_probe_dma8_E2(cx);
-		if (cx->dma8 < 0)
-			sndsb_probe_dma8_14(cx);
+        if (cx->irq < 0)
+            sndsb_probe_irq_F2(cx);
+        if (cx->irq < 0)
+            sndsb_probe_irq_80(cx);
+        if (cx->dma8 < 0)
+            sndsb_probe_dma8_E2(cx);
+        if (cx->dma8 < 0)
+            sndsb_probe_dma8_14(cx);
 
-		// having IRQ and DMA changes the ideal playback method and capabilities
-		sndsb_update_capabilities(cx);
-		sndsb_determine_ideal_dsp_play_method(cx);
-	}
+        // having IRQ and DMA changes the ideal playback method and capabilities
+        sndsb_update_capabilities(cx);
+        sndsb_determine_ideal_dsp_play_method(cx);
+    }
 
     /* OK. done */
     return 0;
@@ -2439,27 +2439,27 @@ int probe_for_sound_blaster(void) {
 
 int main(int argc,char **argv) {
     unsigned char disp=1;
-	int i,loop;
+    int i,loop;
 
     if (!parse_argv(argc,argv))
         return 1;
 
     wav_state_init();
 
-	cpu_probe();
-	probe_8237();
-	if (!probe_8259()) {
-		printf("Cannot init 8259 PIC\n");
-		return 1;
-	}
-	if (!probe_8254()) {
-		printf("Cannot init 8254 timer\n");
-		return 1;
-	}
-	if (!init_isa_pnp_bios()) {
-		printf("Cannot init ISA PnP\n");
-		return 1;
-	}
+    cpu_probe();
+    probe_8237();
+    if (!probe_8259()) {
+        printf("Cannot init 8259 PIC\n");
+        return 1;
+    }
+    if (!probe_8254()) {
+        printf("Cannot init 8254 timer\n");
+        return 1;
+    }
+    if (!init_isa_pnp_bios()) {
+        printf("Cannot init ISA PnP\n");
+        return 1;
+    }
     find_isa_pnp_bios();
 
     /* pick initial time source. */
@@ -2492,24 +2492,24 @@ int main(int argc,char **argv) {
     /* now let the user choose.
      * TODO: At some point, when we have abstracted ourself away from the Sound Blaster library
      *       we can list a different array of abstract sound card device objects. */
-	{
-		unsigned char count = 0;
+    {
+        unsigned char count = 0;
         int sc_idx = -1;
 
-		for (i=0;i < SNDSB_MAX_CARDS;i++) {
-			struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
-			if (cx->baseio == 0) continue;
+        for (i=0;i < SNDSB_MAX_CARDS;i++) {
+            struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
+            if (cx->baseio == 0) continue;
 
-			printf("  [%u] base=%X dma=%d dma16=%d irq=%d DSPv=%u.%u\n",
-					i+1,cx->baseio,cx->dma8,cx->dma16,cx->irq,(unsigned int)cx->dsp_vmaj,(unsigned int)cx->dsp_vmin);
+            printf("  [%u] base=%X dma=%d dma16=%d irq=%d DSPv=%u.%u\n",
+                    i+1,cx->baseio,cx->dma8,cx->dma16,cx->irq,(unsigned int)cx->dsp_vmaj,(unsigned int)cx->dsp_vmin);
 
-			count++;
-		}
+            count++;
+        }
 
-		if (count == 0) {
-			printf("No cards found.\n");
-			return 1;
-		}
+        if (count == 0) {
+            printf("No cards found.\n");
+            return 1;
+        }
         else if (count > 1) {
             printf("-----------\n");
             printf("Which card?: "); fflush(stdout);
@@ -2534,7 +2534,7 @@ int main(int argc,char **argv) {
             return 1;
     }
 
-	loop = 1;
+    loop = 1;
     if (open_wav() < 0)
         printf("Failed to open file\n");
     else if (begin_play() < 0)
@@ -2664,14 +2664,14 @@ int main(int argc,char **argv) {
         }
     }
 
-	_sti();
-	stop_play();
-	close_wav();
+    _sti();
+    stop_play();
+    close_wav();
     tmpbuffer_free();
 
     free_sound_blaster_support();
 
     time_source->close(time_source);
-	return 0;
+    return 0;
 }
 
