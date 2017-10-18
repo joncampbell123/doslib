@@ -477,7 +477,16 @@ struct wav_cbr_t {
 struct wav_cbr_t                        file_codec;
 struct wav_cbr_t                        play_codec;
 
-static unsigned long                    wav_play_dma_position = 0;
+struct wav_state_t {
+    uint32_t                            dma_position;
+};
+
+static struct wav_state_t               wav_state;
+
+void wav_state_init(void) {
+    memset(&wav_state,0,sizeof(wav_state));
+}
+
 static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_data_offset = 44;
 static unsigned long                    wav_data_length_bytes = 0;
@@ -525,7 +534,7 @@ static unsigned char                    resample_on = 0;
 
 void update_wav_dma_position(void) {
     _cli();
-    wav_play_dma_position = sndsb_read_dma_buffer_position(sb_card);
+    wav_state.dma_position = sndsb_read_dma_buffer_position(sb_card);
     _sti();
 }
 
@@ -591,7 +600,7 @@ int clamp_if_behind(uint32_t ahead_in_bytes) {
     update_wav_play_delay();
 
     if (wav_play_counter < wav_play_counter_prev) {
-        sb_card->buffer_last_io = wav_play_dma_position;
+        sb_card->buffer_last_io  = wav_state.dma_position;
         sb_card->buffer_last_io += ahead_in_bytes;
         sb_card->buffer_last_io -= sb_card->buffer_last_io % play_codec.bytes_per_block;
         if (sb_card->buffer_last_io >= sb_card->buffer_size)
@@ -1673,7 +1682,7 @@ void update_wav_play_delay() {
 
     /* DMA trails our "last IO" pointer */
     delay  = (signed long)sb_card->buffer_last_io;
-    delay -= (signed long)wav_play_dma_position;
+    delay -= (signed long)wav_state.dma_position;
 
     /* delay == 0 is a special case.
      * if wav_play_empty, then it means there's no delay.
@@ -2591,6 +2600,8 @@ int main(int argc,char **argv) {
 
     if (!parse_argv(argc,argv))
         return 1;
+
+    wav_state_init();
 
 	cpu_probe();
 	probe_8237();
