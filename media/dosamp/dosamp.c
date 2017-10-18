@@ -1864,14 +1864,32 @@ fail:
     return -1;
 }
 
+int soundcard_assign_isa_dma_buffer(struct dma_8237_allocation *dma) {
+    /* NTS: We WANT to call sndsb_assign_dma_buffer with sb_dma == NULL if it happens because it tells the Sound Blaster library to cancel it's copy as well */
+    if (!sndsb_assign_dma_buffer(sb_card,dma))
+        return -1;
+
+    /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
+     * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
+    {
+        uint32_t adj = 2UL * (unsigned long)play_codec.bytes_per_block;
+
+        sb_card->buffer_size -= sb_card->buffer_size % adj;
+        if (sb_card->buffer_size == 0UL) return -1;
+    }
+
+    return 0;
+}
+
 static void free_dma_buffer() {
     if (sb_dma != NULL) {
+        soundcard_assign_isa_dma_buffer(NULL);
         dma_8237_free_buffer(sb_dma);
         sb_dma = NULL;
     }
 }
 
-static void realloc_dma_buffer() {
+static int realloc_dma_buffer() {
     uint32_t choice;
     int8_t ch;
 
@@ -1891,11 +1909,14 @@ static void realloc_dma_buffer() {
             sb_dma = dma_8237_alloc_buffer_dw(choice,8);
 
         if (sb_dma == NULL) choice -= 4096UL;
-    } while (sb_dma == NULL && choice > 4096UL);
+    } while (sb_dma == NULL && choice >= 4096UL);
 
-    /* NTS: We WANT to call sndsb_assign_dma_buffer with sb_dma == NULL if it happens because it tells the Sound Blaster library to cancel it's copy as well */
-    if (!sndsb_assign_dma_buffer(sb_card,sb_dma))
-        return;
+    if (soundcard_assign_isa_dma_buffer(sb_dma) < 0) {
+        free_dma_buffer();
+        return -1;
+    }
+
+    return 0;
 }
 
 void hook_irq(void) {
@@ -1944,17 +1965,10 @@ int sb_check_dma_buffer(void) {
     if (sb_dma == NULL)
         return -1;
 
-	if (!sndsb_assign_dma_buffer(sb_card,sb_dma))
+    /* FIXME: Why is this needed? */
+    if (soundcard_assign_isa_dma_buffer(sb_dma) < 0) {
+        free_dma_buffer();
         return -1;
-
-    /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
-     * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
-    {
-        uint32_t adj = 2UL * (unsigned long)play_codec.bytes_per_block;
-
-        sb_card->buffer_size = sb_dma->length;
-        sb_card->buffer_size -= sb_card->buffer_size % adj;
-        if (sb_card->buffer_size == 0UL) return -1;
     }
 
     return 0;
@@ -2073,9 +2087,6 @@ void silence_buffer(void) {
 
 int prepare_buffer(void) {
     if (sb_check_dma_buffer() < 0)
-        return -1;
-
-	if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
         return -1;
 
     return 0;
