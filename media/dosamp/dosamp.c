@@ -1428,8 +1428,8 @@ static int open_wav() {
                         windows_WAVEFORMATPCM *wfx = (windows_WAVEFORMATPCM*)tmp;
 
                         if (le16toh(wfx->nChannels) < 256U && le16toh(wfx->wBitsPerSample) < 256U) {
-                            file_codec.number_of_channels = le16toh(wfx->nChannels);
-                            file_codec.bits_per_sample = le16toh(wfx->wBitsPerSample);
+                            file_codec.number_of_channels = (uint8_t)le16toh(wfx->nChannels);
+                            file_codec.bits_per_sample = (uint8_t)le16toh(wfx->wBitsPerSample);
                             file_codec.sample_rate = le32toh(wfx->nSamplesPerSec);
                             file_codec.bytes_per_block = le16toh(wfx->nBlockAlign);
                             file_codec.samples_per_block = 1;
