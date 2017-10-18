@@ -486,7 +486,7 @@ void card_poll(void) {
     update_wav_play_delay();
 }
 
-uint32_t convert_rdbuf_8_to_16_ip(const uint32_t total_samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
+uint32_t convert_ip_8_to_16(const uint32_t total_samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
     const uint32_t ret = total_samples * (uint32_t)2; /* return: how many bytes of converted audio */
 
     /* buffer range check! */
@@ -541,7 +541,7 @@ l1:     lodsb
     return ret;
 }
 
-uint32_t convert_rdbuf_16_to_8_ip(const uint32_t total_samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
+uint32_t convert_ip_16_to_8(const uint32_t total_samples,void dosamp_FAR * const proc_buf,const uint32_t buf_max) {
     /* in-place 16-bit to 8-bit conversion (up to buf_max)
      * from file_codec (16) to play_codec (8). this must happen AFTER
      * channel conversion, therefore use play_codec.number_of_channels */
@@ -872,9 +872,9 @@ int convert_rdbuf_fill(void) {
 
         /* bit conversion */
         if (file_codec.bits_per_sample == 16 && play_codec.bits_per_sample == 8)
-            convert_rdbuf_len = convert_rdbuf_16_to_8_ip(samples * play_codec.number_of_channels,convert_rdbuf,of);
+            convert_rdbuf_len = convert_ip_16_to_8(samples * play_codec.number_of_channels,convert_rdbuf,of);
         else if (file_codec.bits_per_sample == 8 && play_codec.bits_per_sample == 16)
-            convert_rdbuf_len = convert_rdbuf_8_to_16_ip(samples * play_codec.number_of_channels,convert_rdbuf,of);
+            convert_rdbuf_len = convert_ip_8_to_16(samples * play_codec.number_of_channels,convert_rdbuf,of);
 
         assert(convert_rdbuf_len <= of);
     }
