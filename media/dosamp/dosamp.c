@@ -579,17 +579,6 @@ int convert_rdbuf_fill(void) {
     return 0;
 }
 
-static inline int resample_interpolate_generic(const unsigned int channel) {
-    resample_intermediate_t tmp;
-
-    tmp = (resample_intermediate_t)resample_state.c[channel] - (resample_intermediate_t)resample_state.p[channel];
-    tmp *= (resample_intermediate_t)resample_state.frac;
-    tmp >>= (resample_intermediate_t)resample_100_shift;
-    tmp += resample_state.p[channel];
-
-    return (int)tmp;
-}
-
 #if defined(__WATCOMC__) && defined(__386__) && TARGET_MSDOS == 32
 /* Watcom C + MS-DOS/Windows 32-bit target for 386 or higher */
 static unsigned int resample_interpolate_asm86(unsigned int c,unsigned int p,unsigned int f);

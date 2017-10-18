@@ -21,3 +21,14 @@ typedef unsigned long                   resample_whole_count_element_t; /* whole
 
 #define resample_max_channels           (2)
 
+static inline int resample_interpolate_generic(const unsigned int channel) {
+    resample_intermediate_t tmp;
+
+    tmp = (resample_intermediate_t)resample_state.c[channel] - (resample_intermediate_t)resample_state.p[channel];
+    tmp *= (resample_intermediate_t)resample_state.frac;
+    tmp >>= (resample_intermediate_t)resample_100_shift;
+    tmp += resample_state.p[channel];
+
+    return (int)tmp;
+}
+
