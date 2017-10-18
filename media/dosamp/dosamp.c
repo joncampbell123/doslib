@@ -34,6 +34,10 @@
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
 
+#include "wavefmt.h"
+#include "dosamp.h"
+#include "timesrc.h"
+
 static unsigned long        prefer_rate = 0;
 static unsigned char        prefer_channels = 0;
 static unsigned char        prefer_bits = 0;
@@ -41,60 +45,10 @@ static unsigned char        prefer_no_clamp = 0;
 
 static char                 stuck_test = 0;
 
-#pragma pack(push,1)
-typedef struct windows_WAVEFORMATPCM {
-    uint16_t    wFormatTag;             /* +0 */
-    uint16_t    nChannels;              /* +2 */
-    uint32_t    nSamplesPerSec;         /* +4 */
-    uint32_t    nAvgBytesPerSec;        /* +8 */
-    uint16_t    nBlockAlign;            /* +12 */
-    uint16_t    wBitsPerSample;         /* +14 */
-} windows_WAVEFORMATPCM;                /* =16 */
-#pragma pack(pop)
-
-#define windows_WAVE_FORMAT_PCM         0x0001
-
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
 # error Open Watcom C tiny memory model not supported
 #endif
-
-/* making the API use FAR CALL function pointers will allow future development
- * where file access and media playback code can exist in external DLLs, whether
- * 16-bit or 32-bit code */
-#if TARGET_MSDOS == 32 && !defined(WIN386)
-# define dosamp_FAR
-#else
-# define dosamp_FAR far
-#endif
-
-enum {
-    dosamp_time_source_id_null = 0,                 /* null */
-    dosamp_time_source_id_8254 = 1,                 /* MS-DOS / Windows 3.x 8254 PIT timer */
-    dosamp_time_source_id_rdtsc = 2                 /* Pentium RDTSC */
-};
-
-struct dosamp_time_source;
-typedef struct dosamp_time_source dosamp_FAR * dosamp_time_source_t;
-
-/* Time source.
- * NTS: For maximum portability, the caller should not expect accurate timekeeping UNLESS polling
- *      the time source on a semi-regular basis as indicated in the structure. The 8254 PIT time
- *      source especially needs this since the code does NOT hook the IRQ 0 interrupt.
- *
- *      Unlike file sources, these are statically declared and are NOT malloc'd or free'd.
- *      But you must open/close them regardless. */
-struct dosamp_time_source {
-    unsigned int                        obj_id;     /* what exactly this is */
-    volatile unsigned int               refcount;   /* reference count. will NOT auto-free when zero. */
-    unsigned int                        open_flags; /* zero if not open, nonzero if open */
-    unsigned long                       clock_rate; /* tick rate of the time source */
-    unsigned long long                  counter;    /* counter */
-    unsigned long                       poll_requirement; /* you must poll the source this often (clock ticks) to keep time (Intel 8254 source) */
-    int                                 (dosamp_FAR *close)(dosamp_time_source_t inst);
-    int                                 (dosamp_FAR *open)(dosamp_time_source_t inst);
-    unsigned long long                  (dosamp_FAR *poll)(dosamp_time_source_t inst);
-};
 
 /* previous count, and period (in case host changes timer) */
 static uint16_t ts_8254_pcnt = 0;
