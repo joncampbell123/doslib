@@ -479,6 +479,9 @@ struct wav_cbr_t                        play_codec;
 
 struct wav_state_t {
     uint32_t                            dma_position;
+    uint64_t                            write_counter;
+    uint64_t                            play_counter;
+    uint64_t                            play_counter_prev;
     unsigned int                        play_empty:1;
     unsigned int                        prepared:1;
     unsigned int                        playing:1;
@@ -497,13 +500,6 @@ static unsigned long                    wav_data_length = 0;/* in samples */;
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
 static unsigned long                    wav_play_load_block_size = 0;
 static unsigned long                    wav_play_min_load_size = 0;
-
-/* NTS: If long-term playback is desired (long enough to overflow these variables)
- *      you should "extend" them by tracking their previous values and then adding
- *      to a "high half" when they wrap around. */
-static unsigned long                    wav_write_counter = 0;/* at buffer_last_io, bytes written since play start */
-static unsigned long                    wav_play_counter = 0;/* at dma position, bytes played since play start */
-static unsigned long                    wav_play_counter_prev = 0;/* at dma position, bytes played since play start */
 
 static unsigned long                    wav_play_delay_bytes = 0;/* in bytes. delay from wav_position to where sound card is playing now. */
 static unsigned long                    wav_play_delay = 0;/* in samples. delay from wav_position to where sound card is playing now. */
@@ -599,7 +595,7 @@ int clamp_if_behind(uint32_t ahead_in_bytes) {
     update_play_position();
     update_wav_play_delay();
 
-    if (wav_play_counter < wav_play_counter_prev) {
+    if (wav_state.play_counter < wav_state.play_counter_prev) {
         sb_card->buffer_last_io  = wav_state.dma_position;
         sb_card->buffer_last_io += ahead_in_bytes;
         sb_card->buffer_last_io -= sb_card->buffer_last_io % play_codec.bytes_per_block;
@@ -651,7 +647,7 @@ unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
 
     if (want != 0) {
         /* advance I/O. caller MUST fill in the buffer. */
-        wav_write_counter += want;
+        wav_state.write_counter += want;
         sb_card->buffer_last_io += want;
         if (sb_card->buffer_last_io >= sb_card->buffer_size)
             sb_card->buffer_last_io = 0;
@@ -727,7 +723,7 @@ int wav_position_to_file_pointer(void) {
  * such as, knowing that at such and such playback time, we looped the
  * WAV file back or switched to a new one. */
 struct audio_playback_rebase_t {
-    unsigned long           event_at;       /* playback time byte count */
+    uint64_t                event_at;       /* playback time byte count */
     unsigned long           wav_position;   /* starting WAV position to count from using playback time */
 };
 
@@ -802,7 +798,7 @@ void wav_rebase_position_event(void) {
     struct audio_playback_rebase_t *r = rebase_add();
 
     if (r != NULL) {
-        r->event_at = wav_write_counter;
+        r->event_at = wav_state.write_counter;
         r->wav_position = wav_position;
     }
 }
@@ -1702,22 +1698,22 @@ void update_wav_play_delay() {
     wav_play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
 
     /* play position is calculated here */
-    wav_play_counter = wav_write_counter;
-    if (wav_play_counter >= wav_play_delay_bytes) wav_play_counter -= wav_play_delay_bytes;
-    else wav_play_counter = 0;
+    wav_state.play_counter = wav_state.write_counter;
+    if (wav_state.play_counter >= wav_play_delay_bytes) wav_state.play_counter -= wav_play_delay_bytes;
+    else wav_state.play_counter = 0;
 
-    if (wav_play_counter_prev < wav_play_counter)
-        wav_play_counter_prev = wav_play_counter;
+    if (wav_state.play_counter_prev < wav_state.play_counter)
+        wav_state.play_counter_prev = wav_state.play_counter;
 }
 
 void update_play_position(void) {
     struct audio_playback_rebase_t *r;
 
-    r = rebase_find(wav_play_counter);
+    r = rebase_find(wav_state.play_counter);
 
     if (r != NULL) {
         wav_play_position =
-            ((unsigned long long)(((wav_play_counter - r->event_at) / play_codec.bytes_per_block) *
+            ((unsigned long long)(((wav_state.play_counter - r->event_at) / play_codec.bytes_per_block) *
                 (unsigned long long)resample_step) >> (unsigned long long)resample_100_shift) + r->wav_position;
     }
     else if (wav_state.playing)
@@ -2185,9 +2181,9 @@ static int begin_play() {
     /* reset state */
     convert_rdbuf_clear();
     wav_rebase_clear();
-    wav_play_counter_prev = 0;
-    wav_write_counter = 0;
-    wav_play_counter = 0;
+    wav_state.play_counter_prev = 0;
+    wav_state.write_counter = 0;
+    wav_state.play_counter = 0;
     wav_play_delay = 0;
     wav_state.play_empty = 1;
 
@@ -2413,8 +2409,8 @@ void display_idle_buffer(void) {
         (signed long)sb_card->buffer_size,
         (unsigned long)wav_play_delay_bytes,
         (unsigned long)can_write(),
-        (unsigned long)wav_write_counter,
-        (unsigned long)wav_play_counter,
+        (unsigned long)wav_state.write_counter,
+        (unsigned long)wav_state.play_counter,
         (unsigned long)sb_card->irq_counter);
 
     fflush(stdout);
