@@ -129,7 +129,7 @@ static resample_whole_count_element_t   resample_step = 0; /* fixed point step (
 static resample_whole_count_element_t   resample_frac = 0;
 
 static unsigned char                    resample_counter = 0; /* only to count the first two samples through to init resampler */
-static int16_t                          resample_p[2],resample_c[2];
+static int16_t                          resample_p[resample_max_channels],resample_c[resample_max_channels];
 
 void update_wav_dma_position(void) {
     _cli();
