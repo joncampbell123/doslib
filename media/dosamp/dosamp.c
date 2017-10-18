@@ -133,15 +133,18 @@ static unsigned long                    wav_play_min_load_size = 0;/*minimum "ca
 # define resample_100_shift             (32)
 # define resample_100                   (1ULL << 32ULL)
 typedef signed long long                resample_intermediate_t;
-static unsigned long long               resample_step = 0; /* 32.32 resampling step */
-static unsigned long long               resample_frac = 0;
+typedef unsigned long                   resample_counting_element_t; /* one half of the fraction (size of a CPU register, usually) */
+typedef unsigned long long              resample_whole_count_element_t; /* whole + fraction, fixed pt */
 #else
 # define resample_100_shift             (16)
 # define resample_100                   (1UL << 16UL)
 typedef signed long                     resample_intermediate_t;
-static unsigned long                    resample_step = 0; /* 16.16 resampling step */
-static unsigned long                    resample_frac = 0;
+typedef unsigned int                    resample_counting_element_t; /* one half of the fraction (size of a CPU register, usually) */
+typedef unsigned long                   resample_whole_count_element_t; /* whole + fraction, fixed pt */
 #endif
+
+static resample_whole_count_element_t   resample_step = 0; /* fixed point step (where 1.0 == resample_100) */
+static resample_whole_count_element_t   resample_frac = 0;
 
 static unsigned long                    resample_counter = 0;
 static int16_t                          resample_p[2],resample_c[2];
