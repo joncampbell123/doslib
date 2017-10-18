@@ -59,16 +59,16 @@ static unsigned char                            prefer_no_clamp = 0;
 /* DOSAMP debug state */
 static char                                     stuck_test = 0;
 
-/* ISA DMA buffer */
-static struct dma_8237_allocation*      sb_dma = NULL;
-
-/* Sound Blaster sound card */
-static struct sndsb_ctx*	            sb_card = NULL;
-
 /* chosen time source.
  * NTS: Don't forget that by design, some time sources (8254 for example)
  *      require you to poll often enough to get a correct count of time. */
-static dosamp_time_source_t             time_source = NULL;
+static dosamp_time_source_t                     time_source = NULL;
+
+/* ISA DMA buffer */
+static struct dma_8237_allocation*              isa_dma = NULL;
+
+/* Sound Blaster sound card */
+static struct sndsb_ctx*	            sb_card = NULL;
 
 #if TARGET_MSDOS == 32
 static const unsigned int               dosamp_file_io_maxb = (unsigned int)INT_MAX - 1U;
@@ -1724,29 +1724,29 @@ int8_t soundcard_will_use_isa_dma_channel(void) {
 }
 
 static void free_dma_buffer() {
-    if (sb_dma != NULL) {
+    if (isa_dma != NULL) {
         soundcard_assign_isa_dma_buffer(NULL); /* disassociate DMA buffer from sound card */
-        dma_8237_free_buffer(sb_dma);
-        sb_dma = NULL;
+        dma_8237_free_buffer(isa_dma);
+        isa_dma = NULL;
     }
 }
 
 static int alloc_dma_buffer(uint32_t choice,int8_t ch) {
     if (ch < 0)
         return 0;
-    if (sb_dma != NULL)
+    if (isa_dma != NULL)
         return 0;
 
     do {
         if (ch >= 4)
-            sb_dma = dma_8237_alloc_buffer_dw(choice,16);
+            isa_dma = dma_8237_alloc_buffer_dw(choice,16);
         else
-            sb_dma = dma_8237_alloc_buffer_dw(choice,8);
+            isa_dma = dma_8237_alloc_buffer_dw(choice,8);
 
-        if (sb_dma == NULL) choice -= 4096UL;
-    } while (sb_dma == NULL && choice >= 4096UL);
+        if (isa_dma == NULL) choice -= 4096UL;
+    } while (isa_dma == NULL && choice >= 4096UL);
 
-    if (sb_dma == NULL)
+    if (isa_dma == NULL)
         return -1;
 
     return 0;
@@ -1776,7 +1776,7 @@ static int realloc_dma_buffer() {
     if (alloc_dma_buffer(choice,ch) < 0)
         return -1;
 
-    if (soundcard_assign_isa_dma_buffer(sb_dma) < 0) {
+    if (soundcard_assign_isa_dma_buffer(isa_dma) < 0) {
         free_dma_buffer();
         return -1;
     }
@@ -1810,20 +1810,20 @@ void unhook_irq(void) {
     }
 }
 
-int sb_check_dma_buffer(void) {
+int check_dma_buffer(void) {
     int8_t ch;
 
     /* alloc DMA buffer.
      * if already allocated, then realloc if changing from 8-bit to 16-bit DMA */
-    if (sb_dma == NULL)
+    if (isa_dma == NULL)
         realloc_dma_buffer();
     else {
         ch = soundcard_will_use_isa_dma_channel();
-        if (ch >= 0 && sb_dma->dma_width != (ch >= 4 ? 16 : 8))
+        if (ch >= 0 && isa_dma->dma_width != (ch >= 4 ? 16 : 8))
             realloc_dma_buffer();
     }
 
-    if (sb_dma == NULL)
+    if (isa_dma == NULL)
         return -1;
 
     return 0;
@@ -1929,7 +1929,7 @@ void silence_buffer(void) {
 }
 
 int prepare_buffer(void) {
-    if (sb_check_dma_buffer() < 0)
+    if (check_dma_buffer() < 0)
         return -1;
 
     return 0;
