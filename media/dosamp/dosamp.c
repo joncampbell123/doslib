@@ -134,6 +134,14 @@ struct resampler_state_t {
     unsigned char                       counter; /* only to count the first two samples through to init resampler */
 };
 
+void resampler_state_reset(struct resampler_state_t *r) {
+    r->counter = 0;
+    r->p[0] = 0;
+    r->p[1] = 0;
+    r->c[0] = 0;
+    r->c[1] = 0;
+}
+
 struct resampler_state_t                resample_state;
 
 void update_wav_dma_position(void) {
@@ -469,11 +477,7 @@ unsigned char dosamp_FAR * convert_rdbuf_get(uint32_t *sz) {
 void convert_rdbuf_clear(void) {
     convert_rdbuf_len = 0;
     convert_rdbuf_pos = 0;
-    resample_state.counter = 0;
-    resample_state.p[0] = 0;
-    resample_state.p[1] = 0;
-    resample_state.c[0] = 0;
-    resample_state.c[1] = 0;
+    resampler_state_reset(&resample_state);
 }
 
 void card_poll(void) {
@@ -1792,7 +1796,7 @@ int stop_sound_card(void) {
     return 0;
 }
 
-int resampler_init(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
+int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
     if (d->sample_rate == 0 || s->sample_rate == 0)
         return -1;
 
@@ -1813,11 +1817,11 @@ int resampler_init(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) 
         tmp  = (uint64_t)s->sample_rate << (uint64_t)resample_100_shift;
         tmp /= (uint64_t)d->sample_rate;
 
-        resample_state.step = (resample_intermediate_t)tmp;
-        resample_state.frac = 0;
+        r->step = (resample_intermediate_t)tmp;
+        r->frac = 0;
     }
 
-    if (resample_state.step == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
+    if (r->step == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
         resample_on = 0;
     else
         resample_on = 1;
@@ -1854,7 +1858,7 @@ static int begin_play() {
     }
 
     /* based on sound card's choice vs source format, reconfigure resampler */
-    if (resampler_init(&play_codec,&file_codec) < 0) {
+    if (resampler_init(&resample_state,&play_codec,&file_codec) < 0) {
         unprepare_play();
         return -1;
     }
