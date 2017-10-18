@@ -538,11 +538,15 @@ l1:     lodsb
     return ret;
 }
 
-void convert_rdbuf_16_to_8_ip(uint32_t total_samples) {
+uint32_t convert_rdbuf_16_to_8_ip(const uint32_t total_samples,const void dosamp_FAR *proc_buf,const uint32_t buf_max) {
+    uint32_t ret = total_samples;
     /* in-place 16-bit to 8-bit conversion (up to convert_rdbuf_len)
      * from file_codec (16) to play_codec (8). this must happen AFTER
      * channel conversion, therefore use play_codec.number_of_channels */
     uint8_t dosamp_FAR * buf = (uint8_t dosamp_FAR *)convert_rdbuf;
+
+    /* buffer range check (source is 16-bit) */
+    assert((ret*(uint32_t)2) <= buf_max);
 
 #if defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
     __asm {
@@ -572,8 +576,7 @@ l1:     lodsw               ; AX = 16-bit sample
     }
 #endif
 
-    convert_rdbuf_len = total_samples;
-    assert(convert_rdbuf_len <= convert_rdbuf_sz);
+    return ret;
 }
 
 void convert_rdbuf_stereo2mono_ip_u8(uint32_t samples) {
@@ -864,7 +867,7 @@ int convert_rdbuf_fill(void) {
 
         /* bit conversion */
         if (file_codec.bits_per_sample == 16 && play_codec.bits_per_sample == 8)
-            convert_rdbuf_16_to_8_ip(samples * play_codec.number_of_channels);
+            convert_rdbuf_len = convert_rdbuf_16_to_8_ip(samples * play_codec.number_of_channels,convert_rdbuf,of);
         else if (file_codec.bits_per_sample == 8 && play_codec.bits_per_sample == 16)
             convert_rdbuf_len = convert_rdbuf_8_to_16_ip(samples * play_codec.number_of_channels,convert_rdbuf,of);
 
