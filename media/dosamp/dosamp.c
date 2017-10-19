@@ -43,6 +43,7 @@
 #include "cvrdbuf.h"
 #include "cvip.h"
 #include "trkrbase.h"
+#include "tmpbuf.h"
 
 /*====================Sound Blaster Specific=======================*/
 /* section off from main dosamp.c.
@@ -336,33 +337,6 @@ void wav_rebase_position_event(void) {
         r->event_at = wav_state.write_counter;
         r->wav_position = wav_position;
     }
-}
-
-static unsigned char dosamp_FAR * tmpbuffer = NULL;
-static size_t tmpbuffer_sz = 4096;
-
-void tmpbuffer_free(void) {
-    if (tmpbuffer != NULL) {
-#if TARGET_MSDOS == 32
-        free(tmpbuffer);
-#else
-        _ffree(tmpbuffer);
-#endif
-        tmpbuffer = NULL;
-    }
-}
-
-unsigned char dosamp_FAR * tmpbuffer_get(uint32_t *sz) {
-    if (tmpbuffer == NULL) {
-#if TARGET_MSDOS == 32
-        tmpbuffer = malloc(tmpbuffer_sz);
-#else
-        tmpbuffer = _fmalloc(tmpbuffer_sz);
-#endif
-    }
-
-    if (sz != NULL) *sz = tmpbuffer_sz;
-    return tmpbuffer;
 }
 
 void card_poll(void) {
