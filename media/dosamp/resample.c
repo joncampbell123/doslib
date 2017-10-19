@@ -84,8 +84,16 @@ int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const 
 
     if (r->step == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
         resample_on = 0;
-    else
+    else {
         resample_on = 1;
+
+        if (r->resample_mode == resample_best) {
+            unsigned long m = ((unsigned long)s->sample_rate << 8UL) / (unsigned long)d->sample_rate; /* 8.8 fixed pt */
+            if (m > 256UL) m = 256UL;
+            else if (m < 1UL) m = 1UL;
+            r->f_best = (uint8_t)(m - 1UL);
+        }
+    }
 
     return 0;
 }

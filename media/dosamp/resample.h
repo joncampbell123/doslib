@@ -25,6 +25,7 @@ typedef unsigned long                   resample_whole_count_element_t; /* whole
 enum {
     resample_fast=0,                    /* fast (nearest neighbor) */
     resample_good,                      /* good (linear interpolate) */
+    resample_best,                      /* best (linear + lowpass) */
 
     resample_MAX
 };
@@ -35,8 +36,9 @@ struct resampler_state_t {
     resample_whole_count_element_t      frac;
     int16_t                             p[resample_max_channels];
     int16_t                             c[resample_max_channels];
-    int16_t                             f[resample_max_channels];
+    int32_t                             f[resample_max_channels];
     uint8_t                             resample_mode;
+    uint8_t                             f_best; /* best filter, averaging */
     unsigned int                        init:1;
 };
 

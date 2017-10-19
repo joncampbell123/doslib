@@ -497,6 +497,20 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
                         dop = convert_rdbuf_resample_to_8_mono((uint8_t dosamp_FAR*)ptr,bsz);
                 }
             }
+            else if (resample_state.resample_mode == resample_best) {
+                if (play_codec.bits_per_sample > 8) {
+                    if (play_codec.number_of_channels == 2)
+                        dop = convert_rdbuf_resample_best_to_16_stereo((int16_t dosamp_FAR*)ptr,bsz / 4UL);
+                    else
+                        dop = convert_rdbuf_resample_best_to_16_mono((int16_t dosamp_FAR*)ptr,bsz / 2UL);
+                }
+                else {
+                    if (play_codec.number_of_channels == 2)
+                        dop = convert_rdbuf_resample_best_to_8_stereo((uint8_t dosamp_FAR*)ptr,bsz / 2UL);
+                    else
+                        dop = convert_rdbuf_resample_best_to_8_mono((uint8_t dosamp_FAR*)ptr,bsz);
+                }
+            }
             else {
                 dop = 0;
             }
