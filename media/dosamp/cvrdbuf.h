@@ -12,3 +12,8 @@ unsigned char dosamp_FAR * convert_rdbuf_get(uint32_t *sz);
 void convert_rdbuf_clear(void);
 void convert_rdbuf_free(void);
 
+uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples);
+uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t samples);
+uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samples);
+uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t samples);
+

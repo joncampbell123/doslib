@@ -537,42 +537,6 @@ int convert_rdbuf_fill(void) {
     return 0;
 }
 
-#if defined(__WATCOMC__) && defined(__386__) && TARGET_MSDOS == 32
-# include "rs386ow.h"
-#elif defined(__WATCOMC__) && defined(__I86__) && TARGET_MSDOS == 16
-# include "rs86ow.h"
-#else
-# include "rsgenric.h"
-#endif
-
-uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples) {
-#define resample_interpolate_func resample_interpolate8
-#define sample_type_t uint8_t
-#define sample_channels 1
-#include "rsrdbtm.h"
-}
-
-uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t samples) {
-#define resample_interpolate_func resample_interpolate8
-#define sample_type_t uint8_t
-#define sample_channels 2
-#include "rsrdbtm.h"
-}
-
-uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samples) {
-#define resample_interpolate_func resample_interpolate16
-#define sample_type_t int16_t
-#define sample_channels 1
-#include "rsrdbtm.h"
-}
-
-uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t samples) {
-#define resample_interpolate_func resample_interpolate16
-#define sample_type_t int16_t
-#define sample_channels 2
-#include "rsrdbtm.h"
-}
-
 static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
     unsigned char dosamp_FAR * ptr;
     uint32_t dop,bsz;
