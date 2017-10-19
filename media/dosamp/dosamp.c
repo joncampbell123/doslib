@@ -135,8 +135,8 @@ void update_wav_dma_position(void) {
  * 16-bit real mode Large and Compact memory models! Without -zu, minor
  * memory corruption in the DOS kernel will result and the system will
  * hang and/or crash. */
-unsigned char               old_irq_masked = 0;
-static void                 (interrupt *old_irq)() = NULL;
+unsigned char               soundcard_irq_old_masked = 0;
+static void                 (interrupt *soundcard_irq_old)() = NULL;
 
 void soundcard_irq_callback(void) {
     unsigned char c;
@@ -166,14 +166,14 @@ static void interrupt soundcard_irq() {
      *      interrupt handler doesn't exist! In fact, the IRQ vector could easily
      *      be unitialized or 0000:0000 for it! CALLing to that address is obviously
      *      not advised! */
-    if (old_irq_masked || old_irq == NULL) {
+    if (soundcard_irq_old_masked || soundcard_irq_old == NULL) {
         /* ack the interrupt ourself, do not chain */
         if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
         p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
     }
     else {
         /* chain to the previous IRQ, who will acknowledge the interrupt */
-        old_irq();
+        soundcard_irq_old();
     }
 }
 
@@ -846,12 +846,12 @@ static int realloc_dma_buffer() {
 
 void hook_irq(void) {
     if (sb_card->irq != -1) {
-        if (old_irq == NULL) {
-            old_irq_masked = p8259_is_masked(sb_card->irq);
+        if (soundcard_irq_old == NULL) {
+            soundcard_irq_old_masked = p8259_is_masked(sb_card->irq);
             if (vector_is_iret(irq2int(sb_card->irq)))
-                old_irq_masked = 1;
+                soundcard_irq_old_masked = 1;
 
-            old_irq = _dos_getvect(irq2int(sb_card->irq));
+            soundcard_irq_old = _dos_getvect(irq2int(sb_card->irq));
             _dos_setvect(irq2int(sb_card->irq),soundcard_irq);
             /* if the IRQ is still masked, keep it that way until we begin playback */
         }
@@ -859,14 +859,14 @@ void hook_irq(void) {
 }
 
 void unhook_irq(void) {
-    if (old_irq != NULL) {
-        if (sb_card->irq >= 0 && old_irq_masked)
+    if (soundcard_irq_old != NULL) {
+        if (sb_card->irq >= 0 && soundcard_irq_old_masked)
             p8259_mask(sb_card->irq);
 
-        if (sb_card->irq != -1 && old_irq != NULL)
-            _dos_setvect(irq2int(sb_card->irq),old_irq);
+        if (sb_card->irq != -1 && soundcard_irq_old != NULL)
+            _dos_setvect(irq2int(sb_card->irq),soundcard_irq_old);
 
-        old_irq = NULL;
+        soundcard_irq_old = NULL;
     }
 }
 
