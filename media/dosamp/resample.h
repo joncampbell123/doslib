@@ -21,12 +21,21 @@ typedef unsigned long                   resample_whole_count_element_t; /* whole
 
 #define resample_max_channels           (2)
 
+/* resampler mode */
+enum {
+    resample_fast=0,                    /* fast (nearest neighbor) */
+    resample_good,                      /* good (linear interpolate) */
+
+    resample_MAX
+};
+
 /* resampler state */
 struct resampler_state_t {
     resample_whole_count_element_t      step; /* fixed point step (where 1.0 == resample_100) */
     resample_whole_count_element_t      frac;
     int16_t                             p[resample_max_channels];
     int16_t                             c[resample_max_channels];
+    uint8_t                             resample_mode;
     unsigned int                        init:1;
 };
 

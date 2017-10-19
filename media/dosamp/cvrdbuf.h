@@ -18,3 +18,8 @@ uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t sam
 uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samples);
 uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t samples);
 
+uint32_t convert_rdbuf_resample_fast_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples);
+uint32_t convert_rdbuf_resample_fast_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t samples);
+uint32_t convert_rdbuf_resample_fast_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samples);
+uint32_t convert_rdbuf_resample_fast_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t samples);
+

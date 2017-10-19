@@ -469,17 +469,36 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
             avail -= dop;
         }
         else {
-            if (play_codec.bits_per_sample > 8) {
-                if (play_codec.number_of_channels == 2)
-                    dop = convert_rdbuf_resample_to_16_stereo((int16_t dosamp_FAR*)ptr,bsz / 4UL);
-                else
-                    dop = convert_rdbuf_resample_to_16_mono((int16_t dosamp_FAR*)ptr,bsz / 2UL);
+            if (resample_state.resample_mode == resample_fast) {
+                if (play_codec.bits_per_sample > 8) {
+                    if (play_codec.number_of_channels == 2)
+                        dop = convert_rdbuf_resample_fast_to_16_stereo((int16_t dosamp_FAR*)ptr,bsz / 4UL);
+                    else
+                        dop = convert_rdbuf_resample_fast_to_16_mono((int16_t dosamp_FAR*)ptr,bsz / 2UL);
+                }
+                else {
+                    if (play_codec.number_of_channels == 2)
+                        dop = convert_rdbuf_resample_fast_to_8_stereo((uint8_t dosamp_FAR*)ptr,bsz / 2UL);
+                    else
+                        dop = convert_rdbuf_resample_fast_to_8_mono((uint8_t dosamp_FAR*)ptr,bsz);
+                }
+            }
+            else if (resample_state.resample_mode == resample_good) {
+                if (play_codec.bits_per_sample > 8) {
+                    if (play_codec.number_of_channels == 2)
+                        dop = convert_rdbuf_resample_to_16_stereo((int16_t dosamp_FAR*)ptr,bsz / 4UL);
+                    else
+                        dop = convert_rdbuf_resample_to_16_mono((int16_t dosamp_FAR*)ptr,bsz / 2UL);
+                }
+                else {
+                    if (play_codec.number_of_channels == 2)
+                        dop = convert_rdbuf_resample_to_8_stereo((uint8_t dosamp_FAR*)ptr,bsz / 2UL);
+                    else
+                        dop = convert_rdbuf_resample_to_8_mono((uint8_t dosamp_FAR*)ptr,bsz);
+                }
             }
             else {
-                if (play_codec.number_of_channels == 2)
-                    dop = convert_rdbuf_resample_to_8_stereo((uint8_t dosamp_FAR*)ptr,bsz / 2UL);
-                else
-                    dop = convert_rdbuf_resample_to_8_mono((uint8_t dosamp_FAR*)ptr,bsz);
+                dop = 0;
             }
 
             assert(convert_rdbuf.pos <= convert_rdbuf.len);
@@ -1469,6 +1488,10 @@ int main(int argc,char **argv) {
     if (!parse_argv(argc,argv))
         return 1;
 
+    /* default good resampler */
+    /* TODO: If we detect the CPU is slow enough, default to "fast" */
+    resample_state.resample_mode = resample_good;
+
     wav_state_init();
 
     cpu_probe();
@@ -1650,6 +1673,16 @@ int main(int argc,char **argv) {
                         prefer_bits = 16;
                     else
                         prefer_bits = 0;
+
+                    if (wp) begin_play();
+                }
+                else if (i == 'R') {
+                    unsigned char wp = wav_state.playing;
+
+                    if (wp) stop_play();
+
+                    if ((++resample_state.resample_mode) >= resample_MAX)
+                        resample_state.resample_mode = resample_fast;
 
                     if (wp) begin_play();
                 }

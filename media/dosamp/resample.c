@@ -50,6 +50,7 @@ unsigned char                               resample_on = 0;
 struct resampler_state_t                    resample_state;
 
 void resampler_state_reset(struct resampler_state_t *r) {
+    r->frac = 0;
     r->init = 0;
     r->p[0] = 0;
     r->p[1] = 0;
