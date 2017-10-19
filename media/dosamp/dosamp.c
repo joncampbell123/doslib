@@ -73,7 +73,6 @@ static unsigned char                            prefer_no_clamp = 0;
 /* DOSAMP debug state */
 static char                                     stuck_test = 0;
 static unsigned char                            use_mmap_write = 1;
-static unsigned char                            resample_on = 0;
 
 /* chosen time source.
  * NTS: Don't forget that by design, some time sources (8254 for example)
@@ -90,30 +89,22 @@ static char*                                    wav_file = NULL;
 /* convert/read buffer */
 struct convert_rdbuf_t                          convert_rdbuf = {NULL,0,0,0};
 
-struct wav_cbr_t {
-    uint32_t                            sample_rate;
-    uint16_t                            bytes_per_block;
-    uint16_t                            samples_per_block;
-    uint8_t                             number_of_channels; /* nobody's going to ask us to play 4096 channel-audio! */
-    uint8_t                             bits_per_sample;    /* nor will they ask us to play 512-bit PCM audio! */
-};
-
-struct wav_cbr_t                        file_codec;
-struct wav_cbr_t                        play_codec;
+struct wav_cbr_t                                file_codec;
+struct wav_cbr_t                                play_codec;
 
 struct wav_state_t {
-    uint32_t                            dma_position;
-    uint32_t                            play_delay_bytes;/* in bytes. delay from wav_position to where sound card is playing now. */
-    uint32_t                            play_delay;/* in samples. delay from wav_position to where sound card is playing now. */
-    uint64_t                            write_counter;
-    uint64_t                            play_counter;
-    uint64_t                            play_counter_prev;
-    unsigned int                        play_empty:1;
-    unsigned int                        prepared:1;
-    unsigned int                        playing:1;
+    uint32_t                                    dma_position;
+    uint32_t                                    play_delay_bytes;/* in bytes. delay from wav_position to where sound card is playing now. */
+    uint32_t                                    play_delay;/* in samples. delay from wav_position to where sound card is playing now. */
+    uint64_t                                    write_counter;
+    uint64_t                                    play_counter;
+    uint64_t                                    play_counter_prev;
+    unsigned int                                play_empty:1;
+    unsigned int                                prepared:1;
+    unsigned int                                playing:1;
 };
 
-static struct wav_state_t               wav_state;
+struct wav_state_t                              wav_state;
 
 void wav_state_init(void) {
     memset(&wav_state,0,sizeof(wav_state));
@@ -131,14 +122,6 @@ static unsigned long                    wav_play_position = 0L;
 /* buffering threshholds */
 static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
-
-void resampler_state_reset(struct resampler_state_t *r) {
-    r->init = 0;
-    r->p[0] = 0;
-    r->p[1] = 0;
-    r->c[0] = 0;
-    r->c[1] = 0;
-}
 
 struct resampler_state_t                resample_state;
 
@@ -1098,39 +1081,6 @@ int stop_sound_card(void) {
     _sti();
 
     sndsb_stop_dsp_playback(sb_card);
-    return 0;
-}
-
-int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
-    if (d->sample_rate == 0 || s->sample_rate == 0)
-        return -1;
-
-    if (d->number_of_channels == 0 || s->number_of_channels == 0)
-        return -1;
-    if (d->number_of_channels > resample_max_channels || s->number_of_channels > resample_max_channels)
-        return -1;
-
-    {
-        /* NTS: Always compute with uint64_t even on 16-bit builds.
-         *      This gives us the precision we need to compute the resample step value.
-         *      Also remember that on 16-bit builds the resample intermediate type is
-         *      32 bits wide, and the shift is 16. As signed integers, that means that
-         *      this code will produce the wrong value when sample rates >= 32768Hz are
-         *      involved unless we do the math in 64-bit wide integers. */
-        uint64_t tmp;
-
-        tmp  = (uint64_t)s->sample_rate << (uint64_t)resample_100_shift;
-        tmp /= (uint64_t)d->sample_rate;
-
-        r->step = (resample_intermediate_t)tmp;
-        r->frac = 0;
-    }
-
-    if (r->step == resample_100 && d->number_of_channels == s->number_of_channels && d->bits_per_sample == s->bits_per_sample)
-        resample_on = 0;
-    else
-        resample_on = 1;
-
     return 0;
 }
 

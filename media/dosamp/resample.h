@@ -32,6 +32,8 @@ struct resampler_state_t {
 
 extern struct resampler_state_t         resample_state;
 
+extern unsigned char                    resample_on;
+
 static inline int resample_interpolate_generic(const unsigned int channel) {
     resample_intermediate_t tmp;
 
@@ -42,4 +44,7 @@ static inline int resample_interpolate_generic(const unsigned int channel) {
 
     return (int)tmp;
 }
+
+void resampler_state_reset(struct resampler_state_t *r);
+int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const struct wav_cbr_t * const s);
 
