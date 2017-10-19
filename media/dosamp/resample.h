@@ -27,7 +27,7 @@ struct resampler_state_t {
     resample_whole_count_element_t      frac;
     int16_t                             p[resample_max_channels];
     int16_t                             c[resample_max_channels];
-    unsigned char                       counter; /* only to count the first two samples through to init resampler */
+    unsigned int                        init:1;
 };
 
 extern struct resampler_state_t         resample_state;

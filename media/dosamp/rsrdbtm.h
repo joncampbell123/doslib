@@ -9,10 +9,10 @@
     sample_type_t dosamp_FAR *src = (sample_type_t dosamp_FAR*)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
     uint32_t r = 0;
 
-    if (resample_state.counter == 0) {
+    if (resample_state.init == 0) {
         if ((convert_rdbuf_pos+bytes_per_sample+bytes_per_sample) > convert_rdbuf_len) return r;
         resample_state.frac += resample_100;
-        resample_state.counter = 1;
+        resample_state.init = 1;
 
         LOAD();
     }

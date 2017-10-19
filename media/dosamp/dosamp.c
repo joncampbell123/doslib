@@ -127,7 +127,7 @@ static unsigned long                    wav_play_load_block_size = 0;/*max load 
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
 
 void resampler_state_reset(struct resampler_state_t *r) {
-    r->counter = 0;
+    r->init = 0;
     r->p[0] = 0;
     r->p[1] = 0;
     r->c[0] = 0;
