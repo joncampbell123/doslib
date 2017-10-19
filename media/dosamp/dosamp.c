@@ -990,9 +990,15 @@ int set_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s)
     return 0;
 }
 
-void disable_autoinit(void) {
-    sb_card->dsp_autoinit_dma = 0;
-    sb_card->dsp_autoinit_command = 0;
+int get_autoinit(void) {
+    return sb_card->dsp_autoinit_dma && sb_card->dsp_autoinit_command ? 1 : 0;
+}
+
+int set_autoinit(uint8_t flag) {
+    sb_card->dsp_autoinit_dma = flag;
+    sb_card->dsp_autoinit_command = flag;
+
+    return 0;
 }
 
 void silence_buffer(void) {
@@ -1622,10 +1628,19 @@ int main(int argc,char **argv) {
                 }
                 else if (i == 'A') {
                     unsigned char wp = wav_state.playing;
+                    int r;
 
                     if (wp) stop_play();
-                    disable_autoinit();
-                    printf("Disabled auto-init\n");
+
+                    r = get_autoinit();
+                    if (r >= 0) {
+                        set_autoinit(!r);
+                        printf("%sabled auto-init\n",!r ? "En" : "Dis");
+                    }
+                    else {
+                        printf("Auto-init not supported\n");
+                    }
+
                     if (wp) begin_play();
                 }
                 else if (i == 'M') {
