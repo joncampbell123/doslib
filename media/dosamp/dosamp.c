@@ -173,7 +173,7 @@ static void interrupt soundcard_irq_handler() {
     }
     else {
         /* ack the interrupt ourself, do not chain */
-        if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+        if (soundcard_irq.irq_number >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
         p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
     }
 }
