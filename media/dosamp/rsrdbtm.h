@@ -6,6 +6,8 @@
 
 #define INTERPOLATE() { { register unsigned int i; for (i=0;i < sample_channels;i++) dst[i] = (sample_type_t)resample_interpolate_func(i); }; dst += sample_channels; samples--; r++; }
 
+    /* NTS: Open Watcom is smart enough to turn for (i=0;i < constant;i++) into unrolled loop for small values of constant. Good! This code relies on it! */
+
     sample_type_t dosamp_FAR *src = (sample_type_t dosamp_FAR*)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
     uint32_t r = 0;
 
