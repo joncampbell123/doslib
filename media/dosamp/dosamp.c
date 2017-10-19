@@ -42,6 +42,7 @@
 #include "resample.h"
 #include "cvrdbuf.h"
 #include "cvip.h"
+#include "trkrbase.h"
 
 /*====================Sound Blaster Specific=======================*/
 /* section off from main dosamp.c.
@@ -325,81 +326,6 @@ int wav_position_to_file_pointer(void) {
         return wav_rewind();
 
     return 0;
-}
-
-/* the reason I added "written/played" accounting is to make it possible
- * to robustly follow playback and act on events relative to playback.
- * such as, knowing that at such and such playback time, we looped the
- * WAV file back or switched to a new one. */
-struct audio_playback_rebase_t {
-    uint64_t                event_at;       /* playback time byte count */
-    unsigned long           wav_position;   /* starting WAV position to count from using playback time */
-};
-
-#define MAX_REBASE                  32
-
-struct audio_playback_rebase_t      wav_rebase_events[MAX_REBASE];
-unsigned char                       wav_rebase_read=0,wav_rebase_write=0;
-
-void wav_rebase_clear(void) {
-    wav_rebase_read = 0;
-    wav_rebase_write = 0;
-}
-
-void rebase_flush_old(unsigned long before) {
-    int howmany;
-
-    howmany = (int)wav_rebase_write - (int)wav_rebase_read;
-    if (howmany < 0) howmany += MAX_REBASE;
-
-    /* flush all but one */
-    while (wav_rebase_read != wav_rebase_write && howmany > 1) {
-        if (wav_rebase_events[wav_rebase_read].event_at >= before)
-            break;
-
-        howmany--;
-        wav_rebase_read++;
-        if (wav_rebase_read >= MAX_REBASE) wav_rebase_read = 0;
-    }
-}
-
-struct audio_playback_rebase_t *rebase_find(unsigned long event) {
-    struct audio_playback_rebase_t *r = NULL;
-    unsigned char i = wav_rebase_read;
-
-    while (i != wav_rebase_write) {
-        if (event >= wav_rebase_events[i].event_at)
-            r = &wav_rebase_events[i];
-        else
-            break;
-
-        i++;
-        if (i >= MAX_REBASE) i = 0;
-    }
-
-    return r;
-}
-
-struct audio_playback_rebase_t *rebase_add(void) {
-    unsigned char i = wav_rebase_write;
-
-    {
-        unsigned char j = i + 1;
-        if (j >= MAX_REBASE) j -= MAX_REBASE;
-        if (j == wav_rebase_read) {
-            /* well then we just throw the oldest event away */
-            wav_rebase_read++;
-            if (wav_rebase_read >= MAX_REBASE) wav_rebase_read = 0;
-        }
-        wav_rebase_write = j;
-    }
-
-    {
-        struct audio_playback_rebase_t *p = &wav_rebase_events[i];
-
-        memset(p,0,sizeof(*p));
-        return p;
-    }
 }
 
 void wav_rebase_position_event(void) {
