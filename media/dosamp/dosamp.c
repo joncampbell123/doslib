@@ -157,7 +157,7 @@ void soundcard_irq_callback(void) {
     if (wav_state.playing) sndsb_irq_continue(sb_card,c);
 }
 
-static void interrupt sb_irq() {
+static void interrupt soundcard_irq() {
     soundcard_irq_callback();
 
     /* NTS: we assume that if the IRQ was masked when we took it, that we must not
@@ -852,7 +852,7 @@ void hook_irq(void) {
                 old_irq_masked = 1;
 
             old_irq = _dos_getvect(irq2int(sb_card->irq));
-            _dos_setvect(irq2int(sb_card->irq),sb_irq);
+            _dos_setvect(irq2int(sb_card->irq),soundcard_irq);
             /* if the IRQ is still masked, keep it that way until we begin playback */
         }
     }
