@@ -44,6 +44,7 @@
 #include "cvip.h"
 #include "trkrbase.h"
 #include "tmpbuf.h"
+#include "snirq.h"
 
 /*====================Sound Blaster Specific=======================*/
 /* section off from main dosamp.c.
@@ -122,19 +123,6 @@ static unsigned long                    wav_play_position = 0L;
 /* buffering threshholds */
 static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
-
-/* IRQ state */
-struct irq_state_t {
-    void                                (interrupt *old_handler)();
-    uint8_t                             irq_number;
-    uint8_t                             int_number;
-    unsigned int                        was_masked:1;
-    unsigned int                        chain_irq:1;
-    unsigned int                        was_iret:1;             /* prior IRQ handler doesn't ACK IRQs */
-    unsigned int                        hooked:1;
-};
-
-struct irq_state_t                      soundcard_irq = { NULL, 0, 0 };
 
 void update_wav_dma_position(void) {
     _cli();
@@ -849,51 +837,6 @@ static int realloc_dma_buffer() {
     return 0;
 }
 
-void hook_irq(void) {
-    if (sb_card->irq != -1) {
-        if (!soundcard_irq.hooked) {
-            /* take notw whether the IRQ was masked at the time we hooked.
-             * on older DOS systems a masked IRQ can be a sign the handler
-             * doesn't exist and/or that we don't need to chain interrupt handlers.
-             *
-             * we do not unmask the IRQ until we begin playback.
-             *
-             * sometimes IRQ handlers exist but they do not do anything to
-             * dismiss or acknowledge the IRQ (DOSBox default handler, many older
-             * pre-486 BIOSes, etc.). */
-            soundcard_irq.irq_number = sb_card->irq;
-            soundcard_irq.int_number = irq2int(soundcard_irq.irq_number);
-
-            soundcard_irq.was_masked = p8259_is_masked(soundcard_irq.irq_number);
-
-            soundcard_irq.was_iret = vector_is_iret(soundcard_irq.int_number);
-
-            soundcard_irq.old_handler = _dos_getvect(soundcard_irq.int_number);
-            _dos_setvect(soundcard_irq.int_number,soundcard_irq_handler);
-
-            soundcard_irq.chain_irq = (!soundcard_irq.was_masked && !soundcard_irq.was_iret) && (soundcard_irq.old_handler != NULL);
-
-            soundcard_irq.hooked = 1;
-        }
-    }
-}
-
-void unhook_irq(void) {
-    if (soundcard_irq.hooked) {
-        /* if the IRQ was masked at the time we started playback, then mask it again */
-        if (soundcard_irq.was_masked) p8259_mask(soundcard_irq.irq_number);
-
-        _dos_setvect(soundcard_irq.int_number,soundcard_irq.old_handler);
-
-        soundcard_irq.old_handler = NULL;
-        soundcard_irq.int_number = 0;
-        soundcard_irq.irq_number = 0;
-        soundcard_irq.was_masked = 0;
-        soundcard_irq.was_iret = 0;
-        soundcard_irq.hooked = 0;
-    }
-}
-
 int check_dma_buffer(void) {
     int8_t ch;
 
@@ -1026,8 +969,6 @@ int prepare_play(void) {
     if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
         return -1;
 
-    hook_irq();
-
     /* prepare DSP */
     if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8)) {
         unhook_irq();
@@ -1047,7 +988,6 @@ int unprepare_play(void) {
         wav_state.prepared = 0;
     }
 
-    unhook_irq();
     return 0;
 }
 
@@ -1136,18 +1076,21 @@ static int begin_play() {
     /* choose output vs input */
     if (set_play_format(&play_codec,&file_codec) < 0) {
         unprepare_play();
+        unhook_irq();
         return -1;
     }
 
     /* based on sound card's choice vs source format, reconfigure resampler */
     if (resampler_init(&resample_state,&play_codec,&file_codec) < 0) {
         unprepare_play();
+        unhook_irq();
         return -1;
     }
 
     /* prepare buffer */
     if (prepare_buffer() < 0) {
         unprepare_play();
+        unhook_irq();
         return -1;
     }
 
@@ -1171,9 +1114,19 @@ static int begin_play() {
     if (wav_play_load_block_size > (sb_card->buffer_size / 2UL))
         wav_play_load_block_size = (sb_card->buffer_size / 2UL);
 
+    /* hook IRQ */
+    if (sb_card->irq != -1) {
+        if (hook_irq(sb_card->irq,soundcard_irq_handler) < 0) {
+            unprepare_play();
+            unhook_irq();
+            return -1;
+        }
+    }
+
     /* prepare the sound card (buffer, DMA, etc.) */
     if (prepare_play() < 0) {
         unprepare_play();
+        unhook_irq();
         return -1;
     }
 
@@ -1184,6 +1137,7 @@ static int begin_play() {
     /* go! */
     if (start_sound_card() < 0) {
         unprepare_play();
+        unhook_irq();
         return -1;
     }
 
@@ -1200,6 +1154,7 @@ static void stop_play() {
     /* stop */
     stop_sound_card();
     unprepare_play();
+    unhook_irq();
 
     wav_position = wav_play_position;
     update_play_position();
