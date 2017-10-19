@@ -123,6 +123,11 @@ static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
 
+/* IRQ state */
+unsigned char                           soundcard_irq_hooked = 0;
+unsigned char                           soundcard_irq_old_masked = 0;
+void                                    (interrupt *soundcard_irq_old)() = NULL;
+
 void update_wav_dma_position(void) {
     _cli();
     wav_state.dma_position = sndsb_read_dma_buffer_position(sb_card);
@@ -135,8 +140,6 @@ void update_wav_dma_position(void) {
  * 16-bit real mode Large and Compact memory models! Without -zu, minor
  * memory corruption in the DOS kernel will result and the system will
  * hang and/or crash. */
-unsigned char               soundcard_irq_old_masked = 0;
-static void                 (interrupt *soundcard_irq_old)() = NULL;
 
 void soundcard_irq_callback(void) {
     unsigned char c;
@@ -846,27 +849,34 @@ static int realloc_dma_buffer() {
 
 void hook_irq(void) {
     if (sb_card->irq != -1) {
-        if (soundcard_irq_old == NULL) {
+        if (!soundcard_irq_hooked) {
+            /* take notw whether the IRQ was masked at the time we hooked.
+             * on older DOS systems a masked IRQ can be a sign the handler
+             * doesn't exist and/or that we don't need to chain interrupt handlers.
+             *
+             * we do not unmask the IRQ until we begin playback. */
             soundcard_irq_old_masked = p8259_is_masked(sb_card->irq);
             if (vector_is_iret(irq2int(sb_card->irq)))
                 soundcard_irq_old_masked = 1;
 
             soundcard_irq_old = _dos_getvect(irq2int(sb_card->irq));
             _dos_setvect(irq2int(sb_card->irq),soundcard_irq);
-            /* if the IRQ is still masked, keep it that way until we begin playback */
+
+            soundcard_irq_hooked = 1;
         }
     }
 }
 
 void unhook_irq(void) {
-    if (soundcard_irq_old != NULL) {
+    if (soundcard_irq_hooked) {
+        /* if the IRQ was masked at the time we started playback, then mask it again */
         if (sb_card->irq >= 0 && soundcard_irq_old_masked)
             p8259_mask(sb_card->irq);
 
         if (sb_card->irq != -1 && soundcard_irq_old != NULL)
             _dos_setvect(irq2int(sb_card->irq),soundcard_irq_old);
 
-        soundcard_irq_old = NULL;
+        soundcard_irq_hooked = 0;
     }
 }
 
