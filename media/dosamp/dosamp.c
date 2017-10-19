@@ -301,13 +301,32 @@ int wav_rewind(void) {
     return 0;
 }
 
-static size_t convert_rdbuf_len = 0;
-static size_t convert_rdbuf_pos = 0;
+struct convert_rdbuf_t {
+    unsigned char dosamp_FAR *          buffer; // pointer to base
+    unsigned int                        size;   // size in bytes (16-bit builds will not exceed 64KN)
+    unsigned int                        len;    // length of actual data
+    unsigned int                        pos;    // read position of data
+};
+
+struct convert_rdbuf_t                  convert_rdbuf = {NULL,0,0,0};
+
+void convert_rdbuf_free(void) {
+    if (convert_rdbuf.buffer != NULL) {
+#if TARGET_MSDOS == 32
+        free(convert_rdbuf.buffer);
+#else
+        _ffree(convert_rdbuf.buffer);
+#endif
+        convert_rdbuf.buffer = NULL;
+        convert_rdbuf.len = 0;
+        convert_rdbuf.pos = 0;
+    }
+}
 
 int wav_file_pointer_to_position(void) {
     if (wav_source->file_pos >= wav_data_offset) {
         wav_position  = wav_source->file_pos - wav_data_offset;
-        wav_position += convert_rdbuf_pos - convert_rdbuf_len;
+        wav_position += convert_rdbuf.pos - convert_rdbuf.len;
         wav_position /= file_codec.bytes_per_block;
     }
     else {
@@ -411,9 +430,6 @@ void wav_rebase_position_event(void) {
     }
 }
 
-static unsigned char dosamp_FAR * convert_rdbuf = NULL;
-static size_t convert_rdbuf_sz = 4096;
-
 static unsigned char dosamp_FAR * tmpbuffer = NULL;
 static size_t tmpbuffer_sz = 4096;
 
@@ -426,16 +442,7 @@ void tmpbuffer_free(void) {
 #endif
         tmpbuffer = NULL;
     }
-    if (convert_rdbuf != NULL) {
-#if TARGET_MSDOS == 32
-        free(convert_rdbuf);
-#else
-        _ffree(convert_rdbuf);
-#endif
-        convert_rdbuf = NULL;
-        convert_rdbuf_len = 0;
-        convert_rdbuf_pos = 0;
-    }
+    convert_rdbuf_free();
 }
 
 unsigned char dosamp_FAR * tmpbuffer_get(uint32_t *sz) {
@@ -452,23 +459,26 @@ unsigned char dosamp_FAR * tmpbuffer_get(uint32_t *sz) {
 }
 
 unsigned char dosamp_FAR * convert_rdbuf_get(uint32_t *sz) {
-    if (convert_rdbuf == NULL) {
+    if (convert_rdbuf.buffer == NULL) {
+        if (convert_rdbuf.size == 0)
+            convert_rdbuf.size = 4096;
+
 #if TARGET_MSDOS == 32
-        convert_rdbuf = malloc(convert_rdbuf_sz);
+        convert_rdbuf.buffer = malloc(convert_rdbuf.size);
 #else
-        convert_rdbuf = _fmalloc(convert_rdbuf_sz);
+        convert_rdbuf.buffer = _fmalloc(convert_rdbuf.size);
 #endif
-        convert_rdbuf_len = 0;
-        convert_rdbuf_pos = 0;
+        convert_rdbuf.len = 0;
+        convert_rdbuf.pos = 0;
     }
 
-    if (sz != NULL) *sz = convert_rdbuf_sz;
-    return convert_rdbuf;
+    if (sz != NULL) *sz = convert_rdbuf.size;
+    return convert_rdbuf.buffer;
 }
 
 void convert_rdbuf_clear(void) {
-    convert_rdbuf_len = 0;
-    convert_rdbuf_pos = 0;
+    convert_rdbuf.len = 0;
+    convert_rdbuf.pos = 0;
     resampler_state_reset(&resample_state);
 }
 
@@ -484,11 +494,11 @@ int convert_rdbuf_fill(void) {
     uint32_t towrite,xx;
     uint32_t bufsz;
 
-    if (convert_rdbuf_pos >= convert_rdbuf_len) {
+    if (convert_rdbuf.pos >= convert_rdbuf.len) {
         uint32_t samples;
         size_t of;
 
-        convert_rdbuf_pos = convert_rdbuf_len = 0;
+        convert_rdbuf.pos = convert_rdbuf.len = 0;
 
         buf = convert_rdbuf_get(&bufsz);
         if (buf == NULL) return -1;
@@ -514,7 +524,7 @@ int convert_rdbuf_fill(void) {
         assert(bufsz <= of);
 
         /* read and fill */
-        while (convert_rdbuf_len < bufsz) {
+        while (convert_rdbuf.len < bufsz) {
             rem = wav_data_length_bytes + wav_data_offset;
             if (wav_source->file_pos <= rem)
                 rem -= wav_source->file_pos;
@@ -528,13 +538,13 @@ int convert_rdbuf_fill(void) {
                 continue;
             }
 
-            xx = bufsz - convert_rdbuf_len;
+            xx = bufsz - convert_rdbuf.len;
             if (rem > xx) rem = xx;
             towrite = rem;
 
             /* read */
             rem = wav_source->file_pos + towrite; /* expected result pos */
-            if (wav_source->read(wav_source,dosamp_ptr_add_normalize(buf,convert_rdbuf_len),towrite) != towrite) {
+            if (wav_source->read(wav_source,dosamp_ptr_add_normalize(buf,convert_rdbuf.len),towrite) != towrite) {
                 if (wav_source->seek(wav_source,rem) != rem)
                     return -1;
                 if (wav_file_pointer_to_position() < 0)
@@ -545,26 +555,26 @@ int convert_rdbuf_fill(void) {
             }
 
             wav_file_pointer_to_position();
-            convert_rdbuf_len += towrite;
+            convert_rdbuf.len += towrite;
         }
 
-        assert(convert_rdbuf_len <= bufsz);
+        assert(convert_rdbuf.len <= bufsz);
 
-        samples = (uint32_t)convert_rdbuf_len / (uint32_t)file_codec.bytes_per_block;
+        samples = (uint32_t)convert_rdbuf.len / (uint32_t)file_codec.bytes_per_block;
 
         /* channel conversion */
         if (file_codec.number_of_channels == 2 && play_codec.number_of_channels == 1)
-            convert_rdbuf_len = convert_ip_stereo2mono(samples,convert_rdbuf,of,file_codec.bits_per_sample);
+            convert_rdbuf.len = convert_ip_stereo2mono(samples,convert_rdbuf.buffer,of,file_codec.bits_per_sample);
         else if (file_codec.number_of_channels == 1 && play_codec.number_of_channels == 2)
-            convert_rdbuf_len = convert_ip_mono2stereo(samples,convert_rdbuf,of,file_codec.bits_per_sample);
+            convert_rdbuf.len = convert_ip_mono2stereo(samples,convert_rdbuf.buffer,of,file_codec.bits_per_sample);
 
         /* bit conversion */
         if (file_codec.bits_per_sample == 16 && play_codec.bits_per_sample == 8)
-            convert_rdbuf_len = convert_ip_16_to_8(samples * play_codec.number_of_channels,convert_rdbuf,of);
+            convert_rdbuf.len = convert_ip_16_to_8(samples * play_codec.number_of_channels,convert_rdbuf.buffer,of);
         else if (file_codec.bits_per_sample == 8 && play_codec.bits_per_sample == 16)
-            convert_rdbuf_len = convert_ip_8_to_16(samples * play_codec.number_of_channels,convert_rdbuf,of);
+            convert_rdbuf.len = convert_ip_8_to_16(samples * play_codec.number_of_channels,convert_rdbuf.buffer,of);
 
-        assert(convert_rdbuf_len <= of);
+        assert(convert_rdbuf.len <= of);
     }
 
     return 0;
@@ -626,8 +636,8 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
 
         if (resample_state.step == resample_100) {
             /* don't do full resampling if no resampling needed */
-            if (convert_rdbuf_pos < convert_rdbuf_len)
-                dop = convert_rdbuf_len - convert_rdbuf_pos;
+            if (convert_rdbuf.pos < convert_rdbuf.len)
+                dop = convert_rdbuf.len - convert_rdbuf.pos;
             else
                 dop = 0;
 
@@ -637,11 +647,11 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
             if (dop == 0)
                 break;
 
-            if (buffer_write(dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos),dop) != dop)
+            if (buffer_write(dosamp_ptr_add_normalize(convert_rdbuf.buffer,convert_rdbuf.pos),dop) != dop)
                 break;
 
-            convert_rdbuf_pos += dop;
-            assert(convert_rdbuf_pos <= convert_rdbuf_len);
+            convert_rdbuf.pos += dop;
+            assert(convert_rdbuf.pos <= convert_rdbuf.len);
             howmuch -= dop;
             avail -= dop;
         }
@@ -659,7 +669,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
                     dop = convert_rdbuf_resample_to_8_mono((uint8_t dosamp_FAR*)ptr,bsz);
             }
 
-            assert(convert_rdbuf_pos <= convert_rdbuf_len);
+            assert(convert_rdbuf.pos <= convert_rdbuf.len);
 
             if (dop != 0) {
                 dop *= play_codec.bytes_per_block;
