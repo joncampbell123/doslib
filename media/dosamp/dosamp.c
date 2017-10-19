@@ -124,9 +124,17 @@ static unsigned long                    wav_play_load_block_size = 0;/*max load 
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
 
 /* IRQ state */
-unsigned char                           soundcard_irq_hooked = 0;
-unsigned char                           soundcard_irq_old_masked = 0;
-void                                    (interrupt *soundcard_irq_old)() = NULL;
+struct irq_state_t {
+    void                                (interrupt *old_handler)();
+    uint8_t                             irq_number;
+    uint8_t                             int_number;
+    unsigned int                        was_masked:1;
+    unsigned int                        chain_irq:1;
+    unsigned int                        was_iret:1;             /* prior IRQ handler doesn't ACK IRQs */
+    unsigned int                        hooked:1;
+};
+
+struct irq_state_t                      soundcard_irq = { NULL, 0, 0 };
 
 void update_wav_dma_position(void) {
     _cli();
@@ -160,23 +168,17 @@ void soundcard_irq_callback(void) {
     if (wav_state.playing) sndsb_irq_continue(sb_card,c);
 }
 
-static void interrupt soundcard_irq() {
+static void interrupt soundcard_irq_handler() {
     soundcard_irq_callback();
 
-    /* NTS: we assume that if the IRQ was masked when we took it, that we must not
-     *      chain to the previous IRQ handler. This is very important considering
-     *      that on most DOS systems an IRQ is masked for a very good reason---the
-     *      interrupt handler doesn't exist! In fact, the IRQ vector could easily
-     *      be unitialized or 0000:0000 for it! CALLing to that address is obviously
-     *      not advised! */
-    if (soundcard_irq_old_masked || soundcard_irq_old == NULL) {
+    if (soundcard_irq.chain_irq) {
+        /* chain to the previous IRQ, who will acknowledge the interrupt */
+        soundcard_irq.old_handler();
+    }
+    else {
         /* ack the interrupt ourself, do not chain */
         if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
         p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
-    }
-    else {
-        /* chain to the previous IRQ, who will acknowledge the interrupt */
-        soundcard_irq_old();
     }
 }
 
@@ -849,34 +851,46 @@ static int realloc_dma_buffer() {
 
 void hook_irq(void) {
     if (sb_card->irq != -1) {
-        if (!soundcard_irq_hooked) {
+        if (!soundcard_irq.hooked) {
             /* take notw whether the IRQ was masked at the time we hooked.
              * on older DOS systems a masked IRQ can be a sign the handler
              * doesn't exist and/or that we don't need to chain interrupt handlers.
              *
-             * we do not unmask the IRQ until we begin playback. */
-            soundcard_irq_old_masked = p8259_is_masked(sb_card->irq);
-            if (vector_is_iret(irq2int(sb_card->irq)))
-                soundcard_irq_old_masked = 1;
+             * we do not unmask the IRQ until we begin playback.
+             *
+             * sometimes IRQ handlers exist but they do not do anything to
+             * dismiss or acknowledge the IRQ (DOSBox default handler, many older
+             * pre-486 BIOSes, etc.). */
+            soundcard_irq.irq_number = sb_card->irq;
+            soundcard_irq.int_number = irq2int(soundcard_irq.irq_number);
 
-            soundcard_irq_old = _dos_getvect(irq2int(sb_card->irq));
-            _dos_setvect(irq2int(sb_card->irq),soundcard_irq);
+            soundcard_irq.was_masked = p8259_is_masked(soundcard_irq.irq_number);
 
-            soundcard_irq_hooked = 1;
+            soundcard_irq.was_iret = vector_is_iret(soundcard_irq.int_number);
+
+            soundcard_irq.old_handler = _dos_getvect(soundcard_irq.int_number);
+            _dos_setvect(soundcard_irq.int_number,soundcard_irq_handler);
+
+            soundcard_irq.chain_irq = (!soundcard_irq.was_masked && !soundcard_irq.was_iret) && (soundcard_irq.old_handler != NULL);
+
+            soundcard_irq.hooked = 1;
         }
     }
 }
 
 void unhook_irq(void) {
-    if (soundcard_irq_hooked) {
+    if (soundcard_irq.hooked) {
         /* if the IRQ was masked at the time we started playback, then mask it again */
-        if (sb_card->irq >= 0 && soundcard_irq_old_masked)
-            p8259_mask(sb_card->irq);
+        if (soundcard_irq.was_masked) p8259_mask(soundcard_irq.irq_number);
 
-        if (sb_card->irq != -1 && soundcard_irq_old != NULL)
-            _dos_setvect(irq2int(sb_card->irq),soundcard_irq_old);
+        _dos_setvect(soundcard_irq.int_number,soundcard_irq.old_handler);
 
-        soundcard_irq_hooked = 0;
+        soundcard_irq.old_handler = NULL;
+        soundcard_irq.int_number = 0;
+        soundcard_irq.irq_number = 0;
+        soundcard_irq.was_masked = 0;
+        soundcard_irq.was_iret = 0;
+        soundcard_irq.hooked = 0;
     }
 }
 
