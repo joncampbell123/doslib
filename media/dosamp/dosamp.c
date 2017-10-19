@@ -123,8 +123,6 @@ static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
 
-struct resampler_state_t                resample_state;
-
 void update_wav_dma_position(void) {
     _cli();
     wav_state.dma_position = sndsb_read_dma_buffer_position(sb_card);

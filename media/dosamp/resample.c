@@ -47,6 +47,7 @@
 
 /* resample state */
 unsigned char                               resample_on = 0;
+struct resampler_state_t                    resample_state;
 
 void resampler_state_reset(struct resampler_state_t *r) {
     r->init = 0;
