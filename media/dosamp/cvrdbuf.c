@@ -43,7 +43,7 @@
 #include "cvrdbuf.h"
 #include "cvip.h"
 
-// if enabled, the buffer is 256 bytes larger on either end to help detect buffer overruns
+// if enabled, the buffer is 256 bytes larger (128 on either end) to help detect buffer overruns
 //#define BOUNDS_CHECK
 
 #ifdef BOUNDS_CHECK
