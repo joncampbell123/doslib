@@ -111,6 +111,14 @@ void wav_state_init(void) {
     memset(&wav_state,0,sizeof(wav_state));
 }
 
+void wav_reset_state(void) {
+    wav_state.play_counter_prev = 0;
+    wav_state.write_counter = 0;
+    wav_state.play_counter = 0;
+    wav_state.play_delay = 0;
+    wav_state.play_empty = 1;
+}
+
 /* WAV file data chunk info */
 static unsigned long                    wav_data_offset = 44;
 static unsigned long                    wav_data_length_bytes = 0;
@@ -1061,11 +1069,7 @@ static int begin_play() {
     resampler_state_reset(&resample_state);
     convert_rdbuf_clear();
     wav_rebase_clear();
-    wav_state.play_counter_prev = 0;
-    wav_state.write_counter = 0;
-    wav_state.play_counter = 0;
-    wav_state.play_delay = 0;
-    wav_state.play_empty = 1;
+    wav_reset_state();
 
     /* get the file pointer ready */
     wav_position_to_file_pointer();
