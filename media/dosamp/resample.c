@@ -50,12 +50,11 @@ unsigned char                               resample_on = 0;
 struct resampler_state_t                    resample_state;
 
 void resampler_state_reset(struct resampler_state_t *r) {
+    register unsigned int i;
+
     r->frac = 0;
     r->init = 0;
-    r->p[0] = 0;
-    r->p[1] = 0;
-    r->c[0] = 0;
-    r->c[1] = 0;
+    for (i=0;i < resample_max_channels;i++) r->p[i] = r->c[i] = r->f[i] = 0;
 }
 
 int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
