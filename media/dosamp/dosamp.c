@@ -165,6 +165,12 @@ void soundcard_irq_callback(void) {
 }
 
 static void interrupt soundcard_irq_handler() {
+    /* assume:
+     *  - this IRQ handler will not be called UNLESS the IRQ has been hooked.
+     *  - this IRQ will not be hooked unless the sound card has a valid IRQ.
+     *  - this IRQ handler will not be called unless irq_number has been filled in.
+     *  - old_handler contains the prior IRQ handler.
+     *  - chain_irq has been filled in */
     soundcard_irq_callback();
 
     if (soundcard_irq.chain_irq) {
