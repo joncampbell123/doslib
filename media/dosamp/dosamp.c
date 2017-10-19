@@ -479,7 +479,6 @@ unsigned char dosamp_FAR * convert_rdbuf_get(uint32_t *sz) {
 void convert_rdbuf_clear(void) {
     convert_rdbuf.len = 0;
     convert_rdbuf.pos = 0;
-    resampler_state_reset(&resample_state);
 }
 
 void card_poll(void) {
@@ -1321,6 +1320,7 @@ static int begin_play() {
         return -1;
 
     /* reset state */
+    resampler_state_reset(&resample_state);
     convert_rdbuf_clear();
     wav_rebase_clear();
     wav_state.play_counter_prev = 0;
