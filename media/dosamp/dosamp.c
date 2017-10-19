@@ -138,7 +138,7 @@ void update_wav_dma_position(void) {
 unsigned char               old_irq_masked = 0;
 static void                 (interrupt *old_irq)() = NULL;
 
-static void interrupt sb_irq() {
+void soundcard_irq_callback(void) {
     unsigned char c;
 
     sb_card->irq_counter++;
@@ -155,6 +155,10 @@ static void interrupt sb_irq() {
        send_buffer_again() if it knows playback has not started! */
     /* for non-auto-init modes, start another buffer */
     if (wav_state.playing) sndsb_irq_continue(sb_card,c);
+}
+
+static void interrupt sb_irq() {
+    soundcard_irq_callback();
 
     /* NTS: we assume that if the IRQ was masked when we took it, that we must not
      *      chain to the previous IRQ handler. This is very important considering
