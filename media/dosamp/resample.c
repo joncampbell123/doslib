@@ -54,7 +54,6 @@ void resampler_state_reset(struct resampler_state_t *r) {
 
     r->frac = 0;
     r->init = 0;
-    for (i=0;i < resample_max_channels;i++) r->p[i] = r->c[i] = r->f[i] = 0;
 }
 
 int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
@@ -92,6 +91,26 @@ int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const 
             if (m > 256UL) m = 256UL;
             else if (m < 1UL) m = 1UL;
             r->f_best = (uint8_t)(m - 1UL);
+        }
+    }
+
+    {
+        register unsigned int i;
+        int16_t init;
+        int32_t i32;
+
+        if (d->bits_per_sample == 8) {
+            init = 0x80;
+            i32 = 0x80 << 8L;
+        }
+        else {
+            init = 0x8000;
+            i32 = 0;
+        }
+
+        for (i=0;i < resample_max_channels;i++) {
+            r->p[i] = r->c[i] = init;
+            r->f[i] = i32;
         }
     }
 
