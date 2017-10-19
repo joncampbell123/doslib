@@ -658,6 +658,9 @@ static void wav_idle() {
     if (!wav_state.playing || wav_source == NULL)
         return;
 
+    /* debug */
+    convert_rdbuf_check();
+
     /* update card state */
     card_poll();
 
@@ -1685,6 +1688,8 @@ int main(int argc,char **argv) {
             }
         }
     }
+
+    convert_rdbuf_check();
 
     _sti();
     stop_play();

@@ -9,6 +9,7 @@ struct convert_rdbuf_t {
 extern struct convert_rdbuf_t           convert_rdbuf;
 
 unsigned char dosamp_FAR * convert_rdbuf_get(uint32_t *sz);
+void convert_rdbuf_check(void);
 void convert_rdbuf_clear(void);
 void convert_rdbuf_free(void);
 
