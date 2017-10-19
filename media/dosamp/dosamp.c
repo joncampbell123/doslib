@@ -40,6 +40,7 @@
 #include "dosptrnm.h"
 #include "filesrc.h"
 #include "resample.h"
+#include "cvrdbuf.h"
 #include "cvip.h"
 
 /*====================Sound Blaster Specific=======================*/
@@ -83,6 +84,9 @@ static struct dma_8237_allocation*              isa_dma = NULL;
 /* chosen file to play */
 static dosamp_file_source_t                     wav_source = NULL;
 static char*                                    wav_file = NULL;
+
+/* convert/read buffer */
+struct convert_rdbuf_t                          convert_rdbuf = {NULL,0,0,0};
 
 struct wav_cbr_t {
     uint32_t                            sample_rate;
@@ -301,28 +305,6 @@ int wav_rewind(void) {
     return 0;
 }
 
-struct convert_rdbuf_t {
-    unsigned char dosamp_FAR *          buffer; // pointer to base
-    unsigned int                        size;   // size in bytes (16-bit builds will not exceed 64KN)
-    unsigned int                        len;    // length of actual data
-    unsigned int                        pos;    // read position of data
-};
-
-struct convert_rdbuf_t                  convert_rdbuf = {NULL,0,0,0};
-
-void convert_rdbuf_free(void) {
-    if (convert_rdbuf.buffer != NULL) {
-#if TARGET_MSDOS == 32
-        free(convert_rdbuf.buffer);
-#else
-        _ffree(convert_rdbuf.buffer);
-#endif
-        convert_rdbuf.buffer = NULL;
-        convert_rdbuf.len = 0;
-        convert_rdbuf.pos = 0;
-    }
-}
-
 int wav_file_pointer_to_position(void) {
     if (wav_source->file_pos >= wav_data_offset) {
         wav_position  = wav_source->file_pos - wav_data_offset;
@@ -442,7 +424,6 @@ void tmpbuffer_free(void) {
 #endif
         tmpbuffer = NULL;
     }
-    convert_rdbuf_free();
 }
 
 unsigned char dosamp_FAR * tmpbuffer_get(uint32_t *sz) {
@@ -456,29 +437,6 @@ unsigned char dosamp_FAR * tmpbuffer_get(uint32_t *sz) {
 
     if (sz != NULL) *sz = tmpbuffer_sz;
     return tmpbuffer;
-}
-
-unsigned char dosamp_FAR * convert_rdbuf_get(uint32_t *sz) {
-    if (convert_rdbuf.buffer == NULL) {
-        if (convert_rdbuf.size == 0)
-            convert_rdbuf.size = 4096;
-
-#if TARGET_MSDOS == 32
-        convert_rdbuf.buffer = malloc(convert_rdbuf.size);
-#else
-        convert_rdbuf.buffer = _fmalloc(convert_rdbuf.size);
-#endif
-        convert_rdbuf.len = 0;
-        convert_rdbuf.pos = 0;
-    }
-
-    if (sz != NULL) *sz = convert_rdbuf.size;
-    return convert_rdbuf.buffer;
-}
-
-void convert_rdbuf_clear(void) {
-    convert_rdbuf.len = 0;
-    convert_rdbuf.pos = 0;
 }
 
 void card_poll(void) {
@@ -1927,6 +1885,7 @@ int main(int argc,char **argv) {
     stop_play();
     close_wav();
     tmpbuffer_free();
+    convert_rdbuf_free();
 
     free_sound_blaster_support();
 
