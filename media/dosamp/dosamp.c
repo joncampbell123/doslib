@@ -579,176 +579,31 @@ int convert_rdbuf_fill(void) {
 #endif
 
 uint32_t convert_rdbuf_resample_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples) {
-    uint8_t dosamp_FAR *src = dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
-    uint32_t r = 0;
-
-    if (resample_state.counter == 0) {
-        if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
-        resample_state.p[0] = *src;
-        convert_rdbuf_pos++;
-        resample_state.counter++;
-        src++;
-    }
-    if (resample_state.counter == 1) {
-        if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
-        resample_state.c[0] = *src;
-        convert_rdbuf_pos++;
-        resample_state.counter++;
-        src++;
-    }
-
-    while (samples > 0) {
-        if (resample_state.frac >= resample_100) {
-            if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
-            resample_state.frac -= resample_100;
-            resample_state.p[0] = resample_state.c[0];
-            resample_state.c[0] = *src;
-            convert_rdbuf_pos++;
-            src++;
-        }
-        else {
-            *dst++ = (uint8_t)resample_interpolate8(0);
-            samples--;
-            r++;
-
-            resample_state.frac += resample_state.step;
-        }
-    }
-
-    return r;
+#define resample_interpolate_func resample_interpolate8
+#define sample_type_t uint8_t
+#define sample_channels 1
+#include "rsrdbtm.h"
 }
 
 uint32_t convert_rdbuf_resample_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t samples) {
-    uint8_t dosamp_FAR *src = dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
-    uint32_t r = 0;
-
-    if (resample_state.counter == 0) {
-        if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-        resample_state.p[0] = src[0];
-        resample_state.p[1] = src[1];
-        convert_rdbuf_pos += 2;
-        resample_state.counter++;
-        src += 2;
-    }
-    if (resample_state.counter == 1) {
-        if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-        resample_state.c[0] = src[0];
-        resample_state.c[1] = src[1];
-        convert_rdbuf_pos += 2;
-        resample_state.counter++;
-        src += 2;
-    }
-
-    while (samples > 0) {
-        if (resample_state.frac >= resample_100) {
-            if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-            resample_state.frac -= resample_100;
-            resample_state.p[0] = resample_state.c[0];
-            resample_state.p[1] = resample_state.c[1];
-            resample_state.c[0] = src[0];
-            resample_state.c[1] = src[1];
-            convert_rdbuf_pos += 2;
-            src += 2;
-        }
-        else {
-            *dst++ = (uint8_t)resample_interpolate8(0);
-            *dst++ = (uint8_t)resample_interpolate8(1);
-
-            samples--;
-            r++;
-
-            resample_state.frac += resample_state.step;
-        }
-    }
-
-    return r;
+#define resample_interpolate_func resample_interpolate8
+#define sample_type_t uint8_t
+#define sample_channels 2
+#include "rsrdbtm.h"
 }
 
 uint32_t convert_rdbuf_resample_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samples) {
-    int16_t dosamp_FAR *src = (int16_t dosamp_FAR *)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
-    uint32_t r = 0;
-
-    if (resample_state.counter == 0) {
-        if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-        resample_state.p[0] = *src;
-        convert_rdbuf_pos += 2;
-        resample_state.counter++;
-        src++;
-    }
-    if (resample_state.counter == 1) {
-        if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-        resample_state.c[0] = *src;
-        convert_rdbuf_pos += 2;
-        resample_state.counter++;
-        src++;
-    }
-
-    while (samples > 0) {
-        if (resample_state.frac >= resample_100) {
-            if (convert_rdbuf_pos >= convert_rdbuf_len) return r;
-            resample_state.frac -= resample_100;
-            resample_state.p[0] = resample_state.c[0];
-            resample_state.c[0] = *src;
-            convert_rdbuf_pos += 2;
-            src++;
-        }
-        else {
-            *dst++ = (int16_t)resample_interpolate16(0);
-
-            samples--;
-            r++;
-
-            resample_state.frac += resample_state.step;
-        }
-    }
-
-    return r;
+#define resample_interpolate_func resample_interpolate16
+#define sample_type_t int16_t
+#define sample_channels 1
+#include "rsrdbtm.h"
 }
 
 uint32_t convert_rdbuf_resample_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t samples) {
-    int16_t dosamp_FAR *src = (int16_t dosamp_FAR *)dosamp_ptr_add_normalize(convert_rdbuf,convert_rdbuf_pos);
-    uint32_t r = 0;
-
-    if (resample_state.counter == 0) {
-        if ((convert_rdbuf_pos+4UL) > convert_rdbuf_len) return r;
-        resample_state.p[0] = src[0];
-        resample_state.p[1] = src[1];
-        convert_rdbuf_pos += 4;
-        resample_state.counter++;
-        src += 2;
-    }
-    if (resample_state.counter == 1) {
-        if ((convert_rdbuf_pos+4UL) > convert_rdbuf_len) return r;
-        resample_state.c[0] = src[0];
-        resample_state.c[1] = src[1];
-        convert_rdbuf_pos += 4;
-        resample_state.counter++;
-        src += 2;
-    }
-
-    while (samples > 0) {
-        if (resample_state.frac >= resample_100) {
-            if ((convert_rdbuf_pos+2UL) > convert_rdbuf_len) return r;
-            resample_state.frac -= resample_100;
-            resample_state.p[0] = resample_state.c[0];
-            resample_state.p[1] = resample_state.c[1];
-            resample_state.c[0] = src[0];
-            resample_state.c[1] = src[1];
-            convert_rdbuf_pos += 4;
-            src += 2;
-        }
-        else {
-            *dst++ = (int16_t)resample_interpolate16(0);
-            *dst++ = (int16_t)resample_interpolate16(1);
-
-            samples--;
-            r++;
-
-            resample_state.frac += resample_state.step;
-        }
-    }
-
-    return r;
+#define resample_interpolate_func resample_interpolate16
+#define sample_type_t int16_t
+#define sample_channels 2
+#include "rsrdbtm.h"
 }
 
 static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
