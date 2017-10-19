@@ -52,30 +52,62 @@
 #endif
 
 uint32_t convert_rdbuf_resample_best_to_8_mono(uint8_t dosamp_FAR *dst,uint32_t samples) {
+    if (resample_state.step > resample_100) {
+#define resample_interpolate_func resample_interpolate8
+#define sample_type_t uint8_t
+#define sample_channels 1
+#include "rsrdbt2b.h"
+    }
+    else {
 #define resample_interpolate_func resample_interpolate8
 #define sample_type_t uint8_t
 #define sample_channels 1
 #include "rsrdbtmb.h"
+    }
 }
 
 uint32_t convert_rdbuf_resample_best_to_8_stereo(uint8_t dosamp_FAR *dst,uint32_t samples) {
+    if (resample_state.step > resample_100) {
+#define resample_interpolate_func resample_interpolate8
+#define sample_type_t uint8_t
+#define sample_channels 2
+#include "rsrdbt2b.h"
+    }
+    else {
 #define resample_interpolate_func resample_interpolate8
 #define sample_type_t uint8_t
 #define sample_channels 2
 #include "rsrdbtmb.h"
+    }
 }
 
 uint32_t convert_rdbuf_resample_best_to_16_mono(int16_t dosamp_FAR *dst,uint32_t samples) {
+    if (resample_state.step > resample_100) {
+#define resample_interpolate_func resample_interpolate16
+#define sample_type_t int16_t
+#define sample_channels 1
+#include "rsrdbt2b.h"
+    }
+    else {
 #define resample_interpolate_func resample_interpolate16
 #define sample_type_t int16_t
 #define sample_channels 1
 #include "rsrdbtmb.h"
+    }
 }
 
 uint32_t convert_rdbuf_resample_best_to_16_stereo(int16_t dosamp_FAR *dst,uint32_t samples) {
+    if (resample_state.step > resample_100) {
+#define resample_interpolate_func resample_interpolate16
+#define sample_type_t int16_t
+#define sample_channels 2
+#include "rsrdbt2b.h"
+    }
+    else {
 #define resample_interpolate_func resample_interpolate16
 #define sample_type_t int16_t
 #define sample_channels 2
 #include "rsrdbtmb.h"
+    }
 }
 

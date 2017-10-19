@@ -50,8 +50,6 @@ unsigned char                               resample_on = 0;
 struct resampler_state_t                    resample_state;
 
 void resampler_state_reset(struct resampler_state_t *r) {
-    register unsigned int i;
-
     r->frac = 0;
     r->init = 0;
 }
@@ -87,10 +85,15 @@ int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const 
         resample_on = 1;
 
         if (r->resample_mode == resample_best) {
-            unsigned long m = ((unsigned long)s->sample_rate << 8UL) / (unsigned long)d->sample_rate; /* 8.8 fixed pt */
-            if (m > 256UL) m = 256UL;
-            else if (m < 1UL) m = 1UL;
-            r->f_best = (uint8_t)(m - 1UL);
+            unsigned long m;
+
+            if (d->sample_rate >= s->sample_rate)
+                m = ((unsigned long)s->sample_rate << 8UL) / (unsigned long)d->sample_rate; /* 8.8 fixed pt upsampling */
+            else
+                m = ((unsigned long)d->sample_rate << 8UL) / ((unsigned long)s->sample_rate * 2UL); /* 8.8 fixed pt downsampling */
+
+            if (m > 255UL) m = 255UL;
+            r->f_best = (uint8_t)m;
         }
     }
 
@@ -104,7 +107,7 @@ int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const 
             i32 = 0x80 << 8L;
         }
         else {
-            init = 0x8000;
+            init = (int16_t)0x8000U;
             i32 = 0;
         }
 
