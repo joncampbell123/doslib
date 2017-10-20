@@ -104,6 +104,7 @@ struct soundcard {
     uint32_t                                    (dosamp_FAR *can_write)(soundcard_t sc); /* in bytes */
     int                                         (dosamp_FAR *clamp_if_behind)(soundcard_t sc,uint32_t ahead_in_bytes);
     int                                         (dosamp_FAR *irq_callback)(soundcard_t sc);
+    unsigned int                                (dosamp_FAR *write)(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len);
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
@@ -249,7 +250,7 @@ static unsigned char dosamp_FAR * soundblaster_mmap_write(soundcard_t sc,uint32_
 }
 
 /* non-mmap write (much like OSS or ALSA in Linux where you do not have direct access to the hardware buffer) */
-static unsigned int soundblaster_buffer_write(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len) {
+static unsigned int dosamp_FAR soundblaster_buffer_write(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
     unsigned char dosamp_FAR * dst;
     unsigned int r = 0;
@@ -585,6 +586,7 @@ struct soundcard soundblaster_soundcard_template = {
     .poll =                                     soundblaster_poll,
     .clamp_if_behind =                          soundblaster_clamp_if_behind,
     .irq_callback =                             soundblaster_irq_callback,
+    .write =                                    soundblaster_buffer_write,
     .p.soundblaster.index =                     -1
 };
 
@@ -814,7 +816,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
             if (dop == 0)
                 break;
 
-            if (soundblaster_buffer_write(soundcard,dosamp_ptr_add_normalize(convert_rdbuf.buffer,convert_rdbuf.pos),dop) != dop)
+            if (soundcard->write(soundcard,dosamp_ptr_add_normalize(convert_rdbuf.buffer,convert_rdbuf.pos),dop) != dop)
                 break;
 
             convert_rdbuf.pos += dop;
@@ -873,7 +875,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
 
             if (dop != 0) {
                 dop *= play_codec.bytes_per_block;
-                if (soundblaster_buffer_write(soundcard,ptr,dop) != dop)
+                if (soundcard->write(soundcard,ptr,dop) != dop)
                     break;
 
                 howmuch -= dop;
@@ -947,7 +949,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
 
         /* non-mmap write: send temp buffer to sound card */
         if (!use_mmap_write) {
-            if (soundblaster_buffer_write(soundcard,ptr,towrite) != towrite)
+            if (soundcard->write(soundcard,ptr,towrite) != towrite)
                 break;
         }
 
