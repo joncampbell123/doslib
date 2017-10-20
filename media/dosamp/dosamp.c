@@ -93,18 +93,6 @@ struct convert_rdbuf_t                          convert_rdbuf = {NULL,0,0,0};
 struct wav_cbr_t                                file_codec;
 struct wav_cbr_t                                play_codec;
 
-struct wav_state_t {
-    uint32_t                                    dma_position;
-    uint32_t                                    play_delay_bytes;/* in bytes. delay from wav_position to where sound card is playing now. */
-    uint32_t                                    play_delay;/* in samples. delay from wav_position to where sound card is playing now. */
-    uint64_t                                    write_counter;
-    uint64_t                                    play_counter;
-    uint64_t                                    play_counter_prev;
-    unsigned int                                play_empty:1;
-    unsigned int                                prepared:1;
-    unsigned int                                playing:1;
-};
-
 struct wav_state_t                              wav_state;
 
 void wav_state_init(void) {
