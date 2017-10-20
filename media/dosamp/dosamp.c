@@ -113,7 +113,7 @@ struct soundcard {
     int                                         (dosamp_FAR *irq_callback)(soundcard_t sc);
     unsigned int                                (dosamp_FAR *write)(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len);
     unsigned char dosamp_FAR *                  (dosamp_FAR *mmap_write)(soundcard_t sc,uint32_t dosamp_FAR * const howmuch,uint32_t want);
-    int                                         (dosamp_FAR *ioctl)(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len);
+    int                                         (dosamp_FAR *ioctl)(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival);
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
@@ -596,15 +596,14 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t * const 
     return 0;
 }
 
-static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len) {
+static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival) {
     switch (cmd) {
         case soundcard_ioctl_silence_buffer:
             return soundblaster_silence_buffer(sc);
         case soundcard_ioctl_get_autoinit:
             return soundblaster_get_autoinit(sc);
         case soundcard_ioctl_set_autoinit:
-            if (len == NULL || data == NULL || *len < 1) return -1;
-            return soundblaster_set_autoinit(sc,*((uint8_t dosamp_FAR*)data));
+            return soundblaster_set_autoinit(sc,(uint8_t)(ival > 0 ? 1 : 0));
     }
 
     return -1;
@@ -1274,7 +1273,7 @@ static int begin_play() {
         goto error_out;
 
     /* zero the buffer */
-    soundcard->ioctl(soundcard,soundcard_ioctl_silence_buffer,NULL,NULL);
+    soundcard->ioctl(soundcard,soundcard_ioctl_silence_buffer,NULL,NULL,0);
 
     /* set IRQ interval (card will pick closest and sanitize it) */
     soundblaster_set_irq_interval(soundcard,soundblaster_play_buffer_size(soundcard));
@@ -1755,13 +1754,10 @@ int main(int argc,char **argv) {
 
                     if (wp) stop_play();
 
-                    r = soundcard->ioctl(soundcard,soundcard_ioctl_get_autoinit,NULL,NULL);
+                    r = soundcard->ioctl(soundcard,soundcard_ioctl_get_autoinit,NULL,NULL,0);
                     if (r >= 0) {
-                        uint8_t nb = !r;
-                        unsigned int sz = sizeof(nb);
-
-                        if (soundcard->ioctl(soundcard,soundcard_ioctl_set_autoinit,(void dosamp_FAR *)(&nb),&sz) >= 0)
-                            printf("%sabled auto-init\n",nb ? "En" : "Dis");
+                        if (soundcard->ioctl(soundcard,soundcard_ioctl_set_autoinit,NULL,NULL,!r) >= 0)
+                            printf("%sabled auto-init\n",!r ? "En" : "Dis");
                         else
                             printf("Unable to change auto-init\n");
                     }
