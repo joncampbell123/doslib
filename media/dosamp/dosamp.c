@@ -109,6 +109,8 @@ struct soundcard {
     enum soundcard_drv_t                        driver;
     uint16_t                                    capabilities;
     uint16_t                                    requirements;
+    int                                         (dosamp_FAR *open)(soundcard_t sc);
+    int                                         (dosamp_FAR *close)(soundcard_t sc);
     int                                         (dosamp_FAR *poll)(soundcard_t sc);
     uint32_t                                    (dosamp_FAR *can_write)(soundcard_t sc); /* in bytes */
     int                                         (dosamp_FAR *clamp_if_behind)(soundcard_t sc,uint32_t ahead_in_bytes);
@@ -308,6 +310,27 @@ static unsigned int dosamp_FAR soundblaster_buffer_write(soundcard_t sc,const un
     return r;
 }
 
+static int dosamp_FAR soundblaster_open(soundcard_t sc) {
+    if (sc->wav_state.is_open) return -1; /* already open! */
+
+    {
+        struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+        if (card == NULL) return -1; /* no such card */
+    }
+
+    sc->wav_state.is_open = 1;
+    return 0;
+}
+
+static int dosamp_FAR soundblaster_close(soundcard_t sc) {
+    if (sc->wav_state.is_open) {
+        sc->wav_state.is_open = 0;
+    }
+
+    return 0;
+}
+
 static int dosamp_FAR soundblaster_poll(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
@@ -391,6 +414,10 @@ static int soundblaster_prepare_play(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
     if (card == NULL) return -1;
+
+    /* must be open */
+    if (!sc->wav_state.is_open)
+        return -1;
 
     if (sc->wav_state.prepared)
         return 0;
@@ -576,6 +603,9 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
 
     if (card == NULL) return -1;
 
+    /* must be open */
+    if (!sc->wav_state.is_open) return -1;
+
     /* not while prepared or playing!
      * assume: playing is not set unless prepared */
     if (sc->wav_state.prepared) return -1;
@@ -745,6 +775,8 @@ struct soundcard soundblaster_soundcard_template = {
     .capabilities =                             0,
     .requirements =                             0,
     .can_write =                                soundblaster_can_write,
+    .open =                                     soundblaster_open,
+    .close =                                    soundblaster_close,
     .poll =                                     soundblaster_poll,
     .clamp_if_behind =                          soundblaster_clamp_if_behind,
     .irq_callback =                             soundblaster_irq_callback,
@@ -1912,7 +1944,9 @@ int main(int argc,char **argv) {
     }
 
     loop = 1;
-    if (open_wav() < 0)
+    if (soundcard->open(soundcard) < 0)
+        printf("Failed to open soundcard\n");
+    else if (open_wav() < 0)
         printf("Failed to open file\n");
     else if (begin_play() < 0)
         printf("Failed to start playback\n");
@@ -2069,6 +2103,7 @@ int main(int argc,char **argv) {
     close_wav();
     tmpbuffer_free();
     convert_rdbuf_free();
+    soundcard->close(soundcard);
 
     free_sound_blaster_support();
 
