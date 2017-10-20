@@ -126,24 +126,44 @@ struct soundcard {
     } p;
 };
 
+/* open: allocate resources for playback or recording.
+ *
+ * close: free resources for playback and recording.
+ *
+ * poll: update internal/external state of the sound card
+ *
+ * can_write: return in bytes how much data can be written to the sound card without blocking
+ *
+ * clamp_if_behind: check play pointer vs write pointer. if the play pointer passed the write pointer (underrun) then advance write pointer
+ *                  so that next written audio occurs at the play pointer plus an offset provided by the caller.
+ *
+ * irq_callback: call this method from your IRQ handler
+ *
+ * write: write audio data. copy data from caller's buffer into the sound card's playback buffers.
+ *
+ * mmap_write: write audio data. if supported, returns a pointer within sound card's playback buffer and size that caller MUST write to fill
+ *             in buffer. advances write pointer. the byte count returned in *howmuch MUST be filled in by that many bytes.
+ *
+ * ioctl: general entry point for minor functions. */
+
 /* ioctls */
-#define soundcard_ioctl_silence_buffer                      0x5B00U
-#define soundcard_ioctl_get_irq                             0x5B10U
-#define soundcard_ioctl_set_irq_interval                    0x5B11U
-#define soundcard_ioctl_read_irq_counter                    0x5B12U
-#define soundcard_ioctl_isa_dma_assign_buffer               0x5B1AU
-#define soundcard_ioctl_isa_dma_channel                     0x5B1DU
-#define soundcard_ioctl_isa_dma_recommended_buffer_size     0x5B1EU
-#define soundcard_ioctl_get_autoinit                        0x5BA1U
-#define soundcard_ioctl_set_autoinit                        0x5BA2U
-#define soundcard_ioctl_prepare_play                        0x5B40U
-#define soundcard_ioctl_unprepare_play                      0x5B41U
-#define soundcard_ioctl_start_play                          0x5B42U
-#define soundcard_ioctl_stop_play                           0x5B43U
-#define soundcard_ioctl_get_buffer_size                     0x5BB0U
-#define soundcard_ioctl_get_buffer_write_position           0x5BB1U
-#define soundcard_ioctl_get_buffer_play_position            0x5BB2U
-#define soundcard_ioctl_set_play_format                     0x5BF0U
+#define soundcard_ioctl_silence_buffer                      0x5B00U /* fill buffer with silence */
+#define soundcard_ioctl_get_irq                             0x5B10U /* return IRQ used by sound card, or -1 if not supported */
+#define soundcard_ioctl_set_irq_interval                    0x5B11U /* set IRQ interval, if IRQ supported */
+#define soundcard_ioctl_read_irq_counter                    0x5B12U /* read IRQ counter, if IRQ supported */
+#define soundcard_ioctl_isa_dma_assign_buffer               0x5B1AU /* assign DMA buffer to sound card, if ISA DMA is supported */
+#define soundcard_ioctl_isa_dma_channel                     0x5B1DU /* get DMA channel sound card will use, if ISA DMA supported, else -1 */
+#define soundcard_ioctl_isa_dma_recommended_buffer_size     0x5B1EU /* specify buffer size limit, and return recomended ISA DMA buffer size, else -1 */
+#define soundcard_ioctl_get_autoinit                        0x5BA1U /* get flag indicating whether sound card will use auto-init playback method */
+#define soundcard_ioctl_set_autoinit                        0x5BA2U /* set flag indicating whether sound card will use auto-init playback method */
+#define soundcard_ioctl_prepare_play                        0x5B40U /* prepare card for playback */
+#define soundcard_ioctl_unprepare_play                      0x5B41U /* undo preparation for playback */
+#define soundcard_ioctl_start_play                          0x5B42U /* start playback */
+#define soundcard_ioctl_stop_play                           0x5B43U /* stop playback */
+#define soundcard_ioctl_get_buffer_size                     0x5BB0U /* get playback buffer size */
+#define soundcard_ioctl_get_buffer_write_position           0x5BB1U /* get write position within buffer */
+#define soundcard_ioctl_get_buffer_play_position            0x5BB2U /* get play position within buffer (e.g. ISA DMA pointer) */
+#define soundcard_ioctl_set_play_format                     0x5BF0U /* set play format. specify wav_cbr_t which will be modifed to supported format, or -1 if not support */
 
 /* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
