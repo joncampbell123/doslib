@@ -1337,20 +1337,12 @@ static int begin_play() {
     if (wav_state.playing)
         return 0;
 
-    if (wav_source == NULL)
-        return -1;
-
     /* reset state */
-    resampler_state_reset(&resample_state);
     convert_rdbuf_clear();
     wav_rebase_clear();
-    wav_reset_state(&wav_state);
 
-    /* get the file pointer ready */
-    wav_position_to_file_pointer();
-
-    /* make a rebase event */
-    wav_rebase_position_event();
+    if (wav_source == NULL)
+        return -1;
 
     /* choose output vs input */
     if (set_play_format(&play_codec,&file_codec) < 0)
@@ -1407,7 +1399,13 @@ static int begin_play() {
     if (soundcard->ioctl(soundcard,soundcard_ioctl_prepare_play,NULL,NULL,0) < 0)
         goto error_out;
 
+    /* prepare */
+    resampler_state_reset(&resample_state);
+    wav_reset_state(&wav_state);
+
     /* preroll */
+    wav_position_to_file_pointer();
+    wav_rebase_position_event();
     load_audio(wav_play_load_block_size);
     update_play_position();
 
