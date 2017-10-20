@@ -101,6 +101,8 @@ typedef struct soundcard dosamp_FAR * dosamp_FAR * soundcard_ptr_t;
 #define soundcard_caps_mono                     (1U << 2U)
 #define soundcard_caps_sterep                   (1U << 3U)
 #define soundcard_caps_mmap_write               (1U << 4U)
+#define soundcard_caps_irq                      (1U << 5U)      /* uses/can use an IRQ */
+#define soundcard_caps_isa_dma                  (1U << 6U)      /* uses/can use ISA DMA */
 
 #define soundcard_requirements_isa_dma          (1U << 0U)      /* requires ISA DMA */
 #define soundcard_requirements_irq              (1U << 1U)      /* requires IRQ */
@@ -1378,7 +1380,8 @@ static int realloc_isa_dma_buffer() {
 }
 
 int check_dma_buffer(void) {
-    if (soundcard->requirements & soundcard_requirements_isa_dma) {
+    if ((soundcard->requirements & soundcard_requirements_isa_dma) ||
+        (soundcard->capabilities & soundcard_caps_isa_dma)) {
         int8_t ch;
 
         /* alloc DMA buffer.
@@ -1479,7 +1482,8 @@ static int begin_play() {
     }
 
     /* hook IRQ */
-    if (soundcard->requirements & soundcard_requirements_irq) {
+    if ((soundcard->requirements & soundcard_requirements_irq) ||
+        (soundcard->capabilities & soundcard_caps_irq)) {
         int irq = soundcard->ioctl(soundcard,soundcard_ioctl_get_irq,NULL,NULL,0);
         if (irq >= 0) {
             if (hook_irq(irq,soundcard_irq_handler) < 0)
@@ -1936,8 +1940,11 @@ int main(int argc,char **argv) {
 
             /* FIXME */
             soundblaster_soundcard_template.requirements = soundcard_requirements_isa_dma;
-            if (cx->irq >= 0) soundblaster_soundcard_template.requirements |= soundcard_requirements_irq;
-            soundblaster_soundcard_template.capabilities = soundcard_caps_mmap_write | soundcard_caps_8bit/*FIXME*/;
+            soundblaster_soundcard_template.capabilities = soundcard_caps_mmap_write | soundcard_caps_8bit/*FIXME*/ | soundcard_caps_isa_dma;
+            if (cx->irq >= 0) {
+                soundblaster_soundcard_template.requirements |= soundcard_requirements_irq;
+                soundblaster_soundcard_template.capabilities |= soundcard_caps_irq;
+            }
             soundblaster_soundcard_template.p.soundblaster.index = sc_idx - 1;
             soundcard = &soundblaster_soundcard_template;
         }
