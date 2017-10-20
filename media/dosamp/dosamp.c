@@ -121,6 +121,8 @@ struct soundcard {
 
 /* ioctls */
 #define soundcard_ioctl_silence_buffer                      0x5B00U
+#define soundcard_ioctl_get_irq                             0x5B10U
+#define soundcard_ioctl_set_irq_interval                    0x5B11U
 #define soundcard_ioctl_isa_dma_assign_buffer               0x5B1AU
 #define soundcard_ioctl_isa_dma_channel                     0x5B1DU
 #define soundcard_ioctl_isa_dma_recommended_buffer_size     0x5B1EU
@@ -131,7 +133,6 @@ struct soundcard {
 #define soundcard_ioctl_start_play                          0x5B42U
 #define soundcard_ioctl_stop_play                           0x5B43U
 #define soundcard_ioctl_get_buffer_size                     0x5BB0U
-#define soundcard_ioctl_set_irq_interval                    0x5B11U
 #define soundcard_ioctl_set_play_format                     0x5BF0U
 
 /* private */
@@ -607,8 +608,18 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
     return 0;
 }
 
+static int soundblaster_get_irq(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    return card->irq;
+}
+
 static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival) {
     switch (cmd) {
+        case soundcard_ioctl_get_irq:
+            return soundblaster_get_irq(sc);
         case soundcard_ioctl_set_play_format:
             if (data == NULL || len == 0) return -1;
             if (*len < sizeof(struct wav_cbr_t)) return -1;
@@ -1386,9 +1397,12 @@ static int begin_play() {
         wav_play_load_block_size = (sb_card->buffer_size / 2UL);
 
     /* hook IRQ */
-    if (sb_card->irq != -1) {
-        if (hook_irq(sb_card->irq,soundcard_irq_handler) < 0)
-            goto error_out;
+    {
+        int irq = soundcard->ioctl(soundcard,soundcard_ioctl_get_irq,NULL,NULL,0);
+        if (irq >= 0) {
+            if (hook_irq(irq,soundcard_irq_handler) < 0)
+                goto error_out;
+        }
     }
 
     /* unmask and reinit IRQ */
