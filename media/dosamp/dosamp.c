@@ -132,6 +132,7 @@ struct soundcard {
 #define soundcard_ioctl_stop_play                           0x5B43U
 #define soundcard_ioctl_get_buffer_size                     0x5BB0U
 #define soundcard_ioctl_set_irq_interval                    0x5B11U
+#define soundcard_ioctl_set_play_format                     0x5BF0U
 
 /* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
@@ -532,8 +533,86 @@ static int soundblaster_assign_isa_dma_buffer(soundcard_t sc,struct dma_8237_all
     return 0;
 }
 
+static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    uint32_t oph,osz;
+    int r;
+
+    if (card == NULL) return -1;
+
+    /* stereo -> mono conversion if needed (if DSP doesn't support stereo) */
+    if (fmt->number_of_channels == 2 && card->dsp_vmaj < 3) fmt->number_of_channels = 1;
+
+    /* 16-bit -> 8-bit if needed (if DSP doesn't support 16-bit) */
+    if (fmt->bits_per_sample == 16) {
+        if (card->is_gallant_sc6600 && card->dsp_vmaj >= 3) /* SC400 and DSP version 3.xx or higher: OK */
+            { }
+        else if (card->ess_extensions && card->dsp_vmaj >= 2) /* ESS688 and DSP version 2.xx or higher: OK */
+            { }
+        else if (card->dsp_vmaj >= 4) /* DSP version 4.xx or higher (SB16): OK */
+            { }
+        else
+            fmt->bits_per_sample = 8;
+    }
+
+    if (fmt->number_of_channels < 1 || fmt->number_of_channels > 2) /* SB is mono or stereo, nothing else. */
+        return -1;
+    if (fmt->bits_per_sample < 8 || fmt->bits_per_sample > 16) /* SB is 8-bit. SB16 and ESS688 is 16-bit. */
+        return -1;
+
+    /* HACK! */
+    osz = card->buffer_size; card->buffer_size = 1;
+    oph = card->buffer_phys; card->buffer_phys = 0;
+
+    /* SB specific: I know from experience and calculations that Sound Blaster cards don't go below 4000Hz */
+    if (fmt->sample_rate < 4000)
+        fmt->sample_rate = 4000;
+
+    /* we'll follow the recommendations on what is supported by the DSP. no hacks. */
+    r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
+    if (!r) {
+        /* we already made concessions for channels/bits, so try sample rate */
+        fmt->sample_rate = 44100;
+        r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
+    }
+    if (!r) {
+        /* we already made concessions for channels/bits, so try sample rate */
+        fmt->sample_rate = 22050;
+        r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
+    }
+    if (!r) {
+        /* we already made concessions for channels/bits, so try sample rate */
+        fmt->sample_rate = 11025;
+        r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
+    }
+
+    /* HACK! */
+    card->buffer_size = osz;
+    card->buffer_phys = oph;
+
+    if (!r) {
+        if (card->reason_not_supported != NULL && *(card->reason_not_supported) != 0)
+            printf("Negotiation failed (SB) even with %luHz %u-channel %u-bit:\n    %s\n",
+                fmt->sample_rate,
+                fmt->number_of_channels,
+                fmt->bits_per_sample,
+                card->reason_not_supported);
+
+        return -1;
+    }
+
+    /* PCM recalc */
+    fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
+
+    return 0;
+}
+
 static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival) {
     switch (cmd) {
+        case soundcard_ioctl_set_play_format:
+            if (data == NULL || len == 0) return -1;
+            if (*len < sizeof(struct wav_cbr_t)) return -1;
+            return soundblaster_set_play_format(sc,(struct wav_cbr_t dosamp_FAR *)data);
         case soundcard_ioctl_silence_buffer:
             return soundblaster_silence_buffer(sc);
         case soundcard_ioctl_isa_dma_channel:
@@ -1231,80 +1310,6 @@ int prepare_buffer(void) {
     return 0;
 }
 
-static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt) {
-    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
-    uint32_t oph,osz;
-    int r;
-
-    if (card == NULL) return -1;
-
-    /* stereo -> mono conversion if needed (if DSP doesn't support stereo) */
-    if (fmt->number_of_channels == 2 && card->dsp_vmaj < 3) fmt->number_of_channels = 1;
-
-    /* 16-bit -> 8-bit if needed (if DSP doesn't support 16-bit) */
-    if (fmt->bits_per_sample == 16) {
-        if (card->is_gallant_sc6600 && card->dsp_vmaj >= 3) /* SC400 and DSP version 3.xx or higher: OK */
-            { }
-        else if (card->ess_extensions && card->dsp_vmaj >= 2) /* ESS688 and DSP version 2.xx or higher: OK */
-            { }
-        else if (card->dsp_vmaj >= 4) /* DSP version 4.xx or higher (SB16): OK */
-            { }
-        else
-            fmt->bits_per_sample = 8;
-    }
-
-    if (fmt->number_of_channels < 1 || fmt->number_of_channels > 2) /* SB is mono or stereo, nothing else. */
-        return -1;
-    if (fmt->bits_per_sample < 8 || fmt->bits_per_sample > 16) /* SB is 8-bit. SB16 and ESS688 is 16-bit. */
-        return -1;
-
-    /* HACK! */
-    osz = card->buffer_size; card->buffer_size = 1;
-    oph = card->buffer_phys; card->buffer_phys = 0;
-
-    /* SB specific: I know from experience and calculations that Sound Blaster cards don't go below 4000Hz */
-    if (fmt->sample_rate < 4000)
-        fmt->sample_rate = 4000;
-
-    /* we'll follow the recommendations on what is supported by the DSP. no hacks. */
-    r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
-    if (!r) {
-        /* we already made concessions for channels/bits, so try sample rate */
-        fmt->sample_rate = 44100;
-        r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
-    }
-    if (!r) {
-        /* we already made concessions for channels/bits, so try sample rate */
-        fmt->sample_rate = 22050;
-        r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
-    }
-    if (!r) {
-        /* we already made concessions for channels/bits, so try sample rate */
-        fmt->sample_rate = 11025;
-        r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
-    }
-
-    /* HACK! */
-    card->buffer_size = osz;
-    card->buffer_phys = oph;
-
-    if (!r) {
-        if (card->reason_not_supported != NULL && *(card->reason_not_supported) != 0)
-            printf("Negotiation failed (SB) even with %luHz %u-channel %u-bit:\n    %s\n",
-                fmt->sample_rate,
-                fmt->number_of_channels,
-                fmt->bits_per_sample,
-                card->reason_not_supported);
-
-        return -1;
-    }
-
-    /* PCM recalc */
-    fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
-
-    return 0;
-}
-
 static int set_play_format(struct wav_cbr_t dosamp_FAR * const d,const struct wav_cbr_t dosamp_FAR * const s) {
     if (d == NULL || s == NULL) return -1;
     if (d == s) return -1;
@@ -1321,7 +1326,11 @@ static int set_play_format(struct wav_cbr_t dosamp_FAR * const d,const struct wa
     d->bytes_per_block = ((d->bits_per_sample+7U)/8U) * d->number_of_channels;
 
     /* call out to soundcard */
-    return soundblaster_set_play_format(soundcard,d);
+    {
+        unsigned int sz = sizeof(*d);
+
+        return soundcard->ioctl(soundcard,soundcard_ioctl_set_play_format,(void dosamp_FAR*)d,&sz,0);
+    }
 }
 
 static int begin_play() {
