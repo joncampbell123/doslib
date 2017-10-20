@@ -128,6 +128,8 @@ struct soundcard {
 #define soundcard_ioctl_set_autoinit                        0x5BA2U
 #define soundcard_ioctl_prepare_play                        0x5B40U
 #define soundcard_ioctl_unprepare_play                      0x5B41U
+#define soundcard_ioctl_get_buffer_size                     0x5BB0U
+#define soundcard_ioctl_set_irq_interval                    0x5B11U
 
 /* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
@@ -404,8 +406,6 @@ static int soundblaster_unprepare_play(soundcard_t sc) {
     return 0;
 }
 
-////////////////////// TODO
-
 static uint32_t soundblaster_play_buffer_size(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
@@ -439,6 +439,8 @@ static uint32_t soundblaster_set_irq_interval(soundcard_t sc,uint32_t x) {
     card->buffer_irq_interval = x;
     return card->buffer_irq_interval;
 }
+
+////////////////////// TODO
 
 static int soundblaster_start_playback(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
@@ -647,6 +649,20 @@ static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void do
             return soundblaster_prepare_play(sc);
         case soundcard_ioctl_unprepare_play:
             return soundblaster_unprepare_play(sc);
+        case soundcard_ioctl_get_buffer_size: {
+            if (data == NULL || len == 0) return -1;
+            if (*len < sizeof(uint32_t)) return -1;
+            if ((*((uint32_t dosamp_FAR*)data) = soundblaster_play_buffer_size(sc)) == 0) return -1;
+            } return 0;
+        case soundcard_ioctl_set_irq_interval: {
+            uint32_t dosamp_FAR *p = (uint32_t dosamp_FAR*)data;
+
+            if (data == NULL || len == 0) return -1;
+            if (*len < sizeof(uint32_t)) return -1;
+
+            *p = soundblaster_set_irq_interval(sc,*p);
+            return 0;
+        }
     }
 
     return -1;
@@ -1333,7 +1349,16 @@ static int begin_play() {
     soundcard->ioctl(soundcard,soundcard_ioctl_silence_buffer,NULL,NULL,0);
 
     /* set IRQ interval (card will pick closest and sanitize it) */
-    soundblaster_set_irq_interval(soundcard,soundblaster_play_buffer_size(soundcard));
+    {
+        unsigned int sz = sizeof(uint32_t);
+        uint32_t bufsz = 0;
+
+        if (soundcard->ioctl(soundcard,soundcard_ioctl_get_buffer_size,&bufsz,&sz,0) < 0)
+            goto error_out;
+
+        /* might fail, sound card might not have IRQs, don't care. */
+        soundcard->ioctl(soundcard,soundcard_ioctl_set_irq_interval,&bufsz,&sz,0);
+    }
 
     /* minimum buffer until loading again (100ms) */
     wav_play_min_load_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
