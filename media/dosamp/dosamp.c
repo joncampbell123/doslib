@@ -100,6 +100,7 @@ typedef struct soundcard dosamp_FAR * dosamp_FAR * soundcard_ptr_t;
 
 struct soundcard {
     enum soundcard_drv_t                        driver;
+    int                                         (dosamp_FAR *poll)(soundcard_t sc);
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
@@ -267,7 +268,7 @@ static unsigned int soundblaster_buffer_write(soundcard_t sc,const unsigned char
     return r;
 }
 
-static int soundblaster_card_poll(soundcard_t sc) {
+static int dosamp_FAR soundblaster_poll(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
     if (card == NULL) return -1;
@@ -574,6 +575,7 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t * const 
 /* TODO: This will become an array for each valid soundcard in sndsb lib */
 struct soundcard soundblaster_soundcard_template = {
     .driver =                                   soundcard_soundblaster,
+    .poll =                                     soundblaster_poll,
     .p.soundblaster.index =                     -1
 };
 
@@ -1005,7 +1007,7 @@ static void wav_idle() {
     convert_rdbuf_check();
 
     /* update card state */
-    soundblaster_card_poll(soundcard);
+    soundcard->poll(soundcard);
 
     /* load more from disk */
     if (!stuck_test) load_audio(wav_play_load_block_size);
