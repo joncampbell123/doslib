@@ -133,6 +133,7 @@ struct soundcard {
 #define soundcard_ioctl_start_play                          0x5B42U
 #define soundcard_ioctl_stop_play                           0x5B43U
 #define soundcard_ioctl_get_buffer_size                     0x5BB0U
+#define soundcard_ioctl_get_buffer_write_position           0x5BB1U
 #define soundcard_ioctl_set_play_format                     0x5BF0U
 
 /* private */
@@ -419,6 +420,14 @@ static uint32_t soundblaster_play_buffer_size(soundcard_t sc) {
     return card->buffer_size;
 }
 
+static uint32_t soundblaster_play_buffer_write_pos(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return 0;
+
+    return card->buffer_last_io;
+}
+
 static uint32_t soundblaster_set_irq_interval(soundcard_t sc,uint32_t x) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
     uint32_t t;
@@ -656,6 +665,11 @@ static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void do
             return soundblaster_start_playback(sc);
         case soundcard_ioctl_stop_play:
             return soundblaster_stop_playback(sc);
+        case soundcard_ioctl_get_buffer_write_position: {
+            if (data == NULL || len == 0) return -1;
+            if (*len < sizeof(uint32_t)) return -1;
+            if ((*((uint32_t dosamp_FAR*)data) = soundblaster_play_buffer_write_pos(sc)) == 0) return -1;
+            } return 0;
         case soundcard_ioctl_get_buffer_size: {
             if (data == NULL || len == 0) return -1;
             if (*len < sizeof(uint32_t)) return -1;
@@ -1580,9 +1594,9 @@ void display_idle_time(void) {
 }
 
 void display_idle_buffer(void) {
+    signed long apos = -1;
     signed long buffersz = -1;
     signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
-    signed long apos = (signed long)sb_card->buffer_last_io;
 
     {
         unsigned int sz = sizeof(uint32_t);
@@ -1590,6 +1604,8 @@ void display_idle_buffer(void) {
 
         if (soundcard->ioctl(soundcard,soundcard_ioctl_get_buffer_size,&bufsz,&sz,0) >= 0)
             buffersz = (signed long)bufsz;
+        if (soundcard->ioctl(soundcard,soundcard_ioctl_get_buffer_write_position,&bufsz,&sz,0) >= 0)
+            apos = (signed long)bufsz;
     }
 
     printf("\x0D");
