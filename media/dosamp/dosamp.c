@@ -123,6 +123,7 @@ struct soundcard {
 #define soundcard_ioctl_silence_buffer                      0x5B00U
 #define soundcard_ioctl_get_irq                             0x5B10U
 #define soundcard_ioctl_set_irq_interval                    0x5B11U
+#define soundcard_ioctl_read_irq_counter                    0x5B12U
 #define soundcard_ioctl_isa_dma_assign_buffer               0x5B1AU
 #define soundcard_ioctl_isa_dma_channel                     0x5B1DU
 #define soundcard_ioctl_isa_dma_recommended_buffer_size     0x5B1EU
@@ -635,6 +636,14 @@ static int soundblaster_get_irq(soundcard_t sc) {
     return card->irq;
 }
 
+static uint32_t soundblaster_read_irq_counter(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    return card->irq_counter;
+}
+
 static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival) {
     switch (cmd) {
         case soundcard_ioctl_get_irq:
@@ -643,6 +652,13 @@ static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void do
             if (data == NULL || len == 0) return -1;
             if (*len < sizeof(struct wav_cbr_t)) return -1;
             return soundblaster_set_play_format(sc,(struct wav_cbr_t dosamp_FAR *)data);
+        case soundcard_ioctl_read_irq_counter: {
+            uint32_t dosamp_FAR *p = (uint32_t dosamp_FAR*)data;
+
+            if (data == NULL || len == NULL) return -1;
+            if (*len < sizeof(*p)) return -1;
+            *p = soundblaster_read_irq_counter(sc);
+            } return 0;
         case soundcard_ioctl_silence_buffer:
             return soundblaster_silence_buffer(sc);
         case soundcard_ioctl_isa_dma_channel:
@@ -1612,11 +1628,14 @@ void display_idle_buffer(void) {
     signed long pos = -1;
     signed long apos = -1;
     signed long buffersz = -1;
+    signed long irq_counter = -1;
 
     {
         unsigned int sz = sizeof(uint32_t);
         uint32_t bufsz = 0;
 
+        if (soundcard->ioctl(soundcard,soundcard_ioctl_read_irq_counter,&bufsz,&sz,0) >= 0)
+            irq_counter = (signed long)bufsz;
         if (soundcard->ioctl(soundcard,soundcard_ioctl_get_buffer_size,&bufsz,&sz,0) >= 0)
             buffersz = (signed long)bufsz;
         if (soundcard->ioctl(soundcard,soundcard_ioctl_get_buffer_write_position,&bufsz,&sz,0) >= 0)
@@ -1627,7 +1646,7 @@ void display_idle_buffer(void) {
 
     printf("\x0D");
 
-    printf("a=%6ld/p=%6ld/b=%6ld/d=%6lu/cw=%6lu/wp=%8lu/pp=%8lu/irq=%lu",
+    printf("a=%6ld/p=%6ld/b=%6ld/d=%6lu/cw=%6lu/wp=%8lu/pp=%8lu/irq=%ld",
         apos,
         pos,
         (signed long)buffersz,
@@ -1635,7 +1654,7 @@ void display_idle_buffer(void) {
         (unsigned long)soundcard->can_write(soundcard),
         (unsigned long)wav_state.write_counter,
         (unsigned long)wav_state.play_counter,
-        (unsigned long)sb_card->irq_counter);
+        (unsigned long)irq_counter);
 
     fflush(stdout);
 }
