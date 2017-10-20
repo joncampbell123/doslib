@@ -90,7 +90,7 @@ int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const 
             if (d->sample_rate >= s->sample_rate)
                 m = ((unsigned long)s->sample_rate << 8UL) / (unsigned long)d->sample_rate; /* 8.8 fixed pt upsampling */
             else
-                m = ((unsigned long)d->sample_rate << 8UL) / ((unsigned long)s->sample_rate * 2UL); /* 8.8 fixed pt downsampling */
+                m = ((unsigned long)d->sample_rate << 8UL) / (unsigned long)s->sample_rate; /* 8.8 fixed pt downsampling */
 
             if (m > 255UL) m = 255UL;
             r->f_best = (uint8_t)m;
