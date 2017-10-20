@@ -101,11 +101,13 @@ typedef struct soundcard dosamp_FAR * dosamp_FAR * soundcard_ptr_t;
 struct soundcard {
     enum soundcard_drv_t                        driver;
     int                                         (dosamp_FAR *poll)(soundcard_t sc);
+    uint32_t                                    (dosamp_FAR *can_write)(soundcard_t sc); /* in bytes */
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
 };
 
+/* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
     if (sc->p.soundblaster.index < 0 || sc->p.soundblaster.index >= SNDSB_MAX_CARDS)
         return NULL;
@@ -113,12 +115,14 @@ static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
     return &sndsb_card[sc->p.soundblaster.index];
 }
 
+/* private */
 static void soundblaster_update_wav_dma_position(soundcard_t sc,struct sndsb_ctx *card) {
     _cli();
     wav_state.dma_position = sndsb_read_dma_buffer_position(card);
     _sti();
 }
 
+/* private */
 static void soundblaster_update_wav_play_delay(soundcard_t sc,struct sndsb_ctx *card) {
     signed long delay;
 
@@ -153,7 +157,7 @@ static void soundblaster_update_wav_play_delay(soundcard_t sc,struct sndsb_ctx *
 }
 
 /* this depends on keeping the "play delay" up to date */
-static uint32_t soundblaster_can_write(soundcard_t sc) { /* in bytes */
+static uint32_t dosamp_FAR soundblaster_can_write(soundcard_t sc) { /* in bytes */
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
     uint32_t x;
 
@@ -575,6 +579,7 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t * const 
 /* TODO: This will become an array for each valid soundcard in sndsb lib */
 struct soundcard soundblaster_soundcard_template = {
     .driver =                                   soundcard_soundblaster,
+    .can_write =                                soundblaster_can_write,
     .poll =                                     soundblaster_poll,
     .p.soundblaster.index =                     -1
 };
@@ -779,7 +784,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
     uint32_t dop,bsz;
     uint32_t avail;
 
-    avail = soundblaster_can_write(soundcard);
+    avail = soundcard->can_write(soundcard);
 
     if (howmuch > avail) howmuch = avail;
     if (howmuch < wav_play_min_load_size) return; /* don't want to incur too much DOS I/O */
@@ -886,7 +891,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
     uint32_t towrite;
     uint32_t avail;
 
-    avail = soundblaster_can_write(soundcard);
+    avail = soundcard->can_write(soundcard);
 
     if (howmuch > avail) howmuch = avail;
     if (howmuch < wav_play_min_load_size) return; /* don't want to incur too much DOS I/O */
@@ -1434,7 +1439,7 @@ void display_idle_buffer(void) {
         pos,
         (signed long)sb_card->buffer_size,
         (unsigned long)wav_state.play_delay_bytes,
-        (unsigned long)soundblaster_can_write(soundcard),
+        (unsigned long)soundcard->can_write(soundcard),
         (unsigned long)wav_state.write_counter,
         (unsigned long)wav_state.play_counter,
         (unsigned long)sb_card->irq_counter);
