@@ -446,6 +446,7 @@ static int soundblaster_start_playback(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
     if (card == NULL) return -1;
+    if (!wav_state.prepared) return -1;
     if (wav_state.playing) return 0;
 
     if (!sndsb_begin_dsp_playback(card))
