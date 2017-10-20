@@ -48,6 +48,26 @@
 
 struct irq_state_t                      soundcard_irq = { NULL, 0, 0, 0, 0, 0, 0 };
 
+int init_prepare_irq(void) {
+    if (!soundcard_irq.hooked)
+        return -1;
+
+    /* make sure the IRQ is acked */
+    if (soundcard_irq.irq_number >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (soundcard_irq.irq_number & 7)); /* IRQ */
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2); /* IRQ cascade */
+    }
+    else if (soundcard_irq.irq_number >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | soundcard_irq.irq_number); /* IRQ */
+    }
+
+    /* unmask the IRQ, prepare */
+    if (soundcard_irq.irq_number >= 0)
+        p8259_unmask(soundcard_irq.irq_number);
+
+    return 0;
+}
+
 int hook_irq(uint8_t irq,void (interrupt *irq_handler)()) {
     if (!soundcard_irq.hooked) {
         /* take notw whether the IRQ was masked at the time we hooked.

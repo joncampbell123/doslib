@@ -13,5 +13,6 @@ struct irq_state_t {
 extern struct irq_state_t               soundcard_irq;
 
 int hook_irq(uint8_t irq,void (interrupt *func)());
+int init_prepare_irq(void);
 int unhook_irq(void);
 

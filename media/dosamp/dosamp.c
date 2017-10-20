@@ -46,17 +46,6 @@
 #include "tmpbuf.h"
 #include "snirq.h"
 
-/*====================Sound Blaster Specific=======================*/
-/* section off from main dosamp.c.
- * will eventually become it's own module of code
- * through a more generic interface that would enable the use of
- * other sound cards. */
-
-/* Sound Blaster sound card */
-static struct sndsb_ctx*                        sb_card = NULL;
-
-/*====================End Sound Blaster Specific=======================*/
-
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
 # error Open Watcom C tiny memory model not supported
@@ -95,6 +84,501 @@ struct wav_cbr_t                                play_codec;
 
 struct wav_state_t                              wav_state;
 
+/* sound card state */
+enum soundcard_drv_t {
+    soundcard_none=0,
+    soundcard_soundblaster
+};
+
+struct soundcard_priv_soundblaster_t {
+    int8_t                                      index;          /* array into sndsb library card array */
+};
+
+struct soundcard;
+typedef struct soundcard dosamp_FAR * soundcard_t;
+typedef struct soundcard dosamp_FAR * dosamp_FAR * soundcard_ptr_t;
+
+struct soundcard {
+    enum soundcard_drv_t                        driver;
+    union {
+        struct soundcard_priv_soundblaster_t    soundblaster;
+    } p;
+};
+
+static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
+    if (sc->p.soundblaster.index < 0 || sc->p.soundblaster.index >= SNDSB_MAX_CARDS)
+        return NULL;
+
+    return &sndsb_card[sc->p.soundblaster.index];
+}
+
+static void soundblaster_update_wav_dma_position(soundcard_t sc,struct sndsb_ctx *card) {
+    _cli();
+    wav_state.dma_position = sndsb_read_dma_buffer_position(card);
+    _sti();
+}
+
+static void soundblaster_update_wav_play_delay(soundcard_t sc,struct sndsb_ctx *card) {
+    signed long delay;
+
+    /* DMA trails our "last IO" pointer */
+    delay  = (signed long)card->buffer_last_io;
+    delay -= (signed long)wav_state.dma_position;
+
+    /* delay == 0 is a special case.
+     * if wav_state.play_empty, then it means there's no delay.
+     * else, it means there's one whole buffer's worth delay.
+     * we HAVE to make this distinction because this code is
+     * written to load new audio data RIGHT BEHIND the DMA position
+     * which could easily lead to buffer_last_io == DMA position! */
+    if (delay < 0L) delay += (signed long)card->buffer_size;
+    else if (delay == 0L && !wav_state.play_empty) delay = (signed long)card->buffer_size;
+
+    /* guard against inconcievable cases */
+    if (delay < 0L) delay = 0L;
+    if (delay >= (signed long)card->buffer_size) delay = (signed long)card->buffer_size;
+
+    /* convert to samples */
+    wav_state.play_delay_bytes = (unsigned long)delay;
+    wav_state.play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
+
+    /* play position is calculated here */
+    wav_state.play_counter = wav_state.write_counter;
+    if (wav_state.play_counter >= wav_state.play_delay_bytes) wav_state.play_counter -= wav_state.play_delay_bytes;
+    else wav_state.play_counter = 0;
+
+    if (wav_state.play_counter_prev < wav_state.play_counter)
+        wav_state.play_counter_prev = wav_state.play_counter;
+}
+
+/* this depends on keeping the "play delay" up to date */
+static uint32_t soundblaster_can_write(soundcard_t sc) { /* in bytes */
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    uint32_t x;
+
+    if (card == NULL) return (uint32_t)(~0UL);
+
+    soundblaster_update_wav_dma_position(sc,card);
+    soundblaster_update_wav_play_delay(sc,card);
+
+    x = card->buffer_size;
+    if (x >= wav_state.play_delay_bytes) x -= wav_state.play_delay_bytes;
+    else x = 0;
+
+    return x;
+}
+
+/* detect playback underruns, and force write pointer forward to compensate if so.
+ * caller will direct us how many bytes into the future to set the write pointer,
+ * since nobody can INSTANTLY write audio to the playback pointer.
+ *
+ * This way, the playback program can use this to force the write pointer forward
+ * if underrun to at least ensure the next audio written will be immediately audible.
+ * Without this, upon underrun, the written audio may not be heard until the play
+ * pointer has gone through the entire buffer again. */
+static int soundblaster_clamp_if_behind(soundcard_t sc,uint32_t ahead_in_bytes) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    int res = 0;
+
+    if (card == NULL) return -1;
+
+    soundblaster_update_wav_play_delay(sc,card);
+
+    if (wav_state.play_counter < wav_state.play_counter_prev) {
+        card->buffer_last_io  = wav_state.dma_position;
+        card->buffer_last_io += ahead_in_bytes;
+        card->buffer_last_io -= card->buffer_last_io % play_codec.bytes_per_block;
+        if (card->buffer_last_io >= card->buffer_size)
+            card->buffer_last_io -= card->buffer_size;
+        if (card->buffer_last_io >= card->buffer_size)
+            card->buffer_last_io  = 0;
+
+        res = 1;
+        soundblaster_update_wav_play_delay(sc,card);
+    }
+
+    return res;
+}
+
+static unsigned char dosamp_FAR * soundblaster_mmap_write(soundcard_t sc,uint32_t * const howmuch,uint32_t want) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    uint32_t ret_pos;
+    uint32_t m;
+
+    if (card == NULL) return NULL;
+
+    /* simpify I/O by only allowing a write that does not wrap around */
+
+    /* determine how much can be written */
+    if (card->buffer_last_io > card->buffer_size) return NULL;
+
+    m = card->buffer_size - card->buffer_last_io;
+    if (want > m) want = m;
+
+    /* but, must be aligned to the block alignment of the format */
+    want -= want % play_codec.bytes_per_block;
+
+    /* this is what we will return */
+    *howmuch = want;
+    ret_pos = card->buffer_last_io;
+
+    if (want != 0) {
+        /* advance I/O. caller MUST fill in the buffer. */
+        wav_state.write_counter += want;
+        card->buffer_last_io += want;
+        if (card->buffer_last_io >= card->buffer_size)
+            card->buffer_last_io = 0;
+
+        /* now that audio has been written, buffer is no longer empty */
+        wav_state.play_empty = 0;
+
+        /* update */
+        soundblaster_update_wav_dma_position(sc,card);
+        soundblaster_update_wav_play_delay(sc,card);
+    }
+
+    /* return ptr */
+    return dosamp_ptr_add_normalize(card->buffer_lin,ret_pos);
+}
+
+/* non-mmap write (much like OSS or ALSA in Linux where you do not have direct access to the hardware buffer) */
+static unsigned int soundblaster_buffer_write(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    unsigned char dosamp_FAR * dst;
+    unsigned int r = 0;
+    uint32_t todo;
+
+    if (card == NULL) return 0;
+
+    while (len > 0) {
+        dst = soundblaster_mmap_write(sc,&todo,(uint32_t)len);
+        if (dst == NULL || todo == 0) break;
+
+#if TARGET_MSDOS == 16
+        _fmemcpy(dst,dosamp_cptr_add_normalize(buf,r),todo);
+#else
+        memcpy(dst,buf+r,todo);
+#endif
+
+        len -= todo;
+        r += todo;
+    }
+
+    return r;
+}
+
+static int soundblaster_card_poll(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    sndsb_main_idle(card);
+
+    soundblaster_update_wav_dma_position(sc,card);
+    soundblaster_update_wav_play_delay(sc,card);
+
+    return 0;
+}
+
+static int soundblaster_irq_callback(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    unsigned char c;
+
+    if (card == NULL) return -1;
+
+    card->irq_counter++;
+
+    /* ack soundblaster DSP if DSP was the cause of the interrupt */
+    /* NTS: Experience says if you ack the wrong event on DSP 4.xx it
+       will just re-fire the IRQ until you ack it correctly...
+       or until your program crashes from stack overflow, whichever
+       comes first */
+    c = sndsb_interrupt_reason(card);
+    sndsb_interrupt_ack(card,c);
+
+    /* FIXME: The sndsb library should NOT do anything in
+       send_buffer_again() if it knows playback has not started! */
+    /* for non-auto-init modes, start another buffer */
+    if (wav_state.playing) sndsb_irq_continue(card,c);
+
+    return 0;
+}
+
+static int soundblaster_assign_isa_dma_buffer(soundcard_t sc,struct dma_8237_allocation *dma) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    /* NTS: We WANT to call sndsb_assign_dma_buffer with sb_dma == NULL if it happens because it tells the Sound Blaster library to cancel it's copy as well */
+    if (!sndsb_assign_dma_buffer(card,dma))
+        return -1;
+
+    /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
+     * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
+    {
+        uint32_t adj = 2UL * (unsigned long)play_codec.bytes_per_block;
+
+        card->buffer_size -= card->buffer_size % adj;
+        if (card->buffer_size == 0UL) return -1;
+    }
+
+    return 0;
+}
+
+static int8_t soundblaster_will_use_isa_dma_channel(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    return sndsb_dsp_playback_will_use_dma_channel(card,play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8);
+}
+
+static uint32_t soundblaster_recommended_isa_dma_buffer_size(soundcard_t sc,uint32_t limit/*no limit == 0*/) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return 0;
+
+    if (soundblaster_will_use_isa_dma_channel(sc) >= 4)
+        return sndsb_recommended_16bit_dma_buffer_size(card,limit);
+    else
+        return sndsb_recommended_dma_buffer_size(card,limit);
+}
+
+static int soundblaster_get_autoinit(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    return card->dsp_autoinit_dma && card->dsp_autoinit_command ? 1 : 0;
+}
+
+static int soundblaster_set_autoinit(soundcard_t sc,uint8_t flag) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    card->dsp_autoinit_dma = flag;
+    card->dsp_autoinit_command = flag;
+
+    return 0;
+}
+
+static int soundblaster_silence_buffer(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    if (card->buffer_lin != NULL) {
+#if TARGET_MSDOS == 16
+        _fmemset(card->buffer_lin,play_codec.bits_per_sample == 8 ? 128 : 0,card->buffer_size);
+#else
+        memset(card->buffer_lin,play_codec.bits_per_sample == 8 ? 128 : 0,card->buffer_size);
+#endif
+    }
+
+    return 0;
+}
+
+static int soundblaster_prepare_play(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    if (wav_state.prepared)
+        return 0;
+
+    if (card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
+        return -1;
+
+    /* prepare DSP */
+    if (!sndsb_prepare_dsp_playback(card,/*rate*/play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8))
+        return -1;
+
+    sndsb_setup_dma(card);
+    soundblaster_update_wav_dma_position(sc,card);
+    soundblaster_update_wav_play_delay(sc,card);
+    wav_state.prepared = 1;
+    return 0;
+}
+
+static int soundblaster_unprepare_play(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    if (wav_state.prepared) {
+        sndsb_stop_dsp_playback(card);
+        wav_state.prepared = 0;
+    }
+
+    return 0;
+}
+
+static uint32_t soundblaster_play_buffer_size(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return 0;
+
+    return card->buffer_size;
+}
+
+static uint32_t soundblaster_set_irq_interval(soundcard_t sc,uint32_t x) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    uint32_t t;
+
+    if (card == NULL) return 0;
+
+    /* you cannot set IRQ interval once prepared */
+    if (wav_state.prepared) return card->buffer_irq_interval;
+
+    /* keep it sample aligned */
+    x -= x % play_codec.bytes_per_block;
+
+    if (x != 0UL) {
+        /* minimum */
+        t = ((play_codec.sample_rate + 127UL) / 128UL) * play_codec.bytes_per_block;
+        if (x < t) x = t;
+        if (x > card->buffer_size) x = card->buffer_size;
+    }
+    else {
+        x = card->buffer_size;
+    }
+
+    card->buffer_irq_interval = x;
+    return card->buffer_irq_interval;
+}
+
+static int soundblaster_start_playback(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    if (!sndsb_begin_dsp_playback(card))
+        return -1;
+
+    return 0;
+}
+
+static int soundblaster_stop_playback(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    _cli();
+    soundblaster_update_wav_dma_position(sc,card);
+    soundblaster_update_wav_play_delay(sc,card);
+    _sti();
+
+    sndsb_stop_dsp_playback(card);
+    return 0;
+}
+
+static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    uint32_t osz,oph;
+    int r;
+
+    if (card == NULL) return -1;
+
+    /* API check: d != s */
+    if (d == s) return -1;
+
+    /* by default, use source format */
+    *d = *s;
+
+    /* allow overwrite */
+    if (prefer_rate != 0) d->sample_rate = prefer_rate;
+    if (prefer_bits != 0) d->bits_per_sample = prefer_bits;
+    if (prefer_channels != 0) d->number_of_channels = prefer_channels;
+
+    /* TODO: Later we should support 5.1 surround to mono/stereo conversion, 24-bit PCM support, etc. */
+
+    /* stereo -> mono conversion if needed (if DSP doesn't support stereo) */
+    if (d->number_of_channels == 2 && card->dsp_vmaj < 3) d->number_of_channels = 1;
+
+    /* 16-bit -> 8-bit if needed (if DSP doesn't support 16-bit) */
+    if (d->bits_per_sample == 16) {
+        if (card->is_gallant_sc6600 && card->dsp_vmaj >= 3) /* SC400 and DSP version 3.xx or higher: OK */
+            { }
+        else if (card->ess_extensions && card->dsp_vmaj >= 2) /* ESS688 and DSP version 2.xx or higher: OK */
+            { }
+        else if (card->dsp_vmaj >= 4) /* DSP version 4.xx or higher (SB16): OK */
+            { }
+        else
+            d->bits_per_sample = 8;
+    }
+
+    if (d->number_of_channels < 1 || d->number_of_channels > 2) /* SB is mono or stereo, nothing else. */
+        return -1;
+    if (d->bits_per_sample < 8 || d->bits_per_sample > 16) /* SB is 8-bit. SB16 and ESS688 is 16-bit. */
+        return -1;
+
+    /* HACK! */
+    osz = card->buffer_size; card->buffer_size = 1;
+    oph = card->buffer_phys; card->buffer_phys = 0;
+
+    /* SB specific: I know from experience and calculations that Sound Blaster cards don't go below 4000Hz */
+    if (d->sample_rate < 4000)
+        d->sample_rate = 4000;
+
+    /* we'll follow the recommendations on what is supported by the DSP. no hacks. */
+    r = sndsb_dsp_out_method_supported(card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
+    if (!r) {
+        /* we already made concessions for channels/bits, so try sample rate */
+        d->sample_rate = 44100;
+        r = sndsb_dsp_out_method_supported(card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
+    }
+    if (!r) {
+        /* we already made concessions for channels/bits, so try sample rate */
+        d->sample_rate = 22050;
+        r = sndsb_dsp_out_method_supported(card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
+    }
+    if (!r) {
+        /* we already made concessions for channels/bits, so try sample rate */
+        d->sample_rate = 11025;
+        r = sndsb_dsp_out_method_supported(card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
+    }
+
+    /* HACK! */
+    card->buffer_size = osz;
+    card->buffer_phys = oph;
+
+    if (!r) {
+        if (card->reason_not_supported != NULL && *(card->reason_not_supported) != 0)
+            printf("Negotiation failed (SB) even with %luHz %u-channel %u-bit:\n    %s\n",
+                d->sample_rate,
+                d->number_of_channels,
+                d->bits_per_sample,
+                card->reason_not_supported);
+
+        return -1;
+    }
+
+    /* PCM recalc */
+    d->bytes_per_block = ((d->bits_per_sample+7U)/8U) * d->number_of_channels;
+
+    return 0;
+}
+
+/* TODO: This will become an array for each valid soundcard in sndsb lib */
+struct soundcard soundblaster_soundcard_template = {
+    .driver =                                   soundcard_soundblaster,
+    .p.soundblaster.index =                     -1
+};
+
+soundcard_t                                     soundcard = NULL;
+
+/*====================Sound Blaster Specific=======================*/
+/* section off from main dosamp.c.
+ * will eventually become it's own module of code
+ * through a more generic interface that would enable the use of
+ * other sound cards. */
+
+/* Sound Blaster sound card */
+static struct sndsb_ctx*                        sb_card = NULL;
+
+/*====================End Sound Blaster Specific=======================*/
+
 void wav_state_init(void) {
     memset(&wav_state,0,sizeof(wav_state));
 }
@@ -120,37 +604,12 @@ static unsigned long                    wav_play_position = 0L;
 static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
 
-void update_wav_dma_position(void) {
-    _cli();
-    wav_state.dma_position = sndsb_read_dma_buffer_position(sb_card);
-    _sti();
-}
-
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
  * instability in the event the IRQ fires while, say, executing a routine
  * in the DOS kernel, you must compile this code with the -zu flag in
  * 16-bit real mode Large and Compact memory models! Without -zu, minor
  * memory corruption in the DOS kernel will result and the system will
  * hang and/or crash. */
-
-void soundcard_irq_callback(void) {
-    unsigned char c;
-
-    sb_card->irq_counter++;
-
-    /* ack soundblaster DSP if DSP was the cause of the interrupt */
-    /* NTS: Experience says if you ack the wrong event on DSP 4.xx it
-       will just re-fire the IRQ until you ack it correctly...
-       or until your program crashes from stack overflow, whichever
-       comes first */
-    c = sndsb_interrupt_reason(sb_card);
-    sndsb_interrupt_ack(sb_card,c);
-
-    /* FIXME: The sndsb library should NOT do anything in
-       send_buffer_again() if it knows playback has not started! */
-    /* for non-auto-init modes, start another buffer */
-    if (wav_state.playing) sndsb_irq_continue(sb_card,c);
-}
 
 static void interrupt soundcard_irq_handler() {
     /* assume:
@@ -159,7 +618,7 @@ static void interrupt soundcard_irq_handler() {
      *  - this IRQ handler will not be called unless irq_number has been filled in.
      *  - old_handler contains the prior IRQ handler.
      *  - chain_irq has been filled in */
-    soundcard_irq_callback();
+    soundblaster_irq_callback(soundcard);
 
     if (soundcard_irq.chain_irq) {
         /* chain to the previous IRQ, who will acknowledge the interrupt */
@@ -170,115 +629,6 @@ static void interrupt soundcard_irq_handler() {
         if (soundcard_irq.irq_number >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
         p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
     }
-}
-
-void update_play_position();
-void update_wav_play_delay();
-
-/* detect playback underruns, and force write pointer forward to compensate if so.
- * caller will direct us how many bytes into the future to set the write pointer,
- * since nobody can INSTANTLY write audio to the playback pointer.
- *
- * This way, the playback program can use this to force the write pointer forward
- * if underrun to at least ensure the next audio written will be immediately audible.
- * Without this, upon underrun, the written audio may not be heard until the play
- * pointer has gone through the entire buffer again. */
-int clamp_if_behind(uint32_t ahead_in_bytes) {
-    int res = 0;
-
-    update_play_position();
-    update_wav_play_delay();
-
-    if (wav_state.play_counter < wav_state.play_counter_prev) {
-        sb_card->buffer_last_io  = wav_state.dma_position;
-        sb_card->buffer_last_io += ahead_in_bytes;
-        sb_card->buffer_last_io -= sb_card->buffer_last_io % play_codec.bytes_per_block;
-        if (sb_card->buffer_last_io >= sb_card->buffer_size)
-            sb_card->buffer_last_io -= sb_card->buffer_size;
-        if (sb_card->buffer_last_io >= sb_card->buffer_size)
-            sb_card->buffer_last_io  = 0;
-
-        res = 1;
-        update_play_position();
-        update_wav_play_delay();
-    }
-
-    return res;
-}
-
-/* this depends on keeping the "play delay" up to date */
-uint32_t can_write(void) { /* in bytes */
-    uint32_t x;
-
-    update_wav_dma_position();
-    update_wav_play_delay();
-
-    x = sb_card->buffer_size;
-    if (x >= wav_state.play_delay_bytes) x -= wav_state.play_delay_bytes;
-    else x = 0;
-
-    return x;
-}
-
-unsigned char dosamp_FAR * mmap_write(uint32_t * const howmuch,uint32_t want) {
-    uint32_t ret_pos;
-    uint32_t m;
-
-    /* simpify I/O by only allowing a write that does not wrap around */
-
-    /* determine how much can be written */
-    if (sb_card->buffer_last_io > sb_card->buffer_size) return NULL;
-
-    m = sb_card->buffer_size - sb_card->buffer_last_io;
-    if (want > m) want = m;
-
-    /* but, must be aligned to the block alignment of the format */
-    want -= want % play_codec.bytes_per_block;
-
-    /* this is what we will return */
-    *howmuch = want;
-    ret_pos = sb_card->buffer_last_io;
-
-    if (want != 0) {
-        /* advance I/O. caller MUST fill in the buffer. */
-        wav_state.write_counter += want;
-        sb_card->buffer_last_io += want;
-        if (sb_card->buffer_last_io >= sb_card->buffer_size)
-            sb_card->buffer_last_io = 0;
-
-        /* now that audio has been written, buffer is no longer empty */
-        wav_state.play_empty = 0;
-
-        /* update */
-        update_wav_dma_position();
-        update_wav_play_delay();
-    }
-
-    /* return ptr */
-    return dosamp_ptr_add_normalize(sb_card->buffer_lin,ret_pos);
-}
-
-/* non-mmap write (much like OSS or ALSA in Linux where you do not have direct access to the hardware buffer) */
-unsigned int buffer_write(const unsigned char dosamp_FAR * buf,unsigned int len) {
-    unsigned char dosamp_FAR * dst;
-    unsigned int r = 0;
-    uint32_t todo;
-
-    while (len > 0) {
-        dst = mmap_write(&todo,(uint32_t)len);
-        if (dst == NULL || todo == 0) break;
-
-#if TARGET_MSDOS == 16
-        _fmemcpy(dst,dosamp_cptr_add_normalize(buf,r),todo);
-#else
-        memcpy(dst,buf+r,todo);
-#endif
-
-        len -= todo;
-        r += todo;
-    }
-
-    return r;
 }
 
 int wav_rewind(void) {
@@ -317,12 +667,6 @@ void wav_rebase_position_event(void) {
         r->event_at = wav_state.write_counter;
         r->wav_position = wav_position;
     }
-}
-
-void card_poll(void) {
-    sndsb_main_idle(sb_card);
-    update_wav_dma_position();
-    update_wav_play_delay();
 }
 
 int convert_rdbuf_fill(void) {
@@ -422,7 +766,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
     uint32_t dop,bsz;
     uint32_t avail;
 
-    avail = can_write();
+    avail = soundblaster_can_write(soundcard);
 
     if (howmuch > avail) howmuch = avail;
     if (howmuch < wav_play_min_load_size) return; /* don't want to incur too much DOS I/O */
@@ -448,7 +792,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
             if (dop == 0)
                 break;
 
-            if (buffer_write(dosamp_ptr_add_normalize(convert_rdbuf.buffer,convert_rdbuf.pos),dop) != dop)
+            if (soundblaster_buffer_write(soundcard,dosamp_ptr_add_normalize(convert_rdbuf.buffer,convert_rdbuf.pos),dop) != dop)
                 break;
 
             convert_rdbuf.pos += dop;
@@ -507,7 +851,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
 
             if (dop != 0) {
                 dop *= play_codec.bytes_per_block;
-                if (buffer_write(ptr,dop) != dop)
+                if (soundblaster_buffer_write(soundcard,ptr,dop) != dop)
                     break;
 
                 howmuch -= dop;
@@ -520,7 +864,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
     }
 
     if (!prefer_no_clamp)
-        clamp_if_behind(wav_play_min_load_size);
+        soundblaster_clamp_if_behind(soundcard,wav_play_min_load_size);
 }
 
 static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
@@ -529,7 +873,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
     uint32_t towrite;
     uint32_t avail;
 
-    avail = can_write();
+    avail = soundblaster_can_write(soundcard);
 
     if (howmuch > avail) howmuch = avail;
     if (howmuch < wav_play_min_load_size) return; /* don't want to incur too much DOS I/O */
@@ -553,7 +897,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
 
         if (use_mmap_write) {
             /* get the write pointer. towrite is guaranteed to be block aligned */
-            ptr = mmap_write(&towrite,rem);
+            ptr = soundblaster_mmap_write(soundcard,&towrite,rem);
             if (ptr == NULL || towrite == 0) break;
         }
         else {
@@ -581,7 +925,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
 
         /* non-mmap write: send temp buffer to sound card */
         if (!use_mmap_write) {
-            if (buffer_write(ptr,towrite) != towrite)
+            if (soundblaster_buffer_write(soundcard,ptr,towrite) != towrite)
                 break;
         }
 
@@ -591,7 +935,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
     }
 
     if (!prefer_no_clamp)
-        clamp_if_behind(wav_play_min_load_size);
+        soundblaster_clamp_if_behind(soundcard,wav_play_min_load_size);
 }
 
 static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
@@ -599,39 +943,6 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
         load_audio_convert(howmuch);
     else
         load_audio_copy(howmuch);
-}
-
-void update_wav_play_delay() {
-    signed long delay;
-
-    /* DMA trails our "last IO" pointer */
-    delay  = (signed long)sb_card->buffer_last_io;
-    delay -= (signed long)wav_state.dma_position;
-
-    /* delay == 0 is a special case.
-     * if wav_state.play_empty, then it means there's no delay.
-     * else, it means there's one whole buffer's worth delay.
-     * we HAVE to make this distinction because this code is
-     * written to load new audio data RIGHT BEHIND the DMA position
-     * which could easily lead to buffer_last_io == DMA position! */
-    if (delay < 0L) delay += (signed long)sb_card->buffer_size;
-    else if (delay == 0L && !wav_state.play_empty) delay = (signed long)sb_card->buffer_size;
-
-    /* guard against inconcievable cases */
-    if (delay < 0L) delay = 0L;
-    if (delay >= (signed long)sb_card->buffer_size) delay = (signed long)sb_card->buffer_size;
-
-    /* convert to samples */
-    wav_state.play_delay_bytes = (unsigned long)delay;
-    wav_state.play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
-
-    /* play position is calculated here */
-    wav_state.play_counter = wav_state.write_counter;
-    if (wav_state.play_counter >= wav_state.play_delay_bytes) wav_state.play_counter -= wav_state.play_delay_bytes;
-    else wav_state.play_counter = 0;
-
-    if (wav_state.play_counter_prev < wav_state.play_counter)
-        wav_state.play_counter_prev = wav_state.play_counter;
 }
 
 void update_play_position(void) {
@@ -683,7 +994,7 @@ static void wav_idle() {
     convert_rdbuf_check();
 
     /* update card state */
-    card_poll();
+    soundblaster_card_poll(soundcard);
 
     /* load more from disk */
     if (!stuck_test) load_audio(wav_play_load_block_size);
@@ -793,30 +1104,9 @@ fail:
     return -1;
 }
 
-int soundcard_assign_isa_dma_buffer(struct dma_8237_allocation *dma) {
-    /* NTS: We WANT to call sndsb_assign_dma_buffer with sb_dma == NULL if it happens because it tells the Sound Blaster library to cancel it's copy as well */
-    if (!sndsb_assign_dma_buffer(sb_card,dma))
-        return -1;
-
-    /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
-     * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
-    {
-        uint32_t adj = 2UL * (unsigned long)play_codec.bytes_per_block;
-
-        sb_card->buffer_size -= sb_card->buffer_size % adj;
-        if (sb_card->buffer_size == 0UL) return -1;
-    }
-
-    return 0;
-}
-
-int8_t soundcard_will_use_isa_dma_channel(void) {
-    return sndsb_dsp_playback_will_use_dma_channel(sb_card,play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8);
-}
-
 static void free_dma_buffer() {
     if (isa_dma != NULL) {
-        soundcard_assign_isa_dma_buffer(NULL); /* disassociate DMA buffer from sound card */
+        soundblaster_assign_isa_dma_buffer(soundcard,NULL); /* disassociate DMA buffer from sound card */
         dma_8237_free_buffer(isa_dma);
         isa_dma = NULL;
     }
@@ -843,31 +1133,24 @@ static int alloc_dma_buffer(uint32_t choice,int8_t ch) {
     return 0;
 }
 
-uint32_t soundcard_recommended_isa_dma_buffer_size(uint32_t limit/*no limit == 0*/) {
-    if (soundcard_will_use_isa_dma_channel() >= 4)
-        return sndsb_recommended_16bit_dma_buffer_size(sb_card,limit);
-    else
-        return sndsb_recommended_dma_buffer_size(sb_card,limit);
-}
-
 static int realloc_dma_buffer() {
     uint32_t choice;
     int8_t ch;
 
     free_dma_buffer();
 
-    ch = soundcard_will_use_isa_dma_channel();
+    ch = soundblaster_will_use_isa_dma_channel(soundcard);
     if (ch < 0)
         return 0; /* nothing to do */
 
-    choice = soundcard_recommended_isa_dma_buffer_size(/*no limit*/0);
+    choice = soundblaster_recommended_isa_dma_buffer_size(soundcard,/*no limit*/0);
     if (choice == 0)
         return -1;
 
     if (alloc_dma_buffer(choice,ch) < 0)
         return -1;
 
-    if (soundcard_assign_isa_dma_buffer(isa_dma) < 0) {
+    if (soundblaster_assign_isa_dma_buffer(soundcard,isa_dma) < 0) {
         free_dma_buffer();
         return -1;
     }
@@ -883,7 +1166,7 @@ int check_dma_buffer(void) {
     if (isa_dma == NULL)
         realloc_dma_buffer();
     else {
-        ch = soundcard_will_use_isa_dma_channel();
+        ch = soundblaster_will_use_isa_dma_channel(soundcard);
         if (ch >= 0 && isa_dma->dma_width != (ch >= 4 ? 16 : 8))
             realloc_dma_buffer();
     }
@@ -894,203 +1177,10 @@ int check_dma_buffer(void) {
     return 0;
 }
 
-int set_play_format(struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
-    uint32_t osz,oph;
-    int r;
-
-    /* API check: d != s */
-    if (d == s) return -1;
-
-    /* by default, use source format */
-    *d = *s;
-
-    /* allow overwrite */
-    if (prefer_rate != 0) d->sample_rate = prefer_rate;
-    if (prefer_bits != 0) d->bits_per_sample = prefer_bits;
-    if (prefer_channels != 0) d->number_of_channels = prefer_channels;
-
-    /* TODO: Later we should support 5.1 surround to mono/stereo conversion, 24-bit PCM support, etc. */
-
-    /* stereo -> mono conversion if needed (if DSP doesn't support stereo) */
-    if (d->number_of_channels == 2 && sb_card->dsp_vmaj < 3) d->number_of_channels = 1;
-
-    /* 16-bit -> 8-bit if needed (if DSP doesn't support 16-bit) */
-    if (d->bits_per_sample == 16) {
-        if (sb_card->is_gallant_sc6600 && sb_card->dsp_vmaj >= 3) /* SC400 and DSP version 3.xx or higher: OK */
-            { }
-        else if (sb_card->ess_extensions && sb_card->dsp_vmaj >= 2) /* ESS688 and DSP version 2.xx or higher: OK */
-            { }
-        else if (sb_card->dsp_vmaj >= 4) /* DSP version 4.xx or higher (SB16): OK */
-            { }
-        else
-            d->bits_per_sample = 8;
-    }
-
-    if (d->number_of_channels < 1 || d->number_of_channels > 2) /* SB is mono or stereo, nothing else. */
-        return -1;
-    if (d->bits_per_sample < 8 || d->bits_per_sample > 16) /* SB is 8-bit. SB16 and ESS688 is 16-bit. */
-        return -1;
-
-    /* HACK! */
-    osz = sb_card->buffer_size; sb_card->buffer_size = 1;
-    oph = sb_card->buffer_phys; sb_card->buffer_phys = 0;
-
-    /* SB specific: I know from experience and calculations that Sound Blaster cards don't go below 4000Hz */
-    if (d->sample_rate < 4000)
-        d->sample_rate = 4000;
-
-    /* we'll follow the recommendations on what is supported by the DSP. no hacks. */
-    r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
-    if (!r) {
-        /* we already made concessions for channels/bits, so try sample rate */
-        d->sample_rate = 44100;
-        r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
-    }
-    if (!r) {
-        /* we already made concessions for channels/bits, so try sample rate */
-        d->sample_rate = 22050;
-        r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
-    }
-    if (!r) {
-        /* we already made concessions for channels/bits, so try sample rate */
-        d->sample_rate = 11025;
-        r = sndsb_dsp_out_method_supported(sb_card,d->sample_rate,/*stereo*/d->number_of_channels > 1 ? 1 : 0,/*16-bit*/d->bits_per_sample > 8 ? 1 : 0);
-    }
-
-    /* HACK! */
-    sb_card->buffer_size = osz;
-    sb_card->buffer_phys = oph;
-
-    if (!r) {
-        if (sb_card->reason_not_supported != NULL && *(sb_card->reason_not_supported) != 0)
-            printf("Negotiation failed (SB) even with %luHz %u-channel %u-bit:\n    %s\n",
-                d->sample_rate,
-                d->number_of_channels,
-                d->bits_per_sample,
-                sb_card->reason_not_supported);
-
-        return -1;
-    }
-
-    /* PCM recalc */
-    d->bytes_per_block = ((d->bits_per_sample+7U)/8U) * d->number_of_channels;
-
-    return 0;
-}
-
-int get_autoinit(void) {
-    return sb_card->dsp_autoinit_dma && sb_card->dsp_autoinit_command ? 1 : 0;
-}
-
-int set_autoinit(uint8_t flag) {
-    sb_card->dsp_autoinit_dma = flag;
-    sb_card->dsp_autoinit_command = flag;
-
-    return 0;
-}
-
-void silence_buffer(void) {
-    if (sb_card->buffer_lin != NULL) {
-#if TARGET_MSDOS == 16
-        _fmemset(sb_card->buffer_lin,play_codec.bits_per_sample == 8 ? 128 : 0,sb_card->buffer_size);
-#else
-        memset(sb_card->buffer_lin,play_codec.bits_per_sample == 8 ? 128 : 0,sb_card->buffer_size);
-#endif
-    }
-}
-
 int prepare_buffer(void) {
     if (check_dma_buffer() < 0)
         return -1;
 
-    return 0;
-}
-
-int prepare_play(void) {
-    if (wav_state.prepared)
-        return 0;
-
-    if (sb_card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
-        return -1;
-
-    /* prepare DSP */
-    if (!sndsb_prepare_dsp_playback(sb_card,/*rate*/play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8)) {
-        unhook_irq();
-        return -1;
-    }
-
-    sndsb_setup_dma(sb_card);
-    update_wav_dma_position();
-    update_wav_play_delay();
-    wav_state.prepared = 1;
-    return 0;
-}
-
-int unprepare_play(void) {
-    if (wav_state.prepared) {
-        sndsb_stop_dsp_playback(sb_card);
-        wav_state.prepared = 0;
-    }
-
-    return 0;
-}
-
-uint32_t play_buffer_size(void) {
-    return sb_card->buffer_size;
-}
-
-uint32_t set_irq_interval(uint32_t x) {
-    uint32_t t;
-
-    /* you cannot set IRQ interval once prepared */
-    if (wav_state.prepared) return sb_card->buffer_irq_interval;
-
-    /* keep it sample aligned */
-    x -= x % play_codec.bytes_per_block;
-
-    if (x != 0UL) {
-        /* minimum */
-        t = ((play_codec.sample_rate + 127UL) / 128UL) * play_codec.bytes_per_block;
-        if (x < t) x = t;
-        if (x > sb_card->buffer_size) x = sb_card->buffer_size;
-    }
-    else {
-        x = sb_card->buffer_size;
-    }
-
-    sb_card->buffer_irq_interval = x;
-    return sb_card->buffer_irq_interval;
-}
-
-int start_sound_card(void) {
-    /* make sure the IRQ is acked */
-    if (sb_card->irq >= 8) {
-        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7)); /* IRQ */
-        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2); /* IRQ cascade */
-    }
-    else if (sb_card->irq >= 0) {
-        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq); /* IRQ */
-    }
-
-    /* unmask the IRQ, prepare */
-    if (sb_card->irq >= 0)
-        p8259_unmask(sb_card->irq);
-
-    if (!sndsb_begin_dsp_playback(sb_card)) {
-        unhook_irq();
-        return -1;
-    }
-
-    return 0;
-}
-
-int stop_sound_card(void) {
-    _cli();
-    update_wav_dma_position();
-    update_wav_play_delay();
-    _sti();
-
-    sndsb_stop_dsp_playback(sb_card);
     return 0;
 }
 
@@ -1114,31 +1204,22 @@ static int begin_play() {
     wav_rebase_position_event();
 
     /* choose output vs input */
-    if (set_play_format(&play_codec,&file_codec) < 0) {
-        unprepare_play();
-        unhook_irq();
-        return -1;
-    }
+    if (soundblaster_set_play_format(soundcard,&play_codec,&file_codec) < 0)
+        goto error_out;
 
     /* based on sound card's choice vs source format, reconfigure resampler */
-    if (resampler_init(&resample_state,&play_codec,&file_codec) < 0) {
-        unprepare_play();
-        unhook_irq();
-        return -1;
-    }
+    if (resampler_init(&resample_state,&play_codec,&file_codec) < 0)
+        goto error_out;
 
     /* prepare buffer */
-    if (prepare_buffer() < 0) {
-        unprepare_play();
-        unhook_irq();
-        return -1;
-    }
+    if (prepare_buffer() < 0)
+        goto error_out;
 
     /* zero the buffer */
-    silence_buffer();
+    soundblaster_silence_buffer(soundcard);
 
     /* set IRQ interval (card will pick closest and sanitize it) */
-    set_irq_interval(play_buffer_size());
+    soundblaster_set_irq_interval(soundcard,soundblaster_play_buffer_size(soundcard));
 
     /* minimum buffer until loading again (100ms) */
     wav_play_min_load_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
@@ -1156,44 +1237,43 @@ static int begin_play() {
 
     /* hook IRQ */
     if (sb_card->irq != -1) {
-        if (hook_irq(sb_card->irq,soundcard_irq_handler) < 0) {
-            unprepare_play();
-            unhook_irq();
-            return -1;
-        }
+        if (hook_irq(sb_card->irq,soundcard_irq_handler) < 0)
+            goto error_out;
     }
 
+    /* unmask and reinit IRQ */
+    if (init_prepare_irq() < 0)
+        goto error_out;
+
     /* prepare the sound card (buffer, DMA, etc.) */
-    if (prepare_play() < 0) {
-        unprepare_play();
-        unhook_irq();
-        return -1;
-    }
+    if (soundblaster_prepare_play(soundcard) < 0)
+        goto error_out;
 
     /* preroll */
     load_audio(wav_play_load_block_size);
     update_play_position();
 
     /* go! */
-    if (start_sound_card() < 0) {
-        unprepare_play();
-        unhook_irq();
-        return -1;
-    }
+    if (soundblaster_start_playback(soundcard) < 0)
+        goto error_out;
 
     _cli();
     wav_state.playing = 1;
     _sti();
 
     return 0;
+error_out:
+    soundblaster_unprepare_play(soundcard);
+    unhook_irq();
+    return -1;
 }
 
 static void stop_play() {
     if (!wav_state.playing) return;
 
     /* stop */
-    stop_sound_card();
-    unprepare_play();
+    soundblaster_stop_playback(soundcard);
+    soundblaster_unprepare_play(soundcard);
     unhook_irq();
 
     wav_position = wav_play_position;
@@ -1349,7 +1429,7 @@ void display_idle_buffer(void) {
         pos,
         (signed long)sb_card->buffer_size,
         (unsigned long)wav_state.play_delay_bytes,
-        (unsigned long)can_write(),
+        (unsigned long)soundblaster_can_write(soundcard),
         (unsigned long)wav_state.write_counter,
         (unsigned long)wav_state.play_counter,
         (unsigned long)sb_card->irq_counter);
@@ -1588,6 +1668,10 @@ int main(int argc,char **argv) {
         sb_card = &sndsb_card[sc_idx-1];
         if (sb_card->baseio == 0)
             return 1;
+
+        /* FIXME */
+        soundblaster_soundcard_template.p.soundblaster.index = sc_idx - 1;
+        soundcard = &soundblaster_soundcard_template;
     }
 
     loop = 1;
@@ -1620,9 +1704,9 @@ int main(int argc,char **argv) {
 
                     if (wp) stop_play();
 
-                    r = get_autoinit();
+                    r = soundblaster_get_autoinit(soundcard);
                     if (r >= 0) {
-                        set_autoinit(!r);
+                        soundblaster_set_autoinit(soundcard,!r);
                         printf("%sabled auto-init\n",!r ? "En" : "Dis");
                     }
                     else {
