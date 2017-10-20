@@ -121,6 +121,7 @@ struct soundcard {
 
 /* ioctls */
 #define soundcard_ioctl_silence_buffer                      0x5B00U
+#define soundcard_ioctl_isa_dma_assign_buffer               0x5B1AU
 #define soundcard_ioctl_isa_dma_channel                     0x5B1DU
 #define soundcard_ioctl_isa_dma_recommended_buffer_size     0x5B1EU
 #define soundcard_ioctl_get_autoinit                        0x5BA1U
@@ -324,27 +325,6 @@ static int dosamp_FAR soundblaster_irq_callback(soundcard_t sc) {
        send_buffer_again() if it knows playback has not started! */
     /* for non-auto-init modes, start another buffer */
     if (wav_state.playing) sndsb_irq_continue(card,c);
-
-    return 0;
-}
-
-static int soundblaster_assign_isa_dma_buffer(soundcard_t sc,struct dma_8237_allocation *dma) {
-    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
-
-    if (card == NULL) return -1;
-
-    /* NTS: We WANT to call sndsb_assign_dma_buffer with sb_dma == NULL if it happens because it tells the Sound Blaster library to cancel it's copy as well */
-    if (!sndsb_assign_dma_buffer(card,dma))
-        return -1;
-
-    /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
-     * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
-    {
-        uint32_t adj = 2UL * (unsigned long)play_codec.bytes_per_block;
-
-        card->buffer_size -= card->buffer_size % adj;
-        if (card->buffer_size == 0UL) return -1;
-    }
 
     return 0;
 }
@@ -602,6 +582,35 @@ static uint32_t soundblaster_recommended_isa_dma_buffer_size(soundcard_t sc,uint
     return 0;
 }
 
+static int soundblaster_assign_isa_dma_buffer(soundcard_t sc,struct dma_8237_allocation dosamp_FAR *dma) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    /* NTS: We WANT to call sndsb_assign_dma_buffer with sb_dma == NULL if it happens because it tells the Sound Blaster library to cancel it's copy as well */
+    if (dma != NULL) {
+        struct dma_8237_allocation dma_tmp = *dma;
+
+        if (!sndsb_assign_dma_buffer(card,&dma_tmp))
+            return -1;
+
+        /* we want the DMA buffer region actually used by the card to be a multiple of (2 x the block size we play audio with).
+         * we can let that be less than the actual DMA buffer by some bytes, it's fine. */
+        {
+            uint32_t adj = 2UL * (unsigned long)play_codec.bytes_per_block;
+
+            card->buffer_size -= card->buffer_size % adj;
+            if (card->buffer_size == 0UL) return -1;
+        }
+    }
+    else {
+        if (!sndsb_assign_dma_buffer(card,NULL))
+            return -1;
+    }
+
+    return 0;
+}
+
 static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival) {
     switch (cmd) {
         case soundcard_ioctl_silence_buffer:
@@ -615,6 +624,15 @@ static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void do
             if (*len < sizeof(*p)) return -1;
             *p = soundblaster_recommended_isa_dma_buffer_size(sc,*p);
             } return 0;
+        case soundcard_ioctl_isa_dma_assign_buffer:
+            if (data != NULL) {
+                if (len == NULL) return -1;
+                if (*len < sizeof(struct dma_8237_allocation)) return -1;
+                return soundblaster_assign_isa_dma_buffer(sc,(struct dma_8237_allocation dosamp_FAR*)data);
+            }
+            else {
+                return soundblaster_assign_isa_dma_buffer(sc,NULL);
+            }
         case soundcard_ioctl_get_autoinit:
             return soundblaster_get_autoinit(sc);
         case soundcard_ioctl_set_autoinit:
@@ -1178,7 +1196,7 @@ fail:
 
 static void free_dma_buffer() {
     if (isa_dma != NULL) {
-        soundblaster_assign_isa_dma_buffer(soundcard,NULL); /* disassociate DMA buffer from sound card */
+        soundcard->ioctl(soundcard,soundcard_ioctl_isa_dma_assign_buffer,NULL,NULL,0); /* disassociate DMA buffer from sound card */
         dma_8237_free_buffer(isa_dma);
         isa_dma = NULL;
     }
@@ -1232,9 +1250,13 @@ static int realloc_dma_buffer() {
     if (alloc_dma_buffer(choice,ch) < 0)
         return -1;
 
-    if (soundblaster_assign_isa_dma_buffer(soundcard,isa_dma) < 0) {
-        free_dma_buffer();
-        return -1;
+    {
+        unsigned int sz = sizeof(*isa_dma);
+
+        if (soundcard->ioctl(soundcard,soundcard_ioctl_isa_dma_assign_buffer,(void dosamp_FAR*)isa_dma,&sz,0) < 0) {
+            free_dma_buffer();
+            return -1;
+        }
     }
 
     return 0;
