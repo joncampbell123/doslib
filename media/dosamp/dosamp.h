@@ -29,10 +29,8 @@ struct wav_state_t {
     unsigned int                                play_empty:1;
     unsigned int                                prepared:1;
     unsigned int                                playing:1;
+    unsigned int                                is_open:1;
 };
 
-extern struct wav_state_t                       wav_state;
-
-void wav_state_init(struct wav_state_t *w);
-void wav_reset_state(struct wav_state_t *w);
+void wav_reset_state(struct wav_state_t dosamp_FAR * const w);
 

@@ -82,8 +82,6 @@ struct convert_rdbuf_t                          convert_rdbuf = {NULL,0,0,0};
 struct wav_cbr_t                                file_codec;
 struct wav_cbr_t                                play_codec;
 
-struct wav_state_t                              wav_state;
-
 /* sound card state */
 enum soundcard_drv_t {
     soundcard_none=0,
@@ -114,6 +112,7 @@ struct soundcard {
     unsigned int                                (dosamp_FAR *write)(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len);
     unsigned char dosamp_FAR *                  (dosamp_FAR *mmap_write)(soundcard_t sc,uint32_t dosamp_FAR * const howmuch,uint32_t want);
     int                                         (dosamp_FAR *ioctl)(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival);
+    struct wav_state_t                          wav_state;
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
@@ -149,7 +148,7 @@ static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
 /* private */
 static void soundblaster_update_wav_dma_position(soundcard_t sc,struct sndsb_ctx *card) {
     _cli();
-    wav_state.dma_position = sndsb_read_dma_buffer_position(card);
+    sc->wav_state.dma_position = sndsb_read_dma_buffer_position(card);
     _sti();
 }
 
@@ -159,7 +158,7 @@ static void soundblaster_update_wav_play_delay(soundcard_t sc,struct sndsb_ctx *
 
     /* DMA trails our "last IO" pointer */
     delay  = (signed long)card->buffer_last_io;
-    delay -= (signed long)wav_state.dma_position;
+    delay -= (signed long)sc->wav_state.dma_position;
 
     /* delay == 0 is a special case.
      * if wav_state.play_empty, then it means there's no delay.
@@ -168,23 +167,25 @@ static void soundblaster_update_wav_play_delay(soundcard_t sc,struct sndsb_ctx *
      * written to load new audio data RIGHT BEHIND the DMA position
      * which could easily lead to buffer_last_io == DMA position! */
     if (delay < 0L) delay += (signed long)card->buffer_size;
-    else if (delay == 0L && !wav_state.play_empty) delay = (signed long)card->buffer_size;
+    else if (delay == 0L && !sc->wav_state.play_empty) delay = (signed long)card->buffer_size;
 
     /* guard against inconcievable cases */
     if (delay < 0L) delay = 0L;
     if (delay >= (signed long)card->buffer_size) delay = (signed long)card->buffer_size;
 
     /* convert to samples */
-    wav_state.play_delay_bytes = (unsigned long)delay;
-    wav_state.play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
+    sc->wav_state.play_delay_bytes = (unsigned long)delay;
+    sc->wav_state.play_delay = ((unsigned long)delay / play_codec.bytes_per_block) * play_codec.samples_per_block;
 
     /* play position is calculated here */
-    wav_state.play_counter = wav_state.write_counter;
-    if (wav_state.play_counter >= wav_state.play_delay_bytes) wav_state.play_counter -= wav_state.play_delay_bytes;
-    else wav_state.play_counter = 0;
+    sc->wav_state.play_counter = sc->wav_state.write_counter;
+    if (sc->wav_state.play_counter >= sc->wav_state.play_delay_bytes)
+        sc->wav_state.play_counter -= sc->wav_state.play_delay_bytes;
+    else
+        sc->wav_state.play_counter = 0;
 
-    if (wav_state.play_counter_prev < wav_state.play_counter)
-        wav_state.play_counter_prev = wav_state.play_counter;
+    if (sc->wav_state.play_counter_prev < sc->wav_state.play_counter)
+        sc->wav_state.play_counter_prev = sc->wav_state.play_counter;
 }
 
 /* this depends on keeping the "play delay" up to date */
@@ -198,7 +199,7 @@ static uint32_t dosamp_FAR soundblaster_can_write(soundcard_t sc) { /* in bytes 
     soundblaster_update_wav_play_delay(sc,card);
 
     x = card->buffer_size;
-    if (x >= wav_state.play_delay_bytes) x -= wav_state.play_delay_bytes;
+    if (x >= sc->wav_state.play_delay_bytes) x -= sc->wav_state.play_delay_bytes;
     else x = 0;
 
     return x;
@@ -220,8 +221,8 @@ static int dosamp_FAR soundblaster_clamp_if_behind(soundcard_t sc,uint32_t ahead
 
     soundblaster_update_wav_play_delay(sc,card);
 
-    if (wav_state.play_counter < wav_state.play_counter_prev) {
-        card->buffer_last_io  = wav_state.dma_position;
+    if (sc->wav_state.play_counter < sc->wav_state.play_counter_prev) {
+        card->buffer_last_io  = sc->wav_state.dma_position;
         card->buffer_last_io += ahead_in_bytes;
         card->buffer_last_io -= card->buffer_last_io % play_codec.bytes_per_block;
         if (card->buffer_last_io >= card->buffer_size)
@@ -260,13 +261,13 @@ static unsigned char dosamp_FAR * dosamp_FAR soundblaster_mmap_write(soundcard_t
 
     if (want != 0) {
         /* advance I/O. caller MUST fill in the buffer. */
-        wav_state.write_counter += want;
+        sc->wav_state.write_counter += want;
         card->buffer_last_io += want;
         if (card->buffer_last_io >= card->buffer_size)
             card->buffer_last_io = 0;
 
         /* now that audio has been written, buffer is no longer empty */
-        wav_state.play_empty = 0;
+        sc->wav_state.play_empty = 0;
 
         /* update */
         soundblaster_update_wav_dma_position(sc,card);
@@ -335,7 +336,7 @@ static int dosamp_FAR soundblaster_irq_callback(soundcard_t sc) {
     /* FIXME: The sndsb library should NOT do anything in
        send_buffer_again() if it knows playback has not started! */
     /* for non-auto-init modes, start another buffer */
-    if (wav_state.playing) sndsb_irq_continue(card,c);
+    if (sc->wav_state.playing) sndsb_irq_continue(card,c);
 
     return 0;
 }
@@ -383,7 +384,7 @@ static int soundblaster_prepare_play(soundcard_t sc) {
 
     if (card == NULL) return -1;
 
-    if (wav_state.prepared)
+    if (sc->wav_state.prepared)
         return 0;
 
     if (card->dsp_play_method == SNDSB_DSPOUTMETHOD_DIRECT)
@@ -393,10 +394,12 @@ static int soundblaster_prepare_play(soundcard_t sc) {
     if (!sndsb_prepare_dsp_playback(card,/*rate*/play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8))
         return -1;
 
+    wav_reset_state(&sc->wav_state);
+
     sndsb_setup_dma(card);
     soundblaster_update_wav_dma_position(sc,card);
     soundblaster_update_wav_play_delay(sc,card);
-    wav_state.prepared = 1;
+    sc->wav_state.prepared = 1;
     return 0;
 }
 
@@ -404,11 +407,11 @@ static int soundblaster_unprepare_play(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
     if (card == NULL) return -1;
-    if (wav_state.playing) return -1;
+    if (sc->wav_state.playing) return -1;
 
-    if (wav_state.prepared) {
+    if (sc->wav_state.prepared) {
         sndsb_stop_dsp_playback(card);
-        wav_state.prepared = 0;
+        sc->wav_state.prepared = 0;
     }
 
     return 0;
@@ -428,7 +431,7 @@ static uint32_t soundblaster_play_buffer_play_pos(soundcard_t sc) {
     if (card == NULL) return 0;
     soundblaster_update_wav_dma_position(sc,card);
 
-    return wav_state.dma_position;
+    return sc->wav_state.dma_position;
 }
 
 static uint32_t soundblaster_play_buffer_write_pos(soundcard_t sc) {
@@ -446,7 +449,7 @@ static uint32_t soundblaster_set_irq_interval(soundcard_t sc,uint32_t x) {
     if (card == NULL) return 0;
 
     /* you cannot set IRQ interval once prepared */
-    if (wav_state.prepared) return card->buffer_irq_interval;
+    if (sc->wav_state.prepared) return card->buffer_irq_interval;
 
     /* keep it sample aligned */
     x -= x % play_codec.bytes_per_block;
@@ -469,14 +472,14 @@ static int soundblaster_start_playback(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
     if (card == NULL) return -1;
-    if (!wav_state.prepared) return -1;
-    if (wav_state.playing) return 0;
+    if (!sc->wav_state.prepared) return -1;
+    if (sc->wav_state.playing) return 0;
 
     if (!sndsb_begin_dsp_playback(card))
         return -1;
 
     _cli();
-    wav_state.playing = 1;
+    sc->wav_state.playing = 1;
     _sti();
 
     return 0;
@@ -486,7 +489,7 @@ static int soundblaster_stop_playback(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
     if (card == NULL) return -1;
-    if (!wav_state.playing) return 0;
+    if (!sc->wav_state.playing) return 0;
 
     _cli();
     soundblaster_update_wav_dma_position(sc,card);
@@ -496,7 +499,7 @@ static int soundblaster_stop_playback(soundcard_t sc) {
     sndsb_stop_dsp_playback(card);
 
     _cli();
-    wav_state.playing = 0;
+    sc->wav_state.playing = 0;
     _sti();
 
     return 0;
@@ -736,11 +739,7 @@ struct soundcard soundblaster_soundcard_template = {
 
 soundcard_t                                     soundcard = NULL;
 
-void wav_state_init(struct wav_state_t *w) {
-    memset(w,0,sizeof(*w));
-}
-
-void wav_reset_state(struct wav_state_t *w) {
+void wav_reset_state(struct wav_state_t dosamp_FAR * const w) {
     w->play_counter_prev = 0;
     w->write_counter = 0;
     w->play_counter = 0;
@@ -821,7 +820,7 @@ void wav_rebase_position_event(void) {
     struct audio_playback_rebase_t *r = rebase_add();
 
     if (r != NULL) {
-        r->event_at = wav_state.write_counter;
+        r->event_at = soundcard->wav_state.write_counter;
         r->wav_position = wav_position;
     }
 }
@@ -1105,14 +1104,14 @@ static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point
 void update_play_position(void) {
     struct audio_playback_rebase_t *r;
 
-    r = rebase_find(wav_state.play_counter);
+    r = rebase_find(soundcard->wav_state.play_counter);
 
     if (r != NULL) {
         wav_play_position =
-            ((unsigned long long)(((wav_state.play_counter - r->event_at) / play_codec.bytes_per_block) *
+            ((unsigned long long)(((soundcard->wav_state.play_counter - r->event_at) / play_codec.bytes_per_block) *
                 (unsigned long long)resample_state.step) >> (unsigned long long)resample_100_shift) + r->wav_position;
     }
-    else if (wav_state.playing)
+    else if (soundcard->wav_state.playing)
         wav_play_position = 0;
     else
         wav_play_position = wav_position;
@@ -1123,7 +1122,7 @@ void clear_remapping(void) {
 }
 
 void move_pos(signed long adj) {
-    if (wav_state.playing)
+    if (soundcard->wav_state.playing)
         return;
 
     clear_remapping();
@@ -1144,7 +1143,7 @@ void move_pos(signed long adj) {
 }
 
 static void wav_idle() {
-    if (!wav_state.playing || wav_source == NULL)
+    if (!soundcard->wav_state.playing || wav_source == NULL)
         return;
 
     /* debug */
@@ -1379,7 +1378,7 @@ static int set_play_format(struct wav_cbr_t dosamp_FAR * const d,const struct wa
 }
 
 static int begin_play() {
-    if (wav_state.playing)
+    if (soundcard->wav_state.playing)
         return 0;
 
     /* reset state */
@@ -1447,7 +1446,6 @@ static int begin_play() {
 
     /* prepare */
     resampler_state_reset(&resample_state);
-    wav_reset_state(&wav_state);
 
     /* preroll */
     wav_position_to_file_pointer();
@@ -1468,7 +1466,7 @@ error_out:
 }
 
 static void stop_play() {
-    if (!wav_state.playing) return;
+    if (!soundcard->wav_state.playing) return;
 
     /* stop */
     soundcard->ioctl(soundcard,soundcard_ioctl_stop_play,NULL,NULL,0);
@@ -1639,10 +1637,10 @@ void display_idle_buffer(void) {
         apos,
         pos,
         (signed long)buffersz,
-        (unsigned long)wav_state.play_delay_bytes,
+        (unsigned long)soundcard->wav_state.play_delay_bytes,
         (unsigned long)soundcard->can_write(soundcard),
-        (unsigned long)wav_state.write_counter,
-        (unsigned long)wav_state.play_counter,
+        (unsigned long)soundcard->wav_state.write_counter,
+        (unsigned long)soundcard->wav_state.play_counter,
         (unsigned long)irq_counter);
 
     fflush(stdout);
@@ -1798,8 +1796,6 @@ int main(int argc,char **argv) {
     /* TODO: If we detect the CPU is slow enough, default to "fast" */
     resample_state.resample_mode = resample_good;
 
-    wav_state_init(&wav_state);
-
     cpu_probe();
     probe_8237();
     if (!probe_8259()) {
@@ -1919,7 +1915,7 @@ int main(int argc,char **argv) {
                     printf("Stuck test %s\n",stuck_test?"on":"off");
                 }
                 else if (i == 'A') {
-                    unsigned char wp = wav_state.playing;
+                    unsigned char wp = soundcard->wav_state.playing;
                     int r;
 
                     if (wp) stop_play();
@@ -1950,7 +1946,7 @@ int main(int argc,char **argv) {
                     }
                 }
                 else if (i == '^') { /* shift-6 */
-                    unsigned char wp = wav_state.playing;
+                    unsigned char wp = soundcard->wav_state.playing;
 
                     if (wp) stop_play();
 
@@ -1972,7 +1968,7 @@ int main(int argc,char **argv) {
                     if (wp) begin_play();
                 }
                 else if (i == '&') { /* shift-7 */
-                    unsigned char wp = wav_state.playing;
+                    unsigned char wp = soundcard->wav_state.playing;
 
                     if (wp) stop_play();
 
@@ -1986,7 +1982,7 @@ int main(int argc,char **argv) {
                     if (wp) begin_play();
                 }
                 else if (i == '*') { /* shift-8 */
-                    unsigned char wp = wav_state.playing;
+                    unsigned char wp = soundcard->wav_state.playing;
 
                     if (wp) stop_play();
 
@@ -2000,7 +1996,7 @@ int main(int argc,char **argv) {
                     if (wp) begin_play();
                 }
                 else if (i == 'R') {
-                    unsigned char wp = wav_state.playing;
+                    unsigned char wp = soundcard->wav_state.playing;
 
                     if (wp) stop_play();
 
@@ -2010,35 +2006,35 @@ int main(int argc,char **argv) {
                     if (wp) begin_play();
                 }
                 else if (i == '[') {
-                    unsigned char wp = wav_state.playing;
+                    unsigned char wp = soundcard->wav_state.playing;
 
                     if (wp) stop_play();
                     move_pos(-((signed long)file_codec.sample_rate)); /* -1 sec */
                     if (wp) begin_play();
                 }
                 else if (i == ']') {
-                    unsigned char wp = wav_state.playing;
+                    unsigned char wp = soundcard->wav_state.playing;
 
                     if (wp) stop_play();
                     move_pos(file_codec.sample_rate); /* 1 sec */
                     if (wp) begin_play();
                 }
                 else if (i == '{') {
-                    unsigned char wp = wav_state.playing;
+                    unsigned char wp = soundcard->wav_state.playing;
 
                     if (wp) stop_play();
                     move_pos(-((signed long)file_codec.sample_rate * 30L)); /* -30 sec */
                     if (wp) begin_play();
                 }
                 else if (i == '}') {
-                    unsigned char wp = wav_state.playing;
+                    unsigned char wp = soundcard->wav_state.playing;
 
                     if (wp) stop_play();
                     move_pos(file_codec.sample_rate * 30L); /* 30 sec */
                     if (wp) begin_play();
                 }
                 else if (i == ' ') {
-                    if (wav_state.playing) stop_play();
+                    if (soundcard->wav_state.playing) stop_play();
                     else begin_play();
                 }
             }
