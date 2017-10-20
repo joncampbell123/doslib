@@ -38,6 +38,7 @@ struct soundcard {
     unsigned char dosamp_FAR *                  (dosamp_FAR *mmap_write)(soundcard_t sc,uint32_t dosamp_FAR * const howmuch,uint32_t want);
     int                                         (dosamp_FAR *ioctl)(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival);
     struct wav_state_t                          wav_state;
+    struct wav_cbr_t                            cur_codec;
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
