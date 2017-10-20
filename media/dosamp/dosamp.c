@@ -126,6 +126,8 @@ struct soundcard {
 #define soundcard_ioctl_isa_dma_recommended_buffer_size     0x5B1EU
 #define soundcard_ioctl_get_autoinit                        0x5BA1U
 #define soundcard_ioctl_set_autoinit                        0x5BA2U
+#define soundcard_ioctl_prepare_play                        0x5B40U
+#define soundcard_ioctl_unprepare_play                      0x5B41U
 
 /* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
@@ -367,8 +369,6 @@ static int soundblaster_silence_buffer(soundcard_t sc) {
     return 0;
 }
 
-////////////////////// TODO
-
 static int soundblaster_prepare_play(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
@@ -403,6 +403,8 @@ static int soundblaster_unprepare_play(soundcard_t sc) {
 
     return 0;
 }
+
+////////////////////// TODO
 
 static uint32_t soundblaster_play_buffer_size(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
@@ -641,6 +643,10 @@ static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void do
             return soundblaster_get_autoinit(sc);
         case soundcard_ioctl_set_autoinit:
             return soundblaster_set_autoinit(sc,(uint8_t)(ival > 0 ? 1 : 0));
+        case soundcard_ioctl_prepare_play:
+            return soundblaster_prepare_play(sc);
+        case soundcard_ioctl_unprepare_play:
+            return soundblaster_unprepare_play(sc);
     }
 
     return -1;
@@ -1354,7 +1360,7 @@ static int begin_play() {
         goto error_out;
 
     /* prepare the sound card (buffer, DMA, etc.) */
-    if (soundblaster_prepare_play(soundcard) < 0)
+    if (soundcard->ioctl(soundcard,soundcard_ioctl_prepare_play,NULL,NULL,0) < 0)
         goto error_out;
 
     /* preroll */
@@ -1367,7 +1373,7 @@ static int begin_play() {
 
     return 0;
 error_out:
-    soundblaster_unprepare_play(soundcard);
+    soundcard->ioctl(soundcard,soundcard_ioctl_unprepare_play,NULL,NULL,0);
     unhook_irq();
     return -1;
 }
@@ -1377,7 +1383,7 @@ static void stop_play() {
 
     /* stop */
     soundblaster_stop_playback(soundcard);
-    soundblaster_unprepare_play(soundcard);
+    soundcard->ioctl(soundcard,soundcard_ioctl_unprepare_play,NULL,NULL,0);
     unhook_irq();
 
     wav_position = wav_play_position;
