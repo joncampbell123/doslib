@@ -367,6 +367,8 @@ static int soundblaster_silence_buffer(soundcard_t sc) {
     return 0;
 }
 
+////////////////////// TODO
+
 static int soundblaster_prepare_play(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
@@ -472,7 +474,7 @@ static int soundblaster_stop_playback(soundcard_t sc) {
     return 0;
 }
 
-static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t * const d,const struct wav_cbr_t * const s) {
+static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const d,const struct wav_cbr_t dosamp_FAR * const s) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
     uint32_t osz,oph;
     int r;
@@ -558,6 +560,8 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t * const 
 
     return 0;
 }
+
+////////////////////// END TODO
 
 static int8_t soundblaster_will_use_isa_dma_channel(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
