@@ -99,22 +99,16 @@ int resampler_init(struct resampler_state_t *r,struct wav_cbr_t * const d,const 
 
     {
         register unsigned int i;
-        int16_t init;
         int32_t i32;
 
-        if (d->bits_per_sample == 8) {
-            init = 0x80;
-            i32 = 0x80 << 8L;
-        }
-        else {
-            init = (int16_t)0x8000U;
+        if (d->bits_per_sample == 8)
+            i32 = 0x8000L;
+        else
             i32 = 0;
-        }
 
-        for (i=0;i < resample_max_channels;i++) {
-            r->p[i] = r->c[i] = init;
+        /* the resampler will use init flag to load p[] and c[], don't need to reset them here */
+        for (i=0;i < resample_max_channels;i++)
             r->f[i] = i32;
-        }
     }
 
     return 0;
