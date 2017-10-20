@@ -98,8 +98,15 @@ struct soundcard;
 typedef struct soundcard dosamp_FAR * soundcard_t;
 typedef struct soundcard dosamp_FAR * dosamp_FAR * soundcard_ptr_t;
 
+#define soundcard_caps_8bit                     (1U << 0U)
+#define soundcard_caps_16bit                    (1U << 1U)
+#define soundcard_caps_mono                     (1U << 2U)
+#define soundcard_caps_sterep                   (1U << 3U)
+#define soundcard_caps_mmap_write               (1U << 4U)
+
 struct soundcard {
     enum soundcard_drv_t                        driver;
+    uint16_t                                    capabilities;
     int                                         (dosamp_FAR *poll)(soundcard_t sc);
     uint32_t                                    (dosamp_FAR *can_write)(soundcard_t sc); /* in bytes */
     int                                         (dosamp_FAR *clamp_if_behind)(soundcard_t sc,uint32_t ahead_in_bytes);
@@ -583,6 +590,7 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t * const 
 /* TODO: This will become an array for each valid soundcard in sndsb lib */
 struct soundcard soundblaster_soundcard_template = {
     .driver =                                   soundcard_soundblaster,
+    .capabilities =                             0,
     .can_write =                                soundblaster_can_write,
     .poll =                                     soundblaster_poll,
     .clamp_if_behind =                          soundblaster_clamp_if_behind,
@@ -1688,6 +1696,7 @@ int main(int argc,char **argv) {
             return 1;
 
         /* FIXME */
+        soundblaster_soundcard_template.capabilities = soundcard_caps_mmap_write | soundcard_caps_8bit/*FIXME*/;
         soundblaster_soundcard_template.p.soundblaster.index = sc_idx - 1;
         soundcard = &soundblaster_soundcard_template;
     }
