@@ -1447,7 +1447,7 @@ static int begin_play() {
     }
 
     /* hook IRQ */
-    {
+    if (soundcard->requirements & soundcard_requirements_irq) {
         int irq = soundcard->ioctl(soundcard,soundcard_ioctl_get_irq,NULL,NULL,0);
         if (irq >= 0) {
             if (hook_irq(irq,soundcard_irq_handler) < 0)
