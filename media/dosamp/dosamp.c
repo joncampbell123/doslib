@@ -120,9 +120,11 @@ struct soundcard {
 };
 
 /* ioctls */
-#define soundcard_ioctl_silence_buffer          0x5B00U
-#define soundcard_ioctl_get_autoinit            0x5BA1U
-#define soundcard_ioctl_set_autoinit            0x5BA2U
+#define soundcard_ioctl_silence_buffer                      0x5B00U
+#define soundcard_ioctl_isa_dma_channel                     0x5B1DU
+#define soundcard_ioctl_isa_dma_recommended_buffer_size     0x5B1EU
+#define soundcard_ioctl_get_autoinit                        0x5BA1U
+#define soundcard_ioctl_set_autoinit                        0x5BA2U
 
 /* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
@@ -345,25 +347,6 @@ static int soundblaster_assign_isa_dma_buffer(soundcard_t sc,struct dma_8237_all
     }
 
     return 0;
-}
-
-static int8_t soundblaster_will_use_isa_dma_channel(soundcard_t sc) {
-    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
-
-    if (card == NULL) return -1;
-
-    return sndsb_dsp_playback_will_use_dma_channel(card,play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8);
-}
-
-static uint32_t soundblaster_recommended_isa_dma_buffer_size(soundcard_t sc,uint32_t limit/*no limit == 0*/) {
-    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
-
-    if (card == NULL) return 0;
-
-    if (soundblaster_will_use_isa_dma_channel(sc) >= 4)
-        return sndsb_recommended_16bit_dma_buffer_size(card,limit);
-    else
-        return sndsb_recommended_dma_buffer_size(card,limit);
 }
 
 /* private */
@@ -596,10 +579,42 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t * const 
     return 0;
 }
 
+static int8_t soundblaster_will_use_isa_dma_channel(soundcard_t sc) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+
+    if (card == NULL) return -1;
+
+    return sndsb_dsp_playback_will_use_dma_channel(card,play_codec.sample_rate,/*stereo*/play_codec.number_of_channels > 1,/*16-bit*/play_codec.bits_per_sample > 8);
+}
+
+static uint32_t soundblaster_recommended_isa_dma_buffer_size(soundcard_t sc,uint32_t limit/*no limit == 0*/) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    int8_t ch;
+
+    if (card == NULL) return 0;
+
+    ch = soundblaster_will_use_isa_dma_channel(sc);
+    if (ch >= 4)
+        return sndsb_recommended_16bit_dma_buffer_size(card,limit);
+    else if (ch >= 0)
+        return sndsb_recommended_dma_buffer_size(card,limit);
+
+    return 0;
+}
+
 static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival) {
     switch (cmd) {
         case soundcard_ioctl_silence_buffer:
             return soundblaster_silence_buffer(sc);
+        case soundcard_ioctl_isa_dma_channel:
+            return soundblaster_will_use_isa_dma_channel(sc);
+        case soundcard_ioctl_isa_dma_recommended_buffer_size: {
+            uint32_t dosamp_FAR *p = (uint32_t dosamp_FAR*)data;
+
+            if (data == NULL || len == NULL) return -1;
+            if (*len < sizeof(*p)) return -1;
+            *p = soundblaster_recommended_isa_dma_buffer_size(sc,*p);
+            } return 0;
         case soundcard_ioctl_get_autoinit:
             return soundblaster_get_autoinit(sc);
         case soundcard_ioctl_set_autoinit:
@@ -1190,17 +1205,27 @@ static int alloc_dma_buffer(uint32_t choice,int8_t ch) {
     return 0;
 }
 
+static uint32_t soundcard_isa_dma_recommended_buffer_size(soundcard_t sc,uint32_t limit) {
+    unsigned int sz = sizeof(uint32_t);
+    uint32_t p = 0;
+
+    if (soundcard->ioctl(soundcard,soundcard_ioctl_isa_dma_recommended_buffer_size,&p,&sz,0) < 0)
+        return 0;
+
+    return p;
+}
+
 static int realloc_dma_buffer() {
     uint32_t choice;
     int8_t ch;
 
     free_dma_buffer();
 
-    ch = soundblaster_will_use_isa_dma_channel(soundcard);
+    ch = soundcard->ioctl(soundcard,soundcard_ioctl_isa_dma_channel,NULL,NULL,0);
     if (ch < 0)
         return 0; /* nothing to do */
 
-    choice = soundblaster_recommended_isa_dma_buffer_size(soundcard,/*no limit*/0);
+    choice = soundcard_isa_dma_recommended_buffer_size(soundcard,/*no limit*/0);
     if (choice == 0)
         return -1;
 
@@ -1223,7 +1248,7 @@ int check_dma_buffer(void) {
     if (isa_dma == NULL)
         realloc_dma_buffer();
     else {
-        ch = soundblaster_will_use_isa_dma_channel(soundcard);
+        ch = soundcard->ioctl(soundcard,soundcard_ioctl_isa_dma_channel,NULL,NULL,0);
         if (ch >= 0 && isa_dma->dma_width != (ch >= 4 ? 16 : 8))
             realloc_dma_buffer();
     }
