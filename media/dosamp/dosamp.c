@@ -736,17 +736,6 @@ struct soundcard soundblaster_soundcard_template = {
 
 soundcard_t                                     soundcard = NULL;
 
-/*====================Sound Blaster Specific=======================*/
-/* section off from main dosamp.c.
- * will eventually become it's own module of code
- * through a more generic interface that would enable the use of
- * other sound cards. */
-
-/* Sound Blaster sound card */
-static struct sndsb_ctx*                        sb_card = NULL;
-
-/*====================End Sound Blaster Specific=======================*/
-
 void wav_state_init(struct wav_state_t *w) {
     memset(w,0,sizeof(*w));
 }
@@ -1668,8 +1657,15 @@ void display_idle(unsigned char disp) {
 }
 
 void free_sound_blaster_support(void) {
+    unsigned int i;
+
     free_dma_buffer();
-    sndsb_free_card(sb_card);
+
+    for (i=0;i < SNDSB_MAX_CARDS;i++) {
+        struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
+        sndsb_free_card(cx);
+    }
+
     free_sndsb(); /* will also de-ref/unhook the NMI reflection */
 }
 
@@ -1887,9 +1883,10 @@ int main(int argc,char **argv) {
             sc_idx = 1;
         }
 
-        sb_card = &sndsb_card[sc_idx-1];
-        if (sb_card->baseio == 0)
-            return 1;
+        {
+            struct sndsb_ctx *cx = sndsb_index_to_ctx(sc_idx - 1);
+            if (cx->baseio == 0) return 1;
+        }
 
         /* FIXME */
         soundblaster_soundcard_template.capabilities = soundcard_caps_mmap_write | soundcard_caps_8bit/*FIXME*/;
