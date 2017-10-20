@@ -121,6 +121,8 @@ struct soundcard {
 
 /* ioctls */
 #define soundcard_ioctl_silence_buffer          0x5B00U
+#define soundcard_ioctl_get_autoinit            0x5BA1U
+#define soundcard_ioctl_set_autoinit            0x5BA2U
 
 /* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
@@ -364,6 +366,7 @@ static uint32_t soundblaster_recommended_isa_dma_buffer_size(soundcard_t sc,uint
         return sndsb_recommended_dma_buffer_size(card,limit);
 }
 
+/* private */
 static int soundblaster_get_autoinit(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
@@ -372,6 +375,7 @@ static int soundblaster_get_autoinit(soundcard_t sc) {
     return card->dsp_autoinit_dma && card->dsp_autoinit_command ? 1 : 0;
 }
 
+/* private */
 static int soundblaster_set_autoinit(soundcard_t sc,uint8_t flag) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
@@ -596,6 +600,11 @@ static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void do
     switch (cmd) {
         case soundcard_ioctl_silence_buffer:
             return soundblaster_silence_buffer(sc);
+        case soundcard_ioctl_get_autoinit:
+            return soundblaster_get_autoinit(sc);
+        case soundcard_ioctl_set_autoinit:
+            if (len == NULL || data == NULL || *len < 1) return -1;
+            return soundblaster_set_autoinit(sc,*((uint8_t dosamp_FAR*)data));
     }
 
     return -1;
@@ -1746,10 +1755,15 @@ int main(int argc,char **argv) {
 
                     if (wp) stop_play();
 
-                    r = soundblaster_get_autoinit(soundcard);
+                    r = soundcard->ioctl(soundcard,soundcard_ioctl_get_autoinit,NULL,NULL);
                     if (r >= 0) {
-                        soundblaster_set_autoinit(soundcard,!r);
-                        printf("%sabled auto-init\n",!r ? "En" : "Dis");
+                        uint8_t nb = !r;
+                        unsigned int sz = sizeof(nb);
+
+                        if (soundcard->ioctl(soundcard,soundcard_ioctl_set_autoinit,(void dosamp_FAR *)(&nb),&sz) >= 0)
+                            printf("%sabled auto-init\n",nb ? "En" : "Dis");
+                        else
+                            printf("Unable to change auto-init\n");
                     }
                     else {
                         printf("Auto-init not supported\n");
