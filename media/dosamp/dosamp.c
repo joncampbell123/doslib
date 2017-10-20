@@ -452,9 +452,14 @@ static int soundblaster_start_playback(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
     if (card == NULL) return -1;
+    if (wav_state.playing) return 0;
 
     if (!sndsb_begin_dsp_playback(card))
         return -1;
+
+    _cli();
+    wav_state.playing = 1;
+    _sti();
 
     return 0;
 }
@@ -463,6 +468,7 @@ static int soundblaster_stop_playback(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
     if (card == NULL) return -1;
+    if (!wav_state.playing) return 0;
 
     _cli();
     soundblaster_update_wav_dma_position(sc,card);
@@ -470,6 +476,11 @@ static int soundblaster_stop_playback(soundcard_t sc) {
     _sti();
 
     sndsb_stop_dsp_playback(card);
+
+    _cli();
+    wav_state.playing = 0;
+    _sti();
+
     return 0;
 }
 
@@ -1257,10 +1268,6 @@ static int begin_play() {
     if (soundblaster_start_playback(soundcard) < 0)
         goto error_out;
 
-    _cli();
-    wav_state.playing = 1;
-    _sti();
-
     return 0;
 error_out:
     soundblaster_unprepare_play(soundcard);
@@ -1278,10 +1285,6 @@ static void stop_play() {
 
     wav_position = wav_play_position;
     update_play_position();
-
-    _cli();
-    wav_state.playing = 0;
-    _sti();
 }
 
 static void help() {
