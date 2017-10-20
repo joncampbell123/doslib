@@ -103,6 +103,7 @@ struct soundcard {
     int                                         (dosamp_FAR *poll)(soundcard_t sc);
     uint32_t                                    (dosamp_FAR *can_write)(soundcard_t sc); /* in bytes */
     int                                         (dosamp_FAR *clamp_if_behind)(soundcard_t sc,uint32_t ahead_in_bytes);
+    int                                         (dosamp_FAR *irq_callback)(soundcard_t sc);
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
@@ -286,7 +287,7 @@ static int dosamp_FAR soundblaster_poll(soundcard_t sc) {
     return 0;
 }
 
-static int soundblaster_irq_callback(soundcard_t sc) {
+static int dosamp_FAR soundblaster_irq_callback(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
     unsigned char c;
 
@@ -583,6 +584,7 @@ struct soundcard soundblaster_soundcard_template = {
     .can_write =                                soundblaster_can_write,
     .poll =                                     soundblaster_poll,
     .clamp_if_behind =                          soundblaster_clamp_if_behind,
+    .irq_callback =                             soundblaster_irq_callback,
     .p.soundblaster.index =                     -1
 };
 
@@ -638,7 +640,7 @@ static void interrupt soundcard_irq_handler() {
      *  - this IRQ handler will not be called unless irq_number has been filled in.
      *  - old_handler contains the prior IRQ handler.
      *  - chain_irq has been filled in */
-    soundblaster_irq_callback(soundcard);
+    soundcard->irq_callback(soundcard);
 
     if (soundcard_irq.chain_irq) {
         /* chain to the previous IRQ, who will acknowledge the interrupt */
