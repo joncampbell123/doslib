@@ -33,3 +33,6 @@ struct wav_state_t {
 
 extern struct wav_state_t                       wav_state;
 
+void wav_state_init(struct wav_state_t *w);
+void wav_reset_state(struct wav_state_t *w);
+

@@ -691,16 +691,16 @@ static struct sndsb_ctx*                        sb_card = NULL;
 
 /*====================End Sound Blaster Specific=======================*/
 
-void wav_state_init(void) {
-    memset(&wav_state,0,sizeof(wav_state));
+void wav_state_init(struct wav_state_t *w) {
+    memset(w,0,sizeof(*w));
 }
 
-void wav_reset_state(void) {
-    wav_state.play_counter_prev = 0;
-    wav_state.write_counter = 0;
-    wav_state.play_counter = 0;
-    wav_state.play_delay = 0;
-    wav_state.play_empty = 1;
+void wav_reset_state(struct wav_state_t *w) {
+    w->play_counter_prev = 0;
+    w->write_counter = 0;
+    w->play_counter = 0;
+    w->play_delay = 0;
+    w->play_empty = 1;
 }
 
 /* WAV file data chunk info */
@@ -1344,7 +1344,7 @@ static int begin_play() {
     resampler_state_reset(&resample_state);
     convert_rdbuf_clear();
     wav_rebase_clear();
-    wav_reset_state();
+    wav_reset_state(&wav_state);
 
     /* get the file pointer ready */
     wav_position_to_file_pointer();
@@ -1731,7 +1731,7 @@ int main(int argc,char **argv) {
     /* TODO: If we detect the CPU is slow enough, default to "fast" */
     resample_state.resample_mode = resample_good;
 
-    wav_state_init();
+    wav_state_init(&wav_state);
 
     cpu_probe();
     probe_8237();
