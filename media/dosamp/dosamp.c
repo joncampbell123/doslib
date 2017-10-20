@@ -1304,7 +1304,7 @@ static uint32_t soundcard_isa_dma_recommended_buffer_size(soundcard_t sc,uint32_
     return p;
 }
 
-static int realloc_dma_buffer() {
+static int realloc_isa_dma_buffer() {
     uint32_t choice;
     int8_t ch;
 
@@ -1334,20 +1334,22 @@ static int realloc_dma_buffer() {
 }
 
 int check_dma_buffer(void) {
-    int8_t ch;
+    if (soundcard->requirements & soundcard_requirements_isa_dma) {
+        int8_t ch;
 
-    /* alloc DMA buffer.
-     * if already allocated, then realloc if changing from 8-bit to 16-bit DMA */
-    if (isa_dma == NULL)
-        realloc_dma_buffer();
-    else {
-        ch = soundcard->ioctl(soundcard,soundcard_ioctl_isa_dma_channel,NULL,NULL,0);
-        if (ch >= 0 && isa_dma->dma_width != (ch >= 4 ? 16 : 8))
-            realloc_dma_buffer();
+        /* alloc DMA buffer.
+         * if already allocated, then realloc if changing from 8-bit to 16-bit DMA */
+        if (isa_dma == NULL)
+            realloc_isa_dma_buffer();
+        else {
+            ch = soundcard->ioctl(soundcard,soundcard_ioctl_isa_dma_channel,NULL,NULL,0);
+            if (ch >= 0 && isa_dma->dma_width != (ch >= 4 ? 16 : 8))
+                realloc_isa_dma_buffer();
+        }
+
+        if (isa_dma == NULL)
+            return -1;
     }
-
-    if (isa_dma == NULL)
-        return -1;
 
     return 0;
 }
