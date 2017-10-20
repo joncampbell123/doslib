@@ -1380,21 +1380,19 @@ static int begin_play() {
 
         /* might fail, sound card might not have IRQs, don't care. */
         soundcard->ioctl(soundcard,soundcard_ioctl_set_irq_interval,&bufsz,&sz,0);
+
+        /* minimum buffer until loading again (100ms) */
+        wav_play_min_load_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
+
+        /* no more than 1/4 the buffer */
+        if (wav_play_min_load_size > (bufsz / 4UL)) wav_play_min_load_size = (bufsz / 4UL);
+
+        /* how much to load per call (100ms per call) */
+        wav_play_load_block_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
+
+        /* no more than half the buffer */
+        if (wav_play_load_block_size > (bufsz / 2UL)) wav_play_load_block_size = (bufsz / 2UL);
     }
-
-    /* minimum buffer until loading again (100ms) */
-    wav_play_min_load_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
-
-    /* no more than 1/4 the buffer */
-    if (wav_play_min_load_size > (sb_card->buffer_size / 4UL))
-        wav_play_min_load_size = (sb_card->buffer_size / 4UL);
-
-    /* how much to load per call (100ms per call) */
-    wav_play_load_block_size = (play_codec.sample_rate / 10 / play_codec.samples_per_block) * play_codec.bytes_per_block;
-
-    /* no more than half the buffer */
-    if (wav_play_load_block_size > (sb_card->buffer_size / 2UL))
-        wav_play_load_block_size = (sb_card->buffer_size / 2UL);
 
     /* hook IRQ */
     {
@@ -1582,15 +1580,24 @@ void display_idle_time(void) {
 }
 
 void display_idle_buffer(void) {
+    signed long buffersz = -1;
     signed long pos = (signed long)sndsb_read_dma_buffer_position(sb_card);
     signed long apos = (signed long)sb_card->buffer_last_io;
+
+    {
+        unsigned int sz = sizeof(uint32_t);
+        uint32_t bufsz = 0;
+
+        if (soundcard->ioctl(soundcard,soundcard_ioctl_get_buffer_size,&bufsz,&sz,0) >= 0)
+            buffersz = (signed long)bufsz;
+    }
 
     printf("\x0D");
 
     printf("a=%6ld/p=%6ld/b=%6ld/d=%6lu/cw=%6lu/wp=%8lu/pp=%8lu/irq=%lu",
         apos,
         pos,
-        (signed long)sb_card->buffer_size,
+        (signed long)buffersz,
         (unsigned long)wav_state.play_delay_bytes,
         (unsigned long)soundcard->can_write(soundcard),
         (unsigned long)wav_state.write_counter,
