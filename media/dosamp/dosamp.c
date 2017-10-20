@@ -113,10 +113,14 @@ struct soundcard {
     int                                         (dosamp_FAR *irq_callback)(soundcard_t sc);
     unsigned int                                (dosamp_FAR *write)(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len);
     unsigned char dosamp_FAR *                  (dosamp_FAR *mmap_write)(soundcard_t sc,uint32_t dosamp_FAR * const howmuch,uint32_t want);
+    int                                         (dosamp_FAR *ioctl)(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len);
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
 };
+
+/* ioctls */
+#define soundcard_ioctl_silence_buffer          0x5B00U
 
 /* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
@@ -379,6 +383,7 @@ static int soundblaster_set_autoinit(soundcard_t sc,uint8_t flag) {
     return 0;
 }
 
+/* private */
 static int soundblaster_silence_buffer(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
@@ -587,6 +592,15 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t * const 
     return 0;
 }
 
+static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len) {
+    switch (cmd) {
+        case soundcard_ioctl_silence_buffer:
+            return soundblaster_silence_buffer(sc);
+    }
+
+    return -1;
+}
+
 /* TODO: This will become an array for each valid soundcard in sndsb lib */
 struct soundcard soundblaster_soundcard_template = {
     .driver =                                   soundcard_soundblaster,
@@ -597,6 +611,7 @@ struct soundcard soundblaster_soundcard_template = {
     .irq_callback =                             soundblaster_irq_callback,
     .write =                                    soundblaster_buffer_write,
     .mmap_write =                               soundblaster_mmap_write,
+    .ioctl =                                    soundblaster_ioctl,
     .p.soundblaster.index =                     -1
 };
 
@@ -1250,7 +1265,7 @@ static int begin_play() {
         goto error_out;
 
     /* zero the buffer */
-    soundblaster_silence_buffer(soundcard);
+    soundcard->ioctl(soundcard,soundcard_ioctl_silence_buffer,NULL,NULL);
 
     /* set IRQ interval (card will pick closest and sanitize it) */
     soundblaster_set_irq_interval(soundcard,soundblaster_play_buffer_size(soundcard));
