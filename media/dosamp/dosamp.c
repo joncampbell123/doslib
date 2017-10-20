@@ -535,6 +535,10 @@ static uint32_t soundblaster_recommended_isa_dma_buffer_size(soundcard_t sc,uint
 static int soundblaster_assign_isa_dma_buffer(soundcard_t sc,struct dma_8237_allocation dosamp_FAR *dma) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
+    /* not while prepared or playing!
+     * assume: playing is not set unless prepared */
+    if (sc->wav_state.prepared) return -1;
+
     if (card == NULL) return -1;
 
     /* NTS: We WANT to call sndsb_assign_dma_buffer with sb_dma == NULL if it happens because it tells the Sound Blaster library to cancel it's copy as well */
