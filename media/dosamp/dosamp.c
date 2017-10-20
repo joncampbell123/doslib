@@ -128,6 +128,8 @@ struct soundcard {
 #define soundcard_ioctl_set_autoinit                        0x5BA2U
 #define soundcard_ioctl_prepare_play                        0x5B40U
 #define soundcard_ioctl_unprepare_play                      0x5B41U
+#define soundcard_ioctl_start_play                          0x5B42U
+#define soundcard_ioctl_stop_play                           0x5B43U
 #define soundcard_ioctl_get_buffer_size                     0x5BB0U
 #define soundcard_ioctl_set_irq_interval                    0x5B11U
 
@@ -397,6 +399,7 @@ static int soundblaster_unprepare_play(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
     if (card == NULL) return -1;
+    if (wav_state.playing) return -1;
 
     if (wav_state.prepared) {
         sndsb_stop_dsp_playback(card);
@@ -440,8 +443,6 @@ static uint32_t soundblaster_set_irq_interval(soundcard_t sc,uint32_t x) {
     return card->buffer_irq_interval;
 }
 
-////////////////////// TODO
-
 static int soundblaster_start_playback(soundcard_t sc) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
@@ -478,6 +479,8 @@ static int soundblaster_stop_playback(soundcard_t sc) {
 
     return 0;
 }
+
+////////////////////// TODO
 
 static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const d,const struct wav_cbr_t dosamp_FAR * const s) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
@@ -650,6 +653,10 @@ static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void do
             return soundblaster_prepare_play(sc);
         case soundcard_ioctl_unprepare_play:
             return soundblaster_unprepare_play(sc);
+        case soundcard_ioctl_start_play:
+            return soundblaster_start_playback(sc);
+        case soundcard_ioctl_stop_play:
+            return soundblaster_stop_playback(sc);
         case soundcard_ioctl_get_buffer_size: {
             if (data == NULL || len == 0) return -1;
             if (*len < sizeof(uint32_t)) return -1;
@@ -1394,11 +1401,12 @@ static int begin_play() {
     update_play_position();
 
     /* go! */
-    if (soundblaster_start_playback(soundcard) < 0)
+    if (soundcard->ioctl(soundcard,soundcard_ioctl_start_play,NULL,NULL,0) < 0)
         goto error_out;
 
     return 0;
 error_out:
+    soundcard->ioctl(soundcard,soundcard_ioctl_stop_play,NULL,NULL,0);
     soundcard->ioctl(soundcard,soundcard_ioctl_unprepare_play,NULL,NULL,0);
     unhook_irq();
     return -1;
@@ -1408,7 +1416,7 @@ static void stop_play() {
     if (!wav_state.playing) return;
 
     /* stop */
-    soundblaster_stop_playback(soundcard);
+    soundcard->ioctl(soundcard,soundcard_ioctl_stop_play,NULL,NULL,0);
     soundcard->ioctl(soundcard,soundcard_ioctl_unprepare_play,NULL,NULL,0);
     unhook_irq();
 
