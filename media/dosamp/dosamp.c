@@ -358,6 +358,10 @@ static int soundblaster_get_autoinit(soundcard_t sc) {
 static int soundblaster_set_autoinit(soundcard_t sc,uint8_t flag) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
 
+    /* not while prepared or playing!
+     * assume: playing is not set unless prepared */
+    if (sc->wav_state.prepared) return -1;
+
     if (card == NULL) return -1;
 
     card->dsp_autoinit_dma = flag;
@@ -571,6 +575,10 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
     int r;
 
     if (card == NULL) return -1;
+
+    /* not while prepared or playing!
+     * assume: playing is not set unless prepared */
+    if (sc->wav_state.prepared) return -1;
 
     /* stereo -> mono conversion if needed (if DSP doesn't support stereo) */
     if (fmt->number_of_channels == 2 && card->dsp_vmaj < 3) fmt->number_of_channels = 1;
