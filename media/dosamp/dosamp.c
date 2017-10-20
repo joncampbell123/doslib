@@ -102,6 +102,7 @@ struct soundcard {
     enum soundcard_drv_t                        driver;
     int                                         (dosamp_FAR *poll)(soundcard_t sc);
     uint32_t                                    (dosamp_FAR *can_write)(soundcard_t sc); /* in bytes */
+    int                                         (dosamp_FAR *clamp_if_behind)(soundcard_t sc,uint32_t ahead_in_bytes);
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
@@ -181,7 +182,7 @@ static uint32_t dosamp_FAR soundblaster_can_write(soundcard_t sc) { /* in bytes 
  * if underrun to at least ensure the next audio written will be immediately audible.
  * Without this, upon underrun, the written audio may not be heard until the play
  * pointer has gone through the entire buffer again. */
-static int soundblaster_clamp_if_behind(soundcard_t sc,uint32_t ahead_in_bytes) {
+static int dosamp_FAR soundblaster_clamp_if_behind(soundcard_t sc,uint32_t ahead_in_bytes) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
     int res = 0;
 
@@ -581,6 +582,7 @@ struct soundcard soundblaster_soundcard_template = {
     .driver =                                   soundcard_soundblaster,
     .can_write =                                soundblaster_can_write,
     .poll =                                     soundblaster_poll,
+    .clamp_if_behind =                          soundblaster_clamp_if_behind,
     .p.soundblaster.index =                     -1
 };
 
@@ -882,7 +884,7 @@ static void load_audio_convert(uint32_t howmuch/*in bytes*/) {
     }
 
     if (!prefer_no_clamp)
-        soundblaster_clamp_if_behind(soundcard,wav_play_min_load_size);
+        soundcard->clamp_if_behind(soundcard,wav_play_min_load_size);
 }
 
 static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
@@ -953,7 +955,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
     }
 
     if (!prefer_no_clamp)
-        soundblaster_clamp_if_behind(soundcard,wav_play_min_load_size);
+        soundcard->clamp_if_behind(soundcard,wav_play_min_load_size);
 }
 
 static void load_audio(uint32_t howmuch/*in bytes*/) { /* load audio up to point or max */
