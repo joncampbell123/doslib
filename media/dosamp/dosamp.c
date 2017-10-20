@@ -105,6 +105,7 @@ struct soundcard {
     int                                         (dosamp_FAR *clamp_if_behind)(soundcard_t sc,uint32_t ahead_in_bytes);
     int                                         (dosamp_FAR *irq_callback)(soundcard_t sc);
     unsigned int                                (dosamp_FAR *write)(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len);
+    unsigned char dosamp_FAR *                  (dosamp_FAR *mmap_write)(soundcard_t sc,uint32_t dosamp_FAR * const howmuch,uint32_t want);
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
     } p;
@@ -208,7 +209,7 @@ static int dosamp_FAR soundblaster_clamp_if_behind(soundcard_t sc,uint32_t ahead
     return res;
 }
 
-static unsigned char dosamp_FAR * soundblaster_mmap_write(soundcard_t sc,uint32_t * const howmuch,uint32_t want) {
+static unsigned char dosamp_FAR * dosamp_FAR soundblaster_mmap_write(soundcard_t sc,uint32_t dosamp_FAR * const howmuch,uint32_t want) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
     uint32_t ret_pos;
     uint32_t m;
@@ -587,6 +588,7 @@ struct soundcard soundblaster_soundcard_template = {
     .clamp_if_behind =                          soundblaster_clamp_if_behind,
     .irq_callback =                             soundblaster_irq_callback,
     .write =                                    soundblaster_buffer_write,
+    .mmap_write =                               soundblaster_mmap_write,
     .p.soundblaster.index =                     -1
 };
 
@@ -921,7 +923,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
 
         if (use_mmap_write) {
             /* get the write pointer. towrite is guaranteed to be block aligned */
-            ptr = soundblaster_mmap_write(soundcard,&towrite,rem);
+            ptr = soundcard->mmap_write(soundcard,&towrite,rem);
             if (ptr == NULL || towrite == 0) break;
         }
         else {
