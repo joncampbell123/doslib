@@ -1,4 +1,7 @@
 
+/* TODO: Add ioctl() that returns an integer ratio that accurately describes
+ *       the actual hardware sample rate. rate = numerator / denominator */
+
 #define SOUNDCARDLIST_MAX                       4
 
 /* sound card state */
