@@ -508,8 +508,6 @@ static int soundblaster_assign_isa_dma_buffer(soundcard_t sc,struct dma_8237_all
 
 static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt) {
     struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
-    uint32_t oph,osz;
-    int r;
 
     if (card == NULL) return -1;
 
@@ -535,50 +533,38 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
             fmt->bits_per_sample = 8;
     }
 
+    /* you need a Sound Blaster Pro or better for stereo */
+	if (fmt->number_of_channels != 1 && card->dsp_vmaj < 3)
+        fmt->number_of_channels = 1;
+
+    /* Sound Blaster is mono or stereo, nothing else */
     if (fmt->number_of_channels < 1 || fmt->number_of_channels > 2) /* SB is mono or stereo, nothing else. */
         return -1;
+    /* Sound Blaster is 8-bit or 16-bit, nothing else */
     if (fmt->bits_per_sample < 8 || fmt->bits_per_sample > 16) /* SB is 8-bit. SB16 and ESS688 is 16-bit. */
         return -1;
 
-    /* HACK! */
-    osz = card->buffer_size; card->buffer_size = 1;
-    oph = card->buffer_phys; card->buffer_phys = 0;
-
-    /* SB specific: I know from experience and calculations that Sound Blaster cards don't go below 4000Hz */
+    /* sample rate limits */
     if (fmt->sample_rate < 4000)
         fmt->sample_rate = 4000;
 
-    /* we'll follow the recommendations on what is supported by the DSP. no hacks. */
-    r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
-    if (!r) {
-        /* we already made concessions for channels/bits, so try sample rate */
-        fmt->sample_rate = 44100;
-        r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
+    if (card->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx ||
+        (card->ess_chipset != 0 && card->ess_extensions) ||
+        card->is_gallant_sc6600) {
+        if (fmt->sample_rate > card->max_sample_rate_dsp4xx)
+            fmt->sample_rate = card->max_sample_rate_dsp4xx;
     }
-    if (!r) {
-        /* we already made concessions for channels/bits, so try sample rate */
-        fmt->sample_rate = 22050;
-        r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
+    else if (card->dsp_play_method >= SNDSB_DSPOUTMETHOD_201/*highspeed support*/) {
+        const unsigned long max = card->max_sample_rate_sb_hispeed / fmt->number_of_channels;
+
+        if (fmt->sample_rate > max)
+            fmt->sample_rate = max;
     }
-    if (!r) {
-        /* we already made concessions for channels/bits, so try sample rate */
-        fmt->sample_rate = 11025;
-        r = sndsb_dsp_out_method_supported(card,fmt->sample_rate,/*stereo*/fmt->number_of_channels > 1 ? 1 : 0,/*16-bit*/fmt->bits_per_sample > 8 ? 1 : 0);
-    }
+    else {
+        const unsigned long max = card->max_sample_rate_sb_play / fmt->number_of_channels;
 
-    /* HACK! */
-    card->buffer_size = osz;
-    card->buffer_phys = oph;
-
-    if (!r) {
-        if (card->reason_not_supported != NULL && *(card->reason_not_supported) != 0)
-            printf("Negotiation failed (SB) even with %luHz %u-channel %u-bit:\n    %s\n",
-                fmt->sample_rate,
-                fmt->number_of_channels,
-                fmt->bits_per_sample,
-                card->reason_not_supported);
-
-        return -1;
+        if (fmt->sample_rate > max)
+            fmt->sample_rate = max;
     }
 
     /* PCM recalc */
