@@ -44,6 +44,43 @@ static void free_dma_buffer() {
     }
 }
 
+static unsigned char old_irq_masked = 0;
+static void (interrupt *old_irq)() = NULL;
+static void interrupt sb_irq() {
+	unsigned char c;
+
+	sb_card->irq_counter++;
+
+	/* ack soundblaster DSP if DSP was the cause of the interrupt */
+	/* NTS: Experience says if you ack the wrong event on DSP 4.xx it
+	   will just re-fire the IRQ until you ack it correctly...
+	   or until your program crashes from stack overflow, whichever
+	   comes first */
+	c = sndsb_interrupt_reason(sb_card);
+	sndsb_interrupt_ack(sb_card,c);
+
+	/* FIXME: The sndsb library should NOT do anything in
+	   send_buffer_again() if it knows playback has not started! */
+	/* for non-auto-init modes, start another buffer */
+	sndsb_irq_continue(sb_card,c);
+
+	/* NTS: we assume that if the IRQ was masked when we took it, that we must not
+	 *      chain to the previous IRQ handler. This is very important considering
+	 *      that on most DOS systems an IRQ is masked for a very good reason---the
+	 *      interrupt handler doesn't exist! In fact, the IRQ vector could easily
+	 *      be unitialized or 0000:0000 for it! CALLing to that address is obviously
+	 *      not advised! */
+	if (old_irq_masked || old_irq == NULL) {
+		/* ack the interrupt ourself, do not chain */
+		if (sb_card->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+	}
+	else {
+		/* chain to the previous IRQ, who will acknowledge the interrupt */
+		old_irq();
+	}
+}
+
 static void realloc_dma_buffer() {
     uint32_t choice;
     int8_t ch;
@@ -101,6 +138,7 @@ void sb1_sc_play_test(void) {
     unsigned int count;
     unsigned int pc,c;
     unsigned long d;
+    uint32_t irqc;
 
     doubleprintf("SB 1.x single cycle DSP playback test.\n");
 
@@ -128,6 +166,7 @@ void sb1_sc_play_test(void) {
         sndsb_reset_dsp(sb_card);
         sndsb_write_dsp(sb_card,0xD1); /* speaker on */
         sndsb_setup_dma(sb_card);
+        irqc = sb_card->irq_counter;
 
         sndsb_write_dsp_timeconst(sb_card,count);
 
@@ -143,20 +182,22 @@ void sb1_sc_play_test(void) {
         c = read_8254(T8254_TIMER_INTERRUPT_TICK);
         bytes = tlen;
         time = 0;
+        _sti();
 
         while (1) {
-            if (p8259_read_IRR(sb_card->irq) & (1 << (sb_card->irq & 7)))
+            if (irqc != sb_card->irq_counter)
                 break;
 
+            _cli();
             pc = c;
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+            _sti();
+
             if (time >= timeout) goto x_timeout;
         }
 
 x_complete:
-        _sti();
-
         if (time == 0UL) time = 1;
 
         {
@@ -438,10 +479,26 @@ int main(int argc,char **argv) {
     report_fp = fopen("TS_PS.TXT","w");
     if (report_fp == NULL) return 1;
 
+    if (sb_card->irq != -1) {
+        old_irq_masked = p8259_is_masked(sb_card->irq);
+        if (vector_is_iret(irq2int(sb_card->irq)))
+            old_irq_masked = 1;
+
+        old_irq = _dos_getvect(irq2int(sb_card->irq));
+        _dos_setvect(irq2int(sb_card->irq),sb_irq);
+        p8259_unmask(sb_card->irq);
+    }
+
     generate_1khz_sine();
 
     direct_dac_test();
     sb1_sc_play_test();
+
+	if (sb_card->irq >= 0 && old_irq_masked)
+		p8259_mask(sb_card->irq);
+
+	if (sb_card->irq != -1)
+		_dos_setvect(irq2int(sb_card->irq),old_irq);
 
     printf("Test complete.\n");
     fclose(report_fp);
