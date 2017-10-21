@@ -554,17 +554,26 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
         if (fmt->sample_rate > card->max_sample_rate_dsp4xx)
             fmt->sample_rate = card->max_sample_rate_dsp4xx;
     }
-    else if (card->dsp_play_method >= SNDSB_DSPOUTMETHOD_201/*highspeed support*/) {
-        const unsigned long max = card->max_sample_rate_sb_hispeed / fmt->number_of_channels;
-
-        if (fmt->sample_rate > max)
-            fmt->sample_rate = max;
-    }
     else {
-        const unsigned long max = card->max_sample_rate_sb_play / fmt->number_of_channels;
+        if (card->dsp_play_method >= SNDSB_DSPOUTMETHOD_201/*highspeed support*/) {
+            const unsigned long max = card->max_sample_rate_sb_hispeed / fmt->number_of_channels;
 
-        if (fmt->sample_rate > max)
-            fmt->sample_rate = max;
+            if (fmt->sample_rate > max)
+                fmt->sample_rate = max;
+        }
+        else {
+            const unsigned long max = card->max_sample_rate_sb_play / fmt->number_of_channels;
+
+            if (fmt->sample_rate > max)
+                fmt->sample_rate = max;
+        }
+
+        /* but if the time constant is involved, then the actual sample rate is slightly different */
+        {
+            uint8_t tc = sndsb_rate_to_time_constant(card,fmt->sample_rate);
+
+            fmt->sample_rate = 1000000UL / (unsigned long)(256 - tc);
+        }
     }
 
     /* PCM recalc */
