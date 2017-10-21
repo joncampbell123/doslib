@@ -57,13 +57,12 @@ int init_prepare_irq(void) {
         p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (soundcard_irq.irq_number & 7)); /* IRQ */
         p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2); /* IRQ cascade */
     }
-    else if (soundcard_irq.irq_number >= 0) {
+    else {
         p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | soundcard_irq.irq_number); /* IRQ */
     }
 
     /* unmask the IRQ, prepare */
-    if (soundcard_irq.irq_number >= 0)
-        p8259_unmask(soundcard_irq.irq_number);
+    p8259_unmask(soundcard_irq.irq_number);
 
     return 0;
 }

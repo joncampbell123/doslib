@@ -2,7 +2,7 @@
 /* IRQ state */
 struct irq_state_t {
     void                                (interrupt *old_handler)();
-    int8_t                              irq_number;
+    uint8_t                             irq_number;
     uint8_t                             int_number;
     unsigned int                        was_masked:1;
     unsigned int                        chain_irq:1;
