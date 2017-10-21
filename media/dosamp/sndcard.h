@@ -84,6 +84,8 @@ struct soundcard {
 #define soundcard_ioctl_get_buffer_write_position           0x5BB1U /* get write position within buffer */
 #define soundcard_ioctl_get_buffer_play_position            0x5BB2U /* get play position within buffer (e.g. ISA DMA pointer) */
 #define soundcard_ioctl_set_play_format                     0x5BF0U /* set play format. specify wav_cbr_t which will be modifed to supported format, or -1 if not support */
+#define soundcard_ioctl_get_card_name                       0x5BD0U /* get text string, of the card (as known by the driver) ex. "Sound Blaster" */
+#define soundcard_ioctl_get_card_detail                     0x5BD1U /* get text string, of details the driver wants to show the user ex. "at 220h IRQ 7 DMA 1 HDMA 5" */
 
 extern struct soundcard                                     soundcardlist[SOUNDCARDLIST_MAX];
 extern unsigned int                                         soundcardlist_count;

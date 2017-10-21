@@ -55,6 +55,10 @@
 /* file source */
 dosamp_file_source_t dosamp_file_source_file_fd_open(const char * const path);
 
+/* tool */
+char                                            str_tmp[256];
+char                                            soundcard_str_tmp[256];
+
 /* DOSAMP state and user state */
 static unsigned long                            prefer_rate = 0;
 static unsigned char                            prefer_channels = 0;
@@ -87,6 +91,24 @@ struct convert_rdbuf_t                          convert_rdbuf = {NULL,0,0,0};
 
 struct wav_cbr_t                                file_codec;
 struct wav_cbr_t                                play_codec;
+
+void soundcard_str_return_common(char dosamp_FAR *data,unsigned int dosamp_FAR *len,const char *str) {
+    /* assume: *len != 0 */
+    unsigned int l = (unsigned int)strlen(str);
+
+    if (l >= *len) l = *len - 1;
+
+    if (l != 0) {
+#if TARGET_MSDOS == 16
+        _fmemcpy(data,str,l);
+#else
+        memcpy(data,str,l);
+#endif
+    }
+
+    *len = l + 1U;
+    data[l] = 0;
+}
 
 int soundcardlist_init(void) {
     soundcardlist_count = 0;
@@ -681,8 +703,66 @@ static uint32_t soundblaster_read_irq_counter(soundcard_t sc) {
     return card->irq_counter;
 }
 
+static int soundblaster_get_card_name(soundcard_t sc,void dosamp_FAR *data,unsigned int dosamp_FAR *len) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    const char *str;
+
+    if (card == NULL) return -1;
+    if (data == NULL || len == NULL) return -1;
+    if (*len == 0U) return -1;
+
+    if (card->ess_chipset > 0) {
+        str = sndsb_ess_chipset_str(card->ess_chipset);
+    }
+    else if (card->dsp_vmaj >= 4) {
+        if (card->aweio != 0)
+            str = "Sound Blaster 16 AWE";
+        else
+            str = "Sound Blaster 16";
+    }
+    else if (card->dsp_vmaj >= 3) {
+        str = "Sound Blaster Pro";
+    }
+    else {
+        str = "Sound Blaster";
+    }
+
+    soundcard_str_return_common((char dosamp_FAR*)data,len,str);
+    return 0;
+}
+
+static int soundblaster_get_card_detail(soundcard_t sc,void dosamp_FAR *data,unsigned int dosamp_FAR *len) {
+    struct sndsb_ctx *card = soundblaster_get_sndsb_ctx(sc);
+    char *w;
+
+    if (card == NULL) return -1;
+    if (data == NULL || len == NULL) return -1;
+    if (*len == 0U) return -1;
+
+    w = soundcard_str_tmp;
+    w += sprintf(w,"at %03Xh",card->baseio);
+
+    if (card->irq >= 0)
+        w += sprintf(w," IRQ %d",card->irq);
+
+    if (card->dma8 >= 0)
+        w += sprintf(w," DMA %d",card->dma8);
+
+    if (card->dma16 >= 0)
+        w += sprintf(w," HDMA %d",card->dma16);
+
+    assert(w < (soundcard_str_tmp+sizeof(soundcard_str_tmp)));
+
+    soundcard_str_return_common((char dosamp_FAR*)data,len,soundcard_str_tmp);
+    return 0;
+}
+
 static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival) {
     switch (cmd) {
+        case soundcard_ioctl_get_card_name:
+            return soundblaster_get_card_name(sc,data,len);
+        case soundcard_ioctl_get_card_detail:
+            return soundblaster_get_card_detail(sc,data,len);
         case soundcard_ioctl_get_irq:
             return soundblaster_get_irq(sc);
         case soundcard_ioctl_set_play_format:
@@ -1856,6 +1936,20 @@ int probe_for_sound_blaster(void) {
     return 0;
 }
 
+void print_soundcard(soundcard_t sc) {
+    unsigned int sz;
+
+    sz = sizeof(str_tmp);
+    if (sc->ioctl(sc,soundcard_ioctl_get_card_name,str_tmp,&sz,0) >= 0)
+        printf("%s",str_tmp);
+    else
+        printf("(unknown card)");
+
+    sz = sizeof(str_tmp);
+    if (sc->ioctl(sc,soundcard_ioctl_get_card_detail,str_tmp,&sz,0) >= 0)
+        printf(" %s",str_tmp);
+}
+
 int main(int argc,char **argv) {
     unsigned char disp=1;
     int i,loop;
@@ -1931,6 +2025,17 @@ int main(int argc,char **argv) {
         }
         else if (count > 1) {
             printf("-----------\n");
+
+            for (i=0;i < soundcardlist_count;i++) {
+                sc = &soundcardlist[i];
+                if (sc->driver == soundcard_none) continue;
+
+                printf("%d: ",i+1);
+                print_soundcard(sc);
+                printf("\n");
+            }
+
+            printf("-----------\n");
             printf("Which card?: "); fflush(stdout);
 
             i = getch();
@@ -1950,6 +2055,10 @@ int main(int argc,char **argv) {
 
         soundcard = &soundcardlist[sc_idx];
     }
+
+    printf("Playing audio with: ");
+    print_soundcard(soundcard);
+    printf("\n");
 
     loop = 1;
     if (soundcard->open(soundcard) < 0)
