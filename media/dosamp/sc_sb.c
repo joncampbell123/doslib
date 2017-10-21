@@ -560,6 +560,8 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
         card->is_gallant_sc6600) {
         if (fmt->sample_rate > card->max_sample_rate_dsp4xx)
             fmt->sample_rate = card->max_sample_rate_dsp4xx;
+
+        sc->p.soundblaster.user_rate = fmt->sample_rate;
     }
     else {
         if (card->dsp_play_method >= SNDSB_DSPOUTMETHOD_201/*highspeed support*/) {
