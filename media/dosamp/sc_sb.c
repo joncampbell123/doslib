@@ -336,8 +336,15 @@ static int soundblaster_prepare_play(soundcard_t sc) {
         return -1;
 
     /* prepare DSP */
-    if (!sndsb_prepare_dsp_playback(card,/*rate*/sc->cur_codec.sample_rate,/*stereo*/sc->cur_codec.number_of_channels > 1,/*16-bit*/sc->cur_codec.bits_per_sample > 8))
-        return -1;
+    {
+        uint32_t choice_rate = sc->cur_codec.sample_rate;
+
+        if (sc->p.soundblaster.rate_rounding)
+            choice_rate = sc->p.soundblaster.user_rate;
+
+        if (!sndsb_prepare_dsp_playback(card,/*rate*/choice_rate,/*stereo*/sc->cur_codec.number_of_channels > 1,/*16-bit*/sc->cur_codec.bits_per_sample > 8))
+            return -1;
+    }
 
     wav_reset_state(&sc->wav_state);
 
@@ -571,6 +578,15 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
         /* but if the time constant is involved, then the actual sample rate is slightly different */
         if (sc->p.soundblaster.rate_rounding) {
             uint8_t tc = sndsb_rate_to_time_constant(card,(unsigned long)fmt->sample_rate * (unsigned long)fmt->number_of_channels);
+
+            /* we must keep a copy of the actual sample rate desired by the user.
+             * remember we overwrite the sample_rate with the approximation offered by the time constant.
+             * the sndsb library does the same.
+             * the double conversion can cause this code and sndsb to come up with different (off by 1) time constants.
+             *
+             * we could reduce the overall complexity of this code by eventually sending these TC DSP commands ourselves
+             * and computing the TC ourself. */
+            sc->p.soundblaster.user_rate = fmt->sample_rate;
 
             fmt->sample_rate = (1000000UL / (unsigned long)(256 - tc)) / (unsigned long)fmt->number_of_channels;
         }

@@ -8,6 +8,7 @@ enum soundcard_drv_t {
 };
 
 struct soundcard_priv_soundblaster_t {
+    unsigned long                               user_rate;
     int8_t                                      index;          /* array into sndsb library card array */
     unsigned int                                rate_rounding:1;
 };
