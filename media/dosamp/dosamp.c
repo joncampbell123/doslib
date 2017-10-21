@@ -1310,14 +1310,23 @@ static int alloc_dma_buffer(uint32_t choice,int8_t ch) {
     if (isa_dma != NULL)
         return 0;
 
-    do {
-        if (ch >= 4)
-            isa_dma = dma_8237_alloc_buffer_dw(choice,16);
-        else
-            isa_dma = dma_8237_alloc_buffer_dw(choice,8);
+    {
+        const unsigned char isa_width = (ch >= 4 ? 16 : 8);
 
-        if (isa_dma == NULL) choice -= 4096UL;
-    } while (isa_dma == NULL && choice >= 4096UL);
+        do {
+            isa_dma = dma_8237_alloc_buffer_dw(choice,isa_width);
+
+            if (isa_dma != NULL) {
+                break;
+            }
+            else {
+                if (choice >= 8192UL)
+                    choice -= 4096UL;
+                else
+                    break;
+            }
+        } while (1);
+    }
 
     if (isa_dma == NULL)
         return -1;
