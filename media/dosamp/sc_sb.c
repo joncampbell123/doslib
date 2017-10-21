@@ -562,6 +562,27 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
             fmt->sample_rate = card->max_sample_rate_dsp4xx;
 
         sc->p.soundblaster.user_rate = fmt->sample_rate;
+
+        /* ESS chipsets also have their fair share of rounding issues with sample rate */
+        if (card->ess_chipset != 0 && card->ess_extensions) {
+            if (sc->p.soundblaster.rate_rounding) {
+                int b;
+
+                /* this matches sndsb behavior */
+                if (fmt->sample_rate > 22050UL) {
+                    b = 256 - (795500UL / (unsigned long)fmt->sample_rate);
+                    if (b < 0x80) b = 0x80;
+
+                    fmt->sample_rate = 795500UL / (256 - b);
+                }
+                else {
+                    b = 128 - (397700UL / (unsigned long)fmt->sample_rate);
+                    if (b < 0) b = 0;
+
+                    fmt->sample_rate = 397700UL / (128 - b);
+                }
+            }
+        }
     }
     else {
         if (card->dsp_play_method >= SNDSB_DSPOUTMETHOD_201/*highspeed support*/) {
