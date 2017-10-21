@@ -9,6 +9,7 @@ enum soundcard_drv_t {
 
 struct soundcard_priv_soundblaster_t {
     int8_t                                      index;          /* array into sndsb library card array */
+    unsigned int                                rate_rounding:1;
 };
 
 struct soundcard;
@@ -68,6 +69,7 @@ struct soundcard {
 
 /* ioctls */
 #define soundcard_ioctl_silence_buffer                      0x5B00U /* fill buffer with silence */
+#define soundcard_ioctl_set_rate_rounding                   0x5B01U /* set/disable sample rate rounding on format set (ex. update rate by Sound Blaster time constant) */
 #define soundcard_ioctl_get_irq                             0x5B10U /* return IRQ used by sound card, or -1 if not supported */
 #define soundcard_ioctl_set_irq_interval                    0x5B11U /* set IRQ interval, if IRQ supported */
 #define soundcard_ioctl_read_irq_counter                    0x5B12U /* read IRQ counter, if IRQ supported */

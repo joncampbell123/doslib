@@ -569,7 +569,7 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
         }
 
         /* but if the time constant is involved, then the actual sample rate is slightly different */
-        {
+        if (sc->p.soundblaster.rate_rounding) {
             uint8_t tc = sndsb_rate_to_time_constant(card,fmt->sample_rate);
 
             fmt->sample_rate = 1000000UL / (unsigned long)(256 - tc);
@@ -662,6 +662,9 @@ static int soundblaster_get_card_detail(soundcard_t sc,void dosamp_FAR *data,uns
 
 static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival) {
     switch (cmd) {
+        case soundcard_ioctl_set_rate_rounding:
+            sc->p.soundblaster.rate_rounding = (ival > 0) ? 1 : 0;
+            return 0;
         case soundcard_ioctl_get_card_name:
             return soundblaster_get_card_name(sc,data,len);
         case soundcard_ioctl_get_card_detail:
@@ -753,7 +756,8 @@ struct soundcard soundblaster_soundcard_template = {
     .write =                                    soundblaster_buffer_write,
     .mmap_write =                               soundblaster_mmap_write,
     .ioctl =                                    soundblaster_ioctl,
-    .p.soundblaster.index =                     -1
+    .p.soundblaster.index =                     -1,
+    .p.soundblaster.rate_rounding =             1
 };
 
 void free_sound_blaster_support(void) {
