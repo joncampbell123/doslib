@@ -239,6 +239,9 @@ void sb2_sc_play_test(void) {
     unsigned long d;
     uint32_t irqc;
 
+    if (sb_card->dsp_vmaj < 2 || (sb_card->dsp_vmaj == 2 && sb_card->dsp_vmin == 0))
+        return;
+
     doubleprintf("SB 2.x single cycle (highspeed) DSP playback test.\n");
 
     timeout = T8254_REF_CLOCK_HZ * 4UL;
