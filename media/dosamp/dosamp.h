@@ -34,3 +34,6 @@ struct wav_state_t {
 
 void wav_reset_state(struct wav_state_t dosamp_FAR * const w);
 
+extern char                                     str_tmp[256];
+extern char                                     soundcard_str_tmp[256];
+

@@ -69,6 +69,7 @@ int init_prepare_irq(void) {
 }
 
 int hook_irq(uint8_t irq,void (interrupt *irq_handler)()) {
+    /* assume irq >= 0 */
     if (!soundcard_irq.hooked) {
         /* take notw whether the IRQ was masked at the time we hooked.
          * on older DOS systems a masked IRQ can be a sign the handler
@@ -105,8 +106,8 @@ int unhook_irq(void) {
         _dos_setvect(soundcard_irq.int_number,soundcard_irq.old_handler);
 
         soundcard_irq.old_handler = NULL;
+        soundcard_irq.irq_number = -1;
         soundcard_irq.int_number = 0;
-        soundcard_irq.irq_number = 0;
         soundcard_irq.was_masked = 0;
         soundcard_irq.was_iret = 0;
         soundcard_irq.hooked = 0;

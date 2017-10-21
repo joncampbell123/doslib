@@ -89,5 +89,11 @@ struct soundcard {
 
 extern struct soundcard                                     soundcardlist[SOUNDCARDLIST_MAX];
 extern unsigned int                                         soundcardlist_count;
-extern unsigned int                                         soundcardlist_count;
+extern unsigned int                                         soundcardlist_alloc;
+
+void soundcard_str_return_common(char dosamp_FAR *data,unsigned int dosamp_FAR *len,const char *str);
+int soundcardlist_init(void);
+void soundcardlist_close(void);
+soundcard_t soundcardlist_new(const soundcard_t template);
+soundcard_t soundcardlist_free(const soundcard_t sc);
 

@@ -92,60 +92,6 @@ struct convert_rdbuf_t                          convert_rdbuf = {NULL,0,0,0};
 struct wav_cbr_t                                file_codec;
 struct wav_cbr_t                                play_codec;
 
-void soundcard_str_return_common(char dosamp_FAR *data,unsigned int dosamp_FAR *len,const char *str) {
-    /* assume: *len != 0 */
-    unsigned int l = (unsigned int)strlen(str);
-
-    if (l >= *len) l = *len - 1;
-
-    if (l != 0) {
-#if TARGET_MSDOS == 16
-        _fmemcpy(data,str,l);
-#else
-        memcpy(data,str,l);
-#endif
-    }
-
-    *len = l + 1U;
-    data[l] = 0;
-}
-
-int soundcardlist_init(void) {
-    soundcardlist_count = 0;
-    soundcardlist_alloc = 0;
-    return 0;
-}
-
-void soundcardlist_close(void) {
-    soundcardlist_count = 0;
-    soundcardlist_alloc = 0;
-}
-
-soundcard_t soundcardlist_new(const soundcard_t template) {
-    while (soundcardlist_alloc < soundcardlist_count) {
-        if (soundcardlist[soundcardlist_alloc].driver == soundcard_none) {
-            soundcardlist[soundcardlist_alloc] = *template;
-            return &soundcardlist[soundcardlist_alloc++];
-        }
-    }
-
-    if (soundcardlist_count < SOUNDCARDLIST_MAX) {
-        soundcardlist[soundcardlist_count] = *template;
-        return &soundcardlist[soundcardlist_count++];
-    }
-
-    return NULL;
-}
-
-soundcard_t soundcardlist_free(const soundcard_t sc) {
-    if (sc != NULL) {
-        soundcardlist_alloc = 0;
-        sc->driver = soundcard_none;
-    }
-
-    return NULL;
-}
-
 /* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
     if (sc->p.soundblaster.index < 0 || sc->p.soundblaster.index >= SNDSB_MAX_CARDS)
