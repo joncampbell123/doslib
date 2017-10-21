@@ -1328,6 +1328,7 @@ static int alloc_dma_buffer(uint32_t choice,int8_t ch) {
         } while (1);
     }
 
+    /* assume isa_dma != NULL */
     return 0;
 }
 
