@@ -94,6 +94,11 @@ int soundcardlist_init(void) {
     return 0;
 }
 
+void soundcardlist_close(void) {
+    soundcardlist_count = 0;
+    soundcardlist_alloc = 0;
+}
+
 soundcard_t soundcardlist_new(const soundcard_t template) {
     while (soundcardlist_alloc < soundcardlist_count) {
         if (soundcardlist[soundcardlist_alloc].driver == soundcard_none) {
@@ -2102,6 +2107,8 @@ int main(int argc,char **argv) {
     soundcard->close(soundcard);
 
     free_sound_blaster_support();
+
+    soundcardlist_close();
 
     time_source->close(time_source);
     return 0;
