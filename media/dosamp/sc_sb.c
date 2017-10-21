@@ -572,7 +572,7 @@ static int soundblaster_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_F
         if (sc->p.soundblaster.rate_rounding) {
             uint8_t tc = sndsb_rate_to_time_constant(card,(unsigned long)fmt->sample_rate * (unsigned long)fmt->number_of_channels);
 
-            fmt->sample_rate = 1000000UL / (unsigned long)(256 - tc) / (unsigned long)fmt->number_of_channels;
+            fmt->sample_rate = (1000000UL / (unsigned long)(256 - tc)) / (unsigned long)fmt->number_of_channels;
         }
     }
 
