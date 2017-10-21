@@ -73,6 +73,11 @@ static dosamp_time_source_t                     time_source = NULL;
 /* ISA DMA buffer */
 static struct dma_8237_allocation*              isa_dma = NULL;
 
+/* sound card list */
+struct soundcard                                soundcardlist[SOUNDCARDLIST_MAX];
+unsigned int                                    soundcardlist_count;
+unsigned int                                    soundcardlist_alloc;
+
 /* chosen file to play */
 static dosamp_file_source_t                     wav_source = NULL;
 static char*                                    wav_file = NULL;
@@ -82,6 +87,37 @@ struct convert_rdbuf_t                          convert_rdbuf = {NULL,0,0,0};
 
 struct wav_cbr_t                                file_codec;
 struct wav_cbr_t                                play_codec;
+
+int soundcardlist_init(void) {
+    soundcardlist_count = 0;
+    soundcardlist_alloc = 0;
+    return 0;
+}
+
+soundcard_t soundcardlist_new(const soundcard_t template) {
+    while (soundcardlist_alloc < soundcardlist_count) {
+        if (soundcardlist[soundcardlist_alloc].driver == soundcard_none) {
+            soundcardlist[soundcardlist_alloc] = *template;
+            return &soundcardlist[soundcardlist_alloc++];
+        }
+    }
+
+    if (soundcardlist_count < SOUNDCARDLIST_MAX) {
+        soundcardlist[soundcardlist_count] = *template;
+        return &soundcardlist[soundcardlist_count++];
+    }
+
+    return NULL;
+}
+
+soundcard_t soundcardlist_free(const soundcard_t sc) {
+    if (sc != NULL) {
+        soundcardlist_alloc = 0;
+        sc->driver = soundcard_none;
+    }
+
+    return NULL;
+}
 
 /* private */
 static struct sndsb_ctx *soundblaster_get_sndsb_ctx(soundcard_t sc) {
@@ -716,7 +752,6 @@ static int dosamp_FAR soundblaster_ioctl(soundcard_t sc,unsigned int cmd,void do
     return -1;
 }
 
-/* TODO: This will become an array for each valid soundcard in sndsb lib */
 struct soundcard soundblaster_soundcard_template = {
     .driver =                                   soundcard_soundblaster,
     .capabilities =                             0,
@@ -1670,10 +1705,8 @@ void free_sound_blaster_support(void) {
 int probe_for_sound_blaster(void) {
     unsigned int i;
 
-    if (!init_sndsb()) {
-        printf("Cannot init library\n");
+    if (!init_sndsb())
         return -1;
-    }
 
     /* we want to know if certain emulation TSRs exist */
     gravis_mega_em_detect(&megaem_info);
@@ -1781,6 +1814,32 @@ int probe_for_sound_blaster(void) {
         sndsb_determine_ideal_dsp_play_method(cx);
     }
 
+    /* add detected cards to soundcard list */
+    {
+        soundcard_t sc;
+        unsigned int i;
+
+        for (i=0;i < SNDSB_MAX_CARDS;i++) {
+            struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
+            if (cx->baseio == 0) continue;
+
+            sc = soundcardlist_new(&soundblaster_soundcard_template);
+            if (sc == NULL) continue;
+
+            sc->p.soundblaster.index = i;
+            sc->requirements = soundcard_requirements_isa_dma;
+            sc->capabilities = soundcard_caps_mmap_write | soundcard_caps_8bit | soundcard_caps_isa_dma;
+            if (cx->irq >= 0) {
+                sc->requirements |= soundcard_requirements_irq;
+                sc->capabilities |= soundcard_caps_irq;
+            }
+            if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_4xx)
+                sc->capabilities |= soundcard_caps_16bit;
+            else if (cx->dsp_play_method >= SNDSB_DSPOUTMETHOD_3xx && cx->ess_extensions)
+                sc->capabilities |= soundcard_caps_16bit;
+        }
+    }
+
     /* OK. done */
     return 0;
 }
@@ -1831,6 +1890,9 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    if (soundcardlist_init() < 0)
+        return 1;
+
     /* PROBE: Sound Blaster.
      * Will return 0 if scan done, -1 if a serious problem happened.
      * A return value of 0 doesn't mean any cards were found. */
@@ -1839,20 +1901,15 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    /* now let the user choose.
-     * TODO: At some point, when we have abstracted ourself away from the Sound Blaster library
-     *       we can list a different array of abstract sound card device objects. */
+    /* now let the user choose. */
     {
         unsigned char count = 0;
         int sc_idx = -1;
+        soundcard_t sc;
 
-        for (i=0;i < SNDSB_MAX_CARDS;i++) {
-            struct sndsb_ctx *cx = sndsb_index_to_ctx(i);
-            if (cx->baseio == 0) continue;
-
-            printf("  [%u] base=%X dma=%d dma16=%d irq=%d DSPv=%u.%u\n",
-                    i+1,cx->baseio,cx->dma8,cx->dma16,cx->irq,(unsigned int)cx->dsp_vmaj,(unsigned int)cx->dsp_vmin);
-
+        for (i=0;i < soundcardlist_count;i++) {
+            sc = &soundcardlist[i];
+            if (sc->driver == soundcard_none) continue;
             count++;
         }
 
@@ -1868,31 +1925,18 @@ int main(int argc,char **argv) {
             printf("\n");
             if (i == 27) return 0;
             if (i == 13 || i == 10) i = '1';
-            sc_idx = i - '0';
+            sc_idx = i - '1';
 
-            if (sc_idx < 1 || sc_idx > SNDSB_MAX_CARDS) {
+            if (sc_idx < 0 || sc_idx >= soundcardlist_count) {
                 printf("Sound card index out of range\n");
                 return 1;
             }
         }
         else { /* count == 1 */
-            sc_idx = 1;
+            sc_idx = 0;
         }
 
-        {
-            struct sndsb_ctx *cx = sndsb_index_to_ctx(sc_idx - 1);
-            if (cx->baseio == 0) return 1;
-
-            /* FIXME */
-            soundblaster_soundcard_template.requirements = soundcard_requirements_isa_dma;
-            soundblaster_soundcard_template.capabilities = soundcard_caps_mmap_write | soundcard_caps_8bit/*FIXME*/ | soundcard_caps_isa_dma;
-            if (cx->irq >= 0) {
-                soundblaster_soundcard_template.requirements |= soundcard_requirements_irq;
-                soundblaster_soundcard_template.capabilities |= soundcard_caps_irq;
-            }
-            soundblaster_soundcard_template.p.soundblaster.index = sc_idx - 1;
-            soundcard = &soundblaster_soundcard_template;
-        }
+        soundcard = &soundcardlist[sc_idx];
     }
 
     loop = 1;

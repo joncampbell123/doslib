@@ -1,4 +1,6 @@
 
+#define SOUNDCARDLIST_MAX                       4
+
 /* sound card state */
 enum soundcard_drv_t {
     soundcard_none=0,
@@ -82,4 +84,8 @@ struct soundcard {
 #define soundcard_ioctl_get_buffer_write_position           0x5BB1U /* get write position within buffer */
 #define soundcard_ioctl_get_buffer_play_position            0x5BB2U /* get play position within buffer (e.g. ISA DMA pointer) */
 #define soundcard_ioctl_set_play_format                     0x5BF0U /* set play format. specify wav_cbr_t which will be modifed to supported format, or -1 if not support */
+
+extern struct soundcard                                     soundcardlist[SOUNDCARDLIST_MAX];
+extern unsigned int                                         soundcardlist_count;
+extern unsigned int                                         soundcardlist_count;
 
