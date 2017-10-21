@@ -9,6 +9,7 @@
 #include <direct.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <math.h>
 #include <dos.h>
 
 #include <hw/vga/vga.h>
@@ -21,6 +22,8 @@
 
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+
+static FILE*                            report_fp = NULL;
 
 static struct dma_8237_allocation*      sb_dma = NULL; /* DMA buffer */
 
@@ -67,6 +70,69 @@ static void realloc_dma_buffer() {
         return;
     if (sb_dma == NULL)
         return;
+}
+
+void generate_1khz_sine(void) {
+    unsigned int i,l;
+
+    printf("Generating tone...\n");
+
+    l = (unsigned int)sb_dma->length;
+    for (i=0;i < l;i++)
+        sb_dma->lin[i] =
+            (unsigned char)((sin(((double)i * 3.14159 * 2) / 100) * 64) + 128);
+}
+
+static char ptmp[256];
+
+void doubleprintf(const char *fmt,...) {
+    va_list va;
+
+    va_start(va,fmt);
+    vsnprintf(ptmp,sizeof(ptmp),fmt,va);
+    va_end(va);
+
+    fputs(ptmp,stdout);
+    fputs(ptmp,report_fp);
+}
+
+void direct_dac_test(void) {
+    unsigned long time,bytes;
+    unsigned char FAR *ptr;
+    unsigned int i,count;
+    unsigned int pc,c;
+
+    doubleprintf("Direct DAC playback test.\n");
+
+    /* FIXME: Why is the final rate SLOWER in DOSBox-X in 386 protected mode? */
+
+    _cli();
+    time = 0;
+    bytes = 0;
+    c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+    for (count=0;count < 3;count++) {
+        ptr = sb_dma->lin;
+        for (i=0;i < sb_dma->length;i++) {
+            sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DIRECT_DAC_OUT); /* 0x10 */
+            sndsb_write_dsp(sb_card,*ptr++);
+
+            pc = c;
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+        }
+        bytes += sb_dma->length;
+    }
+    _sti();
+
+    if (time == 0UL) time = 1;
+
+    {
+        double t = (double)time / T8254_REF_CLOCK_HZ;
+        double rate = (double)bytes / t;
+
+        doubleprintf(" - %lu bytes played in %.3f seconds\n",(unsigned long)bytes,t);
+        doubleprintf(" - Sample rate is %.3fHz\n",rate);
+    }
 }
 
 int main(int argc,char **argv) {
@@ -268,6 +334,18 @@ int main(int argc,char **argv) {
 	}
 
     write_8254_system_timer(0);
+
+    printf("Test results will be written to TS_PS.TXT\n");
+
+    report_fp = fopen("TS_PS.TXT","w");
+    if (report_fp == NULL) return 1;
+
+    generate_1khz_sine();
+
+    direct_dac_test();
+
+    printf("Test complete.\n");
+    fclose(report_fp);
 
     free_dma_buffer();
 
