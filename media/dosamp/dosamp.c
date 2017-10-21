@@ -711,7 +711,9 @@ static int soundblaster_get_card_name(soundcard_t sc,void dosamp_FAR *data,unsig
     if (data == NULL || len == NULL) return -1;
     if (*len == 0U) return -1;
 
-    if (card->ess_chipset > 0) {
+    if (card->pnp_name != NULL)
+        str = card->pnp_name;
+    else if (card->ess_chipset > 0) {
         str = sndsb_ess_chipset_str(card->ess_chipset);
     }
     else if (card->dsp_vmaj >= 4) {
@@ -750,6 +752,9 @@ static int soundblaster_get_card_detail(soundcard_t sc,void dosamp_FAR *data,uns
 
     if (card->dma16 >= 0)
         w += sprintf(w," HDMA %d",card->dma16);
+
+    if (card->pnp_id != 0UL)
+        w += sprintf(w," PnP");
 
     assert(w < (soundcard_str_tmp+sizeof(soundcard_str_tmp)));
 
