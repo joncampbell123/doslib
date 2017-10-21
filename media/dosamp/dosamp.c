@@ -1051,7 +1051,7 @@ int main(int argc,char **argv) {
         return 1;
 
     /* default good resampler */
-    /* TODO: If we detect the CPU is slow enough, default to "fast" */
+    /* TODO: If we detect the CPU is slow enough, default to "fast" (nearest neighbor) */
     resample_state.resample_mode = resample_good;
 
     cpu_probe();
@@ -1153,6 +1153,8 @@ int main(int argc,char **argv) {
     print_soundcard(soundcard);
     printf("\n");
 
+    /* TODO: if the CPU is slow, and opt_round < 0 (not set) set opt_round = 0 (off).
+     *       slow CPUs should be encouraged not to resample if the rate is "close enough" */
 
     loop = 1;
     if (soundcard->open(soundcard) < 0)
