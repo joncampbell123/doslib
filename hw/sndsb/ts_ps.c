@@ -126,6 +126,7 @@ void sb1_sc_play_test(void) {
         sb_card->buffer_dma_started = 0;
 
         sndsb_reset_dsp(sb_card);
+        sndsb_write_dsp(sb_card,0xD1); /* speaker on */
         sndsb_setup_dma(sb_card);
 
         sndsb_write_dsp_timeconst(sb_card,count);
@@ -199,6 +200,9 @@ void direct_dac_test(void) {
     doubleprintf("Direct DAC playback test.\n");
 
     /* FIXME: Why is the final rate SLOWER in DOSBox-X in 386 protected mode? */
+
+    sndsb_reset_dsp(sb_card);
+    sndsb_write_dsp(sb_card,0xD1); /* speaker on */
 
     _cli();
     time = 0;
