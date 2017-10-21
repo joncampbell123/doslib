@@ -232,6 +232,107 @@ x_timeout:
     sndsb_reset_dsp(sb_card);
 }
 
+void sb2_sc_play_test(void) {
+    unsigned long time,bytes,expect,tlen,timeout;
+    unsigned int count;
+    unsigned int pc,c;
+    unsigned long d;
+    uint32_t irqc;
+
+    doubleprintf("SB 2.x single cycle (highspeed) DSP playback test.\n");
+
+    timeout = T8254_REF_CLOCK_HZ * 4UL;
+
+    for (count=0;count < 256;count++) {
+        expect = 1000000UL / (unsigned long)(256 - count);
+
+        _cli();
+        if (sb_card->irq >= 8) {
+            p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+        }
+        else if (sb_card->irq >= 0) {
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+        }
+        _sti();
+
+        tlen = expect; // 1 sec
+        if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+        sb_card->buffer_dma_started_length = tlen;
+        sb_card->buffer_dma_started = 0;
+
+        sndsb_reset_dsp(sb_card);
+        sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+        sndsb_setup_dma(sb_card);
+        irqc = sb_card->irq_counter;
+
+        sndsb_write_dsp_timeconst(sb_card,count);
+
+        {
+            unsigned int lv = (unsigned int)(tlen - 1UL);
+
+            sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SET_DMA_BLOCK_SIZE); /* 0x48 */
+            sndsb_write_dsp(sb_card,lv);
+            sndsb_write_dsp(sb_card,lv >> 8);
+
+            sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED); /* 0x91 */
+        }
+
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+        bytes = tlen;
+        time = 0;
+        _sti();
+
+        while (1) {
+            if (irqc != sb_card->irq_counter)
+                break;
+
+            _cli();
+            pc = c;
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+            _sti();
+
+            if (time >= timeout) goto x_timeout;
+        }
+
+x_complete:
+        if (time == 0UL) time = 1;
+
+        {
+            double t = (double)time / T8254_REF_CLOCK_HZ;
+            double rate = (double)bytes / t;
+
+            doubleprintf(" - TC 0x%02X: expecting %luHz, %lub/%.3fs @ %.3fHz\n",count,expect,(unsigned long)bytes,t,rate);
+        }
+
+        if (kbhit()) {
+            if (getch() == 27)
+                break;
+        }
+
+        continue;
+x_timeout:
+        d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
+        if (bytes > d) bytes = d;
+        goto x_complete;
+    }
+
+    _cli();
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+    }
+    _sti();
+
+    sndsb_reset_dsp(sb_card);
+}
+
 void direct_dac_test(void) {
     unsigned long time,bytes;
     unsigned char FAR *ptr;
@@ -493,6 +594,7 @@ int main(int argc,char **argv) {
 
     direct_dac_test();
     sb1_sc_play_test();
+    sb2_sc_play_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
