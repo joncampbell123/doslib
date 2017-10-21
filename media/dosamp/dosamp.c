@@ -1323,13 +1323,10 @@ static int alloc_dma_buffer(uint32_t choice,int8_t ch) {
                 if (choice >= 8192UL)
                     choice -= 4096UL;
                 else
-                    break;
+                    return -1;
             }
         } while (1);
     }
-
-    if (isa_dma == NULL)
-        return -1;
 
     return 0;
 }
