@@ -110,23 +110,8 @@ Reveal SC-400:
     If you set the sample rate divider to either of those values, the
     ESS688 will not cycle any samples and playback will be silent.
 
-    But for some reason, the ESS will rapidly cycle DMA for MOST of the DMA
-    transfer despite silence, then stop short of the end of the buffer. So,
-    "playback" at 0x7F or 0xFF means a rapid burst of DMA that is less than
-    the total transfer length, and no sound whatsoever.
-
-    In fact looking at the test results, the DMA transfer length that DID
-    occur is (transfer length - 256). Note that according to ESS
-    documentation that "extended mode" uses a 256-byte FIFO in hardware. So
-    something about the FIFO makes it burst then stop short of the full
-    transfer length.
-
-    I suppose that means that if it were in SB compatible mode, it would be
-    (transfer length - 64) since it is mentioned the SB compatible mode uses
-    a 64-byte firmware-managed FIFO. But the ability to set the sample rate
-    divider is not available in SB compatible mode, and emulation of the
-    SB time constant commands won't allow this condition, so there's no way
-    to test for that case.
+    If you attempt DMA playback at rate 0x7F or 0xFF, the ESS688 appears to
+    fill it's FIFO (DMA 256 bytes) and then stop without playing any audio.
 
     For sanity purposes, we'll list the sample rate of these special cases
     as 0Hz.
