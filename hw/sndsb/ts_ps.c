@@ -428,7 +428,7 @@ void ess_sc_play_test(void) {
             /* effectively disable the lowpass filter (NTS: 0xFF mutes the audio, apparently) */
             sndsb_ess_write_controller(sb_card,0xA2,0xFE);
 
-            t16 = -tlen;
+            t16 = -tlen; /* DMA transfer count reload register value is 2's complement of length */
             sndsb_ess_write_controller(sb_card,0xA4,t16); /* DMA transfer count low */
             sndsb_ess_write_controller(sb_card,0xA5,t16>>8); /* DMA transfer count high */
 
