@@ -33,6 +33,14 @@ Creative Sound Blaster 16 PnP:
   Sound Blaster 16 AWE 64:                      34076Hz
   Sound Blaster 16 ViBRA16C PnP:                22325Hz
 
+- Non-PnP versions of the SB16 appear to have bugs in the sample rate commands:
+
+  - Sound Blaster 1.x/2.x/3.x discontinuity at time constant 0xC8.
+    Sample rate should be 17857Hz but the DSP doubles the sample rate to 35561Hz for some reason.
+
+  - Sound Blaster 16 commands to set the sample rate appear to have odd discontinuities at some
+    points. Setting the sample rate to 5760Hz will instead result in a sample rate of 34Hz.
+
 Reveal SC-400:
 
 - The maximum sample rate depends on the command set used:
