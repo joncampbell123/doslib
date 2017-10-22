@@ -64,3 +64,46 @@ Reveal SC-400:
   - Highspeed commands map sample rates from 3800Hz to 37000Hz, but then the
     rate jumps to 44100Hz afterwards.
 
+- ESS688/ESS1868
+
+  - Sample rates by Sound Blaster commands is continuous, no rounding.
+
+  - The chipset supports all Sound Blaster sample rates regardless of
+    normal or highspeed commands. It does not limit the time constant
+    if you do not use highspeed DSP commands.
+
+  - Minimum sample rates:
+
+    - Sound Blaster DSP:                        3906Hz
+    - ESS688 rate divider:                      3107Hz
+
+  - Maximum sample rates:
+
+    - Sound Blaster DSP:                        43478Hz
+    - ESS688 rate divider:                      397750Hz
+
+    However: Even though the ESS688 CAN be driven at high sample rates,
+             it is limited by the ISA bus. Testing shows that when
+             playback is combined with wait states on the ISA bus
+             (such as continuous IDE controller reads) a more realistic
+             maximum is 48KHz 16-bit stereo.
+
+  - The ESS688 rate divider causes an effective sample rate of zero Hz
+    if set to 0x7F or 0xFF, which isn't mentioned in the datasheet.
+    If you set the sample rate divider to either of those values, the
+    ESS688 will not cycle any samples and playback will be silent.
+
+    The test results are wrong because the code timed out after 2 seconds
+    and assumed that data transfer occurred.
+
+  - The ESS688 lowpass filter causes complete silence if set to 0x7F or 0xFF.
+
+  - Found while testing TS_PS.EXE on real hardware: If you set up the chipset
+    to use demand DMA fetching (2 or 4 bytes), and you use non-auto-init DMA,
+    the ESS chip will fetch only in those blocks of data you specified before
+    acting on DMA and IRQ functions. So if you specify demand DMA of 4 bytes,
+    and the DMA controller is set up for a transfer that is NOT a multiple of
+    4 bytes, the ESS688 will play the buffer but stop short up to 3 bytes
+    from the end because it will be waiting to fill 4 bytes when the DMA
+    controller cannot provide it. It will not fire the IRQ either.
+
