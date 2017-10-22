@@ -170,6 +170,12 @@ void sb1_sc_play_test(void) {
 
         sndsb_write_dsp_timeconst(sb_card,count);
 
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+        bytes = tlen;
+        time = 0;
+        _sti();
+
         {
             unsigned int lv = (unsigned int)(tlen - 1UL);
 
@@ -177,12 +183,6 @@ void sb1_sc_play_test(void) {
             sndsb_write_dsp(sb_card,lv);
             sndsb_write_dsp(sb_card,lv >> 8);
         }
-
-        _cli();
-        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-        bytes = tlen;
-        time = 0;
-        _sti();
 
         while (1) {
             if (irqc != sb_card->irq_counter)
@@ -272,6 +272,12 @@ void sb2_sc_play_test(void) {
 
         sndsb_write_dsp_timeconst(sb_card,count);
 
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+        bytes = tlen;
+        time = 0;
+        _sti();
+
         {
             unsigned int lv = (unsigned int)(tlen - 1UL);
 
@@ -281,12 +287,6 @@ void sb2_sc_play_test(void) {
 
             sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED); /* 0x91 */
         }
-
-        _cli();
-        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-        bytes = tlen;
-        time = 0;
-        _sti();
 
         while (1) {
             if (irqc != sb_card->irq_counter)
@@ -322,6 +322,125 @@ x_timeout:
         if (bytes > d) bytes = d;
         goto x_complete;
     }
+
+    _cli();
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+    }
+    _sti();
+
+    sndsb_reset_dsp(sb_card);
+}
+
+void sb16_sc_play_test(void) {
+    unsigned long time,bytes,expect,tlen,timeout;
+    unsigned long count;
+    unsigned int pc,c;
+    unsigned long d;
+    uint32_t irqc;
+
+    if (sb_card->dsp_vmaj >= 4) /* Sound Blaster 16 */
+        { }
+    else if (sb_card->is_gallant_sc6600) /* Reveal SC-4000 / Gallant SC-6600 */
+        { }
+    else 
+        return;
+
+    doubleprintf("SB16 4.x single cycle DSP playback test (8 bit).\n");
+
+    timeout = T8254_REF_CLOCK_HZ;
+
+    count = 0;
+    do {
+        expect = count;
+
+        _cli();
+        if (sb_card->irq >= 8) {
+            p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+        }
+        else if (sb_card->irq >= 0) {
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+        }
+        _sti();
+
+        tlen = expect; // 1 sec
+        if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+        sb_card->buffer_dma_started_length = tlen;
+        sb_card->buffer_dma_started = 0;
+
+        sndsb_reset_dsp(sb_card);
+        sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+        sndsb_setup_dma(sb_card);
+        irqc = sb_card->irq_counter;
+
+        sndsb_write_dsp_outrate(sb_card,count);
+
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+        bytes = tlen;
+        time = 0;
+        _sti();
+
+        {
+            unsigned int lv = (unsigned int)(tlen - 1UL);
+
+            sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT); /* 0xC0 */
+            sndsb_write_dsp(sb_card,0x00); /* mode (8-bit unsigned PCM) */
+            sndsb_write_dsp(sb_card,lv);
+            sndsb_write_dsp(sb_card,lv >> 8);
+        }
+
+        while (1) {
+            if (irqc != sb_card->irq_counter)
+                break;
+
+            _cli();
+            pc = c;
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+            _sti();
+
+            if (time >= timeout) goto x_timeout;
+        }
+
+x_complete:
+        if (time == 0UL) time = 1;
+
+        {
+            double t = (double)time / T8254_REF_CLOCK_HZ;
+            double rate = (double)bytes / t;
+
+            doubleprintf(" - Rate 0x%04lX: expecting %luHz, %lub/%.3fs @ %.3fHz\n",count,expect,(unsigned long)bytes,t,rate);
+        }
+
+        if (kbhit()) {
+            if (getch() == 27)
+                break;
+        }
+
+        if (count < 0x100UL)
+            count++;
+        else if (count < 4000UL)
+            count += 0x10;
+        else if (count < 0xFF00UL)
+            count += 0x80; /* count by 256 because enumerating all would take too long */
+        else if (count < 0xFFFFUL)
+            count++;
+        else
+            break;
+
+        continue;
+x_timeout:
+        d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
+        if (bytes > d) bytes = d;
+        goto x_complete;
+    } while (1);
 
     _cli();
     if (sb_card->irq >= 8) {
@@ -598,6 +717,7 @@ int main(int argc,char **argv) {
     direct_dac_test();
     sb1_sc_play_test();
     sb2_sc_play_test();
+    sb16_sc_play_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
