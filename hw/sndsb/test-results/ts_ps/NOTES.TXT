@@ -26,5 +26,5 @@ Creative Sound Blaster 16 PnP:
   Sound Blaster 16 DSP commands.
 
   A quick guess from looking at the results is that the rate is rounded down to a multiple
-  of (about, guessing) 192.
+  of (about, guessing) 192 plus some offset.
 
