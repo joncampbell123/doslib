@@ -175,7 +175,7 @@ void sb16_sc_play_test(void) {
             tlen = expect / 10UL; // 100ms
 
             // SB16 is pretty consistent about capping the lower rate at 4800Hz
-            if (tlen < 480UL) tlen = 480UL;
+            if (tlen < (4800UL / 10UL)) tlen = 4800UL / 10UL;
         }
         else {
             /* we need longer test periods for more precision */
