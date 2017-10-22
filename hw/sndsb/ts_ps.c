@@ -512,7 +512,7 @@ x_complete:
         continue;
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
-        if (bytes > d) bytes = d;
+        if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
         goto x_complete;
     }
 
