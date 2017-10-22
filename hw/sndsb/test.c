@@ -1440,11 +1440,12 @@ static void open_wav() {
 
 	if (wav_fd < 0) {
         uint32_t riff_length,scan,len;
+        unsigned char fmt=0;
 
 	    wav_position = 0;
 		wav_data_offset = 0;
 		wav_data_length = 0;
-        wav_sample_rate = 0;
+        wav_sample_rate = 8000;
         wav_bytes_per_sample = 0;
 		if (strlen(wav_file) < 1) return;
 
@@ -1488,6 +1489,7 @@ static void open_wav() {
                         wav_stereo = *((uint16_t*)(tmp + 2)) > 1;
                         wav_16bit = *((uint16_t*)(tmp + 14)) > 8;
                         wav_bytes_per_sample = (wav_stereo ? 2 : 1) * (wav_16bit ? 2 : 1);
+                        fmt = 1;
                     }
                 }
             }
@@ -1500,7 +1502,7 @@ static void open_wav() {
             scan += len + 8UL;
         }
 
-        if (wav_sample_rate == 0UL || wav_data_length == 0UL) goto fail;
+        if (wav_data_length == 0UL || fmt == 0) goto fail;
 	}
 
 	update_cfg();
