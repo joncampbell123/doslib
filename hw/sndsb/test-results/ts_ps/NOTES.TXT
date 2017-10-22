@@ -93,8 +93,13 @@ Reveal SC-400:
     If you set the sample rate divider to either of those values, the
     ESS688 will not cycle any samples and playback will be silent.
 
-    The test results are wrong because the code timed out after 2 seconds
-    and assumed that data transfer occurred.
+    But for some reason, the ESS will rapidly cycle DMA for MOST of the DMA
+    transfer despite silence, then stop short of the end of the buffer. So,
+    "playback" at 0x7F or 0xFF means a rapid burst of DMA that is less than
+    the total transfer length, and no sound whatsoever.
+
+    For sanity purposes, we'll list the sample rate of these special cases
+    as 0Hz.
 
   - The ESS688 lowpass filter causes complete silence if set to 0x7F or 0xFF.
 
