@@ -28,10 +28,16 @@ Creative Sound Blaster 16 PnP:
   A quick guess from looking at the results is that the rate is rounded down to a multiple
   of (about, guessing) 192 plus some offset.
 
+- Direct DAC maximum playback rate depends on the card:
+
+  Sound Blaster 16 AWE 64:                      34076Hz
+  Sound Blaster 16 ViBRA16C PnP:                22325Hz
+
 Reveal SC-400:
 
 - The maximum sample rate depends on the command set used:
 
+  - Direct DAC:                                 23000Hz
   - Sound Blaster 1.x/2.x non-highspeed:        23000Hz
   - Sound Blaster 2.x/3.x highspeed:            44100Hz
   - Sound Blaster 16:                           44000Hz
@@ -65,6 +71,9 @@ Reveal SC-400:
     rate jumps to 44100Hz afterwards.
 
 - ESS688/ESS1868
+
+  - Direct DAC playback is limited to:
+    - Compaq ESS1887                            110349Hz
 
   - Sample rates by Sound Blaster commands is continuous, no rounding.
 
