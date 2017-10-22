@@ -151,7 +151,7 @@ void sb16_sc_play_test(void) {
 
     doubleprintf("SB16 4.x single cycle DSP playback test (8 bit).\n");
 
-    timeout = T8254_REF_CLOCK_HZ * 2UL;
+    timeout = T8254_REF_CLOCK_HZ / 10; /* 100ms */
 
     count = 0;
     do {
@@ -167,8 +167,8 @@ void sb16_sc_play_test(void) {
         }
         _sti();
 
-        tlen = expect; // 1 sec
-        if (tlen < 4000UL) tlen = 4000UL;
+        tlen = expect / 10; // 100ms
+        if (tlen < 400UL) tlen = 400UL;
         if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
 
         sb_card->buffer_dma_started_length = tlen;
@@ -230,19 +230,18 @@ x_complete:
                 break;
         }
 
-        if (count < 0x80UL)
-            count++;
-        else if (count < 0xFF80UL)
-            count += 0x80; /* count by 128 because enumerating all would take too long */
-        else if (count < 0xFFFFUL)
+        if (count < 0xFFFFUL)
             count++;
         else
             break;
 
         continue;
 x_timeout:
-        d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
-        if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+        if (d > tlen) d = tlen;
+        d = tlen - d;
+
+        if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
         else if (bytes > d) bytes = d;
         goto x_complete;
     } while (1);
