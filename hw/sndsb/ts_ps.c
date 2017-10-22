@@ -216,6 +216,7 @@ x_complete:
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
         if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        else if (bytes > d) bytes = d;
         goto x_complete;
     }
 
@@ -320,6 +321,7 @@ x_complete:
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
         if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        else if (bytes > d) bytes = d;
         goto x_complete;
     }
 
@@ -513,6 +515,7 @@ x_complete:
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
         if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        else if (bytes > d) bytes = d;
         goto x_complete;
     }
 
@@ -637,6 +640,7 @@ x_complete:
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
         if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        else if (bytes > d) bytes = d;
         goto x_complete;
     } while (1);
 
