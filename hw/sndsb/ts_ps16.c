@@ -35,6 +35,8 @@ static unsigned char far                devnode_raw[4096];
 
 static uint32_t                         buffer_limit = 0xF000UL;
 
+static unsigned char                    fast_mode = 0;
+
 static unsigned int                     wav_sample_rate = 4000;
 static unsigned char                    wav_stereo = 0;
 static unsigned char                    wav_16bit = 0;
@@ -149,8 +151,8 @@ void sb16_sc_play_test(void) {
     else 
         return;
 
-    doubleprintf("SB16 4.x single cycle DSP playback test (8 bit).\n");
-    printf("This test will take a LONG time! 18 hours to be exact!\n");
+    doubleprintf("SB16 4.x single cycle DSP playback test (8 bit) in %s mode.\n",fast_mode?"fast":"accurate");
+    printf("This test will take a LONG time!\n");
     printf("Hit ESC at any time to break out.\n");
 
     count = 0;
@@ -168,12 +170,21 @@ void sb16_sc_play_test(void) {
         }
         _sti();
 
-        /* we need longer test periods for more precision */
-        timeout = T8254_REF_CLOCK_HZ + (T8254_REF_CLOCK_HZ / 2UL); /* 1500ms */
-        tlen = expect; // 1 sec
+        if (fast_mode) {
+            timeout = T8254_REF_CLOCK_HZ / 5UL; /* 200ms */
+            tlen = expect / 10UL; // 100ms
 
-        // SB16 is pretty consistent about capping the lower rate at 4800Hz
-        if (tlen < 4800UL) tlen = 4800UL;
+            // SB16 is pretty consistent about capping the lower rate at 4800Hz
+            if (tlen < 480UL) tlen = 480UL;
+        }
+        else {
+            /* we need longer test periods for more precision */
+            timeout = T8254_REF_CLOCK_HZ + (T8254_REF_CLOCK_HZ / 2UL); /* 1500ms */
+            tlen = expect; // 1 sec
+
+            // SB16 is pretty consistent about capping the lower rate at 4800Hz
+            if (tlen < 4800UL) tlen = 4800UL;
+        }
 
         if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
 
@@ -285,6 +296,17 @@ int main(int argc,char **argv) {
 		printf("Cannot init library\n");
 		return 1;
 	}
+
+    printf("Two test modes are available.\n");
+    printf("Select (F)ast or (A)ccurate.\n");
+
+    i = tolower(getch());
+    if (i == 'f')
+        fast_mode = 1;
+    else if (i == 'a')
+        fast_mode = 0;
+    else
+        return 1;
 
 	/* it's up to us now to tell it certain minor things */
 	sndsb_detect_virtualbox();		// whether or not we're running in VirtualBox
