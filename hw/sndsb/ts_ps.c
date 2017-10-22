@@ -425,11 +425,9 @@ x_complete:
                 break;
         }
 
-        if (count < 0x100UL)
+        if (count < 0x80UL)
             count++;
-        else if (count < 4000UL)
-            count += 0x10;
-        else if (count < 0xFF00UL)
+        else if (count < 0xFF80UL)
             count += 0x80; /* count by 256 because enumerating all would take too long */
         else if (count < 0xFFFFUL)
             count++;
