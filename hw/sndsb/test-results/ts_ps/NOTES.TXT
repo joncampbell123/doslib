@@ -28,3 +28,39 @@ Creative Sound Blaster 16 PnP:
   A quick guess from looking at the results is that the rate is rounded down to a multiple
   of (about, guessing) 192 plus some offset.
 
+Reveal SC-400:
+
+- The maximum sample rate depends on the command set used:
+
+  - Sound Blaster 1.x/2.x non-highspeed:        23000Hz
+  - Sound Blaster 2.x/3.x highspeed:            44100Hz
+  - Sound Blaster 16:                           44000Hz
+
+- The minimum sample rate depends on the command set used:
+
+  - Sound Blaster 1.x/2.x/3.x:                  3800Hz
+  - Sound Blaster 16:                           5300Hz
+
+- The sample rate in Sound Blaster 1.x/2.x/3.x command set is rounded down a bit.
+  Some time constants are handled at the same rate as the next one, except every so often.
+
+- Sound Blaster 16 sample rate handling is EXTREMELY quanitized.
+  The rate you set is rounded to one of the following:
+
+    5300Hz
+    6400Hz
+    10800Hz
+    18700Hz
+    22000Hz
+    33000Hz
+    37600Hz
+    44000Hz
+
+- There are some odd discontinuities regarding SB 1.x/2.x/3.x commands.
+
+  - Non-highspeed commands map sample rates from 3800Hz to 23000Hz as expected,
+    but for some reason it then jumps to 25500Hz, then jumps to 23000Hz.
+
+  - Highspeed commands map sample rates from 3800Hz to 37000Hz, but then the
+    rate jumps to 44100Hz afterwards.
+
