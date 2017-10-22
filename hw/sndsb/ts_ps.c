@@ -369,6 +369,7 @@ void sb16_sc_play_test(void) {
         _sti();
 
         tlen = expect; // 1 sec
+        if (tlen < 4000UL) tlen = 4000UL;
         if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
 
         sb_card->buffer_dma_started_length = tlen;
