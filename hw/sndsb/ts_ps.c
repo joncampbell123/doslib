@@ -428,7 +428,7 @@ x_complete:
         if (count < 0x80UL)
             count++;
         else if (count < 0xFF80UL)
-            count += 0x80; /* count by 256 because enumerating all would take too long */
+            count += 0x80; /* count by 128 because enumerating all would take too long */
         else if (count < 0xFFFFUL)
             count++;
         else
