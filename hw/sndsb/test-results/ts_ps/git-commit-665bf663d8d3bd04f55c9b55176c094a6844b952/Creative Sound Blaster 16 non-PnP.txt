@@ -202,7 +202,7 @@ SB 1.x single cycle DSP playback test.
  - TC 0xC5: expecting 16949Hz, 16949b/1.003s @ 16893.386Hz
  - TC 0xC6: expecting 17241Hz, 17241b/1.010s @ 17071.187Hz
  - TC 0xC7: expecting 17543Hz, 17543b/1.007s @ 17426.553Hz
- - TC 0xC8: expecting 17857Hz, 17857b/0.502s @ 35561.107Hz
+ - TC 0xC8: expecting 17857Hz, 17857b/0.502s @ 35561.107Hz <- DSP firmware bug? Same rate as 0xE4
  - TC 0xC9: expecting 18181Hz, 18181b/1.002s @ 18137.950Hz
  - TC 0xCA: expecting 18518Hz, 18518b/1.001s @ 18493.434Hz
  - TC 0xCB: expecting 18867Hz, 18867b/1.001s @ 18849.323Hz
@@ -459,7 +459,7 @@ SB 2.x single cycle (highspeed) DSP playback test.
  - TC 0xC5: expecting 16949Hz, 16949b/1.003s @ 16892.638Hz
  - TC 0xC6: expecting 17241Hz, 17241b/1.010s @ 17070.308Hz
  - TC 0xC7: expecting 17543Hz, 17543b/1.007s @ 17426.495Hz
- - TC 0xC8: expecting 17857Hz, 17857b/0.502s @ 35558.437Hz
+ - TC 0xC8: expecting 17857Hz, 17857b/0.502s @ 35558.437Hz <- DSP firmware bug? Same rate as 0xE4
  - TC 0xC9: expecting 18181Hz, 18181b/1.002s @ 18137.540Hz
  - TC 0xCA: expecting 18518Hz, 18518b/1.001s @ 18493.279Hz
  - TC 0xCB: expecting 18867Hz, 18867b/1.001s @ 18848.707Hz
@@ -688,7 +688,7 @@ SB16 4.x single cycle DSP playback test (8 bit).
  - Rate 0x1500: expecting 5376Hz, 5376b/1.007s @ 5336.548Hz
  - Rate 0x1580: expecting 5504Hz, 5504b/0.998s @ 5513.602Hz
  - Rate 0x1600: expecting 5632Hz, 5632b/0.989s @ 5692.191Hz
- - Rate 0x1680: expecting 5760Hz, 68b/2.000s @ 34.000Hz
+ - Rate 0x1680: expecting 5760Hz, 68b/2.000s @ 34.000Hz <- What happened here?? Re-test again, later!
  - Rate 0x1700: expecting 5888Hz, 5888b/1.003s @ 5869.219Hz
  - Rate 0x1780: expecting 6016Hz, 6016b/0.995s @ 6047.801Hz
  - Rate 0x1800: expecting 6144Hz, 6144b/0.987s @ 6225.403Hz
