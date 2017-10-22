@@ -150,10 +150,11 @@ void sb16_sc_play_test(void) {
         return;
 
     doubleprintf("SB16 4.x single cycle DSP playback test (8 bit).\n");
-
-    timeout = T8254_REF_CLOCK_HZ / 10; /* 100ms */
+    printf("This test will take a LONG time! 18 hours to be exact!\n");
+    printf("Hit ESC at any time to break out.\n");
 
     count = 0;
+
     do {
         expect = count;
 
@@ -167,8 +168,13 @@ void sb16_sc_play_test(void) {
         }
         _sti();
 
-        tlen = expect / 10; // 100ms
-        if (tlen < 400UL) tlen = 400UL;
+        /* we need longer test periods for more precision */
+        timeout = T8254_REF_CLOCK_HZ + (T8254_REF_CLOCK_HZ / 2UL); /* 1500ms */
+        tlen = expect; // 1 sec
+
+        // SB16 is pretty consistent about capping the lower rate at 4800Hz
+        if (tlen < 4800UL) tlen = 4800UL;
+
         if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
 
         sb_card->buffer_dma_started_length = tlen;
