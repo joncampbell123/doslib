@@ -214,8 +214,11 @@ x_complete:
 
         continue;
 x_timeout:
-        d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
-        if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+        if (d > tlen) d = tlen;
+        d = tlen - d;
+
+        if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
         else if (bytes > d) bytes = d;
         goto x_complete;
     }
@@ -319,8 +322,11 @@ x_complete:
 
         continue;
 x_timeout:
-        d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
-        if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+        if (d > tlen) d = tlen;
+        d = tlen - d;
+
+        if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
         else if (bytes > d) bytes = d;
         goto x_complete;
     }
@@ -513,8 +519,11 @@ x_complete:
 
         continue;
 x_timeout:
-        d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
-        if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+        if (d > tlen) d = tlen;
+        d = tlen - d;
+
+        if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
         else if (bytes > d) bytes = d;
         goto x_complete;
     }
@@ -638,8 +647,11 @@ x_complete:
 
         continue;
 x_timeout:
-        d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
-        if (irqc == sb_card->irq_counter && d >= tlen) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+        if (d > tlen) d = tlen;
+        d = tlen - d;
+
+        if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
         else if (bytes > d) bytes = d;
         goto x_complete;
     } while (1);
