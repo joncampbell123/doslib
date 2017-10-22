@@ -1,0 +1,27 @@
+Creative Sound Blaster 16 PnP:
+
+- The maximum sample rate is 45454Hz. This maximum is enforced whether you use DSP 1.x/2.x/3.x
+  or Sound Blaster 16 DSP playback commands.
+
+- The minimum sample rate seems to vary, depending on which command set you use to play audio.
+
+  Sound Blaster 1.x/2.x/3.x DSP playback:       3906Hz
+  Sound Blaster 16 DSP playback:                4800Hz
+
+- Sound Blaster 16 DSP playback appears to have a minor bug where you can use a sample rate
+  as low as 4800Hz, but if you specify a rate below 4800Hz it clamps the rate to 4982Hz.
+
+  unsigned int sb16dsp_play_rate(unsigned int desired) {
+    if (desired > 45454)
+      return 45454;
+    else if (desired >= 4800)
+      return desired;
+    else
+      return 4982;
+  }
+
+- The command set would have you think the card can support a wide range of sample rates
+  from minimum to maximum. Actual hardware appears to round the sample rate to the nearest
+  multiple of some unknown constant. This rounding affects both DSP 1.x/2.x/3.x and
+  Sound Blaster 16 DSP commands.
+
