@@ -25,3 +25,6 @@ Creative Sound Blaster 16 PnP:
   multiple of some unknown constant. This rounding affects both DSP 1.x/2.x/3.x and
   Sound Blaster 16 DSP commands.
 
+  A quick guess from looking at the results is that the rate is rounded down to a multiple
+  of (about, guessing) 192.
+
