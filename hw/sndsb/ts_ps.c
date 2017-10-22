@@ -233,6 +233,8 @@ x_timeout:
     }
     _sti();
 
+    sndsb_write_dsp_timeconst(sb_card,0x83); /* 8000Hz */
+
     sndsb_reset_dsp(sb_card);
 }
 
@@ -344,6 +346,8 @@ x_timeout:
 
     sndsb_reset_dsp(sb_card);
     sndsb_reset_dsp(sb_card);
+
+    sndsb_write_dsp_timeconst(sb_card,0x83); /* 8000Hz */
 }
 
 void ess_sc_play_test(void) {
@@ -669,6 +673,8 @@ x_timeout:
     _sti();
 
     sndsb_reset_dsp(sb_card);
+
+    sndsb_write_dsp_outrate(sb_card,8000U);
 }
 
 void direct_dac_test(void) {
