@@ -112,7 +112,7 @@ int sndsb_begin_dsp_playback_s_ESS(struct sndsb_ctx *cx,unsigned short lv) {
 		return 0;
 	}
 
-	t16 = -(lv+1);
+	t16 = -(lv+1); /* LV is length - 1 from caller. Add it back. DMA transfer count reload register is 2's complement */
 	if (sndsb_ess_write_controller(cx,0xA4,t16) == -1 || /* DMA transfer count low */
 			sndsb_ess_write_controller(cx,0xA5,t16>>8) == -1) { /* DMA transfer count high */
 		_sti();
