@@ -348,7 +348,7 @@ void ess_sc_play_test(void) {
 
     doubleprintf("ESS688 single cycle DSP playback test (8 bit).\n");
 
-    timeout = T8254_REF_CLOCK_HZ;
+    timeout = T8254_REF_CLOCK_HZ * 2UL;
 
     for (count=0;count < 256;count++) {
         if (count >= 128)
@@ -368,6 +368,9 @@ void ess_sc_play_test(void) {
 
         tlen = expect; // 1 sec
         if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+        sb_card->buffer_dma_started_length = tlen;
+        sb_card->buffer_dma_started = 0;
 
         sndsb_reset_dsp(sb_card);
         sndsb_write_dsp(sb_card,0xD1); /* speaker on */
@@ -422,7 +425,10 @@ void ess_sc_play_test(void) {
 
             sndsb_ess_write_controller(sb_card,0xA1,count);
 
-            t16 = -(tlen+1);
+            /* effectively disable the lowpass filter (NTS: 0xFF mutes the audio, apparently) */
+            sndsb_ess_write_controller(sb_card,0xA2,0xFE);
+
+            t16 = -tlen;
             sndsb_ess_write_controller(sb_card,0xA4,t16); /* DMA transfer count low */
             sndsb_ess_write_controller(sb_card,0xA5,t16>>8); /* DMA transfer count high */
 
@@ -455,7 +461,6 @@ void ess_sc_play_test(void) {
         bytes = tlen;
         time = 0;
         _sti();
-
 
         while (1) {
             if (irqc != sb_card->irq_counter)
@@ -531,7 +536,7 @@ void sb16_sc_play_test(void) {
 
     doubleprintf("SB16 4.x single cycle DSP playback test (8 bit).\n");
 
-    timeout = T8254_REF_CLOCK_HZ;
+    timeout = T8254_REF_CLOCK_HZ * 2UL;
 
     count = 0;
     do {
