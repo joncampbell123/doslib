@@ -575,7 +575,13 @@ void sb16_sc_play_test(void) {
         {
             unsigned int lv = (unsigned int)(tlen - 1UL);
 
-            sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT); /* 0xC0 */
+            /* NTS: Reveal SC-4000 (Gallant 6600) cards DO support SB16 but only specific commands.
+             *      Command 0xC0 is not recognized, but command 0xC6 works. */
+            if (sb_card->is_gallant_sc6600)
+                sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT); /* 0xC6 */
+            else
+                sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT); /* 0xC0 */
+
             sndsb_write_dsp(sb_card,0x00); /* mode (8-bit unsigned PCM) */
             sndsb_write_dsp(sb_card,lv);
             sndsb_write_dsp(sb_card,lv >> 8);
