@@ -270,6 +270,7 @@ void sb2_sc_play_test(void) {
         sb_card->buffer_dma_started = 0;
 
         sndsb_reset_dsp(sb_card);
+        sndsb_reset_dsp(sb_card);
         sndsb_write_dsp(sb_card,0xD1); /* speaker on */
         sndsb_setup_dma(sb_card);
         irqc = sb_card->irq_counter;
@@ -341,6 +342,7 @@ x_timeout:
     }
     _sti();
 
+    sndsb_reset_dsp(sb_card);
     sndsb_reset_dsp(sb_card);
 }
 
