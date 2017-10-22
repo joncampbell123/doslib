@@ -688,7 +688,7 @@ SB16 4.x single cycle DSP playback test (8 bit).
  - Rate 0x1500: expecting 5376Hz, 5376b/1.007s @ 5336.548Hz
  - Rate 0x1580: expecting 5504Hz, 5504b/0.998s @ 5513.602Hz
  - Rate 0x1600: expecting 5632Hz, 5632b/0.989s @ 5692.191Hz
- - Rate 0x1680: expecting 5760Hz, 68b/2.000s @ 34.000Hz <- What happened here?? Re-test again, later!
+ - Rate 0x1680: expecting 5760Hz, 68b/2.000s @ 34.000Hz <- DSP firmware bug? It's consistent across non-PnP SB16 cards, apparently
  - Rate 0x1700: expecting 5888Hz, 5888b/1.003s @ 5869.219Hz
  - Rate 0x1780: expecting 6016Hz, 6016b/0.995s @ 6047.801Hz
  - Rate 0x1800: expecting 6144Hz, 6144b/0.987s @ 6225.403Hz
@@ -888,7 +888,7 @@ SB16 4.x single cycle DSP playback test (8 bit).
  - Rate 0x7900: expecting 30976Hz, 30976b/1.001s @ 30938.299Hz
  - Rate 0x7980: expecting 31104Hz, 31104b/1.000s @ 31115.996Hz
  - Rate 0x7A00: expecting 31232Hz, 31232b/1.004s @ 31115.562Hz
- - Rate 0x7A80: expecting 31360Hz, 31360b/1.102s @ 28449.093Hz
+ - Rate 0x7A80: expecting 31360Hz, 31360b/1.102s @ 28449.093Hz <- DSP firmware bug? Seems to be consistent across non-PnP SB16 cards
  - Rate 0x7B00: expecting 31488Hz, 31488b/1.001s @ 31471.304Hz
  - Rate 0x7B80: expecting 31616Hz, 31616b/0.999s @ 31649.395Hz
  - Rate 0x7C00: expecting 31744Hz, 31744b/1.003s @ 31649.041Hz
