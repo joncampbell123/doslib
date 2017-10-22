@@ -643,7 +643,7 @@ ESS688 single cycle DSP playback test (8 bit).
  - TC 0x7C: expecting 99425Hz, 53248b/0.533s @ 99910.285Hz
  - TC 0x7D: expecting 132566Hz, 53248b/0.400s @ 133213.224Hz
  - TC 0x7E: expecting 198850Hz, 53248b/0.266s @ 199812.714Hz
- - TC 0x7F: expecting 397700Hz, 256b/2.000s @ 128.000Hz
+ - TC 0x7F: expecting 397700Hz, 256b/2.000s @ 128.000Hz <- DSP fills it's 256-byte FIFO via DMA, then stops and does not play audio. Timeout condition.
  - TC 0x80: expecting 6214Hz, 6212b/0.958s @ 6482.371Hz
  - TC 0x81: expecting 6263Hz, 6260b/0.958s @ 6531.267Hz
  - TC 0x82: expecting 6313Hz, 6312b/0.959s @ 6580.784Hz
@@ -771,4 +771,4 @@ ESS688 single cycle DSP playback test (8 bit).
  - TC 0xFC: expecting 198875Hz, 53248b/0.266s @ 199815.228Hz
  - TC 0xFD: expecting 265166Hz, 53248b/0.200s @ 266418.628Hz
  - TC 0xFE: expecting 397750Hz, 53248b/0.133s @ 399600.293Hz
- - TC 0xFF: expecting 795500Hz, 256b/2.000s @ 128.000Hz
+ - TC 0xFF: expecting 795500Hz, 256b/2.000s @ 128.000Hz <- DSP fills it's 256-byte FIFO via DMA, then stops and does not play audio. Timeout condition.
