@@ -31,7 +31,10 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 !ifeq TARGET_MSDOS 16
 ! ifdef TINYMODE
 ! else
+!  ifeq MMODE c
+!  else
 TS_PS_EXE =	  $(SUBDIR)$(HPS)ts_ps.$(EXEEXT)
+!  endif
 ! endif
 !endif
 !ifeq TARGET_MSDOS 32

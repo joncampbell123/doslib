@@ -336,6 +336,185 @@ x_timeout:
     sndsb_reset_dsp(sb_card);
 }
 
+void ess_sc_play_test(void) {
+    unsigned long time,bytes,expect,tlen,timeout;
+    unsigned long count;
+    unsigned int pc,c;
+    unsigned long d;
+    uint32_t irqc;
+
+    if (!sb_card->ess_extensions || sb_card->ess_chipset == 0)
+        return;
+
+    doubleprintf("ESS688 single cycle DSP playback test (8 bit).\n");
+
+    timeout = T8254_REF_CLOCK_HZ;
+
+    for (count=0;count < 256;count++) {
+        if (count >= 128)
+            expect = 795500UL / (256 - count);
+        else
+            expect = 397700UL / (128 - count);
+
+        _cli();
+        if (sb_card->irq >= 8) {
+            p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+        }
+        else if (sb_card->irq >= 0) {
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+        }
+        _sti();
+
+        tlen = expect; // 1 sec
+        if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+        sndsb_reset_dsp(sb_card);
+        sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+        sndsb_ess_set_extended_mode(sb_card,1/*enable*/);
+        sndsb_setup_dma(sb_card);
+        irqc = sb_card->irq_counter;
+
+        {
+            /* ESS 688/1869 chipset specific DSP playback.
+               using this mode bypasses a lot of the Sound Blaster Pro emulation
+               and restrictions and allows us to run up to 48KHz 16-bit stereo */
+            unsigned short t16;
+            int b;
+
+            _cli();
+
+            /* clear IRQ */
+            sndsb_interrupt_ack(sb_card,3);
+
+            b = 0x00; /* DMA disable */
+            b |= 0x00; /* no auto-init */
+            b |= 0x00; /* [3]=DMA converter in ADC mode [1]=DMA read for ADC playback mode */
+            sndsb_ess_write_controller(sb_card,0xB8,b);
+
+            b = sndsb_ess_read_controller(sb_card,0xA8);
+            b &= ~0xB; /* clear mono/stereo and record monitor (bits 3, 1, and 0) */
+            b |= 2;	/* mono 10=mono 01=stereo */
+            sndsb_ess_write_controller(sb_card,0xA8,b);
+
+            /* NTS: The meaning of bits 1:0 in register 0xB9
+             *
+             *      00 single DMA transfer mode
+             *      01 demand DMA transfer mode, 2 bytes/request
+             *      10 demand DMA transfer mode, 4 bytes/request
+             *      11 reserved
+             *
+             * NOTES on what happens if you set bits 1:0 (DMA transfer type) to the "reserved" 11 value:
+             *
+             *      ESS 688 (Sharp laptop)          Nothing, apparently. Treated the same as 4 bytes/request
+             *
+             *      ESS 1887 (Compaq Presario)      Triggers a hardware bug where the chip appears to fetch
+             *                                      3 bytes per demand transfer but then only handle 1 byte,
+             *                                      which translates to audio playing at 3x the sample rate
+             *                                      it should be. NOT because the DAC is running any faster,
+             *                                      but because the chip is only playing back every 3rd sample!
+             *                                      This play only 3rds behavior is consistent across 8/16-bit
+             *                                      PCM and mono/stereo.
+             */
+
+            b = 2;  /* demand transfer DMA 4 bytes per request */
+            sndsb_ess_write_controller(sb_card,0xB9,b);
+
+            sndsb_ess_write_controller(sb_card,0xA1,count);
+
+            t16 = -(tlen+1);
+            sndsb_ess_write_controller(sb_card,0xA4,t16); /* DMA transfer count low */
+            sndsb_ess_write_controller(sb_card,0xA5,t16>>8); /* DMA transfer count high */
+
+            b = sndsb_ess_read_controller(sb_card,0xB1);
+            b &= ~0xA0; /* clear compat game IRQ, fifo half-empty IRQs */
+            b |= 0x50; /* set overflow IRQ, and "no function" */
+            sndsb_ess_write_controller(sb_card,0xB1,b);
+
+            b = sndsb_ess_read_controller(sb_card,0xB2);
+            b &= ~0xA0; /* clear compat */
+            b |= 0x50; /* set DRQ/DACKB inputs for DMA */
+            sndsb_ess_write_controller(sb_card,0xB2,b);
+
+            b = 0x51; /* enable FIFO+DMA, reserved, load signal */
+            b |= 0x00; /* signed complement mode off */
+            sndsb_ess_write_controller(sb_card,0xB7,b);
+
+            b = 0x90; /* enable FIFO+DMA, reserved, load signal */
+            b |= 0x00; /* signed complement mode off */
+            b |= 0x40; /* [3]=stereo [6]=!stereo */
+            b |= 0x00; /* [2]=16bit */
+            sndsb_ess_write_controller(sb_card,0xB7,b);
+
+            b = sndsb_ess_read_controller(sb_card,0xB8);
+            sndsb_ess_write_controller(sb_card,0xB8,b | 1);
+        }
+
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+        bytes = tlen;
+        time = 0;
+        _sti();
+
+
+        while (1) {
+            if (irqc != sb_card->irq_counter)
+                break;
+
+            _cli();
+            pc = c;
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+            _sti();
+
+            if (time >= timeout) goto x_timeout;
+        }
+
+x_complete:
+        if (time == 0UL) time = 1;
+
+        {
+            int b;
+
+            b = sndsb_ess_read_controller(sb_card,0xB8);
+            if (b != -1) {
+                b &= ~0x01; /* stop DMA */
+                sndsb_ess_write_controller(sb_card,0xB8,b);
+            }
+        }
+
+        {
+            double t = (double)time / T8254_REF_CLOCK_HZ;
+            double rate = (double)bytes / t;
+
+            doubleprintf(" - TC 0x%02lX: expecting %luHz, %lub/%.3fs @ %.3fHz\n",count,expect,(unsigned long)bytes,t,rate);
+        }
+
+        if (kbhit()) {
+            if (getch() == 27)
+                break;
+        }
+
+        continue;
+x_timeout:
+        d = d8237_read_count(sb_card->dma8); /* counts UPWARD */
+        if (bytes > d) bytes = d;
+        goto x_complete;
+    }
+
+    _cli();
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+    }
+    _sti();
+
+    sndsb_reset_dsp(sb_card);
+}
+
 void sb16_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned long count;
@@ -717,6 +896,7 @@ int main(int argc,char **argv) {
     sb1_sc_play_test();
     sb2_sc_play_test();
     sb16_sc_play_test();
+    ess_sc_play_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
