@@ -67,6 +67,10 @@ Creative Sound Blaster Live! SB16 emulation:
 - Asking the emulated SB16 to play high-speed DMA beyond 166666Hz causes the
   emulated DSP to stop responding. This is possibly a bug in the emulation driver.
 
+- Emulation driver accepts Direct DAC commands but silently discards them. It
+  does however emulate Direct DAC at the correct speed to emulate the maximum
+  23000Hz allowed by that method.
+
 Reveal SC-400:
 
 - The maximum sample rate depends on the command set used:
