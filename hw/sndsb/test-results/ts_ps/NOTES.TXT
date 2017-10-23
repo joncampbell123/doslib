@@ -160,3 +160,17 @@ Reveal SC-400:
     from the end because it will be waiting to fill 4 bytes when the DMA
     controller cannot provide it. It will not fire the IRQ either.
 
+- Pro Audio Spectrum 16
+
+  - Sound Blaster emulation is quite good
+
+  - Reports DSP 2.0
+
+  - Minimum sample rate:                        3906Hz
+
+  - Maximum sample rate:                        22222Hz
+
+  - Beyond 22222Hz, sample rate behavior is quite odd. After 22222Hz the card
+    apparently muffles the audio and then the sample rate decreases back down
+    to zero, with some erratic rates at the very tail end.
+
