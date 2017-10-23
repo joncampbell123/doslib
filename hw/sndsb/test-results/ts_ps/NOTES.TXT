@@ -41,6 +41,32 @@ Creative Sound Blaster 16 PnP:
   - Sound Blaster 16 commands to set the sample rate appear to have odd discontinuities at some
     points. Setting the sample rate to 5760Hz will instead result in a sample rate of 34Hz.
 
+  - An hour-long test of all 65536 sample rates is in 'Creative Sound Blaster 16 non-PnP SB16 sample rate test.txt'
+    which shows not only that sample rates are quantized but that there are periodic
+    ranges where the sample rate it chooses is wrong compared to input.
+
+Creative Sound Blaster Live! SB16 emulation:
+
+- Emulation is quite good.
+
+- The sample rate range is continuous, not rounded. See 'Creative Sound Blaster Live (EMU10K1) SB16 emulation.txt'.
+
+- Minimum sample rate:
+
+  - Sound Blaster 1.x/2.x/3.x time constant:    3906Hz
+  - Sound Blaster 16 sample rate:               2.5Hz
+
+- Maximum sample rate:
+
+  - Sound Blaster 1.x/2.x/3.x time constant:    166666Hz
+  - Sound Blaster 16 sample rate:               65535Hz
+
+- Sample rates that lay way outside the normal range of rates seem to produce
+  odd outliers or 0Hz, perhaps due to the emulation driver and division overflow.
+
+- Asking the emulated SB16 to play high-speed DMA beyond 166666Hz causes the
+  emulated DSP to stop responding. This is possibly a bug in the emulation driver.
+
 Reveal SC-400:
 
 - The maximum sample rate depends on the command set used:
