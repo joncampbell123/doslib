@@ -171,7 +171,7 @@ void sb16_sc_play_test(void) {
         _sti();
 
         if (fast_mode) {
-            timeout = T8254_REF_CLOCK_HZ / 5UL; /* 200ms */
+            timeout = T8254_REF_CLOCK_HZ / 10UL + (T8254_REF_CLOCK_HZ / 100UL); /* 110ms */
             tlen = expect / 10UL; // 100ms
 
             // SB16 is pretty consistent about capping the lower rate at 4800Hz
@@ -255,7 +255,7 @@ x_complete:
         continue;
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-        if (d > tlen) d = tlen;
+        if (d > tlen) d = 0; /* terminal count */
         d = tlen - d;
 
         if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */

@@ -215,7 +215,7 @@ x_complete:
         continue;
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-        if (d > tlen) d = tlen;
+        if (d > tlen) d = 0; /* terminal count */
         d = tlen - d;
 
         if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
@@ -326,7 +326,7 @@ x_complete:
         continue;
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-        if (d > tlen) d = tlen;
+        if (d > tlen) d = 0; /* terminal count */
         d = tlen - d;
 
         if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
@@ -526,7 +526,7 @@ x_complete:
         continue;
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-        if (d > tlen) d = tlen;
+        if (d > tlen) d = 0; /* terminal count */
         d = tlen - d;
 
         if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
@@ -654,7 +654,7 @@ x_complete:
         continue;
 x_timeout:
         d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-        if (d > tlen) d = tlen;
+        if (d > tlen) d = 0; /* terminal count */
         d = tlen - d;
 
         if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
