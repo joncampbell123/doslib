@@ -71,6 +71,9 @@ Creative Sound Blaster Live! SB16 emulation:
   does however emulate Direct DAC at the correct speed to emulate the maximum
   23000Hz allowed by that method.
 
+- The emulation driver accepts all time constant values. It does not limit the
+  time constant by whether you use non-highspeed or highspeed DSP playback.
+
 Reveal SC-400:
 
 - The maximum sample rate depends on the command set used:
