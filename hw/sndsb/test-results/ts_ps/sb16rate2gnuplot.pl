@@ -69,6 +69,8 @@ print O "# tc, sb16";
 print O "\n";
 
 for ($i=0;$i < 65536;$i++) {
+    next unless defined($sb16[$i]);
+
     # tc
     print O "$i";
 
