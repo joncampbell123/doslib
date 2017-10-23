@@ -4,6 +4,9 @@ die unless -f $file;
 
 mkdir("gnuplot");
 
+$filenn = $file;
+$filenn =~ s/\.txt$//i;
+
 open(I,"<",$file) || die;
 
 my @sb1x;
@@ -106,7 +109,7 @@ print O "set output '$png1'\n";
 print O "set grid\n";
 print O "set autoscale\n";
 print O "set xrange [0:255]\n";
-print O "set title 'Sound Blaster Time Constant and Playback rate'\n";
+print O "set title 'Sound Blaster Time Constant and Playback rate ($filenn)'\n";
 print O "set xlabel 'Time constant byte'\n";
 print O "set ylabel 'Sample rate (Hz)'\n";
 
@@ -122,7 +125,7 @@ print O "set output '$png2'\n";
 print O "set grid\n";
 print O "set autoscale\n";
 print O "set xrange [0:255]\n";
-print O "set title 'Sound Blaster Time Constant and Playback rate'\n";
+print O "set title 'Sound Blaster Time Constant and Playback rate ($filenn)'\n";
 print O "set xlabel 'Time constant byte'\n";
 print O "set ylabel 'Sample rate (Hz)'\n";
 
@@ -167,7 +170,7 @@ if (@ess > 0) {
     print O "set grid\n";
     print O "set autoscale\n";
     print O "set xrange [0:255]\n";
-    print O "set title 'ESS688 sample rate divider and Playback rate'\n";
+    print O "set title 'ESS688 sample rate divider and Playback rate ($filenn)'\n";
     print O "set xlabel 'Sample rate divider byte'\n";
     print O "set ylabel 'Sample rate (Hz)'\n";
 
