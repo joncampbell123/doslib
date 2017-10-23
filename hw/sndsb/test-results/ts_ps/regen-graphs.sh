@@ -5,7 +5,6 @@ for txt in *.txt; do
 done
 
 # let's not clutter the source tree...
-rm -v gnuplot/*.csv
 rm -v gnuplot/*.gnuplot
 (cd gnuplot && find -size 0 -delete)
 
