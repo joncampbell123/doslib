@@ -25,8 +25,8 @@ Creative Sound Blaster 16 PnP:
   multiple of some unknown constant. This rounding affects both DSP 1.x/2.x/3.x and
   Sound Blaster 16 DSP commands.
 
-  A quick guess from looking at the results is that the rate is rounded down to a multiple
-  of (about, guessing) 192 plus some offset.
+  Quick analysis seems to suggest that the sample rate is subtracted by an unknown base
+  and rounded down to a multiple of 177. The change between each "step" is about 177.
 
 - Direct DAC maximum playback rate depends on the card:
 
@@ -39,7 +39,7 @@ Creative Sound Blaster 16 PnP:
     Sample rate should be 17857Hz but the DSP doubles the sample rate to 35561Hz for some reason.
 
   - Sound Blaster 16 commands to set the sample rate appear to have odd discontinuities at some
-    points. Setting the sample rate to 5760Hz will instead result in a sample rate of 34Hz.
+    points.
 
   - An hour-long test of all 65536 sample rates is in 'Creative Sound Blaster 16 non-PnP SB16 sample rate test.txt'
     which shows not only that sample rates are quantized but that there are periodic
