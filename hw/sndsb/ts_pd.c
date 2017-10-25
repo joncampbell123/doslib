@@ -150,8 +150,8 @@ static unsigned char sb1_tc_rates[] = {
 
 void sb1_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
+    unsigned long ppd,pd,d;
     unsigned int count;
-    unsigned long pd,d;
     unsigned int pc,c;
     uint32_t irqc;
 
@@ -191,7 +191,7 @@ void sb1_sc_play_test(void) {
         c = read_8254(T8254_TIMER_INTERRUPT_TICK);
         bytes = tlen;
         time = 0;
-        d = (~0UL);
+        ppd = pd = d = (~0UL);
         _sti();
 
         {
@@ -204,6 +204,7 @@ void sb1_sc_play_test(void) {
 
         while (1) {
             _cli();
+            ppd = pd;
             pd = d;
             d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
             if (d > tlen) d = 0; /* terminal count */
@@ -215,14 +216,13 @@ void sb1_sc_play_test(void) {
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d) {
+            if (pd != d || ppd != pd) {
                 record_pos->dma_pos = (uint16_t)d;
                 record_pos->timer_pos = time;
 
                 if (++record_pos == record_max) break;
             }
 
-//            if (irqc != sb_card->irq_counter) break;
             if (time >= timeout) break;
         }
 
