@@ -196,14 +196,10 @@ void sb1_sc_play_test(void) {
 
         sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT); /* 0x14 */
         sndsb_write_dsp(sb_card,lv);
+        /* on the first iteration in the loop, write the last byte */
 
         while (1) {
             _cli();
-
-            if (d == (~0UL)) {
-                c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-                sndsb_write_dsp(sb_card,lv >> 8);
-            }
 
             ppd = pd;
             pd = d;
@@ -211,6 +207,11 @@ void sb1_sc_play_test(void) {
             if (d > tlen) d = 0; /* terminal count */
             d = tlen - d;
             bytes = d;
+
+            if (pd == (~0UL)) { /* first iteration */
+                c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+                sndsb_write_dsp(sb_card,lv >> 8);
+            }
 
             pc = c;
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
