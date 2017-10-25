@@ -177,11 +177,15 @@ void sb1_sc_play_test(void) {
         tlen = expect; // 1 sec
         if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
 
+        printf("Starting test... tlen=%lu dmalen=%lu\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size);
+
         sb_card->buffer_dma_started_length = tlen;
         sb_card->buffer_dma_started = 0;
 
         sndsb_reset_dsp(sb_card);
         sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+        sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
+        sndsb_write_dsp(sb_card,0x80);
         sndsb_setup_dma(sb_card);
         irqc = sb_card->irq_counter;
 
@@ -236,6 +240,7 @@ void sb1_sc_play_test(void) {
             fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
 
         fprintf(report_fp,"\n");
+        fflush(report_fp);
 
         if (kbhit()) {
             if (getch() == 27)
