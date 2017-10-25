@@ -536,9 +536,9 @@ void sb16_sc_play_test(void) {
 
 static unsigned char ess_tc_rates[] = {
     0x1D,           // 4000Hz
-    0x4F,           // 8000Hz
-    0x6D,           // 20000Hz
-    0x77            // 40000Hz
+    0x9D,           // 8000Hz
+    0xD9,           // 20000Hz
+    0xED            // 40000Hz
 };
 
 void ess_sc_play_test(void) {
