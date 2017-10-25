@@ -81,7 +81,7 @@ while ($line = <I>) {
         print O "set grid\n";
         print O "set autoscale\n";
         print O "set title '$name'\n";
-        print O "set xrange [0:0.001]\n";
+        print O "set xrange [0:0.0025]\n";
         print O "set xlabel 'Time (s)'\n";
         print O "set ylabel 'DMA transfer count (bytes)'\n";
 
