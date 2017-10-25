@@ -54,6 +54,24 @@ while ($line = <I>) {
         }
 
         close(O);
+
+        # generate gnuplot file
+        open(O,">",$gnuplot) || die;
+
+        print O "reset\n";
+
+        print O "set term png size 1920,1080\n";
+        print O "set output '$png'\n";
+
+        print O "set grid\n";
+        print O "set autoscale\n";
+        print O "set xrange [0:255]\n";
+        print O "set title '$name'\n";
+        print O "set xlabel 'Time (s)'\n";
+        print O "set ylabel 'DMA transfer (bytes)'\n";
+
+        print O "plot '$csv' using 1:2 with lines\n";
+        # done
     }
     elsif ($line eq "") {
     }
