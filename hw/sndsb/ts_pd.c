@@ -149,7 +149,7 @@ static struct dma_xfer_rec_t record[MAX_RECORD],*record_pos,*record_read,*record
 static unsigned char sb1_tc_rates[] = {
     0x06,           // 4000Hz
     0x83,           // 8000Hz
-    0xCE            // 22000Hz
+    0xCE            // 20000Hz
 };
 
 void sb1_sc_play_test(void) {
@@ -219,6 +219,128 @@ void sb1_sc_play_test(void) {
             if (pd == (~0UL)) { /* first iteration */
                 c = read_8254(T8254_TIMER_INTERRUPT_TICK);
                 sndsb_write_dsp(sb_card,lv >> 8);
+            }
+
+            pc = c;
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+            _sti();
+
+            if (pd != d || ppd != pd) {
+                record_pos->dma_pos = (uint16_t)d;
+                record_pos->timer_pos = time;
+
+                if (++record_pos == record_max) break;
+            }
+
+            if (time >= timeout) break;
+        }
+
+        sndsb_reset_dsp(sb_card);
+
+        doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
+
+        for (record_read=record;record_read!=record_pos;record_read++)
+            fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+
+        fprintf(report_fp,"\n");
+        fflush(report_fp);
+
+        if (kbhit()) {
+            if (getch() == 27)
+                break;
+        }
+    }
+
+    _cli();
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+    }
+    _sti();
+
+    sndsb_write_dsp_timeconst(sb_card,0x83); /* 8000Hz */
+
+    sndsb_reset_dsp(sb_card);
+}
+
+static unsigned char sb2_tc_rates[] = {
+    0x06,           // 4000Hz
+    0x83,           // 8000Hz
+    0xCE,           // 20000Hz
+    0xE7            // 40000Hz
+};
+
+void sb2_sc_play_test(void) {
+    unsigned long time,bytes,expect,tlen,timeout;
+    unsigned long ppd,pd,d;
+    unsigned int count,lv;
+    unsigned int pc,c;
+    uint32_t irqc;
+
+    doubleprintf("SB 2.x DMA single cycle DSP test.\n");
+
+    timeout = T8254_REF_CLOCK_HZ * 2UL;
+    record_max = &record[MAX_RECORD];
+
+    for (count=0;count < (sizeof(sb2_tc_rates)/sizeof(sb2_tc_rates[0]));count++) {
+        expect = 1000000UL / (unsigned long)(256 - sb2_tc_rates[count]);
+        record_pos = record;
+
+        _cli();
+        if (sb_card->irq >= 8) {
+            p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+        }
+        else if (sb_card->irq >= 0) {
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+        }
+        _sti();
+
+        tlen = expect; // 1 sec
+        if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+        printf("Starting test... tlen=%lu dmalen=%lu\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size);
+
+        sb_card->buffer_dma_started_length = tlen;
+        sb_card->buffer_dma_started = 0;
+
+        sndsb_reset_dsp(sb_card);
+        sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+        sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
+        sndsb_write_dsp(sb_card,0x80);
+        sndsb_setup_dma(sb_card);
+        irqc = sb_card->irq_counter;
+
+        sndsb_write_dsp_timeconst(sb_card,sb2_tc_rates[count]);
+
+        _cli();
+        bytes = tlen;
+        time = 0;
+        ppd = pd = d = (~0UL);
+        lv = (unsigned int)(tlen - 1UL);
+        _sti();
+
+        sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SET_DMA_BLOCK_SIZE); /* 0x48 */
+        sndsb_write_dsp(sb_card,lv);
+        sndsb_write_dsp(sb_card,lv >> 8);
+
+        while (1) {
+            _cli();
+
+            ppd = pd;
+            pd = d;
+            d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+            if (d > tlen) d = 0; /* terminal count */
+            d = tlen - d;
+            bytes = d;
+
+            if (pd == (~0UL)) { /* first iteration */
+                c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+                sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED); /* 0x91 */
             }
 
             pc = c;
@@ -485,6 +607,7 @@ int main(int argc,char **argv) {
     generate_1khz_sine();
 
     sb1_sc_play_test();
+    sb2_sc_play_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
