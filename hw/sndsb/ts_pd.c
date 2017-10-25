@@ -151,7 +151,7 @@ static unsigned char sb1_tc_rates[] = {
 void sb1_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned long ppd,pd,d;
-    unsigned int count;
+    unsigned int count,lv;
     unsigned int pc,c;
     uint32_t irqc;
 
@@ -188,22 +188,23 @@ void sb1_sc_play_test(void) {
         sndsb_write_dsp_timeconst(sb_card,sb1_tc_rates[count]);
 
         _cli();
-        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
         bytes = tlen;
         time = 0;
         ppd = pd = d = (~0UL);
+        lv = (unsigned int)(tlen - 1UL);
         _sti();
 
-        {
-            unsigned int lv = (unsigned int)(tlen - 1UL);
-
-            sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT); /* 0x14 */
-            sndsb_write_dsp(sb_card,lv);
-            sndsb_write_dsp(sb_card,lv >> 8);
-        }
+        sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT); /* 0x14 */
+        sndsb_write_dsp(sb_card,lv);
 
         while (1) {
             _cli();
+
+            if (d == (~0UL)) {
+                c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+                sndsb_write_dsp(sb_card,lv >> 8);
+            }
+
             ppd = pd;
             pd = d;
             d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
