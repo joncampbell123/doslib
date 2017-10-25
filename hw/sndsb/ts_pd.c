@@ -157,7 +157,7 @@ void sb1_sc_play_test(void) {
 
     doubleprintf("SB 1.x DMA single cycle DSP test.\n");
 
-    timeout = T8254_REF_CLOCK_HZ * 4UL;
+    timeout = T8254_REF_CLOCK_HZ * 2UL;
     record_max = &record[MAX_RECORD];
 
     for (count=0;count < (sizeof(sb1_tc_rates)/sizeof(sb1_tc_rates[0]));count++) {
@@ -222,7 +222,7 @@ void sb1_sc_play_test(void) {
                 if (++record_pos == record_max) break;
             }
 
-            if (irqc != sb_card->irq_counter) break;
+//            if (irqc != sb_card->irq_counter) break;
             if (time >= timeout) break;
         }
 
