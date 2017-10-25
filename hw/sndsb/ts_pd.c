@@ -389,6 +389,141 @@ void sb2_sc_play_test(void) {
     sndsb_reset_dsp(sb_card);
 }
 
+static unsigned short sb16_rates[] = {
+    4000U,          // 4000Hz
+    8000U,          // 8000Hz
+    16000U,         // 16000Hz
+    20000U,         // 20000Hz
+    40000U,         // 40000Hz
+    45454U          // 45454Hz
+};
+
+void sb16_sc_play_test(void) {
+    unsigned long time,bytes,expect,tlen,timeout;
+    unsigned long ppd,pd,d;
+    unsigned int count,lv;
+    unsigned char fifo;
+    unsigned int pc,c;
+    uint32_t irqc;
+
+    doubleprintf("SB 16 DMA single cycle DSP test.\n");
+
+    timeout = T8254_REF_CLOCK_HZ * 2UL;
+    record_max = &record[MAX_RECORD];
+
+    for (count=0;count < (sizeof(sb16_rates)/sizeof(sb16_rates[0]));count++) {
+        for (fifo=0;fifo < 2;fifo++) {
+            if (sb_card->is_gallant_sc6600 && !fifo) /* SC400 cards only support the FIFO version */
+                continue;
+
+            expect = sb16_rates[count];
+            record_pos = record;
+
+            _cli();
+            if (sb_card->irq >= 8) {
+                p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+                p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+            }
+            else if (sb_card->irq >= 0) {
+                p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+            }
+            _sti();
+
+            tlen = expect; // 1 sec
+            if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+            printf("Starting test... tlen=%lu dmalen=%lu fifo=%u\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size,fifo);
+
+            sb_card->buffer_dma_started_length = tlen;
+            sb_card->buffer_dma_started = 0;
+
+            sndsb_reset_dsp(sb_card);
+            sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+            sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
+            sndsb_write_dsp(sb_card,0x80);
+            sndsb_setup_dma(sb_card);
+            irqc = sb_card->irq_counter;
+
+            sndsb_write_dsp_outrate(sb_card,sb16_rates[count]);
+
+            _cli();
+            bytes = tlen;
+            time = 0;
+            ppd = pd = d = (~0UL);
+            lv = (unsigned int)(tlen - 1UL);
+            _sti();
+
+            if (sb_card->is_gallant_sc6600)
+                sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT); /* 0xC6 */
+            else
+                sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT + (fifo ? 2 : 0)); /* 0xC0/0xC2 */
+
+            sndsb_write_dsp(sb_card,0x00); /* mode (8-bit unsigned PCM) */
+            sndsb_write_dsp(sb_card,lv);
+            /* send last byte in first iteration */
+
+            while (1) {
+                _cli();
+
+                ppd = pd;
+                pd = d;
+                d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+                if (d > tlen) d = 0; /* terminal count */
+                d = tlen - d;
+                bytes = d;
+
+                if (pd == (~0UL)) { /* first iteration */
+                    c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+                    sndsb_write_dsp(sb_card,lv >> 8);
+                }
+
+                pc = c;
+                c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+                time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+                _sti();
+
+                if (pd != d || ppd != pd) {
+                    record_pos->dma_pos = (uint16_t)d;
+                    record_pos->timer_pos = time;
+
+                    if (++record_pos == record_max) break;
+                }
+
+                if (time >= timeout) break;
+            }
+
+            sndsb_reset_dsp(sb_card);
+
+            doubleprintf(" - Test at %luHz, %lu bytes, FIFO %s\n",expect,bytes,fifo ? "on" : "off");
+
+            for (record_read=record;record_read!=record_pos;record_read++)
+                fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+
+            fprintf(report_fp,"\n");
+            fflush(report_fp);
+
+            if (kbhit()) {
+                if (getch() == 27)
+                    break;
+            }
+        }
+    }
+
+    _cli();
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+    }
+    _sti();
+
+    sndsb_write_dsp_timeconst(sb_card,0x83); /* 8000Hz */
+
+    sndsb_reset_dsp(sb_card);
+}
+
 int main(int argc,char **argv) {
 	int sc_idx = -1;
     int i;
@@ -608,6 +743,7 @@ int main(int argc,char **argv) {
 
     sb1_sc_play_test();
     sb2_sc_play_test();
+    sb16_sc_play_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
