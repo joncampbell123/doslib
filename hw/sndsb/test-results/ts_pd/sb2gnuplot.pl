@@ -65,13 +65,15 @@ while ($line = <I>) {
 
         print O "set grid\n";
         print O "set autoscale\n";
-        print O "set xrange [0:255]\n";
         print O "set title '$name'\n";
         print O "set xlabel 'Time (s)'\n";
-        print O "set ylabel 'DMA transfer (bytes)'\n";
+        print O "set ylabel 'DMA transfer count (bytes)'\n";
 
-        print O "plot '$csv' using 1:2 with lines\n";
+        print O "plot '$csv' using 1:2 with lines title 'DMA transfer count over time'\n";
         # done
+
+        # render
+        system("gnuplot '$gnuplot'");
     }
     elsif ($line eq "") {
     }
