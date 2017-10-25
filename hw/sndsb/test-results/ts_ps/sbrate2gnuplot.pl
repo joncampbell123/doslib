@@ -84,6 +84,8 @@ print O ", sb2" if @sb2 > 0;
 print O "\n";
 
 for ($i=0;$i < 256;$i++) {
+    next unless (defined($sb1[$i]) || defined($sb2[$i]));
+
     # tc
     print O "$i";
 
@@ -148,6 +150,8 @@ if (@ess > 0) {
     print O "\n";
 
     for ($i=0;$i < 256;$i++) {
+        next unless defined($ess[$i]);
+
         # tc
         print O "$i";
 
