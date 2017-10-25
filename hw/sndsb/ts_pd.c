@@ -228,6 +228,8 @@ void sb1_sc_play_test(void) {
             if (time >= timeout) break;
         }
 
+        sndsb_reset_dsp(sb_card);
+
         doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
 
         for (record_read=record;record_read!=record_pos;record_read++)
