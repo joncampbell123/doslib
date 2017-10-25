@@ -133,6 +133,15 @@ void doubleprintf(const char *fmt,...) {
     fputs(ptmp,report_fp);
 }
 
+#define MAX_RECORD 8192
+
+struct dma_xfer_rec_t {
+    uint16_t        dma_pos;
+    uint32_t        timer_pos;
+};
+
+static struct dma_xfer_rec_t record[MAX_RECORD],*record_pos,*record_read,*record_max;
+
 static unsigned char sb1_tc_rates[] = {
     0x06,           // 4000Hz
     0x83,           // 8000Hz
@@ -142,16 +151,18 @@ static unsigned char sb1_tc_rates[] = {
 void sb1_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned int count;
+    unsigned long pd,d;
     unsigned int pc,c;
-    unsigned long d;
     uint32_t irqc;
 
-    doubleprintf("SB 1.x single cycle DSP playback test.\n");
+    doubleprintf("SB 1.x DMA single cycle DSP test.\n");
 
     timeout = T8254_REF_CLOCK_HZ * 4UL;
+    record_max = &record[MAX_RECORD];
 
     for (count=0;count < (sizeof(sb1_tc_rates)/sizeof(sb1_tc_rates[0]));count++) {
         expect = 1000000UL / (unsigned long)(256 - sb1_tc_rates[count]);
+        record_pos = record;
 
         _cli();
         if (sb_card->irq >= 8) {
@@ -180,6 +191,7 @@ void sb1_sc_play_test(void) {
         c = read_8254(T8254_TIMER_INTERRUPT_TICK);
         bytes = tlen;
         time = 0;
+        d = (~0UL);
         _sti();
 
         {
@@ -191,42 +203,40 @@ void sb1_sc_play_test(void) {
         }
 
         while (1) {
-            if (irqc != sb_card->irq_counter)
-                break;
-
             _cli();
+            pd = d;
+            d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+            if (d > tlen) d = 0; /* terminal count */
+            d = tlen - d;
+            bytes = d;
+
             pc = c;
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (time >= timeout) goto x_timeout;
+            if (pd != d) {
+                record_pos->dma_pos = (uint16_t)d;
+                record_pos->timer_pos = time;
+
+                if (++record_pos == record_max) break;
+            }
+
+            if (irqc != sb_card->irq_counter) break;
+            if (time >= timeout) break;
         }
 
-x_complete:
-        if (time == 0UL) time = 1;
+        doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
 
-        {
-            double t = (double)time / T8254_REF_CLOCK_HZ;
-            double rate = (double)bytes / t;
+        for (record_read=record;record_read!=record_pos;record_read++)
+            fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
 
-            doubleprintf(" - TC 0x%02X: expecting %luHz, %lub/%.3fs @ %.3fHz\n",count,expect,(unsigned long)bytes,t,rate);
-        }
+        fprintf(report_fp,"\n");
 
         if (kbhit()) {
             if (getch() == 27)
                 break;
         }
-
-        continue;
-x_timeout:
-        d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-        if (d > tlen) d = 0; /* terminal count */
-        d = tlen - d;
-
-        if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
-        else if (bytes > d) bytes = d;
-        goto x_complete;
     }
 
     _cli();
@@ -444,9 +454,9 @@ int main(int argc,char **argv) {
 
     write_8254_system_timer(0);
 
-    printf("Test results will be written to TS_PS.TXT\n");
+    printf("Test results will be written to TS_PD.TXT\n");
 
-    report_fp = fopen("TS_PS.TXT","w");
+    report_fp = fopen("TS_PD.TXT","w");
     if (report_fp == NULL) return 1;
 
     if (sb_card->irq != -1) {
