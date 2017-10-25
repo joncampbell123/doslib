@@ -67,10 +67,10 @@ while ($line = <I>) {
         print O "set grid\n";
         print O "set autoscale\n";
         print O "set title '$name'\n";
-        print O "set xlabel 'DMA transfer count (bytes)'\n";
-        print O "set ylabel 'Time (s)'\n";
+        print O "set xlabel 'Time (s)'\n";
+        print O "set ylabel 'DMA transfer count (bytes)'\n";
 
-        print O "plot '$csv' using 1:2 with lines title 'DMA transfer count over time'\n";
+        print O "plot '$csv' using 2:1 with lines title 'DMA transfer count over time'\n";
 
         # the initial burst when loading the FIFO is too subtle for the full graph
         print O "reset\n";
@@ -81,11 +81,11 @@ while ($line = <I>) {
         print O "set grid\n";
         print O "set autoscale\n";
         print O "set title '$name'\n";
-        print O "set xrange [0:288]\n";
-        print O "set xlabel 'DMA transfer count (bytes)'\n";
-        print O "set ylabel 'Time (s)'\n";
+        print O "set xrange [0:0.001]\n";
+        print O "set xlabel 'Time (s)'\n";
+        print O "set ylabel 'DMA transfer count (bytes)'\n";
 
-        print O "plot '$csv' using 1:2 with lines title 'DMA transfer count over time'\n";
+        print O "plot '$csv' using 2:1 with lines title 'DMA transfer count over time'\n";
         # done
 
         # render
