@@ -70,7 +70,7 @@ while ($line = <I>) {
         print O "set xlabel 'Time (s)'\n";
         print O "set ylabel 'DMA transfer count (bytes)'\n";
 
-        print O "plot '$csv' using 2:1 with lines title 'DMA transfer count over time'\n";
+        print O "plot '$csv' using 2:1 with steps title 'DMA transfer count over time'\n";
 
         # the initial burst when loading the FIFO is too subtle for the full graph
         print O "reset\n";
@@ -85,7 +85,7 @@ while ($line = <I>) {
         print O "set xlabel 'Time (s)'\n";
         print O "set ylabel 'DMA transfer count (bytes)'\n";
 
-        print O "plot '$csv' using 2:1 with lines title 'DMA transfer count over time'\n";
+        print O "plot '$csv' using 2:1 with steps title 'DMA transfer count over time'\n";
         # done
 
         # render
