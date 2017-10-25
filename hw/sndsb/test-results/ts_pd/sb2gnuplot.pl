@@ -17,7 +17,8 @@ while ($line = <I>) {
     $line =~ s/[\x0D\x0A]//g;
 
     if ($line =~ m/^SB 1\.x DMA single cycle DSP/i ||
-        $line =~ m/^SB 2\.x DMA single cycle DSP/i) {
+        $line =~ m/^SB 2\.x DMA single cycle DSP/i ||
+        $line =~ m/^SB 16 DMA single cycle DSP/i) {
         $test = $line;
         $test =~ s/\.$//g;
         $subtest = undef;
