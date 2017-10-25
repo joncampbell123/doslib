@@ -281,6 +281,9 @@ void sb2_sc_play_test(void) {
     unsigned int pc,c;
     uint32_t irqc;
 
+    if (sb_card->dsp_vmaj < 2 || (sb_card->dsp_vmaj == 2 && sb_card->dsp_vmin == 0))
+        return;
+
     doubleprintf("SB 2.x DMA single cycle DSP test.\n");
 
     timeout = T8254_REF_CLOCK_HZ * 2UL;
@@ -405,6 +408,13 @@ void sb16_sc_play_test(void) {
     unsigned char fifo;
     unsigned int pc,c;
     uint32_t irqc;
+
+    if (sb_card->dsp_vmaj >= 4) /* Sound Blaster 16 */
+        { }
+    else if (sb_card->is_gallant_sc6600) /* Reveal SC-4000 / Gallant SC-6600 */
+        { }
+    else 
+        return;
 
     doubleprintf("SB 16 DMA single cycle DSP test.\n");
 
