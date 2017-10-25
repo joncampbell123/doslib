@@ -133,7 +133,11 @@ void doubleprintf(const char *fmt,...) {
     fputs(ptmp,report_fp);
 }
 
-#define MAX_RECORD 8192
+#if TARGET_MSDOS == 32
+# define MAX_RECORD (128*1024)
+#else
+# define MAX_RECORD 8192
+#endif
 
 struct dma_xfer_rec_t {
     uint16_t        dma_pos;
