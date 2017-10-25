@@ -33,6 +33,7 @@ while ($line = <I>) {
         $csv = "gnuplot/$name.csv";
         $gnuplot = "gnuplot/$name.gnuplot";
         $png = "gnuplot/$name.png";
+        $pngc = "gnuplot/$name.start.png";
 
         open(O,">",$csv) || die;
         print O "# pos, time\n";
@@ -66,6 +67,21 @@ while ($line = <I>) {
         print O "set grid\n";
         print O "set autoscale\n";
         print O "set title '$name'\n";
+        print O "set xlabel 'DMA transfer count (bytes)'\n";
+        print O "set ylabel 'Time (s)'\n";
+
+        print O "plot '$csv' using 1:2 with lines title 'DMA transfer count over time'\n";
+
+        # the initial burst when loading the FIFO is too subtle for the full graph
+        print O "reset\n";
+
+        print O "set term png size 1920,1080\n";
+        print O "set output '$pngc'\n";
+
+        print O "set grid\n";
+        print O "set autoscale\n";
+        print O "set title '$name'\n";
+        print O "set xrange [0:288]\n";
         print O "set xlabel 'DMA transfer count (bytes)'\n";
         print O "set ylabel 'Time (s)'\n";
 
