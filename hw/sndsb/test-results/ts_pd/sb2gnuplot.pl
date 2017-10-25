@@ -18,7 +18,8 @@ while ($line = <I>) {
 
     if ($line =~ m/^SB 1\.x DMA single cycle DSP/i ||
         $line =~ m/^SB 2\.x DMA single cycle DSP/i ||
-        $line =~ m/^SB 16 DMA single cycle DSP/i) {
+        $line =~ m/^SB 16 DMA single cycle DSP/i ||
+        $line =~ m/^ESS688 DMA single cycle DSP/i) {
         $test = $line;
         $test =~ s/\.$//g;
         $subtest = undef;
