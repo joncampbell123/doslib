@@ -431,11 +431,11 @@ static unsigned short sb16_rates[] = {
 
 void sb16_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
+    unsigned int pc,c,iter;
     unsigned int count,lv;
     unsigned long pd,d;
     unsigned char fifo;
     uint8_t pirqc,irqc;
-    unsigned int pc,c;
 
     if (sb_card->dsp_vmaj >= 4) /* Sound Blaster 16 */
         { }
@@ -486,12 +486,10 @@ void sb16_sc_play_test(void) {
 
             sndsb_write_dsp_outrate(sb_card,sb16_rates[count]);
 
-            _cli();
-            bytes = tlen;
             time = 0;
             pd = d = (~0UL);
+
             lv = (unsigned int)(tlen - 1UL);
-            _sti();
 
             if (sb_card->is_gallant_sc6600)
                 sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT); /* 0xC6 */
@@ -500,35 +498,43 @@ void sb16_sc_play_test(void) {
 
             sndsb_write_dsp(sb_card,0x00); /* mode (8-bit unsigned PCM) */
             sndsb_write_dsp(sb_card,lv);
-            /* send last byte in first iteration */
+
+            _cli();
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            irqc = (uint8_t)sb_card->irq_counter;
+            _sti();
+
+            sndsb_write_dsp(sb_card,lv >> 8);
 
             while (1) {
                 _cli();
 
+                /* up to 16 iterations.
+                 * do not poll for IRQ changes, we have interrupts disabled here */
+                iter = 16;
+                do {
+                    pd = d;
+                    d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+                } while (--iter != 0U && pd == d);
+
+                if (d > tlen) bytes = tlen; /* terminal count */
+                else bytes = tlen - d;
+
                 pirqc = irqc;
-                irqc = sb_card->irq_counter;
-
-                pd = d;
-                d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-                if (d > tlen) d = 0; /* terminal count */
-                d = tlen - d;
-                bytes = d;
-
-                if (pd == (~0UL)) { /* first iteration */
-                    c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-                    sndsb_write_dsp(sb_card,lv >> 8);
-                }
+                irqc = (uint8_t)sb_card->irq_counter;
 
                 pc = c;
                 c = read_8254(T8254_TIMER_INTERRUPT_TICK);
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || irqc != pirqc || time >= timeout) {
-                    if (record_entry((uint16_t)d,time,irqc)) break; /* break if log is full. it will warn only once */
+                if (pd != d || irqc != pirqc) {
+                    if (record_entry((uint16_t)bytes,time,irqc)) break; /* break if log is full. it will warn only once */
                 }
-
-                if (time >= timeout) break;
+                else if (time >= timeout) {
+                    record_entry((uint16_t)bytes,time,irqc); /* may return 1 if this makes the log full. we break anyway */
+                    break;
+                }
             }
 
             sndsb_reset_dsp(sb_card);
@@ -543,8 +549,11 @@ void sb16_sc_play_test(void) {
             fflush(report_fp);
 
             if (kbhit()) {
-                if (getch() == 27)
+                if (getch() == 27) {
+                    count = 99;
+                    fifo = 4;
                     break;
+                }
             }
         }
     }
