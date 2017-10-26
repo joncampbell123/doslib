@@ -94,7 +94,7 @@ while ($line = <I>) {
         print O "set origin 0.0,0.0\n";
         print O "set title '$name vs DMA'\n";
         print O "set xrange [$min_time:$max_time]\n";
-        print O "set yrange [$min_dma:$max_dma]\n";
+        print O "set yrange [$min_pos:$max_pos]\n";
         print O "set xlabel 'Time (s)'\n";
         print O "set ylabel 'DMA transfer count (bytes)'\n";
         print O "plot '$csv' using 2:1 with steps title 'DMA transfer count over time'\n";
