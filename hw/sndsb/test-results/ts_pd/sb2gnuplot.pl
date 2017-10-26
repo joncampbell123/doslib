@@ -31,7 +31,7 @@ while ($line = <I>) {
 
         print "Processing $name\n";
 
-        die if $name =~ m/[^0-9a-z \.\-\,]/i;
+        die "bad name $name" if $name =~ m/[^0-9a-z \.\-\,\(\)]/i;
 
         $csv = "gnuplot/$name.csv";
         $gnuplot = "gnuplot/$name.gnuplot";
@@ -40,6 +40,15 @@ while ($line = <I>) {
 
         open(O,">",$csv) || die;
         print O "# pos, time, irq\n";
+
+        $min_pos = 0;
+        $max_pos = 1;
+
+        $min_time = 0;
+        $max_time = 0.01;
+
+        $min_irq = 0;
+        $max_irq = 1;
 
         while ($line = <I>) {
             chomp $line;
@@ -54,9 +63,18 @@ while ($line = <I>) {
                 $time = $a[2] + 0.0;
                 $irq = $a[4] + 0;
 
+                $max_pos  = $pos  if $max_pos  < $pos;
+                $max_irq  = $irq  if $max_irq  < $irq;
+                $max_time = $time if $max_time < $time;
+
                 print O "$pos, $time, $irq\n";
             }
         }
+
+        # expand out a bit, to show the graph in full
+        $max_irq  += $max_irq  / 4;
+        $max_pos  += $max_pos  / 4;
+        $max_time += $max_time / 10;
 
         close(O);
 
@@ -71,11 +89,12 @@ while ($line = <I>) {
         print O "set multiplot\n";
 
         print O "set grid\n";
-        print O "set autoscale\n";
 
         print O "set size 1.0,0.85\n";
         print O "set origin 0.0,0.0\n";
         print O "set title '$name vs DMA'\n";
+        print O "set xrange [$min_time:$max_time]\n";
+        print O "set yrange [$min_dma:$max_dma]\n";
         print O "set xlabel 'Time (s)'\n";
         print O "set ylabel 'DMA transfer count (bytes)'\n";
         print O "plot '$csv' using 2:1 with steps title 'DMA transfer count over time'\n";
@@ -83,6 +102,8 @@ while ($line = <I>) {
         print O "set size 1.0,0.15\n";
         print O "set origin 0.0,0.85\n";
         print O "set title '$name vs IRQ'\n";
+        print O "set xrange [$min_time:$max_time]\n";
+        print O "set yrange [$min_irq:$max_irq]\n";
         print O "set xlabel 'Time (s)'\n";
         print O "set ylabel 'IRQ count'\n";
         print O "plot '$csv' using 2:3 with steps title 'IRQ count over time'\n";
