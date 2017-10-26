@@ -50,6 +50,10 @@ while ($line = <I>) {
         $min_irq = 0;
         $max_irq = 1;
 
+        $p_pos = undef;
+        $p_irq = undef;
+        $p_time = undef;
+
         while ($line = <I>) {
             chomp $line;
             $line =~ s/[\x0D\x0A]//g;
@@ -59,13 +63,22 @@ while ($line = <I>) {
             if ($line =~ s/^ +\>\> +POS +//i) {
                 my @a = split(/ +/,$line);
 
+                $p_pos = $pos;
                 $pos = $a[0] + 0;
+
+                $p_time = $time;
                 $time = $a[2] + 0.0;
+
+                $p_irq = $irq;
                 $irq = $a[4] + 0;
 
-                $max_pos  = $pos  if $max_pos  < $pos;
-                $max_irq  = $irq  if $max_irq  < $irq;
-                $max_time = $time if $max_time < $time;
+                if (defined($p_time) && $time > ($p_time + 0.1) && $p_irq == $irq && $p_pos == $pos) {
+                }
+                else {
+                    $max_pos  = $pos  if $max_pos  < $pos;
+                    $max_irq  = $irq  if $max_irq  < $irq;
+                    $max_time = $time if $max_time < $time;
+                }
 
                 print O "$pos, $time, $irq\n";
             }
