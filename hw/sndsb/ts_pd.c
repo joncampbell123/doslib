@@ -153,6 +153,16 @@ static unsigned char sb1_tc_rates[] = {
     0xCE            // 20000Hz
 };
 
+/* if this function returns 1, the record log is full.
+ * it will warn you only once! */
+static inline int record_entry(const uint16_t dma_pos,const unsigned long time) {
+    record_pos->irq_count = (uint8_t)sb_card->irq_counter;
+    record_pos->dma_pos = dma_pos;
+    record_pos->timer_pos = time;
+
+    return (++record_pos == record_max);
+}
+
 void sb1_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned int count,lv;
@@ -233,11 +243,7 @@ void sb1_sc_play_test(void) {
             _sti();
 
             if (pd != d || irqc != pirqc || time >= timeout) {
-                record_pos->irq_count = (uint8_t)sb_card->irq_counter;
-                record_pos->dma_pos = (uint16_t)d;
-                record_pos->timer_pos = time;
-
-                if (++record_pos == record_max) break;
+                if (record_entry((uint16_t)d,time)) break; /* break if log is full. it will warn only once */
             }
 
             if (time >= timeout) break;
@@ -364,11 +370,7 @@ void sb2_sc_play_test(void) {
             _sti();
 
             if (pd != d || irqc != pirqc || time >= timeout) {
-                record_pos->irq_count = (uint8_t)sb_card->irq_counter;
-                record_pos->dma_pos = (uint16_t)d;
-                record_pos->timer_pos = time;
-
-                if (++record_pos == record_max) break;
+                if (record_entry((uint16_t)d,time)) break; /* break if log is full. it will warn only once */
             }
 
             if (time >= timeout) break;
@@ -511,11 +513,7 @@ void sb16_sc_play_test(void) {
                 _sti();
 
                 if (pd != d || irqc != pirqc || time >= timeout) {
-                    record_pos->irq_count = (uint8_t)sb_card->irq_counter;
-                    record_pos->dma_pos = (uint16_t)d;
-                    record_pos->timer_pos = time;
-
-                    if (++record_pos == record_max) break;
+                    if (record_entry((uint16_t)d,time)) break; /* break if log is full. it will warn only once */
                 }
 
                 if (time >= timeout) break;
@@ -741,11 +739,7 @@ void ess_sc_play_test(void) {
                 _sti();
 
                 if (pd != d || irqc != pirqc || time >= timeout) {
-                    record_pos->irq_count = (uint8_t)sb_card->irq_counter;
-                    record_pos->dma_pos = (uint16_t)d;
-                    record_pos->timer_pos = time;
-
-                    if (++record_pos == record_max) break;
+                    if (record_entry((uint16_t)d,time)) break; /* break if log is full. it will warn only once */
                 }
 
                 if (time >= timeout) break;
