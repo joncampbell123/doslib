@@ -140,6 +140,7 @@ void doubleprintf(const char *fmt,...) {
 #endif
 
 struct dma_xfer_rec_t {
+    uint8_t         irq_count;          // expect AT MOST one IRQ. Not 2. Not 256. Not a bajillion...
     uint16_t        dma_pos;
     uint32_t        timer_pos;
 };
@@ -166,6 +167,7 @@ void sb1_sc_play_test(void) {
 
     for (count=0;count < (sizeof(sb1_tc_rates)/sizeof(sb1_tc_rates[0]));count++) {
         expect = 1000000UL / (unsigned long)(256 - sb1_tc_rates[count]);
+        sb_card->irq_counter = 0;
         record_pos = record;
 
         _cli();
@@ -227,6 +229,7 @@ void sb1_sc_play_test(void) {
             _sti();
 
             if (pd != d || ppd != pd) {
+                record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                 record_pos->dma_pos = (uint16_t)d;
                 record_pos->timer_pos = time;
 
@@ -241,7 +244,7 @@ void sb1_sc_play_test(void) {
         doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
 
         for (record_read=record;record_read!=record_pos;record_read++)
-            fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+            fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
 
         fprintf(report_fp,"\n");
         fflush(report_fp);
@@ -291,6 +294,7 @@ void sb2_sc_play_test(void) {
 
     for (count=0;count < (sizeof(sb2_tc_rates)/sizeof(sb2_tc_rates[0]));count++) {
         expect = 1000000UL / (unsigned long)(256 - sb2_tc_rates[count]);
+        sb_card->irq_counter = 0;
         record_pos = record;
 
         _cli();
@@ -352,6 +356,7 @@ void sb2_sc_play_test(void) {
             _sti();
 
             if (pd != d || ppd != pd) {
+                record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                 record_pos->dma_pos = (uint16_t)d;
                 record_pos->timer_pos = time;
 
@@ -366,7 +371,7 @@ void sb2_sc_play_test(void) {
         doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
 
         for (record_read=record;record_read!=record_pos;record_read++)
-            fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+            fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
 
         fprintf(report_fp,"\n");
         fflush(report_fp);
@@ -427,6 +432,7 @@ void sb16_sc_play_test(void) {
                 continue;
 
             expect = sb16_rates[count];
+            sb_card->irq_counter = 0;
             record_pos = record;
 
             _cli();
@@ -493,6 +499,7 @@ void sb16_sc_play_test(void) {
                 _sti();
 
                 if (pd != d || ppd != pd) {
+                    record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                     record_pos->dma_pos = (uint16_t)d;
                     record_pos->timer_pos = time;
 
@@ -507,7 +514,7 @@ void sb16_sc_play_test(void) {
             doubleprintf(" - Test at %luHz, %lu bytes, FIFO %s\n",expect,bytes,fifo ? "on" : "off");
 
             for (record_read=record;record_read!=record_pos;record_read++)
-                fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+                fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
 
             fprintf(report_fp,"\n");
             fflush(report_fp);
@@ -577,6 +584,7 @@ void ess_sc_play_test(void) {
                 expect = 397700UL / (128 - ess_tc_rates[count]);
 
             record_pos = record;
+            sb_card->irq_counter = 0;
 
             _cli();
             if (sb_card->irq >= 8) {
@@ -717,6 +725,7 @@ void ess_sc_play_test(void) {
                 _sti();
 
                 if (pd != d || ppd != pd) {
+                    record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                     record_pos->dma_pos = (uint16_t)d;
                     record_pos->timer_pos = time;
 
@@ -731,7 +740,7 @@ void ess_sc_play_test(void) {
             doubleprintf(" - Test at %luHz, %lu bytes, %s\n",expect,bytes,dma_xfer_str[dma_xfer]);
 
             for (record_read=record;record_read!=record_pos;record_read++)
-                fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+                fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
 
             fprintf(report_fp,"\n");
             fflush(report_fp);
