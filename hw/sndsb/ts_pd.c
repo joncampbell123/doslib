@@ -212,13 +212,10 @@ void sb1_sc_play_test(void) {
 
         _cli();
         c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-        _sti();
 
         sndsb_write_dsp(sb_card,lv >> 8); /* playback begins at this write */
 
         while (1) {
-            _cli();
-
             /* up to 16 iterations.
              * do not poll for IRQ changes, we have interrupts disabled here */
             iter = 16;
@@ -233,7 +230,6 @@ void sb1_sc_play_test(void) {
             pc = c;
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
-            _sti();
 
             if (pd != d) {
                 if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
@@ -243,6 +239,7 @@ void sb1_sc_play_test(void) {
                 break;
             }
         }
+        _sti();
 
         sndsb_reset_dsp(sb_card);
 
@@ -338,13 +335,10 @@ void sb2_sc_play_test(void) {
 
         _cli();
         c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-        _sti();
 
         sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED); /* 0x91 */
 
         while (1) {
-            _cli();
-
             /* up to 16 iterations.
              * do not poll for IRQ changes, we have interrupts disabled here */
             iter = 16;
@@ -359,7 +353,6 @@ void sb2_sc_play_test(void) {
             pc = c;
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
-            _sti();
 
             if (pd != d) {
                 if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
@@ -369,6 +362,7 @@ void sb2_sc_play_test(void) {
                 break;
             }
         }
+        _sti();
 
         sndsb_reset_dsp(sb_card);
 
@@ -479,13 +473,10 @@ void sb16_sc_play_test(void) {
 
             _cli();
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-            _sti();
 
             sndsb_write_dsp(sb_card,lv >> 8);
 
             while (1) {
-                _cli();
-
                 /* up to 16 iterations.
                  * do not poll for IRQ changes, we have interrupts disabled here */
                 iter = 16;
@@ -500,7 +491,6 @@ void sb16_sc_play_test(void) {
                 pc = c;
                 c = read_8254(T8254_TIMER_INTERRUPT_TICK);
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
-                _sti();
 
                 if (pd != d) {
                     if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
@@ -510,6 +500,7 @@ void sb16_sc_play_test(void) {
                     break;
                 }
             }
+            _sti();
 
             sndsb_reset_dsp(sb_card);
 
@@ -694,14 +685,11 @@ void ess_sc_play_test(void) {
 
             _cli();
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-            _sti();
 
             /* this begins playback */
             sndsb_ess_write_controller(sb_card,0xB8,b | 1);
 
             while (1) {
-                _cli();
-
                 /* up to 16 iterations.
                  * do not poll for IRQ changes, we have interrupts disabled here */
                 iter = 16;
@@ -716,7 +704,6 @@ void ess_sc_play_test(void) {
                 pc = c;
                 c = read_8254(T8254_TIMER_INTERRUPT_TICK);
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
-                _sti();
 
                 if (pd != d) {
                     if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
@@ -726,6 +713,7 @@ void ess_sc_play_test(void) {
                     break;
                 }
             }
+            _sti();
 
             sndsb_reset_dsp(sb_card);
 
