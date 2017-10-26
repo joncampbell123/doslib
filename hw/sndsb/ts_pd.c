@@ -593,8 +593,8 @@ void ess_sc_play_test(void) {
 
         {
             /* ESS 688/1869 chipset specific DSP playback.
-             *                using this mode bypasses a lot of the Sound Blaster Pro emulation
-             *                               and restrictions and allows us to run up to 48KHz 16-bit stereo */
+             * using this mode bypasses a lot of the Sound Blaster Pro emulation
+             * and restrictions and allows us to run up to 48KHz 16-bit stereo */
             unsigned short t16;
 
             _cli();
