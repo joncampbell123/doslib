@@ -68,13 +68,26 @@ while ($line = <I>) {
         print O "set term png size 1920,1080\n";
         print O "set output '$png'\n";
 
+        print O "set multiplot\n";
+
         print O "set grid\n";
         print O "set autoscale\n";
-        print O "set title '$name'\n";
+
+        print O "set size 1.0,0.85\n";
+        print O "set origin 0.0,0.0\n";
+        print O "set title '$name vs DMA'\n";
         print O "set xlabel 'Time (s)'\n";
         print O "set ylabel 'DMA transfer count (bytes)'\n";
-
         print O "plot '$csv' using 2:1 with steps title 'DMA transfer count over time'\n";
+
+        print O "set size 1.0,0.15\n";
+        print O "set origin 0.0,0.85\n";
+        print O "set title '$name vs IRQ'\n";
+        print O "set xlabel 'Time (s)'\n";
+        print O "set ylabel 'IRQ count'\n";
+        print O "plot '$csv' using 2:3 with steps title 'IRQ count over time'\n";
+
+        print O "unset multiplot\n";
 
         # the initial burst when loading the FIFO is too subtle for the full graph
         print O "reset\n";
