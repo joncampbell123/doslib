@@ -252,6 +252,7 @@ void sb1_sc_play_test(void) {
         sndsb_reset_dsp(sb_card);
 
         doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
+        printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
         for (record_read=record;record_read!=record_pos;record_read++)
             fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
@@ -379,6 +380,7 @@ void sb2_sc_play_test(void) {
         sndsb_reset_dsp(sb_card);
 
         doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
+        printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
         for (record_read=record;record_read!=record_pos;record_read++)
             fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
@@ -522,6 +524,7 @@ void sb16_sc_play_test(void) {
             sndsb_reset_dsp(sb_card);
 
             doubleprintf(" - Test at %luHz, %lu bytes, FIFO %s\n",expect,bytes,fifo ? "on" : "off");
+            printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
             for (record_read=record;record_read!=record_pos;record_read++)
                 fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
@@ -748,6 +751,7 @@ void ess_sc_play_test(void) {
             sndsb_reset_dsp(sb_card);
 
             doubleprintf(" - Test at %luHz, %lu bytes, %s\n",expect,bytes,dma_xfer_str[dma_xfer]);
+            printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
             for (record_read=record;record_read!=record_pos;record_read++)
                 fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
