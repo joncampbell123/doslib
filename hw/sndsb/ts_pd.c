@@ -155,8 +155,8 @@ static unsigned char sb1_tc_rates[] = {
 
 void sb1_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
-    unsigned long ppd,pd,d;
     unsigned int count,lv;
+    unsigned long pd,d;
     unsigned int pc,c;
     uint32_t pirqc;
     uint32_t irqc;
@@ -202,7 +202,7 @@ void sb1_sc_play_test(void) {
         _cli();
         bytes = tlen;
         time = 0;
-        ppd = pd = d = (~0UL);
+        pd = d = (~0UL);
         lv = (unsigned int)(tlen - 1UL);
         _sti();
 
@@ -216,7 +216,6 @@ void sb1_sc_play_test(void) {
             pirqc = irqc;
             irqc = sb_card->irq_counter;
 
-            ppd = pd;
             pd = d;
             d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
             if (d > tlen) d = 0; /* terminal count */
@@ -233,7 +232,7 @@ void sb1_sc_play_test(void) {
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || ppd != pd || irqc != pirqc) {
+            if (pd != d || irqc != pirqc) {
                 record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                 record_pos->dma_pos = (uint16_t)d;
                 record_pos->timer_pos = time;
@@ -284,8 +283,8 @@ static unsigned char sb2_tc_rates[] = {
 
 void sb2_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
-    unsigned long ppd,pd,d;
     unsigned int count,lv;
+    unsigned long pd,d;
     unsigned int pc,c;
     uint32_t pirqc;
     uint32_t irqc;
@@ -334,7 +333,7 @@ void sb2_sc_play_test(void) {
         _cli();
         bytes = tlen;
         time = 0;
-        ppd = pd = d = (~0UL);
+        pd = d = (~0UL);
         lv = (unsigned int)(tlen - 1UL);
         _sti();
 
@@ -348,7 +347,6 @@ void sb2_sc_play_test(void) {
             pirqc = irqc;
             irqc = sb_card->irq_counter;
 
-            ppd = pd;
             pd = d;
             d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
             if (d > tlen) d = 0; /* terminal count */
@@ -365,7 +363,7 @@ void sb2_sc_play_test(void) {
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || ppd != pd || irqc != pirqc) {
+            if (pd != d || irqc != pirqc) {
                 record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                 record_pos->dma_pos = (uint16_t)d;
                 record_pos->timer_pos = time;
@@ -418,8 +416,8 @@ static unsigned short sb16_rates[] = {
 
 void sb16_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
-    unsigned long ppd,pd,d;
     unsigned int count,lv;
+    unsigned long pd,d;
     unsigned char fifo;
     unsigned int pc,c;
     uint32_t pirqc;
@@ -477,7 +475,7 @@ void sb16_sc_play_test(void) {
             _cli();
             bytes = tlen;
             time = 0;
-            ppd = pd = d = (~0UL);
+            pd = d = (~0UL);
             lv = (unsigned int)(tlen - 1UL);
             _sti();
 
@@ -496,7 +494,6 @@ void sb16_sc_play_test(void) {
                 pirqc = irqc;
                 irqc = sb_card->irq_counter;
 
-                ppd = pd;
                 pd = d;
                 d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
                 if (d > tlen) d = 0; /* terminal count */
@@ -513,7 +510,7 @@ void sb16_sc_play_test(void) {
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || ppd != pd || irqc != pirqc) {
+                if (pd != d || irqc != pirqc) {
                     record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                     record_pos->dma_pos = (uint16_t)d;
                     record_pos->timer_pos = time;
@@ -572,9 +569,9 @@ static const char *dma_xfer_str[] = {
 
 void ess_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
-    unsigned long ppd,pd,d;
     unsigned char dma_xfer;
     unsigned int count,lv;
+    unsigned long pd,d;
     unsigned int pc,c;
     uint32_t pirqc;
     uint32_t irqc;
@@ -717,7 +714,7 @@ void ess_sc_play_test(void) {
             _cli();
             bytes = tlen;
             time = 0;
-            ppd = pd = d = (~0UL);
+            pd = d = (~0UL);
             lv = (unsigned int)(tlen - 1UL);
             _sti();
 
@@ -727,7 +724,6 @@ void ess_sc_play_test(void) {
                 pirqc = irqc;
                 irqc = sb_card->irq_counter;
 
-                ppd = pd;
                 pd = d;
                 d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
                 if (d > tlen) d = 0; /* terminal count */
@@ -744,7 +740,7 @@ void ess_sc_play_test(void) {
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || ppd != pd || irqc != pirqc) {
+                if (pd != d || irqc != pirqc) {
                     record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                     record_pos->dma_pos = (uint16_t)d;
                     record_pos->timer_pos = time;
