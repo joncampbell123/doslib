@@ -590,10 +590,10 @@ static const char *dma_xfer_str[] = {
 void ess_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned char dma_xfer;
+    unsigned int pc,c,iter;
     unsigned int count,lv;
     unsigned long pd,d;
     uint8_t pirqc,irqc;
-    unsigned int pc,c;
     int b;
 
     if (!sb_card->ess_extensions || sb_card->ess_chipset == 0)
@@ -615,8 +615,8 @@ void ess_sc_play_test(void) {
             else
                 expect = 397700UL / (128 - ess_tc_rates[count]);
 
-            record_pos = record;
             sb_card->irq_counter = 0;
+            record_pos = record;
 
             _cli();
             if (sb_card->irq >= 8) {
@@ -631,28 +631,23 @@ void ess_sc_play_test(void) {
             tlen = expect; // 1 sec
             if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
 
-            /* NTS: We ask the card to use demand ISA, 4 bytes at a time.
-             *      Behavior observed on real hardware, is that if you set up
-             *      DMA this way and then set up a non-auto-init DMA transfer
-             *      that isn't a multiple of 4, the DMA will stop short of
-             *      the full transfer and the IRQ will never fire. Therefore
-             *      the transfer length must be a multiple of 4! */
-            tlen -= tlen & 3;
-            if (tlen == 0) tlen = 4;
-
-            printf("Starting test... tlen=%lu dmalen=%lu\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size);
+            printf("Starting test... tlen=%lu dmalen=%lu dma_xfer=%u\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size,dma_xfer);
 
             sb_card->buffer_dma_started_length = tlen;
             sb_card->buffer_dma_started = 0;
 
             sndsb_reset_dsp(sb_card);
             sndsb_write_dsp(sb_card,0xD1); /* speaker on */
-            sndsb_ess_set_extended_mode(sb_card,1/*enable*/);
+            sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
+            sndsb_write_dsp(sb_card,0x80);
             sndsb_setup_dma(sb_card);
 
             irqc = pirqc = (~0UL);
 
-            sndsb_write_dsp_timeconst(sb_card,ess_tc_rates[count]);
+            time = 0;
+            pd = d = (~0UL);
+
+            lv = (unsigned int)(tlen - 1UL);
 
             {
                 /* ESS 688/1869 chipset specific DSP playback.
@@ -727,43 +722,45 @@ void ess_sc_play_test(void) {
                 sndsb_ess_write_controller(sb_card,0xB7,b);
 
                 b = sndsb_ess_read_controller(sb_card,0xB8);
-                /* save the write to the first iteration */
             }
 
             _cli();
-            bytes = tlen;
-            time = 0;
-            pd = d = (~0UL);
-            lv = (unsigned int)(tlen - 1UL);
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            irqc = (uint8_t)sb_card->irq_counter;
             _sti();
+
+            /* this begins playback */
+            sndsb_ess_write_controller(sb_card,0xB8,b | 1);
 
             while (1) {
                 _cli();
 
+                /* up to 16 iterations.
+                 * do not poll for IRQ changes, we have interrupts disabled here */
+                iter = 16;
+                do {
+                    pd = d;
+                    d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+                } while (--iter != 0U && pd == d);
+
+                if (d > tlen) bytes = tlen; /* terminal count */
+                else bytes = tlen - d;
+
                 pirqc = irqc;
-                irqc = sb_card->irq_counter;
-
-                pd = d;
-                d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-                if (d > tlen) d = 0; /* terminal count */
-                d = tlen - d;
-                bytes = d;
-
-                if (pd == (~0UL)) { /* first iteration */
-                    c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-                    sndsb_ess_write_controller(sb_card,0xB8,b | 1);
-                }
+                irqc = (uint8_t)sb_card->irq_counter;
 
                 pc = c;
                 c = read_8254(T8254_TIMER_INTERRUPT_TICK);
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || irqc != pirqc || time >= timeout) {
-                    if (record_entry((uint16_t)d,time,irqc)) break; /* break if log is full. it will warn only once */
+                if (pd != d || irqc != pirqc) {
+                    if (record_entry((uint16_t)bytes,time,irqc)) break; /* break if log is full. it will warn only once */
                 }
-
-                if (time >= timeout) break;
+                else if (time >= timeout) {
+                    record_entry((uint16_t)bytes,time,irqc); /* may return 1 if this makes the log full. we break anyway */
+                    break;
+                }
             }
 
             sndsb_reset_dsp(sb_card);
@@ -778,8 +775,11 @@ void ess_sc_play_test(void) {
             fflush(report_fp);
 
             if (kbhit()) {
-                if (getch() == 27)
+                if (getch() == 27) {
+                    dma_xfer = 4;
+                    count = 99;
                     break;
+                }
             }
         }
     }
