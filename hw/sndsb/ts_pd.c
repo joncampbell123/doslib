@@ -578,6 +578,15 @@ void ess_sc_play_test(void) {
         tlen = expect; // 1 sec
         if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
 
+        /* NTS: We ask the card to use demand ISA, 4 bytes at a time.
+         *      Behavior observed on real hardware, is that if you set up
+         *      DMA this way and then set up a non-auto-init DMA transfer
+         *      that isn't a multiple of 4, the DMA will stop short of
+         *      the full transfer and the IRQ will never fire. Therefore
+         *      the transfer length must be a multiple of 4! */
+        tlen -= tlen & 3;
+        if (tlen == 0) tlen = 4;
+
         printf("Starting test... tlen=%lu dmalen=%lu\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size);
 
         sb_card->buffer_dma_started_length = tlen;
