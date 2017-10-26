@@ -232,7 +232,7 @@ void sb1_sc_play_test(void) {
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || irqc != pirqc) {
+            if (pd != d || irqc != pirqc || time >= timeout) {
                 record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                 record_pos->dma_pos = (uint16_t)d;
                 record_pos->timer_pos = time;
@@ -363,7 +363,7 @@ void sb2_sc_play_test(void) {
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || irqc != pirqc) {
+            if (pd != d || irqc != pirqc || time >= timeout) {
                 record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                 record_pos->dma_pos = (uint16_t)d;
                 record_pos->timer_pos = time;
@@ -510,7 +510,7 @@ void sb16_sc_play_test(void) {
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || irqc != pirqc) {
+                if (pd != d || irqc != pirqc || time >= timeout) {
                     record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                     record_pos->dma_pos = (uint16_t)d;
                     record_pos->timer_pos = time;
@@ -740,7 +740,7 @@ void ess_sc_play_test(void) {
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || irqc != pirqc) {
+                if (pd != d || irqc != pirqc || time >= timeout) {
                     record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                     record_pos->dma_pos = (uint16_t)d;
                     record_pos->timer_pos = time;
