@@ -158,6 +158,7 @@ void sb1_sc_play_test(void) {
     unsigned long ppd,pd,d;
     unsigned int count,lv;
     unsigned int pc,c;
+    uint32_t pirqc;
     uint32_t irqc;
 
     doubleprintf("SB 1.x DMA single cycle DSP test.\n");
@@ -193,7 +194,8 @@ void sb1_sc_play_test(void) {
         sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
         sndsb_write_dsp(sb_card,0x80);
         sndsb_setup_dma(sb_card);
-        irqc = sb_card->irq_counter;
+
+        irqc = pirqc = (~0UL);
 
         sndsb_write_dsp_timeconst(sb_card,sb1_tc_rates[count]);
 
@@ -210,6 +212,9 @@ void sb1_sc_play_test(void) {
 
         while (1) {
             _cli();
+
+            pirqc = irqc;
+            irqc = sb_card->irq_counter;
 
             ppd = pd;
             pd = d;
@@ -228,7 +233,7 @@ void sb1_sc_play_test(void) {
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || ppd != pd) {
+            if (pd != d || ppd != pd || irqc != pirqc) {
                 record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                 record_pos->dma_pos = (uint16_t)d;
                 record_pos->timer_pos = time;
@@ -282,6 +287,7 @@ void sb2_sc_play_test(void) {
     unsigned long ppd,pd,d;
     unsigned int count,lv;
     unsigned int pc,c;
+    uint32_t pirqc;
     uint32_t irqc;
 
     if (sb_card->dsp_vmaj < 2 || (sb_card->dsp_vmaj == 2 && sb_card->dsp_vmin == 0))
@@ -320,7 +326,8 @@ void sb2_sc_play_test(void) {
         sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
         sndsb_write_dsp(sb_card,0x80);
         sndsb_setup_dma(sb_card);
-        irqc = sb_card->irq_counter;
+
+        irqc = pirqc = (~0UL);
 
         sndsb_write_dsp_timeconst(sb_card,sb2_tc_rates[count]);
 
@@ -337,6 +344,9 @@ void sb2_sc_play_test(void) {
 
         while (1) {
             _cli();
+
+            pirqc = irqc;
+            irqc = sb_card->irq_counter;
 
             ppd = pd;
             pd = d;
@@ -355,7 +365,7 @@ void sb2_sc_play_test(void) {
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || ppd != pd) {
+            if (pd != d || ppd != pd || irqc != pirqc) {
                 record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                 record_pos->dma_pos = (uint16_t)d;
                 record_pos->timer_pos = time;
@@ -412,6 +422,7 @@ void sb16_sc_play_test(void) {
     unsigned int count,lv;
     unsigned char fifo;
     unsigned int pc,c;
+    uint32_t pirqc;
     uint32_t irqc;
 
     if (sb_card->dsp_vmaj >= 4) /* Sound Blaster 16 */
@@ -458,7 +469,8 @@ void sb16_sc_play_test(void) {
             sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
             sndsb_write_dsp(sb_card,0x80);
             sndsb_setup_dma(sb_card);
-            irqc = sb_card->irq_counter;
+
+            irqc = pirqc = (~0UL);
 
             sndsb_write_dsp_outrate(sb_card,sb16_rates[count]);
 
@@ -481,6 +493,9 @@ void sb16_sc_play_test(void) {
             while (1) {
                 _cli();
 
+                pirqc = irqc;
+                irqc = sb_card->irq_counter;
+
                 ppd = pd;
                 pd = d;
                 d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
@@ -498,7 +513,7 @@ void sb16_sc_play_test(void) {
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || ppd != pd) {
+                if (pd != d || ppd != pd || irqc != pirqc) {
                     record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                     record_pos->dma_pos = (uint16_t)d;
                     record_pos->timer_pos = time;
@@ -561,6 +576,7 @@ void ess_sc_play_test(void) {
     unsigned char dma_xfer;
     unsigned int count,lv;
     unsigned int pc,c;
+    uint32_t pirqc;
     uint32_t irqc;
     int b;
 
@@ -617,7 +633,8 @@ void ess_sc_play_test(void) {
             sndsb_write_dsp(sb_card,0xD1); /* speaker on */
             sndsb_ess_set_extended_mode(sb_card,1/*enable*/);
             sndsb_setup_dma(sb_card);
-            irqc = sb_card->irq_counter;
+
+            irqc = pirqc = (~0UL);
 
             sndsb_write_dsp_timeconst(sb_card,ess_tc_rates[count]);
 
@@ -707,6 +724,9 @@ void ess_sc_play_test(void) {
             while (1) {
                 _cli();
 
+                pirqc = irqc;
+                irqc = sb_card->irq_counter;
+
                 ppd = pd;
                 pd = d;
                 d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
@@ -724,7 +744,7 @@ void ess_sc_play_test(void) {
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || ppd != pd) {
+                if (pd != d || ppd != pd || irqc != pirqc) {
                     record_pos->irq_count = (uint8_t)sb_card->irq_counter;
                     record_pos->dma_pos = (uint16_t)d;
                     record_pos->timer_pos = time;
