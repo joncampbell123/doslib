@@ -155,8 +155,8 @@ static unsigned char sb1_tc_rates[] = {
 
 /* if this function returns 1, the record log is full.
  * it will warn you only once! */
-static inline int record_entry(const uint16_t dma_pos,const unsigned long time) {
-    record_pos->irq_count = (uint8_t)sb_card->irq_counter;
+static inline int record_entry(const uint16_t dma_pos,const unsigned long time,const uint8_t irqc) {
+    record_pos->irq_count = irqc;
     record_pos->dma_pos = dma_pos;
     record_pos->timer_pos = time;
 
@@ -165,11 +165,10 @@ static inline int record_entry(const uint16_t dma_pos,const unsigned long time) 
 
 void sb1_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
+    unsigned int pc,c,iter;
     unsigned int count,lv;
     unsigned long pd,d;
-    unsigned int pc,c;
-    uint32_t pirqc;
-    uint32_t irqc;
+    uint8_t pirqc,irqc;
 
     doubleprintf("SB 1.x DMA single cycle DSP test.\n");
 
@@ -209,44 +208,50 @@ void sb1_sc_play_test(void) {
 
         sndsb_write_dsp_timeconst(sb_card,sb1_tc_rates[count]);
 
-        _cli();
-        bytes = tlen;
         time = 0;
         pd = d = (~0UL);
+
         lv = (unsigned int)(tlen - 1UL);
-        _sti();
 
         sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT); /* 0x14 */
         sndsb_write_dsp(sb_card,lv);
-        /* on the first iteration in the loop, write the last byte */
+
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+        irqc = (uint8_t)sb_card->irq_counter;
+        _sti();
+
+        sndsb_write_dsp(sb_card,lv >> 8); /* playback begins at this write */
 
         while (1) {
             _cli();
 
+            /* up to 16 iterations.
+             * do not poll for IRQ changes, we have interrupts disabled here */
+            iter = 16;
+            do {
+                pd = d;
+                d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+            } while (--iter != 0U && pd == d);
+
+            if (d > tlen) bytes = tlen; /* terminal count */
+            else bytes = tlen - d;
+
             pirqc = irqc;
-            irqc = sb_card->irq_counter;
-
-            pd = d;
-            d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-            if (d > tlen) d = 0; /* terminal count */
-            d = tlen - d;
-            bytes = d;
-
-            if (pd == (~0UL)) { /* first iteration */
-                c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-                sndsb_write_dsp(sb_card,lv >> 8);
-            }
+            irqc = (uint8_t)sb_card->irq_counter;
 
             pc = c;
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || irqc != pirqc || time >= timeout) {
-                if (record_entry((uint16_t)d,time)) break; /* break if log is full. it will warn only once */
+            if (pd != d || irqc != pirqc) {
+                if (record_entry((uint16_t)bytes,time,irqc)) break; /* break if log is full. it will warn only once */
             }
-
-            if (time >= timeout) break;
+            else if (time >= timeout) {
+                record_entry((uint16_t)bytes,time,irqc); /* may return 1 if this makes the log full. we break anyway */
+                break;
+            }
         }
 
         sndsb_reset_dsp(sb_card);
@@ -290,11 +295,10 @@ static unsigned char sb2_tc_rates[] = {
 
 void sb2_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
+    unsigned int pc,c,iter;
     unsigned int count,lv;
     unsigned long pd,d;
-    unsigned int pc,c;
-    uint32_t pirqc;
-    uint32_t irqc;
+    uint8_t pirqc,irqc;
 
     if (sb_card->dsp_vmaj < 2 || (sb_card->dsp_vmaj == 2 && sb_card->dsp_vmin == 0))
         return;
@@ -337,44 +341,51 @@ void sb2_sc_play_test(void) {
 
         sndsb_write_dsp_timeconst(sb_card,sb2_tc_rates[count]);
 
-        _cli();
-        bytes = tlen;
         time = 0;
         pd = d = (~0UL);
+
         lv = (unsigned int)(tlen - 1UL);
-        _sti();
 
         sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SET_DMA_BLOCK_SIZE); /* 0x48 */
         sndsb_write_dsp(sb_card,lv);
         sndsb_write_dsp(sb_card,lv >> 8);
 
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+        irqc = (uint8_t)sb_card->irq_counter;
+        _sti();
+
+        sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED); /* 0x91 */
+
         while (1) {
             _cli();
 
+            /* up to 16 iterations.
+             * do not poll for IRQ changes, we have interrupts disabled here */
+            iter = 16;
+            do {
+                pd = d;
+                d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+            } while (--iter != 0U && pd == d);
+
+            if (d > tlen) bytes = tlen; /* terminal count */
+            else bytes = tlen - d;
+
             pirqc = irqc;
-            irqc = sb_card->irq_counter;
-
-            pd = d;
-            d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
-            if (d > tlen) d = 0; /* terminal count */
-            d = tlen - d;
-            bytes = d;
-
-            if (pd == (~0UL)) { /* first iteration */
-                c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-                sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED); /* 0x91 */
-            }
+            irqc = (uint8_t)sb_card->irq_counter;
 
             pc = c;
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || irqc != pirqc || time >= timeout) {
-                if (record_entry((uint16_t)d,time)) break; /* break if log is full. it will warn only once */
+            if (pd != d || irqc != pirqc) {
+                if (record_entry((uint16_t)bytes,time,irqc)) break; /* break if log is full. it will warn only once */
             }
-
-            if (time >= timeout) break;
+            else if (time >= timeout) {
+                record_entry((uint16_t)bytes,time,irqc); /* may return 1 if this makes the log full. we break anyway */
+                break;
+            }
         }
 
         sndsb_reset_dsp(sb_card);
@@ -423,9 +434,8 @@ void sb16_sc_play_test(void) {
     unsigned int count,lv;
     unsigned long pd,d;
     unsigned char fifo;
+    uint8_t pirqc,irqc;
     unsigned int pc,c;
-    uint32_t pirqc;
-    uint32_t irqc;
 
     if (sb_card->dsp_vmaj >= 4) /* Sound Blaster 16 */
         { }
@@ -515,7 +525,7 @@ void sb16_sc_play_test(void) {
                 _sti();
 
                 if (pd != d || irqc != pirqc || time >= timeout) {
-                    if (record_entry((uint16_t)d,time)) break; /* break if log is full. it will warn only once */
+                    if (record_entry((uint16_t)d,time,irqc)) break; /* break if log is full. it will warn only once */
                 }
 
                 if (time >= timeout) break;
@@ -573,9 +583,8 @@ void ess_sc_play_test(void) {
     unsigned char dma_xfer;
     unsigned int count,lv;
     unsigned long pd,d;
+    uint8_t pirqc,irqc;
     unsigned int pc,c;
-    uint32_t pirqc;
-    uint32_t irqc;
     int b;
 
     if (!sb_card->ess_extensions || sb_card->ess_chipset == 0)
@@ -742,7 +751,7 @@ void ess_sc_play_test(void) {
                 _sti();
 
                 if (pd != d || irqc != pirqc || time >= timeout) {
-                    if (record_entry((uint16_t)d,time)) break; /* break if log is full. it will warn only once */
+                    if (record_entry((uint16_t)d,time,irqc)) break; /* break if log is full. it will warn only once */
                 }
 
                 if (time >= timeout) break;
