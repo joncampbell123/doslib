@@ -140,7 +140,6 @@ void doubleprintf(const char *fmt,...) {
 #endif
 
 struct dma_xfer_rec_t {
-    uint8_t         irq_count;          // expect AT MOST one IRQ. Not 2. Not 256. Not a bajillion...
     uint16_t        dma_pos;
     uint32_t        timer_pos;
 };
@@ -155,8 +154,7 @@ static unsigned char sb1_tc_rates[] = {
 
 /* if this function returns 1, the record log is full.
  * it will warn you only once! */
-static inline int record_entry(const uint16_t dma_pos,const unsigned long time,const uint8_t irqc) {
-    record_pos->irq_count = irqc;
+static inline int record_entry(const uint16_t dma_pos,const unsigned long time) {
     record_pos->dma_pos = dma_pos;
     record_pos->timer_pos = time;
 
@@ -168,7 +166,6 @@ void sb1_sc_play_test(void) {
     unsigned int pc,c,iter;
     unsigned int count,lv;
     unsigned long pd,d;
-    uint8_t pirqc,irqc;
 
     doubleprintf("SB 1.x DMA single cycle DSP test.\n");
 
@@ -177,7 +174,6 @@ void sb1_sc_play_test(void) {
 
     for (count=0;count < (sizeof(sb1_tc_rates)/sizeof(sb1_tc_rates[0]));count++) {
         expect = 1000000UL / (unsigned long)(256 - sb1_tc_rates[count]);
-        sb_card->irq_counter = 0;
         record_pos = record;
 
         _cli();
@@ -204,8 +200,6 @@ void sb1_sc_play_test(void) {
         sndsb_write_dsp(sb_card,0x80);
         sndsb_setup_dma(sb_card);
 
-        irqc = pirqc = (~0UL);
-
         sndsb_write_dsp_timeconst(sb_card,sb1_tc_rates[count]);
 
         time = 0;
@@ -218,7 +212,6 @@ void sb1_sc_play_test(void) {
 
         _cli();
         c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-        irqc = (uint8_t)sb_card->irq_counter;
         _sti();
 
         sndsb_write_dsp(sb_card,lv >> 8); /* playback begins at this write */
@@ -237,19 +230,16 @@ void sb1_sc_play_test(void) {
             if (d > tlen) bytes = tlen; /* terminal count */
             else bytes = tlen - d;
 
-            pirqc = irqc;
-            irqc = (uint8_t)sb_card->irq_counter;
-
             pc = c;
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || irqc != pirqc) {
-                if (record_entry((uint16_t)bytes,time,irqc)) break; /* break if log is full. it will warn only once */
+            if (pd != d) {
+                if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
             }
             else if (time >= timeout) {
-                record_entry((uint16_t)bytes,time,irqc); /* may return 1 if this makes the log full. we break anyway */
+                record_entry((uint16_t)bytes,time); /* may return 1 if this makes the log full. we break anyway */
                 break;
             }
         }
@@ -260,7 +250,7 @@ void sb1_sc_play_test(void) {
         printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
         for (record_read=record;record_read!=record_pos;record_read++)
-            fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
+            fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
 
         fprintf(report_fp,"\n");
         fflush(report_fp);
@@ -298,7 +288,6 @@ void sb2_sc_play_test(void) {
     unsigned int pc,c,iter;
     unsigned int count,lv;
     unsigned long pd,d;
-    uint8_t pirqc,irqc;
 
     if (sb_card->dsp_vmaj < 2 || (sb_card->dsp_vmaj == 2 && sb_card->dsp_vmin == 0))
         return;
@@ -310,7 +299,6 @@ void sb2_sc_play_test(void) {
 
     for (count=0;count < (sizeof(sb2_tc_rates)/sizeof(sb2_tc_rates[0]));count++) {
         expect = 1000000UL / (unsigned long)(256 - sb2_tc_rates[count]);
-        sb_card->irq_counter = 0;
         record_pos = record;
 
         _cli();
@@ -337,8 +325,6 @@ void sb2_sc_play_test(void) {
         sndsb_write_dsp(sb_card,0x80);
         sndsb_setup_dma(sb_card);
 
-        irqc = pirqc = (~0UL);
-
         sndsb_write_dsp_timeconst(sb_card,sb2_tc_rates[count]);
 
         time = 0;
@@ -352,7 +338,6 @@ void sb2_sc_play_test(void) {
 
         _cli();
         c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-        irqc = (uint8_t)sb_card->irq_counter;
         _sti();
 
         sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_8BIT_HISPEED); /* 0x91 */
@@ -371,19 +356,16 @@ void sb2_sc_play_test(void) {
             if (d > tlen) bytes = tlen; /* terminal count */
             else bytes = tlen - d;
 
-            pirqc = irqc;
-            irqc = (uint8_t)sb_card->irq_counter;
-
             pc = c;
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
             time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
             _sti();
 
-            if (pd != d || irqc != pirqc) {
-                if (record_entry((uint16_t)bytes,time,irqc)) break; /* break if log is full. it will warn only once */
+            if (pd != d) {
+                if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
             }
             else if (time >= timeout) {
-                record_entry((uint16_t)bytes,time,irqc); /* may return 1 if this makes the log full. we break anyway */
+                record_entry((uint16_t)bytes,time); /* may return 1 if this makes the log full. we break anyway */
                 break;
             }
         }
@@ -394,7 +376,7 @@ void sb2_sc_play_test(void) {
         printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
         for (record_read=record;record_read!=record_pos;record_read++)
-            fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
+            fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
 
         fprintf(report_fp,"\n");
         fflush(report_fp);
@@ -435,7 +417,6 @@ void sb16_sc_play_test(void) {
     unsigned int count,lv;
     unsigned long pd,d;
     unsigned char fifo;
-    uint8_t pirqc,irqc;
 
     if (sb_card->dsp_vmaj >= 4) /* Sound Blaster 16 */
         { }
@@ -455,7 +436,6 @@ void sb16_sc_play_test(void) {
                 continue;
 
             expect = sb16_rates[count];
-            sb_card->irq_counter = 0;
             record_pos = record;
 
             _cli();
@@ -482,8 +462,6 @@ void sb16_sc_play_test(void) {
             sndsb_write_dsp(sb_card,0x80);
             sndsb_setup_dma(sb_card);
 
-            irqc = pirqc = (~0UL);
-
             sndsb_write_dsp_outrate(sb_card,sb16_rates[count]);
 
             time = 0;
@@ -501,7 +479,6 @@ void sb16_sc_play_test(void) {
 
             _cli();
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-            irqc = (uint8_t)sb_card->irq_counter;
             _sti();
 
             sndsb_write_dsp(sb_card,lv >> 8);
@@ -520,19 +497,16 @@ void sb16_sc_play_test(void) {
                 if (d > tlen) bytes = tlen; /* terminal count */
                 else bytes = tlen - d;
 
-                pirqc = irqc;
-                irqc = (uint8_t)sb_card->irq_counter;
-
                 pc = c;
                 c = read_8254(T8254_TIMER_INTERRUPT_TICK);
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || irqc != pirqc) {
-                    if (record_entry((uint16_t)bytes,time,irqc)) break; /* break if log is full. it will warn only once */
+                if (pd != d) {
+                    if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
                 }
                 else if (time >= timeout) {
-                    record_entry((uint16_t)bytes,time,irqc); /* may return 1 if this makes the log full. we break anyway */
+                    record_entry((uint16_t)bytes,time); /* may return 1 if this makes the log full. we break anyway */
                     break;
                 }
             }
@@ -543,7 +517,7 @@ void sb16_sc_play_test(void) {
             printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
             for (record_read=record;record_read!=record_pos;record_read++)
-                fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
+                fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
 
             fprintf(report_fp,"\n");
             fflush(report_fp);
@@ -593,7 +567,6 @@ void ess_sc_play_test(void) {
     unsigned int pc,c,iter;
     unsigned int count;
     unsigned long pd,d;
-    uint8_t pirqc,irqc;
     int b;
 
     if (!sb_card->ess_extensions || sb_card->ess_chipset == 0)
@@ -615,7 +588,6 @@ void ess_sc_play_test(void) {
             else
                 expect = 397700UL / (128 - ess_tc_rates[count]);
 
-            sb_card->irq_counter = 0;
             record_pos = record;
 
             _cli();
@@ -641,8 +613,6 @@ void ess_sc_play_test(void) {
             sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
             sndsb_write_dsp(sb_card,0x80);
             sndsb_setup_dma(sb_card);
-
-            irqc = pirqc = (~0UL);
 
             time = 0;
             pd = d = (~0UL);
@@ -724,7 +694,6 @@ void ess_sc_play_test(void) {
 
             _cli();
             c = read_8254(T8254_TIMER_INTERRUPT_TICK);
-            irqc = (uint8_t)sb_card->irq_counter;
             _sti();
 
             /* this begins playback */
@@ -744,19 +713,16 @@ void ess_sc_play_test(void) {
                 if (d > tlen) bytes = tlen; /* terminal count */
                 else bytes = tlen - d;
 
-                pirqc = irqc;
-                irqc = (uint8_t)sb_card->irq_counter;
-
                 pc = c;
                 c = read_8254(T8254_TIMER_INTERRUPT_TICK);
                 time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
                 _sti();
 
-                if (pd != d || irqc != pirqc) {
-                    if (record_entry((uint16_t)bytes,time,irqc)) break; /* break if log is full. it will warn only once */
+                if (pd != d) {
+                    if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
                 }
                 else if (time >= timeout) {
-                    record_entry((uint16_t)bytes,time,irqc); /* may return 1 if this makes the log full. we break anyway */
+                    record_entry((uint16_t)bytes,time); /* may return 1 if this makes the log full. we break anyway */
                     break;
                 }
             }
@@ -767,7 +733,7 @@ void ess_sc_play_test(void) {
             printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
             for (record_read=record;record_read!=record_pos;record_read++)
-                fprintf(report_fp," >> POS %u, time %.6f, IRQ %u\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ,record_read->irq_count);
+                fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
 
             fprintf(report_fp,"\n");
             fflush(report_fp);
