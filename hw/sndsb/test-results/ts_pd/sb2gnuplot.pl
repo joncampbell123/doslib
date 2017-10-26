@@ -84,7 +84,7 @@ while ($line = <I>) {
                 }
 
                 if ($f_pos == 1) {
-                    if ($time > 0.002 || $pos > 8) {
+                    if ($time > 0.002 && $pos > 8) {
                         $f_time = $time;
                         $f_pos = $pos;
                     }
