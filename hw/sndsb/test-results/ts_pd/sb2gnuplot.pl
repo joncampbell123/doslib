@@ -74,7 +74,7 @@ while ($line = <I>) {
         # expand out a bit, to show the graph in full
         $max_irq  += $max_irq  / 4;
         $max_pos  += $max_pos  / 4;
-        $max_time += $max_time / 10;
+        $max_time += $max_time / 100;
 
         close(O);
 
