@@ -54,6 +54,9 @@ while ($line = <I>) {
         $p_irq = undef;
         $p_time = undef;
 
+        $f_pos = 1;
+        $f_time = 0.001;
+
         while ($line = <I>) {
             chomp $line;
             $line =~ s/[\x0D\x0A]//g;
@@ -80,9 +83,21 @@ while ($line = <I>) {
                     $max_time = $time if $max_time < $time;
                 }
 
+                if ($f_pos == 1) {
+                    if ($time > 0.002 || $pos > 8) {
+                        $f_time = $time;
+                        $f_pos = $pos;
+                    }
+                }
+
                 print O "$pos, $time, $irq\n";
             }
         }
+
+        # keep original
+        $o_max_irq  = $max_irq;
+        $o_max_pos  = $max_pos;
+        $o_max_time = $max_time;
 
         # expand out a bit, to show the graph in full
         $max_irq  += $max_irq  / 4;
@@ -123,21 +138,45 @@ while ($line = <I>) {
 
         print O "unset multiplot\n";
 
-        # the initial burst when loading the FIFO is too subtle for the full graph
+        # the initial burst when loading the FIFO, and ending part, is too subtle for the full graph
         print O "reset\n";
+
+        $time1 = 0;
+        $time2 = $f_time + ($f_time / 4);
+        $pos1  = 0;
+        $pos2  = $f_pos + ($f_pos / 4);
+
+        $time3 = $o_max_time - 0.0025;
+        $time4 = $o_max_time + 0.0025;
+        $pos3  = $o_max_pos - 144;
+        $pos4  = $o_max_pos + 144;
 
         print O "set term png size 1920,1080\n";
         print O "set output '$pngc'\n";
 
+        print O "set multiplot\n";
+
         print O "set grid\n";
-        print O "set autoscale\n";
-        print O "set title '$name'\n";
-        print O "set xrange [0:0.0025]\n";
+
+        print O "set size 1.0,0.5\n";
+        print O "set origin 0.0,0.0\n";
+        print O "set title '$name vs DMA'\n";
+        print O "set xrange [$time1:$time2]\n";
+        print O "set yrange [$pos1:$pos2]\n";
         print O "set xlabel 'Time (s)'\n";
         print O "set ylabel 'DMA transfer count (bytes)'\n";
-
         print O "plot '$csv' using 2:1 with steps title 'DMA transfer count over time'\n";
-        # done
+
+        print O "set size 1.0,0.5\n";
+        print O "set origin 0.0,0.5\n";
+        print O "set title '$name vs DMA'\n";
+        print O "set xrange [$time3:$time4]\n";
+        print O "set yrange [$pos3:$pos4]\n";
+        print O "set xlabel 'Time (s)'\n";
+        print O "set ylabel 'DMA transfer count (bytes)'\n";
+        print O "plot '$csv' using 2:1 with steps title 'DMA transfer count over time'\n";
+
+        print O "unset multiplot\n";
 
         # render
         system("gnuplot '$gnuplot'");
