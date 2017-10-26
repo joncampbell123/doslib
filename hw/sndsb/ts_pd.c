@@ -591,7 +591,7 @@ void ess_sc_play_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned char dma_xfer;
     unsigned int pc,c,iter;
-    unsigned int count,lv;
+    unsigned int count;
     unsigned long pd,d;
     uint8_t pirqc,irqc;
     int b;
@@ -646,8 +646,6 @@ void ess_sc_play_test(void) {
 
             time = 0;
             pd = d = (~0UL);
-
-            lv = (unsigned int)(tlen - 1UL);
 
             {
                 /* ESS 688/1869 chipset specific DSP playback.
