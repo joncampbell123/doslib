@@ -39,7 +39,7 @@ while ($line = <I>) {
         $pngc = "gnuplot/$name.start.png";
 
         open(O,">",$csv) || die;
-        print O "# pos, time\n";
+        print O "# pos, time, irq\n";
 
         while ($line = <I>) {
             chomp $line;
@@ -52,8 +52,9 @@ while ($line = <I>) {
 
                 $pos = $a[0] + 0;
                 $time = $a[2] + 0.0;
+                $irq = $a[4] + 0;
 
-                print O "$pos, $time\n";
+                print O "$pos, $time, $irq\n";
             }
         }
 
