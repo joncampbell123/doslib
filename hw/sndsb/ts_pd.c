@@ -587,6 +587,7 @@ static const char *dma_xfer_str[] = {
 };
 
 void ess_sc_play_test(void) {
+    unsigned char bytespersample = wav_16bit ? 2 : 1;
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned char dma_xfer;
     unsigned int pc,c,iter;
@@ -597,7 +598,7 @@ void ess_sc_play_test(void) {
     if (!sb_card->ess_extensions || sb_card->ess_chipset == 0)
         return;
 
-    doubleprintf("ESS688 DMA single cycle DSP test.\n");
+    doubleprintf("ESS688 DMA single cycle DSP test %u-bit.\n",wav_16bit?16:8);
 
     timeout = T8254_REF_CLOCK_HZ * 2UL;
     record_max = &record[MAX_RECORD];
@@ -626,11 +627,11 @@ void ess_sc_play_test(void) {
             _sti();
 
             tlen = expect; // 1 sec
-            if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+            if (tlen > (sb_card->buffer_size / (unsigned long)bytespersample)) tlen = sb_card->buffer_size / (unsigned long)bytespersample;
 
-            printf("Starting test... tlen=%lu dmalen=%lu dma_xfer=%u\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size,dma_xfer);
+            printf("Starting test... tlen=%lu dmalen=%lu dma_xfer=%u\n",(unsigned long)tlen * (unsigned long)bytespersample,(unsigned long)sb_card->buffer_size,dma_xfer);
 
-            sb_card->buffer_dma_started_length = tlen;
+            sb_card->buffer_dma_started_length = tlen * (unsigned long)bytespersample;
             sb_card->buffer_dma_started = 0;
 
             sndsb_reset_dsp(sb_card);
@@ -690,7 +691,7 @@ void ess_sc_play_test(void) {
                 /* effectively disable the lowpass filter (NTS: 0xFF mutes the audio, apparently) */
                 sndsb_ess_write_controller(sb_card,0xA2,0xFE);
 
-                t16 = -tlen; /* DMA transfer count reload register value is 2's complement of length */
+                t16 = -(tlen * (uint16_t)bytespersample); /* DMA transfer count reload register value is 2's complement of length */
                 sndsb_ess_write_controller(sb_card,0xA4,t16); /* DMA transfer count low */
                 sndsb_ess_write_controller(sb_card,0xA5,t16>>8); /* DMA transfer count high */
 
@@ -705,13 +706,13 @@ void ess_sc_play_test(void) {
                 sndsb_ess_write_controller(sb_card,0xB2,b);
 
                 b = 0x51; /* enable FIFO+DMA, reserved, load signal */
-                b |= 0x00; /* signed complement mode off */
+                b |= wav_16bit ? 0x20 : 0x00; /* signed complement mode or not */
                 sndsb_ess_write_controller(sb_card,0xB7,b);
 
                 b = 0x90; /* enable FIFO+DMA, reserved, load signal */
-                b |= 0x00; /* signed complement mode off */
+                b |= wav_16bit ? 0x20 : 0x00; /* signed complement mode or not */
                 b |= 0x40; /* [3]=stereo [6]=!stereo */
-                b |= 0x00; /* [2]=16bit */
+                b |= wav_16bit ? 0x04 : 0x00; /* [2]=16bit */
                 sndsb_ess_write_controller(sb_card,0xB7,b);
 
                 b = sndsb_ess_read_controller(sb_card,0xB8);
@@ -751,11 +752,11 @@ void ess_sc_play_test(void) {
 
             sndsb_reset_dsp(sb_card);
 
-            doubleprintf(" - Test at %luHz, %lu bytes, %s\n",expect,bytes,dma_xfer_str[dma_xfer]);
+            doubleprintf(" - Test at %luHz, %lu bytes, %s\n",expect,bytes * (unsigned long)bytespersample,dma_xfer_str[dma_xfer]);
             printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
             for (record_read=record;record_read!=record_pos;record_read++)
-                fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+                fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos * (unsigned int)bytespersample,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
 
             fprintf(report_fp,"\n");
             fflush(report_fp);
@@ -1011,6 +1012,7 @@ int main(int argc,char **argv) {
 	sndsb_assign_dma_buffer(sb_card,sb_dma);
     generate_1khz_sine16();
 
+    ess_sc_play_test();
     sb16_sc_play_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)

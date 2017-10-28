@@ -976,8 +976,8 @@ int main(int argc,char **argv) {
 	sndsb_assign_dma_buffer(sb_card,sb_dma);
     generate_1khz_sine16();
 
-    sb16_sc_play_test();
     ess_sc_play_test();
+    sb16_sc_play_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
