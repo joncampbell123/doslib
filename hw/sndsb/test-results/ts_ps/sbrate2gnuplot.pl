@@ -80,73 +80,72 @@ close(I);
 
 
 
+if (@sb1 > 0) {
+    $png1 = "gnuplot/$file.sb1.png";
+    $png2 = "gnuplot/$file.sb2.png";
+    $csv = $ofile = "gnuplot/$file.sb.csv";
+    open(O,">",$ofile) || die;
 
-$png1 = "gnuplot/$file.sb1.png";
-$png2 = "gnuplot/$file.sb2.png";
-$csv = $ofile = "gnuplot/$file.sb.csv";
-open(O,">",$ofile) || die;
-
-print O "# tc, sb1";
-print O ", sb2" if @sb2 > 0;
-print O "\n";
-
-for ($i=0;$i < 256;$i++) {
-    next unless (defined($sb1[$i]) || defined($sb2[$i]));
-
-    # tc
-    print O "$i";
-
-    # sb1
-    print O ", ".$sb1[$i];
-
-    # sb2
-    print O ", ".$sb2[$i] if @sb2 > 0;
-
+    print O "# tc, sb1";
+    print O ", sb2" if @sb2 > 0;
     print O "\n";
+
+    for ($i=0;$i < 256;$i++) {
+        next unless (defined($sb1[$i]) || defined($sb2[$i]));
+
+        # tc
+        print O "$i";
+
+        # sb1
+        print O ", ".$sb1[$i];
+
+        # sb2
+        print O ", ".$sb2[$i] if @sb2 > 0;
+
+        print O "\n";
+    }
+
+    close(O);
+
+    $ofile = "gnuplot/$file.sb.gnuplot";
+    open(O,">",$ofile) || die;
+
+    print O "reset\n";
+
+    print O "set term png size 1920,1080\n";
+    print O "set output '$png1'\n";
+
+    print O "set grid\n";
+    print O "set autoscale\n";
+    print O "set xrange [0:255]\n";
+    print O "set title 'Sound Blaster Time Constant and Playback rate ($filenn)'\n";
+    print O "set xlabel 'Time constant byte'\n";
+    print O "set ylabel 'Sample rate (Hz)'\n";
+
+    print O "plot '$csv' using 1:2 with lines title 'SB 1.x non-highspeed TC'\n";
+
+    if (@sb2 > 0) {
+
+        print O "reset\n";
+
+        print O "set term png size 1920,1080\n";
+        print O "set output '$png2'\n";
+
+        print O "set grid\n";
+        print O "set autoscale\n";
+        print O "set xrange [0:255]\n";
+        print O "set title 'Sound Blaster Time Constant and Playback rate ($filenn)'\n";
+        print O "set xlabel 'Time constant byte'\n";
+        print O "set ylabel 'Sample rate (Hz)'\n";
+
+        print O "plot '$csv' using 1:3 with lines title 'SB 2.x highspeed TC'\n";
+
+    }
+
+    close(O);
+
+    system("gnuplot '$ofile'");
 }
-
-close(O);
-
-$ofile = "gnuplot/$file.sb.gnuplot";
-open(O,">",$ofile) || die;
-
-print O "reset\n";
-
-print O "set term png size 1920,1080\n";
-print O "set output '$png1'\n";
-
-print O "set grid\n";
-print O "set autoscale\n";
-print O "set xrange [0:255]\n";
-print O "set title 'Sound Blaster Time Constant and Playback rate ($filenn)'\n";
-print O "set xlabel 'Time constant byte'\n";
-print O "set ylabel 'Sample rate (Hz)'\n";
-
-print O "plot '$csv' using 1:2 with lines title 'SB 1.x non-highspeed TC'\n";
-
-if (@sb2 > 0) {
-
-print O "reset\n";
-
-print O "set term png size 1920,1080\n";
-print O "set output '$png2'\n";
-
-print O "set grid\n";
-print O "set autoscale\n";
-print O "set xrange [0:255]\n";
-print O "set title 'Sound Blaster Time Constant and Playback rate ($filenn)'\n";
-print O "set xlabel 'Time constant byte'\n";
-print O "set ylabel 'Sample rate (Hz)'\n";
-
-print O "plot '$csv' using 1:3 with lines title 'SB 2.x highspeed TC'\n";
-
-}
-
-close(O);
-
-system("gnuplot '$ofile'");
-
-
 
 if (@ess > 0) {
     $png1 = "gnuplot/$file.ess.png";
