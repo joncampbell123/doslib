@@ -109,6 +109,30 @@ static void realloc_dma_buffer() {
         return;
 }
 
+unsigned char sndsb_encode_adpcm_4bit(unsigned char samp);
+void sndsb_encode_adpcm_set_reference(unsigned char c,unsigned char mode);
+
+void generate_1khz_sine_adpcm4(void) {
+    unsigned int i,c,l,b;
+
+    printf("Generating tone ADPCM 4-bit...\n");
+
+    l = (unsigned int)sb_dma->length;
+
+    /* reference */
+    for (i=0;i < 1;i++)
+        sb_dma->lin[i] =
+            (unsigned char)((sin(((double)i * 3.14159 * 2) / 100) * 64) + 128);
+
+    /* ADPCM compression */
+    sndsb_encode_adpcm_set_reference(sb_dma->lin[0],ADPCM_4BIT);
+    for (c=i;i < l;i++,c += 2) {
+        b  = sndsb_encode_adpcm_4bit((unsigned char)((sin(((double)(c+0) * 3.14159 * 2) / 100) * 64) + 128)) << 4;
+        b += sndsb_encode_adpcm_4bit((unsigned char)((sin(((double)(c+1) * 3.14159 * 2) / 100) * 64) + 128));
+        sb_dma->lin[i] = b;
+    }
+}
+
 void generate_1khz_sine(void) {
     unsigned int i,l;
 
@@ -123,7 +147,7 @@ void generate_1khz_sine(void) {
 void generate_1khz_sine16(void) {
     unsigned int i,l;
 
-    printf("Generating tone...\n");
+    printf("Generating tone 16-bit...\n");
 
     l = (unsigned int)sb_dma->length / 2U;
     for (i=0;i < l;i++)
@@ -749,6 +773,111 @@ void direct_dac_test(void) {
     }
 }
 
+void sb1_sc_play_adpcm_test(void) {
+    unsigned long time,bytes,expect,tlen,timeout;
+    unsigned int count;
+    unsigned int pc,c;
+    unsigned long d;
+    uint32_t irqc;
+
+    doubleprintf("SB 1.x ADPCM 4-bit single cycle DSP playback test.\n");
+
+    timeout = T8254_REF_CLOCK_HZ * 4UL;
+
+    for (count=0;count < 256;count++) {
+        expect = 1000000UL / (unsigned long)(256 - count);
+
+        _cli();
+        if (sb_card->irq >= 8) {
+            p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+        }
+        else if (sb_card->irq >= 0) {
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+        }
+        _sti();
+
+        tlen = (expect / 2UL) + 1; // 1 sec
+        if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+        sb_card->buffer_dma_started_length = tlen;
+        sb_card->buffer_dma_started = 0;
+
+        sndsb_reset_dsp(sb_card);
+        sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+        sndsb_setup_dma(sb_card);
+        irqc = sb_card->irq_counter;
+
+        sndsb_write_dsp_timeconst(sb_card,count);
+
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+        bytes = tlen;
+        time = 0;
+        _sti();
+
+        {
+            unsigned int lv = (unsigned int)(tlen - 1UL);
+
+            sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT_REF); /* 0x75 */
+            sndsb_write_dsp(sb_card,lv);
+            sndsb_write_dsp(sb_card,lv >> 8);
+        }
+
+        while (1) {
+            if (irqc != sb_card->irq_counter)
+                break;
+
+            _cli();
+            pc = c;
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+            _sti();
+
+            if (time >= timeout) goto x_timeout;
+        }
+
+x_complete:
+        if (time == 0UL) time = 1;
+
+        {
+            double t = (double)time / T8254_REF_CLOCK_HZ;
+            double rate = (double)(((bytes - 1UL) * 2UL) + 1UL) / t; /* 2 samples/byte + 1 reference */
+
+            doubleprintf(" - TC 0x%02X: expecting %luHz, %lub/%.3fs @ %.3fHz\n",count,expect,(unsigned long)bytes,t,rate);
+        }
+
+        if (kbhit()) {
+            if (getch() == 27)
+                break;
+        }
+
+        continue;
+x_timeout:
+        d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+        if (d > tlen) d = 0; /* terminal count */
+        d = tlen - d;
+
+        if (irqc == sb_card->irq_counter && d == 0) bytes = 0; /* nothing happened if no IRQ and counter never changed */
+        else if (bytes > d) bytes = d;
+        goto x_complete;
+    }
+
+    _cli();
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+    }
+    _sti();
+
+    sndsb_write_dsp_timeconst(sb_card,0x83); /* 8000Hz */
+
+    sndsb_reset_dsp(sb_card);
+}
+
 int main(int argc,char **argv) {
 	int sc_idx = -1;
     int i;
@@ -978,6 +1107,14 @@ int main(int argc,char **argv) {
 
     ess_sc_play_test();
     sb16_sc_play_test();
+
+    wav_16bit = 0;
+    sb_card->buffer_16bit = wav_16bit;
+    realloc_dma_buffer();
+	sndsb_assign_dma_buffer(sb_card,sb_dma);
+
+    generate_1khz_sine_adpcm4();
+    sb1_sc_play_adpcm_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
