@@ -110,6 +110,7 @@ static void realloc_dma_buffer() {
 }
 
 unsigned char sndsb_encode_adpcm_4bit(unsigned char samp);
+unsigned char sndsb_encode_adpcm_2_6bit(unsigned char samp,unsigned char b2);
 void sndsb_encode_adpcm_set_reference(unsigned char c,unsigned char mode);
 
 void generate_1khz_sine_adpcm26(void) {
