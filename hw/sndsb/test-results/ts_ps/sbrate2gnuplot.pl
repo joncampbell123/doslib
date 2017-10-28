@@ -13,6 +13,9 @@ my @sb1x;
 my @sb2x;
 my @ess;
 my @ess16;
+my @sb1xa4;
+my @sb1xa26;
+my @sb1xa2;
 
 my $line;
 my $ref = undef;
@@ -30,6 +33,15 @@ while ($line = <I>) {
     }
     elsif ($line =~ m/^ESS688 single cycle.*16 bit/i) {
         $ref = "ess16";
+    }
+    elsif ($line =~ m/^SB 1\.x ADPCM 4-bit/i) {
+        $ref = "sb1xa4";
+    }
+    elsif ($line =~ m/^SB 1\.x ADPCM 2\.6-bit/i) {
+        $ref = "sb1xa26";
+    }
+    elsif ($line =~ m/^SB 1\.x ADPCM 2-bit/i) {
+        $ref = "sb1xa2";
     }
     #  - TC 0x06: expecting 4000Hz, 4000b/0.985s @ 4060.103Hz
     elsif ($line =~ s/^ *- TC *//) {
@@ -68,6 +80,15 @@ while ($line = <I>) {
         }
         elsif ($ref eq "ess16") {
             $ess16[$idx] = $rate;
+        }
+        elsif ($ref eq "sb1xa4") {
+            $sb1xa4[$idx] = $rate;
+        }
+        elsif ($ref eq "sb1xa26") {
+            $sb1xa26[$idx] = $rate;
+        }
+        elsif ($ref eq "sb1xa2") {
+            $sb1xa2[$idx] = $rate;
         }
     }
     else {
@@ -229,6 +250,138 @@ if (@ess16 > 0) {
     print O "set ylabel 'Sample rate (Hz)'\n";
 
     print O "plot '$csv' using 1:2 with lines title 'Sample rate divider byte'\n";
+
+    close(O);
+
+    system("gnuplot '$ofile'");
+}
+
+if (@sb1xa4 > 0) {
+    $png1 = "gnuplot/$file.sb1xa4.png";
+    $csv = $ofile = "gnuplot/$file.sb1xa4.csv";
+    open(O,">",$ofile) || die;
+
+    print O "# tc, sb1xa4";
+    print O "\n";
+
+    for ($i=0;$i < 256;$i++) {
+        next unless defined($sb1xa4[$i]);
+
+        # tc
+        print O "$i";
+
+        # sb1xa4
+        print O ", ".$sb1xa4[$i];
+
+        print O "\n";
+    }
+
+    close(O);
+
+    $ofile = "gnuplot/$file.sb1xa4.gnuplot";
+    open(O,">",$ofile) || die;
+
+    print O "reset\n";
+
+    print O "set term png size 1920,1080\n";
+    print O "set output '$png1'\n";
+
+    print O "set grid\n";
+    print O "set autoscale\n";
+    print O "set xrange [0:255]\n";
+    print O "set title 'Sound Blaster Time Constant and Playback rate 4-bit ADPCM ($filenn)'\n";
+    print O "set xlabel 'Sample rate divider byte'\n";
+    print O "set ylabel 'Sample rate (Hz)'\n";
+
+    print O "plot '$csv' using 1:2 with lines title 'SB 1.x non-highspeed TC'\n";
+
+    close(O);
+
+    system("gnuplot '$ofile'");
+}
+
+if (@sb1xa26 > 0) {
+    $png1 = "gnuplot/$file.sb1xa26.png";
+    $csv = $ofile = "gnuplot/$file.sb1xa26.csv";
+    open(O,">",$ofile) || die;
+
+    print O "# tc, sb1xa26";
+    print O "\n";
+
+    for ($i=0;$i < 256;$i++) {
+        next unless defined($sb1xa26[$i]);
+
+        # tc
+        print O "$i";
+
+        # sb1xa26
+        print O ", ".$sb1xa26[$i];
+
+        print O "\n";
+    }
+
+    close(O);
+
+    $ofile = "gnuplot/$file.sb1xa26.gnuplot";
+    open(O,">",$ofile) || die;
+
+    print O "reset\n";
+
+    print O "set term png size 1920,1080\n";
+    print O "set output '$png1'\n";
+
+    print O "set grid\n";
+    print O "set autoscale\n";
+    print O "set xrange [0:255]\n";
+    print O "set title 'Sound Blaster Time Constant and Playback rate 2.6-bit ADPCM ($filenn)'\n";
+    print O "set xlabel 'Sample rate divider byte'\n";
+    print O "set ylabel 'Sample rate (Hz)'\n";
+
+    print O "plot '$csv' using 1:2 with lines title 'SB 1.x non-highspeed TC'\n";
+
+    close(O);
+
+    system("gnuplot '$ofile'");
+}
+
+if (@sb1xa2 > 0) {
+    $png1 = "gnuplot/$file.sb1xa2.png";
+    $csv = $ofile = "gnuplot/$file.sb1xa2.csv";
+    open(O,">",$ofile) || die;
+
+    print O "# tc, sb1xa2";
+    print O "\n";
+
+    for ($i=0;$i < 256;$i++) {
+        next unless defined($sb1xa2[$i]);
+
+        # tc
+        print O "$i";
+
+        # sb1xa2
+        print O ", ".$sb1xa2[$i];
+
+        print O "\n";
+    }
+
+    close(O);
+
+    $ofile = "gnuplot/$file.sb1xa2.gnuplot";
+    open(O,">",$ofile) || die;
+
+    print O "reset\n";
+
+    print O "set term png size 1920,1080\n";
+    print O "set output '$png1'\n";
+
+    print O "set grid\n";
+    print O "set autoscale\n";
+    print O "set xrange [0:255]\n";
+    print O "set title 'Sound Blaster Time Constant and Playback rate 2-bit ADPCM ($filenn)'\n";
+    print O "set xlabel 'Sample rate divider byte'\n";
+    print O "set ylabel 'Sample rate (Hz)'\n";
+
+    print O "plot '$csv' using 1:2 with lines title 'SB 1.x non-highspeed TC'\n";
 
     close(O);
 
