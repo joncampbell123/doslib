@@ -541,7 +541,7 @@ void sb16_sc_play_test(void) {
             printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
             for (record_read=record;record_read!=record_pos;record_read++)
-                fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+                fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos * (unsigned int)bytespersample,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
 
             fprintf(report_fp,"\n");
             fflush(report_fp);
