@@ -120,6 +120,17 @@ void generate_1khz_sine(void) {
             (unsigned char)((sin(((double)i * 3.14159 * 2) / 100) * 64) + 128);
 }
 
+void generate_1khz_sine16(void) {
+    unsigned int i,l;
+
+    printf("Generating tone...\n");
+
+    l = (unsigned int)sb_dma->length / 2U;
+    for (i=0;i < l;i++)
+        ((uint16_t FAR*)sb_dma->lin)[i] =
+            (uint16_t)((int16_t)(sin(((double)i * 3.14159 * 2) / 100) * 16384));
+}
+
 static char ptmp[256];
 
 void doubleprintf(const char *fmt,...) {
@@ -406,11 +417,18 @@ static unsigned short sb16_rates[] = {
 };
 
 void sb16_sc_play_test(void) {
+    unsigned char bytespersample = wav_16bit ? 2 : 1;
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned int pc,c,iter;
     unsigned int count,lv;
     unsigned long pd,d;
     unsigned char fifo;
+    int dma;
+
+    if (wav_16bit && sb_card->dma16 >= 4)
+        dma = sb_card->dma16;
+    else
+        dma = sb_card->dma8;
 
     if (sb_card->dsp_vmaj >= 4) /* Sound Blaster 16 */
         { }
@@ -419,7 +437,7 @@ void sb16_sc_play_test(void) {
     else 
         return;
 
-    doubleprintf("SB 16 DMA single cycle DSP test.\n");
+    doubleprintf("SB 16 DMA single cycle DSP test %u-bit.\n",wav_16bit?16:8);
 
     timeout = T8254_REF_CLOCK_HZ * 2UL;
     record_max = &record[MAX_RECORD];
@@ -443,11 +461,11 @@ void sb16_sc_play_test(void) {
             _sti();
 
             tlen = expect; // 1 sec
-            if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+            if (tlen > (sb_card->buffer_size / (unsigned long)bytespersample)) tlen = sb_card->buffer_size / (unsigned long)bytespersample;
 
             printf("Starting test... tlen=%lu dmalen=%lu fifo=%u\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size,fifo);
 
-            sb_card->buffer_dma_started_length = tlen;
+            sb_card->buffer_dma_started_length = tlen * (unsigned long)bytespersample;
             sb_card->buffer_dma_started = 0;
 
             sndsb_reset_dsp(sb_card);
@@ -463,10 +481,24 @@ void sb16_sc_play_test(void) {
 
             lv = (unsigned int)(tlen - 1UL);
 
-            if (sb_card->is_gallant_sc6600)
-                sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT); /* 0xC6 */
-            else
-                sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT + (fifo ? 2 : 0)); /* 0xC0/0xC2 */
+            /* NTS: Reveal SC-4000 (Gallant 6600) cards DO support SB16 but only specific commands.
+             *      Command 0xC0 is not recognized, but command 0xC6 works. */
+            if (wav_16bit) {
+                if (sb_card->is_gallant_sc6600)
+                    sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_16BIT); /* 0xB6 */
+                else
+                    sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_DMA_DAC_OUT_16BIT + (fifo ? 2 : 0)); /* 0xB0 */
+
+                sndsb_write_dsp(sb_card,0x10); /* mode (16-bit signed PCM) */
+            }
+            else {
+                if (sb_card->is_gallant_sc6600)
+                    sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_AUTOINIT_DMA_DAC_OUT_8BIT); /* 0xC6 */
+                else
+                    sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT + (fifo ? 2 : 0)); /* 0xC0 */
+
+                sndsb_write_dsp(sb_card,0x00); /* mode (8-bit unsigned PCM) */
+            }
 
             sndsb_write_dsp(sb_card,0x00); /* mode (8-bit unsigned PCM) */
             sndsb_write_dsp(sb_card,lv);
@@ -482,8 +514,9 @@ void sb16_sc_play_test(void) {
                 iter = 16;
                 do {
                     pd = d;
-                    d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+                    d = d8237_read_count(dma); /* counts DOWNWARD */
                 } while (--iter != 0U && pd == d);
+                d /= (unsigned long)bytespersample;
 
                 if (d > tlen) bytes = tlen; /* terminal count */
                 else bytes = tlen - d;
@@ -942,12 +975,6 @@ int main(int argc,char **argv) {
 	}
 
 	printf("Allocating sound buffer..."); fflush(stdout);
-    realloc_dma_buffer();
-
-	if (!sndsb_assign_dma_buffer(sb_card,sb_dma)) {
-		printf("Cannot assign DMA buffer\n");
-		return 1;
-	}
 
     write_8254_system_timer(0);
 
@@ -966,11 +993,23 @@ int main(int argc,char **argv) {
         p8259_unmask(sb_card->irq);
     }
 
+    wav_16bit = 0;
+    sb_card->buffer_16bit = wav_16bit;
+    realloc_dma_buffer();
+	sndsb_assign_dma_buffer(sb_card,sb_dma);
     generate_1khz_sine();
 
     sb1_sc_play_test();
     sb2_sc_play_test();
     ess_sc_play_test();
+    sb16_sc_play_test();
+
+    wav_16bit = 1;
+    sb_card->buffer_16bit = wav_16bit;
+    realloc_dma_buffer();
+	sndsb_assign_dma_buffer(sb_card,sb_dma);
+    generate_1khz_sine16();
+
     sb16_sc_play_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
