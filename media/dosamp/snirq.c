@@ -70,7 +70,7 @@ int init_prepare_irq(void) {
 int hook_irq(uint8_t irq,void (interrupt *irq_handler)()) {
     /* assume irq >= 0 */
     if (!soundcard_irq.hooked) {
-        /* take notw whether the IRQ was masked at the time we hooked.
+        /* take note whether the IRQ was masked at the time we hooked.
          * on older DOS systems a masked IRQ can be a sign the handler
          * doesn't exist and/or that we don't need to chain interrupt handlers.
          *
