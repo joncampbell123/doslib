@@ -362,6 +362,7 @@ x_timeout:
 }
 
 void ess_sc_play_test(void) {
+    unsigned char bytespersample = wav_16bit ? 2 : 1;
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned long count;
     unsigned int pc,c;
@@ -371,7 +372,7 @@ void ess_sc_play_test(void) {
     if (!sb_card->ess_extensions || sb_card->ess_chipset == 0)
         return;
 
-    doubleprintf("ESS688 single cycle DSP playback test (8 bit).\n");
+    doubleprintf("ESS688 single cycle DSP playback test (%u bit).\n",wav_16bit?16:8);
 
     timeout = T8254_REF_CLOCK_HZ * 2UL;
 
@@ -392,7 +393,7 @@ void ess_sc_play_test(void) {
         _sti();
 
         tlen = expect; // 1 sec
-        if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+        if (tlen > (sb_card->buffer_size / (unsigned long)bytespersample)) tlen = sb_card->buffer_size / (unsigned long)bytespersample;
 
         /* NTS: We ask the card to use demand ISA, 4 bytes at a time.
          *      Behavior observed on real hardware, is that if you set up
@@ -403,7 +404,7 @@ void ess_sc_play_test(void) {
         tlen -= tlen & 3;
         if (tlen == 0) tlen = 4;
 
-        sb_card->buffer_dma_started_length = tlen;
+        sb_card->buffer_dma_started_length = tlen * (unsigned long)bytespersample;
         sb_card->buffer_dma_started = 0;
 
         sndsb_reset_dsp(sb_card);
@@ -462,7 +463,7 @@ void ess_sc_play_test(void) {
             /* effectively disable the lowpass filter (NTS: 0xFF mutes the audio, apparently) */
             sndsb_ess_write_controller(sb_card,0xA2,0xFE);
 
-            t16 = -tlen; /* DMA transfer count reload register value is 2's complement of length */
+            t16 = -(tlen * (uint16_t)bytespersample); /* DMA transfer count reload register value is 2's complement of length */
             sndsb_ess_write_controller(sb_card,0xA4,t16); /* DMA transfer count low */
             sndsb_ess_write_controller(sb_card,0xA5,t16>>8); /* DMA transfer count high */
 
@@ -477,13 +478,13 @@ void ess_sc_play_test(void) {
             sndsb_ess_write_controller(sb_card,0xB2,b);
 
             b = 0x51; /* enable FIFO+DMA, reserved, load signal */
-            b |= 0x00; /* signed complement mode off */
+	        b |= wav_16bit ? 0x20 : 0x00; /* signed complement mode or not */
             sndsb_ess_write_controller(sb_card,0xB7,b);
 
             b = 0x90; /* enable FIFO+DMA, reserved, load signal */
-            b |= 0x00; /* signed complement mode off */
+	        b |= wav_16bit ? 0x20 : 0x00; /* signed complement mode or not */
             b |= 0x40; /* [3]=stereo [6]=!stereo */
-            b |= 0x00; /* [2]=16bit */
+            b |= wav_16bit ? 0x04 : 0x00; /* [2]=16bit */
             sndsb_ess_write_controller(sb_card,0xB7,b);
 
             b = sndsb_ess_read_controller(sb_card,0xB8);
@@ -536,7 +537,7 @@ x_complete:
 
         continue;
 x_timeout:
-        d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+        d = d8237_read_count(sb_card->dma8) / (unsigned long)bytespersample; /* counts DOWNWARD */
         if (d > tlen) d = 0; /* terminal count */
         d = tlen - d;
 
@@ -976,6 +977,7 @@ int main(int argc,char **argv) {
     generate_1khz_sine16();
 
     sb16_sc_play_test();
+    ess_sc_play_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
