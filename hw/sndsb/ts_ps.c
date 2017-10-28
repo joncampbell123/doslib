@@ -773,7 +773,7 @@ void direct_dac_test(void) {
     }
 }
 
-void sb1_sc_play_adpcm_test(void) {
+void sb1_sc_play_adpcm4_test(void) {
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned int count;
     unsigned int pc,c;
@@ -1114,7 +1114,7 @@ int main(int argc,char **argv) {
 	sndsb_assign_dma_buffer(sb_card,sb_dma);
 
     generate_1khz_sine_adpcm4();
-    sb1_sc_play_adpcm_test();
+    sb1_sc_play_adpcm4_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
