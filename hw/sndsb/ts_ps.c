@@ -527,7 +527,7 @@ x_complete:
             double t = (double)time / T8254_REF_CLOCK_HZ;
             double rate = (double)bytes / t;
 
-            doubleprintf(" - TC 0x%02lX: expecting %luHz, %lub/%.3fs @ %.3fHz\n",count,expect,(unsigned long)bytes,t,rate);
+            doubleprintf(" - TC 0x%02lX: expecting %luHz, %lu%c/%.3fs @ %.3fHz\n",count,expect,(unsigned long)bytes,wav_16bit?'w':'b',t,rate);
         }
 
         if (kbhit()) {

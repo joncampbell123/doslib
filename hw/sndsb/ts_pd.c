@@ -417,6 +417,7 @@ static unsigned short sb16_rates[] = {
 };
 
 void sb16_sc_play_test(void) {
+    unsigned char bytespersample_shift = wav_16bit ? 1 : 0;
     unsigned char bytespersample = wav_16bit ? 2 : 1;
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned int pc,c,iter;
@@ -516,7 +517,7 @@ void sb16_sc_play_test(void) {
                     pd = d;
                     d = d8237_read_count(dma); /* counts DOWNWARD */
                 } while (--iter != 0U && pd == d);
-                d /= (unsigned long)bytespersample;
+                d >>= (uint32_t)bytespersample_shift;
 
                 if (d > tlen) bytes = tlen; /* terminal count */
                 else bytes = tlen - d;
