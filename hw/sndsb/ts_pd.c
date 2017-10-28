@@ -464,7 +464,7 @@ void sb16_sc_play_test(void) {
             tlen = expect; // 1 sec
             if (tlen > (sb_card->buffer_size / (unsigned long)bytespersample)) tlen = sb_card->buffer_size / (unsigned long)bytespersample;
 
-            printf("Starting test... tlen=%lu dmalen=%lu fifo=%u\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size,fifo);
+            printf("Starting test... tlen=%lu dmalen=%lu fifo=%u\n",(unsigned long)tlen * (unsigned long)bytespersample,(unsigned long)sb_card->buffer_size,fifo);
 
             sb_card->buffer_dma_started_length = tlen * (unsigned long)bytespersample;
             sb_card->buffer_dma_started = 0;
@@ -538,7 +538,7 @@ void sb16_sc_play_test(void) {
 
             sndsb_reset_dsp(sb_card);
 
-            doubleprintf(" - Test at %luHz, %lu bytes, FIFO %s\n",expect,bytes,fifo ? "on" : "off");
+            doubleprintf(" - Test at %luHz, %lu bytes, FIFO %s\n",expect,bytes * (unsigned long)bytespersample,fifo ? "on" : "off");
             printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
 
             for (record_read=record;record_read!=record_pos;record_read++)
