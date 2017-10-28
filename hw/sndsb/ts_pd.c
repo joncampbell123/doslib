@@ -587,6 +587,7 @@ static const char *dma_xfer_str[] = {
 };
 
 void ess_sc_play_test(void) {
+    unsigned char bytespersample_shift = wav_16bit ? 1 : 0;
     unsigned char bytespersample = wav_16bit ? 2 : 1;
     unsigned long time,bytes,expect,tlen,timeout;
     unsigned char dma_xfer;
@@ -732,6 +733,7 @@ void ess_sc_play_test(void) {
                     pd = d;
                     d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
                 } while (--iter != 0U && pd == d);
+                d >>= (uint32_t)bytespersample_shift;
 
                 if (d > tlen) bytes = tlen; /* terminal count */
                 else bytes = tlen - d;
