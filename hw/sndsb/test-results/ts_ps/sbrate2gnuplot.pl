@@ -12,6 +12,7 @@ open(I,"<",$file) || die;
 my @sb1x;
 my @sb2x;
 my @ess;
+my @ess16;
 
 my $line;
 my $ref = undef;
@@ -24,8 +25,11 @@ while ($line = <I>) {
     elsif ($line =~ m/^SB 2\.x single cycle/i) {
         $ref = "sb2";
     }
-    elsif ($line =~ m/^ESS688 single cycle/i) {
+    elsif ($line =~ m/^ESS688 single cycle.*8 bit/i) {
         $ref = "ess";
+    }
+    elsif ($line =~ m/^ESS688 single cycle.*16 bit/i) {
+        $ref = "ess16";
     }
     #  - TC 0x06: expecting 4000Hz, 4000b/0.985s @ 4060.103Hz
     elsif ($line =~ s/^ *- TC *//) {
@@ -61,6 +65,9 @@ while ($line = <I>) {
         }
         elsif ($ref eq "ess") {
             $ess[$idx] = $rate;
+        }
+        elsif ($ref eq "ess16") {
+            $ess16[$idx] = $rate;
         }
     }
     else {
@@ -174,7 +181,51 @@ if (@ess > 0) {
     print O "set grid\n";
     print O "set autoscale\n";
     print O "set xrange [0:255]\n";
-    print O "set title 'ESS688 sample rate divider and Playback rate ($filenn)'\n";
+    print O "set title 'ESS688 sample rate divider and Playback rate 8-bit ($filenn)'\n";
+    print O "set xlabel 'Sample rate divider byte'\n";
+    print O "set ylabel 'Sample rate (Hz)'\n";
+
+    print O "plot '$csv' using 1:2 with lines title 'Sample rate divider byte'\n";
+
+    close(O);
+
+    system("gnuplot '$ofile'");
+}
+
+if (@ess16 > 0) {
+    $png1 = "gnuplot/$file.ess16.png";
+    $csv = $ofile = "gnuplot/$file.ess16.csv";
+    open(O,">",$ofile) || die;
+
+    print O "# tc, ess16";
+    print O "\n";
+
+    for ($i=0;$i < 256;$i++) {
+        next unless defined($ess16[$i]);
+
+        # tc
+        print O "$i";
+
+        # ess
+        print O ", ".$ess16[$i];
+
+        print O "\n";
+    }
+
+    close(O);
+
+    $ofile = "gnuplot/$file.ess16.gnuplot";
+    open(O,">",$ofile) || die;
+
+    print O "reset\n";
+
+    print O "set term png size 1920,1080\n";
+    print O "set output '$png1'\n";
+
+    print O "set grid\n";
+    print O "set autoscale\n";
+    print O "set xrange [0:255]\n";
+    print O "set title 'ESS688 sample rate divider and Playback rate 16-bit ($filenn)'\n";
     print O "set xlabel 'Sample rate divider byte'\n";
     print O "set ylabel 'Sample rate (Hz)'\n";
 
