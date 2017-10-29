@@ -31,6 +31,7 @@ void generate_1khz_sine_adpcm26(void);
 void generate_1khz_sine_adpcm4(void);
 void generate_1khz_sine(void);
 void generate_1khz_sine16(void);
+void generate_1khz_sine16s(void);
 void doubleprintf(const char *fmt,...);
 int common_sb_init(void);
 

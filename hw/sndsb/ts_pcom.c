@@ -202,6 +202,20 @@ void generate_1khz_sine16(void) {
             (uint16_t)((int16_t)(sin(((double)i * 3.14159 * 2) / 100) * 16384));
 }
 
+void generate_1khz_sine16s(void) {
+    unsigned int i,l;
+
+    printf("Generating tone 16-bit stereo...\n");
+
+    l = (unsigned int)sb_dma->length / 2U;
+    for (i=0;i < l;i += 2) { // left channel only
+        ((uint16_t FAR*)sb_dma->lin)[i+0] =
+            (uint16_t)((int16_t)(sin(((double)i * 3.14159 * 2) / 100) * 16384));
+        ((uint16_t FAR*)sb_dma->lin)[i+1] =
+            0;
+    }
+}
+
 void doubleprintf(const char *fmt,...) {
     va_list va;
 

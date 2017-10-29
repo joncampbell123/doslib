@@ -319,7 +319,7 @@ void sb16_sc_play_test(void) {
     else 
         return;
 
-    doubleprintf("SB 16 DMA single cycle DSP test %u-bit.\n",wav_16bit?16:8);
+    doubleprintf("SB 16 DMA single cycle DSP test %u-bit %s.\n",wav_16bit?16:8,wav_stereo?"stereo":"mono");
 
     timeout = T8254_REF_CLOCK_HZ * 2UL;
     record_max = &record[MAX_RECORD];
@@ -342,7 +342,7 @@ void sb16_sc_play_test(void) {
             }
             _sti();
 
-            tlen = expect; // 1 sec
+            tlen = expect * (wav_stereo ? 2U : 1UL); // 1 sec
             if (tlen > (sb_card->buffer_size / (unsigned long)bytespersample)) tlen = sb_card->buffer_size / (unsigned long)bytespersample;
 
             printf("Starting test... tlen=%lu dmalen=%lu fifo=%u\n",(unsigned long)tlen * (unsigned long)bytespersample,(unsigned long)sb_card->buffer_size,fifo);
@@ -371,7 +371,7 @@ void sb16_sc_play_test(void) {
                 else
                     sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_DMA_DAC_OUT_16BIT + (fifo ? 2 : 0)); /* 0xB0 */
 
-                sndsb_write_dsp(sb_card,0x10); /* mode (16-bit signed PCM) */
+                sndsb_write_dsp(sb_card,0x10 + (wav_stereo ? 0x20 : 0x00)); /* mode (16-bit signed PCM) */
             }
             else {
                 if (sb_card->is_gallant_sc6600)
@@ -379,7 +379,7 @@ void sb16_sc_play_test(void) {
                 else
                     sndsb_write_dsp(sb_card,SNDSB_DSPCMD_SB16_DMA_DAC_OUT_8BIT + (fifo ? 2 : 0)); /* 0xC0 */
 
-                sndsb_write_dsp(sb_card,0x00); /* mode (8-bit unsigned PCM) */
+                sndsb_write_dsp(sb_card,0x00 + (wav_stereo ? 0x20 : 0x00)); /* mode (8-bit unsigned PCM) */
             }
 
             sndsb_write_dsp(sb_card,lv);
@@ -1024,7 +1024,9 @@ int main(int argc,char **argv) {
     }
 
     wav_16bit = 0;
+    wav_stereo = 0;
     sb_card->buffer_16bit = wav_16bit;
+    sb_card->buffer_stereo = wav_stereo;
     realloc_dma_buffer();
 	sndsb_assign_dma_buffer(sb_card,sb_dma);
     generate_1khz_sine();
@@ -1035,7 +1037,9 @@ int main(int argc,char **argv) {
     sb16_sc_play_test();
 
     wav_16bit = 1;
+    wav_stereo = 0;
     sb_card->buffer_16bit = wav_16bit;
+    sb_card->buffer_stereo = wav_stereo;
     realloc_dma_buffer();
 	sndsb_assign_dma_buffer(sb_card,sb_dma);
     generate_1khz_sine16();
@@ -1043,8 +1047,20 @@ int main(int argc,char **argv) {
     ess_sc_play_test();
     sb16_sc_play_test();
 
-    wav_16bit = 0;
+    wav_16bit = 1;
+    wav_stereo = 1;
     sb_card->buffer_16bit = wav_16bit;
+    sb_card->buffer_stereo = wav_stereo;
+    realloc_dma_buffer();
+	sndsb_assign_dma_buffer(sb_card,sb_dma);
+    generate_1khz_sine16s();
+
+    sb16_sc_play_test();
+
+    wav_16bit = 0;
+    wav_stereo = 0;
+    sb_card->buffer_16bit = wav_16bit;
+    sb_card->buffer_stereo = wav_stereo;
     realloc_dma_buffer();
 	sndsb_assign_dma_buffer(sb_card,sb_dma);
 
