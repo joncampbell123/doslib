@@ -65,6 +65,8 @@ int main(int argc,char **argv) {
             doubleprintf("- AWE I/O:                      0x%04X\n",sb_card->aweio);
         if (sb_card->wssio != 0U)
             doubleprintf("- WSS I/O:                      0x%04X\n",sb_card->wssio);
+        if (sb_card->opl3sax_controlio != 0U)
+            doubleprintf("- OPL3SAx Control I/O:          0x%04X\n",sb_card->opl3sax_controlio);
         if (sb_card->dma8 >= 0)
             doubleprintf("- 8-bit DMA channel:            %u\n",sb_card->dma8);
         if (sb_card->dma16 >= 0)
