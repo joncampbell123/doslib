@@ -25,6 +25,8 @@
 
 #include "ts_pcom.h"
 
+static char tmp[256];
+
 int main(int argc,char **argv) {
     if (common_sb_init() != 0)
         return 1;
@@ -40,42 +42,45 @@ int main(int argc,char **argv) {
         const char *ess_str;
         const char *mixer_str;
 
+        sndsb_probe_mixer(sb_card);
+
         mixer_str = sndsb_mixer_chip_str(sb_card->mixer_chip);
         ess_str = sndsb_ess_chipset_str(sb_card->ess_chipset);
 
         if (sb_card->baseio != 0U)
-            printf("- Base I/O base:                0x%04X\n",sb_card->baseio);
+            doubleprintf("- Base I/O base:                0x%04X\n",sb_card->baseio);
         if (sb_card->mpuio != 0U)
-            printf("- MPU I/O base:                 0x%04X\n",sb_card->mpuio);
+            doubleprintf("- MPU I/O base:                 0x%04X\n",sb_card->mpuio);
         if (sb_card->oplio != 0U)
-            printf("- OPL I/O:                      0x%04X\n",sb_card->oplio);
+            doubleprintf("- OPL I/O:                      0x%04X\n",sb_card->oplio);
         if (sb_card->gameio != 0U)
-            printf("- Game I/O:                     0x%04X\n",sb_card->gameio);
+            doubleprintf("- Game I/O:                     0x%04X\n",sb_card->gameio);
         if (sb_card->aweio != 0U)
-            printf("- AWE I/O:                      0x%04X\n",sb_card->aweio);
+            doubleprintf("- AWE I/O:                      0x%04X\n",sb_card->aweio);
         if (sb_card->wssio != 0U)
-            printf("- WSS I/O:                      0x%04X\n",sb_card->wssio);
+            doubleprintf("- WSS I/O:                      0x%04X\n",sb_card->wssio);
         if (sb_card->dma8 >= 0)
-            printf("- 8-bit DMA channel:            %u\n",sb_card->dma8);
+            doubleprintf("- 8-bit DMA channel:            %u\n",sb_card->dma8);
         if (sb_card->dma16 >= 0)
-            printf("- 16-bit DMA channel:           %u\n",sb_card->dma16);
+            doubleprintf("- 16-bit DMA channel:           %u\n",sb_card->dma16);
         if (sb_card->irq >= 0)
-            printf("- IRQ:                          %u\n",sb_card->irq);
+            doubleprintf("- IRQ:                          %u\n",sb_card->irq);
 
-        printf("- DSP detected:                 %u\n",sb_card->dsp_ok);
-        printf("- DSP version:                  %u.%u (0x%02X 0x%02X)\n",sb_card->dsp_vmaj,sb_card->dsp_vmin,sb_card->dsp_vmaj,sb_card->dsp_vmin);
-        printf("- DSP copyright string:         %s\n",sb_card->dsp_copyright);
-        printf("- Mixer:                        %s\n",(sb_card->mixer_ok && mixer_str != NULL) ? mixer_str : "(none)");
-        printf("- Is Gallant SC-6600:           %u\n",sb_card->is_gallant_sc6600);
-        printf("- ESS chipset:                  %s\n",(sb_card->ess_extensions && ess_str != NULL) ? ess_str : "(none");
+        doubleprintf("- DSP detected:                 %u\n",sb_card->dsp_ok);
+        doubleprintf("- DSP version:                  %u.%u (0x%02X 0x%02X)\n",sb_card->dsp_vmaj,sb_card->dsp_vmin,sb_card->dsp_vmaj,sb_card->dsp_vmin);
+        doubleprintf("- DSP copyright string:         %s\n",sb_card->dsp_copyright);
+        doubleprintf("- Mixer:                        %s\n",(sb_card->mixer_ok && mixer_str != NULL) ? mixer_str : "(none)");
+        doubleprintf("- Is Gallant SC-6600:           %s\n",sb_card->is_gallant_sc6600 ? "Yes" : "No");
+        doubleprintf("- ESS chipset:                  %s\n",(sb_card->ess_extensions && ess_str != NULL) ? ess_str : "(none)");
 
-        printf("- ISA Plug & Play:              %s\n",sb_card->pnp_id != 0UL ? "Yes" : "No");
+        doubleprintf("- ISA Plug & Play:              %s\n",sb_card->pnp_id != 0UL ? "Yes" : "No");
         if (sb_card->pnp_id != 0UL) {
-            isa_pnp_product_id_to_str(ptmp,sb_card->pnp_id);
-            printf("- ISA PnP ID:                   %s\n",ptmp);
+            tmp[0] = 0;
+            isa_pnp_product_id_to_str(tmp,sb_card->pnp_id);
+            doubleprintf("- ISA PnP ID:                   %s\n",tmp);
         }
         if (sb_card->pnp_name != NULL)
-            printf("- ISA PnP string:               %s\n",sb_card->pnp_name);
+            doubleprintf("- ISA PnP string:               %s\n",sb_card->pnp_name);
     }
 
 	sndsb_free_card(sb_card);
