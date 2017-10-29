@@ -382,7 +382,6 @@ void sb16_sc_play_test(void) {
                 sndsb_write_dsp(sb_card,0x00); /* mode (8-bit unsigned PCM) */
             }
 
-            sndsb_write_dsp(sb_card,0x00); /* mode (8-bit unsigned PCM) */
             sndsb_write_dsp(sb_card,lv);
 
             _cli();
