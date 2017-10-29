@@ -479,7 +479,7 @@ void ess_sc_play_test(void) {
     if (!sb_card->ess_extensions || sb_card->ess_chipset == 0)
         return;
 
-    doubleprintf("ESS688 DMA single cycle DSP test %u-bit.\n",wav_16bit?16:8);
+    doubleprintf("ESS688 DMA single cycle DSP test %u-bit %s.\n",wav_16bit?16:8,wav_stereo?"stereo":"mono");
 
     timeout = T8254_REF_CLOCK_HZ * 2UL;
     record_max = &record[MAX_RECORD];
@@ -507,7 +507,7 @@ void ess_sc_play_test(void) {
             }
             _sti();
 
-            tlen = expect; // 1 sec
+            tlen = expect * (wav_stereo ? 2U : 1UL); // 1 sec
             if (tlen > (sb_card->buffer_size / (unsigned long)bytespersample)) tlen = sb_card->buffer_size / (unsigned long)bytespersample;
 
             printf("Starting test... tlen=%lu dmalen=%lu dma_xfer=%u\n",(unsigned long)tlen * (unsigned long)bytespersample,(unsigned long)sb_card->buffer_size,dma_xfer);
@@ -542,7 +542,7 @@ void ess_sc_play_test(void) {
 
                 b = sndsb_ess_read_controller(sb_card,0xA8);
                 b &= ~0xB; /* clear mono/stereo and record monitor (bits 3, 1, and 0) */
-                b |= 2;     /* mono 10=mono 01=stereo */
+                b |= (wav_stereo ? 1 : 2);     /* mono 10=mono 01=stereo */
                 sndsb_ess_write_controller(sb_card,0xA8,b);
 
                 /* NTS: The meaning of bits 1:0 in register 0xB9
@@ -592,7 +592,7 @@ void ess_sc_play_test(void) {
 
                 b = 0x90; /* enable FIFO+DMA, reserved, load signal */
                 b |= wav_16bit ? 0x20 : 0x00; /* signed complement mode or not */
-                b |= 0x40; /* [3]=stereo [6]=!stereo */
+                b |= (wav_stereo ? 0x08 : 0x40); /* [3]=stereo [6]=!stereo */
                 b |= wav_16bit ? 0x04 : 0x00; /* [2]=16bit */
                 sndsb_ess_write_controller(sb_card,0xB7,b);
 
@@ -1055,6 +1055,7 @@ int main(int argc,char **argv) {
 	sndsb_assign_dma_buffer(sb_card,sb_dma);
     generate_1khz_sine16s();
 
+    ess_sc_play_test();
     sb16_sc_play_test();
 
     wav_16bit = 0;
