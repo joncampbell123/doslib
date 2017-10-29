@@ -84,6 +84,7 @@ int main(int argc,char **argv) {
             tmp[0] = 0;
             isa_pnp_product_id_to_str(tmp,sb_card->pnp_id);
             doubleprintf("- ISA PnP ID:                   %s\n",tmp);
+            doubleprintf("- ISA PnP CSN:                  %u\n",sb_card->pnp_csn);
         }
         if (sb_card->pnp_name != NULL)
             doubleprintf("- ISA PnP string:               %s\n",sb_card->pnp_name);
