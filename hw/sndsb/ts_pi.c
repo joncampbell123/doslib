@@ -21,6 +21,7 @@
 #include <hw/dos/doswin.h>
 
 #include <hw/isapnp/isapnp.h>
+#include <hw/sndsb/sb16asp.h>
 #include <hw/sndsb/sndsbpnp.h>
 
 #include "ts_pcom.h"
@@ -43,6 +44,11 @@ int main(int argc,char **argv) {
         const char *mixer_str;
 
         sndsb_probe_mixer(sb_card);
+        sndsb_check_for_sb16_asp(sb_card);
+        sndsb_sb16_asp_ram_test(sb_card);
+
+        if (sb_card->asp_chip_ram_ok)
+            sndsb_sb16_asp_probe_chip_ram_size(sb_card);
 
         mixer_str = sndsb_mixer_chip_str(sb_card->mixer_chip);
         ess_str = sndsb_ess_chipset_str(sb_card->ess_chipset);
@@ -81,6 +87,17 @@ int main(int argc,char **argv) {
         }
         if (sb_card->pnp_name != NULL)
             doubleprintf("- ISA PnP string:               %s\n",sb_card->pnp_name);
+
+        doubleprintf("- Has CSP/ASP chip:             %s\n",sb_card->has_asp_chip ? "Yes" : "No");
+
+        if (sb_card->has_asp_chip) {
+            doubleprintf("- CSP/ASP chip version ID:      0x%04X\n",sb_card->asp_chip_version_id);
+
+            if (sb_card->asp_chip_ram_ok && sb_card->asp_chip_ram_size_probed)
+                doubleprintf("- CSP/ASP RAM size:             %lu bytes\n",sb_card->asp_chip_ram_size);
+            else
+                doubleprintf("- CSP/ASP RAM size:             N/A (test failed)\n");
+        }
     }
 
 	sndsb_free_card(sb_card);
