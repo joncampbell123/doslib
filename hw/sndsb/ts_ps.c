@@ -553,10 +553,8 @@ x_complete:
                 break;
         }
 
-        if (count < 0x10000UL)
-            count += 0x80; /* count by 128 because enumerating all would take too long */
-        else
-            break;
+        count += 0x80; /* count by 128 because enumerating all would take too long */
+        if (count > 0xFFFFUL) break;
 
         continue;
 x_timeout:
