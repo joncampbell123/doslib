@@ -401,7 +401,7 @@ int common_sb_init(void) {
         printf("Select the card you wish to test: "); fflush(stdout);
         i = getch();
         printf("\n");
-        if (i == 27) return 0;
+        if (i == 27) return 1;
         if (i == 13 || i == 10) i = '1';
         sc_idx = i - '0';
     }
