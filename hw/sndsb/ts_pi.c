@@ -85,6 +85,9 @@ int main(int argc,char **argv) {
             isa_pnp_product_id_to_str(tmp,sb_card->pnp_id);
             doubleprintf("- ISA PnP ID:                   %s\n",tmp);
             doubleprintf("- ISA PnP CSN:                  %u\n",sb_card->pnp_csn);
+
+            if (sb_card->pnp_bios_node != 0xFFU)
+                doubleprintf("- ISA PnP BIOS node:            0x%02X\n",sb_card->pnp_bios_node);
         }
         if (sb_card->pnp_name != NULL)
             doubleprintf("- ISA PnP string:               %s\n",sb_card->pnp_name);
