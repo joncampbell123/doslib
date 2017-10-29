@@ -669,6 +669,342 @@ void ess_sc_play_test(void) {
     sndsb_reset_dsp(sb_card);
 }
 
+void sb1_sc_play_adpcm4_test(void) {
+    unsigned long time,bytes,expect,tlen,timeout;
+    unsigned int pc,c,iter;
+    unsigned int count,lv;
+    unsigned long pd,d;
+
+    doubleprintf("SB 1.x DMA ADPCM 4-bit single cycle DSP test.\n");
+
+    timeout = T8254_REF_CLOCK_HZ * 2UL;
+    record_max = &record[MAX_RECORD];
+
+    for (count=0;count < (sizeof(sb1_tc_rates)/sizeof(sb1_tc_rates[0]));count++) {
+        expect = 1000000UL / (unsigned long)(256 - sb1_tc_rates[count]);
+        record_pos = record;
+
+        _cli();
+        if (sb_card->irq >= 8) {
+            p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+        }
+        else if (sb_card->irq >= 0) {
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+        }
+        _sti();
+
+        tlen = ((expect - 1) / 2) + 1; // 1 sec
+        if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+        printf("Starting test... tlen=%lu dmalen=%lu\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size);
+
+        sb_card->buffer_dma_started_length = tlen;
+        sb_card->buffer_dma_started = 0;
+
+        sndsb_reset_dsp(sb_card);
+        sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+        sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
+        sndsb_write_dsp(sb_card,0x80);
+        sndsb_setup_dma(sb_card);
+
+        sndsb_write_dsp_timeconst(sb_card,sb1_tc_rates[count]);
+
+        time = 0;
+        pd = d = (~0UL);
+
+        lv = (unsigned int)(tlen - 1UL);
+
+        sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_4BIT_REF); /* 0x75 */
+        sndsb_write_dsp(sb_card,lv);
+
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+
+        sndsb_write_dsp(sb_card,lv >> 8); /* playback begins at this write */
+
+        while (1) {
+            /* up to 16 iterations.
+             * do not poll for IRQ changes, we have interrupts disabled here */
+            iter = 16;
+            do {
+                pd = d;
+                d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+            } while (--iter != 0U && pd == d);
+
+            if (d > tlen) bytes = tlen; /* terminal count */
+            else bytes = tlen - d;
+
+            pc = c;
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+
+            if (pd != d) {
+                if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
+            }
+            else if (time >= timeout) {
+                record_entry((uint16_t)bytes,time); /* may return 1 if this makes the log full. we break anyway */
+                break;
+            }
+        }
+        _sti();
+
+        sndsb_reset_dsp(sb_card);
+
+        doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
+        printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
+
+        for (record_read=record;record_read!=record_pos;record_read++)
+            fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+
+        fprintf(report_fp,"\n");
+        fflush(report_fp);
+
+        if (kbhit()) {
+            if (getch() == 27)
+                break;
+        }
+    }
+
+    _cli();
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+    }
+    _sti();
+
+    sndsb_write_dsp_timeconst(sb_card,0x83); /* 8000Hz */
+
+    sndsb_reset_dsp(sb_card);
+}
+
+void sb1_sc_play_adpcm26_test(void) {
+    unsigned long time,bytes,expect,tlen,timeout;
+    unsigned int pc,c,iter;
+    unsigned int count,lv;
+    unsigned long pd,d;
+
+    doubleprintf("SB 1.x DMA ADPCM 2.6-bit single cycle DSP test.\n");
+
+    timeout = T8254_REF_CLOCK_HZ * 2UL;
+    record_max = &record[MAX_RECORD];
+
+    for (count=0;count < (sizeof(sb1_tc_rates)/sizeof(sb1_tc_rates[0]));count++) {
+        expect = 1000000UL / (unsigned long)(256 - sb1_tc_rates[count]);
+        record_pos = record;
+
+        _cli();
+        if (sb_card->irq >= 8) {
+            p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+        }
+        else if (sb_card->irq >= 0) {
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+        }
+        _sti();
+
+        tlen = ((expect - 1) / 3) + 1; // 1 sec
+        if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+        printf("Starting test... tlen=%lu dmalen=%lu\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size);
+
+        sb_card->buffer_dma_started_length = tlen;
+        sb_card->buffer_dma_started = 0;
+
+        sndsb_reset_dsp(sb_card);
+        sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+        sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
+        sndsb_write_dsp(sb_card,0x80);
+        sndsb_setup_dma(sb_card);
+
+        sndsb_write_dsp_timeconst(sb_card,sb1_tc_rates[count]);
+
+        time = 0;
+        pd = d = (~0UL);
+
+        lv = (unsigned int)(tlen - 1UL);
+
+        sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_26BIT_REF); /* 0x77 */
+        sndsb_write_dsp(sb_card,lv);
+
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+
+        sndsb_write_dsp(sb_card,lv >> 8); /* playback begins at this write */
+
+        while (1) {
+            /* up to 16 iterations.
+             * do not poll for IRQ changes, we have interrupts disabled here */
+            iter = 16;
+            do {
+                pd = d;
+                d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+            } while (--iter != 0U && pd == d);
+
+            if (d > tlen) bytes = tlen; /* terminal count */
+            else bytes = tlen - d;
+
+            pc = c;
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+
+            if (pd != d) {
+                if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
+            }
+            else if (time >= timeout) {
+                record_entry((uint16_t)bytes,time); /* may return 1 if this makes the log full. we break anyway */
+                break;
+            }
+        }
+        _sti();
+
+        sndsb_reset_dsp(sb_card);
+
+        doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
+        printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
+
+        for (record_read=record;record_read!=record_pos;record_read++)
+            fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+
+        fprintf(report_fp,"\n");
+        fflush(report_fp);
+
+        if (kbhit()) {
+            if (getch() == 27)
+                break;
+        }
+    }
+
+    _cli();
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+    }
+    _sti();
+
+    sndsb_write_dsp_timeconst(sb_card,0x83); /* 8000Hz */
+
+    sndsb_reset_dsp(sb_card);
+}
+
+void sb1_sc_play_adpcm2_test(void) {
+    unsigned long time,bytes,expect,tlen,timeout;
+    unsigned int pc,c,iter;
+    unsigned int count,lv;
+    unsigned long pd,d;
+
+    doubleprintf("SB 1.x DMA ADPCM 2-bit single cycle DSP test.\n");
+
+    timeout = T8254_REF_CLOCK_HZ * 2UL;
+    record_max = &record[MAX_RECORD];
+
+    for (count=0;count < (sizeof(sb1_tc_rates)/sizeof(sb1_tc_rates[0]));count++) {
+        expect = 1000000UL / (unsigned long)(256 - sb1_tc_rates[count]);
+        record_pos = record;
+
+        _cli();
+        if (sb_card->irq >= 8) {
+            p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+        }
+        else if (sb_card->irq >= 0) {
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+        }
+        _sti();
+
+        tlen = ((expect - 1) / 4) + 1; // 1 sec
+        if (tlen > sb_card->buffer_size) tlen = sb_card->buffer_size;
+
+        printf("Starting test... tlen=%lu dmalen=%lu\n",(unsigned long)tlen,(unsigned long)sb_card->buffer_size);
+
+        sb_card->buffer_dma_started_length = tlen;
+        sb_card->buffer_dma_started = 0;
+
+        sndsb_reset_dsp(sb_card);
+        sndsb_write_dsp(sb_card,0xD1); /* speaker on */
+        sndsb_write_dsp(sb_card,0x10); /* direct DAC reset to neutral output (0V) */
+        sndsb_write_dsp(sb_card,0x80);
+        sndsb_setup_dma(sb_card);
+
+        sndsb_write_dsp_timeconst(sb_card,sb1_tc_rates[count]);
+
+        time = 0;
+        pd = d = (~0UL);
+
+        lv = (unsigned int)(tlen - 1UL);
+
+        sndsb_write_dsp(sb_card,SNDSB_DSPCMD_DMA_DAC_OUT_ADPCM_2BIT_REF); /* 0x17 */
+        sndsb_write_dsp(sb_card,lv);
+
+        _cli();
+        c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+
+        sndsb_write_dsp(sb_card,lv >> 8); /* playback begins at this write */
+
+        while (1) {
+            /* up to 16 iterations.
+             * do not poll for IRQ changes, we have interrupts disabled here */
+            iter = 16;
+            do {
+                pd = d;
+                d = d8237_read_count(sb_card->dma8); /* counts DOWNWARD */
+            } while (--iter != 0U && pd == d);
+
+            if (d > tlen) bytes = tlen; /* terminal count */
+            else bytes = tlen - d;
+
+            pc = c;
+            c = read_8254(T8254_TIMER_INTERRUPT_TICK);
+            time += (unsigned long)((pc - c) & 0xFFFFU); /* remember: it counts DOWN. assumes full 16-bit count */
+
+            if (pd != d) {
+                if (record_entry((uint16_t)bytes,time)) break; /* break if log is full. it will warn only once */
+            }
+            else if (time >= timeout) {
+                record_entry((uint16_t)bytes,time); /* may return 1 if this makes the log full. we break anyway */
+                break;
+            }
+        }
+        _sti();
+
+        sndsb_reset_dsp(sb_card);
+
+        doubleprintf(" - Test at %luHz, %lu bytes\n",expect,bytes);
+        printf("Writing results... please wait\n"); /* The IDE-CF adapter setup in my old Pentium 133MHz is fairly slow at writing a 1MB text file */
+
+        for (record_read=record;record_read!=record_pos;record_read++)
+            fprintf(report_fp," >> POS %u, time %.6f\n",record_read->dma_pos,(double)record_read->timer_pos / T8254_REF_CLOCK_HZ);
+
+        fprintf(report_fp,"\n");
+        fflush(report_fp);
+
+        if (kbhit()) {
+            if (getch() == 27)
+                break;
+        }
+    }
+
+    _cli();
+    if (sb_card->irq >= 8) {
+        p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (sb_card->irq & 7));
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | 2);
+    }
+    else if (sb_card->irq >= 0) {
+        p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | sb_card->irq);
+    }
+    _sti();
+
+    sndsb_write_dsp_timeconst(sb_card,0x83); /* 8000Hz */
+
+    sndsb_reset_dsp(sb_card);
+}
+
 int main(int argc,char **argv) {
     if (common_sb_init() != 0)
         return 1;
@@ -707,6 +1043,20 @@ int main(int argc,char **argv) {
 
     ess_sc_play_test();
     sb16_sc_play_test();
+
+    wav_16bit = 0;
+    sb_card->buffer_16bit = wav_16bit;
+    realloc_dma_buffer();
+	sndsb_assign_dma_buffer(sb_card,sb_dma);
+
+    generate_1khz_sine_adpcm4();
+    sb1_sc_play_adpcm4_test();
+
+    generate_1khz_sine_adpcm26();
+    sb1_sc_play_adpcm26_test();
+
+    generate_1khz_sine_adpcm2();
+    sb1_sc_play_adpcm2_test();
 
 	if (sb_card->irq >= 0 && old_irq_masked)
 		p8259_mask(sb_card->irq);
