@@ -1,0 +1,176 @@
+Creative Sound Blaster 16 PnP:
+
+- The maximum sample rate is 45454Hz. This maximum is enforced whether you use DSP 1.x/2.x/3.x
+  or Sound Blaster 16 DSP playback commands.
+
+- The minimum sample rate seems to vary, depending on which command set you use to play audio.
+
+  Sound Blaster 1.x/2.x/3.x DSP playback:       3906Hz
+  Sound Blaster 16 DSP playback:                4800Hz
+
+- Sound Blaster 16 DSP playback appears to have a minor bug where you can use a sample rate
+  as low as 4800Hz, but if you specify a rate below 4800Hz it clamps the rate to 4982Hz.
+
+  unsigned int sb16dsp_play_rate(unsigned int desired) {
+    if (desired > 45454)
+      return 45454;
+    else if (desired >= 4800)
+      return desired;
+    else
+      return 4982;
+  }
+
+- The command set would have you think the card can support a wide range of sample rates
+  from minimum to maximum. Actual hardware appears to round the sample rate to the nearest
+  multiple of some unknown constant. This rounding affects both DSP 1.x/2.x/3.x and
+  Sound Blaster 16 DSP commands.
+
+  Quick analysis seems to suggest that the sample rate is subtracted by an unknown base
+  and rounded down to a multiple of 177. The change between each "step" is about 177.
+
+- Direct DAC maximum playback rate depends on the card:
+
+  Sound Blaster 16 AWE 64:                      34076Hz
+  Sound Blaster 16 ViBRA16C PnP:                22325Hz
+
+- Non-PnP versions of the SB16 appear to have bugs in the sample rate commands:
+
+  - Sound Blaster 1.x/2.x/3.x discontinuity at time constant 0xC8.
+    Sample rate should be 17857Hz but the DSP doubles the sample rate to 35561Hz for some reason.
+
+  - Sound Blaster 16 commands to set the sample rate appear to have odd discontinuities at some
+    points.
+
+  - An hour-long test of all 65536 sample rates is in 'Creative Sound Blaster 16 non-PnP SB16 sample rate test.txt'
+    which shows not only that sample rates are quantized but that there are periodic
+    ranges where the sample rate it chooses is wrong compared to input.
+
+Creative Sound Blaster Live! SB16 emulation:
+
+- Emulation is quite good.
+
+- The sample rate range is continuous, not rounded. See 'Creative Sound Blaster Live (EMU10K1) SB16 emulation.txt'.
+
+- Minimum sample rate:
+
+  - Sound Blaster 1.x/2.x/3.x time constant:    3906Hz
+  - Sound Blaster 16 sample rate:               2.5Hz
+
+- Maximum sample rate:
+
+  - Sound Blaster 1.x/2.x/3.x time constant:    166666Hz
+  - Sound Blaster 16 sample rate:               65535Hz
+
+- Sample rates that lay way outside the normal range of rates seem to produce
+  odd outliers or 0Hz, perhaps due to the emulation driver and division overflow.
+
+- Asking the emulated SB16 to play high-speed DMA beyond 166666Hz causes the
+  emulated DSP to stop responding. This is possibly a bug in the emulation driver.
+
+- Emulation driver accepts Direct DAC commands but silently discards them. It
+  does however emulate Direct DAC at the correct speed to emulate the maximum
+  23000Hz allowed by that method.
+
+- The emulation driver accepts all time constant values. It does not limit the
+  time constant by whether you use non-highspeed or highspeed DSP playback.
+
+Reveal SC-400:
+
+- The maximum sample rate depends on the command set used:
+
+  - Direct DAC:                                 23000Hz
+  - Sound Blaster 1.x/2.x non-highspeed:        23000Hz
+  - Sound Blaster 2.x/3.x highspeed:            44100Hz
+  - Sound Blaster 16:                           44000Hz
+
+- The minimum sample rate depends on the command set used:
+
+  - Sound Blaster 1.x/2.x/3.x:                  3800Hz
+  - Sound Blaster 16:                           5300Hz
+
+- The sample rate in Sound Blaster 1.x/2.x/3.x command set is rounded down a bit.
+  Some time constants are handled at the same rate as the next one, except every so often.
+
+- Sound Blaster 16 sample rate handling is EXTREMELY quanitized.
+  The rate you set is rounded to one of the following:
+
+    5300Hz
+    6400Hz
+    10800Hz
+    18700Hz
+    22000Hz
+    33000Hz
+    37600Hz
+    44000Hz
+
+- There are some odd discontinuities regarding SB 1.x/2.x/3.x commands.
+
+  - Non-highspeed commands map sample rates from 3800Hz to 23000Hz as expected,
+    but for some reason it then jumps to 25500Hz, then jumps to 23000Hz.
+
+  - Highspeed commands map sample rates from 3800Hz to 37000Hz, but then the
+    rate jumps to 44100Hz afterwards.
+
+- ESS688/ESS1868
+
+  - Direct DAC playback is limited to:
+    - Compaq ESS1887                            110349Hz
+
+  - Sample rates by Sound Blaster commands is continuous, no rounding.
+
+  - The chipset supports all Sound Blaster sample rates regardless of
+    normal or highspeed commands. It does not limit the time constant
+    if you do not use highspeed DSP commands.
+
+  - Minimum sample rates:
+
+    - Sound Blaster DSP:                        3906Hz
+    - ESS688 rate divider:                      3107Hz
+
+  - Maximum sample rates:
+
+    - Sound Blaster DSP:                        43478Hz
+    - ESS688 rate divider:                      397750Hz
+
+    However: Even though the ESS688 CAN be driven at high sample rates,
+             it is limited by the ISA bus. Testing shows that when
+             playback is combined with wait states on the ISA bus
+             (such as continuous IDE controller reads) a more realistic
+             maximum is 48KHz 16-bit stereo.
+
+  - The ESS688 rate divider causes an effective sample rate of zero Hz
+    if set to 0x7F or 0xFF, which isn't mentioned in the datasheet.
+    If you set the sample rate divider to either of those values, the
+    ESS688 will not cycle any samples and playback will be silent.
+
+    If you attempt DMA playback at rate 0x7F or 0xFF, the ESS688 appears to
+    fill it's FIFO (DMA 256 bytes) and then stop without playing any audio.
+
+    For sanity purposes, we'll list the sample rate of these special cases
+    as 0Hz.
+
+  - The ESS688 lowpass filter causes complete silence if set to 0x7F or 0xFF.
+
+  - Found while testing TS_PS.EXE on real hardware: If you set up the chipset
+    to use demand DMA fetching (2 or 4 bytes), and you use non-auto-init DMA,
+    the ESS chip will fetch only in those blocks of data you specified before
+    acting on DMA and IRQ functions. So if you specify demand DMA of 4 bytes,
+    and the DMA controller is set up for a transfer that is NOT a multiple of
+    4 bytes, the ESS688 will play the buffer but stop short up to 3 bytes
+    from the end because it will be waiting to fill 4 bytes when the DMA
+    controller cannot provide it. It will not fire the IRQ either.
+
+- Pro Audio Spectrum 16
+
+  - Sound Blaster emulation is quite good
+
+  - Reports DSP 2.0
+
+  - Minimum sample rate:                        3906Hz
+
+  - Maximum sample rate:                        22222Hz
+
+  - Beyond 22222Hz, sample rate behavior is quite odd. After 22222Hz the card
+    apparently muffles the audio and then the sample rate decreases back down
+    to zero, with some erratic rates at the very tail end.
+
