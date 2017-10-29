@@ -383,12 +383,12 @@ int common_sb_init(void) {
                     cx->is_gallant_sc6600,cx->oplio,cx->gameio,cx->aweio);
             printf("      ESS=%u[%s] use=%u wss=%X OPL3SAx=%X\n",
                     cx->ess_chipset,ess_str,cx->ess_extensions,cx->wssio,cx->opl3sax_controlio);
-#ifdef ISAPNP
+
             if (cx->pnp_name != NULL) {
-                isa_pnp_product_id_to_str(temp_str,cx->pnp_id);
-                printf("      ISA PnP[%u]: %s %s\n",cx->pnp_csn,temp_str,cx->pnp_name);
+                isa_pnp_product_id_to_str(ptmp,cx->pnp_id);
+                printf("      ISA PnP[%u]: %s %s\n",cx->pnp_csn,ptmp,cx->pnp_name);
             }
-#endif
+
             printf("      '%s'\n",cx->dsp_copyright);
 
             count++;
