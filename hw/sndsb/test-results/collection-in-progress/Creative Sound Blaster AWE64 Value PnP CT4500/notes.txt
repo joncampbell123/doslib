@@ -13,3 +13,13 @@
   2.6-bit ADPCM:                        Maximum just under 19KHz
   2-bit ADPCM:                          Maximum just under 24KHz
 
+- Testing notes:
+
+  The card was tested twice.
+
+  The first time, 8-bit PCM was played through an 8-bit DMA channel,
+  and 16-bit PCM was played through a 16-bit DMA channel.
+
+  The second time, the card was configured (ISA PnP) so that both
+  8 and 16 bit PCM were played over an 8-bit DMA channel.
+
