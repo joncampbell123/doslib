@@ -250,7 +250,7 @@ int wav_rewind(void) {
 }
 
 int wav_file_pointer_to_position(void) {
-    if (wav_source->file_pos >= wav_data_offset) {
+    if ((uint64_t)wav_source->file_pos >= (uint64_t)wav_data_offset) {
         wav_position  = wav_source->file_pos - wav_data_offset;
         wav_position += convert_rdbuf.pos - convert_rdbuf.len;
         wav_position /= file_codec.bytes_per_block;
@@ -319,7 +319,7 @@ int convert_rdbuf_fill(void) {
         /* read and fill */
         while (convert_rdbuf.len < bufsz) {
             rem = wav_data_length_bytes + wav_data_offset;
-            if (wav_source->file_pos <= rem)
+            if ((uint64_t)wav_source->file_pos <= (uint64_t)rem)
                 rem -= wav_source->file_pos;
             else
                 rem = 0;
@@ -492,7 +492,7 @@ static void load_audio_copy(uint32_t howmuch/*in bytes*/) { /* load audio up to 
 
     while (howmuch > 0) {
         rem = wav_data_length_bytes + wav_data_offset;
-        if (wav_source->file_pos <= rem)
+        if ((uint64_t)wav_source->file_pos <= (uint64_t)rem)
             rem -= wav_source->file_pos;
         else
             rem = 0;
@@ -1247,7 +1247,7 @@ int main(int argc,char **argv) {
         int sc_idx = -1;
         soundcard_t sc;
 
-        for (i=0;i < soundcardlist_count;i++) {
+        for (i=0;(unsigned int)i < soundcardlist_count;i++) {
             sc = &soundcardlist[i];
             if (sc->driver == soundcard_none) continue;
             count++;
@@ -1260,7 +1260,7 @@ int main(int argc,char **argv) {
         else if (count > 1) {
             printf("-----------\n");
 
-            for (i=0;i < soundcardlist_count;i++) {
+            for (i=0;(unsigned int)i < soundcardlist_count;i++) {
                 sc = &soundcardlist[i];
                 if (sc->driver == soundcard_none) continue;
 
@@ -1278,7 +1278,7 @@ int main(int argc,char **argv) {
             if (i == 13 || i == 10) i = '1';
             sc_idx = i - '1';
 
-            if (sc_idx < 0 || sc_idx >= soundcardlist_count) {
+            if (sc_idx < 0 || sc_idx >= (int)soundcardlist_count) {
                 printf("Sound card index out of range\n");
                 return 1;
             }
