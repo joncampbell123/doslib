@@ -1,6 +1,6 @@
 #!/bin/bash
 for txt in *.txt; do
-    ./sbrate2gnuplot.pl "$txt" || break
+    ./sb16rate2gnuplot.pl "$txt" || break
 done
 
 # let's not clutter the source tree...
