@@ -1219,7 +1219,6 @@ int main(int argc,char **argv) {
 
     if (time_source == NULL) {
         printf("Time source not available\n");
-        printf("Dammit\n");
         return 1;
     }
 
