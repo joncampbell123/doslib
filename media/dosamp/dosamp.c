@@ -1182,6 +1182,16 @@ int main(int argc,char **argv) {
                         loop = 0;
                         break;
                     }
+                    else if (i == 'I') {
+                        printf("\nIRQ status:\n");
+                        printf("  IRQ=%u INT=0x%02X was_masked=%u chain_irq=%u was_iret=%u hooked=%u\n",
+                            soundcard_irq.irq_number,
+                            soundcard_irq.int_number,
+                            soundcard_irq.was_masked,
+                            soundcard_irq.chain_irq,
+                            soundcard_irq.was_iret,
+                            soundcard_irq.hooked);
+                    }
                     else if (i == 'S') {
                         stuck_test = !stuck_test;
                         printf("Stuck test %s\n",stuck_test?"on":"off");
