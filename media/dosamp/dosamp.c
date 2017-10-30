@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdint.h>
 #ifdef LINUX
 #include <endian.h>
 #else
@@ -18,8 +19,11 @@
 #include <errno.h>
 #include <ctype.h>
 #include <fcntl.h>
+#ifndef LINUX
 #include <dos.h>
+#endif
 
+#ifndef LINUX
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
 #include <hw/8237/8237.h>       /* 8237 DMA */
@@ -33,6 +37,7 @@
 #include <hw/dos/tgusumid.h>
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+#endif
 
 #include "wavefmt.h"
 #include "dosamp.h"
@@ -52,6 +57,93 @@
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
 # error Open Watcom C tiny memory model not supported
+#endif
+
+/* TODO: Move to another file eventually. */
+#if defined(LINUX)
+#include <termios.h>
+#include <poll.h>
+
+/* Linux does not provide getch() and kbhit().
+ * We must provide our own using termios() functions. */
+
+static struct termios termios_prev,termios_cur;
+static unsigned char termios_exhook = 0;
+static unsigned char termios_init = 0;
+
+int free_termios(void);
+
+void atexit_termios(void) {
+    free_termios();
+}
+
+int init_termios(void) {
+    if (!termios_init) {
+        tcgetattr(0/*STDIN*/,&termios_prev);
+
+        termios_cur = termios_prev;
+
+        termios_cur.c_iflag &= ~(IGNBRK|IGNCR|ICRNL);
+        termios_cur.c_iflag |=  (BRKINT);
+
+        termios_cur.c_oflag |=  (ONLCR|OCRNL);
+
+        termios_cur.c_lflag &= ~(ICANON|XCASE|ECHO|ECHOE|ECHOK|ECHONL|ECHOCTL|ECHOPRT|ECHOKE);
+
+        tcsetattr(0/*STDIN*/,TCSADRAIN,&termios_cur);
+
+        if (!termios_exhook) {
+            atexit(atexit_termios);
+            termios_exhook = 1;
+        }
+
+        termios_init = 1;
+    }
+
+    return 0;
+}
+
+int free_termios(void) {
+    if (termios_init) {
+        tcsetattr(0/*STDIN*/,TCSADRAIN,&termios_prev);
+        termios_init = 0;
+    }
+
+    return 0;
+}
+
+int getch(void) {
+    char c;
+
+    if (read(0/*STDIN*/,&c,1) != 1)
+        return -1;
+
+    return (int)((unsigned char)c);
+}
+
+int kbhit(void) {
+    struct pollfd pfd = {0,0,0};
+
+    pfd.events = POLLIN;
+    pfd.fd = 0/*STDIN*/;
+    if (poll(&pfd,1,0) > 0) {
+        if ((pfd.revents & POLLIN) != 0)
+            return 1;
+    }
+
+    return 0;
+}
+
+#else
+
+static inline int init_termios(void) {
+    return 0;
+}
+
+static inline int free_termios(void) {
+    return 0;
+}
+
 #endif
 
 /* file source */
@@ -77,8 +169,10 @@ static unsigned char                            use_mmap_write = 1;
  *      require you to poll often enough to get a correct count of time. */
 static dosamp_time_source_t                     time_source = NULL;
 
+#if defined(HAS_IRQ)
 /* ISA DMA buffer */
 static struct dma_8237_allocation*              isa_dma = NULL;
+#endif
 
 /* sound card list */
 struct soundcard                                soundcardlist[SOUNDCARDLIST_MAX];
@@ -108,7 +202,7 @@ void wav_reset_state(struct wav_state_t dosamp_FAR * const w) {
 /* WAV file data chunk info */
 static unsigned long                    wav_data_offset = 44;
 static unsigned long                    wav_data_length_bytes = 0;
-static unsigned long                    wav_data_length = 0;/* in samples */;
+static unsigned long                    wav_data_length = 0;/* in samples */
 
 /* WAV playback state */
 static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
@@ -117,6 +211,8 @@ static unsigned long                    wav_play_position = 0L;
 /* buffering threshholds */
 static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
 static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
+
+#if defined(HAS_IRQ)
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
  * instability in the event the IRQ fires while, say, executing a routine
@@ -144,6 +240,8 @@ static void interrupt soundcard_irq_handler() {
         p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
     }
 }
+
+#endif
 
 int wav_rewind(void) {
     wav_position = 0;
@@ -618,6 +716,7 @@ fail:
     return -1;
 }
 
+#if defined(HAS_DMA)
 static void free_dma_buffer() {
     if (isa_dma != NULL) {
         soundcard->ioctl(soundcard,soundcard_ioctl_isa_dma_assign_buffer,NULL,NULL,0); /* disassociate DMA buffer from sound card */
@@ -625,7 +724,9 @@ static void free_dma_buffer() {
         isa_dma = NULL;
     }
 }
+#endif
 
+#if defined(HAS_DMA)
 static int alloc_dma_buffer(uint32_t choice,int8_t ch) {
     if (ch < 0)
         return 0;
@@ -653,7 +754,9 @@ static int alloc_dma_buffer(uint32_t choice,int8_t ch) {
     /* assume isa_dma != NULL */
     return 0;
 }
+#endif
 
+#if defined(HAS_DMA)
 static uint32_t soundcard_isa_dma_recommended_buffer_size(soundcard_t sc,uint32_t limit) {
     unsigned int sz = sizeof(uint32_t);
     uint32_t p = 0;
@@ -663,7 +766,9 @@ static uint32_t soundcard_isa_dma_recommended_buffer_size(soundcard_t sc,uint32_
 
     return p;
 }
+#endif
 
+#if defined(HAS_DMA)
 static int realloc_isa_dma_buffer() {
     uint32_t choice;
     int8_t ch;
@@ -692,7 +797,9 @@ static int realloc_isa_dma_buffer() {
 
     return 0;
 }
+#endif
 
+#if defined(HAS_DMA)
 int check_dma_buffer(void) {
     if ((soundcard->requirements & soundcard_requirements_isa_dma) ||
         (soundcard->capabilities & soundcard_caps_isa_dma)) {
@@ -714,10 +821,13 @@ int check_dma_buffer(void) {
 
     return 0;
 }
+#endif
 
 int prepare_buffer(void) {
+#if defined(HAS_DMA)
     if (check_dma_buffer() < 0)
         return -1;
+#endif
 
     return 0;
 }
@@ -795,6 +905,7 @@ static int begin_play() {
         if (wav_play_load_block_size > (bufsz / 2UL)) wav_play_load_block_size = (bufsz / 2UL);
     }
 
+#if defined(HAS_IRQ)
     /* hook IRQ */
     if ((soundcard->requirements & soundcard_requirements_irq) ||
         (soundcard->capabilities & soundcard_caps_irq)) {
@@ -808,6 +919,7 @@ static int begin_play() {
     /* unmask and reinit IRQ */
     if (init_prepare_irq() < 0)
         goto error_out;
+#endif
 
     /* prepare the sound card (buffer, DMA, etc.) */
     if (soundcard->ioctl(soundcard,soundcard_ioctl_prepare_play,NULL,NULL,0) < 0)
@@ -830,7 +942,9 @@ static int begin_play() {
 error_out:
     soundcard->ioctl(soundcard,soundcard_ioctl_stop_play,NULL,NULL,0);
     soundcard->ioctl(soundcard,soundcard_ioctl_unprepare_play,NULL,NULL,0);
+#if defined(HAS_IRQ)
     unhook_irq();
+#endif
     return -1;
 }
 
@@ -840,7 +954,9 @@ static void stop_play() {
     /* stop */
     soundcard->ioctl(soundcard,soundcard_ioctl_stop_play,NULL,NULL,0);
     soundcard->ioctl(soundcard,soundcard_ioctl_unprepare_play,NULL,NULL,0);
+#if defined(HAS_IRQ)
     unhook_irq();
+#endif
 
     wav_position = wav_play_position;
     update_play_position();
@@ -857,7 +973,7 @@ static int parse_argv(int argc,char **argv) {
     for (i=1;i < argc;) {
         char *a = argv[i++];
 
-        if (*a == '-' || *a == '/') {
+        if (*a == '-') {
             unsigned char m = *a++;
             while (*a == m) a++;
 
@@ -910,10 +1026,16 @@ static int parse_argv(int argc,char **argv) {
 void display_idle_timesource(void) {
     printf("\x0D");
 
-    if (time_source == &dosamp_time_source_8254)
+    if (0)
+        { }
+#if defined(HAS_8254)
+    else if (time_source == &dosamp_time_source_8254)
         printf("8254-PIT ");
+#endif
+#if defined(HAS_RDTSC)
     else if (time_source == &dosamp_time_source_rdtsc)
         printf("RDTSC ");
+#endif
     else
         printf("? ");
 
@@ -1050,10 +1172,17 @@ int main(int argc,char **argv) {
     if (!parse_argv(argc,argv))
         return 1;
 
+    if (init_termios() < 0)
+        return 2;
+
     /* default good resampler */
     /* TODO: If we detect the CPU is slow enough, default to "fast" (nearest neighbor) */
     resample_state.resample_mode = resample_good;
 
+#if defined(LINUX)
+    /* ... */
+#else
+    /* MS-DOS */
     cpu_probe();
     probe_8237();
     if (!probe_8259()) {
@@ -1069,7 +1198,9 @@ int main(int argc,char **argv) {
         return 1;
     }
     find_isa_pnp_bios();
+#endif
 
+#if defined(HAS_8254)
     /* pick initial time source. */
     time_source = &dosamp_time_source_8254;
 
@@ -1078,10 +1209,19 @@ int main(int argc,char **argv) {
      *      IRQ 0 rate but counts down twice as fast. We need the PIT to count down by 1,
      *      not by 2, in order to keep time. MS-DOS only. */
     write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
+#endif
 
+#if defined(HAS_RDTSC)
     /* we can use the Time Stamp Counter on Pentium or higher systems that offer it */
     if (dosamp_time_source_rdtsc_available(time_source))
         time_source = &dosamp_time_source_rdtsc;
+#endif
+
+    if (time_source == NULL) {
+        printf("Time source not available\n");
+        printf("Dammit\n");
+        return 1;
+    }
 
     /* open the time source */
     if (time_source->open(time_source) < 0) {
@@ -1092,6 +1232,7 @@ int main(int argc,char **argv) {
     if (soundcardlist_init() < 0)
         return 1;
 
+#if defined(HAS_SNDSB)
     /* PROBE: Sound Blaster.
      * Will return 0 if scan done, -1 if a serious problem happened.
      * A return value of 0 doesn't mean any cards were found. */
@@ -1099,6 +1240,7 @@ int main(int argc,char **argv) {
         printf("Serious error while probing for Sound Blaster\n");
         return 1;
     }
+#endif
 
     /* now let the user choose. */
     {
@@ -1184,6 +1326,9 @@ int main(int argc,char **argv) {
                     }
                     else if (i == 'I') {
                         printf("\nIRQ status:\n");
+#if defined(LINUX)
+                        printf("  Not applicable for this platform\n");
+#else
                         printf("  IRQ=%u INT=0x%02X was_masked=%u chain_irq=%u was_iret=%u hooked=%u\n",
                             soundcard_irq.irq_number,
                             soundcard_irq.int_number,
@@ -1191,6 +1336,7 @@ int main(int argc,char **argv) {
                             soundcard_irq.chain_irq,
                             soundcard_irq.was_iret,
                             soundcard_irq.hooked);
+#endif
                     }
                     else if (i == 'S') {
                         stuck_test = !stuck_test;
@@ -1326,19 +1472,26 @@ int main(int argc,char **argv) {
 
     convert_rdbuf_check();
 
+#if defined(HAS_CLISTI)
     _sti();
+#endif
     stop_play();
     close_wav();
     tmpbuffer_free();
+#if defined(HAS_DMA)
     free_dma_buffer();
+#endif
     convert_rdbuf_free();
     soundcard->close(soundcard);
 
+#if defined(HAS_SNDSB)
     free_sound_blaster_support();
+#endif
 
     soundcardlist_close();
 
     time_source->close(time_source);
+    free_termios();
     return 0;
 }
 

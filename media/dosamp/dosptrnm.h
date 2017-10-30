@@ -1,5 +1,5 @@
 
-#if TARGET_MSDOS == 32
+#if TARGET_MSDOS == 32 || defined(LINUX)
 static inline unsigned char *dosamp_ptr_add_normalize(unsigned char * const p,const unsigned int o) {
     return p + o;
 }

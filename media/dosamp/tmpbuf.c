@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdint.h>
 #ifdef LINUX
 #include <endian.h>
 #else
@@ -18,8 +19,11 @@
 #include <errno.h>
 #include <ctype.h>
 #include <fcntl.h>
+#ifndef LINUX
 #include <dos.h>
+#endif
 
+#ifndef LINUX
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
 #include <hw/8237/8237.h>       /* 8237 DMA */
@@ -33,6 +37,7 @@
 #include <hw/dos/tgusumid.h>
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+#endif
 
 #include "wavefmt.h"
 #include "dosamp.h"
@@ -50,7 +55,7 @@ size_t                          tmpbuffer_sz = 4096;
 
 void tmpbuffer_free(void) {
     if (tmpbuffer != NULL) {
-#if TARGET_MSDOS == 32
+#if TARGET_MSDOS == 32 || defined(LINUX)
         free(tmpbuffer);
 #else
         _ffree(tmpbuffer);
@@ -61,7 +66,7 @@ void tmpbuffer_free(void) {
 
 unsigned char dosamp_FAR * tmpbuffer_get(uint32_t *sz) {
     if (tmpbuffer == NULL) {
-#if TARGET_MSDOS == 32
+#if TARGET_MSDOS == 32 || defined(LINUX)
         tmpbuffer = malloc(tmpbuffer_sz);
 #else
         tmpbuffer = _fmalloc(tmpbuffer_sz);

@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdint.h>
 #ifdef LINUX
 #include <endian.h>
 #else
@@ -18,8 +19,11 @@
 #include <errno.h>
 #include <ctype.h>
 #include <fcntl.h>
+#ifndef LINUX
 #include <dos.h>
+#endif
 
+#ifndef LINUX
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
 #include <hw/8237/8237.h>       /* 8237 DMA */
@@ -33,6 +37,7 @@
 #include <hw/dos/tgusumid.h>
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+#endif
 
 #include "wavefmt.h"
 #include "dosamp.h"
@@ -56,7 +61,7 @@
 
 void convert_rdbuf_free(void) {
     if (convert_rdbuf.buffer != NULL) {
-#if TARGET_MSDOS == 32
+#if TARGET_MSDOS == 32 || defined(LINUX)
         free(convert_rdbuf.buffer - BOUNDS_ADJUST);
 #else
         _ffree(convert_rdbuf.buffer - BOUNDS_ADJUST);
@@ -72,7 +77,7 @@ unsigned char dosamp_FAR * convert_rdbuf_get(uint32_t *sz) {
         if (convert_rdbuf.size == 0)
             convert_rdbuf.size = 4096;
 
-#if TARGET_MSDOS == 32
+#if TARGET_MSDOS == 32 || defined(LINUX)
         convert_rdbuf.buffer = malloc(convert_rdbuf.size + BOUNDS_EXTRA);
 #else
         convert_rdbuf.buffer = _fmalloc(convert_rdbuf.size + BOUNDS_EXTRA);

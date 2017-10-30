@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdint.h>
 #ifdef LINUX
 #include <endian.h>
 #else
@@ -18,8 +19,11 @@
 #include <errno.h>
 #include <ctype.h>
 #include <fcntl.h>
+#ifndef LINUX
 #include <dos.h>
+#endif
 
+#ifndef LINUX
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
 #include <hw/8237/8237.h>		/* 8237 DMA */
@@ -33,9 +37,12 @@
 #include <hw/dos/tgusumid.h>
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+#endif
 
 #include "dosamp.h"
 #include "timesrc.h"
+
+#if defined(HAS_8254)
 
 /* previous count, and period (in case host changes timer) */
 static uint16_t ts_8254_pcnt = 0;
@@ -93,4 +100,6 @@ struct dosamp_time_source               dosamp_time_source_8254 = {
     .open =                             dosamp_time_source_8254_open,
     .poll =                             dosamp_time_source_8254_poll
 };
+
+#endif /* defined(HAS_8254) */
 

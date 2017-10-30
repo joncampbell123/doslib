@@ -4,8 +4,52 @@
  * 16-bit or 32-bit code */
 #if TARGET_MSDOS == 32 && !defined(WIN386)
 # define dosamp_FAR
+#elif defined(LINUX)
+# define dosamp_FAR
 #else
 # define dosamp_FAR far
+#endif
+
+/* platform has IRQ handling */
+#if defined(LINUX)
+/* no */
+#else
+# define HAS_IRQ
+#endif
+
+/* platform has DMA handling */
+#if defined(LINUX)
+/* no */
+#else
+# define HAS_DMA
+#endif
+
+/* platform has 8042 timer */
+#if defined(LINUX)
+/* no */
+#else
+# define HAS_8254
+#endif
+
+/* platform has RDTSC timer */
+#if defined(LINUX)
+/* no */
+#else
+# define HAS_RDTSC
+#endif
+
+/* platform has Sound Blaster direct access */
+#if defined(LINUX)
+/* no */
+#else
+# define HAS_SNDSB
+#endif
+
+/* platform has CLI/STI */
+#if defined(LINUX)
+/* no */
+#else
+# define HAS_CLISTI
 #endif
 
 struct wav_cbr_t {

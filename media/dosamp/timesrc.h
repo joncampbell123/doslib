@@ -28,10 +28,14 @@ struct dosamp_time_source {
     unsigned long long                  (dosamp_FAR *poll)(dosamp_time_source_t inst);
 };
 
+#if defined(HAS_8254)
 /* 8254 time source */
 extern struct dosamp_time_source                dosamp_time_source_8254;
+#endif
 
+#if defined(HAS_RDTSC)
 /* Pentium RDTSC time source (and availability check) */
 extern struct dosamp_time_source                dosamp_time_source_rdtsc;
 int dosamp_time_source_rdtsc_available(const dosamp_time_source_t clk);
+#endif
 

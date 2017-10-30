@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdint.h>
 #ifdef LINUX
 #include <endian.h>
 #else
@@ -18,8 +19,11 @@
 #include <errno.h>
 #include <ctype.h>
 #include <fcntl.h>
+#ifndef LINUX
 #include <dos.h>
+#endif
 
+#ifndef LINUX
 #include <hw/dos/dos.h>
 #include <hw/cpu/cpu.h>
 #include <hw/8237/8237.h>       /* 8237 DMA */
@@ -33,6 +37,7 @@
 #include <hw/dos/tgusumid.h>
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+#endif
 
 #include "wavefmt.h"
 #include "dosamp.h"
@@ -45,6 +50,8 @@
 #include "trkrbase.h"
 #include "tmpbuf.h"
 #include "snirq.h"
+
+#if defined(HAS_IRQ)
 
 struct irq_state_t                      soundcard_irq = { NULL, 0, 0, 0, 0, 0, 0 };
 
@@ -114,4 +121,6 @@ int unhook_irq(void) {
 
     return 0;
 }
+
+#endif /* HAS_IRQ */
 
