@@ -2,7 +2,8 @@
 enum {
     dosamp_time_source_id_null = 0,                 /* null */
     dosamp_time_source_id_8254 = 1,                 /* MS-DOS / Windows 3.x 8254 PIT timer */
-    dosamp_time_source_id_rdtsc = 2                 /* Pentium RDTSC */
+    dosamp_time_source_id_rdtsc = 2,                /* Pentium RDTSC */
+    dosamp_time_source_id_clock_monotonic = 3       /* CLOCK_MONOTONIC (Linux) */
 };
 
 /* forward def, to make typedef, before actual struct */
@@ -37,5 +38,9 @@ extern struct dosamp_time_source                dosamp_time_source_8254;
 /* Pentium RDTSC time source (and availability check) */
 extern struct dosamp_time_source                dosamp_time_source_rdtsc;
 int dosamp_time_source_rdtsc_available(const dosamp_time_source_t clk);
+#endif
+
+#if defined(HAS_CLOCK_MONOTONIC)
+extern struct dosamp_time_source                dosamp_time_source_clock_monotonic;
 #endif
 

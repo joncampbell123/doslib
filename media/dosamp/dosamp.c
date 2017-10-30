@@ -1209,9 +1209,11 @@ int main(int argc,char **argv) {
      *      IRQ 0 rate but counts down twice as fast. We need the PIT to count down by 1,
      *      not by 2, in order to keep time. MS-DOS only. */
     write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
+#elif defined(HAS_CLOCK_MONOTONIC)
+    time_source = &dosamp_time_source_clock_monotonic;
 #endif
 
-#if defined(HAS_RDTSC)
+#if defined(HAS_RDTSC) && !defined(HAS_CLOCK_MONOTONIC)
     /* we can use the Time Stamp Counter on Pentium or higher systems that offer it */
     if (dosamp_time_source_rdtsc_available(time_source))
         time_source = &dosamp_time_source_rdtsc;
