@@ -82,7 +82,7 @@ int hook_irq(uint8_t irq,void (interrupt *irq_handler)()) {
         soundcard_irq.irq_number = irq;
         soundcard_irq.int_number = irq2int(soundcard_irq.irq_number);
 
-        soundcard_irq.was_masked = p8259_is_masked(soundcard_irq.irq_number);
+        soundcard_irq.was_masked = p8259_is_masked_bool(soundcard_irq.irq_number);
 
         soundcard_irq.was_iret = vector_is_iret(soundcard_irq.int_number);
 

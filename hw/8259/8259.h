@@ -130,8 +130,15 @@ static inline void p8259_mask(unsigned char c) {
 	p8259_write_mask(c,m | (1 << (c&7)));
 }
 
+/* WARNING: For performance reasons, the return value is guaranteed only to be nonzero if masked.
+ *          There is NO GUARANTEE that the nonzero value will be 1. This is an important consideration
+ *          if you assign to a bit-wide field. */
 static inline unsigned char p8259_is_masked(unsigned char c) {
 	return (p8259_read_mask(c) & (1 << (c&7)));
+}
+
+static inline unsigned char p8259_is_masked_bool(unsigned char c) {
+    return !!p8259_is_masked(c);
 }
 
 void p8259_ICW(unsigned char a,unsigned char b,unsigned char c,unsigned char d);
