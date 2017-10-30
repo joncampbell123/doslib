@@ -89,7 +89,7 @@ int hook_irq(uint8_t irq,void (interrupt *irq_handler)()) {
         soundcard_irq.old_handler = _dos_getvect(soundcard_irq.int_number);
         _dos_setvect(soundcard_irq.int_number,irq_handler);
 
-        soundcard_irq.chain_irq = (!soundcard_irq.was_masked && !soundcard_irq.was_iret) && (soundcard_irq.old_handler != NULL);
+        soundcard_irq.chain_irq = !(soundcard_irq.was_masked || soundcard_irq.old_handler == NULL);
 
         soundcard_irq.hooked = 1;
     }
