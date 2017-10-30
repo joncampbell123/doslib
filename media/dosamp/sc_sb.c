@@ -796,7 +796,7 @@ struct soundcard soundblaster_soundcard_template = {
     .mmap_write =                               soundblaster_mmap_write,
     .ioctl =                                    soundblaster_ioctl,
     .p.soundblaster.index =                     -1,
-    .p.soundblaster.rate_rounding =             1
+    .p.soundblaster.rate_rounding =             0
 };
 
 void free_sound_blaster_support(void) {
