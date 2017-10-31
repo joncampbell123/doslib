@@ -1301,6 +1301,9 @@ int main(int argc,char **argv) {
         soundcard = &soundcardlist[sc_idx];
     }
 
+    if (!(soundcard->capabilities & soundcard_caps_mmap_write))
+        use_mmap_write = 0;
+
     printf("Playing audio with: ");
     print_soundcard(soundcard);
     printf("\n");

@@ -71,6 +71,14 @@ static int oss_get_path(char *dst,size_t dst_max,unsigned int i) {
 
 /* this depends on keeping the "play delay" up to date */
 static uint32_t dosamp_FAR oss_can_write(soundcard_t sc) { /* in bytes */
+    audio_buf_info ai;
+
+    if (sc->p.oss.fd < 0) return 0;
+
+    memset(&ai,0,sizeof(ai));
+    if (ioctl(sc->p.oss.fd,SNDCTL_DSP_GETOSPACE,&ai) >= 0)
+        return ai.bytes;
+
     return 0;
 }
 
@@ -92,7 +100,16 @@ static unsigned char dosamp_FAR * dosamp_FAR oss_mmap_write(soundcard_t sc,uint3
 
 /* non-mmap write (much like OSS or ALSA in Linux where you do not have direct access to the hardware buffer) */
 static unsigned int dosamp_FAR oss_buffer_write(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len) {
-    return 0;
+    int w;
+
+    if (sc->p.oss.fd < 0) return 0;
+
+    w = write(sc->p.oss.fd,buf,len);
+    if (w <= 0) return 0;
+
+    sc->wav_state.write_counter += (uint64_t)w;
+
+    return (unsigned int)w;
 }
 
 static int dosamp_FAR oss_open(soundcard_t sc) {
@@ -105,7 +122,7 @@ static int dosamp_FAR oss_open(soundcard_t sc) {
     if (oss_get_path(path,sizeof(path),sc->p.oss.index) != 0)
         return -1;
 
-    sc->p.oss.fd = open(path,O_WRONLY);
+    sc->p.oss.fd = open(path,O_WRONLY | O_NONBLOCK);
     if (sc->p.oss.fd < 0) return -1;
 
     sc->wav_state.is_open = 1;
@@ -144,6 +161,9 @@ static int oss_prepare_play(soundcard_t sc) {
     if (sc->wav_state.prepared)
         return 0;
 
+    sc->wav_state.play_counter = 0;
+    sc->wav_state.write_counter = 0;
+
     sc->wav_state.prepared = 1;
     return 0;
 }
@@ -159,11 +179,11 @@ static int oss_unprepare_play(soundcard_t sc) {
 }
 
 static uint32_t oss_play_buffer_play_pos(soundcard_t sc) {
-    return 0;
+    return sc->wav_state.play_counter;
 }
 
 static uint32_t oss_play_buffer_write_pos(soundcard_t sc) {
-    return 0;
+    return sc->wav_state.write_counter;
 }
 
 static uint32_t oss_play_buffer_size(soundcard_t sc) {
@@ -173,7 +193,7 @@ static uint32_t oss_play_buffer_size(soundcard_t sc) {
 
     memset(&ai,0,sizeof(ai));
     if (ioctl(sc->p.oss.fd,SNDCTL_DSP_GETOSPACE,&ai) >= 0)
-        return (ai.fragments - 1) * ai.fragsize;
+        return ai.fragments * ai.fragsize;
 
     return 0;
 }
@@ -181,6 +201,9 @@ static uint32_t oss_play_buffer_size(soundcard_t sc) {
 static int oss_start_playback(soundcard_t sc) {
     if (!sc->wav_state.prepared) return -1;
     if (sc->wav_state.playing) return 0;
+
+    sc->wav_state.play_counter = 0;
+    sc->wav_state.write_counter = 0;
 
     sc->wav_state.playing = 1;
     return 0;
