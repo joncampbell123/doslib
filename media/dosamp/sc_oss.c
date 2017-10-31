@@ -166,26 +166,71 @@ static uint32_t oss_play_buffer_write_pos(soundcard_t sc) {
     return 0;
 }
 
+static uint32_t oss_play_buffer_size(soundcard_t sc) {
+    audio_buf_info ai;
+
+    if (sc->p.oss.fd < 0) return 0;
+
+    memset(&ai,0,sizeof(ai));
+    if (ioctl(sc->p.oss.fd,SNDCTL_DSP_GETOSPACE,&ai) >= 0)
+        return (ai.fragments - 1) * ai.fragsize;
+
+    return 0;
+}
+
 static int oss_start_playback(soundcard_t sc) {
     if (!sc->wav_state.prepared) return -1;
     if (sc->wav_state.playing) return 0;
 
-    return -1;
+    sc->wav_state.playing = 1;
+    return 0;
 }
 
 static int oss_stop_playback(soundcard_t sc) {
     if (!sc->wav_state.playing) return 0;
 
-    return -1;
+    ioctl(sc->p.oss.fd,SNDCTL_DSP_RESET,NULL); /* STOP! */
+
+    sc->wav_state.playing = 0;
+    return 0;
 }
 
 static int oss_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt) {
+    int r;
+
     /* must be open */
     if (!sc->wav_state.is_open) return -1;
 
     /* not while prepared or playing!
      * assume: playing is not set unless prepared */
     if (sc->wav_state.prepared) return -1;
+
+    /* channel count */
+    r = fmt->number_of_channels;
+    if (ioctl(sc->p.oss.fd,SNDCTL_DSP_CHANNELS,&r) < 0) return -1;
+    fmt->number_of_channels = r;
+
+    /* bits per sample */
+    if (fmt->bits_per_sample == 8)
+        r = AFMT_U8;
+    else if (fmt->bits_per_sample == 16)
+        r = AFMT_S16_LE;
+    else
+        return -1;
+
+    if (ioctl(sc->p.oss.fd,SNDCTL_DSP_SETFMT,&r) < 0) return -1;
+
+    if (r == AFMT_U8)
+        fmt->bits_per_sample = 8;
+    else if (r == AFMT_S16_LE)
+        fmt->bits_per_sample = 16;
+    else
+        return -1;
+
+    /* sample rate */
+    r = fmt->sample_rate;
+    if (ioctl(sc->p.oss.fd,SNDCTL_DSP_SPEED,&r) < 0) return -1;
+    fmt->sample_rate = r;
 
     /* PCM recalc */
     fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
@@ -250,6 +295,11 @@ static int dosamp_FAR oss_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR 
             if (data == NULL || len == 0) return -1;
             if (*len < sizeof(uint32_t)) return -1;
             if ((*((uint32_t dosamp_FAR*)data) = oss_play_buffer_play_pos(sc)) == 0) return -1;
+            } return 0;
+        case soundcard_ioctl_get_buffer_size: {
+            if (data == NULL || len == 0) return -1;
+            if (*len < sizeof(uint32_t)) return -1;
+            if ((*((uint32_t dosamp_FAR*)data) = oss_play_buffer_size(sc)) == 0) return -1;
             } return 0;
     }
 
