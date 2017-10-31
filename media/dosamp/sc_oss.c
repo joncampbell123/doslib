@@ -320,20 +320,24 @@ static int oss_get_card_name(soundcard_t sc,void dosamp_FAR *data,unsigned int d
     if (data == NULL || len == NULL) return -1;
     if (*len == 0U) return -1;
 
-    str = "OSS";
+    str = "Open Sound System";
 
     soundcard_str_return_common((char dosamp_FAR*)data,len,str);
     return 0;
 }
 
 static int oss_get_card_detail(soundcard_t sc,void dosamp_FAR *data,unsigned int dosamp_FAR *len) {
+    char tx[128];
     char *w;
 
     if (data == NULL || len == NULL) return -1;
     if (*len == 0U) return -1;
 
+    tx[0] = 0;
+    oss_get_path(tx,sizeof(tx),sc->p.oss.index);
+
     w = soundcard_str_tmp;
-    w += sprintf(w,"DSP device %u",sc->p.oss.index);
+    w += sprintf(w,"DSP device %s",tx);
 
     assert(w < (soundcard_str_tmp+sizeof(soundcard_str_tmp)));
 
