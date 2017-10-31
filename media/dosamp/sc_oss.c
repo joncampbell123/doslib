@@ -395,7 +395,6 @@ struct soundcard oss_soundcard_template = {
     .write =                                    oss_buffer_write,
     .mmap_write =                               oss_mmap_write,
     .ioctl =                                    oss_ioctl,
-    .p.oss.index =                              -1,
     .p.oss.fd =                                 -1
 };
 
