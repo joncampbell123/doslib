@@ -1517,6 +1517,11 @@ int main(int argc,char **argv) {
     printf("\n");
 #endif
 
+    if (wav_file != NULL) {
+        free(wav_file);
+        wav_file = NULL;
+    }
+
     return 0;
 }
 
