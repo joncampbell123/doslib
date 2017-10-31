@@ -87,6 +87,9 @@ soundcard_t soundcardlist_new(const soundcard_t template) {
             soundcardlist[soundcardlist_alloc] = *template;
             return &soundcardlist[soundcardlist_alloc++];
         }
+        else {
+            soundcardlist_alloc++;
+        }
     }
 
     if (soundcardlist_count < SOUNDCARDLIST_MAX) {
