@@ -98,6 +98,8 @@ static unsigned char dosamp_FAR * dosamp_FAR oss_mmap_write(soundcard_t sc,uint3
     return NULL;
 }
 
+static int dosamp_FAR oss_poll(soundcard_t sc);
+
 /* non-mmap write (much like OSS or ALSA in Linux where you do not have direct access to the hardware buffer) */
 static unsigned int dosamp_FAR oss_buffer_write(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len) {
     int w;
@@ -108,6 +110,8 @@ static unsigned int dosamp_FAR oss_buffer_write(soundcard_t sc,const unsigned ch
     if (w <= 0) return 0;
 
     sc->wav_state.write_counter += (uint64_t)w;
+
+    oss_poll(sc);
 
     return (unsigned int)w;
 }
@@ -142,6 +146,24 @@ static int dosamp_FAR oss_close(soundcard_t sc) {
 }
 
 static int dosamp_FAR oss_poll(soundcard_t sc) {
+    int delay = 0;
+
+    if (sc->p.oss.fd < 0) return 0;
+
+    /* WARNING: OSS considers the sound card's FIFO as part of the delay */
+    ioctl(sc->p.oss.fd,SNDCTL_DSP_GETODELAY,&delay);
+
+    sc->wav_state.play_delay_bytes = delay;
+    sc->wav_state.play_delay = delay / sc->cur_codec.bytes_per_block;
+
+    sc->wav_state.play_counter_prev = sc->wav_state.play_counter;
+
+    sc->wav_state.play_counter = sc->wav_state.write_counter;
+    if (sc->wav_state.play_counter >= sc->wav_state.play_delay_bytes)
+        sc->wav_state.play_counter -= sc->wav_state.play_delay_bytes;
+    else
+        sc->wav_state.play_counter = 0;
+
     return 0;
 }
 
