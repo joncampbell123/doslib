@@ -59,6 +59,13 @@
 /* no */
 #endif
 
+/* platform has OSS */
+#if defined(LINUX)
+# define HAS_OSS
+#else
+/* no */
+#endif
+
 struct wav_cbr_t {
     uint32_t                                    sample_rate;
     uint16_t                                    bytes_per_block;

@@ -53,6 +53,7 @@
 #include "sndcard.h"
 
 #include "sc_sb.h"
+#include "sc_oss.h"
 
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
@@ -1243,6 +1244,13 @@ int main(int argc,char **argv) {
     }
 #endif
 
+#if defined(HAS_OSS)
+    if (probe_for_oss() < 0) {
+        printf("Serious error while probing OSS devices\n");
+        return 1;
+    }
+#endif
+
     /* now let the user choose. */
     {
         unsigned char count = 0;
@@ -1487,6 +1495,9 @@ int main(int argc,char **argv) {
 
 #if defined(HAS_SNDSB)
     free_sound_blaster_support();
+#endif
+#if defined(HAS_OSS)
+    free_oss_support();
 #endif
 
     soundcardlist_close();

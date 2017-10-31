@@ -6,8 +6,9 @@
 
 /* sound card state */
 enum soundcard_drv_t {
-    soundcard_none=0,
-    soundcard_soundblaster
+    soundcard_none=0,                           /* none */
+    soundcard_soundblaster=1,                   /* Sound Blaster (MS-DOS) */
+    soundcard_oss=2                             /* Open Sound System (Linux) */
 };
 
 struct soundcard_priv_soundblaster_t {
@@ -15,6 +16,13 @@ struct soundcard_priv_soundblaster_t {
     int8_t                                      index;          /* array into sndsb library card array */
     unsigned int                                rate_rounding:1;
 };
+
+#if defined(HAS_OSS)
+struct soundcard_priv_oss_t {
+    uint8_t                                     index;          /* /dev/dsp, /dev/dsp1, /dev/dsp2, etc... */
+    int                                         fd;
+};
+#endif
 
 struct soundcard;
 typedef struct soundcard dosamp_FAR * soundcard_t;
@@ -48,6 +56,9 @@ struct soundcard {
     struct wav_cbr_t                            cur_codec;
     union {
         struct soundcard_priv_soundblaster_t    soundblaster;
+#if defined(HAS_OSS)
+        struct soundcard_priv_oss_t             oss;
+#endif
     } p;
 };
 
