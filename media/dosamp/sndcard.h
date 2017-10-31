@@ -21,6 +21,7 @@ struct soundcard_priv_soundblaster_t {
 struct soundcard_priv_oss_t {
     uint8_t                                     index;          /* /dev/dsp, /dev/dsp1, /dev/dsp2, etc... */
     int                                         fd;
+    uint32_t                                    buffer_size;
 };
 #endif
 

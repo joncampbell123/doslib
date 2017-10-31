@@ -146,24 +146,27 @@ static int dosamp_FAR oss_close(soundcard_t sc) {
 }
 
 static int dosamp_FAR oss_poll(soundcard_t sc) {
+    count_info ci;
     int delay = 0;
 
     if (sc->p.oss.fd < 0) return 0;
 
     /* WARNING: OSS considers the sound card's FIFO as part of the delay */
-    ioctl(sc->p.oss.fd,SNDCTL_DSP_GETODELAY,&delay);
+    memset(&ci,0,sizeof(ci));
+    ioctl(sc->p.oss.fd,SNDCTL_DSP_GETOPTR,&ci);
 
-    sc->wav_state.play_delay_bytes = delay;
-    sc->wav_state.play_delay = delay / sc->cur_codec.bytes_per_block;
 
     sc->wav_state.play_counter_prev = sc->wav_state.play_counter;
 
-    sc->wav_state.play_counter = sc->wav_state.write_counter;
-    if (sc->wav_state.play_counter >= sc->wav_state.play_delay_bytes)
-        sc->wav_state.play_counter -= sc->wav_state.play_delay_bytes;
-    else
-        sc->wav_state.play_counter = 0;
+    /* FIXME: 32-bit counter from OSS */
+    sc->wav_state.play_counter = ci.bytes;
 
+    if (sc->wav_state.play_counter <= sc->wav_state.write_counter)
+        sc->wav_state.play_delay_bytes = sc->wav_state.write_counter - sc->wav_state.play_counter;
+    else
+        sc->wav_state.play_delay_bytes = 0;
+
+    sc->wav_state.play_delay = delay / sc->cur_codec.bytes_per_block;
     return 0;
 }
 
@@ -213,11 +216,17 @@ static uint32_t oss_play_buffer_size(soundcard_t sc) {
 
     if (sc->p.oss.fd < 0) return 0;
 
-    memset(&ai,0,sizeof(ai));
-    if (ioctl(sc->p.oss.fd,SNDCTL_DSP_GETOSPACE,&ai) >= 0)
-        return ai.fragments * ai.fragsize;
+    /* store buffer size NOW because it will fall to zero later */
+    if (sc->p.oss.buffer_size == 0) {
+        audio_buf_info ai;
 
-    return 0;
+        sc->p.oss.buffer_size = 0;
+        memset(&ai,0,sizeof(ai));
+        if (ioctl(sc->p.oss.fd,SNDCTL_DSP_GETOSPACE,&ai) >= 0)
+            sc->p.oss.buffer_size = ai.fragments * ai.fragsize;
+    }
+
+    return sc->p.oss.buffer_size;
 }
 
 static int oss_start_playback(soundcard_t sc) {
