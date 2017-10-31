@@ -1508,6 +1508,11 @@ int main(int argc,char **argv) {
 
     time_source->close(time_source);
     free_termios();
+
+#if defined(LINUX)
+    printf("\n");
+#endif
+
     return 0;
 }
 
