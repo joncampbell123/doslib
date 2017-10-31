@@ -133,7 +133,7 @@ static int dosamp_FAR alsa_open(soundcard_t sc) {
     assert(sc->p.alsa.handle == NULL);
     assert(sc->p.alsa.param == NULL);
 
-    if (snd_pcm_open(&sc->p.alsa.handle, sc->p.alsa.device, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK | SND_PCM_NO_AUTO_RESAMPLE) < 0)
+    if (snd_pcm_open(&sc->p.alsa.handle, sc->p.alsa.device, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK) < 0)
         goto fail;
 
     if (snd_pcm_hw_params_malloc(&sc->p.alsa.param))
@@ -447,7 +447,7 @@ void alsa_check(const char *devname) {
     snd_pcm_t *handle;
     int r;
 
-    r = snd_pcm_open(&handle, devname, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK | SND_PCM_NO_AUTO_RESAMPLE);
+    r = snd_pcm_open(&handle, devname, SND_PCM_STREAM_PLAYBACK, SND_PCM_NONBLOCK);
     if (r < 0) return;
 
     {
