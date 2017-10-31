@@ -91,10 +91,17 @@ static uint32_t dosamp_FAR oss_can_write(soundcard_t sc) { /* in bytes */
  * Without this, upon underrun, the written audio may not be heard until the play
  * pointer has gone through the entire buffer again. */
 static int dosamp_FAR oss_clamp_if_behind(soundcard_t sc,uint32_t ahead_in_bytes) {
+    (void)sc;
+    (void)ahead_in_bytes;
+
     return 0;
 }
 
 static unsigned char dosamp_FAR * dosamp_FAR oss_mmap_write(soundcard_t sc,uint32_t dosamp_FAR * const howmuch,uint32_t want) {
+    (void)sc;
+    (void)howmuch;
+    (void)want;
+
     return NULL;
 }
 
@@ -171,6 +178,8 @@ static int dosamp_FAR oss_poll(soundcard_t sc) {
 }
 
 static int dosamp_FAR oss_irq_callback(soundcard_t sc) {
+    (void)sc;
+
     return 0;
 }
 
@@ -212,8 +221,6 @@ static uint32_t oss_play_buffer_write_pos(soundcard_t sc) {
 }
 
 static uint32_t oss_play_buffer_size(soundcard_t sc) {
-    audio_buf_info ai;
-
     if (sc->p.oss.fd < 0) return 0;
 
     /* store buffer size NOW because it will fall to zero later */
@@ -239,7 +246,6 @@ static int oss_start_playback(soundcard_t sc) {
 
     {
         count_info ci;
-        int delay = 0;
 
         /* WARNING: OSS considers the sound card's FIFO as part of the delay */
         memset(&ci,0,sizeof(ci));
@@ -310,6 +316,8 @@ static int oss_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * cons
 static int oss_get_card_name(soundcard_t sc,void dosamp_FAR *data,unsigned int dosamp_FAR *len) {
     const char *str;
 
+    (void)sc;
+
     if (data == NULL || len == NULL) return -1;
     if (*len == 0U) return -1;
 
@@ -335,6 +343,8 @@ static int oss_get_card_detail(soundcard_t sc,void dosamp_FAR *data,unsigned int
 }
 
 static int dosamp_FAR oss_ioctl(soundcard_t sc,unsigned int cmd,void dosamp_FAR *data,unsigned int dosamp_FAR * len,int ival) {
+    (void)ival;
+
     switch (cmd) {
         case soundcard_ioctl_get_card_name:
             return oss_get_card_name(sc,data,len);

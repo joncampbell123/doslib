@@ -91,6 +91,10 @@ static unsigned int dosamp_FAR dosamp_file_source_file_fd_read(dosamp_file_sourc
 }
 
 static unsigned int dosamp_FAR dosamp_file_source_file_fd_write(dosamp_file_source_t const inst,const void dosamp_FAR * buf,unsigned int count) {
+    (void)inst;
+    (void)buf;
+    (void)count;
+
     errno = EIO; /* not implemented */
     return dosamp_file_io_err;
 }
