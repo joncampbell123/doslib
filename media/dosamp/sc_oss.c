@@ -423,6 +423,7 @@ int probe_for_oss(void) {
         }
     }
 
+    oss_probed = 1;
     return 0;
 }
 

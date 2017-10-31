@@ -66,6 +66,13 @@
 /* no */
 #endif
 
+/* platform has ALSA */
+#if defined(LINUX)
+# define HAS_ALSA
+#else
+/* no */
+#endif
+
 struct wav_cbr_t {
     uint32_t                                    sample_rate;
     uint16_t                                    bytes_per_block;

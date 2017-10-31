@@ -8,7 +8,8 @@
 enum soundcard_drv_t {
     soundcard_none=0,                           /* none */
     soundcard_soundblaster=1,                   /* Sound Blaster (MS-DOS) */
-    soundcard_oss=2                             /* Open Sound System (Linux) */
+    soundcard_oss=2,                            /* Open Sound System (Linux) */
+    soundcard_alsa=3                            /* Advanced Linux Sound Architecture (Linux) */
 };
 
 struct soundcard_priv_soundblaster_t {
@@ -23,6 +24,15 @@ struct soundcard_priv_oss_t {
     int                                         fd;
     uint32_t                                    buffer_size;
     unsigned int                                oss_p_pcount;
+};
+#endif
+
+#if defined(HAS_ALSA)
+# include <alsa/asoundlib.h>
+struct soundcard_priv_alsa_t {
+    snd_pcm_t*                                  handle;
+    char*                                       device;
+    uint32_t                                    buffer_size;
 };
 #endif
 
@@ -60,6 +70,9 @@ struct soundcard {
         struct soundcard_priv_soundblaster_t    soundblaster;
 #if defined(HAS_OSS)
         struct soundcard_priv_oss_t             oss;
+#endif
+#if defined(HAS_ALSA)
+        struct soundcard_priv_alsa_t            alsa;
 #endif
     } p;
 };

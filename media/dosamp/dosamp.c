@@ -1249,6 +1249,16 @@ int main(int argc,char **argv) {
     }
 #endif
 
+#if defined(HAS_ALSA)
+    /* PROBE: Sound Blaster.
+     * Will return 0 if scan done, -1 if a serious problem happened.
+     * A return value of 0 doesn't mean any cards were found. */
+    if (probe_for_alsa() < 0) {
+        printf("Serious error while probing ALSA devices\n");
+        return 1;
+    }
+#endif
+
 #if defined(HAS_OSS)
     if (probe_for_oss() < 0) {
         printf("Serious error while probing OSS devices\n");
@@ -1503,6 +1513,9 @@ int main(int argc,char **argv) {
 
 #if defined(HAS_SNDSB)
     free_sound_blaster_support();
+#endif
+#if defined(HAS_ALSA)
+    free_alsa_support();
 #endif
 #if defined(HAS_OSS)
     free_oss_support();
