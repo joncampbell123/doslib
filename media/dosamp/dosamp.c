@@ -54,6 +54,7 @@
 
 #include "sc_sb.h"
 #include "sc_oss.h"
+#include "sc_alsa.h"
 
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
