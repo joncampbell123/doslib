@@ -158,7 +158,8 @@ static int dosamp_FAR oss_poll(soundcard_t sc) {
     sc->wav_state.play_counter_prev = sc->wav_state.play_counter;
 
     /* FIXME: 32-bit counter from OSS */
-    sc->wav_state.play_counter = ci.bytes;
+    sc->wav_state.play_counter += ci.bytes - sc->p.oss.oss_p_pcount;
+    sc->p.oss.oss_p_pcount = ci.bytes;
 
     if (sc->wav_state.play_counter <= sc->wav_state.write_counter)
         sc->wav_state.play_delay_bytes = sc->wav_state.write_counter - sc->wav_state.play_counter;
@@ -234,6 +235,18 @@ static int oss_start_playback(soundcard_t sc) {
 
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
+    sc->wav_state.play_counter_prev = 0;
+
+    {
+        count_info ci;
+        int delay = 0;
+
+        /* WARNING: OSS considers the sound card's FIFO as part of the delay */
+        memset(&ci,0,sizeof(ci));
+        ioctl(sc->p.oss.fd,SNDCTL_DSP_GETOPTR,&ci);
+
+        sc->p.oss.oss_p_pcount = ci.bytes;
+    }
 
     sc->wav_state.playing = 1;
     return 0;

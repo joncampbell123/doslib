@@ -22,6 +22,7 @@ struct soundcard_priv_oss_t {
     uint8_t                                     index;          /* /dev/dsp, /dev/dsp1, /dev/dsp2, etc... */
     int                                         fd;
     uint32_t                                    buffer_size;
+    unsigned int                                oss_p_pcount;
 };
 #endif
 
