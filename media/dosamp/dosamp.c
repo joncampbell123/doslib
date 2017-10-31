@@ -84,10 +84,11 @@ int init_termios(void) {
 
         termios_cur = termios_prev;
 
-        termios_cur.c_iflag &= ~(IGNBRK|IGNCR|ICRNL);
+        termios_cur.c_iflag &= ~(IGNBRK|IGNCR|ICRNL|INLCR);
         termios_cur.c_iflag |=  (BRKINT);
 
-        termios_cur.c_oflag |=  (ONLCR|OCRNL);
+        termios_cur.c_oflag &= ~(OCRNL);
+        termios_cur.c_oflag |=  (ONLCR);
 
         termios_cur.c_lflag &= ~(ICANON|XCASE|ECHO|ECHOE|ECHOK|ECHONL|ECHOCTL|ECHOPRT|ECHOKE);
 
