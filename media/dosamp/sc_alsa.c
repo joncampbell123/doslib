@@ -456,7 +456,6 @@ void alsa_check(const char *devname) {
         sc = soundcardlist_new(&alsa_soundcard_template);
         if (sc != NULL) {
             sc->p.alsa.device = strdup(devname);
-            printf("ALSA: Found '%s'\n",sc->p.alsa.device);
         }
     }
 
