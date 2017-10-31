@@ -164,7 +164,6 @@ static int dosamp_FAR oss_poll(soundcard_t sc) {
 
     sc->wav_state.play_counter_prev = sc->wav_state.play_counter;
 
-    /* FIXME: 32-bit counter from OSS */
     sc->wav_state.play_counter += ci.bytes - sc->p.oss.oss_p_pcount;
     sc->p.oss.oss_p_pcount = ci.bytes;
 
