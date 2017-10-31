@@ -1038,6 +1038,10 @@ void display_idle_timesource(void) {
     else if (time_source == &dosamp_time_source_rdtsc)
         printf("RDTSC ");
 #endif
+#if defined(HAS_CLOCK_MONOTONIC)
+    else if (time_source == &dosamp_time_source_clock_monotonic)
+        printf("CLOCK_MONOTONIC ");
+#endif
     else
         printf("? ");
 
