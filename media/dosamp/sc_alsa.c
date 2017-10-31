@@ -267,6 +267,10 @@ static int alsa_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * con
      * assume: playing is not set unless prepared */
     if (sc->wav_state.prepared) return -1;
 
+    /* take defaults */
+    snd_pcm_hw_params_any(sc->p.alsa.handle, sc->p.alsa.param);
+    snd_pcm_hw_params_set_access(sc->p.alsa.handle, sc->p.alsa.param, SND_PCM_ACCESS_RW_INTERLEAVED);
+
     /* pass it through to ALSA, see what happens */
     if (fmt->bits_per_sample == 8)
         snd_pcm_hw_params_set_format(sc->p.alsa.handle, sc->p.alsa.param, SND_PCM_FORMAT_U8);
