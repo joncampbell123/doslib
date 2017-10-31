@@ -30,6 +30,7 @@ struct soundcard_priv_oss_t {
 #if defined(HAS_ALSA)
 # include <alsa/asoundlib.h>
 struct soundcard_priv_alsa_t {
+    snd_pcm_hw_params_t*                        param;
     snd_pcm_t*                                  handle;
     char*                                       device;
     uint32_t                                    buffer_size;
