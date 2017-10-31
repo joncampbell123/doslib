@@ -64,10 +64,17 @@ static int dosamp_FAR alsa_poll(soundcard_t sc);
 /* this depends on keeping the "play delay" up to date */
 static uint32_t dosamp_FAR alsa_can_write(soundcard_t sc) { /* in bytes */
     snd_pcm_sframes_t avail=0,delay=0;
+    int r;
 
     if (sc->p.alsa.handle == NULL) return 0;
 
-    snd_pcm_avail_delay(sc->p.alsa.handle, &avail, &delay);
+    r = snd_pcm_avail_delay(sc->p.alsa.handle, &avail, &delay);
+    if (r == -EPIPE) {
+        /* ALSA underrun. Try again. */
+        snd_pcm_prepare(sc->p.alsa.handle);
+        r = snd_pcm_avail_delay(sc->p.alsa.handle, &avail, &delay);
+    }
+
     return avail * sc->cur_codec.bytes_per_block;
 }
 
@@ -107,6 +114,7 @@ static unsigned int dosamp_FAR alsa_buffer_write(soundcard_t sc,const unsigned c
     if (r == -EPIPE) {
         /* underrun */
         snd_pcm_prepare(sc->p.alsa.handle);
+        r = 0;
     }
     else if (r < 0) {
         r = 0;
