@@ -155,7 +155,6 @@ static int dosamp_FAR oss_poll(soundcard_t sc) {
     memset(&ci,0,sizeof(ci));
     ioctl(sc->p.oss.fd,SNDCTL_DSP_GETOPTR,&ci);
 
-
     sc->wav_state.play_counter_prev = sc->wav_state.play_counter;
 
     /* FIXME: 32-bit counter from OSS */
