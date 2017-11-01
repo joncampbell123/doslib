@@ -350,7 +350,7 @@ int _win_kb_write(const char *p,int sz) {
 	return cnt;
 }
 
-int _win_read(int fd,void *buf,int sz) {
+int _win_read(int fd,void *buf,size_t sz) {
 	if (fd == 0) return _win_kb_read((char*)buf,sz);
 	else if (fd == 1 || fd == 2) return -1;
 	else return read(fd,buf,sz);

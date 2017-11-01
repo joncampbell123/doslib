@@ -28,7 +28,7 @@ void _gdi_pause();
 void _win_pump_wait();
 void _win_putc(char c);
 int _win_isatty(int fd);
-int _win_read(int fd,void *buf,int sz);
+int _win_read(int fd,void *buf,size_t sz);
 size_t _win_printf(const char *fmt,...);
 int _win_write(int fd,const void *buf,int sz);
 int _cdecl _fake_main(int argc,char **argv,char **envp);
