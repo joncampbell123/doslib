@@ -169,9 +169,12 @@ int main() {
 	t8254_time_t tick[3];
 	unsigned int i;
 
-#ifdef TARGET_WINDOWS
+#if defined(TARGET_WINDOWS) && TARGET_WINDOWS == 32 && !defined(WIN386)
+    /* As a 32-bit Windows application, we *can* talk directly to the 8254 but only if running under Windows 3.1/95/98/ME.
+     * Windows NT would never permit us to directly talk to IO.
+     *
+     * However if we're a Win16 program or Watcom 386 application, Windows NT will trap and emulate the 8254 through NTVDM.EXE */
     detect_windows();
-    /* this program should NOT be run under OS/2, or Windows NT */
     if (!(windows_mode == WINDOWS_REAL || windows_mode == WINDOWS_STANDARD || windows_mode == WINDOWS_ENHANCED)) {
         printf("This test program is only applicable to Windows 3.x/9x\n");
         return 1;
