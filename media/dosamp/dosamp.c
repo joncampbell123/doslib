@@ -3,6 +3,11 @@
 # define WINFCON_STOCK_WIN_MAIN
 #endif
 
+#if defined(TARGET_WINDOWS)
+# include <windows.h>
+# include <commdlg.h>
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #ifdef LINUX
@@ -888,6 +893,39 @@ static void help() {
     printf(" /h /help             This help\n");
 }
 
+#if defined(TARGET_WINDOWS) && TARGET_WINDOWS >= 31 /* GetOpenFileName did not appear until Windows 3.1 */
+char *prompt_open_file(void) {
+	char tmp[300];
+	OPENFILENAME of;
+
+	memset(&of,0,sizeof(of));
+    memset(tmp,0,sizeof(tmp));
+
+	of.lStructSize = sizeof(of);
+	of.hwndOwner = _win_hwnd();
+	of.hInstance = _win_hInstance;
+	of.lpstrFilter =
+		"All supported files\x00*.wav\x00"
+		"WAV files\x00*.wav\x00"
+		"All files\x00*.*\x00";
+	of.nFilterIndex = 1;
+	if (wav_file != NULL) strncpy(tmp,wav_file,sizeof(tmp)-1);
+	of.lpstrFile = tmp;
+	of.nMaxFile = sizeof(tmp)-1;
+	of.lpstrTitle = "Select file to play";
+	of.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+    if (!GetOpenFileName(&of))
+        return NULL;
+
+    return strdup(tmp);
+}
+#else
+char *prompt_open_file(void) {
+    /* TODO */
+    return NULL;
+}
+#endif
+
 static int parse_argv(int argc,char **argv) {
     int i;
 
@@ -943,6 +981,10 @@ static int parse_argv(int argc,char **argv) {
         /*OK*/
     }
     else {
+        /* Windows: Try asking the user what to play */
+        if (wav_file == NULL)
+            wav_file = prompt_open_file();
+
         if (wav_file == NULL) {
             printf("You must specify a file to play\n");
             return 0;

@@ -55,8 +55,11 @@ $(DOSAMP_EXE): $(DOSAMP_EXE_DEPS)
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
 # Windows 3.x
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%append tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
+	%append tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+!  endif
+!  ifeq TARGET_WINDOWS 31
+	%append tmp.cmd library commdlg
 !  endif
 ! else
 # MS-DOS
