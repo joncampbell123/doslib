@@ -9,6 +9,7 @@ doshuge=1 # MS-DOS huge model
 dospc98=1 # MS-DOS PC-98
 win30=1 # Windows 3.0
 win31=1 # Windows 3.1
+win32s=1 # Windows 3.1 + Win32s
 
 if [ "$1" == "clean" ]; then
     do_clean
