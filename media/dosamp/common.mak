@@ -45,7 +45,6 @@ $(DOSAMP_EXE): $(WINDOWS_W9XVMM_LIB) $(WINDOWS_W9XVMM_LIB_DEPENDENCIES) $(HW_SND
 
 clean: .SYMBOLIC
           del $(SUBDIR)$(HPS)*.obj
-          del $(HW_SNDSB_LIB)
           del tmp.cmd
           @echo Cleaning done
 
