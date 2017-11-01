@@ -58,7 +58,7 @@ $(DOSAMP_EXE): $(DOSAMP_EXE_DEPS)
 	%append tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
 	%append tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
 !  endif
-!  ifeq TARGET_WINDOWS 31
+!  ifeq TARGET_WINDOWS 31 # Blargh, please tell me Watcom's makefile system has a "if greater than or equal to.."
 	%append tmp.cmd library commdlg
 !  endif
 ! else
