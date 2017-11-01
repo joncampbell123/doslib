@@ -24,6 +24,11 @@
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
 
+#ifdef TARGET_WINDOWS
+# define WINFCON_STOCK_WIN_MAIN
+# include <hw/dos/winfcon.h>
+#endif
+
 static volatile unsigned int counter = 0;
 static unsigned int speaker_rate = 0;
 static unsigned int max = 0xFFFF;
@@ -60,7 +65,7 @@ void pulse_width_test() {
 	fd = open("..\\test1_22.wav",O_RDONLY|O_BINARY);
 	if (fd < 0) fd = open("test1_22.wav",O_RDONLY|O_BINARY);
 	if (fd < 0) {
-		fprintf(stderr,"Cannot open test WAV\n");
+		printf("Cannot open test WAV\n");
 		return;
 	}
 	lseek(fd,44,SEEK_SET);
@@ -91,7 +96,7 @@ void pulse_width_test() {
 		if (patience <= 2) {
 			write_8254_system_timer(0xFFFF);	/* BUGFIX: on very old slow machines, the 54-count tick can easily cause the printf() below to absolutely CRAWL... */
 			_sti();
-			fprintf(stderr,"Oops! Either your CPU is too fast or the timer countdown trick doesn't work.\n");
+			printf("Oops! Either your CPU is too fast or the timer countdown trick doesn't work.\n");
 			_cli();
 			write_8254_system_timer(54);
 			plan_b = 1;
