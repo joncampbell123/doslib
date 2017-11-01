@@ -1,0 +1,12 @@
+- Base I/O base:                0x0220
+- 8-bit DMA channel:            1
+- 16-bit DMA channel:           5
+- IRQ:                          5
+- DSP detected:                 1
+- DSP version:                  4.5 (0x04 0x05)
+- DSP copyright string:         COPYRIGHT (C) CREATIVE TECHNOLOGY LTD, 1992.
+- Mixer:                        CT1745
+- Is Gallant SC-6600:           No
+- ESS chipset:                  (none)
+- ISA Plug & Play:              No
+- Has CSP/ASP chip:             No
