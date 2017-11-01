@@ -894,6 +894,8 @@ static void help() {
 }
 
 #if defined(TARGET_WINDOWS) && TARGET_WINDOWS >= 31 /* GetOpenFileName did not appear until Windows 3.1 */
+/* TODO: Instead of directly depending on COMMDLG/GetOpenFileName we should LoadLibrary/GetProcAddress it.
+ *       That way, we can target Windows 3.0 and still use it if the Windows 3.0 binary is run on Windows 3.1 */
 char *prompt_open_file(void) {
 	char tmp[300];
 	OPENFILENAME of;
