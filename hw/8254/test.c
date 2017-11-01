@@ -29,10 +29,17 @@
 # include <hw/dos/winfcon.h>
 #endif
 
+#ifdef TARGET_WINDOWS
+/* no interrupts */
+#else
+# define HOOK_IRQ
+#endif
+
 static volatile unsigned int counter = 0;
 static unsigned int speaker_rate = 0;
 static unsigned int max = 0xFFFF;
 
+#ifdef HOOK_IRQ
 void (__interrupt __far *prev_irq0)() = NULL;
 static void __interrupt __far irq0() {
 	counter++;
@@ -42,6 +49,7 @@ static void __interrupt __far irq0() {
 #endif
 	p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
 }
+#endif
 
 #if TARGET_MSDOS == 32
 /* 32-bit DOS flat mode doesn't impose restrictions */
@@ -170,8 +178,10 @@ int main() {
 
 	speaker_rate = T8254_REF_CLOCK_HZ / 400UL;	/* 400Hz */
 
+#ifdef HOOK_IRQ
 	prev_irq0 = _dos_getvect(T8254_IRQ+0x08);
 	_dos_setvect(T8254_IRQ+0x8,irq0);
+#endif
 
 	_cli();
 	write_8254_pc_speaker(speaker_rate);
@@ -321,7 +331,9 @@ int main() {
 	_cli();
 	write_8254_pc_speaker(0);
 	t8254_pc_speaker_set_gate(0);
+#ifdef HOOK_IRQ
 	_dos_setvect(T8254_IRQ+0x8,prev_irq0);
+#endif
 	_sti();
 
 	write_8254_system_timer(0xFFFF); /* restore normal function to prevent BIOS from going crazy */
