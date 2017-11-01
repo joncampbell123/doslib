@@ -1102,22 +1102,28 @@ int main(int argc,char **argv) {
 #if defined(LINUX)
     /* ... */
 #else
-    /* MS-DOS */
     cpu_probe();
+# if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+    /* MS-DOS */
     probe_8237();
     if (!probe_8259()) {
         printf("Cannot init 8259 PIC\n");
         return 1;
     }
+# endif
+# if defined(HAS_8254)
     if (!probe_8254()) {
         printf("Cannot init 8254 timer\n");
         return 1;
     }
+# endif
+# if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
     if (!init_isa_pnp_bios()) {
         printf("Cannot init ISA PnP\n");
         return 1;
     }
     find_isa_pnp_bios();
+# endif
 #endif
 
 #if defined(HAS_8254)
@@ -1269,7 +1275,7 @@ int main(int argc,char **argv) {
                         printf("\nIRQ status:\n");
 #if defined(LINUX)
                         printf("  Not applicable for this platform\n");
-#else
+#elif defined(HAS_IRQ)
                         printf("  IRQ=%u INT=0x%02X was_masked=%u chain_irq=%u was_iret=%u hooked=%u\n",
                             soundcard_irq.irq_number,
                             soundcard_irq.int_number,

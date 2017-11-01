@@ -11,14 +11,14 @@
 #endif
 
 /* platform has IRQ handling */
-#if defined(LINUX)
+#if defined(LINUX) || defined(TARGET_WINDOWS) || defined(TARGET_OS2)
 /* no */
 #else
 # define HAS_IRQ
 #endif
 
 /* platform has DMA handling */
-#if defined(LINUX)
+#if defined(LINUX) || defined(TARGET_WINDOWS) || defined(TARGET_OS2)
 /* no */
 #else
 # define HAS_DMA
@@ -27,6 +27,17 @@
 /* platform has 8042 timer */
 #if defined(LINUX)
 /* no */
+#elif defined(TARGET_WINDOWS)
+/* Windows 3.x MIGHT have WINMM multimedia timer, might not.
+ * If it doesn't, we can do what any other Windows 3.x app would do
+ * and just talk directly to the 8042, because Windows 3.x/9x/ME
+ * are that kind of platform where IO is allowed in userspace (but
+ * sometimes virtualized by kernel drivers). Note that direct IO
+ * of this kind is a no-no in 32-bit Windows NT, but we'll detect
+ * that case and avoid the code then. If we're a 16-bit WINAPP,
+ * we *can* do this in Windows NT because NTVDM.EXE will trap and
+ * emulate the 8042 timer. */
+# define HAS_8254
 #else
 # define HAS_8254
 #endif
@@ -39,14 +50,14 @@
 #endif
 
 /* platform has Sound Blaster direct access */
-#if defined(LINUX)
+#if defined(LINUX) || defined(TARGET_WINDOWS) || defined(TARGET_OS2)
 /* no */
 #else
 # define HAS_SNDSB
 #endif
 
 /* platform has CLI/STI */
-#if defined(LINUX)
+#if defined(LINUX) || defined(TARGET_WINDOWS) || defined(TARGET_OS2)
 /* no */
 #else
 # define HAS_CLISTI
