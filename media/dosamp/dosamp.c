@@ -74,6 +74,7 @@ char                                            str_tmp[256];
 char                                            soundcard_str_tmp[256];
 
 /* DOSAMP state and user state */
+static unsigned char                            test_mode = 0;
 static unsigned long                            prefer_rate = 0;
 static unsigned char                            prefer_channels = 0;
 static unsigned char                            prefer_bits = 0;
@@ -917,6 +918,9 @@ static int parse_argv(int argc,char **argv) {
             else if (!strcmp(a,"rnd")) {
                 opt_round = 1;
             }
+            else if (!strcmp(a,"tst")) {
+                test_mode = TEST_TSC;
+            }
             else if (!strcmp(a,"ar")) {
                 a = argv[i++];
                 if (a == NULL) return 1;
@@ -935,9 +939,14 @@ static int parse_argv(int argc,char **argv) {
         }
     }
 
-    if (wav_file == NULL) {
-        printf("You must specify a file to play\n");
-        return 0;
+    if (test_mode == TEST_TSC) {
+        /*OK*/
+    }
+    else {
+        if (wav_file == NULL) {
+            printf("You must specify a file to play\n");
+            return 0;
+        }
     }
 
     return 1;
@@ -1093,6 +1102,8 @@ int main(int argc,char **argv,char **envp) {
     unsigned char disp=1;
     int i,loop;
 
+    (void)envp;
+
     if (!parse_argv(argc,argv))
         return 1;
 
@@ -1157,6 +1168,20 @@ int main(int argc,char **argv,char **envp) {
     /* open the time source */
     if (time_source->open(time_source) < 0) {
         printf("Cannot open time source\n");
+        return 1;
+    }
+
+    if (test_mode == TEST_TSC) {
+        while (1) {
+            display_idle_timesource();
+
+            if (kbhit()) {
+                if (getch() == 27)
+                    break;
+            }
+        }
+
+        time_source->close(time_source);
         return 1;
     }
 

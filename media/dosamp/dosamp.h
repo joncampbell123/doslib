@@ -96,6 +96,11 @@
 # include <hw/dos/winfcon.h>
 #endif
 
+enum {
+    TEST_NONE=0,
+    TEST_TSC
+};
+
 struct wav_cbr_t {
     uint32_t                                    sample_rate;
     uint16_t                                    bytes_per_block;
