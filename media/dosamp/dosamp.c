@@ -1,4 +1,8 @@
 
+#if defined(TARGET_WINDOWS)
+# define WINFCON_STOCK_WIN_MAIN
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #ifdef LINUX
@@ -1085,7 +1089,7 @@ void print_soundcard(soundcard_t sc) {
         printf(" %s",str_tmp);
 }
 
-int main(int argc,char **argv) {
+int main(int argc,char **argv,char **envp) {
     unsigned char disp=1;
     int i,loop;
 

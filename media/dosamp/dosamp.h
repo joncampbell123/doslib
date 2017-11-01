@@ -31,7 +31,7 @@
 /* Windows 3.x MIGHT have WINMM multimedia timer, might not.
  * If it doesn't, we can do what any other Windows 3.x app would do
  * and just talk directly to the 8042, because Windows 3.x/9x/ME
- * are that kind of platform where IO is allowed in userspace (but
+ * is that kind of platform where IO is allowed in userspace (but
  * sometimes virtualized by kernel drivers). Note that direct IO
  * of this kind is a no-no in 32-bit Windows NT, but we'll detect
  * that case and avoid the code then. If we're a 16-bit WINAPP,
@@ -40,6 +40,14 @@
 # define HAS_8254
 #else
 # define HAS_8254
+#endif
+
+/* platform should use winfcon (our own DOSLIB console emulation) */
+#if defined(TARGET_WINDOWS) && TARGET_WINDOWS < 40
+/* yes: Windows 3.x does not offer a console even for Win32s applications */
+# define USE_WINFCON
+#else
+/* no */
 #endif
 
 /* platform has RDTSC timer */
@@ -82,6 +90,10 @@
 # define HAS_ALSA
 #else
 /* no */
+#endif
+
+#ifdef USE_WINFCON
+# include <hw/dos/winfcon.h>
 #endif
 
 struct wav_cbr_t {

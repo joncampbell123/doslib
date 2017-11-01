@@ -134,7 +134,9 @@ void convert_rdbuf_check(void) {
 
     return;
 fail:
+# if !defined(USE_WINFCON)
     fprintf(stderr,"convert_rdbuf buffer overrun corruption detected.\n");
+# endif
     abort();
 #endif
 }
