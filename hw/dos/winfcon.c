@@ -578,6 +578,72 @@ void _gdi_pause() {
 #endif
 }
 
+static char *cmdline_copy = NULL;
+static char **cmdline_argv = NULL;
+static unsigned int cmdline_argc_alloc = 0;
+static unsigned int cmdline_argc = 0;
+
+static void lpstr_to_cmdline(LPSTR lpCmdLine) {
+    char *s,*start;
+
+    /* assume: cmdline_copy == NULL, cmdline_argv == NULL, cmdline_argc_alloc == 0, cmdline_argc == 0 */
+    /* do not call this twice */
+
+    /* first, we need to duplicate the command line so we can chop it up and feed it to main() as argv[] */
+    cmdline_copy = strdup(lpCmdLine);
+    if (cmdline_copy == NULL) return;
+
+    /* chop it up into argv[] */
+    cmdline_argc_alloc = 16;
+    cmdline_argv = malloc(sizeof(char*) * cmdline_argc_alloc);
+    if (cmdline_argv == NULL) return;
+
+    /* we don't have code to determine argv[0] yet (FIXME). assume argc == 0 */
+    cmdline_argv[cmdline_argc++] = "";
+
+    /* convert the rest of the string to argv[1]....argv[N] */
+    s = cmdline_copy;
+    while (*s != 0) {
+        if (*s == ' ') {
+            s++;
+            continue;
+        }
+
+        if (*s == '\"') {
+            start = ++s; /* argv[] starts just after quote */
+            while (*s && *s != '\"') s++;
+
+            if (*s) *s++ = 0; /* ASCIIZ snip (erase trailing quote) */
+        }
+        else {
+            start = s;
+            while (*s && *s != ' ') s++;
+
+            if (*s) *s++ = 0; /* ASCIIZ snip */
+        }
+
+        /* so, "start" points at the first char of argv[]. */
+        /* assume: start != NULL. we allow "" as argv[].
+         * expand argv[] as needed. */
+        if ((cmdline_argc+1) > cmdline_argc_alloc) {
+            size_t nl = cmdline_argc_alloc + 48;
+            char **np = (char**)realloc((void*)cmdline_argv,sizeof(char*) * nl);
+            if (np == NULL) break;
+
+            cmdline_argv = np;
+            cmdline_argc_alloc = nl;
+        }
+        cmdline_argv[cmdline_argc++] = start;
+
+        /* skip whitespace */
+        while (*s == ' ') s++;
+    }
+
+    /* final argv[] */
+    assert(cmdline_argc < cmdline_argc_alloc);
+    cmdline_argv[cmdline_argc] = NULL;
+}
+
 /* NOTES:
  *   For Win16, programmers generally use WINAPI WinMain(...) but WINAPI is defined in such a way
  *   that it always makes the function prolog return FAR. Unfortunately, when Watcom C's runtime
@@ -586,6 +652,8 @@ void _gdi_pause() {
 int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow,int (_cdecl *_main_f)(int argc,char**,char**)) {
 	WNDCLASS wnd;
 	MSG msg;
+
+    lpstr_to_cmdline(lpCmdLine);
 
 	_win_hInstance = hInstance;
 	snprintf(_win_WindowProcClass,sizeof(_win_WindowProcClass),"_HW_DOS_WINFCON_%lX",(DWORD)hInstance);
@@ -695,7 +763,7 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 		SWP_NOMOVE);
 
 	if (setjmp(_this_console.exit_jmp) == 0)
-		_main_f(0,NULL,NULL); /* <- FIXME: We need to take the command line and generate argv[]. Also generate envp[] */
+		_main_f(cmdline_argc, cmdline_argv, NULL); /* <- FIXME: We need to take the command line and generate argv[]. Also generate envp[] */
 
 	if (!_this_console.userReqClose) {
 		_win_printf("\n<program terminated>");

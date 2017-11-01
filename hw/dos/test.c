@@ -31,7 +31,17 @@
 # include <hw/dos/winfcon.h>
 #endif
 
-int main() {
+int main(int argc,char **argv,char **envp) {
+    printf("argc = %d\n",argc);
+    printf("argv = %p\n",argv);
+    printf("envp = %p\n",envp);
+    {
+        unsigned int i;
+
+        for (i=0;i < (unsigned int)argc;i++)
+            printf(" argv[%u]: '%s'\n",i,argv[i]);
+    }
+
 	cpu_probe();
 	printf("Your CPU is basically a %s or higher\n",cpu_basic_level_to_string(cpu_basic_level));
 

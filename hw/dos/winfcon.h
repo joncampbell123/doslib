@@ -31,14 +31,15 @@ int _win_isatty(int fd);
 int _win_read(int fd,void *buf,int sz);
 size_t _win_printf(const char *fmt,...);
 int _win_write(int fd,const void *buf,int sz);
-int _cdecl main(int argc,char **argv,char **envp);
+int _cdecl _fake_main(int argc,char **argv,char **envp);
 int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow,int (_cdecl *_main_f)(int argc,char**,char**));
 
 extern HINSTANCE _win_hInstance;
 
 # ifdef WINFCON_STOCK_WIN_MAIN
+#  define main _fake_main
 int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow) {
-	return _win_main_con_entry(hInstance,hPrevInstance,lpCmdLine,nCmdShow,main);
+	return _win_main_con_entry(hInstance,hPrevInstance,lpCmdLine,nCmdShow,_fake_main);
 }
 # endif
 
