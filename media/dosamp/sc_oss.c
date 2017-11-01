@@ -167,11 +167,10 @@ static int dosamp_FAR oss_poll(soundcard_t sc) {
     sc->wav_state.play_counter += ci.bytes - sc->p.oss.oss_p_pcount;
     sc->p.oss.oss_p_pcount = ci.bytes;
 
-    if (sc->wav_state.play_counter <= sc->wav_state.write_counter)
-        sc->wav_state.play_delay_bytes = sc->wav_state.write_counter - sc->wav_state.play_counter;
-    else
-        sc->wav_state.play_delay_bytes = 0;
+    if (sc->wav_state.play_counter > sc->wav_state.write_counter)
+        sc->wav_state.play_counter = sc->wav_state.write_counter;
 
+    sc->wav_state.play_delay_bytes = sc->wav_state.write_counter - sc->wav_state.play_counter;
     sc->wav_state.play_delay = delay / sc->cur_codec.bytes_per_block;
     return 0;
 }
