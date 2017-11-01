@@ -51,6 +51,7 @@
 #include "tmpbuf.h"
 #include "snirq.h"
 #include "sndcard.h"
+#include "termios.h"
 
 #include "sc_sb.h"
 #include "sc_oss.h"
@@ -59,94 +60,6 @@
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
 # error Open Watcom C tiny memory model not supported
-#endif
-
-/* TODO: Move to another file eventually. */
-#if defined(LINUX)
-#include <termios.h>
-#include <poll.h>
-
-/* Linux does not provide getch() and kbhit().
- * We must provide our own using termios() functions. */
-
-static struct termios termios_prev,termios_cur;
-static unsigned char termios_exhook = 0;
-static unsigned char termios_init = 0;
-
-int free_termios(void);
-
-void atexit_termios(void) {
-    free_termios();
-}
-
-int init_termios(void) {
-    if (!termios_init) {
-        tcgetattr(0/*STDIN*/,&termios_prev);
-
-        termios_cur = termios_prev;
-
-        termios_cur.c_iflag &= ~(IGNBRK|IGNCR|ICRNL|INLCR);
-        termios_cur.c_iflag |=  (BRKINT);
-
-        termios_cur.c_oflag &= ~(OCRNL);
-        termios_cur.c_oflag |=  (ONLCR);
-
-        termios_cur.c_lflag &= ~(ICANON|XCASE|ECHO|ECHOE|ECHOK|ECHONL|ECHOCTL|ECHOPRT|ECHOKE);
-
-        tcsetattr(0/*STDIN*/,TCSADRAIN,&termios_cur);
-
-        if (!termios_exhook) {
-            atexit(atexit_termios);
-            termios_exhook = 1;
-        }
-
-        termios_init = 1;
-    }
-
-    return 0;
-}
-
-int free_termios(void) {
-    if (termios_init) {
-        tcsetattr(0/*STDIN*/,TCSADRAIN,&termios_prev);
-        termios_init = 0;
-    }
-
-    return 0;
-}
-
-int getch(void) {
-    char c;
-
-    if (read(0/*STDIN*/,&c,1) != 1)
-        return -1;
-
-    return (int)((unsigned char)c);
-}
-
-int kbhit(void) {
-    struct pollfd pfd = {0,0,0};
-
-    pfd.events = POLLIN;
-    pfd.fd = 0/*STDIN*/;
-    if (poll(&pfd,1,0) > 0) {
-        if ((pfd.revents & POLLIN) != 0)
-            return 1;
-    }
-
-    return 0;
-}
-
-#else
-
-static inline int init_termios(void) {
-    return 0;
-}
-
-static inline int free_termios(void) {
-    return 0;
-}
-
 #endif
 
 /* file source */
