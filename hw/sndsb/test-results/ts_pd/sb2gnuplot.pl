@@ -32,7 +32,7 @@ while ($line = <I>) {
 
         print "Processing $name\n";
 
-        die "bad name $name" if $name =~ m/[^0-9a-zA-Z \.\-\,\(\)_]/i;
+        die "bad name $name" if $name =~ m/[^0-9a-zA-Z \.\-\,\!\(\)_]/i;
 
         $csv = "gnuplot/$name.csv";
         $gnuplot = "gnuplot/$name.gnuplot";
