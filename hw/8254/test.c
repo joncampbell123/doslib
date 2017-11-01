@@ -24,6 +24,11 @@
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
 
+#include <hw/dos/dos.h>
+#include <hw/dos/doswin.h>
+#include <hw/dos/dosbox.h>
+#include <hw/dos/dosntvdm.h>
+
 #ifdef TARGET_WINDOWS
 # define WINFCON_STOCK_WIN_MAIN
 # include <hw/dos/winfcon.h>
@@ -163,6 +168,15 @@ int main() {
 	struct t8254_readback_t readback;
 	t8254_time_t tick[3];
 	unsigned int i;
+
+#ifdef TARGET_WINDOWS
+    detect_windows();
+    /* this program should NOT be run under OS/2, or Windows NT */
+    if (!(windows_mode == WINDOWS_REAL || windows_mode == WINDOWS_STANDARD || windows_mode == WINDOWS_ENHANCED)) {
+        printf("This test program is only applicable to Windows 3.x/9x\n");
+        return 1;
+    }
+#endif
 
 	printf("8254 library test program\n");
 	if (!probe_8254()) {
