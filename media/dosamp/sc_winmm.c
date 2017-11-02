@@ -290,11 +290,16 @@ static unsigned int dosamp_FAR mmsystem_buffer_write(soundcard_t sc,const unsign
 
             if (howmuch > len) howmuch = len;
 
+            /* track write count */
+            if (wh->write_pos == 0)
+                wh->write_counter_base = sc->wav_state.write_counter;
+
 #if TARGET_MSDOS == 16
             _fmemcpy(wh->hdr.lpData + wh->write_pos,buf,howmuch);
 #else
             memcpy(wh->hdr.lpData + wh->write_pos,buf,howmuch);
 #endif
+            sc->wav_state.write_counter += howmuch;
             wh->write_pos += howmuch;
             count += howmuch;
             buf += howmuch;
