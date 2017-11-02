@@ -371,6 +371,32 @@ static int dosamp_FAR mmsystem_poll(soundcard_t sc) {
     mm.wType = TIME_BYTES;
 
     if (__waveOutGetPosition(sc->p.mmsystem.handle, &mm, sizeof(mm)) == 0) {
+        /* FIXME:
+         *
+         *   The "Tandy SBP16" driver in Windows 3.0 is laughably lame about the "current position".
+         *   Apparently they took a shortcut where, instead of actually tracking the DMA pointer
+         *   and playback position, they read once and do not update the playback count until
+         *   either buffers are unprepared or until all buffers finish playing.
+         *
+         *   So under Windows 3.0, this code will see a play counter that jumps forward every so
+         *   often as determined by our buffer size or half of it (hit '2' in DOSAMP to see what
+         *   I mean from the buffer statistics).
+         *
+         *   This is the reason why DOSAMP playback in Windows 3.0 with the SBP16 driver is so
+         *   prone to halt and stutter every so often.
+         *
+         *   The fix:
+         *
+         *   We need to scan the fragment list (with a tracking index) to watch each fragment
+         *   finish playing (dwFlags & WHDR_DONE) and track playback from that in addition
+         *   to the waveOutGetPosition call, then use the two values (one from waveOutGetPosition
+         *   and the other from our fragment tracking) to come up with the final play counter
+         *   to return to the host application.
+         *
+         *   I can only hope that the SBP16 driver is just a bad apple and that not all Windows 3.x
+         *   sound drivers are that shitty. --J.C.
+         *
+         */
         /* count the play counter.
          * we do this so that we could (theoretically) count properly even beyond
          * the limits of the 32-bit byte counter provided by the driver. */
