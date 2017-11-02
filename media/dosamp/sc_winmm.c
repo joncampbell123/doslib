@@ -54,6 +54,7 @@ static unsigned char                mmsystem_probed = 0;
 UINT (WINAPI *__waveOutClose)(HWAVEOUT) = NULL;
 UINT (WINAPI *__waveOutReset)(HWAVEOUT) = NULL;
 UINT (WINAPI *__waveOutOpen)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD) = NULL;
+UINT (WINAPI *__waveOutPrepareHeader)(HWAVEOUT,LPWAVEHDR,UINT) = NULL;
 UINT (WINAPI *__waveOutUnprepareHeader)(HWAVEOUT,LPWAVEHDR,UINT) = NULL;
 UINT (WINAPI *__waveOutGetDevCaps)(UINT,LPWAVEOUTCAPS,UINT) = NULL;
 UINT (WINAPI *__waveOutGetNumDevs)(void) = NULL;
@@ -149,6 +150,38 @@ static void unprepare_fragment_array(soundcard_t sc) {
         for (i=0;i < sc->p.mmsystem.fragment_count;i++)
             unprepare_fragment(sc,sc->p.mmsystem.fragments+i);
     }
+}
+
+static int prepare_fragment(soundcard_t sc,struct soundcard_priv_mmsystem_wavhdr *wh) {
+    if (wh->hdr.dwFlags & WHDR_PREPARED)
+        return 0; /* already prepared */
+
+    if (__waveOutPrepareHeader(sc->p.mmsystem.handle, &wh->hdr, sizeof(wh->hdr)) != 0)
+        return -1;
+
+    return 0;
+}
+
+static int prepare_fragment_array(soundcard_t sc) {
+    unsigned int i;
+
+    /* never while playing! */
+    if (sc->wav_state.playing)
+        return -1;
+
+    /* allocate the fragments first, idiot */
+    if (sc->p.mmsystem.fragments == NULL)
+        return -1;
+
+    for (i=0;i < sc->p.mmsystem.fragment_count;i++) {
+        if (prepare_fragment(sc,sc->p.mmsystem.fragments+i) < 0)
+            goto fail;
+    }
+
+    return 0;
+fail:
+    unprepare_fragment_array(sc);
+    return -1;
 }
 
 /* this depends on keeping the "play delay" up to date */
@@ -298,6 +331,9 @@ static int mmsystem_start_playback(soundcard_t sc) {
 
     __waveOutReset(sc->p.mmsystem.handle);
     unprepare_fragment_array(sc);
+
+    if (prepare_fragment_array(sc) < 0)
+        return -1;
 
     sc->wav_state.playing = 1;
     return 0;
@@ -522,6 +558,8 @@ int probe_for_mmsystem(void) {
     if ((__waveOutReset=((UINT (WINAPI *)(HWAVEOUT))GetProcAddress(mmsystem_dll,"WAVEOUTRESET"))) == NULL)
         return 0;
     if ((__waveOutGetNumDevs=((UINT (WINAPI *)(void))GetProcAddress(mmsystem_dll,"WAVEOUTGETNUMDEVS"))) == NULL)
+        return 0;
+    if ((__waveOutPrepareHeader=((UINT (WINAPI *)(HWAVEOUT,LPWAVEHDR,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTPREPAREHEADER"))) == NULL)
         return 0;
     if ((__waveOutUnprepareHeader=((UINT (WINAPI *)(HWAVEOUT,LPWAVEHDR,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTUNPREPAREHEADER"))) == NULL)
         return 0;
