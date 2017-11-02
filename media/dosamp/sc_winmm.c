@@ -55,6 +55,7 @@ static unsigned char                mmsystem_probed = 0;
 
 UINT (WINAPI *__waveOutClose)(HWAVEOUT) = NULL;
 UINT (WINAPI *__waveOutReset)(HWAVEOUT) = NULL;
+UINT (WINAPI *__waveOutWrite)(HWAVEOUT,LPWAVEHDR,UINT) = NULL;
 UINT (WINAPI *__waveOutOpen)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD) = NULL;
 UINT (WINAPI *__waveOutPrepareHeader)(HWAVEOUT,LPWAVEHDR,UINT) = NULL;
 UINT (WINAPI *__waveOutUnprepareHeader)(HWAVEOUT,LPWAVEHDR,UINT) = NULL;
@@ -214,7 +215,7 @@ static uint32_t dosamp_FAR mmsystem_can_write(soundcard_t sc) { /* in bytes */
          * as "new" and not yet sent to the driver. when we sent it to the driver we clear WHDR_DONE and
          * MMSYSTEM_USERFL_VIRGIN right before we do so. */
         if ((wh->hdr.dwFlags & WHDR_DONE) || (wh->hdr.dwUser & MMSYSTEM_USERFL_VIRGIN))
-            count += wh->hdr.dwBufferLength;
+            count += wh->hdr.dwBufferLength - wh->write_pos;
         else
             break;
 
@@ -242,13 +243,87 @@ static unsigned char dosamp_FAR * dosamp_FAR mmsystem_mmap_write(soundcard_t sc,
 
 static int dosamp_FAR mmsystem_poll(soundcard_t sc);
 
+static int submit_fragment(soundcard_t sc,struct soundcard_priv_mmsystem_wavhdr *wh) {
+    if (!(wh->hdr.dwFlags & WHDR_PREPARED))
+        return -1;
+    if (wh->hdr.lpData == NULL || wh->hdr.dwBufferLength == 0 || wh->hdr.dwBufferLength > sc->p.mmsystem.fragment_size)
+        return -1;
+
+    /* prepare to send to driver */
+    wh->hdr.dwFlags &= ~WHDR_DONE;
+    wh->hdr.dwUser &= ~MMSYSTEM_USERFL_VIRGIN;
+
+    /* send */
+    if (__waveOutWrite(sc->p.mmsystem.handle, &wh->hdr, sizeof(wh->hdr)) != 0)
+        return -1;
+
+    wh->write_pos = 0;
+    return 0;
+}
+
 /* non-mmap write (much like OSS or ALSA in Linux where you do not have direct access to the hardware buffer) */
 static unsigned int dosamp_FAR mmsystem_buffer_write(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len) {
-    (void)sc;
-    (void)buf;
-    (void)len;
+    struct soundcard_priv_mmsystem_wavhdr *wh;
+    unsigned int count = 0;
+    unsigned int i,c;
 
-    return 0;
+    if (!sc->wav_state.playing)
+        return 0;
+
+    /* assume fragments != NULL.
+     * we shouldn't be in playing state unless the fragment array was allocated */
+
+    /* we MUST use the same algorithm as can_write() to ensure the caller can write what they actually intend to
+     * write. normal audio playback should do nothing but increase the amount of data the caller can write. */
+
+    i = sc->p.mmsystem.fragment_next;
+    for (c=0;len != 0U && c < sc->p.mmsystem.fragment_count;c++) {
+        wh = sc->p.mmsystem.fragments + i;
+
+        /* assume lpData != NULL, deBufferLength != 0, buffer prepared.
+         * we shouldn't be here unless the fragment array was allocated and each fragment allocated and prepared. */
+        /* we can use the buffer if the driver marked it as done (completing playback) OR we marked it ourself
+         * as "new" and not yet sent to the driver. when we sent it to the driver we clear WHDR_DONE and
+         * MMSYSTEM_USERFL_VIRGIN right before we do so. */
+        if ((wh->hdr.dwFlags & WHDR_DONE) || (wh->hdr.dwUser & MMSYSTEM_USERFL_VIRGIN)) {
+            unsigned int howmuch = (unsigned int)wh->hdr.dwBufferLength - wh->write_pos;
+
+            if (howmuch > len) howmuch = len;
+
+#if TARGET_MSDOS == 16
+            _fmemcpy(wh->hdr.lpData + wh->write_pos,buf,howmuch);
+#else
+            memcpy(wh->hdr.lpData + wh->write_pos,buf,howmuch);
+#endif
+            wh->write_pos += howmuch;
+            count += howmuch;
+            buf += howmuch;
+            len -= howmuch;
+
+            /* if the buffer is full, send it to the driver and move on */
+            if (wh->write_pos >= wh->hdr.dwBufferLength) {
+                if (submit_fragment(sc,wh) < 0)
+                    break;
+
+                if ((++i) >= sc->p.mmsystem.fragment_count)
+                    i = 0;
+
+                sc->p.mmsystem.fragment_next = i;
+                continue;
+            }
+            else {
+                break;
+            }
+        }
+        else {
+            break;
+        }
+
+        if ((++i) >= sc->p.mmsystem.fragment_count)
+            i = 0;
+    }
+
+    return count;
 }
 
 static int dosamp_FAR mmsystem_open(soundcard_t sc) {
@@ -589,6 +664,8 @@ int probe_for_mmsystem(void) {
     if ((__waveOutClose=((UINT (WINAPI *)(HWAVEOUT))GetProcAddress(mmsystem_dll,"WAVEOUTCLOSE"))) == NULL)
         return 0;
     if ((__waveOutReset=((UINT (WINAPI *)(HWAVEOUT))GetProcAddress(mmsystem_dll,"WAVEOUTRESET"))) == NULL)
+        return 0;
+    if ((__waveOutWrite=((UINT (WINAPI *)(HWAVEOUT,LPWAVEHDR,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTWRITE"))) == NULL)
         return 0;
     if ((__waveOutGetNumDevs=((UINT (WINAPI *)(void))GetProcAddress(mmsystem_dll,"WAVEOUTGETNUMDEVS"))) == NULL)
         return 0;
