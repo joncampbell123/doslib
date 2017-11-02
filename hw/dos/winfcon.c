@@ -523,56 +523,7 @@ size_t _win_printf(const char *fmt,...) {
 	return 0;
 }
 
-/* HACK: I don't know if real systems do this or QEMU is doing something wrong, but apparently if a program
- *       rapidly prints a lot of text under Windows 3.1 (like the RDTSC test program) it can cause the GDI
- *       to become 100% focused on TextOut() to the point not even the cursor updates when you move it, and
- *       keyboard events to become severely stalled. Our solution to this problem is to see if we're running
- *       under Windows 3.1 or earlier, and if so, purposely slow down our output with a software delay */
 void _gdi_pause() {
-#if defined(TARGET_WINDOWS)
-# if TARGET_MSDOS == 32 && defined(WIN386)
-# else
-	const DWORD ConDelay = 16UL; /* 16ms */
-# endif
-#endif
-
-#if defined(TARGET_WINDOWS)
-	if (windows_mode != WINDOWS_NT) {
-# if TARGET_MSDOS == 32 && defined(WIN386)
-		/* nothing */
-# else
-#  if TARGET_MSDOS == 16
-		if (ToolHelpInit()) {
-			DWORD base,m;
-			TIMERINFO ti;
-			ti.dwSize = sizeof(ti);
-			if (__TimerCount(&ti)) {
-				base = ti.dwmsSinceStart;
-
-				do {
-					Yield();
-					_win_pump();
-					if (!__TimerCount(&ti)) break;
-					m = ti.dwmsSinceStart;
-				} while ((m - base) < ConDelay);
-			}
-		}
-		else {
-#  else
-		{
-#  endif
-			DWORD base,m;
-
-			base = GetTickCount();
-			do {
-				Yield();
-				_win_pump();
-				m = GetTickCount();
-			} while ((m - base) < ConDelay);
-		}
-# endif
-	}
-#endif
 }
 
 static char *cmdline_copy = NULL;
