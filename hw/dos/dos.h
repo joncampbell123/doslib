@@ -316,6 +316,8 @@ void genthunk32_free();
 #endif
 
 #if TARGET_MSDOS == 16 || !defined(TARGET_WINDOWS)
+# ifndef HW_DOS_DONT_DEFINE_MMSYSTEM
+
 #pragma pack(push,4)
 /* OpenWatcom does not define the OSVERSIONINFO struct for Win16 */
 typedef struct OSVERSIONINFO {
@@ -347,6 +349,8 @@ typedef struct WAVEOUTCAPS {
 	uint32_t	dwSupport;
 } WAVEOUTCAPS;
 #pragma pack(pop)
+
+# endif
 #endif
 
 #if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
