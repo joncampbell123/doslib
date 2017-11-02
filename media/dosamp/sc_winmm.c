@@ -334,9 +334,6 @@ static unsigned int dosamp_FAR mmsystem_buffer_write(soundcard_t sc,const unsign
         else {
             break;
         }
-
-        if ((++i) >= sc->p.mmsystem.fragment_count)
-            i = 0;
     }
 
     return count;
@@ -712,6 +709,18 @@ struct soundcard mmsystem_soundcard_template = {
     .p.mmsystem.handle =                        WAVE_INVALID_HANDLE
 };
 
+static int mmsystem_device_exists(soundcard_t sc,const UINT dev_id) {
+    WAVEOUTCAPS caps;
+
+    (void)sc;
+
+    memset(&caps,0,sizeof(caps));
+    if (__waveOutGetDevCaps(dev_id, &caps, sizeof(caps)) != 0)
+        return 0;
+
+    return 1;
+}
+
 int probe_for_mmsystem(void) {
     UINT devs;
 
@@ -745,7 +754,12 @@ int probe_for_mmsystem(void) {
 
         sc = soundcardlist_new(&mmsystem_soundcard_template);
         if (sc != NULL) {
-            sc->p.mmsystem.device_id = WAVE_MAPPER;
+            /* Windows 3.1 and higher have a wave mapper (usually), and we can just use that.
+             * Windows 3.0 does NOT have a wave mapper, and we'll have to use the first sound card instead. */
+            if (mmsystem_device_exists(sc,WAVE_MAPPER))
+                sc->p.mmsystem.device_id = WAVE_MAPPER;
+            else
+                sc->p.mmsystem.device_id = 0;
         }
     }
 
