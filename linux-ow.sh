@@ -210,7 +210,7 @@ make_buildlist() {
         if [ x"$build_everything" == x"1" ]; then
             build_list="$build_list win300l win300c win302l win302c win303l win303c"
         else
-            build_list="$build_list win302l"
+            build_list="$build_list win300l win302l"
         fi
     fi
 
