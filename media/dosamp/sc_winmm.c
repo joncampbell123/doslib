@@ -395,6 +395,11 @@ static int dosamp_FAR mmsystem_poll(soundcard_t sc) {
         }
         if (sc->wav_state.play_counter < minn)
             sc->wav_state.play_counter = minn;
+
+        /* now we can provide play delay */
+        /* assume play_counter <= write_counter */
+        sc->wav_state.play_delay_bytes = (uint32_t)(sc->wav_state.write_counter - sc->wav_state.play_counter);
+        sc->wav_state.play_delay = sc->wav_state.play_delay_bytes / sc->cur_codec.bytes_per_block;
     }
 
     return 0;
