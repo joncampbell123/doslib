@@ -264,6 +264,8 @@ $(EXEHDMP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exehdmp.
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -285,6 +287,8 @@ $(EXENEDMP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exenedm
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -306,6 +310,8 @@ $(EXELEDMP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exeledm
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -327,6 +333,8 @@ $(EXENEEXP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exeneex
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -348,6 +356,8 @@ $(EXENERDM_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exenerd
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -369,6 +379,8 @@ $(TEST_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(TEST_EXE)
@@ -391,6 +403,8 @@ $(CR3_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)cr3.obj
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(CR3_EXE)

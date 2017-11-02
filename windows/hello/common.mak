@@ -81,8 +81,8 @@ $(HELLDLL1_EXE): $(SUBDIR)$(HPS)helldll1.obj $(HELLDLL1_RES)
 	%write tmp.cmd library $(SUBDIR)$(HPS)HELLDLD1.LIB
 !ifeq TARGET_MSDOS 16
 	%write tmp.cmd EXPORT WndProc.1 PRIVATE RESIDENT
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 ! endif
 	%write tmp.cmd op resource=$(HELLDLL1_RES) name $(HELLDLL1_EXE)
 	@wlink @tmp.cmd
@@ -110,8 +110,8 @@ $(HELLDLD1_DLL) $(HELLDLD1_LIB): $(SUBDIR)$(HPS)helldld1.obj
 !  endif
 ! endif
 !ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 ! endif
 # explanation: if we use the IMPLIB option, Watcom will go off and make an import library that
 # cases all references to refer to HELLDLD1.DLL within the NE image, which Windows does NOT like.
