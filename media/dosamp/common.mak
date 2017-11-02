@@ -35,6 +35,9 @@ DOSAMP_EXE_DEPS = $(SUBDIR)$(HPS)dosamp.obj $(SUBDIR)$(HPS)ts8254.obj $(SUBDIR)$
 
 DOSAMP_EXE_WLINK = file $(SUBDIR)$(HPS)dosamp.obj file $(SUBDIR)$(HPS)ts8254.obj file $(SUBDIR)$(HPS)tsrdtsc.obj file $(SUBDIR)$(HPS)tsrdtsc2.obj file $(SUBDIR)$(HPS)fsref.obj file $(SUBDIR)$(HPS)fsalloc.obj file $(SUBDIR)$(HPS)fssrcfd.obj file $(SUBDIR)$(HPS)cvip816.obj file $(SUBDIR)$(HPS)cvip168.obj file $(SUBDIR)$(HPS)cvipsm8.obj file $(SUBDIR)$(HPS)cvipsm16.obj file $(SUBDIR)$(HPS)cvipsm.obj file $(SUBDIR)$(HPS)cvipms16.obj file $(SUBDIR)$(HPS)cvipms8.obj file $(SUBDIR)$(HPS)cvipms.obj file $(SUBDIR)$(HPS)cvrdbuf.obj file $(SUBDIR)$(HPS)cvrdbfrs.obj file $(SUBDIR)$(HPS)cvrdbfrf.obj file $(SUBDIR)$(HPS)cvrdbfrb.obj file $(SUBDIR)$(HPS)trkrbase.obj file $(SUBDIR)$(HPS)tmpbuf.obj file $(SUBDIR)$(HPS)resample.obj file $(SUBDIR)$(HPS)snirq.obj file $(SUBDIR)$(HPS)sndcard.obj file $(SUBDIR)$(HPS)sc_sb.obj file $(SUBDIR)$(HPS)termios.obj
 
+# FIXME: We're making it dynamic load
+DOSAMP_EXE_WLINK += library windows
+
 ! ifdef TARGET_WINDOWS
 # Windows target.
 # NTS: We include code to talk directly to 8254 in case the WINMM multimedia timer or RDTSC are not available

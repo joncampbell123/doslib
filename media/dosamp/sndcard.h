@@ -44,6 +44,7 @@ struct soundcard_priv_alsa_t {
 
 struct soundcard_priv_mmsystem_t {
     UINT                                        device_id;
+    HWAVEOUT                                    handle;
 };
 #endif
 

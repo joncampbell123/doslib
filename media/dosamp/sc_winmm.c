@@ -47,7 +47,14 @@
 
 int init_mmsystem(void);
 
+#define WAVE_INVALID_HANDLE         ((HWAVEOUT) NULL)
+
 static unsigned char                mmsystem_probed = 0;
+
+UINT (WINAPI *__waveOutClose)(HWAVEOUT) = NULL;
+UINT (WINAPI *__waveOutOpen)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD) = NULL;
+UINT (WINAPI *__waveOutGetDevCaps)(UINT,LPWAVEOUTCAPS,UINT) = NULL;
+UINT (WINAPI *__waveOutGetNumDevs)(void) = NULL;
 
 /* this depends on keeping the "play delay" up to date */
 static uint32_t dosamp_FAR mmsystem_can_write(soundcard_t sc) { /* in bytes */
@@ -121,6 +128,22 @@ static int mmsystem_prepare_play(soundcard_t sc) {
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
 
+    {
+        PCMWAVEFORMAT pcm;
+        UINT r;
+
+        memset(&pcm,0,sizeof(pcm));
+        pcm.wf.wFormatTag = WAVE_FORMAT_PCM;
+        pcm.wf.nChannels = sc->cur_codec.number_of_channels;
+        pcm.wf.nSamplesPerSec = sc->cur_codec.sample_rate;
+        pcm.wf.nAvgBytesPerSec = sc->cur_codec.sample_rate * sc->cur_codec.bytes_per_block;
+        pcm.wf.nBlockAlign = sc->cur_codec.bytes_per_block;
+        pcm.wBitsPerSample = sc->cur_codec.bits_per_sample;
+
+        r = __waveOutOpen(&sc->p.mmsystem.handle, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), NULL, NULL, 0);
+        if (r != 0) return -1;
+    }
+
     sc->wav_state.prepared = 1;
     return 0;
 }
@@ -129,6 +152,11 @@ static int mmsystem_unprepare_play(soundcard_t sc) {
     if (sc->wav_state.playing) return -1;
 
     if (sc->wav_state.prepared) {
+        if (sc->p.mmsystem.handle != WAVE_INVALID_HANDLE) {
+            __waveOutClose(sc->p.mmsystem.handle);
+            sc->p.mmsystem.handle = WAVE_INVALID_HANDLE;
+        }
+
         sc->wav_state.prepared = 0;
     }
 
@@ -167,12 +195,88 @@ static int mmsystem_stop_playback(soundcard_t sc) {
 }
 
 static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt) {
+    PCMWAVEFORMAT pcm;
+    WAVEOUTCAPS caps;
+    UINT r;
+
     /* must be open */
     if (!sc->wav_state.is_open) return -1;
 
     /* not while prepared or playing!
      * assume: playing is not set unless prepared */
     if (sc->wav_state.prepared) return -1;
+
+    /* sane limits */
+    if (fmt->bits_per_sample < 8) fmt->bits_per_sample = 8;
+    else if (fmt->bits_per_sample > 8) fmt->bits_per_sample = 16;
+
+    if (fmt->number_of_channels < 1) fmt->number_of_channels = 1;
+    else if (fmt->number_of_channels > 2) fmt->number_of_channels = 2;
+
+    /* ask the driver */
+    memset(&caps,0,sizeof(caps));
+    if (__waveOutGetDevCaps(sc->p.mmsystem.device_id, &caps, sizeof(caps)) != 0)
+        return -1;
+
+    if (fmt->bits_per_sample == 8) {
+        if ((caps.dwFormats & (WAVE_FORMAT_1M08|WAVE_FORMAT_1S08|WAVE_FORMAT_2M08|WAVE_FORMAT_2S08|WAVE_FORMAT_4M08|WAVE_FORMAT_4S08)) == 0)
+            fmt->bits_per_sample = 16;
+    }
+    if (fmt->bits_per_sample > 8) {
+        if ((caps.dwFormats & (WAVE_FORMAT_1M16|WAVE_FORMAT_1S16|WAVE_FORMAT_2M16|WAVE_FORMAT_2S16|WAVE_FORMAT_4M16|WAVE_FORMAT_4S16)) == 0)
+            fmt->bits_per_sample = 8;
+    }
+    if (fmt->sample_rate > 22050) {
+        if ((caps.dwFormats & (WAVE_FORMAT_4M08|WAVE_FORMAT_4S08|WAVE_FORMAT_4M16|WAVE_FORMAT_4S16)) == 0)
+            fmt->sample_rate = 22050;
+    }
+    if (fmt->sample_rate > 11025) {
+        if ((caps.dwFormats & (WAVE_FORMAT_2M08|WAVE_FORMAT_2S08|WAVE_FORMAT_2M16|WAVE_FORMAT_2S16)) == 0)
+            fmt->sample_rate = 11025;
+    }
+    if (fmt->sample_rate > 8000) {
+        if ((caps.dwFormats & (WAVE_FORMAT_1M08|WAVE_FORMAT_1S08|WAVE_FORMAT_1M16|WAVE_FORMAT_1S16)) == 0)
+            fmt->sample_rate = 8000;
+    }
+
+    /* PCM recalc */
+    fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
+
+    memset(&pcm,0,sizeof(pcm));
+    pcm.wf.wFormatTag = WAVE_FORMAT_PCM;
+    pcm.wf.nChannels = fmt->number_of_channels;
+    pcm.wf.nSamplesPerSec = fmt->sample_rate;
+    pcm.wf.nAvgBytesPerSec = fmt->sample_rate * fmt->bytes_per_block;
+    pcm.wf.nBlockAlign = fmt->bytes_per_block;
+    pcm.wBitsPerSample = fmt->bits_per_sample;
+
+    /* is OK? */
+    r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), NULL, NULL, WAVE_FORMAT_QUERY);
+    if (r == WAVERR_BADFORMAT && pcm.wBitsPerSample == 16) {
+        /* drop to 8-bit. is OK? */
+        fmt->bits_per_sample = 8;
+        fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
+
+        pcm.wf.nAvgBytesPerSec = fmt->sample_rate * fmt->bytes_per_block;
+        pcm.wf.nBlockAlign = fmt->bytes_per_block;
+        pcm.wBitsPerSample = fmt->bits_per_sample;
+
+        r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), NULL, NULL, WAVE_FORMAT_QUERY);
+    }
+    if (r == WAVERR_BADFORMAT && pcm.wf.nChannels > 1) {
+        /* drop to mono. is OK? */
+        fmt->number_of_channels = 1;
+        fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
+
+        pcm.wf.nAvgBytesPerSec = fmt->sample_rate * fmt->bytes_per_block;
+        pcm.wf.nBlockAlign = fmt->bytes_per_block;
+        pcm.wBitsPerSample = fmt->bits_per_sample;
+
+        r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), NULL, NULL, WAVE_FORMAT_QUERY);
+    }
+
+    if (r == WAVERR_BADFORMAT)
+        return -1;
 
     /* PCM recalc */
     fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
@@ -265,7 +369,8 @@ struct soundcard mmsystem_soundcard_template = {
     .write =                                    mmsystem_buffer_write,
     .mmap_write =                               mmsystem_mmap_write,
     .ioctl =                                    mmsystem_ioctl,
-    .p.mmsystem.device_id =                     WAVE_MAPPER
+    .p.mmsystem.device_id =                     WAVE_MAPPER,
+    .p.mmsystem.handle =                        WAVE_INVALID_HANDLE
 };
 
 int probe_for_mmsystem(void) {
@@ -278,15 +383,16 @@ int probe_for_mmsystem(void) {
 
     if (!init_mmsystem()) return 0;
 
-    devs=0;
-    {
-        UINT (WINAPI * __waveOutGetNumDevs)(void) =
-            (UINT (WINAPI *)(void))GetProcAddress(mmsystem_dll,"WAVEOUTGETNUMDEVS");
+    if ((__waveOutGetDevCaps=((UINT (WINAPI *)(UINT,LPWAVEOUTCAPS,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTGETDEVCAPS"))) == NULL)
+        return 0;
+    if ((__waveOutOpen=((UINT (WINAPI *)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD))GetProcAddress(mmsystem_dll,"WAVEOUTOPEN"))) == NULL)
+        return 0;
+    if ((__waveOutClose=((UINT (WINAPI *)(HWAVEOUT))GetProcAddress(mmsystem_dll,"WAVEOUTCLOSE"))) == NULL)
+        return 0;
+    if ((__waveOutGetNumDevs=((UINT (WINAPI *)(void))GetProcAddress(mmsystem_dll,"WAVEOUTGETNUMDEVS"))) == NULL)
+        return 0;
 
-        if (__waveOutGetNumDevs != NULL)
-            devs = __waveOutGetNumDevs();
-    }
-
+    devs = __waveOutGetNumDevs();
     if (devs != 0U) {
         /* just point at the wave mapper and call it good */
         soundcard_t sc;
