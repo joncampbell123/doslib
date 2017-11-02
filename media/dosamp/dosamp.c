@@ -898,6 +898,15 @@ static void help() {
 HMODULE             commdlg_dll = NULL;
 unsigned char       commdlg_tried = 0;
 
+typedef BOOL (WINAPI *GETOPENFILENAMEPROC)(OPENFILENAME FAR *);
+
+GETOPENFILENAMEPROC commdlg_getopenfilenameproc(void) {
+    if (commdlg_dll != NULL)
+        return (GETOPENFILENAMEPROC)GetProcAddress(commdlg_dll,"GETOPENFILENAME");
+
+    return NULL;
+}
+
 void free_commdlg(void) {
     if (commdlg_dll != NULL) {
         FreeLibrary(commdlg_dll);
@@ -931,13 +940,12 @@ int init_commdlg(void) {
 
 #if defined(TARGET_WINDOWS)
 char *prompt_open_file_windows_gofn(void) {
-    BOOL (WINAPI *__GetOpenFileName)(OPENFILENAME FAR *lpofn);
+    GETOPENFILENAMEPROC gofn;
 
     /* GetOpenFileName() did not appear until Windows 3.1 */
     if (!init_commdlg())
         return NULL;
-
-    if ((__GetOpenFileName=GetProcAddress(commdlg_dll,"GETOPENFILENAME")) == NULL)
+    if ((gofn=commdlg_getopenfilenameproc()) == NULL)
         return NULL;
 
     {
@@ -960,7 +968,7 @@ char *prompt_open_file_windows_gofn(void) {
         of.nMaxFile = sizeof(tmp)-1;
         of.lpstrTitle = "Select file to play";
         of.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-        if (!__GetOpenFileName(&of))
+        if (!gofn(&of))
             return NULL;
 
         return strdup(tmp);
