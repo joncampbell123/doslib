@@ -482,6 +482,7 @@ static int mmsystem_unprepare_play(soundcard_t sc) {
     if (sc->wav_state.prepared) {
         /* close the sound device */
         if (sc->p.mmsystem.handle != WAVE_INVALID_HANDLE) {
+            /* TODO: for Reset and Close, we need to loop while the return code is "still playing" to wait for the card to stop */
             __waveOutReset(sc->p.mmsystem.handle);
             unprepare_fragment_array(sc);
             __waveOutClose(sc->p.mmsystem.handle);
@@ -518,6 +519,7 @@ static int mmsystem_start_playback(soundcard_t sc) {
     sc->wav_state.write_counter = 0;
     sc->wav_state.play_counter_prev = 0;
 
+    /* TODO: for Reset, we need to loop while the return code is "still playing" to wait for the card to stop */
     __waveOutReset(sc->p.mmsystem.handle);
     unprepare_fragment_array(sc);
 
@@ -531,6 +533,7 @@ static int mmsystem_start_playback(soundcard_t sc) {
 static int mmsystem_stop_playback(soundcard_t sc) {
     if (!sc->wav_state.playing) return 0;
 
+    /* TODO: for Reset, we need to loop while the return code is "still playing" to wait for the card to stop */
     __waveOutReset(sc->p.mmsystem.handle);
     unprepare_fragment_array(sc);
     sc->wav_state.playing = 0;
