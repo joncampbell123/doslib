@@ -56,6 +56,7 @@ struct soundcard_priv_mmsystem_t {
     unsigned int                                fragment_count;     // number of fragments
     unsigned int                                fragment_next;      // next fragment to write
     unsigned int                                fragment_size;      // size of a fragment
+    DWORD                                       p_cb;               // previous byte count
     struct soundcard_priv_mmsystem_wavhdr*      fragments;
 };
 #endif

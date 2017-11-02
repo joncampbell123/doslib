@@ -59,6 +59,7 @@ UINT (WINAPI *__waveOutWrite)(HWAVEOUT,LPWAVEHDR,UINT) = NULL;
 UINT (WINAPI *__waveOutOpen)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD) = NULL;
 UINT (WINAPI *__waveOutPrepareHeader)(HWAVEOUT,LPWAVEHDR,UINT) = NULL;
 UINT (WINAPI *__waveOutUnprepareHeader)(HWAVEOUT,LPWAVEHDR,UINT) = NULL;
+UINT (WINAPI *__waveOutGetPosition)(HWAVEOUT,LPMMTIME,UINT) = NULL;
 UINT (WINAPI *__waveOutGetDevCaps)(UINT,LPWAVEOUTCAPS,UINT) = NULL;
 UINT (WINAPI *__waveOutGetNumDevs)(void) = NULL;
 
@@ -193,8 +194,10 @@ fail:
     return -1;
 }
 
+static int dosamp_FAR mmsystem_poll(soundcard_t sc);
+
 /* this depends on keeping the "play delay" up to date */
-static uint32_t dosamp_FAR mmsystem_can_write(soundcard_t sc) { /* in bytes */
+static uint32_t dosamp_FAR mmsystem_can_write_inner(soundcard_t sc) { /* in bytes */
     struct soundcard_priv_mmsystem_wavhdr *wh;
     uint32_t count = 0;
     unsigned int i,c;
@@ -224,6 +227,14 @@ static uint32_t dosamp_FAR mmsystem_can_write(soundcard_t sc) { /* in bytes */
     }
 
     return count;
+}
+
+static uint32_t dosamp_FAR mmsystem_can_write(soundcard_t sc) { /* in bytes */
+    uint32_t r;
+
+    r = mmsystem_can_write_inner(sc);
+    mmsystem_poll(sc);
+    return r;
 }
 
 static int dosamp_FAR mmsystem_clamp_if_behind(soundcard_t sc,uint32_t ahead_in_bytes) {
@@ -351,8 +362,39 @@ static int dosamp_FAR mmsystem_close(soundcard_t sc) {
     return 0;
 }
 
+static uint32_t mmsystem_play_buffer_size(soundcard_t sc);
+
 static int dosamp_FAR mmsystem_poll(soundcard_t sc) {
-    (void)sc;
+    uint64_t minn;
+    MMTIME mm;
+
+    if (!sc->wav_state.playing) return 0;
+
+    memset(&mm,0,sizeof(mm));
+    mm.wType = TIME_BYTES;
+
+    if (__waveOutGetPosition(sc->p.mmsystem.handle, &mm, sizeof(mm)) == 0) {
+        /* count the play counter.
+         * we do this so that we could (theoretically) count properly even beyond
+         * the limits of the 32-bit byte counter provided by the driver. */
+        sc->wav_state.play_counter += (uint64_t)(mm.u.cb - sc->p.mmsystem.p_cb);
+        sc->p.mmsystem.p_cb = mm.u.cb;
+
+        /* sanity check, in case of errant drivers (as was common in the Windows 3.x era) */
+        if (sc->wav_state.play_counter > sc->wav_state.write_counter)
+            sc->wav_state.play_counter = sc->wav_state.write_counter;
+
+        /* another, in case the driver can't count properly */
+        {
+            uint32_t sz = mmsystem_play_buffer_size(sc) - mmsystem_can_write_inner(sc);
+
+            minn = sc->wav_state.write_counter;
+            if (minn >= (uint64_t)sz) minn -= sz;
+            else minn = 0;
+        }
+        if (sc->wav_state.play_counter < minn)
+            sc->wav_state.play_counter = minn;
+    }
 
     return 0;
 }
@@ -375,6 +417,7 @@ static int mmsystem_prepare_play(soundcard_t sc) {
     if (sc->wav_state.prepared)
         return 0;
 
+    sc->p.mmsystem.p_cb = 0;
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
 
@@ -441,6 +484,7 @@ static int mmsystem_start_playback(soundcard_t sc) {
     if (sc->wav_state.playing) return 0;
     if (sc->p.mmsystem.fragments == NULL) return -1;
 
+    sc->p.mmsystem.p_cb = 0;
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
     sc->wav_state.play_counter_prev = 0;
@@ -669,6 +713,8 @@ int probe_for_mmsystem(void) {
 
     if (!init_mmsystem()) return 0;
 
+    if ((__waveOutGetPosition=((UINT (WINAPI *)(HWAVEOUT,LPMMTIME,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTGETPOSITION"))) == NULL)
+        return 0;
     if ((__waveOutGetDevCaps=((UINT (WINAPI *)(UINT,LPWAVEOUTCAPS,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTGETDEVCAPS"))) == NULL)
         return 0;
     if ((__waveOutOpen=((UINT (WINAPI *)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD))GetProcAddress(mmsystem_dll,"WAVEOUTOPEN"))) == NULL)
