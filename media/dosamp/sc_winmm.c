@@ -579,13 +579,20 @@ static int mmsystem_get_card_name(soundcard_t sc,void dosamp_FAR *data,unsigned 
 }
 
 static int mmsystem_get_card_detail(soundcard_t sc,void dosamp_FAR *data,unsigned int dosamp_FAR *len) {
+    WAVEOUTCAPS caps;
     char *w;
 
     if (data == NULL || len == NULL) return -1;
     if (*len == 0U) return -1;
 
+    memset(&caps,0,sizeof(caps));
+    __waveOutGetDevCaps(sc->p.mmsystem.device_id, &caps, sizeof(caps));
+
     w = soundcard_str_tmp;
-    w += sprintf(w,"MMSYSTEM device");
+    if (caps.szPname[0] != 0)
+        w += sprintf(w,"%s",caps.szPname);
+    else
+        w += sprintf(w,"MMSYSTEM device");
 
     assert(w < (soundcard_str_tmp+sizeof(soundcard_str_tmp)));
 
