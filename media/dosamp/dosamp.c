@@ -893,40 +893,91 @@ static void help() {
     printf(" /h /help             This help\n");
 }
 
-#if defined(TARGET_WINDOWS) && TARGET_WINDOWS >= 31 /* GetOpenFileName did not appear until Windows 3.1 */
-/* TODO: Instead of directly depending on COMMDLG/GetOpenFileName we should LoadLibrary/GetProcAddress it.
- *       That way, we can target Windows 3.0 and still use it if the Windows 3.0 binary is run on Windows 3.1 */
-char *prompt_open_file(void) {
-	char tmp[300];
-	OPENFILENAME of;
+#if defined(TARGET_WINDOWS)
+/* dynamic loading of COMMDLG */
+HMODULE             commdlg_dll = NULL;
+unsigned char       commdlg_tried = 0;
 
-	memset(&of,0,sizeof(of));
-    memset(tmp,0,sizeof(tmp));
+void free_commdlg(void) {
+    if (commdlg_dll != NULL) {
+        FreeLibrary(commdlg_dll);
+        commdlg_dll = NULL;
+    }
 
-	of.lStructSize = sizeof(of);
-	of.hwndOwner = _win_hwnd();
-	of.hInstance = _win_hInstance;
-	of.lpstrFilter =
-		"All supported files\x00*.wav\x00"
-		"WAV files\x00*.wav\x00"
-		"All files\x00*.*\x00";
-	of.nFilterIndex = 1;
-	if (wav_file != NULL) strncpy(tmp,wav_file,sizeof(tmp)-1);
-	of.lpstrFile = tmp;
-	of.nMaxFile = sizeof(tmp)-1;
-	of.lpstrTitle = "Select file to play";
-	of.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-    if (!GetOpenFileName(&of))
-        return NULL;
-
-    return strdup(tmp);
+    commdlg_tried = 0;
 }
+
+void commdlg_atexit(void) {
+    free_commdlg();
+}
+
+int init_commdlg(void) {
+    if (commdlg_dll == NULL) {
+        if (!commdlg_tried) {
+#if TARGET_MSDOS == 16
+            commdlg_dll = LoadLibrary("COMMDLG");
 #else
-char *prompt_open_file(void) {
-    /* TODO */
-    return NULL;
+            commdlg_dll = LoadLibrary("COMDLG32.DLL");
+#endif
+
+            atexit(commdlg_atexit);
+            commdlg_tried = 1;
+        }
+    }
+
+    return (commdlg_dll != NULL) ? 1 : 0;
 }
 #endif
+
+#if defined(TARGET_WINDOWS)
+char *prompt_open_file_windows_gofn(void) {
+    BOOL (WINAPI *__GetOpenFileName)(OPENFILENAME FAR *lpofn);
+
+    /* GetOpenFileName() did not appear until Windows 3.1 */
+    if (!init_commdlg())
+        return NULL;
+
+    if ((__GetOpenFileName=GetProcAddress(commdlg_dll,"GETOPENFILENAME")) == NULL)
+        return NULL;
+
+    {
+        char tmp[300];
+        OPENFILENAME of;
+
+        memset(&of,0,sizeof(of));
+        memset(tmp,0,sizeof(tmp));
+
+        of.lStructSize = sizeof(of);
+        of.hwndOwner = _win_hwnd();
+        of.hInstance = _win_hInstance;
+        of.lpstrFilter =
+            "All supported files\x00*.wav\x00"
+            "WAV files\x00*.wav\x00"
+            "All files\x00*.*\x00";
+        of.nFilterIndex = 1;
+        if (wav_file != NULL) strncpy(tmp,wav_file,sizeof(tmp)-1);
+        of.lpstrFile = tmp;
+        of.nMaxFile = sizeof(tmp)-1;
+        of.lpstrTitle = "Select file to play";
+        of.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+        if (!__GetOpenFileName(&of))
+            return NULL;
+
+        return strdup(tmp);
+    }
+}
+#endif
+
+char *prompt_open_file(void) {
+    char *ret = NULL;
+
+#if defined(TARGET_WINDOWS)
+    if ((ret=prompt_open_file_windows_gofn()) != NULL)
+        return ret;
+#endif
+
+    return ret;
+}
 
 static int parse_argv(int argc,char **argv) {
     int i;
