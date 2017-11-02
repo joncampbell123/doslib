@@ -377,6 +377,7 @@ static int dosamp_FAR mmsystem_poll(soundcard_t sc) {
         /* count the play counter.
          * we do this so that we could (theoretically) count properly even beyond
          * the limits of the 32-bit byte counter provided by the driver. */
+        sc->wav_state.play_counter_prev = sc->wav_state.play_counter;
         sc->wav_state.play_counter += (uint64_t)(mm.u.cb - sc->p.mmsystem.p_cb);
         sc->p.mmsystem.p_cb = mm.u.cb;
 
