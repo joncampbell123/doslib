@@ -67,6 +67,7 @@
 #include "sc_sb.h"
 #include "sc_oss.h"
 #include "sc_alsa.h"
+#include "sc_winmm.h"
 
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
@@ -1397,6 +1398,13 @@ int main(int argc,char **argv,char **envp) {
     }
 #endif
 
+#if defined(TARGET_WINDOWS)
+    if (probe_for_mmsystem() < 0) {
+        printf("Serious error while probing MMSYSTEM devices\n");
+        return 1;
+    }
+#endif
+
     /* now let the user choose. */
     {
         unsigned char count = 0;
@@ -1650,6 +1658,9 @@ int main(int argc,char **argv,char **envp) {
 #endif
 #if defined(HAS_OSS)
     free_oss_support();
+#endif
+#if defined(TARGET_WINDOWS)
+    free_mmsystem_support();
 #endif
 
     soundcardlist_close();

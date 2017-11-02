@@ -9,7 +9,8 @@ enum soundcard_drv_t {
     soundcard_none=0,                           /* none */
     soundcard_soundblaster=1,                   /* Sound Blaster (MS-DOS) */
     soundcard_oss=2,                            /* Open Sound System (Linux) */
-    soundcard_alsa=3                            /* Advanced Linux Sound Architecture (Linux) */
+    soundcard_alsa=3,                           /* Advanced Linux Sound Architecture (Linux) */
+    soundcard_mmsystem=4                        /* Windows Multimedia System (WINMM/MMSYSTEM) */
 };
 
 struct soundcard_priv_soundblaster_t {
@@ -34,6 +35,15 @@ struct soundcard_priv_alsa_t {
     snd_pcm_t*                                  handle;
     char*                                       device;
     uint32_t                                    buffer_size;
+};
+#endif
+
+#if defined(TARGET_WINDOWS)
+# include <windows.h>
+# include <mmsystem.h>
+
+struct soundcard_priv_mmsystem_t {
+    UINT                                        device_id;
 };
 #endif
 
@@ -74,6 +84,9 @@ struct soundcard {
 #endif
 #if defined(HAS_ALSA)
         struct soundcard_priv_alsa_t            alsa;
+#endif
+#if defined(TARGET_WINDOWS)
+        struct soundcard_priv_mmsystem_t        mmsystem;
 #endif
     } p;
 };
