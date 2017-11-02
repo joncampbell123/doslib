@@ -542,6 +542,20 @@ static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR *
     WAVEOUTCAPS caps;
     UINT r;
 
+    /* FIXME:
+     *
+     *    Windows 3.0 / Tandy SBP16 driver:
+     *
+     *    The driver seems to be written against Sound Blaster Pro hardware.
+     *    However, it's capabilities seem to imply it can do 16-bit when it can't (or, DOSBox
+     *    doesn't emulate how it does it?)
+     *
+     *    In any case, whenever the driver takes on a format it can't actually play, it
+     *    flat out just doesn't do anything when you send audio. That includes out of
+     *    spec DSP speeds like 44100Hz stereo.
+     *
+     *    How do we resolve this? --J.C. */
+
     /* must be open */
     if (!sc->wav_state.is_open) return -1;
 
