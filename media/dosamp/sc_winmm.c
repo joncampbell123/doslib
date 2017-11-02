@@ -467,7 +467,7 @@ static int mmsystem_prepare_play(soundcard_t sc) {
         pcm.wf.nBlockAlign = sc->cur_codec.bytes_per_block;
         pcm.wBitsPerSample = sc->cur_codec.bits_per_sample;
 
-        r = __waveOutOpen(&sc->p.mmsystem.handle, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), NULL, NULL, 0);
+        r = __waveOutOpen(&sc->p.mmsystem.handle, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), (DWORD)NULL, (DWORD)NULL, 0);
         if (r != 0) return -1;
     }
 
@@ -563,7 +563,7 @@ static int mmsystem_sample_rate_20_questions(soundcard_t sc,struct wav_cbr_t dos
             pcm->wf.nSamplesPerSec = fmt->sample_rate;
             pcm->wf.nAvgBytesPerSec = fmt->sample_rate * fmt->bytes_per_block;
 
-            r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)pcm, NULL, NULL, WAVE_FORMAT_QUERY);
+            r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)pcm, (DWORD)NULL, (DWORD)NULL, WAVE_FORMAT_QUERY);
         }
 
         i++;
@@ -652,7 +652,7 @@ static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR *
     pcm.wBitsPerSample = fmt->bits_per_sample;
 
     /* is OK? */
-    r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), NULL, NULL, WAVE_FORMAT_QUERY);
+    r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), (DWORD)NULL, (DWORD)NULL, WAVE_FORMAT_QUERY);
     if (r == WAVERR_BADFORMAT && pcm.wBitsPerSample == 16) {
         /* drop to 8-bit. is OK? */
         fmt->bits_per_sample = 8;
@@ -662,7 +662,7 @@ static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR *
         pcm.wf.nBlockAlign = fmt->bytes_per_block;
         pcm.wBitsPerSample = fmt->bits_per_sample;
 
-        r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), NULL, NULL, WAVE_FORMAT_QUERY);
+        r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), (DWORD)NULL, (DWORD)NULL, WAVE_FORMAT_QUERY);
     }
 
     if (r == WAVERR_BADFORMAT)
@@ -677,7 +677,7 @@ static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR *
         pcm.wf.nBlockAlign = fmt->bytes_per_block;
         pcm.wBitsPerSample = fmt->bits_per_sample;
 
-        r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), NULL, NULL, WAVE_FORMAT_QUERY);
+        r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), (DWORD)NULL, (DWORD)NULL, WAVE_FORMAT_QUERY);
     }
 
     if (r == WAVERR_BADFORMAT)
