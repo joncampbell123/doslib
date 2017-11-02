@@ -50,6 +50,12 @@ struct soundcard_priv_mmsystem_wavhdr {
     WAVEHDR                                     hdr;
 };
 
+struct mmsystem_hacks_t {
+    /* some old Windows 3.0 drivers like the Tandy SBP16 drivers have problems with
+     * fragments that are less than 4KB mono 8KB stereo (they hold the audio to combine them together). */
+    unsigned int                                min_4kbperchannel:1;
+};
+
 struct soundcard_priv_mmsystem_t {
     UINT                                        device_id;
     HWAVEOUT                                    handle;
@@ -58,6 +64,7 @@ struct soundcard_priv_mmsystem_t {
     unsigned int                                fragment_size;      // size of a fragment
     DWORD                                       p_cb;               // previous byte count
     struct soundcard_priv_mmsystem_wavhdr*      fragments;
+    struct mmsystem_hacks_t                     hacks;
 };
 #endif
 

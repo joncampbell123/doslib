@@ -646,7 +646,21 @@ static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR *
      * 20 fragments (2 seconds). */
     free_fragment_array(sc);
 
-    {
+    if (sc->p.mmsystem.hacks.min_4kbperchannel) {
+        /* alternative algorithm for old shitty Windows 3.0 drivers that like to
+         * group audio playback around 4KB/8KB blocks */
+        uint32_t sz = (uint32_t)4096 * (uint32_t)fmt->bytes_per_block;
+        uint32_t final_sz = (uint32_t)fmt->sample_rate * (uint32_t)2 * (uint32_t)fmt->bytes_per_block;
+
+        if (final_sz < (sz * 4UL))
+            final_sz = (sz * 4UL);
+        else
+            final_sz -= final_sz % sz;
+
+        sc->p.mmsystem.fragment_size = (unsigned int)sz;
+        sc->p.mmsystem.fragment_count = (unsigned int)(final_sz / sz);
+    }
+    else {
         uint32_t sz = (fmt->sample_rate / (uint32_t)10) * (uint32_t)fmt->bytes_per_block;
         if (sz > 32768UL) sz = 32768UL;
         sc->p.mmsystem.fragment_size = (unsigned int)sz;
@@ -749,13 +763,11 @@ struct soundcard mmsystem_soundcard_template = {
     .p.mmsystem.handle =                        WAVE_INVALID_HANDLE
 };
 
-static int mmsystem_device_exists(soundcard_t sc,const UINT dev_id) {
-    WAVEOUTCAPS caps;
-
+static int mmsystem_device_exists(soundcard_t sc,const UINT dev_id,WAVEOUTCAPS *caps) {
     (void)sc;
 
-    memset(&caps,0,sizeof(caps));
-    if (__waveOutGetDevCaps(dev_id, &caps, sizeof(caps)) != 0)
+    memset(caps,0,sizeof(*caps));
+    if (__waveOutGetDevCaps(dev_id, caps, sizeof(*caps)) != 0)
         return 0;
 
     return 1;
@@ -790,16 +802,38 @@ int probe_for_mmsystem(void) {
     devs = __waveOutGetNumDevs();
     if (devs != 0U) {
         /* just point at the wave mapper and call it good */
+        unsigned char dont;
+        WAVEOUTCAPS caps;
         soundcard_t sc;
+        UINT dev_id;
 
-        sc = soundcardlist_new(&mmsystem_soundcard_template);
-        if (sc != NULL) {
-            /* Windows 3.1 and higher have a wave mapper (usually), and we can just use that.
-             * Windows 3.0 does NOT have a wave mapper, and we'll have to use the first sound card instead. */
-            if (mmsystem_device_exists(sc,WAVE_MAPPER))
-                sc->p.mmsystem.device_id = WAVE_MAPPER;
-            else
-                sc->p.mmsystem.device_id = 0;
+        dont = 0;
+        /* Windows 3.1 and higher have a wave mapper (usually), and we can just use that.
+         * Windows 3.0 does NOT have a wave mapper, and we'll have to use the first sound card instead. */
+        if (mmsystem_device_exists(sc,WAVE_MAPPER,&caps))
+            dev_id = WAVE_MAPPER;
+        else if (mmsystem_device_exists(sc,0,&caps))
+            dev_id = 0;
+        else
+            dont = 1;
+
+        if (!dont) {
+            sc = soundcardlist_new(&mmsystem_soundcard_template);
+            if (sc != NULL) {
+                sc->p.mmsystem.device_id = dev_id;
+
+                /* Hacks collection.
+                 *
+                 * MMSYSTEM drivers will be identified here who have issues and hacks will be enabled for them. */
+
+                /* Tandy SBP16 Windows 3.0 drivers like to collect and group buffers into 4KB mono 8KB stereo buffers
+                 * before playing. If we try to use small fragments we get audio that starts, pauses at startup, and
+                 * just barely avoids underrun during playback. */
+                if (caps.wMid == 0x0002 && caps.wPid == 0x0068) { /* Tandy SBP16 */
+                    /* NTS: I will add a check for vDriverVersion if later revisions fix the issue. */
+                    sc->p.mmsystem.hacks.min_4kbperchannel = 1;
+                }
+            }
         }
     }
 
