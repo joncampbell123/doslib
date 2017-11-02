@@ -189,8 +189,14 @@ static int dosamp_FAR mmsystem_open(soundcard_t sc) {
     return 0;
 }
 
+static int mmsystem_unprepare_play(soundcard_t sc);
+static int mmsystem_stop_playback(soundcard_t sc);
+
 static int dosamp_FAR mmsystem_close(soundcard_t sc) {
     if (!sc->wav_state.is_open) return 0;
+
+    mmsystem_unprepare_play(sc);
+    mmsystem_stop_playback(sc);
 
     sc->wav_state.is_open = 0;
     return 0;
