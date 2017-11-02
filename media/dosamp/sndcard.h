@@ -46,6 +46,7 @@ struct soundcard_priv_alsa_t {
 
 struct soundcard_priv_mmsystem_wavhdr {
     uint64_t                                    write_counter_base;
+    unsigned int                                write_pos;          // when writing, to fill the buffer
     WAVEHDR                                     hdr;
 };
 

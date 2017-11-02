@@ -139,6 +139,8 @@ static void unprepare_fragment(soundcard_t sc,struct soundcard_priv_mmsystem_wav
      *      it if we call something like waveOutReset, so we don't check. */
     if (wh->hdr.dwFlags & WHDR_PREPARED)
         __waveOutUnprepareHeader(sc->p.mmsystem.handle, &wh->hdr, sizeof(wh->hdr));
+
+    wh->write_pos = 0;
 }
 
 static void unprepare_fragment_array(soundcard_t sc) {
@@ -164,6 +166,7 @@ static int prepare_fragment(soundcard_t sc,struct soundcard_priv_mmsystem_wavhdr
     /* we can't assume the MMSYSTEM driver will tolerate us setting WHDR_DONE before it's done,
      * so use the dwUser field for our use instead */
     wh->hdr.dwUser = MMSYSTEM_USERFL_VIRGIN;
+    wh->write_pos = 0;
     return 0;
 }
 
