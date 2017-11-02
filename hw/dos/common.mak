@@ -262,8 +262,8 @@ $(EXEHDMP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exehdmp.
 	%write tmp.cmd option map=$(EXEHDMP_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -283,8 +283,8 @@ $(EXENEDMP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exenedm
 	%write tmp.cmd option map=$(EXENEDMP_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -304,8 +304,8 @@ $(EXELEDMP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exeledm
 	%write tmp.cmd option map=$(EXELEDMP_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -325,8 +325,8 @@ $(EXENEEXP_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exeneex
 	%write tmp.cmd option map=$(EXENEEXP_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -346,8 +346,8 @@ $(EXENERDM_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)exenerd
 	%write tmp.cmd option map=$(EXENERDM_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	@wlink @tmp.cmd
@@ -367,9 +367,8 @@ $(TEST_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(
 	%write tmp.cmd option map=$(TEST_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
-	%write tmp.cmd IMPORT CreateWindow USER.CREATEWINDOW # NTS: This is to test the NE dumper, in order to make an import by name rather than ordinal
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(TEST_EXE)
@@ -390,8 +389,8 @@ $(CR3_EXE): $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)cr3.obj
 	%write tmp.cmd option map=$(CR3_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(CR3_EXE)
