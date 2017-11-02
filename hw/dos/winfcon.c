@@ -650,6 +650,19 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 	WNDCLASS wnd;
 	MSG msg;
 
+#if TARGET_MSDOS == 16
+    /* This code no longer supports Windows 3.0 real mode.
+     * Too painful to work with.
+     * Remind the developer to set the "protected mode only" flag on their executable.
+     * We ask code that needs to run in real mode to take the extra effort to talk to
+     * the Windows API with as little abstraction as possible and it's own memory management,
+     * in order to run in the tight memory constraints. */
+    if (!(GetWinFlags() & WF_PMODE)) {
+        MessageBox(NULL,"This application requires protected mode Windows.","Not supported",MB_OK);
+        return 1;
+    }
+#endif
+
     lpstr_to_cmdline(lpCmdLine);
 
 	_win_hInstance = hInstance;
