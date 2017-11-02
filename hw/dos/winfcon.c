@@ -650,20 +650,6 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 	WNDCLASS wnd;
 	MSG msg;
 
-#if TARGET_MSDOS == 16 && TARGET_WINDOWS < 31 && !defined(WIN386)
-    /* In order to work properly in Windows 3.0 real mode, we must lock our segments in place.
-     * This code cannot work with segments that move around from under us. */
-    {
-        unsigned int r=0;
-
-        __asm mov r,cs
-        LockSegment(r);
-
-        __asm mov r,ds
-        LockSegment(r);
-    }
-#endif
-
     lpstr_to_cmdline(lpCmdLine);
 
 	_win_hInstance = hInstance;
