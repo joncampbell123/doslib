@@ -57,6 +57,9 @@ $(DOSAMP_EXE): $(DOSAMP_EXE_DEPS)
 # Windows 3.x
 	%append tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
 	%append tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+# I can't be bothered to make DOSAMP work in Windows real mode. Too much work
+# to deal with real mode segments that can change on a whim. No thanks.
+	%append tmp.cmd option protmode
 !  endif
 ! else
 # MS-DOS
