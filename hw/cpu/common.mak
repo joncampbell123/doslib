@@ -134,8 +134,8 @@ $(MMX_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)mmx.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)mmx.obj option map=$(SUBDIR)$(HPS)mmx.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(MMX_EXE)
@@ -153,8 +153,8 @@ $(SSE_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)sse.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)sse.obj option map=$(SUBDIR)$(HPS)sse.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(SSE_EXE)
@@ -172,8 +172,8 @@ $(TEST_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj option map=$(SUBDIR)$(HPS)test.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(TEST_EXE)
@@ -191,8 +191,8 @@ $(GRIND_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)grind.obj
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)grind.obj option map=$(SUBDIR)$(HPS)grind.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(GRIND_EXE)
@@ -210,8 +210,8 @@ $(GR_ADD_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gr_add.ob
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)gr_add.obj option map=$(SUBDIR)$(HPS)gr_add.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(GR_ADD_EXE)
@@ -229,8 +229,8 @@ $(RDTSC_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_8254_LIB) $(SUBDIR)$
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) library $(HW_8254_LIB) file $(SUBDIR)$(HPS)rdtsc.obj option map=$(SUBDIR)$(HPS)rdtsc.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(RDTSC_EXE)
@@ -264,8 +264,8 @@ $(DISPSN_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)dispsn.ob
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)dispsn.obj option map=$(SUBDIR)$(HPS)dispsn.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(DISPSN_EXE)
@@ -283,8 +283,8 @@ $(SSEOFF_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)sseoff.ob
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)sseoff.obj option map=$(SUBDIR)$(HPS)sseoff.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(SSEOFF_EXE)
@@ -302,8 +302,8 @@ $(GDTLIST_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gdtlist.
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)gdtlist.obj option map=$(SUBDIR)$(HPS)gdtlist.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(GDTLIST_EXE)
@@ -322,8 +322,8 @@ $(GDTTAE_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gdttae.ob
 	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)gdttae.obj option map=$(SUBDIR)$(HPS)gdttae.map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD FIXED DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !  endif
 ! endif
 	%write tmp.cmd name $(GDTTAE_EXE)
