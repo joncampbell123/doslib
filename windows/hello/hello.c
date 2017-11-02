@@ -112,6 +112,14 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 
 	myInstance = hInstance;
 
+#if TARGET_MSDOS == 16 && TARGET_WINDOWS < 31 /* Windows 3.0 or older (any version capable of real-mode) */
+    /* our data segment is discardable.
+     * in Windows 3.0 real mode that means our data segment can disappear out from under us.
+     * unfortunately I don't know how to call the data segment back in.
+     * so we have to compensate by locking our data segment in place. */
+    LockData();
+#endif
+
 #if TARGET_WINDOWS >= 30
 	/* FIXME: Windows 3.0 Real Mode: Why are we unable to load our own Application Icon? */
 	AppIcon = LoadIcon(hInstance,MAKEINTRESOURCE(IDI_APPICON));
