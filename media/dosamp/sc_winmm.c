@@ -537,6 +537,48 @@ static int mmsystem_stop_playback(soundcard_t sc) {
     return 0;
 }
 
+static unsigned short try_rates[] = {
+    44100,
+    22050,
+    11025,
+    8000,
+    6000,
+    5512,
+    4000,
+
+    0
+};
+
+/* Windows 3.0 drivers do not fill in the WAVECAPS flags regarding supported formats,
+ * so to work with these drivers we have to play "20 questions" with the sample rate. */
+static int mmsystem_sample_rate_20_questions(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt,PCMWAVEFORMAT *pcm) {
+    uint32_t old_rate = fmt->sample_rate;
+    int r = WAVERR_BADFORMAT;
+    unsigned int i = 0;
+
+    /* Windows 3.0 makes us guess. Play 20 questions. */
+    while (r == WAVERR_BADFORMAT && try_rates[i] != 0) {
+        if (fmt->sample_rate > try_rates[i]) {
+            fmt->sample_rate = try_rates[i];
+            pcm->wf.nSamplesPerSec = fmt->sample_rate;
+            pcm->wf.nAvgBytesPerSec = fmt->sample_rate * fmt->bytes_per_block;
+
+            r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)pcm, NULL, NULL, WAVE_FORMAT_QUERY);
+        }
+
+        i++;
+    }
+
+    /* couldn't negotiate. restore original sample rate */
+    if (r == WAVERR_BADFORMAT) {
+        fmt->sample_rate = old_rate;
+        pcm->wf.nSamplesPerSec = fmt->sample_rate;
+        pcm->wf.nAvgBytesPerSec = fmt->sample_rate * fmt->bytes_per_block;
+    }
+
+    return r;
+}
+
 static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt) {
     PCMWAVEFORMAT pcm;
     WAVEOUTCAPS caps;
@@ -622,6 +664,10 @@ static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR *
 
         r = __waveOutOpen(NULL, sc->p.mmsystem.device_id, (LPWAVEFORMAT)(&pcm), NULL, NULL, WAVE_FORMAT_QUERY);
     }
+
+    if (r == WAVERR_BADFORMAT)
+        r = mmsystem_sample_rate_20_questions(sc,fmt,&pcm);
+
     if (r == WAVERR_BADFORMAT && pcm.wf.nChannels > 1) {
         /* drop to mono. is OK? */
         fmt->number_of_channels = 1;
@@ -635,7 +681,12 @@ static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR *
     }
 
     if (r == WAVERR_BADFORMAT)
+        r = mmsystem_sample_rate_20_questions(sc,fmt,&pcm);
+
+    if (r == WAVERR_BADFORMAT) {
+        printf("FORMAT FAIL\n");
         return -1;
+    }
 
     /* PCM recalc */
     fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
