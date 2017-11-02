@@ -57,6 +57,7 @@ $(HELLO_EXE): $(SUBDIR)$(HPS)hello.obj $(HELLO_RES)
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
 !endif
+	%write tmp.cmd option map=$(HELLO_EXE).map
 !ifdef HELLO_RES
 	%write tmp.cmd op resource=$(HELLO_RES) name $(HELLO_EXE)
 !endif
