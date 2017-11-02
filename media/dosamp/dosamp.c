@@ -923,13 +923,19 @@ void commdlg_atexit(void) {
 int init_commdlg(void) {
     if (commdlg_dll == NULL) {
         if (!commdlg_tried) {
+            UINT oldMode;
+
+            oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
 #if TARGET_MSDOS == 16
             commdlg_dll = LoadLibrary("COMMDLG");
 #else
             commdlg_dll = LoadLibrary("COMDLG32.DLL");
 #endif
+            SetErrorMode(oldMode);
 
-            atexit(commdlg_atexit);
+            if (commdlg_dll != NULL)
+                atexit(commdlg_atexit);
+
             commdlg_tried = 1;
         }
     }
