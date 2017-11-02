@@ -966,8 +966,13 @@ unsigned char       commdlg_tried = 0;
 typedef BOOL (WINAPI *GETOPENFILENAMEPROC)(OPENFILENAME FAR *);
 
 GETOPENFILENAMEPROC commdlg_getopenfilenameproc(void) {
+#if TARGET_MSDOS == 16
     if (commdlg_dll != NULL)
         return (GETOPENFILENAMEPROC)GetProcAddress(commdlg_dll,"GETOPENFILENAME");
+#else
+    if (commdlg_dll != NULL)
+        return (GETOPENFILENAMEPROC)GetProcAddress(commdlg_dll,"GetOpenFileNameA");
+#endif
 
     return NULL;
 }
