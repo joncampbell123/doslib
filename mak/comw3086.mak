@@ -67,6 +67,15 @@ TARGET86_1DIGIT=5
 TARGET86_1DIGIT=6
 !endif
 
+# Encourage Open Watcom to compile all our code into one segment _TEXT for Windows real-mode compatible builds.
+# Windows in real mode will obscurely complain about "not enough memory" when attempting to run an EXE with more
+# than (about) 5 or 6 segments. Right. Out of memory running a 30KB executable. Sure.
+# 
+# Protected mode builds on the other hand are free to have many segments.
+#
+# To keep complex programs sane, we'll just insist on putting everything in one segment anyway.
+CFLAGS_1 += -nt=_TEXT
+
 # why is this even necessary? why does dumbshit Watcom insist on including the WINNT headers for Windows 3.1 builds?
 WIN_INCLUDE=-i="$(%WATCOM)/h/win"
 
