@@ -245,6 +245,7 @@ static int mmsystem_prepare_play(soundcard_t sc) {
     }
 
     sc->wav_state.prepared = 1;
+    sc->p.mmsystem.fragment_next = 0;
     return 0;
 }
 
@@ -283,10 +284,14 @@ static uint32_t mmsystem_play_buffer_size(soundcard_t sc) {
 static int mmsystem_start_playback(soundcard_t sc) {
     if (!sc->wav_state.prepared) return -1;
     if (sc->wav_state.playing) return 0;
+    if (sc->p.mmsystem.fragments == NULL) return -1;
 
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
     sc->wav_state.play_counter_prev = 0;
+
+    __waveOutReset(sc->p.mmsystem.handle);
+    unprepare_fragment_array(sc);
 
     sc->wav_state.playing = 1;
     return 0;
@@ -295,6 +300,8 @@ static int mmsystem_start_playback(soundcard_t sc) {
 static int mmsystem_stop_playback(soundcard_t sc) {
     if (!sc->wav_state.playing) return 0;
 
+    __waveOutReset(sc->p.mmsystem.handle);
+    unprepare_fragment_array(sc);
     sc->wav_state.playing = 0;
     return 0;
 }
