@@ -136,6 +136,8 @@ $(MMX_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)mmx.obj
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(MMX_EXE)
@@ -155,6 +157,8 @@ $(SSE_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)sse.obj
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(SSE_EXE)
@@ -174,6 +178,8 @@ $(TEST_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(TEST_EXE)
@@ -193,6 +199,8 @@ $(GRIND_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)grind.obj
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(GRIND_EXE)
@@ -212,6 +220,8 @@ $(GR_ADD_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gr_add.ob
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(GR_ADD_EXE)
@@ -231,6 +241,8 @@ $(RDTSC_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_8254_LIB) $(SUBDIR)$
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(RDTSC_EXE)
@@ -266,6 +278,8 @@ $(DISPSN_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)dispsn.ob
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(DISPSN_EXE)
@@ -285,6 +299,8 @@ $(SSEOFF_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)sseoff.ob
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(SSEOFF_EXE)
@@ -304,6 +320,8 @@ $(GDTLIST_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gdtlist.
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(GDTLIST_EXE)
@@ -324,6 +342,8 @@ $(GDTTAE_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gdttae.ob
 !  ifeq TARGET_MSDOS 16
 	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
 	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
 !  endif
 ! endif
 	%write tmp.cmd name $(GDTTAE_EXE)
