@@ -45,6 +45,8 @@
 
 #if defined(TARGET_WINDOWS)
 
+#define MMSYSTEM_USERFL_VIRGIN      (1U << 0U)
+
 int init_mmsystem(void);
 
 #define WAVE_INVALID_HANDLE         ((HWAVEOUT) NULL)
@@ -159,6 +161,9 @@ static int prepare_fragment(soundcard_t sc,struct soundcard_priv_mmsystem_wavhdr
     if (__waveOutPrepareHeader(sc->p.mmsystem.handle, &wh->hdr, sizeof(wh->hdr)) != 0)
         return -1;
 
+    /* we can't assume the MMSYSTEM driver will tolerate us setting WHDR_DONE before it's done,
+     * so use the dwUser field for our use instead */
+    wh->hdr.dwUser = MMSYSTEM_USERFL_VIRGIN;
     return 0;
 }
 
@@ -186,7 +191,35 @@ fail:
 
 /* this depends on keeping the "play delay" up to date */
 static uint32_t dosamp_FAR mmsystem_can_write(soundcard_t sc) { /* in bytes */
-    return 0;
+    struct soundcard_priv_mmsystem_wavhdr *wh;
+    uint32_t count = 0;
+    unsigned int i,c;
+
+    if (!sc->wav_state.playing)
+        return 0;
+
+    /* assume fragments != NULL.
+     * we shouldn't be in playing state unless the fragment array was allocated */
+
+    i = sc->p.mmsystem.fragment_next;
+    for (c=0;c < sc->p.mmsystem.fragment_count;c++) {
+        wh = sc->p.mmsystem.fragments + i;
+
+        /* assume lpData != NULL, deBufferLength != 0, buffer prepared.
+         * we shouldn't be here unless the fragment array was allocated and each fragment allocated and prepared. */
+        /* we can use the buffer if the driver marked it as done (completing playback) OR we marked it ourself
+         * as "new" and not yet sent to the driver. when we sent it to the driver we clear WHDR_DONE and
+         * MMSYSTEM_USERFL_VIRGIN right before we do so. */
+        if ((wh->hdr.dwFlags & WHDR_DONE) || (wh->hdr.dwUser & MMSYSTEM_USERFL_VIRGIN))
+            count += wh->hdr.dwBufferLength;
+        else
+            break;
+
+        if ((++i) >= sc->p.mmsystem.fragment_count)
+            i = 0;
+    }
+
+    return count;
 }
 
 static int dosamp_FAR mmsystem_clamp_if_behind(soundcard_t sc,uint32_t ahead_in_bytes) {
