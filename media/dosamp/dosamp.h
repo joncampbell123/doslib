@@ -1,4 +1,6 @@
 
+#define HW_DOS_DONT_DEFINE_MMSYSTEM
+
 /* making the API use FAR CALL function pointers will allow future development
  * where file access and media playback code can exist in external DLLs, whether
  * 16-bit or 32-bit code */

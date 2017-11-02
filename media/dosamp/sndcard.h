@@ -1,4 +1,6 @@
 
+#define HW_DOS_DONT_DEFINE_MMSYSTEM
+
 /* TODO: Add ioctl() that returns an integer ratio that accurately describes
  *       the actual hardware sample rate. rate = numerator / denominator */
 
@@ -42,9 +44,17 @@ struct soundcard_priv_alsa_t {
 # include <windows.h>
 # include <mmsystem.h>
 
+struct soundcard_priv_mmsystem_wavhdr {
+    uint64_t                                    write_counter_base;
+    WAVEHDR                                     hdr;
+};
+
 struct soundcard_priv_mmsystem_t {
     UINT                                        device_id;
     HWAVEOUT                                    handle;
+    unsigned int                                fragment_count;
+    unsigned int                                fragment_size;
+    struct soundcard_priv_mmsystem_wavhdr*      fragments;
 };
 #endif
 

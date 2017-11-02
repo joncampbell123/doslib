@@ -52,6 +52,7 @@ int init_mmsystem(void);
 static unsigned char                mmsystem_probed = 0;
 
 UINT (WINAPI *__waveOutClose)(HWAVEOUT) = NULL;
+UINT (WINAPI *__waveOutReset)(HWAVEOUT) = NULL;
 UINT (WINAPI *__waveOutOpen)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD) = NULL;
 UINT (WINAPI *__waveOutGetDevCaps)(UINT,LPWAVEOUTCAPS,UINT) = NULL;
 UINT (WINAPI *__waveOutGetNumDevs)(void) = NULL;
@@ -128,6 +129,7 @@ static int mmsystem_prepare_play(soundcard_t sc) {
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
 
+    /* open the sound device */
     {
         PCMWAVEFORMAT pcm;
         UINT r;
@@ -152,7 +154,9 @@ static int mmsystem_unprepare_play(soundcard_t sc) {
     if (sc->wav_state.playing) return -1;
 
     if (sc->wav_state.prepared) {
+        /* close the sound device */
         if (sc->p.mmsystem.handle != WAVE_INVALID_HANDLE) {
+            __waveOutReset(sc->p.mmsystem.handle);
             __waveOutClose(sc->p.mmsystem.handle);
             sc->p.mmsystem.handle = WAVE_INVALID_HANDLE;
         }
@@ -388,6 +392,8 @@ int probe_for_mmsystem(void) {
     if ((__waveOutOpen=((UINT (WINAPI *)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD))GetProcAddress(mmsystem_dll,"WAVEOUTOPEN"))) == NULL)
         return 0;
     if ((__waveOutClose=((UINT (WINAPI *)(HWAVEOUT))GetProcAddress(mmsystem_dll,"WAVEOUTCLOSE"))) == NULL)
+        return 0;
+    if ((__waveOutReset=((UINT (WINAPI *)(HWAVEOUT))GetProcAddress(mmsystem_dll,"WAVEOUTRESET"))) == NULL)
         return 0;
     if ((__waveOutGetNumDevs=((UINT (WINAPI *)(void))GetProcAddress(mmsystem_dll,"WAVEOUTGETNUMDEVS"))) == NULL)
         return 0;

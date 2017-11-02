@@ -1,4 +1,6 @@
 
+#define HW_DOS_DONT_DEFINE_MMSYSTEM
+
 #include <stdio.h>
 #include <stdint.h>
 #ifdef LINUX
