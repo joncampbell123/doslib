@@ -947,12 +947,21 @@ int check_mmsystem_time(void) {
     if (!init_mmsystem())
         return 0;
 
+#if TARGET_MSDOS == 16
     if (GetProcAddress(mmsystem_dll,"TIMEGETTIME") == NULL)
         return 0;
     if (GetProcAddress(mmsystem_dll,"TIMEBEGINPERIOD") == NULL)
         return 0;
     if (GetProcAddress(mmsystem_dll,"TIMEENDPERIOD") == NULL)
         return 0;
+#else
+    if (GetProcAddress(mmsystem_dll,"timeGetTime") == NULL)
+        return 0;
+    if (GetProcAddress(mmsystem_dll,"timeBeginPeriod") == NULL)
+        return 0;
+    if (GetProcAddress(mmsystem_dll,"timeEndPeriod") == NULL)
+        return 0;
+#endif
 
     return 1;
 }

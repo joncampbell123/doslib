@@ -51,7 +51,11 @@ int dosamp_FAR dosamp_time_source_mmsystem_time_open(dosamp_time_source_t inst) 
     if (!init_mmsystem())
         return -1;
 
+#if TARGET_MSDOS == 16
     __timeGetTime = (DWORD (WINAPI *)(void))GetProcAddress(mmsystem_dll,"TIMEGETTIME");
+#else
+    __timeGetTime = (DWORD (WINAPI *)(void))GetProcAddress(mmsystem_dll,"timeGetTime");
+#endif
     if (__timeGetTime == NULL)
         return -1;
 
