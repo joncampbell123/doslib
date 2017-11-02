@@ -833,6 +833,7 @@ int probe_for_mmsystem(void) {
 
     if (!init_mmsystem()) return 0;
 
+#if TARGET_MSDOS == 16
     if ((__waveOutGetPosition=((UINT (WINAPI *)(HWAVEOUT,LPMMTIME,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTGETPOSITION"))) == NULL)
         return 0;
     if ((__waveOutGetDevCaps=((UINT (WINAPI *)(UINT,LPWAVEOUTCAPS,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTGETDEVCAPS"))) == NULL)
@@ -851,6 +852,26 @@ int probe_for_mmsystem(void) {
         return 0;
     if ((__waveOutUnprepareHeader=((UINT (WINAPI *)(HWAVEOUT,LPWAVEHDR,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTUNPREPAREHEADER"))) == NULL)
         return 0;
+#else
+    if ((__waveOutGetPosition=((UINT (WINAPI *)(HWAVEOUT,LPMMTIME,UINT))GetProcAddress(mmsystem_dll,"waveOutGetPosition"))) == NULL)
+        return 0;
+    if ((__waveOutGetDevCaps=((UINT (WINAPI *)(UINT,LPWAVEOUTCAPS,UINT))GetProcAddress(mmsystem_dll,"waveOutGetDevCapsA"))) == NULL)
+        return 0;
+    if ((__waveOutOpen=((UINT (WINAPI *)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD))GetProcAddress(mmsystem_dll,"waveOutOpen"))) == NULL)
+        return 0;
+    if ((__waveOutClose=((UINT (WINAPI *)(HWAVEOUT))GetProcAddress(mmsystem_dll,"waveOutClose"))) == NULL)
+        return 0;
+    if ((__waveOutReset=((UINT (WINAPI *)(HWAVEOUT))GetProcAddress(mmsystem_dll,"waveOutReset"))) == NULL)
+        return 0;
+    if ((__waveOutWrite=((UINT (WINAPI *)(HWAVEOUT,LPWAVEHDR,UINT))GetProcAddress(mmsystem_dll,"waveOutWrite"))) == NULL)
+        return 0;
+    if ((__waveOutGetNumDevs=((UINT (WINAPI *)(void))GetProcAddress(mmsystem_dll,"waveOutGetNumDevs"))) == NULL)
+        return 0;
+    if ((__waveOutPrepareHeader=((UINT (WINAPI *)(HWAVEOUT,LPWAVEHDR,UINT))GetProcAddress(mmsystem_dll,"waveOutPrepareHeader"))) == NULL)
+        return 0;
+    if ((__waveOutUnprepareHeader=((UINT (WINAPI *)(HWAVEOUT,LPWAVEHDR,UINT))GetProcAddress(mmsystem_dll,"waveOutUnprepareHeader"))) == NULL)
+        return 0;
+#endif
 
     devs = __waveOutGetNumDevs();
     if (devs != 0U) {
