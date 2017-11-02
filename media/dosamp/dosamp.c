@@ -4,8 +4,10 @@
 #endif
 
 #if defined(TARGET_WINDOWS)
+# define HW_DOS_DONT_DEFINE_MMSYSTEM
 # include <windows.h>
 # include <commdlg.h>
+# include <mmsystem.h>
 #endif
 
 #include <stdio.h>
@@ -894,6 +896,62 @@ static void help() {
 }
 
 #if defined(TARGET_WINDOWS)
+/* dynamic loading of MMSYSTEM/WINMM */
+HMODULE             mmsystem_dll = NULL;
+unsigned char       mmsystem_tried = 0;
+
+void free_mmsystem(void) {
+    if (mmsystem_dll != NULL) {
+        FreeLibrary(mmsystem_dll);
+        mmsystem_dll = NULL;
+    }
+
+    mmsystem_tried = 0;
+}
+
+void mmsystem_atexit(void) {
+    free_mmsystem();
+}
+
+int init_mmsystem(void) {
+    if (mmsystem_dll == NULL) {
+        if (!mmsystem_tried) {
+            UINT oldMode;
+
+            oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
+#if TARGET_MSDOS == 16
+            mmsystem_dll = LoadLibrary("MMSYSTEM");
+#else
+            mmsystem_dll = LoadLibrary("WINMM.DLL");
+#endif
+            SetErrorMode(oldMode);
+
+            if (mmsystem_dll != NULL)
+                atexit(mmsystem_atexit);
+
+            mmsystem_tried = 1;
+        }
+    }
+
+    return (mmsystem_dll != NULL) ? 1 : 0;
+}
+
+int check_mmsystem_time(void) {
+    if (!init_mmsystem())
+        return 0;
+
+    if (GetProcAddress(mmsystem_dll,"TIMEGETTIME") == NULL)
+        return 0;
+    if (GetProcAddress(mmsystem_dll,"TIMEBEGINPERIOD") == NULL)
+        return 0;
+    if (GetProcAddress(mmsystem_dll,"TIMEENDPERIOD") == NULL)
+        return 0;
+
+    return 1;
+}
+#endif
+
+#if defined(TARGET_WINDOWS)
 /* dynamic loading of COMMDLG */
 HMODULE             commdlg_dll = NULL;
 unsigned char       commdlg_tried = 0;
@@ -1078,6 +1136,10 @@ void display_idle_timesource(void) {
     else if (time_source == &dosamp_time_source_clock_monotonic)
         printf("CLOCK_MONOTONIC ");
 #endif
+#if defined(TARGET_WINDOWS)
+    else if (time_source == &dosamp_time_source_mmsystem_time)
+        printf("MMSYSTEM_TIME ");
+#endif
     else
         printf("? ");
 
@@ -1250,6 +1312,10 @@ int main(int argc,char **argv,char **envp) {
 # endif
 #endif
 
+#if defined(TARGET_WINDOWS)
+    init_mmsystem();
+#endif
+
 #if defined(HAS_8254)
     /* pick initial time source. */
     time_source = &dosamp_time_source_8254;
@@ -1261,6 +1327,13 @@ int main(int argc,char **argv,char **envp) {
     write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
 #elif defined(HAS_CLOCK_MONOTONIC)
     time_source = &dosamp_time_source_clock_monotonic;
+#endif
+
+#if defined(TARGET_WINDOWS)
+    /* if we can use MMSYSTEM's timer, then please do so.
+     * the 8254 fallback is for really old Windows (3.0 and earlier) that lacks the multimedia timer */
+    if (check_mmsystem_time())
+        time_source = &dosamp_time_source_mmsystem_time;
 #endif
 
 #if defined(HAS_RDTSC) && !defined(HAS_CLOCK_MONOTONIC)
