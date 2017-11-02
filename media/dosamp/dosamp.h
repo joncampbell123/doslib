@@ -39,7 +39,9 @@
  * that case and avoid the code then. If we're a 16-bit WINAPP,
  * we *can* do this in Windows NT because NTVDM.EXE will trap and
  * emulate the 8042 timer. */
-# define HAS_8254
+# if (TARGET_MSDOS == 16)/*Win16*/ || (TARGET_MSDOS == 32 && TARGET_WINDOWS < 40)/*Win32s*/ || defined(WIN386)/*Win386*/
+#  define HAS_8254
+# endif
 #else
 # define HAS_8254
 #endif

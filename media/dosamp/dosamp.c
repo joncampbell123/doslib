@@ -1041,8 +1041,12 @@ char *prompt_open_file_windows_gofn(void) {
         memset(tmp,0,sizeof(tmp));
 
         of.lStructSize = sizeof(of);
+#ifdef USE_WINFCON
         of.hwndOwner = _win_hwnd();
         of.hInstance = _win_hInstance;
+#else
+        of.hInstance = GetModuleHandle(NULL);
+#endif
         of.lpstrFilter =
             "All supported files\x00*.wav\x00"
             "WAV files\x00*.wav\x00"
