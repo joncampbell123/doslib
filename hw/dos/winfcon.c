@@ -103,9 +103,6 @@ typedef struct _win_console_ctx {
 	jmp_buf		exit_jmp;
 	HWND		hwndMain;
 	int		myCaret;
-#if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && defined(WIN386))
-	WORD		my_ds;
-#endif	
 };
 
 HINSTANCE			_win_hInstance;
@@ -653,6 +650,20 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 	WNDCLASS wnd;
 	MSG msg;
 
+#if TARGET_MSDOS == 16 && TARGET_WINDOWS < 31 && !defined(WIN386)
+    /* In order to work properly in Windows 3.0 real mode, we must lock our segments in place.
+     * This code cannot work with segments that move around from under us. */
+    {
+        unsigned int r=0;
+
+        __asm mov r,cs
+        LockSegment(r);
+
+        __asm mov r,ds
+        LockSegment(r);
+    }
+#endif
+
     lpstr_to_cmdline(lpCmdLine);
 
 	_win_hInstance = hInstance;
@@ -669,17 +680,6 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 	_this_console.conWidth = 80;
 	_this_console.conX = 0;
 	_this_console.conY = 0;
-#if TARGET_MSDOS == 16 || (TARGET_MSDOS == 32 && defined(WIN386))
-	{
-		WORD s=0;
-
-		__asm {
-			mov	ax,ds
-			mov	s,ax
-		}
-		_this_console.my_ds = s;
-	}
-#endif
 
 	/* we need to know at this point what DOS/Windows combination we're running under */
 	probe_dos();
