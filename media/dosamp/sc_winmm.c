@@ -291,7 +291,7 @@ static unsigned int dosamp_FAR mmsystem_buffer_write(soundcard_t sc,const unsign
     for (c=0;len != 0U && c < sc->p.mmsystem.fragment_count;c++) {
         wh = sc->p.mmsystem.fragments + i;
 
-        /* assume lpData != NULL, deBufferLength != 0, buffer prepared.
+        /* assume lpData != NULL, deBufferLength != 0, fragment prepared.
          * we shouldn't be here unless the fragment array was allocated and each fragment allocated and prepared. */
         /* we can use the buffer if the driver marked it as done (completing playback) OR we marked it ourself
          * as "new" and not yet sent to the driver. when we sent it to the driver we clear WHDR_DONE and
@@ -316,7 +316,7 @@ static unsigned int dosamp_FAR mmsystem_buffer_write(soundcard_t sc,const unsign
             buf += howmuch;
             len -= howmuch;
 
-            /* if the buffer is full, send it to the driver and move on */
+            /* if the fragment is full, send it to the driver and move on */
             if (wh->write_pos >= wh->hdr.dwBufferLength) {
                 if (submit_fragment(sc,wh) < 0)
                     break;
