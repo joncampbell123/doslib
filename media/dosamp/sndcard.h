@@ -52,8 +52,9 @@ struct soundcard_priv_mmsystem_wavhdr {
 struct soundcard_priv_mmsystem_t {
     UINT                                        device_id;
     HWAVEOUT                                    handle;
-    unsigned int                                fragment_count;
-    unsigned int                                fragment_size;
+    unsigned int                                fragment_count;     // number of fragments
+    unsigned int                                fragment_next;      // next fragment to write
+    unsigned int                                fragment_size;      // size of a fragment
     struct soundcard_priv_mmsystem_wavhdr*      fragments;
 };
 #endif

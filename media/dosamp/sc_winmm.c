@@ -54,8 +54,102 @@ static unsigned char                mmsystem_probed = 0;
 UINT (WINAPI *__waveOutClose)(HWAVEOUT) = NULL;
 UINT (WINAPI *__waveOutReset)(HWAVEOUT) = NULL;
 UINT (WINAPI *__waveOutOpen)(LPHWAVEOUT,UINT,LPWAVEFORMAT,DWORD,DWORD,DWORD) = NULL;
+UINT (WINAPI *__waveOutUnprepareHeader)(HWAVEOUT,LPWAVEHDR,UINT) = NULL;
 UINT (WINAPI *__waveOutGetDevCaps)(UINT,LPWAVEOUTCAPS,UINT) = NULL;
 UINT (WINAPI *__waveOutGetNumDevs)(void) = NULL;
+
+static void free_fragment_array(soundcard_t sc);
+
+static int alloc_fragment_array(soundcard_t sc) {
+    struct soundcard_priv_mmsystem_wavhdr *wh;
+    unsigned int i;
+
+    if (sc->wav_state.playing)
+        return -1;
+    if (sc->p.mmsystem.fragment_count == 0 || sc->p.mmsystem.fragment_size <= 16)
+        return -1;
+    if (sc->p.mmsystem.fragment_count >= 100)
+        return -1;
+    if (sc->p.mmsystem.fragments != NULL)
+        return 0;
+
+    /* allocate array. use calloc so we don't have to memset() ourselves */
+    sc->p.mmsystem.fragments =
+        (struct soundcard_priv_mmsystem_wavhdr*)
+        calloc(sc->p.mmsystem.fragment_count,sizeof(struct soundcard_priv_mmsystem_wavhdr));
+    if (sc->p.mmsystem.fragments == NULL)
+        return -1;
+
+    /* then allocate memory for each fragment */
+    for (i=0;i < sc->p.mmsystem.fragment_count;i++) {
+        wh = sc->p.mmsystem.fragments + i;
+
+#if TARGET_MSDOS == 16
+        wh->hdr.lpData = _fmalloc(sc->p.mmsystem.fragment_size);
+#else
+        wh->hdr.lpData = malloc(sc->p.mmsystem.fragment_size);
+#endif
+        if (wh->hdr.lpData == NULL) goto fail;
+        wh->hdr.dwBufferLength = sc->p.mmsystem.fragment_size;
+    }
+
+    sc->p.mmsystem.fragment_next = 0;
+    return 0;
+fail:
+    free_fragment_array(sc);
+    return -1;
+}
+
+static void free_fragment(struct soundcard_priv_mmsystem_wavhdr *wh) {
+    /* NTS: We trust Windows not to clear lpData! I will rewrite this code if Windows violates that trust. */
+    if (wh->hdr.lpData != NULL) {
+#if TARGET_MSDOS == 16
+        _ffree(wh->hdr.lpData);
+#else
+        free(wh->hdr.lpData);
+#endif
+        wh->hdr.lpData = NULL;
+    }
+
+    memset(wh,0,sizeof(*wh));
+}
+
+static void free_fragment_array(soundcard_t sc) {
+    unsigned int i;
+
+    /* never while playing! otherwise, fragments are "unprepared" and can be freed. */
+    if (sc->wav_state.playing)
+        return;
+
+    if (sc->p.mmsystem.fragments != NULL) {
+        for (i=0;i < sc->p.mmsystem.fragment_count;i++)
+            free_fragment(sc->p.mmsystem.fragments+i);
+
+        free(sc->p.mmsystem.fragments);
+        sc->p.mmsystem.fragments = NULL;
+    }
+}
+
+static void unprepare_fragment(soundcard_t sc,struct soundcard_priv_mmsystem_wavhdr *wh) {
+    /* NTS: It would be sanest to check if WHDR_DONE, and the driver is supposed to set it
+     *      upon completion of playing the block, but we can't assume the driver will set
+     *      it if we call something like waveOutReset, so we don't check. */
+    if (wh->hdr.dwFlags & WHDR_PREPARED)
+        __waveOutUnprepareHeader(sc->p.mmsystem.handle, &wh->hdr, sizeof(wh->hdr));
+}
+
+static void unprepare_fragment_array(soundcard_t sc) {
+    unsigned int i;
+
+    /* never while playing! */
+    if (sc->wav_state.playing)
+        return;
+
+    if (sc->p.mmsystem.fragments != NULL) {
+        for (i=0;i < sc->p.mmsystem.fragment_count;i++)
+            unprepare_fragment(sc,sc->p.mmsystem.fragments+i);
+    }
+}
 
 /* this depends on keeping the "play delay" up to date */
 static uint32_t dosamp_FAR mmsystem_can_write(soundcard_t sc) { /* in bytes */
@@ -129,6 +223,10 @@ static int mmsystem_prepare_play(soundcard_t sc) {
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
 
+    /* set up the fragment array */
+    if (alloc_fragment_array(sc) < 0)
+        return -1;
+
     /* open the sound device */
     {
         PCMWAVEFORMAT pcm;
@@ -157,11 +255,13 @@ static int mmsystem_unprepare_play(soundcard_t sc) {
         /* close the sound device */
         if (sc->p.mmsystem.handle != WAVE_INVALID_HANDLE) {
             __waveOutReset(sc->p.mmsystem.handle);
+            unprepare_fragment_array(sc);
             __waveOutClose(sc->p.mmsystem.handle);
             sc->p.mmsystem.handle = WAVE_INVALID_HANDLE;
         }
 
         sc->wav_state.prepared = 0;
+        free_fragment_array(sc);
     }
 
     return 0;
@@ -176,7 +276,8 @@ static uint32_t mmsystem_play_buffer_write_pos(soundcard_t sc) {
 }
 
 static uint32_t mmsystem_play_buffer_size(soundcard_t sc) {
-    return 0;
+    return  (uint32_t)sc->p.mmsystem.fragment_size *
+            (uint32_t)sc->p.mmsystem.fragment_count;
 }
 
 static int mmsystem_start_playback(soundcard_t sc) {
@@ -288,6 +389,18 @@ static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR *
     /* take it */
     sc->cur_codec = *fmt;
 
+    /* compute fragment size and count for the format.
+     * set one fragment to 1/10th of a second.
+     * 20 fragments (2 seconds). */
+    free_fragment_array(sc);
+
+    {
+        uint32_t sz = (fmt->sample_rate / (uint32_t)10) * (uint32_t)fmt->bytes_per_block;
+        if (sz > 32768UL) sz = 32768UL;
+        sc->p.mmsystem.fragment_size = (unsigned int)sz;
+        sc->p.mmsystem.fragment_count = 20;
+    }
+
     return 0;
 }
 
@@ -396,6 +509,8 @@ int probe_for_mmsystem(void) {
     if ((__waveOutReset=((UINT (WINAPI *)(HWAVEOUT))GetProcAddress(mmsystem_dll,"WAVEOUTRESET"))) == NULL)
         return 0;
     if ((__waveOutGetNumDevs=((UINT (WINAPI *)(void))GetProcAddress(mmsystem_dll,"WAVEOUTGETNUMDEVS"))) == NULL)
+        return 0;
+    if ((__waveOutUnprepareHeader=((UINT (WINAPI *)(HWAVEOUT,LPWAVEHDR,UINT))GetProcAddress(mmsystem_dll,"WAVEOUTUNPREPAREHEADER"))) == NULL)
         return 0;
 
     devs = __waveOutGetNumDevs();
