@@ -22,7 +22,6 @@
 #include <dos.h>
 
 #include <hw/8254/8254.h>
-#include <hw/8259/8259.h>
 
 #include <hw/dos/dos.h>
 #include <hw/dos/doswin.h>
@@ -38,6 +37,10 @@
 /* no interrupts */
 #else
 # define HOOK_IRQ
+#endif
+
+#ifdef HOOK_IRQ
+# include <hw/8259/8259.h>
 #endif
 
 static volatile unsigned int counter = 0;
@@ -186,10 +189,12 @@ int main() {
 		printf("Chip not present. Your computer might be 2010-era hardware that dropped support for it.\n");
 		return 1;
 	}
+#ifdef HOOK_IRQ
 	if (!probe_8259()) {
 		printf("8259 interrupt controller not present. Your computer might be 2010-era hardware that dropped support for it.\n");
 		return 1;
 	}
+#endif
 
 	printf("8254 base clock: %luHz\n",T8254_REF_CLOCK_HZ);
 
@@ -205,9 +210,11 @@ int main() {
 	write_8254_system_timer(max);
 	_sti();
 
+#ifdef HOOK_IRQ
 #ifdef TARGET_PC98
 	/* PC-98 does not have IRQ0 running by default */
 	p8259_unmask(T8254_IRQ);
+#endif
 #endif
 
 	while (1) {
@@ -340,9 +347,11 @@ int main() {
 	}
 	printf("\n");
 
+#ifdef HOOK_IRQ
 #ifdef TARGET_PC98
 	/* PC-98 does not have IRQ0 running by default */
 	p8259_mask(T8254_IRQ);
+#endif
 #endif
 
 	_cli();
