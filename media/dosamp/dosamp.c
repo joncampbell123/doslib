@@ -1,14 +1,4 @@
 
-/* FIXME: Windows WINFCON builds:
- *
- *        WINFCON simulates SIGINT when the user clicks the system menu to close the application.
- *        We need to set up the signal handler to catch that, so that we shutdown gracefully.
- *
- *        As it is right now, clicking on the system menu terminates us suddenly and we do not
- *        clean up after ourselves. If we're playing audio through the multimedia driver in
- *        Windows 3.0 this is a good way to cause an "unrecoverable application error".
- */
-
 #if defined(TARGET_WINDOWS)
 # define WINFCON_STOCK_WIN_MAIN
 #endif
@@ -23,6 +13,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #ifdef LINUX
+#include <signal.h>
 #include <endian.h>
 #else
 #include <hw/cpu/endian.h>
@@ -79,6 +70,10 @@
 #include "sc_alsa.h"
 #include "sc_winmm.h"
 
+#if defined(TARGET_WINDOWS) && defined(USE_WINFCON)
+#include <signal.h>
+#endif
+
 /* this code won't work with the TINY memory model for awhile. sorry. */
 #ifdef __TINY__
 # error Open Watcom C tiny memory model not supported
@@ -92,6 +87,7 @@ char                                            str_tmp[256];
 char                                            soundcard_str_tmp[256];
 
 /* DOSAMP state and user state */
+static volatile unsigned char                   exit_now = 0;
 static unsigned char                            test_mode = 0;
 static unsigned long                            prefer_rate = 0;
 static unsigned char                            prefer_channels = 0;
@@ -1280,9 +1276,22 @@ void print_soundcard(soundcard_t sc) {
         printf(" %s",str_tmp);
 }
 
+#if (defined(TARGET_WINDOWS) && defined(USE_WINFCON)) || defined(LINUX)
+void sigint_handler(int x) {
+    (void)x;
+
+    exit_now++;
+}
+#endif
+
 int main(int argc,char **argv,char **envp) {
     unsigned char disp=1;
     int i,loop;
+
+#if (defined(TARGET_WINDOWS) && defined(USE_WINFCON)) || defined(LINUX)
+    /* winfcon will send SIGINT if the user closes the window through the system menu */
+    signal(SIGINT,sigint_handler);
+#endif
 
     (void)envp;
 
@@ -1491,6 +1500,9 @@ int main(int argc,char **argv,char **envp) {
             while (loop) {
                 wav_idle();
                 display_idle(disp);
+
+                if (exit_now)
+                    break;
 
                 if (kbhit()) {
                     i = getch();
