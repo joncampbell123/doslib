@@ -573,9 +573,6 @@ struct soundcard mmsystem_soundcard_template = {
 };
 
 int probe_for_mmsystem(void) {
-    unsigned int didx;
-    struct stat st;
-    char path[128];
     UINT devs;
 
     if (mmsystem_probed) return 0;
