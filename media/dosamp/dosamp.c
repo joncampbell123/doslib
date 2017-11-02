@@ -70,7 +70,7 @@
 #include "sc_alsa.h"
 #include "sc_winmm.h"
 
-#if defined(TARGET_WINDOWS) && defined(USE_WINFCON)
+#if defined(TARGET_WINDOWS)
 #include <signal.h>
 #endif
 
@@ -1276,7 +1276,7 @@ void print_soundcard(soundcard_t sc) {
         printf(" %s",str_tmp);
 }
 
-#if (defined(TARGET_WINDOWS) && defined(USE_WINFCON)) || defined(LINUX)
+#if defined(TARGET_WINDOWS) || defined(LINUX)
 void sigint_handler(int x) {
     (void)x;
 
@@ -1288,7 +1288,7 @@ int main(int argc,char **argv,char **envp) {
     unsigned char disp=1;
     int i,loop;
 
-#if (defined(TARGET_WINDOWS) && defined(USE_WINFCON)) || defined(LINUX)
+#if defined(TARGET_WINDOWS) || defined(LINUX)
     /* winfcon will send SIGINT if the user closes the window through the system menu */
     signal(SIGINT,sigint_handler);
 #endif
