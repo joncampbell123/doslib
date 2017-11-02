@@ -572,7 +572,7 @@ static int mmsystem_get_card_name(soundcard_t sc,void dosamp_FAR *data,unsigned 
     if (data == NULL || len == NULL) return -1;
     if (*len == 0U) return -1;
 
-    str = "Open Sound System";
+    str = "Windows Sound System";
 
     soundcard_str_return_common((char dosamp_FAR*)data,len,str);
     return 0;
