@@ -1,4 +1,14 @@
 
+/* FIXME: Windows WINFCON builds:
+ *
+ *        WINFCON simulates SIGINT when the user clicks the system menu to close the application.
+ *        We need to set up the signal handler to catch that, so that we shutdown gracefully.
+ *
+ *        As it is right now, clicking on the system menu terminates us suddenly and we do not
+ *        clean up after ourselves. If we're playing audio through the multimedia driver in
+ *        Windows 3.0 this is a good way to cause an "unrecoverable application error".
+ */
+
 #if defined(TARGET_WINDOWS)
 # define WINFCON_STOCK_WIN_MAIN
 #endif
