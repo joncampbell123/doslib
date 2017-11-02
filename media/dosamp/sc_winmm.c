@@ -580,7 +580,9 @@ static int mmsystem_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR *
             fmt->bits_per_sample = 16;
     }
     if (fmt->bits_per_sample > 8) {
-        if ((caps.dwFormats & (WAVE_FORMAT_1M16|WAVE_FORMAT_1S16|WAVE_FORMAT_2M16|WAVE_FORMAT_2S16|WAVE_FORMAT_4M16|WAVE_FORMAT_4S16)) == 0)
+        if (sc->p.mmsystem.hacks.never_16bit)
+            fmt->bits_per_sample = 8;
+        else if ((caps.dwFormats & (WAVE_FORMAT_1M16|WAVE_FORMAT_1S16|WAVE_FORMAT_2M16|WAVE_FORMAT_2S16|WAVE_FORMAT_4M16|WAVE_FORMAT_4S16)) == 0)
             fmt->bits_per_sample = 8;
     }
     if (fmt->sample_rate > 22050) {
@@ -832,6 +834,7 @@ int probe_for_mmsystem(void) {
                 if (caps.wMid == 0x0002 && caps.wPid == 0x0068) { /* Tandy SBP16 */
                     /* NTS: I will add a check for vDriverVersion if later revisions fix the issue. */
                     sc->p.mmsystem.hacks.min_4kbperchannel = 1;
+                    sc->p.mmsystem.hacks.never_16bit = 1; /* does not support 16-bit PCM */
                 }
             }
         }
