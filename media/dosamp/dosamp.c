@@ -69,6 +69,7 @@
 #include "sc_oss.h"
 #include "sc_alsa.h"
 #include "sc_winmm.h"
+#include "sc_dsound.h"
 
 #if defined(TARGET_WINDOWS)
 #include <signal.h>
@@ -1486,6 +1487,13 @@ int main(int argc,char **argv,char **envp) {
     }
 #endif
 
+#if defined(HAS_DSOUND)
+    if (probe_for_dsound() < 0) {
+        printf("Serious error while probing DSOUND devices\n");
+        return 1;
+    }
+#endif
+
     /* now let the user choose. */
     {
         unsigned char count = 0;
@@ -1745,6 +1753,9 @@ int main(int argc,char **argv,char **envp) {
 #endif
 #if defined(TARGET_WINDOWS)
     free_mmsystem_support();
+#endif
+#if defined(HAS_DSOUND)
+    free_dsound_support();
 #endif
 
     soundcardlist_close();
