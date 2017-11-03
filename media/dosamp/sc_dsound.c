@@ -306,8 +306,6 @@ static int dsound_stop_playback(soundcard_t sc) {
 }
 
 static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt) {
-    DSCAPS dscaps;
-
     /* must be open */
     if (!sc->wav_state.is_open) return -1;
 
@@ -329,31 +327,6 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
 
     if (fmt->number_of_channels < 1) fmt->number_of_channels = 1;
     else if (fmt->number_of_channels > 2) fmt->number_of_channels = 2;
-
-    /* caps? */
-    memset(&dscaps,0,sizeof(dscaps));
-    dscaps.dwSize = sizeof(dscaps);
-    if (IDirectSound_GetCaps(sc->p.dsound.dsound, &dscaps) != DS_OK) return -1;
-
-    /* NTS: We're using a secondary buffer. That's what we check. */
-    if (dscaps.dwMinSecondarySampleRate != 0) {
-        if (fmt->sample_rate < dscaps.dwMinSecondarySampleRate)
-            fmt->sample_rate = dscaps.dwMinSecondarySampleRate;
-    }
-    if (dscaps.dwMaxSecondarySampleRate != 0) {
-        if (fmt->sample_rate > dscaps.dwMaxSecondarySampleRate)
-            fmt->sample_rate = dscaps.dwMaxSecondarySampleRate;
-    }
-
-    if (fmt->bits_per_sample == 16 && !(dscaps.dwFlags & DSCAPS_SECONDARY16BIT))
-        fmt->bits_per_sample = 8;
-    else if (fmt->bits_per_sample == 8 && !(dscaps.dwFlags & DSCAPS_SECONDARY8BIT))
-        fmt->bits_per_sample = 16;
-
-    if (fmt->number_of_channels == 2 && !(dscaps.dwFlags & DSCAPS_SECONDARYSTEREO))
-        fmt->number_of_channels = 1;
-    else if (fmt->number_of_channels == 1 && !(dscaps.dwFlags & DSCAPS_SECONDARYMONO))
-        fmt->number_of_channels = 2;
 
     /* PCM recalc */
     fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
