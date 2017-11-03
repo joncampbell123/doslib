@@ -60,10 +60,10 @@ static int dsound_update_play_position(soundcard_t sc) {
     if (dsound_delay < 0) dsound_delay = 0;
     sc->p.dsound.dsound_delay = dsound_delay;
 
+    /* "delay" is the distance from our write pointer to DirectSound's play pointer */
     delay = (signed long)sc->p.dsound.write_to;
     delay -= (signed long)sc->p.dsound.play;
     if (delay < 0L) delay += (signed long)sc->p.dsound.buffer_size;
-    delay += sc->p.dsound.dsound_delay;
 
     sc->wav_state.play_delay_bytes = (unsigned long)delay;
     sc->wav_state.play_delay = ((unsigned long)delay / sc->cur_codec.bytes_per_block) * sc->cur_codec.samples_per_block;
@@ -90,6 +90,7 @@ static uint32_t dosamp_FAR dsound_can_write(soundcard_t sc) { /* in bytes */
 
     dsound_update_play_position(sc);
 
+    /* we consider "can write" the area from our write pointer to DirectSound's play pointer */
     ret  = sc->p.dsound.buffer_size;
     ret -= sc->p.dsound.dsound_delay;
     ret -= sc->wav_state.play_delay_bytes + 8;
