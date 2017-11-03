@@ -96,8 +96,19 @@
 /* no */
 #endif
 
+/* platform has/could have DirectSound */
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(WIN386)
+# define HAS_DSOUND
+#else
+/* no */
+#endif
+
 #ifdef USE_WINFCON
 # include <hw/dos/winfcon.h>
+#endif
+
+#ifdef HAS_DSOUND
+# include <dsound.h>
 #endif
 
 enum {
