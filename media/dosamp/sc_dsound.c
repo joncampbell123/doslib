@@ -161,7 +161,7 @@ static unsigned int dosamp_FAR dsound_buffer_write(soundcard_t sc,const unsigned
     }
 
     /* finish */
-    IDirectSoundBuffer_Unlock(sc->p.dsound.dsbuffer, &ptr1, len1, &ptr2, len2);
+    IDirectSoundBuffer_Unlock(sc->p.dsound.dsbuffer, ptr1, len1, ptr2, len2);
 
     dsound_update_play_position(sc);
     return count;
