@@ -40,10 +40,42 @@ static GUID                         zero_guid = {0,0,0,0};
 
 extern HRESULT (WINAPI *__DirectSoundCreate)(LPGUID lpGuid,LPDIRECTSOUND* ppDS,LPUNKNOWN pUnkOuter);
 
-static uint32_t dosamp_FAR dsound_can_write(soundcard_t sc) { /* in bytes */
-    (void)sc;
+static int dsound_update_play_position(soundcard_t sc) {
+    if (!sc->wav_state.playing) return 0;
+    if (sc->p.dsound.dsound == NULL) return 0;
+    if (sc->p.dsound.dsbuffer == NULL) return 0;
 
+    IDirectSoundBuffer_GetCurrentPosition(sc->p.dsound.dsbuffer, &sc->p.dsound.play, &sc->p.dsound.write);
     return 0;
+}
+
+static uint32_t dosamp_FAR dsound_can_write(soundcard_t sc) { /* in bytes */
+    int32_t ret;
+
+    if (!sc->wav_state.playing) return 0;
+    if (sc->p.dsound.dsound == NULL) return 0;
+    if (sc->p.dsound.dsbuffer == NULL) return 0;
+
+    dsound_update_play_position(sc);
+
+    /* DirectSound by default keeps the write pointer ahead of the play pointer.
+     * The write pointer behind the play pointer means the buffer is full or becoming full.
+     * Note that the "clamp if behind" method is unnecessary since DirectSound appears to
+     * march the write pointer forward automatically if we underrun. If this is false, I
+     * will update clamp_if_behind() to act.
+     *
+     * Note that unless you ask for "new" position capability, the "legacy" behavior is
+     * kept where the write pointer is always some 1-2K samples ahead of play.
+     *
+     * so to keep sanity we'll just assume one can write buffer size minus 1/10th of a sec */
+    ret  = sc->p.dsound.play;
+    ret -= sc->p.dsound.write;
+    if (ret < 0) ret += sc->p.dsound.buffer_size;
+    ret -= (sc->cur_codec.sample_rate / 10) * sc->cur_codec.bytes_per_block;
+    if (ret < 0) ret  = 0;
+    if (ret > sc->p.dsound.buffer_size) ret = sc->p.dsound.buffer_size;
+
+    return (uint32_t)ret;
 }
 
 static int dosamp_FAR dsound_clamp_if_behind(soundcard_t sc,uint32_t ahead_in_bytes) {
@@ -67,6 +99,7 @@ static unsigned int dosamp_FAR dsound_buffer_write(soundcard_t sc,const unsigned
     (void)buf;
     (void)len;
 
+    dsound_update_play_position(sc);
     return 0;
 }
 
@@ -122,8 +155,7 @@ static int dosamp_FAR dsound_close(soundcard_t sc) {
 }
 
 static int dosamp_FAR dsound_poll(soundcard_t sc) {
-    (void)sc;
-
+    dsound_update_play_position(sc);
     return 0;
 }
 
@@ -162,6 +194,7 @@ static int dsound_unprepare_play(soundcard_t sc) {
 }
 
 static uint32_t dsound_play_buffer_play_pos(soundcard_t sc) {
+    dsound_update_play_position(sc);
     return sc->wav_state.play_counter;
 }
 
@@ -170,23 +203,16 @@ static uint32_t dsound_play_buffer_write_pos(soundcard_t sc) {
 }
 
 static uint32_t dsound_play_buffer_size(soundcard_t sc) {
-    DSBCAPS dsb;
-
     if (sc->p.dsound.dsbuffer == NULL) return 0;
-
-    memset(&dsb, 0, sizeof(dsb));
-    dsb.dwSize = sizeof(dsb);
-
-    if (IDirectSoundBuffer_GetCaps(sc->p.dsound.dsbuffer, &dsb) != DS_OK)
-        return 0;
-
-    return dsb.dwBufferBytes;
+    return sc->p.dsound.buffer_size;
 }
 
 static int dsound_start_playback(soundcard_t sc) {
     if (!sc->wav_state.prepared) return -1;
     if (sc->wav_state.playing) return 0;
 
+    sc->p.dsound.play = 0;
+    sc->p.dsound.write = 0;
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
     sc->wav_state.play_counter_prev = 0;
@@ -194,6 +220,8 @@ static int dsound_start_playback(soundcard_t sc) {
     IDirectSoundBuffer_Stop(sc->p.dsound.dsbuffer);
 
     IDirectSoundBuffer_SetCurrentPosition(sc->p.dsound.dsbuffer, 0);
+
+    dsound_update_play_position(sc);
 
     IDirectSoundBuffer_Play(sc->p.dsound.dsbuffer, 0, 0, DSBPLAY_LOOPING);
 
@@ -282,7 +310,7 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
 
         memset(&dsd,0,sizeof(dsd));
         dsd.dwSize = sizeof(dsd);
-        dsd.dwFlags = DSBCAPS_GLOBALFOCUS;
+        dsd.dwFlags = DSBCAPS_GLOBALFOCUS | DSBCAPS_GETCURRENTPOSITION2;
         dsd.dwBufferBytes = sz;
         dsd.lpwfxFormat = &sc->p.dsound.dsbufferfmt;
 
@@ -291,6 +319,18 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
             goto fail;
         if (sc->p.dsound.dsbuffer == NULL)
             goto fail;
+    }
+
+    {
+        DSBCAPS dsb;
+
+        memset(&dsb, 0, sizeof(dsb));
+        dsb.dwSize = sizeof(dsb);
+
+        if (IDirectSoundBuffer_GetCaps(sc->p.dsound.dsbuffer, &dsb) != DS_OK)
+            goto fail;
+
+        sc->p.dsound.buffer_size = dsb.dwBufferBytes;
     }
 
     /* take it */

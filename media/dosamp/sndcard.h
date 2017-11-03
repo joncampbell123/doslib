@@ -76,6 +76,8 @@ struct soundcard_priv_dsound_t {
     IDirectSound*                               dsound;
     IDirectSoundBuffer*                         dsbuffer;
     WAVEFORMATEX                                dsbufferfmt;
+    DWORD                                       play,write;         // last known play/write pointers
+    DWORD                                       buffer_size;
 };
 # endif
 #endif
