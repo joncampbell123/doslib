@@ -41,6 +41,7 @@ static GUID                         zero_guid = {0,0,0,0};
 extern HRESULT (WINAPI *__DirectSoundCreate)(LPGUID lpGuid,LPDIRECTSOUND* ppDS,LPUNKNOWN pUnkOuter);
 
 static int dsound_update_play_position(soundcard_t sc) {
+    signed long dsound_delay;
     signed long delay;
 
     if (!sc->wav_state.playing) return 0;
@@ -49,9 +50,20 @@ static int dsound_update_play_position(soundcard_t sc) {
 
     IDirectSoundBuffer_GetCurrentPosition(sc->p.dsound.dsbuffer, &sc->p.dsound.play, &sc->p.dsound.write);
 
-    delay = (signed long)sc->p.dsound.write;
+    /* use distance from our write ptr to DirectSound write position,
+     * and distance from play and write position, to determine how much
+     * is safe to write. write pointer is ahead of play pointer by some
+     * fixed amount. */
+    dsound_delay  = sc->p.dsound.write;
+    dsound_delay -= sc->p.dsound.play;
+    if (dsound_delay < 0) dsound_delay += sc->p.dsound.buffer_size;
+    if (dsound_delay < 0) dsound_delay = 0;
+    sc->p.dsound.dsound_delay = dsound_delay;
+
+    delay = (signed long)sc->p.dsound.write_to;
     delay -= (signed long)sc->p.dsound.play;
     if (delay < 0L) delay += (signed long)sc->p.dsound.buffer_size;
+    delay += sc->p.dsound.dsound_delay;
 
     sc->wav_state.play_delay_bytes = (unsigned long)delay;
     sc->wav_state.play_delay = ((unsigned long)delay / sc->cur_codec.bytes_per_block) * sc->cur_codec.samples_per_block;
@@ -78,22 +90,10 @@ static uint32_t dosamp_FAR dsound_can_write(soundcard_t sc) { /* in bytes */
 
     dsound_update_play_position(sc);
 
-    /* DirectSound by default keeps the write pointer ahead of the play pointer.
-     * The write pointer behind the play pointer means the buffer is full or becoming full.
-     * Note that the "clamp if behind" method is unnecessary since DirectSound appears to
-     * march the write pointer forward automatically if we underrun. If this is false, I
-     * will update clamp_if_behind() to act.
-     *
-     * Note that unless you ask for "new" position capability, the "legacy" behavior is
-     * kept where the write pointer is always some 1-2K samples ahead of play.
-     *
-     * so to keep sanity we'll just assume one can write buffer size minus 1/10th of a sec */
-    ret  = sc->p.dsound.play;
-    ret -= sc->p.dsound.write;
-    if (ret < 0) ret += sc->p.dsound.buffer_size;
-    ret -= (sc->cur_codec.sample_rate / 10) * sc->cur_codec.bytes_per_block;
-    if (ret < 0) ret  = 0;
-    if (ret > sc->p.dsound.buffer_size) ret = sc->p.dsound.buffer_size;
+    ret  = sc->p.dsound.buffer_size;
+    ret -= sc->p.dsound.dsound_delay;
+    ret -= sc->wav_state.play_delay_bytes + 8;
+    if (ret < 0) ret = 0;
 
     return (uint32_t)ret;
 }
@@ -115,12 +115,56 @@ static unsigned char dosamp_FAR * dosamp_FAR dsound_mmap_write(soundcard_t sc,ui
 
 /* non-mmap write (much like OSS or ALSA in Linux where you do not have direct access to the hardware buffer) */
 static unsigned int dosamp_FAR dsound_buffer_write(soundcard_t sc,const unsigned char dosamp_FAR * buf,unsigned int len) {
-    (void)sc;
-    (void)buf;
-    (void)len;
+    void *ptr1 = NULL,*ptr2 = NULL;
+    DWORD len1 = 0,len2 = 0;
+    unsigned int count = 0;
+    HRESULT hr;
+
+    if (sc->p.dsound.dsbuffer == NULL) return 0;
+
+    if (len > sc->p.dsound.buffer_size)
+        len = sc->p.dsound.buffer_size;
+
+    /* try to keep things sample aligned */
+    len -= len % sc->cur_codec.bytes_per_block;
+    if (len == 0) return 0;
+
+    if (sc->p.dsound.write_to >= sc->p.dsound.buffer_size)
+        sc->p.dsound.write_to = 0;
+
+    /* do it */
+    hr = IDirectSoundBuffer_Lock(sc->p.dsound.dsbuffer, sc->p.dsound.write_to, (DWORD)len, &ptr1, &len1, &ptr2, &len2, 0);
+    if (hr != DS_OK) return 0;
+
+    if (len1 != 0 && ptr1 != NULL && len1 <= len) {
+        sc->wav_state.write_counter += len1;
+        sc->p.dsound.write_to += len1;
+        memcpy(ptr1,buf,len1);
+        count += len1;
+        len -= len1;
+        buf += len1;
+    }
+
+    if (sc->p.dsound.write_to >= sc->p.dsound.buffer_size)
+        sc->p.dsound.write_to = 0;
+
+    if (len2 != 0 && ptr2 != NULL && len2 <= len) {
+        /* assume: Since DirectSound buffers are circular, that the presence of a second pair of pointers is indicative of wraparound.
+         *         But of course, complicated Microsoft APIs don't explicitly state that, and perhaps we'll find some DirectSound
+         *         implementation that returns two pointers for a sequential block just for shits and giggles. */
+        sc->wav_state.write_counter += len2;
+        sc->p.dsound.write_to = len2; /* NTS: Not a typo: The concept is that of a circular buffer. */
+        memcpy(ptr2,buf,len2);
+        count += len2;
+        len -= len2;
+        buf += len2;
+    }
+
+    /* finish */
+    IDirectSoundBuffer_Unlock(sc->p.dsound.dsbuffer, &ptr1, len1, &ptr2, len2);
 
     dsound_update_play_position(sc);
-    return 0;
+    return count;
 }
 
 static int dosamp_FAR dsound_close(soundcard_t sc);
@@ -233,6 +277,7 @@ static int dsound_start_playback(soundcard_t sc) {
 
     sc->p.dsound.play = 0;
     sc->p.dsound.write = 0;
+    sc->p.dsound.write_to = 0;
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
     sc->wav_state.play_counter_prev = 0;
