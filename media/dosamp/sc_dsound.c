@@ -79,6 +79,7 @@ static int dosamp_FAR dsound_open(soundcard_t sc) {
     if (sc->wav_state.is_open) return -1; /* already open! */
 
     assert(sc->p.dsound.dsound == NULL);
+    assert(sc->p.dsound.dsbuffer == NULL);
 
     if (memcmp(&sc->p.dsound.device_id, &zero_guid, sizeof(zero_guid)) == 0)
         hr = __DirectSoundCreate(NULL,&sc->p.dsound.dsound,NULL);
@@ -94,7 +95,7 @@ static int dosamp_FAR dsound_open(soundcard_t sc) {
     if (hwnd == NULL) hwnd = GetDesktopWindow();
 
     hr = IDirectSound_SetCooperativeLevel(sc->p.dsound.dsound, hwnd, DSSCL_PRIORITY);
-    if (hr != DS_OK) goto fail;
+    if (hr != DS_OK || sc->p.dsound.dsound == NULL) goto fail;
 
     return 0;
 fail:
@@ -104,6 +105,11 @@ fail:
 
 static int dosamp_FAR dsound_close(soundcard_t sc) {
     if (!sc->wav_state.is_open) return 0;
+
+    if (sc->p.dsound.dsbuffer != NULL) {
+        IDirectSoundBuffer_Release(sc->p.dsound.dsbuffer);
+        sc->p.dsound.dsbuffer = NULL;
+    }
 
     if (sc->p.dsound.dsound != NULL) {
         IDirectSound_Release(sc->p.dsound.dsound);
@@ -161,7 +167,17 @@ static uint32_t dsound_play_buffer_write_pos(soundcard_t sc) {
 }
 
 static uint32_t dsound_play_buffer_size(soundcard_t sc) {
-    return 0;
+    DSBCAPS dsb;
+
+    if (sc->p.dsound.dsbuffer == NULL) return 0;
+
+    memset(&dsb, 0, sizeof(dsb));
+    dsb.dwSize = sizeof(dsb);
+
+    if (IDirectSoundBuffer_GetCaps(sc->p.dsound.dsbuffer, &dsb) != DS_OK)
+        return 0;
+
+    return dsb.dwBufferBytes;
 }
 
 static int dsound_start_playback(soundcard_t sc) {
@@ -184,12 +200,22 @@ static int dsound_stop_playback(soundcard_t sc) {
 }
 
 static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt) {
+    DSCAPS dscaps;
+
     /* must be open */
     if (!sc->wav_state.is_open) return -1;
 
     /* not while prepared or playing!
      * assume: playing is not set unless prepared */
     if (sc->wav_state.prepared) return -1;
+
+    /* close */
+    if (sc->p.dsound.dsbuffer != NULL) {
+        IDirectSoundBuffer_Release(sc->p.dsound.dsbuffer);
+        sc->p.dsound.dsbuffer = NULL;
+    }
+
+    if (sc->p.dsound.dsound == NULL) return -1;
 
     /* sane limits */
     if (fmt->bits_per_sample < 8) fmt->bits_per_sample = 8;
@@ -198,13 +224,74 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
     if (fmt->number_of_channels < 1) fmt->number_of_channels = 1;
     else if (fmt->number_of_channels > 2) fmt->number_of_channels = 2;
 
+    /* caps? */
+    memset(&dscaps,0,sizeof(dscaps));
+    dscaps.dwSize = sizeof(dscaps);
+    if (IDirectSound_GetCaps(sc->p.dsound.dsound, &dscaps) != DS_OK) return -1;
+
+    /* NTS: We're using a secondary buffer. That's what we check. */
+    if (dscaps.dwMinSecondarySampleRate != 0) {
+        if (fmt->sample_rate < dscaps.dwMinSecondarySampleRate)
+            fmt->sample_rate = dscaps.dwMinSecondarySampleRate;
+    }
+    if (dscaps.dwMaxSecondarySampleRate != 0) {
+        if (fmt->sample_rate > dscaps.dwMaxSecondarySampleRate)
+            fmt->sample_rate = dscaps.dwMaxSecondarySampleRate;
+    }
+
+    if (fmt->bits_per_sample == 16 && !(dscaps.dwFlags & DSCAPS_SECONDARY16BIT))
+        fmt->bits_per_sample = 8;
+    else if (fmt->bits_per_sample == 8 && !(dscaps.dwFlags & DSCAPS_SECONDARY8BIT))
+        fmt->bits_per_sample = 16;
+
+    if (fmt->number_of_channels == 2 && !(dscaps.dwFlags & DSCAPS_SECONDARYSTEREO))
+        fmt->number_of_channels = 1;
+    else if (fmt->number_of_channels == 1 && !(dscaps.dwFlags & DSCAPS_SECONDARYMONO))
+        fmt->number_of_channels = 2;
+
     /* PCM recalc */
     fmt->bytes_per_block = ((fmt->bits_per_sample+7U)/8U) * fmt->number_of_channels;
+
+    /* WAVEFORMATEX */
+    memset(&sc->p.dsound.dsbufferfmt,0,sizeof(sc->p.dsound.dsbufferfmt));
+    sc->p.dsound.dsbufferfmt.wFormatTag = WAVE_FORMAT_PCM;
+    sc->p.dsound.dsbufferfmt.nChannels = fmt->number_of_channels;
+    sc->p.dsound.dsbufferfmt.nSamplesPerSec = fmt->sample_rate;
+    sc->p.dsound.dsbufferfmt.nBlockAlign = fmt->bytes_per_block;
+    sc->p.dsound.dsbufferfmt.wBitsPerSample = fmt->bits_per_sample;
+    sc->p.dsound.dsbufferfmt.nAvgBytesPerSec = sc->p.dsound.dsbufferfmt.nSamplesPerSec * sc->p.dsound.dsbufferfmt.nBlockAlign;
+
+    /* create secondary buffer */
+    {
+        DSBUFFERDESC dsd;
+        uint32_t sz;
+        HRESULT hr;
+
+        sz = (uint32_t)fmt->sample_rate * (uint32_t)2 * (uint32_t)fmt->bytes_per_block;
+
+        memset(&dsd,0,sizeof(dsd));
+        dsd.dwSize = sizeof(dsd);
+        dsd.dwFlags = DSBCAPS_GLOBALFOCUS;
+        dsd.dwBufferBytes = sz;
+        dsd.lpwfxFormat = &sc->p.dsound.dsbufferfmt;
+
+        hr = IDirectSound_CreateSoundBuffer(sc->p.dsound.dsound, &dsd, &sc->p.dsound.dsbuffer, NULL);
+        if (!SUCCEEDED(hr))
+            goto fail;
+        if (sc->p.dsound.dsbuffer == NULL)
+            goto fail;
+    }
 
     /* take it */
     sc->cur_codec = *fmt;
 
     return 0;
+fail:
+    if (sc->p.dsound.dsbuffer != NULL) {
+        IDirectSoundBuffer_Release(sc->p.dsound.dsbuffer);
+        sc->p.dsound.dsbuffer = NULL;
+    }
+    return -1;
 }
 
 static int dsound_get_card_name(soundcard_t sc,void dosamp_FAR *data,unsigned int dosamp_FAR *len) {

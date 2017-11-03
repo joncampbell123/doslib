@@ -75,6 +75,7 @@ struct soundcard_priv_dsound_t {
     GUID                                        device_id;
     IDirectSound*                               dsound;
     IDirectSoundBuffer*                         dsbuffer;
+    WAVEFORMATEX                                dsbufferfmt;
 };
 # endif
 #endif
