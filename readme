@@ -13,6 +13,17 @@ v2.0 compiler. Earlier versions referred to symbols that don't
 exist and make assumptions about the stack in ways that don't
 pan out in Windows 3.1 (stack check fail).
 
+*** Support ********************************
+
+If you would like to help fund development, and the videos I produce about
+MS-DOS, feel free to subscribe to me on Patreon:
+
+    https://www.patreon.com/thegreatcodeholio
+
+Your contributions help fund video production about MS-DOS and the
+purchase of MS-DOS hardware and software to test and develop this
+code. Any support is welcome.
+
 ********************************************
 
 This is a collection of source code intended for DOS and DOS-level
