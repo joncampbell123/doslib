@@ -20,20 +20,14 @@ fi
 
 if [ "$1" == "disk" ]; then
     make_msdos_data_disk test.dsk || exit 1
-    mcopy -i test.dsk dos86c/test.exe ::test86c.exe
-    mcopy -i test.dsk dos86s/test.exe ::test86s.exe
-    mcopy -i test.dsk dos86m/test.exe ::test86m.exe
-    mcopy -i test.dsk dos86l/test.exe ::test86l.exe
-    mcopy -i test.dsk dos286c/test.exe ::test286c.exe
-    mcopy -i test.dsk dos286s/test.exe ::test286s.exe
-    mcopy -i test.dsk dos286m/test.exe ::test286m.exe
-    mcopy -i test.dsk dos286l/test.exe ::test286l.exe
-    mcopy -i test.dsk dos386f/test.exe ::test386.exe
-    mcopy -i test.dsk dos486f/test.exe ::test486.exe
-    mcopy -i test.dsk dos586f/test.exe ::test586.exe
-    mcopy -i test.dsk dos686f/test.exe ::test686.exe
+    mcopy -i test.dsk dos86s/dosamp.exe ::amp86s.exe
+    mcopy -i test.dsk dos86l/dosamp.exe ::amp86l.exe
+    mcopy -i test.dsk dos386f/dosamp.exe ::amp386.exe
+    mcopy -i test.dsk win32s3/dosamp.exe ::amp32s.exe
+    mcopy -i test.dsk win32/dosamp.exe ::amp32.exe
+    mcopy -i test.dsk winnt/dosamp.exe ::ampnt.exe
+    mcopy -i test.dsk win313l/dosamp.exe ::amp16.exe
     mcopy -i test.dsk dos386f/dos4gw.exe ::dos4gw.exe
-    mcopy -i test.dsk dos86s/pnpcfg.exe ::pnpcfg86.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
