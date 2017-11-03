@@ -107,6 +107,7 @@ static int dosamp_FAR dsound_close(soundcard_t sc) {
     if (!sc->wav_state.is_open) return 0;
 
     if (sc->p.dsound.dsbuffer != NULL) {
+        IDirectSoundBuffer_Stop(sc->p.dsound.dsbuffer);
         IDirectSoundBuffer_Release(sc->p.dsound.dsbuffer);
         sc->p.dsound.dsbuffer = NULL;
     }
@@ -143,6 +144,8 @@ static int dsound_prepare_play(soundcard_t sc) {
 
     if (sc->wav_state.prepared)
         return 0;
+
+    IDirectSoundBuffer_Restore(sc->p.dsound.dsbuffer);
 
     sc->wav_state.prepared = 1;
     return 0;
@@ -188,12 +191,16 @@ static int dsound_start_playback(soundcard_t sc) {
     sc->wav_state.write_counter = 0;
     sc->wav_state.play_counter_prev = 0;
 
+    IDirectSoundBuffer_Stop(sc->p.dsound.dsbuffer);
+
     sc->wav_state.playing = 1;
     return 0;
 }
 
 static int dsound_stop_playback(soundcard_t sc) {
     if (!sc->wav_state.playing) return 0;
+
+    IDirectSoundBuffer_Stop(sc->p.dsound.dsbuffer);
 
     sc->wav_state.playing = 0;
     return 0;
