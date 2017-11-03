@@ -70,15 +70,45 @@ static unsigned int dosamp_FAR dsound_buffer_write(soundcard_t sc,const unsigned
     return 0;
 }
 
+static int dosamp_FAR dsound_close(soundcard_t sc);
+
 static int dosamp_FAR dsound_open(soundcard_t sc) {
+    HWND hwnd = NULL;
+    HRESULT hr;
+
     if (sc->wav_state.is_open) return -1; /* already open! */
 
+    assert(sc->p.dsound.dsound == NULL);
+
+    if (memcmp(&sc->p.dsound.device_id, &zero_guid, sizeof(zero_guid)) == 0)
+        hr = __DirectSoundCreate(NULL,&sc->p.dsound.dsound,NULL);
+    else
+        hr = __DirectSoundCreate(&sc->p.dsound.device_id,&sc->p.dsound.dsound,NULL);
+
+    if (sc->p.dsound.dsound == NULL)
+        return -1;
+
     sc->wav_state.is_open = 1;
+
+    if (hwnd == NULL) hwnd = GetForegroundWindow();
+    if (hwnd == NULL) hwnd = GetDesktopWindow();
+
+    hr = IDirectSound_SetCooperativeLevel(sc->p.dsound.dsound, hwnd, DSSCL_PRIORITY);
+    if (hr != DS_OK) goto fail;
+
     return 0;
+fail:
+    dsound_close(sc);
+    return -1;
 }
 
 static int dosamp_FAR dsound_close(soundcard_t sc) {
     if (!sc->wav_state.is_open) return 0;
+
+    if (sc->p.dsound.dsound != NULL) {
+        IDirectSound_Release(sc->p.dsound.dsound);
+        sc->p.dsound.dsound = NULL;
+    }
 
     sc->wav_state.is_open = 0;
     return 0;
@@ -267,7 +297,7 @@ static IDirectSound *dsound_test_create(GUID *guid) {
 
     if (__DirectSoundCreate == NULL) return NULL;
 
-    if (!memcmp(guid,&zero_guid,sizeof(zero_guid)))
+    if (memcmp(guid, &zero_guid, sizeof(zero_guid)) == 0)
         hr = __DirectSoundCreate(NULL/*default*/,&ds,NULL);
     else
         hr = __DirectSoundCreate(guid,&ds,NULL);
@@ -294,7 +324,7 @@ int probe_for_dsound(void) {
 
         if ((ds=dsound_test_create(&zero_guid)) != NULL) {
             sc = soundcardlist_new(&dsound_soundcard_template);
-            if (sc != NULL) dsound_add(sc,ds,&zero_guid);
+            if (sc != NULL) dsound_add(sc, ds, &zero_guid);
             IDirectSound_Release(ds);
         }
     }
