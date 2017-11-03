@@ -243,6 +243,8 @@ static int dsound_prepare_play(soundcard_t sc) {
 
     IDirectSoundBuffer_Restore(sc->p.dsound.dsbuffer);
 
+    sc->wav_state.play_counter = 0;
+    sc->wav_state.write_counter = 0;
     sc->wav_state.prepared = 1;
     return 0;
 }
