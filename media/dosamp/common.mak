@@ -72,6 +72,15 @@ $(DOSAMP_EXE): $(DOSAMP_EXE_DEPS)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
+! ifdef TARGET_WINDOWS
+!  ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(DOSAMP_EXE)
+	@wbind $(DOSAMP_EXE) -q -n
+!  endif
+!  ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(DOSAMP_EXE)
+!  endif
+! endif
 
 clean: .SYMBOLIC
           del $(SUBDIR)$(HPS)*.obj
