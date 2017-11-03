@@ -1,3 +1,13 @@
+/* Windows 98 SE mystery bug:
+ *
+ *    Sometimes (especially in a console) we'll start playback, and DSOUND will
+ *    not play the audio until one buffer length later when playback will then
+ *    begin normally.
+ *
+ *    I have NO idea why it does this, but if there's some kind of kick or hack
+ *    I can do to work around the bug, I'll do it.
+ *
+ *    This testing was done within DOSBox-X, if it is relevent --J.C. */
 
 #include <windows.h>
 
