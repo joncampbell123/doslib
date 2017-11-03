@@ -41,11 +41,31 @@ static GUID                         zero_guid = {0,0,0,0};
 extern HRESULT (WINAPI *__DirectSoundCreate)(LPGUID lpGuid,LPDIRECTSOUND* ppDS,LPUNKNOWN pUnkOuter);
 
 static int dsound_update_play_position(soundcard_t sc) {
+    signed long delay;
+
     if (!sc->wav_state.playing) return 0;
     if (sc->p.dsound.dsound == NULL) return 0;
     if (sc->p.dsound.dsbuffer == NULL) return 0;
 
     IDirectSoundBuffer_GetCurrentPosition(sc->p.dsound.dsbuffer, &sc->p.dsound.play, &sc->p.dsound.write);
+
+    delay = (signed long)sc->p.dsound.write;
+    delay -= (signed long)sc->p.dsound.play;
+    if (delay < 0L) delay += (signed long)sc->p.dsound.buffer_size;
+
+    sc->wav_state.play_delay_bytes = (unsigned long)delay;
+    sc->wav_state.play_delay = ((unsigned long)delay / sc->cur_codec.bytes_per_block) * sc->cur_codec.samples_per_block;
+
+    /* play position is calculated here */
+    sc->wav_state.play_counter = sc->wav_state.write_counter;
+    if (sc->wav_state.play_counter >= sc->wav_state.play_delay_bytes)
+        sc->wav_state.play_counter -= sc->wav_state.play_delay_bytes;
+    else
+        sc->wav_state.play_counter = 0;
+
+    if (sc->wav_state.play_counter_prev < sc->wav_state.play_counter)
+        sc->wav_state.play_counter_prev = sc->wav_state.play_counter;
+
     return 0;
 }
 
