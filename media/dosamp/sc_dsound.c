@@ -193,6 +193,10 @@ static int dsound_start_playback(soundcard_t sc) {
 
     IDirectSoundBuffer_Stop(sc->p.dsound.dsbuffer);
 
+    IDirectSoundBuffer_SetCurrentPosition(sc->p.dsound.dsbuffer, 0);
+
+    IDirectSoundBuffer_Play(sc->p.dsound.dsbuffer, 0, 0, DSBPLAY_LOOPING);
+
     sc->wav_state.playing = 1;
     return 0;
 }
