@@ -20,7 +20,7 @@ DOSAMP_EXE =    $(SUBDIR)$(HPS)dosamp.$(EXEEXT)
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
 .C.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
 !ifdef TINYMODE
 	$(OMFSEGDG) -i $@ -o $@
@@ -67,7 +67,7 @@ $(DOSAMP_EXE): $(DOSAMP_EXE_DEPS)
 	%append tmp.cmd option stack=4096
 !  endif
 ! endif
-	%append tmp.cmd option quiet option map=$(DOSAMP_EXE).map system $(WLINK_SYSTEM) $(DOSAMP_EXE_WLINK)
+	%append tmp.cmd option quiet option map=$(DOSAMP_EXE).map system $(WLINK_CON_SYSTEM) $(DOSAMP_EXE_WLINK)
 	%append tmp.cmd name $(DOSAMP_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
