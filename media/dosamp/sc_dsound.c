@@ -496,6 +496,29 @@ static IDirectSound *dsound_test_create(GUID *guid) {
 static void dsound_add(IDirectSound *ds,GUID *guid) {
     soundcard_t sc;
 
+    /* Wait wait wait... can we ACTUALLY use the card?
+     * Windows 95 DirectX (at least in DOSBox-X) likes to offer DirectSound
+     * but then we can't actually create any sound buffers. At all. Neither
+     * secondary or primary.
+     *
+     * Weed out this asinine situation by test-creatig a primary buffer. */
+    {
+        IDirectSoundBuffer *ibuf = NULL;
+        DSBUFFERDESC dsd;
+        HRESULT hr;
+
+        memset(&dsd,0,sizeof(dsd));
+        dsd.dwSize = sizeof(dsd);
+        dsd.dwFlags = DSBCAPS_PRIMARYBUFFER;
+
+        hr = IDirectSound_CreateSoundBuffer(ds, &dsd, &ibuf, NULL);
+        if (!SUCCEEDED(hr) || ibuf == NULL) return;
+
+        /* it worked. let it go. */
+        IDirectSoundBuffer_Release(ibuf);
+    }
+
+    /* add the device */
     sc = soundcardlist_new(&dsound_soundcard_template);
     if (sc != NULL) {
         sc->p.dsound.device_id = *guid;
