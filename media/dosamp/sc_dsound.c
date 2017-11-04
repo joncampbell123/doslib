@@ -258,7 +258,9 @@ static int dsound_prepare_play(soundcard_t sc) {
 
     IDirectSoundBuffer_Restore(sc->p.dsound.dsbuffer);
     IDirectSoundBuffer_Restore(sc->p.dsound.dsprimary);
+    IDirectSoundBuffer_SetCurrentPosition(sc->p.dsound.dsbuffer, 0);
 
+    sc->p.dsound.write_to = 0;
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
     sc->wav_state.prepared = 1;
@@ -295,12 +297,10 @@ static int dsound_start_playback(soundcard_t sc) {
 
     sc->p.dsound.play = 0;
     sc->p.dsound.write = 0;
-    sc->p.dsound.write_to = 0;
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
     sc->wav_state.play_counter_prev = 0;
 
-    IDirectSoundBuffer_SetCurrentPosition(sc->p.dsound.dsbuffer, 0);
     IDirectSoundBuffer_Play(sc->p.dsound.dsbuffer, 0, 0, DSBPLAY_LOOPING);
 
     dsound_update_play_position(sc);
