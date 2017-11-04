@@ -105,6 +105,13 @@
 /* no */
 #endif
 
+/* platform has QueryPerformanceCounter */
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(WIN386)
+# define HAS_QPC
+#else
+/* no */
+#endif
+
 #ifdef USE_WINFCON
 # include <hw/dos/winfcon.h>
 #endif

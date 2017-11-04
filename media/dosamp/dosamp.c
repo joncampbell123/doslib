@@ -1207,6 +1207,10 @@ void display_idle_timesource(void) {
     else if (time_source == &dosamp_time_source_mmsystem_time)
         printf("MMSYSTEM_TIME ");
 #endif
+#if defined(HAS_QPC)
+    else if (time_source == &dosamp_time_source_qpc)
+        printf("QueryPerformanceCounter ");
+#endif
     else
         printf("? ");
 
@@ -1442,6 +1446,12 @@ int main(int argc,char **argv,char **envp) {
     /* we can use the Time Stamp Counter on Pentium or higher systems that offer it */
     if (dosamp_time_source_rdtsc_available(time_source))
         time_source = &dosamp_time_source_rdtsc;
+#endif
+
+#if defined(HAS_QPC)
+    /* we can use the Time Stamp Counter on Pentium or higher systems that offer it */
+    if (dosamp_time_source_qpc_available(time_source))
+        time_source = &dosamp_time_source_qpc;
 #endif
 
     if (time_source == NULL) {

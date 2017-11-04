@@ -4,7 +4,8 @@ enum {
     dosamp_time_source_id_8254 = 1,                 /* MS-DOS / Windows 3.x 8254 PIT timer */
     dosamp_time_source_id_rdtsc = 2,                /* Pentium RDTSC */
     dosamp_time_source_id_clock_monotonic = 3,      /* CLOCK_MONOTONIC (Linux) */
-    dosamp_time_source_id_mmsystem_time = 4         /* Windows MMSYSTEM/WINMM timer */
+    dosamp_time_source_id_mmsystem_time = 4,        /* Windows MMSYSTEM/WINMM timer */
+    dosamp_time_source_id_qpc = 5                   /* Windows QueryPerformanceCounter */
 };
 
 /* forward def, to make typedef, before actual struct */
@@ -47,5 +48,10 @@ extern struct dosamp_time_source                dosamp_time_source_clock_monoton
 
 #if defined(TARGET_WINDOWS)
 extern struct dosamp_time_source                dosamp_time_source_mmsystem_time;
+#endif
+
+#if defined(HAS_QPC)
+extern struct dosamp_time_source                dosamp_time_source_qpc;
+int dosamp_time_source_qpc_available(const dosamp_time_source_t clk);
 #endif
 

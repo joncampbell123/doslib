@@ -19,15 +19,15 @@ if [ "$1" == "clean" ]; then
 fi
 
 if [ "$1" == "disk" ]; then
-    make_msdos_data_disk test.dsk || exit 1
-    mcopy -i test.dsk dos86s/dosamp.exe ::amp86s.exe
-    mcopy -i test.dsk dos86l/dosamp.exe ::amp86l.exe
-    mcopy -i test.dsk dos386f/dosamp.exe ::amp386.exe
+#    make_msdos_data_disk test.dsk || exit 1
+#    mcopy -i test.dsk dos86s/dosamp.exe ::amp86s.exe
+#    mcopy -i test.dsk dos86l/dosamp.exe ::amp86l.exe
+#    mcopy -i test.dsk dos386f/dosamp.exe ::amp386.exe
     mcopy -i test.dsk win32s3/dosamp.exe ::amp32s.exe
-    mcopy -i test.dsk win32/dosamp.exe ::amp32.exe
-    mcopy -i test.dsk winnt/dosamp.exe ::ampnt.exe
-    mcopy -i test.dsk win313l/dosamp.exe ::amp16.exe
-    mcopy -i test.dsk dos386f/dos4gw.exe ::dos4gw.exe
+#    mcopy -i test.dsk win32/dosamp.exe ::amp32.exe
+#    mcopy -i test.dsk winnt/dosamp.exe ::ampnt.exe
+#    mcopy -i test.dsk win313l/dosamp.exe ::amp16.exe
+#    mcopy -i test.dsk dos386f/dos4gw.exe ::dos4gw.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
