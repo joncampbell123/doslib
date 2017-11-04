@@ -64,7 +64,6 @@ static int dsound_update_play_position(soundcard_t sc) {
     signed long dsound_delay;
     signed long delay;
 
-    if (!sc->wav_state.playing) return 0;
     if (sc->p.dsound.dsound == NULL) return 0;
     if (sc->p.dsound.dsbuffer == NULL) return 0;
 
@@ -104,7 +103,6 @@ static int dsound_update_play_position(soundcard_t sc) {
 static uint32_t dosamp_FAR dsound_can_write(soundcard_t sc) { /* in bytes */
     int32_t ret;
 
-    if (!sc->wav_state.playing) return 0;
     if (sc->p.dsound.dsound == NULL) return 0;
     if (sc->p.dsound.dsbuffer == NULL) return 0;
 
