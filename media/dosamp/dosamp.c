@@ -1410,6 +1410,7 @@ int main(int argc,char **argv,char **envp) {
      * the 8254 fallback is for really old Windows (3.0 and earlier) that lacks the multimedia timer */
     if (check_mmsystem_time())
         time_source = &dosamp_time_source_mmsystem_time;
+# if defined(HAS_8254) /* if enabled for build (i.e. Windows NT builds will omit the 8254 source entirely0 */
     /* use the 8254 ONLY IF the code above probed for it.
      * the code above will NOT probe for it if not Windows 3.x/9x/ME.
      * the 8254 library will only cause crashes on Windows NT based versions. */
@@ -1419,6 +1420,7 @@ int main(int argc,char **argv,char **envp) {
         time_source = &dosamp_time_source_8254;
         write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
     }
+# endif
     else {
         /* nothing to time, then */
         time_source = NULL;
