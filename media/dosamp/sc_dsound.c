@@ -202,9 +202,6 @@ static int dosamp_FAR dsound_open(soundcard_t sc) {
     if (hwnd == NULL) hwnd = GetForegroundWindow();
     if (hwnd == NULL) hwnd = GetDesktopWindow();
 
-    hr = IDirectSound_SetCooperativeLevel(sc->p.dsound.dsound, hwnd, DSSCL_PRIORITY);
-    if (hr != DS_OK || sc->p.dsound.dsound == NULL) goto fail;
-
     return 0;
 fail:
     dsound_close(sc);
@@ -350,6 +347,10 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
     sc->p.dsound.dsbufferfmt.nBlockAlign = fmt->bytes_per_block;
     sc->p.dsound.dsbufferfmt.wBitsPerSample = fmt->bits_per_sample;
     sc->p.dsound.dsbufferfmt.nAvgBytesPerSec = sc->p.dsound.dsbufferfmt.nSamplesPerSec * sc->p.dsound.dsbufferfmt.nBlockAlign;
+
+    /* set prio */
+    hr = IDirectSound_SetCooperativeLevel(sc->p.dsound.dsound, hwnd, DSSCL_PRIORITY);
+    if (hr != DS_OK || sc->p.dsound.dsound == NULL) goto fail;
 
     /* create secondary buffer */
     {
