@@ -1368,7 +1368,9 @@ int main(int argc,char **argv,char **envp) {
 #if defined(LINUX)
     /* ... */
 #else
+    probe_dos();
     cpu_probe();
+    detect_windows();
 # if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
     /* MS-DOS */
     probe_8237();
@@ -1378,9 +1380,13 @@ int main(int argc,char **argv,char **envp) {
     }
 # endif
 # if defined(HAS_8254)
-    if (!probe_8254()) {
-        printf("Cannot init 8254 timer\n");
-        return 1;
+    /* DO use the 8254 as a timer source but only in Windows 3.x/9x/ME.
+     * Touching the timer directly under Windows NT is a NO-NO and will crash us right away. */
+    if (windows_mode == WINDOWS_REAL || windows_mode == WINDOWS_STANDARD || windows_mode == WINDOWS_ENHANCED) {
+        if (!probe_8254()) {
+            printf("Cannot init 8254 timer\n");
+            return 1;
+        }
     }
 # endif
 # if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
@@ -1399,7 +1405,25 @@ int main(int argc,char **argv,char **envp) {
     init_dsound();
 #endif
 
-#if defined(HAS_8254)
+#if defined(TARGET_WINDOWS)
+    /* if we can use MMSYSTEM's timer, then please do so.
+     * the 8254 fallback is for really old Windows (3.0 and earlier) that lacks the multimedia timer */
+    if (check_mmsystem_time())
+        time_source = &dosamp_time_source_mmsystem_time;
+    /* use the 8254 ONLY IF the code above probed for it.
+     * the code above will NOT probe for it if not Windows 3.x/9x/ME.
+     * the 8254 library will only cause crashes on Windows NT based versions. */
+    /* NTS: Apparently Windows 7 and later will silently ignore 8254 I/O access IF you
+     *      configure this application to run in "Windows 95 or 98" compatability mode. */
+    else if (probed_8254_result > 0) {
+        time_source = &dosamp_time_source_8254;
+        write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
+    }
+    else {
+        /* nothing to time, then */
+        time_source = NULL;
+    }
+#elif defined(HAS_8254) /* but not Windows */
     /* pick initial time source. */
     time_source = &dosamp_time_source_8254;
 
@@ -1410,13 +1434,6 @@ int main(int argc,char **argv,char **envp) {
     write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
 #elif defined(HAS_CLOCK_MONOTONIC)
     time_source = &dosamp_time_source_clock_monotonic;
-#endif
-
-#if defined(TARGET_WINDOWS)
-    /* if we can use MMSYSTEM's timer, then please do so.
-     * the 8254 fallback is for really old Windows (3.0 and earlier) that lacks the multimedia timer */
-    if (check_mmsystem_time())
-        time_source = &dosamp_time_source_mmsystem_time;
 #endif
 
 #if defined(HAS_RDTSC) && !defined(HAS_CLOCK_MONOTONIC)

@@ -90,6 +90,9 @@ static int calibrate_rdtsc(const dosamp_time_source_t current_time_source) {
 }
 
 int dosamp_time_source_rdtsc_available(const dosamp_time_source_t clk) {
+    if (clk == NULL)
+        return -1;
+
     if (cpu_flags & CPU_FLAG_CPUID) {
         if (!(cpu_flags & CPU_FLAG_DONT_USE_RDTSC)) {
             if (cpu_cpuid_features.a.raw[2] & 0x10/*RDTSC*/) {
