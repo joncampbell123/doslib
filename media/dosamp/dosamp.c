@@ -894,8 +894,8 @@ static void stop_play() {
     unhook_irq();
 #endif
 
-    wav_position = wav_play_position;
     update_play_position();
+    wav_position = wav_play_position;
 }
 
 static void help() {
