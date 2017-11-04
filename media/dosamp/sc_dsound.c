@@ -9,6 +9,16 @@
  *
  *    This testing was done within DOSBox-X, if it is relevent --J.C. */
 
+/* Windows 95 compat note:
+ *
+ *    In order to work with DirectSound in Windows 95, do NOT use DSBUFFERDESC.
+ *    That structure has an extra GUID field for 3D processing. DSOUND.VXD in
+ *    Windows 95 appears to validate the sizeof() the struct and it will reject
+ *    as invalid the newer version of the struct.
+ *
+ *    In order to work with Windows 95 we must use DSBUFFERDESC1 (which reflect
+ *    the original form as it existed then). */
+
 #include <windows.h>
 
 #include <stdio.h>
@@ -367,14 +377,14 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
 
     /* create primary buffer */
     {
-        DSBUFFERDESC dsd;
+        DSBUFFERDESC1 dsd;
         HRESULT hr;
 
         memset(&dsd,0,sizeof(dsd));
         dsd.dwSize = sizeof(dsd);
         dsd.dwFlags = DSBCAPS_PRIMARYBUFFER;
 
-        hr = IDirectSound_CreateSoundBuffer(sc->p.dsound.dsound, &dsd, &sc->p.dsound.dsprimary, NULL);
+        hr = IDirectSound_CreateSoundBuffer(sc->p.dsound.dsound, (DSBUFFERDESC*)(&dsd), &sc->p.dsound.dsprimary, NULL);
         if (!SUCCEEDED(hr))
             goto fail;
         if (sc->p.dsound.dsprimary == NULL)
@@ -386,7 +396,7 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
 
     /* create secondary buffer */
     {
-        DSBUFFERDESC dsd;
+        DSBUFFERDESC1 dsd;
         uint32_t sz;
         HRESULT hr;
 
@@ -398,7 +408,18 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
         dsd.dwBufferBytes = sz;
         dsd.lpwfxFormat = &sc->p.dsound.dsbufferfmt;
 
-        hr = IDirectSound_CreateSoundBuffer(sc->p.dsound.dsound, &dsd, &sc->p.dsound.dsbuffer, NULL);
+        hr = IDirectSound_CreateSoundBuffer(sc->p.dsound.dsound, (DSBUFFERDESC*)(&dsd), &sc->p.dsound.dsbuffer, NULL);
+        if (hr == DSERR_INVALIDPARAM) {
+            /* Try 1: Change GLOBALFOCUS to STICKYFOCUS (Windows 95 DSOUND.VXD workaround) */
+            dsd.dwFlags &= ~DSBCAPS_GLOBALFOCUS;
+            dsd.dwFlags |=  DSBCAPS_STICKYFOCUS;
+            hr = IDirectSound_CreateSoundBuffer(sc->p.dsound.dsound, (DSBUFFERDESC*)(&dsd), &sc->p.dsound.dsbuffer, NULL);
+        }
+        if (hr == DSERR_INVALIDPARAM) {
+            /* Try 2: Remove STICKYFOCUS and GLOBALFOCUS entirely */
+            dsd.dwFlags &= ~(DSBCAPS_GLOBALFOCUS|DSBCAPS_STICKYFOCUS);
+            hr = IDirectSound_CreateSoundBuffer(sc->p.dsound.dsound, (DSBUFFERDESC*)(&dsd), &sc->p.dsound.dsbuffer, NULL);
+        }
         if (!SUCCEEDED(hr))
             goto fail;
         if (sc->p.dsound.dsbuffer == NULL)
@@ -542,14 +563,14 @@ static void dsound_add(IDirectSound *ds,GUID *guid) {
      * Weed out this asinine situation by test-creatig a primary buffer. */
     {
         IDirectSoundBuffer *ibuf = NULL;
-        DSBUFFERDESC dsd;
+        DSBUFFERDESC1 dsd;
         HRESULT hr;
 
         memset(&dsd,0,sizeof(dsd));
         dsd.dwSize = sizeof(dsd);
         dsd.dwFlags = DSBCAPS_PRIMARYBUFFER;
 
-        hr = IDirectSound_CreateSoundBuffer(ds, &dsd, &ibuf, NULL);
+        hr = IDirectSound_CreateSoundBuffer(ds, (DSBUFFERDESC*)(&dsd), &ibuf, NULL);
         if (!SUCCEEDED(hr) || ibuf == NULL) return;
 
         /* it worked. let it go. */
