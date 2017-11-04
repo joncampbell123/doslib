@@ -496,29 +496,6 @@ static IDirectSound *dsound_test_create(GUID *guid) {
 
 static void dsound_add(IDirectSound *ds,GUID *guid) {
     soundcard_t sc;
-    DSCAPS dscaps;
-    (void)ds;
-
-    /* WAAAAAAAAIIITAMINUTE. IS THE CARD ACTUALLY FUNCTIONAL?
-     * This stupid check brought to you by the brain-dead DirectX drivers in Windows 95 >:( */
-    /* You can use DirectX in Windows 95 and even open the default card, but that doesn't
-     * mean it will actually give you a sound buffer to play. That means we won't see the failure
-     * until we've already told the host application about the card and the host goes to set
-     * the play format. But we can pre-detect this condition by reading the sound card caps.
-     * In such condition, the brain-dead driver will ALSO fail to fill in the DSCAPS struct. */
-    memset(&dscaps,0,sizeof(dscaps));
-    dscaps.dwSize = sizeof(dscaps);
-    if (IDirectSound_GetCaps(ds, &dscaps) != DS_OK) {
-        /* oh okay. goodbye. fuck you on the way out. idiot. */
-        return;
-    }
-
-    /* we can detect this braindead driver by dwFlags and it's statement that the
-     * card apparently neither supports 8/16-bit PCM nor mono/stereo. Note the driver
-     * seems to indicate we can use the PRIMARY buffer... but then we can't seem to create
-     * the primary buffer. So, no point. Just take the WINMM driver and fuck it all. */
-    if ((dscaps.dwFlags & (DSCAPS_SECONDARY16BIT|DSCAPS_SECONDARY8BIT|DSCAPS_SECONDARYMONO|DSCAPS_SECONDARYSTEREO)) == 0)
-        return;
 
     sc = soundcardlist_new(&dsound_soundcard_template);
     if (sc != NULL) {
