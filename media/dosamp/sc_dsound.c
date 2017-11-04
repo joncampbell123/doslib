@@ -220,7 +220,6 @@ static int dosamp_FAR dsound_close(soundcard_t sc) {
     }
 
     if (sc->p.dsound.dsprimary != NULL) {
-        IDirectSoundBuffer_Stop(sc->p.dsound.dsprimary);
         IDirectSoundBuffer_Release(sc->p.dsound.dsprimary);
         sc->p.dsound.dsprimary = NULL;
     }
@@ -301,16 +300,10 @@ static int dsound_start_playback(soundcard_t sc) {
     sc->wav_state.write_counter = 0;
     sc->wav_state.play_counter_prev = 0;
 
-    IDirectSoundBuffer_Stop(sc->p.dsound.dsbuffer);
-    IDirectSoundBuffer_Stop(sc->p.dsound.dsprimary);
-
     IDirectSoundBuffer_SetCurrentPosition(sc->p.dsound.dsbuffer, 0);
-    IDirectSoundBuffer_SetCurrentPosition(sc->p.dsound.dsprimary, 0);
+    IDirectSoundBuffer_Play(sc->p.dsound.dsbuffer, 0, 0, DSBPLAY_LOOPING);
 
     dsound_update_play_position(sc);
-
-    IDirectSoundBuffer_Play(sc->p.dsound.dsbuffer, 0, 0, DSBPLAY_LOOPING);
-    IDirectSoundBuffer_Play(sc->p.dsound.dsprimary, 0, 0, DSBPLAY_LOOPING);
 
     sc->wav_state.playing = 1;
     return 0;
@@ -320,7 +313,6 @@ static int dsound_stop_playback(soundcard_t sc) {
     if (!sc->wav_state.playing) return 0;
 
     IDirectSoundBuffer_Stop(sc->p.dsound.dsbuffer);
-    IDirectSoundBuffer_Stop(sc->p.dsound.dsprimary);
 
     sc->wav_state.playing = 0;
     return 0;
