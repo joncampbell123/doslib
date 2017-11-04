@@ -1480,23 +1480,16 @@ int main(int argc,char **argv,char **envp) {
     }
 #endif
 
-    /* WARNING: In Windows 95, WINMM and DirectSound cannot share the sound card.
-     *          Fair enough. But it seems that probing WINMM devices before DirectSound
-     *          results in DirectSound being unable to create sound buffers even if
-     *          we were able to "open" the sound card.
-     *
-     *          So to make both work, we have to probe DirectSound first before WINMM. */
-
-#if defined(HAS_DSOUND)
-    if (probe_for_dsound() < 0) {
-        printf("Serious error while probing DSOUND devices\n");
+#if defined(TARGET_WINDOWS)
+    if (probe_for_mmsystem() < 0) {
+        printf("Serious error while probing MMSYSTEM devices\n");
         return 1;
     }
 #endif
 
-#if defined(TARGET_WINDOWS)
-    if (probe_for_mmsystem() < 0) {
-        printf("Serious error while probing MMSYSTEM devices\n");
+#if defined(HAS_DSOUND)
+    if (probe_for_dsound() < 0) {
+        printf("Serious error while probing DSOUND devices\n");
         return 1;
     }
 #endif
