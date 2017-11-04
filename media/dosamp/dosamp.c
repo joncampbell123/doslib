@@ -1480,16 +1480,16 @@ int main(int argc,char **argv,char **envp) {
     }
 #endif
 
-#if defined(TARGET_WINDOWS)
-    if (probe_for_mmsystem() < 0) {
-        printf("Serious error while probing MMSYSTEM devices\n");
+#if defined(HAS_DSOUND)
+    if (probe_for_dsound() < 0) {
+        printf("Serious error while probing DSOUND devices\n");
         return 1;
     }
 #endif
 
-#if defined(HAS_DSOUND)
-    if (probe_for_dsound() < 0) {
-        printf("Serious error while probing DSOUND devices\n");
+#if defined(TARGET_WINDOWS)
+    if (probe_for_mmsystem() < 0) {
+        printf("Serious error while probing MMSYSTEM devices\n");
         return 1;
     }
 #endif
