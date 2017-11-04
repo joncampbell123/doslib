@@ -209,6 +209,12 @@ static int dosamp_FAR dsound_close(soundcard_t sc) {
         sc->p.dsound.dsbuffer = NULL;
     }
 
+    if (sc->p.dsound.dsprimary != NULL) {
+        IDirectSoundBuffer_Stop(sc->p.dsound.dsprimary);
+        IDirectSoundBuffer_Release(sc->p.dsound.dsprimary);
+        sc->p.dsound.dsprimary = NULL;
+    }
+
     if (sc->p.dsound.dsound != NULL) {
         IDirectSound_Release(sc->p.dsound.dsound);
         sc->p.dsound.dsound = NULL;
@@ -242,6 +248,7 @@ static int dsound_prepare_play(soundcard_t sc) {
         return 0;
 
     IDirectSoundBuffer_Restore(sc->p.dsound.dsbuffer);
+    IDirectSoundBuffer_Restore(sc->p.dsound.dsprimary);
 
     sc->wav_state.play_counter = 0;
     sc->wav_state.write_counter = 0;
@@ -285,12 +292,15 @@ static int dsound_start_playback(soundcard_t sc) {
     sc->wav_state.play_counter_prev = 0;
 
     IDirectSoundBuffer_Stop(sc->p.dsound.dsbuffer);
+    IDirectSoundBuffer_Stop(sc->p.dsound.dsprimary);
 
     IDirectSoundBuffer_SetCurrentPosition(sc->p.dsound.dsbuffer, 0);
+    IDirectSoundBuffer_SetCurrentPosition(sc->p.dsound.dsprimary, 0);
 
     dsound_update_play_position(sc);
 
     IDirectSoundBuffer_Play(sc->p.dsound.dsbuffer, 0, 0, DSBPLAY_LOOPING);
+    IDirectSoundBuffer_Play(sc->p.dsound.dsprimary, 0, 0, DSBPLAY_LOOPING);
 
     sc->wav_state.playing = 1;
     return 0;
@@ -300,6 +310,7 @@ static int dsound_stop_playback(soundcard_t sc) {
     if (!sc->wav_state.playing) return 0;
 
     IDirectSoundBuffer_Stop(sc->p.dsound.dsbuffer);
+    IDirectSoundBuffer_Stop(sc->p.dsound.dsprimary);
 
     sc->wav_state.playing = 0;
     return 0;
@@ -320,6 +331,10 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
     if (sc->p.dsound.dsbuffer != NULL) {
         IDirectSoundBuffer_Release(sc->p.dsound.dsbuffer);
         sc->p.dsound.dsbuffer = NULL;
+    }
+    if (sc->p.dsound.dsprimary != NULL) {
+        IDirectSoundBuffer_Release(sc->p.dsound.dsprimary);
+        sc->p.dsound.dsprimary = NULL;
     }
 
     if (sc->p.dsound.dsound == NULL) return -1;
@@ -349,6 +364,24 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
     /* set prio */
     hr = IDirectSound_SetCooperativeLevel(sc->p.dsound.dsound, hwnd, DSSCL_PRIORITY);
     if (hr != DS_OK || sc->p.dsound.dsound == NULL) goto fail;
+
+    /* create primary buffer */
+    {
+        DSBUFFERDESC dsd;
+        HRESULT hr;
+
+        memset(&dsd,0,sizeof(dsd));
+        dsd.dwSize = sizeof(dsd);
+        dsd.dwFlags = DSBCAPS_PRIMARYBUFFER;
+
+        hr = IDirectSound_CreateSoundBuffer(sc->p.dsound.dsound, &dsd, &sc->p.dsound.dsprimary, NULL);
+        if (!SUCCEEDED(hr))
+            goto fail;
+        if (sc->p.dsound.dsprimary == NULL)
+            goto fail;
+
+        printf("PRIMARYOK\n");
+    }
 
     /* create secondary buffer */
     {
@@ -391,6 +424,10 @@ fail:
     if (sc->p.dsound.dsbuffer != NULL) {
         IDirectSoundBuffer_Release(sc->p.dsound.dsbuffer);
         sc->p.dsound.dsbuffer = NULL;
+    }
+    if (sc->p.dsound.dsprimary != NULL) {
+        IDirectSoundBuffer_Release(sc->p.dsound.dsprimary);
+        sc->p.dsound.dsprimary = NULL;
     }
     return -1;
 }

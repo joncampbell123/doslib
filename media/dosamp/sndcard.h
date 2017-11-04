@@ -75,6 +75,7 @@ struct soundcard_priv_dsound_t {
     GUID                                        device_id;
     IDirectSound*                               dsound;
     IDirectSoundBuffer*                         dsbuffer;
+    IDirectSoundBuffer*                         dsprimary;
     WAVEFORMATEX                                dsbufferfmt;
     DWORD                                       play,write;         // NTS: 'play' and 'write' from DirectSound means play position and ideal write position
     DWORD                                       write_to;           //      Where we will write to in the buffer.
