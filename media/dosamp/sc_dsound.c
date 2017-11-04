@@ -181,7 +181,6 @@ static unsigned int dosamp_FAR dsound_buffer_write(soundcard_t sc,const unsigned
 static int dosamp_FAR dsound_close(soundcard_t sc);
 
 static int dosamp_FAR dsound_open(soundcard_t sc) {
-    HWND hwnd = NULL;
     HRESULT hr;
 
     if (sc->wav_state.is_open) return -1; /* already open! */
@@ -198,14 +197,7 @@ static int dosamp_FAR dsound_open(soundcard_t sc) {
         return -1;
 
     sc->wav_state.is_open = 1;
-
-    if (hwnd == NULL) hwnd = GetForegroundWindow();
-    if (hwnd == NULL) hwnd = GetDesktopWindow();
-
     return 0;
-fail:
-    dsound_close(sc);
-    return -1;
 }
 
 static int dosamp_FAR dsound_close(soundcard_t sc) {
@@ -314,6 +306,9 @@ static int dsound_stop_playback(soundcard_t sc) {
 }
 
 static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * const fmt) {
+    HWND hwnd = NULL;
+    HRESULT hr;
+
     /* must be open */
     if (!sc->wav_state.is_open) return -1;
 
@@ -347,6 +342,9 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
     sc->p.dsound.dsbufferfmt.nBlockAlign = fmt->bytes_per_block;
     sc->p.dsound.dsbufferfmt.wBitsPerSample = fmt->bits_per_sample;
     sc->p.dsound.dsbufferfmt.nAvgBytesPerSec = sc->p.dsound.dsbufferfmt.nSamplesPerSec * sc->p.dsound.dsbufferfmt.nBlockAlign;
+
+    if (hwnd == NULL) hwnd = GetForegroundWindow();
+    if (hwnd == NULL) hwnd = GetDesktopWindow();
 
     /* set prio */
     hr = IDirectSound_SetCooperativeLevel(sc->p.dsound.dsound, hwnd, DSSCL_PRIORITY);
