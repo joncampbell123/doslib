@@ -380,7 +380,8 @@ static int dsound_set_play_format(soundcard_t sc,struct wav_cbr_t dosamp_FAR * c
         if (sc->p.dsound.dsprimary == NULL)
             goto fail;
 
-        printf("PRIMARYOK\n");
+        /* try to set the primary buffer format (we don't care if it can't) */
+        IDirectSoundBuffer_SetFormat(sc->p.dsound.dsprimary, &sc->p.dsound.dsbufferfmt);
     }
 
     /* create secondary buffer */
