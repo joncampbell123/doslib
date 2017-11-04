@@ -57,6 +57,8 @@
 /* platform has RDTSC timer */
 #if defined(LINUX)
 /* no */
+#elif defined(TARGET_WINDOWS)
+/* no. we can use the multimedia timer (Windows 3.x and later) or the 8254 (Windows 3.0 and older) */
 #else
 # define HAS_RDTSC
 #endif
