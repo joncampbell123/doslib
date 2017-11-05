@@ -1225,11 +1225,27 @@ char *prompt_open_file_tty(void) {
                         break;
                     }
                     else if (S_ISDIR(st.st_mode)) {
-                        if (chdir(tmp) >= 0)
-                            redraw = 1;
-                        else
-                            printf("* Unable to change directory\n");
+#if defined(TARGET_MSDOS) || defined(TARGET_WINDOWS)
+                        /* if the drive exists at the start (A:\, C:\ etc)
+                         * then change current drive as well */
+                        if (isalpha(tmp[0]) && tmp[1] == ':')
+                            _chdrive(tolower(tmp[0]) + 1 - 'a');
+
+                        if (strlen(tmp) > 2) {
+                            if (chdir(tmp) < 0)
+                                printf("\n* Unable to change directory\n");
+                        }
+#else
+                        if (chdir(tmp) < 0)
+                            printf("\n* Unable to change directory\n");
+#endif
+
+                        redraw = 1;
                     }
+                }
+                else {
+                    printf("\n* Does not exist\n");
+                    redraw = 1;
                 }
             }
         }
