@@ -1492,9 +1492,6 @@ int prompt_soundcard(unsigned int flags) {
     return 0;
 }
 
-#if defined(TARGET_WINDOWS)
-#include <shellapi.h>
-
 /* linked list of filenames the user dropped */
 struct shell_droplist_t {
     char*                       file;
@@ -1526,12 +1523,12 @@ struct shell_droplist_t *shell_droplist_get(void) {
 void shell_droplist_clear(void) {
     struct shell_droplist_t *n;
 
-    while ((n=shell_droplist_get()) != NULL) {
-        MessageBox(NULL,n->file,"FREE",MB_OK);
-
+    while ((n=shell_droplist_get()) != NULL)
         shell_droplist_entry_free(n);
-    }
 }
+
+#if defined(TARGET_WINDOWS)
+#include <shellapi.h>
 
 static char *shell_queryfile(HDROP hDrop,UINT i) {
     char *str = NULL;
