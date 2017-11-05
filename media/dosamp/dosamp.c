@@ -1895,7 +1895,7 @@ int main(int argc,char **argv,char **envp) {
      * This API first appeared in Windows 3.1 and has stayed ever since */
     init_shell();
 
-    if (shell_dll != NULL) {
+    if (shell_dll != NULL && __DragAcceptFiles != NULL) {
         __DragAcceptFiles(_win_hwnd(), TRUE);
         _win_dropFilesHandler = shell_dropfileshandler;
     }
