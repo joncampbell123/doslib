@@ -1348,6 +1348,55 @@ void sigint_handler(int x) {
 }
 #endif
 
+int prompt_soundcard(void) {
+    unsigned char count = 0;
+    int sc_idx = -1;
+    soundcard_t sc;
+    int i;
+
+    for (i=0;(unsigned int)i < soundcardlist_count;i++) {
+        sc = &soundcardlist[i];
+        if (sc->driver == soundcard_none) continue;
+        count++;
+    }
+
+    if (count == 0) {
+        printf("No cards found.\n");
+        return -1;
+    }
+    else if (count > 1) {
+        printf("-----------\n");
+
+        for (i=0;(unsigned int)i < soundcardlist_count;i++) {
+            sc = &soundcardlist[i];
+            if (sc->driver == soundcard_none) continue;
+
+            printf("%d: ",i+1);
+            print_soundcard(sc);
+            printf("\n");
+        }
+
+        printf("-----------\n");
+        printf("Which card?: "); fflush(stdout);
+
+        i = getch();
+        printf("\n");
+        if (i == 27) return -1;
+        if (i == 13 || i == 10) i = '1';
+        sc_idx = i - '1';
+
+        if (sc_idx < 0 || sc_idx >= (int)soundcardlist_count)
+            return -1;
+    }
+    else { /* count == 1 */
+        sc_idx = 0;
+    }
+
+    soundcard = &soundcardlist[sc_idx];
+    use_mmap_write = !!(soundcard->capabilities & soundcard_caps_mmap_write);
+    return 0;
+}
+
 int main(int argc,char **argv,char **envp) {
     unsigned char disp=1;
     int i,loop;
@@ -1523,57 +1572,8 @@ int main(int argc,char **argv,char **envp) {
     }
 #endif
 
-    /* now let the user choose. */
-    {
-        unsigned char count = 0;
-        int sc_idx = -1;
-        soundcard_t sc;
-
-        for (i=0;(unsigned int)i < soundcardlist_count;i++) {
-            sc = &soundcardlist[i];
-            if (sc->driver == soundcard_none) continue;
-            count++;
-        }
-
-        if (count == 0) {
-            printf("No cards found.\n");
-            return 1;
-        }
-        else if (count > 1) {
-            printf("-----------\n");
-
-            for (i=0;(unsigned int)i < soundcardlist_count;i++) {
-                sc = &soundcardlist[i];
-                if (sc->driver == soundcard_none) continue;
-
-                printf("%d: ",i+1);
-                print_soundcard(sc);
-                printf("\n");
-            }
-
-            printf("-----------\n");
-            printf("Which card?: "); fflush(stdout);
-
-            i = getch();
-            printf("\n");
-            if (i == 27) return 0;
-            if (i == 13 || i == 10) i = '1';
-            sc_idx = i - '1';
-
-            if (sc_idx < 0 || sc_idx >= (int)soundcardlist_count) {
-                printf("Sound card index out of range\n");
-                return 1;
-            }
-        }
-        else { /* count == 1 */
-            sc_idx = 0;
-        }
-
-        soundcard = &soundcardlist[sc_idx];
-    }
-
-    if (!(soundcard->capabilities & soundcard_caps_mmap_write))
-        use_mmap_write = 0;
+    if (prompt_soundcard() < 0)
+        return 1;
 
     printf("Playing audio with: ");
     print_soundcard(soundcard);
