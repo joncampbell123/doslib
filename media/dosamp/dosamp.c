@@ -1394,6 +1394,11 @@ int prompt_soundcard(void) {
 
     soundcard = &soundcardlist[sc_idx];
     use_mmap_write = !!(soundcard->capabilities & soundcard_caps_mmap_write);
+
+    printf("Playing audio with: ");
+    print_soundcard(soundcard);
+    printf("\n");
+
     return 0;
 }
 
@@ -1574,10 +1579,6 @@ int main(int argc,char **argv,char **envp) {
 
     if (prompt_soundcard() < 0)
         return 1;
-
-    printf("Playing audio with: ");
-    print_soundcard(soundcard);
-    printf("\n");
 
     /* TODO: if the CPU is slow, and opt_round < 0 (not set) set opt_round = 0 (off).
      *       slow CPUs should be encouraged not to resample if the rate is "close enough" */
