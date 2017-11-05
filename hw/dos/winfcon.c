@@ -473,6 +473,13 @@ void _win_scrollup() {
 		' ',_this_console.conWidth);
 }
 
+void _win_backspace() {
+    if (_this_console.conX > 0) {
+        _this_console.conX--;
+		_win_update_cursor();
+    }
+}
+
 void _win_newline() {
 	_this_console.conX = 0;
 	if ((_this_console.conY+1) == _this_console.conHeight) {
@@ -490,7 +497,10 @@ void _win_newline() {
 
 /* write to the console. does NOT redraw the screen unless we get a newline or we need to scroll up */
 void _win_putc(char c) {
-	if (c == 10) {
+    if (c == 8) {
+        _win_backspace();
+    }
+    else if (c == 10) {
 		_win_newline();
 	}
 	else if (c == 13) {
