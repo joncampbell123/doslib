@@ -16,6 +16,7 @@
 #ifdef LINUX
 #include <signal.h>
 #include <endian.h>
+#include <dirent.h>
 #else
 #include <hw/cpu/endian.h>
 #endif
@@ -1188,6 +1189,109 @@ char *prompt_open_file_windows_gofn(void) {
 # define PATH_SEP '/'
 #endif
 
+unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
+#if defined(TARGET_MSDOS) && TARGET_MSDOS == 16 && defined(__SMALL__)
+    return 0;
+#else
+    unsigned int count = 0;
+    unsigned int ret = 0;
+    struct dirent *d;
+    int newi = -1;
+    int file_pos;
+    char *ens;
+    DIR *dir;
+
+    if (*tmp == 0) return 0;
+
+    ens = strdup(tmp);
+    if (ens == NULL) return 0;
+    {
+        /* remove filename and path separator from end in case that prevents DOS from reading the directory */
+        char *e = ens + strlen(ens) - 1;
+        while (e >= ens && *e != PATH_SEP) *e-- = 0;
+    }
+
+    {
+        char *file;
+
+        /* in tmp[] look for the filename */
+        file = strrchr(tmp,PATH_SEP);
+        if (file != NULL) file++;
+        else file = tmp;
+
+        file_pos = (int)(file - tmp);
+    }
+
+    dir = opendir(ens);
+    if (dir != NULL) {
+        while ((d=readdir(dir)) != NULL) {
+            if (d->d_name[0] == '.') continue;
+
+            /* TODO: If MS-DOS and the "hidden" bit is set... */
+
+            {
+                char *s1 = tmp + file_pos;
+                char *s2 = d->d_name;
+
+                while (s1 < (tmp + *tmpi) && *s1 != 0 && *s2 != 0) {
+                    if (tolower(*s1) == tolower(*s2)) {
+                        s1++;
+                        s2++;
+                    }
+                    else {
+                        break;
+                    }
+                }
+
+                if (s1 == (tmp + *tmpi)) {
+                    int i = *tmpi;
+
+                    count++;
+
+                    if (newi >= 0) {
+                        while (*s1 != 0 && *s2 != 0) {
+                            if (tolower(*s1) == tolower(*s2)) {
+                                s1++;
+                                s2++;
+                                i++;
+                            }
+                            else {
+                                break;
+                            }
+                        }
+
+                        if (newi > i)
+                            newi = i;
+                    }
+                    else {
+                        while ((size_t)i < (tmpsize-1) && *s2 != 0)
+                            tmp[i++] = *s2++;
+
+                        newi = i;
+                    }
+
+                    tmp[newi] = 0;
+                }
+            }
+        }
+        closedir(dir);
+    }
+
+    if (newi >= 0) {
+        tmp[newi] = 0;
+        if (*tmpi < newi) {
+            printf("%s",tmp+*tmpi);
+            fflush(stdout);
+        }
+        *tmpi = newi;
+    }
+
+    free(ens);
+
+    return ret;
+#endif
+}
+
 char *prompt_open_file_tty(void) {
     struct stat st;
     char tmp[300];
@@ -1265,7 +1369,7 @@ char *prompt_open_file_tty(void) {
                 printf("%s",tmp); fflush(stdout);
             }
             else if (tmp[tmpi-1] == PATH_SEP) {
-                /* nothing to do */
+                redraw = tty_tab_completion(tmp,sizeof(tmp),&tmpi);
             }
             else if (stat(tmp,&st) == 0) {
                 if (S_ISDIR(st.st_mode)) {
@@ -1274,7 +1378,7 @@ char *prompt_open_file_tty(void) {
                 }
             }
             else {
-                /* TODO: directory listing, tab completion */
+                redraw = tty_tab_completion(tmp,sizeof(tmp),&tmpi);
             }
         }
         else if (c == 23/*CTRL+W*/) {
