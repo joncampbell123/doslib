@@ -87,6 +87,8 @@ int init_termios(void) {
 
         termios_cur.c_lflag &= ~(ICANON|XCASE|ECHO|ECHOE|ECHOK|ECHONL|ECHOCTL|ECHOPRT|ECHOKE);
 
+        termios_cur.c_cc[VERASE] = 8; // backspace as ASCII 8 not 127
+
         tcsetattr(0/*STDIN*/,TCSADRAIN,&termios_cur);
 
         if (!termios_exhook) {
