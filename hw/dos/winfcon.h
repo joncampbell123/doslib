@@ -14,6 +14,7 @@
 # define WIN_STDOUT_CONSOLE
 # define getch _win_getch
 # define kbhit _win_kbhit
+# define fflush _win_fflush
 # define fprintf __XXX_TODO_fprintf
 # define printf _win_printf
 # define isatty _win_isatty
@@ -28,6 +29,7 @@ void _gdi_pause();
 void _win_pump_wait();
 void _win_putc(char c);
 int _win_isatty(int fd);
+int _win_fflush(FILE *stream);
 int _win_read(int fd,void *buf,size_t sz);
 size_t _win_printf(const char *fmt,...);
 int _win_write(int fd,const void *buf,int sz);

@@ -495,6 +495,14 @@ void _win_newline() {
 	}
 }
 
+#undef fflush
+int _win_fflush(FILE *stream) {
+    if (stream == stdout)
+		_win_redraw_line_row();
+
+    return fflush(stream);
+}
+
 /* write to the console. does NOT redraw the screen unless we get a newline or we need to scroll up */
 void _win_putc(char c) {
     if (c == 8) {
