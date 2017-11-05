@@ -1189,6 +1189,22 @@ char *prompt_open_file_windows_gofn(void) {
 # define PATH_SEP '/'
 #endif
 
+#if defined(LINUX)
+/* case sensitive */
+int fs_comparechar(char c1,char c2) {
+    return (c1 == c2);
+}
+
+# define fs_strncasecmp strncmp
+#else
+/* case insensitive */
+int fs_comparechar(char c1,char c2) {
+    return (tolower(c1) == tolower(c2));
+}
+
+# define fs_strncasecmp strncasecmp
+#endif
+
 unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
 #if defined(TARGET_MSDOS) && TARGET_MSDOS == 16 && defined(__SMALL__)
     return 0;
@@ -1236,7 +1252,7 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
                 char *s2 = d->d_name;
 
                 while (s1 < (tmp + *tmpi) && *s1 != 0 && *s2 != 0) {
-                    if (tolower(*s1) == tolower(*s2)) {
+                    if (fs_comparechar(*s1,*s2)) {
                         s1++;
                         s2++;
                     }
@@ -1252,7 +1268,7 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
 
                     if (newi >= 0) {
                         while (*s1 != 0 && *s2 != 0) {
-                            if (tolower(*s1) == tolower(*s2)) {
+                            if (fs_comparechar(*s1,*s2)) {
                                 s1++;
                                 s2++;
                                 i++;
@@ -1296,7 +1312,7 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
 
                 /* TODO: If MS-DOS and the "hidden" bit is set... */
 
-                if (*tmpi <= file_pos || !strncasecmp(tmp + file_pos, d->d_name, (size_t)(*tmpi - file_pos))) {
+                if (*tmpi <= file_pos || !fs_strncasecmp(tmp + file_pos, d->d_name, (size_t)(*tmpi - file_pos))) {
                     if (!ret) printf("\x0D" "                           " "\x0D");
 
                     printf("  %s\n",d->d_name);
