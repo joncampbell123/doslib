@@ -1181,6 +1181,53 @@ char *prompt_open_file_windows_gofn(void) {
 }
 #endif
 
+char *prompt_open_file_tty(void) {
+    char tmp[300];
+    char redraw=1;
+    char loop=1;
+    int tmpi=0;
+    char ok=0;
+    int c;
+
+    memset(tmp,0,sizeof(tmp));
+    if (wav_file != NULL) strncpy(tmp,wav_file,sizeof(tmp)-1);
+    tmpi=strlen(tmp);
+
+    do {
+        /* redraw */
+        if (redraw) {
+            redraw=0;
+            printf("File? %s",tmp); fflush(stdout);
+        }
+
+        c = getch();
+        if (c == 27)
+            break;
+        else if (c == 13) {
+            if (tmpi != 0) {
+                ok = 1;
+                break;
+            }
+        }
+        else if (c == 8) {
+            if (tmpi > 0) {
+                printf("\x08 \x08"); fflush(stdout);
+                tmp[--tmpi] = 0;
+            }
+        }
+        else if (c >= 32 || c < 0) {
+            if ((size_t)tmpi < (sizeof(tmp)-1)) {
+                printf("%c",c); fflush(stdout);
+                tmp[tmpi++] = c;
+                tmp[tmpi] = 0;
+            }
+        }
+    } while (loop);
+    printf("\n");
+
+    return ok ? strdup(tmp) : NULL;
+}
+
 char *prompt_open_file(void) {
     char *ret = NULL;
 
@@ -1188,6 +1235,9 @@ char *prompt_open_file(void) {
     if ((ret=prompt_open_file_windows_gofn()) != NULL)
         return ret;
 #endif
+
+    if ((ret=prompt_open_file_tty()) != NULL)
+        return ret;
 
     return ret;
 }
