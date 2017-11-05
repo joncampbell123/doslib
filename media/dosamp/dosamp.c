@@ -1181,6 +1181,12 @@ char *prompt_open_file_windows_gofn(void) {
 }
 #endif
 
+#if defined(TARGET_WINDOWS) || defined(TARGET_MSDOS)
+# define PATH_SEP '\\'
+#else
+# define PATH_SEP '/'
+#endif
+
 char *prompt_open_file_tty(void) {
     char tmp[300];
     char redraw=1;
@@ -1211,6 +1217,20 @@ char *prompt_open_file_tty(void) {
         }
         else if (c == 8) {
             if (tmpi > 0) {
+                printf("\x08 \x08"); fflush(stdout);
+                tmp[--tmpi] = 0;
+            }
+        }
+        else if (c == 23/*CTRL+W*/) {
+            if (tmpi > 0 && tmp[tmpi-1] == PATH_SEP) {
+                printf("\x08 \x08"); fflush(stdout);
+                tmp[--tmpi] = 0;
+            }
+
+            while (tmpi > 0) {
+                if (tmp[tmpi-1] == PATH_SEP)
+                    break;
+
                 printf("\x08 \x08"); fflush(stdout);
                 tmp[--tmpi] = 0;
             }
