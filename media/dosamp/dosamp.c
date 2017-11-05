@@ -1581,8 +1581,17 @@ unsigned int shell_dropfileshandler(HDROP hDrop) {
 }
 #endif
 
+void change_play_file(const char *nfile) {
+    close_wav();
+
+    set_cstr(&wav_file,nfile);
+
+    if (open_wav() < 0)
+        printf("Failed to open\n");
+}
+
 int player_main(void) {
-    int i,loop;
+    int i,loop,initplay=1;
 
     /* TODO: if the CPU is slow, and opt_round < 0 (not set) set opt_round = 0 (off).
      *       slow CPUs should be encouraged not to resample if the rate is "close enough" */
@@ -1609,12 +1618,37 @@ int player_main(void) {
     if (wav_file != NULL && wav_source != NULL && begin_play() < 0)
         printf("Failed to start playback\n");
 
+    if (wav_file != NULL)
+        initplay = 0;
+
     printf("Hit ESC to stop playback. Use 1-9 keys for other status.\n");
 
     loop = 1;
     while (loop) {
         wav_idle();
         display_idle();
+
+        /* any drag & drop files? */
+        /* TODO: Future versions should add to a playlist instead if multiple files. */
+        {
+            struct shell_droplist_t *ent = shell_droplist_get();
+
+            if (ent != NULL) {
+                if (ent->file != NULL) {
+                    printf("\nAccepting drag & drop file: %s\n",ent->file);
+
+                    {
+                        unsigned char wp = soundcard->wav_state.playing || initplay;
+
+                        stop_play();
+                        change_play_file(ent->file);
+                        if (wp) begin_play();
+                    }
+                }
+
+                shell_droplist_entry_free(ent);
+            }
+        }
 
         if (exit_now)
             break;
@@ -1642,7 +1676,7 @@ int player_main(void) {
 #endif
             }
             else if (i == 'F') {
-                unsigned char wp = soundcard->wav_state.playing;
+                unsigned char wp = soundcard->wav_state.playing || initplay;
 
                 printf("\n");
 
@@ -1650,14 +1684,7 @@ int player_main(void) {
 
                 {
                     char *nfile = prompt_open_file();
-                    if (nfile != NULL) {
-                        close_wav();
-
-                        set_cstr(&wav_file,nfile);
-
-                        if (open_wav() < 0)
-                            printf("Failed to open\n");
-                    }
+                    if (nfile != NULL) change_play_file(nfile);
                 }
 
                 if (wp) begin_play();
