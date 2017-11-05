@@ -962,6 +962,48 @@ int init_dsound(void) {
 
 #if defined(TARGET_WINDOWS)
 /* dynamic loading of MMSYSTEM/WINMM */
+HMODULE             shell_dll = NULL;
+unsigned char       shell_tried = 0;
+
+void free_shell(void) {
+    if (shell_dll != NULL) {
+        FreeLibrary(shell_dll);
+        shell_dll = NULL;
+    }
+
+    shell_tried = 0;
+}
+
+void shell_atexit(void) {
+    free_shell();
+}
+
+int init_shell(void) {
+    if (shell_dll == NULL) {
+        if (!shell_tried) {
+            UINT oldMode;
+
+            oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
+#if TARGET_MSDOS == 16
+            shell_dll = LoadLibrary("SHELL");
+#else
+            shell_dll = LoadLibrary("SHELL32.DLL");
+#endif
+            SetErrorMode(oldMode);
+
+            if (shell_dll != NULL)
+                atexit(shell_atexit);
+
+            shell_tried = 1;
+        }
+    }
+
+    return (shell_dll != NULL) ? 1 : 0;
+}
+#endif
+
+#if defined(TARGET_WINDOWS)
+/* dynamic loading of MMSYSTEM/WINMM */
 HMODULE             mmsystem_dll = NULL;
 unsigned char       mmsystem_tried = 0;
 
@@ -1714,6 +1756,22 @@ int main(int argc,char **argv,char **envp) {
     }
     find_isa_pnp_bios();
 # endif
+#endif
+
+#if defined(TARGET_WINDOWS) && defined(USE_WINFCON)
+    /* As a Windows program we'd like to accept Drag & Drop from the File Manager.
+     * This API first appeared in Windows 3.1 and has stayed ever since */
+    init_shell();
+
+    if (shell_dll != NULL) {
+# if TARGET_WINDOWS == 16
+        VOID (WINAPI * __DragAcceptFiles)(HWND,BOOL) = (VOID (WINAPI *)(HWND,BOOL))GetProcAddress(shell_dll,"DRAGACCEPTFILES");
+# else
+        VOID (WINAPI * __DragAcceptFiles)(HWND,BOOL) = (VOID (WINAPI *)(HWND,BOOL))GetProcAddress(shell_dll,"DragAcceptFiles");
+# endif
+
+        __DragAcceptFiles(_win_hwnd(), TRUE);
+    }
 #endif
 
 #if defined(TARGET_WINDOWS)
