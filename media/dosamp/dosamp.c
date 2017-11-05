@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/stat.h>
 #ifdef LINUX
 #include <signal.h>
 #include <endian.h>
@@ -1188,6 +1189,7 @@ char *prompt_open_file_windows_gofn(void) {
 #endif
 
 char *prompt_open_file_tty(void) {
+    struct stat st;
     char tmp[300];
     char redraw=1;
     char loop=1;
@@ -1202,8 +1204,14 @@ char *prompt_open_file_tty(void) {
     do {
         /* redraw */
         if (redraw) {
-            redraw=0;
+            char *cwd = getcwd(NULL, 0);
+
+            printf("\n");
+            printf("CWD: %s\n",cwd?cwd:"(null)");
             printf("File? %s",tmp); fflush(stdout);
+
+            if (cwd) free(cwd);
+            redraw=0;
         }
 
         c = getch();
@@ -1211,8 +1219,18 @@ char *prompt_open_file_tty(void) {
             break;
         else if (c == 13) {
             if (tmpi != 0) {
-                ok = 1;
-                break;
+                if (stat(tmp,&st) == 0) {
+                    if (S_ISREG(st.st_mode)) {
+                        ok = 1;
+                        break;
+                    }
+                    else if (S_ISDIR(st.st_mode)) {
+                        if (chdir(tmp) >= 0)
+                            redraw = 1;
+                        else
+                            printf("* Unable to change directory\n");
+                    }
+                }
             }
         }
         else if (c == 8) {
