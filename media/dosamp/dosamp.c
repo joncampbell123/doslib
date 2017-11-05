@@ -1286,6 +1286,26 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
         *tmpi = newi;
     }
 
+    if (count > 1) {
+        dir = opendir(ens);
+        if (dir != NULL) {
+            while ((d=readdir(dir)) != NULL) {
+                if (d->d_name[0] == '.') continue;
+
+                /* TODO: If MS-DOS and the "hidden" bit is set... */
+
+                if (*tmpi <= file_pos || !strncasecmp(tmp + file_pos, d->d_name, (size_t)(*tmpi - file_pos))) {
+                    if (!ret) printf("\x0D" "                           " "\x0D");
+
+                    printf("  %s\n",d->d_name);
+
+                    ret = 1; /* need redraw */
+                }
+            }
+            closedir(dir);
+        }
+    }
+
     free(ens);
 
     return ret;
