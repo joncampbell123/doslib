@@ -1169,20 +1169,6 @@ static int parse_argv(int argc,char **argv) {
         }
     }
 
-    if (test_mode == TEST_TSC) {
-        /*OK*/
-    }
-    else {
-        /* Windows: Try asking the user what to play */
-        if (wav_file == NULL)
-            wav_file = prompt_open_file();
-
-        if (wav_file == NULL) {
-            printf("You must specify a file to play\n");
-            return 0;
-        }
-    }
-
     return 1;
 }
 
@@ -1242,44 +1228,51 @@ void display_idle_time(void) {
         if (display_time_wait_next < time_source->counter)
             display_time_wait_next = time_source->counter;
 
-        /* to stay within numerical limits of unsigned long, divide into whole and fraction by sample rate */
-        w = wav_play_position / (unsigned long)file_codec.sample_rate;
-        f = wav_play_position % (unsigned long)file_codec.sample_rate;
+        if (wav_source != NULL) {
+            /* to stay within numerical limits of unsigned long, divide into whole and fraction by sample rate */
+            w = wav_play_position / (unsigned long)file_codec.sample_rate;
+            f = wav_play_position % (unsigned long)file_codec.sample_rate;
 
-        /* we can then turn the whole part into HH:MM:SS */
-        sec = (unsigned char)(w % 60UL); w /= 60UL;
-        min = (unsigned char)(w % 60UL); w /= 60UL;
-        hour = (unsigned char)w; /* don't bother modulus, WAV files couldn't possibly represent things that long */
+            /* we can then turn the whole part into HH:MM:SS */
+            sec = (unsigned char)(w % 60UL); w /= 60UL;
+            min = (unsigned char)(w % 60UL); w /= 60UL;
+            hour = (unsigned char)w; /* don't bother modulus, WAV files couldn't possibly represent things that long */
 
-        /* and then use the more limited numeric range to turn the fractional part into centiseconds */
-        centisec = (unsigned char)((f * 100UL) / (unsigned long)file_codec.sample_rate);
+            /* and then use the more limited numeric range to turn the fractional part into centiseconds */
+            centisec = (unsigned char)((f * 100UL) / (unsigned long)file_codec.sample_rate);
 
-        /* also provide the user some information on the length of the WAV */
-        {
-            unsigned long m,d;
+            /* also provide the user some information on the length of the WAV */
+            {
+                unsigned long m,d;
 
-            m = wav_play_position;
-            d = wav_data_length;
+                m = wav_play_position;
+                d = wav_data_length;
 
-            /* it's a percentage from 0 to 99, we don't need high precision for large files */
-            while ((m|d) >= 0x10000UL) {
-                m >>= 4UL;
-                d >>= 4UL;
+                /* it's a percentage from 0 to 99, we don't need high precision for large files */
+                while ((m|d) >= 0x10000UL) {
+                    m >>= 4UL;
+                    d >>= 4UL;
+                }
+
+                /* we don't want divide by zero */
+                if (d == 0UL) d = 1UL;
+
+                percent = (unsigned short)((m * 1000UL) / d);
             }
 
-            /* we don't want divide by zero */
-            if (d == 0UL) d = 1UL;
-
-            percent = (unsigned short)((m * 1000UL) / d);
+            printf("\x0D");
+            printf("%02u:%02u:%02u.%02u %%%02u.%u %lu/%lu as %lu-Hz %u-ch %u-bit ",
+                    hour,min,sec,centisec,percent/10U,percent%10U,wav_play_position,wav_data_length,
+                    (unsigned long)play_codec.sample_rate,
+                    (unsigned int)play_codec.number_of_channels,
+                    (unsigned int)play_codec.bits_per_sample);
+            fflush(stdout);
         }
-
-        printf("\x0D");
-        printf("%02u:%02u:%02u.%02u %%%02u.%u %lu/%lu as %lu-Hz %u-ch %u-bit ",
-                hour,min,sec,centisec,percent/10U,percent%10U,wav_play_position,wav_data_length,
-                (unsigned long)play_codec.sample_rate,
-                (unsigned int)play_codec.number_of_channels,
-                (unsigned int)play_codec.bits_per_sample);
-        fflush(stdout);
+        else {
+            printf("\x0D");
+            printf("No file selected");
+            fflush(stdout);
+        }
     }
 }
 
@@ -1288,6 +1281,9 @@ void display_idle_buffer(void) {
     signed long apos = -1;
     signed long buffersz = -1;
     signed long irq_counter = -1;
+
+    /* FIXME: Our output drivers divide by zero when no format given. */
+    if (wav_source == NULL) return;
 
     {
         unsigned int sz = sizeof(uint32_t);
@@ -1318,8 +1314,10 @@ void display_idle_buffer(void) {
     fflush(stdout);
 }
 
-void display_idle(unsigned char disp) {
-    switch (disp) {
+unsigned char disp_mode = 1;
+
+void display_idle(void) {
+    switch (disp_mode) {
         case 1:     display_idle_time(); break;
         case 2:     display_idle_buffer(); break;
         case 3:     display_idle_timesource(); break;
@@ -1348,7 +1346,25 @@ void sigint_handler(int x) {
 }
 #endif
 
-int prompt_soundcard(void) {
+int open_soundcard(void) {
+    if (soundcard->open(soundcard) < 0)
+        return -1;
+
+    if (opt_round >= 0)
+        soundcard->ioctl(soundcard,soundcard_ioctl_set_rate_rounding,NULL,NULL,opt_round);
+
+    return 0;
+}
+
+int close_soundcard(void) {
+    stop_play();
+    soundcard->close(soundcard);
+    return 0;
+}
+
+#define PROMPT_SOUNDCARD_SKIP_IF_ONE_OR_ZERO            (1U << 0U)
+
+int prompt_soundcard(unsigned int flags) {
     unsigned char count = 0;
     int sc_idx = -1;
     soundcard_t sc;
@@ -1360,11 +1376,11 @@ int prompt_soundcard(void) {
         count++;
     }
 
-    if (count == 0) {
+    if (count == 0 && (flags & PROMPT_SOUNDCARD_SKIP_IF_ONE_OR_ZERO)) {
         printf("No cards found.\n");
         return -1;
     }
-    else if (count > 1) {
+    else if (count > 1 || !(flags & PROMPT_SOUNDCARD_SKIP_IF_ONE_OR_ZERO)) {
         printf("-----------\n");
 
         for (i=0;(unsigned int)i < soundcardlist_count;i++) {
@@ -1402,9 +1418,216 @@ int prompt_soundcard(void) {
     return 0;
 }
 
-int main(int argc,char **argv,char **envp) {
-    unsigned char disp=1;
+int player_main(void) {
     int i,loop;
+
+    /* TODO: if the CPU is slow, and opt_round < 0 (not set) set opt_round = 0 (off).
+     *       slow CPUs should be encouraged not to resample if the rate is "close enough" */
+
+    /* if a WAV file was never specified, then ask */
+    if (wav_file == NULL)
+        wav_file = prompt_open_file();
+
+    if (wav_file != NULL && wav_source == NULL) {
+        if (open_wav() < 0)
+            printf("Failed to open WAV file\n");
+    }
+
+    /* on open: ask for soundcard, try to open it.
+     *          do not exit loop until user hits ESC or selects a card we can open. */
+    do {
+        if (prompt_soundcard(PROMPT_SOUNDCARD_SKIP_IF_ONE_OR_ZERO) < 0)
+            return 1;
+        if (open_soundcard() >= 0)
+            break;
+    } while(1);
+
+    /* auto start playback */
+    if (wav_file != NULL && wav_source != NULL && begin_play() < 0)
+        printf("Failed to start playback\n");
+
+    printf("Hit ESC to stop playback. Use 1-9 keys for other status.\n");
+
+    loop = 1;
+    while (loop) {
+        wav_idle();
+        display_idle();
+
+        if (exit_now)
+            break;
+
+        if (kbhit()) {
+            i = getch();
+            if (i == 0) i = getch() << 8;
+
+            if (i == 27) {
+                loop = 0;
+                break;
+            }
+            else if (i == 'I') {
+                printf("\nIRQ status:\n");
+#if defined(LINUX)
+                printf("  Not applicable for this platform\n");
+#elif defined(HAS_IRQ)
+                printf("  IRQ=%u INT=0x%02X was_masked=%u chain_irq=%u was_iret=%u hooked=%u\n",
+                        soundcard_irq.irq_number,
+                        soundcard_irq.int_number,
+                        soundcard_irq.was_masked,
+                        soundcard_irq.chain_irq,
+                        soundcard_irq.was_iret,
+                        soundcard_irq.hooked);
+#endif
+            }
+            else if (i == 'P') {
+                unsigned char wp = soundcard->wav_state.playing;
+
+                printf("\n");
+
+                stop_play();
+                close_soundcard();
+
+                prompt_soundcard(0);
+
+                open_soundcard();
+                if (wp) begin_play();
+            }
+            else if (i == 'S') {
+                stuck_test = !stuck_test;
+                printf("Stuck test %s\n",stuck_test?"on":"off");
+            }
+            else if (i == 'A') {
+                unsigned char wp = soundcard->wav_state.playing;
+                int r;
+
+                if (wp) stop_play();
+
+                r = soundcard->ioctl(soundcard,soundcard_ioctl_get_autoinit,NULL,NULL,0);
+                if (r >= 0) {
+                    if (soundcard->ioctl(soundcard,soundcard_ioctl_set_autoinit,NULL,NULL,!r) >= 0)
+                        printf("%sabled auto-init\n",!r ? "En" : "Dis");
+                    else
+                        printf("Unable to change auto-init\n");
+                }
+                else {
+                    printf("Auto-init not supported\n");
+                }
+
+                if (wp) begin_play();
+            }
+            else if (i == 'M') {
+                use_mmap_write = !use_mmap_write;
+                printf("%s mmap write\n",use_mmap_write?"Using":"Not using");
+            }
+            else if (i >= '0' && i <= '9') {
+                unsigned char nd = (unsigned char)(i-'0');
+
+                if (disp_mode != nd) {
+                    printf("\n");
+                    disp_mode = nd;
+                }
+            }
+            else if (i == '^') { /* shift-6 */
+                unsigned char wp = soundcard->wav_state.playing;
+
+                if (wp) stop_play();
+
+                if (prefer_rate < 4000)
+                    prefer_rate = 4000;
+                else if (prefer_rate < 6000)
+                    prefer_rate = 6000;
+                else if (prefer_rate < 8000)
+                    prefer_rate = 8000;
+                else if (prefer_rate < 11025)
+                    prefer_rate = 11025;
+                else if (prefer_rate < 22050)
+                    prefer_rate = 22050;
+                else if (prefer_rate < 44100)
+                    prefer_rate = 44100;
+                else
+                    prefer_rate = 0;
+
+                if (wp) begin_play();
+            }
+            else if (i == '&') { /* shift-7 */
+                unsigned char wp = soundcard->wav_state.playing;
+
+                if (wp) stop_play();
+
+                if (prefer_channels < 1)
+                    prefer_channels = 1;
+                else if (prefer_channels < 2)
+                    prefer_channels = 2;
+                else
+                    prefer_channels = 0;
+
+                if (wp) begin_play();
+            }
+            else if (i == '*') { /* shift-8 */
+                unsigned char wp = soundcard->wav_state.playing;
+
+                if (wp) stop_play();
+
+                if (prefer_bits < 8)
+                    prefer_bits = 8;
+                else if (prefer_bits < 16)
+                    prefer_bits = 16;
+                else
+                    prefer_bits = 0;
+
+                if (wp) begin_play();
+            }
+            else if (i == 'R') {
+                unsigned char wp = soundcard->wav_state.playing;
+
+                if (wp) stop_play();
+
+                if ((++resample_state.resample_mode) >= resample_MAX)
+                    resample_state.resample_mode = resample_fast;
+
+                if (wp) begin_play();
+            }
+            else if (i == '[') {
+                unsigned char wp = soundcard->wav_state.playing;
+
+                if (wp) stop_play();
+                move_pos(-((signed long)file_codec.sample_rate)); /* -1 sec */
+                if (wp) begin_play();
+            }
+            else if (i == ']') {
+                unsigned char wp = soundcard->wav_state.playing;
+
+                if (wp) stop_play();
+                move_pos(file_codec.sample_rate); /* 1 sec */
+                if (wp) begin_play();
+            }
+            else if (i == '{') {
+                unsigned char wp = soundcard->wav_state.playing;
+
+                if (wp) stop_play();
+                move_pos(-((signed long)file_codec.sample_rate * 30L)); /* -30 sec */
+                if (wp) begin_play();
+            }
+            else if (i == '}') {
+                unsigned char wp = soundcard->wav_state.playing;
+
+                if (wp) stop_play();
+                move_pos(file_codec.sample_rate * 30L); /* 30 sec */
+                if (wp) begin_play();
+            }
+            else if (i == ' ') {
+                if (soundcard->wav_state.playing) stop_play();
+                else begin_play();
+            }
+        }
+    }
+
+    stop_play();
+    close_soundcard();
+    return 0;
+}
+
+int main(int argc,char **argv,char **envp) {
+    int ret=0;
 
 #if defined(TARGET_WINDOWS) || defined(LINUX)
     /* winfcon will send SIGINT if the user closes the window through the system menu */
@@ -1577,186 +1800,7 @@ int main(int argc,char **argv,char **envp) {
     }
 #endif
 
-    if (prompt_soundcard() < 0)
-        return 1;
-
-    /* TODO: if the CPU is slow, and opt_round < 0 (not set) set opt_round = 0 (off).
-     *       slow CPUs should be encouraged not to resample if the rate is "close enough" */
-
-    loop = 1;
-    if (soundcard->open(soundcard) < 0)
-        printf("Failed to open soundcard\n");
-    else {
-        if (opt_round >= 0)
-            soundcard->ioctl(soundcard,soundcard_ioctl_set_rate_rounding,NULL,NULL,opt_round);
-
-        if (open_wav() < 0)
-            printf("Failed to open file\n");
-        else if (begin_play() < 0)
-            printf("Failed to start playback\n");
-        else {
-            printf("Hit ESC to stop playback. Use 1-9 keys for other status.\n");
-
-            while (loop) {
-                wav_idle();
-                display_idle(disp);
-
-                if (exit_now)
-                    break;
-
-                if (kbhit()) {
-                    i = getch();
-                    if (i == 0) i = getch() << 8;
-
-                    if (i == 27) {
-                        loop = 0;
-                        break;
-                    }
-                    else if (i == 'I') {
-                        printf("\nIRQ status:\n");
-#if defined(LINUX)
-                        printf("  Not applicable for this platform\n");
-#elif defined(HAS_IRQ)
-                        printf("  IRQ=%u INT=0x%02X was_masked=%u chain_irq=%u was_iret=%u hooked=%u\n",
-                            soundcard_irq.irq_number,
-                            soundcard_irq.int_number,
-                            soundcard_irq.was_masked,
-                            soundcard_irq.chain_irq,
-                            soundcard_irq.was_iret,
-                            soundcard_irq.hooked);
-#endif
-                    }
-                    else if (i == 'S') {
-                        stuck_test = !stuck_test;
-                        printf("Stuck test %s\n",stuck_test?"on":"off");
-                    }
-                    else if (i == 'A') {
-                        unsigned char wp = soundcard->wav_state.playing;
-                        int r;
-
-                        if (wp) stop_play();
-
-                        r = soundcard->ioctl(soundcard,soundcard_ioctl_get_autoinit,NULL,NULL,0);
-                        if (r >= 0) {
-                            if (soundcard->ioctl(soundcard,soundcard_ioctl_set_autoinit,NULL,NULL,!r) >= 0)
-                                printf("%sabled auto-init\n",!r ? "En" : "Dis");
-                            else
-                                printf("Unable to change auto-init\n");
-                        }
-                        else {
-                            printf("Auto-init not supported\n");
-                        }
-
-                        if (wp) begin_play();
-                    }
-                    else if (i == 'M') {
-                        use_mmap_write = !use_mmap_write;
-                        printf("%s mmap write\n",use_mmap_write?"Using":"Not using");
-                    }
-                    else if (i >= '0' && i <= '9') {
-                        unsigned char nd = (unsigned char)(i-'0');
-
-                        if (disp != nd) {
-                            printf("\n");
-                            disp = nd;
-                        }
-                    }
-                    else if (i == '^') { /* shift-6 */
-                        unsigned char wp = soundcard->wav_state.playing;
-
-                        if (wp) stop_play();
-
-                        if (prefer_rate < 4000)
-                            prefer_rate = 4000;
-                        else if (prefer_rate < 6000)
-                            prefer_rate = 6000;
-                        else if (prefer_rate < 8000)
-                            prefer_rate = 8000;
-                        else if (prefer_rate < 11025)
-                            prefer_rate = 11025;
-                        else if (prefer_rate < 22050)
-                            prefer_rate = 22050;
-                        else if (prefer_rate < 44100)
-                            prefer_rate = 44100;
-                        else
-                            prefer_rate = 0;
-
-                        if (wp) begin_play();
-                    }
-                    else if (i == '&') { /* shift-7 */
-                        unsigned char wp = soundcard->wav_state.playing;
-
-                        if (wp) stop_play();
-
-                        if (prefer_channels < 1)
-                            prefer_channels = 1;
-                        else if (prefer_channels < 2)
-                            prefer_channels = 2;
-                        else
-                            prefer_channels = 0;
-
-                        if (wp) begin_play();
-                    }
-                    else if (i == '*') { /* shift-8 */
-                        unsigned char wp = soundcard->wav_state.playing;
-
-                        if (wp) stop_play();
-
-                        if (prefer_bits < 8)
-                            prefer_bits = 8;
-                        else if (prefer_bits < 16)
-                            prefer_bits = 16;
-                        else
-                            prefer_bits = 0;
-
-                        if (wp) begin_play();
-                    }
-                    else if (i == 'R') {
-                        unsigned char wp = soundcard->wav_state.playing;
-
-                        if (wp) stop_play();
-
-                        if ((++resample_state.resample_mode) >= resample_MAX)
-                            resample_state.resample_mode = resample_fast;
-
-                        if (wp) begin_play();
-                    }
-                    else if (i == '[') {
-                        unsigned char wp = soundcard->wav_state.playing;
-
-                        if (wp) stop_play();
-                        move_pos(-((signed long)file_codec.sample_rate)); /* -1 sec */
-                        if (wp) begin_play();
-                    }
-                    else if (i == ']') {
-                        unsigned char wp = soundcard->wav_state.playing;
-
-                        if (wp) stop_play();
-                        move_pos(file_codec.sample_rate); /* 1 sec */
-                        if (wp) begin_play();
-                    }
-                    else if (i == '{') {
-                        unsigned char wp = soundcard->wav_state.playing;
-
-                        if (wp) stop_play();
-                        move_pos(-((signed long)file_codec.sample_rate * 30L)); /* -30 sec */
-                        if (wp) begin_play();
-                    }
-                    else if (i == '}') {
-                        unsigned char wp = soundcard->wav_state.playing;
-
-                        if (wp) stop_play();
-                        move_pos(file_codec.sample_rate * 30L); /* 30 sec */
-                        if (wp) begin_play();
-                    }
-                    else if (i == ' ') {
-                        if (soundcard->wav_state.playing) stop_play();
-                        else begin_play();
-                    }
-                }
-            }
-        }
-    }
+    ret = player_main();
 
     convert_rdbuf_check();
 
@@ -1770,7 +1814,7 @@ int main(int argc,char **argv,char **envp) {
     free_dma_buffer();
 #endif
     convert_rdbuf_free();
-    soundcard->close(soundcard);
+    close_soundcard();
 
 #if defined(HAS_SNDSB)
     free_sound_blaster_support();
@@ -1802,6 +1846,6 @@ int main(int argc,char **argv,char **envp) {
         wav_file = NULL;
     }
 
-    return 0;
+    return ret;
 }
 
