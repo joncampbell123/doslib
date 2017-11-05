@@ -1452,12 +1452,20 @@ char *prompt_open_file(void) {
     char *ret = NULL;
 
 #if defined(TARGET_WINDOWS)
-    if ((ret=prompt_open_file_windows_gofn()) != NULL)
-        return ret;
-#endif
+    init_commdlg();
 
+    if (commdlg_getopenfilenameproc() != NULL) {
+        if ((ret=prompt_open_file_windows_gofn()) != NULL)
+            return ret;
+    }
+    else {
+        if ((ret=prompt_open_file_tty()) != NULL)
+            return ret;
+    }
+#else
     if ((ret=prompt_open_file_tty()) != NULL)
         return ret;
+#endif
 
     return ret;
 }
