@@ -1205,6 +1205,17 @@ int fs_comparechar(char c1,char c2) {
 # define fs_strncasecmp strncasecmp
 #endif
 
+int tty_tab_complete_filter(char *fname) {
+    char *ext = strrchr(fname,'.');
+    if (ext == NULL) return 0;
+    ext++;
+
+    if (!strcasecmp(ext,"wav"))
+        return 1;
+
+    return 0;
+}
+
 unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
 #if defined(TARGET_MSDOS) && TARGET_MSDOS == 16 && defined(__SMALL__)
     return 0;
@@ -1213,6 +1224,8 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
     unsigned int count = 0;
     unsigned int ret = 0;
     struct dirent *d;
+    struct stat st;
+    char *path_tmp;
     int newi = -1;
     int file_pos;
     char *ens;
@@ -1227,6 +1240,7 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
         /* remove filename and path separator from end in case that prevents DOS from reading the directory */
         char *e = ens + strlen(ens) - 1;
         while (e >= ens && *e != PATH_SEP) *e-- = 0;
+        if (e >= ens && *e == PATH_SEP) *e-- = 0;
     }
 
     {
@@ -1240,10 +1254,28 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
         file_pos = (int)(file - tmp);
     }
 
+    path_tmp = malloc(PATH_MAX+1);
+    if (path_tmp == NULL) {
+        free(ens);
+        return 0;
+    }
+
     dir = opendir(ens);
     if (dir != NULL) {
         while ((d=readdir(dir)) != NULL) {
             if (d->d_name[0] == '.') continue;
+            if (snprintf(path_tmp,PATH_MAX,"%s%c%s",ens,PATH_SEP,d->d_name) >= PATH_MAX) continue;
+
+            if (stat(path_tmp,&st) != 0) continue;
+
+            if (S_ISREG(st.st_mode)) {
+                if (!tty_tab_complete_filter(d->d_name)) continue;
+            }
+            else if (S_ISDIR(st.st_mode)) {
+            }
+            else {
+                continue;
+            }
 
             /* TODO: If MS-DOS and the "hidden" bit is set... */
 
@@ -1309,6 +1341,18 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
         if (dir != NULL) {
             while ((d=readdir(dir)) != NULL) {
                 if (d->d_name[0] == '.') continue;
+                if (snprintf(path_tmp,PATH_MAX,"%s%c%s",ens,PATH_SEP,d->d_name) >= PATH_MAX) continue;
+
+                if (stat(path_tmp,&st) != 0) continue;
+
+                if (S_ISREG(st.st_mode)) {
+                    if (!tty_tab_complete_filter(d->d_name)) continue;
+                }
+                else if (S_ISDIR(st.st_mode)) {
+                }
+                else {
+                    continue;
+                }
 
                 /* TODO: If MS-DOS and the "hidden" bit is set... */
 
@@ -1342,6 +1386,7 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
         }
     }
 
+    free(path_tmp);
     free(ens);
 
     return ret;
