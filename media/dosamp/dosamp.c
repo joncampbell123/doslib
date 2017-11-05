@@ -1255,6 +1255,28 @@ char *prompt_open_file_tty(void) {
                 tmp[--tmpi] = 0;
             }
         }
+        else if (c == 9) {
+            if (tmpi == 0) {
+#if defined(TARGET_MSDOS) || defined(TARGET_WINDOWS)
+                tmpi = sprintf(tmp,"%c:",_getdrive()+'A'-1);
+#else
+                tmpi = sprintf(tmp,"/");
+#endif
+                printf("%s",tmp); fflush(stdout);
+            }
+            else if (tmp[tmpi-1] == PATH_SEP) {
+                /* nothing to do */
+            }
+            else if (stat(tmp,&st) == 0) {
+                if (S_ISDIR(st.st_mode)) {
+                    tmpi += sprintf(tmp+tmpi,"%c",PATH_SEP);
+                    printf("%c",PATH_SEP); fflush(stdout);
+                }
+            }
+            else {
+                /* TODO: directory listing, tab completion */
+            }
+        }
         else if (c == 23/*CTRL+W*/) {
             if (tmpi > 0 && tmp[tmpi-1] == PATH_SEP) {
                 printf("\x08 \x08"); fflush(stdout);
