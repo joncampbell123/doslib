@@ -961,9 +961,14 @@ int init_dsound(void) {
 #endif
 
 #if defined(TARGET_WINDOWS)
+# include <shellapi.h>
 /* dynamic loading of MMSYSTEM/WINMM */
 HMODULE             shell_dll = NULL;
 unsigned char       shell_tried = 0;
+
+UINT (WINAPI * __DragQueryFile)(HDROP,UINT,LPSTR,UINT) = NULL;
+VOID (WINAPI * __DragAcceptFiles)(HWND,BOOL) = NULL;
+VOID (WINAPI * __DragFinish)(HDROP hDrop) = NULL;
 
 void free_shell(void) {
     if (shell_dll != NULL) {
@@ -991,8 +996,19 @@ int init_shell(void) {
 #endif
             SetErrorMode(oldMode);
 
-            if (shell_dll != NULL)
+            if (shell_dll != NULL) {
                 atexit(shell_atexit);
+
+# if TARGET_WINDOWS == 16
+                __DragQueryFile = (UINT (WINAPI *)(HDROP,UINT,LPSTR,UINT))GetProcAddress(shell_dll,"DRAGQUERYFILE");
+                __DragAcceptFiles = (VOID (WINAPI *)(HWND,BOOL))GetProcAddress(shell_dll,"DRAGACCEPTFILES");
+                __DragFinish = (VOID (WINAPI *)(HDROP))GetProcAddress(shell_dll,"DRAGFINISH");
+# else
+                __DragQueryFile = (UINT (WINAPI *)(HDROP,UINT,LPSTR,UINT))GetProcAddress(shell_dll,"DragQueryFile");
+                __DragAcceptFiles = (VOID (WINAPI *)(HWND,BOOL))GetProcAddress(shell_dll,"DragAcceptFiles");
+                __DragFinish = (VOID (WINAPI *)(HDROP))GetProcAddress(shell_dll,"DragFinish");
+# endif
+            }
 
             shell_tried = 1;
         }
@@ -1476,6 +1492,98 @@ int prompt_soundcard(unsigned int flags) {
     return 0;
 }
 
+#if defined(TARGET_WINDOWS)
+#include <shellapi.h>
+
+/* linked list of filenames the user dropped */
+struct shell_droplist_t {
+    char*                       file;
+    struct shell_droplist_t*    next;
+};
+
+struct shell_droplist_t*        shell_droplist = NULL;
+
+void shell_droplist_entry_free(struct shell_droplist_t *ent) {
+    free_cstr(&ent->file);
+    ent->next = NULL;
+}
+
+struct shell_droplist_t *shell_droplist_peek(void) {
+    return shell_droplist;
+}
+
+/* take next node in linked list and return it.
+ * move the next node up to the front.
+ * caller must use shell_droplist_entry_free() when done. */
+struct shell_droplist_t *shell_droplist_get(void) {
+    struct shell_droplist_t* ret = shell_droplist;
+
+    if (ret != NULL) shell_droplist = ret->next;
+
+    return ret;
+}
+
+void shell_droplist_clear(void) {
+    struct shell_droplist_t *n;
+
+    while ((n=shell_droplist_get()) != NULL) {
+        MessageBox(NULL,n->file,"FREE",MB_OK);
+
+        shell_droplist_entry_free(n);
+    }
+}
+
+static char *shell_queryfile(HDROP hDrop,UINT i) {
+    char *str = NULL;
+    UINT sz;
+
+    sz = __DragQueryFile(hDrop, i, NULL, 0);
+    if (sz != 0U) {
+        str = malloc(sz+1+1);
+        if (str != NULL) {
+            str[sz] = 0;
+            str[sz+1] = 0;
+            if (__DragQueryFile(hDrop, i, str, sz + 1/*Despite MSDN docs, the last char written at [sz-1] is NUL*/) == 0U) {
+                free(str);
+                str = NULL;
+            }
+        }
+    }
+
+    return str;
+}
+
+unsigned int shell_dropfileshandler(HDROP hDrop) {
+    struct shell_droplist_t **appendto;
+    UINT i,files;
+    char *str;
+
+    appendto = &shell_droplist;
+    while (*appendto != NULL) appendto = &((*appendto)->next);
+
+    files = __DragQueryFile(hDrop, (UINT)(-1), NULL, 0);
+    if (files != 0U) {
+        for (i=0;i < files;i++) {
+            str = shell_queryfile(hDrop, i);
+            if (str != NULL) {
+                /* assume *appendto == NULL */
+                *appendto = calloc(1, sizeof(struct shell_droplist_t));
+                if (*appendto != NULL) {
+                    (*appendto)->file = str;
+                    appendto = &((*appendto)->next);
+                }
+                else {
+                    free(str);
+                }
+            }
+        }
+    }
+
+    __DragFinish(hDrop);
+    return 0;
+}
+#endif
+
 int player_main(void) {
     int i,loop;
 
@@ -1764,13 +1872,8 @@ int main(int argc,char **argv,char **envp) {
     init_shell();
 
     if (shell_dll != NULL) {
-# if TARGET_WINDOWS == 16
-        VOID (WINAPI * __DragAcceptFiles)(HWND,BOOL) = (VOID (WINAPI *)(HWND,BOOL))GetProcAddress(shell_dll,"DRAGACCEPTFILES");
-# else
-        VOID (WINAPI * __DragAcceptFiles)(HWND,BOOL) = (VOID (WINAPI *)(HWND,BOOL))GetProcAddress(shell_dll,"DragAcceptFiles");
-# endif
-
         __DragAcceptFiles(_win_hwnd(), TRUE);
+        _win_dropFilesHandler = shell_dropfileshandler;
     }
 #endif
 
@@ -1925,6 +2028,10 @@ int main(int argc,char **argv,char **envp) {
 #endif
 #if defined(HAS_DSOUND)
     free_dsound_support();
+#endif
+
+#if defined(TARGET_WINDOWS)
+    shell_droplist_clear();
 #endif
 
     soundcardlist_close();

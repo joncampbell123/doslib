@@ -17,6 +17,7 @@
 
 #ifdef TARGET_WINDOWS
 # include <windows.h>
+# include <shellapi.h>
 # include <windows/apihelp.h>
 #else
 # error what
@@ -147,6 +148,8 @@ void _win_sigint_post(struct _win_console_ctx FAR *ctx) {
 	ctx->pendingSigInt = 1;
 }
 
+unsigned int (*_win_dropFilesHandler)(HDROP hDrop) = NULL;
+
 #if ((TARGET_MSDOS == 16 && TARGET_WINDOWS < 31) || (TARGET_MSDOS == 32 && defined(WIN386)))
 FARPROC _win_WindowProc_MPI;
 #endif
@@ -194,6 +197,10 @@ WindowProcType_NoLoadDS winproc_export _win_WindowProc(HWND hwnd,UINT message,WP
 		mm->ptMaxTrackSize.y = mm->ptMaxSize.y;
 		return 0;
 	}
+    else if (message == WM_DROPFILES) {
+        if (_win_dropFilesHandler != NULL)
+            return _win_dropFilesHandler((HDROP)wparam);
+    }
 	else if (message == WM_CLOSE) {
 		if (_ctx_console->allowClose) DestroyWindow(hwnd);
 		else _win_sigint_post(_ctx_console);

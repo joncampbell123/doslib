@@ -34,6 +34,10 @@ int _win_write(int fd,const void *buf,int sz);
 int _cdecl _fake_main(int argc,char **argv,char **envp);
 int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow,int (_cdecl *_main_f)(int argc,char**,char**));
 
+# include <shellapi.h>
+
+extern unsigned int (*_win_dropFilesHandler)(HDROP hDrop);
+
 extern HINSTANCE _win_hInstance;
 
 # ifdef WINFCON_STOCK_WIN_MAIN
