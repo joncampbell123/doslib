@@ -1643,6 +1643,7 @@ int player_main(void) {
                         stop_play();
                         change_play_file(ent->file);
                         if (wp) begin_play();
+                        initplay = 0;
                     }
                 }
 
@@ -1688,6 +1689,7 @@ int player_main(void) {
                 }
 
                 if (wp) begin_play();
+                initplay = 0;
             }
             else if (i == 'P') {
                 unsigned char wp = soundcard->wav_state.playing;
