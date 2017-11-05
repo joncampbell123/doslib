@@ -127,6 +127,22 @@ struct wav_cbr_t                                play_codec;
 
 soundcard_t                                     soundcard = NULL;
 
+void free_cstr(char **str) {
+    if (*str != NULL) {
+        free(*str);
+        *str = NULL;
+    }
+}
+
+int set_cstr(char **str,const char *src) {
+    free_cstr(str);
+
+    if (src != NULL)
+        *str = strdup(src);
+
+    return (*str != NULL);
+}
+
 void wav_reset_state(struct wav_state_t dosamp_FAR * const w) {
     w->play_counter_prev = 0;
     w->write_counter = 0;
@@ -1165,7 +1181,7 @@ static int parse_argv(int argc,char **argv) {
         }
         else {
             if (wav_file != NULL) return 0;
-            wav_file = strdup(a);
+            if (!set_cstr(&wav_file,a)) return 0;
         }
     }
 
@@ -1426,7 +1442,7 @@ int player_main(void) {
 
     /* if a WAV file was never specified, then ask */
     if (wav_file == NULL)
-        wav_file = prompt_open_file();
+        set_cstr(&wav_file,prompt_open_file());
 
     if (wav_file != NULL && wav_source == NULL) {
         if (open_wav() < 0)
@@ -1477,6 +1493,27 @@ int player_main(void) {
                         soundcard_irq.was_iret,
                         soundcard_irq.hooked);
 #endif
+            }
+            else if (i == 'F') {
+                unsigned char wp = soundcard->wav_state.playing;
+
+                printf("\n");
+
+                stop_play();
+
+                {
+                    char *nfile = prompt_open_file();
+                    if (nfile != NULL) {
+                        close_wav();
+
+                        set_cstr(&wav_file,nfile);
+
+                        if (open_wav() < 0)
+                            printf("Failed to open\n");
+                    }
+                }
+
+                if (wp) begin_play();
             }
             else if (i == 'P') {
                 unsigned char wp = soundcard->wav_state.playing;
@@ -1841,10 +1878,7 @@ int main(int argc,char **argv,char **envp) {
     printf("\n");
 #endif
 
-    if (wav_file != NULL) {
-        free(wav_file);
-        wav_file = NULL;
-    }
+    free_cstr(&wav_file);
 
     return ret;
 }
