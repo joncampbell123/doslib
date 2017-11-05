@@ -1193,6 +1193,7 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
 #if defined(TARGET_MSDOS) && TARGET_MSDOS == 16 && defined(__SMALL__)
     return 0;
 #else
+    unsigned int row = 0,rowmax = 23;
     unsigned int count = 0;
     unsigned int ret = 0;
     struct dirent *d;
@@ -1200,6 +1201,7 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
     int file_pos;
     char *ens;
     DIR *dir;
+    int c;
 
     if (*tmp == 0) return 0;
 
@@ -1300,6 +1302,24 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
                     printf("  %s\n",d->d_name);
 
                     ret = 1; /* need redraw */
+
+                    if ((++row) >= rowmax) {
+                        printf("(space to continue)");
+                        fflush(stdout);
+                        row = 0;
+
+                        do {
+                            c = getch();
+                            if (c == 27 || c == 13 || c == ' ')
+                                break;
+                        } while (1);
+
+                        printf("\x0D" "                          " "\x0D");
+                        fflush(stdout);
+
+                        if (c == 27)
+                            break;
+                    }
                 }
             }
             closedir(dir);
