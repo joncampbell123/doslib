@@ -79,6 +79,7 @@
 #include "mmsystem.h"
 #include "commdlg.h"
 #include "fs.h"
+#include "shdropls.h"
 
 #include "pof_gofn.h"
 #include "pof_tty.h"
@@ -1235,41 +1236,6 @@ int prompt_soundcard(unsigned int flags) {
     printf("\n");
 
     return 0;
-}
-
-/* linked list of filenames the user dropped */
-struct shell_droplist_t {
-    char*                       file;
-    struct shell_droplist_t*    next;
-};
-
-struct shell_droplist_t*        shell_droplist = NULL;
-
-void shell_droplist_entry_free(struct shell_droplist_t *ent) {
-    free_cstr(&ent->file);
-    ent->next = NULL;
-}
-
-struct shell_droplist_t *shell_droplist_peek(void) {
-    return shell_droplist;
-}
-
-/* take next node in linked list and return it.
- * move the next node up to the front.
- * caller must use shell_droplist_entry_free() when done. */
-struct shell_droplist_t *shell_droplist_get(void) {
-    struct shell_droplist_t* ret = shell_droplist;
-
-    if (ret != NULL) shell_droplist = ret->next;
-
-    return ret;
-}
-
-void shell_droplist_clear(void) {
-    struct shell_droplist_t *n;
-
-    while ((n=shell_droplist_get()) != NULL)
-        shell_droplist_entry_free(n);
 }
 
 #if defined(TARGET_WINDOWS)
