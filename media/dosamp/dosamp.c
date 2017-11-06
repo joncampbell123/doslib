@@ -1073,13 +1073,13 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
                     ret = 1; /* need redraw */
 
                     if ((++row) >= rowmax) {
-                        printf("(space to continue)");
+                        printf("(TAB to continue)");
                         fflush(stdout);
                         row = 0;
 
                         do {
                             c = getch();
-                            if (c == 27 || c == 13 || c == ' ')
+                            if (c == 27 || c == 13 || c == ' ' || c == 9)
                                 break;
                         } while (1);
 
