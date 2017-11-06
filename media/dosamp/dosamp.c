@@ -78,6 +78,7 @@
 #include "winshell.h"
 #include "mmsystem.h"
 #include "commdlg.h"
+#include "fs.h"
 
 #if defined(TARGET_WINDOWS)
 #include <signal.h>
@@ -951,22 +952,6 @@ char *prompt_open_file_windows_gofn(void) {
         return strdup(tmp);
     }
 }
-#endif
-
-#if defined(LINUX)
-/* case sensitive */
-int fs_comparechar(char c1,char c2) {
-    return (c1 == c2);
-}
-
-# define fs_strncasecmp strncmp
-#else
-/* case insensitive */
-int fs_comparechar(char c1,char c2) {
-    return (tolower(c1) == tolower(c2));
-}
-
-# define fs_strncasecmp strncasecmp
 #endif
 
 int tty_tab_complete_filter(char *fname) {
