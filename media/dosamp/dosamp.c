@@ -75,6 +75,7 @@
 #include "sc_dsound.h"
 
 #include "dsound.h"
+#include "winshell.h"
 
 #if defined(TARGET_WINDOWS)
 #include <signal.h>
@@ -907,64 +908,6 @@ static void help() {
     printf("dosamp [options] <file>\n");
     printf(" /h /help             This help\n");
 }
-
-#if defined(TARGET_WINDOWS)
-# include <shellapi.h>
-/* dynamic loading of MMSYSTEM/WINMM */
-HMODULE             shell_dll = NULL;
-unsigned char       shell_tried = 0;
-
-UINT (WINAPI * __DragQueryFile)(HDROP,UINT,LPSTR,UINT) = NULL;
-VOID (WINAPI * __DragAcceptFiles)(HWND,BOOL) = NULL;
-VOID (WINAPI * __DragFinish)(HDROP hDrop) = NULL;
-
-void free_shell(void) {
-    if (shell_dll != NULL) {
-        FreeLibrary(shell_dll);
-        shell_dll = NULL;
-    }
-
-    shell_tried = 0;
-}
-
-void shell_atexit(void) {
-    free_shell();
-}
-
-int init_shell(void) {
-    if (shell_dll == NULL) {
-        if (!shell_tried) {
-            UINT oldMode;
-
-            oldMode = SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX);
-#if TARGET_MSDOS == 16
-            shell_dll = LoadLibrary("SHELL");
-#else
-            shell_dll = LoadLibrary("SHELL32.DLL");
-#endif
-            SetErrorMode(oldMode);
-
-            if (shell_dll != NULL) {
-                atexit(shell_atexit);
-
-# if TARGET_WINDOWS == 16
-                __DragQueryFile = (UINT (WINAPI *)(HDROP,UINT,LPSTR,UINT))GetProcAddress(shell_dll,"DRAGQUERYFILE");
-                __DragAcceptFiles = (VOID (WINAPI *)(HWND,BOOL))GetProcAddress(shell_dll,"DRAGACCEPTFILES");
-                __DragFinish = (VOID (WINAPI *)(HDROP))GetProcAddress(shell_dll,"DRAGFINISH");
-# else
-                __DragQueryFile = (UINT (WINAPI *)(HDROP,UINT,LPSTR,UINT))GetProcAddress(shell_dll,"DragQueryFile");
-                __DragAcceptFiles = (VOID (WINAPI *)(HWND,BOOL))GetProcAddress(shell_dll,"DragAcceptFiles");
-                __DragFinish = (VOID (WINAPI *)(HDROP))GetProcAddress(shell_dll,"DragFinish");
-# endif
-            }
-
-            shell_tried = 1;
-        }
-    }
-
-    return (shell_dll != NULL) ? 1 : 0;
-}
-#endif
 
 #if defined(TARGET_WINDOWS)
 /* dynamic loading of MMSYSTEM/WINMM */
