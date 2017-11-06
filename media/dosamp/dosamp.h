@@ -1,4 +1,10 @@
 
+#if defined(TARGET_WINDOWS) || defined(TARGET_MSDOS)
+# define PATH_SEP '\\'
+#else
+# define PATH_SEP '/'
+#endif
+
 #define HW_DOS_DONT_DEFINE_MMSYSTEM
 
 /* making the API use FAR CALL function pointers will allow future development

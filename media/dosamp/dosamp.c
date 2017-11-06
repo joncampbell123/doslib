@@ -953,12 +953,6 @@ char *prompt_open_file_windows_gofn(void) {
 }
 #endif
 
-#if defined(TARGET_WINDOWS) || defined(TARGET_MSDOS)
-# define PATH_SEP '\\'
-#else
-# define PATH_SEP '/'
-#endif
-
 #if defined(LINUX)
 /* case sensitive */
 int fs_comparechar(char c1,char c2) {
