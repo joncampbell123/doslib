@@ -80,6 +80,8 @@
 #include "commdlg.h"
 #include "fs.h"
 
+#include "pof_gofn.h"
+
 #if defined(TARGET_WINDOWS)
 #include <signal.h>
 #endif
@@ -125,8 +127,8 @@ unsigned int                                    soundcardlist_count;
 unsigned int                                    soundcardlist_alloc;
 
 /* chosen file to play */
-static dosamp_file_source_t                     wav_source = NULL;
-static char*                                    wav_file = NULL;
+dosamp_file_source_t                            wav_source = NULL;
+char*                                           wav_file = NULL;
 
 /* convert/read buffer */
 struct convert_rdbuf_t                          convert_rdbuf = {NULL,0,0,0};
@@ -911,48 +913,6 @@ static void help() {
     printf("dosamp [options] <file>\n");
     printf(" /h /help             This help\n");
 }
-
-#if defined(TARGET_WINDOWS)
-char *prompt_open_file_windows_gofn(void) {
-    GETOPENFILENAMEPROC gofn;
-
-    /* GetOpenFileName() did not appear until Windows 3.1 */
-    if (!init_commdlg())
-        return NULL;
-    if ((gofn=commdlg_getopenfilenameproc()) == NULL)
-        return NULL;
-
-    {
-        char tmp[300];
-        OPENFILENAME of;
-
-        memset(&of,0,sizeof(of));
-        memset(tmp,0,sizeof(tmp));
-
-        of.lStructSize = sizeof(of);
-#ifdef USE_WINFCON
-        of.hwndOwner = _win_hwnd();
-        of.hInstance = _win_hInstance;
-#else
-        of.hInstance = GetModuleHandle(NULL);
-#endif
-        of.lpstrFilter =
-            "All supported files\x00*.wav\x00"
-            "WAV files\x00*.wav\x00"
-            "All files\x00*.*\x00";
-        of.nFilterIndex = 1;
-        if (wav_file != NULL) strncpy(tmp,wav_file,sizeof(tmp)-1);
-        of.lpstrFile = tmp;
-        of.nMaxFile = sizeof(tmp)-1;
-        of.lpstrTitle = "Select file to play";
-        of.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
-        if (!gofn(&of))
-            return NULL;
-
-        return strdup(tmp);
-    }
-}
-#endif
 
 int tty_tab_complete_filter(char *fname) {
     char *ext = strrchr(fname,'.');
