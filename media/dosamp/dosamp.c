@@ -949,7 +949,17 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
         /* remove filename and path separator from end in case that prevents DOS from reading the directory */
         char *e = ens + strlen(ens) - 1;
         while (e >= ens && *e != PATH_SEP) *e-- = 0;
+#if defined(TARGET_MSDOS) || defined(TARGET_WINDOWS)
+        /* make sure we retain trailing slash for root dir i.e. C:\ not C: */
+        if (isalpha(ens[0]) && ens[1] == ':') {
+            if (e >= (ens+3) && *e == PATH_SEP) *e-- = 0;
+        }
+        else {
+            if (e >= ens && *e == PATH_SEP) *e-- = 0;
+        }
+#else
         if (e >= ens && *e == PATH_SEP) *e-- = 0;
+#endif
     }
 
     {
