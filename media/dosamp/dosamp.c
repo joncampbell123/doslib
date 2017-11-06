@@ -132,26 +132,18 @@ struct wav_cbr_t                                play_codec;
 
 soundcard_t                                     soundcard = NULL;
 
-void wav_reset_state(struct wav_state_t dosamp_FAR * const w) {
-    w->play_counter_prev = 0;
-    w->write_counter = 0;
-    w->play_counter = 0;
-    w->play_delay = 0;
-    w->play_empty = 1;
-}
-
 /* WAV file data chunk info */
-static unsigned long                    wav_data_offset = 44;
-static unsigned long                    wav_data_length_bytes = 0;
-static unsigned long                    wav_data_length = 0;/* in samples */
+static unsigned long                            wav_data_offset = 44;
+static unsigned long                            wav_data_length_bytes = 0;
+static unsigned long                            wav_data_length = 0;/* in samples */
 
 /* WAV playback state */
-static unsigned long                    wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
-static unsigned long                    wav_play_position = 0L;
+static unsigned long                            wav_position = 0;/* in samples. read pointer. after reading, points to next sample to read. */
+static unsigned long                            wav_play_position = 0L;
 
 /* buffering threshholds */
-static unsigned long                    wav_play_load_block_size = 0;/*max load per call*/
-static unsigned long                    wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
+static unsigned long                            wav_play_load_block_size = 0;/*max load per call*/
+static unsigned long                            wav_play_min_load_size = 0;/*minimum "can write" threshhold to load more*/
 
 #if defined(HAS_IRQ)
 
@@ -183,6 +175,14 @@ static void interrupt soundcard_irq_handler() {
 }
 
 #endif
+
+void wav_reset_state(struct wav_state_t dosamp_FAR * const w) {
+    w->play_counter_prev = 0;
+    w->write_counter = 0;
+    w->play_counter = 0;
+    w->play_delay = 0;
+    w->play_empty = 1;
+}
 
 int wav_rewind(void) {
     wav_position = 0;
