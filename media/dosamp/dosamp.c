@@ -66,6 +66,7 @@
 #include "snirq.h"
 #include "sndcard.h"
 #include "termios.h"
+#include "cstr.h"
 
 #include "sc_sb.h"
 #include "sc_oss.h"
@@ -130,22 +131,6 @@ struct wav_cbr_t                                file_codec;
 struct wav_cbr_t                                play_codec;
 
 soundcard_t                                     soundcard = NULL;
-
-void free_cstr(char **str) {
-    if (*str != NULL) {
-        free(*str);
-        *str = NULL;
-    }
-}
-
-int set_cstr(char **str,const char *src) {
-    free_cstr(str);
-
-    if (src != NULL)
-        *str = strdup(src);
-
-    return (*str != NULL);
-}
 
 void wav_reset_state(struct wav_state_t dosamp_FAR * const w) {
     w->play_counter_prev = 0;
