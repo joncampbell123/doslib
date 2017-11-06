@@ -1033,8 +1033,19 @@ unsigned int tty_tab_completion(char *tmp,size_t tmpsize,int *tmpi) {
                             newi = i;
                     }
                     else {
+#if defined(TARGET_MSDOS) || defined(TARGET_WINDOWS)
+                        if (*tmpi <= file_pos || isupper(tmp[file_pos])) {
+                            while ((size_t)i < (tmpsize-1) && *s2 != 0)
+                                tmp[i++] = toupper(*s2++);
+                        }
+                        else {
+                            while ((size_t)i < (tmpsize-1) && *s2 != 0)
+                                tmp[i++] = tolower(*s2++);
+                        }
+#else
                         while ((size_t)i < (tmpsize-1) && *s2 != 0)
                             tmp[i++] = *s2++;
+#endif
 
                         newi = i;
                     }
