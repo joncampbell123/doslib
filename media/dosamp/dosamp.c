@@ -80,6 +80,7 @@
 #include "commdlg.h"
 #include "fs.h"
 #include "shdropls.h"
+#include "shdropwn.h"
 
 #include "pof_gofn.h"
 #include "pof_tty.h"
@@ -1237,60 +1238,6 @@ int prompt_soundcard(unsigned int flags) {
 
     return 0;
 }
-
-#if defined(TARGET_WINDOWS)
-#include <shellapi.h>
-
-static char *shell_queryfile(HDROP hDrop,UINT i) {
-    char *str = NULL;
-    UINT sz;
-
-    sz = __DragQueryFile(hDrop, i, NULL, 0);
-    if (sz != 0U) {
-        str = malloc(sz+1+1);
-        if (str != NULL) {
-            str[sz] = 0;
-            str[sz+1] = 0;
-            if (__DragQueryFile(hDrop, i, str, sz + 1/*Despite MSDN docs, the last char written at [sz-1] is NUL*/) == 0U) {
-                free(str);
-                str = NULL;
-            }
-        }
-    }
-
-    return str;
-}
-
-unsigned int shell_dropfileshandler(HDROP hDrop) {
-    struct shell_droplist_t **appendto;
-    UINT i,files;
-    char *str;
-
-    appendto = &shell_droplist;
-    while (*appendto != NULL) appendto = &((*appendto)->next);
-
-    files = __DragQueryFile(hDrop, (UINT)(-1), NULL, 0);
-    if (files != 0U) {
-        for (i=0;i < files;i++) {
-            str = shell_queryfile(hDrop, i);
-            if (str != NULL) {
-                /* assume *appendto == NULL */
-                *appendto = calloc(1, sizeof(struct shell_droplist_t));
-                if (*appendto != NULL) {
-                    (*appendto)->file = str;
-                    appendto = &((*appendto)->next);
-                }
-                else {
-                    free(str);
-                }
-            }
-        }
-    }
-
-    __DragFinish(hDrop);
-    return 0;
-}
-#endif
 
 void change_play_file(const char *nfile) {
     close_wav();
