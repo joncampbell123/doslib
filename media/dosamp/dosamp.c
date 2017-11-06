@@ -117,11 +117,13 @@ static unsigned char                            use_mmap_write = 1;
 /* chosen time source.
  * NTS: Don't forget that by design, some time sources (8254 for example)
  *      require you to poll often enough to get a correct count of time. */
-static dosamp_time_source_t                     time_source = NULL;
+dosamp_time_source_t                            time_source = NULL;
 
-#if defined(HAS_IRQ)
+soundcard_t                                     soundcard = NULL;
+
+#if defined(HAS_DMA)
 /* ISA DMA buffer */
-static struct dma_8237_allocation*              isa_dma = NULL;
+struct dma_8237_allocation*                     isa_dma = NULL;
 #endif
 
 /* sound card list */
@@ -138,8 +140,6 @@ struct convert_rdbuf_t                          convert_rdbuf = {NULL,0,0,0};
 
 struct wav_cbr_t                                file_codec;
 struct wav_cbr_t                                play_codec;
-
-soundcard_t                                     soundcard = NULL;
 
 /* WAV file data chunk info */
 static unsigned long                            wav_data_offset = 44;
