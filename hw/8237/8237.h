@@ -30,6 +30,9 @@
 /* page registers are 8 bits wide */
 #define D8237_DMA_8BIT_PAGE         0x20
 /* 16-bit DMA channels can span a 128K region */
+/* NTS: I found the IBM PS/1 technical reference where IBM specifically documents
+ *      that for DMA channels 5-7, bits [7:1] become A23-A17 and the WORD counter
+ *      becomes bits [16:1] thus 16-bit DMA can span 128KB (65536 16-bit WORDs) */
 #define D8237_DMA_16BIT_CANDO_128K  0x40
 
 /* NTS: There is generally no way to detect if the DMA controller can do 16-bit DMA across 128K,
