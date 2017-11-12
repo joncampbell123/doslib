@@ -30,3 +30,8 @@
 
   You *can* however set the PAS and SB emulation to use different DMA channels.
 
+- No filtering.
+
+  Much like the Sound Blaster it emulates, the Sound Blaster DAC does not filter
+  it's output. Low sample rates sound "metallic" for that reason.
+
