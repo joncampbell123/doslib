@@ -11,7 +11,10 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 !ifeq TARGET_MSDOS 16
 ! ifeq MMODE c
 ! else
+!  ifeq MMODE s
+!  else
 DOSAMP_EXE =    $(SUBDIR)$(HPS)dosamp.$(EXEEXT)
+! endif
 ! endif
 !else
 DOSAMP_EXE =    $(SUBDIR)$(HPS)dosamp.$(EXEEXT)
