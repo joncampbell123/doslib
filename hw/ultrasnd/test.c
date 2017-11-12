@@ -1069,9 +1069,11 @@ int main(int argc,char **argv) {
 
 #if TARGET_MSDOS == 16
                                     /* "rd" is signed integer, which in MS-DOS 16-bit builds is 16-bit wide
-                                     * and cannot represent values larger than 32767 */
-                                    if (rem > 32767UL)
-                                        rem = 32767UL;
+                                     * and cannot represent values larger than 32767. The GUS DMA routine
+                                     * requires our DMA transfer to be a multiple of 16 and start on a multiple
+                                     * of 16 (or 32 if 16-bit PCM). */
+                                    if (rem > (32768UL-32UL))
+                                        rem = (32768UL-32UL);
 #endif
                                     rd = (int)rem;
 
