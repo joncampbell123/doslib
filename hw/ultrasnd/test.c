@@ -1038,7 +1038,7 @@ int main(int argc,char **argv) {
 							printf("Will load into GUS RAM 0x%lx-0x%lx.\n",
 								(unsigned long)offset,(unsigned long)end-1UL);
 							if (gus->boundary256k && (offset & 0xFFFC0000UL) != ((end-1UL)&0xFFFC0000UL))
-								printf("WARNING: Which also crosses a 256KKB boundary!\n");
+								printf("WARNING: Which also crosses a 256KB boundary!\n");
 
 							printf("Continue (y/n)? "); fflush(stdout);
 							fgets(temp_str,sizeof(temp_str)-1,stdin);
@@ -1048,13 +1048,12 @@ int main(int argc,char **argv) {
 								ultrasnd_stop_voice(gus,channel);
 
 								o = offset;
-								rem = end - offset;
 								lseek(wav_fd,wav_data_offset,SEEK_SET);
-								while (rem > 0UL) {
+								while (o < end) {
 									vga_moveto(box.x+2,box.y+2);
 									vga_write_color(0x1F);
 									sprintf(temp_str,"%%%02u %uKB/%uKB",
-										(unsigned int)(((o-offset) * 100UL) / wav_data_size),
+										(unsigned int)(((o-offset) * 100UL) / (end-offset)),
 										(unsigned int)((o-offset) >> 10UL),
 										(unsigned int)(((end-offset)+0x3FFUL) >> 10UL));
 									vga_write(temp_str);
@@ -1064,10 +1063,17 @@ int main(int argc,char **argv) {
 											break;
 									}
 
+                                    rem = end - o;
 									if (rem > (unsigned long)gus->dram_xfer_a->length)
-										rd = gus->dram_xfer_a->length;
-									else
-										rd = (int)rem;
+										rem = (unsigned long)gus->dram_xfer_a->length;
+
+#if TARGET_MSDOS == 16
+                                    /* "rd" is signed integer, which in MS-DOS 16-bit builds is 16-bit wide
+                                     * and cannot represent values larger than 32767 */
+                                    if (rem > 32767UL)
+                                        rem = 32767UL;
+#endif
+                                    rd = (int)rem;
 
 									_dos_xread(wav_fd,buf,rd);
 									ultrasnd_send_dram_buffer(gus,o,rd,
