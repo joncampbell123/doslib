@@ -10,3 +10,23 @@
   2.6-bit ADPCM:                        Maximum just under 20KHz
   2-bit ADPCM:                          Maximum just under 20KHz
 
+- PAS IRQ vs SB IRQ
+
+  INSTALL.EXE when configuring the card will give you the impression that the
+  MV101 chip and the Sound Blaster compatible part can have different IRQs.
+
+  Unfortunately that doesn't seem to work.
+
+  Sound Blaster emulation appears to use the PAS IRQ anyway.
+
+  Setting the PAS IRQ to 10 and the SB IRQ to 5 for example means that none
+  of your DOS games will get a working interrupt.
+
+  Setting the PAS IRQ to 3 and the SB IRQ to 5 will mean your DOS games
+  detect a Sound Blaster on IRQ 3.
+
+  The only way to get Sound Blaster emulation to work correctly is to set
+  both IRQs to the same value.
+
+  You *can* however set the PAS and SB emulation to use different DMA channels.
+
