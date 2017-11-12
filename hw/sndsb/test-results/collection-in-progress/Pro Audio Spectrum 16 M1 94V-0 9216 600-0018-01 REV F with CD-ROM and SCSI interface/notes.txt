@@ -1,0 +1,12 @@
+
+- ADPCM playback notes
+
+  Each ADPCM format maxes out at just under a specific limit.
+  If you attempt to play at the limit or faster, the decoded audio exhibits
+  jitter/artifact noise as if the DSP has signalled an output rate faster than
+  it decode.
+
+  4-bit ADPCM:                          Maximum just under 20KHz
+  2.6-bit ADPCM:                        Maximum just under 20KHz
+  2-bit ADPCM:                          Maximum just under 20KHz
+
