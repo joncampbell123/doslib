@@ -506,15 +506,15 @@ SB 1.x ADPCM 4-bit single cycle DSP playback test.
  - TC 0xF4: expecting 83333Hz, 1294b/4.000s @ 646.750Hz
  - TC 0xF5: expecting 90909Hz, 1169b/4.000s @ 584.250Hz
  - TC 0xF6: expecting 100000Hz, 1969b/4.000s @ 984.250Hz
- - TC 0xF7: expecting 111111Hz, 0b/4.000s @ 1073741823.750Hz
+ - TC 0xF7: expecting 111111Hz, 0b/4.000s @ 0Hz
  - TC 0xF8: expecting 125000Hz, 509b/4.000s @ 254.250Hz
- - TC 0xF9: expecting 142857Hz, 0b/4.000s @ 1073740923.851Hz
- - TC 0xFA: expecting 166666Hz, 0b/4.000s @ 1073741373.801Hz
- - TC 0xFB: expecting 200000Hz, 0b/4.000s @ 1073740698.877Hz
- - TC 0xFC: expecting 250000Hz, 0b/4.000s @ 1073740473.903Hz
- - TC 0xFD: expecting 333333Hz, 0b/4.000s @ 1073740248.929Hz
- - TC 0xFE: expecting 500000Hz, 0b/4.000s @ 1073741598.775Hz
- - TC 0xFF: expecting 1000000Hz, 0b/4.000s @ 1073740698.877Hz
+ - TC 0xF9: expecting 142857Hz, 0b/4.000s @ 0Hz
+ - TC 0xFA: expecting 166666Hz, 0b/4.000s @ 0Hz
+ - TC 0xFB: expecting 200000Hz, 0b/4.000s @ 0Hz
+ - TC 0xFC: expecting 250000Hz, 0b/4.000s @ 0Hz
+ - TC 0xFD: expecting 333333Hz, 0b/4.000s @ 0Hz
+ - TC 0xFE: expecting 500000Hz, 0b/4.000s @ 0Hz
+ - TC 0xFF: expecting 1000000Hz, 0b/4.000s @ 0Hz
 SB 1.x ADPCM 2.6-bit single cycle DSP playback test.
  - TC 0x00: expecting 3906Hz, 1303b/0.992s @ 3938.663Hz
  - TC 0x01: expecting 3921Hz, 1308b/0.991s @ 3959.063Hz
@@ -763,15 +763,15 @@ SB 1.x ADPCM 2.6-bit single cycle DSP playback test.
  - TC 0xF4: expecting 83333Hz, 967b/4.000s @ 724.750Hz
  - TC 0xF5: expecting 90909Hz, 832b/4.000s @ 623.499Hz
  - TC 0xF6: expecting 100000Hz, 1468b/4.000s @ 1100.500Hz
- - TC 0xF7: expecting 111111Hz, 0b/4.000s @ 1073741823.500Hz
+ - TC 0xF7: expecting 111111Hz, 0b/4.000s @ 0Hz
  - TC 0xF8: expecting 125000Hz, 375b/4.000s @ 280.750Hz
- - TC 0xF9: expecting 142857Hz, 0b/4.000s @ 1073740473.653Hz
- - TC 0xFA: expecting 166666Hz, 0b/4.000s @ 1073741148.576Hz
- - TC 0xFB: expecting 200000Hz, 0b/4.000s @ 1073741373.551Hz
- - TC 0xFC: expecting 250000Hz, 0b/4.000s @ 1073741148.576Hz
- - TC 0xFD: expecting 333333Hz, 0b/4.000s @ 1073740248.679Hz
- - TC 0xFE: expecting 500000Hz, 0b/4.000s @ 1073740248.679Hz
- - TC 0xFF: expecting 1000000Hz, 0b/4.000s @ 1073740473.653Hz
+ - TC 0xF9: expecting 142857Hz, 0b/4.000s @ 0Hz
+ - TC 0xFA: expecting 166666Hz, 0b/4.000s @ 0Hz
+ - TC 0xFB: expecting 200000Hz, 0b/4.000s @ 0Hz
+ - TC 0xFC: expecting 250000Hz, 0b/4.000s @ 0Hz
+ - TC 0xFD: expecting 333333Hz, 0b/4.000s @ 0Hz
+ - TC 0xFE: expecting 500000Hz, 0b/4.000s @ 0Hz
+ - TC 0xFF: expecting 1000000Hz, 0b/4.000s @ 0Hz
 SB 1.x ADPCM 2-bit single cycle DSP playback test.
  - TC 0x00: expecting 3906Hz, 977b/0.991s @ 3938.550Hz
  - TC 0x01: expecting 3921Hz, 981b/0.990s @ 3958.934Hz
@@ -1020,12 +1020,12 @@ SB 1.x ADPCM 2-bit single cycle DSP playback test.
  - TC 0xF4: expecting 83333Hz, 719b/4.000s @ 718.249Hz
  - TC 0xF5: expecting 90909Hz, 642b/4.000s @ 641.250Hz
  - TC 0xF6: expecting 100000Hz, 1089b/4.000s @ 1088.248Hz
- - TC 0xF7: expecting 111111Hz, 0b/4.000s @ 1073740248.429Hz
+ - TC 0xF7: expecting 111111Hz, 0b/4.000s @ 0Hz
  - TC 0xF8: expecting 125000Hz, 277b/4.000s @ 276.250Hz
- - TC 0xF9: expecting 142857Hz, 0b/4.000s @ 1073741823.250Hz
- - TC 0xFA: expecting 166666Hz, 0b/4.000s @ 1073740698.377Hz
- - TC 0xFB: expecting 200000Hz, 0b/4.000s @ 1073741823.250Hz
- - TC 0xFC: expecting 250000Hz, 0b/4.000s @ 1073740923.351Hz
- - TC 0xFD: expecting 333333Hz, 0b/4.000s @ 1073740923.351Hz
- - TC 0xFE: expecting 500000Hz, 0b/4.000s @ 1073740923.351Hz
- - TC 0xFF: expecting 1000000Hz, 0b/4.000s @ 1073741598.275Hz
+ - TC 0xF9: expecting 142857Hz, 0b/4.000s @ 0Hz
+ - TC 0xFA: expecting 166666Hz, 0b/4.000s @ 0Hz
+ - TC 0xFB: expecting 200000Hz, 0b/4.000s @ 0Hz
+ - TC 0xFC: expecting 250000Hz, 0b/4.000s @ 0Hz
+ - TC 0xFD: expecting 333333Hz, 0b/4.000s @ 0Hz
+ - TC 0xFE: expecting 500000Hz, 0b/4.000s @ 0Hz
+ - TC 0xFF: expecting 1000000Hz, 0b/4.000s @ 0Hz
