@@ -57,11 +57,16 @@ static inline void uart_8251_command(struct uart_8251 *uart,const unsigned char 
 void raw_input(void) {
     unsigned long countdown_init = T8254_REF_CLOCK_HZ * 2UL;
     unsigned long countdown = countdown_init;
+    unsigned char was_masked = 1;
     unsigned short c,pc;
+
+    if (uart->irq >= 0) {
+        was_masked = p8259_is_masked(uart->irq);
+        p8259_mask(uart->irq);
+    }
 
     c = pc = read_8254(T8254_TIMER_INTERRUPT_TICK);
 
-    _cli();
     while (1) {
         if (uart->irq >= 0)
     		p8259_OCW2(uart->irq,P8259_OCW2_SPECIFIC_EOI | (uart->irq & 7));
@@ -82,7 +87,9 @@ void raw_input(void) {
             if ((signed long)countdown <= 0L) break; /* timeout */
         }
     }
-    _sti();
+
+    if (uart->irq >= 0 && !was_masked)
+        p8259_unmask(uart->irq);
 }
 
 void config_input(void) {
