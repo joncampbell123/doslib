@@ -103,6 +103,12 @@ HW_8250PNP_LIB=$(HW_8250PNP_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)8250pnp.lib
 HW_8250PNP_LIB_DEPENDENCIES=$(HW_8250_LIB)
 HW_8250PNP_LIB_WLINK_LIBRARIES=library $(HW_8250PNP_LIB) library $(HW_8250_LIB)
 
+# HW\8251-----------------------------------------------------------------------------------
+HW_8251_LIB_DIR=$(REL)$(HPS)hw$(HPS)8251
+HW_8251_LIB=$(HW_8251_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)8251.lib
+HW_8251_LIB_DEPENDENCIES=
+HW_8251_LIB_WLINK_LIBRARIES=library $(HW_8251_LIB)
+
 # HW\8254-----------------------------------------------------------------------------------
 HW_8254_LIB_DIR=$(REL)$(HPS)hw$(HPS)8254
 HW_8254_LIB=$(HW_8254_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)8254.lib

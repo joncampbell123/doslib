@@ -60,6 +60,14 @@ int main() {
             c_uart->description ? c_uart->description : "");
     }
 
+    printf("Choice? "); fflush(stdout);
+    c = getch() - '0';
+    printf("\n");
+    if (c < 0 || c >= uart_8251_total()) return 0;
+
+    uart = uart_8251_get(c);
+    printf("You chose '%s' at 0x%02X\n",uart->description ? uart->description : "",uart->base_io);
+
     return 0;
 }
 

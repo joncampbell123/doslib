@@ -4,7 +4,7 @@
 
 struct uart_8251 {
     unsigned short      base_io;        /* if nonzero, exists */
-    unsigned char       mode_byte;      /* if nonzero, mode byte the host programmed the UART with */
+    unsigned char       mode_byte;      /* if nonzero, mode byte the host programmed the UART with. There's no way to READ the mode byte. */
     unsigned int        dont_touch_config:1; /* if nonzero, don't touch baud rate, etc. */
     char*               description;    /* non-NULL if known */
 };
