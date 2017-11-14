@@ -15,10 +15,13 @@
 #include <hw/8251/8251.h>
 #include <hw/dos/doswin.h>
 
-int main() {
-    printf("8251 test program\n");
+struct uart_8251 *uart = NULL;
 
-    /* WARNING: For PC-98 only. Do not run on IBM PC hardware */
+int main() {
+    unsigned int i;
+    int c;
+
+    printf("8251 test program\n");
 
     cpu_probe();        /* ..for the DOS probe routine */
     probe_dos();        /* ..for the Windows detection code */
@@ -37,6 +40,24 @@ int main() {
     if (!init_8251()) {
         printf("Cannot init 8250 library\n");
         return 1;
+    }
+
+    probe_common_8251();
+
+    if (uart_8251_total() == 0) {
+        printf("No 8251 chips found\n");
+        return 1;
+    }
+
+    printf("Pick a UART to play with.\n");
+    for (i=0;i < uart_8251_total();i++) {
+        struct uart_8251 *c_uart = uart_8251_get(i);
+        if (c_uart == NULL) continue;
+
+        printf("  %u: UART at 0x%02X,0x%02X '%s'\n",
+            i,uart_8251_portidx(c_uart->base_io,0),
+            uart_8251_portidx(c_uart->base_io,1),
+            c_uart->description ? c_uart->description : "");
     }
 
     return 0;
