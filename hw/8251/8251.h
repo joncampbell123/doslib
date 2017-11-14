@@ -7,6 +7,7 @@ struct uart_8251 {
     unsigned char       mode_byte;      /* if nonzero, mode byte the host programmed the UART with. There's no way to READ the mode byte. */
     unsigned int        dont_touch_config:1; /* if nonzero, don't touch baud rate, etc. */
     char*               description;    /* non-NULL if known */
+    int8_t              irq;            /* IRQ associated with it, if known, or -1 */
 };
 
 #define MAX_UART_8251       4

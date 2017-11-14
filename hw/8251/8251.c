@@ -26,14 +26,17 @@ void check_8251(unsigned short baseio) {
 
     uart_8251_list[uart_8251_listadd].base_io = baseio;
     uart_8251_list[uart_8251_listadd].mode_byte = 0x00; // unknown
+    uart_8251_list[uart_8251_listadd].irq = -1; // unknown
 
 #ifdef TARGET_PC98
     if (baseio == 0x41/*keyboard*/) {
         uart_8251_list[uart_8251_listadd].dont_touch_config = 1; /* probably not wise to play with 8251 mode of the keyboard */
         uart_8251_list[uart_8251_listadd].description = "PC-98 keyboard UART";
+        uart_8251_list[uart_8251_listadd].irq = 1;
     }
     else if (baseio == 0x30/*RS-232 COM1*/) {
         uart_8251_list[uart_8251_listadd].description = "COM1 RS-232C UART";
+        uart_8251_list[uart_8251_listadd].irq = 3;
     }
 #endif
 
