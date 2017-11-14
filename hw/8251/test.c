@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <dos.h>
 
 #include <hw/cpu/cpu.h>
@@ -28,6 +29,28 @@ static inline unsigned char uart_8251_rxready(struct uart_8251 *uart) {
 
 static inline unsigned char uart_8251_read(struct uart_8251 *uart) {
     return inp(uart_8251_portidx(uart->base_io,0/*data*/));
+}
+
+void uart_8251_reset(struct uart_8251 *uart,unsigned char mode,unsigned char sync1,unsigned char sync2) {
+    const unsigned short prt = uart_8251_portidx(uart->base_io,1/*command/mode*/);
+
+    /* force UART into known state */
+    outp(prt,0x00);
+    outp(prt,0x00);
+    outp(prt,0x00);
+
+    outp(prt,0x40); /* UART reset (bit 6=1) to return to mode format */
+    outp(prt,mode);
+    if ((mode&3) == 0/*SYNC MODE*/) {
+        /* TODO? */
+    }
+}
+
+static inline void uart_8251_command(struct uart_8251 *uart,const unsigned char cmd) {
+    const unsigned short prt = uart_8251_portidx(uart->base_io,1/*command/mode*/);
+
+    /* WARNING: Assumes bit 6 == 0. If bit 6 == 1 you will reset back into mode byte */
+    outp(prt,cmd);
 }
 // END
 
@@ -59,6 +82,78 @@ void raw_input(void) {
             if ((signed long)countdown <= 0L) break; /* timeout */
         }
     }
+    _sti();
+}
+
+void config_input(void) {
+    unsigned long rate;
+    unsigned char b;
+    char tmp[64];
+    int sbits;
+    int bits;
+    char p;
+
+    if (uart->dont_touch_config) {
+        printf("It is not recommended to reconfigure this UART.\n");
+        printf("Hit Y to continue, anything else to cancel.\n");
+
+        if (tolower(getch()) != 'y') return;
+    }
+
+    /* NTS: It seems to be the standard on PC-98 to use the 16X baud rate multiplier, so we do so here. */
+
+    printf("Baud rate? "); fflush(stdout);
+    tmp[0] = 0;
+    fgets(tmp,sizeof(tmp),stdin);
+    rate = atoi(tmp);
+    if (rate < 1 || rate > 115200) return;
+
+    printf("Stop bits? (1=1 2=1.5 3=2) "); fflush(stdout);
+    tmp[0] = 0;
+    fgets(tmp,sizeof(tmp),stdin);
+    sbits = atoi(tmp);
+    if (sbits < 1 || sbits > 3) return;
+
+    printf("Data bits? (5 to 8) "); fflush(stdout);
+    tmp[0] = 0;
+    fgets(tmp,sizeof(tmp),stdin);
+    bits = atoi(tmp);
+    if (bits < 5 || bits > 8) return;
+
+    printf("Parity? (E)ven (O)dd or (N)one "); fflush(stdout);
+    p = tolower(getch());
+    if (!(p == 'e' || p == 'o' || p == 'n')) return;
+
+    /* construct mode byte */
+    b  = (bits - 5) << 2; /* bits [3:2] = character length (0=5 .. 3=8) */
+    if (p == 'e') {
+        b |= 0x30;  /* bits [5:4] = 11 = even parity, enable  (bit 4 is parity enable) */
+    }
+    else if (p == 'o') {
+        b |= 0x10;  /* bits [5:4] = 01 = odd parity, enable  (bit 4 is parity enable) */
+    }
+    else { /* n */
+        /* bits [5:4] = 00 = parity disable */
+    }
+
+    b |= sbits << 6; /* bits [7:6] = stop bits 0=invalid 1=1-bit 2=1.5-bit 3=2-bit */
+    b |= (2 << 0); /* bits [1:0] = 16X baud rate factor (baud rate is 1/16th the clock rate) */
+
+    printf("Using mode byte 0x%02X\n",b);
+
+    _cli();
+    uart_8251_reset(uart,b,0,0);
+    uart_8251_command(uart,0x15); /* error reset | receive enable | transmit enable */
+
+    /* BAUD rate is controlled by PIT timer output 2 (COM1) */
+#ifdef TARGET_PC98
+    if (uart->base_io == 0x30) {
+        unsigned long clk = T8254_REF_CLOCK_HZ / (rate * 16UL/*baud rate times 16*/);
+	    write_8254(T8254_TIMER_RS232,clk,T8254_MODE_2_RATE_GENERATOR);
+        printf("Programming PIT output 2 to set baud rate\n");
+    }
+#endif
+
     _sti();
 }
 
@@ -118,13 +213,16 @@ int main() {
 
     while (1) {
         printf("What do you want to do?\n");
-        printf(" 1. Show raw input\n");
+        printf(" 1. Show raw input   2. Configure device\n");
 
         c = getch();
         if (c == 27) break;
 
         if (c == '1') {
             raw_input();
+        }
+        else if (c == '2') {
+            config_input();
         }
     }
 
