@@ -25,7 +25,7 @@ unsigned short far *TRAM_A = (unsigned short far*)0xA2000000;
 static char hexes[] = "0123456789ABCDEF";
 
 int main(int argc,char **argv) {
-    unsigned short ch = 'A';
+    unsigned short ch,chbase = 0;
     unsigned int x,y,o;
     int c;
 
@@ -38,38 +38,48 @@ int main(int argc,char **argv) {
     for (y=0;y < 25;y++) printf("\n");
     printf("Hit ESC to exit.\n");
 
-    /* what is what, on the side */
-    for (y=0;y < 16;y++) {
-        o = (0 * 80) + ((y + 1) * 2);
-        TRAM_C[o] = hexes[y];
-        TRAM_A[o] = 0xE1;
-
-        o = ((y + 1) * 80) + (0 * 2);
-        TRAM_C[o] = hexes[y];
-        TRAM_A[o] = 0xE1;
-    }
-
     do {
+        /* what is what, on the side */
+        for (y=0;y < 16;y++) {
+            o = (0 * 80) + ((y + 3) * 2);
+            TRAM_C[o] = hexes[y];
+            TRAM_A[o] = 0xE1;
+
+            ch = chbase + (y * 16U);
+            o = ((y + 1) * 80) + (0 * 2);
+            TRAM_C[o] = hexes[(ch>>12U)&0xFU];
+            TRAM_A[o] = 0xE1;
+            o++;
+            TRAM_C[o] = hexes[(ch>>8U)&0xFU];
+            TRAM_A[o] = 0xE1;
+            o++;
+            TRAM_C[o] = hexes[(ch>>4U)&0xFU];
+            TRAM_A[o] = 0xE1;
+            o++;
+            TRAM_C[o] = hexes[(ch>>0U)&0xFU];
+            TRAM_A[o] = 0xE1;
+            o++;
+        }
+
         /* draw directly on text VRAM a 16x16 grid of one character, each attribute */
         for (y=0;y < 16;y++) {
             for (x=0;x < 16;x++) {
-                o = ((y + 1) * 80) + ((x + 1) * 2);
+                o = ((y + 1) * 80) + ((x + 3) * 2);
+                ch = chbase + (y * 16) + x;
                 TRAM_C[o+0] = ch;
                 TRAM_C[o+1] = 0;
-                TRAM_A[o+0] = (y << 4) + x;
-                TRAM_A[o+1] = (y << 4) + x;
+                TRAM_A[o+0] = 0xE1;
+                TRAM_A[o+1] = 0xE1;
             }
         }
 
         /* keyboard input */
         c = getch();
         if (c == 27) break;
-        else if (c == ']') ch += 0x10;
-        else if (c == '}') ch += 0x80;
-        else if (c == '[') ch -= 0x10;
-        else if (c == '{') ch -= 0x80;
-        else if (c == ',') ch--;
-        else if (c == '.') ch++;
+        else if (c == 'u') chbase -= 0x10;
+        else if (c == 'd') chbase += 0x10;
+        else if (c == 'U') chbase -= 0x100;
+        else if (c == 'D') chbase += 0x100;
         else ch = c;
     } while (1);
 
