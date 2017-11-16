@@ -36,7 +36,7 @@ void check_8251(unsigned short baseio) {
     }
     else if (baseio == 0x30/*RS-232 COM1*/) {
         uart_8251_list[uart_8251_listadd].description = "COM1 RS-232C UART";
-        uart_8251_list[uart_8251_listadd].irq = 3;
+        uart_8251_list[uart_8251_listadd].irq = 4;
     }
 #endif
 
