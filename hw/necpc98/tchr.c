@@ -30,6 +30,16 @@ int main(int argc,char **argv) {
     unsigned int x,y,o;
     int c;
 
+    /* NTS: Generally, if you write a doublewide character, the code is taken
+     *      from that cell and continued over the next cell. The next cell
+     *      contents are ignored. Except... that doesn't seem to be strictly
+     *      true for ALL codes. Some codes are fullwidth but will show only
+     *      the first half unless you write the same code twice. Some codes
+     *      you think would make a doublewide code but don't. I'm not sure why.
+     *
+     *      If you see half of a character, try hitting 'f' to toggle filling
+     *      both cells with the same code. */
+
 	printf("NEC PC-98 doslib test program\n");
 	if (!probe_nec_pc98()) {
 		printf("Sorry, your system is not PC-98\n");
