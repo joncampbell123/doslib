@@ -26,6 +26,7 @@ static char hexes[] = "0123456789ABCDEF";
 
 int main(int argc,char **argv) {
     unsigned short ch,chbase = 0;
+    unsigned char chfill = 0;
     unsigned int x,y,o;
     int c;
 
@@ -67,7 +68,7 @@ int main(int argc,char **argv) {
                 o = ((y + 1) * 80) + ((x + 3) * 2);
                 ch = chbase + (y * 16) + x;
                 TRAM_C[o+0] = ch;
-                TRAM_C[o+1] = 0;
+                TRAM_C[o+1] = chfill ? ch : 0;
                 TRAM_A[o+0] = 0xE1;
                 TRAM_A[o+1] = 0xE1;
             }
@@ -80,6 +81,7 @@ int main(int argc,char **argv) {
         else if (c == 'd') chbase += 0x10;
         else if (c == 'U') chbase -= 0x100;
         else if (c == 'D') chbase += 0x100;
+        else if (c == 'f') chfill ^= 1;
         else ch = c;
     } while (1);
 
