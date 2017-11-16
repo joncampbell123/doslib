@@ -51,6 +51,8 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    write_8254_system_timer(0);
+
     for (y=0;y < 25;y++) printf("\n");
     printf("Hit ESC to exit.\n");
 
