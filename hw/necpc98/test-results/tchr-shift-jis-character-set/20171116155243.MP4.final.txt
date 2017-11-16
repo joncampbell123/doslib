@@ -1,0 +1,15 @@
+Run on a PC-9821 laptop.
+
+Captured on a Startech PEXHDCAP which surprisingly locked right onto the mode (when it normally has problems with IBM PC/AT VGA 400-line modes?)
+
+An Av.io USB capture card on the other hand didn't like it and refused to capture it.
+
+Video mode coming from the analog RGB connector was 640x400 56Hz with 24KHz horizontal refresh.
+
+In this GIF I run the TATTR.EXE program to show how display attributes are handled.
+
+Then, I run TCHR.EXE to run through what is shown on the screen for all 65536 possible character code values.
+
+Note that during the run both cells are filled, whether fullwidth or not, to show whether it is rendered
+half or full width. The first run, I use 'f' to toggle between filling in the second cell or not.
+
