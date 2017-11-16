@@ -10,6 +10,7 @@
 #include <dos.h>
 
 #include <hw/dos/dos.h>
+#include <hw/8254/8254.h>
 #include <hw/necpc98/necpc98.h>
 
 #include "isjp_cnv.h" // Shift-JIS converted "This is Japanese" string constant
@@ -26,6 +27,7 @@ static char hexes[] = "0123456789ABCDEF";
 
 int main(int argc,char **argv) {
     unsigned short ch,chbase = 0;
+    unsigned char autorun = 0;
     unsigned char chfill = 0;
     unsigned int x,y,o;
     int c;
@@ -45,6 +47,9 @@ int main(int argc,char **argv) {
 		printf("Sorry, your system is not PC-98\n");
 		return 1;
 	}
+    if (!probe_8254()) {
+        return 1;
+    }
 
     for (y=0;y < 25;y++) printf("\n");
     printf("Hit ESC to exit.\n");
@@ -85,14 +90,29 @@ int main(int argc,char **argv) {
         }
 
         /* keyboard input */
-        c = getch();
+        if (autorun) {
+            if (kbhit())
+                c = getch();
+            else
+                c = -1;
+        }
+        else {
+            c = getch();
+        }
+
         if (c == 27) break;
+        else if (c == 'a') autorun ^= 1;
         else if (c == 'u') chbase -= 0x10;
         else if (c == 'd') chbase += 0x10;
         else if (c == 'U') chbase -= 0x100;
         else if (c == 'D') chbase += 0x100;
         else if (c == 'f') chfill ^= 1;
-        else ch = c;
+        else if (c > 0) ch = c;
+
+        if (autorun) {
+            t8254_wait(t8254_us2ticks(250000/*250ms*/));
+            chbase += 0x100;
+        }
     } while (1);
 
 	return 0;
