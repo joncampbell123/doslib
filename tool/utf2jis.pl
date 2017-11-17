@@ -61,12 +61,14 @@ while ($line = <STDIN>) {
             read(TO,$procret,65536);
             close(TO);
 
+            $cnt = 0;
             $shift_2nd = 0;
             for ($l=0;$l < length($procret);$l++) {
                 $c = substr($procret,$l,1);
                 $o = ord($c);
                 if ($o < 0x20 || $o >= 0x7F || $shift_2nd) {
                     $out .= sprintf("\\x%02x",$o);
+                    $cnt++;
 
                     if ($shift_2nd) {
                         $shift_2nd = 0;
@@ -86,8 +88,8 @@ while ($line = <STDIN>) {
             $procsum .= $proc;
             $procsum .= "\n" if ($quot ne "");
 
-            # leave comments indicating the conversion
-            if ($quot eq "") {
+            # leave comments indicating the conversion if conversion happened
+            if ($quot eq "" && $cnt != 0) {
                 $out .= "/* UTF-8 to Shift-JIS of \"".substr($procsum,0,length($procsum)-1)."\" */";
                 $procsum = "";
             }
