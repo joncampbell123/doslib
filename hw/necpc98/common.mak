@@ -9,6 +9,7 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 TCHR_EXE =	  $(SUBDIR)$(HPS)tchr.$(EXEEXT)
 TATTR_EXE =	  $(SUBDIR)$(HPS)tattr.$(EXEEXT)
 SJIS1_EXE =	  $(SUBDIR)$(HPS)sjis1.$(EXEEXT)
+SJIS2_EXE =	  $(SUBDIR)$(HPS)sjis2.$(EXEEXT)
 
 $(HW_NECPC98_LIB): $(OBJS)
 	wlib -q -b -c $(HW_NECPC98_LIB) -+$(SUBDIR)$(HPS)necpc98.obj
@@ -26,7 +27,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_NECPC98_LIB) .symbolic
 
-exe: $(TEST_EXE) $(TCHR_EXE) $(TATTR_EXE) $(SJIS1_EXE) .symbolic
+exe: $(TEST_EXE) $(TCHR_EXE) $(TATTR_EXE) $(SJIS1_EXE) $(SJIS2_EXE) .symbolic
 
 # FIXME: Need a makefile var here what to run, rather than hard-code the path!! This assumes Linux!
 isjp_cnv.h: isjp_utf.h
@@ -50,6 +51,11 @@ $(TATTR_EXE): $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)ta
 
 $(SJIS1_EXE): isjp_cnv.h $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)sjis1.obj $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
 	%write tmp.cmd option quiet option map=$(SJIS1_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)sjis1.obj $(HW_NECPC98_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(SJIS1_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+
+$(SJIS2_EXE): isjp_cnv.h $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)sjis2.obj $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
+	%write tmp.cmd option quiet option map=$(SJIS2_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)sjis2.obj $(HW_NECPC98_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(SJIS2_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 

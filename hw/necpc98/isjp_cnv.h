@@ -21,3 +21,24 @@
                              "\n" \
     "        \x82\xf1 (n)"/* UTF-8 to Shift-JIS of "\n"\n"        ん (n)" */         "\n"
 
+#define KATAKANA_CHART \
+    "    a   i   u   e   o" "\n" \
+    "  +------------------" "\n" \
+    "  | \x83\x41  \x83\x43  \x83\x45  \x83\x47  \x83\x49"/* UTF-8 to Shift-JIS of "\n"    a   i   u   e   o"\n"  +------------------"\n"  | ア  イ  ウ  エ  オ" */ "\n" \
+    "k | \x83\x4a  \x83\x4c  \x83\x4e  \x83\x50  \x83\x52"/* UTF-8 to Shift-JIS of "\n"k | カ  キ  ク  ケ  コ" */ "\n" \
+    "g | \x83\x4b  \x83\x4d  \x83\x4f  \x83\x51  \x83\x53"/* UTF-8 to Shift-JIS of "\n"g | ガ  ギ  グ  ゲ  ゴ" */ "\n" \
+    "s | \x83\x54  \x83\x56  \x83\x58  \x83\x5a  \x83\x5c"/* UTF-8 to Shift-JIS of "\n"s | サ  シ  ス  セ  ソ" */ "\n" \
+    "z | \x83\x55  \x83\x57  \x83\x59  \x83\x5b  \x83\x5d"/* UTF-8 to Shift-JIS of "\n"z | ザ  ジ  ズ  ゼ  ゾ" */ "\n" \
+    "t | \x83\x5e  \x83\x60  \x83\x63  \x83\x65  \x83\x67"/* UTF-8 to Shift-JIS of "\n"t | タ  チ  ツ  テ  ト" */ "\n" \
+    "d | \x83\x5f  \x83\x61  \x83\x64  \x83\x66  \x83\x68"/* UTF-8 to Shift-JIS of "\n"d | ダ  ヂ  ヅ  デ  ド" */ "\n" \
+    "n | \x83\x69  \x83\x6a  \x83\x6b  \x83\x6c  \x83\x6d"/* UTF-8 to Shift-JIS of "\n"n | ナ  ニ  ヌ  ネ  ノ" */ "\n" \
+    "h | \x83\x6e  \x83\x71  \x83\x74  \x83\x77  \x83\x7a"/* UTF-8 to Shift-JIS of "\n"h | ハ  ヒ  フ  ヘ  ホ" */ "\n" \
+    "b | \x83\x6f  \x83\x72  \x83\x75  \x83\x78  \x83\x7b"/* UTF-8 to Shift-JIS of "\n"b | バ  ビ  ブ  ベ  ボ" */ "\n" \
+    "p | \x83\x70  \x83\x73  \x83\x76  \x83\x79  \x83\x7c"/* UTF-8 to Shift-JIS of "\n"p | パ  ピ  プ  ペ  ポ" */ "\n" \
+    "m | \x83\x7d  \x83\x7e  \x83\x80  \x83\x81  \x83\x82"/* UTF-8 to Shift-JIS of "\n"m | マ  ミ  ム  メ  モ" */ "\n" \
+    "y | \x83\x84      \x83\x86      \x83\x88"/* UTF-8 to Shift-JIS of "\n"y | ヤ      ユ      ヨ" */ "\n" \
+    "r | \x83\x89  \x83\x8a  \x83\x8b  \x83\x8c  \x83\x8d"/* UTF-8 to Shift-JIS of "\n"r | ラ  リ  ル  レ  ロ" */ "\n" \
+    "w | \x83\x8f  \x83\x90      \x83\x91  \x83\x92"/* UTF-8 to Shift-JIS of "\n"w | ワ  ヰ      ヱ  ヲ" */ "\n" \
+                             "\n" \
+    "n           \x83\x93"/* UTF-8 to Shift-JIS of "\n"\n"n           ン" */         "\n"
+

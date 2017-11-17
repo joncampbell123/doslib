@@ -21,7 +21,7 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-	printf(HIRAGANA_CHART "\n");
+	printf(KATAKANA_CHART "\n");
     printf("Is this chart correct?\n");
 	return 0;
 }
