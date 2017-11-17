@@ -68,7 +68,10 @@ while ($line = <STDIN>) {
                 if ($o < 0x20 || $o >= 0x7F || $shift_2nd) {
                     $out .= sprintf("\\x%02x",$o);
 
-                    if (($o >= 0x80 && $o <= 0xA0) || ($o >= 0xE0 && $o <= 0xFF)) {
+                    if ($shift_2nd) {
+                        $shift_2nd = 0;
+                    }
+                    elsif (($o >= 0x80 && $o <= 0xA0) || ($o >= 0xE0 && $o <= 0xFF)) {
                         $shift_2nd = 1; # first byte of double-byte
                     }
                     else {
