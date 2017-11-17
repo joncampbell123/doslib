@@ -40,3 +40,13 @@
                              "\n" \
     "n           ン"         "\n"
 
+/* with humor! */
+#define FULLWIDTH_ENGLISH \
+    "abcdefghijklmnopqrstuvwxyz" "\n" \
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ" "\n" \
+    "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ" "\n" \
+    "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ" "\n" \
+    "\n" \
+    "I like to watch the Ｓｉｍｐｓｏｎｓ and listen to" "\n" \
+    "Ｖａｐｏｒｗａｖｅ for it's Ａｅｓｔｈｅｔｉｃ qualities." "\n"
+
