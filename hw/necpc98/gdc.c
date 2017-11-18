@@ -81,6 +81,8 @@ void raw_entry(void) {
             }
 
             _sti();
+
+            while (getch() != 13);
         }
     } while (1);
 
