@@ -53,10 +53,16 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
-    /* turn on the graphics layer */
+    /* set the graphics mode */
     __asm {
         mov     ah,0x42         ; display area setup
         mov     ch,0xC0         ; 640x400 8-color graphics
+        int     18h
+    }
+
+    /* AH=42h disables graphics layer, turn it on again */
+    __asm {
+        mov     ah,0x40         ; start displaying graphics
         int     18h
     }
 
