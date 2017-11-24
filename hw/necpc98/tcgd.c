@@ -10,7 +10,6 @@
 #include <dos.h>
 
 #include <hw/dos/dos.h>
-#include <hw/8254/8254.h>
 #include <hw/necpc98/necpc98.h>
 
 #include "isjp_cnv.h" // Shift-JIS converted "This is Japanese" string constant
@@ -53,11 +52,6 @@ int main(int argc,char **argv) {
 		printf("Sorry, your system is not PC-98\n");
 		return 1;
 	}
-    if (!probe_8254()) {
-        return 1;
-    }
-
-    write_8254_system_timer(0);
 
     /* turn on the graphics layer */
     __asm {
