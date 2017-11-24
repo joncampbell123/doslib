@@ -12,6 +12,7 @@ TATTR_EXE =	  $(SUBDIR)$(HPS)tattr.$(EXEEXT)
 SJIS1_EXE =	  $(SUBDIR)$(HPS)sjis1.$(EXEEXT)
 SJIS2_EXE =	  $(SUBDIR)$(HPS)sjis2.$(EXEEXT)
 SJIS3_EXE =	  $(SUBDIR)$(HPS)sjis3.$(EXEEXT)
+TCGD_EXE =    $(SUBDIR)$(HPS)tcgd.$(EXEEXT)
 
 $(HW_NECPC98_LIB): $(OBJS)
 	wlib -q -b -c $(HW_NECPC98_LIB) -+$(SUBDIR)$(HPS)necpc98.obj
@@ -29,7 +30,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_NECPC98_LIB) .symbolic
 
-exe: $(TEST_EXE) $(TCHR_EXE) $(TATTR_EXE) $(SJIS1_EXE) $(SJIS2_EXE) $(SJIS3_EXE) $(GDC_EXE) .symbolic
+exe: $(TEST_EXE) $(TCHR_EXE) $(TATTR_EXE) $(SJIS1_EXE) $(SJIS2_EXE) $(SJIS3_EXE) $(GDC_EXE) $(TCGD_EXE) .symbolic
 
 # FIXME: Need a makefile var here what to run, rather than hard-code the path!! This assumes Linux!
 isjp_cnv.h: isjp_utf.h
@@ -68,6 +69,11 @@ $(SJIS3_EXE): isjp_cnv.h $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(SUBD
 
 $(GDC_EXE): isjp_cnv.h $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gdc.obj $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
 	%write tmp.cmd option quiet option map=$(GDC_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)gdc.obj $(HW_NECPC98_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(GDC_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+
+$(TCGD_EXE): $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)tcgd.obj $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
+	%write tmp.cmd option quiet option map=$(TCGD_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)tcgd.obj $(HW_NECPC98_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TCGD_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 
