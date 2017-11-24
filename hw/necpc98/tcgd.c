@@ -66,6 +66,15 @@ int main(int argc,char **argv) {
         int     18h
     }
 
+    /* we want the 8-color mode */
+    outp(0x6A,0x00);
+
+    /* restore the color palette */
+    outp(0xA8,0x37);
+    outp(0xAA,0x15);
+    outp(0xAC,0x26);
+    outp(0xAE,0x04);
+
     ch = 'A';
     for (y=0;y < 25;y++) printf("\n");
     printf("Hit ESC to exit.\n");
