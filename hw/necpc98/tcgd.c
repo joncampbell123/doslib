@@ -53,6 +53,10 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
+    ch = 'A';
+    for (y=0;y < 25;y++) printf("\n");
+    printf("Hit ESC to exit.\n");
+
     /* set the graphics mode */
     __asm {
         mov     ah,0x42         ; display area setup
@@ -60,7 +64,7 @@ int main(int argc,char **argv) {
         int     18h
     }
 
-    /* AH=42h disables graphics layer, turn it on again */
+    /* make sure graphics are showing */
     __asm {
         mov     ah,0x40         ; start displaying graphics
         int     18h
@@ -74,10 +78,6 @@ int main(int argc,char **argv) {
     outp(0xAA,0x15);
     outp(0xAC,0x26);
     outp(0xAE,0x04);
-
-    ch = 'A';
-    for (y=0;y < 25;y++) printf("\n");
-    printf("Hit ESC to exit.\n");
 
     /* main loop */
 #if TARGET_MSDOS == 32
