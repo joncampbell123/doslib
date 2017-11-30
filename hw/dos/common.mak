@@ -39,7 +39,6 @@ TESTSMRT_EXE =$(SUBDIR)$(HPS)testsmrt.$(EXEEXT)
 NTASTRM_EXE = $(SUBDIR)$(HPS)ntastrm.$(EXEEXT)
 !  ifeq TARGET_MSDOS 16
 TESTDPMI_EXE =$(SUBDIR)$(HPS)testdpmi.$(EXEEXT)
-HEXSTDIN_EXE =$(SUBDIR)$(HPS)hexstdin.$(EXEEXT)
 !  endif
 TSTHIMEM_EXE =$(SUBDIR)$(HPS)tsthimem.$(EXEEXT)
 TESTBEXT_EXE =$(SUBDIR)$(HPS)testbext.$(EXEEXT)
@@ -48,6 +47,7 @@ TSTBIOM_EXE = $(SUBDIR)$(HPS)tstbiom.$(EXEEXT)
 TSTLP_EXE =   $(SUBDIR)$(HPS)tstlp.$(EXEEXT)
 ! endif
 !endif
+HEXSTDIN_EXE =$(SUBDIR)$(HPS)hexstdin.$(EXEEXT)
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 CR3_EXE =     $(SUBDIR)$(HPS)cr3.$(EXEEXT)
 
