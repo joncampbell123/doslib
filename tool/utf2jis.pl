@@ -49,6 +49,10 @@ while ($line = <STDIN>) {
                 }
             }
 
+            # GNU iconv has decided that \ cannot be translated.
+            # Makes sense as \ becomes the Yen symbol in SHIFT-JIS.
+            $proc =~ s/\\/\xC2\xA5/g;
+
             # run the string through iconv, hex escape, then carry on
             open(TI,">",$tmp1) || die;
             print TI $proc;
@@ -60,6 +64,9 @@ while ($line = <STDIN>) {
             open(TO,"<",$tmp2) || die;
             read(TO,$procret,65536);
             close(TO);
+
+            # convert Yen back to backslash. Blegh.
+            $proc =~ s/\xC2\xA5/\\/g;
 
             $cnt = 0;
             $shift_2nd = 0;
