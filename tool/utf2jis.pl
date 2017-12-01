@@ -55,7 +55,7 @@ while ($line = <STDIN>) {
             close(TI);
 
             # Use GNU iconv to do charset conversion
-            system("iconv -f UTF-8 -t SHIFT-JIS -o '$tmp2' '$tmp1'") == 0 || die;
+            system("iconv -f UTF-8 -t SHIFT-JIS '$tmp1' >'$tmp2'") == 0 || die;
 
             open(TO,"<",$tmp2) || die;
             read(TO,$procret,65536);
