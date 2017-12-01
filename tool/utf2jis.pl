@@ -17,6 +17,8 @@ my $out;
 my $i,$j;
 my $c;
 
+# WARNING: This script assumes your Perl interpreter allows strings to be handled byte-wise (no charset encoding enforcement)
+
 # fixme: proper tempfile processing!
 my $tmp1 = ".iconv.tmp1";
 my $tmp2 = ".iconv.tmp2";
