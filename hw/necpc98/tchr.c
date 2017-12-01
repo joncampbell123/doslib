@@ -92,12 +92,19 @@ int main(int argc,char **argv) {
             }
         }
 
-        /* show */
-        o = ((16 + 1 + 1) * 80) + 0;
-        TRAM_C[o+0] = 'F';          TRAM_A[o+0] = 0xC1;
-        TRAM_C[o+1] = '0'+chfill;   TRAM_A[o+1] = 0xC1;
-        TRAM_C[o+2] = 'S';          TRAM_A[o+2] = 0xC1;
-        TRAM_C[o+3] = '0'+secret1;  TRAM_A[o+3] = 0xC1;
+        for (x=0;x < 16;x++) {
+            o = ((16 + 1) * 80) + ((x + 3) * 2);
+            TRAM_C[o+0] = (chfill & 1) ? 'F' : 0;
+            TRAM_A[o+0] = 0xC1;
+            TRAM_C[o+1] = (chfill & 2) ? 'F' : 0;
+            TRAM_A[o+1] = 0xC1;
+
+            o = ((16 + 1 + 1) * 80) + ((x + 3) * 2);
+            TRAM_C[o+0] = (secret1 & 1) ? 'S' : 0;
+            TRAM_A[o+0] = 0xC1;
+            TRAM_C[o+1] = (secret1 & 2) ? 'S' : 0;
+            TRAM_A[o+1] = 0xC1;
+        }
 
         /* keyboard input */
         if (autorun) {
