@@ -28,7 +28,8 @@ static char hexes[] = "0123456789ABCDEF";
 int main(int argc,char **argv) {
     unsigned short ch,chbase = 0;
     unsigned char autorun = 0;
-    unsigned char chfill = 0;
+    unsigned char secret1 = 0;
+    unsigned char chfill = 1;
     unsigned int x,y,o;
     int c;
 
@@ -84,12 +85,19 @@ int main(int argc,char **argv) {
             for (x=0;x < 16;x++) {
                 o = ((y + 1) * 80) + ((x + 3) * 2);
                 ch = chbase + (y * 16) + x;
-                TRAM_C[o+0] = ch;
-                TRAM_C[o+1] = chfill ? ch : 0;
-                TRAM_A[o+0] = 0xE1;
-                TRAM_A[o+1] = 0xE1;
+                TRAM_C[o+0] = (chfill & 1) ? ch : 0;
+                TRAM_C[o+1] = (chfill & 2) ? ch : 0;
+                TRAM_A[o+0] = (secret1 & 1) ? 0x00 : 0xE1;
+                TRAM_A[o+1] = (secret1 & 2) ? 0x00 : 0xE1;
             }
         }
+
+        /* show */
+        o = ((16 + 1 + 1) * 80) + 0;
+        TRAM_C[o+0] = 'F';          TRAM_A[o+0] = 0xC1;
+        TRAM_C[o+1] = '0'+chfill;   TRAM_A[o+1] = 0xC1;
+        TRAM_C[o+2] = 'S';          TRAM_A[o+2] = 0xC1;
+        TRAM_C[o+3] = '0'+secret1;  TRAM_A[o+3] = 0xC1;
 
         /* keyboard input */
         if (autorun) {
@@ -104,11 +112,12 @@ int main(int argc,char **argv) {
 
         if (c == 27) break;
         else if (c == 'a') autorun ^= 1;
+        else if (c == 's') secret1 = (secret1 + 1) & 3;
         else if (c == 'u') chbase -= 0x10;
         else if (c == 'd') chbase += 0x10;
         else if (c == 'U') chbase -= 0x100;
         else if (c == 'D') chbase += 0x100;
-        else if (c == 'f') chfill ^= 1;
+        else if (c == 'f') chfill = (chfill + 1) & 3;
         else if (c > 0) ch = c;
 
         if (autorun) {
