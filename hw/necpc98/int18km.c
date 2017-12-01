@@ -33,6 +33,18 @@ static unsigned char int18_getmap(unsigned char i) {
     return r;
 }
 
+static unsigned char int18_shift_sts(void) {
+    unsigned char r=0;
+
+    __asm {
+        mov     ah,0x02
+        int     18h
+        mov     r,al
+    }
+
+    return r;
+}
+
 int main(int argc,char **argv,char **envp) {
     int esc=0;
     int c;
@@ -51,6 +63,7 @@ int main(int argc,char **argv,char **envp) {
 
         printf("\x0D");
         for (c=0;c < 16;c++) printf("%02X ",int18_getmap((unsigned char)c));
+        printf("STS 0x%02x",int18_shift_sts());
         fflush(stdout);
     }
 
