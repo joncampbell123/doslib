@@ -50,3 +50,9 @@
     "I like to watch the Ｓｉｍｐｓｏｎｓ and listen to" "\n" \
     "Ｖａｐｏｒｗａｖｅ for it's Ａｅｓｔｈｅｔｉｃ qualities." "\n"
 
+/* boxes */
+#define BOXES_STR \
+    "┏━━━━━━━━━━━━━━━━━━┓\n" \
+    "┃ Hello with boxes ┃\n" \
+    "┗━━━━━━━━━━━━━━━━━━┛\n"
+

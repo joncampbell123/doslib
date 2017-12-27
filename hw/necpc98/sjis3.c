@@ -22,6 +22,7 @@ int main(int argc,char **argv) {
 	}
 
 	printf(FULLWIDTH_ENGLISH "\n");
+    printf(BOXES_STR "\n");
 	return 0;
 }
 
