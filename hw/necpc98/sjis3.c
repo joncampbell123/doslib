@@ -22,7 +22,14 @@ int main(int argc,char **argv) {
 	}
 
 	printf(FULLWIDTH_ENGLISH "\n");
-    printf(BOXES_STR "\n");
+    printf(BOXES_STR "\n"); /* unfortunately the standard chars are invisible on real hardware */
+
+    /* here's a string using NEC's proprietary code points to draw a box */
+    printf("This box is visible\n");
+    printf("\x86\x52\x86\x44\x86\x44\x86\x44\x86\x44\x86\x44\x86\x44\x86\x44\x86\x56\n");
+    printf("\x86\x46  BOX  \x86\x46\n");
+    printf("\x86\x5A\x86\x44\x86\x44\x86\x44\x86\x44\x86\x44\x86\x44\x86\x44\x86\x5E\n");
+
 	return 0;
 }
 
