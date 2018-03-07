@@ -112,7 +112,7 @@ putc:
     mov         [di+0x2000-2],al; ES:DI = attribute   (STOSW already added 2 to DI)
 %else
     push        ax
-    mov         ah,0x03         ; VGA dark cyan
+    mov         ah,0x0B         ; VGA cyan
     stosw
     pop         ax
 %endif
