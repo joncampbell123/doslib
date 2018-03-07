@@ -52,7 +52,12 @@ start2:
     lea         si,[bx+hexes]       ; SI = hex strings
     add         bx,string2x
 
-    mov         cx,(-S_BASE) / 2
+    mov         cx,2
+
+ploopo:
+    push        cx
+    push        di
+    mov         cx,(-S_BASE) / 2 / 2
 
 ; -----------------------------------
 ; So:
@@ -71,6 +76,11 @@ ploop:
     mov         al,' '
     call        putc
     loop        ploop
+
+    pop         di
+    pop         cx
+    add         di,80*2
+    loop        ploopo
 
 ; STOP
     jmp         short $
