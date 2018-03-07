@@ -107,12 +107,12 @@ putc:
     xor         ah,ah           ; keep upper byte zero, single wide
     stosw
     pop         ax
-    mov         al,0xE1         ; white, not invisible
+    mov         al,0xA1         ; cyan, not invisible
     es
-    mov         [di+0x2000],al  ; ES:DI = attribute
+    mov         [di+0x2000-2],al; ES:DI = attribute   (STOSW already added 2 to DI)
 %else
     push        ax
-    mov         ah,0x07         ; VGA light gray attribute
+    mov         ah,0x03         ; VGA dark cyan
     stosw
     pop         ax
 %endif
