@@ -13,10 +13,10 @@ if [ "$1" == "clean" ]; then
 fi
 
 if [ "$1" == "disk" ]; then
-    make_msdos_data_disk bootibm.dsk || exit 1
+    dd if=/dev/zero          of=bootibm.dsk bs=512 count=2880 || exit 1
     dd if=dos86s/bootrep.com of=bootibm.dsk bs=512 conv=notrunc || exit 1
 
-    make_msdos_data_disk bootpc98.dsk || exit 1
+    dd if=/dev/zero          of=bootpc98.dsk bs=512 count=2880 || exit 1
     dd if=d9886s/bootrep.com of=bootpc98.dsk bs=512 conv=notrunc || exit 1
 fi
 
