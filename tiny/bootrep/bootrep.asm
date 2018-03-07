@@ -73,10 +73,19 @@ ploop:
     call        putc
     mov         al,ah
     call        putc
+
     mov         al,' '
     call        putc
-    loop        ploop
 
+    mov         ax,[bp]
+    add         bp,2
+    call        puthex16
+
+    mov         al,' '
+    call        putc
+
+    loop        ploop
+;-------------------------------------
     pop         di
     pop         cx
     add         di,80*2
@@ -107,6 +116,51 @@ putc:
     stosw
     pop         ax
 %endif
+    ret
+
+; puthex16
+; in:
+; AX = 16-bit value
+; ES:DI = VRAM
+; out:
+; AX = destroyed
+; DI += 2
+puthex16:
+    push        cx
+    mov         cl,4
+
+    rol         ax,cl
+    call        puthex4
+
+    rol         ax,cl
+    call        puthex4
+
+    rol         ax,cl
+    call        puthex4
+
+    rol         ax,cl
+    call        puthex4
+
+    pop         cx
+    ret
+
+; puthex4
+; in:
+; AL = lower 4 bits are digit to print
+; ES:DI = VRAM
+; DS:SI = hexes
+; out:
+; AL = destroyed
+puthex4:
+    push        ax
+    push        bx
+    mov         bl,al
+    and         bl,0xF
+    xor         bh,bh
+    mov         al,[bx+si]
+    pop         bx
+    call        putc
+    pop         ax
     ret
 
 ; strings
