@@ -32,6 +32,8 @@ start2:
     push        ss                  ; -> S_BASE = -26
     push        ax                  ; -> S_BASE = -28   will become SP
 
+    cli                             ; turn off interrupts
+
     mov         bp,sp               ; -> make stack ptr accessible
     lea         ax,[bp-S_BASE]
     mov         [bp],ax             ; -> S_BASE = -28
@@ -43,11 +45,59 @@ start2:
     mov         es,ax
     xor         di,di               ; ES:DI where to write (upper left corner)
 
+    push        cs
+    pop         ds
+
     mov         bx,[bp-2-S_BASE]    ; get IP (the base of our data)
+    lea         si,[bx+hexes]       ; SI = hex strings
     add         bx,string2x
 
-; TODO
+    mov         cx,(-S_BASE) / 2
+
+; -----------------------------------
+; So:
+;   SS:BP = SP + S_BASE = start of struct
+;   ES:DI = video RAM
+;   DS:BX = 2-char strings
+;   DS:SI = &hexes[0]
+;   CX    = count
+; -----------------------------------
+ploop:
+    mov         ax,[bx]
+    add         bx,2
+    call        putc
+    mov         al,ah
+    call        putc
+    mov         al,' '
+    call        putc
+    loop        ploop
+
+; STOP
     jmp         short $
+
+; putc
+; in:
+; AL = char
+; ES:DI = VRAM
+; out:
+; AL = destroyed
+; DI += 2
+putc:
+%ifdef TARGET_PC98
+    push        ax
+    xor         ah,ah           ; keep upper byte zero, single wide
+    stosw
+    pop         ax
+    mov         al,0xE1         ; white, not invisible
+    es
+    mov         [di+0x2000],al  ; ES:DI = attribute
+%else
+    push        ax
+    mov         ah,0x07         ; VGA light gray attribute
+    stosw
+    pop         ax
+%endif
+    ret
 
 ; strings
 string2x:
@@ -55,6 +105,11 @@ string2x:
     db          'CS','FL','BP','DI'
     db          'SI','DX','CX','BX'
     db          'AX','IP'
+
+; hexdump
+hexes:
+    db          '01234567'
+    db          '89ABCDEF'
 
 ; padding
 
