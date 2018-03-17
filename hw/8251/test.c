@@ -123,8 +123,10 @@ void raw_input(void) {
 
 #if TARGET_PC98
         /* Port C controls the interrupt enable bits for the RS-232C 8251 */
-        if (uart->base_io == 0x30) {
-            outp(0x35,(inp(0x35) & (~7)) | ((port_C_masked ^ 7) & 7));
+        if (hookirq) {
+            if (uart->base_io == 0x30) {
+                outp(0x35,(inp(0x35) & (~7)) | ((port_C_masked ^ 7) & 7));
+            }
         }
 #endif
 
