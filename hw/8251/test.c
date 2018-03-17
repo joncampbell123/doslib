@@ -35,6 +35,10 @@ static void interrupt uart_irq() {
     IRQ_counter++;
 }
 
+/* NOTES:
+ *
+ * Polling mode (non interrupt) eventually results in an unresponsive keyboard
+ * on an old PC-9801-UX system, but interrupt mode works fine. Not sure why. */
 void raw_input(void) {
     unsigned long countdown_init = T8254_REF_CLOCK_HZ * 2UL;
     unsigned long countdown = countdown_init;
