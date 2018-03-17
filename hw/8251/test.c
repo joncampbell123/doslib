@@ -18,22 +18,56 @@
 
 struct uart_8251 *uart = NULL;
 
+static char hookirq=0;
+
+static volatile unsigned long IRQ_counter = 0;
+
+static void (interrupt *old_irq)() = NULL;
+static void interrupt uart_irq() {
+    /* clear interrupts, just in case. NTS: the nature of interrupt handlers
+     * on the x86 platform (IF in EFLAGS) ensures interrupts will be reenabled on exit */
+    _cli();
+
+    /* ack PIC */
+    if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+    p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+    IRQ_counter++;
+}
+
 void raw_input(void) {
     unsigned long countdown_init = T8254_REF_CLOCK_HZ * 2UL;
     unsigned long countdown = countdown_init;
+    unsigned long p_IRQ_counter = 0;
     unsigned char was_masked = 1;
     unsigned short c,pc;
 
     if (uart->irq >= 0) {
+        IRQ_counter = 0;
         was_masked = p8259_is_masked(uart->irq);
         p8259_mask(uart->irq);
+
+        if (hookirq) {
+            old_irq = _dos_getvect(irq2int(uart->irq));
+            _dos_setvect(irq2int(uart->irq),uart_irq);
+            if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+            p8259_unmask(uart->irq);
+        }
     }
 
     c = pc = read_8254(T8254_TIMER_INTERRUPT_TICK);
 
     while (1) {
-        if (uart->irq >= 0)
+        if (uart->irq >= 0 && !hookirq)
     		p8259_OCW2(uart->irq,P8259_OCW2_SPECIFIC_EOI | (uart->irq & 7));
+
+        if (hookirq) {
+            unsigned long c = IRQ_counter;
+            if (p_IRQ_counter != c) {
+                p_IRQ_counter  = c;
+                printf("IRQ=%lu ",p_IRQ_counter);
+            }
+        }
 
         uart_8251_command(uart,0x10); /* error reset(4) */
         if (uart_8251_rxready(uart)) {
@@ -54,8 +88,14 @@ void raw_input(void) {
         }
     }
 
-    if (uart->irq >= 0 && !was_masked)
-        p8259_unmask(uart->irq);
+    if (uart->irq >= 0) {
+        p8259_mask(uart->irq);
+
+        if (hookirq) _dos_setvect(irq2int(uart->irq),old_irq);
+
+        if (!was_masked)
+            p8259_unmask(uart->irq);
+    }
 }
 
 void config_input(void) {
@@ -185,8 +225,8 @@ int main() {
     printf("You chose '%s' at 0x%02X\n",uart->description ? uart->description : "",uart->base_io);
 
     while (1) {
-        printf("What do you want to do?\n");
-        printf(" 1. Show raw input   2. Configure device\n");
+        printf("What do you want to do? hookirq=%s\n",hookirq?"yes":"no");
+        printf(" 1. Show raw input   2. Configure device  I. IRQ\n");
 
         c = getch();
         if (c == 27) break;
@@ -196,6 +236,9 @@ int main() {
         }
         else if (c == '2') {
             config_input();
+        }
+        else if (c == 'i') {
+            hookirq = !hookirq;
         }
     }
 
