@@ -53,6 +53,14 @@ static inline unsigned char uart_8251_read(struct uart_8251 *uart) {
     return inp(uart_8251_portidx(uart->base_io,0/*data*/));
 }
 
+static inline unsigned char uart_8251_txready(struct uart_8251 *uart) {
+    return (uart_8251_status(uart) & 0x01/*TxRDY*/);
+}
+
+static inline unsigned char uart_8251_write(struct uart_8251 *uart,unsigned char c) {
+    return outp(uart_8251_portidx(uart->base_io,0/*data*/),c);
+}
+
 static inline void uart_8251_command(struct uart_8251 *uart,const unsigned char cmd) {
     const unsigned short prt = uart_8251_portidx(uart->base_io,1/*command/mode*/);
 
