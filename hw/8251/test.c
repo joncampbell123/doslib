@@ -18,42 +18,6 @@
 
 struct uart_8251 *uart = NULL;
 
-// TODO MOVE
-static inline unsigned char uart_8251_status(struct uart_8251 *uart) {
-    return inp(uart_8251_portidx(uart->base_io,1/*status/mode/command*/));
-}
-
-static inline unsigned char uart_8251_rxready(struct uart_8251 *uart) {
-    return (uart_8251_status(uart) & 0x02/*RxRDY*/);
-}
-
-static inline unsigned char uart_8251_read(struct uart_8251 *uart) {
-    return inp(uart_8251_portidx(uart->base_io,0/*data*/));
-}
-
-void uart_8251_reset(struct uart_8251 *uart,unsigned char mode,unsigned char sync1,unsigned char sync2) {
-    const unsigned short prt = uart_8251_portidx(uart->base_io,1/*command/mode*/);
-
-    /* force UART into known state */
-    outp(prt,0x00);
-    outp(prt,0x00);
-    outp(prt,0x00);
-
-    outp(prt,0x40); /* UART reset (bit 6=1) to return to mode format */
-    outp(prt,mode);
-    if ((mode&3) == 0/*SYNC MODE*/) {
-        /* TODO? */
-    }
-}
-
-static inline void uart_8251_command(struct uart_8251 *uart,const unsigned char cmd) {
-    const unsigned short prt = uart_8251_portidx(uart->base_io,1/*command/mode*/);
-
-    /* WARNING: Assumes bit 6 == 0. If bit 6 == 1 you will reset back into mode byte */
-    outp(prt,cmd);
-}
-// END
-
 void raw_input(void) {
     unsigned long countdown_init = T8254_REF_CLOCK_HZ * 2UL;
     unsigned long countdown = countdown_init;

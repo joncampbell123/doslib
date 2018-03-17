@@ -17,6 +17,7 @@ extern unsigned char uart_8251_listadd;
 
 int init_8251();
 void probe_common_8251();
+void uart_8251_reset(struct uart_8251 *uart,unsigned char mode,unsigned char sync1,unsigned char sync2);
 
 /* base_io + idx */
 static inline unsigned short uart_8251_portidx(unsigned short base,unsigned char idx) {
@@ -38,6 +39,25 @@ static inline struct uart_8251 *uart_8251_get(unsigned char idx) {
         return NULL;
 
     return &uart_8251_list[idx];
+}
+
+static inline unsigned char uart_8251_status(struct uart_8251 *uart) {
+    return inp(uart_8251_portidx(uart->base_io,1/*status/mode/command*/));
+}
+
+static inline unsigned char uart_8251_rxready(struct uart_8251 *uart) {
+    return (uart_8251_status(uart) & 0x02/*RxRDY*/);
+}
+
+static inline unsigned char uart_8251_read(struct uart_8251 *uart) {
+    return inp(uart_8251_portidx(uart->base_io,0/*data*/));
+}
+
+static inline void uart_8251_command(struct uart_8251 *uart,const unsigned char cmd) {
+    const unsigned short prt = uart_8251_portidx(uart->base_io,1/*command/mode*/);
+
+    /* WARNING: Assumes bit 6 == 0. If bit 6 == 1 you will reset back into mode byte */
+    outp(prt,cmd);
 }
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */
