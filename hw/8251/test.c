@@ -39,6 +39,9 @@ void raw_input(void) {
     unsigned long countdown_init = T8254_REF_CLOCK_HZ * 2UL;
     unsigned long countdown = countdown_init;
     unsigned long p_IRQ_counter = 0;
+#if TARGET_PC98
+    unsigned char port_C_masked = 0;
+#endif
     unsigned char was_masked = 1;
     unsigned char rx = 0;
     unsigned short c,pc;
@@ -59,6 +62,14 @@ void raw_input(void) {
 
             if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
             p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+
+#if TARGET_PC98
+            /* Port C controls the interrupt enable bits for the RS-232C 8251 */
+            if (uart->base_io == 0x30) {
+                port_C_masked = (inp(0x35) ^ 7) & 7; /* bits [2:0] = TXRE(2), TXEMPTY(1), RXRE(0) */
+                outp(0x35,(inp(0x35) & (~7)) | 1); /* enable RXRE */
+            }
+#endif
         }
     }
 
@@ -109,6 +120,13 @@ void raw_input(void) {
         p8259_mask(uart->irq);
 
         if (hookirq) _dos_setvect(irq2int(uart->irq),old_irq);
+
+#if TARGET_PC98
+        /* Port C controls the interrupt enable bits for the RS-232C 8251 */
+        if (uart->base_io == 0x30) {
+            outp(0x35,(inp(0x35) & (~7)) | ((port_C_masked ^ 7) & 7));
+        }
+#endif
 
         if (!was_masked)
             p8259_unmask(uart->irq);
