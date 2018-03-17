@@ -114,7 +114,7 @@ void config_input(void) {
 
     _cli();
     uart_8251_reset(uart,b,0,0);
-    uart_8251_command(uart,0x15); /* error reset | receive enable | transmit enable */
+    uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
 
     /* BAUD rate is controlled by PIT timer output 2 (COM1) */
 #ifdef TARGET_PC98
