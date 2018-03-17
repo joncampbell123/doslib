@@ -31,6 +31,7 @@ static void interrupt uart_irq() {
     /* ack PIC */
     if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
     p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+
     IRQ_counter++;
 }
 
@@ -39,6 +40,7 @@ void raw_input(void) {
     unsigned long countdown = countdown_init;
     unsigned long p_IRQ_counter = 0;
     unsigned char was_masked = 1;
+    unsigned char rx = 0;
     unsigned short c,pc;
 
     if (uart->irq >= 0) {
@@ -49,31 +51,46 @@ void raw_input(void) {
         if (hookirq) {
             old_irq = _dos_getvect(irq2int(uart->irq));
             _dos_setvect(irq2int(uart->irq),uart_irq);
+
             if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
             p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+
             p8259_unmask(uart->irq);
+
+            if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
         }
     }
 
     c = pc = read_8254(T8254_TIMER_INTERRUPT_TICK);
 
     while (1) {
+        rx = 0;
         if (uart->irq >= 0 && !hookirq)
     		p8259_OCW2(uart->irq,P8259_OCW2_SPECIFIC_EOI | (uart->irq & 7));
 
         if (hookirq) {
             unsigned long c = IRQ_counter;
+
             if (p_IRQ_counter != c) {
                 p_IRQ_counter  = c;
                 printf("IRQ=%lu ",p_IRQ_counter);
+                fflush(stdout);
+
+                rx = uart_8251_rxready(uart);
+                if (uart_8251_status(uart) & 0x38) /* if frame|overrun|parity error... */
+                    uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
             }
         }
+        else {
+            rx = uart_8251_rxready(uart);
+            if (uart_8251_status(uart) & 0x38) /* if frame|overrun|parity error... */
+                uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
+        }
 
-        uart_8251_command(uart,0x10); /* error reset(4) */
-        if (uart_8251_rxready(uart)) {
+        if (rx) {
             unsigned char c = uart_8251_read(uart);
 
-            uart_8251_command(uart,0x10); /* error reset(4) */
             countdown = countdown_init;
 
             printf("0x%02X ",c);
@@ -96,6 +113,8 @@ void raw_input(void) {
         if (!was_masked)
             p8259_unmask(uart->irq);
     }
+
+    printf("\n");
 }
 
 void config_input(void) {
