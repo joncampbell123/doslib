@@ -35,9 +35,11 @@ void raw_input(void) {
         if (uart->irq >= 0)
     		p8259_OCW2(uart->irq,P8259_OCW2_SPECIFIC_EOI | (uart->irq & 7));
 
+        uart_8251_command(uart,0x10); /* error reset(4) */
         if (uart_8251_rxready(uart)) {
             unsigned char c = uart_8251_read(uart);
 
+            uart_8251_command(uart,0x10); /* error reset(4) */
             countdown = countdown_init;
 
             printf("0x%02X ",c);
