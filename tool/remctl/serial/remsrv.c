@@ -353,11 +353,12 @@ static void interrupt uart_irq() {
     /* clear interrupts, just in case. NTS: the nature of interrupt handlers
      * on the x86 platform (IF in EFLAGS) ensures interrupts will be reenabled on exit */
     _cli();
-    irq_uart_handle_iir(uart);
 
     /* ack PIC */
     if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
     p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+
+    irq_uart_handle_iir(uart);
 
     /* halt here if instructed */
     if (halt_system) halt_system_loop();
