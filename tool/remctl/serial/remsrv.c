@@ -1647,6 +1647,8 @@ int main(int argc,char **argv) {
 
         uart = uart_8251_get(choice);
         if (uart == NULL) return 0;
+
+        if (uart->base_io == 0x41) return 0; /* do not allow keyboard port */
     }
 #else
     probe_8250_bios_ports();
