@@ -1311,8 +1311,6 @@ void do_process_output(void) {
 #ifdef TARGET_PC98
     if (uart_8251_status(uart) & 0x38) /* if frame|overrun|parity error... */
         uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
-
-    outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
 #endif
 
     do {
@@ -1729,9 +1727,7 @@ int main(int argc,char **argv) {
     }
 
 #ifdef TARGET_PC98
-    outp(0x35,(inp(0x35) & (~7)));
-    outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
-
+    outp(0x35,(inp(0x35) & (~7))); /* mask all interrupt lines for a bit while we work here */
     {
         unsigned char bits = 8;
         unsigned char b;
