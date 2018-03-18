@@ -1267,6 +1267,7 @@ void process_input(void) {
     if (uart_8251_status(uart) & 0x38) /* if frame|overrun|parity error... */
         uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
 
+    outp(0x35,(inp(0x35) & (~7)));
     outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
 #endif
 }
@@ -1287,6 +1288,7 @@ void do_process_output(void) {
     if (uart_8251_status(uart) & 0x38) /* if frame|overrun|parity error... */
         uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
 
+    outp(0x35,(inp(0x35) & (~7)));
     outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
 #endif
 
