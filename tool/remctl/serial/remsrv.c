@@ -16,14 +16,25 @@
 #include <hw/dos/doswin.h>
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
-#include <hw/8250/8250.h>
-#include <hw/8250/8250pnp.h>
+
+#ifdef TARGET_PC98
+# include <hw/8251/8251.h>
+#else
+# include <hw/8250/8250.h>
+# include <hw/8250/8250pnp.h>
+#endif
+
 #include <hw/isapnp/isapnp.h>
 #include <hw/flatreal/flatreal.h>
 
 #include "proto.h"
 
+#ifdef TARGET_PC98
+static struct uart_8251 *uart = NULL;
+#else
 static struct info_8250 *uart = NULL;
+#endif
+
 static unsigned long baud_rate = 115200;
 static unsigned long ic_delay_counter = 0;
 static unsigned char use_interrupts = 1;
@@ -120,6 +131,29 @@ void dos_set_dta(const unsigned char far * const dta) {
     }
 }
 
+#ifdef TARGET_PC98
+static void irq_uart_handle_iir(struct uart_8251 *uart) {
+    unsigned char act_reason = 0;
+
+    /* why the interrupt? */
+    /* NOTE: we loop a maximum of 8 times in case the UART we're talking to happens
+     *       to be some cheap knockoff chipset that never clears the IIR register
+     *       when all events are read */
+    /* if there was actually an interrupt, then handle it. loop until all interrupt conditions are depleted */
+    if ((uart_8251_status(uart)&7) != 0) {
+        // 2 = data avail
+        // 1 = transmit empty
+        act_reason = 1;
+    }
+
+    if (act_reason) {
+        uart_waiting_read = 0;
+        uart_waiting_write = 0;
+        process_input();
+        process_output();
+    }
+}
+#else
 /* NOTE: You're supposed to call this function with interrupts disabled,
  *       or from within an interrupt handler in response to the UART's IRQ signal. */
 static void irq_uart_handle_iir(struct info_8250 *uart) {
@@ -158,6 +192,7 @@ static void irq_uart_handle_iir(struct info_8250 *uart) {
         process_output();
     }
 }
+#endif
 
 void halt_system_loop(void) {
     /* interrupts at this point should be disabled */
@@ -215,8 +250,39 @@ static void (interrupt *old_timer_irq)() = NULL;
 static void interrupt timer_irq() {
     if (use_interrupts && uart->irq != -1) {
         unsigned char fix_irq = 0;
+#ifndef TARGET_PC98
         unsigned int i;
+#endif
 
+#ifdef TARGET_PC98
+        if (uart_8251_status(uart)&2) {
+            if ((++uart_waiting_read) >= 9) {
+                uart_waiting_read = 0;
+                fix_irq = 1;
+            }
+        }
+        if (uart_8251_status(uart)&1) {
+            if ((++uart_waiting_write) >= 9) {
+                uart_waiting_write = 0;
+                fix_irq = 1;
+            }
+        }
+
+        if (fix_irq) {
+            _cli();
+            p8259_mask(uart->irq);
+
+            if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+            p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
+
+            outp(0x35,(inp(0x35) & (~7)));
+            outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
+
+            process_input();
+            process_output();
+            p8259_unmask(uart->irq);
+        }
+#else
         if (uart_8250_can_read(uart)) {
             if ((++uart_waiting_read) >= 9) {
                 uart_waiting_read = 0;
@@ -249,6 +315,7 @@ static void interrupt timer_irq() {
             process_output();
             p8259_unmask(uart->irq);
         }
+#endif
     }
 
     /* halt here if instructed */
@@ -1175,10 +1242,18 @@ void process_input(void) {
     }
 
     do {
+#ifdef TARGET_PC98
+        if (!uart_8251_rxready(uart))
+            break;
+
+        ((unsigned char*)(&cur_pkt_in))[cur_pkt_in_write] = uart_8251_read(uart);
+#else
         if (!uart_8250_can_read(uart))
             break;
 
         ((unsigned char*)(&cur_pkt_in))[cur_pkt_in_write] = uart_8250_read(uart);
+#endif
+
         if (cur_pkt_in_write == 0 && cur_pkt_in.hdr.mark != REMCTL_SERIAL_MARK)
             continue;
 
@@ -1187,6 +1262,13 @@ void process_input(void) {
                 break;
         }
     } while(1);
+
+#ifdef TARGET_PC98
+    if (uart_8251_status(uart) & 0x38) /* if frame|overrun|parity error... */
+        uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
+
+    outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
+#endif
 }
 
 void process_output(void) {
@@ -1201,11 +1283,25 @@ void do_process_output(void) {
     if (cur_pkt_out.hdr.mark != REMCTL_SERIAL_MARK)
         return;
 
+#ifdef TARGET_PC98
+    if (uart_8251_status(uart) & 0x38) /* if frame|overrun|parity error... */
+        uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
+
+    outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
+#endif
+
     do {
+#ifdef TARGET_PC98
+        if (!uart_8251_txready(uart))
+            break;
+
+        uart_8251_write(uart,((unsigned char*)(&cur_pkt_out))[cur_pkt_out_write]);
+#else
         if (!uart_8250_can_write(uart))
             break;
 
         uart_8250_write(uart,((unsigned char*)(&cur_pkt_out))[cur_pkt_out_write]);
+#endif
         if ((++cur_pkt_out_write) >= (sizeof(cur_pkt_out.hdr)+cur_pkt_out.hdr.length)) {
             cur_pkt_out_write = 0;
             cur_pkt_out.hdr.mark = 0;
@@ -1221,6 +1317,7 @@ void do_check_io(void) {
     _sti();
 }
 
+#ifndef TARGET_PC98
 /*--------------------------------------------------------------*/
 
 static unsigned char devnode_raw[4096];
@@ -1304,6 +1401,7 @@ case ISAPNP_TAG_FIXED_IO_PORT: {
         }
     }
 }
+#endif
 
 void tsr_exit(void) {
     unsigned short resident_size = 0;
@@ -1471,10 +1569,17 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+#ifdef TARGET_PC98
+    if (!init_8251()) {
+        printf("Cannot init 8251 library\n");
+        return 1;
+    }
+#else
     if (!init_8250()) {
         printf("Cannot init 8250 library\n");
         return 1;
     }
+#endif
 
     /* get my PSP segment */
     my_resident_psp = dos_get_psp();
@@ -1515,6 +1620,33 @@ int main(int argc,char **argv) {
     printf("LOL: %04x:%04x\n",FP_SEG(DOS_LOL),FP_OFF(DOS_LOL));
     printf("PSP: %04x\n",my_resident_psp);
 
+#ifdef TARGET_PC98
+    probe_common_8251();
+
+    {
+        unsigned int i;
+        int choice;
+
+        printf("Which serial port should I use?\n");
+        for (i=0;i < uart_8251_total();i++) {
+            struct uart_8251 *c_uart = uart_8251_get(i);
+            if (c_uart == NULL) continue;
+
+            printf("  %u: UART at 0x%02X,0x%02X '%s'\n",
+                    i,uart_8251_portidx(c_uart->base_io,0),
+                    uart_8251_portidx(c_uart->base_io,1),
+                    c_uart->description ? c_uart->description : "");
+        }
+
+        printf("Choice? "); fflush(stdout);
+        choice = -1;
+        scanf("%d",&choice);
+        if (choice < 0 || choice >= uart_8251_total()) return 0;
+
+        uart = uart_8251_get(choice);
+        if (uart == NULL) return 0;
+    }
+#else
     probe_8250_bios_ports();
 
     {
@@ -1546,6 +1678,7 @@ int main(int argc,char **argv) {
         if (choice < 0 || choice >= base_8250_ports) return 0;
         uart = &info_8250_port[choice];
     }
+#endif
 
     old_int28 = _dos_getvect(0x28);
     _dos_setvect(0x28,my_int28);
@@ -1565,6 +1698,28 @@ int main(int argc,char **argv) {
         }
     }
 
+#ifdef TARGET_PC98
+    outp(0x35,(inp(0x35) & (~7)));
+    outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
+
+    {
+        unsigned char bits = 8;
+        unsigned char b;
+
+        unsigned long clk = T8254_REF_CLOCK_HZ / (baud_rate * 16UL/*baud rate times 16*/);
+	    write_8254(T8254_TIMER_RS232,clk,T8254_MODE_2_RATE_GENERATOR);
+
+        b  = (bits - 5) << 2; /* bits [3:2] = character length (0=5 .. 3=8) */
+        b |= ((stop_bits == 2U) ? 3U : 1U) << 6U;
+        b |= (2 << 0); /* bits [1:0] = 16X baud rate factor (baud rate is 1/16th the clock rate) */
+        b |= 0x10;  /* bits [5:4] = 01 = odd parity, enable  (bit 4 is parity enable) */
+
+        uart_8251_reset(uart,b,0,0);
+        uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
+        uart_8251_reset(uart,b,0,0);
+        uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
+    }
+#else
     uart_8250_enable_interrupt(uart,0); /* disable interrupts (set IER=0) */
     uart_8250_disable_FIFO(uart);
     uart_8250_set_MCR(uart,3);      /* turn on RTS and DTS */
@@ -1610,16 +1765,21 @@ int main(int argc,char **argv) {
             }
         }
     }
+#endif
 
     // main loop
     mainloop();
 
+#ifdef TARGET_PC98
+    outp(0x35,(inp(0x35) & (~7)));
+#else
     // okay, shutdown
     uart_8250_enable_interrupt(uart,0); /* disable interrupts (set IER=0) */
     uart_8250_set_MCR(uart,0);      /* RTS/DTR and aux lines off */
     uart_8250_disable_FIFO(uart);
     uart_8250_set_line_control(uart,UART_8250_LCR_8BIT | UART_8250_LCR_PARITY); /* 8 bit 1 stop bit odd parity */
     uart_8250_set_baudrate(uart,uart_8250_baud_to_divisor(uart,9600));
+#endif
 
     if (uart->irq != -1 && use_interrupts) {
         _dos_setvect(irq2int(uart->irq),old_irq);
