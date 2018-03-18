@@ -77,7 +77,7 @@ void pc98_uart_irq_update(void) {
      *      signal again even if a byte is ready. To keep the ISR working we
      *      must switch the TxEMPTY and TxREADY masks on and off depending on
      *      whether we have data to send */
-    outp(0x35,(inp(0x35) & (~7)) | 1/*RxRDY*/ | (cur_pkt_out.hdr.mark == REMCTL_SERIAL_MARK ? 6/*TxRDY|TxEMPTY*/ : 0));
+    outp(0x35,(inp(0x35) & (~7)) | 1/*RxRDY*/ | (cur_pkt_out.hdr.mark == REMCTL_SERIAL_MARK ? 4/*TxRDY*/ : 0));
 }
 #endif
 
