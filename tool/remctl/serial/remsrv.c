@@ -63,6 +63,24 @@ static struct remctl_serial_packet      cur_pkt_out = {0};
 static unsigned char                    cur_pkt_out_write = 0;      // from 0 to < sizeof(cur_pkt_out)
 static unsigned char                    cur_pkt_out_seq = 0xFF;
 
+#ifdef TARGET_PC98
+void pc98_uart_irq_update(void) {
+    /* NTS: Unlike the IBM PC UARTs, we can't just leave all interrupt signals
+     *      turned on and filter for it, we must selectively enable interrupt
+     *      signal masks for the RS-232 port.
+     *
+     *      Apparently this is the behavior of the Intel 8251 UART.
+     *
+     *      Leaving the RxREADY interrupt signal enabled at all times is fine,
+     *      but TxEMPTY and TxREADY are problematic in that, if the UART signals
+     *      an interrupt for them and we don't send a byte, the UART will not
+     *      signal again even if a byte is ready. To keep the ISR working we
+     *      must switch the TxEMPTY and TxREADY masks on and off depending on
+     *      whether we have data to send */
+    outp(0x35,(inp(0x35) & (~7)) | 1/*RxRDY*/ | (cur_pkt_out.hdr.mark == REMCTL_SERIAL_MARK ? 6/*TxRDY|TxEMPTY*/ : 0));
+}
+#endif
+
 void process_input(void);
 void process_output(void);
 void do_process_output(void);
@@ -152,6 +170,8 @@ static void irq_uart_handle_iir(struct uart_8251 *uart) {
         process_input();
         process_output();
     }
+
+    pc98_uart_irq_update();
 }
 #else
 /* NOTE: You're supposed to call this function with interrupts disabled,
@@ -201,6 +221,9 @@ void halt_system_loop(void) {
         uart_waiting_write = 0;
         process_input();
         process_output();
+#ifdef TARGET_PC98
+        pc98_uart_irq_update();
+#endif
     } while (halt_system);
 }
 
@@ -231,6 +254,9 @@ static void interrupt my_int28() {
     _cli();
     process_input();
     process_output();
+#ifdef TARGET_PC98
+    pc98_uart_irq_update();
+#endif
 
     /* halt here if instructed */
     if (halt_system) halt_system_loop();
@@ -275,11 +301,9 @@ static void interrupt timer_irq() {
             if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
             p8259_OCW2(0,P8259_OCW2_SPECIFIC_EOI | (uart->irq&7));
 
-            outp(0x35,(inp(0x35) & (~7)));
-            outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
-
             process_input();
             process_output();
+            pc98_uart_irq_update();
             p8259_unmask(uart->irq);
         }
 #else
@@ -423,7 +447,12 @@ void send_dta_find(void) {
     _fmemcpy((unsigned char far*)cur_pkt_out.data + 1,(unsigned char far*)my_dta + 21,43 - 21);
     end_output_packet();
 
-    while (has_output()) do_process_output();
+    while (has_output()) {
+        do_process_output();
+#ifdef TARGET_PC98
+        pc98_uart_irq_update();
+#endif
+    }
 }
 
 void do_file_find_command(void) {
@@ -1232,6 +1261,9 @@ int process_input_packet(void) {
     cur_pkt_in.hdr.mark = 0;
     cur_pkt_in_write = 0;
     process_output();
+#ifdef TARGET_PC98
+    pc98_uart_irq_update();
+#endif
     return 0;
 }
 
@@ -1262,13 +1294,6 @@ void process_input(void) {
                 break;
         }
     } while(1);
-
-#ifdef TARGET_PC98
-    if (uart_8251_status(uart) & 0x38) /* if frame|overrun|parity error... */
-        uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
-
-    outp(0x35,(inp(0x35) & (~7)) | 7); /* enable RXRE */
-#endif
 }
 
 void process_output(void) {
@@ -1314,6 +1339,9 @@ void do_check_io(void) {
     _cli();
     process_input();
     process_output();
+#ifdef TARGET_PC98
+    pc98_uart_irq_update();
+#endif
     _sti();
 }
 
@@ -1773,7 +1801,7 @@ int main(int argc,char **argv) {
     mainloop();
 
 #ifdef TARGET_PC98
-    outp(0x35,(inp(0x35) & (~7)));
+    pc98_uart_irq_update();
 #else
     // okay, shutdown
     uart_8250_enable_interrupt(uart,0); /* disable interrupts (set IER=0) */
