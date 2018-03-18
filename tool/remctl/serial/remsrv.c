@@ -1745,6 +1745,7 @@ int main(int argc,char **argv) {
         uart_8251_reset(uart,b,0,0);
         uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
     }
+    pc98_uart_irq_update();
 #else
     uart_8250_enable_interrupt(uart,0); /* disable interrupts (set IER=0) */
     uart_8250_disable_FIFO(uart);
@@ -1798,6 +1799,7 @@ int main(int argc,char **argv) {
 
 #ifdef TARGET_PC98
     pc98_uart_irq_update();
+    outp(0x35,(inp(0x35) & (~7)));
 #else
     // okay, shutdown
     uart_8250_enable_interrupt(uart,0); /* disable interrupts (set IER=0) */
