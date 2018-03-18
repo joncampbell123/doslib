@@ -358,6 +358,16 @@ static void interrupt uart_irq() {
     if (uart->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
     p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
 
+    /* After acknowledging the interrupt, THEN process the data
+     * and possibly call into DOS. There's a reason for this.
+     * On some systems, the RS-232 IRQ might be higher priority
+     * than the disk drive we're trying to access. Failure to
+     * ack the serial IRQ before disk I/O isn't an issue on the
+     * IBM PC because IRQ 15 is higher priority than IRQ 3, BUT
+     * on PC-98 this is vital because IRQ 4 (RS-232C) is higher
+     * priority than the hard drive. Failure to ack our IRQ
+     * prevents the hard drive from working and a long "hang"
+     * within MS-DOS and the BIOS! */
     irq_uart_handle_iir(uart);
 
     /* halt here if instructed */
