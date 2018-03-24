@@ -5244,6 +5244,14 @@ static inline System_Control__response System_Control(uint32_t const Message/*ea
 /*   Type of I/O enumeration, for I/O trap routines             */
 /*                                                              */
 /*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2069 */
+#define IO_Seg_Mask  0xFFFF0000UL /* 0xffff0000 TODO */
+#define IO_Seg_Shift 0x00000010UL /* 0x10 TODO */
+
+/*-------------------------------------------------------------*/
+/* description: */
+/*   Type of I/O enumeration, for I/O trap routines             */
+/*                                                              */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2069 */
 #define Output     0x00000004U /* 1U << 2U bit[2] Output operation */
 #define Word_IO    0x00000008U /* 1U << 3U bit[3] Word size I/O, 16-bit */
 #define Dword_IO   0x00000010U /* 1U << 4U bit[4] Dword size I/O, 32-bit */

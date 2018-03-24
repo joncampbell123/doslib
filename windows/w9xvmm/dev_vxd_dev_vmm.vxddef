@@ -2364,6 +2364,17 @@ def     Dword_Output                0x14
 %enddef
 
 #--------------------------------------
+%defconstenum
+description     Type of I/O enumeration, for I/O trap routines
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2069
+
+#       constant                    value
+def     IO_Seg_Mask                 0xffff0000                    ; TODO
+def     IO_Seg_Shift                0x10                          ; TODO
+%enddef
+
+#--------------------------------------
 %defconstbitfield
 description     Type of I/O enumeration, for I/O trap routines
 description
