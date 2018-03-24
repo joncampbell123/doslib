@@ -2349,6 +2349,21 @@ out             EDX                             out_edx
 %enddef
 
 #--------------------------------------
+%defconstenum
+description     Type of I/O enumeration, for I/O trap routines
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2069
+
+#       constant                    value
+def     Byte_Input                  0x00
+def     Byte_Output                 0x04
+def     Word_Input                  0x08
+def     Word_Output                 0x0C
+def     Dword_Input                 0x10
+def     Dword_Output                0x14
+%enddef
+
+#--------------------------------------
 %defcall
 byname          Simulate_IO
 description     The purpose of this service is to reduce complex I/O instructions to simpler terms.

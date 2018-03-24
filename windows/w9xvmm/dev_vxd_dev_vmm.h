@@ -5228,6 +5228,18 @@ static inline System_Control__response System_Control(uint32_t const Message/*ea
 }
 
 /*-------------------------------------------------------------*/
+/* description: */
+/*   Type of I/O enumeration, for I/O trap routines             */
+/*                                                              */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2069 */
+#define Byte_Input   0x00000000UL /* 0x00 */
+#define Byte_Output  0x00000004UL /* 0x04 */
+#define Word_Input   0x00000008UL /* 0x08 */
+#define Word_Output  0x0000000CUL /* 0x0C */
+#define Dword_Input  0x00000010UL /* 0x10 */
+#define Dword_Output 0x00000014UL /* 0x14 */
+
+/*-------------------------------------------------------------*/
 /* VMM Simulate_IO (VMMCall dev=0x0001 serv=0x0094) WINVER=3.0+ */
 
 /* description: */
