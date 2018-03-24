@@ -2225,3 +2225,30 @@ byname          Set_PM_Exec_Mode
 description     Force the current virtual machine into protected mode. If already in protected mode, this call has no effect.
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Begin_Use_Locked_PM_Stack
+description     Lock the protected mode stack, to prevent demand paging of the stack.
+description
+description     The client VM SS:SP registers are updated with the address of the locked stack, if not already locked.
+description     Otherwise, the client registers are unchanged.
+description
+description     The calling device is responsible for checking that the VM is running in protected mode, according
+description     to VMStat_PM_Exec and the CB_VM_Status field.
+description
+description     Devices are allowed to call this multiple times, only the first call has effect.
+description     Each call increments a counter. If a device locks the stack, it must eventually unlock the
+description     stack using End_Use_Locked_PM_Stack service.
+%enddef
+
+#--------------------------------------
+%defcall
+byname          End_Use_Locked_PM_Stack
+description     Unlock the protected mode stack, when locked by Begin_Use_Locked_PM_Stack.
+description
+description     This call decrements a locked stack counter, and restores the previous VM SS:SP stack pointer
+description     when the counter reaches zero.
+description
+description     If the locked stack counter does not reach zero after this call, the VM's SS:SP stack pointer is unchanged.
+%enddef
+

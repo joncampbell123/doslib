@@ -4956,5 +4956,62 @@ static inline void Set_PM_Exec_Mode(void) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Begin_Use_Locked_PM_Stack (VMMCall dev=0x0001 serv=0x008B) WINVER=3.0+ */
+
+/* description: */
+/*   Lock the protected mode stack, to prevent demand paging of the stack.                                  */
+/*                                                                                                          */
+/*   The client VM SS:SP registers are updated with the address of the locked stack, if not already locked. */
+/*   Otherwise, the client registers are unchanged.                                                         */
+/*                                                                                                          */
+/*   The calling device is responsible for checking that the VM is running in protected mode, according     */
+/*   to VMStat_PM_Exec and the CB_VM_Status field.                                                          */
+/*                                                                                                          */
+/*   Devices are allowed to call this multiple times, only the first call has effect.                       */
+/*   Each call increments a counter. If a device locks the stack, it must eventually unlock the             */
+/*   stack using End_Use_Locked_PM_Stack service.                                                           */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void Begin_Use_Locked_PM_Stack(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Begin_Use_Locked_PM_Stack)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM End_Use_Locked_PM_Stack (VMMCall dev=0x0001 serv=0x008C) WINVER=3.0+ */
+
+/* description: */
+/*   Unlock the protected mode stack, when locked by Begin_Use_Locked_PM_Stack.                                  */
+/*                                                                                                               */
+/*   This call decrements a locked stack counter, and restores the previous VM SS:SP stack pointer               */
+/*   when the counter reaches zero.                                                                              */
+/*                                                                                                               */
+/*   If the locked stack counter does not reach zero after this call, the VM's SS:SP stack pointer is unchanged. */
+
+/* inputs: */
+/*   None */
+
+/* outputs: */
+/*   None */
+
+static inline void End_Use_Locked_PM_Stack(void) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_End_Use_Locked_PM_Stack)
+        : /* outputs */
+        : /* inputs */
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
