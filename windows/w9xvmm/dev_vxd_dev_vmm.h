@@ -5013,5 +5013,50 @@ static inline void End_Use_Locked_PM_Stack(void) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Save_Client_State (VMMCall dev=0x0001 serv=0x008D) WINVER=3.0+ */
+
+/* description: */
+/*   Copy the contents of the current VM's Client_Reg_Struc to the specified buffer. */
+
+/* inputs: */
+/*   EDI = Buffer (Buffer to receive the client state. Must be at least the size of the client reg struct) */
+
+/* outputs: */
+/*   None */
+
+static inline void Save_Client_State(void* const Buffer/*edi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Save_Client_State)
+        : /* outputs */
+        : /* inputs */ "D" (Buffer)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Restore_Client_State (VMMCall dev=0x0001 serv=0x008E) WINVER=3.0+ */
+
+/* description: */
+/*   Restore the contents of the current VM's Client_Reg_Struc from the specified buffer.                              */
+/*                                                                                                                     */
+/*   This will change execution mode if the restore state is different.                                                */
+/*   This may change the state of the interrupt flag, causing the system to call event callbacks previously scheduled. */
+
+/* inputs: */
+/*   ESI = Buffer (Buffer containing the client state, saved from Save_Client_State) */
+
+/* outputs: */
+/*   None */
+
+static inline void Restore_Client_State(const void* const Buffer/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Restore_Client_State)
+        : /* outputs */
+        : /* inputs */ "S" (Buffer)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

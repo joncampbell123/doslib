@@ -2252,3 +2252,22 @@ description
 description     If the locked stack counter does not reach zero after this call, the VM's SS:SP stack pointer is unchanged.
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Save_Client_State
+description     Copy the contents of the current VM's Client_Reg_Struc to the specified buffer.
+
+in              EDI=void*                       Buffer                  ; Buffer to receive the client state. Must be at least the size of the client reg struct
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Restore_Client_State
+description     Restore the contents of the current VM's Client_Reg_Struc from the specified buffer.
+description
+description     This will change execution mode if the restore state is different.
+description     This may change the state of the interrupt flag, causing the system to call event callbacks previously scheduled.
+
+in              ESI=const+void*                 Buffer                  ; Buffer containing the client state, saved from Save_Client_State
+%enddef
+
