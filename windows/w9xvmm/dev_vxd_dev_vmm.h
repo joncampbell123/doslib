@@ -5240,6 +5240,19 @@ static inline System_Control__response System_Control(uint32_t const Message/*ea
 #define Dword_Output 0x00000014UL /* 0x14 */
 
 /*-------------------------------------------------------------*/
+/* description: */
+/*   Type of I/O enumeration, for I/O trap routines             */
+/*                                                              */
+/*   Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2069 */
+#define Output     0x00000004U /* 1U << 2U bit[2] Output operation */
+#define Word_IO    0x00000008U /* 1U << 3U bit[3] Word size I/O, 16-bit */
+#define Dword_IO   0x00000010U /* 1U << 4U bit[4] Dword size I/O, 32-bit */
+#define String_IO  0x00000020U /* 1U << 5U bit[5] Operation is string I/O operation */
+#define Rep_IO     0x00000040U /* 1U << 6U bit[6] Operation is rep string I/O operation */
+#define Addr_32_IO 0x00000080U /* 1U << 7U bit[7] Operation uses 32-bit addresses */
+#define Reverse_IO 0x00000100U /* 1U << 8U bit[8] Operation is reverse string (DF=1) */
+
+/*-------------------------------------------------------------*/
 /* VMM Simulate_IO (VMMCall dev=0x0001 serv=0x0094) WINVER=3.0+ */
 
 /* description: */

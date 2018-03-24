@@ -2364,6 +2364,24 @@ def     Dword_Output                0x14
 %enddef
 
 #--------------------------------------
+%defconstbitfield
+description     Type of I/O enumeration, for I/O trap routines
+description
+description     Source: Windows 3.1 DDK, D:\386\INCLUDE\VMM.INC, line 2069
+
+#                                               default=1   default=(1<<width)-1
+#       constant                    bit number  bit width   value   comment
+def     Output                      2                             ; Output operation
+def     Word_IO                     3                             ; Word size I/O, 16-bit
+def     Dword_IO                    4                             ; Dword size I/O, 32-bit
+
+def     String_IO                   5                             ; Operation is string I/O operation
+def     Rep_IO                      6                             ; Operation is rep string I/O operation
+def     Addr_32_IO                  7                             ; Operation uses 32-bit addresses
+def     Reverse_IO                  8                             ; Operation is reverse string (DF=1)
+%enddef
+
+#--------------------------------------
 %defcall
 byname          Simulate_IO
 description     The purpose of this service is to reduce complex I/O instructions to simpler terms.
