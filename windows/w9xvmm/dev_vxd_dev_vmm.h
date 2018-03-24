@@ -5318,5 +5318,79 @@ static inline uint32_t Simulate_IO(uint32_t const Data/*eax*/,vxd_vm_handle_t co
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Install_Mult_IO_Handlers (VMMCall dev=0x0001 serv=0x0095) WINVER=3.0+ */
+
+/* description: */
+/*   Install I/O callback procedures for one or more I/O ports.          */
+/*   This service is only available during initialization.               */
+/*                                                                       */
+/*   The I/O table must be created in code using the Begin_Vxd_IO_Table, */
+/*   End_Vxd_IO_Table, and Vxd_IO macros.                                */
+
+/* inputs: */
+/*   EDI = IOTable (pointer to a table created using IO table macros) */
+
+/* outputs: */
+/*   EDX = BadPort (if failed, the port number that failed) */
+/*   !CF = Success (CF set if failed, nonzero if success) */
+
+typedef struct Install_Mult_IO_Handlers__response {
+    uint32_t BadPort; /* EDX */
+    _Bool Success; /* !CF */
+} Install_Mult_IO_Handlers__response;
+
+static inline Install_Mult_IO_Handlers__response Install_Mult_IO_Handlers(const void* const IOTable/*edi*/) {
+    register Install_Mult_IO_Handlers__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Install_Mult_IO_Handlers)
+        : /* outputs */ "=d" (r.BadPort), "=@ccnc" (r.Success)
+        : /* inputs */ "D" (IOTable)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Install_IO_Handler (VMMCall dev=0x0001 serv=0x0096) WINVER=3.0+ */
+
+/* description: */
+/*   Install a callback procedure for trapping I/O ports and enables trapping for the specific port. */
+/*   This service is only available during initialization.                                           */
+/*                                                                                                   */
+/*   The callback procedure is called when a program in a virtual machine attempts to access the     */
+/*   I/O port.                                                                                       */
+/*                                                                                                   */
+/*   When called:                                                                                    */
+/*   EBX = VM                                                                                        */
+/*   ECX = IOType                                                                                    */
+/*   EDX = Port                                                                                      */
+/*   EBP = pointer to Client_Reg_Struc                                                               */
+/*   EAX = Data                                                                                      */
+/*   call [IOCallback]                                                                               */
+/*   Data = EAX                                                                                      */
+
+/* inputs: */
+/*   ESI = IOCallback (Callback procedure) */
+/*   EDX = Port (I/O port) */
+
+/* outputs: */
+/*   !CF = CF set if failed, nonzero if success */
+
+static inline _Bool Install_IO_Handler(const void* const IOCallback/*esi*/,uint32_t const Port/*edx*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Install_IO_Handler)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "S" (IOCallback), "d" (Port)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

@@ -2424,3 +2424,42 @@ in              EBP=void*                       crs                     ; Pointe
 out             EAX                             .                       ; input data, if input operation
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Install_Mult_IO_Handlers
+description     Install I/O callback procedures for one or more I/O ports.
+description     This service is only available during initialization.
+description
+description     The I/O table must be created in code using the Begin_Vxd_IO_Table,
+description     End_Vxd_IO_Table, and Vxd_IO macros.
+
+in              EDI=const+void*                 IOTable                 ; pointer to a table created using IO table macros
+
+out             EDX                             BadPort                 ; if failed, the port number that failed
+out             !CF                             Success                 ; CF set if failed, nonzero if success
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Install_IO_Handler
+description     Install a callback procedure for trapping I/O ports and enables trapping for the specific port.
+description     This service is only available during initialization.
+description
+description     The callback procedure is called when a program in a virtual machine attempts to access the
+description     I/O port.
+description
+description     When called:
+description     EBX = VM
+description     ECX = IOType
+description     EDX = Port
+description     EBP = pointer to Client_Reg_Struc
+description     EAX = Data
+description     call [IOCallback]
+description     Data = EAX
+
+in              ESI=const+void*                 IOCallback              ; Callback procedure
+in              EDX                             Port                    ; I/O port
+
+out             !CF                             .                       ; CF set if failed, nonzero if success
+%enddef
+
