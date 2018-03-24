@@ -5227,5 +5227,35 @@ static inline System_Control__response System_Control(uint32_t const Message/*ea
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Simulate_IO (VMMCall dev=0x0001 serv=0x0094) WINVER=3.0+ */
+
+/* description: */
+/*   The purpose of this service is to reduce complex I/O instructions to simpler terms.                 */
+/*   I/O callback procedures will jump to this service to handle I/O types it does not directly support. */
+
+/* inputs: */
+/*   EAX = Data (data, for output operation) */
+/*   EBX = VM (current VM handle) */
+/*   ECX = IOType (I/O type, as given to callback) */
+/*   EDX = Port (I/O port) */
+/*   EBP = crs (Pointer to Client_Reg_Struc) */
+
+/* outputs: */
+/*   EAX = input data, if input operation */
+
+static inline uint32_t Simulate_IO(uint32_t const Data/*eax*/,vxd_vm_handle_t const VM/*ebx*/,uint32_t const IOType/*ecx*/,uint32_t const Port/*edx*/,void* const crs/*ebp*/) {
+    register uint32_t r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Simulate_IO)
+        : /* outputs */ "=a" (r)
+        : /* inputs */ "a" (Data), "b" (VM), "c" (IOType), "d" (Port), "" (crs)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

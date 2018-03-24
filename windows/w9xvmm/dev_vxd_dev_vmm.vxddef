@@ -2348,3 +2348,18 @@ out             EDI                             out_edi
 out             EDX                             out_edx
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Simulate_IO
+description     The purpose of this service is to reduce complex I/O instructions to simpler terms.
+description     I/O callback procedures will jump to this service to handle I/O types it does not directly support.
+
+in              EAX                             Data                    ; data, for output operation
+in              EBX=vxd_vm_handle_t             VM                      ; current VM handle
+in              ECX                             IOType                  ; I/O type, as given to callback
+in              EDX                             Port                    ; I/O port
+in              EBP=void*                       crs                     ; Pointer to Client_Reg_Struc
+
+out             EAX                             .                       ; input data, if input operation
+%enddef
+
