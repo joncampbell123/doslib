@@ -2329,3 +2329,22 @@ out             ESI=const+void*                 PreviousCallback        ; previo
 out             !CF                             Success                 ; CF set if error, return value nonzero if success
 %enddef
 
+#--------------------------------------
+%defcall
+byname          System_Control
+description     This service sends a system control message to all virtual devices and the VMM
+
+in              EAX                             Message                 ; system control message
+in              EBX=vxd_vm_handle_t             VM                      ; VM handle, if needed by message
+in              ESI                             Param1
+in              EDI                             Param2
+in              EDX                             Param3
+
+out             !CF                             Success                 ; CF set if error, return value nonzero if success
+out             EAX                             out_eax
+out             EBX                             out_ebx
+out             ESI                             out_esi
+out             EDI                             out_edi
+out             EDX                             out_edx
+%enddef
+

@@ -5184,5 +5184,48 @@ static inline Hook_Device_PM_API__response Hook_Device_PM_API(uint32_t const ID/
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM System_Control (VMMCall dev=0x0001 serv=0x0093) WINVER=3.0+ */
+
+/* description: */
+/*   This service sends a system control message to all virtual devices and the VMM */
+
+/* inputs: */
+/*   EAX = Message (system control message) */
+/*   EBX = VM (VM handle, if needed by message) */
+/*   ESI = Param1 () */
+/*   EDI = Param2 () */
+/*   EDX = Param3 () */
+
+/* outputs: */
+/*   !CF = Success (CF set if error, return value nonzero if success) */
+/*   EBX = out_ebx () */
+/*   EDI = out_edi () */
+/*   EDX = out_edx () */
+/*   EAX = out_eax () */
+/*   ESI = out_esi () */
+
+typedef struct System_Control__response {
+    _Bool Success; /* !CF */
+    uint32_t out_eax; /* EAX */
+    uint32_t out_ebx; /* EBX */
+    uint32_t out_esi; /* ESI */
+    uint32_t out_edi; /* EDI */
+    uint32_t out_edx; /* EDX */
+} System_Control__response;
+
+static inline System_Control__response System_Control(uint32_t const Message/*eax*/,vxd_vm_handle_t const VM/*ebx*/,uint32_t const Param1/*esi*/,uint32_t const Param2/*edi*/,uint32_t const Param3/*edx*/) {
+    register System_Control__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_System_Control)
+        : /* outputs */ "=@ccnc" (r.Success), "=b" (r.out_ebx), "=D" (r.out_edi), "=d" (r.out_edx), "=a" (r.out_eax), "=S" (r.out_esi)
+        : /* inputs */ "a" (Message), "b" (VM), "S" (Param1), "D" (Param2), "d" (Param3)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/
