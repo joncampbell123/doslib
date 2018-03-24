@@ -5085,5 +5085,36 @@ static inline void Exec_VxD_Int(uint32_t const Interrupt/*__cdecl0*/) {
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Hook_Device_Service (VMMCall dev=0x0001 serv=0x0090) WINVER=3.0+ */
+
+/* description: */
+/*   This service allows a device to monitor or replace the services of another virtual device. */
+/*   The hook should preserve the full functionality of the virtual device being hooked.        */
+/*   More than one virtual device can hook a service. The last hook installed is called first.  */
+/*   The hook procedure must save and restore registers that are not modified by the service,   */
+/*   including flags. If the service uses the C calling convention, the hook procedure must     */
+/*   preserve those across the call as well.                                                    */
+
+/* inputs: */
+/*   EAX = Service (service to hook) */
+/*   ESI = HookProc (hook procedure) */
+
+/* outputs: */
+/*   !CF = set if error */
+
+static inline _Bool Hook_Device_Service(uint32_t const Service/*eax*/,const void* const HookProc/*esi*/) {
+    register _Bool r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_Device_Service)
+        : /* outputs */ "=@ccnc" (r)
+        : /* inputs */ "a" (Service), "S" (HookProc)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

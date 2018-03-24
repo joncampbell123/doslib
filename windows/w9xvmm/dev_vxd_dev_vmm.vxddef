@@ -2285,3 +2285,19 @@ cdecl           Interrupt
 in              __cdecl                         Interrupt               ; Interrupt number to call
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Hook_Device_Service
+description     This service allows a device to monitor or replace the services of another virtual device.
+description     The hook should preserve the full functionality of the virtual device being hooked.
+description     More than one virtual device can hook a service. The last hook installed is called first.
+description     The hook procedure must save and restore registers that are not modified by the service,
+description     including flags. If the service uses the C calling convention, the hook procedure must
+description     preserve those across the call as well.
+
+in              EAX                             Service                 ; service to hook
+in              ESI=const+void*                 HookProc                ; hook procedure
+
+out             !CF                             .                       ; set if error
+%enddef
+
