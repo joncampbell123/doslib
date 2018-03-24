@@ -2298,6 +2298,34 @@ description     preserve those across the call as well.
 in              EAX                             Service                 ; service to hook
 in              ESI=const+void*                 HookProc                ; hook procedure
 
-out             !CF                             .                       ; set if error
+out             !CF                             .                       ; CF set if error, so return value nonzero if success
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Hook_Device_V86_API
+description     Installs an API callback procedure that allows a virtual device to intercept calls to
+description     the V86 mode API of another device. This is meant for devices that need to monitor calls
+description     to the APIs of other devices.
+
+in              EAX                             ID                      ; device ID
+in              ESI=const+void*                 Callback                ; API callback
+
+out             ESI=const+void*                 PreviousCallback        ; previous callback if success
+out             !CF                             Success                 ; CF set if error, return value nonzero if success
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Hook_Device_PM_API
+description     Installs an API callback procedure that allows a virtual device to intercept calls to
+description     the protected mode API of another device. This is meant for devices that need to monitor calls
+description     to the APIs of other devices.
+
+in              EAX                             ID                      ; device ID
+in              ESI=const+void*                 Callback                ; API callback
+
+out             ESI=const+void*                 PreviousCallback        ; previous callback if success
+out             !CF                             Success                 ; CF set if error, return value nonzero if success
 %enddef
 

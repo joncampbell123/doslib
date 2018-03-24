@@ -5101,7 +5101,7 @@ static inline void Exec_VxD_Int(uint32_t const Interrupt/*__cdecl0*/) {
 /*   ESI = HookProc (hook procedure) */
 
 /* outputs: */
-/*   !CF = set if error */
+/*   !CF = CF set if error, so return value nonzero if success */
 
 static inline _Bool Hook_Device_Service(uint32_t const Service/*eax*/,const void* const HookProc/*esi*/) {
     register _Bool r;
@@ -5110,6 +5110,74 @@ static inline _Bool Hook_Device_Service(uint32_t const Service/*eax*/,const void
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_Device_Service)
         : /* outputs */ "=@ccnc" (r)
         : /* inputs */ "a" (Service), "S" (HookProc)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Hook_Device_V86_API (VMMCall dev=0x0001 serv=0x0091) WINVER=3.0+ */
+
+/* description: */
+/*   Installs an API callback procedure that allows a virtual device to intercept calls to    */
+/*   the V86 mode API of another device. This is meant for devices that need to monitor calls */
+/*   to the APIs of other devices.                                                            */
+
+/* inputs: */
+/*   EAX = ID (device ID) */
+/*   ESI = Callback (API callback) */
+
+/* outputs: */
+/*   !CF = Success (CF set if error, return value nonzero if success) */
+/*   ESI = PreviousCallback (previous callback if success) */
+
+typedef struct Hook_Device_V86_API__response {
+    const void* PreviousCallback; /* ESI */
+    _Bool Success; /* !CF */
+} Hook_Device_V86_API__response;
+
+static inline Hook_Device_V86_API__response Hook_Device_V86_API(uint32_t const ID/*eax*/,const void* const Callback/*esi*/) {
+    register Hook_Device_V86_API__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_Device_V86_API)
+        : /* outputs */ "=@ccnc" (r.Success), "=S" (r.PreviousCallback)
+        : /* inputs */ "a" (ID), "S" (Callback)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Hook_Device_PM_API (VMMCall dev=0x0001 serv=0x0092) WINVER=3.0+ */
+
+/* description: */
+/*   Installs an API callback procedure that allows a virtual device to intercept calls to          */
+/*   the protected mode API of another device. This is meant for devices that need to monitor calls */
+/*   to the APIs of other devices.                                                                  */
+
+/* inputs: */
+/*   EAX = ID (device ID) */
+/*   ESI = Callback (API callback) */
+
+/* outputs: */
+/*   !CF = Success (CF set if error, return value nonzero if success) */
+/*   ESI = PreviousCallback (previous callback if success) */
+
+typedef struct Hook_Device_PM_API__response {
+    const void* PreviousCallback; /* ESI */
+    _Bool Success; /* !CF */
+} Hook_Device_PM_API__response;
+
+static inline Hook_Device_PM_API__response Hook_Device_PM_API(uint32_t const ID/*eax*/,const void* const Callback/*esi*/) {
+    register Hook_Device_PM_API__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_Device_PM_API)
+        : /* outputs */ "=@ccnc" (r.Success), "=S" (r.PreviousCallback)
+        : /* inputs */ "a" (ID), "S" (Callback)
         : /* clobbered */
     );
 
