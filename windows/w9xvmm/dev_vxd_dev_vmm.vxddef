@@ -2283,6 +2283,23 @@ description     This service should not be called directly, but only from inline
 cdecl           Interrupt
 
 in              __cdecl                         Interrupt               ; Interrupt number to call
+
+in              EAX                             in_eax                  ; EAX input
+in              EBX                             in_ebx                  ; EBX input
+in              ECX                             in_ecx                  ; ECX input
+in              EDX                             in_edx                  ; EDX input
+in              ESI                             in_esi                  ; ESI input
+in              EDI                             in_edi                  ; EDI input
+
+out             EAX                             out_eax                 ; EAX output
+out             EBX                             out_ebx                 ; EBX output
+out             ECX                             out_ecx                 ; ECX output
+out             EDX                             out_edx                 ; EDX output
+out             ESI                             out_esi                 ; ESI output
+out             EDI                             out_edi                 ; EDI output
+
+out             CF                              out_cf                  ; CF flag output
+out             ZF                              out_zf                  ; ZF flag output
 %enddef
 
 #--------------------------------------

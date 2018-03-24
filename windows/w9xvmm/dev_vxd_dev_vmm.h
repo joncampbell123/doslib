@@ -5070,19 +5070,47 @@ static inline void Restore_Client_State(const void* const Buffer/*esi*/) {
 
 /* inputs: */
 /*   __CDECL0 = Interrupt (Interrupt number to call) */
+/*   EAX = in_eax (EAX input) */
+/*   EBX = in_ebx (EBX input) */
+/*   ECX = in_ecx (ECX input) */
+/*   EDX = in_edx (EDX input) */
+/*   ESI = in_esi (ESI input) */
+/*   EDI = in_edi (EDI input) */
 
 /* outputs: */
-/*   None */
+/*   CF = out_cf (CF flag output) */
+/*   EDX = out_edx (EDX output) */
+/*   ESI = out_esi (ESI output) */
+/*   EBX = out_ebx (EBX output) */
+/*   EDI = out_edi (EDI output) */
+/*   ECX = out_ecx (ECX output) */
+/*   EAX = out_eax (EAX output) */
+/*   ZF = out_zf (ZF flag output) */
 
-static inline void Exec_VxD_Int(uint32_t const Interrupt/*__cdecl0*/) {
+typedef struct Exec_VxD_Int__response {
+    uint32_t out_eax; /* EAX */
+    uint32_t out_ebx; /* EBX */
+    uint32_t out_ecx; /* ECX */
+    uint32_t out_edx; /* EDX */
+    uint32_t out_esi; /* ESI */
+    uint32_t out_edi; /* EDI */
+    _Bool out_cf; /* CF */
+    _Bool out_zf; /* ZF */
+} Exec_VxD_Int__response;
+
+static inline Exec_VxD_Int__response Exec_VxD_Int(uint32_t const Interrupt/*__cdecl0*/,uint32_t const in_eax/*eax*/,uint32_t const in_ebx/*ebx*/,uint32_t const in_ecx/*ecx*/,uint32_t const in_edx/*edx*/,uint32_t const in_esi/*esi*/,uint32_t const in_edi/*edi*/) {
+    register Exec_VxD_Int__response r;
+
     __asm__ (
-        "push %0\n"
+        "push %8\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Exec_VxD_Int)
         "addl $4,%%esp\n"
-        : /* outputs */
-        : /* inputs */ "g" (Interrupt)
+        : /* outputs */ "=@ccc" (r.out_cf), "=d" (r.out_edx), "=S" (r.out_esi), "=b" (r.out_ebx), "=D" (r.out_edi), "=c" (r.out_ecx), "=a" (r.out_eax), "=@ccz" (r.out_zf)
+        : /* inputs */ "g" (Interrupt), "a" (in_eax), "b" (in_ebx), "c" (in_ecx), "d" (in_edx), "S" (in_esi), "D" (in_edi)
         : /* clobbered */
     );
+
+    return r;
 }
 
 /*-------------------------------------------------------------*/
@@ -5129,8 +5157,8 @@ static inline _Bool Hook_Device_Service(uint32_t const Service/*eax*/,const void
 /*   ESI = Callback (API callback) */
 
 /* outputs: */
-/*   !CF = Success (CF set if error, return value nonzero if success) */
 /*   ESI = PreviousCallback (previous callback if success) */
+/*   !CF = Success (CF set if error, return value nonzero if success) */
 
 typedef struct Hook_Device_V86_API__response {
     const void* PreviousCallback; /* ESI */
@@ -5142,7 +5170,7 @@ static inline Hook_Device_V86_API__response Hook_Device_V86_API(uint32_t const I
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_Device_V86_API)
-        : /* outputs */ "=@ccnc" (r.Success), "=S" (r.PreviousCallback)
+        : /* outputs */ "=S" (r.PreviousCallback), "=@ccnc" (r.Success)
         : /* inputs */ "a" (ID), "S" (Callback)
         : /* clobbered */
     );
@@ -5163,8 +5191,8 @@ static inline Hook_Device_V86_API__response Hook_Device_V86_API(uint32_t const I
 /*   ESI = Callback (API callback) */
 
 /* outputs: */
-/*   !CF = Success (CF set if error, return value nonzero if success) */
 /*   ESI = PreviousCallback (previous callback if success) */
+/*   !CF = Success (CF set if error, return value nonzero if success) */
 
 typedef struct Hook_Device_PM_API__response {
     const void* PreviousCallback; /* ESI */
@@ -5176,7 +5204,7 @@ static inline Hook_Device_PM_API__response Hook_Device_PM_API(uint32_t const ID/
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Hook_Device_PM_API)
-        : /* outputs */ "=@ccnc" (r.Success), "=S" (r.PreviousCallback)
+        : /* outputs */ "=S" (r.PreviousCallback), "=@ccnc" (r.Success)
         : /* inputs */ "a" (ID), "S" (Callback)
         : /* clobbered */
     );
@@ -5198,12 +5226,12 @@ static inline Hook_Device_PM_API__response Hook_Device_PM_API(uint32_t const ID/
 /*   EDX = Param3 () */
 
 /* outputs: */
+/*   EDX = out_edx () */
+/*   ESI = out_esi () */
 /*   !CF = Success (CF set if error, return value nonzero if success) */
 /*   EBX = out_ebx () */
 /*   EDI = out_edi () */
-/*   EDX = out_edx () */
 /*   EAX = out_eax () */
-/*   ESI = out_esi () */
 
 typedef struct System_Control__response {
     _Bool Success; /* !CF */
@@ -5219,7 +5247,7 @@ static inline System_Control__response System_Control(uint32_t const Message/*ea
 
     __asm__ (
         VXD_AsmCall(VMM_Device_ID,VMM_snr_System_Control)
-        : /* outputs */ "=@ccnc" (r.Success), "=b" (r.out_ebx), "=D" (r.out_edi), "=d" (r.out_edx), "=a" (r.out_eax), "=S" (r.out_esi)
+        : /* outputs */ "=d" (r.out_edx), "=S" (r.out_esi), "=@ccnc" (r.Success), "=b" (r.out_ebx), "=D" (r.out_edi), "=a" (r.out_eax)
         : /* inputs */ "a" (Message), "b" (VM), "S" (Param1), "D" (Param2), "d" (Param3)
         : /* clobbered */
     );
