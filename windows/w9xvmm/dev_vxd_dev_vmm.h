@@ -5063,53 +5063,26 @@ static inline void Restore_Client_State(const void* const Buffer/*esi*/) {
 
 /* description: */
 /*   Execute the specified software interrupt. Devices use this service to call MS-DOS or the BIOS, outside the scope of a nested execution block. */
+/*   The device should set CPU registers for the call, then call this service.                                                                     */
+/*   CPU registers will be updated on return according to the call, including flags.                                                               */
+/*                                                                                                                                                 */
+/*   This service should not be called directly, but only from inline ASM.                                                                         */
 
 /* inputs: */
 /*   __CDECL0 = Interrupt (Interrupt number to call) */
-/*   EAX = in_eax (EAX to provide the call) */
-/*   EBX = in_ebx (EBX to provide the call) */
-/*   ECX = in_ecx (ECX to provide the call) */
-/*   EDX = in_edx (EDX to provide the call) */
-/*   ESI = in_esi (ESI to provide the call) */
-/*   EDI = in_edi (EDI to provide the call) */
-/*   EBP = in_ebp (EBP to provide the call) */
 
 /* outputs: */
-/*   EBP = out_ebp (EBP from call) */
-/*   CF = out_cf (CF from call) */
-/*   EDX = out_edx (EDX from call) */
-/*   ESI = out_esi (ESI from call) */
-/*   EBX = out_ebx (EBX from call) */
-/*   EDI = out_edi (EDI from call) */
-/*   ECX = out_ecx (ECX from call) */
-/*   ZF = out_zf (ZF from call) */
-/*   EAX = out_eax (EAX from call) */
+/*   None */
 
-typedef struct Exec_VxD_Int__response {
-    uint32_t out_eax; /* EAX */
-    uint32_t out_ebx; /* EBX */
-    uint32_t out_ecx; /* ECX */
-    uint32_t out_edx; /* EDX */
-    uint32_t out_esi; /* ESI */
-    uint32_t out_edi; /* EDI */
-    uint32_t out_ebp; /* EBP */
-    _Bool out_zf; /* ZF */
-    _Bool out_cf; /* CF */
-} Exec_VxD_Int__response;
-
-static inline Exec_VxD_Int__response Exec_VxD_Int(uint32_t const Interrupt/*__cdecl0*/,uint32_t const in_eax/*eax*/,uint32_t const in_ebx/*ebx*/,uint32_t const in_ecx/*ecx*/,uint32_t const in_edx/*edx*/,uint32_t const in_esi/*esi*/,uint32_t const in_edi/*edi*/,uint32_t const in_ebp/*ebp*/) {
-    register Exec_VxD_Int__response r;
-
+static inline void Exec_VxD_Int(uint32_t const Interrupt/*__cdecl0*/) {
     __asm__ (
-        "push %9\n"
+        "push %0\n"
         VXD_AsmCall(VMM_Device_ID,VMM_snr_Exec_VxD_Int)
         "addl $4,%%esp\n"
-        : /* outputs */ "=" (r.out_ebp), "=@ccc" (r.out_cf), "=d" (r.out_edx), "=S" (r.out_esi), "=b" (r.out_ebx), "=D" (r.out_edi), "=c" (r.out_ecx), "=@ccz" (r.out_zf), "=a" (r.out_eax)
-        : /* inputs */ "g" (Interrupt), "a" (in_eax), "b" (in_ebx), "c" (in_ecx), "d" (in_edx), "S" (in_esi), "D" (in_edi), "" (in_ebp)
+        : /* outputs */
+        : /* inputs */ "g" (Interrupt)
         : /* clobbered */
     );
-
-    return r;
 }
 
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
