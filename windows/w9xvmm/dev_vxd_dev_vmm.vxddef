@@ -2271,3 +2271,31 @@ description     This may change the state of the interrupt flag, causing the sys
 in              ESI=const+void*                 Buffer                  ; Buffer containing the client state, saved from Save_Client_State
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Exec_VxD_Int
+description     Execute the specified software interrupt. Devices use this service to call MS-DOS or the BIOS, outside the scope of a nested execution block.
+
+cdecl           Interrupt
+
+in              __cdecl                         Interrupt               ; Interrupt number to call
+
+in              EAX                             in_eax                  ; EAX to provide the call
+in              EBX                             in_ebx                  ; EBX to provide the call
+in              ECX                             in_ecx                  ; ECX to provide the call
+in              EDX                             in_edx                  ; EDX to provide the call
+in              ESI                             in_esi                  ; ESI to provide the call
+in              EDI                             in_edi                  ; EDI to provide the call
+in              EBP                             in_ebp                  ; EBP to provide the call
+
+out             EAX                             out_eax                 ; EAX from call
+out             EBX                             out_ebx                 ; EBX from call
+out             ECX                             out_ecx                 ; ECX from call
+out             EDX                             out_edx                 ; EDX from call
+out             ESI                             out_esi                 ; ESI from call
+out             EDI                             out_edi                 ; EDI from call
+out             EBP                             out_ebp                 ; EBP from call
+out             ZF                              out_zf                  ; ZF from call
+out             CF                              out_cf                  ; CF from call
+%enddef
+
