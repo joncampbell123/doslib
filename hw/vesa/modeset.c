@@ -56,6 +56,35 @@ static void help() {
 	printf("    /s                    Single-step mode (hit ENTER)\n");
 }
 
+static void vbe_mode_test_pattern_svga_text(struct vbe_mode_decision *md,struct vbe_mode_info *mi) {
+	unsigned long ofs;
+	unsigned int x,y;
+    unsigned int c;
+
+	probe_vga();
+
+    for (c=0;c < 16;c++) {
+        ofs = 0;
+        for (y=0;y < mi->y_resolution;y++) {
+            ofs = ((unsigned long)y * (unsigned long)mi->bytes_per_scan_line);
+            for (x=0;x < mi->x_resolution;x++) {
+                vesa_writeb(ofs++,(x+y)&0xFF);
+                vesa_writeb(ofs++,y + (c << 4));
+            }
+        }
+
+        while (getch() != 13);
+    }
+
+	if (!vbe_mode_decision_acceptmode(md,NULL)) {
+		vbe_reset_video_to_text();
+		printf("Failed to un-set up mode\n");
+	}
+	else {
+		vbe_reset_video_to_text();
+	}
+}
+
 static void vbe_mode_test_pattern_svga_planar(struct vbe_mode_decision *md,struct vbe_mode_info *mi) {
 	unsigned char *pal = malloc(16*4);
 	unsigned long ofs;
@@ -578,6 +607,8 @@ int main(int argc,char **argv) {
 		}
 		vbe_reset_video_to_text();
 	}
+    else if (mi.memory_model == 0)
+		vbe_mode_test_pattern_svga_text(&md,&mi);
 	else if (mi.memory_model == 3)
 		vbe_mode_test_pattern_svga_planar(&md,&mi);
 	else if (mi.memory_model == 4 || mi.memory_model == 6)
