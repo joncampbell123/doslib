@@ -5392,5 +5392,91 @@ static inline _Bool Install_IO_Handler(const void* const IOCallback/*esi*/,uint3
     return r;
 }
 
+/*-------------------------------------------------------------*/
+/* VMM Enable_Global_Trapping (VMMCall dev=0x0001 serv=0x0097) WINVER=3.0+ */
+
+/* description: */
+/*   Enable I/O port trapping for the specified port, in every virtual machine */
+
+/* inputs: */
+/*   EDX = Port (I/O port) */
+
+/* outputs: */
+/*   None */
+
+static inline void Enable_Global_Trapping(uint32_t const Port/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Enable_Global_Trapping)
+        : /* outputs */
+        : /* inputs */ "d" (Port)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Enable_Local_Trapping (VMMCall dev=0x0001 serv=0x0098) WINVER=3.0+ */
+
+/* description: */
+/*   Enable I/O port trapping for the specified port in the specified VM */
+
+/* inputs: */
+/*   EBX = VM (Virtual machine) */
+/*   EDX = Port (I/O port) */
+
+/* outputs: */
+/*   None */
+
+static inline void Enable_Local_Trapping(vxd_vm_handle_t const VM/*ebx*/,uint32_t const Port/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Enable_Local_Trapping)
+        : /* outputs */
+        : /* inputs */ "b" (VM), "d" (Port)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Disable_Global_Trapping (VMMCall dev=0x0001 serv=0x0099) WINVER=3.0+ */
+
+/* description: */
+/*   Disable I/O port trapping for the specified port, in every virtual machine */
+
+/* inputs: */
+/*   EDX = Port (I/O port) */
+
+/* outputs: */
+/*   None */
+
+static inline void Disable_Global_Trapping(uint32_t const Port/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Disable_Global_Trapping)
+        : /* outputs */
+        : /* inputs */ "d" (Port)
+        : /* clobbered */
+    );
+}
+
+/*-------------------------------------------------------------*/
+/* VMM Disable_Local_Trapping (VMMCall dev=0x0001 serv=0x009A) WINVER=3.0+ */
+
+/* description: */
+/*   Disable I/O port trapping for the specified port in the specified VM */
+
+/* inputs: */
+/*   EBX = VM (Virtual machine) */
+/*   EDX = Port (I/O port) */
+
+/* outputs: */
+/*   None */
+
+static inline void Disable_Local_Trapping(vxd_vm_handle_t const VM/*ebx*/,uint32_t const Port/*edx*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_Disable_Local_Trapping)
+        : /* outputs */
+        : /* inputs */ "b" (VM), "d" (Port)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

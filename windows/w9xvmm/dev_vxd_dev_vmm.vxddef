@@ -2463,3 +2463,37 @@ in              EDX                             Port                    ; I/O po
 out             !CF                             .                       ; CF set if failed, nonzero if success
 %enddef
 
+#--------------------------------------
+%defcall
+byname          Enable_Global_Trapping
+description     Enable I/O port trapping for the specified port, in every virtual machine
+
+in              EDX                             Port                    ; I/O port
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Enable_Local_Trapping
+description     Enable I/O port trapping for the specified port in the specified VM
+
+in              EBX=vxd_vm_handle_t             VM                      ; Virtual machine
+in              EDX                             Port                    ; I/O port
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Disable_Global_Trapping
+description     Disable I/O port trapping for the specified port, in every virtual machine
+
+in              EDX                             Port                    ; I/O port
+%enddef
+
+#--------------------------------------
+%defcall
+byname          Disable_Local_Trapping
+description     Disable I/O port trapping for the specified port in the specified VM
+
+in              EBX=vxd_vm_handle_t             VM                      ; Virtual machine
+in              EDX                             Port                    ; I/O port
+%enddef
+
