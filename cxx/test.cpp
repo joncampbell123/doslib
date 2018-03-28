@@ -20,7 +20,7 @@
 #include <fcntl.h>
 #include <dos.h>
 
-int main(int argc,char **argv,char **envp) {
+int main() {
     printf("Hello world\n");
 	return 0;
 }
