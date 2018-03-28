@@ -60,6 +60,7 @@ TARGET_OS2 = 20
 SUBDIR   = os2d$(TARGET86_1DIGIT)$(MMODE)
 RC       = wrc
 CC       = wcc386
+CXX		 = wpp386
 LINKER   = wcl386
 WLINK_SYSTEM = os2v2_pm
 WLINK_CON_SYSTEM = os2v2

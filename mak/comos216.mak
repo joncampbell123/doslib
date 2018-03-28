@@ -64,6 +64,7 @@ TARGET_OS2 = 10
 SUBDIR   = os2w$(TARGET86_1DIGIT)$(MMODE)
 RC       = wrc
 CC       = wcc
+CXX		 = wpp
 LINKER   = wcl
 WLINK_SYSTEM = os2_pm
 WLINK_CON_SYSTEM = os2

@@ -94,6 +94,7 @@ TARGET_WINDOWS = 30
 WIN386   = 1
 SUBDIR   = win386
 CC       = wcc386
+CXX		 = wpp386
 RC       = wrc
 LINKER   = wcl386
 LDFLAGS  = # -ldos32a

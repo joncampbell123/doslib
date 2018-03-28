@@ -89,6 +89,7 @@ TARGET_WINDOWS = 10
 SUBDIR   = win10$(TARGET86_1DIGIT)$(MMODE)
 RC       = wrc
 CC       = wcc
+CXX		 = wpp
 LINKER   = wcl
 WLINK_SYSTEM = windows
 WLINK_CON_SYSTEM = windows

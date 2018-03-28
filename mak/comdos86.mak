@@ -75,6 +75,7 @@ SUBDIR   = d98$(TARGET86)$(MMODEC)
 SUBDIR   = dos$(TARGET86)$(MMODEC)
 !endif
 CC       = wcc
+CXX		 = wpp
 LINKER   = wcl
 
 !ifdef TINYMODE

@@ -93,6 +93,7 @@ TARGET_MSDOS = 32
 TARGET_WINDOWS = 31
 SUBDIR   = win32s$(TARGET86_1DIGIT)
 CC       = wcc386
+CXX		 = wpp386
 RC       = wrc
 LINKER   = wcl386
 LDFLAGS  = # -ldos32a
