@@ -30,7 +30,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=..
 	$(OMFSEGDG) -i $@ -o $@
 !endif
 
-all: lib exe
+all: $(OMFSEGDG) lib exe
 
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
