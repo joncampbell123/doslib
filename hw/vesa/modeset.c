@@ -416,7 +416,8 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 		pal = NULL;
 
         if (info) {
-            unsigned int w=0,r=0,fo;
+            unsigned int fo;
+            unsigned long w=0,r=0;
             char *s = info_txt;
             char c;
 
@@ -478,6 +479,35 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 						(b << mi->blue_field_position));
 			}
 		}
+
+        if (info) {
+            unsigned int fo;
+            unsigned long w=0,r=0;
+            char *s = info_txt;
+            char c;
+
+            while (c = *s++) {
+                if (c != '\n') {
+                    fo = ((unsigned char)c) * 8;
+                    ofs = w;
+                    w += 8*2;
+
+                    for (y=0;y < 8;y++) {
+                        unsigned char b = font8x8[fo++];
+
+                        for (x=0;x < 8;x++) {
+                            vesa_writew(ofs+(x*2),(b & 0x80) ? 0xFFFF : 0x0000);
+                            b <<= 1;
+                        }
+
+                        ofs += mi->bytes_per_scan_line;
+                    }
+                }
+                else {
+                    w = (r += (mi->bytes_per_scan_line * 8));
+                }
+            }
+        }
 	}
 	else if (bypp == 3 || bypp == 4) {
 		unsigned int r,g,b;
