@@ -544,6 +544,35 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 					((unsigned long)b << (unsigned long)mi->blue_field_position));
 			}
 		}
+
+        if (info) {
+            unsigned int fo;
+            unsigned long w=0,r=0;
+            char *s = info_txt;
+            char c;
+
+            while (c = *s++) {
+                if (c != '\n') {
+                    fo = ((unsigned char)c) * 8;
+                    ofs = w;
+                    w += 8*bypp;
+
+                    for (y=0;y < 8;y++) {
+                        unsigned char b = font8x8[fo++];
+
+                        for (x=0;x < 8;x++) {
+                            vesa_writed(ofs+(x*bypp),(b & 0x80) ? 0xFFFFFFFF : 0x00000000);
+                            b <<= 1;
+                        }
+
+                        ofs += mi->bytes_per_scan_line;
+                    }
+                }
+                else {
+                    w = (r += (mi->bytes_per_scan_line * 8));
+                }
+            }
+        }
 	}
 
 	while (getch() != 13);
