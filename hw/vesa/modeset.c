@@ -51,6 +51,8 @@ static unsigned char *font8x8 = NULL;
 static unsigned char FAR *font8x8 = NULL;
 #endif
 
+static char info_txt[1024];
+
 static void help() {
 	printf("modeset [options] <MODE>\n");
 	printf("    /h /help              This help\n");
@@ -78,6 +80,23 @@ static void vbe_mode_test_pattern_svga_text(struct vbe_mode_decision *md,struct 
             for (x=0;x < mi->x_resolution;x++) {
                 vesa_writeb(ofs++,(x+y)&0xFF);
                 vesa_writeb(ofs++,y + (c << 4));
+            }
+        }
+
+        if (c == 0 && info) {
+            unsigned int w=0,r=0;
+            char *s = info_txt;
+            char c;
+
+            while (c = *s++) {
+                if (c != '\n') {
+                    vesa_writeb(w+0,(unsigned char)c);
+                    vesa_writeb(w+1,0x0F);
+                    w += 2;
+                }
+                else {
+                    w = (r += mi->bytes_per_scan_line);
+                }
             }
         }
 
@@ -116,6 +135,30 @@ static void vbe_mode_test_pattern_svga_planar(struct vbe_mode_decision *md,struc
 			vesa_writeb(ofs++,(y+x)>>3);
 		}
 	}
+
+    if (info) {
+        unsigned int w=0,r=0,fo;
+        char *s = info_txt;
+        char c;
+
+        vga_write_GC(VGA_GC_MODE,		0x00);	/* write mode 0 */
+
+        while (c = *s++) {
+            if (c != '\n') {
+                fo = ((unsigned char)c) * 8;
+                ofs = w;
+                w++;
+
+                for (y=0;y < 8;y++) {
+			        vesa_writeb(ofs,font8x8[fo++]);
+                    ofs += mi->bytes_per_scan_line;
+                }
+            }
+            else {
+                w = (r += (mi->bytes_per_scan_line * 8));
+            }
+        }
+    }
 
 	while (getch() != 13);
 
@@ -371,7 +414,35 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 
 		free(pal);
 		pal = NULL;
-	}
+
+        if (info) {
+            unsigned int w=0,r=0,fo;
+            char *s = info_txt;
+            char c;
+
+            while (c = *s++) {
+                if (c != '\n') {
+                    fo = ((unsigned char)c) * 8;
+                    ofs = w;
+                    w += 8;
+
+                    for (y=0;y < 8;y++) {
+                        unsigned char b = font8x8[fo++];
+
+                        for (x=0;x < 8;x++) {
+                            vesa_writeb(ofs+x,(b & 0x80) ? 63 : 0);
+                            b <<= 1;
+                        }
+
+                        ofs += mi->bytes_per_scan_line;
+                    }
+                }
+                else {
+                    w = (r += (mi->bytes_per_scan_line * 8));
+                }
+            }
+        }
+    }
 	else if (bypp == 2) {
 		unsigned int r,g,b;
 		for (y=0;y < 16 && y < mi->y_resolution;y++) {
@@ -622,6 +693,52 @@ int main(int argc,char **argv) {
 	vbe_fill_in_mode_info(md.mode,&mi);
 	printf("OK\n");
 	sstep_wait();
+
+    if (info) {
+        char *w = info_txt;
+        char *f = info_txt + sizeof(info_txt) - 1;
+
+        w += sprintf(w,"Mode 0x%04x:\n",md.mode);
+        if (mi.mode_attributes & VESA_MODE_ATTR_LINEAR_FRAMEBUFFER_AVAILABLE)
+            w += sprintf(w,"LinFB ");
+        if (mi.mode_attributes & VESA_MODE_ATTR_DOUBLESCAN_AVAILABLE)
+            w += sprintf(w,"Dblscan ");
+        if (mi.mode_attributes & VESA_MODE_ATTR_INTERLACED_AVAILABLE)
+            w += sprintf(w,"Intlace ");
+        if (md.lfb)
+            w += sprintf(w,"UsingLFB ");
+        w += sprintf(w,"\n");
+
+        w += sprintf(w,"    Win A Attr=0x%02x seg=0x%04x   Win B Attr=0x%02x seg=0x%04x\n",
+                mi.win_a_attributes,mi.win_a_segment,
+                mi.win_b_attributes,mi.win_b_segment);
+        w += sprintf(w,"    Window granularity=%uKB size=%uKB function=%04x:%04x bytes/line=%u\n",
+                mi.win_granularity,mi.win_size,
+                (unsigned int)(mi.window_function>>16),
+                (unsigned int)(mi.window_function&0xFFFF),
+                mi.bytes_per_scan_line);
+        w += sprintf(w,"    %u x %u (char %u x %u) %u-plane %ubpp. %u banks. Model %u.\n",
+                mi.x_resolution,mi.y_resolution,mi.x_char_size,mi.y_char_size,
+                mi.number_of_planes,mi.bits_per_pixel,mi.number_of_banks,mi.memory_model);
+        w += sprintf(w,"    RGBA (size,pos) R=(%u,%u) G=(%u,%u) B=(%u,%u) A=(%u,%u) DCModeInfo=0x%02X\n",
+                mi.red_mask_size,	mi.red_field_position,
+                mi.green_mask_size,	mi.green_field_position,
+                mi.blue_mask_size,	mi.blue_field_position,
+                mi.reserved_mask_size,	mi.reserved_field_position,
+                mi.direct_color_mode_info);
+        w += sprintf(w,"    Physical addr: 0x%08lX Linbytes/scan=%u BankPages=%u LinPages=%u\n",(unsigned long)mi.phys_base_ptr,
+                mi.lin_bytes_per_line,	mi.bank_number_of_image_pages+1,
+                mi.lin_number_of_image_pages);
+        w += sprintf(w,"    Lin RGBA (size,pos) R=(%u,%u) G=(%u,%u) B=(%u,%u) A=(%u,%u) maxpixelclock=%lu\n",
+                mi.lin_red_mask_size,		mi.lin_red_field_position,
+                mi.lin_green_mask_size,		mi.lin_green_field_position,
+                mi.lin_blue_mask_size,		mi.lin_blue_field_position,
+                mi.lin_reserved_mask_size,	mi.lin_reserved_field_position,
+                mi.max_pixel_clock);
+
+        assert(w <= f);
+        *w = 0;
+    }
 
 	if (!vbe_mode_decision_validate(&md,&mi)) {
 		printf(" Parameter validation failed\n");
