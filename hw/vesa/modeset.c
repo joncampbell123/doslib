@@ -42,7 +42,14 @@
 #include <hw/flatreal/flatreal.h>
 #include <hw/dos/doswin.h>
 
+static int info = 0; /* show info */
 static int sstep = 0; /* single step */
+
+#if TARGET_MSDOS == 32
+static unsigned char *font8x8 = NULL;
+#else
+static unsigned char FAR *font8x8 = NULL;
+#endif
 
 static void help() {
 	printf("modeset [options] <MODE>\n");
@@ -54,6 +61,7 @@ static void help() {
 	printf("    /6                    Set DAC to 6-bit wide (16/256-color modes only)\n");
 	printf("    /8                    Set DAC to 8-bit wide (16/256-color modes only)\n");
 	printf("    /s                    Single-step mode (hit ENTER)\n");
+    printf("    /i                    Print info on screen\n");
 }
 
 static void vbe_mode_test_pattern_svga_text(struct vbe_mode_decision *md,struct vbe_mode_info *mi) {
@@ -513,6 +521,9 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"l")) {
 				md.lfb = 1;
 			}
+            else if (!strcmp(a,"i")) {
+                info = 1;
+            }
 			else if (!strcmp(a,"s")) {
 				sstep = 1;
 			}
@@ -541,6 +552,39 @@ int main(int argc,char **argv) {
 			};
 		}
 	}
+
+    if (info) {
+#if TARGET_MSDOS == 32
+        struct dpmi_realmode_call rc={0};
+
+        rc.eax = 0x1130;
+        rc.ebx = 0x0300;
+        vbe_realint(&rc);
+
+        font8x8 = (unsigned char*)((rc.es << 4) + (rc.ebp & 0xFFFF));
+#else
+        unsigned short s=0,o=0;
+
+        __asm {
+            push    ax
+            push    bx
+            push    es
+            push    bp
+            mov     ax,1130h
+            mov     bh,3h
+            int     10h
+            mov     ax,bp
+            pop     bp
+            mov     s,es
+            mov     o,ax
+            pop     es
+            pop     bx
+            pop     ax
+        }
+
+        font8x8 = MK_FP(s,o);
+#endif
+    }
 
 	printf("VESA VGA test program\n");
 	if (md.mode < 0) {
