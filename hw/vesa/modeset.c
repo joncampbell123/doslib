@@ -768,27 +768,33 @@ int main(int argc,char **argv) {
             w += sprintf(w,"UsingLFB ");
         w += sprintf(w,"\n");
 
-        w += sprintf(w,"    Win A Attr=0x%02x seg=0x%04x   Win B Attr=0x%02x seg=0x%04x\n",
+        w += sprintf(w,"Win A Attr=0x%02x seg=0x%04x\n"
+                       "    Win B Attr=0x%02x seg=0x%04x\n",
                 mi.win_a_attributes,mi.win_a_segment,
                 mi.win_b_attributes,mi.win_b_segment);
-        w += sprintf(w,"    Window granularity=%uKB size=%uKB function=%04x:%04x bytes/line=%u\n",
+        w += sprintf(w,"Window granularity=%uKB size=%uKB\n"
+                       "    function=%04x:%04x bytes/line=%u\n",
                 mi.win_granularity,mi.win_size,
                 (unsigned int)(mi.window_function>>16),
                 (unsigned int)(mi.window_function&0xFFFF),
                 mi.bytes_per_scan_line);
-        w += sprintf(w,"    %u x %u (char %u x %u) %u-plane %ubpp. %u banks. Model %u.\n",
+        w += sprintf(w,"%u x %u (char %u x %u) %u-plane\n"
+                       "    %ubpp. %u banks. Model %u.\n",
                 mi.x_resolution,mi.y_resolution,mi.x_char_size,mi.y_char_size,
                 mi.number_of_planes,mi.bits_per_pixel,mi.number_of_banks,mi.memory_model);
-        w += sprintf(w,"    RGBA (size,pos) R=(%u,%u) G=(%u,%u) B=(%u,%u) A=(%u,%u) DCModeInfo=0x%02X\n",
+        w += sprintf(w,"RGBA (size,pos) R=(%u,%u) G=(%u,%u)\n"
+                       "    B=(%u,%u) A=(%u,%u) DCModeInfo=0x%02X\n",
                 mi.red_mask_size,	mi.red_field_position,
                 mi.green_mask_size,	mi.green_field_position,
                 mi.blue_mask_size,	mi.blue_field_position,
                 mi.reserved_mask_size,	mi.reserved_field_position,
                 mi.direct_color_mode_info);
-        w += sprintf(w,"    Physical addr: 0x%08lX Linbytes/scan=%u BankPages=%u LinPages=%u\n",(unsigned long)mi.phys_base_ptr,
+        w += sprintf(w,"Phys: 0x%08lX Lnbyte/scan=%u\n"
+                       "    BankPages=%u LinPages=%u\n",(unsigned long)mi.phys_base_ptr,
                 mi.lin_bytes_per_line,	mi.bank_number_of_image_pages+1,
                 mi.lin_number_of_image_pages);
-        w += sprintf(w,"    Lin RGBA (size,pos) R=(%u,%u) G=(%u,%u) B=(%u,%u) A=(%u,%u) maxpixelclock=%lu\n",
+        w += sprintf(w,"Lin RGBA (size,pos) R=(%u,%u) G=(%u,%u)\n"
+                       "    B=(%u,%u) A=(%u,%u) maxpixelclock=%lu\n",
                 mi.lin_red_mask_size,		mi.lin_red_field_position,
                 mi.lin_green_mask_size,		mi.lin_green_field_position,
                 mi.lin_blue_mask_size,		mi.lin_blue_field_position,
