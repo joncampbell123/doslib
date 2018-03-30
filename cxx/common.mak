@@ -54,13 +54,11 @@ $(TEST_EXE): $(SUBDIR)$(HPS)test.obj $(DOSNTAST_VDD)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 ! ifdef WIN386
-	# FIXME: WIN_NE_SETVER_BUILD assumes ../..
-	@$(SUBDIR)$(HPS)$(WIN386_EXE_TO_REX_IF_REX) $(TEST_EXE)
+	@$(WIN386_EXE_TO_REX_IF_REX) $(TEST_EXE)
 	@wbind $(TEST_EXE) -q -n
 ! endif
 ! ifdef WIN_NE_SETVER_BUILD
-	# FIXME: WIN_NE_SETVER_BUILD assumes ../..
-	$(SUBDIR)$(HPS)$(WIN_NE_SETVER_BUILD) $(TEST_EXE)
+	$(WIN_NE_SETVER_BUILD) $(TEST_EXE)
 ! endif
 !endif
 

@@ -122,7 +122,7 @@ AFLAGS_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=windows
 NASMFLAGS_DLL = -DTARGET_MSDOS=16 -DTARGET_WINDOWS=$(TARGET_WINDOWS) -DMSDOS=1 -DTARGET86=$(TARGET86) -DMMODE=$(MMODE) -Dsegment_use=USE16 -I$(REL)/asminc/
 
 # macro to patch the EXE to the proper version
-WIN_NE_SETVER_BUILD = ../../tool/chgnever.pl 2.0
+WIN_NE_SETVER_BUILD = $(REL)$(HPS)tool$(HPS)chgnever.pl 2.0
 
 !include "$(REL)$(HPS)mak$(HPS)bcommon.mak"
 !include "common.mak"
