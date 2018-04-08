@@ -106,6 +106,8 @@ extern int8_t                       floppy_controllers_init;
 
 struct floppy_controller *floppy_get_standard_isa_port(int x);
 struct floppy_controller *floppy_get_controller(int x);
+struct floppy_controller *alloc_floppy_controller();
+void floppy_controller_read_ps2_status(struct floppy_controller *i);
 
 #endif /* __DOSLIB_HW_IDE_FLOPPYLIB_H */
 

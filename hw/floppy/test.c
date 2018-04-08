@@ -32,27 +32,6 @@ int wait_for_enter_or_escape() {
 	return c;
 }
 
-struct floppy_controller *alloc_floppy_controller() {
-	unsigned int i=0;
-
-	while (i < MAX_FLOPPY_CONTROLLER) {
-		if (floppy_controllers[i].base_io == 0)
-			return &floppy_controllers[i];
-	}
-
-	return NULL;
-}
-
-void floppy_controller_read_ps2_status(struct floppy_controller *i) {
-	if (i->ps2_mode) {
-		i->ps2_status[0] = inp(i->base_io+0);
-		i->ps2_status[1] = inp(i->base_io+1);
-	}
-	else {
-		i->ps2_status[0] = i->ps2_status[1] = 0xFF;
-	}
-}
-
 static inline uint8_t floppy_controller_read_status(struct floppy_controller *i) {
 	i->main_status = inp(i->base_io+4); /* 0x3F4 main status */
 	return i->main_status;
