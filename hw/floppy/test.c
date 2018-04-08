@@ -977,6 +977,7 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 }
 
 void do_read_sector_id_demo(struct floppy_controller *fdc) {
+    unsigned char tracksel = current_log_track;
 	unsigned char headsel = current_phys_head;
 	char resp[10];
 	int c;
@@ -996,6 +997,18 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
 				break;
 			else if (c == ' ')
 				headsel ^= 1;
+            else if (c == '-') {
+                if (tracksel > 0) tracksel--;
+                do_seek_drive(fdc,tracksel);
+            }
+            else if (c == '+') {
+                if (tracksel < 127) tracksel++;
+                do_seek_drive(fdc,tracksel);
+            }
+            else if (c == 'c') {
+                tracksel = 0;
+                do_calibrate_drive(fdc);
+            }
 		}
 
 		if ((c=do_read_sector_id(resp,fdc,headsel)) == 7) {
