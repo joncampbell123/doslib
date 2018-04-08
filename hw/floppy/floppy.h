@@ -108,6 +108,16 @@ struct floppy_controller *floppy_get_standard_isa_port(int x);
 struct floppy_controller *floppy_get_controller(int x);
 struct floppy_controller *alloc_floppy_controller();
 void floppy_controller_read_ps2_status(struct floppy_controller *i);
+void floppy_controller_enable_dma(struct floppy_controller *i,unsigned char set);
+void floppy_controller_enable_irq(struct floppy_controller *i,unsigned char set);
+void floppy_controller_enable_irqdma_gate_otr(struct floppy_controller *i,unsigned char set);
+void floppy_controller_set_motor_state(struct floppy_controller *i,unsigned char drv,unsigned char set);
+void floppy_controller_set_data_transfer_rate(struct floppy_controller *i,unsigned char rsel);
+void floppy_controller_drive_select(struct floppy_controller *i,unsigned char drv);
+void floppy_controller_set_reset(struct floppy_controller *i,unsigned char set);
+struct floppy_controller *floppy_controller_probe(struct floppy_controller *i);
+int init_floppy_controller_lib();
+void free_floppy_controller_lib();
 
 static inline uint8_t floppy_controller_read_status(struct floppy_controller *i) {
 	i->main_status = inp(i->base_io+4); /* 0x3F4 main status */

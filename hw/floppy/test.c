@@ -21,164 +21,6 @@
 
 struct dma_8237_allocation*		floppy_dma = NULL; /* DMA buffer */
 
-int wait_for_enter_or_escape() {
-	int c;
-
-	do {
-		c = getch();
-		if (c == 0) c = getch() << 8;
-	} while (!(c == 13 || c == 27));
-
-	return c;
-}
-
-void floppy_controller_set_data_transfer_rate(struct floppy_controller *i,unsigned char rsel) {
-	if (rsel > 3) return;
-	floppy_controller_write_CCR(i,(i->control_cfg & ~3) + rsel); /* change bits [1:0] */
-}
-
-void floppy_controller_drive_select(struct floppy_controller *i,unsigned char drv) {
-	if (drv > 3) return;
-
-	i->digital_out &= ~0x03;
-	i->digital_out |= drv;
-	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
-}
-
-void floppy_controller_set_motor_state(struct floppy_controller *i,unsigned char drv,unsigned char set) {
-	if (drv > 3) return;
-
-	i->digital_out &= ~(0x10 << drv);
-	i->digital_out |= (set?(0x10 << drv):0x00);
-	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
-}
-
-void floppy_controller_enable_dma(struct floppy_controller *i,unsigned char set) {
-	if (i->dma < 0) set = 0;
-	i->use_dma = !!set;
-
-	/* 82077AA refers to this bit as "!DMAGATE", and only in AT mode.
-	 * Setting it gates both the IRQ and DMA. It says it has no effect
-	 * in PS/2 mode. Doh! */
-	i->digital_out &= ~0x08;
-	i->digital_out |= ((i->use_irq || i->use_dma)?0x08:0x00);
-	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
-}
-
-void floppy_controller_enable_irq(struct floppy_controller *i,unsigned char set) {
-	if (i->irq < 0) set = 0;
-	i->use_irq = !!set;
-
-	/* 82077AA refers to this bit as "!DMAGATE", and only in AT mode.
-	 * Setting it gates both the IRQ and DMA. It says it has no effect
-	 * in PS/2 mode. Doh! */
-	i->digital_out &= ~0x08;
-	i->digital_out |= ((i->use_irq || i->use_dma)?0x08:0x00);
-	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
-}
-
-void floppy_controller_enable_irqdma_gate_otr(struct floppy_controller *i,unsigned char set) {
-	unsigned char c;
-
-	c = i->digital_out;
-	c &= ~0x08;
-	c |= (set?0x08:0x00);
-	outp(i->base_io+2,c);			/* 0x3F2 Digital Output Register */
-}
-
-void floppy_controller_set_reset(struct floppy_controller *i,unsigned char set) {
-	i->digital_out &= ~0x04;
-	i->digital_out |= (set?0x00:0x04);	/* bit is INVERTED (0=reset 1=normal) */
-	outp(i->base_io+2,i->digital_out);	/* 0x3F2 Digital Output Register */
-}
-
-struct floppy_controller *floppy_controller_probe(struct floppy_controller *i) {
-	struct floppy_controller *ret = NULL;
-	uint8_t t1;
-
-	if (i == NULL) return NULL;
-	if (i->base_io == 0) return NULL;
-
-	/* is anything there? the best we can hope for is to probe the I/O port range and see if SOMETHING responds */
-	t1 = inp(i->base_io+4); /* main status register (we can't assume the ability to read the digital output register, the data reg might be 0xFF) */
-	if (t1 == 0xFF) return NULL;
-
-	ret = alloc_floppy_controller();
-	if (ret == NULL) return NULL;
-	memset(ret,0,sizeof(*ret));
-
-	ret->base_io = i->base_io;
-	if (i->irq >= 2 && i->irq <= 15)
-		ret->irq = i->irq;
-	else
-		ret->irq = -1;
-
-	if (i->dma >= 0 && i->dma <= 7)
-		ret->dma = i->dma;
-	else
-		ret->dma = -1;
-
-	ret->use_dma = (ret->dma >= 0);
-	ret->use_irq = (ret->irq >= 0);
-
-	/* assume middle-of-the-road defaults */
-	ret->current_srt = 8;		/* 4/8/14/16ms for 1M/500K/300K/250K */
-	ret->current_hut = 8;		/* 64/128/213/256 for 1M/500K/300K/250K */
-	ret->current_hlt = 0x40;	/* 64/128/213/256 for 1M/500K/300K/250K */
-
-	/* assume controller has ND (Non-DMA) and EIS (implied seek) turned off.
-	 * most BIOSes do that. */
-
-	/* if something appears at 0x3F0-0x3F1, assume "PS/2 mode".
-	 * there are finer intricate details where the meaning of some bits
-	 * completely change or invert their meaning between PS/2 and Model 30,
-	 * so we don't concern ourself with them, we only care that there's
-	 * something there and we can let the program using this lib figure it out. */
-	t1 = inp(ret->base_io+0);
-	t1 &= inp(ret->base_io+1);
-	if (t1 != 0xFF) ret->ps2_mode = 1;
-
-	/* what about the AT & PS/2 style CCR & DIR */
-	t1 = inp(ret->base_io+7);
-	if (t1 != 0xFF) ret->at_mode = 1;
-
-	/* and ... guess */
-	floppy_controller_write_DOR(ret,0x04+(ret->use_irq?0x08:0x00));	/* most BIOSes: DMA/IRQ enable, !reset, motor off, drive A select */
-	floppy_controller_read_status(ret);
-
-	/* is the Digital Out port readable? */
-	t1 = inp(ret->base_io+2);
-	if (t1 == ret->digital_out) ret->digital_out_rw = 1;
-
-	floppy_controller_read_DIR(ret);
-
-	return ret;
-}
-
-int init_floppy_controller_lib() {
-	if (floppy_controllers_init < 0) {
-		memset(floppy_controllers,0,sizeof(floppy_controllers));
-		floppy_controllers_init = 0;
-
-		cpu_probe();
-		probe_dos();
-		detect_windows();
-
-		/* do NOT under any circumstances talk directly to the floppy from under Windows! */
-		if (windows_mode != WINDOWS_NONE) return (floppy_controllers_init=0);
-
-		/* init OK */
-		floppy_controllers_init = 1;
-	}
-
-	return floppy_controllers_init;
-}
-
-void free_floppy_controller_lib() {
-}
-
-/*------------------------------------------------------------------------*/
-
 char	tmp[1024];
 
 /* "current position" */
@@ -254,6 +96,17 @@ static void interrupt my_floppy_irq() {
 	vga_state.vga_alpha_ram[i++] = 0x1F00 | ' ';
 
 	floppy_irq_counter++;
+}
+
+int wait_for_enter_or_escape() {
+	int c;
+
+	do {
+		c = getch();
+		if (c == 0) c = getch() << 8;
+	} while (!(c == 13 || c == 27));
+
+	return c;
 }
 
 void do_floppy_controller_hook_irq(struct floppy_controller *fdc) {
