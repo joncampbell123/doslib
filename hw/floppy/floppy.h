@@ -101,5 +101,11 @@ struct floppy_controller {
 extern struct floppy_controller     floppy_standard_isa[2];
 extern int8_t                       floppy_controllers_enable_2nd;
 
+extern struct floppy_controller     floppy_controllers[MAX_FLOPPY_CONTROLLER];
+extern int8_t                       floppy_controllers_init;
+
+struct floppy_controller *floppy_get_standard_isa_port(int x);
+struct floppy_controller *floppy_get_controller(int x);
+
 #endif /* __DOSLIB_HW_IDE_FLOPPYLIB_H */
 

@@ -19,22 +19,7 @@
 #include <hw/dos/doswin.h>
 #include <hw/floppy/floppy.h>
 
-struct floppy_controller *floppy_get_standard_isa_port(int x) {
-	if (x < 0 || x >= (sizeof(floppy_standard_isa)/sizeof(floppy_standard_isa[0]))) return NULL;
-    if (x != 0 && !floppy_controllers_enable_2nd) return NULL;
-	return &floppy_standard_isa[x];
-}
-
 struct dma_8237_allocation*		floppy_dma = NULL; /* DMA buffer */
-
-struct floppy_controller		floppy_controllers[MAX_FLOPPY_CONTROLLER];
-int8_t					floppy_controllers_init = -1;
-
-struct floppy_controller *floppy_get_controller(int x) {
-	if (x < 0 || x >= MAX_FLOPPY_CONTROLLER) return NULL;
-	if (floppy_controllers[x].base_io == 0) return NULL;
-	return &floppy_controllers[x];
-}
 
 int wait_for_enter_or_escape() {
 	int c;
