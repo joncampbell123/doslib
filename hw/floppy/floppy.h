@@ -143,5 +143,70 @@ static inline void floppy_controller_write_CCR(struct floppy_controller *i,unsig
 	outp(i->base_io+7,c);	/* 0x3F7 Control Configuration Register */
 }
 
+static inline uint8_t floppy_controller_busy_in_instruction(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0x10) == 0x10)?1:0; /* busy == 1 */
+}
+
+static inline uint8_t floppy_controller_data_io_ready(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0x80) == 0x80)?1:0; /* data ready == 1 */
+}
+
+static inline uint8_t floppy_controller_can_read_data(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0xC0) == 0xC0)?1:0; /* data ready == 1 and data i/o == 1 */
+}
+
+static inline uint8_t floppy_controller_can_read_data_non_dma(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0xE0) == 0xE0)?1:0; /* data ready == 1 and data i/o == 1 and NDMA == 1 */
+}
+
+static inline uint8_t floppy_controller_can_write_data(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0xC0) == 0x80)?1:0; /* data ready == 1 and data i/o == 0 */
+}
+
+static inline uint8_t floppy_controller_can_write_data_non_dma(struct floppy_controller *fdc) {
+	return ((fdc->main_status & 0xE0) == 0xA0)?1:0; /* data ready == 1 and data i/o == 0 AND NDMA == 1 */
+}
+
+static inline uint8_t floppy_controller_read_data_byte(struct floppy_controller *fdc) {
+	return inp(fdc->base_io+5);
+}
+
+static inline void floppy_controller_write_data_byte(struct floppy_controller *fdc,uint8_t b) {
+	outp(fdc->base_io+5,b);
+}
+
+static inline int floppy_controller_wait_data_ready(struct floppy_controller *fdc,unsigned int timeout) {
+	do {
+		floppy_controller_read_status(fdc);
+		if (floppy_controller_data_io_ready(fdc)) return 1;
+	} while (--timeout != 0);
+
+	return 0;
+}
+
+static inline int floppy_controller_wait_data_read_non_dma_ready(struct floppy_controller *fdc,unsigned int timeout) {
+	do {
+		floppy_controller_read_status(fdc);
+		if (floppy_controller_can_read_data_non_dma(fdc)) return 1;
+		t8254_wait(t8254_us2ticks(1000));
+	} while (--timeout != 0);
+
+	return 0;
+}
+
+static inline int floppy_controller_wait_data_write_non_dma_ready(struct floppy_controller *fdc,unsigned int timeout) {
+	do {
+		floppy_controller_read_status(fdc);
+		if (floppy_controller_can_write_data_non_dma(fdc)) return 1;
+		t8254_wait(t8254_us2ticks(1000));
+	} while (--timeout != 0);
+
+	return 0;
+}
+
+static inline void floppy_controller_reset_irq_counter(struct floppy_controller *fdc) {
+	fdc->irq_fired = 0;
+}
+
 #endif /* __DOSLIB_HW_IDE_FLOPPYLIB_H */
 
