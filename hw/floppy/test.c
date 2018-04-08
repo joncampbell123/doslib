@@ -32,30 +32,6 @@ int wait_for_enter_or_escape() {
 	return c;
 }
 
-static inline uint8_t floppy_controller_read_status(struct floppy_controller *i) {
-	i->main_status = inp(i->base_io+4); /* 0x3F4 main status */
-	return i->main_status;
-}
-
-static inline uint8_t floppy_controller_read_DIR(struct floppy_controller *i) {
-	if (i->at_mode || i->ps2_mode)
-		i->digital_in = inp(i->base_io+7); /* 0x3F7 */
-	else
-		i->digital_in = 0xFF;
-
-	return i->digital_in;
-}
-
-static inline void floppy_controller_write_DOR(struct floppy_controller *i,unsigned char c) {
-	i->digital_out = c;
-	outp(i->base_io+2,c);	/* 0x3F2 Digital Output Register */
-}
-
-static inline void floppy_controller_write_CCR(struct floppy_controller *i,unsigned char c) {
-	i->control_cfg = c;
-	outp(i->base_io+7,c);	/* 0x3F7 Control Configuration Register */
-}
-
 void floppy_controller_set_data_transfer_rate(struct floppy_controller *i,unsigned char rsel) {
 	if (rsel > 3) return;
 	floppy_controller_write_CCR(i,(i->control_cfg & ~3) + rsel); /* change bits [1:0] */
