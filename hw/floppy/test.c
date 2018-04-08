@@ -373,10 +373,10 @@ static void interrupt my_irq0() {
      *   40:40  motor shutoff counter */
 #if TARGET_MSDOS == 32
     *((unsigned char*)0x43F) = 0x00; /* motors are off */
-    *((unsigned char*)0x440) = 0x7F; /* keep motor shutoff counter nonzero */
+    *((unsigned char*)0x440) = 0x00; /* keep motor shutoff counter zero */
 #else
     *((unsigned char far*)MK_FP(0x40,0x3F)) = 0x00; /* motors are off */
-    *((unsigned char far*)MK_FP(0x40,0x40)) = 0x7F; /* keep motor shutoff counter nonzero */
+    *((unsigned char far*)MK_FP(0x40,0x40)) = 0x00; /* keep motor shutoff counter zero */
 #endif
 
     my_irq0_old_irq();
