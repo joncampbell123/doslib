@@ -370,12 +370,6 @@ void do_spin_up_motor(struct floppy_controller *fdc,unsigned char drv) {
 
 		vga_msg_box_destroy(&vgabox);
 	}
-	else {
-		/* some controllers auto-timeout the motor against our will.
-		 * perhaps this is what the Linux kernel means by "twaddling" the motor bit */
-		floppy_controller_set_motor_state(fdc,drv,0);
-		floppy_controller_set_motor_state(fdc,drv,1);
-	}
 }
 
 void do_seek_drive_rel(struct floppy_controller *fdc,int track) {
@@ -2630,6 +2624,9 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 		floppy_dma = NULL;
 	}
 
+    /* motor off */
+    for (y=0;y < 4;y++) floppy_controller_set_motor_state(fdc,y,0);
+
 	do_floppy_controller_enable_irq(fdc,0);
 	floppy_controller_enable_irqdma_gate_otr(fdc,1); /* because BIOSes probably won't */
 	p8259_unmask(fdc->irq);
@@ -2735,6 +2732,7 @@ void do_main_menu() {
 		}
 	}
 
+    /* restore IRQ */
     _dos_setvect(irq2int(0),my_irq0_old_irq);
 }
 
