@@ -982,6 +982,8 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
 	char resp[10];
 	int c;
 
+	do_spin_up_motor(fdc,fdc->digital_out&3);
+
 	vga_moveto(0,0);
 	vga_write_color(0x0E);
 	vga_clear();
