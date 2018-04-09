@@ -273,6 +273,10 @@ static void help(void) {
     fprintf(stderr," -ddisk        Disk is double density\n");
     fprintf(stderr," -chs c/h/s    Geometry\n");
     fprintf(stderr," -bs n         Bytes per sector\n");
+    fprintf(stderr," -fmt <preset> Format preset\n");
+    fprintf(stderr,"                   1.44 = 1.44MB HD\n");
+    fprintf(stderr,"                   1.2 = 1.2MB HD\n");
+    fprintf(stderr,"                   360 = 360KB SD\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -291,6 +295,35 @@ static int parse_argv(int argc,char **argv) {
             }
             else if (!strcmp(a,"1")) {
                 floppy_controllers_enable_2nd = 0;
+            }
+            else if (!strcmp(a,"fmt")) {
+                a = argv[i++];
+
+                if (!strcmp(a,"1.44")) {
+                    disk_bps = 512;
+                    disk_cyls = 80;
+                    disk_heads = 2;
+                    disk_sects = 18;
+                    high_density_disk = 1;
+                }
+                else if (!strcmp(a,"1.2")) {
+                    disk_bps = 512;
+                    disk_cyls = 80;
+                    disk_heads = 2;
+                    disk_sects = 15;
+                    high_density_disk = 1;
+                }
+                else if (!strcmp(a,"360")) {
+                    disk_bps = 512;
+                    disk_cyls = 40;
+                    disk_heads = 2;
+                    disk_sects = 9;
+                    high_density_disk = 0;
+                }
+                else {
+                    fprintf(stderr,"Unknown preset\n");
+                    return 1;
+                }
             }
             else if (!strcmp(a,"bs")) {
                 a = argv[i++];
