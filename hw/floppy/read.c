@@ -537,8 +537,8 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
                     returned_length = (unsigned int)((uint32_t)data_length - dma_len);
                 }
 
-                if (returned_length != disk_bps) {
-                    fprintf(stderr,"Read DMA error\n");
+                if (returned_length != data_length) {
+                    fprintf(stderr,"Read DMA error (want=%u got=%u)\n",data_length,returned_length);
                     break;
                 }
 
