@@ -633,6 +633,20 @@ do_retry:
 #endif
 
                 if (retry == 3) {
+                    do_floppy_controller_reset(fdc);
+
+                    if (disk_drate > 600)
+                        floppy_controller_set_data_transfer_rate(fdc,3); /* 1000 */
+                    else if (disk_drate > 400)
+                        floppy_controller_set_data_transfer_rate(fdc,0); /* 500 */
+                    else if (disk_drate > 280)
+                        floppy_controller_set_data_transfer_rate(fdc,1); /* 300 */
+                    else
+                        floppy_controller_set_data_transfer_rate(fdc,2); /* 250 */
+
+                    floppy_controller_set_motor_state(fdc,drive,0);
+                    do_spin_up_motor(fdc,drive);
+
                     do_calibrate_drive(fdc);
                     do_calibrate_drive(fdc);
                     do_calibrate_drive(fdc);
@@ -763,19 +777,6 @@ do_retry:
                     fprintf(stderr,"Resp: %02x %02x %02x %02x %02x %02x %02x\n",
                         resp[0],resp[1],resp[2],resp[3],
                         resp[4],resp[5],resp[6]);
-                    do_floppy_controller_reset(fdc);
-
-                    if (disk_drate > 600)
-                        floppy_controller_set_data_transfer_rate(fdc,3); /* 1000 */
-                    else if (disk_drate > 400)
-                        floppy_controller_set_data_transfer_rate(fdc,0); /* 500 */
-                    else if (disk_drate > 280)
-                        floppy_controller_set_data_transfer_rate(fdc,1); /* 300 */
-                    else
-                        floppy_controller_set_data_transfer_rate(fdc,2); /* 250 */
-
-                    floppy_controller_set_motor_state(fdc,drive,0);
-                    do_spin_up_motor(fdc,drive);
 
                     goto do_retry;
                 }
