@@ -605,7 +605,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
             do_seek_drive(fdc,r_cyl * track_2x);
 
             for (r_sec=1;r_sec <= disk_sects;r_sec++) {
-                int retry = 6;
+                int retry = 3*10;
 
 do_retry:
                 do_spin_up_motor(fdc,drive);
@@ -632,7 +632,12 @@ do_retry:
                 _fmemset(floppy_dma->lin,0,data_length);
 #endif
 
-                if (retry == 3) {
+                if (retry-- == 0) {
+                    fprintf(stderr,"GIVING UP\n");
+                    goto do_write;
+                }
+
+                if ((retry%3) == 0) {
                     do_floppy_controller_reset(fdc);
 
                     if (disk_drate > 600)
@@ -654,9 +659,6 @@ do_retry:
                     do_seek_drive(fdc,r_cyl * track_2x);
                     do_seek_drive(fdc,r_cyl * track_2x);
                 }
-
-                if (retry-- == 0)
-                    goto do_write;
 
                 floppy_controller_read_status(fdc);
                 if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
