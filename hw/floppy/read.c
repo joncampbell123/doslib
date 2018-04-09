@@ -326,8 +326,14 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 }
 
 static void do_read(struct floppy_controller *fdc,unsigned char drive) {
+	unsigned int returned_length = 0;
     unsigned int track_2x = 1;
+    unsigned int data_length;
     int r_cyl,r_head,r_sec;
+	char cmd[10],resp[10];
+    unsigned char wd,wdo;
+    unsigned char rd,rdo;
+    unsigned char r_ssz;
     int img_fd = -1;
 
     if (high_density_drive < 0) {
@@ -362,10 +368,14 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         return;
     }
 
+    r_ssz = 0; /* 128 */
+    while ((disk_bps >> (7+r_ssz)) != 1)
+        r_ssz++;
+
     track_2x = (high_density_drive > 0 && high_density_disk <= 0) ? 2 : 1;
 
-    printf("Disk geometry: CHS %u/%u/%u %u/sector (HD=%d) drive=%s\n",
-        disk_cyls,disk_heads,disk_sects,disk_bps,high_density_disk,high_density_drive>0?"HD":"DD");
+    printf("Disk geometry: CHS %u/%u/%u %u/sector (HD=%d) drive=%s ssz=%u\n",
+        disk_cyls,disk_heads,disk_sects,disk_bps,high_density_disk,high_density_drive>0?"HD":"DD",r_ssz);
 
     if (high_density_disk > 0 && high_density_drive == 0) {
         fprintf(stderr,"That format requires a high density drive\n");
@@ -383,25 +393,159 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
     }
 
     for (r_cyl=0;r_cyl < disk_cyls;r_cyl++) {
+        printf("\x0d");
+        printf("Seeking C=%3u... ",r_cyl * track_2x);
+        fflush(stdout);
+
         do_spin_up_motor(fdc,drive);
 
         for (r_head=0;r_head < disk_heads;r_head++) {
             current_phys_head=r_head;
             do_spin_up_motor(fdc,drive);
-            do_seek_drive(fdc,r_head * track_2x);
+
+            printf("\x0d");
+            printf("Seeking C=%3u H=%u... ",r_cyl * track_2x,r_head);
+            fflush(stdout);
+
+            do_seek_drive(fdc,r_cyl * track_2x);
 
             for (r_sec=1;r_sec <= disk_sects;r_sec++) {
                 do_spin_up_motor(fdc,drive);
+                data_length = disk_bps;
 
                 printf("\x0D");
                 printf("Reading C=%3u H=%u S=%03u... ",r_cyl,r_head,r_sec);
+                fflush(stdout);
 
-                if (_dos_xwrite(img_fd,floppy_dma->lin,disk_bps) != disk_bps) {
-                    printf("Error\n");
+#if TARGET_MSDOS == 32
+                memset(floppy_dma->lin,0,data_length);
+#else
+                _fmemset(floppy_dma->lin,0,data_length);
+#endif
+
+                floppy_controller_read_status(fdc);
+                if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+                    do_floppy_controller_reset(fdc);
+
+                {
+                    outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma) | D8237_MASK_SET); /* mask */
+
+                    outp(d8237_ioport(fdc->dma,D8237_REG_W_WRITE_MODE),
+                            D8237_MODER_CHANNEL(fdc->dma) |
+                            D8237_MODER_TRANSFER(D8237_MODER_XFER_WRITE) |
+                            D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
+
+                    d8237_write_count(fdc->dma,data_length);
+                    d8237_write_base(fdc->dma,floppy_dma->phys);
+
+                    outp(d8237_ioport(fdc->dma,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(fdc->dma)); /* unmask */
+
+                    inp(d8237_ioport(fdc->dma,D8237_REG_R_STATUS)); /* read status port to clear TC bits */
+                }
+
+                /* Read Sector (x6h)
+                 *
+                 *   Byte |  7   6   5   4   3   2   1   0
+                 *   -----+---------------------------------
+                 *      0 | MT  MF  SK   0   0   1   1   0
+                 *      1 |  x   x   x   x   x  HD DR1 DR0
+                 *      2 |            Cylinder
+                 *      3 |              Head
+                 *      4 |         Sector Number
+                 *      5 |          Sector Size
+                 *      6 |    Track length/last sector
+                 *      7 |        Length of GAP3
+                 *      8 |          Data Length
+                 *
+                 *         MT = Multi-track
+                 *         MF = MFM/FM
+                 *         SK = Skip deleted address mark
+                 *         HD = Head select (on PC platform, doesn't matter)
+                 *    DR1,DR0 = Drive select */
+
+                /* NTS: To ensure we read only one sector, Track length/last sector must equal
+                 * Sector Number field. The floppy controller stops reading on error or when
+                 * sector number matches. This is very important for the PIO mode of this code,
+                 * else we'll never complete reading properly and never get to reading back
+                 * the status bytes. */
+
+                wdo = 9;
+                cmd[0] = /*no multitrack*/ + 0x40/* MFM */ + 0x06/* READ DATA */;
+                cmd[1] = (fdc->digital_out&3)+(current_phys_head&1?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] = HD */;
+                cmd[2] = r_cyl;	/* cyl=0 */
+                cmd[3] = r_head;/* head=0 */
+                cmd[4] = r_sec;	/* sector=1 */
+                cmd[5] = r_ssz;	/* sector size=2 (512 bytes) */
+                cmd[6] = r_sec; /* last sector of the track (what sector to stop at). */
+                cmd[7] = 0x1B;//current_phys_rw_gap;
+                cmd[8] = 0xFF;//current_sectsize_smaller; /* DTL (not used if 256 or larger) */
+                wd = floppy_controller_write_data(fdc,cmd,wdo);
+                if (wd < 2) {
+                    fprintf(stderr,"Write data port failed\n");
+                    do_floppy_controller_reset(fdc);
                     break;
                 }
 
-                fflush(stdout);
+                if (fdc->use_irq) floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
+                floppy_controller_wait_data_ready_ms(fdc,1000);
+
+                rdo = 7;
+                rd = floppy_controller_read_data(fdc,resp,rdo);
+                if (rd < 1) {
+                    fprintf(stderr,"Read data port failed\n");
+                    do_floppy_controller_reset(fdc);
+                    break;
+                }
+
+                /* Read Sector (x6h) response
+                 *
+                 *   Byte |  7   6   5   4   3   2   1   0
+                 *   -----+---------------------------------
+                 *      0 |              ST0
+                 *      1 |              ST1
+                 *      2 |              ST2
+                 *      3 |           Cylinder
+                 *      4 |             Head
+                 *      5 |        Sector Number
+                 *      6 |         Sector Size
+                 */
+
+                /* the command SHOULD terminate */
+                floppy_controller_wait_data_ready(fdc,20);
+                if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+                    do_floppy_controller_reset(fdc);
+
+                /* accept ST0..ST2 from response and update */
+                if (rd >= 3) {
+                    fdc->st[0] = resp[0];
+                    fdc->st[1] = resp[1];
+                    fdc->st[2] = resp[2];
+                }
+                if (rd >= 4) {
+                    fdc->cylinder = resp[3];
+                }
+
+                {
+                    uint32_t dma_len = d8237_read_count(fdc->dma);
+                    uint8_t status = inp(d8237_ioport(fdc->dma,D8237_REG_R_STATUS));
+
+                    /* some DMA controllers reset the count back to the original value on terminal count.
+                     * so if the DMA controller says terminal count, the true count is zero */
+                    if (status&D8237_STATUS_TC(fdc->dma)) dma_len = 0;
+
+                    if (dma_len > (uint32_t)data_length) dma_len = (uint32_t)data_length;
+                    returned_length = (unsigned int)((uint32_t)data_length - dma_len);
+                }
+
+                if (returned_length != disk_bps) {
+                    fprintf(stderr,"Read DMA error\n");
+                    break;
+                }
+
+                if (_dos_xwrite(img_fd,floppy_dma->lin,data_length) != data_length) {
+                    printf("Error\n");
+                    break;
+                }
             }
         }
     }
@@ -592,8 +736,8 @@ int main(int argc,char **argv) {
     _dos_setvect(irq2int(0),my_irq0);
 
 	/* if the floppy struct says to use interrupts, then do it */
-	do_floppy_controller_enable_irq(floppy,floppy->use_irq);
-	floppy_controller_enable_dma(floppy,floppy->use_dma);
+	do_floppy_controller_enable_irq(floppy,1);
+	floppy_controller_enable_dma(floppy,1);
 
     /* do the read */
     do_read(floppy,drive);
