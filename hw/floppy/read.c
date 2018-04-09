@@ -25,6 +25,7 @@ static signed char              high_density_disk = -1;
 static signed char              high_density_drive = -1;
 static unsigned char            current_phys_head=0;
 static unsigned char            disk_cyls=0,disk_heads=0,disk_sects=0;
+static unsigned int             disk_drate=0;
 static unsigned short           disk_bps=0;
 
 /* "current position" */
@@ -468,6 +469,33 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         high_density_drive = 1; /* pretty likely these days */
     }
 
+    if (disk_drate == 0) {
+        if (disk_sects > 21)
+            disk_drate = 1000; /* 1000 kb/sec */
+        else if (disk_sects > 17)
+            disk_drate = 500; /* 500 kb/sec */
+        else if (disk_sects > 12)
+            disk_drate = 300; /* 300 kb/sec */
+        else
+            disk_drate = 250; /* 250 kb/sec */
+    }
+
+    if (disk_drate > 600)
+		floppy_controller_set_data_transfer_rate(fdc,3); /* 1000 */
+    else if (disk_drate > 400)
+		floppy_controller_set_data_transfer_rate(fdc,0); /* 500 */
+    else if (disk_drate > 280)
+		floppy_controller_set_data_transfer_rate(fdc,1); /* 300 */
+    else
+		floppy_controller_set_data_transfer_rate(fdc,2); /* 250 */
+
+    floppy_controller_set_motor_state(fdc,drive,0);
+    do_spin_up_motor(fdc,drive);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+ 
     if (high_density_disk < 0) {
         if (disk_cyls < 44 && high_density_drive) {
             unsigned int cyl1=0,cyl2=0;
@@ -757,10 +785,12 @@ static void help(void) {
     fprintf(stderr," -ddisk        Disk is double density\n");
     fprintf(stderr," -chs c/h/s    Geometry\n");
     fprintf(stderr," -bs n         Bytes per sector\n");
+    fprintf(stderr," -br n         Data rate (250, 300, 500, 1000)\n");
     fprintf(stderr," -fmt <preset> Format preset\n");
     fprintf(stderr,"                   1.44 = 1.44MB HD\n");
     fprintf(stderr,"                   1.2 = 1.2MB HD\n");
-    fprintf(stderr,"                   360 = 360KB SD\n");
+    fprintf(stderr,"                   720 = 720KB DD\n");
+    fprintf(stderr,"                   360 = 360KB DD\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -789,6 +819,7 @@ static int parse_argv(int argc,char **argv) {
                     disk_heads = 2;
                     disk_sects = 18;
                     high_density_disk = 1;
+                    disk_drate = 500;
                 }
                 else if (!strcmp(a,"1.2")) {
                     disk_bps = 512;
@@ -796,6 +827,15 @@ static int parse_argv(int argc,char **argv) {
                     disk_heads = 2;
                     disk_sects = 15;
                     high_density_disk = 1;
+                    disk_drate = 300; /* GUESS */
+                }
+                else if (!strcmp(a,"720")) {
+                    disk_bps = 512;
+                    disk_cyls = 80;
+                    disk_heads = 2;
+                    disk_sects = 9;
+                    high_density_disk = 1;
+                    disk_drate = 250;
                 }
                 else if (!strcmp(a,"360")) {
                     disk_bps = 512;
@@ -803,11 +843,17 @@ static int parse_argv(int argc,char **argv) {
                     disk_heads = 2;
                     disk_sects = 9;
                     high_density_disk = 0;
+                    disk_drate = 250;
                 }
                 else {
                     fprintf(stderr,"Unknown preset\n");
                     return 1;
                 }
+            }
+            else if (!strcmp(a,"br")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                disk_drate = strtoul(a,&a,10);
             }
             else if (!strcmp(a,"bs")) {
                 a = argv[i++];
