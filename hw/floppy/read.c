@@ -754,6 +754,20 @@ do_retry:
                     fprintf(stderr,"Resp: %02x %02x %02x %02x %02x %02x %02x\n",
                         resp[0],resp[1],resp[2],resp[3],
                         resp[4],resp[5],resp[6]);
+                    do_floppy_controller_reset(fdc);
+
+                    if (disk_drate > 600)
+                        floppy_controller_set_data_transfer_rate(fdc,3); /* 1000 */
+                    else if (disk_drate > 400)
+                        floppy_controller_set_data_transfer_rate(fdc,0); /* 500 */
+                    else if (disk_drate > 280)
+                        floppy_controller_set_data_transfer_rate(fdc,1); /* 300 */
+                    else
+                        floppy_controller_set_data_transfer_rate(fdc,2); /* 250 */
+
+                    floppy_controller_set_motor_state(fdc,drive,0);
+                    do_spin_up_motor(fdc,drive);
+
                     goto do_retry;
                 }
 
@@ -791,6 +805,9 @@ static void help(void) {
     fprintf(stderr,"                   1.2 = 1.2MB HD\n");
     fprintf(stderr,"                   720 = 720KB DD\n");
     fprintf(stderr,"                   360 = 360KB DD\n");
+    fprintf(stderr,"                   1.2pc98 = 1.2MB HD PC-98\n");
+    fprintf(stderr,"  WARNING: The ability to read PC-98 3-mode floppies may vary\n");
+    fprintf(stderr,"           depending on your hardware and floppy controller.\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -828,6 +845,16 @@ static int parse_argv(int argc,char **argv) {
                     disk_sects = 15;
                     high_density_disk = 1;
                     disk_drate = 300; /* GUESS */
+                }
+                else if (!strcmp(a,"1.2pc98")) {
+                    /* WARNING: Your IBM PC's ability to read PC-98 3-mode 1.2MB depends on the hardware
+                     *          and floppy controller. Some can, some can't */
+                    disk_bps = 1024;
+                    disk_cyls = 77;
+                    disk_heads = 2;
+                    disk_sects = 8;
+                    high_density_disk = 1;
+                    disk_drate = 500;
                 }
                 else if (!strcmp(a,"720")) {
                     disk_bps = 512;
