@@ -23,6 +23,7 @@ char	tmp[1024];
 /* chosen geometry */
 static signed char              high_density_disk = -1;
 static signed char              high_density_drive = -1;
+static unsigned char            current_phys_head=0;
 static unsigned char            disk_cyls=0,disk_heads=0,disk_sects=0;
 static unsigned short           disk_bps=0;
 
@@ -215,7 +216,120 @@ void do_spin_up_motor(struct floppy_controller *fdc,unsigned char drv) {
 	}
 }
 
-static void do_read(void) {
+void do_check_interrupt_status(struct floppy_controller *fdc) {
+	char cmd[10],resp[10];
+	int rd,wd,rdo,wdo;
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	/* Check Interrupt Status (x8h)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   1   0   0   0
+	 *
+	 */
+
+	wdo = 1;
+	cmd[0] = 0x08;	/* Check interrupt status */
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 1) {
+        fprintf(stderr,"Failed to write FDC data\n");
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* wait for data ready. does not fire an IRQ (because you use this to clear IRQ status!) */
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* NTS: It's not specified whether this returns 2 bytes if success and 1 if no IRQ pending.. or...? */
+	rdo = 2;
+	resp[1] = 0;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+        fprintf(stderr,"Failed to read FDC data\n");
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* Check Interrupt Status (x8h) response
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |              ST0
+	 *      1 |        Current Cylinder
+	 */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* return value is ST0 and the current cylinder */
+	fdc->st[0] = resp[0];
+	fdc->cylinder = resp[1];
+}
+
+void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
+	char cmd[10];
+	int wd,wdo;
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	floppy_controller_reset_irq_counter(fdc);
+
+	/* Seek (xFh)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   1   1   1   1
+	 *      1 |  x   x   x   x   x  HD DR1 DR0
+	 *      2 |            Cylinder
+	 *
+	 *         HD = Head select (on PC platform, doesn't matter)
+	 *    DR1,DR0 = Drive select
+	 *   Cylinder = Track to move to */
+
+	wdo = 3;
+	cmd[0] = 0x0F;	/* Seek */
+	cmd[1] = (fdc->digital_out&3)+(current_phys_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
+	cmd[2] = track;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 3) {
+		fprintf(stderr,"Failed to write data to FDC, %u/%u",wd,wdo);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* fires an IRQ. doesn't return state */
+	if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* Seek (xFh) response
+	 *
+	 * (none)
+	 */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* use Check Interrupt Status */
+	do_check_interrupt_status(fdc);
+}
+
+static void do_read(struct floppy_controller *fdc,unsigned char drive) {
+    unsigned int track_2x = 1;
+    int r_cyl,r_head,r_sec;
+    int img_fd = -1;
+
     if (high_density_drive < 0) {
         /* TODO: We could read magic values out of CMOS, BIOS, etc. or possibly even ask MS-DOS
          *       whether the drive is 1.2MB/1.44MB high density or 160KB/320KB/360KB double density */
@@ -248,6 +362,8 @@ static void do_read(void) {
         return;
     }
 
+    track_2x = (high_density_drive > 0 && high_density_disk <= 0) ? 2 : 1;
+
     printf("Disk geometry: CHS %u/%u/%u %u/sector (HD=%d) drive=%s\n",
         disk_cyls,disk_heads,disk_sects,disk_bps,high_density_disk,high_density_drive>0?"HD":"DD");
 
@@ -259,6 +375,39 @@ static void do_read(void) {
         fprintf(stderr,"Insufficient information\n");
         return;
     }
+
+    img_fd = open("FLOPPY.DSK",O_RDWR|O_CREAT|O_TRUNC,0644);
+    if (img_fd < 0) {
+        fprintf(stderr,"Unable to open disk image\n");
+        return;
+    }
+
+    for (r_cyl=0;r_cyl < disk_cyls;r_cyl++) {
+        do_spin_up_motor(fdc,drive);
+
+        for (r_head=0;r_head < disk_heads;r_head++) {
+            current_phys_head=r_head;
+            do_spin_up_motor(fdc,drive);
+            do_seek_drive(fdc,r_head * track_2x);
+
+            for (r_sec=1;r_sec <= disk_sects;r_sec++) {
+                do_spin_up_motor(fdc,drive);
+
+                printf("\x0D");
+                printf("Reading C=%3u H=%u S=%03u... ",r_cyl,r_head,r_sec);
+
+                if (_dos_xwrite(img_fd,floppy_dma->lin,disk_bps) != disk_bps) {
+                    printf("Error\n");
+                    break;
+                }
+
+                fflush(stdout);
+            }
+        }
+    }
+    printf("\n");
+
+    close(img_fd);
 }
 
 static void help(void) {
@@ -447,7 +596,7 @@ int main(int argc,char **argv) {
 	floppy_controller_enable_dma(floppy,floppy->use_dma);
 
     /* do the read */
-    do_read();
+    do_read(floppy,drive);
 
     /* switch off motor */
     floppy_controller_set_motor_state(floppy,drive,0);
