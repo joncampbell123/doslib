@@ -272,6 +272,55 @@ void do_check_interrupt_status(struct floppy_controller *fdc) {
 	fdc->cylinder = resp[1];
 }
 
+void do_calibrate_drive(struct floppy_controller *fdc) {
+	char cmd[10];
+	int wd,wdo;
+
+	do_spin_up_motor(fdc,fdc->digital_out&3);
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	floppy_controller_reset_irq_counter(fdc);
+
+	/* Calibrate Drive (x7h)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0   0   0   0   0   1   1   1
+	 *      1 |  x   x   x   x   x   0 DR1 DR0
+	 *
+	 *  DR1,DR0 = Drive select */
+
+	wdo = 2;
+	cmd[0] = 0x07;	/* Calibrate */
+	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 */;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 2) {
+		fprintf(stderr,"Failed to write data to FDC, %u/%u",wd,wdo);
+		do_floppy_controller_reset(fdc);
+		return;
+	}
+
+	/* fires an IRQ. doesn't return state */
+	if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	/* Calibrate Drive (x7h) response
+	 *
+	 * (none)
+	 */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* use Check Interrupt Status */
+	do_check_interrupt_status(fdc);
+}
+
 void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 	char cmd[10];
 	int wd,wdo;
@@ -392,6 +441,10 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         return;
     }
 
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
     for (r_cyl=0;r_cyl < disk_cyls;r_cyl++) {
         printf("\x0d");
         printf("Seeking C=%3u... ",r_cyl * track_2x);
@@ -746,7 +799,10 @@ int main(int argc,char **argv) {
     do_read(floppy,drive);
 
     /* switch off motor */
-    floppy_controller_set_motor_state(floppy,drive,0);
+    floppy_controller_set_motor_state(floppy,0,0);
+    floppy_controller_set_motor_state(floppy,1,0);
+    floppy_controller_set_motor_state(floppy,2,0);
+    floppy_controller_set_motor_state(floppy,3,0);
 
     /* free DMA */
 	if (floppy_dma != NULL) {
