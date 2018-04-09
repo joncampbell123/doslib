@@ -870,7 +870,7 @@ static int parse_argv(int argc,char **argv) {
                     disk_heads = 2;
                     disk_sects = 9;
                     high_density_disk = 0;
-                    disk_drate = 250;
+                    disk_drate = 300;
                 }
                 else {
                     fprintf(stderr,"Unknown preset\n");
