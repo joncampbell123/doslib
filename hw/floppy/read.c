@@ -817,6 +817,7 @@ static void help(void) {
     fprintf(stderr,"                   1.2 = 1.2MB HD\n");
     fprintf(stderr,"                   720 = 720KB DD\n");
     fprintf(stderr,"                   360 = 360KB DD\n");
+    fprintf(stderr,"                   180 = 180KB DD single sided\n");
     fprintf(stderr,"                   1.2pc98 = 1.2MB HD PC-98\n");
     fprintf(stderr,"  WARNING: The ability to read PC-98 3-mode floppies may vary\n");
     fprintf(stderr,"           depending on your hardware and floppy controller.\n");
@@ -880,6 +881,14 @@ static int parse_argv(int argc,char **argv) {
                     disk_bps = 512;
                     disk_cyls = 40;
                     disk_heads = 2;
+                    disk_sects = 9;
+                    high_density_disk = 0;
+                    disk_drate = 300;
+                }
+                else if (!strcmp(a,"180")) {
+                    disk_bps = 512;
+                    disk_cyls = 40;
+                    disk_heads = 1;
                     disk_sects = 9;
                     high_density_disk = 0;
                     disk_drate = 300;
