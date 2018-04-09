@@ -463,6 +463,9 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
             do_seek_drive(fdc,r_cyl * track_2x);
 
             for (r_sec=1;r_sec <= disk_sects;r_sec++) {
+                int retry = 3;
+
+do_retry:
                 do_spin_up_motor(fdc,drive);
                 data_length = disk_bps;
 
@@ -486,6 +489,9 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
 #else
                 _fmemset(floppy_dma->lin,0,data_length);
 #endif
+
+                if (retry-- == 0)
+                    goto do_write;
 
                 floppy_controller_read_status(fdc);
                 if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
@@ -547,7 +553,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
                 if (wd < 2) {
                     fprintf(stderr,"Write data port failed\n");
                     do_floppy_controller_reset(fdc);
-                    break;
+                    goto do_retry;
                 }
 
                 if (fdc->use_irq) floppy_controller_wait_irq(fdc,10000,1); /* 10 seconds */
@@ -558,7 +564,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
                 if (rd < 1) {
                     fprintf(stderr,"Read data port failed\n");
                     do_floppy_controller_reset(fdc);
-                    break;
+                    goto do_retry;
                 }
 
                 /* Read Sector (x6h) response
@@ -606,11 +612,15 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
                     fprintf(stderr,"Resp: %02x %02x %02x %02x %02x %02x %02x\n",
                         resp[0],resp[1],resp[2],resp[3],
                         resp[4],resp[5],resp[6]);
-                    break;
+                    goto do_retry;
                 }
 
+do_write:
                 if (_dos_xwrite(img_fd,floppy_dma->lin,data_length) != data_length) {
                     printf("Error\n");
+                    r_head = 255;
+                    r_sec = 255;
+                    r_cyl = 255;
                     break;
                 }
             }
