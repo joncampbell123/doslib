@@ -976,9 +976,12 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 	return rd;
 }
 
+static unsigned char found_sectors[256];
+
 void do_read_sector_id_demo(struct floppy_controller *fdc) {
     unsigned char tracksel = current_log_track;
 	unsigned char headsel = current_phys_head;
+    unsigned char fsup = 0;
 	char resp[10];
 	int c;
 
@@ -987,6 +990,9 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
 	vga_moveto(0,0);
 	vga_write_color(0x0E);
 	vga_clear();
+
+    memset(found_sectors,0,sizeof(found_sectors));
+    fsup = 1;
 
 	vga_write("Read Sector ID demo. Space to switch heads.\n\n");
 
@@ -1002,14 +1008,23 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
             else if (c == '-') {
                 if (tracksel > 0) tracksel--;
                 do_seek_drive(fdc,tracksel);
+
+                memset(found_sectors,0,sizeof(found_sectors));
+                fsup = 1;
             }
             else if (c == '+') {
                 if (tracksel < 127) tracksel++;
                 do_seek_drive(fdc,tracksel);
+
+                memset(found_sectors,0,sizeof(found_sectors));
+                fsup = 1;
             }
             else if (c == 'c') {
                 tracksel = 0;
                 do_calibrate_drive(fdc);
+
+                memset(found_sectors,0,sizeof(found_sectors));
+                fsup = 1;
             }
 		}
 
@@ -1022,6 +1037,11 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
 
 			sprintf(tmp,"C/H/S/sz: %-3u/%-3u/%-3u/%-3u       \n",resp[3],resp[4],resp[5],resp[6]);
 			vga_write(tmp);
+
+            if (found_sectors[(unsigned char)resp[5]] == 0) {
+                found_sectors[(unsigned char)resp[5]] = 1;
+                fsup = 1;
+            }
 		}
 		else {
 			vga_moveto(0,2);
@@ -1033,6 +1053,28 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
 			sprintf(tmp,"C/H/S/sz: ---/---/---/---       \n");
 			vga_write(tmp);
 		}
+
+        if (fsup) {
+            unsigned int i,mn=255,ma=0;
+
+            vga_moveto(0,8);
+            vga_write_color(0x0E);
+
+            for (i=0;i < 256;i++) {
+                if (found_sectors[i]) {
+                    if (mn > i) mn = i;
+                    if (ma < i) ma = i;
+                }
+            }
+
+            for (i=0;i < 20;i++)
+                vga_writec(found_sectors[i]?'*':' ');
+
+            sprintf(tmp," %u-%u     ",mn,ma);
+            vga_write(tmp);
+
+            fsup = 0;
+        }
 	} while (1);
 }
 
