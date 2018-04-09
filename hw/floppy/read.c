@@ -605,7 +605,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
             do_seek_drive(fdc,r_cyl * track_2x);
 
             for (r_sec=1;r_sec <= disk_sects;r_sec++) {
-                int retry = 3;
+                int retry = 6;
 
 do_retry:
                 do_spin_up_motor(fdc,drive);
@@ -631,6 +631,15 @@ do_retry:
 #else
                 _fmemset(floppy_dma->lin,0,data_length);
 #endif
+
+                if (retry == 3) {
+                    do_calibrate_drive(fdc);
+                    do_calibrate_drive(fdc);
+                    do_calibrate_drive(fdc);
+                    do_calibrate_drive(fdc);
+                    do_seek_drive(fdc,r_cyl * track_2x);
+                    do_seek_drive(fdc,r_cyl * track_2x);
+                }
 
                 if (retry-- == 0)
                     goto do_write;
