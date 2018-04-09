@@ -374,6 +374,75 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 	do_check_interrupt_status(fdc);
 }
 
+int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsigned char head) {
+	int rd,wd,rdo,wdo;
+	char cmd[10];
+
+	floppy_controller_read_status(fdc);
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+		do_floppy_controller_reset(fdc);
+
+	/* Read ID (xAh)
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |  0  MF   0   0   1   0   1   0
+	 *      1 |  x   x   x   x   x  HD DR1 DR0
+	 *
+	 *         MF = MFM/FM
+	 *         HD = Head select (on PC platform, doesn't matter)
+	 *    DR1,DR0 = Drive select */
+
+	wdo = 2;
+	cmd[0] = 0x0A + 0x40; /* Read sector ID [6:6] MFM */
+	cmd[1] = (fdc->digital_out&3)+(head<<2)/* [1:0] = DR1,DR0 [2:2] = HD */;
+	wd = floppy_controller_write_data(fdc,cmd,wdo);
+	if (wd < 2) {
+		do_floppy_controller_reset(fdc);
+		return 0;
+	}
+
+	/* wait for data ready. does not fire an IRQ */
+	floppy_controller_wait_data_ready_ms(fdc,1000);
+
+	rdo = 7;
+	rd = floppy_controller_read_data(fdc,resp,rdo);
+	if (rd < 1) {
+		do_floppy_controller_reset(fdc);
+		return 0;
+	}
+
+	/* Read ID (xAh) response
+	 *
+	 *   Byte |  7   6   5   4   3   2   1   0
+	 *   -----+---------------------------------
+	 *      0 |              ST0
+	 *      1 |              ST1
+	 *      2 |              ST2
+	 *      3 |           Cylinder
+	 *      4 |             Head
+	 *      5 |        Sector Number
+	 *      6 |         Sector Size
+         */
+
+	/* the command SHOULD terminate */
+	floppy_controller_wait_data_ready(fdc,20);
+	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+		do_floppy_controller_reset(fdc);
+
+	/* accept ST0..ST2 from response and update */
+	if (rd >= 3) {
+		fdc->st[0] = resp[0];
+		fdc->st[1] = resp[1];
+		fdc->st[2] = resp[2];
+	}
+	if (rd >= 4) {
+		fdc->cylinder = resp[3];
+	}
+
+	return rd;
+}
+
 static void do_read(struct floppy_controller *fdc,unsigned char drive) {
 	unsigned int returned_length = 0;
     unsigned int track_2x = 1;
@@ -385,6 +454,12 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
     unsigned char r_ssz;
     int img_fd = -1;
 
+    do_spin_up_motor(fdc,drive);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+ 
     if (high_density_drive < 0) {
         /* TODO: We could read magic values out of CMOS, BIOS, etc. or possibly even ask MS-DOS
          *       whether the drive is 1.2MB/1.44MB high density or 160KB/320KB/360KB double density */
@@ -394,11 +469,49 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
     }
 
     if (high_density_disk < 0) {
-        /* TODO: We can try seeking to track 2 and using Read Sector ID to see if Track 1 comes back, to autodetect this. */
-        if (disk_cyls > 44)
-            high_density_disk = 1;
-        else
+        if (disk_cyls < 44 && high_density_drive) {
+            unsigned int cyl1=0,cyl2=0;
+            unsigned int maxs=0;
+
             high_density_disk = 0;
+
+            /* try to autodetect high density by whether seeking to Track 2 reveals Track 1 */
+            do_seek_drive(fdc,1);
+
+            /* what do we see? */
+            for (r_cyl=0;r_cyl < 1000;r_cyl++) {
+                if (do_read_sector_id(resp,fdc,0) >= 7) {
+                    /*      3 |           Cylinder
+                     *      4 |             Head
+                     *      5 |        Sector Number
+                     *      6 |         Sector Size */
+                    if (resp[4] == 0 && resp[5] < 36) {
+                        if (resp[3] == 1) cyl1++;
+                        else if (resp[3] == 2) cyl2++;
+
+                        if (resp[3] >= 1 && resp[3] <= 2 && maxs < resp[5])
+                            maxs = resp[5];
+                    }
+                }
+                else {
+                    r_cyl += 9;
+                }
+            }
+
+            fprintf(stderr,"Autodetect: CYL1=%u CYL2=%u MAXS=%u\n",cyl1,cyl2,maxs);
+
+            if (maxs >= 4 && (cyl1 >= 10 || cyl2 >= 10)) {
+                if (cyl2 >= (cyl1*3U)) /* if Track 2 is prominent from physical track 1, this is a double density disk in a high density drive */
+                    high_density_disk = 0;
+                else
+                    high_density_disk = 1;
+
+                fprintf(stderr,"Chosen: HD=%u\n",high_density_disk);
+            }
+        }
+        else {
+            high_density_disk = 1;
+        }
     }
 
     if (disk_bps == 0) {
@@ -441,6 +554,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         return;
     }
 
+    do_spin_up_motor(fdc,drive);
     do_calibrate_drive(fdc);
     do_calibrate_drive(fdc);
     do_calibrate_drive(fdc);
