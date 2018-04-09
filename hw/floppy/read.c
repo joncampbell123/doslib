@@ -20,6 +20,12 @@ struct dma_8237_allocation*		floppy_dma = NULL; /* DMA buffer */
 
 char	tmp[1024];
 
+/* chosen geometry */
+static signed char              high_density_disk = -1;
+static signed char              high_density_drive = -1;
+static unsigned char            disk_cyls=0,disk_heads=0,disk_sects=0;
+static unsigned short           disk_bps=0;
+
 /* "current position" */
 static void (interrupt *my_irq0_old_irq)() = NULL;
 static void (interrupt *my_floppy_old_irq)() = NULL;
@@ -209,10 +215,64 @@ void do_spin_up_motor(struct floppy_controller *fdc,unsigned char drv) {
 	}
 }
 
+static void do_read(void) {
+    if (high_density_drive < 0) {
+        /* TODO: We could read magic values out of CMOS, BIOS, etc. or possibly even ask MS-DOS
+         *       whether the drive is 1.2MB/1.44MB high density or 160KB/320KB/360KB double density */
+        /* This option only matters if we're asked to read 360KB double density in a 1.2MB high density drive (track numbers).
+         * Other formats generally match logical == physical track and our guess is as good as any. */
+        high_density_drive = 1; /* pretty likely these days */
+    }
+
+    if (high_density_disk < 0) {
+        /* TODO: We can try seeking to track 2 and using Read Sector ID to see if Track 1 comes back, to autodetect this. */
+        if (disk_cyls > 44)
+            high_density_disk = 1;
+        else
+            high_density_disk = 0;
+    }
+
+    if (disk_bps == 0) {
+        /* TODO: Use Read Sector ID to determine format */
+        /* NTS: Apparently some IBM PC compatible systems, if pushed to do so, can
+         *      almost reliably read a PC-98 formatted 1.2MB floppy (1024 bytes/sector). Almost. */
+        disk_bps = 512;
+    }
+
+    /* disk_bps must be power of 2 */
+    /* FIXME: I'm aware the controller has some sort of support for weird formats
+     *        with some arbitrary byte count < 255 but I'm not doing to bother with that now */
+    if ((disk_bps & (disk_bps - 1)) != 0/*not a power of 2*/ ||
+        disk_bps < 128 || disk_bps > 16384) {
+        printf("Sectors/track is invalid\n");
+        return;
+    }
+
+    printf("Disk geometry: CHS %u/%u/%u %u/sector (HD=%d) drive=%s\n",
+        disk_cyls,disk_heads,disk_sects,disk_bps,high_density_disk,high_density_drive>0?"HD":"DD");
+
+    if (high_density_disk > 0 && high_density_drive == 0) {
+        fprintf(stderr,"That format requires a high density drive\n");
+        return;
+    }
+    if (disk_cyls == 0 || disk_heads == 0 || disk_sects == 0 || disk_bps == 0) {
+        fprintf(stderr,"Insufficient information\n");
+        return;
+    }
+}
+
 static void help(void) {
     fprintf(stderr,"test [options]\n");
     fprintf(stderr," -h --help     Show this help\n");
     fprintf(stderr," -1            First controller only\n");
+    fprintf(stderr,"These options control the density of the drive, not the media.\n");
+    fprintf(stderr,"These options are REQUIRED for 5.25\" drives to read 360KB and 1.2MB properly.\n");
+    fprintf(stderr," -hd           Drive is high density (1.2MB, 1.44MB)\n");
+    fprintf(stderr," -dd           Drive is double density (360KB)\n");
+    fprintf(stderr," -hdisk        Disk is high density\n");
+    fprintf(stderr," -ddisk        Disk is double density\n");
+    fprintf(stderr," -chs c/h/s    Geometry\n");
+    fprintf(stderr," -bs n         Bytes per sector\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -231,6 +291,33 @@ static int parse_argv(int argc,char **argv) {
             }
             else if (!strcmp(a,"1")) {
                 floppy_controllers_enable_2nd = 0;
+            }
+            else if (!strcmp(a,"bs")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                disk_bps = strtoul(a,&a,10);
+            }
+            else if (!strcmp(a,"chs")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+
+                disk_cyls = strtoul(a,&a,10);
+                if (*a == '/') a++;
+                disk_heads = strtoul(a,&a,10);
+                if (*a == '/') a++;
+                disk_sects = strtoul(a,&a,10);
+            }
+            else if (!strcmp(a,"hd")) {
+                high_density_drive = 1;
+            }
+            else if (!strcmp(a,"dd")) {
+                high_density_drive = 0;
+            }
+            else if (!strcmp(a,"hdisk")) {
+                high_density_disk = 1;
+            }
+            else if (!strcmp(a,"ddisk")) {
+                high_density_disk = 0;
             }
             else {
                 fprintf(stderr,"Unknown switch '%s'\n",a);
@@ -326,7 +413,8 @@ int main(int argc,char **argv) {
 	do_floppy_controller_enable_irq(floppy,floppy->use_irq);
 	floppy_controller_enable_dma(floppy,floppy->use_dma);
 
-    // TODO
+    /* do the read */
+    do_read();
 
     /* switch off motor */
     floppy_controller_set_motor_state(floppy,drive,0);
