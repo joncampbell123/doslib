@@ -466,6 +466,17 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
                 do_spin_up_motor(fdc,drive);
                 data_length = disk_bps;
 
+                if (kbhit()) {
+                    int c = getch();
+
+                    if (c == 27) {
+                        r_head = 255;
+                        r_sec = 255;
+                        r_cyl = 255;
+                        break;
+                    }
+                }
+
                 printf("\x0D");
                 printf("Reading C=%3u H=%u S=%03u... ",r_cyl,r_head,r_sec);
                 fflush(stdout);
