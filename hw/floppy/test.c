@@ -1075,7 +1075,9 @@ void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
                 sprintf(tmp,"%3u/%3u/%3u/%3u |",ps->c,ps->h,ps->s,ps->sz);
                 vga_write(tmp);
 
-                if (++rc == 4) {
+                if (rc >= (4 * 20)) break;
+
+                if (((++rc)&3) == 0) {
                     vga_write("\n");
                     rc = 0;
                 }
@@ -1084,6 +1086,7 @@ void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
             psc = *ps;
         }
     }
+    vga_write("\n");
 
     while (getch() != 13);
 
