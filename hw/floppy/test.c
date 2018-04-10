@@ -491,8 +491,15 @@ void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
 	do_spin_up_motor(fdc,fdc->digital_out&3);
 
 	floppy_controller_read_status(fdc);
-	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc)) {
+        /* Fun fact, on real hardware, resetting the floppy controller also causes the
+         * controller to forget which track it's on (reset to zero).
+         *
+         * So, issuing a command to seek to track 10, resetting the controller, then issuing another seek to track 10
+         * will leave the head on track 20. */
 		do_floppy_controller_reset(fdc);
+        do_calibrate_drive(fdc);
+    }
 
 	floppy_controller_reset_irq_counter(fdc);
 
