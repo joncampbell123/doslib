@@ -1009,8 +1009,10 @@ int scanlist_cmp(const void *a,const void *b) {
 }
 
 void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
+    t8254_time_t pt,ct;
     unsigned int i,scancount;
     scanid_t *scanlist,*ps,psc;
+    unsigned long countdown = (unsigned long)T8254_REF_CLOCK_HZ * (unsigned long)3; // 3 seconds max
 	char resp[10];
 	int c,rc;
 
@@ -1018,14 +1020,22 @@ void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
     scanlist = malloc(scancount * sizeof(scanid_t));
     if (scanlist == NULL) return;
 
+    write_8254_system_timer(0);
+
     vga_moveto(0,0);
     vga_write_color(0x0E);
     vga_clear();
 
+    pt = ct = read_8254(T8254_TIMER_INTERRUPT_TICK);
     memset(&psc,0,sizeof(psc));
     for (i=0;i < scancount;i++) {
+        if ((signed long)countdown < 0L) {
+            scancount = i;
+            break;
+        }
+
         vga_moveto(0,0);
-        sprintf(tmp,"Scanning... %u/%u",i,scancount);
+        sprintf(tmp,"Scanning... %u/%u %lu     ",i,scancount,countdown);
         vga_write(tmp);
 
         ps = scanlist + i;
@@ -1055,6 +1065,12 @@ void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
                 break;
             }
         }
+
+        pt = ct;
+        ct = read_8254(T8254_TIMER_INTERRUPT_TICK);
+
+        /* timer counts DOWN */
+        countdown -= ((unsigned long)(pt - ct)) & 0xFFFFUL;
     }
     vga_write(" C/H/S/SZ list follows\n");
 
