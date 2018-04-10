@@ -985,6 +985,111 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 
 static unsigned char found_sectors[256];
 
+typedef struct scanid_t {
+    unsigned char       c,h,s,sz;
+} scanid_t;
+
+int scanlist_cmp(const void *a,const void *b) {
+    const scanid_t *sa = (const scanid_t*)a;
+    const scanid_t *sb = (const scanid_t*)b;
+
+    if (sa->c > sb->c) return 1;
+    else if (sa->c < sb->c) return -1;
+
+    if (sa->h > sb->h) return 1;
+    else if (sa->h < sb->h) return -1;
+
+    if (sa->s > sb->s) return 1;
+    else if (sa->s < sb->s) return -1;
+
+    if (sa->sz > sb->sz) return 1;
+    else if (sa->sz < sb->sz) return -1;
+
+    return 0;
+}
+
+void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
+    unsigned int i,scancount;
+    scanid_t *scanlist,*ps,psc;
+	char resp[10];
+	int c,rc;
+
+    scancount = 500;
+    scanlist = malloc(scancount * sizeof(scanid_t));
+    if (scanlist == NULL) return;
+
+    vga_moveto(0,0);
+    vga_write_color(0x0E);
+    vga_clear();
+
+    memset(&psc,0,sizeof(psc));
+    for (i=0;i < scancount;i++) {
+        vga_moveto(0,0);
+        sprintf(tmp,"Scanning... %u/%u",i,scancount);
+        vga_write(tmp);
+
+        ps = scanlist + i;
+
+		if ((c=do_read_sector_id(resp,fdc,headsel)) == 7) {
+            ps->c = resp[3];
+            ps->h = resp[4];
+            ps->s = resp[5];
+            ps->sz= resp[6];
+
+            if (ps->c == psc.c &&
+                ps->h == psc.h &&
+                ps->s == psc.s &&
+                ps->sz== psc.sz)
+                i--; /* step back, same data */
+
+            psc = *ps;
+        }
+        else {
+            memset(ps,0,sizeof(*ps));
+        }
+
+        if (kbhit()) {
+            c = getch();
+            if (c == 27) {
+                scancount = i;
+                break;
+            }
+        }
+    }
+    vga_write(" C/H/S/SZ list follows\n");
+
+    /* yes, I'm lazy */
+    qsort(scanlist,scancount,sizeof(psc),scanlist_cmp);
+
+    /* show it */
+    rc=0;
+    memset(&psc,0,sizeof(psc));
+    for (i=0;i < scancount;i++) {
+        ps = scanlist + i;
+
+        if (ps->c != 0 || ps->h != 0 || ps->s != 0 || ps->sz != 0) {
+            if (psc.c != ps->c ||
+                psc.h != ps->h ||
+                psc.s != ps->s ||
+                psc.sz!= ps->sz) {
+                sprintf(tmp,"%3u/%3u/%3u/%3u |",ps->c,ps->h,ps->s,ps->sz);
+                vga_write(tmp);
+
+                if (++rc == 4) {
+                    vga_write("\n");
+                    rc = 0;
+                }
+            }
+
+            psc = *ps;
+        }
+    }
+
+    while (getch() != 13);
+
+    free(scanlist);
+}
+
 void do_read_sector_id_demo(struct floppy_controller *fdc) {
     unsigned char tracksel = current_log_track;
 	unsigned char headsel = current_phys_head;
@@ -1035,6 +1140,15 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
                 do_calibrate_drive(fdc);
 
                 memset(found_sectors,0,sizeof(found_sectors));
+                fsup = 1;
+            }
+            else if (c == 's') {
+                do_readid_scan(fdc,headsel);
+
+                vga_moveto(0,0);
+                vga_write_color(0x0E);
+                vga_clear();
+
                 fsup = 1;
             }
 		}
