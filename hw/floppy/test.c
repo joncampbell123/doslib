@@ -2351,6 +2351,129 @@ nextkey:	if (c == 27) {
 	}
 }
 
+void do_presets(struct floppy_controller *fdc) {
+	char backredraw=1;
+	VGA_ALPHA_PTR vga;
+	unsigned int x,y;
+	char redraw=1;
+	int select=-1;
+	int c;
+
+	while (1) {
+		if (backredraw) {
+			vga = vga_state.vga_alpha_ram;
+			backredraw = 0;
+			redraw = 1;
+
+			for (y=0;y < vga_state.vga_height;y++) {
+				for (x=0;x < vga_state.vga_width;x++) {
+					*vga++ = 0x1E00 + 177;
+				}
+			}
+
+			vga_moveto(0,0);
+
+			vga_write_color(0x1F);
+			vga_write("        Floppy format presets ");
+			sprintf(tmp,"@%X",fdc->base_io);
+			vga_write(tmp);
+			if (fdc->irq >= 0) {
+				sprintf(tmp," IRQ %d",fdc->irq);
+				vga_write(tmp);
+			}
+			if (fdc->dma >= 0) {
+				sprintf(tmp," DMA %d",fdc->dma);
+				vga_write(tmp);
+			}
+			if (floppy_dma != NULL) {
+				sprintf(tmp," phys=%08lxh len=%04lxh",(unsigned long)floppy_dma->phys,(unsigned long)floppy_dma->length);
+				vga_write(tmp);
+			}
+			while (vga_state.vga_pos_x < vga_state.vga_width && vga_state.vga_pos_x != 0) vga_writec(' ');
+		}
+
+		if (redraw) {
+			redraw = 0;
+
+			y = 5;
+			vga_moveto(8,y++);
+			vga_write_color((select == -1) ? 0x70 : 0x0F);
+			vga_write("Back");
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
+			y++;
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 0) ? 0x70 : 0x0F);
+			vga_write("1.44MB 3.5\" high density");
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 1) ? 0x70 : 0x0F);
+			vga_write("720KB 3.5\" high density");
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 2) ? 0x70 : 0x0F);
+			vga_write("1.2MB 5.25\" high density");
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 3) ? 0x70 : 0x0F);
+			vga_write("360KB 5.25\" double density");
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
+
+			vga_moveto(8,y++);
+			vga_write_color((select == 4) ? 0x70 : 0x0F);
+			vga_write("180KB 5.25\" double density");
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
+		}
+
+		c = getch();
+		if (c == 0) c = getch() << 8;
+
+		if (c == 27) {
+			break;
+		}
+		else if (c == 13) {
+			if (select == -1) {
+				break;
+			}
+			else if (select == 0) { /* 1.44MB 3.5" */
+				floppy_controller_set_data_transfer_rate(fdc,0/*500kb*/);
+				break;
+			}
+			else if (select == 1) { /* 720KB 3.5" */
+				floppy_controller_set_data_transfer_rate(fdc,2/*250kb*/);
+				break;
+			}
+			else if (select == 2) { /* 1.2MB 5.25" */
+				floppy_controller_set_data_transfer_rate(fdc,1/*300kb*/);
+				break;
+			}
+			else if (select == 3) { /* 360KB 5.25" */
+				floppy_controller_set_data_transfer_rate(fdc,1/*300kb*/);
+				break;
+			}
+			else if (select == 4) { /* 180KB 5.25" */
+				floppy_controller_set_data_transfer_rate(fdc,1/*300kb*/);
+				break;
+			}
+		}
+		else if (c == 0x4800) {
+			if (--select < -1)
+				select = 4;
+
+			redraw = 1;
+		}
+		else if (c == 0x5000) {
+			if (++select > 4)
+				select = -1;
+
+			redraw = 1;
+		}
+	}
+}
+
 void do_floppy_controller(struct floppy_controller *fdc) {
 	char backredraw=1;
 	VGA_ALPHA_PTR vga;
@@ -2566,6 +2689,10 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 			vga_write_color((select == 20) ? 0x70 : 0x0F);
 			vga_write("Step through tracks");
 			while (vga_state.vga_pos_x < cx && vga_state.vga_pos_x != 0) vga_writec(' ');
+
+			vga_write_color((select == 21) ? 0x70 : 0x0F);
+			vga_write("Preset...");
+			while (vga_state.vga_pos_x < (vga_state.vga_width-8) && vga_state.vga_pos_x != 0) vga_writec(' ');
 		}
 
 		c = getch();
@@ -2579,6 +2706,11 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 
             floppy_controller_set_motor_state(fdc,drv,!(fdc->digital_out&(0x10<<drv)));
             redraw = 1;
+        }
+        else if (c == 'p') {
+            /* presets */
+            do_presets(fdc);
+            backredraw = 1;
         }
 		else if (c == 13) {
 			if (select == -1) {
@@ -2678,15 +2810,19 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 				do_step_tracks(fdc);
 				backredraw = 1;
 			}
+            else if (select == 21) { /* presets menu */
+                do_presets(fdc);
+                backredraw = 1;
+            }
 		}
 		else if (c == 0x4800) {
 			if (--select < -1)
-				select = 20;
+				select = 21;
 
 			redraw = 1;
 		}
 		else if (c == 0x5000) {
-			if (++select > 20)
+			if (++select > 21)
 				select = -1;
 
 			redraw = 1;
