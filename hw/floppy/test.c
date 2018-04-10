@@ -2797,6 +2797,7 @@ static void help(void) {
     fprintf(stderr,"test [options]\n");
     fprintf(stderr," -h --help     Show this help\n");
     fprintf(stderr," -1            First controller only\n");
+    fprintf(stderr," -2            Look for 2nd controller\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -2815,6 +2816,9 @@ static int parse_argv(int argc,char **argv) {
             }
             else if (!strcmp(a,"1")) {
                 floppy_controllers_enable_2nd = 0;
+            }
+            else if (!strcmp(a,"2")) {
+                floppy_controllers_enable_2nd = 1;
             }
             else {
                 fprintf(stderr,"Unknown switch '%s'\n",a);

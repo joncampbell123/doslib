@@ -16,7 +16,7 @@
 #include <hw/dos/doswin.h>
 #include <hw/floppy/floppy.h>
 
-int8_t                          floppy_controllers_enable_2nd = 1;
+int8_t                          floppy_controllers_enable_2nd = 0;
 
 struct floppy_controller        floppy_controllers[MAX_FLOPPY_CONTROLLER];
 int8_t                          floppy_controllers_init = -1;

@@ -803,6 +803,7 @@ static void help(void) {
     fprintf(stderr,"test [options]\n");
     fprintf(stderr," -h --help     Show this help\n");
     fprintf(stderr," -1            First controller only\n");
+    fprintf(stderr," -2            Look for 2nd controller\n");
     fprintf(stderr,"These options control the density of the drive, not the media.\n");
     fprintf(stderr,"These options are REQUIRED for 5.25\" drives to read 360KB and 1.2MB properly.\n");
     fprintf(stderr," -hd           Drive is high density (1.2MB, 1.44MB)\n");
@@ -839,6 +840,9 @@ static int parse_argv(int argc,char **argv) {
             }
             else if (!strcmp(a,"1")) {
                 floppy_controllers_enable_2nd = 0;
+            }
+            else if (!strcmp(a,"2")) {
+                floppy_controllers_enable_2nd = 1;
             }
             else if (!strcmp(a,"fmt")) {
                 a = argv[i++];
