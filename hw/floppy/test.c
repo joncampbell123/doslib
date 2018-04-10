@@ -1010,8 +1010,12 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
 
 			if (c == 27)
 				break;
-			else if (c == ' ')
+			else if (c == ' ') {
 				headsel ^= 1;
+
+                memset(found_sectors,0,sizeof(found_sectors));
+                fsup = 1;
+            }
             else if (c == '-') {
                 if (tracksel > 0) tracksel--;
                 do_seek_drive(fdc,tracksel);
