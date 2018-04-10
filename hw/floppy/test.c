@@ -2570,6 +2570,12 @@ void do_floppy_controller(struct floppy_controller *fdc) {
 		if (c == 27) {
 			break;
 		}
+        else if (c == 'm') {
+            const unsigned char drv = (fdc->digital_out&3);
+
+            floppy_controller_set_motor_state(fdc,drv,!(fdc->digital_out&(0x10<<drv)));
+            redraw = 1;
+        }
 		else if (c == 13) {
 			if (select == -1) {
 				break;
