@@ -451,6 +451,26 @@ int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsign
 	return rd;
 }
 
+void apply_drate(struct floppy_controller *fdc,unsigned char drive,unsigned int rate) {
+    if (rate > 600)
+        floppy_controller_set_data_transfer_rate(fdc,3); /* 1000 */
+    else if (rate > 400)
+        floppy_controller_set_data_transfer_rate(fdc,0); /* 500 */
+    else if (rate > 280)
+        floppy_controller_set_data_transfer_rate(fdc,1); /* 300 */
+    else
+        floppy_controller_set_data_transfer_rate(fdc,2); /* 250 */
+
+    floppy_controller_set_motor_state(fdc,drive,0);
+    do_spin_up_motor(fdc,drive);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+    do_calibrate_drive(fdc);
+}
+
+static unsigned short drate_tests[4] = { 250, 300, 500, 1000 };
+
 static void do_read(struct floppy_controller *fdc,unsigned char drive) {
 	unsigned int returned_length = 0;
     unsigned int track_2x = 1;
@@ -462,18 +482,154 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
     unsigned char r_ssz;
     int img_fd = -1;
 
+    /* disk_bps must be power of 2 */
+    /* FIXME: I'm aware the controller has some sort of support for weird formats
+     *        with some arbitrary byte count < 255 but I'm not doing to bother with that now */
+    if (disk_bps != 0) {
+        if ((disk_bps & (disk_bps - 1)) != 0/*not a power of 2*/ ||
+             disk_bps < 128 || disk_bps > 16384) {
+            printf("Sectors/track is invalid\n");
+            return;
+        }
+    }
+
     do_spin_up_motor(fdc,drive);
     do_calibrate_drive(fdc);
     do_calibrate_drive(fdc);
     do_calibrate_drive(fdc);
     do_calibrate_drive(fdc);
- 
-    if (high_density_drive < 0) {
-        /* TODO: We could read magic values out of CMOS, BIOS, etc. or possibly even ask MS-DOS
-         *       whether the drive is 1.2MB/1.44MB high density or 160KB/320KB/360KB double density */
-        /* This option only matters if we're asked to read 360KB double density in a 1.2MB high density drive (track numbers).
-         * Other formats generally match logical == physical track and our guess is as good as any. */
-        high_density_drive = 1; /* pretty likely these days */
+
+    if (disk_drate > 0)
+        apply_drate(fdc,drive,disk_drate);
+
+    if (disk_drate == 0) {
+        unsigned char m[4];
+        unsigned char mmax;
+
+        /* try to autodetect the date rate.
+         * on real hardware the sector IDs will only work at one rate.
+         * in emulators, sector IDs will work at any data rate. */
+
+        mmax=0;
+        memset(m,0,sizeof(m));
+        for (r_sec=0;r_sec < 4;r_sec++) {
+            apply_drate(fdc,drive,drate_tests[r_sec]);
+            do_seek_drive(fdc,0); /* use track 0 */
+
+            for (r_cyl=0;r_cyl < 2;r_cyl++) {
+                if (do_read_sector_id(resp,fdc,0) >= 7) {
+                    /*      3 |           Cylinder
+                     *      4 |             Head
+                     *      5 |        Sector Number
+                     *      6 |         Sector Size */
+                    if (resp[4] == 0 && resp[5] < 36 && resp[3] == 0/*track 0*/) {
+                        m[r_sec]++;
+                        if (mmax < m[r_sec]) mmax = m[r_sec];
+                    }
+                }
+                else {
+                    r_cyl += 4 - 1;
+                }
+            }
+        }
+
+        /* which one? */
+        if (mmax >= 2) {
+            r_sec=0;
+            while (r_sec < 4 && m[r_sec] < mmax) r_sec++;
+
+            if (r_sec < 4) {
+                /* if other data rates work just as well, then our test results don't apply */
+                disk_drate = drate_tests[r_sec++];
+
+                while (r_sec < 4) {
+                    if (m[r_sec] >= mmax) {
+                        disk_drate=0;
+                        break;
+                    }
+                    r_sec++;
+                }
+            }
+        }
+
+        if (disk_drate != 0) {
+            fprintf(stderr,"Disk drate autodetected %uk\n",disk_drate);
+
+            apply_drate(fdc,drive,disk_drate);
+        }
+        else {
+            fprintf(stderr,"Disk drate autodetection failed [%u,%u,%u,%u] cannot determine\n",m[0],m[1],m[2],m[3]);
+
+            apply_drate(fdc,drive,500);
+        }
+    }
+
+    if (disk_sects == 0 || disk_bps == 0) {
+        unsigned char presp[4];
+        unsigned char ssz[8];
+        unsigned char ss[36];
+        unsigned int max;
+
+        memset(presp,0,sizeof(presp));
+        memset(ssz,0,sizeof(ssz));
+        memset(ss,0,sizeof(ss));
+
+        do_spin_up_motor(fdc,drive);
+        do_calibrate_drive(fdc);
+        do_calibrate_drive(fdc);
+        do_calibrate_drive(fdc);
+        do_calibrate_drive(fdc);
+
+        for (r_cyl=0;r_cyl < 255;r_cyl++) {
+            if (do_read_sector_id(resp,fdc,0) >= 7) {
+                /*      3 |           Cylinder
+                 *      4 |             Head
+                 *      5 |        Sector Number
+                 *      6 |         Sector Size */
+                if (resp[4] == 0 && resp[5] < 36 && resp[3] == 0/*track 0*/) {
+                    if (presp[0] != resp[3] || presp[1] != resp[4] |
+                        presp[2] != resp[5] || presp[3] != resp[6]) {
+                        presp[0] = resp[3];
+                        presp[1] = resp[4];
+                        presp[2] = resp[5];
+                        presp[3] = resp[6];
+
+                        if ((unsigned char)resp[6] < 8 && ssz[(unsigned char)resp[6]] < 255)
+                            ssz[(unsigned char)resp[6]]++;
+                        if ((unsigned char)resp[5] < 36 && ss[(unsigned char)resp[5]] < 255)
+                            ss[(unsigned char)resp[5]]++;
+                    }
+                    else {
+                        r_cyl--;
+                    }
+                }
+            }
+            else {
+                r_cyl += 4 - 1;
+            }
+        }
+
+        if (disk_bps == 0) {
+            max=0;
+            for (r_cyl=0;r_cyl < 8;r_cyl++) {
+                if (max < ssz[r_cyl]) {
+                    max = ssz[r_cyl];
+                    if (max >= 4) disk_bps = 128 << r_cyl;
+                }
+            }
+        }
+
+        if (disk_sects == 0) {
+            for (r_cyl=0;r_cyl < 36;r_cyl++) {
+                if (ss[r_cyl] != 0) disk_sects = r_cyl;
+            }
+        }
+    }
+
+    if (disk_bps != 0) {
+        r_ssz = 0; /* 128 */
+        while ((disk_bps >> (7+r_ssz)) != 1)
+            r_ssz++;
     }
 
     if (disk_drate == 0) {
@@ -485,95 +641,159 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
             disk_drate = 300; /* 300 kb/sec */
         else
             disk_drate = 250; /* 250 kb/sec */
+
+        apply_drate(fdc,drive,disk_drate);
     }
 
-    if (disk_drate > 600)
-		floppy_controller_set_data_transfer_rate(fdc,3); /* 1000 */
-    else if (disk_drate > 400)
-		floppy_controller_set_data_transfer_rate(fdc,0); /* 500 */
-    else if (disk_drate > 280)
-		floppy_controller_set_data_transfer_rate(fdc,1); /* 300 */
-    else
-		floppy_controller_set_data_transfer_rate(fdc,2); /* 250 */
+    if (disk_heads == 0) {
+        unsigned char presp[4];
+        unsigned int cnt=0;
 
-    floppy_controller_set_motor_state(fdc,drive,0);
-    do_spin_up_motor(fdc,drive);
-    do_calibrate_drive(fdc);
-    do_calibrate_drive(fdc);
-    do_calibrate_drive(fdc);
-    do_calibrate_drive(fdc);
+        do_spin_up_motor(fdc,drive);
+        do_calibrate_drive(fdc);
+        do_calibrate_drive(fdc);
+        do_calibrate_drive(fdc);
+        do_calibrate_drive(fdc);
  
-    if (high_density_disk < 0) {
-        if (disk_cyls < 44 && high_density_drive) {
-            unsigned int cyl1=0,cyl2=0;
-            unsigned int maxs=0;
+        for (r_cyl=0;r_cyl < 20;r_cyl++) {
+            if (do_read_sector_id(resp,fdc,1/*head 1 this time*/) >= 7) {
+                /*      3 |           Cylinder
+                 *      4 |             Head
+                 *      5 |        Sector Number
+                 *      6 |         Sector Size */
+                if (resp[4] == 1/*head*/ && resp[5] < 36 && resp[3] == 0/*track 0*/ && resp[6] == r_ssz/*same sector size*/) {
+                    if (presp[0] != resp[3] || presp[1] != resp[4] |
+                        presp[2] != resp[5] || presp[3] != resp[6]) {
+                        presp[0] = resp[3];
+                        presp[1] = resp[4];
+                        presp[2] = resp[5];
+                        presp[3] = resp[6];
 
-            high_density_disk = 0;
-
-            /* try to autodetect high density by whether seeking to Track 2 reveals Track 1 */
-            do_seek_drive(fdc,1);
-
-            /* what do we see? */
-            for (r_cyl=0;r_cyl < 1000;r_cyl++) {
-                if (do_read_sector_id(resp,fdc,0) >= 7) {
-                    /*      3 |           Cylinder
-                     *      4 |             Head
-                     *      5 |        Sector Number
-                     *      6 |         Sector Size */
-                    if (resp[4] == 0 && resp[5] < 36) {
-                        if (resp[3] == 1) cyl1++;
-                        else if (resp[3] == 2) cyl2++;
-
-                        if (resp[3] >= 1 && resp[3] <= 2 && maxs < resp[5])
-                            maxs = resp[5];
+                        cnt++;
+                    }
+                    else {
+                        r_cyl--;
                     }
                 }
-                else {
-                    r_cyl += 9;
+            }
+            else {
+                r_cyl += 4 - 1;
+            }
+        }
+
+        if (cnt >= 2)
+            disk_heads = 2;
+        else
+            disk_heads = 1;
+
+        fprintf(stderr,"Head autodetect: %u/20 valid reads on head 1. %u head format\n",cnt,disk_heads);
+    }
+
+    if (high_density_disk < 0 || high_density_drive < 0) {
+        unsigned int cyl1=0,cyl2=0;
+
+        /* try to autodetect high density drive vs double density floppy by seeking to Track 2.
+         * if the logical track coming back is track 1, then this is a double density disk in a high density drive. */
+        do_seek_drive(fdc,2);
+
+        /* what do we see? */
+        for (r_cyl=0;r_cyl < 10;r_cyl++) {
+            if (do_read_sector_id(resp,fdc,0) >= 7) {
+                /*      3 |           Cylinder
+                 *      4 |             Head
+                 *      5 |        Sector Number
+                 *      6 |         Sector Size */
+                if (resp[4] == 0 && resp[5] < 36) {
+                    if (resp[3] == 1) cyl1++;
+                    else if (resp[3] == 2) cyl2++;
                 }
             }
-
-            fprintf(stderr,"Autodetect: CYL1=%u CYL2=%u MAXS=%u\n",cyl1,cyl2,maxs);
-
-            if (maxs >= 4 && (cyl1 >= 10 || cyl2 >= 10)) {
-                if (cyl2 >= (cyl1*3U)) /* if Track 2 is prominent from physical track 1, this is a double density disk in a high density drive */
-                    high_density_disk = 0;
-                else
-                    high_density_disk = 1;
-
-                fprintf(stderr,"Chosen: HD=%u\n",high_density_disk);
+            else {
+                r_cyl += 4 - 1;
             }
         }
-        else {
-            high_density_disk = 1;
+
+        fprintf(stderr,"Autodetect: CYL1=%u CYL2=%u\n",cyl1,cyl2);
+
+        if (cyl1 >= 2 || cyl2 >= 2) {
+            /* having read physical track 2... */
+            if (cyl2 >= (cyl1*3U)) { /* if Track 2 is most common, this is either: */
+                                     /* - A high density disk in a high density drive, or
+                                      * - A double density disk in a double density drive.
+                                      *
+                                      * It doesn't tell us if the floppy or drive are high density or not.
+                                      * But since the track numbers match, it doesn't matter. */
+            }
+            else {                  /* if Track 1 is most common, this is a double density disk in a high density drive */
+                if (high_density_disk < 0)
+                    high_density_disk = 0; /* double density disk */
+                if (high_density_drive < 0)
+                    high_density_drive = 1; /* high density drive */
+            }
         }
     }
 
-    if (disk_bps == 0) {
-        /* TODO: Use Read Sector ID to determine format */
-        /* NTS: Apparently some IBM PC compatible systems, if pushed to do so, can
-         *      almost reliably read a PC-98 formatted 1.2MB floppy (1024 bytes/sector). Almost. */
-        disk_bps = 512;
+    /* if we KNOW the drive is high density and the we KNOW the disk is double density,
+     * then reading the disk requires seeking to TWICE the logical track number */
+    track_2x = (high_density_drive > 0 && high_density_disk == 0) ? 2 : 1;
+
+    /* guess for cyls */
+    if (disk_cyls == 0) {
+        if (track_2x == 2 || high_density_drive == 0/* we KNOW it's a double density drive */)
+            disk_cyls = 40;
     }
 
-    /* disk_bps must be power of 2 */
-    /* FIXME: I'm aware the controller has some sort of support for weird formats
-     *        with some arbitrary byte count < 255 but I'm not doing to bother with that now */
-    if ((disk_bps & (disk_bps - 1)) != 0/*not a power of 2*/ ||
-        disk_bps < 128 || disk_bps > 16384) {
-        printf("Sectors/track is invalid\n");
-        return;
+    /* some poking at the disk is required for more */
+    if (disk_cyls == 0 && track_2x == 1) {
+        /* a normal disk would have 40 tracks if double density, 80 if high density */
+        unsigned char presp[4];
+        unsigned int cnt=0;
+
+        do_spin_up_motor(fdc,drive);
+        do_calibrate_drive(fdc);
+        do_calibrate_drive(fdc);
+        do_calibrate_drive(fdc);
+        do_calibrate_drive(fdc);
+        do_seek_drive(fdc,41);
+ 
+        for (r_cyl=0;r_cyl < 20;r_cyl++) {
+            if (do_read_sector_id(resp,fdc,0) >= 7) {
+                /*      3 |           Cylinder
+                 *      4 |             Head
+                 *      5 |        Sector Number
+                 *      6 |         Sector Size */
+                if (resp[4] == 0/*head*/ && resp[5] < 36 && resp[3] == 41/*track 0*/ && resp[6] == r_ssz/*same sector size*/) {
+                    if (presp[0] != resp[3] || presp[1] != resp[4] |
+                        presp[2] != resp[5] || presp[3] != resp[6]) {
+                        presp[0] = resp[3];
+                        presp[1] = resp[4];
+                        presp[2] = resp[5];
+                        presp[3] = resp[6];
+
+                        cnt++;
+                    }
+                    else {
+                        r_cyl--;
+                    }
+                }
+            }
+            else {
+                r_cyl += 4 - 1;
+            }
+        }
+
+        if (cnt >= 2) {
+            disk_cyls = 80;
+            fprintf(stderr,"Cyl autodetect: %u tracks\n",cnt,disk_cyls);
+        }
     }
 
-    r_ssz = 0; /* 128 */
-    while ((disk_bps >> (7+r_ssz)) != 1)
-        r_ssz++;
+    /* announce */
+    printf("Disk geometry: CHS %u/%u/%u %u/sector hddisk=%d hddrive=%d ssz=%u(%ub)\n"
+           "               trackx=%u drate=%u\n",
+        disk_cyls,disk_heads,disk_sects,disk_bps,high_density_disk,high_density_drive,r_ssz,disk_bps,track_2x,disk_drate);
 
-    track_2x = (high_density_drive > 0 && high_density_disk <= 0) ? 2 : 1;
-
-    printf("Disk geometry: CHS %u/%u/%u %u/sector (HD=%d) drive=%s ssz=%u\n",
-        disk_cyls,disk_heads,disk_sects,disk_bps,high_density_disk,high_density_drive>0?"HD":"DD",r_ssz);
-
+    /* we can't read high density floppies in a double density drive */
     if (high_density_disk > 0 && high_density_drive == 0) {
         fprintf(stderr,"That format requires a high density drive\n");
         return;
