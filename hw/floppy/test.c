@@ -1026,6 +1026,9 @@ void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
     vga_write_color(0x0E);
     vga_clear();
 
+    vga_moveto(0,0);
+    vga_write("Scanning... ");
+
     pt = ct = read_8254(T8254_TIMER_INTERRUPT_TICK);
     memset(&psc,0,sizeof(psc));
     for (i=0;i < scancount;i++) {
@@ -1034,12 +1037,7 @@ void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
             break;
         }
 
-        vga_moveto(0,0);
-        sprintf(tmp,"Scanning... %u/%u %lu     ",i,scancount,countdown);
-        vga_write(tmp);
-
         ps = scanlist + i;
-
 		if ((c=do_read_sector_id(resp,fdc,headsel)) == 7) {
             ps->c = resp[3];
             ps->h = resp[4];
