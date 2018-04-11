@@ -1037,6 +1037,14 @@ void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
             break;
         }
 
+        if (kbhit()) {
+            c = getch();
+            if (c == 27) {
+                scancount = i;
+                break;
+            }
+        }
+
         ps = scanlist + i;
 		if ((c=do_read_sector_id(resp,fdc,headsel)) == 7) {
             ps->c = resp[3];
@@ -1054,14 +1062,7 @@ void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
         }
         else {
             memset(ps,0,sizeof(*ps));
-        }
-
-        if (kbhit()) {
-            c = getch();
-            if (c == 27) {
-                scancount = i;
-                break;
-            }
+            i--;
         }
 
         pt = ct;
