@@ -5478,5 +5478,58 @@ static inline void Disable_Local_Trapping(vxd_vm_handle_t const VM/*ebx*/,uint32
     );
 }
 
+/*-------------------------------------------------------------*/
+/* VMM List_Create (VMMCall dev=0x0001 serv=0x009B) WINVER=3.0+ */
+
+/* description: */
+/*   Create a list structure and return a handle to the list. */
+
+/* inputs: */
+/*   EAX = Flags (creation flags) */
+/*   ECX = NodeSize (size in bytes of node in the list) */
+
+/* outputs: */
+/*   ESI = List (list handle if Success) */
+/*   !CF = Success (CF set if error, Success set if success) */
+
+typedef struct List_Create__response {
+    _Bool Success; /* !CF */
+    uint32_t List; /* ESI */
+} List_Create__response;
+
+static inline List_Create__response List_Create(uint32_t const Flags/*eax*/,uint32_t const NodeSize/*ecx*/) {
+    register List_Create__response r;
+
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_List_Create)
+        : /* outputs */ "=S" (r.List), "=@ccnc" (r.Success)
+        : /* inputs */ "a" (Flags), "c" (NodeSize)
+        : /* clobbered */
+    );
+
+    return r;
+}
+
+/*-------------------------------------------------------------*/
+/* VMM List_Destroy (VMMCall dev=0x0001 serv=0x009C) WINVER=3.0+ */
+
+/* description: */
+/*   Deallocate all nodes of a list and destroy the list handle. */
+
+/* inputs: */
+/*   ESI = List (list handle to destroy) */
+
+/* outputs: */
+/*   None */
+
+static inline void List_Destroy(uint32_t const List/*esi*/) {
+    __asm__ (
+        VXD_AsmCall(VMM_Device_ID,VMM_snr_List_Destroy)
+        : /* outputs */
+        : /* inputs */ "S" (List)
+        : /* clobbered */
+    );
+}
+
 # endif /*GCC_INLINE_ASM_SUPPORTS_cc_OUTPUT*/
 #endif /*defined(__GNUC__)*/

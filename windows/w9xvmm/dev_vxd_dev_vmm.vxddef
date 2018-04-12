@@ -2497,3 +2497,23 @@ in              EBX=vxd_vm_handle_t             VM                      ; Virtua
 in              EDX                             Port                    ; I/O port
 %enddef
 
+#--------------------------------------
+%defcall
+byname          List_Create
+description     Create a list structure and return a handle to the list.
+
+in              EAX                             Flags                   ; creation flags
+in              ECX                             NodeSize                ; size in bytes of node in the list
+
+out             !CF                             Success                 ; CF set if error, Success set if success
+out             ESI                             List                    ; list handle if Success
+%enddef
+
+#--------------------------------------
+%defcall
+byname          List_Destroy
+description     Deallocate all nodes of a list and destroy the list handle.
+
+in              ESI                             List                    ; list handle to destroy
+%enddef
+
