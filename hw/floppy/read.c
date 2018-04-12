@@ -626,8 +626,8 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         }
     }
 
+    r_ssz = 0; /* 128 */
     if (disk_bps != 0) {
-        r_ssz = 0; /* 128 */
         while ((disk_bps >> (7+r_ssz)) != 1)
             r_ssz++;
     }
