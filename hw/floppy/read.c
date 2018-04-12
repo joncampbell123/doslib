@@ -605,7 +605,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
                 }
             }
             else {
-                r_cyl += 4 - 1;
+                r_cyl += 48 - 1;
             }
         }
 
