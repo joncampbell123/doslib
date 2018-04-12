@@ -739,7 +739,8 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
 
     /* guess for cyls */
     if (disk_cyls == 0) {
-        if (track_2x == 2 || high_density_drive == 0/* we KNOW it's a double density drive */)
+        if (track_2x == 2/*double density floppy in high density drive*/ ||
+            high_density_drive == 0/* we KNOW it's a double density drive */)
             disk_cyls = 40;
     }
 
