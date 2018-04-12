@@ -1089,7 +1089,7 @@ static int parse_argv(int argc,char **argv) {
                     disk_heads = 2;
                     disk_sects = 15;
                     high_density_disk = 1;
-                    disk_drate = 300; /* GUESS */
+                    disk_drate = 500;
                 }
                 else if (!strcmp(a,"1.2pc98")) {
                     /* WARNING: Your IBM PC's ability to read PC-98 3-mode 1.2MB depends on the hardware
