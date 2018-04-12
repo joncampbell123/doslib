@@ -784,10 +784,15 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
             }
         }
 
-        if (cnt >= 2) {
-            disk_cyls = 80;
-            fprintf(stderr,"Cyl autodetect: %u tracks\n",cnt,disk_cyls);
-        }
+        if (cnt >= 2 && high_density_drive != 0)
+            disk_cyls = 80; /* there's a track 41, so assume 80 tracks IF we know it's not double density */
+        else
+            disk_cyls = 40; /* there isn't a track 41, so assume 40 tracks */
+
+        /* FIXME: This is where it would be GREAT to know if it's a double density drive
+         *        or not to avoid banging to head against the drive */
+
+        fprintf(stderr,"Cyl autodetect: %u tracks\n",cnt,disk_cyls);
     }
 
     /* announce */
