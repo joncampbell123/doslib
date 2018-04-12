@@ -733,7 +733,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         }
     }
 
-    /* if we KNOW the drive is high density and the we KNOW the disk is double density,
+    /* if we KNOW the drive is high density, and we KNOW the disk is double density,
      * then reading the disk requires seeking to TWICE the logical track number */
     track_2x = (high_density_drive > 0 && high_density_disk == 0) ? 2 : 1;
 
