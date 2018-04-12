@@ -2579,7 +2579,7 @@ void do_presets(struct floppy_controller *fdc) {
 				break;
 			}
 			else if (select == 2) { /* 1.2MB 5.25" */
-				floppy_controller_set_data_transfer_rate(fdc,1/*300kb*/);
+				floppy_controller_set_data_transfer_rate(fdc,0/*500kb*/);
 				break;
 			}
 			else if (select == 3) { /* 360KB 5.25" */
