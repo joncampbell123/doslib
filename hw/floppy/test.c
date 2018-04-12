@@ -1046,7 +1046,7 @@ void do_readid_scan(struct floppy_controller *fdc,unsigned char headsel) {
         }
 
         ps = scanlist + i;
-		if ((c=do_read_sector_id(resp,fdc,headsel)) == 7) {
+		if ((c=do_read_sector_id(resp,fdc,headsel)) == 7 && (fdc->st[0] & 0xC0) == 0/*no error*/) {
             ps->c = resp[3];
             ps->h = resp[4];
             ps->s = resp[5];
@@ -1171,7 +1171,7 @@ void do_read_sector_id_demo(struct floppy_controller *fdc) {
             }
 		}
 
-		if ((c=do_read_sector_id(resp,fdc,headsel)) == 7) {
+		if ((c=do_read_sector_id(resp,fdc,headsel)) == 7 && (fdc->st[0] & 0xC0) == 0/*no error*/) {
 			vga_moveto(0,2);
 			vga_write_color(0x0F);
 

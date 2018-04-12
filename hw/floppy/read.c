@@ -517,7 +517,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
             do_seek_drive(fdc,0); /* use track 0 */
 
             for (r_cyl=0;r_cyl < 2;r_cyl++) {
-                if (do_read_sector_id(resp,fdc,0) >= 7) {
+                if (do_read_sector_id(resp,fdc,0) >= 7 && (fdc->st[0] & 0xC0) == 0/*no error*/) {
                     /*      3 |           Cylinder
                      *      4 |             Head
                      *      5 |        Sector Number
@@ -581,7 +581,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         do_calibrate_drive(fdc);
 
         for (r_cyl=0;r_cyl < 255;r_cyl++) {
-            if (do_read_sector_id(resp,fdc,0) >= 7) {
+            if (do_read_sector_id(resp,fdc,0) >= 7 && (fdc->st[0] & 0xC0) == 0/*no error*/) {
                 /*      3 |           Cylinder
                  *      4 |             Head
                  *      5 |        Sector Number
@@ -656,7 +656,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         do_calibrate_drive(fdc);
  
         for (r_cyl=0;r_cyl < 20;r_cyl++) {
-            if (do_read_sector_id(resp,fdc,1/*head 1 this time*/) >= 7) {
+            if (do_read_sector_id(resp,fdc,1/*head 1 this time*/) >= 7 && (fdc->st[0] & 0xC0) == 0/*no error*/) {
                 /*      3 |           Cylinder
                  *      4 |             Head
                  *      5 |        Sector Number
@@ -698,7 +698,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
 
         /* what do we see? */
         for (r_cyl=0;r_cyl < 10;r_cyl++) {
-            if (do_read_sector_id(resp,fdc,0) >= 7) {
+            if (do_read_sector_id(resp,fdc,0) >= 7 && (fdc->st[0] & 0xC0) == 0/*no error*/) {
                 /*      3 |           Cylinder
                  *      4 |             Head
                  *      5 |        Sector Number
@@ -758,7 +758,7 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         do_seek_drive(fdc,41);
  
         for (r_cyl=0;r_cyl < 20;r_cyl++) {
-            if (do_read_sector_id(resp,fdc,0) >= 7) {
+            if (do_read_sector_id(resp,fdc,0) >= 7 && (fdc->st[0] & 0xC0) == 0/*no error*/) {
                 /*      3 |           Cylinder
                  *      4 |             Head
                  *      5 |        Sector Number
