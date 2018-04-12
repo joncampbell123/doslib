@@ -462,11 +462,13 @@ void apply_drate(struct floppy_controller *fdc,unsigned char drive,unsigned int 
         floppy_controller_set_data_transfer_rate(fdc,2); /* 250 */
 
     floppy_controller_set_motor_state(fdc,drive,0);
+	t8254_wait(t8254_us2ticks(50000)); /* 50ms */
     do_spin_up_motor(fdc,drive);
     do_calibrate_drive(fdc);
     do_calibrate_drive(fdc);
     do_calibrate_drive(fdc);
     do_calibrate_drive(fdc);
+    do_seek_drive(fdc,0); /* use track 0 */
 }
 
 static unsigned short drate_tests[4] = { 250, 300, 500, 1000 };
@@ -514,7 +516,6 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
         memset(m,0,sizeof(m));
         for (r_sec=0;r_sec < 4;r_sec++) {
             apply_drate(fdc,drive,drate_tests[r_sec]);
-            do_seek_drive(fdc,0); /* use track 0 */
 
             for (r_cyl=0;r_cyl < 2;r_cyl++) {
                 if (do_read_sector_id(resp,fdc,0) >= 7 && (fdc->st[0] & 0xC0) == 0/*no error*/) {
