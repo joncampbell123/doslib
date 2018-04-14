@@ -800,6 +800,27 @@ static void do_read(struct floppy_controller *fdc,unsigned char drive) {
            "               trackx=%u drate=%u\n",
         disk_cyls,disk_heads,disk_sects,disk_bps,high_density_disk,high_density_drive,r_ssz,disk_bps,track_2x,disk_drate);
 
+    /* announce if we recognize the format */
+    if ((disk_bps == 512) &&
+       ((disk_sects == 8 && disk_cyls == 40)/*160KB/320KB*/ ||
+        (disk_sects == 9 && disk_cyls == 40)/*180KB/360KB*/ ||
+        (disk_sects == 15 && disk_cyls == 80)/*1.2MB*/ ||
+        (disk_sects == 18 && disk_cyls == 80 && disk_heads == 2)/*1.44MB*/ ||
+        (disk_sects == 9 && disk_cyls == 80 && disk_heads == 2)/*720KB*/)) {
+        unsigned int tot = disk_sects * disk_cyls * disk_heads;
+        printf("IBM PC format %uKB\n",(unsigned int)((unsigned long)tot / 2UL));
+    }
+    else if (
+        (disk_bps == 512) &&
+       ((disk_sects == 10 && disk_cyls == 40)/*200KB/400KB DEC Rainbow 100*/)) {
+        unsigned int tot = disk_sects * disk_cyls * disk_heads;
+        printf("DEC Rainbow 100 format %uKB\n",(unsigned int)((unsigned long)tot / 2UL));
+    }
+    else {
+        unsigned int tot = disk_sects * disk_cyls * disk_heads;
+        printf("** UNKNOWN format %uKB\n",(unsigned int)((unsigned long)tot / 2UL));
+    }
+
     /* we can't read high density floppies in a double density drive */
     if (high_density_disk > 0 && high_density_drive == 0) {
         fprintf(stderr,"That format requires a high density drive\n");
