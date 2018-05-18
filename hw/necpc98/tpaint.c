@@ -37,6 +37,7 @@ static inline void gdc_write_data(const unsigned char d) {
 
 int main(int argc,char **argv) {
     uint16_t charcode = 0x2106; /* double-wide A */
+    uint8_t attrcode = 0xE1; /* white */
     unsigned int cur_x = 0,cur_y = 0;
     unsigned char running = 1;
     unsigned char redraw = 1;
@@ -66,7 +67,7 @@ int main(int argc,char **argv) {
 
     while (running) {
         if (redraw) {
-            sprintf(tmp,"X=%02u Y=%02u char=0x%04x",cur_x,cur_y,charcode);
+            sprintf(tmp,"X=%02u Y=%02u char=0x%04x attr=0x%02x",cur_x,cur_y,charcode,attrcode);
             {
                 const unsigned int ofs = 80*24;
                 unsigned int i = 0;
@@ -139,7 +140,7 @@ int main(int argc,char **argv) {
             unsigned int addr = (cur_y * 80) + cur_x;
 
             TRAM_C[addr] = charcode;
-            TRAM_A[addr] = 0xE1;
+            TRAM_A[addr] = attrcode;
         }
         else if (c == 9) {
             unsigned int addr = (cur_y * 80) + cur_x;
