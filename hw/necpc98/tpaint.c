@@ -136,6 +136,10 @@ int main(int argc,char **argv) {
             charcode += (c == 'V' ? 0x0001 : 0xFFFF);
             redraw = 1;
         }
+        else if (c >= '1' && c <= '8') {
+            attrcode ^= 1U << ((unsigned char)(c - '1'));
+            redraw = 1;
+        }
         else if (c == ' ') {
             unsigned int addr = (cur_y * 80) + cur_x;
 
