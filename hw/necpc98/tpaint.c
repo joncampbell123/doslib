@@ -127,6 +127,20 @@ int main(int argc,char **argv) {
                 redraw = 1;
             }
         }
+        else if (c == 'C' || c == 'c') {
+            charcode += (c == 'C' ? 0x0100 : 0xFF00);
+            redraw = 1;
+        }
+        else if (c == 'V' || c == 'v') {
+            charcode += (c == 'V' ? 0x0001 : 0xFFFF);
+            redraw = 1;
+        }
+        else if (c == ' ') {
+            unsigned int addr = (cur_y * 80) + cur_x;
+
+            TRAM_C[addr] = charcode;
+            TRAM_A[addr] = 0xE1;
+        }
     }
 
     printf("\n");
