@@ -38,6 +38,7 @@ static inline void gdc_write_data(const unsigned char d) {
 int main(int argc,char **argv) {
     uint16_t charcode = 0x2106; /* double-wide A */
     uint8_t attrcode = 0xE1; /* white */
+    unsigned char simplegraphics = 0;
     unsigned int cur_x = 0,cur_y = 0;
     unsigned char running = 1;
     unsigned char redraw = 1;
@@ -67,7 +68,7 @@ int main(int argc,char **argv) {
 
     while (running) {
         if (redraw) {
-            sprintf(tmp,"X=%02u Y=%02u char=0x%04x attr=0x%02x",cur_x,cur_y,charcode,attrcode);
+            sprintf(tmp,"X=%02u Y=%02u char=0x%04x attr=0x%02x sg=%u",cur_x,cur_y,charcode,attrcode,simplegraphics);
             {
                 const unsigned int ofs = 80*24;
                 unsigned int i = 0;
@@ -127,6 +128,12 @@ int main(int argc,char **argv) {
                 cur_y++;
                 redraw = 1;
             }
+        }
+        else if (c == 'g') {
+            simplegraphics ^= 1;
+            redraw = 1;
+
+            outp(0x68,simplegraphics ? 0x01 : 0x00);
         }
         else if (c == 'C' || c == 'c') {
             charcode += (c == 'C' ? 0x0100 : 0xFF00);
