@@ -16,6 +16,7 @@ TCGD_EXE =    $(SUBDIR)$(HPS)tcgd.$(EXEEXT)
 CGDUMP_EXE =  $(SUBDIR)$(HPS)cgdump.$(EXEEXT)
 INT18_EXE =   $(SUBDIR)$(HPS)int18.$(EXEEXT)
 INT18KM_EXE = $(SUBDIR)$(HPS)int18km.$(EXEEXT)
+TPAINT_EXE =  $(SUBDIR)$(HPS)tpaint.$(EXEEXT)
 
 $(HW_NECPC98_LIB): $(OBJS)
 	wlib -q -b -c $(HW_NECPC98_LIB) -+$(SUBDIR)$(HPS)necpc98.obj
@@ -33,7 +34,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_NECPC98_LIB) .symbolic
 
-exe: $(TEST_EXE) $(TCHR_EXE) $(TATTR_EXE) $(SJIS1_EXE) $(SJIS2_EXE) $(SJIS3_EXE) $(GDC_EXE) $(TCGD_EXE) $(CGDUMP_EXE) $(INT18_EXE) $(INT18KM_EXE) .symbolic
+exe: $(TEST_EXE) $(TCHR_EXE) $(TATTR_EXE) $(SJIS1_EXE) $(SJIS2_EXE) $(SJIS3_EXE) $(GDC_EXE) $(TCGD_EXE) $(CGDUMP_EXE) $(INT18_EXE) $(INT18KM_EXE) $(TPAINT_EXE) .symbolic
 
 # FIXME: Need a makefile var here what to run, rather than hard-code the path!! This assumes Linux!
 isjp_cnv.h: isjp_utf.h
@@ -92,6 +93,11 @@ $(INT18_EXE): $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)in
 
 $(INT18KM_EXE): $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)int18km.obj $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
 	%write tmp.cmd option quiet option map=$(INT18KM_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)int18km.obj $(HW_NECPC98_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(INT18KM_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+
+$(TPAINT_EXE): $(HW_NECPC98_LIB) $(HW_NECPC98_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)tpaint.obj $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES)
+	%write tmp.cmd option quiet option map=$(TPAINT_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)tpaint.obj $(HW_NECPC98_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) name $(TPAINT_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 
