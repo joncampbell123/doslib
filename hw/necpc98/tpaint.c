@@ -141,6 +141,11 @@ int main(int argc,char **argv) {
             TRAM_C[addr] = charcode;
             TRAM_A[addr] = 0xE1;
         }
+        else if (c == 9) {
+            unsigned int addr = (cur_y * 80) + cur_x;
+
+            TRAM_C[addr] = 0;
+        }
     }
 
     printf("\n");
