@@ -167,7 +167,7 @@ unsigned int can_move(unsigned int dir, struct game_cell far *cur, struct game_c
 uint16_t game_cell_to_VGA(struct game_cell far *c) {
     switch (c->what) {
         case THE_VOID:      return (uint16_t)(0x0000);
-        case OPEN_SPACE:    return (uint16_t)(0x0720);
+        case OPEN_SPACE:    return (uint16_t)(0x08B0);
         default:            return (uint16_t)(c->what + 0x0700);
     };
 
@@ -314,9 +314,12 @@ int load_level_file(struct game_map *map, const char *fn) {
             if (my < map->map_height) {
                 struct game_cell far *row = map_get_row(map,my);
                 unsigned int mx = 0;
-                assert(row != NULL);
+                char last_p = OPEN_SPACE;
 
+                assert(row != NULL);
                 while (*p != 0 && *p != '\n' && *p != '\r' && mx < map->map_width) {
+                    last_p = *p;
+
                     row->what = (unsigned char)(*p);
                     row->param = 0;
 
@@ -325,7 +328,7 @@ int load_level_file(struct game_map *map, const char *fn) {
                     p++;
                 }
                 while (mx < map->map_width) {
-                    row->what = THE_VOID;
+                    row->what = (unsigned char)(last_p);
                     row->param = 0;
 
                     row++;
