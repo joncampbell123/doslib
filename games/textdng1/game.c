@@ -45,6 +45,17 @@ struct game_map {
     unsigned int                map_width,map_height;
 };
 
+enum {
+    CHAR_PLAYER=1
+};
+
+struct game_character {
+    int                         map_x,map_y;
+    unsigned char               what;
+};
+
+struct game_character           player = {0, 0, CHAR_PLAYER};
+
 struct game_map*                current_level = NULL;
 
 struct game_map *map_alloc(void) {
@@ -116,6 +127,18 @@ struct game_map *map_free(struct game_map *m) {
 
 uint16_t offscreen_composite[80*25];
 
+void draw_character_composite(unsigned int dx,unsigned int dy,unsigned int dw,unsigned int dh,unsigned int sx,unsigned int sy,struct game_character *c) {
+    int drawx = c->map_x - (int)sx;
+    int drawy = c->map_y - (int)sy;
+    if (drawx < 0 || drawy < 0 || (unsigned int)drawx >= dw || (unsigned int)drawy >= dh) return;
+
+    switch (c->what) {
+        case CHAR_PLAYER:
+            offscreen_composite[((unsigned int)drawy * dw) + (unsigned int)drawx] = 0x0F01U;
+            break;
+    }
+}
+
 uint16_t game_cell_to_VGA(struct game_cell far *c) {
     switch (c->what) {
         case THE_VOID:      return (uint16_t)(0x0000);
@@ -153,6 +176,8 @@ void draw_level(void) {
             for (x=0;x < dw;x++)
                 *crow++ = game_cell_to_VGA(srow++);
         }
+
+        draw_character_composite(dx,dy,dw,dh,0,0,&player);
 
         crow = offscreen_composite;
         for (y=0;y < dh;y++) {
