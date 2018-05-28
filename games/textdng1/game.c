@@ -392,6 +392,8 @@ int load_level(unsigned int N) {
     return 0;
 }
 
+static unsigned int extra_edge_scroll = 2;
+
 void level_loop(void) {
     int c;
 
@@ -409,8 +411,10 @@ void level_loop(void) {
                     map_get_cell(current_level, player.map_x, player.map_y),
                     map_get_cell(current_level, player.map_x, player.map_y - 1), 1)) {
                     player.map_y--;
-                    if (current_level->map_scroll_y > player.map_y)
-                        current_level->map_scroll_y = player.map_y;
+                    if (player.map_y >= extra_edge_scroll) {
+                        if (current_level->map_scroll_y > (player.map_y - extra_edge_scroll))
+                            current_level->map_scroll_y = (player.map_y - extra_edge_scroll);
+                    }
                     draw_level();
                 }
             }
@@ -421,9 +425,12 @@ void level_loop(void) {
                     map_get_cell(current_level, player.map_x, player.map_y),
                     map_get_cell(current_level, player.map_x, player.map_y + 1), 1)) {
                     player.map_y++;
-                    if (player.map_y >= (current_level->map_display_h - 1)) {
-                        if (current_level->map_scroll_y < (player.map_y + 1 - current_level->map_display_h))
-                            current_level->map_scroll_y = (player.map_y + 1 - current_level->map_display_h);
+                    if (current_level->map_display_h >= (1 + extra_edge_scroll) &&
+                        player.map_y >= (current_level->map_display_h - (1 + extra_edge_scroll))) {
+                        if (current_level->map_scroll_y < (player.map_y + 1 + extra_edge_scroll - current_level->map_display_h))
+                            current_level->map_scroll_y = (player.map_y + 1 + extra_edge_scroll - current_level->map_display_h);
+                        if (current_level->map_scroll_y > (current_level->map_height - current_level->map_display_h))
+                            current_level->map_scroll_y = (current_level->map_height - current_level->map_display_h);
                     }
                     draw_level();
                 }
@@ -435,8 +442,10 @@ void level_loop(void) {
                     map_get_cell(current_level, player.map_x,     player.map_y),
                     map_get_cell(current_level, player.map_x - 1, player.map_y), 1)) {
                     player.map_x--;
-                    if (current_level->map_scroll_x > player.map_x)
-                        current_level->map_scroll_x = player.map_x;
+                    if (player.map_x >= extra_edge_scroll) {
+                        if (current_level->map_scroll_x > (player.map_x - extra_edge_scroll))
+                            current_level->map_scroll_x = (player.map_x - extra_edge_scroll);
+                    }
                     draw_level();
                 }
             }
@@ -447,9 +456,12 @@ void level_loop(void) {
                     map_get_cell(current_level, player.map_x,     player.map_y),
                     map_get_cell(current_level, player.map_x + 1, player.map_y), 1)) {
                     player.map_x++;
-                    if (player.map_x >= (current_level->map_display_w - 1)) {
-                        if (current_level->map_scroll_x < (player.map_x + 1 - current_level->map_display_w))
-                            current_level->map_scroll_x = (player.map_x + 1 - current_level->map_display_w);
+                    if (current_level->map_display_w >= (1 + extra_edge_scroll) &&
+                        player.map_x >= (current_level->map_display_w - (1 + extra_edge_scroll))) {
+                        if (current_level->map_scroll_x < (player.map_x + 1 + extra_edge_scroll - current_level->map_display_w))
+                            current_level->map_scroll_x = (player.map_x + 1 + extra_edge_scroll - current_level->map_display_w);
+                        if (current_level->map_scroll_x > (current_level->map_width - current_level->map_display_w))
+                            current_level->map_scroll_x = (current_level->map_width - current_level->map_display_w);
                     }
                     draw_level();
                 }
