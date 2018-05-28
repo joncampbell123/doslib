@@ -257,6 +257,14 @@ int load_level_file(struct game_map *map, const char *fn) {
                 p += 2;
                 h = atoi(p);
             }
+            else if (!strncmp(p,"start=",6)) {
+                p += 6;
+                player.map_x = (int)strtol(p,&p,10);
+                if (*p == ',') {
+                    p++;
+                    player.map_y = (int)strtol(p,&p,10);
+                }
+            }
         }
         else if (*p == '>') {
             p++;
