@@ -33,6 +33,13 @@ enum {
     OPEN_SPACE=' '
 };
 
+enum {
+    UP=0,
+    DOWN,
+    LEFT,
+    RIGHT
+};
+
 #pragma pack(push,1)
 struct game_cell {
     unsigned char               what;
@@ -137,6 +144,21 @@ void draw_character_composite(unsigned int dx,unsigned int dy,unsigned int dw,un
             offscreen_composite[((unsigned int)drawy * dw) + (unsigned int)drawx] = 0x0E02U;
             break;
     }
+}
+
+unsigned int can_move(unsigned int dir, struct game_cell far *cur, struct game_cell far *next) {
+    if (next == NULL)
+        return 0;
+    if (cur == NULL)
+        return 1;
+
+    switch (next->what) {
+        case THE_VOID:
+        case OPEN_SPACE:
+            return 1;
+    };
+
+    return 0;
 }
 
 uint16_t game_cell_to_VGA(struct game_cell far *c) {
@@ -377,26 +399,42 @@ void level_loop(void) {
 
         if (c == 0x4800) {//UP
             if (player.map_y > 0) {
-                player.map_y--;
-                draw_level();
+                if (can_move(UP,
+                    map_get_cell(current_level, player.map_x, player.map_y),
+                    map_get_cell(current_level, player.map_x, player.map_y - 1))) {
+                    player.map_y--;
+                    draw_level();
+                }
             }
         }
         else if (c == 0x5000) {//DOWN
             if ((player.map_y + 1) < current_level->map_height) {
-                player.map_y++;
-                draw_level();
+                if (can_move(DOWN,
+                    map_get_cell(current_level, player.map_x, player.map_y),
+                    map_get_cell(current_level, player.map_x, player.map_y + 1))) {
+                    player.map_y++;
+                    draw_level();
+                }
             }
         }
         else if (c == 0x4B00) {//RIGHT
-             if (player.map_x > 0) {
-                player.map_x--;
-                draw_level();
+            if (player.map_x > 0) {
+                if (can_move(RIGHT,
+                    map_get_cell(current_level, player.map_x,     player.map_y),
+                    map_get_cell(current_level, player.map_x - 1, player.map_y))) {
+                    player.map_x--;
+                    draw_level();
+                }
             }
         }
         else if (c == 0x4D00) {//LEFT
             if ((player.map_x + 1) < current_level->map_width) {
-                player.map_x++;
-                draw_level();
+                if (can_move(LEFT,
+                    map_get_cell(current_level, player.map_x,     player.map_y),
+                    map_get_cell(current_level, player.map_x + 1, player.map_y))) {
+                    player.map_x++;
+                    draw_level();
+                }
             }
         }
     } while (1);
