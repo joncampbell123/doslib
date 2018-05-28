@@ -210,10 +210,9 @@ unsigned int can_move(struct game_character *chr, unsigned int dir, struct game_
 
     /* if the player is falling, the player cannot move out of the void */
     if (chr->what == CHAR_PLAYER) {
-        if (chr->param >= CH_P_FALLING6)
-            return 0;
-
         if (chr->param >= CH_P_FALLING1) {
+            if (chr->param >= CH_P_FALLING6)
+                return 0;
             if (cur->what == THE_VOID && next->what != THE_VOID)
                 return 0;
         }
