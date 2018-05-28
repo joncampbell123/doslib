@@ -486,7 +486,6 @@ void level_loop(void) {
             else {
                 if (player.param < CH_P_FALLING6) {
                     player.param++;
-                    draw_level();
                 }
                 else {
                     /* game over */
@@ -520,7 +519,6 @@ void level_loop(void) {
                                 current_level->map_scroll_y = (player.map_y - extra_edge_scroll);
                         }
                         act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
-                        draw_level();
                     }
                 }
             }
@@ -538,7 +536,6 @@ void level_loop(void) {
                                 current_level->map_scroll_y = (current_level->map_height - current_level->map_display_h);
                         }
                         act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
-                        draw_level();
                     }
                 }
             }
@@ -553,7 +550,6 @@ void level_loop(void) {
                                 current_level->map_scroll_x = (player.map_x - extra_edge_scroll);
                         }
                         act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
-                        draw_level();
                     }
                 }
             }
@@ -571,11 +567,13 @@ void level_loop(void) {
                                 current_level->map_scroll_x = (current_level->map_width - current_level->map_display_w);
                         }
                         act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
-                        draw_level();
                     }
                 }
             }
         }
+
+        /* redraw */
+        draw_level();
 
         /* pause for 100ms (10 frames/sec) */
         t8254_wait(t8254_us2ticks(100000UL));
