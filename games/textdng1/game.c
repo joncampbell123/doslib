@@ -62,9 +62,23 @@ enum {
 struct game_character {
     int                         map_x,map_y;
     unsigned char               what;
+    unsigned char               param;
+    unsigned char               param2;
 };
 
-struct game_character           player = {0, 0, CHAR_PLAYER};
+enum {
+    CH_P_NORMAL=0,
+    CH_P_FALLING1,
+    CH_P_FALLING2,
+    CH_P_FALLING3,
+    CH_P_FALLING4,
+    CH_P_FALLING5,
+    CH_P_FALLING6,
+
+    CH_P_MAX
+};
+
+struct game_character           player = {0, 0, CHAR_PLAYER, 0, 0};
 
 struct game_map*                current_level = NULL;
 
@@ -137,6 +151,16 @@ struct game_map *map_free(struct game_map *m) {
 
 uint16_t offscreen_composite[80*25];
 
+uint16_t player_chars[CH_P_MAX] = {
+    0x0E02,     // CH_P_NORMAL
+    0x0E01,     // CH_P_FALLING1
+    0x0601,     // CH_P_FALLING2
+    0x0701,     // CH_P_FALLING3
+    0x0801,     // CH_P_FALLING4
+    0x08FA,     // CH_P_FALLING5
+    0x0000      // CH_P_FALLING6
+};
+
 void draw_character_composite(unsigned int dx,unsigned int dy,unsigned int dw,unsigned int dh,unsigned int sx,unsigned int sy,struct game_character *c) {
     int drawx = c->map_x - (int)sx;
     int drawy = c->map_y - (int)sy;
@@ -144,16 +168,24 @@ void draw_character_composite(unsigned int dx,unsigned int dy,unsigned int dw,un
 
     switch (c->what) {
         case CHAR_PLAYER:
-            offscreen_composite[((unsigned int)drawy * dw) + (unsigned int)drawx] = 0x0E02U;
+            offscreen_composite[((unsigned int)drawy * dw) + (unsigned int)drawx] = player_chars[c->param];
             break;
     }
 }
 
-unsigned int can_move(unsigned int dir, struct game_cell far *cur, struct game_cell far *next, unsigned int do_action) {
+unsigned int can_move(struct game_character *chr, unsigned int dir, struct game_cell far *cur, struct game_cell far *next, unsigned int do_action) {
     if (next == NULL)
         return 0;
     if (cur == NULL)
         return 1;
+
+    /* if the player is falling, the player cannot move out of the void */
+    if (chr->what == CHAR_PLAYER) {
+        if (chr->param >= CH_P_FALLING1) {
+            if (cur->what == THE_VOID && next->what != THE_VOID)
+                return 0;
+        }
+    }
 
     switch (next->what) {
         case THE_VOID:
@@ -264,6 +296,15 @@ char line[1024];
 void ERROR(const char *fmt) {
     fprintf(stderr,"%s\n",fmt);
     while (getch() != 13);
+}
+
+void act_player(struct game_character *chr,struct game_cell far *cell) {
+    /* if the player walked into the void, fall */
+    if (cell->what == THE_VOID) {
+        if (chr->what == CHAR_PLAYER) {
+            chr->param = CH_P_FALLING1;
+        }
+    }
 }
 
 int load_level_file(struct game_map *map, const char *fn) {
@@ -410,7 +451,7 @@ void level_loop(void) {
 
         if (c == 0x4800) {//UP
             if (player.map_y > 0) {
-                if (can_move(UP,
+                if (can_move(&player, UP,
                     map_get_cell(current_level, player.map_x, player.map_y),
                     map_get_cell(current_level, player.map_x, player.map_y - 1), 1)) {
                     player.map_y--;
@@ -418,13 +459,14 @@ void level_loop(void) {
                         if (current_level->map_scroll_y > (player.map_y - extra_edge_scroll))
                             current_level->map_scroll_y = (player.map_y - extra_edge_scroll);
                     }
+                    act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
                     draw_level();
                 }
             }
         }
         else if (c == 0x5000) {//DOWN
             if ((player.map_y + 1) < current_level->map_height) {
-                if (can_move(DOWN,
+                if (can_move(&player, DOWN,
                     map_get_cell(current_level, player.map_x, player.map_y),
                     map_get_cell(current_level, player.map_x, player.map_y + 1), 1)) {
                     player.map_y++;
@@ -435,13 +477,14 @@ void level_loop(void) {
                         if (current_level->map_scroll_y > (current_level->map_height - current_level->map_display_h))
                             current_level->map_scroll_y = (current_level->map_height - current_level->map_display_h);
                     }
+                    act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
                     draw_level();
                 }
             }
         }
         else if (c == 0x4B00) {//RIGHT
             if (player.map_x > 0) {
-                if (can_move(RIGHT,
+                if (can_move(&player, RIGHT,
                     map_get_cell(current_level, player.map_x,     player.map_y),
                     map_get_cell(current_level, player.map_x - 1, player.map_y), 1)) {
                     player.map_x--;
@@ -449,13 +492,14 @@ void level_loop(void) {
                         if (current_level->map_scroll_x > (player.map_x - extra_edge_scroll))
                             current_level->map_scroll_x = (player.map_x - extra_edge_scroll);
                     }
+                    act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
                     draw_level();
                 }
             }
         }
         else if (c == 0x4D00) {//LEFT
             if ((player.map_x + 1) < current_level->map_width) {
-                if (can_move(LEFT,
+                if (can_move(&player, LEFT,
                     map_get_cell(current_level, player.map_x,     player.map_y),
                     map_get_cell(current_level, player.map_x + 1, player.map_y), 1)) {
                     player.map_x++;
@@ -466,6 +510,7 @@ void level_loop(void) {
                         if (current_level->map_scroll_x > (current_level->map_width - current_level->map_display_w))
                             current_level->map_scroll_x = (current_level->map_width - current_level->map_display_w);
                     }
+                    act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
                     draw_level();
                 }
             }
