@@ -150,18 +150,29 @@ uint16_t game_cell_to_VGA(struct game_cell far *c) {
 }
 
 void draw_level(void) {
-    unsigned int x,y,dx,dy,dw,dh;
+    unsigned int x,y,dx,dy,dw,dh,sx,sy;
 
+    if (current_level->map_base == 0 || current_level->map_width == 0 || current_level->map_height == 0)
+        return;
+
+    sx = 0;
+    sy = 0;
     dx = 0;
     dy = 0;
-    dw = current_level->map_width;
-    dh = current_level->map_height;
+
+    assert(sx < current_level->map_width);
+    assert(sy < current_level->map_height);
+
+    dw = current_level->map_width - sx;
+    dh = current_level->map_height - sy;
 
     if ((dx+dw) > 80)
         dw = 80 - dx;
     if ((dy+dh) > 25)
         dh = 25 - dy;
 
+    assert((sx+dw) <= current_level->map_width);
+    assert((sy+dh) <= current_level->map_height);
     assert((dx+dw) <= 80 && dw <= 80);
     assert((dy+dh) <= 25 && dh <= 25);
 
@@ -171,13 +182,13 @@ void draw_level(void) {
         
         crow = offscreen_composite;
         for (y=0;y < dh;y++) {
-            struct game_cell *srow = map_get_cell(current_level,0,y);
+            struct game_cell *srow = map_get_cell(current_level,sx,y + sy);
 
             for (x=0;x < dw;x++)
                 *crow++ = game_cell_to_VGA(srow++);
         }
 
-        draw_character_composite(dx,dy,dw,dh,0,0,&player);
+        draw_character_composite(dx,dy,dw,dh,sx,sy,&player);
 
         crow = offscreen_composite;
         for (y=0;y < dh;y++) {
