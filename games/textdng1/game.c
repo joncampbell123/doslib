@@ -189,8 +189,8 @@ int load_level_file(struct game_map *map, const char *fn) {
             }
 
             if (my < map->map_height) {
-                unsigned int mx = 0;
                 struct game_cell far *row = map_get_row(map,my);
+                unsigned int mx = 0;
                 assert(row != NULL);
 
                 while (*p != 0 && *p != '\n' && *p != '\r' && mx < map->map_width) {
@@ -216,8 +216,8 @@ int load_level_file(struct game_map *map, const char *fn) {
 
     if (map->map_base != NULL && map->map_width != 0) {
         while (my < map->map_height) {
-            unsigned int mx = 0;
             struct game_cell far *row = map_get_row(map,my);
+            unsigned int mx = 0;
             assert(row != NULL);
 
             while (mx < map->map_width) {
