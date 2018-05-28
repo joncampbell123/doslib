@@ -2,23 +2,27 @@
 #h=20
 #start=3,3
 #exit1=level2
+#exit2=tele3
+#exit3=tele2
+#exit4=tele5
+#exit5=teleback
 >aaaaaa``
 >b   bb``````````````````````````````````````````````````````````````````````````````````````````````````````
 >b   bb-----------------------------------------   ----------------------tttttttttttttttttttttttttttttttttttt
 >b        bb 
 >bbbbbb 
->````bb 
+>````bb t2 
 >````bb 
 >````   
 >````bb 
->````bb                 aaaaa 
->````bb                   e1a 
->````bb                 aaaaa 
->````bb 
+>````bb                 aaaaa          xxxxxxxx 
+>````bb                   e1a          xx t5 xx 
+>````bb t3              aaaaa          xxxxxxxx 
+>````bb  
 >````bb---- 
 >````bbe1 
 >bbbbbb---- 
 >
 >
->
+>              t4 
 >ddddddddddd

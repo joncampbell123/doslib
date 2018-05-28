@@ -31,7 +31,8 @@ static unsigned char apploop = 1;
 enum {
     THE_VOID='`',
     OPEN_SPACE=' ',
-    EXIT_SPACE='e'
+    EXIT_SPACE='e',
+    TELE_SPACE='t'
 };
 
 enum {
@@ -43,11 +44,16 @@ enum {
 
 enum {
     ET_NONE=0,
-    ET_LEVEL
+    ET_LEVEL,
+    ET_TELE
 };
 
 enum {
     ET_LEVEL_BACK=255
+};
+
+enum {
+    ET_TELE_BACK=255
 };
 
 #pragma pack(push,1)
@@ -59,6 +65,7 @@ struct game_cell {
 struct game_exit {
     unsigned char               type;
     unsigned char               param;
+    unsigned char               x,y;
 };
 #pragma pack(pop)
 
@@ -108,6 +115,7 @@ signed char                     current_level_N = -1;
 
 signed char                     prev_level = -1;
 signed char                     prev_level_exit = -1;
+static unsigned char            prev_level_dir = UP;
 struct game_character           prev_level_player;
 
 struct game_map *map_alloc(void) {
@@ -243,6 +251,7 @@ unsigned int can_move(struct game_character *chr, unsigned int dir, struct game_
         case OPEN_SPACE:
             return 1;
         case EXIT_SPACE:
+        case TELE_SPACE:
             if (next->param < 10) {
                 struct game_exit *ex = &current_level->exit[next->param];
 
@@ -262,6 +271,22 @@ unsigned int can_move(struct game_character *chr, unsigned int dir, struct game_
                         exit_proc = next->param;
                     }
                 }
+                else if (ex->type == ET_TELE) {
+                    if (ex->param < 100) {
+                        if (chr->what == CHAR_PLAYER) {
+                            chr->param = CH_P_TRAVEL_LOCK;
+                            chr->param2 = 1;
+                            exit_proc_dir = dir;
+                            exit_proc = next->param;
+                        }
+                    }
+                    else if (ex->param == ET_TELE_BACK) {
+                        chr->param = CH_P_TRAVEL_LOCK;
+                        chr->param2 = 1;
+                        exit_proc_dir = dir;
+                        exit_proc = next->param;
+                    }
+                }
             }
             return 0;
     };
@@ -274,6 +299,7 @@ uint16_t game_cell_to_VGA(struct game_cell far *c) {
         case THE_VOID:      return (uint16_t)(0x0000);
         case OPEN_SPACE:    return (uint16_t)(0x08B0);
         case EXIT_SPACE:    return (uint16_t)(0x0B08);
+        case TELE_SPACE:    return (uint16_t)(0x0B08);
         default:            return (uint16_t)(c->what + 0x0700);
     };
 
@@ -464,6 +490,16 @@ int load_level_file(struct game_map *map, const char *fn) {
                     ex->type = ET_LEVEL;
                     ex->param = ET_LEVEL_BACK;
                 }
+                else if (!strncmp(p,"tele",4) && isdigit(p[4])) {
+                    p += 4;
+                    while (*p == ' ') p++;
+                    ex->type = ET_TELE;
+                    ex->param = atoi(p);
+                }
+                else if (!strncmp(p,"teleback",8)) {
+                    ex->type = ET_TELE;
+                    ex->param = ET_TELE_BACK;
+                }
                 else {
                     ex->type = ET_NONE;
                 }
@@ -542,10 +578,15 @@ int load_level_file(struct game_map *map, const char *fn) {
             assert(row != NULL);
 
             for (mx=0;(mx+1U) < map->map_width;) {
-                if (row[mx].what == EXIT_SPACE) { /* e1 = exit 1    two cells */
+                if (row[mx].what == EXIT_SPACE || row[mx].what == TELE_SPACE) { /* e1 = exit 1    two cells */
                     if (row[mx+1].what >= '0' && row[mx+1].what <= '9') {
                         row[mx].param = row[mx+1].what - '0';
                         row[mx+1] = row[mx];
+
+                        current_level->exit[row[mx].param].x = mx;
+                        current_level->exit[row[mx].param].y = my;
+                        current_level->exit[row[mx+1].param].x = mx+1;
+                        current_level->exit[row[mx+1].param].y = my;
 
                         /* so now the exit space is two cells wide.
                          * trim one or the other based on which side is against a wall */
@@ -567,7 +608,6 @@ int load_level_file(struct game_map *map, const char *fn) {
 
                             if (ok) row[mx] = row[mx-1];
                         }
-
 
                         mx += 2;
                     }
@@ -659,13 +699,13 @@ int level_loop(void) {
                     struct game_exit *ex = &current_level->exit[exit_proc];
 
                     if (ex->type == ET_LEVEL) {
-
                         if (ex->param == ET_LEVEL_BACK) {
                             if (prev_level >= 0) {
                                 struct game_character pl = prev_level_player;
                                 signed char level = prev_level;
 //                              signed char exit = prev_level_exit;
 
+                                prev_level_dir = exit_proc_dir;
                                 prev_level_player = player;
                                 prev_level = current_level_N;
                                 prev_level_exit = exit_proc;
@@ -680,6 +720,7 @@ int level_loop(void) {
                             }
                         }
                         else if (ex->param < 100) {
+                            prev_level_dir = exit_proc_dir;
                             prev_level_player = player;
                             prev_level = current_level_N;
                             prev_level_exit = exit_proc;
@@ -688,6 +729,44 @@ int level_loop(void) {
                         }
 
                         return 1;
+                    }
+                    else if (ex->type == ET_TELE) {
+                        player.param = CH_P_NORMAL;
+                        player.param2 = 0;
+                        if (ex->param == ET_TELE_BACK) {
+                            struct game_character pl = prev_level_player;
+
+                            prev_level_player = player;
+
+                            player = pl;
+                            scroll_to_player();
+                        }
+                        else if (ex->param < 10) {
+                            struct game_exit *nex = &current_level->exit[ex->param];
+
+                            prev_level_player = player;
+
+                            player.map_x = nex->x;
+                            player.map_y = nex->y;
+
+                            /* need to step out of the block itself, based on player direction and walls */
+                            if (exit_proc_dir == UP) {
+                                player.map_y--;
+                            }
+                            else if (exit_proc_dir == DOWN) {
+                                player.map_y++;
+                            }
+                            else if (exit_proc_dir == LEFT) {
+                                player.map_x--;
+                            }
+                            else if (exit_proc_dir == RIGHT) {
+                                player.map_x++;
+                            }
+
+                            scroll_to_player();
+                        }
+
+                        continue;
                     }
 
                     ERROR("Unhandled exit");
@@ -735,9 +814,9 @@ int level_loop(void) {
                     }
                 }
             }
-            else if (c == 0x4B00) {//RIGHT
+            else if (c == 0x4B00) {//LEFT
                 if (player.map_x > 0) {
-                    if (can_move(&player, RIGHT,
+                    if (can_move(&player, LEFT,
                                 map_get_cell(current_level, player.map_x,     player.map_y),
                                 map_get_cell(current_level, player.map_x - 1, player.map_y), 1)) {
                         player.map_x--;
@@ -746,9 +825,9 @@ int level_loop(void) {
                     }
                 }
             }
-            else if (c == 0x4D00) {//LEFT
+            else if (c == 0x4D00) {//RIGHT
                 if ((player.map_x + 1) < current_level->map_width) {
-                    if (can_move(&player, LEFT,
+                    if (can_move(&player, RIGHT,
                                 map_get_cell(current_level, player.map_x,     player.map_y),
                                 map_get_cell(current_level, player.map_x + 1, player.map_y), 1)) {
                         player.map_x++;
