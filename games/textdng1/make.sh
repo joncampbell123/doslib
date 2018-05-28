@@ -3,7 +3,7 @@ rel=../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
-dos=1
+#dos=1
 
 if [ "$1" == "clean" ]; then
     do_clean
@@ -18,6 +18,7 @@ if [ "$1" == "disk" ]; then
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
+    export allow_build_list="dos86s dos86l"
     make_buildlist
     begin_bat
 

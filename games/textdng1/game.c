@@ -28,6 +28,74 @@
 
 static unsigned char apploop = 1;
 
+#pragma pack(push,1)
+struct game_cell {
+    unsigned char               display_char;
+    unsigned char               behavior;
+};
+#pragma pack(pop)
+
+struct game_map {
+    struct game_cell far*       map_base;
+    unsigned int                map_width,map_height;
+};
+
+struct game_map*                current_level = NULL;
+
+struct game_map *map_alloc(void) {
+    struct game_map *m = calloc(1,sizeof(struct game_map));
+    return m;
+}
+
+struct game_cell far *map_get_row(struct game_map *m,unsigned int y) {
+    if (m->map_base == NULL)
+        return NULL;
+    if (y >= m->map_height)
+        return NULL;
+
+    return m->map_base + (y * m->map_width);
+}
+
+void map_free_data(struct game_map *m) {
+    if (m->map_base != NULL) {
+        _ffree(m->map_base);
+        m->map_base = NULL;
+    }
+
+    m->map_width = 0;
+    m->map_height = 0;
+}
+
+int map_alloc_data(struct game_map *m,unsigned int w,unsigned int h) {
+    if (m->map_base != NULL)
+        map_free_data(m);
+    if (w == 0 || h == 0 || w >= 256 || h >= 256)
+        return -1;
+
+    {
+        unsigned long sz = (unsigned long)w * (unsigned long)h * (unsigned long)sizeof(struct game_cell);
+        if (sz >= 0xFFF0UL)
+            return -1;
+
+        m->map_base = (struct game_cell far*)_fmalloc((unsigned)sz);
+        if (m->map_base == NULL)
+            return -1;
+    }
+
+    m->map_width = w;
+    m->map_height = h;
+    return 0;
+}
+
+struct game_map *map_free(struct game_map *m) {
+    if (m) {
+        map_free_data(m);
+        free(m);
+    }
+
+    return NULL;
+}
+
 void clear_screen(void) {
     vga_clear();
     vga_moveto(0,0);
@@ -63,6 +131,107 @@ void do_title_screen(void) {
     } while (1);
 }
 
+char line[1024];
+
+void ERROR(const char *fmt) {
+    fprintf(stderr,"%s\n",fmt);
+    while (getch() != 13);
+}
+
+int load_level_file(struct game_map *map, const char *fn) {
+    unsigned int w=0,h=0,my=0;
+    FILE *fp;
+    char *p;
+
+    fp = fopen(fn,"rb");
+    if (fp == NULL) {
+        ERROR("Unable to open level file");
+        return -1;
+    }
+
+    while (!feof(fp) && !ferror(fp)) {
+        if (fgets(line,sizeof(line)-1,fp) == NULL) break;
+
+        p = line;
+        if (*p == '#') {
+            p++;
+
+            if (!strncmp(p,"w=",2)) {
+                p += 2;
+                w = atoi(p);
+            }
+            else if (!strncmp(p,"h=",2)) {
+                p += 2;
+                h = atoi(p);
+            }
+        }
+        else if (*p == '>') {
+            p++;
+
+            if (map->map_base == NULL) {
+                if (map_alloc_data(map,w,h) < 0) {
+                    ERROR("Failed to alloc map data");
+                    break;
+                }
+            }
+
+            if (my < map->map_height) {
+                unsigned int mx = 0;
+                struct game_cell far *row = map_get_row(map,my);
+                assert(row != NULL);
+
+                while (*p != 0 && *p != '\n' && *p != '\r' && mx < map->map_width) {
+                    row->display_char = *p;
+                    row->behavior = 0;
+
+                    row++;
+                    mx++;
+                    p++;
+                }
+                while (mx < map->map_width) {
+                    row->display_char = *p;
+                    row->behavior = 0;
+
+                    row++;
+                    mx++;
+                }
+            }
+        }
+    }
+
+    fclose(fp);
+
+    if (map->map_base == NULL || map->map_width == 0 || map->map_height == 0) {
+        ERROR("Map not alloc");
+        return -1;
+    }
+
+    return 0;
+}
+
+int load_level(unsigned int N) {
+    char tmp[14];
+
+    if (N == 0U || N > 99U) return -1;
+
+    current_level = map_free(current_level);
+
+    current_level = map_alloc();
+    if (current_level == NULL) {
+        ERROR("map alloc failed");
+        return -1;
+    }
+
+    sprintf(tmp,"level%02u.txt",N);
+    if (load_level_file(current_level, tmp) < 0) {
+        current_level = map_free(current_level);
+        ERROR("Load level failed");
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv,char **envp) {
     probe_dos();
     cpu_probe();
@@ -90,6 +259,7 @@ int main(int argc,char **argv,char **envp) {
     while (apploop) {
         do_title_screen();
         if (!apploop) break;
+        if (load_level(1) < 0) break;
     }
 
     clear_screen();
