@@ -50,6 +50,9 @@ struct game_cell {
 struct game_map {
     struct game_cell far*       map_base;
     unsigned int                map_width,map_height;
+    unsigned int                map_scroll_x,map_scroll_y;
+    unsigned int                map_display_x,map_display_y;
+    unsigned int                map_display_w,map_display_h;
 };
 
 enum {
@@ -177,21 +180,20 @@ void draw_level(void) {
     if (current_level->map_base == 0 || current_level->map_width == 0 || current_level->map_height == 0)
         return;
 
-    sx = 0;
-    sy = 0;
-    dx = 0;
-    dy = 0;
+    sx = current_level->map_scroll_x;
+    sy = current_level->map_scroll_y;
+    dx = current_level->map_display_x;
+    dy = current_level->map_display_y;
 
     assert(sx < current_level->map_width);
     assert(sy < current_level->map_height);
 
     dw = current_level->map_width - sx;
     dh = current_level->map_height - sy;
-
-    if ((dx+dw) > 80)
-        dw = 80 - dx;
-    if ((dy+dh) > 25)
-        dh = 25 - dy;
+    if (dw > current_level->map_display_w)
+        dw = current_level->map_display_w;
+    if (dh > current_level->map_display_h)
+        dh = current_level->map_display_h;
 
     assert((sx+dw) <= current_level->map_width);
     assert((sy+dh) <= current_level->map_height);
@@ -383,6 +385,10 @@ int load_level(unsigned int N) {
         return -1;
     }
 
+    current_level->map_display_x = 2;
+    current_level->map_display_y = 2;
+    current_level->map_display_w = 60;
+    current_level->map_display_h = 15;
     return 0;
 }
 
@@ -403,6 +409,8 @@ void level_loop(void) {
                     map_get_cell(current_level, player.map_x, player.map_y),
                     map_get_cell(current_level, player.map_x, player.map_y - 1), 1)) {
                     player.map_y--;
+                    if (current_level->map_scroll_y > player.map_y)
+                        current_level->map_scroll_y = player.map_y;
                     draw_level();
                 }
             }
@@ -413,6 +421,10 @@ void level_loop(void) {
                     map_get_cell(current_level, player.map_x, player.map_y),
                     map_get_cell(current_level, player.map_x, player.map_y + 1), 1)) {
                     player.map_y++;
+                    if (player.map_y >= (current_level->map_display_h - 1)) {
+                        if (current_level->map_scroll_y < (player.map_y + 1 - current_level->map_display_h))
+                            current_level->map_scroll_y = (player.map_y + 1 - current_level->map_display_h);
+                    }
                     draw_level();
                 }
             }
@@ -423,6 +435,8 @@ void level_loop(void) {
                     map_get_cell(current_level, player.map_x,     player.map_y),
                     map_get_cell(current_level, player.map_x - 1, player.map_y), 1)) {
                     player.map_x--;
+                    if (current_level->map_scroll_x > player.map_x)
+                        current_level->map_scroll_x = player.map_x;
                     draw_level();
                 }
             }
@@ -433,6 +447,10 @@ void level_loop(void) {
                     map_get_cell(current_level, player.map_x,     player.map_y),
                     map_get_cell(current_level, player.map_x + 1, player.map_y), 1)) {
                     player.map_x++;
+                    if (player.map_x >= (current_level->map_display_w - 1)) {
+                        if (current_level->map_scroll_x < (player.map_x + 1 - current_level->map_display_w))
+                            current_level->map_scroll_x = (player.map_x + 1 - current_level->map_display_w);
+                    }
                     draw_level();
                 }
             }

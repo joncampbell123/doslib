@@ -1,8 +1,24 @@
-#w=32
-#h=5
+#w=90
+#h=20
 #start=3,3
 >aaaaaa
 >b   bb
->b   bb
+>b   bb---------------------------------------------------------------tttttttttttttttttttttttttttttttttttt
 >b        bb
 >bbbbbb
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>
+>ddddddddddd
+
