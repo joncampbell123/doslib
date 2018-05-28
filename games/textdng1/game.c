@@ -30,8 +30,7 @@ static unsigned char apploop = 1;
 
 enum {
     THE_VOID='`',
-    OPEN_SPACE=' ',
-
+    OPEN_SPACE=' '
 };
 
 #pragma pack(push,1)
@@ -113,6 +112,56 @@ struct game_map *map_free(struct game_map *m) {
     }
 
     return NULL;
+}
+
+uint16_t offscreen_composite[80*25];
+
+uint16_t game_cell_to_VGA(struct game_cell far *c) {
+    switch (c->what) {
+        case THE_VOID:      return (uint16_t)(0x0000);
+        case OPEN_SPACE:    return (uint16_t)(0x0720);
+        default:            return (uint16_t)(c->what + 0x0700);
+    };
+
+    return 0;
+}
+
+void draw_level(void) {
+    unsigned int x,y,dx,dy,dw,dh;
+
+    dx = 0;
+    dy = 0;
+    dw = current_level->map_width;
+    dh = current_level->map_height;
+
+    if ((dx+dw) > 80)
+        dw = 80 - dx;
+    if ((dy+dh) > 25)
+        dh = 25 - dy;
+
+    assert((dx+dw) <= 80 && dw <= 80);
+    assert((dy+dh) <= 25 && dh <= 25);
+
+    {
+        VGA_ALPHA_PTR vstart;
+        uint16_t *crow;
+        
+        crow = offscreen_composite;
+        for (y=0;y < dh;y++) {
+            struct game_cell *srow = map_get_cell(current_level,0,y);
+
+            for (x=0;x < dw;x++)
+                *crow++ = game_cell_to_VGA(srow++);
+        }
+
+        crow = offscreen_composite;
+        for (y=0;y < dh;y++) {
+            vstart = vga_state.vga_alpha_ram + ((dy + y) * 80) + dx;
+
+            for (x=0;x < dw;x++)
+                *vstart++ = *crow++;
+        }
+    }
 }
 
 void clear_screen(void) {
@@ -200,7 +249,7 @@ int load_level_file(struct game_map *map, const char *fn) {
                 assert(row != NULL);
 
                 while (*p != 0 && *p != '\n' && *p != '\r' && mx < map->map_width) {
-                    row->what = *p;
+                    row->what = (unsigned char)(*p);
                     row->param = 0;
 
                     row++;
@@ -214,6 +263,8 @@ int load_level_file(struct game_map *map, const char *fn) {
                     row++;
                     mx++;
                 }
+
+                my++;
             }
         }
     }
@@ -227,7 +278,7 @@ int load_level_file(struct game_map *map, const char *fn) {
             assert(row != NULL);
 
             while (mx < map->map_width) {
-                row->what = 0;
+                row->what = THE_VOID;
                 row->param = 0;
 
                 row++;
@@ -270,6 +321,8 @@ int load_level(unsigned int N) {
 }
 
 int main(int argc,char **argv,char **envp) {
+    int c;
+
     probe_dos();
     cpu_probe();
     detect_windows();
@@ -297,6 +350,8 @@ int main(int argc,char **argv,char **envp) {
         do_title_screen();
         if (!apploop) break;
         if (load_level(1) < 0) break;
+        draw_level();
+        c = getch();
     }
 
     clear_screen();

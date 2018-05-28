@@ -1,5 +1,7 @@
-#w=8
-#h=8
+#w=32
+#h=15
 >aaaaaa
->bbb
-
+>b   bb
+>b   bb
+>b   bb
+>bbbbbb
