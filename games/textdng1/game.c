@@ -216,6 +216,7 @@ void draw_character_composite(unsigned int dx,unsigned int dy,unsigned int dw,un
     }
 }
 
+unsigned char exit_proc_dir = UP;
 unsigned char level_run = 0;
 int exit_proc = -1;
 
@@ -250,12 +251,14 @@ unsigned int can_move(struct game_character *chr, unsigned int dir, struct game_
                         if (chr->what == CHAR_PLAYER) {
                             chr->param = CH_P_TRAVEL_LOCK;
                             chr->param2 = 5;
+                            exit_proc_dir = dir;
                             exit_proc = next->param;
                         }
                     }
                     else if (ex->param == ET_LEVEL_BACK) {
                         chr->param = CH_P_TRAVEL_LOCK;
                         chr->param2 = 3;
+                        exit_proc_dir = dir;
                         exit_proc = next->param;
                     }
                 }
@@ -621,6 +624,7 @@ int load_level(unsigned int N) {
 int level_loop(void) {
     int c;
 
+    exit_proc_dir = UP;
     exit_proc = -1;
     level_run = 1;
     clear_screen();
