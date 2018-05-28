@@ -445,76 +445,81 @@ void level_loop(void) {
     draw_level();
 
     do {
-        c = getch();
-        if (c == 0) c = getch() << 8;
-        if (c == 27) break;
+        if (kbhit()) {
+            c = getch();
+            if (c == 0) c = getch() << 8;
+            if (c == 27) break;
 
-        if (c == 0x4800) {//UP
-            if (player.map_y > 0) {
-                if (can_move(&player, UP,
-                    map_get_cell(current_level, player.map_x, player.map_y),
-                    map_get_cell(current_level, player.map_x, player.map_y - 1), 1)) {
-                    player.map_y--;
-                    if (player.map_y >= extra_edge_scroll) {
-                        if (current_level->map_scroll_y > (player.map_y - extra_edge_scroll))
-                            current_level->map_scroll_y = (player.map_y - extra_edge_scroll);
+            if (c == 0x4800) {//UP
+                if (player.map_y > 0) {
+                    if (can_move(&player, UP,
+                                map_get_cell(current_level, player.map_x, player.map_y),
+                                map_get_cell(current_level, player.map_x, player.map_y - 1), 1)) {
+                        player.map_y--;
+                        if (player.map_y >= extra_edge_scroll) {
+                            if (current_level->map_scroll_y > (player.map_y - extra_edge_scroll))
+                                current_level->map_scroll_y = (player.map_y - extra_edge_scroll);
+                        }
+                        act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
+                        draw_level();
                     }
-                    act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
-                    draw_level();
+                }
+            }
+            else if (c == 0x5000) {//DOWN
+                if ((player.map_y + 1) < current_level->map_height) {
+                    if (can_move(&player, DOWN,
+                                map_get_cell(current_level, player.map_x, player.map_y),
+                                map_get_cell(current_level, player.map_x, player.map_y + 1), 1)) {
+                        player.map_y++;
+                        if (current_level->map_display_h >= (1 + extra_edge_scroll) &&
+                                player.map_y >= (current_level->map_display_h - (1 + extra_edge_scroll))) {
+                            if (current_level->map_scroll_y < (player.map_y + 1 + extra_edge_scroll - current_level->map_display_h))
+                                current_level->map_scroll_y = (player.map_y + 1 + extra_edge_scroll - current_level->map_display_h);
+                            if (current_level->map_scroll_y > (current_level->map_height - current_level->map_display_h))
+                                current_level->map_scroll_y = (current_level->map_height - current_level->map_display_h);
+                        }
+                        act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
+                        draw_level();
+                    }
+                }
+            }
+            else if (c == 0x4B00) {//RIGHT
+                if (player.map_x > 0) {
+                    if (can_move(&player, RIGHT,
+                                map_get_cell(current_level, player.map_x,     player.map_y),
+                                map_get_cell(current_level, player.map_x - 1, player.map_y), 1)) {
+                        player.map_x--;
+                        if (player.map_x >= extra_edge_scroll) {
+                            if (current_level->map_scroll_x > (player.map_x - extra_edge_scroll))
+                                current_level->map_scroll_x = (player.map_x - extra_edge_scroll);
+                        }
+                        act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
+                        draw_level();
+                    }
+                }
+            }
+            else if (c == 0x4D00) {//LEFT
+                if ((player.map_x + 1) < current_level->map_width) {
+                    if (can_move(&player, LEFT,
+                                map_get_cell(current_level, player.map_x,     player.map_y),
+                                map_get_cell(current_level, player.map_x + 1, player.map_y), 1)) {
+                        player.map_x++;
+                        if (current_level->map_display_w >= (1 + extra_edge_scroll) &&
+                                player.map_x >= (current_level->map_display_w - (1 + extra_edge_scroll))) {
+                            if (current_level->map_scroll_x < (player.map_x + 1 + extra_edge_scroll - current_level->map_display_w))
+                                current_level->map_scroll_x = (player.map_x + 1 + extra_edge_scroll - current_level->map_display_w);
+                            if (current_level->map_scroll_x > (current_level->map_width - current_level->map_display_w))
+                                current_level->map_scroll_x = (current_level->map_width - current_level->map_display_w);
+                        }
+                        act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
+                        draw_level();
+                    }
                 }
             }
         }
-        else if (c == 0x5000) {//DOWN
-            if ((player.map_y + 1) < current_level->map_height) {
-                if (can_move(&player, DOWN,
-                    map_get_cell(current_level, player.map_x, player.map_y),
-                    map_get_cell(current_level, player.map_x, player.map_y + 1), 1)) {
-                    player.map_y++;
-                    if (current_level->map_display_h >= (1 + extra_edge_scroll) &&
-                        player.map_y >= (current_level->map_display_h - (1 + extra_edge_scroll))) {
-                        if (current_level->map_scroll_y < (player.map_y + 1 + extra_edge_scroll - current_level->map_display_h))
-                            current_level->map_scroll_y = (player.map_y + 1 + extra_edge_scroll - current_level->map_display_h);
-                        if (current_level->map_scroll_y > (current_level->map_height - current_level->map_display_h))
-                            current_level->map_scroll_y = (current_level->map_height - current_level->map_display_h);
-                    }
-                    act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
-                    draw_level();
-                }
-            }
-        }
-        else if (c == 0x4B00) {//RIGHT
-            if (player.map_x > 0) {
-                if (can_move(&player, RIGHT,
-                    map_get_cell(current_level, player.map_x,     player.map_y),
-                    map_get_cell(current_level, player.map_x - 1, player.map_y), 1)) {
-                    player.map_x--;
-                    if (player.map_x >= extra_edge_scroll) {
-                        if (current_level->map_scroll_x > (player.map_x - extra_edge_scroll))
-                            current_level->map_scroll_x = (player.map_x - extra_edge_scroll);
-                    }
-                    act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
-                    draw_level();
-                }
-            }
-        }
-        else if (c == 0x4D00) {//LEFT
-            if ((player.map_x + 1) < current_level->map_width) {
-                if (can_move(&player, LEFT,
-                    map_get_cell(current_level, player.map_x,     player.map_y),
-                    map_get_cell(current_level, player.map_x + 1, player.map_y), 1)) {
-                    player.map_x++;
-                    if (current_level->map_display_w >= (1 + extra_edge_scroll) &&
-                        player.map_x >= (current_level->map_display_w - (1 + extra_edge_scroll))) {
-                        if (current_level->map_scroll_x < (player.map_x + 1 + extra_edge_scroll - current_level->map_display_w))
-                            current_level->map_scroll_x = (player.map_x + 1 + extra_edge_scroll - current_level->map_display_w);
-                        if (current_level->map_scroll_x > (current_level->map_width - current_level->map_display_w))
-                            current_level->map_scroll_x = (current_level->map_width - current_level->map_display_w);
-                    }
-                    act_player(&player,map_get_cell(current_level, player.map_x, player.map_y));
-                    draw_level();
-                }
-            }
-        }
+
+        /* pause for 100ms (10 frames/sec) */
+        t8254_wait(t8254_us2ticks(100000UL));
     } while (1);
 }
 
@@ -541,6 +546,8 @@ int main(int argc,char **argv,char **envp) {
 	int10_setmode(3); /* 80x25 */
 	update_state_from_vga(); /* make sure the VGA library knows so the VGA ptr values work. */
                              /* text is at either B000:0000 (mono/MDA) or B800:0000 (color/CGA) */
+
+    write_8254_system_timer(0); /* 18.2 tick/sec on our terms (proper PIT mode) */
 
     while (apploop) {
         do_title_screen();
