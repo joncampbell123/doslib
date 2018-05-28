@@ -38,7 +38,6 @@ int main(int argc,char **argv,char **envp) {
         printf("Cannot init 8254 timer\n");
         return 1;
     }
-
 	if (!probe_vga()) { /* NTS: By "VGA" we mean any VGA, EGA, CGA, MDA, or other common graphics hardware on the PC platform
                                 that acts in common ways and responds to I/O ports 3B0-3BF or 3D0-3DF as well as 3C0-3CF */
 		printf("VGA probe failed\n");
