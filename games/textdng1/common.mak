@@ -9,14 +9,6 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 #CFLAGS_THIS += -DDBG
 
 !ifeq TARGET_MSDOS 16
-! ifeq MMODE c
-! else
-!  ifeq MMODE s
-!  else
-GAME_EXE =    $(SUBDIR)$(HPS)game.$(EXEEXT)
-! endif
-! endif
-!else
 GAME_EXE =    $(SUBDIR)$(HPS)game.$(EXEEXT)
 !endif
 

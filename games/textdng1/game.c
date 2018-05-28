@@ -258,7 +258,7 @@ void draw_level(void) {
         
         crow = offscreen_composite;
         for (y=0;y < dh;y++) {
-            struct game_cell *srow = map_get_cell(current_level,sx,y + sy);
+            struct game_cell far * srow = map_get_cell(current_level,sx,y + sy);
 
             for (x=0;x < dw;x++)
                 *crow++ = game_cell_to_VGA(srow++);
