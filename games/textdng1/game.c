@@ -66,6 +66,8 @@ struct game_character {
     unsigned char               param2;
 };
 
+#define CH_P_FALLING_DELAY      3
+
 enum {
     CH_P_NORMAL=0,
     CH_P_FALLING1,
@@ -154,9 +156,9 @@ uint16_t offscreen_composite[80*25];
 uint16_t player_chars[CH_P_MAX] = {
     0x0E02,     // CH_P_NORMAL
     0x0E01,     // CH_P_FALLING1
-    0x0601,     // CH_P_FALLING2
-    0x0701,     // CH_P_FALLING3
-    0x0801,     // CH_P_FALLING4
+    0x0701,     // CH_P_FALLING2
+    0x0801,     // CH_P_FALLING3
+    0x08F8,     // CH_P_FALLING4
     0x08FA,     // CH_P_FALLING5
     0x0000      // CH_P_FALLING6
 };
@@ -303,6 +305,7 @@ void act_player(struct game_character *chr,struct game_cell far *cell) {
     if (cell->what == THE_VOID) {
         if (chr->what == CHAR_PLAYER) {
             chr->param = CH_P_FALLING1;
+            chr->param2 = CH_P_FALLING_DELAY; // delay
         }
     }
 }
@@ -445,6 +448,21 @@ void level_loop(void) {
     draw_level();
 
     do {
+        /* if the player is falling, animate */
+        if (player.param >= CH_P_FALLING1) {
+            if (player.param2 > 0) {
+                player.param2--;
+            }
+            else {
+                if (player.param < CH_P_FALLING6) {
+                    player.param++;
+                    draw_level();
+                }
+
+                player.param2 = CH_P_FALLING_DELAY;
+            }
+        }
+
         if (kbhit()) {
             c = getch();
             if (c == 0) c = getch() << 8;
