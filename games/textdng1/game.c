@@ -56,6 +56,19 @@ struct game_cell far *map_get_row(struct game_map *m,unsigned int y) {
     return m->map_base + (y * m->map_width);
 }
 
+struct game_cell far *map_get_cell(struct game_map *m,unsigned int x,unsigned int y) {
+    struct game_cell far *p;
+
+    assert(m != NULL);
+    if (x >= m->map_width) return NULL;
+
+    p = map_get_row(m,y);
+
+    if (p != NULL) p += x;
+
+    return p;
+}
+
 void map_free_data(struct game_map *m) {
     if (m->map_base != NULL) {
         _ffree(m->map_base);
