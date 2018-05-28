@@ -1,5 +1,5 @@
 #w=32
-#h=15
+#h=5
 #start=3,3
 >aaaaaa
 >b   bb

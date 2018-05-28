@@ -364,9 +364,45 @@ int load_level(unsigned int N) {
     return 0;
 }
 
-int main(int argc,char **argv,char **envp) {
+void level_loop(void) {
     int c;
 
+    clear_screen();
+    draw_level();
+
+    do {
+        c = getch();
+        if (c == 0) c = getch() << 8;
+        if (c == 27) break;
+
+        if (c == 0x4800) {//UP
+            if (player.map_y > 0) {
+                player.map_y--;
+                draw_level();
+            }
+        }
+        else if (c == 0x5000) {//DOWN
+            if ((player.map_y + 1) < current_level->map_height) {
+                player.map_y++;
+                draw_level();
+            }
+        }
+        else if (c == 0x4B00) {//RIGHT
+             if (player.map_x > 0) {
+                player.map_x--;
+                draw_level();
+            }
+        }
+        else if (c == 0x4D00) {//LEFT
+            if ((player.map_x + 1) < current_level->map_width) {
+                player.map_x++;
+                draw_level();
+            }
+        }
+    } while (1);
+}
+
+int main(int argc,char **argv,char **envp) {
     probe_dos();
     cpu_probe();
     detect_windows();
@@ -394,8 +430,8 @@ int main(int argc,char **argv,char **envp) {
         do_title_screen();
         if (!apploop) break;
         if (load_level(1) < 0) break;
-        draw_level();
-        c = getch();
+
+        level_loop();
     }
 
     clear_screen();
