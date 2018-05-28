@@ -82,6 +82,9 @@ struct game_character {
 
 enum {
     CH_P_NORMAL=0,
+
+    CH_P_TRAVEL_LOCK,
+
     CH_P_FALLING1,
     CH_P_FALLING2,
     CH_P_FALLING3,
@@ -182,6 +185,7 @@ uint16_t offscreen_composite[80*25];
 
 uint16_t player_chars[CH_P_MAX] = {
     0x0E02,     // CH_P_NORMAL
+    0x0C02,     // CH_P_TRAVEL_LOCK
     0x0E01,     // CH_P_FALLING1
     0x0701,     // CH_P_FALLING2
     0x0801,     // CH_P_FALLING3
@@ -202,6 +206,9 @@ void draw_character_composite(unsigned int dx,unsigned int dy,unsigned int dw,un
     }
 }
 
+unsigned char level_run = 0;
+int exit_proc = -1;
+
 unsigned int can_move(struct game_character *chr, unsigned int dir, struct game_cell far *cur, struct game_cell far *next, unsigned int do_action) {
     if (next == NULL)
         return 0;
@@ -216,12 +223,29 @@ unsigned int can_move(struct game_character *chr, unsigned int dir, struct game_
             if (cur->what == THE_VOID && next->what != THE_VOID)
                 return 0;
         }
+        else if (chr->param == CH_P_TRAVEL_LOCK)
+            return 0;
     }
 
     switch (next->what) {
         case THE_VOID:
         case OPEN_SPACE:
             return 1;
+        case EXIT_SPACE:
+            if (next->param < 10) {
+                struct game_exit *ex = &current_level->exit[next->param];
+
+                if (ex->type == ET_LEVEL) {
+                    if (ex->param < 100) {
+                        if (chr->what == CHAR_PLAYER) {
+                            chr->param = CH_P_TRAVEL_LOCK;
+                            chr->param2 = 5;
+                            exit_proc = next->param;
+                        }
+                    }
+                }
+            }
+            return 0;
     };
 
     return 0;
@@ -573,9 +597,11 @@ int load_level(unsigned int N) {
     return 0;
 }
 
-void level_loop(void) {
+int level_loop(void) {
     int c;
 
+    exit_proc = -1;
+    level_run = 1;
     clear_screen();
     draw_level();
 
@@ -598,6 +624,32 @@ void level_loop(void) {
 
                 player.param2 = CH_P_FALLING_DELAY;
             }
+        }
+        else if (player.param == CH_P_TRAVEL_LOCK) {
+            if (player.param2 > 0)
+                player.param2--;
+            else {
+                if (exit_proc >= 0 && exit_proc < 10) {
+                    struct game_exit *ex = &current_level->exit[exit_proc];
+
+                    if (ex->type == ET_LEVEL) {
+                        if (load_level(ex->param) < 0)
+                            return 0;
+
+                        return 1;
+                    }
+
+                    ERROR("Unhandled exit");
+                    break;
+                }
+                else {
+                    ERROR("Exit proc out of range");
+                    break;
+                }
+            }
+        }
+        else {
+            if (!level_run) break;
         }
 
         if (kbhit()) {
@@ -662,6 +714,8 @@ void level_loop(void) {
         /* pause for 100ms (10 frames/sec) */
         t8254_wait(t8254_us2ticks(100000UL));
     } while (1);
+
+    return 0;
 }
 
 int main(int argc,char **argv,char **envp) {
@@ -695,7 +749,7 @@ int main(int argc,char **argv,char **envp) {
         if (!apploop) break;
         if (load_level(1) < 0) break;
 
-        level_loop();
+        while (level_loop());
     }
 
     clear_screen();
