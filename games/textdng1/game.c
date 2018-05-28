@@ -304,8 +304,10 @@ void act_player(struct game_character *chr,struct game_cell far *cell) {
     /* if the player walked into the void, fall */
     if (cell->what == THE_VOID) {
         if (chr->what == CHAR_PLAYER) {
-            chr->param = CH_P_FALLING1;
-            chr->param2 = CH_P_FALLING_DELAY; // delay
+            if (chr->param < CH_P_FALLING1) {
+                chr->param = CH_P_FALLING1;
+                chr->param2 = CH_P_FALLING_DELAY; // delay
+            }
         }
     }
 }
