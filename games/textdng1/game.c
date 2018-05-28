@@ -134,7 +134,7 @@ void draw_character_composite(unsigned int dx,unsigned int dy,unsigned int dw,un
 
     switch (c->what) {
         case CHAR_PLAYER:
-            offscreen_composite[((unsigned int)drawy * dw) + (unsigned int)drawx] = 0x0F01U;
+            offscreen_composite[((unsigned int)drawy * dw) + (unsigned int)drawx] = 0x0E02U;
             break;
     }
 }
