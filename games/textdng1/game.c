@@ -227,6 +227,8 @@ int load_level_file(struct game_map *map, const char *fn) {
                 row++;
                 mx++;
             }
+
+            my++;
         }
     }
 
