@@ -1,7 +1,7 @@
 #w=90
 #h=20
 #start=9,2
-#exit0=level1
+#exit0=levelback
 >`````````````
 >`````aaaaaa``
 >`````ae0   ``

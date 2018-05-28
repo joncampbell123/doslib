@@ -46,6 +46,10 @@ enum {
     ET_LEVEL
 };
 
+enum {
+    ET_LEVEL_BACK=255
+};
+
 #pragma pack(push,1)
 struct game_cell {
     unsigned char               what;
@@ -99,6 +103,10 @@ struct game_character           player;
 struct game_character           player_init = {0, 0, CHAR_PLAYER, 0, 0};
 
 struct game_map*                current_level = NULL;
+char                            current_level_N = -1;
+
+char                            prev_level = -1;
+char                            prev_level_exit = -1;
 
 struct game_map *map_alloc(void) {
     struct game_map *m = calloc(1,sizeof(struct game_map));
@@ -242,6 +250,11 @@ unsigned int can_move(struct game_character *chr, unsigned int dir, struct game_
                             chr->param2 = 5;
                             exit_proc = next->param;
                         }
+                    }
+                    else if (ex->param == ET_LEVEL_BACK) {
+                        chr->param = CH_P_TRAVEL_LOCK;
+                        chr->param2 = 3;
+                        exit_proc = next->param;
                     }
                 }
             }
@@ -442,6 +455,10 @@ int load_level_file(struct game_map *map, const char *fn) {
                     ex->type = ET_LEVEL;
                     ex->param = atoi(p);
                 }
+                else if (!strncmp(p,"levelback",9)) {
+                    ex->type = ET_LEVEL;
+                    ex->param = ET_LEVEL_BACK;
+                }
                 else {
                     ex->type = ET_NONE;
                 }
@@ -575,6 +592,8 @@ int load_level(unsigned int N) {
 
     if (N == 0U || N > 99U) return -1;
 
+    current_level_N = N;
+
     current_level = map_free(current_level);
 
     current_level = map_alloc();
@@ -633,8 +652,23 @@ int level_loop(void) {
                     struct game_exit *ex = &current_level->exit[exit_proc];
 
                     if (ex->type == ET_LEVEL) {
-                        if (load_level(ex->param) < 0)
-                            return 0;
+
+                        if (ex->param == ET_LEVEL_BACK) {
+                            if (prev_level >= 0) {
+                                char level = prev_level;
+
+                                prev_level = current_level_N;
+                                prev_level_exit = exit_proc;
+                                if (load_level(level) < 0)
+                                    return 0;
+                            }
+                        }
+                        else if (ex->param < 100) {
+                            prev_level = current_level_N;
+                            prev_level_exit = exit_proc;
+                            if (load_level(ex->param) < 0)
+                                return 0;
+                        }
 
                         return 1;
                     }
@@ -747,6 +781,10 @@ int main(int argc,char **argv,char **envp) {
     while (apploop) {
         do_title_screen();
         if (!apploop) break;
+
+        prev_level = -1;
+        prev_level_exit = -1;
+
         if (load_level(1) < 0) break;
 
         while (level_loop());
