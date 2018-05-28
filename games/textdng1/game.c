@@ -504,6 +504,11 @@ void level_loop(void) {
             if (c == 0) c = getch() << 8;
             if (c == 27) break;
 
+            /* avoid key buffering by eating the rest of the pending input NOW.
+             * This gives us the same "buffered and delayed" keyboard input problems
+             * I remember having with Chips Challenge, but, it's better than nothing. */
+            while (kbhit()) getch();
+
             if (c == 0x4800) {//UP
                 if (player.map_y > 0) {
                     if (can_move(&player, UP,
