@@ -16,7 +16,7 @@
 >````   
 >````bb 
 >````bb                 aaaaa          xxxxxxxx 
->````bb                   e1a          xx t5xx 
+>````bb                   e1a          xx t5 xx 
 >````bb t3              aaaaa          xxxxxxxx 
 >````bb  
 >````bb---- 
