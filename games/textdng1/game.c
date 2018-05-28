@@ -30,8 +30,8 @@ static unsigned char apploop = 1;
 
 #pragma pack(push,1)
 struct game_cell {
-    unsigned char               display_char;
-    unsigned char               behavior;
+    unsigned char               what;
+    unsigned char               param;
 };
 #pragma pack(pop)
 
@@ -181,16 +181,16 @@ int load_level_file(struct game_map *map, const char *fn) {
                 assert(row != NULL);
 
                 while (*p != 0 && *p != '\n' && *p != '\r' && mx < map->map_width) {
-                    row->display_char = *p;
-                    row->behavior = 0;
+                    row->what = *p;
+                    row->param = 0;
 
                     row++;
                     mx++;
                     p++;
                 }
                 while (mx < map->map_width) {
-                    row->display_char = *p;
-                    row->behavior = 0;
+                    row->what = 0;
+                    row->param = 0;
 
                     row++;
                     mx++;
@@ -200,6 +200,22 @@ int load_level_file(struct game_map *map, const char *fn) {
     }
 
     fclose(fp);
+
+    if (map->map_base != NULL && map->map_width != 0) {
+        while (my < map->map_height) {
+            unsigned int mx = 0;
+            struct game_cell far *row = map_get_row(map,my);
+            assert(row != NULL);
+
+            while (mx < map->map_width) {
+                row->what = 0;
+                row->param = 0;
+
+                row++;
+                mx++;
+            }
+        }
+    }
 
     if (map->map_base == NULL || map->map_width == 0 || map->map_height == 0) {
         ERROR("Map not alloc");
