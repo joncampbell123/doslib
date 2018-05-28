@@ -4,5 +4,5 @@
 >aaaaaa
 >b   bb
 >b   bb
->b   bb
+>b        bb
 >bbbbbb

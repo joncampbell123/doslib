@@ -146,7 +146,7 @@ void draw_character_composite(unsigned int dx,unsigned int dy,unsigned int dw,un
     }
 }
 
-unsigned int can_move(unsigned int dir, struct game_cell far *cur, struct game_cell far *next) {
+unsigned int can_move(unsigned int dir, struct game_cell far *cur, struct game_cell far *next, unsigned int do_action) {
     if (next == NULL)
         return 0;
     if (cur == NULL)
@@ -401,7 +401,7 @@ void level_loop(void) {
             if (player.map_y > 0) {
                 if (can_move(UP,
                     map_get_cell(current_level, player.map_x, player.map_y),
-                    map_get_cell(current_level, player.map_x, player.map_y - 1))) {
+                    map_get_cell(current_level, player.map_x, player.map_y - 1), 1)) {
                     player.map_y--;
                     draw_level();
                 }
@@ -411,7 +411,7 @@ void level_loop(void) {
             if ((player.map_y + 1) < current_level->map_height) {
                 if (can_move(DOWN,
                     map_get_cell(current_level, player.map_x, player.map_y),
-                    map_get_cell(current_level, player.map_x, player.map_y + 1))) {
+                    map_get_cell(current_level, player.map_x, player.map_y + 1), 1)) {
                     player.map_y++;
                     draw_level();
                 }
@@ -421,7 +421,7 @@ void level_loop(void) {
             if (player.map_x > 0) {
                 if (can_move(RIGHT,
                     map_get_cell(current_level, player.map_x,     player.map_y),
-                    map_get_cell(current_level, player.map_x - 1, player.map_y))) {
+                    map_get_cell(current_level, player.map_x - 1, player.map_y), 1)) {
                     player.map_x--;
                     draw_level();
                 }
@@ -431,7 +431,7 @@ void level_loop(void) {
             if ((player.map_x + 1) < current_level->map_width) {
                 if (can_move(LEFT,
                     map_get_cell(current_level, player.map_x,     player.map_y),
-                    map_get_cell(current_level, player.map_x + 1, player.map_y))) {
+                    map_get_cell(current_level, player.map_x + 1, player.map_y), 1)) {
                     player.map_x++;
                     draw_level();
                 }
