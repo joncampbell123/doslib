@@ -66,7 +66,7 @@ struct game_character {
     unsigned char               param2;
 };
 
-#define CH_P_FALLING_DELAY      3
+#define CH_P_FALLING_DELAY      1
 
 enum {
     CH_P_NORMAL=0,
