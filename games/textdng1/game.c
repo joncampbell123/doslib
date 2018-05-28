@@ -44,6 +44,12 @@ int main(int argc,char **argv,char **envp) {
 		return 1;
 	}
 
+    /* this runs in text mode 80x25 */
+	int10_setmode(3); /* 80x25 */
+	update_state_from_vga(); /* make sure the VGA library knows so the VGA ptr values work. */
+                             /* text is at either B000:0000 (mono/MDA) or B800:0000 (color/CGA) */
+
+
     return 0;
 }
 
