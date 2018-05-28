@@ -585,28 +585,28 @@ int load_level_file(struct game_map *map, const char *fn) {
 
                         current_level->exit[row[mx].param].x = mx;
                         current_level->exit[row[mx].param].y = my;
-                        current_level->exit[row[mx+1].param].x = mx+1;
-                        current_level->exit[row[mx+1].param].y = my;
 
                         /* so now the exit space is two cells wide.
                          * trim one or the other based on which side is against a wall */
-                        {/*trim the right door? */
-                            unsigned char ok=0;
+                        {
+                            unsigned char okr=0;
+                            unsigned char okl=0;
 
                             if (mx == 0)
-                                ok = 1;
+                                okr = 1;
                             else if (row[mx-1].what != OPEN_SPACE)
-                                ok = 1;
+                                okr = 1;
 
-                            if (ok) row[mx+1] = row[mx+2];
-                        }
-                        {/*trim the left door? */
-                            unsigned char ok=0;
+                            if (mx > 0 && row[mx+2].what != OPEN_SPACE)
+                                okl = 1;
 
-                            if (mx > 0 && row[mx+1].what != OPEN_SPACE)
-                                ok = 1;
+                            /* must trim one or the other */
+                            if (!okr && !okl) okr = 1;
 
-                            if (ok) row[mx] = row[mx-1];
+                            if (okr) row[mx+1] = row[mx+2];
+                            if (okl) row[mx] = row[mx-1];
+
+                            if (okl) current_level->exit[row[mx+1].param].x++;
                         }
 
                         mx += 2;
