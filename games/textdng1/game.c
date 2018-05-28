@@ -28,6 +28,12 @@
 
 static unsigned char apploop = 1;
 
+enum {
+    THE_VOID='`',
+    OPEN_SPACE=' ',
+
+};
+
 #pragma pack(push,1)
 struct game_cell {
     unsigned char               what;
@@ -202,7 +208,7 @@ int load_level_file(struct game_map *map, const char *fn) {
                     p++;
                 }
                 while (mx < map->map_width) {
-                    row->what = 0;
+                    row->what = THE_VOID;
                     row->param = 0;
 
                     row++;
