@@ -151,6 +151,20 @@ struct game_map *map_free(struct game_map *m) {
     return NULL;
 }
 
+void player_says(const char *msg) {
+    unsigned int x;
+
+    vga_write_color(0x0F);
+    vga_moveto(0,22);
+
+    for (x=0;x < 80;x++) {
+        char c = *msg;
+
+        vga_writec(c);
+        if (c != 0) msg++;
+    }
+}
+
 uint16_t offscreen_composite[80*25];
 
 uint16_t player_chars[CH_P_MAX] = {
@@ -183,6 +197,9 @@ unsigned int can_move(struct game_character *chr, unsigned int dir, struct game_
 
     /* if the player is falling, the player cannot move out of the void */
     if (chr->what == CHAR_PLAYER) {
+        if (chr->param >= CH_P_FALLING6)
+            return 0;
+
         if (chr->param >= CH_P_FALLING1) {
             if (cur->what == THE_VOID && next->what != THE_VOID)
                 return 0;
@@ -307,6 +324,8 @@ void act_player(struct game_character *chr,struct game_cell far *cell) {
             if (chr->param < CH_P_FALLING1) {
                 chr->param = CH_P_FALLING1;
                 chr->param2 = CH_P_FALLING_DELAY; // delay
+
+                player_says("AAAAAAAAaaaaaaaaaaaahhhh!!! (poof)");
             }
         }
     }
