@@ -30,7 +30,8 @@ static unsigned char apploop = 1;
 
 enum {
     THE_VOID='`',
-    OPEN_SPACE=' '
+    OPEN_SPACE=' ',
+    EXIT_SPACE='e'
 };
 
 enum {
@@ -40,9 +41,19 @@ enum {
     RIGHT
 };
 
+enum {
+    ET_NONE=0,
+    ET_LEVEL
+};
+
 #pragma pack(push,1)
 struct game_cell {
     unsigned char               what;
+    unsigned char               param;
+};
+
+struct game_exit {
+    unsigned char               type;
     unsigned char               param;
 };
 #pragma pack(pop)
@@ -53,6 +64,7 @@ struct game_map {
     unsigned int                map_scroll_x,map_scroll_y;
     unsigned int                map_display_x,map_display_y;
     unsigned int                map_display_w,map_display_h;
+    struct game_exit            exit[10];
 };
 
 enum {
@@ -220,6 +232,7 @@ uint16_t game_cell_to_VGA(struct game_cell far *c) {
     switch (c->what) {
         case THE_VOID:      return (uint16_t)(0x0000);
         case OPEN_SPACE:    return (uint16_t)(0x08B0);
+        case EXIT_SPACE:    return (uint16_t)(0x0B08);
         default:            return (uint16_t)(c->what + 0x0700);
     };
 
@@ -368,6 +381,20 @@ int load_level_file(struct game_map *map, const char *fn) {
                     player.map_y = (int)strtol(p,&p,10);
                 }
             }
+            else if (!strncmp(p,"exit",4) && isdigit(p[4]) && p[5] == '=') { /* exit1=level 3 */
+                struct game_exit *ex = &map->exit[p[4] - '0'];
+
+                p += 6;
+                if (!strncmp(p,"level",5) && isdigit(p[5])) {
+                    p += 5;
+                    while (*p == ' ') p++;
+                    ex->type = ET_LEVEL;
+                    ex->param = atoi(p);
+                }
+                else {
+                    ex->type = ET_NONE;
+                }
+            }
         }
         else if (*p == '>') {
             p++;
@@ -431,6 +458,33 @@ int load_level_file(struct game_map *map, const char *fn) {
     if (map->map_base == NULL || map->map_width == 0 || map->map_height == 0) {
         ERROR("Map not alloc");
         return -1;
+    }
+
+    /* some things need to be converted */
+    {
+        unsigned int mx,my;
+
+        for (my=0;my < map->map_height;my++) {
+            struct game_cell far *row = map_get_row(map,my);
+            assert(row != NULL);
+
+            for (mx=0;(mx+1U) < map->map_width;) {
+                if (row[mx].what == EXIT_SPACE) { /* e1 = exit 1    two cells */
+                    if (row[mx+1].what >= '0' && row[mx+1].what <= '9') {
+                        row[mx].param = row[mx+1].what - '0';
+                        row[mx+1] = row[mx];
+                        mx += 2;
+                    }
+                    else {
+                        row[mx].what = THE_VOID;
+                        mx++;
+                    }
+                }
+                else {
+                    mx++;
+                }
+            }
+        }
     }
 
     return 0;
