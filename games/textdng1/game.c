@@ -80,7 +80,8 @@ enum {
     CH_P_MAX
 };
 
-struct game_character           player = {0, 0, CHAR_PLAYER, 0, 0};
+struct game_character           player;
+struct game_character           player_init = {0, 0, CHAR_PLAYER, 0, 0};
 
 struct game_map*                current_level = NULL;
 
@@ -341,6 +342,8 @@ int load_level_file(struct game_map *map, const char *fn) {
         ERROR("Unable to open level file");
         return -1;
     }
+
+    player = player_init;
 
     while (!feof(fp) && !ferror(fp)) {
         if (fgets(line,sizeof(line)-1,fp) == NULL) break;
