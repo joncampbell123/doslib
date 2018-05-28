@@ -100,13 +100,15 @@ enum {
 };
 
 struct game_character           player;
-struct game_character           player_init = {0, 0, CHAR_PLAYER, 0, 0};
+
+const struct game_character     player_init = {0, 0, CHAR_PLAYER, 0, 0};
 
 struct game_map*                current_level = NULL;
-char                            current_level_N = -1;
+signed char                     current_level_N = -1;
 
-char                            prev_level = -1;
-char                            prev_level_exit = -1;
+signed char                     prev_level = -1;
+signed char                     prev_level_exit = -1;
+struct game_character           prev_level_player;
 
 struct game_map *map_alloc(void) {
     struct game_map *m = calloc(1,sizeof(struct game_map));
@@ -622,6 +624,7 @@ int level_loop(void) {
     exit_proc = -1;
     level_run = 1;
     clear_screen();
+    scroll_to_player();
     draw_level();
 
     do {
@@ -655,15 +658,25 @@ int level_loop(void) {
 
                         if (ex->param == ET_LEVEL_BACK) {
                             if (prev_level >= 0) {
-                                char level = prev_level;
+                                struct game_character pl = prev_level_player;
+                                signed char level = prev_level;
+//                              signed char exit = prev_level_exit;
 
+                                prev_level_player = player;
                                 prev_level = current_level_N;
                                 prev_level_exit = exit_proc;
                                 if (load_level(level) < 0)
                                     return 0;
+
+                                if (pl.param == CH_P_TRAVEL_LOCK) {
+                                    player = pl;
+                                    player.param = CH_P_NORMAL;
+                                    player.param2 = 0;
+                                }
                             }
                         }
                         else if (ex->param < 100) {
+                            prev_level_player = player;
                             prev_level = current_level_N;
                             prev_level_exit = exit_proc;
                             if (load_level(ex->param) < 0)
@@ -784,6 +797,7 @@ int main(int argc,char **argv,char **envp) {
 
         prev_level = -1;
         prev_level_exit = -1;
+        prev_level_player = player_init;
 
         if (load_level(1) < 0) break;
 
