@@ -473,6 +473,29 @@ int load_level_file(struct game_map *map, const char *fn) {
                     if (row[mx+1].what >= '0' && row[mx+1].what <= '9') {
                         row[mx].param = row[mx+1].what - '0';
                         row[mx+1] = row[mx];
+
+                        /* so now the exit space is two cells wide.
+                         * trim one or the other based on which side is against a wall */
+                        {/*trim the right door? */
+                            unsigned char ok=0;
+
+                            if (mx == 0)
+                                ok = 1;
+                            else if (row[mx-1].what != OPEN_SPACE)
+                                ok = 1;
+
+                            if (ok) row[mx+1] = row[mx+2];
+                        }
+                        {/*trim the left door? */
+                            unsigned char ok=0;
+
+                            if (mx > 0 && row[mx+1].what != OPEN_SPACE)
+                                ok = 1;
+
+                            if (ok) row[mx] = row[mx-1];
+                        }
+
+
                         mx += 2;
                     }
                     else {
