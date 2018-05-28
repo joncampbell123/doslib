@@ -436,6 +436,12 @@ int load_level_file(struct game_map *map, const char *fn) {
     return 0;
 }
 
+void game_over(void) {
+    vga_write_color(0x4E);
+    vga_moveto(20,14);
+    vga_write("* GAME OVER *");
+}
+
 int load_level(unsigned int N) {
     char tmp[14];
 
@@ -481,6 +487,12 @@ void level_loop(void) {
                 if (player.param < CH_P_FALLING6) {
                     player.param++;
                     draw_level();
+                }
+                else {
+                    /* game over */
+                    game_over();
+                    do { c=getch(); } while (!(c == 27 || c == 13));
+                    break;
                 }
 
                 player.param2 = CH_P_FALLING_DELAY;
