@@ -5,7 +5,7 @@
 #exit2=tele3
 #exit3=tele2
 #exit4=tele5
-#exit5=teleback
+#exit5=+n:teleback
 >aaaaaa``
 >b   bb``````````````````````````````````````````````````````````````````````````````````````````````````````
 >b   bb-----------------------------------------   ----------------------tttttttttttttttttttttttttttttttttttt

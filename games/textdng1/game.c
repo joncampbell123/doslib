@@ -50,6 +50,10 @@ enum {
 };
 
 enum {
+    ETF_NA=(1u << 0u)
+};
+
+enum {
     ET_LEVEL_BACK=255
 };
 
@@ -66,6 +70,7 @@ struct game_cell {
 struct game_exit {
     unsigned char               type;
     unsigned char               param;
+    unsigned char               flags;
     unsigned char               x,y;
 };
 #pragma pack(pop)
@@ -489,6 +494,25 @@ int load_level_file(struct game_map *map, const char *fn) {
                 struct game_exit *ex = &map->exit[p[4] - '0'];
 
                 p += 6;
+
+                while (*p == '+') {
+                    if (*p == '+') {
+                        p++;
+                        while (*p != 0 && *p != ':') {
+                            char c = *p++;
+
+                            if (c == 'n')
+                                ex->flags |= ETF_NA;
+                        }
+
+                        if (*p == ':')
+                            p++;
+                    }
+                    else {
+                        abort();
+                    }
+                }
+
                 if (!strncmp(p,"level",5) && isdigit(p[5])) {
                     p += 5;
                     while (*p == ' ') p++;
@@ -601,16 +625,21 @@ int load_level_file(struct game_map *map, const char *fn) {
                             unsigned char okr=0;
                             unsigned char okl=0;
 
-                            if (mx == 0)
-                                okr = 1;
-                            else if (row[mx-1].what != OPEN_SPACE)
-                                okr = 1;
+                            if (current_level->exit[row[mx].param].flags & ETF_NA) {
+                                okr = okl = 1;
+                            }
+                            else {
+                                if (mx == 0)
+                                    okr = 1;
+                                else if (row[mx-1].what != OPEN_SPACE)
+                                    okr = 1;
 
-                            if (mx > 0 && row[mx+2].what != OPEN_SPACE)
-                                okl = 1;
+                                if (mx > 0 && row[mx+2].what != OPEN_SPACE)
+                                    okl = 1;
 
-                            /* must trim one or the other */
-                            if (!okr && !okl) okr = 1;
+                                /* must trim one or the other */
+                                if (!okr && !okl) okr = 1;
+                            }
 
                             if (okr) row[mx+1] = row[mx+2];
                             if (okl) row[mx] = row[mx-1];
