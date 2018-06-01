@@ -34,7 +34,7 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
     end_bat
 
     for target in dos86{s,l}; do
-        cp -v level??.txt ./$target/ || exit 1
+        cp -vu level??.txt ./$target/ || exit 1
     done
 fi
 
