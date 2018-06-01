@@ -15,13 +15,13 @@
 >````bb 
 >````   
 >````bb 
->````bb                 aaaaa          xxxxxxxx 
->````bb                   e1a          xx t5 xx 
->````bb t3              aaaaa          xxxxxxxx 
->````bb  
->````bb---- 
->````bbe1 
->bbbbbb---- 
+>````bb                 aaaaa          xxxxxxxxxxxxxxxxxxxxxxxxx 
+>````bb                   e1a          xx t5                  xx 
+>````bb t3              aaaaa          xxxxxxxxxxxxxxxxxxxxxx xx 
+>````bb                                                    xx xx 
+>````bb----                            xxxxxxxxxxxxxxxxxxxxxx xx 
+>````bbe1                              xx t2                  xx 
+>bbbbbb----                            xxxxxxxxxxxxxxxxxxxxxxxxx 
 >
 >
 >              t4 
