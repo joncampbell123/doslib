@@ -50,7 +50,8 @@ enum {
 };
 
 enum {
-    ETF_NA=(1u << 0u)
+    ETF_NA=(1u << 0u),
+    ETF_NOPOS=(1u << 1u)
 };
 
 enum {
@@ -616,8 +617,11 @@ int load_level_file(struct game_map *map, const char *fn) {
                         row[mx].param = row[mx+1].what - '0';
                         row[mx+1] = row[mx];
 
-                        current_level->exit[row[mx].param].x = mx;
-                        current_level->exit[row[mx].param].y = my;
+                        if (!(current_level->exit[row[mx].param].flags & ETF_NOPOS)) {
+                            current_level->exit[row[mx].param].x = mx;
+                            current_level->exit[row[mx].param].y = my;
+                            current_level->exit[row[mx].param].flags |= ETF_NOPOS;
+                        }
 
                         /* so now the exit space is two cells wide.
                          * trim one or the other based on which side is against a wall */
