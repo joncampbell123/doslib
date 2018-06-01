@@ -39,7 +39,8 @@ enum {
     UP=0,
     DOWN,
     LEFT,
-    RIGHT
+    RIGHT,
+    NONE
 };
 
 enum {
@@ -143,6 +144,14 @@ struct game_cell far *map_get_cell(struct game_map *m,unsigned int x,unsigned in
     if (p != NULL) p += x;
 
     return p;
+}
+
+struct game_cell far *map_get_cell_clip(struct game_map *m,unsigned int x,unsigned int y) {
+    assert(m != NULL);
+    if (x >= m->map_width) x = m->map_width - 1;
+    if (y >= m->map_height) y = m->map_height - 1;
+
+    return map_get_row(m,y) + x;
 }
 
 void map_free_data(struct game_map *m) {
@@ -748,6 +757,20 @@ int level_loop(void) {
 
                             player.map_x = nex->x;
                             player.map_y = nex->y;
+
+                            /* blocking check */
+                            if (exit_proc_dir == UP && map_get_cell_clip(current_level,player.map_x,player.map_y-1)->what != OPEN_SPACE)
+                                exit_proc_dir = DOWN;
+                            if (exit_proc_dir == DOWN && map_get_cell_clip(current_level,player.map_x,player.map_y+1)->what != OPEN_SPACE)
+                                exit_proc_dir = UP;
+                            if (exit_proc_dir == UP && map_get_cell_clip(current_level,player.map_x,player.map_y-1)->what != OPEN_SPACE)
+                                exit_proc_dir = LEFT;
+                            if (exit_proc_dir == LEFT && map_get_cell_clip(current_level,player.map_x-1,player.map_y)->what != OPEN_SPACE)
+                                exit_proc_dir = RIGHT;
+                            if (exit_proc_dir == RIGHT && map_get_cell_clip(current_level,player.map_x+1,player.map_y)->what != OPEN_SPACE)
+                                exit_proc_dir = LEFT;
+                            if (exit_proc_dir == LEFT && map_get_cell_clip(current_level,player.map_x-1,player.map_y)->what != OPEN_SPACE)
+                                exit_proc_dir = NONE;
 
                             /* need to step out of the block itself, based on player direction and walls */
                             if (exit_proc_dir == UP) {
