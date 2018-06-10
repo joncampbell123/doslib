@@ -370,16 +370,18 @@ int probe_himem_sys() {
 		mov	himem_sys_flags,dl ; this maps to HIMEM_F_HMA
 	}
 
-	/* does this HIMEM.SYS support the extended functions to address more than 64MB of memory? */
-	__asm {
-		mov	ah,0x88		; function 0x88: query any free memory
-		mov	bl,0x80
-		call	[himem_sys_entry]
-		cmp	bl,0x80		; BL=0x80 if error (unsupported)
-		jz	label1
-		or	himem_sys_flags,2 ; <- HIMEM_F_4GB
-label1:
-	}
+    if (cpu_basic_level >= 3) {
+        /* does this HIMEM.SYS support the extended functions to address more than 64MB of memory? */
+        __asm {
+            mov	ah,0x88		; function 0x88: query any free memory
+                mov	bl,0x80
+                call	[himem_sys_entry]
+                cmp	bl,0x80		; BL=0x80 if error (unsupported)
+                jz	label1
+                or	himem_sys_flags,2 ; <- HIMEM_F_4GB
+                label1:
+        }
+    }
 
 	/* Unfortunately, there are HIMEM.SYS implementations that will respond to the extended commands, but fail
            to read or make use of the upper 16 bits of the registers. These broken implementations are easy to check
