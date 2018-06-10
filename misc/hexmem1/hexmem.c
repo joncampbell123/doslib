@@ -491,7 +491,33 @@ int main(int argc,char **argv) {
                 }
             }
 #else
-            // TODO
+            printf("\x1B[m"); /* normal attributes */
+            printf("\x1B[J"); /* clear screen */
+            printf("\x1B[1>h"); /* hide function row */
+            printf("\x1B[5>h"); /* hide cursor (so we can directly control it) */
+            printf("Jump to: ");
+            fflush(stdout);
+
+            /* we can just use NEC's ANSI driver for input */
+            while (1) {
+                c = getch();
+                if (c == 13 || c == 27) break;
+                else if ((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
+                    if (i < 16) {
+                        input[i++] = c;
+                        putc(c,stdout);
+                        fflush(stdout);
+                    }
+                    input[i] = 0;
+                }
+                else if (c == 8) {
+                    if (i > 0) {
+                        input[--i] = 0;
+                        printf("\x08 \x08");
+                        fflush(stdout);
+                    }
+                }
+            }
 #endif
 
             if (c == 13) {
