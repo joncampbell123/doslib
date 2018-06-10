@@ -260,12 +260,8 @@ int main(int argc,char **argv) {
                 strcpy(test_biosext+16,"ABCDEFGH");
                 /* OK then, does the BIOS provide extended memcpy? */
                 memset(test_biosext,0,sizeof(test_biosext));
-#if !defined(TARGET_PC98)
                 /* direct the BIOS to memcpy() from the realmode vector table */
                 bios_extcopy(segoff2phys(test_biosext),segoff2phys(test_biosext+16),8);
-#else
-                // TODO: PC-98 INT 1Fh...
-#endif
                 /* did it work? */
                 if (_fmemcmp((void far*)test_biosext,(void far*)(test_biosext+16),8) == 0) {
                     /* are the remaining bytes zero? or did the BIOS copy too much? */
