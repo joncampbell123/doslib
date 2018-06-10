@@ -384,10 +384,10 @@ int main(int argc,char **argv) {
                     tram[x] =
                         (unsigned short)hexen[((segment+(y*16ULL))>>(60ULL-(x*4ULL)))&0xFULL];
                     cram[x] =
-                        (unsigned short)0xE1;
+                        (unsigned short)0xC1;
                 }
                 tram[x] = ' ';
-                cram[x] = 0xE1;
+                cram[x] = 0xC1;
                 x++;
                 for (i=0;i < 16;i++) {
                     unsigned char b = *rdptr++;
@@ -412,7 +412,7 @@ int main(int argc,char **argv) {
                 for (i=0;i < 16;i++) {
                     unsigned char b = *rdptr++;
                     tram[x] = (unsigned short)b;
-                    cram[x] = 0xE1;
+                    cram[x] = 0x61;
                     x++;
                 }
                 while (x < SCREEN_WIDTH) {
