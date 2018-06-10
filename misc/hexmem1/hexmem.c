@@ -23,14 +23,26 @@
 
 #include <hw/dos/dos.h>
 #include <hw/dos/emm.h>
+#if !defined(TARGET_PC98)
 #include <hw/8042/8042.h>
+#endif
 #include <hw/dos/biosext.h>
 #include <hw/dos/himemsys.h>
 #include <hw/flatreal/flatreal.h>
 #include <hw/llmem/llmem.h>
+#if !defined(TARGET_PC98)
 #include <hw/vga/vga.h>
 #include <hw/vga/vgatty.h>
+#endif
 #include <hw/dos/doswin.h>
+
+#if !defined(TARGET_PC98)
+#define SCREEN_WIDTH  vga_state.vga_width
+#define SCREEN_HEIGHT vga_state.vga_height
+#else
+static unsigned int SCREEN_WIDTH = 80;
+static unsigned int SCREEN_HEIGHT = 25;
+#endif
 
 #if TARGET_MSDOS == 16
 static unsigned long segoff2phys(void far *p) {
@@ -194,11 +206,15 @@ int main(int argc,char **argv) {
     llmem = llmem_init();
     printf("[OK]\n");
 
+#if !defined(TARGET_PC98)
     if (!probe_vga())
         return 1;
+#endif
 
-    if (vga_state.vga_height > 50)
-        vga_state.vga_height = 50;
+#if !defined(TARGET_PC98)
+    if (SCREEN_HEIGHT > 50)
+        SCREEN_HEIGHT = 50;
+#endif
 
     if (windows_mode != WINDOWS_NONE) {
 #if TARGET_MSDOS == 32
@@ -244,8 +260,12 @@ int main(int argc,char **argv) {
                 strcpy(test_biosext+16,"ABCDEFGH");
                 /* OK then, does the BIOS provide extended memcpy? */
                 memset(test_biosext,0,sizeof(test_biosext));
+#if !defined(TARGET_PC98)
                 /* direct the BIOS to memcpy() from the realmode vector table */
                 bios_extcopy(segoff2phys(test_biosext),segoff2phys(test_biosext+16),8);
+#else
+                // TODO: PC-98 INT 1Fh...
+#endif
                 /* did it work? */
                 if (_fmemcmp((void far*)test_biosext,(void far*)(test_biosext+16),8) == 0) {
                     /* are the remaining bytes zero? or did the BIOS copy too much? */
@@ -264,6 +284,7 @@ int main(int argc,char **argv) {
         himem_sys_global_a20(1);
     }
     else {
+#if !defined(TARGET_PC98)
         unsigned char keyb,bb;
 
         /* try to enable A20 via port 0x92, or the keyboard controller */
@@ -288,6 +309,9 @@ int main(int argc,char **argv) {
         /* see also: http://www.win.tue.nl/~aeb/linux/kbd/A20.html */
         bb = inp(0x92);
         if (!(bb & 2)) outp(0x92,(bb|2)|1);
+#else
+        outp(0xF6,0x02); // unmask A20 (PC-98)
+#endif
 
         _sti();
     }
@@ -311,12 +335,21 @@ int main(int argc,char **argv) {
     printf("Ready\n");
     getch();
 
+#if defined(TARGET_PC98)
+    printf("\x1B[m"); /* normal attributes */
+    printf("\x1B[J"); /* clear screen */
+    printf("\x1B[1>h"); /* hide function row */
+    printf("\x1B[5>h"); /* hide cursor (so we can directly control it) */
+    fflush(stdout);
+#endif
+
     while (!die) {
         if (drawmem) {
             unsigned char *rdptr = datatmp;
-            copy_data_to(rdptr,segment,vga_state.vga_height);
-            for (y=0;y < vga_state.vga_height;y++) {
-                VGA_ALPHA_PTR dst = vga_state.vga_alpha_ram + (y * vga_state.vga_width);
+            copy_data_to(rdptr,segment,SCREEN_HEIGHT);
+            for (y=0;y < SCREEN_HEIGHT;y++) {
+#if !defined(TARGET_PC98)
+                VGA_ALPHA_PTR dst = vga_state.vga_alpha_ram + (y * SCREEN_WIDTH);
                 for (x=0;x < 16;x++) {
                     dst[x] =
                         (unsigned short)hexen[((segment+(y*16ULL))>>(60ULL-(x*4ULL)))&0xFULL]|
@@ -335,13 +368,90 @@ int main(int argc,char **argv) {
                     unsigned char b = *rdptr++;
                     dst[x++] = (unsigned short)b | (unsigned short)0x0D00;
                 }
-                while (x < vga_state.vga_width)
+                while (x < SCREEN_WIDTH)
                     dst[x++] = (unsigned short)' ' | (unsigned short)0x0700;
+#else
+# if TARGET_MSDOS == 16
+                uint16_t far *tram = MK_FP(0xA000,0x0000);
+                uint16_t far *cram = MK_FP(0xA200,0x0000);
+# else
+                uint16_t *tram = (uint16_t*)0xA0000;
+                uint16_t *cram = (uint16_t*)0xA2000;
+# endif
+                tram += (y * SCREEN_WIDTH);
+                cram += (y * SCREEN_WIDTH);
+                for (x=0;x < 16;x++) {
+                    tram[x] =
+                        (unsigned short)hexen[((segment+(y*16ULL))>>(60ULL-(x*4ULL)))&0xFULL];
+                    cram[x] =
+                        (unsigned short)0xE1;
+                }
+                tram[x] = ' ';
+                cram[x] = 0xE1;
+                x++;
+                for (i=0;i < 16;i++) {
+                    unsigned char b = *rdptr++;
+
+                    tram[x] = (unsigned short)hexen[b>>4];
+                    cram[x] = 0xE1;
+                    x++;
+                    tram[x] = (unsigned short)hexen[b&0xF];
+                    cram[x] = 0xE1;
+                    x++;
+
+                    if ((i&1) == 1) {
+                        tram[x] = ' ';
+                        cram[x] = 0xE1;
+                        x++;
+                    }
+                }
+                rdptr -= 16;
+                tram[x] = (unsigned short)' ';
+                cram[x] = 0xE1;
+                x++;
+                for (i=0;i < 16;i++) {
+                    unsigned char b = *rdptr++;
+                    tram[x] = (unsigned short)b;
+                    cram[x] = 0xE1;
+                    x++;
+                }
+                while (x < SCREEN_WIDTH) {
+                    tram[x] = (unsigned short)' ';
+                    cram[x] = 0xE1;
+                    x++;
+                }
+#endif
             }
             drawmem=0;
         }
 
+#if !defined(TARGET_PC98)
         key = _bios_keybrd(_KEYBRD_READ);
+#else
+        {
+            unsigned short x=0;
+
+            /* use INT 18h AH=00 */
+            __asm {
+                xor     ax,ax
+                int     18h
+                mov     x,ax
+            }
+
+            key = x;
+
+            /* translate PC-98 to IBM for this codebase */
+            if ((key >> 8) == 0x3A)//uparrow
+                key = 0x4800;
+            else if ((key >> 8) == 0x3D)//downarrow
+                key = 0x5000;
+            else if ((key >> 8) == 0x36)//rollup
+                key = 0x4900;
+            else if ((key >> 8) == 0x37)//rolldown
+                key = 0x5100;
+        }
+#endif
+
         if ((key&0xFF) == 27) { /* ESC */
             die = 1;
             break;
@@ -351,6 +461,8 @@ int main(int argc,char **argv) {
             int i=0,c;
 
             drawmem=1;
+
+#if !defined(TARGET_PC98)
             vga_write_color(0x0E);
             vga_clear();
             vga_moveto(0,0);
@@ -378,6 +490,9 @@ int main(int argc,char **argv) {
                     }
                 }
             }
+#else
+            // TODO
+#endif
 
             if (c == 13) {
                 segment = (uint64_t)strtoull(input,NULL,16);
@@ -399,17 +514,25 @@ int main(int argc,char **argv) {
                 drawmem=1;
             }
             else if (key == 0x49) {
-                segment -= (unsigned)vga_state.vga_height * repeat * 16ULL;
+                segment -= (unsigned)SCREEN_HEIGHT * repeat * 16ULL;
                 drawmem=1;
             }
             else if (key == 0x51) {
-                segment += (unsigned)vga_state.vga_height * repeat * 16ULL;
+                segment += (unsigned)SCREEN_HEIGHT * repeat * 16ULL;
                 drawmem=1;
             }
 
             repeat=0;
         }
     }
+
+#if defined(TARGET_PC98)
+    printf("\n");
+    printf("\x1B[1>l"); /* show function row */
+    printf("\x1B[5>l"); /* show cursor */
+    printf("\x1B[24;1H"); /* show cursor */
+    fflush(stdout);
+#endif
 
 #if TARGET_MSDOS == 16
     flatrealmode_setup(FLATREALMODE_64KB);
