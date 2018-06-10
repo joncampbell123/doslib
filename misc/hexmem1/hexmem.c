@@ -351,6 +351,7 @@ int main(int argc,char **argv) {
             int i=0,c;
 
             drawmem=1;
+            vga_write_color(0x0E);
             vga_clear();
             vga_moveto(0,0);
             vga_write("Jump to: ");
