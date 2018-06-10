@@ -113,12 +113,21 @@ int bios_extcopy_sub(uint32_t dst,uint32_t src,unsigned long copy/* WARNING: mus
     if (dst >= 0x1000000UL/*>= 16MB*/) /* see DOSBox bug report listed above to understand why I am filling in bytes 7-8 this way */
         *((uint16_t*)(tmp+0x1E)) = ((dst >> 16) & 0xFF00UL) + 0x8FUL;   /* (386) base bits 24-31, flags, limit bits 16-19 */
 
+#if defined(TARGET_PC98)
+    regs.h.ah = 0x90;
+    regs.w.cx = (unsigned int)(copy & 0xFFFFUL);
+    regs.w.bx = FP_OFF((unsigned char*)tmp);
+    sregs.es = FP_SEG((unsigned char*)tmp);
+    int86x(0x1F,&regs,&regs,&sregs); /* now call the BIOS (PC-98) */
+    return ((regs.w.cflag & 1) == 0) ? 0 : -1; // carry flag clear if OK
+#else
     regs.h.ah = 0x87;
     regs.w.cx = (unsigned int)(copy >> 1UL);    /* number of WORDS, not BYTES */
     regs.w.si = FP_OFF((unsigned char*)tmp);
     sregs.es = FP_SEG((unsigned char*)tmp);
-    int86x(0x15,&regs,&regs,&sregs); /* now call the BIOS */
-    return (regs.h.ah == 0) ? 0 : -1;
+    int86x(0x15,&regs,&regs,&sregs); /* now call the BIOS (IBM PC/AT) */
+    return (regs.h.ah == 0) ? 0 : -1; // AH == 0 if OK
+#endif
 }
 
 int bios_extcopy(uint32_t dst,uint32_t src,unsigned long copy) {
