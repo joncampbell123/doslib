@@ -71,7 +71,11 @@ static void help() {
 #if TARGET_MSDOS == 32
 #else
     fprintf(stderr,"    /nf     Don't use Flat Real Mode to read extended memory\n");
+# if !defined(TARGET_PC98)
     fprintf(stderr,"    /nb     Don't use BIOS INT 15H to read extended memory\n");
+# else
+    fprintf(stderr,"    /nb     Don't use BIOS INT 1FH to read extended memory\n");
+# endif
 #endif
 }
 
