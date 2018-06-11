@@ -4,7 +4,12 @@
 #include <hw/dos/dos.h>
 #include <hw/dos/doswin.h>
 
-int main() {
+#ifdef TARGET_WINDOWS
+# define WINFCON_STOCK_WIN_MAIN
+# include <hw/dos/winfcon.h>
+#endif
+
+int main(int argc,char **argv,char **envp) {
     printf("Hello world\n");
 
 	cpu_probe();
