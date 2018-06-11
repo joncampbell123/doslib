@@ -27,6 +27,10 @@
 # include <os2.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern unsigned char FAR *dos_LOL;
 
 #if TARGET_MSDOS == 32 && !defined(TARGET_OS2)
@@ -502,6 +506,10 @@ uint32_t dos_linear_to_phys_vcpi(uint32_t pn);
 
 #if !defined(TARGET_WINDOWS) && !defined(WIN386) && !defined(TARGET_OS2)
 int vector_is_iret(const unsigned char vector);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* __HW_DOS_DOS_H */
