@@ -39,8 +39,8 @@ exe: $(TEST_EXE) .symbolic
 lib: .symbolic
 
 !ifdef TEST_EXE
-$(TEST_EXE): $(SUBDIR)$(HPS)test.obj $(DOSNTAST_VDD)
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) file $(SUBDIR)$(HPS)test.obj
+$(TEST_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(DOSNTAST_VDD)
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj
 	%write tmp.cmd option map=$(TEST_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
