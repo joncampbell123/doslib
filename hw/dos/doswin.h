@@ -10,6 +10,10 @@
 #include <windows/ntvdm/ntvdmlib.h>
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
 	WINEMU_NONE=0,
 	WINEMU_WINE
@@ -82,6 +86,10 @@ extern BOOL			(PASCAL FAR *__InterruptRegister)(HTASK htask,FARPROC callback);
 
 int ToolHelpInit();
 void ToolHelpFree();
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif //__HW_DOS_DOSWIN_H
