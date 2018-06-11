@@ -1,15 +1,6 @@
 
 #include <stdio.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <hw/cpu/cpu.h>
-
-#ifdef __cplusplus
-}
-#endif
 
 int main() {
     printf("Hello world\n");

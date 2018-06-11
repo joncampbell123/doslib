@@ -27,6 +27,10 @@
 # endif
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* FIX: Open Watcom does not provide inpd/outpd in 16-bit real mode, so we have to provide it ourself */
 /*      We assume for the same stupid reasons the pragma aux function can't be used because it's a 386 level instruction */
 #if TARGET_MSDOS == 16
@@ -234,6 +238,10 @@ static inline void cpu_wrmsr(const uint32_t idx,const uint64_t val);
 /* see CPUASM.ASM */
 uint64_t cpu_rdmsr(const uint32_t idx);
 void cpu_wrmsr(const uint32_t idx,const uint64_t val);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* __HW_CPU_CPU_H */
