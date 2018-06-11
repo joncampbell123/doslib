@@ -21,6 +21,10 @@
 # define write _win_write
 # define read _win_read
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void _win_pump();
 int _win_kbhit();
 int _win_getch();
@@ -36,7 +40,15 @@ int _win_write(int fd,const void *buf,int sz);
 int _cdecl _fake_main(int argc,char **argv,char **envp);
 int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nCmdShow,int (_cdecl *_main_f)(int argc,char**,char**));
 
+#ifdef __cplusplus
+}
+#endif
+
 # include <shellapi.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 extern unsigned int (*_win_dropFilesHandler)(HDROP hDrop);
 
@@ -48,6 +60,10 @@ int PASCAL WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,i
 	return _win_main_con_entry(hInstance,hPrevInstance,lpCmdLine,nCmdShow,_fake_main);
 }
 # endif
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 
