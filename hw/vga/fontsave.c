@@ -15,7 +15,17 @@
 #include <hw/vga/vgatty.h>
 #include <hw/dos/doswin.h>
 
+static unsigned char buffer[1024];
+
 int main(int argc,char **argv) {
+    char *capturename = NULL;
+
+    if (argc < 2) {
+        printf("Need to specify filename to WRITE to\n");
+        return 1;
+    }
+    capturename = argv[1];
+
     /* probe_vga() is defined in vga.c */
 	if (!probe_vga()) {
 		printf("VGA probe failed\n");
@@ -128,6 +138,25 @@ int main(int argc,char **argv) {
          *  bit[7:2] = not defined
          *  bit[1:0] = map select */
 		vga_write_GC(4,0x02); /* select plane 2, where the font data is */
+
+        /* copy it down */
+        {
+            FILE *fp = fopen(capturename,"wb");
+            if (fp != NULL) {
+                unsigned int i;
+
+                for (i=0;i < (32*256);i += (unsigned int)sizeof(buffer)) {
+#if TARGET_MSDOS == 32
+                    memcpy(buffer,(unsigned char*)(0xA0000 + i),sizeof(buffer)); /* copy from VGA RAM */
+#else
+                    _fmemcpy(buffer,MK_FP(0xA000,i),sizeof(buffer)); /* copy from VGA RAM */
+#endif
+                    fwrite(buffer,sizeof(buffer),1,fp);
+                }
+
+                fclose(fp);
+            }
+        }
 
         /* reset the sequencer */
 		vga_write_sequencer(0,0x01); /* synchronous reset */
