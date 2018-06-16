@@ -89,7 +89,7 @@ int main(int argc,char **argv) {
          *  bit[1:1] = Chain odd/even enable
          *  bit[0:0] = Alphanumeric mode disable (set to 1 for graphics) */
 		ogc6 = vga_read_GC(6);
-		vga_write_GC(6,ogc6 & (~3u)); /* switch off graphics, odd/even mode, leave memory map alone */
+		vga_write_GC(6,ogc6 & (~0xFU)); /* switch off graphics, odd/even mode, move memory map to A0000 */
 
         /* Graphics Mode Register (index 5):
          *  bit[7:7] = not defined
