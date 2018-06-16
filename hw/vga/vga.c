@@ -213,7 +213,6 @@ int probe_vga() {
 	return 1;
 #else
 	union REGS regs = {0};
-	unsigned char c,c2;
 
 	vga_state.vga_flags = 0;
 	vga_state.vga_base_3x0 = 0;
@@ -264,72 +263,70 @@ int probe_vga() {
 		}
 	}
 
-	/* hm, okay. how about testing for a CGA? */
-	/* NTS: The CGA is always at port 0x3Dx */
+    /* If nothing found yet, then it's either CGA or MDA. At this point, ask the BIOS.
+     * Probing I/O ports on old hardware is not advised because the undefined ports
+     * may return values other than 0xFF especially with aging components. */
 	if (vga_state.vga_flags == 0) {
-		unsigned int patience = 1000;
-		outp(0x3D4,0xF);
-		c = inp(0x3D5);
-		outp(0x3D5,0xAA);
-		while (--patience != 0 && (c2=inp(0x3D5)) != 0xAA);
-		outp(0x3D5,c);
-		if (c2 == 0xAA) {
-			vga_state.vga_flags |= VGA_IS_CGA;
+        unsigned short equip = 0;
 
-			/* If it looks like a CGA it might be a Tandy/PCjr */
-			/* unfortunately I can't find ANYTHING on
-			 * how to go about detecting Tandy graphics. The best I can
-			 * find are obscure INT 1Ah calls that detect the Tandy's
-			 * sound chip (and conflict the PCMCIA services---YIKES!) */
-			{
-				union REGS regs = {0};
-				regs.w.ax = 0x8100;
-#if TARGET_MSDOS == 32
-				int386(0x1A,&regs,&regs);
-#else
-				int86(0x1A,&regs,&regs);
-#endif
-				if (regs.h.al & 0x80) {
-					if ((regs.w.cflag & 1) == 0) { /* and sound chip is free? CF=0 */
-						vga_state.vga_flags |= VGA_IS_TANDY;
-					}
-				}
-			}
+        __asm {
+            push    ax
+            int     11h
+            mov     equip,ax
+            pop     ax
+        }
 
-			/* what about Amstrad? */
-			{
-				union REGS regs = {0};
-				regs.w.ax = 0x0600;
-				regs.w.bx = 0;
-				regs.w.cflag = 0;
-#if TARGET_MSDOS == 32
-				int386(0x15,&regs,&regs);
-#else
-				int86(0x15,&regs,&regs);
-#endif
-				if (regs.w.bx != 0 && !(regs.w.cflag & 1)) {
-					vga_state.vga_flags |= VGA_IS_AMSTRAD;
-					/* TODO: If I read the Amstrad tech manual correctly, their video hardware also emulates Hercules modes, right? */
-					/* TODO: I get the impression Amstrad graphics do not include Tandy modes, is that correct? */
-					//vga_state.vga_flags &= ~VGA_IS_TANDY; /* <- if so, uncomment this line */
-				}
-			}
-		}
-	}
-
-	/* hm, okay. how about testing for a MDA? */
-	/* NTS: The MDA is always at port 0x3Bx */
-	if (vga_state.vga_flags == 0) {
-		unsigned int patience = 1000;
-		outp(0x3B4,0xF);
-		c = inp(0x3B5);
-		outp(0x3B5,0xAA);
-		while (--patience != 0 && (c2=inp(0x3B5)) != 0xAA);
-		outp(0x3B5,c);
-		if (c2 == 0xAA) {
+        /* bits [5:4]
+         *   11 = TTL monochrome (MDA)
+         *   10 = 80-column CGA
+         *   01 = 40-column CGA
+         *   00 = ?? */
+        if ((equip & (3 << 4)) == (3 << 4))
 			vga_state.vga_flags |= VGA_IS_MDA;
-		}
-	}
+        else if ((equip & (3 << 4)) != (0 << 4))
+			vga_state.vga_flags |= VGA_IS_CGA;
+    }
+
+	if (vga_state.vga_flags & VGA_IS_CGA) {
+        /* If it looks like a CGA it might be a Tandy/PCjr */
+        /* unfortunately I can't find ANYTHING on
+         * how to go about detecting Tandy graphics. The best I can
+         * find are obscure INT 1Ah calls that detect the Tandy's
+         * sound chip (and conflict the PCMCIA services---YIKES!) */
+        {
+            union REGS regs = {0};
+            regs.w.ax = 0x8100;
+#if TARGET_MSDOS == 32
+            int386(0x1A,&regs,&regs);
+#else
+            int86(0x1A,&regs,&regs);
+#endif
+            if (regs.h.al & 0x80) {
+                if ((regs.w.cflag & 1) == 0) { /* and sound chip is free? CF=0 */
+                    vga_state.vga_flags |= VGA_IS_TANDY;
+                }
+            }
+        }
+
+        /* what about Amstrad? */
+        {
+            union REGS regs = {0};
+            regs.w.ax = 0x0600;
+            regs.w.bx = 0;
+            regs.w.cflag = 0;
+#if TARGET_MSDOS == 32
+            int386(0x15,&regs,&regs);
+#else
+            int86(0x15,&regs,&regs);
+#endif
+            if (regs.w.bx != 0 && !(regs.w.cflag & 1)) {
+                vga_state.vga_flags |= VGA_IS_AMSTRAD;
+                /* TODO: If I read the Amstrad tech manual correctly, their video hardware also emulates Hercules modes, right? */
+                /* TODO: I get the impression Amstrad graphics do not include Tandy modes, is that correct? */
+                //vga_state.vga_flags &= ~VGA_IS_TANDY; /* <- if so, uncomment this line */
+            }
+        }
+    }
 
 	/* If it looks like an MDA, then it might be helpful to tell whether it's a
 	 * Hercules graphics card */
