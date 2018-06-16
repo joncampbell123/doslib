@@ -15,6 +15,8 @@
 #include <hw/vga/vgatty.h>
 #include <hw/dos/doswin.h>
 
+/* FIXME: This code assumes 80x25 text */
+
 static unsigned char cursx = 0,cursy = 0;
 static unsigned char statrow = 25 - 1;
 static unsigned char sel = 'A';
