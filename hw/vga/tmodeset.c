@@ -717,6 +717,45 @@ void dump_to_file(int automated) {
 	}
 }
 
+int prompt_disk_space() {
+    struct diskfree_t df;
+    int c;
+
+    do {
+        if (_dos_getdiskfree(0/*default*/,&df) == 0) {
+            unsigned long fsp,m;
+
+            fsp  = (unsigned long)df.bytes_per_sector;
+            fsp *= (unsigned long)df.sectors_per_cluster;
+            fsp *= (unsigned long)df.avail_clusters;
+
+#if defined(SVGA_TSENG)
+            m  = (65536UL + 128UL);
+            if (tseng_mode == ET4000)       m *= 16UL;
+            else if (tseng_mode == ET3000)  m *= 8UL;
+            m += 256UL * 24UL;
+#else
+            m  = (65536UL + 128UL) * 5UL;
+            m += 256UL * 24UL;
+#endif
+
+            if (fsp > m) break;
+
+            printf("Not enough disk space (%luKB). Switch disks and hit ENTER to continue.\n",fsp>>10UL);
+        }
+        else {
+            printf("Unable to determine disk space. Switch disks and hit ENTER to continue.\n");
+        }
+
+        do { c = getch();
+        } while (!(c == 13 || c == 27));
+
+        if (c == 27) return 0;
+    } while (1);
+
+    return 1;
+}
+
 void dump_auto_modes_and_bios() {
 	unsigned int smode;
 	int c;
@@ -748,6 +787,9 @@ void dump_auto_modes_and_bios() {
 			 * some early 1990's SVGA cards will even crash in the VGA BIOS if you ask for such modes! */
 			continue;
 		}
+
+        /* wait for free disk space */
+        if (!prompt_disk_space()) break;
 
 		/* set the mode. if it didn't take, then skip */
 		int10_setmode(smode);
