@@ -48,6 +48,35 @@ void updatecursor(void) {
     vga_write_sync();
 }
 
+void drawchar(void) {
+    unsigned int x,y,a;
+
+    for (y=0;y < 24;y++) {
+        VGA_ALPHA_PTR p = vga_state.vga_alpha_ram + (80 * y) + 80 - (8*2);
+        for (x=0;x < 8;x++,p += 2) {
+            a = 7;
+
+            if (x == cursx && y == cursy)
+                a = 14;
+
+            *((VGA_RAM_PTR)(&p[0]) + 1ul) = a << 4;
+            *((VGA_RAM_PTR)(&p[1]) + 1ul) = a << 4;
+        }
+    }
+}
+
+void clearchar(void) {
+    unsigned int x,y;
+
+    for (y=0;y < 24;y++) {
+        VGA_ALPHA_PTR p = vga_state.vga_alpha_ram + (80 * y) + 80 - (8*2);
+        for (x=0;x < 8;x++,p += 2) {
+            *((VGA_RAM_PTR)(&p[0]) + 1ul) = 0x07;
+            *((VGA_RAM_PTR)(&p[1]) + 1ul) = 0x07;
+        }
+    }
+}
+
 int main(int argc,char **argv) {
     int c;
 
@@ -67,7 +96,14 @@ int main(int argc,char **argv) {
 
     while (run) {
         if (editmode) {
+            unsigned char o_x = cursx;
+            unsigned char o_y = cursy;
+
+            cursx = 0;
+            cursy = 0;
             updatecursor();
+
+            drawchar();
             drawstat();
             do {
                 c = getch();
@@ -79,12 +115,32 @@ int main(int argc,char **argv) {
                 }
 
                 if (c == 0x4800) {
+                    if (cursy > 0) {
+                        cursy--;
+                        drawchar();
+                        drawstat();
+                    }
                 }
                 else if (c == 0x5000) {
+                    if (cursy < (statrow-1u)) {
+                        cursy++;
+                        drawchar();
+                        drawstat();
+                    }
                 }
                 else if (c == 0x4B00) {
+                    if (cursx > 0) {
+                        cursx--;
+                        drawchar();
+                        drawstat();
+                    }
                 }
                 else if (c == 0x4D00) {
+                    if (cursx < 7) {
+                        cursx++;
+                        drawchar();
+                        drawstat();
+                    }
                 }
                 else if (c == ' ') {
                 }
@@ -93,6 +149,11 @@ int main(int argc,char **argv) {
                     break;
                 }
             } while(1);
+
+            cursx = o_x;
+            cursy = o_y;
+            updatecursor();
+            clearchar();
         }
         else {
             updatecursor();
