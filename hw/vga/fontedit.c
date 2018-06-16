@@ -23,6 +23,7 @@ static unsigned char statrow = 25 - 1;
 static unsigned char sel = 'A';
 static unsigned char run = 1;
 
+static unsigned char tmpcell[32];
 static char tmp[128];
 
 void drawstat(void) {
@@ -43,6 +44,51 @@ void clearstat(void) {
     for (i=0;i < 80;i++) p[i] = 0x0720;
 }
 
+static unsigned char fp_seq4,fp_ogc5,fp_ogc6,fp_seqmask;
+
+void vga_enter_fontplane(void) {
+    fp_ogc6 = vga_read_GC(6);
+    vga_write_GC(6,fp_ogc6 & (~0xFU)); /* switch off graphics, odd/even mode, move memory map to A0000 */
+
+    fp_ogc5 = vga_read_GC(5);
+    vga_write_GC(5,fp_ogc5 & (~0x1B)); /* switch off host odd/even, set read mode=0 write mode=0 */
+
+    fp_seq4 = vga_read_sequencer(4);
+    vga_write_sequencer(4,0x06); /* switch off odd/even, switch off chain4, keep extended memory enabled */
+
+    fp_seqmask = vga_read_sequencer(VGA_SC_MAP_MASK);
+    vga_write_sequencer(VGA_SC_MAP_MASK,0x4); /* bit plane 2 */
+
+    vga_write_GC(4,0x02); /* select plane 2, where the font data is */
+}
+
+void vga_leave_fontplane(void) {
+    /* reset the sequencer */
+    vga_write_sequencer(0,0x01); /* synchronous reset */
+    vga_write_sequencer(0,0x03);
+
+    /* restore */
+    vga_write_sequencer(4,fp_seq4);
+    vga_write_sequencer(0,0x01);
+    vga_write_sequencer(0,0x03);
+    vga_write_sequencer(VGA_SC_MAP_MASK,fp_seqmask);
+    vga_write_GC(4,0x00); /* select plane 0 */
+    vga_write_GC(5,fp_ogc5);
+    vga_write_GC(6,fp_ogc6);
+}
+
+void readcharcell(unsigned char *buf,unsigned char cell) {
+    vga_enter_fontplane();
+
+#if TARGET_MSDOS == 32
+    memcpy(buf,(unsigned char*)0xA0000 + ((unsigned int)cell * 32),32);
+#else
+    _fmemcpy(buf,MK_FP(0xA000,((unsigned int)cell * 32)),32);
+#endif
+
+    vga_leave_fontplane();
+}
+
 void updatecursor(void) {
     vga_moveto(cursx,cursy);
     vga_write_sync();
@@ -51,13 +97,18 @@ void updatecursor(void) {
 void drawchar(void) {
     unsigned int x,y,a;
 
+    readcharcell(tmpcell,sel);
+
     for (y=0;y < 24;y++) {
         VGA_ALPHA_PTR p = vga_state.vga_alpha_ram + (80 * y) + 80 - (8*2);
         for (x=0;x < 8;x++,p += 2) {
-            a = 7;
+            if (tmpcell[y] & (0x80 >> x))
+                a = 7;
+            else
+                a = 1;
 
             if (x == cursx && y == cursy)
-                a = 14;
+                a = 6;
 
             *((VGA_RAM_PTR)(&p[0]) + 1ul) = a << 4;
             *((VGA_RAM_PTR)(&p[1]) + 1ul) = a << 4;
@@ -143,6 +194,16 @@ int main(int argc,char **argv) {
                     }
                 }
                 else if (c == ' ') {
+                }
+                else if (c == '=' || c == '+') {
+                    sel++;
+                    drawchar();
+                    drawstat();
+                }
+                else if (c == '-' || c == '_') {
+                    sel--;
+                    drawchar();
+                    drawstat();
                 }
                 else if (c == 'e') {
                     editmode ^= 1;
