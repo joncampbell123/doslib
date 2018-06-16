@@ -89,6 +89,18 @@ void readcharcell(unsigned char *buf,unsigned char cell) {
     vga_leave_fontplane();
 }
 
+void writecharcell(unsigned char *buf,unsigned char cell) {
+    vga_enter_fontplane();
+
+#if TARGET_MSDOS == 32
+    memcpy((unsigned char*)0xA0000 + ((unsigned int)cell * 32),buf,32);
+#else
+    _fmemcpy(MK_FP(0xA000,((unsigned int)cell * 32)),buf,32);
+#endif
+
+    vga_leave_fontplane();
+}
+
 void updatecursor(void) {
     vga_moveto(cursx,cursy);
     vga_write_sync();
@@ -194,6 +206,12 @@ int main(int argc,char **argv) {
                     }
                 }
                 else if (c == ' ') {
+                    readcharcell(tmpcell,sel);
+
+                    if (cursy < 32 && cursx < 8)
+                        tmpcell[cursy] ^= 0x80 >> cursx;
+
+                    writecharcell(tmpcell,sel);
                 }
                 else if (c == '=' || c == '+') {
                     sel++;
