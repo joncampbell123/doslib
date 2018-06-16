@@ -17,6 +17,7 @@
 
 /* FIXME: This code assumes 80x25 text */
 
+static unsigned char editmode = 0;
 static unsigned char cursx = 0,cursy = 0;
 static unsigned char statrow = 25 - 1;
 static unsigned char sel = 'A';
@@ -29,7 +30,7 @@ void drawstat(void) {
     unsigned int i;
 
     i  = 0;
-    i += sprintf(tmp+i," x=%03u y=%03u",cursx,cursy);
+    i += sprintf(tmp+i," x=%03u y=%03u %s",cursx,cursy,editmode?"Font bitmap mode":"Alpha draw mode");
 
     p[0] = 0x0F00 | sel;
     for (i=0;i < 79;i++) p[i+1] = 0x7000 | (unsigned char)tmp[i];
@@ -64,53 +65,92 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    updatecursor();
-    drawstat();
     while (run) {
-        c = getch();
-        if (c == 0) c = getch() << 8;
-
-        if (c == 27) break;
-
-        if (c == 0x4800) {
-            if (cursy > 0) {
-                cursy--;
-                updatecursor();
-                drawstat();
-            }
-        }
-        else if (c == 0x5000) {
-            if (cursy < (statrow-1u)) {
-                cursy++;
-                updatecursor();
-                drawstat();
-            }
-        }
-        else if (c == 0x4B00) {
-            if (cursx > 0) {
-                cursx--;
-                updatecursor();
-                drawstat();
-            }
-        }
-        else if (c == 0x4D00) {
-            if (cursx < 79) {
-                cursx++;
-                updatecursor();
-                drawstat();
-            }
-        }
-        else if (c == ' ') {
-            /* write to the screen */
-            vga_state.vga_alpha_ram[(cursy*80)+cursx] = 0x0700 + sel;
-        }
-        else if (c == '=' || c == '+') {
-            sel++;
+        if (editmode) {
+            updatecursor();
             drawstat();
+            do {
+                c = getch();
+                if (c == 0) c = getch() << 8;
+
+                if (c == 27) {
+                    run=0;
+                    break;
+                }
+
+                if (c == 0x4800) {
+                }
+                else if (c == 0x5000) {
+                }
+                else if (c == 0x4B00) {
+                }
+                else if (c == 0x4D00) {
+                }
+                else if (c == ' ') {
+                }
+                else if (c == 'e') {
+                    editmode ^= 1;
+                    break;
+                }
+            } while(1);
         }
-        else if (c == '-' || c == '_') {
-            sel--;
+        else {
+            updatecursor();
             drawstat();
+            do {
+                c = getch();
+                if (c == 0) c = getch() << 8;
+
+                if (c == 27) {
+                    run=0;
+                    break;
+                }
+
+                if (c == 0x4800) {
+                    if (cursy > 0) {
+                        cursy--;
+                        updatecursor();
+                        drawstat();
+                    }
+                }
+                else if (c == 0x5000) {
+                    if (cursy < (statrow-1u)) {
+                        cursy++;
+                        updatecursor();
+                        drawstat();
+                    }
+                }
+                else if (c == 0x4B00) {
+                    if (cursx > 0) {
+                        cursx--;
+                        updatecursor();
+                        drawstat();
+                    }
+                }
+                else if (c == 0x4D00) {
+                    if (cursx < 79) {
+                        cursx++;
+                        updatecursor();
+                        drawstat();
+                    }
+                }
+                else if (c == ' ') {
+                    /* write to the screen */
+                    vga_state.vga_alpha_ram[(cursy*80)+cursx] = 0x0700 + sel;
+                }
+                else if (c == '=' || c == '+') {
+                    sel++;
+                    drawstat();
+                }
+                else if (c == '-' || c == '_') {
+                    sel--;
+                    drawstat();
+                }
+                else if (c == 'e') {
+                    editmode ^= 1;
+                    break;
+                }
+            } while(1);
         }
     }
     vga_moveto(0,24);
