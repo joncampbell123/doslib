@@ -286,6 +286,8 @@ $(FONTEDIT_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_VGATTY_LIB) $(HW_
 	%write tmp.cmd option quiet option map=$(FONTEDIT_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_VGATTY_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)fontedit.obj name $(FONTEDIT_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+	# example VGA fonts
+	@$(COPY) *.vga $(SUBDIR)$(HPS)
 !endif
 
 !ifdef FONTLOAD_EXE
