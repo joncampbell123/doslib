@@ -158,14 +158,8 @@ int main(int argc,char **argv) {
             }
         }
 
-        /* reset the sequencer */
-		vga_write_sequencer(0,0x01); /* synchronous reset */
-		vga_write_sequencer(0,0x03);
-
         /* restore */
 		vga_write_sequencer(4,seq4);
-		vga_write_sequencer(0,0x01);
-		vga_write_sequencer(0,0x03);
 		vga_write_sequencer(VGA_SC_MAP_MASK,seqmask);
 		vga_write_GC(4,0x00); /* select plane 0 */
 		vga_write_GC(5,ogc5);
