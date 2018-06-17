@@ -1,0 +1,19 @@
+- Base I/O base:                0x0220
+- MPU I/O base:                 0x0330
+- OPL I/O:                      0x0388
+- WSS I/O:                      0x0530
+- OPL3SAx Control I/O:          0x0370
+- 8-bit DMA channel:            1
+- IRQ:                          5
+- DSP detected:                 1
+- DSP version:                  3.1 (0x03 0x01)
+- DSP copyright string:         
+- Mixer:                        CT1345
+- Is Gallant SC-6600:           No
+- ESS chipset:                  (none)
+- ISA Plug & Play:              Yes
+- ISA PnP ID:                   YMH0021
+- ISA PnP CSN:                  0
+- ISA PnP BIOS node:            0x17
+- ISA PnP string:               Yamaha OPL3-SAx
+- Has CSP/ASP chip:             No
