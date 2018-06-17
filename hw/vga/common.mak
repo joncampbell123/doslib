@@ -288,6 +288,7 @@ $(FONTEDIT_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_VGATTY_LIB) $(HW_
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 	# example VGA fonts
 	@$(COPY) *.vga $(SUBDIR)$(HPS)
+	@$(COPY) fontedit.txt $(SUBDIR)$(HPS)
 !endif
 
 !ifdef FONTLOAD_EXE
