@@ -1,0 +1,79 @@
+DOSLIB provides three tools to play with the FONT RAM
+on your EGA/VGA hardware.
+
+NOTICE: Changes are temporary in nature. They will be
+        lost when your BIOS is called to reset the
+        video mode.
+
+These three programs are:
+
+FONTLOAD.EXE <file>         Load a binary file into VGA FONT RAM
+
+FONTSAVE.EXE <file>         Save VGA FONT RAM to a binary file
+
+FONTEDIT.EXE                Edit the VGA FONT RAM
+
+
+FONTLOAD and FONTSAVE need to be given a filename.
+
+
+FONTEDIT allows you to do live realtime editing of the VGA
+FONT RAM.
+
+FONTEDIT interface keys:
+
+    ESC         Exit to DOS
+
+    e           Use unshifted 'e' to switch between 'alpha' and 'font bitmap'
+                editing mode.
+
+    Space bar   Write character to screen in alpha mode, or
+                toggle pixel in font bitmap mode
+
+    + or =      Increment character value (in lower left corner)
+
+    - or _      Decrement character value (in lower left corner)
+
+    Arrow keys  Move editing cursor
+
+
+FONTEDIT has two modes, 'alpha' and 'font bitmap' mode.
+
+Alpha mode allows you to draw alphanumeric characters on the screen using the
+arrow keys and the spacebar. The purpose of this mode is to allow placement
+of characters to aid in editing VGA FONT RAM.
+
+Font bitmap mode allows editing the font bitmap of the currently selected
+character. Arrow keys control the scan line row and pixel to edit. Space bar
+toggles the pixel. All changes happen realtime. Changes to the font bitmap
+will be immediately visible on your DOS console wherever that character
+appears.
+
+The current selected character is always visible on the lower left hand
+corner of the screen.
+
+
+
+Example fonts.
+
+
+Some example fonts are provided for you to get started and to see results
+immediately. These *.VGA files can be loaded into your font RAM immediately
+using FONTLOAD.EXE.
+
+lamegthc.vga            A quick and dirty attempt at a "gothic" font.
+                        Only A-Z and 0-9 have been changed.
+
+
+
+BUGS TO FIX:
+
+- FONTEDIT assumes your screen is in 80x25 text mode
+- FONTEDIT does not read console screen size from BIOS or DOS
+- FONTEDIT does not check whether the video mode is
+  graphics or text.
+
+Other consideration:
+- This code has only been tested on VGA hardware.
+  It *should* work on EGA, but I have no EGA hardware to test.
+
