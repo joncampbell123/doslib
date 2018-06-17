@@ -63,14 +63,12 @@ void vga_enter_fontplane(void) {
 }
 
 void vga_leave_fontplane(void) {
-    /* reset the sequencer */
-    vga_write_sequencer(0,0x01); /* synchronous reset */
-    vga_write_sequencer(0,0x03);
+    /* NTS: Do not do a synchronous reset of the sequencer on real IBM PS/2 hardware.
+     *      It actually does cause an interruption of video. It doesn't matter that
+     *      clone VGA hardware ignores it. */
 
     /* restore */
     vga_write_sequencer(4,fp_seq4);
-    vga_write_sequencer(0,0x01);
-    vga_write_sequencer(0,0x03);
     vga_write_sequencer(VGA_SC_MAP_MASK,fp_seqmask);
     vga_write_GC(4,0x00); /* select plane 0 */
     vga_write_GC(5,fp_ogc5);
