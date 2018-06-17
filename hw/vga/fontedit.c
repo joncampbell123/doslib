@@ -177,35 +177,35 @@ int main(int argc,char **argv) {
                     break;
                 }
 
-                if (c == 0x4800) {
+                if (c == 0x4800) { // IBM PC BIOS scan code UP ARROW
                     if (cursy > 0) {
                         cursy--;
                         drawchar();
                         drawstat();
                     }
                 }
-                else if (c == 0x5000) {
+                else if (c == 0x5000) { // IBM PC BIOS scan code DOWN ARROW
                     if (cursy < (statrow-1u)) {
                         cursy++;
                         drawchar();
                         drawstat();
                     }
                 }
-                else if (c == 0x4B00) {
+                else if (c == 0x4B00) { // IBM PC BIOS scan code LEFT ARROW
                     if (cursx > 0) {
                         cursx--;
                         drawchar();
                         drawstat();
                     }
                 }
-                else if (c == 0x4D00) {
+                else if (c == 0x4D00) { // IBM PC BIOS scan code RIGHT ARROW
                     if (cursx < 7) {
                         cursx++;
                         drawchar();
                         drawstat();
                     }
                 }
-                else if (c == ' ') {
+                else if (c == ' ') { // SPACEBAR
                     readcharcell(tmpcell,sel);
 
                     if (cursy < 32 && cursx < 8)
@@ -213,17 +213,17 @@ int main(int argc,char **argv) {
 
                     writecharcell(tmpcell,sel);
                 }
-                else if (c == '=' || c == '+') {
+                else if (c == '=' || c == '+') { // =/+
                     sel++;
                     drawchar();
                     drawstat();
                 }
-                else if (c == '-' || c == '_') {
+                else if (c == '-' || c == '_') { // -/_
                     sel--;
                     drawchar();
                     drawstat();
                 }
-                else if (c == 'e') {
+                else if (c == 'e') { // 'e'
                     editmode ^= 1;
                     break;
                 }
@@ -246,47 +246,47 @@ int main(int argc,char **argv) {
                     break;
                 }
 
-                if (c == 0x4800) {
+                if (c == 0x4800) { // IBM PC BIOS scan code UP ARROW
                     if (cursy > 0) {
                         cursy--;
                         updatecursor();
                         drawstat();
                     }
                 }
-                else if (c == 0x5000) {
+                else if (c == 0x5000) { // IBM PC BIOS scan code DOWN ARROW
                     if (cursy < (statrow-1u)) {
                         cursy++;
                         updatecursor();
                         drawstat();
                     }
                 }
-                else if (c == 0x4B00) {
+                else if (c == 0x4B00) { // IBM PC BIOS scan code LEFT ARROW
                     if (cursx > 0) {
                         cursx--;
                         updatecursor();
                         drawstat();
                     }
                 }
-                else if (c == 0x4D00) {
+                else if (c == 0x4D00) { // IBM PC BIOS scan code RIGHT ARROW
                     if (cursx < 79) {
                         cursx++;
                         updatecursor();
                         drawstat();
                     }
                 }
-                else if (c == ' ') {
+                else if (c == ' ') { // SPACEBAR
                     /* write to the screen */
                     vga_state.vga_alpha_ram[(cursy*80)+cursx] = 0x0700 + sel;
                 }
-                else if (c == '=' || c == '+') {
+                else if (c == '=' || c == '+') { // =/+
                     sel++;
                     drawstat();
                 }
-                else if (c == '-' || c == '_') {
+                else if (c == '-' || c == '_') { // -/_
                     sel--;
                     drawstat();
                 }
-                else if (c == 'e') {
+                else if (c == 'e') { // 'e'
                     editmode ^= 1;
                     break;
                 }
