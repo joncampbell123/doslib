@@ -79,6 +79,31 @@ int log_init(void) {
     return 1;
 }
 
+void log_cpu_info(void) {
+	LOG("CPU: %s or higher\n",cpu_basic_level_to_string(cpu_basic_level));
+
+	if (cpu_v86_active)
+		LOG("CPU: Is in virtual 8086 mode\n");
+	if (cpu_flags & CPU_FLAG_PROTECTED_MODE)
+		LOG("CPU: CPU is in protected mode\n");
+	if (cpu_flags & CPU_FLAG_PROTECTED_MODE_32)
+		LOG("CPU: CPU is in 32-bit protected mode\n");
+}
+
+void log_dos_info(void) {
+	LOG("DOS: version %x.%02u\n",dos_version>>8,dos_version&0xFF);
+	LOG("DOS: Method: '%s'\n",dos_version_method);
+	LOG("DOS: Flavor: '%s'\n",dos_flavor_str(dos_flavor));
+}
+
+void log_windows_info(void) {
+    if (windows_mode != WINDOWS_NONE) {
+		LOG("WINDOWS: Mode is %s\n",windows_mode_str(windows_mode));
+		LOG("WINDOWS: Version %x.%u\n",windows_version>>8,windows_version&0xFF);
+		LOG("WINDOWS: Method is %s\n",windows_version_method);
+    }
+}
+
 int main() {
     mkdir("video");
     mkdir("video\\pc");
@@ -90,8 +115,14 @@ int main() {
     /* Expected environment: Pure DOS mode (not Windows or OS/2).
      *                       User may run us under EMM386.EXE or not.
      *                       CPU is expected to be 8086 or higher. */
+    cpu_probe();
+    log_cpu_info();
+
 	probe_dos();
+    log_dos_info();
+
 	detect_windows();
+    log_windows_info();
 
     if (windows_mode != WINDOWS_NONE) {
         printf("This test requires pure DOS mode. Do not run under Windows or OS/2.\n");
