@@ -74,6 +74,8 @@ int log_init(void) {
             log_atexit_set = 1;
             atexit(log_atexit);
         }
+
+        LOG("* VIDEO\\PC\\TEST: IBM PC/XT/AT video test group #1\n");
     }
 
     return 1;
