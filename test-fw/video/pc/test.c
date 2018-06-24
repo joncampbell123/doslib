@@ -26,7 +26,7 @@ FILE *log_fp = NULL;
 unsigned char log_echo = 1;
 unsigned char log_atexit_set = 0;
 
-const char log_name[] = "video\\pc\\test.txt";
+const char log_name[] = "video\\pc\\test.log";
 
 void log_noecho(void) {
     log_echo = 0;
