@@ -1,0 +1,8 @@
+Test framework.
+
+These programs are used to test the behavior of hardware.
+They are meant to run in either DOSBox-X or on real hardware.
+They log to a TXT file in the current working directory when run.
+These are meant to inform on the behavior of actual hardware,
+and to help validate the accuracy of DOSBox-X emulation.
+
