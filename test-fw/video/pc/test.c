@@ -542,10 +542,40 @@ void ega_test(unsigned int w,unsigned int h) {
  
     test_pause(1);
 
+    // NTS: DOSBox INT 10h does not set mode back to write mode 0 when printing text
+    vga_write_GC(0x03/*Data rotate*/,0x00);    // no rotation, no ROP, data is unmodified
+    vga_write_GC(0x05/*mode register*/,0x00);  // read mode=0  write mode=0
+    vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
+
     {
         unsigned char *pal = (h >= 350) ? egapalac64 : egapalac16;
 
         for (i=0;i < 16;i++) {
+            {
+                const unsigned int oi = i;
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"EGA palette index %02xh       ",oi);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
             for (o=0;o < 4;o++) {
                 vga_write_AC(i,(o & 1) ? pal[i] : (i >= 8 ? 0x00 : 0x3F));
                 vga_write_AC(VGA_AC_ENABLE|0x1F,0);
