@@ -544,6 +544,9 @@ void ega_test(unsigned int w,unsigned int h) {
  
             if (!test_pause_10ths(8)) break;
         }
+
+        /* restore palette */
+        for (i=0;i < 16;i++) vga_write_AC(i,pal[i]);
     }
 }
 
