@@ -196,6 +196,24 @@ void LOG_INT11_VIDEOMODE(uint16_t int11) {
 
 const char hexes[16] = "0123456789ABCDEF";
 
+void test_pause_10ths(unsigned int dsecs) {
+	const unsigned long delay = t8254_us2ticks(1000UL);
+    unsigned int i;
+
+    dsecs *= 100u;
+    for (i=0;i < dsecs;i++) {
+		t8254_wait(delay);
+        if (kbhit()) {
+            unsigned int c = getchex();
+            if (c == ' ') break;
+            else if (c == 'x') {
+                while (getch() != 13);
+                break;
+            }
+        }
+    }
+}
+
 void test_pause(unsigned int secs) {
 	const unsigned long delay = t8254_us2ticks(1000UL);
     unsigned int i;
@@ -213,6 +231,50 @@ void test_pause(unsigned int secs) {
         }
     }
 }
+
+#define EGARGB2(r,g,b) \
+    (((((b) & 2) >> 1) + (((g) & 2) << 0) + (((r) & 2) << 1)) + \
+     ((((b) & 1) << 3) + (((g) & 1) << 4) + (((r) & 1) << 5)))
+
+unsigned char egapalac16[16] = {
+    EGARGB2(0,0,0),
+    EGARGB2(0,0,2),
+    EGARGB2(0,2,0),
+    EGARGB2(0,2,2),
+    EGARGB2(2,0,0),
+    EGARGB2(2,0,2),
+    EGARGB2(2,2,0),
+    EGARGB2(2,2,2),
+
+    EGARGB2(1,1,1),
+    EGARGB2(1,1,3),
+    EGARGB2(1,3,1),
+    EGARGB2(1,3,3),
+    EGARGB2(3,1,1),
+    EGARGB2(3,1,3),
+    EGARGB2(3,3,1),
+    EGARGB2(3,3,3)
+};
+
+unsigned char egapalac64[16] = {
+    EGARGB2(0,0,0),
+    EGARGB2(0,0,2),
+    EGARGB2(0,2,0),
+    EGARGB2(0,2,2),
+    EGARGB2(2,0,0),
+    EGARGB2(2,0,2),
+    EGARGB2(2,1,0),
+    EGARGB2(2,2,2),
+
+    EGARGB2(1,1,1),
+    EGARGB2(1,1,3),
+    EGARGB2(1,3,1),
+    EGARGB2(1,3,3),
+    EGARGB2(3,1,1),
+    EGARGB2(3,1,3),
+    EGARGB2(3,3,1),
+    EGARGB2(3,3,3)
+};
 
 void ega_test(unsigned int w,unsigned int h) {
     unsigned int o,i,x,y;
@@ -423,6 +485,23 @@ void ega_test(unsigned int w,unsigned int h) {
 
         for (x=0;x < (256/8u);x++) vmem[o+x] = 15;
     }
+ 
+    test_pause(3);
+
+    /* now play with the EGA palette */
+    assert(EGARGB2(0,0,1) == 0x08);
+    assert(EGARGB2(0,0,2) == 0x01);
+    assert(EGARGB2(0,0,3) == 0x09);
+    assert(EGARGB2(1,0,0) == 0x20);
+    assert(EGARGB2(2,0,0) == 0x04);
+    assert(EGARGB2(3,0,0) == 0x24);
+    if (h >= 350) {
+        for (i=0;i < 16;i++) vga_write_AC(i,egapalac64[i]);
+    }
+    else {
+        for (i=0;i < 16;i++) vga_write_AC(i,egapalac16[i]);
+    }
+    vga_write_AC(VGA_AC_ENABLE|0x1F,0);
  
     test_pause(3);
 }
