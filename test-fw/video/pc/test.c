@@ -215,7 +215,7 @@ void test_pause(unsigned int secs) {
 }
 
 void cga4_test(unsigned int w,unsigned int h) {
-    unsigned int o=0,i,x,y;
+    unsigned int i,x,y;
     VGA_RAM_PTR vmem;
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -253,6 +253,64 @@ void cga4_test(unsigned int w,unsigned int h) {
 
     for (i=0;i < 0x4000;i++)
         vmem[i] = 0;
+
+    /* CGA memory layout:
+     * 16KB RAM region
+     *
+     * First 8KB has the even lines 0, 2, 4, 6, 8....
+     * Second 8KB has the odd lines 1, 3, 5, 7, 9....
+     * 4 pixels per byte.
+     *
+     * Getting the 8x8 fonts is a pain on pre-EGA BIOSes, so just go ahead and use INT 10h to print text */
+    __asm {
+        mov     ah,0x02     ; set cursor pos
+        mov     bh,0x00     ; page 0
+        xor     dx,dx       ; DH=row=0  DL=col=0
+        int     10h
+    }
+
+    sprintf(tmp,"%u x %u text at seg 0x%04x, mode 0x%02x\r\n",w,h,0xB800,read_int10_bd_mode());
+    for (i=0;tmp[i] != 0;i++) {
+        unsigned char cv = tmp[i];
+
+        __asm {
+            mov     ah,0x0E     ; teletype output
+            mov     al,cv
+            xor     bh,bh
+            mov     bl,3        ; foreground color (white)
+            int     10h
+        }
+    }
+
+    for (y=16;y < 80;y++) {
+        VGA_RAM_PTR d = vmem + ((y>>1u) * (w>>2u)) + ((y&1u) * 0x2000u);
+        for (x=0;x < (256u/4u);x++) {
+            unsigned char c1 = x / (64u/4u);
+            unsigned char c2 = ((x + (32u/4u)) / (64u/4u)) & 3;
+
+            if (y >= 48 && c1 != c2)
+                d[x] = (c2 * ((y&1) ? 0x11u : 0x44u)) + (c1 * ((y&1) ? 0x44u : 0x11u));
+            else
+                d[x] = c1 * 0x55u;
+        }
+    }
+
+    for (i=1;i <= 3;i++) {
+        for (x=0;x < w;x++) {
+            y = (x + ((i - 1) * 10)) % 60;
+            if (y >= 30) y = 60 - y;
+            y += 100;
+
+            {
+                VGA_RAM_PTR d = vmem + ((y>>1u) * (w>>2u)) + ((y&1u) * 0x2000u);
+
+                d[x/4u] &= ~((0xC0u) >> ((x & 3) * 2u));
+                d[x/4u] |= (((i&3u) * 0x40u) >> ((x & 3) * 2u));
+            }
+        }
+    }
+
+    test_pause(3);
 }
 
 void alphanumeric_test(unsigned int w,unsigned int h) {
