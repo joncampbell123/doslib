@@ -2,7 +2,6 @@ MDA/Hercules/CGA/EGA/VGA/SVGA and various other test programs.
 Uses VGA library and 8254 library.
 
 TODO: Yet to test:
- - 320x200x256 mode (VGA/MCGA)
  - 16-color PCjr/Tandy modes
  - Hercules 720x350 graphics
 
