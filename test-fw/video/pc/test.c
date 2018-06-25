@@ -246,6 +246,10 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         if (port != crtbase)
             LOG(LOG_WARN "BIOS says CRT I/O port is 0x%x, my guess was 0x%x. This might be a problem.\n",
                 port,crtbase);
+
+        if (port != 0x3D4 && port != 0x3B4)
+            LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual.\n",
+                port);
     }
 
     LOG(LOG_INFO "Therefore, using video RAM segment 0x%04x\n",sv);
