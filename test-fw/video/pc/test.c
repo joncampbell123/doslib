@@ -531,6 +531,18 @@ void ega_test(unsigned int w,unsigned int h) {
                 }
             }
         }
+
+        /* NTS: Testing so far, shows that EGA 200-line modes are limited to a CGA
+         *      palette. Otherwise, this should cycle through smooth gradients
+         *      of each RGB combination */
+        for (i=0;i < 8;i++) {
+            for (x=0;x < 4;x++)
+                vga_write_AC(x,EGARGB2((i&4)?(x&3):0,(i&2)?(x&3):0,(i&1)?(x&3):0));
+
+            vga_write_AC(VGA_AC_ENABLE|0x1F,0);
+ 
+            if (!test_pause_10ths(8)) break;
+        }
     }
 }
 
