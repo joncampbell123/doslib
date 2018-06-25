@@ -61,9 +61,13 @@ void LOG(const char *fmt,...) {
     }
 }
 
+#define LOG_DEBUG   "DEBUG> "
+#define LOG_INFO    "INFO> "
+#define LOG_WARN    "WARN> "
+
 /* WARNING: We trust the C library will still have working STDIO at this point */
 void log_atexit(void) {
-    LOG("INFO> NORMAL EXIT\n");
+    LOG(LOG_INFO "NORMAL EXIT\n");
     log_close();
 }
 
@@ -82,48 +86,48 @@ int log_init(void) {
 }
 
 void log_cpu_info(void) {
-	LOG("INFO> CPU: %s or higher\n",cpu_basic_level_to_string(cpu_basic_level));
+	LOG(LOG_INFO "CPU: %s or higher\n",cpu_basic_level_to_string(cpu_basic_level));
 
 	if (cpu_v86_active)
-		LOG("INFO> CPU: Is in virtual 8086 mode\n");
+		LOG(LOG_INFO "CPU: Is in virtual 8086 mode\n");
 	if (cpu_flags & CPU_FLAG_PROTECTED_MODE)
-		LOG("INFO> CPU: CPU is in protected mode\n");
+		LOG(LOG_INFO "CPU: CPU is in protected mode\n");
 	if (cpu_flags & CPU_FLAG_PROTECTED_MODE_32)
-		LOG("INFO> CPU: CPU is in 32-bit protected mode\n");
+		LOG(LOG_INFO "CPU: CPU is in 32-bit protected mode\n");
 }
 
 void log_dos_info(void) {
-	LOG("INFO> DOS: version %x.%02u\n",dos_version>>8,dos_version&0xFF);
-	LOG("INFO> DOS: Method: '%s'\n",dos_version_method);
-	LOG("INFO> DOS: Flavor: '%s'\n",dos_flavor_str(dos_flavor));
+	LOG(LOG_INFO "DOS: version %x.%02u\n",dos_version>>8,dos_version&0xFF);
+	LOG(LOG_INFO "DOS: Method: '%s'\n",dos_version_method);
+	LOG(LOG_INFO "DOS: Flavor: '%s'\n",dos_flavor_str(dos_flavor));
 }
 
 void log_windows_info(void) {
     if (windows_mode != WINDOWS_NONE) {
-		LOG("INFO> WINDOWS: Mode is %s\n",windows_mode_str(windows_mode));
-		LOG("INFO> WINDOWS: Version %x.%u\n",windows_version>>8,windows_version&0xFF);
-		LOG("INFO> WINDOWS: Method is %s\n",windows_version_method);
+		LOG(LOG_INFO "WINDOWS: Mode is %s\n",windows_mode_str(windows_mode));
+		LOG(LOG_INFO "WINDOWS: Version %x.%u\n",windows_version>>8,windows_version&0xFF);
+		LOG(LOG_INFO "WINDOWS: Method is %s\n",windows_version_method);
     }
 }
 
 void log_vga_info(void) {
-    LOG("INFO> According to VGA library, video hardware is compatible with:\n");
+    LOG(LOG_INFO "According to VGA library, video hardware is compatible with:\n");
     if (vga_state.vga_flags & VGA_IS_MDA)
-        LOG("INFO> - MDA\n");
+        LOG(LOG_INFO "- MDA\n");
     if (vga_state.vga_flags & VGA_IS_CGA)
-        LOG("INFO> - CGA\n");
+        LOG(LOG_INFO "- CGA\n");
     if (vga_state.vga_flags & VGA_IS_AMSTRAD)
-        LOG("INFO> - AMSTRAD\n");
+        LOG(LOG_INFO "- AMSTRAD\n");
     if (vga_state.vga_flags & VGA_IS_TANDY)
-        LOG("INFO> - TANDY\n");
+        LOG(LOG_INFO "- TANDY\n");
     if (vga_state.vga_flags & VGA_IS_MCGA)
-        LOG("INFO> - MCGA\n");
+        LOG(LOG_INFO "- MCGA\n");
     if (vga_state.vga_flags & VGA_IS_HGC)
-        LOG("INFO> - HGC\n");
+        LOG(LOG_INFO "- HGC\n");
     if (vga_state.vga_flags & VGA_IS_EGA)
-        LOG("INFO> - EGA\n");
+        LOG(LOG_INFO "- EGA\n");
     if (vga_state.vga_flags & VGA_IS_VGA)
-        LOG("INFO> - VGA\n");
+        LOG(LOG_INFO "- VGA\n");
 }
 
 uint8_t read_int10_bd_mode(void) {
@@ -158,7 +162,7 @@ int int10_setmode_and_check(uint8_t mode) {
     int10_setmode(mode);
 
     if ((amode=read_int10_bd_mode()) != mode) {
-        LOG("WARN> INT 10h mode set 0x%02x failed, BIOS is still in mode 0x%02x according to BIOS data area\n",mode,amode);
+        LOG(LOG_WARN "INT 10h mode set 0x%02x failed, BIOS is still in mode 0x%02x according to BIOS data area\n",mode,amode);
         return 0;
     }
 
@@ -175,7 +179,7 @@ unsigned int getchex(void) {
 }
 
 void LOG_INT11_VIDEOMODE(uint16_t int11) {
-    LOG("INFO> INT 11h video mode: ");
+    LOG(LOG_INFO "INT 11h video mode: ");
     switch ((int11 >> 4) & 0x3) {
         case 0: LOG("EGA or later"); break; 
         case 1: LOG("CGA color 40x25"); break; 
@@ -212,7 +216,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     uint16_t sv;
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
-    LOG("DEBUG> INT 11h equipment list: 0x%04x\n",int11_info);
+    LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
     LOG_INT11_VIDEOMODE(int11_info);
 
     /* MDA monochrome mode means the text VRAM is at B000:0000
@@ -228,7 +232,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     }
 
     if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA)) != 0 && read_int10_bd_mode() == 7) {
-        LOG("DEBUG> But this is EGA/VGA/MCGA and INT 10h mode 7, therefore monochrome mode\n");
+        LOG(LOG_DEBUG "But this is EGA/VGA/MCGA and INT 10h mode 7, therefore monochrome mode\n");
         crtbase = 0x3B4;
         sv = 0xB000u;
     }
@@ -239,17 +243,17 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     {
         uint16_t port = int10_bd_read_cga_crt_io();
         if (port != crtbase)
-            LOG("WARN> BIOS says CRT I/O port is 0x%x, my guess was 0x%x. This might be a problem.\n",
+            LOG(LOG_WARN "BIOS says CRT I/O port is 0x%x, my guess was 0x%x. This might be a problem.\n",
                 port,crtbase);
     }
 
-    LOG("INFO> Therefore, using video RAM segment 0x%04x\n",sv);
+    LOG(LOG_INFO "Therefore, using video RAM segment 0x%04x\n",sv);
 #if TARGET_MSDOS == 32
     vmem = (VGA_ALPHA_PTR)(sv << 4u);
-    LOG("DEBUG> Internal ptr: %p\n",vmem);
+    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
 #else
     vmem = (VGA_ALPHA_PTR)MK_FP(sv,0);
-    LOG("DEBUG> Internal ptr: %Fp\n",vmem);
+    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
 #endif
 
     /* test that the RAM is there, note if it is not */
@@ -258,7 +262,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
 
     for (i=0;i < (w * h);i++) {
         if (vmem[i] != (0x0F0F ^ i ^ (i << 13))) {
-            LOG("WARN> VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
+            LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
             return;
         }
     }
@@ -322,7 +326,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     else {
         uint8_t mb = int10_bd_read_cga_mode_byte();
 
-        LOG("DEBUG> Switching on blink attribute CGA/MDA method, port=0x%03x, BIOS mode byte was 0x%02x\n",
+        LOG(LOG_DEBUG "Switching on blink attribute CGA/MDA method, port=0x%03x, BIOS mode byte was 0x%02x\n",
             crtbase+4u,mb);
 
         outp(crtbase+4u,mb | 0x20);/*turn on bit 5*/
@@ -347,7 +351,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     else {
         uint8_t mb = int10_bd_read_cga_mode_byte();
 
-        LOG("DEBUG> Switching off blink attribute CGA/MDA method, port=0x%03x, BIOS mode byte was 0x%02x\n",
+        LOG(LOG_DEBUG "Switching off blink attribute CGA/MDA method, port=0x%03x, BIOS mode byte was 0x%02x\n",
             crtbase+4u,mb);
 
         outp(crtbase+4u,mb & 0xDF);/*turn off bit 5*/
@@ -364,7 +368,7 @@ int main() {
         return 1;
     }
 
-    LOG("INFO> VIDEO\\PC\\TEST: IBM PC/XT/AT video test group #1\n");
+    LOG(LOG_INFO "VIDEO\\PC\\TEST: IBM PC/XT/AT video test group #1\n");
 
     /* Expected environment: Pure DOS mode (not Windows or OS/2).
      *                       User may run us under EMM386.EXE or not.
@@ -403,32 +407,32 @@ int main() {
     /* we need the screen */
     log_noecho();
 
-    LOG("INFO> Testing: INT 10h mode 0 40x25 mono text mode\n");
+    LOG(LOG_INFO "Testing: INT 10h mode 0 40x25 mono text mode\n");
     if (int10_setmode_and_check(0))// will LOG if mode set failure
         alphanumeric_test(40,25); // should be 40x25
 
-    LOG("INFO> Testing: INT 10h mode 1 40x25 color text mode\n");
+    LOG(LOG_INFO "Testing: INT 10h mode 1 40x25 color text mode\n");
     if (int10_setmode_and_check(1))// will LOG if mode set failure
         alphanumeric_test(40,25); // should be 40x25
 
 
-    LOG("INFO> Testing: INT 10h mode 2 80x25 mono text mode\n");
+    LOG(LOG_INFO "Testing: INT 10h mode 2 80x25 mono text mode\n");
     if (int10_setmode_and_check(2))// will LOG if mode set failure
         alphanumeric_test(80,25); // should be 40x25
 
-    LOG("INFO> Testing: INT 10h mode 3 80x25 color text mode\n");
+    LOG(LOG_INFO "Testing: INT 10h mode 3 80x25 color text mode\n");
     if (int10_setmode_and_check(3))// will LOG if mode set failure
         alphanumeric_test(80,25); // should be 40x25
 
 
-    LOG("INFO> Testing: INT 10h mode 7 80x25 mono text mode\n");
+    LOG(LOG_INFO "Testing: INT 10h mode 7 80x25 mono text mode\n");
     if (int10_setmode_and_check(7))// will LOG if mode set failure
         alphanumeric_test(80,25); // should be 40x25
 
     /* set back to mode 3 80x25 text */
     int10_setmode(3);
     log_doecho();
-    LOG("DEBUG> Restoring 80x25 text mode\n");
+    LOG(LOG_DEBUG "Restoring 80x25 text mode\n");
 
 	return 0;
 }
