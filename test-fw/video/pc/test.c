@@ -484,6 +484,90 @@ void vga_test(unsigned int w,unsigned int h) {
         for (i=0;i < 16;i++) vga_write_AC(i,i);
         vga_write_AC(VGA_AC_ENABLE|0x1F,0);
     }
+
+    /* set palette index 255 to white */
+    outp(0x3C8,0xFF);
+    outp(0x3C9,0x3F);
+    outp(0x3C9,0x3F);
+    outp(0x3C9,0x3F);
+
+    for (i=0;i < 8;i++) {
+        const unsigned char msk = 0xFF << i;
+        {
+            unsigned int i;
+
+            __asm {
+                mov     ah,0x02     ; set cursor pos
+                mov     bh,0x00     ; page 0
+                xor     dx,dx       ; DH=row=0  DL=col=0
+                int     10h
+            }
+
+            sprintf(tmp,"DAC mask %02xh       ",msk);
+            for (i=0;tmp[i] != 0;i++) {
+                unsigned char cv = tmp[i];
+
+                __asm {
+                    mov     ah,0x0E     ; teletype output
+                    mov     al,cv
+                    xor     bh,bh
+                    mov     bl,0xFF     ; foreground color (white)
+                    int     10h
+                }
+            }
+        }
+
+        for (o=0;o < 4;o++) {
+            outp(0x3C6,(o & 1) ? 0xFF : msk);
+            if (!test_pause_10ths(4)) {
+                outp(0x3C6,0xFF);
+                i=16;
+                o=8;
+                break;
+            }
+        }
+
+        outp(0x3C6,0xFF);
+    }
+
+    for (i=0;i < 8;i++) {
+        const unsigned char msk = 0xFF >> i;
+        {
+            unsigned int i;
+
+            __asm {
+                mov     ah,0x02     ; set cursor pos
+                mov     bh,0x00     ; page 0
+                xor     dx,dx       ; DH=row=0  DL=col=0
+                int     10h
+            }
+
+            sprintf(tmp,"DAC mask %02xh       ",msk);
+            for (i=0;tmp[i] != 0;i++) {
+                unsigned char cv = tmp[i];
+
+                __asm {
+                    mov     ah,0x0E     ; teletype output
+                    mov     al,cv
+                    xor     bh,bh
+                    mov     bl,0xFF     ; foreground color (white)
+                    int     10h
+                }
+            }
+        }
+
+        for (o=0;o < 4;o++) {
+            outp(0x3C6,(o & 1) ? 0xFF : msk);
+            if (!test_pause_10ths(4)) {
+                outp(0x3C6,0xFF);
+                i=16;
+                o=8;
+                break;
+            }
+        }
+
+        outp(0x3C6,0xFF);
+    }
 }
 
 #define EGARGB2(r,g,b) \
