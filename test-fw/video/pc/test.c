@@ -574,10 +574,61 @@ void ega_test(unsigned int w,unsigned int h) {
 
         /* restore palette */
         for (i=0;i < 16;i++) vga_write_AC(i,pal[i]);
+        vga_write_AC(VGA_AC_ENABLE|0x1F,0);
     }
+
+    vga_write_GC(0x03/*Data rotate*/,0x00);    // no rotation, no ROP, data is unmodified
+    vga_write_GC(0x05/*mode register*/,0x00);  // read mode=0  write mode=0
+    vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
 
     /* If this is MCGA/VGA then play with the VGA palette that the EGA palette is mapped to */
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
+        /* We don't need to store the VGA palette because we can read back the palette at will */
+        unsigned char r,g,b,brk;
+
+        /* test only the first 64 colors because of EGA modes */
+        for (i=0;i < 64;i++) {
+#if 0
+            __asm {
+                mov     ah,0x02     ; set cursor pos
+                mov     bh,0x00     ; page 0
+                xor     dx,dx       ; DH=row=0  DL=col=0
+                int     10h
+            }
+
+            sprintf(tmp,"VGA palette index %02xh       ",i);
+            for (i=0;tmp[i] != 0;i++) {
+                unsigned char cv = tmp[i];
+
+                __asm {
+                    mov     ah,0x0E     ; teletype output
+                    mov     al,cv
+                    xor     bh,bh
+                    mov     bl,0x0F     ; foreground color (white)
+                    int     10h
+                }
+            }
+#endif
+
+            outp(0x3C7,i);
+            r = inp(0x3C9);
+            g = inp(0x3C9);
+            b = inp(0x3C9);
+
+            outp(0x3C8,i);
+            outp(0x3C9,0x3F);
+            outp(0x3C9,0x3F);
+            outp(0x3C9,0x3F);
+ 
+            brk = test_pause_10ths(1);
+
+            outp(0x3C8,i);
+            outp(0x3C9,r);
+            outp(0x3C9,g);
+            outp(0x3C9,b);
+
+            if (!brk) break;
+        }
     }
 }
 
