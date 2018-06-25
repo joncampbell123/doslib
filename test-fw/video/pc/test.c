@@ -196,7 +196,7 @@ void LOG_INT11_VIDEOMODE(uint16_t int11) {
 
 const char hexes[16] = "0123456789ABCDEF";
 
-void test_pause_10ths(unsigned int dsecs) {
+int test_pause_10ths(unsigned int dsecs) {
 	const unsigned long delay = t8254_us2ticks(1000UL);
     unsigned int i;
 
@@ -210,11 +210,15 @@ void test_pause_10ths(unsigned int dsecs) {
                 while (getch() != 13);
                 break;
             }
+            else if (c == 27)
+                return 0;
         }
     }
+
+    return 1;
 }
 
-void test_pause(unsigned int secs) {
+int test_pause(unsigned int secs) {
 	const unsigned long delay = t8254_us2ticks(1000UL);
     unsigned int i;
 
@@ -228,8 +232,12 @@ void test_pause(unsigned int secs) {
                 while (getch() != 13);
                 break;
             }
+            else if (c == 27)
+                return 0;
         }
     }
+
+    return 1;
 }
 
 #define EGARGB2(r,g,b) \
@@ -496,14 +504,34 @@ void ega_test(unsigned int w,unsigned int h) {
     assert(EGARGB2(2,0,0) == 0x04);
     assert(EGARGB2(3,0,0) == 0x24);
     if (h >= 350) {
+        LOG(LOG_DEBUG "Loading EGA palette appropriate for 350/480-line modes\n");
         for (i=0;i < 16;i++) vga_write_AC(i,egapalac64[i]);
     }
     else {
+        LOG(LOG_DEBUG "Loading EGA palette appropriate for 200-line modes\n");
         for (i=0;i < 16;i++) vga_write_AC(i,egapalac16[i]);
     }
     vga_write_AC(VGA_AC_ENABLE|0x1F,0);
  
-    test_pause(3);
+    test_pause(1);
+
+    {
+        unsigned char *pal = (h >= 350) ? egapalac64 : egapalac16;
+
+        for (i=0;i < 16;i++) {
+            for (o=0;o < 4;o++) {
+                vga_write_AC(i,(o & 1) ? pal[i] : (i >= 8 ? 0x00 : 0x3F));
+                vga_write_AC(VGA_AC_ENABLE|0x1F,0);
+                if (!test_pause_10ths(2)) {
+                    vga_write_AC(i,pal[i]);
+                    vga_write_AC(VGA_AC_ENABLE|0x1F,0);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void cga4_test(unsigned int w,unsigned int h) {
@@ -1062,7 +1090,7 @@ int main() {
     /* we need the screen */
     log_noecho();
 
-#if 1
+#if 0
     LOG(LOG_INFO "Testing: INT 10h mode 0 40x25 mono text mode\n");
     if (int10_setmode_and_check(0))// will LOG if mode set failure
         alphanumeric_test(40,25); // should be 40x25
