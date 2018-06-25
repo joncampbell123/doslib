@@ -424,7 +424,7 @@ void ega_test(unsigned int w,unsigned int h) {
         for (x=0;x < (256/8u);x++) vmem[o+x] = 15;
     }
  
-    test_pause(1);
+    test_pause(3);
 }
 
 void cga4_test(unsigned int w,unsigned int h) {
