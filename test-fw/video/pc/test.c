@@ -265,39 +265,12 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         }
     }
 
-    test_pause(2);
-
-    /* turn off blinking */
-    /* EGA/VGA: Use INT 10h AX=1003h
-     * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
-    sprintf(tmp,"Attribute map below w/o blinking");
-    for (i=0;tmp[i] != 0;i++)
-        vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
-
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
-        __asm {
-            mov     ax,0x1003
-            mov     bl,0x00
-            int     10h
-        }
-    }
-    else {
-        uint8_t mb = int10_bd_read_cga_mode_byte();
-
-        LOG("Switching off blink attribute CGA/MDA method, port=0x%03x, BIOS mode byte was 0x%02x\n",
-            crtbase+4u,mb);
-
-        outp(crtbase+4u,mb & 0xDF);/*turn off bit 5*/
-    }
-
-    test_pause(2);
-
     /* turn on blinking */
     /* EGA/VGA: Use INT 10h AX=1003h
      * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
     /* NTS: DOSBox and DOSBox-X appear to have a bug in INT 10h where if we switch off blinking,
      *      INT 10h won't turn it back on */
-    sprintf(tmp,"Attribute map below w/o blinking");
+    sprintf(tmp,"Attribute map below with blinking");
     for (i=0;tmp[i] != 0;i++)
         vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
 
@@ -317,7 +290,32 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         outp(crtbase+4u,mb | 0x20);/*turn on bit 5*/
     }
 
-    test_pause(2);
+    test_pause(3);
+
+    /* turn off blinking */
+    /* EGA/VGA: Use INT 10h AX=1003h
+     * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
+    sprintf(tmp,"Attribute map below w/o blinking ");
+    for (i=0;tmp[i] != 0;i++)
+        vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
+
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        __asm {
+            mov     ax,0x1003
+            mov     bl,0x00
+            int     10h
+        }
+    }
+    else {
+        uint8_t mb = int10_bd_read_cga_mode_byte();
+
+        LOG("Switching off blink attribute CGA/MDA method, port=0x%03x, BIOS mode byte was 0x%02x\n",
+            crtbase+4u,mb);
+
+        outp(crtbase+4u,mb & 0xDF);/*turn off bit 5*/
+    }
+
+    test_pause(3);
 }
 
 int main() {
