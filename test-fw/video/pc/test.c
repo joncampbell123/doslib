@@ -214,6 +214,94 @@ void test_pause(unsigned int secs) {
     }
 }
 
+void ega_test(unsigned int w,unsigned int h) {
+    unsigned int i,x,y;
+    VGA_RAM_PTR vmem;
+
+    int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
+    LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
+    LOG_INT11_VIDEOMODE(int11_info);
+
+    if (((int11_info >> 4) & 3) == 3) // MDA can't do EGA!
+        LOG(LOG_WARN "EGA 16-color mode allowed to work despite MDA configuration\n");
+
+#if TARGET_MSDOS == 32
+    vmem = (VGA_RAM_PTR)(0xA000u << 4u);
+    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
+#else
+    vmem = (VGA_RAM_PTR)MK_FP(0xA000u,0);
+    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
+#endif
+
+    {
+        uint16_t port = int10_bd_read_cga_crt_io();
+        if (port != 0x3D4)
+            LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
+                port);
+    }
+
+    /* test that the RAM is there, note if it is not.
+     * although EGA/VGA bioses generally set the mode
+     * with all planes enabled at once on write, program
+     * the registers to make sure */
+    /* NTS: This test will FAIL for 640x350 4-color mode.
+     *      I don't know how to support EGA cards with 64kb */
+    vga_write_GC(0x05/*mode register*/,0x00);  // read mode=0  write mode=0
+    vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
+    for (x=0;x < 4;x++) {
+        vga_write_sequencer(0x02/*map mask*/,1 << x);// plane to write
+        vga_write_GC(0x04/*read map select*/,x);// plane to read
+
+        for (i=0;i < 0x4000/*16KB*/;i++)
+            vmem[i] = 0x0F ^ i ^ (i << 6);
+
+        for (i=0;i < 0x4000/*16KB*/;i++) {
+            if (vmem[i] != ((0x0F ^ i ^ (i << 6)) & 0xFF)) {
+                LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
+                return;
+            }
+        }
+
+        for (i=0;i < 0x4000;i++)
+            vmem[i] = 0;
+    }
+    vga_write_sequencer(0x02/*map mask*/,0x0F);// all planes
+
+    /* EGA memory layout:
+     * 4 bitplanes, each 16KB, 32KB, or 64KB in size.
+     * One bit from each bitplane is combined together
+     * to make 4 bits per pixel.
+     *
+     * The original 64KB EGA had a hacked 640x350 4-color
+     * mode which seems to use odd/even mode in which
+     * each bitplane is only 16KB, but each bitplane pair
+     * combines together into one 32KB, giving only two
+     * bitplanes.
+     *
+     * I don't know how to support the 4-color 640x350 mode. */
+    __asm {
+        mov     ah,0x02     ; set cursor pos
+        mov     bh,0x00     ; page 0
+        xor     dx,dx       ; DH=row=0  DL=col=0
+        int     10h
+    }
+
+    sprintf(tmp,"%ux%u 16-col gr. seg 0x%04x, mod 0x%02x\r\n",w,h,0xA000,read_int10_bd_mode());
+    for (i=0;tmp[i] != 0;i++) {
+        unsigned char cv = tmp[i];
+
+        __asm {
+            mov     ah,0x0E     ; teletype output
+            mov     al,cv
+            xor     bh,bh
+            mov     bl,0x0F     ; foreground color (white)
+            int     10h
+        }
+    }
+
+    test_pause(1);
+}
+
 void cga4_test(unsigned int w,unsigned int h) {
     unsigned int i,x,y;
     VGA_RAM_PTR vmem;
@@ -803,6 +891,22 @@ int main() {
     if (int10_setmode_and_check(6))// will LOG if mode set failure
         cga2_test(640,200);
 #endif
+
+    LOG(LOG_INFO "Testing: INT 10h mode 13 320x200 EGA 16-color graphics mode\n");
+    if (int10_setmode_and_check(13))// will LOG if mode set failure
+        ega_test(320,200);
+
+    LOG(LOG_INFO "Testing: INT 10h mode 14 640x200 EGA 16-color graphics mode\n");
+    if (int10_setmode_and_check(14))// will LOG if mode set failure
+        ega_test(620,200);
+
+    LOG(LOG_INFO "Testing: INT 10h mode 16 640x350 EGA 16-color graphics mode\n");
+    if (int10_setmode_and_check(16))// will LOG if mode set failure
+        ega_test(640,350);
+
+    LOG(LOG_INFO "Testing: INT 10h mode 18 640x480 VGA 16-color graphics mode\n");
+    if (int10_setmode_and_check(18))// will LOG if mode set failure
+        ega_test(640,480);
 
     /* set back to mode 3 80x25 text */
     int10_setmode(3);
