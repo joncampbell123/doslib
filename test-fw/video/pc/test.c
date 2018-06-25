@@ -251,10 +251,8 @@ void cga4_test(unsigned int w,unsigned int h) {
         }
     }
 
-    for (i=0;i < (w * h);i++)
+    for (i=0;i < 0x4000;i++)
         vmem[i] = 0;
-
-
 }
 
 void alphanumeric_test(unsigned int w,unsigned int h) {
