@@ -261,7 +261,7 @@ int test_pause(unsigned int secs) {
     return 1;
 }
 
-void vga_dacmask_test(void) {
+void vga_dacmask_test(unsigned char fgcolor) {
     unsigned int o,i;
 
     /* set palette index 255 to white */
@@ -290,7 +290,7 @@ void vga_dacmask_test(void) {
                     mov     ah,0x0E     ; teletype output
                     mov     al,cv
                     xor     bh,bh
-                    mov     bl,0xFF     ; foreground color (white)
+                    mov     bl,fgcolor
                     int     10h
                 }
             }
@@ -329,7 +329,7 @@ void vga_dacmask_test(void) {
                     mov     ah,0x0E     ; teletype output
                     mov     al,cv
                     xor     bh,bh
-                    mov     bl,0xFF     ; foreground color (white)
+                    mov     bl,fgcolor
                     int     10h
                 }
             }
@@ -573,7 +573,7 @@ void vga_test(unsigned int w,unsigned int h) {
         vga_write_AC(VGA_AC_ENABLE|0x1F,0);
     }
 
-    vga_dacmask_test();
+    vga_dacmask_test(0xFF);
 }
 
 #define EGARGB2(r,g,b) \
@@ -1028,7 +1028,7 @@ void ega_test(unsigned int w,unsigned int h) {
             if (!brk) break;
         }
 
-        vga_dacmask_test();
+        vga_dacmask_test(0x0F);
     }
 }
 
@@ -1207,7 +1207,7 @@ void cga4_test(unsigned int w,unsigned int h) {
     test_pause(1);
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
-        vga_dacmask_test();
+        vga_dacmask_test(3);
 }
 
 void cga2_test(unsigned int w,unsigned int h) {
@@ -1337,7 +1337,7 @@ void cga2_test(unsigned int w,unsigned int h) {
     test_pause(1);
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
-        vga_dacmask_test();
+        vga_dacmask_test(1);
 }
 
 void alphanumeric_test(unsigned int w,unsigned int h) {
@@ -1513,7 +1513,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     test_pause(3);
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
-        vga_dacmask_test();
+        vga_dacmask_test(7);
 }
 
 int main() {
