@@ -131,28 +131,32 @@ void log_vga_info(void) {
         LOG(LOG_INFO "- VGA\n");
 }
 
-uint8_t read_int10_bd_mode(void) {
+uint8_t read_bda8(unsigned int ofs) {
 #if TARGET_MSDOS == 32
-    return *((uint8_t*)0x449);
+    return *((uint8_t*)(0x400 + ofs));
 #else
-    return *((uint8_t far*)MK_FP(0x40,0x49));
+    return *((uint8_t far*)MK_FP(0x40,ofs));
 #endif
+}
+
+uint16_t read_bda16(unsigned int ofs) {
+#if TARGET_MSDOS == 32
+    return *((uint16_t*)(0x400 + ofs));
+#else
+    return *((uint16_t far*)MK_FP(0x40,ofs));
+#endif
+}
+
+uint8_t read_int10_bd_mode(void) {
+    return read_bda8(0x49);
 }
 
 uint16_t int10_bd_read_cga_crt_io(void) {
-#if TARGET_MSDOS == 32
-    return *((uint16_t*)0x463);
-#else
-    return *((uint16_t far*)MK_FP(0x40,0x63));
-#endif
+    return read_bda16(0x63);
 }
 
 uint8_t int10_bd_read_cga_mode_byte(void) {
-#if TARGET_MSDOS == 32
-    return *((uint8_t*)0x465);
-#else
-    return *((uint8_t far*)MK_FP(0x40,0x65));
-#endif
+    return read_bda8(0x65);
 }
 
 uint16_t int11_info = 0;
