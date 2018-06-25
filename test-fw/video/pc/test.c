@@ -215,12 +215,14 @@ void test_pause(unsigned int secs) {
 }
 
 void ega_test(unsigned int w,unsigned int h) {
-    unsigned int i,x,y;
-    VGA_RAM_PTR vmem;
+    unsigned int o,i,x,y;
+    volatile VGA_RAM_PTR vmem; // do not optimize this code, EGA/VGA planar operations require it
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
     LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
     LOG_INT11_VIDEOMODE(int11_info);
+
+    LOG(LOG_DEBUG "EGA 16-color planar test %u x %u\n",w,h);
 
     if (((int11_info >> 4) & 3) == 3) // MDA can't do EGA!
         LOG(LOG_WARN "EGA 16-color mode allowed to work despite MDA configuration\n");
@@ -296,6 +298,91 @@ void ega_test(unsigned int w,unsigned int h) {
             xor     bh,bh
             mov     bl,0x0F     ; foreground color (white)
             int     10h
+        }
+    }
+
+    /* color band. assume that part of the screen is clear. write mode 0, plane by plane. */
+    vga_write_GC(0x03/*Data rotate*/,0x00);    // no rotation, no ROP, data is unmodified
+    vga_write_GC(0x05/*mode register*/,0x00);  // read mode=0  write mode=0
+    vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
+    for (y=19;y <= 19;y++) {
+        o = y * (w / 8u);
+
+        vga_write_sequencer(0x02/*map mask*/,0x01);// plane 0
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 0xFF;
+
+        vga_write_sequencer(0x02/*map mask*/,0x02);// plane 1
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 0xFF;
+
+        vga_write_sequencer(0x02/*map mask*/,0x04);// plane 2
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 0xFF;
+
+        vga_write_sequencer(0x02/*map mask*/,0x08);// plane 3
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 0xFF;
+    }
+    for (y=20;y < 36;y++) {
+        o = y * (w / 8u);
+
+        vga_write_sequencer(0x02/*map mask*/,0x01);// plane 0
+        for (x=0;x < (256/8u);x++) vmem[o+x] = ((x / (16u/8u)) & 1) ? 0xFF : 0x00;
+
+        vga_write_sequencer(0x02/*map mask*/,0x02);// plane 1
+        for (x=0;x < (256/8u);x++) vmem[o+x] = ((x / (16u/8u)) & 2) ? 0xFF : 0x00;
+
+        vga_write_sequencer(0x02/*map mask*/,0x04);// plane 2
+        for (x=0;x < (256/8u);x++) vmem[o+x] = ((x / (16u/8u)) & 4) ? 0xFF : 0x00;
+
+        vga_write_sequencer(0x02/*map mask*/,0x08);// plane 3
+        for (x=0;x < (256/8u);x++) vmem[o+x] = ((x / (16u/8u)) & 8) ? 0xFF : 0x00;
+    }
+    for (y=36;y < 52;y++) {
+        o = y * (w / 8u);
+
+        vga_write_sequencer(0x02/*map mask*/,0x01);// plane 0
+        for (x=0;x < (256/8u);x++) vmem[o+x] = ((((x          ) / (16u/8u)) & 1) ? (0x55 << (y&1)) : 0x00) |
+                                               ((((x + (8u/8u)) / (16u/8u)) & 1) ? (0xAA >> (y&1)) : 0x00);
+
+        vga_write_sequencer(0x02/*map mask*/,0x02);// plane 1
+        for (x=0;x < (256/8u);x++) vmem[o+x] = ((((x          ) / (16u/8u)) & 2) ? (0x55 << (y&1)) : 0x00) |
+                                               ((((x + (8u/8u)) / (16u/8u)) & 2) ? (0xAA >> (y&1)) : 0x00);
+
+        vga_write_sequencer(0x02/*map mask*/,0x04);// plane 2
+        for (x=0;x < (256/8u);x++) vmem[o+x] = ((((x          ) / (16u/8u)) & 4) ? (0x55 << (y&1)) : 0x00) |
+                                               ((((x + (8u/8u)) / (16u/8u)) & 4) ? (0xAA >> (y&1)) : 0x00);
+
+        vga_write_sequencer(0x02/*map mask*/,0x08);// plane 3
+        for (x=0;x < (256/8u);x++) vmem[o+x] = ((((x          ) / (16u/8u)) & 8) ? (0x55 << (y&1)) : 0x00) |
+                                               ((((x + (8u/8u)) / (16u/8u)) & 8) ? (0xAA >> (y&1)) : 0x00);
+    }
+    for (y=52;y <= 52;y++) {
+        o = y * (w / 8u);
+
+        vga_write_sequencer(0x02/*map mask*/,0x01);// plane 0
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 0xFF;
+
+        vga_write_sequencer(0x02/*map mask*/,0x02);// plane 1
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 0xFF;
+
+        vga_write_sequencer(0x02/*map mask*/,0x04);// plane 2
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 0xFF;
+
+        vga_write_sequencer(0x02/*map mask*/,0x08);// plane 3
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 0xFF;
+    }
+ 
+    /* color band. write mode 1 to copy the first */
+    vga_write_sequencer(0x02/*map mask*/,0x0F);// all planes
+    vga_write_GC(0x03/*Data rotate*/,0x00);    // no rotation, no ROP, data is unmodified
+    vga_write_GC(0x05/*mode register*/,0x01);  // read mode=0  write mode=1
+    vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
+    for (y=54;y < (54+1+32+1);y++) {
+        o = y * (w / 8u);
+        i = o - ((54-19) * (w / 8u));
+
+        /* use VOLATILE to prevent the compiler from optimizing this code! */
+        for (x=0;x < (w/8u);x++) {
+            unsigned char c = (volatile)vmem[i+x];
+            vmem[o+x] = c;
         }
     }
 
@@ -898,7 +985,7 @@ int main() {
 
     LOG(LOG_INFO "Testing: INT 10h mode 14 640x200 EGA 16-color graphics mode\n");
     if (int10_setmode_and_check(14))// will LOG if mode set failure
-        ega_test(620,200);
+        ega_test(640,200);
 
     LOG(LOG_INFO "Testing: INT 10h mode 16 640x350 EGA 16-color graphics mode\n");
     if (int10_setmode_and_check(16))// will LOG if mode set failure
