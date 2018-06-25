@@ -386,6 +386,44 @@ void ega_test(unsigned int w,unsigned int h) {
         }
     }
 
+    /* color band. write mode 2 */
+    vga_write_sequencer(0x02/*map mask*/,0x0F);// all planes
+    vga_write_GC(0x03/*Data rotate*/,0x00);    // no rotation, no ROP, data is unmodified
+    vga_write_GC(0x05/*mode register*/,0x02);  // read mode=0  write mode=2
+    vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
+    for (y=89;y <= 89;y++) {
+        o = y * (w / 8u);
+
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 15;
+    }
+    for (y=90;y < 106;y++) {
+        o = y * (w / 8u);
+
+        for (x=0;x < (256/8u);x++) vmem[o+x] = x >> 1u;
+    }
+    for (y=106;y < 122;y++) {
+        o = y * (w / 8u);
+
+        vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
+        for (x=0;x < (256/8u);x += 2) vmem[o+x] = x >> 1u;
+
+        vga_write_GC(0x08/*bit mask*/,0x55 << (y&1));
+        for (x=1;x < (256/8u);x += 2) vmem[o+x] = x >> 1u;
+
+        vga_write_GC(0x08/*bit mask*/,0xAA >> (y&1));
+        for (x=1;x < (256/8u);x += 2) {
+            volatile unsigned char c = vmem[o+x];//load latches, DO NOT optimize out!
+            vmem[o+x] = (x >> 1u) + 1u;
+            (void)c;
+        }
+    }
+    vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
+    for (y=122;y <= 122;y++) {
+        o = y * (w / 8u);
+
+        for (x=0;x < (256/8u);x++) vmem[o+x] = 15;
+    }
+ 
     test_pause(1);
 }
 
