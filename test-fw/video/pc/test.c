@@ -591,6 +591,10 @@ int main() {
     if (int10_setmode_and_check(4))// will LOG if mode set failure
         cga4_test(320,200);
 
+    LOG(LOG_INFO "Testing: INT 10h mode 5 320x200 CGA color 4-color graphics mode\n");
+    if (int10_setmode_and_check(5))// will LOG if mode set failure
+        cga4_test(320,200);
+
     /* set back to mode 3 80x25 text */
     int10_setmode(3);
     log_doecho();
