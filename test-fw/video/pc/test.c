@@ -337,6 +337,8 @@ void ega_test(unsigned int w,unsigned int h) {
             LOG("%02xh %02xh %02xh  ",r,g,b);
             if ((i&7) == 7) LOG("\n");
         }
+
+        LOG(LOG_DEBUG "VGA DAC mask: 0x%02x\n",inp(0x3C6));
     }
 
     /* test that the RAM is there, note if it is not.
