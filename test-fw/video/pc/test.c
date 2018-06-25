@@ -298,7 +298,7 @@ void vga_dacmask_test(unsigned char fgcolor) {
 
         for (o=0;o < 4;o++) {
             outp(0x3C6,(o & 1) ? 0xFF : msk);
-            if (!test_pause_10ths(4)) {
+            if (!test_pause_10ths(2)) {
                 outp(0x3C6,0xFF);
                 i=16;
                 o=8;
@@ -337,7 +337,7 @@ void vga_dacmask_test(unsigned char fgcolor) {
 
         for (o=0;o < 4;o++) {
             outp(0x3C6,(o & 1) ? 0xFF : msk);
-            if (!test_pause_10ths(4)) {
+            if (!test_pause_10ths(2)) {
                 outp(0x3C6,0xFF);
                 i=16;
                 o=8;
