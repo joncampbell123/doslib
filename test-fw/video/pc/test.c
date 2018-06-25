@@ -240,6 +240,132 @@ int test_pause(unsigned int secs) {
     return 1;
 }
 
+void vga_test(unsigned int w,unsigned int h) {
+    unsigned int o,i,x,y;
+    unsigned char attrpal[16];
+    VGA_RAM_PTR vmem; // do not optimize this code, EGA/VGA planar operations require it
+
+    int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
+    LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
+    LOG_INT11_VIDEOMODE(int11_info);
+
+    LOG(LOG_DEBUG "VGA 256-color planar test %u x %u\n",w,h);
+
+    if (((int11_info >> 4) & 3) == 3) // MDA can't do EGA!
+        LOG(LOG_WARN "VGA 256-color mode allowed to work despite MDA configuration\n");
+
+#if TARGET_MSDOS == 32
+    vmem = (VGA_RAM_PTR)(0xA000u << 4u);
+    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
+#else
+    vmem = (VGA_RAM_PTR)MK_FP(0xA000u,0);
+    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
+#endif
+
+    {
+        uint16_t port = int10_bd_read_cga_crt_io();
+        if (port != 0x3D4)
+            LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
+                port);
+    }
+
+    /* If this is MCGA/VGA then read the EGA palette back out */
+    {
+        for (i=0;i < 16;i++) attrpal[i] = vga_read_AC(i);
+        LOG(LOG_DEBUG "Reading AC palette: ");
+        for (i=0;i < 16;i++) LOG("0x%02x ",attrpal[i]);
+        LOG("\n");
+
+        /* As 256-color mode the attribute controller palette SHOULD be a linear sequence from 0 to 15,
+         * or else 256-color mode cannot display properly. */
+        for (i=0;i < 16;i++) {
+            if (attrpal[i] != i)
+                LOG(LOG_WARN "Unusual attribute controller palette entry %u, should be %u\n",i,i);
+        }
+
+        /* also log the VGA palette */
+        LOG(LOG_DEBUG "Reading VGA palette:\n");
+        for (i=0;i < 256;i++) {
+            unsigned char r,g,b;
+
+            /* NTS: Remember that the VGA has one port for setting READ index, another for WRITE index.
+             *      Don't use one to do the other, weird things will happen. At the very least, you'll
+             *      read the color palette index off by 1 */
+            outp(0x3C7,i);
+            r = inp(0x3C9);
+            g = inp(0x3C9);
+            b = inp(0x3C9);
+
+            if ((i&7) == 0) LOG(LOG_DEBUG " palette 0x%02x-0x%02x = ",i,i+7);
+            LOG("%02xh %02xh %02xh  ",r,g,b);
+            if ((i&7) == 7) LOG("\n");
+        }
+
+        LOG(LOG_DEBUG "VGA DAC mask: 0x%02x\n",inp(0x3C6));
+    }
+
+    for (i=0;i < 64000;i++)
+        vmem[i] = 0x0F ^ i ^ (i << 6);
+
+    for (i=0;i < 64000;i++) {
+        if (vmem[i] != ((0x0F ^ i ^ (i << 6)) & 0xFF)) {
+            LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
+            return;
+        }
+    }
+
+    for (i=0;i < 64000;i++)
+        vmem[i] = 0;
+
+    /* VGA memory layout:
+     * One linear hunk (64KB) of 8-bit pixels, each one referring to a 256-color palette.
+     * 
+     * Well actually that's not ENTIRELY true... behind the scenes the 256-color mode is
+     * "chained" across four bitplanes where the low 2 bits of the video memory address
+     * touched by the CPU select the bitplane. The memory layout changes if you switch off
+     * this chained mode. But we don't test that here. */
+    __asm {
+        mov     ah,0x02     ; set cursor pos
+        mov     bh,0x00     ; page 0
+        xor     dx,dx       ; DH=row=0  DL=col=0
+        int     10h
+    }
+
+    sprintf(tmp,"%ux%u 256-col gr. seg 0x%04x, mod 0x%02x\r\n",w,h,0xA000,read_int10_bd_mode());
+    for (i=0;tmp[i] != 0;i++) {
+        unsigned char cv = tmp[i];
+
+        __asm {
+            mov     ah,0x0E     ; teletype output
+            mov     al,cv
+            xor     bh,bh
+            mov     bl,0x0F     ; foreground color (white)
+            int     10h
+        }
+    }
+
+    for (y=11;y <= 11;y++) {
+        o = w * y;
+        for (x=0;x <= 256;x++) vmem[o+x] = 15;
+    }
+    for (y=12;y < 24;y++) {
+        o = w * y;
+        for (x=0;x < 256;x++) vmem[o+x] = x;
+        vmem[o+256] = 15;
+    }
+    for (y=24;y < 36;y++) {
+        o = w * y;
+        for (x=0;x < 256;x++) vmem[o+x] = x + (y + 1 - 24);
+        vmem[o+256] = 15;
+    }
+    for (y=36;y <= 36;y++) {
+        o = w * y;
+        for (x=0;x <= 256;x++) vmem[o+x] = 15;
+    }
+ 
+    test_pause(3);
+}
+
 #define EGARGB2(r,g,b) \
     (((((b) & 2) >> 1) + (((g) & 2) << 0) + (((r) & 2) << 1)) + \
      ((((b) & 1) << 3) + (((g) & 1) << 4) + (((r) & 1) << 5)))
@@ -1250,7 +1376,7 @@ int main() {
     /* we need the screen */
     log_noecho();
 
-#if 1
+#if 0
     LOG(LOG_INFO "Testing: INT 10h mode 0 40x25 mono text mode\n");
     if (int10_setmode_and_check(0))// will LOG if mode set failure
         alphanumeric_test(40,25); // should be 40x25
@@ -1282,7 +1408,6 @@ int main() {
     LOG(LOG_INFO "Testing: INT 10h mode 6 640x200 CGA mono 2-color graphics mode\n");
     if (int10_setmode_and_check(6))// will LOG if mode set failure
         cga2_test(640,200);
-#endif
 
     if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
         LOG(LOG_INFO "Testing: INT 10h mode 13 320x200 EGA 16-color graphics mode\n");
@@ -1300,6 +1425,13 @@ int main() {
         LOG(LOG_INFO "Testing: INT 10h mode 18 640x480 VGA 16-color graphics mode\n");
         if (int10_setmode_and_check(18))// will LOG if mode set failure
             ega_test(640,480);
+    }
+#endif
+
+    if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
+        LOG(LOG_INFO "Testing: INT 10h mode 19 320x200 VGA 256-color graphics mode\n");
+        if (int10_setmode_and_check(19))// will LOG if mode set failure
+            vga_test(320,200);
     }
 
     /* set back to mode 3 80x25 text */
