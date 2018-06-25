@@ -286,6 +286,7 @@ unsigned char egapalac64[16] = {
 
 void ega_test(unsigned int w,unsigned int h) {
     unsigned int o,i,x,y;
+    unsigned char attrpal[16];
     volatile VGA_RAM_PTR vmem; // do not optimize this code, EGA/VGA planar operations require it
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -310,6 +311,14 @@ void ega_test(unsigned int w,unsigned int h) {
         if (port != 0x3D4)
             LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
                 port);
+    }
+
+    /* If this is MCGA/VGA then read the EGA palette back out */
+    if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
+        for (i=0;i < 16;i++) attrpal[i] = vga_read_AC(i);
+        LOG(LOG_DEBUG "Reading AC palette: ");
+        for (i=0;i < 16;i++) LOG("0x%02x ",attrpal[i]);
+        LOG("\n");
     }
 
     /* test that the RAM is there, note if it is not.
@@ -547,6 +556,10 @@ void ega_test(unsigned int w,unsigned int h) {
 
         /* restore palette */
         for (i=0;i < 16;i++) vga_write_AC(i,pal[i]);
+    }
+
+    /* If this is MCGA/VGA then play with the VGA palette that the EGA palette is mapped to */
+    if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
     }
 }
 
