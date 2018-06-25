@@ -116,6 +116,14 @@ uint8_t read_int10_bd_mode(void) {
 #endif
 }
 
+uint8_t int10_bd_read_cga_mode_byte(void) {
+#if TARGET_MSDOS == 32
+    return *((uint8_t*)0x465);
+#else
+    return *((uint8_t far*)MK_FP(0x40,0x65));
+#endif
+}
+
 uint16_t int11_info = 0;
 
 int int10_setmode_and_check(uint8_t mode) {
@@ -153,11 +161,12 @@ void LOG_INT11_VIDEOMODE(uint16_t int11) {
 
 const char hexes[16] = "0123456789ABCDEF";
 
-void test_pause(void) {
+void test_pause(unsigned int secs) {
 	const unsigned long delay = t8254_us2ticks(1000UL);
     unsigned int i;
 
-    for (i=0;i < 3000u;i++) {
+    secs *= 1000u;
+    for (i=0;i < secs;i++) {
 		t8254_wait(delay);
         if (kbhit()) {
             unsigned int c = getchex();
@@ -173,6 +182,7 @@ void test_pause(void) {
 void alphanumeric_test(unsigned int w,unsigned int h) {
     unsigned int o=0,i,x,y;
     VGA_ALPHA_PTR vmem;
+    uint16_t crtbase;
     uint16_t sv;
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -182,10 +192,14 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     /* MDA monochrome mode means the text VRAM is at B000:0000
      * Otherwise, the text VRAM is at B800:0000
      * BUT on EGA/VGA despite this equipment check the segment is B000 */
-    if (((int11_info >> 4) & 3) == 3)//MDA
+    if (((int11_info >> 4) & 3) == 3) {//MDA
+        crtbase = 0x3B4;
         sv = 0xB000u;
-    else
+    }
+    else {
+        crtbase = 0x3D4;
         sv = 0xB800u;
+    }
 
     if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA)) != 0 && read_int10_bd_mode() == 7) {
         LOG("But this is EGA/VGA/MCGA and INT 10h mode 7, therefore monochrome mode\n");
@@ -236,7 +250,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         }
     }
 
-    test_pause();
+    test_pause(3);
 
     sprintf(tmp,"Attribute map below");
     for (i=0;tmp[i] != 0;i++)
@@ -251,7 +265,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         }
     }
 
-    test_pause();
+    test_pause(2);
 
     /* turn off blinking */
     /* EGA/VGA: Use INT 10h AX=1003h
@@ -268,10 +282,42 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         }
     }
     else {
-        // TODO
+        uint8_t mb = int10_bd_read_cga_mode_byte();
+
+        LOG("Switching off blink attribute CGA/MDA method, port=0x%03x, BIOS mode byte was 0x%02x\n",
+            crtbase+4u,mb);
+
+        outp(crtbase+4u,mb & 0xDF);/*turn off bit 5*/
     }
 
-    test_pause();
+    test_pause(2);
+
+    /* turn on blinking */
+    /* EGA/VGA: Use INT 10h AX=1003h
+     * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
+    /* NTS: DOSBox and DOSBox-X appear to have a bug in INT 10h where if we switch off blinking,
+     *      INT 10h won't turn it back on */
+    sprintf(tmp,"Attribute map below w/o blinking");
+    for (i=0;tmp[i] != 0;i++)
+        vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
+
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        __asm {
+            mov     ax,0x1003
+            mov     bl,0x01
+            int     10h
+        }
+    }
+    else {
+        uint8_t mb = int10_bd_read_cga_mode_byte();
+
+        LOG("Switching on blink attribute CGA/MDA method, port=0x%03x, BIOS mode byte was 0x%02x\n",
+            crtbase+4u,mb);
+
+        outp(crtbase+4u,mb | 0x20);/*turn on bit 5*/
+    }
+
+    test_pause(2);
 }
 
 int main() {
