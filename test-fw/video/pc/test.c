@@ -201,6 +201,16 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     LOG("! Internal ptr: %Fp\n",vmem);
 #endif
 
+    /* test that the RAM is there, note if it is not */
+    for (i=0;i < (w * h);i++)
+        vmem[i] = 0x0F0F ^ i ^ (i << 13);
+
+    for (i=0;i < (w * h);i++) {
+        if (vmem[i] != (0x0F0F ^ i ^ (i << 13))) {
+            LOG("* VRAM TEST FAILED, data written did not read back");
+        }
+    }
+
     for (i=0;i < (w * h);i++)
         vmem[i] = 0x0720;
 
