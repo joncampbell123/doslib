@@ -474,7 +474,6 @@ int main() {
     if (int10_setmode_and_check(1))// will LOG if mode set failure
         alphanumeric_test(40,25); // should be 40x25
 
-
     LOG(LOG_INFO "Testing: INT 10h mode 2 80x25 mono text mode\n");
     if (int10_setmode_and_check(2))// will LOG if mode set failure
         alphanumeric_test(80,25); // should be 40x25
@@ -482,7 +481,6 @@ int main() {
     LOG(LOG_INFO "Testing: INT 10h mode 3 80x25 color text mode\n");
     if (int10_setmode_and_check(3))// will LOG if mode set failure
         alphanumeric_test(80,25); // should be 40x25
-
 
     LOG(LOG_INFO "Testing: INT 10h mode 7 80x25 mono text mode\n");
     if (int10_setmode_and_check(7))// will LOG if mode set failure
