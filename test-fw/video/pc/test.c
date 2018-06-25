@@ -196,6 +196,27 @@ void LOG_INT11_VIDEOMODE(uint16_t int11) {
 
 const char hexes[16] = "0123456789ABCDEF";
 
+int test_pause_ms(unsigned int msecs) {
+	const unsigned long delay = t8254_us2ticks(1000UL);
+    unsigned int i;
+
+    for (i=0;i < msecs;i++) {
+		t8254_wait(delay);
+        if (kbhit()) {
+            unsigned int c = getchex();
+            if (c == ' ') break;
+            else if (c == 'x') {
+                while (getch() != 13);
+                break;
+            }
+            else if (c == 27)
+                return 0;
+        }
+    }
+
+    return 1;
+}
+
 int test_pause_10ths(unsigned int dsecs) {
 	const unsigned long delay = t8254_us2ticks(1000UL);
     unsigned int i;
@@ -364,6 +385,60 @@ void vga_test(unsigned int w,unsigned int h) {
     }
  
     test_pause(3);
+
+    /* If this is MCGA/VGA then play with the VGA palette that the EGA palette is mapped to */
+    {
+        /* We don't need to store the VGA palette because we can read back the palette at will */
+        unsigned char r,g,b,brk;
+
+        for (x=0;x < 256;x++) {
+            __asm {
+                mov     ah,0x02     ; set cursor pos
+                mov     bh,0x00     ; page 0
+                xor     dx,dx       ; DH=row=0  DL=col=0
+                int     10h
+            }
+
+            sprintf(tmp,"VGA palette index %02xh       ",x);
+            for (i=0;tmp[i] != 0;i++) {
+                unsigned char cv = tmp[i];
+
+                __asm {
+                    mov     ah,0x0E     ; teletype output
+                    mov     al,cv
+                    xor     bh,bh
+                    mov     bl,0x0F     ; foreground color (white)
+                    int     10h
+                }
+            }
+
+            outp(0x3C7,x);
+            r = inp(0x3C9);
+            g = inp(0x3C9);
+            b = inp(0x3C9);
+
+            outp(0x3C8,x);
+            if (r >= 0x30 || g >= 0x30 || b >= 0x30) {
+                outp(0x3C9,0x00);
+                outp(0x3C9,0x00);
+                outp(0x3C9,0x00);
+            }
+            else {
+                outp(0x3C9,0x3F);
+                outp(0x3C9,0x3F);
+                outp(0x3C9,0x3F);
+            }
+ 
+            brk = test_pause_ms(75);
+
+            outp(0x3C8,x);
+            outp(0x3C9,r);
+            outp(0x3C9,g);
+            outp(0x3C9,b);
+
+            if (!brk) break;
+        }
+    }
 }
 
 #define EGARGB2(r,g,b) \
