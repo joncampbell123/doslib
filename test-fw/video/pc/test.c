@@ -423,6 +423,19 @@ int main() {
             LOG_DEBUG "- CL(switch settings)=0x%02x\n",
             bv>>8u,bv&0xFFu,
             cv>>8u,cv&0xFFu);
+
+        __asm {
+            mov     ax,0x1A00
+            xor     bx,bx
+            int     10h
+            mov     bv,bx
+            mov     cv,cx
+        }
+
+        LOG(LOG_DEBUG "INT 10h AX=0x1A00 Get Display Combination Code:\n"
+            LOG_DEBUG "- BL(active display code)=0x%02x\n"
+            LOG_DEBUG "- BH(alternate display code)=0x%02x\n",
+            bv&0xFFu,bv>>8u);
     }
 
 	_cli();
