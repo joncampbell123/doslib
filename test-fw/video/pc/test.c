@@ -310,7 +310,83 @@ void cga4_test(unsigned int w,unsigned int h) {
         }
     }
 
-    test_pause(3);
+    test_pause(1);
+
+    /* second palette */
+    /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
+     * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        __asm {
+            mov     ah,0x0B
+            mov     bh,0x01
+            mov     bl,0x00
+            int     10h
+        }
+    }
+    else {
+        LOG(LOG_DEBUG "Switching CGA palette, port=0x%03x\n",0x3D9);
+
+        outp(0x3D9,0x10);
+    }
+
+    test_pause(1);
+
+    /* second palette */
+    /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
+     * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        __asm {
+            mov     ah,0x0B
+            mov     bh,0x01
+            mov     bl,0x01
+            int     10h
+        }
+    }
+    else {
+        LOG(LOG_DEBUG "Switching CGA palette, port=0x%03x\n",0x3D9);
+
+        outp(0x3D9,0x30);
+    }
+
+    test_pause(1);
+
+    /* second palette */
+    /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
+     * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        __asm {
+            mov     ah,0x0B
+            mov     bh,0x01
+            mov     bl,0x00
+            int     10h
+        }
+    }
+    else {
+        LOG(LOG_DEBUG "Switching CGA palette, port=0x%03x\n",0x3D9);
+
+        outp(0x3D9,0x00);
+    }
+
+    test_pause(1);
+
+    /* second palette */
+    /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
+     * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        __asm {
+            mov     ah,0x0B
+            mov     bh,0x01
+            mov     bl,0x01
+            int     10h
+        }
+    }
+    else {
+        LOG(LOG_DEBUG "Switching CGA palette, port=0x%03x\n",0x3D9);
+
+        outp(0x3D9,0x20);
+    }
+
+    test_pause(1);
 }
 
 void alphanumeric_test(unsigned int w,unsigned int h) {
@@ -430,6 +506,8 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
             vmem[o+1] = (((y * 16) + x) << 8) + 'A';
         }
     }
+
+    test_pause(1);
 
     /* turn on blinking */
     /* EGA/VGA: Use INT 10h AX=1003h
@@ -587,11 +665,11 @@ int main() {
         alphanumeric_test(80,25); // should be 40x25
 #endif
 
-    LOG(LOG_INFO "Testing: INT 10h mode 4 320x200 CGA mono 4-color graphics mode\n");
+    LOG(LOG_INFO "Testing: INT 10h mode 4 320x200 CGA color 4-color graphics mode\n");
     if (int10_setmode_and_check(4))// will LOG if mode set failure
         cga4_test(320,200);
 
-    LOG(LOG_INFO "Testing: INT 10h mode 5 320x200 CGA color 4-color graphics mode\n");
+    LOG(LOG_INFO "Testing: INT 10h mode 5 320x200 CGA mono 4-color graphics mode\n");
     if (int10_setmode_and_check(5))// will LOG if mode set failure
         cga4_test(320,200);
 
