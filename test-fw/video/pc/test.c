@@ -224,6 +224,22 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
     LOG_INT11_VIDEOMODE(int11_info);
 
+    /* check columns */
+    LOG(LOG_DEBUG "BIOS data area reports %u columns per row\n",read_bda16(0x4A));
+    if (read_bda16(0x4A) != w)
+        LOG(LOG_WARN "BIOS data area reports different columns/row than our expected %u\n",w);
+
+    /* check rows.
+     * I noticed from the 1984 edition of the IBM hardware reference that
+     * byte 0x84 in the BDA didn't exist until the 1986 reference,
+     * therefore it's best not to check unless EGA/MCGA or better. */
+    LOG(LOG_DEBUG "BIOS data area reports %u rows (may not exist if BIOS is old enough)\n",read_bda8(0x84)+1);
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA)) != 0) {
+        y = read_bda8(0x84);
+        if (y != 0 && (y+1) != h)
+            LOG(LOG_WARN "BIOS data area reports different row count than our expected %u\n",h);
+    }
+
     /* MDA monochrome mode means the text VRAM is at B000:0000
      * Otherwise, the text VRAM is at B800:0000
      * BUT on EGA/VGA despite this equipment check the segment is B000 */
