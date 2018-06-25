@@ -64,6 +64,7 @@ void LOG(const char *fmt,...) {
 #define LOG_DEBUG   "DEBUG> "
 #define LOG_INFO    "INFO> "
 #define LOG_WARN    "WARN> "
+#define LOG_ERROR   "ERROR> "
 
 /* WARNING: We trust the C library will still have working STDIO at this point */
 void log_atexit(void) {
