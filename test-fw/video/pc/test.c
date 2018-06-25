@@ -214,6 +214,15 @@ void test_pause(unsigned int secs) {
     }
 }
 
+void cga4_test(unsigned int w,unsigned int h) {
+    int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
+    LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
+    LOG_INT11_VIDEOMODE(int11_info);
+
+    if (((int11_info >> 4) & 3) == 3) // MDA can't do CGA!
+        LOG(LOG_WARN "CGA 4-color mode allowed to work despite MDA configuration\n");
+}
+
 void alphanumeric_test(unsigned int w,unsigned int h) {
     unsigned int o=0,i,x,y;
     VGA_ALPHA_PTR vmem;
@@ -485,6 +494,11 @@ int main() {
     LOG(LOG_INFO "Testing: INT 10h mode 7 80x25 mono text mode\n");
     if (int10_setmode_and_check(7))// will LOG if mode set failure
         alphanumeric_test(80,25); // should be 40x25
+
+
+    LOG(LOG_INFO "Testing: INT 10h mode 4 320x200 CGA mono 4-color graphics mode\n");
+    if (int10_setmode_and_check(4))// will LOG if mode set failure
+        cga4_test(320,200);
 
     /* set back to mode 3 80x25 text */
     int10_setmode(3);
