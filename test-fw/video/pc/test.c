@@ -1243,7 +1243,7 @@ int main() {
     /* we need the screen */
     log_noecho();
 
-#if 0
+#if 1
     LOG(LOG_INFO "Testing: INT 10h mode 0 40x25 mono text mode\n");
     if (int10_setmode_and_check(0))// will LOG if mode set failure
         alphanumeric_test(40,25); // should be 40x25
