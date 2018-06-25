@@ -587,8 +587,7 @@ void ega_test(unsigned int w,unsigned int h) {
         unsigned char r,g,b,brk;
 
         /* test only the first 64 colors because of EGA modes */
-        for (i=0;i < 64;i++) {
-#if 0
+        for (x=0;x < 64;x++) {
             __asm {
                 mov     ah,0x02     ; set cursor pos
                 mov     bh,0x00     ; page 0
@@ -596,7 +595,7 @@ void ega_test(unsigned int w,unsigned int h) {
                 int     10h
             }
 
-            sprintf(tmp,"VGA palette index %02xh       ",i);
+            sprintf(tmp,"VGA palette index %02xh       ",x);
             for (i=0;tmp[i] != 0;i++) {
                 unsigned char cv = tmp[i];
 
@@ -608,21 +607,20 @@ void ega_test(unsigned int w,unsigned int h) {
                     int     10h
                 }
             }
-#endif
 
-            outp(0x3C7,i);
+            outp(0x3C7,x);
             r = inp(0x3C9);
             g = inp(0x3C9);
             b = inp(0x3C9);
 
-            outp(0x3C8,i);
+            outp(0x3C8,x);
             outp(0x3C9,0x3F);
             outp(0x3C9,0x3F);
             outp(0x3C9,0x3F);
  
             brk = test_pause_10ths(1);
 
-            outp(0x3C8,i);
+            outp(0x3C8,x);
             outp(0x3C9,r);
             outp(0x3C9,g);
             outp(0x3C9,b);
