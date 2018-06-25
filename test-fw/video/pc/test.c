@@ -1021,11 +1021,89 @@ void ega_test(unsigned int w,unsigned int h) {
 
             if (!brk) break;
         }
+
+        for (i=0;i < 8;i++) {
+            const unsigned char msk = 0xFF << i;
+            {
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"DAC mask %02xh       ",msk);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
+            for (o=0;o < 4;o++) {
+                outp(0x3C6,(o & 1) ? 0xFF : msk);
+                if (!test_pause_10ths(4)) {
+                    outp(0x3C6,0xFF);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+
+            outp(0x3C6,0xFF);
+        }
+
+        for (i=0;i < 8;i++) {
+            const unsigned char msk = 0xFF >> i;
+            {
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"DAC mask %02xh       ",msk);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
+            for (o=0;o < 4;o++) {
+                outp(0x3C6,(o & 1) ? 0xFF : msk);
+                if (!test_pause_10ths(4)) {
+                    outp(0x3C6,0xFF);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+
+            outp(0x3C6,0xFF);
+        }
     }
 }
 
 void cga4_test(unsigned int w,unsigned int h) {
-    unsigned int i,x,y;
+    unsigned int o,i,x,y;
     VGA_RAM_PTR vmem;
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -1197,10 +1275,92 @@ void cga4_test(unsigned int w,unsigned int h) {
     }
 
     test_pause(1);
+
+    /* If this is MCGA/VGA then play with the VGA palette that the EGA palette is mapped to */
+    if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
+        /* We don't need to store the VGA palette because we can read back the palette at will */
+        for (i=0;i < 8;i++) {
+            const unsigned char msk = 0xFF << i;
+            {
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"DAC mask %02xh       ",msk);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
+            for (o=0;o < 4;o++) {
+                outp(0x3C6,(o & 1) ? 0xFF : msk);
+                if (!test_pause_10ths(4)) {
+                    outp(0x3C6,0xFF);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+
+            outp(0x3C6,0xFF);
+        }
+
+        for (i=0;i < 8;i++) {
+            const unsigned char msk = 0xFF >> i;
+            {
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"DAC mask %02xh       ",msk);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
+            for (o=0;o < 4;o++) {
+                outp(0x3C6,(o & 1) ? 0xFF : msk);
+                if (!test_pause_10ths(4)) {
+                    outp(0x3C6,0xFF);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+
+            outp(0x3C6,0xFF);
+        }
+    }
 }
 
 void cga2_test(unsigned int w,unsigned int h) {
-    unsigned int i,x,y;
+    unsigned int o,i,x,y;
     VGA_RAM_PTR vmem;
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -1324,6 +1484,88 @@ void cga2_test(unsigned int w,unsigned int h) {
     }
 
     test_pause(1);
+
+    /* If this is MCGA/VGA then play with the VGA palette that the EGA palette is mapped to */
+    if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
+        /* We don't need to store the VGA palette because we can read back the palette at will */
+        for (i=0;i < 8;i++) {
+            const unsigned char msk = 0xFF << i;
+            {
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"DAC mask %02xh       ",msk);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
+            for (o=0;o < 4;o++) {
+                outp(0x3C6,(o & 1) ? 0xFF : msk);
+                if (!test_pause_10ths(4)) {
+                    outp(0x3C6,0xFF);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+
+            outp(0x3C6,0xFF);
+        }
+
+        for (i=0;i < 8;i++) {
+            const unsigned char msk = 0xFF >> i;
+            {
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"DAC mask %02xh       ",msk);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
+            for (o=0;o < 4;o++) {
+                outp(0x3C6,(o & 1) ? 0xFF : msk);
+                if (!test_pause_10ths(4)) {
+                    outp(0x3C6,0xFF);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+
+            outp(0x3C6,0xFF);
+        }
+    }
 }
 
 void alphanumeric_test(unsigned int w,unsigned int h) {
@@ -1497,6 +1739,88 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     }
 
     test_pause(3);
+
+    /* If this is MCGA/VGA then play with the VGA palette that the EGA palette is mapped to */
+    if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
+        /* We don't need to store the VGA palette because we can read back the palette at will */
+        for (i=0;i < 8;i++) {
+            const unsigned char msk = 0xFF << i;
+            {
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"DAC mask %02xh       ",msk);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
+            for (o=0;o < 4;o++) {
+                outp(0x3C6,(o & 1) ? 0xFF : msk);
+                if (!test_pause_10ths(4)) {
+                    outp(0x3C6,0xFF);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+
+            outp(0x3C6,0xFF);
+        }
+
+        for (i=0;i < 8;i++) {
+            const unsigned char msk = 0xFF >> i;
+            {
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"DAC mask %02xh       ",msk);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
+            for (o=0;o < 4;o++) {
+                outp(0x3C6,(o & 1) ? 0xFF : msk);
+                if (!test_pause_10ths(4)) {
+                    outp(0x3C6,0xFF);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+
+            outp(0x3C6,0xFF);
+        }
+    }
 }
 
 int main() {
@@ -1580,7 +1904,6 @@ int main() {
     /* we need the screen */
     log_noecho();
 
-#if 0
     LOG(LOG_INFO "Testing: INT 10h mode 0 40x25 mono text mode\n");
     if (int10_setmode_and_check(0))// will LOG if mode set failure
         alphanumeric_test(40,25); // should be 40x25
@@ -1630,7 +1953,6 @@ int main() {
         if (int10_setmode_and_check(18))// will LOG if mode set failure
             ega_test(640,480);
     }
-#endif
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
         LOG(LOG_INFO "Testing: INT 10h mode 19 320x200 VGA 256-color graphics mode\n");
