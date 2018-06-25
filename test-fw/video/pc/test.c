@@ -108,6 +108,26 @@ void log_windows_info(void) {
     }
 }
 
+void log_vga_info(void) {
+    LOG("According to VGA library, video hardware is compatible with:\n");
+    if (vga_state.vga_flags & VGA_IS_MDA)
+        LOG(" - MDA\n");
+    if (vga_state.vga_flags & VGA_IS_CGA)
+        LOG(" - CGA\n");
+    if (vga_state.vga_flags & VGA_IS_AMSTRAD)
+        LOG(" - AMSTRAD\n");
+    if (vga_state.vga_flags & VGA_IS_TANDY)
+        LOG(" - TANDY\n");
+    if (vga_state.vga_flags & VGA_IS_MCGA)
+        LOG(" - MCGA\n");
+    if (vga_state.vga_flags & VGA_IS_HGC)
+        LOG(" - HGC\n");
+    if (vga_state.vga_flags & VGA_IS_EGA)
+        LOG(" - EGA\n");
+    if (vga_state.vga_flags & VGA_IS_VGA)
+        LOG(" - VGA\n");
+}
+
 uint8_t read_int10_bd_mode(void) {
 #if TARGET_MSDOS == 32
     return *((uint8_t*)0x449);
@@ -372,6 +392,8 @@ int main() {
 		printf("Video probe failed\n");
 		return 1;
 	}
+
+    log_vga_info();
 
 	_cli();
 	write_8254_system_timer(0); // 18.2
