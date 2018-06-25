@@ -671,9 +671,16 @@ void ega_test(unsigned int w,unsigned int h) {
             b = inp(0x3C9);
 
             outp(0x3C8,x);
-            outp(0x3C9,0x3F);
-            outp(0x3C9,0x3F);
-            outp(0x3C9,0x3F);
+            if (r >= 0x30 || g >= 0x30 || b >= 0x30) {
+                outp(0x3C9,0x00);
+                outp(0x3C9,0x00);
+                outp(0x3C9,0x00);
+            }
+            else {
+                outp(0x3C9,0x3F);
+                outp(0x3C9,0x3F);
+                outp(0x3C9,0x3F);
+            }
  
             brk = test_pause_10ths(1);
 
