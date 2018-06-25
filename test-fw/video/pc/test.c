@@ -404,6 +404,27 @@ int main() {
 
     log_vga_info();
 
+    // additional debug info
+    {
+        uint16_t bv=0,cv=0;
+
+        __asm {
+            mov     ah,0x12             ; Alternate function select - Get EGA INFO
+            mov     bx,0xFF10
+            int     10h
+            mov     bv,bx
+            mov     cv,cx
+        }
+
+        LOG(LOG_DEBUG "INT 10h AH=0x12 BL=0x10 Get EGA INFO results:\n"
+            LOG_DEBUG "- BH(video state)=0x%02x\n"
+            LOG_DEBUG "- BL(installed memory in 64KB)=0x%02x\n"
+            LOG_DEBUG "- CH(feature connector bits)=0x%02x\n"
+            LOG_DEBUG "- CL(switch settings)=0x%02x\n",
+            bv>>8u,bv&0xFFu,
+            cv>>8u,cv&0xFFu);
+    }
+
 	_cli();
 	write_8254_system_timer(0); // 18.2
 	_sti();
