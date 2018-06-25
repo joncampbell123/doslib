@@ -533,8 +533,9 @@ void ega_test(unsigned int w,unsigned int h) {
         }
 
         /* NTS: Testing so far, shows that EGA 200-line modes are limited to a CGA
-         *      palette. Otherwise, this should cycle through smooth gradients
-         *      of each RGB combination */
+         *      palette. This is documented on EGA hardware to be a limitation of the
+         *      EGA video connector and monitor when in 200-line modes. Otherwise,
+         *      this should cycle through smooth gradients of each RGB combination */
         for (i=0;i < 8;i++) {
             for (x=0;x < 4;x++)
                 vga_write_AC(x,EGARGB2((i&4)?(x&3):0,(i&2)?(x&3):0,(i&1)?(x&3):0));
