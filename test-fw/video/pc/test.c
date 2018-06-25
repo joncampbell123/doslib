@@ -208,7 +208,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     for (i=0;tmp[i] != 0;i++)
         vmem[i] = 0x0700 + ((unsigned char)tmp[i]);
 
-    sprintf(tmp,"Character map below",w,h,sv,read_int10_bd_mode());
+    sprintf(tmp,"Character map below");
     for (i=0;tmp[i] != 0;i++)
         vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
 
@@ -223,6 +223,19 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
             o = w*(4+y)+(x*2)+1;
             vmem[o+0] =
             vmem[o+1] = 0x0700 + (y * 16) + x;
+        }
+    }
+
+    test_pause();
+
+    sprintf(tmp,"Attribute map below");
+
+    /* show characters */
+    for (y=0;y < 16;y++) {
+        for (x=0;x < 16;x++) {
+            o = w*(4+y)+(x*2)+1;
+            vmem[o+0] =
+            vmem[o+1] = (((y * 16) + x) << 8) + 'A';
         }
     }
 
