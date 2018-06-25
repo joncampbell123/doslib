@@ -439,6 +439,51 @@ void vga_test(unsigned int w,unsigned int h) {
             if (!brk) break;
         }
     }
+
+    {
+        for (i=0;i < 16;i++) {
+            {
+                const unsigned int oi = i;
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"EGA palette index %02xh       ",oi);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
+            for (o=0;o < 4;o++) {
+                vga_write_AC(i,(o & 1) ? i : (i >= 8 ? 0x00 : 0x0F));
+                vga_write_AC(VGA_AC_ENABLE|0x1F,0);
+                if (!test_pause_10ths(2)) {
+                    vga_write_AC(i,i);
+                    vga_write_AC(VGA_AC_ENABLE|0x1F,0);
+                    i=16;
+                    o=8;
+                    break;
+                }
+            }
+        }
+
+        /* restore palette */
+        for (i=0;i < 16;i++) vga_write_AC(i,i);
+        vga_write_AC(VGA_AC_ENABLE|0x1F,0);
+    }
 }
 
 #define EGARGB2(r,g,b) \
