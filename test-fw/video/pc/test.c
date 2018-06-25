@@ -215,12 +215,46 @@ void test_pause(unsigned int secs) {
 }
 
 void cga4_test(unsigned int w,unsigned int h) {
+    unsigned int o=0,i,x,y;
+    VGA_RAM_PTR vmem;
+
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
     LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
     LOG_INT11_VIDEOMODE(int11_info);
 
     if (((int11_info >> 4) & 3) == 3) // MDA can't do CGA!
         LOG(LOG_WARN "CGA 4-color mode allowed to work despite MDA configuration\n");
+
+#if TARGET_MSDOS == 32
+    vmem = (VGA_RAM_PTR)(0xB800u << 4u);
+    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
+#else
+    vmem = (VGA_RAM_PTR)MK_FP(0xB800u,0);
+    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
+#endif
+
+    {
+        uint16_t port = int10_bd_read_cga_crt_io();
+        if (port != 0x3D4)
+            LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
+                port);
+    }
+
+    /* test that the RAM is there, note if it is not */
+    for (i=0;i < 0x4000/*16KB*/;i++)
+        vmem[i] = 0x0F ^ i ^ (i << 6);
+
+    for (i=0;i < 0x4000/*16KB*/;i++) {
+        if (vmem[i] != ((0x0F ^ i ^ (i << 6)) & 0xFF)) {
+            LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
+            return;
+        }
+    }
+
+    for (i=0;i < (w * h);i++)
+        vmem[i] = 0;
+
+
 }
 
 void alphanumeric_test(unsigned int w,unsigned int h) {
@@ -295,7 +329,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         vmem[i] = 0x0F0F ^ i ^ (i << 13);
 
     for (i=0;i < (w * h);i++) {
-        if (vmem[i] != (0x0F0F ^ i ^ (i << 13))) {
+        if (vmem[i] != ((0x0F0F ^ i ^ (i << 13)) & 0xFFFF)) {
             LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
             return;
         }
@@ -475,6 +509,7 @@ int main() {
     /* we need the screen */
     log_noecho();
 
+#if 1
     LOG(LOG_INFO "Testing: INT 10h mode 0 40x25 mono text mode\n");
     if (int10_setmode_and_check(0))// will LOG if mode set failure
         alphanumeric_test(40,25); // should be 40x25
@@ -494,7 +529,7 @@ int main() {
     LOG(LOG_INFO "Testing: INT 10h mode 7 80x25 mono text mode\n");
     if (int10_setmode_and_check(7))// will LOG if mode set failure
         alphanumeric_test(80,25); // should be 40x25
-
+#endif
 
     LOG(LOG_INFO "Testing: INT 10h mode 4 320x200 CGA mono 4-color graphics mode\n");
     if (int10_setmode_and_check(4))// will LOG if mode set failure
