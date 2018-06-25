@@ -362,26 +362,26 @@ int main() {
     log_noecho();
 
     LOG("* Testing: INT 10h mode 0 40x25 mono text mode\n");
-    int10_setmode_and_check(0); // will LOG if mode set failure, any sane IBM PC BIOS will have this mode though
-    alphanumeric_test(40,25); // should be 40x25
+    if (int10_setmode_and_check(0))// will LOG if mode set failure
+        alphanumeric_test(40,25); // should be 40x25
 
     LOG("* Testing: INT 10h mode 1 40x25 color text mode\n");
-    int10_setmode_and_check(1); // will LOG if mode set failure, any sane IBM PC BIOS will have this mode though
-    alphanumeric_test(40,25); // should be 40x25
+    if (int10_setmode_and_check(1))// will LOG if mode set failure
+        alphanumeric_test(40,25); // should be 40x25
 
 
     LOG("* Testing: INT 10h mode 2 80x25 mono text mode\n");
-    int10_setmode_and_check(2); // will LOG if mode set failure, any sane IBM PC BIOS will have this mode though
-    alphanumeric_test(80,25); // should be 40x25
+    if (int10_setmode_and_check(2))// will LOG if mode set failure
+        alphanumeric_test(80,25); // should be 40x25
 
     LOG("* Testing: INT 10h mode 3 80x25 color text mode\n");
-    int10_setmode_and_check(3); // will LOG if mode set failure, any sane IBM PC BIOS will have this mode though
-    alphanumeric_test(80,25); // should be 40x25
+    if (int10_setmode_and_check(3))// will LOG if mode set failure
+        alphanumeric_test(80,25); // should be 40x25
 
 
     LOG("* Testing: INT 10h mode 7 80x25 mono text mode\n");
-    int10_setmode_and_check(7); // will LOG if mode set failure, any sane IBM PC BIOS will have this mode though
-    alphanumeric_test(80,25); // should be 40x25
+    if (int10_setmode_and_check(7))// will LOG if mode set failure
+        alphanumeric_test(80,25); // should be 40x25
 
     /* set back to mode 3 80x25 text */
     int10_setmode(3);
