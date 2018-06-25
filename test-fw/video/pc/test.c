@@ -136,6 +136,10 @@ int main() {
 		return 1;
 	}
 
+	_cli();
+	write_8254_system_timer(0); // 18.2
+	_sti();
+
 	if (!probe_vga()) {
 		printf("Video probe failed\n");
 		return 1;
