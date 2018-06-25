@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <fcntl.h>
 #include <math.h>
+#include <bios.h>
 #include <dos.h>
 
 #include <hw/cpu/cpu.h>
@@ -106,6 +107,87 @@ void log_windows_info(void) {
     }
 }
 
+uint8_t read_int10_bd_mode(void) {
+#if TARGET_MSDOS == 32
+    return *((uint8_t*)0x449);
+#else
+    return *((uint8_t far*)MK_FP(0x40,0x49));
+#endif
+}
+
+uint16_t int11_info = 0;
+
+int int10_setmode_and_check(uint8_t mode) {
+    uint8_t amode;
+
+    int10_setmode(mode);
+
+    if ((amode=read_int10_bd_mode()) != mode) {
+        LOG("! INT 10h mode set 0x%02x failed, BIOS is still in mode 0x%02x according to BIOS data area\n",mode,amode);
+        return 0;
+    }
+
+    return 1;
+}
+
+unsigned int getchex(void) {
+    unsigned int c;
+
+    c = getch();
+    if (c == 0) c = getch() << 8;
+
+    return c;
+}
+
+void LOG_INT11_VIDEOMODE(uint16_t int11) {
+    LOG("INT 11h video mode: ");
+    switch ((int11 >> 4) & 0x3) {
+        case 0: LOG("EGA or later"); break; 
+        case 1: LOG("CGA color 40x25"); break; 
+        case 2: LOG("CGA color 80x25"); break; 
+        case 3: LOG("MDA monochrome 80x25"); break; 
+    }
+    LOG("\n");
+}
+
+void alphanumeric_test(unsigned int w,unsigned int h) {
+    VGA_ALPHA_PTR vmem;
+    uint16_t sv;
+
+    int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
+    LOG("INT 11h equipment list: 0x%04x\n",int11_info);
+    LOG_INT11_VIDEOMODE(int11_info);
+
+    /* MDA monochrome mode means the text VRAM is at B000:0000
+     * Otherwise, the text VRAM is at B800:0000 */
+    if (((int11_info >> 4) & 3) == 3)//MDA
+        sv = 0xB000u;
+    else
+        sv = 0xB800u;
+
+    LOG("Therefore, using video RAM segment 0x%04x\n",sv);
+#if TARGET_MSDOS == 32
+    vmem = (VGA_ALPHA_PTR)(sv << 4u);
+    LOG("! Internal ptr: %p\n",vmem);
+#else
+    vmem = (VGA_ALPHA_PTR)MK_FP(sv,0);
+    LOG("! Internal ptr: %Fp\n",vmem);
+#endif
+}
+
+void test_pause(void) {
+	const unsigned long delay = t8254_us2ticks(1000UL);
+    unsigned int i;
+
+    for (i=0;i < 3000u;i++) {
+		t8254_wait(delay);
+        if (kbhit()) {
+            unsigned int c = getchex();
+            if (c == ' ') break;
+        }
+    }
+}
+
 int main() {
     mkdir("video");
     mkdir("video\\pc");
@@ -139,6 +221,20 @@ int main() {
 	_cli();
 	write_8254_system_timer(0); // 18.2
 	_sti();
+
+    /* basic pattern tests */
+    /* we need the screen */
+    log_noecho();
+
+    LOG("* Testing: INT 10h mode 0 40x25 mono text mode\n");
+    int10_setmode_and_check(0); // will LOG if mode set failure, any sane IBM PC BIOS will have this mode though
+    alphanumeric_test(40,25); // should be 40x25
+    test_pause();
+
+    /* set back to mode 3 80x25 text */
+    int10_setmode(3);
+    log_doecho();
+    LOG("* Restoring 80x25 text mode\n");
 
 	if (!probe_vga()) {
 		printf("Video probe failed\n");
