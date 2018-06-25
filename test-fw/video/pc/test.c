@@ -211,6 +211,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
 
     if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA)) != 0 && read_int10_bd_mode() == 7) {
         LOG("But this is EGA/VGA/MCGA and INT 10h mode 7, therefore monochrome mode\n");
+        crtbase = 0x3B4;
         sv = 0xB000u;
     }
 
