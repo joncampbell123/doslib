@@ -319,6 +319,24 @@ void ega_test(unsigned int w,unsigned int h) {
         LOG(LOG_DEBUG "Reading AC palette: ");
         for (i=0;i < 16;i++) LOG("0x%02x ",attrpal[i]);
         LOG("\n");
+
+        /* also log the VGA palette */
+        LOG(LOG_DEBUG "Reading VGA palette:\n");
+        for (i=0;i < 256;i++) {
+            unsigned char r,g,b;
+
+            /* NTS: Remember that the VGA has one port for setting READ index, another for WRITE index.
+             *      Don't use one to do the other, weird things will happen. At the very least, you'll
+             *      read the color palette index off by 1 */
+            outp(0x3C7,i);
+            r = inp(0x3C9);
+            g = inp(0x3C9);
+            b = inp(0x3C9);
+
+            if ((i&7) == 0) LOG(LOG_DEBUG " palette 0x%02x-0x%02x = ",i,i+7);
+            LOG("%02xh %02xh %02xh  ",r,g,b);
+            if ((i&7) == 7) LOG("\n");
+        }
     }
 
     /* test that the RAM is there, note if it is not.
