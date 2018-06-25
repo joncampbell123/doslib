@@ -1140,21 +1140,23 @@ int main() {
         cga2_test(640,200);
 #endif
 
-    LOG(LOG_INFO "Testing: INT 10h mode 13 320x200 EGA 16-color graphics mode\n");
-    if (int10_setmode_and_check(13))// will LOG if mode set failure
-        ega_test(320,200);
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        LOG(LOG_INFO "Testing: INT 10h mode 13 320x200 EGA 16-color graphics mode\n");
+        if (int10_setmode_and_check(13))// will LOG if mode set failure
+            ega_test(320,200);
 
-    LOG(LOG_INFO "Testing: INT 10h mode 14 640x200 EGA 16-color graphics mode\n");
-    if (int10_setmode_and_check(14))// will LOG if mode set failure
-        ega_test(640,200);
+        LOG(LOG_INFO "Testing: INT 10h mode 14 640x200 EGA 16-color graphics mode\n");
+        if (int10_setmode_and_check(14))// will LOG if mode set failure
+            ega_test(640,200);
 
-    LOG(LOG_INFO "Testing: INT 10h mode 16 640x350 EGA 16-color graphics mode\n");
-    if (int10_setmode_and_check(16))// will LOG if mode set failure
-        ega_test(640,350);
+        LOG(LOG_INFO "Testing: INT 10h mode 16 640x350 EGA 16-color graphics mode\n");
+        if (int10_setmode_and_check(16))// will LOG if mode set failure
+            ega_test(640,350);
 
-    LOG(LOG_INFO "Testing: INT 10h mode 18 640x480 VGA 16-color graphics mode\n");
-    if (int10_setmode_and_check(18))// will LOG if mode set failure
-        ega_test(640,480);
+        LOG(LOG_INFO "Testing: INT 10h mode 18 640x480 VGA 16-color graphics mode\n");
+        if (int10_setmode_and_check(18))// will LOG if mode set failure
+            ega_test(640,480);
+    }
 
     /* set back to mode 3 80x25 text */
     int10_setmode(3);
