@@ -221,7 +221,8 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
 
     for (i=0;i < (w * h);i++) {
         if (vmem[i] != (0x0F0F ^ i ^ (i << 13))) {
-            LOG("* VRAM TEST FAILED, data written did not read back");
+            LOG("* VRAM TEST FAILED, data written did not read back at byte offset 0x%x",i);
+            return;
         }
     }
 
