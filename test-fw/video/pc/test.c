@@ -239,6 +239,8 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     test_pause();
 
     sprintf(tmp,"Attribute map below");
+    for (i=0;tmp[i] != 0;i++)
+        vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
 
     /* show characters */
     for (y=0;y < 16;y++) {
@@ -247,6 +249,26 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
             vmem[o+0] =
             vmem[o+1] = (((y * 16) + x) << 8) + 'A';
         }
+    }
+
+    test_pause();
+
+    /* turn off blinking */
+    /* EGA/VGA: Use INT 10h AX=1003h
+     * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
+    sprintf(tmp,"Attribute map below w/o blinking");
+    for (i=0;tmp[i] != 0;i++)
+        vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
+
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        __asm {
+            mov     ax,0x1003
+            mov     bl,0x00
+            int     10h
+        }
+    }
+    else {
+        // TODO
     }
 
     test_pause();
