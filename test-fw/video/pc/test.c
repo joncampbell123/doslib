@@ -116,6 +116,14 @@ uint8_t read_int10_bd_mode(void) {
 #endif
 }
 
+uint16_t int10_bd_read_cga_crt_io(void) {
+#if TARGET_MSDOS == 32
+    return *((uint16_t*)0x463);
+#else
+    return *((uint16_t far*)MK_FP(0x40,0x63));
+#endif
+}
+
 uint8_t int10_bd_read_cga_mode_byte(void) {
 #if TARGET_MSDOS == 32
     return *((uint8_t*)0x465);
@@ -204,6 +212,16 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA)) != 0 && read_int10_bd_mode() == 7) {
         LOG("But this is EGA/VGA/MCGA and INT 10h mode 7, therefore monochrome mode\n");
         sv = 0xB000u;
+    }
+
+    /* did we determine the CRT base I/O port correctly?
+     * check the BIOS data area.
+     * EGA/VGA seems to emulate this correctly. */
+    {
+        uint16_t port = int10_bd_read_cga_crt_io();
+        if (port != crtbase)
+            LOG("WARNING: BIOS says CRT I/O port is 0x%x, my guess was 0x%x. This might be a problem.\n",
+                port,crtbase);
     }
 
     LOG("Therefore, using video RAM segment 0x%04x\n",sv);
