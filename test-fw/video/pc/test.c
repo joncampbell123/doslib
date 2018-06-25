@@ -594,6 +594,31 @@ void ega_test(unsigned int w,unsigned int h) {
          *      EGA video connector and monitor when in 200-line modes. Otherwise,
          *      this should cycle through smooth gradients of each RGB combination */
         for (i=0;i < 8;i++) {
+            {
+                const unsigned int oi = i;
+                unsigned int i;
+
+                __asm {
+                    mov     ah,0x02     ; set cursor pos
+                    mov     bh,0x00     ; page 0
+                    xor     dx,dx       ; DH=row=0  DL=col=0
+                    int     10h
+                }
+
+                sprintf(tmp,"EGA palette gradient RGB %u%u%u       ",(oi>>2)&1,(oi>>1)&1,oi&1);
+                for (i=0;tmp[i] != 0;i++) {
+                    unsigned char cv = tmp[i];
+
+                    __asm {
+                        mov     ah,0x0E     ; teletype output
+                        mov     al,cv
+                        xor     bh,bh
+                        mov     bl,0x0F     ; foreground color (white)
+                        int     10h
+                    }
+                }
+            }
+
             for (x=0;x < 4;x++)
                 vga_write_AC(x,EGARGB2((i&4)?(x&3):0,(i&2)?(x&3):0,(i&1)?(x&3):0));
 
