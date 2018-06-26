@@ -349,6 +349,102 @@ void vga_dacmask_test(unsigned char fgcolor) {
     }
 }
 
+void mcga2c_test(unsigned int w,unsigned int h) {
+    unsigned int i,x,y;
+    VGA_RAM_PTR vmem;
+
+    int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
+    LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
+    LOG_INT11_VIDEOMODE(int11_info);
+
+    if (((int11_info >> 4) & 3) == 3) // MDA can't do CGA!
+        LOG(LOG_WARN "CGA 2-color mode allowed to work despite MDA configuration\n");
+
+#if TARGET_MSDOS == 32
+    vmem = (VGA_RAM_PTR)(0xA000u << 4u);
+    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
+#else
+    vmem = (VGA_RAM_PTR)MK_FP(0xA000u,0);
+    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
+#endif
+
+    { /* NTS: Might be monochrome mode */
+        uint16_t port = int10_bd_read_cga_crt_io();
+        if (!(port == 0x3B4 || port == 0x3D4))
+            LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
+                port);
+    }
+
+    /* test that the RAM is there, note if it is not */
+    for (i=0;i < (h * (w / 8u));i++)
+        vmem[i] = 0x0F ^ i ^ (i << 6);
+
+    for (i=0;i < (h * (w / 8u));i++) {
+        if (vmem[i] != ((0x0F ^ i ^ (i << 6)) & 0xFF)) {
+            LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
+            return;
+        }
+    }
+
+    for (i=0;i < (h * (w / 8u));i++)
+        vmem[i] = 0;
+
+    /* MCGA memory layout (2-color) 640x480 or EGA 640x350.
+     * 64KB RAM region (MCGA) or 32KB RAM region (EGA).
+     *
+     * Non-interleaved one bit per pixel.
+     */
+    __asm {
+        mov     ah,0x02     ; set cursor pos
+        mov     bh,0x00     ; page 0
+        xor     dx,dx       ; DH=row=0  DL=col=0
+        int     10h
+    }
+
+    sprintf(tmp,"%u x %u text at seg 0x%04x, mode 0x%02x\r\n",w,h,0xB800,read_int10_bd_mode());
+    for (i=0;tmp[i] != 0;i++) {
+        unsigned char cv = tmp[i];
+
+        __asm {
+            mov     ah,0x0E     ; teletype output
+            mov     al,cv
+            xor     bh,bh
+            mov     bl,3        ; foreground color (white)
+            int     10h
+        }
+    }
+ 
+    for (y=16;y < 80;y++) {
+        VGA_RAM_PTR d = vmem + (y * (w>>3u));
+        for (x=0;x < (512u/8u);x++) {
+            unsigned char c1 = x / (256u/8u);
+            unsigned char c2 = ((x + (128u/8u)) / (256u/8u)) & 1;
+
+            if (y >= 48 && c1 != c2)
+                d[x] = (c2 * ((y&1) ? 0x55u : 0xAAu)) + (c1 * ((y&1) ? 0xAAu : 0x55u));
+            else
+                d[x] = c1 * 0xFFu;
+        }
+    }
+
+    for (i=1;i == 1;i++) {
+        for (x=0;x < w;x++) {
+            y = (x + ((i - 1) * 10)) % 60;
+            if (y >= 30) y = 60 - y;
+            y += 100;
+
+            {
+                VGA_RAM_PTR d = vmem + (y * (w>>3u));
+
+                d[x/8u] &= ~(0x80u >> (x & 7));
+                d[x/8u] |= (0x80u >> (x & 7));
+            }
+        }
+    }
+
+    test_pause(3);
+}
+
 void vga_test(unsigned int w,unsigned int h) {
     unsigned int o,i,x,y;
     unsigned char attrpal[16];
@@ -1651,6 +1747,18 @@ int main() {
         LOG(LOG_INFO "Testing: INT 10h mode 19 320x200 VGA 256-color graphics mode\n");
         if (int10_setmode_and_check(19))// will LOG if mode set failure
             vga_test(320,200);
+    }
+
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA))) {
+        LOG(LOG_INFO "Testing: INT 10h mode 15 640x350 EGA 2-color graphics mode\n");
+        if (int10_setmode_and_check(15))// will LOG if mode set failure
+            mcga2c_test(640,350);
+    }
+
+    if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
+        LOG(LOG_INFO "Testing: INT 10h mode 17 640x480 MCGA 2-color graphics mode\n");
+        if (int10_setmode_and_check(17))// will LOG if mode set failure
+            mcga2c_test(640,480);
     }
 
     /* set back to mode 3 80x25 text */
