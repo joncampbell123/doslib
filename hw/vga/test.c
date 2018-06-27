@@ -230,7 +230,7 @@ int main() {
 		vga_write("  1: Set video mode   M: Make mono\n");
 		vga_write("  T: Restore 80x25    C: Make color\n");
 		vga_write("  H: HGC graphics tst !: VGA mmap test\n");
-		vga_write("  D: CGA graphics tst P: Tandy graphics tst\n");
+		vga_write("  D: CGA graphics tst P: Tandy/PCjr graphics\n");
 		vga_write("  V: EGA/VGA graphics W: EGA/VGA grph II\n");
 		vga_write("  X: VGA/MCGA 256-col Y: VGA 256-col modex\n");
 		vga_write("  R: VGA raster tst   S: EGA raster tst\n");
