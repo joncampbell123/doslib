@@ -648,7 +648,7 @@ void tandy16_test(unsigned int w,unsigned int h,unsigned int ils) {
             {
                 VGA_RAM_PTR d = vmem + ((y>>ils) * (w>>1u)) + ((y&ymsk) * 0x2000u);
 
-                d[x/2u] &= ~((0xF0u) >> ((x & 15) * 16u));
+                d[x/2u] &= ~((0xF0u) >> ((x & 1) * 4u));
                 d[x/2u] |= (((i&15u) * 0x10u) >> ((x & 1) * 4u));
             }
         }
