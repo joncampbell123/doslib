@@ -349,8 +349,49 @@ void vga_dacmask_test(unsigned char fgcolor) {
     }
 }
 
+VGA_RAM_PTR get_8x8_font(void) {
+    unsigned short s=0xF000,o=0xFA6E; /* IBM BIOS F000:FA6E font */
+
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        __asm {
+            push    es
+            push    bp
+            push    cx
+            push    dx
+
+            xor     ax,ax
+            mov     es,ax
+            mov     bp,ax
+
+            mov     ax,0x1130       ; Get Font Information
+            mov     bh,0x03         ; ROM 8x8 double dot, 0x00-0x7F
+            int     10h             ; returns pointer in ES:BP
+
+            mov     ax,es
+            or      ax,bp
+            jz      noptr
+
+            mov     s,es
+            mov     o,bp
+
+noptr:
+            pop     dx
+            pop     cx
+            pop     bp
+            pop     es
+        }
+    }
+
+#if TARGET_MSDOS == 32
+    return (VGA_RAM_PTR)((s << 4u) + o);
+#else
+    return (VGA_RAM_PTR)MK_FP(s,o);
+#endif
+}
+
 void hgc_test(unsigned int w,unsigned int h) {
     unsigned int i,x,y;
+    VGA_RAM_PTR font8;
     VGA_RAM_PTR vmem;
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -402,20 +443,27 @@ void hgc_test(unsigned int w,unsigned int h) {
         int     10h
     }
 
-#if 0
-    sprintf(tmp,"%u x %u text at seg 0x%04x, mode 0x%02x\r\n",w,h,0xB800,read_int10_bd_mode());
-    for (i=0;tmp[i] != 0;i++) {
-        unsigned char cv = tmp[i];
+    /* NTS: Cannot use INT 10h to print in graphics mode, because INT 10h does not
+     *      know or understand the HGC graphics mode. */
+    {
+        font8 = get_8x8_font();
 
-        __asm {
-            mov     ah,0x0E     ; teletype output
-            mov     al,cv
-            xor     bh,bh
-            mov     bl,3        ; foreground color (white)
-            int     10h
+#if TARGET_MSDOS == 32
+        LOG(LOG_DEBUG "Font ptr: %p\n",font8);
+#else
+        LOG(LOG_DEBUG "Font ptr: %Fp\n",font8);
+#endif
+    }
+
+    sprintf(tmp,"%u x %u text at seg 0x%04x, mode 0x%02x",w,h,0xB800,read_int10_bd_mode());
+    for (i=0;tmp[i] != 0;i++) {
+        VGA_RAM_PTR s = font8 + ((unsigned char)tmp[i] * 8u);
+
+        for (y=0;y < 8;y++) {
+            VGA_RAM_PTR d = vmem + ((y>>2) * (w>>3u)) + ((y&3) * 0x2000) + i;
+            *d = s[y];
         }
     }
-#endif
  
     for (y=16;y < 80;y++) {
         VGA_RAM_PTR d = vmem + ((y>>2) * (w>>3u)) + ((y&3) * 0x2000);
