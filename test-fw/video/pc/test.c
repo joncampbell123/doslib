@@ -2002,7 +2002,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     for (i=0;tmp[i] != 0;i++)
         vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
 
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_PCJR))) {
         __asm {
             mov     ax,0x1003
             mov     bl,0x01
@@ -2027,7 +2027,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     for (i=0;tmp[i] != 0;i++)
         vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
 
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_PCJR))) {
         __asm {
             mov     ax,0x1003
             mov     bl,0x00
