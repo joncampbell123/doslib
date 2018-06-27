@@ -389,6 +389,47 @@ noptr:
 #endif
 }
 
+void tandy_palette_test(void) {
+    unsigned int i,o;
+
+    for (i=0;i < 16;i++) {
+        {
+            const unsigned int oi = i;
+            unsigned int i;
+
+            __asm {
+                mov     ah,0x02     ; set cursor pos
+                mov     bh,0x00     ; page 0
+                xor     dx,dx       ; DH=row=0  DL=col=0
+                int     10h
+            }
+
+            sprintf(tmp,"Palette index %02xh       ",oi);
+            for (i=0;tmp[i] != 0;i++) {
+                unsigned char cv = tmp[i];
+
+                __asm {
+                    mov     ah,0x0E     ; teletype output
+                    mov     al,cv
+                    xor     bh,bh
+                    mov     bl,0x0F     ; foreground color (white)
+                    int     10h
+                }
+            }
+        }
+
+        for (o=0;o < 4;o++) {
+            vga_tandy_setpalette(i,(o & 1) ? i : (i >= 8 ? 0x00 : 0x3F));
+            if (!test_pause_10ths(2)) {
+                vga_tandy_setpalette(i,i);
+                i=16;
+                o=8;
+                break;
+            }
+        }
+    }
+}
+
 void tandy4_test(unsigned int w,unsigned int h,unsigned int ils) {
     unsigned int ymsk = (1u << ils) - 1u;
     unsigned int i,x,y;
@@ -496,6 +537,8 @@ void tandy4_test(unsigned int w,unsigned int h,unsigned int ils) {
     }
 
     test_pause(3);
+
+    tandy_palette_test();
 }
 
 void tandy16_test(unsigned int w,unsigned int h,unsigned int ils) {
@@ -612,6 +655,8 @@ void tandy16_test(unsigned int w,unsigned int h,unsigned int ils) {
     }
 
     test_pause(3);
+
+    tandy_palette_test();
 }
 
 void hgc_test(unsigned int w,unsigned int h) {
