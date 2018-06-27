@@ -389,6 +389,115 @@ noptr:
 #endif
 }
 
+void tandy4_test(unsigned int w,unsigned int h,unsigned int ils) {
+    unsigned int ymsk = (1u << ils) - 1u;
+    unsigned int i,x,y;
+    VGA_RAM_PTR vmem;
+
+    int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
+    LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
+    LOG_INT11_VIDEOMODE(int11_info);
+
+    if (((int11_info >> 4) & 3) == 3) // MDA can't do CGA!
+        LOG(LOG_WARN "CGA 4-color mode allowed to work despite MDA configuration\n");
+
+#if TARGET_MSDOS == 32
+    vmem = (VGA_RAM_PTR)(0xB800u << 4u);
+    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
+#else
+    vmem = (VGA_RAM_PTR)MK_FP(0xB800u,0);
+    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
+#endif
+
+    {
+        uint16_t port = int10_bd_read_cga_crt_io();
+        if (port != 0x3D4)
+            LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
+                port);
+    }
+
+    /* test that the RAM is there, note if it is not */
+    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++)
+        vmem[i] = 0x0F ^ i ^ (i << 6);
+
+    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++) {
+        if (vmem[i] != ((0x0F ^ i ^ (i << 6)) & 0xFF)) {
+            LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
+            return;
+        }
+    }
+
+    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++)
+        vmem[i] = 0;
+
+    /* Tandy memory layout:
+     * 16KB RAM region
+     *
+     * First 8KB has the even lines 0, 2, 4, 6, 8....
+     * Second 8KB has the odd lines 1, 3, 5, 7, 9....
+     * 8 pixels per byte pair. Low bits in first byte, high bits in second byte.
+     *
+     * Getting the 8x8 fonts is a pain on pre-EGA BIOSes, so just go ahead and use INT 10h to print text */
+    __asm {
+        mov     ah,0x02     ; set cursor pos
+        mov     bh,0x00     ; page 0
+        xor     dx,dx       ; DH=row=0  DL=col=0
+        int     10h
+    }
+
+    sprintf(tmp,"%ux%u %04xh m=%02xh\r\n",w,h,0xB800,read_int10_bd_mode());
+    for (i=0;tmp[i] != 0;i++) {
+        unsigned char cv = tmp[i];
+
+        __asm {
+            mov     ah,0x0E     ; teletype output
+            mov     al,cv
+            xor     bh,bh
+            mov     bl,15       ; foreground color (white)
+            int     10h
+        }
+    }
+
+    for (y=16;y < 80;y++) {
+        VGA_RAM_PTR d = vmem + ((y>>ils) * (w>>2u)) + ((y&ymsk) * 0x2000u);
+        for (x=0;x < (512u/4u);x += 2u) {
+            unsigned char c1 = x / (128u/4u);
+            unsigned char c2 = ((x + (64u/4u)) / (128u/4u)) & 3u;
+
+            if (y >= 48 && c1 != c2) {
+                d[x]   = ((c1 & 1)       * ((y&1) ? 0x55u : 0xAAu)) +
+                         ((c2 & 1)       * ((y&1) ? 0xAAu : 0x55u));
+                d[x+1] = (((c1 & 2) >> 1) * ((y&1) ? 0x55u : 0xAAu)) +
+                         (((c2 & 2) >> 1) * ((y&1) ? 0xAAu : 0x55u));
+            }
+            else {
+                d[x]   =  (c1 & 1)       * 0xFFu;
+                d[x+1] = ((c1 & 2) >> 1) * 0xFFu;
+            }
+        }
+    }
+
+    for (i=1;i <= 3;i++) {
+        for (x=0;x < w;x++) {
+            y = (x + ((i - 1) * 6)) % 100;
+            if (y >= 50) y = 100 - y;
+            y += 100;
+
+            {
+                VGA_RAM_PTR d = vmem + ((y>>ils) * (w>>2u)) + ((y&ymsk) * 0x2000u) + ((x >> 3u) * 2u);
+
+                d[0] &= ~((0x80u) >> (x & 7));
+                d[0] |= (((i&1u) * 0x80u) >> (x & 7));
+
+                d[1] &= ~((0x80u) >> (x & 7));
+                d[1] |= (((i&2u) * 0x40u) >> (x & 7));
+            }
+        }
+    }
+
+    test_pause(3);
+}
+
 void tandy16_test(unsigned int w,unsigned int h,unsigned int ils) {
     unsigned int ymsk = (1u << ils) - 1u;
     unsigned int i,x,y;
@@ -2054,6 +2163,10 @@ int main() {
         LOG(LOG_INFO "Testing: INT 10h mode 9 320x200 Tandy/PCjr 16-color graphics mode\n");
         if (int10_setmode_and_check(9))// will LOG if mode set failure
             tandy16_test(320,200,2); // 4-way interlace
+
+        LOG(LOG_INFO "Testing: INT 10h mode 10 640x200 Tandy/PCjr 4-color graphics mode\n");
+        if (int10_setmode_and_check(10))// will LOG if mode set failure
+            tandy4_test(640,200,2); // 4-way interlace
     }
 
     /* set back to mode 3 80x25 text */
