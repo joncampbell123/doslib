@@ -465,7 +465,7 @@ void tandy_palette_test(void) {
         }
 
         for (o=0;o < 4;o++) {
-            vga_tandy_setpalette(i,(o & 1) ? i : (i >= 8 ? 0x00 : 0x3F));
+            vga_tandy_setpalette(i,(o & 1) ? i : (i >= 8 ? 0x0 : 0xF));
             if (!test_pause_10ths(2)) {
                 vga_tandy_setpalette(i,i);
                 i=16;
