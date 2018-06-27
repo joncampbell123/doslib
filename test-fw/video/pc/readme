@@ -1,6 +1,3 @@
-MDA/Hercules/CGA/EGA/VGA/SVGA and various other test programs.
+MDA/Hercules/CGA/EGA/VGA/SVGA/MCGA/Tandy/PCjr and various other test programs.
 Uses VGA library and 8254 library.
-
-TODO: Yet to test:
- - 16-color PCjr/Tandy modes
 
