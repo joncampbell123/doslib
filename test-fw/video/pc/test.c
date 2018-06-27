@@ -159,6 +159,14 @@ uint8_t int10_bd_read_cga_mode_byte(void) {
     return read_bda8(0x65);
 }
 
+// TODO: Make a flag in the VGA library.
+//       If set, Tandy.
+//       If clear, PCjr.
+//       This is important to know because PCjr requires us to
+//       refer to the system memory map of VRAM to properly access
+//       graphics mode, while Tandy does not require this.
+uint8_t is_tandy = 0;
+
 uint16_t int11_info = 0;
 
 int int10_setmode_and_check(uint8_t mode) {
@@ -364,18 +372,21 @@ VGA_RAM_PTR get_pcjr_mem(void) {
     unsigned short s;
     unsigned char b;
 
-    /* TODO: How can the VGA library detect PCjr vs Tandy? */
-
+    if (!is_tandy) {
 #if TARGET_MSDOS == 32
-    b = *((unsigned char*)(0x48A));
+        b = *((unsigned char*)(0x48A));
 #else
-    b = *((unsigned char far*)MK_FP(0x40,0x8A));
+        b = *((unsigned char far*)MK_FP(0x40,0x8A));
 #endif
 
-    s = ((b >> 3) & 7) << 10;
+        s = ((b >> 3) & 7) << 10;
 
-    /* SAFETY: If s == 0, then return 0xB800 */
-    if (s == 0) s = 0xB800;
+        /* SAFETY: If s == 0, then return 0xB800 */
+        if (s == 0) s = 0xB800;
+    }
+    else {
+        s = 0xB800;
+    }
 
 #if TARGET_MSDOS == 32
     return (VGA_RAM_PTR)(s << 4);
@@ -2150,6 +2161,17 @@ int main() {
 	_cli();
 	write_8254_system_timer(0); // 18.2
 	_sti();
+
+    /* PCjr/Tandy: We NEED to know which one! Use the BIOS model byte. */
+    is_tandy = 1;
+    if ((vga_state.vga_flags & (VGA_IS_TANDY))) {
+#if TARGET_MSDOS == 32
+        if (*((unsigned char*)0xFFFFE) == 0xFD) is_tandy = 0;
+#else
+        if (*((unsigned char far*)MK_FP(0xF000,0xFFFE)) == 0xFD) is_tandy = 0;
+#endif
+        LOG(LOG_INFO "PCjr/Tandy detected, computer is %s\n",is_tandy?"Tandy":"PCjr");
+    }
 
     /* basic pattern tests */
     /* we need the screen */
