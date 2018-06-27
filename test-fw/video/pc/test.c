@@ -1879,10 +1879,9 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     uint16_t crtbase;
     uint16_t sv;
 
-    // emulation bug check:
-    //
-    // DOSBox SVN & DOSBox-X, machine=pcjr, INT 10h doesn't do anything to control blink attribute,
-    // nor does the text mode come up with blink enabled by default.
+    // NTS: The PCjr puts the CGA "mode register" in 0x3DA register 0 instead of 0x3D8.
+    //      We have to write it directly to control blinking. INT 10h does not provide
+    //      the blink control function on PCjr.
 
     // real hardware vs emulation check:
     //
@@ -2012,12 +2011,21 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     for (i=0;tmp[i] != 0;i++)
         vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
 
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_PCJR))) {
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
         __asm {
             mov     ax,0x1003
             mov     bl,0x01
             int     10h
         }
+    }
+    else if ((vga_state.vga_flags & (VGA_IS_PCJR))) {
+        uint8_t mb = int10_bd_read_cga_mode_byte();
+
+        LOG(LOG_DEBUG "Switching on blink attribute PCjr method, port=0x%03x, BIOS mode byte was 0x%02x\n",
+            crtbase+6u,mb);
+
+        outp(crtbase+6u,0x00);
+        outp(crtbase+6u,mb | 0x20);/*turn on bit 5*/
     }
     else {
         uint8_t mb = int10_bd_read_cga_mode_byte();
@@ -2037,12 +2045,21 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     for (i=0;tmp[i] != 0;i++)
         vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
 
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_PCJR))) {
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
         __asm {
             mov     ax,0x1003
             mov     bl,0x00
             int     10h
         }
+    }
+    else if ((vga_state.vga_flags & (VGA_IS_PCJR))) {
+        uint8_t mb = int10_bd_read_cga_mode_byte();
+
+        LOG(LOG_DEBUG "Switching on blink attribute PCjr method, port=0x%03x, BIOS mode byte was 0x%02x\n",
+            crtbase+6u,mb);
+
+        outp(crtbase+6u,0x00);
+        outp(crtbase+6u,mb & 0xDF);/*turn off bit 5*/
     }
     else {
         uint8_t mb = int10_bd_read_cga_mode_byte();
