@@ -245,6 +245,9 @@ static inline void vga_tandy_setpalette(unsigned char i,unsigned char c) {
 	inp(0x3DA);
     outp(0x3DA,0x10 + i);
 	outp(0x3DA,c);	/* NTS: Writing 0x00 like some sames do works on Tandy but PCjr takes THIS byte as palette data */
+
+	inp(0x3DA);
+    outp(0x3DA,0x10 + i);
 	outp(0x3DE,c);	/* NTS: This works properly on Tandy [at least DOSBox] */
 
     /* PCjr: According to DOSBox SVN, setting a color palette blanks the display, so unblank it */
