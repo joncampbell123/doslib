@@ -389,6 +389,122 @@ noptr:
 #endif
 }
 
+void tandy16_test(unsigned int w,unsigned int h,unsigned int ils) {
+    unsigned int ymsk = (1u << ils) - 1u;
+    unsigned int i,x,y;
+    VGA_RAM_PTR vmem;
+
+    int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
+    LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
+    LOG_INT11_VIDEOMODE(int11_info);
+
+    if (((int11_info >> 4) & 3) == 3) // MDA can't do CGA!
+        LOG(LOG_WARN "CGA 4-color mode allowed to work despite MDA configuration\n");
+
+#if TARGET_MSDOS == 32
+    vmem = (VGA_RAM_PTR)(0xB800u << 4u);
+    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
+#else
+    vmem = (VGA_RAM_PTR)MK_FP(0xB800u,0);
+    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
+#endif
+
+    {
+        uint16_t port = int10_bd_read_cga_crt_io();
+        if (port != 0x3D4)
+            LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
+                port);
+    }
+
+    /* test that the RAM is there, note if it is not */
+    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++)
+        vmem[i] = 0x0F ^ i ^ (i << 6);
+
+    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++) {
+        if (vmem[i] != ((0x0F ^ i ^ (i << 6)) & 0xFF)) {
+            LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
+            return;
+        }
+    }
+
+    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++)
+        vmem[i] = 0;
+
+    /* Tandy memory layout:
+     * 16KB RAM region
+     *
+     * First 8KB has the even lines 0, 2, 4, 6, 8....
+     * Second 8KB has the odd lines 1, 3, 5, 7, 9....
+     * 2 pixels per byte.
+     *
+     * Getting the 8x8 fonts is a pain on pre-EGA BIOSes, so just go ahead and use INT 10h to print text */
+    __asm {
+        mov     ah,0x02     ; set cursor pos
+        mov     bh,0x00     ; page 0
+        xor     dx,dx       ; DH=row=0  DL=col=0
+        int     10h
+    }
+
+    sprintf(tmp,"%ux%u %04xh m=%02xh\r\n",w,h,0xB800,read_int10_bd_mode());
+    for (i=0;tmp[i] != 0;i++) {
+        unsigned char cv = tmp[i];
+
+        __asm {
+            mov     ah,0x0E     ; teletype output
+            mov     al,cv
+            xor     bh,bh
+            mov     bl,15       ; foreground color (white)
+            int     10h
+        }
+    }
+
+    if (w >= 320) {
+        for (y=16;y < 80;y++) {
+            VGA_RAM_PTR d = vmem + ((y>>ils) * (w>>1u)) + ((y&ymsk) * 0x2000u);
+            for (x=0;x < (256u/2u);x++) {
+                unsigned char c1 = x / (16u/2u);
+                unsigned char c2 = ((x + (8u/2u)) / (16u/2u)) & 15;
+
+                if (y >= 48 && c1 != c2)
+                    d[x] = (c2 * ((y&1) ? 0x01u : 0x10u)) + (c1 * ((y&1) ? 0x10u : 0x01u));
+                else
+                    d[x] = c1 * 0x11u;
+            }
+        }
+    }
+    else {
+        for (y=16;y < 80;y++) {
+            VGA_RAM_PTR d = vmem + ((y>>ils) * (w>>1u)) + ((y&ymsk) * 0x2000u);
+            for (x=0;x < (128u/2u);x++) {
+                unsigned char c1 = x / (8u/2u);
+                unsigned char c2 = ((x + (4u/2u)) / (8u/2u)) & 15;
+
+                if (y >= 48 && c1 != c2)
+                    d[x] = (c2 * ((y&1) ? 0x01u : 0x10u)) + (c1 * ((y&1) ? 0x10u : 0x01u));
+                else
+                    d[x] = c1 * 0x11u;
+            }
+        }
+    }
+
+    for (i=1;i <= 15;i++) {
+        for (x=0;x < w;x++) {
+            y = (x + ((i - 1) * 6)) % 100;
+            if (y >= 50) y = 100 - y;
+            y += 100;
+
+            {
+                VGA_RAM_PTR d = vmem + ((y>>ils) * (w>>1u)) + ((y&ymsk) * 0x2000u);
+
+                d[x/2u] &= ~((0xF0u) >> ((x & 15) * 16u));
+                d[x/2u] |= (((i&15u) * 0x10u) >> ((x & 1) * 4u));
+            }
+        }
+    }
+
+    test_pause(3);
+}
+
 void hgc_test(unsigned int w,unsigned int h) {
     unsigned int i,x,y;
     VGA_RAM_PTR font8;
@@ -1928,6 +2044,16 @@ int main() {
             hgc_test(720,350);
             vga_turn_off_hgc();
         }
+    }
+
+    if ((vga_state.vga_flags & (VGA_IS_TANDY))) {
+        LOG(LOG_INFO "Testing: INT 10h mode 8 160x200 Tandy/PCjr 16-color graphics mode\n");
+        if (int10_setmode_and_check(8))// will LOG if mode set failure
+            tandy16_test(160,200,1); // 2-way interlace
+
+        LOG(LOG_INFO "Testing: INT 10h mode 9 320x200 Tandy/PCjr 16-color graphics mode\n");
+        if (int10_setmode_and_check(9))// will LOG if mode set failure
+            tandy16_test(320,200,2); // 4-way interlace
     }
 
     /* set back to mode 3 80x25 text */
