@@ -243,6 +243,10 @@ static inline void vga_tandy_setpalette(unsigned char i,unsigned char c) {
     if (vga_state.vga_flags & VGA_IS_PCJR) {
         outp(0x3DA,0x10 + i);
         outp(0x3DA,c);
+
+        /* NTS: DOSBox machine=pcjr emulation seems to imply that writing palette
+         *      registers blanks the display. Do dummy write to un-blank the display. */
+        outp(0x3DA,0x00);
     }
     else {
         outp(0x3DA,0x10 + i);
