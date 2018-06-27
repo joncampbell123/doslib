@@ -2122,6 +2122,11 @@ int main() {
 #if TARGET_MSDOS == 16 && defined(__COMPACT__)
 #else
 			if (vga_state.vga_flags & (VGA_IS_TANDY|VGA_IS_PCJR)) {
+                /* PCjr maps system RAM to B8000 but only the first 16KB,
+                 * making 320x200x16 and 640x200x4 impossible to work properly
+                 * without locating the system RAM that's mapped there. */
+                VGA_RAM_PTR svmem;
+
 				/* 160x200x16 */
 				int10_setmode(8);
 				{
@@ -2129,7 +2134,17 @@ int main() {
 					unsigned int x,y;
 					VGA_RAM_PTR wr;
 
-					for (y=0;y < (160/2);y++)
+                    /* This may point into system RAM.
+                     * Worst case scenario the BIOS byte read for this info might be WRONG
+                     * and we're likely to scribble over the DOS kernel. Just in case, show
+                     * the memory address onscreen.
+                     *
+                     * Also beware: The system memory pointer may change between 160x200 and 320x200 Tandy/PCjr mode! */
+                    svmem = get_pcjr_mem();
+                    vga_state.vga_graphics_ram = (VGA_RAM_PTR)svmem;
+                    vga_state.vga_alpha_ram = (VGA_ALPHA_PTR)svmem;
+
+                    for (y=0;y < (160/2);y++)
 						row[y] = ((y * 0x10) / 80) * 0x11;
 
 					for (y=0;y < 80;y++) {
@@ -2171,6 +2186,16 @@ int main() {
 					unsigned char row[320];
 					unsigned int x,y;
 					VGA_RAM_PTR wr;
+
+                    /* This may point into system RAM.
+                     * Worst case scenario the BIOS byte read for this info might be WRONG
+                     * and we're likely to scribble over the DOS kernel. Just in case, show
+                     * the memory address onscreen.
+                     *
+                     * Also beware: The system memory pointer may change between 160x200 and 320x200 Tandy/PCjr mode! */
+                    svmem = get_pcjr_mem();
+                    vga_state.vga_graphics_ram = (VGA_RAM_PTR)svmem;
+                    vga_state.vga_alpha_ram = (VGA_ALPHA_PTR)svmem;
 
 					for (y=0;y < (320/2);y++)
 						row[y] = ((y * 0x10) / 160) * 0x11;
@@ -2227,6 +2252,16 @@ int main() {
 					unsigned int x,y;
 					VGA_ALPHA_PTR wr;
 
+                    /* This may point into system RAM.
+                     * Worst case scenario the BIOS byte read for this info might be WRONG
+                     * and we're likely to scribble over the DOS kernel. Just in case, show
+                     * the memory address onscreen.
+                     *
+                     * Also beware: The system memory pointer may change between 160x200 and 320x200 Tandy/PCjr mode! */
+                    svmem = get_pcjr_mem();
+                    vga_state.vga_graphics_ram = (VGA_RAM_PTR)svmem;
+                    vga_state.vga_alpha_ram = (VGA_ALPHA_PTR)svmem;
+
 					for (y=0;y < (640/8);y++) {
 						x = (y * 4) / (640/8);
 						row[y] = (x & 1) * 0xFFU;
@@ -2273,6 +2308,7 @@ int main() {
 				/* TODO: figure out 640x200x16 */
 
 				int10_setmode(3);
+                update_state_from_vga();
 				if (vga_state.vga_flags & VGA_IS_VGA && vga_want_9wide != 0xFF) vga_set_9wide(vga_want_9wide);
 			}
 			else {
