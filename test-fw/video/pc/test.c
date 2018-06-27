@@ -121,6 +121,8 @@ void log_vga_info(void) {
         LOG(LOG_INFO "- AMSTRAD\n");
     if (vga_state.vga_flags & VGA_IS_TANDY)
         LOG(LOG_INFO "- TANDY\n");
+    if (vga_state.vga_flags & VGA_IS_PCJR)
+        LOG(LOG_INFO "- PCjr\n");
     if (vga_state.vga_flags & VGA_IS_MCGA)
         LOG(LOG_INFO "- MCGA\n");
     if (vga_state.vga_flags & VGA_IS_HGC)
@@ -158,14 +160,6 @@ uint16_t int10_bd_read_cga_crt_io(void) {
 uint8_t int10_bd_read_cga_mode_byte(void) {
     return read_bda8(0x65);
 }
-
-// TODO: Make a flag in the VGA library.
-//       If set, Tandy.
-//       If clear, PCjr.
-//       This is important to know because PCjr requires us to
-//       refer to the system memory map of VRAM to properly access
-//       graphics mode, while Tandy does not require this.
-uint8_t is_tandy = 0;
 
 uint16_t int11_info = 0;
 
@@ -372,7 +366,8 @@ VGA_RAM_PTR get_pcjr_mem(void) {
     unsigned short s;
     unsigned char b;
 
-    if (!is_tandy) {
+    if ((vga_state.vga_flags & (VGA_IS_PCJR))) {
+        /* PCjr: Must locate the system memory area because the video mem alias is limited to 16KB */
 #if TARGET_MSDOS == 32
         b = *((unsigned char*)(0x48A));
 #else
@@ -2162,17 +2157,6 @@ int main() {
 	write_8254_system_timer(0); // 18.2
 	_sti();
 
-    /* PCjr/Tandy: We NEED to know which one! Use the BIOS model byte. */
-    is_tandy = 1;
-    if ((vga_state.vga_flags & (VGA_IS_TANDY))) {
-#if TARGET_MSDOS == 32
-        if (*((unsigned char*)0xFFFFE) == 0xFD) is_tandy = 0;
-#else
-        if (*((unsigned char far*)MK_FP(0xF000,0xFFFE)) == 0xFD) is_tandy = 0;
-#endif
-        LOG(LOG_INFO "PCjr/Tandy detected, computer is %s\n",is_tandy?"Tandy":"PCjr");
-    }
-
     /* basic pattern tests */
     /* we need the screen */
     log_noecho();
@@ -2255,7 +2239,7 @@ int main() {
         }
     }
 
-    if ((vga_state.vga_flags & (VGA_IS_TANDY))) {
+    if ((vga_state.vga_flags & (VGA_IS_TANDY|VGA_IS_PCJR))) {
         LOG(LOG_INFO "Testing: INT 10h mode 8 160x200 Tandy/PCjr 16-color graphics mode\n");
         if (int10_setmode_and_check(8))// will LOG if mode set failure
             tandy16_test(160,200,1); // 2-way interlace
