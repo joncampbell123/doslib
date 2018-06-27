@@ -350,7 +350,7 @@ void vga_dacmask_test(unsigned char fgcolor) {
 }
 
 VGA_RAM_PTR get_8x8_font(void) {
-    unsigned short s=0xF000,o=0xFA6E; /* IBM BIOS F000:FA6E font */
+    static unsigned short s=0xF000,o=0xFA6E; /* IBM BIOS F000:FA6E font. MUST NOT BE ON STACK BECAUSE OF BP */
 
     if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
         __asm {
@@ -1830,6 +1830,18 @@ int main() {
             LOG_DEBUG "- BL(active display code)=0x%02x\n"
             LOG_DEBUG "- BH(alternate display code)=0x%02x\n",
             bv&0xFFu,bv>>8u);
+    }
+
+    /* NTS: Cannot use INT 10h to print in graphics mode, because INT 10h does not
+     *      know or understand the HGC graphics mode. */
+    {
+        VGA_RAM_PTR font8 = get_8x8_font();
+
+#if TARGET_MSDOS == 32
+        LOG(LOG_DEBUG "Font ptr: %p\n",font8);
+#else
+        LOG(LOG_DEBUG "Font ptr: %Fp\n",font8);
+#endif
     }
 
 	_cli();
