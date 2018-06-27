@@ -3,5 +3,4 @@ Uses VGA library and 8254 library.
 
 TODO: Yet to test:
  - 16-color PCjr/Tandy modes
- - Hercules 720x350 graphics
 
