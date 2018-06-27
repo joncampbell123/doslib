@@ -1729,6 +1729,9 @@ void cga4_test(unsigned int w,unsigned int h) {
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
         vga_dacmask_test(3);
+
+    if ((vga_state.vga_flags & (VGA_IS_TANDY|VGA_IS_PCJR)))
+        tandy_palette_test();
 }
 
 void cga2_test(unsigned int w,unsigned int h) {
@@ -1859,6 +1862,9 @@ void cga2_test(unsigned int w,unsigned int h) {
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
         vga_dacmask_test(1);
+
+    if ((vga_state.vga_flags & (VGA_IS_TANDY|VGA_IS_PCJR)))
+        tandy_palette_test();
 }
 
 void alphanumeric_test(unsigned int w,unsigned int h) {
