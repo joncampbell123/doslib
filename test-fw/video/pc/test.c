@@ -349,6 +349,105 @@ void vga_dacmask_test(unsigned char fgcolor) {
     }
 }
 
+void hgc_test(unsigned int w,unsigned int h) {
+    unsigned int i,x,y;
+    VGA_RAM_PTR vmem;
+
+    int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
+    LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
+    LOG_INT11_VIDEOMODE(int11_info);
+
+#if TARGET_MSDOS == 32
+    vmem = (VGA_RAM_PTR)(0xB000u << 4u);
+    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
+#else
+    vmem = (VGA_RAM_PTR)MK_FP(0xB000u,0);
+    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
+#endif
+
+    { /* NTS: Might be monochrome mode */
+        uint16_t port = int10_bd_read_cga_crt_io();
+        if (port != 0x3B4)
+            LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
+                port);
+    }
+
+    /* test that the RAM is there, note if it is not */
+    for (i=0;i < (h * (w / 8u));i++)
+        vmem[i] = 0x0F ^ i ^ (i << 6);
+
+    for (i=0;i < (h * (w / 8u));i++) {
+        if (vmem[i] != ((0x0F ^ i ^ (i << 6)) & 0xFF)) {
+            LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
+            return;
+        }
+    }
+
+    for (i=0;i < (h * (w / 8u));i++)
+        vmem[i] = 0;
+
+    /* Hercules memory layout:
+     *
+     * 720x350 (actually 720x348) with a 4-way interleave, within a 32KB memory region.
+     * 
+     * Scan lines 0, 4, 8, 12,16.... at B000:0000
+     * Scan lines 1, 5, 9, 13,17.... at B200:0000
+     * Scan lines 2, 6, 10,14,18.... at B400:0000
+     * Scan lines 3, 7, 11,15,19.... at B600:0000
+     */
+    __asm {
+        mov     ah,0x02     ; set cursor pos
+        mov     bh,0x00     ; page 0
+        xor     dx,dx       ; DH=row=0  DL=col=0
+        int     10h
+    }
+
+#if 0
+    sprintf(tmp,"%u x %u text at seg 0x%04x, mode 0x%02x\r\n",w,h,0xB800,read_int10_bd_mode());
+    for (i=0;tmp[i] != 0;i++) {
+        unsigned char cv = tmp[i];
+
+        __asm {
+            mov     ah,0x0E     ; teletype output
+            mov     al,cv
+            xor     bh,bh
+            mov     bl,3        ; foreground color (white)
+            int     10h
+        }
+    }
+#endif
+ 
+    for (y=16;y < 80;y++) {
+        VGA_RAM_PTR d = vmem + ((y>>2) * (w>>3u)) + ((y&3) * 0x2000);
+        for (x=0;x < (512u/8u);x++) {
+            unsigned char c1 = x / (256u/8u);
+            unsigned char c2 = ((x + (128u/8u)) / (256u/8u)) & 1;
+
+            if (y >= 48 && c1 != c2)
+                d[x] = (c2 * ((y&1) ? 0x55u : 0xAAu)) + (c1 * ((y&1) ? 0xAAu : 0x55u));
+            else
+                d[x] = c1 * 0xFFu;
+        }
+    }
+
+    for (i=1;i == 1;i++) {
+        for (x=0;x < w;x++) {
+            y = (x + ((i - 1) * 10)) % 60;
+            if (y >= 30) y = 60 - y;
+            y += 100;
+
+            {
+                VGA_RAM_PTR d = vmem + ((y>>2) * (w>>3u)) + ((y&3) * 0x2000);
+
+                d[x/8u] &= ~(0x80u >> (x & 7));
+                d[x/8u] |= (0x80u >> (x & 7));
+            }
+        }
+    }
+
+    test_pause(3);
+}
+
 void mcga2c_test(unsigned int w,unsigned int h) {
     unsigned int i,x,y;
     VGA_RAM_PTR vmem;
@@ -1759,6 +1858,16 @@ int main() {
         LOG(LOG_INFO "Testing: INT 10h mode 17 640x480 MCGA 2-color graphics mode\n");
         if (int10_setmode_and_check(17))// will LOG if mode set failure
             mcga2c_test(640,480);
+    }
+
+    if ((vga_state.vga_flags & (VGA_IS_HGC))) {
+        LOG(LOG_INFO "Testing: INT 10h mode XX 720x350 Hercules 2-color graphics mode\n");
+
+        if (int10_setmode_and_check(7)) {// will LOG if mode set failure
+            vga_turn_on_hgc();
+            hgc_test(720,350);
+            vga_turn_off_hgc();
+        }
     }
 
     /* set back to mode 3 80x25 text */
