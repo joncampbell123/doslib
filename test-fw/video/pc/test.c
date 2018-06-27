@@ -492,17 +492,17 @@ void tandy4_test(unsigned int w,unsigned int h,unsigned int ils) {
     }
 
     /* test that the RAM is there, note if it is not */
-    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++)
+    for (i=0;i < ((ymsk+1)*0x2000u);i++)
         vmem[i] = 0x0F ^ i ^ (i << 6);
 
-    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++) {
+    for (i=0;i < ((ymsk+1)*0x2000u);i++) {
         if (vmem[i] != ((0x0F ^ i ^ (i << 6)) & 0xFF)) {
             LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
             return;
         }
     }
 
-    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++)
+    for (i=0;i < ((ymsk+1)*0x2000u);i++)
         vmem[i] = 0;
 
     /* Tandy memory layout:
@@ -602,17 +602,17 @@ void tandy16_test(unsigned int w,unsigned int h,unsigned int ils) {
     }
 
     /* test that the RAM is there, note if it is not */
-    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++)
+    for (i=0;i < ((ymsk+1)*0x2000u);i++)
         vmem[i] = 0x0F ^ i ^ (i << 6);
 
-    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++) {
+    for (i=0;i < ((ymsk+1)*0x2000u);i++) {
         if (vmem[i] != ((0x0F ^ i ^ (i << 6)) & 0xFF)) {
             LOG(LOG_WARN "VRAM TEST FAILED, data written did not read back at byte offset 0x%x\n",i);
             return;
         }
     }
 
-    for (i=0;i < (w >= 320 ? 0x8000 : 0x4000)/*32KB/16KB*/;i++)
+    for (i=0;i < ((ymsk+1)*0x2000u);i++)
         vmem[i] = 0;
 
     /* Tandy memory layout:
