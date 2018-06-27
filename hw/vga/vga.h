@@ -221,6 +221,8 @@ void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags);
 void vga_correct_crtc_mode(struct vga_mode_params *p);
 void vga_read_crtc_mode(struct vga_mode_params *p);
 
+VGA_RAM_PTR get_pcjr_mem(void);
+
 #define VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC	0x0001
 
 static inline unsigned char vga_read_CRTC(unsigned char i) {
