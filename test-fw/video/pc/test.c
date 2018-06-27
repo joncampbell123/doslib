@@ -526,7 +526,11 @@ void tandy4_test(unsigned int w,unsigned int h,unsigned int ils) {
         int     10h
     }
 
-    sprintf(tmp,"%ux%u %04xh m=%02xh\r\n",w,h,0xB800,read_int10_bd_mode());
+#if TARGET_MSDOS == 32
+    sprintf(tmp,"%ux%u %04xh m=%02xh\r\n",w,h,(unsigned int)vmem >> 4,read_int10_bd_mode());
+#else
+    sprintf(tmp,"%ux%u %04xh m=%02xh\r\n",w,h,FP_SEG(vmem),read_int10_bd_mode());
+#endif
     for (i=0;tmp[i] != 0;i++) {
         unsigned char cv = tmp[i];
 
@@ -636,7 +640,11 @@ void tandy16_test(unsigned int w,unsigned int h,unsigned int ils) {
         int     10h
     }
 
-    sprintf(tmp,"%ux%u %04xh m=%02xh\r\n",w,h,0xB800,read_int10_bd_mode());
+#if TARGET_MSDOS == 32
+    sprintf(tmp,"%ux%u %04xh m=%02xh\r\n",w,h,(unsigned int)vmem >> 4,read_int10_bd_mode());
+#else
+    sprintf(tmp,"%ux%u %04xh m=%02xh\r\n",w,h,FP_SEG(vmem),read_int10_bd_mode());
+#endif
     for (i=0;tmp[i] != 0;i++) {
         unsigned char cv = tmp[i];
 
