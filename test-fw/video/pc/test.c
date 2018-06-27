@@ -1884,6 +1884,11 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     // DOSBox SVN & DOSBox-X, machine=pcjr, INT 10h doesn't do anything to control blink attribute,
     // nor does the text mode come up with blink enabled by default.
 
+    // real hardware vs emulation check:
+    //
+    // If DOSBox emulation is correct, Tandy/PCjr palette registers have no effect in text mode.
+    // Is that true of real hardware?
+
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
     LOG(LOG_DEBUG "INT 11h equipment list: 0x%04x\n",int11_info);
     LOG_INT11_VIDEOMODE(int11_info);
