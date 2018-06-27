@@ -1118,8 +1118,9 @@ int main() {
 				(vga_state.vga_flags & VGA_IS_MDA) ? 1 : 0,
 				(vga_state.vga_flags & VGA_IS_MCGA) ? 1 : 0,
 				(vga_state.vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type);
-			printf("Tandy/PCjr=%u Amstrad=%u IO=%03xh ALPHA=%u\n",
+			printf("Tandy=%u PCjr=%u Amstrad=%u IO=%03xh AM=%u\n",
 				(vga_state.vga_flags & VGA_IS_TANDY) ? 1 : 0,
+				(vga_state.vga_flags & VGA_IS_PCJR) ? 1 : 0,
 				(vga_state.vga_flags & VGA_IS_AMSTRAD) ? 1 : 0,
 				vga_state.vga_base_3x0,
 				vga_state.vga_alpha_mode);

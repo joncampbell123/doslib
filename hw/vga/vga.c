@@ -308,6 +308,22 @@ int probe_vga() {
             }
         }
 
+        /* actually it might not be Tandy, it could be PCjr */
+        if (vga_state.vga_flags & VGA_IS_TANDY) {
+            unsigned char mb;
+
+#if TARGET_MSDOS == 32
+            mb = *((unsigned char*)0xFFFFE);
+#else
+            mb = *((unsigned char far*)MK_FP(0xF000,0xFFFE));
+#endif
+
+            if (mb == 0xFD) {
+                vga_state.vga_flags &= ~VGA_IS_TANDY;
+                vga_state.vga_flags |= VGA_IS_PCJR;
+            }
+        }
+
         /* what about Amstrad? */
         {
             union REGS regs = {0};

@@ -38,7 +38,7 @@ char *vga_get_buf = NULL;
 
 void vga_write_state_DEBUG(FILE *f) {
 	unsigned char tmp[128];
-	sprintf(tmp,"VGA=%u EGA=%u CGA=%u MDA=%u MCGA=%u HGC=%u(%u) Tandy/PCjr=%u Amstrad=%u\n",
+	sprintf(tmp,"VGA=%u EGA=%u CGA=%u MDA=%u MCGA=%u HGC=%u(%u) Tandy=%u PCjr=%u Amstrad=%u\n",
 			(vga_state.vga_flags & VGA_IS_VGA) ? 1 : 0,
 			(vga_state.vga_flags & VGA_IS_EGA) ? 1 : 0,
 			(vga_state.vga_flags & VGA_IS_CGA) ? 1 : 0,
@@ -46,6 +46,7 @@ void vga_write_state_DEBUG(FILE *f) {
 			(vga_state.vga_flags & VGA_IS_MCGA) ? 1 : 0,
 			(vga_state.vga_flags & VGA_IS_HGC) ? 1 : 0,vga_state.vga_hgc_type,
 			(vga_state.vga_flags & VGA_IS_TANDY) ? 1 : 0,
+			(vga_state.vga_flags & VGA_IS_PCJR) ? 1 : 0,
 			(vga_state.vga_flags & VGA_IS_AMSTRAD) ? 1 : 0);
 	if (f == NULL)
 		vga_write(tmp);
@@ -2120,7 +2121,7 @@ int main() {
 		else if (c == 'P') {
 #if TARGET_MSDOS == 16 && defined(__COMPACT__)
 #else
-			if (vga_state.vga_flags & VGA_IS_TANDY) {
+			if (vga_state.vga_flags & (VGA_IS_TANDY|VGA_IS_PCJR)) {
 				/* 160x200x16 */
 				int10_setmode(8);
 				{
@@ -2285,7 +2286,7 @@ int main() {
 		else if (c == 'D') {
 			if (vga_state.vga_flags & VGA_IS_CGA) { /* NTS: This test also works on EGA/VGA */
 				int10_setmode(4);
-				if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_TANDY)) == 0) /* this part of the test doesn't work on EGA/VGA nor does it work on Tandy/PCjr */
+				if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_TANDY|VGA_IS_PCJR)) == 0) /* this part of the test doesn't work on EGA/VGA nor does it work on Tandy/PCjr */
 					vga_set_cga_palette_and_background(0,0);
 
 				{
@@ -2310,7 +2311,7 @@ int main() {
 						for (   ;x < (((320/4)*8)/8);x++) *wr++ = 0xFF;
 					}
 				}
-				if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_TANDY)) == 0) {/* this part of the test doesn't work on EGA/VGA */
+				if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_TANDY|VGA_IS_PCJR)) == 0) {/* this part of the test doesn't work on EGA/VGA */
 					while (getch() != 13);
 					vga_set_cga_palette_and_background(0,VGA_CGA_PALETTE_CS_BLUE);
 					while (getch() != 13);

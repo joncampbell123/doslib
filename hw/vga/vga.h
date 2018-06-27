@@ -43,7 +43,7 @@ struct vgastate_t {
 #pragma pack(pop)
 
 /* vga_flags */
-#define VGA_IS_TANDY			0x02	/* Tandy/PCjr */
+#define VGA_IS_TANDY			0x02
 #define VGA_IS_HGC			0x04
 #define VGA_IS_MCGA			0x08
 #define VGA_IS_VGA			0x10
@@ -51,6 +51,7 @@ struct vgastate_t {
 #define VGA_IS_CGA			0x40
 #define VGA_IS_MDA			0x80
 #define VGA_IS_AMSTRAD			0x100
+#define VGA_IS_PCJR             0x200
 
 /* attribute controller index, OR with index to enable palette again */
 #define VGA_AC_ENABLE			0x20
