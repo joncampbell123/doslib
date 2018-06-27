@@ -349,6 +349,41 @@ void vga_dacmask_test(unsigned char fgcolor) {
     }
 }
 
+/* NTS: PCjr and Tandy fake video RAM using system memory.
+ *      Video RAM memory I/O is redirected to system RAM at
+ *      a page controlled by the BIOS. We can read what
+ *      it is from the BIOS data area. Let's hope that
+ *      byte is valid.
+ *
+ *      The reason we can't just use the B800 alias is that
+ *      for some odd reason the IBM PCjr disregards address
+ *      line A14 which makes it impossible to access the
+ *      second half of 16KB through it, and therefore prevents
+ *      proper use of 320x200x16 and 640x200x4 modes. */
+VGA_RAM_PTR get_pcjr_mem(void) {
+    unsigned short s;
+    unsigned char b;
+
+    /* TODO: How can the VGA library detect PCjr vs Tandy? */
+
+#if TARGET_MSDOS == 32
+    b = *((unsigned char*)(0x48A));
+#else
+    b = *((unsigned char far*)MK_FP(0x40,0x8A));
+#endif
+
+    s = ((b >> 3) & 7) << 10;
+
+    /* SAFETY: If s == 0, then return 0xB800 */
+    if (s == 0) s = 0xB800;
+
+#if TARGET_MSDOS == 32
+    return (VGA_RAM_PTR)(s << 4);
+#else
+    return (VGA_RAM_PTR)MK_FP(s,0);
+#endif
+}
+
 VGA_RAM_PTR get_8x8_font(void) {
     static unsigned short s=0xF000,o=0xFA6E; /* IBM BIOS F000:FA6E font. MUST NOT BE ON STACK BECAUSE OF BP */
 
@@ -442,12 +477,11 @@ void tandy4_test(unsigned int w,unsigned int h,unsigned int ils) {
     if (((int11_info >> 4) & 3) == 3) // MDA can't do CGA!
         LOG(LOG_WARN "CGA 4-color mode allowed to work despite MDA configuration\n");
 
+    vmem = get_pcjr_mem();
 #if TARGET_MSDOS == 32
-    vmem = (VGA_RAM_PTR)(0xB800u << 4u);
-    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
+    LOG(LOG_DEBUG "Internal ptr (CPU system RAM): %p\n",vmem);
 #else
-    vmem = (VGA_RAM_PTR)MK_FP(0xB800u,0);
-    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
+    LOG(LOG_DEBUG "Internal ptr (CPU system RAM): %Fp\n",vmem);
 #endif
 
     {
@@ -553,12 +587,11 @@ void tandy16_test(unsigned int w,unsigned int h,unsigned int ils) {
     if (((int11_info >> 4) & 3) == 3) // MDA can't do CGA!
         LOG(LOG_WARN "CGA 4-color mode allowed to work despite MDA configuration\n");
 
+    vmem = get_pcjr_mem();
 #if TARGET_MSDOS == 32
-    vmem = (VGA_RAM_PTR)(0xB800u << 4u);
-    LOG(LOG_DEBUG "Internal ptr: %p\n",vmem);
+    LOG(LOG_DEBUG "Internal ptr (CPU system RAM): %p\n",vmem);
 #else
-    vmem = (VGA_RAM_PTR)MK_FP(0xB800u,0);
-    LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
+    LOG(LOG_DEBUG "Internal ptr (CPU system RAM): %Fp\n",vmem);
 #endif
 
     {
