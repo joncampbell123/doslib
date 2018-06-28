@@ -287,12 +287,24 @@ int probe_vga() {
 			vga_state.vga_flags |= VGA_IS_CGA;
     }
 
-	if (vga_state.vga_flags & VGA_IS_CGA) {
-        /* If it looks like a CGA it might be a Tandy/PCjr */
-        /* unfortunately I can't find ANYTHING on
-         * how to go about detecting Tandy graphics. The best I can
-         * find are obscure INT 1Ah calls that detect the Tandy's
-         * sound chip (and conflict the PCMCIA services---YIKES!) */
+    /* if it looks like CGA, it might be PCjr */
+    if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY))) {
+        unsigned char mb; /* Look at the BIOS model byte */
+
+#if TARGET_MSDOS == 32
+        mb = *((unsigned char*)0xFFFFE);
+#else
+        mb = *((unsigned char far*)MK_FP(0xF000,0xFFFE));
+#endif
+
+        if (mb == 0xFD)
+            vga_state.vga_flags |= VGA_IS_PCJR;
+    }
+
+    /* if it looks like CGA, it might be Tandy */
+    if ((vga_state.vga_flags & VGA_IS_CGA) && !(vga_state.vga_flags & (VGA_IS_PCJR|VGA_IS_TANDY))) {
+        /* Detect by the 3-voice chip.
+         * FIXME: Is there a better way? */
         {
             union REGS regs = {0};
             regs.w.ax = 0x8100;
@@ -305,22 +317,6 @@ int probe_vga() {
                 if ((regs.w.cflag & 1) == 0) { /* and sound chip is free? CF=0 */
                     vga_state.vga_flags |= VGA_IS_TANDY;
                 }
-            }
-        }
-
-        /* actually it might not be Tandy, it could be PCjr */
-        if (vga_state.vga_flags & VGA_IS_TANDY) {
-            unsigned char mb;
-
-#if TARGET_MSDOS == 32
-            mb = *((unsigned char*)0xFFFFE);
-#else
-            mb = *((unsigned char far*)MK_FP(0xF000,0xFFFE));
-#endif
-
-            if (mb == 0xFD) {
-                vga_state.vga_flags &= ~VGA_IS_TANDY;
-                vga_state.vga_flags |= VGA_IS_PCJR;
             }
         }
 
