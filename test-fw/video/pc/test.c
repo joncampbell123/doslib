@@ -352,6 +352,32 @@ void vga_dacmask_test(unsigned char fgcolor) {
 }
 
 VGA_RAM_PTR get_8x8_font(void) {
+#if TARGET_MSDOS == 32
+    VGA_RAM_PTR p = (VGA_RAM_PTR)0xFFA6E; /* IBM BIOS F000:FA6E font. MUST NOT BE ON STACK BECAUSE OF BP */
+
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+        struct dpmi_realmode_call rc;
+        struct dpmi_realmode_call *p_rc = &rc;
+
+        rc.eax = 0x1130;
+        rc.ebx = 0x0300;
+        rc.flags = 0;
+        rc.es = 0;
+
+        __asm {
+            mov	ax,0x0300
+            mov	bx,0x0010   ; INT 10h
+            xor	cx,cx
+            mov	edi,p_rc    ; we trust Watcom has left ES == DS
+            int	0x31		; call DPMI
+        }
+
+        if (((rc.ebp | rc.es) & 0xFFFFu) != 0u)
+            p = (VGA_RAM_PTR)((rc.es << 4u) + (rc.ebp & 0xFFFFu));
+    }
+
+    return p;
+#else
     static unsigned short s=0xF000,o=0xFA6E; /* IBM BIOS F000:FA6E font. MUST NOT BE ON STACK BECAUSE OF BP */
 
     if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
@@ -384,9 +410,6 @@ noptr:
         }
     }
 
-#if TARGET_MSDOS == 32
-    return (VGA_RAM_PTR)((s << 4u) + o);
-#else
     return (VGA_RAM_PTR)MK_FP(s,o);
 #endif
 }
