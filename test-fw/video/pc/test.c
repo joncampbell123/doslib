@@ -2207,6 +2207,28 @@ int main() {
 #endif
     }
 
+    /* Snap the first 1KB of VGA BIOS (if it exists).
+     * If the card is CGA or MDA, it probably doesn't have one. */
+    {
+        VGA_RAM_PTR ptr;
+        FILE *fp;
+
+        assert(sizeof(tmp) >= 1024);
+#if TARGET_MSDOS == 32
+        ptr = (VGA_RAM_PTR)0xC0000;
+        memcpy(tmp,ptr,1024);
+#else
+        ptr = (VGA_RAM_PTR)MK_FP(0xC000,0x0000);
+        _fmemcpy(tmp,ptr,1024);
+#endif
+
+        fp = fopen("video\\pc\\C000_1KB.BIN","wb");
+        if (fp != NULL) {
+            fwrite(tmp,1024,1,fp);
+            fclose(fp);
+        }
+    }
+
 	_cli();
 	write_8254_system_timer(0); // 18.2
 	_sti();
