@@ -458,6 +458,29 @@ void tandy4_test(unsigned int w,unsigned int h,unsigned int ils) {
                 port);
     }
 
+    /* test if PCjr:
+     * Make sure what we see at B800:0000 matches the segment we think is PCjr video memory.
+     * This is a read-only test, to avoid damaging the DOS kernel accidentally.
+     * According to DOSBox SVN/DOSBox-X PCjr emulation, only the first 16KB is visible at B800. */
+    if ((vga_state.vga_flags & (VGA_IS_PCJR))) {
+        VGA_RAM_PTR alt;
+
+#if TARGET_MSDOS == 32
+        alt = (VGA_RAM_PTR)0xB8000;
+#else
+        alt = (VGA_RAM_PTR)MK_FP(0xB800,0x0000);
+#endif
+
+        LOG(LOG_DEBUG "Testing PCjr video memory vs system memory remapping\n");
+
+        for (i=0;i < 0x2000u;i++) {
+            if (vmem[i] != alt[i]) {
+                LOG(LOG_WARN "VRAM TEST FAILED, PCjr video mem vs system mem associated with it does not match at byte 0x%x\n",i);
+                return;
+            }
+        }
+    }
+
     /* test that the RAM is there, note if it is not */
     for (i=0;i < ((ymsk+1)*0x2000u);i++)
         vmem[i] = 0x0F ^ i ^ (i << 6);
@@ -570,6 +593,29 @@ void tandy16_test(unsigned int w,unsigned int h,unsigned int ils) {
         if (port != 0x3D4)
             LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
                 port);
+    }
+
+    /* test if PCjr:
+     * Make sure what we see at B800:0000 matches the segment we think is PCjr video memory.
+     * This is a read-only test, to avoid damaging the DOS kernel accidentally.
+     * According to DOSBox SVN/DOSBox-X PCjr emulation, only the first 16KB is visible at B800. */
+    if ((vga_state.vga_flags & (VGA_IS_PCJR))) {
+        VGA_RAM_PTR alt;
+
+#if TARGET_MSDOS == 32
+        alt = (VGA_RAM_PTR)0xB8000;
+#else
+        alt = (VGA_RAM_PTR)MK_FP(0xB800,0x0000);
+#endif
+
+        LOG(LOG_DEBUG "Testing PCjr video memory vs system memory remapping\n");
+
+        for (i=0;i < 0x2000u;i++) {
+            if (vmem[i] != alt[i]) {
+                LOG(LOG_WARN "VRAM TEST FAILED, PCjr video mem vs system mem associated with it does not match at byte 0x%x\n",i);
+                return;
+            }
+        }
     }
 
     /* test that the RAM is there, note if it is not */
