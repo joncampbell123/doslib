@@ -541,6 +541,23 @@ void cga4_test(unsigned int w,unsigned int h) {
                 port);
     }
 
+    sprintf(tmp,"%ux%u seg %xh CGA4, mode %02xh",w,h,0xB800,read_int10_bd_mode());
+    int10_poscurs(0,0);
+    int10_print(tmp);
+
+    for (y=16;y < 80;y++) {
+        VGA_RAM_PTR d = vmem + ((y>>1u) * (w>>2u)) + ((y&1u) * 0x2000u);
+        for (x=0;x < (128u/4u);x++) {
+            unsigned char c1 = x / (32u/4u);
+            unsigned char c2 = ((x + (16u/4u)) / (32u/4u)) & 3;
+
+            if (y >= 48 && c1 != c2)
+                d[x] = (c2 * ((y&1) ? 0x11u : 0x44u)) + (c1 * ((y&1) ? 0x44u : 0x11u));
+            else
+                d[x] = c1 * 0x55u;
+        }
+    }
+
     test(4);
 }
 
@@ -568,6 +585,23 @@ void cga2_test(unsigned int w,unsigned int h) {
         if (port != 0x3D4)
             LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
                 port);
+    }
+
+    sprintf(tmp,"%ux%u seg %xh CGA2, mode %02xh",w,h,0xB800,read_int10_bd_mode());
+    int10_poscurs(0,0);
+    int10_print(tmp);
+
+    for (y=16;y < 80;y++) {
+        VGA_RAM_PTR d = vmem + ((y>>1u) * (w>>3u)) + ((y&1u) * 0x2000u);
+        for (x=0;x < (128u/8u);x++) {
+            unsigned char c1 = x / (64u/8u);
+            unsigned char c2 = ((x + (32u/8u)) / (64u/8u)) & 1;
+
+            if (y >= 48 && c1 != c2)
+                d[x] = (c2 * ((y&1) ? 0x55u : 0xAAu)) + (c1 * ((y&1) ? 0xAAu : 0x55u));
+            else
+                d[x] = c1 * 0xFFu;
+        }
     }
 
     test(2);
