@@ -1222,6 +1222,25 @@ void auto_test(unsigned int colors) {
         st_ac_pal[i] = i;    update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
     }
 
+    for (i=0;i < 8;i++) {
+        st_dac_mask = 0xFF << i;
+        outp(0x3C6,st_dac_mask);
+        print_vga_state();
+
+        test_pause_10ths(2);
+    }
+
+    for (i=0;i < 8;i++) {
+        st_dac_mask = 0xFF >> i;
+        outp(0x3C6,st_dac_mask);
+        print_vga_state();
+
+        test_pause_10ths(2);
+    }
+    st_dac_mask = 0xFF;
+    outp(0x3C6,st_dac_mask);
+    print_vga_state();
+
     if (colors == 256) {
         dac_ramps2();
 
