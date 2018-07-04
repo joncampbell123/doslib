@@ -861,11 +861,35 @@ void dac_ramps16(void) {
     }
 }
 
+/* palette ramps appropriate for 256-color modes */
+void dac_ramps256(void) {
+    unsigned int i,j;
+    unsigned char r,g,b;
+    unsigned char rm,gm,bm;
+
+    outp(0x3C8,0);
+    for (i=0;i < 4;i++) {
+        rm = ((i&3) == 0) || ((i&3) == 1);
+        gm = ((i&3) == 0) || ((i&3) == 2);
+        bm = ((i&3) == 0) || ((i&3) == 3);
+        for (j=0;j < 64;j++) {
+            r = rm ? j : 0;
+            g = gm ? j : 0;
+            b = bm ? j : 0;
+            outp(0x3C9,r);
+            outp(0x3C9,g);
+            outp(0x3C9,b);
+        }
+    }
+}
+
 void manual_test(unsigned int colors) {
     outp(0x3C6,0xFF);
     ac_ramp();
 
-    if (colors == 16)
+    if (colors == 256)
+        dac_ramps256();
+    else if (colors == 16)
         dac_ramps16();
     else if (colors == 4)
         dac_ramps4();
