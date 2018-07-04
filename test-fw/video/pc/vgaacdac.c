@@ -1294,6 +1294,9 @@ int main(int argc,char **argv) {
         }
     }
 
+    if (auto_test_mode)
+        vga_entry_sel = VGAENT_MAX;
+
     mkdir("video");
     mkdir("video\\pc");
     if (!log_init()) {
