@@ -969,6 +969,11 @@ void st_dac_mask_toggle(unsigned char b) {
     outp(0x3C6,st_dac_mask);
 }
 
+void update_ac_pal(unsigned char i) {
+    vga_write_AC(i,              st_ac_pal[i]);
+    vga_write_AC(i|VGA_AC_ENABLE,st_ac_pal[i]);
+}
+
 void test(unsigned int colors) {
     outp(0x3C6,0xFF);
     ac_ramp();
@@ -1117,6 +1122,8 @@ void manual_test(unsigned int colors) {
 }
 
 void auto_test(unsigned int colors) {
+    unsigned int i;
+
     int10_poscurs(24,0);
     int10_print("Initial modeset",0x3F);
     print_vga_state();
@@ -1165,6 +1172,18 @@ void auto_test(unsigned int colors) {
         print_vga_state();
 
         test_pause(1);
+    }
+
+    /* ------------- */
+    int10_poscurs(24,0);
+    int10_print("Attribute pal  ",0x3F);
+    for (i=0;i < 16;i++) {
+        st_ac_pal[i] = 0x00; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
+        st_ac_pal[i] = 0x07; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
+        st_ac_pal[i] = 0x0F; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
+        st_ac_pal[i] = 0x1F; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
+        st_ac_pal[i] = 0x3F; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
+        st_ac_pal[i] = i;    update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
     }
 }
 
