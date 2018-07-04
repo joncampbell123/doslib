@@ -499,7 +499,7 @@ noptr:
 }
 
 void mcga2c_test(unsigned int w,unsigned int h) {
-    unsigned int i,x,y;
+    unsigned int x,y;
     VGA_RAM_PTR vmem;
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -538,8 +538,7 @@ void mcga2c_test(unsigned int w,unsigned int h) {
 }
 
 void vga_test(unsigned int w,unsigned int h) {
-    unsigned int o,i,x,y;
-    unsigned char attrpal[16];
+    unsigned int o,x,y;
     VGA_RAM_PTR vmem; // do not optimize this code, EGA/VGA planar operations require it
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -593,8 +592,7 @@ void vga_test(unsigned int w,unsigned int h) {
 }
 
 void ega_test(unsigned int w,unsigned int h) {
-    unsigned int o,i,x,y;
-    unsigned char attrpal[16];
+    unsigned int o,x,y;
     volatile VGA_RAM_PTR vmem; // do not optimize this code, EGA/VGA planar operations require it
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -649,7 +647,7 @@ void ega_test(unsigned int w,unsigned int h) {
 }
 
 void cga4_test(unsigned int w,unsigned int h) {
-    unsigned int i,x,y;
+    unsigned int x,y;
     VGA_RAM_PTR vmem;
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
@@ -695,7 +693,7 @@ void cga4_test(unsigned int w,unsigned int h) {
 }
 
 void cga2_test(unsigned int w,unsigned int h) {
-    unsigned int i,x,y;
+    unsigned int x,y;
     VGA_RAM_PTR vmem;
 
     int11_info = _bios_equiplist(); /* IBM PC BIOS equipment list INT 11h */
