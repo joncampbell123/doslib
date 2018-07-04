@@ -1030,25 +1030,25 @@ void manual_test(unsigned int colors) {
                         print_vga_state();
                     }
                     break;
-                 case VGAENT_BLINK:
+                case VGAENT_BLINK:
                     if (c == ' ') {
                         st_ac_10_toggle(0x08);
                         print_vga_state();
                     }
                     break;
-                 case VGAENT_LGA:
+                case VGAENT_LGA:
                     if (c == ' ') {
                         st_ac_10_toggle(0x04);
                         print_vga_state();
                     }
                     break;
-                 case VGAENT_ATGE:
+                case VGAENT_ATGE:
                     if (c == ' ') {
                         st_ac_10_toggle(0x01);
                         print_vga_state();
                     }
                     break;
-                 case VGAENT_CS76:
+                case VGAENT_CS76:
                     if (c == ' ') {
                         st_ac_14_inc(0x04,0x0C);
                         print_vga_state();
@@ -1058,7 +1058,7 @@ void manual_test(unsigned int colors) {
                         print_vga_state();
                     }
                     break;
-                 case VGAENT_CS54:
+                case VGAENT_CS54:
                     if (c == ' ') {
                         st_ac_14_inc(0x01,0x03);
                         print_vga_state();
