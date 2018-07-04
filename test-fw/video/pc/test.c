@@ -168,6 +168,10 @@ int int10_setmode_and_check(uint8_t mode) {
 
     int10_setmode(mode);
 
+    /* EGA/VGA can relocate registers between 3Bxh and 3Dxh */
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA)))
+        update_state_from_vga();
+
     if ((amode=read_int10_bd_mode()) != mode) {
         LOG(LOG_WARN "INT 10h mode set 0x%02x failed, BIOS is still in mode 0x%02x according to BIOS data area\n",mode,amode);
         return 0;
