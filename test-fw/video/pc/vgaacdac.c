@@ -77,6 +77,11 @@ enum {
     VGAENT_P54S,
     VGAENT_8BIT,
     VGAENT_PPM,
+    VGAENT_BLINK,
+    VGAENT_LGA,
+    VGAENT_ATGE,
+    VGAENT_CS76,
+    VGAENT_CS54,
 
     VGAENT_MAX
 };
@@ -117,19 +122,24 @@ void print_vga_state(void) {
     int10_poscurs(4,17);
     int10_print(tmp,0x3F);
 
-    sprintf(tmp,"BLINK=%u LGA=%u ATGE=%u",
+    sprintf(tmp,"%cBLINK=%u%cLGA=%u%cATGE=%u",
+        vga_entry_sel==VGAENT_BLINK?0x1A:' ',
         (st_ac_10&0x08)?1:0,
+        vga_entry_sel==VGAENT_LGA?0x1A:' ',
         (st_ac_10&0x04)?1:0,
+        vga_entry_sel==VGAENT_ATGE?0x1A:' ',
         (st_ac_10&0x01)?1:0);
 
-    int10_poscurs(5,18);
+    int10_poscurs(5,17);
     int10_print(tmp,0x3F);
 
-    sprintf(tmp,"CS76=%u CS54=%u",
+    sprintf(tmp,"%cCS76=%u%cCS54=%u",
+        vga_entry_sel==VGAENT_CS76?0x1A:' ',
         (st_ac_14>>2)&3,
+        vga_entry_sel==VGAENT_CS54?0x1A:' ',
         (st_ac_14>>0)&3);
 
-    int10_poscurs(6,18);
+    int10_poscurs(6,17);
     int10_print(tmp,0x3F);
 
     sprintf(tmp,"AC: %02x %02x %02x %02x",
