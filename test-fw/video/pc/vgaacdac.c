@@ -26,6 +26,7 @@ char log_tmp[1024];
 FILE *log_fp = NULL;
 
 unsigned char log_echo = 1;
+unsigned char manual_mode = 0xFFu;
 unsigned char log_atexit_set = 0;
 
 const char log_name[] = "video\\pc\\vgaacdac.log";
@@ -1757,7 +1758,24 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         vga_dacmask_test(7);
 }
 
-int main() {
+int main(int argc,char **argv) {
+    int i;
+    char *a;
+
+    for (i=1;i < argc;) {
+        a = argv[i++];
+
+        if (!strcmp(a,"-m")) {
+            a = argv[i++];
+            if (a == NULL) return 1;
+            manual_mode = strtoul(a,NULL,0);;
+        }
+        else {
+            fprintf(stderr,"Unknown arg %s\n",a);
+            return 1;
+        }
+    }
+
     mkdir("video");
     mkdir("video\\pc");
     if (!log_init()) {
@@ -1855,65 +1873,95 @@ int main() {
     /* we need the screen */
     log_noecho();
 
-    LOG(LOG_INFO "Testing: INT 10h mode 0 40x25 mono text mode\n");
-    if (int10_setmode_and_check(0))// will LOG if mode set failure
-        alphanumeric_test(40,25); // should be 40x25
+    if (manual_mode == 0xFF || manual_mode == 0) {
+        LOG(LOG_INFO "Testing: INT 10h mode 0 40x25 mono text mode\n");
+        if (int10_setmode_and_check(0))// will LOG if mode set failure
+            alphanumeric_test(40,25); // should be 40x25
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 1 40x25 color text mode\n");
-    if (int10_setmode_and_check(1))// will LOG if mode set failure
-        alphanumeric_test(40,25); // should be 40x25
+    if (manual_mode == 0xFF || manual_mode == 1) {
+        LOG(LOG_INFO "Testing: INT 10h mode 1 40x25 color text mode\n");
+        if (int10_setmode_and_check(1))// will LOG if mode set failure
+            alphanumeric_test(40,25); // should be 40x25
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 2 80x25 mono text mode\n");
-    if (int10_setmode_and_check(2))// will LOG if mode set failure
-        alphanumeric_test(80,25); // should be 40x25
+    if (manual_mode == 0xFF || manual_mode == 2) {
+        LOG(LOG_INFO "Testing: INT 10h mode 2 80x25 mono text mode\n");
+        if (int10_setmode_and_check(2))// will LOG if mode set failure
+            alphanumeric_test(80,25); // should be 40x25
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 3 80x25 color text mode\n");
-    if (int10_setmode_and_check(3))// will LOG if mode set failure
-        alphanumeric_test(80,25); // should be 40x25
+    if (manual_mode == 0xFF || manual_mode == 3) {
+        LOG(LOG_INFO "Testing: INT 10h mode 3 80x25 color text mode\n");
+        if (int10_setmode_and_check(3))// will LOG if mode set failure
+            alphanumeric_test(80,25); // should be 40x25
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 7 80x25 mono text mode\n");
-    if (int10_setmode_and_check(7))// will LOG if mode set failure
-        alphanumeric_test(80,25); // should be 40x25
+    if (manual_mode == 0xFF || manual_mode == 7) {
+        LOG(LOG_INFO "Testing: INT 10h mode 7 80x25 mono text mode\n");
+        if (int10_setmode_and_check(7))// will LOG if mode set failure
+            alphanumeric_test(80,25); // should be 40x25
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 4 320x200 CGA color 4-color graphics mode\n");
-    if (int10_setmode_and_check(4))// will LOG if mode set failure
-        cga4_test(320,200);
+    if (manual_mode == 0xFF || manual_mode == 4) {
+        LOG(LOG_INFO "Testing: INT 10h mode 4 320x200 CGA color 4-color graphics mode\n");
+        if (int10_setmode_and_check(4))// will LOG if mode set failure
+            cga4_test(320,200);
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 5 320x200 CGA mono 4-color graphics mode\n");
-    if (int10_setmode_and_check(5))// will LOG if mode set failure
-        cga4_test(320,200);
+    if (manual_mode == 0xFF || manual_mode == 5) {
+        LOG(LOG_INFO "Testing: INT 10h mode 5 320x200 CGA mono 4-color graphics mode\n");
+        if (int10_setmode_and_check(5))// will LOG if mode set failure
+            cga4_test(320,200);
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 6 640x200 CGA mono 2-color graphics mode\n");
-    if (int10_setmode_and_check(6))// will LOG if mode set failure
-        cga2_test(640,200);
+    if (manual_mode == 0xFF || manual_mode == 6) {
+        LOG(LOG_INFO "Testing: INT 10h mode 6 640x200 CGA mono 2-color graphics mode\n");
+        if (int10_setmode_and_check(6))// will LOG if mode set failure
+            cga2_test(640,200);
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 13 320x200 EGA 16-color graphics mode\n");
-    if (int10_setmode_and_check(13))// will LOG if mode set failure
-        ega_test(320,200);
+    if (manual_mode == 0xFF || manual_mode == 13) {
+        LOG(LOG_INFO "Testing: INT 10h mode 13 320x200 EGA 16-color graphics mode\n");
+        if (int10_setmode_and_check(13))// will LOG if mode set failure
+            ega_test(320,200);
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 14 640x200 EGA 16-color graphics mode\n");
-    if (int10_setmode_and_check(14))// will LOG if mode set failure
-        ega_test(640,200);
+    if (manual_mode == 0xFF || manual_mode == 14) {
+        LOG(LOG_INFO "Testing: INT 10h mode 14 640x200 EGA 16-color graphics mode\n");
+        if (int10_setmode_and_check(14))// will LOG if mode set failure
+            ega_test(640,200);
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 16 640x350 EGA 16-color graphics mode\n");
-    if (int10_setmode_and_check(16))// will LOG if mode set failure
-        ega_test(640,350);
+    if (manual_mode == 0xFF || manual_mode == 16) {
+        LOG(LOG_INFO "Testing: INT 10h mode 16 640x350 EGA 16-color graphics mode\n");
+        if (int10_setmode_and_check(16))// will LOG if mode set failure
+            ega_test(640,350);
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 18 640x480 VGA 16-color graphics mode\n");
-    if (int10_setmode_and_check(18))// will LOG if mode set failure
-        ega_test(640,480);
+    if (manual_mode == 0xFF || manual_mode == 18) {
+        LOG(LOG_INFO "Testing: INT 10h mode 18 640x480 VGA 16-color graphics mode\n");
+        if (int10_setmode_and_check(18))// will LOG if mode set failure
+            ega_test(640,480);
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 19 320x200 VGA 256-color graphics mode\n");
-    if (int10_setmode_and_check(19))// will LOG if mode set failure
-        vga_test(320,200);
+    if (manual_mode == 0xFF || manual_mode == 19) {
+        LOG(LOG_INFO "Testing: INT 10h mode 19 320x200 VGA 256-color graphics mode\n");
+        if (int10_setmode_and_check(19))// will LOG if mode set failure
+            vga_test(320,200);
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 15 640x350 EGA 2-color graphics mode\n");
-    if (int10_setmode_and_check(15))// will LOG if mode set failure
-        mcga2c_test(640,350);
+    if (manual_mode == 0xFF || manual_mode == 15) {
+        LOG(LOG_INFO "Testing: INT 10h mode 15 640x350 EGA 2-color graphics mode\n");
+        if (int10_setmode_and_check(15))// will LOG if mode set failure
+            mcga2c_test(640,350);
+    }
 
-    LOG(LOG_INFO "Testing: INT 10h mode 17 640x480 MCGA 2-color graphics mode\n");
-    if (int10_setmode_and_check(17))// will LOG if mode set failure
-        mcga2c_test(640,480);
+    if (manual_mode == 0xFF || manual_mode == 17) {
+        LOG(LOG_INFO "Testing: INT 10h mode 17 640x480 MCGA 2-color graphics mode\n");
+        if (int10_setmode_and_check(17))// will LOG if mode set failure
+            mcga2c_test(640,480);
+    }
 
     /* set back to mode 3 80x25 text */
     int10_setmode(3);
