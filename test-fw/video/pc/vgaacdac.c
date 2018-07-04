@@ -941,6 +941,23 @@ void dac_ramps256(void) {
     }
 }
 
+void st_ac_10_toggle(unsigned char b) {
+    st_ac_10 ^= b;
+    vga_write_AC(0x10,st_ac_10);
+    vga_write_AC(VGA_AC_ENABLE|0x10,st_ac_10);
+}
+
+void st_ac_14_inc(unsigned char i,unsigned char m) {
+    st_ac_14 = (st_ac_14 & ~m) + ((st_ac_14 + i) & m);
+    vga_write_AC(0x14,st_ac_14);
+    vga_write_AC(VGA_AC_ENABLE|0x14,st_ac_14);
+}
+
+void st_dac_mask_toggle(unsigned char b) {
+    st_dac_mask ^= b;
+    outp(0x3C6,st_dac_mask);
+}
+
 void test(unsigned int colors) {
     outp(0x3C6,0xFF);
     ac_ramp();
@@ -985,9 +1002,56 @@ void manual_test(unsigned int colors) {
             switch (vga_entry_sel) {
                 case VGAENT_MASK:
                     if (c >= '1' && c <= '8') {
-                        st_dac_mask ^= (1 << (c - '1'));
+                        st_dac_mask_toggle(1 << (c - '1'));
                         print_vga_state();
-                        outp(0x3C6,st_dac_mask);
+                    }
+                    break;
+                case VGAENT_P54S:
+                    if (c == ' ') {
+                        st_ac_10_toggle(0x80);
+                        print_vga_state();
+                    }
+                    break;
+                case VGAENT_8BIT:
+                    if (c == ' ') {
+                        st_ac_10_toggle(0x40);
+                        print_vga_state();
+                    }
+                    break;
+                case VGAENT_PPM:
+                    if (c == ' ') {
+                        st_ac_10_toggle(0x20);
+                        print_vga_state();
+                    }
+                    break;
+                 case VGAENT_BLINK:
+                    if (c == ' ') {
+                        st_ac_10_toggle(0x08);
+                        print_vga_state();
+                    }
+                    break;
+                  case VGAENT_LGA:
+                    if (c == ' ') {
+                        st_ac_10_toggle(0x04);
+                        print_vga_state();
+                    }
+                    break;
+                  case VGAENT_ATGE:
+                    if (c == ' ') {
+                        st_ac_10_toggle(0x01);
+                        print_vga_state();
+                    }
+                    break;
+                  case VGAENT_CS76:
+                    if (c == ' ') {
+                        st_ac_14_inc(0x04,0x0C);
+                        print_vga_state();
+                    }
+                    break;
+                  case VGAENT_CS54:
+                    if (c == ' ') {
+                        st_ac_14_inc(0x01,0x03);
+                        print_vga_state();
                     }
                     break;
             };
