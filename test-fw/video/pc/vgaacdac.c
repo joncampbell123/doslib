@@ -82,6 +82,22 @@ enum {
     VGAENT_ATGE,
     VGAENT_CS76,
     VGAENT_CS54,
+    VGAENT_AC0,
+    VGAENT_AC1,
+    VGAENT_AC2,
+    VGAENT_AC3,
+    VGAENT_AC4,
+    VGAENT_AC5,
+    VGAENT_AC6,
+    VGAENT_AC7,
+    VGAENT_AC8,
+    VGAENT_AC9,
+    VGAENT_AC10,
+    VGAENT_AC11,
+    VGAENT_AC12,
+    VGAENT_AC13,
+    VGAENT_AC14,
+    VGAENT_AC15,
 
     VGAENT_MAX
 };
@@ -142,23 +158,35 @@ void print_vga_state(void) {
     int10_poscurs(6,17);
     int10_print(tmp,0x3F);
 
-    sprintf(tmp,"AC: %02x %02x %02x %02x",
-        st_ac_pal[0], st_ac_pal[1], st_ac_pal[2], st_ac_pal[3]);
+    sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
+        vga_entry_sel==VGAENT_AC0?0x1A:' ', st_ac_pal[0],
+        vga_entry_sel==VGAENT_AC1?0x1A:' ', st_ac_pal[1],
+        vga_entry_sel==VGAENT_AC2?0x1A:' ', st_ac_pal[2],
+        vga_entry_sel==VGAENT_AC3?0x1A:' ', st_ac_pal[3]);
     int10_poscurs(7,18);
     int10_print(tmp,0x3F);
 
-    sprintf(tmp,"AC: %02x %02x %02x %02x",
-        st_ac_pal[4], st_ac_pal[5], st_ac_pal[6], st_ac_pal[7]);
+    sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
+        vga_entry_sel==VGAENT_AC4?0x1A:' ', st_ac_pal[4],
+        vga_entry_sel==VGAENT_AC5?0x1A:' ', st_ac_pal[5],
+        vga_entry_sel==VGAENT_AC6?0x1A:' ', st_ac_pal[6],
+        vga_entry_sel==VGAENT_AC7?0x1A:' ', st_ac_pal[7]);
     int10_poscurs(8,18);
     int10_print(tmp,0x3F);
 
-    sprintf(tmp,"AC: %02x %02x %02x %02x",
-        st_ac_pal[8], st_ac_pal[9], st_ac_pal[10],st_ac_pal[11]);
+    sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
+        vga_entry_sel==VGAENT_AC8?0x1A:' ', st_ac_pal[8],
+        vga_entry_sel==VGAENT_AC9?0x1A:' ', st_ac_pal[9],
+        vga_entry_sel==VGAENT_AC10?0x1A:' ', st_ac_pal[10],
+        vga_entry_sel==VGAENT_AC11?0x1A:' ', st_ac_pal[11]);
     int10_poscurs(9,18);
     int10_print(tmp,0x3F);
 
-    sprintf(tmp,"AC: %02x %02x %02x %02x",
-        st_ac_pal[12],st_ac_pal[13],st_ac_pal[14],st_ac_pal[15]);
+    sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
+        vga_entry_sel==VGAENT_AC12?0x1A:' ', st_ac_pal[12],
+        vga_entry_sel==VGAENT_AC13?0x1A:' ', st_ac_pal[13],
+        vga_entry_sel==VGAENT_AC14?0x1A:' ', st_ac_pal[14],
+        vga_entry_sel==VGAENT_AC15?0x1A:' ', st_ac_pal[15]);
     int10_poscurs(10,18);
     int10_print(tmp,0x3F);
 }
