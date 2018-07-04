@@ -42,6 +42,7 @@ void read_vga_state(void) {
     st_ac_14 = vga_read_AC(0x14);
     st_dac_mask = inp(0x3C6);
     for (i=0;i < 16;i++) st_ac_pal[i] = vga_read_AC(i);
+    vga_write_AC(VGA_AC_ENABLE|0x1F,0);
 }
 
 void int10_print(char *s) {
