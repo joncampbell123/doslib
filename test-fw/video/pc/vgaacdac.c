@@ -760,6 +760,7 @@ void dac_ramps16(void) {
 }
 
 void manual_test(unsigned int colors) {
+    outp(0x3C6,0xFF);
     ac_ramp();
 
     if (colors == 16)
