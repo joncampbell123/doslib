@@ -70,24 +70,51 @@ void int10_poscurs(unsigned char y,unsigned char x) {
     }
 }
 
+unsigned char       vga_entry_sel = 0;
+
+enum {
+    VGAENT_MASK=0,
+    VGAENT_P54S,
+    VGAENT_8BIT,
+    VGAENT_PPM,
+
+    VGAENT_MAX
+};
+
+void vga_entry_next(void) {
+    if (++vga_entry_sel == VGAENT_MAX)
+        vga_entry_sel = 0;
+}
+
+void vga_entry_prev(void) {
+    if (vga_entry_sel == 0)
+        vga_entry_sel = VGAENT_MAX;
+
+    vga_entry_sel--;
+}
+
 void print_vga_state(void) {
     /* --------------------------------*/
-    sprintf(tmp,"MASK=%u%u%u%u%u%u%u%u",
+    sprintf(tmp,"%cMASK=%u%u%u%u%u%u%u%u",
+        vga_entry_sel==VGAENT_MASK?0x1A:' ',
         (st_dac_mask>>7)&1, (st_dac_mask>>6)&1,
         (st_dac_mask>>5)&1, (st_dac_mask>>4)&1,
         (st_dac_mask>>3)&1, (st_dac_mask>>2)&1,
         (st_dac_mask>>1)&1, (st_dac_mask>>0)&1);
 
-    int10_poscurs(3,18);
+    int10_poscurs(3,17);
     int10_print(tmp,0x3F);
 
     /* --------------------------------*/
-    sprintf(tmp,"P54S=%s 8BIT=%u PPM=%u",
+    sprintf(tmp,"%cP54S=%s%c8BIT=%u%cPPM=%u",
+        vga_entry_sel==VGAENT_P54S?0x1A:' ',
         (st_ac_10&0x80)?"PAL":"CSR",
+        vga_entry_sel==VGAENT_8BIT?0x1A:' ',
         (st_ac_10&0x40)?1:0,
+        vga_entry_sel==VGAENT_PPM?0x1A:' ',
         (st_ac_10&0x20)?1:0);
 
-    int10_poscurs(4,18);
+    int10_poscurs(4,17);
     int10_print(tmp,0x3F);
 
     sprintf(tmp,"BLINK=%u LGA=%u ATGE=%u",
@@ -906,7 +933,16 @@ void manual_test(unsigned int colors) {
         c = getch();
         if (c == 0) c = getch() << 8;
 
-        if (c == 27) break;
+        if (c == 27)
+            break;
+        else if (c == 0x4800) {
+            vga_entry_prev();
+            print_vga_state();
+        }
+        else if (c == 0x5000) {
+            vga_entry_next();
+            print_vga_state();
+        }
     }
 }
 
