@@ -128,7 +128,7 @@ void print_vga_state(void) {
 
 const char log_name[] = "video\\pc\\vgaacdac.log";
 
-void test(unsigned char cols);
+void test(unsigned int cols);
 void auto_test(unsigned int colors);
 void manual_test(unsigned int colors);
 
@@ -447,7 +447,7 @@ void mcga2c_test(unsigned int w,unsigned int h) {
     LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
 #endif
 
-    test_pause(3);
+    test(2);
 }
 
 void vga_test(unsigned int w,unsigned int h) {
@@ -478,8 +478,8 @@ void vga_test(unsigned int w,unsigned int h) {
             LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
                 port);
     }
- 
-    test_pause(3);
+
+    test(256);
 }
 
 void ega_test(unsigned int w,unsigned int h) {
@@ -510,8 +510,8 @@ void ega_test(unsigned int w,unsigned int h) {
             LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
                 port);
     }
- 
-    test_pause(3);
+
+    test(16);
 }
 
 void cga4_test(unsigned int w,unsigned int h) {
@@ -540,7 +540,7 @@ void cga4_test(unsigned int w,unsigned int h) {
                 port);
     }
 
-    test_pause(3);
+    test(4);
 }
 
 void cga2_test(unsigned int w,unsigned int h) {
@@ -569,7 +569,7 @@ void cga2_test(unsigned int w,unsigned int h) {
                 port);
     }
 
-    test_pause(3);
+    test(2);
 }
 
 void alphanumeric_test(unsigned int w,unsigned int h) {
@@ -667,7 +667,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     test(16);
 }
 
-void test(unsigned char cols) {
+void test(unsigned int cols) {
     if (manual_mode == 0xFF)
         auto_test(cols);
     else
