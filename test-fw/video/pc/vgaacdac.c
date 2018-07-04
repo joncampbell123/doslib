@@ -448,6 +448,19 @@ void mcga2c_test(unsigned int w,unsigned int h) {
     LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
 #endif
 
+    for (y=16;y < 80;y++) {
+        VGA_RAM_PTR d = vmem + (y * (w>>3u));
+        for (x=0;x < (128u/8u);x++) {
+            unsigned char c1 = x / (64u/8u);
+            unsigned char c2 = ((x + (32u/8u)) / (64u/8u)) & 1;
+
+            if (y >= 48 && c1 != c2)
+                d[x] = (c2 * ((y&1) ? 0x55u : 0xAAu)) + (c1 * ((y&1) ? 0xAAu : 0x55u));
+            else
+                d[x] = c1 * 0xFFu;
+        }
+    }
+
     test(2);
 }
 
