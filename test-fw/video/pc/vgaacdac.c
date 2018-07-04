@@ -769,13 +769,6 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     test(16);
 }
 
-void test(unsigned int cols) {
-    if (manual_mode == 0xFF)
-        auto_test(cols);
-    else
-        manual_test(cols);
-}
-
 void ac_ramp(void) {
     unsigned int i;
 
@@ -883,7 +876,7 @@ void dac_ramps256(void) {
     }
 }
 
-void manual_test(unsigned int colors) {
+void test(unsigned int colors) {
     outp(0x3C6,0xFF);
     ac_ramp();
 
@@ -899,6 +892,13 @@ void manual_test(unsigned int colors) {
     read_vga_state();
     print_vga_state();
 
+    if (manual_mode == 0xFF)
+        auto_test(colors);
+    else
+        manual_test(colors);
+}
+
+void manual_test(unsigned int colors) {
     test_pause(3);
 }
 
