@@ -36,10 +36,12 @@ unsigned char st_ac_10;         /* 0x10 Attribute Mode Control */
 unsigned char st_ac_14;         /* 0x14 Color Select Register */
 unsigned char st_dac_mask;      /* 0x3C6 pel mask */
 unsigned char st_ac_pal[16];    /* Attribute palette */
+unsigned char st_gc_05;         /* Graphics controller mode register (0x05) */
 
 void read_vga_state(void) {
     unsigned int i;
 
+    st_gc_05 = vga_read_GC(0x05);
     st_ac_10 = vga_read_AC(0x10);
     st_ac_14 = vga_read_AC(0x14);
     st_dac_mask = inp(0x3C6);
@@ -84,6 +86,9 @@ enum {
     VGAENT_ATGE,
     VGAENT_CS76,
     VGAENT_CS54,
+    VGAENT_SH256,
+    VGAENT_SRI,
+    VGAENT_HOE,
     VGAENT_AC0,
     VGAENT_AC1,
     VGAENT_AC2,
@@ -160,12 +165,23 @@ void print_vga_state(void) {
     int10_poscurs(6,17);
     int10_print(tmp,0x3F);
 
+    sprintf(tmp,"%cSH256=%u%cSRI=%u%cHOE=%u",
+        vga_entry_sel==VGAENT_SH256?0x1A:' ',
+        (st_gc_05&0x40)?1:0,
+        vga_entry_sel==VGAENT_SRI?0x1A:' ',
+        (st_gc_05&0x20)?1:0,
+        vga_entry_sel==VGAENT_HOE?0x1A:' ',
+        (st_gc_05&0x10)?1:0);
+
+    int10_poscurs(7,17);
+    int10_print(tmp,0x3F);
+
     sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
         vga_entry_sel==VGAENT_AC0?0x1A:' ', st_ac_pal[0],
         vga_entry_sel==VGAENT_AC1?0x1A:' ', st_ac_pal[1],
         vga_entry_sel==VGAENT_AC2?0x1A:' ', st_ac_pal[2],
         vga_entry_sel==VGAENT_AC3?0x1A:' ', st_ac_pal[3]);
-    int10_poscurs(7,18);
+    int10_poscurs(8,18);
     int10_print(tmp,0x3F);
 
     sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
@@ -173,7 +189,7 @@ void print_vga_state(void) {
         vga_entry_sel==VGAENT_AC5?0x1A:' ', st_ac_pal[5],
         vga_entry_sel==VGAENT_AC6?0x1A:' ', st_ac_pal[6],
         vga_entry_sel==VGAENT_AC7?0x1A:' ', st_ac_pal[7]);
-    int10_poscurs(8,18);
+    int10_poscurs(9,18);
     int10_print(tmp,0x3F);
 
     sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
@@ -181,7 +197,7 @@ void print_vga_state(void) {
         vga_entry_sel==VGAENT_AC9?0x1A:' ', st_ac_pal[9],
         vga_entry_sel==VGAENT_AC10?0x1A:' ', st_ac_pal[10],
         vga_entry_sel==VGAENT_AC11?0x1A:' ', st_ac_pal[11]);
-    int10_poscurs(9,18);
+    int10_poscurs(10,18);
     int10_print(tmp,0x3F);
 
     sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
@@ -189,7 +205,7 @@ void print_vga_state(void) {
         vga_entry_sel==VGAENT_AC13?0x1A:' ', st_ac_pal[13],
         vga_entry_sel==VGAENT_AC14?0x1A:' ', st_ac_pal[14],
         vga_entry_sel==VGAENT_AC15?0x1A:' ', st_ac_pal[15]);
-    int10_poscurs(10,18);
+    int10_poscurs(11,18);
     int10_print(tmp,0x3F);
 }
 
