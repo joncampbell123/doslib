@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <direct.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
 #include <unistd.h>
@@ -1065,6 +1066,44 @@ void manual_test(unsigned int colors) {
                     }
                     else if (c >= '0' && c <= '3') {
                         st_ac_14_set((c - '0') << 0,0x03);
+                        print_vga_state();
+                    }
+                    break;
+                case VGAENT_AC0:
+                case VGAENT_AC1:
+                case VGAENT_AC2:
+                case VGAENT_AC3:
+                case VGAENT_AC4:
+                case VGAENT_AC5:
+                case VGAENT_AC6:
+                case VGAENT_AC7:
+                case VGAENT_AC8:
+                case VGAENT_AC9:
+                case VGAENT_AC10:
+                case VGAENT_AC11:
+                case VGAENT_AC12:
+                case VGAENT_AC13:
+                case VGAENT_AC14:
+                case VGAENT_AC15:
+                    {
+                        unsigned char *ent = &st_ac_pal[vga_entry_sel-VGAENT_AC0];
+                        if (c == '=' || c == '+') {
+                            (*ent) = ((*ent) + 1) & 0x3F;
+                        }
+                        else if (c == '-' || c == '_') {
+                            (*ent) = ((*ent) - 1) & 0x3F;
+                        }
+                        else if (isdigit(c)) {
+                            (*ent) = (c - '0') << 4;
+                            c = getch();
+                            if (c >= '0' && c <= '9')
+                                (*ent) += c - '0';
+                            else if (c >= 'a' && c <= 'f')
+                                (*ent) += c + 10 - 'a';
+                        }
+
+                        vga_write_AC((vga_entry_sel-VGAENT_AC0),*ent);
+                        vga_write_AC((vga_entry_sel-VGAENT_AC0) | VGA_AC_ENABLE,*ent);
                         print_vga_state();
                     }
                     break;
