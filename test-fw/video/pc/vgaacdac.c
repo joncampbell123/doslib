@@ -451,6 +451,10 @@ void mcga2c_test(unsigned int w,unsigned int h) {
     LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
 #endif
 
+    sprintf(tmp,"%ux%u seg %xh MCGA, mode %02xh",w,h,0xA000,read_int10_bd_mode());
+    int10_poscurs(0,0);
+    int10_print(tmp);
+
     for (y=16;y < 80;y++) {
         VGA_RAM_PTR d = vmem + (y * (w>>3u));
         for (x=0;x < (128u/8u);x++) {
@@ -526,6 +530,30 @@ void ega_test(unsigned int w,unsigned int h) {
         if (port != 0x3D4)
             LOG(LOG_WARN "BIOS CRT I/O port in bios DATA area 0x%x is unusual for this video mode\n",
                 port);
+    }
+
+    sprintf(tmp,"%ux%u seg %xh EGA, mode %02xh",w,h,0xA000,read_int10_bd_mode());
+    int10_poscurs(0,0);
+    int10_print(tmp);
+
+    /* color band. assume that part of the screen is clear. write mode 0, plane by plane. */
+    vga_write_GC(0x03/*Data rotate*/,0x00);    // no rotation, no ROP, data is unmodified
+    vga_write_GC(0x05/*mode register*/,0x00);  // read mode=0  write mode=0
+    vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
+    for (y=20;y < 36;y++) {
+        o = y * (w / 8u);
+
+        vga_write_sequencer(0x02/*map mask*/,0x01);// plane 0
+        for (x=0;x < (128/8u);x++) vmem[o+x] = ((x / (8u/8u)) & 1) ? 0xFF : 0x00;
+
+        vga_write_sequencer(0x02/*map mask*/,0x02);// plane 1
+        for (x=0;x < (128/8u);x++) vmem[o+x] = ((x / (8u/8u)) & 2) ? 0xFF : 0x00;
+
+        vga_write_sequencer(0x02/*map mask*/,0x04);// plane 2
+        for (x=0;x < (128/8u);x++) vmem[o+x] = ((x / (8u/8u)) & 4) ? 0xFF : 0x00;
+
+        vga_write_sequencer(0x02/*map mask*/,0x08);// plane 3
+        for (x=0;x < (128/8u);x++) vmem[o+x] = ((x / (8u/8u)) & 8) ? 0xFF : 0x00;
     }
 
     test(16);
