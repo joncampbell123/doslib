@@ -551,6 +551,18 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     for (i=0;tmp[i] != 0;i++)
         vmem[i] = 0x0700 + ((unsigned char)tmp[i]);
 
+    for (x=0;x < 16;x++)
+        vmem[2*w+x+1] = hexes[x] + 0x7000;
+    for (y=0;y < 16;y++)
+        vmem[(y+3)*w] = hexes[y] + 0x7000;
+
+    for (y=0;y < 16;y++) {
+        o=(y+3)*w+1;
+        for (x=0;x < 16;x++) {
+            vmem[o+x] = (y * 0x1000) + (x * 0x0100) + 'A';
+        }
+    }
+
     test_pause(3);
 }
 
