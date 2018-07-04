@@ -948,6 +948,12 @@ void st_ac_10_toggle(unsigned char b) {
     vga_write_AC(VGA_AC_ENABLE|0x10,st_ac_10);
 }
 
+void st_ac_10_set(unsigned char i,unsigned char m) {
+    st_ac_10 = (st_ac_10 & ~m) + (i & m);
+    vga_write_AC(0x10,st_ac_10);
+    vga_write_AC(VGA_AC_ENABLE|0x10,st_ac_10);
+}
+
 void st_ac_14_inc(unsigned char i,unsigned char m) {
     st_ac_14 = (st_ac_14 & ~m) + ((st_ac_14 + i) & m);
     vga_write_AC(0x14,st_ac_14);
@@ -1113,6 +1119,26 @@ void manual_test(unsigned int colors) {
 }
 
 void auto_test(unsigned int colors) {
+    int10_poscurs(24,0);
+    int10_print("Initial modeset",0x3F);
+    print_vga_state();
+
+    test_pause(3);
+
+    /* ------------- */
+    int10_poscurs(24,0);
+    int10_print("Blink on       ",0x3F);
+    st_ac_10_set(0x08,0x08);
+    print_vga_state();
+
+    test_pause(1);
+
+    /* ------------- */
+    int10_poscurs(24,0);
+    int10_print("Blink off      ",0x3F);
+    st_ac_10_set(0,0x08);
+    print_vga_state();
+
     test_pause(1);
 }
 
