@@ -981,6 +981,17 @@ void manual_test(unsigned int colors) {
             vga_entry_next();
             print_vga_state();
         }
+        else {
+            switch (vga_entry_sel) {
+                case VGAENT_MASK:
+                    if (c >= '1' && c <= '8') {
+                        st_dac_mask ^= (1 << (c - '1'));
+                        print_vga_state();
+                        outp(0x3C6,st_dac_mask);
+                    }
+                    break;
+            };
+        }
     }
 }
 
