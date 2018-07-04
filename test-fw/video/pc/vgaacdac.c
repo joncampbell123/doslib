@@ -41,7 +41,89 @@ void read_vga_state(void) {
     st_ac_10 = vga_read_AC(0x10);
     st_ac_14 = vga_read_AC(0x14);
     st_dac_mask = inp(0x3C6);
-    for (i=0;i < 16;i++) vga_read_AC(i);
+    for (i=0;i < 16;i++) st_ac_pal[i] = vga_read_AC(i);
+}
+
+void int10_print(char *s) {
+    unsigned int i;
+
+    for (i=0;s[i] != 0;i++) {
+        unsigned char cv = s[i];
+
+        __asm {
+            mov     ah,0x0E     ; teletype output
+            mov     al,cv
+            xor     bh,bh
+            mov     bl,0x0F     ; foreground color (white)
+            int     10h
+        }
+    }
+}
+
+void int10_poscurs(unsigned char y,unsigned char x) {
+    __asm {
+        mov     ah,0x02     ; set cursor pos
+        mov     bh,0x00     ; page 0
+        mov     dh,y
+        mov     dl,x
+        int     10h
+    }
+}
+
+void print_vga_state(void) {
+    /* --------------------------------*/
+    sprintf(tmp,"MASK=%u%u%u%u%u%u%u%u",
+        (st_dac_mask>>7)&1, (st_dac_mask>>6)&1,
+        (st_dac_mask>>5)&1, (st_dac_mask>>4)&1,
+        (st_dac_mask>>3)&1, (st_dac_mask>>2)&1,
+        (st_dac_mask>>1)&1, (st_dac_mask>>0)&1);
+
+    int10_poscurs(3,18);
+    int10_print(tmp);
+
+    /* --------------------------------*/
+    sprintf(tmp,"P54S=%s 8BIT=%u PPM=%u",
+        (st_ac_10&0x80)?"PAL":"CSR",
+        (st_ac_10&0x40)?1:0,
+        (st_ac_10&0x20)?1:0);
+
+    int10_poscurs(4,18);
+    int10_print(tmp);
+
+    sprintf(tmp,"BLINK=%u LGA=%u ATGE=%u",
+        (st_ac_10&0x08)?1:0,
+        (st_ac_10&0x04)?1:0,
+        (st_ac_10&0x01)?1:0);
+
+    int10_poscurs(5,18);
+    int10_print(tmp);
+
+    sprintf(tmp,"CS76=%u CS54=%u",
+        (st_ac_14>>2)&3,
+        (st_ac_14>>0)&3);
+
+    int10_poscurs(6,18);
+    int10_print(tmp);
+
+    sprintf(tmp,"AC: %02x %02x %02x %02x",
+        st_ac_pal[0], st_ac_pal[1], st_ac_pal[2], st_ac_pal[3]);
+    int10_poscurs(7,18);
+    int10_print(tmp);
+
+    sprintf(tmp,"AC: %02x %02x %02x %02x",
+        st_ac_pal[4], st_ac_pal[5], st_ac_pal[6], st_ac_pal[7]);
+    int10_poscurs(8,18);
+    int10_print(tmp);
+
+    sprintf(tmp,"AC: %02x %02x %02x %02x",
+        st_ac_pal[8], st_ac_pal[9], st_ac_pal[10],st_ac_pal[11]);
+    int10_poscurs(9,18);
+    int10_print(tmp);
+
+    sprintf(tmp,"AC: %02x %02x %02x %02x",
+        st_ac_pal[12],st_ac_pal[13],st_ac_pal[14],st_ac_pal[15]);
+    int10_poscurs(10,18);
+    int10_print(tmp);
 }
 
 const char log_name[] = "video\\pc\\vgaacdac.log";
@@ -627,6 +709,7 @@ void manual_test(unsigned int colors) {
         dac_ramps16();
 
     read_vga_state();
+    print_vga_state();
 
     test_pause(3);
 }
