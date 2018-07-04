@@ -129,7 +129,7 @@ void print_vga_state(void) {
     /* --------------------------------*/
     sprintf(tmp,"%cP54S=%s%c8BIT=%u%cPPM=%u",
         vga_entry_sel==VGAENT_P54S?0x1A:' ',
-        (st_ac_10&0x80)?"PAL":"CSR",
+        (st_ac_10&0x80)?"CSR":"PAL",
         vga_entry_sel==VGAENT_8BIT?0x1A:' ',
         (st_ac_10&0x40)?1:0,
         vga_entry_sel==VGAENT_PPM?0x1A:' ',
