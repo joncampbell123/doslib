@@ -981,6 +981,11 @@ void st_ac_14_set(unsigned char i,unsigned char m) {
     vga_write_AC(VGA_AC_ENABLE|0x14,st_ac_14);
 }
 
+void st_gc_05_toggle(unsigned char b) {
+    st_gc_05 ^= b;
+    vga_write_GC(0x05,st_gc_05);
+}
+
 void st_dac_mask_toggle(unsigned char b) {
     st_dac_mask ^= b;
     outp(0x3C6,st_dac_mask);
@@ -1092,6 +1097,24 @@ void manual_test(unsigned int colors) {
                     }
                     else if (c >= '0' && c <= '3') {
                         st_ac_14_set((c - '0') << 0,0x03);
+                        print_vga_state();
+                    }
+                    break;
+                case VGAENT_SH256:
+                    if (c == ' ') {
+                        st_gc_05_toggle(0x40);
+                        print_vga_state();
+                    }
+                    break;
+                case VGAENT_SRI:
+                    if (c == ' ') {
+                        st_gc_05_toggle(0x20);
+                        print_vga_state();
+                    }
+                    break;
+                case VGAENT_HOE:
+                    if (c == ' ') {
+                        st_gc_05_toggle(0x10);
                         print_vga_state();
                     }
                     break;
