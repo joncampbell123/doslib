@@ -953,6 +953,12 @@ void st_ac_14_inc(unsigned char i,unsigned char m) {
     vga_write_AC(VGA_AC_ENABLE|0x14,st_ac_14);
 }
 
+void st_ac_14_set(unsigned char i,unsigned char m) {
+    st_ac_14 = (st_ac_14 & ~m) + (i & m);
+    vga_write_AC(0x14,st_ac_14);
+    vga_write_AC(VGA_AC_ENABLE|0x14,st_ac_14);
+}
+
 void st_dac_mask_toggle(unsigned char b) {
     st_dac_mask ^= b;
     outp(0x3C6,st_dac_mask);
@@ -1047,10 +1053,18 @@ void manual_test(unsigned int colors) {
                         st_ac_14_inc(0x04,0x0C);
                         print_vga_state();
                     }
+                    else if (c >= '0' && c <= '3') {
+                        st_ac_14_set((c - '0') << 2,0x0C);
+                        print_vga_state();
+                    }
                     break;
                   case VGAENT_CS54:
                     if (c == ' ') {
                         st_ac_14_inc(0x01,0x03);
+                        print_vga_state();
+                    }
+                    else if (c >= '0' && c <= '3') {
+                        st_ac_14_set((c - '0') << 0,0x03);
                         print_vga_state();
                     }
                     break;
