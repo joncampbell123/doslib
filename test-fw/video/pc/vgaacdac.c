@@ -547,6 +547,10 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     LOG(LOG_DEBUG "Internal ptr: %Fp\n",vmem);
 #endif
 
+    sprintf(tmp,"%ux%u seg %xh text, mode %02xh",w,h,sv,read_int10_bd_mode());
+    for (i=0;tmp[i] != 0;i++)
+        vmem[i] = 0x0700 + ((unsigned char)tmp[i]);
+
     test_pause(3);
 }
 
