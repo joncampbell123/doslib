@@ -500,6 +500,29 @@ void vga_test(unsigned int w,unsigned int h) {
                 port);
     }
 
+    sprintf(tmp,"%ux%u seg %xh VGA, mode %02xh",w,h,0xA000,read_int10_bd_mode());
+    int10_poscurs(0,0);
+    int10_print(tmp);
+
+    for (x=0;x < 16;x++) tmp[x] = hexes[x];
+    tmp[16] = 0;
+    int10_poscurs(2,1);
+    int10_print(tmp);
+
+    for (y=0;y < 16;y++) {
+        tmp[0] = hexes[y];
+        tmp[1] = 0;
+        int10_poscurs(3+y,0);
+        int10_print(tmp);
+    }
+
+    for (y=0;y < 128;y++) {
+        o=(y+24)*w+(1*8);
+        for (x=0;x < 128;x++) {
+            vmem[o++] = ((y>>3u)<<4)+(x>>3u);
+        }
+    }
+
     test(256);
 }
 
