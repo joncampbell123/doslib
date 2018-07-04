@@ -1185,6 +1185,33 @@ void auto_test(unsigned int colors) {
         st_ac_pal[i] = 0x3F; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
         st_ac_pal[i] = i;    update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
     }
+
+    if (colors == 256) {
+        dac_ramps2();
+
+        int10_poscurs(24,0);
+        int10_print("2-color palette (for next tests) ",0x3F);
+
+        test_pause(3);
+    }
+
+    if (colors == 256) {
+        dac_ramps4();
+
+        int10_poscurs(24,0);
+        int10_print("4-color palette (for next tests) ",0x3F);
+
+        test_pause(3);
+    }
+
+    if (colors == 256) {
+        dac_ramps16();
+
+        int10_poscurs(24,0);
+        int10_print("16-color palette (for next tests) ",0x3F);
+
+        test_pause(3);
+    }
 }
 
 int main(int argc,char **argv) {
@@ -1302,6 +1329,13 @@ int main(int argc,char **argv) {
     /* we need the screen */
     log_noecho();
 
+    /* do 320x200x256 FIRST to make the full color palette apparent to the user */
+    if (manual_mode == 0xFF || manual_mode == 19) {
+        LOG(LOG_INFO "Testing: INT 10h mode 19 320x200 VGA 256-color graphics mode\n");
+        if (int10_setmode_and_check(19))// will LOG if mode set failure
+            vga_test(320,200);
+    }
+
     if (manual_mode == 0xFF || manual_mode == 0) {
         LOG(LOG_INFO "Testing: INT 10h mode 0 40x25 mono text mode\n");
         if (int10_setmode_and_check(0))// will LOG if mode set failure
@@ -1372,12 +1406,6 @@ int main(int argc,char **argv) {
         LOG(LOG_INFO "Testing: INT 10h mode 18 640x480 VGA 16-color graphics mode\n");
         if (int10_setmode_and_check(18))// will LOG if mode set failure
             ega_test(640,480);
-    }
-
-    if (manual_mode == 0xFF || manual_mode == 19) {
-        LOG(LOG_INFO "Testing: INT 10h mode 19 320x200 VGA 256-color graphics mode\n");
-        if (int10_setmode_and_check(19))// will LOG if mode set failure
-            vga_test(320,200);
     }
 
     if (manual_mode == 0xFF || manual_mode == 15) {
