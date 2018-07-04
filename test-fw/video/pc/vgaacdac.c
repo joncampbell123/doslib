@@ -27,6 +27,7 @@ char log_tmp[1024];
 FILE *log_fp = NULL;
 
 unsigned char log_echo = 1;
+unsigned char auto_test_mode = 1;
 unsigned char manual_mode = 0xFFu;
 unsigned char log_atexit_set = 0;
 
@@ -990,7 +991,7 @@ void test(unsigned int colors) {
     read_vga_state();
     print_vga_state();
 
-    if (manual_mode == 0xFF)
+    if (manual_mode == 0xFF || auto_test_mode)
         auto_test(colors);
     else
         manual_test(colors);
@@ -1224,7 +1225,14 @@ int main(int argc,char **argv) {
         if (!strcmp(a,"-m")) {
             a = argv[i++];
             if (a == NULL) return 1;
-            manual_mode = strtoul(a,NULL,0);;
+            manual_mode = strtoul(a,NULL,0);
+            auto_test_mode = 0;
+        }
+        else if (!strcmp(a,"-a")) {
+            a = argv[i++];
+            if (a == NULL) return 1;
+            manual_mode = strtoul(a,NULL,0);
+            auto_test_mode = 1;
         }
         else {
             fprintf(stderr,"Unknown arg %s\n",a);
