@@ -29,6 +29,21 @@ unsigned char log_echo = 1;
 unsigned char manual_mode = 0xFFu;
 unsigned char log_atexit_set = 0;
 
+/* VGA state */
+unsigned char st_ac_10;         /* 0x10 Attribute Mode Control */
+unsigned char st_ac_14;         /* 0x14 Color Select Register */
+unsigned char st_dac_mask;      /* 0x3C6 pel mask */
+unsigned char st_ac_pal[16];    /* Attribute palette */
+
+void read_vga_state(void) {
+    unsigned int i;
+
+    st_ac_10 = vga_read_AC(0x10);
+    st_ac_14 = vga_read_AC(0x14);
+    st_dac_mask = inp(0x3C6);
+    for (i=0;i < 16;i++) vga_read_AC(i);
+}
+
 const char log_name[] = "video\\pc\\vgaacdac.log";
 
 void auto_test(unsigned int colors);
@@ -610,6 +625,8 @@ void manual_test(unsigned int colors) {
 
     if (colors == 16)
         dac_ramps16();
+
+    read_vga_state();
 
     test_pause(3);
 }
