@@ -681,6 +681,58 @@ void ac_ramp(void) {
     vga_write_AC(VGA_AC_ENABLE|0x1F,0);
 }
 
+/* palette ramps appropriate for 2-color modes */
+void dac_ramps2(void) {
+    unsigned int i,j,sj;
+    unsigned char r,g,b;
+    unsigned char rm,gm,bm;
+
+    outp(0x3C8,0);
+    for (i=0;i < 16;i++) {
+        rm = ((i&3) == 0) || ((i&3) == 1);
+        gm = ((i&3) == 0) || ((i&3) == 2);
+        bm = ((i&3) == 0) || ((i&3) == 3);
+        for (j=0;j < 16;j++) {
+            sj = (j & 1) * 0x3F; /* equiv sj = j * 63 / 15 */
+            r = rm ? sj : 0;
+            g = gm ? sj : 0;
+            b = bm ? sj : 0;
+            r >>= (i >> 2u);
+            g >>= (i >> 2u);
+            b >>= (i >> 2u);
+            outp(0x3C9,r);
+            outp(0x3C9,g);
+            outp(0x3C9,b);
+        }
+    }
+}
+
+/* palette ramps appropriate for 4-color modes */
+void dac_ramps4(void) {
+    unsigned int i,j,sj;
+    unsigned char r,g,b;
+    unsigned char rm,gm,bm;
+
+    outp(0x3C8,0);
+    for (i=0;i < 16;i++) {
+        rm = ((i&3) == 0) || ((i&3) == 1);
+        gm = ((i&3) == 0) || ((i&3) == 2);
+        bm = ((i&3) == 0) || ((i&3) == 3);
+        for (j=0;j < 16;j++) {
+            sj = (j & 3) * 0x15; /* equiv sj = j * 63 / 15 */
+            r = rm ? sj : 0;
+            g = gm ? sj : 0;
+            b = bm ? sj : 0;
+            r >>= (i >> 2u);
+            g >>= (i >> 2u);
+            b >>= (i >> 2u);
+            outp(0x3C9,r);
+            outp(0x3C9,g);
+            outp(0x3C9,b);
+        }
+    }
+}
+
 /* palette ramps appropriate for 16-color modes */
 void dac_ramps16(void) {
     unsigned int i,j,sj;
@@ -712,6 +764,10 @@ void manual_test(unsigned int colors) {
 
     if (colors == 16)
         dac_ramps16();
+    else if (colors == 4)
+        dac_ramps4();
+    else if (colors == 2)
+        dac_ramps2();
 
     read_vga_state();
     print_vga_state();
