@@ -899,7 +899,15 @@ void test(unsigned int colors) {
 }
 
 void manual_test(unsigned int colors) {
-    test_pause(3);
+    unsigned char run=1;
+    int c;
+
+    while (run) {
+        c = getch();
+        if (c == 0) c = getch() << 8;
+
+        if (c == 27) break;
+    }
 }
 
 void auto_test(unsigned int colors) {
