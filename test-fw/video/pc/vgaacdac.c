@@ -128,6 +128,7 @@ void print_vga_state(void) {
 
 const char log_name[] = "video\\pc\\vgaacdac.log";
 
+void test(unsigned char cols);
 void auto_test(unsigned int colors);
 void manual_test(unsigned int colors);
 
@@ -663,10 +664,14 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         }
     }
 
+    test(16);
+}
+
+void test(unsigned char cols) {
     if (manual_mode == 0xFF)
-        auto_test(16);
+        auto_test(cols);
     else
-        manual_test(16);
+        manual_test(cols);
 }
 
 void ac_ramp(void) {
