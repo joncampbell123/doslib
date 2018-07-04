@@ -31,6 +31,9 @@ unsigned char log_atexit_set = 0;
 
 const char log_name[] = "video\\pc\\vgaacdac.log";
 
+void auto_test(unsigned int colors);
+void manual_test(unsigned int colors);
+
 void log_noecho(void) {
     log_echo = 0;
 }
@@ -563,7 +566,56 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
         }
     }
 
+    if (manual_mode == 0xFF)
+        auto_test(16);
+    else
+        manual_test(16);
+}
+
+void ac_ramp(void) {
+    unsigned int i;
+
+    for (i=0;i < 16;i++) vga_write_AC(i,i);
+    vga_write_AC(VGA_AC_ENABLE|0x1F,0);
+}
+
+/* palette ramps appropriate for 16-color modes */
+void dac_ramps16(void) {
+    unsigned int i,j,sj;
+    unsigned char r,g,b;
+    unsigned char rm,gm,bm;
+
+    outp(0x3C8,0);
+    for (i=0;i < 16;i++) {
+        rm = ((i&3) == 0) || ((i&3) == 1);
+        gm = ((i&3) == 0) || ((i&3) == 2);
+        bm = ((i&3) == 0) || ((i&3) == 3);
+        for (j=0;j < 16;j++) {
+            sj = (j << 2) + (j >> 2); /* equiv sj = j * 63 / 15 */
+            r = rm ? sj : 0;
+            g = gm ? sj : 0;
+            b = bm ? sj : 0;
+            r >>= (i >> 2u);
+            g >>= (i >> 2u);
+            b >>= (i >> 2u);
+            outp(0x3C9,r);
+            outp(0x3C9,g);
+            outp(0x3C9,b);
+        }
+    }
+}
+
+void manual_test(unsigned int colors) {
+    ac_ramp();
+
+    if (colors == 16)
+        dac_ramps16();
+
     test_pause(3);
+}
+
+void auto_test(unsigned int colors) {
+    test_pause(1);
 }
 
 int main(int argc,char **argv) {
