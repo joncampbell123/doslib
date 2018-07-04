@@ -44,7 +44,7 @@ void read_vga_state(void) {
     for (i=0;i < 16;i++) st_ac_pal[i] = vga_read_AC(i);
 }
 
-void int10_print(char *s) {
+void int10_print(char *s,unsigned char c) {
     unsigned int i;
 
     for (i=0;s[i] != 0;i++) {
@@ -54,7 +54,7 @@ void int10_print(char *s) {
             mov     ah,0x0E     ; teletype output
             mov     al,cv
             xor     bh,bh
-            mov     bl,0x0F     ; foreground color (white)
+            mov     bl,c
             int     10h
         }
     }
@@ -79,7 +79,7 @@ void print_vga_state(void) {
         (st_dac_mask>>1)&1, (st_dac_mask>>0)&1);
 
     int10_poscurs(3,18);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 
     /* --------------------------------*/
     sprintf(tmp,"P54S=%s 8BIT=%u PPM=%u",
@@ -88,7 +88,7 @@ void print_vga_state(void) {
         (st_ac_10&0x20)?1:0);
 
     int10_poscurs(4,18);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 
     sprintf(tmp,"BLINK=%u LGA=%u ATGE=%u",
         (st_ac_10&0x08)?1:0,
@@ -96,34 +96,34 @@ void print_vga_state(void) {
         (st_ac_10&0x01)?1:0);
 
     int10_poscurs(5,18);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 
     sprintf(tmp,"CS76=%u CS54=%u",
         (st_ac_14>>2)&3,
         (st_ac_14>>0)&3);
 
     int10_poscurs(6,18);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 
     sprintf(tmp,"AC: %02x %02x %02x %02x",
         st_ac_pal[0], st_ac_pal[1], st_ac_pal[2], st_ac_pal[3]);
     int10_poscurs(7,18);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 
     sprintf(tmp,"AC: %02x %02x %02x %02x",
         st_ac_pal[4], st_ac_pal[5], st_ac_pal[6], st_ac_pal[7]);
     int10_poscurs(8,18);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 
     sprintf(tmp,"AC: %02x %02x %02x %02x",
         st_ac_pal[8], st_ac_pal[9], st_ac_pal[10],st_ac_pal[11]);
     int10_poscurs(9,18);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 
     sprintf(tmp,"AC: %02x %02x %02x %02x",
         st_ac_pal[12],st_ac_pal[13],st_ac_pal[14],st_ac_pal[15]);
     int10_poscurs(10,18);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 }
 
 const char log_name[] = "video\\pc\\vgaacdac.log";
@@ -453,7 +453,7 @@ void mcga2c_test(unsigned int w,unsigned int h) {
 
     sprintf(tmp,"%ux%u seg %xh MCGA, mode %02xh",w,h,0xA000,read_int10_bd_mode());
     int10_poscurs(0,0);
-    int10_print(tmp);
+    int10_print(tmp,0x01);
 
     for (y=16;y < 80;y++) {
         VGA_RAM_PTR d = vmem + (y * (w>>3u));
@@ -502,18 +502,18 @@ void vga_test(unsigned int w,unsigned int h) {
 
     sprintf(tmp,"%ux%u seg %xh VGA, mode %02xh",w,h,0xA000,read_int10_bd_mode());
     int10_poscurs(0,0);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 
     for (x=0;x < 16;x++) tmp[x] = hexes[x];
     tmp[16] = 0;
     int10_poscurs(2,1);
-    int10_print(tmp);
+    int10_print(tmp,0x3F);
 
     for (y=0;y < 16;y++) {
         tmp[0] = hexes[y];
         tmp[1] = 0;
         int10_poscurs(3+y,0);
-        int10_print(tmp);
+        int10_print(tmp,0x3F);
     }
 
     for (y=0;y < 128;y++) {
@@ -557,7 +557,7 @@ void ega_test(unsigned int w,unsigned int h) {
 
     sprintf(tmp,"%ux%u seg %xh EGA, mode %02xh",w,h,0xA000,read_int10_bd_mode());
     int10_poscurs(0,0);
-    int10_print(tmp);
+    int10_print(tmp,0x0F);
 
     /* color band. assume that part of the screen is clear. write mode 0, plane by plane. */
     vga_write_GC(0x03/*Data rotate*/,0x00);    // no rotation, no ROP, data is unmodified
@@ -610,7 +610,7 @@ void cga4_test(unsigned int w,unsigned int h) {
 
     sprintf(tmp,"%ux%u seg %xh CGA4, mode %02xh",w,h,0xB800,read_int10_bd_mode());
     int10_poscurs(0,0);
-    int10_print(tmp);
+    int10_print(tmp,0x03);
 
     for (y=16;y < 80;y++) {
         VGA_RAM_PTR d = vmem + ((y>>1u) * (w>>2u)) + ((y&1u) * 0x2000u);
@@ -656,7 +656,7 @@ void cga2_test(unsigned int w,unsigned int h) {
 
     sprintf(tmp,"%ux%u seg %xh CGA2, mode %02xh",w,h,0xB800,read_int10_bd_mode());
     int10_poscurs(0,0);
-    int10_print(tmp);
+    int10_print(tmp,0x01);
 
     for (y=16;y < 80;y++) {
         VGA_RAM_PTR d = vmem + ((y>>1u) * (w>>3u)) + ((y&1u) * 0x2000u);
