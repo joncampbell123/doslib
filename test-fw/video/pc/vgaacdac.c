@@ -1246,6 +1246,31 @@ void auto_test(unsigned int colors) {
     st_ac_14_set(0,0x03);
     print_vga_state();
 
+    st_ac_14_set(0x0F,0x0F);
+    print_vga_state();
+
+    for (i=0;i < 8;i++) {
+        st_dac_mask = 0xFF << i;
+        outp(0x3C6,st_dac_mask);
+        print_vga_state();
+
+        test_pause_10ths(2);
+    }
+
+    for (i=0;i < 8;i++) {
+        st_dac_mask = 0xFF >> i;
+        outp(0x3C6,st_dac_mask);
+        print_vga_state();
+
+        test_pause_10ths(2);
+    }
+    st_dac_mask = 0xFF;
+    outp(0x3C6,st_dac_mask);
+    print_vga_state();
+
+    st_ac_14_set(0,0x0F);
+    print_vga_state();
+
     st_ac_10_toggle(0x80); // P54S to PAL
     print_vga_state();
 
