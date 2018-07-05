@@ -1215,7 +1215,7 @@ void auto_test(unsigned int colors) {
     }
 
     /* ------------- */
-    st_ac_10_toggle(0x80);
+    st_ac_10_toggle(0x80); // P54S to CSR
     print_vga_state();
 
     for (i=0;i < 4;i++) {
@@ -1246,7 +1246,7 @@ void auto_test(unsigned int colors) {
     st_ac_14_set(0,0x03);
     print_vga_state();
 
-    st_ac_10_toggle(0x80);
+    st_ac_10_toggle(0x80); // P54S to PAL
     print_vga_state();
 
     /* ------------- */
