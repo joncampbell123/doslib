@@ -453,69 +453,6 @@ int test_pause(unsigned int secs) {
     return 1;
 }
 
-VGA_RAM_PTR get_8x8_font(void) {
-#if TARGET_MSDOS == 32
-    VGA_RAM_PTR p = (VGA_RAM_PTR)0xFFA6E; /* IBM BIOS F000:FA6E font. MUST NOT BE ON STACK BECAUSE OF BP */
-
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
-        struct dpmi_realmode_call rc;
-        struct dpmi_realmode_call *p_rc = &rc;
-
-        rc.eax = 0x1130;
-        rc.ebx = 0x0300;
-        rc.flags = 0;
-        rc.es = 0;
-
-        __asm {
-            mov	ax,0x0300
-            mov	bx,0x0010   ; INT 10h
-            xor	cx,cx
-            mov	edi,p_rc    ; we trust Watcom has left ES == DS
-            int	0x31		; call DPMI
-        }
-
-        if (((rc.ebp | rc.es) & 0xFFFFu) != 0u)
-            p = (VGA_RAM_PTR)((rc.es << 4u) + (rc.ebp & 0xFFFFu));
-    }
-
-    return p;
-#else
-    static unsigned short s=0xF000,o=0xFA6E; /* IBM BIOS F000:FA6E font. MUST NOT BE ON STACK BECAUSE OF BP */
-
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
-        __asm {
-            push    es
-            push    bp
-            push    cx
-            push    dx
-
-            xor     ax,ax
-            mov     es,ax
-            mov     bp,ax
-
-            mov     ax,0x1130       ; Get Font Information
-            mov     bh,0x03         ; ROM 8x8 double dot, 0x00-0x7F
-            int     10h             ; returns pointer in ES:BP
-
-            mov     ax,es
-            or      ax,bp
-            jz      noptr
-
-            mov     s,es
-            mov     o,bp
-
-noptr:
-            pop     dx
-            pop     cx
-            pop     bp
-            pop     es
-        }
-    }
-
-    return (VGA_RAM_PTR)MK_FP(s,o);
-#endif
-}
-
 void vga_test(unsigned int w,unsigned int h) {
     unsigned int o,x,y;
     VGA_RAM_PTR vmem; // do not optimize this code, EGA/VGA planar operations require it
@@ -760,18 +697,6 @@ int main(int argc,char **argv) {
             LOG_DEBUG "- BL(active display code)=0x%02x\n"
             LOG_DEBUG "- BH(alternate display code)=0x%02x\n",
             bv&0xFFu,bv>>8u);
-    }
-
-    /* NTS: Cannot use INT 10h to print in graphics mode, because INT 10h does not
-     *      know or understand the HGC graphics mode. */
-    {
-        VGA_RAM_PTR font8 = get_8x8_font();
-
-#if TARGET_MSDOS == 32
-        LOG(LOG_DEBUG "Font ptr: %p\n",font8);
-#else
-        LOG(LOG_DEBUG "Font ptr: %Fp\n",font8);
-#endif
     }
 
     if (!(vga_state.vga_flags & (VGA_IS_VGA))) {
