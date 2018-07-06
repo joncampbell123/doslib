@@ -555,6 +555,56 @@ void vga_test(unsigned int w,unsigned int h) {
         }
     }
 
+    {
+        VGA_RAM_PTR font = get_8x8_font();
+        const char *message1 = "This.is.written,.top.nibble--";
+        const char *message2 = "Bottom.nibble.this.is.written";
+        unsigned char c1,c2,color1,color2;
+        unsigned int o1 = (320*140)+0;
+        unsigned int o2 = (320*160)+0;
+        unsigned int o = (320*120)+0;
+        const char *s1 = message1;
+        const char *s2 = message2;
+        unsigned int x,y;
+        VGA_RAM_PTR fb1;
+        VGA_RAM_PTR fb2;
+
+        color1 = 0x10;
+        color2 = 0x01;
+        while (1) {
+            c1 = (unsigned char)(*s1++);
+            c2 = (unsigned char)(*s2++);
+            if (c1 == 0 || c2 == 0) break;
+
+            fb1 = font + ((unsigned int)c1 * 8u);
+            fb2 = font + ((unsigned int)c2 * 8u);
+            for (y=0;y < 8;y++) {
+                unsigned char b1 = *fb1++;
+                unsigned char b2 = *fb2++;
+
+                for (x=0;x < 8;x++,b1 <<= 1u,b2 <<= 1u) {
+                    vmem[o +x] = ((b1 & 0x80) ? color1 : 0x00) + ((b2 & 0x80) ? color2 : 0x00);
+                    vmem[o1+x] = ((b1 & 0x80) ? color1 : 0x00);
+                    vmem[o2+x] =                                 ((b2 & 0x80) ? color2 : 0x00);
+                }
+
+                o2 += 320;
+                o1 += 320;
+                o += 320;
+            }
+
+            color1 += 0x10;
+            if (color1 == 0x00) color1 = 0x10;
+
+            color2 += 0x01;
+            if (color2 == 0x10) color2 = 0x01;
+
+            o2 -= 320*8 - 8;
+            o1 -= 320*8 - 8;
+            o -= 320*8 - 8;
+       }
+    }
+
     test(256);
 }
 
