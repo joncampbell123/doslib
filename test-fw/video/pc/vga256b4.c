@@ -570,7 +570,7 @@ void vga_test(unsigned int w,unsigned int h) {
         VGA_RAM_PTR fb2;
 
         color1 = 0x10;
-        color2 = 0x01;
+        color2 = 0x08;
         while (1) {
             c1 = (unsigned char)(*s1++);
             c2 = (unsigned char)(*s2++);
@@ -594,10 +594,10 @@ void vga_test(unsigned int w,unsigned int h) {
             }
 
             color1 += 0x10;
-            if (color1 == 0x00) color1 = 0x10;
+            if (color1 == 0x80) color1 = 0x10;
 
             color2 += 0x01;
-            if (color2 == 0x10) color2 = 0x01;
+            if (color2 == 0x10) color2 = 0x08;
 
             o2 -= 320*8 - 8;
             o1 -= 320*8 - 8;
@@ -623,8 +623,16 @@ void dac_ramps256(void) {
     outp(0x3C8,0);
     for (i=0;i < 16;i++) {
         for (j=0;j < 16;j++) {
-            r = (i << 2) + (i >> 2);
-            b = (j << 2) + (j >> 2);
+            if (i < 8)
+                r = ((i * 31) / 7) + 32;
+            else
+                r = 0;
+
+            if (j >= 8)
+                b = (((j - 8) * 31) / 7) + 32;
+            else
+                b = 0;
+
             g = 0;
             outp(0x3C9,r);
             outp(0x3C9,g);
