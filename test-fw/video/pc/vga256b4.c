@@ -485,22 +485,10 @@ void vga_test(unsigned int w,unsigned int h) {
     int10_poscurs(0,0);
     int10_print(tmp,0x3F);
 
-    for (x=0;x < 16;x++) tmp[x] = hexes[x];
-    tmp[16] = 0;
-    int10_poscurs(2,1);
-    int10_print(tmp,0x3F);
-
-    for (y=0;y < 16;y++) {
-        tmp[0] = hexes[y];
-        tmp[1] = 0;
-        int10_poscurs(3+y,0);
-        int10_print(tmp,0x3F);
-    }
-
-    for (y=0;y < 128;y++) {
-        o=(y+24)*w+(1*8);
-        for (x=0;x < 128;x++) {
-            vmem[o++] = ((y>>3u)<<4)+(x>>3u);
+    for (y=0;y < 32;y++) {
+        o=(y+24)*w+(1*2);
+        for (x=0;x < 32;x++) {
+            vmem[o++] = ((y>>1u)<<4)+(x>>1u);
         }
     }
 
@@ -518,17 +506,14 @@ void ac_ramp(void) {
 void dac_ramps256(void) {
     unsigned int i,j;
     unsigned char r,g,b;
-    unsigned char rm,gm,bm;
 
     outp(0x3C8,0);
-    for (i=0;i < 4;i++) {
-        rm = ((i&3) == 0) || ((i&3) == 1);
-        gm = ((i&3) == 0) || ((i&3) == 2);
-        bm = ((i&3) == 0) || ((i&3) == 3);
-        for (j=0;j < 64;j++) {
-            r = rm ? j : 0;
-            g = gm ? j : 0;
-            b = bm ? j : 0;
+    for (i=0;i < 16;i++) {
+        for (j=0;j < 16;j++) {
+            r = (i << 2) + (i >> 2);
+            b = (j << 2) + (j >> 2);
+            if (r < b) r = b;
+            g = b = r;
             outp(0x3C9,r);
             outp(0x3C9,g);
             outp(0x3C9,b);
