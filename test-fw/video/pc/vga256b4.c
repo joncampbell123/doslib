@@ -686,7 +686,37 @@ void test(unsigned int colors) {
 
 void auto_test(unsigned int colors) {
     while (1) {
-        st_ac_10_toggle(0x40);
+        st_dac_mask = 0xFF;
+        outp(0x3C6,st_dac_mask);
+
+        /*--------------------------*/
+        st_ac_10_set(0x40,0x40); // 8BIT=1
+        print_vga_state();
+
+        if (!test_pause(3))
+            break;
+
+        /*--------------------------*/
+        outp(0x3C6,st_dac_mask);
+        st_ac_10_set(0x00,0x40); // 8BIT=0
+        print_vga_state();
+
+        if (!test_pause(3))
+            break;
+
+        st_dac_mask = 0x0F;
+        outp(0x3C6,st_dac_mask);
+
+        /*--------------------------*/
+        st_ac_10_set(0x40,0x40); // 8BIT=1
+        print_vga_state();
+
+        if (!test_pause(3))
+            break;
+
+        /*--------------------------*/
+        outp(0x3C6,st_dac_mask);
+        st_ac_10_set(0x00,0x40); // 8BIT=0
         print_vga_state();
 
         if (!test_pause(3))
