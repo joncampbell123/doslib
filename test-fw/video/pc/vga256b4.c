@@ -594,7 +594,7 @@ void vga_test(unsigned int w,unsigned int h) {
             }
 
             color1 += 0x10;
-            if (color1 == 0x00) color1 = 0x10;
+            if (color1 == 0x00) color1 = 0x40;
 
             color2 += 0x01;
             if (color2 == 0x10) color2 = 0x04;
