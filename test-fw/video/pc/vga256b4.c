@@ -625,7 +625,7 @@ void dac_ramps256(void) {
         for (j=0;j < 16;j++) {
             r = ((j * 63) / 15);
             b = ((i * 63) / 15);
-            g = (r + b) / 2;
+            g = b;
             outp(0x3C9,r);
             outp(0x3C9,g);
             outp(0x3C9,b);
