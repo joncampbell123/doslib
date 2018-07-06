@@ -633,7 +633,9 @@ void dac_ramps256(void) {
             else
                 b = 0;
 
-            g = 0;
+            if (r < b) r = b;
+            g = r;
+            b = r;
             outp(0x3C9,r);
             outp(0x3C9,g);
             outp(0x3C9,b);
