@@ -546,7 +546,7 @@ void vga_test(unsigned int w,unsigned int h) {
 
     sprintf(tmp,"%ux%u seg %xh VGA, mode %02xh",w,h,0xA000,read_int10_bd_mode());
     int10_poscurs(0,0);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 
     for (y=0;y < 32;y++) {
         o=(y+24)*w+(1*2);
@@ -623,9 +623,9 @@ void dac_ramps256(void) {
     outp(0x3C8,0);
     for (i=0;i < 16;i++) {
         for (j=0;j < 16;j++) {
-            r = (i == 0 || (i == 15 && j == 15)) ? ((j * 63) / 15) : 0;
-            b = r;
-            g = r;
+            r = ((j * 63) / 15);
+            b = ((i * 63) / 15);
+            g = (i == 15 && j == 15) ? 0x3F : 0;
             outp(0x3C9,r);
             outp(0x3C9,g);
             outp(0x3C9,b);
