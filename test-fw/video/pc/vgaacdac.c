@@ -86,6 +86,7 @@ enum {
     VGAENT_ATGE,
     VGAENT_CS76,
     VGAENT_CS54,
+    VGAENT_MONO,
     VGAENT_SH256,
     VGAENT_SRI,
     VGAENT_HOE,
@@ -156,11 +157,13 @@ void print_vga_state(void) {
     int10_poscurs(5,17);
     int10_print(tmp,0x3F);
 
-    sprintf(tmp,"%cCS76=%u%cCS54=%u",
+    sprintf(tmp,"%cCS76=%u%cCS54=%u%cMONO=%u",
         vga_entry_sel==VGAENT_CS76?0x1A:' ',
         (st_ac_14>>2)&3,
         vga_entry_sel==VGAENT_CS54?0x1A:' ',
-        (st_ac_14>>0)&3);
+        (st_ac_14>>0)&3,
+        vga_entry_sel==VGAENT_MONO?0x1A:' ',
+        (st_ac_10>>1)&1);
 
     int10_poscurs(6,17);
     int10_print(tmp,0x3F);
@@ -1097,6 +1100,12 @@ void manual_test(unsigned int colors) {
                     }
                     else if (c >= '0' && c <= '3') {
                         st_ac_14_set((c - '0') << 0,0x03);
+                        print_vga_state();
+                    }
+                    break;
+                case VGAENT_MONO:
+                    if (c == ' ') {
+                        st_ac_10_toggle(0x02);
                         print_vga_state();
                     }
                     break;
