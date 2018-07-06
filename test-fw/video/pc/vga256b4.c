@@ -131,7 +131,7 @@ void print_vga_state(void) {
         (st_dac_mask>>1)&1, (st_dac_mask>>0)&1);
 
     int10_poscurs(3,17);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 
     /* --------------------------------*/
     sprintf(tmp,"%cP54S=%s%c8BIT=%u%cPPM=%u",
@@ -143,7 +143,7 @@ void print_vga_state(void) {
         (st_ac_10&0x20)?1:0);
 
     int10_poscurs(4,17);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 
     sprintf(tmp,"%cBLINK=%u%cLGA=%u%cATGE=%u",
         vga_entry_sel==VGAENT_BLINK?0x1A:' ',
@@ -154,7 +154,7 @@ void print_vga_state(void) {
         (st_ac_10&0x01)?1:0);
 
     int10_poscurs(5,17);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 
     sprintf(tmp,"%cCS76=%u%cCS54=%u%cMONO=%u",
         vga_entry_sel==VGAENT_CS76?0x1A:' ',
@@ -165,7 +165,7 @@ void print_vga_state(void) {
         (st_ac_10>>1)&1);
 
     int10_poscurs(6,17);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 
     sprintf(tmp,"%cSH256=%u%cSRI=%u%cHOE=%u",
         vga_entry_sel==VGAENT_SH256?0x1A:' ',
@@ -176,7 +176,7 @@ void print_vga_state(void) {
         (st_gc_05&0x10)?1:0);
 
     int10_poscurs(7,17);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 
     sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
         vga_entry_sel==VGAENT_AC0?0x1A:' ', st_ac_pal[0],
@@ -184,7 +184,7 @@ void print_vga_state(void) {
         vga_entry_sel==VGAENT_AC2?0x1A:' ', st_ac_pal[2],
         vga_entry_sel==VGAENT_AC3?0x1A:' ', st_ac_pal[3]);
     int10_poscurs(8,18);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 
     sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
         vga_entry_sel==VGAENT_AC4?0x1A:' ', st_ac_pal[4],
@@ -192,7 +192,7 @@ void print_vga_state(void) {
         vga_entry_sel==VGAENT_AC6?0x1A:' ', st_ac_pal[6],
         vga_entry_sel==VGAENT_AC7?0x1A:' ', st_ac_pal[7]);
     int10_poscurs(9,18);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 
     sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
         vga_entry_sel==VGAENT_AC8?0x1A:' ', st_ac_pal[8],
@@ -200,7 +200,7 @@ void print_vga_state(void) {
         vga_entry_sel==VGAENT_AC10?0x1A:' ', st_ac_pal[10],
         vga_entry_sel==VGAENT_AC11?0x1A:' ', st_ac_pal[11]);
     int10_poscurs(10,18);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 
     sprintf(tmp,"AC:%c%02x%c%02x%c%02x%c%02x",
         vga_entry_sel==VGAENT_AC12?0x1A:' ', st_ac_pal[12],
@@ -208,7 +208,7 @@ void print_vga_state(void) {
         vga_entry_sel==VGAENT_AC14?0x1A:' ', st_ac_pal[14],
         vga_entry_sel==VGAENT_AC15?0x1A:' ', st_ac_pal[15]);
     int10_poscurs(11,18);
-    int10_print(tmp,0x3F);
+    int10_print(tmp,0xFF);
 }
 
 const char log_name[] = "video\\pc\\vga256b4.log";
@@ -623,9 +623,9 @@ void dac_ramps256(void) {
     outp(0x3C8,0);
     for (i=0;i < 16;i++) {
         for (j=0;j < 16;j++) {
-            r = ((i * 63) / 15);
-            b = ((j * 63) / 15);
-            g = 0;
+            r = (i == 0 || (i == 15 && j == 15)) ? ((j * 63) / 15) : 0;
+            b = r;
+            g = r;
             outp(0x3C9,r);
             outp(0x3C9,g);
             outp(0x3C9,b);
@@ -686,27 +686,6 @@ void test(unsigned int colors) {
 
 void auto_test(unsigned int colors) {
     while (1) {
-        st_dac_mask = 0xFF;
-        outp(0x3C6,st_dac_mask);
-
-        /*--------------------------*/
-        st_ac_10_set(0x40,0x40); // 8BIT=1
-        print_vga_state();
-
-        if (!test_pause(3))
-            break;
-
-        /*--------------------------*/
-        outp(0x3C6,st_dac_mask);
-        st_ac_10_set(0x00,0x40); // 8BIT=0
-        print_vga_state();
-
-        if (!test_pause(3))
-            break;
-
-        st_dac_mask = 0x0F;
-        outp(0x3C6,st_dac_mask);
-
         /*--------------------------*/
         st_ac_10_set(0x40,0x40); // 8BIT=1
         print_vga_state();
