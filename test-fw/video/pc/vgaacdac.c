@@ -1265,7 +1265,7 @@ void auto_test(unsigned int colors) {
         st_ac_14_set(i << 2,0x0C);
         print_vga_state();
 
-        test_pause_10ths(4);
+        if (!test_pause_10ths(4)) break;
     }
     st_ac_14_set(0,0x0C);
     print_vga_state();
@@ -1279,7 +1279,7 @@ void auto_test(unsigned int colors) {
         st_ac_14_set(i,0x03);
         print_vga_state();
 
-        test_pause_10ths(4);
+        if (!test_pause_10ths(4)) break;
     }
     st_ac_14_set(0,0x03);
     print_vga_state();
@@ -1299,7 +1299,7 @@ void auto_test(unsigned int colors) {
         st_ac_14_set(i << 2,0x0C);
         print_vga_state();
 
-        test_pause_10ths(4);
+        if (!test_pause_10ths(4)) break;
     }
     st_ac_14_set(0,0x0C);
     print_vga_state();
@@ -1313,7 +1313,7 @@ void auto_test(unsigned int colors) {
         st_ac_14_set(i,0x03);
         print_vga_state();
 
-        test_pause_10ths(4);
+        if (!test_pause_10ths(4)) break;
     }
     st_ac_14_set(0,0x03);
     print_vga_state();
@@ -1328,7 +1328,7 @@ void auto_test(unsigned int colors) {
         outp(0x3C6,st_dac_mask);
         print_vga_state();
 
-        test_pause_10ths(2);
+        if (!test_pause_10ths(2)) break;
     }
 
     for (i=0;i < 8;i++) {
@@ -1336,7 +1336,7 @@ void auto_test(unsigned int colors) {
         outp(0x3C6,st_dac_mask);
         print_vga_state();
 
-        test_pause_10ths(2);
+        if (!test_pause_10ths(2)) break;
     }
     st_dac_mask = 0xFF;
     outp(0x3C6,st_dac_mask);
@@ -1352,12 +1352,12 @@ void auto_test(unsigned int colors) {
     int10_poscurs(24,0);
     int10_print("Attribute pal  ",0x3F);
     for (i=0;i < 16;i++) {
-        st_ac_pal[i] = 0x00; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
-        st_ac_pal[i] = 0x07; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
-        st_ac_pal[i] = 0x0F; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
-        st_ac_pal[i] = 0x1F; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
-        st_ac_pal[i] = 0x3F; update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
-        st_ac_pal[i] = i;    update_ac_pal(i); print_vga_state(); test_pause_10ths(2);
+        st_ac_pal[i] = 0x00; update_ac_pal(i); print_vga_state(); if (!test_pause_10ths(2)) break;
+        st_ac_pal[i] = 0x07; update_ac_pal(i); print_vga_state(); if (!test_pause_10ths(2)) break;
+        st_ac_pal[i] = 0x0F; update_ac_pal(i); print_vga_state(); if (!test_pause_10ths(2)) break;
+        st_ac_pal[i] = 0x1F; update_ac_pal(i); print_vga_state(); if (!test_pause_10ths(2)) break;
+        st_ac_pal[i] = 0x3F; update_ac_pal(i); print_vga_state(); if (!test_pause_10ths(2)) break;
+        st_ac_pal[i] = i;    update_ac_pal(i); print_vga_state(); if (!test_pause_10ths(2)) break;
     }
 
     for (i=0;i < 8;i++) {
@@ -1365,7 +1365,7 @@ void auto_test(unsigned int colors) {
         outp(0x3C6,st_dac_mask);
         print_vga_state();
 
-        test_pause_10ths(2);
+        if (!test_pause_10ths(2)) break;
     }
 
     for (i=0;i < 8;i++) {
@@ -1373,7 +1373,7 @@ void auto_test(unsigned int colors) {
         outp(0x3C6,st_dac_mask);
         print_vga_state();
 
-        test_pause_10ths(2);
+        if (!test_pause_10ths(2)) break;
     }
     st_dac_mask = 0xFF;
     outp(0x3C6,st_dac_mask);
