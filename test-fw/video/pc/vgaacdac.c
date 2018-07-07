@@ -1197,6 +1197,38 @@ void auto_test(unsigned int colors) {
 
     /* ------------- */
     int10_poscurs(24,0);
+    int10_print("Mono on        ",0x3F);
+    st_ac_10_set(0x02,0x02);
+    print_vga_state();
+
+    test_pause(1);
+
+    /* ------------- */
+    int10_poscurs(24,0);
+    int10_print("Mono off       ",0x3F);
+    st_ac_10_set(0,0x02);
+    print_vga_state();
+
+    test_pause(1);
+
+    /* ------------- */
+    int10_poscurs(24,0);
+    int10_print("Mono/blink on  ",0x3F);
+    st_ac_10_set(0x0A,0x0A);
+    print_vga_state();
+
+    test_pause(1);
+
+    /* ------------- */
+    int10_poscurs(24,0);
+    int10_print("Mono/blink off ",0x3F);
+    st_ac_10_set(0,0x0A);
+    print_vga_state();
+
+    test_pause(1);
+
+    /* ------------- */
+    int10_poscurs(24,0);
     int10_print("Flat DAC 1 8BIT",0x3F);
     st_ac_10_set(0,0xAC); // P54S=PAL(0x80)  PPM=0(0x2)  BLINK=0(0x08)  LGA=0(0x04)
     st_ac_10_set(0x40,0x40);
