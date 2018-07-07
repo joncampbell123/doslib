@@ -1223,6 +1223,37 @@ void auto_test(unsigned int colors) {
         test_pause(1);
     }
 
+    /* ------------- */ // P54S is PAL
+    for (i=0;i < 4;i++) {
+        sprintf(tmp,"P54S=1 CS54=%u  ",i);
+
+        int10_poscurs(24,0);
+        int10_print(tmp,0x3F);
+
+        st_ac_14_set(i << 2,0x0C);
+        print_vga_state();
+
+        test_pause_10ths(4);
+    }
+    st_ac_14_set(0,0x0C);
+    print_vga_state();
+
+    for (i=0;i < 4;i++) {
+        sprintf(tmp,"P54S=1 CS76=%u  ",i);
+
+        int10_poscurs(24,0);
+        int10_print(tmp,0x3F);
+
+        st_ac_14_set(i,0x03);
+        print_vga_state();
+
+        test_pause_10ths(4);
+    }
+    st_ac_14_set(0,0x03);
+    print_vga_state();
+
+    test_pause(1);
+
     /* ------------- */
     st_ac_10_toggle(0x80); // P54S to CSR
     print_vga_state();
@@ -1254,6 +1285,8 @@ void auto_test(unsigned int colors) {
     }
     st_ac_14_set(0,0x03);
     print_vga_state();
+
+    test_pause(1);
 
     st_ac_14_set(0x0F,0x0F);
     print_vga_state();
