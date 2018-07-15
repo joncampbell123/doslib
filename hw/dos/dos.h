@@ -508,6 +508,14 @@ uint32_t dos_linear_to_phys_vcpi(uint32_t pn);
 int vector_is_iret(const unsigned char vector);
 #endif
 
+#if !defined(TARGET_WINDOWS) && !defined(WIN386) && !defined(TARGET_OS2)
+int int2f_is_valid(void);
+#else
+/* No, don't call INT 2Fh from Windows or OS/2!
+ * If you must, it's probably valid since Windows itself probably uses it. */
+# define int2f_is_valid() (0)
+#endif
+
 #ifdef __cplusplus
 }
 #endif

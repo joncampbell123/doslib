@@ -350,6 +350,8 @@ int probe_himem_sys() {
 	/* NTS: If this is an 8086, then there is no extended memory, and therefore no reason to call HIMEM.SYS */
 	if (cpu_basic_level < 0) cpu_probe();
 	if (cpu_basic_level < 2) return 0;
+    /* NTS: Really old versions of DOS (possibly 3.x, definitely 2.x) allow INT 2Fh to be NULL. */
+    if (!int2f_is_valid()) return 0;
 
 	regs.w.ax = 0x4300;
 	int86(0x2F,&regs,&regs);

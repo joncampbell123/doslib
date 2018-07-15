@@ -318,6 +318,7 @@ int detect_windows() {
 	/* MS-DOS 16-bit or 32-bit. MS-DOS applications must try various obscure interrupts to detect whether Windows is running */
 	/* TODO: How can we detect whether we're running under OS/2? */
 	if (!windows_init) {
+        unsigned char int2f_valid = int2f_is_valid(); /* NTS: INT 2Fh may be NULL if the DOS version is old enough */
 		union REGS regs;
 
 		windows_version = 0;
@@ -333,7 +334,7 @@ int detect_windows() {
 				break;
 		};
 
-		if (windows_version == 0) {
+		if (windows_version == 0 && int2f_valid) {
 			regs.w.ax = 0x160A;
 #if TARGET_MSDOS == 32
 			int386(0x2F,&regs,&regs);
@@ -353,7 +354,7 @@ int detect_windows() {
 			}
 		}
 
-		if (windows_version == 0) {
+		if (windows_version == 0 && int2f_valid) {
 			regs.w.ax = 0x4680;
 #if TARGET_MSDOS == 32
 			int386(0x2F,&regs,&regs);
@@ -376,7 +377,7 @@ int detect_windows() {
 			}
 		}
 
-		if (windows_version == 0) {
+		if (windows_version == 0 && int2f_valid) {
 			regs.w.ax = 0x1600;
 #if TARGET_MSDOS == 32
 			int386(0x2F,&regs,&regs);
