@@ -12,7 +12,7 @@ win32=1 # Windows 9x/NT/XP/Vista/etc.
 
 if [ "$1" == "clean" ]; then
     do_clean
-    rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd pcx2vrl pcxsscut vrl2vrs vrsdump vrldbg *.o
+    rm -fv test.dsk test2.dsk pcjrtest.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd pcx2vrl pcxsscut vrl2vrs vrsdump vrldbg *.o
     exit 0
 fi
 
@@ -28,6 +28,9 @@ if [ "$1" == "disk" ]; then
     mcopy -i test.dsk dos86s/tmodeset.exe ::tmods86.exe
     mcopy -i test.dsk dos86l/tmodeset.exe ::tmods86l.exe
     mcopy -i test.dsk dos386f/tmodeset.exe ::tmods386.exe
+
+    cp -v pcjrboot.dsk pcjrtest.dsk || exit 1
+    mcopy -i pcjrtest.dsk dos86l/test.exe ::test86l.exe
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
