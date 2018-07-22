@@ -331,6 +331,8 @@ int main(int argc,char **argv) {
                 unsigned int FrameDatum;
                 unsigned int TargetDatum;
                 unsigned long TargetDisplacement;
+                const struct omf_segdef_t *frame_segdef;
+                const struct omf_segdef_t *target_segdef;
 
                 ModuleType = omf_record_get_byte(&omf_state->record);
                 EndData = omf_record_get_byte(&omf_state->record);
@@ -341,6 +343,9 @@ int main(int argc,char **argv) {
                     TargetDisplacement = omf_record_get_dword(&omf_state->record);
                 else
                     TargetDisplacement = omf_record_get_word(&omf_state->record);
+    
+                frame_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,FrameDatum);
+                target_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,TargetDatum);
 
                 printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
                     ModuleType,
@@ -348,8 +353,13 @@ int main(int argc,char **argv) {
                     ModuleType&0x40?1:0,
                     ModuleType&0x20?1:0,
                     ModuleType&0x01?1:0);
-                printf("    EndData=0x%02x FrameDatum=%u TargetDatum=%u TargetDisplacement=0x%lx\n",
-                    EndData,FrameDatum,TargetDatum,TargetDisplacement);
+                printf("    EndData=0x%02x FrameDatum=%u(%s) TargetDatum=%u(%s) TargetDisplacement=0x%lx\n",
+                    EndData,
+                    FrameDatum,
+                    (frame_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index):"",
+                    TargetDatum,
+                    (target_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index):"",
+                    TargetDisplacement);
 
                 } break;
         }
