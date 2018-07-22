@@ -16,9 +16,16 @@ void dump_GRPDEF(FILE *fp,const struct omf_context_t * const ctx,unsigned int i)
             int segdef = omf_grpdefs_context_get_grpdef_segdef(&ctx->GRPDEFs,grpdef,j);
 
             if (segdef >= 0) {
-                fprintf(fp,"\"%s\"(%u) ",
-                    omf_lnames_context_get_name_safe(&ctx->LNAMEs,segdef),
-                    segdef);
+                const struct omf_segdef_t *sg = omf_segdefs_context_get_segdef(&ctx->SEGDEFs,segdef);
+
+                if (sg != NULL) {
+                    fprintf(fp,"\"%s\"(%u) ",
+                        omf_lnames_context_get_name_safe(&ctx->LNAMEs,sg->segment_name_index),
+                        segdef);
+                }
+                else {
+                    fprintf(fp,"[invalid SEGDEF] ");
+                }
             }
             else {
                 fprintf(fp,"[invalid] ");
