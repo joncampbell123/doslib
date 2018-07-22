@@ -329,6 +329,8 @@ static char*                            out_file = NULL;
 static char*                            in_file[MAX_IN_FILES];
 static unsigned int                     in_file_count = 0;
 
+static unsigned char                    do_dosseg = 1;
+
 struct omf_context_t*                   omf_state = NULL;
 
 static void help(void) {
@@ -337,6 +339,8 @@ static void help(void) {
     fprintf(stderr,"  -o <file>    Output file\n");
     fprintf(stderr,"  -v           Verbose mode\n");
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
+    fprintf(stderr,"  -no-dosseg   No DOSSEG sort order\n");
+    fprintf(stderr,"  -dosseg      DOSSEG sort order\n");
 }
 
 void my_dumpstate(const struct omf_context_t * const ctx) {
@@ -411,6 +415,12 @@ int main(int argc,char **argv) {
             }
             else if (!strcmp(a,"v")) {
                 verbose = 1;
+            }
+            else if (!strcmp(a,"dosseg")) {
+                do_dosseg = 1;
+            }
+            else if (!strcmp(a,"no-dosseg")) {
+                do_dosseg = 0;
             }
             else {
                 help();
@@ -528,7 +538,8 @@ int main(int argc,char **argv) {
         close(fd);
     }
 
-    owlink_dosseg_sort_order();
+    if (do_dosseg)
+        owlink_dosseg_sort_order();
 
     if (verbose)
         dump_link_segments();
