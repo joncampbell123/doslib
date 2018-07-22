@@ -37,6 +37,128 @@ struct link_segdef {
 static struct link_segdef               link_segments[MAX_SEGMENTS];
 static unsigned int                     link_segments_count = 0;
 
+/* Open Watcom DOSSEG linker order
+ * 
+ * 1. not DGROUP, class CODE
+ * 2. not DGROUP
+ * 3. group DGROUP, class BEGDATA
+ * 4. group DGROUP, not (class BEGDATA or class BSS or class STACK)
+ * 5. group DGROUP, class BSS
+ * 6. group DGROUP, class STACK */
+
+/* 1. return -1 if not DGROUP, class CODE (move up) */
+int sort_cmp_not_dgroup_class_code(const struct link_segdef *a) {
+    if (a->groupname == NULL || strcmp(a->groupname,"DGROUP")) { /* not DGROUP */
+        if (a->classname != NULL && strcmp(a->classname,"CODE") == 0) { /* CODE */
+            /* OK */
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/* 2. return -1 if not DGROUP */
+int sort_cmp_not_dgroup(const struct link_segdef *a) {
+    if (a->groupname == NULL || strcmp(a->groupname,"DGROUP")) { /* not DGROUP */
+        /* OK */
+        return -1;
+    }
+
+    return 0;
+}
+
+/* 3. return -1 if group DGROUP, class BEGDATA */
+int sort_cmp_dgroup_class_BEGDATA(const struct link_segdef *a) {
+    if (a->groupname != NULL && strcmp(a->groupname,"DGROUP") == 0) { /* DGROUP */
+        if (a->classname != NULL && strcmp(a->classname,"BEGDATA") == 0) { /* BEGDATA */
+            /* OK */
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/* 4. return -1 if group DGROUP, not (class BEGDATA or class BSS or class STACK) */
+int sort_cmp_dgroup_class_not_special(const struct link_segdef *a) {
+    if (a->groupname != NULL && strcmp(a->groupname,"DGROUP") == 0) { /* DGROUP */
+        if (a->classname != NULL && !(strcmp(a->classname,"BEGDATA") == 0 || strcmp(a->classname,"BSS") == 0 || strcmp(a->classname,"STACK") == 0)) { /* BEGDATA */
+            /* OK */
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/* 5. return -1 if group DGROUP, class BSS */
+int sort_cmp_dgroup_class_bss(const struct link_segdef *a) {
+    if (a->groupname != NULL && strcmp(a->groupname,"DGROUP") == 0) { /* DGROUP */
+        if (a->classname != NULL && strcmp(a->classname,"BSS") == 0) { /* BSS */
+            /* OK */
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+/* 6. return -1 if group DGROUP, class STACK */
+int sort_cmp_dgroup_class_stack(const struct link_segdef *a) {
+    if (a->groupname != NULL && strcmp(a->groupname,"DGROUP") == 0) { /* DGROUP */
+        if (a->classname != NULL && strcmp(a->classname,"STACK") == 0) { /* STACK */
+            /* OK */
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+void link_segments_swap(unsigned int s1,unsigned int s2) {
+    if (s1 != s2) {
+        struct link_segdef t;
+
+                        t = link_segments[s1];
+        link_segments[s1] = link_segments[s2];
+        link_segments[s2] = t;
+    }
+}
+
+void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(const struct link_segdef *a)) {
+    unsigned int i;
+    int r;
+
+    for (i=*start;i <= *end;) {
+        r = sort_cmp(&link_segments[i]);
+        if (r < 0) {
+            while (i > *start) {
+                i--;
+                link_segments_swap(i,i+1);
+            }
+
+            (*start)++;
+            i++;
+        }
+        else {
+            i++;
+        }
+    }
+}
+
+void owlink_dosseg_sort_order(void) {
+    unsigned int s = 0,e = link_segments_count-1;
+
+    if (link_segments_count == 0) return;
+    link_segments_sort(&s,&e,sort_cmp_not_dgroup_class_code);       /* 1 */
+    link_segments_sort(&s,&e,sort_cmp_not_dgroup);                  /* 2 */
+    link_segments_sort(&s,&e,sort_cmp_dgroup_class_BEGDATA);        /* 3 */
+    link_segments_sort(&s,&e,sort_cmp_dgroup_class_not_special);    /* 4 */
+    link_segments_sort(&s,&e,sort_cmp_dgroup_class_bss);            /* 5 */
+    link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
+}
+
 void free_link_segment(struct link_segdef *sg) {
     cstr_free(&(sg->groupname));
     cstr_free(&(sg->classname));
@@ -405,6 +527,8 @@ int main(int argc,char **argv) {
 
         close(fd);
     }
+
+    owlink_dosseg_sort_order();
 
     if (verbose)
         dump_link_segments();
