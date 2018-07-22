@@ -295,6 +295,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
             /* it is an error to change attributes */
             fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
 
+            lsg->attr.f.f.alignment = sg->attr.f.f.alignment;
             if (lsg->attr.f.f.use32 != sg->attr.f.f.use32 ||
                 lsg->attr.f.f.combination != sg->attr.f.f.combination ||
                 lsg->attr.f.f.big_segment != sg->attr.f.f.big_segment) {
