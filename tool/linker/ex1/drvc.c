@@ -1,4 +1,5 @@
 
-void entry_c(void) {
+unsigned int entry_c(void) {
+    return 0;
 }
 
