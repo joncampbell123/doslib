@@ -32,6 +32,7 @@ struct link_segdef {
     unsigned long                       segment_offset;
     unsigned long                       segment_length;
     unsigned long                       segment_relative;
+    unsigned long                       load_base;
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
@@ -230,6 +231,7 @@ struct link_segdef *new_link_segment(const char *name) {
 
 int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) {
     struct link_segdef *lsg;
+    unsigned long max_ofs;
     const char *segname;
 
     segname = omf_context_get_segdef_name_safe(omf_state, info->segment_index);
@@ -242,6 +244,9 @@ int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info)
         fprintf(stderr,"Segment %s not found\n",segname);
         return 1;
     }
+
+    max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)lsg->load_base;
+    if (lsg->segment_length < max_ofs) lsg->segment_length = max_ofs;
 
     return 0;
 }
