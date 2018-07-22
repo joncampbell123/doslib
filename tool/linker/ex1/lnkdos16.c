@@ -248,6 +248,14 @@ int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info)
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)lsg->load_base;
     if (lsg->segment_length < max_ofs) lsg->segment_length = max_ofs;
 
+#if 0
+    fprintf(stderr,"* enum=0x%lx len=0x%lx base=0x%lx max=0x%lx\n",
+        info->enum_data_offset,
+        info->data_length,
+        lsg->load_base,
+        max_ofs);
+#endif
+
     return 0;
 }
 
@@ -304,6 +312,7 @@ int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
 }
 
 int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
+    unsigned long alignb,malign;
     struct link_segdef *lsg;
 
     while (first < omf_state->SEGDEFs.omf_SEGDEFS_count) {
@@ -339,6 +348,15 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
 
             lsg->attr = sg->attr;
         }
+
+        /* alignment */
+        lsg->load_base = lsg->segment_length;
+        alignb = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
+        malign = lsg->load_base % (unsigned long)alignb;
+        if (malign != 0) lsg->load_base += alignb - malign;
+
+        fprintf(stderr,"Start segment='%s' len=0x%lx load=0x%lx\n",
+            lsg->name, lsg->segment_length, lsg->load_base);
     }
 
     return 0;
