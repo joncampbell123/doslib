@@ -8,7 +8,7 @@ void dos_putc(const char c);
     modify [ah] \
     parm [dl]
 
-unsigned int entry_c(void) {
+unsigned int near entry_c(void) {
     {
         const char *p = hello_world;
         char c;

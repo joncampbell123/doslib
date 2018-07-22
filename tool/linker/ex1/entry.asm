@@ -36,11 +36,8 @@ correct:
     sub     sp,0x100
 %endif
 
-%ifdef MMODE_CODE_CALL_DEF_FAR
-    call far entry_c_
-%else
+; unsigned int near entry_c(void)
     call    entry_c_
-%endif
 
 global _exit_
 _exit_:
