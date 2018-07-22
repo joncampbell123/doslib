@@ -58,7 +58,7 @@ segment _STACK align=4 class=STACK use16
 %endif
 
 %ifdef TINYMODE
-group DGROUP _DATA _TEXT
+group DGROUP _DATA _TEXT _STACK
 %else
-group DGROUP _DATA
+group DGROUP _DATA _STACK
 %endif
