@@ -1,5 +1,5 @@
 
-static const char hello_world[] = "Hello world. This is code without a C runtime.\r\n";
+const char hello_world[] = "Hello world. This is code without a C runtime.\r\n";
 
 void dos_putc(const char c);
 #pragma aux dos_putc = \
