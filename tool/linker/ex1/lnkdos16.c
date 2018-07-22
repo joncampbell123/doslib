@@ -27,6 +27,7 @@ struct link_segdef {
     struct omf_segdef_attr_t            attr;
     char*                               name;
     char*                               classname;
+    char*                               groupname;
     unsigned long                       file_offset;
     unsigned long                       segment_offset;
     unsigned long                       segment_length;
@@ -37,6 +38,7 @@ static struct link_segdef               link_segments[MAX_SEGMENTS];
 static unsigned int                     link_segments_count = 0;
 
 void free_link_segment(struct link_segdef *sg) {
+    cstr_free(&(sg->groupname));
     cstr_free(&(sg->classname));
     cstr_free(&(sg->name));
 }
@@ -65,9 +67,8 @@ void dump_link_segments(void) {
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
 
-        fprintf(stderr,"segment[%u]: name='%s' class='%s' align=%u use32=%u comb=%u big=%u fileofs=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx\n",
-            i/*post-increment, intentional*/,sg->name,sg->classname,
-            omf_align_code_to_bytes(sg->attr.f.f.alignment),
+        fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx\n",
+            i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
             sg->attr.f.f.use32,
             sg->attr.f.f.combination,
             sg->attr.f.f.big_segment,
@@ -119,13 +120,6 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
         if (lsg != NULL) {
             /* it is an error to change attributes */
             fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
-
-            if (lsg->attr.f.f.alignment != sg->attr.f.f.alignment) {
-                if (omf_align_code_to_bytes(lsg->attr.f.f.alignment) < omf_align_code_to_bytes(sg->attr.f.f.alignment)) {
-                    fprintf(stderr,"Segment: Alignment changed, using larger\n");
-                    lsg->attr.f.f.alignment = sg->attr.f.f.alignment;
-                }
-            }
 
             if (lsg->attr.f.f.use32 != sg->attr.f.f.use32 ||
                 lsg->attr.f.f.combination != sg->attr.f.f.combination ||
