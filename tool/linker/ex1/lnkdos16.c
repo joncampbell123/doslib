@@ -27,6 +27,9 @@ struct link_segdef {
     struct omf_segdef_attr_t            attr;
     char*                               name;
     char*                               classname;
+    unsigned long                       file_offset;
+    unsigned long                       segment_offset;
+    unsigned long                       segment_length;
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
@@ -61,12 +64,15 @@ void dump_link_segments(void) {
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
 
-        fprintf(stderr,"segment[%u]: name='%s' class='%s' align=%u use32=%u comb=%u big=%u\n",
+        fprintf(stderr,"segment[%u]: name='%s' class='%s' align=%u use32=%u comb=%u big=%u fileofs=0x%lx segofs=0x%lx len=0x%lx\n",
             i/*post-increment, intentional*/,sg->name,sg->classname,
             omf_align_code_to_bytes(sg->attr.f.f.alignment),
             sg->attr.f.f.use32,
             sg->attr.f.f.combination,
-            sg->attr.f.f.big_segment);
+            sg->attr.f.f.big_segment,
+            sg->file_offset,
+            sg->segment_offset,
+            sg->segment_length);
     }
 }
 
