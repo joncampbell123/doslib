@@ -228,6 +228,24 @@ struct link_segdef *new_link_segment(const char *name) {
     return NULL;
 }
 
+int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) {
+    struct link_segdef *lsg;
+    const char *segname;
+
+    segname = omf_context_get_segdef_name_safe(omf_state, info->segment_index);
+    if (*segname == 0) {
+        fprintf(stderr,"Null segment name\n");
+        return 1;
+    }
+
+    if ((lsg=find_link_segment(segname)) == NULL) {
+        fprintf(stderr,"Segment %s not found\n",segname);
+        return 1;
+    }
+
+    return 0;
+}
+
 int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
     while (first < omf_state->GRPDEFs.omf_GRPDEFS_count) {
         struct omf_grpdef_t *gd = &omf_state->GRPDEFs.omf_GRPDEFS[first++];
@@ -560,6 +578,8 @@ int main(int argc,char **argv) {
                         if (omf_state->flags.verbose)
                             dump_LEDATA(stdout,omf_state,&info);
 
+                        if (ledata_note(omf_state, &info))
+                            return 1;
                     } break;
                 default:
                     break;
