@@ -328,6 +328,8 @@ static char*                            out_file = NULL;
 
 static char*                            in_file[MAX_IN_FILES];
 static unsigned int                     in_file_count = 0;
+static unsigned int                     current_in_file = 0;
+static unsigned int                     current_in_mod = 0;
 
 static unsigned char                    do_dosseg = 1;
 
@@ -451,6 +453,7 @@ int main(int argc,char **argv) {
             fprintf(stderr,"Failed to open input file %s\n",strerror(errno));
             return 1;
         }
+        current_in_file = inf;
 
         // prepare parsing
         if ((omf_state=omf_context_create()) == NULL) {
@@ -460,12 +463,33 @@ int main(int argc,char **argv) {
         omf_state->flags.verbose = (verbose > 0);
 
         diddump = 0;
+        current_in_mod = 0;
         omf_context_begin_file(omf_state);
 
         do {
             ret = omf_context_read_fd(omf_state,fd);
             if (ret == 0) {
-                /* TODO: Multiple mods, for .LIB files */
+                if (omf_record_is_modend(&omf_state->record)) {
+                    if (!diddump) {
+                        my_dumpstate(omf_state);
+                        diddump = 1;
+                    }
+
+                    printf("----- next module -----\n");
+
+                    ret = omf_context_next_lib_module_fd(omf_state,fd);
+                    if (ret < 0) {
+                        printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
+                        if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
+                    }
+                    else if (ret > 0) {
+                        current_in_mod++;
+                        omf_context_begin_module(omf_state);
+                        diddump = 0;
+                        continue;
+                    }
+                }
+
                 break;
             }
             else if (ret < 0) {
