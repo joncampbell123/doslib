@@ -324,6 +324,34 @@ int main(int argc,char **argv) {
                     dump_LIDATA(stdout,omf_state,&info,&omf_state->record);
 
                 } break;
+            case OMF_RECTYPE_MODEND:/*0x8A*/
+            case OMF_RECTYPE_MODEND32:/*0x8B*/{
+                unsigned char ModuleType;
+                unsigned char EndData;
+                unsigned int FrameDatum;
+                unsigned int TargetDatum;
+                unsigned long TargetDisplacement;
+
+                ModuleType = omf_record_get_byte(&omf_state->record);
+                EndData = omf_record_get_byte(&omf_state->record);
+                FrameDatum = omf_record_get_index(&omf_state->record);
+                TargetDatum = omf_record_get_index(&omf_state->record);
+
+                if (omf_state->record.rectype == OMF_RECTYPE_MODEND32)
+                    TargetDisplacement = omf_record_get_dword(&omf_state->record);
+                else
+                    TargetDisplacement = omf_record_get_word(&omf_state->record);
+
+                printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
+                    ModuleType,
+                    ModuleType&0x80?1:0,
+                    ModuleType&0x40?1:0,
+                    ModuleType&0x20?1:0,
+                    ModuleType&0x01?1:0);
+                printf("    EndData=0x%02x FrameDatum=%u TargetDatum=%u TargetDisplacement=0x%lx\n",
+                    EndData,FrameDatum,TargetDatum,TargetDisplacement);
+
+                } break;
         }
     } while (1);
 
