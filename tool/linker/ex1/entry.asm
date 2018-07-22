@@ -15,8 +15,13 @@ asm_entry:
 
 extern entry_c_
 
+%ifndef TINYMODE
     mov     ax,_DATA
     mov     ds,ax
+%else
+    ; tiny model (.com) already has CS == DS
+%endif
+
 %ifdef MMODE_CODE_CALL_DEF_FAR
     call far entry_c_
 %else

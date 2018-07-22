@@ -9,7 +9,11 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -zl -s
 NOW_BUILDING = TOOL_LINKER_EX1
 
+!ifdef TINYMODE
+TEST_EXE =    $(SUBDIR)$(HPS)test.com
+!else
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+!endif
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -32,9 +36,15 @@ exe: $(TEST_EXE) .symbolic
 
 lib: .symbolic
 
+!ifdef TINYMODE
+WLINK_NOCLIBS_SYSTEM = dos com
+!else
+WLINK_NOCLIBS_SYSTEM = $(WLINK_SYSTEM)
+!endif
+
 !ifdef TEST_EXE
 $(TEST_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
-	%write tmp.cmd option quiet OPTION NODEFAULTLIBS option map=$(TEST_EXE).map system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)entry.obj file $(SUBDIR)$(HPS)drvc.obj name $(TEST_EXE)
+	%write tmp.cmd option quiet OPTION NODEFAULTLIBS option map=$(TEST_EXE).map system $(WLINK_NOCLIBS_SYSTEM) file $(SUBDIR)$(HPS)entry.obj file $(SUBDIR)$(HPS)drvc.obj name $(TEST_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
