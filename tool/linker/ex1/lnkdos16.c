@@ -32,6 +32,7 @@ struct link_segdef {
     unsigned long                       segment_offset;
     unsigned long                       segment_length;
     unsigned long                       segment_relative;
+    unsigned short                      initial_alignment;
     unsigned long                       load_base;
 };
 
@@ -190,7 +191,7 @@ void dump_link_segments(void) {
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
 
-        fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx\n",
+        fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u\n",
             i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
             sg->attr.f.f.use32,
             sg->attr.f.f.combination,
@@ -198,7 +199,8 @@ void dump_link_segments(void) {
             sg->file_offset,
             sg->segment_offset,
             sg->segment_length,
-            sg->segment_relative);
+            sg->segment_relative,
+            sg->initial_alignment);
     }
 }
 
@@ -347,6 +349,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
             lsg->classname = strdup(classname);
 
             lsg->attr = sg->attr;
+            lsg->initial_alignment = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
         }
 
         /* alignment */
