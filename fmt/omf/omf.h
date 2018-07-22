@@ -75,6 +75,9 @@ enum {
 
 #define OMF_RECTYPE_COMENT      (0x88)
 
+#define OMF_RECTYPE_MODEND      (0x8A)
+#define OMF_RECTYPE_MODEND32    (0x8B)
+
 #define OMF_RECTYPE_EXTDEF      (0x8C)
 
 #define OMF_RECTYPE_PUBDEF      (0x90)
