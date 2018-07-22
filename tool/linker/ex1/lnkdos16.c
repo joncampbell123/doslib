@@ -547,6 +547,20 @@ int main(int argc,char **argv) {
                         if (grpdef_add(omf_state, p_count))
                             return 1;
                     } break;
+                case OMF_RECTYPE_LEDATA:/*0xA0*/
+                case OMF_RECTYPE_LEDATA32:/*0xA1*/
+                    {
+                        struct omf_ledata_info_t info;
+
+                        if (omf_context_parse_LEDATA(omf_state,&info,&omf_state->record) < 0) {
+                            fprintf(stderr,"Error parsing LEDATA\n");
+                            return 1;
+                        }
+
+                        if (omf_state->flags.verbose)
+                            dump_LEDATA(stdout,omf_state,&info);
+
+                    } break;
                 default:
                     break;
             }
