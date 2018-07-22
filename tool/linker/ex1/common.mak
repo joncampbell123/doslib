@@ -45,7 +45,6 @@ WLINK_NOCLIBS_SYSTEM = $(WLINK_SYSTEM)
 !ifdef TEST_EXE
 $(TEST_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
 	%write tmp.cmd option quiet OPTION NODEFAULTLIBS option map=$(TEST_EXE).map system $(WLINK_NOCLIBS_SYSTEM) file $(SUBDIR)$(HPS)entry.obj file $(SUBDIR)$(HPS)drvc.obj name $(TEST_EXE)
-	%write tmp.cmd order clname CODE clname DATA clname STACK NOEMIT
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
