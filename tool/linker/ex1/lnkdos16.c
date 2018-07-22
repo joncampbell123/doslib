@@ -106,6 +106,58 @@ struct link_segdef *new_link_segment(const char *name) {
     return NULL;
 }
 
+int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
+    while (first < omf_state->GRPDEFs.omf_GRPDEFS_count) {
+        struct omf_grpdef_t *gd = &omf_state->GRPDEFs.omf_GRPDEFS[first++];
+        struct link_segdef *lsg;
+        const char *grpdef_name;
+        const char *segdef_name;
+        unsigned int i;
+        int segdef;
+
+        grpdef_name = omf_lnames_context_get_name_safe(&omf_state->LNAMEs, gd->group_name_index);
+        if (*grpdef_name == 0) continue;
+
+        for (i=0;i < gd->count;i++) {
+            segdef = omf_grpdefs_context_get_grpdef_segdef(&omf_state->GRPDEFs,gd,i);
+            if (segdef >= 0) {
+                const struct omf_segdef_t *sg = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,segdef);
+
+                if (sg == NULL) {
+                    fprintf(stderr,"GRPDEF refers to non-existent SEGDEF\n");
+                    return 1;
+                }
+
+                segdef_name = omf_lnames_context_get_name_safe(&omf_state->LNAMEs, sg->segment_name_index);
+                if (*segdef_name == 0) {
+                    fprintf(stderr,"GRPDEF refers to SEGDEF with no name\n");
+                    return 1;
+                }
+
+                lsg = find_link_segment(segdef_name);
+                if (lsg == NULL) {
+                    fprintf(stderr,"GRPDEF refers to SEGDEF that has not been registered\n");
+                    return 1;
+                }
+
+                if (lsg->groupname == NULL) {
+                    /* assign to group */
+                    lsg->groupname = strdup(grpdef_name);
+                }
+                else if (!strcmp(lsg->groupname, grpdef_name)) {
+                    /* re-asserting group membership, OK */
+                }
+                else {
+                    fprintf(stderr,"GRPDEF re-defines membership of segment '%s'\n",segdef_name);
+                    return 1;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
 int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
     struct link_segdef *lsg;
 
@@ -324,6 +376,7 @@ int main(int argc,char **argv) {
                 case OMF_RECTYPE_GRPDEF:/*0x9A*/
                 case OMF_RECTYPE_GRPDEF32:/*0x9B*/
                     {
+                        int p_count = omf_state->GRPDEFs.omf_GRPDEFS_count;
                         int first_new_grpdef;
 
                         if ((first_new_grpdef=omf_context_parse_GRPDEF(omf_state,&omf_state->record)) < 0) {
@@ -334,6 +387,8 @@ int main(int argc,char **argv) {
                         if (omf_state->flags.verbose)
                             dump_GRPDEF(stdout,omf_state,(unsigned int)first_new_grpdef);
 
+                        if (grpdef_add(omf_state, p_count))
+                            return 1;
                     } break;
                 default:
                     break;
