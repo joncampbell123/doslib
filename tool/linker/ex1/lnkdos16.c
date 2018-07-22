@@ -13,12 +13,138 @@
 #include <stdio.h>
 
 #include <fmt/omf/omf.h>
+#include <fmt/omf/omfcstr.h>
 
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
 
 //================================== PROGRAM ================================
+
+#define MAX_SEGMENTS                    256
+
+struct link_segdef {
+    struct omf_segdef_attr_t            attr;
+    char*                               name;
+    char*                               classname;
+};
+
+static struct link_segdef               link_segments[MAX_SEGMENTS];
+static unsigned int                     link_segments_count = 0;
+
+void free_link_segment(struct link_segdef *sg) {
+    cstr_free(&(sg->classname));
+    cstr_free(&(sg->name));
+}
+
+void free_link_segments(void) {
+    while (link_segments_count > 0)
+        free_link_segment(&link_segments[--link_segments_count]);
+}
+
+unsigned int omf_align_code_to_bytes(const unsigned int x) {
+    switch (x) {
+        case OMF_SEGDEF_RELOC_BYTE:         return 1;
+        case OMF_SEGDEF_RELOC_WORD:         return 2;
+        case OMF_SEGDEF_RELOC_PARA:         return 16;
+        case OMF_SEGDEF_RELOC_PAGE:         return 4096;
+        case OMF_SEGDEF_RELOC_DWORD:        return 4;
+        default:                            break;
+    };
+
+    return 0;
+}
+
+void dump_link_segments(void) {
+    unsigned int i=0;
+
+    while (i < link_segments_count) {
+        struct link_segdef *sg = &link_segments[i++];
+
+        fprintf(stderr,"segment[%u]: name='%s' class='%s' align=%u use32=%u comb=%u big=%u\n",
+            i/*post-increment, intentional*/,sg->name,sg->classname,
+            omf_align_code_to_bytes(sg->attr.f.f.alignment),
+            sg->attr.f.f.use32,
+            sg->attr.f.f.combination,
+            sg->attr.f.f.big_segment);
+    }
+}
+
+struct link_segdef *find_link_segment(const char *name) {
+    unsigned int i=0;
+
+    while (i < link_segments_count) {
+        struct link_segdef *sg = &link_segments[i++];
+
+        assert(sg->name != NULL);
+        if (!strcmp(name,sg->name)) return sg;
+    }
+
+    return NULL;
+}
+
+struct link_segdef *new_link_segment(const char *name) {
+    if (link_segments_count < MAX_SEGMENTS) {
+        struct link_segdef *sg = &link_segments[link_segments_count++];
+
+        memset(sg,0,sizeof(*sg));
+        sg->name = strdup(name);
+        assert(sg->name != NULL);
+
+        return sg;
+    }
+
+    return NULL;
+}
+
+int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
+    struct link_segdef *lsg;
+
+    while (first < omf_state->SEGDEFs.omf_SEGDEFS_count) {
+        struct omf_segdef_t *sg = &omf_state->SEGDEFs.omf_SEGDEFS[first++];
+        const char *classname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,sg->class_name_index);
+        const char *name = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,sg->segment_name_index);
+
+        if (*name == 0) continue;
+
+        lsg = find_link_segment(name);
+        if (lsg != NULL) {
+            /* it is an error to change attributes */
+            fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
+
+            if (lsg->attr.f.f.alignment != sg->attr.f.f.alignment) {
+                if (omf_align_code_to_bytes(lsg->attr.f.f.alignment) < omf_align_code_to_bytes(sg->attr.f.f.alignment)) {
+                    fprintf(stderr,"Segment: Alignment changed, using larger\n");
+                    lsg->attr.f.f.alignment = sg->attr.f.f.alignment;
+                }
+            }
+
+            if (lsg->attr.f.f.use32 != sg->attr.f.f.use32 ||
+                lsg->attr.f.f.combination != sg->attr.f.f.combination ||
+                lsg->attr.f.f.big_segment != sg->attr.f.f.big_segment) {
+                fprintf(stderr,"ERROR, segment attribute changed\n");
+                return -1;
+            }
+        }
+        else {
+            fprintf(stderr,"Adding class='%s' name='%s'\n",classname,name);
+            lsg = new_link_segment(name);
+            if (lsg == NULL) {
+                fprintf(stderr,"Cannot add segment\n");
+                return -1;
+            }
+
+            assert(lsg->classname == NULL);
+            lsg->classname = strdup(classname);
+
+            lsg->attr = sg->attr;
+        }
+    }
+
+    return 0;
+}
+
+#define MAX_GROUPS                      256
 
 #define MAX_IN_FILES                    256
 
@@ -179,6 +305,7 @@ int main(int argc,char **argv) {
                 case OMF_RECTYPE_SEGDEF:/*0x98*/
                 case OMF_RECTYPE_SEGDEF32:/*0x99*/
                     {
+                        int p_count = omf_state->SEGDEFs.omf_SEGDEFS_count;
                         int first_new_segdef;
 
                         if ((first_new_segdef=omf_context_parse_SEGDEF(omf_state,&omf_state->record)) < 0) {
@@ -189,6 +316,8 @@ int main(int argc,char **argv) {
                         if (omf_state->flags.verbose)
                             dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
+                        if (segdef_add(omf_state, p_count))
+                            return 1;
                     } break;
                 case OMF_RECTYPE_GRPDEF:/*0x9A*/
                 case OMF_RECTYPE_GRPDEF32:/*0x9B*/
@@ -220,6 +349,10 @@ int main(int argc,char **argv) {
         close(fd);
     }
 
+    if (verbose)
+        dump_link_segments();
+
+    free_link_segments();
     return 0;
 }
 
