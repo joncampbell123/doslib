@@ -19,7 +19,21 @@ extern entry_c_
     mov     ax,_DATA
     mov     ds,ax
 %else
-    ; tiny model (.com) already has CS == DS
+    ; tiny model (.com) already has CS == DS HOWEVER Open Watcom Linker insists
+    ; on offset=0 in the segment, which is off by 0x100
+    mov     ax,cs
+    add     ax,10h
+    mov     [correctseg+0x100],ax
+    ; go
+    db      0xEA            ; jmp seg:off
+    dw      correct
+correctseg:
+    dw      0
+correct:
+    mov     ds,ax
+    mov     es,ax
+    mov     ss,ax
+    sub     sp,0x100
 %endif
 
 %ifdef MMODE_CODE_CALL_DEF_FAR
