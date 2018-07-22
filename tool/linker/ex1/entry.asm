@@ -30,5 +30,16 @@ _exit_:
 
 %include "_segdata.inc"
 
+; stack
+%ifidni segment_use,use32
+section _STACK align=4 class=STACK use32
+%else
+ %ifidni segment_use,use16
+segment _STACK align=4 class=STACK use16
+ %else
+  %error unknown or undefined segment_use
+ %endif
+%endif
+
 group DGROUP _DATA
 
