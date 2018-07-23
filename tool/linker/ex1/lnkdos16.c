@@ -35,6 +35,7 @@ struct link_segdef {
     unsigned long                       segment_relative;
     unsigned short                      initial_alignment;
     unsigned long                       load_base;
+    unsigned char*                      image_ptr;  /* size is segment_length */
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
@@ -166,6 +167,11 @@ void free_link_segment(struct link_segdef *sg) {
     cstr_free(&(sg->groupname));
     cstr_free(&(sg->classname));
     cstr_free(&(sg->name));
+
+    if (sg->image_ptr != NULL) {
+        free(sg->image_ptr);
+        sg->image_ptr = NULL;
+    }
 }
 
 void free_link_segments(void) {
@@ -667,6 +673,20 @@ int main(int argc,char **argv) {
                     /* TODO: adjust by EXE header size */
 
                     sd->file_offset = ofs;
+                }
+            }
+
+            /* allocate in-memory copy of the segments */
+            {
+                for (inf=0;inf < link_segments_count;inf++) {
+                    struct link_segdef *sd = &link_segments[inf];
+
+                    assert(sd->image_ptr == NULL);
+                    if (sd->segment_length == 0) continue;
+
+                    sd->image_ptr = malloc(sd->segment_length);
+                    assert(sd->image_ptr != NULL);
+                    memset(sd->image_ptr,0,sd->segment_length);
                 }
             }
         }
