@@ -19,7 +19,7 @@ dostiny=1 # MS-DOS tiny model
 
 if [ "$1" == "clean" ]; then
     do_clean
-    rmdir -p linux-host
+    rm -Rf linux-host
     exit 0
 fi
 
