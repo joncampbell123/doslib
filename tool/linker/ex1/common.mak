@@ -11,8 +11,10 @@ NOW_BUILDING = TOOL_LINKER_EX1
 
 !ifdef TINYMODE
 TEST_EXE =    $(SUBDIR)$(HPS)test.com
+TEST2_EXE =   $(SUBDIR)$(HPS)test2.com
 !else
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
+TEST2_EXE =   $(SUBDIR)$(HPS)test2.exe
 !endif
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
@@ -32,7 +34,7 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(TEST_EXE) .symbolic
+exe: $(TEST_EXE) $(TEST2_EXE) .symbolic
 
 lib: .symbolic
 
@@ -45,6 +47,13 @@ WLINK_NOCLIBS_SYSTEM = $(WLINK_SYSTEM)
 !ifdef TEST_EXE
 $(TEST_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
 	%write tmp.cmd option quiet OPTION NODEFAULTLIBS option map=$(TEST_EXE).map system $(WLINK_NOCLIBS_SYSTEM) file $(SUBDIR)$(HPS)entry.obj file $(SUBDIR)$(HPS)drvc.obj name $(TEST_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef TEST2_EXE
+$(TEST2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
+	%write tmp.cmd option quiet OPTION NODEFAULTLIBS option map=$(TEST2_EXE).map system $(WLINK_NOCLIBS_SYSTEM) file $(SUBDIR)$(HPS)entry2.obj file $(SUBDIR)$(HPS)drvc.obj name $(TEST2_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
