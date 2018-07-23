@@ -34,6 +34,7 @@ struct link_segdef {
     unsigned long                       segment_length;
     unsigned long                       segment_relative;
     unsigned short                      initial_alignment;
+    unsigned long                       segment_len_count;
     unsigned long                       load_base;
     unsigned char*                      image_ptr;  /* size is segment_length */
 };
@@ -239,6 +240,33 @@ struct link_segdef *new_link_segment(const char *name) {
     return NULL;
 }
 
+int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) {
+    struct link_segdef *lsg;
+    unsigned long max_ofs;
+    const char *segname;
+
+    segname = omf_context_get_segdef_name_safe(omf_state, info->segment_index);
+    if (*segname == 0) {
+        fprintf(stderr,"Null segment name\n");
+        return 1;
+    }
+
+    if ((lsg=find_link_segment(segname)) == NULL) {
+        fprintf(stderr,"Segment %s not found\n",segname);
+        return 1;
+    }
+
+    max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
+    if (lsg->segment_len_count < max_ofs) lsg->segment_len_count = max_ofs;
+    max_ofs += (unsigned long)lsg->load_base;
+    if (lsg->segment_length < max_ofs) {
+        fprintf(stderr,"LEDATA out of bounds (len=%lu max=%lu)\n",lsg->segment_length,max_ofs);
+        return 1;
+    }
+
+    return 0;
+}
+
 int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) {
     struct link_segdef *lsg;
     unsigned long max_ofs;
@@ -255,16 +283,10 @@ int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info)
         return 1;
     }
 
-    max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)lsg->load_base;
+    max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
+    if (lsg->segment_len_count < max_ofs) lsg->segment_len_count = max_ofs;
+    max_ofs += (unsigned long)lsg->load_base;
     if (lsg->segment_length < max_ofs) lsg->segment_length = max_ofs;
-
-#if 0
-    fprintf(stderr,"* enum=0x%lx len=0x%lx base=0x%lx max=0x%lx\n",
-        info->enum_data_offset,
-        info->data_length,
-        lsg->load_base,
-        max_ofs);
-#endif
 
     return 0;
 }
@@ -361,13 +383,13 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
         }
 
         /* alignment */
-        lsg->load_base = lsg->segment_length;
         alignb = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
-        malign = lsg->load_base % (unsigned long)alignb;
-        if (malign != 0) lsg->load_base += alignb - malign;
+        malign = lsg->segment_len_count % (unsigned long)alignb;
+        if (malign != 0) lsg->segment_len_count += alignb - malign;
+        lsg->load_base = lsg->segment_len_count;
 
-        fprintf(stderr,"Start segment='%s' len=0x%lx load=0x%lx\n",
-            lsg->name, lsg->segment_length, lsg->load_base);
+        fprintf(stderr,"Start segment='%s' load=0x%lx\n",
+            lsg->name, lsg->load_base);
     }
 
     return 0;
@@ -616,6 +638,8 @@ int main(int argc,char **argv) {
 
                             if (pass == 0 && ledata_note(omf_state, &info))
                                 return 1;
+                            if (pass == 1 && ledata_add(omf_state, &info))
+                                return 1;
                         } break;
                     default:
                         break;
@@ -687,6 +711,10 @@ int main(int argc,char **argv) {
                     sd->image_ptr = malloc(sd->segment_length);
                     assert(sd->image_ptr != NULL);
                     memset(sd->image_ptr,0,sd->segment_length);
+
+                    /* reset load base */
+                    sd->segment_len_count = 0;
+                    sd->load_base = 0;
                 }
             }
         }
