@@ -27,5 +27,5 @@ linux-host/%.o : %.c
 
 clean:
 	rm -f linux-host/lnkdos16 linux-host/*.o linux-host/*.a
-	rmdir -p linux-host
+	rm -Rf linux-host
 
