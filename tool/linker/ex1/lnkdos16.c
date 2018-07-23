@@ -30,13 +30,13 @@ struct link_segdef {
     char*                               groupname;
     unsigned long                       file_offset;
     unsigned long                       linear_offset;
-    unsigned long                       segment_offset;
-    unsigned long                       segment_length;
-    unsigned long                       segment_relative;
+    unsigned long                       segment_offset;     /* offset within segment */
+    unsigned long                       segment_length;     /* length in bytes */
+    unsigned long                       segment_relative;   /* relative segment */
     unsigned short                      initial_alignment;
     unsigned long                       segment_len_count;
     unsigned long                       load_base;
-    unsigned char*                      image_ptr;  /* size is segment_length */
+    unsigned char*                      image_ptr;          /* size is segment_length */
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
