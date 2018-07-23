@@ -256,6 +256,9 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) 
         return 1;
     }
 
+    if (info->data_length == 0)
+        return 0;
+
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
     if (lsg->segment_len_count < max_ofs) lsg->segment_len_count = max_ofs;
     max_ofs += (unsigned long)lsg->load_base;
@@ -263,6 +266,10 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) 
         fprintf(stderr,"LEDATA out of bounds (len=%lu max=%lu)\n",lsg->segment_length,max_ofs);
         return 1;
     }
+
+    assert(info->data != NULL);
+    assert(lsg->image_ptr != NULL);
+    memcpy(lsg->image_ptr + (unsigned long)info->enum_data_offset, info->data, info->data_length);
 
     return 0;
 }
