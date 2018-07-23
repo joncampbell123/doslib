@@ -215,6 +215,19 @@ void dump_link_segments(void) {
     }
 }
 
+struct link_segdef *find_link_segment_by_grpdef(const char *name) {
+    unsigned int i=0;
+
+    while (i < link_segments_count) {
+        struct link_segdef *sg = &link_segments[i++];
+
+        if (sg->groupname == NULL) continue;
+        if (!strcmp(name,sg->groupname)) return sg;
+    }
+
+    return NULL;
+}
+
 struct link_segdef *find_link_segment(const char *name) {
     unsigned int i=0;
 
