@@ -30,6 +30,7 @@ struct link_segdef {
     char*                               groupname;
     unsigned long                       file_offset;
     unsigned long                       linear_offset;
+    unsigned long                       segment_base;       /* segment base */
     unsigned long                       segment_offset;     /* offset within segment */
     unsigned long                       segment_length;     /* length in bytes */
     unsigned long                       segment_relative;   /* relative segment */
@@ -199,13 +200,14 @@ void dump_link_segments(void) {
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
 
-        fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u\n",
+        fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u\n",
             i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
             sg->attr.f.f.use32,
             sg->attr.f.f.combination,
             sg->attr.f.f.big_segment,
             sg->file_offset,
             sg->linear_offset,
+            sg->segment_base,
             sg->segment_offset,
             sg->segment_length,
             sg->segment_relative,
@@ -712,7 +714,8 @@ int main(int argc,char **argv) {
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
 
-                    sd->segment_offset = com_segbase;
+                    sd->segment_base = com_segbase;
+                    sd->segment_offset = com_segbase + sd->linear_offset;
                 }
             }
 
