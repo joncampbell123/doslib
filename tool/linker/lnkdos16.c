@@ -347,7 +347,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         }
 
         *fseg = lsg->segment_relative;
-        *fofs = lsg->segment_base;
+        *fofs = lsg->segment_offset;
     }
     else if (method == 1/*GRPDEF*/) {
         struct link_segdef *lsg;
@@ -366,7 +366,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         }
 
         *fseg = lsg->segment_relative;
-        *fofs = lsg->segment_base;
+        *fofs = lsg->segment_offset;
     }
     else if (method == 2/*EXTDEF*/) {
         fprintf(stderr,"FRAME EXTDEF not impl\n");
@@ -886,7 +886,7 @@ int main(int argc,char **argv) {
                                         targseg = find_link_segment(targetname);
                                         frameseg = find_link_segment(framename);
                                         if (targseg != NULL && frameseg != NULL) {
-                                            entry_seg_ofs = TargetDisplacement + frameseg->segment_base;
+                                            entry_seg_ofs = TargetDisplacement;
                                             entry_seg_link_target = targseg;
                                             entry_seg_link_frame = frameseg;
                                         }
