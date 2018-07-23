@@ -651,6 +651,24 @@ int main(int argc,char **argv) {
                     ofs += sd->segment_length;
                 }
             }
+
+            /* decide where the segments end up in the executable */
+            {
+                unsigned long ofs = 0;
+
+                if (0) {
+                    /* TODO: EXE header */
+                }
+
+                for (inf=0;inf < link_segments_count;inf++) {
+                    struct link_segdef *sd = &link_segments[inf];
+
+                    ofs = sd->linear_offset;
+                    /* TODO: adjust by EXE header size */
+
+                    sd->file_offset = ofs;
+                }
+            }
         }
     }
 
