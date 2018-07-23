@@ -269,7 +269,9 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) 
 
     assert(info->data != NULL);
     assert(lsg->image_ptr != NULL);
-    memcpy(lsg->image_ptr + (unsigned long)info->enum_data_offset, info->data, info->data_length);
+    assert(max_ofs >= (unsigned long)info->data_length);
+    max_ofs -= (unsigned long)info->data_length;
+    memcpy(lsg->image_ptr + max_ofs, info->data, info->data_length);
 
     return 0;
 }
