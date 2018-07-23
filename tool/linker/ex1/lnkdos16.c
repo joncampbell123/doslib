@@ -417,6 +417,10 @@ static unsigned int                     current_in_mod = 0;
 
 static unsigned char                    do_dosseg = 1;
 
+static unsigned short                   com_segbase = 0; /* Watcom Linker behavior: .COM starts at 0, then
+                                                            entry point has to fiddle with instruction pointer
+                                                            and sregs to adjust */
+
 struct omf_context_t*                   omf_state = NULL;
 
 static void help(void) {
@@ -427,6 +431,8 @@ static void help(void) {
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
     fprintf(stderr,"  -no-dosseg   No DOSSEG sort order\n");
     fprintf(stderr,"  -dosseg      DOSSEG sort order\n");
+    fprintf(stderr,"  -com100      Link .COM segment starting at 0x100\n");
+    fprintf(stderr,"  -com0        Link .COM segment starting at 0 (Watcom Linker)\n");
 }
 
 void my_dumpstate(const struct omf_context_t * const ctx) {
@@ -495,6 +501,12 @@ int main(int argc,char **argv) {
                 in_file[in_file_count] = argv[i++];
                 if (in_file[in_file_count] == NULL) return 1;
                 in_file_count++;
+            }
+            else if (!strcmp(a,"com0")) {
+                com_segbase = 0x000;
+            }
+            else if (!strcmp(a,"com100")) {
+                com_segbase = 0x100;
             }
             else if (!strcmp(a,"o")) {
                 out_file = argv[i++];
@@ -688,6 +700,19 @@ int main(int argc,char **argv) {
 
                     sd->linear_offset = ofs;
                     ofs += sd->segment_length;
+                }
+            }
+
+            /* if a .COM executable, then all segments are arranged so that the first byte
+             * is at 0x100 */
+            if (0) {
+                /* EXE */
+            }
+            else {
+                for (inf=0;inf < link_segments_count;inf++) {
+                    struct link_segdef *sd = &link_segments[inf];
+
+                    sd->segment_offset = com_segbase;
                 }
             }
 
