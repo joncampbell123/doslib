@@ -730,6 +730,37 @@ int main(int argc,char **argv) {
     if (verbose)
         dump_link_segments();
 
+    /* write output */
+    assert(out_file != NULL);
+    {
+        int fd;
+
+        fd = open(out_file,O_RDWR|O_BINARY|O_CREAT|O_TRUNC,0644);
+        if (fd < 0) {
+            fprintf(stderr,"Unable to open output file\n");
+            return 1;
+        }
+
+        for (inf=0;inf < link_segments_count;inf++) {
+            struct link_segdef *sd = &link_segments[inf];
+
+            if (sd->segment_length == 0) continue;
+
+            if ((unsigned long)lseek(fd,sd->file_offset,SEEK_SET) != sd->file_offset) {
+                fprintf(stderr,"Seek error\n");
+                return 1;
+            }
+
+            assert(sd->image_ptr != NULL);
+            if ((unsigned long)write(fd,sd->image_ptr,sd->segment_length) != sd->segment_length) {
+                fprintf(stderr,"Write error\n");
+                return 1;
+            }
+        }
+
+        close(fd);
+    }
+
     free_link_segments();
     return 0;
 }
