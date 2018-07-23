@@ -43,6 +43,8 @@ struct link_segdef {
 static struct link_segdef               link_segments[MAX_SEGMENTS];
 static unsigned int                     link_segments_count = 0;
 
+static struct link_segdef*              current_link_segment = NULL;
+
 /* Open Watcom DOSSEG linker order
  * 
  * 1. not DGROUP, class CODE
@@ -271,6 +273,8 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) 
         return 1;
     }
 
+    current_link_segment = lsg;
+
     if (info->data_length == 0)
         return 0;
 
@@ -307,10 +311,143 @@ int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info)
         return 1;
     }
 
+    current_link_segment = lsg;
+
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
     if (lsg->segment_len_count < max_ofs) lsg->segment_len_count = max_ofs;
     max_ofs += (unsigned long)lsg->load_base;
     if (lsg->segment_length < max_ofs) lsg->segment_length = max_ofs;
+
+    return 0;
+}
+
+int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index) {
+    *fseg = *fofs = ~0UL;
+    (void)ent;
+
+    if (method == 0/*SEGDEF*/) {
+        struct link_segdef *lsg;
+        const char *segname;
+
+        segname = omf_context_get_segdef_name_safe(omf_state,index);
+        if (*segname == 0) {
+            fprintf(stderr,"FIXUPP SEGDEF no name\n");
+            return -1;
+        }
+
+        lsg = find_link_segment(segname);
+        if (lsg == NULL) {
+            fprintf(stderr,"FIXUPP SEGDEF not found\n");
+            return -1;
+        }
+
+        *fseg = lsg->segment_relative;
+        *fofs = lsg->segment_base;
+    }
+    else if (method == 1/*GRPDEF*/) {
+        struct link_segdef *lsg;
+        const char *segname;
+
+        segname = omf_context_get_grpdef_name_safe(omf_state,index);
+        if (*segname == 0) {
+            fprintf(stderr,"FIXUPP SEGDEF no name\n");
+            return -1;
+        }
+
+        lsg = find_link_segment_by_grpdef(segname);
+        if (lsg == NULL) {
+            fprintf(stderr,"FIXUPP SEGDEF not found\n");
+            return -1;
+        }
+
+        *fseg = lsg->segment_relative;
+        *fofs = lsg->segment_base;
+    }
+    else if (method == 2/*EXTDEF*/) {
+        fprintf(stderr,"FRAME EXTDEF not impl\n");
+    }
+    else {
+        fprintf(stderr,"FRAME UNSUPP not impl\n");
+    }
+
+    return 0;
+}
+
+int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
+    unsigned long final_seg,final_ofs;
+    unsigned long frame_seg,frame_ofs;
+    unsigned long targ_seg,targ_ofs;
+    unsigned char *fence;
+    unsigned char *ptr;
+    unsigned long ptch;
+
+    assert(current_link_segment != NULL);
+    assert(current_link_segment->image_ptr != NULL);
+    fence = current_link_segment->image_ptr + current_link_segment->segment_length;
+
+    while (first <= omf_fixupps_context_get_highest_index(&omf_state->FIXUPPs)) {
+        const struct omf_fixupp_t *ent = omf_fixupps_context_get_fixupp(&omf_state->FIXUPPs,first++);
+        if (ent == NULL) continue;
+        if (!ent->alloc) continue;
+
+        if (!ent->segment_relative) {
+            fprintf(stderr,"Self-relative not yet supported\n");
+            continue;
+        }
+
+        if (fixupp_get(omf_state,&frame_seg,&frame_ofs,ent,ent->frame_method,ent->frame_index))
+            return -1;
+        if (fixupp_get(omf_state,&targ_seg,&targ_ofs,ent,ent->target_method,ent->target_index))
+            return -1;
+
+        if (omf_state->flags.verbose) {
+            fprintf(stderr,"fixup[%u] frame=%lx:%lx targ=%lx:%lx\n",
+                    first,
+                    frame_seg,frame_ofs,
+                    targ_seg,targ_ofs);
+        }
+
+        if (frame_seg == ~0UL || frame_ofs == ~0UL) {
+            fprintf(stderr,"frame addr not resolved\n");
+            continue;
+        }
+        if (targ_seg == ~0UL || targ_ofs == ~0UL) {
+            fprintf(stderr,"target addr not resolved\n");
+            continue;
+        }
+
+        final_seg = targ_seg;
+        final_ofs = targ_ofs;
+
+        if (final_seg != frame_seg) {
+            fprintf(stderr,"frame!=target seg not supported\n");
+            continue;
+        }
+
+        if (omf_state->flags.verbose) {
+            fprintf(stderr,"fixup[%u] final=%lx:%lx\n",
+                    first,
+                    final_seg,final_ofs);
+        }
+
+        ptch = (unsigned long)ent->omf_rec_file_enoffs + (unsigned long)ent->data_record_offset;
+
+        if (omf_state->flags.verbose)
+            fprintf(stderr,"ptch=0x%lx\n",ptch);
+
+        ptr = current_link_segment->image_ptr + ptch;
+        assert(ptr < fence);
+
+        switch (ent->location) {
+            case OMF_FIXUPP_LOCATION_16BIT_OFFSET: /* 16-bit offset */
+                assert((ptr+2) <= fence);
+                *((uint16_t*)ptr) += (uint16_t)final_ofs;
+                break;
+            default:
+                fprintf(stderr,"Unsupported\n");
+                break;
+        }
+    }
 
     return 0;
 }
@@ -657,6 +794,23 @@ int main(int argc,char **argv) {
                                 dump_GRPDEF(stdout,omf_state,(unsigned int)first_new_grpdef);
 
                             if (grpdef_add(omf_state, p_count))
+                                return 1;
+                        } break;
+                    case OMF_RECTYPE_FIXUPP:/*0x9C*/
+                    case OMF_RECTYPE_FIXUPP32:/*0x9D*/
+                        {
+                            int p_count = omf_state->FIXUPPs.omf_FIXUPPS_count;
+                            int first_new_fixupp;
+
+                            if ((first_new_fixupp=omf_context_parse_FIXUPP(omf_state,&omf_state->record)) < 0) {
+                                fprintf(stderr,"Error parsing FIXUPP\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose)
+                                dump_FIXUPP(stdout,omf_state,(unsigned int)first_new_fixupp);
+
+                            if (pass == 1 && apply_FIXUPP(omf_state,p_count))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_LEDATA:/*0xA0*/
