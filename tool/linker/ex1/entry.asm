@@ -7,7 +7,16 @@ bits 16          ; 16-bit real mode
 
 %include "_comregn.inc"
 
-%include "_segcode.inc"
+; code
+%ifidni segment_use,use32
+section _TEXT align=1 class=CODE use32
+%else
+ %ifidni segment_use,use16
+segment _TEXT align=1 class=CODE use16
+ %else
+  %error unknown or undefined segment_use
+ %endif
+%endif
 
 ..start:
 global asm_entry
@@ -48,7 +57,16 @@ _exit_:
     mov     ah,4Ch
     int     21h
 
-%include "_segdata.inc"
+; data
+%ifidni segment_use,use32
+section _DATA align=1 class=DATA use32
+%else
+ %ifidni segment_use,use16
+segment _DATA align=1 class=DATA use16
+ %else
+  %error unknown or undefined segment_use
+ %endif
+%endif
 
 ; stack
 %ifidni segment_use,use32
