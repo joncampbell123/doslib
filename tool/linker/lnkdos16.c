@@ -45,6 +45,11 @@ static unsigned int                     link_segments_count = 0;
 
 static struct link_segdef*              current_link_segment = NULL;
 
+static struct link_segdef*              entry_seg_link_target = NULL;
+static struct link_segdef*              entry_seg_link_frame = NULL;
+static unsigned char                    com_entry_insert = 0;
+static unsigned long                    entry_seg_ofs = 0;
+
 /* Open Watcom DOSSEG linker order
  * 
  * 1. not DGROUP, class CODE
@@ -831,6 +836,74 @@ int main(int argc,char **argv) {
                             if (pass == 1 && ledata_add(omf_state, &info))
                                 return 1;
                         } break;
+                    case OMF_RECTYPE_MODEND:/*0x8A*/
+                    case OMF_RECTYPE_MODEND32:/*0x8B*/
+                        if (pass == 0) {
+                            unsigned char ModuleType;
+                            unsigned char EndData;
+                            unsigned int FrameDatum;
+                            unsigned int TargetDatum;
+                            unsigned long TargetDisplacement;
+                            const struct omf_segdef_t *frame_segdef;
+                            const struct omf_segdef_t *target_segdef;
+
+                            ModuleType = omf_record_get_byte(&omf_state->record);
+                            if (ModuleType&0x40/*START*/) {
+                                EndData = omf_record_get_byte(&omf_state->record);
+                                FrameDatum = omf_record_get_index(&omf_state->record);
+                                TargetDatum = omf_record_get_index(&omf_state->record);
+
+                                if (omf_state->record.rectype == OMF_RECTYPE_MODEND32)
+                                    TargetDisplacement = omf_record_get_dword(&omf_state->record);
+                                else
+                                    TargetDisplacement = omf_record_get_word(&omf_state->record);
+
+                                frame_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,FrameDatum);
+                                target_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,TargetDatum);
+
+                                printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
+                                        ModuleType,
+                                        ModuleType&0x80?1:0,
+                                        ModuleType&0x40?1:0,
+                                        ModuleType&0x20?1:0,
+                                        ModuleType&0x01?1:0);
+                                printf("    EndData=0x%02x FrameDatum=%u(%s) TargetDatum=%u(%s) TargetDisplacement=0x%lx\n",
+                                        EndData,
+                                        FrameDatum,
+                                        (frame_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index):"",
+                                        TargetDatum,
+                                        (target_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index):"",
+                                        TargetDisplacement);
+
+                                if (frame_segdef != NULL && target_segdef != NULL) {
+                                    const char *framename = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index);
+                                    const char *targetname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index);
+
+                                    fprintf(stderr,"'%s' vs '%s'\n",framename,targetname);
+                                    if (*framename != 0 && *targetname != 0) {
+                                        struct link_segdef *frameseg,*targseg;
+
+                                        targseg = find_link_segment(targetname);
+                                        frameseg = find_link_segment(framename);
+                                        if (targseg != NULL && frameseg != NULL) {
+                                            entry_seg_ofs = TargetDisplacement + frameseg->segment_base;
+                                            entry_seg_link_target = targseg;
+                                            entry_seg_link_frame = frameseg;
+                                        }
+                                        else {
+                                            fprintf(stderr,"Did not find segments\n");
+                                        }
+                                    }
+                                    else {
+                                        fprintf(stderr,"frame/target name not found\n");
+                                    }
+                                }
+                                else {
+                                    fprintf(stderr,"frame/target segdef not found\n");
+                                }
+                            }
+                        } break;
+ 
                     default:
                         break;
                 }
@@ -851,10 +924,39 @@ int main(int argc,char **argv) {
             if (do_dosseg)
                 owlink_dosseg_sort_order();
 
+            /* entry point checkup */
+            if (entry_seg_link_target == NULL) {
+                fprintf(stderr,"WARNING: No entry point found\n");
+            }
+
             /* put segments in order, linear offset */
             {
                 unsigned long ofs = 0;
                 unsigned long m;
+
+                /* .COM format: if the entry point is nonzero, a JMP instruction
+                 * must be inserted at the start to JMP to the entry point */
+                if (0) {
+                    /* EXE */
+                }
+                else {
+                    /* COM */
+                    if (entry_seg_link_target != NULL) {
+                        unsigned long io = (entry_seg_link_target->linear_offset+entry_seg_ofs);
+
+                        if (io != 0) {
+                            fprintf(stderr,"Entry point is not start of executable, required by .COM format.\n");
+                            fprintf(stderr,"Adding JMP instruction to compensate.\n");
+
+                            if (io >= 0x82) /* too far for 2-byte JMP */
+                                com_entry_insert = 3;
+                            else
+                                com_entry_insert = 2;
+
+                            ofs += com_entry_insert;
+                        }
+                    }
+                }
 
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
@@ -936,6 +1038,42 @@ int main(int argc,char **argv) {
         if (fd < 0) {
             fprintf(stderr,"Unable to open output file\n");
             return 1;
+        }
+
+        if (0) {
+        }
+        else {
+            /* .COM require JMP instruction */
+            if (entry_seg_link_target != NULL && com_entry_insert > 0) {
+                unsigned long ofs = (entry_seg_link_target->linear_offset+entry_seg_ofs);
+                unsigned char tmp[4];
+
+                assert(com_entry_insert < 4);
+
+                if (ofs >= (unsigned long)com_entry_insert) {
+                    ofs -= (unsigned long)com_entry_insert;
+
+                    if (lseek(fd,0,SEEK_SET) == 0) {
+                        if (com_entry_insert == 3) {
+                            tmp[0] = 0xE9; /* JMP near */
+                            *((uint16_t*)(tmp+1)) = (uint16_t)ofs;
+                            if (write(fd,tmp,3) == 3) {
+                                /* good */
+                            }
+                        }
+                        else if (com_entry_insert == 2) {
+                            tmp[0] = 0xEB; /* JMP short */
+                            tmp[1] = (unsigned char)ofs;
+                            if (write(fd,tmp,2) == 2) {
+                                /* good */
+                            }
+                        }
+                        else {
+                            abort();
+                        }
+                    }
+                }
+            }
         }
 
         for (inf=0;inf < link_segments_count;inf++) {
