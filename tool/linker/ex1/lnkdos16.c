@@ -29,6 +29,7 @@ struct link_segdef {
     char*                               classname;
     char*                               groupname;
     unsigned long                       file_offset;
+    unsigned long                       linear_offset;
     unsigned long                       segment_offset;
     unsigned long                       segment_length;
     unsigned long                       segment_relative;
@@ -191,12 +192,13 @@ void dump_link_segments(void) {
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
 
-        fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u\n",
+        fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u\n",
             i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
             sg->attr.f.f.use32,
             sg->attr.f.f.combination,
             sg->attr.f.f.big_segment,
             sg->file_offset,
+            sg->linear_offset,
             sg->segment_offset,
             sg->segment_length,
             sg->segment_relative,
@@ -436,6 +438,7 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
 int main(int argc,char **argv) {
     unsigned char verbose = 0;
     unsigned char diddump = 0;
+    unsigned char pass;
     unsigned int inf;
     int i,fd,ret;
     char *a;
@@ -490,141 +493,166 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    for (inf=0;inf < in_file_count;inf++) {
-        assert(in_file[inf] != NULL);
+    for (pass=0;pass < 2;pass++) {
+        for (inf=0;inf < in_file_count;inf++) {
+            assert(in_file[inf] != NULL);
 
-        fd = open(in_file[inf],O_RDONLY|O_BINARY);
-        if (fd < 0) {
-            fprintf(stderr,"Failed to open input file %s\n",strerror(errno));
-            return 1;
-        }
-        current_in_file = inf;
+            fd = open(in_file[inf],O_RDONLY|O_BINARY);
+            if (fd < 0) {
+                fprintf(stderr,"Failed to open input file %s\n",strerror(errno));
+                return 1;
+            }
+            current_in_file = inf;
 
-        // prepare parsing
-        if ((omf_state=omf_context_create()) == NULL) {
-            fprintf(stderr,"Failed to init OMF parsing state\n");
-            return 1;
-        }
-        omf_state->flags.verbose = (verbose > 0);
+            // prepare parsing
+            if ((omf_state=omf_context_create()) == NULL) {
+                fprintf(stderr,"Failed to init OMF parsing state\n");
+                return 1;
+            }
+            omf_state->flags.verbose = (verbose > 0);
 
-        diddump = 0;
-        current_in_mod = 0;
-        omf_context_begin_file(omf_state);
+            diddump = 0;
+            current_in_mod = 0;
+            omf_context_begin_file(omf_state);
 
-        do {
-            ret = omf_context_read_fd(omf_state,fd);
-            if (ret == 0) {
-                if (omf_record_is_modend(&omf_state->record)) {
-                    if (!diddump) {
-                        my_dumpstate(omf_state);
-                        diddump = 1;
+            do {
+                ret = omf_context_read_fd(omf_state,fd);
+                if (ret == 0) {
+                    if (omf_record_is_modend(&omf_state->record)) {
+                        if (!diddump) {
+                            my_dumpstate(omf_state);
+                            diddump = 1;
+                        }
+
+                        printf("----- next module -----\n");
+
+                        ret = omf_context_next_lib_module_fd(omf_state,fd);
+                        if (ret < 0) {
+                            printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
+                            if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
+                        }
+                        else if (ret > 0) {
+                            current_in_mod++;
+                            omf_context_begin_module(omf_state);
+                            diddump = 0;
+                            continue;
+                        }
                     }
 
-                    printf("----- next module -----\n");
-
-                    ret = omf_context_next_lib_module_fd(omf_state,fd);
-                    if (ret < 0) {
-                        printf("Unable to advance to next .LIB module, %s\n",strerror(errno));
-                        if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
-                    }
-                    else if (ret > 0) {
-                        current_in_mod++;
-                        omf_context_begin_module(omf_state);
-                        diddump = 0;
-                        continue;
-                    }
+                    break;
+                }
+                else if (ret < 0) {
+                    fprintf(stderr,"Error: %s\n",strerror(errno));
+                    if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
+                    break;
                 }
 
-                break;
+                switch (omf_state->record.rectype) {
+                    case OMF_RECTYPE_LNAMES:/*0x96*/
+                        {
+                            int first_new_lname;
+
+                            if ((first_new_lname=omf_context_parse_LNAMES(omf_state,&omf_state->record)) < 0) {
+                                fprintf(stderr,"Error parsing LNAMES\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose)
+                                dump_LNAMES(stdout,omf_state,(unsigned int)first_new_lname);
+
+                        } break;
+                    case OMF_RECTYPE_SEGDEF:/*0x98*/
+                    case OMF_RECTYPE_SEGDEF32:/*0x99*/
+                        {
+                            int p_count = omf_state->SEGDEFs.omf_SEGDEFS_count;
+                            int first_new_segdef;
+
+                            if ((first_new_segdef=omf_context_parse_SEGDEF(omf_state,&omf_state->record)) < 0) {
+                                fprintf(stderr,"Error parsing SEGDEF\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose)
+                                dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
+
+                            if (segdef_add(omf_state, p_count))
+                                return 1;
+                        } break;
+                    case OMF_RECTYPE_GRPDEF:/*0x9A*/
+                    case OMF_RECTYPE_GRPDEF32:/*0x9B*/
+                        {
+                            int p_count = omf_state->GRPDEFs.omf_GRPDEFS_count;
+                            int first_new_grpdef;
+
+                            if ((first_new_grpdef=omf_context_parse_GRPDEF(omf_state,&omf_state->record)) < 0) {
+                                fprintf(stderr,"Error parsing GRPDEF\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose)
+                                dump_GRPDEF(stdout,omf_state,(unsigned int)first_new_grpdef);
+
+                            if (grpdef_add(omf_state, p_count))
+                                return 1;
+                        } break;
+                    case OMF_RECTYPE_LEDATA:/*0xA0*/
+                    case OMF_RECTYPE_LEDATA32:/*0xA1*/
+                        {
+                            struct omf_ledata_info_t info;
+
+                            if (omf_context_parse_LEDATA(omf_state,&info,&omf_state->record) < 0) {
+                                fprintf(stderr,"Error parsing LEDATA\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose && pass == 0)
+                                dump_LEDATA(stdout,omf_state,&info);
+
+                            if (pass == 0 && ledata_note(omf_state, &info))
+                                return 1;
+                        } break;
+                    default:
+                        break;
+                }
+            } while (1);
+
+            if (!diddump) {
+                my_dumpstate(omf_state);
+                diddump = 1;
             }
-            else if (ret < 0) {
-                fprintf(stderr,"Error: %s\n",strerror(errno));
-                if (omf_state->last_error != NULL) fprintf(stderr,"Details: %s\n",omf_state->last_error);
-                break;
-            }
 
-            switch (omf_state->record.rectype) {
-                case OMF_RECTYPE_LNAMES:/*0x96*/
-                    {
-                        int first_new_lname;
+            omf_context_clear(omf_state);
+            omf_state = omf_context_destroy(omf_state);
 
-                        if ((first_new_lname=omf_context_parse_LNAMES(omf_state,&omf_state->record)) < 0) {
-                            fprintf(stderr,"Error parsing LNAMES\n");
-                            return 1;
-                        }
-
-                        if (omf_state->flags.verbose)
-                            dump_LNAMES(stdout,omf_state,(unsigned int)first_new_lname);
-
-                    } break;
-                case OMF_RECTYPE_SEGDEF:/*0x98*/
-                case OMF_RECTYPE_SEGDEF32:/*0x99*/
-                    {
-                        int p_count = omf_state->SEGDEFs.omf_SEGDEFS_count;
-                        int first_new_segdef;
-
-                        if ((first_new_segdef=omf_context_parse_SEGDEF(omf_state,&omf_state->record)) < 0) {
-                            fprintf(stderr,"Error parsing SEGDEF\n");
-                            return 1;
-                        }
-
-                        if (omf_state->flags.verbose)
-                            dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
-
-                        if (segdef_add(omf_state, p_count))
-                            return 1;
-                    } break;
-                case OMF_RECTYPE_GRPDEF:/*0x9A*/
-                case OMF_RECTYPE_GRPDEF32:/*0x9B*/
-                    {
-                        int p_count = omf_state->GRPDEFs.omf_GRPDEFS_count;
-                        int first_new_grpdef;
-
-                        if ((first_new_grpdef=omf_context_parse_GRPDEF(omf_state,&omf_state->record)) < 0) {
-                            fprintf(stderr,"Error parsing GRPDEF\n");
-                            return 1;
-                        }
-
-                        if (omf_state->flags.verbose)
-                            dump_GRPDEF(stdout,omf_state,(unsigned int)first_new_grpdef);
-
-                        if (grpdef_add(omf_state, p_count))
-                            return 1;
-                    } break;
-                case OMF_RECTYPE_LEDATA:/*0xA0*/
-                case OMF_RECTYPE_LEDATA32:/*0xA1*/
-                    {
-                        struct omf_ledata_info_t info;
-
-                        if (omf_context_parse_LEDATA(omf_state,&info,&omf_state->record) < 0) {
-                            fprintf(stderr,"Error parsing LEDATA\n");
-                            return 1;
-                        }
-
-                        if (omf_state->flags.verbose)
-                            dump_LEDATA(stdout,omf_state,&info);
-
-                        if (ledata_note(omf_state, &info))
-                            return 1;
-                    } break;
-                default:
-                    break;
-            }
-        } while (1);
-
-        if (!diddump) {
-            my_dumpstate(omf_state);
-            diddump = 1;
+            close(fd);
         }
 
-        omf_context_clear(omf_state);
-        omf_state = omf_context_destroy(omf_state);
+        if (pass == 0) {
+            if (do_dosseg)
+                owlink_dosseg_sort_order();
 
-        close(fd);
+            /* put segments in order, linear offset */
+            {
+                unsigned long ofs = 0;
+                unsigned long m;
+
+                for (inf=0;inf < link_segments_count;inf++) {
+                    struct link_segdef *sd = &link_segments[inf];
+
+                    if (sd->initial_alignment != 0ul) {
+                        m = ofs % sd->initial_alignment;
+                        if (m != 0ul) ofs += sd->initial_alignment - m;
+                    }
+
+                    fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
+                        inf,ofs,sd->segment_length);
+
+                    sd->linear_offset = ofs;
+                    ofs += sd->segment_length;
+                }
+            }
+        }
     }
-
-    if (do_dosseg)
-        owlink_dosseg_sort_order();
 
     if (verbose)
         dump_link_segments();
