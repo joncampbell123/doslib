@@ -494,7 +494,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
 
         lsg = find_link_segment(segname);
         if (lsg == NULL) {
-            fprintf(stderr,"FIXUPP SEGDEF not found\n");
+            fprintf(stderr,"FIXUPP SEGDEF not found '%s'\n",segname);
             return -1;
         }
 
@@ -521,7 +521,31 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         *fofs = lsg->segment_offset;
     }
     else if (method == 2/*EXTDEF*/) {
-        fprintf(stderr,"FRAME EXTDEF not impl\n");
+        struct link_segdef *lsg;
+        struct link_symbol *sym;
+        const char *defname;
+
+        defname = omf_context_get_extdef_name_safe(omf_state,index);
+        if (*defname == 0) {
+            fprintf(stderr,"FIXUPP EXTDEF no name\n");
+            return -1;
+        }
+
+        sym = find_link_symbol(defname);
+        if (sym == NULL) {
+            fprintf(stderr,"No such symbol '%s'\n",defname);
+            return -1;
+        }
+
+        assert(sym->segdef != NULL);
+        lsg = find_link_segment(sym->segdef);
+        if (lsg == NULL) {
+            fprintf(stderr,"FIXUPP SEGDEF for EXTDEF not found '%s'\n",sym->segdef);
+            return -1;
+        }
+
+        *fseg = lsg->segment_relative;
+        *fofs = sym->offset;
     }
     else if (method == 5/*BY TARGET*/) {
     }
@@ -548,11 +572,6 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
         const struct omf_fixupp_t *ent = omf_fixupps_context_get_fixupp(&omf_state->FIXUPPs,first++);
         if (ent == NULL) continue;
         if (!ent->alloc) continue;
-
-        if (!ent->segment_relative) {
-            fprintf(stderr,"Self-relative not yet supported\n");
-            continue;
-        }
 
         if (fixupp_get(omf_state,&frame_seg,&frame_ofs,ent,ent->frame_method,ent->frame_index))
             return -1;
@@ -605,6 +624,10 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
         switch (ent->location) {
             case OMF_FIXUPP_LOCATION_16BIT_OFFSET: /* 16-bit offset */
                 assert((ptr+2) <= fence);
+
+                if (!ent->segment_relative)
+                    final_ofs -= ptch+2;
+
                 *((uint16_t*)ptr) += (uint16_t)final_ofs;
                 break;
             default:
