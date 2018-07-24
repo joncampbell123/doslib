@@ -18,9 +18,13 @@ DOSLIBLINKER_OFMT = -of com
 !else
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 TEST2_EXE =   $(SUBDIR)$(HPS)test2.exe
+! ifeq TARGET_MSDOS 32
+# DOSLIB linker cannot handle 32-bit OMF........yet
+! else
 TESTA_EXE =   $(SUBDIR)$(HPS)testa.exe
 TESTA2_EXE =  $(SUBDIR)$(HPS)testa2.exe
 DOSLIBLINKER_OFMT = -of exe
+! endif
 !endif
 
 DOSLIBLINKER = ../linux-host/lnkdos16
