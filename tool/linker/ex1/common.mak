@@ -14,6 +14,8 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.com
 TEST2_EXE =   $(SUBDIR)$(HPS)test2.com
 TESTA_EXE =   $(SUBDIR)$(HPS)testa.com
 TESTA2_EXE =  $(SUBDIR)$(HPS)testa2.com
+TESTB_EXE =   $(SUBDIR)$(HPS)testb.com
+TESTB2_EXE =  $(SUBDIR)$(HPS)testb2.com
 DOSLIBLINKER_OFMT = -of com
 !else
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
@@ -23,6 +25,8 @@ TEST2_EXE =   $(SUBDIR)$(HPS)test2.exe
 ! else
 TESTA_EXE =   $(SUBDIR)$(HPS)testa.exe
 TESTA2_EXE =  $(SUBDIR)$(HPS)testa2.exe
+TESTB_EXE =   $(SUBDIR)$(HPS)testb.exe
+TESTB2_EXE =  $(SUBDIR)$(HPS)testb2.exe
 DOSLIBLINKER_OFMT = -of exe
 ! endif
 !endif
@@ -49,7 +53,7 @@ $(DOSLIBLINKER):
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TESTA_EXE) $(TESTA2_EXE) .symbolic
+exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TESTA_EXE) $(TESTA2_EXE) $(TESTB_EXE) $(TESTB2_EXE) .symbolic
 
 lib: .symbolic
 
@@ -71,6 +75,11 @@ $(TESTA_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
 	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTA_EXE) -com0 $(DOSLIBLINKER_OFMT)
 !endif
 
+!ifdef TESTB_EXE
+$(TESTB_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTB_EXE) -com0 $(DOSLIBLINKER_OFMT) -pflat
+!endif
+
 !ifdef TEST2_EXE
 $(TEST2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
 	%write tmp.cmd option quiet OPTION NODEFAULTLIBS option map=$(TEST2_EXE).map system $(WLINK_NOCLIBS_SYSTEM) file $(SUBDIR)$(HPS)entry2.obj file $(SUBDIR)$(HPS)drvc.obj name $(TEST2_EXE)
@@ -81,6 +90,11 @@ $(TEST2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
 !ifdef TESTA2_EXE
 $(TESTA2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
 	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTA2_EXE) -com100 $(DOSLIBLINKER_OFMT)
+!endif
+
+!ifdef TESTB2_EXE
+$(TESTB2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTB2_EXE) -com100 $(DOSLIBLINKER_OFMT) -pflat
 !endif
 
 clean: .SYMBOLIC
