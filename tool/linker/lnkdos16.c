@@ -1228,10 +1228,10 @@ int main(int argc,char **argv) {
 
                 /* .COM format: if the entry point is nonzero, a JMP instruction
                  * must be inserted at the start to JMP to the entry point */
-                if (0) {
+                if (output_format == OFMT_EXE) {
                     /* EXE */
                 }
-                else {
+                else if (output_format == OFMT_COM) {
                     /* COM */
                     if (entry_seg_link_target != NULL) {
                         unsigned long io = (entry_seg_link_target->linear_offset+entry_seg_ofs);
@@ -1248,6 +1248,9 @@ int main(int argc,char **argv) {
                             ofs += com_entry_insert;
                         }
                     }
+                }
+                else {
+                    abort();
                 }
 
                 for (inf=0;inf < link_segments_count;inf++) {
@@ -1268,10 +1271,10 @@ int main(int argc,char **argv) {
 
             /* if a .COM executable, then all segments are arranged so that the first byte
              * is at 0x100 */
-            if (0) {
+            if (output_format == OFMT_EXE) {
                 /* EXE */
             }
-            else {
+            else if (output_format == OFMT_COM) {
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
 
@@ -1279,12 +1282,15 @@ int main(int argc,char **argv) {
                     sd->segment_offset = com_segbase + sd->linear_offset;
                 }
             }
+            else {
+                abort();
+            }
 
             /* decide where the segments end up in the executable */
             {
                 unsigned long ofs = 0;
 
-                if (0) {
+                if (output_format == OFMT_EXE) {
                     /* TODO: EXE header */
                 }
 
@@ -1292,7 +1298,10 @@ int main(int argc,char **argv) {
                     struct link_segdef *sd = &link_segments[inf];
 
                     ofs = sd->linear_offset;
-                    /* TODO: adjust by EXE header size */
+
+                    if (output_format == OFMT_EXE) {
+                        /* TODO: EXE header */
+                    }
 
                     sd->file_offset = ofs;
                 }
@@ -1334,9 +1343,10 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        if (0) {
+        if (output_format == OFMT_EXE) {
+            /* EXE */
         }
-        else {
+        else if (output_format == OFMT_COM) {
             /* .COM require JMP instruction */
             if (entry_seg_link_target != NULL && com_entry_insert > 0) {
                 unsigned long ofs = (entry_seg_link_target->linear_offset+entry_seg_ofs);
@@ -1368,6 +1378,9 @@ int main(int argc,char **argv) {
                     }
                 }
             }
+        }
+        else {
+            abort();
         }
 
         for (inf=0;inf < link_segments_count;inf++) {
