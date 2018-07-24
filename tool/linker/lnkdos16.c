@@ -896,7 +896,7 @@ static unsigned int                     current_in_mod = 0;
 static unsigned char                    do_dosseg = 1;
 
 /* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
-static unsigned short                   com_segbase = 0x100;
+static unsigned short                   com_segbase = (unsigned short)(~0u);
 
 struct omf_context_t*                   omf_state = NULL;
 
@@ -1024,6 +1024,15 @@ int main(int argc,char **argv) {
         else {
             fprintf(stderr,"Unexpected arg %s\n",a);
             return 1;
+        }
+    }
+
+    if (com_segbase == (unsigned short)(~0u)) {
+        if (output_format == OFMT_COM) {
+            com_segbase = 0x100;
+        }
+        else if (output_format == OFMT_EXE) {
+            com_segbase = 0;
         }
     }
 
