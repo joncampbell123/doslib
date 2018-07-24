@@ -61,6 +61,17 @@ int link_symbols_extend(size_t sz) {
     return 0;
 }
 
+int link_symbols_extend_double(void) {
+    if (link_symbols_alloc < MAX_SYMBOLS) {
+        size_t ns = link_symbols_alloc * 2u;
+        if (ns > MAX_SYMBOLS) ns = MAX_SYMBOLS;
+        if (link_symbols_extend(ns)) return -1;
+        assert(link_symbols_alloc >= ns);
+    }
+
+    return 0;
+}
+
 void link_symbol_free(struct link_symbol *s) {
     cstr_free(&(s->name));
     cstr_free(&(s->segdef));
