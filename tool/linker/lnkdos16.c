@@ -671,10 +671,9 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         if (pubdef == NULL) continue;
         name = pubdef->name_string;
         if (name == NULL) continue;
-        groupname = omf_context_get_grpdef_name_safe(omf_state,pubdef->group_index);
-        if (*groupname == 0) continue;
         segname = omf_context_get_segdef_name_safe(omf_state,pubdef->segment_index);
         if (*segname == 0) continue;
+        groupname = omf_context_get_grpdef_name_safe(omf_state,pubdef->group_index);
 
         fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx\n",
             first,name,groupname,segname,(unsigned long)pubdef->public_offset);
