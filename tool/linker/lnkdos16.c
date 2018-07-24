@@ -21,6 +21,13 @@
 
 //================================== PROGRAM ================================
 
+enum {
+    OFMT_COM=0,
+    OFMT_EXE
+};
+
+static unsigned int                     output_format = OFMT_COM;
+
 #define MAX_SYMBOLS                     65536
 
 struct link_symbol {
@@ -818,6 +825,7 @@ static void help(void) {
     fprintf(stderr,"lnkdos16 [options]\n");
     fprintf(stderr,"  -i <file>    OMF file to link\n");
     fprintf(stderr,"  -o <file>    Output file\n");
+    fprintf(stderr,"  -of <fmt>    Output format (COM, EXE)\n");
     fprintf(stderr,"  -v           Verbose mode\n");
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
     fprintf(stderr,"  -no-dosseg   No DOSSEG sort order\n");
@@ -898,6 +906,19 @@ int main(int argc,char **argv) {
             }
             else if (!strcmp(a,"com100")) {
                 com_segbase = 0x100;
+            }
+            else if (!strcmp(a,"of")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+
+                if (!strcmp(a,"com"))
+                    output_format = OFMT_COM;
+                else if (!strcmp(a,"exe"))
+                    output_format = OFMT_EXE;
+                else {
+                    fprintf(stderr,"Unknown format\n");
+                    return 1;
+                }
             }
             else if (!strcmp(a,"o")) {
                 out_file = argv[i++];
