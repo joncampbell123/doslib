@@ -691,6 +691,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         }
         assert(sym->groupdef == NULL);
         assert(sym->segdef == NULL);
+        sym->offset = pubdef->public_offset;
         sym->groupdef = strdup(groupname);
         sym->segdef = strdup(segname);
     }
