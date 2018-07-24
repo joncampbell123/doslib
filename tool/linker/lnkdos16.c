@@ -73,6 +73,60 @@ int link_symbols_extend_double(void) {
     return 0;
 }
 
+struct link_symbol *link_symbol_empty_slot(void) {
+    struct link_symbol *sym = NULL;
+
+    if (link_symbols == NULL && link_symbols_extend_double()) return NULL;
+
+    do {
+        assert(link_symbols_nextalloc <= link_symbols_count);
+        assert(link_symbols_count <= link_symbols_alloc);
+        for (;link_symbols_nextalloc < link_symbols_count;link_symbols_nextalloc++) {
+            sym = link_symbols + link_symbols_nextalloc;
+            if (sym->name == NULL) return sym;
+        }
+        for (;link_symbols_count < link_symbols_alloc;link_symbols_count++) {
+            sym = link_symbols + link_symbols_count;
+            if (sym->name == NULL) return sym;
+        }
+
+        if (link_symbols_extend_double()) return NULL;
+    } while (1);
+
+    return NULL;
+}
+
+struct link_symbol *new_link_symbol(const char *name) {
+    struct link_symbol *sym = link_symbol_empty_slot();
+
+    if (sym != NULL) {
+        assert(sym->name == NULL);
+        assert(sym->segdef == NULL);
+        assert(sym->groupdef == NULL);
+
+        sym->name = strdup(name);
+    }
+
+    return sym;
+}
+
+struct link_symbol *find_link_symbol(const char *name) {
+    struct link_symbol *sym;
+    size_t i = 0;
+
+    if (link_symbols != NULL) {
+        for (;i < link_symbols_count;i++) {
+            sym = link_symbols + i;
+            if (sym->name != NULL) {
+                if (!strcmp(sym->name, name))
+                    return sym;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 void link_symbol_free(struct link_symbol *s) {
     cstr_free(&(s->name));
     cstr_free(&(s->segdef));
