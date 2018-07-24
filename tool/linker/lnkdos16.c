@@ -26,6 +26,10 @@ enum {
     OFMT_EXE
 };
 
+static uint32_t*                        exe_relocation_table = NULL;
+static size_t                           exe_relocation_table_count = 0;
+static size_t                           exe_relocation_table_alloc = 0;
+
 static unsigned int                     output_format = OFMT_COM;
 
 #define MAX_SYMBOLS                     65536
@@ -1330,6 +1334,9 @@ int main(int argc,char **argv) {
                     ofs = sd->linear_offset + file_baseofs;
 
                     sd->file_offset = ofs;
+
+                    /* NTS: for EXE files, sd->file_offset will be adjusted further downward for relocation tables.
+                     *      in fact, maybe computing file offset at this phase was a bad idea... :( */
                 }
             }
 
@@ -1374,16 +1381,45 @@ int main(int argc,char **argv) {
             unsigned char tmp[32];
             unsigned long disk_size = 0;
             unsigned long header_size = 0;
+            unsigned long o_header_size = 0;
             unsigned long resident_size = 0;
+            unsigned long relocation_table_offset = 0;
             unsigned long max_resident_size = 0xFFFF0ul; /* by default, take ALL memory */
             unsigned long init_ss = 0,init_sp = 0,init_cs = 0,init_ip = 0;
             unsigned int stack_size = 4096;/*reasonable default*/
             unsigned int i,ofs;
 
+            if (link_segments_count > 0) {
+                struct link_segdef *sd = &link_segments[0];
+                header_size = sd->file_offset;
+            }
+            o_header_size = header_size;
+
+            if (exe_relocation_table_count != 0) {
+                assert(header_size >= 0x20);
+                relocation_table_offset = header_size;
+                header_size += (exe_relocation_table_count * 4ul);
+            }
+
+            /* header_size must be a multiple of 16 */
+            if (header_size % 16ul)
+                header_size += 16ul - (header_size % 16ul);
+
+            /* move segments farther down if needed */
+            if (o_header_size < header_size) {
+                unsigned long adj = header_size - o_header_size;
+
+                for (i=0;i < link_segments_count;i++) {
+                    struct link_segdef *sd = &link_segments[i];
+
+                    if (sd->segment_length == 0) continue;
+
+                    sd->file_offset += adj;
+                }
+            }
+
             for (i=0;i < link_segments_count;i++) {
                 struct link_segdef *sd = &link_segments[i];
-
-                if (i == 0) header_size = sd->file_offset;
 
                 if (sd->segment_length == 0) continue;
 
@@ -1436,6 +1472,11 @@ int main(int argc,char **argv) {
             tmp[0] = 'M';
             tmp[1] = 'Z';
 
+            if (verbose) {
+                fprintf(stderr,"Adjusted segment table\n");
+                dump_link_segments();
+            }
+ 
             {
                 unsigned int blocks,lastblock;
 
@@ -1456,6 +1497,11 @@ int main(int argc,char **argv) {
                 *((uint16_t*)(tmp+22)) = init_cs; /* relative */
                 // no relocation table (yet)
                 // no overlay
+
+                if (exe_relocation_table_count != 0) {
+                    *((uint16_t*)(tmp+24)) = (uint16_t)relocation_table_offset;
+                    *((uint16_t*)(tmp+6)) = (uint16_t)exe_relocation_table_count;
+                }
             }
 
             if (lseek(fd,0,SEEK_SET) == 0) {
