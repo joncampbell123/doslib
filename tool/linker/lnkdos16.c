@@ -207,7 +207,9 @@ static unsigned int                     link_segments_count = 0;
 
 static struct link_segdef*              current_link_segment = NULL;
 
+static char*                            entry_seg_link_target_name = NULL;
 static struct link_segdef*              entry_seg_link_target = NULL;
+static char*                            entry_seg_link_frame_name = NULL;
 static struct link_segdef*              entry_seg_link_frame = NULL;
 static unsigned char                    com_entry_insert = 0;
 static unsigned long                    entry_seg_ofs = 0;
@@ -302,6 +304,21 @@ void link_segments_swap(unsigned int s1,unsigned int s2) {
     }
 }
 
+struct link_segdef *find_link_segment(const char *name);
+
+void reconnect_gl_segs() {
+    if (entry_seg_link_target_name) {
+        entry_seg_link_target = find_link_segment(entry_seg_link_target_name);
+        assert(entry_seg_link_target != NULL);
+        assert(!strcmp(entry_seg_link_target->name,entry_seg_link_target_name));
+    }
+    if (entry_seg_link_frame_name) {
+        entry_seg_link_frame = find_link_segment(entry_seg_link_frame_name);
+        assert(entry_seg_link_frame != NULL);
+        assert(!strcmp(entry_seg_link_frame->name,entry_seg_link_frame_name));
+    }
+}
+
 void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(const struct link_segdef *a)) {
     unsigned int i;
     int r;
@@ -321,6 +338,8 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
             i++;
         }
     }
+
+    reconnect_gl_segs();
 }
 
 void owlink_dosseg_sort_order(void) {
@@ -1271,7 +1290,9 @@ int main(int argc,char **argv) {
                                         frameseg = find_link_segment(framename);
                                         if (targseg != NULL && frameseg != NULL) {
                                             entry_seg_ofs = TargetDisplacement;
+                                            entry_seg_link_target_name = strdup(targetname);
                                             entry_seg_link_target = targseg;
+                                            entry_seg_link_frame_name = strdup(framename);
                                             entry_seg_link_frame = frameseg;
                                         }
                                         else {
@@ -1658,6 +1679,9 @@ int main(int argc,char **argv) {
 
         close(fd);
     }
+
+    cstr_free(&entry_seg_link_target_name);
+    cstr_free(&entry_seg_link_frame_name);
 
     link_symbols_free();
     free_link_segments();
