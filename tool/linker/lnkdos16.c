@@ -685,8 +685,30 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                     fprintf(stderr,"segment base self-relative not supported for .COM\n");
                     return -1;
                 }
+                else if (output_format == OFMT_EXE) {
+                    /* emit as a relocation */
+                    unsigned long rseg,roff;
+                    uint32_t *reloc = new_exe_relocation();
+                    if (reloc == NULL) {
+                        fprintf(stderr,"Unable to allocate relocation\n");
+                        return -1;
+                    }
 
-                *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                    rseg = current_link_segment->segment_relative;
+                    roff = ent->omf_rec_file_enoffs +
+                           ent->data_record_offset +
+                           current_link_segment->load_base;
+
+                    while (roff >= 0xFFFEul) {
+                        rseg++;
+                        roff -= 0x10ul;
+                    }
+
+                    *reloc = (rseg << 16ul) + roff;
+                }
+                else {
+                    *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                }
                 break;
             default:
                 fprintf(stderr,"Unsupported fixup\n");
@@ -1530,6 +1552,14 @@ int main(int argc,char **argv) {
             if (lseek(fd,0,SEEK_SET) == 0) {
                 if (write(fd,tmp,32) == 32) {
                     /* good */
+                }
+            }
+
+            if (exe_relocation_table_count != 0) {
+                if ((unsigned long)lseek(fd,relocation_table_offset,SEEK_SET) == relocation_table_offset) {
+                    if ((unsigned long)write(fd,exe_relocation_table,exe_relocation_table_count * 4ul) == (exe_relocation_table_count * 4ul)) {
+                        /* good */
+                    }
                 }
             }
         }
