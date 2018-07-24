@@ -1536,6 +1536,7 @@ int main(int argc,char **argv) {
 
                 init_cs = entry_seg_link_target->segment_relative;
                 init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset;
+                fprintf(stderr,"EXE entry: %04lx:%04lx in %s\n",init_cs,init_ip,entry_seg_link_target->name);
             }
             else {
                 fprintf(stderr,"EXE warning: No entry point\n");
