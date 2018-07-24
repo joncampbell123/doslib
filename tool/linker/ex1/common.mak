@@ -12,6 +12,7 @@ NOW_BUILDING = TOOL_LINKER_EX1
 !ifdef TINYMODE
 TEST_EXE =    $(SUBDIR)$(HPS)test.com
 TEST2_EXE =   $(SUBDIR)$(HPS)test2.com
+TEST3_EXE =   $(SUBDIR)$(HPS)test3.com
 TESTA_EXE =   $(SUBDIR)$(HPS)testa.com
 TESTA2_EXE =  $(SUBDIR)$(HPS)testa2.com
 TESTB_EXE =   $(SUBDIR)$(HPS)testb.com
@@ -23,6 +24,7 @@ TEST2_EXE =   $(SUBDIR)$(HPS)test2.exe
 ! ifeq TARGET_MSDOS 32
 # DOSLIB linker cannot handle 32-bit OMF........yet
 ! else
+TEST3_EXE =   $(SUBDIR)$(HPS)test3.exe
 TESTA_EXE =   $(SUBDIR)$(HPS)testa.exe
 TESTA2_EXE =  $(SUBDIR)$(HPS)testa2.exe
 TESTB_EXE =   $(SUBDIR)$(HPS)testb.exe
@@ -53,7 +55,7 @@ $(DOSLIBLINKER):
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TESTA_EXE) $(TESTA2_EXE) $(TESTB_EXE) $(TESTB2_EXE) .symbolic
+exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) $(TESTA_EXE) $(TESTA2_EXE) $(TESTB_EXE) $(TESTB2_EXE) .symbolic
 
 lib: .symbolic
 
@@ -95,6 +97,11 @@ $(TESTA2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
 !ifdef TESTB2_EXE
 $(TESTB2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
 	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTB2_EXE) -com100 $(DOSLIBLINKER_OFMT) -pflat
+!endif
+
+!ifdef TEST3_EXE
+$(TEST3_EXE): $(SUBDIR)$(HPS)entry3.obj $(SUBDIR)$(HPS)drvc.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry3.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TEST3_EXE) -com100 $(DOSLIBLINKER_OFMT) -pflat
 !endif
 
 clean: .SYMBOLIC
