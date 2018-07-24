@@ -649,6 +649,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
 
     while (first < omf_state->PUBDEFs.omf_PUBDEFS_count) {
         const struct omf_pubdef_t *pubdef = &omf_state->PUBDEFs.omf_PUBDEFS[first++];
+        struct link_symbol *sym;
         const char *groupname;
         const char *segname;
         const char *name;
@@ -663,6 +664,21 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
 
         fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx\n",
             first,name,groupname,segname,(unsigned long)pubdef->public_offset);
+
+        sym = find_link_symbol(name);
+        if (sym != NULL) {
+            fprintf(stderr,"Symbol '%s' already defined\n",name);
+            return -1;
+        }
+        sym = new_link_symbol(name);
+        if (sym == NULL) {
+            fprintf(stderr,"Unable to allocate symbol '%s'\n",name);
+            return -1;
+        }
+        assert(sym->groupdef == NULL);
+        assert(sym->segdef == NULL);
+        sym->groupdef = strdup(groupname);
+        sym->segdef = strdup(segname);
     }
 
     return 0;
