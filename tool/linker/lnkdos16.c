@@ -64,6 +64,7 @@ int link_symbols_extend(size_t sz) {
 int link_symbols_extend_double(void) {
     if (link_symbols_alloc < MAX_SYMBOLS) {
         size_t ns = link_symbols_alloc * 2u;
+        if (ns < 128) ns = 128;
         if (ns > MAX_SYMBOLS) ns = MAX_SYMBOLS;
         if (link_symbols_extend(ns)) return -1;
         assert(link_symbols_alloc >= ns);
