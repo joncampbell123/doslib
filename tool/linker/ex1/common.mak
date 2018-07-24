@@ -14,9 +14,13 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.com
 TEST2_EXE =   $(SUBDIR)$(HPS)test2.com
 TESTA_EXE =   $(SUBDIR)$(HPS)testa.com
 TESTA2_EXE =  $(SUBDIR)$(HPS)testa2.com
+DOSLIBLINKER_OFMT = -of com
 !else
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 TEST2_EXE =   $(SUBDIR)$(HPS)test2.exe
+TESTA_EXE =   $(SUBDIR)$(HPS)testa.exe
+TESTA2_EXE =  $(SUBDIR)$(HPS)testa2.exe
+DOSLIBLINKER_OFMT = -of exe
 !endif
 
 DOSLIBLINKER = ../linux-host/lnkdos16
@@ -60,7 +64,7 @@ $(TEST_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
 
 !ifdef TESTA_EXE
 $(TESTA_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTA_EXE) -com0 -of com
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTA_EXE) -com0 $(DOSLIBLINKER_OFMT)
 !endif
 
 !ifdef TEST2_EXE
@@ -72,7 +76,7 @@ $(TEST2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
 
 !ifdef TESTA2_EXE
 $(TESTA2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTA2_EXE) -com100 -of com
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTA2_EXE) -com100 $(DOSLIBLINKER_OFMT)
 !endif
 
 clean: .SYMBOLIC
