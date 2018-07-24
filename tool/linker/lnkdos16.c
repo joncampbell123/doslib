@@ -628,7 +628,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                 assert((ptr+2) <= fence);
 
                 if (!ent->segment_relative)
-                    final_ofs -= ptch+2;
+                    final_ofs -= ptch+2+current_link_segment->segment_base;
 
                 *((uint16_t*)ptr) += (uint16_t)final_ofs;
                 break;
