@@ -613,10 +613,11 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                     final_seg,final_ofs);
         }
 
-        ptch = (unsigned long)ent->omf_rec_file_enoffs + (unsigned long)ent->data_record_offset;
+        ptch =  (unsigned long)ent->omf_rec_file_enoffs +
+                (unsigned long)ent->data_record_offset;
 
         if (omf_state->flags.verbose)
-            fprintf(stderr,"ptch=0x%lx\n",ptch);
+            fprintf(stderr,"ptch=0x%lx '%s'\n",ptch,current_link_segment->name);
 
         ptr = current_link_segment->image_ptr + ptch;
         assert(ptr < fence);
