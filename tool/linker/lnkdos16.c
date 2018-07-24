@@ -663,6 +663,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
 
     while (first < omf_state->PUBDEFs.omf_PUBDEFS_count) {
         const struct omf_pubdef_t *pubdef = &omf_state->PUBDEFs.omf_PUBDEFS[first++];
+        struct link_segdef *lsg;
         struct link_symbol *sym;
         const char *groupname;
         const char *segname;
@@ -674,6 +675,12 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         segname = omf_context_get_segdef_name_safe(omf_state,pubdef->segment_index);
         if (*segname == 0) continue;
         groupname = omf_context_get_grpdef_name_safe(omf_state,pubdef->group_index);
+
+        lsg = find_link_segment(segname);
+        if (lsg == NULL) {
+            fprintf(stderr,"Pubdef: No such segment '%s'\n",segname);
+            return -1;
+        }
 
         fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx\n",
             first,name,groupname,segname,(unsigned long)pubdef->public_offset);
@@ -690,7 +697,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         }
         assert(sym->groupdef == NULL);
         assert(sym->segdef == NULL);
-        sym->offset = pubdef->public_offset;
+        sym->offset = pubdef->public_offset + lsg->load_base;
         sym->groupdef = strdup(groupname);
         sym->segdef = strdup(segname);
     }
