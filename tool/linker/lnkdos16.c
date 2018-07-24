@@ -633,8 +633,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                 *((uint16_t*)ptr) += (uint16_t)final_ofs;
                 break;
             default:
-                fprintf(stderr,"Unsupported\n");
-                break;
+                fprintf(stderr,"Unsupported fixup\n");
+                return -1;
         }
     }
 
