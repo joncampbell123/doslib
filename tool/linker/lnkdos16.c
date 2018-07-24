@@ -81,12 +81,12 @@ struct link_symbol *link_symbol_empty_slot(void) {
     do {
         assert(link_symbols_nextalloc <= link_symbols_count);
         assert(link_symbols_count <= link_symbols_alloc);
-        for (;link_symbols_nextalloc < link_symbols_count;link_symbols_nextalloc++) {
-            sym = link_symbols + link_symbols_nextalloc;
+        while (link_symbols_nextalloc < link_symbols_count) {
+            sym = link_symbols + (link_symbols_nextalloc++);
             if (sym->name == NULL) return sym;
         }
-        for (;link_symbols_count < link_symbols_alloc;link_symbols_count++) {
-            sym = link_symbols + link_symbols_count;
+        while (link_symbols_count < link_symbols_alloc) {
+            sym = link_symbols + (link_symbols_count++);
             if (sym->name == NULL) return sym;
         }
 
@@ -324,6 +324,20 @@ unsigned int omf_align_code_to_bytes(const unsigned int x) {
     };
 
     return 0;
+}
+
+void dump_link_symbols(void) {
+    unsigned int i=0;
+
+    if (link_symbols == NULL) return;
+
+    while (i < link_symbols_count) {
+        struct link_symbol *sym = &link_symbols[i++];
+        if (sym->name == NULL) continue;
+
+        fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx\n",
+            i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset);
+    }
 }
 
 void dump_link_segments(void) {
@@ -1238,8 +1252,10 @@ int main(int argc,char **argv) {
         }
     }
 
-    if (verbose)
+    if (verbose) {
+        dump_link_symbols();
         dump_link_segments();
+    }
 
     /* write output */
     assert(out_file != NULL);
