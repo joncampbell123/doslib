@@ -810,8 +810,8 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
             return -1;
         }
 
-        fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx finalofs=0x%lx\n",
-            first,name,groupname,segname,(unsigned long)pubdef->public_offset,pubdef->public_offset + lsg->load_base);
+        fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx finalofs=0x%lx local=%u\n",
+            first,name,groupname,segname,(unsigned long)pubdef->public_offset,pubdef->public_offset + lsg->load_base,is_local);
 
         sym = find_link_symbol(name);
         if (sym != NULL) {
