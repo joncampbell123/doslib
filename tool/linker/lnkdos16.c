@@ -1381,9 +1381,9 @@ int main(int argc,char **argv) {
                     if (prefer_flat && sd->linear_offset < 0xFFF0ul)
                         segrel = 0; /* user prefers flat .COM memory model, where possible */
 
-                    sd->segment_base = 0;
-                    sd->segment_relative = segrel;
-                    sd->segment_offset = sd->linear_offset - (segrel << 4ul);
+                    sd->segment_base = com_segbase;
+                    sd->segment_relative = segrel - (com_segbase >> 4ul);
+                    sd->segment_offset = com_segbase + sd->linear_offset - (segrel << 4ul);
                 }
             }
             else if (output_format == OFMT_COM) {
@@ -1534,8 +1534,8 @@ int main(int argc,char **argv) {
                     return 1;
                 }
 
-                init_cs = entry_seg_link_target->segment_base;
-                init_ip = entry_seg_ofs;
+                init_cs = entry_seg_link_target->segment_relative;
+                init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset;
             }
             else {
                 fprintf(stderr,"EXE warning: No entry point\n");
