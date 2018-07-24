@@ -1014,7 +1014,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                            if (segdef_add(omf_state, p_count))
+                            if (pass == 0 && segdef_add(omf_state, p_count))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
@@ -1031,7 +1031,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_GRPDEF(stdout,omf_state,(unsigned int)first_new_grpdef);
 
-                            if (grpdef_add(omf_state, p_count))
+                            if (pass == 0 && grpdef_add(omf_state, p_count))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_FIXUPP:/*0x9C*/
