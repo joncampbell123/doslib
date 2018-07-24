@@ -614,7 +614,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
         }
 
         ptch =  (unsigned long)ent->omf_rec_file_enoffs +
-                (unsigned long)ent->data_record_offset;
+                (unsigned long)ent->data_record_offset +
+                (unsigned long)current_link_segment->load_base;
 
         if (omf_state->flags.verbose)
             fprintf(stderr,"ptch=0x%lx '%s'\n",ptch,current_link_segment->name);
