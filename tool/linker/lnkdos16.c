@@ -21,6 +21,65 @@
 
 //================================== PROGRAM ================================
 
+#define MAX_SYMBOLS                     65536
+
+struct link_symbol {
+    char*                               name;
+    char*                               segdef;
+    char*                               groupdef;
+    unsigned long                       offset;
+};
+
+static struct link_symbol*              link_symbols = NULL;
+static size_t                           link_symbols_count = 0;
+static size_t                           link_symbols_alloc = 0;
+static size_t                           link_symbols_nextalloc = 0;
+
+int link_symbols_extend(size_t sz) {
+    if (sz > MAX_SYMBOLS) return -1;
+    if (sz <= link_symbols_alloc) return 0;
+    if (sz == 0) return -1;
+
+    if (link_symbols != NULL) {
+        size_t old_alloc = link_symbols_alloc;
+        struct link_symbol *n = realloc(link_symbols, sz * sizeof(struct link_symbol));
+        if (n == NULL) return -1;
+        link_symbols = n;
+        assert(old_alloc != 0);
+        assert(old_alloc < sz);
+        memset(link_symbols + old_alloc, 0, (sz - old_alloc) * sizeof(struct link_symbol));
+    }
+    else {
+        link_symbols = malloc(sz * sizeof(struct link_symbol));
+        if (link_symbols == NULL) return -1;
+        memset(link_symbols, 0, sz * sizeof(struct link_symbol));
+        link_symbols_nextalloc = 0;
+        link_symbols_count = 0;
+    }
+
+    link_symbols_alloc = sz;
+    return 0;
+}
+
+void link_symbol_free(struct link_symbol *s) {
+    cstr_free(&(s->name));
+    cstr_free(&(s->segdef));
+    cstr_free(&(s->groupdef));
+}
+
+void link_symbols_free(void) {
+    size_t i;
+
+    if (link_symbols != NULL) {
+        for (i=0;i < link_symbols_alloc;i++) link_symbol_free(&link_symbols[i]);
+        free(link_symbols);
+        link_symbols = NULL;
+        link_symbols_alloc = 0;
+        link_symbols_count = 0;
+        link_symbols_nextalloc = 0;
+    }
+}
+
 #define MAX_SEGMENTS                    256
 
 struct link_segdef {
@@ -1167,6 +1226,7 @@ int main(int argc,char **argv) {
         close(fd);
     }
 
+    link_symbols_free();
     free_link_segments();
     return 0;
 }
