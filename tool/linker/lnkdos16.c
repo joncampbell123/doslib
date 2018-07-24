@@ -709,6 +709,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                         roff -= 0x10ul;
                     }
 
+                    *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+
                     *reloc = (rseg << 16ul) + roff;
                     fprintf(stderr,"EXE relocation entry: Patch up %04lx:%04lx\n",rseg,roff);
                 }
@@ -1352,17 +1354,26 @@ int main(int argc,char **argv) {
             /* if a .COM executable, then all segments are arranged so that the first byte
              * is at 0x100 */
             if (output_format == OFMT_EXE) {
+                unsigned long segrel = 0;
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
+                    struct link_segdef *gd = sd->groupname != NULL ? find_link_segment_by_grpdef(sd->groupname) : 0;
+
+                    if (gd != NULL)
+                        segrel = gd->linear_offset >> 4ul;
+                    else
+                        segrel = sd->linear_offset >> 4ul;
 
                     sd->segment_base = 0;
-                    sd->segment_offset = sd->linear_offset;
+                    sd->segment_relative = segrel;
+                    sd->segment_offset = sd->linear_offset - (segrel << 4ul);
                 }
             }
             else if (output_format == OFMT_COM) {
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
 
+                    sd->segment_relative = 0;
                     sd->segment_base = com_segbase;
                     sd->segment_offset = com_segbase + sd->linear_offset;
                 }
