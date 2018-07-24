@@ -423,8 +423,8 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) 
         return 0;
 
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
-    if (lsg->segment_len_count < max_ofs) lsg->segment_len_count = max_ofs;
     max_ofs += (unsigned long)lsg->load_base;
+    if (lsg->segment_len_count < max_ofs) lsg->segment_len_count = max_ofs;
     if (lsg->segment_length < max_ofs) {
         fprintf(stderr,"LEDATA out of bounds (len=%lu max=%lu)\n",lsg->segment_length,max_ofs);
         return 1;
@@ -435,6 +435,11 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) 
     assert(max_ofs >= (unsigned long)info->data_length);
     max_ofs -= (unsigned long)info->data_length;
     memcpy(lsg->image_ptr + max_ofs, info->data, info->data_length);
+
+#if 0
+    fprintf(stderr,"LEDATA '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx\n",
+        segname,lsg->load_base,max_ofs,info->data_length,info->enum_data_offset);
+#endif
 
     return 0;
 }
@@ -458,9 +463,17 @@ int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info)
     current_link_segment = lsg;
 
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
-    if (lsg->segment_len_count < max_ofs) lsg->segment_len_count = max_ofs;
     max_ofs += (unsigned long)lsg->load_base;
+    if (lsg->segment_len_count < max_ofs) lsg->segment_len_count = max_ofs;
     if (lsg->segment_length < max_ofs) lsg->segment_length = max_ofs;
+
+    assert(max_ofs >= (unsigned long)info->data_length);
+    max_ofs -= (unsigned long)info->data_length;
+
+#if 0
+    fprintf(stderr,"LEDATA note '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx\n",
+        segname,lsg->load_base,max_ofs,info->data_length,info->enum_data_offset);
+#endif
 
     return 0;
 }
@@ -1014,7 +1027,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                            if (pass == 0 && segdef_add(omf_state, p_count))
+                            if (segdef_add(omf_state, p_count))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
