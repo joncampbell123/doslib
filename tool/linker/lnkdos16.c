@@ -837,9 +837,8 @@ static unsigned int                     current_in_mod = 0;
 
 static unsigned char                    do_dosseg = 1;
 
-static unsigned short                   com_segbase = 0; /* Watcom Linker behavior: .COM starts at 0, then
-                                                            entry point has to fiddle with instruction pointer
-                                                            and sregs to adjust */
+/* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
+static unsigned short                   com_segbase = 0x100;
 
 struct omf_context_t*                   omf_state = NULL;
 
