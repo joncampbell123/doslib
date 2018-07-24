@@ -485,8 +485,9 @@ int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info)
     return 0;
 }
 
-int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index) {
+int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,struct link_segdef **sdef,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index) {
     *fseg = *fofs = ~0UL;
+    *sdef = NULL;
     (void)ent;
 
     if (method == 0/*SEGDEF*/) {
@@ -507,6 +508,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
 
         *fseg = lsg->segment_relative;
         *fofs = lsg->segment_offset;
+        *sdef = lsg;
     }
     else if (method == 1/*GRPDEF*/) {
         struct link_segdef *lsg;
@@ -526,6 +528,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
 
         *fseg = lsg->segment_relative;
         *fofs = lsg->segment_offset;
+        *sdef = lsg;
     }
     else if (method == 2/*EXTDEF*/) {
         struct link_segdef *lsg;
@@ -553,6 +556,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
 
         *fseg = lsg->segment_relative;
         *fofs = sym->offset + lsg->segment_offset;
+        *sdef = lsg;
     }
     else if (method == 5/*BY TARGET*/) {
     }
@@ -567,6 +571,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
     unsigned long final_seg,final_ofs;
     unsigned long frame_seg,frame_ofs;
     unsigned long targ_seg,targ_ofs;
+    struct link_segdef *frame_sdef;
+    struct link_segdef *targ_sdef;
     unsigned char *fence;
     unsigned char *ptr;
     unsigned long ptch;
@@ -580,12 +586,13 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
         if (ent == NULL) continue;
         if (!ent->alloc) continue;
 
-        if (fixupp_get(omf_state,&frame_seg,&frame_ofs,ent,ent->frame_method,ent->frame_index))
+        if (fixupp_get(omf_state,&frame_seg,&frame_ofs,&frame_sdef,ent,ent->frame_method,ent->frame_index))
             return -1;
-        if (fixupp_get(omf_state,&targ_seg,&targ_ofs,ent,ent->target_method,ent->target_index))
+        if (fixupp_get(omf_state,&targ_seg,&targ_ofs,&targ_sdef,ent,ent->target_method,ent->target_index))
             return -1;
 
         if (ent->frame_method == 5/*BY TARGET*/) {
+            frame_sdef = targ_sdef;
             frame_seg = targ_seg;
             frame_ofs = targ_ofs;
         }
@@ -597,11 +604,11 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                     targ_seg,targ_ofs);
         }
 
-        if (frame_seg == ~0UL || frame_ofs == ~0UL) {
+        if (frame_seg == ~0UL || frame_ofs == ~0UL || frame_sdef == NULL) {
             fprintf(stderr,"frame addr not resolved\n");
             continue;
         }
-        if (targ_seg == ~0UL || targ_ofs == ~0UL) {
+        if (targ_seg == ~0UL || targ_ofs == ~0UL || targ_sdef == NULL) {
             fprintf(stderr,"target addr not resolved\n");
             continue;
         }
@@ -638,6 +645,21 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                     final_ofs -= ptch+2+current_link_segment->segment_base;
 
                 *((uint16_t*)ptr) += (uint16_t)final_ofs;
+                break;
+            case OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE: /* 16-bit segment base */
+                assert((ptr+2) <= fence);
+
+                if (!ent->segment_relative) {
+                    fprintf(stderr,"segment base self relative\n");
+                    return -1;
+                }
+
+                if (output_format == OFMT_COM) {
+                    fprintf(stderr,"segment base self-relative not supported for .COM\n");
+                    return -1;
+                }
+
+                *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
                 break;
             default:
                 fprintf(stderr,"Unsupported fixup\n");
