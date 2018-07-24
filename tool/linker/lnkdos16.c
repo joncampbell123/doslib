@@ -1234,6 +1234,8 @@ int main(int argc,char **argv) {
         }
 
         if (pass == 0) {
+            unsigned long file_baseofs = 0;
+
             if (do_dosseg)
                 owlink_dosseg_sort_order();
 
@@ -1251,6 +1253,8 @@ int main(int argc,char **argv) {
                  * must be inserted at the start to JMP to the entry point */
                 if (output_format == OFMT_EXE) {
                     /* EXE */
+                    /* TODO: relocation table */
+                    file_baseofs = 32;
                 }
                 else if (output_format == OFMT_COM) {
                     /* COM */
@@ -1323,11 +1327,7 @@ int main(int argc,char **argv) {
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
 
-                    ofs = sd->linear_offset;
-
-                    if (output_format == OFMT_EXE) {
-                        /* TODO: EXE header */
-                    }
+                    ofs = sd->linear_offset + file_baseofs;
 
                     sd->file_offset = ofs;
                 }
@@ -1370,7 +1370,99 @@ int main(int argc,char **argv) {
         }
 
         if (output_format == OFMT_EXE) {
-            /* EXE */
+            /* EXE header */
+            unsigned char tmp[32];
+            unsigned long disk_size = 0;
+            unsigned long header_size = 0;
+            unsigned long resident_size = 0;
+            unsigned long max_resident_size = 0xFFFF0ul; /* by default, take ALL memory */
+            unsigned long init_ss = 0,init_sp = 0,init_cs = 0,init_ip = 0;
+            unsigned int stack_size = 4096;/*reasonable default*/
+            unsigned int i,ofs;
+
+            for (i=0;i < link_segments_count;i++) {
+                struct link_segdef *sd = &link_segments[i];
+
+                if (i == 0) header_size = sd->file_offset;
+
+                if (sd->segment_length == 0) continue;
+
+                ofs = sd->file_offset + sd->segment_length;
+
+                /* NTS: "disk size" includes EXE header, everything needed for MS-DOS
+                 *      to parse and load the EXE file */
+
+                /* TODO: Some segments, like BSS or STACK, do not get emitted to disk.
+                 *       Except that in the EXE format, segments can only be omitted
+                 *       from the end of the image. */
+
+                if (disk_size < ofs) disk_size = ofs;
+                if (resident_size < ofs) resident_size = ofs;
+            }
+
+            /* TODO: Use the size and position of the STACK segment! */
+            /* Take additional resident size for the stack */
+            resident_size += stack_size;
+            ofs = resident_size;
+            assert(resident_size >= 32);
+            init_ss = 0;
+            init_sp = resident_size - 16; /* assume MS-DOS will consume some stack on entry to program */
+            while (init_sp >= 0xFFF0u) {
+                init_ss++;
+                init_sp -= 0x10;
+            }
+
+            /* entry point */
+            if (entry_seg_link_target != NULL && entry_seg_link_frame != NULL) {
+                if (entry_seg_link_target->segment_base != entry_seg_link_frame->segment_base) {
+                    fprintf(stderr,"EXE Entry point with frame != target not yet supported\n");
+                    return 1;
+                }
+
+                init_cs = entry_seg_link_target->segment_base;
+                init_ip = entry_seg_ofs;
+            }
+            else {
+                fprintf(stderr,"EXE warning: No entry point\n");
+            }
+
+            fprintf(stderr,"EXE header size: %lu\n",header_size);
+
+            assert(resident_size > disk_size);
+            assert(header_size != 0u);
+            assert((header_size % 16u) == 0u);
+            assert(sizeof(tmp) >= 32);
+            memset(tmp,0,32);
+            tmp[0] = 'M';
+            tmp[1] = 'Z';
+
+            {
+                unsigned int blocks,lastblock;
+
+                blocks = disk_size / 512u;
+                lastblock = disk_size % 512u;
+                if (lastblock != 0) blocks++;
+
+                *((uint16_t*)(tmp+2)) = lastblock;
+                *((uint16_t*)(tmp+4)) = blocks;
+                // no relocations (yet)
+                *((uint16_t*)(tmp+8)) = header_size / 16u; /* in paragraphs */
+                *((uint16_t*)(tmp+10)) = ((resident_size + 15ul - disk_size) / 16ul); /* in paragraphs, additional memory needed */
+                *((uint16_t*)(tmp+12)) = (max_resident_size + 15ul) / 16ul; /* maximum additional memory */
+                *((uint16_t*)(tmp+14)) = init_ss; /* relative */
+                *((uint16_t*)(tmp+16)) = init_sp;
+                // no checksum
+                *((uint16_t*)(tmp+20)) = init_ip;
+                *((uint16_t*)(tmp+22)) = init_cs; /* relative */
+                // no relocation table (yet)
+                // no overlay
+            }
+
+            if (lseek(fd,0,SEEK_SET) == 0) {
+                if (write(fd,tmp,32) == 32) {
+                    /* good */
+                }
+            }
         }
         else if (output_format == OFMT_COM) {
             /* .COM require JMP instruction */
@@ -1379,6 +1471,10 @@ int main(int argc,char **argv) {
                 unsigned char tmp[4];
 
                 assert(com_entry_insert < 4);
+
+                /* TODO: Some segments, like BSS or STACK, do not get emitted to disk.
+                 *       Except that in the COM format, segments can only be omitted
+                 *       from the end of the image. */
 
                 if (ofs >= (unsigned long)com_entry_insert) {
                     ofs -= (unsigned long)com_entry_insert;
