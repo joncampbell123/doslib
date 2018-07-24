@@ -371,6 +371,8 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
     else if (method == 2/*EXTDEF*/) {
         fprintf(stderr,"FRAME EXTDEF not impl\n");
     }
+    else if (method == 5/*BY TARGET*/) {
+    }
     else {
         fprintf(stderr,"FRAME UNSUPP not impl\n");
     }
@@ -404,6 +406,11 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
             return -1;
         if (fixupp_get(omf_state,&targ_seg,&targ_ofs,ent,ent->target_method,ent->target_index))
             return -1;
+
+        if (ent->frame_method == 5/*BY TARGET*/) {
+            frame_seg = targ_seg;
+            frame_ofs = targ_ofs;
+        }
 
         if (omf_state->flags.verbose) {
             fprintf(stderr,"fixup[%u] frame=%lx:%lx targ=%lx:%lx\n",
