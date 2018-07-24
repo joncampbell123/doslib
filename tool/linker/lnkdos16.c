@@ -761,6 +761,21 @@ int main(int argc,char **argv) {
                 }
 
                 switch (omf_state->record.rectype) {
+                    case OMF_RECTYPE_EXTDEF:/*0x8C*/
+                    case OMF_RECTYPE_LEXTDEF:/*0xB4*/
+                    case OMF_RECTYPE_LEXTDEF32:/*0xB5*/
+                        {
+                            int first_new_extdef;
+
+                            if ((first_new_extdef=omf_context_parse_EXTDEF(omf_state,&omf_state->record)) < 0) {
+                                fprintf(stderr,"Error parsing EXTDEF\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose)
+                                dump_EXTDEF(stdout,omf_state,(unsigned int)first_new_extdef);
+
+                        } break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
                         {
                             int first_new_lname;
