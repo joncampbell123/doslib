@@ -208,6 +208,7 @@ static struct link_segdef*              entry_seg_link_target = NULL;
 static struct link_segdef*              entry_seg_link_frame = NULL;
 static unsigned char                    com_entry_insert = 0;
 static unsigned long                    entry_seg_ofs = 0;
+static unsigned char                    prefer_flat = 0;
 
 /* Open Watcom DOSSEG linker order
  * 
@@ -910,6 +911,7 @@ static void help(void) {
     fprintf(stderr,"  -dosseg      DOSSEG sort order\n");
     fprintf(stderr,"  -com100      Link .COM segment starting at 0x100\n");
     fprintf(stderr,"  -com0        Link .COM segment starting at 0 (Watcom Linker)\n");
+    fprintf(stderr,"  -pflat       Prefer .COM-like flat layout\n");
 }
 
 void my_dumpstate(const struct omf_context_t * const ctx) {
@@ -978,6 +980,9 @@ int main(int argc,char **argv) {
                 in_file[in_file_count] = argv[i++];
                 if (in_file[in_file_count] == NULL) return 1;
                 in_file_count++;
+            }
+            else if (!strcmp(a,"pflat")) {
+                prefer_flat = 1;
             }
             else if (!strcmp(a,"com0")) {
                 com_segbase = 0x000;
@@ -1363,6 +1368,9 @@ int main(int argc,char **argv) {
                         segrel = gd->linear_offset >> 4ul;
                     else
                         segrel = sd->linear_offset >> 4ul;
+
+                    if (prefer_flat && sd->linear_offset < 0xFFF0ul)
+                        segrel = 0; /* user prefers flat .COM memory model, where possible */
 
                     sd->segment_base = 0;
                     sd->segment_relative = segrel;
