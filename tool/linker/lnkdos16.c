@@ -1293,7 +1293,12 @@ int main(int argc,char **argv) {
             /* if a .COM executable, then all segments are arranged so that the first byte
              * is at 0x100 */
             if (output_format == OFMT_EXE) {
-                /* EXE */
+                for (inf=0;inf < link_segments_count;inf++) {
+                    struct link_segdef *sd = &link_segments[inf];
+
+                    sd->segment_base = 0;
+                    sd->segment_offset = sd->linear_offset;
+                }
             }
             else if (output_format == OFMT_COM) {
                 for (inf=0;inf < link_segments_count;inf++) {
