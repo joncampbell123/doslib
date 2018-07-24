@@ -516,7 +516,12 @@ int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
     return 0;
 }
 
-int pubdef_add(struct omf_context_t *omf_state,unsigned int first) {
+int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int tag) {
+    const unsigned char is_local = (tag == OMF_RECTYPE_LPUBDEF) || (tag == OMF_RECTYPE_LPUBDEF32);
+
+    // TODO
+    (void)is_local;
+
     while (first < omf_state->PUBDEFs.omf_PUBDEFS_count) {
         const struct omf_pubdef_t *pubdef = &omf_state->PUBDEFs.omf_PUBDEFS[first++];
         const char *groupname;
@@ -817,7 +822,7 @@ int main(int argc,char **argv) {
                             /* TODO: LPUBDEF symbols need to "disappear" at the end of the module.
                              *       LPUBDEF means the symbols are not visible outside the module. */
 
-                            if (pass == 0 && pubdef_add(omf_state, p_count))
+                            if (pass == 0 && pubdef_add(omf_state, p_count, omf_state->record.rectype))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
