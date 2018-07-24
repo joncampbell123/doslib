@@ -516,6 +516,28 @@ int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
     return 0;
 }
 
+int pubdef_add(struct omf_context_t *omf_state,unsigned int first) {
+    while (first < omf_state->PUBDEFs.omf_PUBDEFS_count) {
+        const struct omf_pubdef_t *pubdef = &omf_state->PUBDEFs.omf_PUBDEFS[first++];
+        const char *groupname;
+        const char *segname;
+        const char *name;
+
+        if (pubdef == NULL) continue;
+        name = pubdef->name_string;
+        if (name == NULL) continue;
+        groupname = omf_context_get_grpdef_name_safe(omf_state,pubdef->group_index);
+        if (*groupname == 0) continue;
+        segname = omf_context_get_segdef_name_safe(omf_state,pubdef->segment_index);
+        if (*segname == 0) continue;
+
+        fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx\n",
+            first,name,groupname,segname,(unsigned long)pubdef->public_offset);
+    }
+
+    return 0;
+}
+
 int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
     unsigned long alignb,malign;
     struct link_segdef *lsg;
@@ -781,6 +803,7 @@ int main(int argc,char **argv) {
                     case OMF_RECTYPE_LPUBDEF:/*0xB6*/
                     case OMF_RECTYPE_LPUBDEF32:/*0xB7*/
                         {
+                            int p_count = omf_state->PUBDEFs.omf_PUBDEFS_count;
                             int first_new_pubdef;
 
                             if ((first_new_pubdef=omf_context_parse_PUBDEF(omf_state,&omf_state->record)) < 0) {
@@ -791,6 +814,11 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_PUBDEF(stdout,omf_state,(unsigned int)first_new_pubdef);
 
+                            /* TODO: LPUBDEF symbols need to "disappear" at the end of the module.
+                             *       LPUBDEF means the symbols are not visible outside the module. */
+
+                            if (pass == 0 && pubdef_add(omf_state, p_count))
+                                return 1;
                         } break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
                         {
