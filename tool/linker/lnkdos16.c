@@ -656,6 +656,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
 
         ptch =  (unsigned long)ent->omf_rec_file_enoffs +
                 (unsigned long)ent->data_record_offset +
+                (unsigned long)current_link_segment->linear_offset +
                 (unsigned long)current_link_segment->load_base;
 
         if (omf_state->flags.verbose)
@@ -697,6 +698,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                     rseg = current_link_segment->segment_relative;
                     roff = ent->omf_rec_file_enoffs +
                            ent->data_record_offset +
+                           current_link_segment->linear_offset +
                            current_link_segment->load_base;
 
                     while (roff >= 0xFFFEul) {
@@ -705,6 +707,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                     }
 
                     *reloc = (rseg << 16ul) + roff;
+                    fprintf(stderr,"EXE relocation entry: Patch up %04lx:%04lx\n",rseg,roff);
                 }
                 else {
                     *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
