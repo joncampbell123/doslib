@@ -776,6 +776,22 @@ int main(int argc,char **argv) {
                                 dump_EXTDEF(stdout,omf_state,(unsigned int)first_new_extdef);
 
                         } break;
+                    case OMF_RECTYPE_PUBDEF:/*0x90*/
+                    case OMF_RECTYPE_PUBDEF32:/*0x91*/
+                    case OMF_RECTYPE_LPUBDEF:/*0xB6*/
+                    case OMF_RECTYPE_LPUBDEF32:/*0xB7*/
+                        {
+                            int first_new_pubdef;
+
+                            if ((first_new_pubdef=omf_context_parse_PUBDEF(omf_state,&omf_state->record)) < 0) {
+                                fprintf(stderr,"Error parsing PUBDEF\n");
+                                return 1;
+                            }
+
+                            if (omf_state->flags.verbose)
+                                dump_PUBDEF(stdout,omf_state,(unsigned int)first_new_pubdef);
+
+                        } break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
                         {
                             int first_new_lname;
