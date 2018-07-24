@@ -21,6 +21,9 @@
 
 //================================== PROGRAM ================================
 
+/* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
+static unsigned short                   com_segbase = (unsigned short)(~0u);
+
 enum {
     OFMT_COM=0,
     OFMT_EXE
@@ -699,7 +702,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                         return -1;
                     }
 
-                    rseg = current_link_segment->segment_relative;
+                    rseg = current_link_segment->segment_relative + (com_segbase >> 4ul);
                     roff = ent->omf_rec_file_enoffs +
                            ent->data_record_offset +
                            current_link_segment->linear_offset +
@@ -894,9 +897,6 @@ static unsigned int                     current_in_file = 0;
 static unsigned int                     current_in_mod = 0;
 
 static unsigned char                    do_dosseg = 1;
-
-/* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
-static unsigned short                   com_segbase = (unsigned short)(~0u);
 
 struct omf_context_t*                   omf_state = NULL;
 
