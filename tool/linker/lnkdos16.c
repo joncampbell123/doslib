@@ -30,6 +30,29 @@ static uint32_t*                        exe_relocation_table = NULL;
 static size_t                           exe_relocation_table_count = 0;
 static size_t                           exe_relocation_table_alloc = 0;
 
+uint32_t *new_exe_relocation(void) {
+    if (exe_relocation_table == NULL) {
+        exe_relocation_table_count = 0;
+        exe_relocation_table_alloc = 4096;
+        exe_relocation_table = (uint32_t*)malloc(sizeof(uint32_t) * exe_relocation_table_alloc);
+        if (exe_relocation_table == NULL) return NULL;
+    }
+
+    if (exe_relocation_table_count >= exe_relocation_table_alloc)
+        return NULL;
+
+    return exe_relocation_table + (exe_relocation_table_count++);
+}
+
+void free_exe_relocations(void) {
+    if (exe_relocation_table) {
+        free(exe_relocation_table);
+        exe_relocation_table = NULL;
+        exe_relocation_table_count = 0;
+        exe_relocation_table_alloc = 0;
+    }
+}
+
 static unsigned int                     output_format = OFMT_COM;
 
 #define MAX_SYMBOLS                     65536
@@ -1573,6 +1596,7 @@ int main(int argc,char **argv) {
 
     link_symbols_free();
     free_link_segments();
+    free_exe_relocations();
     return 0;
 }
 
