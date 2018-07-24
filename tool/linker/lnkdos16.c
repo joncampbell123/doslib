@@ -545,7 +545,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         }
 
         *fseg = lsg->segment_relative;
-        *fofs = sym->offset;
+        *fofs = sym->offset + lsg->segment_offset;
     }
     else if (method == 5/*BY TARGET*/) {
     }
