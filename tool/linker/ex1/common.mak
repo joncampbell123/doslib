@@ -12,10 +12,17 @@ NOW_BUILDING = TOOL_LINKER_EX1
 !ifdef TINYMODE
 TEST_EXE =    $(SUBDIR)$(HPS)test.com
 TEST2_EXE =   $(SUBDIR)$(HPS)test2.com
+TESTA_EXE =   $(SUBDIR)$(HPS)testa.com
+TESTA2_EXE =  $(SUBDIR)$(HPS)testa2.com
 !else
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 TEST2_EXE =   $(SUBDIR)$(HPS)test2.exe
 !endif
+
+DOSLIBLINKER = ../linux-host/lnkdos16
+
+$(DOSLIBLINKER):
+	make -C ..
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -34,7 +41,7 @@ TEST2_EXE =   $(SUBDIR)$(HPS)test2.exe
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(TEST_EXE) $(TEST2_EXE) .symbolic
+exe: $(DOSLIBLINKER) $(TEST_EXE) $(TEST2_EXE) $(TESTA_EXE) $(TESTA2_EXE) .symbolic
 
 lib: .symbolic
 
@@ -51,11 +58,21 @@ $(TEST_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
+!ifdef TESTA_EXE
+$(TESTA_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTA_EXE) -com0
+!endif
+
 !ifdef TEST2_EXE
 $(TEST2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
 	%write tmp.cmd option quiet OPTION NODEFAULTLIBS option map=$(TEST2_EXE).map system $(WLINK_NOCLIBS_SYSTEM) file $(SUBDIR)$(HPS)entry2.obj file $(SUBDIR)$(HPS)drvc.obj name $(TEST2_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef TESTA2_EXE
+$(TESTA2_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTA2_EXE) -com100
 !endif
 
 clean: .SYMBOLIC
