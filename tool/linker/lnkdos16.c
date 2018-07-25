@@ -21,6 +21,8 @@
 
 //================================== PROGRAM ================================
 
+static unsigned char                    verbose = 0;
+
 /* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
 static unsigned short                   com_segbase = (unsigned short)(~0u);
 
@@ -1020,11 +1022,11 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
     if (ctx->FIXUPPs.omf_FIXUPPS != NULL)
         dump_FIXUPP(stdout,omf_state,1);
 
-    printf("----END-----\n");
+    if (verbose)
+        printf("----END-----\n");
 }
 
 int main(int argc,char **argv) {
-    unsigned char verbose = 0;
     unsigned char diddump = 0;
     unsigned char pass;
     unsigned int inf;
@@ -1147,7 +1149,8 @@ int main(int argc,char **argv) {
                             diddump = 1;
                         }
 
-                        printf("----- next module -----\n");
+                        if (verbose)
+                            printf("----- next module -----\n");
 
                         ret = omf_context_next_lib_module_fd(omf_state,fd);
                         if (ret < 0) {
