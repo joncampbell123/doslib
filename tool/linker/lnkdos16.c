@@ -24,6 +24,19 @@
 /* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
 static unsigned short                   com_segbase = (unsigned short)(~0u);
 
+/* comrel entry point */
+static const uint8_t comrel_entry_point[] = {
+    0xB9,0x00,0x00,                     // MOV CX,<count>
+    0xBE,0x00,0x00,                     // MOV SI,<table offset>
+    0xE9,0x00,0x00                      // JMP rel <target>
+};
+
+enum {
+    OFMTVAR_NONE=0,
+
+    OFMTVAR_COMREL=10
+};
+
 enum {
     OFMT_COM=0,
     OFMT_EXE
@@ -57,6 +70,7 @@ void free_exe_relocations(void) {
 }
 
 static unsigned int                     output_format = OFMT_COM;
+static unsigned int                     output_format_variant = OFMTVAR_NONE;
 
 #define MAX_SYMBOLS                     65536
 
@@ -709,8 +723,28 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                 }
 
                 if (output_format == OFMT_COM) {
-                    fprintf(stderr,"segment base self-relative not supported for .COM\n");
-                    return -1;
+                    if (output_format_variant == OFMTVAR_COMREL) {
+                        unsigned long roff;
+                        uint32_t *reloc = new_exe_relocation();
+                        if (reloc == NULL) {
+                            fprintf(stderr,"Unable to allocate relocation\n");
+                            return -1;
+                        }
+
+                        roff = ent->omf_rec_file_enoffs +
+                            ent->data_record_offset +
+                            current_link_segment->linear_offset +
+                            current_link_segment->load_base;
+
+                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+
+                        *reloc = roff;
+                        fprintf(stderr,"COM relocation entry: Patch up %04lx\n",roff);
+                    }
+                    else {
+                        fprintf(stderr,"segment base self-relative not supported for .COM\n");
+                        return -1;
+                    }
                 }
                 else if (output_format == OFMT_EXE) {
                     /* emit as a relocation */
@@ -923,7 +957,10 @@ static void help(void) {
     fprintf(stderr,"lnkdos16 [options]\n");
     fprintf(stderr,"  -i <file>    OMF file to link\n");
     fprintf(stderr,"  -o <file>    Output file\n");
-    fprintf(stderr,"  -of <fmt>    Output format (COM, EXE)\n");
+    fprintf(stderr,"  -of <fmt>    Output format (COM, EXE, COMREL)\n");
+    fprintf(stderr,"                COM = flat COM executable\n");
+    fprintf(stderr,"                COMREL = flat COM executable, relocatable\n");
+    fprintf(stderr,"                EXE = segmented EXE executable\n");
     fprintf(stderr,"  -v           Verbose mode\n");
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
     fprintf(stderr,"  -no-dosseg   No DOSSEG sort order\n");
@@ -1015,6 +1052,10 @@ int main(int argc,char **argv) {
 
                 if (!strcmp(a,"com"))
                     output_format = OFMT_COM;
+                else if (!strcmp(a,"comrel")) {
+                    output_format = OFMT_COM;
+                    output_format_variant = OFMTVAR_COMREL;
+                }
                 else if (!strcmp(a,"exe"))
                     output_format = OFMT_EXE;
                 else {
@@ -1349,8 +1390,15 @@ int main(int argc,char **argv) {
                     file_baseofs = 32;
                 }
                 else if (output_format == OFMT_COM) {
+                    /* COM relocatable */
+                    if (output_format_variant == OFMTVAR_COMREL) {
+                        /* always make room */
+                        com_entry_insert = 3;
+                        ofs += com_entry_insert;
+                        fprintf(stderr,"Entry point needed for relocateable .COM\n");
+                    }
                     /* COM */
-                    if (entry_seg_link_target != NULL) {
+                    else if (entry_seg_link_target != NULL) {
                         unsigned long io = (entry_seg_link_target->linear_offset+entry_seg_ofs);
 
                         if (io != 0) {
@@ -1456,6 +1504,111 @@ int main(int argc,char **argv) {
                     sd->segment_len_count = 0;
                     sd->load_base = 0;
                 }
+            }
+        }
+    }
+
+    if (output_format == OFMT_COM && output_format_variant == OFMTVAR_COMREL) {
+        /* make a new segment attached to the end, containing the relocation
+         * table and the patch up code, which becomes the new entry point. */
+        struct link_segdef *sg;
+        struct link_symbol *sym;
+        unsigned long img_size = 0;
+
+        for (inf=0;inf < link_segments_count;inf++) {
+            struct link_segdef *sd = &link_segments[inf];
+            unsigned long ofs = sd->linear_offset + sd->segment_length;
+            if (img_size < ofs) img_size = ofs;   
+        }
+
+        fprintf(stderr,".COM image without rel is 0x%lx bytes\n",img_size);
+ 
+        sg = find_link_segment("__COMREL_RELOC");
+        if (sg != NULL) {
+            fprintf(stderr,"OBJ files are not allowed to override the COMREL relocation segment\n");
+            return 1;
+        }
+        sg = new_link_segment("__COMREL_RELOC");
+        if (sg == NULL) {
+            fprintf(stderr,"Cannot allocate COMREL relocation segment\n");
+            return 1;
+        }
+
+        sg->linear_offset = img_size;
+        sg->segment_base = com_segbase;
+        sg->segment_offset = com_segbase + sg->linear_offset;
+        sg->file_offset = img_size;
+
+        /* first, the relocation table */
+        if (exe_relocation_table_count > 0) {
+            unsigned long ro,po;
+
+            assert(sg->segment_length == 0);
+            assert(exe_relocation_table != NULL);
+
+            ro = sg->segment_length;
+            sg->segment_length += exe_relocation_table_count * 2;
+
+            sym = find_link_symbol("__COMREL_RELOC_TABLE");
+            if (sym != NULL) return 1;
+            sym = new_link_symbol("__COMREL_RELOC_TABLE");
+            sym->groupdef = strdup("DGROUP");
+            sym->segdef = strdup("__COMREL_RELOC");
+            sym->offset = ro;
+
+            po = sg->segment_length;
+            sg->segment_length += sizeof(comrel_entry_point);
+
+            sym = find_link_symbol("__COMREL_RELOC_ENTRY");
+            if (sym != NULL) return 1;
+            sym = new_link_symbol("__COMREL_RELOC_ENTRY");
+            sym->groupdef = strdup("DGROUP");
+            sym->segdef = strdup("__COMREL_RELOC");
+            sym->offset = po;
+
+            /* do it */
+            assert(sg->image_ptr == NULL);
+            sg->image_ptr = malloc(sg->segment_length);
+            if (sg->image_ptr == NULL) {
+                fprintf(stderr,"Unable to alloc segment\n");
+                return 1;
+            }
+
+            {
+                uint16_t *d = (uint16_t*)(sg->image_ptr + ro);
+                uint16_t *f = (uint16_t*)(sg->image_ptr + sg->segment_length);
+
+                assert((d+exe_relocation_table_count) <= f);
+                for (inf=0;inf < exe_relocation_table_count;inf++)
+                    d[inf] = (uint16_t)exe_relocation_table[inf]; /* only the low 16 bits should be filled in */
+            }
+
+            {
+                uint8_t *d = (uint8_t*)(sg->image_ptr + po);
+                uint8_t *f = (uint8_t*)(sg->image_ptr + sg->segment_length);
+
+                assert((d+sizeof(comrel_entry_point)) <= f);
+                memcpy(d,comrel_entry_point,sizeof(comrel_entry_point));
+            }
+
+            /* change entry point to new entry point */
+            {
+                unsigned long old_init_ip,init_ip;
+
+                if (entry_seg_link_target != NULL)
+                    old_init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset;
+                else
+                    old_init_ip = 0x100;
+
+                init_ip = po + sg->segment_offset;
+
+                fprintf(stderr,"Old entry IP=0x%lx\n",old_init_ip);
+                fprintf(stderr,"New entry IP=0x%lx\n",init_ip);
+
+                cstr_free(&entry_seg_link_target_name);
+                entry_seg_link_target_name = strdup(sg->name);
+                entry_seg_link_target = sg;
+                entry_seg_ofs = po;
             }
         }
     }
