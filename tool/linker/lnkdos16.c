@@ -1531,7 +1531,8 @@ int main(int argc,char **argv) {
             if (img_size < ofs) img_size = ofs;   
         }
 
-        fprintf(stderr,".COM image without rel is 0x%lx bytes\n",img_size);
+        if (verbose)
+            fprintf(stderr,".COM image without rel is 0x%lx bytes\n",img_size);
  
         sg = find_link_segment("__COMREL_RELOC");
         if (sg != NULL) {
@@ -1620,15 +1621,15 @@ int main(int argc,char **argv) {
             }
 
             /* change entry point to new entry point */
-            {
+            if (verbose) {
                 fprintf(stderr,"Old entry IP=0x%lx\n",old_init_ip);
                 fprintf(stderr,"New entry IP=0x%lx\n",init_ip);
-
-                cstr_free(&entry_seg_link_target_name);
-                entry_seg_link_target_name = strdup(sg->name);
-                entry_seg_link_target = sg;
-                entry_seg_ofs = po;
             }
+
+            cstr_free(&entry_seg_link_target_name);
+            entry_seg_link_target_name = strdup(sg->name);
+            entry_seg_link_target = sg;
+            entry_seg_ofs = po;
         }
     }
 
