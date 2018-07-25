@@ -17,6 +17,7 @@ DOSLIBLINKER_OFMT = -of com
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
 TESTW_EXE =   $(SUBDIR)$(HPS)testw.exe
 TESTF_EXE =   $(SUBDIR)$(HPS)testf.exe
+TESTFF_EXE =  $(SUBDIR)$(HPS)testff.exe
 TESTFC_EXE =  $(SUBDIR)$(HPS)testfc.com
 DOSLIBLINKER_OFMT = -of exe
 ! endif
@@ -38,7 +39,7 @@ $(DOSLIBLINKER):
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(DOSLIBLINKER) $(TEST_EXE) $(TESTW_EXE) $(TESTF_EXE) $(TESTFC_EXE) .symbolic
+exe: $(DOSLIBLINKER) $(TEST_EXE) $(TESTW_EXE) $(TESTF_EXE) $(TESTFF_EXE) $(TESTFC_EXE) .symbolic
 
 lib: .symbolic
 
@@ -63,6 +64,11 @@ $(TEST_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
 !ifdef TESTF_EXE
 $(TESTF_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
 	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTF_EXE) $(DOSLIBLINKER_OFMT) -pflat
+!endif
+
+!ifdef TESTFF_EXE
+$(TESTFF_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTFF_EXE) $(DOSLIBLINKER_OFMT) -pflat -com100
 !endif
 
 !ifdef TESTFC_EXE
