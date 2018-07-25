@@ -1,4 +1,6 @@
 
+extern const char hello_init_string[];
+
 const char hello_world[] = "Hello world. This is code without a C runtime.\r\n";
 
 void dos_putc(const char c);
@@ -8,15 +10,16 @@ void dos_putc(const char c);
     modify [ah] \
     parm [dl]
 
+void dos_puts(const char *p) {
+    char c;
+
+    while ((c = *p++) != 0)
+        dos_putc(c);
+}
+
 unsigned int near entry_c(void) {
-    {
-        const char *p = hello_world;
-        char c;
-
-        while ((c = *p++) != 0)
-            dos_putc(c);
-    }
-
+    dos_puts(hello_world);
+    dos_puts(hello_init_string);
     return 0;
 }
 
