@@ -751,7 +751,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                         *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
 
                         *reloc = roff;
-                        fprintf(stderr,"COM relocation entry: Patch up %04lx\n",roff);
+
+                        if (verbose)
+                            fprintf(stderr,"COM relocation entry: Patch up %04lx\n",roff);
                     }
                     else {
                         fprintf(stderr,"segment base self-relative not supported for .COM\n");
@@ -875,8 +877,9 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
             return -1;
         }
 
-        fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx finalofs=0x%lx local=%u\n",
-            first,name,groupname,segname,(unsigned long)pubdef->public_offset,pubdef->public_offset + lsg->load_base,is_local);
+        if (verbose)
+            fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx finalofs=0x%lx local=%u\n",
+                    first,name,groupname,segname,(unsigned long)pubdef->public_offset,pubdef->public_offset + lsg->load_base,is_local);
 
         sym = find_link_symbol(name);
         if (sym != NULL) {
@@ -912,7 +915,8 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
         lsg = find_link_segment(name);
         if (lsg != NULL) {
             /* it is an error to change attributes */
-            fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
+            if (verbose)
+                fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
 
             lsg->attr.f.f.alignment = sg->attr.f.f.alignment;
             if (lsg->attr.f.f.use32 != sg->attr.f.f.use32 ||
@@ -923,7 +927,9 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
             }
         }
         else {
-            fprintf(stderr,"Adding class='%s' name='%s'\n",classname,name);
+            if (verbose)
+                fprintf(stderr,"Adding class='%s' name='%s'\n",classname,name);
+
             lsg = new_link_segment(name);
             if (lsg == NULL) {
                 fprintf(stderr,"Cannot add segment\n");
@@ -943,8 +949,9 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
         if (malign != 0) lsg->segment_len_count += alignb - malign;
         lsg->load_base = lsg->segment_len_count;
 
-        fprintf(stderr,"Start segment='%s' load=0x%lx\n",
-            lsg->name, lsg->load_base);
+        if (verbose)
+            fprintf(stderr,"Start segment='%s' load=0x%lx\n",
+                    lsg->name, lsg->load_base);
     }
 
     return 0;
@@ -1144,7 +1151,7 @@ int main(int argc,char **argv) {
                 ret = omf_context_read_fd(omf_state,fd);
                 if (ret == 0) {
                     if (omf_record_is_modend(&omf_state->record)) {
-                        if (!diddump) {
+                        if (!diddump && verbose) {
                             my_dumpstate(omf_state);
                             diddump = 1;
                         }
@@ -1318,25 +1325,29 @@ int main(int argc,char **argv) {
                                 frame_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,FrameDatum);
                                 target_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,TargetDatum);
 
-                                printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
-                                        ModuleType,
-                                        ModuleType&0x80?1:0,
-                                        ModuleType&0x40?1:0,
-                                        ModuleType&0x20?1:0,
-                                        ModuleType&0x01?1:0);
-                                printf("    EndData=0x%02x FrameDatum=%u(%s) TargetDatum=%u(%s) TargetDisplacement=0x%lx\n",
-                                        EndData,
-                                        FrameDatum,
-                                        (frame_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index):"",
-                                        TargetDatum,
-                                        (target_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index):"",
-                                        TargetDisplacement);
+                                if (verbose) {
+                                    printf("ModuleType: 0x%02x: MainModule=%u Start=%u Segment=%u StartReloc=%u\n",
+                                            ModuleType,
+                                            ModuleType&0x80?1:0,
+                                            ModuleType&0x40?1:0,
+                                            ModuleType&0x20?1:0,
+                                            ModuleType&0x01?1:0);
+                                    printf("    EndData=0x%02x FrameDatum=%u(%s) TargetDatum=%u(%s) TargetDisplacement=0x%lx\n",
+                                            EndData,
+                                            FrameDatum,
+                                            (frame_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index):"",
+                                            TargetDatum,
+                                            (target_segdef!=NULL)?omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index):"",
+                                            TargetDisplacement);
+                                }
 
                                 if (frame_segdef != NULL && target_segdef != NULL) {
                                     const char *framename = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,frame_segdef->segment_name_index);
                                     const char *targetname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,target_segdef->segment_name_index);
 
-                                    fprintf(stderr,"'%s' vs '%s'\n",framename,targetname);
+                                    if (verbose)
+                                        fprintf(stderr,"'%s' vs '%s'\n",framename,targetname);
+
                                     if (*framename != 0 && *targetname != 0) {
                                         struct link_segdef *frameseg,*targseg;
 
@@ -1368,7 +1379,7 @@ int main(int argc,char **argv) {
                 }
             } while (1);
 
-            if (!diddump) {
+            if (!diddump && verbose) {
                 my_dumpstate(omf_state);
                 diddump = 1;
             }
@@ -1408,7 +1419,9 @@ int main(int argc,char **argv) {
                         /* always make room */
                         com_entry_insert = 3;
                         ofs += com_entry_insert;
-                        fprintf(stderr,"Entry point needed for relocateable .COM\n");
+
+                        if (verbose)
+                            fprintf(stderr,"Entry point needed for relocateable .COM\n");
                     }
                     /* COM */
                     else if (entry_seg_link_target != NULL) {
@@ -1439,8 +1452,9 @@ int main(int argc,char **argv) {
                         if (m != 0ul) ofs += sd->initial_alignment - m;
                     }
 
-                    fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
-                        inf,ofs,sd->segment_length);
+                    if (verbose)
+                        fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
+                                inf,ofs,sd->segment_length);
 
                     sd->linear_offset = ofs;
                     ofs += sd->segment_length;
