@@ -67,7 +67,7 @@ $(TESTF_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
 !endif
 
 !ifdef TESTFF_EXE
-$(TESTFF_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
+$(TESTFF_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
 	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)entry2.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTFF_EXE) $(DOSLIBLINKER_OFMT) -pflat -com100
 !endif
 
