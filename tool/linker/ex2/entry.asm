@@ -48,6 +48,10 @@ segment _DATA align=1 class=DATA use16
  %endif
 %endif
 
+global _hellostr2
+_hellostr2:
+    db      'Hello world from ASM',13,10,0
+
 ; stack
 %ifidni segment_use,use32
 section _STACK align=4 class=STACK use32
