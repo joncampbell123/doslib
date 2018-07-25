@@ -25,16 +25,20 @@
 static unsigned short                   com_segbase = (unsigned short)(~0u);
 
 /* comrel entry point */
+#define comrel_entry_point_CX_COUNT         0x04
+#define comrel_entry_point_SI_OFFSET        0x07
+#define comrel_entry_point_JMP_ENTRY        0x11
 static const uint8_t comrel_entry_point[] = {
-    0xFC,                               // CLD
-    0x8C,0xCA,                          // MOV DX,CS
-    0xB9,0x00,0x00,                     // MOV CX,<count>
-    0xBE,0x00,0x00,                     // MOV SI,<table offset>
-    0xAD,                               // <loop1>  LODSW
-    0x89,0xC3,                          // MOV BX,AX
-    0x01,0x17,                          // ADD [BX],DX
-    0xE2,0x100u-7u,                     // LOOP <loop1>
-    0xE9,0x00,0x00                      // JMP rel <target>
+    0xFC,                               // 0x00 CLD
+    0x8C,0xCA,                          // 0x01 MOV DX,CS
+    0xB9,0x00,0x00,                     // 0x03 MOV CX,<count>
+    0xBE,0x00,0x00,                     // 0x06 MOV SI,<table offset>
+    0xAD,                               // 0x09 <loop1>  LODSW
+    0x89,0xC3,                          // 0x0A MOV BX,AX
+    0x01,0x17,                          // 0x0C ADD [BX],DX
+    0xE2,0x100u-7u,                     // 0x0E LOOP <loop1>
+    0xE9,0x00,0x00                      // 0x10 JMP rel <target>
+                                        // 0x13
 };
 
 enum {
@@ -1547,6 +1551,7 @@ int main(int argc,char **argv) {
 
         /* first, the relocation table */
         if (exe_relocation_table_count > 0) {
+            unsigned long old_init_ip,init_ip;
             unsigned long ro,po;
 
             assert(sg->segment_length == 0);
@@ -1586,8 +1591,15 @@ int main(int argc,char **argv) {
 
                 assert((d+exe_relocation_table_count) <= f);
                 for (inf=0;inf < exe_relocation_table_count;inf++)
-                    d[inf] = (uint16_t)exe_relocation_table[inf]; /* only the low 16 bits should be filled in */
+                    d[inf] = (uint16_t)exe_relocation_table[inf] + com_segbase; /* only the low 16 bits should be filled in */
             }
+
+            if (entry_seg_link_target != NULL)
+                old_init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset;
+            else
+                old_init_ip = 0x100;
+
+            init_ip = po + sg->segment_offset;
 
             {
                 uint8_t *d = (uint8_t*)(sg->image_ptr + po);
@@ -1595,19 +1607,20 @@ int main(int argc,char **argv) {
 
                 assert((d+sizeof(comrel_entry_point)) <= f);
                 memcpy(d,comrel_entry_point,sizeof(comrel_entry_point));
+
+#if 0
+#define comrel_entry_point_CX_COUNT         0x04
+#define comrel_entry_point_SI_OFFSET        0x07
+#define comrel_entry_point_JMP_ENTRY        0x11
+#endif
+
+                *((uint16_t*)(d+comrel_entry_point_CX_COUNT)) = exe_relocation_table_count;
+                *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
+                *((uint16_t*)(d+comrel_entry_point_JMP_ENTRY)) = old_init_ip - (init_ip + comrel_entry_point_JMP_ENTRY + 2);
             }
 
             /* change entry point to new entry point */
             {
-                unsigned long old_init_ip,init_ip;
-
-                if (entry_seg_link_target != NULL)
-                    old_init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset;
-                else
-                    old_init_ip = 0x100;
-
-                init_ip = po + sg->segment_offset;
-
                 fprintf(stderr,"Old entry IP=0x%lx\n",old_init_ip);
                 fprintf(stderr,"New entry IP=0x%lx\n",init_ip);
 
