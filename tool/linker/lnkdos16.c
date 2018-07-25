@@ -26,8 +26,14 @@ static unsigned short                   com_segbase = (unsigned short)(~0u);
 
 /* comrel entry point */
 static const uint8_t comrel_entry_point[] = {
+    0xFC,                               // CLD
+    0x8C,0xCA,                          // MOV DX,CS
     0xB9,0x00,0x00,                     // MOV CX,<count>
     0xBE,0x00,0x00,                     // MOV SI,<table offset>
+    0xAD,                               // <loop1>  LODSW
+    0x89,0xC3,                          // MOV BX,AX
+    0x01,0x17,                          // ADD [BX],DX
+    0xE2,0x100u-7u,                     // LOOP <loop1>
     0xE9,0x00,0x00                      // JMP rel <target>
 };
 
