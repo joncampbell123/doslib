@@ -8,15 +8,15 @@ void dos_putc(const char c);
     modify [ah] \
     parm [dl]
 
+void dos_puts(const char *p) {
+    char c;
+
+    while ((c = *p++) != 0)
+        dos_putc(c);
+}
+
 unsigned int near entry_c(void) {
-    {
-        const char *p = hello_world;
-        char c;
-
-        while ((c = *p++) != 0)
-            dos_putc(c);
-    }
-
+    dos_puts(hello_world);
     return 0;
 }
 
