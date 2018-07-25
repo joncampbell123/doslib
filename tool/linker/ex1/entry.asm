@@ -1,11 +1,9 @@
 ; auto-generated code, do not edit
+%ifidni segment_use,use32
+bits 32          ; 32-bit real mode
+%else
 bits 16          ; 16-bit real mode
-
-%include '_memmodl.inc'
-
-%include "_watcall.inc"
-
-%include "_comregn.inc"
+%endif
 
 ; code
 %ifidni segment_use,use32
