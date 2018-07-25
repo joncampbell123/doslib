@@ -18,10 +18,6 @@ segment _TEXT align=1 class=CODE use16
  %endif
 %endif
 
-global _hello_init_string
-_hello_init_string:
-    db      'Hello world init string',0
-
 ..start:
 global asm_entry
 asm_entry:
