@@ -226,7 +226,6 @@ struct link_segdef {
     unsigned long                       segment_len_count;
     unsigned long                       load_base;
     unsigned char*                      image_ptr;          /* size is segment_length */
-    int                                 source_input_file;
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
@@ -331,16 +330,16 @@ void link_segments_swap(unsigned int s1,unsigned int s2) {
     }
 }
 
-struct link_segdef *find_link_segment(const char *name,int source);
+struct link_segdef *find_link_segment(const char *name);
 
 void reconnect_gl_segs() {
     if (entry_seg_link_target_name) {
-        entry_seg_link_target = find_link_segment(entry_seg_link_target_name,-1);
+        entry_seg_link_target = find_link_segment(entry_seg_link_target_name);
         assert(entry_seg_link_target != NULL);
         assert(!strcmp(entry_seg_link_target->name,entry_seg_link_target_name));
     }
     if (entry_seg_link_frame_name) {
-        entry_seg_link_frame = find_link_segment(entry_seg_link_frame_name,-1);
+        entry_seg_link_frame = find_link_segment(entry_seg_link_frame_name);
         assert(entry_seg_link_frame != NULL);
         assert(!strcmp(entry_seg_link_frame->name,entry_seg_link_frame_name));
     }
@@ -458,19 +457,14 @@ struct link_segdef *find_link_segment_by_grpdef(const char *name) {
     return NULL;
 }
 
-struct link_segdef *find_link_segment(const char *name,int source) {
+struct link_segdef *find_link_segment(const char *name) {
     unsigned int i=0;
 
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
 
         assert(sg->name != NULL);
-        if (!strcmp(name,sg->name)) {
-            if (source >= 0 && sg->source_input_file != source)
-                continue;
-
-            return sg;
-        }
+        if (!strcmp(name,sg->name)) return sg;
     }
 
     return NULL;
@@ -483,7 +477,6 @@ struct link_segdef *new_link_segment(const char *name) {
         memset(sg,0,sizeof(*sg));
         sg->name = strdup(name);
         assert(sg->name != NULL);
-        sg->source_input_file = -1;
 
         return sg;
     }
@@ -502,7 +495,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) 
         return 1;
     }
 
-    if ((lsg=find_link_segment(segname,-1)) == NULL) {
+    if ((lsg=find_link_segment(segname)) == NULL) {
         fprintf(stderr,"Segment %s not found\n",segname);
         return 1;
     }
@@ -545,7 +538,7 @@ int ledata_note(struct omf_context_t *omf_state, struct omf_ledata_info_t *info)
         return 1;
     }
 
-    if ((lsg=find_link_segment(segname,-1)) == NULL) {
+    if ((lsg=find_link_segment(segname)) == NULL) {
         fprintf(stderr,"Segment %s not found\n",segname);
         return 1;
     }
@@ -583,7 +576,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
-        lsg = find_link_segment(segname,-1);
+        lsg = find_link_segment(segname);
         if (lsg == NULL) {
             fprintf(stderr,"FIXUPP SEGDEF not found '%s'\n",segname);
             return -1;
@@ -631,7 +624,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         }
 
         assert(sym->segdef != NULL);
-        lsg = find_link_segment(sym->segdef,-1);
+        lsg = find_link_segment(sym->segdef);
         if (lsg == NULL) {
             fprintf(stderr,"FIXUPP SEGDEF for EXTDEF not found '%s'\n",sym->segdef);
             return -1;
@@ -835,7 +828,7 @@ int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
                     return 1;
                 }
 
-                lsg = find_link_segment(segdef_name,-1);
+                lsg = find_link_segment(segdef_name);
                 if (lsg == NULL) {
                     fprintf(stderr,"GRPDEF refers to SEGDEF that has not been registered\n");
                     return 1;
@@ -880,7 +873,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         if (*segname == 0) continue;
         groupname = omf_context_get_grpdef_name_safe(omf_state,pubdef->group_index);
 
-        lsg = find_link_segment(segname,-1);
+        lsg = find_link_segment(segname);
         if (lsg == NULL) {
             fprintf(stderr,"Pubdef: No such segment '%s'\n",segname);
             return -1;
@@ -921,7 +914,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
 
         if (*name == 0) continue;
 
-        lsg = find_link_segment(name,-1);
+        lsg = find_link_segment(name);
         if (lsg != NULL) {
             /* it is an error to change attributes */
             if (verbose)
@@ -1360,8 +1353,8 @@ int main(int argc,char **argv) {
                                     if (*framename != 0 && *targetname != 0) {
                                         struct link_segdef *frameseg,*targseg;
 
-                                        targseg = find_link_segment(targetname,-1);
-                                        frameseg = find_link_segment(framename,-1);
+                                        targseg = find_link_segment(targetname);
+                                        frameseg = find_link_segment(framename);
                                         if (targseg != NULL && frameseg != NULL) {
                                             entry_seg_ofs = TargetDisplacement;
                                             entry_seg_link_target_name = strdup(targetname);
@@ -1560,7 +1553,7 @@ int main(int argc,char **argv) {
         if (verbose)
             fprintf(stderr,".COM image without rel is 0x%lx bytes\n",img_size);
  
-        sg = find_link_segment("__COMREL_RELOC",-1);
+        sg = find_link_segment("__COMREL_RELOC");
         if (sg != NULL) {
             fprintf(stderr,"OBJ files are not allowed to override the COMREL relocation segment\n");
             return 1;
