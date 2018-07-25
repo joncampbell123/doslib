@@ -30,15 +30,9 @@ $(DOSLIBLINKER):
 .C.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 	@$(CC) @tmp.cmd
-!ifdef TINYMODE
-	$(OMFSEGDG) -i $@ -o $@
-!endif
 
 .ASM.OBJ:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
-!ifdef TINYMODE
-	$(OMFSEGDG) -i $@ -o $@
-!endif
 
 all: $(OMFSEGDG) lib exe
 
