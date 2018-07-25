@@ -783,7 +783,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                     *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
 
                     *reloc = (rseg << 16ul) + roff;
-                    fprintf(stderr,"EXE relocation entry: Patch up %04lx:%04lx\n",rseg,roff);
+
+                    if (verbose)
+                        fprintf(stderr,"EXE relocation entry: Patch up %04lx:%04lx\n",rseg,roff);
                 }
                 else {
                     *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
@@ -1747,13 +1749,16 @@ int main(int argc,char **argv) {
 
                 init_cs = entry_seg_link_target->segment_relative;
                 init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset;
-                fprintf(stderr,"EXE entry: %04lx:%04lx in %s\n",init_cs,init_ip,entry_seg_link_target->name);
+
+                if (verbose)
+                    fprintf(stderr,"EXE entry: %04lx:%04lx in %s\n",init_cs,init_ip,entry_seg_link_target->name);
             }
             else {
                 fprintf(stderr,"EXE warning: No entry point\n");
             }
 
-            fprintf(stderr,"EXE header size: %lu\n",header_size);
+            if (verbose)
+                fprintf(stderr,"EXE header size: %lu\n",header_size);
 
             assert(resident_size > disk_size);
             assert(header_size != 0u);
