@@ -90,7 +90,11 @@ void free_exe_relocations(void) {
 static unsigned int                     output_format = OFMT_COM;
 static unsigned int                     output_format_variant = OFMTVAR_NONE;
 
+#if TARGET_MSDOS == 32 || defined(LINUX)
 #define MAX_SYMBOLS                     65536
+#else
+#define MAX_SYMBOLS                     4096
+#endif
 
 struct link_symbol {
     char*                               name;
