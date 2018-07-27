@@ -19,6 +19,12 @@
 #define O_BINARY (0)
 #endif
 
+enum {
+    PASS_GATHER,
+    PASS_BUILD,
+    PASS_MAX
+};
+
 //================================== PROGRAM ================================
 
 static unsigned char                    verbose = 0;
@@ -1127,7 +1133,7 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    for (pass=0;pass < 2;pass++) {
+    for (pass=0;pass < PASS_MAX;pass++) {
         for (inf=0;inf < in_file_count;inf++) {
             assert(in_file[inf] != NULL);
 
@@ -1217,7 +1223,7 @@ int main(int argc,char **argv) {
                             /* TODO: LPUBDEF symbols need to "disappear" at the end of the module.
                              *       LPUBDEF means the symbols are not visible outside the module. */
 
-                            if (pass == 0 && pubdef_add(omf_state, p_count, omf_state->record.rectype))
+                            if (pass == PASS_GATHER && pubdef_add(omf_state, p_count, omf_state->record.rectype))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
@@ -1264,7 +1270,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_GRPDEF(stdout,omf_state,(unsigned int)first_new_grpdef);
 
-                            if (pass == 0 && grpdef_add(omf_state, p_count))
+                            if (pass == PASS_GATHER && grpdef_add(omf_state, p_count))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_FIXUPP:/*0x9C*/
@@ -1281,7 +1287,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_FIXUPP(stdout,omf_state,(unsigned int)first_new_fixupp);
 
-                            if (pass == 1 && apply_FIXUPP(omf_state,p_count))
+                            if (pass == PASS_BUILD && apply_FIXUPP(omf_state,p_count))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_LEDATA:/*0xA0*/
@@ -1294,17 +1300,17 @@ int main(int argc,char **argv) {
                                 return 1;
                             }
 
-                            if (omf_state->flags.verbose && pass == 0)
+                            if (omf_state->flags.verbose && pass == PASS_GATHER)
                                 dump_LEDATA(stdout,omf_state,&info);
 
-                            if (pass == 0 && ledata_note(omf_state, &info))
+                            if (pass == PASS_GATHER && ledata_note(omf_state, &info))
                                 return 1;
-                            if (pass == 1 && ledata_add(omf_state, &info))
+                            if (pass == PASS_BUILD && ledata_add(omf_state, &info))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
                     case OMF_RECTYPE_MODEND32:/*0x8B*/
-                        if (pass == 0) {
+                        if (pass == PASS_GATHER) {
                             unsigned char ModuleType;
                             unsigned char EndData;
                             unsigned int FrameDatum;
@@ -1392,7 +1398,7 @@ int main(int argc,char **argv) {
             close(fd);
         }
 
-        if (pass == 0) {
+        if (pass == PASS_GATHER) {
             unsigned long file_baseofs = 0;
 
             if (do_dosseg)
