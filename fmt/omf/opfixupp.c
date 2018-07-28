@@ -28,6 +28,7 @@ int omf_context_parse_FIXUPP_subrecord(struct omf_context_t * const ctx,struct o
         if (ent == NULL)
             return -1;
 
+        ent->fixup_segdef_index = ctx->last_LEDATA_seg;
         ent->segment_relative = (fb & 0x40) ? 1 : 0;
         ent->location = (fb >> 2) & 0xF;
         ent->data_record_offset = (fb & 3) << 8;

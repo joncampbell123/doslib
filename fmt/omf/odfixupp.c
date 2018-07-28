@@ -5,12 +5,14 @@ void dump_FIXUPP_entry(FILE *fp,const struct omf_context_t * const ctx,const str
     if (!ent->alloc)
         return;
 
-    fprintf(fp,"    %s-relative location=%s(%u) frame_method=%s(%u)",
+    fprintf(fp,"    %s-relative location=%s(%u) frame_method=%s(%u) apply-to-seg='%s'(%u)",
             ent->segment_relative?"seg":"self",
             omf_fixupp_location_to_str(ent->location),
             ent->location,
             omf_fixupp_frame_method_to_str(ent->frame_method),
-            ent->frame_method);
+            ent->frame_method,
+            omf_context_get_segdef_name_safe(ctx,ent->fixup_segdef_index),
+            ent->fixup_segdef_index);
 
     if (ent->frame_method == 0/*SEGDEF*/) {
         fprintf(fp," frame_index=\"%s\"(%u)",

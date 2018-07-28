@@ -138,6 +138,7 @@ struct omf_fixupp_t {
     uint16_t                            data_record_offset; // offset in last LEDATA (relative to LEDATA's enum offset)
     uint16_t                            frame_index;        // frame index (SEGDEF, GRPDEF, etc. according to frame method)
     uint16_t                            target_index;       // target index (SEGDEF, GRPDEF, etc. according to target method)
+    uint16_t                            fixup_segdef_index; // SEGDEF to apply fixup to
     unsigned long                       target_displacement;
     unsigned long                       omf_rec_file_offset;// file offset of LEDATA record
     unsigned long                       omf_rec_file_enoffs;
