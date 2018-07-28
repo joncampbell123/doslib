@@ -473,7 +473,11 @@ struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
 
     assert(sg->fragments_count < sg->fragments_alloc);
 
-    return &sg->fragments[sg->fragments_count++];
+    {
+        struct seg_fragment *f = &sg->fragments[sg->fragments_count++];
+        sg->fragments_read = sg->fragments_count;
+        return f;
+    }
 }
 
 void free_link_segment(struct link_segdef *sg) {
@@ -638,12 +642,8 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
         return 1;
     }
 
-    if (pass == PASS_GATHER)
-        frag = &lsg->fragments[lsg->fragments_count-1];
-    else if (pass == PASS_BUILD)
-        frag = &lsg->fragments[lsg->fragments_read-1];
-    else
-        abort();
+    assert(lsg->fragments_read > 0 && lsg->fragments_read <= lsg->fragments_count);
+    frag = &lsg->fragments[lsg->fragments_read-1];
 
     max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)frag->offset;
     if (lsg->segment_length < max_ofs) {
@@ -1434,7 +1434,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose && pass == PASS_GATHER)
                                 dump_LEDATA(stdout,omf_state,&info);
 
-                            if (ledata_add(omf_state, &info, pass))
+                            if (pass == PASS_BUILD && ledata_add(omf_state, &info, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
@@ -1665,11 +1665,11 @@ int main(int argc,char **argv) {
                     struct link_segdef *sd = &link_segments[inf];
 
                     assert(sd->image_ptr == NULL);
-                    if (sd->segment_length == 0) continue;
-
-                    sd->image_ptr = malloc(sd->segment_length);
-                    assert(sd->image_ptr != NULL);
-                    memset(sd->image_ptr,0,sd->segment_length);
+                    if (sd->segment_length != 0) {
+                        sd->image_ptr = malloc(sd->segment_length);
+                        assert(sd->image_ptr != NULL);
+                        memset(sd->image_ptr,0,sd->segment_length);
+                    }
 
                     /* reset load base */
                     sd->segment_len_count = 0;
