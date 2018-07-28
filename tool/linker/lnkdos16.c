@@ -579,6 +579,7 @@ struct link_segdef *new_link_segment(const char *name) {
 }
 
 int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,unsigned int pass) {
+    struct seg_fragment *frag;
     struct link_segdef *lsg;
     unsigned long max_ofs;
     const char *segname;
@@ -599,8 +600,19 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
     if (info->data_length == 0)
         return 0;
 
-    max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length;
-    max_ofs += (unsigned long)lsg->load_base;
+    if (lsg->fragments == NULL || lsg->fragments_count == 0) {
+        fprintf(stderr,"LEDATA when no fragments defined (bug?)\n");
+        return 1;
+    }
+
+    if (pass == PASS_GATHER)
+        frag = &lsg->fragments[lsg->fragments_count-1];
+    else if (pass == PASS_BUILD)
+        frag = &lsg->fragments[lsg->fragments_read-1];
+    else
+        abort();
+
+    max_ofs = (unsigned long)info->enum_data_offset + (unsigned long)info->data_length + (unsigned long)frag->offset;
     if (lsg->segment_length < max_ofs) {
         fprintf(stderr,"LEDATA out of bounds (len=%lu max=%lu)\n",lsg->segment_length,max_ofs);
         return 1;
@@ -615,8 +627,8 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
     }
 
     if (verbose)
-        fprintf(stderr,"LEDATA '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx\n",
-                segname,lsg->load_base,max_ofs,info->data_length,info->enum_data_offset);
+        fprintf(stderr,"LEDATA '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx in frag ofs=0x%lx\n",
+                segname,lsg->load_base,max_ofs,info->data_length,info->enum_data_offset,frag->offset);
 
     return 0;
 }
