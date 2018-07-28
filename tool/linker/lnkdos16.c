@@ -119,6 +119,9 @@ struct link_symbol {
     char*                               segdef;
     char*                               groupdef;
     unsigned long                       offset;
+    unsigned short                      in_file;
+    unsigned short                      in_module;
+    unsigned int                        is_local:1;
 };
 
 static struct link_symbol*              link_symbols = NULL;
@@ -499,8 +502,9 @@ void dump_link_symbols(void) {
         struct link_symbol *sym = &link_symbols[i++];
         if (sym->name == NULL) continue;
 
-        fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx\n",
-            i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset);
+        fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx file='%s' module=%u local=%u\n",
+            i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,
+            in_file[sym->in_file],sym->in_module,sym->is_local);
     }
 }
 
@@ -908,11 +912,10 @@ int grpdef_add(struct omf_context_t *omf_state,unsigned int first) {
     return 0;
 }
 
-int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int tag) {
+int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int tag,unsigned int in_file,unsigned int in_module,unsigned int pass) {
     const unsigned char is_local = (tag == OMF_RECTYPE_LPUBDEF) || (tag == OMF_RECTYPE_LPUBDEF32);
 
-    // TODO
-    (void)is_local;
+    (void)pass;
 
     while (first < omf_state->PUBDEFs.omf_PUBDEFS_count) {
         const struct omf_pubdef_t *pubdef = &omf_state->PUBDEFs.omf_PUBDEFS[first++];
@@ -954,6 +957,9 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         sym->offset = pubdef->public_offset + lsg->load_base;
         sym->groupdef = strdup(groupname);
         sym->segdef = strdup(segname);
+        sym->in_file = in_file;
+        sym->in_module = in_module;
+        sym->is_local = is_local;
     }
 
     return 0;
@@ -1300,7 +1306,7 @@ int main(int argc,char **argv) {
                             /* TODO: LPUBDEF symbols need to "disappear" at the end of the module.
                              *       LPUBDEF means the symbols are not visible outside the module. */
 
-                            if (pass == PASS_GATHER && pubdef_add(omf_state, p_count, omf_state->record.rectype))
+                            if (pass == PASS_GATHER && pubdef_add(omf_state, p_count, omf_state->record.rectype, inf, current_in_mod, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_LNAMES:/*0x96*/
