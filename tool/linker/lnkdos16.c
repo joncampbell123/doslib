@@ -242,6 +242,7 @@ void link_symbols_free(void) {
 struct seg_fragment {
     unsigned short                      in_file;
     unsigned short                      in_module;
+    unsigned short                      segidx;
     unsigned long                       offset;
     unsigned long                       fragment_length;
 };
@@ -525,8 +526,8 @@ void dump_link_segments(void) {
             for (f=0;f < sg->fragments_count;f++) {
                 struct seg_fragment *frag = &sg->fragments[f];
 
-                fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
-                    f,in_file[frag->in_file],frag->in_module,frag->offset,frag->fragment_length);
+                fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx segidx=%u\n",
+                    f,in_file[frag->in_file],frag->in_module,frag->offset,frag->fragment_length,frag->segidx);
             }
         }
     }
@@ -1017,6 +1018,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
             f->in_module = in_module;
             f->offset = lsg->load_base;
             f->fragment_length = sg->segment_length;
+            f->segidx = first;
         }
 
         if (verbose)
