@@ -1639,12 +1639,6 @@ int main(int argc,char **argv) {
                 assert((d+sizeof(comrel_entry_point)) <= f);
                 memcpy(d,comrel_entry_point,sizeof(comrel_entry_point));
 
-#if 0
-#define comrel_entry_point_CX_COUNT         0x04
-#define comrel_entry_point_SI_OFFSET        0x07
-#define comrel_entry_point_JMP_ENTRY        0x11
-#endif
-
                 *((uint16_t*)(d+comrel_entry_point_CX_COUNT)) = exe_relocation_table_count;
                 *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
                 *((uint16_t*)(d+comrel_entry_point_JMP_ENTRY)) = old_init_ip - (init_ip + comrel_entry_point_JMP_ENTRY + 2);
