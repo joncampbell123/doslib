@@ -509,6 +509,20 @@ unsigned int omf_align_code_to_bytes(const unsigned int x) {
     return 0;
 }
 
+void dump_link_relocations(void) {
+    unsigned int i=0;
+
+    if (exe_relocation_table == NULL) return;
+
+    while (i < exe_relocation_table_count) {
+        struct exe_relocation *rel = &exe_relocation_table[i++];
+
+        assert(rel->segname != NULL);
+        fprintf(stderr,"relocation[%u]: seg='%s' frag=%u offset=0x%lx\n",
+            i,rel->segname,rel->fragment,rel->offset);
+    }
+}
+
 void dump_link_symbols(void) {
     unsigned int i=0;
 
@@ -1779,6 +1793,7 @@ int main(int argc,char **argv) {
     }
 
     if (verbose) {
+        dump_link_relocations();
         dump_link_symbols();
         dump_link_segments();
     }
