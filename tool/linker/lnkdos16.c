@@ -1569,7 +1569,14 @@ int main(int argc,char **argv) {
                     }
                     /* COM */
                     else if (entry_seg_link_target != NULL) {
-                        unsigned long io = (entry_seg_link_target->linear_offset+entry_seg_ofs);
+                        struct seg_fragment *frag;
+                        unsigned long io;
+
+                        assert(entry_seg_link_target->fragments != NULL);
+                        assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
+                        frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+                        io = (entry_seg_link_target->linear_offset+entry_seg_ofs+frag->offset);
 
                         if (io != 0) {
                             fprintf(stderr,"Entry point is not start of executable, required by .COM format.\n");
@@ -1782,10 +1789,18 @@ int main(int argc,char **argv) {
                 }
             }
 
-            if (entry_seg_link_target != NULL)
-                old_init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset;
-            else
+            if (entry_seg_link_target != NULL) {
+                struct seg_fragment *frag;
+
+                assert(entry_seg_link_target->fragments != NULL);
+                assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
+                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+                old_init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
+            }
+            else {
                 old_init_ip = 0x100;
+            }
 
             init_ip = po + sg->segment_offset;
 
@@ -1905,13 +1920,19 @@ int main(int argc,char **argv) {
 
             /* entry point */
             if (entry_seg_link_target != NULL && entry_seg_link_frame != NULL) {
+                struct seg_fragment *frag;
+
+                assert(entry_seg_link_target->fragments != NULL);
+                assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
+                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
                 if (entry_seg_link_target->segment_base != entry_seg_link_frame->segment_base) {
                     fprintf(stderr,"EXE Entry point with frame != target not yet supported\n");
                     return 1;
                 }
 
                 init_cs = entry_seg_link_target->segment_relative;
-                init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset;
+                init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
 
                 if (verbose)
                     fprintf(stderr,"EXE entry: %04lx:%04lx in %s\n",init_cs,init_ip,entry_seg_link_target->name);
