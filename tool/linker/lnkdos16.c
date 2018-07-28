@@ -265,6 +265,7 @@ struct link_segdef {
     struct seg_fragment*                fragments;          /* fragments (one from each OBJ/module) */
     unsigned int                        fragments_count;
     unsigned int                        fragments_alloc;
+    unsigned int                        fragments_read;
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
@@ -968,62 +969,88 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
         if (*name == 0) continue;
 
-        lsg = find_link_segment(name);
-        if (lsg != NULL) {
-            /* it is an error to change attributes */
-            if (verbose)
-                fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
-
-            lsg->attr.f.f.alignment = sg->attr.f.f.alignment;
-            if (lsg->attr.f.f.use32 != sg->attr.f.f.use32 ||
-                lsg->attr.f.f.combination != sg->attr.f.f.combination ||
-                lsg->attr.f.f.big_segment != sg->attr.f.f.big_segment) {
-                fprintf(stderr,"ERROR, segment attribute changed\n");
-                return -1;
-            }
-        }
-        else {
-            if (verbose)
-                fprintf(stderr,"Adding class='%s' name='%s'\n",classname,name);
-
-            lsg = new_link_segment(name);
+        if (pass == PASS_BUILD) {
+            lsg = find_link_segment(name);
             if (lsg == NULL) {
-                fprintf(stderr,"Cannot add segment\n");
+                fprintf(stderr,"No SEGDEF '%s'\n",name);
                 return -1;
             }
+            if (lsg->fragments == NULL)
+                continue;
+            if (lsg->fragments_count == 0)
+                continue;
 
-            assert(lsg->classname == NULL);
-            lsg->classname = strdup(classname);
+            assert(lsg->fragments_read < lsg->fragments_count);
 
-            lsg->attr = sg->attr;
-            lsg->initial_alignment = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
+            {
+                struct seg_fragment *f = &lsg->fragments[lsg->fragments_read++];
+
+                assert(f->in_file == in_file);
+                assert(f->in_module == in_module);
+                assert(f->fragment_length == sg->segment_length);
+                assert(f->segidx == first);
+
+                lsg->load_base = f->offset;
+            }
         }
+        else if (pass == PASS_GATHER) {
+            lsg = find_link_segment(name);
+            if (lsg != NULL) {
+                /* it is an error to change attributes */
+                if (verbose)
+                    fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
 
-        /* alignment */
-        alignb = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
-        malign = lsg->segment_len_count % (unsigned long)alignb;
-        if (malign != 0) lsg->segment_len_count += alignb - malign;
-        lsg->load_base = lsg->segment_len_count;
-        lsg->segment_len_count += sg->segment_length;
-        lsg->segment_length = lsg->segment_len_count;
+                lsg->attr.f.f.alignment = sg->attr.f.f.alignment;
+                if (lsg->attr.f.f.use32 != sg->attr.f.f.use32 ||
+                    lsg->attr.f.f.combination != sg->attr.f.f.combination ||
+                    lsg->attr.f.f.big_segment != sg->attr.f.f.big_segment) {
+                    fprintf(stderr,"ERROR, segment attribute changed\n");
+                    return -1;
+                }
+            }
+            else {
+                if (verbose)
+                    fprintf(stderr,"Adding class='%s' name='%s'\n",classname,name);
 
-        if (pass == PASS_GATHER) {
-            struct seg_fragment *f = alloc_link_segment_fragment(lsg);
-            if (f == NULL) {
-                fprintf(stderr,"Unable to alloc segment fragment\n");
-                return -1;
+                lsg = new_link_segment(name);
+                if (lsg == NULL) {
+                    fprintf(stderr,"Cannot add segment\n");
+                    return -1;
+                }
+
+                assert(lsg->classname == NULL);
+                lsg->classname = strdup(classname);
+
+                lsg->attr = sg->attr;
+                lsg->initial_alignment = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
             }
 
-            f->in_file = in_file;
-            f->in_module = in_module;
-            f->offset = lsg->load_base;
-            f->fragment_length = sg->segment_length;
-            f->segidx = first;
-        }
+            /* alignment */
+            alignb = omf_align_code_to_bytes(lsg->attr.f.f.alignment);
+            malign = lsg->segment_len_count % (unsigned long)alignb;
+            if (malign != 0) lsg->segment_len_count += alignb - malign;
+            lsg->load_base = lsg->segment_len_count;
+            lsg->segment_len_count += sg->segment_length;
+            lsg->segment_length = lsg->segment_len_count;
 
-        if (verbose)
-            fprintf(stderr,"Start segment='%s' load=0x%lx\n",
-                    lsg->name, lsg->load_base);
+            {
+                struct seg_fragment *f = alloc_link_segment_fragment(lsg);
+                if (f == NULL) {
+                    fprintf(stderr,"Unable to alloc segment fragment\n");
+                    return -1;
+                }
+
+                f->in_file = in_file;
+                f->in_module = in_module;
+                f->offset = lsg->load_base;
+                f->fragment_length = sg->segment_length;
+                f->segidx = first;
+            }
+
+            if (verbose)
+                fprintf(stderr,"Start segment='%s' load=0x%lx\n",
+                        lsg->name, lsg->load_base);
+        }
     }
 
     return 0;
@@ -1584,6 +1611,7 @@ int main(int argc,char **argv) {
 
                     /* reset load base */
                     sd->segment_len_count = 0;
+                    sd->fragments_read = 0;
                     sd->load_base = 0;
                 }
             }
