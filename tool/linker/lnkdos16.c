@@ -76,15 +76,21 @@ enum {
     OFMT_EXE
 };
 
-static uint32_t*                        exe_relocation_table = NULL;
+struct exe_relocation {
+    char*                               segname;
+    unsigned int                        fragment;
+    unsigned long                       offset;
+};
+
+static struct exe_relocation*           exe_relocation_table = NULL;
 static size_t                           exe_relocation_table_count = 0;
 static size_t                           exe_relocation_table_alloc = 0;
 
-uint32_t *new_exe_relocation(void) {
+struct exe_relocation *new_exe_relocation(void) {
     if (exe_relocation_table == NULL) {
         exe_relocation_table_count = 0;
         exe_relocation_table_alloc = 4096;
-        exe_relocation_table = (uint32_t*)malloc(sizeof(uint32_t) * exe_relocation_table_alloc);
+        exe_relocation_table = (struct exe_relocation*)malloc(sizeof(struct exe_relocation) * exe_relocation_table_alloc);
         if (exe_relocation_table == NULL) return NULL;
     }
 
@@ -808,24 +814,22 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
 
                 if (output_format == OFMT_COM) {
                     if (output_format_variant == OFMTVAR_COMREL) {
-                        unsigned long roff;
-                        uint32_t *reloc = new_exe_relocation();
+                        struct exe_relocation *reloc = new_exe_relocation();
                         if (reloc == NULL) {
                             fprintf(stderr,"Unable to allocate relocation\n");
                             return -1;
                         }
 
-                        roff = ent->omf_rec_file_enoffs +
-                            ent->data_record_offset +
-                            current_link_segment->linear_offset +
-                            current_link_segment->load_base;
+                        assert(current_link_segment->fragments_read > 0);
+                        assert(current_link_segment->name != NULL);
+                        reloc->segname = strdup(current_link_segment->name);
+                        reloc->fragment = current_link_segment->fragments_read - 1u;
+                        reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                         *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
 
-                        *reloc = roff;
-
                         if (verbose)
-                            fprintf(stderr,"COM relocation entry: Patch up %04lx\n",roff);
+                            fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
                     }
                     else {
                         fprintf(stderr,"segment base self-relative not supported for .COM\n");
@@ -834,30 +838,22 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
                 }
                 else if (output_format == OFMT_EXE) {
                     /* emit as a relocation */
-                    unsigned long rseg,roff;
-                    uint32_t *reloc = new_exe_relocation();
+                    struct exe_relocation *reloc = new_exe_relocation();
                     if (reloc == NULL) {
                         fprintf(stderr,"Unable to allocate relocation\n");
                         return -1;
                     }
 
-                    rseg = current_link_segment->segment_relative + (com_segbase >> 4ul);
-                    roff = ent->omf_rec_file_enoffs +
-                           ent->data_record_offset +
-                           current_link_segment->linear_offset +
-                           current_link_segment->load_base;
-
-                    while (roff >= 0xFFFEul) {
-                        rseg++;
-                        roff -= 0x10ul;
-                    }
+                    assert(current_link_segment->fragments_read > 0);
+                    assert(current_link_segment->name != NULL);
+                    reloc->segname = strdup(current_link_segment->name);
+                    reloc->fragment = current_link_segment->fragments_read - 1u;
+                    reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
                     *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
 
-                    *reloc = (rseg << 16ul) + roff;
-
                     if (verbose)
-                        fprintf(stderr,"EXE relocation entry: Patch up %04lx:%04lx\n",rseg,roff);
+                        fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
                 }
                 else {
                     *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
@@ -1709,10 +1705,35 @@ int main(int argc,char **argv) {
             {
                 uint16_t *d = (uint16_t*)(sg->image_ptr + ro);
                 uint16_t *f = (uint16_t*)(sg->image_ptr + sg->segment_length);
+                struct exe_relocation *rel = exe_relocation_table;
+                struct seg_fragment *frag;
+                struct link_segdef *lsg;
+                unsigned long roff;
 
                 assert((d+exe_relocation_table_count) <= f);
-                for (inf=0;inf < exe_relocation_table_count;inf++)
-                    d[inf] = (uint16_t)exe_relocation_table[inf] + com_segbase; /* only the low 16 bits should be filled in */
+                for (inf=0;inf < exe_relocation_table_count;inf++,rel++) {
+                    assert(rel->segname != NULL);
+                    lsg = find_link_segment(rel->segname);
+                    if (lsg == NULL) {
+                        fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname);
+                        return 1;
+                    }
+
+                    assert(lsg->fragments != NULL);
+                    assert(lsg->fragments_count != 0);
+                    assert(lsg->fragments_count <= lsg->fragments_alloc);
+                    assert(rel->fragment < lsg->fragments_count);
+                    frag = lsg->fragments + rel->fragment;
+
+                    roff = rel->offset + lsg->linear_offset + frag->offset + com_segbase;
+
+                    if (roff >= (0xFF00u - (exe_relocation_table_count * 2u))) {
+                        fprintf(stderr,"COM relocation entry is non-representable\n");
+                        return 1;
+                    }
+
+                    d[inf] = (uint16_t)roff;
+                }
             }
 
             if (entry_seg_link_target != NULL)
