@@ -760,15 +760,13 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
     unsigned long targ_seg,targ_ofs;
     struct link_segdef *frame_sdef;
     struct link_segdef *targ_sdef;
+    const struct omf_segdef_t *cur_segdef;
+    const char *cur_segdefname;
     unsigned char *fence;
     unsigned char *ptr;
     unsigned long ptch;
 
     if (pass != PASS_BUILD) return 0;
-
-    assert(current_link_segment != NULL);
-    assert(current_link_segment->image_ptr != NULL);
-    fence = current_link_segment->image_ptr + current_link_segment->segment_length;
 
     while (first <= omf_fixupps_context_get_highest_index(&omf_state->FIXUPPs)) {
         const struct omf_fixupp_t *ent = omf_fixupps_context_get_fixupp(&omf_state->FIXUPPs,first++);
@@ -815,6 +813,27 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     first,
                     final_seg,final_ofs);
         }
+
+        cur_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,ent->fixup_segdef_index);
+        if (cur_segdef == NULL) {
+            fprintf(stderr,"Cannot find OMF SEGDEF\n");
+            return 1;
+        }
+        cur_segdefname = omf_lnames_context_get_name_safe(&omf_state->LNAMEs,cur_segdef->segment_name_index);
+        if (*cur_segdefname == 0) {
+            fprintf(stderr,"Cannot resolve OMF SEGDEF name\n");
+            return 1;
+        }
+
+        current_link_segment = find_link_segment(cur_segdefname);
+        if (current_link_segment == NULL) {
+            fprintf(stderr,"Cannot find linker segment '%s'\n",cur_segdefname);
+            return 1;
+        }
+
+        assert(current_link_segment != NULL);
+        assert(current_link_segment->image_ptr != NULL);
+        fence = current_link_segment->image_ptr + current_link_segment->segment_length;
 
         ptch =  (unsigned long)ent->omf_rec_file_enoffs +
                 (unsigned long)ent->data_record_offset +
@@ -1290,6 +1309,10 @@ int main(int argc,char **argv) {
             do {
                 ret = omf_context_read_fd(omf_state,fd);
                 if (ret == 0) {
+                    if (apply_FIXUPP(omf_state,0,inf,current_in_mod,pass))
+                        return 1;
+                    omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
+
                     if (omf_record_is_modend(&omf_state->record)) {
                         if (!diddump && verbose) {
                             my_dumpstate(omf_state);
@@ -1409,7 +1432,6 @@ int main(int argc,char **argv) {
                     case OMF_RECTYPE_FIXUPP:/*0x9C*/
                     case OMF_RECTYPE_FIXUPP32:/*0x9D*/
                         {
-                            int p_count = omf_state->FIXUPPs.omf_FIXUPPS_count;
                             int first_new_fixupp;
 
                             if ((first_new_fixupp=omf_context_parse_FIXUPP(omf_state,&omf_state->record)) < 0) {
@@ -1419,9 +1441,6 @@ int main(int argc,char **argv) {
 
                             if (omf_state->flags.verbose)
                                 dump_FIXUPP(stdout,omf_state,(unsigned int)first_new_fixupp);
-
-                            if (apply_FIXUPP(omf_state,p_count,inf,current_in_mod,pass))
-                                return 1;
                         } break;
                     case OMF_RECTYPE_LEDATA:/*0xA0*/
                     case OMF_RECTYPE_LEDATA32:/*0xA1*/
@@ -1529,6 +1548,10 @@ int main(int argc,char **argv) {
                 my_dumpstate(omf_state);
                 diddump = 1;
             }
+
+            if (apply_FIXUPP(omf_state,0,inf,current_in_mod,pass))
+                return 1;
+            omf_fixupps_context_free_entries(&omf_state->FIXUPPs);
 
             omf_context_clear(omf_state);
             omf_state = omf_context_destroy(omf_state);
