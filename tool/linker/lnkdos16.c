@@ -1969,7 +1969,7 @@ int main(int argc,char **argv) {
                         frag = lsg->fragments + rel->fragment;
 
                         rseg = 0;
-                        roff = rel->offset + lsg->linear_offset + frag->offset + com_segbase;
+                        roff = rel->offset + lsg->linear_offset + frag->offset;
 
                         while (roff >= 0x4000ul) {
                             rseg += 0x10ul;
