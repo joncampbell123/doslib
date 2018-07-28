@@ -761,6 +761,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
     struct link_segdef *frame_sdef;
     struct link_segdef *targ_sdef;
     const struct omf_segdef_t *cur_segdef;
+    struct seg_fragment *frag;
     const char *cur_segdefname;
     unsigned char *fence;
     unsigned char *ptr;
@@ -833,6 +834,17 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
             fprintf(stderr,"Cannot find linker segment '%s'\n",cur_segdefname);
             return 1;
         }
+
+        /* assuming each OBJ/module has only one of each named segment,
+         * get the fragment it belongs to */
+        assert(current_link_segment->fragments_read > 0);
+        assert(current_link_segment->fragments_read <= current_link_segment->fragments_count);
+        frag = &current_link_segment->fragments[current_link_segment->fragments_read-1];
+
+        assert(frag->in_file == in_file);
+        assert(frag->in_module == in_module);
+
+        current_link_segment->load_base = frag->offset;
 
         assert(current_link_segment != NULL);
         assert(current_link_segment->image_ptr != NULL);
