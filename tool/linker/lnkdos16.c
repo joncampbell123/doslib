@@ -574,7 +574,7 @@ struct link_segdef *new_link_segment(const char *name) {
     return NULL;
 }
 
-int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) {
+int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,unsigned int pass) {
     struct link_segdef *lsg;
     unsigned long max_ofs;
     const char *segname;
@@ -602,16 +602,17 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info) 
         return 1;
     }
 
-    assert(info->data != NULL);
-    assert(lsg->image_ptr != NULL);
-    assert(max_ofs >= (unsigned long)info->data_length);
-    max_ofs -= (unsigned long)info->data_length;
-    memcpy(lsg->image_ptr + max_ofs, info->data, info->data_length);
+    if (pass == PASS_BUILD) {
+        assert(info->data != NULL);
+        assert(max_ofs >= (unsigned long)info->data_length);
+        max_ofs -= (unsigned long)info->data_length;
+        assert(lsg->image_ptr != NULL);
+        memcpy(lsg->image_ptr + max_ofs, info->data, info->data_length);
+    }
 
-#if 0
-    fprintf(stderr,"LEDATA '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx\n",
-        segname,lsg->load_base,max_ofs,info->data_length,info->enum_data_offset);
-#endif
+    if (verbose)
+        fprintf(stderr,"LEDATA '%s' base=0x%lx offset=0x%lx len=%lu enumo=0x%lx\n",
+                segname,lsg->load_base,max_ofs,info->data_length,info->enum_data_offset);
 
     return 0;
 }
@@ -1379,7 +1380,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose && pass == PASS_GATHER)
                                 dump_LEDATA(stdout,omf_state,&info);
 
-                            if (pass == PASS_BUILD && ledata_add(omf_state, &info))
+                            if (ledata_add(omf_state, &info, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_MODEND:/*0x8A*/
