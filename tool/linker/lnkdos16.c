@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -996,6 +997,7 @@ static void help(void) {
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
     fprintf(stderr,"  -no-dosseg   No DOSSEG sort order\n");
     fprintf(stderr,"  -dosseg      DOSSEG sort order\n");
+    fprintf(stderr,"  -comNNN      Link .COM segment starting at 0xNNN\n");
     fprintf(stderr,"  -com100      Link .COM segment starting at 0x100\n");
     fprintf(stderr,"  -com0        Link .COM segment starting at 0 (Watcom Linker)\n");
     fprintf(stderr,"  -pflat       Prefer .COM-like flat layout\n");
@@ -1071,11 +1073,10 @@ int main(int argc,char **argv) {
             else if (!strcmp(a,"pflat")) {
                 prefer_flat = 1;
             }
-            else if (!strcmp(a,"com0")) {
-                com_segbase = 0x000;
-            }
-            else if (!strcmp(a,"com100")) {
-                com_segbase = 0x100;
+            else if (!strncmp(a,"com",3)) {
+                a += 3;
+                if (!isxdigit(*a)) return 1;
+                com_segbase = strtoul(a,NULL,16);
             }
             else if (!strcmp(a,"of")) {
                 a = argv[i++];
