@@ -754,7 +754,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
     return 0;
 }
 
-int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
+int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int in_file,unsigned int in_module,unsigned int pass) {
     unsigned long final_seg,final_ofs;
     unsigned long frame_seg,frame_ofs;
     unsigned long targ_seg,targ_ofs;
@@ -763,6 +763,8 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first) {
     unsigned char *fence;
     unsigned char *ptr;
     unsigned long ptch;
+
+    if (pass != PASS_BUILD) return 0;
 
     assert(current_link_segment != NULL);
     assert(current_link_segment->image_ptr != NULL);
@@ -1418,7 +1420,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_FIXUPP(stdout,omf_state,(unsigned int)first_new_fixupp);
 
-                            if (pass == PASS_BUILD && apply_FIXUPP(omf_state,p_count))
+                            if (apply_FIXUPP(omf_state,p_count,inf,current_in_mod,pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_LEDATA:/*0xA0*/
