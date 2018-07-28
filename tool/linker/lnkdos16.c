@@ -100,8 +100,18 @@ struct exe_relocation *new_exe_relocation(void) {
     return exe_relocation_table + (exe_relocation_table_count++);
 }
 
+void free_exe_relocation_entry(struct exe_relocation *r) {
+    if (r->segname != NULL) {
+        free(r->segname);
+        r->segname = NULL;
+    }
+}
+
 void free_exe_relocations(void) {
+    unsigned int i;
+
     if (exe_relocation_table) {
+        for (i=0;i < exe_relocation_table_count;i++) free_exe_relocation_entry(exe_relocation_table + i);
         free(exe_relocation_table);
         exe_relocation_table = NULL;
         exe_relocation_table_count = 0;
