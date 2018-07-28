@@ -28,6 +28,21 @@ enum {
 
 //================================== PROGRAM ================================
 
+#define MAX_GROUPS                      256
+
+#define MAX_IN_FILES                    256
+
+static char*                            out_file = NULL;
+
+static char*                            in_file[MAX_IN_FILES];
+static unsigned int                     in_file_count = 0;
+static unsigned int                     current_in_file = 0;
+static unsigned int                     current_in_mod = 0;
+
+static unsigned char                    do_dosseg = 1;
+
+struct omf_context_t*                   omf_state = NULL;
+
 static unsigned char                    verbose = 0;
 
 /* NTS: Default -com100, use -com0 for Open Watcom compiled C source */
@@ -90,6 +105,8 @@ void free_exe_relocations(void) {
 
 static unsigned int                     output_format = OFMT_COM;
 static unsigned int                     output_format_variant = OFMTVAR_NONE;
+
+#define MAX_SEG_FRAGMENTS               1024
 
 #if TARGET_MSDOS == 32 || defined(LINUX)
 #define MAX_SYMBOLS                     65536
@@ -222,6 +239,13 @@ void link_symbols_free(void) {
 
 #define MAX_SEGMENTS                    256
 
+struct seg_fragment {
+    unsigned short                      in_file;
+    unsigned short                      in_module;
+    unsigned long                       offset;
+    unsigned long                       fragment_length;
+};
+
 struct link_segdef {
     struct omf_segdef_attr_t            attr;
     char*                               name;
@@ -237,6 +261,9 @@ struct link_segdef {
     unsigned long                       segment_len_count;
     unsigned long                       load_base;
     unsigned char*                      image_ptr;          /* size is segment_length */
+    struct seg_fragment*                fragments;          /* fragments (one from each OBJ/module) */
+    unsigned int                        fragments_count;
+    unsigned int                        fragments_alloc;
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
@@ -391,10 +418,51 @@ void owlink_dosseg_sort_order(void) {
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
 }
 
+struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
+    if (sg->fragments == NULL) {
+        sg->fragments_alloc = 16;
+        sg->fragments_count = 0;
+        sg->fragments = calloc(sg->fragments_alloc, sizeof(struct seg_fragment));
+        if (sg->fragments == NULL) return NULL;
+    }
+    if (sg->fragments_count >= sg->fragments_alloc) {
+        if (sg->fragments_alloc < MAX_SEG_FRAGMENTS) {
+            unsigned int nalloc = sg->fragments_alloc * 2;
+            struct seg_fragment *np;
+
+            if (nalloc > MAX_SEG_FRAGMENTS)
+                nalloc = MAX_SEG_FRAGMENTS;
+
+            assert(sg->fragments_alloc < nalloc);
+
+            np = (struct seg_fragment*)realloc((void*)sg->fragments, sizeof(struct seg_fragment) * nalloc);
+            if (np == NULL) return NULL;
+            memset(np + sg->fragments_alloc, 0, sizeof(struct seg_fragment) * (nalloc - sg->fragments_alloc));
+
+            sg->fragments = np;
+            sg->fragments_alloc = nalloc;
+        }
+        else {
+            return NULL;
+        }
+    }
+
+    assert(sg->fragments_count < sg->fragments_alloc);
+
+    return &sg->fragments[sg->fragments_count++];
+}
+
 void free_link_segment(struct link_segdef *sg) {
     cstr_free(&(sg->groupname));
     cstr_free(&(sg->classname));
     cstr_free(&(sg->name));
+
+    if (sg->fragments != NULL) {
+        free(sg->fragments);
+        sg->fragments = NULL;
+    }
+    sg->fragments_alloc = 0;
+    sg->fragments_count = 0;
 
     if (sg->image_ptr != NULL) {
         free(sg->image_ptr);
@@ -435,7 +503,7 @@ void dump_link_symbols(void) {
 }
 
 void dump_link_segments(void) {
-    unsigned int i=0;
+    unsigned int i=0,f;
 
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
@@ -452,6 +520,15 @@ void dump_link_segments(void) {
             sg->segment_length,
             sg->segment_relative,
             sg->initial_alignment);
+
+        if (sg->fragments != NULL) {
+            for (f=0;f < sg->fragments_count;f++) {
+                struct seg_fragment *frag = &sg->fragments[f];
+
+                fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx\n",
+                    f,in_file[frag->in_file],frag->in_module,frag->offset,frag->fragment_length);
+            }
+        }
     }
 }
 
@@ -879,12 +956,9 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
     return 0;
 }
 
-int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int in_file,unsigned int in_mod) {
+int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int in_file,unsigned int in_module,unsigned int pass) {
     unsigned long alignb,malign;
     struct link_segdef *lsg;
-
-    (void)in_file;
-    (void)in_mod;
 
     while (first < omf_state->SEGDEFs.omf_SEGDEFS_count) {
         struct omf_segdef_t *sg = &omf_state->SEGDEFs.omf_SEGDEFS[first++];
@@ -932,6 +1006,19 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
         lsg->segment_len_count += sg->segment_length;
         lsg->segment_length = lsg->segment_len_count;
 
+        if (pass == PASS_GATHER) {
+            struct seg_fragment *f = alloc_link_segment_fragment(lsg);
+            if (f == NULL) {
+                fprintf(stderr,"Unable to alloc segment fragment\n");
+                return -1;
+            }
+
+            f->in_file = in_file;
+            f->in_module = in_module;
+            f->offset = lsg->load_base;
+            f->fragment_length = sg->segment_length;
+        }
+
         if (verbose)
             fprintf(stderr,"Start segment='%s' load=0x%lx\n",
                     lsg->name, lsg->load_base);
@@ -939,21 +1026,6 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
 
     return 0;
 }
-
-#define MAX_GROUPS                      256
-
-#define MAX_IN_FILES                    256
-
-static char*                            out_file = NULL;
-
-static char*                            in_file[MAX_IN_FILES];
-static unsigned int                     in_file_count = 0;
-static unsigned int                     current_in_file = 0;
-static unsigned int                     current_in_mod = 0;
-
-static unsigned char                    do_dosseg = 1;
-
-struct omf_context_t*                   omf_state = NULL;
 
 static void help(void) {
     fprintf(stderr,"lnkdos16 [options]\n");
@@ -1228,7 +1300,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                            if (segdef_add(omf_state, p_count, inf, current_in_mod))
+                            if (segdef_add(omf_state, p_count, inf, current_in_mod, pass))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
