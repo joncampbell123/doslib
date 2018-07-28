@@ -1286,6 +1286,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_EXTDEF(stdout,omf_state,(unsigned int)first_new_extdef);
 
+                            // TODO: Store as symbol, noting it is external
                         } break;
                     case OMF_RECTYPE_PUBDEF:/*0x90*/
                     case OMF_RECTYPE_PUBDEF32:/*0x91*/
