@@ -135,6 +135,7 @@ struct link_symbol {
     char*                               segdef;
     char*                               groupdef;
     unsigned long                       offset;
+    unsigned short                      fragment;
     unsigned short                      in_file;
     unsigned short                      in_module;
     unsigned int                        is_local:1;
@@ -709,6 +710,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
         *sdef = lsg;
     }
     else if (method == 2/*EXTDEF*/) {
+        struct seg_fragment *frag;
         struct link_segdef *lsg;
         struct link_symbol *sym;
         const char *defname;
@@ -732,8 +734,13 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
+        assert(lsg->fragments != NULL);
+        assert(lsg->fragments_count <= lsg->fragments_alloc);
+        assert(sym->fragment < lsg->fragments_count);
+        frag = &lsg->fragments[sym->fragment];
+
         *fseg = lsg->segment_relative;
-        *fofs = sym->offset + lsg->segment_offset;
+        *fofs = sym->offset + lsg->segment_offset + frag->offset;
         *sdef = lsg;
     }
     else if (method == 5/*BY TARGET*/) {
@@ -986,7 +993,13 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
         }
         assert(sym->groupdef == NULL);
         assert(sym->segdef == NULL);
-        sym->offset = pubdef->public_offset + lsg->load_base;
+
+        assert(pass == PASS_GATHER);
+        assert(lsg->fragments != NULL);
+        assert(lsg->fragments_count != 0);
+
+        sym->fragment = lsg->fragments_count - 1u;
+        sym->offset = pubdef->public_offset;
         sym->groupdef = strdup(groupname);
         sym->segdef = strdup(segname);
         sym->in_file = in_file;
