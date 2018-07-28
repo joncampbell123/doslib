@@ -844,21 +844,19 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
         assert(frag->in_file == in_file);
         assert(frag->in_module == in_module);
 
-        current_link_segment->load_base = frag->offset;
-
         assert(current_link_segment != NULL);
         assert(current_link_segment->image_ptr != NULL);
         fence = current_link_segment->image_ptr + current_link_segment->segment_length;
 
         ptch =  (unsigned long)ent->omf_rec_file_enoffs +
                 (unsigned long)ent->data_record_offset +
-                (unsigned long)current_link_segment->load_base;
+                (unsigned long)frag->offset;
 
         if (omf_state->flags.verbose)
             fprintf(stderr,"ptch=0x%lx linear=0x%lx load=0x%lx '%s'\n",
                 ptch,
                 current_link_segment->linear_offset,
-                current_link_segment->load_base,
+                ent->omf_rec_file_enoffs + ent->data_record_offset,
                 current_link_segment->name);
 
         ptr = current_link_segment->image_ptr + ptch;
