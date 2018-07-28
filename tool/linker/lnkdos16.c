@@ -879,9 +879,12 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
     return 0;
 }
 
-int segdef_add(struct omf_context_t *omf_state,unsigned int first) {
+int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int in_file,unsigned int in_mod) {
     unsigned long alignb,malign;
     struct link_segdef *lsg;
+
+    (void)in_file;
+    (void)in_mod;
 
     while (first < omf_state->SEGDEFs.omf_SEGDEFS_count) {
         struct omf_segdef_t *sg = &omf_state->SEGDEFs.omf_SEGDEFS[first++];
@@ -1225,7 +1228,7 @@ int main(int argc,char **argv) {
                             if (omf_state->flags.verbose)
                                 dump_SEGDEF(stdout,omf_state,(unsigned int)first_new_segdef);
 
-                            if (segdef_add(omf_state, p_count))
+                            if (segdef_add(omf_state, p_count, inf, current_in_mod))
                                 return 1;
                         } break;
                     case OMF_RECTYPE_GRPDEF:/*0x9A*/
