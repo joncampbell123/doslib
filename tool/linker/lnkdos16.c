@@ -293,8 +293,10 @@ static unsigned int                     link_segments_count = 0;
 
 static struct link_segdef*              current_link_segment = NULL;
 
+static unsigned int                     entry_seg_link_target_fragment = 0;
 static char*                            entry_seg_link_target_name = NULL;
 static struct link_segdef*              entry_seg_link_target = NULL;
+static unsigned int                     entry_seg_link_frame_fragment = 0;
 static char*                            entry_seg_link_frame_name = NULL;
 static struct link_segdef*              entry_seg_link_frame = NULL;
 static unsigned char                    com_entry_insert = 0;
@@ -1490,6 +1492,13 @@ int main(int argc,char **argv) {
                                         frameseg = find_link_segment(framename);
                                         if (targseg != NULL && frameseg != NULL) {
                                             entry_seg_ofs = TargetDisplacement;
+
+                                            assert(frameseg->fragments_count != 0);
+                                            entry_seg_link_frame_fragment = frameseg->fragments_count - 1u;
+
+                                            assert(targseg->fragments_count != 0);
+                                            entry_seg_link_target_fragment = targseg->fragments_count - 1u;
+
                                             entry_seg_link_target_name = strdup(targetname);
                                             entry_seg_link_target = targseg;
                                             entry_seg_link_frame_name = strdup(framename);
