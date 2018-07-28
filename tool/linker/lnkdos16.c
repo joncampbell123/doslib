@@ -1934,8 +1934,36 @@ int main(int argc,char **argv) {
 
             if (exe_relocation_table_count != 0) {
                 if ((unsigned long)lseek(fd,relocation_table_offset,SEEK_SET) == relocation_table_offset) {
-                    if ((unsigned long)write(fd,exe_relocation_table,exe_relocation_table_count * 4ul) == (exe_relocation_table_count * 4ul)) {
-                        /* good */
+                    struct exe_relocation *rel = exe_relocation_table;
+                    struct seg_fragment *frag;
+                    struct link_segdef *lsg;
+                    unsigned long rseg,roff;
+
+                    for (inf=0;inf < exe_relocation_table_count;inf++,rel++) {
+                        assert(rel->segname != NULL);
+                        lsg = find_link_segment(rel->segname);
+                        if (lsg == NULL) {
+                            fprintf(stderr,"COM relocation entry refers to non-existent segment '%s'\n",rel->segname);
+                            return 1;
+                        }
+
+                        assert(lsg->fragments != NULL);
+                        assert(lsg->fragments_count != 0);
+                        assert(lsg->fragments_count <= lsg->fragments_alloc);
+                        assert(rel->fragment < lsg->fragments_count);
+                        frag = lsg->fragments + rel->fragment;
+
+                        rseg = 0;
+                        roff = rel->offset + lsg->linear_offset + frag->offset + com_segbase;
+
+                        while (roff >= 0x4000ul) {
+                            rseg += 0x10ul;
+                            roff -= 0x100ul;
+                        }
+
+                        *((uint16_t*)(tmp + 0)) = (uint16_t)roff;
+                        *((uint16_t*)(tmp + 2)) = (uint16_t)rseg;
+                        write(fd,tmp,4);
                     }
                 }
             }
