@@ -2374,8 +2374,9 @@ int main(int argc,char **argv) {
                 }
             }
         }
-        else if (output_format == OFMT_DOSDRV) {
-            /* the entry point symbol must exist and must be at the very start of the file */
+        else if (output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
+            /* the entry point symbol must exist and must be at the very start of the file,
+             * or at the very beginning of the resident image if EXE */
             struct link_segdef *segdef;
             struct seg_fragment *frag;
             struct link_symbol *sym;
