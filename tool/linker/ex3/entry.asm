@@ -63,6 +63,17 @@ segment _STACK align=4 class=STACK use16
  %endif
 %endif
 
+; stack
+%ifidni segment_use,use32
+section _BSS align=4 class=BSS use32
+%else
+ %ifidni segment_use,use16
+segment _BSS align=4 class=BSS use16
+ %else
+  %error unknown or undefined segment_use
+ %endif
+%endif
+
 %ifdef TINYMODE
 group DGROUP _DATA _TEXT _STACK
 %else

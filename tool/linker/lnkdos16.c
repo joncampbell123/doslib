@@ -382,6 +382,26 @@ int sort_cmp_dgroup_class_stack(const struct link_segdef *a) {
     return 0;
 }
 
+/* return 1 if class BSS */
+int sort_cmpf_class_bss(const struct link_segdef *a) {
+    if (a->classname != NULL && strcmp(a->classname,"BSS") == 0) { /* STACK */
+        /* OK */
+        return 1;
+    }
+
+    return 0;
+}
+
+/* return 1 if class STACK */
+int sort_cmpf_class_stack(const struct link_segdef *a) {
+    if (a->classname != NULL && strcmp(a->classname,"STACK") == 0) { /* STACK */
+        /* OK */
+        return 1;
+    }
+
+    return 0;
+}
+
 void link_segments_swap(unsigned int s1,unsigned int s2) {
     if (s1 != s2) {
         struct link_segdef t;
@@ -422,6 +442,15 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
             (*start)++;
             i++;
         }
+        else if (r > 0) {
+            while (i < *end) {
+                link_segments_swap(i,i+1);
+                i++;
+            }
+
+            (*end)--;
+            i--;
+        }
         else {
             i++;
         }
@@ -431,7 +460,7 @@ void link_segments_sort(unsigned int *start,unsigned int *end,int (*sort_cmp)(co
 }
 
 void owlink_dosseg_sort_order(void) {
-    unsigned int s = 0,e = link_segments_count-1;
+    unsigned int s = 0,e = link_segments_count - 1u;
 
     if (link_segments_count == 0) return;
     link_segments_sort(&s,&e,sort_cmp_not_dgroup_class_code);       /* 1 */
@@ -440,6 +469,15 @@ void owlink_dosseg_sort_order(void) {
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_not_special);    /* 4 */
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_bss);            /* 5 */
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
+
+    if (output_format == OFMT_COM || output_format == OFMT_EXE) {
+        /* STACK and BSS must be placed at the end in BSS, STACK order */
+        e = link_segments_count - 1u;
+        s = 0;
+
+        link_segments_sort(&s,&e,sort_cmpf_class_stack);
+        link_segments_sort(&s,&e,sort_cmpf_class_bss);
+    }
 }
 
 struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
