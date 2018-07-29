@@ -259,11 +259,16 @@ if ($introutine_stub) {
     print ASM "dosdrv_interrupt_stub_:\n";
     print ASM "        push    ax\n";
     print ASM "        push    ds\n";
-    print ASM "        mov     ax,cs\n";
-    print ASM "        mov     ds,ax\n";
+    if ($ds_is_cs) {
+        print ASM "        mov     ax,cs\n";
+        print ASM "        mov     ds,ax\n";
+    }
+    else {
+        print ASM "        mov     ax,seg _dosdrv_req_ptr\n";
+        print ASM "        mov     ds,ax\n";
+    }
     if ($introutine_stub_far) {
-        print ASM "        push    ax\n";
-        print ASM "        call    dosdrv_interrupt_far_\n";
+        print ASM "        call far dosdrv_interrupt_far_\n";
     }
     else {
         print ASM "        call    dosdrv_interrupt_near_\n";
