@@ -853,9 +853,6 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
 
     if (pass != PASS_BUILD) return 0;
 
-    (void)in_file;
-    (void)in_module;
-
     while (first <= omf_fixupps_context_get_highest_index(&omf_state->FIXUPPs)) {
         const struct omf_fixupp_t *ent = omf_fixupps_context_get_fixupp(&omf_state->FIXUPPs,first++);
         if (ent == NULL) continue;
