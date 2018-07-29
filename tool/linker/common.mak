@@ -9,7 +9,9 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
 NOW_BUILDING = TOOL_LINKER
 
+!ifeq TARGET_MSDOS 32
 LNKDOS16_EXE = $(SUBDIR)$(HPS)lnkdos16.$(EXEEXT)
+!endif
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
