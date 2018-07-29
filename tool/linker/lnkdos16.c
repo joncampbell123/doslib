@@ -1973,6 +1973,8 @@ int main(int argc,char **argv) {
                     return 1;
                 }
 
+                assert(sg->segment_relative == 0);
+
                 assert(sg->fragments != NULL);
                 assert(sg->fragments_count > 0);
                 assert(sg->fragments_count <= sg->fragments_alloc);
@@ -1984,6 +1986,8 @@ int main(int argc,char **argv) {
                     assert(tsg->fragments_count > 0);
                     assert(tsg->fragments_count <= sg->fragments_alloc);
                     tfrag = &tsg->fragments[tsg->fragments_count-1]; // should be the last one
+
+                    assert(tsg->segment_relative == 0);
                 }
                 else {
                     tfrag = NULL;
