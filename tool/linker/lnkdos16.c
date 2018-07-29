@@ -67,12 +67,23 @@ static const uint8_t comrel_entry_point[] = {
                                         // 0x13
 };
 
+//#define dosdrvrel_entry_debug
+
 /* dosdrvrel entry point */
-#define dosdrvrel_entry_point_entry1           0x01
-#define dosdrvrel_entry_point_entry2           0x06
-#define dosdrvrel_entry_point_CX_COUNT         0x0C
-#define dosdrvrel_entry_point_SI_OFFSET        0x0F
+#ifdef dosdrvrel_entry_debug
+# define dosdrvrel_entry_debug_O 1
+#else
+# define dosdrvrel_entry_debug_O 0
+#endif
+
+#define dosdrvrel_entry_point_entry1           (0x01+dosdrvrel_entry_debug_O)
+#define dosdrvrel_entry_point_entry2           (0x06+dosdrvrel_entry_debug_O)
+#define dosdrvrel_entry_point_CX_COUNT         (0x0C+dosdrvrel_entry_debug_O)
+#define dosdrvrel_entry_point_SI_OFFSET        (0x0F+dosdrvrel_entry_debug_O)
 static const uint8_t dosdrvrel_entry_point[] = {
+#ifdef dosdrvrel_entry_debug
+    0xCC,                               //
+#endif
     0xBF,0x00,0x00,                     // 0x00 MOV DI,<offset>
     0xEB,0x03,                          // 0x03 JMP short (entry)
 
