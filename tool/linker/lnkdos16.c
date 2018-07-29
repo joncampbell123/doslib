@@ -76,7 +76,8 @@ enum {
 enum {
     OFMT_COM=0,
     OFMT_EXE,
-    OFMT_DOSDRV
+    OFMT_DOSDRV,
+    OFMT_DOSDRVEXE
 };
 
 struct exe_relocation {
@@ -507,7 +508,7 @@ void owlink_stack_bss_arrange(void) {
     unsigned int s = 0,e = link_segments_count - 1u;
 
     if (link_segments_count == 0) return;
-    if (output_format == OFMT_COM || output_format == OFMT_EXE) {
+    if (output_format == OFMT_COM || output_format == OFMT_EXE || output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
         /* STACK and BSS must be placed at the end in BSS, STACK order */
         e = link_segments_count - 1u;
         s = 0;
@@ -1025,7 +1026,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         return -1;
                     }
                 }
-                else if (output_format == OFMT_EXE) {
+                else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
                     /* emit as a relocation */
                     if (pass == PASS_GATHER) {
                         struct exe_relocation *reloc = new_exe_relocation();
@@ -1281,6 +1282,7 @@ static void help(void) {
     fprintf(stderr,"                COMREL = flat COM executable, relocatable\n");
     fprintf(stderr,"                EXE = segmented EXE executable\n");
     fprintf(stderr,"                DOSDRV = flat MS-DOS driver (SYS)\n");
+    fprintf(stderr,"                DOSDRVEXE = MS-DOS driver (EXE)\n");
     fprintf(stderr,"  -v           Verbose mode\n");
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
     fprintf(stderr,"  -no-dosseg   No DOSSEG sort order\n");
@@ -1386,6 +1388,8 @@ int main(int argc,char **argv) {
                     output_format = OFMT_EXE;
                 else if (!strcmp(a,"dosdrv"))
                     output_format = OFMT_DOSDRV;
+                else if (!strcmp(a,"dosdrvexe"))
+                    output_format = OFMT_DOSDRVEXE;
                 else {
                     fprintf(stderr,"Unknown format\n");
                     return 1;
@@ -1419,7 +1423,7 @@ int main(int argc,char **argv) {
         if (output_format == OFMT_COM) {
             com_segbase = 0x100;
         }
-        else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRV) {
+        else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
             com_segbase = 0;
         }
     }
@@ -1794,7 +1798,7 @@ int main(int argc,char **argv) {
                  * must be inserted at the start to JMP to the entry point */
                 if (output_format == OFMT_DOSDRV) {
                 }
-                else if (output_format == OFMT_EXE) {
+                else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
                     /* EXE */
                     /* TODO: relocation table */
                     file_baseofs = 32;
@@ -1849,7 +1853,8 @@ int main(int argc,char **argv) {
                         fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
                                 inf,ofs,sd->segment_length);
 
-                    if (output_format == OFMT_COM || output_format == OFMT_EXE || output_format == OFMT_DOSDRV) {
+                    if (output_format == OFMT_COM || output_format == OFMT_EXE ||
+                        output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
                         if (sd->segment_length > 0x10000ul) {
                             dump_link_segments();
                             fprintf(stderr,"Segment too large >= 64KB\n");
@@ -1864,7 +1869,7 @@ int main(int argc,char **argv) {
 
             /* if a .COM executable, then all segments are arranged so that the first byte
              * is at 0x100 */
-            if (output_format == OFMT_EXE) {
+            if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
                 unsigned long segrel = 0;
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
@@ -1915,7 +1920,7 @@ int main(int argc,char **argv) {
             {
                 unsigned long ofs = 0;
 
-                if (output_format == OFMT_EXE) {
+                if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
                     /* TODO: EXE header */
                 }
 
@@ -2134,7 +2139,7 @@ int main(int argc,char **argv) {
             return 1;
         }
 
-        if (output_format == OFMT_EXE) {
+        if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
             /* EXE header */
             unsigned char tmp[32];
             unsigned long disk_size = 0;
