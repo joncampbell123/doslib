@@ -2522,14 +2522,26 @@ int main(int argc,char **argv) {
                 hdr_p = segdef->image_ptr + ofs;
                 reloc_p = rsegdef->image_ptr + rofs;
 
+                if (verbose) {
+                    fprintf(stderr,"Original entry: 0x%x, 0x%x\n",
+                        *((uint16_t*)(hdr_p + 0x06)),
+                        *((uint16_t*)(hdr_p + 0x08)));
+                }
+
                 /* copy entry points (2) to the relocation parts of the ASM we inserted */
                 *((uint16_t*)(reloc_p + dosdrvrel_entry_point_orig_entry1)) = *((uint16_t*)(hdr_p + 0x06));
                 *((uint16_t*)(reloc_p + dosdrvrel_entry_point_entry1)) = *((uint16_t*)(hdr_p + 0x06));
-                *((uint16_t*)(hdr_p + 0x06)) = rofs + dosdrvrel_entry_point_entry1 - 1;
+                *((uint16_t*)(hdr_p + 0x06)) = rofs + rsegdef->segment_offset + dosdrvrel_entry_point_entry1 - 1;
 
                 *((uint16_t*)(reloc_p + dosdrvrel_entry_point_orig_entry2)) = *((uint16_t*)(hdr_p + 0x08));
                 *((uint16_t*)(reloc_p + dosdrvrel_entry_point_entry2)) = *((uint16_t*)(hdr_p + 0x08));
-                *((uint16_t*)(hdr_p + 0x08)) = rofs + dosdrvrel_entry_point_entry2 - 1;
+                *((uint16_t*)(hdr_p + 0x08)) = rofs + rsegdef->segment_offset + dosdrvrel_entry_point_entry2 - 1;
+
+                if (verbose) {
+                    fprintf(stderr,"New entry: 0x%x, 0x%x\n",
+                        *((uint16_t*)(hdr_p + 0x06)),
+                        *((uint16_t*)(hdr_p + 0x08)));
+                }
             }
         }
         else {
