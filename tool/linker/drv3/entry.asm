@@ -16,6 +16,13 @@ segment _TEXT align=1 class=CODE use16
  %endif
 %endif
 
+; dummy entry point
+%ifndef TINYMODE
+..start:
+    mov     ax,4C00h
+    int     21h
+%endif
+
 ; data
 %ifidni segment_use,use32
 section _DATA align=1 class=DATA use32
