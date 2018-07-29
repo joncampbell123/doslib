@@ -870,6 +870,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     /* sanity check: self-relative is only allowed IF the same segment */
                     /* we could fidget about with relative fixups across real-mode segments, but I'm not going to waste my time on that */
                     if (current_link_segment->segment_relative != targ_sdef->segment_relative) {
+                        dump_link_segments();
                         fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
                         return -1;
                     }
