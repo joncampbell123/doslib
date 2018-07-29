@@ -1743,6 +1743,14 @@ int main(int argc,char **argv) {
                         fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
                                 inf,ofs,sd->segment_length);
 
+                    if (output_format == OFMT_COM || output_format == OFMT_EXE) {
+                        if (sd->segment_length > 0x10000ul) {
+                            dump_link_segments();
+                            fprintf(stderr,"Segment too large >= 64KB\n");
+                            return -1;
+                        }
+                    }
+
                     sd->linear_offset = ofs;
                     ofs += sd->segment_length;
                 }
