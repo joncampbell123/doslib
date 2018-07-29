@@ -497,6 +497,7 @@ int owlink_segsrt_def_qsort_cmp(const void *a,const void *b) {
 
 void owlink_default_sort_seg(void) {
     qsort(link_segments, link_segments_count, sizeof(struct link_segdef), owlink_segsrt_def_qsort_cmp);
+    reconnect_gl_segs();
 }
 
 void owlink_stack_bss_arrange(void) {
