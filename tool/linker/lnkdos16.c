@@ -67,6 +67,29 @@ static const uint8_t comrel_entry_point[] = {
                                         // 0x13
 };
 
+/* dosdrvrel entry point */
+#define dosdrvrel_entry_point_entry1           0x01
+#define dosdrvrel_entry_point_entry2           0x06
+#define dosdrvrel_entry_point_CX_COUNT         0x0C
+#define dosdrvrel_entry_point_SI_OFFSET        0x0F
+static const uint8_t dosdrvrel_entry_point[] = {
+    0xBF,0x00,0x00,                     // 0x00 MOV DI,<offset>
+    0xEB,0x03,                          // 0x03 JMP short (entry)
+
+    0xBF,0x00,0x00,                     // 0x05 MOV DI,<offset>
+
+    0xFC,                               // 0x08 CLD (entry)
+    0x8C,0xCA,                          // 0x09 MOV DX,CS
+    0xB9,0x00,0x00,                     // 0x0B MOV CX,<count>
+    0xBE,0x00,0x00,                     // 0x0E MOV SI,<table offset>
+    0xAD,                               // 0x11 <loop1>  LODSW
+    0x89,0xC3,                          // 0x12 MOV BX,AX
+    0x01,0x17,                          // 0x14 ADD [BX],DX
+    0xE2,0x100u-7u,                     // 0x16 LOOP <loop1>
+    0xFF,0xE7                           // 0x18 JMP DI
+                                        // 0x1A
+};
+
 enum {
     OFMTVAR_NONE=0,
 
@@ -1793,7 +1816,11 @@ int main(int argc,char **argv) {
                     }
 
                     tsg->segment_length += exe_relocation_table_count * 2;
-                    sg->segment_length += sizeof(comrel_entry_point);
+
+                    if (output_format == OFMT_DOSDRV)
+                        sg->segment_length += sizeof(dosdrvrel_entry_point);
+                    else
+                        sg->segment_length += sizeof(comrel_entry_point);
 
                     frag->fragment_length = sg->segment_length - frag->offset;
                     if (tfrag != frag)
@@ -2011,13 +2038,18 @@ int main(int argc,char **argv) {
                         assert((ro + tfrag->fragment_length) <= tsg->segment_length);
 
                         po = frag->offset;
-                        assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
                     }
                     else {
                         ro = frag->offset;
                         assert((ro + frag->fragment_length) <= sg->segment_length);
 
                         po = ro + (exe_relocation_table_count * 2);
+                    }
+
+                    if (output_format == OFMT_DOSDRV) {
+                        assert((po + sizeof(dosdrvrel_entry_point)) <= sg->segment_length);
+                    }
+                    else {
                         assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
                     }
 
@@ -2085,24 +2117,46 @@ int main(int argc,char **argv) {
                         }
                     }
 
-                    if (entry_seg_link_target != NULL) {
-                        struct seg_fragment *frag;
-
-                        assert(entry_seg_link_target->fragments != NULL);
-                        assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
-                        frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
-
-                        old_init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
-                    }
-                    else {
-                        old_init_ip = 0x100;
-                    }
-
-                    init_ip = po + sg->segment_offset;
-
-                    {
+                    if (output_format == OFMT_DOSDRV) {
                         uint8_t *d = (uint8_t*)(sg->image_ptr + po);
                         uint8_t *f = (uint8_t*)(sg->image_ptr + sg->segment_length);
+
+                        assert((d+sizeof(dosdrvrel_entry_point)) <= f);
+                        memcpy(d,dosdrvrel_entry_point,sizeof(dosdrvrel_entry_point));
+
+                        *((uint16_t*)(d+dosdrvrel_entry_point_CX_COUNT)) = exe_relocation_table_count;
+
+                        if (tsg != NULL)
+                            *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + tsg->segment_offset;
+                        else
+                            *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
+
+//                        *((uint16_t*)(d+dosdrvrel_entry_point_JMP_ENTRY)) = old_init_ip - (init_ip + dosdrvrel_entry_point_JMP_ENTRY + 2);
+                    }
+                    else {
+                        uint8_t *d = (uint8_t*)(sg->image_ptr + po);
+                        uint8_t *f = (uint8_t*)(sg->image_ptr + sg->segment_length);
+
+                        if (entry_seg_link_target != NULL) {
+                            struct seg_fragment *frag;
+
+                            assert(entry_seg_link_target->fragments != NULL);
+                            assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
+                            frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+                            old_init_ip = entry_seg_ofs + entry_seg_link_target->segment_offset + frag->offset;
+                        }
+                        else {
+                            old_init_ip = 0x100;
+                        }
+
+                        init_ip = po + sg->segment_offset;
+
+                        /* change entry point to new entry point */
+                        if (verbose) {
+                            fprintf(stderr,"Old entry IP=0x%lx\n",old_init_ip);
+                            fprintf(stderr,"New entry IP=0x%lx\n",init_ip);
+                        }
 
                         assert((d+sizeof(comrel_entry_point)) <= f);
                         memcpy(d,comrel_entry_point,sizeof(comrel_entry_point));
@@ -2115,19 +2169,13 @@ int main(int argc,char **argv) {
                             *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
 
                         *((uint16_t*)(d+comrel_entry_point_JMP_ENTRY)) = old_init_ip - (init_ip + comrel_entry_point_JMP_ENTRY + 2);
-                    }
 
-                    /* change entry point to new entry point */
-                    if (verbose) {
-                        fprintf(stderr,"Old entry IP=0x%lx\n",old_init_ip);
-                        fprintf(stderr,"New entry IP=0x%lx\n",init_ip);
+                        cstr_free(&entry_seg_link_target_name);
+                        entry_seg_link_target_fragment = (int)(frag - sg->fragments);
+                        entry_seg_link_target_name = strdup(sg->name);
+                        entry_seg_link_target = sg;
+                        entry_seg_ofs = po - frag->offset;
                     }
-
-                    cstr_free(&entry_seg_link_target_name);
-                    entry_seg_link_target_fragment = (int)(frag - sg->fragments);
-                    entry_seg_link_target_name = strdup(sg->name);
-                    entry_seg_link_target = sg;
-                    entry_seg_ofs = po - frag->offset;
                 }
             }
         }
