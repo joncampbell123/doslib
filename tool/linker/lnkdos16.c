@@ -2472,7 +2472,7 @@ int main(int argc,char **argv) {
                 return 1;
             }
 
-            if (output_format == OFMT_DOSDRV && output_format_variant == OFMTVAR_COMREL) {
+            if (output_format == OFMT_DOSDRV && output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
                 unsigned char *hdr_p;
                 unsigned char *reloc_p;
                 struct link_segdef *rsegdef;
