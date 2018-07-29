@@ -611,8 +611,8 @@ void dump_link_symbols(void) {
         struct link_symbol *sym = &link_symbols[i++];
         if (sym->name == NULL) continue;
 
-        fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx file='%s' module=%u local=%u\n",
-            i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,
+        fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u\n",
+            i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
             in_file[sym->in_file],sym->in_module,sym->is_local);
     }
 }
@@ -1943,6 +1943,7 @@ int main(int argc,char **argv) {
                     sym = new_link_symbol("__COMREL_RELOC_TABLE");
                     sym->groupdef = strdup("DGROUP");
                     sym->segdef = strdup("__COMREL_RELOC");
+                    sym->fragment = sg->fragments_count-1;
                     sym->offset = ro;
 
                     po = ro + (exe_relocation_table_count * 2);
@@ -1952,6 +1953,7 @@ int main(int argc,char **argv) {
                     sym = new_link_symbol("__COMREL_RELOC_ENTRY");
                     sym->groupdef = strdup("DGROUP");
                     sym->segdef = strdup("__COMREL_RELOC");
+                    sym->fragment = sg->fragments_count-1;
                     sym->offset = po;
 
                     /* check */
@@ -2031,7 +2033,7 @@ int main(int argc,char **argv) {
                     entry_seg_link_target_fragment = (int)(frag - sg->fragments);
                     entry_seg_link_target_name = strdup(sg->name);
                     entry_seg_link_target = sg;
-                    entry_seg_ofs = po;
+                    entry_seg_ofs = po - frag->offset;
                 }
             }
         }
