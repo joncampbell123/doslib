@@ -1764,12 +1764,18 @@ int main(int argc,char **argv) {
                     else
                         segrel = sd->linear_offset >> 4ul;
 
-                    if (prefer_flat && sd->linear_offset < (0xFF00ul - com_segbase))
+                    if (prefer_flat && sd->linear_offset < (0xFFFFul - com_segbase))
                         segrel = 0; /* user prefers flat .COM memory model, where possible */
 
                     sd->segment_base = com_segbase;
                     sd->segment_relative = segrel - (com_segbase >> 4ul);
                     sd->segment_offset = com_segbase + sd->linear_offset - (segrel << 4ul);
+
+                    if (sd->segment_offset >= 0xFFFFul) {
+                        dump_link_segments();
+                        fprintf(stderr,"EXE: segment offset out of range\n");
+                        return -1;
+                    }
                 }
             }
             else if (output_format == OFMT_COM) {
@@ -1779,6 +1785,12 @@ int main(int argc,char **argv) {
                     sd->segment_relative = 0;
                     sd->segment_base = com_segbase;
                     sd->segment_offset = com_segbase + sd->linear_offset;
+
+                    if (sd->segment_offset >= 0xFFFFul) {
+                        dump_link_segments();
+                        fprintf(stderr,"COM: segment offset out of range\n");
+                        return -1;
+                    }
                 }
             }
             else {
