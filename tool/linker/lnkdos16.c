@@ -1721,7 +1721,9 @@ int main(int argc,char **argv) {
                 if (output_format == OFMT_COM && output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
                     /* make a new segment attached to the end, containing the relocation
                      * table and the patch up code, which becomes the new entry point. */
+                    struct seg_fragment *tfrag;
                     struct seg_fragment *frag;
+                    struct link_segdef *tsg;
                     struct link_segdef *sg;
 
                     assert(exe_relocation_table != NULL);
@@ -1738,6 +1740,8 @@ int main(int argc,char **argv) {
                         sg->classname = strdup("CODE");
                     }
 
+                    tsg = find_link_segment("__COMREL_RELOCTBL");
+
                     frag = alloc_link_segment_fragment(sg);
                     if (frag == NULL) {
                         return 1;
@@ -1745,10 +1749,25 @@ int main(int argc,char **argv) {
                     frag->offset = sg->segment_length;
                     frag->segidx = (int)(sg + 1 - (&link_segments[0]));
 
-                    sg->segment_length += exe_relocation_table_count * 2;
+                    if (tsg != NULL) {
+                        tfrag = alloc_link_segment_fragment(tsg);
+                        if (tfrag == NULL) {
+                            return 1;
+                        }
+                        tfrag->offset = tsg->segment_length;
+                        tfrag->segidx = (int)(tsg + 1 - (&link_segments[0]));
+                    }
+                    else {
+                        tsg = sg;
+                        tfrag = frag;
+                    }
+
+                    tsg->segment_length += exe_relocation_table_count * 2;
                     sg->segment_length += sizeof(comrel_entry_point);
 
                     frag->fragment_length = sg->segment_length - frag->offset;
+                    if (tfrag != frag)
+                        tfrag->fragment_length = tsg->segment_length - tfrag->offset;
                 }
 
                 /* .COM format: if the entry point is nonzero, a JMP instruction
@@ -1917,6 +1936,9 @@ int main(int argc,char **argv) {
                 struct link_symbol *sym;
                 struct seg_fragment *frag;
 
+                struct link_segdef *tsg;
+                struct seg_fragment *tfrag;
+
                 sg = find_link_segment("__COMREL_RELOC");
                 if (sg == NULL) {
                     fprintf(stderr,"COMREL relocation segment missing\n");
@@ -1928,6 +1950,17 @@ int main(int argc,char **argv) {
                 assert(sg->fragments_count <= sg->fragments_alloc);
                 frag = &sg->fragments[sg->fragments_count-1]; // should be the last one
 
+                tsg = find_link_segment("__COMREL_RELOCTBL");
+                if (tsg != NULL) {
+                    assert(tsg->fragments != NULL);
+                    assert(tsg->fragments_count > 0);
+                    assert(tsg->fragments_count <= sg->fragments_alloc);
+                    tfrag = &tsg->fragments[tsg->fragments_count-1]; // should be the last one
+                }
+                else {
+                    tfrag = NULL;
+                }
+
                 /* first, the relocation table */
                 {
                     unsigned long old_init_ip,init_ip;
@@ -1935,18 +1968,33 @@ int main(int argc,char **argv) {
 
                     assert(exe_relocation_table != NULL);
 
-                    ro = frag->offset;
-                    assert((ro + frag->fragment_length) <= sg->segment_length);
+                    if (tsg != NULL) {
+                        ro = tfrag->offset;
+                        assert((ro + tfrag->fragment_length) <= tsg->segment_length);
 
-                    po = ro + (exe_relocation_table_count * 2);
-                    assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
+                        po = frag->offset;
+                        assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
+                    }
+                    else {
+                        ro = frag->offset;
+                        assert((ro + frag->fragment_length) <= sg->segment_length);
+
+                        po = ro + (exe_relocation_table_count * 2);
+                        assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
+                    }
 
                     sym = find_link_symbol("__COMREL_RELOC_TABLE");
                     if (sym != NULL) return 1;
                     sym = new_link_symbol("__COMREL_RELOC_TABLE");
                     sym->groupdef = strdup("DGROUP");
-                    sym->segdef = strdup("__COMREL_RELOC");
-                    sym->fragment = sg->fragments_count-1;
+                    if (tsg != NULL) {
+                        sym->segdef = strdup("__COMREL_RELOCTBL");
+                        sym->fragment = tsg->fragments_count-1;
+                    }
+                    else {
+                        sym->segdef = strdup("__COMREL_RELOC");
+                        sym->fragment = sg->fragments_count-1;
+                    }
                     sym->offset = ro;
 
                     sym = find_link_symbol("__COMREL_RELOC_ENTRY");
@@ -1967,6 +2015,11 @@ int main(int argc,char **argv) {
                         struct seg_fragment *frag;
                         struct link_segdef *lsg;
                         unsigned long roff;
+
+                        if (tsg != NULL) {
+                            d = (uint16_t*)(tsg->image_ptr + ro);
+                            f = (uint16_t*)(tsg->image_ptr + sg->segment_length);
+                        }
 
                         assert((d+exe_relocation_table_count) <= f);
                         for (inf=0;inf < exe_relocation_table_count;inf++,rel++) {
@@ -2017,7 +2070,12 @@ int main(int argc,char **argv) {
                         memcpy(d,comrel_entry_point,sizeof(comrel_entry_point));
 
                         *((uint16_t*)(d+comrel_entry_point_CX_COUNT)) = exe_relocation_table_count;
-                        *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
+
+                        if (tsg != NULL)
+                            *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + tsg->segment_offset;
+                        else
+                            *((uint16_t*)(d+comrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
+
                         *((uint16_t*)(d+comrel_entry_point_JMP_ENTRY)) = old_init_ip - (init_ip + comrel_entry_point_JMP_ENTRY + 2);
                     }
 
