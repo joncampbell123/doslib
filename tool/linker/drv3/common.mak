@@ -21,12 +21,16 @@ NOW_BUILDING = TOOL_LINKER_EX1
 !ifdef TINYMODE
 TEST_SYS =   $(SUBDIR)$(HPS)test.sys
 TEST2_SYS =  $(SUBDIR)$(HPS)test2.sys
+
+DRVA =		 $(SUBDIR)$(HPS)drva.obj
 !else
 ! ifeq TARGET_MSDOS 32
 # DOSLIB linker cannot handle 32-bit OMF........yet
 ! else
 TEST_SYS =   $(SUBDIR)$(HPS)test.sys
 TEST2_SYS =  $(SUBDIR)$(HPS)test2.sys
+
+DRVA =		 $(SUBDIR)$(HPS)drva2.obj
 ! endif
 !endif
 
@@ -64,14 +68,18 @@ drva.asm:
 	../../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy --no-stack --no-stub --ds-is-cs --int-stub
 	echo "group DGROUP _END _BEGIN _TEXT _DATA" >>$@
 
+drva2.asm:
+	../../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy --no-stack --no-stub --int-stub
+	echo "group DGROUP _END _BEGIN _TEXT _DATA" >>$@
+
 !ifdef TEST_SYS
-$(TEST_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) $(DOSLINKFMT)
+$(TEST_SYS): $(DRVA) $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
+	$(DOSLIBLINKER) -i $(DRVA) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) $(DOSLINKFMT)
 !endif
 
 !ifdef TEST2_SYS
-$(TEST2_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST2_SYS) $(DOSLINKFMT2)
+$(TEST2_SYS): $(DRVA) $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
+	$(DOSLIBLINKER) -i $(DRVA) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST2_SYS) $(DOSLINKFMT2)
 !endif
 
 clean: .SYMBOLIC
