@@ -1717,6 +1717,40 @@ int main(int argc,char **argv) {
                 unsigned long ofs = 0;
                 unsigned long m;
 
+                /* COMREL relocation + patch code */
+                if (output_format == OFMT_COM && output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
+                    /* make a new segment attached to the end, containing the relocation
+                     * table and the patch up code, which becomes the new entry point. */
+                    struct seg_fragment *frag;
+                    struct link_segdef *sg;
+
+                    assert(exe_relocation_table != NULL);
+
+                    sg = find_link_segment("__COMREL_RELOC");
+                    if (sg == NULL) {
+                        sg = new_link_segment("__COMREL_RELOC");
+                        if (sg == NULL) {
+                            fprintf(stderr,"Cannot allocate COMREL relocation segment\n");
+                            return 1;
+                        }
+
+                        sg->initial_alignment = 1;
+                        sg->classname = strdup("CODE");
+                    }
+
+                    frag = alloc_link_segment_fragment(sg);
+                    if (frag == NULL) {
+                        return 1;
+                    }
+                    frag->offset = sg->segment_length;
+                    frag->segidx = (int)(sg + 1 - (&link_segments[0]));
+
+                    sg->segment_length += exe_relocation_table_count * 2;
+                    sg->segment_length += sizeof(comrel_entry_point);
+
+                    frag->fragment_length = sg->segment_length - frag->offset;
+                }
+
                 /* .COM format: if the entry point is nonzero, a JMP instruction
                  * must be inserted at the start to JMP to the entry point */
                 if (output_format == OFMT_EXE) {
@@ -1876,54 +1910,33 @@ int main(int argc,char **argv) {
             }
 
             /* COMREL relocation + patch code */
-            if (output_format == OFMT_COM && output_format_variant == OFMTVAR_COMREL) {
+            if (output_format == OFMT_COM && output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
                 /* make a new segment attached to the end, containing the relocation
                  * table and the patch up code, which becomes the new entry point. */
                 struct link_segdef *sg;
                 struct link_symbol *sym;
                 struct seg_fragment *frag;
-                unsigned long img_size = 0;
-
-                for (inf=0;inf < link_segments_count;inf++) {
-                    struct link_segdef *sd = &link_segments[inf];
-                    unsigned long ofs = sd->linear_offset + sd->segment_length;
-                    if (img_size < ofs) img_size = ofs;   
-                }
-
-                if (verbose)
-                    fprintf(stderr,".COM image without rel is 0x%lx bytes\n",img_size);
 
                 sg = find_link_segment("__COMREL_RELOC");
-                if (sg != NULL) {
-                    fprintf(stderr,"OBJ files are not allowed to override the COMREL relocation segment\n");
-                    return 1;
-                }
-                sg = new_link_segment("__COMREL_RELOC");
                 if (sg == NULL) {
-                    fprintf(stderr,"Cannot allocate COMREL relocation segment\n");
+                    fprintf(stderr,"COMREL relocation segment missing\n");
                     return 1;
                 }
 
-                frag = alloc_link_segment_fragment(sg);
-                frag->offset = sg->segment_length;
-                frag->segidx = (int)(sg + 1 - (&link_segments[0]));
-                frag->fragment_length = 0;
-
-                sg->linear_offset = img_size;
-                sg->segment_base = com_segbase;
-                sg->segment_offset = com_segbase + sg->linear_offset;
-                sg->file_offset = img_size;
+                assert(sg->fragments != NULL);
+                assert(sg->fragments_count > 0);
+                assert(sg->fragments_count <= sg->fragments_alloc);
+                frag = &sg->fragments[sg->fragments_count-1]; // should be the last one
 
                 /* first, the relocation table */
-                if (exe_relocation_table_count > 0) {
+                {
                     unsigned long old_init_ip,init_ip;
                     unsigned long ro,po;
 
-                    assert(sg->segment_length == 0);
                     assert(exe_relocation_table != NULL);
 
-                    ro = sg->segment_length;
-                    sg->segment_length += exe_relocation_table_count * 2;
+                    assert(frag->fragment_length <= sg->segment_length);
+                    ro = sg->segment_length - frag->fragment_length;
 
                     sym = find_link_symbol("__COMREL_RELOC_TABLE");
                     if (sym != NULL) return 1;
@@ -1932,8 +1945,7 @@ int main(int argc,char **argv) {
                     sym->segdef = strdup("__COMREL_RELOC");
                     sym->offset = ro;
 
-                    po = sg->segment_length;
-                    sg->segment_length += sizeof(comrel_entry_point);
+                    po = ro + (exe_relocation_table_count * 2);
 
                     sym = find_link_symbol("__COMREL_RELOC_ENTRY");
                     if (sym != NULL) return 1;
@@ -1942,14 +1954,11 @@ int main(int argc,char **argv) {
                     sym->segdef = strdup("__COMREL_RELOC");
                     sym->offset = po;
 
+                    /* check */
+                    assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
+
                     /* do it */
-                    assert(sg->image_ptr == NULL);
-                    sg->image_ptr = malloc(sg->segment_length);
-                    if (sg->image_ptr == NULL) {
-                        fprintf(stderr,"Unable to alloc segment\n");
-                        return 1;
-                    }
-                    frag->fragment_length = sg->segment_length;
+                    assert(sg->image_ptr != NULL);
 
                     {
                         uint16_t *d = (uint16_t*)(sg->image_ptr + ro);
