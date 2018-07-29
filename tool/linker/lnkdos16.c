@@ -32,6 +32,8 @@ enum {
 
 #define MAX_IN_FILES                    256
 
+static char*                            dosdrv_header_symbol = "_dosdrv_header";
+
 static char*                            out_file = NULL;
 
 static char*                            in_file[MAX_IN_FILES];
@@ -1287,6 +1289,7 @@ static void help(void) {
     fprintf(stderr,"  -com100      Link .COM segment starting at 0x100\n");
     fprintf(stderr,"  -com0        Link .COM segment starting at 0 (Watcom Linker)\n");
     fprintf(stderr,"  -pflat       Prefer .COM-like flat layout\n");
+    fprintf(stderr,"  -hsym        Header symbol name (DOSDRV)\n");
 }
 
 void my_dumpstate(const struct omf_context_t * const ctx) {
@@ -1355,6 +1358,11 @@ int main(int argc,char **argv) {
                 in_file[in_file_count] = argv[i++];
                 if (in_file[in_file_count] == NULL) return 1;
                 in_file_count++;
+            }
+            else if (!strcmp(a,"hsym")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                dosdrv_header_symbol = a;
             }
             else if (!strcmp(a,"pflat")) {
                 prefer_flat = 1;
@@ -2351,6 +2359,43 @@ int main(int argc,char **argv) {
             }
         }
         else if (output_format == OFMT_DOSDRV) {
+            /* the entry point symbol must exist and must be at the very start of the file */
+            struct link_segdef *segdef;
+            struct seg_fragment *frag;
+            struct link_symbol *sym;
+            unsigned long ofs;
+
+            sym = find_link_symbol(dosdrv_header_symbol);
+            if (sym == NULL) {
+                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header)\n",dosdrv_header_symbol);
+                return 1;
+            }
+            assert(sym->name != NULL);
+
+            segdef = find_link_segment(sym->segdef);
+            if (segdef == NULL) {
+                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) missing SEGDEF '%s'\n",
+                    dosdrv_header_symbol,sym->segdef);
+                return 1;
+            }
+
+            assert(segdef->fragments != NULL);
+            assert(segdef->fragments_count <= segdef->fragments_alloc);
+            assert(sym->fragment < segdef->fragments_count);
+            frag = &segdef->fragments[sym->fragment];
+
+            ofs = sym->offset + frag->offset;
+            if (ofs != 0ul) {
+                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) has nonzero offset 0x%lx within segment '%s'\n",
+                    dosdrv_header_symbol,ofs,sym->segdef);
+                return 1;
+            }
+
+            if (segdef->linear_offset != 0ul) {
+                fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) starts within segment '%s' which is not at the start of the file (offset 0x%lx)\n",
+                    dosdrv_header_symbol,sym->segdef,segdef->linear_offset);
+                return 1;
+            }
         }
         else {
             abort();
