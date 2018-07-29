@@ -1388,6 +1388,10 @@ int main(int argc,char **argv) {
                     output_format = OFMT_EXE;
                 else if (!strcmp(a,"dosdrv"))
                     output_format = OFMT_DOSDRV;
+                else if (!strcmp(a,"dosdrvrel")) {
+                    output_format = OFMT_DOSDRV;
+                    output_format_variant = OFMTVAR_COMREL;
+                }
                 else if (!strcmp(a,"dosdrvexe"))
                     output_format = OFMT_DOSDRVEXE;
                 else {
@@ -1743,7 +1747,8 @@ int main(int argc,char **argv) {
                 unsigned long m;
 
                 /* COMREL relocation + patch code */
-                if (output_format == OFMT_COM && output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
+                if ((output_format == OFMT_COM || output_format == OFMT_DOSDRV) &&
+                    output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
                     /* make a new segment attached to the end, containing the relocation
                      * table and the patch up code, which becomes the new entry point. */
                     struct seg_fragment *tfrag;
@@ -1957,7 +1962,8 @@ int main(int argc,char **argv) {
             }
 
             /* COMREL relocation + patch code */
-            if (output_format == OFMT_COM && output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
+            if ((output_format == OFMT_COM || output_format == OFMT_DOSDRV) &&
+                output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
                 /* make a new segment attached to the end, containing the relocation
                  * table and the patch up code, which becomes the new entry point. */
                 struct link_segdef *sg;
