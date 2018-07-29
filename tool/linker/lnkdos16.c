@@ -2020,6 +2020,7 @@ int main(int argc,char **argv) {
             }
 
             cstr_free(&entry_seg_link_target_name);
+            entry_seg_link_target_fragment = (int)(frag - sg->fragments);
             entry_seg_link_target_name = strdup(sg->name);
             entry_seg_link_target = sg;
             entry_seg_ofs = po;
