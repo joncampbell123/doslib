@@ -471,6 +471,34 @@ void owlink_dosseg_sort_order(void) {
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
 }
 
+int owlink_segsrt_def_qsort_cmp(const void *a,const void *b) {
+    const struct link_segdef *sa = (const struct link_segdef*)a;
+    const struct link_segdef *sb = (const struct link_segdef*)b;
+    const char *gna,*gnb;
+    const char *cna,*cnb;
+//  const char *nna,*nnb;
+    int ret = 0;
+
+    /* sort by GROUP, CLASS, NAME */
+    gna = sa->groupname ? sa->groupname : "";
+    gnb = sb->groupname ? sb->groupname : "";
+    cna = sa->classname ? sa->classname : "";
+    cnb = sb->classname ? sb->classname : "";
+//  nna = sa->name      ? sa->name      : "";
+//  nnb = sb->name      ? sb->name      : "";
+
+    /* do it */
+                  ret = strcmp(gna,gnb);
+    if (ret == 0) ret = strcmp(cna,cnb);
+//  if (ret == 0) ret = strcmp(nna,nnb);
+
+    return ret;
+}
+
+void owlink_default_sort_seg(void) {
+    qsort(link_segments, link_segments_count, sizeof(struct link_segdef), owlink_segsrt_def_qsort_cmp);
+}
+
 void owlink_stack_bss_arrange(void) {
     unsigned int s = 0,e = link_segments_count - 1u;
 
@@ -1627,6 +1655,8 @@ int main(int argc,char **argv) {
 
         if (pass == PASS_GATHER) {
             unsigned long file_baseofs = 0;
+
+            owlink_default_sort_seg();
 
             if (do_dosseg)
                 owlink_dosseg_sort_order();
