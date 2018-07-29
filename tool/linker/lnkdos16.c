@@ -1764,7 +1764,7 @@ int main(int argc,char **argv) {
                     else
                         segrel = sd->linear_offset >> 4ul;
 
-                    if (prefer_flat && sd->linear_offset < 0xFFF0ul)
+                    if (prefer_flat && sd->linear_offset < (0xFF00ul - com_segbase))
                         segrel = 0; /* user prefers flat .COM memory model, where possible */
 
                     sd->segment_base = com_segbase;
