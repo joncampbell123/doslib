@@ -19,11 +19,20 @@ void INIT_func(void) {
 #define initreq ((struct dosdrv_request_init_t far*)dosdrv_req_ptr)
 
     __asm {
+#if defined(TINYMODE)
+        push    ds
+#endif
         push    ax
         push    si
 
+#if defined(TINYMODE)
         ; NTS: We can refer to it without reloading DS because we tied everything to DGROUP in this project
         mov     si,offset hello_world
+#else
+        mov     si,seg hello_world
+        mov     ds,si
+        mov     si,offset hello_world
+#endif
 
 l1:     lodsb
         or      al,al
@@ -35,6 +44,9 @@ le:
 
         pop     si
         pop     ax
+#if defined(TINYMODE)
+        pop     ds
+#endif
     }
 
     dosdrv_req_ptr->status = dosdrv_request_status_flag_DONE;

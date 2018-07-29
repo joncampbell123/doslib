@@ -22,6 +22,7 @@ if [ "$1" == "clean" ]; then
     rm -f win95.dsk
     rm -f win95s.dsk
     rm -f win95r.dsk
+    rm -f win95rc.dsk
     rm -Rf linux-host
     exit 0
 fi
@@ -36,11 +37,14 @@ if [ "$1" == "disk" ]; then
 
     gunzip -c -d win95.dsk.gz >win95r.dsk
     mcopy -i win95r.dsk dos86s/test2.sys ::drv.sys
+
+    gunzip -c -d win95.dsk.gz >win95rc.dsk
+    mcopy -i win95rc.dsk dos86c/test2.sys ::drv.sys
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
 #    make_buildlist
-    build_list="dos86t dos86s"
+    build_list="dos86t dos86s dos86c"
     begin_bat
 
     what=all
