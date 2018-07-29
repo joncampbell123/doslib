@@ -3,7 +3,7 @@ rel=../../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
-dos=1 # MS-DOS
+#dos=1 # MS-DOS
 dostiny=1 # MS-DOS tiny model
 #doshuge=1 # MS-DOS huge model
 #dospc98=1 # MS-DOS PC-98
@@ -19,8 +19,15 @@ dostiny=1 # MS-DOS tiny model
 
 if [ "$1" == "clean" ]; then
     do_clean
+    rm -f win95.dsk
     rm -Rf linux-host
     exit 0
+fi
+
+if [ "$1" == "disk" ]; then
+    # bootable win95 rescue disk with test program
+    gunzip -c -d win95.dsk.gz >win95.dsk
+    mcopy -i win95.dsk dos86t/test.sys ::drv.sys
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then

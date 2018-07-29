@@ -57,8 +57,8 @@ drva.asm:
 
 !ifdef TEST_SYS
 # TODO: dosdrv
-$(TEST_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -o $(TESTA_EXE) -com0 -of com
+$(TEST_SYS): $(SUBDIR)$(HPS)drva.obj $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drva.obj -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) -com0 -of com
 !endif
 
 clean: .SYMBOLIC
