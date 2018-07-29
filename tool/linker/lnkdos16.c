@@ -80,8 +80,8 @@ static const uint8_t comrel_entry_point[] = {
 #define dosdrvrel_entry_point_entry2           (0x06+dosdrvrel_entry_debug_O)
 #define dosdrvrel_entry_point_CX_COUNT         (0x0C+dosdrvrel_entry_debug_O)
 #define dosdrvrel_entry_point_SI_OFFSET        (0x0F+dosdrvrel_entry_debug_O)
-#define dosdrvrel_entry_point_orig_entry1      (0x1D+dosdrvrel_entry_debug_O)
-#define dosdrvrel_entry_point_orig_entry2      (0x22+dosdrvrel_entry_debug_O)
+#define dosdrvrel_entry_point_orig_entry1      (0x1F+dosdrvrel_entry_debug_O)
+#define dosdrvrel_entry_point_orig_entry2      (0x24+dosdrvrel_entry_debug_O)
 static const uint8_t dosdrvrel_entry_point[] = {
 #ifdef dosdrvrel_entry_debug
     0xCC,                               //
@@ -95,15 +95,17 @@ static const uint8_t dosdrvrel_entry_point[] = {
     0x8C,0xCA,                          // 0x09 MOV DX,CS
     0xB9,0x00,0x00,                     // 0x0B MOV CX,<count>
     0xBE,0x00,0x00,                     // 0x0E MOV SI,<table offset>
-    0xAD,                               // 0x11 <loop1>  LODSW
-    0x89,0xC3,                          // 0x12 MOV BX,AX
-    0x01,0x17,                          // 0x14 ADD [BX],DX
-    0xE2,0x100u-7u,                     // 0x16 LOOP <loop1>
-    0xBE,0x06,0x00,                     // 0x18 MOV SI,0x0006
-    0xC7,0x04,0x00,0x00,                // 0x1B MOV [SI],<original value>
-    0xC7,0x44,0x02,0x00,0x00,           // 0x1F MOV [SI+2],<original value>
-    0xFF,0xE7                           // 0x24 JMP DI
-                                        // 0x26
+    0x53,                               // 0x11 PUSH BX
+    0xAD,                               // 0x12 <loop1>  LODSW
+    0x89,0xC3,                          // 0x13 MOV BX,AX
+    0x01,0x17,                          // 0x15 ADD [BX],DX
+    0xE2,0x100u-7u,                     // 0x17 LOOP <loop1>
+    0x5B,                               // 0x19 POP BX
+    0xBE,0x06,0x00,                     // 0x1A MOV SI,0x0006
+    0xC7,0x04,0x00,0x00,                // 0x1D MOV [SI],<original value>
+    0xC7,0x44,0x02,0x00,0x00,           // 0x21 MOV [SI+2],<original value>
+    0xFF,0xE7                           // 0x26 JMP DI
+                                        // 0x28
 };
 
 enum {
