@@ -21,6 +21,7 @@ if [ "$1" == "clean" ]; then
     do_clean
     rm -f win95.dsk
     rm -f win95s.dsk
+    rm -f win95r.dsk
     rm -Rf linux-host
     exit 0
 fi
@@ -32,6 +33,9 @@ if [ "$1" == "disk" ]; then
 
     gunzip -c -d win95.dsk.gz >win95s.dsk
     mcopy -i win95s.dsk dos86s/test.sys ::drv.sys
+
+    gunzip -c -d win95.dsk.gz >win95r.dsk
+    mcopy -i win95r.dsk dos86s/test2.sys ::drv.sys
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
