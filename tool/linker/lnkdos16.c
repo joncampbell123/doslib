@@ -2517,6 +2517,7 @@ int main(int argc,char **argv) {
 
                 assert(segdef->image_ptr != NULL);
                 assert((ofs + 10) <= segdef->segment_length);
+                assert(ofs == 0);
 
                 hdr_p = segdef->image_ptr + ofs;
                 reloc_p = rsegdef->image_ptr + rofs;
