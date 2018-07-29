@@ -1881,6 +1881,7 @@ int main(int argc,char **argv) {
          * table and the patch up code, which becomes the new entry point. */
         struct link_segdef *sg;
         struct link_symbol *sym;
+        struct seg_fragment *frag;
         unsigned long img_size = 0;
 
         for (inf=0;inf < link_segments_count;inf++) {
@@ -1891,7 +1892,7 @@ int main(int argc,char **argv) {
 
         if (verbose)
             fprintf(stderr,".COM image without rel is 0x%lx bytes\n",img_size);
- 
+
         sg = find_link_segment("__COMREL_RELOC");
         if (sg != NULL) {
             fprintf(stderr,"OBJ files are not allowed to override the COMREL relocation segment\n");
@@ -1902,6 +1903,11 @@ int main(int argc,char **argv) {
             fprintf(stderr,"Cannot allocate COMREL relocation segment\n");
             return 1;
         }
+
+        frag = alloc_link_segment_fragment(sg);
+        frag->offset = sg->segment_length;
+        frag->segidx = (int)(sg + 1 - (&link_segments[0]));
+        frag->fragment_length = 0;
 
         sg->linear_offset = img_size;
         sg->segment_base = com_segbase;
@@ -1943,6 +1949,7 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"Unable to alloc segment\n");
                 return 1;
             }
+            frag->fragment_length = sg->segment_length;
 
             {
                 uint16_t *d = (uint16_t*)(sg->image_ptr + ro);
