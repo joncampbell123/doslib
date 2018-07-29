@@ -851,52 +851,62 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
     unsigned char *ptr;
     unsigned long ptch;
 
-    if (pass != PASS_BUILD) return 0;
-
     while (first <= omf_fixupps_context_get_highest_index(&omf_state->FIXUPPs)) {
         const struct omf_fixupp_t *ent = omf_fixupps_context_get_fixupp(&omf_state->FIXUPPs,first++);
         if (ent == NULL) continue;
         if (!ent->alloc) continue;
 
-        if (fixupp_get(omf_state,&frame_seg,&frame_ofs,&frame_sdef,ent,ent->frame_method,ent->frame_index))
-            return -1;
-        if (fixupp_get(omf_state,&targ_seg,&targ_ofs,&targ_sdef,ent,ent->target_method,ent->target_index))
-            return -1;
+        if (pass == PASS_BUILD) {
+            if (fixupp_get(omf_state,&frame_seg,&frame_ofs,&frame_sdef,ent,ent->frame_method,ent->frame_index))
+                return -1;
+            if (fixupp_get(omf_state,&targ_seg,&targ_ofs,&targ_sdef,ent,ent->target_method,ent->target_index))
+                return -1;
 
-        if (ent->frame_method == 5/*BY TARGET*/) {
-            frame_sdef = targ_sdef;
-            frame_seg = targ_seg;
-            frame_ofs = targ_ofs;
+            if (ent->frame_method == 5/*BY TARGET*/) {
+                frame_sdef = targ_sdef;
+                frame_seg = targ_seg;
+                frame_ofs = targ_ofs;
+            }
+
+            if (omf_state->flags.verbose) {
+                fprintf(stderr,"fixup[%u] frame=%lx:%lx targ=%lx:%lx\n",
+                        first,
+                        frame_seg,frame_ofs,
+                        targ_seg,targ_ofs);
+            }
+
+            if (frame_seg == ~0UL || frame_ofs == ~0UL || frame_sdef == NULL) {
+                fprintf(stderr,"frame addr not resolved\n");
+                continue;
+            }
+            if (targ_seg == ~0UL || targ_ofs == ~0UL || targ_sdef == NULL) {
+                fprintf(stderr,"target addr not resolved\n");
+                continue;
+            }
+
+            final_seg = targ_seg;
+            final_ofs = targ_ofs;
+
+            if (final_seg != frame_seg) {
+                fprintf(stderr,"frame!=target seg not supported\n");
+                continue;
+            }
+
+            if (omf_state->flags.verbose) {
+                fprintf(stderr,"fixup[%u] final=%lx:%lx\n",
+                        first,
+                        final_seg,final_ofs);
+            }
         }
-
-        if (omf_state->flags.verbose) {
-            fprintf(stderr,"fixup[%u] frame=%lx:%lx targ=%lx:%lx\n",
-                    first,
-                    frame_seg,frame_ofs,
-                    targ_seg,targ_ofs);
-        }
-
-        if (frame_seg == ~0UL || frame_ofs == ~0UL || frame_sdef == NULL) {
-            fprintf(stderr,"frame addr not resolved\n");
-            continue;
-        }
-        if (targ_seg == ~0UL || targ_ofs == ~0UL || targ_sdef == NULL) {
-            fprintf(stderr,"target addr not resolved\n");
-            continue;
-        }
-
-        final_seg = targ_seg;
-        final_ofs = targ_ofs;
-
-        if (final_seg != frame_seg) {
-            fprintf(stderr,"frame!=target seg not supported\n");
-            continue;
-        }
-
-        if (omf_state->flags.verbose) {
-            fprintf(stderr,"fixup[%u] final=%lx:%lx\n",
-                    first,
-                    final_seg,final_ofs);
+        else {
+            final_seg = 0;
+            final_ofs = 0;
+            frame_seg = 0;
+            frame_ofs = 0;
+            targ_seg = 0;
+            targ_ofs = 0;
+            frame_sdef = NULL;
+            targ_sdef = NULL;
         }
 
         cur_segdef = omf_segdefs_context_get_segdef(&omf_state->SEGDEFs,ent->fixup_segdef_index);
@@ -925,53 +935,95 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
         assert(frag->in_file == in_file);
         assert(frag->in_module == in_module);
 
-        assert(current_link_segment != NULL);
-        assert(current_link_segment->image_ptr != NULL);
-        fence = current_link_segment->image_ptr + current_link_segment->segment_length;
+        if (pass == PASS_BUILD) {
+            assert(current_link_segment != NULL);
+            assert(current_link_segment->image_ptr != NULL);
+            fence = current_link_segment->image_ptr + current_link_segment->segment_length;
 
-        ptch =  (unsigned long)ent->omf_rec_file_enoffs +
+            ptch =  (unsigned long)ent->omf_rec_file_enoffs +
                 (unsigned long)ent->data_record_offset +
                 (unsigned long)frag->offset;
 
-        if (omf_state->flags.verbose)
-            fprintf(stderr,"ptch=0x%lx linear=0x%lx load=0x%lx '%s'\n",
-                ptch,
-                current_link_segment->linear_offset,
-                ent->omf_rec_file_enoffs + ent->data_record_offset,
-                current_link_segment->name);
+            if (omf_state->flags.verbose)
+                fprintf(stderr,"ptch=0x%lx linear=0x%lx load=0x%lx '%s'\n",
+                        ptch,
+                        current_link_segment->linear_offset,
+                        ent->omf_rec_file_enoffs + ent->data_record_offset,
+                        current_link_segment->name);
 
-        ptr = current_link_segment->image_ptr + ptch;
-        assert(ptr < fence);
+            ptr = current_link_segment->image_ptr + ptch;
+            assert(ptr < fence);
+        }
+        else if (pass == PASS_GATHER) {
+            ptr = fence = NULL;
+            ptch = 0;
+        }
+        else {
+            continue;
+        }
 
         switch (ent->location) {
             case OMF_FIXUPP_LOCATION_16BIT_OFFSET: /* 16-bit offset */
-                assert((ptr+2) <= fence);
+                if (pass == PASS_BUILD) {
+                    assert((ptr+2) <= fence);
 
-                if (!ent->segment_relative) {
-                    /* sanity check: self-relative is only allowed IF the same segment */
-                    /* we could fidget about with relative fixups across real-mode segments, but I'm not going to waste my time on that */
-                    if (current_link_segment->segment_relative != targ_sdef->segment_relative) {
-                        dump_link_segments();
-                        fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
-                        return -1;
+                    if (!ent->segment_relative) {
+                        /* sanity check: self-relative is only allowed IF the same segment */
+                        /* we could fidget about with relative fixups across real-mode segments, but I'm not going to waste my time on that */
+                        if (current_link_segment->segment_relative != targ_sdef->segment_relative) {
+                            dump_link_segments();
+                            fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
+                            return -1;
+                        }
+
+                        /* do it */
+                        final_ofs -= ptch+2+current_link_segment->segment_offset;
                     }
 
-                    /* do it */
-                    final_ofs -= ptch+2+current_link_segment->segment_offset;
+                    *((uint16_t*)ptr) += (uint16_t)final_ofs;
                 }
-
-                *((uint16_t*)ptr) += (uint16_t)final_ofs;
                 break;
             case OMF_FIXUPP_LOCATION_16BIT_SEGMENT_BASE: /* 16-bit segment base */
-                assert((ptr+2) <= fence);
+                if (pass == PASS_BUILD) {
+                    assert((ptr+2) <= fence);
 
-                if (!ent->segment_relative) {
-                    fprintf(stderr,"segment base self relative\n");
-                    return -1;
+                    if (!ent->segment_relative) {
+                        fprintf(stderr,"segment base self relative\n");
+                        return -1;
+                    }
                 }
 
                 if (output_format == OFMT_COM) {
                     if (output_format_variant == OFMTVAR_COMREL) {
+                        if (pass == PASS_GATHER) {
+                            struct exe_relocation *reloc = new_exe_relocation();
+                            if (reloc == NULL) {
+                                fprintf(stderr,"Unable to allocate relocation\n");
+                                return -1;
+                            }
+
+                            assert(current_link_segment->fragments_read > 0);
+                            assert(current_link_segment->name != NULL);
+                            reloc->segname = strdup(current_link_segment->name);
+                            reloc->fragment = current_link_segment->fragments_read - 1u;
+                            reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
+
+                            if (verbose)
+                                fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
+                        }
+
+                        if (pass == PASS_BUILD) {
+                            *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                        }
+                    }
+                    else {
+                        fprintf(stderr,"segment base self-relative not supported for .COM\n");
+                        return -1;
+                    }
+                }
+                else if (output_format == OFMT_EXE) {
+                    /* emit as a relocation */
+                    if (pass == PASS_GATHER) {
                         struct exe_relocation *reloc = new_exe_relocation();
                         if (reloc == NULL) {
                             fprintf(stderr,"Unable to allocate relocation\n");
@@ -984,37 +1036,18 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         reloc->fragment = current_link_segment->fragments_read - 1u;
                         reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
 
-                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
-
                         if (verbose)
-                            fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
-                    }
-                    else {
-                        fprintf(stderr,"segment base self-relative not supported for .COM\n");
-                        return -1;
-                    }
-                }
-                else if (output_format == OFMT_EXE) {
-                    /* emit as a relocation */
-                    struct exe_relocation *reloc = new_exe_relocation();
-                    if (reloc == NULL) {
-                        fprintf(stderr,"Unable to allocate relocation\n");
-                        return -1;
+                            fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
                     }
 
-                    assert(current_link_segment->fragments_read > 0);
-                    assert(current_link_segment->name != NULL);
-                    reloc->segname = strdup(current_link_segment->name);
-                    reloc->fragment = current_link_segment->fragments_read - 1u;
-                    reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset;
-
-                    *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
-
-                    if (verbose)
-                        fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
+                    if (pass == PASS_BUILD) {
+                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                    }
                 }
                 else {
-                    *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                    if (pass == PASS_BUILD) {
+                        *((uint16_t*)ptr) += (uint16_t)targ_sdef->segment_relative;
+                    }
                 }
                 break;
             default:
