@@ -73,7 +73,8 @@ enum {
 
 enum {
     OFMT_COM=0,
-    OFMT_EXE
+    OFMT_EXE,
+    OFMT_DOSDRV
 };
 
 struct exe_relocation {
@@ -994,7 +995,7 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     }
                 }
 
-                if (output_format == OFMT_COM) {
+                if (output_format == OFMT_COM || output_format == OFMT_DOSDRV) {
                     if (output_format_variant == OFMTVAR_COMREL) {
                         if (pass == PASS_GATHER) {
                             struct exe_relocation *reloc = new_exe_relocation();
@@ -1277,6 +1278,7 @@ static void help(void) {
     fprintf(stderr,"                COM = flat COM executable\n");
     fprintf(stderr,"                COMREL = flat COM executable, relocatable\n");
     fprintf(stderr,"                EXE = segmented EXE executable\n");
+    fprintf(stderr,"                DOSDRV = flat MS-DOS driver (SYS)\n");
     fprintf(stderr,"  -v           Verbose mode\n");
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
     fprintf(stderr,"  -no-dosseg   No DOSSEG sort order\n");
@@ -1374,6 +1376,8 @@ int main(int argc,char **argv) {
                 }
                 else if (!strcmp(a,"exe"))
                     output_format = OFMT_EXE;
+                else if (!strcmp(a,"dosdrv"))
+                    output_format = OFMT_DOSDRV;
                 else {
                     fprintf(stderr,"Unknown format\n");
                     return 1;
@@ -1407,7 +1411,7 @@ int main(int argc,char **argv) {
         if (output_format == OFMT_COM) {
             com_segbase = 0x100;
         }
-        else if (output_format == OFMT_EXE) {
+        else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRV) {
             com_segbase = 0;
         }
     }
@@ -1708,8 +1712,16 @@ int main(int argc,char **argv) {
             owlink_stack_bss_arrange();
 
             /* entry point checkup */
-            if (entry_seg_link_target == NULL) {
-                fprintf(stderr,"WARNING: No entry point found\n");
+            if (output_format == OFMT_DOSDRV) {
+                /* MS-DOS device drivers do NOT have an entry point */
+                if (entry_seg_link_target != NULL) {
+                    fprintf(stderr,"WARNING: MS-DOS device drivers, flat format (.SYS) should not have entry point\n");
+                }
+            }
+            else {
+                if (entry_seg_link_target == NULL) {
+                    fprintf(stderr,"WARNING: No entry point found\n");
+                }
             }
 
             /* put segments in order, linear offset */
@@ -1772,7 +1784,9 @@ int main(int argc,char **argv) {
 
                 /* .COM format: if the entry point is nonzero, a JMP instruction
                  * must be inserted at the start to JMP to the entry point */
-                if (output_format == OFMT_EXE) {
+                if (output_format == OFMT_DOSDRV) {
+                }
+                else if (output_format == OFMT_EXE) {
                     /* EXE */
                     /* TODO: relocation table */
                     file_baseofs = 32;
@@ -1827,7 +1841,7 @@ int main(int argc,char **argv) {
                         fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
                                 inf,ofs,sd->segment_length);
 
-                    if (output_format == OFMT_COM || output_format == OFMT_EXE) {
+                    if (output_format == OFMT_COM || output_format == OFMT_EXE || output_format == OFMT_DOSDRV) {
                         if (sd->segment_length > 0x10000ul) {
                             dump_link_segments();
                             fprintf(stderr,"Segment too large >= 64KB\n");
@@ -1870,7 +1884,7 @@ int main(int argc,char **argv) {
                     }
                 }
             }
-            else if (output_format == OFMT_COM) {
+            else if (output_format == OFMT_COM || output_format == OFMT_DOSDRV) {
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
 
@@ -2335,6 +2349,8 @@ int main(int argc,char **argv) {
                     }
                 }
             }
+        }
+        else if (output_format == OFMT_DOSDRV) {
         }
         else {
             abort();
