@@ -2131,7 +2131,7 @@ int main(int argc,char **argv) {
                         else
                             *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
 
-//                        *((uint16_t*)(d+dosdrvrel_entry_point_JMP_ENTRY)) = old_init_ip - (init_ip + dosdrvrel_entry_point_JMP_ENTRY + 2);
+                        /* header handling will patch in mov DI fields later */
                     }
                     else {
                         uint8_t *d = (uint8_t*)(sg->image_ptr + po);
@@ -2470,6 +2470,45 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header) starts within segment '%s' which is not at the start of the file (offset 0x%lx)\n",
                     dosdrv_header_symbol,sym->segdef,segdef->linear_offset);
                 return 1;
+            }
+
+            if (output_format == OFMT_DOSDRV && output_format_variant == OFMTVAR_COMREL) {
+                unsigned char *hdr_p;
+                unsigned char *reloc_p;
+                struct link_segdef *rsegdef;
+                struct seg_fragment *rfrag;
+                struct link_symbol *rsym;
+                unsigned long rofs;
+
+                rsym = find_link_symbol("__COMREL_RELOC_ENTRY");
+                assert(rsym != NULL);
+                assert(rsym->segdef != NULL);
+
+                rsegdef = find_link_segment(rsym->segdef);
+                assert(rsegdef != NULL);
+
+                assert(rsegdef->fragments != NULL);
+                assert(rsegdef->fragments_count <= rsegdef->fragments_alloc);
+                assert(rsym->fragment < rsegdef->fragments_count);
+                rfrag = &rsegdef->fragments[rsym->fragment];
+
+                rofs = rsym->offset + rfrag->offset;
+
+                assert(rsegdef->image_ptr != NULL);
+                assert((rofs + sizeof(dosdrvrel_entry_point)) <= rsegdef->segment_length);
+
+                assert(segdef->image_ptr != NULL);
+                assert((ofs + 10) <= segdef->segment_length);
+
+                hdr_p = segdef->image_ptr + ofs;
+                reloc_p = rsegdef->image_ptr + rofs;
+
+                /* copy entry points (2) to the relocation parts of the ASM we inserted */
+                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_entry1)) = *((uint16_t*)(hdr_p + 0x06));
+                *((uint16_t*)(hdr_p + 0x06)) = rofs + dosdrvrel_entry_point_entry1 - 1;
+
+                *((uint16_t*)(reloc_p + dosdrvrel_entry_point_entry2)) = *((uint16_t*)(hdr_p + 0x08));
+                *((uint16_t*)(hdr_p + 0x08)) = rofs + dosdrvrel_entry_point_entry2 - 1;
             }
         }
         else {
