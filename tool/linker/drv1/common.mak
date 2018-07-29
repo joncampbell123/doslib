@@ -6,7 +6,8 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -zl -s
+CFLAGS_END = -zl -s -zl -q -zu -zdp -zff -zgf -zc -fpi87 -dNEAR_DRVVAR
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS)..
 NOW_BUILDING = TOOL_LINKER_EX1
 
 !ifdef TINYMODE
@@ -27,17 +28,15 @@ $(DOSLIBLINKER):
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
 .C.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $(CFLAGS_END) $[@
 	@$(CC) @tmp.cmd
-!ifdef TINYMODE
-	$(OMFSEGDG) -i $@ -o $@
-!endif
 
 .ASM.OBJ:
 	nasm -o $@ -f obj $(NASMFLAGS) $[@
-!ifdef TINYMODE
-	$(OMFSEGDG) -i $@ -o $@
-!endif
+
+dos86t/drvci.obj: drvci.c
+	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $(CFLAGS_END) -nt=_INITTEXT -nc=INITCODE $[@
+	@$(CC) @tmp.cmd
 
 all: $(OMFSEGDG) lib exe
 

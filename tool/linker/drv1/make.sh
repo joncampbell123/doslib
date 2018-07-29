@@ -4,7 +4,7 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
 #dos=1 # MS-DOS
-dostiny=1 # MS-DOS tiny model
+#dostiny=1 # MS-DOS tiny model
 #doshuge=1 # MS-DOS huge model
 #dospc98=1 # MS-DOS PC-98
 #win30=1 # Windows 3.0
@@ -31,7 +31,8 @@ if [ "$1" == "disk" ]; then
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
-    make_buildlist
+#    make_buildlist
+    build_list=dos86t
     begin_bat
 
     what=all
