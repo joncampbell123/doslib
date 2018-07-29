@@ -659,6 +659,19 @@ struct link_segdef *find_link_segment_by_grpdef(const char *name) {
     return NULL;
 }
 
+struct link_segdef *find_link_segment_by_class(const char *name) {
+    unsigned int i=0;
+
+    while (i < link_segments_count) {
+        struct link_segdef *sg = &link_segments[i++];
+
+        if (sg->classname == NULL) continue;
+        if (!strcmp(name,sg->classname)) return sg;
+    }
+
+    return NULL;
+}
+
 struct link_segdef *find_link_segment(const char *name) {
     unsigned int i=0;
 
@@ -1742,9 +1755,12 @@ int main(int argc,char **argv) {
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
                     struct link_segdef *gd = sd->groupname != NULL ? find_link_segment_by_grpdef(sd->groupname) : 0;
+                    struct link_segdef *cd = sd->classname != NULL ? find_link_segment_by_class(sd->classname) : 0;
 
                     if (gd != NULL)
                         segrel = gd->linear_offset >> 4ul;
+                    else if (cd != NULL)
+                        segrel = cd->linear_offset >> 4ul;
                     else
                         segrel = sd->linear_offset >> 4ul;
 
