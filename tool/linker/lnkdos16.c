@@ -2235,13 +2235,12 @@ int main(int argc,char **argv) {
                     fprintf(stderr,"EXE warning: An entry point is recommended even for MS-DOS EXE-type device drivers.\n");
                     fprintf(stderr,"             Normally such EXEs are intended to be both a runnable command and device\n");
                     fprintf(stderr,"             driver. One common example: EMM386.EXE. Please define an entry point to\n");
-                    fprintf(stderr,"             avoid this warning, even if a simple RET to exit normally.\n");
+                    fprintf(stderr,"             avoid this warning.\n");
                 }
                 else {
                     fprintf(stderr,"EXE warning: No entry point. Executable will likely crash executing\n");
                     fprintf(stderr,"             code or data at the start of the image. Please define\n");
-                    fprintf(stderr,"             an entry point routine (at minimum, a simple RET) to\n");
-                    fprintf(stderr,"             avoid that.\n");
+                    fprintf(stderr,"             an entry point routine to avoid that.\n");
                }
             }
 
