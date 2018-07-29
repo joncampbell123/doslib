@@ -1727,7 +1727,8 @@ int main(int argc,char **argv) {
             if (output_format == OFMT_DOSDRV) {
                 /* MS-DOS device drivers do NOT have an entry point */
                 if (entry_seg_link_target != NULL) {
-                    fprintf(stderr,"WARNING: MS-DOS device drivers, flat format (.SYS) should not have entry point\n");
+                    fprintf(stderr,"WARNING: MS-DOS device drivers, flat format (.SYS) should not have entry point.\n");
+                    fprintf(stderr,"         Entry point provided by input OBJs will be ignored.\n");
                 }
             }
             else {
