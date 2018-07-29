@@ -2218,8 +2218,15 @@ int main(int argc,char **argv) {
         else if (output_format == OFMT_COM) {
             /* .COM require JMP instruction */
             if (entry_seg_link_target != NULL && com_entry_insert > 0) {
-                unsigned long ofs = (entry_seg_link_target->linear_offset+entry_seg_ofs);
+                struct seg_fragment *frag;
                 unsigned char tmp[4];
+                unsigned long ofs;
+
+                assert(entry_seg_link_target->fragments != NULL);
+                assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
+                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+                ofs = (entry_seg_link_target->linear_offset+entry_seg_ofs+frag->offset);
 
                 assert(com_entry_insert < 4);
 
