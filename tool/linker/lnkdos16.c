@@ -1935,8 +1935,8 @@ int main(int argc,char **argv) {
 
                     assert(exe_relocation_table != NULL);
 
-                    assert(frag->fragment_length <= sg->segment_length);
-                    ro = sg->segment_length - frag->fragment_length;
+                    ro = frag->offset;
+                    assert((ro + frag->fragment_length) <= sg->segment_length);
 
                     sym = find_link_symbol("__COMREL_RELOC_TABLE");
                     if (sym != NULL) return 1;
@@ -1947,6 +1947,7 @@ int main(int argc,char **argv) {
                     sym->offset = ro;
 
                     po = ro + (exe_relocation_table_count * 2);
+                    assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
 
                     sym = find_link_symbol("__COMREL_RELOC_ENTRY");
                     if (sym != NULL) return 1;
@@ -1955,9 +1956,6 @@ int main(int argc,char **argv) {
                     sym->segdef = strdup("__COMREL_RELOC");
                     sym->fragment = sg->fragments_count-1;
                     sym->offset = po;
-
-                    /* check */
-                    assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
 
                     /* do it */
                     assert(sg->image_ptr != NULL);
