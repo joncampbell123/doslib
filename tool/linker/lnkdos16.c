@@ -469,7 +469,12 @@ void owlink_dosseg_sort_order(void) {
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_not_special);    /* 4 */
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_bss);            /* 5 */
     link_segments_sort(&s,&e,sort_cmp_dgroup_class_stack);          /* 6 */
+}
 
+void owlink_stack_bss_arrange(void) {
+    unsigned int s = 0,e = link_segments_count - 1u;
+
+    if (link_segments_count == 0) return;
     if (output_format == OFMT_COM || output_format == OFMT_EXE) {
         /* STACK and BSS must be placed at the end in BSS, STACK order */
         e = link_segments_count - 1u;
@@ -1625,6 +1630,8 @@ int main(int argc,char **argv) {
 
             if (do_dosseg)
                 owlink_dosseg_sort_order();
+
+            owlink_stack_bss_arrange();
 
             /* entry point checkup */
             if (entry_seg_link_target == NULL) {
