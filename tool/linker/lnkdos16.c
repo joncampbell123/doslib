@@ -1096,6 +1096,76 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     }
                 }
                 break;
+            case OMF_FIXUPP_LOCATION_16BIT_SEGMENT_OFFSET: /* 16-bit segment:offset */
+                if (pass == PASS_BUILD) {
+                    assert((ptr+4) <= fence);
+
+                    if (!ent->segment_relative) {
+                        fprintf(stderr,"segment base self relative\n");
+                        return -1;
+                    }
+                }
+
+                if (output_format == OFMT_COM || output_format == OFMT_DOSDRV) {
+                    if (output_format_variant == OFMTVAR_COMREL) {
+                        if (pass == PASS_GATHER) {
+                            struct exe_relocation *reloc = new_exe_relocation();
+                            if (reloc == NULL) {
+                                fprintf(stderr,"Unable to allocate relocation\n");
+                                return -1;
+                            }
+
+                            assert(current_link_segment->fragments_read > 0);
+                            assert(current_link_segment->name != NULL);
+                            reloc->segname = strdup(current_link_segment->name);
+                            reloc->fragment = current_link_segment->fragments_read - 1u;
+                            reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
+
+                            if (verbose)
+                                fprintf(stderr,"COM relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
+                        }
+
+                        if (pass == PASS_BUILD) {
+                            *((uint16_t*)ptr) += (uint16_t)final_ofs;
+                            *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative;
+                        }
+                    }
+                    else {
+                        fprintf(stderr,"segment base self-relative not supported for .COM\n");
+                        return -1;
+                    }
+                }
+                else if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+                    /* emit as a relocation */
+                    if (pass == PASS_GATHER) {
+                        struct exe_relocation *reloc = new_exe_relocation();
+                        if (reloc == NULL) {
+                            fprintf(stderr,"Unable to allocate relocation\n");
+                            return -1;
+                        }
+
+                        assert(current_link_segment->fragments_read > 0);
+                        assert(current_link_segment->name != NULL);
+                        reloc->segname = strdup(current_link_segment->name);
+                        reloc->fragment = current_link_segment->fragments_read - 1u;
+                        reloc->offset = ent->omf_rec_file_enoffs + ent->data_record_offset + 2u;
+
+                        if (verbose)
+                            fprintf(stderr,"EXE relocation entry: Patch up %s:%u:%04lx\n",reloc->segname,reloc->fragment,reloc->offset);
+                    }
+
+                    if (pass == PASS_BUILD) {
+                        *((uint16_t*)ptr) += (uint16_t)final_ofs;
+                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative;
+                    }
+                }
+                else {
+                    if (pass == PASS_BUILD) {
+                        *((uint16_t*)ptr) += (uint16_t)final_ofs;
+                        *((uint16_t*)(ptr+2)) += (uint16_t)targ_sdef->segment_relative;
+                    }
+                }
+                break;
             default:
                 fprintf(stderr,"Unsupported fixup\n");
                 return -1;
