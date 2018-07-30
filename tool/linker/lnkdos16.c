@@ -700,31 +700,57 @@ void dump_link_symbols(void) {
 void dump_link_segments(void) {
     unsigned int i=0,f;
 
+    if (map_fp != NULL) {
+        fprintf(map_fp,"\n");
+        fprintf(map_fp,"Segment table: %u entries\n",(unsigned int)link_segments_count);
+        fprintf(map_fp,"---------------------------------------\n");
+    }
+
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
 
-        fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u\n",
-            i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
-            sg->attr.f.f.use32,
-            sg->attr.f.f.combination,
-            sg->attr.f.f.big_segment,
-            sg->file_offset,
-            sg->linear_offset,
-            sg->segment_base,
-            sg->segment_offset,
-            sg->segment_length,
-            sg->segment_relative,
-            sg->initial_alignment);
+        if (verbose) {
+            fprintf(stderr,"segment[%u]: name='%s' class='%s' group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u\n",
+                    i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
+                    sg->attr.f.f.use32,
+                    sg->attr.f.f.combination,
+                    sg->attr.f.f.big_segment,
+                    sg->file_offset,
+                    sg->linear_offset,
+                    sg->segment_base,
+                    sg->segment_offset,
+                    sg->segment_length,
+                    sg->segment_relative,
+                    sg->initial_alignment);
+        }
+
+        if (map_fp != NULL) {
+            fprintf(map_fp,"  [use%02u] %-16s %-16s %-16s %04lx:%08lx-%08lx base=0x%04lx align=%u\n",
+                sg->attr.f.f.use32?32:16,
+                sg->name?sg->name:"",
+                sg->classname?sg->classname:"",
+                sg->groupname?sg->groupname:"",
+                sg->segment_relative,
+                sg->segment_offset,
+                sg->segment_offset+sg->segment_length-1u,
+                sg->segment_base,
+                sg->initial_alignment);
+        }
 
         if (sg->fragments != NULL) {
             for (f=0;f < sg->fragments_count;f++) {
                 struct seg_fragment *frag = &sg->fragments[f];
 
-                fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx segidx=%u\n",
-                    f,in_file[frag->in_file],frag->in_module,frag->offset,frag->fragment_length,frag->segidx);
+                if (verbose) {
+                    fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx segidx=%u\n",
+                            f,in_file[frag->in_file],frag->in_module,frag->offset,frag->fragment_length,frag->segidx);
+                }
             }
         }
     }
+
+    if (map_fp != NULL)
+        fprintf(map_fp,"\n");
 }
 
 struct link_segdef *find_link_segment_by_grpdef(const char *name) {
@@ -2326,8 +2352,9 @@ int main(int argc,char **argv) {
 
     if (verbose) {
         dump_link_symbols();
-        dump_link_segments();
     }
+
+    dump_link_segments();
 
     /* write output */
     assert(out_file != NULL);
