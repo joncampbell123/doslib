@@ -2433,6 +2433,19 @@ int main(int argc,char **argv) {
             assert(sg->image_ptr != NULL);
             assert(sg->segment_length >= com_entry_insert);
 
+            if (sg->segment_relative != 0) {
+                fprintf(stderr,"__COM_ENTRY_JMP nonzero segment relative 0x%lx\n",sg->segment_relative);
+                return 1;
+            }
+            if (sg->segment_base != com_segbase) {
+                fprintf(stderr,"__COM_ENTRY_JMP incorrect segment base 0x%lx\n",sg->segment_base);
+                return 1;
+            }
+            if (sg->segment_offset != sg->segment_base) {
+                fprintf(stderr,"__COM_ENTRY_JMP segment offset is not start of file, 0x%lx\n",sg->segment_offset);
+                return 1;
+            }
+
             assert(entry_seg_link_target->fragments != NULL);
             assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
             frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
