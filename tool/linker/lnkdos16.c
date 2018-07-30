@@ -16,6 +16,10 @@
 #include <fmt/omf/omf.h>
 #include <fmt/omf/omfcstr.h>
 
+#if defined(_MSC_VER)
+# define strcasecmp strcmpi
+#endif
+
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
@@ -709,7 +713,7 @@ int link_symbol_qsort_cmp_by_name(const void *a,const void *b) {
     assert(sa->name != NULL);
     assert(sb->name != NULL);
 
-    return strcmp(sa->name,sb->name);
+    return strcasecmp(sa->name,sb->name);
 }
 
 int link_symbol_qsort_cmp(const void *a,const void *b) {
