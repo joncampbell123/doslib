@@ -2550,6 +2550,31 @@ int main(int argc,char **argv) {
                             fprintf(stderr,"New entry IP=0x%lx\n",init_ip);
                         }
 
+                        if (map_fp != NULL) {
+                            fprintf(map_fp,"\n");
+                            fprintf(map_fp,"Entry point prior to replacement by relocation code:\n");
+                            fprintf(map_fp,"---------------------------------------\n");
+
+                            if (entry_seg_link_target != NULL) {
+                                struct seg_fragment *frag;
+
+                                assert(entry_seg_link_target->fragments != NULL);
+                                assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
+
+                                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+                                fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s':%u\n",
+                                        entry_seg_link_target->segment_relative&0xfffful,
+                                        entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
+                                        entry_seg_link_target->name,
+                                        frag->offset + entry_seg_ofs,
+                                        get_in_file(frag->in_file),frag->in_module);
+
+                            }
+
+                            fprintf(map_fp,"\n");
+                        }
+
                         assert((d+sizeof(comrel_entry_point)) <= f);
                         memcpy(d,comrel_entry_point,sizeof(comrel_entry_point));
 
