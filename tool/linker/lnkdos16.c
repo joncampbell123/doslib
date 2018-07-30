@@ -2273,12 +2273,13 @@ int main(int argc,char **argv) {
                     if (tsg != NULL) {
                         sym->segdef = strdup("__COMREL_RELOCTBL");
                         sym->fragment = tsg->fragments_count-1;
+                        sym->offset = ro - tfrag->offset;
                     }
                     else {
                         sym->segdef = strdup("__COMREL_RELOC");
                         sym->fragment = sg->fragments_count-1;
+                        sym->offset = ro - frag->offset;
                     }
-                    sym->offset = ro;
 
                     sym = find_link_symbol("__COMREL_RELOC_ENTRY");
                     if (sym != NULL) return 1;
@@ -2286,7 +2287,7 @@ int main(int argc,char **argv) {
                     sym->groupdef = strdup("DGROUP");
                     sym->segdef = strdup("__COMREL_RELOC");
                     sym->fragment = sg->fragments_count-1;
-                    sym->offset = po;
+                    sym->offset = po - frag->offset;
 
                     /* do it */
                     assert(sg->image_ptr != NULL);
