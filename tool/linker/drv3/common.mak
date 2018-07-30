@@ -70,7 +70,7 @@ drva.asm:
 
 drva2.asm:
 	../../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy --no-stack --no-stub --int-stub-far
-	echo "group DGROUP _END _BEGIN _TEXT _DATA" >>$@
+	echo "group DGROUP _END _BEGIN _DATA" >>$@
 
 !ifdef TEST_SYS
 $(TEST_SYS): $(DRVA) $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj

@@ -64,4 +64,4 @@ section _BEGIN class=INITBEGIN
 global _dosdrv_initbegin
 _dosdrv_initbegin:
 
-group DGROUP _END _BEGIN _TEXT _DATA
+group DGROUP _END _BEGIN _DATA
