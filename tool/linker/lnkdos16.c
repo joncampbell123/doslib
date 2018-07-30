@@ -774,11 +774,12 @@ void dump_link_symbols(void) {
             assert(sym->fragment < sg->fragments_count);
             frag = &sg->fragments[sym->fragment];
 
-            fprintf(map_fp,"  %-32s %c %04lx:%08lx %20s + 0x%08lx from '%s':%u\n",
+            fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
                 sym->name,
                 sym->is_local?'L':'G',
                 sg->segment_relative,
                 sg->segment_offset + frag->offset + sym->offset,
+                sg->linear_offset + frag->offset + sym->offset,
                 sym->segdef,
                 frag->offset + sym->offset,
                 in_file[sym->in_file],
@@ -818,7 +819,7 @@ void dump_link_segments(void) {
         }
 
         if (map_fp != NULL) {
-            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%08lx-%08lx base=0x%04lx align=%u\n",
+            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%08lx-%08lx [0x%08lx-0x%08lx] base=0x%04lx align=%u\n",
                 sg->attr.f.f.use32?32:16,
                 sg->name?sg->name:"",
                 sg->classname?sg->classname:"",
@@ -826,6 +827,8 @@ void dump_link_segments(void) {
                 sg->segment_relative,
                 sg->segment_offset,
                 sg->segment_offset+sg->segment_length-1u,
+                sg->linear_offset,
+                sg->linear_offset+sg->segment_length-1u,
                 sg->segment_base,
                 sg->initial_alignment);
         }
@@ -840,12 +843,14 @@ void dump_link_segments(void) {
                 }
 
                 if (map_fp != NULL) {
-                    fprintf(map_fp,"          %-20s %-20s %-20s      %08lx-%08lx   from '%s':%u\n",
+                    fprintf(map_fp,"          %-20s %-20s %-20s      %08lx-%08lx [0x%08lx-0x%08lx]   from '%s':%u\n",
                             "",
                             "",
                             "",
                             sg->segment_offset+frag->offset,
                             sg->segment_offset+frag->offset+frag->fragment_length-1u,
+                            sg->linear_offset+frag->offset,
+                            sg->linear_offset+frag->offset+frag->fragment_length-1u,
                             in_file[frag->in_file],frag->in_module);
                 }
             }
