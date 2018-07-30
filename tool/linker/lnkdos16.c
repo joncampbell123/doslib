@@ -334,6 +334,7 @@ struct link_segdef {
     unsigned int                        fragments_count;
     unsigned int                        fragments_alloc;
     unsigned int                        fragments_read;
+    unsigned char                       pinned;
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
@@ -526,6 +527,9 @@ int owlink_segsrt_def_qsort_cmp(const void *a,const void *b) {
     const char *cna,*cnb;
 //  const char *nna,*nnb;
     int ret = 0;
+
+    /* if either one is pinned, don't move */
+    if (sa->pinned || sb->pinned) return 0;
 
     /* sort by GROUP, CLASS, NAME */
     gna = sa->groupname ? sa->groupname : "";
@@ -1678,6 +1682,20 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    if (output_format == OFMT_COM) {
+        struct link_segdef *sg;
+
+        sg = find_link_segment("__COM_ENTRY_JMP");
+        if (sg != NULL) return 1;
+
+        sg = new_link_segment("__COM_ENTRY_JMP");
+        if (sg == NULL) return 1;
+
+        sg->classname = strdup("CODE");
+        sg->initial_alignment = 1;
+        sg->pinned = 1;
+    }
+
     for (pass=0;pass < PASS_MAX;pass++) {
         for (inf=0;inf < in_file_count;inf++) {
             assert(in_file[inf] != NULL);
@@ -2050,11 +2068,17 @@ int main(int argc,char **argv) {
                     file_baseofs = 32;
                 }
                 else if (output_format == OFMT_COM) {
+                    struct link_segdef *sg;
+
+                    sg = find_link_segment("__COM_ENTRY_JMP");
+                    assert(sg != NULL);
+                    assert(sg->segment_length == 0);
+
                     /* COM relocatable */
                     if (output_format_variant == OFMTVAR_COMREL) {
                         /* always make room */
                         com_entry_insert = 3;
-                        ofs += com_entry_insert;
+                        sg->segment_length = com_entry_insert;
 
                         if (verbose)
                             fprintf(stderr,"Entry point needed for relocateable .COM\n");
@@ -2079,7 +2103,7 @@ int main(int argc,char **argv) {
                             else
                                 com_entry_insert = 2;
 
-                            ofs += com_entry_insert;
+                            sg->segment_length = com_entry_insert;
                         }
                     }
                 }
@@ -2394,6 +2418,48 @@ int main(int argc,char **argv) {
             }
         }
     }
+ 
+    if (output_format == OFMT_COM) {
+        struct link_segdef *sg;
+
+        sg = find_link_segment("__COM_ENTRY_JMP");
+        assert(sg != NULL);
+
+        /* .COM require JMP instruction */
+        if (entry_seg_link_target != NULL && com_entry_insert > 0) {
+            struct seg_fragment *frag;
+            unsigned long ofs;
+
+            assert(sg->image_ptr != NULL);
+            assert(sg->segment_length >= com_entry_insert);
+
+            assert(entry_seg_link_target->fragments != NULL);
+            assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
+            frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+            ofs = (entry_seg_link_target->linear_offset+entry_seg_ofs+frag->offset);
+
+            assert(com_entry_insert < 4);
+
+            /* TODO: Some segments, like BSS or STACK, do not get emitted to disk.
+             *       Except that in the COM format, segments can only be omitted
+             *       from the end of the image. */
+
+            if (com_entry_insert == 3) {
+                assert(ofs <= (0xFFFFu - 3u));
+                sg->image_ptr[0] = 0xE9; /* JMP near */
+                *((uint16_t*)(sg->image_ptr+1)) = (uint16_t)ofs - 3;
+            }
+            else if (com_entry_insert == 2) {
+                assert(ofs <= (0xFFu + 2u));
+                sg->image_ptr[0] = 0xEB; /* JMP short */
+                sg->image_ptr[1] = (unsigned char)ofs - 2;
+            }
+            else {
+                abort();
+            }
+        }
+    }
 
     dump_link_relocations();
     dump_link_symbols();
@@ -2596,50 +2662,6 @@ int main(int argc,char **argv) {
                         *((uint16_t*)(tmp + 0)) = (uint16_t)roff;
                         *((uint16_t*)(tmp + 2)) = (uint16_t)rseg;
                         write(fd,tmp,4);
-                    }
-                }
-            }
-        }
-        if (output_format == OFMT_COM) {
-            /* .COM require JMP instruction */
-            if (entry_seg_link_target != NULL && com_entry_insert > 0) {
-                struct seg_fragment *frag;
-                unsigned char tmp[4];
-                unsigned long ofs;
-
-                assert(entry_seg_link_target->fragments != NULL);
-                assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
-                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
-
-                ofs = (entry_seg_link_target->linear_offset+entry_seg_ofs+frag->offset);
-
-                assert(com_entry_insert < 4);
-
-                /* TODO: Some segments, like BSS or STACK, do not get emitted to disk.
-                 *       Except that in the COM format, segments can only be omitted
-                 *       from the end of the image. */
-
-                if (ofs >= (unsigned long)com_entry_insert) {
-                    ofs -= (unsigned long)com_entry_insert;
-
-                    if (lseek(fd,0,SEEK_SET) == 0) {
-                        if (com_entry_insert == 3) {
-                            tmp[0] = 0xE9; /* JMP near */
-                            *((uint16_t*)(tmp+1)) = (uint16_t)ofs;
-                            if (write(fd,tmp,3) == 3) {
-                                /* good */
-                            }
-                        }
-                        else if (com_entry_insert == 2) {
-                            tmp[0] = 0xEB; /* JMP short */
-                            tmp[1] = (unsigned char)ofs;
-                            if (write(fd,tmp,2) == 2) {
-                                /* good */
-                            }
-                        }
-                        else {
-                            abort();
-                        }
                     }
                 }
             }
