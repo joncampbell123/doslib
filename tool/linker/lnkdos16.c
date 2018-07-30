@@ -2596,6 +2596,8 @@ int main(int argc,char **argv) {
     dump_link_symbols();
     dump_link_segments();
 
+    qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
+
     /* write output */
     assert(out_file != NULL);
     {
