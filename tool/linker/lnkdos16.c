@@ -671,7 +671,7 @@ void dump_link_relocations(void) {
             assert(rel->fragment < sg->fragments_count);
             frag = &sg->fragments[rel->fragment];
 
-            fprintf(map_fp,"  %04lx:%08lx %16s + 0x%08lx\n",
+            fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx\n",
                 sg->segment_relative,
                 sg->segment_offset + frag->offset + rel->offset,
                 rel->segname,frag->offset + rel->offset);
@@ -725,7 +725,7 @@ void dump_link_segments(void) {
         }
 
         if (map_fp != NULL) {
-            fprintf(map_fp,"  [use%02u] %-16s %-16s %-16s %04lx:%08lx-%08lx base=0x%04lx align=%u\n",
+            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%08lx-%08lx base=0x%04lx align=%u\n",
                 sg->attr.f.f.use32?32:16,
                 sg->name?sg->name:"",
                 sg->classname?sg->classname:"",
@@ -747,7 +747,7 @@ void dump_link_segments(void) {
                 }
 
                 if (map_fp != NULL) {
-                    fprintf(map_fp,"          %-16s %-16s %-16s      %08lx-%08lx   from '%s':%u\n",
+                    fprintf(map_fp,"          %-20s %-20s %-20s      %08lx-%08lx   from '%s':%u\n",
                             "",
                             "",
                             "",
@@ -2739,7 +2739,7 @@ int main(int argc,char **argv) {
 
             frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
-            fprintf(map_fp,"  %04lx:%08lx %16s + 0x%08lx\n",
+            fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx\n",
                 entry_seg_link_target->segment_relative,
                 entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
                 entry_seg_link_target->name,
