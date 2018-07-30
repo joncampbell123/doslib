@@ -747,7 +747,8 @@ void dump_link_symbols(void) {
         fprintf(map_fp,"---------------------------------------\n");
     }
 
-    qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
+    if (verbose || map_fp != NULL)
+        qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
 
     while (i < link_symbols_count) {
         struct link_symbol *sym = &link_symbols[i++];
