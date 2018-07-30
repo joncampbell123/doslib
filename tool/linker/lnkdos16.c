@@ -36,6 +36,8 @@ static char*                            dosdrv_header_symbol = "_dosdrv_header";
 
 static char*                            out_file = NULL;
 
+static char*                            map_file = NULL;
+
 static char*                            in_file[MAX_IN_FILES];
 static unsigned int                     in_file_count = 0;
 static unsigned int                     current_in_file = 0;
@@ -1394,6 +1396,7 @@ static void help(void) {
     fprintf(stderr,"lnkdos16 [options]\n");
     fprintf(stderr,"  -i <file>    OMF file to link\n");
     fprintf(stderr,"  -o <file>    Output file\n");
+    fprintf(stderr,"  -map <file>  Map/report file\n");
     fprintf(stderr,"  -of <fmt>    Output format (COM, EXE, COMREL)\n");
     fprintf(stderr,"                COM = flat COM executable\n");
     fprintf(stderr,"                COMREL = flat COM executable, relocatable\n");
@@ -1516,6 +1519,10 @@ int main(int argc,char **argv) {
                     fprintf(stderr,"Unknown format\n");
                     return 1;
                 }
+            }
+            else if (!strcmp(a,"map")) {
+                map_file = argv[i++];
+                if (map_file == NULL) return 1;
             }
             else if (!strcmp(a,"o")) {
                 out_file = argv[i++];
