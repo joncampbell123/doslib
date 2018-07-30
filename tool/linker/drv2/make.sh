@@ -19,7 +19,7 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 
 if [ "$1" == "clean" ]; then
     do_clean
-    rm -f win95.dsk
+    rm -f win95.dsk drva.asm drva2.asm
     rm -Rf linux-host
     exit 0
 fi

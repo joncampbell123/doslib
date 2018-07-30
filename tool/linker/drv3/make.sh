@@ -22,7 +22,7 @@ if [ "$1" == "clean" ]; then
     rm -f win95.dsk
     rm -f win95s.dsk
     rm -f win95r.dsk
-    rm -f win95rc.dsk
+    rm -f win95rc.dsk drva.asm drva2.asm
     rm -Rf linux-host
     exit 0
 fi
