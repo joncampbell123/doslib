@@ -686,6 +686,16 @@ void dump_link_relocations(void) {
         fprintf(map_fp,"\n");
 }
 
+int link_symbol_qsort_cmp_by_name(const void *a,const void *b) {
+    const struct link_symbol *sa = (const struct link_symbol*)a;
+    const struct link_symbol *sb = (const struct link_symbol*)b;
+
+    assert(sa->name != NULL);
+    assert(sb->name != NULL);
+
+    return strcmp(sa->name,sb->name);
+}
+
 int link_symbol_qsort_cmp(const void *a,const void *b) {
     const struct link_symbol *sa = (const struct link_symbol*)a;
     const struct seg_fragment *fraga;
@@ -737,58 +747,66 @@ int link_symbol_qsort_cmp(const void *a,const void *b) {
 }
 
 void dump_link_symbols(void) {
-    unsigned int i=0;
+    unsigned int i,pass=0,passes=1;
 
     if (link_symbols == NULL) return;
 
-    if (map_fp != NULL) {
-        fprintf(map_fp,"\n");
-        fprintf(map_fp,"Symbol table: %u entries\n",(unsigned int)link_symbols_count);
-        fprintf(map_fp,"---------------------------------------\n");
-    }
+    if (map_fp != NULL)
+        passes = 2;
 
-    if (verbose || map_fp != NULL)
-        qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
-
-    while (i < link_symbols_count) {
-        struct link_symbol *sym = &link_symbols[i++];
-        if (sym->name == NULL) continue;
-
-        if (verbose) {
-            fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u\n",
-                    i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
-                    in_file[sym->in_file],sym->in_module,sym->is_local);
-        }
+    for (pass=0;pass < passes;pass++) {
+        i = 0;
 
         if (map_fp != NULL) {
-            struct seg_fragment *frag;
-            struct link_segdef *sg;
-
-            assert(sym->segdef != NULL);
-
-            sg = find_link_segment(sym->segdef);
-            assert(sg != NULL);
-
-            assert(sg->fragments != NULL);
-            assert(sg->fragments_count <= sg->fragments_alloc);
-            assert(sym->fragment < sg->fragments_count);
-            frag = &sg->fragments[sym->fragment];
-
-            fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
-                sym->name,
-                sym->is_local?'L':'G',
-                sg->segment_relative,
-                sg->segment_offset + frag->offset + sym->offset,
-                sg->linear_offset + frag->offset + sym->offset,
-                sym->segdef,
-                frag->offset + sym->offset,
-                in_file[sym->in_file],
-                sym->in_module);
+            fprintf(map_fp,"\n");
+            fprintf(map_fp,"Symbol table %s: %u entries\n",pass == 1 ? "by name" : "by address",(unsigned int)link_symbols_count);
+            fprintf(map_fp,"---------------------------------------\n");
         }
-    }
 
-    if (map_fp != NULL)
-        fprintf(map_fp,"\n");
+        if (verbose || map_fp != NULL)
+            qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol),
+                pass == 1 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
+
+        while (i < link_symbols_count) {
+            struct link_symbol *sym = &link_symbols[i++];
+            if (sym->name == NULL) continue;
+
+            if (verbose) {
+                fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u\n",
+                        i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
+                        in_file[sym->in_file],sym->in_module,sym->is_local);
+            }
+
+            if (map_fp != NULL) {
+                struct seg_fragment *frag;
+                struct link_segdef *sg;
+
+                assert(sym->segdef != NULL);
+
+                sg = find_link_segment(sym->segdef);
+                assert(sg != NULL);
+
+                assert(sg->fragments != NULL);
+                assert(sg->fragments_count <= sg->fragments_alloc);
+                assert(sym->fragment < sg->fragments_count);
+                frag = &sg->fragments[sym->fragment];
+
+                fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
+                        sym->name,
+                        sym->is_local?'L':'G',
+                        sg->segment_relative,
+                        sg->segment_offset + frag->offset + sym->offset,
+                        sg->linear_offset + frag->offset + sym->offset,
+                        sym->segdef,
+                        frag->offset + sym->offset,
+                        in_file[sym->in_file],
+                        sym->in_module);
+            }
+        }
+
+        if (map_fp != NULL)
+            fprintf(map_fp,"\n");
+    }
 }
 
 void dump_link_segments(void) {
