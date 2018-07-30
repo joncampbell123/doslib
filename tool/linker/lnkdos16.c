@@ -2920,7 +2920,12 @@ int main(int argc,char **argv) {
         fprintf(map_fp,"---------------------------------------\n");
 
         if (entry_seg_link_target != NULL) {
+            unsigned int symi = 0,fsymi = ~0u;
+            unsigned long sofs,cofs;
+            struct link_symbol *sym;
             struct seg_fragment *frag;
+            struct seg_fragment *sfrag;
+            struct link_segdef *ssg;
 
             assert(entry_seg_link_target->fragments != NULL);
             assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
@@ -2933,6 +2938,49 @@ int main(int argc,char **argv) {
                 entry_seg_link_target->name,
                 frag->offset + entry_seg_ofs,
                 in_file[frag->in_file],frag->in_module);
+
+            while (symi < link_symbols_count) {
+                sym = &link_symbols[symi++];
+
+                assert(sym->segdef != NULL);
+                if (strcmp(sym->segdef, entry_seg_link_target->name)) continue;
+
+                ssg = find_link_segment(sym->segdef);
+                assert(ssg != NULL);
+
+                assert(ssg->fragments != NULL);
+                assert(ssg->fragments_count <= ssg->fragments_alloc);
+                assert(sym->fragment < ssg->fragments_count);
+
+                sfrag = &ssg->fragments[sym->fragment];
+
+                sofs = ssg->segment_offset + sfrag->offset + sym->offset;
+                cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
+
+                if (sofs > cofs) break;
+                else fsymi = symi - 1u;
+            }
+
+            if (fsymi != (~0u)) {
+                sym = &link_symbols[fsymi];
+
+                assert(sym->segdef != NULL);
+                assert(strcmp(sym->segdef, entry_seg_link_target->name) == 0);
+
+                ssg = find_link_segment(sym->segdef);
+                assert(ssg != NULL);
+
+                assert(ssg->fragments != NULL);
+                assert(ssg->fragments_count <= ssg->fragments_alloc);
+                assert(sym->fragment < ssg->fragments_count);
+
+                sfrag = &ssg->fragments[sym->fragment];
+
+                sofs = ssg->segment_offset + sfrag->offset + sym->offset;
+                cofs = entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs;
+
+                fprintf(map_fp,"    %s + 0x%08lx\n",sym->name,cofs - sofs);
+            }
         }
         else {
             fprintf(map_fp,"  No entry point defined\n");
