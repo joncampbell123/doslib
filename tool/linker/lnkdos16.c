@@ -676,7 +676,7 @@ void dump_link_relocations(void) {
             frag = &sg->fragments[rel->fragment];
 
             fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx\n",
-                sg->segment_relative,
+                sg->segment_relative&0xfffful,
                 sg->segment_offset + frag->offset + rel->offset,
                 rel->segname,frag->offset + rel->offset);
         }
@@ -794,7 +794,7 @@ void dump_link_symbols(void) {
                 fprintf(map_fp,"  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u\n",
                         sym->name,
                         sym->is_local?'L':'G',
-                        sg->segment_relative,
+                        sg->segment_relative&0xfffful,
                         sg->segment_offset + frag->offset + sym->offset,
                         sg->linear_offset + frag->offset + sym->offset,
                         sym->segdef,
@@ -857,7 +857,7 @@ void dump_link_segments(void) {
                 sg->name?sg->name:"",
                 sg->classname?sg->classname:"",
                 sg->groupname?sg->groupname:"",
-                sg->segment_relative,
+                sg->segment_relative&0xfffful,
                 range1,
                 range2,
                 sg->segment_base,
@@ -2926,7 +2926,7 @@ int main(int argc,char **argv) {
             frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
             fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx\n",
-                entry_seg_link_target->segment_relative,
+                entry_seg_link_target->segment_relative&0xfffful,
                 entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
                 entry_seg_link_target->name,
                 frag->offset + entry_seg_ofs);
