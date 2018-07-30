@@ -45,6 +45,9 @@ static unsigned int                     current_in_file = 0;
 static unsigned int                     current_in_mod = 0;
 
 const char *get_in_file(unsigned int idx) {
+    if (idx >= 0xFFFFu)
+        return "<internal>";
+
     if (idx < MAX_IN_FILES) {
         if (in_file[idx] != NULL)
             return in_file[idx];
@@ -273,6 +276,8 @@ struct link_symbol *new_link_symbol(const char *name) {
         assert(sym->groupdef == NULL);
 
         sym->name = strdup(name);
+
+        sym->in_file = (unsigned short)(~0u);
     }
 
     return sym;
@@ -609,6 +614,7 @@ struct seg_fragment *alloc_link_segment_fragment(struct link_segdef *sg) {
     {
         struct seg_fragment *f = &sg->fragments[sg->fragments_count++];
         sg->fragments_read = sg->fragments_count;
+        f->in_file = (unsigned short)(~0u);
         return f;
     }
 }
