@@ -673,7 +673,7 @@ void dump_link_relocations(void) {
 
             fprintf(map_fp,"  %04lx:%08lx %16s + 0x%08lx\n",
                 sg->segment_relative,
-                sg->segment_base + frag->offset + rel->offset,
+                sg->segment_offset + frag->offset + rel->offset,
                 rel->segname,frag->offset + rel->offset);
         }
     }
