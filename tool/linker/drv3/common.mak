@@ -69,7 +69,7 @@ drva.asm:
 	echo "group DGROUP _END _BEGIN _TEXT _DATA" >>$@
 
 drva2.asm:
-	../../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy --no-stack --no-stub --int-stub
+	../../../hw/dos/devhdgen.pl --asm $@ --name "hello$$" --type c --c-openclose --c-out-busy --no-stack --no-stub --int-stub-far
 	echo "group DGROUP _END _BEGIN _TEXT _DATA" >>$@
 
 !ifdef TEST_SYS

@@ -3,7 +3,7 @@ bits 16          ; 16-bit real mode
 
 section _TEXT class=CODE
 
-extern dosdrv_interrupt_near_           ; <- watcall
+extern dosdrv_interrupt_far_            ; <- watcall
 
 global _dosdrv_header
 global _dosdrv_req_ptr
@@ -42,7 +42,7 @@ dosdrv_interrupt_stub_:
         push    ds
         mov     ax,seg _dosdrv_req_ptr
         mov     ds,ax
-        call    dosdrv_interrupt_near_
+        call far dosdrv_interrupt_far_
         pop     ds
         pop     ax
         retf
