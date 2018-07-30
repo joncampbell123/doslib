@@ -686,6 +686,56 @@ void dump_link_relocations(void) {
         fprintf(map_fp,"\n");
 }
 
+int link_symbol_qsort_cmp(const void *a,const void *b) {
+    const struct link_symbol *sa = (const struct link_symbol*)a;
+    const struct seg_fragment *fraga;
+    const struct link_segdef *sga;
+
+    const struct link_symbol *sb = (const struct link_symbol*)b;
+    struct seg_fragment *fragb;
+    struct link_segdef *sgb;
+
+    unsigned long la,lb;
+
+    /* -----A----- */
+    assert(sa->segdef != NULL);
+
+    sga = find_link_segment(sa->segdef);
+    assert(sga != NULL);
+
+    assert(sga->fragments != NULL);
+    assert(sga->fragments_count <= sga->fragments_alloc);
+    assert(sa->fragment < sga->fragments_count);
+    fraga = &sga->fragments[sa->fragment];
+
+    /* -----B----- */
+    assert(sb->segdef != NULL);
+
+    sgb = find_link_segment(sb->segdef);
+    assert(sgb != NULL);
+
+    assert(sgb->fragments != NULL);
+    assert(sgb->fragments_count <= sgb->fragments_alloc);
+    assert(sb->fragment < sgb->fragments_count);
+    fragb = &sgb->fragments[sb->fragment];
+
+    /* segment */
+    la = sga->segment_relative;
+    lb = sgb->segment_relative;
+
+    if (la < lb) return -1;
+    if (la > lb) return 1;
+
+    /* offset */
+    la = sga->segment_offset + fraga->offset + sa->offset;
+    lb = sgb->segment_offset + fragb->offset + sb->offset;
+
+    if (la < lb) return -1;
+    if (la > lb) return 1;
+
+    return 0;
+}
+
 void dump_link_symbols(void) {
     unsigned int i=0;
 
@@ -696,6 +746,8 @@ void dump_link_symbols(void) {
         fprintf(map_fp,"Symbol table: %u entries\n",(unsigned int)link_symbols_count);
         fprintf(map_fp,"---------------------------------------\n");
     }
+
+    qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol), link_symbol_qsort_cmp);
 
     while (i < link_symbols_count) {
         struct link_symbol *sym = &link_symbols[i++];
