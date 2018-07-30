@@ -58,22 +58,22 @@ $(TESTW_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
 
 !ifdef TEST_EXE
 $(TEST_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)entry.obj -o $(TEST_EXE) $(DOSLIBLINKER_OFMT)
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)entry.obj -o $(TEST_EXE) $(DOSLIBLINKER_OFMT) -map $(TEST_EXE).map
 !endif
 
 !ifdef TESTF_EXE
 $(TESTF_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)entry.obj -o $(TESTF_EXE) $(DOSLIBLINKER_OFMT) -pflat
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)entry.obj -o $(TESTF_EXE) $(DOSLIBLINKER_OFMT) -pflat -map $(TESTF_EXE).map
 !endif
 
 !ifdef TESTFF_EXE
 $(TESTFF_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TESTFF_EXE) $(DOSLIBLINKER_OFMT) -pflat -com100
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TESTFF_EXE) $(DOSLIBLINKER_OFMT) -pflat -com100 -map $(TESTFF_EXE).map
 !endif
 
 !ifdef TESTFC_EXE
 $(TESTFC_EXE): $(SUBDIR)$(HPS)entry2.obj $(SUBDIR)$(HPS)drvc.obj
-	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TESTFC_EXE) -of comrel -pflat
+	$(DOSLIBLINKER) -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)entry2.obj -o $(TESTFC_EXE) -of comrel -pflat -map $(TESTFC_EXE).map
 !endif
 
 clean: .SYMBOLIC

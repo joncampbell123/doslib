@@ -74,12 +74,12 @@ drva2.asm:
 
 !ifdef TEST_SYS
 $(TEST_SYS): $(DRVA) $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
-	$(DOSLIBLINKER) -i $(DRVA) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) $(DOSLINKFMT)
+	$(DOSLIBLINKER) -i $(DRVA) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST_SYS) $(DOSLINKFMT) -map $(TEST_SYS).map
 !endif
 
 !ifdef TEST2_SYS
 $(TEST2_SYS): $(DRVA) $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj $(SUBDIR)$(HPS)drvci.obj
-	$(DOSLIBLINKER) -i $(DRVA) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST2_SYS) $(DOSLINKFMT2)
+	$(DOSLIBLINKER) -i $(DRVA) -i $(SUBDIR)$(HPS)entry.obj -i $(SUBDIR)$(HPS)drvc.obj -i $(SUBDIR)$(HPS)drvci.obj -o $(TEST2_SYS) $(DOSLINKFMT2) -map $(TEST2_SYS).map
 !endif
 
 clean: .SYMBOLIC
