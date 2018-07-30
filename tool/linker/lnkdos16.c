@@ -37,6 +37,7 @@ static char*                            dosdrv_header_symbol = "_dosdrv_header";
 static char*                            out_file = NULL;
 
 static char*                            map_file = NULL;
+static FILE*                            map_fp = NULL;
 
 static char*                            in_file[MAX_IN_FILES];
 static unsigned int                     in_file_count = 0;
@@ -640,13 +641,45 @@ void dump_link_relocations(void) {
 
     if (exe_relocation_table == NULL) return;
 
+    if (map_fp != NULL) {
+        fprintf(map_fp,"\n");
+        fprintf(map_fp,"Relocation table: %u entries\n",(unsigned int)exe_relocation_table_count);
+        fprintf(map_fp,"---------------------------------------\n");
+    }
+
     while (i < exe_relocation_table_count) {
         struct exe_relocation *rel = &exe_relocation_table[i++];
 
         assert(rel->segname != NULL);
-        fprintf(stderr,"relocation[%u]: seg='%s' frag=%u offset=0x%lx\n",
-            i,rel->segname,rel->fragment,rel->offset);
+
+        if (verbose) {
+            fprintf(stderr,"relocation[%u]: seg='%s' frag=%u offset=0x%lx\n",
+                i,rel->segname,rel->fragment,rel->offset);
+        }
+
+        if (map_fp != NULL) {
+            struct seg_fragment *frag;
+            struct link_segdef *sg;
+
+            assert(rel->segname != NULL);
+
+            sg = find_link_segment(rel->segname);
+            assert(sg != NULL);
+
+            assert(sg->fragments != NULL);
+            assert(sg->fragments_count <= sg->fragments_alloc);
+            assert(rel->fragment < sg->fragments_count);
+            frag = &sg->fragments[rel->fragment];
+
+            fprintf(map_fp,"  %04lx:%08lx %16s + 0x%08lx\n",
+                sg->segment_relative,
+                sg->segment_base + frag->offset + rel->offset,
+                rel->segname,frag->offset + rel->offset);
+        }
     }
+
+    if (map_fp != NULL)
+        fprintf(map_fp,"\n");
 }
 
 void dump_link_symbols(void) {
@@ -1557,6 +1590,12 @@ int main(int argc,char **argv) {
         }
     }
 
+    if (map_file != NULL) {
+        map_fp = fopen(map_file,"w");
+        if (map_fp == NULL) return 1;
+        setbuf(map_fp,NULL);
+    }
+
     if (in_file_count == 0) {
         help();
         return 1;
@@ -2283,8 +2322,9 @@ int main(int argc,char **argv) {
         }
     }
 
+    dump_link_relocations();
+
     if (verbose) {
-        dump_link_relocations();
         dump_link_symbols();
         dump_link_segments();
     }
@@ -2651,6 +2691,11 @@ int main(int argc,char **argv) {
 
     cstr_free(&entry_seg_link_target_name);
     cstr_free(&entry_seg_link_frame_name);
+
+    if (map_fp != NULL) {
+        fclose(map_fp);
+        map_fp = NULL;
+    }
 
     link_symbols_free();
     free_link_segments();
