@@ -2925,11 +2925,12 @@ int main(int argc,char **argv) {
 
             frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
 
-            fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx\n",
+            fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx '%s':%u\n",
                 entry_seg_link_target->segment_relative&0xfffful,
                 entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
                 entry_seg_link_target->name,
-                frag->offset + entry_seg_ofs);
+                frag->offset + entry_seg_ofs,
+                in_file[frag->in_file],frag->in_module);
         }
         else {
             fprintf(map_fp,"  No entry point defined\n");
