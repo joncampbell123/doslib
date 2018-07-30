@@ -687,14 +687,50 @@ void dump_link_symbols(void) {
 
     if (link_symbols == NULL) return;
 
+    if (map_fp != NULL) {
+        fprintf(map_fp,"\n");
+        fprintf(map_fp,"Symbol table: %u entries\n",(unsigned int)link_symbols_count);
+        fprintf(map_fp,"---------------------------------------\n");
+    }
+
     while (i < link_symbols_count) {
         struct link_symbol *sym = &link_symbols[i++];
         if (sym->name == NULL) continue;
 
-        fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u\n",
-            i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
-            in_file[sym->in_file],sym->in_module,sym->is_local);
+        if (verbose) {
+            fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u\n",
+                    i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
+                    in_file[sym->in_file],sym->in_module,sym->is_local);
+        }
+
+        if (map_fp != NULL) {
+            struct seg_fragment *frag;
+            struct link_segdef *sg;
+
+            assert(sym->segdef != NULL);
+
+            sg = find_link_segment(sym->segdef);
+            assert(sg != NULL);
+
+            assert(sg->fragments != NULL);
+            assert(sg->fragments_count <= sg->fragments_alloc);
+            assert(sym->fragment < sg->fragments_count);
+            frag = &sg->fragments[sym->fragment];
+
+            fprintf(map_fp,"  %-32s %c %04lx:%08lx %20s + 0x%08lx from '%s':%u\n",
+                sym->name,
+                sym->is_local?'L':'G',
+                sg->segment_relative,
+                sg->segment_offset + frag->offset + sym->offset,
+                sym->segdef,
+                frag->offset + sym->offset,
+                in_file[sym->in_file],
+                sym->in_module);
+        }
     }
+
+    if (map_fp != NULL)
+        fprintf(map_fp,"\n");
 }
 
 void dump_link_segments(void) {
@@ -2359,11 +2395,7 @@ int main(int argc,char **argv) {
     }
 
     dump_link_relocations();
-
-    if (verbose) {
-        dump_link_symbols();
-    }
-
+    dump_link_symbols();
     dump_link_segments();
 
     /* write output */
