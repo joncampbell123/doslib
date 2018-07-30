@@ -745,6 +745,16 @@ void dump_link_segments(void) {
                     fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx segidx=%u\n",
                             f,in_file[frag->in_file],frag->in_module,frag->offset,frag->fragment_length,frag->segidx);
                 }
+
+                if (map_fp != NULL) {
+                    fprintf(map_fp,"          %-16s %-16s %-16s      %08lx-%08lx   from '%s':%u\n",
+                            "",
+                            "",
+                            "",
+                            sg->segment_offset+frag->offset,
+                            sg->segment_offset+frag->offset+frag->fragment_length-1u,
+                            in_file[frag->in_file],frag->in_module);
+                }
             }
         }
     }
