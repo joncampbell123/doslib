@@ -2482,7 +2482,7 @@ int main(int argc,char **argv) {
                 }
             }
         }
-        else if (output_format == OFMT_COM) {
+        if (output_format == OFMT_COM) {
             /* .COM require JMP instruction */
             if (entry_seg_link_target != NULL && com_entry_insert > 0) {
                 struct seg_fragment *frag;
@@ -2526,7 +2526,7 @@ int main(int argc,char **argv) {
                 }
             }
         }
-        else if (output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
+        if (output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
             /* the entry point symbol must exist and must be at the very start of the file,
              * or at the very beginning of the resident image if EXE */
             struct link_segdef *segdef;
@@ -2619,9 +2619,6 @@ int main(int argc,char **argv) {
                         *((uint16_t*)(hdr_p + 0x08)));
                 }
             }
-        }
-        else {
-            abort();
         }
 
         for (inf=0;inf < link_segments_count;inf++) {
