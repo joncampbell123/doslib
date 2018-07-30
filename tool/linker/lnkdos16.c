@@ -1399,6 +1399,7 @@ static void help(void) {
     fprintf(stderr,"                COMREL = flat COM executable, relocatable\n");
     fprintf(stderr,"                EXE = segmented EXE executable\n");
     fprintf(stderr,"                DOSDRV = flat MS-DOS driver (SYS)\n");
+    fprintf(stderr,"                DOSDRVREL = flat MS-DOS driver (SYS), relocateable\n");
     fprintf(stderr,"                DOSDRVEXE = MS-DOS driver (EXE)\n");
     fprintf(stderr,"  -v           Verbose mode\n");
     fprintf(stderr,"  -d           Dump memory state after parsing\n");
