@@ -2854,6 +2854,30 @@ int main(int argc,char **argv) {
                 return 1;
             }
 
+            if (map_fp != NULL) {
+                char tmp[9];
+                unsigned int i;
+                unsigned char *hdr_p;
+
+                hdr_p = segdef->image_ptr + ofs;
+
+                fprintf(map_fp,"\n");
+                fprintf(map_fp,"MS-DOS device driver information:\n");
+                fprintf(map_fp,"---------------------------------------\n");
+
+                fprintf(map_fp,"  Attributes:          0x%04x\n",*((uint16_t*)(hdr_p + 0x4)));
+                fprintf(map_fp,"  Strategy routine:    0x%04x\n",*((uint16_t*)(hdr_p + 0x6)));
+                fprintf(map_fp,"  Interrupt routine:   0x%04x\n",*((uint16_t*)(hdr_p + 0x8)));
+
+                memcpy(tmp,hdr_p + 0xA,8); tmp[8] = 0;
+                for (i=0;i < 8;i++) {
+                    if (tmp[i] < 32 || tmp[i] >= 127) tmp[i] = ' ';
+                }
+                fprintf(map_fp,"  Initial device name: '%s'\n",tmp);
+
+                fprintf(map_fp,"\n");
+            }
+
             if (output_format == OFMT_DOSDRV && output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
                 unsigned char *hdr_p;
                 unsigned char *reloc_p;
@@ -2905,6 +2929,17 @@ int main(int argc,char **argv) {
                     fprintf(stderr,"New entry: 0x%x, 0x%x\n",
                         *((uint16_t*)(hdr_p + 0x06)),
                         *((uint16_t*)(hdr_p + 0x08)));
+                }
+
+                if (map_fp != NULL) {
+                    fprintf(map_fp,"\n");
+                    fprintf(map_fp,"MS-DOS device driver information, after relocation table added:\n");
+                    fprintf(map_fp,"---------------------------------------\n");
+
+                    fprintf(map_fp,"  Strategy routine:    0x%04x\n",*((uint16_t*)(hdr_p + 0x6)));
+                    fprintf(map_fp,"  Interrupt routine:   0x%04x\n",*((uint16_t*)(hdr_p + 0x8)));
+
+                    fprintf(map_fp,"\n");
                 }
             }
         }
