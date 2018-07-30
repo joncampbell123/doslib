@@ -2113,6 +2113,16 @@ int main(int argc,char **argv) {
 
                         frag->offset = 0;
                         frag->fragment_length = sg->segment_length;
+
+                        if (sg->segment_length > 0) {
+                            struct link_symbol *sym;
+
+                            sym = new_link_symbol("__COM_ENTRY_JMP_INS");
+                            if (sym == NULL) return 1;
+                            sym->offset = 0;
+                            sym->fragment = (int)(frag - &sg->fragments[0]);
+                            sym->segdef = strdup("__COM_ENTRY_JMP");
+                        }
                     }
                 }
                 else {
