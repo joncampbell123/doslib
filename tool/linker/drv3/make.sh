@@ -44,7 +44,7 @@ fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
 #    make_buildlist
-    build_list="dos86t dos86s dos86c dos86m"
+    build_list="dos86t dos86s dos86c dos86m dos86l"
     begin_bat
 
     what=all
