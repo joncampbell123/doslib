@@ -759,13 +759,13 @@ void dump_link_symbols(void) {
 
         if (map_fp != NULL) {
             fprintf(map_fp,"\n");
-            fprintf(map_fp,"Symbol table %s: %u entries\n",pass == 1 ? "by name" : "by address",(unsigned int)link_symbols_count);
+            fprintf(map_fp,"Symbol table %s: %u entries\n",pass == 0 ? "by name" : "by address",(unsigned int)link_symbols_count);
             fprintf(map_fp,"---------------------------------------\n");
         }
 
         if (verbose || map_fp != NULL)
             qsort(link_symbols, link_symbols_count, sizeof(struct link_symbol),
-                pass == 1 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
+                pass == 0 ? link_symbol_qsort_cmp_by_name : link_symbol_qsort_cmp);
 
         while (i < link_symbols_count) {
             struct link_symbol *sym = &link_symbols[i++];
