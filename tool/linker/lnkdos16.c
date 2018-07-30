@@ -92,6 +92,7 @@ static const uint8_t comrel_entry_point[] = {
 #endif
 
 #define dosdrvrel_entry_point_entry1           (0x01+dosdrvrel_entry_debug_O)
+#define dosdrvrel_entry_point_code_intr        (0x05+dosdrvrel_entry_debug_O)
 #define dosdrvrel_entry_point_entry2           (0x06+dosdrvrel_entry_debug_O)
 #define dosdrvrel_entry_point_CX_COUNT         (0x0C+dosdrvrel_entry_debug_O)
 #define dosdrvrel_entry_point_SI_OFFSET        (0x0F+dosdrvrel_entry_debug_O)
@@ -2501,6 +2502,26 @@ int main(int argc,char **argv) {
                             *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + tsg->segment_offset;
                         else
                             *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
+
+                        {
+                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_STRAT");
+                            if (sym != NULL) return 1;
+                            sym = new_link_symbol("__COMREL_RELOC_ENTRY_STRAT");
+                            sym->groupdef = strdup("DGROUP");
+                            sym->segdef = strdup("__COMREL_RELOC");
+                            sym->fragment = sg->fragments_count-1;
+                            sym->offset = po - frag->offset;
+                        }
+
+                        {
+                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_INTR");
+                            if (sym != NULL) return 1;
+                            sym = new_link_symbol("__COMREL_RELOC_ENTRY_INTR");
+                            sym->groupdef = strdup("DGROUP");
+                            sym->segdef = strdup("__COMREL_RELOC");
+                            sym->fragment = sg->fragments_count-1;
+                            sym->offset = po + dosdrvrel_entry_point_code_intr - frag->offset;
+                        }
 
                         /* header handling will patch in mov DI fields later */
                     }
