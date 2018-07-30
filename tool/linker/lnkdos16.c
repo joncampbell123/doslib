@@ -2726,6 +2726,32 @@ int main(int argc,char **argv) {
         close(fd);
     }
 
+    if (map_fp != NULL) {
+        fprintf(map_fp,"\n");
+        fprintf(map_fp,"Entry point:\n");
+        fprintf(map_fp,"---------------------------------------\n");
+
+        if (entry_seg_link_target != NULL) {
+            struct seg_fragment *frag;
+
+            assert(entry_seg_link_target->fragments != NULL);
+            assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
+
+            frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+            fprintf(map_fp,"  %04lx:%08lx %16s + 0x%08lx\n",
+                entry_seg_link_target->segment_relative,
+                entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
+                entry_seg_link_target->name,
+                frag->offset + entry_seg_ofs);
+        }
+        else {
+            fprintf(map_fp,"  No entry point defined\n");
+        }
+
+        fprintf(map_fp,"\n");
+    }
+
     cstr_free(&entry_seg_link_target_name);
     cstr_free(&entry_seg_link_frame_name);
 
