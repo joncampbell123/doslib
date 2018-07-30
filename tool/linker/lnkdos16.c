@@ -2106,6 +2106,14 @@ int main(int argc,char **argv) {
                             sg->segment_length = com_entry_insert;
                         }
                     }
+
+                    {
+                        struct seg_fragment *frag = alloc_link_segment_fragment(sg);
+                        if (frag == NULL) return 1;
+
+                        frag->offset = 0;
+                        frag->fragment_length = sg->segment_length;
+                    }
                 }
                 else {
                     abort();
