@@ -1019,6 +1019,12 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                         if (current_link_segment->segment_relative != targ_sdef->segment_relative) {
                             dump_link_segments();
                             fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
+                            fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
+                                current_link_segment->name,
+                                current_link_segment->segment_relative);
+                            fprintf(stderr,"        FIXUP to segment '%s' base 0x%lx\n",
+                                targ_sdef->name,
+                                targ_sdef->segment_relative);
                             return -1;
                         }
 
