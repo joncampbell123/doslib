@@ -44,6 +44,15 @@ static unsigned int                     in_file_count = 0;
 static unsigned int                     current_in_file = 0;
 static unsigned int                     current_in_mod = 0;
 
+const char *get_in_file(unsigned int idx) {
+    if (idx < MAX_IN_FILES) {
+        if (in_file[idx] != NULL)
+            return in_file[idx];
+    }
+
+    return "";
+}
+
 static unsigned char                    do_dosseg = 1;
 
 struct omf_context_t*                   omf_state = NULL;
@@ -774,7 +783,7 @@ void dump_link_symbols(void) {
             if (verbose) {
                 fprintf(stderr,"symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u\n",
                         i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
-                        in_file[sym->in_file],sym->in_module,sym->is_local);
+                        get_in_file(sym->in_file),sym->in_module,sym->is_local);
             }
 
             if (map_fp != NULL) {
@@ -799,7 +808,7 @@ void dump_link_symbols(void) {
                         sg->linear_offset + frag->offset + sym->offset,
                         sym->segdef,
                         frag->offset + sym->offset,
-                        in_file[sym->in_file],
+                        get_in_file(sym->in_file),
                         sym->in_module);
             }
         }
@@ -870,7 +879,7 @@ void dump_link_segments(void) {
 
                 if (verbose) {
                     fprintf(stderr,"  fragment[%u]: file='%s' module=%u offset=0x%lx length=0x%lx segidx=%u\n",
-                            f,in_file[frag->in_file],frag->in_module,frag->offset,frag->fragment_length,frag->segidx);
+                            f,get_in_file(frag->in_file),frag->in_module,frag->offset,frag->fragment_length,frag->segidx);
                 }
 
                 if (map_fp != NULL) {
@@ -893,7 +902,7 @@ void dump_link_segments(void) {
                             "",
                             range1,
                             range2,
-                            in_file[frag->in_file],frag->in_module);
+                            get_in_file(frag->in_file),frag->in_module);
                 }
             }
         }
@@ -2937,7 +2946,7 @@ int main(int argc,char **argv) {
                 entry_seg_link_target->segment_offset + frag->offset + entry_seg_ofs,
                 entry_seg_link_target->name,
                 frag->offset + entry_seg_ofs,
-                in_file[frag->in_file],frag->in_module);
+                get_in_file(frag->in_file),frag->in_module);
 
             while (symi < link_symbols_count) {
                 sym = &link_symbols[symi++];
