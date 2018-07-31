@@ -2870,11 +2870,11 @@ int main(int argc,char **argv) {
             }
 
             if (verbose) {
-                fprintf(stderr,"EXE header:                   0x%lx\n",header_size);
-                fprintf(stderr,"EXE resident size with header:0x%lx\n",resident_size);
-                fprintf(stderr,"EXE resident size:            0x%lx\n",resident_size - header_size);
-                fprintf(stderr,"EXE disk size without header: 0x%lx\n",disk_size - header_size);
-                fprintf(stderr,"EXE disk size:                0x%lx\n",disk_size);
+                fprintf(stderr,"EXE header:                    0x%lx\n",header_size);
+                fprintf(stderr,"EXE resident size with header: 0x%lx\n",resident_size);
+                fprintf(stderr,"EXE resident size:             0x%lx\n",resident_size - header_size);
+                fprintf(stderr,"EXE disk size without header:  0x%lx\n",disk_size - header_size);
+                fprintf(stderr,"EXE disk size:                 0x%lx\n",disk_size);
             }
 
             if (map_fp != NULL) {
@@ -2883,12 +2883,12 @@ int main(int argc,char **argv) {
                 fprintf(map_fp,"EXE header stats:\n");
                 fprintf(map_fp,"---------------------------------------\n");
 
-                fprintf(map_fp,"EXE header:                   0x%lx\n",header_size);
-                fprintf(map_fp,"EXE resident size with header:0x%lx\n",resident_size);
-                fprintf(map_fp,"EXE resident size:            0x%lx\n",resident_size - header_size);
-                fprintf(map_fp,"EXE disk size without header: 0x%lx\n",disk_size - header_size);
-                fprintf(map_fp,"EXE disk size:                0x%lx\n",disk_size);
-                fprintf(map_fp,"EXE stack pointer:            %04lx:%04lx [0x%08lx]\n",
+                fprintf(map_fp,"EXE header:                    0x%lx\n",header_size);
+                fprintf(map_fp,"EXE resident size with header: 0x%lx\n",resident_size);
+                fprintf(map_fp,"EXE resident size:             0x%lx\n",resident_size - header_size);
+                fprintf(map_fp,"EXE disk size without header:  0x%lx\n",disk_size - header_size);
+                fprintf(map_fp,"EXE disk size:                 0x%lx\n",disk_size);
+                fprintf(map_fp,"EXE stack pointer:             %04lx:%04lx [0x%08lx]\n",
                     init_ss,init_sp,(init_ss << 4ul) + init_sp);
  
                 fprintf(map_fp,"\n");
