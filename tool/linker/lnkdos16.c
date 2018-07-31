@@ -288,17 +288,27 @@ struct link_symbol *new_link_symbol(const char *name) {
     return sym;
 }
 
-struct link_symbol *find_link_symbol(const char *name) {
+struct link_symbol *find_link_symbol(const char *name,int in_file,int in_module) {
     struct link_symbol *sym;
     size_t i = 0;
 
     if (link_symbols != NULL) {
         for (;i < link_symbols_count;i++) {
             sym = link_symbols + i;
-            if (sym->name != NULL) {
-                if (!strcmp(sym->name, name))
-                    return sym;
+            assert(sym->name != NULL);
+
+            if (sym->is_local) {
+                /* ignore local symbols unless file/module scope is given */
+                if (in_file < 0 || in_module < 0)
+                    continue;
+                if (in_file >= 0 && sym->in_file != in_file)
+                    continue;
+                if (in_module >= 0 && sym->in_module != in_module)
+                    continue;
             }
+
+            if (!strcmp(sym->name, name))
+                return sym;
         }
     }
 
@@ -1029,7 +1039,7 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
     return 0;
 }
 
-int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,struct link_segdef **sdef,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index) {
+int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long *fofs,struct link_segdef **sdef,const struct omf_fixupp_t *ent,unsigned int method,unsigned int index,unsigned int in_file,unsigned int in_module) {
     *fseg = *fofs = ~0UL;
     *sdef = NULL;
     (void)ent;
@@ -1086,7 +1096,7 @@ int fixupp_get(struct omf_context_t *omf_state,unsigned long *fseg,unsigned long
             return -1;
         }
 
-        sym = find_link_symbol(defname);
+        sym = find_link_symbol(defname,in_file,in_module);
         if (sym == NULL) {
             fprintf(stderr,"No such symbol '%s'\n",defname);
             return -1;
@@ -1136,9 +1146,9 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
         if (!ent->alloc) continue;
 
         if (pass == PASS_BUILD) {
-            if (fixupp_get(omf_state,&frame_seg,&frame_ofs,&frame_sdef,ent,ent->frame_method,ent->frame_index))
+            if (fixupp_get(omf_state,&frame_seg,&frame_ofs,&frame_sdef,ent,ent->frame_method,ent->frame_index,in_file,in_module))
                 return -1;
-            if (fixupp_get(omf_state,&targ_seg,&targ_ofs,&targ_sdef,ent,ent->target_method,ent->target_index))
+            if (fixupp_get(omf_state,&targ_seg,&targ_ofs,&targ_sdef,ent,ent->target_method,ent->target_index,in_file,in_module))
                 return -1;
 
             if (ent->frame_method == 5/*BY TARGET*/) {
@@ -1496,7 +1506,7 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
             fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx finalofs=0x%lx local=%u\n",
                     first,name,groupname,segname,(unsigned long)pubdef->public_offset,pubdef->public_offset + lsg->load_base,is_local);
 
-        sym = find_link_symbol(name);
+        sym = find_link_symbol(name,in_file,in_module);
         if (sym != NULL) {
             fprintf(stderr,"Symbol '%s' already defined\n",name);
             return -1;
@@ -2430,7 +2440,7 @@ int main(int argc,char **argv) {
                         assert((po + sizeof(comrel_entry_point)) <= sg->segment_length);
                     }
 
-                    sym = find_link_symbol("__COMREL_RELOC_TABLE");
+                    sym = find_link_symbol("__COMREL_RELOC_TABLE",-1,-1);
                     if (sym != NULL) return 1;
                     sym = new_link_symbol("__COMREL_RELOC_TABLE");
                     sym->groupdef = strdup("DGROUP");
@@ -2445,7 +2455,7 @@ int main(int argc,char **argv) {
                         sym->offset = ro - frag->offset;
                     }
 
-                    sym = find_link_symbol("__COMREL_RELOC_ENTRY");
+                    sym = find_link_symbol("__COMREL_RELOC_ENTRY",-1,-1);
                     if (sym != NULL) return 1;
                     sym = new_link_symbol("__COMREL_RELOC_ENTRY");
                     sym->groupdef = strdup("DGROUP");
@@ -2510,7 +2520,7 @@ int main(int argc,char **argv) {
                             *((uint16_t*)(d+dosdrvrel_entry_point_SI_OFFSET)) = ro + sg->segment_offset;
 
                         {
-                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_STRAT");
+                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_STRAT",-1,-1);
                             if (sym != NULL) return 1;
                             sym = new_link_symbol("__COMREL_RELOC_ENTRY_STRAT");
                             sym->groupdef = strdup("DGROUP");
@@ -2520,7 +2530,7 @@ int main(int argc,char **argv) {
                         }
 
                         {
-                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_INTR");
+                            sym = find_link_symbol("__COMREL_RELOC_ENTRY_INTR",-1,-1);
                             if (sym != NULL) return 1;
                             sym = new_link_symbol("__COMREL_RELOC_ENTRY_INTR");
                             sym->groupdef = strdup("DGROUP");
@@ -2874,7 +2884,7 @@ int main(int argc,char **argv) {
             struct link_symbol *sym;
             unsigned long ofs;
 
-            sym = find_link_symbol(dosdrv_header_symbol);
+            sym = find_link_symbol(dosdrv_header_symbol,-1,-1);
             if (sym == NULL) {
                 fprintf(stderr,"Required symbol '%s' not found (MS-DOS .SYS header)\n",dosdrv_header_symbol);
                 return 1;
@@ -2938,7 +2948,7 @@ int main(int argc,char **argv) {
                 struct link_symbol *rsym;
                 unsigned long rofs;
 
-                rsym = find_link_symbol("__COMREL_RELOC_ENTRY");
+                rsym = find_link_symbol("__COMREL_RELOC_ENTRY",-1,-1);
                 assert(rsym != NULL);
                 assert(rsym->segdef != NULL);
 
