@@ -2812,7 +2812,6 @@ int main(int argc,char **argv) {
             unsigned long relocation_table_offset = 0;
             unsigned long max_resident_size = 0xFFFF0ul; /* by default, take ALL memory */
             unsigned long init_ss = 0,init_sp = 0,init_cs = 0,init_ip = 0;
-            unsigned int stack_size = 4096;/*reasonable default*/
             unsigned int i,ofs;
 
             if (link_segments_count > 0) {
@@ -2849,7 +2848,7 @@ int main(int argc,char **argv) {
 
                 if (sd->segment_length == 0) continue;
 
-                ofs = sd->linear_offset + sd->segment_length;
+                ofs = sd->linear_offset + sd->segment_length + header_size;
                 if (resident_size < ofs) resident_size = ofs;
 
                 if (!sd->noemit) {
@@ -2858,9 +2857,22 @@ int main(int argc,char **argv) {
                 }
             }
 
+            {
+                unsigned long ofs;
+                struct link_segdef *stacksg = find_link_segment_by_class("STACK");
+                assert(stacksg != NULL);
+
+                init_ss = stacksg->segment_relative;
+                init_sp = stacksg->segment_offset + stacksg->segment_length;
+
+                ofs = (init_ss << 4ul) + init_sp + header_size;
+                if (resident_size < ofs) resident_size = ofs;
+            }
+
             if (verbose) {
                 fprintf(stderr,"EXE header:                   0x%lx\n",header_size);
-                fprintf(stderr,"EXE resident size:            0x%lx\n",resident_size);
+                fprintf(stderr,"EXE resident size with header:0x%lx\n",resident_size);
+                fprintf(stderr,"EXE resident size:            0x%lx\n",resident_size - header_size);
                 fprintf(stderr,"EXE disk size without header: 0x%lx\n",disk_size - header_size);
                 fprintf(stderr,"EXE disk size:                0x%lx\n",disk_size);
             }
@@ -2871,24 +2883,15 @@ int main(int argc,char **argv) {
                 fprintf(map_fp,"EXE header stats:\n");
                 fprintf(map_fp,"---------------------------------------\n");
 
-                fprintf(map_fp,"EXE header:                   0x%lx bytes\n",header_size);
-                fprintf(map_fp,"EXE resident size:            0x%lx bytes\n",resident_size);
-                fprintf(map_fp,"EXE disk size without header: 0x%lx bytes\n",disk_size - header_size);
-                fprintf(map_fp,"EXE disk size:                0x%lx bytes\n",disk_size);
-
+                fprintf(map_fp,"EXE header:                   0x%lx\n",header_size);
+                fprintf(map_fp,"EXE resident size with header:0x%lx\n",resident_size);
+                fprintf(map_fp,"EXE resident size:            0x%lx\n",resident_size - header_size);
+                fprintf(map_fp,"EXE disk size without header: 0x%lx\n",disk_size - header_size);
+                fprintf(map_fp,"EXE disk size:                0x%lx\n",disk_size);
+                fprintf(map_fp,"EXE stack pointer:            %04lx:%04lx [0x%08lx]\n",
+                    init_ss,init_sp,(init_ss << 4ul) + init_sp);
+ 
                 fprintf(map_fp,"\n");
-            }
-
-            /* TODO: Use the size and position of the STACK segment! */
-            /* Take additional resident size for the stack */
-            resident_size += stack_size;
-            ofs = resident_size;
-            assert(resident_size >= 32);
-            init_ss = 0;
-            init_sp = resident_size - 16; /* assume MS-DOS will consume some stack on entry to program */
-            while (init_sp >= 0xFFF0u) {
-                init_ss++;
-                init_sp -= 0x10;
             }
 
             /* entry point */
@@ -2927,7 +2930,7 @@ int main(int argc,char **argv) {
             if (verbose)
                 fprintf(stderr,"EXE header size: %lu\n",header_size);
 
-            assert(resident_size > disk_size);
+            assert(resident_size >= disk_size);
             assert(header_size != 0u);
             assert((header_size % 16u) == 0u);
             assert(sizeof(tmp) >= 32);
