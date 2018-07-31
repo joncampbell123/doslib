@@ -2458,6 +2458,12 @@ int main(int argc,char **argv) {
                     /* NTS: for EXE files, sd->file_offset will be adjusted further downward for relocation tables.
                      *      in fact, maybe computing file offset at this phase was a bad idea... :( */
                 }
+
+                for (;inf < link_segments_count;inf++) {
+                    struct link_segdef *sd = &link_segments[inf];
+
+                    assert(sd->noemit != 0);
+                }
             }
 
             /* allocate in-memory copy of the segments */
