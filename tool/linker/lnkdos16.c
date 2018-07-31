@@ -2441,8 +2441,12 @@ int main(int argc,char **argv) {
                 for (;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
 
-                    if (!sd->noemit)
+                    if (!sd->noemit) {
                         fprintf(stderr,"WARNING: NOEMIT segments followed by non-NOEMIT. COM/EXE/DRV cannot support that.\n");
+
+                        if (map_fp != NULL)
+                            fprintf(stderr,"* WARNING: NOEMIT segments followed by non-NOEMIT. COM/EXE/DRV cannot support that.\n");
+                    }
 
                     sd->file_offset = 0;
                 }
