@@ -695,9 +695,10 @@ void dump_link_relocations(void) {
             assert(rel->fragment < sg->fragments_count);
             frag = &sg->fragments[rel->fragment];
 
-            fprintf(map_fp,"  %04lx:%08lx %20s + 0x%08lx\n",
+            fprintf(map_fp,"  %04lx:%08lx [0x%08lx] %20s + 0x%08lx\n",
                 sg->segment_relative&0xfffful,
                 sg->segment_offset + frag->offset + rel->offset,
+                sg->linear_offset + frag->offset + rel->offset,
                 rel->segname,frag->offset + rel->offset);
         }
     }
