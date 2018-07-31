@@ -11,14 +11,24 @@ void dos_putc(const char c);
     modify [ah] \
     parm [dl]
 
+#if defined(TINYMODE)
 void dos_puts(const char *p) {
+#else
+void dos_puts(const char far *p) {
+#endif
     char c;
 
     while ((c = *p++) != 0)
         dos_putc(c);
 }
 
+#if defined(TINYMODE)
+# define DATA32_SCOPE
 extern unsigned long ex_data32;
+#else
+# define DATA32_SCOPE far
+extern unsigned long far ex_data32;
+#endif
 
 unsigned int near entry_c(void) {
     dos_puts(hello_world);
@@ -30,7 +40,7 @@ unsigned int near entry_c(void) {
      * NTS: Open Watcom's Linker WILL NOT link this test properly, this test will fail. */
     if (ex_data32 == 0x89ABCDEF) {
         dos_puts("EX_DATA32 YES\nEX_DATA32 string: ");
-        dos_puts((const char *)(&ex_data32) + 4ul);
+        dos_puts((const char DATA32_SCOPE *)(&ex_data32) + 4ul);
         dos_puts(crlf);
     }
     else {

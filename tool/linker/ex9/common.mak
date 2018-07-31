@@ -15,11 +15,14 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.com
 DOSLIBLINKER_OFMT = -of com
 ! else
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-TESTW_EXE =   $(SUBDIR)$(HPS)testw.exe
 TESTF_EXE =   $(SUBDIR)$(HPS)testf.exe
 TESTFF_EXE =  $(SUBDIR)$(HPS)testff.exe
 TESTFC_EXE =  $(SUBDIR)$(HPS)testfc.com
 DOSLIBLINKER_OFMT = -of exe
+
+# NTS: Open Watcom's linker does NOT handle this test case well 
+#TESTW_EXE =   $(SUBDIR)$(HPS)testw.exe
+
 ! endif
 !endif
 
