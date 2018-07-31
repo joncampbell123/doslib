@@ -99,6 +99,11 @@ segment _STACK align=4 class=STACK use16
  %endif
 %endif
 
+; define a stack
+global _stackblock
+_stackblock:
+    times 512 db 0
+
 ; stack
 %ifidni segment_use,use32
 section _BSS align=4 class=BSS use32
