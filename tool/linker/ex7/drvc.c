@@ -17,9 +17,12 @@ static void dos_puts(const char *p) {
         dos_putc(c);
 }
 
+void entry2(void);
+
 unsigned int near entry_c(void) {
     dos_puts(hello_world);
     dos_puts(hellostr2);
+    entry2();
     return 0;
 }
 
