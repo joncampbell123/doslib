@@ -2685,7 +2685,7 @@ int main(int argc,char **argv) {
                 *((uint16_t*)(sg->image_ptr+1)) = (uint16_t)ofs - 3;
             }
             else if (com_entry_insert == 2) {
-                assert(ofs <= (0xFFu + 2u));
+                assert(ofs <= (0x7Fu + 2u));
                 sg->image_ptr[0] = 0xEB; /* JMP short */
                 sg->image_ptr[1] = (unsigned char)ofs - 2;
             }
