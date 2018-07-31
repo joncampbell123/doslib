@@ -24,3 +24,5 @@ _exit_:
 
 segment _DATA align=1 class=DATA use16
 
+segment _STACK align=1 class=STACK use16
+
