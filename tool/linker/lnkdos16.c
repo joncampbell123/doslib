@@ -342,6 +342,7 @@ struct seg_fragment {
     unsigned short                      segidx;
     unsigned long                       offset;
     unsigned long                       fragment_length;
+    struct omf_segdef_attr_t            attr;
 };
 
 struct link_segdef {
@@ -919,7 +920,8 @@ void dump_link_segments(void) {
                         strcpy(range2,"---------------------");
                     }
 
-                    fprintf(map_fp,"          %-20s %-20s %-20s      %s [%s]   from '%s':%u\n",
+                    fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s':%u\n",
+                            frag->attr.f.f.use32?32:16,
                             "",
                             "",
                             "",
@@ -1648,6 +1650,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                 f->offset = lsg->load_base;
                 f->fragment_length = sg->segment_length;
                 f->segidx = first;
+                f->attr = sg->attr;
             }
 
             if (verbose)
@@ -2219,6 +2222,7 @@ int main(int argc,char **argv) {
                     }
                     frag->offset = sg->segment_length;
                     frag->segidx = (int)(sg + 1 - (&link_segments[0]));
+                    frag->attr = sg->attr;
 
                     if (tsg != NULL) {
                         tfrag = alloc_link_segment_fragment(tsg);
@@ -2227,6 +2231,7 @@ int main(int argc,char **argv) {
                         }
                         tfrag->offset = tsg->segment_length;
                         tfrag->segidx = (int)(tsg + 1 - (&link_segments[0]));
+                        tfrag->attr = sg->attr;
                     }
                     else {
                         tsg = sg;
@@ -2304,6 +2309,7 @@ int main(int argc,char **argv) {
 
                         frag->offset = 0;
                         frag->fragment_length = sg->segment_length;
+                        frag->attr = sg->attr;
 
                         if (sg->segment_length > 0) {
                             struct link_symbol *sym;
