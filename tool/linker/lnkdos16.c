@@ -1726,6 +1726,38 @@ void my_dumpstate(const struct omf_context_t * const ctx) {
         printf("----END-----\n");
 }
 
+int segment_def_arrange(void) {
+    unsigned long m,ofs = 0;
+    unsigned int inf;
+
+    for (inf=0;inf < link_segments_count;inf++) {
+        struct link_segdef *sd = &link_segments[inf];
+
+        if (sd->initial_alignment != 0ul) {
+            m = ofs % sd->initial_alignment;
+            if (m != 0ul) ofs += sd->initial_alignment - m;
+        }
+
+        if (verbose)
+            fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
+                    inf,ofs,sd->segment_length);
+
+        if (output_format == OFMT_COM || output_format == OFMT_EXE ||
+                output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
+            if (sd->segment_length > 0x10000ul) {
+                dump_link_segments();
+                fprintf(stderr,"Segment too large >= 64KB\n");
+                return -1;
+            }
+        }
+
+        sd->linear_offset = ofs;
+        ofs += sd->segment_length;
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
     unsigned char diddump = 0;
     unsigned char pass;
@@ -2155,9 +2187,6 @@ int main(int argc,char **argv) {
 
             /* put segments in order, linear offset */
             {
-                unsigned long ofs = 0;
-                unsigned long m;
-
                 /* COMREL relocation + patch code */
                 if ((output_format == OFMT_COM || output_format == OFMT_DOSDRV) &&
                     output_format_variant == OFMTVAR_COMREL && exe_relocation_table_count > 0) {
@@ -2287,30 +2316,8 @@ int main(int argc,char **argv) {
                     abort();
                 }
 
-                for (inf=0;inf < link_segments_count;inf++) {
-                    struct link_segdef *sd = &link_segments[inf];
-
-                    if (sd->initial_alignment != 0ul) {
-                        m = ofs % sd->initial_alignment;
-                        if (m != 0ul) ofs += sd->initial_alignment - m;
-                    }
-
-                    if (verbose)
-                        fprintf(stderr,"segment[%u] ofs=0x%lx len=0x%lx\n",
-                                inf,ofs,sd->segment_length);
-
-                    if (output_format == OFMT_COM || output_format == OFMT_EXE ||
-                        output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
-                        if (sd->segment_length > 0x10000ul) {
-                            dump_link_segments();
-                            fprintf(stderr,"Segment too large >= 64KB\n");
-                            return -1;
-                        }
-                    }
-
-                    sd->linear_offset = ofs;
-                    ofs += sd->segment_length;
-                }
+                if (segment_def_arrange())
+                    return 1;
             }
 
             /* if a .COM executable, then all segments are arranged so that the first byte
