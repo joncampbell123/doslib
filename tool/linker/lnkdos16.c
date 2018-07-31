@@ -2830,6 +2830,7 @@ int main(int argc,char **argv) {
             /* EXE header */
             unsigned char tmp[32];
             unsigned long disk_size = 0;
+            unsigned long stack_size = 0;
             unsigned long header_size = 0;
             unsigned long o_header_size = 0;
             unsigned long resident_size = 0;
@@ -2888,6 +2889,7 @@ int main(int argc,char **argv) {
                 if (stacksg != NULL) {
                     init_ss = stacksg->segment_relative;
                     init_sp = stacksg->segment_offset + stacksg->segment_length;
+                    stack_size = stacksg->segment_length;
                 }
                 else {
                     fprintf(stderr,"Warning, no STACK class segment defined\n");
@@ -2896,7 +2898,8 @@ int main(int argc,char **argv) {
                         fprintf(map_fp,"* Warning, no STACK class segment defined\n");
 
                     init_ss = 0;
-                    init_sp = resident_size;
+                    init_sp = resident_size + want_stack_size;
+                    stack_size = want_stack_size;
                     while (init_sp > 0xFF00ul) {
                         init_sp -= 0x100;
                         init_ss += 0x10;
@@ -2926,6 +2929,7 @@ int main(int argc,char **argv) {
                 fprintf(map_fp,"EXE resident size:             0x%lx\n",resident_size - header_size);
                 fprintf(map_fp,"EXE disk size without header:  0x%lx\n",disk_size - header_size);
                 fprintf(map_fp,"EXE disk size:                 0x%lx\n",disk_size);
+                fprintf(map_fp,"EXE stack size:                0x%lx\n",stack_size);
                 fprintf(map_fp,"EXE stack pointer:             %04lx:%04lx [0x%08lx]\n",
                     init_ss,init_sp,(init_ss << 4ul) + init_sp);
  
