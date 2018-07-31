@@ -2254,7 +2254,11 @@ int main(int argc,char **argv) {
                     /* TODO: relocation table */
                     file_baseofs = 32;
                 }
-                else if (output_format == OFMT_COM) {
+
+                if (segment_def_arrange())
+                    return 1;
+
+                if (output_format == OFMT_COM) {
                     struct link_segdef *sg;
 
                     sg = find_link_segment("__COM_ENTRY_JMP");
@@ -2311,13 +2315,10 @@ int main(int argc,char **argv) {
                             sym->segdef = strdup("__COM_ENTRY_JMP");
                         }
                     }
-                }
-                else {
-                    abort();
-                }
 
-                if (segment_def_arrange())
-                    return 1;
+                    if (segment_def_arrange())
+                        return 1;
+                }
             }
 
             /* if a .COM executable, then all segments are arranged so that the first byte
