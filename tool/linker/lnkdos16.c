@@ -48,6 +48,8 @@ static unsigned int                     in_file_count = 0;
 static unsigned int                     current_in_file = 0;
 static unsigned int                     current_in_mod = 0;
 
+static unsigned int                     want_stack_size = 4096;
+
 const char *get_in_file(unsigned int idx) {
     if (idx >= 0xFFFFu)
         return "<internal>";
@@ -1700,6 +1702,7 @@ static void help(void) {
     fprintf(stderr,"  -comNNN      Link .COM segment starting at 0xNNN\n");
     fprintf(stderr,"  -com100      Link .COM segment starting at 0x100\n");
     fprintf(stderr,"  -com0        Link .COM segment starting at 0 (Watcom Linker)\n");
+    fprintf(stderr,"  -stackN      Set minimum stack segment size (0xNNN)\n");
     fprintf(stderr,"  -pflat       Prefer .COM-like flat layout\n");
     fprintf(stderr,"  -hsym        Header symbol name (DOSDRV)\n");
 }
@@ -1810,6 +1813,11 @@ int main(int argc,char **argv) {
             }
             else if (!strcmp(a,"pflat")) {
                 prefer_flat = 1;
+            }
+            else if (!strncmp(a,"stack",5)) {
+                a += 5;
+                if (!isxdigit(*a)) return 1;
+                want_stack_size = strtoul(a,NULL,16);
             }
             else if (!strncmp(a,"com",3)) {
                 a += 3;
