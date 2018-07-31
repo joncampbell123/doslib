@@ -4,6 +4,11 @@ extern const char hellostr2[];
 const char hello_world[] = "Hello world. This is code without a C runtime.\r\n";
 const char crlf[] = "\r\n";
 
+/* put this in the BSS segment! */
+int bss_value1;
+char bss_tmp[512];
+long bss_value2;
+
 void dos_putc(const char c);
 #pragma aux dos_putc = \
     "mov    ah,0x02" \
@@ -46,6 +51,9 @@ unsigned int near entry_c(void) {
     else {
         dos_puts("EX_DATA32 NO");
     }
+
+    bss_value1 = 0x1234u;
+    bss_value2 = 0x12345678ul;
 
     return 0;
 }
