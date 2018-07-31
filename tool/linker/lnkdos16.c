@@ -2231,7 +2231,7 @@ int main(int argc,char **argv) {
                         }
                         tfrag->offset = tsg->segment_length;
                         tfrag->segidx = (int)(tsg + 1 - (&link_segments[0]));
-                        tfrag->attr = sg->attr;
+                        tfrag->attr = tsg->attr;
                     }
                     else {
                         tsg = sg;
