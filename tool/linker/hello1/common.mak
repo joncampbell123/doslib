@@ -15,7 +15,6 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.com
 DOSLIBLINKER_OFMT = -of com
 ! else
 TEST_EXE =    $(SUBDIR)$(HPS)test.exe
-TESTW_EXE =   $(SUBDIR)$(HPS)testw.exe
 TESTF_EXE =   $(SUBDIR)$(HPS)testf.exe
 TESTFF_EXE =  $(SUBDIR)$(HPS)testff.exe
 TESTFC_EXE =  $(SUBDIR)$(HPS)testfc.com
@@ -39,7 +38,7 @@ $(DOSLIBLINKER):
 
 all: $(OMFSEGDG) lib exe
 
-exe: $(DOSLIBLINKER) $(TEST_EXE) $(TESTW_EXE) $(TESTF_EXE) $(TESTFF_EXE) $(TESTFC_EXE) .symbolic
+exe: $(DOSLIBLINKER) $(TEST_EXE) $(TESTF_EXE) $(TESTFF_EXE) $(TESTFC_EXE) .symbolic
 
 lib: .symbolic
 
@@ -47,13 +46,6 @@ lib: .symbolic
 WLINK_NOCLIBS_SYSTEM = dos com
 !else
 WLINK_NOCLIBS_SYSTEM = $(WLINK_SYSTEM)
-!endif
-
-!ifdef TESTW_EXE
-$(TESTW_EXE): $(SUBDIR)$(HPS)entry.obj $(SUBDIR)$(HPS)drvc.obj
-	%write tmp.cmd option quiet OPTION NODEFAULTLIBS option map=$(TESTW_EXE).map system $(WLINK_NOCLIBS_SYSTEM) file $(SUBDIR)$(HPS)drvc.obj file $(SUBDIR)$(HPS)entry.obj name $(TESTW_EXE)
-	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef TEST_EXE
