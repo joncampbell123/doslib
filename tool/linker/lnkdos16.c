@@ -2194,6 +2194,18 @@ int main(int argc,char **argv) {
         if (pass == PASS_GATHER) {
             unsigned long file_baseofs = 0;
 
+            if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+                struct link_segdef *stacksg = find_link_segment_by_class_last("STACK");
+
+                if (stacksg != NULL) {
+                    assert(stacksg->image_ptr == NULL);
+
+                    if (stacksg->segment_length < want_stack_size) {
+                        stacksg->segment_length = want_stack_size;
+                    }
+                }
+            }
+
             owlink_default_sort_seg();
 
             if (do_dosseg)
