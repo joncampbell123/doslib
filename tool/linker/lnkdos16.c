@@ -2472,7 +2472,7 @@ int main(int argc,char **argv) {
                     struct link_segdef *sd = &link_segments[inf];
 
                     assert(sd->image_ptr == NULL);
-                    if (sd->segment_length != 0) {
+                    if (sd->segment_length != 0 && !sd->noemit) {
                         sd->image_ptr = malloc(sd->segment_length);
                         assert(sd->image_ptr != NULL);
                         memset(sd->image_ptr,0,sd->segment_length);
