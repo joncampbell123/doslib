@@ -2188,6 +2188,23 @@ int main(int argc,char **argv) {
                 }
             }
 
+            /* entry point cannot be 32-bit */
+            if (output_format == OFMT_DOSDRV) {
+                /* nothing */
+            }
+            else if (entry_seg_link_target != NULL) {
+                struct seg_fragment *frag;
+
+                assert(entry_seg_link_target->fragments != NULL);
+                assert(entry_seg_link_target_fragment < entry_seg_link_target->fragments_count);
+                frag = &entry_seg_link_target->fragments[entry_seg_link_target_fragment];
+
+                if (frag->attr.f.f.use32) {
+                    fprintf(stderr,"Entry point cannot be 32-bit\n");
+                    return 1;
+                }
+            }
+
             /* put segments in order, linear offset */
             {
                 /* COMREL relocation + patch code */
@@ -2436,6 +2453,12 @@ int main(int argc,char **argv) {
                 sg = find_link_segment("__COMREL_RELOC");
                 if (sg == NULL) {
                     fprintf(stderr,"COMREL relocation segment missing\n");
+                    return 1;
+                }
+
+                /* __COMREL_RELOC cannot be a 32-bit segment */
+                if (sg->attr.f.f.use32) {
+                    fprintf(stderr,"__COMREL_RELOC cannot be a 32-bit segment\n");
                     return 1;
                 }
 
