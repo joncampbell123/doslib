@@ -2214,6 +2214,12 @@ int main(int argc,char **argv) {
                         sg->classname = strdup("CODE");
                     }
 
+                    /* __COMREL_RELOC cannot be a 32-bit segment */
+                    if (sg->attr.f.f.use32) {
+                        fprintf(stderr,"__COMREL_RELOC cannot be a 32-bit segment\n");
+                        return 1;
+                    }
+
                     tsg = find_link_segment("__COMREL_RELOCTBL");
 
                     frag = alloc_link_segment_fragment(sg);
