@@ -1,5 +1,5 @@
 
-section _TEXT align=1 class=CODE use32
+section _TEXT32 align=1 class=CODE use32
 
 global entry_code32
 entry_code32:
@@ -10,7 +10,7 @@ entry_code32:
 function32:
     ret
 
-section _DATA align=1 class=DATA use32
+section _DATA32 align=1 class=DATA use32
 
 global _ex_data32
 _ex_data32:
