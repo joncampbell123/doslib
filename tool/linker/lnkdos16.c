@@ -365,6 +365,7 @@ struct link_segdef {
     unsigned int                        fragments_alloc;
     unsigned int                        fragments_read;
     unsigned char                       pinned;
+    unsigned char                       noemit;
 };
 
 static struct link_segdef               link_segments[MAX_SEGMENTS];
@@ -885,7 +886,7 @@ void dump_link_segments(void) {
                 strcpy(range2,"---------------------");
             }
 
-            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%u\n",
+            fprintf(map_fp,"  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%u%s%s\n",
                 sg->attr.f.f.use32?32:16,
                 sg->name?sg->name:"",
                 sg->classname?sg->classname:"",
@@ -894,7 +895,9 @@ void dump_link_segments(void) {
                 range1,
                 range2,
                 sg->segment_base,
-                sg->initial_alignment);
+                sg->initial_alignment,
+                sg->pinned ? " PIN" : "",
+                sg->noemit ? " NOEMIT" : "");
         }
 
         if (sg->fragments != NULL) {
