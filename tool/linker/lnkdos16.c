@@ -966,6 +966,20 @@ struct link_segdef *find_link_segment_by_class(const char *name) {
     return NULL;
 }
 
+struct link_segdef *find_link_segment_by_class_last(const char *name) {
+    struct link_segdef *ret=NULL;
+    unsigned int i=0;
+
+    while (i < link_segments_count) {
+        struct link_segdef *sg = &link_segments[i++];
+
+        if (sg->classname == NULL) continue;
+        if (!strcmp(name,sg->classname)) ret = sg;
+    }
+
+    return ret;
+}
+
 struct link_segdef *find_link_segment(const char *name) {
     unsigned int i=0;
 
@@ -1009,6 +1023,8 @@ int ledata_add(struct omf_context_t *omf_state, struct omf_ledata_info_t *info,u
         fprintf(stderr,"Segment %s not found\n",segname);
         return 1;
     }
+
+    if (lsg->noemit) return 0;
 
     current_link_segment = lsg;
 
@@ -2859,7 +2875,7 @@ int main(int argc,char **argv) {
 
             {
                 unsigned long ofs;
-                struct link_segdef *stacksg = find_link_segment_by_class("STACK");
+                struct link_segdef *stacksg = find_link_segment_by_class_last("STACK");
 
                 if (stacksg != NULL) {
                     init_ss = stacksg->segment_relative;
