@@ -2201,6 +2201,17 @@ int main(int argc,char **argv) {
                     assert(stacksg->image_ptr == NULL);
 
                     if (stacksg->segment_length < want_stack_size) {
+                        struct seg_fragment *frag;
+
+                        frag = alloc_link_segment_fragment(stacksg);
+                        if (frag == NULL) {
+                            return 1;
+                        }
+                        frag->offset = stacksg->segment_length;
+                        frag->segidx = (int)(stacksg + 1 - (&link_segments[0]));
+                        frag->attr = stacksg->attr;
+                        frag->fragment_length = want_stack_size - stacksg->segment_length;
+
                         stacksg->segment_length = want_stack_size;
                     }
                 }
