@@ -2831,17 +2831,34 @@ int main(int argc,char **argv) {
 
                 if (sd->segment_length == 0) continue;
 
-                ofs = sd->file_offset + sd->segment_length;
-
-                /* NTS: "disk size" includes EXE header, everything needed for MS-DOS
-                 *      to parse and load the EXE file */
-
-                /* TODO: Some segments, like BSS or STACK, do not get emitted to disk.
-                 *       Except that in the EXE format, segments can only be omitted
-                 *       from the end of the image. */
-
-                if (disk_size < ofs) disk_size = ofs;
+                ofs = sd->linear_offset + sd->segment_length;
                 if (resident_size < ofs) resident_size = ofs;
+
+                if (!sd->noemit) {
+                    ofs = sd->file_offset + sd->segment_length;
+                    if (disk_size < ofs) disk_size = ofs;
+                }
+            }
+
+            if (verbose) {
+                fprintf(stderr,"EXE header:                   0x%lx\n",header_size);
+                fprintf(stderr,"EXE resident size:            0x%lx\n",resident_size);
+                fprintf(stderr,"EXE disk size without header: 0x%lx\n",disk_size - header_size);
+                fprintf(stderr,"EXE disk size:                0x%lx\n",disk_size);
+            }
+
+            if (map_fp != NULL) {
+                fprintf(map_fp,"\n");
+
+                fprintf(map_fp,"EXE header stats:\n");
+                fprintf(map_fp,"---------------------------------------\n");
+
+                fprintf(map_fp,"EXE header:                   0x%lx bytes\n",header_size);
+                fprintf(map_fp,"EXE resident size:            0x%lx bytes\n",resident_size);
+                fprintf(map_fp,"EXE disk size without header: 0x%lx bytes\n",disk_size - header_size);
+                fprintf(map_fp,"EXE disk size:                0x%lx bytes\n",disk_size);
+
+                fprintf(map_fp,"\n");
             }
 
             /* TODO: Use the size and position of the STACK segment! */
