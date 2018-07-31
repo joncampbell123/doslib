@@ -2175,6 +2175,21 @@ int main(int argc,char **argv) {
             if (do_dosseg)
                 owlink_dosseg_sort_order();
 
+            {
+                struct link_segdef *ssg;
+                unsigned int i;
+
+                for (i=0;i < link_segments_count;i++) {
+                    ssg = &link_segments[i];
+                    if (ssg->classname == NULL) continue;
+
+                    if (!strcmp(ssg->classname,"STACK") ||
+                        !strcmp(ssg->classname,"BSS")) {
+                        ssg->noemit = 1;
+                    }
+                }
+            }
+
             owlink_stack_bss_arrange();
 
             /* entry point checkup */
@@ -2413,12 +2428,23 @@ int main(int argc,char **argv) {
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
 
+                    if (sd->noemit) break;
+
                     ofs = sd->linear_offset + file_baseofs;
 
                     sd->file_offset = ofs;
 
                     /* NTS: for EXE files, sd->file_offset will be adjusted further downward for relocation tables.
                      *      in fact, maybe computing file offset at this phase was a bad idea... :( */
+                }
+
+                for (;inf < link_segments_count;inf++) {
+                    struct link_segdef *sd = &link_segments[inf];
+
+                    if (!sd->noemit)
+                        fprintf(stderr,"WARNING: NOEMIT segments followed by non-NOEMIT. COM/EXE/DRV cannot support that.\n");
+
+                    sd->file_offset = 0;
                 }
             }
 
@@ -3081,7 +3107,7 @@ int main(int argc,char **argv) {
         for (inf=0;inf < link_segments_count;inf++) {
             struct link_segdef *sd = &link_segments[inf];
 
-            if (sd->segment_length == 0) continue;
+            if (sd->segment_length == 0 || sd->noemit) continue;
 
             if ((unsigned long)lseek(fd,sd->file_offset,SEEK_SET) != sd->file_offset) {
                 fprintf(stderr,"Seek error\n");
