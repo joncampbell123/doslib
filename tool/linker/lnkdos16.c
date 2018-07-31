@@ -1415,6 +1415,33 @@ int apply_FIXUPP(struct omf_context_t *omf_state,unsigned int first,unsigned int
                     }
                 }
                 break;
+            case OMF_FIXUPP_LOCATION_32BIT_OFFSET: /* 32-bit offset */
+                if (pass == PASS_BUILD) {
+                    assert((ptr+4) <= fence);
+
+                    if (!ent->segment_relative) {
+                        /* sanity check: self-relative is only allowed IF the same segment */
+                        /* we could fidget about with relative fixups across real-mode segments, but I'm not going to waste my time on that */
+                        if (current_link_segment->segment_relative != targ_sdef->segment_relative) {
+                            dump_link_segments();
+                            fprintf(stderr,"FIXUPP: self-relative offset fixup across segments with different bases not allowed\n");
+                            fprintf(stderr,"        FIXUP in segment '%s' base 0x%lx\n",
+                                current_link_segment->name,
+                                current_link_segment->segment_relative);
+                            fprintf(stderr,"        FIXUP to segment '%s' base 0x%lx\n",
+                                targ_sdef->name,
+                                targ_sdef->segment_relative);
+                            return -1;
+                        }
+
+                        /* do it */
+                        final_ofs -= ptch+4+current_link_segment->segment_offset;
+                    }
+
+                    *((uint32_t*)ptr) += (uint16_t)final_ofs;
+                }
+                break;
+ 
             default:
                 fprintf(stderr,"Unsupported fixup\n");
                 return -1;
@@ -1578,8 +1605,7 @@ int segdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int i
                     fprintf(stderr,"SEGDEF class='%s' name='%s' already exits\n",classname,name);
 
                 lsg->attr.f.f.alignment = sg->attr.f.f.alignment;
-                if (lsg->attr.f.f.use32 != sg->attr.f.f.use32 ||
-                    lsg->attr.f.f.combination != sg->attr.f.f.combination ||
+                if (lsg->attr.f.f.combination != sg->attr.f.f.combination ||
                     lsg->attr.f.f.big_segment != sg->attr.f.f.big_segment) {
                     fprintf(stderr,"ERROR, segment attribute changed\n");
                     return -1;
