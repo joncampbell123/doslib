@@ -2860,10 +2860,24 @@ int main(int argc,char **argv) {
             {
                 unsigned long ofs;
                 struct link_segdef *stacksg = find_link_segment_by_class("STACK");
-                assert(stacksg != NULL);
 
-                init_ss = stacksg->segment_relative;
-                init_sp = stacksg->segment_offset + stacksg->segment_length;
+                if (stacksg != NULL) {
+                    init_ss = stacksg->segment_relative;
+                    init_sp = stacksg->segment_offset + stacksg->segment_length;
+                }
+                else {
+                    fprintf(stderr,"Warning, no STACK class segment defined\n");
+
+                    if (map_fp != NULL)
+                        fprintf(map_fp,"* Warning, no STACK class segment defined\n");
+
+                    init_ss = 0;
+                    init_sp = resident_size;
+                    while (init_sp > 0xFF00ul) {
+                        init_sp -= 0x100;
+                        init_ss += 0x10;
+                    }
+                }
 
                 ofs = (init_ss << 4ul) + init_sp + header_size;
                 if (resident_size < ofs) resident_size = ofs;
