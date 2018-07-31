@@ -2425,6 +2425,27 @@ int main(int argc,char **argv) {
                     /* TODO: EXE header */
                 }
 
+                for (inf=link_segments_count;inf > 0;) {
+                    struct link_segdef *sd = &link_segments[--inf];
+
+                    if (!sd->noemit) break;
+                }
+
+                for (;inf > 0;) {
+                    struct link_segdef *sd = &link_segments[--inf];
+
+                    if (sd->noemit) {
+                        fprintf(stderr,"Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",
+                            sd->name);
+
+                        if (map_fp != NULL)
+                            fprintf(map_fp,"* Warning, segment '%s' marked NOEMIT will be emitted due to COM/EXE format constraints.\n",
+                                sd->name);
+
+                        sd->noemit = 0;
+                    }
+                }
+
                 for (inf=0;inf < link_segments_count;inf++) {
                     struct link_segdef *sd = &link_segments[inf];
 
@@ -2436,19 +2457,6 @@ int main(int argc,char **argv) {
 
                     /* NTS: for EXE files, sd->file_offset will be adjusted further downward for relocation tables.
                      *      in fact, maybe computing file offset at this phase was a bad idea... :( */
-                }
-
-                for (;inf < link_segments_count;inf++) {
-                    struct link_segdef *sd = &link_segments[inf];
-
-                    if (!sd->noemit) {
-                        fprintf(stderr,"WARNING: NOEMIT segments followed by non-NOEMIT. COM/EXE/DRV cannot support that.\n");
-
-                        if (map_fp != NULL)
-                            fprintf(stderr,"* WARNING: NOEMIT segments followed by non-NOEMIT. COM/EXE/DRV cannot support that.\n");
-                    }
-
-                    sd->file_offset = 0;
                 }
             }
 
