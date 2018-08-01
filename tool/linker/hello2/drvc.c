@@ -11,7 +11,6 @@ unsigned int _dos_write_small(short fd,const void *buffer,unsigned int count);
     value [ax]
 #else
 #pragma aux _dos_write_small = \
-    "mov    ds,ax" \
     "mov    ah,0x40" \
     "int    21h" \
     modify [ax] \
