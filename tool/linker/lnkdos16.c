@@ -1768,7 +1768,7 @@ int segment_def_arrange(void) {
                     inf,ofs,sd->segment_length);
 
         if (output_format == OFMT_COM || output_format == OFMT_EXE ||
-                output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
+            output_format == OFMT_DOSDRV || output_format == OFMT_DOSDRVEXE) {
             if (sd->segment_length > 0x10000ul) {
                 dump_link_segments();
                 fprintf(stderr,"Segment too large >= 64KB\n");
@@ -2237,8 +2237,6 @@ int main(int argc,char **argv) {
                 }
             }
 
-            owlink_stack_bss_arrange();
-
             /* entry point checkup */
             if (output_format == OFMT_DOSDRV) {
                 /* MS-DOS device drivers do NOT have an entry point */
@@ -2347,6 +2345,8 @@ int main(int argc,char **argv) {
                     /* TODO: relocation table */
                     file_baseofs = 32;
                 }
+
+                owlink_stack_bss_arrange();
 
                 if (segment_def_arrange())
                     return 1;
