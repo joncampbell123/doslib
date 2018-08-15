@@ -2,6 +2,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
@@ -68,7 +69,7 @@ const struct patch_info gus_pop_ds_bug = {
 
 static unsigned char temp[4096];
 
-int apply_patch(int fd,const struct patch_info *p) {
+int apply_patch(int fd,const struct patch_info *p,long base) {
     assert(p->name != NULL);
     assert(p->match_what != NULL);
     assert(p->match_what_size != 0);
@@ -77,13 +78,13 @@ int apply_patch(int fd,const struct patch_info *p) {
     assert(p->match_what_size <= sizeof(temp));
     assert(p->patch_what_size <= sizeof(temp));
 
-    if (lseek(fd,p->match_offset,SEEK_SET) != p->match_offset)
+    if (lseek(fd,p->match_offset + base,SEEK_SET) != (p->match_offset + base))
         return 0;
     if (read(fd,temp,p->match_what_size) != p->match_what_size)
         return 0;
 
     if (!memcmp(temp,p->match_what,p->match_what_size)) {
-        printf("Code match at 0x%lx '%s'\n",p->match_offset,p->name);
+        printf("Code match at 0x%lx '%s'\n",(unsigned long)p->match_offset,p->name);
     }
 
     return 0;
@@ -101,7 +102,22 @@ int openrw_file(const char *path) {
     return fd;
 }
 
+void execom_get_base(long *base,int fd) {
+    *base = 0;
+
+    if (lseek(fd,0,SEEK_SET) != 0)
+        return;
+    if (read(fd,temp,0x20) != 0x20)
+        return;
+
+    if (!memcmp(temp,"MZ",2)) {
+        *base = *((uint16_t*)(temp + 0x08)) << 4L; /* EXE header size in paragraphs -> base */
+        printf("EXE header size: %lu\n",*base);
+    }
+}
+
 int main() {
+    long patch_base = 0;
     int fd;
 
     printf("DOSLIB/DOSBox-X patch for DID INCENTIV (the party 1994)\n");
@@ -110,7 +126,8 @@ int main() {
 
     /* ======================================= INCENTIV.EXE ================================ */
     if ((fd=openrw_file("INCENTIV.EXE")) < 0) return 1;
-    if (apply_patch(fd,&gus_pop_ds_bug) < 0) return 1;
+    execom_get_base(&patch_base,fd);
+    if (apply_patch(fd,&gus_pop_ds_bug,patch_base) < 0) return 1;
     close(fd);
     /* ===================================================================================== */
 
