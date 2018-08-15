@@ -87,6 +87,13 @@ int apply_patch(int fd,const struct patch_info *p,long base) {
         printf("Code match at 0x%lx '%s'\n",(unsigned long)p->match_offset,p->name);
     }
 
+    if (lseek(fd,p->patch_offset + base,SEEK_SET) != (p->patch_offset + base))
+        return 0;
+    if (write(fd,p->patch_what,p->patch_what_size) != p->patch_what_size) {
+        printf("ERROR: Unable to write patch\n");
+        return -1;
+    }
+
     return 0;
 }
 
