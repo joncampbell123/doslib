@@ -3,12 +3,91 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <assert.h>
+#include <string.h>
 #include <fcntl.h>
 #include <stdio.h>
 
 #ifndef O_BINARY
 #define O_BINARY (0)
 #endif
+
+struct patch_info {
+    const char*             name;
+
+    const size_t            match_offset;
+    const unsigned char*    match_what;
+    const size_t            match_what_size;
+
+    const size_t            patch_offset;
+    const unsigned char*    patch_what;
+    const size_t            patch_what_size;
+};
+
+/* ================================= GUS POP DS */
+
+const unsigned char gus_pop_ds_bug_match[] = {
+    /*+0000:2D63*/ 0x07,                        /* pop  es */
+    /*+0000:2D64*/ 0x1F,                        /* pop  ds */
+    /*+0000:2D65*/ 0x8B,0x16,0xFE,0x38,         /* mov  dx,[38FE] */
+    /*+0000:2D69*/ 0xB0,0x8F,                   /* mov  al,8F */
+    /*+0000:2D6B*/ 0xEE,                        /* out  dx,al */
+    /*+0000:2D6C*/ 0x80,0xC2,0x02,              /* add  dl,02 */
+    /*+0000:2D6F*/ 0xEC,                        /* in   al,dx */
+    /*+0000:2D70*/ 0x61,                        /* popa */
+    /*+0000:2D71*/ 0xCF                         /* iret */
+};
+
+const unsigned char gus_pop_ds_bug_patch[] = {
+    /*+0000:2D63*/ 0x8B,0x16,0xFE,0x38,         /* mov  dx,[38FE]              ds:[38FE]=0000 */
+    /*+0000:2D67*/ 0xB0,0x8F,                   /* mov  al,8F */
+    /*+0000:2D69*/ 0xEE,                        /* out  dx,al */
+    /*+0000:2D6A*/ 0x80,0xC2,0x02,              /* add  dl,02 */
+    /*+0000:2D6D*/ 0xEC,                        /* in   al,dx */
+    /*+0000:2D6E*/ 0x07,                        /* pop  es */
+    /*+0000:2D6F*/ 0x1F,                        /* pop  ds */
+    /*+0000:2D70*/ 0x61,                        /* popa */
+    /*+0000:2D71*/ 0xCF                         /* iret */
+};
+
+/* ============================================ */
+
+const struct patch_info gus_pop_ds_bug = {
+    "Gravis Ultrasound IRQ handler POP DS bug",     /* name */
+
+    /* match */
+    0x2D63,                                         /* offset */
+    gus_pop_ds_bug_match,
+    sizeof(gus_pop_ds_bug_match),
+
+    /* patch */
+    0x2D63,                                         /* offset */
+    gus_pop_ds_bug_patch,
+    sizeof(gus_pop_ds_bug_patch)
+};
+
+static unsigned char temp[4096];
+
+int apply_patch(int fd,const struct patch_info *p) {
+    assert(p->name != NULL);
+    assert(p->match_what != NULL);
+    assert(p->match_what_size != 0);
+    assert(p->patch_what != NULL);
+    assert(p->patch_what_size != 0);
+    assert(p->match_what_size <= sizeof(temp));
+    assert(p->patch_what_size <= sizeof(temp));
+
+    if (lseek(fd,p->match_offset,SEEK_SET) != p->match_offset)
+        return 0;
+    if (read(fd,temp,p->match_what_size) != p->match_what_size)
+        return 0;
+
+    if (!memcmp(temp,p->match_what,p->match_what_size)) {
+        printf("Code match at 0x%lx '%s'\n",p->match_offset,p->name);
+    }
+
+    return 0;
+}
 
 int openrw_file(const char *path) {
     int fd;
@@ -31,7 +110,7 @@ int main() {
 
     /* ======================================= INCENTIV.EXE ================================ */
     if ((fd=openrw_file("INCENTIV.EXE")) < 0) return 1;
-
+    if (apply_patch(fd,&gus_pop_ds_bug) < 0) return 1;
     close(fd);
     /* ===================================================================================== */
 
