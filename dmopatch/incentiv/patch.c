@@ -16,11 +16,11 @@
 struct patch_info {
     const char*             name;
 
-    const size_t            match_offset;
+    const unsigned long     match_offset;
     const unsigned char*    match_what;
     const size_t            match_what_size;
 
-    const size_t            patch_offset;
+    const unsigned long     patch_offset;
     const unsigned char*    patch_what;
     const size_t            patch_what_size;
 };
@@ -69,7 +69,7 @@ const struct patch_info gus_pop_ds_bug = {
 
 static unsigned char temp[4096];
 
-int apply_patch(int fd,const struct patch_info *p,long base) {
+int apply_patch(int fd,const struct patch_info *p,unsigned long base) {
     assert(p->name != NULL);
     assert(p->match_what != NULL);
     assert(p->match_what_size != 0);
@@ -78,18 +78,18 @@ int apply_patch(int fd,const struct patch_info *p,long base) {
     assert(p->match_what_size <= sizeof(temp));
     assert(p->patch_what_size <= sizeof(temp));
 
-    if (lseek(fd,p->match_offset + base,SEEK_SET) != (p->match_offset + base))
+    if ((unsigned long)lseek(fd,p->match_offset + base,SEEK_SET) != (p->match_offset + base))
         return 0;
-    if (read(fd,temp,p->match_what_size) != p->match_what_size)
+    if ((size_t)read(fd,temp,p->match_what_size) != p->match_what_size)
         return 0;
 
     if (!memcmp(temp,p->match_what,p->match_what_size)) {
         printf("Code match at 0x%lx '%s'\n",(unsigned long)p->match_offset,p->name);
     }
 
-    if (lseek(fd,p->patch_offset + base,SEEK_SET) != (p->patch_offset + base))
+    if ((unsigned long)lseek(fd,p->patch_offset + base,SEEK_SET) != (p->patch_offset + base))
         return 0;
-    if (write(fd,p->patch_what,p->patch_what_size) != p->patch_what_size) {
+    if ((size_t)write(fd,p->patch_what,p->patch_what_size) != p->patch_what_size) {
         printf("ERROR: Unable to write patch\n");
         return -1;
     }
@@ -109,7 +109,7 @@ int openrw_file(const char *path) {
     return fd;
 }
 
-void execom_get_base(long *base,int fd) {
+void execom_get_base(unsigned long *base,int fd) {
     *base = 0;
 
     if (lseek(fd,0,SEEK_SET) != 0)
@@ -124,7 +124,7 @@ void execom_get_base(long *base,int fd) {
 }
 
 int main() {
-    long patch_base = 0;
+    unsigned long patch_base = 0;
     int fd;
 
     printf("DOSLIB/DOSBox-X patch for DID INCENTIV (the party 1994)\n");
