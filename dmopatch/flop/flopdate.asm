@@ -60,5 +60,5 @@ new_int21_pass:
             jmp far word [cs:old_int21]
 
 ; end symbol
-the_end:    db      'X'
+the_end:    db      'FLOP.EXE last/modified time/date hack (C) 2018 Hackipedia/DOSLIB project'
 
