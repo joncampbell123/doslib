@@ -46,6 +46,16 @@ old_int21   dd      0
 
 ; new INT 21h
 new_int21:
+            cmp     ax,0x5700               ; we're looking for "get file last written date/time"
+            jne     new_int21_pass
+;---------------------------------------- LIE, Say the date is 2800h and time is 0000h
+            pushf
+            call far word [cs:old_int21]    ; call through to DOS, so when DOS returns we can change the result
+            jc      new_int21_pass          ; not if error
+            mov     cx,0x0000               ; change result, time
+            mov     dx,0x2800               ; change result, date
+            iret
+;----------------------------------------
 new_int21_pass:
             jmp far word [cs:old_int21]
 
