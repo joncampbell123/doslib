@@ -350,6 +350,15 @@ int load_menu(void) {
     fclose(fp);
     temp_free();
 
+    /* NTS: Note we allow a blank line */
+    if (menu_msg == NULL)
+        menu_msg = strdup("Make a selection and hit ENTER");
+
+    if (*menu_msg != 0)
+        first_menu_item_y = 2;
+    else
+        first_menu_item_y = 0;
+
     if (debug_ini) {
         fprintf(stderr,"Menu items:\n");
         {
@@ -416,17 +425,7 @@ int load_menu(void) {
         }
         fprintf(stderr,"Default timeout: %d seconds\n",menu_default_timeout);
         fprintf(stderr,"Initial menu select: %d\n",menu_sel);
-
-        /* NTS: Note we allow a blank line */
-        if (menu_msg == NULL)
-            menu_msg = strdup("Make a selection and hit ENTER");
-
         fprintf(stderr,"Menu message: '%s'\n",menu_msg);
-
-        if (*menu_msg != 0)
-            first_menu_item_y = 2;
-        else
-            first_menu_item_y = 0;
     }
 
     if (menu_items == 0) {
@@ -468,15 +467,28 @@ static inline VGA_ALPHA_PTR attr_vram(void) {
 VGA_ALPHA_PTR           text_vram = NULL; // 16-bit per cell
 #endif
 
+void draw_string(unsigned int vramoff,const char *s,unsigned int attrw) {
+    unsigned int x = 0;
+
+    while (x < screen_w && *s != 0) {
+#if defined(TARGET_PC98)
+        text_vram[vramoff+x] = (unsigned char)(*s++);
+        attr_vram()[vramoff+x] = attrw;
+#else
+        text_vram[vramoff+x] = *s++ + attrw;
+#endif
+
+        x++;
+    }
+}
+
 void draw_menu_item(unsigned int idx) {
     if (idx >= menu_items) return;
 
     {
         struct menuitem *item = &menu[idx];
         unsigned int vramoff = (idx + first_menu_item_y) * screen_w;
-        const char *s = item->menu_text;
         unsigned short attrw;
-        unsigned int x = 0;
 
 #if defined(TARGET_PC98)
         attrw = (idx == menu_sel) ? 0xE5 : 0xE1; /* white, not invisible. use reverse attribute if selected */
@@ -484,16 +496,7 @@ void draw_menu_item(unsigned int idx) {
         attrw = (idx == menu_sel) ? 0x7000 : 0x0700;
 #endif
 
-        while (x < screen_w && *s != 0) {
-#if defined(TARGET_PC98)
-            text_vram[vramoff+x] = (unsigned char)(*s++);
-            attr_vram()[vramoff+x] = attrw;
-#else
-            text_vram[vramoff+x] = *s++ + attrw;
-#endif
-
-            x++;
-        }
+        draw_string(vramoff,item->menu_text,attrw);
     }
 }
 
@@ -554,6 +557,18 @@ int run_menu(void) {
 
         do {
             if (redraw) {
+                if (first_menu_item_y > 0) {
+                    unsigned short attrw;
+
+#if defined(TARGET_PC98)
+                    attrw = 0xE1; /* white, not invisible. use reverse attribute if selected */
+#else
+                    attrw = 0x0700;
+#endif
+
+                    draw_string(0,menu_msg,attrw);
+                }
+
                 for (i=0;i < menu_items;i++)
                     draw_menu_item(i);
 
