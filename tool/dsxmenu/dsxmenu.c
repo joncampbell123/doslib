@@ -643,8 +643,12 @@ int run_menu(void) {
                     }
                 }
 
-                if (timeout == 0)
+                if (timeout == 0) {
+                    if (menu_sel >= 0 && menu_sel < menu_items)
+                        doit = 1;
+
                     break;
+                }
             }
 
             if (redraw) {
