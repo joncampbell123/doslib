@@ -27,14 +27,6 @@ struct menuitem {
     char*                           menu_item_name;             // strdup()'d
 };
 
-#define MAX_MENUCHOICE_COMMANDS     100
-
-struct menuchoice {
-    char*                           menu_item_name;             // strdup()'d
-    char*                           command[MAX_MENUCHOICE_COMMANDS];
-    int                             command_items;
-};
-
 /* [menu] */
 #define MAX_MENU_ITEMS              20
 
