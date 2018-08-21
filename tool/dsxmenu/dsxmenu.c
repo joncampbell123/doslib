@@ -534,6 +534,13 @@ int run_menu(void) {
     screen_h++;
 
     text_vram = vga_state.vga_alpha_ram;
+
+    /* use the BIOS to hide the cursor */
+    __asm {
+        mov     ah,0x01
+        mov     cx,0x2000
+        int     10h
+    }
 #endif
 
     if (debug_ini) {
@@ -629,6 +636,12 @@ int run_menu(void) {
     printf("\x1B[5>l"); /* show cursor */
     fflush(stdout);
 #else
+    /* use the BIOS to show the cursor */
+    __asm {
+        mov     ah,0x01
+        mov     cx,0x0607       ; FIXME: Assumes CGA cursor emulation is active. Map to CGA lines 6-7
+        int     10h
+    }
 #endif
 
     return 0;
