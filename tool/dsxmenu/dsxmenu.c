@@ -15,6 +15,8 @@
 #include <hw/dos/dos.h>
 #include <hw/dos/dosbox.h>
 
+static unsigned char                debug_ini = 0;
+
 static const char*                  menu_ini = NULL;            // points at argv[] do not free
 
 static char*                        menu_default_name = NULL;   // strdup(), free at end
@@ -98,6 +100,7 @@ static void temp_free(void) {
 static void help(void) {
     fprintf(stderr,"DSXMENU [options] <menu INI file>\n");
     fprintf(stderr," -h  --help   /?       Show this help\n");
+    fprintf(stderr," -d                    Debug output\n");
 }
 
 static int parse_argv(int argc,char **argv) {
@@ -114,6 +117,9 @@ static int parse_argv(int argc,char **argv) {
             if (!strcmp(a,"h") || !strcmp(a,"help") || !strcmp(a,"?")) {
                 help();
                 return -1;
+            }
+            else if (!strcmp(a,"d")) {
+                debug_ini = 1;
             }
             else {
                 fprintf(stderr,"Unknown switch '%s'\n",a);
@@ -312,6 +318,55 @@ int load_menu(void) {
 
     fclose(fp);
     temp_free();
+
+    if (debug_ini) {
+        fprintf(stderr,"Menu items:\n");
+        {
+            unsigned int i;
+            for (i=0;i < menu_items;i++) {
+                struct menuitem *item = &menu[i];
+
+                assert(item->menu_item_name != NULL);
+                assert(item->menu_text != NULL);
+
+                fprintf(stderr," [%d] item='%s' text='%s'\n",i,item->menu_item_name,item->menu_text);
+            }
+        }
+
+        fprintf(stderr,"Common commands:\n");
+        {
+            unsigned int i;
+            for (i=0;i < common_command_items;i++) {
+                char *s = common_command[i];
+
+                assert(s != NULL);
+
+                fprintf(stderr," '%s'\n",s);
+            }
+        }
+
+        fprintf(stderr,"Choice commands:\n");
+        {
+            unsigned int i;
+            for (i=0;i < choice_command_items;i++) {
+                char *s = choice_command[i];
+                unsigned int menuidx = choice_command_menu_item[i];
+
+                assert(s != NULL);
+                assert(menuidx < menu_items);
+
+                {
+                    struct menuitem *item = &menu[menuidx];
+
+                    assert(item->menu_item_name != NULL);
+
+                    fprintf(stderr," For choice '%s': '%s'\n",
+                        item->menu_item_name,s);
+                }
+            }
+        }
+    }
+
     return 0;
 }
 
