@@ -53,12 +53,29 @@ struct menuitem* menu_alloc(void) {
 char*                               common_command[MAX_COMMON_COMMANDS];
 int                                 common_command_items = 0;
 
-/* [section] */
+int add_common(const char *s) {
+    if (common_command_items >= MAX_COMMON_COMMANDS)
+        return -1;
 
-#define MAX_MENU_CHOICES            (MAX_MENU_ITEMS)
+    common_command[common_command_items++] = strdup(s);
+    return 0;
+}
 
-struct menuchoice                   menu_choice[MAX_MENU_CHOICES];
-int                                 menu_choice_items = 0;
+/* [choice] */
+#define MAX_CHOICE_COMMANDS         256
+
+char*                               choice_command[MAX_COMMON_COMMANDS];
+unsigned char                       choice_command_menu_item[MAX_COMMON_COMMANDS];  // NTS: Change to unsigned short when we allow >256 menu items
+int                                 choice_command_items = 0;
+
+int add_choice(const char *s,unsigned int menu_item) {
+    if (choice_command_items >= MAX_COMMON_COMMANDS)
+        return -1;
+
+    choice_command_menu_item[choice_command_items] = menu_item;
+    choice_command[choice_command_items++] = strdup(s);
+    return 0;
+}
 
 #define TEMP_SZ                     4096
 
@@ -153,6 +170,7 @@ enum {
 
 int load_menu(void) {
     char *current_section = NULL;
+    unsigned int load_choice_index = 0;
     int load_mode = LOAD_NONE;
     char *s = NULL;
     FILE *fp;
@@ -195,8 +213,29 @@ int load_menu(void) {
             if (!strcmp(current_section,"menu")) {
                 load_mode = LOAD_MENU;
             }
+            else if (!strcmp(current_section,"common")) {
+                load_mode = LOAD_COMMON;
+            }
             else {
                 load_mode = LOAD_NONE;
+
+                if (*current_section != 0) {
+                    unsigned int i=0;
+
+                    while (i < (unsigned int)menu_items) {
+                        struct menuitem *item = &menu[i];
+
+                        assert(item->menu_item_name != NULL);
+
+                        if (!strcmp(item->menu_item_name,current_section)) {
+                            load_mode = LOAD_CHOICE;
+                            load_choice_index = i;
+                            break;
+                        }
+
+                        i++;
+                    }
+                }
             }
 
             continue;
@@ -251,6 +290,20 @@ int load_menu(void) {
 
                     cstr_set(&menu_default_name,choice);
                 }
+            }
+        }
+        else if (load_mode == LOAD_COMMON) {
+            if (add_common(s)) {
+                fprintf(stderr,"Too many common commands\n");
+                break;
+            }
+        }
+        else if (load_mode == LOAD_CHOICE) {
+            assert(load_choice_index < menu_items);
+
+            if (add_choice(s,load_choice_index)) {
+                fprintf(stderr,"Too many choice commands\n");
+                break;
             }
         }
     }
