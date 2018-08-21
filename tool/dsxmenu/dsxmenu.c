@@ -13,6 +13,7 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/vga/vga.h>
 #include <hw/dos/dosbox.h>
 
 static unsigned char                debug_ini = 0;
@@ -416,12 +417,95 @@ int load_menu(void) {
     return 0;
 }
 
+uint8_t read_bda8(unsigned int ofs) {
+#if TARGET_MSDOS == 32
+    return *((uint8_t*)(0x400 + ofs));
+#else
+    return *((uint8_t far*)MK_FP(0x40,ofs));
+#endif
+}
+
+uint16_t read_bda16(unsigned int ofs) {
+#if TARGET_MSDOS == 32
+    return *((uint16_t*)(0x400 + ofs));
+#else
+    return *((uint16_t far*)MK_FP(0x40,ofs));
+#endif
+}
+
+uint8_t read_int10_bd_mode(void) {
+    return read_bda8(0x49);
+}
+
+unsigned int            screen_w,screen_h;
+#if defined(TARGET_PC98)
+VGA_ALPHA_PTR           text_vram = NULL; // 16-bit per cell
+
+static inline VGA_ALPHA_PTR attr_vram(void) {
+    return text_vram + 0x1000;  /* A200:0000 (0x1000 x 16-bit) */
+}
+#else
+VGA_ALPHA_PTR           text_vram = NULL; // 16-bit per cell
+#endif
+
+int run_menu(void) {
+#if defined(TARGET_PC98)
+ #if TARGET_MSDOS == 32
+    text_vram = (VGA_ALPHA_PTR)0xA0000;
+ #else
+    text_vram = (VGA_ALPHA_PTR)MK_FP(0xA000,0x0000);
+ #endif
+#else
+    // IBM PC/XT/AT
+
+    // make sure we're in a text mode
+	if (!vga_state.vga_alpha_mode) {
+        int10_setmode(3);
+        update_state_from_vga();
+    }
+
+    if (vga_state.vga_alpha_ram == NULL)
+        return 1;
+
+    screen_w = read_bda16(0x4A);    // number of columns
+    if (screen_w == 0) screen_w = 80;
+    screen_h = read_bda8(0x84);     // number of rows (may not exist if BIOS is old enough)
+    if (screen_h == 0) screen_h = 24;
+    screen_h++;
+
+    text_vram = vga_state.vga_alpha_ram;
+#endif
+
+    if (debug_ini) {
+        fprintf(stderr,"Screen is %u x %u\n",screen_w,screen_h);
+#if TARGET_MSDOS == 32
+        fprintf(stderr,"Ram ptr %p\n",text_vram);
+#else
+        fprintf(stderr,"Ram ptr %Fp\n",text_vram);
+#endif
+
+#if defined(TARGET_PC98)
+ #if TARGET_MSDOS == 32
+        fprintf(stderr,"Ram ptr2 %p\n",attr_vram());
+ #else
+        fprintf(stderr,"Ram ptr2 %Fp\n",attr_vram());
+ #endif
+#endif
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv,char **envp) {
     if (parse_argv(argc,argv))
         return 1;
 
-    if (load_menu())
-        return 1;
+    if (load_menu() == 0) {
+        if (probe_vga()) {
+            if (run_menu() == 0) {
+            }
+        }
+    }
 
     free_menu();
 	return 0;
