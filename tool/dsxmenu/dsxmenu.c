@@ -560,6 +560,27 @@ int run_menu(void) {
 #endif
     }
 
+    /* erase background */
+    {
+        unsigned int x,y,erh,o;
+
+        erh = first_menu_item_y + menu_items + 1;
+        if (erh > screen_h) erh = screen_h;
+
+#if defined(TARGET_PC98)
+        for (y=0;y < erh;y++) {
+            o = screen_w * y;
+            for (x=0;x < screen_w;x++) text_vram[o+x] = 0x20;
+            for (x=0;x < screen_w;x++) attr_vram()[o+x] = 0x00; /* no color, invisible */
+        }
+#else
+        for (y=0;y < erh;y++) {
+            o = screen_w * y;
+            for (x=0;x < screen_w;x++) text_vram[o+x] = 0x0720;
+        }
+#endif
+    }
+
     {
         unsigned int i;
         unsigned char doit = 0;
