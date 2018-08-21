@@ -631,13 +631,13 @@ int run_menu(void) {
                         unsigned short attrw;
 
 #if defined(TARGET_PC98)
-                        attrw = 0xE1; /* white, not invisible. use reverse attribute if selected */
+                        attrw = 0xA1; /* cyan, not invisible */
 #else
-                        attrw = 0x0700;
+                        attrw = 0x0300; /* cyan */
 #endif
 
                         assert(temp != NULL);
-                        sprintf(temp,"%u ",sec + 1u);
+                        sprintf(temp,"Will choose default in %u seconds ",sec + 1u);
 
                         draw_string((first_menu_item_y + menu_items + 1) * screen_w,temp,attrw);
                     }
@@ -701,7 +701,7 @@ int run_menu(void) {
 #endif
 
                         timeout = ~0UL;
-                        draw_string((first_menu_item_y + menu_items + 1) * screen_w,"    ",attrw);
+                        draw_string((first_menu_item_y + menu_items + 1) * screen_w,"                                        ",attrw);
                     }
                 }
                 else if (c == DNARROW) {
@@ -724,7 +724,7 @@ int run_menu(void) {
 #endif
 
                         timeout = ~0UL;
-                        draw_string((first_menu_item_y + menu_items + 1) * screen_w,"    ",attrw);
+                        draw_string((first_menu_item_y + menu_items + 1) * screen_w,"                                        ",attrw);
                     }
                 }
                 else if (c == 13) {
