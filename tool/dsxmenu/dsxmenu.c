@@ -367,6 +367,11 @@ int load_menu(void) {
         }
     }
 
+    if (menu_items == 0) {
+        fprintf(stderr,"No menu items defined\n");
+        return 1;
+    }
+
     return 0;
 }
 
