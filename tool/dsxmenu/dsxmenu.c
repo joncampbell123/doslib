@@ -510,6 +510,11 @@ int run_menu(void) {
 
     screen_w = 80;                  // TODO: When would such a system use 40-column mode?
     screen_h = 25;                  // TODO: PC-98 systems have a 20-line text mode too!
+
+    // print escapes to hide the function row and cursor
+    printf("\x1B[1>h"); /* hide function row */
+    printf("\x1B[5>h"); /* hide cursor (so we can directly control it) */
+    fflush(stdout);
 #else
     // IBM PC/XT/AT
 
@@ -617,6 +622,14 @@ int run_menu(void) {
             }
         } while(1);
     }
+
+#if defined(TARGET_PC98)
+    printf("\n");
+    printf("\x1B[1>l"); /* show function row */
+    printf("\x1B[5>l"); /* show cursor */
+    fflush(stdout);
+#else
+#endif
 
     return 0;
 }
