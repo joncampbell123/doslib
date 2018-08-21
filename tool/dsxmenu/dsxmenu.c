@@ -18,7 +18,11 @@
 
 static unsigned char                debug_ini = 0;
 
+static char*                        menu_msg = NULL;            // strdup()'d
+
 static const char*                  menu_ini = NULL;            // points at argv[] do not free
+
+static unsigned int                 first_menu_item_y = 0;
 
 static char*                        menu_default_name = NULL;   // strdup(), free at end
 static int                          menu_default_timeout = 5;
@@ -194,6 +198,8 @@ void free_menu(void) {
         }
         choice_command_items = 0;
     }
+
+    cstr_free(&menu_msg);
 }
 
 int load_menu(void) {
@@ -318,6 +324,9 @@ int load_menu(void) {
 
                     cstr_set(&menu_default_name,choice);
                 }
+                else if (!strcmp(name,"menumessage")) {
+                    cstr_set(&menu_msg,value);
+                }
             }
         }
         else if (load_mode == LOAD_COMMON) {
@@ -407,6 +416,17 @@ int load_menu(void) {
         }
         fprintf(stderr,"Default timeout: %d seconds\n",menu_default_timeout);
         fprintf(stderr,"Initial menu select: %d\n",menu_sel);
+
+        /* NTS: Note we allow a blank line */
+        if (menu_msg == NULL)
+            menu_msg = strdup("Make a selection and hit ENTER");
+
+        fprintf(stderr,"Menu message: '%s'\n",menu_msg);
+
+        if (*menu_msg != 0)
+            first_menu_item_y = 2;
+        else
+            first_menu_item_y = 0;
     }
 
     if (menu_items == 0) {
@@ -453,7 +473,7 @@ void draw_menu_item(unsigned int idx) {
 
     {
         struct menuitem *item = &menu[idx];
-        unsigned int vramoff = idx * screen_w;
+        unsigned int vramoff = (idx + first_menu_item_y) * screen_w;
         const char *s = item->menu_text;
         unsigned short attrw;
         unsigned int x = 0;
