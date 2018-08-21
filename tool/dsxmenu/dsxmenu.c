@@ -507,13 +507,17 @@ void draw_menu_item(unsigned int idx) {
 }
 
 int run_menu(void) {
-    unsigned long timeout = 0;
+    unsigned long timeout;
+    unsigned long timeout_disp_update;
     unsigned char doit = 0;
     t8254_time_t pr,cr;
+
+    if (temp_alloc()) return 1;
 
 	write_8254_system_timer(0);
 
     timeout = (unsigned long)T8254_REF_CLOCK_HZ * (unsigned long)menu_default_timeout;
+    timeout_disp_update = timeout;
     cr = read_8254(0);
 
 #if defined(TARGET_PC98)
@@ -579,7 +583,7 @@ int run_menu(void) {
     {
         unsigned int x,y,erh,o;
 
-        erh = first_menu_item_y + menu_items + 1;
+        erh = first_menu_item_y + menu_items + 2;
         if (erh > screen_h) erh = screen_h;
 
 #if defined(TARGET_PC98)
@@ -614,6 +618,29 @@ int run_menu(void) {
                         timeout -= countdown;
                     else
                         timeout = 0;
+                }
+
+                if (timeout < timeout_disp_update) {
+                    if (timeout_disp_update >= T8254_REF_CLOCK_HZ)
+                        timeout_disp_update -= T8254_REF_CLOCK_HZ;
+                    else
+                        timeout_disp_update = 0;
+
+                    {
+                        unsigned int sec = (timeout_disp_update / (unsigned long)T8254_REF_CLOCK_HZ);
+                        unsigned short attrw;
+
+#if defined(TARGET_PC98)
+                        attrw = 0xE1; /* white, not invisible. use reverse attribute if selected */
+#else
+                        attrw = 0x0700;
+#endif
+
+                        assert(temp != NULL);
+                        sprintf(temp,"%u ",sec + 1u);
+
+                        draw_string((first_menu_item_y + menu_items + 1) * screen_w,temp,attrw);
+                    }
                 }
 
                 if (timeout == 0)
@@ -664,7 +691,18 @@ int run_menu(void) {
                         draw_menu_item(menu_sel);
                     }
 
-                    timeout = ~0UL;
+                    if (timeout != (~0UL)) {
+                        unsigned short attrw;
+
+#if defined(TARGET_PC98)
+                        attrw = 0xE1; /* white, not invisible. use reverse attribute if selected */
+#else
+                        attrw = 0x0700;
+#endif
+
+                        timeout = ~0UL;
+                        draw_string((first_menu_item_y + menu_items + 1) * screen_w,"    ",attrw);
+                    }
                 }
                 else if (c == DNARROW) {
                     i = menu_sel;
@@ -676,15 +714,24 @@ int run_menu(void) {
                         draw_menu_item(menu_sel);
                     }
 
-                    timeout = ~0UL;
+                    if (timeout != (~0UL)) {
+                        unsigned short attrw;
+
+#if defined(TARGET_PC98)
+                        attrw = 0xE1; /* white, not invisible. use reverse attribute if selected */
+#else
+                        attrw = 0x0700;
+#endif
+
+                        timeout = ~0UL;
+                        draw_string((first_menu_item_y + menu_items + 1) * screen_w,"    ",attrw);
+                    }
                 }
                 else if (c == 13) {
                     if (menu_sel >= 0 && menu_sel < menu_items) {
                         doit = 1;
                         break;
                     }
-
-                    timeout = ~0UL;
                 }
             }
         } while(1);
