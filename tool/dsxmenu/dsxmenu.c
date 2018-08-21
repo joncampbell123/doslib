@@ -501,6 +501,8 @@ void draw_menu_item(unsigned int idx) {
 }
 
 int run_menu(void) {
+    unsigned char doit = 0;
+
 #if defined(TARGET_PC98)
  #if TARGET_MSDOS == 32
     text_vram = (VGA_ALPHA_PTR)0xA0000;
@@ -583,7 +585,6 @@ int run_menu(void) {
 
     {
         unsigned int i;
-        unsigned char doit = 0;
         unsigned char redraw = 1;
         int c;
 
@@ -675,6 +676,9 @@ int run_menu(void) {
         }
     }
 #endif
+
+    if (!doit)
+        return 1;
 
     return 0;
 }
