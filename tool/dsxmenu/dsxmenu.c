@@ -16,6 +16,8 @@
 #include <hw/vga/vga.h>
 #include <hw/dos/dosbox.h>
 
+static unsigned char                loop_menu = 0;
+
 static unsigned char                debug_ini = 0;
 
 static char*                        menu_msg = NULL;            // strdup()'d
@@ -326,6 +328,9 @@ int load_menu(void) {
                 }
                 else if (!strcmp(name,"menumessage")) {
                     cstr_set(&menu_msg,value);
+                }
+                else if (!strcmp(name,"menuloop")) {
+                    loop_menu = atoi(value) > 0 ? 1 : 0;
                 }
             }
         }
@@ -720,8 +725,10 @@ int main(int argc,char **argv,char **envp) {
 #endif
 
     if (load_menu() == 0) {
+again:
         if (run_menu() == 0) {
             run_commands();
+            if (loop_menu) goto again;
         }
     }
 
