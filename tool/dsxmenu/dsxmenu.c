@@ -679,6 +679,33 @@ int run_menu(void) {
     return 0;
 }
 
+void run_commands(void) {
+    struct menuitem *item;
+    unsigned int i;
+
+    if (menu_sel >= menu_items)
+        return;
+
+    item = &menu[menu_sel];
+    assert(item->menu_item_name != NULL);
+
+    /* first run common commands */
+    for (i=0;i < common_command_items;i++) {
+        char *s = common_command[i];
+        assert(s != NULL);
+        system(s);
+    }
+
+    /* then run choice commands */
+    for (i=0;i < choice_command_items;i++) {
+        if (choice_command_menu_item[i] == menu_sel) {
+            char *s = choice_command[i];
+            assert(s != NULL);
+            system(s);
+        }
+    }
+}
+
 int main(int argc,char **argv,char **envp) {
     if (parse_argv(argc,argv))
         return 1;
@@ -690,6 +717,7 @@ int main(int argc,char **argv,char **envp) {
 
     if (load_menu() == 0) {
         if (run_menu() == 0) {
+            run_commands();
         }
     }
 
