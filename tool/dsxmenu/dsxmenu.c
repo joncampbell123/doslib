@@ -386,6 +386,11 @@ int load_menu(void) {
                 }
             }
         }
+
+        if (menu_default_name != NULL) {
+            fprintf(stderr,"Default item: '%s'\n",menu_default_name);
+        }
+        fprintf(stderr,"Default timeout: %d seconds\n",menu_default_timeout);
     }
 
     if (menu_items == 0) {
