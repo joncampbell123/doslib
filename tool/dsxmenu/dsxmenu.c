@@ -585,7 +585,6 @@ int run_menu(void) {
         unsigned int i;
         unsigned char doit = 0;
         unsigned char redraw = 1;
-        struct menuitem *item;
         int c;
 
         do {
@@ -655,6 +654,7 @@ int run_menu(void) {
     printf("\n");
     printf("\x1B[1>l"); /* show function row */
     printf("\x1B[5>l"); /* show cursor */
+    printf("\x1B[%dB",screen_h); /* put the cursor at the bottom */
     fflush(stdout);
 #else
     /* use the BIOS to show the cursor */
@@ -662,6 +662,17 @@ int run_menu(void) {
         mov     ah,0x01
         mov     cx,0x0607       ; FIXME: Assumes CGA cursor emulation is active. Map to CGA lines 6-7
         int     10h
+    }
+    /* and then put it at the bottom */
+    {
+        uint16_t x = (screen_h - 1u) << 8u;
+
+        __asm {
+            mov     ah,0x02
+            xor     bh,bh
+            mov     dx,x
+            int     10h
+        }
     }
 #endif
 
