@@ -448,6 +448,35 @@ static inline VGA_ALPHA_PTR attr_vram(void) {
 VGA_ALPHA_PTR           text_vram = NULL; // 16-bit per cell
 #endif
 
+void draw_menu_item(unsigned int idx) {
+    if (idx >= menu_items) return;
+
+    {
+        struct menuitem *item = &menu[idx];
+        unsigned int vramoff = idx * screen_w;
+        const char *s = item->menu_text;
+        unsigned short attrw;
+        unsigned int x = 0;
+
+#if defined(TARGET_PC98)
+        attrw = (idx == menu_sel) ? 0xE5 : 0xE1; /* white, not invisible. use reverse attribute if selected */
+#else
+        attrw = (idx == menu_sel) ? 0x7000 : 0x0700;
+#endif
+
+        while (x < screen_w && *s != 0) {
+#if defined(TARGET_PC98)
+            text_vram[vramoff+x] = (unsigned char)(*s++);
+            attr_vram()[vramoff+x] = attrw;
+#else
+            text_vram[vramoff+x] = *s++ + attrw;
+#endif
+
+            x++;
+        }
+    }
+}
+
 int run_menu(void) {
 #if defined(TARGET_PC98)
  #if TARGET_MSDOS == 32
@@ -455,6 +484,9 @@ int run_menu(void) {
  #else
     text_vram = (VGA_ALPHA_PTR)MK_FP(0xA000,0x0000);
  #endif
+
+    screen_w = 80;                  // TODO: When would such a system use 40-column mode?
+    screen_h = 25;                  // TODO: PC-98 systems have a 20-line text mode too!
 #else
     // IBM PC/XT/AT
 
@@ -493,6 +525,64 @@ int run_menu(void) {
 #endif
     }
 
+    {
+        unsigned int i;
+        unsigned char doit = 0;
+        unsigned char redraw = 1;
+        struct menuitem *item;
+        int c;
+
+        do {
+            if (redraw) {
+                for (i=0;i < menu_items;i++)
+                    draw_menu_item(i);
+
+                redraw = 1;
+            }
+
+            c = getch();
+#if defined(TARGET_PC98)
+# define UPARROW        0x0B
+# define DNARROW        0x0A
+            // TODO ANSI escapes
+#else
+# define UPARROW        0x4800
+# define DNARROW        0x5000
+            if (c == 0) c = getch() << 8;
+#endif
+
+            if (c == 27) {
+                break;
+            }
+            else if (c == UPARROW) {
+                i = menu_sel;
+                if ((--menu_sel) < 0)
+                    menu_sel = menu_items - 1;
+
+                if (i != menu_sel) {
+                    draw_menu_item(i);
+                    draw_menu_item(menu_sel);
+                }
+            }
+            else if (c == DNARROW) {
+                i = menu_sel;
+                if ((++menu_sel) >= menu_items)
+                    menu_sel = 0;
+
+                if (i != menu_sel) {
+                    draw_menu_item(i);
+                    draw_menu_item(menu_sel);
+                }
+            }
+            else if (c == 13) {
+                if (menu_sel >= 0 && menu_sel < menu_items) {
+                    doit = 1;
+                    break;
+                }
+            }
+        } while(1);
+    }
+
     return 0;
 }
 
@@ -500,10 +590,13 @@ int main(int argc,char **argv,char **envp) {
     if (parse_argv(argc,argv))
         return 1;
 
+#if !defined(TARGET_PC98)
+    if (!probe_vga())
+        return 1;
+#endif
+
     if (load_menu() == 0) {
-        if (probe_vga()) {
-            if (run_menu() == 0) {
-            }
+        if (run_menu() == 0) {
         }
     }
 
