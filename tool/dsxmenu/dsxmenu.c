@@ -14,6 +14,7 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
+#include <hw/8254/8254.h>
 #include <hw/dos/dosbox.h>
 
 static unsigned char                loop_menu = 0;
@@ -506,7 +507,14 @@ void draw_menu_item(unsigned int idx) {
 }
 
 int run_menu(void) {
+    unsigned long timeout = 0;
     unsigned char doit = 0;
+    t8254_time_t pr,cr;
+
+	write_8254_system_timer(0);
+
+    timeout = (unsigned long)T8254_REF_CLOCK_HZ * (unsigned long)menu_default_timeout;
+    cr = read_8254(0);
 
 #if defined(TARGET_PC98)
  #if TARGET_MSDOS == 32
@@ -594,6 +602,24 @@ int run_menu(void) {
         int c;
 
         do {
+            if (timeout != (~0UL)) {
+                /* NTS: The 8254 counts DOWN, not up */
+                pr = cr;
+                cr = read_8254(0);
+
+                /* count down to timeout */
+                {
+                    unsigned long countdown = (pr - cr) & 0xFFFFUL;
+                    if (timeout >= countdown)
+                        timeout -= countdown;
+                    else
+                        timeout = 0;
+                }
+
+                if (timeout == 0)
+                    break;
+            }
+
             if (redraw) {
                 if (first_menu_item_y > 0) {
                     unsigned short attrw;
@@ -610,47 +636,55 @@ int run_menu(void) {
                 for (i=0;i < menu_items;i++)
                     draw_menu_item(i);
 
-                redraw = 1;
+                redraw = 0;
             }
 
-            c = getch();
+            if (kbhit()) {
+                c = getch();
 #if defined(TARGET_PC98)
 # define UPARROW        0x0B
 # define DNARROW        0x0A
-            // TODO ANSI escapes
+                // TODO ANSI escapes
 #else
 # define UPARROW        0x4800
 # define DNARROW        0x5000
-            if (c == 0) c = getch() << 8;
+                if (c == 0) c = getch() << 8;
 #endif
 
-            if (c == 27) {
-                break;
-            }
-            else if (c == UPARROW) {
-                i = menu_sel;
-                if ((--menu_sel) < 0)
-                    menu_sel = menu_items - 1;
-
-                if (i != menu_sel) {
-                    draw_menu_item(i);
-                    draw_menu_item(menu_sel);
-                }
-            }
-            else if (c == DNARROW) {
-                i = menu_sel;
-                if ((++menu_sel) >= menu_items)
-                    menu_sel = 0;
-
-                if (i != menu_sel) {
-                    draw_menu_item(i);
-                    draw_menu_item(menu_sel);
-                }
-            }
-            else if (c == 13) {
-                if (menu_sel >= 0 && menu_sel < menu_items) {
-                    doit = 1;
+                if (c == 27) {
                     break;
+                }
+                else if (c == UPARROW) {
+                    i = menu_sel;
+                    if ((--menu_sel) < 0)
+                        menu_sel = menu_items - 1;
+
+                    if (i != menu_sel) {
+                        draw_menu_item(i);
+                        draw_menu_item(menu_sel);
+                    }
+
+                    timeout = ~0UL;
+                }
+                else if (c == DNARROW) {
+                    i = menu_sel;
+                    if ((++menu_sel) >= menu_items)
+                        menu_sel = 0;
+
+                    if (i != menu_sel) {
+                        draw_menu_item(i);
+                        draw_menu_item(menu_sel);
+                    }
+
+                    timeout = ~0UL;
+                }
+                else if (c == 13) {
+                    if (menu_sel >= 0 && menu_sel < menu_items) {
+                        doit = 1;
+                        break;
+                    }
+
+                    timeout = ~0UL;
                 }
             }
         } while(1);
@@ -723,6 +757,9 @@ int main(int argc,char **argv,char **envp) {
     if (!probe_vga())
         return 1;
 #endif
+
+    if (!probe_8254())
+		return 1;
 
     if (load_menu() == 0) {
 again:
