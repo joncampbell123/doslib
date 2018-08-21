@@ -96,12 +96,28 @@ static int parse_argv(int argc,char **argv) {
     return 0;
 }
 
+void cstr_free(char **s) {
+    if (s != NULL) {
+        if (*s != NULL) {
+            free(*s);
+            *s = NULL;
+        }
+    }
+}
+
+void cstr_set(char **d,const char *s) {
+    cstr_free(d);
+    if (s) *d = strdup(s);
+}
+
 static void chomp(char *s) {
     char *e = s + strlen(s) - 1;
     while (e >= s && (*e == 13 || *e == 10)) *e-- = 0;
 }
 
 int load_menu(void) {
+    char *current_section = NULL;
+    char *s = NULL;
     FILE *fp;
 
     if (menu_ini == NULL) {
@@ -124,8 +140,25 @@ int load_menu(void) {
         if (fgets(temp,TEMP_SZ,fp) == NULL) break;
         chomp(temp);
 
-        // TODO
+        // lines starting with '#' are comments, Unix style
+        s = temp;
+        while (*s == ' ' || *s == '\t') s++;
+        if (*s == '#') continue;
+        if (*s == 0) continue;
+
+        // [name] is INI style section header
+        if (*s == '[') {
+            char *e = strchr(++s,']'); /* step ptr s past the '[' and to the first char, find the ']' */
+            if (e) *e = 0; /* eat the ']' if found */
+
+            /* 's' should point to a section header, without brackets */
+            cstr_set(&current_section,s);
+
+            // TODO
+        }
     }
+
+    cstr_free(&current_section);
 
     fclose(fp);
     temp_free();
