@@ -15,15 +15,39 @@
 #include <hw/dos/dos.h>
 #include <hw/dos/dosbox.h>
 
-static const char*                  menu_ini = NULL;
+static const char*                  menu_ini = NULL;            // points at argv[] do not free
 
-static const char*                  menu_default_name;
+static const char*                  menu_default_name = NULL;   // strdup(), free at end
 static int                          menu_default_timeout = 5;
 
 struct menuitem {
-    char*                           menu_text;
-    char*                           menu_item_name;
+    char*                           menu_text;                  // strdup()'d
+    char*                           menu_item_name;             // strdup()'d
 };
+
+#define MAX_MENU_ITEMS              20
+
+struct menuitem                     menu[MAX_MENU_ITEMS];
+int                                 menu_items = 0;
+int                                 menu_sel = 0;
+
+#define TEMP_SZ                     4096
+
+char*                               temp = NULL;
+
+static int temp_alloc(void) {
+    if (temp == NULL)
+        temp = malloc(TEMP_SZ + 1);
+
+    return (temp != NULL) ? 0 : -1;
+}
+
+static void temp_free(void) {
+    if (temp != NULL) {
+        free(temp);
+        temp = NULL;
+    }
+}
 
 static void help(void) {
     fprintf(stderr,"DSXMENU [options] <menu INI file>\n");
@@ -72,8 +96,47 @@ static int parse_argv(int argc,char **argv) {
     return 0;
 }
 
+static void chomp(char *s) {
+    char *e = s + strlen(s) - 1;
+    while (e >= s && (*e == 13 || *e == 10)) *e-- = 0;
+}
+
+int load_menu(void) {
+    FILE *fp;
+
+    if (menu_ini == NULL) {
+        fprintf(stderr,"menu_ini == NULL??\n");
+        return 1;
+    }
+
+    if (temp_alloc()) {
+        fprintf(stderr,"Cannot alloc temp\n");
+        return 1;
+    }
+
+    fp = fopen(menu_ini,"r");
+    if (fp == NULL) {
+        fprintf(stderr,"Unable to open file '%s'\n",menu_ini);
+        return 1;
+    }
+
+    while (!feof(fp) && !ferror(fp)) {
+        if (fgets(temp,TEMP_SZ,fp) == NULL) break;
+        chomp(temp);
+
+        // TODO
+    }
+
+    fclose(fp);
+    temp_free();
+    return 0;
+}
+
 int main(int argc,char **argv,char **envp) {
     if (parse_argv(argc,argv))
+        return 1;
+
+    if (load_menu())
         return 1;
 
 	return 0;
