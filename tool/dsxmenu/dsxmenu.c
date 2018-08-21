@@ -174,6 +174,35 @@ enum {
     LOAD_CHOICE
 };
 
+void free_menu(void) {
+    {
+        unsigned int i;
+        for (i=0;i < menu_items;i++) {
+            struct menuitem *item = &menu[i];
+            cstr_free(&item->menu_item_name);
+            cstr_free(&item->menu_text);
+        }
+        menu_items = 0;
+    }
+
+    {
+        unsigned int i;
+        for (i=0;i < common_command_items;i++) {
+            cstr_free(&common_command[i]);
+        }
+        common_command_items = 0;
+    }
+
+    {
+        unsigned int i;
+        for (i=0;i < choice_command_items;i++) {
+            cstr_free(&choice_command[i]);
+            choice_command_menu_item[i] = 0;
+        }
+        choice_command_items = 0;
+    }
+}
+
 int load_menu(void) {
     char *current_section = NULL;
     unsigned int load_choice_index = 0;
@@ -382,6 +411,7 @@ int main(int argc,char **argv,char **envp) {
     if (load_menu())
         return 1;
 
+    free_menu();
 	return 0;
 }
 
