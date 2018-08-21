@@ -644,6 +644,15 @@ int run_menu(void) {
                 }
 
                 if (timeout == 0) {
+                    unsigned short attrw;
+
+#if defined(TARGET_PC98)
+                    attrw = 0xE1; /* white, not invisible. use reverse attribute if selected */
+#else
+                    attrw = 0x0700;
+#endif
+
+                    draw_string((first_menu_item_y + menu_items + 1) * screen_w,"                                        ",attrw);
                     if (menu_sel >= 0 && menu_sel < menu_items)
                         doit = 1;
 
