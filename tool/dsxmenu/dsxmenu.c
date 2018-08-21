@@ -365,6 +365,20 @@ int load_menu(void) {
     else
         first_menu_item_y = 0;
 
+    menu_sel = 0;
+    {
+        unsigned int i;
+        for (i=0;i < menu_items;i++) {
+            struct menuitem *item = &menu[i];
+
+            assert(item->menu_item_name != NULL);
+            if (!strcmp(item->menu_item_name,menu_default_name)) {
+                menu_sel = i;
+                break;
+            }
+        }
+    }
+
     if (debug_ini) {
         fprintf(stderr,"Menu items:\n");
         {
@@ -412,23 +426,9 @@ int load_menu(void) {
             }
         }
 
-        if (menu_default_name != NULL) {
+        if (menu_default_name != NULL)
             fprintf(stderr,"Default item: '%s'\n",menu_default_name);
 
-            menu_sel = 0;
-            {
-                unsigned int i;
-                for (i=0;i < menu_items;i++) {
-                    struct menuitem *item = &menu[i];
-
-                    assert(item->menu_item_name != NULL);
-                    if (!strcmp(item->menu_item_name,menu_default_name)) {
-                        menu_sel = i;
-                        break;
-                    }
-                }
-            }
-        }
         fprintf(stderr,"Default timeout: %d seconds\n",menu_default_timeout);
         fprintf(stderr,"Initial menu select: %d\n",menu_sel);
         fprintf(stderr,"Menu message: '%s'\n",menu_msg);
