@@ -1811,12 +1811,18 @@ int main() {
 			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_MCGA)) {
 				volatile VGA_RAM_PTR wr;
 				unsigned int w,h,x,y,ii;
+                unsigned int cstride;
 
 				int10_setmode(19);
 				update_state_from_vga();
 
 				w = 320; h = 200;
 				wr = vga_state.vga_graphics_ram;
+
+                if (vga_state.vga_flags & VGA_IS_VGA)
+                    cstride = w/4u; /* CRTC DWORD unit */
+                else
+                    cstride = w/2u; /* MCGA WORD unit */
 
 				for (y=0;y < (h/4);y++) {
 					for (x=0;x < w;x++)
@@ -1847,7 +1853,7 @@ int main() {
 						vga_wait_for_hsync();
 						vga_wait_for_hsync_end();
 					}
-					vga_set_start_location(y*(w/4));
+					vga_set_start_location(y*cstride);
 				}
 				while (getch() != 13);
 
@@ -1863,7 +1869,7 @@ int main() {
 						vga_wait_for_hsync();
 						vga_wait_for_hsync_end();
 					}
-					vga_set_start_location(y*(w/4));
+					vga_set_start_location(y*cstride);
 				}
 				while (getch() != 13);
 
