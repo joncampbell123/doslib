@@ -169,7 +169,7 @@ void update_state_from_vga() {
 			/* TODO: similar semantics for graphics mode */
 		}
 	}
-	else if (vga_state.vga_flags & VGA_IS_CGA) {
+	else if (vga_state.vga_flags & (VGA_IS_CGA|VGA_IS_MCGA)) {
 		vga_state.vga_base_3x0 = 0x3D0; /* always at 0x3Dx */
 
 		/* TODO: If Tandy, detect state */
@@ -191,8 +191,11 @@ void update_state_from_vga() {
 			vga_state.vga_width = 40;
 		}
 
-		update_state_vga_memory_map_select(3); /* 0xB8000 */
-	}
+        if (c >= 0x08)
+            update_state_vga_memory_map_select(1); /* 0xA0000 */
+        else
+            update_state_vga_memory_map_select(3); /* 0xB8000 */
+    }
 	else if (vga_state.vga_flags & VGA_IS_MDA) {
 		vga_state.vga_base_3x0 = 0x3B0; /* always at 0x3Bx */
 		vga_state.vga_alpha_mode = 1; /* stock MDA doesn't have graphics */
