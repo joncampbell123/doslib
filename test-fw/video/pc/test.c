@@ -1727,7 +1727,7 @@ void cga4_test(unsigned int w,unsigned int h) {
     /* second palette */
     /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
      * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_PCJR))) {
+    if (vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_PCJR)) {
         __asm {
             mov     ah,0x0B
             mov     bh,0x01
@@ -1746,7 +1746,7 @@ void cga4_test(unsigned int w,unsigned int h) {
     /* second palette */
     /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
      * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA)|VGA_IS_PCJR)) {
+    if (vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_PCJR)) {
         __asm {
             mov     ah,0x0B
             mov     bh,0x01
@@ -1765,7 +1765,7 @@ void cga4_test(unsigned int w,unsigned int h) {
     /* second palette */
     /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
      * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_PCJR))) {
+    if (vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_PCJR)) {
         __asm {
             mov     ah,0x0B
             mov     bh,0x01
@@ -1784,7 +1784,7 @@ void cga4_test(unsigned int w,unsigned int h) {
     /* second palette */
     /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
      * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA|VGA_IS_PCJR))) {
+    if (vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA|VGA_IS_PCJR)) {
         __asm {
             mov     ah,0x0B
             mov     bh,0x01
@@ -1908,7 +1908,7 @@ void cga2_test(unsigned int w,unsigned int h) {
     /* second palette */
     /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
      * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA))) {
         // NONE
     }
     else if ((vga_state.vga_flags & (VGA_IS_PCJR))) {
@@ -1925,7 +1925,7 @@ void cga2_test(unsigned int w,unsigned int h) {
     /* second palette */
     /* EGA/VGA: Use INT 10h AH=0Bh BH=01h
      * CGA/MDA: Read the mode select register value from 40:65, modify, and write to CGA hardware */
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA))) {
         // NONE
     }
     else if ((vga_state.vga_flags & (VGA_IS_PCJR))) {
@@ -2084,7 +2084,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     for (i=0;tmp[i] != 0;i++)
         vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
 
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA))) {
         __asm {
             mov     ax,0x1003
             mov     bl,0x01
@@ -2118,7 +2118,7 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     for (i=0;tmp[i] != 0;i++)
         vmem[i+w] = 0x0700 + ((unsigned char)tmp[i]);
 
-    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_MCGA|VGA_IS_VGA))) {
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA))) {
         __asm {
             mov     ax,0x1003
             mov     bl,0x00
