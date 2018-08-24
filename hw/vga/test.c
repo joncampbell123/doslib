@@ -30,7 +30,7 @@
 # include <hw/8254/8254.h>
 #endif
 
-unsigned char paltmp[392*3];
+unsigned char paltmp[392*2*3];
 
 #define VGA_GET_BUF_SIZE 255
 
@@ -1484,7 +1484,7 @@ int main() {
 			}
 		}
 		else if (c == 'R') {
-			if (vga_state.vga_flags & VGA_IS_VGA) {
+			if (vga_state.vga_flags & (VGA_IS_VGA|VGA_IS_MCGA)) {
 				signed char tr,tg,tb,cc,cd;
 				unsigned char r,g,b,*pal;
 				volatile VGA_RAM_PTR wr;
@@ -1494,20 +1494,43 @@ int main() {
 				int10_setmode(19);
 				tr=63;tg=63;tb=63;cc=0;cd=1;
 				update_state_from_vga();
-				vga_enable_256color_modex();
-				w = 320; h = (0x10000 / (w/4));
-				x = 0; v = 1;
 
-				wr = vga_state.vga_graphics_ram;
-				for (y=0;y < h;y++) {
-					*wr++ = y;
-					*wr++ = y;
-					*wr++ = y;
-					*wr++ = (y&1)?15:0;
-					/* NTS: Some chipsets change how they interpret RAM depending on whether we
-					 *      enable "Mode X" especially Intel chipsets */
-					for (x=16;x < w;x += 4) *wr++ = 0;
-				}
+                if (vga_state.vga_flags & VGA_IS_VGA) {
+                    vga_enable_256color_modex();
+
+                    w = 320; h = (0x10000 / (w/4));
+                    x = 0; v = 1;
+
+                    wr = vga_state.vga_graphics_ram;
+                    for (y=0;y < h;y++) {
+                        *wr++ = y;
+                        *wr++ = y;
+                        *wr++ = y;
+                        *wr++ = (y&1)?15:0;
+                        /* NTS: Some chipsets change how they interpret RAM depending on whether we
+                         *      enable "Mode X" especially Intel chipsets */
+                        for (x=16;x < w;x += 4) *wr++ = 0;
+                    }
+
+                    x = 0;
+                }
+                else {
+                    w = 320; h = 0x10000 / w;
+                    x = 0; v = 1;
+
+                    wr = vga_state.vga_graphics_ram;
+                    for (y=0;y < h;y++) {
+                        *wr++ = y;
+                        *wr++ = y;
+                        *wr++ = y;
+                        *wr++ = (y&1)?15:0;
+                        /* NTS: Some chipsets change how they interpret RAM depending on whether we
+                         *      enable "Mode X" especially Intel chipsets */
+                        for (x=4;x < w;x++) *wr++ = 0;
+                    }
+
+                    x = 0;
+                }
 
 				vga_wait_for_vsync();
 				vga_wait_for_vsync_end();
@@ -1516,9 +1539,24 @@ int main() {
 					if (vga_in_vsync()) break;
 					vga_wait_for_hsync_end();
 				}
-				if (y > 392) y = 392;
+
+                if (vga_state.vga_flags & VGA_IS_VGA) {
+                    if (y > 340) y = 340;
+                }
+                else {
+                    if (y > 140) y = 140;
+                }
+
 				h = y;
 				if (h > 24) h -= 24;
+
+                pal = paltmp;
+                for (y=0;y < (392*2);y++) {
+                    iy = 64 - abs((int)y - (int)h); if (iy < 0) iy = 0;
+                    *pal++ = (tr*iy)>>6;
+                    *pal++ = (tg*iy)>>6;
+                    *pal++ = (tb*iy)>>6;
+                }
 
 				do {
 					vga_wait_for_vsync();
@@ -1530,16 +1568,8 @@ int main() {
 					}
 					_cli();
 
-					pal = paltmp;
-					for (y=0;y < h;y++) {
-						iy = 64 - abs((int)y - (int)x); if (iy < 0) iy = 0;
-						*pal++ = (tr*iy)>>6;
-						*pal++ = (tg*iy)>>6;
-						*pal++ = (tb*iy)>>6;
-					}
-
 					vga_wait_for_vsync_end();
-					pal = paltmp;
+					pal = paltmp + (x*3);
 					for (y=0;y < h;y++) {
 						r = *pal++;
 						g = *pal++;
@@ -1547,8 +1577,8 @@ int main() {
 						vga_wait_for_hsync();
 						vga_palette_lseek(0);
 						vga_palette_write(r,g,b);
-						vga_palette_lseek(15);
-						vga_palette_write(63-r,63-g,63-b);
+//						vga_palette_lseek(15);
+//						vga_palette_write(63-r,63-g,63-b);
 						vga_wait_for_hsync_end();
 					}
 
@@ -1574,8 +1604,17 @@ int main() {
 					}
 
 					x += v;
-					if (x == 0) v = 1;
-					else if (x == 392) v = -1;
+					if (x == 0) {
+                        v = 1;
+                    }
+					else {
+                        if (vga_state.vga_flags & VGA_IS_VGA) {
+                            if (x == 392) v = -1;
+                        }
+                        else {
+                            if (x == 160) v = -1;
+                        }
+                    }
 				} while (1);
 				_sti();
 
