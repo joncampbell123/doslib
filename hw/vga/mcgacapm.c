@@ -100,7 +100,7 @@ void dump_to_file(int automated) {
 	FILE *fp;
 
 	mode = int10_getmode();
-	sprintf(nname,"VGADMP%02X",mode);
+	sprintf(nname,"MCGADP%02X",mode);
 
 	bios_cls();
 	/* position the cursor to home */
