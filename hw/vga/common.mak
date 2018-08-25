@@ -35,6 +35,7 @@ PCX2VRL_EXE =  $(SUBDIR)$(HPS)pcx2vrl.$(EXEEXT)
 VRL2VRS_EXE =  $(SUBDIR)$(HPS)vrl2vrs.$(EXEEXT)
 VRSDUMP_EXE =  $(SUBDIR)$(HPS)vrsdump.$(EXEEXT)
 PCXSSCUT_EXE = $(SUBDIR)$(HPS)pcxsscut.$(EXEEXT)
+MCGACAPM_EXE = $(SUBDIR)$(HPS)mcgacapm.$(EXEEXT)
 ! endif
 ! ifeq MMODE f
 VRLDBG_EXE =   $(SUBDIR)$(HPS)vrldbg.$(EXEEXT)
@@ -48,6 +49,7 @@ TMODESET_EXE = $(SUBDIR)$(HPS)tmodeset.$(EXEEXT)
 TMOTSENG_EXE = $(SUBDIR)$(HPS)tmotseng.$(EXEEXT)
 DRAWVRL4_EXE = $(SUBDIR)$(HPS)drawvrl4.$(EXEEXT)
 DRAWVRL5_EXE = $(SUBDIR)$(HPS)drawvrl5.$(EXEEXT)
+MCGACAPM_EXE = $(SUBDIR)$(HPS)mcgacapm.$(EXEEXT)
 !endif
 
 $(HW_VGA_LIB): $(SUBDIR)$(HPS)vga.obj $(SUBDIR)$(HPS)herc.obj $(SUBDIR)$(HPS)tseng.obj $(SUBDIR)$(HPS)vgach3c0.obj $(SUBDIR)$(HPS)vgastget.obj $(SUBDIR)$(HPS)vgatxt50.obj $(SUBDIR)$(HPS)vgaclks.obj $(SUBDIR)$(HPS)vgabicur.obj $(SUBDIR)$(HPS)vgasetmm.obj $(SUBDIR)$(HPS)vgarcrtc.obj $(SUBDIR)$(HPS)vgasemo.obj $(SUBDIR)$(HPS)vgaseco.obj $(SUBDIR)$(HPS)vgacrtcc.obj $(SUBDIR)$(HPS)vgacrtcr.obj $(SUBDIR)$(HPS)vgacrtcs.obj $(SUBDIR)$(HPS)vgasplit.obj $(SUBDIR)$(HPS)vgamodex.obj $(SUBDIR)$(HPS)vga9wide.obj $(SUBDIR)$(HPS)vgaalfpl.obj $(SUBDIR)$(HPS)vgaselcs.obj $(SUBDIR)$(HPS)vgastloc.obj $(SUBDIR)$(HPS)vrl1xlof.obj $(SUBDIR)$(HPS)vrl1xdrw.obj $(SUBDIR)$(HPS)vrl1ydrw.obj $(SUBDIR)$(HPS)vrl1xdrs.obj $(SUBDIR)$(HPS)vgawm1bc.obj $(SUBDIR)$(HPS)pcjrmem.obj
@@ -91,7 +93,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_VGA_LIB) $(HW_VGATTY_LIB) $(HW_VGAGUI_LIB) $(HW_VGAGFX_LIB) .symbolic
 	
-exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(PCX2VRL_EXE) $(VRLDBG_EXE) $(VRL2VRS_EXE) $(PCXSSCUT_EXE) $(DRAWVRL_EXE) $(VRSDUMP_EXE) $(DRAWVRL2_EXE) $(DRAWVRL3_EXE) $(DRAWVRL4_EXE) $(DRAWVRL5_EXE) $(TGFX_EXE) $(VGA240_EXE) $(CGAFX1_EXE) $(CGAFX2_EXE) $(CGAFX3_EXE) $(CGAFX4_EXE) $(CGAFX4B_EXE) $(CGAFX4C_EXE) $(CGAFX5_EXE) $(CGAFX6_EXE) $(CGAFX6B_EXE) $(CGAFX6C_EXE) $(FONTEDIT_EXE) $(FONTLOAD_EXE) $(FONTSAVE_EXE) .symbolic
+exe: $(TEST_EXE) $(TMODESET_EXE) $(TMOTSENG_EXE) $(PCX2VRL_EXE) $(VRLDBG_EXE) $(VRL2VRS_EXE) $(PCXSSCUT_EXE) $(DRAWVRL_EXE) $(VRSDUMP_EXE) $(DRAWVRL2_EXE) $(DRAWVRL3_EXE) $(DRAWVRL4_EXE) $(DRAWVRL5_EXE) $(TGFX_EXE) $(VGA240_EXE) $(CGAFX1_EXE) $(CGAFX2_EXE) $(CGAFX3_EXE) $(CGAFX4_EXE) $(CGAFX4B_EXE) $(CGAFX4C_EXE) $(CGAFX5_EXE) $(CGAFX6_EXE) $(CGAFX6B_EXE) $(CGAFX6C_EXE) $(FONTEDIT_EXE) $(FONTLOAD_EXE) $(FONTSAVE_EXE) $(MCGACAPM_EXE) .symbolic
 
 $(TEST_EXE): $(HW_VGATTY_LIB) $(HW_VGATTY_LIB_DEPENDENCIES) $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGATTY_LIB_WLINK_LIBRARIES) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE)
@@ -193,6 +195,13 @@ $(TGFX_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_VGAGFX_LIB) $(HW_VGAG
 !ifdef TMODESET_EXE
 $(TMODESET_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)tmodeset.obj
 	%write tmp.cmd option quiet option map=$(TMODESET_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)tmodeset.obj name $(TMODESET_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef MCGACAPM_EXE
+$(MCGACAPM_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)mcgacapm.obj
+	%write tmp.cmd option quiet option map=$(MCGACAPM_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)mcgacapm.obj name $(MCGACAPM_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
