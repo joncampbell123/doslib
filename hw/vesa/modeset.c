@@ -346,6 +346,40 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 
 		free(pal);
 		pal = NULL;
+
+        if (info) {
+            unsigned int fo;
+            unsigned long w=0,r=0;
+            char *s = info_txt;
+            char c;
+
+            while (c = *s++) {
+                if (c != '\n') {
+                    fo = ((unsigned char)c) * 8;
+                    ofs = w;
+                    w += 8/2;
+
+                    for (y=0;y < 8;y++) {
+                        unsigned char b = font8x8[fo++];
+
+                        for (x=0;x < 8;x += 2) {
+                            unsigned char fb;
+
+                            fb  = (b & 0x80) ? 0xF0 : 0x00;
+                            fb += (b & 0x40) ? 0x0F : 0x00;
+
+                            vesa_writeb(ofs+(x>>1u),fb);
+                            b <<= 2;
+                        }
+
+                        ofs += mi->bytes_per_scan_line;
+                    }
+                }
+                else {
+                    w = (r += (mi->bytes_per_scan_line * 8));
+                }
+            }
+        }
 	}
 	else if (bypp == 1) {
 		unsigned char *pal = malloc(1024);
