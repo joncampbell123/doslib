@@ -344,6 +344,81 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 			}
 		}
 
+        while (getch() != 13);
+
+        for (x=0;x < 16;x++) {
+            pal[x*4+0] = x*4;
+            pal[x*4+1] = 0;
+            pal[x*4+2] = 0;
+        }
+
+        if (md->dac8) {
+            for (x=0;x < 16*4;x++)
+                pal[x] <<= 2;
+        }
+
+        if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+            vesa_set_palette_data(0,16,pal);
+        }
+        else {
+            outp(0x3C8,0);
+            for (y=0;y < 16;y++) {
+                outp(0x3C9,pal[y*4+0]);
+                outp(0x3C9,pal[y*4+1]);
+                outp(0x3C9,pal[y*4+2]);
+            }
+        }
+
+        while (getch() != 13);
+
+        for (x=0;x < 16;x++) {
+            pal[x*4+0] = 0;
+            pal[x*4+1] = x*4;
+            pal[x*4+2] = 0;
+        }
+
+        if (md->dac8) {
+            for (x=0;x < 16*4;x++)
+                pal[x] <<= 2;
+        }
+
+        if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+            vesa_set_palette_data(0,16,pal);
+        }
+        else {
+            outp(0x3C8,0);
+            for (y=0;y < 16;y++) {
+                outp(0x3C9,pal[y*4+0]);
+                outp(0x3C9,pal[y*4+1]);
+                outp(0x3C9,pal[y*4+2]);
+            }
+        }
+
+        while (getch() != 13);
+
+        for (x=0;x < 16;x++) {
+            pal[x*4+0] = 0;
+            pal[x*4+1] = 0;
+            pal[x*4+2] = x*4;
+        }
+
+        if (md->dac8) {
+            for (x=0;x < 16*4;x++)
+                pal[x] <<= 2;
+        }
+
+        if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
+            vesa_set_palette_data(0,16,pal);
+        }
+        else {
+            outp(0x3C8,0);
+            for (y=0;y < 16;y++) {
+                outp(0x3C9,pal[y*4+0]);
+                outp(0x3C9,pal[y*4+1]);
+                outp(0x3C9,pal[y*4+2]);
+            }
+        }
+
 		free(pal);
 		pal = NULL;
 
