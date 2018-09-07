@@ -334,7 +334,7 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 		for (y=0;y < 32 && y < mi->y_resolution;y++) {
 			ofs = ((unsigned long)y * (unsigned long)mi->bytes_per_scan_line);
 			for (x=0;x < mi->x_resolution;x += 2,ofs++) {
-				vesa_writeb(ofs,(x << 4) | (x+1));
+				vesa_writeb(ofs,(x << 4) | ((x+1) & 0xF));
 			}
 		}
 		for (y=32;y < mi->y_resolution;y++) {
