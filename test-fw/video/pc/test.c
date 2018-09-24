@@ -267,6 +267,88 @@ int test_pause(unsigned int secs) {
     return 1;
 }
 
+void vga_acmask_test(unsigned char finalmask,unsigned char fgcolor) {
+    unsigned int o,i;
+
+    for (i=0;i < 4;i++) {
+        const unsigned char msk = (0xF << i) & 0xF;
+        {
+            unsigned int i;
+
+            __asm {
+                mov     ah,0x02     ; set cursor pos
+                mov     bh,0x00     ; page 0
+                xor     dx,dx       ; DH=row=0  DL=col=0
+                int     10h
+            }
+
+            sprintf(tmp,"AC mask %01xh       ",msk);
+            for (i=0;tmp[i] != 0;i++) {
+                unsigned char cv = tmp[i];
+
+                __asm {
+                    mov     ah,0x0E     ; teletype output
+                    mov     al,cv
+                    xor     bh,bh
+                    mov     bl,fgcolor
+                    int     10h
+                }
+            }
+        }
+
+        for (o=0;o < 4;o++) {
+            vga_write_AC(VGA_AC_ENABLE|0x12,(o & 1) ? 0xF : msk);
+            if (!test_pause_10ths(2)) {
+                vga_write_AC(VGA_AC_ENABLE|0x12,0xF);
+                i=16;
+                o=8;
+                break;
+            }
+        }
+
+        vga_write_AC(VGA_AC_ENABLE|0x12,0xF);
+    }
+
+    for (i=0;i < 4;i++) {
+        const unsigned char msk = 0xF >> i;
+        {
+            unsigned int i;
+
+            __asm {
+                mov     ah,0x02     ; set cursor pos
+                mov     bh,0x00     ; page 0
+                xor     dx,dx       ; DH=row=0  DL=col=0
+                int     10h
+            }
+
+            sprintf(tmp,"AC mask %01xh       ",msk);
+            for (i=0;tmp[i] != 0;i++) {
+                unsigned char cv = tmp[i];
+
+                __asm {
+                    mov     ah,0x0E     ; teletype output
+                    mov     al,cv
+                    xor     bh,bh
+                    mov     bl,fgcolor
+                    int     10h
+                }
+            }
+        }
+
+        for (o=0;o < 4;o++) {
+            vga_write_AC(VGA_AC_ENABLE|0x12,(o & 1) ? 0xF : msk);
+            if (!test_pause_10ths(2)) {
+                vga_write_AC(VGA_AC_ENABLE|0x12,0xF);
+                i=16;
+                o=8;
+                break;
+            }
+        }
+
+        vga_write_AC(VGA_AC_ENABLE|0x12,0xF);
+    }
+}
+
 void vga_dacmask_test(unsigned char fgcolor) {
     unsigned int o,i;
 
@@ -1167,6 +1249,7 @@ void vga_test(unsigned int w,unsigned int h) {
         vga_write_AC(VGA_AC_ENABLE|0x1F,0);
     }
 
+    vga_acmask_test(0xF,0xFF);
     vga_dacmask_test(0xFF);
 }
 
@@ -1568,6 +1651,9 @@ void ega_test(unsigned int w,unsigned int h) {
     vga_write_GC(0x05/*mode register*/,0x00);  // read mode=0  write mode=0
     vga_write_GC(0x08/*bit mask*/,0xFF);       // all bits
 
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA)))
+        vga_acmask_test(0xF,0xF);
+
     /* If this is MCGA/VGA then play with the VGA palette that the EGA palette is mapped to */
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA))) {
         /* We don't need to store the VGA palette because we can read back the palette at will */
@@ -1800,6 +1886,9 @@ void cga4_test(unsigned int w,unsigned int h) {
 
     test_pause(1);
 
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA)))
+        vga_acmask_test(0xF,3);
+
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
         vga_dacmask_test(3);
 
@@ -1938,6 +2027,9 @@ void cga2_test(unsigned int w,unsigned int h) {
     }
 
     test_pause(1);
+
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA)))
+        vga_acmask_test(0xF,1);
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
         vga_dacmask_test(1);
@@ -2144,6 +2236,9 @@ void alphanumeric_test(unsigned int w,unsigned int h) {
     }
 
     test_pause(3);
+
+    if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA)))
+        vga_acmask_test(0xF,7);
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
         vga_dacmask_test(7);
