@@ -830,19 +830,19 @@ void dump_hex_symbols(FILE *hfp,const char *hex_output_name) {
                     sym->in_module);
 
             if (!sg->noemit)
-                fprintf(hfp,"#define %s_bin_symbol_%s_file_offset 0x%lxul\n",
+                fprintf(hfp,"#define %s_bin_symbol_%s_file_offset 0x%lxul /*offset in file*/\n",
                     hex_output_name,sym->name,(unsigned long)sg->file_offset + frag->offset + sym->offset);
 
-            fprintf(hfp,"#define %s_bin_symbol_%s_resident_offset 0x%lxul\n",
+            fprintf(hfp,"#define %s_bin_symbol_%s_resident_offset 0x%lxul /*offset from base of resident image*/\n",
                     hex_output_name,sym->name,(unsigned long)sg->linear_offset + frag->offset + sym->offset);
 
-            fprintf(hfp,"#define %s_bin_symbol_%s_segment_relative 0x%lxul\n",
+            fprintf(hfp,"#define %s_bin_symbol_%s_segment_relative 0x%lxul /*segment value relative to resident segment base*/\n",
                     hex_output_name,sym->name,(unsigned long)sg->segment_relative);
 
-            fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset 0x%lxul\n",
+            fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset 0x%lxul /*offset from base of resident segment base*/\n",
                     hex_output_name,sym->name,(unsigned long)((sg->segment_offset + frag->offset + sym->offset) - sg->segment_base));
 
-            fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset_with_base 0x%lxul\n",
+            fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset_with_base 0x%lxul /*offset with segment base offset added (that code would use)*/\n",
                     hex_output_name,sym->name,(unsigned long)(sg->segment_offset + frag->offset + sym->offset));
         }
     }
@@ -924,19 +924,19 @@ void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
             ressz = (sg->linear_offset+sg->segment_length);
 
         if (!sg->noemit)
-            fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_file_offset 0x%lxul\n",
+            fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_file_offset 0x%lxul /*file offset of base of segment*/\n",
                     hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->file_offset);
 
-        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_resident_offset 0x%lxul\n",
+        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_resident_offset 0x%lxul /*resident offset of base of segment*/\n",
                 hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->linear_offset);
 
-        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_relative 0x%lxul\n",
+        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_relative 0x%lxul /*segment value relative to resident base segment*/\n",
                 hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_relative);
 
-        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_offset 0x%lxul\n",
+        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_offset 0x%lxul /*offset of segment relative to segment base that contents start*/\n",
                 hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_offset);
 
-        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_base 0x%lxul\n",
+        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_base 0x%lxul /*base offset added to all symbols at fixup (i.e. 0x100 for all .COM symbols)*/\n",
                 hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_base);
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_length 0x%lxul\n",
