@@ -3272,7 +3272,7 @@ int main(int argc,char **argv) {
                 return 1;
             }
 
-            fprintf(hfp,"const unsigned char %s_bin[%lu] = {\n",hex_output_name,sz);
+            fprintf(hfp,"const uint8_t %s_bin[%lu] = {\n",hex_output_name,sz);
 
             count = 0;
             lseek(fd,0,SEEK_SET);
@@ -3289,7 +3289,7 @@ int main(int argc,char **argv) {
 
             fprintf(hfp,"};\n");
 
-            fprintf(hfp,"const size_t %s_bin_sz = %ld;\n",hex_output_name,(signed long)sz);
+            fprintf(hfp,"const uint32_t %s_bin_sz = %ld;\n",hex_output_name,(signed long)sz);
 
             fclose(hfp);
         }
