@@ -852,6 +852,102 @@ void dump_link_symbols(void) {
     }
 }
 
+void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
+    static char range1[64];
+    static char range2[64];
+    unsigned int i=0,f;
+
+    while (i < link_segments_count) {
+        struct link_segdef *sg = &link_segments[i++];
+
+        if (!sg->noemit)
+            fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_file_offset 0x%lxul\n",
+                    hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->file_offset);
+
+        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_resident_offset 0x%lxul\n",
+                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->linear_offset);
+
+        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_relative 0x%lxul\n",
+                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_relative);
+
+        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_offset 0x%lxul\n",
+                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_offset);
+
+        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_segment_base 0x%lxul\n",
+                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_base);
+
+        fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_length 0x%lxul\n",
+                hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->segment_length);
+
+        fprintf(hfp,"/*segment=%u name='%s',class='%s',group='%s' use32=%u comb=%u big=%u fileofs=0x%lx linofs=0x%lx segbase=0x%lx segofs=0x%lx len=0x%lx segrel=0x%lx init_align=%u*/\n",
+                i/*post-increment, intentional*/,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",
+                sg->attr.f.f.use32,
+                sg->attr.f.f.combination,
+                sg->attr.f.f.big_segment,
+                sg->file_offset,
+                sg->linear_offset,
+                sg->segment_base,
+                sg->segment_offset,
+                sg->segment_length,
+                sg->segment_relative,
+                sg->initial_alignment);
+
+        if (sg->segment_length != 0ul) {
+            sprintf(range1,"%08lx-%08lx",
+                    sg->segment_offset,
+                    sg->segment_offset+sg->segment_length-1ul);
+            sprintf(range2,"0x%08lx-0x%08lx",
+                    sg->linear_offset,
+                    sg->linear_offset+sg->segment_length-1ul);
+        }
+        else {
+            strcpy(range1,"-----------------");
+            strcpy(range2,"---------------------");
+        }
+
+        fprintf(hfp,"/*  [use%02u] %-20s %-20s %-20s %04lx:%s [%s] base=0x%04lx align=%u%s%s*/\n",
+                sg->attr.f.f.use32?32:16,
+                sg->name?sg->name:"",
+                sg->classname?sg->classname:"",
+                sg->groupname?sg->groupname:"",
+                sg->segment_relative&0xfffful,
+                range1,
+                range2,
+                sg->segment_base,
+                sg->initial_alignment,
+                sg->pinned ? " PIN" : "",
+                sg->noemit ? " NOEMIT" : "");
+
+        if (sg->fragments != NULL) {
+            for (f=0;f < sg->fragments_count;f++) {
+                struct seg_fragment *frag = &sg->fragments[f];
+
+                if (frag->fragment_length != 0ul) {
+                    sprintf(range1,"%08lx-%08lx",
+                            sg->segment_offset+frag->offset,
+                            sg->segment_offset+frag->offset+frag->fragment_length-1ul);
+                    sprintf(range2,"0x%08lx-0x%08lx",
+                            sg->linear_offset+frag->offset,
+                            sg->linear_offset+frag->offset+frag->fragment_length-1ul);
+                }
+                else {
+                    strcpy(range1,"-----------------");
+                    strcpy(range2,"---------------------");
+                }
+
+                fprintf(hfp,"/*  [use%02u] %-20s %-20s %-20s      %s [%s]   from '%s':%u*/\n",
+                        frag->attr.f.f.use32?32:16,
+                        "",
+                        "",
+                        "",
+                        range1,
+                        range2,
+                        get_in_file(frag->in_file),frag->in_module);
+            }
+        }
+    }
+}
+
 void dump_link_segments(void) {
     static char range1[64];
     static char range2[64];
@@ -3323,6 +3419,8 @@ int main(int argc,char **argv) {
             }
 
             fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name,(unsigned long)sz);
+
+            dump_hex_segments(hfp, hex_output_name);
 
             fclose(hfp);
         }
