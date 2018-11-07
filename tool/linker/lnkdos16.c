@@ -1,5 +1,6 @@
 /* FIXME: This code (and omfsegfl) should be consolidated into a library for
  *        reading/writing OMF files. */
+/* TODO: For COM and DRV output (non-EXE), emitting symbols to STACK should be forbidden because we cannot predict the stack location */
 
 #include <sys/types.h>
 #include <sys/stat.h>
