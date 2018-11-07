@@ -855,10 +855,14 @@ void dump_link_symbols(void) {
 void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
     static char range1[64];
     static char range2[64];
+    unsigned long ressz=0;
     unsigned int i=0,f;
 
     while (i < link_segments_count) {
         struct link_segdef *sg = &link_segments[i++];
+
+        if (ressz < (sg->linear_offset+sg->segment_length))
+            ressz = (sg->linear_offset+sg->segment_length);
 
         if (!sg->noemit)
             fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_file_offset 0x%lxul\n",
@@ -946,6 +950,8 @@ void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
             }
         }
     }
+
+    fprintf(hfp,"#define %s_bin_resident_sz (%ldul)\n",hex_output_name,(unsigned long)ressz);
 }
 
 void dump_link_segments(void) {
