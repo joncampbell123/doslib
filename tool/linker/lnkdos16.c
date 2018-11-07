@@ -3308,12 +3308,9 @@ int main(int argc,char **argv) {
 
             fprintf(hfp,"};\n");
 
-            if (!hex_split)
-                fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name,(unsigned long)sz);
-
-            fclose(hfp);
-
             if (hex_split) {
+                fclose(hfp);
+
                 sprintf(hex_output_tmpfile,"%s.h",hex_output);
 
                 hfp = fopen(hex_output_tmpfile,"w");
@@ -3323,11 +3320,11 @@ int main(int argc,char **argv) {
                 }
 
                 fprintf(hfp,"extern const uint8_t %s_bin[%lu];\n",hex_output_name,sz);
-
-                fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name,(unsigned long)sz);
-
-                fclose(hfp);
             }
+
+            fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name,(unsigned long)sz);
+
+            fclose(hfp);
         }
 
         close(fd);
