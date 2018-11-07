@@ -43,8 +43,12 @@ static char*                            out_file = NULL;
 static char*                            map_file = NULL;
 static FILE*                            map_fp = NULL;
 
+static unsigned char                    hex_split = 0;
+static unsigned char                    hex_cpp = 0;
+
 static char*                            hex_output = NULL;
 static char                             hex_output_name[1024];
+static char                             hex_output_tmpfile[1024];
 
 static char*                            in_file[MAX_IN_FILES];
 static unsigned int                     in_file_count = 0;
@@ -1709,6 +1713,8 @@ static void help(void) {
     fprintf(stderr,"  -pflat       Prefer .COM-like flat layout\n");
     fprintf(stderr,"  -hsym        Header symbol name (DOSDRV)\n");
     fprintf(stderr,"  -hex <file>  Also emit file as C header hex dump\n");
+    fprintf(stderr,"  -hexsplit    Emit to -hex as .h and .c files\n");
+    fprintf(stderr,"  -hexcpp      Use CPP extension.\n");
 }
 
 void my_dumpstate(const struct omf_context_t * const ctx) {
@@ -1834,6 +1840,12 @@ int main(int argc,char **argv) {
                 a = argv[i++];
                 if (a == NULL) return 1;
                 hex_output = a;
+            }
+            else if (!strcmp(a,"hexcpp")) {
+                hex_cpp = 1;
+            }
+            else if (!strcmp(a,"hexsplit")) {
+                hex_split = 1;
             }
             else if (!strcmp(a,"of")) {
                 a = argv[i++];
@@ -3258,7 +3270,7 @@ int main(int argc,char **argv) {
                         hex_output_name[o++] = '_';
                     }
 
-                    if ((o+1) >= sizeof(hex_output_name)) break;
+                    if ((o+16) >= sizeof(hex_output_name)) break;
                 }
 
                 hex_output_name[o] = 0;
@@ -3266,7 +3278,14 @@ int main(int argc,char **argv) {
 
             sz = lseek(fd,0,SEEK_END);
 
-            hfp = fopen(hex_output,"w");
+            if (hex_split) {
+                sprintf(hex_output_tmpfile,"%s.%s",hex_output,hex_cpp ? "cpp" : "c");
+            }
+            else {
+                strcpy(hex_output_tmpfile,hex_output);
+            }
+
+            hfp = fopen(hex_output_tmpfile,"w");
             if (hfp == NULL) {
                 fprintf(stderr,"Unable to write hex output\n");
                 return 1;
@@ -3292,6 +3311,22 @@ int main(int argc,char **argv) {
             fprintf(hfp,"const uint32_t %s_bin_sz = %ld;\n",hex_output_name,(signed long)sz);
 
             fclose(hfp);
+
+            if (hex_split) {
+                sprintf(hex_output_tmpfile,"%s.h",hex_output);
+
+                hfp = fopen(hex_output_tmpfile,"w");
+                if (hfp == NULL) {
+                    fprintf(stderr,"Unable to write hex output\n");
+                    return 1;
+                }
+
+                fprintf(hfp,"extern const uint8_t %s_bin[%lu];\n",hex_output_name,sz);
+
+                fprintf(hfp,"extern const uint32_t %s_bin_sz;\n",hex_output_name);
+
+                fclose(hfp);
+            }
         }
 
         close(fd);
