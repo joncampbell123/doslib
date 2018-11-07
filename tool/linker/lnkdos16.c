@@ -790,6 +790,64 @@ int link_symbol_qsort_cmp(const void *a,const void *b) {
     return 0;
 }
 
+void dump_hex_symbols(FILE *hfp,const char *hex_output_name) {
+    unsigned int i;
+
+    if (link_symbols == NULL) return;
+
+    i = 0;
+    while (i < link_symbols_count) {
+        struct link_symbol *sym = &link_symbols[i++];
+        if (sym->name == NULL) continue;
+
+        fprintf(hfp,"/*symbol[%u]: name='%s' group='%s' seg='%s' offset=0x%lx frag=%u file='%s' module=%u local=%u*/\n",
+                i/*post-increment, intentional*/,sym->name,sym->groupdef,sym->segdef,sym->offset,sym->fragment,
+                get_in_file(sym->in_file),sym->in_module,sym->is_local);
+
+        {
+            struct seg_fragment *frag;
+            struct link_segdef *sg;
+
+            assert(sym->segdef != NULL);
+
+            sg = find_link_segment(sym->segdef);
+            assert(sg != NULL);
+
+            assert(sg->fragments != NULL);
+            assert(sg->fragments_count <= sg->fragments_alloc);
+            assert(sym->fragment < sg->fragments_count);
+            frag = &sg->fragments[sym->fragment];
+
+            fprintf(hfp,"/*  %-32s %c %04lx:%08lx [0x%08lx] %20s + 0x%08lx from '%s':%u*/\n",
+                    sym->name,
+                    sym->is_local?'L':'G',
+                    sg->segment_relative&0xfffful,
+                    sg->segment_offset + frag->offset + sym->offset,
+                    sg->linear_offset + frag->offset + sym->offset,
+                    sym->segdef,
+                    frag->offset + sym->offset,
+                    get_in_file(sym->in_file),
+                    sym->in_module);
+
+            if (!sg->noemit)
+                fprintf(hfp,"#define %s_bin_symbol_%s_file_offset 0x%lxul\n",
+                    hex_output_name,sym->name,(unsigned long)sg->file_offset + frag->offset + sym->offset);
+
+            fprintf(hfp,"#define %s_bin_symbol_%s_resident_offset 0x%lxul\n",
+                    hex_output_name,sym->name,(unsigned long)sg->linear_offset + frag->offset + sym->offset);
+
+            fprintf(hfp,"#define %s_bin_symbol_%s_segment_relative 0x%lxul\n",
+                    hex_output_name,sym->name,(unsigned long)sg->segment_relative);
+
+            fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset 0x%lxul\n",
+                    hex_output_name,sym->name,(unsigned long)((sg->segment_offset + frag->offset + sym->offset) - sg->segment_base));
+
+            fprintf(hfp,"#define %s_bin_symbol_%s_segment_offset_with_base 0x%lxul\n",
+                    hex_output_name,sym->name,(unsigned long)(sg->segment_offset + frag->offset + sym->offset));
+        }
+    }
+}
+
 void dump_link_symbols(void) {
     unsigned int i,pass=0,passes=1;
 
@@ -3428,6 +3486,7 @@ int main(int argc,char **argv) {
             fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name,(unsigned long)sz);
 
             dump_hex_segments(hfp, hex_output_name);
+            dump_hex_symbols(hfp, hex_output_name);
 
             fclose(hfp);
         }
