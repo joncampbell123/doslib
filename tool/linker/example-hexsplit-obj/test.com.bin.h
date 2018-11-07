@@ -56,6 +56,7 @@ extern const uint8_t dos86t_test_com_bin[47];
 /*  [use16] _STACK               STACK                                     0000:----------------- [---------------------] base=0x0100 align=1 NOEMIT*/
 /*  [use16]                                                                     ----------------- [---------------------]   from 'dos86t/entry.obj':0*/
 #define dos86t_test_com_bin_resident_sz (48ul)
+#define dos86t_test_com_bin_first_segment_file_offset (0ul)
 /*symbol[1]: name='__COM_ENTRY_JMP_INS' group='(null)' seg='__COM_ENTRY_JMP' offset=0x0 frag=0 file='<internal>' module=0 local=0*/
 /*  __COM_ENTRY_JMP_INS              G 0000:00000100 [0x00000000]      __COM_ENTRY_JMP + 0x00000000 from '<internal>':0*/
 #define dos86t_test_com_bin_symbol___COM_ENTRY_JMP_INS_file_offset 0x0ul /*offset in file*/

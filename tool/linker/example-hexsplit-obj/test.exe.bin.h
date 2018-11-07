@@ -56,6 +56,7 @@ extern const uint8_t dos86l_test_exe_bin[103];
 /*  [use16]                                                                     ----------------- [---------------------]   from 'dos86l/entry.obj':0*/
 /*  [use16]                                                                     00000008-00001007 [0x00000038-0x00001037]   from '<internal>':0*/
 #define dos86l_test_exe_bin_resident_sz (4152ul)
+#define dos86l_test_exe_bin_first_segment_file_offset (48ul)
 /*symbol[1]: name='entry_c_' group='' seg='drvc_TEXT' offset=0x0 frag=0 file='dos86l/drvc.obj' module=0 local=0*/
 /*  entry_c_                         G 0000:00000000 [0x00000000]            drvc_TEXT + 0x00000000 from 'dos86l/drvc.obj':0*/
 #define dos86l_test_exe_bin_symbol_entry_c__file_offset 0x30ul /*offset in file*/
