@@ -99,10 +99,14 @@ segment _STACK align=4 class=STACK use16
  %endif
 %endif
 
+%ifdef TINYMODE
+; symbols in the stack no longer permitted for non-EXE
+%else
 ; define a stack
 global _stackblock
 _stackblock:
     times 512 db 0
+%endif
 
 ; stack
 %ifidni segment_use,use32

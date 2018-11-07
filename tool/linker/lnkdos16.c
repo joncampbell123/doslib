@@ -1726,6 +1726,18 @@ int pubdef_add(struct omf_context_t *omf_state,unsigned int first,unsigned int t
             return -1;
         }
 
+        if (output_format == OFMT_EXE || output_format == OFMT_DOSDRVEXE) {
+        }
+        else {
+            /* no symbols allowed in STACK.
+             * BSS is allowed. */
+            if (!strcasecmp(segname,"_STACK") || !strcasecmp(segname,"STACK") ||
+                (lsg->classname != NULL && (!strcasecmp(lsg->classname,"STACK")))) {
+                fprintf(stderr,"Emitting symbols to STACK segment not permitted for COM/DRV output\n");
+                return 1;
+            }
+        }
+
         if (verbose)
             fprintf(stderr,"pubdef[%u]: '%s' group='%s' seg='%s' offset=0x%lx finalofs=0x%lx local=%u\n",
                     first,name,groupname,segname,(unsigned long)pubdef->public_offset,pubdef->public_offset + lsg->load_base,is_local);
