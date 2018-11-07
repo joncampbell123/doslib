@@ -3308,7 +3308,8 @@ int main(int argc,char **argv) {
 
             fprintf(hfp,"};\n");
 
-            fprintf(hfp,"const uint32_t %s_bin_sz = %ld;\n",hex_output_name,(signed long)sz);
+            if (!hex_split)
+                fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name,(unsigned long)sz);
 
             fclose(hfp);
 
@@ -3323,7 +3324,7 @@ int main(int argc,char **argv) {
 
                 fprintf(hfp,"extern const uint8_t %s_bin[%lu];\n",hex_output_name,sz);
 
-                fprintf(hfp,"extern const uint32_t %s_bin_sz;\n",hex_output_name);
+                fprintf(hfp,"#define %s_bin_sz (%ldul)\n",hex_output_name,(unsigned long)sz);
 
                 fclose(hfp);
             }
