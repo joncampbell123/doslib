@@ -915,6 +915,7 @@ void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
     static char range1[64];
     static char range2[64];
     unsigned long ressz=0;
+    unsigned long firstofs=~0UL;
     unsigned int i=0,f;
 
     while (i < link_segments_count) {
@@ -923,9 +924,13 @@ void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
         if (ressz < (sg->linear_offset+sg->segment_length))
             ressz = (sg->linear_offset+sg->segment_length);
 
-        if (!sg->noemit)
+        if (!sg->noemit) {
             fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_file_offset 0x%lxul /*file offset of base of segment*/\n",
                     hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->file_offset);
+
+            if (firstofs == (~0UL) || firstofs > sg->file_offset)
+                firstofs = sg->file_offset;
+        }
 
         fprintf(hfp,"#define %s_bin_segment_%s_%s_%s_resident_offset 0x%lxul /*resident offset of base of segment*/\n",
                 hex_output_name,sg->name?sg->name:"",sg->classname?sg->classname:"",sg->groupname?sg->groupname:"",(unsigned long)sg->linear_offset);
@@ -1011,6 +1016,7 @@ void dump_hex_segments(FILE *hfp,const char *hex_output_name) {
     }
 
     fprintf(hfp,"#define %s_bin_resident_sz (%ldul)\n",hex_output_name,(unsigned long)ressz);
+    fprintf(hfp,"#define %s_bin_first_segment_file_offset (%ldul)\n",hex_output_name,(unsigned long)firstofs);
 }
 
 void dump_link_segments(void) {
