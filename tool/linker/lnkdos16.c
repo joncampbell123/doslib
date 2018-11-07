@@ -43,6 +43,9 @@ static char*                            out_file = NULL;
 static char*                            map_file = NULL;
 static FILE*                            map_fp = NULL;
 
+static char*                            hex_output = NULL;
+static char                             hex_output_name[1024];
+
 static char*                            in_file[MAX_IN_FILES];
 static unsigned int                     in_file_count = 0;
 static unsigned int                     current_in_file = 0;
@@ -1705,6 +1708,7 @@ static void help(void) {
     fprintf(stderr,"  -stackN      Set minimum stack segment size (0xNNN)\n");
     fprintf(stderr,"  -pflat       Prefer .COM-like flat layout\n");
     fprintf(stderr,"  -hsym        Header symbol name (DOSDRV)\n");
+    fprintf(stderr,"  -hex <file>  Also emit file as C header hex dump\n");
 }
 
 void my_dumpstate(const struct omf_context_t * const ctx) {
@@ -1790,6 +1794,8 @@ int main(int argc,char **argv) {
     int i,fd,ret;
     char *a;
 
+    hex_output_name[0] = 0;
+
     for (i=1;i < argc;) {
         a = argv[i++];
 
@@ -1823,6 +1829,11 @@ int main(int argc,char **argv) {
                 a += 3;
                 if (!isxdigit(*a)) return 1;
                 com_segbase = strtoul(a,NULL,16);
+            }
+            else if (!strcmp(a,"hex")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                hex_output = a;
             }
             else if (!strcmp(a,"of")) {
                 a = argv[i++];
@@ -3222,6 +3233,65 @@ int main(int argc,char **argv) {
                 fprintf(stderr,"Write error\n");
                 return 1;
             }
+        }
+
+        if (hex_output != NULL) {
+            unsigned char tmp[16];
+            long sz,count=0;
+            FILE *hfp;
+            int rd,x;
+
+            {
+                char *i = out_file;
+                size_t o = 0;
+
+                while (*i != 0) {
+                    char c = *i++;
+
+                    if (isalpha(c) || isdigit(c) || c == '_') {
+                        if (isdigit(c)) 
+                            hex_output_name[o++] = '_';
+
+                        hex_output_name[o++] = c;
+                    }
+                    else {
+                        hex_output_name[o++] = '_';
+                    }
+
+                    if ((o+1) >= sizeof(hex_output_name)) break;
+                }
+
+                hex_output_name[o] = 0;
+            }
+
+            sz = lseek(fd,0,SEEK_END);
+
+            hfp = fopen(hex_output,"w");
+            if (hfp == NULL) {
+                fprintf(stderr,"Unable to write hex output\n");
+                return 1;
+            }
+
+            fprintf(hfp,"const unsigned char %s_bin[%lu] = {\n",hex_output_name,sz);
+
+            count = 0;
+            lseek(fd,0,SEEK_SET);
+            while ((rd=read(fd,tmp,sizeof(tmp))) > 0) {
+                fprintf(hfp,"    ");
+                for (x=0;x < rd;x++) {
+                    fprintf(hfp,"0x%02x",tmp[x]);
+                    if ((count+x+1l) < sz) fprintf(hfp,",");
+                }
+                fprintf(hfp," /* 0x%08lx */\n",(unsigned long)count);
+
+                count += (unsigned int)rd;
+            }
+
+            fprintf(hfp,"};\n");
+
+            fprintf(hfp,"const size_t %s_bin_sz = %ld;\n",hex_output_name,(signed long)sz);
+
+            fclose(hfp);
         }
 
         close(fd);
