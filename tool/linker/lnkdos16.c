@@ -3422,7 +3422,7 @@ int main(int argc,char **argv) {
                     char c = *i++;
 
                     if (isalpha(c) || isdigit(c) || c == '_') {
-                        if (isdigit(c)) 
+                        if (i == out_file && isdigit(c)) /* symbols cannot start with digits */
                             hex_output_name[o++] = '_';
 
                         hex_output_name[o++] = c;
