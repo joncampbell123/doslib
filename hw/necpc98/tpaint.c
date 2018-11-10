@@ -247,6 +247,44 @@ int main(int argc,char **argv) {
                     rows = (0xF80 / 80);
             }
         }
+        else if (c == '%') {
+            unsigned char recomp_row = 0;
+            unsigned char e;
+
+            c = getch();
+            if (c == 'a' || c == 'A') { /* % a play with port 70h */
+                e = inp(0x70);
+                e += (c == 'A' ? 0x01 : 0xFF);
+                outp(0x70,e);
+                recomp_row = 1;
+            }
+            else if (c == 's' || c == 'S') { /* % s play with port 72h */
+                e = inp(0x72);
+                e += (c == 'S' ? 0x01 : 0xFF);
+                outp(0x72,e);
+                recomp_row = 1;
+            }
+            else if (c == 'd' || c == 'D') { /* % s play with port 74h */
+                e = inp(0x74);
+                e += (c == 'D' ? 0x01 : 0xFF);
+                outp(0x74,e);
+            }
+
+            if (recomp_row) {
+                e = (inp(0x72) & 0x1F);
+                e -= (inp(0x70) & 0x1F);
+                if (e & 0x80) e += 0x20;
+                e++;
+                assert(e <= 0x20);
+
+                rowheight = e;
+                rows = 400 / rowheight;
+                if (rows > (0xF80 / 80))
+                    rows = (0xF80 / 80);
+
+                redraw = 1;
+            }
+        }
     }
 
     __asm {
