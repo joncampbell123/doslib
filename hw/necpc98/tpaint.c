@@ -227,7 +227,7 @@ int main(int argc,char **argv) {
             }
         }
         else if (c == ')') {
-            if (rowheight < 0x1F) {
+            if (rowheight < 0x20) {
                 rowheight++;
                 redraw = 1;
 
