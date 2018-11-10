@@ -38,6 +38,8 @@ static inline void gdc_write_data(const unsigned char d) {
 int main(int argc,char **argv) {
     uint16_t charcode = 0x2106; /* double-wide A */
     uint8_t attrcode = 0xE1; /* white */
+    unsigned char rowheight = 16;
+    unsigned char rows = 25;
     unsigned char simplegraphics = 0;
     unsigned int cur_x = 0,cur_y = 0;
     unsigned char running = 1;
@@ -60,6 +62,21 @@ int main(int argc,char **argv) {
 		return 1;
 	}
 
+    {
+        unsigned char c = 16;
+
+        __asm {
+            mov     ah,0x0B
+            int     18h
+            mov     c,al
+        }
+
+        if (c & 1) {
+            rowheight = 20;
+            rows = 20;
+        }
+    }
+
     printf("\x1B[m"); /* normal attributes */
     printf("\x1B[J"); /* clear screen */
     printf("\x1B[1>h"); /* hide function row */
@@ -70,7 +87,7 @@ int main(int argc,char **argv) {
         if (redraw) {
             sprintf(tmp,"X=%02u Y=%02u char=0x%04x attr=0x%02x sg=%u",cur_x,cur_y,charcode,attrcode,simplegraphics);
             {
-                const unsigned int ofs = 80*24;
+                const unsigned int ofs = 80*(rows-1);
                 unsigned int i = 0;
                 char *s = tmp;
 
@@ -96,7 +113,7 @@ int main(int argc,char **argv) {
                 gdc_write_data(0);
 
                 gdc_write_command(0x4B); /* cursor setup */
-                gdc_write_data(0x80 + 0x0F); /* visible, 16 lines */
+                gdc_write_data(0x80 + (rowheight - 1)); /* visible, 16 lines */
             }
 
             redraw = 0;
@@ -124,7 +141,7 @@ int main(int argc,char **argv) {
             }
         }
         else if (c == 0x0A/*down arrow*/) {
-            if (cur_y < 23) {
+            if (cur_y < (rows-1-1)) {
                 cur_y++;
                 redraw = 1;
             }
@@ -158,6 +175,42 @@ int main(int argc,char **argv) {
 
             TRAM_C[addr] = 0;
         }
+        else if (c == '!') { /* 20/25-line switch */
+            unsigned char c = 0;
+
+            __asm {
+                mov     ah,0x0B         ; get CRT mode
+                int     18h
+                xor     al,0x01         ; toggle 20/25-line mode
+                mov     c,al
+                mov     ah,0x0A
+                int     18h
+            }
+
+            rowheight = (c & 1) ? 20 : 16;
+            rows = (c & 1) ? 20 : 25;
+            redraw = 1;
+
+            if (rows == 25) {
+                /* need to clear rows 19-24 */
+                unsigned int i = 80*19;
+                unsigned int j = 80*25;
+
+                while (i < j) {
+                    TRAM_C[i] = 0;
+                    TRAM_A[i] = 0xE1;
+                    i++;
+                }
+            }
+        }
+    }
+
+    __asm {
+        mov     ah,0x0B         ; get CRT mode
+        int     18h
+        and     al,0xFE         ; 25-line mode
+        mov     ah,0x0A
+        int     18h
     }
 
     printf("\n");
