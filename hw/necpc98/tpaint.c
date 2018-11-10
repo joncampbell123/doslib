@@ -114,8 +114,8 @@ int main(int argc,char **argv) {
 
                 gdc_write_command(0x4B); /* cursor setup */
                 gdc_write_data(0x80 + (rowheight - 1)); /* visible, 16 lines */
-                gdc_write_data(0xC0);                   /* BR(L) = 3 SC = 0 (blink) CTOP = 0 */
-                gdc_write_data(((rowheight - 1) << 3) + 0x07); /* CBOT, BR(U) = 7 */
+                gdc_write_data(0x00);                   /* BR(L 2-bit) = 3 SC = 0 (blink) CTOP = 0 */
+                gdc_write_data(((rowheight - 1) << 3) + 0x04); /* CBOT, BR(U) = 4 */
             }
 
             redraw = 0;
@@ -203,6 +203,48 @@ int main(int argc,char **argv) {
                     TRAM_A[i] = 0xE1;
                     i++;
                 }
+            }
+        }
+        else if (c == '(') {
+            if (rowheight > 1) {
+                rowheight--;
+                redraw = 1;
+
+                if (rowheight > 0x10) {
+                    outp(0x74,0x10);
+                    outp(0x72,0x7u + ((rowheight + 1u) >> 1u));
+                    outp(0x70,0x8u - (rowheight >> 1u)); /* 2's complement */
+                }
+                else {
+                    outp(0x74,rowheight);
+                    outp(0x72,rowheight - 1);
+                    outp(0x70,0);
+                }
+
+                rows = 400 / rowheight;
+                if (rows > (0xF80 / 80))
+                    rows = (0xF80 / 80);
+            }
+        }
+        else if (c == ')') {
+            if (rowheight < 0x1F) {
+                rowheight++;
+                redraw = 1;
+
+                if (rowheight > 0x10) {
+                    outp(0x74,0x10);
+                    outp(0x72,0x7u + ((rowheight + 1u) >> 1u));
+                    outp(0x70,0x8u - (rowheight >> 1u)); /* 2's complement */
+                }
+                else {
+                    outp(0x74,rowheight);
+                    outp(0x72,rowheight - 1);
+                    outp(0x70,0);
+                }
+
+                rows = 400 / rowheight;
+                if (rows > (0xF80 / 80))
+                    rows = (0xF80 / 80);
             }
         }
     }
