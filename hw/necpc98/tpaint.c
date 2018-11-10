@@ -114,6 +114,8 @@ int main(int argc,char **argv) {
 
                 gdc_write_command(0x4B); /* cursor setup */
                 gdc_write_data(0x80 + (rowheight - 1)); /* visible, 16 lines */
+                gdc_write_data(0xC0);                   /* BR(L) = 3 SC = 0 (blink) CTOP = 0 */
+                gdc_write_data(((rowheight - 1) << 3) + 0x07); /* CBOT, BR(U) = 7 */
             }
 
             redraw = 0;
