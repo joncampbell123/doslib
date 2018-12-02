@@ -297,16 +297,16 @@ void vga_acmask_test(unsigned char finalmask,unsigned char fgcolor) {
         }
 
         for (o=0;o < 4;o++) {
-            vga_write_AC(VGA_AC_ENABLE|0x12,(o & 1) ? 0xF : msk);
+            vga_write_AC(VGA_AC_ENABLE|0x12,(o & 1) ? finalmask : msk);
             if (!test_pause_10ths(2)) {
-                vga_write_AC(VGA_AC_ENABLE|0x12,0xF);
+                vga_write_AC(VGA_AC_ENABLE|0x12,finalmask);
                 i=16;
                 o=8;
                 break;
             }
         }
 
-        vga_write_AC(VGA_AC_ENABLE|0x12,0xF);
+        vga_write_AC(VGA_AC_ENABLE|0x12,finalmask);
     }
 
     for (i=0;i < 4;i++) {
@@ -336,16 +336,16 @@ void vga_acmask_test(unsigned char finalmask,unsigned char fgcolor) {
         }
 
         for (o=0;o < 4;o++) {
-            vga_write_AC(VGA_AC_ENABLE|0x12,(o & 1) ? 0xF : msk);
+            vga_write_AC(VGA_AC_ENABLE|0x12,(o & 1) ? finalmask : msk);
             if (!test_pause_10ths(2)) {
-                vga_write_AC(VGA_AC_ENABLE|0x12,0xF);
+                vga_write_AC(VGA_AC_ENABLE|0x12,finalmask);
                 i=16;
                 o=8;
                 break;
             }
         }
 
-        vga_write_AC(VGA_AC_ENABLE|0x12,0xF);
+        vga_write_AC(VGA_AC_ENABLE|0x12,finalmask);
     }
 }
 
