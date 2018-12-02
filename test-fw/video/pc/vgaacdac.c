@@ -35,6 +35,7 @@ unsigned char log_atexit_set = 0;
 unsigned char st_ac_10;         /* 0x10 Attribute Mode Control */
 unsigned char st_ac_14;         /* 0x14 Color Select Register */
 unsigned char st_dac_mask;      /* 0x3C6 pel mask */
+unsigned char st_ac_mask;
 unsigned char st_ac_pal[16];    /* Attribute palette */
 unsigned char st_gc_05;         /* Graphics controller mode register (0x05) */
 
@@ -44,6 +45,7 @@ void read_vga_state(void) {
     st_gc_05 = vga_read_GC(0x05);
     st_ac_10 = vga_read_AC(0x10);
     st_ac_14 = vga_read_AC(0x14);
+    st_ac_mask = vga_read_AC(0x12);
     st_dac_mask = inp(0x3C6);
     for (i=0;i < 16;i++) st_ac_pal[i] = vga_read_AC(i);
 }
@@ -106,6 +108,7 @@ enum {
     VGAENT_AC13,
     VGAENT_AC14,
     VGAENT_AC15,
+    VGAENT_ACMASK,
 
     VGAENT_MAX
 };
@@ -209,6 +212,17 @@ void print_vga_state(void) {
         vga_entry_sel==VGAENT_AC14?0x1A:' ', st_ac_pal[14],
         vga_entry_sel==VGAENT_AC15?0x1A:' ', st_ac_pal[15]);
     int10_poscurs(11,18);
+    int10_print(tmp,0x3F);
+
+    /* --------------------------------*/
+    sprintf(tmp,"%cACMASK=%u%u%u%u%u%u%u%u",
+        vga_entry_sel==VGAENT_ACMASK?0x1A:' ',
+        (st_ac_mask>>7)&1, (st_ac_mask>>6)&1,
+        (st_ac_mask>>5)&1, (st_ac_mask>>4)&1,
+        (st_ac_mask>>3)&1, (st_ac_mask>>2)&1,
+        (st_ac_mask>>1)&1, (st_ac_mask>>0)&1);
+
+    int10_poscurs(12,17);
     int10_print(tmp,0x3F);
 }
 
@@ -994,6 +1008,12 @@ void st_dac_mask_toggle(unsigned char b) {
     outp(0x3C6,st_dac_mask);
 }
 
+void st_ac_mask_toggle(unsigned char b) {
+    st_ac_mask ^= b;
+    vga_write_AC(0x12,st_ac_mask);
+    vga_write_AC(VGA_AC_ENABLE|0x12,st_ac_mask);
+}
+
 void update_ac_pal(unsigned char i) {
     vga_write_AC(i,              st_ac_pal[i]);
     vga_write_AC(i|VGA_AC_ENABLE,st_ac_pal[i]);
@@ -1162,6 +1182,12 @@ void manual_test(unsigned int colors) {
 
                         vga_write_AC((vga_entry_sel-VGAENT_AC0),*ent);
                         vga_write_AC((vga_entry_sel-VGAENT_AC0) | VGA_AC_ENABLE,*ent);
+                        print_vga_state();
+                    }
+                    break;
+                case VGAENT_ACMASK:
+                    if (c >= '1' && c <= '8') {
+                        st_ac_mask_toggle(1 << (c - '1'));
                         print_vga_state();
                     }
                     break;
