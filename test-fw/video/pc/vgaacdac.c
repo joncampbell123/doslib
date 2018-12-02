@@ -1405,6 +1405,28 @@ void auto_test(unsigned int colors) {
     outp(0x3C6,st_dac_mask);
     print_vga_state();
 
+    for (i=0;i < 4;i++) {
+        st_ac_mask = (0x0F << i) & 0xF;
+        vga_write_AC(0x12,st_ac_mask);
+        vga_write_AC(VGA_AC_ENABLE|0x12,st_ac_mask);
+        print_vga_state();
+
+        if (!test_pause_10ths(2)) break;
+    }
+
+    for (i=0;i < 4;i++) {
+        st_ac_mask = (0x0F >> i) & 0xF;
+        vga_write_AC(0x12,st_ac_mask);
+        vga_write_AC(VGA_AC_ENABLE|0x12,st_ac_mask);
+        print_vga_state();
+
+        if (!test_pause_10ths(2)) break;
+    }
+    st_ac_mask = 0xF;
+    vga_write_AC(0x12,st_ac_mask);
+    vga_write_AC(VGA_AC_ENABLE|0x12,st_ac_mask);
+    print_vga_state();
+
     if (colors == 256) {
         dac_ramps2();
 
