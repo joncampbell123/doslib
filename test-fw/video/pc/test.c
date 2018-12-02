@@ -1887,7 +1887,7 @@ void cga4_test(unsigned int w,unsigned int h) {
     test_pause(1);
 
     if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA)))
-        vga_acmask_test(0xF,3);
+        vga_acmask_test(3,3);
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
         vga_dacmask_test(3);
@@ -2029,7 +2029,7 @@ void cga2_test(unsigned int w,unsigned int h) {
     test_pause(1);
 
     if ((vga_state.vga_flags & (VGA_IS_EGA|VGA_IS_VGA)))
-        vga_acmask_test(0xF,1);
+        vga_acmask_test(1,1);
 
     if ((vga_state.vga_flags & (VGA_IS_MCGA|VGA_IS_VGA)))
         vga_dacmask_test(1);
