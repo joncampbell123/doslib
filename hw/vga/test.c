@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <assert.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include <math.h>
 #include <dos.h>
 
@@ -31,8 +32,22 @@
 #endif
 
 unsigned char paltmp[392*2*3];
+char tmpline[256];
 
 #define VGA_GET_BUF_SIZE 255
+
+unsigned int common_prompt_number() {
+	unsigned int nm;
+
+	tmpline[0] = 0;
+	fgets(tmpline,sizeof(tmpline),stdin);
+	if (isdigit(tmpline[0]))
+		nm = (unsigned int)strtoul(tmpline,NULL,0);
+	else
+		nm = ~0U;
+
+	return nm;
+}
 
 char *vga_get_buf = NULL;
 
@@ -243,6 +258,7 @@ int main() {
 			vga_write("  9: VGA 9-bit wide \n");
 		vga_write("  z: Measurements     o: Change overscan\n");
         vga_write("  @: CGA snow test    #. CGA mode scan fx\n");
+        vga_write("  O: offset\n");
 
 		vga_write("ESC: quit\n");
 		vga_write_sync();
@@ -2614,6 +2630,21 @@ countup4:               in          al,dx       ; wait for hsync end
 				int10_setmode(3);
                 update_state_from_vga();
             }
+        }
+        else if (c == 'O') {
+            unsigned int ofs = 0;
+
+            vga_clear();
+            vga_moveto(0,0);
+            vga_write_color(7);
+            vga_sync_bios_cursor();
+
+            printf("Offset? ");
+            ofs = common_prompt_number();
+            if (ofs != ~0U) vga_set_start_location(ofs);
+
+            vga_write_sync();
+            while (getch() != 13);
         }
         else if (c == '@') {
             unsigned char c = 219; /* solid block */
