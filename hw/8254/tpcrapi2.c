@@ -259,14 +259,22 @@ void play_sfx(const pcspkt_ent_list *pl) {
     while (p != NULL) {
         while (p->delay != 0) {
             if (p->freq != 0) {
+#ifdef TARGET_PC98
+                write_8254_pc_speaker(p->freq << 9u);
+#else
                 write_8254_pc_speaker(p->freq << 8u);
+#endif
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
             }
             else {
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
             }
 
+#ifdef TARGET_PC98
+            tim += (int32_t)((unsigned long)p->delay << 9u);
+#else
             tim += (int32_t)((unsigned int)p->delay << 8u);
+#endif
             while (tim >= 0l) {
                 pc = cc;
                 cc = read_8254(0);
