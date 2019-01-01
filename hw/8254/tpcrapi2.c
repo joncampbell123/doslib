@@ -1,3 +1,17 @@
+/* EXPLANATION:
+ *
+ *      The original Apogee Duke Nukem game uses PC speaker effects that sound
+ *      very different from pure square waves. Though rendered correctly in DOSBox-X,
+ *      DOSBox SVN does not, and the sound effects sound like simple beeps.
+ *
+ *      The game appears to be constantly changing the PC speaker frequency (even
+ *      if to the same frequency) which is apparently what gives the PC speaker
+ *      sounds their more complex flavor.
+ *
+ *      The purpose of this program is to recreate that sound for testing
+ *      DOSBox-X, DOSBox SVN, and real hardware
+ *
+ *      (C) 2019 Jonathan Campbell */
 
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
