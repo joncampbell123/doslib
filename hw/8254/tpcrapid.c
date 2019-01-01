@@ -58,7 +58,7 @@ int main() {
 
         cc = read_8254(0);
 
-        for (i=(T8254_REF_CLOCK_HZ * 1ul);i >= (T8254_REF_CLOCK_HZ / 1000ul);i /= 2ul) {
+        for (i=(T8254_REF_CLOCK_HZ * 1ul);i >= (T8254_REF_CLOCK_HZ / 2000ul);i /= 2ul) {
             tim = T8254_REF_CLOCK_HZ * 4ul;
             freqi = 0;
             spk = 0;
