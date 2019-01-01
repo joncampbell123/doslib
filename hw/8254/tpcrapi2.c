@@ -25,7 +25,9 @@ struct pcspk_ent {
 };
 #pragma pack(pop)
 
-const struct pcspk_ent      duke_entry[] = {
+typedef struct pcspk_ent*   pcspkt_ent_list;
+
+struct pcspk_ent duke_entry_1[] = {
     //freq  delay
     {0x01,  0x1F},
     {0x02,  0x1F},
@@ -61,30 +63,155 @@ const struct pcspk_ent      duke_entry[] = {
     {0,     0}              // END
 };
 
-void play_sfx(const struct pcspk_ent *p) {
+struct pcspk_ent duke_entry_2[] = {
+    //freq  delay
+    {0x01,  0x1F},
+    {0x01,  0x1F},
+    {0x02,  0x1F},
+    {0x02,  0x1F},
+    {0x03,  0x1F},
+    {0x03,  0x1F},
+    {0x04,  0x1F},
+    {0x04,  0x1F},
+    {0x05,  0x1F},
+    {0x05,  0x1F},
+    {0x06,  0x1F},
+    {0x06,  0x1F},
+    {0x07,  0x1F},
+    {0x07,  0x1F},
+    {0x08,  0x1F},
+    {0x08,  0x1F},
+    {0x09,  0x1F},
+    {0x09,  0x1F},
+    {0x0A,  0x1F},
+    {0x0A,  0x1F},
+    {0x0B,  0x1F},
+    {0x0B,  0x1F},
+    {0x0C,  0x1F},
+    {0x0C,  0x1F},
+    {0x0D,  0x1F},
+    {0x0D,  0x1F},
+    {0x0E,  0x1F},
+    {0x0E,  0x1F},
+    {0x0F,  0x1F},
+    {0x0F,  0x1F},
+    {0x10,  0x1F},
+    {0x10,  0x1F},
+    {0x11,  0x1F},
+    {0x11,  0x1F},
+    {0x12,  0x1F},
+    {0x12,  0x1F},
+    {0x13,  0x1F},
+    {0x13,  0x1F},
+    {0x14,  0x1F},
+    {0x14,  0x1F},
+    {0x15,  0x1F},
+    {0x15,  0x1F},
+    {0x16,  0x1F},
+    {0x16,  0x1F},
+    {0x17,  0x1F},
+    {0x17,  0x1F},
+    {0x18,  0x1F},
+    {0x18,  0x1F},
+    {0x19,  0x1F},
+    {0x19,  0x1F},
+    {0x1A,  0x1F},
+    {0x1A,  0x1F},
+    {0x1B,  0x1F},
+    {0x1B,  0x1F},
+    {0x1C,  0x1F},
+    {0x1C,  0x1F},
+    {0x1D,  0x1F},
+    {0x1D,  0x1F},
+    {0x1E,  0x1F},
+    {0x1E,  0x1F},
+    {0x1F,  0x1F},
+    {0x1F,  0x1F},
+    {0,     0}              // END
+};
+
+struct pcspk_ent duke_entry_2alt[] = {
+    //freq  delay
+    {0x01,  0x3F},
+    {0x02,  0x3F},
+    {0x03,  0x3F},
+    {0x04,  0x3F},
+    {0x05,  0x3F},
+    {0x06,  0x3F},
+    {0x07,  0x3F},
+    {0x08,  0x3F},
+    {0x09,  0x3F},
+    {0x0A,  0x3F},
+    {0x0B,  0x3F},
+    {0x0C,  0x3F},
+    {0x0D,  0x3F},
+    {0x0E,  0x3F},
+    {0x0F,  0x3F},
+    {0x10,  0x3F},
+    {0x11,  0x3F},
+    {0x12,  0x3F},
+    {0x13,  0x3F},
+    {0x14,  0x3F},
+    {0x15,  0x3F},
+    {0x16,  0x3F},
+    {0x17,  0x3F},
+    {0x18,  0x3F},
+    {0x19,  0x3F},
+    {0x1A,  0x3F},
+    {0x1B,  0x3F},
+    {0x1C,  0x3F},
+    {0x1D,  0x3F},
+    {0x1E,  0x3F},
+    {0x1F,  0x3F},
+    {0,     0}              // END
+};
+
+pcspkt_ent_list duke_entry[] = {
+    duke_entry_1,
+    duke_entry_1,
+    duke_entry_1,
+    duke_entry_2,
+    NULL
+};
+
+pcspkt_ent_list duke_entry_alt[] = {
+    duke_entry_1,
+    duke_entry_1,
+    duke_entry_1,
+    duke_entry_2alt,
+    NULL
+};
+
+void play_sfx(const pcspkt_ent_list *pl) {
+    struct pcspk_ent *p;
     t8254_time_t pc,cc;
     t8254_time_t delta;
     int32_t tim = 0;
 
+    p = *(pl++);
     cc = read_8254(0);
-    while (p->delay != 0) {
-        if (p->freq != 0) {
-            write_8254_pc_speaker(p->freq << 8u);
-            t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
-        }
-        else {
-            t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+    while (p != NULL) {
+        while (p->delay != 0) {
+            if (p->freq != 0) {
+                write_8254_pc_speaker(p->freq << 8u);
+                t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
+            }
+            else {
+                t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+            }
+
+            tim += (int32_t)((unsigned int)p->delay << 8u);
+            while (tim >= 0l) {
+                pc = cc;
+                cc = read_8254(0);
+                delta = (pc - cc) & 0xFFFFul; /* counts DOWN */
+                tim -= delta;
+            }
+
+            p++;
         }
 
-        tim += (int32_t)((unsigned int)p->delay << 8u);
-        while (tim >= 0l) {
-            pc = cc;
-            cc = read_8254(0);
-            delta = (pc - cc) & 0xFFFFul; /* counts DOWN */
-            tim -= delta;
-        }
-
-        p++;
+        p = *(pl++);
     }
 
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
@@ -115,7 +242,11 @@ int main() {
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
 
+    printf("Rapid ramping (entry)\n");
     play_sfx(duke_entry);
+
+    printf("Rapid ramping (entry) alternate with extra delay\n");
+    play_sfx(duke_entry_alt);
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
 	return 0;
