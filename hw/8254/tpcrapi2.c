@@ -182,6 +182,58 @@ pcspkt_ent_list duke_entry_alt[] = {
     NULL
 };
 
+struct pcspk_ent duke_item_1[] = {
+    //freq  delay
+    {0x0F,  0x1F},
+    {0x0F,  0x1F},
+    {0x0F,  0x1F},
+    {0x0F,  0x1F},
+    {0x0F,  0x1F},
+    {0x0F,  0x1F},
+    {0x00,  0x1F},
+    {0x00,  0x1F},
+    {0x0B,  0x1F},
+    {0x0B,  0x1F},
+    {0x0B,  0x1F},
+    {0x0B,  0x1F},
+    {0x0B,  0x1F},
+    {0x0B,  0x1F},
+    {0x00,  0x1F},
+    {0x00,  0x1F},
+    {0x07,  0x1F},
+    {0x07,  0x1F},
+    {0x07,  0x1F},
+    {0x07,  0x1F},
+    {0x07,  0x1F},
+    {0x07,  0x1F},
+    {0x07,  0x1F},
+    {0x07,  0x1F},
+    {0x00,  0x1F},
+    {0x00,  0x1F},
+    {0,     0}              // END
+};
+
+pcspkt_ent_list duke_item[] = {
+    duke_item_1,
+    NULL
+};
+
+struct pcspk_ent duke_item_alt_1[] = {
+    //freq  delay
+    {0x0F,  0xBF},
+    {0x00,  0x3F},
+    {0x0B,  0xBF},
+    {0x00,  0x3F},
+    {0x07,  0xBF},
+    {0x00,  0x3F},
+    {0,     0}              // END
+};
+
+pcspkt_ent_list duke_item_alt[] = {
+    duke_item_alt_1,
+    NULL
+};
+
 void play_sfx(const pcspkt_ent_list *pl) {
     struct pcspk_ent *p;
     t8254_time_t pc,cc;
@@ -218,6 +270,8 @@ void play_sfx(const pcspkt_ent_list *pl) {
 }
 
 int main() {
+    unsigned int i;
+
 #if defined(TARGET_WINDOWS) && TARGET_WINDOWS == 32 && !defined(WIN386)
     /* As a 32-bit Windows application, we *can* talk directly to the 8254 but only if running under Windows 3.1/95/98/ME.
      * Windows NT would never permit us to directly talk to IO.
@@ -247,6 +301,12 @@ int main() {
 
     printf("Rapid ramping (entry) alternate with extra delay\n");
     play_sfx(duke_entry_alt);
+
+    printf("Rapid ramping (item)\n");
+    for (i=0;i < 8;i++) play_sfx(duke_item);
+
+    printf("Rapid ramping (item) alternate\n");
+    for (i=0;i < 8;i++) play_sfx(duke_item_alt);
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
 	return 0;
