@@ -38,7 +38,10 @@ int main() {
 	}
 
     printf("This program tests the ability for emulation to handle\n");
-    printf("rapid changes to PC speaker frequency.\n");
+    printf("rapid changes to PC speaker frequency. In this test, the\n");
+    printf("same counter value (frequency) is repeatedly loaded into\n");
+    printf("the PIT timer tied to the PC speaker, at varying intervals,\n");
+    printf("to determine it's effects on the output.\n");
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
 
