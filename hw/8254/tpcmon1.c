@@ -29,6 +29,7 @@ int main() {
     unsigned long tmcnt;
     unsigned long spcnt;
     unsigned long cn;
+    unsigned char ok;
     int32_t tim;
 
 #if defined(TARGET_WINDOWS) && TARGET_WINDOWS == 32 && !defined(WIN386)
@@ -62,7 +63,7 @@ int main() {
         else
             cn -= 0x7;
 
-        printf("Testing: count=%lu %.3fHz... ",(unsigned long)cn,((double)T8254_REF_CLOCK_HZ) / cn); fflush(stdout);
+        printf("Testing: count=%lu %.3fHz:\n",(unsigned long)cn,((double)T8254_REF_CLOCK_HZ) / cn);
 
         write_8254_pc_speaker(cn);
 
@@ -70,6 +71,7 @@ int main() {
         spcnt = tmcnt = 0;
         spreset = 0;
         sprange = 0;
+        ok = 0;
 
         tcc = read_8254(0);
         scc = read_8254(T8254_TIMER_PC_SPEAKER);
@@ -100,7 +102,24 @@ int main() {
             spcnt += delta;
         } while (tim > 0);
 
-        printf("tim=%lu spk=%lu spkres=%lu\n",tmcnt,spcnt,spreset);
+        /* Mode 3 is a square wave mode, which means the 8254 will load the counter and count by 2 with output HIGH.
+         * When the counter hits zero, it reloads and counts by 2 again with output LOW.
+         *
+         * So the expected result is spcnt = (tmcnt * 2ul) and spreset = frequency in Hz.
+         *
+         * Of course hardware isn't perfect so there is some leeway. */
+        ok = 1;
+        {
+            signed long threshhold = (signed long)(T8254_REF_CLOCK_HZ / 10000); /* 0.1ms tolerance */
+            signed long d = (signed long)(tmcnt * 2ul) - (signed long)spcnt;
+            if (labs(d) > threshhold) ok = 0;
+        }
+        {
+            signed long d = (signed long)spreset - (signed long)((T8254_REF_CLOCK_HZ * 2ul) / cn);
+            if (labs(d) > 2l) ok = 0;
+        }
+
+        printf("* %s -- result: timertick=%lu spkrtick=%lu spkrelatch=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset);
 
         if (kbhit()) {
             int c = getch();
