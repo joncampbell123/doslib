@@ -20,6 +20,44 @@
 # include <hw/dos/winfcon.h>
 #endif
 
+#define DO_TEST() \
+    { \
+        tim = T8254_REF_CLOCK_HZ; \
+        spcnt = tmcnt = 0; \
+        spreset = 0; \
+        sprange = 0; \
+        ok = 0; \
+ \
+        tcc = read_8254(0); \
+        scc = read_8254(T8254_TIMER_PC_SPEAKER); \
+ \
+        do { \
+            tpc = tcc; \
+            spc = scc; \
+ \
+            tcc = read_8254(0); \
+            scc = read_8254(T8254_TIMER_PC_SPEAKER); \
+ \
+            delta = tpc - tcc; /* 8254 counts DOWN. interval of 0 (0x10000) means we just use unsigned integer overflow */ \
+            tmcnt += delta; \
+            tim -= delta; \
+ \
+            if ((unsigned long)scc > cn) /* TODO: Should we check scc >= cn? */ \
+                sprange++; /* out of range */ \
+ \
+            /* 8254 counts DOWN. interval is (cn). If the new value is larger then the counter hit 0 and rolled back */ \
+            if (scc < spc) {/*likely*/ \
+                delta = spc - scc; \
+            } \
+            else {/*reset condition*/ \
+                delta = spc + (t8254_time_t)cn - scc; \
+                spreset++; \
+            } \
+ \
+            spcnt += delta; \
+        } while (tim > 0); \
+    }
+
 int main() {
     t8254_time_t tpc,tcc;
     t8254_time_t spc,scc;
@@ -67,40 +105,7 @@ int main() {
 
         write_8254_pc_speaker(cn);
 
-        tim = T8254_REF_CLOCK_HZ;
-        spcnt = tmcnt = 0;
-        spreset = 0;
-        sprange = 0;
-        ok = 0;
-
-        tcc = read_8254(0);
-        scc = read_8254(T8254_TIMER_PC_SPEAKER);
-
-        do {
-            tpc = tcc;
-            spc = scc;
-
-            tcc = read_8254(0);
-            scc = read_8254(T8254_TIMER_PC_SPEAKER);
-
-            delta = tpc - tcc; /* 8254 counts DOWN. interval of 0 (0x10000) means we just use unsigned integer overflow */
-            tmcnt += delta;
-            tim -= delta;
-
-            if ((unsigned long)scc > cn) /* TODO: Should we check scc >= cn? */
-                sprange++; /* out of range */
-
-            /* 8254 counts DOWN. interval is (cn). If the new value is larger then the counter hit 0 and rolled back */
-            if (scc < spc) {/*likely*/
-                delta = spc - scc;
-            }
-            else {/*reset condition*/
-                delta = spc + (t8254_time_t)cn - scc;
-                spreset++;
-            }
-
-            spcnt += delta;
-        } while (tim > 0);
+        DO_TEST();
 
         /* Mode 3 is a square wave mode, which means the 8254 will load the counter and count by 2 with output HIGH.
          * When the counter hits zero, it reloads and counts by 2 again with output LOW.
