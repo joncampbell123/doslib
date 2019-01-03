@@ -46,7 +46,7 @@
                 sprange++; /* out of range */ \
  \
             /* 8254 counts DOWN. interval is (cn). If the new value is larger then the counter hit 0 and rolled back */ \
-            if (scc < spc) {/*likely*/ \
+            if (scc <= spc) {/*likely*/ \
                 delta = spc - scc; \
             } \
             else {/*reset condition*/ \
@@ -133,6 +133,38 @@ int main() {
             signed long d = (signed long)spreset - (signed long)((T8254_REF_CLOCK_HZ * 2ul) / cn);
             if (labs(d) > 2l) ok = 0;
         }
+
+        printf("* %s -- result: timrtck=%lu spktck=%lu spkltch=%lu spkrnge=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange);
+
+        if (kbhit()) {
+            c = getch();
+            if (c == 27 || c == ' ') break;
+        }
+    }
+    t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+    if (c == 27) return 0;
+////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////
+    c = 0;
+    t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+    for (cn=0x10000;cn >= 0x80/*routine may be too slow for smaller values*/;) {
+        if (cn >= 0x2000)
+            cn -= 0xFB3;
+        else if (cn >= 0x100)
+            cn -= 0x51;
+        else
+            cn -= 0x7;
+
+        printf("Testing with speaker OFF: count=%lu %.3fHz:\n",(unsigned long)cn,((double)T8254_REF_CLOCK_HZ) / cn);
+
+        write_8254_pc_speaker(cn);
+
+        DO_TEST();
+
+        /* This time, no longer how much time is given, the PIT counter should not change */
+        ok = 1;
+        if (spcnt != 0ul || spreset != 0ul) ok = 0;
 
         printf("* %s -- result: timrtck=%lu spktck=%lu spkltch=%lu spkrnge=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange);
 
