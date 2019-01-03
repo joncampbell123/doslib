@@ -121,7 +121,7 @@ int main() {
             if (labs(d) > 2l) ok = 0;
         }
 
-        printf("* %s -- result: timertick=%lu spkrtick=%lu spkrelatch=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset);
+        printf("* %s -- result: timrtck=%lu spktck=%lu spkltch=%lu spkrnge=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange);
 
         if (kbhit()) {
             int c = getch();
