@@ -69,6 +69,7 @@ int main() {
     unsigned long cn;
     unsigned char ok;
     int32_t tim;
+    int c;
 
 #if defined(TARGET_WINDOWS) && TARGET_WINDOWS == 32 && !defined(WIN386)
     /* As a 32-bit Windows application, we *can* talk directly to the 8254 but only if running under Windows 3.1/95/98/ME.
@@ -97,6 +98,8 @@ int main() {
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
 
+////////////////////////////////////////////////////////////////////////////////////////
+    c = 0;
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
     for (cn=0x10000;cn >= 0x80/*routine may be too slow for smaller values*/;) {
         if (cn >= 0x2000)
@@ -134,11 +137,13 @@ int main() {
         printf("* %s -- result: timrtck=%lu spktck=%lu spkltch=%lu spkrnge=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange);
 
         if (kbhit()) {
-            int c = getch();
+            c = getch();
             if (c == 27 || c == ' ') break;
         }
     }
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+    if (c == 27) return 0;
+////////////////////////////////////////////////////////////////////////////////////////
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
 	return 0;
