@@ -249,13 +249,13 @@ int main() {
 			else if (c == '1') {
 #ifndef TARGET_PC98
 				unsigned char v = t8254_pc_speaker_read_gate();
-				t8254_pc_speaker_set_gate(v ^ PC_SPEAKER_OUTPUT_TTL_AND_GATE);
+				t8254_pc_speaker_set_gate(v ^ PC_SPEAKER_COUNTER_2_GATE);
 #endif
 			}
 			else if (c == '2') {
 #ifndef TARGET_PC98
 				unsigned char v = t8254_pc_speaker_read_gate();
-				t8254_pc_speaker_set_gate(v ^ PC_SPEAKER_COUNTER_2_GATE);
+				t8254_pc_speaker_set_gate(v ^ PC_SPEAKER_OUTPUT_TTL_AND_GATE);
 #endif
 			}
 			else if (c == '[') {
