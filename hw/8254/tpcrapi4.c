@@ -44,7 +44,8 @@ int main() {
 	}
 
     printf("This program tries to determine how writing the counter\n");
-    printf("affects the square wave at any point during the cycle.\n");
+    printf("affects the square wave depending on how many counter cycles\n");
+    printf("(half of a full square wave) occur.\n");
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
