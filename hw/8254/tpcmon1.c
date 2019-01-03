@@ -105,6 +105,8 @@ int main() {
         /* Mode 3 is a square wave mode, which means the 8254 will load the counter and count by 2 with output HIGH.
          * When the counter hits zero, it reloads and counts by 2 again with output LOW.
          *
+         * The timer is set to mode 2 by this code, and will count down by 1 per tick.
+         *
          * So the expected result is spcnt = (tmcnt * 2ul) and spreset = frequency in Hz.
          *
          * Of course hardware isn't perfect so there is some leeway. */
