@@ -93,8 +93,8 @@ int main() {
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
 
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
-    for (cn=0x10000;cn >= 0xB0/*routine may be too slow for smaller values*/;) {
-        if (cn >= 0x1000)
+    for (cn=0x10000;cn >= 0x80/*routine may be too slow for smaller values*/;) {
+        if (cn >= 0x2000)
             cn -= 0xFB3;
         else if (cn >= 0x100)
             cn -= 0x51;
