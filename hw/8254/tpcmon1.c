@@ -177,6 +177,87 @@ int main() {
     if (c == 27) return 0;
 ////////////////////////////////////////////////////////////////////////////////////////
 
+#if !defined(TARGET_PC98)//IBM PC only. PC-98 does not have a separate gate bit for the "buzzer" as far as I know
+////////////////////////////////////////////////////////////////////////////////////////
+    c = 0;
+    t8254_pc_speaker_set_gate(PC_SPEAKER_OUTPUT_TTL_AND_GATE);
+    for (cn=0x10000;cn >= 0x80/*routine may be too slow for smaller values*/;) {
+        if (cn >= 0x2000)
+            cn -= 0xFB3;
+        else if (cn >= 0x100)
+            cn -= 0x51;
+        else
+            cn -= 0x7;
+
+        printf("Testing, spkr ON, counter OFF: count=%lu %.3fHz:\n",(unsigned long)cn,((double)T8254_REF_CLOCK_HZ) / cn);
+
+        write_8254_pc_speaker(cn);
+
+        DO_TEST();
+
+        /* This time, no longer how much time is given, the PIT counter should not change */
+        ok = 1;
+        if (spcnt != 0ul || spreset != 0ul) ok = 0;
+
+        printf("* %s -- result: timrtck=%lu spktck=%lu spkltch=%lu spkrnge=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange);
+
+        if (kbhit()) {
+            c = getch();
+            if (c == 27 || c == ' ') break;
+        }
+    }
+    t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+    if (c == 27) return 0;
+////////////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////////////
+    c = 0;
+    t8254_pc_speaker_set_gate(PC_SPEAKER_COUNTER_2_GATE);
+    for (cn=0x10000;cn >= 0x80/*routine may be too slow for smaller values*/;) {
+        if (cn >= 0x2000)
+            cn -= 0xFB3;
+        else if (cn >= 0x100)
+            cn -= 0x51;
+        else
+            cn -= 0x7;
+
+        printf("Testing, spkr OFF, counter ON: count=%lu %.3fHz:\n",(unsigned long)cn,((double)T8254_REF_CLOCK_HZ) / cn);
+
+        write_8254_pc_speaker(cn);
+
+        DO_TEST();
+
+        /* Mode 3 is a square wave mode, which means the 8254 will load the counter and count by 2 with output HIGH.
+         * When the counter hits zero, it reloads and counts by 2 again with output LOW.
+         *
+         * The timer is set to mode 2 by this code, and will count down by 1 per tick.
+         *
+         * So the expected result is spcnt = (tmcnt * 2ul) and spreset = frequency in Hz.
+         *
+         * Of course hardware isn't perfect so there is some leeway. */
+        ok = 1;
+        {
+            signed long threshhold = (signed long)(T8254_REF_CLOCK_HZ / 10000); /* 0.1ms tolerance */
+            signed long d = (signed long)(tmcnt * 2ul) - (signed long)spcnt;
+            if (labs(d) > threshhold) ok = 0;
+        }
+        {
+            signed long d = (signed long)spreset - (signed long)((T8254_REF_CLOCK_HZ * 2ul) / cn);
+            if (labs(d) > 2l) ok = 0;
+        }
+
+        printf("* %s -- result: timrtck=%lu spktck=%lu spkltch=%lu spkrnge=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange);
+
+        if (kbhit()) {
+            c = getch();
+            if (c == 27 || c == ' ') break;
+        }
+    }
+    t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+    if (c == 27) return 0;
+////////////////////////////////////////////////////////////////////////////////////////
+#endif
+
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
 	return 0;
 }
