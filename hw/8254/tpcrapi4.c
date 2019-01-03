@@ -19,7 +19,7 @@
 #endif
 
 int main() {
-    unsigned int cycle,cyclecnt;
+    unsigned int cycle,cyclecnt,countmax;
     t8254_time_t pcc,cc;
     unsigned long freq;
     unsigned int count;
@@ -57,9 +57,11 @@ int main() {
         t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
         do {
-            printf("Count 0x%lx cycles-until-change=%u 4x... ",freq,cyclecnt); fflush(stdout);
+            countmax = ((0x10000ul * 25ul) / freq) / cyclecnt;
 
-            for (count=0;count < 4;count++) {
+            printf("Count 0x%lx cycles-until-change=%u %ux... ",freq,cyclecnt,countmax); fflush(stdout);
+
+            for (count=0;count < countmax;count++) {
                 cycle = cyclecnt;
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
                 /* wait for "cycle" countdown cycles to pass */
