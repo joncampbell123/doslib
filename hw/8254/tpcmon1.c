@@ -88,6 +88,11 @@ int main() {
 		return 1;
 	}
 
+    printf("timrtck = Timer ticks (PIT 0) counted during test\n");
+    printf("spktck  = Speaker ticks (PIT %u) counted during test\n",T8254_TIMER_PC_SPEAKER);
+    printf("spkltch = Number of times counter reset (relatched) on PC speaker during test\n");
+    printf("spkrnge = Number of times counter was out of range on PC speaker counter\n");
+
     printf("This program tests whether the PIT timer tied to PC speaker works.\n");
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
