@@ -149,6 +149,17 @@ int main() {
             signed long d = (signed long)spreset - (signed long)((T8254_REF_CLOCK_HZ * 2ul) / cn);
             if (labs(d) > 2l) ok = 0;
         }
+        {
+            if (rdhit >= 256) {/*even the slowest computer could do this */
+                /* rdmiss is usually not zero. there is I/O delay between reading output and the timer
+                 * between which the PIT can change state. It's usually (so far) 200 or less, usually
+                 * 10-80. Consider it a failure if more than 2000 or 10% of the hit rate */
+                if (rdmiss >= (rdhit / 10ul)) ok = 0;
+            }
+            else {
+                ok = 0;
+            }
+        }
 
         printf("* %s -- result: tt=%lu st=%lu sl=%lu sr=%lu rh=%lu rm=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange,rdhit,rdmiss);
 
@@ -181,6 +192,14 @@ int main() {
         /* This time, no longer how much time is given, the PIT counter should not change */
         ok = 1;
         if (spcnt != 0ul || spreset != 0ul) ok = 0;
+        {
+            if (rdhit >= 256) {/*even the slowest computer could do this */
+                if (rdmiss != 0ul) ok = 0; /* timer isn't cycling, it shouldn't have any misses! */
+            }
+            else {
+                ok = 0;
+            }
+        }
 
         printf("* %s -- result: tt=%lu st=%lu sl=%lu sr=%lu rh=%lu rm=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange,rdhit,rdmiss);
 
@@ -213,6 +232,14 @@ int main() {
         /* This time, no longer how much time is given, the PIT counter should not change */
         ok = 1;
         if (spcnt != 0ul || spreset != 0ul) ok = 0;
+        {
+            if (rdhit >= 256) {/*even the slowest computer could do this */
+                if (rdmiss != 0ul) ok = 0; /* timer isn't cycling, it shouldn't have any misses! */
+            }
+            else {
+                ok = 0;
+            }
+        }
 
         printf("* %s -- result: tt=%lu st=%lu sl=%lu sr=%lu rh=%lu rm=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange,rdhit,rdmiss);
 
@@ -259,6 +286,17 @@ int main() {
         {
             signed long d = (signed long)spreset - (signed long)((T8254_REF_CLOCK_HZ * 2ul) / cn);
             if (labs(d) > 2l) ok = 0;
+        }
+        {
+            if (rdhit >= 256) {/*even the slowest computer could do this */
+                /* rdmiss is usually not zero. there is I/O delay between reading output and the timer
+                 * between which the PIT can change state. It's usually (so far) 200 or less, usually
+                 * 10-80. Consider it a failure if more than 2000 or 10% of the hit rate */
+                if (rdmiss >= (rdhit / 10ul)) ok = 0;
+            }
+            else {
+                ok = 0;
+            }
         }
 
         printf("* %s -- result: tt=%lu st=%lu sl=%lu sr=%lu rh=%lu rm=%lu\n",ok?"PASS":"FAIL",tmcnt,spcnt,spreset,sprange,rdhit,rdmiss);
