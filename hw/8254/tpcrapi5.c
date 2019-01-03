@@ -19,7 +19,7 @@
 #endif
 
 int main() {
-    unsigned long cycleout;
+    unsigned long cycleout,cyclesub;
     t8254_time_t pcc,cc;
     unsigned long freq;
     unsigned int count;
@@ -55,11 +55,14 @@ int main() {
         write_8254_pc_speaker((t8254_time_t)freq);
         t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
-        printf("Count 0x%lx... ",freq); fflush(stdout);
+        cyclesub = (0x100ul * (freq - 0x800ul)) / 0x10000ul;
+        if (cyclesub == 0) cyclesub = 1;
+
+        printf("Count 0x%lx sub=0x%lx... ",freq,cyclesub); fflush(stdout);
 
         for (count=0;count < 1;count++) {
             cc = read_8254(T8254_TIMER_PC_SPEAKER);
-            for (cycleout=0x400;cycleout < freq;cycleout += 0x100) {
+            for (cycleout=0x400;cycleout < freq;cycleout += cyclesub) {
                 /* wait for the first half */
                 do {
                     pcc = cc;
