@@ -57,9 +57,9 @@ int main() {
 
         printf("Count 0x%lx... ",freq); fflush(stdout);
 
-        for (count=0;count < 4;count++) {
+        for (count=0;count < 1;count++) {
             cc = read_8254(T8254_TIMER_PC_SPEAKER);
-            for (cycleout=0x400;cycleout < freq;cycleout += 0x800) {
+            for (cycleout=0x400;cycleout < freq;cycleout += 0x100) {
                 /* wait for the first half */
                 do {
                     pcc = cc;
@@ -95,7 +95,7 @@ int main() {
             }
         }
 
-        if (freq > 0xFFFCu)
+        if (freq > 0xFFFEu)
             freq--;
          else if (freq >= 0x4000u) {
             freq -= 0x2000u;
