@@ -53,14 +53,14 @@ int main() {
     for (freq=0x10000;freq >= 0x800;) {
         cyclecnt = 10;
 
-        t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
-        write_8254_pc_speaker((t8254_time_t)freq);
-        t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
-
         do {
             countmax = ((0x10000ul * 25ul) / freq) / cyclecnt;
 
             printf("Count 0x%lx cycles-until-change=%u %ux... ",freq,cyclecnt,countmax); fflush(stdout);
+
+            t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+            write_8254_pc_speaker((t8254_time_t)freq);
+            t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
             for (count=0;count < countmax;count++) {
                 cycle = cyclecnt;
