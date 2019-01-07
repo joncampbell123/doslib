@@ -46,6 +46,9 @@ int main() {
 
     printf("This program tests whether toggling the clock gate resets the counter\n");
     printf("and affects the sound.\n");
+#if defined(NO_READBACK)
+    printf("This version DOES NOT read back the counter after reset.\n");
+#endif
 
     /* NTS: This should work on both PC-98 (which has only the clock gate control) and IBM PC (which has clock gate AND speaker enable) */
 
