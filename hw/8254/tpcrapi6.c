@@ -132,6 +132,88 @@ int main() {
         }
     }
 
+    /* NTS: The reason this will likely produce silence is that lowering the clock
+     *      gate causes the output to go back HIGH. The output remains high during
+     *      the first half of the square wave. This code will interrupt the square
+     *      wave by toggling the clock gate during that first half, so the output
+     *      during this test should really never change. */
+    printf("Again, without waiting for the first cycle. This part of the\n");
+    printf("test may be silent.\n");
+
+    for (freq=0x10000;freq >= 0x800;) {
+        ok = 1;
+
+        t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+        write_8254_pc_speaker((t8254_time_t)freq);
+        t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
+
+        /* the toggle should have reset the counter.
+         * we should read a value back that is "freq" or close to "freq" */
+        cc = read_8254(T8254_TIMER_PC_SPEAKER);
+        if ((unsigned long)cc < (freq - 0x80ul) || (unsigned long)cc > freq) {
+            printf("* unusual counter after reset: 0x%x (out of expected range)\n",cc);
+            ok = 0;
+        }
+
+        cyclesub = (0x100ul * (freq - 0x800ul)) / 0x10000ul;
+        if (cyclesub == 0) cyclesub = 1;
+
+        printf("Count 0x%lx after-reset=0x%x sub=0x%lx... ",freq,cc,cyclesub); fflush(stdout);
+
+        for (count=0;count < 1;count++) {
+            cc = read_8254(T8254_TIMER_PC_SPEAKER);
+            for (cycleout=0x400;cycleout < freq;cycleout += cyclesub) {
+                /* wait for countdown cycle to hit our threshhold */
+                do {
+                    pcc = cc;
+                    cc = read_8254(T8254_TIMER_PC_SPEAKER);
+                } while (cc >= cycleout);
+
+                /* reset */
+                t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
+                t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
+
+                /* FIXME: DOSBox-X appears to have a bug where NOT reading back the counter
+                 *        after reset results in silence instead of an audible square wave.
+                 *
+                 *        #if 0 the following readback, compile and run on real hardware and
+                 *        check this case. */
+
+                /* the toggle should have reset the counter.
+                 * we should read a value back that is "freq" or close to "freq" */
+                cc = read_8254(T8254_TIMER_PC_SPEAKER);
+                if ((unsigned long)cc < (freq - 0x80ul) || (unsigned long)cc > freq) {
+                    printf("* unusual counter after reset: 0x%x (out of expected range)\n",cc);
+                    ok = 0;
+                }
+            }
+        }
+
+        printf("%s\n",ok?"PASS":"FAIL");
+
+        if (kbhit()) {
+            c = getch();
+            if (c == 27) {
+                freq = 0;
+                break;
+            }
+            else if (c == 32) {
+                break;
+            }
+        }
+
+        if (freq > 0xFFFEu)
+            freq--;
+         else if (freq >= 0x4000u) {
+            freq -= 0x2000u;
+            freq &= ~0x1FFFu;
+        }
+        else if (freq != 0u) {
+            freq -= 0x400u;
+            freq &= ~0x3FFu;
+        }
+    }
+
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
     write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
 	return 0;
