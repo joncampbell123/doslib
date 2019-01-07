@@ -90,7 +90,7 @@ int main() {
                 /* reset */
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
-
+#if !defined(NO_READBACK)
                 /* FIXME: DOSBox-X appears to have a bug where NOT reading back the counter
                  *        after reset results in silence instead of an audible square wave.
                  *
@@ -104,6 +104,7 @@ int main() {
                     printf("* unusual counter after reset: 0x%x (out of expected range)\n",cc);
                     ok = 0;
                 }
+#endif
             }
         }
 
@@ -172,7 +173,7 @@ int main() {
                 /* reset */
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
-
+#if !defined(NO_READBACK)
                 /* FIXME: DOSBox-X appears to have a bug where NOT reading back the counter
                  *        after reset results in silence instead of an audible square wave.
                  *
@@ -186,6 +187,7 @@ int main() {
                     printf("* unusual counter after reset: 0x%x (out of expected range)\n",cc);
                     ok = 0;
                 }
+#endif
             }
         }
 
