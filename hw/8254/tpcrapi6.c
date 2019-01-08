@@ -96,7 +96,10 @@ int main() {
                 /* this readback is REQUIRED in order to correctly count down in
                  * the next iteration of this for loop. */
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
-                if ((unsigned long)cc < (freq - 0x80ul) || (unsigned long)cc > freq) {
+                if (cc == 0 && freq == 0x10000ul) {
+                    /* apparently this is possible on a 486 */
+                }
+                else if ((unsigned long)cc < (freq - 0x80ul) || (unsigned long)cc > freq) {
                     printf("* unusual counter after reset: 0x%x (out of expected range)\n",cc);
                     ok = 0;
                 }
@@ -174,7 +177,10 @@ int main() {
                 /* this readback is REQUIRED in order to correctly count down in
                  * the next iteration of this for loop. */
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
-                if ((unsigned long)cc < (freq - 0x80ul) || (unsigned long)cc > freq) {
+                if (cc == 0 && freq == 0x10000ul) {
+                    /* apparently this is possible on a 486 */
+                }
+                else if ((unsigned long)cc < (freq - 0x80ul) || (unsigned long)cc > freq) {
                     printf("* unusual counter after reset: 0x%x (out of expected range)\n",cc);
                     ok = 0;
                 }
