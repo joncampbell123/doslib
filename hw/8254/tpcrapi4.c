@@ -100,7 +100,11 @@ int main() {
                  *        However the timer.cpp code does track whether port 43h was written first, and there is code
                  *        there to at least consider that case for PIT 0 (system timer), so hopefully at some point
                  *        it should be possible to adapt PIT 2 (IBM) or PIT 1 (NEC PC-98) to finish the current count
-                 *        before latching the new value in the NO_PORT_43 case. */
+                 *        before latching the new value in the NO_PORT_43 case.
+                 *
+                 *        UPDATE: Running RAPN4 confirms that on real hardware, NOT writing port 43h before writing
+                 *                the counter causes behavior as documented in the datasheet where the 8254 lets the
+                 *                current count run down before using the new counter value written. */
                 pcc = cc;
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
 #if defined(NO_PORT_43)
