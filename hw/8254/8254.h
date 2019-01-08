@@ -220,6 +220,11 @@ static inline void write_8254_pc_speaker(t8254_time_t max) {
 	write_8254(T8254_TIMER_PC_SPEAKER,max,T8254_MODE_3_SQUARE_WAVE_MODE);
 }
 
+/* you must set the PIT to mode 3 with write_8254_pc_speaker() first before calling this function! */
+static inline void writenm_8254_pc_speaker(t8254_time_t max) {
+	writenm_8254(T8254_TIMER_PC_SPEAKER,max);
+}
+
 #ifdef TARGET_PC98
 /* NEC PC-98 */
 /* FIXME: Does the PC-98 have a way to read PC speaker output back like IBM PC? */
