@@ -60,6 +60,10 @@ int main() {
     write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
+#if defined(NO_PORT_43)
+# define write_8254_pc_speaker writenm_8254_pc_speaker
+#endif
+
     for (freq=0x10000;freq >= 0x800;) {
         ok = 1;
 
