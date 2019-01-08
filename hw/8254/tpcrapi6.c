@@ -62,6 +62,11 @@ int main() {
         /* the toggle should have reset the counter.
          * we should read a value back that is "freq" or close to "freq" */
         cc = read_8254(T8254_TIMER_PC_SPEAKER);
+
+        /* this code is fast enough to read back counter 0x0000 on a 486 */
+        while (cc == 0)
+            cc = read_8254(T8254_TIMER_PC_SPEAKER);
+
         if ((unsigned long)cc < (freq - 0x80ul) || (unsigned long)cc > freq) {
             printf("* unusual counter after reset: 0x%x (out of expected range)\n",cc);
             ok = 0;
