@@ -95,6 +95,12 @@ int main() {
                  * NTS: On real hardware, this code is fast enough on a 486 to read the counter when it's still at 0x0000. */
                 /* NTS: Not writing port 43h (RAPN4) and writing the counter should cause the current countdown to finish
                  *      before starting the new one. In that case the counter should continue without resetting. */
+                /* FIXME: Neither DOSBox-X nor DOSBox SVN emulate the NO_PORT_43 case correctly. Both implementations
+                 *        reset the counter upon changing the frequency whether or not port 43h was written first.
+                 *        However the timer.cpp code does track whether port 43h was written first, and there is code
+                 *        there to at least consider that case for PIT 0 (system timer), so hopefully at some point
+                 *        it should be possible to adapt PIT 2 (IBM) or PIT 1 (NEC PC-98) to finish the current count
+                 *        before latching the new value in the NO_PORT_43 case. */
                 pcc = cc;
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
 #if defined(NO_PORT_43)
