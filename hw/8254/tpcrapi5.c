@@ -19,6 +19,7 @@
 #endif
 
 int main() {
+    unsigned char reset_write_freq_bug;
     unsigned long cycleout,cyclesub;
     t8254_time_t pcc,cc;
     unsigned long freq;
@@ -60,6 +61,7 @@ int main() {
 
         printf("Count 0x%lx sub=0x%lx... ",freq,cyclesub); fflush(stdout);
 
+        reset_write_freq_bug = 0;
         for (count=0;count < 1;count++) {
             cc = read_8254(T8254_TIMER_PC_SPEAKER);
             for (cycleout=0x400;cycleout < freq;cycleout += cyclesub) {
@@ -77,6 +79,18 @@ int main() {
 
                 write_8254_pc_speaker((t8254_time_t)freq);
 
+                /* FIXME: Both DOSBox-X and DOSBox SVN reset the PIC counter when writing a new frequency.
+                 *        What is supposed to happen on actual 8254 hardware according to Intel is that
+                 *        the 8254 is supposed to finish the half of the square wave with the old counter
+                 *        THEN use the new counter.
+                 *
+                 *        This code is here to check for that.
+                 *
+                 *        However it has not yet been run on real hardware. */
+                pcc = read_8254(T8254_TIMER_PC_SPEAKER);
+                if (pcc >= cycleout)
+                    reset_write_freq_bug = 1;
+
                 /* wait for countdown cycle to complete */
                 do {
                     pcc = cc;
@@ -86,6 +100,9 @@ int main() {
         }
 
         printf("done\n");
+
+        if (reset_write_freq_bug)
+            printf("* PIT timer/emulation bug: 8254 reset counter when writing new frequency!\n");
 
         if (kbhit()) {
             c = getch();
