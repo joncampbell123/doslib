@@ -75,6 +75,10 @@ int main() {
         for (count=0;count < 1;count++) {
             cc = read_8254(T8254_TIMER_PC_SPEAKER);
             for (cycleout=0x400;cycleout < freq;cycleout += cyclesub) {
+                /* this code is fast enough to read back counter 0x0000 on a 486 */
+                while (cc == 0)
+                    cc = read_8254(T8254_TIMER_PC_SPEAKER);
+
                 /* wait for the first half */
                 do {
                     pcc = cc;
@@ -162,6 +166,10 @@ int main() {
         for (count=0;count < 1;count++) {
             cc = read_8254(T8254_TIMER_PC_SPEAKER);
             for (cycleout=0x400;cycleout < freq;cycleout += cyclesub) {
+                /* this code is fast enough to read back counter 0x0000 on a 486 */
+                while (cc == 0)
+                    cc = read_8254(T8254_TIMER_PC_SPEAKER);
+
                 /* wait for countdown cycle to hit our threshhold */
                 do {
                     pcc = cc;

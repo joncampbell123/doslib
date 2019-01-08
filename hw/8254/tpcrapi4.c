@@ -69,6 +69,10 @@ int main() {
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
                 /* wait for "cycle" countdown cycles to pass */
                 do {
+                    /* this code is fast enough to read back counter 0x0000 on a 486 */
+                    while (cc == 0)
+                        cc = read_8254(T8254_TIMER_PC_SPEAKER);
+
                     /* wait for one countdown cycle */
                     do {
                         pcc = cc;
