@@ -52,6 +52,10 @@ int main() {
     write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
+#if defined(NO_PORT_43)
+# define write_8254_pc_speaker writenm_8254_pc_speaker
+#endif
+
     for (freq=0x10000;freq >= 0x800;) {
         t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
         write_8254_pc_speaker((t8254_time_t)freq);
@@ -92,19 +96,26 @@ int main() {
                  * NTS: On real hardware, this code is fast enough on a 486 to read the counter when it's still at 0x0000. */
                 pcc = cc;
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
+#if defined(NO_PORT_43)
+                if (cc > pcc) /* if it reset, that's a failure */
+                    reset_write_freq_bug = cc;
+#else
                 if (freq == 0x10000ul && cc == 0)
                     { /* OK */ }
                 else if (cc < pcc) /* if it continued counting down despite writing the counter, that's a failure */
                     reset_write_freq_bug = cc;
-
-                cc = read_8254(T8254_TIMER_PC_SPEAKER);
+#endif
             }
         }
 
         printf("done\n");
 
         if (reset_write_freq_bug)
+#if defined(NO_PORT_43)
+            printf("* PIT timer (8254) reset counter on writing frequency without port 43h (0x%x)!\n",reset_write_freq_bug);
+#else
             printf("* PIT timer (8254) did not reset counter on writing frequency (0x%x)!\n",reset_write_freq_bug);
+#endif
 
         if (kbhit()) {
             c = getch();
