@@ -50,6 +50,7 @@ int main() {
     /* NTS: This should work on both PC-98 (which has only the clock gate control) and IBM PC (which has clock gate AND speaker enable) */
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
+    write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
     for (freq=0x10000;freq >= 0x800;) {

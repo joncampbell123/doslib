@@ -41,6 +41,7 @@ int main() {
     printf("rapid changes to PC speaker frequency.\n");
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
+    write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
 
     {
         uint16_t freqs[4];

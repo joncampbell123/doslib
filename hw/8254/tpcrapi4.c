@@ -49,6 +49,7 @@ int main() {
     printf("(half of a full square wave) occur.\n");
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
+    write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
     for (freq=0x10000;freq >= 0x800;) {

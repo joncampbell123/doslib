@@ -57,6 +57,7 @@ int main() {
     printf("Testing, applying gate to both halves of the square wave.\n");
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
+    write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
     for (freq=0x10000;freq >= 0x800;) {
@@ -126,6 +127,7 @@ int main() {
     printf("Testing, applying gate to the first half of the square wave.\n");
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
+    write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
     for (freq=0x10000;freq >= 0x800;) {
@@ -204,6 +206,7 @@ int main() {
      *   Changing the gate while LOW has no effect on the output. */
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
+    write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
     t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
     for (freq=0x10000;freq >= 0x800;) {
