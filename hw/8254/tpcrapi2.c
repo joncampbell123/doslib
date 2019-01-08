@@ -27,6 +27,10 @@
 #include <hw/dos/dosbox.h>
 #include <hw/dos/dosntvdm.h>
 
+#if defined(NO_PORT_43)
+# define write_8254_pc_speaker writenm_8254_pc_speaker
+#endif
+
 #ifdef TARGET_WINDOWS
 # define WINFCON_STOCK_WIN_MAIN
 # include <hw/dos/winfcon.h>
@@ -315,6 +319,10 @@ int main() {
     printf("This program tests the ability for emulation to handle\n");
     printf("rapid changes to PC speaker frequency.\n");
     printf("Apogee/Duke Nukem style sound effects.\n");
+
+#if defined(NO_PORT_43)
+# undef write_8254_pc_speaker
+#endif
 
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
     write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
