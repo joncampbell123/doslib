@@ -19,7 +19,7 @@
 #endif
 
 int main() {
-    unsigned char reset_write_freq_bug;
+    unsigned short reset_write_freq_bug;
     unsigned long cycleout,cyclesub;
     t8254_time_t pcc,cc;
     unsigned long freq;
@@ -89,7 +89,7 @@ int main() {
                  *        However it has not yet been run on real hardware. */
                 pcc = read_8254(T8254_TIMER_PC_SPEAKER);
                 if (pcc >= cycleout)
-                    reset_write_freq_bug = 1;
+                    reset_write_freq_bug = pcc;
 
                 /* wait for countdown cycle to complete */
                 do {
@@ -102,7 +102,7 @@ int main() {
         printf("done\n");
 
         if (reset_write_freq_bug)
-            printf("* PIT timer/emulation bug: 8254 reset counter when writing new frequency!\n");
+            printf("* PIT timer/emulation bug: 8254 reset counter (0x%x) when writing new frequency!\n",reset_write_freq_bug);
 
         if (kbhit()) {
             c = getch();
