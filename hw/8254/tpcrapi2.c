@@ -259,7 +259,7 @@ void play_sfx(const pcspkt_ent_list *pl) {
     while (p != NULL) {
         while (p->delay != 0) {
             if (p->freq != 0) {
-#ifdef TARGET_PC98
+#ifdef TARGET_PC98 /* Double the counter to convert IBM PC timer delay (1193182Hz) to PC-98 timer delay (2457600Hz) */
                 write_8254_pc_speaker(p->freq << 9u);
 #else
                 write_8254_pc_speaker(p->freq << 8u);
@@ -270,7 +270,7 @@ void play_sfx(const pcspkt_ent_list *pl) {
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
             }
 
-#ifdef TARGET_PC98
+#ifdef TARGET_PC98 /* Double the delay to convert IBM PC timer delay (1193182Hz) to PC-98 timer delay (2457600Hz) */
             tim += (int32_t)((unsigned long)p->delay << 9u);
 #else
             tim += (int32_t)((unsigned int)p->delay << 8u);
