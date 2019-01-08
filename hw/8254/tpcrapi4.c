@@ -59,6 +59,10 @@ int main() {
         write_8254_pc_speaker((t8254_time_t)freq);
         t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
 
+#if defined(NO_PORT_43)
+# define write_8254_pc_speaker writenm_8254_pc_speaker
+#endif
+
         do {
             countmax = ((0x10000ul * 25ul) / freq) / cyclecnt;
 
@@ -82,24 +86,36 @@ int main() {
                 } while (--cycle != 0u);
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
 
-                /* write frequency (43h + counter) which resets the counter */
+                /* RAPI4.EXE: write frequency (43h + counter) which resets the counter */
+                /* RAPN4.EXE: write frequency (counter only) which does NOT reset the counter */
                 write_8254_pc_speaker((t8254_time_t)freq);
 
                 /* NTS: According to real hardware, writing port 43h then the counter resets the counter right away. */
                 /*      So it's considered a failure if the counter is not right back up at the counter value.
                  * NTS: On real hardware, this code is fast enough on a 486 to read the counter when it's still at 0x0000. */
+                /* NTS: Not writing port 43h (RAPN4) and writing the counter should cause the current countdown to finish
+                 *      before starting the new one. In that case the counter should continue without resetting. */
                 pcc = cc;
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
+#if defined(NO_PORT_43)
+                if (cc > pcc) /* if it reset, that's a failure */
+                    reset_write_freq_bug = cc;
+#else
                 if (freq == 0x10000ul && cc == 0)
                     { /* OK */ }
                 else if (cc < pcc) /* if it continued counting down despite writing the counter, that's a failure */
                     reset_write_freq_bug = cc;
+#endif
             }
 
             printf("done\n");
 
             if (reset_write_freq_bug)
+#if defined(NO_PORT_43)
+                printf("* PIT timer (8254) reset counter on writing frequency without port 43h (0x%x)!\n",reset_write_freq_bug);
+#else
                 printf("* PIT timer (8254) did not reset counter on writing frequency (0x%x)!\n",reset_write_freq_bug);
+#endif
 
             if (kbhit()) {
                 c = getch();
