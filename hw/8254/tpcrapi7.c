@@ -1,5 +1,8 @@
 
-#define NO_READBACK
+#include <stdio.h>
 
-#include "tpcrapi6.c"
+int main(int argc,char **argv) {
+    printf("This program is obsolete\n");
+    return 0;
+}
 

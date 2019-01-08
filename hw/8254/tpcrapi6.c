@@ -46,9 +46,6 @@ int main() {
 
     printf("This program tests whether toggling the clock gate resets the counter\n");
     printf("and affects the sound.\n");
-#if defined(NO_READBACK)
-    printf("This version DOES NOT read back the counter after reset.\n");
-#endif
 
     /* NTS: This should work on both PC-98 (which has only the clock gate control) and IBM PC (which has clock gate AND speaker enable) */
 
@@ -93,21 +90,16 @@ int main() {
                 /* reset */
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
-#if !defined(NO_READBACK)
-                /* FIXME: DOSBox-X appears to have a bug where NOT reading back the counter
-                 *        after reset results in silence instead of an audible square wave.
-                 *
-                 *        #if 0 the following readback, compile and run on real hardware and
-                 *        check this case. */
 
                 /* the toggle should have reset the counter.
                  * we should read a value back that is "freq" or close to "freq" */
+                /* this readback is REQUIRED in order to correctly count down in
+                 * the next iteration of this for loop. */
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
                 if ((unsigned long)cc < (freq - 0x80ul) || (unsigned long)cc > freq) {
                     printf("* unusual counter after reset: 0x%x (out of expected range)\n",cc);
                     ok = 0;
                 }
-#endif
             }
         }
 
@@ -176,21 +168,16 @@ int main() {
                 /* reset */
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_OFF);
                 t8254_pc_speaker_set_gate(PC_SPEAKER_GATE_ON);
-#if !defined(NO_READBACK)
-                /* FIXME: DOSBox-X appears to have a bug where NOT reading back the counter
-                 *        after reset results in silence instead of an audible square wave.
-                 *
-                 *        #if 0 the following readback, compile and run on real hardware and
-                 *        check this case. */
 
                 /* the toggle should have reset the counter.
                  * we should read a value back that is "freq" or close to "freq" */
+                /* this readback is REQUIRED in order to correctly count down in
+                 * the next iteration of this for loop. */
                 cc = read_8254(T8254_TIMER_PC_SPEAKER);
                 if ((unsigned long)cc < (freq - 0x80ul) || (unsigned long)cc > freq) {
                     printf("* unusual counter after reset: 0x%x (out of expected range)\n",cc);
                     ok = 0;
                 }
-#endif
             }
         }
 
