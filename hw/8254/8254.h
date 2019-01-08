@@ -160,6 +160,25 @@ static inline t8254_time_t read_8254(unsigned char timer) {
 	return x;
 }
 
+/* write without writing port 43h, therefore no mode control.
+ * before using this function you will need to use write_8254 to provide the mode.
+ * the most common case is writing LSB then MSB, which this code assumes. */
+static inline void writenm_8254_ncli(unsigned char timer,t8254_time_t count) {
+	if (timer > 2) return;
+	outp(T8254_TIMER_PORT(timer),count);
+	outp(T8254_TIMER_PORT(timer),count >> 8);
+	/* for our own timing code, keep track of what that count was. we can't read it back from H/W anyway */
+	t8254_counter[timer] = (count == 0 ? 0x10000 : count);
+}
+
+static inline void writenm_8254(unsigned char timer,t8254_time_t count) {
+	unsigned int flags;
+
+	flags = get_cpu_flags();
+	writenm_8254_ncli(timer,count);
+	_sti_if_flags(flags);
+}
+
 /* NTS: At the hardware level, count == 0 is equivalent to programming 0x10000 into it.
  *      t8254_time_t is a 16-bit integer, and we write 16 bits, so 0 and 0x10000 is
  *      the same thing to us anyway */
