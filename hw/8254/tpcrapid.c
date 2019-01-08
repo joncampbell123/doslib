@@ -43,6 +43,10 @@ int main() {
 	write_8254_system_timer(0); /* restore normal function to prevent BIOS from going crazy */
     write_8254_pc_speaker(0); /* make sure the PIT timer is in mode 3 (square wave) */
 
+#if defined(NO_PORT_43)
+# define write_8254_pc_speaker writenm_8254_pc_speaker
+#endif
+
     {
         uint16_t freqs[4];
         unsigned int freqi;
