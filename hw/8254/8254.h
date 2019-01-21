@@ -16,6 +16,10 @@
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* WARNING: When calling these functions it is recommended that you disable interrupts
  *          during the programming procedure. In MS-DOS mode there is nothing to stop
  *          the BIOS from trying to use the 8254 chip at the same time you are. It is
@@ -234,6 +238,10 @@ static inline void writenm_8254_pc_speaker(t8254_time_t max) {
 static inline uint8_t read_8254_pc_speaker_output() {
 	/* bit 5 of port 61h gives us the output of the counter (prior to the AND gate) */
 	return (inp(PC_SPEAKER_GATE) & 0x20);
+}
+#endif
+
+#ifdef __cplusplus
 }
 #endif
 

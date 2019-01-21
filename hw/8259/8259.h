@@ -16,6 +16,10 @@
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* PIC hardware register description
  *
  *    ICW1        I/O port base + 0  (NTS: bit D4 == 1 when writing this)
@@ -144,6 +148,10 @@ static inline unsigned char p8259_is_masked_bool(unsigned char c) {
 void p8259_ICW(unsigned char a,unsigned char b,unsigned char c,unsigned char d);
 unsigned char p8259_poll(unsigned char c);
 int probe_8259();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* __HW_8259_8259_H */
 
