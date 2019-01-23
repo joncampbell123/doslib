@@ -185,10 +185,8 @@ static void set_cpu_flags(unsigned int f);
 	parm [ax];
 #endif
 
-#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
+#if (defined(TARGET_WINDOWS) || defined(TARGET_OS2)) && TARGET_MSDOS == 32
 /* Watcom does not offer int86/int386 for Win32s/Win9x/NT/etc */
-#elif defined(__cplusplus)
-/* For reasons unknown to me, int386() isn't available from Watcom's C++ compiler */
 #else
 static inline void just_int86(unsigned char c,union REGS *r1,union REGS *r2) {
 # ifdef __386__
