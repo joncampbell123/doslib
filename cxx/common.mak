@@ -36,7 +36,10 @@ TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 !ifdef TARGET_WINDOWS
 !else
+! ifdef TARGET_OS2
+! else
 8254_EXE =    $(SUBDIR)$(HPS)8254.$(EXEEXT)
+! endif
 !endif
 
 exe: $(TEST_EXE) $(8254_EXE) .symbolic

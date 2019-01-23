@@ -35,8 +35,6 @@
 
 #ifdef TARGET_WINDOWS
 /* no interrupts */
-#elif defined(__cplusplus)
-/* why are dos_getvect() and dos_setvect() not available in C++ mode? */
 #else
 # define HOOK_IRQ
 #endif
