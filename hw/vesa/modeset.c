@@ -42,6 +42,7 @@
 #include <hw/flatreal/flatreal.h>
 #include <hw/dos/doswin.h>
 
+static int vga_setbmode = -1;
 static int info = 0; /* show info */
 static int sstep = 0; /* single step */
 
@@ -778,7 +779,16 @@ int main(int argc,char **argv) {
 			else if (!strcmp(a,"6")) {
 				md.dac8 = 0;
 			}
-			else {
+            else if (!strcmp(a,"vb")) {
+                vga_setbmode = 0;//byte mode
+            }
+            else if (!strcmp(a,"vw")) {
+                vga_setbmode = 1;//word mode
+            }
+            else if (!strcmp(a,"vd")) {
+                vga_setbmode = 2;//dword mode
+            }
+            else {
 				printf("I don't know what switch '%s' means\n",a);
 				return 1;
 			}
@@ -924,6 +934,31 @@ int main(int argc,char **argv) {
 		printf(" Failed to set mode\n");
 		return 1;
 	}
+
+    if (vga_setbmode >= 0) {
+        /* Test whether SVGA modes are immune or not to the BYTE/WORD/DWORD bits */
+        unsigned char un,mc;
+
+        if (!probe_vga())
+            return 1;
+
+        un = vga_read_CRTC(0x14);
+        mc = vga_read_CRTC(0x17);
+
+        if (vga_setbmode >= 2)//DW BIT
+            un |=  0x40;
+        else
+            un &= ~0x40;
+
+        if (vga_setbmode >= 1)//W BIT (set to 0 for word mode)
+            mc &= ~0x40;
+        else
+            mc |=  0x40;
+
+        vga_write_CRTC(0x14,un);
+        vga_write_CRTC(0x17,mc);
+    }
+
 	sstep_wait();
 	if (!vbe_mode_decision_acceptmode(&md,&mi)) {
 		vbe_reset_video_to_text();
