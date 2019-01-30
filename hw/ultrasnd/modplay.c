@@ -196,28 +196,26 @@ int main(int argc,char **argv) {
 	/* NTS: We no longer auto-probe for the card (at this time) because it is also standard for DOS
 	 *      programs using the GUS SDK to expect the ULTRASND variable */
 
-	for (i=0;i < MAX_ULTRASND;i++) {
-		gus = &ultrasnd_card[i];
-		if (ultrasnd_card_taken(gus)) {
-			printf("[%u] RAM=%dKB PORT=0x%03x IRQ=%d,%d DMA=%d,%d 256KB-boundary=%u voices=%u/%uHz\n",
-				i+1,
-				(int)(gus->total_ram >> 10UL),
-				gus->port,
-				gus->irq1,
-				gus->irq2,
-				gus->dma1,
-				gus->dma2,
-				gus->boundary256k,
-				gus->active_voices,
-				gus->output_rate);
-		}
-		gus = NULL;
-	}
-	printf("Which card to use? "); fflush(stdout);
-	i = -1; scanf("%d",&i); i--;
-	if (i < 0 || i >= MAX_ULTRASND || !ultrasnd_card_taken(&ultrasnd_card[i])) return 1;
-	gus = &ultrasnd_card[i];
-	if (no_dma) gus->use_dma = 0;
+	i = 0;
+    gus = &ultrasnd_card[i];
+    if (ultrasnd_card_taken(gus)) {
+        printf("[%u] RAM=%dKB PORT=0x%03x IRQ=%d,%d DMA=%d,%d 256KB-boundary=%u voices=%u/%uHz\n",
+                i+1,
+                (int)(gus->total_ram >> 10UL),
+                gus->port,
+                gus->irq1,
+                gus->irq2,
+                gus->dma1,
+                gus->dma2,
+                gus->boundary256k,
+                gus->active_voices,
+                gus->output_rate);
+    }
+    else {
+        fprintf(stderr,"Need GUS card\n");
+        return 1;
+    }
+    if (no_dma) gus->use_dma = 0;
 
 	if (gus->irq1 >= 0) {
 		old_irq_masked = p8259_is_masked(gus->irq1);
