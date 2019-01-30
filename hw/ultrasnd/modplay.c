@@ -118,8 +118,73 @@ static void help() {
 #endif
 }
 
+char *mod_file = NULL;
+unsigned int mod_samples = 0;
+unsigned int mod_patterns = 0;
+unsigned int mod_song_length = 0;
+
+unsigned char mod_pattern[128];
+
+unsigned char temp[4096];
+
+struct mod_sample {
+    unsigned long   file_offset;
+    unsigned long   ram_offset;
+    unsigned long   size;
+};
+
+struct mod_sample mod_sample[32];
+
+int load_mod() {
+    unsigned long tof;
+    unsigned int i;
+    int fd;
+
+    fd = open(mod_file,O_RDONLY | O_BINARY);
+    if (fd < 0) return 0;
+
+    /* first 20 bytes: Song name */
+    /* 20 + (30 * sample): Sample info */
+    /* offset 1080: 'M.K.', or 'M!K!' or sometimes other IDs as well */
+    if (lseek(fd,1080,SEEK_SET) != 1080 || read(fd,temp,4) != 4) goto fail;
+
+    mod_samples = 15;
+    if (!memcmp(temp,"M.K.",4) ||
+        !memcmp(temp,"M!K!",4) ||
+        !memcmp(temp,"FLT4",4) ||
+        !memcmp(temp,"FLT8",4))
+        mod_samples = 31;
+
+    tof = 20ul + (30ul * (unsigned long)mod_samples);
+    if (lseek(fd,tof,SEEK_SET) != tof || read(fd,temp,2+128) != (2+128)) goto fail;
+    mod_song_length = temp[0];
+    memcpy(mod_pattern,temp+2,128);
+
+    mod_patterns = 0;
+    for (i=0;i < 128;i++) {
+        unsigned int pn = (unsigned int)mod_pattern[i] + 1u;
+        if (mod_patterns < pn) mod_patterns = pn;
+    }
+
+    printf("MOD: samples=%u patterns=%u song_length=%u\n",
+        mod_samples,mod_patterns,mod_song_length);
+
+    tof = 20ul + (30ul * (unsigned long)mod_samples) + 2u + 128u;
+    if (mod_samples != 15) tof += 4u;
+    printf("     pattern_ofs=%lu\n",(unsigned long)tof);
+
+    tof = 20ul + (30ul * (unsigned long)mod_samples) + 2u + 128u + ((unsigned long)mod_patterns * 1024);
+    if (mod_samples != 15) tof += 4u;
+    printf("     samples_ofs=%lu\n",(unsigned long)tof);
+
+    close(fd);
+    return 1;
+fail:
+    close(fd);
+    return 0;
+}
+
 int main(int argc,char **argv) {
-    char *mod_file = NULL;
 	int i;
 
 	probe_dos();
@@ -227,7 +292,9 @@ int main(int argc,char **argv) {
 	i = int10_getmode();
 	if (i != 3) int10_setmode(3);
 
-    // TODO
+    if (load_mod()) {
+        printf("MOD loaded\n");
+    }
 
 	if (gus->irq1 >= 0 && old_irq_masked)
 		p8259_mask(gus->irq1);
