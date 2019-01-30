@@ -109,7 +109,7 @@ static void interrupt gus_irq() {
 }
 
 static void help() {
-	printf("modplay [options] <mod file>\n");
+	printf("modplay [options] -m <mod file>\n");
 #if !(TARGET_MSDOS == 16 && defined(__COMPACT__)) /* this is too much to cram into a small model EXE */
 	printf(" /h /help             This help\n");
 	printf(" /nochain             Don't chain to previous IRQ (sound blaster IRQ)\n");
@@ -119,6 +119,7 @@ static void help() {
 }
 
 int main(int argc,char **argv) {
+    char *mod_file = NULL;
 	int i;
 
 	probe_dos();
@@ -153,6 +154,11 @@ int main(int argc,char **argv) {
 
 			if (!strcmp(a,"d"))
 				ultrasnd_debug(1);
+            else if (!strcmp(a,"m")) {
+                a = argv[++i];
+                if (*a == NULL) return 1;
+                mod_file = a;
+            }
 			else if (!strcmp(a,"nodma"))
 				no_dma = 1;
 			else if (!strcmp(a,"nochain"))
@@ -165,6 +171,11 @@ int main(int argc,char **argv) {
 			}
 		}
 	}
+
+    if (mod_file == NULL) {
+        fprintf(stderr,"MOD file required\n");
+        return 1;
+    }
 
 	if (ultrasnd_try_ultrasnd_env() != NULL) {
 		printf("ULTRASND environment variable: PORT=0x%03x IRQ=%d,%d DMA=%d,%d\n",
