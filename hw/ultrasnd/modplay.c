@@ -276,7 +276,8 @@ int load_mod() {
             // make room in GUS RAM for the sample,
             // taking into consideration that you shouldn't cross 256KB boundaries
             for (ri=0;ri < 4;ri++) {
-                if ((ramofs[ri] + s->size) < rammax) {
+                if ((ramofs[ri] + s->size + 0x20) < rammax) {
+                    ramofs[ri] = (ramofs[ri] + 0x1F) & (~0x1F);
                     s->ram_offset = ramofs[ri] + (rammax * (unsigned long)ri);
                     ramofs[ri] += s->size;
                     break;
@@ -299,9 +300,65 @@ int load_mod() {
         }
     }
 
+    {
+        size_t bufsize = 16384;
+        unsigned char FAR *dram_buf = ultrasnd_dram_buffer_alloc(gus,bufsize);
+        if (dram_buf == NULL) {
+            printf("Cannot alloc DMA buffer\n");
+            goto fail;
+        }
+
+        /* load samples into GUS RAM. Use DMA, of course */
+        for (i=0;i < mod_samples;i++) {
+            struct mod_sample *s = &mod_sample[i];
+
+            if (s->size != 0 && s->ram_offset != (~0ul)) {
+                unsigned long rem,ramoff;
+                unsigned rd;
+
+                printf("Loading sample %u\n",i);
+
+                if (lseek(fd,s->file_offset,SEEK_SET) != s->file_offset) {
+                    printf("Seek error, samples\n");
+                    goto fail;
+                }
+
+                rem = s->size;
+                ramoff = s->ram_offset;
+                while (rem >= bufsize) {
+                    rd = 0;
+                    if (_dos_read(fd,dram_buf,bufsize,&rd) != 0) {
+                        printf("Read error, samples\n");
+                        goto fail;
+                    }
+                    if (ultrasnd_send_dram_buffer(gus,ramoff,bufsize,ULTRASND_DMA_TC_IRQ) == 0) {
+                        printf("Send to GUS error\n");
+                        goto fail;
+                    }
+                    ramoff += bufsize;
+                    rem -= bufsize;
+                }
+                if (rem != 0) {
+                    rd = 0;
+                    if (_dos_read(fd,dram_buf,rem,&rd) != 0) {
+                        printf("Read error, samples\n");
+                        goto fail;
+                    }
+                    if (ultrasnd_send_dram_buffer(gus,ramoff,rem,ULTRASND_DMA_TC_IRQ) == 0) {
+                        printf("Send to GUS error\n");
+                        goto fail;
+                    }
+                }
+            }
+        }
+
+        ultrasnd_dram_buffer_free(gus);
+    }
+
     close(fd);
     return 1;
 fail:
+    ultrasnd_dram_buffer_free(gus);
     close(fd);
     return 0;
 }
@@ -403,6 +460,7 @@ int main(int argc,char **argv) {
         return 1;
     }
     if (no_dma) gus->use_dma = 0;
+    printf("Using DMA: %u\n",gus->use_dma);
 
 	if (gus->irq1 >= 0) {
 		old_irq_masked = p8259_is_masked(gus->irq1);
