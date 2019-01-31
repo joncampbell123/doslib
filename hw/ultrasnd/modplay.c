@@ -87,7 +87,6 @@ static void interrupt gus_irq() {
 		else if (irq_stat & 0x0C) { // bit 3-4
 			if (gus_timer_ctl != 0) {
 				ultrasnd_select_write(gus,0x45,0x00);
-		        ultrasnd_select_write(gus,0x46,0x100 - 250); /* load timer 1 (250 * 80us = 20ms) */
 				ultrasnd_select_write(gus,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
 			}
 
