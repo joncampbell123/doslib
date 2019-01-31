@@ -63,6 +63,7 @@ static unsigned char gus_ignore_irq = 0;
 static void (interrupt *old_irq)() = NULL;
 static void interrupt gus_irq() {
 	unsigned char irq_stat,c;
+    unsigned char timer_tick=0;
 
 	gus_irq_count++;
 	draw_irq_indicator();
@@ -90,12 +91,18 @@ static void interrupt gus_irq() {
 				ultrasnd_select_write(gus,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
 			}
 
+            timer_tick = 1;
 			gus_timer_ticks++;
 		}
 		else {
 			break;
 		}
 	} while (1);
+
+    if (timer_tick) {
+//        void next_step();
+//        next_step();
+    }
 
 	if (old_irq_masked || old_irq == NULL || dont_chain_irq) {
 		/* ack the interrupt ourself, do not chain */
@@ -140,12 +147,104 @@ struct mod_sample {
 
 struct mod_sample mod_sample[32];
 
-unsigned long pattern_block_size = 0;
+unsigned int chpan[16];
+
+unsigned short pattern_channels = 0;
+unsigned short pattern_block_size = 0;
+unsigned short pattern_block_ofs = 0;
+unsigned short song_pos = 0;
 #if TARGET_MSDOS == 32
 unsigned char *pattern_data = NULL;
+unsigned char *pattern_data_read = NULL;
 #else
 unsigned char far *pattern_data = NULL;
+unsigned char far *pattern_data_read = NULL;
 #endif
+
+void begin_pattern() {
+    unsigned char c = mod_pattern[song_pos];
+    pattern_block_ofs = 0;
+
+    if (c >= mod_patterns) c = 0;
+
+#if TARGET_MSDOS == 32
+    pattern_data_read = pattern_data + (c * pattern_block_size);
+#else
+    {
+        unsigned long ofs = ((unsigned long)c * (unsigned long)pattern_block_size);
+        pattern_data_read = MK_FP(FP_SEG(pattern_data) + (unsigned)(ofs >> 4UL),(unsigned)(ofs & 0xFUL));
+    };
+#endif
+}
+
+void next_step() {
+    if (pattern_block_ofs < pattern_block_size) {
+        unsigned int channel;
+        for (channel = 0;channel < pattern_channels;channel++) {
+            unsigned char FAR *pat = pattern_data_read + pattern_block_ofs;
+            unsigned short note_period;
+            unsigned char voice_mode;
+            unsigned short effect;
+            unsigned char sample;
+
+            sample  = (pat[0] & 0xF0u);
+            sample += (pat[2] >> 4u);
+
+            note_period = (pat[0] & 0x0Fu) << 8u;
+            note_period += pat[1];
+            if (note_period < 1ul) note_period = 1ul;
+
+            effect  = (pat[2] & 0x0Fu) << 8;
+            effect +=  pat[3];
+
+            if (sample != 0 && sample <= mod_samples) {
+                struct mod_sample *s = &mod_sample[sample-1];
+
+//                printf("spos=%u sample=%u period=%u effect=%u\n",song_pos,sample,note_period,effect);
+
+                if (s->size != 0 && s->ram_offset != (~0ul)) {
+                    ultrasnd_stop_voice(gus,channel);
+
+                    voice_mode = 0x00;
+                    ultrasnd_set_voice_mode(gus,channel,voice_mode);
+
+                    ultrasnd_set_voice_ramp_rate(gus,channel,0,0);
+                    ultrasnd_set_voice_ramp_start(gus,channel,0xF0); /* NTS: You have to set the ramp start/end because it will override your current volume */
+                    ultrasnd_set_voice_ramp_end(gus,channel,0xF0);
+                    ultrasnd_set_voice_volume(gus,channel,0xFFF0); /* full vol */
+                    ultrasnd_set_voice_pan(gus,channel,chpan[channel]);
+                    ultrasnd_set_voice_ramp_control(gus,channel,0);
+
+                    {
+                        unsigned long amiga_rate = 7159090ul / ((unsigned long)note_period * 2ul);
+                        unsigned long freq = (amiga_rate << 10ul) / (unsigned long)gus->output_rate;
+
+                        ultrasnd_select_voice(gus,channel);
+                        ultrasnd_select_write16(gus,0x01,(unsigned short)freq);
+                        ultrasnd_set_voice_current(gus,channel,s->ram_offset);
+                        ultrasnd_set_voice_start(gus,channel,s->ram_offset);
+                        ultrasnd_set_voice_end(gus,channel,s->ram_offset + s->size - 1ul);
+                    }
+
+                    voice_mode = ultrasnd_read_voice_mode(gus,channel);
+                    ultrasnd_start_voice(gus,channel);
+                }
+            }
+
+            pattern_block_ofs += 4;
+        }
+    }
+    if (pattern_block_ofs >= pattern_block_size) {
+        song_pos++;
+        if (song_pos >= mod_song_length) song_pos = 0;
+        begin_pattern();
+    }
+}
+
+void play_mod() {
+    song_pos = 0;
+    begin_pattern();
+}
 
 int load_mod() {
     unsigned long rammax;
@@ -154,6 +253,14 @@ int load_mod() {
     unsigned long tof;
     unsigned int i,ri;
     int fd;
+
+    // default Amiga panning
+    for (i=0;i < 4;i++) {
+        chpan[0] = 0;//left
+        chpan[1] = 15;//right
+        chpan[2] = 15;//right
+        chpan[3] = 0;//left
+    }
 
     rammax = 256ul << 10ul;
 
@@ -171,6 +278,7 @@ int load_mod() {
     if (lseek(fd,1080,SEEK_SET) != 1080 || read(fd,temp,4) != 4) goto fail;
 
     pattern_block_size = 256u * 4u;
+    pattern_channels = 4;
 
     mod_samples = 15;
     if (!memcmp(temp,"M.K.",4) ||
@@ -180,8 +288,10 @@ int load_mod() {
         !memcmp(temp,"10CH",4))
         mod_samples = 31;
 
-    if (!memcmp(temp,"10CH",4))
+    if (!memcmp(temp,"10CH",4)) {
         pattern_block_size = 256u * 10u;
+        pattern_channels = 10;
+    }
 
     tof = 20ul + (30ul * (unsigned long)mod_samples);
     if (lseek(fd,tof,SEEK_SET) != tof || read(fd,temp,2+128) != (2+128)) goto fail;
@@ -260,7 +370,7 @@ int load_mod() {
          * +26 repeat point, words
          * +28 repeat length, words
          * =30 */
-        s->file_offset = sof + 4ul; /* 4 byte header? */
+        s->file_offset = sof;
         s->size = ((unsigned long)(((unsigned)temp[22] << 8u) + ((unsigned)temp[23]))) * 2ul;
         s->finetune = (signed char)(temp[24] & 0xF);
         if (s->finetune >= 8) s->finetune -= 0x10;
@@ -356,6 +466,9 @@ int load_mod() {
 
         ultrasnd_dram_buffer_free(gus);
     }
+
+    pattern_block_ofs = 0u;
+    song_pos = ~0u;
 
     close(fd);
     return 1;
@@ -479,7 +592,11 @@ int main(int argc,char **argv) {
     ultrasnd_drain_irq_events(gus);
 
     if (load_mod()) {
+        unsigned long tick_time = 0;
+
         printf("MOD loaded\n");
+
+        play_mod();
 
 		gus_timer_ctl = 0x04;
 
@@ -498,6 +615,15 @@ int main(int argc,char **argv) {
                 int c = getch();
 
                 if (c == 27) break;
+            }
+
+            {
+                unsigned long long t = gus_timer_ticks;
+
+                while (tick_time < t) {
+                    next_step();
+                    tick_time += 6;
+                }
             }
         } while (1);
     }
