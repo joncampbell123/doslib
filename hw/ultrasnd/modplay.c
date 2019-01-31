@@ -205,7 +205,7 @@ void next_step() {
                 if (s->size != 0 && s->ram_offset != (~0ul)) {
                     ultrasnd_stop_voice(gus,channel);
 
-                    voice_mode = 0x00;
+                    voice_mode = ULTRASND_VOICE_MODE_STOP | ULTRASND_VOICE_MODE_IS_STOPPED;
                     ultrasnd_set_voice_mode(gus,channel,voice_mode);
 
                     ultrasnd_set_voice_ramp_rate(gus,channel,0,0);
