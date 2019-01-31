@@ -272,11 +272,15 @@ int load_mod() {
 
         s->ram_offset = ~0ul;
 
-        for (ri=0;ri < 4;ri++) {
-            if ((ramofs[ri] + s->size) < rammax) {
-                s->ram_offset = ramofs[ri] + (rammax * (unsigned long)ri);
-                ramofs[ri] += s->size;
-                break;
+        if (s->size != 0ul) {
+            // make room in GUS RAM for the sample,
+            // taking into consideration that you shouldn't cross 256KB boundaries
+            for (ri=0;ri < 4;ri++) {
+                if ((ramofs[ri] + s->size) < rammax) {
+                    s->ram_offset = ramofs[ri] + (rammax * (unsigned long)ri);
+                    ramofs[ri] += s->size;
+                    break;
+                }
             }
         }
 
@@ -287,9 +291,11 @@ int load_mod() {
             (unsigned long)s->repeat_point,
             (unsigned long)s->repeat_length);
 
-        if (s->ram_offset == (~0ul)) {
-            printf("Not enough room in GUS RAM\n");
-            goto fail;
+        if (s->size != 0ul) {
+            if (s->ram_offset == (~0ul)) {
+                printf("Not enough room in GUS RAM\n");
+                goto fail;
+            }
         }
     }
 
