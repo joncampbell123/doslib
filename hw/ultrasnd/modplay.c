@@ -255,7 +255,7 @@ int load_mod() {
     int fd;
 
     // default Amiga panning
-    for (i=0;i < 4;i++) {
+    for (i=0;i < 16;i++) {
         chpan[0] = 0;//left
         chpan[1] = 15;//right
         chpan[2] = 15;//right
