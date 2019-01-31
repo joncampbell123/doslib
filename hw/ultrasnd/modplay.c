@@ -25,8 +25,7 @@
 
 static struct ultrasnd_ctx*	gus = NULL;
 
-static volatile unsigned char	IRQ_anim = 0;
-static volatile unsigned char	gus_irq_count = 0;
+static volatile unsigned int	gus_irq_count = 0;
 
 static unsigned char		old_irq_masked = 0;
 static unsigned char		dont_chain_irq = 1;	// FIXME: I don't know why IRQ chaining is a problem, but it is.
@@ -34,7 +33,6 @@ static unsigned char		no_dma=0;
 
 static void draw_irq_indicator() {
 	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram;
-	unsigned char i;
 
 	wr[0] = 0x1E00 | 'G';
 	wr[1] = 0x1E00 | 'U';
@@ -42,7 +40,10 @@ static void draw_irq_indicator() {
 	wr[3] = 0x1E00 | 'I';
 	wr[4] = 0x1E00 | 'R';
 	wr[5] = 0x1E00 | 'Q';
-	for (i=0;i < 4;i++) wr[i+6] = (uint16_t)(i == IRQ_anim ? 'x' : '-') | 0x1E00;
+    wr[6] = ((gus_irq_count / 1000u) % 10u) | 0x1E30;
+    wr[7] = ((gus_irq_count /  100u) % 10u) | 0x1E30;
+    wr[8] = ((gus_irq_count /   10u) % 10u) | 0x1E30;
+    wr[9] = ((gus_irq_count /    1u) % 10u) | 0x1E30;
 }
 
 static unsigned char gus_dma_tc_ignore = 0;
@@ -64,7 +65,6 @@ static void interrupt gus_irq() {
 	unsigned char irq_stat,c;
 
 	gus_irq_count++;
-	if (++IRQ_anim >= 4) IRQ_anim = 0;
 	draw_irq_indicator();
 
 	do {
@@ -87,6 +87,7 @@ static void interrupt gus_irq() {
 		else if (irq_stat & 0x0C) { // bit 3-4
 			if (gus_timer_ctl != 0) {
 				ultrasnd_select_write(gus,0x45,0x00);
+		        ultrasnd_select_write(gus,0x46,0x100 - 250); /* load timer 1 (250 * 80us = 20ms) */
 				ultrasnd_select_write(gus,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
 			}
 
@@ -474,8 +475,32 @@ int main(int argc,char **argv) {
 	i = int10_getmode();
 	if (i != 3) int10_setmode(3);
 
+    ultrasnd_stop_all_voices(gus);
+    ultrasnd_stop_timers(gus);
+    ultrasnd_drain_irq_events(gus);
+
     if (load_mod()) {
         printf("MOD loaded\n");
+
+		gus_timer_ctl = 0x04;
+
+		ultrasnd_stop_timers(gus);
+		outp(gus->port+0x008,0x04); /* select "timer stuff" */
+		outp(gus->port+0x009,0xE0);
+		outp(gus->port+0x009,0x80);
+		outp(gus->port+0x009,0x60);
+		outp(gus->port+0x009,0x20/*mask timer 2 */ | 0x01/*enable timer 1*/);
+		ultrasnd_select_write(gus,0x45,gus_timer_ctl); /* enable timer 1 IRQ */
+		ultrasnd_select_write(gus,0x46,0x100 - 250); /* load timer 1 (250 * 80us = 20ms) */
+		ultrasnd_select_write(gus,0x47,0x00); /* load timer 2 (0xFF * 320us = 80ms) */
+
+        do {
+            if (kbhit()) {
+                int c = getch();
+
+                if (c == 27) break;
+            }
+        } while (1);
     }
 
 	if (gus->irq1 >= 0 && old_irq_masked)
