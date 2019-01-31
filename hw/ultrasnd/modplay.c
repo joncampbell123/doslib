@@ -274,7 +274,9 @@ int load_mod() {
 
         if (s->size != 0ul) {
             // make room in GUS RAM for the sample,
-            // taking into consideration that you shouldn't cross 256KB boundaries
+            // taking into consideration that you shouldn't cross 256KB boundaries.
+            // also take into consideration that DMA with the GUS requires DRAM offsets
+            // to be a multiple of 16 (32 if 16-bit PCM)
             for (ri=0;ri < 4;ri++) {
                 if ((ramofs[ri] + s->size + 0x20) < rammax) {
                     ramofs[ri] = (ramofs[ri] + 0x1F) & (~0x1F);
