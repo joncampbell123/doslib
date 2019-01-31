@@ -131,14 +131,36 @@ struct mod_sample {
     unsigned long   file_offset;
     unsigned long   ram_offset;
     unsigned long   size;
+
+    signed char     finetune;
+    unsigned char   volume;
+    unsigned long   repeat_point;
+    unsigned long   repeat_length;
 };
 
 struct mod_sample mod_sample[32];
 
+unsigned long pattern_block_size = 0;
+#if TARGET_MSDOS == 32
+unsigned char *pattern_data = NULL;
+#else
+unsigned char far *pattern_data = NULL;
+#endif
+
 int load_mod() {
+    unsigned long rammax;
+    unsigned long ramofs[4];
+    unsigned long sof;
     unsigned long tof;
-    unsigned int i;
+    unsigned int i,ri;
     int fd;
+
+    rammax = 256ul << 10ul;
+
+    ramofs[0] = 0;
+    ramofs[1] = 0;
+    ramofs[2] = 0;
+    ramofs[3] = 0;
 
     fd = open(mod_file,O_RDONLY | O_BINARY);
     if (fd < 0) return 0;
@@ -148,12 +170,18 @@ int load_mod() {
     /* offset 1080: 'M.K.', or 'M!K!' or sometimes other IDs as well */
     if (lseek(fd,1080,SEEK_SET) != 1080 || read(fd,temp,4) != 4) goto fail;
 
+    pattern_block_size = 256u * 4u;
+
     mod_samples = 15;
     if (!memcmp(temp,"M.K.",4) ||
         !memcmp(temp,"M!K!",4) ||
         !memcmp(temp,"FLT4",4) ||
-        !memcmp(temp,"FLT8",4))
+        !memcmp(temp,"FLT8",4) ||
+        !memcmp(temp,"10CH",4))
         mod_samples = 31;
+
+    if (!memcmp(temp,"10CH",4))
+        pattern_block_size = 256u * 10u;
 
     tof = 20ul + (30ul * (unsigned long)mod_samples);
     if (lseek(fd,tof,SEEK_SET) != tof || read(fd,temp,2+128) != (2+128)) goto fail;
@@ -172,10 +200,98 @@ int load_mod() {
     tof = 20ul + (30ul * (unsigned long)mod_samples) + 2u + 128u;
     if (mod_samples != 15) tof += 4u;
     printf("     pattern_ofs=%lu\n",(unsigned long)tof);
+    if (lseek(fd,tof,SEEK_SET) != tof) goto fail;
 
-    tof = 20ul + (30ul * (unsigned long)mod_samples) + 2u + 128u + ((unsigned long)mod_patterns * 1024);
-    if (mod_samples != 15) tof += 4u;
-    printf("     samples_ofs=%lu\n",(unsigned long)tof);
+    {
+        unsigned long sz = (unsigned long)mod_patterns * (unsigned long)pattern_block_size;
+
+#if TARGET_MSDOS == 32
+        pattern_data = malloc(sz);
+        if (pattern_data == NULL) {
+            printf("Allocation failure (pattern data)\n");
+            goto fail;
+        }
+        printf("     Pattern data: %p\n",pattern_data);
+        if (read(fd,pattern_data,sz) != sz) {
+            printf("Read failure (pattern data)\n");
+            goto fail;
+        }
+#else
+        {
+            unsigned sg = 0;
+            if (_dos_allocmem((unsigned)(sz >> 4UL),&sg) != 0) {
+                printf("Allocation failure (pattern data)\n");
+                goto fail;
+            }
+            pattern_data = MK_FP(sg,0);
+        }
+        printf("     Pattern data: %Fp\n",pattern_data);
+        {
+            unsigned sg = FP_SEG(pattern_data);
+            for (i=0;i < mod_patterns;i++) {
+                unsigned long o = pattern_block_size * (unsigned long)i;
+                unsigned char far *p = MK_FP(sg + (unsigned)(o >> 4ul),(unsigned)(o & 0xful));
+                unsigned rd = 0;
+
+                if (_dos_read(fd,p,(unsigned)pattern_block_size,&rd) != 0 || rd != (unsigned)pattern_block_size) {
+                    printf("Read failure (pattern data)\n");
+                    goto fail;
+                }
+            }
+        }
+#endif
+    }
+
+    sof = 20ul + (30ul * (unsigned long)mod_samples) + 2u + 128u + ((unsigned long)mod_patterns * (unsigned long)pattern_block_size);
+    if (mod_samples != 15) sof += 4ul;
+    printf("     samples_ofs=%lu\n",(unsigned long)sof);
+    for (i=0;i < mod_samples;i++) {
+        struct mod_sample *s = &mod_sample[i];
+
+        memset(s,0,sizeof(*s));
+
+        tof = 20ul + (30ul * (unsigned long)i);
+        if (lseek(fd,tof,SEEK_SET) != tof || read(fd,temp,30) != 30) goto fail;
+
+        /* +0-21 Sample name
+         * +22 WORD, sample length in words
+         * +24 finetune (low 4 bits)
+         * +25 volume for sample (0x00-0x40)
+         * +26 repeat point, words
+         * +28 repeat length, words
+         * =30 */
+        s->file_offset = sof + 4ul; /* 4 byte header? */
+        s->size = ((unsigned long)(((unsigned)temp[22] << 8u) + ((unsigned)temp[23]))) * 2ul;
+        s->finetune = (signed char)(temp[24] & 0xF);
+        if (s->finetune >= 8) s->finetune -= 0x10;
+        s->volume = temp[25];
+        s->repeat_point = ((unsigned long)(((unsigned)temp[26] << 8u) + ((unsigned)temp[27]))) * 2ul;
+        s->repeat_length = ((unsigned long)(((unsigned)temp[28] << 8u) + ((unsigned)temp[29]))) * 2ul;
+
+        sof += s->size;
+
+        s->ram_offset = ~0ul;
+
+        for (ri=0;ri < 4;ri++) {
+            if ((ramofs[ri] + s->size) < rammax) {
+                s->ram_offset = ramofs[ri] + (rammax * (unsigned long)ri);
+                ramofs[ri] += s->size;
+                break;
+            }
+        }
+
+        printf("     sample[%u]: fofs=%lu rofs=%lu size=%lu ft=%d vol=%u rep=%lu rlen=%lu\n",
+            i,(unsigned long)s->file_offset,(unsigned long)s->ram_offset,
+            (unsigned long)s->size,s->finetune,
+            s->volume,
+            (unsigned long)s->repeat_point,
+            (unsigned long)s->repeat_length);
+
+        if (s->ram_offset == (~0ul)) {
+            printf("Not enough room in GUS RAM\n");
+            goto fail;
+        }
+    }
 
     close(fd);
     return 1;
