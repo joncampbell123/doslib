@@ -1744,7 +1744,7 @@ int main(int argc,char **argv) {
         unsigned char b;
 
         unsigned long clk = T8254_REF_CLOCK_HZ / (baud_rate * 16UL/*baud rate times 16*/);
-	    write_8254(T8254_TIMER_RS232,clk,T8254_MODE_2_RATE_GENERATOR);
+	    write_8254(T8254_TIMER_RS232,clk,T8254_MODE_3_SQUARE_WAVE_MODE);
 
         b  = (bits - 5) << 2; /* bits [3:2] = character length (0=5 .. 3=8) */
         b |= ((stop_bits == 2U) ? 3U : 1U) << 6U;
