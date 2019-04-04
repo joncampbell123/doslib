@@ -205,7 +205,7 @@ void config_input(void) {
 #ifdef TARGET_PC98
     if (uart->base_io == 0x30) {
         unsigned long clk = T8254_REF_CLOCK_HZ / (rate * 16UL/*baud rate times 16*/);
-	    write_8254(T8254_TIMER_RS232,clk,T8254_MODE_2_RATE_GENERATOR);
+	    write_8254(T8254_TIMER_RS232,clk,T8254_MODE_3_SQUARE_WAVE_MODE);
         printf("Programming PIT output 2 to set baud rate\n");
     }
 #endif
