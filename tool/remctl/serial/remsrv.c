@@ -1738,13 +1738,11 @@ int main(int argc,char **argv) {
     }
 
 #ifdef TARGET_PC98
+    _cli();
     outp(0x35,(inp(0x35) & (~7))); /* mask all interrupt lines for a bit while we work here */
     {
         unsigned char bits = 8;
         unsigned char b;
-
-        unsigned long clk = T8254_REF_CLOCK_HZ / (baud_rate * 16UL/*baud rate times 16*/);
-	    write_8254(T8254_TIMER_RS232,clk,T8254_MODE_3_SQUARE_WAVE_MODE);
 
         b  = (bits - 5) << 2; /* bits [3:2] = character length (0=5 .. 3=8) */
         b |= ((stop_bits == 2U) ? 3U : 1U) << 6U;
@@ -1753,10 +1751,14 @@ int main(int argc,char **argv) {
 
         uart_8251_reset(uart,b,0,0);
         uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
-        uart_8251_reset(uart,b,0,0);
-        uart_8251_command(uart,0x17); /* error reset(4) | receive enable(2) | DTR(1) | transmit enable(0) */
+
+        {
+            unsigned long clk = T8254_REF_CLOCK_HZ / (baud_rate * 16UL/*baud rate times 16*/);
+            write_8254(T8254_TIMER_RS232,clk,T8254_MODE_3_SQUARE_WAVE_MODE);
+        }
     }
     pc98_uart_irq_update();
+    _sti();
 #else
     uart_8250_enable_interrupt(uart,0); /* disable interrupts (set IER=0) */
     uart_8250_disable_FIFO(uart);
