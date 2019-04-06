@@ -2330,11 +2330,11 @@ static void play_with_ess() {
 	if (ess688_not_present_init) {
 		ess688_not_present_init = 0;
 		if (sb_card->ess_chipset == SNDSB_ESS_688) {
-			for (cc=0x00;cc < 0xFF;cc++) ess688_not_present[cc] = 1;
-			for (cc=0xA0;cc < 0xBA;cc++) ess688_not_present[cc] = 0;
+			for (cc=0x00;cc < 0x100;cc++) ess688_not_present[cc] = 1;
+			for (cc=0xA0;cc <  0xBA;cc++) ess688_not_present[cc] = 0;
 		}
 		else {
-			for (cc=0x00;cc < 0xFF;cc++) ess688_not_present[cc] = 0;
+			for (cc=0x00;cc < 0x100;cc++) ess688_not_present[cc] = 0;
 		}
 	}
 
