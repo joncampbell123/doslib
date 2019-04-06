@@ -5031,7 +5031,7 @@ int main(int argc,char **argv) {
 #endif
 			else if (mitem == &main_menu_help_about) {
 				struct vga_msg_box box;
-				vga_msg_box_create(&box,"Sound Blaster test program v1.3 for DOS\n\n(C) 2008-2017 Jonathan Campbell\nALL RIGHTS RESERVED\n"
+				vga_msg_box_create(&box,"Sound Blaster test program v1.4 for DOS\n\n(C) 2008-2019 Jonathan Campbell\nALL RIGHTS RESERVED\n"
 #if TARGET_MSDOS == 32
 					"32-bit protected mode version"
 #elif defined(__LARGE__)
