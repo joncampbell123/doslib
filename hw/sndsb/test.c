@@ -2312,6 +2312,173 @@ static void change_param_menu() {
 }
 
 #ifdef SB_MIXER
+/* TODO: Move into SNDSB library */
+int sndsb_sb16_8051_mem_read(struct sndsb_ctx* cx,const unsigned char idx) {
+	if (sb_card->dsp_vmaj < 4) return -1;
+
+    if (sndsb_write_dsp(cx,0xF9) < 0) {
+        sndsb_reset_dsp(cx);
+        return -1;
+    }
+    if (sndsb_write_dsp(cx,idx) < 0) {
+        sndsb_reset_dsp(cx);
+        return -1;
+    }
+
+    return sndsb_read_dsp(cx);
+}
+
+/* TODO: Move into SNDSB library */
+int sndsb_sb16_8051_mem_write(struct sndsb_ctx* cx,const unsigned char idx,const unsigned char c) {
+	if (sb_card->dsp_vmaj < 4) return -1;
+
+    if (sndsb_write_dsp(cx,0xFA) < 0) {
+        sndsb_reset_dsp(cx);
+        return -1;
+    }
+    if (sndsb_write_dsp(cx,idx) < 0) {
+        sndsb_reset_dsp(cx);
+        return -1;
+    }
+    if (sndsb_write_dsp(cx,c) < 0) {
+        sndsb_reset_dsp(cx);
+        return -1;
+    }
+
+    /* TODO: Does the DSP acknowledge? Return 0xAA? */
+    return 0;
+}
+
+static void play_with_sb16_8051() {
+	unsigned char bb;
+	unsigned char loop=1;
+	unsigned char redraw=1;
+	unsigned char uiredraw=1;
+	signed short offset=0;
+	signed short selector=0x00;
+	signed short cc,x,y;
+	VGA_ALPHA_PTR vga;
+	int bbi;
+
+	if (sb_card->dsp_vmaj < 4) return; /* SB16 only */
+
+	while (loop) {
+		if (redraw || uiredraw) {
+			_cli();
+			if (redraw) {
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+				ui_anim(1);
+			}
+			vga_moveto(0,2);
+			vga_write_color(0x1F);
+			sprintf(temp_str,"x=enter byte value p=re-detect\n");
+			vga_write(temp_str);
+			vga_write("\n");
+
+			redraw = uiredraw = 0;
+			if (selector > 0xFF) selector = 0xFF;
+			else if (selector < 0) selector = 0;
+			offset = 0;
+
+			/* reading ESS controllers involves the DSP so avoid conflicts by clearing interrupts */
+			_cli();
+
+			for (cc=0;cc < 256;cc++) {
+				x = ((cc & 15)*3)+4;
+				y = (cc >> 4)+4;
+				bbi = sndsb_sb16_8051_mem_read(sb_card,(unsigned char)cc);
+				bb = (unsigned char)bbi;
+				vga_moveto(x,y);
+				vga_write_color(cc == selector ? 0x70 : 0x1E);
+				sprintf(temp_str,"%02X ",bb);
+				vga_write(temp_str);
+
+				if ((cc&15) == 0) {
+					sprintf(temp_str,"%02x  ",cc&0xF0);
+					vga_write_color(0x1F);
+					vga_moveto(0,y);
+					vga_write(temp_str);
+				}
+				if (cc <= 15) {
+					sprintf(temp_str,"%02x ",cc);
+					vga_write_color(0x1F);
+					vga_moveto(x,y-1);
+					vga_write(temp_str);
+				}
+			}
+
+			_sti();
+		}
+
+		if (kbhit()) {
+			int c = getch();
+			if (c == 0) c = getch() << 8;
+
+			if (c == 'x') {
+				int a,b;
+
+				vga_moveto(0,2);
+				vga_write_color(0x1F);
+				vga_write("Type hex value:                             \n");
+				vga_write_sync();
+
+				a = getch();
+				vga_moveto(20,2);
+				vga_write_color(0x1E);
+				vga_writec((char)a);
+				vga_write_sync();
+
+				b = getch();
+				vga_moveto(21,2);
+				vga_write_color(0x1E);
+				vga_writec((char)b);
+				vga_write_sync();
+
+				if (isxdigit(a) && isxdigit(b)) {
+					unsigned char nb;
+					nb = (unsigned char)xdigit2int(a) << 4;
+					nb |= (unsigned char)xdigit2int(b);
+
+					/* reading ESS controllers involves the DSP so avoid conflicts by clearing interrupts */
+					_cli();
+
+					sndsb_sb16_8051_mem_write(sb_card,(unsigned char)selector,nb);
+
+					_sti();
+				}
+
+				uiredraw = 1;
+			}
+			else if (c == ' ')
+				uiredraw = 1;
+			else if (c == 27)
+				loop = 0;
+			else if (c == 0x4800) { /* up arrow */
+				selector -= 0x10;
+				selector &= 0xFF;
+				uiredraw=1;
+			}
+			else if (c == 0x4B00) { /* left arrow */
+				selector--;
+				selector &= 0xFF;
+				uiredraw=1;
+			}
+			else if (c == 0x4D00) { /* right arrow */
+				selector++;
+				selector &= 0xFF;
+				uiredraw=1;
+			}
+			else if (c == 0x5000) { /* down arrow */
+				selector += 0x10;
+				selector &= 0xFF;
+				uiredraw=1;
+			}
+		}
+
+		ui_anim(0);
+	}
+}
+
 static unsigned char ess688_not_present_init=1;
 static unsigned char ess688_not_present[0x100];
 static void play_with_ess() {
@@ -2887,6 +3054,8 @@ static const struct vga_menu_item main_menu_device_mixer_controls =
 	{"Mixer controls",	'm',	0,	0};
 static const struct vga_menu_item main_menu_device_ess_controls =
 	{"ESS 688/1868 controls",'e',	0,	0};
+static const struct vga_menu_item main_menu_device_sb16_8051 =
+	{"SB16 8051 memory",'b',	0,	0};
 #endif
 #ifdef CARD_INFO_AND_CHOOSER
 static const struct vga_menu_item main_menu_device_info =
@@ -2923,6 +3092,7 @@ static const struct vga_menu_item* main_menu_device[] = {
 #ifdef SB_MIXER
 	&main_menu_device_mixer_controls,
 	&main_menu_device_ess_controls,
+	&main_menu_device_sb16_8051,
 #endif
 #ifdef CARD_INFO_AND_CHOOSER
 	&main_menu_device_info,
@@ -5390,6 +5560,11 @@ int main(int argc,char **argv) {
 			}
 			else if (mitem == &main_menu_device_ess_controls) {
 				play_with_ess();
+				bkgndredraw = 1;
+				redraw = 1;
+			}
+			else if (mitem == &main_menu_device_sb16_8051) {
+				play_with_sb16_8051();
 				bkgndredraw = 1;
 				redraw = 1;
 			}
