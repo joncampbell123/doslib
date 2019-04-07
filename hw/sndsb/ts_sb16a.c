@@ -81,6 +81,36 @@ uint16_t sndsb_sb16_read_dsp_internal_rate(struct sndsb_ctx* cx) {
     return r;
 }
 
+void sb_rate_test(void) {
+    uint16_t setv,getv;
+
+    sndsb_reset_dsp(sb_card);
+
+    doubleprintf("SB sample rate time constant test.\n");
+
+    getv = sndsb_sb16_read_dsp_internal_rate(sb_card);
+
+    doubleprintf("Initial sample rate is %u\n",getv);
+
+    setv = 0;
+    do {
+        if (kbhit()) {
+            if (getch() == 27)
+                break;
+        }
+
+        sndsb_write_dsp_timeconst(sb_card,setv);
+        getv = sndsb_sb16_read_dsp_internal_rate(sb_card);
+
+        fprintf(report_fp," - Time constant %u: Result %u\n",setv,getv);
+        if ((setv & 0x1F) == 0)
+            printf(" - Rate %u: Result %u\n",setv,getv);
+
+        setv++;
+        if (setv == 0x100u) break;
+    } while(1);
+}
+
 void sb16_rate_test(void) {
     uint16_t setv,getv;
 
@@ -118,6 +148,7 @@ int main(int argc,char **argv) {
     report_fp = fopen("TS_SB16A.TXT","w");
     if (report_fp == NULL) return 1;
 
+    sb_rate_test();
     sb16_rate_test();
 
     printf("Test complete.\n");
