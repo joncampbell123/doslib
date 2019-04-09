@@ -14,6 +14,7 @@ const void far *AssignedEventProc = NULL;
 static unsigned short prev_x = 0xFFFFU;
 static unsigned short prev_y = 0xFFFFU;
 static unsigned char prev_status = 0;
+static unsigned short prev_winstatus = 0;
 
 /* mouse button change lookup (PPBB) P=previous button state B=current button state */
 /* this is const (readonly) data, so stick it in with the code segment where Win16
@@ -117,7 +118,7 @@ static void __cdecl near __loadds interrupt_handler_C(void) {
      *      It acts on mouse buttons THEN mouse movement. It makes DOSBox-X pointer integration very awkward with DOSBox-X's touchscreen
      *      handling. */
 
-    if (!(win_status & SF_MOVEMENT)) {
+    if (!(win_status & SF_MOVEMENT) || (prev_winstatus & SF_MOVEMENT)) {
         unsigned char status = 0;
         unsigned char lookup;
 
@@ -140,6 +141,7 @@ static void __cdecl near __loadds interrupt_handler_C(void) {
     dosbox_id_pop_state(); /* restore state, so user-space's work continues uninterrupted */
     _sti();
 
+    prev_winstatus = win_status;
     if ((win_status & ~(SF_ABSOLUTE)) != 0) {
         if (AssignedEventProc != NULL) {
             /* call Windows */
