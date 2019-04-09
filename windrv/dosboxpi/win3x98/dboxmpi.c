@@ -104,9 +104,8 @@ void WINAPI __loadds Disable(void) {
             push    ds
             mov     ah,0x25         ; set interrupt vector
             mov     al,(0x08+13)    ; IRQ13
-            mov     dx,word ptr old_interrupt_handler+2
-            mov     ds,dx
             mov     dx,word ptr old_interrupt_handler+0
+            mov     ds,word ptr old_interrupt_handler+2
             int     21h
             pop     ds
         }
