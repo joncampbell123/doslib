@@ -109,6 +109,11 @@ static void __cdecl near __loadds interrupt_handler_C(void) {
             pos_x = (unsigned short)(r & 0xFFFFUL);
             pos_y = (unsigned short)(r >> 16UL);
 
+            // throw away mouse motion
+            outp(0x7FDD,0x00);
+            outp(0x7FDD,0x80);
+            outp(0x7FDD,0x00);
+
             if (((pos_x - prev_x) | (pos_y - prev_y)) != 0) /* if X or Y changed, there's movement */
                 win_status |= SF_MOVEMENT;
 
