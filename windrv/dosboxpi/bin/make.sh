@@ -6,6 +6,8 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 if [ "$1" == "clean" ]; then
     rm -fv win??/*.drv
     rm -fv win??/*.vxd
+    rm -fv win??98/*.drv
+    rm -fv win??98/*.vxd
 fi
 
 if [ "$1" == "disk" ]; then
