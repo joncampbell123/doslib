@@ -45,18 +45,9 @@ static const unsigned char __based( __segname("_CODE") ) mousebutton_lookup[4*4]
 static void __cdecl near __loadds interrupt_handler_C(void) {
     unsigned short win_status = SF_ABSOLUTE;
     unsigned short pos_x,pos_y;
-    unsigned char status = 0;
 
     _cli();
     dosbox_id_push_state(); /* user-space may very well in the middle of working with the DOSBOX IG, save state */
-
-    // read button state.
-    // NTS: Convert 3-button info to 2-button L:R state
-    {
-        unsigned char t = ~inp(0x7FD9);
-        if (t & 0x80) status |= 1;// left button
-        if (t & 0x20) status |= 2;// right button
-    }
 
     {
         unsigned long r;
@@ -122,10 +113,24 @@ static void __cdecl near __loadds interrupt_handler_C(void) {
         }
     }
 
-    {
+    /* NTS: Windows mouse handling seems to have trouble when the status says both mouse movement AND mouse button input happened.
+     *      It acts on mouse buttons THEN mouse movement. It makes DOSBox-X pointer integration very awkward with DOSBox-X's touchscreen
+     *      handling. */
+
+    if (!(win_status & SF_MOVEMENT)) {
+        unsigned char status = 0;
+        unsigned char lookup;
+
+        // read button state.
+        // NTS: Convert 3-button info to 2-button L:R state
+        {
+            unsigned char t = ~inp(0x7FD9);
+            if (t & 0x80) status |= 1;// left button
+            if (t & 0x20) status |= 2;// right button
+        }
+
         /* take button status from status given by BIOS and update win_status with it.
          * use lookup table: PPBB (P=prev button state B=current button state) */
-        unsigned char lookup;
 
         lookup = (prev_status << 2) | (status & 3);
         prev_status = status & 3;
