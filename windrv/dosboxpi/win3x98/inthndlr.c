@@ -41,29 +41,22 @@ static const unsigned char __based( __segname("_CODE") ) mousebutton_lookup[4*4]
     0
 };
 
-/* __cdecl pushes right-to-left, so given [bp+ofs], [bp+ofs+0] would be _ax, [bp+ofs+6] would be status, etc.
- * do you see how I am using the function prototype to access the stack here?
- *
- *   [status]                       <- BIOS provided info
- *   [xdata]
- *   [ydata]
- *   [word4]
- *   [return address segment]       <- BIOS far call to our callback
- *   [return address offset]
- *   [saved AX]                     <- our callback
- *   [saved BX]
- *   [saved CX]
- *   [saved DX]
- *   [saved ES]                                                         <- SS:SP right before near call to this function
- *
- *   __cdecl passes "right to left", meaning that arguments are pushed onto the stack in that order.
- */
-static void __cdecl near __loadds int15_handler_C(const unsigned short _es,const unsigned short _dx,const unsigned short _cx,const unsigned short _bx,const unsigned short _ax,const unsigned short retn,const unsigned short retf,const unsigned short word4,const unsigned short ydata,const unsigned short xdata,const unsigned short status) {
+/* WARNING: This will be called 60 times per second, because that is how interrupts from the PC-98 bus mouse work */
+static void __cdecl near __loadds interrupt_handler_C(void) {
     unsigned short win_status = SF_ABSOLUTE;
     unsigned short pos_x,pos_y;
+    unsigned char status = 0;
 
     _cli();
     dosbox_id_push_state(); /* user-space may very well in the middle of working with the DOSBOX IG, save state */
+
+    // read button state.
+    // NTS: Convert 3-button info to 2-button L:R state
+    {
+        unsigned char t = ~inp(0x7FD9);
+        if (t & 0x80) status |= 1;// left button
+        if (t & 0x20) status |= 2;// right button
+    }
 
     {
         unsigned long r;
@@ -79,8 +72,33 @@ static void __cdecl near __loadds int15_handler_C(const unsigned short _es,const
             /* DOSBox-X has captured the user's mouse. Send relative motion. */
             win_status &= ~SF_ABSOLUTE;
 
-            pos_x = (unsigned short)  ((int8_t)xdata); /* sign-extend 8-bit motion */
-            pos_y = (unsigned short) -((int8_t)ydata); /* sign-extend 8-bit motion, flip Y direction */
+            // read bus mouse motion
+            {
+                unsigned char t;
+
+                // ----------------- X pos ----------------
+                outp(0x7FDD,(0 << 5) | 0x80); // X-pos low nibble, latch position
+                t  =  inp(0x7FD9) & 0xF;
+
+                outp(0x7FDD,(1 << 5) | 0x80); // X-pos high nibble, latch position
+                t |= (inp(0x7FD9) & 0xF) << 4u;
+
+                pos_x = (unsigned int)t;
+                if (t & 0x80) pos_x |= 0xFF80u;
+
+                // ----------------- Y pos ----------------
+                outp(0x7FDD,(2 << 5) | 0x80); // Y-pos low nibble, latch position
+                t  =  inp(0x7FD9) & 0xF;
+
+                outp(0x7FDD,(3 << 5) | 0x80); // Y-pos high nibble, latch position
+                t |= (inp(0x7FD9) & 0xF) << 4u;
+
+                pos_y = (unsigned int)t;
+                if (t & 0x80) pos_y |= 0xFF80u;
+
+                // ----------------- DONE -----------------
+                outp(0x7FDD,0x00);          // clear latch. make sure interrupt is not masked
+            }
 
             if ((pos_x | pos_y) != 0)
                 win_status |= SF_MOVEMENT;
@@ -113,33 +131,38 @@ static void __cdecl near __loadds int15_handler_C(const unsigned short _es,const
     _sti();
 
     if ((win_status & ~(SF_ABSOLUTE)) != 0) {
-        /* call Windows */
-        __asm {
-            mov         ax,win_status
-            mov         bx,pos_x
-            mov         cx,pos_y
-            mov         dx,2            ; number of buttons
-            xor         si,si
-            xor         di,di
-            call        dword ptr [AssignedEventProc]
+        if (AssignedEventProc != NULL) {
+            /* call Windows */
+            __asm {
+                mov         ax,win_status
+                mov         bx,pos_x
+                mov         cx,pos_y
+                mov         dx,2            ; number of buttons
+                xor         si,si
+                xor         di,di
+                call        dword ptr [AssignedEventProc]
+            }
         }
     }
 }
 
-void __declspec(naked) far int15_handler() {
+void __declspec(naked) far interrupt_handler() {
     __asm {
         push    ax      ; because __cdecl won't preserve AX
         push    bx      ; or BX
         push    cx      ; or CX
         push    dx      ; or DX
         push    es      ; and Watcom won't bother saving ES
-        call    int15_handler_C
+        call    interrupt_handler_C
+        mov     al,0x20
+        out     0x08,al ; ack slave
+        out     0x00,al ; ack master
         pop     es
         pop     dx
         pop     cx
         pop     bx
         pop     ax
-        retf
+        iretf
     }
 }
 

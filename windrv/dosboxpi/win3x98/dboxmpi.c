@@ -24,11 +24,13 @@ typedef MOUSEINFO* PMOUSEINFO;
 typedef MOUSEINFO FAR* LPMOUSEINFO;
 #pragma pack(pop)
 
+static uint16_t IntCS = 0; // DS alias of CS
 static MOUSEINFO my_mouseinfo = {0};
 
 extern const void far *AssignedEventProc;
 
-extern void far int15_handler();
+void far *old_interrupt_handler;
+extern void far interrupt_handler();
 
 WORD PASCAL __loadds Inquire(LPMOUSEINFO mouseinfo) {
     *mouseinfo = my_mouseinfo;
@@ -44,45 +46,41 @@ void WINAPI __loadds Enable(const void far * const EventProc) {
         return;
 
     if (!AssignedEventProc) {
-        unsigned char fail=1;
-
         _cli();
 
-        __asm {
-            stc
+        {
+            uint16_t vds = 0;
 
-            mov     ax,0xC205           ; PS/2 initialize
-            mov     bh,3                ; data package size
-            int     15h
-            jc      failed
+            __asm   mov vds,seg interrupt_handler
 
-            mov     ax,0xC201           ; PS/2 reset interface
-            int     15h
-            jc      failed
-
-            mov     ax,0xC207           ; PS/2 set pointing device
-            mov     bx,seg int15_handler
-            mov     es,bx
-            mov     bx,offset int15_handler
-            int     15h
-            jc      failed
-
-            stc
-            mov     ax,0xC200           ; PS/2 enable/disable
-            mov     bh,0x01             ; enable
-            int     15h
-            jc      failed
-
-            mov     fail,0
-failed:
+            IntCS = AllocDStoCSAlias(vds);
         }
 
-        if (fail) return;
+        // replace interrupt vector, save old
+        __asm {
+            mov     ah,0x35         ; get interrupt vector
+            mov     al,(0x08+13)    ; IRQ13
+            int     21h
+            mov     word ptr old_interrupt_handler+0,bx
+            mov     word ptr old_interrupt_handler+2,es
+
+            push    ds
+            mov     ah,0x25         ; set interrupt vector
+            mov     al,(0x08+13)    ; IRQ13
+            mov     dx,IntCS        ; cannot use CS, protected mode will not allow it
+            mov     ds,dx
+            mov     dx,offset interrupt_handler
+            int     21h
+            pop     ds
+        }
 
         AssignedEventProc = EventProc;
 
         dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
         dosbox_id_write_data(1); /* PS/2 notification */
+
+        // turn on interrupts
+        outp(0x7FDD,0x00);
 
         _sti();
     }
@@ -95,16 +93,16 @@ void WINAPI __loadds Disable(void) {
         dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
         dosbox_id_write_data(0); /* disable */
 
+        // restore interrupt vector
         __asm {
-            stc
-
-            stc
-            mov     ax,0xC200           ; PS/2 enable/disable
-            mov     bh,0x00             ; disable
-            int     15h
-
-            mov     ax,0xC201           ; PS/2 reset interface
-            int     15h
+            push    ds
+            mov     ah,0x25         ; set interrupt vector
+            mov     al,(0x08+13)    ; IRQ13
+            mov     dx,word ptr old_interrupt_handler+2
+            mov     ds,ax
+            mov     dx,word ptr old_interrupt_handler+0
+            int     21h
+            pop     ds
         }
 
         AssignedEventProc = NULL;
@@ -118,29 +116,12 @@ WORD WINAPI WEP(BOOL bSystemExit) {
 }
 #endif
 
-unsigned short bios_equipment();
-#pragma aux bios_equipment = \
-    "int    11h" \
-    value [ax]
-
 unsigned char dos_version();
 #pragma aux dos_version = \
     "mov    ah,0x30" \
     "int    21h" \
     modify [ah bx] \
     value [al]
-
-unsigned char far *bios_get_config();
-#pragma aux bios_get_config = \
-    "stc" \
-    "mov    ah,0xC0" \
-    "int    15h" \
-    "jnc    @F" \
-    "xor    bx,bx" \
-    "mov    es,bx" \
-    "@F:" \
-    modify [bx ax] \
-    value [es bx]
 
 WORD MiniLibMain(void) {
     /* we must return 1.
@@ -150,17 +131,6 @@ WORD MiniLibMain(void) {
     if (!probe_dosbox_id())
         return 1;
     if (dos_version() < 3)
-        return 1;
-
-    {
-        unsigned char far *p = bios_get_config();
-        if (p == NULL)
-            return 1;
-        if (p[2] > 0xFC) /* anything older than AT is not supported */
-            return 1;
-    }
-
-    if (!(bios_equipment() & 4)) /* Pointing device (PS/2 mouse) installed according to BIOS? (assuming PS/2 or higher) */
         return 1;
 
     /* it exists. fill in the struct. take shortcuts, struct is initialized as zero. */
