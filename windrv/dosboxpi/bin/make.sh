@@ -40,6 +40,10 @@ if [ "$1" == "disk" ]; then
     mmd   -i install.dsk                    ::winme
     mcopy -i install.dsk winme/dboxmpi.drv  ::winme/dboxmpi.drv
     mcopy -i install.dsk winme/dboxmpi.inf  ::winme/dboxmpi.inf
+
+    mmd   -i install.dsk                      ::win3198
+    mcopy -i install.dsk win3198/dboxmpi.drv  ::win3198/dboxmpi.drv
+    mcopy -i install.dsk win3198/oemsetup.inf ::win3198/oemsetup.inf
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
