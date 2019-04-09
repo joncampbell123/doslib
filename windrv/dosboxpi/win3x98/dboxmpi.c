@@ -79,6 +79,9 @@ void WINAPI __loadds Enable(const void far * const EventProc) {
         dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
         dosbox_id_write_data(1); /* PS/2 notification */
 
+        // 60Hz bus mouse rate
+        outp(0xBFDB,0x01);
+
         // turn on interrupts
         outp(0x7FDD,0x00);
 
@@ -93,13 +96,16 @@ void WINAPI __loadds Disable(void) {
         dosbox_id_write_regsel(DOSBOX_ID_REG_USER_MOUSE_CURSOR_NORMALIZED);
         dosbox_id_write_data(0); /* disable */
 
+        // 120Hz bus mouse rate
+        outp(0xBFDB,0x00);
+
         // restore interrupt vector
         __asm {
             push    ds
             mov     ah,0x25         ; set interrupt vector
             mov     al,(0x08+13)    ; IRQ13
             mov     dx,word ptr old_interrupt_handler+2
-            mov     ds,ax
+            mov     ds,dx
             mov     dx,word ptr old_interrupt_handler+0
             int     21h
             pop     ds
