@@ -1,0 +1,11 @@
+[data]
+    Version   = "2.0"
+
+[disks]
+    1 =. ,"DOSBox-X Guest Additions for Windows 2.0 Disk (PC-98)",disk1
+
+[pointing.device]
+;profile = mouse driver,  description
+;
+dboxmpi  = 1:dboxmpi.drv, "DOSBox-X Mouse Pointer Integration (PC-98)"
+
