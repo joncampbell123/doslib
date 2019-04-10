@@ -41,6 +41,10 @@ if [ "$1" == "disk" ]; then
     mcopy -i install.dsk winme/dboxmpi.drv  ::winme/dboxmpi.drv
     mcopy -i install.dsk winme/dboxmpi.inf  ::winme/dboxmpi.inf
 
+    mmd   -i install.dsk                      ::win2098
+    mcopy -i install.dsk win2098/dboxmpi.drv  ::win2098/dboxmpi.drv
+    mcopy -i install.dsk win2098/oemsetup.inf ::win2098/oemsetup.inf
+
     mmd   -i install.dsk                      ::win3198
     mcopy -i install.dsk win3198/dboxmpi.drv  ::win3198/dboxmpi.drv
     mcopy -i install.dsk win3198/oemsetup.inf ::win3198/oemsetup.inf
