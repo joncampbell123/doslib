@@ -29,7 +29,7 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
 
     # copy the result into BIN
 #    cp -vu win200l/dboxmpi.drv ../bin/win1098/dboxmpi.drv
-#    cp -vu win200l/dboxmpi.drv ../bin/win2098/dboxmpi.drv
+    cp -vu win200l/dboxmpi.drv ../bin/win2098/dboxmpi.drv
 #    cp -vu win300l/dboxmpi.drv ../bin/win3098/dboxmpi.drv
     cp -vu win312l/dboxmpi.drv ../bin/win3198/dboxmpi.drv
 
