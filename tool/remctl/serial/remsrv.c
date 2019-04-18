@@ -659,28 +659,53 @@ void do_file_open_command(void) {
         unsigned short retv = 0;
         unsigned short fd = 0;
 
-        __asm {
-            push    ax
-            push    bx
-            push    cx
-            push    dx
-            push    si
-            push    ds
-            mov     ah,0x6C         ; extended open/create
-            mov     bx,0x2002       ; read/write, don't use INT 24h
-            xor     cx,cx           ; normal file
-            mov     dx,0x0001       ; open if exists, fail otherwise
-            lds     si,word ptr [p]
-            int     21h
-            mov     fd,ax           ; grab error code/file handle
-            jnc     l1
-            mov     retv,ax         ; grab error code
-l1:         pop     ds
-            pop     si
-            pop     dx
-            pop     cx
-            pop     bx
-            pop     ax
+        if (dos_version >= 0x400) {
+            __asm {
+                push    ax
+                push    bx
+                push    cx
+                push    dx
+                push    si
+                push    ds
+                mov     ah,0x6C         ; extended open/create
+                mov     bx,0x2002       ; read/write, don't use INT 24h
+                xor     cx,cx           ; normal file
+                mov     dx,0x0001       ; open if exists, fail otherwise
+                lds     si,word ptr [p]
+                int     21h
+                mov     fd,ax           ; grab error code/file handle
+                jnc     l1
+                mov     retv,ax         ; grab error code
+l1:             pop     ds
+                pop     si
+                pop     dx
+                pop     cx
+                pop     bx
+                pop     ax
+            }
+        }
+        else {
+            __asm {
+                push    ax
+                push    bx
+                push    cx
+                push    dx
+                push    si
+                push    ds
+                mov     ax,0x3D02       ; open read/write
+                xor     cx,cx           ; attribute to search for
+                lds     dx,word ptr [p] ; DS:DX = open existing file
+                int     21h
+                mov     fd,ax           ; grab error code/file handle
+                jnc     l1
+                mov     retv,ax         ; grab error code
+l1:             pop     ds
+                pop     si
+                pop     dx
+                pop     cx
+                pop     bx
+                pop     ax
+            }
         }
 
         if (retv != 0) {
@@ -705,28 +730,53 @@ void do_file_create_command(void) {
         unsigned short retv = 0;
         unsigned short fd = 0;
 
-        __asm {
-            push    ax
-            push    bx
-            push    cx
-            push    dx
-            push    si
-            push    ds
-            mov     ah,0x6C         ; extended open/create
-            mov     bx,0x2002       ; read/write, don't use INT 24h
-            xor     cx,cx           ; normal file
-            mov     dx,0x0012       ; create file, truncate if exists
-            lds     si,word ptr [p]
-            int     21h
-            mov     fd,ax           ; grab error code/file handle
-            jnc     l1
-            mov     retv,ax         ; grab error code
-l1:         pop     ds
-            pop     si
-            pop     dx
-            pop     cx
-            pop     bx
-            pop     ax
+        if (dos_version >= 0x400) {
+            __asm {
+                push    ax
+                push    bx
+                push    cx
+                push    dx
+                push    si
+                push    ds
+                mov     ah,0x6C         ; extended open/create
+                mov     bx,0x2002       ; read/write, don't use INT 24h
+                xor     cx,cx           ; normal file
+                mov     dx,0x0012       ; create file, truncate if exists
+                lds     si,word ptr [p]
+                int     21h
+                mov     fd,ax           ; grab error code/file handle
+                jnc     l1
+                mov     retv,ax         ; grab error code
+l1:             pop     ds
+                pop     si
+                pop     dx
+                pop     cx
+                pop     bx
+                pop     ax
+            }
+        }
+        else {
+            __asm {
+                push    ax
+                push    bx
+                push    cx
+                push    dx
+                push    si
+                push    ds
+                mov     ah,0x3C         ; create
+                xor     cx,cx           ; attribute to search for
+                lds     dx,word ptr [p] ; DS:DX = open existing file
+                int     21h
+                mov     fd,ax           ; grab error code/file handle
+                jnc     l1
+                mov     retv,ax         ; grab error code
+l1:             pop     ds
+                pop     si
+                pop     dx
+                pop     cx
+                pop     bx
+                pop     ax
+            }
         }
 
         if (retv != 0) {
@@ -1653,6 +1703,7 @@ int main(int argc,char **argv) {
     printf("         USE THIS PROGRAM AT YOUR OWN RISK. Read the README for more info.\n");
     printf("\n");
 
+    printf("DOS ver: %u.%u\n",dos_version>>8,dos_version&0xFF);
     printf("InDOS: %04x:%04x\n",FP_SEG(InDOS_ptr),FP_OFF(InDOS_ptr));
     printf("LOL: %04x:%04x\n",FP_SEG(DOS_LOL),FP_OFF(DOS_LOL));
     printf("PSP: %04x\n",my_resident_psp);
