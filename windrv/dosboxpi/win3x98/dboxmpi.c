@@ -129,6 +129,9 @@ unsigned char dos_version();
     value [al]
 
 WORD MiniLibMain(void) {
+    // PC-98 hack FIXME
+    dosbox_id_baseio = 0xDB28U;	// Default ports 0xDB28 - 0xDB2B
+
     /* we must return 1.
      * returning 0 makes Windows drop back to DOS.
      * Microsoft DDK example code always returns 1 so that failure to detect mouse
