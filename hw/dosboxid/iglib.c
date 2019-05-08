@@ -15,5 +15,9 @@
 
 #include <hw/dosboxid/iglib.h>
 
+#ifdef TARGET_PC98
+uint16_t DOSBOXID_VAR dosbox_id_baseio = 0xDB28U;	// Default ports 0xDB28 - 0xDB2B
+#else
 uint16_t DOSBOXID_VAR dosbox_id_baseio = 0x28U;	// Default ports 0x28 - 0x2B
+#endif
 
