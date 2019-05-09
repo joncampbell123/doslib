@@ -55,9 +55,11 @@ int main() {
         return 0;
     }
 
-    /* ENTER for next, ESC to stop */
-    while ((c=getch()) != 13) {
-        if (c == 27) return 0;
+    if (isatty(0) && isatty(1)) {
+        /* ENTER for next, ESC to stop */
+        while ((c=getch()) != 13) {
+            if (c == 27) return 0;
+        }
     }
 
     /* list MCBs */
@@ -86,9 +88,11 @@ int main() {
                     if (++line >= 20) {
                         line -= 20;
 
-                        /* ENTER for next, ESC to stop */
-                        while ((c=getch()) != 13) {
-                            if (c == 27) return 0;
+                        if (isatty(0) && isatty(1)) {
+                            /* ENTER for next, ESC to stop */
+                            while ((c=getch()) != 13) {
+                                if (c == 27) return 0;
+                            }
                         }
                     }
                 }
@@ -96,16 +100,20 @@ int main() {
                 if (++line >= 20) {
                     line -= 20;
 
-                    /* ENTER for next, ESC to stop */
-                    while ((c=getch()) != 13) {
-                        if (c == 27) return 0;
+                    if (isatty(0) && isatty(1)) {
+                        /* ENTER for next, ESC to stop */
+                        while ((c=getch()) != 13) {
+                            if (c == 27) return 0;
+                        }
                     }
                 }
             } while (dos_mcb_next(&men));
 
-            /* ENTER for next, ESC to stop */
-            while ((c=getch()) != 13) {
-                if (c == 27) return 0;
+            if (isatty(0) && isatty(1)) {
+                /* ENTER for next, ESC to stop */
+                while ((c=getch()) != 13) {
+                    if (c == 27) return 0;
+                }
             }
         }
     }
@@ -124,16 +132,20 @@ int main() {
                 if (++line >= 20) {
                     line -= 20;
 
-                    /* ENTER for next, ESC to stop */
-                    while ((c=getch()) != 13) {
-                        if (c == 27) return 0;
+                    if (isatty(0) && isatty(1)) {
+                        /* ENTER for next, ESC to stop */
+                        while ((c=getch()) != 13) {
+                            if (c == 27) return 0;
+                        }
                     }
                 }
             } while (dos_device_next(&denu));
 
-            /* ENTER for next, ESC to stop */
-            while ((c=getch()) != 13) {
-                if (c == 27) return 0;
+            if (isatty(0) && isatty(1)) {
+                /* ENTER for next, ESC to stop */
+                while ((c=getch()) != 13) {
+                    if (c == 27) return 0;
+                }
             }
         }
     }

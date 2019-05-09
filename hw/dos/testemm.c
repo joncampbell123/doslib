@@ -72,7 +72,9 @@ int main() {
                 emm_phys_pages,
                 (unsigned long)emm_phys_pages << 4UL);
 
-        while (getch() != 13);
+        if (isatty(0) && isatty(1)) {
+            while (getch() != 13);
+        }
         sanity();
 
         /* print out the mapping table, if available */
@@ -117,7 +119,9 @@ int main() {
         if (h3 >= 0) printf("OK, handle=%u\n",h3);
         else printf("FAILED\n");
 
-        while (getch() != 13);
+        if (isatty(0) && isatty(1)) {
+            while (getch() != 13);
+        }
 
         if (h1 >= 0 && !emm_free_pages(h1)) printf("Cannot free\n");
         sanity();

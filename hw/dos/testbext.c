@@ -39,7 +39,9 @@ int main() {
             for (i=0;i < 16;i++) printf("%c",tmp[i] >= 32 ? tmp[i] : ' ');
             printf("\n");
         }
-        while (getch() != 13);
+        if (isatty(0) && isatty(1)) {
+            while (getch() != 13);
+        }
 
         printf("Copying data out of extended memory via BIOS (16MB higher)\n");
         for (addr=0x10FFF80UL;addr < 0x1100000UL;addr += sizeof(tmp)) {
@@ -52,7 +54,9 @@ int main() {
             for (i=0;i < 16;i++) printf("%c",tmp[i] >= 32 ? tmp[i] : ' ');
             printf("\n");
         }
-        while (getch() != 13);
+        if (isatty(0) && isatty(1)) {
+            while (getch() != 13);
+        }
     }
 #else
     printf("Test does not apply to 32-bit builds\n");
