@@ -266,9 +266,11 @@ int main(int argc,char **argv) {
 					}
 
 					if (++line >= 16) {
-						while (getch() != 13);
-						line -= 16;
-					}
+                        if (isatty(0) && isatty(1)) {
+                            while (getch() != 13);
+                            line -= 16;
+                        }
+                    }
 
 					if (dumpraw) { /* prove readability by dumping 0,0,0 config space */
 						unsigned int reg;
@@ -295,7 +297,9 @@ int main(int argc,char **argv) {
 							else printf(" ");
 						}
 
-						while (getch() != 13);
+                        if (isatty(0) && isatty(1)) {
+                            while (getch() != 13);
+                        }
 					}
 
 					/* single function device? stop scanning. */
