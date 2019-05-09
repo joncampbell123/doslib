@@ -23,41 +23,41 @@
 
 int main() {
 #if TARGET_MSDOS == 16
-	{
-		unsigned int i;
-		unsigned long addr;
-		unsigned char tmp[16];
+    {
+        unsigned int i;
+        unsigned long addr;
+        unsigned char tmp[16];
 
-		printf("Copying data out of extended memory via BIOS\n");
-		for (addr=0xFFF80UL;addr < 0x100000UL;addr += sizeof(tmp)) {
-			memset(tmp,0,sizeof(tmp));
-			if (bios_extcopy(ptr2phys(tmp),addr,16)) {
-				printf("Problem copying\n");
-				break;
-			}
-			for (i=0;i < 16;i++) printf("%02x ",tmp[i]);
-			for (i=0;i < 16;i++) printf("%c",tmp[i] >= 32 ? tmp[i] : ' ');
-			printf("\n");
-		}
-		while (getch() != 13);
+        printf("Copying data out of extended memory via BIOS\n");
+        for (addr=0xFFF80UL;addr < 0x100000UL;addr += sizeof(tmp)) {
+            memset(tmp,0,sizeof(tmp));
+            if (bios_extcopy(ptr2phys(tmp),addr,16)) {
+                printf("Problem copying\n");
+                break;
+            }
+            for (i=0;i < 16;i++) printf("%02x ",tmp[i]);
+            for (i=0;i < 16;i++) printf("%c",tmp[i] >= 32 ? tmp[i] : ' ');
+            printf("\n");
+        }
+        while (getch() != 13);
 
-		printf("Copying data out of extended memory via BIOS (16MB higher)\n");
-		for (addr=0x10FFF80UL;addr < 0x1100000UL;addr += sizeof(tmp)) {
-			memset(tmp,0,sizeof(tmp));
-			if (bios_extcopy(ptr2phys(tmp),addr,16)) {
-				printf("Problem copying\n");
-				break;
-			}
-			for (i=0;i < 16;i++) printf("%02x ",tmp[i]);
-			for (i=0;i < 16;i++) printf("%c",tmp[i] >= 32 ? tmp[i] : ' ');
-			printf("\n");
-		}
-		while (getch() != 13);
-	}
+        printf("Copying data out of extended memory via BIOS (16MB higher)\n");
+        for (addr=0x10FFF80UL;addr < 0x1100000UL;addr += sizeof(tmp)) {
+            memset(tmp,0,sizeof(tmp));
+            if (bios_extcopy(ptr2phys(tmp),addr,16)) {
+                printf("Problem copying\n");
+                break;
+            }
+            for (i=0;i < 16;i++) printf("%02x ",tmp[i]);
+            for (i=0;i < 16;i++) printf("%c",tmp[i] >= 32 ? tmp[i] : ' ');
+            printf("\n");
+        }
+        while (getch() != 13);
+    }
 #else
-	printf("Test does not apply to 32-bit builds\n");
+    printf("Test does not apply to 32-bit builds\n");
 #endif
 
-	return 0;
+    return 0;
 }
 
