@@ -10,13 +10,36 @@
 #include <hw/cpu/cpu.h>
 #include <hw/dos/doswin.h>
 
-#ifdef TARGET_WINDOWS
-# define WINFCON_STOCK_WIN_MAIN
-# include <hw/dos/winfcon.h>
-#endif
+int main(int argc,char **argv) {
+    uint32_t data;
+    uint16_t port;
+    char sz = 'b';
 
-int main() {
 	cpu_probe();
+
+    if (argc < 3) {
+        fprintf(stderr,"OUTP <port>[bwl] <data>\n");
+        return 1;
+    }
+
+    data = (uint32_t)strtoul(argv[2],NULL,0);
+
+    {
+        char *s = argv[1];
+        port = (uint16_t)strtoul(s,&s,0);
+        if (*s == 'b' || *s == 'w' || *s == 'l') sz = *s++;
+    }
+
+    if (sz == 'l') {
+        outpd(port,data);
+    }
+    else if (sz == 'w') {
+        outpw(port,data);
+    }
+    else { /* 'b' */
+        outp(port,data);
+    }
+
 	return 0;
 }
 
