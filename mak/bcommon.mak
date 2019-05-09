@@ -464,6 +464,12 @@ FMT_OMF_LIB=$(FMT_OMF_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)omf.lib
 FMT_OMF_LIB_DEPENDENCIES=
 FMT_OMF_LIB_WLINK_LIBRARIES=library $(FMT_OMF_LIB)
 
+# HW\86DUINO-------------------------------------------------------------------------------
+HW_86DUINO_LIB_DIR=$(REL)$(HPS)hw$(HPS)86duino
+HW_86DUINO_LIB=$(HW_86DUINO_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)86duino.lib
+HW_86DUINO_LIB_DEPENDENCIES=
+HW_86DUINO_LIB_WLINK_LIBRARIES=library $(HW_86DUINO_LIB)
+
 # FMT\OMF\OMFSEGDG utility
 !ifeq HPS /
 OMFSEGDG=$(REL)$(HPS)fmt$(HPS)omf$(HPS)linux-host$(HPS)omfsegdg
