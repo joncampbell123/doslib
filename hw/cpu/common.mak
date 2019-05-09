@@ -43,6 +43,8 @@ RDTSC_EXE =   $(SUBDIR)$(HPS)rdtsc.$(EXEEXT)
 # test programs (MS-DOS only)
 RESET_EXE =   $(SUBDIR)$(HPS)reset.$(EXEEXT)
 APIC_EXE =    $(SUBDIR)$(HPS)apic.$(EXEEXT)
+INP_EXE =	  $(SUBDIR)$(HPS)inp.$(EXEEXT)
+OUTP_EXE =	  $(SUBDIR)$(HPS)outp.$(EXEEXT)
 ! endif
 !endif
 
@@ -96,7 +98,7 @@ all: $(OMFSEGDG) lib exe
 	
 lib: $(HW_CPU_LIB) .symbolic
 	
-exe: $(GDTTAE_EXE) $(TEST_EXE) $(GRIND_EXE) $(GR_ADD_EXE) $(DISPSN_EXE) $(RESET_EXE) $(APIC_EXE) $(MMX_EXE) $(SSE_EXE) $(SSEOFF_EXE) $(PROT286_COM) $(PROT386_COM) $(TSS_COM) $(TSSRING_COM) $(ALIGNCHK_COM) $(V86_COM) $(V86KERN_COM) $(V86KERN2_COM) $(PROTVCPI_COM) $(PROTDPMI_COM) $(RDTSC_EXE) $(GDTLIST_EXE) .symbolic
+exe: $(GDTTAE_EXE) $(TEST_EXE) $(GRIND_EXE) $(GR_ADD_EXE) $(DISPSN_EXE) $(RESET_EXE) $(APIC_EXE) $(MMX_EXE) $(SSE_EXE) $(SSEOFF_EXE) $(PROT286_COM) $(PROT386_COM) $(TSS_COM) $(TSSRING_COM) $(ALIGNCHK_COM) $(V86_COM) $(V86KERN_COM) $(V86KERN2_COM) $(PROTVCPI_COM) $(PROTDPMI_COM) $(RDTSC_EXE) $(GDTLIST_EXE) $(INP_EXE) $(OUTP_EXE) .symbolic
 
 !ifdef BUILD_NASM_COM
 $(V86_COM): v86.asm
@@ -355,6 +357,52 @@ $(GDTTAE_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)gdttae.ob
 ! endif
 ! ifdef WIN_NE_SETVER_BUILD
 	$(WIN_NE_SETVER_BUILD) $(GDTTAE_EXE)
+! endif
+!endif
+
+!ifdef INP_EXE
+$(INP_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)inp.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)inp.obj option map=$(SUBDIR)$(HPS)inp.map
+! ifdef TARGET_WINDOWS
+!  ifeq TARGET_MSDOS 16
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
+!  endif
+! endif
+	%write tmp.cmd name $(INP_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+! ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(INP_EXE)
+	@wbind $(INP_EXE) -q -n
+! endif
+! ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(INP_EXE)
+! endif
+!endif
+
+!ifdef OUTP_EXE
+$(OUTP_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)outp.obj
+	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)outp.obj option map=$(SUBDIR)$(HPS)outp.map
+! ifdef TARGET_WINDOWS
+!  ifeq TARGET_MSDOS 16
+	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+	# protected mode only. real-mode Windows is a pain.
+	%append tmp.cmd option protmode
+!  endif
+! endif
+	%write tmp.cmd name $(OUTP_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+! ifdef WIN386
+	@$(WIN386_EXE_TO_REX_IF_REX) $(OUTP_EXE)
+	@wbind $(OUTP_EXE) -q -n
+! endif
+! ifdef WIN_NE_SETVER_BUILD
+	$(WIN_NE_SETVER_BUILD) $(OUTP_EXE)
 ! endif
 !endif
 
