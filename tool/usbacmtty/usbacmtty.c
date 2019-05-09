@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 
 /* for connecting to serial port */
 #include <termios.h>
@@ -265,6 +266,18 @@ int main(int argc,char **argv) {
     }
 
     do {
+        {
+            struct timeval tv;
+            fd_set fds;
+
+            tv.tv_sec = 0;
+            tv.tv_usec = 250000;
+
+            FD_SET(0,&fds);
+            FD_SET(conn_fd,&fds);
+            select(conn_fd+1,&fds,NULL,NULL,&tv);
+        }
+
         {
             int r = read(0/*stdin*/,&c,1);
             if (r == 0)
