@@ -191,7 +191,7 @@ int do_connect(void) {
             if (!waitconn)
                 return -1;
             else
-                usleep(250);
+                usleep(250000);
         }
     }
 
