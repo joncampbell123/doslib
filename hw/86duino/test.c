@@ -80,6 +80,8 @@ void vtx86_sb_writel(const uint8_t reg,const uint32_t val) {
 }
 
 uint16_t    uart_config_base_io = 0;
+uint16_t    gpio_config_base_io = 0;
+uint16_t    crossbar_config_base_io = 0;
 
 int main(int argc,char **argv) {
 	cpu_probe();
@@ -142,6 +144,22 @@ int main(int argc,char **argv) {
             }
         }
     }
+
+    gpio_config_base_io = vtx86_sb_readw(0x62);
+    if (gpio_config_base_io & 1u)
+        gpio_config_base_io &= ~1u;
+    else
+        gpio_config_base_io  = 0;
+
+    printf("- GPIO Configuration I/O port base:     0x%04x\n",gpio_config_base_io);
+
+    crossbar_config_base_io = vtx86_sb_readw(0x64);
+    if (crossbar_config_base_io & 1u)
+        crossbar_config_base_io &= ~1u;
+    else
+        crossbar_config_base_io  = 0;
+
+    printf("- Crossbar Configuration I/O port base: 0x%04x\n",crossbar_config_base_io);
 
 	return 0;
 }
