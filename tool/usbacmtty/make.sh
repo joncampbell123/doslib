@@ -23,6 +23,7 @@ if [ "$1" == "disk" ]; then
 fi
 
 if [[ "$1" == "build" || "$1" == "" ]]; then
+    exit 0 # fixme
     make_buildlist
     begin_bat
 
