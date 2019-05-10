@@ -72,6 +72,8 @@ void vtx86_sb_writel(const uint8_t reg,const uint32_t val) {
     pci_write_cfgl(VORTEX86_PCI_SB_BUS,VORTEX86_PCI_SB_DEV,VORTEX86_PCI_SB_FUNC,reg,val);
 }
 
+uint16_t    uart_config_base_io = 0;
+
 int main(int argc,char **argv) {
 	cpu_probe();
     probe_dos();
@@ -105,7 +107,15 @@ int main(int argc,char **argv) {
     }
 
     printf("Looks like a Vortex86 SoC / 86Duino\n");
-	
+
+    uart_config_base_io = vtx86_sb_readw(0x60);
+    if (uart_config_base_io & 1u)
+        uart_config_base_io &= ~1u;
+    else
+        uart_config_base_io  = 0;
+
+    printf("- UART Configuration I/O port base:     0x%04x\n",uart_config_base_io);
+
 	return 0;
 }
 
