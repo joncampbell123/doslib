@@ -133,6 +133,8 @@ int main(int argc,char **argv) {
     {
         uint16_t vendor,device;
 
+        vtx86_86duino_flags = 0;
+
         vendor = vtx86_nb_readw(0x00);
         device = vtx86_nb_readw(0x02);
         if (vendor == 0xFFFF || device == 0xFFFF || vendor != 0x17f3) {
