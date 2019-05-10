@@ -79,9 +79,42 @@ void vtx86_sb_writel(const uint8_t reg,const uint32_t val) {
     pci_write_cfgl(VORTEX86_PCI_SB_BUS,VORTEX86_PCI_SB_DEV,VORTEX86_PCI_SB_FUNC,reg,val);
 }
 
+/* southbridge 0:7:1 */
+#define VORTEX86_PCI_SB1_BUS        (0)
+#define VORTEX86_PCI_SB1_DEV        (7)
+#define VORTEX86_PCI_SB1_FUNC       (1)
+
+uint8_t vtx86_sb1_readb(const uint8_t reg) {
+    return pci_read_cfgb(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg);
+}
+
+uint16_t vtx86_sb1_readw(const uint8_t reg) {
+    return pci_read_cfgw(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg);
+}
+
+uint32_t vtx86_sb1_readl(const uint8_t reg) {
+    return pci_read_cfgl(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg);
+}
+
+void vtx86_sb1_writeb(const uint8_t reg,const uint8_t val) {
+    pci_write_cfgb(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg,val);
+}
+
+void vtx86_sb1_writew(const uint8_t reg,const uint16_t val) {
+    pci_write_cfgw(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg,val);
+}
+
+void vtx86_sb1_writel(const uint8_t reg,const uint32_t val) {
+    pci_write_cfgl(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg,val);
+}
+
 uint16_t    uart_config_base_io = 0;
 uint16_t    gpio_config_base_io = 0;
 uint16_t    crossbar_config_base_io = 0;
+
+unsigned char   vtx86_86duino_flags = 0;
+
+#define VTX86_86DUINO_FLAG_SB1          (1u << 0u)
 
 int main(int argc,char **argv) {
 	cpu_probe();
