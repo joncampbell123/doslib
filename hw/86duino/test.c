@@ -146,9 +146,16 @@ int main(int argc,char **argv) {
             printf("Southbridge does not seem correct\n");
             return 1;
         }
+
+        vendor = vtx86_sb1_readw(0x00);
+        device = vtx86_sb1_readw(0x02);
+        if (!(vendor == 0xFFFF || device == 0xFFFF || vendor != 0x17f3))
+            vtx86_86duino_flags |= VTX86_86DUINO_FLAG_SB1;
     }
 
     printf("Looks like a Vortex86 SoC / 86Duino\n");
+    if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_SB1)
+        printf("- Southbridge function 1 exists\n");
 
     vtx86_uart_config_base_io = vtx86_sb_readw(0x60);
     if (vtx86_uart_config_base_io & 1u)
