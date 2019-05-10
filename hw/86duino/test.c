@@ -14,6 +14,13 @@
 #include <hw/pci/pci.h>
 #include <hw/cpu/cpu.h>
 
+const int8_t vtx86_uart_IRQs[16] = {
+    -1, 9, 3,10,
+     4, 5, 7, 6,
+     1,11,-1,12,
+    -1,14,-1,15
+};
+
 /* northbridge 0:0:0 */
 #define VORTEX86_PCI_NB_BUS         (0)
 #define VORTEX86_PCI_NB_DEV         (0)
@@ -115,6 +122,26 @@ int main(int argc,char **argv) {
         uart_config_base_io  = 0;
 
     printf("- UART Configuration I/O port base:     0x%04x\n",uart_config_base_io);
+
+    if (uart_config_base_io != 0u) {
+        unsigned int idx;
+
+        for (idx=0;idx < 10;idx++) {
+            uint32_t raw = inpd(uart_config_base_io + (idx * 4u));
+
+            printf("  - UART %u\n",idx+1);
+            printf("    - Internal UART I/O addr decode:    %u\n",(raw & (1ul << 23ul)) ? 1 : 0);
+            if (raw & (1ul << 23ul)) {
+                printf("    - Half duplex:                      %u\n",(raw & (1ul << 25ul)) ? 1 : 0);
+                printf("    - Forward port 80h to UART data:    %u\n",(raw & (1ul << 24ul)) ? 1 : 0);
+                printf("    - UART clock select:                %u\n",(raw & (1ul << 22ul)) ? 1 : 0);
+                printf("    - FIFO size select:                 %u\n",(raw & (1ul << 21ul)) ?32 :16);
+                printf("    - UART clock ratio select:          1/%u\n",(raw & (1ul<<20ul)) ? 8 :16);
+                printf("    - IRQ:                              %d\n",vtx86_uart_IRQs[(raw >> 16ul) & 15ul]);
+                printf("    - I/O base:                         0x%04x\n",(unsigned int)(raw & 0xFFF8ul));
+            }
+        }
+    }
 
 	return 0;
 }
