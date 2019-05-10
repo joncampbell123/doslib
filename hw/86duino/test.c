@@ -108,14 +108,45 @@ void vtx86_sb1_writel(const uint8_t reg,const uint32_t val) {
     pci_write_cfgl(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg,val);
 }
 
+/* MC 0:10:0 */
+#define VORTEX86_PCI_MC_BUS         (0)
+#define VORTEX86_PCI_MC_DEV         (0x10)
+#define VORTEX86_PCI_MC_FUNC        (0)
+
+uint8_t vtx86_mc_readb(const uint8_t reg) {
+    return pci_read_cfgb(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg);
+}
+
+uint16_t vtx86_mc_readw(const uint8_t reg) {
+    return pci_read_cfgw(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg);
+}
+
+uint32_t vtx86_mc_readl(const uint8_t reg) {
+    return pci_read_cfgl(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg);
+}
+
+void vtx86_mc_writeb(const uint8_t reg,const uint8_t val) {
+    pci_write_cfgb(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg,val);
+}
+
+void vtx86_mc_writew(const uint8_t reg,const uint16_t val) {
+    pci_write_cfgw(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg,val);
+}
+
+void vtx86_mc_writel(const uint8_t reg,const uint32_t val) {
+    pci_write_cfgl(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg,val);
+}
+
 uint16_t        vtx86_uart_config_base_io = 0;
 uint16_t        vtx86_gpio_config_base_io = 0;
 uint16_t        vtx86_crossbar_config_base_io = 0;
+uint16_t        vtx86_pwm_config_base_io = 0;
 uint16_t        vtx86_adc_config_base_io = 0;
 
 unsigned char   vtx86_86duino_flags = 0;
 
 #define VTX86_86DUINO_FLAG_SB1          (1u << 0u)
+#define VTX86_86DUINO_FLAG_MC           (1u << 1u)
 
 int main(int argc,char **argv) {
 	cpu_probe();
@@ -154,11 +185,18 @@ int main(int argc,char **argv) {
         device = vtx86_sb1_readw(0x02);
         if (!(vendor == 0xFFFF || device == 0xFFFF || vendor != 0x17f3))
             vtx86_86duino_flags |= VTX86_86DUINO_FLAG_SB1;
+
+        vendor = vtx86_mc_readw(0x00);
+        device = vtx86_mc_readw(0x02);
+        if (!(vendor == 0xFFFF || device == 0xFFFF || vendor != 0x17f3))
+            vtx86_86duino_flags |= VTX86_86DUINO_FLAG_MC;
     }
 
     printf("Looks like a Vortex86 SoC / 86Duino\n");
     if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_SB1)
         printf("- Southbridge function 1 exists\n");
+    if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_MC)
+        printf("- MC exists\n");
 
     vtx86_uart_config_base_io = vtx86_sb_readw(0x60);
     if (vtx86_uart_config_base_io & 1u)
@@ -216,6 +254,19 @@ int main(int argc,char **argv) {
     }
 
     printf("- ADC I/O port base:                    0x%04x\n",vtx86_adc_config_base_io);
+
+    if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_MC) {
+        vtx86_pwm_config_base_io = vtx86_mc_readw(0x10);
+        if (vtx86_pwm_config_base_io & 1u)
+            vtx86_pwm_config_base_io &= ~1u;
+        else
+            vtx86_pwm_config_base_io  = 0;
+    }
+    else {
+        vtx86_pwm_config_base_io = 0;
+    }
+
+    printf("- PWM I/O port base:                    0x%04x\n",vtx86_pwm_config_base_io);
 
 	return 0;
 }
