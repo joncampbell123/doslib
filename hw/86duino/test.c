@@ -111,6 +111,7 @@ void vtx86_sb1_writel(const uint8_t reg,const uint32_t val) {
 uint16_t        vtx86_uart_config_base_io = 0;
 uint16_t        vtx86_gpio_config_base_io = 0;
 uint16_t        vtx86_crossbar_config_base_io = 0;
+uint16_t        vtx86_adc_config_base_io = 0;
 
 unsigned char   vtx86_86duino_flags = 0;
 
@@ -202,6 +203,19 @@ int main(int argc,char **argv) {
         vtx86_crossbar_config_base_io  = 0;
 
     printf("- Crossbar Configuration I/O port base: 0x%04x\n",vtx86_crossbar_config_base_io);
+
+    if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_SB1) {
+        vtx86_adc_config_base_io = vtx86_sb1_readw(0xE0);
+        if (vtx86_adc_config_base_io & 1u)
+            vtx86_adc_config_base_io &= ~1u;
+        else
+            vtx86_adc_config_base_io  = 0;
+    }
+    else {
+        vtx86_adc_config_base_io = 0;
+    }
+
+    printf("- ADC I/O port base:                    0x%04x\n",vtx86_adc_config_base_io);
 
 	return 0;
 }
