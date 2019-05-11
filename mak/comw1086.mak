@@ -76,7 +76,7 @@ TARGET86_1DIGIT=6
 # To keep complex programs sane, we'll just insist on putting everything in one segment anyway.
 CFLAGS_1 += -nt=_TEXT
 
-# why is this even necessary? why does dumbshit Watcom insist on including the WINNT headers for Windows 3.1 builds?
+# FIXME
 WIN_INCLUDE=-i="$(%WATCOM)/h/win"
 
 # NOTE TO SELF: If you compile using naive flags, your code will work under Windows 3.1, but will crash horribly under Windows 3.0.

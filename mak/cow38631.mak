@@ -85,7 +85,7 @@ TARGET86_1DIGIT=5
 TARGET86_1DIGIT=6
 !endif
 
-# why is this even necessary? why does dumbshit Watcom insist on including the WINNT headers for Windows 3.1 builds?
+# FIXME
 WIN_INCLUDE=-i="$(%WATCOM)/h/win"
 
 EXEEXT=exe
