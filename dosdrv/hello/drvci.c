@@ -1,7 +1,6 @@
 
 /* does NOT use C runtime */
 
-#include <i86.h>
 #include <conio.h>
 #include <stdint.h>
 
