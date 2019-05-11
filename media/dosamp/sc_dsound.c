@@ -41,8 +41,6 @@
 #include "sc_dsound.h"
 
 #if defined(HAS_DSOUND)
-#include <dsound.h>
-
 int init_dsound(void);
 
 static unsigned char                dsound_probed = 0;

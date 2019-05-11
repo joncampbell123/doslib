@@ -123,7 +123,11 @@
 #endif
 
 #ifdef HAS_DSOUND
-# include <dsound.h>
+# if defined(__WATCOMC__)
+#  include <directx/dsound.h> // FIXME
+# else
+#  include <dsound.h>
+# endif
 #endif
 
 enum {
