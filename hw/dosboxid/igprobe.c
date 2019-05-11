@@ -7,7 +7,6 @@
 #include <malloc.h>
 #include <ctype.h>
 #include <fcntl.h>
-#include <dos.h>
 
 #include <hw/dos/dos.h>
 #include <hw/dos/doswin.h>
