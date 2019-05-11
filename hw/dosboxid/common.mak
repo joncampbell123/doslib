@@ -1,7 +1,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = HW_DOSBOXID_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 CFLAGS_THIS_VXD = -fo=$(SUBDIR)_vxd$(HPS).obj -s -zl -zc -nt=_TEXT -e=2 -zq -zw -mf -oilrtfm -wx -fp3 -3r -dTARGET_MSDOS=32 -dTARGET_WINDOWS=32 -dTARGET86=386 -DMMODE=f -q -bc -zl -zdp -dTARGET_VXD=1
 CFLAGS_THIS_DRV = -fo=$(SUBDIR)_drv$(HPS).obj -s -zl -zc -nt=_TEXT
 CFLAGS_THIS_DRVN = -fo=$(SUBDIR)_drvn$(HPS).obj -s -zl -zc -nt=_TEXT

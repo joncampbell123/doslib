@@ -1,7 +1,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = EXT_SPEEX_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS).. -dHAVE_CONFIG_H
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -dHAVE_CONFIG_H
 
 OBJS = $(SUBDIR)$(HPS)bits.obj $(SUBDIR)$(HPS)buffer.obj $(SUBDIR)$(HPS)cb_search.obj $(SUBDIR)$(HPS)exc_10_16_table.obj $(SUBDIR)$(HPS)exc_10_32_table.obj $(SUBDIR)$(HPS)exc_20_32_table.obj $(SUBDIR)$(HPS)exc_5_256_table.obj $(SUBDIR)$(HPS)exc_5_64_table.obj $(SUBDIR)$(HPS)exc_8_128_table.obj $(SUBDIR)$(HPS)fftwrap.obj $(SUBDIR)$(HPS)filterbank.obj $(SUBDIR)$(HPS)filters.obj $(SUBDIR)$(HPS)gain_table.obj $(SUBDIR)$(HPS)gain_table_lbr.obj $(SUBDIR)$(HPS)hexc_10_32_table.obj $(SUBDIR)$(HPS)hexc_table.obj $(SUBDIR)$(HPS)high_lsp_tables.obj $(SUBDIR)$(HPS)jitter.obj $(SUBDIR)$(HPS)kiss_fft.obj $(SUBDIR)$(HPS)kiss_fftr.obj $(SUBDIR)$(HPS)lpc.obj $(SUBDIR)$(HPS)lsp.obj $(SUBDIR)$(HPS)lsp_tables_nb.obj $(SUBDIR)$(HPS)ltp.obj $(SUBDIR)$(HPS)mdf.obj $(SUBDIR)$(HPS)modes.obj $(SUBDIR)$(HPS)modes_wb.obj $(SUBDIR)$(HPS)nb_celp.obj $(SUBDIR)$(HPS)preprocess.obj $(SUBDIR)$(HPS)quant_lsp.obj $(SUBDIR)$(HPS)resample.obj $(SUBDIR)$(HPS)sb_celp.obj $(SUBDIR)$(HPS)scal.obj $(SUBDIR)$(HPS)smallft.obj $(SUBDIR)$(HPS)speex.obj $(SUBDIR)$(HPS)speex_callbacks.obj $(SUBDIR)$(HPS)speex_header.obj $(SUBDIR)$(HPS)stereo.obj $(SUBDIR)$(HPS)testdenoise.obj $(SUBDIR)$(HPS)testecho.obj $(SUBDIR)$(HPS)testenc.obj $(SUBDIR)$(HPS)testenc_uwb.obj $(SUBDIR)$(HPS)testenc_wb.obj $(SUBDIR)$(HPS)testjitter.obj $(SUBDIR)$(HPS)vbr.obj $(SUBDIR)$(HPS)vq.obj $(SUBDIR)$(HPS)window.obj
 

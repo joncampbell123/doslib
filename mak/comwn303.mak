@@ -3,5 +3,5 @@ CPULEV0 = 3
 CPULEV2 = 3
 CPULEV3 = 3
 TARGET86 = 386
-!include "$(REL)$(HPS)mak$(HPS)comw3086.mak"
+!include "$(REL)/mak/comw3086.mak"
 

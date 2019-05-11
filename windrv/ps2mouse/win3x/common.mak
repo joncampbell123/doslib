@@ -6,7 +6,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq -zl -zu -zw -zc
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../.." -s -zq -zl -zu -zw -zc
 NOW_BUILDING = WINDRV_PS2MOUSE_WIN31OW
 
 DISCARDABLE_CFLAGS = -nt=_TEXT -nc=CODE

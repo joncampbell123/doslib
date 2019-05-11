@@ -52,7 +52,13 @@ TARGET86_1DIGIT=6
 !endif
 
 # Include the 1.x headers. I looked at their os2 headers and they seem optimized for 32-bit
-OS2_INCLUDE=-i="$(%WATCOM)/h/os21x"
+!if $(__VERSION__) < 1300
+WATCOM_INCLUDE=-i"$(%WATCOM)/h;$(%WATCOM)/h/os21x"
+.BEFORE
+	set INCLUDE=
+!else
+WATCOM_INCLUDE=-x -i"$(%WATCOM)/h;$(%WATCOM)/h/os21x"
+!endif
 
 # NOTE TO SELF: If you compile using naive flags, your code will work under Windows 3.1, but will crash horribly under Windows 3.0.
 #               Wanna know why? Because apparently Windows 3.0 doesn't maintain SS == DS, which Watcom assumes. So you always need
@@ -71,34 +77,34 @@ WLINK_CON_SYSTEM = os2
 WLINK_DLL_SYSTEM = os2_dll
 
 # GUI versions
-RCFLAGS  = -q -r -31 -bt=os2_pm $(OS2_INCLUDE)
-CFLAGS   = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -oilrtfm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
-CFLAGS386= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -oilrtfm -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
-CFLAGS386_TO_586= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
-CFLAGS386_TO_686= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
-AFLAGS   = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
+RCFLAGS  = -q -r -31 -bt=os2_pm $(WATCOM_INCLUDE)
+CFLAGS   = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -oilrtfm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bg
+CFLAGS386= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -oilrtfm -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bg
+CFLAGS386_TO_586= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bg
+CFLAGS386_TO_686= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bg
+AFLAGS   = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2_pm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q -D_OS2_16_ -bg
 NASMFLAGS= -DTARGET_MSDOS=16 -DTARGET_OS2=$(TARGET_OS2) -DMSDOS=1 -DTARGET86=$(TARGET86) -DMMODE=$(MMODE) -Dsegment_use=USE16 -I$(REL)/asminc/
 WLINK_FLAGS = op start=_cstart_ 
 
 # console versions
-RCFLAGS_CON  = -q -r -31 -bt=os2 $(OS2_INCLUDE)
-CFLAGS_CON   = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
-CFLAGS386_CON= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
-CFLAGS386_TO_586_CON= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
-CFLAGS386_TO_686_CON= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
-AFLAGS_CON   = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bg
+RCFLAGS_CON  = -q -r -31 -bt=os2 $(WATCOM_INCLUDE)
+CFLAGS_CON   = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bg
+CFLAGS386_CON= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bg
+CFLAGS386_TO_586_CON= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bg
+CFLAGS386_TO_686_CON= -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bg
+AFLAGS_CON   = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q -D_OS2_16_ -bg
 NASMFLAGS_CON= -DTARGET_MSDOS=16 -DTARGET_OS2=$(TARGET_OS2) -DMSDOS=1 -DTARGET86=$(TARGET86) -DMMODE=$(MMODE) -Dsegment_use=USE16 -I$(REL)/asminc/
 WLINK_CON_FLAGS = op start=_cstart_ 
 
-RCFLAGS_DLL = -q -r -31 -bt=os2_dll $(OS2_INCLUDE)
-CFLAGS_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bd
-CFLAGS386_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bd
-CFLAGS386_TO_586_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bd
-CFLAGS386_TO_686_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bd
-AFLAGS_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(OS2_INCLUDE) -D_OS2_16_ -bd
+RCFLAGS_DLL = -q -r -31 -bt=os2_dll $(WATCOM_INCLUDE)
+CFLAGS_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bd
+CFLAGS386_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -$(CPULEV3) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bd
+CFLAGS386_TO_586_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -fp$(CPULEV5) -$(CPULEV5) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bd
+CFLAGS386_TO_686_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -oilrtfm -wx -fp$(CPULEV6) -$(CPULEV6) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE) -D_OS2_16_ -bd
+AFLAGS_DLL = -e=2 -zq -zw -zu -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=os2 -wx -$(CPULEV0) -dTARGET_MSDOS=16 -dTARGET_OS2=$(TARGET_OS2) -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q -D_OS2_16_ -bd
 NASMFLAGS_DLL = -DTARGET_MSDOS=16 -DTARGET_OS2=$(TARGET_OS2) -DMSDOS=1 -DTARGET86=$(TARGET86) -DMMODE=$(MMODE) -Dsegment_use=USE16 -I$(REL)/asminc/
 
-!include "$(REL)$(HPS)mak$(HPS)bcommon.mak"
+!include "$(REL)/mak/bcommon.mak"
 !include "common.mak"
-!include "$(REL)$(HPS)mak$(HPS)dcommon.mak"
+!include "$(REL)/mak/dcommon.mak"
 

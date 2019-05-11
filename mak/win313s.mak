@@ -1,5 +1,5 @@
 # do not run directly, use make.sh
 
 MMODE=s
-!include "$(REL)$(HPS)mak$(HPS)comwn313.mak"
+!include "$(REL)/mak/comwn313.mak"
 

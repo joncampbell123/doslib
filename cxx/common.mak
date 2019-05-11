@@ -8,7 +8,7 @@
 
 NOW_BUILDING = CXX
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=..
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i..
 
 .C.OBJ:
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@

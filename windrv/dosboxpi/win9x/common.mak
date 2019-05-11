@@ -6,7 +6,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS).. -s -zq -zl -zu -zw -zc
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../.." -s -zq -zl -zu -zw -zc
 CFLAGS_THIS_GCC = -I.. -I../../.. -nostdlib -O3 -Os -fomit-frame-pointer -fno-exceptions -fno-pic -std=gnu99 -ffreestanding -fno-hosted -Wall -pedantic
 
 NOW_BUILDING = WINDRV_DOSBOXPI_WIN9XOW

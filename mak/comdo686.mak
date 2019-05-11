@@ -6,5 +6,5 @@ CPULEV4 = 6
 CPULEV5 = 6
 CPULEV6 = 6
 TARGET86 = 686
-!include "$(REL)$(HPS)mak$(HPS)comdo386.mak"
+!include "$(REL)/mak/comdo386.mak"
 

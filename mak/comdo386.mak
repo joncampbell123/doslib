@@ -68,6 +68,15 @@ CPULEV4F=3
 !endif
 !endif
 
+# Include DOS headers.
+!if $(__VERSION__) < 1300
+WATCOM_INCLUDE=-i"$(%WATCOM)/h"
+.BEFORE
+	set INCLUDE=
+!else
+WATCOM_INCLUDE=-x -i"$(%WATCOM)/h"
+!endif
+
 EXEEXT=exe
 TARGET_MSDOS = 32
 !ifdef PC98
@@ -81,12 +90,12 @@ LINKER   = wcl386
 LDFLAGS  = # -ldos32a
 WLINK_SYSTEM = dos4g
 WLINK_CON_SYSTEM = dos4g
-CFLAGS   = -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV3F) -$(CPULEV3)r -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
-CFLAGS386= -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV3F) -$(CPULEV3)r -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
+CFLAGS   = -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV3F) -$(CPULEV3)r -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE)
+CFLAGS386= -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV3F) -$(CPULEV3)r -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE)
 # a 586 version of the build flags, so some OBJ files can target Pentium or higher instructions
-CFLAGS386_TO_586= -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV5) -$(CPULEV5)r -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
+CFLAGS386_TO_586= -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV5) -$(CPULEV5)r -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE)
 # a 686 version of the build flags, so some OBJ files can target Pentium or higher instructions
-CFLAGS386_TO_686= -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV6) -$(CPULEV6)r -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
+CFLAGS386_TO_686= -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos $(CFLAGS_OPT) -wx -fp$(CPULEV6) -$(CPULEV6)r -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q $(WATCOM_INCLUDE)
 AFLAGS   = -e=2 -zq -m$(MMODE) $(CFLAGS_DEBUG) $(CFLAGS_1) -bt=dos -wx -fp$(CPULEV3F) -$(CPULEV3) -dTARGET_MSDOS=32 -dMSDOS=1 -dTARGET86=$(TARGET86) -DMMODE=$(MMODE) -q
 NASMFLAGS= -DTARGET_MSDOS=32 -DMSDOS=1 -DTARGET86=$(TARGET86) -DMMODE=$(MMODE) -Dsegment_use=USE32 -I$(REL)/asminc/
 
@@ -100,7 +109,7 @@ CFLAGS386_TO_686_CON = $(CFLAGS386_TO_686)
 AFLAGS_CON = $(AFLAGS)
 NASMFLAGS_CON = $(NASMFLAGS)
 
-!include "$(REL)$(HPS)mak$(HPS)bcommon.mak"
+!include "$(REL)/mak/bcommon.mak"
 !include "common.mak"
-!include "$(REL)$(HPS)mak$(HPS)dcommon.mak"
+!include "$(REL)/mak/dcommon.mak"
 

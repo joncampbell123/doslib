@@ -1,7 +1,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = EXT_FLAC_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS).. -dHAVE_CONFIG_H
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -dHAVE_CONFIG_H
 
 OBJS = $(SUBDIR)$(HPS)bitmath.obj $(SUBDIR)$(HPS)bitreader.obj $(SUBDIR)$(HPS)bitwriter.obj $(SUBDIR)$(HPS)cpu.obj $(SUBDIR)$(HPS)crc.obj $(SUBDIR)$(HPS)fixed.obj $(SUBDIR)$(HPS)float.obj $(SUBDIR)$(HPS)format.obj $(SUBDIR)$(HPS)lpc.obj $(SUBDIR)$(HPS)md5.obj $(SUBDIR)$(HPS)memory.obj $(SUBDIR)$(HPS)metadata_iterators.obj $(SUBDIR)$(HPS)metadata_object.obj $(SUBDIR)$(HPS)ogg_decoder_aspect.obj $(SUBDIR)$(HPS)ogg_encoder_aspect.obj $(SUBDIR)$(HPS)ogg_helper.obj $(SUBDIR)$(HPS)ogg_mapping.obj $(SUBDIR)$(HPS)stream_decoder.obj $(SUBDIR)$(HPS)stream_encoder.obj $(SUBDIR)$(HPS)stream_encoder_framing.obj $(SUBDIR)$(HPS)window.obj
 

@@ -7,7 +7,7 @@
 # NTS: HPS is either \ (DOS) or / (Linux)
 
 CFLAGS_END = -zl -s -zl -q -zu -zdp -zff -zgf -zc -fpi87 -dNEAR_DRVVAR
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS)..
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../.."
 NOW_BUILDING = TOOL_LINKER_EX1
 
 !ifdef TINYMODE
