@@ -129,6 +129,9 @@ extern const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 
 #ifdef WIN32
 #  ifndef __CYGWIN__  /* Cygwin is Unix, not Win32 */
+#    ifdef OS_CODE
+#      undef OS_CODE
+#    endif
 #    define OS_CODE  0x0b
 #  endif
 #endif
