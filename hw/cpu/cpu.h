@@ -13,10 +13,9 @@
 #define __HW_CPU_CPU_H
 
 #include <stdint.h>
-#include <dos.h>
 
 #if !defined(FAR)
-# if defined(TARGET_WINDOWS)
+# if defined(TARGET_WINDOWS) && !defined(TARGET_VXD)
 #  include <windows.h>
 # else
 #  if TARGET_MSDOS == 32

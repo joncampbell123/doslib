@@ -5,7 +5,7 @@
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
-#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2) && !defined(TARGET_VXD)
 /* NTVDM.EXE DOSNTAST.VDD call support */
 #include <windows/ntvdm/ntvdmlib.h>
 #endif
@@ -49,7 +49,7 @@ extern const char *windows_emulation_comment_str;
 int detect_windows();
 const char *windows_emulation_str(uint8_t e);
 
-#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(WIN386)
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(WIN386) && !defined(TARGET_VXD)
 # include <windows.h>
 # include <stdint.h>
 

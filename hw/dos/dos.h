@@ -276,14 +276,14 @@ static inline unsigned char read_bios_keystate() { /* from 0x40:0x17 */
 #endif
 }
 
-#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16 && !defined(TARGET_VXD)
 void far *win16_getexhandler(unsigned char n);
 int win16_setexhandler(unsigned char n,void far *x);
 void far *win16_getvect(unsigned char n);
 int win16_setvect(unsigned char n,void far *x);
 #endif
 
-#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 32 && !defined(TARGET_VXD)
 typedef struct Win32OrdinalLookupInfo {
 	DWORD	entries,base,base_addr;
 	DWORD*	table;
@@ -294,7 +294,7 @@ void *Win32GetOrdinalAddress(Win32OrdinalLookupInfo *nfo,unsigned int ord);
 int Win32GetOrdinalLookupInfo(HMODULE mod,Win32OrdinalLookupInfo *info);
 #endif
 
-#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16
+#if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16 && !defined(TARGET_VXD)
 extern DWORD		genthunk32w_ntdll;
 extern DWORD		genthunk32w_kernel32;
 extern DWORD		genthunk32w_kernel32_GetVersion;
