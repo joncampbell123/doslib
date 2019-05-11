@@ -176,9 +176,9 @@ make_buildlist() {
     # NTS: Watcom C doesn't work properly emitting "medium/small" memory model output for Windows 3.1. Do not use it!
     #      To demonstate how messed up it is, try using even standard C runtime functions--it will still mismatch near/far types
     if [ x"$win10" == x"1" ]; then
-        # NTS: "win100" = Windows 3.0/8086 target
-        # NTS: "win102" = Windows 3.0/286 target
-        #      "win103" = Windows 3.0/386 target
+        # NTS: "win100" = Windows 1.0/8086 target
+        # NTS: "win102" = Windows 1.0/286 target
+        #      "win103" = Windows 1.0/386 target
         if [ x"$build_everything" == x"1" ]; then
             build_list="$build_list win100l win100c win102l win102c win103l win103c"
         else
@@ -190,9 +190,9 @@ make_buildlist() {
     # NTS: Watcom C doesn't work properly emitting "medium/small" memory model output for Windows 3.1. Do not use it!
     #      To demonstate how messed up it is, try using even standard C runtime functions--it will still mismatch near/far types
     if [ x"$win20" == x"1" ]; then
-        # NTS: "win200" = Windows 3.0/8086 target
-        # NTS: "win202" = Windows 3.0/286 target
-        #      "win203" = Windows 3.0/386 target
+        # NTS: "win200" = Windows 2.0/8086 target
+        # NTS: "win202" = Windows 2.0/286 target
+        #      "win203" = Windows 2.0/386 target
         if [ x"$build_everything" == x"1" ]; then
             build_list="$build_list win200l win200c win202l win202c win203l win203c"
         else
