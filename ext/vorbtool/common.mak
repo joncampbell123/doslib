@@ -11,7 +11,7 @@ OGGENC_EXE = $(SUBDIR)$(HPS)oggenc.exe
 !endif
 
 NOW_BUILDING = EXT_VORBTOOL_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS).. -dHAVE_CONFIG_H
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -dHAVE_CONFIG_H
 
 OBJS = $(SUBDIR)$(HPS)audio.obj $(SUBDIR)$(HPS)easyflac.obj $(SUBDIR)$(HPS)encode.obj $(SUBDIR)$(HPS)flac.obj $(SUBDIR)$(HPS)lyrics.obj $(SUBDIR)$(HPS)oggdec.obj $(SUBDIR)$(HPS)oggenc.obj $(SUBDIR)$(HPS)ogginfo2.obj $(SUBDIR)$(HPS)platform.obj $(SUBDIR)$(HPS)resample.obj $(SUBDIR)$(HPS)skeleton.obj $(SUBDIR)$(HPS)theora.obj $(SUBDIR)$(HPS)charset.obj $(SUBDIR)$(HPS)charset_test.obj $(SUBDIR)$(HPS)getopt1.obj $(SUBDIR)$(HPS)getopt.obj $(SUBDIR)$(HPS)iconvert.obj $(SUBDIR)$(HPS)makemap.obj $(SUBDIR)$(HPS)utf8.obj
 

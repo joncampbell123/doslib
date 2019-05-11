@@ -1,7 +1,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = EXT_BZIP2_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS).. -dHAVE_CONFIG_H
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -dHAVE_CONFIG_H
 
 OBJS = $(SUBDIR)$(HPS)blocksrt.obj $(SUBDIR)$(HPS)bzlib.obj $(SUBDIR)$(HPS)compress.obj $(SUBDIR)$(HPS)crctable.obj $(SUBDIR)$(HPS)decomprs.obj $(SUBDIR)$(HPS)huffman.obj $(SUBDIR)$(HPS)randtabl.obj
 

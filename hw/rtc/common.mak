@@ -1,7 +1,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = HW_RTC_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 
 C_SOURCE =    rtc.c
 OBJS =        $(SUBDIR)$(HPS)rtc.obj $(SUBDIR)$(HPS)rtc.obj

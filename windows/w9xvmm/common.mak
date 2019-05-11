@@ -1,8 +1,8 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = WINDOWS_W9XVMM
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
-RCFLAGS_THIS = -i=.. -i..$(HPS)..
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
+RCFLAGS_THIS = -i.. -i"../.."
 
 VMMLIST_EXE = $(SUBDIR)$(HPS)vmmlist.exe
 

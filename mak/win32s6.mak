@@ -8,5 +8,5 @@ CPULEV4 = 6
 CPULEV5 = 6
 CPULEV6 = 6
 TARGET86 = 686
-!include "$(REL)$(HPS)mak$(HPS)cowin32s.mak"
+!include "$(REL)/mak/cowin32s.mak"
 

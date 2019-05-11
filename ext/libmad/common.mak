@@ -1,7 +1,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = EXT_LIBMAD_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS).. -dHAVE_CONFIG_H
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -dHAVE_CONFIG_H
 
 OBJS = $(SUBDIR)$(HPS)bit.obj $(SUBDIR)$(HPS)decoder.obj $(SUBDIR)$(HPS)fixed.obj $(SUBDIR)$(HPS)frame.obj $(SUBDIR)$(HPS)huffman.obj $(SUBDIR)$(HPS)layer12.obj $(SUBDIR)$(HPS)layer3.obj $(SUBDIR)$(HPS)stream.obj $(SUBDIR)$(HPS)synth.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)version.obj
 

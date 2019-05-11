@@ -6,7 +6,7 @@ NO_EXE = 1
 !endif
 
 NOW_BUILDING = MEDIA_PLAYMP3_EXE
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS).. -dHAVE_CONFIG_H
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -dHAVE_CONFIG_H
 
 OBJS = $(SUBDIR)$(HPS)bit.obj $(SUBDIR)$(HPS)decoder.obj $(SUBDIR)$(HPS)fixed.obj $(SUBDIR)$(HPS)frame.obj $(SUBDIR)$(HPS)huffman.obj $(SUBDIR)$(HPS)layer12.obj $(SUBDIR)$(HPS)layer3.obj $(SUBDIR)$(HPS)stream.obj $(SUBDIR)$(HPS)synth.obj $(SUBDIR)$(HPS)timer.obj $(SUBDIR)$(HPS)version.obj
 

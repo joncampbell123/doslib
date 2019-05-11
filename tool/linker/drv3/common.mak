@@ -15,7 +15,7 @@ DOSLINKFMT = -of dosdrvexe
 DOSLINKFMT2 = -of dosdrvrel
 !endif
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..$(HPS)..
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../.."
 NOW_BUILDING = TOOL_LINKER_EX1
 
 !ifdef TINYMODE

@@ -1,9 +1,9 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = WINDOWS_NTVDM
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 
-RCFLAGS_THIS = -i=.. -i..$(HPS)..
+RCFLAGS_THIS = -i.. -i"../.."
 
 VDDC1_EXE =  $(SUBDIR)$(HPS)vddc1.exe
 VDDC1D_DLL =  $(SUBDIR)$(HPS)vddc1d.dll

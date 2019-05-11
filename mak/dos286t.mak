@@ -2,5 +2,5 @@
 
 MMODE=s
 TINYMODE=1
-!include "$(REL)$(HPS)mak$(HPS)comdo286.mak"
+!include "$(REL)/mak/comdo286.mak"
 

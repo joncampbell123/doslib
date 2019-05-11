@@ -1,7 +1,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = HW_8250_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 
 C_SOURCE =    8250.c
 OBJS =        $(SUBDIR)$(HPS)8250.obj $(SUBDIR)$(HPS)8250prob.obj $(SUBDIR)$(HPS)8250bios.obj $(SUBDIR)$(HPS)8250siop.obj $(SUBDIR)$(HPS)8250fifo.obj $(SUBDIR)$(HPS)8250cint.obj $(SUBDIR)$(HPS)8250xien.obj $(SUBDIR)$(HPS)8250rcfg.obj $(SUBDIR)$(HPS)8250baud.obj $(SUBDIR)$(HPS)8250bauc.obj $(SUBDIR)$(HPS)8250tstr.obj $(SUBDIR)$(HPS)8250pstr.obj

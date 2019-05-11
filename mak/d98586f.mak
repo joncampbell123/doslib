@@ -2,5 +2,5 @@
 
 PC98=1
 MMODE=f
-!include "$(REL)$(HPS)mak$(HPS)comdo586.mak"
+!include "$(REL)/mak/comdo586.mak"
 

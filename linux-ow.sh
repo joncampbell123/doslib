@@ -20,10 +20,10 @@ if [ -z "$WATCOM" ]; then
     fi
 
     export PATH=$WATCOM/binl:$WATCOM/binw:$PATH
+    export EDPATH=$WATCOM/eddat
+    export INCLUDE=$WATCOM/lh
 fi
 
-export EDPATH=$WATCOM/eddat
-export "INCLUDE=$WATCOM/h/nt;$WATCOM/h/nt/directx;$WATCOM/h/nt/ddk;$WATCOM/h"
 export HPS=/
 # PROJTOP: top directory of project we are building
 export PROJTOP=`pwd`

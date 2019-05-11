@@ -1,9 +1,9 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = OS2_HELLO_EXE
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i=.. -i..$(HPS)..
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 
-RCFLAGS_THIS = -i=.. -i..$(HPS)..
+RCFLAGS_THIS = -i.. -i"../.."
 
 HELLO_EXE =  $(SUBDIR)$(HPS)hello.exe
 HELLOPM_EXE =  $(SUBDIR)$(HPS)hellopm.exe
