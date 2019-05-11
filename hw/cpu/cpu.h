@@ -13,6 +13,7 @@
 #define __HW_CPU_CPU_H
 
 #include <stdint.h>
+#include <i86.h>        /* FP_SEG/FP_OFF */
 
 #if !defined(FAR)
 # if defined(TARGET_WINDOWS) && !defined(TARGET_VXD)
