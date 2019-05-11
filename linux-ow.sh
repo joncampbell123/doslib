@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # allow the user to override WATCOM variable, auto-set otherwise
 if [ -z "$WATCOM" ]; then

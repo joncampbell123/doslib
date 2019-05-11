@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 if [ "$1" == "disk" ]; then
     xz -c -d ../boot.tmpl.xz >test.dsk
 

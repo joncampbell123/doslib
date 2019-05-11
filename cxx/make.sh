@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 rel=..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh

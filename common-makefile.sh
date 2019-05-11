@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 if [ "$1" == "clean" ]; then
     rm -fv *.{obj,sym,map,exe}
