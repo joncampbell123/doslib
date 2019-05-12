@@ -41,9 +41,11 @@ int main(int argc,char **argv) {
     unsigned char rowheight = 16;
     unsigned char rows = 25;
     unsigned char simplegraphics = 0;
+    unsigned char cursx = 0,cursy = 0;
     unsigned int cur_x = 0,cur_y = 0;
     unsigned char running = 1;
     unsigned char redraw = 1;
+    unsigned char sgdraw = 0;
     int c;
 
     /* NTS: Generally, if you write a doublewide character, the code is taken
@@ -85,7 +87,7 @@ int main(int argc,char **argv) {
 
     while (running) {
         if (redraw) {
-            sprintf(tmp,"X=%02u Y=%02u char=0x%04x attr=0x%02x sg=%u",cur_x,cur_y,charcode,attrcode,simplegraphics);
+            sprintf(tmp,"X=%02u Y=%02u char=0x%04x attr=0x%02x sg=%u sgd=%u",cur_x,cur_y,charcode,attrcode,simplegraphics,sgdraw);
             {
                 const unsigned int ofs = 80*(rows-1);
                 unsigned int i = 0;
@@ -105,6 +107,7 @@ int main(int argc,char **argv) {
             }
 
             {
+                unsigned char visible = sgdraw ? 0 : 1;
                 unsigned int addr = (cur_y * 80) + cur_x;
 
                 gdc_write_command(0x49); /* cursor position */
@@ -113,7 +116,7 @@ int main(int argc,char **argv) {
                 gdc_write_data(0);
 
                 gdc_write_command(0x4B); /* cursor setup */
-                gdc_write_data(0x80 + (rowheight - 1)); /* visible, 16 lines */
+                gdc_write_data((visible ? 0x80 : 0x00) + (rowheight - 1)); /* visible, 16 lines */
                 gdc_write_data(0x00);                   /* BR(L 2-bit) = 3 SC = 0 (blink) CTOP = 0 */
                 gdc_write_data(((rowheight - 1) << 3) + 0x04); /* CBOT, BR(U) = 4 */
             }
@@ -125,25 +128,41 @@ int main(int argc,char **argv) {
         if (c == 27) break;
 
         if (c == 0x08/*left arrow*/) {
-            if (cur_x > 0) {
+            if (sgdraw && (cursx & 1) != 0) {
+                cursx--;
+            }
+            else if (cur_x > 0) {
+                cursx=1;
                 cur_x--;
                 redraw = 1;
             }
         }
         else if (c == 0x0C/*right arrow*/) {
-            if (cur_x < 79) {
+            if (sgdraw && (cursx & 1) != 1) {
+                cursx++;
+            }
+            else if (cur_x < 79) {
+                cursx=0;
                 cur_x++;
                 redraw = 1;
             }
         }
         else if (c == 0x0B/*up arrow*/) {
-            if (cur_y > 0) {
+            if (sgdraw && (cursy & 3) != 0) {
+                cursy--;
+            }
+            else if (cur_y > 0) {
+                cursy=3;
                 cur_y--;
                 redraw = 1;
             }
         }
         else if (c == 0x0A/*down arrow*/) {
-            if (cur_y < (rows-1-1)) {
+            if (sgdraw && (cursy & 3) != 3) {
+                cursy++;
+            }
+            else if (cur_y < (rows-1-1)) {
+                cursy=0;
                 cur_y++;
                 redraw = 1;
             }
@@ -169,8 +188,29 @@ int main(int argc,char **argv) {
         else if (c == ' ') {
             unsigned int addr = (cur_y * 80) + cur_x;
 
-            TRAM_C[addr] = charcode;
-            TRAM_A[addr] = attrcode;
+            if (sgdraw) {
+                /* NTS: "Simple graphics" means the lower 8 bits are arranged on the screen
+                 *      in this bit order like a low res bitmap.
+                 *
+                 *      0 4
+                 *      1 5
+                 *      2 6
+                 *      3 7
+                 */
+                uint16_t flipbit = 1u << (cursy + (cursx<<2u));
+
+                if (!(TRAM_A[addr] & 0x10u)) {
+                    TRAM_C[addr] = 0x00;
+                    TRAM_A[addr] = attrcode | 0x10u;
+                }
+
+                TRAM_C[addr] ^= flipbit;
+                TRAM_A[addr] |= 0x10u;
+            }
+            else {
+                TRAM_C[addr] = charcode;
+                TRAM_A[addr] = attrcode;
+            }
         }
         else if (c == 9) {
             unsigned int addr = (cur_y * 80) + cur_x;
@@ -268,6 +308,20 @@ int main(int argc,char **argv) {
                 e = inp(0x74);
                 e += (c == 'D' ? 0x01 : 0xFF);
                 outp(0x74,e);
+            }
+            else if (c == 'g' || c == 'G') {
+                sgdraw = !sgdraw;
+                redraw = 1;
+
+                if (sgdraw) {
+                    cursx = 0;
+                    cursy = 0;
+                }
+
+                if (!simplegraphics) {
+                    simplegraphics ^= 1;
+                    outp(0x68,simplegraphics ? 0x01 : 0x00);
+                }
             }
 
             if (recomp_row) {
