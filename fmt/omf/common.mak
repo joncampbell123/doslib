@@ -11,8 +11,16 @@ NOW_BUILDING = FMT_OMF_LIB
 
 OBJS =        $(SUBDIR)$(HPS)oextdefs.obj $(SUBDIR)$(HPS)oextdeft.obj $(SUBDIR)$(HPS)ofixupps.obj $(SUBDIR)$(HPS)ofixuppt.obj $(SUBDIR)$(HPS)ogrpdefs.obj $(SUBDIR)$(HPS)olnames.obj $(SUBDIR)$(HPS)omfcstr.obj $(SUBDIR)$(HPS)omfctx.obj $(SUBDIR)$(HPS)omfrec.obj $(SUBDIR)$(HPS)omfrecs.obj $(SUBDIR)$(HPS)omledata.obj $(SUBDIR)$(HPS)opubdefs.obj $(SUBDIR)$(HPS)opubdeft.obj $(SUBDIR)$(HPS)osegdefs.obj $(SUBDIR)$(HPS)osegdeft.obj $(SUBDIR)$(HPS)opledata.obj $(SUBDIR)$(HPS)omfctxnm.obj $(SUBDIR)$(HPS)omfctxrf.obj $(SUBDIR)$(HPS)omfctxlf.obj $(SUBDIR)$(HPS)optheadr.obj $(SUBDIR)$(HPS)opextdef.obj $(SUBDIR)$(HPS)opfixupp.obj $(SUBDIR)$(HPS)opgrpdef.obj $(SUBDIR)$(HPS)oppubdef.obj $(SUBDIR)$(HPS)opsegdef.obj $(SUBDIR)$(HPS)oplnames.obj $(SUBDIR)$(HPS)odlnames.obj $(SUBDIR)$(HPS)odextdef.obj $(SUBDIR)$(HPS)odfixupp.obj $(SUBDIR)$(HPS)odgrpdef.obj $(SUBDIR)$(HPS)odledata.obj $(SUBDIR)$(HPS)odlidata.obj $(SUBDIR)$(HPS)odpubdef.obj $(SUBDIR)$(HPS)odsegdef.obj $(SUBDIR)$(HPS)odtheadr.obj $(SUBDIR)$(HPS)omfctxwf.obj $(SUBDIR)$(HPS)omfrecw.obj $(SUBDIR)$(HPS)owfixupp.obj
 
+!ifeq TARGET_MSDOS 32
+! ifeq TARGET_WINDOWS 31
+!  define NO_EXE
+! endif
+!endif
+
+!ifndef NO_EXE
 OMFDUMP_EXE = $(SUBDIR)$(HPS)omfdump.$(EXEEXT)
 OMFSEGDG_EXE = $(SUBDIR)$(HPS)omfsegdg.$(EXEEXT)
+!endif
 
 $(FMT_OMF_LIB): $(OBJS)
 	wlib -q -b -c $(FMT_OMF_LIB) -+$(SUBDIR)$(HPS)oextdefs.obj -+$(SUBDIR)$(HPS)oextdeft.obj
