@@ -13,6 +13,7 @@ win32=1 # Windows 9x/NT/XP/Vista/etc.
 win32s=1 # Windows 3.1 + Win32s
 win386=1 # Windows 3.0 + Watcom 386 extender
 win38631=1 # Windows 3.1 + Watcom 386 extender
+#vxd31=1 # Windows 3.1 VXD
 
 # WARNING: Test programs that run in the Win32 environment are provided,
 #          but should only be run under Windows 3.1, 95, 98, or ME.
@@ -35,7 +36,7 @@ win38631=1 # Windows 3.1 + Watcom 386 extender
 
 if [ "$1" == "clean" ]; then
     do_clean
-    rm -Rfv win2??? win2???_drv win2???_drvn win3??? win3???_drv win3???_drvn win*_vxd
+    rm -Rfv win2??? win2???_drv win2???_drvn win3??? win3???_drv win3???_drvn vxd*
     rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
     exit 0
 fi

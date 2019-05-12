@@ -34,7 +34,8 @@ $(SUBDIR)$(HPS)inthndlr.obj: inthndlr.c
 	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_DLL) $(NONDISCARDABLE_CFLAGS) $[@
 	@$(CC) @tmp.cmd
 
-all: lib exe
+# TODO: temporary disabled, need to fixed
+all: .symbolic #lib exe
 
 exe: $(DBOXMPI_DRV) $(DBOXMPI_VXD) .symbolic
 

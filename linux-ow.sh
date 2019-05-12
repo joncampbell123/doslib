@@ -83,7 +83,7 @@ make_buildlist() {
     fi
 
     # assume DOS target
-    if [[ x"$win386" == x"1" || x"$win38631" == x"1" || x"$win10" == x"1" || x"$win20" == x"1" || x"$win30" == x"1" || x"$win31" == x"1" || x"$win32s" == x"1" || x"$winnt" == x"1" || x"$win32" == x"1" || x"$os216" == x"1" || x"$os232" == x"1" ]]; then
+    if [[ x"$win386" == x"1" || x"$win38631" == x"1" || x"$win10" == x"1" || x"$win20" == x"1" || x"$win30" == x"1" || x"$win31" == x"1" || x"$win32s" == x"1" || x"$winnt" == x"1" || x"$win32" == x"1" || x"$os216" == x"1" || x"$os232" == x"1" || x"$vxd31" == x"1" ]]; then
         true
     else
         if [[ x"$dos" == x"" && x"$dostiny" == x"" ]]; then dos=1; fi
@@ -258,6 +258,11 @@ make_buildlist() {
     # Windows 3.1 win386 output
     if [ x"$win38631" == x"1" ]; then
         build_list="$build_list win38631"
+    fi
+
+    # Windows 3.1 VXD output
+    if [ x"$vxd31" == x"1" ]; then
+        build_list="$build_list vxd31"
     fi
 
     if [ x"$allow_build_list" != x ]; then

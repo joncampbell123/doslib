@@ -87,11 +87,11 @@ TARGET86_1DIGIT=6
 
 # FIXME
 !if $(__VERSION__) < 1300
-WATCOM_INCLUDE=-i"$(%WATCOM)/h;$(%WATCOM)/h/nt"
+WATCOM_INCLUDE=-i"$(%WATCOM)/h;$(%WATCOM)/h/nt;$(%WATCOM)/h/nt/directx;$(%WATCOM)/h/nt/ddk"
 .BEFORE
 	set INCLUDE=
 !else
-WATCOM_INCLUDE=-x -i"$(%WATCOM)/h;$(%WATCOM)/h/nt"
+WATCOM_INCLUDE=-x -i"$(%WATCOM)/h;$(%WATCOM)/h/nt;$(%WATCOM)/h/nt/directx;$(%WATCOM)/h/nt/ddk"
 !endif
 
 EXEEXT=exe

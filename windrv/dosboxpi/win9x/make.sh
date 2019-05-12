@@ -24,13 +24,14 @@ if [[ "$1" == "build" || "$1" == "" ]]; then
         bat_wmake $name "$what" || exit 1
     done
 
+# TODO: temporary disabled, need to fix
     # copy the result into BIN
     cp -vu win313l/dboxmpi.drv ../bin/win95/dboxmpi.drv
-    cp -vu win313l/dboxmpi.vxd ../bin/win95/dboxmpi.vxd
+#    cp -vu win313l/dboxmpi.vxd ../bin/win95/dboxmpi.vxd
     cp -vu win313l/dboxmpi.drv ../bin/win98/dboxmpi.drv
-    cp -vu win313l/dboxmpi.vxd ../bin/win98/dboxmpi.vxd
+#    cp -vu win313l/dboxmpi.vxd ../bin/win98/dboxmpi.vxd
     cp -vu win313l/dboxmpi.drv ../bin/winme/dboxmpi.drv
-    cp -vu win313l/dboxmpi.vxd ../bin/winme/dboxmpi.vxd
+#    cp -vu win313l/dboxmpi.vxd ../bin/winme/dboxmpi.vxd
 
     end_bat
 fi
