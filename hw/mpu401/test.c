@@ -15,14 +15,19 @@
 
 #include <hw/mpu401/mpu401.h>
 
-int main(int argc,char **argv) {
+#ifdef TARGET_WINDOWS
+# define WINFCON_STOCK_WIN_MAIN
+# include <hw/dos/winfcon.h>
+#endif
+
+int main() {
 	probe_dos();
 	init_mpu401();
 
 	if (mpu401_try_base(0x300))
-		fprintf(stderr,"Found MPU-401 at 300h\n");
+		printf("Found MPU-401 at 300h\n");
 	if (mpu401_try_base(0x330))
-		fprintf(stderr,"Found MPU-401 at 330h\n");
+		printf("Found MPU-401 at 330h\n");
 
 	return 0;
 }
