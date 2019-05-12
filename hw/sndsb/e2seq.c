@@ -26,14 +26,11 @@
 
 #include "ts_pcom.h"
 
-static char tmp[256];
-
 int dma_nocycle = 0;
 int dma_toomuch = 0;
 
 int do_e2(unsigned char b) {
     const unsigned char ch = (unsigned char)sb_card->dma8;
-    unsigned int retry = 0;
     unsigned int cn;
     int i;
 
