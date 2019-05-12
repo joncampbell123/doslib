@@ -37,6 +37,8 @@ CLSGEXT1_EXE = $(SUBDIR)$(HPS)clsgext1.$(EXEEXT)
 ANSI_EXE =	  $(SUBDIR)$(HPS)ansi.$(EXEEXT)
 LOL_EXE =     $(SUBDIR)$(HPS)lol.$(EXEEXT)
 TESTSMRT_EXE =$(SUBDIR)$(HPS)testsmrt.$(EXEEXT)
+HEXSTDI2_EXE =$(SUBDIR)$(HPS)hexstdi2.$(EXEEXT)
+HEXSTDIN_EXE =$(SUBDIR)$(HPS)hexstdin.$(EXEEXT)
 NTASTRM_EXE = $(SUBDIR)$(HPS)ntastrm.$(EXEEXT)
 INT16_EXE =   $(SUBDIR)$(HPS)int16.$(EXEEXT)
 !  ifeq TARGET_MSDOS 16
@@ -49,8 +51,6 @@ TSTBIOM_EXE = $(SUBDIR)$(HPS)tstbiom.$(EXEEXT)
 TSTLP_EXE =   $(SUBDIR)$(HPS)tstlp.$(EXEEXT)
 ! endif
 !endif
-HEXSTDI2_EXE =$(SUBDIR)$(HPS)hexstdi2.$(EXEEXT)
-HEXSTDIN_EXE =$(SUBDIR)$(HPS)hexstdin.$(EXEEXT)
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 CR3_EXE =     $(SUBDIR)$(HPS)cr3.$(EXEEXT)
 
