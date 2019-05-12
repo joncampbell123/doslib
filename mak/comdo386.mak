@@ -84,9 +84,9 @@ SUBDIR   = d98$(TARGET86)$(MMODE)
 !else
 SUBDIR   = dos$(TARGET86)$(MMODE)
 !endif
-CC       = wcc386
-CXX		 = wpp386
-LINKER   = wcl386
+CC       = *wcc386
+CXX      = *wpp386
+LINKER   = *wcl386
 LDFLAGS  = # -ldos32a
 WLINK_SYSTEM = dos4g
 WLINK_CON_SYSTEM = dos4g

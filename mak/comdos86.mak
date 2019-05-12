@@ -74,9 +74,9 @@ SUBDIR   = d98$(TARGET86)$(MMODEC)
 !else
 SUBDIR   = dos$(TARGET86)$(MMODEC)
 !endif
-CC       = wcc
-CXX		 = wpp
-LINKER   = wcl
+CC       = *wcc
+CXX      = *wpp
+LINKER   = *wcl
 
 !ifdef TINYMODE
 WLINK_SYSTEM = com
