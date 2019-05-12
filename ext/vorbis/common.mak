@@ -36,7 +36,7 @@ LIB_OBJS = $+$(OBJS)$-
 PRFX = -+$(SUBDIR)$(HPS)
 LIB_CMDS = $+$(OBJS)$-
 
-$(EXT_VORBIS_LIB): $(OBJS)
+$(EXT_VORBIS_LIB): $(LIB_OBJS)
         *wlib -q -b -c $(EXT_VORBIS_LIB) $(LIB_CMDS)
 !endif
 

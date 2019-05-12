@@ -69,7 +69,7 @@ fi
 # clean up then it should do them after running this subroutine.
 do_clean() {
     cd "$PROJTOP" || exit 1
-    rm -Rfv {dos,d98}*86{t,s,m,c,l,h,f}{,d} win{1,2,3}{0,1}{0,2,3}{s,m,c,l,h,f} win32s{3,4,5,6}{,d} winnt win32 win386 win38631 os2{d,w}{2,3}{l,f}
+    rm -Rfv {dos,d98}*86{t,s,m,c,l,h,f}{,d} win{1,2,3}{0,1}{0,2,3}{s,m,c,l,h,f} win32s{3,4,5,6}{,d} winnt win32 win386 win38631 vxd31 os2{d,w}{2,3}{l,f}
     rm -fv nul.err tmp.cmd *~
 }
 

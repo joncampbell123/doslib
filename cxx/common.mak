@@ -80,7 +80,7 @@ $(8254_EXE): $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254
         %append tmp.cmd option protmode
 !  endif
 ! endif
-        *wlink tmp.cmd name $(8254_EXE)
+        *wlink @tmp.cmd name $(8254_EXE)
         @$(COPY) ..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 ! ifdef WIN386
         @$(WIN386_EXE_TO_REX_IF_REX) $(8254_EXE)
