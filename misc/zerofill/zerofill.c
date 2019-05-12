@@ -30,8 +30,10 @@ int main(int argc,char **argv) {
         fflush(stdout);
     }
 
+#if 0 // unreachable due to while(1)
     free(zeros);
     fclose(fp);
+#endif
     return 0;
 }
 
