@@ -348,7 +348,7 @@ int quicktime_stack_read(quicktime_stack *s,quicktime_atom *a,void *buffer,size_
 
 	if (s == NULL) return -1;
 	if (buffer == NULL) return 0;
-	if (len <= 0) return 0;
+	if (len == (size_t)0u) return 0;
 
 	if (a) {
 		int64_t rem;
