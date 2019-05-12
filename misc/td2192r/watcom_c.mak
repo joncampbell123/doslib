@@ -1,8 +1,8 @@
 
 OBJS =     tdchoose.obj
 
-CC       = wcc
-LINKER   = wcl
+CC       = *wcc
+LINKER   = *wcl
 CFLAGS   = -zq -ms -s -bt=com -oilrtfm -fr=nul -wx -0 -fo=.obj -dSTDC -q
 
 .C.OBJ:

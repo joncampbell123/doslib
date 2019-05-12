@@ -8,26 +8,24 @@
 
 NOW_BUILDING = CXX
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i..
+CFLAGS_THIS = -fr=nul -fo=$@ -i..
 
 .C.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
-	@$(CC) @tmp.cmd
+        $(CC) $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 !ifdef TINYMODE
-	$(OMFSEGDG) -i $@ -o $@
+        $(OMFSEGDG) -i $@ -o $@
 !endif
 
 .CPP.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS_CON) $[@
-	@$(CXX) @tmp.cmd
+        $(CXX) $(CFLAGS_THIS) $(CFLAGS_CON) $[@
 !ifdef TINYMODE
-	$(OMFSEGDG) -i $@ -o $@
+        $(OMFSEGDG) -i $@ -o $@
 !endif
 
 .ASM.OBJ:
-	nasm -o $@ -f obj $(NASMFLAGS) $[@
+        nasm -o $@ -f obj $(NASMFLAGS) $[@
 !ifdef TINYMODE
-	$(OMFSEGDG) -i $@ -o $@
+        $(OMFSEGDG) -i $@ -o $@
 !endif
 
 all: $(OMFSEGDG) lib exe
@@ -48,49 +46,48 @@ lib: .symbolic
 
 !ifdef TEST_EXE
 $(TEST_EXE): $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(DOSNTAST_VDD)
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj
-	%write tmp.cmd option map=$(TEST_EXE).map
+        %write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_CPU_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj
+        %write tmp.cmd option map=$(TEST_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
-	# protected mode only. real-mode Windows is a pain.
-	%append tmp.cmd option protmode
+        %write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+        %write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+        # protected mode only. real-mode Windows is a pain.
+        %append tmp.cmd option protmode
 !  endif
 ! endif
-	%write tmp.cmd name $(TEST_EXE)
-	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+        %write tmp.cmd name $(TEST_EXE)
+        @*wlink @tmp.cmd
+        @$(COPY) ..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 ! ifdef WIN386
-	@$(WIN386_EXE_TO_REX_IF_REX) $(TEST_EXE)
-	@wbind $(TEST_EXE) -q -n
+        @$(WIN386_EXE_TO_REX_IF_REX) $(TEST_EXE)
+        @wbind $(TEST_EXE) -q -n
 ! endif
 ! ifdef WIN_NE_SETVER_BUILD
-	$(WIN_NE_SETVER_BUILD) $(TEST_EXE)
+        $(WIN_NE_SETVER_BUILD) $(TEST_EXE)
 ! endif
 !endif
 
 !ifdef 8254_EXE
 $(8254_EXE): $(HW_8259_LIB) $(HW_8259_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(HW_CPU_LIB) $(HW_CPU_LIB_DEPENDENCIES) $(HW_DOS_LIB) $(HW_DOS_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)8254.obj $(DOSNTAST_VDD)
-	%write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_8259_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_CPU_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)8254.obj
-	%write tmp.cmd option map=$(8254_EXE).map
+        %write tmp.cmd option quiet system $(WLINK_CON_SYSTEM) $(WLINK_FLAGS) $(HW_8259_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(HW_CPU_LIB_WLINK_LIBRARIES) $(HW_DOS_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)8254.obj
+        %write tmp.cmd option map=$(8254_EXE).map
 ! ifdef TARGET_WINDOWS
 !  ifeq TARGET_MSDOS 16
-	%write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
-	%write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
-	# protected mode only. real-mode Windows is a pain.
-	%append tmp.cmd option protmode
+        %write tmp.cmd segment TYPE CODE PRELOAD MOVEABLE DISCARDABLE SHARED
+        %write tmp.cmd segment TYPE DATA PRELOAD MOVEABLE DISCARDABLE
+        # protected mode only. real-mode Windows is a pain.
+        %append tmp.cmd option protmode
 !  endif
 ! endif
-	%write tmp.cmd name $(8254_EXE)
-	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+        *wlink tmp.cmd name $(8254_EXE)
+        @$(COPY) ..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 ! ifdef WIN386
-	@$(WIN386_EXE_TO_REX_IF_REX) $(8254_EXE)
-	@wbind $(8254_EXE) -q -n
+        @$(WIN386_EXE_TO_REX_IF_REX) $(8254_EXE)
+        @wbind $(8254_EXE) -q -n
 ! endif
 ! ifdef WIN_NE_SETVER_BUILD
-	$(WIN_NE_SETVER_BUILD) $(8254_EXE)
+        $(WIN_NE_SETVER_BUILD) $(8254_EXE)
 ! endif
 !endif
 

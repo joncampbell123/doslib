@@ -1,34 +1,50 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 NOW_BUILDING = EXT_VORBIS_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -dHAVE_CONFIG_H
+CFLAGS_THIS = -fr=nul -fo=$@ -i.. -i"../.." -dHAVE_CONFIG_H
 
-OBJS = $(SUBDIR)$(HPS)analysis.obj $(SUBDIR)$(HPS)barkmel.obj $(SUBDIR)$(HPS)bitrate.obj $(SUBDIR)$(HPS)block.obj $(SUBDIR)$(HPS)codebook.obj $(SUBDIR)$(HPS)envelope.obj $(SUBDIR)$(HPS)floor0.obj $(SUBDIR)$(HPS)floor1.obj $(SUBDIR)$(HPS)info.obj $(SUBDIR)$(HPS)lookup.obj $(SUBDIR)$(HPS)lpc.obj $(SUBDIR)$(HPS)lsp.obj $(SUBDIR)$(HPS)mapping0.obj $(SUBDIR)$(HPS)mdct.obj $(SUBDIR)$(HPS)psy.obj $(SUBDIR)$(HPS)registry.obj $(SUBDIR)$(HPS)res0.obj $(SUBDIR)$(HPS)sharedbook.obj $(SUBDIR)$(HPS)smallft.obj $(SUBDIR)$(HPS)synthesis.obj $(SUBDIR)$(HPS)vorbisenc.obj $(SUBDIR)$(HPS)vorbisfile.obj $(SUBDIR)$(HPS)window.obj
+OBJS = &
+    $(PRFX)analysis.obj &
+    $(PRFX)barkmel.obj &
+    $(PRFX)bitrate.obj &
+    $(PRFX)block.obj &
+    $(PRFX)codebook.obj &
+    $(PRFX)envelope.obj &
+    $(PRFX)floor0.obj &
+    $(PRFX)floor1.obj &
+    $(PRFX)info.obj &
+    $(PRFX)lookup.obj &
+    $(PRFX)lpc.obj &
+    $(PRFX)lsp.obj &
+    $(PRFX)mapping0.obj &
+    $(PRFX)mdct.obj &
+    $(PRFX)psy.obj &
+    $(PRFX)registry.obj &
+    $(PRFX)res0.obj &
+    $(PRFX)sharedbook.obj &
+    $(PRFX)smallft.obj &
+    $(PRFX)synthesis.obj &
+    $(PRFX)vorbisenc.obj &
+    $(PRFX)vorbisfile.obj &
+    $(PRFX)window.obj
 
+all: lib exe .symbolic
+       
 !ifdef EXT_VORBIS_LIB
+PRFX = $(SUBDIR)$(HPS)
+LIB_OBJS = $+$(OBJS)$-
+PRFX = -+$(SUBDIR)$(HPS)
+LIB_CMDS = $+$(OBJS)$-
+
 $(EXT_VORBIS_LIB): $(OBJS)
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)analysis.obj -+$(SUBDIR)$(HPS)barkmel.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)bitrate.obj -+$(SUBDIR)$(HPS)block.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)codebook.obj -+$(SUBDIR)$(HPS)envelope.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)floor0.obj -+$(SUBDIR)$(HPS)floor1.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)info.obj -+$(SUBDIR)$(HPS)lookup.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)lpc.obj -+$(SUBDIR)$(HPS)lsp.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)mapping0.obj -+$(SUBDIR)$(HPS)mdct.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)psy.obj -+$(SUBDIR)$(HPS)synthesis.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)registry.obj -+$(SUBDIR)$(HPS)res0.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)sharedbook.obj -+$(SUBDIR)$(HPS)smallft.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)vorbisenc.obj -+$(SUBDIR)$(HPS)vorbisfile.obj
-	wlib -q -b -c $(EXT_VORBIS_LIB) -+$(SUBDIR)$(HPS)window.obj
+        *wlib -q -b -c $(EXT_VORBIS_LIB) $(LIB_CMDS)
 !endif
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
 .C.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
-	@$(CC) @tmp.cmd
+        $(CC) $(CFLAGS_THIS) $(CFLAGS) $[@
 
-all: lib exe .symbolic
-       
 lib: $(EXT_VORBIS_LIB) .symbolic
 
 exe: .symbolic

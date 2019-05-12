@@ -11,15 +11,19 @@ OGGENC_EXE = $(SUBDIR)$(HPS)oggenc.exe
 !endif
 
 NOW_BUILDING = EXT_VORBTOOL_LIB
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.." -dHAVE_CONFIG_H
+CFLAGS_THIS = -fr=nul -fo=$@ -i.. -i"../.." -dHAVE_CONFIG_H
 
-OBJS = $(SUBDIR)$(HPS)audio.obj $(SUBDIR)$(HPS)easyflac.obj $(SUBDIR)$(HPS)encode.obj $(SUBDIR)$(HPS)flac.obj $(SUBDIR)$(HPS)lyrics.obj $(SUBDIR)$(HPS)oggdec.obj $(SUBDIR)$(HPS)oggenc.obj $(SUBDIR)$(HPS)ogginfo2.obj $(SUBDIR)$(HPS)platform.obj $(SUBDIR)$(HPS)resample.obj $(SUBDIR)$(HPS)skeleton.obj $(SUBDIR)$(HPS)theora.obj $(SUBDIR)$(HPS)charset.obj $(SUBDIR)$(HPS)charset_test.obj $(SUBDIR)$(HPS)getopt1.obj $(SUBDIR)$(HPS)getopt.obj $(SUBDIR)$(HPS)iconvert.obj $(SUBDIR)$(HPS)makemap.obj $(SUBDIR)$(HPS)utf8.obj
+OBJS = &
+    $(PRFX)oggdec.obj &
+    $(PRFX)charset.obj &
+    $(PRFX)charset_test.obj &
+    $(PRFX)iconvert.obj &
+    $(PRFX)makemap.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
 .C.OBJ:
-	%write tmp.cmd $(CFLAGS_THIS) $(CFLAGS) $[@
-	@$(CC) @tmp.cmd
+        $(CC) $(CFLAGS_THIS) $(CFLAGS) $[@
 
 all: lib exe .symbolic
        
@@ -28,25 +32,47 @@ lib: .symbolic
 exe: $(OGGINFO_EXE) $(OGGDEC_EXE) $(OGGENC_EXE) .symbolic
 
 !ifdef OGGINFO_EXE
-$(OGGINFO_EXE): $(EXT_LIBOGG_LIB) $(EXT_VORBIS_LIB) $(EXT_FLAC_LIB) $(SUBDIR)$(HPS)ogginfo2.obj $(SUBDIR)$(HPS)theora.obj $(SUBDIR)$(HPS)getopt.obj $(SUBDIR)$(HPS)getopt1.obj $(SUBDIR)$(HPS)utf8.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)ogginfo2.obj file $(SUBDIR)$(HPS)theora.obj file $(SUBDIR)$(HPS)getopt.obj file $(SUBDIR)$(HPS)getopt1.obj file $(SUBDIR)$(HPS)utf8.obj $(EXT_LIBOGG_LIB_WLINK_LIBRARIES) $(EXT_VORBIS_LIB_WLINK_LIBRARIES) $(EXT_FLAC_LIB_WLINK_LIBRARIES) name $(OGGINFO_EXE)
-	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+OGGINFO_EXE_OBJS = &
+    $(SUBDIR)$(HPS)ogginfo2.obj &
+    $(SUBDIR)$(HPS)theora.obj &
+    $(SUBDIR)$(HPS)getopt.obj &
+    $(SUBDIR)$(HPS)getopt1.obj &
+    $(SUBDIR)$(HPS)utf8.obj
+
+$(OGGINFO_EXE): $(EXT_LIBOGG_LIB) $(EXT_VORBIS_LIB) $(EXT_FLAC_LIB) $(OGGINFO_EXE_OBJS)
+        *wlink option quiet system $(WLINK_SYSTEM) file {$(OGGINFO_EXE_OBJS)} $(EXT_LIBOGG_LIB_WLINK_LIBRARIES) $(EXT_VORBIS_LIB_WLINK_LIBRARIES) $(EXT_FLAC_LIB_WLINK_LIBRARIES) name $(OGGINFO_EXE)
+        @$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef OGGDEC_EXE
-$(OGGDEC_EXE): $(EXT_LIBOGG_LIB) $(EXT_VORBIS_LIB) $(EXT_FLAC_LIB) $(SUBDIR)$(HPS)oggdec.obj $(SUBDIR)$(HPS)getopt.obj $(SUBDIR)$(HPS)getopt1.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)oggdec.obj file $(SUBDIR)$(HPS)getopt.obj file $(SUBDIR)$(HPS)getopt1.obj $(EXT_LIBOGG_LIB_WLINK_LIBRARIES) $(EXT_VORBIS_LIB_WLINK_LIBRARIES) $(EXT_FLAC_LIB_WLINK_LIBRARIES) name $(OGGDEC_EXE)
-	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+OGGDEC_EXE_OBJS = &
+    $(SUBDIR)$(HPS)oggdec.obj &
+    $(SUBDIR)$(HPS)getopt.obj &
+    $(SUBDIR)$(HPS)getopt1.obj
+
+$(OGGDEC_EXE): $(EXT_LIBOGG_LIB) $(EXT_VORBIS_LIB) $(EXT_FLAC_LIB) $(OGGDEC_EXE_OBJS)
+        *wlink option quiet system $(WLINK_SYSTEM) file {$(OGGDEC_EXE_OBJS)} $(EXT_LIBOGG_LIB_WLINK_LIBRARIES) $(EXT_VORBIS_LIB_WLINK_LIBRARIES) $(EXT_FLAC_LIB_WLINK_LIBRARIES) name $(OGGDEC_EXE)
+        @$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef OGGENC_EXE
-$(OGGENC_EXE): $(EXT_LIBOGG_LIB) $(EXT_VORBIS_LIB) $(EXT_FLAC_LIB) $(SUBDIR)$(HPS)oggenc.obj $(SUBDIR)$(HPS)getopt.obj $(SUBDIR)$(HPS)getopt1.obj $(SUBDIR)$(HPS)audio.obj $(SUBDIR)$(HPS)easyflac.obj $(SUBDIR)$(HPS)flac.obj $(SUBDIR)$(HPS)lyrics.obj $(SUBDIR)$(HPS)platform.obj $(SUBDIR)$(HPS)resample.obj $(SUBDIR)$(HPS)skeleton.obj $(SUBDIR)$(HPS)encode.obj
-	%write tmp.cmd option quiet system $(WLINK_SYSTEM) file $(SUBDIR)$(HPS)oggenc.obj file $(SUBDIR)$(HPS)getopt.obj file $(SUBDIR)$(HPS)getopt1.obj file $(SUBDIR)$(HPS)audio.obj file $(SUBDIR)$(HPS)easyflac.obj file $(SUBDIR)$(HPS)flac.obj file $(SUBDIR)$(HPS)lyrics.obj file $(SUBDIR)$(HPS)platform.obj file $(SUBDIR)$(HPS)resample.obj file $(SUBDIR)$(HPS)skeleton.obj file $(SUBDIR)$(HPS)encode.obj $(EXT_LIBOGG_LIB_WLINK_LIBRARIES) $(EXT_VORBIS_LIB_WLINK_LIBRARIES) $(EXT_FLAC_LIB_WLINK_LIBRARIES) name $(OGGENC_EXE)
-	@wlink @tmp.cmd
-	upx --best $(OGGENC_EXE) # Whew! OGGENC.EXE comes out as a 1.7MB EXE file!
-	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+OGGENC_EXE_OBJS = &
+    $(SUBDIR)$(HPS)oggenc.obj &
+    $(SUBDIR)$(HPS)getopt.obj &
+    $(SUBDIR)$(HPS)getopt1.obj &
+    $(SUBDIR)$(HPS)audio.obj &
+    $(SUBDIR)$(HPS)easyflac.obj &
+    $(SUBDIR)$(HPS)flac.obj &
+    $(SUBDIR)$(HPS)lyrics.obj &
+    $(SUBDIR)$(HPS)platform.obj &
+    $(SUBDIR)$(HPS)resample.obj &
+    $(SUBDIR)$(HPS)skeleton.obj &
+    $(SUBDIR)$(HPS)encode.obj
+
+$(OGGENC_EXE): $(EXT_LIBOGG_LIB) $(EXT_VORBIS_LIB) $(EXT_FLAC_LIB) $(OGGENC_EXE_OBJS)
+        *wlink option quiet system $(WLINK_SYSTEM) file {$(OGGENC_EXE_OBJS)} $(EXT_LIBOGG_LIB_WLINK_LIBRARIES) $(EXT_VORBIS_LIB_WLINK_LIBRARIES) $(EXT_FLAC_LIB_WLINK_LIBRARIES) name $(OGGENC_EXE)
+        upx --best $(OGGENC_EXE) # Whew! OGGENC.EXE comes out as a 1.7MB EXE file!
+        @$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 clean: .SYMBOLIC
