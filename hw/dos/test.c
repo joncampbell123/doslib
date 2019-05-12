@@ -52,8 +52,10 @@ int main(int argc,char **argv,char **envp) {
 	if (cpu_flags & CPU_FLAG_PROTECTED_MODE_32)
 		printf(" - Your CPU is currently running in 32-bit protected mode\n");
 
+#ifdef int2f_can_be_valid
     if (int2f_is_valid())
         printf(" - INT 2Fh is valid\n");
+#endif
 
 	detect_window_enable_ntdvm(); // we care about whether or not we're running in NTVDM.EXE under Windows NT
 	detect_dos_version_enable_win9x_qt_thunk(); // we care about DOS version from Win32 builds

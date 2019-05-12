@@ -509,6 +509,7 @@ int vector_is_iret(const unsigned char vector);
 #endif
 
 #if !defined(TARGET_WINDOWS) && !defined(WIN386) && !defined(TARGET_OS2)
+# define int2f_can_be_valid
 int int2f_is_valid(void);
 #else
 /* No, don't call INT 2Fh from Windows or OS/2!
