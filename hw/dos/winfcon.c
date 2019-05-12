@@ -698,10 +698,7 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 		return 1;
 	}
 
-#if TARGET_MSDOS == 32 && defined(WIN386)
-	/* our Win386 hack needs the address of our console context */
-	SetWindowLong(_this_console.hwndMain,USER_GWW_CTX,(DWORD)(&_this_console));
-#elif TARGET_MSDOS == 16
+#if (TARGET_MSDOS == 32 && defined(WIN386)) || TARGET_MSDOS == 16
 	/* our Win16 hack needs the address of our console context */
 	SetWindowLong(_this_console.hwndMain,USER_GWW_CTX,(DWORD)(&_this_console));
 #endif
