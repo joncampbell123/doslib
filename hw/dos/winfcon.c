@@ -165,13 +165,9 @@ FARPROC _win_WindowProc_MPI;
  *      removes that crash. */
 WindowProcType_NoLoadDS winproc_export _win_WindowProc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam) {
 #if TARGET_MSDOS == 32 && defined(WIN386)
-	struct _win_console_ctx FAR *_ctx_console;
-	{
-		unsigned short s = GetWindowWord(hwnd,USER_GWW_CTX);
-		unsigned int o = GetWindowLong(hwnd,USER_GWW_CTX+2);
-		_ctx_console = (void far *)MK_FP(s,o);
-	}
-	if (_ctx_console == NULL) return DefWindowProc(hwnd,message,wparam,lparam);
+	struct _win_console_ctx *_ctx_console;
+    _ctx_console = (void *)GetWindowLong(hwnd,USER_GWW_CTX);
+    if (_ctx_console == NULL) return DefWindowProc(hwnd,message,wparam,lparam);
 #elif TARGET_MSDOS == 16
 	struct _win_console_ctx FAR *_ctx_console;
 	_ctx_console = (void far *)GetWindowLong(hwnd,USER_GWW_CTX);
@@ -704,8 +700,7 @@ int PASCAL _win_main_con_entry(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR
 
 #if TARGET_MSDOS == 32 && defined(WIN386)
 	/* our Win386 hack needs the address of our console context */
-	SetWindowWord(_this_console.hwndMain,USER_GWW_CTX,(WORD)FP_SEG(&_this_console));
-	SetWindowLong(_this_console.hwndMain,USER_GWW_CTX+2,(DWORD)FP_OFF(&_this_console));
+	SetWindowLong(_this_console.hwndMain,USER_GWW_CTX,(DWORD)(&_this_console));
 #elif TARGET_MSDOS == 16
 	/* our Win16 hack needs the address of our console context */
 	SetWindowLong(_this_console.hwndMain,USER_GWW_CTX,(DWORD)(&_this_console));
