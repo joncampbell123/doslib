@@ -138,7 +138,7 @@ void vtx86_mc_writel(const uint8_t reg,const uint32_t val) {
 }
 
 uint16_t        vtx86_uart_config_base_io = 0;
-uint16_t        vtx86_gpio_config_base_io = 0;
+uint16_t        vtx86_gpio_portconfig_base_io = 0;
 uint16_t        vtx86_crossbar_config_base_io = 0;
 uint16_t        vtx86_pwm_config_base_io = 0;
 uint16_t        vtx86_adc_config_base_io = 0;
@@ -226,13 +226,13 @@ int main(int argc,char **argv) {
         }
     }
 
-    vtx86_gpio_config_base_io = vtx86_sb_readw(0x62);
-    if (vtx86_gpio_config_base_io & 1u)
-        vtx86_gpio_config_base_io &= ~1u;
+    vtx86_gpio_portconfig_base_io = vtx86_sb_readw(0x62);
+    if (vtx86_gpio_portconfig_base_io & 1u)
+        vtx86_gpio_portconfig_base_io &= ~1u;
     else
-        vtx86_gpio_config_base_io  = 0;
+        vtx86_gpio_portconfig_base_io  = 0;
 
-    printf("- GPIO Configuration I/O port base:     0x%04x\n",vtx86_gpio_config_base_io);
+    printf("- GPIO Port configuration I/O port base:0x%04x\n",vtx86_gpio_portconfig_base_io);
 
     vtx86_crossbar_config_base_io = vtx86_sb_readw(0x64);
     if (vtx86_crossbar_config_base_io & 1u)
