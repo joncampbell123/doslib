@@ -33,13 +33,68 @@ const int8_t vtx86_uart_IRQs[16] = {
     -1,14,-1,15
 };
 
-const uint8_t vtx86_gpio_to_crossbar_pin_map[45] =
+const uint8_t vtx86_gpio_to_crossbar_pin_map[45/*PINS*/] =
    {11, 10, 39, 23, 37, 20, 19, 35,
     33, 17, 28, 27, 32, 25, 12, 13,
     14, 15, 24, 26, 29, 47, 46, 45,
     44, 43, 42, 41, 40,  1,  3,  4,
     31,  0,  2,  5, 22, 30,  6, 38,
     36, 34, 16, 18, 21};
+
+// MC no.
+#define MC_GENERAL          (-1)
+#define MC_MODULE0          (0)
+#define MC_MODULE1          (1)
+#define MC_MODULE2          (2)
+#define MC_MODULE3          (3)
+// #define MC_MODULE4          (4)
+// #define MC_MODULE5          (5)
+// #define MC_MODULE6          (6)
+// #define MC_MODULE7          (7)
+// #define MC_MODULE8          (8)
+// #define MC_MODULE9          (9)
+// #define MC_MODULE10         (10)
+// #define MC_MODULE11         (11)
+
+// Module no.
+#define MCPWM_MODULEA       (0)
+#define MCPWM_MODULEB       (1)
+#define MCPWM_MODULEC       (2)
+#define MCSERVO_MODULEA     (0)
+#define MCSERVO_MODULEB     (1)
+#define MCSERVO_MODULEC     (2)
+#define MCSIF_MODULEA       (0)
+#define MCSIF_MODULEB       (1)
+
+#define NOPWM    (-1)
+static int arduino_to_mc_md[2/*MC/MD*/][45/*PINS*/] = {
+    // MC
+    {NOPWM,         NOPWM,          NOPWM,          MC_MODULE3,
+     NOPWM,         MC_MODULE0,     MC_MODULE0,     NOPWM,
+     NOPWM,         MC_MODULE0,     MC_MODULE1,     MC_MODULE1,
+     NOPWM,         MC_MODULE1,     NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         MC_MODULE2,     MC_MODULE2,     MC_MODULE2,
+     MC_MODULE3,    NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM},
+    // MD
+    {NOPWM,         NOPWM,          NOPWM,          MCPWM_MODULEA,
+     NOPWM,         MCPWM_MODULEC,  MCPWM_MODULEB,  NOPWM,
+     NOPWM,         MCPWM_MODULEA,  MCPWM_MODULEC,  MCPWM_MODULEB,
+     NOPWM,         MCPWM_MODULEA,  NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         MCPWM_MODULEA,  MCPWM_MODULEB,  MCPWM_MODULEC,
+     MCPWM_MODULEB, NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM,         NOPWM,          NOPWM,          NOPWM,
+     NOPWM}
+    };
 
 /* northbridge 0:0:0 */
 #define VORTEX86_PCI_NB_BUS         (0)
@@ -402,10 +457,10 @@ int main(int argc,char **argv) {
         printf("This program requires a 86duino embedded SoC to run\n");
         return 1;
     }
-	if (!probe_8254()) {
-		printf("Chip not present. Your computer might be 2010-era hardware that dropped support for it.\n");
-		return 1;
-	}
+    if (!probe_8254()) {
+        printf("Chip not present. Your computer might be 2010-era hardware that dropped support for it.\n");
+        return 1;
+    }
 
     printf("Looks like a Vortex86 SoC / 86Duino\n");
     if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_SB1)
