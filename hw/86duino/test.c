@@ -264,6 +264,23 @@ int probe_vtx86(void) {
     return !!(vtx86_86duino_flags & VTX86_86DUINO_FLAG_DETECTED);
 }
 
+int read_vtx86_gpio_pin_config(void) {
+    unsigned int i;
+    uint32_t tmp;
+
+    if (!(vtx86_86duino_flags & VTX86_86DUINO_FLAG_DETECTED))
+        return 0;
+
+    vtx86_gpio_port_cfg.gpio_dec_enable = inpd(vtx86_cfg.gpio_portconfig_base_io + 0x00);
+    for (i=0;i < 10;i++) {
+        tmp = inpd(vtx86_cfg.gpio_portconfig_base_io + 0x04 + (i * 4u));
+        vtx86_gpio_port_cfg.gpio_pingroup[i].data_io = (uint16_t)(tmp & 0xFFFFul);
+        vtx86_gpio_port_cfg.gpio_pingroup[i].dir_io  = (uint16_t)(tmp >> 16ul);
+    }
+
+    return 1;
+}
+
 int read_vtx86_config(void) {
     if (!(vtx86_86duino_flags & VTX86_86DUINO_FLAG_DETECTED))
         return 0;
@@ -360,27 +377,21 @@ int main(int argc,char **argv) {
 
     printf("- GPIO Port configuration I/O port base:0x%04x\n",vtx86_cfg.gpio_portconfig_base_io);
     if (vtx86_cfg.gpio_portconfig_base_io != 0u) {
-        struct vtx86_gpio_port_cfg_t pins;
-        unsigned int i;
-        uint32_t tmp;
+        if (read_vtx86_gpio_pin_config()) {
+            unsigned int i;
 
-        pins.gpio_dec_enable = inpd(vtx86_cfg.gpio_portconfig_base_io + 0x00);
-        for (i=0;i < 10;i++) {
-            tmp = inpd(vtx86_cfg.gpio_portconfig_base_io + 0x04 + (i * 4u));
-            pins.gpio_pingroup[i].data_io = (uint16_t)(tmp & 0xFFFFul);
-            pins.gpio_pingroup[i].dir_io  = (uint16_t)(tmp >> 16ul);
+            printf("  - GPIO data/dir port enable:          0x%lx",(unsigned long)vtx86_gpio_port_cfg.gpio_dec_enable);
+            for (i=0;i < 10;i++) printf(" PG%u=%u",i,(vtx86_gpio_port_cfg.gpio_dec_enable & (1ul << (unsigned long)i)) ? 1 : 0);
+            printf("\n");
+
+            for (i=0;i < 10;i++) {
+                printf("  - GPIO pin group %u I/O:               data=0x%x dir=0x%x\n",i,
+                        vtx86_gpio_port_cfg.gpio_pingroup[i].data_io,
+                        vtx86_gpio_port_cfg.gpio_pingroup[i].dir_io);
+            }
         }
-
-        vtx86_gpio_port_cfg = pins;
-
-        printf("  - GPIO data/dir port enable:          0x%lx",(unsigned long)pins.gpio_dec_enable);
-        for (i=0;i < 10;i++) printf(" PG%u=%u",i,(pins.gpio_dec_enable & (1ul << (unsigned long)i)) ? 1 : 0);
-        printf("\n");
-
-        for (i=0;i < 10;i++) {
-            printf("  - GPIO pin group %u I/O:               data=0x%x dir=0x%x\n",i,
-                pins.gpio_pingroup[i].data_io,
-                pins.gpio_pingroup[i].dir_io);
+        else {
+            printf("  - Unable to read configuration\n");
         }
     }
 
