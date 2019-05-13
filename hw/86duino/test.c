@@ -21,6 +21,14 @@ const int8_t vtx86_uart_IRQs[16] = {
     -1,14,-1,15
 };
 
+const uint8_t vtx86_gpio_to_crossbar_pin_map[45] =
+   {11, 10, 39, 23, 37, 20, 19, 35,
+    33, 17, 28, 27, 32, 25, 12, 13,
+    14, 15, 24, 26, 29, 47, 46, 45,
+    44, 43, 42, 41, 40,  1,  3,  4,
+    31,  0,  2,  5, 22, 30,  6, 38,
+    36, 34, 16, 18, 21};
+
 /* northbridge 0:0:0 */
 #define VORTEX86_PCI_NB_BUS         (0)
 #define VORTEX86_PCI_NB_DEV         (0)
