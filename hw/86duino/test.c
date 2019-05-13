@@ -184,7 +184,7 @@ unsigned char                   vtx86_86duino_flags = 0;
 struct vtx86_cfg_t              vtx86_cfg = {0};
 struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
 
-unsigned int vtx86_digitalRead(uint8_t pin) {
+unsigned int vtx86_digitalRead(const uint8_t pin) {
     unsigned char crossbar_bit;
     unsigned char cbio_bitmask;
     uint16_t dport;
