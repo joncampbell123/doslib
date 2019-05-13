@@ -19,6 +19,12 @@
 #define VTX86_INPUT_PULLUP      (0x02)
 #define VTX86_INPUT_PULLDOWN    (0x03)
 
+#define VTX86_LOW               (0x00)
+#define VTX86_HIGH              (0x01)
+#define VTX86_CHANGE            (0x02)
+#define VTX86_FALLING           (0x03)
+#define VTX86_RISING            (0x04)
+
 const int8_t vtx86_uart_IRQs[16] = {
     -1, 9, 3,10,
      4, 5, 7, 6,
@@ -177,6 +183,27 @@ unsigned char                   vtx86_86duino_flags = 0;
 
 struct vtx86_cfg_t              vtx86_cfg = {0};
 struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
+
+unsigned int vtx86_digitalRead(uint8_t pin) {
+    unsigned char crossbar_bit;
+    unsigned char cbio_bitmask;
+    uint16_t dport;
+
+    if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return ~0u;
+
+    crossbar_bit = vtx86_gpio_to_crossbar_pin_map[pin];
+    dport = vtx86_gpio_port_cfg.gpio_pingroup[crossbar_bit / 8u].data_io;
+    if (dport == 0) return ~0u;
+
+    cbio_bitmask = 1u << (crossbar_bit % 8u);
+
+    if (crossbar_bit >= 32u)
+        outp(vtx86_cfg.crossbar_config_base_io + 0x80 + (crossbar_bit / 8u), 0x01);
+    else
+        outp(vtx86_cfg.crossbar_config_base_io + 0x90 + crossbar_bit, 0x01);
+
+    return (inp(dport) & cbio_bitmask) ? VTX86_HIGH : VTX86_LOW;
+}
 
 void vtx86_pinMode(const uint8_t pin, const uint8_t mode) {
 #define VTX86_PINMODE_TRI_STATE         (0x00)
