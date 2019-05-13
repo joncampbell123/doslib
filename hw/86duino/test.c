@@ -178,16 +178,13 @@ struct vtx86_cfg_t              vtx86_cfg = {0};
 struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
 
 void vtx86_pinMode(uint8_t pin, uint8_t mode) {
-#define crossbar_ioaddr vtx86_cfg.crossbar_config_base_io
-#define io_outpb outp
-#define io_inpb inp
-    unsigned char crossbar_bit;
-    unsigned int cpu_flags;
-    uint16_t dbport;
-
 #define TRI_STATE     (0x00)
 #define PULL_UP       (0x01)
 #define PULL_DOWN     (0x02)
+
+    unsigned char crossbar_bit;
+    unsigned int cpu_flags;
+    uint16_t dbport;
 
     if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return;
 
@@ -200,27 +197,24 @@ void vtx86_pinMode(uint8_t pin, uint8_t mode) {
 
     if (mode == VTX86_INPUT)
     {
-        io_outpb(crossbar_ioaddr + 0x30 + vtx86_gpio_to_crossbar_pin_map[pin], TRI_STATE);
-        io_outpb(dbport, io_inpb(dbport) & (~(1u << (crossbar_bit % 8u))));
+        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, TRI_STATE);
+        outp(dbport, inp(dbport) & (~(1u << (crossbar_bit % 8u))));
     }
     else if(mode == VTX86_INPUT_PULLDOWN)
     {
-        io_outpb(crossbar_ioaddr + 0x30 + vtx86_gpio_to_crossbar_pin_map[pin], PULL_DOWN);
-        io_outpb(dbport, io_inpb(dbport) & (~(1u << (crossbar_bit % 8u))));
+        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, PULL_DOWN);
+        outp(dbport, inp(dbport) & (~(1u << (crossbar_bit % 8u))));
     }
     else if (mode == VTX86_INPUT_PULLUP)
     {
-        io_outpb(crossbar_ioaddr + 0x30 + vtx86_gpio_to_crossbar_pin_map[pin], PULL_UP);
-        io_outpb(dbport, io_inpb(dbport) & (~(1u << (crossbar_bit % 8u))));
+        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, PULL_UP);
+        outp(dbport, inp(dbport) & (~(1u << (crossbar_bit % 8u))));
     }
     else {
-        io_outpb(dbport, io_inpb(dbport) | (1u << (crossbar_bit % 8u)));
+        outp(dbport, inp(dbport) | (1u << (crossbar_bit % 8u)));
     }
 
     _sti_if_flags(cpu_flags);
-#undef io_inpb
-#undef io_outpb
-#undef crossbar_ioaddr
 
 #undef TRI_STATE
 #undef PULL_UP
