@@ -13,6 +13,7 @@
 #include <hw/dos/dos.h>
 #include <hw/pci/pci.h>
 #include <hw/cpu/cpu.h>
+#include <hw/8254/8254.h>
 
 #define VTX86_INPUT             (0x00)
 #define VTX86_OUTPUT            (0x01)
@@ -401,6 +402,10 @@ int main(int argc,char **argv) {
         printf("This program requires a 86duino embedded SoC to run\n");
         return 1;
     }
+	if (!probe_8254()) {
+		printf("Chip not present. Your computer might be 2010-era hardware that dropped support for it.\n");
+		return 1;
+	}
 
     printf("Looks like a Vortex86 SoC / 86Duino\n");
     if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_SB1)
