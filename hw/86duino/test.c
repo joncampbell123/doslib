@@ -14,6 +14,11 @@
 #include <hw/pci/pci.h>
 #include <hw/cpu/cpu.h>
 
+#define VTX86_INPUT             (0x00)
+#define VTX86_OUTPUT            (0x01)
+#define VTX86_INPUT_PULLUP      (0x02)
+#define VTX86_INPUT_PULLDOWN    (0x03)
+
 const int8_t vtx86_uart_IRQs[16] = {
     -1, 9, 3,10,
      4, 5, 7, 6,
@@ -162,17 +167,68 @@ struct vtx86_gpio_port_cfg_pin_t {
 
 struct vtx86_gpio_port_cfg_t {
     uint32_t                                gpio_dec_enable;
-    struct vtx86_gpio_port_cfg_pin_t        gpio_pin[10];
+    struct vtx86_gpio_port_cfg_pin_t        gpio_pingroup[10];
 };
 
 unsigned char   vtx86_86duino_flags = 0;
 #define VTX86_86DUINO_FLAG_SB1          (1u << 0u)
 #define VTX86_86DUINO_FLAG_MC           (1u << 1u)
 
-struct vtx86_cfg_t  vtx86_cfg = {0};
+struct vtx86_cfg_t              vtx86_cfg = {0};
+struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
+
+void vtx86_pinMode(uint8_t pin, uint8_t mode) {
+#define crossbar_ioaddr vtx86_cfg.crossbar_config_base_io
+#define io_outpb outp
+#define io_inpb inp
+    unsigned char crossbar_bit;
+    unsigned int cpu_flags;
+    uint16_t dbport;
+
+#define TRI_STATE     (0x00)
+#define PULL_UP       (0x01)
+#define PULL_DOWN     (0x02)
+
+    if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return;
+
+    crossbar_bit = vtx86_gpio_to_crossbar_pin_map[pin];
+    dbport = vtx86_gpio_port_cfg.gpio_pingroup[crossbar_bit / 8u].dir_io;
+    if (dbport == 0) return;
+
+    cpu_flags = get_cpu_flags();
+    _cli();
+
+    if (mode == VTX86_INPUT)
+    {
+        io_outpb(crossbar_ioaddr + 0x30 + vtx86_gpio_to_crossbar_pin_map[pin], TRI_STATE);
+        io_outpb(dbport, io_inpb(dbport) & (~(1u << (crossbar_bit % 8u))));
+    }
+    else if(mode == VTX86_INPUT_PULLDOWN)
+    {
+        io_outpb(crossbar_ioaddr + 0x30 + vtx86_gpio_to_crossbar_pin_map[pin], PULL_DOWN);
+        io_outpb(dbport, io_inpb(dbport) & (~(1u << (crossbar_bit % 8u))));
+    }
+    else if (mode == VTX86_INPUT_PULLUP)
+    {
+        io_outpb(crossbar_ioaddr + 0x30 + vtx86_gpio_to_crossbar_pin_map[pin], PULL_UP);
+        io_outpb(dbport, io_inpb(dbport) & (~(1u << (crossbar_bit % 8u))));
+    }
+    else {
+        io_outpb(dbport, io_inpb(dbport) | (1u << (crossbar_bit % 8u)));
+    }
+
+    _sti_if_flags(cpu_flags);
+#undef io_inpb
+#undef io_outpb
+#undef crossbar_ioaddr
+
+#undef TRI_STATE
+#undef PULL_UP
+#undef PULL_DOWN
+}
 
 int main(int argc,char **argv) {
-	cpu_probe();
+    cpu_probe();
     probe_dos();
     /* Vortex86 systems are (as far as I know) at least Pentium level (maybe 486?), and support CPUID with vendor "Vortex86 SoC" */
     if (cpu_basic_level < CPU_486 || !(cpu_flags & CPU_FLAG_CPUID) || memcmp(cpu_cpuid_vendor,"Vortex86 SoC",12) != 0) {
@@ -180,10 +236,10 @@ int main(int argc,char **argv) {
         return 1;
     }
     /* They also have a PCI bus that's integral to locating and talking to the GPIO pins, etc. */
-	if (pci_probe(PCI_CFG_TYPE1/*Vortex86 uses this type, definitely!*/) == PCI_CFG_NONE) {
-		printf("PCI bus not found\n");
-		return 1;
-	}
+    if (pci_probe(PCI_CFG_TYPE1/*Vortex86 uses this type, definitely!*/) == PCI_CFG_NONE) {
+        printf("PCI bus not found\n");
+        return 1;
+    }
     /* check the northbridge and southbridge */
     {
         uint16_t vendor,device;
@@ -264,17 +320,20 @@ int main(int argc,char **argv) {
         pins.gpio_dec_enable = inpd(vtx86_cfg.gpio_portconfig_base_io + 0x00);
         for (i=0;i < 10;i++) {
             tmp = inpd(vtx86_cfg.gpio_portconfig_base_io + 0x04 + (i * 4u));
-            pins.gpio_pin[i].data_io = (uint16_t)(tmp & 0xFFFFul);
-            pins.gpio_pin[i].dir_io  = (uint16_t)(tmp >> 16ul);
+            pins.gpio_pingroup[i].data_io = (uint16_t)(tmp & 0xFFFFul);
+            pins.gpio_pingroup[i].dir_io  = (uint16_t)(tmp >> 16ul);
         }
+
+        vtx86_gpio_port_cfg = pins;
 
         printf("  - GPIO data/dir port enable:          0x%lx",(unsigned long)pins.gpio_dec_enable);
         for (i=0;i < 10;i++) printf(" PG%u=%u",i,(pins.gpio_dec_enable & (1ul << (unsigned long)i)) ? 1 : 0);
         printf("\n");
 
         for (i=0;i < 10;i++) {
-            printf("  - GPIO pin group %u I/O:               data=0x%x dir=0x%x\n",
-                    i,pins.gpio_pin[i].data_io,pins.gpio_pin[i].dir_io);
+            printf("  - GPIO pin group %u I/O:               data=0x%x dir=0x%x\n",i,
+                pins.gpio_pingroup[i].data_io,
+                pins.gpio_pingroup[i].dir_io);
         }
     }
 
@@ -320,6 +379,6 @@ int main(int argc,char **argv) {
 
     printf("- PWM I/O port base:                    0x%04x\n",vtx86_cfg.pwm_config_base_io);
 
-	return 0;
+    return 0;
 }
 
