@@ -184,6 +184,36 @@ unsigned char                   vtx86_86duino_flags = 0;
 struct vtx86_cfg_t              vtx86_cfg = {0};
 struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
 
+void vtx86_digitalWrite(const uint8_t pin,const uint8_t val) {
+    unsigned char crossbar_bit;
+    unsigned char cbio_bitmask;
+    unsigned int cpu_flags;
+    uint16_t dport;
+
+    if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return;
+
+    crossbar_bit = vtx86_gpio_to_crossbar_pin_map[pin];
+    dport = vtx86_gpio_port_cfg.gpio_pingroup[crossbar_bit / 8u].data_io;
+    if (dport == 0) return;
+
+    cbio_bitmask = 1u << (crossbar_bit % 8u);
+
+    if (crossbar_bit >= 32u)
+        outp(vtx86_cfg.crossbar_config_base_io + 0x80 + (crossbar_bit / 8u), 0x01);
+    else
+        outp(vtx86_cfg.crossbar_config_base_io + 0x90 + crossbar_bit, 0x01);
+
+    cpu_flags = get_cpu_flags();
+    _cli();
+
+    if (val == VTX86_LOW)
+        outp(dport, inp(dport) & (~cbio_bitmask));
+    else
+        outp(dport, inp(dport) |   cbio_bitmask );
+
+    _sti_if_flags(cpu_flags);
+}
+
 unsigned int vtx86_digitalRead(const uint8_t pin) {
     unsigned char crossbar_bit;
     unsigned char cbio_bitmask;
