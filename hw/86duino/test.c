@@ -184,6 +184,7 @@ void vtx86_pinMode(uint8_t pin, uint8_t mode) {
 #define VTX86_PINMODE_PULL_DOWN         (0x02)
 
     unsigned char crossbar_bit;
+    unsigned char cbio_bitmask;
     unsigned int cpu_flags;
     uint16_t dbport;
 
@@ -193,26 +194,28 @@ void vtx86_pinMode(uint8_t pin, uint8_t mode) {
     dbport = vtx86_gpio_port_cfg.gpio_pingroup[crossbar_bit / 8u].dir_io;
     if (dbport == 0) return;
 
+    cbio_bitmask = 1u << (crossbar_bit % 8u);
+
     cpu_flags = get_cpu_flags();
     _cli();
 
     if (mode == VTX86_INPUT)
     {
         outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_TRI_STATE);
-        outp(dbport, inp(dbport) & (~(1u << (crossbar_bit % 8u))));
+        outp(dbport, inp(dbport) & (~cbio_bitmask));
     }
     else if(mode == VTX86_INPUT_PULLDOWN)
     {
         outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_PULL_DOWN);
-        outp(dbport, inp(dbport) & (~(1u << (crossbar_bit % 8u))));
+        outp(dbport, inp(dbport) & (~cbio_bitmask));
     }
     else if (mode == VTX86_INPUT_PULLUP)
     {
         outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_PULL_UP);
-        outp(dbport, inp(dbport) & (~(1u << (crossbar_bit % 8u))));
+        outp(dbport, inp(dbport) & (~cbio_bitmask));
     }
     else {
-        outp(dbport, inp(dbport) | (1u << (crossbar_bit % 8u)));
+        outp(dbport, inp(dbport) |   cbio_bitmask );
     }
 
     _sti_if_flags(cpu_flags);
