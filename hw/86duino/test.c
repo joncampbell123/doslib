@@ -178,7 +178,7 @@ unsigned char                   vtx86_86duino_flags = 0;
 struct vtx86_cfg_t              vtx86_cfg = {0};
 struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
 
-void vtx86_pinMode(uint8_t pin, uint8_t mode) {
+void vtx86_pinMode(const uint8_t pin, const uint8_t mode) {
 #define VTX86_PINMODE_TRI_STATE         (0x00)
 #define VTX86_PINMODE_PULL_UP           (0x01)
 #define VTX86_PINMODE_PULL_DOWN         (0x02)
