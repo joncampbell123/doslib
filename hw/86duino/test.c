@@ -269,11 +269,11 @@ int main(int argc,char **argv) {
         }
 
         printf("  - GPIO data/dir port enable:          0x%lx",(unsigned long)pins.gpio_dec_enable);
-        for (i=0;i < 10;i++) printf(" P%u=%u",i,(pins.gpio_dec_enable & (1ul << (unsigned long)i)) ? 1 : 0);
+        for (i=0;i < 10;i++) printf(" PG%u=%u",i,(pins.gpio_dec_enable & (1ul << (unsigned long)i)) ? 1 : 0);
         printf("\n");
 
         for (i=0;i < 10;i++) {
-            printf("  - GPIO pin %u I/O:                     data=0x%x dir=0x%x\n",
+            printf("  - GPIO pin group %u I/O:               data=0x%x dir=0x%x\n",
                     i,pins.gpio_pin[i].data_io,pins.gpio_pin[i].dir_io);
         }
     }
