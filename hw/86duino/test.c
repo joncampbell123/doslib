@@ -170,9 +170,10 @@ struct vtx86_gpio_port_cfg_t {
     struct vtx86_gpio_port_cfg_pin_t        gpio_pingroup[10];
 };
 
-unsigned char   vtx86_86duino_flags = 0;
+unsigned char                   vtx86_86duino_flags = 0;
 #define VTX86_86DUINO_FLAG_SB1          (1u << 0u)
 #define VTX86_86DUINO_FLAG_MC           (1u << 1u)
+#define VTX86_86DUINO_FLAG_DETECTED     (1u << 2u)
 
 struct vtx86_cfg_t              vtx86_cfg = {0};
 struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
@@ -221,38 +222,30 @@ void vtx86_pinMode(uint8_t pin, uint8_t mode) {
 #undef VTX86_PINMODE_PULL_DOWN
 }
 
-int main(int argc,char **argv) {
-    cpu_probe();
-    probe_dos();
-    /* Vortex86 systems are (as far as I know) at least Pentium level (maybe 486?), and support CPUID with vendor "Vortex86 SoC" */
-    if (cpu_basic_level < CPU_486 || !(cpu_flags & CPU_FLAG_CPUID) || memcmp(cpu_cpuid_vendor,"Vortex86 SoC",12) != 0) {
-        printf("Doesn't look like a Vortex86 SoC\n");
-        return 1;
-    }
-    /* They also have a PCI bus that's integral to locating and talking to the GPIO pins, etc. */
-    if (pci_probe(PCI_CFG_TYPE1/*Vortex86 uses this type, definitely!*/) == PCI_CFG_NONE) {
-        printf("PCI bus not found\n");
-        return 1;
-    }
-    /* check the northbridge and southbridge */
-    {
+int probe_86duino(void) {
+    if (!(vtx86_86duino_flags & VTX86_86DUINO_FLAG_DETECTED)) {
         uint16_t vendor,device;
 
         vtx86_86duino_flags = 0;
 
+        cpu_probe();
+        /* Vortex86 systems are (as far as I know) at least Pentium level (maybe 486?), and support CPUID with vendor "Vortex86 SoC" */
+        if (cpu_basic_level < CPU_486 || !(cpu_flags & CPU_FLAG_CPUID) || memcmp(cpu_cpuid_vendor,"Vortex86 SoC",12) != 0)
+            return 0;
+        /* They also have a PCI bus that's integral to locating and talking to the GPIO pins, etc. */
+        if (pci_probe(PCI_CFG_TYPE1/*Vortex86 uses this type, definitely!*/) == PCI_CFG_NONE)
+            return 0;
+
+        /* check the northbridge and southbridge */
         vendor = vtx86_nb_readw(0x00);
         device = vtx86_nb_readw(0x02);
-        if (vendor == 0xFFFF || device == 0xFFFF || vendor != 0x17f3) {
-            printf("Northbridge does not seem correct\n");
-            return 1;
-        }
+        if (vendor == 0xFFFF || device == 0xFFFF || vendor != 0x17f3)
+            return 0;
 
         vendor = vtx86_sb_readw(0x00);
         device = vtx86_sb_readw(0x02);
-        if (vendor == 0xFFFF || device == 0xFFFF || vendor != 0x17f3) {
-            printf("Southbridge does not seem correct\n");
-            return 1;
-        }
+        if (vendor == 0xFFFF || device == 0xFFFF || vendor != 0x17f3)
+            return 0;
 
         vendor = vtx86_sb1_readw(0x00);
         device = vtx86_sb1_readw(0x02);
@@ -263,6 +256,19 @@ int main(int argc,char **argv) {
         device = vtx86_mc_readw(0x02);
         if (!(vendor == 0xFFFF || device == 0xFFFF || vendor != 0x17f3))
             vtx86_86duino_flags |= VTX86_86DUINO_FLAG_MC;
+
+        vtx86_86duino_flags |= VTX86_86DUINO_FLAG_DETECTED;
+    }
+
+    return !!(vtx86_86duino_flags & VTX86_86DUINO_FLAG_DETECTED);
+}
+
+int main(int argc,char **argv) {
+    cpu_probe();
+    probe_dos();
+    if (!probe_86duino()) { // NTS: Will ALSO probe for the PCI bus
+        printf("This program requires a 86duino embedded SoC to run\n");
+        return 1;
     }
 
     printf("Looks like a Vortex86 SoC / 86Duino\n");
