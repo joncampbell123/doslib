@@ -264,6 +264,59 @@ int probe_vtx86(void) {
     return !!(vtx86_86duino_flags & VTX86_86DUINO_FLAG_DETECTED);
 }
 
+int read_vtx86_config(void) {
+    if (!(vtx86_86duino_flags & VTX86_86DUINO_FLAG_DETECTED))
+        return 0;
+
+    vtx86_cfg.uart_config_base_io = vtx86_sb_readw(0x60);
+    if (vtx86_cfg.uart_config_base_io & 1u)
+        vtx86_cfg.uart_config_base_io &= ~1u;
+    else
+        vtx86_cfg.uart_config_base_io  = 0;
+
+    vtx86_cfg.gpio_portconfig_base_io = vtx86_sb_readw(0x62);
+    if (vtx86_cfg.gpio_portconfig_base_io & 1u)
+        vtx86_cfg.gpio_portconfig_base_io &= ~1u;
+    else
+        vtx86_cfg.gpio_portconfig_base_io  = 0;
+
+    vtx86_cfg.gpio_intconfig_base_io = vtx86_sb_readw(0x66);
+    if (vtx86_cfg.gpio_intconfig_base_io & 1u)
+        vtx86_cfg.gpio_intconfig_base_io &= ~1u;
+    else
+        vtx86_cfg.gpio_intconfig_base_io  = 0;
+
+    vtx86_cfg.crossbar_config_base_io = vtx86_sb_readw(0x64);
+    if (vtx86_cfg.crossbar_config_base_io & 1u)
+        vtx86_cfg.crossbar_config_base_io &= ~1u;
+    else
+        vtx86_cfg.crossbar_config_base_io  = 0;
+
+    if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_SB1) {
+        vtx86_cfg.adc_config_base_io = vtx86_sb1_readw(0xE0);
+        if (vtx86_cfg.adc_config_base_io & 1u)
+            vtx86_cfg.adc_config_base_io &= ~1u;
+        else
+            vtx86_cfg.adc_config_base_io  = 0;
+    }
+    else {
+        vtx86_cfg.adc_config_base_io = 0;
+    }
+
+    if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_MC) {
+        vtx86_cfg.pwm_config_base_io = vtx86_mc_readw(0x10);
+        if (vtx86_cfg.pwm_config_base_io & 1u)
+            vtx86_cfg.pwm_config_base_io &= ~1u;
+        else
+            vtx86_cfg.pwm_config_base_io  = 0;
+    }
+    else {
+        vtx86_cfg.pwm_config_base_io = 0;
+    }
+
+    return 1;
+}
+
 int main(int argc,char **argv) {
     cpu_probe();
     probe_dos();
@@ -278,11 +331,10 @@ int main(int argc,char **argv) {
     if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_MC)
         printf("- MC exists\n");
 
-    vtx86_cfg.uart_config_base_io = vtx86_sb_readw(0x60);
-    if (vtx86_cfg.uart_config_base_io & 1u)
-        vtx86_cfg.uart_config_base_io &= ~1u;
-    else
-        vtx86_cfg.uart_config_base_io  = 0;
+    if (!read_vtx86_config()) {
+        printf("Failed to read config\n");
+        return 1;
+    }
 
     printf("- UART Configuration I/O port base:     0x%04x\n",vtx86_cfg.uart_config_base_io);
 
@@ -305,12 +357,6 @@ int main(int argc,char **argv) {
             }
         }
     }
-
-    vtx86_cfg.gpio_portconfig_base_io = vtx86_sb_readw(0x62);
-    if (vtx86_cfg.gpio_portconfig_base_io & 1u)
-        vtx86_cfg.gpio_portconfig_base_io &= ~1u;
-    else
-        vtx86_cfg.gpio_portconfig_base_io  = 0;
 
     printf("- GPIO Port configuration I/O port base:0x%04x\n",vtx86_cfg.gpio_portconfig_base_io);
     if (vtx86_cfg.gpio_portconfig_base_io != 0u) {
@@ -338,45 +384,11 @@ int main(int argc,char **argv) {
         }
     }
 
-    vtx86_cfg.gpio_intconfig_base_io = vtx86_sb_readw(0x66);
-    if (vtx86_cfg.gpio_intconfig_base_io & 1u)
-        vtx86_cfg.gpio_intconfig_base_io &= ~1u;
-    else
-        vtx86_cfg.gpio_intconfig_base_io  = 0;
-
     printf("- GPIO Interrupt config, I/O int base:  0x%04x\n",vtx86_cfg.gpio_intconfig_base_io);
-
-    vtx86_cfg.crossbar_config_base_io = vtx86_sb_readw(0x64);
-    if (vtx86_cfg.crossbar_config_base_io & 1u)
-        vtx86_cfg.crossbar_config_base_io &= ~1u;
-    else
-        vtx86_cfg.crossbar_config_base_io  = 0;
 
     printf("- Crossbar Configuration I/O port base: 0x%04x\n",vtx86_cfg.crossbar_config_base_io);
 
-    if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_SB1) {
-        vtx86_cfg.adc_config_base_io = vtx86_sb1_readw(0xE0);
-        if (vtx86_cfg.adc_config_base_io & 1u)
-            vtx86_cfg.adc_config_base_io &= ~1u;
-        else
-            vtx86_cfg.adc_config_base_io  = 0;
-    }
-    else {
-        vtx86_cfg.adc_config_base_io = 0;
-    }
-
     printf("- ADC I/O port base:                    0x%04x\n",vtx86_cfg.adc_config_base_io);
-
-    if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_MC) {
-        vtx86_cfg.pwm_config_base_io = vtx86_mc_readw(0x10);
-        if (vtx86_cfg.pwm_config_base_io & 1u)
-            vtx86_cfg.pwm_config_base_io &= ~1u;
-        else
-            vtx86_cfg.pwm_config_base_io  = 0;
-    }
-    else {
-        vtx86_cfg.pwm_config_base_io = 0;
-    }
 
     printf("- PWM I/O port base:                    0x%04x\n",vtx86_cfg.pwm_config_base_io);
 
