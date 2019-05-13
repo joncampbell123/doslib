@@ -222,6 +222,7 @@ void vtx86_pinMode(uint8_t pin, uint8_t mode) {
 #undef VTX86_PINMODE_PULL_DOWN
 }
 
+/* NTS: This so far has only been tested against the 86Duino embedded systems */
 int probe_vtx86(void) {
     if (!(vtx86_86duino_flags & VTX86_86DUINO_FLAG_DETECTED)) {
         uint16_t vendor,device;
