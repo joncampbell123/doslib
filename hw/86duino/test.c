@@ -178,9 +178,9 @@ struct vtx86_cfg_t              vtx86_cfg = {0};
 struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
 
 void vtx86_pinMode(uint8_t pin, uint8_t mode) {
-#define TRI_STATE     (0x00)
-#define PULL_UP       (0x01)
-#define PULL_DOWN     (0x02)
+#define VTX86_PINMODE_TRI_STATE         (0x00)
+#define VTX86_PINMODE_PULL_UP           (0x01)
+#define VTX86_PINMODE_PULL_DOWN         (0x02)
 
     unsigned char crossbar_bit;
     unsigned int cpu_flags;
@@ -197,17 +197,17 @@ void vtx86_pinMode(uint8_t pin, uint8_t mode) {
 
     if (mode == VTX86_INPUT)
     {
-        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, TRI_STATE);
+        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_TRI_STATE);
         outp(dbport, inp(dbport) & (~(1u << (crossbar_bit % 8u))));
     }
     else if(mode == VTX86_INPUT_PULLDOWN)
     {
-        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, PULL_DOWN);
+        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_PULL_DOWN);
         outp(dbport, inp(dbport) & (~(1u << (crossbar_bit % 8u))));
     }
     else if (mode == VTX86_INPUT_PULLUP)
     {
-        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, PULL_UP);
+        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_PULL_UP);
         outp(dbport, inp(dbport) & (~(1u << (crossbar_bit % 8u))));
     }
     else {
@@ -216,9 +216,9 @@ void vtx86_pinMode(uint8_t pin, uint8_t mode) {
 
     _sti_if_flags(cpu_flags);
 
-#undef TRI_STATE
-#undef PULL_UP
-#undef PULL_DOWN
+#undef VTX86_PINMODE_TRI_STATE
+#undef VTX86_PINMODE_PULL_UP
+#undef VTX86_PINMODE_PULL_DOWN
 }
 
 int main(int argc,char **argv) {
