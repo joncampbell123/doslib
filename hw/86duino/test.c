@@ -803,6 +803,43 @@ int vtx86_init_adc(void) {
     return 1;
 }
 
+static inline unsigned int vtx86_analogFIFO_Pending(void) {
+    return (inp(vtx86_cfg.adc_config_base_io + 2u) & 1u); /* data ready in FIFO */
+}
+
+static inline uint16_t vtx86_analogFIFO_ReadRaw(void) {
+    return inpw(vtx86_cfg.adc_config_base_io + 4u); /* ADC data register   bits [15:13] indicate which channel, bits [10:0] contain the value */
+}
+
+static inline uint16_t vtx86_analogFIFO_Read(void) {
+    return vtx86_analogFIFO_ReadRaw() & 0x7FFu;
+}
+
+uint16_t vtx86_analogRead(const uint8_t pin) {
+    unsigned int cpu_flags;
+    uint16_t r;
+
+    if (pin >= 8) return (uint16_t)(~0u);
+
+    /* drain FIFO */
+    while (vtx86_analogFIFO_Pending())
+        vtx86_analogFIFO_ReadRaw();
+
+    cpu_flags = get_cpu_flags();
+    _cli();
+
+    outp(vtx86_cfg.adc_config_base_io + 1, 0x08);           // disable ADC
+    outp(vtx86_cfg.adc_config_base_io + 0, 1u << pin);      // enable AUX scan for the pin we want
+    outp(vtx86_cfg.adc_config_base_io + 1, 0x01);           // enable ADC, start ADC, one shot only
+
+    while (!vtx86_analogFIFO_Pending());
+    r = vtx86_analogFIFO_Read();
+
+    _sti_if_flags(cpu_flags);
+
+    return r;
+}
+
 int main(int argc,char **argv) {
     cpu_probe();
     probe_dos();
@@ -874,9 +911,20 @@ int main(int argc,char **argv) {
 
     printf("- ADC I/O port base:                    0x%04x\n",vtx86_cfg.adc_config_base_io);
 
+#if 0
     if (vtx86_init_adc()) {
+        unsigned int i;
+        uint16_t v;
+
         printf("  - ADC I/O port base after init:       0x%04x\n",vtx86_cfg.adc_config_base_io);
+
+        for (i=0;i < 32;i++) {
+            v = vtx86_analogRead(0);
+            printf("%04x ",v);
+        }
+        printf("\n");
     }
+#endif
 
     printf("- PWM I/O port base:                    0x%04x\n",vtx86_cfg.pwm_config_base_io);
 
