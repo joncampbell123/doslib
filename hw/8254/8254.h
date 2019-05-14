@@ -155,13 +155,12 @@ static inline t8254_time_t read_8254_ncli(unsigned char timer) {
 }
 
 static inline t8254_time_t read_8254(unsigned char timer) {
+	unsigned int flags;
 	t8254_time_t x;
 
-    SAVE_CPUFLAGS {
-        _cli(); /* do not interrupt me */
-        x = read_8254_ncli(timer);
-    } RESTORE_CPUFLAGS;
-
+	flags = get_cpu_flags();
+	x = read_8254_ncli(timer);
+	_sti_if_flags(flags);
 	return x;
 }
 
@@ -177,10 +176,11 @@ static inline void writenm_8254_ncli(unsigned char timer,t8254_time_t count) {
 }
 
 static inline void writenm_8254(unsigned char timer,t8254_time_t count) {
-    SAVE_CPUFLAGS {
-        _cli(); /* do not interrupt me */
-        writenm_8254_ncli(timer,count);
-    } RESTORE_CPUFLAGS;
+	unsigned int flags;
+
+	flags = get_cpu_flags();
+	writenm_8254_ncli(timer,count);
+	_sti_if_flags(flags);
 }
 
 /* NTS: At the hardware level, count == 0 is equivalent to programming 0x10000 into it.
@@ -196,10 +196,11 @@ static inline void write_8254_ncli(unsigned char timer,t8254_time_t count,unsign
 }
 
 static inline void write_8254(unsigned char timer,t8254_time_t count,unsigned char mode) {
-    SAVE_CPUFLAGS {
-        _cli(); /* do not interrupt me */
-        write_8254_ncli(timer,count,mode);
-    } RESTORE_CPUFLAGS;
+	unsigned int flags;
+
+	flags = get_cpu_flags();
+	write_8254_ncli(timer,count,mode);
+	_sti_if_flags(flags);
 }
 
 static inline unsigned char t8254_pc_speaker_read_gate() {
