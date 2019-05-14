@@ -46,36 +46,35 @@ signed char p8259_probed = 0;
 
 int probe_8259() {
 	unsigned char om,cm,c2;
+	unsigned int flags;
 
 	if (p8259_probed < 0)
 		return (int)p8259_probed;
 
 	/* don't let the BIOS fiddle with the mask during
 	   the test. Fixes: Pentium machine where 1 out of
-       100 times programs fail with "cannot init PIC" */
-    SAVE_CPUFLAGS {
-        _cli();
-        om = p8259_read_mask(0);
-        p8259_write_mask(0,0xFF);
-        cm = p8259_read_mask(0);
-        p8259_write_mask(0,0x00);
-        c2 = p8259_read_mask(0);
-        p8259_write_mask(0,om);
-    } RESTORE_CPUFLAGS;
+	   100 times programs fail with "cannot init PIC" */
+	flags = get_cpu_flags(); _cli();
+	om = p8259_read_mask(0);
+	p8259_write_mask(0,0xFF);
+	cm = p8259_read_mask(0);
+	p8259_write_mask(0,0x00);
+	c2 = p8259_read_mask(0);
+	p8259_write_mask(0,om);
+	set_cpu_flags(flags);
 
 	if (cm != 0xFF || c2 != 0x00)
 		return (p8259_probed=0);
 
 	/* is a slave present too? */
-    SAVE_CPUFLAGS {
-        _cli();
-        om = p8259_read_mask(8);
-        p8259_write_mask(8,0xFF);
-        cm = p8259_read_mask(8);
-        p8259_write_mask(8,0x00);
-        c2 = p8259_read_mask(8);
-        p8259_write_mask(8,om);
-    } RESTORE_CPUFLAGS;
+	flags = get_cpu_flags(); _cli();
+	om = p8259_read_mask(8);
+	p8259_write_mask(8,0xFF);
+	cm = p8259_read_mask(8);
+	p8259_write_mask(8,0x00);
+	c2 = p8259_read_mask(8);
+	p8259_write_mask(8,om);
+	set_cpu_flags(flags);
 
 	if (cm == 0xFF && c2 == 0x00)
 		p8259_slave_present = 1;
