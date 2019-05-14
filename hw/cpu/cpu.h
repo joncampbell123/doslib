@@ -211,30 +211,7 @@ static void _cpu_pop_flags(void);
  * RESTORE_CPUFLAGS or else it's a C/C++ compiler error.
  *
  * If you think this is terrible, go look at how pthreads on Linux
- * implements one of it's features, it's quite similar.
- *
- * Example usage:
- *
- *     do_something_with_interrupts_possibly_enabled();
- *     SAVE_CPUFLAGS {
- *        _cli();
- *        do_something_that_requires_interrupts_disabled();
- *     } RESTORE_CFLAGS;
- *     do_something_with_interrupts_possibly_enabled_2();
- *
- * Should be equivalent to:
- *
- *     call     do_something_with_interrupts_possibly_enabled
- *
- *     pushf
- *     cli
- *
- *     call     do_something_that_requires_interrupts_disabled
- *
- *     popf
- *
- *     call     do_something_with_interrupts_possibly_enabled_2
- */
+ * implements one of it's features, it's quite similar. */
 #define SAVE_CPUFLAGS       _cpu_push_flags(); {
 #define RESTORE_CPUFLAGS    }; _cpu_pop_flags();
 
