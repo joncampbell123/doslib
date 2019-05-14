@@ -185,36 +185,6 @@ static void set_cpu_flags(unsigned int f);
 	parm [ax];
 #endif
 
-static void _cpu_push_flags(void);
-#if TARGET_MSDOS == 32
-#pragma aux _cpu_push_flags = \
-	"pushfd";
-#else
-#pragma aux _cpu_push_flags = \
-	"pushf";
-#endif
-
-static void _cpu_pop_flags(void);
-#if TARGET_MSDOS == 32
-#pragma aux _cpu_pop_flags = \
-	"popfd";
-#else
-#pragma aux _cpu_pop_flags = \
-	"popf";
-#endif
-
-/* utility macro: pushf + cli and popf bracket for your C/C++ code.
- * Open Watcom C prologue saves SP to BP and indexes by BP for stack
- * params and local variables, so this should not cause any problems.
- *
- * The design also ensures that every SAVE_CPUFLAGS has a matching
- * RESTORE_CPUFLAGS or else it's a C/C++ compiler error.
- *
- * If you think this is terrible, go look at how pthreads on Linux
- * implements one of it's features, it's quite similar. */
-#define SAVE_CPUFLAGS       _cpu_push_flags(); {
-#define RESTORE_CPUFLAGS    }; _cpu_pop_flags();
-
 #if (defined(TARGET_WINDOWS) || defined(TARGET_OS2)) && TARGET_MSDOS == 32
 /* Watcom does not offer int86/int386 for Win32s/Win9x/NT/etc */
 #else
