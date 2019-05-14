@@ -787,6 +787,22 @@ int read_vtx86_config(void) {
     return 1;
 }
 
+int vtx86_init_adc(void) {
+    if (!(vtx86_86duino_flags & VTX86_86DUINO_FLAG_DETECTED))
+        return 0;
+    if (vtx86_cfg.adc_config_base_io == 0)
+        return 0;
+
+    // FIXME: I can't find in the datasheet the list of PCI configuration space registers
+    //        that includes these mystery registers here. This is mystery I/O borrowed from
+    //        the 86Duino core library code.
+    vtx86_sb_writel(0xBC,vtx86_sb_readl(0xBC) & (~(1ul << 28ul)));      // activate ADC (??)
+    vtx86_sb1_writew(0xDE,vtx86_sb1_readw(0xDE) | 0x02);                // ???
+    vtx86_sb1_writel(0xE0,0x00500000ul | (unsigned long)vtx86_cfg.adc_config_base_io); // baseaddr and disable IRQ
+
+    return 1;
+}
+
 int main(int argc,char **argv) {
     cpu_probe();
     probe_dos();
@@ -857,6 +873,10 @@ int main(int argc,char **argv) {
     printf("- Crossbar Configuration I/O port base: 0x%04x\n",vtx86_cfg.crossbar_config_base_io);
 
     printf("- ADC I/O port base:                    0x%04x\n",vtx86_cfg.adc_config_base_io);
+
+    if (vtx86_init_adc()) {
+        printf("  - ADC I/O port base after init:       0x%04x\n",vtx86_cfg.adc_config_base_io);
+    }
 
     printf("- PWM I/O port base:                    0x%04x\n",vtx86_cfg.pwm_config_base_io);
 
