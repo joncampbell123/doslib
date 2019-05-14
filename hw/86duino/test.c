@@ -8,12 +8,15 @@
 #include <malloc.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <math.h>
 #include <dos.h>
 
 #include <hw/dos/dos.h>
 #include <hw/pci/pci.h>
 #include <hw/cpu/cpu.h>
 #include <hw/8254/8254.h>
+
+#define VTX86_SYSCLK            (100)
 
 #define VTX86_INPUT             (0x00)
 #define VTX86_OUTPUT            (0x01)
@@ -25,6 +28,13 @@
 #define VTX86_CHANGE            (0x02)
 #define VTX86_FALLING           (0x03)
 #define VTX86_RISING            (0x04)
+
+#define VTX86_MCM_MC            (0)
+#define VTX86_MCM_MD            (1)
+
+static unsigned int vtx86_MCPWM_modOffset[3] = {0x08u, 0x08u + 0x2cu, 0x08u + 2u*0x2cu};
+
+uint8_t vtx86_mc_md_inuse[45/*PINS*/] = {0};
 
 const int8_t vtx86_uart_IRQs[16] = {
     -1, 9, 3,10,
@@ -67,7 +77,7 @@ const uint8_t vtx86_gpio_to_crossbar_pin_map[45/*PINS*/] =
 #define MCSIF_MODULEB       (1)
 
 #define NOPWM    (-1)
-static int arduino_to_mc_md[2/*MC/MD*/][45/*PINS*/] = {
+const int8_t vtx86_arduino_to_mc_md[2/*MC/MD*/][45/*PINS*/] = {
     // MC
     {NOPWM,         NOPWM,          NOPWM,          MC_MODULE3,
      NOPWM,         MC_MODULE0,     MC_MODULE0,     NOPWM,
@@ -240,6 +250,270 @@ unsigned char                   vtx86_86duino_flags = 0;
 struct vtx86_cfg_t              vtx86_cfg = {0};
 struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
 
+// MC General Registers
+#define MCG_MODEREG1        (0x00L)
+#define MCG_MODEREG2        (0x04L)
+#define MCG_ENABLEREG1      (0x08L)
+#define MCG_ENABLEREG2      (0x0cL)
+#define MCG_PROTECTREG1     (0x10L)
+#define MCG_PROTECTREG2     (0x14L)
+#define MCG_LDRDYSYNCREG1   (0x18L)
+#define MCG_LDRDYSYNCREG2   (0x1cL)
+#define MCG_G1ROUTEREG1     (0x20L)
+#define MCG_G1ROUTEREG2     (0x24L)
+#define MCG_G2ROUTEREG1     (0x28L)
+#define MCG_G2ROUTEREG2     (0x2cL)
+#define MCG_G3ROUTEREG1     (0x30L)
+#define MCG_G3ROUTEREG2     (0x34L)
+#define MCG_INTMASKREG      (0x38L)     // 16-bit
+#define MCG_INTSTATREG      (0x3aL)     // 16-bit
+#define MCG_UNLOCKREG1      (0x3cL)     // 16-bit
+#define MCG_UNLOCKREG2      (0x3eL)     // 16-bit
+
+#define MCPWM_RELOAD_CANCEL         (0x00<<4)
+#define MCPWM_RELOAD_PEREND         (0x01<<4)
+#define MCPWM_RELOAD_PERCE          (0x02<<4)
+#define MCPWM_RELOAD_SCEND          (0x03<<4)
+#define MCPWM_RELOAD_SIFTRIG        (0x05<<4)
+#define MCPWM_RELOAD_EVT            (0x06<<4)
+#define MCPWM_RELOAD_NOW            (0x07<<4)
+
+#define VTX86_ADC_RESOLUTION      (11u) // for 86Duino
+#define VTX86_PWM_RESOLUTION      (13u) // for 86duino
+
+#define MCPWM_HPOL_NORMAL       (0x00L << 29)
+#define MCPWM_HPOL_INVERSE      (0x01L << 29)
+#define MCPWM_LPOL_NORMAL       (0x00L << 28)
+#define MCPWM_LPOL_INVERSE      (0x01L << 28)
+
+#define MCPWM_MPWM_DISABLE      (0x00L << 30)
+#define MCPWM_MPWM_INACTIVE     (0x02L << 30)
+#define MCPWM_MPWM_ACTIVE       (0x03L << 30)
+
+#define MCPWM_EVT_DISABLE           (0x00L)
+#define MCPWM_EVT_PERSC             (0x01L)
+#define MCPWM_EVT_PERPWM            (0x02L)
+#define MCPWM_EVT_PERPWM2           (0x03L)
+
+#define MCPWM_HMASK_NONE        (0x00L << 26)
+#define MCPWM_HMASK_INACTIVE    (0x01L << 26)
+#define MCPWM_HMASK_TRISTATE    (0x03L << 26)
+#define MCPWM_LMASK_NONE        (0x00L << 24)
+#define MCPWM_LMASK_INACTIVE    (0x01L << 24)
+#define MCPWM_LMASK_TRISTATE    (0x03L << 24)
+
+#define MCPWM_EDGE_I0A1     (0x00L << 30)
+#define MCPWM_EDGE_A0I1     (0x02L << 30)
+#define MCPWM_CENTER_I0A1   (0x01L << 30)
+#define MCPWM_CENTER_A0I1   (0x03L << 30)
+
+#define MCPFAU_CAP_1TO0EDGE          (0x00L << 28)
+#define MCPFAU_CAP_0TO1EDGE          (0x02L << 28)
+#define MCPFAU_CAP_CAPCNT_OVERFLOW   (0x08L << 28)
+#define MCPFAU_CAP_FIFOEMPTY         (0x0fL << 28)
+
+// MC PWM Registers
+#define MCPWM_PERREG        (0x00L)
+#define MCPWM_P0REG         (0x04L)
+#define MCPWM_CTRLREG       (0x08L)
+#define MCPWM_STATREG1      (0x0cL)
+#define MCPWM_STATREG2      (0x10L)
+#define MCPWM_EVTREG1       (0x14L)
+#define MCPWM_EVTREG2       (0x18L)
+#define MCPWM_OUTCTRLREG    (0x1cL)
+#define MCPWM_FOUTREG       (0x24L)
+#define MCPWM_LDREG         (0x28L)
+
+void vtx86_mc_outp(const int mc, const uint32_t idx, const uint32_t val) {
+    unsigned int cpu_flags;
+
+    cpu_flags = get_cpu_flags();
+    _cli();
+
+    outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
+    outpd(vtx86_cfg.pwm_config_base_io + (unsigned)idx, val);
+
+    _sti_if_flags(cpu_flags);
+}
+
+uint32_t vtx86_mc_inp(const int mc, const uint32_t idx) {
+    unsigned int cpu_flags;
+    uint32_t tmp;
+
+    cpu_flags = get_cpu_flags();
+    _cli();
+
+    outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
+    tmp = inpd(vtx86_cfg.pwm_config_base_io + (unsigned)idx);
+
+    _sti_if_flags(cpu_flags);
+
+    return tmp;
+}
+
+void vtx86_mc_outpb(const int mc, const uint32_t idx, const unsigned char val) {
+    unsigned int cpu_flags;
+
+    cpu_flags = get_cpu_flags();
+    _cli();
+
+    outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
+    outp(vtx86_cfg.pwm_config_base_io + (unsigned)idx, val);
+
+    _sti_if_flags(cpu_flags);
+}
+
+unsigned char vtx86_mc_inpb(const int mc, const uint32_t idx) {
+    unsigned int cpu_flags;
+    unsigned char tmp;
+
+    cpu_flags = get_cpu_flags();
+    _cli();
+
+    outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
+    tmp = inp(vtx86_cfg.pwm_config_base_io + (unsigned)idx);
+
+    _sti_if_flags(cpu_flags);
+    return tmp;
+}
+
+uint8_t vtx86_mc_IsEnabled(const int mc) {
+    const uint32_t reg1 = vtx86_mc_inp(MC_GENERAL, MCG_ENABLEREG1);
+    const uint32_t reg2 = vtx86_mc_inp(MC_GENERAL, MCG_ENABLEREG2);
+    unsigned int i;
+
+    if ((reg2 & (1L << (mc+4))) != 0L) return 1;     // check SIFBEN
+
+    for (i=0; i<3; i++)  // check PWMAEN/SERVOAEN/SIFAEN, PWMBEN/SERVOBEN, PWMCEN/SERVOCEN
+    {
+        int tmp = mc*3 + i;
+        if (tmp <  32 && ((reg1 & (0x01L << tmp)) != 0L)) return 1;
+        if (tmp >= 32 && ((reg2 & (0x01L << (tmp-32u))) != 0L)) return 1;
+    }
+
+    return 0;
+}
+
+void vtx86_mcpwm_Enable(const uint8_t mc, const uint8_t module) {
+    const uint32_t val  = 1L << ((mc*3 + module) & 31);
+    const uint32_t reg  = ((mc*3 + module) < 32)? MCG_ENABLEREG1 : MCG_ENABLEREG2;
+
+    vtx86_mc_outp(MC_GENERAL, reg, vtx86_mc_inp(MC_GENERAL, reg) | val);
+}
+
+void vtx86_mcpwm_Disable(const uint8_t mc, const uint8_t module) {
+    const uint32_t val  = 1L << ((mc*3 + module) & 31);
+    const uint32_t reg  = ((mc*3 + module) < 32)? MCG_ENABLEREG1 : MCG_ENABLEREG2;
+
+    vtx86_mc_outp(MC_GENERAL, reg, vtx86_mc_inp(MC_GENERAL, reg) & ~val);
+}
+
+void vtx86_mcpwm_DisableProtect(const int mc, const uint8_t module) {
+    uint32_t val = ~(1L << ((mc*3 + module) & 31));
+    uint32_t reg = ((mc*3 + module) < 32)? MCG_PROTECTREG1 : MCG_PROTECTREG2;
+
+    val = vtx86_mc_inp(MC_GENERAL, reg) & val;
+    if ((mc*3 + module) < 32)  // unlock the write protection register
+    {
+        vtx86_mc_outp(MC_GENERAL, MCG_UNLOCKREG1, 0x000055aaL);
+        vtx86_mc_outp(MC_GENERAL, MCG_UNLOCKREG1, 0x0000aa55L);
+    }
+    else
+    {
+        vtx86_mc_outp(MC_GENERAL, MCG_UNLOCKREG1, 0x55aa0000L);
+        vtx86_mc_outp(MC_GENERAL, MCG_UNLOCKREG1, 0xaa550000L);
+    }
+
+    vtx86_mc_outp(MC_GENERAL, reg, val);
+}
+
+void vtx86_Close_Pwm(const uint8_t pin) {
+    unsigned int cpu_flags;
+    int8_t mc, md;
+
+    if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return;
+
+    mc = vtx86_arduino_to_mc_md[VTX86_MCM_MC][pin];
+    md = vtx86_arduino_to_mc_md[VTX86_MCM_MD][pin];
+
+    cpu_flags = get_cpu_flags();
+    _cli();
+
+    if (vtx86_mc_md_inuse[pin] == 1) {
+        vtx86_mcpwm_Disable(mc, md);
+        vtx86_mc_md_inuse[pin] = 0;
+    }
+
+    _sti_if_flags(cpu_flags);
+}
+
+void vtx86_mcpwm_SetDeadband(const int mc, const int module, const uint32_t db) {
+    uint32_t reg = vtx86_MCPWM_modOffset[module] + MCPWM_OUTCTRLREG;
+
+    vtx86_mc_outp(mc, reg, (vtx86_mc_inp(mc, reg) & 0xff000000L) | (db & 0x00ffffffL));
+}
+
+void vtx86_mcpwm_ReloadPWM(const int mc, const int module, const unsigned char mode) {
+    vtx86_mc_outpb(mc, vtx86_MCPWM_modOffset[module] + MCPWM_LDREG + 3L, mode);
+}
+
+void vtx86_mcpwm_ReloadEVT(const int mc, const int module, const unsigned char mode) {
+    vtx86_mc_outpb(mc, vtx86_MCPWM_modOffset[module] + MCPWM_LDREG + 1L, mode);
+}
+
+void vtx86_mcpwm_ReloadOUT(const int mc, const int module, const unsigned char mode) {
+    vtx86_mc_outpb(mc, vtx86_MCPWM_modOffset[module] + MCPWM_LDREG + 2L, mode);
+}
+
+void vtx86_mcpwm_ReloadOUT_Unsafe(const int mc, const int module, const unsigned char mode) {
+    vtx86_mcpwm_DisableProtect(mc, module);
+    vtx86_mc_outpb(mc, vtx86_MCPWM_modOffset[module] + MCPWM_LDREG + 2L, mode);
+}
+
+void mcspwm_ReloadOUT_Unsafe(const int mc, const unsigned char mode) {
+    vtx86_mcpwm_DisableProtect(mc, MCPWM_MODULEA);
+    vtx86_mcpwm_DisableProtect(mc, MCPWM_MODULEB);
+    vtx86_mcpwm_DisableProtect(mc, MCPWM_MODULEC);
+    vtx86_mc_outpb(mc, vtx86_MCPWM_modOffset[MCPWM_MODULEA] + MCPWM_LDREG + 2L, mode);
+}
+
+void vtx86_mcpwm_SetOutMask(const int mc, const int module, const uint32_t mask) {
+    const uint32_t reg = vtx86_MCPWM_modOffset[module] + MCPWM_OUTCTRLREG;
+
+    vtx86_mc_outp(mc, reg, (vtx86_mc_inp(mc, reg) & 0xf0ffffffL) | (mask & 0x0f000000L));
+}
+
+void vtx86_mcpwm_SetOutPolarity(const int mc, const int module, const uint32_t pol) {
+    const uint32_t reg = vtx86_MCPWM_modOffset[module] + MCPWM_OUTCTRLREG;
+
+    vtx86_mc_outp(mc, reg, (vtx86_mc_inp(mc, reg) & 0xcfffffffL) | (pol & 0x30000000L));
+}
+
+void vtx86_mcpwm_SetMPWM(const int mc, const int module, const uint32_t mpwm) {
+    const uint32_t reg = vtx86_MCPWM_modOffset[module] + MCPWM_OUTCTRLREG;
+
+    vtx86_mc_outp(mc, reg, (vtx86_mc_inp(mc, reg) & 0x3fffffffL) | (mpwm & 0xc0000000L));
+}
+
+void vtx86_mcpwm_SetWaveform(const int mc, const int module, const uint32_t mode) {
+    const uint32_t reg = vtx86_MCPWM_modOffset[module] + MCPWM_CTRLREG;
+
+    vtx86_mc_outp(mc, reg, (vtx86_mc_inp(mc, reg) & 0x3fffffffL) | mode);
+}
+
+void vtx86_mcpwm_SetWidth(const int mc, const int module, const uint32_t period, const uint32_t phase0) {
+    const uint32_t reg = vtx86_MCPWM_modOffset[module];
+
+    vtx86_mc_outp(mc, reg + MCPWM_PERREG, period);
+    vtx86_mc_outp(mc, reg + MCPWM_P0REG,  phase0);
+}
+
+void vtx86_mcpwm_SetSamplCycle(const int mc, const int module, const uint32_t sc) {
+    const uint32_t reg = vtx86_MCPWM_modOffset[module] + MCPWM_CTRLREG;
+
+    vtx86_mc_outp(mc, reg, (vtx86_mc_inp(mc, reg) & 0xe0000000L) | (sc & 0x1fffffffL));
+}
+
 void vtx86_digitalWrite(const uint8_t pin,const uint8_t val) {
     unsigned char crossbar_bit;
     unsigned char cbio_bitmask;
@@ -256,8 +530,10 @@ void vtx86_digitalWrite(const uint8_t pin,const uint8_t val) {
 
     if (crossbar_bit >= 32u)
         outp(vtx86_cfg.crossbar_config_base_io + 0x80 + (crossbar_bit / 8u), 0x01);
-    else
+    else {
         outp(vtx86_cfg.crossbar_config_base_io + 0x90 + crossbar_bit, 0x01);
+        vtx86_Close_Pwm(pin);
+    }
 
     cpu_flags = get_cpu_flags();
     _cli();
@@ -336,6 +612,70 @@ void vtx86_pinMode(const uint8_t pin, const uint8_t mode) {
 #undef VTX86_PINMODE_TRI_STATE
 #undef VTX86_PINMODE_PULL_UP
 #undef VTX86_PINMODE_PULL_DOWN
+}
+
+void vtx86_analogWrite(const uint8_t pin, const uint16_t val) {
+    unsigned int cpu_flags;
+    unsigned int mc, md;
+
+    if (pin >= 45/*PINS*/) return;
+    vtx86_pinMode(pin, VTX86_OUTPUT);
+
+    if (val == 0L)
+        vtx86_digitalWrite(pin, VTX86_LOW);
+    else if (val >= ((0x00000001L<<VTX86_PWM_RESOLUTION)-1ul))
+        vtx86_digitalWrite(pin, VTX86_HIGH);
+    else
+    {
+        mc = vtx86_arduino_to_mc_md[VTX86_MCM_MC][pin];
+        md = vtx86_arduino_to_mc_md[VTX86_MCM_MD][pin];
+        if(mc == NOPWM || md == NOPWM)
+        {
+            if (val < (0x00000001L<<(VTX86_PWM_RESOLUTION-1ul)))
+                vtx86_digitalWrite(pin, VTX86_LOW);
+            else
+                vtx86_digitalWrite(pin, VTX86_HIGH);
+            return;
+        }
+
+        // Init H/W PWM
+        cpu_flags = get_cpu_flags();
+        _cli();
+
+        if (vtx86_mc_md_inuse[pin] == 0) {
+            vtx86_mcpwm_ReloadPWM(mc, md, MCPWM_RELOAD_CANCEL);
+            vtx86_mcpwm_SetOutMask(mc, md, MCPWM_HMASK_NONE + MCPWM_LMASK_NONE);
+            vtx86_mcpwm_SetOutPolarity(mc, md, MCPWM_HPOL_NORMAL + MCPWM_LPOL_NORMAL);
+            vtx86_mcpwm_SetDeadband(mc, md, 0L);
+            vtx86_mcpwm_ReloadOUT_Unsafe(mc, md, MCPWM_RELOAD_NOW);
+
+            vtx86_mcpwm_SetWaveform(mc, md, MCPWM_EDGE_A0I1);
+            vtx86_mcpwm_SetSamplCycle(mc, md, 1999L);   // sample cycle: 20ms
+
+            vtx86_cfg.crossbar_config_base_io = vtx86_sb_readw(0x64)&0xfffe;
+            if (pin <= 9)
+                outp(vtx86_cfg.crossbar_config_base_io + 2, 0x01); // GPIO port2: 0A, 0B, 0C, 3A
+            else if (pin > 28)
+                outp(vtx86_cfg.crossbar_config_base_io, 0x03); // GPIO port0: 2A, 2B, 2C, 3C
+            else
+                outp(vtx86_cfg.crossbar_config_base_io + 3, 0x02); // GPIO port3: 1A, 1B, 1C, 3B
+        }
+
+        _sti_if_flags(cpu_flags);
+
+        cpu_flags = get_cpu_flags();
+        _cli();
+
+        vtx86_mcpwm_SetWidth(mc, md, 1000L*VTX86_SYSCLK, val << (16u - VTX86_PWM_RESOLUTION));
+        vtx86_mcpwm_ReloadPWM(mc, md, MCPWM_RELOAD_PEREND);
+        if (vtx86_mc_md_inuse[pin] == 0) {
+            vtx86_mcpwm_Enable(mc, md);
+            outp(vtx86_cfg.crossbar_config_base_io + 0x90 + vtx86_gpio_to_crossbar_pin_map[pin], 0x08);
+            vtx86_mc_md_inuse[pin] = 1;
+        }
+
+        _sti_if_flags(cpu_flags);
+    }
 }
 
 /* NTS: This so far has only been tested against the 86Duino embedded systems */
@@ -522,6 +862,28 @@ int main(int argc,char **argv) {
     printf("- ADC I/O port base:                    0x%04x\n",vtx86_cfg.adc_config_base_io);
 
     printf("- PWM I/O port base:                    0x%04x\n",vtx86_cfg.pwm_config_base_io);
+
+#if 0
+    vtx86_pinMode(3,VTX86_OUTPUT);
+    {
+        unsigned int msk = 1u << VTX86_PWM_RESOLUTION;
+        unsigned int i;
+        unsigned int v;
+        unsigned int wv;
+        double d;
+
+        for (i=0;i < 10000u;i++) {
+            d = ((double)i * msk * 10) / 10000;
+            v = ((unsigned int)d) & (msk - 1u);
+            wv=  (unsigned int)floor(d / msk);
+            if (wv & 1u) v ^= msk - 1u;
+
+            vtx86_analogWrite(3,v);
+
+            t8254_wait(t8254_us2ticks(1000));
+        }
+    }
+#endif
 
     return 0;
 }
