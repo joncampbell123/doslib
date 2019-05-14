@@ -215,10 +215,10 @@ static inline void d8237_reset_flipflop_ncli(unsigned char ch) {
 }
 
 static inline void d8237_reset_flipflop(unsigned char ch) {
-    unsigned int flags = get_cpu_flags();
-    _cli();
-    d8237_reset_flipflop_ncli(ch);
-    _sti_if_flags(flags);
+    SAVE_CPUFLAGS {
+        _cli();
+        d8237_reset_flipflop_ncli(ch);
+    } RESTORE_CPUFLAGS;
 }
 
 /*============*/
@@ -233,11 +233,13 @@ static inline uint16_t d8237_read_base_lo16_ncli(unsigned char ch) {
 }
 
 static inline uint16_t d8237_read_base_lo16(unsigned char ch) {
-    unsigned int flags = get_cpu_flags();
     uint16_t x;
-    _cli();
-    x = d8237_read_base_lo16_ncli(ch);
-    _sti_if_flags(flags);
+
+    SAVE_CPUFLAGS {
+        _cli();
+        x = d8237_read_base_lo16_ncli(ch);
+    } RESTORE_CPUFLAGS;
+
     return x;
 }
 
@@ -253,11 +255,13 @@ static inline uint16_t d8237_read_count_lo16_direct_ncli(unsigned char ch) {
 }
 
 static inline uint16_t d8237_read_count_lo16_direct(unsigned char ch) {
-    unsigned int flags = get_cpu_flags();
     uint16_t x;
-    _cli();
-    x = d8237_read_count_lo16_direct_ncli(ch);
-    _sti_if_flags(flags);
+
+    SAVE_CPUFLAGS {
+        _cli();
+        x = d8237_read_count_lo16_direct_ncli(ch);
+    } RESTORE_CPUFLAGS;
+
     return x;
 }
 
@@ -270,10 +274,10 @@ static inline void d8237_write_base_lo16_ncli(unsigned char ch,uint16_t o) {
 }
 
 static inline void d8237_write_base_lo16(unsigned char ch,uint16_t o) {
-    unsigned int flags = get_cpu_flags();
-    _cli();
-    d8237_write_base_lo16_ncli(ch,o);
-    _sti_if_flags(flags);
+    SAVE_CPUFLAGS {
+        _cli();
+        d8237_write_base_lo16_ncli(ch,o);
+    } RESTORE_CPUFLAGS;
 }
 
 /*============*/
@@ -285,10 +289,10 @@ static inline void d8237_write_count_lo16_ncli(unsigned char ch,uint16_t o) {
 }
 
 static inline void d8237_write_count_lo16(unsigned char ch,uint16_t o) {
-    unsigned int flags = get_cpu_flags();
-    _cli();
-    d8237_write_count_lo16_ncli(ch,o);
-    _sti_if_flags(flags);
+    SAVE_CPUFLAGS {
+        _cli();
+        d8237_write_count_lo16_ncli(ch,o);
+    } RESTORE_CPUFLAGS;
 }
 
 /*============*/
