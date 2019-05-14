@@ -766,11 +766,8 @@ int read_vtx86_config(void) {
         vtx86_cfg.crossbar_config_base_io  = 0;
 
     if (vtx86_86duino_flags & VTX86_86DUINO_FLAG_SB1) {
-        vtx86_cfg.adc_config_base_io = vtx86_sb1_readw(0xE0);
-        if (vtx86_cfg.adc_config_base_io & 1u)
-            vtx86_cfg.adc_config_base_io &= ~1u;
-        else
-            vtx86_cfg.adc_config_base_io  = 0;
+        // NTS: Bit 0 is not set and has no effect on my 86Duino --J.C.
+        vtx86_cfg.adc_config_base_io = vtx86_sb1_readw(0xE0) & (~1u);
     }
     else {
         vtx86_cfg.adc_config_base_io = 0;
