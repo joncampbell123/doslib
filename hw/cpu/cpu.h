@@ -185,6 +185,23 @@ static void set_cpu_flags(unsigned int f);
 	parm [ax];
 #endif
 
+#if TARGET_MSDOS == 16
+// 16-bit WCC uses the BP register to refer to local variables and parameters on the stack.
+// PUSHF and POPF are safe to use, apparently.
+//
+// It is NOT safe to do this with 32-bit WCC386 because the 386 instruction set allows WCC386
+// to generate code that directly references locals relative to ESP, and PUSHFD/POPFD change ESP.
+//
+// I'm going to ask jmalak if an extension to Open Watcom can be added to make this function part of the compiler
+// and therefore part of the stack-relative locals management code.
+# define SAVE_CPUFLAGS          { __asm { pushf }; {
+# define RESTORE_CPUFLAGS       } __asm { popf }; }
+#else
+// more generic safe code
+# define SAVE_CPUFLAGS          { unsigned int __cpu_flags = get_cpu_flags(); {
+# define RESTORE_CPUFLAGS       } set_cpu_flags(__cpu_flags); }
+#endif
+
 #if (defined(TARGET_WINDOWS) || defined(TARGET_OS2)) && TARGET_MSDOS == 32
 /* Watcom does not offer int86/int386 for Win32s/Win9x/NT/etc */
 #else
