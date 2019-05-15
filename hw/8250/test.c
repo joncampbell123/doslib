@@ -107,6 +107,10 @@
  *     - With COM1 (0x3F8)           Y     Y           Y      115200   Y      ?      DB-9 port
  */
 
+#if defined(TARGET_PC98)
+#error this program cannot run on pc98
+#endif
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>

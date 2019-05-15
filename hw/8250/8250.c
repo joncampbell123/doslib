@@ -24,6 +24,8 @@
  * IRQ associated with the device, such as on older Toshiba laptops that emulate
  * a serial port using the IR infared device on the back. */
 
+#if !defined(TARGET_PC98)
+
 #include <string.h>
 
 #include <hw/8250/8250.h>
@@ -54,5 +56,7 @@ int init_8250() {
 
     return 1;
 }
+
+#endif //!defined(TARGET_PC98)
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */

@@ -23,7 +23,9 @@
  * late 1990's hardware, the PnP awareness is required to correctly identify the
  * IRQ associated with the device, such as on older Toshiba laptops that emulate
  * a serial port using the IR infared device on the back. */
- 
+
+#if !defined(TARGET_PC98)
+
 #include <dos.h>        /* MK_FP() */
 
 #include <hw/8250/8250.h>
@@ -54,5 +56,7 @@ uint16_t get_8250_bios_port(unsigned int index) {
     return *((uint16_t far*)MK_FP(0x40,index*2));
 #endif
 }
+
+#endif //!defined(TARGET_PC98)
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */

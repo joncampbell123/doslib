@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <string.h>
 
 #include <hw/8250/8250.h>
@@ -27,5 +29,7 @@ int is_rs232_or_compat_pnp_device(struct isa_pnp_device_node far *devn) {
 
     return 0;
 }
+
+#endif //!defined(TARGET_PC98)
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */

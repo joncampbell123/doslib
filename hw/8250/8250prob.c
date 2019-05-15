@@ -1,4 +1,6 @@
- 
+
+#if !defined(TARGET_PC98)
+
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/8250/8250.h>
@@ -103,5 +105,7 @@ int probe_8250(uint16_t port) {
     base_8250_port[base_8250_ports++] = port;
     return 1;
 }
+
+#endif //!defined(TARGET_PC98)
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */

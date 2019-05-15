@@ -1,4 +1,6 @@
- 
+
+#if !defined(TARGET_PC98)
+
 #include <hw/8250/8250.h>
 
 void uart_8250_get_config(struct info_8250 *uart,unsigned long *baud,unsigned char *bits,unsigned char *stop_bits,unsigned char *parity) {
@@ -20,5 +22,7 @@ void uart_8250_get_config(struct info_8250 *uart,unsigned long *baud,unsigned ch
 
     *baud = uart_8250_divisor_to_baud(uart,dlab);
 }
+
+#endif //!defined(TARGET_PC98)
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */

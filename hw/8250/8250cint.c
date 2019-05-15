@@ -1,4 +1,6 @@
- 
+
+#if !defined(TARGET_PC98)
+
 #include <hw/8250/8250.h>
 
 void uart_8250_enable_interrupt(struct info_8250 *uart,uint8_t mask) {
@@ -15,5 +17,7 @@ void uart_8250_enable_interrupt(struct info_8250 *uart,uint8_t mask) {
     else           c &= ~8;
     outp(uart->port+PORT_8250_MCR,c);
 }
+
+#endif //!defined(TARGET_PC98)
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */

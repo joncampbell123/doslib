@@ -1,4 +1,6 @@
- 
+
+#if !defined(TARGET_PC98)
+
 #include <hw/dos/dos.h>
 #include <hw/8250/8250.h>
 #include <hw/dos/doswin.h>
@@ -98,5 +100,7 @@ int add_pnp_8250(uint16_t port,int irq) {
     base_8250_port[base_8250_ports++] = port;
     return 1;
 }
+
+#endif //!defined(TARGET_PC98)
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */

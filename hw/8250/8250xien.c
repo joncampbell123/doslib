@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <hw/8250/8250.h>
 
 void uart_toggle_xmit_ien(struct info_8250 *uart) {
@@ -9,5 +11,7 @@ void uart_toggle_xmit_ien(struct info_8250 *uart) {
     outp(uart->port+PORT_8250_IER,c & ~(1 << 2));
     outp(uart->port+PORT_8250_IER,c);
 }
+
+#endif //!defined(TARGET_PC98)
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */

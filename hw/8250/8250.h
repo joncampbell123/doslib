@@ -14,6 +14,8 @@
  *          enable/disable interrupts (cli/sti). To avoid contention with
  *          interrupt handlers the calling program should do that. */
 
+#if !defined(TARGET_PC98)
+
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdint.h>
 
@@ -147,5 +149,7 @@ void uart_8250_enable_interrupt(struct info_8250 *uart,uint8_t mask);
 uint16_t uart_8250_baud_to_divisor(struct info_8250 *uart,unsigned long rate);
 unsigned long uart_8250_divisor_to_baud(struct info_8250 *uart,uint16_t rate);
 void uart_8250_get_config(struct info_8250 *uart,unsigned long *baud,unsigned char *bits,unsigned char *stop_bits,unsigned char *parity);
+
+#endif //!defined(TARGET_PC98)
 
 /* vim: set tabstop=4 softtabstop=4 shiftwidth=4 expandtab */
