@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -33,4 +35,6 @@ void isa_pnp_init_key() {
 	 * to access information for possibly very slow storage devices */
 	t8254_wait(t8254_us2ticks(1200));
 }
+
+#endif //!defined(TARGET_PC98)
 

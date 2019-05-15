@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #ifndef __ISAPNP_ISAPNP_H
 #define __ISAPNP_ISAPNP_H
 
@@ -315,4 +317,6 @@ static inline unsigned int has_isa_pnp_bios() {
 }
 
 #endif /* __ISAPNP_ISAPNP_H */
+
+#endif /*!defined(TARGET_PC98)*/
 

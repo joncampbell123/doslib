@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -136,4 +138,6 @@ fail:				free_isa_pnp_bios();
 
 	return 0;
 }
+
+#endif //!defined(TARGET_PC98)
 

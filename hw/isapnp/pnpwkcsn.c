@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -17,4 +19,6 @@ void isa_pnp_wake_csn(unsigned char id) {
 	isa_pnp_write_address(3); /* Wake[CSN] */
 	isa_pnp_write_data(id); /* isolation state */
 }
+
+#endif //!defined(TARGET_PC98)
 

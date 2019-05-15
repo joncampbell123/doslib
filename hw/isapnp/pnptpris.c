@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -23,4 +25,6 @@ const char *isapnp_sdf_priority_str(uint8_t x) {
 	if (x >= 3) return NULL;
 	return isapnp_sdf_priority_strs[x];
 }
+
+#endif //!defined(TARGET_PC98)
 

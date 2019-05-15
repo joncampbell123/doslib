@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -22,4 +24,6 @@ int isa_pnp_read_dma(unsigned int i) {
 	if ((c & 7) == 4) return -1;	/* not assigned */
 	return (c & 7);
 }
+
+#endif //!defined(TARGET_PC98)
 

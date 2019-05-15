@@ -24,6 +24,10 @@
 #include <fcntl.h>
 #include <dos.h>
 
+#if defined(TARGET_PC98)
+#error this program cannot run on PC98
+#endif
+
 #include <hw/dos/dos.h>
 #include <hw/8254/8254.h>		/* 8254 timer */
 #include <isapnp/isapnp.h>

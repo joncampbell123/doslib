@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -398,3 +400,4 @@ unsigned int isa_pnp_bios_send_message(unsigned int msg) {
 
 #endif
 
+#endif //!defined(TARGET_PC98)

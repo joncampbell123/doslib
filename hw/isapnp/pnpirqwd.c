@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -25,4 +27,6 @@ void isa_pnp_write_irq_mode(unsigned int i,unsigned int im) {
 	isa_pnp_write_data_register(0x70 + (i*2) + 1,im);
 	t8254_wait(t8254_us2ticks(250));
 }
+
+#endif //!defined(TARGET_PC98)
 

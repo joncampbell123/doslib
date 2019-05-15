@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -39,4 +41,6 @@ const char *isapnp_dma_xfer_preference_str[4] = {
 	"16-bit",
 	"??"
 };
+
+#endif //!defined(TARGET_PC98)
 

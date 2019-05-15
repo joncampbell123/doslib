@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -23,4 +25,6 @@ void isa_pnp_product_id_to_str(char *str,unsigned long id) {
 		(unsigned char)((id>>28)&0xF),
 		(unsigned char)((id>>24)&0xF));
 }
+
+#endif //!defined(TARGET_PC98)
 

@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -47,4 +49,6 @@ const char *isapnp_tag_str(uint8_t tag) { /* tag from struct isapnp_tag NOT the 
 
 	return isapnp_tag_strs[tag];
 }
+
+#endif //!defined(TARGET_PC98)
 

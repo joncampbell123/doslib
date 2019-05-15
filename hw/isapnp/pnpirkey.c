@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -44,3 +46,4 @@ int isa_pnp_init_key_readback(unsigned char *data/*9 bytes*/) {
 	return (checksum == data[8]);
 }
 
+#endif //!defined(TARGET_PC98)

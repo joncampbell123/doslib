@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -31,4 +33,6 @@ unsigned char isa_pnp_read_config() {
 	} while (1);
 	return ret;
 }
+
+#endif //!defined(TARGET_PC98)
 

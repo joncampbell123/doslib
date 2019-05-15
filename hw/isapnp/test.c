@@ -31,6 +31,10 @@
 #include <hw/vga/vgatty.h>
 #include <isapnp/isapnp.h>
 
+#if defined(TARGET_PC98)
+#error this program cannot support PC98
+#endif
+
 #if defined(__TINY__)
 static unsigned char devnode_raw[1024]; // NTS: declaring it "far" causes problem with forced CS = DS = DGROUP segref patching
 #else

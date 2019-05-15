@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -42,4 +44,6 @@ int isapnp_read_tag(uint8_t far **pptr,uint8_t far *fence,struct isapnp_tag *tag
 	*pptr = ptr;
 	return 1;
 }
+
+#endif //!defined(TARGET_PC98)
 

@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>
@@ -42,4 +44,6 @@ const char *isa_pnp_device_category(uint32_t productid) {
 
 	return NULL;
 }
+
+#endif //!defined(TARGET_PC98)
 
