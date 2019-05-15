@@ -787,6 +787,8 @@ uint16_t vtx86_analogRead(const uint8_t pin) {
     while (vtx86_analogFIFO_Pending())
         vtx86_analogFIFO_ReadRaw();
 
+    /* TODO: Enforce a timeout, just as the 86Duino core code does.
+     *       Perhaps there is a case where the ADC fails to function. */
     SAVE_CPUFLAGS( _cli() ) {
         outp(vtx86_cfg.adc_config_base_io + 1, 0x08);           // disable ADC
         outp(vtx86_cfg.adc_config_base_io + 0, 1u << pin);      // enable AUX scan for the pin we want
