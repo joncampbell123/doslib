@@ -127,12 +127,12 @@ typedef uint16_t t8254_time_t;
  * was programmed as, the output of the counter at the time, and whether a new counter
  * value was being loaded. The t8254_readback_t structure is used to read this info */
 struct t8254_readback_entry_t {
-	unsigned char		status;
-	t8254_time_t		count;
+    unsigned char       status;
+    t8254_time_t        count;
 };
 
 struct t8254_readback_t {
-	struct t8254_readback_entry_t	timer[3];
+    struct t8254_readback_entry_t   timer[3];
 };
 
 extern uint32_t t8254_counter[3];
@@ -145,13 +145,13 @@ unsigned long t8254_us2ticksr(unsigned long a,unsigned long *rem);
 void t8254_wait(unsigned long ticks);
 
 static inline t8254_time_t read_8254_ncli(unsigned char timer) {
-	t8254_time_t x;
+    t8254_time_t x;
 
-	if (timer > 2) return 0;
-	outp(T8254_CONTROL_PORT,(timer << 6) | (T8254_RW_COUNTER_LATCH << 4) | 0/*don't care*/); /* latch counter N, counter latch read */
-	x  = (t8254_time_t)inp(T8254_TIMER_PORT(timer));
-	x |= (t8254_time_t)inp(T8254_TIMER_PORT(timer)) << 8U;
-	return x;
+    if (timer > 2) return 0;
+    outp(T8254_CONTROL_PORT,(timer << 6) | (T8254_RW_COUNTER_LATCH << 4) | 0/*don't care*/); /* latch counter N, counter latch read */
+    x  = (t8254_time_t)inp(T8254_TIMER_PORT(timer));
+    x |= (t8254_time_t)inp(T8254_TIMER_PORT(timer)) << 8U;
+    return x;
 }
 
 static inline t8254_time_t read_8254(unsigned char timer) {
@@ -168,11 +168,11 @@ static inline t8254_time_t read_8254(unsigned char timer) {
  * before using this function you will need to use write_8254 to provide the mode.
  * the most common case is writing LSB then MSB, which this code assumes. */
 static inline void writenm_8254_ncli(unsigned char timer,t8254_time_t count) {
-	if (timer > 2) return;
-	outp(T8254_TIMER_PORT(timer),count);
-	outp(T8254_TIMER_PORT(timer),count >> 8);
-	/* for our own timing code, keep track of what that count was. we can't read it back from H/W anyway */
-	t8254_counter[timer] = (count == 0 ? 0x10000 : count);
+    if (timer > 2) return;
+    outp(T8254_TIMER_PORT(timer),count);
+    outp(T8254_TIMER_PORT(timer),count >> 8);
+    /* for our own timing code, keep track of what that count was. we can't read it back from H/W anyway */
+    t8254_counter[timer] = (count == 0 ? 0x10000 : count);
 }
 
 static inline void writenm_8254(unsigned char timer,t8254_time_t count) {
@@ -185,12 +185,12 @@ static inline void writenm_8254(unsigned char timer,t8254_time_t count) {
  *      t8254_time_t is a 16-bit integer, and we write 16 bits, so 0 and 0x10000 is
  *      the same thing to us anyway */
 static inline void write_8254_ncli(unsigned char timer,t8254_time_t count,unsigned char mode) {
-	if (timer > 2) return;
-	outp(T8254_CONTROL_PORT,(timer << 6) | (T8254_RW_LSB_THEN_MSB << 4) | (mode << 1)); /* set new time */
-	outp(T8254_TIMER_PORT(timer),count);
-	outp(T8254_TIMER_PORT(timer),count >> 8);
-	/* for our own timing code, keep track of what that count was. we can't read it back from H/W anyway */
-	t8254_counter[timer] = (count == 0 ? 0x10000 : count);
+    if (timer > 2) return;
+    outp(T8254_CONTROL_PORT,(timer << 6) | (T8254_RW_LSB_THEN_MSB << 4) | (mode << 1)); /* set new time */
+    outp(T8254_TIMER_PORT(timer),count);
+    outp(T8254_TIMER_PORT(timer),count >> 8);
+    /* for our own timing code, keep track of what that count was. we can't read it back from H/W anyway */
+    t8254_counter[timer] = (count == 0 ? 0x10000 : count);
 }
 
 static inline void write_8254(unsigned char timer,t8254_time_t count,unsigned char mode) {
@@ -200,29 +200,29 @@ static inline void write_8254(unsigned char timer,t8254_time_t count,unsigned ch
 }
 
 static inline unsigned char t8254_pc_speaker_read_gate() {
-	return ((inp(PC_SPEAKER_GATE) >> PC_SPEAKER_GATE_SHIFT) & PC_SPEAKER_GATE_MASK) ^ PC_SPEAKER_GATE_XOR;
+    return ((inp(PC_SPEAKER_GATE) >> PC_SPEAKER_GATE_SHIFT) & PC_SPEAKER_GATE_MASK) ^ PC_SPEAKER_GATE_XOR;
 }
 
 static inline void t8254_pc_speaker_set_gate(unsigned char m) {
-	unsigned char x;
+    unsigned char x;
 
-	x = inp(PC_SPEAKER_GATE);
-	x &= ~(PC_SPEAKER_GATE_MASK << PC_SPEAKER_GATE_SHIFT);
-	x |=  ((m ^ PC_SPEAKER_GATE_XOR) & PC_SPEAKER_GATE_MASK) << PC_SPEAKER_GATE_SHIFT;
-	outp(PC_SPEAKER_GATE,x);
+    x = inp(PC_SPEAKER_GATE);
+    x &= ~(PC_SPEAKER_GATE_MASK << PC_SPEAKER_GATE_SHIFT);
+    x |=  ((m ^ PC_SPEAKER_GATE_XOR) & PC_SPEAKER_GATE_MASK) << PC_SPEAKER_GATE_SHIFT;
+    outp(PC_SPEAKER_GATE,x);
 }
 
 static inline void write_8254_system_timer(t8254_time_t max) {
-	write_8254(T8254_TIMER_INTERRUPT_TICK,max,T8254_MODE_2_RATE_GENERATOR);
+    write_8254(T8254_TIMER_INTERRUPT_TICK,max,T8254_MODE_2_RATE_GENERATOR);
 }
 
 static inline void write_8254_pc_speaker(t8254_time_t max) {
-	write_8254(T8254_TIMER_PC_SPEAKER,max,T8254_MODE_3_SQUARE_WAVE_MODE);
+    write_8254(T8254_TIMER_PC_SPEAKER,max,T8254_MODE_3_SQUARE_WAVE_MODE);
 }
 
 /* you must set the PIT to mode 3 with write_8254_pc_speaker() first before calling this function! */
 static inline void writenm_8254_pc_speaker(t8254_time_t max) {
-	writenm_8254(T8254_TIMER_PC_SPEAKER,max);
+    writenm_8254(T8254_TIMER_PC_SPEAKER,max);
 }
 
 #ifdef TARGET_PC98
@@ -232,8 +232,8 @@ static inline void writenm_8254_pc_speaker(t8254_time_t max) {
 #else
 /* IBM AT and PS/2 only. This does NOT exist on PC/XT, port B of the PPI is output only, bit 5 enables I/O channel check on PC/XT */
 static inline uint8_t read_8254_pc_speaker_output() {
-	/* bit 5 of port 61h gives us the output of the counter (prior to the AND gate) */
-	return (inp(PC_SPEAKER_GATE) & 0x20);
+    /* bit 5 of port 61h gives us the output of the counter (prior to the AND gate) */
+    return (inp(PC_SPEAKER_GATE) & 0x20);
 }
 #endif
 
