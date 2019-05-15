@@ -198,7 +198,7 @@ static void set_cpu_flags(unsigned int f);
 # define RESTORE_CPUFLAGS       } __asm { popf }; }
 #else
 // more generic safe code
-# define SAVE_CPUFLAGS          { unsigned int __cpu_flags = get_cpu_flags(); {
+# define SAVE_CPUFLAGS          { const unsigned int __cpu_flags = get_cpu_flags(); {
 # define RESTORE_CPUFLAGS       } set_cpu_flags(__cpu_flags); }
 #endif
 
