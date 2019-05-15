@@ -459,7 +459,11 @@ int sndsb_determine_ideal_dsp_play_method(struct sndsb_ctx *cx) {
 }
 
 void sndsb_update_dspio(struct sndsb_ctx *cx) {
+#if defined(TARGET_PC98)
+    cx->dspio = cx->baseio + (cx->dsp_alias_port?0x100:0);
+#else
     cx->dspio = cx->baseio + (cx->dsp_alias_port?1:0);
+#endif
 }
 
 /* this is for taking a base address and probing the I/O ports there to see if something like a SB DSP is there. */
@@ -468,10 +472,13 @@ void sndsb_update_dspio(struct sndsb_ctx *cx) {
 int sndsb_try_base(uint16_t iobase) {
 	struct sndsb_ctx *cx;
 
-	if ((iobase&0xF) != 0)
+#if defined(TARGET_PC98)
+	if (iobase < 0xD2 || iobase > 0xDE || (iobase & 1) != 0) // xxD2 to xxDE even
 		return 0;
-	if (iobase < 0x210 || iobase > 0x270)
+#else
+	if (iobase < 0x210 || iobase > 0x270 || (iobase & 0xF) != 0) // 210 to 270 every 0x10 I/O ports
 		return 0;
+#endif
 	if (sndsb_by_base(iobase) != NULL)
 		return 0;
 

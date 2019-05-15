@@ -36,16 +36,29 @@
 
 #define SNDSB_MAX_CARDS                                         4
 
+#if defined(TARGET_PC98)
+/* Sound Blaster I/O ports */
+/* 0x20xx + const = I/O port  where xx can be 0xD2 to 0xDE even */
+# define SNDSB_BIO_MIXER_INDEX                                   0x2400
+# define SNDSB_BIO_MIXER_DATA                                    0x2500
+# define SNDSB_BIO_DSP_RESET                                     0x2600
+# define SNDSB_BIO_DSP_READ_DATA                                 0x2A00
+# define SNDSB_BIO_DSP_WRITE_DATA                                0x2C00
+# define SNDSB_BIO_DSP_WRITE_STATUS                              0x2C00
+# define SNDSB_BIO_DSP_READ_STATUS                               0x2E00
+# define SNDSB_BIO_DSP_READ_STATUS16                             0x2F00
+#else
 /* Sound Blaster I/O ports */
 /* 0x2x0 + const = I/O port */
-#define SNDSB_BIO_MIXER_INDEX                                   0x4
-#define SNDSB_BIO_MIXER_DATA                                    0x5
-#define SNDSB_BIO_DSP_RESET                                     0x6
-#define SNDSB_BIO_DSP_READ_DATA                                 0xA
-#define SNDSB_BIO_DSP_WRITE_DATA                                0xC
-#define SNDSB_BIO_DSP_WRITE_STATUS                              0xC
-#define SNDSB_BIO_DSP_READ_STATUS                               0xE
-#define SNDSB_BIO_DSP_READ_STATUS16                             0xF
+# define SNDSB_BIO_MIXER_INDEX                                   0x4
+# define SNDSB_BIO_MIXER_DATA                                    0x5
+# define SNDSB_BIO_DSP_RESET                                     0x6
+# define SNDSB_BIO_DSP_READ_DATA                                 0xA
+# define SNDSB_BIO_DSP_WRITE_DATA                                0xC
+# define SNDSB_BIO_DSP_WRITE_STATUS                              0xC
+# define SNDSB_BIO_DSP_READ_STATUS                               0xE
+# define SNDSB_BIO_DSP_READ_STATUS16                             0xF
+#endif
 
 /* DSP commands */
 #define SNDSB_DSPCMD_SB16ASP_MICROCODE_DOWNLOAD                 0x01 // Linux SB16CSP driver

@@ -338,10 +338,18 @@ int common_sb_init(void) {
         if (!sndsb_init_card(sndsb_card_blaster))
             sndsb_free_card(sndsb_card_blaster);
     }
+
+#if defined(TARGET_PC98)
+    if (sndsb_try_base(0xD2))
+        printf("Also found one at 0xD2\n");
+    if (sndsb_try_base(0xD4))
+        printf("Also found one at 0xD4\n");
+#else
     if (sndsb_try_base(0x220))
         printf("Also found one at 0x220\n");
     if (sndsb_try_base(0x240))
         printf("Also found one at 0x240\n");
+#endif
 
     /* init card no longer probes the mixer */
     for (i=0;i < SNDSB_MAX_CARDS;i++) {
