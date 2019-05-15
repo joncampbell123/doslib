@@ -603,6 +603,9 @@ int sndsb_continue_autoinit_mode(struct sndsb_ctx *cx);
 int sndsb_halt_dma(struct sndsb_ctx *cx);
 int sndsb_continue_dma(struct sndsb_ctx *cx);
 
+int sndsb_sb16_8051_mem_read(struct sndsb_ctx* cx,const unsigned char idx);
+int sndsb_sb16_8051_mem_write(struct sndsb_ctx* cx,const unsigned char idx,const unsigned char c);
+
 extern const signed char sndsb_adpcm_4bit_scalemap[64];
 extern const signed char sndsb_adpcm_4bit_adjustmap[32];
 

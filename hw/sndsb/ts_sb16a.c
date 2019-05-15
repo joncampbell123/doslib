@@ -29,43 +29,6 @@
 
 unsigned char fast_mode = 0;
 
-/* TODO: Move into SNDSB library */
-int sndsb_sb16_8051_mem_read(struct sndsb_ctx* cx,const unsigned char idx) {
-	if (sb_card->dsp_vmaj < 4) return -1;
-
-    if (sndsb_write_dsp(cx,0xF9) < 0) {
-        sndsb_reset_dsp(cx);
-        return -1;
-    }
-    if (sndsb_write_dsp(cx,idx) < 0) {
-        sndsb_reset_dsp(cx);
-        return -1;
-    }
-
-    return sndsb_read_dsp(cx);
-}
-
-/* TODO: Move into SNDSB library */
-int sndsb_sb16_8051_mem_write(struct sndsb_ctx* cx,const unsigned char idx,const unsigned char c) {
-	if (sb_card->dsp_vmaj < 4) return -1;
-
-    if (sndsb_write_dsp(cx,0xFA) < 0) {
-        sndsb_reset_dsp(cx);
-        return -1;
-    }
-    if (sndsb_write_dsp(cx,idx) < 0) {
-        sndsb_reset_dsp(cx);
-        return -1;
-    }
-    if (sndsb_write_dsp(cx,c) < 0) {
-        sndsb_reset_dsp(cx);
-        return -1;
-    }
-
-    /* DSP does not return data in response */
-    return 0;
-}
-
 uint16_t sndsb_sb16_read_dsp_internal_rate(struct sndsb_ctx* cx) {
     uint16_t r;
     int i;
