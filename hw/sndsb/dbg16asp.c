@@ -11,7 +11,6 @@
 #include <fcntl.h>
 #include <dos.h>
 
-#include <hw/vga/vga.h>
 #include <hw/dos/dos.h>
 #include <hw/8237/8237.h>		/* 8237 DMA */
 #include <hw/8254/8254.h>		/* 8254 timer */
