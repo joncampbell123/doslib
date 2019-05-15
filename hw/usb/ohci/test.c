@@ -403,20 +403,18 @@ int usb_ohci_ci_update_root_hub_status(struct usb_ohci_ci_ctx *c) {
 }
 
 int usb_ohci_ci_update_frame_status(struct usb_ohci_ci_ctx *c) {
-	unsigned int cpu_flags;
 	uint32_t tmp;
 
 	if (c == NULL) return -1;
 
-	cpu_flags = get_cpu_flags(); _cli();
+    SAVE_CPUFLAGS( _cli() ) {
+        tmp = usb_ohci_ci_read_reg(c,HcFmRemaining);
+        c->FrameRemaining = tmp & 0x3FFF;
 
-	tmp = usb_ohci_ci_read_reg(c,HcFmRemaining);
-	c->FrameRemaining = tmp & 0x3FFF;
+        tmp = usb_ohci_ci_read_reg(c,HcFmNumber);
+        c->FrameNumber = (tmp & 0xFFFF) | (((uint32_t)c->FrameNumberHi) << 16UL);
+    } RESTORE_CPUFLAGS();
 
-	tmp = usb_ohci_ci_read_reg(c,HcFmNumber);
-	c->FrameNumber = (tmp & 0xFFFF) | (((uint32_t)c->FrameNumberHi) << 16UL);
-
-	set_cpu_flags(cpu_flags);
 	return 0;
 }
 
@@ -626,7 +624,6 @@ int usb_ohci_ci_pci_device_is_ohci(struct usb_ohci_ci_ctx *ohci,uint8_t bus,uint
 
 int usb_ohci_ci_ownership_change(struct usb_ohci_ci_ctx *c,unsigned int bios_owner) {
 	unsigned int patience;
-	unsigned int cpu_flags;
 	int ret = 0;
 
 	if (c == NULL) return -1;
@@ -636,24 +633,22 @@ int usb_ohci_ci_ownership_change(struct usb_ohci_ci_ctx *c,unsigned int bios_own
 	c->bios_is_using_it = c->control.f.InterruptRouting;
 	if ((c->bios_is_using_it?1:0) == (bios_owner?1:0)) return 0; /* break loop when ownership becomes what we want */
 
-	cpu_flags = get_cpu_flags(); _cli();
+    SAVE_CPUFLAGS( _cli() ) {
+        if (bios_owner && !c->bios_is_using_it) {
+            /* disable all other interrupts */
+            usb_ohci_ci_write_reg(c,HcInterruptDisable,/*HcInterrupt_MIE+*/HcInterrupt_OC+HcInterrupt_RHSC+HcInterrupt_FNO+HcInterrupt_UE+HcInterrupt_RD+HcInterrupt_SF+HcInterrupt_WDH+HcInterrupt_SO); /* disable all event interrupts, except Ownership Change */
 
-	if (bios_owner && !c->bios_is_using_it) {
-		/* disable all other interrupts */
-		usb_ohci_ci_write_reg(c,HcInterruptDisable,/*HcInterrupt_MIE+*/HcInterrupt_OC+HcInterrupt_RHSC+HcInterrupt_FNO+HcInterrupt_UE+HcInterrupt_RD+HcInterrupt_SF+HcInterrupt_WDH+HcInterrupt_SO); /* disable all event interrupts, except Ownership Change */
+        }
 
-	}
+        /* enable the Ownership Change interrupt, make sure BIOS responds to it */
+        usb_ohci_ci_write_reg(c,HcInterruptEnable,HcInterrupt_MIE/*Master Interrupt Enable*/+HcInterrupt_OC/*Ownership Change*/);
 
-	/* enable the Ownership Change interrupt, make sure BIOS responds to it */
-	usb_ohci_ci_write_reg(c,HcInterruptEnable,HcInterrupt_MIE/*Master Interrupt Enable*/+HcInterrupt_OC/*Ownership Change*/);
+        /* forcibly clear interrupt status to ensure it triggers */
+        usb_ohci_ci_write_reg(c,HcInterruptStatus,0x7FFFFFFFUL);
 
-	/* forcibly clear interrupt status to ensure it triggers */
-	usb_ohci_ci_write_reg(c,HcInterruptStatus,0x7FFFFFFFUL);
-
-	/* write InterruptStatus to change ownership */
-	usb_ohci_ci_write_reg(c,HcCommandStatus,1UL << 3UL);
-
-	set_cpu_flags(cpu_flags);
+        /* write InterruptStatus to change ownership */
+        usb_ohci_ci_write_reg(c,HcCommandStatus,1UL << 3UL);
+    } RESTORE_CPUFLAGS();
 
 	/* wait for status to clear (NTS: on one test system, the BIOS seems to take 3 seconds to regain control) */
 	patience = 150; /* 100ms x 150 = 15 seconds */
@@ -664,25 +659,24 @@ int usb_ohci_ci_ownership_change(struct usb_ohci_ci_ctx *c,unsigned int bios_own
 		if ((c->bios_is_using_it?1:0) == (bios_owner?1:0)) break; /* break loop when ownership becomes what we want */
 
 		if (--patience == 0) {
-			cpu_flags = get_cpu_flags(); _cli();
-
-			/* the BIOS failed to get our change request */
-			fprintf(stderr,"OHCI warning: Ownership Change not acknowledged\n");
-
-			set_cpu_flags(cpu_flags);
-			ret = -1;
-			break;
-		}
+            SAVE_CPUFLAGS( _cli() ) {
+                /* the BIOS failed to get our change request */
+                fprintf(stderr,"OHCI warning: Ownership Change not acknowledged\n");
+            } RESTORE_CPUFLAGS();
+            ret = -1;
+            break;
+        }
 
 		t8254_wait(t8254_us2ticks(100000/*100ms*/));
 	}
 
 	if (!bios_owner && !c->control.f.InterruptRouting) {
 		fprintf(stderr,"OHCI debug: Disabling all interrupts, I own the controller now\n");
-		cpu_flags = get_cpu_flags(); _cli();
-		usb_ohci_ci_write_reg(c,HcInterruptDisable,HcInterrupt_SO+HcInterrupt_WDH+HcInterrupt_SF+HcInterrupt_RD+HcInterrupt_UE+HcInterrupt_FNO+HcInterrupt_RHSC+HcInterrupt_OC+HcInterrupt_MIE);
-		set_cpu_flags(cpu_flags);
-	}
+
+        SAVE_CPUFLAGS( _cli() ) {
+            usb_ohci_ci_write_reg(c,HcInterruptDisable,HcInterrupt_SO+HcInterrupt_WDH+HcInterrupt_SF+HcInterrupt_RD+HcInterrupt_UE+HcInterrupt_FNO+HcInterrupt_RHSC+HcInterrupt_OC+HcInterrupt_MIE);
+        } RESTORE_CPUFLAGS();
+    }
 
 	usb_ohci_ci_update_ownership_status(c);
 	return ret;
