@@ -155,13 +155,13 @@ static inline t8254_time_t read_8254_ncli(unsigned char timer) {
 }
 
 static inline t8254_time_t read_8254(unsigned char timer) {
-	unsigned int flags;
-	t8254_time_t x;
+    t8254_time_t x;
 
-	flags = get_cpu_flags();
-	x = read_8254_ncli(timer);
-	_sti_if_flags(flags);
-	return x;
+    SAVE_CPUFLAGS( _cli() ) {
+        x = read_8254_ncli(timer);
+    } RESTORE_CPUFLAGS();
+
+    return x;
 }
 
 /* write without writing port 43h, therefore no mode control.
@@ -176,11 +176,9 @@ static inline void writenm_8254_ncli(unsigned char timer,t8254_time_t count) {
 }
 
 static inline void writenm_8254(unsigned char timer,t8254_time_t count) {
-	unsigned int flags;
-
-	flags = get_cpu_flags();
-	writenm_8254_ncli(timer,count);
-	_sti_if_flags(flags);
+    SAVE_CPUFLAGS( _cli() ) {
+        writenm_8254_ncli(timer,count);
+    } RESTORE_CPUFLAGS();
 }
 
 /* NTS: At the hardware level, count == 0 is equivalent to programming 0x10000 into it.
@@ -196,11 +194,9 @@ static inline void write_8254_ncli(unsigned char timer,t8254_time_t count,unsign
 }
 
 static inline void write_8254(unsigned char timer,t8254_time_t count,unsigned char mode) {
-	unsigned int flags;
-
-	flags = get_cpu_flags();
-	write_8254_ncli(timer,count,mode);
-	_sti_if_flags(flags);
+    SAVE_CPUFLAGS( _cli() ) {
+        write_8254_ncli(timer,count,mode);
+    } RESTORE_CPUFLAGS();
 }
 
 static inline unsigned char t8254_pc_speaker_read_gate() {
