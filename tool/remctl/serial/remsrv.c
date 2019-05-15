@@ -35,6 +35,7 @@ static struct uart_8251 *uart = NULL;
 static struct info_8250 *uart = NULL;
 #endif
 
+static unsigned char tsr_init = 0;
 static int           user_sel_port = -1;
 static unsigned long baud_rate = 115200;
 static unsigned long ic_delay_counter = 0;
@@ -1579,6 +1580,7 @@ void help(void) {
     fprintf(stderr,"  -ic <n>                Software delay during INT 28h\n");
     fprintf(stderr,"                         (for slow machines use 8000-16000)\n");
     fprintf(stderr,"  -p <n>                 COM port (1 to 4)\n");
+    fprintf(stderr,"  -tsr                   Immediately exit as a TSR\n");
 }
 
 int parse_argv(int argc,char **argv) {
@@ -1594,6 +1596,9 @@ int parse_argv(int argc,char **argv) {
             if (!strcmp(a,"h") || !strcmp(a,"help")) {
                 help();
                 return 1;
+            }
+            else if (!strcmp(a,"tsr")) {
+                tsr_init = 1;
             }
             else if (!strcmp(a,"p")) {
                 a = argv[i++];
@@ -1880,6 +1885,9 @@ int main(int argc,char **argv) {
         }
     }
 #endif
+
+    if (tsr_init)
+        tsr_exit(); // does not return
 
     // main loop
     mainloop();
