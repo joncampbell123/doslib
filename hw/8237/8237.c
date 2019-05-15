@@ -503,24 +503,23 @@ fail:
 }
 
 uint16_t d8237_read_count_lo16(unsigned char ch) {
-    unsigned int flags = get_cpu_flags();
     uint16_t r,r2,patience=32;
 
     /* The DMA controller as emulated by DOSBox and on real hardware does not guarantee latching the count while reading.
      * it can change between reading the upper and lower bytes. so we need to do this loop to read a coherent value. */
-    _cli();
-    d8237_reset_flipflop(ch);
-    r2 = d8237_read_count_lo16_direct_ncli(ch);
-    do {
-        r   = r2;
+    SAVE_CPUFLAGS( _cli() ) {
+        d8237_reset_flipflop(ch);
         r2 = d8237_read_count_lo16_direct_ncli(ch);
-        /* the counter must be decreasing! */
-        if ((r&0xFF00) != (r2&0xFF00)) continue;
-        if (r == 0xFFFF) break; /* if at terminal count, then break now */
-        if (r2 > r) continue;
-        break;
-    } while (--patience != 0U);
-    _sti_if_flags(flags);
+        do {
+            r   = r2;
+            r2 = d8237_read_count_lo16_direct_ncli(ch);
+            /* the counter must be decreasing! */
+            if ((r&0xFF00) != (r2&0xFF00)) continue;
+            if (r == 0xFFFF) break; /* if at terminal count, then break now */
+            if (r2 > r) continue;
+            break;
+        } while (--patience != 0U);
+    } RESTORE_CPUFLAGS();
 
     return r2;
 }
