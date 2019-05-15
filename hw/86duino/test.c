@@ -325,55 +325,38 @@ struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
 #define MCPWM_LDREG         (0x28L)
 
 void vtx86_mc_outp(const int mc, const uint32_t idx, const uint32_t val) {
-    unsigned int cpu_flags;
-
-    cpu_flags = get_cpu_flags();
-    _cli();
-
-    outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
-    outpd(vtx86_cfg.pwm_config_base_io + (unsigned)idx, val);
-
-    _sti_if_flags(cpu_flags);
+    SAVE_CPUFLAGS( _cli() ) {
+        outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
+        outpd(vtx86_cfg.pwm_config_base_io + (unsigned)idx, val);
+    } RESTORE_CPUFLAGS();
 }
 
 uint32_t vtx86_mc_inp(const int mc, const uint32_t idx) {
-    unsigned int cpu_flags;
     uint32_t tmp;
 
-    cpu_flags = get_cpu_flags();
-    _cli();
-
-    outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
-    tmp = inpd(vtx86_cfg.pwm_config_base_io + (unsigned)idx);
-
-    _sti_if_flags(cpu_flags);
+    SAVE_CPUFLAGS( _cli() ) {
+        outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
+        tmp = inpd(vtx86_cfg.pwm_config_base_io + (unsigned)idx);
+    } RESTORE_CPUFLAGS();
 
     return tmp;
 }
 
 void vtx86_mc_outpb(const int mc, const uint32_t idx, const unsigned char val) {
-    unsigned int cpu_flags;
-
-    cpu_flags = get_cpu_flags();
-    _cli();
-
-    outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
-    outp(vtx86_cfg.pwm_config_base_io + (unsigned)idx, val);
-
-    _sti_if_flags(cpu_flags);
+    SAVE_CPUFLAGS( _cli() ) {
+        outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
+        outp(vtx86_cfg.pwm_config_base_io + (unsigned)idx, val);
+    } RESTORE_CPUFLAGS();
 }
 
 unsigned char vtx86_mc_inpb(const int mc, const uint32_t idx) {
-    unsigned int cpu_flags;
     unsigned char tmp;
 
-    cpu_flags = get_cpu_flags();
-    _cli();
+    SAVE_CPUFLAGS( _cli() ) {
+        outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
+        tmp = inp(vtx86_cfg.pwm_config_base_io + (unsigned)idx);
+    } RESTORE_CPUFLAGS();
 
-    outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
-    tmp = inp(vtx86_cfg.pwm_config_base_io + (unsigned)idx);
-
-    _sti_if_flags(cpu_flags);
     return tmp;
 }
 
@@ -428,7 +411,6 @@ void vtx86_mcpwm_DisableProtect(const int mc, const uint8_t module) {
 }
 
 void vtx86_Close_Pwm(const uint8_t pin) {
-    unsigned int cpu_flags;
     int8_t mc, md;
 
     if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return;
@@ -436,15 +418,12 @@ void vtx86_Close_Pwm(const uint8_t pin) {
     mc = vtx86_arduino_to_mc_md[VTX86_MCM_MC][pin];
     md = vtx86_arduino_to_mc_md[VTX86_MCM_MD][pin];
 
-    cpu_flags = get_cpu_flags();
-    _cli();
-
-    if (vtx86_mc_md_inuse[pin] == 1) {
-        vtx86_mcpwm_Disable(mc, md);
-        vtx86_mc_md_inuse[pin] = 0;
-    }
-
-    _sti_if_flags(cpu_flags);
+    SAVE_CPUFLAGS( _cli() ) {
+        if (vtx86_mc_md_inuse[pin] == 1) {
+            vtx86_mcpwm_Disable(mc, md);
+            vtx86_mc_md_inuse[pin] = 0;
+        }
+    } RESTORE_CPUFLAGS();
 }
 
 void vtx86_mcpwm_SetDeadband(const int mc, const int module, const uint32_t db) {
@@ -517,7 +496,6 @@ void vtx86_mcpwm_SetSamplCycle(const int mc, const int module, const uint32_t sc
 void vtx86_digitalWrite(const uint8_t pin,const uint8_t val) {
     unsigned char crossbar_bit;
     unsigned char cbio_bitmask;
-    unsigned int cpu_flags;
     uint16_t dport;
 
     if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return;
@@ -535,15 +513,12 @@ void vtx86_digitalWrite(const uint8_t pin,const uint8_t val) {
         vtx86_Close_Pwm(pin);
     }
 
-    cpu_flags = get_cpu_flags();
-    _cli();
-
-    if (val == VTX86_LOW)
-        outp(dport, inp(dport) & (~cbio_bitmask));
-    else
-        outp(dport, inp(dport) |   cbio_bitmask );
-
-    _sti_if_flags(cpu_flags);
+    SAVE_CPUFLAGS( _cli() ) {
+        if (val == VTX86_LOW)
+            outp(dport, inp(dport) & (~cbio_bitmask));
+        else
+            outp(dport, inp(dport) |   cbio_bitmask );
+    } RESTORE_CPUFLAGS();
 }
 
 unsigned int vtx86_digitalRead(const uint8_t pin) {
@@ -574,7 +549,6 @@ void vtx86_pinMode(const uint8_t pin, const uint8_t mode) {
 
     unsigned char crossbar_bit;
     unsigned char cbio_bitmask;
-    unsigned int cpu_flags;
     uint16_t dbport;
 
     if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return;
@@ -585,29 +559,26 @@ void vtx86_pinMode(const uint8_t pin, const uint8_t mode) {
 
     cbio_bitmask = 1u << (crossbar_bit % 8u);
 
-    cpu_flags = get_cpu_flags();
-    _cli();
-
-    if (mode == VTX86_INPUT)
-    {
-        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_TRI_STATE);
-        outp(dbport, inp(dbport) & (~cbio_bitmask));
-    }
-    else if(mode == VTX86_INPUT_PULLDOWN)
-    {
-        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_PULL_DOWN);
-        outp(dbport, inp(dbport) & (~cbio_bitmask));
-    }
-    else if (mode == VTX86_INPUT_PULLUP)
-    {
-        outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_PULL_UP);
-        outp(dbport, inp(dbport) & (~cbio_bitmask));
-    }
-    else {
-        outp(dbport, inp(dbport) |   cbio_bitmask );
-    }
-
-    _sti_if_flags(cpu_flags);
+    SAVE_CPUFLAGS( _cli() ) {
+        if (mode == VTX86_INPUT)
+        {
+            outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_TRI_STATE);
+            outp(dbport, inp(dbport) & (~cbio_bitmask));
+        }
+        else if(mode == VTX86_INPUT_PULLDOWN)
+        {
+            outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_PULL_DOWN);
+            outp(dbport, inp(dbport) & (~cbio_bitmask));
+        }
+        else if (mode == VTX86_INPUT_PULLUP)
+        {
+            outp(vtx86_cfg.crossbar_config_base_io + 0x30 + crossbar_bit, VTX86_PINMODE_PULL_UP);
+            outp(dbport, inp(dbport) & (~cbio_bitmask));
+        }
+        else {
+            outp(dbport, inp(dbport) |   cbio_bitmask );
+        }
+    } RESTORE_CPUFLAGS();
 
 #undef VTX86_PINMODE_TRI_STATE
 #undef VTX86_PINMODE_PULL_UP
@@ -615,7 +586,6 @@ void vtx86_pinMode(const uint8_t pin, const uint8_t mode) {
 }
 
 void vtx86_analogWrite(const uint8_t pin, const uint16_t val) {
-    unsigned int cpu_flags;
     unsigned int mc, md;
 
     if (pin >= 45/*PINS*/) return;
@@ -639,42 +609,35 @@ void vtx86_analogWrite(const uint8_t pin, const uint16_t val) {
         }
 
         // Init H/W PWM
-        cpu_flags = get_cpu_flags();
-        _cli();
+        SAVE_CPUFLAGS( _cli() ) {
+            if (vtx86_mc_md_inuse[pin] == 0) {
+                vtx86_mcpwm_ReloadPWM(mc, md, MCPWM_RELOAD_CANCEL);
+                vtx86_mcpwm_SetOutMask(mc, md, MCPWM_HMASK_NONE + MCPWM_LMASK_NONE);
+                vtx86_mcpwm_SetOutPolarity(mc, md, MCPWM_HPOL_NORMAL + MCPWM_LPOL_NORMAL);
+                vtx86_mcpwm_SetDeadband(mc, md, 0L);
+                vtx86_mcpwm_ReloadOUT_Unsafe(mc, md, MCPWM_RELOAD_NOW);
 
-        if (vtx86_mc_md_inuse[pin] == 0) {
-            vtx86_mcpwm_ReloadPWM(mc, md, MCPWM_RELOAD_CANCEL);
-            vtx86_mcpwm_SetOutMask(mc, md, MCPWM_HMASK_NONE + MCPWM_LMASK_NONE);
-            vtx86_mcpwm_SetOutPolarity(mc, md, MCPWM_HPOL_NORMAL + MCPWM_LPOL_NORMAL);
-            vtx86_mcpwm_SetDeadband(mc, md, 0L);
-            vtx86_mcpwm_ReloadOUT_Unsafe(mc, md, MCPWM_RELOAD_NOW);
+                vtx86_mcpwm_SetWaveform(mc, md, MCPWM_EDGE_A0I1);
+                vtx86_mcpwm_SetSamplCycle(mc, md, 1999L);   // sample cycle: 20ms
 
-            vtx86_mcpwm_SetWaveform(mc, md, MCPWM_EDGE_A0I1);
-            vtx86_mcpwm_SetSamplCycle(mc, md, 1999L);   // sample cycle: 20ms
+                vtx86_cfg.crossbar_config_base_io = vtx86_sb_readw(0x64)&0xfffe;
+                if (pin <= 9)
+                    outp(vtx86_cfg.crossbar_config_base_io + 2, 0x01); // GPIO port2: 0A, 0B, 0C, 3A
+                else if (pin > 28)
+                    outp(vtx86_cfg.crossbar_config_base_io, 0x03); // GPIO port0: 2A, 2B, 2C, 3C
+                else
+                    outp(vtx86_cfg.crossbar_config_base_io + 3, 0x02); // GPIO port3: 1A, 1B, 1C, 3B
+            }
 
-            vtx86_cfg.crossbar_config_base_io = vtx86_sb_readw(0x64)&0xfffe;
-            if (pin <= 9)
-                outp(vtx86_cfg.crossbar_config_base_io + 2, 0x01); // GPIO port2: 0A, 0B, 0C, 3A
-            else if (pin > 28)
-                outp(vtx86_cfg.crossbar_config_base_io, 0x03); // GPIO port0: 2A, 2B, 2C, 3C
-            else
-                outp(vtx86_cfg.crossbar_config_base_io + 3, 0x02); // GPIO port3: 1A, 1B, 1C, 3B
-        }
+            vtx86_mcpwm_SetWidth(mc, md, 1000L*VTX86_SYSCLK, val << (16u - VTX86_PWM_RESOLUTION));
+            vtx86_mcpwm_ReloadPWM(mc, md, MCPWM_RELOAD_PEREND);
 
-        _sti_if_flags(cpu_flags);
-
-        cpu_flags = get_cpu_flags();
-        _cli();
-
-        vtx86_mcpwm_SetWidth(mc, md, 1000L*VTX86_SYSCLK, val << (16u - VTX86_PWM_RESOLUTION));
-        vtx86_mcpwm_ReloadPWM(mc, md, MCPWM_RELOAD_PEREND);
-        if (vtx86_mc_md_inuse[pin] == 0) {
-            vtx86_mcpwm_Enable(mc, md);
-            outp(vtx86_cfg.crossbar_config_base_io + 0x90 + vtx86_gpio_to_crossbar_pin_map[pin], 0x08);
-            vtx86_mc_md_inuse[pin] = 1;
-        }
-
-        _sti_if_flags(cpu_flags);
+            if (vtx86_mc_md_inuse[pin] == 0) {
+                vtx86_mcpwm_Enable(mc, md);
+                outp(vtx86_cfg.crossbar_config_base_io + 0x90 + vtx86_gpio_to_crossbar_pin_map[pin], 0x08);
+                vtx86_mc_md_inuse[pin] = 1;
+            }
+        } RESTORE_CPUFLAGS();
     }
 }
 
@@ -816,7 +779,6 @@ static inline uint16_t vtx86_analogFIFO_Read(void) {
 }
 
 uint16_t vtx86_analogRead(const uint8_t pin) {
-    unsigned int cpu_flags;
     uint16_t r;
 
     if (pin >= 8) return (uint16_t)(~0u);
@@ -825,17 +787,14 @@ uint16_t vtx86_analogRead(const uint8_t pin) {
     while (vtx86_analogFIFO_Pending())
         vtx86_analogFIFO_ReadRaw();
 
-    cpu_flags = get_cpu_flags();
-    _cli();
+    SAVE_CPUFLAGS( _cli() ) {
+        outp(vtx86_cfg.adc_config_base_io + 1, 0x08);           // disable ADC
+        outp(vtx86_cfg.adc_config_base_io + 0, 1u << pin);      // enable AUX scan for the pin we want
+        outp(vtx86_cfg.adc_config_base_io + 1, 0x01);           // enable ADC, start ADC, one shot only
 
-    outp(vtx86_cfg.adc_config_base_io + 1, 0x08);           // disable ADC
-    outp(vtx86_cfg.adc_config_base_io + 0, 1u << pin);      // enable AUX scan for the pin we want
-    outp(vtx86_cfg.adc_config_base_io + 1, 0x01);           // enable ADC, start ADC, one shot only
-
-    while (!vtx86_analogFIFO_Pending());
-    r = vtx86_analogFIFO_Read();
-
-    _sti_if_flags(cpu_flags);
+        while (!vtx86_analogFIFO_Pending());
+        r = vtx86_analogFIFO_Read();
+    } RESTORE_CPUFLAGS();
 
     return r;
 }
