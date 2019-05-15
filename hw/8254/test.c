@@ -45,6 +45,9 @@
 
 static volatile unsigned int counter = 0;
 static unsigned int speaker_rate = 0;
+#ifdef HOOK_IRQ
+static unsigned int pass_irq0 = 0;
+#endif
 static unsigned int max = 0xFFFF;
 
 #ifdef HOOK_IRQ
@@ -52,10 +55,15 @@ void (__interrupt __far *prev_irq0)() = NULL;
 static void __interrupt __far irq0() {
 	counter++;
 
+    if (!pass_irq0) {
 #if T8254_IRQ >= 8
-	p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+        p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
 #endif
-	p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+        p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+    }
+    else {
+        _chain_intr(prev_irq0);
+    }
 }
 #endif
 
@@ -215,6 +223,40 @@ int main() {
 	/* PC-98 does not have IRQ0 running by default */
 	p8259_unmask(T8254_IRQ);
 #endif
+#endif
+
+#if !defined(TARGET_PC98) && defined(HOOK_IRQ) && TARGET_MSDOS == 32
+    /* Bizarre DOS4GW.EXE BUG:
+     *  - If DOS4GW.EXE is run on an IBM PC/AT system, kbhit() will NOT work
+     *    if the DPMI call is made to hook IRQ 0 (timer) and the timer
+     *    interrupt handler does NOT chain through to the previous handler.
+     *
+     *    Tracing through it in DOSBox-X's debugger shows that the DOS extender
+     *    catches it (INT 21h AH=0Bh) and does NOT call down to DOS but returns
+     *    as if no input in this case. Badly written kbhit() caching?
+     *
+     *  - If our interrupt handler calls down to the previous handler at least
+     *    ONCE while within the kbhit() + getch() loop below, then kbhit()
+     *    works again.
+     *
+     *  - ...BUT the timer interrupt chain through must happen while using
+     *    kbhit() + getch() to "unlock" kbhit()
+     *
+     *  - If this program and DOS4GW.EXE is run in PC-98 mode, this does not happen.
+     *
+     *  - If this program is run with DOS32A.EXE, this does not happen.
+     *
+     *  - It's tied to the call to set an interrupt handler for IRQ0. kbhit()
+     *    stops working the instant we call _dos_setvect() for IRQ0.
+     *
+     * Solution: If we know it's DOS4GW.EXE (by the "dpmi_no_0301h" flag) then
+     *           set a flag telling our IRQ0 handler to chain through.
+     */
+    if (dpmi_no_0301h) {
+	    p8259_unmask(T8254_IRQ);
+        pass_irq0 = 1;
+        printf("Will chain to previous IRQ handler for IRQ0 because DOS4GW.EXE is screwed up.\n");
+    }
 #endif
 
 	while (1) {
