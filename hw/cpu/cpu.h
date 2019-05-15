@@ -194,12 +194,12 @@ static void set_cpu_flags(unsigned int f);
 //
 // I'm going to ask jmalak if an extension to Open Watcom can be added to make this function part of the compiler
 // and therefore part of the stack-relative locals management code.
-# define SAVE_CPUFLAGS          { __asm { pushf }; {
-# define RESTORE_CPUFLAGS       } __asm { popf }; }
+# define SAVE_CPUFLAGS(code)            { __asm { pushf }; code; {
+# define RESTORE_CPUFLAGS()             } __asm { popf }; }
 #else
 // more generic safe code
-# define SAVE_CPUFLAGS          { const unsigned int __cpu_flags = get_cpu_flags(); {
-# define RESTORE_CPUFLAGS       } set_cpu_flags(__cpu_flags); }
+# define SAVE_CPUFLAGS(code)            { const unsigned int __cpu_flags = get_cpu_flags(); code; {
+# define RESTORE_CPUFLAGS()             } set_cpu_flags(__cpu_flags); }
 #endif
 
 #if (defined(TARGET_WINDOWS) || defined(TARGET_OS2)) && TARGET_MSDOS == 32
