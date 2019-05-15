@@ -35,6 +35,7 @@ static struct uart_8251 *uart = NULL;
 static struct info_8250 *uart = NULL;
 #endif
 
+static int           user_sel_port = -1;
 static unsigned long baud_rate = 115200;
 static unsigned long ic_delay_counter = 0;
 static unsigned char use_interrupts = 1;
@@ -1577,6 +1578,7 @@ void help(void) {
     fprintf(stderr,"  -s <n>                 Stop bits (1 or 2)\n");
     fprintf(stderr,"  -ic <n>                Software delay during INT 28h\n");
     fprintf(stderr,"                         (for slow machines use 8000-16000)\n");
+    fprintf(stderr,"  -p <n>                 COM port (1 to 4)\n");
 }
 
 int parse_argv(int argc,char **argv) {
@@ -1592,6 +1594,11 @@ int parse_argv(int argc,char **argv) {
             if (!strcmp(a,"h") || !strcmp(a,"help")) {
                 help();
                 return 1;
+            }
+            else if (!strcmp(a,"p")) {
+                a = argv[i++];
+                if (a == NULL) return 1;
+                user_sel_port = strtoul(a,NULL,0);
             }
             else if (!strcmp(a,"ic")) {
                 a = argv[i++];
@@ -1715,20 +1722,28 @@ int main(int argc,char **argv) {
         unsigned int i;
         int choice;
 
-        printf("Which serial port should I use?\n");
+        if (user_sel_port <= 0)
+            printf("Which serial port should I use?\n");
+
         for (i=0;i < uart_8251_total();i++) {
             struct uart_8251 *c_uart = uart_8251_get(i);
             if (c_uart == NULL) continue;
 
             printf("  %u: UART at 0x%02X,0x%02X '%s'\n",
-                    i,uart_8251_portidx(c_uart->base_io,0),
+                    i+1,uart_8251_portidx(c_uart->base_io,0),
                     uart_8251_portidx(c_uart->base_io,1),
                     c_uart->description ? c_uart->description : "");
         }
 
-        printf("Choice? "); fflush(stdout);
-        choice = -1;
-        scanf("%d",&choice);
+        if (user_sel_port <= 0) {
+            printf("Choice? "); fflush(stdout);
+            choice = -1;
+            scanf("%d",&choice);
+        }
+        else {
+            choice = user_sel_port;
+        }
+        choice--;
         if (choice < 0 || choice >= uart_8251_total()) return 0;
 
         uart = uart_8251_get(choice);
@@ -1756,14 +1771,22 @@ int main(int argc,char **argv) {
         unsigned int i;
         int choice;
 
-        printf("Which serial port should I use?\n");
+        if (user_sel_port <= 0)
+            printf("Which serial port should I use?\n");
+
         for (i=0;i < base_8250_ports;i++) {
             struct info_8250 *inf = &info_8250_port[i];
             printf("[%u] @ %03X (type %s IRQ %d)\n",i+1,inf->port,type_8250_to_str(inf->type),inf->irq);
         }
-        printf("Choice? "); fflush(stdout);
-        choice = -1;
-        scanf("%d",&choice);
+
+        if (user_sel_port <= 0) {
+            printf("Choice? "); fflush(stdout);
+            choice = -1;
+            scanf("%d",&choice);
+        }
+        else {
+            choice = user_sel_port;
+        }
         choice--;
         if (choice < 0 || choice >= base_8250_ports) return 0;
         uart = &info_8250_port[choice];
