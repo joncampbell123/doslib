@@ -22,11 +22,13 @@ void sndsb_read_sb16_irqdma_resources(struct sndsb_ctx * const cx) {
 			else if (dmam & 1)	cx->dma8 = 0;
 		}
 
+#if !defined(TARGET_PC98)
 		if (cx->dma16 < 0) {
 			if (dmam & 0x80)	cx->dma16 = 7;
 			else if (dmam & 0x40)	cx->dma16 = 6;
 			else if (dmam & 0x20)	cx->dma16 = 5;
 		}
+#endif
 
 		/* NTS: From the Creative programming guide:
 		 *      "DSP version 4.xx also supports the transfer of 16-bit sound data through

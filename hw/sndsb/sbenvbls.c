@@ -29,8 +29,10 @@ struct sndsb_ctx *sndsb_try_blaster_var(void) {
             I = strtol(++s,&s,10);
         else if (*s == 'D')
             D = strtol(++s,&s,10);
+#if !defined(TARGET_PC98)
         else if (*s == 'H')
             H = strtol(++s,&s,10);
+#endif
         else {
             while (*s && *s != ' ') s++;
         }
@@ -38,6 +40,10 @@ struct sndsb_ctx *sndsb_try_blaster_var(void) {
 
     if (A < 0 || I < 0 || D < 0 || I > 15 || D > 7)
         return NULL;
+
+#if defined(TARGET_PC98)
+    H = D;
+#endif
 
     if (sndsb_by_base(A) != NULL)
         return 0;
