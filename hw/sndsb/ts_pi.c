@@ -19,13 +19,17 @@
 #include <hw/sndsb/sndsb.h>
 #include <hw/dos/doswin.h>
 
-#include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sb16asp.h>
+#if !defined(TARGET_PC98)
+#include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+#endif
 
 #include "ts_pcom.h"
 
+#if !defined(TARGET_PC98)
 static char tmp[256];
+#endif
 
 int main(int argc,char **argv) {
     if (common_sb_init() != 0)
@@ -80,6 +84,7 @@ int main(int argc,char **argv) {
         doubleprintf("- Is Gallant SC-6600:           %s\n",sb_card->is_gallant_sc6600 ? "Yes" : "No");
         doubleprintf("- ESS chipset:                  %s\n",(sb_card->ess_extensions && ess_str != NULL) ? ess_str : "(none)");
 
+#if !defined(TARGET_PC98)
         doubleprintf("- ISA Plug & Play:              %s\n",sb_card->pnp_id != 0UL ? "Yes" : "No");
         if (sb_card->pnp_id != 0UL) {
             tmp[0] = 0;
@@ -92,6 +97,7 @@ int main(int argc,char **argv) {
         }
         if (sb_card->pnp_name != NULL)
             doubleprintf("- ISA PnP string:               %s\n",sb_card->pnp_name);
+#endif
 
         doubleprintf("- Has CSP/ASP chip:             %s\n",sb_card->has_asp_chip ? "Yes" : "No");
 

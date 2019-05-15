@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 /* Additional support functions for Sound Blaster 16 ISA Plug & Play based cards.
  * This is compiled into a separate library (sndsbpnp.lib) so that a programmer
  * can include it only if they want to handle the cards directly. In most cases,
@@ -383,4 +385,6 @@ int sndsb_try_isa_pnp(uint32_t id,uint8_t csn) {
 	isa_pnp_is_sound_blaster_compatible_id(cx->pnp_id,&cx->pnp_name);
 	return 1;
 }
+
+#endif //!defined(TARGET_PC98)
 

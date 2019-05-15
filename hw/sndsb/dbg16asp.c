@@ -22,16 +22,22 @@
 #include <hw/dos/tgussbos.h>
 #include <hw/dos/tgusumid.h>
 
+#if !defined(TARGET_PC98)
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+#endif
 
 static char                 line[256];
 static unsigned char        tmp[512];
 
 #if defined(__TINY__)
+# if !defined(TARGET_PC98)
 static unsigned char devnode_raw[1024]; // NTS: declaring it "far" causes problem with forced CS = DS = DGROUP segref patching
+# endif
 #else
+# if !defined(TARGET_PC98)
 static unsigned char far devnode_raw[4096];
+# endif
 #endif
 
 static struct sndsb_ctx*	sb_card = NULL;
@@ -118,6 +124,7 @@ int main(int argc,char **argv) {
 	}
 # endif
 #endif
+#if !defined(TARGET_PC98)
 	if (!init_isa_pnp_bios()) {
 		printf("Cannot init ISA PnP\n");
 		return 1;
@@ -191,6 +198,7 @@ int main(int argc,char **argv) {
             }
         }
     }
+#endif
     /* Non-plug & play scan */
 	if (sndsb_try_blaster_var() != NULL) {
 		printf("Created card ent. for BLASTER variable. IO=%X MPU=%X DMA=%d DMA16=%d IRQ=%d\n",

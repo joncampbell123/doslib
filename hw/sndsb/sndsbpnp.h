@@ -1,4 +1,6 @@
 
+#if !defined(TARGET_PC98)
+
 /* NTS: The caller is expected to pnp_wake_scn() then siphon off the device id */
 int isa_pnp_sound_blaster_get_resources(uint32_t id,unsigned char csn,struct sndsb_ctx *cx);
 int isa_pnp_bios_sound_blaster_get_resources(uint32_t id,unsigned char node,struct isa_pnp_device_node far *devn,unsigned int devn_size,struct sndsb_ctx *cx);
@@ -26,4 +28,6 @@ static inline int isa_pnp_iobase_typical_sb(uint16_t io) {
 static inline int isa_pnp_iobase_typical_mpu(uint16_t io) {
 	return ((io&0xF) == 0) && (io == 0x300 || io == 0x330);
 }
+
+#endif //!defined(TARGET_PC98)
 

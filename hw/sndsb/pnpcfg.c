@@ -1,4 +1,8 @@
 
+#if defined(TARGET_PC98)
+#error this program cannot run on PC98
+#endif
+
 #include <stdio.h>
 #include <conio.h> /* this is where Open Watcom hides the outp() etc. functions */
 #include <stdlib.h>

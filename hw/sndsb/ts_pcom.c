@@ -19,8 +19,10 @@
 #include <hw/sndsb/sndsb.h>
 #include <hw/dos/doswin.h>
 
+#if !defined(TARGET_PC98)
 #include <hw/isapnp/isapnp.h>
 #include <hw/sndsb/sndsbpnp.h>
+#endif
 
 #include "ts_pcom.h"
 
@@ -254,6 +256,7 @@ int common_sb_init(void) {
     sndsb_enable_sc400_support();		// SC400 support
     sndsb_enable_ess_audiodrive_support();	// ESS AudioDrive support
 
+#if !defined(TARGET_PC98)
     if (!init_isa_pnp_bios()) {
         printf("Cannot init ISA PnP\n");
         return 1;
@@ -328,6 +331,7 @@ int common_sb_init(void) {
             }
         }
     }
+#endif
 
     /* Non-plug & play scan */
     if (sndsb_try_blaster_var() != NULL) {
@@ -383,10 +387,12 @@ int common_sb_init(void) {
             printf("      ESS=%u[%s] use=%u wss=%X OPL3SAx=%X\n",
                     cx->ess_chipset,ess_str,cx->ess_extensions,cx->wssio,cx->opl3sax_controlio);
 
+#if !defined(TARGET_PC98)
             if (cx->pnp_name != NULL) {
                 isa_pnp_product_id_to_str(ptmp,cx->pnp_id);
                 printf("      ISA PnP[%u]: %s %s\n",cx->pnp_csn,ptmp,cx->pnp_name);
             }
+#endif
 
             printf("      '%s'\n",cx->dsp_copyright);
 
