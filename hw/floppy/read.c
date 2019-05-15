@@ -10,15 +10,15 @@
 #include <dos.h>
 
 #include <hw/dos/dos.h>
-#include <hw/8237/8237.h>		/* DMA controller */
-#include <hw/8254/8254.h>		/* 8254 timer */
-#include <hw/8259/8259.h>		/* 8259 PIC interrupts */
+#include <hw/8237/8237.h>       /* DMA controller */
+#include <hw/8254/8254.h>       /* 8254 timer */
+#include <hw/8259/8259.h>       /* 8259 PIC interrupts */
 #include <hw/dos/doswin.h>
 #include <hw/floppy/floppy.h>
 
-struct dma_8237_allocation*		floppy_dma = NULL; /* DMA buffer */
+struct dma_8237_allocation*     floppy_dma = NULL; /* DMA buffer */
 
-char	tmp[1024];
+char    tmp[1024];
 
 /* chosen geometry */
 static signed char              high_density_disk = -1;
@@ -54,107 +54,107 @@ static void interrupt my_irq0() {
 }
 
 static void interrupt my_floppy_irq() {
-	_cli();
-	if (my_floppy_irq_floppy != NULL) {
-		my_floppy_irq_floppy->irq_fired++;
+    _cli();
+    if (my_floppy_irq_floppy != NULL) {
+        my_floppy_irq_floppy->irq_fired++;
 
-		/* ack PIC */
-		if (my_floppy_irq_floppy->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
-		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+        /* ack PIC */
+        if (my_floppy_irq_floppy->irq >= 8) p8259_OCW2(8,P8259_OCW2_NON_SPECIFIC_EOI);
+        p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
 
-		/* If too many IRQs fired, then unhook the IRQ and use polling from now on. */
-		if (my_floppy_irq_floppy->irq_fired >= 0xFFFEU) {
-			do_floppy_controller_unhook_irq(my_floppy_irq_floppy);
-			my_floppy_irq_floppy->irq_fired = ~0; /* make sure the IRQ counter is as large as possible */
-		}
-	}
+        /* If too many IRQs fired, then unhook the IRQ and use polling from now on. */
+        if (my_floppy_irq_floppy->irq_fired >= 0xFFFEU) {
+            do_floppy_controller_unhook_irq(my_floppy_irq_floppy);
+            my_floppy_irq_floppy->irq_fired = ~0; /* make sure the IRQ counter is as large as possible */
+        }
+    }
 
-	floppy_irq_counter++;
+    floppy_irq_counter++;
 }
 
 int wait_for_enter_or_escape() {
-	int c;
+    int c;
 
-	do {
-		c = getch();
-		if (c == 0) c = getch() << 8;
-	} while (!(c == 13 || c == 27));
+    do {
+        c = getch();
+        if (c == 0) c = getch() << 8;
+    } while (!(c == 13 || c == 27));
 
-	return c;
+    return c;
 }
 
 void do_floppy_controller_hook_irq(struct floppy_controller *fdc) {
-	if (my_floppy_irq_number >= 0 || my_floppy_old_irq != NULL || fdc->irq < 0)
-		return;
+    if (my_floppy_irq_number >= 0 || my_floppy_old_irq != NULL || fdc->irq < 0)
+        return;
 
-	/* let the IRQ know what floppy controller */
-	my_floppy_irq_floppy = fdc;
+    /* let the IRQ know what floppy controller */
+    my_floppy_irq_floppy = fdc;
 
-	/* enable on floppy controller */
-	p8259_mask(fdc->irq);
-	floppy_controller_enable_irq(fdc,1);
+    /* enable on floppy controller */
+    p8259_mask(fdc->irq);
+    floppy_controller_enable_irq(fdc,1);
 
-	/* hook IRQ */
-	my_floppy_old_irq = _dos_getvect(irq2int(fdc->irq));
-	_dos_setvect(irq2int(fdc->irq),my_floppy_irq);
-	my_floppy_irq_number = fdc->irq;
+    /* hook IRQ */
+    my_floppy_old_irq = _dos_getvect(irq2int(fdc->irq));
+    _dos_setvect(irq2int(fdc->irq),my_floppy_irq);
+    my_floppy_irq_number = fdc->irq;
 
-	/* enable at PIC */
-	p8259_unmask(fdc->irq);
+    /* enable at PIC */
+    p8259_unmask(fdc->irq);
 }
 
 void do_floppy_controller_unhook_irq(struct floppy_controller *fdc) {
-	if (my_floppy_irq_number < 0 || my_floppy_old_irq == NULL || fdc->irq < 0)
-		return;
+    if (my_floppy_irq_number < 0 || my_floppy_old_irq == NULL || fdc->irq < 0)
+        return;
 
-	/* disable on floppy controller, then mask at PIC */
-	p8259_mask(fdc->irq);
-	floppy_controller_enable_irq(fdc,0);
+    /* disable on floppy controller, then mask at PIC */
+    p8259_mask(fdc->irq);
+    floppy_controller_enable_irq(fdc,0);
 
-	/* restore the original vector */
-	_dos_setvect(irq2int(fdc->irq),my_floppy_old_irq);
-	my_floppy_irq_number = -1;
-	my_floppy_old_irq = NULL;
+    /* restore the original vector */
+    _dos_setvect(irq2int(fdc->irq),my_floppy_old_irq);
+    my_floppy_irq_number = -1;
+    my_floppy_old_irq = NULL;
 }
 
 void do_floppy_controller_enable_irq(struct floppy_controller *fdc,unsigned char en) {
-	if (!en || fdc->irq < 0 || fdc->irq != my_floppy_irq_number)
-		do_floppy_controller_unhook_irq(fdc);
-	if (en && fdc->irq >= 0)
-		do_floppy_controller_hook_irq(fdc);
+    if (!en || fdc->irq < 0 || fdc->irq != my_floppy_irq_number)
+        do_floppy_controller_unhook_irq(fdc);
+    if (en && fdc->irq >= 0)
+        do_floppy_controller_hook_irq(fdc);
 }
 
 int floppy_controller_wait_busy_in_instruction(struct floppy_controller *fdc,unsigned int timeout) {
-	do {
-		floppy_controller_read_status(fdc);
-		if (!floppy_controller_busy_in_instruction(fdc)) return 1;
-		t8254_wait(t8254_us2ticks(1000));
-	} while (--timeout != 0);
+    do {
+        floppy_controller_read_status(fdc);
+        if (!floppy_controller_busy_in_instruction(fdc)) return 1;
+        t8254_wait(t8254_us2ticks(1000));
+    } while (--timeout != 0);
 
-	return 0;
+    return 0;
 }
 
 int floppy_controller_wait_data_ready_ms(struct floppy_controller *fdc,unsigned int timeout) {
-	do {
-		floppy_controller_read_status(fdc);
-		if (floppy_controller_data_io_ready(fdc)) return 1;
-		t8254_wait(t8254_us2ticks(1000));
-	} while (--timeout != 0);
+    do {
+        floppy_controller_read_status(fdc);
+        if (floppy_controller_data_io_ready(fdc)) return 1;
+        t8254_wait(t8254_us2ticks(1000));
+    } while (--timeout != 0);
 
-	return 0;
+    return 0;
 }
 
 int floppy_controller_wait_irq(struct floppy_controller *fdc,unsigned int timeout,unsigned int counter) {
-	do {
-		if (fdc->irq_fired >= counter) break;
-		t8254_wait(t8254_us2ticks(1000));
-	} while (--timeout != 0);
+    do {
+        if (fdc->irq_fired >= counter) break;
+        t8254_wait(t8254_us2ticks(1000));
+    } while (--timeout != 0);
 
-	return 0;
+    return 0;
 }
 
 int floppy_controller_write_data(struct floppy_controller *fdc,const unsigned char *data,int len) {
-	int ret = 0;
+    int ret = 0;
 
     SAVE_CPUFLAGS( _cli() ) {
         while (len > 0) {
@@ -176,7 +176,7 @@ int floppy_controller_write_data(struct floppy_controller *fdc,const unsigned ch
 }
 
 int floppy_controller_read_data(struct floppy_controller *fdc,unsigned char *data,int len) {
-	int ret = 0;
+    int ret = 0;
 
     SAVE_CPUFLAGS( _cli() ) {
         while (len > 0) {
@@ -194,259 +194,259 @@ int floppy_controller_read_data(struct floppy_controller *fdc,unsigned char *dat
         }
     } RESTORE_CPUFLAGS();
 
-	return ret;
+    return ret;
 }
 
 void do_floppy_controller_reset(struct floppy_controller *fdc) {
-	floppy_controller_set_reset(fdc,1);
-	t8254_wait(t8254_us2ticks(1000000));
-	floppy_controller_set_reset(fdc,0);
-	floppy_controller_wait_data_ready_ms(fdc,1000);
-	floppy_controller_read_status(fdc);
+    floppy_controller_set_reset(fdc,1);
+    t8254_wait(t8254_us2ticks(1000000));
+    floppy_controller_set_reset(fdc,0);
+    floppy_controller_wait_data_ready_ms(fdc,1000);
+    floppy_controller_read_status(fdc);
 }
 
 void do_spin_up_motor(struct floppy_controller *fdc,unsigned char drv) {
-	if (drv > 3) return;
+    if (drv > 3) return;
 
-	if (!(fdc->digital_out & (0x10 << drv))) {
-		/* if the motor isn't on, then turn it on, and then wait for motor to stabilize */
-		floppy_controller_set_motor_state(fdc,drv,1);
-		t8254_wait(t8254_us2ticks(500000)); /* 500ms */
-	}
+    if (!(fdc->digital_out & (0x10 << drv))) {
+        /* if the motor isn't on, then turn it on, and then wait for motor to stabilize */
+        floppy_controller_set_motor_state(fdc,drv,1);
+        t8254_wait(t8254_us2ticks(500000)); /* 500ms */
+    }
 }
 
 void do_check_interrupt_status(struct floppy_controller *fdc) {
-	char cmd[10],resp[10];
-	int rd,wd,rdo,wdo;
+    char cmd[10],resp[10];
+    int rd,wd,rdo,wdo;
 
-	floppy_controller_read_status(fdc);
-	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
-		do_floppy_controller_reset(fdc);
+    floppy_controller_read_status(fdc);
+    if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+        do_floppy_controller_reset(fdc);
 
-	/* Check Interrupt Status (x8h)
-	 *
-	 *   Byte |  7   6   5   4   3   2   1   0
-	 *   -----+---------------------------------
-	 *      0 |  0   0   0   0   1   0   0   0
-	 *
-	 */
+    /* Check Interrupt Status (x8h)
+     *
+     *   Byte |  7   6   5   4   3   2   1   0
+     *   -----+---------------------------------
+     *      0 |  0   0   0   0   1   0   0   0
+     *
+     */
 
-	wdo = 1;
-	cmd[0] = 0x08;	/* Check interrupt status */
-	wd = floppy_controller_write_data(fdc,cmd,wdo);
-	if (wd < 1) {
+    wdo = 1;
+    cmd[0] = 0x08;  /* Check interrupt status */
+    wd = floppy_controller_write_data(fdc,cmd,wdo);
+    if (wd < 1) {
         fprintf(stderr,"Failed to write FDC data\n");
-		do_floppy_controller_reset(fdc);
-		return;
-	}
+        do_floppy_controller_reset(fdc);
+        return;
+    }
 
-	/* wait for data ready. does not fire an IRQ (because you use this to clear IRQ status!) */
-	floppy_controller_wait_data_ready_ms(fdc,1000);
+    /* wait for data ready. does not fire an IRQ (because you use this to clear IRQ status!) */
+    floppy_controller_wait_data_ready_ms(fdc,1000);
 
-	/* NTS: It's not specified whether this returns 2 bytes if success and 1 if no IRQ pending.. or...? */
-	rdo = 2;
-	resp[1] = 0;
-	rd = floppy_controller_read_data(fdc,resp,rdo);
-	if (rd < 1) {
+    /* NTS: It's not specified whether this returns 2 bytes if success and 1 if no IRQ pending.. or...? */
+    rdo = 2;
+    resp[1] = 0;
+    rd = floppy_controller_read_data(fdc,resp,rdo);
+    if (rd < 1) {
         fprintf(stderr,"Failed to read FDC data\n");
-		do_floppy_controller_reset(fdc);
-		return;
-	}
+        do_floppy_controller_reset(fdc);
+        return;
+    }
 
-	/* Check Interrupt Status (x8h) response
-	 *
-	 *   Byte |  7   6   5   4   3   2   1   0
-	 *   -----+---------------------------------
-	 *      0 |              ST0
-	 *      1 |        Current Cylinder
-	 */
+    /* Check Interrupt Status (x8h) response
+     *
+     *   Byte |  7   6   5   4   3   2   1   0
+     *   -----+---------------------------------
+     *      0 |              ST0
+     *      1 |        Current Cylinder
+     */
 
-	/* the command SHOULD terminate */
-	floppy_controller_wait_data_ready(fdc,20);
-	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
-		do_floppy_controller_reset(fdc);
+    /* the command SHOULD terminate */
+    floppy_controller_wait_data_ready(fdc,20);
+    if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+        do_floppy_controller_reset(fdc);
 
-	/* return value is ST0 and the current cylinder */
-	fdc->st[0] = resp[0];
-	fdc->cylinder = resp[1];
+    /* return value is ST0 and the current cylinder */
+    fdc->st[0] = resp[0];
+    fdc->cylinder = resp[1];
 }
 
 void do_calibrate_drive(struct floppy_controller *fdc) {
-	char cmd[10];
-	int wd,wdo;
+    char cmd[10];
+    int wd,wdo;
 
-	do_spin_up_motor(fdc,fdc->digital_out&3);
+    do_spin_up_motor(fdc,fdc->digital_out&3);
 
-	floppy_controller_read_status(fdc);
-	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
-		do_floppy_controller_reset(fdc);
+    floppy_controller_read_status(fdc);
+    if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+        do_floppy_controller_reset(fdc);
 
-	floppy_controller_reset_irq_counter(fdc);
+    floppy_controller_reset_irq_counter(fdc);
 
-	/* Calibrate Drive (x7h)
-	 *
-	 *   Byte |  7   6   5   4   3   2   1   0
-	 *   -----+---------------------------------
-	 *      0 |  0   0   0   0   0   1   1   1
-	 *      1 |  x   x   x   x   x   0 DR1 DR0
-	 *
-	 *  DR1,DR0 = Drive select */
+    /* Calibrate Drive (x7h)
+     *
+     *   Byte |  7   6   5   4   3   2   1   0
+     *   -----+---------------------------------
+     *      0 |  0   0   0   0   0   1   1   1
+     *      1 |  x   x   x   x   x   0 DR1 DR0
+     *
+     *  DR1,DR0 = Drive select */
 
-	wdo = 2;
-	cmd[0] = 0x07;	/* Calibrate */
-	cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 */;
-	wd = floppy_controller_write_data(fdc,cmd,wdo);
-	if (wd < 2) {
-		fprintf(stderr,"Failed to write data to FDC, %u/%u",wd,wdo);
-		do_floppy_controller_reset(fdc);
-		return;
-	}
+    wdo = 2;
+    cmd[0] = 0x07;  /* Calibrate */
+    cmd[1] = (fdc->digital_out&3)/* [1:0] = DR1,DR0 */;
+    wd = floppy_controller_write_data(fdc,cmd,wdo);
+    if (wd < 2) {
+        fprintf(stderr,"Failed to write data to FDC, %u/%u",wd,wdo);
+        do_floppy_controller_reset(fdc);
+        return;
+    }
 
-	/* fires an IRQ. doesn't return state */
-	if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
-	floppy_controller_wait_data_ready_ms(fdc,1000);
+    /* fires an IRQ. doesn't return state */
+    if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
+    floppy_controller_wait_data_ready_ms(fdc,1000);
 
-	/* Calibrate Drive (x7h) response
-	 *
-	 * (none)
-	 */
+    /* Calibrate Drive (x7h) response
+     *
+     * (none)
+     */
 
-	/* the command SHOULD terminate */
-	floppy_controller_wait_data_ready(fdc,20);
-	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
-		do_floppy_controller_reset(fdc);
+    /* the command SHOULD terminate */
+    floppy_controller_wait_data_ready(fdc,20);
+    if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+        do_floppy_controller_reset(fdc);
 
-	/* use Check Interrupt Status */
-	do_check_interrupt_status(fdc);
+    /* use Check Interrupt Status */
+    do_check_interrupt_status(fdc);
 }
 
 void do_seek_drive(struct floppy_controller *fdc,uint8_t track) {
-	char cmd[10];
-	int wd,wdo;
+    char cmd[10];
+    int wd,wdo;
 
-	do_spin_up_motor(fdc,fdc->digital_out&3);
+    do_spin_up_motor(fdc,fdc->digital_out&3);
 
-	floppy_controller_read_status(fdc);
-	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc)) {
+    floppy_controller_read_status(fdc);
+    if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc)) {
         /* Fun fact, on real hardware, resetting the floppy controller also causes the
          * controller to forget which track it's on (reset to zero).
          *
          * So, issuing a command to seek to track 10, resetting the controller, then issuing another seek to track 10
          * will leave the head on track 20. */
-		do_floppy_controller_reset(fdc);
+        do_floppy_controller_reset(fdc);
         do_calibrate_drive(fdc);
     }
 
-	floppy_controller_reset_irq_counter(fdc);
+    floppy_controller_reset_irq_counter(fdc);
 
-	/* Seek (xFh)
-	 *
-	 *   Byte |  7   6   5   4   3   2   1   0
-	 *   -----+---------------------------------
-	 *      0 |  0   0   0   0   1   1   1   1
-	 *      1 |  x   x   x   x   x  HD DR1 DR0
-	 *      2 |            Cylinder
-	 *
-	 *         HD = Head select (on PC platform, doesn't matter)
-	 *    DR1,DR0 = Drive select
-	 *   Cylinder = Track to move to */
+    /* Seek (xFh)
+     *
+     *   Byte |  7   6   5   4   3   2   1   0
+     *   -----+---------------------------------
+     *      0 |  0   0   0   0   1   1   1   1
+     *      1 |  x   x   x   x   x  HD DR1 DR0
+     *      2 |            Cylinder
+     *
+     *         HD = Head select (on PC platform, doesn't matter)
+     *    DR1,DR0 = Drive select
+     *   Cylinder = Track to move to */
 
-	wdo = 3;
-	cmd[0] = 0x0F;	/* Seek */
-	cmd[1] = (fdc->digital_out&3)+(current_phys_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
-	cmd[2] = track;
-	wd = floppy_controller_write_data(fdc,cmd,wdo);
-	if (wd < 3) {
-		fprintf(stderr,"Failed to write data to FDC, %u/%u",wd,wdo);
-		do_floppy_controller_reset(fdc);
-		return;
-	}
+    wdo = 3;
+    cmd[0] = 0x0F;  /* Seek */
+    cmd[1] = (fdc->digital_out&3)+(current_phys_head?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] HD (doesn't matter) */;
+    cmd[2] = track;
+    wd = floppy_controller_write_data(fdc,cmd,wdo);
+    if (wd < 3) {
+        fprintf(stderr,"Failed to write data to FDC, %u/%u",wd,wdo);
+        do_floppy_controller_reset(fdc);
+        return;
+    }
 
-	/* fires an IRQ. doesn't return state */
-	if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
-	floppy_controller_wait_data_ready_ms(fdc,1000);
+    /* fires an IRQ. doesn't return state */
+    if (fdc->use_irq) floppy_controller_wait_irq(fdc,1000,1);
+    floppy_controller_wait_data_ready_ms(fdc,1000);
 
-	/* Seek (xFh) response
-	 *
-	 * (none)
-	 */
+    /* Seek (xFh) response
+     *
+     * (none)
+     */
 
-	/* the command SHOULD terminate */
-	floppy_controller_wait_data_ready(fdc,20);
-	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
-		do_floppy_controller_reset(fdc);
+    /* the command SHOULD terminate */
+    floppy_controller_wait_data_ready(fdc,20);
+    if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+        do_floppy_controller_reset(fdc);
 
-	/* use Check Interrupt Status */
-	do_check_interrupt_status(fdc);
+    /* use Check Interrupt Status */
+    do_check_interrupt_status(fdc);
 }
 
 int do_read_sector_id(unsigned char resp[7],struct floppy_controller *fdc,unsigned char head) {
-	int rd,wd,rdo,wdo;
-	char cmd[10];
+    int rd,wd,rdo,wdo;
+    char cmd[10];
 
-	floppy_controller_read_status(fdc);
-	if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
-		do_floppy_controller_reset(fdc);
+    floppy_controller_read_status(fdc);
+    if (!floppy_controller_can_write_data(fdc) || floppy_controller_busy_in_instruction(fdc))
+        do_floppy_controller_reset(fdc);
 
-	/* Read ID (xAh)
-	 *
-	 *   Byte |  7   6   5   4   3   2   1   0
-	 *   -----+---------------------------------
-	 *      0 |  0  MF   0   0   1   0   1   0
-	 *      1 |  x   x   x   x   x  HD DR1 DR0
-	 *
-	 *         MF = MFM/FM
-	 *         HD = Head select (on PC platform, doesn't matter)
-	 *    DR1,DR0 = Drive select */
+    /* Read ID (xAh)
+     *
+     *   Byte |  7   6   5   4   3   2   1   0
+     *   -----+---------------------------------
+     *      0 |  0  MF   0   0   1   0   1   0
+     *      1 |  x   x   x   x   x  HD DR1 DR0
+     *
+     *         MF = MFM/FM
+     *         HD = Head select (on PC platform, doesn't matter)
+     *    DR1,DR0 = Drive select */
 
-	wdo = 2;
-	cmd[0] = 0x0A + 0x40; /* Read sector ID [6:6] MFM */
-	cmd[1] = (fdc->digital_out&3)+(head<<2)/* [1:0] = DR1,DR0 [2:2] = HD */;
-	wd = floppy_controller_write_data(fdc,cmd,wdo);
-	if (wd < 2) {
-		do_floppy_controller_reset(fdc);
-		return 0;
-	}
+    wdo = 2;
+    cmd[0] = 0x0A + 0x40; /* Read sector ID [6:6] MFM */
+    cmd[1] = (fdc->digital_out&3)+(head<<2)/* [1:0] = DR1,DR0 [2:2] = HD */;
+    wd = floppy_controller_write_data(fdc,cmd,wdo);
+    if (wd < 2) {
+        do_floppy_controller_reset(fdc);
+        return 0;
+    }
 
-	/* wait for data ready. does not fire an IRQ */
-	floppy_controller_wait_data_ready_ms(fdc,1000);
+    /* wait for data ready. does not fire an IRQ */
+    floppy_controller_wait_data_ready_ms(fdc,1000);
 
-	rdo = 7;
-	rd = floppy_controller_read_data(fdc,resp,rdo);
-	if (rd < 1) {
-		do_floppy_controller_reset(fdc);
-		return 0;
-	}
+    rdo = 7;
+    rd = floppy_controller_read_data(fdc,resp,rdo);
+    if (rd < 1) {
+        do_floppy_controller_reset(fdc);
+        return 0;
+    }
 
-	/* Read ID (xAh) response
-	 *
-	 *   Byte |  7   6   5   4   3   2   1   0
-	 *   -----+---------------------------------
-	 *      0 |              ST0
-	 *      1 |              ST1
-	 *      2 |              ST2
-	 *      3 |           Cylinder
-	 *      4 |             Head
-	 *      5 |        Sector Number
-	 *      6 |         Sector Size
+    /* Read ID (xAh) response
+     *
+     *   Byte |  7   6   5   4   3   2   1   0
+     *   -----+---------------------------------
+     *      0 |              ST0
+     *      1 |              ST1
+     *      2 |              ST2
+     *      3 |           Cylinder
+     *      4 |             Head
+     *      5 |        Sector Number
+     *      6 |         Sector Size
          */
 
-	/* the command SHOULD terminate */
-	floppy_controller_wait_data_ready(fdc,20);
-	if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
-		do_floppy_controller_reset(fdc);
+    /* the command SHOULD terminate */
+    floppy_controller_wait_data_ready(fdc,20);
+    if (!floppy_controller_wait_busy_in_instruction(fdc,1000))
+        do_floppy_controller_reset(fdc);
 
-	/* accept ST0..ST2 from response and update */
-	if (rd >= 3) {
-		fdc->st[0] = resp[0];
-		fdc->st[1] = resp[1];
-		fdc->st[2] = resp[2];
-	}
-	if (rd >= 4) {
-		fdc->cylinder = resp[3];
-	}
+    /* accept ST0..ST2 from response and update */
+    if (rd >= 3) {
+        fdc->st[0] = resp[0];
+        fdc->st[1] = resp[1];
+        fdc->st[2] = resp[2];
+    }
+    if (rd >= 4) {
+        fdc->cylinder = resp[3];
+    }
 
-	return rd;
+    return rd;
 }
 
 void apply_drate(struct floppy_controller *fdc,unsigned char drive,unsigned int rate) {
@@ -460,7 +460,7 @@ void apply_drate(struct floppy_controller *fdc,unsigned char drive,unsigned int 
         floppy_controller_set_data_transfer_rate(fdc,2); /* 250 */
 
     floppy_controller_set_motor_state(fdc,drive,0);
-	t8254_wait(t8254_us2ticks(50000)); /* 50ms */
+    t8254_wait(t8254_us2ticks(50000)); /* 50ms */
     do_spin_up_motor(fdc,drive);
     do_calibrate_drive(fdc);
     do_calibrate_drive(fdc);
@@ -472,11 +472,11 @@ void apply_drate(struct floppy_controller *fdc,unsigned char drive,unsigned int 
 static unsigned short drate_tests[4] = { 250, 300, 500, 1000 };
 
 static void do_read(struct floppy_controller *fdc,unsigned char drive) {
-	unsigned int returned_length = 0;
+    unsigned int returned_length = 0;
     unsigned int track_2x = 1;
     unsigned int data_length;
     int r_cyl,r_head,r_sec;
-	char cmd[10],resp[10];
+    char cmd[10],resp[10];
     unsigned char wd,wdo;
     unsigned char rd,rdo;
     unsigned char r_ssz;
@@ -962,10 +962,10 @@ do_retry:
                 wdo = 9;
                 cmd[0] = /*no multitrack*/ + 0x40/* MFM */ + 0x06/* READ DATA */;
                 cmd[1] = (fdc->digital_out&3)+(current_phys_head&1?0x04:0x00)/* [1:0] = DR1,DR0 [2:2] = HD */;
-                cmd[2] = r_cyl;	/* cyl=0 */
+                cmd[2] = r_cyl; /* cyl=0 */
                 cmd[3] = r_head;/* head=0 */
-                cmd[4] = r_sec;	/* sector=1 */
-                cmd[5] = r_ssz;	/* sector size=2 (512 bytes) */
+                cmd[4] = r_sec; /* sector=1 */
+                cmd[5] = r_ssz; /* sector size=2 (512 bytes) */
                 cmd[6] = r_sec; /* last sector of the track (what sector to stop at). */
                 cmd[7] = 0x1B;//current_phys_rw_gap;
                 cmd[8] = 0xFF;//current_sectsize_smaller; /* DTL (not used if 256 or larger) */
@@ -1202,84 +1202,84 @@ static int parse_argv(int argc,char **argv) {
 }
 
 int main(int argc,char **argv) {
-	struct floppy_controller *reffdc;
-	struct floppy_controller *newfdc;
-	struct floppy_controller *floppy;
+    struct floppy_controller *reffdc;
+    struct floppy_controller *newfdc;
+    struct floppy_controller *floppy;
     unsigned char drive = 0;
-	int i;
+    int i;
 
     if (parse_argv(argc,argv))
         return 1;
 
-	if (!probe_8237()) {
-		printf("WARNING: Cannot init 8237 DMA\n");
+    if (!probe_8237()) {
+        printf("WARNING: Cannot init 8237 DMA\n");
         return 1;
     }
-	if (!probe_8254()) {
-		printf("8254 chip not detected\n");
-		return 1;
-	}
-	if (!probe_8259()) {
-		printf("8259 chip not detected\n");
-		return 1;
-	}
-	if (!init_floppy_controller_lib()) {
-		printf("Failed to init floppy controller\n");
-		return 1;
-	}
+    if (!probe_8254()) {
+        printf("8254 chip not detected\n");
+        return 1;
+    }
+    if (!probe_8259()) {
+        printf("8259 chip not detected\n");
+        return 1;
+    }
+    if (!init_floppy_controller_lib()) {
+        printf("Failed to init floppy controller\n");
+        return 1;
+    }
 
-	printf("Probing standard FDC ports...\n");
-	for (i=0;(reffdc = (struct floppy_controller*)floppy_get_standard_isa_port(i)) != NULL;i++) {
-		printf("   %3X IRQ %d DMA %d: ",reffdc->base_io,reffdc->irq,reffdc->dma); fflush(stdout);
+    printf("Probing standard FDC ports...\n");
+    for (i=0;(reffdc = (struct floppy_controller*)floppy_get_standard_isa_port(i)) != NULL;i++) {
+        printf("   %3X IRQ %d DMA %d: ",reffdc->base_io,reffdc->irq,reffdc->dma); fflush(stdout);
 
-		if ((newfdc = floppy_controller_probe(reffdc)) != NULL) {
-			printf("FOUND. PS/2=%u AT=%u dma=%u DOR/RW=%u DOR=%02xh DIR=%02xh mst=%02xh\n",
-				newfdc->ps2_mode,
-				newfdc->at_mode,
-				newfdc->use_dma,
-				newfdc->digital_out_rw,
-				newfdc->digital_out,
-				newfdc->digital_in,
-				newfdc->main_status);
-		}
-		else {
-			printf("\x0D                             \x0D"); fflush(stdout);
-		}
-	}
+        if ((newfdc = floppy_controller_probe(reffdc)) != NULL) {
+            printf("FOUND. PS/2=%u AT=%u dma=%u DOR/RW=%u DOR=%02xh DIR=%02xh mst=%02xh\n",
+                newfdc->ps2_mode,
+                newfdc->at_mode,
+                newfdc->use_dma,
+                newfdc->digital_out_rw,
+                newfdc->digital_out,
+                newfdc->digital_in,
+                newfdc->main_status);
+        }
+        else {
+            printf("\x0D                             \x0D"); fflush(stdout);
+        }
+    }
 
     floppy = floppy_get_controller(0);
 
-	if (floppy == NULL) {
+    if (floppy == NULL) {
         fprintf(stderr,"Failed to find floppy controller\n");
-		free_floppy_controller_lib();
-		return 0;
-	}
+        free_floppy_controller_lib();
+        return 0;
+    }
 
     /* allocate DMA */
-	if (floppy->dma >= 0 && floppy_dma == NULL) {
+    if (floppy->dma >= 0 && floppy_dma == NULL) {
 #if TARGET_MSDOS == 32
-		uint32_t choice = 65536;
+        uint32_t choice = 65536;
 #else
-		uint32_t choice = 32768;
+        uint32_t choice = 32768;
 #endif
 
-		do {
-			floppy_dma = dma_8237_alloc_buffer(choice);
-			if (floppy_dma == NULL) choice -= 4096UL;
-		} while (floppy_dma == NULL && choice > 4096UL);
+        do {
+            floppy_dma = dma_8237_alloc_buffer(choice);
+            if (floppy_dma == NULL) choice -= 4096UL;
+        } while (floppy_dma == NULL && choice > 4096UL);
 
-		if (floppy_dma == NULL) {
+        if (floppy_dma == NULL) {
             fprintf(stderr,"Unable to alloc DMA\n");
             return 0;
         }
-	}
+    }
 
     my_irq0_old_irq = _dos_getvect(irq2int(0));
     _dos_setvect(irq2int(0),my_irq0);
 
-	/* if the floppy struct says to use interrupts, then do it */
-	do_floppy_controller_enable_irq(floppy,1);
-	floppy_controller_enable_dma(floppy,1);
+    /* if the floppy struct says to use interrupts, then do it */
+    do_floppy_controller_enable_irq(floppy,1);
+    floppy_controller_enable_dma(floppy,1);
 
     /* do the read */
     do_read(floppy,drive);
@@ -1291,20 +1291,20 @@ int main(int argc,char **argv) {
     floppy_controller_set_motor_state(floppy,3,0);
 
     /* free DMA */
-	if (floppy_dma != NULL) {
-		dma_8237_free_buffer(floppy_dma);
-		floppy_dma = NULL;
-	}
+    if (floppy_dma != NULL) {
+        dma_8237_free_buffer(floppy_dma);
+        floppy_dma = NULL;
+    }
 
     /* more */
     do_floppy_controller_enable_irq(floppy,0);
-	floppy_controller_enable_irqdma_gate_otr(floppy,1); /* because BIOSes probably won't */
-	p8259_unmask(floppy->irq);
+    floppy_controller_enable_irqdma_gate_otr(floppy,1); /* because BIOSes probably won't */
+    p8259_unmask(floppy->irq);
 
     /* restore IRQ */
     _dos_setvect(irq2int(0),my_irq0_old_irq);
 
-	free_floppy_controller_lib();
-	return 0;
+    free_floppy_controller_lib();
+    return 0;
 }
 
