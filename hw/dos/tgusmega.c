@@ -14,7 +14,7 @@
 #include <hw/dos/dos.h>
 #include <hw/dos/tgusmega.h>
 
-#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2) && !defined(TARGET_PC98)
 struct mega_em_info megaem_info={0};
 
 int gravis_mega_em_detect(struct mega_em_info *x) {

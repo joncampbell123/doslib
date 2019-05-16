@@ -18,7 +18,7 @@
 #include <hw/dos/dos.h>
 #include <hw/dos/tgussbos.h>
 
-#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+#if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2) && !defined(TARGET_PC98)
 /* returns interrupt vector */
 /* these functions are duplicates of the ones in the ULTRASND library
    because it matters to this library whether or not we're talking to
