@@ -825,9 +825,11 @@ int probe_for_sound_blaster(void) {
     if (!init_sndsb())
         return -1;
 
+#if !defined(TARGET_PC98)
     /* we want to know if certain emulation TSRs exist */
     gravis_mega_em_detect(&megaem_info);
     gravis_sbos_detect();
+#endif
 
     /* it's up to us now to tell it certain minor things */
     sndsb_detect_virtualbox();      // whether or not we're running in VirtualBox
@@ -836,6 +838,7 @@ int probe_for_sound_blaster(void) {
     sndsb_enable_sc400_support();       // SC400 support
     sndsb_enable_ess_audiodrive_support();  // ESS AudioDrive support
 
+#if !defined(TARGET_PC98)
     /* Plug & Play scan */
     if (has_isa_pnp_bios()) {
         const unsigned int devnode_raw_sz = 4096U;
@@ -901,6 +904,7 @@ int probe_for_sound_blaster(void) {
             free(devnode_raw);
         }
     }
+#endif
 
     /* Non-plug & play scan: BLASTER environment variable */
     if (sndsb_try_blaster_var() != NULL) {
@@ -908,9 +912,15 @@ int probe_for_sound_blaster(void) {
             sndsb_free_card(sndsb_card_blaster);
     }
 
+#if defined(TARGET_PC98)
+    /* Non-plug & play scan: Most SB cards exist at xxD2h or xxD4h */
+    sndsb_try_base(0xD2);
+    sndsb_try_base(0xD4);
+#else
     /* Non-plug & play scan: Most SB cards exist at 220h or 240h */
     sndsb_try_base(0x220);
     sndsb_try_base(0x240);
+#endif
 
     /* further probing, for IRQ and DMA and other capabilities */
     for (i=0;i < SNDSB_MAX_CARDS;i++) {

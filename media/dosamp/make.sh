@@ -4,6 +4,7 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
 dos=1
+dospc98=1
 doshuge=1
 win30=1 # Windows 3.0
 win31=1 # Windows 3.1

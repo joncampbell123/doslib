@@ -1431,7 +1431,7 @@ int main(int argc,char **argv,char **envp) {
         }
     }
 # endif
-# if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2)
+# if !defined(TARGET_WINDOWS) && !defined(TARGET_OS2) && !defined(TARGET_PC98)
     if (!init_isa_pnp_bios()) {
         printf("Cannot init ISA PnP\n");
         return 1;
