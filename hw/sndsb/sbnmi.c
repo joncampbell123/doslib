@@ -13,9 +13,11 @@ int sb_nmi_32_auto_choose_hook() {
 	if (sndsb_nmi_32_hook >= 0)
 		return sndsb_nmi_32_hook;
 
+# if !defined(TARGET_PC98)
 	/* auto-detect SBOS/MEGA-EM and enable nmi reflection if present */
 	if (gravis_mega_em_detect(&megaem_info) || gravis_sbos_detect() >= 0)
 		return 1;
+# endif
 
 	return 0;
 }

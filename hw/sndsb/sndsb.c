@@ -372,6 +372,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 	if (cx->dsp_vmaj >= 3)
 		sndsb_read_dsp_copyright(cx,cx->dsp_copyright,sizeof(cx->dsp_copyright));
 	else if (cx->dsp_vmaj == 1 || cx->dsp_vmaj == 2) {
+#if !defined(TARGET_PC98)
 		if (gravis_mega_em_detect(&megaem_info)) { // MEGA-EM emulates DSP 1.xx. It can emulate DSP 2.01, but badly
 			cx->mega_em = 1;
 			cx->dsp_autoinit_dma = 0;
@@ -382,6 +383,7 @@ int sndsb_init_card(struct sndsb_ctx *cx) {
 			cx->dsp_autoinit_dma = 0;
 			cx->dsp_autoinit_command = 0;
 		}
+#endif
 	}
 
 	/* Sound Blaster 16 (DSP 4.xx): we read the mixer registers, unless this card was initialized from a PnP device */

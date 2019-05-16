@@ -100,6 +100,7 @@ int main(int argc,char **argv) {
 	if (sndsb_nmi_32_hook > 0) /* it means the NMI hook is taken */
 		printf("Sound Blaster NMI hook/reflection active\n");
 
+# if !defined(TARGET_PC98)
 	if (gravis_mega_em_detect(&megaem_info)) {
 		/* let the user know we're a 32-bit program and MEGA-EM's emulation
 		 * won't work with 32-bit DOS programs */
@@ -115,13 +116,16 @@ int main(int argc,char **argv) {
 		printf("         real-mode builds instead. When a workaround is possible, it will\n");
 		printf("         be implemented and this warning will be removed.\n");
 	}
+# endif
 #elif TARGET_MSDOS == 16
 # if defined(__LARGE__)
+#  if !defined(TARGET_PC98)
 	if (gravis_sbos_detect() >= 0) {
 		printf("WARNING: 16-bit large model builds of the SNDSB program have a known, but not\n");
 		printf("         yet understood incompatability with Gravis SBOS emulation. Use the\n");
 		printf("         dos86s, dos86m, or dos86c builds.\n");
 	}
+#  endif
 # endif
 #endif
 #if !defined(TARGET_PC98)
