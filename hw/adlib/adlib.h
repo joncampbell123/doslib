@@ -15,13 +15,23 @@
 
 #define ADLIB_FM_VOICES			18
 
-#define ADLIB_IO_INDEX			0x388
-#define ADLIB_IO_STATUS			0x388
-#define ADLIB_IO_DATA			0x389
+#if defined(TARGET_PC98)
+# define ADLIB_IO_INDEX			0xC8D2
+# define ADLIB_IO_STATUS		0xC8D2
+# define ADLIB_IO_DATA			0xC9D2
 
-#define ADLIB_IO_INDEX2			0x38A
-#define ADLIB_IO_STATUS2		0x38A
-#define ADLIB_IO_DATA2			0x38B
+# define ADLIB_IO_INDEX2		0xCAD2
+# define ADLIB_IO_STATUS2		0xCAD2
+# define ADLIB_IO_DATA2			0xCBD2
+#else
+# define ADLIB_IO_INDEX			0x388
+# define ADLIB_IO_STATUS		0x388
+# define ADLIB_IO_DATA			0x389
+
+# define ADLIB_IO_INDEX2		0x38A
+# define ADLIB_IO_STATUS2		0x38A
+# define ADLIB_IO_DATA2			0x38B
+#endif
 
 /* Adlib status */
 #define ADLIB_STATUS_TIMERS_EXPIRED	0x80

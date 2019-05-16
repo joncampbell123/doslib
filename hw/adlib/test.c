@@ -32,6 +32,10 @@
 #include <hw/vga/vgatty.h>
 #include <hw/adlib/adlib.h>
 
+#if defined(TARGET_PC98)
+#error do not compile this program for PC98
+#endif
+
 static unsigned int musical_scale[18] = {
 	0x1B0,			/* E */
 	0x1CA,			/* F */
