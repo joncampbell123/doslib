@@ -1424,7 +1424,8 @@ int main(int argc,char **argv,char **envp) {
 # if defined(HAS_8254)
     /* DO use the 8254 as a timer source but only in Windows 3.x/9x/ME.
      * Touching the timer directly under Windows NT is a NO-NO and will crash us right away. */
-    if (windows_mode == WINDOWS_REAL || windows_mode == WINDOWS_STANDARD || windows_mode == WINDOWS_ENHANCED) {
+    if (windows_mode == WINDOWS_NONE     || windows_mode == WINDOWS_REAL ||
+        windows_mode == WINDOWS_STANDARD || windows_mode == WINDOWS_ENHANCED) {
         if (!probe_8254()) {
             printf("Cannot init 8254 timer\n");
             return 1;

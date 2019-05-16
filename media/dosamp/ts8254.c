@@ -59,6 +59,9 @@ int dosamp_FAR dosamp_time_source_8254_open(dosamp_time_source_t inst) {
     inst->clock_rate = T8254_REF_CLOCK_HZ;
     ts_8254_pcnt = read_8254(T8254_TIMER_INTERRUPT_TICK);
     ts_8254_pper = t8254_counter[T8254_TIMER_INTERRUPT_TICK];
+#if defined(TARGET_PC98)
+    assert(inst->clock_rate != 0ul); // blow up here if someone forgot to probe the 8254
+#endif
     return 0;
 }
 
