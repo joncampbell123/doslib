@@ -1058,11 +1058,22 @@ int main(int argc,char **argv) {
 	}
 
 	write_8254_system_timer(T8254_REF_CLOCK_HZ / ticks_per_quarter_note); /* tick faster at quarter note rate please */
+#if defined(TARGET_PC98)
+	irq0_cnt = 0; /* do not chain to IRQ0 handler on PC-98. IRQ0 will re-mask the IRQ and/or reprogram the timer */
+	irq0_add = 0;
+	irq0_max = 1;
+#else
 	irq0_cnt = 0;
 	irq0_add = 182;
 	irq0_max = 10 * ticks_per_quarter_note; /* about 18.2Hz */
+#endif
 	old_irq0 = _dos_getvect(8);/*IRQ0*/
 	_dos_setvect(8,irq0);
+
+#if defined(TARGET_PC98)
+	/* PC-98 does not have IRQ0 running by default */
+	p8259_unmask(T8254_IRQ);
+#endif
 
 	adlib_shut_up();
 	midi_reset_channels();
@@ -1095,6 +1106,10 @@ int main(int argc,char **argv) {
 			}
 		}
 	}
+
+#if defined(TARGET_PC98)
+	p8259_mask(T8254_IRQ);
+#endif
 
 	midi_playing = 0;
 	adlib_shut_up();
