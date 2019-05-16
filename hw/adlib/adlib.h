@@ -148,10 +148,18 @@ static inline void adlib_wait() {
 
 static inline unsigned char adlib_status(unsigned char which) {
 	adlib_wait();
+#if defined(TARGET_PC98)
+	return inp(ADLIB_IO_STATUS+(which*0x200u));
+#else
 	return inp(ADLIB_IO_STATUS+(which*2));
+#endif
 }
 
 static inline unsigned char adlib_status_imm(unsigned char which) {
+#if defined(TARGET_PC98)
+	return inp(ADLIB_IO_STATUS+(which*0x200u));
+#else
 	return inp(ADLIB_IO_STATUS+(which*2));
+#endif
 }
 

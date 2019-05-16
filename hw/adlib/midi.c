@@ -1041,6 +1041,10 @@ int main(int argc,char **argv) {
 		printf("Cannot init library\n");
 		return 1;
 	}
+
+    if (adlib_flags & ADLIB_FM_OPL3)
+        printf("OPL3 detected\n");
+
 	if (!probe_8254()) { /* we need the timer to keep time with the music */
 		printf("8254 timer not found\n");
 		return 1;

@@ -146,17 +146,33 @@ struct adlib_fm_channel adlib_fm_preset_small_drum = {
 
 unsigned char adlib_read(unsigned short i) {
 	unsigned char c;
+#if defined(TARGET_PC98)
+	outp(ADLIB_IO_INDEX+((i>>8)*0x200),(unsigned char)i);
+#else
 	outp(ADLIB_IO_INDEX+((i>>8)*2),(unsigned char)i);
+#endif
 	adlib_wait();
+#if defined(TARGET_PC98)
+	c = inp(ADLIB_IO_DATA+((i>>8)*0x200));
+#else
 	c = inp(ADLIB_IO_DATA+((i>>8)*2));
+#endif
 	adlib_wait();
 	return c;
 }
 
 void adlib_write(unsigned short i,unsigned char d) {
+#if defined(TARGET_PC98)
+	outp(ADLIB_IO_INDEX+((i>>8)*0x200),(unsigned char)i);
+#else
 	outp(ADLIB_IO_INDEX+((i>>8)*2),(unsigned char)i);
+#endif
 	adlib_wait();
+#if defined(TARGET_PC98)
+	outp(ADLIB_IO_DATA+((i>>8)*0x200),d);
+#else
 	outp(ADLIB_IO_DATA+((i>>8)*2),d);
+#endif
 	adlib_wait();
 }
 
