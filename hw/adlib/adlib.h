@@ -16,13 +16,15 @@
 #define ADLIB_FM_VOICES			18
 
 #if defined(TARGET_PC98)
-# define ADLIB_IO_INDEX			0xC8D2
-# define ADLIB_IO_STATUS		0xC8D2
-# define ADLIB_IO_DATA			0xC9D2
+// ADLIB is tied to Sound Blaster base I/O on PC-98
+extern uint16_t _adlib_sb_base;
+# define ADLIB_IO_INDEX			(_adlib_sb_base+0xC800u)
+# define ADLIB_IO_STATUS		(_adlib_sb_base+0xC800u)
+# define ADLIB_IO_DATA			(_adlib_sb_base+0xC900u)
 
-# define ADLIB_IO_INDEX2		0xCAD2
-# define ADLIB_IO_STATUS2		0xCAD2
-# define ADLIB_IO_DATA2			0xCBD2
+# define ADLIB_IO_INDEX2		(_adlib_sb_base+0xCA00u)
+# define ADLIB_IO_STATUS2		(_adlib_sb_base+0xCA00u)
+# define ADLIB_IO_DATA2			(_adlib_sb_base+0xCB00u)
 #else
 # define ADLIB_IO_INDEX			0x388
 # define ADLIB_IO_STATUS		0x388
