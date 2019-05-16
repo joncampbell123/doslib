@@ -915,7 +915,7 @@ void display_idle_timesource(void) {
 
     printf("counter=%-10llu (%lu) rate=%lu req=%lu  ",
             (unsigned long long)time_source->counter,
-            (unsigned long)(time_source->counter / (unsigned long long)time_source->clock_rate),
+            (time_source->clock_rate != 0ul) ? ((unsigned long)(time_source->counter / (unsigned long long)time_source->clock_rate)) : 0ul,
             (unsigned long)time_source->clock_rate,
             (unsigned long)time_source->poll_requirement);
 
