@@ -91,35 +91,6 @@ const int8_t vtx86_arduino_to_mc_md[2/*MC/MD*/][45/*PINS*/] = {
      NOPWM}
     };
 
-/* southbridge 0:7:1 */
-#define VORTEX86_PCI_SB1_BUS        (0)
-#define VORTEX86_PCI_SB1_DEV        (7)
-#define VORTEX86_PCI_SB1_FUNC       (1)
-
-uint8_t vtx86_sb1_readb(const uint8_t reg) {
-    return pci_read_cfgb(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg);
-}
-
-uint16_t vtx86_sb1_readw(const uint8_t reg) {
-    return pci_read_cfgw(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg);
-}
-
-uint32_t vtx86_sb1_readl(const uint8_t reg) {
-    return pci_read_cfgl(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg);
-}
-
-void vtx86_sb1_writeb(const uint8_t reg,const uint8_t val) {
-    pci_write_cfgb(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg,val);
-}
-
-void vtx86_sb1_writew(const uint8_t reg,const uint16_t val) {
-    pci_write_cfgw(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg,val);
-}
-
-void vtx86_sb1_writel(const uint8_t reg,const uint32_t val) {
-    pci_write_cfgl(VORTEX86_PCI_SB1_BUS,VORTEX86_PCI_SB1_DEV,VORTEX86_PCI_SB1_FUNC,reg,val);
-}
-
 /* MC 0:10:0 */
 #define VORTEX86_PCI_MC_BUS         (0)
 #define VORTEX86_PCI_MC_DEV         (0x10)

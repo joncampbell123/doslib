@@ -44,6 +44,18 @@ void vtx86_sb_writeb(const uint8_t reg,const uint8_t val);
 void vtx86_sb_writew(const uint8_t reg,const uint16_t val);
 void vtx86_sb_writel(const uint8_t reg,const uint32_t val);
 
+/* southbridge 0:7:1 */
+#define VORTEX86_PCI_SB1_BUS        (0)
+#define VORTEX86_PCI_SB1_DEV        (7)
+#define VORTEX86_PCI_SB1_FUNC       (1)
+
+uint8_t vtx86_sb1_readb(const uint8_t reg);
+uint16_t vtx86_sb1_readw(const uint8_t reg);
+uint32_t vtx86_sb1_readl(const uint8_t reg);
+void vtx86_sb1_writeb(const uint8_t reg,const uint8_t val);
+void vtx86_sb1_writew(const uint8_t reg,const uint16_t val);
+void vtx86_sb1_writel(const uint8_t reg,const uint32_t val);
+
 extern uint8_t vtx86_mc_md_inuse[VTX86_GPIO_PINS];
 
 #endif //__DOSLIB_HW_86DUINO_86DUINO_H
