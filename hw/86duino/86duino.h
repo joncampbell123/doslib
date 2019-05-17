@@ -177,5 +177,17 @@ void                                        vtx86_pinMode(const uint8_t pin, con
 void                                        vtx86_digitalWrite(const uint8_t pin,const uint8_t val);
 unsigned int                                vtx86_digitalRead(const uint8_t pin);
 
+static inline unsigned int vtx86_analogFIFO_Pending(void) {
+    return (inp(vtx86_cfg.adc_config_base_io + 2u) & 1u); /* data ready in FIFO */
+}
+
+static inline uint16_t vtx86_analogFIFO_ReadRaw(void) {
+    return inpw(vtx86_cfg.adc_config_base_io + 4u); /* ADC data register   bits [15:13] indicate which channel, bits [10:0] contain the value */
+}
+
+static inline uint16_t vtx86_analogFIFO_Read(void) {
+    return vtx86_analogFIFO_ReadRaw() & 0x7FFu;
+}
+
 #endif //__DOSLIB_HW_86DUINO_86DUINO_H
 

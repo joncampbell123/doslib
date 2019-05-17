@@ -96,18 +96,6 @@ int vtx86_init_adc(void) {
     return 1;
 }
 
-static inline unsigned int vtx86_analogFIFO_Pending(void) {
-    return (inp(vtx86_cfg.adc_config_base_io + 2u) & 1u); /* data ready in FIFO */
-}
-
-static inline uint16_t vtx86_analogFIFO_ReadRaw(void) {
-    return inpw(vtx86_cfg.adc_config_base_io + 4u); /* ADC data register   bits [15:13] indicate which channel, bits [10:0] contain the value */
-}
-
-static inline uint16_t vtx86_analogFIFO_Read(void) {
-    return vtx86_analogFIFO_ReadRaw() & 0x7FFu;
-}
-
 uint16_t vtx86_analogRead(const uint8_t pin) {
     uint16_t r;
 
