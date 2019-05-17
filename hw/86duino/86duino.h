@@ -177,6 +177,10 @@ void                                        vtx86_pinMode(const uint8_t pin, con
 void                                        vtx86_digitalWrite(const uint8_t pin,const uint8_t val);
 unsigned int                                vtx86_digitalRead(const uint8_t pin);
 
+int                                         vtx86_init_adc(void);
+void                                        vtx86_analogWrite(const uint8_t pin, const uint16_t val);
+uint16_t                                    vtx86_analogRead(const uint8_t pin);
+
 static inline unsigned int vtx86_analogFIFO_Pending(void) {
     return (inp(vtx86_cfg.adc_config_base_io + 2u) & 1u); /* data ready in FIFO */
 }
