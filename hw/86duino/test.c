@@ -15,26 +15,11 @@
 #include <hw/pci/pci.h>
 #include <hw/cpu/cpu.h>
 #include <hw/8254/8254.h>
-
-#define VTX86_SYSCLK            (100)
-
-#define VTX86_INPUT             (0x00)
-#define VTX86_OUTPUT            (0x01)
-#define VTX86_INPUT_PULLUP      (0x02)
-#define VTX86_INPUT_PULLDOWN    (0x03)
-
-#define VTX86_LOW               (0x00)
-#define VTX86_HIGH              (0x01)
-#define VTX86_CHANGE            (0x02)
-#define VTX86_FALLING           (0x03)
-#define VTX86_RISING            (0x04)
-
-#define VTX86_MCM_MC            (0)
-#define VTX86_MCM_MD            (1)
+#include <hw/86duino/86duino.h>
 
 static unsigned int vtx86_MCPWM_modOffset[3] = {0x08u, 0x08u + 0x2cu, 0x08u + 2u*0x2cu};
 
-uint8_t vtx86_mc_md_inuse[45/*PINS*/] = {0};
+uint8_t vtx86_mc_md_inuse[VTX86_GPIO_PINS] = {0};
 
 const int8_t vtx86_uart_IRQs[16] = {
     -1, 9, 3,10,
