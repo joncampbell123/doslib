@@ -98,7 +98,9 @@ extern unsigned char                        vtx86_86duino_flags;
 extern struct vtx86_cfg_t                   vtx86_cfg;
 extern struct vtx86_gpio_port_cfg_t         vtx86_gpio_port_cfg;
 
-int probe_vtx86(void);
+extern const uint8_t                        vtx86_gpio_to_crossbar_pin_map[45/*PINS*/];
+
+int                                         probe_vtx86(void);
 
 #endif //__DOSLIB_HW_86DUINO_86DUINO_H
 
