@@ -4,11 +4,11 @@ NOW_BUILDING = HW_86DUINO_LIB
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 
 C_SOURCE =    86duino.c
-OBJS =        $(SUBDIR)$(HPS)86duino.obj $(SUBDIR)$(HPS)nb.obj $(SUBDIR)$(HPS)sb.obj $(SUBDIR)$(HPS)sb1.obj $(SUBDIR)$(HPS)mc.obj $(SUBDIR)$(HPS)gpio.obj $(SUBDIR)$(HPS)mcio.obj
+OBJS =        $(SUBDIR)$(HPS)86duino.obj $(SUBDIR)$(HPS)nb.obj $(SUBDIR)$(HPS)sb.obj $(SUBDIR)$(HPS)sb1.obj $(SUBDIR)$(HPS)mc.obj $(SUBDIR)$(HPS)gpio.obj $(SUBDIR)$(HPS)mcio.obj $(SUBDIR)$(HPS)cfg.obj
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 
 $(HW_86DUINO_LIB): $(OBJS)
-	wlib -q -b -c $(HW_86DUINO_LIB) -+$(SUBDIR)$(HPS)86duino.obj -+$(SUBDIR)$(HPS)nb.obj -+$(SUBDIR)$(HPS)sb.obj -+$(SUBDIR)$(HPS)sb1.obj -+$(SUBDIR)$(HPS)mc.obj -+$(SUBDIR)$(HPS)gpio.obj -+$(SUBDIR)$(HPS)mcio.obj
+	wlib -q -b -c $(HW_86DUINO_LIB) -+$(SUBDIR)$(HPS)86duino.obj -+$(SUBDIR)$(HPS)nb.obj -+$(SUBDIR)$(HPS)sb.obj -+$(SUBDIR)$(HPS)sb1.obj -+$(SUBDIR)$(HPS)mc.obj -+$(SUBDIR)$(HPS)gpio.obj -+$(SUBDIR)$(HPS)mcio.obj -+$(SUBDIR)$(HPS)cfg.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
