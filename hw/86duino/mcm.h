@@ -24,8 +24,6 @@
 #define MCSIF_MODULEA       (0)
 #define MCSIF_MODULEB       (1)
 
-#define NOPWM    (-1)
-
 // MC General Registers
 #define MCG_MODEREG1        (0x00L)
 #define MCG_MODEREG2        (0x04L)
@@ -45,48 +43,6 @@
 #define MCG_INTSTATREG      (0x3aL)     // 16-bit
 #define MCG_UNLOCKREG1      (0x3cL)     // 16-bit
 #define MCG_UNLOCKREG2      (0x3eL)     // 16-bit
-
-#define MCPWM_RELOAD_CANCEL         (0x00<<4)
-#define MCPWM_RELOAD_PEREND         (0x01<<4)
-#define MCPWM_RELOAD_PERCE          (0x02<<4)
-#define MCPWM_RELOAD_SCEND          (0x03<<4)
-#define MCPWM_RELOAD_SIFTRIG        (0x05<<4)
-#define MCPWM_RELOAD_EVT            (0x06<<4)
-#define MCPWM_RELOAD_NOW            (0x07<<4)
-
-#define VTX86_ADC_RESOLUTION      (11u) // for 86Duino
-#define VTX86_PWM_RESOLUTION      (13u) // for 86duino
-
-#define MCPWM_HPOL_NORMAL       (0x00L << 29)
-#define MCPWM_HPOL_INVERSE      (0x01L << 29)
-#define MCPWM_LPOL_NORMAL       (0x00L << 28)
-#define MCPWM_LPOL_INVERSE      (0x01L << 28)
-
-#define MCPWM_MPWM_DISABLE      (0x00L << 30)
-#define MCPWM_MPWM_INACTIVE     (0x02L << 30)
-#define MCPWM_MPWM_ACTIVE       (0x03L << 30)
-
-#define MCPWM_EVT_DISABLE           (0x00L)
-#define MCPWM_EVT_PERSC             (0x01L)
-#define MCPWM_EVT_PERPWM            (0x02L)
-#define MCPWM_EVT_PERPWM2           (0x03L)
-
-#define MCPWM_HMASK_NONE        (0x00L << 26)
-#define MCPWM_HMASK_INACTIVE    (0x01L << 26)
-#define MCPWM_HMASK_TRISTATE    (0x03L << 26)
-#define MCPWM_LMASK_NONE        (0x00L << 24)
-#define MCPWM_LMASK_INACTIVE    (0x01L << 24)
-#define MCPWM_LMASK_TRISTATE    (0x03L << 24)
-
-#define MCPWM_EDGE_I0A1     (0x00L << 30)
-#define MCPWM_EDGE_A0I1     (0x02L << 30)
-#define MCPWM_CENTER_I0A1   (0x01L << 30)
-#define MCPWM_CENTER_A0I1   (0x03L << 30)
-
-#define MCPFAU_CAP_1TO0EDGE          (0x00L << 28)
-#define MCPFAU_CAP_0TO1EDGE          (0x02L << 28)
-#define MCPFAU_CAP_CAPCNT_OVERFLOW   (0x08L << 28)
-#define MCPFAU_CAP_FIFOEMPTY         (0x0fL << 28)
 
 // MC PWM Registers
 #define MCPWM_PERREG        (0x00L)

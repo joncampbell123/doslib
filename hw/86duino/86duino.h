@@ -20,6 +20,50 @@
 
 #define VTX86_GPIO_PINS         (45)
 
+#define VTX86_ADC_RESOLUTION      (11u) // for 86Duino
+#define VTX86_PWM_RESOLUTION      (13u) // for 86duino
+
+#define NOPWM    (-1)
+
+#define MCPWM_RELOAD_CANCEL         (0x00<<4)
+#define MCPWM_RELOAD_PEREND         (0x01<<4)
+#define MCPWM_RELOAD_PERCE          (0x02<<4)
+#define MCPWM_RELOAD_SCEND          (0x03<<4)
+#define MCPWM_RELOAD_SIFTRIG        (0x05<<4)
+#define MCPWM_RELOAD_EVT            (0x06<<4)
+#define MCPWM_RELOAD_NOW            (0x07<<4)
+
+#define MCPWM_HPOL_NORMAL       (0x00L << 29)
+#define MCPWM_HPOL_INVERSE      (0x01L << 29)
+#define MCPWM_LPOL_NORMAL       (0x00L << 28)
+#define MCPWM_LPOL_INVERSE      (0x01L << 28)
+
+#define MCPWM_MPWM_DISABLE      (0x00L << 30)
+#define MCPWM_MPWM_INACTIVE     (0x02L << 30)
+#define MCPWM_MPWM_ACTIVE       (0x03L << 30)
+
+#define MCPWM_EVT_DISABLE           (0x00L)
+#define MCPWM_EVT_PERSC             (0x01L)
+#define MCPWM_EVT_PERPWM            (0x02L)
+#define MCPWM_EVT_PERPWM2           (0x03L)
+
+#define MCPWM_HMASK_NONE        (0x00L << 26)
+#define MCPWM_HMASK_INACTIVE    (0x01L << 26)
+#define MCPWM_HMASK_TRISTATE    (0x03L << 26)
+#define MCPWM_LMASK_NONE        (0x00L << 24)
+#define MCPWM_LMASK_INACTIVE    (0x01L << 24)
+#define MCPWM_LMASK_TRISTATE    (0x03L << 24)
+
+#define MCPWM_EDGE_I0A1     (0x00L << 30)
+#define MCPWM_EDGE_A0I1     (0x02L << 30)
+#define MCPWM_CENTER_I0A1   (0x01L << 30)
+#define MCPWM_CENTER_A0I1   (0x03L << 30)
+
+#define MCPFAU_CAP_1TO0EDGE          (0x00L << 28)
+#define MCPFAU_CAP_0TO1EDGE          (0x02L << 28)
+#define MCPFAU_CAP_CAPCNT_OVERFLOW   (0x08L << 28)
+#define MCPFAU_CAP_FIFOEMPTY         (0x0fL << 28)
+
 /* northbridge 0:0:0 */
 #define VORTEX86_PCI_NB_BUS         (0)
 #define VORTEX86_PCI_NB_DEV         (0)
@@ -73,7 +117,8 @@ uint32_t vtx86_mc_inp(const int mc, const uint32_t idx);
 void vtx86_mc_outpb(const int mc, const uint32_t idx, const unsigned char val);
 unsigned char vtx86_mc_inpb(const int mc, const uint32_t idx);
 
-extern uint8_t vtx86_mc_md_inuse[VTX86_GPIO_PINS];
+extern uint8_t                              vtx86_mc_md_inuse[VTX86_GPIO_PINS];
+extern const int8_t                         vtx86_arduino_to_mc_md[2/*MC/MD*/][45/*PINS*/];
 
 struct vtx86_cfg_t {
     uint16_t                                uart_config_base_io;
@@ -108,6 +153,24 @@ extern const uint8_t                        vtx86_gpio_to_crossbar_pin_map[45/*P
 int                                         probe_vtx86(void);
 int                                         read_vtx86_config(void);
 int                                         read_vtx86_gpio_pin_config(void);
+
+uint8_t                                     vtx86_mc_IsEnabled(const int mc);
+void                                        vtx86_mcpwm_Enable(const uint8_t mc, const uint8_t module);
+void                                        vtx86_mcpwm_Disable(const uint8_t mc, const uint8_t module);
+void                                        vtx86_mcpwm_DisableProtect(const int mc, const uint8_t module);
+void                                        vtx86_Close_Pwm(const uint8_t pin);
+void                                        vtx86_mcpwm_SetDeadband(const int mc, const int module, const uint32_t db);
+void                                        vtx86_mcpwm_ReloadPWM(const int mc, const int module, const unsigned char mode);
+void                                        vtx86_mcpwm_ReloadEVT(const int mc, const int module, const unsigned char mode);
+void                                        vtx86_mcpwm_ReloadOUT(const int mc, const int module, const unsigned char mode);
+void                                        vtx86_mcpwm_ReloadOUT_Unsafe(const int mc, const int module, const unsigned char mode);
+void                                        mcspwm_ReloadOUT_Unsafe(const int mc, const unsigned char mode);
+void                                        vtx86_mcpwm_SetOutMask(const int mc, const int module, const uint32_t mask);
+void                                        vtx86_mcpwm_SetOutPolarity(const int mc, const int module, const uint32_t pol);
+void                                        vtx86_mcpwm_SetMPWM(const int mc, const int module, const uint32_t mpwm);
+void                                        vtx86_mcpwm_SetWaveform(const int mc, const int module, const uint32_t mode);
+void                                        vtx86_mcpwm_SetWidth(const int mc, const int module, const uint32_t period, const uint32_t phase0);
+void                                        vtx86_mcpwm_SetSamplCycle(const int mc, const int module, const uint32_t sc);
 
 #endif //__DOSLIB_HW_86DUINO_86DUINO_H
 
