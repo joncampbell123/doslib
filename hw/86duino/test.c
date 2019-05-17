@@ -91,64 +91,6 @@ const int8_t vtx86_arduino_to_mc_md[2/*MC/MD*/][45/*PINS*/] = {
      NOPWM}
     };
 
-/* northbridge 0:0:0 */
-#define VORTEX86_PCI_NB_BUS         (0)
-#define VORTEX86_PCI_NB_DEV         (0)
-#define VORTEX86_PCI_NB_FUNC        (0)
-
-uint8_t vtx86_nb_readb(const uint8_t reg) {
-    return pci_read_cfgb(VORTEX86_PCI_NB_BUS,VORTEX86_PCI_NB_DEV,VORTEX86_PCI_NB_FUNC,reg);
-}
-
-uint16_t vtx86_nb_readw(const uint8_t reg) {
-    return pci_read_cfgw(VORTEX86_PCI_NB_BUS,VORTEX86_PCI_NB_DEV,VORTEX86_PCI_NB_FUNC,reg);
-}
-
-uint32_t vtx86_nb_readl(const uint8_t reg) {
-    return pci_read_cfgl(VORTEX86_PCI_NB_BUS,VORTEX86_PCI_NB_DEV,VORTEX86_PCI_NB_FUNC,reg);
-}
-
-void vtx86_nb_writeb(const uint8_t reg,const uint8_t val) {
-    pci_write_cfgb(VORTEX86_PCI_NB_BUS,VORTEX86_PCI_NB_DEV,VORTEX86_PCI_NB_FUNC,reg,val);
-}
-
-void vtx86_nb_writew(const uint8_t reg,const uint16_t val) {
-    pci_write_cfgw(VORTEX86_PCI_NB_BUS,VORTEX86_PCI_NB_DEV,VORTEX86_PCI_NB_FUNC,reg,val);
-}
-
-void vtx86_nb_writel(const uint8_t reg,const uint32_t val) {
-    pci_write_cfgl(VORTEX86_PCI_NB_BUS,VORTEX86_PCI_NB_DEV,VORTEX86_PCI_NB_FUNC,reg,val);
-}
-
-/* southbridge 0:7:0 */
-#define VORTEX86_PCI_SB_BUS         (0)
-#define VORTEX86_PCI_SB_DEV         (7)
-#define VORTEX86_PCI_SB_FUNC        (0)
-
-uint8_t vtx86_sb_readb(const uint8_t reg) {
-    return pci_read_cfgb(VORTEX86_PCI_SB_BUS,VORTEX86_PCI_SB_DEV,VORTEX86_PCI_SB_FUNC,reg);
-}
-
-uint16_t vtx86_sb_readw(const uint8_t reg) {
-    return pci_read_cfgw(VORTEX86_PCI_SB_BUS,VORTEX86_PCI_SB_DEV,VORTEX86_PCI_SB_FUNC,reg);
-}
-
-uint32_t vtx86_sb_readl(const uint8_t reg) {
-    return pci_read_cfgl(VORTEX86_PCI_SB_BUS,VORTEX86_PCI_SB_DEV,VORTEX86_PCI_SB_FUNC,reg);
-}
-
-void vtx86_sb_writeb(const uint8_t reg,const uint8_t val) {
-    pci_write_cfgb(VORTEX86_PCI_SB_BUS,VORTEX86_PCI_SB_DEV,VORTEX86_PCI_SB_FUNC,reg,val);
-}
-
-void vtx86_sb_writew(const uint8_t reg,const uint16_t val) {
-    pci_write_cfgw(VORTEX86_PCI_SB_BUS,VORTEX86_PCI_SB_DEV,VORTEX86_PCI_SB_FUNC,reg,val);
-}
-
-void vtx86_sb_writel(const uint8_t reg,const uint32_t val) {
-    pci_write_cfgl(VORTEX86_PCI_SB_BUS,VORTEX86_PCI_SB_DEV,VORTEX86_PCI_SB_FUNC,reg,val);
-}
-
 /* southbridge 0:7:1 */
 #define VORTEX86_PCI_SB1_BUS        (0)
 #define VORTEX86_PCI_SB1_DEV        (7)

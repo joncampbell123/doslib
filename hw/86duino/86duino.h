@@ -20,6 +20,30 @@
 
 #define VTX86_GPIO_PINS         (45)
 
+/* northbridge 0:0:0 */
+#define VORTEX86_PCI_NB_BUS         (0)
+#define VORTEX86_PCI_NB_DEV         (0)
+#define VORTEX86_PCI_NB_FUNC        (0)
+
+uint8_t vtx86_nb_readb(const uint8_t reg);
+uint16_t vtx86_nb_readw(const uint8_t reg);
+uint32_t vtx86_nb_readl(const uint8_t reg);
+void vtx86_nb_writeb(const uint8_t reg,const uint8_t val);
+void vtx86_nb_writew(const uint8_t reg,const uint16_t val);
+void vtx86_nb_writel(const uint8_t reg,const uint32_t val);
+
+/* southbridge 0:7:0 */
+#define VORTEX86_PCI_SB_BUS         (0)
+#define VORTEX86_PCI_SB_DEV         (7)
+#define VORTEX86_PCI_SB_FUNC        (0)
+
+uint8_t vtx86_sb_readb(const uint8_t reg);
+uint16_t vtx86_sb_readw(const uint8_t reg);
+uint32_t vtx86_sb_readl(const uint8_t reg);
+void vtx86_sb_writeb(const uint8_t reg,const uint8_t val);
+void vtx86_sb_writew(const uint8_t reg,const uint16_t val);
+void vtx86_sb_writel(const uint8_t reg,const uint32_t val);
+
 extern uint8_t vtx86_mc_md_inuse[VTX86_GPIO_PINS];
 
 #endif //__DOSLIB_HW_86DUINO_86DUINO_H
