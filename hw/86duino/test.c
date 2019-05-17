@@ -24,55 +24,6 @@ const int8_t vtx86_uart_IRQs[16] = {
     -1,14,-1,15
 };
 
-void vtx86_digitalWrite(const uint8_t pin,const uint8_t val) {
-    unsigned char crossbar_bit;
-    unsigned char cbio_bitmask;
-    uint16_t dport;
-
-    if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return;
-
-    crossbar_bit = vtx86_gpio_to_crossbar_pin_map[pin];
-    dport = vtx86_gpio_port_cfg.gpio_pingroup[crossbar_bit / 8u].data_io;
-    if (dport == 0) return;
-
-    cbio_bitmask = 1u << (crossbar_bit % 8u);
-
-    if (crossbar_bit >= 32u)
-        outp(vtx86_cfg.crossbar_config_base_io + 0x80 + (crossbar_bit / 8u), 0x01);
-    else {
-        outp(vtx86_cfg.crossbar_config_base_io + 0x90 + crossbar_bit, 0x01);
-        vtx86_Close_Pwm(pin);
-    }
-
-    SAVE_CPUFLAGS( _cli() ) {
-        if (val == VTX86_LOW)
-            outp(dport, inp(dport) & (~cbio_bitmask));
-        else
-            outp(dport, inp(dport) |   cbio_bitmask );
-    } RESTORE_CPUFLAGS();
-}
-
-unsigned int vtx86_digitalRead(const uint8_t pin) {
-    unsigned char crossbar_bit;
-    unsigned char cbio_bitmask;
-    uint16_t dport;
-
-    if (pin >= sizeof(vtx86_gpio_to_crossbar_pin_map)) return ~0u;
-
-    crossbar_bit = vtx86_gpio_to_crossbar_pin_map[pin];
-    dport = vtx86_gpio_port_cfg.gpio_pingroup[crossbar_bit / 8u].data_io;
-    if (dport == 0) return ~0u;
-
-    cbio_bitmask = 1u << (crossbar_bit % 8u);
-
-    if (crossbar_bit >= 32u)
-        outp(vtx86_cfg.crossbar_config_base_io + 0x80 + (crossbar_bit / 8u), 0x01);
-    else
-        outp(vtx86_cfg.crossbar_config_base_io + 0x90 + crossbar_bit, 0x01);
-
-    return (inp(dport) & cbio_bitmask) ? VTX86_HIGH : VTX86_LOW;
-}
-
 void vtx86_pinMode(const uint8_t pin, const uint8_t mode) {
 #define VTX86_PINMODE_TRI_STATE         (0x00)
 #define VTX86_PINMODE_PULL_UP           (0x01)

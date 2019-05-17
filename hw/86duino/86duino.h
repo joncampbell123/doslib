@@ -172,5 +172,8 @@ void                                        vtx86_mcpwm_SetWaveform(const int mc
 void                                        vtx86_mcpwm_SetWidth(const int mc, const int module, const uint32_t period, const uint32_t phase0);
 void                                        vtx86_mcpwm_SetSamplCycle(const int mc, const int module, const uint32_t sc);
 
+void                                        vtx86_digitalWrite(const uint8_t pin,const uint8_t val);
+unsigned int                                vtx86_digitalRead(const uint8_t pin);
+
 #endif //__DOSLIB_HW_86DUINO_86DUINO_H
 
