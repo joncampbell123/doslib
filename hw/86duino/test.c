@@ -91,35 +91,6 @@ const int8_t vtx86_arduino_to_mc_md[2/*MC/MD*/][45/*PINS*/] = {
      NOPWM}
     };
 
-/* MC 0:10:0 */
-#define VORTEX86_PCI_MC_BUS         (0)
-#define VORTEX86_PCI_MC_DEV         (0x10)
-#define VORTEX86_PCI_MC_FUNC        (0)
-
-uint8_t vtx86_mc_readb(const uint8_t reg) {
-    return pci_read_cfgb(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg);
-}
-
-uint16_t vtx86_mc_readw(const uint8_t reg) {
-    return pci_read_cfgw(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg);
-}
-
-uint32_t vtx86_mc_readl(const uint8_t reg) {
-    return pci_read_cfgl(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg);
-}
-
-void vtx86_mc_writeb(const uint8_t reg,const uint8_t val) {
-    pci_write_cfgb(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg,val);
-}
-
-void vtx86_mc_writew(const uint8_t reg,const uint16_t val) {
-    pci_write_cfgw(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg,val);
-}
-
-void vtx86_mc_writel(const uint8_t reg,const uint32_t val) {
-    pci_write_cfgl(VORTEX86_PCI_MC_BUS,VORTEX86_PCI_MC_DEV,VORTEX86_PCI_MC_FUNC,reg,val);
-}
-
 struct vtx86_cfg_t {
     uint16_t        uart_config_base_io;
     uint16_t        gpio_intconfig_base_io;
