@@ -149,6 +149,7 @@ extern struct vtx86_cfg_t                   vtx86_cfg;
 extern struct vtx86_gpio_port_cfg_t         vtx86_gpio_port_cfg;
 
 extern const uint8_t                        vtx86_gpio_to_crossbar_pin_map[45/*PINS*/];
+extern const int8_t                         vtx86_uart_IRQs[16];
 
 int                                         probe_vtx86(void);
 int                                         read_vtx86_config(void);

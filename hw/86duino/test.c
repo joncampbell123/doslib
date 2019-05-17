@@ -17,13 +17,6 @@
 #include <hw/8254/8254.h>
 #include <hw/86duino/86duino.h>
 
-const int8_t vtx86_uart_IRQs[16] = {
-    -1, 9, 3,10,
-     4, 5, 7, 6,
-     1,11,-1,12,
-    -1,14,-1,15
-};
-
 int main(int argc,char **argv) {
     cpu_probe();
     probe_dos();
