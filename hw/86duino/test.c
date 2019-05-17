@@ -91,34 +91,6 @@ const int8_t vtx86_arduino_to_mc_md[2/*MC/MD*/][45/*PINS*/] = {
      NOPWM}
     };
 
-struct vtx86_cfg_t {
-    uint16_t        uart_config_base_io;
-    uint16_t        gpio_intconfig_base_io;
-    uint16_t        gpio_portconfig_base_io;
-    uint16_t        crossbar_config_base_io;
-    uint16_t        pwm_config_base_io;
-    uint16_t        adc_config_base_io;
-};
-
-/* gpio_portconfig */
-struct vtx86_gpio_port_cfg_pin_t {
-    uint16_t                        dir_io;
-    uint16_t                        data_io;
-};
-
-struct vtx86_gpio_port_cfg_t {
-    uint32_t                                gpio_dec_enable;
-    struct vtx86_gpio_port_cfg_pin_t        gpio_pingroup[10];
-};
-
-unsigned char                   vtx86_86duino_flags = 0;
-#define VTX86_86DUINO_FLAG_SB1          (1u << 0u)
-#define VTX86_86DUINO_FLAG_MC           (1u << 1u)
-#define VTX86_86DUINO_FLAG_DETECTED     (1u << 2u)
-
-struct vtx86_cfg_t              vtx86_cfg = {0};
-struct vtx86_gpio_port_cfg_t    vtx86_gpio_port_cfg = {0};
-
 // MC General Registers
 #define MCG_MODEREG1        (0x00L)
 #define MCG_MODEREG2        (0x04L)

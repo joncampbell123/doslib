@@ -70,5 +70,33 @@ void vtx86_mc_writel(const uint8_t reg,const uint32_t val);
 
 extern uint8_t vtx86_mc_md_inuse[VTX86_GPIO_PINS];
 
+struct vtx86_cfg_t {
+    uint16_t                                uart_config_base_io;
+    uint16_t                                gpio_intconfig_base_io;
+    uint16_t                                gpio_portconfig_base_io;
+    uint16_t                                crossbar_config_base_io;
+    uint16_t                                pwm_config_base_io;
+    uint16_t                                adc_config_base_io;
+};
+
+/* gpio_portconfig */
+struct vtx86_gpio_port_cfg_pin_t {
+    uint16_t                                dir_io;
+    uint16_t                                data_io;
+};
+
+struct vtx86_gpio_port_cfg_t {
+    uint32_t                                gpio_dec_enable;
+    struct vtx86_gpio_port_cfg_pin_t        gpio_pingroup[10];
+};
+
+extern unsigned char                        vtx86_86duino_flags;
+#define VTX86_86DUINO_FLAG_SB1              (1u << 0u)
+#define VTX86_86DUINO_FLAG_MC               (1u << 1u)
+#define VTX86_86DUINO_FLAG_DETECTED         (1u << 2u)
+
+extern struct vtx86_cfg_t                   vtx86_cfg;
+extern struct vtx86_gpio_port_cfg_t         vtx86_gpio_port_cfg;
+
 #endif //__DOSLIB_HW_86DUINO_86DUINO_H
 
