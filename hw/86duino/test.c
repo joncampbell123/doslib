@@ -157,42 +157,6 @@ const int8_t vtx86_arduino_to_mc_md[2/*MC/MD*/][45/*PINS*/] = {
 #define MCPWM_FOUTREG       (0x24L)
 #define MCPWM_LDREG         (0x28L)
 
-void vtx86_mc_outp(const int mc, const uint32_t idx, const uint32_t val) {
-    SAVE_CPUFLAGS( _cli() ) {
-        outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
-        outpd(vtx86_cfg.pwm_config_base_io + (unsigned)idx, val);
-    } RESTORE_CPUFLAGS();
-}
-
-uint32_t vtx86_mc_inp(const int mc, const uint32_t idx) {
-    uint32_t tmp;
-
-    SAVE_CPUFLAGS( _cli() ) {
-        outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
-        tmp = inpd(vtx86_cfg.pwm_config_base_io + (unsigned)idx);
-    } RESTORE_CPUFLAGS();
-
-    return tmp;
-}
-
-void vtx86_mc_outpb(const int mc, const uint32_t idx, const unsigned char val) {
-    SAVE_CPUFLAGS( _cli() ) {
-        outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
-        outp(vtx86_cfg.pwm_config_base_io + (unsigned)idx, val);
-    } RESTORE_CPUFLAGS();
-}
-
-unsigned char vtx86_mc_inpb(const int mc, const uint32_t idx) {
-    unsigned char tmp;
-
-    SAVE_CPUFLAGS( _cli() ) {
-        outpd(vtx86_cfg.pwm_config_base_io + 0xd0, 1UL<<(mc+1));  // paging to corresponding reg window 
-        tmp = inp(vtx86_cfg.pwm_config_base_io + (unsigned)idx);
-    } RESTORE_CPUFLAGS();
-
-    return tmp;
-}
-
 uint8_t vtx86_mc_IsEnabled(const int mc) {
     const uint32_t reg1 = vtx86_mc_inp(MC_GENERAL, MCG_ENABLEREG1);
     const uint32_t reg2 = vtx86_mc_inp(MC_GENERAL, MCG_ENABLEREG2);

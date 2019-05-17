@@ -68,6 +68,11 @@ void vtx86_mc_writeb(const uint8_t reg,const uint8_t val);
 void vtx86_mc_writew(const uint8_t reg,const uint16_t val);
 void vtx86_mc_writel(const uint8_t reg,const uint32_t val);
 
+void vtx86_mc_outp(const int mc, const uint32_t idx, const uint32_t val);
+uint32_t vtx86_mc_inp(const int mc, const uint32_t idx);
+void vtx86_mc_outpb(const int mc, const uint32_t idx, const unsigned char val);
+unsigned char vtx86_mc_inpb(const int mc, const uint32_t idx);
+
 extern uint8_t vtx86_mc_md_inuse[VTX86_GPIO_PINS];
 
 struct vtx86_cfg_t {
