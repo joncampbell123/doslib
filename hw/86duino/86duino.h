@@ -107,6 +107,7 @@ extern const uint8_t                        vtx86_gpio_to_crossbar_pin_map[45/*P
 
 int                                         probe_vtx86(void);
 int                                         read_vtx86_config(void);
+int                                         read_vtx86_gpio_pin_config(void);
 
 #endif //__DOSLIB_HW_86DUINO_86DUINO_H
 
