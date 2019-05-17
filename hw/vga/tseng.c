@@ -16,6 +16,10 @@
 #include <hw/8254/8254.h>
 #include <hw/dos/doswin.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 int tseng_et3000_detect() {
 	unsigned char old,val;
 	int base;
@@ -82,3 +86,4 @@ int tseng_et4000_detect() {
 	return 1;
 }
 
+#endif

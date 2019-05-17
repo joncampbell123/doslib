@@ -2,6 +2,10 @@
 #ifndef __DOSLIB_HW_VGA_VGA_H
 #define __DOSLIB_HW_VGA_VGA_H
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 #include <conio.h>
 
 #include <hw/cpu/cpu.h>
@@ -475,6 +479,8 @@ struct vga_mode_params {
 void vga_wm1_mem_block_copy(uint16_t dst,uint16_t src,uint16_t b);
 void vga_setup_wm1_block_copy();
 void vga_restore_rm0wm0();
+
+#endif //defined(TARGET_PC98)
 
 #endif /* __DOSLIB_HW_VGA_VGA_H */
 

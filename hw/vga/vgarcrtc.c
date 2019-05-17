@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 /* WARNING: [At least in DOSBox 0.74] do not call this for any CGA or EGA graphics modes.
  *          It seems to trigger a false mode change and alphanumeric mode */
 void vga_relocate_crtc(unsigned char color) {
@@ -43,4 +47,6 @@ void vga_relocate_crtc(unsigned char color) {
 
 	vga_state.vga_base_3x0 = color ? 0x3D0 : 0x3B0;
 }
+
+#endif
 

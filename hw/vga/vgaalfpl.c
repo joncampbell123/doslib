@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 void vga_alpha_switch_to_font_plane() {
 	vga_write_GC(0x4,0x02); /* NTS: Read Map Select: This is very important if the caller wants to read from the font plane without reading back gibberish */
 	vga_write_GC(0x5,0x00);
@@ -37,4 +41,6 @@ void vga_alpha_switch_from_font_plane() {
 	vga_write_sequencer(0x2,0x03);
 	vga_write_sequencer(0x4,0x02);
 }
+
+#endif
 

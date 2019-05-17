@@ -15,6 +15,10 @@
 #include <hw/vga/vga.h>
 #include <hw/dos/doswin.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 uint16_t vga_get_start_location() {
 	uint16_t r;
 
@@ -22,4 +26,6 @@ uint16_t vga_get_start_location() {
 	r += vga_read_CRTC(0x0C) << 8;
 	return r;
 }
+
+#endif
 

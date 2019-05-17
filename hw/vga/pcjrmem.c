@@ -15,6 +15,10 @@
 #include <hw/vga/vga.h>
 #include <hw/dos/doswin.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 /* NTS: PCjr and Tandy fake video RAM using system memory.
  *      Video RAM memory I/O is redirected to system RAM at
  *      a page controlled by the BIOS. We can read what
@@ -54,3 +58,4 @@ VGA_RAM_PTR get_pcjr_mem(void) {
 #endif
 }
 
+#endif

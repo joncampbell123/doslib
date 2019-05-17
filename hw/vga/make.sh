@@ -5,6 +5,7 @@ if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 
 dos=1 # MS-DOS
 dostiny=1 # MS-DOS tiny model
+dospc98=1 # stub
 doshuge=1 # MS-DOS huge
 win31=1 # Windows 3.1
 win32s=1 # Windows 3.1 + Win32s

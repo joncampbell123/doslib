@@ -21,6 +21,10 @@
 #include <hw/vga/vgatty.h>
 #include <hw/dos/doswin.h>
 
+#ifdef TARGET_PC98
+#error this code cannot compile for PC98
+#endif
+
 #ifdef TARGET_WINDOWS
 # define WINFCON_STOCK_WIN_MAIN
 # include <hw/dos/winfcon.h>

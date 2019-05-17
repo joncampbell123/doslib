@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 void vga_sync_bios_cursor() {
 #ifndef TARGET_WINDOWS
 # if TARGET_MSDOS == 32
@@ -34,3 +38,4 @@ void vga_sync_bios_cursor() {
 #endif
 }
 
+#endif

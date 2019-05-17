@@ -16,6 +16,10 @@
 #include <hw/vga/vgatty.h>
 #include <hw/vga/vgagui.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 #ifdef TARGET_WINDOWS
 # include <hw/dos/winfcon.h>
 # include <windows/apihelp.h>
@@ -491,4 +495,6 @@ int confirm_yes_no_dialog(const char *message) {
 
 	return ret;
 }
+
+#endif
 

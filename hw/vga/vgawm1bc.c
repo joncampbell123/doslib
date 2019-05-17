@@ -13,6 +13,10 @@
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 void vga_setup_wm1_block_copy() {
 	vga_write_GC(VGA_GC_MODE,0x40/*256-color mode*/ | 1/*write mode 1*/); // and read mode 0
 	vga_write_sequencer(0x02/*map mask*/,0xF); // all planes enabled
@@ -67,4 +71,6 @@ void vga_wm1_mem_block_copy(uint16_t dst,uint16_t src,uint16_t b) {
 void vga_restore_rm0wm0() {
 	vga_write_GC(VGA_GC_MODE,0x40/*256-color mode*/); // read mode 0, write mode 0
 }
+
+#endif
 

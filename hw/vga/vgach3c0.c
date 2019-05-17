@@ -15,6 +15,10 @@
 #include <hw/vga/vga.h>
 #include <hw/dos/doswin.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 int check_vga_3C0() {
 	unsigned char mor;
 
@@ -39,4 +43,6 @@ int check_vga_3C0() {
 
 	return 1;
 }
+
+#endif
 

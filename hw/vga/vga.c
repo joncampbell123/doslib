@@ -15,6 +15,10 @@
 #include <hw/vga/vga.h>
 #include <hw/dos/doswin.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 #ifdef TARGET_WINDOWS
 # include <hw/dos/winfcon.h>
 # include <windows/apihelp.h>
@@ -428,5 +432,8 @@ void int10_setmode(unsigned char mode) {
 	ExecuteWin16EBbuffer(code);
 	UnlockWin16EBbuffer();
 }
+
+#endif
+
 #endif
 

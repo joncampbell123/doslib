@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 void vga_read_crtc_mode(struct vga_mode_params *p) {
 	unsigned char c,c2;
 
@@ -83,4 +87,6 @@ void vga_read_crtc_mode(struct vga_mode_params *p) {
 	if (p->vertical_blank_start >= p->vertical_blank_end)
 		p->vertical_blank_end += 0x80;
 }
+
+#endif
 

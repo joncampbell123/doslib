@@ -22,9 +22,14 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 /* VGA hardware registers impose several restraints on valid values,
  * mostly related to how retrace and blanking start/end values are encoded */
 void vga_correct_crtc_mode(struct vga_mode_params *p) {
 	/* TODO */
 }
 
+#endif

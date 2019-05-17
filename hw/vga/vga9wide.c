@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 /* NTS: this also completes the change by setting the clock select bits in Misc. out register
  *      on the assumption that you are changing 8/9 bits in 80x25 alphanumeric mode. The
  *      clock change is necessary to retain the proper hsync/vsync rates on the VGA monitor. */
@@ -42,4 +46,6 @@ void vga_set_9wide(unsigned char en) {
 	c |= (en ? 1 : 0) << 2;	/* 0=25MHz 1=28MHz */
 	outp(0x3C2,c);
 }
+
+#endif
 

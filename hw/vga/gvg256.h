@@ -3,6 +3,10 @@
 
 #include <hw/vga/vga.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 struct v320x200x256_VGA_state {
 	uint16_t		stride;			// bytes per scanline
 	uint16_t		width,virt_width;	// video width vs virtual width
@@ -94,4 +98,6 @@ static inline void v320x200x256_VGA_setpixel(const unsigned int x,const unsigned
 	if (x >= v320x200x256_VGA_state.stride || y >= v320x200x256_VGA_state.height) return;
 	v320x200x256_VGA_setpixelnc(x,y,v);
 }
+
+#endif
 

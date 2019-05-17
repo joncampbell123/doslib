@@ -9,6 +9,10 @@
 #include <math.h>
 #include <dos.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
@@ -43,4 +47,6 @@ void draw_vrl1_vgax_modexstretch(unsigned int x,unsigned int y,unsigned int xste
 		}
 	}
 }
+
+#endif
 

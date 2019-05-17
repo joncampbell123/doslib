@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 /* WARNING: This code is deliberately designed to NOT fullfill your request if you have
  *          anything but VGA. EGA and CGA monitors are fixed-frequency and this kind of
  *          experimentation is not good for them. You can of course fry a VGA monitor
@@ -113,4 +117,6 @@ void vga_write_crtc_mode(struct vga_mode_params *p,unsigned int flags) {
 	c = vga_read_CRTC(0x11);
 	vga_write_CRTC(0x11,c|0x80);
 }
+
+#endif
 

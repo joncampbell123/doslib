@@ -16,6 +16,10 @@
 #include <hw/vga/vgatty.h>
 #include <hw/dos/doswin.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 #include <hw/vga/gvg256.h>
 
 struct v320x200x256_VGA_state v320x200x256_VGA_state = {0};
@@ -225,4 +229,6 @@ void v320x200x256_VGA_setwindow(int x,int y,int w,int h,int vwidth) {
 	vga_write_crtc_mode(&v320x200x256_VGA_crtc_state,VGA_WRITE_CRTC_MODE_NO_CLEAR_SYNC);
 	v320x200x256_VGA_update_from_CRTC_state();
 }
+
+#endif
 

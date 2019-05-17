@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 void vga_switch_to_mono() {
 	unsigned char moc = 0;
 
@@ -64,3 +68,4 @@ void vga_switch_to_mono() {
 #endif
 }
 
+#endif

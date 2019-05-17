@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 /* EGA/VGA only */
 void vga_set_memory_map(unsigned char c) {
 	unsigned char b;
@@ -39,4 +43,6 @@ void vga_set_memory_map(unsigned char c) {
 		update_state_vga_memory_map_select(c);
 	}
 }
+
+#endif
 

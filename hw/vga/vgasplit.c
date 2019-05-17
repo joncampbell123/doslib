@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 void vga_splitscreen(unsigned int v) {
 	unsigned char c;
 
@@ -42,3 +46,4 @@ void vga_splitscreen(unsigned int v) {
 	}
 }
 
+#endif

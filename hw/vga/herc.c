@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 /* HGC values for HGC graphics */
 const unsigned char hgc_graphics_crtc[12] = {
 	0x35,0x2D,0x2E,0x07,
@@ -59,4 +63,6 @@ void vga_turn_off_hgc() {
 	}
 	outp(0x3B8,0x28); /* turn on video and text */
 }
+
+#endif
 

@@ -22,8 +22,14 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 void vga_set_start_location(unsigned int offset) {
 	vga_write_CRTC(0x0C,offset>>8);
 	vga_write_CRTC(0x0D,offset);
 }
+
+#endif
 

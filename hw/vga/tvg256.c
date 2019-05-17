@@ -18,6 +18,10 @@
 #include <hw/vga/vgatty.h>
 #include <hw/dos/doswin.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 #include <hw/vga/gvg256.h>
 #include <hw/vga/tvg256.h>
 
@@ -866,4 +870,6 @@ void v320x200x256_VGA_menu() {
 	int10_setmode(3);
 	update_state_from_vga();
 }
+
+#endif
 

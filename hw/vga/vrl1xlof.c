@@ -9,6 +9,10 @@
 #include <math.h>
 #include <dos.h>
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
 #include <hw/vga/vga.h>
@@ -50,4 +54,6 @@ vrl1_vgax_offset_t *vrl1_vgax_genlineoffsets(struct vrl1_vgax_header *hdr,unsign
 
 	return list;
 }
+
+#endif
 

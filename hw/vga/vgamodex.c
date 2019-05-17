@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 void vga_enable_256color_modex() {
 	vga_write_sequencer(4,0x06);
 	vga_write_sequencer(0,0x01);
@@ -30,4 +34,6 @@ void vga_enable_256color_modex() {
 	vga_write_sequencer(0,0x03);
 	vga_write_sequencer(VGA_SC_MAP_MASK,0xF);
 }
+
+#endif
 

@@ -22,6 +22,10 @@
 # include <windows/win16eb/win16eb.h>
 #endif
 
+#if defined(TARGET_PC98)
+/*nothing*/
+#else
+
 void vga_select_charset_a_b(unsigned short a,unsigned short b) {
 	unsigned char c;
 
@@ -32,4 +36,6 @@ void vga_select_charset_a_b(unsigned short a,unsigned short b) {
 
 	vga_write_sequencer(3,c);
 }
+
+#endif
 
