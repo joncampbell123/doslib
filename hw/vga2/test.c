@@ -20,7 +20,7 @@ extern uint16_t                 vga2_flags;
 #define probe_vga2_dcc_to_flags_sz 0x0D
 static const uint8_t probe_vga2_dcc_to_flags[probe_vga2_dcc_to_flags_sz] = {
     VGA2_FLAG_NONE,                                                                         // 0x00
-    VGA2_FLAG_MDA | VGA2_FLAG_MONO_DISPLAY,                                                 // 0x01
+    VGA2_FLAG_MDA | VGA2_FLAG_DIGITAL_DISPLAY | VGA2_FLAG_MONO_DISPLAY,                     // 0x01
     VGA2_FLAG_CGA | VGA2_FLAG_DIGITAL_DISPLAY,                                              // 0x02
     VGA2_FLAG_NONE,                                                                         // 0x03 reserved
     VGA2_FLAG_CGA | VGA2_FLAG_EGA | VGA2_FLAG_DIGITAL_DISPLAY,                              // 0x04
