@@ -34,6 +34,12 @@ static const uint8_t probe_vga2_dcc_to_flags[probe_vga2_dcc_to_flags_sz] = {
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA                                                          // 0x0C
 };
 
+uint16_t vga2_int11_equipment(void);
+#pragma aux vga2_int11_equipment = \
+    "int        11h" \
+    value [ax] \
+    modify [ax];
+
 /* INT 10h AX=0x1A00 GET DISPLAY COMBINATION CODE (PS,VGA/MCGA) [http://www.ctyme.com/intr/rb-0219.htm].
  * Return value from BL (active display code). Does not return BH (alternate display code).
  *
@@ -91,6 +97,15 @@ void probe_vga2(void) {
             if (egasw == 2 || egasw == 5) vga2_flags |= VGA2_FLAG_MONO_DISPLAY; /* CL=04h/05h or CL=0Ah/CL=0Bh */
             return;
         }
+    }
+
+    /* Then: MDA/CGA detection. Prefer CGA. */
+    {
+        /* equipment word, bits [5:4]   3=80x25 mono  2=80x25 color  1=40x25 color  0=EGA, VGA, PGA */
+        if ((vga2_int11_equipment() & 0x30u) == 0x30u)
+            vga2_flags |= VGA2_FLAG_MDA | VGA2_FLAG_DIGITAL_DISPLAY | VGA2_FLAG_MONO_DISPLAY;
+        else
+            vga2_flags |= VGA2_FLAG_CGA | VGA2_FLAG_DIGITAL_DISPLAY;
     }
 }
 
