@@ -22,6 +22,14 @@ $(HW_VGAGFX_LIB):
 	@cd $(HERE)
 !endif
 
+# HW\VGA2------------------------------------------------------------------------------------
+!ifneq NOW_BUILDING HW_VGA2_LIB
+$(HW_VGA2_LIB):
+	@cd $(HW_VGA2_LIB_DIR)
+	@$(MAKECMD) build lib $(SUBDIR)
+	@cd $(HERE)
+!endif
+
 # HW\CPU------------------------------------------------------------------------------------
 !ifneq NOW_BUILDING HW_CPU_LIB
 $(HW_CPU_LIB):

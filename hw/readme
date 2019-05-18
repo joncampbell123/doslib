@@ -51,6 +51,7 @@ ultrasnd ......... Gravis Ultrasound support functions
 usb .............. Universal Serial Bus functions
 vesa ............. VESA VGA BIOS video API
 vga .............. VGA/EGA/CGA/MDA/Tandy/PCjr/Hercules support functions
+vga2 ............. VGA/EGA/CGA/MDA/Tandy/PCjr/Hercules 2nd library
 
 Build subdirectory naming convention:
 
