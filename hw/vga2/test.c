@@ -57,6 +57,20 @@ uint8_t vga2_get_dcc(void) {
     return vga2_get_dcc_inline();
 }
 
+/* return the color/mono state of EGA/VGA.
+ * this code assumes you have already tested the card is EGA/VGA and present. */
+unsigned char vga2_alt_ega_monocolor_inline(void);
+#pragma aux vga2_alt_ega_monocolor_inline = \
+    "mov        ah,12h" \
+    "mov        bl,10h" \
+    "int        10h" \
+    value [bh] \
+    modify [ax bx cx];
+
+unsigned char vga2_alt_ega_monocolor(void) {
+    return vga2_alt_ega_monocolor_inline();
+}
+
 // will return 0xFF if EGA not present.
 // NTS: BIOSes that pre-date the EGA will not modify registers.
 //      So, call INT 10h AH=12h BL=10h with CX=FFFFh. Function returns CL.
