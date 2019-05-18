@@ -26,9 +26,6 @@ if [ "$1" == "disk" ]; then
     mcopy -i test.dsk win313l/test.exe ::testw31.exe
     mcopy -i test.dsk win32s3/test.exe ::testw32s.exe
     mcopy -i test.dsk win32/test.exe ::testw32.exe
-    mcopy -i test.dsk dos86s/tmodeset.exe ::tmods86.exe
-    mcopy -i test.dsk dos86l/tmodeset.exe ::tmods86l.exe
-    mcopy -i test.dsk dos386f/tmodeset.exe ::tmods386.exe
 
     cp -v pcjrboot.dsk pcjrtest.dsk || exit 1
     mcopy -i pcjrtest.dsk dos86l/test.exe ::test86l.exe
