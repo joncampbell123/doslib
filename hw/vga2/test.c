@@ -82,7 +82,7 @@ void probe_vga2(void) {
 
     /* First: VGA/MCGA detection. Ask the BIOS. */
     {
-        const uint8_t dcc = vga2_get_dcc_inline();
+        const unsigned char dcc = vga2_get_dcc_inline();
         if (dcc < probe_vga2_dcc_to_flags_sz) {
             vga2_flags = probe_vga2_dcc_to_flags[dcc];
             return;
@@ -91,10 +91,10 @@ void probe_vga2(void) {
 
     /* Then: EGA. Ask the BIOS */
     {
-        const uint8_t egasw = vga2_alt_ega_switches_inline() >> 1u; /* filter out LSB, we don't need it */
-        if (egasw != 0x7Fu) { /* CL=FFh if no EGA BIOS */
+        const unsigned char egasw = (unsigned char)vga2_alt_ega_switches_inline() & (unsigned char)0xFEu; /* filter out LSB, we don't need it */
+        if (egasw != 0xFEu) { /* CL=FFh if no EGA BIOS */
             vga2_flags = VGA2_FLAG_CGA | VGA2_FLAG_EGA | VGA2_FLAG_DIGITAL_DISPLAY;
-            if (egasw == 2 || egasw == 5) vga2_flags |= VGA2_FLAG_MONO_DISPLAY; /* CL=04h/05h or CL=0Ah/CL=0Bh */
+            if (egasw == 0x04 || egasw == 0x0A) vga2_flags |= VGA2_FLAG_MONO_DISPLAY; /* CL=04h/05h or CL=0Ah/CL=0Bh */
             return;
         }
     }
@@ -102,7 +102,7 @@ void probe_vga2(void) {
     /* Then: MDA/CGA detection. Prefer CGA. */
     {
         /* equipment word, bits [5:4]   3=80x25 mono  2=80x25 color  1=40x25 color  0=EGA, VGA, PGA */
-        if ((vga2_int11_equipment() & 0x30u) == 0x30u)
+        if (((unsigned char)vga2_int11_equipment() & (unsigned char)0x30u) == (unsigned char)0x30u)
             vga2_flags |= VGA2_FLAG_MDA | VGA2_FLAG_DIGITAL_DISPLAY | VGA2_FLAG_MONO_DISPLAY;
         else
             vga2_flags |= VGA2_FLAG_CGA | VGA2_FLAG_DIGITAL_DISPLAY;
