@@ -79,7 +79,7 @@ unsigned char vga2_alt_ega_switches(void) {
 /* Unlike the first VGA library, this probe function only focuses on the primary
  * classification of video hardware: MDA, CGA, EGA, VGA, MCGA, and PGA. The code
  * is kept minimal to keep executable size down. Tandy and PCjr will show up as
- * CGA.
+ * CGA, Hercules as MDA, any SVGA chipset as VGA.
  *
  * Tandy, PCjr, SVGA, Hercules, and any other secondary classification will have
  * their own detection routines if your program is interested in them. The goal
