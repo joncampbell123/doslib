@@ -1,4 +1,5 @@
 
+#include <i86.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -90,6 +91,56 @@ unsigned char vga2_alt_ega_switches(void) {
     return vga2_alt_ega_switches_inline();
 }
 
+#if TARGET_MSDOS == 32
+# define VGA2_FAR
+#else
+# define VGA2_FAR   far
+#endif
+
+void vga2_update_alpha_ptr_default(void);
+
+/* NTS: Not only can we treat character cells on IBM PC as 16-bit, but we can also
+ *      do the same on NEC PC-98 in another library because of the 16-bit character
+ *      cells (attribute in another part) */
+typedef uint16_t VGA2_FAR      *VGA2_ALPHA_PTR;
+
+VGA2_ALPHA_PTR                  vga2_alpha_mem = NULL;
+
+/* this is a function pointer so that specialty code, such as PCjr support, can
+ * provide it's own version to point at wherever the video memory is. */
+void                            (*vga2_update_alpha_ptr)(void) = vga2_update_alpha_ptr_default;
+
+static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
+#if TARGET_MSDOS == 32
+    return (VGA2_ALPHA_PTR)((unsigned int)s << 4u);
+#else
+    return (VGA2_ALPHA_PTR)MK_FP(s,0);
+#endif
+}
+
+void vga2_update_alpha_ptr_default(void) {
+    if ((vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) != 0u) {
+        /* EGA/VGA: Could be mono or color.
+         * NTS: We could read it back from hardware on VGA, but that's an extra IF statement
+         *      and I think it would be better for executable size reasons to combine EGA/VGA
+         *      case of inferring it from BIOS data.
+         *
+         * NTS: I will make the VGA case it's own if it turns out the BIOS is not reliable
+         *      on this matter even under normal usage of the hardware and BIOS.
+         *
+         * INT 10h AH=12h BL=10h, return value BH which is 00h = color   01h = mono */
+        vga2_alpha_mem = vga2_seg2ptr((vga2_alt_ega_monocolor() & 1u) ? 0xB000u : 0xB800u);
+    }
+    else if ((vga2_flags & (VGA2_FLAG_CGA|VGA2_FLAG_MCGA)) != 0u) {
+        /* CGA/MCGA: Color, always */
+        vga2_alpha_mem = vga2_seg2ptr(0xB800u);
+    }
+    else {
+        /* MDA/Hercules: Mono, always */
+        vga2_alpha_mem = vga2_seg2ptr(0xB000u);
+    }
+}
+
 /* Unlike the first VGA library, this probe function only focuses on the primary
  * classification of video hardware: MDA, CGA, EGA, VGA, MCGA, and PGA. The code
  * is kept minimal to keep executable size down. Tandy and PCjr will show up as
@@ -109,7 +160,7 @@ void probe_vga2(void) {
         const unsigned char dcc = vga2_get_dcc_inline();
         if (dcc < probe_vga2_dcc_to_flags_sz) {
             vga2_flags = probe_vga2_dcc_to_flags[dcc];
-            return;
+            goto done;
         }
     }
 
@@ -119,7 +170,7 @@ void probe_vga2(void) {
         if (egasw != 0xFEu) { /* CL=FFh if no EGA BIOS */
             vga2_flags = VGA2_FLAG_CGA | VGA2_FLAG_EGA | VGA2_FLAG_DIGITAL_DISPLAY;
             if (egasw == 0x04 || egasw == 0x0A) vga2_flags |= VGA2_FLAG_MONO_DISPLAY; /* CL=04h/05h or CL=0Ah/CL=0Bh */
-            return;
+            goto done;
         }
     }
 
@@ -131,6 +182,9 @@ void probe_vga2(void) {
         else
             vga2_flags |= VGA2_FLAG_CGA | VGA2_FLAG_DIGITAL_DISPLAY;
     }
+
+done:
+    vga2_update_alpha_ptr();
 }
 
 int main(int argc,char **argv) {
@@ -153,6 +207,12 @@ int main(int argc,char **argv) {
         printf("  - MONO DISPLAY\n");
     if (vga2_flags & VGA2_FLAG_DIGITAL_DISPLAY)
         printf("  - DIGITAL DISPLAY\n");
+
+#if TARGET_MSDOS == 32
+    printf("Alpha ptr: %p\n",vga2_alpha_mem);
+#else
+    printf("Alpha ptr: %Fp\n",vga2_alpha_mem);
+#endif
 
     return 0;
 }
