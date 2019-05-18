@@ -51,14 +51,44 @@ uint8_t vga2_get_dcc(void) {
     return vga2_get_dcc_inline();
 }
 
+// will return 0xFF if EGA not present.
+// NTS: BIOSes that pre-date the EGA will not modify registers.
+//      So, call INT 10h AH=12h BL=10h with CX=FFFFh. Function returns CL.
+//      If the BIOS does not recognize the call, CL=FFh on return.
+//      Else it contains the EGA switch settings.
+unsigned char vga2_alt_ega_switches_inline(void);
+#pragma aux vga2_alt_ega_switches_inline = \
+    "mov        ah,12h" \
+    "mov        bl,10h" \
+    "xor        cx,cx" \
+    "dec        cx" \
+    "int        10h" \
+    value [cl] \
+    modify [ax bx cx];
+
+unsigned char vga2_alt_ega_switches(void) {
+    return vga2_alt_ega_switches_inline();
+}
+
 void probe_vga2(void) {
     if (vga2_flags != 0)
         return;
 
+    /* First: VGA/MCGA detection. Ask the BIOS. */
     {
         const uint8_t dcc = vga2_get_dcc_inline();
         if (dcc < probe_vga2_dcc_to_flags_sz) {
             vga2_flags = probe_vga2_dcc_to_flags[dcc];
+            return;
+        }
+    }
+
+    /* Then: EGA. Ask the BIOS */
+    {
+        const uint8_t egasw = vga2_alt_ega_switches_inline() >> 1u; /* filter out LSB, we don't need it */
+        if (egasw != 0x7Fu) { /* CL=FFh if no EGA BIOS */
+            vga2_flags = VGA2_FLAG_CGA | VGA2_FLAG_EGA | VGA2_FLAG_DIGITAL_DISPLAY;
+            if (egasw == 2 || egasw == 5) vga2_flags |= VGA2_FLAG_MONO_DISPLAY; /* CL=04h/05h or CL=0Ah/CL=0Bh */
             return;
         }
     }
@@ -72,6 +102,18 @@ int main(int argc,char **argv) {
         printf("  - MDA\n");
     if (vga2_flags & VGA2_FLAG_CGA)
         printf("  - CGA\n");
+    if (vga2_flags & VGA2_FLAG_EGA)
+        printf("  - EGA\n");
+    if (vga2_flags & VGA2_FLAG_VGA)
+        printf("  - VGA\n");
+    if (vga2_flags & VGA2_FLAG_MCGA)
+        printf("  - MCGA\n");
+    if (vga2_flags & VGA2_FLAG_PGA)
+        printf("  - PGA\n");
+    if (vga2_flags & VGA2_FLAG_MONO_DISPLAY)
+        printf("  - MONO DISPLAY\n");
+    if (vga2_flags & VGA2_FLAG_DIGITAL_DISPLAY)
+        printf("  - DIGITAL DISPLAY\n");
 
     return 0;
 }
