@@ -114,12 +114,7 @@ int main(int argc,char **argv) {
         unsigned int i=0;
         unsigned char c;
 
-#ifdef TARGET_PC98
-        uch.f.at = 0x0081u;         // red
-#else
-        uch.f.at = 0x0Au;           // bright green
-#endif
-
+        uch.f.at = UTTY_COLOR_MAKE_INTENSITY_FG(UTTY_COLOR_FB(/*f*/UTTY_COLOR_GREEN,/*b*/UTTY_COLOR_BLACK));
         while ((c=(*msg++)) != 0) {
             uch.f.ch = c;
             uach[i++] = uch;
@@ -138,12 +133,7 @@ int main(int argc,char **argv) {
         UTTY_ALPHA_CHAR uach[40],uch = UTTY_BLANK_CHAR;
         unsigned int i=0;
 
-#ifdef TARGET_PC98
-        uch.f.at = 0x0021u;         // blue
-#else
-        uch.f.at = 0x09u;           // bright blue
-#endif
-
+        uch.f.at = UTTY_COLOR_MAKE_INTENSITY_FG(UTTY_COLOR_FB(/*f*/UTTY_COLOR_BLUE,/*b*/UTTY_COLOR_BLACK));
         i = utty_string2ac_const(uach,UTTY_ARRAY_LEN(uach),msg,uch);
         assert(i < 40);
         utty_funcs.setcharblock(o,uach,i);
@@ -160,12 +150,7 @@ int main(int argc,char **argv) {
         const char *scan = msg,*scanfence = msg + strlen(msg);
         unsigned int i=0;
 
-#ifdef TARGET_PC98
-        uch.f.at = 0x00E1u;         // white
-#else
-        uch.f.at = 0x0Fu;           // white
-#endif
-
+        uch.f.at = UTTY_COLOR_MAKE_INTENSITY_FG(UTTY_COLOR_FB(/*f*/UTTY_COLOR_WHITE,/*b*/UTTY_COLOR_BLACK));
         while (*scan != 0) {
             i = utty_string2ac(uach,UTTY_ARRAY_LEN(uach),&scan,uch);
             assert(i <= UTTY_MAX_CHAR_WIDTH);
@@ -202,12 +187,7 @@ int main(int argc,char **argv) {
         utty_offset_t o = utty_offset_getofs(9/*row*/,4/*col*/),ostp;
         UTTY_ALPHA_CHAR uch = UTTY_BLANK_CHAR;
 
-#ifdef TARGET_PC98
-        uch.f.at = 0x00C5u;         // inverse yellow
-#else
-        uch.f.at = 0x60u;           // inverse yellow
-#endif
-
+        uch.f.at = UTTY_COLOR_FB(/*f*/UTTY_COLOR_BLACK,/*b*/UTTY_COLOR_YELLOW);
         ostp = utty_offset_advance(o,32);
         o = utty_printat_const(o,msg,uch);
         while (o < ostp) o = utty_funcs.setchar(o,uch);
