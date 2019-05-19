@@ -4,9 +4,7 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 NOW_BUILDING = HW_UTTY_LIB
 
-!ifndef PC98
 TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
-!endif
 
 $(HW_UTTY_LIB): $(SUBDIR)$(HPS)utty.obj
 	wlib -q -b -c $(HW_UTTY_LIB) -+$(SUBDIR)$(HPS)utty.obj
