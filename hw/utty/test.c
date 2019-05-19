@@ -87,8 +87,8 @@ void utty_pc98__update_from_screen(void) {
 
 static inline UTTY_ALPHA_CHAR _pc98_getchar(utty_offset_t ofs) {
     register UTTY_ALPHA_CHAR r;                     // UTTY_ALPHA_PTR is uint16_t therefore &[0x1000] = byte offset 0x2000
-    r.f.ch = utty_funcs.vram[ofs        ];            // A000:0000 character RAM
-    r.f.at = utty_funcs.vram[ofs+0x1000u];            // A200:0000 attribute RAM
+    r.f.ch = utty_funcs.vram[ofs        ];          // A000:0000 character RAM
+    r.f.at = utty_funcs.vram[ofs+0x1000u];          // A200:0000 attribute RAM
     return r;
 }
 
