@@ -246,7 +246,7 @@ int utty_init_vgalib(void) {
 /////////////////////////////////////////////////////////////////////////////
 #endif
 
-unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char *msg,UTTY_ALPHA_CHAR refch) {
+unsigned int utty_string2ac_const(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char *msg,UTTY_ALPHA_CHAR refch) {
 #ifdef TARGET_PC98
     struct ShiftJISDecoder sjis;
     unsigned char c;
@@ -373,7 +373,7 @@ int main(int argc,char **argv) {
         uch.f.at = 0x09u;           // bright blue
 #endif
 
-        i = utty_string2ac(uach,UTTY_ARRAY_LEN(uach),msg,uch);
+        i = utty_string2ac_const(uach,UTTY_ARRAY_LEN(uach),msg,uch);
         assert(i < 40);
         utty_funcs.setcharblock(o,uach,i);
     }
