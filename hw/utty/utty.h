@@ -110,5 +110,7 @@ utty_offset_t utty_printat_const(utty_offset_t o,const char *msg,UTTY_ALPHA_CHAR
 
 #ifdef TARGET_PC98
 int utty_init_pc98(void);
+#else
+int utty_init_vgalib(void);
 #endif
 
