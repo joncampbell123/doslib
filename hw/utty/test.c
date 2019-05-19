@@ -281,8 +281,10 @@ unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char
             r++;
         }
 #else
-        refch.f.ch = *(msg++);
+        refch.f.ch = *msg;
         if (refch.f.ch == 0) break;
+        msg++;
+
         *(dst++) = refch;
         r++;
 #endif
