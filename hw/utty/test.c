@@ -25,6 +25,8 @@
 typedef unsigned int            utty_offset_t;
 
 #ifdef TARGET_PC98
+# define UTTY_MAX_CHAR_WIDTH    2
+
 /* This represents the ideal pointer type for accessing VRAM. It does not necessarily contain ALL data for the char. */
 typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
 
@@ -38,6 +40,8 @@ typedef union {
 } UTTY_ALPHA_CHAR;
 # pragma pack(pop)
 #else
+# define UTTY_MAX_CHAR_WIDTH    1
+
 /* This represents the ideal pointer type for accessing VRAM. It does not necessarily contain ALL data for the char. */
 typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
 
@@ -403,7 +407,7 @@ int main(int argc,char **argv) {
         const char *msg = "Hello world";
 #endif
         utty_offset_t o = utty_funcs.getofs(7/*row*/,4/*col*/);
-        UTTY_ALPHA_CHAR uach[4],uch = UTTY_BLANK_CHAR;
+        UTTY_ALPHA_CHAR uach[UTTY_MAX_CHAR_WIDTH],uch = UTTY_BLANK_CHAR;
         const char *scan = msg,*scanfence = msg + strlen(msg);
         unsigned int i=0;
 
@@ -415,7 +419,7 @@ int main(int argc,char **argv) {
 
         while (*scan != 0) {
             i = utty_string2ac(uach,UTTY_ARRAY_LEN(uach),&scan,uch);
-            assert(i <= 4);
+            assert(i <= UTTY_MAX_CHAR_WIDTH);
             utty_funcs.setcharblock(o,uach,i);
             o = utty_offset_advance(o,i);
             assert(scan <= scanfence);
