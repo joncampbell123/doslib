@@ -312,6 +312,26 @@ int main(int argc,char **argv) {
         utty_printat_const(o,msg,uch);
     }
 
+    {
+#ifdef TARGET_PC98
+        const char *msg = "Hello world \x82\xb1\x82\xea\x82\xcd\x93\xfa\x96\x7b\x8c\xea\x82\xc5\x82\xb7";
+#else
+        const char *msg = "Hello world";
+#endif
+        utty_offset_t o = utty_offset_getofs(9/*row*/,4/*col*/),ostp;
+        UTTY_ALPHA_CHAR uch = UTTY_BLANK_CHAR;
+
+#ifdef TARGET_PC98
+        uch.f.at = 0x00C5u;         // inverse yellow
+#else
+        uch.f.at = 0x70u;           // inverse yellow
+#endif
+
+        ostp = utty_offset_advance(o,32);
+        o = utty_printat_const(o,msg,uch);
+        while (o < ostp) o = utty_funcs.setchar(o,uch);
+    }
+
     return 0;
 }
 
