@@ -310,6 +310,10 @@ int main(int argc,char **argv) {
 	probe_dos();
 
 #ifdef TARGET_PC98
+	if (!probe_nec_pc98()) {
+		printf("Sorry, your system is not PC-98\n");
+		return 1;
+	}
 #else
 	if (!probe_vga()) {
         printf("VGA probe failed\n");
