@@ -27,8 +27,11 @@ typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
 
 /* PC-98 requires two WORDs, one for the 16-bit character and one for the 16-bit attribute (even if only the lower 8 are used) */
 # pragma pack(push,1)
-typedef struct {
-    uint16_t                    ch,at;
+typedef union {
+    struct {
+        uint16_t                    ch,at;
+    } f;
+    uint32_t                        raw;
 } UTTY_ALPHA_CHAR;
 # pragma pack(pop)
 #else
@@ -36,7 +39,14 @@ typedef struct {
 typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
 
 /* This data type represents one whole character. It doesn't necessarily match the typedef to video RAM. */
-typedef uint16_t                UTTY_ALPHA_CHAR;
+# pragma pack(push,1)
+typedef union {
+    struct {
+        uint8_t                     ch,at;
+    } f;
+    uint16_t                        raw;
+} UTTY_ALPHA_CHAR;
+# pragma pack(pop)
 #endif
 
 static inline UTTY_ALPHA_PTR utty_seg2ptr(const unsigned short s) {
@@ -77,14 +87,14 @@ void utty_pc98__update_from_screen(void) {
 
 static inline UTTY_ALPHA_CHAR _pc98_getchar(utty_offset_t ofs) {
     register UTTY_ALPHA_CHAR r;                     // UTTY_ALPHA_PTR is uint16_t therefore &[0x1000] = byte offset 0x2000
-    r.ch = utty_funcs.vram[ofs        ];            // A000:0000 character RAM
-    r.at = utty_funcs.vram[ofs+0x1000u];            // A200:0000 attribute RAM
+    r.f.ch = utty_funcs.vram[ofs        ];            // A000:0000 character RAM
+    r.f.at = utty_funcs.vram[ofs+0x1000u];            // A200:0000 attribute RAM
     return r;
 }
 
 static inline void _pc98_setchar(const utty_offset_t ofs,const UTTY_ALPHA_CHAR ch) {
-    utty_funcs.vram[ofs        ] = ch.ch;
-    utty_funcs.vram[ofs+0x1000u] = ch.at;
+    utty_funcs.vram[ofs        ] = ch.f.ch;
+    utty_funcs.vram[ofs+0x1000u] = ch.f.at;
 }
 
 UTTY_ALPHA_CHAR utty_pc98__getchar(utty_offset_t ofs) {
@@ -127,11 +137,13 @@ void utty_vga__update_from_screen(void) {
 }
 
 static inline UTTY_ALPHA_CHAR _vga_getchar(utty_offset_t ofs) {
-    return utty_funcs.vram[ofs];
+    register UTTY_ALPHA_CHAR r;
+    r.raw = utty_funcs.vram[ofs];
+    return r;
 }
 
 static inline void _vga_setchar(const utty_offset_t ofs,const UTTY_ALPHA_CHAR ch) {
-    utty_funcs.vram[ofs] = ch;
+    utty_funcs.vram[ofs] = ch.raw;
 }
 
 UTTY_ALPHA_CHAR utty_vga__getchar(utty_offset_t ofs) {
@@ -199,17 +211,13 @@ int main(int argc,char **argv) {
         unsigned char c;
 
 #ifdef TARGET_PC98
-        uch.at = 0x0041u;       // red
+        uch.f.at = 0x0041u;         // red
 #else
-        uch = 0x0C00u;          // bright red
+        uch.f.at = 0x0Cu;           // bright red
 #endif
 
         while ((c=(*msg++)) != 0) {
-#ifdef TARGET_PC98
-            uch.ch = c;
-#else
-            uch = (uch & 0xFF00u) | c;
-#endif
+            uch.f.ch = c;
             utty_funcs.setchar(o++,uch);
         }
     }
