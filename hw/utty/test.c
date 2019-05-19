@@ -153,8 +153,6 @@ int utty_init_vgalib(void) {
 /////////////////////////////////////////////////////////////////////////////
 #endif
 
-static UTTY_ALPHA_CHAR utty_tmp[16];
-
 unsigned int utty_printat(utty_offset_t o,const char **msg,UTTY_ALPHA_CHAR uch) {
     unsigned int i,r=0;
 

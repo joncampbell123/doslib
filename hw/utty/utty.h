@@ -77,6 +77,7 @@ struct utty_funcs_t {
 };
 
 extern struct utty_funcs_t          utty_funcs;
+extern UTTY_ALPHA_CHAR              utty_tmp[16];
 
 static inline utty_offset_t utty_offset_getofs(const uint8_t y,const uint8_t x) {
 #if TARGET_MSDOS == 32
