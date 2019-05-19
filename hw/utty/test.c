@@ -8,7 +8,7 @@
 
 #if defined(TARGET_PC98)
 // There is no background on PC-98, only foreground, and no intensity control either.
-# define UTTY_COLOR_FG(c)               (fg)
+# define UTTY_COLOR_FG(c)               (PC98_TATTR_COLOR(fg))
 # define UTTY_COLOR_BG(c)               (0)
 # define UTTY_COLOR_FB(fg,bg)           (UTTY_COLOR_FG(fg))
 # define UTTY_COLOR_INTENSITY_FG        (0u)
@@ -18,8 +18,8 @@
 // background may be limited to 7 colors (3 bits) when the 4th background bit is
 // interpreted as "blink", foreground may be limited to 7 colors (3 bits) when the
 // 4th foreground bit is interpreted as bit 8 of the character code.
-# define UTTY_COLOR_FG(c)               (fg)
-# define UTTY_COLOR_BG(c)               ((bg) << 4u)
+# define UTTY_COLOR_FG(c)               ((fg) & 0xFu)
+# define UTTY_COLOR_BG(c)               (((bg) & 0xFu) << 4u)
 # define UTTY_COLOR_FB(fg,bg)           (UTTY_COLOR_FG(fg) + UTTY_COLOR_BG(bg))
 # define UTTY_COLOR_INTENSITY_FG        (0x08u)
 # define UTTY_COLOR_INTENSITY_BG        (0x80u)

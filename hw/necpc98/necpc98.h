@@ -12,6 +12,14 @@ struct ShiftJISDecoder {
 };
 #pragma pack(pop)
 
+#define PC98_TATTR_NOTSECRET            (1u << 0u)
+#define PC98_TATTR_BLINK                (1u << 1u)
+#define PC98_TATTR_REVERSE              (1u << 2u)
+#define PC98_TATTR_UNDERLINE            (1u << 3u)
+#define PC98_TATTR_VLINE                (1u << 4u)
+#define PC98_TATTR_SGRAPHICS            (1u << 4u)
+#define PC98_TATTR_COLOR(x)             (((x) & 3u) << 5u)
+
 extern struct nec_pc98_state_t		nec_pc98;
 
 int probe_nec_pc98();
