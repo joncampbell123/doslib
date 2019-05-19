@@ -6,9 +6,18 @@ struct nec_pc98_state_t {
 };
 #pragma pack(pop)
 
+#pragma pack(push,1)
+struct ShiftJISDecoder {
+    unsigned char       b1,b2;
+};
+#pragma pack(pop)
+
 extern struct nec_pc98_state_t		nec_pc98;
 
 int probe_nec_pc98();
+
+unsigned int pc98_sjis_dec1(struct ShiftJISDecoder *j,const unsigned char c);
+unsigned int pc98_sjis_dec2(struct ShiftJISDecoder *j,const unsigned char c);
 
 static inline unsigned char vram_pc98_doublewide(const uint16_t chcode) {
     if (chcode & 0xFF00u) {
