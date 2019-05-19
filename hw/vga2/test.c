@@ -104,6 +104,9 @@ void vga2_update_alpha_ptr_default(void);
  *      cells (attribute in another part) */
 typedef uint16_t VGA2_FAR      *VGA2_ALPHA_PTR;
 
+/* This data type represents one whole character. It doesn't necessarily match the typedef to video RAM. */
+typedef uint16_t                VGA2_ALPHA_CHAR;
+
 VGA2_ALPHA_PTR                  vga2_alpha_mem = NULL;
 
 /* this is a function pointer so that specialty code, such as PCjr support, can
