@@ -89,6 +89,10 @@ utty_offset_t utty_funcs_common_getofs(uint8_t y,uint8_t x) {
     return ((((utty_offset_t)y * utty_funcs.stride) + (utty_offset_t)x) * sizeof(uint16_t)) + (utty_offset_t)ofs;
 }
 
+static inline utty_offset_t utty_offset_advance(const utty_offset_t o,const unsigned int amt) {
+    return o + (amt * 2u);
+}
+
 static inline UTTY_ALPHA_PTR _utty_ofs_to_ptr(const utty_offset_t o) {
 #if TARGET_MSDOS == 32
     return (UTTY_ALPHA_PTR)(o);
@@ -390,6 +394,32 @@ int main(int argc,char **argv) {
         i = utty_string2ac_const(uach,UTTY_ARRAY_LEN(uach),msg,uch);
         assert(i < 40);
         utty_funcs.setcharblock(o,uach,i);
+    }
+
+    {
+#ifdef TARGET_PC98
+        const char *msg = "Hello world \x82\xb1\x82\xea\x82\xcd\x93\xfa\x96\x7b\x8c\xea\x82\xc5\x82\xb7";
+#else
+        const char *msg = "Hello world";
+#endif
+        utty_offset_t o = utty_funcs.getofs(7/*row*/,4/*col*/);
+        UTTY_ALPHA_CHAR uach[4],uch = UTTY_BLANK_CHAR;
+        const char *scan = msg,*scanfence = msg + strlen(msg);
+        unsigned int i=0;
+
+#ifdef TARGET_PC98
+        uch.f.at = 0x00E1u;         // white
+#else
+        uch.f.at = 0x0Fu;           // white
+#endif
+
+        while (*scan != 0) {
+            i = utty_string2ac(uach,UTTY_ARRAY_LEN(uach),&scan,uch);
+            assert(i <= 4);
+            utty_funcs.setcharblock(o,uach,i);
+            o = utty_offset_advance(o,i);
+            assert(scan <= scanfence);
+        }
     }
 
     return 0;
