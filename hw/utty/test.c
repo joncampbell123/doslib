@@ -13,16 +13,25 @@
 # define UTTY_COLOR_FB(fg,bg)           (UTTY_COLOR_FG(fg))
 # define UTTY_COLOR_INTENSITY_FG        (0u)
 # define UTTY_COLOR_INTENSITY_BG        (0u)
+# define UTTY_COLOR_MAKE_REVERSE(x)     ((x) | PC98_TATTR_REVERSE)
+# define UTTY_COLOR_MAKE_BLINK(x)       ((x) | PC98_TATTR_BLINK)
+# define UTTY_COLOR_MAKE_UNDERLINE(x)   ((x) | PC98_TATTR_UNDERLINE)
 #else
 // MDA/CGA/EGA/VGA/etc. have foreground in lower 4 bits, background in upper 4 bits.
 // background may be limited to 7 colors (3 bits) when the 4th background bit is
 // interpreted as "blink", foreground may be limited to 7 colors (3 bits) when the
 // 4th foreground bit is interpreted as bit 8 of the character code.
+//
+// underline is available ONLY if the foreground color is blue and the background is
+// black (MDA compat).
 # define UTTY_COLOR_FG(c)               ((fg) & 0xFu)
 # define UTTY_COLOR_BG(c)               (((bg) & 0xFu) << 4u)
 # define UTTY_COLOR_FB(fg,bg)           (UTTY_COLOR_FG(fg) + UTTY_COLOR_BG(bg))
 # define UTTY_COLOR_INTENSITY_FG        (0x08u)
 # define UTTY_COLOR_INTENSITY_BG        (0x80u)
+# define UTTY_COLOR_MAKE_REVERSE(x)     ((((x) & 0xF0u) >> 4u) + (((x) & 0x0Fu) << 4u))
+# define UTTY_COLOR_MAKE_BLINK(x)       ((x) | 0x80u)
+# define UTTY_COLOR_MAKE_UNDERLINE(x)   (((x) & 0x88u) | 0x01u)
 #endif
 
 int main(int argc,char **argv) {
