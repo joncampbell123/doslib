@@ -153,6 +153,26 @@ int utty_init_vgalib(void) {
 /////////////////////////////////////////////////////////////////////////////
 #endif
 
+static UTTY_ALPHA_CHAR utty_tmp[16];
+
+unsigned int utty_printat(utty_offset_t o,const char **msg,UTTY_ALPHA_CHAR uch) {
+    unsigned int i,r=0;
+
+    while (**msg != 0) {
+        i = utty_string2ac(utty_tmp,UTTY_ARRAY_LEN(utty_tmp),msg,uch);
+        assert(i <= UTTY_ARRAY_LEN(utty_tmp));
+        utty_funcs.setcharblock(o,utty_tmp,i);
+        o = utty_offset_advance(o,i);
+        r += i;
+    }
+
+    return r;
+}
+
+unsigned int utty_printat_const(utty_offset_t o,const char *msg,UTTY_ALPHA_CHAR uch) {
+    return utty_printat(o,&msg,uch);
+}
+
 int main(int argc,char **argv) {
 	probe_dos();
 
@@ -275,6 +295,24 @@ int main(int argc,char **argv) {
             o = utty_offset_advance(o,i);
             assert(scan <= scanfence);
         }
+    }
+
+    {
+#ifdef TARGET_PC98
+        const char *msg = "Hello world \x82\xb1\x82\xea\x82\xcd\x93\xfa\x96\x7b\x8c\xea\x82\xc5\x82\xb7";
+#else
+        const char *msg = "Hello world";
+#endif
+        utty_offset_t o = utty_offset_getofs(8/*row*/,4/*col*/);
+        UTTY_ALPHA_CHAR uch = UTTY_BLANK_CHAR;
+
+#ifdef TARGET_PC98
+        uch.f.at = 0x00C1u;         // yellow
+#else
+        uch.f.at = 0x0Eu;           // yellow
+#endif
+
+        utty_printat_const(o,msg,uch);
     }
 
     return 0;
