@@ -3,7 +3,82 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include <hw/dos/dos.h>
+#include <hw/vga/vga.h>
+#include <hw/vga2/vga2.h>
+
+#include <hw/utty/utty.h>
+
+#if TARGET_MSDOS == 32
+# define UTTY_FAR
+#else
+# define UTTY_FAR   far
+#endif
+
+/* NTS: Not only can we treat character cells on IBM PC as 16-bit, but we can also
+ *      do the same on NEC PC-98 in another library because of the 16-bit character
+ *      cells (attribute in another part) */
+typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
+
+/* This data type represents one whole character. It doesn't necessarily match the typedef to video RAM. */
+typedef uint16_t                UTTY_ALPHA_CHAR;
+
+struct utty_funcs_t {
+    UTTY_ALPHA_PTR          vram;
+    uint8_t                 w,h;
+    uint16_t                stride;         // in units of type UTTY_ALPHA_PTR
+
+    void                    (*update_from_screen)(void);
+};
+
+struct utty_funcs_t         utty_funcs;
+
+int utty_init(void) {
+    return 1;
+}
+
+void utty_vga__update_from_screen(void) {
+    utty_funcs.vram =       vga_state.vga_alpha_ram;
+    utty_funcs.w =          vga_state.vga_width;
+    utty_funcs.h =          vga_state.vga_height;
+    utty_funcs.stride =     vga_state.vga_stride;
+}
+
+const struct utty_funcs_t utty_funcs_vga_init = {
+    .update_from_screen =               utty_vga__update_from_screen
+};
+
+int utty_init_vgalib(void) {
+    utty_funcs = utty_funcs_vga_init;
+    utty_funcs.update_from_screen();
+    if (utty_funcs.vram == NULL) return 0;
+    return 1;
+}
+
 int main(int argc,char **argv) {
+	probe_dos();
+
+	if (!probe_vga()) {
+        printf("VGA probe failed\n");
+		return 1;
+	}
+
+    if (!utty_init()) {
+        printf("utty init fail\n");
+        return 1;
+    }
+    if (!utty_init_vgalib()) {
+        printf("utty init vga fail\n");
+        return 1;
+    }
+
+#if TARGET_MSDOS == 32
+    printf("Alpha ptr: %p\n",utty_funcs.vram);
+#else
+    printf("Alpha ptr: %Fp\n",utty_funcs.vram);
+#endif
+    printf("Size: %u x %u (stride=%u)\n",utty_funcs.w,utty_funcs.h,utty_funcs.stride);
+
     return 0;
 }
 
