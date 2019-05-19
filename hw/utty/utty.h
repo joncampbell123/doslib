@@ -79,6 +79,56 @@ struct utty_funcs_t {
 extern struct utty_funcs_t          utty_funcs;
 extern UTTY_ALPHA_CHAR              utty_tmp[16];
 
+#if defined(TARGET_PC98)
+// There is no background on PC-98, only foreground, and no intensity control either.
+# define UTTY_COLOR_FG(c)                   (PC98_TATTR_COLOR(c) | PC98_TATTR_NOTSECRET)
+# define UTTY_COLOR_BG(c)                   (0u)
+# define UTTY_COLOR_FB(fg,bg)               (((fg) != 0u) ? (UTTY_COLOR_FG(fg)) : (UTTY_COLOR_FG(bg) | PC98_TATTR_REVERSE))
+# define UTTY_COLOR_MAKE_INTENSITY_FG(x)    (x)
+# define UTTY_COLOR_MAKE_INTENSITY_BG(x)    (x)
+# define UTTY_COLOR_MAKE_INTENSITY_FB(x)    (x)
+# define UTTY_COLOR_MAKE_REVERSE(x)         ((x) | PC98_TATTR_REVERSE)
+# define UTTY_COLOR_MAKE_BLINK(x)           ((x) | PC98_TATTR_BLINK)
+# define UTTY_COLOR_MAKE_UNDERLINE(x)       ((x) | PC98_TATTR_UNDERLINE)
+
+// PC-98 msb-lsb Green-Red-Blue order
+# define UTTY_COLOR_BLACK               (0u)
+# define UTTY_COLOR_BLUE                (1u)
+# define UTTY_COLOR_RED                 (2u)
+# define UTTY_COLOR_PURPLE              (3u)
+# define UTTY_COLOR_GREEN               (4u)
+# define UTTY_COLOR_CYAN                (5u)
+# define UTTY_COLOR_YELLOW              (6u)
+# define UTTY_COLOR_WHITE               (7u)
+#else
+// MDA/CGA/EGA/VGA/etc. have foreground in lower 4 bits, background in upper 4 bits.
+// background may be limited to 7 colors (3 bits) when the 4th background bit is
+// interpreted as "blink", foreground may be limited to 7 colors (3 bits) when the
+// 4th foreground bit is interpreted as bit 8 of the character code.
+//
+// underline is available ONLY if the foreground color is blue and the background is
+// black (MDA compat).
+# define UTTY_COLOR_FG(c)                   ((c) & 0xFu)
+# define UTTY_COLOR_BG(c)                   (((c) & 0xFu) << 4u)
+# define UTTY_COLOR_FB(fg,bg)               (UTTY_COLOR_FG(fg) + UTTY_COLOR_BG(bg))
+# define UTTY_COLOR_MAKE_INTENSITY_FG(x)    ((x) | 0x08u)
+# define UTTY_COLOR_MAKE_INTENSITY_BG(x)    ((x) | 0x80u)
+# define UTTY_COLOR_MAKE_INTENSITY_FB(x)    ((x) | 0x88u)
+# define UTTY_COLOR_MAKE_REVERSE(x)         ((((x) & 0xF0u) >> 4u) + (((x) & 0x0Fu) << 4u))
+# define UTTY_COLOR_MAKE_BLINK(x)           ((x) | 0x80u)
+# define UTTY_COLOR_MAKE_UNDERLINE(x)       (((x) & 0x88u) | 0x01u)
+
+// VGA msb-lsb Red-Green-Blue order
+# define UTTY_COLOR_BLACK               (0u)
+# define UTTY_COLOR_BLUE                (1u)
+# define UTTY_COLOR_GREEN               (2u)
+# define UTTY_COLOR_CYAN                (3u)
+# define UTTY_COLOR_RED                 (4u)
+# define UTTY_COLOR_PURPLE              (5u)
+# define UTTY_COLOR_YELLOW              (6u)
+# define UTTY_COLOR_WHITE               (7u)
+#endif
+
 static inline utty_offset_t utty_offset_getofs(const uint8_t y,const uint8_t x) {
 #if TARGET_MSDOS == 32
     const unsigned int ofs = (unsigned int)(utty_funcs.vram);
