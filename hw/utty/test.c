@@ -16,6 +16,16 @@
 # define UTTY_COLOR_MAKE_REVERSE(x)     ((x) | PC98_TATTR_REVERSE)
 # define UTTY_COLOR_MAKE_BLINK(x)       ((x) | PC98_TATTR_BLINK)
 # define UTTY_COLOR_MAKE_UNDERLINE(x)   ((x) | PC98_TATTR_UNDERLINE)
+
+// PC-98 msb-lsb Green-Red-Blue order
+# define UTTY_COLOR_BLACK               (0u)
+# define UTTY_COLOR_BLUE                (1u)
+# define UTTY_COLOR_RED                 (2u)
+# define UTTY_COLOR_PURPLE              (3u)
+# define UTTY_COLOR_GREEN               (4u)
+# define UTTY_COLOR_CYAN                (5u)
+# define UTTY_COLOR_YELLOW              (6u)
+# define UTTY_COLOR_WHITE               (7u)
 #else
 // MDA/CGA/EGA/VGA/etc. have foreground in lower 4 bits, background in upper 4 bits.
 // background may be limited to 7 colors (3 bits) when the 4th background bit is
@@ -32,6 +42,16 @@
 # define UTTY_COLOR_MAKE_REVERSE(x)     ((((x) & 0xF0u) >> 4u) + (((x) & 0x0Fu) << 4u))
 # define UTTY_COLOR_MAKE_BLINK(x)       ((x) | 0x80u)
 # define UTTY_COLOR_MAKE_UNDERLINE(x)   (((x) & 0x88u) | 0x01u)
+
+// VGA msb-lsb Red-Green-Blue order
+# define UTTY_COLOR_BLACK               (0u)
+# define UTTY_COLOR_BLUE                (1u)
+# define UTTY_COLOR_GREEN               (2u)
+# define UTTY_COLOR_CYAN                (3u)
+# define UTTY_COLOR_RED                 (4u)
+# define UTTY_COLOR_PURPLE              (5u)
+# define UTTY_COLOR_YELLOW              (6u)
+# define UTTY_COLOR_WHITE               (7u)
 #endif
 
 int main(int argc,char **argv) {
