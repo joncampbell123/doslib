@@ -19,7 +19,6 @@
 # define UTTY_FAR   far
 #endif
 
-
 #ifdef TARGET_PC98
 /* This represents the ideal pointer type for accessing VRAM. It does not necessarily contain ALL data for the char. */
 typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
