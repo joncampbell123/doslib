@@ -7,7 +7,7 @@
 #include <hw/utty/utty.h>
 
 #ifdef TARGET_PC98
-void utty_pc98__update_from_screen(void) {
+static void utty_pc98__update_from_screen(void) {
     // TODO
 }
 
@@ -23,11 +23,11 @@ static inline void _pc98_setchar(const UTTY_ALPHA_PTR ptr,const UTTY_ALPHA_CHAR 
     ptr[0x1000u] = ch.f.at;
 }
 
-UTTY_ALPHA_CHAR utty_pc98__getchar(utty_offset_t ofs) {
+static UTTY_ALPHA_CHAR utty_pc98__getchar(utty_offset_t ofs) {
     return _pc98_getchar(_utty_ofs_to_ptr(ofs));
 }
 
-utty_offset_t utty_pc98__setchar(utty_offset_t ofs,UTTY_ALPHA_CHAR ch) {
+static utty_offset_t utty_pc98__setchar(utty_offset_t ofs,UTTY_ALPHA_CHAR ch) {
     UTTY_ALPHA_PTR ptr = _utty_ofs_to_ptr(ofs);
 
     if (!vram_pc98_doublewide(ch.f.ch)) {
@@ -40,7 +40,7 @@ utty_offset_t utty_pc98__setchar(utty_offset_t ofs,UTTY_ALPHA_CHAR ch) {
     return ofs + 4u;
 }
 
-unsigned int utty_pc98__getcharblock(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count) {
+static unsigned int utty_pc98__getcharblock(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count) {
     register unsigned int ocount = count;
 
     if (count != 0u) {
@@ -51,7 +51,7 @@ unsigned int utty_pc98__getcharblock(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,un
     return ocount;
 }
 
-unsigned int utty_pc98__setcharblock(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count) {
+static unsigned int utty_pc98__setcharblock(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count) {
     register unsigned int ocount = count;
 
     if (count != 0u) {
