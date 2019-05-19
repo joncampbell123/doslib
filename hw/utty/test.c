@@ -19,12 +19,11 @@
 # define UTTY_FAR   far
 #endif
 
-/* NTS: Not only can we treat character cells on IBM PC as 16-bit, but we can also
- *      do the same on NEC PC-98 in another library because of the 16-bit character
- *      cells (attribute in another part) */
-typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
 
 #ifdef TARGET_PC98
+/* This represents the ideal pointer type for accessing VRAM. It does not necessarily contain ALL data for the char. */
+typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
+
 /* PC-98 requires two WORDs, one for the 16-bit character and one for the 16-bit attribute (even if only the lower 8 are used) */
 # pragma pack(push,1)
 typedef struct UTTY_ALPHA_CHAR {
@@ -32,6 +31,9 @@ typedef struct UTTY_ALPHA_CHAR {
 };
 # pragma pack(pop)
 #else
+/* This represents the ideal pointer type for accessing VRAM. It does not necessarily contain ALL data for the char. */
+typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
+
 /* This data type represents one whole character. It doesn't necessarily match the typedef to video RAM. */
 typedef uint16_t                UTTY_ALPHA_CHAR;
 #endif
