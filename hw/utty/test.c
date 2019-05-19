@@ -8,7 +8,7 @@
 
 #if defined(TARGET_PC98)
 // There is no background on PC-98, only foreground, and no intensity control either.
-# define UTTY_COLOR_FG(c)                   (PC98_TATTR_COLOR(c))
+# define UTTY_COLOR_FG(c)                   (PC98_TATTR_COLOR(c) | PC98_TATTR_NOTSECRET)
 # define UTTY_COLOR_BG(c)                   (0u)
 # define UTTY_COLOR_FB(fg,bg)               (UTTY_COLOR_FG(fg))
 # define UTTY_COLOR_MAKE_INTENSITY_FG(x)    (x)
@@ -101,12 +101,6 @@ int main(int argc,char **argv) {
         unsigned char c;
 
         uch.f.at = UTTY_COLOR_MAKE_INTENSITY_FG(UTTY_COLOR_FB(/*f*/UTTY_COLOR_RED,/*b*/UTTY_COLOR_BLACK));
-#ifdef TARGET_PC98
-        uch.f.at = 0x0041u;         // red
-#else
-        uch.f.at = 0x0Cu;           // bright red
-#endif
-
         while ((c=(*msg++)) != 0) {
             uch.f.ch = c;
             o = utty_funcs.setchar(o,uch);

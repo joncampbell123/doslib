@@ -18,7 +18,7 @@ struct ShiftJISDecoder {
 #define PC98_TATTR_UNDERLINE            (1u << 3u)
 #define PC98_TATTR_VLINE                (1u << 4u)
 #define PC98_TATTR_SGRAPHICS            (1u << 4u)
-#define PC98_TATTR_COLOR(x)             (((x) & 3u) << 5u)
+#define PC98_TATTR_COLOR(x)             (((x) & 7u) << 5u)
 
 extern struct nec_pc98_state_t		nec_pc98;
 
