@@ -27,13 +27,13 @@ unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char
             if (c == 0) break;
             msg++;
 
-            pc98_sjis_dec2(&sjis,c);
-
-            refch.f.ch = (sjis.b1 - 0x20u) + (sjis.b2 << 8u);
-            *(dst++) = refch;
-            r++;
-            *(dst++) = refch;
-            r++;
+            if (pc98_sjis_dec2(&sjis,c)) {
+                refch.f.ch = (sjis.b1 - 0x20u) + (sjis.b2 << 8u);
+                *(dst++) = refch;
+                r++;
+                *(dst++) = refch;
+                r++;
+            }
         }
         else { 
             refch.f.ch = c;
