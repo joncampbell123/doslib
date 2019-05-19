@@ -108,3 +108,7 @@ unsigned int utty_string2ac_const(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,cons
 utty_offset_t utty_printat(utty_offset_t o,const char **msg,UTTY_ALPHA_CHAR uch);
 utty_offset_t utty_printat_const(utty_offset_t o,const char *msg,UTTY_ALPHA_CHAR uch);
 
+#ifdef TARGET_PC98
+int utty_init_pc98(void);
+#endif
+
