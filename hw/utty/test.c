@@ -296,12 +296,11 @@ unsigned int pc98_sjis_dec2(struct ShiftJISDecoder *j,const unsigned char c) {
 
 unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char *msg,UTTY_ALPHA_CHAR refch) {
     unsigned int r = 0;
-    unsigned char c;
 
     while (r < dst_max) {
-        c = (unsigned char)(*msg++);
-        if (c == 0) break;
-        refch.f.ch = c;
+        refch.f.ch = (*msg++);
+        if (refch.f.ch == 0) break;
+
         *(dst++) = refch;
         r++;
     }
