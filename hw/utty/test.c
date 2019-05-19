@@ -9,7 +9,7 @@
 #if defined(TARGET_PC98)
 // There is no background on PC-98, only foreground, and no intensity control either.
 # define UTTY_COLOR_FG(c)               (PC98_TATTR_COLOR(fg))
-# define UTTY_COLOR_BG(c)               (0)
+# define UTTY_COLOR_BG(c)               (0u)
 # define UTTY_COLOR_FB(fg,bg)           (UTTY_COLOR_FG(fg))
 # define UTTY_COLOR_INTENSITY_FG        (0u)
 # define UTTY_COLOR_INTENSITY_BG        (0u)
