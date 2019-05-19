@@ -105,3 +105,6 @@ int utty_init(void);
 unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char **msgp,UTTY_ALPHA_CHAR refch);
 unsigned int utty_string2ac_const(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char *msg,UTTY_ALPHA_CHAR refch);
 
+utty_offset_t utty_printat(utty_offset_t o,const char **msg,UTTY_ALPHA_CHAR uch);
+utty_offset_t utty_printat_const(utty_offset_t o,const char *msg,UTTY_ALPHA_CHAR uch);
+

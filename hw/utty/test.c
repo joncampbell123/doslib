@@ -153,23 +153,6 @@ int utty_init_vgalib(void) {
 /////////////////////////////////////////////////////////////////////////////
 #endif
 
-utty_offset_t utty_printat(utty_offset_t o,const char **msg,UTTY_ALPHA_CHAR uch) {
-    unsigned int i;
-
-    while (**msg != 0) {
-        i = utty_string2ac(utty_tmp,UTTY_ARRAY_LEN(utty_tmp),msg,uch);
-        assert(i <= UTTY_ARRAY_LEN(utty_tmp));
-        utty_funcs.setcharblock(o,utty_tmp,i);
-        o = utty_offset_advance(o,i);
-    }
-
-    return o;
-}
-
-utty_offset_t utty_printat_const(utty_offset_t o,const char *msg,UTTY_ALPHA_CHAR uch) {
-    return utty_printat(o,&msg,uch);
-}
-
 int main(int argc,char **argv) {
 	probe_dos();
 
@@ -324,7 +307,7 @@ int main(int argc,char **argv) {
 #ifdef TARGET_PC98
         uch.f.at = 0x00C5u;         // inverse yellow
 #else
-        uch.f.at = 0x70u;           // inverse yellow
+        uch.f.at = 0x60u;           // inverse yellow
 #endif
 
         ostp = utty_offset_advance(o,32);
