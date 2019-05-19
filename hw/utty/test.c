@@ -76,7 +76,20 @@ int utty_init(void) {
 
 // COMMON
 utty_offset_t utty_funcs_common_getofs(uint8_t y,uint8_t x) {
-    return ((utty_offset_t)y * utty_funcs.stride) + (utty_offset_t)x;
+#if TARGET_MSDOS == 32
+    const unsigned int ofs = (unsigned int)(utty_funcs.vram);
+#else
+    const unsigned int ofs = FP_OFF(utty_funcs.vram);
+#endif
+    return ((((utty_offset_t)y * utty_funcs.stride) + (utty_offset_t)x) * sizeof(uint16_t)) + (utty_offset_t)ofs;
+}
+
+static inline UTTY_ALPHA_PTR _utty_ofs_to_ptr(const utty_offset_t o) {
+#if TARGET_MSDOS == 32
+    return (UTTY_ALPHA_PTR)(utty_funcs.vram + o);
+#else
+    return (UTTY_ALPHA_PTR)MK_FP(FP_SEG(utty_funcs.vram),(unsigned int)o);
+#endif
 }
 
 #ifdef TARGET_PC98
@@ -85,16 +98,16 @@ void utty_pc98__update_from_screen(void) {
     // TODO
 }
 
-static inline UTTY_ALPHA_CHAR _pc98_getchar(utty_offset_t ofs) {
+static inline UTTY_ALPHA_CHAR _pc98_getchar(const UTTY_ALPHA_PTR ptr) {
     register UTTY_ALPHA_CHAR r;                     // UTTY_ALPHA_PTR is uint16_t therefore &[0x1000] = byte offset 0x2000
-    r.f.ch = utty_funcs.vram[ofs        ];          // A000:0000 character RAM
-    r.f.at = utty_funcs.vram[ofs+0x1000u];          // A200:0000 attribute RAM
+    r.f.ch = ptr[0x0000u];                          // A000:0000 character RAM
+    r.f.at = ptr[0x1000u];                          // A200:0000 attribute RAM
     return r;
 }
 
-static inline void _pc98_setchar(const utty_offset_t ofs,const UTTY_ALPHA_CHAR ch) {
-    utty_funcs.vram[ofs        ] = ch.f.ch;
-    utty_funcs.vram[ofs+0x1000u] = ch.f.at;
+static inline void _pc98_setchar(const UTTY_ALPHA_PTR ptr,const UTTY_ALPHA_CHAR ch) {
+    ptr[0x0000u] = ch.f.ch;
+    ptr[0x1000u] = ch.f.at;
 }
 
 static unsigned char _pc98_doublewide(const uint16_t chcode) {
@@ -107,18 +120,20 @@ static unsigned char _pc98_doublewide(const uint16_t chcode) {
 }
 
 UTTY_ALPHA_CHAR utty_pc98__getchar(utty_offset_t ofs) {
-    return _pc98_getchar(ofs);
+    return _pc98_getchar(_utty_ofs_to_ptr(ofs));
 }
 
 utty_offset_t utty_pc98__setchar(utty_offset_t ofs,UTTY_ALPHA_CHAR ch) {
+    UTTY_ALPHA_PTR ptr = _utty_ofs_to_ptr(ofs);
+
     if (!_pc98_doublewide(ch.f.ch)) {
-        _pc98_setchar(ofs,ch);
-        return ofs + 1u;
+        _pc98_setchar(ptr,ch);
+        return ofs + 2u;
     }
 
-    _pc98_setchar(ofs++,ch);
-    _pc98_setchar(ofs++,ch);
-    return ofs;
+    _pc98_setchar(ptr+0u,ch);
+    _pc98_setchar(ptr+1u,ch);
+    return ofs + 4u;
 }
 
 const struct utty_funcs_t utty_funcs_pc98_init = {
@@ -152,23 +167,23 @@ void utty_vga__update_from_screen(void) {
     utty_funcs.stride =     vga_state.vga_stride;
 }
 
-static inline UTTY_ALPHA_CHAR _vga_getchar(utty_offset_t ofs) {
+static inline UTTY_ALPHA_CHAR _vga_getchar(const UTTY_ALPHA_PTR ptr) {
     register UTTY_ALPHA_CHAR r;
-    r.raw = utty_funcs.vram[ofs];
+    r.raw = *ptr;
     return r;
 }
 
-static inline void _vga_setchar(const utty_offset_t ofs,const UTTY_ALPHA_CHAR ch) {
-    utty_funcs.vram[ofs] = ch.raw;
+static inline void _vga_setchar(const UTTY_ALPHA_PTR ptr,const UTTY_ALPHA_CHAR ch) {
+    *ptr = ch.raw;
 }
 
 UTTY_ALPHA_CHAR utty_vga__getchar(utty_offset_t ofs) {
-    return _vga_getchar(ofs);
+    return _vga_getchar(_utty_ofs_to_ptr(ofs));
 }
 
 utty_offset_t utty_vga__setchar(utty_offset_t ofs,UTTY_ALPHA_CHAR ch) {
-    _vga_setchar(ofs,ch);
-    return ofs + (utty_offset_t)1u;
+    _vga_setchar(_utty_ofs_to_ptr(ofs),ch);
+    return ofs + (utty_offset_t)2u;
 }
 
 const struct utty_funcs_t utty_funcs_vga_init = {
