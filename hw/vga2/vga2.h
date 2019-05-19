@@ -26,6 +26,10 @@ extern uint16_t                 vga2_flags;
 #define VGA2_FLAG_DIGITAL_DISPLAY   (1u << 6u)
 #define VGA2_FLAG_PGA               (1u << 7u)
 
+extern VGA2_ALPHA_PTR           vga2_alpha_mem;
+
+extern void                     (*vga2_update_alpha_ptr)(void);
+
 static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
 #if TARGET_MSDOS == 32
     return (VGA2_ALPHA_PTR)((unsigned int)s << 4u);
@@ -79,4 +83,11 @@ unsigned char vga2_alt_ega_switches_inline(void);
     "int        10h" \
     value [cl] \
     modify [ax bx cx];
+
+uint8_t vga2_get_dcc(void);
+unsigned char vga2_alt_ega_monocolor(void);
+unsigned char vga2_alt_ega_switches(void);
+void probe_vga2(void);
+
+void vga2_update_alpha_ptr_default(void);
 
