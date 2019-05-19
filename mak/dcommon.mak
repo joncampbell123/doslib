@@ -30,6 +30,14 @@ $(HW_VGA2_LIB):
 	@cd $(HERE)
 !endif
 
+# HW\UTTY------------------------------------------------------------------------------------
+!ifneq NOW_BUILDING HW_UTTY_LIB
+$(HW_UTTY_LIB):
+	@cd $(HW_UTTY_LIB_DIR)
+	@$(MAKECMD) build lib $(SUBDIR)
+	@cd $(HERE)
+!endif
+
 # HW\CPU------------------------------------------------------------------------------------
 !ifneq NOW_BUILDING HW_CPU_LIB
 $(HW_CPU_LIB):
