@@ -88,7 +88,7 @@ utty_offset_t utty_funcs_common_getofs(uint8_t y,uint8_t x) {
 
 static inline UTTY_ALPHA_PTR _utty_ofs_to_ptr(const utty_offset_t o) {
 #if TARGET_MSDOS == 32
-    return (UTTY_ALPHA_PTR)(utty_funcs.vram + o);
+    return (UTTY_ALPHA_PTR)(o);
 #else
     return (UTTY_ALPHA_PTR)MK_FP(FP_SEG(utty_funcs.vram),(unsigned int)o);
 #endif
