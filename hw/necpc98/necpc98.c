@@ -58,8 +58,7 @@ int probe_nec_pc98() {
 	 * No additional information is provided, other than entering with AX = 0x1000 and AX != 0x1000 on return.
 	 * I'm assuming some BIOSes will follow the pattern of AH=0x86 and CF=1 on this call, to be extra cautious
 	 * against false positives.
-	 *
-	 * FIXME: Anyone over there in Japan still have these things around? All I have to test this code is the Neko Project II emulator. */
+	 */
 		avl = 0x1000;
 
 		/* NTS: PC-98 is said to go as low as 8088, do not use PUSHA/POPA.
