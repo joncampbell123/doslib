@@ -19,6 +19,9 @@
 # define UTTY_FAR   far
 #endif
 
+#define UTTY_ARRAY_LEN(x)       (sizeof(x) / sizeof(x[0]))
+#define UTTY_BLANK_CHAR         { .f.ch=' ' }
+
 typedef unsigned int            utty_offset_t;
 
 #ifdef TARGET_PC98
@@ -243,6 +246,22 @@ int utty_init_vgalib(void) {
 /////////////////////////////////////////////////////////////////////////////
 #endif
 
+// TODO: PC-98 targets need to parse Shift-JIS and convert to VRAM format
+unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char *msg,UTTY_ALPHA_CHAR refch) {
+    unsigned int r = 0;
+    unsigned char c;
+
+    while (r < dst_max) {
+        c = (unsigned char)(*msg++);
+        if (c == 0) break;
+        refch.f.ch = c;
+        *(dst++) = refch;
+        r++;
+    }
+
+    return r;
+}
+
 int main(int argc,char **argv) {
 	probe_dos();
 
@@ -312,6 +331,23 @@ int main(int argc,char **argv) {
             uch.f.ch = c;
             uach[i++] = uch;
         }
+        assert(i < 12);
+        utty_funcs.setcharblock(o,uach,i);
+    }
+
+    {
+        const char *msg = "Hello world";
+        utty_offset_t o = utty_funcs.getofs(6/*row*/,4/*col*/);
+        UTTY_ALPHA_CHAR uach[12],uch = UTTY_BLANK_CHAR;
+        unsigned int i=0;
+
+#ifdef TARGET_PC98
+        uch.f.at = 0x0021u;         // blue
+#else
+        uch.f.at = 0x09u;           // bright blue
+#endif
+
+        i = utty_string2ac(uach,UTTY_ARRAY_LEN(uach),msg,uch);
         assert(i < 12);
         utty_funcs.setcharblock(o,uach,i);
     }
