@@ -289,20 +289,47 @@ unsigned int pc98_sjis_dec2(struct ShiftJISDecoder *j,const unsigned char c) {
         if (c >= 0x80) j->b2--; /* gap at 0x7F */
         return 1u;
     }
+    else {
+        j->b1 = j->b2 = 0x7F;
+    }
 
     return 0u;
 }
 #endif
 
 unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char *msg,UTTY_ALPHA_CHAR refch) {
+#ifdef TARGET_PC98
+    struct ShiftJISDecoder sjis;
+    unsigned char c;
+#endif
     unsigned int r = 0;
 
     while (r < dst_max) {
-        refch.f.ch = (*msg++);
-        if (refch.f.ch == 0) break;
+#ifdef TARGET_PC98
+        c = *(msg++);
+        if (c == 0) break;
 
+        if (pc98_sjis_dec1(&sjis,c)) {
+            if ((r+2) > dst_max) break;
+            pc98_sjis_dec2(&sjis,*(msg++));
+
+            refch.f.ch = (sjis.b1 - 0x20u) + (sjis.b2 << 8u);
+            *(dst++) = refch;
+            r++;
+            *(dst++) = refch;
+            r++;
+        }
+        else { 
+            refch.f.ch = c;
+            *(dst++) = refch;
+            r++;
+        }
+#else
+        refch.f.ch = *(msg++);
+        if (refch.f.ch == 0) break;
         *(dst++) = refch;
         r++;
+#endif
     }
 
     return r;
@@ -382,9 +409,13 @@ int main(int argc,char **argv) {
     }
 
     {
+#ifdef TARGET_PC98
+        const char *msg = "Hello world \x82\xb1\x82\xea\x82\xcd\x93\xfa\x96\x7b\x8c\xea\x82\xc5\x82\xb7";
+#else
         const char *msg = "Hello world";
+#endif
         utty_offset_t o = utty_funcs.getofs(6/*row*/,4/*col*/);
-        UTTY_ALPHA_CHAR uach[12],uch = UTTY_BLANK_CHAR;
+        UTTY_ALPHA_CHAR uach[40],uch = UTTY_BLANK_CHAR;
         unsigned int i=0;
 
 #ifdef TARGET_PC98
@@ -394,7 +425,7 @@ int main(int argc,char **argv) {
 #endif
 
         i = utty_string2ac(uach,UTTY_ARRAY_LEN(uach),msg,uch);
-        assert(i < 12);
+        assert(i < 40);
         utty_funcs.setcharblock(o,uach,i);
     }
 
