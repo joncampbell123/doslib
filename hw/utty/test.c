@@ -256,12 +256,18 @@ unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char
 
     while (r < dst_max) {
 #ifdef TARGET_PC98
-        c = *(msg++);
+        c = *msg;
         if (c == 0) break;
+        msg++;
 
         if (pc98_sjis_dec1(&sjis,c)) {
             if ((r+2) > dst_max) break;
-            pc98_sjis_dec2(&sjis,*(msg++));
+
+            c = *msg;
+            if (c == 0) break;
+            msg++;
+
+            pc98_sjis_dec2(&sjis,c);
 
             refch.f.ch = (sjis.b1 - 0x20u) + (sjis.b2 << 8u);
             *(dst++) = refch;
