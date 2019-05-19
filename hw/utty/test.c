@@ -8,14 +8,15 @@
 
 #if defined(TARGET_PC98)
 // There is no background on PC-98, only foreground, and no intensity control either.
-# define UTTY_COLOR_FG(c)               (PC98_TATTR_COLOR(fg))
-# define UTTY_COLOR_BG(c)               (0u)
-# define UTTY_COLOR_FB(fg,bg)           (UTTY_COLOR_FG(fg))
-# define UTTY_COLOR_INTENSITY_FG        (0u)
-# define UTTY_COLOR_INTENSITY_BG        (0u)
-# define UTTY_COLOR_MAKE_REVERSE(x)     ((x) | PC98_TATTR_REVERSE)
-# define UTTY_COLOR_MAKE_BLINK(x)       ((x) | PC98_TATTR_BLINK)
-# define UTTY_COLOR_MAKE_UNDERLINE(x)   ((x) | PC98_TATTR_UNDERLINE)
+# define UTTY_COLOR_FG(c)                   (PC98_TATTR_COLOR(c))
+# define UTTY_COLOR_BG(c)                   (0u)
+# define UTTY_COLOR_FB(fg,bg)               (UTTY_COLOR_FG(fg))
+# define UTTY_COLOR_MAKE_INTENSITY_FG(x)    (x)
+# define UTTY_COLOR_MAKE_INTENSITY_BG(x)    (x)
+# define UTTY_COLOR_MAKE_INTENSITY_FB(x)    (x)
+# define UTTY_COLOR_MAKE_REVERSE(x)         ((x) | PC98_TATTR_REVERSE)
+# define UTTY_COLOR_MAKE_BLINK(x)           ((x) | PC98_TATTR_BLINK)
+# define UTTY_COLOR_MAKE_UNDERLINE(x)       ((x) | PC98_TATTR_UNDERLINE)
 
 // PC-98 msb-lsb Green-Red-Blue order
 # define UTTY_COLOR_BLACK               (0u)
@@ -34,14 +35,15 @@
 //
 // underline is available ONLY if the foreground color is blue and the background is
 // black (MDA compat).
-# define UTTY_COLOR_FG(c)               ((fg) & 0xFu)
-# define UTTY_COLOR_BG(c)               (((bg) & 0xFu) << 4u)
-# define UTTY_COLOR_FB(fg,bg)           (UTTY_COLOR_FG(fg) + UTTY_COLOR_BG(bg))
-# define UTTY_COLOR_INTENSITY_FG        (0x08u)
-# define UTTY_COLOR_INTENSITY_BG        (0x80u)
-# define UTTY_COLOR_MAKE_REVERSE(x)     ((((x) & 0xF0u) >> 4u) + (((x) & 0x0Fu) << 4u))
-# define UTTY_COLOR_MAKE_BLINK(x)       ((x) | 0x80u)
-# define UTTY_COLOR_MAKE_UNDERLINE(x)   (((x) & 0x88u) | 0x01u)
+# define UTTY_COLOR_FG(c)                   ((c) & 0xFu)
+# define UTTY_COLOR_BG(c)                   (((c) & 0xFu) << 4u)
+# define UTTY_COLOR_FB(fg,bg)               (UTTY_COLOR_FG(fg) + UTTY_COLOR_BG(bg))
+# define UTTY_COLOR_MAKE_INTENSITY_FG(x)    ((x) | 0x08u)
+# define UTTY_COLOR_MAKE_INTENSITY_BG(x)    ((x) | 0x80u)
+# define UTTY_COLOR_MAKE_INTENSITY_FB(x)    ((x) | 0x88u)
+# define UTTY_COLOR_MAKE_REVERSE(x)         ((((x) & 0xF0u) >> 4u) + (((x) & 0x0Fu) << 4u))
+# define UTTY_COLOR_MAKE_BLINK(x)           ((x) | 0x80u)
+# define UTTY_COLOR_MAKE_UNDERLINE(x)       (((x) & 0x88u) | 0x01u)
 
 // VGA msb-lsb Red-Green-Blue order
 # define UTTY_COLOR_BLACK               (0u)
@@ -98,6 +100,7 @@ int main(int argc,char **argv) {
         UTTY_ALPHA_CHAR uch;
         unsigned char c;
 
+        uch.f.at = UTTY_COLOR_MAKE_INTENSITY_FG(UTTY_COLOR_FB(/*f*/UTTY_COLOR_RED,/*b*/UTTY_COLOR_BLACK));
 #ifdef TARGET_PC98
         uch.f.at = 0x0041u;         // red
 #else
