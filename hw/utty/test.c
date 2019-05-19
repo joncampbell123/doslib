@@ -246,11 +246,12 @@ int utty_init_vgalib(void) {
 /////////////////////////////////////////////////////////////////////////////
 #endif
 
-unsigned int utty_string2ac_const(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char *msg,UTTY_ALPHA_CHAR refch) {
+unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char **msgp,UTTY_ALPHA_CHAR refch) {
 #ifdef TARGET_PC98
     struct ShiftJISDecoder sjis;
     unsigned char c;
 #endif
+    const char *msg = *msgp;
     unsigned int r = 0;
 
     while (r < dst_max) {
@@ -281,7 +282,12 @@ unsigned int utty_string2ac_const(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,cons
 #endif
     }
 
+    *msgp = msg;
     return r;
+}
+
+unsigned int utty_string2ac_const(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char *msg,UTTY_ALPHA_CHAR refch) {
+    return utty_string2ac(dst,dst_max,&msg,refch);
 }
 
 int main(int argc,char **argv) {
