@@ -65,6 +65,8 @@ struct utty_funcs_t {
     void                    (*update_from_screen)(void);
     UTTY_ALPHA_CHAR         (*getchar)(utty_offset_t ofs);
     utty_offset_t           (*setchar)(utty_offset_t ofs,UTTY_ALPHA_CHAR ch);
+    unsigned int            (*getcharblock)(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count);
+    unsigned int            (*setcharblock)(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count);
     utty_offset_t           (*getofs)(uint8_t y,uint8_t x);
 };
 
@@ -127,6 +129,28 @@ utty_offset_t utty_pc98__setchar(utty_offset_t ofs,UTTY_ALPHA_CHAR ch) {
     return ofs + 4u;
 }
 
+unsigned int utty_pc98__getcharblock(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count) {
+    register unsigned int ocount = count;
+
+    if (count != 0u) {
+        UTTY_ALPHA_PTR ptr = _utty_ofs_to_ptr(ofs);
+        do { *chptr++ = _pc98_getchar(ptr++); } while ((--count) != 0u);
+    }
+
+    return ocount;
+}
+
+unsigned int utty_pc98__setcharblock(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count) {
+    register unsigned int ocount = count;
+
+    if (count != 0u) {
+        UTTY_ALPHA_PTR ptr = _utty_ofs_to_ptr(ofs);
+        do { _pc98_setchar(ptr++,*chptr++); } while ((--count) != 0u);
+    }
+
+    return ocount;
+}
+
 const struct utty_funcs_t utty_funcs_pc98_init = {
 #if TARGET_MSDOS == 32
     .vram =                             (UTTY_ALPHA_PTR)(0xA000u << 4u),
@@ -139,6 +163,8 @@ const struct utty_funcs_t utty_funcs_pc98_init = {
     .update_from_screen =               utty_pc98__update_from_screen,
     .getchar =                          utty_pc98__getchar,
     .setchar =                          utty_pc98__setchar,
+    .getcharblock =                     utty_pc98__getcharblock,
+    .setcharblock =                     utty_pc98__setcharblock,
     .getofs =                           utty_funcs_common_getofs
 };
 
@@ -177,10 +203,34 @@ utty_offset_t utty_vga__setchar(utty_offset_t ofs,UTTY_ALPHA_CHAR ch) {
     return ofs + (utty_offset_t)2u;
 }
 
+unsigned int utty_vga__getcharblock(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count) {
+    register unsigned int ocount = count;
+
+    if (count != 0u) {
+        UTTY_ALPHA_PTR ptr = _utty_ofs_to_ptr(ofs);
+        do { *chptr++ = _vga_getchar(ptr++); } while ((--count) != 0u);
+    }
+
+    return ocount;
+}
+
+unsigned int utty_vga__setcharblock(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count) {
+    register unsigned int ocount = count;
+
+    if (count != 0u) {
+        UTTY_ALPHA_PTR ptr = _utty_ofs_to_ptr(ofs);
+        do { _vga_setchar(ptr++,*chptr++); } while ((--count) != 0u);
+    }
+
+    return ocount;
+}
+
 const struct utty_funcs_t utty_funcs_vga_init = {
     .update_from_screen =               utty_vga__update_from_screen,
     .getchar =                          utty_vga__getchar,
     .setchar =                          utty_vga__setchar,
+    .getcharblock =                     utty_vga__getcharblock,
+    .setcharblock =                     utty_vga__setcharblock,
     .getofs =                           utty_funcs_common_getofs
 };
 
@@ -243,6 +293,27 @@ int main(int argc,char **argv) {
             uch.f.ch = c;
             o = utty_funcs.setchar(o,uch);
         }
+    }
+
+    {
+        const char *msg = "Hello world";
+        utty_offset_t o = utty_funcs.getofs(5/*row*/,4/*col*/);
+        UTTY_ALPHA_CHAR uach[12],uch;
+        unsigned int i=0;
+        unsigned char c;
+
+#ifdef TARGET_PC98
+        uch.f.at = 0x0081u;         // red
+#else
+        uch.f.at = 0x0Au;           // bright green
+#endif
+
+        while ((c=(*msg++)) != 0) {
+            uch.f.ch = c;
+            uach[i++] = uch;
+        }
+        assert(i < 12);
+        utty_funcs.setcharblock(o,uach,i);
     }
 
     return 0;
