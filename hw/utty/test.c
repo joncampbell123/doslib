@@ -5,7 +5,7 @@
 
 #include <hw/dos/dos.h>
 #ifdef TARGET_PC98
-// TODO
+# include <hw/necpc98/necpc98.h>
 #else
 # include <hw/vga/vga.h>
 # include <hw/vga2/vga2.h>
@@ -110,15 +110,6 @@ static inline void _pc98_setchar(const UTTY_ALPHA_PTR ptr,const UTTY_ALPHA_CHAR 
     ptr[0x1000u] = ch.f.at;
 }
 
-static unsigned char _pc98_doublewide(const uint16_t chcode) {
-    if (chcode & 0xFF00u) {
-        if ((chcode & 0x7Cu) != 0x08u)
-            return 1;
-    }
-
-    return 0;
-}
-
 UTTY_ALPHA_CHAR utty_pc98__getchar(utty_offset_t ofs) {
     return _pc98_getchar(_utty_ofs_to_ptr(ofs));
 }
@@ -126,7 +117,7 @@ UTTY_ALPHA_CHAR utty_pc98__getchar(utty_offset_t ofs) {
 utty_offset_t utty_pc98__setchar(utty_offset_t ofs,UTTY_ALPHA_CHAR ch) {
     UTTY_ALPHA_PTR ptr = _utty_ofs_to_ptr(ofs);
 
-    if (!_pc98_doublewide(ch.f.ch)) {
+    if (!vram_pc98_doublewide(ch.f.ch)) {
         _pc98_setchar(ptr,ch);
         return ofs + 2u;
     }
