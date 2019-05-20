@@ -79,7 +79,11 @@ struct utty_funcs_t {
 struct utty_con_t {
     uint8_t                 x,y;
     uint8_t                 top,left,right,bottom; /* top <= y <= bottom, left <= x <= right */
+    uint16_t                flags;
 };
+
+#define UTTY_CON_FLAG_NOWRAP            (1u << 0u)
+#define UTTY_CON_FLAG_NOSCROLL          (1u << 1u)
 
 extern struct utty_con_t            utty_con;
 extern struct utty_funcs_t          utty_funcs;
@@ -158,6 +162,14 @@ static inline UTTY_ALPHA_PTR _utty_ofs_to_ptr(const utty_offset_t o) {
 
 static inline utty_offset_t utty_con_to_offset_inline(void) {
     return utty_offset_getofs(utty_con.y, utty_con.x);
+}
+
+static inline uint8_t utty_con_canwrite_this_row(void) {
+    return utty_con.right + 1u - utty_con.x; /* .left to .right inclusive */
+}
+
+static inline uint8_t utty_con_canwrite_rows(void) {
+    return utty_con.bottom + 1u - utty_con.y; /* .top to .bottom inclusive */
 }
 
 int utty_init(void);
