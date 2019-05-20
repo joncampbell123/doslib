@@ -265,6 +265,23 @@ struct dos_linear_to_phys_info {
 };
 #endif
 
+#if defined(TARGET_PC98)
+
+/* emulation for code migration */
+
+#define BIOS_KS_ALT		0x08
+#define BIOS_KT_CTRL		0x10
+
+static inline unsigned char read_bios_keystate() { /* from 0x53A */
+#if TARGET_MSDOS == 32
+	return *((unsigned char*)(0x53A));
+#else
+	return *((unsigned char far*)MK_FP(0x50,0x3A));
+#endif
+}
+
+#else
+
 #define BIOS_KS_ALT		0x08
 #define BIOS_KT_CTRL		0x04
 
@@ -275,6 +292,8 @@ static inline unsigned char read_bios_keystate() { /* from 0x40:0x17 */
 	return *((unsigned char far*)MK_FP(0x40,0x17));
 #endif
 }
+
+#endif
 
 #if defined(TARGET_WINDOWS) && TARGET_MSDOS == 16 && !defined(TARGET_VXD)
 void far *win16_getexhandler(unsigned char n);
