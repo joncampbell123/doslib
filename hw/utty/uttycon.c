@@ -30,11 +30,6 @@ void utty_con_write(const char *msg) {
         js = 0;
         for (j=0;j < i;) {
             const UTTY_ALPHA_CHAR ch = utty_tmp[j];
-#if defined(TARGET_PC98)
-            const unsigned int cw = vram_pc98_doublewide(ch.f.ch) ? 2u : 1u;
-#else
-            const unsigned int cw = 1u;
-#endif
 
             // control chars should be passed through as-is.
             // also if we're about to print outside the box on the right, wrap around.
@@ -49,16 +44,24 @@ void utty_con_write(const char *msg) {
             else if (ch.f.ch == '\r') {
                 js = ++j; // start from next
             }
-            else if ((cw+utty_con.x-1u) > utty_con.right) {
-                utty_funcs.setcharblock(o,utty_tmp+js,j-js);
-                utty_con_cr();
-                utty_con_lf();
-                o = utty_con_to_offset();
-                js = j++; // start from current
-            }
-            else { // NTS: On PC-98 encodings, if double-byte encoding, this should be the decomposed doublewide, copy as-is
-                utty_con.x++;
-                ++j;
+            else {
+#if defined(TARGET_PC98)
+                const unsigned int cw = vram_pc98_doublewide(ch.f.ch) ? 2u : 1u;
+#else
+                const unsigned int cw = 1u;
+#endif
+
+                if ((cw+utty_con.x-1u) > utty_con.right) {
+                    utty_funcs.setcharblock(o,utty_tmp+js,j-js);
+                    utty_con_cr();
+                    utty_con_lf();
+                    o = utty_con_to_offset();
+                    js = j++; // start from current
+                }
+                else { // NTS: On PC-98 encodings, if double-byte encoding, this should be the decomposed doublewide, copy as-is
+                    utty_con.x++;
+                    ++j;
+                }
             }
         }
 
