@@ -174,6 +174,7 @@ int utty_init_pc98(void);
 int utty_init_vgalib(void);
 #endif
 
+void utty_con_poscurs(const uint8_t y,const uint8_t x);
 utty_offset_t utty_con_to_offset(void);
 void utty_con_home(void);
 void utty_con_update_from_dev(void);

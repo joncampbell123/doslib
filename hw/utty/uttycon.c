@@ -13,6 +13,15 @@ void utty_con_home(void) {
     utty_con.y = utty_con.top;
 }
 
+void utty_con_poscurs(const uint8_t y,const uint8_t x) {
+    utty_con.x = x + utty_con.left;
+    utty_con.y = y + utty_con.top;
+    if (utty_con.x > utty_con.right)
+        utty_con.x = utty_con.right;
+    if (utty_con.y > utty_con.bottom)
+        utty_con.y = utty_con.bottom;
+}
+
 void utty_con_update_from_dev(void) {
     utty_con.top = 0;
     utty_con.left = 0;
