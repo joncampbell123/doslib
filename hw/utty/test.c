@@ -198,6 +198,30 @@ int main(int argc,char **argv) {
         }
     }
 
+    {
+        unsigned int i;
+        for (i=0;i < 3;i++) {
+            getch();
+            utty_funcs.scroll(
+                /*dofs*/utty_offset_getofs(utty_con.top+5u,utty_con.left+6u),
+                /*sofs*/utty_offset_getofs(utty_con.top+6u,utty_con.left+6u),
+                /*w*/20u,
+                /*h*/5u);
+        }
+    }
+
+    {
+        unsigned int i;
+        for (i=0;i < 3;i++) {
+            getch();
+            utty_funcs.scroll(
+                /*sofs*/utty_offset_getofs(utty_con.top+6u,utty_con.left+6u),
+                /*dofs*/utty_offset_getofs(utty_con.top+5u,utty_con.left+6u),
+                /*w*/20u,
+                /*h*/5u);
+        }
+    }
+
     return 0;
 }
 
