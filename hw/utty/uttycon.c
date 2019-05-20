@@ -8,10 +8,6 @@
 
 struct utty_con_t               utty_con = { .refch = UTTY_BLANK_CHATTR };
 
-void utty_con_cr(void) {
-    utty_con.x = utty_con.left;
-}
-
 void utty_con_lf(void) {
     if (utty_con.y < utty_con.bottom)
         utty_con.y++;

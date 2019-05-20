@@ -185,6 +185,10 @@ static inline uint8_t utty_con_canwrite_rows(void) {
     return utty_con.bottom + 1u - utty_con.y; /* .top to .bottom inclusive */
 }
 
+static inline void utty_con_cr(void) {
+    utty_con.x = utty_con.left;
+}
+
 int utty_init(void);
 
 unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char **msgp,UTTY_ALPHA_CHAR refch);
