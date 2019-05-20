@@ -53,14 +53,20 @@ void utty_con_write(const char *msg) {
 
                 if ((cw+utty_con.x-1u) > utty_con.right) {
                     utty_funcs.setcharblock(o,utty_tmp+js,j-js);
+                    o = utty_offset_advance(o,j-js);
+                    if (cw != 1u) utty_funcs.setchar(o,utty_con.refch);
+
                     utty_con_cr();
                     utty_con_lf();
                     o = utty_con_to_offset();
-                    js = j++; // start from current
+                    js = j; // restart from current
                 }
-                else { // NTS: On PC-98 encodings, if double-byte encoding, this should be the decomposed doublewide, copy as-is
-                    utty_con.x++;
-                    ++j;
+                else {
+                    // NTS: On PC-98 encodings, if double-byte encoding, this should be the decomposed doublewide, copy as-is.
+                    //      To allow wraparound to work, advance by character width. string2ac upon DBCS encoding will either
+                    //      write two of the same char (for VRAM) or will not write anything at all (i.e. not enough space).
+                    utty_con.x += cw;
+                    j += cw;
                 }
             }
         }
