@@ -89,6 +89,17 @@ static void utty_pc98__scroll(utty_offset_t dofs,utty_offset_t sofs,uint8_t w,ui
     }
 }
 
+static void utty_pc98__fill(utty_offset_t ofs,unsigned int count,UTTY_ALPHA_CHAR ch) {
+    if (count != 0u) {
+        UTTY_ALPHA_PTR p = _utty_ofs_to_ptr(ofs);
+        do {
+            p[0x0000u] = ch.f.ch;
+            p[0x1000u] = ch.f.at;
+            p++;
+        } while ((--count) != 0u);
+    }
+}
+
 const struct utty_funcs_t utty_funcs_pc98_init = {
 #if TARGET_MSDOS == 32
     .vram =                             (UTTY_ALPHA_PTR)(0xA000u << 4u),
@@ -103,7 +114,8 @@ const struct utty_funcs_t utty_funcs_pc98_init = {
     .setchar =                          utty_pc98__setchar,
     .getcharblock =                     utty_pc98__getcharblock,
     .setcharblock =                     utty_pc98__setcharblock,
-    .scroll =                           utty_pc98__scroll
+    .scroll =                           utty_pc98__scroll,
+    .fill =                             utty_pc98__fill
 };
 
 int utty_init_pc98(void) {

@@ -73,13 +73,21 @@ static void utty_vga__scroll(utty_offset_t dofs,utty_offset_t sofs,uint8_t w,uin
     }
 }
 
+static void utty_vga__fill(utty_offset_t ofs,unsigned int count,UTTY_ALPHA_CHAR ch) {
+    if (count != 0u) {
+        UTTY_ALPHA_PTR p = _utty_ofs_to_ptr(ofs);
+        do { *p++ = ch.raw; } while ((--count) != 0u);
+    }
+}
+
 const struct utty_funcs_t utty_funcs_vga_init = {
     .update_from_screen =               utty_vga__update_from_screen,
     .getchar =                          utty_vga__getchar,
     .setchar =                          utty_vga__setchar,
     .getcharblock =                     utty_vga__getcharblock,
     .setcharblock =                     utty_vga__setcharblock,
-    .scroll =                           utty_vga__scroll
+    .scroll =                           utty_vga__scroll,
+    .fill =                             utty_vga__fill
 };
 
 int utty_init_vgalib(void) {

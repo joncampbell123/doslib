@@ -77,6 +77,7 @@ struct utty_funcs_t {
     utty_offset_t           (*getcharblock)(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count);
     utty_offset_t           (*setcharblock)(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count);
     void                    (*scroll)(utty_offset_t dofs,utty_offset_t sofs,uint8_t w,uint8_t h);
+    void                    (*fill)(utty_offset_t ofs,unsigned int count,UTTY_ALPHA_CHAR ch);
 };
 
 struct utty_con_t {
