@@ -1,4 +1,7 @@
 
+#ifndef __HW_NECPC98_NECPC98_H
+#define __HW_NECPC98_NECPC98_H
+
 #pragma pack(push,1)
 struct nec_pc98_state_t {
 	uint8_t			probed:1;
@@ -35,4 +38,6 @@ static inline unsigned char vram_pc98_doublewide(const uint16_t chcode) {
 
     return 0;
 }
+
+#endif //__HW_NECPC98_NECPC98_H
 
