@@ -203,9 +203,9 @@ int main(int argc,char **argv) {
         for (i=0;i < 3;i++) {
             getch();
             utty_funcs.scroll(
-                /*dofs*/utty_offset_getofs(utty_con.top+5u,utty_con.left+6u),
-                /*sofs*/utty_offset_getofs(utty_con.top+6u,utty_con.left+6u),
-                /*w*/20u,
+                /*dofs*/utty_offset_getofs(utty_con.top+5u,utty_con.left+16u),
+                /*sofs*/utty_offset_getofs(utty_con.top+6u,utty_con.left+16u),
+                /*w*/5u,
                 /*h*/5u);
         }
     }
@@ -215,9 +215,9 @@ int main(int argc,char **argv) {
         for (i=0;i < 3;i++) {
             getch();
             utty_funcs.scroll(
-                /*sofs*/utty_offset_getofs(utty_con.top+6u,utty_con.left+6u),
-                /*dofs*/utty_offset_getofs(utty_con.top+5u,utty_con.left+6u),
-                /*w*/20u,
+                /*sofs*/utty_offset_getofs(utty_con.top+6u,utty_con.left+16u),
+                /*dofs*/utty_offset_getofs(utty_con.top+5u,utty_con.left+16u),
+                /*w*/5u,
                 /*h*/5u);
         }
     }
