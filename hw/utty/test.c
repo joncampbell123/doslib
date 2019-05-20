@@ -150,6 +150,9 @@ int main(int argc,char **argv) {
     {
         utty_con_poscurs(10/*row*/,0/*col*/);
         utty_con_write("Hello world\nHow are you?\n\nHello.\nThis is fun. Hello. Hello. Yay!\n");
+#ifdef TARGET_PC98
+        utty_con_write("Hello world \x82\xb1\x82\xea\x82\xcd\x93\xfa\x96\x7b\x8c\xea\x82\xc5\x82\xb7\n");
+#endif
     }
 
     return 0;
