@@ -20,10 +20,14 @@ This code is designed to run in pure DOS mode. It is written to be tolerant
 towards running in a Windows "DOS Box", though that is strongly discouraged.
 
 8042 ............. 8042 keyboard controller (and PS/2 mouse)
+8237 ............. 8237 DMA controller
 8250 ............. 8250/16450/16550/16750 serial port UART
+8251 ............. 8251 serial port UART (commonly used on PC-98)
 8254 ............. 8253/8254 timer chip
 8259 ............. 8259 programmable interrupt controller
+86duino .......... 86duino (Vortex86) embedded SoC
 acpi ............. ACPI BIOS support functions and experiments
+adlib ............ Adlib/Sound Blaster FM (OPL2 and OPL3) support code
 apm .............. APM BIOS support functions
 biosdisk ......... BIOS INT 13H low-level disk access
 cpu .............. CPU utility and CPU/FPU detection
@@ -35,20 +39,28 @@ dos .............. MS-DOS environment library, allowing:
                      - Lotus/Intel/Microsoft Expanded Memory API,
 		         usually EMM386.EXE
                      - HIMEM.SYS Extended Memory API
+dosboxid ......... DOSBox-X Integrated Device support
 flatreal ......... 386 "Flat Real Mode" API, to allow direct extended memory
                      access to 16-bit real-mode applications
+floppy ........... Floppy controller code
 ide .............. IDE/ATA hard disk and ATAPI CD-ROM code
 isapnp ........... ISA Plug & Play BIOS API and hardware I/O
+llmem ............ Memory access beyond conventional memory. Depending on
+                   system configuration, may also enable use of memory above
+                   the 4GB boundary.
 mb ............... Motherboard-specific hacking "toys", see README for
                      comprehensive list
+mpu401 ........... MPU-401 (MIDI)
 necpc98 .......... Japanese NEC PC-98 support functions
 parport .......... PC parallel (printer) port functions
 pci .............. PCI bus functions
 pcie ............. PCI-Express bus functions
+rtc .............. Real-time clock
 smbios ........... DMI/SMBIOS parsing functions
 sndsb ............ Sound Blaster or compatible support functions
 ultrasnd ......... Gravis Ultrasound support functions
 usb .............. Universal Serial Bus functions
+utty ............. A universal TTY library for MS-DOS and PC-98 targets (common code)
 vesa ............. VESA VGA BIOS video API
 vga .............. VGA/EGA/CGA/MDA/Tandy/PCjr/Hercules support functions
 vga2 ............. VGA/EGA/CGA/MDA/Tandy/PCjr/Hercules 2nd library
