@@ -15,7 +15,12 @@ void utty_con_cr(void) {
 void utty_con_lf(void) {
     if (utty_con.y < utty_con.bottom)
         utty_con.y++;
-    // TODO scrolling
+    else if (!(utty_con.flags & UTTY_CON_FLAG_NOSCROLL))
+        utty_funcs.scroll(
+            /*dofs*/utty_offset_getofs(utty_con.top   ,utty_con.left),
+            /*sofs*/utty_offset_getofs(utty_con.top+1u,utty_con.left),
+            /*w*/utty_con.right - utty_con.left + 1u,
+            /*h*/utty_con.bottom - utty_con.top);
 }
 
 void utty_con_write(const char *msg) {

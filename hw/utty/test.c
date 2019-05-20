@@ -161,6 +161,43 @@ int main(int argc,char **argv) {
 #endif
     }
 
+    getch();
+
+    {
+        unsigned int i;
+        char tmp[64];
+
+        for (i=0;i < 25;i++) {
+            sprintf(tmp,"Line. Line. Line. %u\n",i);
+            utty_con_write(tmp);
+            getch();
+        }
+    }
+
+    {
+        unsigned int i;
+        for (i=0;i < 5;i++) {
+            getch();
+            utty_funcs.scroll(
+                /*dofs*/utty_offset_getofs(utty_con.top   ,utty_con.left),
+                /*sofs*/utty_offset_getofs(utty_con.top+1u,utty_con.left),
+                /*w*/utty_con.right - utty_con.left + 1u,
+                /*h*/utty_con.bottom - utty_con.top);
+        }
+    }
+
+    {
+        unsigned int i;
+        for (i=0;i < 5;i++) {
+            getch();
+            utty_funcs.scroll(
+                /*sofs*/utty_offset_getofs(utty_con.top+1u,utty_con.left),
+                /*dofs*/utty_offset_getofs(utty_con.top   ,utty_con.left),
+                /*w*/utty_con.right - utty_con.left + 1u,
+                /*h*/utty_con.bottom - utty_con.top);
+        }
+    }
+
     return 0;
 }
 
