@@ -86,26 +86,6 @@ void utty_con_home(void) {
     utty_con.y = utty_con.top;
 }
 
-void utty_con_xadj(const int8_t x) {
-    const uint8_t nx = x + utty_con.x;
-    if (nx < utty_con.left || (nx & (~0x7Fu)/*became negative*/))
-        utty_con.x = utty_con.left;
-    else if (nx > utty_con.right)
-        utty_con.x = utty_con.right;
-    else
-        utty_con.x = (uint8_t)x;
-}
-
-void utty_con_yadj(const int8_t y) {
-    const uint8_t ny = y + utty_con.y;
-    if (ny < utty_con.top || (ny & (~0x7Fu)/*became negative*/))
-        utty_con.y = utty_con.top;
-    else if (ny > utty_con.bottom)
-        utty_con.y = utty_con.bottom;
-    else
-        utty_con.y = (uint8_t)y;
-}
-
 void utty_con_poscurs(const uint8_t y,const uint8_t x) {
     utty_con.x = x + utty_con.left;
     utty_con.y = y + utty_con.top;

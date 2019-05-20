@@ -209,7 +209,5 @@ utty_offset_t utty_con_to_offset(void);
 void utty_con_home(void);
 void utty_con_update_from_dev(void);
 int utty_con_init(void);
-void utty_con_xadj(const int8_t x);
-void utty_con_yadj(const int8_t y);
 void utty_con_write(const char *msg);
 
