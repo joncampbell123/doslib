@@ -155,8 +155,9 @@ int main(int argc,char **argv) {
 #endif
         utty_con_write("Very very very very very long long long long long very very long longlonglonglonglonglong long long long too long\n");
 #ifdef TARGET_PC98
-        // we purposely make the console split the "kore wa nihongo desu" string
+        // we purposely make the console split the "kore wa nihongo desu" string on an odd column to test wraparound
         utty_con_write("Hello world very very very very very very long long long long too long \x82\xb1\x82\xea\x82\xcd\x93\xfa\x96\x7b\x8c\xea\x82\xc5\x82\xb7\n");
+        utty_con_write("Hello world very very very very very very long long long long too longg \x82\xb1\x82\xea\x82\xcd\x93\xfa\x96\x7b\x8c\xea\x82\xc5\x82\xb7\n");
 #endif
     }
 
