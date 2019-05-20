@@ -36,6 +36,10 @@ int main(int argc,char **argv) {
         return 1;
     }
 #endif
+    if (!utty_con_init()) {
+        printf("utty con init\n");
+        return 1;
+    }
 
 #if TARGET_MSDOS == 32
     printf("Alpha ptr: %p\n",utty_funcs.vram);
@@ -141,6 +145,11 @@ int main(int argc,char **argv) {
         ostp = utty_offset_advance(o,32);
         o = utty_printat_const(o,msg,uch);
         while (o < ostp) o = utty_funcs.setchar(o,uch);
+    }
+
+    {
+        utty_con_poscurs(10/*row*/,0/*col*/);
+        utty_con_write("Hello world\nHow are you?\n\nHello.\nThis is fun. Hello. Hello. Yay!\n");
     }
 
     return 0;

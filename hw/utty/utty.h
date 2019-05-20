@@ -23,6 +23,7 @@ typedef unsigned int            utty_offset_t;
 #ifdef TARGET_PC98
 /////////////////////////////////////////////////////////////////////////////
 # define UTTY_MAX_CHAR_WIDTH    2
+# define UTTY_BLANK_CHATTR      { .f.ch=' ', .f.at=0xE1u }
 
 /* This represents the ideal pointer type for accessing VRAM. It does not necessarily contain ALL data for the char. */
 typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
@@ -40,6 +41,7 @@ typedef union {
 #else
 /////////////////////////////////////////////////////////////////////////////
 # define UTTY_MAX_CHAR_WIDTH    1
+# define UTTY_BLANK_CHATTR      { .f.ch=' ', .f.at=0x07u }
 
 /* This represents the ideal pointer type for accessing VRAM. It does not necessarily contain ALL data for the char. */
 typedef uint16_t UTTY_FAR      *UTTY_ALPHA_PTR;
@@ -80,6 +82,7 @@ struct utty_con_t {
     uint8_t                 x,y;
     uint8_t                 top,left,right,bottom; /* top <= y <= bottom, left <= x <= right */
     uint16_t                flags;
+    UTTY_ALPHA_CHAR         refch;
 };
 
 #define UTTY_CON_FLAG_NOWRAP            (1u << 0u)
@@ -186,9 +189,13 @@ int utty_init_pc98(void);
 int utty_init_vgalib(void);
 #endif
 
+void utty_con_write(const char *msg);
 void utty_con_poscurs(const uint8_t y,const uint8_t x);
 utty_offset_t utty_con_to_offset(void);
 void utty_con_home(void);
 void utty_con_update_from_dev(void);
 int utty_con_init(void);
+void utty_con_xadj(const int8_t x);
+void utty_con_yadj(const int8_t y);
+void utty_con_write(const char *msg);
 
