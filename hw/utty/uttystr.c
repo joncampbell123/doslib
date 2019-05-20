@@ -16,28 +16,34 @@ unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char
 
     while (r < dst_max) {
 #ifdef TARGET_PC98
-        c = *msg;
+        c = msg[0];
         if (c == 0) break;
-        msg++;
 
-        if (pc98_sjis_dec1(&sjis,c)) {
+        if (pc98_sjis_dec1(&sjis,c)) { // double byte char. either advance msg for the entire char or do not advance at all and exit
             if ((r+2) > dst_max) break;
 
-            c = *msg;
-            if (c == 0) break;
-            msg++;
+            c = msg[1];
+            if (c != 0) {
+                msg += 2;
 
-            if (pc98_sjis_dec2(&sjis,c)) {
-                refch.f.ch = (sjis.b1 - 0x20u) + (sjis.b2 << 8u);
-                *(dst++) = refch;
-                r++;
-                *(dst++) = refch;
-                r++;
+                if (pc98_sjis_dec2(&sjis,c)) {
+                    refch.f.ch = (sjis.b1 - 0x20u) + (sjis.b2 << 8u);
+                    *(dst++) = refch;
+                    r++;
+                    *(dst++) = refch;
+                    r++;
+                }
+            }
+            else {
+                msg++; // msg[1] == 0 therefore stop at NUL
+                assert(*msg == 0);
+                break;
             }
         }
-        else { 
+        else {
             refch.f.ch = c;
             *(dst++) = refch;
+            msg++; // single byte char
             r++;
         }
 #else
