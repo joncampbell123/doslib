@@ -20,13 +20,6 @@
 /*nothing*/
 #else
 
-#ifdef TARGET_WINDOWS
-# include <hw/dos/winfcon.h>
-# include <windows/apihelp.h>
-# include <windows/dispdib/dispdib.h>
-# include <windows/win16eb/win16eb.h>
-#endif
-
 struct vga_menu_bar_state	vga_menu_bar = {NULL,-1,0};
 void				(*vga_menu_idle)() = NULL;
 
