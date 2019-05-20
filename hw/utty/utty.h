@@ -156,6 +156,10 @@ static inline UTTY_ALPHA_PTR _utty_ofs_to_ptr(const utty_offset_t o) {
 #endif
 }
 
+static inline utty_offset_t utty_con_to_offset_inline(void) {
+    return utty_offset_getofs(utty_con.y, utty_con.x);
+}
+
 int utty_init(void);
 
 unsigned int utty_string2ac(UTTY_ALPHA_CHAR *dst,unsigned int dst_max,const char **msgp,UTTY_ALPHA_CHAR refch);
@@ -170,6 +174,7 @@ int utty_init_pc98(void);
 int utty_init_vgalib(void);
 #endif
 
+utty_offset_t utty_con_to_offset(void);
 void utty_con_home(void);
 void utty_con_update_from_dev(void);
 int utty_con_init(void);

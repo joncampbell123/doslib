@@ -21,6 +21,10 @@ void utty_con_update_from_dev(void) {
     utty_con_home();
 }
 
+utty_offset_t utty_con_to_offset(void) {
+    return utty_con_to_offset_inline();
+}
+
 /* must call after utty_init() and utty driver init */
 int utty_con_init(void) {
     utty_con_update_from_dev();
