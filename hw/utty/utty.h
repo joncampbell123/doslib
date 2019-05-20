@@ -74,8 +74,8 @@ struct utty_funcs_t {
     void                    (*update_from_screen)(void);
     UTTY_ALPHA_CHAR         (*getchar)(utty_offset_t ofs);
     utty_offset_t           (*setchar)(utty_offset_t ofs,UTTY_ALPHA_CHAR ch);
-    unsigned int            (*getcharblock)(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count);
-    unsigned int            (*setcharblock)(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count);
+    utty_offset_t           (*getcharblock)(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count);
+    utty_offset_t           (*setcharblock)(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count);
     void                    (*scroll)(utty_offset_t dofs,utty_offset_t sofs,uint8_t w,uint8_t h);
 };
 
@@ -161,6 +161,14 @@ static inline UTTY_ALPHA_PTR _utty_ofs_to_ptr(const utty_offset_t o) {
     return (UTTY_ALPHA_PTR)(o);
 #else
     return (UTTY_ALPHA_PTR)MK_FP(FP_SEG(utty_funcs.vram),(unsigned int)o);
+#endif
+}
+
+static inline utty_offset_t _utty_ptr_to_ofs(const UTTY_ALPHA_PTR o) {
+#if TARGET_MSDOS == 32
+    return (utty_offset_t)(o);
+#else
+    return (utty_offset_t)FP_OFF(o);
 #endif
 }
 

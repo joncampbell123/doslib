@@ -57,8 +57,7 @@ void utty_con_write(const char *msg) {
 #endif
 
                 if ((cw+utty_con.x-1u) > utty_con.right) {
-                    utty_funcs.setcharblock(o,utty_tmp+js,j-js);
-                    o = utty_offset_advance(o,j-js);
+                    o = utty_funcs.setcharblock(o,utty_tmp+js,j-js);
                     if (cw != 1u) utty_funcs.setchar(o,utty_con.refch);
 
                     utty_con_cr();
@@ -76,10 +75,8 @@ void utty_con_write(const char *msg) {
             }
         }
 
-        if (js < j) {
-            i = utty_funcs.setcharblock(o,utty_tmp+js,j-js);
-            o = utty_offset_advance(o,i);
-        }
+        if (js < j)
+            o = utty_funcs.setcharblock(o,utty_tmp+js,j-js);
     } while (1);
 }
 

@@ -40,26 +40,24 @@ static utty_offset_t utty_pc98__setchar(utty_offset_t ofs,UTTY_ALPHA_CHAR ch) {
     return ofs + 4u;
 }
 
-static unsigned int utty_pc98__getcharblock(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count) {
-    register unsigned int ocount = count;
-
+static utty_offset_t utty_pc98__getcharblock(utty_offset_t ofs,UTTY_ALPHA_CHAR *chptr,unsigned int count) {
     if (count != 0u) {
         UTTY_ALPHA_PTR ptr = _utty_ofs_to_ptr(ofs);
         do { *chptr++ = _pc98_getchar(ptr++); } while ((--count) != 0u);
+        return _utty_ptr_to_ofs(ptr);
     }
 
-    return ocount;
+    return ofs;
 }
 
-static unsigned int utty_pc98__setcharblock(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count) {
-    register unsigned int ocount = count;
-
+static utty_offset_t utty_pc98__setcharblock(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count) {
     if (count != 0u) {
         UTTY_ALPHA_PTR ptr = _utty_ofs_to_ptr(ofs);
         do { _pc98_setchar(ptr++,*chptr++); } while ((--count) != 0u);
+        return _utty_ptr_to_ofs(ptr);
     }
 
-    return ocount;
+    return ofs;
 }
 
 static void utty_pc98__scroll(utty_offset_t dofs,utty_offset_t sofs,uint8_t w,uint8_t h) {
