@@ -76,6 +76,12 @@ struct utty_funcs_t {
     unsigned int            (*setcharblock)(utty_offset_t ofs,const UTTY_ALPHA_CHAR *chptr,unsigned int count);
 };
 
+struct utty_con_t {
+    uint8_t                 x,y;
+    uint8_t                 top,left,right,bottom; /* top <= y <= bottom, left <= x <= right */
+};
+
+extern struct utty_con_t            utty_con;
 extern struct utty_funcs_t          utty_funcs;
 extern UTTY_ALPHA_CHAR              utty_tmp[16];
 
@@ -163,4 +169,8 @@ int utty_init_pc98(void);
 #else
 int utty_init_vgalib(void);
 #endif
+
+void utty_con_home(void);
+void utty_con_update_from_dev(void);
+int utty_con_init(void);
 

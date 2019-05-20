@@ -6,8 +6,8 @@ NOW_BUILDING = HW_UTTY_LIB
 
 TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
 
-$(HW_UTTY_LIB): $(SUBDIR)$(HPS)utty.obj $(SUBDIR)$(HPS)uttystr.obj $(SUBDIR)$(HPS)uttytmp.obj $(SUBDIR)$(HPS)uttyprna.obj $(SUBDIR)$(HPS)drv_pc98.obj $(SUBDIR)$(HPS)drv_vga.obj
-	wlib -q -b -c $(HW_UTTY_LIB) -+$(SUBDIR)$(HPS)utty.obj -+$(SUBDIR)$(HPS)uttystr.obj -+$(SUBDIR)$(HPS)uttytmp.obj -+$(SUBDIR)$(HPS)uttyprna.obj -+$(SUBDIR)$(HPS)drv_pc98.obj -+$(SUBDIR)$(HPS)drv_vga.obj
+$(HW_UTTY_LIB): $(SUBDIR)$(HPS)utty.obj $(SUBDIR)$(HPS)uttystr.obj $(SUBDIR)$(HPS)uttytmp.obj $(SUBDIR)$(HPS)uttyprna.obj $(SUBDIR)$(HPS)drv_pc98.obj $(SUBDIR)$(HPS)drv_vga.obj $(SUBDIR)$(HPS)uttycon.obj
+	wlib -q -b -c $(HW_UTTY_LIB) -+$(SUBDIR)$(HPS)utty.obj -+$(SUBDIR)$(HPS)uttystr.obj -+$(SUBDIR)$(HPS)uttytmp.obj -+$(SUBDIR)$(HPS)uttyprna.obj -+$(SUBDIR)$(HPS)drv_pc98.obj -+$(SUBDIR)$(HPS)drv_vga.obj -+$(SUBDIR)$(HPS)uttycon.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
