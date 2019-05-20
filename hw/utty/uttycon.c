@@ -30,11 +30,16 @@ void utty_con_write(const char *msg) {
         js = 0;
         for (j=0;j < i;) {
             const UTTY_ALPHA_CHAR ch = utty_tmp[j];
+#if defined(TARGET_PC98)
+            const unsigned int cw = vram_pc98_doublewide(ch.f.ch) ? 2u : 1u;
+#else
+            const unsigned int cw = 1u;
+#endif
 
             // control chars should be passed through as-is.
             // also if we're about to print outside the box on the right, wrap around.
             // TODO: Or in that case, just overprint on the side if NOWRAP
-            if (ch.f.ch == '\n' || utty_con.x > utty_con.right) {
+            if (ch.f.ch == '\n' || (cw+utty_con.x) > utty_con.right) {
                 utty_funcs.setcharblock(o,utty_tmp+js,j-js);
                 utty_con_cr();
                 utty_con_lf();
