@@ -1,4 +1,7 @@
 
+#ifndef __HW_VGA2_VGA2_H
+#define __HW_VGA2_VGA2_H
+
 #include <stdint.h>
 
 #if TARGET_MSDOS == 32
@@ -90,4 +93,6 @@ unsigned char vga2_alt_ega_switches(void);
 void probe_vga2(void);
 
 void vga2_update_alpha_ptr_default(void);
+
+#endif //__HW_VGA2_VGA2_H
 
