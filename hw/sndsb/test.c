@@ -2105,17 +2105,29 @@ static void change_alias_menu() {
 
 			if (c == 27 || c == 13)
 				loop = 0;
+#if defined(TARGET_PC98)
+			else if (c == 0x0B) { /* up arrow */
+#else
 			else if (c == 0x4800) { /* up arrow */
+#endif
 //				if (selector > 0) selector--;
 //				else selector=0;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0A) { /* down arrow */
+#else
 			else if (c == 0x5000) { /* down arrow */
+#endif
 //				if (selector < -1) selector++;
 //				else selector=0;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x08) { /* left arrow */
+#else
 			else if (c == 0x4B00) { /* left arrow */
+#endif
 				switch (selector) {
 					case 0:	/* sample rate */
 						sb_card->dsp_alias_port ^= 1;
@@ -2125,7 +2137,11 @@ static void change_alias_menu() {
 				update_cfg();
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0C) { /* right arrow */
+#else
 			else if (c == 0x4D00) { /* right arrow */
+#endif
 				switch (selector) {
 					case 0:	/* sample rate */
 						sb_card->dsp_alias_port ^= 1;
@@ -2591,22 +2607,38 @@ static void play_with_sb16_8051() {
 				uiredraw = 1;
 			else if (c == 27)
 				loop = 0;
+#if defined(TARGET_PC98)
+			else if (c == 0x0B) { /* up arrow */
+#else
 			else if (c == 0x4800) { /* up arrow */
+#endif
 				selector -= 0x10;
 				selector &= 0xFF;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x08) { /* left arrow */
+#else
 			else if (c == 0x4B00) { /* left arrow */
+#endif
 				selector--;
 				selector &= 0xFF;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0C) { /* right arrow */
+#else
 			else if (c == 0x4D00) { /* right arrow */
+#endif
 				selector++;
 				selector &= 0xFF;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0A) { /* down arrow */
+#else
 			else if (c == 0x5000) { /* down arrow */
+#endif
 				selector += 0x10;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -2752,22 +2784,38 @@ static void play_with_ess() {
 				uiredraw = 1;
 			else if (c == 27)
 				loop = 0;
+#if defined(TARGET_PC98)
+			else if (c == 0x0B) { /* up arrow */
+#else
 			else if (c == 0x4800) { /* up arrow */
+#endif
 				selector -= 0x10;
 				selector &= 0xFF;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x08) { /* left arrow */
+#else
 			else if (c == 0x4B00) { /* left arrow */
+#endif
 				selector--;
 				selector &= 0xFF;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0C) { /* right arrow */
+#else
 			else if (c == 0x4D00) { /* right arrow */
+#endif
 				selector++;
 				selector &= 0xFF;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0A) { /* down arrow */
+#else
 			else if (c == 0x5000) { /* down arrow */
+#endif
 				selector += 0x10;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -2979,7 +3027,11 @@ static void play_with_mixer() {
 				loop = 0;
 			else if (c == ' ')
 				uiredraw = 1;
+#if defined(TARGET_PC98)
+			else if (c == 0x0B) { /* up arrow */
+#else
 			else if (c == 0x4800) { /* up arrow */
+#endif
 				if (rawmode) {
 					selector -= 0x10;
 					selector &= 0xFF;
@@ -2994,7 +3046,11 @@ static void play_with_mixer() {
 					}
 				}
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x08) { /* left arrow */
+#else
 			else if (c == 0x4B00) { /* left arrow */
+#endif
 				if (rawmode) {
 					selector--;
 					selector &= 0xFF;
@@ -3009,7 +3065,11 @@ static void play_with_mixer() {
 					}
 				}
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0C) { /* right arrow */
+#else
 			else if (c == 0x4D00) { /* right arrow */
+#endif
 				if (rawmode) {
 					selector++;
 					selector &= 0xFF;
@@ -3036,7 +3096,11 @@ static void play_with_mixer() {
 					}
 				}
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0A) { /* down arrow */
+#else
 			else if (c == 0x5000) { /* down arrow */
+#endif
 				if (rawmode) {
 					selector += 0x10;
 					selector &= 0xFF;
@@ -3906,17 +3970,30 @@ static int conf_sound_card_list(const char *title,struct conf_list_item *list,co
 			if (c == 0) c = getch() << 8;
 
 			if (c == 27 || c == 13) break;
+
+#if defined(TARGET_PC98)
+			if (c == 0x08) {
+#else
 			if (c == 0x4B00) {
+#endif
 				if (sel == 0) sel = list_items-1;
 				else sel--;
 				redraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0C) {
+#else
 			else if (c == 0x4D00) {
+#endif
 				if (sel == (list_items-1)) sel = 0;
 				else sel++;
 				redraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0B) { /* up arrow */
+#else
 			else if (c == 0x4800) { /* up arrow */
+#endif
 				do {
 					li = list + sel;
 					if ((++li->setting) >= li->listlen) li->setting = 0;
@@ -3944,7 +4021,11 @@ static int conf_sound_card_list(const char *title,struct conf_list_item *list,co
 				} while (1);
 				redraw = 1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0A) { /* down arrow */
+#else
 			else if (c == 0x5000) { /* down arrow */
+#endif
 				do {
 					li = list + sel;
 					if (li->setting == 0) li->setting = li->listlen - 1;
@@ -4349,14 +4430,22 @@ static void choose_sound_card() {
 				if (card->baseio != 0) break;
 				card = NULL;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0B) {
+#else
 			else if (c == 0x4800) {
+#endif
 				draw_sound_card_choice(box.x+2,box.y+1+sel,cols,&sndsb_card[sel],0);
 				if (sel == 0) sel = SNDSB_MAX_CARDS - 1;
 				else sel--;
 				draw_sound_card_choice(box.x+2,box.y+1+sel,cols,&sndsb_card[sel],1);
 				draw_device_info(&sndsb_card[sel],box.x+2,box.y+1+rows-3,cols,3);
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0A) {
+#else
 			else if (c == 0x5000) {
+#endif
 				draw_sound_card_choice(box.x+2,box.y+1+sel,cols,&sndsb_card[sel],0);
 				if (++sel == SNDSB_MAX_CARDS) sel = 0;
 				draw_sound_card_choice(box.x+2,box.y+1+sel,cols,&sndsb_card[sel],1);
