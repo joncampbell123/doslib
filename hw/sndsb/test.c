@@ -3842,9 +3842,15 @@ static void draw_sound_card_choice(unsigned int x,unsigned int y,unsigned int w,
 static const signed char sc6600_irq[] = { -1,5,7,9,10,11 };
 static const signed char sc6600_dma[] = { -1,0,1,3 };
 
+#if defined(TARGET_PC98)
+static const signed char sb16_non_pnp_irq[] = { -1,3,5,10,12 };
+static const signed char sb16_non_pnp_dma[] = { -1,0,3 };
+static const signed char sb16_non_pnp_dma16[] = { -1,0,3 };
+#else
 static const signed char sb16_non_pnp_irq[] = { -1,2,5,7,10 };
 static const signed char sb16_non_pnp_dma[] = { -1,0,1,3 };
 static const signed char sb16_non_pnp_dma16[] = { -1,0,1,3,5,6,7 };
+#endif
 
 #ifdef ISAPNP
 static const int16_t sb16_pnp_base[] = { 0x220,0x240,0x260,0x280 };
@@ -4257,6 +4263,19 @@ static void conf_sound_card() {
 
 			/* apply changes */
 			c = 0;
+#if defined(TARGET_PC98)
+			if (IRQ == 3)			c |= 0x01;
+			else if (IRQ == 5)		c |= 0x08;
+			else if (IRQ == 10)		c |= 0x02;
+			else if (IRQ == 12)		c |= 0x04;
+			else				IRQ = -1;
+			sndsb_write_mixer(sb_card,0x80,c);
+
+			c = 0;
+			if (DMA8 == 0)			c |= 0x01;
+			else if (DMA8 == 3)		c |= 0x02;
+			else				DMA8 = -1;
+#else
 			if (IRQ == 2)			c |= 0x01;
 			else if (IRQ == 5)		c |= 0x02;
 			else if (IRQ == 7)		c |= 0x04;
@@ -4269,6 +4288,7 @@ static void conf_sound_card() {
 			else if (DMA8 == 1)		c |= 0x02;
 			else if (DMA8 == 3)		c |= 0x08;
 			else				DMA8 = -1;
+#endif
 
 			/* NTS: From the Creative programming guide:
 			 *      "DSP version 4.xx also supports the transfer of 16-bit sound data through
