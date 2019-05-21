@@ -2261,7 +2261,11 @@ static void change_param_menu() {
 			vga_write("\n");
 
 			vga_moveto(0,13);
+#if defined(TARGET_PC98)
+			vga_write_color(0x10);
+#else
 			vga_write_color(0x1F);
+#endif
 			vga_write_until(80);
 			vga_write("\n");
 			vga_write_until(80);
@@ -2269,6 +2273,9 @@ static void change_param_menu() {
 			vga_write_until(80);
 			vga_write("\n");
 			vga_moveto(0,13);
+#if defined(TARGET_PC98)
+			vga_write_color(0x0E);
+#endif
 			if (sb_card->reason_not_supported) vga_write(sb_card->reason_not_supported);
 
 			vga_moveto(0,16);
