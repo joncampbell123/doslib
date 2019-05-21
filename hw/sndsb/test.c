@@ -2115,11 +2115,7 @@ static void change_alias_menu() {
 //				else selector=0;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0A) { /* down arrow */
-#else
-			else if (c == 0x5000) { /* down arrow */
-#endif
+			else if (c == VGATTY_DOWN_ARROW) { /* down arrow */
 //				if (selector < -1) selector++;
 //				else selector=0;
 				uiredraw=1;
@@ -2349,11 +2345,7 @@ static void change_param_menu() {
 				else selector=7;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0A) { /* down arrow */
-#else
-			else if (c == 0x5000) { /* down arrow */
-#endif
+			else if (c == VGATTY_DOWN_ARROW) { /* down arrow */
 				if (selector < 7) selector++;
 				else selector=0;
 				uiredraw=1;
@@ -2624,11 +2616,7 @@ static void play_with_sb16_8051() {
 				selector &= 0xFF;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0A) { /* down arrow */
-#else
-			else if (c == 0x5000) { /* down arrow */
-#endif
+			else if (c == VGATTY_DOWN_ARROW) { /* down arrow */
 				selector += 0x10;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -2796,11 +2784,7 @@ static void play_with_ess() {
 				selector &= 0xFF;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0A) { /* down arrow */
-#else
-			else if (c == 0x5000) { /* down arrow */
-#endif
+			else if (c == VGATTY_DOWN_ARROW) { /* down arrow */
 				selector += 0x10;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -3075,11 +3059,7 @@ static void play_with_mixer() {
 					}
 				}
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0A) { /* down arrow */
-#else
-			else if (c == 0x5000) { /* down arrow */
-#endif
+			else if (c == VGATTY_DOWN_ARROW) { /* down arrow */
 				if (rawmode) {
 					selector += 0x10;
 					selector &= 0xFF;
@@ -3999,11 +3979,7 @@ static int conf_sound_card_list(const char *title,struct conf_list_item *list,co
 				} while (1);
 				redraw = 1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0A) { /* down arrow */
-#else
-			else if (c == 0x5000) { /* down arrow */
-#endif
+			else if (c == VGATTY_DOWN_ARROW) { /* down arrow */
 				do {
 					li = list + sel;
 					if (li->setting == 0) li->setting = li->listlen - 1;
@@ -4427,11 +4403,7 @@ static void choose_sound_card() {
 				draw_sound_card_choice(box.x+2,box.y+1+sel,cols,&sndsb_card[sel],1);
 				draw_device_info(&sndsb_card[sel],box.x+2,box.y+1+rows-3,cols,3);
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0A) {
-#else
-			else if (c == 0x5000) {
-#endif
+			else if (c == VGATTY_DOWN_ARROW) { /* down arrow */
 				draw_sound_card_choice(box.x+2,box.y+1+sel,cols,&sndsb_card[sel],0);
 				if (++sel == SNDSB_MAX_CARDS) sel = 0;
 				draw_sound_card_choice(box.x+2,box.y+1+sel,cols,&sndsb_card[sel],1);
