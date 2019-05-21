@@ -740,13 +740,21 @@ int confirm_yes_no_dialog(const char *message) {
 		vga_write_color(0x70);
 		vga_moveto(x,box.y+box.h-2);
 		vga_write("  ");
+#if defined(TARGET_PC98)
+		vga_write_color(0x60);
+#else
 		vga_write_color(0x71);
+#endif
 		vga_write("Y");
 		vga_write_color(0x70);
 		vga_write("es  ");
 		vga_moveto(x+bw,box.y+box.h-2);
 		vga_write("  ");
+#if defined(TARGET_PC98)
+		vga_write_color(0x60);
+#else
 		vga_write_color(0x71);
+#endif
 		vga_write("N");
 		vga_write_color(0x70);
 		vga_write("o  ");
