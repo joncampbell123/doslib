@@ -5854,7 +5854,7 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
-			else if (i == 0x4300) { /* F9 */
+			else if (i == VGATTY_SC_Fn(9)) { /* F9 */
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
 				sb_card->backwards ^= 1;
@@ -5862,7 +5862,7 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
-			else if (i == 0x4200) { /* F8 */
+			else if (i == VGATTY_SC_Fn(8)) { /* F8 */
 				getch(); /* delibrate pause */
 			}
 		}
