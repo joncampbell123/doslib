@@ -194,18 +194,35 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 		}
 		items = i;
 
-#if TARGET_MSDOS == 32
-		buf = malloc(w * h * 2);
+#if defined(TARGET_PC98)
+# if TARGET_MSDOS == 32
+		buf = malloc(w * h * 4);
+# else
+		buf = _fmalloc(w * h * 4);
+# endif
 #else
+# if TARGET_MSDOS == 32
+		buf = malloc(w * h * 2);
+# else
 		buf = _fmalloc(w * h * 2);
+# endif
 #endif
 		screen = vga_state.vga_alpha_ram + (row * vga_state.vga_width) + menu->x;
 		if (buf != NULL) {
 			/* copy off the screen contents */
 			for (y=0;y < h;y++) {
+#if defined(TARGET_PC98)
+				o = w * y * 2;
+				i = vga_state.vga_width * y;
+				for (x=0;x < w;x++,o += 2,i++) {
+                    buf[o+0u] = screen[i        ];
+                    buf[o+1u] = screen[i+0x1000u];
+                }
+#else
 				o = w * y;
 				i = vga_state.vga_width * y;
 				for (x=0;x < w;x++,o++,i++) buf[o] = screen[i];
+#endif
 			}
 
 			/* draw the box */
@@ -321,9 +338,18 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 
 			/* copy screen contents back */
 			for (y=0;y < h;y++) {
+#if defined(TARGET_PC98)
+				i = w * y * 2;
+				o = vga_state.vga_width * y;
+				for (x=0;x < w;x++,o++,i += 2) {
+                    screen[o       ] = buf[i+0];
+                    screen[o+0x1000] = buf[i+1];
+                }
+#else
 				i = w * y;
 				o = vga_state.vga_width * y;
 				for (x=0;x < w;x++,o++,i++) screen[o] = buf[i];
+#endif
 			}
 
 #if TARGET_MSDOS == 32
