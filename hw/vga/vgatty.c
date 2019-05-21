@@ -89,7 +89,7 @@ void vga_writec(char c) {
 		}
 
 #if defined(TARGET_PC98)
-		vga_state.vga_alpha_ram[(vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x] = c;
+		vga_state.vga_alpha_ram[(vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x] = c & 0xFFu;
 		vga_state.vga_alpha_ram[(vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x + 0x1000u] = vga_state.vga_color;
 #else
 		vga_state.vga_alpha_ram[(vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x] = c | (vga_state.vga_color << 8);
