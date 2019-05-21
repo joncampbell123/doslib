@@ -50,6 +50,83 @@ enum pc98_intdc_editkey {
     PC98_INTDC_EK_KEYPAD_MINUS=10
 };
 
+#if TARGET_MSDOS == 32
+// INT DCh CL=0Ch AX=00h
+void pc98_intdc_get_keycode_state(nec_pc98_intdc_keycode_state* s);
+// INT DCh CL=0Ch AX=FFh
+void pc98_intdc_get_keycode_state_ext(nec_pc98_intdc_keycode_state_ext* s);
+// INT DCh CL=0Dh AX=00h
+void pc98_intdc_set_keycode_state(const nec_pc98_intdc_keycode_state* s);
+// INT DCh CL=0Dh AX=FFh
+void pc98_intdc_set_keycode_state_ext(const nec_pc98_intdc_keycode_state_ext* s);
+#elif (defined(__LARGE__) || defined(__COMPACT__) || defined(__HUGE__))
+// INT DCh CL=0Ch AX=00h
+static void pc98_intdc_get_keycode_state(nec_pc98_intdc_keycode_state *s);
+#pragma aux pc98_intdc_get_keycode_state = \
+    "mov    cl,0x0C" \
+    "xor    ax,ax" \
+    "int    0xDC" \
+    modify [ax cx] \
+    parm [ds dx];
+// INT DCh CL=0Ch AX=FFh
+static void pc98_intdc_get_keycode_state_ext(nec_pc98_intdc_keycode_state_ext *s);
+#pragma aux pc98_intdc_get_keycode_state_ext = \
+    "mov    cl,0x0C" \
+    "mov    ax,0xFF" \
+    "int    0xDC" \
+    modify [ax cx] \
+    parm [ds dx];
+// INT DCh CL=0Dh AX=00h
+static void pc98_intdc_set_keycode_state(const nec_pc98_intdc_keycode_state *s);
+#pragma aux pc98_intdc_set_keycode_state = \
+    "mov    cl,0x0D" \
+    "xor    ax,ax" \
+    "int    0xDC" \
+    modify [ax cx] \
+    parm [ds dx];
+// INT DCh CL=0Dh AX=FFh
+static void pc98_intdc_set_keycode_state_ext(const nec_pc98_intdc_keycode_state_ext *s);
+#pragma aux pc98_intdc_set_keycode_state_ext = \
+    "mov    cl,0x0D" \
+    "mov    ax,0xFF" \
+    "int    0xDC" \
+    modify [ax cx] \
+    parm [ds dx];
+#else
+// INT DCh CL=0Ch AX=00h
+static void pc98_intdc_get_keycode_state(nec_pc98_intdc_keycode_state *s);
+#pragma aux pc98_intdc_get_keycode_state = \
+    "mov    cl,0x0C" \
+    "xor    ax,ax" \
+    "int    0xDC" \
+    modify [ax cx] \
+    parm [dx];
+// INT DCh CL=0Ch AX=FFh
+static void pc98_intdc_get_keycode_state_ext(nec_pc98_intdc_keycode_state_ext *s);
+#pragma aux pc98_intdc_get_keycode_state_ext = \
+    "mov    cl,0x0C" \
+    "mov    ax,0xFF" \
+    "int    0xDC" \
+    modify [ax cx] \
+    parm [dx];
+// INT DCh CL=0Dh AX=00h
+static void pc98_intdc_set_keycode_state(const nec_pc98_intdc_keycode_state *s);
+#pragma aux pc98_intdc_set_keycode_state = \
+    "mov    cl,0x0D" \
+    "xor    ax,ax" \
+    "int    0xDC" \
+    modify [ax cx] \
+    parm [dx];
+// INT DCh CL=0Dh AX=FFh
+static void pc98_intdc_set_keycode_state_ext(const nec_pc98_intdc_keycode_state_ext *s);
+#pragma aux pc98_intdc_set_keycode_state_ext = \
+    "mov    cl,0x0D" \
+    "mov    ax,0xFF" \
+    "int    0xDC" \
+    modify [ax cx] \
+    parm [dx];
+#endif
+
 #pragma pack(push,1)
 struct nec_pc98_state_t {
 	uint8_t			probed:1;
