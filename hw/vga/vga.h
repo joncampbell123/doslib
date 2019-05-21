@@ -65,13 +65,21 @@ static inline void int10_setmode(unsigned char mode) {
     // ignore
 }
 
+static inline unsigned char _color_vga2pc98(const unsigned char i) {
+    /* input: VGA      I R G B
+     * output: PC-98     G R B */
+    return      ((i & 0x01/*B*/) ? 0x01 : 0x00) +
+                ((i & 0x02/*G*/) ? 0x04 : 0x00) +
+                ((i & 0x04/*R*/) ? 0x02 : 0x00);
+}
+
 static inline void vga_write_color(unsigned char c) {
     // translate VGA color to PC-98 attribute
     if ((c & 0xFu) != 0u) { /* foreground */
-    	vga_state.vga_color = ((c & 0x07u) << 5u) | 0x01u; /* map VGA [2:0] to PC-98 [7:5] */
+    	vga_state.vga_color = (_color_vga2pc98(c) << 5u) | 0x01u; /* map VGA [2:0] to PC-98 [7:5] */
     }
     else { /* background */
-    	vga_state.vga_color = ((c & 0x70u) << 1u) | 0x05u; /* map VGA [6:4] to PC-98 [7:5], reverse */
+    	vga_state.vga_color = (_color_vga2pc98(c >> 4u) << 5u) | 0x05u; /* map VGA [6:4] to PC-98 [7:5], reverse */
     }
 
     if (c & 0x80u) /* blink */
