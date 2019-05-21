@@ -5837,11 +5837,7 @@ int main(int argc,char **argv) {
 					else begin_play();
 				}
 			}
-#if defined(TARGET_PC98)
-			else if (i == 0x08) { /* left arrow */
-#else
-			else if (i == 0x4B00) { /* left arrow */
-#endif
+			else if (i == VGATTY_LEFT_ARROW) { /* left arrow */
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
 				wav_position -= wav_sample_rate * 5UL;
@@ -5850,11 +5846,7 @@ int main(int argc,char **argv) {
 				bkgndredraw = 1;
 				redraw = 1;
 			}
-#if defined(TARGET_PC98)
-			else if (i == 0x0C) { /* right arrow */
-#else
-			else if (i == 0x4D00) { /* right arrow */
-#endif
+			else if (i == VGATTY_RIGHT_ARROW) { /* right arrow */
 				unsigned char wp = wav_playing;
 				if (wp) stop_play();
 				wav_position += wav_sample_rate * 5UL;
