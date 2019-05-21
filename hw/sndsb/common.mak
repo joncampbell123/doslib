@@ -28,11 +28,6 @@ PNPCFG_EXE =  $(SUBDIR)$(HPS)pnpcfg.$(EXEEXT)
 ! endif
 !endif
 
-!ifdef PC98
-# TEST.EXE has too much dependence on CGA/EGA/VGA/etc hardware
-NO_TEST_EXE=1
-!endif
-
 !ifndef NO_TEST_EXE
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
 !endif

@@ -345,7 +345,9 @@
 # define SB_MIXER
 # define CARD_INFO_AND_CHOOSER
 # define LIVE_CFG
-# define ISAPNP
+# if !defined(TARGET_PC98)
+#  define ISAPNP
+# endif
 #endif
 
 #ifdef ISAPNP
@@ -605,6 +607,18 @@ static void draw_irq_indicator() {
 	VGA_ALPHA_PTR wr = vga_state.vga_alpha_ram;
 	unsigned char i;
 
+#if defined(TARGET_PC98)
+	wr[0] = 'S';    wr[0+0x1000] = 0xC1;
+	wr[1] = 'B';    wr[1+0x1000] = 0xC1;
+	wr[2] = '-';    wr[2+0x1000] = 0xC1;
+	wr[3] = 'I';    wr[3+0x1000] = 0xC1;
+	wr[4] = 'R';    wr[4+0x1000] = 0xC1;
+	wr[5] = 'Q';    wr[5+0x1000] = 0xC1;
+	for (i=0;i < 4;i++) {
+        wr[i+6] = (uint16_t)(i == IRQ_anim ? 'x' : '-');
+        wr[i+6+0x1000] = 0xC1;
+    }
+#else
 	wr[0] = 0x1E00 | 'S';
 	wr[1] = 0x1E00 | 'B';
 	wr[2] = 0x1E00 | '-';
@@ -612,6 +626,7 @@ static void draw_irq_indicator() {
 	wr[4] = 0x1E00 | 'R';
 	wr[5] = 0x1E00 | 'Q';
 	for (i=0;i < 4;i++) wr[i+6] = (uint16_t)(i == IRQ_anim ? 'x' : '-') | 0x1E00;
+#endif
 }
 
 static uint32_t irq_0_count = 0;
@@ -662,6 +677,10 @@ static void interrupt irq_0() { /* timer IRQ */
 		}
 	}
 
+#if defined(TARGET_PC98)
+    // do not chain to BIOS handler, it will confuse the timer tick system in place
+    p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
+#else
 	/* tick rate conversion. we may run the timer at a faster tick rate but the BIOS may have problems
 	 * unless we chain through it's ISR at the 18.2 ticks/sec it expects to be called. If we don't,
 	 * most BIOS services will work fine but some parts usually involving the floppy drive will have
@@ -677,6 +696,7 @@ static void interrupt irq_0() { /* timer IRQ */
 	else {
 		p8259_OCW2(0,P8259_OCW2_NON_SPECIFIC_EOI);
 	}
+#endif
 }
 
 /* WARNING!!! This interrupt handler calls subroutines. To avoid system
@@ -1362,6 +1382,23 @@ static void ui_anim(int force) {
 		if (rem2 != 0) rem2--;
 		rem2 = (unsigned int)(((unsigned long)rem2 * (unsigned long)width) / (unsigned long)sb_card->buffer_size);
 
+#if defined(TARGET_PC98)
+		while (*msg) {
+            wr[0x0000] = (uint16_t)(*msg++);
+            wr[0x1000] = 0x21;
+            wr++;
+        }
+		for (i=0;i < width;i++) {
+			if (i == rem2) {
+				wr[i] = (uint16_t)(i == rem ? 'x' : (i < rem ? '-' : ' '));
+                wr[i+0x1000] = 0xE1;
+            }
+			else {
+				wr[i] = (uint16_t)(i == rem ? 'x' : (i < rem ? '-' : ' '));
+                wr[i+0x1000] = 0xC1;
+            }
+		}
+#else
 		while (*msg) *wr++ = (uint16_t)(*msg++) | 0x1E00;
 		for (i=0;i < width;i++) {
 			if (i == rem2)
@@ -1369,6 +1406,7 @@ static void ui_anim(int force) {
 			else
 				wr[i] = (uint16_t)(i == rem ? 'x' : (i < rem ? '-' : ' ')) | 0x1E00;
 		}
+#endif
 
 		if (wav_playing) temp = playback_live_position();
 		else temp = wav_position;
@@ -1381,6 +1419,88 @@ static void ui_anim(int force) {
 		msg = temp_str;
 		sprintf(temp_str,"%ub %s %5luHz @%c%u:%02u:%02u.%02u",wav_16bit ? 16 : 8,wav_stereo ? "ST" : "MO",
 			wav_sample_rate,wav_playing ? (wav_record ? 'r' : 'p') : 's',pH,pM,pS,pSS);
+
+#if defined(TARGET_PC98)
+		for (wr=vga_state.vga_alpha_ram+(80*1),cc=0;cc < 29 && *msg != 0;cc++) {
+            wr[0x0000] = ((unsigned char)(*msg++));
+            wr[0x1000] = 0xE1;
+            wr++;
+        }
+		for (;cc < 29;cc++) {
+            wr[0x0000] = 0x20;
+            wr[0x1000] = 0xE1;
+            wr++;
+        }
+		msg = sndsb_dspoutmethod_str[sb_card->dsp_play_method];
+		rem = sndsb_dsp_out_method_supported(sb_card,wav_sample_rate,wav_stereo,wav_16bit) ? 0x81 : 0x21;
+		for (;cc < 36 && *msg != 0;cc++) {
+            wr[0x0000] = ((unsigned char)(*msg++));
+            wr[0x1000] = rem;
+            wr++;
+        }
+		if (cc < 36) {
+			if (rem == 0x21) {
+                wr[0x0000] = '?';
+                wr[0x1000] = 0xC1;
+                wr++;
+            }
+			else if (sb_card->reason_not_supported) {
+                wr[0x0000] = '?';
+                wr[0x1000] = 0x81;
+                wr++;
+            }
+		}
+		for (;cc < 36;cc++) {
+            wr[0x0000] = 0x20;
+            wr[0x1000] = 0xE1;
+            wr++;
+        }
+
+		if (sb_card->dsp_adpcm != 0) {
+#if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
+			msg = sndsb_adpcm_mode_str[sb_card->dsp_adpcm];
+			for (;cc < 52 && *msg != 0;cc++) {
+                wr[0x0000] = ((unsigned char)(*msg++));
+                wr[0x1000] = 0xE1;
+                wr++;
+            }
+#endif
+		}
+		else if (sb_card->audio_data_flipped_sign) {
+			msg = "[flipsign]";
+			for (;cc < 52 && *msg != 0;cc++) {
+                wr[0x0000] = ((unsigned char)(*msg++));
+                wr[0x1000] = 0xE1;
+                wr++;
+            }
+		}
+
+		/* fill */
+		for (;cc < 57;cc++) {
+            wr[0x0000] = 0x20;
+            wr[0x1000] = 0xE1;
+            wr++;
+        }
+
+		msg = temp_str;
+		temp = sndsb_read_dma_buffer_position(sb_card);
+		sprintf(temp_str,"%05lx/%05lx @%08lx",
+			(unsigned long)temp,
+			(unsigned long)sb_card->buffer_size,
+            (unsigned long)sb_card->buffer_phys + (unsigned long)temp);
+		for (;cc < 80 && *msg != 0;cc++) {
+            wr[0x0000] = ((unsigned char)(*msg++));
+            wr[0x1000] = 0xE1;
+            wr++;
+        }
+
+		/* finish */
+		for (;cc < 80;cc++) {
+            wr[0x0000] = 0x20;
+            wr[0x1000] = 0xE1;
+            wr++;
+        }
+#else
 		for (wr=vga_state.vga_alpha_ram+(80*1),cc=0;cc < 29 && *msg != 0;cc++) *wr++ = 0x1F00 | ((unsigned char)(*msg++));
 		for (;cc < 29;cc++) *wr++ = 0x1F20;
 		msg = sndsb_dspoutmethod_str[sb_card->dsp_play_method];
@@ -1416,6 +1536,7 @@ static void ui_anim(int force) {
 
 		/* finish */
 		for (;cc < 80;cc++) *wr++ = 0x1F20;
+#endif
 	}
 
 	irq_0_watchdog_ack();
@@ -3524,6 +3645,7 @@ static void draw_device_info(struct sndsb_ctx *cx,int x,int y,int w,int h) {
 		if (cx->mega_em) vga_write("MEGA-EM ");
 		if (cx->sbos) vga_write("SBOS ");
 	}
+#ifdef ISAPNP
 	if (row < h) {
 		vga_moveto(x,y + (row++));
 		if (cx->pnp_name != NULL) {
@@ -3534,6 +3656,7 @@ static void draw_device_info(struct sndsb_ctx *cx,int x,int y,int w,int h) {
 			vga_write(cx->pnp_name);
 		}
 	}
+#endif
 }
 
 static void show_device_info() {
@@ -3589,10 +3712,12 @@ static const signed char sb16_non_pnp_irq[] = { -1,2,5,7,10 };
 static const signed char sb16_non_pnp_dma[] = { -1,0,1,3 };
 static const signed char sb16_non_pnp_dma16[] = { -1,0,1,3,5,6,7 };
 
+#ifdef ISAPNP
 static const int16_t sb16_pnp_base[] = { 0x220,0x240,0x260,0x280 };
 static const signed char sb16_pnp_irq[] = { -1,2,3,4,5,6,7,8,9,10,11,12,13,14,15 };
 static const signed char sb16_pnp_dma[] = { -1,0,1,3 };
 static const signed char sb16_pnp_dma16[] = { -1,0,1,3,5,6,7 };
+#endif
 
 static const signed char ess_688_irq[] = { -1,5,7,9,10 }; /* NTS: The datasheet says 2/9/"all others". Since PCs map IRQ 2 to IRQ 9 we'll just say "IRQ 9" */
 static const signed char ess_688_dma[] = { -1,0,1,3 };
@@ -3643,12 +3768,14 @@ static struct conf_list_item sb16_non_pnp[] = {
 	{ET_SCHAR,	ER_DMA16,	0,	sizeof(sb16_non_pnp_dma16),	(void*)sb16_non_pnp_dma16}
 };
 
+#ifdef ISAPNP
 static struct conf_list_item sb16_pnp[] = {
 	{ET_SINTX,	ER_BASE,	0,	sizeof(sb16_pnp_base)/2,	(void*)sb16_pnp_base},
 	{ET_SCHAR,	ER_IRQ,		0,	sizeof(sb16_pnp_irq),		(void*)sb16_pnp_irq},
 	{ET_SCHAR,	ER_DMA,		0,	sizeof(sb16_pnp_dma),		(void*)sb16_pnp_dma},
 	{ET_SCHAR,	ER_DMA16,	0,	sizeof(sb16_pnp_dma16),		(void*)sb16_pnp_dma16}
 };
+#endif
 
 static void conf_item_index_lookup(struct conf_list_item *item,int val) {
 	if (item->etype == ET_SCHAR) {
@@ -3881,6 +4008,7 @@ static void conf_sound_card() {
 		}
 		return;
 	}
+#ifdef ISAPNP
 	/* -------- ISA Plug & Play --------- */
 	else if (sb_card->pnp_id != 0) {
 		if (ISAPNP_ID_FMATCH(sb_card->pnp_id,'C','T','L')) {
@@ -3947,6 +4075,7 @@ static void conf_sound_card() {
 			return;
 		}
 	}
+#endif
 	/* -------- Non Plug & Play --------- */
 	else if (sb_card->dsp_vmaj == 4) {
 		/* SB16 non-pnp can reassign resources when
@@ -4575,6 +4704,7 @@ int main(int argc,char **argv) {
 	if (sndsb_nmi_32_hook > 0) /* it means the NMI hook is taken */
 		printf("Sound Blaster NMI hook/reflection active\n");
 
+# if !defined(TARGET_PC98)
 	if (gravis_mega_em_detect(&megaem_info)) {
 		/* let the user know we're a 32-bit program and MEGA-EM's emulation
 		 * won't work with 32-bit DOS programs */
@@ -4590,13 +4720,16 @@ int main(int argc,char **argv) {
 		printf("         real-mode builds instead. When a workaround is possible, it will\n");
 		printf("         be implemented and this warning will be removed.\n");
 	}
+# endif
 #elif TARGET_MSDOS == 16
 # if defined(__LARGE__)
+#  if !defined(TARGET_PC98)
 	if (gravis_sbos_detect() >= 0) {
 		printf("WARNING: 16-bit large model builds of the SNDSB program have a known, but not\n");
 		printf("         yet understood incompatability with Gravis SBOS emulation. Use the\n");
 		printf("         dos86s, dos86m, or dos86c builds.\n");
 	}
+#  endif
 # endif
 #endif
 #ifdef ISAPNP
@@ -5566,7 +5699,15 @@ int main(int argc,char **argv) {
 		if (redraw || bkgndredraw) {
 			if (!wav_playing) update_cfg();
 			if (bkgndredraw) {
+#if defined(TARGET_PC98)
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) {
+                    vga[0x0000] = 0x20;
+                    vga[0x1000] = 0x25;
+                    vga++;
+                }
+#else
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+#endif
 				vga_menu_bar_draw();
 				draw_irq_indicator();
 			}
