@@ -2120,11 +2120,7 @@ static void change_alias_menu() {
 //				else selector=0;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x08) { /* left arrow */
-#else
-			else if (c == 0x4B00) { /* left arrow */
-#endif
+			else if (c == VGATTY_LEFT_ARROW) { /* left arrow */
 				switch (selector) {
 					case 0:	/* sample rate */
 						sb_card->dsp_alias_port ^= 1;
@@ -2350,11 +2346,7 @@ static void change_param_menu() {
 				else selector=0;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x08) { /* left arrow */
-#else
-			else if (c == 0x4B00) { /* left arrow */
-#endif
+			else if (c == VGATTY_LEFT_ARROW) { /* left arrow */
 				switch (selector) {
 					case 0:	/* sample rate */
 						ra = param_preset_rates[0];
@@ -2598,11 +2590,7 @@ static void play_with_sb16_8051() {
 				selector &= 0xFF;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x08) { /* left arrow */
-#else
-			else if (c == 0x4B00) { /* left arrow */
-#endif
+			else if (c == VGATTY_LEFT_ARROW) { /* left arrow */
 				selector--;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -2766,11 +2754,7 @@ static void play_with_ess() {
 				selector &= 0xFF;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x08) { /* left arrow */
-#else
-			else if (c == 0x4B00) { /* left arrow */
-#endif
+			else if (c == VGATTY_LEFT_ARROW) { /* left arrow */
 				selector--;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -3009,11 +2993,7 @@ static void play_with_mixer() {
 					}
 				}
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x08) { /* left arrow */
-#else
-			else if (c == 0x4B00) { /* left arrow */
-#endif
+			else if (c == VGATTY_LEFT_ARROW) { /* left arrow */
 				if (rawmode) {
 					selector--;
 					selector &= 0xFF;
@@ -3931,13 +3911,9 @@ static int conf_sound_card_list(const char *title,struct conf_list_item *list,co
 		if (kbhit()) {
 			c = vga_getch();
 
-			if (c == 27 || c == 13) break;
-
-#if defined(TARGET_PC98)
-			if (c == 0x08) {
-#else
-			if (c == 0x4B00) {
-#endif
+			if (c == 27 || c == 13)
+                break;
+			else if (c == VGATTY_LEFT_ARROW) { /* left arrow */
 				if (sel == 0) sel = list_items-1;
 				else sel--;
 				redraw=1;
