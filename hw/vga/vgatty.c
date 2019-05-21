@@ -104,7 +104,14 @@ void vga_write(const char *msg) {
 
 void vga_write_sync() { /* sync writing pos with BIOS cursor and hardware */
 #if defined(TARGET_PC98)
-    // TODO use INT 18h
+		unsigned short ofs = ((vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x) * 2;
+        __asm {
+            push    dx
+            mov     ah,0x13             ; INT 18h AH=13h set cursor position
+            mov     dx,ofs
+            int     18h
+            pop     dx
+        }
 #else
 	if (vga_state.vga_alpha_mode) {
 		unsigned int ofs = (vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x;
