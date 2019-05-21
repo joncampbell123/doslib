@@ -1405,7 +1405,7 @@ static void ui_anim(int force) {
 		for (i=0;i < width;i++) {
 			if (i == rem2) {
 				wr[i] = (uint16_t)(i == rem ? 'x' : (i < rem ? '-' : ' '));
-                wr[i+0x1000] = 0xE1;
+                wr[i+0x1000] = 0xE5;
             }
 			else {
 				wr[i] = (uint16_t)(i == rem ? 'x' : (i < rem ? '-' : ' '));
