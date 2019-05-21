@@ -16,6 +16,8 @@ int vga_getch();
 #if defined(TARGET_PC98)
 # include <hw/necpc98/necpc98.h>
 void vga_tty_pc98_mapping(nec_pc98_intdc_keycode_state_ext *map);
+void vga_writecw(unsigned short c);
+void vga_writew(const char *msg);
 
 # define VGATTY_SC_Fn(x)        (0x7F30 + (x) - 1)
 # define VGATTY_SC_VFn(x)       (0x7F3A + (x) - 1)
