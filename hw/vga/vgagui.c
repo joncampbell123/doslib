@@ -518,7 +518,11 @@ again:
 
 int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_y,unsigned int min_x) {
 	unsigned int w=min_x,h=max(1,extra_y),x=0,y,px,py,i,o;
+#if defined(TARGET_PC98)
+	static const unsigned int color = 0xC1;
+#else
 	static const unsigned int color = 0x1E00;
+#endif
 	const char *scan;
 
 	scan = msg;
@@ -575,6 +579,70 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 		}
 	}
 
+#if defined(TARGET_PC98)
+	/* draw border */
+	for (y=1;y < (h-1);y++) {
+		o = y * vga_state.vga_width;
+		b->screen[o+0] = 0x96;
+		b->screen[o+0+0x1000] = color;
+		b->screen[o+1] = 32;
+		b->screen[o+1+0x1000] = color;
+		b->screen[o+w-2] = 32;
+		b->screen[o+w+0x1000-2] = color;
+		b->screen[o+w-1] = 0x96;
+		b->screen[o+w+0x1000-1] = color;
+	}
+	o = (h-1)*vga_state.vga_width;
+	for (x=1;x < (w-1);x++) {
+		b->screen[x] = 0x95;
+		b->screen[x+0x1000] = color;
+		b->screen[x+o] = 0x95;
+		b->screen[x+o+0x1000] = color;
+	}
+	b->screen[0] = 0x98;
+	b->screen[0+0x1000] = color;
+	b->screen[w-1] = 0x99;
+	b->screen[w+0x1000-1] = color;
+	b->screen[o] = 0x9A;
+	b->screen[o+0x1000] = color;
+	b->screen[o+w-1] = 0x9B;
+	b->screen[o+w+0x1000-1] = color;
+
+	x = 0;
+	y = 0;
+	o = vga_state.vga_width + 2;
+	scan = msg;
+	while (*scan != 0) {
+		if (*scan == '\n') {
+			while (x < (w-4)) {
+				b->screen[o+x] = 32;
+                b->screen[o+x+0x1000] = color;
+				x++;
+			}
+			if (++y >= (h-2)) break;
+			x = 0;
+			o += vga_state.vga_width;
+		}
+		else if ((unsigned char)(*scan) >= 32) {
+			if (x < (w-4)) {
+                b->screen[o+x] = *scan;
+                b->screen[o+x+0x1000] = color;
+            }
+			x++;
+		}
+		scan++;
+	}
+	while (y < (h-2)) {
+		while (x < (w-4)) {
+			b->screen[o+x] = 32;
+			b->screen[o+x+0x1000] = color;
+			x++;
+		}
+		++y;
+		x = 0;
+		o += vga_state.vga_width;
+	}
+#else
 	/* draw border */
 	for (y=1;y < (h-1);y++) {
 		o = y * vga_state.vga_width;
@@ -622,6 +690,7 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 		x = 0;
 		o += vga_state.vga_width;
 	}
+#endif
 
 	b->w = w;
 	b->h = h;
