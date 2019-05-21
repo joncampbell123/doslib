@@ -2130,11 +2130,7 @@ static void change_alias_menu() {
 				update_cfg();
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0C) { /* right arrow */
-#else
-			else if (c == 0x4D00) { /* right arrow */
-#endif
+			else if (c == VGATTY_RIGHT_ARROW) { /* right arrow */
 				switch (selector) {
 					case 0:	/* sample rate */
 						sb_card->dsp_alias_port ^= 1;
@@ -2397,11 +2393,7 @@ static void change_param_menu() {
 				update_cfg();
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0C) { /* right arrow */
-#else
-			else if (c == 0x4D00) { /* right arrow */
-#endif
+			else if (c == VGATTY_RIGHT_ARROW) { /* right arrow */
 				switch (selector) {
 					case 0:	/* sample rate */
 						for (cc=0;cc < ((sizeof(param_preset_rates)/sizeof(param_preset_rates[0]))-1);) {
@@ -2595,11 +2587,7 @@ static void play_with_sb16_8051() {
 				selector &= 0xFF;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0C) { /* right arrow */
-#else
-			else if (c == 0x4D00) { /* right arrow */
-#endif
+			else if (c == VGATTY_RIGHT_ARROW) { /* right arrow */
 				selector++;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -2759,11 +2747,7 @@ static void play_with_ess() {
 				selector &= 0xFF;
 				uiredraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0C) { /* right arrow */
-#else
-			else if (c == 0x4D00) { /* right arrow */
-#endif
+			else if (c == VGATTY_RIGHT_ARROW) { /* right arrow */
 				selector++;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -3008,11 +2992,7 @@ static void play_with_mixer() {
 					}
 				}
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0C) { /* right arrow */
-#else
-			else if (c == 0x4D00) { /* right arrow */
-#endif
+			else if (c == VGATTY_RIGHT_ARROW) { /* right arrow */
 				if (rawmode) {
 					selector++;
 					selector &= 0xFF;
@@ -3918,11 +3898,7 @@ static int conf_sound_card_list(const char *title,struct conf_list_item *list,co
 				else sel--;
 				redraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0C) {
-#else
-			else if (c == 0x4D00) {
-#endif
+			else if (c == VGATTY_RIGHT_ARROW) { /* right arrow */
 				if (sel == (list_items-1)) sel = 0;
 				else sel++;
 				redraw=1;
