@@ -5715,7 +5715,15 @@ int main(int argc,char **argv) {
 			_cli();
 			vga_moveto(0,2);
 			vga_write_color(0x1F);
+#if defined(TARGET_PC98)
+			for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < 80;cc++) {
+                vga[0     ] = 0x20;
+                vga[0x1000] = 0xE5;
+                vga++;
+            }
+#else
 			for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < 80;cc++) *vga++ = 0x1F20;
+#endif
 			vga_write("File: ");
 			vga_write(wav_file);
 			vga_write_sync();
