@@ -47,6 +47,10 @@ int main(int argc,char **argv) {
         printf("Failed to read config\n");
         return 1;
     }
+    if (!read_vtx86_gpio_pin_config()) {
+        printf("Failed to read pin config\n");
+        return 1;
+    }
 
     vtx86_pinMode(pin,VTX86_OUTPUT);
     {
