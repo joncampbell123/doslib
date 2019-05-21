@@ -48,7 +48,7 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-    vtx86_pinMode(3,VTX86_OUTPUT);
+    vtx86_pinMode(pin,VTX86_OUTPUT);
     {
         unsigned int i;
 
