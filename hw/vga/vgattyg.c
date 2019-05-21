@@ -40,7 +40,7 @@ int vga_getch() {
     //          not possible to define IBM PC scan code like strings like 0x00 0x48, so 0x7F is used
     //          instead.
     c = (unsigned int)getch();
-    if (c == 0x7Fu) c = (unsigned int)getch() << 8u;
+    if (c == 0x7Fu) c = (c << 8u) + (unsigned int)getch();
 #else
     // IBM PC: Extended codes are returned as 0x00 <scan code>, else normal ASCII
     c = (unsigned int)getch();
