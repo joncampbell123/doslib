@@ -5213,6 +5213,11 @@ int main(int argc,char **argv) {
 #else
 					"16-bit real mode (small model) version"
 #endif
+#if defined(TARGET_PC98)
+                    "\nFor NEC PC-9801/PC-9821 and compatibles"
+#else
+                    "\nFor IBM PC/XT/AT and compatibles"
+#endif
 					,0,0);
 				while (1) {
 					ui_anim(0);
