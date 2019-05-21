@@ -2110,11 +2110,7 @@ static void change_alias_menu() {
 
 			if (c == 27 || c == 13)
 				loop = 0;
-#if defined(TARGET_PC98)
-			else if (c == 0x0B) { /* up arrow */
-#else
-			else if (c == 0x4800) { /* up arrow */
-#endif
+			else if (c == VGATTY_UP_ARROW) { /* up arrow */
 //				if (selector > 0) selector--;
 //				else selector=0;
 				uiredraw=1;
@@ -2348,11 +2344,7 @@ static void change_param_menu() {
 					vga_msg_box_destroy(&box);
 				}
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0B) { /* up arrow */
-#else
-			else if (c == 0x4800) { /* up arrow */
-#endif
+			else if (c == VGATTY_UP_ARROW) { /* up arrow */
 				if (selector > 0) selector--;
 				else selector=7;
 				uiredraw=1;
@@ -2609,11 +2601,7 @@ static void play_with_sb16_8051() {
 				uiredraw = 1;
 			else if (c == 27)
 				loop = 0;
-#if defined(TARGET_PC98)
-			else if (c == 0x0B) { /* up arrow */
-#else
-			else if (c == 0x4800) { /* up arrow */
-#endif
+			else if (c == VGATTY_UP_ARROW) { /* up arrow */
 				selector -= 0x10;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -2785,11 +2773,7 @@ static void play_with_ess() {
 				uiredraw = 1;
 			else if (c == 27)
 				loop = 0;
-#if defined(TARGET_PC98)
-			else if (c == 0x0B) { /* up arrow */
-#else
-			else if (c == 0x4800) { /* up arrow */
-#endif
+			else if (c == VGATTY_UP_ARROW) { /* up arrow */
 				selector -= 0x10;
 				selector &= 0xFF;
 				uiredraw=1;
@@ -3026,11 +3010,7 @@ static void play_with_mixer() {
 				loop = 0;
 			else if (c == ' ')
 				uiredraw = 1;
-#if defined(TARGET_PC98)
-			else if (c == 0x0B) { /* up arrow */
-#else
-			else if (c == 0x4800) { /* up arrow */
-#endif
+			else if (c == VGATTY_UP_ARROW) { /* up arrow */
 				if (rawmode) {
 					selector -= 0x10;
 					selector &= 0xFF;
@@ -3991,11 +3971,7 @@ static int conf_sound_card_list(const char *title,struct conf_list_item *list,co
 				else sel++;
 				redraw=1;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0B) { /* up arrow */
-#else
-			else if (c == 0x4800) { /* up arrow */
-#endif
+			else if (c == VGATTY_UP_ARROW) { /* up arrow */
 				do {
 					li = list + sel;
 					if ((++li->setting) >= li->listlen) li->setting = 0;
@@ -4444,11 +4420,7 @@ static void choose_sound_card() {
 				if (card->baseio != 0) break;
 				card = NULL;
 			}
-#if defined(TARGET_PC98)
-			else if (c == 0x0B) {
-#else
-			else if (c == 0x4800) {
-#endif
+			else if (c == VGATTY_UP_ARROW) { /* up arrow */
 				draw_sound_card_choice(box.x+2,box.y+1+sel,cols,&sndsb_card[sel],0);
 				if (sel == 0) sel = SNDSB_MAX_CARDS - 1;
 				else sel--;
