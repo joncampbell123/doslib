@@ -16,10 +16,6 @@
 #include <hw/vga/vgatty.h>
 #include <hw/vga/vgagui.h>
 
-#if defined(TARGET_PC98)
-/*nothing*/
-#else
-
 #ifdef TARGET_WINDOWS
 # include <hw/dos/winfcon.h>
 # include <windows/apihelp.h>
@@ -42,15 +38,28 @@ void vga_scroll_up(unsigned char lines) {
 		rd = vga_state.vga_alpha_ram + (lines * vga_state.vga_stride);
 		for (row=0;row < lcopy;row++) {
 			for (c=0;c < vga_state.vga_stride;c++) {
+#if defined(TARGET_PC98)
+                wr[0x0000u] = rd[0x0000u];
+                wr[0x1000u] = rd[0x1000u];
+                wr++; rd++;
+#else
 				*wr++ = *rd++;
+#endif
 			}
 		}
 	}
 
 	wr = vga_state.vga_alpha_ram + ((vga_state.vga_height - lines) * vga_state.vga_stride);
 	for (row=0;row < lines;row++) {
-		for (c=0;c < vga_state.vga_stride;c++)
+		for (c=0;c < vga_state.vga_stride;c++) {
+#if defined(TARGET_PC98)
+            wr[0x0000u] = 0x20;
+            wr[0x1000u] = vga_state.vga_color;
+            wr++;
+#else
 			*wr++ = (vga_state.vga_color << 8) | 0x20;
+#endif
+        }
 	}
 }
 
@@ -79,7 +88,12 @@ void vga_writec(char c) {
 			vga_cursor_down();
 		}
 
+#if defined(TARGET_PC98)
+		vga_state.vga_alpha_ram[(vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x] = c;
+		vga_state.vga_alpha_ram[(vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x + 0x1000u] = vga_state.vga_color;
+#else
 		vga_state.vga_alpha_ram[(vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x] = c | (vga_state.vga_color << 8);
+#endif
 		vga_state.vga_pos_x++;
 	}
 }
@@ -89,11 +103,15 @@ void vga_write(const char *msg) {
 }
 
 void vga_write_sync() { /* sync writing pos with BIOS cursor and hardware */
+#if defined(TARGET_PC98)
+    // TODO use INT 18h
+#else
 	if (vga_state.vga_alpha_mode) {
 		unsigned int ofs = (vga_state.vga_pos_y * vga_state.vga_stride) + vga_state.vga_pos_x;
 		vga_write_CRTC(0xE,ofs >> 8);
 		vga_write_CRTC(0xF,ofs);
 	}
+#endif
 }
 
 void vga_clear() {
@@ -103,10 +121,14 @@ void vga_clear() {
 	wr = vga_state.vga_alpha_ram;
 	for (r=0;r < vga_state.vga_height;r++) {
 		for (c=0;c < vga_state.vga_stride;c++) {
+#if defined(TARGET_PC98)
+            wr[0x0000u] = 0x20;
+            wr[0x1000u] = 0xE1;
+            wr++;
+#else
 			*wr++ = 0x0720;
+#endif
 		}
 	}
 }
-
-#endif
 

@@ -16,10 +16,6 @@
 #include <hw/vga/vgatty.h>
 #include <hw/vga/vgagui.h>
 
-#if defined(TARGET_PC98)
-/*nothing*/
-#else
-
 struct vga_menu_bar_state	vga_menu_bar = {NULL,-1,0};
 void				(*vga_menu_idle)() = NULL;
 
@@ -43,9 +39,38 @@ void vga_menu_bar_draw() {
 			ti = 1;
 			msg = m->name;
 			hi = (i == vga_menu_bar.sel);
+#if defined(TARGET_PC98)
+			color = hi ? 0xE1 : 0xE5;
+			colorh = hi ? 0xA1 : 0xA5;
+#else
 			color = hi ? 0x1F00 : 0x7000;
 			colorh = hi ? 0x1E00 : 0x7100;
+#endif
 			if (m->x >= 80) break;
+#if defined(TARGET_PC98)
+			while (x < m->x) {
+                vga[x] = 0x20;
+                vga[x+0x1000u] = color;
+                x++;
+            }
+			while (x < (m->x+m->w) && *msg != 0) {
+				if (ti && *msg == m->shortcut_key) {
+					vga[x] = (*msg++);
+                    vga[x+0x1000u] = colorh;
+					ti = 0;
+				}
+				else {
+					vga[x] = (*msg++);
+                    vga[x+0x1000u] = color;
+				}
+                x++;
+			}
+			while (x < (m->x+m->w)) {
+                vga[x] = 0x20;
+                vga[x+0x1000u] = color;
+                x++;
+            }
+#else
 			while (x < m->x) vga[x++] = color | 0x20;
 			while (x < (m->x+m->w) && *msg != 0) {
 				if (ti && *msg == m->shortcut_key) {
@@ -57,13 +82,22 @@ void vga_menu_bar_draw() {
 				}
 			}
 			while (x < (m->x+m->w)) vga[x++] = color | 0x20;
+#endif
 			m++;
 			i++;
 		}
 	}
 
 	/* finish the bar */
+#if defined(TARGET_PC98)
+	while (x < 80) {
+        vga[x] = 0x20;
+        vga[x+0x1000u] = 0xE5;
+        x++;
+    }
+#else
 	while (x < 80) vga[x++] = 0x7020;
+#endif
 }
 
 void vga_menu_draw_item(VGA_ALPHA_PTR screen,const struct vga_menu_item **scan,unsigned int i,unsigned int w,unsigned int color,unsigned int tcolor) {
@@ -73,37 +107,77 @@ void vga_menu_draw_item(VGA_ALPHA_PTR screen,const struct vga_menu_item **scan,u
 
 	screen += (i * vga_state.vga_width) + 1;
 	if (txt == (char*)1) {
+#if defined(TARGET_PC98)
+        screen[-1] = 0x93;
+        screen[-1+0x1000] = color;
+        for (x=0;x < w;x++) {
+            screen[x] = 0x95;
+            screen[x+0x1000] = color;
+        }
+        screen[w] = 0x92;
+        screen[w+0x1000] = color;
+#else
 		screen[-1] = 204 | color;
 		for (x=0;x < w;x++) screen[x] = 205 | color;
 		screen[w] = 185 | color;
+#endif
 	}
 	else {
 		for (x=0;x < w && txt[x] != 0;x++) {
 			if (ti && tolower(txt[x]) == tolower(sci->shortcut_key)) {
+#if defined(TARGET_PC98)
+				screen[x] = txt[x];
+                screen[x+0x1000] = tcolor;
+#else
 				screen[x] = txt[x] | tcolor;
+#endif
 				ti = 0;
 			}
 			else {
+#if defined(TARGET_PC98)
+				screen[x] = txt[x];
+                screen[x+0x1000] = color;
+#else
 				screen[x] = txt[x] | color;
+#endif
 			}
 		}
+#if defined(TARGET_PC98)
+		for (;x < w;x++) {
+            screen[x] = 0x20;
+            screen[x+0x1000] = color;
+        }
+#else
 		for (;x < w;x++) screen[x] = 0x20 | color;
+#endif
 	}
 }
 
 const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item *menu,unsigned char row,unsigned int *spec) {
 	const struct vga_menu_item *ret = NULL,**scan,*sci;
 	unsigned int w,h,i,l,x,y,o,ks,nks,items,sel,c,altup=0;
+#if defined(TARGET_PC98)
+	static const unsigned int hicolor = 0xE5;
+	static const unsigned int hitcolor = 0xA5;
+	static const unsigned int color = 0xE1;
+	static const unsigned int tcolor = 0xA1;
+#else
 	static const unsigned int hicolor = 0x7000;
 	static const unsigned int hitcolor = 0x7100;
 	static const unsigned int color = 0x1700;
 	static const unsigned int tcolor = 0x1E00;
+#endif
 	VGA_ALPHA_PTR screen,buf;
 	unsigned char loop = 1;
 
 	/* FIX: If re-inited because of arrow keys, then one more alt-up should trigger release */
+#if defined(TARGET_PC98)
+	if (*spec == 0x08 || *spec == 0x0C)
+		altup++;
+#else
 	if (*spec == 0x4B00 || *spec == 0x4D00)
 		altup++;
+#endif
 
 	*spec = 0;
 	if (menu != NULL) {
@@ -137,13 +211,31 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 			/* draw the box */
 			for (y=0;y < (h-1);y++) {
 				o = vga_state.vga_width * y;
+#if defined(TARGET_PC98)
+				screen[o+0] = 0x96;
+				screen[o+0x1000] = color;
+				screen[o+w-1] = 0x96;
+				screen[o+w+0x1000-1] = color;
+#else
 				screen[o+0] = 186 | color;
 				screen[o+w-1] = 186 | color;
+#endif
 			}
 			o = vga_state.vga_width * (h-1);
+#if defined(TARGET_PC98)
+			screen[o+0] = 0x9A;
+			screen[o+0x1000] = color;
+			for (x=1;x < (w-1);x++) {
+                screen[o+x] = 0x95;
+                screen[o+x+0x1000] = color;
+            }
+			screen[o+w-1] = 0x9B;
+			screen[o+w+0x1000-1] = color;
+#else
 			screen[o+0] = 200 | color;
 			for (x=1;x < (w-1);x++) screen[o+x] = 205 | color;
 			screen[o+w-1] = 188 | color;
+#endif
 
 			/* draw the items */
 			for (i=0;i < items;i++)
@@ -159,8 +251,12 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 				ks = nks;
 
 				if (kbhit()) {
+#if defined(TARGET_PC98)
+					c = getch();
+#else
 					c = getch();
 					if (c == 0) c = getch() << 8;
+#endif
 
 					if (c == 27)
 						break;
@@ -168,7 +264,11 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 						ret = scan[sel];
 						break;
 					}
+#if defined(TARGET_PC98)
+					else if (c == 0x0B) {
+#else
 					else if (c == 0x4800) {
+#endif
 						vga_menu_draw_item(screen,scan,sel,w-2,color,tcolor);
 						do {
 							if (sel == 0) sel = items-1;
@@ -176,14 +276,22 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 						} while (vga_menu_item_nonselectable(scan[sel]));
 						vga_menu_draw_item(screen,scan,sel,w-2,hicolor,hitcolor);
 					}
+#if defined(TARGET_PC98)
+					else if (c == 0x0A) {
+#else
 					else if (c == 0x5000) {
+#endif
 						vga_menu_draw_item(screen,scan,sel,w-2,color,tcolor);
 						do {
 							if (++sel >= items) sel = 0;
 						} while (vga_menu_item_nonselectable(scan[sel]));
 						vga_menu_draw_item(screen,scan,sel,w-2,hicolor,hitcolor);
 					}
+#if defined(TARGET_PC98)
+					else if (c == 0x08 || c == 0x0C) {
+#else
 					else if (c == 0x4B00 || c == 0x4D00) {
+#endif
 						*spec = c;
 						ret = NULL;
 						break;
@@ -239,6 +347,14 @@ const struct vga_menu_item *vga_menu_bar_keymon() {
 		return ret;
 
 	if (read_bios_keystate() & BIOS_KS_ALT) {
+#if defined(TARGET_PC98)
+    /* If you hold a key down on a PC-98 system, the scan codes repeated from the keyboard
+     * contain UP and DOWN codes, which is also reflected in the bit if you poll the BIOS
+     * for whether or not the ALT key is down. */
+        const unsigned int alt_patience_init = 5;
+        unsigned int alt_patience = alt_patience_init;
+#endif
+
 		vga_menu_bar.sel = 0;
 		vga_menu_bar_draw();
 
@@ -246,10 +362,29 @@ again:
 		do {
 			vga_menu_idle();
 			if (kbhit()) {
+#if !defined(TARGET_PC98)
 				c = getch();
-				if (c == 0) {
+				if (c == 0)
+#endif
+                {
 					i = 0;
 					c = getch();
+#if defined(TARGET_PC98)
+					if (c == 0x08) { /* left */
+						if (--vga_menu_bar.sel < 0) {
+							vga_menu_bar.sel = 0;
+							while (vga_menu_bar.bar[vga_menu_bar.sel].name != NULL) vga_menu_bar.sel++;
+							vga_menu_bar.sel--;
+						}
+						m = &vga_menu_bar.bar[vga_menu_bar.sel];
+						vga_menu_bar_draw();
+					}
+					else if (c == 0x0C) { /* right */
+						if (vga_menu_bar.bar[++vga_menu_bar.sel].name == NULL) vga_menu_bar.sel = 0;
+						m = &vga_menu_bar.bar[vga_menu_bar.sel];
+						vga_menu_bar_draw();
+					}
+#else
 					if (c == 0x9B) { /* ALT-left */
 						if (--vga_menu_bar.sel < 0) {
 							vga_menu_bar.sel = 0;
@@ -264,12 +399,19 @@ again:
 						m = &vga_menu_bar.bar[vga_menu_bar.sel];
 						vga_menu_bar_draw();
 					}
-					else {
+#endif
+					else
+                    {
 						int oi = vga_menu_bar.sel;
 
 						for (m=vga_menu_bar.bar;m->name != NULL;m++,i++) {
+#if defined(TARGET_PC98) // shortcut scan codes are IBM PC oriented, use the key char instead
+							if (tolower(c) == tolower(m->shortcut_key))
+								break;
+#else
 							if (c == m->shortcut_scan)
 								break;
+#endif
 						}
 						if (m->name == NULL) {
 							m = NULL;
@@ -287,7 +429,22 @@ again:
 					}
 				}
 			}
-		} while (read_bios_keystate() & BIOS_KS_ALT);
+            if (!(read_bios_keystate() & BIOS_KS_ALT)) {
+#if defined(TARGET_PC98)
+                __asm {
+                    mov     ah,1
+                    int     18h
+                }
+                if (--alt_patience != 0u) continue;
+#endif
+                break;
+            }
+            else {
+#if defined(TARGET_PC98)
+                alt_patience = alt_patience_init;
+#endif
+            }
+        } while (1);
 
 		if (!(read_bios_keystate() & BIOS_KS_ALT)) {
 			while (kbhit()) getch();
@@ -296,7 +453,12 @@ again:
 		if (m != NULL) {
 			ret = vga_menu_bar_menuitem(m,vga_menu_bar.row+1,&spec);
 			if (ret == NULL) {
+#if defined(TARGET_PC98)
+				if (spec == 0x08) {
+                    alt_patience = 1u;
+#else
 				if (spec == 0x4B00) {
+#endif
 					if (--vga_menu_bar.sel < 0) {
 						vga_menu_bar.sel = 0;
 						while (vga_menu_bar.bar[vga_menu_bar.sel].name != NULL) vga_menu_bar.sel++;
@@ -306,7 +468,12 @@ again:
 					vga_menu_bar_draw();
 					goto again;
 				}
+#if defined(TARGET_PC98)
+				else if (spec == 0x0C) {
+                    alt_patience = 1u;
+#else
 				else if (spec == 0x4D00) {
+#endif
 					if (vga_menu_bar.bar[++vga_menu_bar.sel].name == NULL) vga_menu_bar.sel = 0;
 					m = &vga_menu_bar.bar[vga_menu_bar.sel];
 					vga_menu_bar_draw();
@@ -488,6 +655,4 @@ int confirm_yes_no_dialog(const char *message) {
 
 	return ret;
 }
-
-#endif
 

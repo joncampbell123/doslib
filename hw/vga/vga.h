@@ -2,10 +2,6 @@
 #ifndef __DOSLIB_HW_VGA_VGA_H
 #define __DOSLIB_HW_VGA_VGA_H
 
-#if defined(TARGET_PC98)
-/*nothing*/
-#else
-
 #include <conio.h>
 
 #include <hw/cpu/cpu.h>
@@ -45,6 +41,44 @@ struct vgastate_t {
 	unsigned char		vga_9wide:1;
 };
 #pragma pack(pop)
+
+extern struct vgastate_t	vga_state;
+
+int probe_vga();
+void update_state_from_vga();
+
+static inline void vga_moveto(unsigned char x,unsigned char y) {
+	vga_state.vga_pos_x = x;
+	vga_state.vga_pos_y = y;
+}
+
+#if defined(TARGET_PC98)
+
+/* emulated subset, for code migration */
+
+static inline unsigned char int10_getmode(void) {
+    return 3; /* think of the PC-98 text layer as perpetually locked into 80x25 mode */
+}
+
+static inline void int10_setmode(unsigned char mode) {
+    (void)mode;
+    // ignore
+}
+
+static inline void vga_write_color(unsigned char c) {
+    // translate VGA color to PC-98 attribute
+    if ((c & 0xFu) != 0u) { /* foreground */
+    	vga_state.vga_color = ((c & 0x07u) << 5u) | 0x01u; /* map VGA [2:0] to PC-98 [7:5] */
+    }
+    else { /* background */
+    	vga_state.vga_color = ((c & 0x70u) << 1u) | 0x05u; /* map VGA [6:4] to PC-98 [7:5], reverse */
+    }
+
+    if (c & 0x80u) /* blink */
+        vga_state.vga_color |= 0x02u; /* PC-98 blink */
+}
+
+#else
 
 /* vga_flags */
 #define VGA_IS_TANDY			0x02
@@ -189,7 +223,6 @@ enum { /* color select (text=border color  320x200=background    640x200=foregro
 	VGA_CGA_PALETTE_CS_ALT_INTENSITY =	(1U << 4U)
 };
 
-extern struct vgastate_t	vga_state;
 extern uint32_t			vga_clock_rates[4];
 
 unsigned char int10_getmode();
@@ -205,8 +238,6 @@ void vga_sync_bios_cursor();
 void update_state_vga_memory_map_select(unsigned char c);
 void vga_set_memory_map(unsigned char c);
 void vga_bios_set_80x50_text();
-void update_state_from_vga();
-int probe_vga();
 void vga_write_state_DEBUG(FILE *f);
 void vga_relocate_crtc(unsigned char color);
 void vga_switch_to_mono();
@@ -237,11 +268,6 @@ static inline unsigned char vga_read_CRTC(unsigned char i) {
 static inline unsigned char vga_read_GC(unsigned char i) {
 	outp(0x3CE,i);
 	return inp(0x3CF);
-}
-
-static inline void vga_moveto(unsigned char x,unsigned char y) {
-	vga_state.vga_pos_x = x;
-	vga_state.vga_pos_y = y;
 }
 
 static inline void vga_tandy_setpalette(unsigned char i,unsigned char c) {

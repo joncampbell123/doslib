@@ -2,10 +2,6 @@
 #ifndef __DOSLIB_HW_VGA_VGAGUI_H
 #define __DOSLIB_HW_VGA_VGAGUI_H
 
-#if defined(TARGET_PC98)
-/*nothing*/
-#else
-
 #include <hw/cpu/cpu.h>
 #include <stdint.h>
 
@@ -48,8 +44,6 @@ void vga_msg_box_destroy(struct vga_msg_box *b);
 int confirm_yes_no_dialog(const char *message);
 const struct vga_menu_item *vga_menu_bar_keymon();
 void vga_menu_bar_draw();
-
-#endif
 
 #endif /* __DOSLIB_HW_VGA_VGAGUI_H */
 

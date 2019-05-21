@@ -15,8 +15,41 @@
 #include <hw/vga/vga.h>
 #include <hw/dos/doswin.h>
 
+struct vgastate_t	vga_state;
+
 #if defined(TARGET_PC98)
-/*nothing*/
+
+/* emulated subset for code migration */
+
+int probe_vga() {
+    update_state_from_vga();
+    return 1;
+}
+
+void update_state_from_vga() {
+	vga_state.vga_pos_x = 0;
+	vga_state.vga_pos_y = 0;
+	vga_state.vga_stride = 80;
+	vga_state.vga_height = 25;
+	vga_state.vga_width = 80;
+	vga_state.vga_9wide = 0;
+    vga_state.vga_ram_base = 0xA0000;
+    vga_state.vga_ram_size = 0x03F00;
+
+	vga_state.vga_graphics_ram = NULL;
+	vga_state.vga_graphics_ram_fence = NULL;
+
+# if TARGET_MSDOS == 32
+	/* NTS: According to many sources, 32-bit DOS extenders tend to map the lower 1MB 1:1, so this is safe */
+	/* NTS: If I remember correctly Windows 95 also did this for Win32 applications, for whatever reason! */
+	vga_state.vga_alpha_ram = (uint16_t*)vga_state.vga_ram_base;
+	vga_state.vga_alpha_ram_fence = (uint16_t*)(vga_state.vga_alpha_ram + vga_state.vga_ram_size);
+# else
+	vga_state.vga_alpha_ram = (uint16_t far*)MK_FP(vga_state.vga_ram_base>>4,vga_state.vga_ram_base&0xF);	/* A0000 -> A000:0000 */
+	vga_state.vga_alpha_ram_fence = (uint16_t far*)(vga_state.vga_alpha_ram + vga_state.vga_ram_size);
+# endif
+}
+
 #else
 
 #ifdef TARGET_WINDOWS
@@ -25,8 +58,6 @@
 # include <windows/dispdib/dispdib.h>
 # include <windows/win16eb/win16eb.h>
 #endif
-
-struct vgastate_t	vga_state;
 
 void vga_sync_hw_cursor() {
 	unsigned int i;
