@@ -1159,8 +1159,15 @@ static void rec_vu(uint32_t pos) {
 	uint16_t sample;
 
 	if (pos == (~0UL)) {
+#if defined(TARGET_PC98)
+		for (x=0;x < (unsigned int)vga_state.vga_width;x++) {
+            wr[x       ] = 0x20;
+            wr[x+0x1000] = 0x25;
+        }
+#else
 		for (x=0;x < (unsigned int)vga_state.vga_width;x++)
 			wr[x] = 0x1E00 | 177;
+#endif
 
 		return;
 	}
@@ -2067,7 +2074,15 @@ static void change_alias_menu() {
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
+#if defined(TARGET_PC98)
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) {
+                    vga[0x0000] = 0x20;
+                    vga[0x1000] = 0x25;
+                    vga++;
+                }
+#else
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+#endif
 				ui_anim(1);
 			}
 			vga_moveto(0,4);
@@ -2157,7 +2172,15 @@ static void change_param_menu() {
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
+#if defined(TARGET_PC98)
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) {
+                    vga[0x0000] = 0x20;
+                    vga[0x1000] = 0x25;
+                    vga++;
+                }
+#else
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+#endif
 				ui_anim(1);
 			}
 			vga_moveto(0,4);
@@ -2450,7 +2473,15 @@ static void play_with_sb16_8051() {
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
+#if defined(TARGET_PC98)
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) {
+                    vga[0x0000] = 0x20;
+                    vga[0x1000] = 0x25;
+                    vga++;
+                }
+#else
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+#endif
 				ui_anim(1);
 			}
 			vga_moveto(0,2);
@@ -2593,7 +2624,15 @@ static void play_with_ess() {
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
+#if defined(TARGET_PC98)
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) {
+                    vga[0x0000] = 0x20;
+                    vga[0x1000] = 0x25;
+                    vga++;
+                }
+#else
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+#endif
 				ui_anim(1);
 			}
 			vga_moveto(0,2);
@@ -2739,7 +2778,15 @@ static void play_with_mixer() {
 		if (redraw || uiredraw) {
 			_cli();
 			if (redraw) {
+#if defined(TARGET_PC98)
+				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) {
+                    vga[0x0000] = 0x20;
+                    vga[0x1000] = 0x25;
+                    vga++;
+                }
+#else
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) *vga++ = 0x1E00 | 177;
+#endif
 				ui_anim(1);
 			}
 			vga_moveto(0,2);
