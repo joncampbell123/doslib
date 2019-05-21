@@ -1782,8 +1782,7 @@ static void begin_play() {
 			while (1) {
 				ui_anim(0);
 				if (kbhit()) {
-					i = getch();
-					if (i == 0) i = getch() << 8;
+					i = vga_getch();
 					if (i == 13 || i == 27) break;
 				}
 			}
@@ -2064,7 +2063,7 @@ static void measure_dsp_busy_cycle() {
 	vga_write_sync();
 
 	do {
-		c = getch();
+		c = vga_getch();
 	} while (!(c == 13 || c == 27));
 }
 
@@ -2107,8 +2106,7 @@ static void change_alias_menu() {
 		}
 
 		if (kbhit()) {
-			int c = getch();
-			if (c == 0) c = getch() << 8;
+			int c = vga_getch();
 
 			if (c == 27 || c == 13)
 				loop = 0;
@@ -2310,8 +2308,7 @@ static void change_param_menu() {
 		}
 
 		if (kbhit()) {
-			int c = getch();
-			if (c == 0) c = getch() << 8;
+			int c = vga_getch();
 
 			if (c == 27 || c == 13)
 				loop = 0;
@@ -2325,8 +2322,7 @@ static void change_param_menu() {
 					sco[i] = c | 0x1E00;
 					temp_str[i++] = c;
 					while (1) {
-						c = getch();
-						if (c == 0) c = getch() << 8;
+						c = vga_getch();
 
 						if (c == 27)
 							break;
@@ -2572,8 +2568,7 @@ static void play_with_sb16_8051() {
 		}
 
 		if (kbhit()) {
-			int c = getch();
-			if (c == 0) c = getch() << 8;
+			int c = vga_getch();
 
 			if (c == 'x') {
 				int a,b;
@@ -2583,13 +2578,13 @@ static void play_with_sb16_8051() {
 				vga_write("Type hex value:                             \n");
 				vga_write_sync();
 
-				a = getch();
+				a = vga_getch();
 				vga_moveto(20,2);
 				vga_write_color(0x1E);
 				vga_writec((char)a);
 				vga_write_sync();
 
-				b = getch();
+				b = vga_getch();
 				vga_moveto(21,2);
 				vga_write_color(0x1E);
 				vga_writec((char)b);
@@ -2744,8 +2739,7 @@ static void play_with_ess() {
 		}
 
 		if (kbhit()) {
-			int c = getch();
-			if (c == 0) c = getch() << 8;
+			int c = vga_getch();
 
 			if (c == 'p') {
 				for (cc=0;cc < 256;cc++) ess688_not_present[cc] = 0;
@@ -2759,13 +2753,13 @@ static void play_with_ess() {
 				vga_write("Type hex value:                             \n");
 				vga_write_sync();
 
-				a = getch();
+				a = vga_getch();
 				vga_moveto(20,2);
 				vga_write_color(0x1E);
 				vga_writec((char)a);
 				vga_write_sync();
 
-				b = getch();
+				b = vga_getch();
 				vga_moveto(21,2);
 				vga_write_color(0x1E);
 				vga_writec((char)b);
@@ -2941,8 +2935,7 @@ static void play_with_mixer() {
 		}
 
 		if (kbhit()) {
-			int c = getch();
-			if (c == 0) c = getch() << 8;
+			int c = vga_getch();
 
 			if (c == 'M' || c == 'm') {
 				selector = 0;
@@ -2967,8 +2960,7 @@ static void play_with_mixer() {
 				while (1) {
 					ui_anim(0);
 					if (kbhit()) {
-						c = getch();
-						if (c == 0) c = getch() << 8;
+						c = vga_getch();
 
 						if (c == 27)
 							break;
@@ -3003,13 +2995,13 @@ static void play_with_mixer() {
 				vga_write("Type hex value:                             \n");
 				vga_write_sync();
 
-				a = getch();
+				a = vga_getch();
 				vga_moveto(20,2);
 				vga_write_color(0x1E);
 				vga_writec((char)a);
 				vga_write_sync();
 
-				b = getch();
+				b = vga_getch();
 				vga_moveto(21,2);
 				vga_write_color(0x1E);
 				vga_writec((char)b);
@@ -3605,8 +3597,7 @@ static void prompt_play_wav(unsigned char rec) {
 			}
 
 			if (kbhit()) {
-				c = getch();
-				if (c == 0) c = getch() << 8;
+				c = vga_getch();
 
 				if (c == 27) {
 					ok = -1;
@@ -3815,8 +3806,7 @@ static void show_device_info() {
 	while (1) {
 		ui_anim(0);
 		if (kbhit()) {
-			c = getch();
-			if (c == 0) c = getch() << 8;
+			c = vga_getch();
 
 			if (c == 27 || c == 13)
 				break;
@@ -3979,8 +3969,7 @@ static int conf_sound_card_list(const char *title,struct conf_list_item *list,co
 
 		ui_anim(0);
 		if (kbhit()) {
-			c = getch();
-			if (c == 0) c = getch() << 8;
+			c = vga_getch();
 
 			if (c == 27 || c == 13) break;
 
@@ -4411,8 +4400,7 @@ static void conf_sound_card() {
 		do {
 			ui_anim(0);
 			if (kbhit()) {
-				c = getch();
-				if (c == 0) c = getch() << 8;
+				c = vga_getch();
 			}
 			else {
 				c = -1;
@@ -4445,8 +4433,7 @@ static void choose_sound_card() {
 	while (1) {
 		ui_anim(0);
 		if (kbhit()) {
-			c = getch();
-			if (c == 0) c = getch() << 8;
+			c = vga_getch();
 
 			if (c == 27) {
 				card = NULL;
@@ -4541,8 +4528,7 @@ static void fx_vol_echo() {
 
 		ui_anim(0);
 		if (kbhit()) {
-			c = getch();
-			if (c == 0) c = getch() << 8;
+			c = vga_getch();
 
 			if (c == 27 || c == 13)
 				break;
@@ -4602,8 +4588,7 @@ static void fx_vol_dialog() {
 
 		ui_anim(0);
 		if (kbhit()) {
-			c = getch();
-			if (c == 0) c = getch() << 8;
+			c = vga_getch();
 
 			if (c == 27 || c == 13)
 				break;
@@ -5165,7 +5150,7 @@ int main(int argc,char **argv) {
 		}
 		printf("-----------\n");
 		printf("Select the card you wish to test: "); fflush(stdout);
-		i = getch();
+		i = vga_getch();
 		printf("\n");
 		if (i == 27) return 0;
 		if (i == 13 || i == 10) i = '1';
@@ -5352,8 +5337,7 @@ int main(int argc,char **argv) {
 				while (1) {
 					ui_anim(0);
 					if (kbhit()) {
-						i = getch();
-						if (i == 0) i = getch() << 8;
+						i = vga_getch();
 						if (i == 13 || i == 27) break;
 					}
 				}
@@ -5388,8 +5372,7 @@ int main(int argc,char **argv) {
 				while (!quit) {
 					ui_anim(0);
 					if (kbhit()) {
-						i = getch();
-						if (i == 0) i = getch() << 8;
+						i = vga_getch();
 						if (i == 13 || i == 27) {
 							quit = (i == 27);
 							break;
@@ -5421,8 +5404,7 @@ int main(int argc,char **argv) {
 				while (!quit) {
 					ui_anim(0);
 					if (kbhit()) {
-						i = getch();
-						if (i == 0) i = getch() << 8;
+						i = vga_getch();
 						if (i == 13 || i == 27) {
 							quit = (i == 27);
 							break;
@@ -5455,8 +5437,7 @@ int main(int argc,char **argv) {
 				while (!quit) {
 					ui_anim(0);
 					if (kbhit()) {
-						i = getch();
-						if (i == 0) i = getch() << 8;
+						i = vga_getch();
 						if (i == 13 || i == 27) {
 							quit = (i == 27);
 							break;
@@ -5627,8 +5608,7 @@ int main(int argc,char **argv) {
 					while (1) {
 						ui_anim(0);
 						if (kbhit()) {
-							i = getch();
-							if (i == 0) i = getch() << 8;
+							i = vga_getch();
 							if (i == 13 || i == 27) break;
 						}
 					}
@@ -5717,8 +5697,7 @@ int main(int argc,char **argv) {
 				while (1) {
 					ui_anim(0);
 					if (kbhit()) {
-						i = getch();
-						if (i == 0) i = getch() << 8;
+						i = vga_getch();
 						if (i == 13 || i == 27) break;
 					}
 				}
@@ -5745,8 +5724,7 @@ int main(int argc,char **argv) {
 				while (1) {
 					ui_anim(0);
 					if (kbhit()) {
-						i = getch();
-						if (i == 0) i = getch() << 8;
+						i = vga_getch();
 						if (i == 13 || i == 27) break;
 					}
 				}
@@ -5763,8 +5741,7 @@ int main(int argc,char **argv) {
 					while (1) {
 						ui_anim(0);
 						if (kbhit()) {
-							i = getch();
-							if (i == 0) i = getch() << 8;
+							i = vga_getch();
 							if (i == 13 || i == 27) break;
 						}
 					}
@@ -5794,8 +5771,7 @@ int main(int argc,char **argv) {
 				while (1) {
 					ui_anim(0);
 					if (kbhit()) {
-						i = getch();
-						if (i == 0) i = getch() << 8;
+						i = vga_getch();
 						if (i == 13 || i == 27) break;
 					}
 				}
@@ -5817,8 +5793,7 @@ int main(int argc,char **argv) {
 					while (1) {
 						ui_anim(0);
 						if (kbhit()) {
-							i = getch();
-							if (i == 0) i = getch() << 8;
+							i = vga_getch();
 							if (i == 13 || i == 27) break;
 						}
 					}
@@ -5839,8 +5814,7 @@ int main(int argc,char **argv) {
 					while (1) {
 						ui_anim(0);
 						if (kbhit()) {
-							i = getch();
-							if (i == 0) i = getch() << 8;
+							i = vga_getch();
 							if (i == 13 || i == 27) break;
 						}
 					}
@@ -5938,8 +5912,7 @@ int main(int argc,char **argv) {
 		}
 
 		if (kbhit()) {
-			i = getch();
-			if (i == 0) i = getch() << 8;
+			i = vga_getch();
 
 			if (i == 27) {
 				if (confirm_quit()) {
@@ -5955,8 +5928,7 @@ int main(int argc,char **argv) {
 					while (1) {
 						ui_anim(0);
 						if (kbhit()) {
-							i = getch();
-							if (i == 0) i = getch() << 8;
+							i = vga_getch();
 							if (i == 13 || i == 27) break;
 						}
 					}

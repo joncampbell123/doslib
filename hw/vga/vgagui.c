@@ -268,12 +268,7 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 				ks = nks;
 
 				if (kbhit()) {
-#if defined(TARGET_PC98)
-					c = getch();
-#else
-					c = getch();
-					if (c == 0) c = getch() << 8;
-#endif
+					c = vga_getch();
 
 					if (c == 27)
 						break;
@@ -388,13 +383,9 @@ again:
 		do {
 			vga_menu_idle();
 			if (kbhit()) {
-#if !defined(TARGET_PC98)
-				c = getch();
-				if (c == 0)
-#endif
                 {
 					i = 0;
-					c = getch();
+					c = vga_getch();
 #if defined(TARGET_PC98)
 					if (c == 0x08) { /* left */
 						if (--vga_menu_bar.sel < 0) {
@@ -432,10 +423,10 @@ again:
 
 						for (m=vga_menu_bar.bar;m->name != NULL;m++,i++) {
 #if defined(TARGET_PC98) // shortcut scan codes are IBM PC oriented, use the key char instead
-							if (tolower(c) == tolower(m->shortcut_key))
+							if ((c & 0xFF00u) == 0u && tolower(c) == tolower(m->shortcut_key))
 								break;
 #else
-							if (c == m->shortcut_scan)
+							if ((c & 0xFF00u) != 0u && (c>>8u) == m->shortcut_scan)
 								break;
 #endif
 						}
@@ -473,7 +464,7 @@ again:
         } while (1);
 
 		if (!(read_bios_keystate() & BIOS_KS_ALT)) {
-			while (kbhit()) getch();
+			while (kbhit()) vga_getch();
 		}
 
 		if (m != NULL) {
@@ -762,8 +753,7 @@ int confirm_yes_no_dialog(const char *message) {
 		while (1) {
 			vga_menu_idle();
 			if (kbhit()) {
-				c = getch();
-				if (c == 0) c = getch() << 8;
+				c = vga_getch();
 
 				if (c == 'Y' || c == 'y') {
 					ret = 1;
