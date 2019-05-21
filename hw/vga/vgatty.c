@@ -139,6 +139,32 @@ void vga_clear() {
 	}
 }
 
+int vga_getch() {
+    unsigned int c;
+
+#if defined(TARGET_PC98)
+    // WARNING: For extended codes this routine assumes you've set the pc98 mapping else it won't work.
+    //          The mapping is reprogrammed so that function and editor keys are returned as 0x7F <code>
+    //          where the <code> is assigned by us.
+    //
+    //          Remember that on PC-98 MS-DOS the bytes returned by function and editor keys are by
+    //          default ANSI codes but can be changed via INT DCh functions, so we re-define them within
+    //          the program as 0x7F <code> (same idea as VZ.EXE)
+    //
+    //          The INT DCh interface used for this accepts NUL-terminated strings, which means it is
+    //          not possible to define IBM PC scan code like strings like 0x00 0x48, so 0x7F is used
+    //          instead.
+    c = (unsigned int)getch();
+    if (c == 0x7Fu) c = (unsigned int)getch() << 8u;
+#else
+    // IBM PC: Extended codes are returned as 0x00 <scan code>, else normal ASCII
+    c = (unsigned int)getch();
+    if (c == 0x00u) c = (unsigned int)getch() << 8u;
+#endif
+
+    return (int)c;
+}
+
 #if defined(TARGET_PC98)
 # include <hw/necpc98/necpc98.h>
 void vga_tty_pc98_mapping(nec_pc98_intdc_keycode_state_ext *map) {
