@@ -335,6 +335,10 @@
 #include <hw/dos/tgussbos.h>
 #include <hw/dos/tgusumid.h>
 
+#if defined(TARGET_PC98)
+# include <hw/necpc98/necpc98.h>
+#endif
+
 #if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
   /* chop features out of the Compact memory model build to ensure all code fits inside 64KB */
   /* don't include FX */
