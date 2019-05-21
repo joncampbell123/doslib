@@ -2329,17 +2329,29 @@ static void change_param_menu() {
 					vga_msg_box_destroy(&box);
 				}
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0B) { /* up arrow */
+#else
 			else if (c == 0x4800) { /* up arrow */
+#endif
 				if (selector > 0) selector--;
 				else selector=7;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0A) { /* down arrow */
+#else
 			else if (c == 0x5000) { /* down arrow */
+#endif
 				if (selector < 7) selector++;
 				else selector=0;
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x08) { /* left arrow */
+#else
 			else if (c == 0x4B00) { /* left arrow */
+#endif
 				switch (selector) {
 					case 0:	/* sample rate */
 						ra = param_preset_rates[0];
@@ -2390,7 +2402,11 @@ static void change_param_menu() {
 				update_cfg();
 				uiredraw=1;
 			}
+#if defined(TARGET_PC98)
+			else if (c == 0x0C) { /* right arrow */
+#else
 			else if (c == 0x4D00) { /* right arrow */
+#endif
 				switch (selector) {
 					case 0:	/* sample rate */
 						for (cc=0;cc < ((sizeof(param_preset_rates)/sizeof(param_preset_rates[0]))-1);) {
