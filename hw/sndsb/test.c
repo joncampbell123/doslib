@@ -340,43 +340,6 @@
 
 nec_pc98_intdc_keycode_state_ext            prev_pc98_keycodes;
 nec_pc98_intdc_keycode_state_ext            cur_pc98_keycodes;
-
-// TODO move to VGA GUI
-void vga_tty_pc98_mapping(nec_pc98_intdc_keycode_state_ext *map) {
-    unsigned int i;
-
-    memset(map,0,sizeof(*map));
-
-    /* function keys */
-    for (i=0;i < 10;i++) {
-        map->func[i].skey[0] = 0x7F;                // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
-        map->func[i].skey[1] = 0x30 + i;            // F1-F10 to 0x30-0x39
-    }
-    for (i=0;i < 5;i++) {
-        map->vfunc[i].skey[0] = 0x7F;               // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
-        map->vfunc[i].skey[1] = 0x3A + i;           // VF1-VF10 to 0x3A-0x3E
-    }
-    for (i=0;i < 10;i++) {
-        map->shift_func[i].skey[0] = 0x7F;          // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
-        map->shift_func[i].skey[1] = 0x40 + i;      // shift F1-F10 to 0x40-0x49
-    }
-    for (i=0;i < 5;i++) {
-        map->shift_vfunc[i].skey[0] = 0x7F;         // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
-        map->shift_vfunc[i].skey[1] = 0x4A + i;     // shift VF1-VF10 to 0x4A-0x4E
-    }
-    for (i=0;i < 10;i++) {
-        map->ctrl_func[i].skey[0] = 0x7F;           // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
-        map->ctrl_func[i].skey[1] = 0x50 + i;       // control F1-F10 to 0x50-0x59
-    }
-    for (i=0;i < 5;i++) {
-        map->ctrl_vfunc[i].skey[0] = 0x7F;          // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
-        map->ctrl_vfunc[i].skey[1] = 0x5A + i;      // control VF1-VF10 to 0x5A-0x5E
-    }
-    for (i=0;i < 11;i++) {
-        map->editkey[i].skey[0] = 0x7F;             // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
-        map->editkey[i].skey[1] = 0x60 + i;         // editor keys (see enum) to 0x60-0x6A
-    }
-}
 #endif
 
 #if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))

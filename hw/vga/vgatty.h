@@ -11,3 +11,7 @@ void vga_write(const char *msg);
 void vga_write_sync();
 void vga_clear();
 
+#if defined(TARGET_PC98)
+# include <hw/necpc98/necpc98.h>
+void vga_tty_pc98_mapping(nec_pc98_intdc_keycode_state_ext *map);
+#endif
