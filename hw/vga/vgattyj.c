@@ -47,16 +47,17 @@ void vga_writecw(unsigned short c) { // for use with double-wide DBCS, once deco
 #if defined(TARGET_PC98)
 void vga_writew(const char *msg) { // for use with Shift-JIS DBCS
     struct ShiftJISDecoder sj;
+    char c;
 
-	while (*msg != 0) {
-        if (pc98_sjis_dec1(&sj,*msg++)) {
-            if (*msg != 0) {
-                if (pc98_sjis_dec2(&sj,*msg++))
+	while ((c=(*msg++)) != 0) {
+        if (pc98_sjis_dec1(&sj,c)) {
+            if ((c=(*msg++)) != 0) {
+                if (pc98_sjis_dec2(&sj,c))
                     vga_writecw((sj.b1 - 0x20u) + (sj.b2 << 8u));
             }
         }
         else {
-            vga_writec(*msg++);
+            vga_writec(c);
         }
     }
 }
