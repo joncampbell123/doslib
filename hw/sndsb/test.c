@@ -3471,7 +3471,7 @@ static void prompt_play_wav(unsigned char rec) {
 				}
 
 				if (_dos_findfirst("*.*",_A_NORMAL|_A_RDONLY,&ft) == 0) {
-					int x=0,y=7,cw = 14,i;
+					int x=0,y=7,cw = 14;
 					char *ex;
 
 					do {
@@ -3488,8 +3488,13 @@ static void prompt_play_wav(unsigned char rec) {
 							vga_write_color(0x07);
 						}
 						vga_moveto(x,y);
-						for (i=0;i < 13 && ft.name[i] != 0;) vga_writec(ft.name[i++]);
-						for (;i < 14;i++) vga_writec(' ');
+#if defined(TARGET_PC98)
+			            vga_writew(ft.name);
+#else
+			            vga_write(ft.name);
+#endif
+                        vga_write_until(x+14);
+						vga_writec(' ');
 
 						x += cw;
 						if ((x+cw) > vga_state.vga_width) {
@@ -5800,7 +5805,11 @@ int main(int argc,char **argv) {
 			for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < 80;cc++) *vga++ = 0x1F20;
 #endif
 			vga_write("File: ");
+#if defined(TARGET_PC98)
+			vga_writew(wav_file);
+#else
 			vga_write(wav_file);
+#endif
 			vga_write_sync();
 			bkgndredraw = 0;
 			redraw = 0;
