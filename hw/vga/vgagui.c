@@ -543,17 +543,35 @@ int vga_msg_box_create(struct vga_msg_box *b,const char *msg,unsigned int extra_
 	b->w = w;
 	b->h = h;
 
-#if TARGET_MSDOS == 32
-	b->buf = malloc(w * h * 2);
+#if defined(TARGET_PC98)
+# if TARGET_MSDOS == 32
+    b->buf = malloc(w * h * 4);
+# else
+    b->buf = _fmalloc(w * h * 4);
+# endif
 #else
-	b->buf = _fmalloc(w * h * 2);
+# if TARGET_MSDOS == 32
+    b->buf = malloc(w * h * 2);
+# else
+    b->buf = _fmalloc(w * h * 2);
+# endif
 #endif
+
 	if (b->buf != NULL) {
 		/* copy the screen to buffer */
 		for (y=0;y < h;y++) {
-			i = y * vga_state.vga_width;
-			o = y * w;
-			for (x=0;x < w;x++,i++,o++) b->buf[o] = b->screen[i];
+#if defined(TARGET_PC98)
+            i = y * vga_state.vga_width;
+            o = y * w * 2;
+            for (x=0;x < w;x++,i++,o += 2) {
+                b->buf[o+0u] = b->screen[i       ];
+                b->buf[o+1u] = b->screen[i+0x1000];
+            }
+#else
+            i = y * vga_state.vga_width;
+            o = y * w;
+            for (x=0;x < w;x++,i++,o++) b->buf[o] = b->screen[i];
+#endif
 		}
 	}
 
@@ -617,9 +635,18 @@ void vga_msg_box_destroy(struct vga_msg_box *b) {
 		if (b->buf) {
 			/* copy screen back */
 			for (y=0;y < b->h;y++) {
+#if defined(TARGET_PC98)
+				i = y * b->w * 2;
+				o = y * vga_state.vga_width;
+				for (x=0;x < b->w;x++,i += 2,o++) {
+                    b->screen[o       ] = b->buf[i+0u];
+                    b->screen[o+0x1000] = b->buf[i+1u];
+                }
+#else
 				i = y * b->w;
 				o = y * vga_state.vga_width;
 				for (x=0;x < b->w;x++,i++,o++) b->screen[o] = b->buf[i];
+#endif
 			}
 
 #if TARGET_MSDOS == 32
