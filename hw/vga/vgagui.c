@@ -171,13 +171,8 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 	unsigned char loop = 1;
 
 	/* FIX: If re-inited because of arrow keys, then one more alt-up should trigger release */
-#if defined(TARGET_PC98)
-	if (*spec == 0x08 || *spec == 0x0C)
+	if (*spec == VGATTY_LEFT_ARROW || *spec == VGATTY_RIGHT_ARROW)
 		altup++;
-#else
-	if (*spec == 0x4B00 || *spec == 0x4D00)
-		altup++;
-#endif
 
 	*spec = 0;
 	if (menu != NULL) {
@@ -276,11 +271,7 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 						ret = scan[sel];
 						break;
 					}
-#if defined(TARGET_PC98)
-					else if (c == 0x0B) {
-#else
-					else if (c == 0x4800) {
-#endif
+					else if (c == VGATTY_UP_ARROW) {
 						vga_menu_draw_item(screen,scan,sel,w-2,color,tcolor);
 						do {
 							if (sel == 0) sel = items-1;
@@ -288,22 +279,14 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 						} while (vga_menu_item_nonselectable(scan[sel]));
 						vga_menu_draw_item(screen,scan,sel,w-2,hicolor,hitcolor);
 					}
-#if defined(TARGET_PC98)
-					else if (c == 0x0A) {
-#else
-					else if (c == 0x5000) {
-#endif
+					else if (c == VGATTY_DOWN_ARROW) {
 						vga_menu_draw_item(screen,scan,sel,w-2,color,tcolor);
 						do {
 							if (++sel >= items) sel = 0;
 						} while (vga_menu_item_nonselectable(scan[sel]));
 						vga_menu_draw_item(screen,scan,sel,w-2,hicolor,hitcolor);
 					}
-#if defined(TARGET_PC98)
-					else if (c == 0x08 || c == 0x0C) {
-#else
-					else if (c == 0x4B00 || c == 0x4D00) {
-#endif
+					else if (c == VGATTY_LEFT_ARROW || c == VGATTY_RIGHT_ARROW) {
 						*spec = c;
 						ret = NULL;
 						break;
@@ -453,13 +436,11 @@ again:
 		if (m != NULL) {
 			ret = vga_menu_bar_menuitem(m,vga_menu_bar.row+1,&spec);
 			if (ret == NULL) {
+				if (spec == VGATTY_LEFT_ARROW) {
 #if defined(TARGET_PC98)
-				if (spec == 0x08) {
                     alt_patience = 1u;
-#else
-				if (spec == 0x4B00) {
 #endif
-					if (--vga_menu_bar.sel < 0) {
+                    if (--vga_menu_bar.sel < 0) {
 						vga_menu_bar.sel = 0;
 						while (vga_menu_bar.bar[vga_menu_bar.sel].name != NULL) vga_menu_bar.sel++;
 						vga_menu_bar.sel--;
@@ -468,11 +449,9 @@ again:
 					vga_menu_bar_draw();
 					goto again;
 				}
+				else if (spec == VGATTY_RIGHT_ARROW) {
 #if defined(TARGET_PC98)
-				else if (spec == 0x0C) {
                     alt_patience = 1u;
-#else
-				else if (spec == 0x4D00) {
 #endif
 					if (vga_menu_bar.bar[++vga_menu_bar.sel].name == NULL) vga_menu_bar.sel = 0;
 					m = &vga_menu_bar.bar[vga_menu_bar.sel];
