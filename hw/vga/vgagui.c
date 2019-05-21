@@ -386,8 +386,7 @@ again:
                 {
 					i = 0;
 					c = vga_getch();
-#if defined(TARGET_PC98)
-					if (c == 0x08) { /* left */
+					if (c == VGATTY_ALT_LEFT_ARROW) {
 						if (--vga_menu_bar.sel < 0) {
 							vga_menu_bar.sel = 0;
 							while (vga_menu_bar.bar[vga_menu_bar.sel].name != NULL) vga_menu_bar.sel++;
@@ -396,27 +395,11 @@ again:
 						m = &vga_menu_bar.bar[vga_menu_bar.sel];
 						vga_menu_bar_draw();
 					}
-					else if (c == 0x0C) { /* right */
+					else if (c == VGATTY_ALT_RIGHT_ARROW) {
 						if (vga_menu_bar.bar[++vga_menu_bar.sel].name == NULL) vga_menu_bar.sel = 0;
 						m = &vga_menu_bar.bar[vga_menu_bar.sel];
 						vga_menu_bar_draw();
 					}
-#else
-					if (c == 0x9B) { /* ALT-left */
-						if (--vga_menu_bar.sel < 0) {
-							vga_menu_bar.sel = 0;
-							while (vga_menu_bar.bar[vga_menu_bar.sel].name != NULL) vga_menu_bar.sel++;
-							vga_menu_bar.sel--;
-						}
-						m = &vga_menu_bar.bar[vga_menu_bar.sel];
-						vga_menu_bar_draw();
-					}
-					else if (c == 0x9D) { /* ALT-right */
-						if (vga_menu_bar.bar[++vga_menu_bar.sel].name == NULL) vga_menu_bar.sel = 0;
-						m = &vga_menu_bar.bar[vga_menu_bar.sel];
-						vga_menu_bar_draw();
-					}
-#endif
 					else
                     {
 						int oi = vga_menu_bar.sel;
