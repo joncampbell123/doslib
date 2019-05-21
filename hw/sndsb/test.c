@@ -337,6 +337,46 @@
 
 #if defined(TARGET_PC98)
 # include <hw/necpc98/necpc98.h>
+
+nec_pc98_intdc_keycode_state_ext            prev_pc98_keycodes;
+nec_pc98_intdc_keycode_state_ext            cur_pc98_keycodes;
+
+// TODO move to VGA GUI
+void vga_tty_pc98_mapping(nec_pc98_intdc_keycode_state_ext *map) {
+    unsigned int i;
+
+    memset(map,0,sizeof(*map));
+
+    /* function keys */
+    for (i=0;i < 10;i++) {
+        map->func[i].skey[0] = 0x7F;                // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
+        map->func[i].skey[1] = 0x30 + i;            // F1-F10 to 0x30-0x39
+    }
+    for (i=0;i < 5;i++) {
+        map->vfunc[i].skey[0] = 0x7F;               // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
+        map->vfunc[i].skey[1] = 0x3A + i;           // VF1-VF10 to 0x3A-0x3E
+    }
+    for (i=0;i < 10;i++) {
+        map->shift_func[i].skey[0] = 0x7F;          // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
+        map->shift_func[i].skey[1] = 0x40 + i;      // shift F1-F10 to 0x40-0x49
+    }
+    for (i=0;i < 5;i++) {
+        map->shift_vfunc[i].skey[0] = 0x7F;         // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
+        map->shift_vfunc[i].skey[1] = 0x4A + i;     // shift VF1-VF10 to 0x4A-0x4E
+    }
+    for (i=0;i < 10;i++) {
+        map->ctrl_func[i].skey[0] = 0x7F;           // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
+        map->ctrl_func[i].skey[1] = 0x50 + i;       // control F1-F10 to 0x50-0x59
+    }
+    for (i=0;i < 5;i++) {
+        map->ctrl_vfunc[i].skey[0] = 0x7F;          // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
+        map->ctrl_vfunc[i].skey[1] = 0x5A + i;      // control VF1-VF10 to 0x5A-0x5E
+    }
+    for (i=0;i < 11;i++) {
+        map->editkey[i].skey[0] = 0x7F;             // cannot use 0x00, that's the string terminator. VZ.EXE uses this.
+        map->editkey[i].skey[1] = 0x60 + i;         // editor keys (see enum) to 0x60-0x6A
+    }
+}
 #endif
 
 #if TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__COMPACT__) || defined(__SMALL__))
@@ -5248,6 +5288,20 @@ int main(int argc,char **argv) {
 	}
 #endif
 
+#if defined(TARGET_PC98) && TARGET_MSDOS == 16
+    /* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
+     * between left arrow and backspace, etc.
+     *
+     * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
+     * seems to be perfectly reasonable patterns. */
+    pc98_intdc_get_keycode_state_ext(&prev_pc98_keycodes);
+    cur_pc98_keycodes = prev_pc98_keycodes;
+
+    /* the VGA GUI expects a specific mapping to work */
+    vga_tty_pc98_mapping(&cur_pc98_keycodes);
+    pc98_intdc_set_keycode_state_ext(&cur_pc98_keycodes);
+#endif
+
 	if (wav_file[0] != 0) open_wav();
 	if (autoplay) begin_play();
 	while (loop) {
@@ -6014,6 +6068,15 @@ int main(int argc,char **argv) {
 
 		ui_anim(0);
 	}
+
+#if defined(TARGET_PC98) && TARGET_MSDOS == 16
+    /* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
+     * between left arrow and backspace, etc.
+     *
+     * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
+     * seems to be perfectly reasonable patterns. */
+    pc98_intdc_set_keycode_state_ext(&prev_pc98_keycodes);
+#endif
 
 	_sti();
 	vga_write_sync();
