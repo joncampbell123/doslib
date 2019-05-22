@@ -2496,7 +2496,7 @@ static void play_with_sb16_8051() {
 			}
 			vga_moveto(0,2);
 			vga_write_color(0x1F);
-			sprintf(temp_str,"x=enter byte value p=re-detect\n");
+			sprintf(temp_str,"x=enter byte value\n");
 			vga_write(temp_str);
 			vga_write("\n");
 
