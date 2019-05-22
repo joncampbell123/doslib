@@ -357,6 +357,7 @@ const struct vga_menu_item *vga_menu_bar_keymon() {
      * for whether or not the ALT key is down. */
         const unsigned int alt_patience_init = 5;
         unsigned int alt_patience = alt_patience_init;
+        unsigned char alt_toggle = 0;
 #endif
 
 		vga_menu_bar.sel = 0;
@@ -419,6 +420,9 @@ again:
                     int     18h
                 }
                 if (--alt_patience != 0u) continue;
+                /* user really did release GRPH */
+                alt_toggle ^= 1;
+                if (alt_toggle) continue;
 #endif
                 break;
             }
