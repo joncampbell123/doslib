@@ -171,7 +171,7 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 	unsigned char loop = 1;
 
 	/* FIX: If re-inited because of arrow keys, then one more alt-up should trigger release */
-	if (*spec == VGATTY_LEFT_ARROW || *spec == VGATTY_RIGHT_ARROW)
+	if (*spec == VGATTY_LEFT_ARROW || *spec == VGATTY_RIGHT_ARROW || *spec == (~0U))
 		altup++;
 
 	*spec = 0;
@@ -351,20 +351,23 @@ const struct vga_menu_item *vga_menu_bar_keymon() {
 		return ret;
 
 	if (read_bios_keystate() & BIOS_KS_ALT) {
-#if defined(TARGET_PC98)
-    /* If you hold a key down on a PC-98 system, the scan codes repeated from the keyboard
-     * contain UP and DOWN codes, which is also reflected in the bit if you poll the BIOS
-     * for whether or not the ALT key is down. */
-        const unsigned int alt_patience_init = 5;
-        unsigned int alt_patience = alt_patience_init;
-#endif
-
 		vga_menu_bar.sel = 0;
 		vga_menu_bar_draw();
+
+#if defined(TARGET_PC98)
+        m = &vga_menu_bar.bar[0];
+        spec = ~0U;
+#endif
 
 again:
 		do {
 			vga_menu_idle();
+#if defined(TARGET_PC98)
+            if (kbhit()) {
+                m = NULL;
+                break;
+            }
+#else
 			if (kbhit()) {
                 {
 					i = 0;
@@ -383,18 +386,12 @@ again:
 						m = &vga_menu_bar.bar[vga_menu_bar.sel];
 						vga_menu_bar_draw();
 					}
-					else
-                    {
+					else {
 						int oi = vga_menu_bar.sel;
 
 						for (m=vga_menu_bar.bar;m->name != NULL;m++,i++) {
-#if defined(TARGET_PC98) // shortcut scan codes are IBM PC oriented, use the key char instead
-							if ((c & 0xFF00u) == 0u && tolower(c) == tolower(m->shortcut_key))
-								break;
-#else
 							if ((c & 0xFF00u) != 0u && (c>>8u) == m->shortcut_scan)
 								break;
-#endif
 						}
 						if (m->name == NULL) {
 							m = NULL;
@@ -412,34 +409,24 @@ again:
 					}
 				}
 			}
-            if (!(read_bios_keystate() & BIOS_KS_ALT)) {
-#if defined(TARGET_PC98)
-                __asm {
-                    mov     ah,1
-                    int     18h
-                }
-                if (--alt_patience != 0u) continue;
 #endif
+
+            if (!(read_bios_keystate() & BIOS_KS_ALT))
                 break;
-            }
-            else {
-#if defined(TARGET_PC98)
-                alt_patience = alt_patience_init;
-#endif
-            }
         } while (1);
 
+#if !defined(TARGET_PC98)
 		if (!(read_bios_keystate() & BIOS_KS_ALT)) {
+#endif
 			while (kbhit()) vga_getch();
+#if !defined(TARGET_PC98)
 		}
+#endif
 
 		if (m != NULL) {
 			ret = vga_menu_bar_menuitem(m,vga_menu_bar.row+1,&spec);
 			if (ret == NULL) {
 				if (spec == VGATTY_LEFT_ARROW) {
-#if defined(TARGET_PC98)
-                    alt_patience = 1u;
-#endif
                     if (--vga_menu_bar.sel < 0) {
 						vga_menu_bar.sel = 0;
 						while (vga_menu_bar.bar[vga_menu_bar.sel].name != NULL) vga_menu_bar.sel++;
@@ -450,9 +437,6 @@ again:
 					goto again;
 				}
 				else if (spec == VGATTY_RIGHT_ARROW) {
-#if defined(TARGET_PC98)
-                    alt_patience = 1u;
-#endif
 					if (vga_menu_bar.bar[++vga_menu_bar.sel].name == NULL) vga_menu_bar.sel = 0;
 					m = &vga_menu_bar.bar[vga_menu_bar.sel];
 					vga_menu_bar_draw();
