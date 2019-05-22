@@ -171,7 +171,7 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 	unsigned char loop = 1;
 
 	/* FIX: If re-inited because of arrow keys, then one more alt-up should trigger release */
-	if (*spec == VGATTY_LEFT_ARROW || *spec == VGATTY_RIGHT_ARROW || *spec == (~0U))
+	if (*spec == VGATTY_LEFT_ARROW || *spec == VGATTY_RIGHT_ARROW || *spec == ~0U)
 		altup++;
 
 	*spec = 0;
@@ -356,18 +356,81 @@ const struct vga_menu_item *vga_menu_bar_keymon() {
 
 #if defined(TARGET_PC98)
         m = &vga_menu_bar.bar[0];
-        spec = ~0U;
 #endif
 
-again:
+#if defined(TARGET_PC98)
 		do {
 			vga_menu_idle();
-#if defined(TARGET_PC98)
+
             if (kbhit()) {
                 m = NULL;
                 break;
             }
+
+            if (!(read_bios_keystate() & BIOS_KS_ALT))
+                break;
+        } while (1);
+
+        if (!(read_bios_keystate() & BIOS_KS_ALT)) {
+            do {
+                if (kbhit()) {
+                    i = 0;
+                    c = vga_getch();
+                    if (c == VGATTY_ALT_LEFT_ARROW) {
+                        if (--vga_menu_bar.sel < 0) {
+                            vga_menu_bar.sel = 0;
+                            while (vga_menu_bar.bar[vga_menu_bar.sel].name != NULL) vga_menu_bar.sel++;
+                            vga_menu_bar.sel--;
+                        }
+                        m = &vga_menu_bar.bar[vga_menu_bar.sel];
+                        vga_menu_bar_draw();
+                    }
+                    else if (c == VGATTY_ALT_RIGHT_ARROW) {
+                        if (vga_menu_bar.bar[++vga_menu_bar.sel].name == NULL) vga_menu_bar.sel = 0;
+                        m = &vga_menu_bar.bar[vga_menu_bar.sel];
+                        vga_menu_bar_draw();
+                    }
+                    else if (c == 13 || c == VGATTY_DOWN_ARROW) {
+                        spec = ~0U;
+                        break;
+                    }
+                    else if (c == VGATTY_UP_ARROW) {
+                        /* nothing */
+                    }
+                    else {
+                        int oi = vga_menu_bar.sel;
+
+                        for (m=vga_menu_bar.bar;m->name != NULL;m++,i++) {
+                            if ((c & 0xFFu) != 0u && tolower(c) == tolower(m->shortcut_key))
+                                break;
+                        }
+                        if (m->name == NULL) {
+                            m = NULL;
+                            vga_menu_bar.sel = -1;
+                        }
+                        else {
+                            vga_menu_bar.sel = i;
+                        }
+
+                        if (oi != vga_menu_bar.sel)
+                            vga_menu_bar_draw();
+
+                        spec = ~0U;
+                        break;
+                    }
+                }
+
+                if (read_bios_keystate() & BIOS_KS_ALT) {
+                    m = NULL;
+                    break;
+                }
+            } while (1);
+        }
+again:
 #else
+again:
+		do {
+			vga_menu_idle();
 			if (kbhit()) {
                 {
 					i = 0;
@@ -409,19 +472,15 @@ again:
 					}
 				}
 			}
-#endif
 
             if (!(read_bios_keystate() & BIOS_KS_ALT))
                 break;
         } while (1);
+#endif
 
-#if !defined(TARGET_PC98)
 		if (!(read_bios_keystate() & BIOS_KS_ALT)) {
-#endif
 			while (kbhit()) vga_getch();
-#if !defined(TARGET_PC98)
 		}
-#endif
 
 		if (m != NULL) {
 			ret = vga_menu_bar_menuitem(m,vga_menu_bar.row+1,&spec);
