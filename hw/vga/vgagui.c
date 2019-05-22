@@ -297,7 +297,7 @@ const struct vga_menu_item *vga_menu_bar_menuitem(const struct vga_menu_bar_item
 						vga_menu_draw_item(screen,scan,sel,w-2,color,tcolor);
 						/* look for the first menu item with that shortcut key */
 						if (++sel >= items) sel = 0;
-						while (tolower(scan[sel]->shortcut_key) != tolower(c)) {
+						while (scan[sel]->text == (void*)1 || tolower(scan[sel]->shortcut_key) != tolower(c)) {
 							if (--patience == 0) {
 								sel = 0;
 								break;
