@@ -2784,7 +2784,6 @@ static void play_with_mixer() {
 
 	while (loop) {
 		if (redraw || uiredraw) {
-			_cli();
 			if (redraw) {
 #if defined(TARGET_PC98)
 				for (vga=vga_state.vga_alpha_ram+(80*2),cc=0;cc < (80*23);cc++) {
@@ -2810,7 +2809,9 @@ static void play_with_mixer() {
 				for (cc=0;cc < 256;cc++) {
 					x = ((cc & 15)*3)+4;
 					y = (cc >> 4)+4;
+                    _cli();
 					bb = sndsb_read_mixer(sb_card,(unsigned char)cc);
+                    _sti();
 					vga_moveto(x,y);
 					vga_write_color(cc == selector ? 0x70 : 0x1E);
 					sprintf(temp_str,"%02X ",bb);
@@ -2852,6 +2853,8 @@ static void play_with_mixer() {
 					ent = sb_mixer + offset + y;
 					vga_moveto(0,y+visy);
 					vga_write_color((y+offset) == selector ? 0x70 : 0x1E);
+                    _cli();
+
 					if (ent->length == 1)
 						x=sprintf(temp_str,"%s     %s",
 							sndsb_read_mixer_entry(sb_card,ent) ? "On " : "Off",ent->name);
@@ -2859,13 +2862,13 @@ static void play_with_mixer() {
 						x=sprintf(temp_str,"%-3u/%-3u %s",sndsb_read_mixer_entry(sb_card,ent),
 							(1 << ent->length) - 1,ent->name);
 
+                    _sti();
 					while (x < 80) temp_str[x++] = ' '; temp_str[x] = 0;
 					vga_write(temp_str);
 				}
 			}
 
 			vga_write_sync();
-			_sti();
 			redraw = 0;
 			uiredraw = 0;
 		}
