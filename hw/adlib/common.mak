@@ -5,10 +5,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 
 C_SOURCE =    adlib.c
 OBJS =        $(SUBDIR)$(HPS)adlib.obj $(SUBDIR)$(HPS)adlib.obj
-!ifdef PC98
-!else
 TEST_EXE =    $(SUBDIR)$(HPS)test.$(EXEEXT)
-!endif
 MIDI_EXE =    $(SUBDIR)$(HPS)midi.$(EXEEXT)
 IMFPLAY_EXE = $(SUBDIR)$(HPS)imfplay.$(EXEEXT)
 MIDI2IMF_EXE =$(SUBDIR)$(HPS)midi2imf.$(EXEEXT)

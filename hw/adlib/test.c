@@ -33,7 +33,17 @@
 #include <hw/adlib/adlib.h>
 
 #if defined(TARGET_PC98)
-#error do not compile this program for PC98
+# include <hw/necpc98/necpc98.h>
+
+nec_pc98_intdc_keycode_state_ext            prev_pc98_keycodes;
+nec_pc98_intdc_keycode_state_ext            cur_pc98_keycodes;
+#endif
+
+#if defined(TARGET_PC98)
+# include <hw/necpc98/necpc98.h>
+
+nec_pc98_intdc_keycode_state_ext            prev_pc98_keycodes;
+nec_pc98_intdc_keycode_state_ext            cur_pc98_keycodes;
 #endif
 
 static unsigned int musical_scale[18] = {
@@ -76,9 +86,25 @@ int main(int argc,char **argv) {
 
 	int10_setmode(3);
 
+#if !defined(TARGET_PC98)
 	/* for VGA: free up space if needed by going to 80x50 */
 	if (adlib_fm_voices > 9)
 		vga_bios_set_80x50_text();
+#endif
+
+#if defined(TARGET_PC98) && TARGET_MSDOS == 16
+    /* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
+     * between left arrow and backspace, etc.
+     *
+     * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
+     * seems to be perfectly reasonable patterns. */
+    pc98_intdc_get_keycode_state_ext(&prev_pc98_keycodes);
+    cur_pc98_keycodes = prev_pc98_keycodes;
+
+    /* the VGA GUI expects a specific mapping to work */
+    vga_tty_pc98_mapping(&cur_pc98_keycodes);
+    pc98_intdc_set_keycode_state_ext(&cur_pc98_keycodes);
+#endif
 
 	memset(adlib_fm,0,sizeof(adlib_fm));
 	memset(&adlib_reg_bd,0,sizeof(adlib_reg_bd));
@@ -231,13 +257,12 @@ int main(int argc,char **argv) {
 		}
 
 		if (kbhit()) {
-			c = getch();
-			if (c == 0) c = getch() << 8;
+			c = vga_getch();
 
 			if (c == 27) {
 				loop = 0;
 			}
-			else if (c == 0x3B00) { /* F1 */
+			else if (c == VGATTY_SC_Fn(1)) { /* F1 */
 				for (i=0;i < adlib_fm_voices;i++) {
 					adlib_fm[i].mod.key_on = 0;
 					adlib_fm[i].car.key_on = 0;
@@ -245,14 +270,14 @@ int main(int argc,char **argv) {
 				}
 				redrawln = 1;
 			}
-			else if (c == 0x3C00) { /* F2 */
+			else if (c == VGATTY_SC_Fn(2)) { /* F2 */
 				if (adlib_flags & ADLIB_FM_OPL3) {
 					shutdown_adlib_opl3();
 					int10_setmode(3);
 					redraw = 1;
 				}
 			}
-			else if (c == 0x4400) { /* F10 */
+			else if (c == VGATTY_SC_Fn(10)) { /* F10 */
 				unsigned short op = adlib_voice_to_op[selector];
 
 				vga_write_color(0x07);
@@ -417,7 +442,7 @@ int main(int argc,char **argv) {
 
 				redrawln=1;
 			}
-			else if (c == 0x4800) {
+			else if (c == VGATTY_UP_ARROW) {
 				if (selectsub && !(hselect >= 11 && hselect <= 15)) {
 					selectsub = 0;
 					redrawln = 1;
@@ -428,19 +453,19 @@ int main(int argc,char **argv) {
 					redrawln = 1;
 				}
 			}
-			else if (c == 0x4B00) {
+			else if (c == VGATTY_LEFT_ARROW) {
 				if (hselect > 0) {
 					hselect--;
 					redrawln=1;
 				}
 			}
-			else if (c == 0x4D00) {
+			else if (c == VGATTY_RIGHT_ARROW) {
 				if (hselect < 17) {
 					hselect++;
 					redrawln=1;
 				}
 			}
-			else if (c == 0x5000) {
+			else if (c == VGATTY_DOWN_ARROW) {
 				if (selectsub == 0 && !(hselect >= 11 && hselect <= 15)) {
 					selectsub = 1;
 					redrawln = 1;
@@ -454,6 +479,15 @@ int main(int argc,char **argv) {
 
 		}
 	}
+
+#if defined(TARGET_PC98) && TARGET_MSDOS == 16
+    /* re-define function and editor keys on PC-98 MS-DOS so we can differentiate
+     * between left arrow and backspace, etc.
+     *
+     * the remapping is based on the patterns used by SEDIT.EXE and VZ.EXE which
+     * seems to be perfectly reasonable patterns. */
+    pc98_intdc_set_keycode_state_ext(&prev_pc98_keycodes);
+#endif
 
 	shutdown_adlib();
 	int10_setmode(3);
