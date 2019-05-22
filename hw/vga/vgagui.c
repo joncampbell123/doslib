@@ -370,7 +370,7 @@ again:
                 {
 					i = 0;
 					c = vga_getch();
-					if (c == VGATTY_ALT_LEFT_ARROW) {
+					if (c == VGATTY_ALT_LEFT_ARROW || c == VGATTY_LEFT_ARROW) {
 						if (--vga_menu_bar.sel < 0) {
 							vga_menu_bar.sel = 0;
 							while (vga_menu_bar.bar[vga_menu_bar.sel].name != NULL) vga_menu_bar.sel++;
@@ -379,7 +379,7 @@ again:
 						m = &vga_menu_bar.bar[vga_menu_bar.sel];
 						vga_menu_bar_draw();
 					}
-					else if (c == VGATTY_ALT_RIGHT_ARROW) {
+					else if (c == VGATTY_ALT_RIGHT_ARROW || c == VGATTY_LEFT_ARROW) {
 						if (vga_menu_bar.bar[++vga_menu_bar.sel].name == NULL) vga_menu_bar.sel = 0;
 						m = &vga_menu_bar.bar[vga_menu_bar.sel];
 						vga_menu_bar_draw();
