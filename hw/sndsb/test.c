@@ -4892,10 +4892,17 @@ int main(int argc,char **argv) {
 		}
 	}
 	if (!disable_probe) {
+#if defined(TARGET_PC98)
+		if (sndsb_try_base(0xD2))
+			printf("Also found one at 0xD2\n");
+		if (sndsb_try_base(0xD4))
+			printf("Also found one at 0xD4\n");
+#else
 		if (sndsb_try_base(0x220))
 			printf("Also found one at 0x220\n");
 		if (sndsb_try_base(0x240))
 			printf("Also found one at 0x240\n");
+#endif
 	}
 
 #if !(TARGET_MSDOS == 16 && (defined(__TINY__) || defined(__SMALL__) || defined(__COMPACT__))) /* this is too much to cram into a small model EXE */
