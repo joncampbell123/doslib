@@ -373,6 +373,8 @@ const struct vga_menu_item *vga_menu_bar_keymon() {
 
         if (!(read_bios_keystate() & BIOS_KS_ALT)) {
             do {
+                vga_menu_idle();
+
                 if (kbhit()) {
                     i = 0;
                     c = vga_getch();
@@ -504,7 +506,9 @@ again:
 			}
 		}
 
-		while (read_bios_keystate() & BIOS_KS_ALT);
+		while (read_bios_keystate() & BIOS_KS_ALT)
+            vga_menu_idle();
+
 		vga_menu_bar.sel = -1;
 		vga_menu_bar_draw();
 	}
