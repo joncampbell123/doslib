@@ -2505,14 +2505,13 @@ static void play_with_sb16_8051() {
 			else if (selector < 0) selector = 0;
 			offset = 0;
 
-			/* reading ESS controllers involves the DSP so avoid conflicts by clearing interrupts */
-			_cli();
-
 			for (cc=0;cc < 256;cc++) {
 				x = ((cc & 15)*3)+4;
 				y = (cc >> 4)+4;
+			    _cli();
 				bbi = sndsb_sb16_8051_mem_read(sb_card,(unsigned char)cc);
-				bb = (unsigned char)bbi;
+                _sti();
+                bb = (unsigned char)bbi;
 				vga_moveto(x,y);
 				vga_write_color(cc == selector ? 0x70 : 0x1E);
 				sprintf(temp_str,"%02X ",bb);
@@ -2531,8 +2530,6 @@ static void play_with_sb16_8051() {
 					vga_write(temp_str);
 				}
 			}
-
-			_sti();
 		}
 
 		if (kbhit()) {
@@ -2563,11 +2560,8 @@ static void play_with_sb16_8051() {
 					nb = (unsigned char)xdigit2int(a) << 4;
 					nb |= (unsigned char)xdigit2int(b);
 
-					/* reading ESS controllers involves the DSP so avoid conflicts by clearing interrupts */
 					_cli();
-
 					sndsb_sb16_8051_mem_write(sb_card,(unsigned char)selector,nb);
-
 					_sti();
 				}
 
