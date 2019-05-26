@@ -15,18 +15,17 @@ int main(int argc,char **argv) {
 	long templong;
 
 	initialize();
-	if (argc >= 2)
-	{
+	if (argc >= 2) {
 		for(i=0;i<8;i++)
 			ksmfile[i] = argv[argc-1][i];
+
 		i = 0;
-		while ((ksmfile[i] != 0) && (i < 8))
-		{
+		while ((ksmfile[i] != 0) && (i < 8)) {
 			ksmfile[i] = (ksmfile[i]^(i<<1))+7;
 			i++;
 		}
-		if (i == 7)
-		{
+
+		if (i == 7) {
 			ksmfile[7] = 0;
 			if (strcmp(ksmfile,"zslz‚…|") == 0)
 				cheatenable = 1;
@@ -35,32 +34,31 @@ int main(int argc,char **argv) {
 	kgif(1);
 	introduction(0);
 	won = 0;
-	while (quitgame == 0)
-	{
-		if (death < 4095)
-		{
+	while (quitgame == 0) {
+		if (death < 4095) {
 			fade(death>>6);
 			posz+=2;
 			if (posz > 64)
 				posz = 64;
-			if (angvel < 0)
-			{
+
+			if (angvel < 0) {
 				angvel -= 8;
 				if (angvel < -32)
 					angvel = -32;
 			}
-			if (angvel > 0)
-			{
+
+			if (angvel > 0) {
 				angvel += 8;
 				if (angvel > 32)
 					angvel = 32;
 			}
+
 			ang = (ang+angvel)&2047;
 			death -= (((((int)(totalclock-ototclock))<<6)&0xffc0)+64);
 			if (death <= 0)
 				death = 0;
-			if (lifevests == 0)
-			{
+
+			if (lifevests == 0) {
 				for(i=lside;i<rside;i++)
 					height[i] = 0;
 				i = pageoffset;
@@ -70,10 +68,9 @@ int main(int argc,char **argv) {
 				pictur(x,y,(144-(death>>5))<<2,death&2047^2047,gameover);
 				pageoffset = i;
 			}
-			if (death == 0)
-			{
-				if (lifevests > 0)
-				{
+
+			if (death == 0) {
+				if (lifevests > 0) {
 					death = 4095;
 					life = 4095;
 					purpletime = totalclock-1;
