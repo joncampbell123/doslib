@@ -8,8 +8,7 @@ static const unsigned char slotable[3][16] =
 	4,2,0,4,5,4,1,3,1,5,4,3,2,5,3,5
 };
 
-main(int argc,char **argv)
-{
+int main(int argc,char **argv) {
 	char ksmfile[15], hitnet, cheatkeysdown, won;
 	int i, j, jj, k, m, n, x, y, brd0, brd1, brd2, brd3, incenter;
 	unsigned int l, newx, newy, oposx, oposy, plcx, plcy;
@@ -3371,4 +3370,5 @@ retraceholdfade2:
 	if (emswalls > 0) emmdeallocate(emmhandle);
 	if (xmswalls > 0) xmsdeallocate(xmshandle);
 	if (speechstatus >= 2) reset_dsp();
+    return 0;
 }
