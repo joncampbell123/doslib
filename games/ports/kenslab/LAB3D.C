@@ -102,9 +102,8 @@ int main(int argc,char **argv) {
 				}
 				else
 				{
-					for(i=0;i<60;i++)
-						_asm \
-						{
+					for(i=0;i<60;i++) {
+						__asm {
 							mov dx, 0x3da
 retraceholdfade9:
 							in al, dx
@@ -115,10 +114,9 @@ retraceholdfade10:
 							test al, 8
 							jnz retraceholdfade10
 						}
-					for(i=fadewarpval;i>=0;i-=2)
-					{
-						_asm \
-						{
+                    }
+					for(i=fadewarpval;i>=0;i-=2) {
+						__asm {
 							mov dx, 0x3da
 retraceholdfade7:
 							in al, dx
@@ -211,18 +209,16 @@ startfadegameover:
 		}
 		picrot(posx,posy,posz,ang);
 		sortcnt = 0;
-		if ((musicstatus == 1) && (clockspeed >= 0) && (clockspeed < 3))
-			_asm \
-			{
+		if ((musicstatus == 1) && (clockspeed >= 0) && (clockspeed < 3)) {
+			__asm {
 limitframerate:
 				cmp clockspeed, 3
 				jb limitframerate
 			}
+        }
 		lastpageoffset = pageoffset;
-		if (vidmode == 0)
-		{
-			_asm \
-			{
+		if (vidmode == 0) {
+			__asm {
 				mov bx, lastpageoffset
 				add bx, 5
 				mov al, 0xc
@@ -247,8 +243,7 @@ limitframerate:
 		}
 		else
 		{
-			_asm \
-			{
+			__asm {
 				mov bx, lastpageoffset
 				mov al, 0xc
 				mov ah, bh
@@ -459,8 +454,7 @@ limitframerate:
 		}
 		for(i=0;i<bulnum;i++)
 		{
-			_asm \
-			{
+			__asm {
 						;x = (int)((clockspeed*sintable[(bulang[i]+512)&2047])>>13);
 				mov bx, i
 				shl bx, 1
@@ -998,8 +992,7 @@ skipnegatebulyval:
 		mrotbuf[0] = ((posx>>10)<<6)+(posy>>10);
 		tempbuf[mrotbuf[0]] = 20;
 		j = 1;                               //j is stop (end of nodes)
-		_asm \
-		{
+		__asm {
 			mov bx, i
 			shl bx, 1
 			mov bx, word ptr mrotbuf[bx]
@@ -1467,8 +1460,7 @@ endscan:
 			bstatus = 0;
 			if (joystat == 0)
 			{
-				_asm \
-				{
+				__asm {
 					mov dx, 0x201
 					xor al, al
 					out dx, al
@@ -1510,9 +1502,8 @@ endjoystickloop:
 						mousy = (int)((((long)(mousy-joyy2))<<5)/((long)(joyy3-joyy2)));
 				}
 			}
-			if (moustat == 0)
-				_asm \
-				{
+			if (moustat == 0) {
+				__asm {
 					mov ax, 11
 					int 0x33
 					add mousx, cx
@@ -1521,6 +1512,7 @@ endjoystickloop:
 					int 0x33
 					or bstatus, ax
 				}
+            }
 			if (keystatus[keydefs[4]] == 0)
 			{
 				j = clockspeed;
@@ -2294,8 +2286,7 @@ endjoystickloop:
 				checkhitwall(oldposx,oldposy,posx,posy);
 			}
 		}
-		_asm \
-		{
+		__asm {
 			mov dx, 0x3c8
 			mov al, 255
 			out dx, al
@@ -2976,8 +2967,7 @@ endjoystickloop:
 			if (fadewarpval > 16)
 				for(i=63;i>=16;i-=2)
 				{
-					_asm \
-					{
+					__asm {
 						mov dx, 0x3da
 retraceholdfade3:
 						in al, dx
@@ -2995,30 +2985,29 @@ retraceholdfade4:
 			while ((x <= y) && (keystatus[1] == 0) && (keystatus[57] == 0) && (keystatus[28] == 0) && (bstatus == 0))
 			{
 				bstatus = 0;
-				if (moustat == 0)
-					_asm \
-					{
+				if (moustat == 0) {
+					__asm {
 						mov ax, 5
 						int 0x33
 						mov bstatus, ax
 					}
-				if (joystat == 0)
-					_asm
-					{
+                }
+				if (joystat == 0) {
+					__asm {
 						mov dx, 0x201
 						in al, dx
 						and ax, 0x30
 						xor al, 0x30
 						or bstatus, ax
 					}
+                }
 				y = x;
 				x = keystatus[keydefs[15]];
 			}
-			if (fadewarpval > 16)
+			if (fadewarpval > 16) {
 				for(i=16;i<=fadewarpval;i+=2)
 				{
-					_asm \
-					{
+					__asm {
 						mov dx, 0x3da
 retraceholdfade5:
 						in al, dx
@@ -3031,6 +3020,7 @@ retraceholdfade6:
 					}
 					fade(i+64);
 				}
+            }
 			totalclock = ototclock;
 			clockspeed = 0;
 			lastunlock = 1;
@@ -3051,26 +3041,25 @@ retraceholdfade6:
 			while ((keystatus[1] == 0) && (keystatus[57] == 0) && (keystatus[28] == 0) && (bstatus == 0))
 			{
 				bstatus = 0;
-				if (moustat == 0)
-					_asm \
-					{
+				if (moustat == 0) {
+					__asm {
 						mov ax, 5
 						int 0x33
 						mov bstatus, ax
 					}
-				if (joystat == 0)
-					_asm
-					{
+                }
+				if (joystat == 0) {
+					__asm {
 						mov dx, 0x201
 						in al, dx
 						and ax, 0x30
 						xor al, 0x30
 						or bstatus, ax
 					}
+                }
 				totalclock += clockspeed;
 				clockspeed = 0;
-				_asm \
-				{
+				__asm {
 					mov dx, 0x3c8
 					mov al, 240
 					out dx, al
@@ -3082,8 +3071,7 @@ retraceholdfade6:
 					tempbuf[i*3+1] = (i*j)>>4;
 					tempbuf[i*3+2] = (i*j)>>4;
 				}
-				_asm \
-				{
+				__asm {
 					mov dx, 0x3da
 retrace3:
 					in al, dx
@@ -3094,14 +3082,14 @@ retrace4:
 					test al, 8
 					jz retrace4
 				}
-				for(i=0;i<48;i++)
-					_asm \
-					{
+				for(i=0;i<48;i++) {
+					__asm {
 						mov dx, 0x3c9
 						mov bx, i
 						mov al, byte ptr tempbuf[bx]
 						out dx, al
 					}
+                }
 			}
 			lastunlock = 1;
 			lastshoot = 1;
@@ -3119,8 +3107,7 @@ retrace4:
 			loadmusic(ksmfile);
 			for(i=27;i<=63;i+=2)
 			{
-				_asm \
-				{
+				__asm {
 					mov dx, 0x3da
 retraceholdfade1:
 					in al, dx
