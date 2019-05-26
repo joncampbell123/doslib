@@ -392,8 +392,8 @@ unsigned int filenum;
 		{
 			mov ax, offset clockspeed
 			mov dx, ds
-			mov ksaycode[4], ax
-			mov ksaycode[6], dx
+			mov word ptr ksaycode[4], ax
+			mov word ptr ksaycode[6], dx
 			xor ax, ax
 			mov es, ax
 			mov cx, ksaycodestart
@@ -488,7 +488,7 @@ skiprestoreintvecta:
 			mov di, 32767
 			mov bx, cx
 fixsndbuffer:
-			mov si, byte ptr es:[bx]         ;fix up snd buffer by shifting
+			mov si, word ptr es:[bx]         ;fix up snd buffer by shifting
 			and si, 0x00ff
 			dec bx
 			mov al, byte ptr ksaybuflookup[si]
@@ -3933,7 +3933,7 @@ setgamevideomode()
 		mov al, ah
 		out dx, al
 		mov al, byte ptr es:[1]
-		mov videotype, al
+		mov byte ptr videotype, al
 	}
 }
 
@@ -4327,8 +4327,8 @@ hiscorecheck()
 			mov di, i
 			shl di, 1
 			shl di, 1
-			mov hiscore[di], ax
-			mov hiscore[di+2], dx
+			mov word ptr hiscore[di], ax
+			mov word ptr hiscore[di+2], dx
 		}
 	}
 	for(i=lside;i<rside;i++)
@@ -4428,8 +4428,8 @@ hiscorecheck()
 				mov di, inse
 				mov cl, 4
 				shl di, cl
-				mov tempbuf[di+12], ax
-				mov tempbuf[di+14], dx
+				mov word ptr tempbuf[di+12], ax
+				mov word ptr tempbuf[di+14], dx
 			}
 			spridraw(20,0,320*4,scorebox);
 			if (scorecount == scorexist)
@@ -5858,7 +5858,7 @@ int slotnum;
 				mov word ptr ds:[bx], ax
 				mov al, byte ptr es:[di+128]
 				mov ah, byte ptr es:[di+192]
-				mov byte ptr ds:[bx+2], ax
+				mov word ptr ds:[bx+2], ax
 				mov al, byte ptr es:[di+256]
 				mov ah, byte ptr es:[di+320]
 				mov word ptr ds:[bx+4], ax

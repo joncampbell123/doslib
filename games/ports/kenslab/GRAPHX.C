@@ -706,7 +706,7 @@ fixlinestart:
 			mov ax, 0xa000
 			mov es, ax
 			mov dx, 0x3c5
-			mov cl, i
+			mov cl, byte ptr i
 			and cl, 3
 			mov al, 1
 			shl al, cl
@@ -718,7 +718,7 @@ fixlinestart:
 			_asm \
 			{
 				mov dx, 0x3c5
-				mov cl, i
+				mov cl, byte ptr i
 				and cl, 3
 				mov al, 3
 				shl al, cl
@@ -731,7 +731,7 @@ fixlinestart:
 			_asm \
 			{
 				mov dx, 0x3c5
-				mov cl, i
+				mov cl, byte ptr i
 				and cl, 3
 				mov al, 7
 				shl al, cl
@@ -1243,7 +1243,8 @@ start9:
 						lodsw
 						add ax, shadeioffs
 						cmp di, cx
-						ja endit9
+                        jna start9a
+						jmp endit9
 start9a:
 						xor dh, dh
 						add dx, bx
@@ -1794,7 +1795,7 @@ int x, y, siz, walnume;
 					_asm \
 					{
 						mov dx, 0x3c5
-						mov cl, x
+						mov cl, byte ptr x
 						and cl, 3
 						mov al, 1
 						shl al, cl
@@ -1835,7 +1836,7 @@ int x, y, siz, walnume;
 				_asm \
 				{
 					mov dx, 0x3c5
-					mov cl, i
+					mov cl, byte ptr i
 					and cl, 3
 					mov al, 1
 					shl al, cl
@@ -1847,7 +1848,7 @@ int x, y, siz, walnume;
 					_asm \
 					{
 						mov dx, 0x3c5
-						mov cl, i
+						mov cl, byte ptr i
 						and cl, 3
 						mov al, 3
 						shl al, cl
@@ -1859,7 +1860,7 @@ int x, y, siz, walnume;
 						_asm \
 						{
 							mov dx, 0x3c5
-							mov cl, i
+							mov cl, byte ptr i
 							and cl, 3
 							mov al, 7
 							shl al, cl
@@ -2403,7 +2404,7 @@ int poszs, walnume, angs;
 			_asm \
 			{
 				mov dx, 0x3c5
-				mov cl, i
+				mov cl, byte ptr i
 				and cl, 3
 				mov al, 1
 				shl al, cl
@@ -2415,7 +2416,7 @@ int poszs, walnume, angs;
 				_asm \
 				{
 					mov dx, 0x3c5
-					mov cl, i
+					mov cl, byte ptr i
 					and cl, 3
 					mov al, 3
 					shl al, cl
@@ -2427,7 +2428,7 @@ int poszs, walnume, angs;
 					_asm \
 					{
 						mov dx, 0x3c5
-						mov cl, i
+						mov cl, byte ptr i
 						and cl, 3
 						mov al, 7
 						shl al, cl
@@ -2493,7 +2494,7 @@ int walnume;
 		_asm \
 		{
 			mov dx, 0x3c5
-			mov cl, x
+			mov cl, byte ptr x
 			and cl, 3
 			mov al, 1
 			shl al, cl
