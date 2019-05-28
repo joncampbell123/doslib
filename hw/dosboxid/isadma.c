@@ -24,6 +24,7 @@
 static struct dma_8237_allocation *sb_dma = NULL; /* DMA buffer */
 
 int main(int argc,char **argv,char **envp) {
+    unsigned short tmpr[8];
     unsigned int ch;
     unsigned int i;
 
@@ -124,6 +125,73 @@ int main(int argc,char **argv,char **envp) {
     }
 
     for (i=0;i < 8;i++) printf("%02x ",sb_dma->lin[i]);
+    printf("\n");
+    /*=====================================================================================*/
+
+
+    /*=====================================================================================*/
+    /* read test from memory */
+	outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch) | D8237_MASK_SET); /* mask */
+
+	outp(d8237_ioport(ch,D8237_REG_W_WRITE_MODE),
+		D8237_MODER_CHANNEL(ch) |
+		D8237_MODER_TRANSFER(D8237_MODER_XFER_READ) |
+		D8237_MODER_MODESEL(D8237_MODER_MODESEL_SINGLE));
+
+    d8237_write_count(ch,4096);
+	d8237_write_base(ch,sb_dma->phys);
+    if (ch >= 4) {
+        sb_dma->lin[0] = 0x44;
+        sb_dma->lin[1] = 0xCC;
+        sb_dma->lin[2] = 0x55;
+        sb_dma->lin[3] = 0xDD;
+        sb_dma->lin[4] = 0x66;
+        sb_dma->lin[5] = 0xEE;
+        sb_dma->lin[6] = 0x77;
+        sb_dma->lin[7] = 0xFF;
+    }
+    else {
+        sb_dma->lin[0] = 0x44;
+        sb_dma->lin[1] = 0x55;
+        sb_dma->lin[2] = 0x66;
+        sb_dma->lin[3] = 0x77;
+    }
+
+	outp(d8237_ioport(ch,D8237_REG_W_SINGLE_MASK),D8237_MASK_CHANNEL(ch)); /* unmask */
+
+    for (i=0;i < 4;i++) {
+        dosbox_id_reset_latch();
+        dosbox_id_write_regsel(DOSBOX_ID_REG_8237_INJECT_READ);
+        dosbox_id_write_data(((uint32_t)ch << (uint32_t)16));
+        tmpr[i] = (unsigned short)(dosbox_id_read_data() & 0xFFFFu);
+    }
+
+    /* If 8-bit DMA, the memory pattern read should be 0x44 0x55 0x66 0x77 */
+    /* If 16-bit DMA, the memory pattern read should be 0xCC44 0xDD55 0xEE66 0xFF77 */
+    if (ch >= 4) {
+        if (tmpr[0] == 0xCC44u &&
+            tmpr[1] == 0xDD55u &&
+            tmpr[2] == 0xEE66u &&
+            tmpr[3] == 0xFF77u) {
+            printf("ISA DMA read from memory test passed\n");
+        }
+        else {
+            printf("ISA DMA read from memory test failed\n");
+        }
+    }
+    else {
+        if (tmpr[0] == 0x44 &&
+            tmpr[1] == 0x55 &&
+            tmpr[2] == 0x66 &&
+            tmpr[3] == 0x77) {
+            printf("ISA DMA read from memory test passed\n");
+        }
+        else {
+            printf("ISA DMA read from memory test failed\n");
+        }
+    }
+
+    for (i=0;i < 4;i++) printf("%04x ",tmpr[i]);
     printf("\n");
     /*=====================================================================================*/
 
