@@ -30,7 +30,7 @@ int main(int argc,char **argv,char **envp) {
     irq = (unsigned int)strtoul(argv[1],NULL,0);
     if (irq > 15) return 1;
 
-    if (!strcasecmp(argv[2],"raise"))
+    if (!strcasecmp(argv[2],"raise") || !strcmp(argv[2],"1"))
         raise=1;
 
 	probe_dos();
