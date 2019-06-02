@@ -62,6 +62,7 @@ extern uint16_t DOSBOXID_VAR dosbox_id_baseio;
 #define DOSBOX_ID_REG_8237_INJECT_READ      (0x00823780UL)
 
 #define DOSBOX_ID_REG_8259_INJECT_IRQ       (0x00825900UL)
+#define DOSBOX_ID_REG_8259_PIC_INFO         (0x00825901UL)
 
 #define DOSBOX_ID_REG_INJECT_NMI            (0x00808602UL)
 
