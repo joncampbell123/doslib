@@ -131,7 +131,7 @@ int main(int argc,char **argv,char **envp) {
 
         {
             sz = c - buffer_phys;
-            sz &= (~3u); // FIXME: Assumes 2-channel 16-bit
+            sz -= sz % (size_t)(2 * channel_count);
             if (sz <= buffer_size && sz > 0) {
                 /* prove it's working by writing the audio to disk */
                 fd = open("MIXC.WAV",O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0644);
