@@ -51,6 +51,7 @@ int main(int argc,char **argv,char **envp) {
         printf("Malloc failed\n");
         return 1;
     }
+    memset(buffer,0,buffer_size);
 
     {
         uint32_t mixq;
@@ -106,7 +107,9 @@ int main(int argc,char **argv,char **envp) {
     dosbox_id_write_data(0); // turn off and reset mixer recording control
 
     {
-        uint32_t c;
+        unsigned char tmp[44];
+        uint32_t c,sz;
+        int fd;
 
         printf("* Start means the first byte of memory\n");
         printf("* End means the first byte past the end of the buffer\n");
@@ -117,6 +120,37 @@ int main(int argc,char **argv,char **envp) {
         dosbox_id_write_regsel(DOSBOX_ID_REG_MIXER_WRITEPOS);
         c = dosbox_id_read_data();
         printf("Finished: Write pos 0x%08lx\n",(unsigned long)c);
+
+        {
+            sz = c - buffer_phys;
+            sz &= (~3u); // FIXME: Assumes 2-channel 16-bit
+            if (sz <= buffer_size && sz > 0) {
+                /* prove it's working by writing the audio to disk */
+                fd = open("MIXC.WAV",O_WRONLY|O_BINARY|O_CREAT|O_TRUNC,0644);
+                if (fd >= 0) {
+                    memcpy(tmp+0x00,"RIFF",4);
+                    *((uint32_t*)(tmp+0x04)) = (sz + 44u - 8u);
+                    memcpy(tmp+0x08,"WAVE",4);
+
+                    memcpy(tmp+0x0C,"fmt ",4); // struct starts at 0x14, 16 bytes
+                    *((uint32_t*)(tmp+0x10)) = 16;
+                    *((uint16_t*)(tmp+0x14)) = 0x0001;      // WAVE_FORMAT_PCM
+                    *((uint16_t*)(tmp+0x16)) = 2;           // nChannels        (FIXME assumes 2 channels)
+                    *((uint32_t*)(tmp+0x18)) = 44100;       // nSamplesPerSec   (FIXME)
+                    *((uint32_t*)(tmp+0x1C)) = 44100 * 2 * 2;// nAvgBytesPerSec (FIXME)
+                    *((uint16_t*)(tmp+0x20)) = 2 * 2;       // nBlockAlign
+                    *((uint16_t*)(tmp+0x22)) = 16;          // wBitsPerSample   (FIXME)
+
+                    memcpy(tmp+0x24,"data",4); // data starts at 0x2C (44)
+                    *((uint32_t*)(tmp+0x28)) = sz;
+
+                    write(fd,tmp,0x2C);
+                    write(fd,buffer,sz);
+
+                    close(fd);
+                }
+            }
+        }
     }
 
     return 0;
