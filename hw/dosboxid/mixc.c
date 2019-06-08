@@ -42,10 +42,12 @@ int main(int argc,char **argv,char **envp) {
     buffer_size = 512 * 1024;
     buffer = malloc(buffer_size); // CAUTION: Assumes EMM386.EXE does not have the system in virtual 8086 mode
     buffer_phys = (uint32_t)buffer;
+    printf("Buffer: %p phys 0x%08lx\n",buffer,buffer_phys);
 #else
     buffer_size = 16384;
     buffer = malloc(buffer_size);
-    buffer_phys = (FP_SEG(buffer) << 4ul) + FP_OFF(buffer);
+    buffer_phys = ((unsigned long)FP_SEG(buffer) << 4ul) + (unsigned long)FP_OFF(buffer);
+    printf("Buffer: %Fp phys 0x%08lx\n",(unsigned char far*)buffer,buffer_phys);
 #endif
     if (buffer == NULL) {
         printf("Malloc failed\n");
