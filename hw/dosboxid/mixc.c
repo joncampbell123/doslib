@@ -73,6 +73,11 @@ int main(int argc,char **argv,char **envp) {
 
         sample_rate = (uint32_t)(mixq & 0xFFFFFul);
         channel_count = (uint16_t)((mixq >> 20ul) & 0xFul);
+
+        if (sample_rate == 0 || channel_count == 0 || channel_count > 8) {
+            printf("Cannot accept mixer params\n");
+            return 1;
+        }
     }
 
     dosbox_id_write_regsel(DOSBOX_ID_REG_MIXER_CONTROL);
