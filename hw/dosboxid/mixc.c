@@ -23,6 +23,9 @@ int16_t *buffer = NULL;
 size_t buffer_size = 0;
 uint32_t buffer_phys = 0;
 
+uint32_t sample_rate = 0;
+uint16_t channel_count = 0;
+
 int main(int argc,char **argv,char **envp) {
 	probe_dos();
 	detect_windows();
@@ -67,6 +70,9 @@ int main(int argc,char **argv,char **envp) {
             (unsigned int)((mixq >> 30ul) & 1ul),
             ((unsigned int)((mixq >> 31ul) & 1ul)) ^ 1,
             (unsigned int)((mixq >> 29ul) & 1ul));
+
+        sample_rate = (uint32_t)(mixq & 0xFFFFFul);
+        channel_count = (uint16_t)((mixq >> 20ul) & 0xFul);
     }
 
     dosbox_id_write_regsel(DOSBOX_ID_REG_MIXER_CONTROL);
@@ -136,12 +142,12 @@ int main(int argc,char **argv,char **envp) {
 
                     memcpy(tmp+0x0C,"fmt ",4); // struct starts at 0x14, 16 bytes
                     *((uint32_t*)(tmp+0x10)) = 16;
-                    *((uint16_t*)(tmp+0x14)) = 0x0001;      // WAVE_FORMAT_PCM
-                    *((uint16_t*)(tmp+0x16)) = 2;           // nChannels        (FIXME assumes 2 channels)
-                    *((uint32_t*)(tmp+0x18)) = 44100;       // nSamplesPerSec   (FIXME)
-                    *((uint32_t*)(tmp+0x1C)) = 44100 * 2 * 2;// nAvgBytesPerSec (FIXME)
-                    *((uint16_t*)(tmp+0x20)) = 2 * 2;       // nBlockAlign
-                    *((uint16_t*)(tmp+0x22)) = 16;          // wBitsPerSample   (FIXME)
+                    *((uint16_t*)(tmp+0x14)) = 0x0001;                              // WAVE_FORMAT_PCM
+                    *((uint16_t*)(tmp+0x16)) = channel_count;                       // nChannels
+                    *((uint32_t*)(tmp+0x18)) = sample_rate;                         // nSamplesPerSec
+                    *((uint32_t*)(tmp+0x1C)) = sample_rate * channel_count * 2ul;   // nAvgBytesPerSec
+                    *((uint16_t*)(tmp+0x20)) = 2 * channel_count;                   // nBlockAlign
+                    *((uint16_t*)(tmp+0x22)) = 16;                                  // wBitsPerSample
 
                     memcpy(tmp+0x24,"data",4); // data starts at 0x2C (44)
                     *((uint32_t*)(tmp+0x28)) = sz;
