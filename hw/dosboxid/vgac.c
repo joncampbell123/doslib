@@ -74,7 +74,7 @@ void write_frame(void) {
     write(fd,&fhdr,sizeof(fhdr));
 
     ihdr.biSize = sizeof(ihdr); // 40
-    ihdr.biWidth = buffer_width;
+    ihdr.biWidth = (buffer_width + 3u) & (~3u); // because ImageMagick doesn't seem to understand the BMP round up rule?
     ihdr.biHeight = buffer_height;
     ihdr.biPlanes = 1;
     ihdr.biBitCount = 32;
