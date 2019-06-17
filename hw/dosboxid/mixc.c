@@ -28,10 +28,15 @@ uint16_t channel_count = 0;
 
 int main(int argc,char **argv,char **envp) {
 	probe_dos();
+    cpu_probe();
 	detect_windows();
 
     if (windows_mode == WINDOWS_NT) {
         printf("This program is not compatible with Windows NT\n");
+        return 1;
+    }
+    if (cpu_flags & CPU_FLAG_V86_ACTIVE) {
+        printf("This program cannot be safely used in virtual 8086 mode\n");
         return 1;
     }
 
