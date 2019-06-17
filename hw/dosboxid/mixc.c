@@ -40,6 +40,18 @@ int main(int argc,char **argv,char **envp) {
         return 1;
     }
 
+#if TARGET_MSDOS == 32
+    /* if we can't use the LTP library, then we can't do the trick */
+    if (!dos_ltp_probe()) {
+        printf("Cannot determine physical memory mapping\n");
+        return 1;
+    }
+    if (dos_ltp_info.paging) { // DOS extenders and EMM386 may remap DMA to make it work but bus mastering... no way
+        printf("Cannot determine physical memory mapping\n");
+        return 1;
+    }
+#endif
+
 	if (!probe_dosbox_id()) {
 		printf("DOSBox integration device not found\n");
 		return 1;
