@@ -44,7 +44,7 @@ typedef struct windows_BITMAPINFOHEADER {
 #pragma pack(pop)
 
 uint8_t *buffer = NULL;
-size_t buffer_size = 0;
+uint32_t buffer_size = 0;
 uint32_t buffer_phys = 0;
 
 uint32_t buffer_max = 0;
