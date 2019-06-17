@@ -110,6 +110,8 @@ extern uint16_t DOSBOXID_VAR dosbox_id_baseio;
 
 #define DOSBOX_ID_CMD_SET_WATCHDOG          (0x57415444UL)
 
+#define DOSBOX_ID_CMD_GET_VGA_SIZE          (0x006845C0UL)
+
 /* DOSBOX_ID_REG_SCREENSHOT_TRIGGER bitfield for writing */
 #define DOSBOX_ID_SCREENSHOT_IMAGE		(1UL << 0UL)		/* trigger a screenshot. wait for vertical retrace, then read the register to check it happened */
 #define DOSBOX_ID_SCREENSHOT_VIDEO		(1UL << 1UL)		/* toggle on/off video capture */

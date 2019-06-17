@@ -58,6 +58,15 @@ int main(int argc,char **argv,char **envp) {
             ((unsigned int)((mixq >> 31ul) & 1ul)) ^ 1,
             (unsigned int)((mixq >> 29ul) & 1ul));
     }
+    {
+        uint32_t vgainfo;
+
+        dosbox_id_write_regsel(DOSBOX_ID_CMD_GET_VGA_SIZE);
+        vgainfo = dosbox_id_read_data();
+        printf("VGA: %u x %u\n",
+            (unsigned int)(vgainfo & 0xFFFFUL),
+            (unsigned int)(vgainfo >> 16UL));
+    }
 
 	return 0;
 }
