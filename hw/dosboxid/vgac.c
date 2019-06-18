@@ -74,7 +74,7 @@ void write_frame(void) {
     write(fd,&fhdr,sizeof(fhdr));
 
     ihdr.biSize = sizeof(ihdr); // 40
-    ihdr.biWidth = (buffer_width + 3u) & (~3u); // because ImageMagick doesn't seem to understand the BMP round up rule?
+    ihdr.biWidth = buffer_stride / 4;   // stride is rounded up to DWORD multiple. Each pixel is a DWORD, therefore no rounding needed.
     ihdr.biHeight = buffer_height;
     ihdr.biPlanes = 1;
     ihdr.biBitCount = 32;
@@ -145,7 +145,7 @@ int main(int argc,char **argv,char **envp) {
     buffer_max = 24*1024;
 #endif
 
-    buffer_stride = ((uint32_t)((w + 3) & (~3u))) * 4ul; // output is always 32bpp XRGB, width multiple of 4 for bitmap
+    buffer_stride = (uint32_t)w * 4ul; // output is always 32bpp XRGB
 
     printf("VGA: %u x %u\n",vga_width,vga_height);
     printf("Will capture: x=%d y=%d w=%d h=%d\n",x,y,w,h);
