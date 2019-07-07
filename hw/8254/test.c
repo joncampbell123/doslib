@@ -352,6 +352,39 @@ int main() {
 					}
 				}
 			}
+            else if (c == 's') {
+				unsigned long delay_ticks;
+
+                printf("\nRunning the CPU in a loop with interrupts disabled, but STI+CLI per wait (4 sec loop)\n");
+				delay_ticks = t8254_us2ticks(1000000);
+
+                while (1) {
+                    printf("."); fflush(stdout);
+                    if (kbhit()) {
+						int c = getch();
+                        if (c == 27) break;
+                    }
+
+                    _cli();
+                    t8254_wait(delay_ticks);
+                    __asm {
+                        sti
+                        cli
+                    }
+                    t8254_wait(delay_ticks);
+                    __asm {
+                        sti
+                        cli
+                    }
+                    t8254_wait(delay_ticks);
+                    __asm {
+                        sti
+                        cli
+                    }
+                    t8254_wait(delay_ticks);
+                    _sti();
+                }
+            }
 			else if (c == 'd') {
 				printf("\n                                    \nDetail mode, hit 'd' again to exit: [WARNING: 8254 only]\n");
 				while (1) {
