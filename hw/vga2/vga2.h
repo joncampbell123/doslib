@@ -15,7 +15,11 @@
  *      cells (attribute in another part) */
 typedef uint16_t VGA2_FAR      *VGA2_ALPHA_PTR;
 
-/* This data type represents one whole character. It doesn't necessarily match the typedef to video RAM. */
+/* This data type represents one whole character. It doesn't necessarily match the typedef to video RAM
+ * nor does it necessarily include the attribute.
+ *
+ * IBM PC: Carries char and attribute
+ * PC-98:  Carries char only */
 typedef uint16_t                VGA2_ALPHA_CHAR;
 
 extern uint8_t                  vga2_flags;
