@@ -51,41 +51,41 @@ extern uint16_t                 vga2_alpha_segptr;
 extern void                     (*vga2_update_alpha_ptr)(void);
 #endif
 
-static inline VGA2_ALPHA_PTR vga2_segofs2ptr(const unsigned short s,const unsigned short o) {
+static inline VGA2_ALPHA_PTR vga2_segofs2ptr(const unsigned int s,const unsigned int o) {
 #if TARGET_MSDOS == 32
-    return (VGA2_ALPHA_PTR)(((unsigned int)s << 4u) + (unsigned int)o);
+    return (VGA2_ALPHA_PTR)((s << 4u) + o);
 #else
     return (VGA2_ALPHA_PTR)MK_FP(s,o);
 #endif
 }
 
-static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
+static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned int s) {
     return vga2_segofs2ptr(s,0u);
 }
 
 #ifdef TARGET_PC98
-static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned short o) {
+static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
     return vga2_segofs2ptr(0xA000,0);
 }
 
-static inline void vga2_alpha_ptr_set(const uint16_t s) {
+static inline void vga2_alpha_ptr_set(const unsigned int s) {
     /* nothing */
 }
 #else
  #if TARGET_MSDOS == 32
-static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned short o) {
+static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
     return vga2_alpha_memptr + o;
 }
 
-static inline void vga2_alpha_ptr_set(const uint16_t s) {
+static inline void vga2_alpha_ptr_set(const unsigned int s) {
     vga2_alpha_memptr = vga2_seg2ptr(s);
 }
  #else
-static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned short o) {
+static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
     return vga2_segofs2ptr(vga2_alpha_segptr,0);
 }
 
-static inline void vga2_alpha_ptr_set(const uint16_t s) {
+static inline void vga2_alpha_ptr_set(const unsigned int s) {
     vga2_alpha_segptr = s;
 }
  #endif
