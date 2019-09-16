@@ -24,7 +24,7 @@ static const uint8_t probe_vga2_dcc_to_flags[probe_vga2_dcc_to_flags_sz] = {
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA                                                          // 0x0C
 };
 
-uint16_t                        vga2_flags = 0;
+uint8_t                         vga2_flags = 0;
 
 /* Unlike the first VGA library, this probe function only focuses on the primary
  * classification of video hardware: MDA, CGA, EGA, VGA, MCGA, and PGA. The code

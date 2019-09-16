@@ -18,7 +18,7 @@ typedef uint16_t VGA2_FAR      *VGA2_ALPHA_PTR;
 /* This data type represents one whole character. It doesn't necessarily match the typedef to video RAM. */
 typedef uint16_t                VGA2_ALPHA_CHAR;
 
-extern uint16_t                 vga2_flags;
+extern uint8_t                  vga2_flags;
 #define VGA2_FLAG_NONE              (0u)
 #define VGA2_FLAG_MDA               (1u << 0u)
 #define VGA2_FLAG_CGA               (1u << 1u)
