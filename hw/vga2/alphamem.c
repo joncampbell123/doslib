@@ -51,9 +51,30 @@ void                            (*vga2_update_alpha_modeinfo)(void) = vga2_updat
 
 void vga2_update_alpha_modeinfo_default(void) {
 #ifdef TARGET_PC98
-    vga2_alpha_base.width = 80;         /* always 80, even in 40 column mode. see notes above. */
-    vga2_alpha_base.height = 25;        /* TODO: MS-DOS maintains the console, and fixed locations are well known to hold the height. */
-                                        /*       Height can be 20, 25, or 30 */
+    vga2_alpha_base.width = 80;                         /* always 80, even in 40 column mode. see notes above. */
+    vga2_alpha_base.height = 25;                        /* assume 25, but code below will poke into DOS kernel for more info */
+
+    /* Poking into the DOS kernel directly is bad, but on PC-98 MS-DOS is a very common practice by
+     * games and applications to determine cursor position and screen size.
+     *
+     * If it matters, perhaps this code could instead poke into the BIOS data area instead. */
+    {
+        /* 0x60:0x112 = ANSI scroll region lower limit (last line number).
+         *              Normally this is the last line before the function key row.
+         *              On a 25-line text display with the function key row visible this value would be 23.
+         *              This code will return the wrong value if a smaller scroll region has been defined
+         *              through the ANSI driver (INT DCh or otherwise).
+         *              If your program clears everything away at startup and never sets a scroll region
+         *              this code should work OK.
+         *              Using this value is very common with PC-98 games. */
+        register unsigned char sh = *vga2_dosseg_b(0x112) + 1;
+        /* 0x60:0x111 = Function key row display status. 0x01 if visible, 0x00 if not.
+         *              If it's visible then one more line needs to be counted. */
+        if (*vga2_dosseg_b(0x111) != 0) sh++;
+
+        /* if the result seems reasonable then accept it */
+        vga2_alpha_base.height = sh;
+    }
 #else
     if ((vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) != 0u) {
         /* EGA/VGA: Could be mono or color.
