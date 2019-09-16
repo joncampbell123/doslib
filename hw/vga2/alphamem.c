@@ -31,8 +31,8 @@ vga2_alpha_base_t vga2_alpha_base = {
     .segptr = 0,
  #endif
 #endif
-    .width = 0,
-    .height = 0
+    .width = 80,                /* reasonable defaults, for both IBM PC and NEC PC-98 */
+    .height = 25
 };
 
 #if TARGET_MSDOS == 32
