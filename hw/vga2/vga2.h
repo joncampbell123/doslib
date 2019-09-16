@@ -64,6 +64,25 @@ typedef struct vga2_alpha_base_t {
 
 extern vga2_alpha_base_t        vga2_alpha_base;
 
+/* TODO: Should be more general library functions to read the BIOS data area! */
+#if TARGET_MSDOS == 32
+static inline uint8_t *vga2_bda_b(const unsigned int o) {
+    return ((uint8_t*)(0x400u + o));
+}
+
+static inline uint16_t *vga2_bda_w(const unsigned int o) {
+    return ((uint16_t*)(0x400u + o));
+}
+#else
+static inline uint8_t far *vga2_bda_b(const unsigned int o) {
+    return ((uint8_t far*)MK_FP(0x40u,o));
+}
+
+static inline uint16_t far *vga2_bda_w(const unsigned int o) {
+    return ((uint16_t far*)MK_FP(0x40u,o));
+}
+#endif
+
 static inline VGA2_ALPHA_PTR vga2_segofs2ptr(const unsigned int s,const unsigned int o) {
 #if TARGET_MSDOS == 32
     return (VGA2_ALPHA_PTR)((s << 4u) + o);
