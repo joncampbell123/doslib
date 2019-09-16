@@ -6,6 +6,21 @@
 
 #include <hw/vga2/vga2.h>
 
+/* TODO: This API must be replaced.
+ *
+ *       Replace it with a general "init from video mode" that reads from the BIOS.
+ *       That way one function call takes care of video pointer, number of rows and
+ *       columns (from BIOS).
+ *
+ * TODO: Add variables for width and height, byte values. The API will deliberately
+ *       use the width as the stride (bytes per line) and will not maintain a
+ *       separate variable for stride. It is not this code's responsibility to
+ *       provide for rendering text at an offset within the bounds of a display.
+ *
+ * TODO: Separate variables and source code file if the program wants to manage
+ *       cursor position as well. Will have internal variables for X and Y and
+ *       functions to copy to/from the BIOS data area. */
+
 VGA2_ALPHA_PTR                  vga2_alpha_mem = NULL;
 
 /* this is a function pointer so that specialty code, such as PCjr support, can
