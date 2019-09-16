@@ -51,12 +51,16 @@ extern uint16_t                 vga2_alpha_segptr;
 extern void                     (*vga2_update_alpha_ptr)(void);
 #endif
 
-static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
+static inline VGA2_ALPHA_PTR vga2_segofs2ptr(const unsigned short s,const unsigned short o) {
 #if TARGET_MSDOS == 32
-    return (VGA2_ALPHA_PTR)((unsigned int)s << 4u);
+    return (VGA2_ALPHA_PTR)(((unsigned int)s << 4u) + (unsigned int)o);
 #else
-    return (VGA2_ALPHA_PTR)MK_FP(s,0);
+    return (VGA2_ALPHA_PTR)MK_FP(s,o);
 #endif
+}
+
+static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
+    return vga2_segofs2ptr(s,0u);
 }
 
 #ifdef TARGET_PC98
