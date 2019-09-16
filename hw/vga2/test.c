@@ -10,9 +10,6 @@ int main(int argc,char **argv) {
     /* base classicifcation */
     probe_vga2();
 
-    /* we're interested in text mode, probe it */
-    vga2_update_alpha_ptr();
-
     printf("VGA2 flags: 0x%x\n",vga2_flags);
     if (vga2_flags & VGA2_FLAG_MDA)
         printf("  - MDA\n");
@@ -30,6 +27,9 @@ int main(int argc,char **argv) {
         printf("  - MONO DISPLAY\n");
     if (vga2_flags & VGA2_FLAG_DIGITAL_DISPLAY)
         printf("  - DIGITAL DISPLAY\n");
+
+    /* we're interested in text mode, probe it */
+    vga2_update_alpha_ptr();
 
 #if TARGET_MSDOS == 32
     printf("Alpha ptr: %p\n",vga2_alpha_mem);
