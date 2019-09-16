@@ -49,6 +49,10 @@ void vga2_update_alpha_ptr_default(void) {
          *
          *      (well actually the 5150 BIOS I have with CGA does allow mode 7 *bug*, in which
          *      case the CGA output is programmed to MDA timing!) */
+        /* Another, possibly more effective technique that would be extra work here, would be
+         * to use INT 10h AH=12h BL=10h Alternate Function Select (Get EGA info) to determine
+         * whether the card is in mono or color mode (BH value on return). That would be more
+         * useful to the alphanumeric and graphics libraries than this code. */
         vga2_alpha_ptr_set((vga2_get_int10_current_mode() == 7u) ? 0xB000u : 0xB800u);
     }
     else {
