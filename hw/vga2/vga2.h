@@ -29,7 +29,11 @@ extern uint8_t                  vga2_flags;
 #define VGA2_FLAG_DIGITAL_DISPLAY   (1u << 6u)
 #define VGA2_FLAG_PGA               (1u << 7u)
 
-extern VGA2_ALPHA_PTR           vga2_alpha_mem;
+#if TARGET_MSDOS == 32
+extern VGA2_ALPHA_PTR           vga2_alpha_memptr;
+#else
+extern uint16_t                 vga2_alpha_segptr;
+#endif
 
 extern void                     (*vga2_update_alpha_ptr)(void);
 
@@ -40,6 +44,24 @@ static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
     return (VGA2_ALPHA_PTR)MK_FP(s,0);
 #endif
 }
+
+#if TARGET_MSDOS == 32
+static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
+    return vga2_alpha_memptr;
+}
+
+static inline void vga2_alpha_ptr_set(const uint16_t s) {
+    vga2_alpha_memptr = vga2_seg2ptr(s);
+}
+#else
+static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
+    return vga2_seg2ptr(vga2_alpha_segptr);
+}
+
+static inline void vga2_alpha_ptr_set(const uint16_t s) {
+    vga2_alpha_segptr = s;
+}
+#endif
 
 void vga2_update_alpha_ptr_default(void);
 

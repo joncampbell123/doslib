@@ -32,9 +32,9 @@ int main(int argc,char **argv) {
     vga2_update_alpha_ptr();
 
 #if TARGET_MSDOS == 32
-    printf("Alpha ptr: %p\n",vga2_alpha_mem);
+    printf("Alpha ptr: %p\n",vga2_alpha_ptr());
 #else
-    printf("Alpha ptr: %Fp\n",vga2_alpha_mem);
+    printf("Alpha ptr: %Fp\n",vga2_alpha_ptr());
 #endif
 
     return 0;

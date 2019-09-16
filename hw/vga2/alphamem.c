@@ -21,7 +21,11 @@
  *       cursor position as well. Will have internal variables for X and Y and
  *       functions to copy to/from the BIOS data area. */
 
-VGA2_ALPHA_PTR                  vga2_alpha_mem = NULL;
+#if TARGET_MSDOS == 32
+VGA2_ALPHA_PTR                  vga2_alpha_memptr = NULL;
+#else
+uint16_t                        vga2_alpha_segptr = 0;
+#endif
 
 /* this is a function pointer so that specialty code, such as PCjr support, can
  * provide it's own version to point at wherever the video memory is. */
@@ -43,15 +47,15 @@ void vga2_update_alpha_ptr_default(void) {
          *
          *      (well actually the 5150 BIOS I have with CGA does allow mode 7 *bug*, in which
          *      case the CGA output is programmed to MDA timing!) */
-        vga2_alpha_mem = vga2_seg2ptr((vga2_get_int10_current_mode() == 7u) ? 0xB000u : 0xB800u);
+        vga2_alpha_ptr_set((vga2_get_int10_current_mode() == 7u) ? 0xB000u : 0xB800u);
     }
     else if ((vga2_flags & (VGA2_FLAG_CGA|VGA2_FLAG_MCGA)) != 0u) {
         /* CGA/MCGA: Color, always */
-        vga2_alpha_mem = vga2_seg2ptr(0xB800u);
+        vga2_alpha_ptr_set(0xB800u);
     }
     else {
         /* MDA/Hercules: Mono, always */
-        vga2_alpha_mem = vga2_seg2ptr(0xB000u);
+        vga2_alpha_ptr_set(0xB000u);
     }
 }
 
