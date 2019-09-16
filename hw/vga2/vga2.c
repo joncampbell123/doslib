@@ -94,6 +94,10 @@ void probe_vga2(void) {
     }
 
     /* Then: MDA/CGA detection. Prefer whatever the BIOS started up with. */
+    /*       Please NOTE on original IBM 5150 hardware this comes from the DIP switches on the board
+     *       that tells the BIOS whether MDA or CGA is installed. The design allows both MDA and CGA
+     *       to be installed at the same time in which case the DIP switches tell the BIOS which one
+     *       to use by default, and therefore this library as well. */
     {
         /* equipment word, bits [5:4]   3=80x25 mono  2=80x25 color  1=40x25 color  0=EGA, VGA, PGA */
         if (((unsigned char)vga2_int11_equipment() & (unsigned char)0x30u) == (unsigned char)0x30u)
