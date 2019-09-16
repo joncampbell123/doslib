@@ -8,9 +8,9 @@ NOW_BUILDING = HW_VGA2_LIB
 TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
 !endif
 
-$(HW_VGA2_LIB): $(SUBDIR)$(HPS)vga2.obj $(SUBDIR)$(HPS)vgagdcc.obj $(SUBDIR)$(HPS)valtegam.obj $(SUBDIR)$(HPS)valegasw.obj
-	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)vga2.obj -+$(SUBDIR)$(HPS)vgagdcc.obj -+$(SUBDIR)$(HPS)valtegam.obj
-	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)valegasw.obj
+$(HW_VGA2_LIB): $(SUBDIR)$(HPS)vga2.obj $(SUBDIR)$(HPS)vgagdcc.obj $(SUBDIR)$(HPS)valtegam.obj $(SUBDIR)$(HPS)valegasw.obj $(SUBDIR)$(HPS)alphamem.obj
+	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)vga2.obj     -+$(SUBDIR)$(HPS)vgagdcc.obj  -+$(SUBDIR)$(HPS)valtegam.obj
+	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)valegasw.obj -+$(SUBDIR)$(HPS)alphamem.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
