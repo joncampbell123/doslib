@@ -47,14 +47,22 @@ extern uint8_t                  vga2_flags;
 /* fixed, not movable */
  #define                        vga2_update_alpha_modeinfo() do { } while(0) /* stub */
 #else
- #if TARGET_MSDOS == 32
-extern VGA2_ALPHA_PTR           vga2_alpha_memptr;
- #else
-extern uint16_t                 vga2_alpha_segptr;
- #endif
-
 extern void                     (*vga2_update_alpha_modeinfo)(void);
 #endif
+
+typedef struct vga2_alpha_base_t {
+#ifndef TARGET_PC98 /* segment is fixed, not movable */
+ #if TARGET_MSDOS == 32
+    VGA2_ALPHA_PTR              memptr;
+ #else
+    uint16_t                    segptr;
+ #endif
+#endif
+    uint8_t                     width;
+    uint8_t                     height;
+} vga2_alpha_base_t;
+
+extern vga2_alpha_base_t        vga2_alpha_base;
 
 static inline VGA2_ALPHA_PTR vga2_segofs2ptr(const unsigned int s,const unsigned int o) {
 #if TARGET_MSDOS == 32
@@ -79,19 +87,19 @@ static inline void vga2_alpha_ptr_set(const unsigned int s) {
 #else
  #if TARGET_MSDOS == 32
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
-    return vga2_alpha_memptr + o;
+    return vga2_alpha_base.memptr + o;
 }
 
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
-    vga2_alpha_memptr = vga2_seg2ptr(s);
+    vga2_alpha_base.memptr = vga2_seg2ptr(s);
 }
  #else
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
-    return vga2_segofs2ptr(vga2_alpha_segptr,0);
+    return vga2_segofs2ptr(vga2_alpha_base.segptr,0);
 }
 
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
-    vga2_alpha_segptr = (uint16_t)s;
+    vga2_alpha_base.segptr = (uint16_t)s;
 }
  #endif
 

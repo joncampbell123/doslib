@@ -23,6 +23,18 @@
  *       cursor position as well. Will have internal variables for X and Y and
  *       functions to copy to/from the BIOS data area. */
 
+vga2_alpha_base_t vga2_alpha_base = {
+#ifndef TARGET_PC98 /* PC-98 segment is always 0xA000, IBM PC can be 0xB800 or 0xB800 and even 0xA000 is possible. */
+ #if TARGET_MSDOS == 32
+    .memptr = NULL,
+ #else
+    .segptr = 0,
+ #endif
+#endif
+    .width = 0,
+    .height = 0
+};
+
 #if TARGET_MSDOS == 32
 VGA2_ALPHA_PTR                  vga2_alpha_memptr = NULL;
 #else
