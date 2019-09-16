@@ -7,7 +7,10 @@
 #include <hw/vga2/vga2.h>
 
 int main(int argc,char **argv) {
+    /* base classicifcation */
     probe_vga2();
+
+    /* we're interested in text mode, probe it */
     vga2_update_alpha_ptr();
 
     printf("VGA2 flags: 0x%x\n",vga2_flags);
