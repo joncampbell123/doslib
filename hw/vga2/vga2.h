@@ -172,7 +172,11 @@ unsigned char vga2_alt_ega_monocolor(void);
 unsigned char vga2_alt_ega_switches(void);
 #endif
 
+#ifdef TARGET_PC98
+ #define probe_vga2() do { } while (0)
+#else
 void probe_vga2(void);
+#endif
 
 #ifndef TARGET_PC98
 void vga2_update_alpha_ptr_default(void);

@@ -47,11 +47,10 @@ uint8_t                         vga2_flags = 0;
  * information, so that if the host does not call anything related to that, then
  * nothing of that sort is linked into the executable (i.e. games that do not
  * use text mode) */
-void probe_vga2(void) {
 #ifdef TARGET_PC98
     /*nothing*/
-    goto done;
 #else
+void probe_vga2(void) {
     if (vga2_flags != 0)
         return;
 
@@ -86,9 +85,9 @@ void probe_vga2(void) {
         else
             vga2_flags = VGA2_FLAG_CGA | VGA2_FLAG_DIGITAL_DISPLAY;
     }
-#endif
 
 done:
     { }
 }
+#endif
 
