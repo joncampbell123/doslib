@@ -10,6 +10,14 @@ int main(int argc,char **argv) {
     /* base classicifcation */
     probe_vga2();
 
+    /* If I don't call the function to obtain the alphanumeric pointer,
+     * then that code should NOT be linked into this executable.
+     *
+     * That can be verified by compiling with Open Watcom C and then
+     * reading the *.map file for this executable to make sure only
+     * the probe and flags symbols were added. The alpha functions
+     * should NOT be linked in. */
+
     printf("VGA2 flags: 0x%x\n",vga2_flags);
     if (vga2_flags & VGA2_FLAG_MDA)
         printf("  - MDA\n");
