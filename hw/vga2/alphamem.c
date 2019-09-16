@@ -6,6 +6,8 @@
 
 #include <hw/vga2/vga2.h>
 
+#ifndef TARGET_PC98
+
 /* TODO: This API must be replaced.
  *
  *       Replace it with a general "init from video mode" that reads from the BIOS.
@@ -58,4 +60,6 @@ void vga2_update_alpha_ptr_default(void) {
         vga2_alpha_ptr_set(0xB000u);
     }
 }
+
+#endif
 

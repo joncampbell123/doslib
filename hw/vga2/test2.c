@@ -19,6 +19,9 @@ int main(int argc,char **argv) {
      * should NOT be linked in. */
 
     printf("VGA2 flags: 0x%x\n",vga2_flags);
+#ifdef TARGET_PC98
+    /*nothing*/
+#else
     if (vga2_flags & VGA2_FLAG_MDA)
         printf("  - MDA\n");
     if (vga2_flags & VGA2_FLAG_CGA)
@@ -35,6 +38,7 @@ int main(int argc,char **argv) {
         printf("  - MONO DISPLAY\n");
     if (vga2_flags & VGA2_FLAG_DIGITAL_DISPLAY)
         printf("  - DIGITAL DISPLAY\n");
+#endif
 
     return 0;
 }

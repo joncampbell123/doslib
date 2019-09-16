@@ -4,10 +4,8 @@
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 NOW_BUILDING = HW_VGA2_LIB
 
-!ifndef PC98
 TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
 TEST2_EXE =    $(SUBDIR)$(HPS)test2.$(EXEEXT)
-!endif
 
 $(HW_VGA2_LIB): $(SUBDIR)$(HPS)vga2.obj $(SUBDIR)$(HPS)vgagdcc.obj $(SUBDIR)$(HPS)valtegam.obj $(SUBDIR)$(HPS)valegasw.obj $(SUBDIR)$(HPS)alphamem.obj
 	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)vga2.obj     -+$(SUBDIR)$(HPS)vgagdcc.obj  -+$(SUBDIR)$(HPS)valtegam.obj

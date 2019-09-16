@@ -6,6 +6,7 @@
 
 #include <hw/vga2/vga2.h>
 
+#ifndef TARGET_PC98
 /* INT 10h AX=0x1A00 GET DISPLAY COMBINATION CODE (PS,VGA/MCGA) values of BL [http://www.ctyme.com/intr/rb-0219.htm] */
 #define probe_vga2_dcc_to_flags_sz 0x0D
 static const uint8_t probe_vga2_dcc_to_flags[probe_vga2_dcc_to_flags_sz] = {
@@ -23,6 +24,7 @@ static const uint8_t probe_vga2_dcc_to_flags[probe_vga2_dcc_to_flags_sz] = {
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA | VGA2_FLAG_MONO_DISPLAY,                                // 0x0B
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA                                                          // 0x0C
 };
+#endif
 
 uint8_t                         vga2_flags = 0;
 
@@ -42,6 +44,10 @@ uint8_t                         vga2_flags = 0;
  * nothing of that sort is linked into the executable (i.e. games that do not
  * use text mode) */
 void probe_vga2(void) {
+#ifdef TARGET_PC98
+    /*nothing*/
+    goto done;
+#else
     if (vga2_flags != 0)
         return;
 
@@ -76,6 +82,7 @@ void probe_vga2(void) {
         else
             vga2_flags = VGA2_FLAG_CGA | VGA2_FLAG_DIGITAL_DISPLAY;
     }
+#endif
 
 done:
     { }

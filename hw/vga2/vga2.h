@@ -24,22 +24,32 @@ typedef uint16_t                VGA2_ALPHA_CHAR;
 
 extern uint8_t                  vga2_flags;
 #define VGA2_FLAG_NONE              (0u)
-#define VGA2_FLAG_MDA               (1u << 0u)
-#define VGA2_FLAG_CGA               (1u << 1u)
-#define VGA2_FLAG_EGA               (1u << 2u)
-#define VGA2_FLAG_MCGA              (1u << 3u)
-#define VGA2_FLAG_VGA               (1u << 4u)
-#define VGA2_FLAG_MONO_DISPLAY      (1u << 5u)
-#define VGA2_FLAG_DIGITAL_DISPLAY   (1u << 6u)
-#define VGA2_FLAG_PGA               (1u << 7u)
 
-#if TARGET_MSDOS == 32
-extern VGA2_ALPHA_PTR           vga2_alpha_memptr;
+#ifdef TARGET_PC98
+/* nothing yet */
 #else
-extern uint16_t                 vga2_alpha_segptr;
+# define VGA2_FLAG_MDA              (1u << 0u)
+# define VGA2_FLAG_CGA              (1u << 1u)
+# define VGA2_FLAG_EGA              (1u << 2u)
+# define VGA2_FLAG_MCGA             (1u << 3u)
+# define VGA2_FLAG_VGA              (1u << 4u)
+# define VGA2_FLAG_MONO_DISPLAY     (1u << 5u)
+# define VGA2_FLAG_DIGITAL_DISPLAY  (1u << 6u)
+# define VGA2_FLAG_PGA              (1u << 7u)
 #endif
 
+#ifdef TARGET_PC98
+/* fixed, not movable */
+ #define                        vga2_update_alpha_ptr() do { } while(0) /* stub */
+#else
+ #if TARGET_MSDOS == 32
+extern VGA2_ALPHA_PTR           vga2_alpha_memptr;
+ #else
+extern uint16_t                 vga2_alpha_segptr;
+ #endif
+
 extern void                     (*vga2_update_alpha_ptr)(void);
+#endif
 
 static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
 #if TARGET_MSDOS == 32
@@ -49,7 +59,16 @@ static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
 #endif
 }
 
-#if TARGET_MSDOS == 32
+#ifdef TARGET_PC98
+static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
+    return vga2_seg2ptr(0xA000);
+}
+
+static inline void vga2_alpha_ptr_set(const uint16_t s) {
+    /* nothing */
+}
+#else
+ #if TARGET_MSDOS == 32
 static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
     return vga2_alpha_memptr;
 }
@@ -57,7 +76,7 @@ static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
 static inline void vga2_alpha_ptr_set(const uint16_t s) {
     vga2_alpha_memptr = vga2_seg2ptr(s);
 }
-#else
+ #else
 static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
     return vga2_seg2ptr(vga2_alpha_segptr);
 }
@@ -65,10 +84,12 @@ static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
 static inline void vga2_alpha_ptr_set(const uint16_t s) {
     vga2_alpha_segptr = s;
 }
-#endif
+ #endif
 
 void vga2_update_alpha_ptr_default(void);
+#endif
 
+#ifndef TARGET_PC98
 /* NTS: Contrary to early impressions INT 10h AH=Fh does exist in the original 5150 BIOS. */
 /*      INT 10H AH=Fh returns: AL=video mode AH=number of columns BH=active page.
  *      This function returns: AL=video mode */
@@ -78,13 +99,17 @@ uint8_t vga2_get_int10_current_mode(void);
     "int        10h" \
     value [al] \
     modify [ax bx];
+#endif
 
+#ifndef TARGET_PC98
 uint16_t vga2_int11_equipment(void);
 #pragma aux vga2_int11_equipment = \
     "int        11h" \
     value [ax] \
     modify [ax];
+#endif
 
+#ifndef TARGET_PC98
 /* INT 10h AX=0x1A00 GET DISPLAY COMBINATION CODE (PS,VGA/MCGA) [http://www.ctyme.com/intr/rb-0219.htm].
  * Return value from BL (active display code). Does not return BH (alternate display code).
  *
@@ -97,7 +122,9 @@ uint8_t vga2_get_dcc_inline(void);
     "int        10h" \
     value [bl] \
     modify [ax bx];
+#endif
 
+#ifndef TARGET_PC98
 /* return the color/mono state of EGA/VGA.
  * this code assumes you have already tested the card is EGA/VGA and present. */
 unsigned char vga2_alt_ega_monocolor_inline(void);
@@ -107,7 +134,9 @@ unsigned char vga2_alt_ega_monocolor_inline(void);
     "int        10h" \
     value [bh] \
     modify [ax bx cx];
+#endif
 
+#ifndef TARGET_PC98
 // will return 0xFF if EGA not present.
 // NTS: BIOSes that pre-date the EGA will not modify registers.
 //      So, call INT 10h AH=12h BL=10h with CX=FFFFh. Function returns CL.
@@ -122,13 +151,19 @@ unsigned char vga2_alt_ega_switches_inline(void);
     "int        10h" \
     value [cl] \
     modify [ax bx cx];
+#endif
 
+#ifndef TARGET_PC98
 uint8_t vga2_get_dcc(void);
 unsigned char vga2_alt_ega_monocolor(void);
 unsigned char vga2_alt_ega_switches(void);
+#endif
+
 void probe_vga2(void);
 
+#ifndef TARGET_PC98
 void vga2_update_alpha_ptr_default(void);
+#endif
 
 #endif //__HW_VGA2_VGA2_H
 
