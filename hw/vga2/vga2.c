@@ -35,7 +35,12 @@ uint16_t                        vga2_flags = 0;
  * their own detection routines if your program is interested in them. The goal
  * is that, if a program is not interested in PCjr or Tandy support then it can
  * keep code bloat down by not calling the probe function for then and sticking
- * with the primary classification here. */
+ * with the primary classification here.
+ *
+ * This probing code does NOT initialize the alphanumeric pointer and state
+ * information, so that if the host does not call anything related to that, then
+ * nothing of that sort is linked into the executable (i.e. games that do not
+ * use text mode) */
 void probe_vga2(void) {
     if (vga2_flags != 0)
         return;
