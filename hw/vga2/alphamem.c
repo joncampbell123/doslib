@@ -51,13 +51,12 @@ void vga2_update_alpha_ptr_default(void) {
          *      case the CGA output is programmed to MDA timing!) */
         vga2_alpha_ptr_set((vga2_get_int10_current_mode() == 7u) ? 0xB000u : 0xB800u);
     }
-    else if ((vga2_flags & (VGA2_FLAG_CGA|VGA2_FLAG_MCGA)) != 0u) {
-        /* CGA/MCGA: Color, always */
-        vga2_alpha_ptr_set(0xB800u);
-    }
     else {
+        /* CGA/MCGA: Color, always */
         /* MDA/Hercules: Mono, always */
-        vga2_alpha_ptr_set(0xB000u);
+        /* MCGA is hard-wired to map 64KB of RAM to A0000-AFFFF at all times,
+         * with B0000-B7FFF unmapped and B8000-BFFFF an alias of the last 32KB. CGA and MCGA cannot respond to B000h. */
+        vga2_alpha_ptr_set((vga2_flags & (VGA2_FLAG_CGA|VGA2_FLAG_MCGA)) ? 0xB800u : 0xB000u);
     }
 }
 
