@@ -86,7 +86,7 @@ static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
 }
 
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
-    vga2_alpha_segptr = s;
+    vga2_alpha_segptr = (uint16_t)s;
 }
  #endif
 
