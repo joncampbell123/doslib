@@ -40,7 +40,7 @@ uint8_t                         vga2_flags = 0;
  * Tandy, PCjr, SVGA, Hercules, and any other secondary classification will have
  * their own detection routines if your program is interested in them. The goal
  * is that, if a program is not interested in PCjr or Tandy support then it can
- * keep code bloat down by not calling the probe function for then and sticking
+ * keep code bloat down by not calling the probe function for them and sticking
  * with the primary classification here.
  *
  * This probing code does NOT initialize the alphanumeric pointer and state
