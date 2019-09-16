@@ -6,8 +6,6 @@
 
 #include <hw/vga2/vga2.h>
 
-#ifndef TARGET_PC98
-
 /* TODO: This API must be replaced.
  *
  *       Replace it with a general "init from video mode" that reads from the BIOS.
@@ -34,6 +32,8 @@ vga2_alpha_base_t vga2_alpha_base = {
     .width = 80,                /* reasonable defaults, for both IBM PC and NEC PC-98 */
     .height = 25
 };
+
+#ifndef TARGET_PC98
 
 /* PC-98 notes:
  *
@@ -86,6 +86,16 @@ void vga2_update_alpha_modeinfo_default(void) {
         /* MCGA is hard-wired to map 64KB of RAM to A0000-AFFFF at all times,
          * with B0000-B7FFF unmapped and B8000-BFFFF an alias of the last 32KB. CGA and MCGA cannot respond to B000h. */
         vga2_alpha_ptr_set((vga2_flags & (VGA2_FLAG_CGA|VGA2_FLAG_MCGA)) ? 0xB800u : 0xB000u);
+    }
+
+    vga2_alpha_base.width = *vga2_bda_w(0x4A); /* number of text columns in active display mode */
+    {
+        /* NTS: Believe it or not IBM BIOSes prior to about 1985 (in the BIOS listings) do not mention
+         *      anything about a number of rows value in the BIOS data area. That value is typically
+         *      zero on those systems. */
+        register unsigned char c = *vga2_bda_b(0x84); /* number of rows minus 1 */
+        if (c == 0u) c = 24u; /* assume 80x25 which is reasonable for CGA/MDA/PCjr */
+        vga2_alpha_base.height = c + 1u;
     }
 }
 

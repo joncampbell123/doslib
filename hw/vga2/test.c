@@ -40,6 +40,7 @@ int main(int argc,char **argv) {
 #else
     printf("Alpha ptr: %Fp\n",vga2_alpha_ptr());
 #endif
+    printf("Alpha dim: %u x %u\n",vga2_alpha_base.width,vga2_alpha_base.height);
 
     return 0;
 }
