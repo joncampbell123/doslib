@@ -31,9 +31,9 @@ uint16_t                        vga2_alpha_segptr = 0;
 
 /* this is a function pointer so that specialty code, such as PCjr support, can
  * provide it's own version to point at wherever the video memory is. */
-void                            (*vga2_update_alpha_ptr)(void) = vga2_update_alpha_ptr_default;
+void                            (*vga2_update_alpha_modeinfo)(void) = vga2_update_alpha_modeinfo_default;
 
-void vga2_update_alpha_ptr_default(void) {
+void vga2_update_alpha_modeinfo_default(void) {
     if ((vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) != 0u) {
         /* EGA/VGA: Could be mono or color.
          * NTS: We could read it back from hardware on VGA, but that's an extra IF statement

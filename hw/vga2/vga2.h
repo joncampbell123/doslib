@@ -45,7 +45,7 @@ extern uint8_t                  vga2_flags;
 
 #ifdef TARGET_PC98
 /* fixed, not movable */
- #define                        vga2_update_alpha_ptr() do { } while(0) /* stub */
+ #define                        vga2_update_alpha_modeinfo() do { } while(0) /* stub */
 #else
  #if TARGET_MSDOS == 32
 extern VGA2_ALPHA_PTR           vga2_alpha_memptr;
@@ -53,7 +53,7 @@ extern VGA2_ALPHA_PTR           vga2_alpha_memptr;
 extern uint16_t                 vga2_alpha_segptr;
  #endif
 
-extern void                     (*vga2_update_alpha_ptr)(void);
+extern void                     (*vga2_update_alpha_modeinfo)(void);
 #endif
 
 static inline VGA2_ALPHA_PTR vga2_segofs2ptr(const unsigned int s,const unsigned int o) {
@@ -95,7 +95,7 @@ static inline void vga2_alpha_ptr_set(const unsigned int s) {
 }
  #endif
 
-void vga2_update_alpha_ptr_default(void);
+void vga2_update_alpha_modeinfo_default(void);
 #endif
 
 static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
@@ -179,7 +179,7 @@ void probe_vga2(void);
 #endif
 
 #ifndef TARGET_PC98
-void vga2_update_alpha_ptr_default(void);
+void vga2_update_alpha_modeinfo_default(void);
 #endif
 
 #endif //__HW_VGA2_VGA2_H

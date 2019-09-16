@@ -33,7 +33,7 @@ int main(int argc,char **argv) {
 #endif
 
     /* we're interested in text mode, probe it */
-    vga2_update_alpha_ptr();
+    vga2_update_alpha_modeinfo();
 
 #if TARGET_MSDOS == 32
     printf("Alpha ptr: %p\n",vga2_alpha_ptr());
