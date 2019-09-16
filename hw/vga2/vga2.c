@@ -32,18 +32,6 @@ VGA2_ALPHA_PTR                  vga2_alpha_mem = NULL;
  * provide it's own version to point at wherever the video memory is. */
 void                            (*vga2_update_alpha_ptr)(void) = vga2_update_alpha_ptr_default;
 
-uint8_t vga2_get_dcc(void) {
-    return vga2_get_dcc_inline();
-}
-
-unsigned char vga2_alt_ega_monocolor(void) {
-    return vga2_alt_ega_monocolor_inline();
-}
-
-unsigned char vga2_alt_ega_switches(void) {
-    return vga2_alt_ega_switches_inline();
-}
-
 void vga2_update_alpha_ptr_default(void) {
     if ((vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) != 0u) {
         /* EGA/VGA: Could be mono or color.

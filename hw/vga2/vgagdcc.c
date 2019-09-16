@@ -1,0 +1,12 @@
+
+#include <i86.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#include <hw/vga2/vga2.h>
+
+uint8_t vga2_get_dcc(void) {
+    return vga2_get_dcc_inline();
+}
+
