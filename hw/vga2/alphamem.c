@@ -35,6 +35,19 @@ vga2_alpha_base_t vga2_alpha_base = {
     .height = 25
 };
 
+/* PC-98 notes:
+ *
+ * - There is a 40 column mode, but it's really just 80-column mode with every other character
+ *   cell skipped and the character bitmap sent to raster with each pixel doubled. Most PC-98
+ *   games will write the character twice to video memory to make sure it displays properly.
+ *   The WORDs per row do not change between 40-column and 80-column mode.
+ *
+ *   In fact it's rare for the text layer to change columns per line at all, unless the game
+ *   is willing to reprogram it (which does not happen often).
+ *
+ *   If you are coding for PC-98 and will be doing that, update the width yourself. When you
+ *   are done, restore the default 80 columns. */
+
 #if TARGET_MSDOS == 32
 VGA2_ALPHA_PTR                  vga2_alpha_memptr = NULL;
 #else
