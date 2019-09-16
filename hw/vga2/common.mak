@@ -37,7 +37,7 @@ $(TEST_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
 
 !ifdef TEST2_EXE
 $(TEST2_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test2.obj
-	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA2_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test2.obj name $(TEST2_EXE)
+	%write tmp.cmd option quiet option map=$(TEST2_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA2_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test2.obj name $(TEST2_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
