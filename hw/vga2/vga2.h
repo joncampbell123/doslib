@@ -22,7 +22,12 @@ typedef uint16_t VGA2_FAR      *VGA2_ALPHA_PTR;
  * PC-98:  Carries char only */
 typedef uint16_t                VGA2_ALPHA_CHAR;
 
+#ifdef TARGET_PC98
+/* nothing yet */
+ #define                        vga2_flags (0u)
+#else
 extern uint8_t                  vga2_flags;
+#endif
 #define VGA2_FLAG_NONE              (0u)
 
 #ifdef TARGET_PC98
