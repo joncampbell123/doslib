@@ -43,6 +43,16 @@ static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
 
 void vga2_update_alpha_ptr_default(void);
 
+/* NTS: Contrary to early impressions INT 10h AH=Fh does exist in the original 5150 BIOS. */
+/*      INT 10H AH=Fh returns: AL=video mode AH=number of columns BH=active page.
+ *      This function returns: AL=video mode */
+uint8_t vga2_get_int10_current_mode(void);
+#pragma aux vga2_get_int10_current_mode = \
+    "mov        ah,0Fh" \
+    "int        10h" \
+    value [al] \
+    modify [ax bx];
+
 uint16_t vga2_int11_equipment(void);
 #pragma aux vga2_int11_equipment = \
     "int        11h" \

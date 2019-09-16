@@ -39,11 +39,16 @@ void vga2_update_alpha_ptr_default(void) {
          *      and I think it would be better for executable size reasons to combine EGA/VGA
          *      case of inferring it from BIOS data.
          *
-         * NTS: I will make the VGA case it's own if it turns out the BIOS is not reliable
-         *      on this matter even under normal usage of the hardware and BIOS.
+         * NTS: One would think you'd infer this from the equipment word, but most software,
+         *      including Microsoft software, is determining B800 vs B000 by reading the
+         *      video mode and assuming B000 if mode 7.
          *
-         * INT 10h AH=12h BL=10h, return value BH which is 00h = color   01h = mono */
-        vga2_alpha_mem = vga2_seg2ptr((vga2_alt_ega_monocolor() & 1u) ? 0xB000u : 0xB800u);
+         *      This makes sense since on original CGA hardware mode 7 doesn't exist, and
+         *      on MDA, only mode 7 exists.
+         *
+         *      (well actually the 5150 BIOS I have with CGA does allow mode 7 *bug*, in which
+         *      case the CGA output is programmed to MDA timing!) */
+        vga2_alpha_mem = vga2_seg2ptr((vga2_get_int10_current_mode() == 7u) ? 0xB000u : 0xB800u);
     }
     else if ((vga2_flags & (VGA2_FLAG_CGA|VGA2_FLAG_MCGA)) != 0u) {
         /* CGA/MCGA: Color, always */
