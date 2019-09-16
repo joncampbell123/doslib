@@ -48,12 +48,6 @@ vga2_alpha_base_t vga2_alpha_base = {
  *   If you are coding for PC-98 and will be doing that, update the width yourself. When you
  *   are done, restore the default 80 columns. */
 
-#if TARGET_MSDOS == 32
-VGA2_ALPHA_PTR                  vga2_alpha_memptr = NULL;
-#else
-uint16_t                        vga2_alpha_segptr = 0;
-#endif
-
 /* this is a function pointer so that specialty code, such as PCjr support, can
  * provide it's own version to point at wherever the video memory is. */
 void                            (*vga2_update_alpha_modeinfo)(void) = vga2_update_alpha_modeinfo_default;
