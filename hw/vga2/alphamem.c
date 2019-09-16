@@ -72,7 +72,8 @@ void vga2_update_alpha_modeinfo_default(void) {
          *              If it's visible then one more line needs to be counted. */
         if (*vga2_dosseg_b(0x111) != 0) sh++;
 
-        vga2_alpha_base.height = sh;
+        /* if the result seems reasonable then accept it */
+        if (sh >= 12) vga2_alpha_base.height = sh;
     }
 #else
     if ((vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) != 0u) {
