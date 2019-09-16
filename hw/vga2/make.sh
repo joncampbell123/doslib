@@ -20,9 +20,9 @@ if [ "$1" == "disk" ]; then
     mcopy -i test.dsk dos86s/test.exe ::test86.exe
     mcopy -i test.dsk dos86l/test.exe ::test86l.exe
     mcopy -i test.dsk dos386f/test.exe ::test386.exe
-    mcopy -i test.dsk win313l/test.exe ::testw31.exe
-    mcopy -i test.dsk win32s3/test.exe ::testw32s.exe
-    mcopy -i test.dsk win32/test.exe ::testw32.exe
+    mcopy -i test.dsk d9886s/test.exe ::pc9886.exe
+    mcopy -i test.dsk d9886l/test.exe ::pc9886l.exe
+    mcopy -i test.dsk d98386f/test.exe ::pc98386.exe
 
     cp -v pcjrboot.dsk pcjrtest.dsk || exit 1
     mcopy -i pcjrtest.dsk dos86l/test.exe ::test86l.exe
