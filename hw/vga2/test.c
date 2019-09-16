@@ -8,6 +8,7 @@
 
 int main(int argc,char **argv) {
     probe_vga2();
+    vga2_update_alpha_ptr();
 
     printf("VGA2 flags: 0x%x\n",vga2_flags);
     if (vga2_flags & VGA2_FLAG_MDA)

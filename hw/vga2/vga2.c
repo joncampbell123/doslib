@@ -73,6 +73,6 @@ void probe_vga2(void) {
     }
 
 done:
-    vga2_update_alpha_ptr();
+    { }
 }
 
