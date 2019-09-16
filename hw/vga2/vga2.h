@@ -64,8 +64,8 @@ static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned short s) {
 }
 
 #ifdef TARGET_PC98
-static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
-    return vga2_seg2ptr(0xA000);
+static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned short o) {
+    return vga2_segofs2ptr(0xA000,0);
 }
 
 static inline void vga2_alpha_ptr_set(const uint16_t s) {
@@ -73,16 +73,16 @@ static inline void vga2_alpha_ptr_set(const uint16_t s) {
 }
 #else
  #if TARGET_MSDOS == 32
-static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
-    return vga2_alpha_memptr;
+static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned short o) {
+    return vga2_alpha_memptr + o;
 }
 
 static inline void vga2_alpha_ptr_set(const uint16_t s) {
     vga2_alpha_memptr = vga2_seg2ptr(s);
 }
  #else
-static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
-    return vga2_seg2ptr(vga2_alpha_segptr);
+static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned short o) {
+    return vga2_segofs2ptr(vga2_alpha_segptr,0);
 }
 
 static inline void vga2_alpha_ptr_set(const uint16_t s) {
@@ -92,6 +92,10 @@ static inline void vga2_alpha_ptr_set(const uint16_t s) {
 
 void vga2_update_alpha_ptr_default(void);
 #endif
+
+static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
+    return vga2_alphaofs_ptr(0);
+}
 
 #ifndef TARGET_PC98
 /* NTS: Contrary to early impressions INT 10h AH=Fh does exist in the original 5150 BIOS. */
