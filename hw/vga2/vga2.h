@@ -43,12 +43,7 @@ extern uint8_t                  vga2_flags;
 # define VGA2_FLAG_PGA              (1u << 7u)
 #endif
 
-#ifdef TARGET_PC98
-/* fixed, not movable */
- #define                        vga2_update_alpha_modeinfo() do { } while(0) /* stub */
-#else
 extern void                     (*vga2_update_alpha_modeinfo)(void);
-#endif
 
 typedef struct vga2_alpha_base_t {
 #ifndef TARGET_PC98 /* segment is fixed, not movable */
@@ -124,8 +119,6 @@ static inline void vga2_alpha_ptr_set(const unsigned int s) {
     vga2_alpha_base.segptr = (uint16_t)s;
 }
  #endif
-
-void vga2_update_alpha_modeinfo_default(void);
 #endif
 
 static inline VGA2_ALPHA_PTR vga2_alpha_ptr(void) {
@@ -208,9 +201,7 @@ unsigned char vga2_alt_ega_switches(void);
 void probe_vga2(void);
 #endif
 
-#ifndef TARGET_PC98
 void vga2_update_alpha_modeinfo_default(void);
-#endif
 
 #endif //__HW_VGA2_VGA2_H
 

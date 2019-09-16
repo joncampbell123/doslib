@@ -33,8 +33,6 @@ vga2_alpha_base_t vga2_alpha_base = {
     .height = 25
 };
 
-#ifndef TARGET_PC98
-
 /* PC-98 notes:
  *
  * - There is a 40 column mode, but it's really just 80-column mode with every other character
@@ -45,14 +43,18 @@ vga2_alpha_base_t vga2_alpha_base = {
  *   In fact it's rare for the text layer to change columns per line at all, unless the game
  *   is willing to reprogram it (which does not happen often).
  *
- *   If you are coding for PC-98 and will be doing that, update the width yourself. When you
- *   are done, restore the default 80 columns. */
+ *   If you are coding for PC-98 and will be doing that, update the width yourself. */
 
 /* this is a function pointer so that specialty code, such as PCjr support, can
  * provide it's own version to point at wherever the video memory is. */
 void                            (*vga2_update_alpha_modeinfo)(void) = vga2_update_alpha_modeinfo_default;
 
 void vga2_update_alpha_modeinfo_default(void) {
+#ifdef TARGET_PC98
+    vga2_alpha_base.width = 80;         /* always 80, even in 40 column mode. see notes above. */
+    vga2_alpha_base.height = 25;        /* TODO: MS-DOS maintains the console, and fixed locations are well known to hold the height. */
+                                        /*       Height can be 20, 25, or 30 */
+#else
     if ((vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) != 0u) {
         /* EGA/VGA: Could be mono or color.
          * NTS: We could read it back from hardware on VGA, but that's an extra IF statement
@@ -91,7 +93,6 @@ void vga2_update_alpha_modeinfo_default(void) {
         if (c == 0u) c = 24u; /* assume 80x25 which is reasonable for CGA/MDA/PCjr */
         vga2_alpha_base.height = c + 1u;
     }
-}
-
 #endif
+}
 
