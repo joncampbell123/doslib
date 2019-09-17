@@ -78,7 +78,7 @@ void vga2_update_alpha_modeinfo_default(void) {
         if (sh >= 12) vga2_alpha_base.height = sh;
     }
 #else
-    if ((vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) != 0u) {
+    if ((vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_MCGA|VGA2_FLAG_VGA)) != 0u) {
         /* EGA/VGA: Could be mono or color.
          * NTS: We could read it back from hardware on VGA, but that's an extra IF statement
          *      and I think it would be better for executable size reasons to combine EGA/VGA
@@ -92,11 +92,11 @@ void vga2_update_alpha_modeinfo_default(void) {
          *      on MDA, only mode 7 exists.
          *
          *      (well actually the 5150 BIOS I have with CGA does allow mode 7 *bug*, in which
-         *      case the CGA output is programmed to MDA timing!) */
-        /* Another, possibly more effective technique that would be extra work here, would be
-         * to use INT 10h AH=12h BL=10h Alternate Function Select (Get EGA info) to determine
-         * whether the card is in mono or color mode (BH value on return). That would be more
-         * useful to the alphanumeric and graphics libraries than this code. */
+         *      case the CGA output is programmed to MDA timing!)
+         *
+         * NTS: MCGA is counted here because MCGA will also not allow monochrome mode 7 to be
+         *      set, and it offers 32KB of alphanumeric text memory (which is really just the
+         *      last 32KB of it's 64KB of video RAM mirrored at B8000h) */
         vga2_alpha_ptrsz_set(0x8000u); /* 32KB */
         vga2_alpha_ptr_set((vga2_get_int10_current_mode() == 7u) ? 0xB000u : 0xB800u);
     }
@@ -115,13 +115,8 @@ void vga2_update_alpha_modeinfo_default(void) {
          * There is only 4KB of RAM on the MDA. Extra libary code to support the Hercules graphics cards will
          * change this to 32KB as needed if your code wants to support HGC graphics and hardware. */
         if (vga2_flags & VGA2_FLAG_CGA) {
-            /* MCGA: 32KB at B8000h */
             /* CGA: 16KB at B8000h */
-            if (vga2_flags & VGA2_FLAG_MCGA)
-                vga2_alpha_ptrsz_set(0x8000u);
-            else
-                vga2_alpha_ptrsz_set(0x4000u);
-
+            vga2_alpha_ptrsz_set(0x4000u);
             vga2_alpha_ptr_set(0xB800u);
         }
         else {
