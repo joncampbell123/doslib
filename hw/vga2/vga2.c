@@ -19,7 +19,7 @@ static const uint8_t probe_vga2_dcc_to_flags[probe_vga2_dcc_to_flags_sz] = {
     VGA2_FLAG_CGA | VGA2_FLAG_PGA,                                                          // 0x06
     VGA2_FLAG_CGA | VGA2_FLAG_EGA | VGA2_FLAG_VGA | VGA2_FLAG_MONO_DISPLAY,                 // 0x07
     VGA2_FLAG_CGA | VGA2_FLAG_EGA | VGA2_FLAG_VGA,                                          // 0x08
-    VGA2_FLAG_NONE,                                                                         // 0x09
+    VGA2_FLAG_NONE,                                                                         // 0x09 reserved
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA | VGA2_FLAG_DIGITAL_DISPLAY,                             // 0x0A
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA | VGA2_FLAG_MONO_DISPLAY,                                // 0x0B
     VGA2_FLAG_CGA | VGA2_FLAG_MCGA                                                          // 0x0C
