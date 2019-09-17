@@ -94,9 +94,9 @@ void vga2_update_alpha_modeinfo_default(void) {
          *      (well actually the 5150 BIOS I have with CGA does allow mode 7 *bug*, in which
          *      case the CGA output is programmed to MDA timing!)
          *
-         * NTS: MCGA is counted here because MCGA will also not allow monochrome mode 7 to be
-         *      set, and it offers 32KB of alphanumeric text memory (which is really just the
-         *      last 32KB of it's 64KB of video RAM mirrored at B8000h) */
+         * NTS: MCGA only supports the color modes and will NOT allow setting mode 7. It will
+         *      only respond to CGA memory and I/O ranges. It has 64KB of video memory at
+         *      A0000h and the last 32KB of that 64KB is mirrored at B8000h for CGA compat. */
         vga2_alpha_ptrsz_set(0x8000u); /* 32KB */
         vga2_alpha_ptr_set((vga2_get_int10_current_mode() == 7u) ? 0xB000u : 0xB800u);
     }
