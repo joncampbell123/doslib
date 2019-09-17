@@ -114,8 +114,21 @@ void vga2_update_alpha_modeinfo_default(void) {
          *
          * There is only 4KB of RAM on the MDA. Extra libary code to support the Hercules graphics cards will
          * change this to 32KB as needed if your code wants to support HGC graphics and hardware. */
-        vga2_alpha_ptrsz_set((vga2_flags & VGA2_FLAG_CGA) ? 0x4000u : 0x1000u); /* 16KB (CGA) / 4KB (MDA) */
-        vga2_alpha_ptr_set((vga2_flags & (VGA2_FLAG_CGA|VGA2_FLAG_MCGA)) ? 0xB800u : 0xB000u);
+        if (vga2_flags & VGA2_FLAG_CGA) {
+            /* MCGA: 32KB at B8000h */
+            /* CGA: 16KB at B8000h */
+            if (vga2_flags & VGA2_FLAG_MCGA)
+                vga2_alpha_ptrsz_set(0x8000u);
+            else
+                vga2_alpha_ptrsz_set(0x4000u);
+
+            vga2_alpha_ptr_set(0xB800u);
+        }
+        else {
+            /* MDA: 4KB at B0000h */
+            vga2_alpha_ptrsz_set(0x1000u);
+            vga2_alpha_ptr_set(0xB000u);
+        }
     }
 
     vga2_alpha_base.width = *vga2_bda_w(0x4A); /* number of text columns in active display mode */
