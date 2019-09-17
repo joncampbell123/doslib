@@ -25,8 +25,10 @@ vga2_alpha_base_t vga2_alpha_base = {
 #ifndef TARGET_PC98 /* PC-98 segment is always 0xA000, IBM PC can be 0xB800 or 0xB800 and even 0xA000 is possible. */
  #if TARGET_MSDOS == 32
     .memptr = NULL,
+    .memsz = 0,
  #else
     .segptr = 0,
+    .segsz = 0,
  #endif
 #endif
     .width = 80,                /* reasonable defaults, for both IBM PC and NEC PC-98 */
@@ -95,6 +97,7 @@ void vga2_update_alpha_modeinfo_default(void) {
          * to use INT 10h AH=12h BL=10h Alternate Function Select (Get EGA info) to determine
          * whether the card is in mono or color mode (BH value on return). That would be more
          * useful to the alphanumeric and graphics libraries than this code. */
+        vga2_alpha_ptrsz_set(0x8000u); /* 32KB */
         vga2_alpha_ptr_set((vga2_get_int10_current_mode() == 7u) ? 0xB000u : 0xB800u);
     }
     else {
@@ -102,6 +105,16 @@ void vga2_update_alpha_modeinfo_default(void) {
         /* MDA/Hercules: Mono, always */
         /* MCGA is hard-wired to map 64KB of RAM to A0000-AFFFF at all times,
          * with B0000-B7FFF unmapped and B8000-BFFFF an alias of the last 32KB. CGA and MCGA cannot respond to B000h. */
+        /* Remember that the original CGA had only 16KB of RAM (16KB repeated twice in the 32KB memory region).
+         * The 16KB limit is also on the PCjr. CGA clone cards like the ColorPlus will have the full 32KB,
+         * but if your code supports that the extra libary code to set it up will change this to 32KB.
+         *
+         * CGA graphics modes are wired so that 200-line graphics exist as two 100-line 8KB framebuffers interleaved
+         * together, even/odd scanlines (bit 0 of the row counter as bit 13 of the address), within the 16KB.
+         *
+         * There is only 4KB of RAM on the MDA. Extra libary code to support the Hercules graphics cards will
+         * change this to 32KB as needed if your code wants to support HGC graphics and hardware. */
+        vga2_alpha_ptrsz_set((vga2_flags & VGA2_FLAG_CGA) ? 0x4000u : 0x1000u); /* 16KB (CGA) / 4KB (MDA) */
         vga2_alpha_ptr_set((vga2_flags & (VGA2_FLAG_CGA|VGA2_FLAG_MCGA)) ? 0xB800u : 0xB000u);
     }
 

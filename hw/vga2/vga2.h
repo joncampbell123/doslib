@@ -49,8 +49,10 @@ typedef struct vga2_alpha_base_t {
 #ifndef TARGET_PC98 /* segment is fixed, not movable */
  #if TARGET_MSDOS == 32
     VGA2_ALPHA_PTR              memptr;
+    uint32_t                    memsz;
  #else
     uint16_t                    segptr;
+    uint16_t                    segsz;
  #endif
 #endif
     uint8_t                     width;
@@ -119,6 +121,18 @@ static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
     /* nothing */
 }
+
+static inline unsigned long vga2_alpha_ptrsz(void) {
+    return 0x2000u; /* attribute RAM on PC-98 */
+}
+
+static inline uint16_t vga2_alpha_ptrszseg(void) {
+    return 0x2000u>>4u; /* attribute RAM on PC-98 in paragraphs */
+}
+
+static inline void vga2_alpha_ptrsz_set(const unsigned long s) {
+    /* nothing */
+}
 #else
  #if TARGET_MSDOS == 32
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
@@ -128,6 +142,18 @@ static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
     vga2_alpha_base.memptr = vga2_seg2ptr(s);
 }
+
+static inline unsigned long vga2_alpha_ptrsz(void) {
+    return vga2_alpha_base.memsz;
+}
+
+static inline uint16_t vga2_alpha_ptrszseg(void) {
+    return (uint16_t)(vga2_alpha_base.memsz>>4u);
+}
+
+static inline void vga2_alpha_ptrsz_set(const unsigned long s) {
+    vga2_alpha_base.memsz = s;
+}
  #else
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
     return vga2_segofs2ptr(vga2_alpha_base.segptr,0);
@@ -135,6 +161,18 @@ static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
 
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
     vga2_alpha_base.segptr = (uint16_t)s;
+}
+
+static inline unsigned long vga2_alpha_ptrsz(void) {
+    return vga2_alpha_base.segsz << 4ul;
+}
+
+static inline uint16_t vga2_alpha_ptrszseg(void) {
+    return vga2_alpha_base.segsz;
+}
+
+static inline void vga2_alpha_ptrsz_set(const unsigned long s) {
+    vga2_alpha_base.segsz = (uint16_t)(s >> 4ul);
 }
  #endif
 #endif
