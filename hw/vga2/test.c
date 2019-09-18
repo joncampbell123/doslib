@@ -42,6 +42,7 @@ int main(int argc,char **argv) {
 #endif
     printf("Alpha size: %lu bytes\n",vga2_alpha_ptrsz());
     printf("Alpha dim: %u x %u\n",vga2_alpha_base.width,vga2_alpha_base.height);
+    printf("Alpha ptr valid: %u\n",vga2_alpha_ptr_valid());
 
     return 0;
 }

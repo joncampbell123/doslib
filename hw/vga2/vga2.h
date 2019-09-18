@@ -133,6 +133,10 @@ static inline uint16_t vga2_alpha_ptrszseg(void) {
 static inline void vga2_alpha_ptrsz_set(const unsigned long s) {
     /* nothing */
 }
+
+static inline unsigned int vga2_alpha_ptr_valid(void) {
+    return 1;
+}
 #else
  #if TARGET_MSDOS == 32
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
@@ -154,6 +158,10 @@ static inline uint16_t vga2_alpha_ptrszseg(void) {
 static inline void vga2_alpha_ptrsz_set(const unsigned long s) {
     vga2_alpha_base.memsz = s;
 }
+
+static inline unsigned int vga2_alpha_ptr_valid(void) {
+    return vga2_alpha_base.memptr != NULL;
+}
  #else
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
     return vga2_segofs2ptr(vga2_alpha_base.segptr,0);
@@ -173,6 +181,10 @@ static inline uint16_t vga2_alpha_ptrszseg(void) {
 
 static inline void vga2_alpha_ptrsz_set(const unsigned long s) {
     vga2_alpha_base.segsz = (uint16_t)(s >> 4ul);
+}
+
+static inline unsigned int vga2_alpha_ptr_valid(void) {
+    return vga2_alpha_base.segptr != 0u;
 }
  #endif
 #endif
