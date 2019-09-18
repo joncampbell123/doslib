@@ -47,6 +47,34 @@ vga2_alpha_base_t vga2_alpha_base = {
  *
  *   If you are coding for PC-98 and will be doing that, update the width yourself. */
 
+/* IBM PC notes:
+ *
+ * - EGA/VGA/SVGA hardware uses the Offset register (CRTC reg 13h) to determine character cells
+ *   per scanline. The offset register is character cells per scanline divided by 2 because
+ *   the CRTC in text mode is set to WORD mode. Because of this, odd bytes per scanline are
+ *   impossible in hardware.
+ *
+ * - MDA, CGA and PCjr hardware do not have an Offset register. The bytes per scanline
+ *   are determined by the Horizontal Display End register, which seems to permit (in documentation
+ *   anyway) an odd number of character cells.
+ *
+ * - MCGA is the strange case. MCGA is supposed to be a superset of CGA but some of the CRTC
+ *   registers are fake or nonsensical. Register dumps of MCGA hardware for each mode show
+ *   that, for whatever reason, all modes have Horizontal display parameters set as if
+ *   40x25 or 320x200 mode including the 80x25 text modes. This means that the Horizontal
+ *   Display End value holds 39 (40-1) even when 80x25 mode is active. Since MCGA lacks the
+ *   Offset register (as does the CGA) this means that only an even number of character cells
+ *   are possible on the MCGA. (TODO: Confirm this!)
+ *
+ *   Note that on the MCGA there is a hardware bit to select whether horizontal timing is
+ *   controlled by CRTC registers 00h-03h, or whether they're made up in MCGA hardware and
+ *   CRTC 00h-03h are ignored. Values programmed into the Mode Control Register (CRTC reg
+ *   10h) have bit 3 set by the BIOS for all video modes, which means that the MCGA hardware
+ *   makes up the horizontal timings. While this keeps video stable no matter what tricks
+ *   are tried by DOS games, it does bring up the question whether it locks horizontal
+ *   timing only or whether it also prevents reprogramming the active display area
+ *   (and therefore stride) as well. (TODO: Confirm this!) */
+
 /* this is a function pointer so that specialty code, such as PCjr support, can
  * provide it's own version to point at wherever the video memory is. */
 void                            (*vga2_update_alpha_modeinfo)(void) = vga2_update_alpha_modeinfo_default;
