@@ -165,7 +165,7 @@ static inline unsigned int vga2_alpha_ptr_valid(void) {
 #else
  #if TARGET_MSDOS == 32
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
-    return vga2_alpha_base.memptr + o;
+    return (VGA2_ALPHA_PTR)((unsigned char*)vga2_alpha_base.memptr + o);
 }
 
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
