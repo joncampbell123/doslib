@@ -43,7 +43,7 @@ typedef uint16_t                VGA2_ALPHA_CHAR;
 # define VGA2_ALPHA_W2ATTR(x)                   (((x) >> 8u) & 0xFFu)
 # define VGA2_ALPHA_ATTR_FGCOLOR(x)             (((x) & 0xFu) << 8u)
 # define VGA2_ALPHA_ATTR_BGCOLOR(x)             (((x) & 0xFu) << 12u)
-# define VGA2_ALPGA_ATTR_FGBGCOLOR(f,b)         (VGA2_ALPHA_FGCOLOR(f) | VGA2_ALPHA_BGCOLOR(b))
+# define VGA2_ALPHA_ATTR_FGBGCOLOR(f,b)         (VGA2_ALPHA_ATTR_FGCOLOR(f) | VGA2_ALPHA_ATTR_BGCOLOR(b))
 # define VGA2_ALPHA_ATTR_BLINK                  (0x8000u) /* only IF blink attribute enabled */
 #endif
 
