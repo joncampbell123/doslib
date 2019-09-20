@@ -22,6 +22,31 @@ typedef uint16_t VGA2_FAR      *VGA2_ALPHA_PTR;
  * PC-98:  Carries char only */
 typedef uint16_t                VGA2_ALPHA_CHAR;
 
+/* attribute values */
+#ifdef TARGET_PC98
+/* NTS: Attribute RAM is in a separate memory location from text.
+ *      Only the low 8 bits exist but it wouldn't hurt to support the full 16-bit word in the memory location */
+# define VGA2_ALPHA_ATTRMASK                    (0xFFFFu)
+# define VGA2_ALPHA_ATTR2W(x)                   (x)
+# define VGA2_ALPHA_W2ATTR(x)                   (x)
+
+# define VGA2_ALPHA_ATTR_NOTSECRET              (1u << 0u)
+# define VGA2_ALPHA_ATTR_BLINK                  (1u << 1u)
+# define VGA2_ALPHA_ATTR_REVERSE                (1u << 2u)
+# define VGA2_ALPHA_ATTR_UNDERLINE              (1u << 3u)
+# define VGA2_ALPHA_ATTR_VLINE                  (1u << 4u)
+# define VGA2_ALPHA_ATTR_SGRAPHICS              (1u << 4u)
+# define VGA2_ALPHA_ATTR_COLOR(x)               (((x) & 7u) << 5u)
+#else
+# define VGA2_ALPHA_ATTRMASK                    (0xFF00u)
+# define VGA2_ALPHA_ATTR2W(x)                   (((x) & 0xFFu) << 8u)
+# define VGA2_ALPHA_W2ATTR(x)                   (((x) >> 8u) & 0xFFu)
+# define VGA2_ALPHA_ATTR_FGCOLOR(x)             (((x) & 0xFu) << 8u)
+# define VGA2_ALPHA_ATTR_BGCOLOR(x)             (((x) & 0xFu) << 12u)
+# define VGA2_ALPGA_ATTR_FGBGCOLOR(f,b)         (VGA2_ALPHA_FGCOLOR(f) | VGA2_ALPHA_BGCOLOR(b))
+# define VGA2_ALPHA_ATTR_BLINK                  (0x8000u) /* only IF blink attribute enabled */
+#endif
+
 #ifdef TARGET_PC98
 /* nothing yet */
  #define                        vga2_flags (0u)
