@@ -7,6 +7,7 @@ NOW_BUILDING = HW_VGA2_LIB
 TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
 TEST2_EXE =    $(SUBDIR)$(HPS)test2.$(EXEEXT)
 TEST3_EXE =    $(SUBDIR)$(HPS)test3.$(EXEEXT)
+TEST4_EXE =    $(SUBDIR)$(HPS)test4.$(EXEEXT)
 
 $(HW_VGA2_LIB): $(SUBDIR)$(HPS)vga2.obj $(SUBDIR)$(HPS)vgagdcc.obj $(SUBDIR)$(HPS)valtegam.obj $(SUBDIR)$(HPS)valegasw.obj $(SUBDIR)$(HPS)alphamem.obj
 	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)vga2.obj     -+$(SUBDIR)$(HPS)vgagdcc.obj  -+$(SUBDIR)$(HPS)valtegam.obj
@@ -25,7 +26,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_VGA2_LIB) .symbolic
 	
-exe: $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) .symbolic
+exe: $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) $(TEST4_EXE) .symbolic
 
 !ifdef TEST_EXE
 $(TEST_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
@@ -44,6 +45,13 @@ $(TEST2_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test2.ob
 !ifdef TEST3_EXE
 $(TEST3_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test3.obj
 	%write tmp.cmd option quiet option map=$(TEST3_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA2_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test3.obj name $(TEST3_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef TEST4_EXE
+$(TEST4_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test4.obj
+	%write tmp.cmd option quiet option map=$(TEST4_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA2_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test4.obj name $(TEST4_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
