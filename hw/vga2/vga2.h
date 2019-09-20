@@ -226,6 +226,10 @@ static inline VGA2_ALPHA_PTR vga2_alpharow_ptr(const unsigned int row) {
     return vga2_alphachar_ptr(row * vga2_alpha_base.width);
 }
 
+static inline VGA2_ALPHA_PTR vga2_alpharowcol_ptr(const unsigned int row,const unsigned int col) {
+    return vga2_alphachar_ptr((row * vga2_alpha_base.width) + col);
+}
+
 #ifndef TARGET_PC98
 /* NTS: Contrary to early impressions INT 10h AH=Fh does exist in the original 5150 BIOS. */
 /*      INT 10H AH=Fh returns: AL=video mode AH=number of columns BH=active page.

@@ -34,8 +34,36 @@ int main(int argc,char **argv) {
         return 1;
     }
 
+    /*----------------*/
+
     for (y=0;y < vga2_alpha_base.height;y++) {
         VGA2_ALPHA_PTR rowp = vga2_alpharow_ptr(y);
+
+#ifdef TARGET_PC98
+        const unsigned int fg = 7 - (y % 6);
+        const unsigned short attr =
+            VGA2_ALPHA_ATTR_NOTSECRET | VGA2_ALPHA_ATTR_COLOR(fg) |
+            ((((y / 6) % 2) == 1) ? VGA2_ALPHA_ATTR_REVERSE : 0);
+        VGA2_ALPHA_PTR rowpa = rowp + (0x2000 / sizeof(VGA2_ALPHA_CHAR));
+
+        for (x=0;msg[x] != 0;x++) {
+            rowp[x] = msg[x];
+            rowpa[x] = attr;
+        }
+#else
+        const unsigned int fg = 15 - (y % 15);
+        const unsigned int bg = 1 + ((y / 15) % 15);
+
+        for (x=0;msg[x] != 0;x++) rowp[x] = msg[x] | VGA2_ALPHA_ATTR_FGBGCOLOR(fg,bg);
+#endif
+    }
+
+    while (getch() != 13);
+
+    /*----------------*/
+
+    for (y=0;y < vga2_alpha_base.height;y++) {
+        VGA2_ALPHA_PTR rowp = vga2_alpharowcol_ptr(y,20);
 
 #ifdef TARGET_PC98
         const unsigned int fg = 7 - (y % 6);
