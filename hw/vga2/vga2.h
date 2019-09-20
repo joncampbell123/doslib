@@ -140,7 +140,7 @@ static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned int s) {
 
 #ifdef TARGET_PC98
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
-    return vga2_segofs2ptr(0xA000,0);
+    return vga2_segofs2ptr(0xA000,o);
 }
 
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
@@ -189,7 +189,7 @@ static inline unsigned int vga2_alpha_ptr_valid(void) {
 }
  #else
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
-    return vga2_segofs2ptr(vga2_alpha_base.segptr,0);
+    return vga2_segofs2ptr(vga2_alpha_base.segptr,o);
 }
 
 static inline void vga2_alpha_ptr_set(const unsigned int s) {
