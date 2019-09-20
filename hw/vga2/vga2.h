@@ -242,6 +242,13 @@ uint8_t vga2_get_int10_current_mode(void);
     modify [ax bx];
 #endif
 
+void vga2_set_int10_mode(const uint8_t m);
+#pragma aux vga2_set_int10_mode = \
+    "xor        ah,ah" \
+    "int        10h" \
+    modify [ax] \
+    parm [al];
+
 #ifndef TARGET_PC98
 uint16_t vga2_int11_equipment(void);
 #pragma aux vga2_int11_equipment = \
