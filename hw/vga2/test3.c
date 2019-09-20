@@ -35,7 +35,7 @@ int main(int argc,char **argv) {
     }
 
     for (y=0;y < vga2_alpha_base.height;y++) {
-        VGA2_ALPHA_PTR rowp = vga2_alphachar_ptr(y * vga2_alpha_base.width);
+        VGA2_ALPHA_PTR rowp = vga2_alpharow_ptr(y);
 
 #ifdef TARGET_PC98
         const unsigned int fg = 7 - (y % 6);
