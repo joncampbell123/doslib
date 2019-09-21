@@ -258,6 +258,26 @@ void vga2_set_int10_mode(const uint8_t m);
 #endif
 
 #ifndef TARGET_PC98
+/* NTS: start/end lines here are affected by "cursor emulation", which if enabled, the values
+ *      are treated as if CGA 8-pixel high and upscaled to EGA/VGA values.
+ *
+ *      top_and_flags contains blink flags in bits [6:5] and top scan line bits [4:0]
+ *      bottom contains bottom scan line (inside cursor) in bits [4:0] */
+
+/* or with top_and_flags */
+# define VGA2_INT10_CURSOR_SHAPE_NORMAL     (0u << 5u)
+# define VGA2_INT10_CURSOR_SHAPE_INVISIBLE  (1u << 5u)
+# define VGA2_INT10_CURSOR_SHAPE_ODD        (2u << 5u)  /* CGA/MDA only */
+# define VGA2_INT10_CURSOR_SHAPE_SLOW       (3u << 5u)  /* CGA/MDA only */
+
+void vga2_set_int10_cursor_shape(const uint8_t top_and_flags,const uint8_t bottom);
+#pragma aux vga2_set_int10_cursor_shape = \
+    "mov        ah,01h" \
+    "int        10h" \
+    parm [ch] [cl];
+#endif
+
+#ifndef TARGET_PC98
 uint16_t vga2_int11_equipment(void);
 #pragma aux vga2_int11_equipment = \
     "int        11h" \
