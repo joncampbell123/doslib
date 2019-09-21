@@ -37,6 +37,7 @@ int main(int argc,char **argv) {
         }
     }
 
+    /* controls BIOS cursor position and therefore the next location written by printf() */
     vga2_set_int10_cursor_pos(7/*row*/,0);
     printf("Hello\n");
     getch();
