@@ -242,6 +242,7 @@ uint8_t vga2_get_int10_current_mode(void);
     modify [ax bx];
 #endif
 
+#ifndef TARGET_PC98
 /* NTS: Apparently you can declare the param 8-bit, but give it to a 16-bit asm param,
  *      the compiler will zero extend for us. "MOV AX,00XXh" is fewer opcode bytes than
  *      "XOR AH,AH / MOV AL,XXh" */
@@ -250,6 +251,7 @@ void vga2_set_int10_mode(const uint8_t m);
     "int        10h" \
     modify [ax] \
     parm [ax];
+#endif
 
 #ifndef TARGET_PC98
 uint16_t vga2_int11_equipment(void);
