@@ -28,6 +28,18 @@ int main(int argc,char **argv) {
 
     vga2_set_int10_cursor_shape(6,7); /* standard shape */
     getch();
+
+    {
+        unsigned int i;
+        for (i=0;i < 32;i++) {
+            vga2_set_int10_cursor_pos(7/*row*/,i);
+            getch();
+        }
+    }
+
+    vga2_set_int10_cursor_pos(7/*row*/,0);
+    printf("Hello\n");
+    getch();
 #endif
 
     return 0;

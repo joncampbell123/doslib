@@ -278,6 +278,17 @@ void vga2_set_int10_cursor_shape(const uint8_t top_and_flags,const uint8_t botto
 #endif
 
 #ifndef TARGET_PC98
+/* this sets cursor position according to the BIOS's sense of chars per scanline NOT our internal representation.
+ * This does NOT support multiple pages offered by the BIOS (BH=0) */
+void vga2_set_int10_cursor_pos(const uint8_t row,const uint8_t col);
+#pragma aux vga2_set_int10_cursor_pos = \
+    "mov        ah,02h" \
+    "xor        bh,bh" \
+    "int        10h" \
+    parm [dh] [dl];
+#endif
+
+#ifndef TARGET_PC98
 uint16_t vga2_int11_equipment(void);
 #pragma aux vga2_int11_equipment = \
     "int        11h" \
