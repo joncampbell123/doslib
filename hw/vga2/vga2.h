@@ -274,6 +274,7 @@ void vga2_set_int10_cursor_shape(const uint8_t top_and_flags,const uint8_t botto
 #pragma aux vga2_set_int10_cursor_shape = \
     "mov        ah,01h" \
     "int        10h" \
+    modify [ah] \
     parm [ch] [cl];
 #endif
 
@@ -285,6 +286,7 @@ void vga2_set_int10_cursor_pos(const uint8_t row,const uint8_t col);
     "mov        ah,02h" \
     "xor        bh,bh" \
     "int        10h" \
+    modify [ah bh] \
     parm [dh] [dl];
 #endif
 
