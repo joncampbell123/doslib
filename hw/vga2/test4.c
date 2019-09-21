@@ -15,8 +15,19 @@ int main(int argc,char **argv) {
     vga2_set_int10_mode(1);
     printf("Hello\n");
     getch();
+
     vga2_set_int10_mode(3);
     printf("Hello\n");
+    getch();
+
+    vga2_set_int10_cursor_shape(0,7);
+    getch();
+
+    vga2_set_int10_cursor_shape(VGA2_INT10_CURSOR_SHAPE_INVISIBLE,7);
+    getch();
+
+    vga2_set_int10_cursor_shape(6,7); /* standard shape */
+    getch();
 #endif
 
     return 0;
