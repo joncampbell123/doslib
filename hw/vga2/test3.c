@@ -44,7 +44,7 @@ int main(int argc,char **argv) {
         const unsigned short attr =
             VGA2_ALPHA_ATTR_NOTSECRET | VGA2_ALPHA_ATTR_COLOR(fg) |
             ((((y / 6) % 2) == 1) ? VGA2_ALPHA_ATTR_REVERSE : 0);
-        VGA2_ALPHA_PTR rowpa = rowp + (0x2000 / sizeof(VGA2_ALPHA_CHAR));
+        VGA2_ALPHA_PTR rowpa = rowp + VGA2_PC98_ATTR_OFFSC;
 
         for (x=0;msg[x] != 0;x++) {
             rowp[x] = msg[x];
@@ -70,7 +70,7 @@ int main(int argc,char **argv) {
         const unsigned short attr =
             VGA2_ALPHA_ATTR_NOTSECRET | VGA2_ALPHA_ATTR_COLOR(fg) |
             ((((y / 6) % 2) == 1) ? VGA2_ALPHA_ATTR_REVERSE : 0);
-        VGA2_ALPHA_PTR rowpa = rowp + (0x2000 / sizeof(VGA2_ALPHA_CHAR));
+        VGA2_ALPHA_PTR rowpa = rowp + VGA2_PC98_ATTR_OFFSC;
 
         for (x=0;msg[x] != 0;x++) {
             rowp[x] = msg[x];

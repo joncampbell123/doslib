@@ -139,6 +139,8 @@ static inline VGA2_ALPHA_PTR vga2_seg2ptr(const unsigned int s) {
 }
 
 #ifdef TARGET_PC98
+# define VGA2_PC98_ATTR_OFFSB (0x2000) /* bytes */
+# define VGA2_PC98_ATTR_OFFSC (0x1000) /* chars */
 static inline VGA2_ALPHA_PTR vga2_alphaofs_ptr(const unsigned int o) {
     return vga2_segofs2ptr(0xA000,o);
 }
