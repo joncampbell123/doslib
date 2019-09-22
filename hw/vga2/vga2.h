@@ -85,6 +85,15 @@ static inline uint8_t vga2_set_alpha_width_can_set_stride(void) {
 #endif
 }
 
+#ifdef TARGET_PC98
+// TODO
+#else
+void vga2_set_alpha_width_cga(const unsigned int w,const unsigned int str);
+#define vga2_set_alpha_width_mda vga2_set_alpha_width_cga
+#define vga2_set_alpha_width_pcjr vga2_set_alpha_width_cga
+#define vga2_set_alpha_width_tandy vga2_set_alpha_width_cga
+#endif
+
 typedef struct vga2_alpha_base_t {
 #ifndef TARGET_PC98 /* segment is fixed, not movable */
  #if TARGET_MSDOS == 32
@@ -138,6 +147,13 @@ static inline uint8_t far *vga2_bda_b(const unsigned int o) {
 
 static inline uint16_t far *vga2_bda_w(const unsigned int o) {
     return ((uint16_t far*)MK_FP(0x40u,o));
+}
+#endif
+
+#ifdef TARGET_PC98
+#else
+static inline uint16_t vga2_bios_crtc_io(void) {
+    return *vga2_bda_w(0x63);
 }
 #endif
 
