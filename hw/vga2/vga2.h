@@ -66,6 +66,8 @@ extern uint8_t                  vga2_flags;
 # define VGA2_FLAG_MONO_DISPLAY     (1u << 5u)
 # define VGA2_FLAG_DIGITAL_DISPLAY  (1u << 6u)
 # define VGA2_FLAG_PGA              (1u << 7u)
+
+# define VGA2_FLAG_CARD_MASK        (VGA2_FLAG_MDA|VGA2_FLAG_CGA|VGA2_FLAG_EGA|VGA2_FLAG_MCGA|VGA2_FLAG_VGA|VGA2_FLAG_PGA)
 #endif
 
 extern void                     (*vga2_update_alpha_modeinfo)(void);
