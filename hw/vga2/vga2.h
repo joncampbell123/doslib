@@ -70,6 +70,21 @@ extern uint8_t                  vga2_flags;
 
 extern void                     (*vga2_update_alpha_modeinfo)(void);
 
+// set display width (MDA/CGA/PCjr/Tandy/EGA/VGA) which affects stride. EGA/VGA allows stride != display width.
+// also programs BIOS data area to match.
+extern void                     (*vga2_set_alpha_width)(const unsigned int w,const unsigned int str);
+
+static inline uint8_t vga2_set_alpha_width_can_set_stride(void) {
+#ifdef TARGET_PC98
+    /* The text layer is absolutely capable of stride != display width */
+    return 1u;
+#else
+    // EGA/VGA have offset register, therefore stride != display width.
+    // Anything else (CGA/MDA/PCjr/etc) lacks the register, therefore active display width determines chars per row (stride).
+    return (vga2_flags & (VGA2_FLAG_VGA|VGA2_FLAG_EGA));
+#endif
+}
+
 typedef struct vga2_alpha_base_t {
 #ifndef TARGET_PC98 /* segment is fixed, not movable */
  #if TARGET_MSDOS == 32
