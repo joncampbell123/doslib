@@ -9,11 +9,12 @@ TEST2_EXE =    $(SUBDIR)$(HPS)test2.$(EXEEXT)
 TEST3_EXE =    $(SUBDIR)$(HPS)test3.$(EXEEXT)
 TEST4_EXE =    $(SUBDIR)$(HPS)test4.$(EXEEXT)
 TEST5C_EXE =   $(SUBDIR)$(HPS)test5c.$(EXEEXT)
+TEST5E_EXE =   $(SUBDIR)$(HPS)test5e.$(EXEEXT)
 
-$(HW_VGA2_LIB): $(SUBDIR)$(HPS)vga2.obj $(SUBDIR)$(HPS)vgagdcc.obj $(SUBDIR)$(HPS)valtegam.obj $(SUBDIR)$(HPS)valegasw.obj $(SUBDIR)$(HPS)alphamem.obj $(SUBDIR)$(HPS)alphastw.obj $(SUBDIR)$(HPS)alstwmcg.obj
+$(HW_VGA2_LIB): $(SUBDIR)$(HPS)vga2.obj $(SUBDIR)$(HPS)vgagdcc.obj $(SUBDIR)$(HPS)valtegam.obj $(SUBDIR)$(HPS)valegasw.obj $(SUBDIR)$(HPS)alphamem.obj $(SUBDIR)$(HPS)alphastw.obj $(SUBDIR)$(HPS)alstwmcg.obj $(SUBDIR)$(HPS)alstwevg.obj
 	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)vga2.obj     -+$(SUBDIR)$(HPS)vgagdcc.obj  -+$(SUBDIR)$(HPS)valtegam.obj
 	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)valegasw.obj -+$(SUBDIR)$(HPS)alphamem.obj -+$(SUBDIR)$(HPS)alphastw.obj
-	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)alstwmcg.obj
+	wlib -q -b -c $(HW_VGA2_LIB) -+$(SUBDIR)$(HPS)alstwmcg.obj -+$(SUBDIR)$(HPS)alstwevg.obj
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
@@ -28,7 +29,7 @@ all: $(OMFSEGDG) lib exe
        
 lib: $(HW_VGA2_LIB) .symbolic
 	
-exe: $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) $(TEST4_EXE) $(TEST5C_EXE) .symbolic
+exe: $(TEST_EXE) $(TEST2_EXE) $(TEST3_EXE) $(TEST4_EXE) $(TEST5C_EXE) $(TEST5E_EXE) .symbolic
 
 !ifdef TEST_EXE
 $(TEST_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
@@ -61,6 +62,13 @@ $(TEST4_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test4.ob
 !ifdef TEST5C_EXE
 $(TEST5C_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test5c.obj
 	%write tmp.cmd option quiet option map=$(TEST5C_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA2_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test5c.obj name $(TEST5C_EXE)
+	@wlink @tmp.cmd
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+!endif
+
+!ifdef TEST5E_EXE
+$(TEST5E_EXE): $(HW_VGA2_LIB) $(HW_VGA2_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test5e.obj
+	%write tmp.cmd option quiet option map=$(TEST5E_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA2_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test5e.obj name $(TEST5E_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
