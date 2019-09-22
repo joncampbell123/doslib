@@ -94,8 +94,6 @@ void vga2_set_alpha_width_cga(const unsigned int w,const unsigned int str);
 #define vga2_set_alpha_width_mda vga2_set_alpha_width_cga
 #define vga2_set_alpha_width_pcjr vga2_set_alpha_width_cga
 #define vga2_set_alpha_width_tandy vga2_set_alpha_width_cga
-void vga2_set_alpha_width_ega(const unsigned int w,const unsigned int str);
-#define vga2_set_alpha_width_vga vga2_set_alpha_width_ega
 #endif
 
 typedef struct vga2_alpha_base_t {
