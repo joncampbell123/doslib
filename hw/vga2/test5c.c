@@ -15,7 +15,7 @@ int main(int argc,char **argv) {
 #else
     /* this version requires CGA/MDA/PCjr/Tandy */
     if (((vga2_flags & (VGA2_FLAG_MDA|VGA2_FLAG_CGA)) == 0)/*neither MDA/CGA*/ ||
-        (vga2_flags & VGA2_FLAG_CARD_MASK & (~(VGA2_FLAG_MDA|VGA2_FLAG_CGA))) != 0/*something other than MDA/CGA*/) {
+        (vga2_flags & VGA2_FLAG_CARD_MASK/*ignore non-card bits*/ & (~(VGA2_FLAG_MDA|VGA2_FLAG_CGA))) != 0/*something other than MDA/CGA*/) {
         printf("This program requires CGA/MDA/PCjr/Tandy\n");
         return 1;
     }
