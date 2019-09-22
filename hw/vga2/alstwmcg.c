@@ -24,6 +24,8 @@ void vga2_set_alpha_width_cga(const unsigned int w,const unsigned int str) {
     }
     /* update the BIOS data area */
     *vga2_bda_w(0x4A) = (uint16_t)w;
+    /* update internal var */
+    vga2_alpha_base.width = (uint8_t)w;
 }
 #endif
 
