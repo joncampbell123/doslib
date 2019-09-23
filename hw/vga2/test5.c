@@ -84,7 +84,7 @@ unsigned int do_test(unsigned int w) {
             vga2_set_alpha_display_width_ega(w);
     }
     else if (vga2_flags & VGA2_FLAG_MCGA) {
-        // TODO
+        // TODO: If the CRTC regs for horz/vert are just fake then how do we do this?
     }
     else {
         vga2_set_alpha_display_width_cga(w);
