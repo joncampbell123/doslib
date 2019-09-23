@@ -29,6 +29,22 @@ void vga2_set_alpha_stride_egavga(unsigned int w) {
     vga2_alpha_base.width = w & ~1u; /* even values only */
     *vga2_bda_w(0x4A) = w & ~1u; /* update BIOS too */
 }
+
+/* VGA only (write protect in the way).
+ * For simplicity sake (for now) calls EGA version after unlocking registers */
+void vga2_set_alpha_display_width_vga(unsigned int w) {
+}
+
+/* EGA only (VGA requires consideration of CRTC write protect) */
+void vga2_set_alpha_display_width_ega(unsigned int w) {
+    const uint16_t port = vga2_bios_crtc_io();
+    w &= ~1u; /* EGA/VGA can only allow even number of columns. Horizontal display end CAN allow it but offset register cannot */
+    outp(port+0,0x01);
+    outp(port+1,w-1u); /* horizontal display end */
+    outp(port+0,0x02);
+    outp(port+1,w+1u); /* start horizontal blanking. between active and blanking exists the overscan border */
+    /* affects display width, not stride */
+}
 #endif
 
 unsigned int do_test(unsigned int w) {
@@ -39,6 +55,10 @@ unsigned int do_test(unsigned int w) {
 #else
     if (vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) {
         vga2_set_alpha_stride_egavga(w);
+        if (vga2_flags & VGA2_FLAG_VGA)
+            vga2_set_alpha_display_width_vga(w);
+        else
+            vga2_set_alpha_display_width_ega(w);
     }
     else {
     }
