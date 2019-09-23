@@ -20,9 +20,29 @@ void cls(void) {
     }
 }
 
+#if !defined(TARGET_PC98)
+/* EGA/VGA only! */
+void vga2_set_alpha_stride_egavga(unsigned int w) {
+    const uint16_t port = vga2_bios_crtc_io();
+    outp(port+0,0x13);
+    outp(port+1,w>>1u); /* offset register, even values only */
+    vga2_alpha_base.width = w & ~1u; /* even values only */
+    *vga2_bda_w(0x4A) = w & ~1u; /* update BIOS too */
+}
+#endif
+
 unsigned int do_test(unsigned int w) {
     unsigned int r = 1;
     int c;
+
+#if defined(TARGET_PC98)
+#else
+    if (vga2_set_alpha_width_can_set_stride()) {
+        vga2_set_alpha_stride_egavga(w);
+    }
+    else {
+    }
+#endif
 
     cls();
 #if defined(TARGET_PC98)
