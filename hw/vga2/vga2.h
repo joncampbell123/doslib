@@ -76,6 +76,12 @@ extern void                     (*vga2_update_alpha_modeinfo)(void);
 // also programs BIOS data area to match.
 extern void                     (*vga2_set_alpha_width)(const unsigned int w,const unsigned int str);
 
+/* does the hardware support active display width != stride?
+ * If so, it is then possible to have wider than display panning.
+ * Only EGA/VGA have this capability. CGA/MDA/PCjr/Tandy/MCGA define
+ * chars per row according to active display width.
+ *
+ * PC-98 text layer (GDC) is known to support display width != stride */
 static inline uint8_t vga2_set_alpha_width_can_set_stride(void) {
 #ifdef TARGET_PC98
     /* The text layer is absolutely capable of stride != display width */
