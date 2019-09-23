@@ -60,6 +60,9 @@ void vga2_set_alpha_display_width_vga(unsigned int w) {
 }
 
 /* CGA/MDA/PCjr/Tandy. Stride (char per row) is determined by display columns */
+/* TODO: It is *UNKNOWN* whether this works on MCGA since MCGA has hardware support
+ *       for figuring out horizontal timing automatically and ignoring these registers,
+ *       which is on by default apparently. */
 void vga2_set_alpha_display_width_cga(unsigned int w) {
     const uint16_t port = vga2_bios_crtc_io();
     outp(port+0,0x01);
@@ -82,9 +85,6 @@ unsigned int do_test(unsigned int w) {
             vga2_set_alpha_display_width_vga(w);
         else
             vga2_set_alpha_display_width_ega(w);
-    }
-    else if (vga2_flags & VGA2_FLAG_MCGA) {
-        // TODO: If the CRTC regs for horz/vert are just fake then how do we do this?
     }
     else {
         vga2_set_alpha_display_width_cga(w);
