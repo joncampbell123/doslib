@@ -44,7 +44,19 @@ void vga2_set_alpha_display_width_ega(unsigned int w) {
 /* VGA only (write protect in the way).
  * For simplicity sake (for now) calls EGA version after unlocking registers */
 void vga2_set_alpha_display_width_vga(unsigned int w) {
-    vga2_set_alpha_display_width_ega(w);
+    const uint16_t port = vga2_bios_crtc_io();
+    uint8_t p;
+    outp(port+0,0x11); /* vertical retrace end / bandwith / protect */
+    p = inp(port+1);
+    outp(port+1,p & 0x7Fu); /* unlock */
+    w &= ~1u; /* EGA/VGA can only allow even number of columns. Horizontal display end CAN allow it but offset register cannot */
+    outp(port+0,0x01);
+    outp(port+1,w-1u); /* horizontal display end */
+    outp(port+0,0x02);
+    outp(port+1,w+1u); /* start horizontal blanking. between active and blanking exists the overscan border */
+    /* affects display width, not stride */
+    outp(port+0,0x11); /* vertical retrace end / bandwith / protect */
+    outp(port+1,p); /* restore */
 }
 #endif
 
