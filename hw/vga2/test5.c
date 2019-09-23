@@ -13,6 +13,9 @@ void cls(void) {
 
     while (c > 0) {
 #if defined(TARGET_PC98)
+        p[0] = 0x20;
+        p[VGA2_PC98_ATTR_OFFSC] = VGA2_ALPHA_ATTR_NOTSECRET | VGA2_ALPHA_ATTR_COLOR(7);
+        p++;
 #else
         *p++ = VGA2_ALPHA_ATTR_FGBGCOLOR(7,0) | 0x20;
 #endif
