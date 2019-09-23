@@ -152,6 +152,11 @@ unsigned int do_test(unsigned int w) {
 
 #if defined(TARGET_PC98)
     vga2_set_alpha_stride_pc98(w);
+    /* changing active display width is way more involved.
+     * it involves re-sending the mode to the GDC.
+     * if it turns out some table or pointer is available to read those
+     * values that we can read and copy, then we can use that here in
+     * the future. */
 #else
     if (vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) {
         vga2_set_alpha_stride_egavga(w);
