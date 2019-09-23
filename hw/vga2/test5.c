@@ -41,8 +41,7 @@ void vga2_set_alpha_display_width_ega(unsigned int w) {
     /* affects display width, not stride */
 }
 
-/* VGA only (write protect in the way).
- * For simplicity sake (for now) calls EGA version after unlocking registers */
+/* VGA only (write protect in the way) */
 void vga2_set_alpha_display_width_vga(unsigned int w) {
     const uint16_t port = vga2_bios_crtc_io();
     uint8_t p;
@@ -59,10 +58,47 @@ void vga2_set_alpha_display_width_vga(unsigned int w) {
     outp(port+1,p); /* restore */
 }
 
+/* MCGA only (write protect in the way). */
+void vga2_set_alpha_display_width_mcga(unsigned int w) {
+    const uint16_t port = 0x3D4; /* MCGA is always color, there's no monochrome MCGA that I'm aware of at 3B4h */
+    unsigned int fw;
+    uint8_t p,q;
+
+    /* MCGA is weird.
+     * 80x25 mode has horizontal timings programmed as if 40x25.
+     * In fact all modes are programming as if 40x25.
+     * This is probably why the PS/2 BIOS sets write protect for 80x25 mode 2 and 3.
+     * The unfortunate result is that the final value of w depends on whether a 40x25
+     * or 80x25 mode is in effect, which we have to figure out.
+     *
+     * One way to tell it seems is to look at the 80-column enable bit in 3D8h.
+     * Fortunately it seems, 3D8h is readable on MCGA, unlike the original CGA hardware.
+     *
+     * However that won't detect the 640x480 2-color mode, but there's a bit in the MCGA
+     * mode set aside specifically to enable that mode, which we can see. */
+    outp(port+0,0x10); /* mcga mode / protect */
+    p = inp(port+1);
+    outp(port+1,p & 0x7Fu); /* unlock */
+
+    q = inp(0x3D8); /* CGA compatible mode control */
+
+    if ((p & 2)/*enable for 640x480 2-color*/ || (q & 1)/*enable for CGA 80-column*/) {
+        w &= ~1u;
+        fw = w >> 1u;
+    }
+    else {
+        fw = w;
+    }
+
+    outp(port+0,0x01);
+    outp(port+1,fw-1); /* horizontal display end */
+    outp(port+0,0x10); /* mcga mode / protect */
+    outp(port+1,p); /* restore */
+    vga2_alpha_base.width = w;
+    *vga2_bda_w(0x4A) = w; /* update BIOS too */
+}
+
 /* CGA/MDA/PCjr/Tandy. Stride (char per row) is determined by display columns */
-/* TODO: It is *UNKNOWN* whether this works on MCGA since MCGA has hardware support
- *       for figuring out horizontal timing automatically and ignoring these registers,
- *       which is on by default apparently. */
 void vga2_set_alpha_display_width_cga(unsigned int w) {
     const uint16_t port = vga2_bios_crtc_io();
     outp(port+0,0x01);
@@ -85,6 +121,9 @@ unsigned int do_test(unsigned int w) {
             vga2_set_alpha_display_width_vga(w);
         else
             vga2_set_alpha_display_width_ega(w);
+    }
+    else if (vga2_flags & VGA2_FLAG_MCGA) {
+        vga2_set_alpha_display_width_mcga(w);
     }
     else {
         vga2_set_alpha_display_width_cga(w);
