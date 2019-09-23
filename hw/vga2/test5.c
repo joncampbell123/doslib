@@ -37,7 +37,7 @@ unsigned int do_test(unsigned int w) {
 
 #if defined(TARGET_PC98)
 #else
-    if (vga2_set_alpha_width_can_set_stride()) {
+    if (vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) {
         vga2_set_alpha_stride_egavga(w);
     }
     else {
