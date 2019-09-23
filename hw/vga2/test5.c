@@ -7,6 +7,22 @@
 
 #include <hw/vga2/vga2.h>
 
+#if defined(TARGET_PC98)
+static char tmp[256];
+
+void my_pc98_write_str(unsigned int r,unsigned int c,const char *s) {
+    VGA2_ALPHA_PTR p = vga2_alpharowcol_ptr(r,c);
+    char cc;
+
+    /* this won't do Shift JIS decoding, sorry */
+    while ((cc = *s++) != 0) {
+        p[0] = (unsigned char)cc;
+        p[VGA2_PC98_ATTR_OFFSC] = VGA2_ALPHA_ATTR_NOTSECRET | VGA2_ALPHA_ATTR_COLOR(7);
+        p++;
+    }
+}
+#endif
+
 void cls(void) {
     VGA2_ALPHA_PTR p = vga2_alpha_ptr();
     unsigned int c = vga2_alpha_base.width * vga2_alpha_base.height;
@@ -135,12 +151,30 @@ unsigned int do_test(unsigned int w) {
 
     cls();
 #if defined(TARGET_PC98)
+    /* Unlike IBM PC, I do not think PC-98 and the MS-DOS console driver support
+     * anything other than 80 columns, so for the effect to work we have to draw
+     * our own text.
+     *
+     * It also means that unlike IBM PC we have to put the console back to 80
+     * columns when we're done.
+     *
+     * Declaring a char[] array on stack is not wise in 16-bit real mode because
+     * the stack is typically very small, use a global char tmp[] instead. */
+    {
+        sprintf(tmp,"Hello w=%u mode %u x %u",w,vga2_alpha_base.width,vga2_alpha_base.height);
+        my_pc98_write_str(2/*row*/,0/*col*/,tmp);
+        sprintf(tmp,"Hello 2");
+        my_pc98_write_str(3/*row*/,0/*col*/,tmp);
+        sprintf(tmp,"Hello 3");
+        my_pc98_write_str(4/*row*/,0/*col*/,tmp);
+    }
 #else
     vga2_set_int10_cursor_pos(2,0);
-#endif
     printf("Hello w=%u mode %u x %u\n",w,vga2_alpha_base.width,vga2_alpha_base.height);
     printf("Hello 2\n");
     printf("Hello 3\n");
+#endif
+
     do {
         c = getch();
         if (c == 13) break;
@@ -175,6 +209,9 @@ int main(int argc,char **argv) {
     if (!do_test(30)) return 0;
     if (!do_test(20)) return 0;
     if (!do_test(84)) return 0;
+#if defined(TARGET_PC98)
+    if (!do_test(80)) return 0;
+#endif
 
     return 0;
 }
