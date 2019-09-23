@@ -20,6 +20,30 @@ void cls(void) {
     }
 }
 
+unsigned int do_test(unsigned int w) {
+    unsigned int r = 1;
+    int c;
+
+    cls();
+#if defined(TARGET_PC98)
+#else
+    vga2_set_int10_cursor_pos(2,0);
+#endif
+    printf("Hello w=%u mode %u x %u\n",w,vga2_alpha_base.width,vga2_alpha_base.height);
+    printf("Hello 2\n");
+    printf("Hello 3\n");
+    do {
+        c = getch();
+        if (c == 13) break;
+        if (c == 27) {
+            r = 0;
+            break;
+        }
+    } while (1);
+
+    return r;
+}
+
 int main(int argc,char **argv) {
     /* base classicifcation */
     probe_vga2();
@@ -29,15 +53,19 @@ int main(int argc,char **argv) {
         return 1;
     }
 
-#if defined(TARGET_PC98)
-#else
-    cls();
-    vga2_set_int10_cursor_pos(2,0);
-    printf("Hello\n");
-    printf("Hello 2\n");
-    printf("Hello 3\n");
-    while (getch() != 13);
-#endif
+    if (!do_test(80)) return 0;
+    if (!do_test(82)) return 0;
+    if (!do_test(85)) return 0;
+    if (!do_test(90)) return 0;
+    if (!do_test(79)) return 0;
+    if (!do_test(78)) return 0;
+    if (!do_test(70)) return 0;
+    if (!do_test(60)) return 0;
+    if (!do_test(50)) return 0;
+    if (!do_test(40)) return 0;
+    if (!do_test(30)) return 0;
+    if (!do_test(20)) return 0;
+    if (!do_test(84)) return 0;
 
     return 0;
 }
