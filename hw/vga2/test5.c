@@ -39,7 +39,25 @@ void cls(void) {
     }
 }
 
-#if !defined(TARGET_PC98)
+#if defined(TARGET_PC98)
+
+static inline void vga2_pc98_text_gdc_write_command(const unsigned char cmd) {
+    while (inp(0x60) & 0x02); /* while FIFO full */
+    outp(0x60+2,cmd); // write command
+}
+
+static inline void vga2_pc98_text_gdc_write_data(const unsigned char d) {
+    while (inp(0x60) & 0x02); /* while FIFO full */
+    outp(0x60,d); // write data
+}
+
+/* PC-98 only */
+void vga2_set_alpha_stride_pc98(unsigned int w) {
+    vga2_pc98_text_gdc_write_command(0x47/*Pitch specification*/);
+    vga2_pc98_text_gdc_write_data(w);
+    vga2_alpha_base.width = w; /* even values only */
+}
+#else
 /* EGA/VGA only! */
 void vga2_set_alpha_stride_egavga(unsigned int w) {
     const uint16_t port = vga2_bios_crtc_io();
@@ -133,6 +151,7 @@ unsigned int do_test(unsigned int w) {
     int c;
 
 #if defined(TARGET_PC98)
+    vga2_set_alpha_stride_pc98(w);
 #else
     if (vga2_flags & (VGA2_FLAG_EGA|VGA2_FLAG_VGA)) {
         vga2_set_alpha_stride_egavga(w);
