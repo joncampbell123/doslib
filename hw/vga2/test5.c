@@ -58,6 +58,16 @@ void vga2_set_alpha_display_width_vga(unsigned int w) {
     outp(port+0,0x11); /* vertical retrace end / bandwith / protect */
     outp(port+1,p); /* restore */
 }
+
+/* CGA/MDA/PCjr/Tandy. Stride (char per row) is determined by display columns */
+void vga2_set_alpha_display_width_cga(unsigned int w) {
+    const uint16_t port = vga2_bios_crtc_io();
+    outp(port+0,0x01);
+    outp(port+1,w); /* horizontal display end */
+    vga2_alpha_base.width = w;
+    *vga2_bda_w(0x4A) = w; /* update BIOS too */
+}
+
 #endif
 
 unsigned int do_test(unsigned int w) {
@@ -73,7 +83,11 @@ unsigned int do_test(unsigned int w) {
         else
             vga2_set_alpha_display_width_ega(w);
     }
+    else if (vga2_flags & VGA2_FLAG_MCGA) {
+        // TODO
+    }
     else {
+        vga2_set_alpha_display_width_cga(w);
     }
 #endif
 
