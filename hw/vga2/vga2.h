@@ -72,10 +72,6 @@ extern uint8_t                  vga2_flags;
 
 extern void                     (*vga2_update_alpha_modeinfo)(void);
 
-// set display width (MDA/CGA/PCjr/Tandy/EGA/VGA) which affects stride. EGA/VGA allows stride != display width.
-// also programs BIOS data area to match.
-extern void                     (*vga2_set_alpha_width)(const unsigned int w,const unsigned int str);
-
 /* does the hardware support active display width != stride?
  * If so, it is then possible to have wider than display panning.
  * Only EGA/VGA have this capability. CGA/MDA/PCjr/Tandy/MCGA define
@@ -96,10 +92,7 @@ static inline uint8_t vga2_set_alpha_width_can_set_stride(void) {
 #ifdef TARGET_PC98
 // TODO
 #else
-void vga2_set_alpha_width_cga(const unsigned int w,const unsigned int str);
-#define vga2_set_alpha_width_mda vga2_set_alpha_width_cga
-#define vga2_set_alpha_width_pcjr vga2_set_alpha_width_cga
-#define vga2_set_alpha_width_tandy vga2_set_alpha_width_cga
+// TODO
 #endif
 
 typedef struct vga2_alpha_base_t {
