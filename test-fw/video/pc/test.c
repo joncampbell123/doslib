@@ -2384,6 +2384,53 @@ int main() {
         }
     }
 
+    /* EGA/VGA video parameter control block (40:A8 far ptr) */
+    {
+        VGA_RAM_PTR ptr;
+        uint16_t pts,pto;
+        FILE *fp;
+
+        assert(sizeof(tmp) >= 1024);
+#if TARGET_MSDOS == 32
+        pto = ((uint16_t*)(0x4A8))[0];
+        pts = ((uint16_t*)(0x4A8))[1];
+        ptr = (VGA_RAM_PTR)(((unsigned long)pts << 4ul) + (unsigned long)pto);
+#else
+        pto = ((uint16_t far*)(0x4A8))[0];
+        pts = ((uint16_t far*)(0x4A8))[1];
+        ptr = (VGA_RAM_PTR)MK_FP(pts,pto);
+#endif
+
+        LOG(LOG_INFO "Testing: BIOS DATA AREA 40:A8 %04x:%04x\n",pts,pto);
+
+        if (ptr != 0) {
+#if TARGET_MSDOS == 32
+            pto = ((uint16_t*)((uint8_t*)ptr))[0];
+            pts = ((uint16_t*)((uint8_t*)ptr))[1];
+            ptr = (VGA_RAM_PTR)(((unsigned long)pts << 4ul) + (unsigned long)pto);
+            memcpy(tmp,ptr,1024);
+#else
+            pto = ((uint16_t far*)((uint8_t far*)ptr))[0];
+            pts = ((uint16_t far*)((uint8_t far*)ptr))[1];
+            ptr = (VGA_RAM_PTR)MK_FP(pts,pto);
+            _fmemcpy(tmp,ptr,1024);
+#endif
+
+            LOG(LOG_INFO "Testing: BIOS DATA AREA 40:A8 first far ptr %04x:%04x\n",pts,pto);
+#if TARGET_MSDOS == 32
+            LOG(LOG_INFO "Testing: BIOS DATA AREA 40:A8 first far ptr ptr %p\n",ptr);
+#else
+            LOG(LOG_INFO "Testing: BIOS DATA AREA 40:A8 first far ptr ptr %Fp\n",ptr);
+#endif
+
+            fp = fopen("video\\pc\\40A8VPCT.BIN","wb");
+            if (fp != NULL) {
+                fwrite(tmp,1024,1,fp);
+                fclose(fp);
+            }
+        }
+    }
+
 	_cli();
 	write_8254_system_timer(0); // 18.2
 	_sti();
