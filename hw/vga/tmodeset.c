@@ -76,6 +76,7 @@ static int tseng_promptuser() {
 # error WRONG
 #endif
 
+char tmp[2048];
 char tmpline[160];
 
 void bios_cls() {
@@ -758,6 +759,87 @@ int prompt_disk_space() {
     return 1;
 }
 
+void dump_bios_vptables_to_files() {
+    /* INT 1Dh video parameter table */
+    {
+        VGA_RAM_PTR ptr;
+        uint16_t pts,pto;
+        FILE *fp;
+
+        assert(sizeof(tmp) >= 1024);
+#if TARGET_MSDOS == 32
+        pto = ((uint16_t*)(0x1Du << 2u))[0];
+        pts = ((uint16_t*)(0x1Du << 2u))[1];
+        ptr = (VGA_RAM_PTR)(((unsigned long)pts << 4ul) + (unsigned long)pto);
+        memcpy(tmp,ptr,1024);
+#else
+        pto = ((uint16_t far*)(0x1Du << 2u))[0];
+        pts = ((uint16_t far*)(0x1Du << 2u))[1];
+        ptr = (VGA_RAM_PTR)MK_FP(pts,pto);
+        _fmemcpy(tmp,ptr,1024);
+#endif
+
+        fp = fopen("INT1DVPT.NFO","wb");
+        if (fp != NULL) {
+            fprintf(fp,"INT 1Dh table found at %04x:%04x\n",pts,pto);
+            fclose(fp);
+        }
+
+        fp = fopen("INT1DVPT.BIN","wb");
+        if (fp != NULL) {
+            fwrite(tmp,1024,1,fp);
+            fclose(fp);
+        }
+    }
+
+    /* EGA/VGA video parameter control block (40:A8 far ptr).
+     * According to DOSBox-X source code, the EGA table is 0x40*0x17 large
+     * and the VGA table is 0x40*0x1D large. 2048 bytes allows for tables
+     * up to 0x40*0x20 large. */
+    {
+        VGA_RAM_PTR ptr;
+        uint16_t pts,pto;
+        FILE *fp;
+
+        assert(sizeof(tmp) >= 2048);
+#if TARGET_MSDOS == 32
+        pto = ((uint16_t*)(0x4A8))[0];
+        pts = ((uint16_t*)(0x4A8))[1];
+        ptr = (VGA_RAM_PTR)(((unsigned long)pts << 4ul) + (unsigned long)pto);
+#else
+        pto = ((uint16_t far*)(0x4A8))[0];
+        pts = ((uint16_t far*)(0x4A8))[1];
+        ptr = (VGA_RAM_PTR)MK_FP(pts,pto);
+#endif
+
+        if (ptr != 0) {
+#if TARGET_MSDOS == 32
+            pto = ((uint16_t*)((uint8_t*)ptr))[0];
+            pts = ((uint16_t*)((uint8_t*)ptr))[1];
+            ptr = (VGA_RAM_PTR)(((unsigned long)pts << 4ul) + (unsigned long)pto);
+            memcpy(tmp,ptr,2048);
+#else
+            pto = ((uint16_t far*)((uint8_t far*)ptr))[0];
+            pts = ((uint16_t far*)((uint8_t far*)ptr))[1];
+            ptr = (VGA_RAM_PTR)MK_FP(pts,pto);
+            _fmemcpy(tmp,ptr,2048);
+#endif
+
+            fp = fopen("40A8VPCT.NFO","wb");
+            if (fp != NULL) {
+                fprintf(fp,"BDA 40:A8 VPCT table found at %04x:%04x\n",pts,pto);
+                fclose(fp);
+            }
+
+            fp = fopen("40A8VPCT.BIN","wb");
+            if (fp != NULL) {
+                fwrite(tmp,2048,1,fp);
+                fclose(fp);
+            }
+        }
+    }
+}
+
 void dump_auto_modes_and_bios() {
 	unsigned int smode;
 	int c;
@@ -780,6 +862,7 @@ void dump_auto_modes_and_bios() {
 	int10_setmode(3);
 
 	dump_bios_to_file(/*automated=*/1);
+    dump_bios_vptables_to_files();
 
 	/* standard modes.
 	 * SVGA cards (made either prior to or after VESA BIOS extensions) will have SVGA modes beyond the standard IBM INT 10h modelist */
