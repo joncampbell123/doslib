@@ -2351,6 +2351,39 @@ int main() {
         }
     }
 
+    /* INT 1Dh video parameter table */
+    {
+        VGA_RAM_PTR ptr;
+        uint16_t pts,pto;
+        FILE *fp;
+
+        assert(sizeof(tmp) >= 1024);
+#if TARGET_MSDOS == 32
+        pto = ((uint16_t*)(0x1Du << 2u))[0];
+        pts = ((uint16_t*)(0x1Du << 2u))[1];
+        ptr = (VGA_RAM_PTR)(((unsigned long)pts << 4ul) + (unsigned long)pto);
+        memcpy(tmp,ptr,1024);
+#else
+        pto = ((uint16_t far*)(0x1Du << 2u))[0];
+        pts = ((uint16_t far*)(0x1Du << 2u))[1];
+        ptr = (VGA_RAM_PTR)MK_FP(pts,pto);
+        _fmemcpy(tmp,ptr,1024);
+#endif
+
+        LOG(LOG_INFO "Testing: INT 1Dh vector %04x:%04x\n",pts,pto);
+#if TARGET_MSDOS == 32
+        LOG(LOG_INFO "Testing: INT 1Dh vector ptr %p\n",ptr);
+#else
+        LOG(LOG_INFO "Testing: INT 1Dh vector ptr %Fp\n",ptr);
+#endif
+
+        fp = fopen("video\\pc\\INT1DVPT.BIN","wb");
+        if (fp != NULL) {
+            fwrite(tmp,1024,1,fp);
+            fclose(fp);
+        }
+    }
+
 	_cli();
 	write_8254_system_timer(0); // 18.2
 	_sti();
