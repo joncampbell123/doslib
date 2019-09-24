@@ -2288,6 +2288,8 @@ int main() {
         uint16_t bv=0,cv=0;
 
         __asm {
+            xor     cx,cx
+            dec     cx
             mov     ah,0x12             ; Alternate function select - Get EGA INFO
             mov     bx,0xFF10
             int     10h
@@ -2308,7 +2310,6 @@ int main() {
             xor     bx,bx
             int     10h
             mov     bv,bx
-            mov     cv,cx
         }
 
         LOG(LOG_DEBUG "INT 10h AX=0x1A00 Get Display Combination Code:\n"
