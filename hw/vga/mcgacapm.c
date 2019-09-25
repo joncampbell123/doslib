@@ -225,6 +225,22 @@ void dump_to_file(int automated) {
 			pop	ax
 		}
 	}
+
+	/* ============= BIOS data area ============ */
+#if TARGET_MSDOS == 32
+	for (i=0;i < 256;i++) rdump[i] = *((uint8_t*)(0x400+i));
+#else
+	for (i=0;i < 256;i++) rdump[i] = *((uint8_t far*)MK_FP(0x40,i));
+#endif
+
+	/* ----- write */
+	sprintf(tmpname,"%s.BDA",nname);
+	if ((fp=fopen(tmpname,"wb")) != NULL) {
+		fwrite(rdump,256,1,fp);
+		fclose(fp);
+	}
+
+    /* resume */
 	vga_moveto(0,6);
 	vga_sync_bios_cursor();
 
