@@ -96,7 +96,7 @@ void vga2_set_alpha_display_width_vga(unsigned int w) {
 }
 
 /* MCGA only (write protect in the way). */
-/* TODO: Verify this works on real hardware the same as DOSBox-X */
+/* NTS: This code has been tested and confirmed to work on MCGA hardware */
 void vga2_set_alpha_display_width_mcga(unsigned int w) {
     const uint16_t port = 0x3D4; /* MCGA is always color, there's no monochrome MCGA that I'm aware of at 3B4h */
     unsigned int fw;
