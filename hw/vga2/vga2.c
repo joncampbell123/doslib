@@ -46,7 +46,22 @@ uint8_t                         vga2_flags = 0;
  * This probing code does NOT initialize the alphanumeric pointer and state
  * information, so that if the host does not call anything related to that, then
  * nothing of that sort is linked into the executable (i.e. games that do not
- * use text mode) */
+ * use text mode).
+ *
+ * Please note that on MCGA hardware (IBM PS/2 Model 30), if the monitor is not
+ * connected, the MCGA hardware will be configured to emit a CGA-like 60Hz 240p
+ * mode and the API will return DCC code 0x00 (no monitor). This check and
+ * configuration is done every time the BIOS runs POST, whether first power on
+ * or CTRL+ALT+DEL reset.
+ *
+ * If your program prefers to know whether or not it is on MCGA in that condition
+ * (when the user has attached a monitor after the fact), you will need to do
+ * additional checks on the model byte to confirm it is MCGA despite the unhelpful
+ * DCC from the BIOS. However that is an inconvenient use case the user is not
+ * likely to set up, so this function will not do it for you.
+ *
+ * Naturally when MCGA is in CGA-like 200-line mode, the 640x480 monochrome mode
+ * is not available. */
 #ifdef TARGET_PC98
     /*nothing*/
 #else
