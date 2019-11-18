@@ -27,6 +27,7 @@
 char*           in_file = NULL;
 char*           out_file = NULL;
 char*           out_codepage = NULL;
+int32_t         out_codepage_num = -1;
 
 static void help(void) {
     fprintf(stderr,"DOSLIB game string table compiler\n");
@@ -52,6 +53,15 @@ char *set_string(char **a,const char *s) {
     }
 
     return *a;
+}
+
+int32_t codepage_to_num(const char *s) {
+    if (!strncmp(s,"CP",2) && isdigit(s[2])) {
+        // CP437, CP932, etc.
+        return (int32_t)atol(s+2);
+    }
+
+    return -1;
 }
 
 static int parse(int argc,char **argv) {
@@ -120,6 +130,18 @@ static int parse(int argc,char **argv) {
 
     if (out_codepage == NULL)
         set_string(&out_codepage,"CP437");
+
+    assert(out_codepage != NULL);
+
+    out_codepage_num = codepage_to_num(out_codepage);
+    if (out_codepage_num < 0) {
+        fprintf(stderr,"Unknown codepage %s\n",out_codepage);
+        return 1;
+    }
+
+    fprintf(stderr,"Input file: %s\n",in_file);
+    fprintf(stderr,"Output file: %s\n",out_file);
+    fprintf(stderr,"Encoding: %s (code page %d)\n",out_codepage,out_codepage_num);
 
     return 0;
 }
