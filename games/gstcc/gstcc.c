@@ -128,6 +128,15 @@ static int parse(int argc,char **argv) {
         return 1;
     }
 
+    return 0;
+}
+
+int main(int argc,char **argv) {
+    if (parse(argc,argv))
+        return 1;
+
+    // TODO: Open the file read the header, then stop there and return here
+
     if (out_codepage == NULL)
         set_string(&out_codepage,"CP437");
 
@@ -139,16 +148,7 @@ static int parse(int argc,char **argv) {
         return 1;
     }
 
-    fprintf(stderr,"Input file: %s\n",in_file);
-    fprintf(stderr,"Output file: %s\n",out_file);
     fprintf(stderr,"Encoding: %s (code page %d)\n",out_codepage,out_codepage_num);
-
-    return 0;
-}
-
-int main(int argc,char **argv) {
-    if (parse(argc,argv))
-        return 1;
 
     return 0;
 }
