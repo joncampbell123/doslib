@@ -109,6 +109,15 @@ static int parse(int argc,char **argv) {
         return 1;
     }
 
+    if (stat(in_file,&st)) {
+        fprintf(stderr,"Cannot stat input file %s, %s\n",in_file,strerror(errno));
+        return 1;
+    }
+    if (!S_ISREG(st.st_mode)) {
+        fprintf(stderr,"%s is not a file\n",in_file);
+        return 1;
+    }
+
     if (out_codepage == NULL)
         set_string(&out_codepage,"CP437");
 
