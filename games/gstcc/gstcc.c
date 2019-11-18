@@ -31,7 +31,9 @@ char*           out_codepage = NULL;
 static void help(void) {
     fprintf(stderr,"DOSLIB game string table compiler\n");
     fprintf(stderr,"gstcc -i <input> -o <output> [-e codepage]\n");
-    fprintf(stderr,"To get a complete list of code pages see iconv --list\n");
+    fprintf(stderr,"To get a complete list of code pages see iconv --list.\n");
+    fprintf(stderr,"Input file is assumed to be UTF-8 and will be encoded to the target\n");
+    fprintf(stderr,"code page on compile.\n");
 }
 
 void clear_string(char **a) {
