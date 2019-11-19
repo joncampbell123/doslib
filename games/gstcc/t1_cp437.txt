@@ -8,6 +8,8 @@
 51=Another one
 30=Out of order
 32=Another ooo
+52=Repeated string
+52=This is the one you should see
 100=In computing, a code page is a character encoding and as such it is a specific association of a set of printable characters and control characters with unique numbers.
 101=The term "code page" originated from IBM's EBCDIC-based mainframe systems,[1] but Microsoft, SAP,[2] and Oracle Corporation[3] are among the few vendors which use this term.
 102=The majority of vendors identify their own character sets by a name. In the case when there is a plethora of character sets (like in IBM), identifying character sets through a number is a convenient way to distinguish them.
