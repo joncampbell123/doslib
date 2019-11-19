@@ -43,6 +43,7 @@ typedef struct out_str_t {
     unsigned int        data_ofs;
 } out_str_t;
 
+unsigned int    out_string_base = 1;
 unsigned int    out_string_count = 0;
 out_str_t       out_string[MAX_STRINGS];
 
@@ -362,13 +363,20 @@ int proc_strings(void) {
     unsigned long ofs = 12;
     unsigned int i;
 
-    ofs += out_string_count * 2; // length of string 16-bit
-
     for (i=0;i < out_string_count;i++) {
+        if (out_string[i].data_len != 0)
+            break;
+    }
+    out_string_base = i;
+
+    ofs += (out_string_count - out_string_base) * 2; // length of string 16-bit
+
+    for (i=out_string_base;i < out_string_count;i++) {
         out_string[i].data_ofs = ofs;
         ofs += out_string[i].data_len;
     }
 
+    fprintf(stderr,"String table defines strings %u <= x <= %u\n",out_string_base+1,out_string_count);
     fprintf(stderr,"String table size: %lu bytes\n",ofs);
 
     if (ofs >= 0xFFF0) { // This is for MS-DOS 16-bit so it's gotta fit into a 64KB segment
@@ -379,9 +387,53 @@ int proc_strings(void) {
     return 0;
 }
 
-int main(int argc,char **argv) {
-    int r;
+void write16le(unsigned char *d,uint16_t v) {
+    d[0] = (unsigned char)( v        & 0xFFu);
+    d[1] = (unsigned char)((v >> 8u) & 0xFFu);
+}
 
+void write32le(unsigned char *d,uint32_t v) {
+    d[0] = (unsigned char)( v          & 0xFFul);
+    d[1] = (unsigned char)((v >>  8ul) & 0xFFul);
+    d[2] = (unsigned char)((v >> 16ul) & 0xFFul);
+    d[3] = (unsigned char)((v >> 24ul) & 0xFFul);
+}
+
+int write_out(void) {
+    unsigned char tmp[12];
+    unsigned int i;
+    FILE *fp;
+
+    fp = fopen(out_file,"wb");
+    if (fp == NULL) {
+        fprintf(stderr,"Cannot open output file %s\n",out_file);
+        return -1;
+    }
+
+    // header
+    memcpy(tmp,"ST0U",4);
+    write32le(tmp+4,out_codepage_num);
+    write16le(tmp+8,out_string_base);
+    write16le(tmp+10,out_string_count - out_string_base);
+    fwrite(tmp,12,1,fp);
+
+    // list
+    for (i=out_string_base;i < out_string_count;i++) {
+        write16le(tmp,out_string[i].data_len);
+        fwrite(tmp,2,1,fp);
+    }
+
+    // strings
+    for (i=out_string_base;i < out_string_count;i++) {
+        if (out_string[i].data_len != 0)
+            fwrite(out_string[i].data,out_string[i].data_len,1,fp);
+    }
+
+    fclose(fp);
+    return 0;
+}
+
+int main(int argc,char **argv) {
     if (parse(argc,argv))
         return 1;
 
@@ -410,6 +462,10 @@ int main(int argc,char **argv) {
 
     // done loading
     close_in();
+
+    // write output
+    if (write_out() < 0)
+        return 1;
 
     return 0;
 }
