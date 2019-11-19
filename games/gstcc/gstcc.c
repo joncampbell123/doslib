@@ -333,7 +333,7 @@ int read_body(void) {
             }
 
             if (encode_string_to_slot((unsigned int)idx,value) < 0) {
-                fprintf(stderr,"String encoding failure\n");
+                fprintf(stderr,"String encoding failure for string #%lu\n",idx);
                 return -1;
             }
         }
