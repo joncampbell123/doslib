@@ -24,10 +24,60 @@
 #define O_BINARY (0)
 #endif
 
+FILE*           in_fp = NULL;
+char            in_line[4096];
+char*           in_line_r = NULL;
+
 char*           in_file = NULL;
 char*           out_file = NULL;
 char*           out_codepage = NULL;
 int32_t         out_codepage_num = -1;
+
+int in_gl(void) {
+    if (in_line_r == in_line)
+        return 1;
+
+    if (in_fp != NULL) {
+        memset(in_line,0,16); // keep the first 16 bytes NULL
+
+        if (feof(in_fp))
+            return 0;
+        if (ferror(in_fp))
+            return -1;
+        if (fgets(in_line,sizeof(in_line),in_fp) == NULL)
+            return 0;
+
+        /* eat the newline */
+        {
+            char *s = in_line + strlen(in_line) - 1;
+            while (s >= in_line && (*s == '\r' || *s == '\n')) *s-- = 0;
+        }
+
+        in_line_r = in_line;
+        return 1;
+    }
+
+    return 0;
+}
+
+void in_gl_discard(void) {
+    in_line_r = in_line + 1;
+}
+
+int in_gl_p(void) {
+    int r;
+
+    while ((r=in_gl()) == 1) {
+        if (in_line[0] == ';') { /* skip comments */
+            in_gl_discard();
+            continue;
+        }
+
+        break;
+    }
+
+    return r;
+}
 
 static void help(void) {
     fprintf(stderr,"DOSLIB game string table compiler\n");
@@ -137,12 +187,7 @@ static int parse(int argc,char **argv) {
     return 0;
 }
 
-int main(int argc,char **argv) {
-    if (parse(argc,argv))
-        return 1;
-
-    // TODO: Open the file read the header, then stop there and return here
-
+int prep_body(void) {
     if (out_codepage == NULL)
         set_string(&out_codepage,"CP437");
 
@@ -151,10 +196,68 @@ int main(int argc,char **argv) {
     out_codepage_num = codepage_to_num(out_codepage);
     if (out_codepage_num < 0) {
         fprintf(stderr,"Unknown codepage %s\n",out_codepage);
-        return 1;
+        return -1;
     }
 
     fprintf(stderr,"Encoding: %s (code page %d)\n",out_codepage,out_codepage_num);
+    return 0;
+}
+
+void split_name_value(char **name,char **value,char *s) {
+    *name = s;
+    *value = strchr(s,'=');
+    if (*value != NULL)
+        *((*value)++) = 0;
+    else
+        *value = s + strlen(s);
+}
+
+int read_header(void) {
+    char *name,*value;
+    int r;
+
+    while ((r=in_gl_p()) == 1) {
+        if (in_line[0] != '!')
+            break;
+
+        split_name_value(&name,&value,in_line+1/*skip!*/);
+        in_gl_discard();
+
+        if (!strcmp(name,"codepage"))
+            set_string(&out_codepage,value);
+    }
+
+    return 0;
+}
+
+void close_in(void) {
+    fclose(in_fp);
+    in_fp = NULL;
+}
+
+int main(int argc,char **argv) {
+    int r;
+
+    if (parse(argc,argv))
+        return 1;
+
+    // begin reading
+    in_fp = fopen(in_file,"rb");
+    if (in_fp == NULL) {
+        fprintf(stderr,"Unable to open input file %s\n",in_file);
+        return 1;
+    }
+
+    // read header
+    if (read_header() < 0)
+        return 1;
+
+    // prepare to read body
+    if (prep_body() < 0)
+        return 1;
+
+    // done loading
+    close_in();
 
     return 0;
 }

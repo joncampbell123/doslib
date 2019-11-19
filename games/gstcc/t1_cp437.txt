@@ -1,4 +1,6 @@
 ; comment
+!codepage=CP437
+; another comment
 1=Testing123
 2=Testing Testing 1 2 3
 3=Testing with ascii art ├───┤
