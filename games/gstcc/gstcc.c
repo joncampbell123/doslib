@@ -33,6 +33,21 @@ char*           out_file = NULL;
 char*           out_codepage = NULL;
 int32_t         out_codepage_num = -1;
 
+iconv_t         iconv_context = (iconv_t)-1;
+
+#define MAX_STRINGS     8192
+
+typedef struct out_str_t {
+    unsigned char       *data;
+    unsigned int        data_len;
+} out_str_t;
+
+unsigned int    out_string_count = 0;
+out_str_t       out_string[MAX_STRINGS];
+
+char            out_str_tmp[4096];
+char*           out_str_tmp_w = 0;
+
 int in_gl(void) {
     if (in_line_r == in_line)
         return 1;
@@ -109,9 +124,6 @@ int32_t codepage_to_num(const char *s) {
     if (!strncmp(s,"CP",2) && isdigit(s[2])) {
         // CP437, CP932, etc.
         return (int32_t)atol(s+2);
-    }
-    if (!strcmp(s,"UTF-16LE")) {
-        return (int32_t)1200;//microsoft
     }
     if (!strcmp(s,"UTF-8")) {
         return (int32_t)65001;//microsoft
@@ -227,10 +239,113 @@ int read_header(void) {
             set_string(&out_codepage,value);
     }
 
+    assert(iconv_context == (iconv_t)-1);
+    iconv_context = iconv_open(out_codepage,"UTF-8");
+    if (iconv_context == (iconv_t)-1) {
+        fprintf(stderr,"Unable to open iconv context\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+int out_string_alloc_slot(unsigned int idx) {
+    while (out_string_count <= idx) {
+        out_string[out_string_count].data = NULL;
+        out_string[out_string_count].data_len = 0;
+        out_string_count++;
+    }
+
+    return 0;
+}
+
+int encode_string_to_slot(unsigned int idx,char *s) {
+    size_t ol = sizeof(out_str_tmp) - 1;
+    size_t sl = strlen(s);
+    int ret;
+
+    if (idx > out_string_count)
+        return -1;
+
+    out_str_tmp_w = out_str_tmp;
+
+    ret = iconv(iconv_context,&s,&sl,&out_str_tmp_w,&ol);
+    if (ret < 0 || sl != 0 || ol == 0) {
+        fprintf(stderr,"Iconv conversion error\n");
+        return -1;
+    }
+    *out_str_tmp_w = 0;
+
+    if (out_string[idx].data) {
+        free(out_string[idx].data);
+        out_string[idx].data = NULL;
+        out_string[idx].data_len = 0;
+    }
+
+    assert(out_str_tmp <= out_str_tmp_w);
+
+    out_string[idx].data_len = (unsigned int)(out_str_tmp_w - out_str_tmp);
+    if (out_string[idx].data_len != 0) {
+        out_string[idx].data = malloc(out_string[idx].data_len);
+        if (out_string[idx].data == NULL) {
+            fprintf(stderr,"Cannot allocate string memory\n");
+            return -1;
+        }
+        memcpy(out_string[idx].data,out_str_tmp,out_string[idx].data_len);
+    }
+    else {
+        out_string[idx].data = NULL;
+    }
+
+    return 0;
+}
+
+int read_body(void) {
+    char *name,*value;
+    int r;
+
+    while ((r=in_gl_p()) == 1) {
+        split_name_value(&name,&value,in_line);
+        in_gl_discard();
+
+        if (isdigit(*name)) {
+            unsigned long idx = strtoul(name,&name,0);
+            if (idx == 0) {
+                fprintf(stderr,"Index 0 is reserved\n");
+                return -1;
+            }
+            idx--;
+            if (idx >= (unsigned long)MAX_STRINGS) {
+                fprintf(stderr,"Index too large\n");
+                return -1;
+            }
+
+            if (*name != 0) {
+                fprintf(stderr,"Extra junk after number\n");
+                return -1;
+            }
+
+            if (out_string_alloc_slot((unsigned int)idx) < 0) {
+                fprintf(stderr,"Failed to alloc string slot\n");
+                return -1;
+            }
+
+            if (encode_string_to_slot((unsigned int)idx,value) < 0) {
+                fprintf(stderr,"String encoding failure\n");
+                return -1;
+            }
+        }
+    }
+
     return 0;
 }
 
 void close_in(void) {
+    if (iconv_context != (iconv_t)-1) {
+        iconv_close(iconv_context);
+        iconv_context = (iconv_t)-1;
+    }
+
     fclose(in_fp);
     in_fp = NULL;
 }
@@ -254,6 +369,10 @@ int main(int argc,char **argv) {
 
     // prepare to read body
     if (prep_body() < 0)
+        return 1;
+
+    // read body
+    if (read_body() < 0)
         return 1;
 
     // done loading
