@@ -8,3 +8,8 @@
 51=Another one
 30=Out of order
 32=Another ooo
+100=In computing, a code page is a character encoding and as such it is a specific association of a set of printable characters and control characters with unique numbers.
+101=The term "code page" originated from IBM's EBCDIC-based mainframe systems,[1] but Microsoft, SAP,[2] and Oracle Corporation[3] are among the few vendors which use this term.
+102=The majority of vendors identify their own character sets by a name. In the case when there is a plethora of character sets (like in IBM), identifying character sets through a number is a convenient way to distinguish them.
+103=Originally, the code page numbers referred to the page numbers in the IBM standard character set manual,[4][5][6] a condition which has not held for a long time.
+104=Vendors that use a code page system allocate their own code page number to a character encoding, even if it is better known by another name; for example, UTF-8 has been assigned page numbers 1208 at IBM, 65001 at Microsoft, and 4110 at SAP.
