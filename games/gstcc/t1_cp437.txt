@@ -6,4 +6,5 @@
 3=Testing with ascii art ├───┤
 50=Gap test
 51=Another one
-
+30=Out of order
+32=Another ooo
