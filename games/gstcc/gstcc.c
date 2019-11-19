@@ -413,7 +413,7 @@ int write_out(void) {
     // header
     memcpy(tmp,"ST0U",4);
     write32le(tmp+4,out_codepage_num);
-    write16le(tmp+8,out_string_base);
+    write16le(tmp+8,out_string_base + 1);
     write16le(tmp+10,out_string_count - out_string_base);
     fwrite(tmp,12,1,fp);
 
