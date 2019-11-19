@@ -1,0 +1,17 @@
+; comment
+!codepage=CP437
+; another comment
+1=Testing123
+2=Testing Testing 1 2 3
+3=Testing with ascii art ├───┤
+3=Gap test
+4=Another one
+5=Out of order
+6=Another ooo
+7=Repeated string
+8=This is the one you should see
+9=In computing, a code page is a character encoding and as such it is a specific association of a set of printable characters and control characters with unique numbers.
+10=The term "code page" originated from IBM's EBCDIC-based mainframe systems,[1] but Microsoft, SAP,[2] and Oracle Corporation[3] are among the few vendors which use this term.
+11=The majority of vendors identify their own character sets by a name. In the case when there is a plethora of character sets (like in IBM), identifying character sets through a number is a convenient way to distinguish them.
+12=Originally, the code page numbers referred to the page numbers in the IBM standard character set manual,[4][5][6] a condition which has not held for a long time.
+13=Vendors that use a code page system allocate their own code page number to a character encoding, even if it is better known by another name; for example, UTF-8 has been assigned page numbers 1208 at IBM, 65001 at Microsoft, and 4110 at SAP.
