@@ -40,6 +40,7 @@ iconv_t         iconv_context = (iconv_t)-1;
 typedef struct out_str_t {
     unsigned char       *data;
     unsigned int        data_len;
+    unsigned int        data_ofs;
 } out_str_t;
 
 unsigned int    out_string_count = 0;
@@ -350,6 +351,34 @@ void close_in(void) {
     in_fp = NULL;
 }
 
+/* header:
+ * char         "ST0U"
+ * DWORD        code page
+ * WORD         string first index
+ * WORD         string count
+ */
+
+int proc_strings(void) {
+    unsigned long ofs = 12;
+    unsigned int i;
+
+    ofs += out_string_count * 2; // length of string 16-bit
+
+    for (i=0;i < out_string_count;i++) {
+        out_string[i].data_ofs = ofs;
+        ofs += out_string[i].data_len;
+    }
+
+    fprintf(stderr,"String table size: %lu bytes\n",ofs);
+
+    if (ofs >= 0xFFF0) { // This is for MS-DOS 16-bit so it's gotta fit into a 64KB segment
+        fprintf(stderr,"String table to big.\n");
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
     int r;
 
@@ -373,6 +402,10 @@ int main(int argc,char **argv) {
 
     // read body
     if (read_body() < 0)
+        return 1;
+
+    // process strings
+    if (proc_strings() < 0)
         return 1;
 
     // done loading
