@@ -60,6 +60,12 @@ int32_t codepage_to_num(const char *s) {
         // CP437, CP932, etc.
         return (int32_t)atol(s+2);
     }
+    if (!strcmp(s,"UTF-16LE")) {
+        return (int32_t)1200;//microsoft
+    }
+    if (!strcmp(s,"UTF-8")) {
+        return (int32_t)65001;//microsoft
+    }
 
     return -1;
 }
