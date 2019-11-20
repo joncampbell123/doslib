@@ -25,7 +25,6 @@
 #endif
 
 unsigned char*      buffer = NULL;                  /* string data */
-size_t              buffer_sz = 0;
 uint16_t            buffer_string_count = 0;        /* number of strings */
 uint16_t            buffer_string_start = 0;        /* first string ID */
 uint16_t*           buffer_string_offsets = NULL;   /* offsets of each string. array is count + 1 long, with [count] the size of the buffer */
