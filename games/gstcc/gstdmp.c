@@ -59,6 +59,8 @@ int main(int argc,char **argv) {
 
     {
         unsigned char tmp[12];
+        unsigned long ofs;
+        unsigned int i;
         off_t len;
 
         len = lseek(fd,0,SEEK_END);
@@ -78,6 +80,7 @@ int main(int argc,char **argv) {
             return 1;
         }
 
+        len -= (off_t)12;
         buffer_codepage = read32le(tmp+4);
         buffer_string_start = read16le(tmp+8);
         buffer_string_count = read16le(tmp+10);
@@ -85,6 +88,57 @@ int main(int argc,char **argv) {
         fprintf(stderr,"Codepage: %lu\n",(unsigned long)buffer_codepage);
         fprintf(stderr,"First string: #%u\n",(unsigned int)buffer_string_start);
         fprintf(stderr,"Number of strings: %u\n",(unsigned int)buffer_string_count);
+
+        if (buffer_string_start == 0) {
+            fprintf(stderr,"First string cannot be zero\n");
+            close(fd);
+            return 1;
+        }
+        if (buffer_string_count == 0) {
+            fprintf(stderr,"Count cannot be zero\n");
+            close(fd);
+            return 1;
+        }
+        if (((uint32_t)buffer_string_count + (uint32_t)buffer_string_start) > (uint32_t)0x1FFFul) {
+            fprintf(stderr,"Start+count exceeds 8k\n");
+            close(fd);
+            return 1;
+        }
+
+        /* 8K string count limit also prevents integer overflow when multiplied by 2 for alloc. */
+        /* One extra element is allocated so the last contains the total size and to simplify lookup code. */
+
+        buffer_string_offsets = (uint16_t*)malloc((buffer_string_count + 1u) * 2u);
+        if (buffer_string_offsets == NULL) {
+            fprintf(stderr,"Cannot alloc buffer string offsets\n");
+            close(fd);
+            return 1;
+        }
+        len -= (off_t)(buffer_string_count * 2u);
+        if (len < 0) {
+            fprintf(stderr,"Cannot read string buffer sizes (len < 0)\n");
+            close(fd);
+            return 1;
+        }
+        if (read(fd,buffer_string_offsets,buffer_string_count * 2u) != (buffer_string_count * 2u)) {
+            fprintf(stderr,"Cannot read string buffer sizes\n");
+            close(fd);
+            return 1;
+        }
+
+        ofs = 0;
+        for (i=0;i < buffer_string_count;i++) {
+            uint16_t count = read16le((unsigned char*)(&buffer_string_offsets[i]));
+            buffer_string_offsets[i] = (uint16_t)ofs;
+            ofs += count;
+            if (ofs >= 0xFFF0ul) {
+                fprintf(stderr,"String count exceeds 64KB\n");
+                close(fd);
+                return 1;
+            }
+        }
+        assert(i == buffer_string_count);
+        buffer_string_offsets[i] = (uint16_t)ofs;
     }
 
     close(fd);
