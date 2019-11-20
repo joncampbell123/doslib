@@ -139,6 +139,16 @@ int main(int argc,char **argv) {
         }
         assert(i == buffer_string_count);
         buffer_string_offsets[i] = (uint16_t)ofs;
+
+        len -= (off_t)ofs;
+        if (len < 0) {
+            fprintf(stderr,"String total exceeds file\n");
+            close(fd);
+            return 1;
+        }
+        if (len > 0) {
+            fprintf(stderr,"WARNING: %lu extra bytes\n",len);
+        }
     }
 
     close(fd);
