@@ -30,6 +30,13 @@ uint16_t            buffer_string_start = 0;        /* first string ID */
 uint16_t*           buffer_string_offsets = NULL;   /* offsets of each string. array is count + 1 long, with [count] the size of the buffer */
 uint32_t            buffer_codepage = 0;
 
+unsigned int buffer_size(void) {
+    if (buffer_string_offsets != NULL)
+        return buffer_string_offsets[buffer_string_count];
+
+    return 0;
+}
+
 uint16_t read16le(const unsigned char *x) {
     return      ((uint16_t)x[0]) +
                 ((uint16_t)x[1] << (uint32_t)8u);
@@ -148,6 +155,8 @@ int main(int argc,char **argv) {
         if (len > 0) {
             fprintf(stderr,"WARNING: %lu extra bytes\n",len);
         }
+
+        fprintf(stderr,"Buffer size: %u\n",buffer_size());
     }
 
     close(fd);
