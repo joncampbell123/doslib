@@ -242,6 +242,9 @@ int main(int argc,char **argv) {
         iconv_context = (iconv_t)-1;
     }
 
+    free(buffer);
+    free(buffer_string_offsets);
+
     return 0;
 }
 
