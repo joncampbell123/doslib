@@ -59,6 +59,20 @@ size_t get_string_rel(char **p,unsigned int i) {
     return 0;
 }
 
+iconv_t get_iconv_from_codepage_to_utf8(uint32_t codepage) {
+    iconv_t ret = (iconv_t)-1;
+    char nm[32];
+
+    if (codepage == 65001)
+        ret = iconv_open("UTF-8","UTF-8");
+    else if (codepage < 65535u) {
+        sprintf(nm,"CP%u",(unsigned int)codepage);
+        ret = iconv_open("UTF-8",nm);
+    }
+
+    return ret;
+}
+
 char out_tmp[4096];
 
 int main(int argc,char **argv) {
@@ -197,17 +211,35 @@ int main(int argc,char **argv) {
     close(fd);
 
     {
+        iconv_t iconv_context = (iconv_t)-1;
+        size_t len,il,ol;
         unsigned int i;
-        size_t len;
+        int ret;
+        char *o;
         char *p;
+
+        iconv_context = get_iconv_from_codepage_to_utf8(buffer_codepage);
+        if (iconv_context == (iconv_t)-1) {
+            fprintf(stderr,"Cannot convert codepage\n");
+            return 1;
+        }
 
         for (i=0;i < buffer_string_count;i++) {
             len = get_string_rel(&p,i);
 
-            printf("#%d: ",i+buffer_string_start);
-            fwrite(p,len,1,stdout);
-            printf("\n");
+            o = out_tmp;
+            ol = sizeof(out_tmp)-1;
+            il = len;
+
+            ret = iconv(iconv_context,&p,&il,&o,&ol);
+            if (ret < 0 || il != 0 || ol == 0) fprintf(stderr,"Iconv conversion error\n");
+            *o = 0;
+
+            printf("#%d: %s\n",i+buffer_string_start,out_tmp);
         }
+
+        iconv_close(iconv_context);
+        iconv_context = (iconv_t)-1;
     }
 
     return 0;
