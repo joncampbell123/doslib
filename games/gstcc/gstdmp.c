@@ -235,7 +235,7 @@ int main(int argc,char **argv) {
             if (ret < 0 || il != 0 || ol == 0) fprintf(stderr,"Iconv conversion error\n");
             *o = 0;
 
-            printf("#%d: %s\n",i+buffer_string_start,out_tmp);
+            printf("%d=%s\n",i+buffer_string_start,out_tmp);
         }
 
         iconv_close(iconv_context);
