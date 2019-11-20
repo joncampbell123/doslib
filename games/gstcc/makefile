@@ -1,10 +1,11 @@
 
 GSTCC = linux-host/gstcc
+GSTDMP = linux-host/gstdmp
 
 ICONV = ../../ext/libiconv/linux-host/lib/libiconv.a
 ZLIB = ../../ext/zlib/linux-host/libz.a
 
-BIN_OUT = $(GSTCC)
+BIN_OUT = $(GSTCC) $(GSTDMP)
 
 # GNU makefile, Linux host
 all: bin lib
@@ -24,6 +25,9 @@ $(ICONV):
 
 $(GSTCC): linux-host/gstcc.o $(ZLIB) $(ICONV)
 	gcc -o $@ linux-host/gstcc.o $(ZLIB) $(ICONV)
+
+$(GSTDMP): linux-host/gstdmp.o $(ZLIB) $(ICONV)
+	gcc -o $@ linux-host/gstdmp.o $(ZLIB) $(ICONV)
 
 linux-host/%.o : %.c
 	gcc -I../.. -I../../ext/zlib -I../../ext/libiconv/linux-host/include -DLINUX -Wall -Wextra -pedantic -std=gnu99 -g3 -c -o $@ $^
