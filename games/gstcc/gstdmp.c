@@ -49,6 +49,18 @@ uint32_t read32le(const unsigned char *x) {
                 ((uint32_t)x[3] << (uint32_t)24u);
 }
 
+size_t get_string_rel(char **p,unsigned int i) {
+    if (i < buffer_string_count) {
+        *p = (char*)buffer + buffer_string_offsets[i];
+        return buffer_string_offsets[i+1] - buffer_string_offsets[i];
+    }
+
+    *p = (char*)buffer;
+    return 0;
+}
+
+char out_tmp[4096];
+
 int main(int argc,char **argv) {
     int fd;
 
@@ -159,7 +171,44 @@ int main(int argc,char **argv) {
         fprintf(stderr,"Buffer size: %u\n",buffer_size());
     }
 
+    {
+        unsigned int sz = buffer_size();
+
+        if (sz != 0)
+            buffer = malloc(sz+1);
+        else
+            buffer = malloc(1);
+
+        if (buffer == NULL) {
+            fprintf(stderr,"Cannot alloc buffer\n");
+            close(fd);
+            return 1;
+        }
+
+        buffer[sz] = 0;
+        if (sz != 0) {
+            if (read(fd,buffer,sz) != sz) {
+                fprintf(stderr,"Failed to read to buffer\n");
+                close(fd);
+                return 1;
+            }
+        }
+    }
     close(fd);
+
+    {
+        unsigned int i;
+        size_t len;
+        char *p;
+
+        for (i=0;i < buffer_string_count;i++) {
+            len = get_string_rel(&p,i);
+
+            printf("#%d: ",i+buffer_string_start);
+            fwrite(p,len,1,stdout);
+            printf("\n");
+        }
+    }
 
     return 0;
 }
