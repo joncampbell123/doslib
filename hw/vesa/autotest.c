@@ -24,7 +24,7 @@ int main() {
 	}
 
     if (vbe_info->video_mode_ptr != 0UL) {
-		for (entry=0;entry < 128;entry++) {
+		for (entry=0;entry < 4096;entry++) {
 			struct vbe_mode_info mi={0};
 
 			mode = vbe_read_mode_entry(vbe_info->video_mode_ptr,entry);

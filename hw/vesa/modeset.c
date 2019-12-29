@@ -304,6 +304,7 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 			pal[x*4+2] = x*4;
 		}
 
+#if 0 // FIXME: Does this 4bpp packed mode support 8-bit DAC features? If the Libretto BIOS does not, then we should not try and DOSBox-X should not allow it.
 		/* try to set DAC width */
 		if (md->dac8 && (x=vbe_set_dac_width(8)) != 8) {
 			vbe_reset_video_to_text();
@@ -318,6 +319,7 @@ static void vbe_mode_test_pattern_svga_packed(struct vbe_mode_decision *md,struc
 			for (x=0;x < 64;x++)
 				pal[x] <<= 2;
 		}
+#endif
 
 		if (mi->mode_attributes & VESA_MODE_ATTR_NOT_VGA_COMPATIBLE) {
 			vesa_set_palette_data(0,16,pal);

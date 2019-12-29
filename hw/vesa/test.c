@@ -117,7 +117,7 @@ int main() {
 
 	printf("     Video modes:           @%08lx\n",(unsigned long)(vbe_info->video_mode_ptr));
 	if (vbe_info->video_mode_ptr != 0UL) {
-		for (entry=0;entry < 128;entry++) {
+		for (entry=0;entry < 4096;entry++) {
 			mode = vbe_read_mode_entry(vbe_info->video_mode_ptr,entry);
 			if (mode == 0xFFFF) break;
 			printf("0x%04x ",mode);
@@ -131,7 +131,7 @@ int main() {
 	}
 
 	if (vbe_info->video_mode_ptr != 0UL) {
-		for (entry=0;entry < 128;entry++) {
+		for (entry=0;entry < 4096;entry++) {
 			struct vbe_mode_info mi={0};
 			mode = vbe_read_mode_entry(vbe_info->video_mode_ptr,entry);
 			if (mode == 0xFFFF) break;
