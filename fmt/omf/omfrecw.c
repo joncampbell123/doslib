@@ -1,7 +1,7 @@
 
 #include <fmt/omf/omf.h>
 
-void omf_record_write_byte_fast(struct omf_record_t * const rec,const unsigned char c) {
+static inline void omf_record_write_byte_fast(struct omf_record_t * const rec,const unsigned char c) {
     rec->data[rec->recpos] = c;
     rec->recpos++;
 }
@@ -16,7 +16,7 @@ int omf_record_write_byte(struct omf_record_t * const rec,const unsigned char c)
     return 0;
 }
 
-void omf_record_write_word_fast(struct omf_record_t * const rec,const unsigned short c) {
+static inline void omf_record_write_word_fast(struct omf_record_t * const rec,const unsigned short c) {
     *((uint16_t*)(rec->data+rec->recpos)) = c;
     rec->recpos += 2;
 }
@@ -31,7 +31,7 @@ int omf_record_write_word(struct omf_record_t * const rec,const unsigned short c
     return 0;
 }
 
-void omf_record_write_dword_fast(struct omf_record_t * const rec,const unsigned long c) {
+static inline void omf_record_write_dword_fast(struct omf_record_t * const rec,const unsigned long c) {
     *((uint32_t*)(rec->data+rec->recpos)) = c;
     rec->recpos += 4;
 }

@@ -83,7 +83,7 @@ size_t omf_record_data_available(const struct omf_record_t * const rec) {
     return (size_t)(rec->reclen - rec->recpos);
 }
 
-unsigned char omf_record_get_byte_fast(struct omf_record_t * const rec) {
+static inline unsigned char omf_record_get_byte_fast(struct omf_record_t * const rec) {
     unsigned char c;
 
     c = *((unsigned char*)(rec->data + rec->recpos));
@@ -100,7 +100,7 @@ unsigned char omf_record_get_byte(struct omf_record_t * const rec) {
     return omf_record_get_byte_fast(rec);
 }
 
-unsigned short omf_record_get_word_fast(struct omf_record_t * const rec) {
+static inline unsigned short omf_record_get_word_fast(struct omf_record_t * const rec) {
     unsigned short c;
 
     c = *((uint16_t*)(rec->data + rec->recpos));
@@ -117,7 +117,7 @@ unsigned short omf_record_get_word(struct omf_record_t * const rec) {
     return omf_record_get_word_fast(rec);
 }
 
-unsigned long omf_record_get_dword_fast(struct omf_record_t * const rec) {
+static inline unsigned long omf_record_get_dword_fast(struct omf_record_t * const rec) {
     unsigned long c;
 
     c = *((uint32_t*)(rec->data + rec->recpos));
