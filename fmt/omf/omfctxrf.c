@@ -39,7 +39,7 @@ int omf_context_read_fd(struct omf_context_t * const ctx,int fd) {
         return -1;
     }
     ctx->record.rectype = tmp[0];
-    ctx->record.reclen = *((uint16_t*)(tmp+1)); // length (including checksum)
+    ctx->record.reclen = le16toh(*((uint16_t*)(tmp+1))); // length (including checksum)
     if (ctx->record.rectype == 0 || ctx->record.reclen == 0)
         return 0;
     if (ctx->record.reclen > ctx->record.data_alloc) {

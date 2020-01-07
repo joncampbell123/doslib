@@ -5,7 +5,7 @@ int omf_context_record_write_fd(const int ofd,const struct omf_record_t * const 
     unsigned char tmp[3];
 
     tmp[0] = rec->rectype;
-    *((uint16_t*)(tmp+1)) = rec->reclen + 1U; // +1 checksum
+    *((uint16_t*)(tmp+1)) = htole16((uint16_t)(rec->reclen + 1U)); // +1 checksum
 
     if (write(ofd,tmp,3) != 3)
         return -1;

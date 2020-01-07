@@ -103,7 +103,7 @@ unsigned char omf_record_get_byte(struct omf_record_t * const rec) {
 static inline unsigned short omf_record_get_word_fast(struct omf_record_t * const rec) {
     unsigned short c;
 
-    c = *((uint16_t*)(rec->data + rec->recpos));
+    c = le16toh(*((uint16_t*)(rec->data + rec->recpos)));
     rec->recpos += 2;
     return c;
 }
@@ -120,7 +120,7 @@ unsigned short omf_record_get_word(struct omf_record_t * const rec) {
 static inline unsigned long omf_record_get_dword_fast(struct omf_record_t * const rec) {
     unsigned long c;
 
-    c = *((uint32_t*)(rec->data + rec->recpos));
+    c = le32toh(*((uint32_t*)(rec->data + rec->recpos)));
     rec->recpos += 4;
     return c;
 }

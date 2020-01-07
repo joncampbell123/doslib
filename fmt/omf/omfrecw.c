@@ -17,7 +17,7 @@ int omf_record_write_byte(struct omf_record_t * const rec,const unsigned char c)
 }
 
 static inline void omf_record_write_word_fast(struct omf_record_t * const rec,const unsigned short c) {
-    *((uint16_t*)(rec->data+rec->recpos)) = c;
+    *((uint16_t*)(rec->data+rec->recpos)) = htole16(c);
     rec->recpos += 2;
 }
 
@@ -32,7 +32,7 @@ int omf_record_write_word(struct omf_record_t * const rec,const unsigned short c
 }
 
 static inline void omf_record_write_dword_fast(struct omf_record_t * const rec,const unsigned long c) {
-    *((uint32_t*)(rec->data+rec->recpos)) = c;
+    *((uint32_t*)(rec->data+rec->recpos)) = htole32(c);
     rec->recpos += 4;
 }
 

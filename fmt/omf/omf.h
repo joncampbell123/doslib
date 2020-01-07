@@ -13,6 +13,12 @@
 #include <fcntl.h>
 #include <stdio.h>
 
+#if defined(LINUX)
+# include <endian.h>
+#else
+# include <hw/cpu/endian.h>
+#endif
+
 enum {
     OMF_EXTDEF_TYPE_GLOBAL=0,
     OMF_EXTDEF_TYPE_LOCAL
