@@ -11,29 +11,29 @@
 #include <stdint.h>
 
 uint8_t inpb_x(const unsigned short port);
-#pragma aux inpb_x = "in AL,DX" parm [dx] value [al];
+#pragma aux inpb_x = "in AL,DX" parm [dx] value [al] modify [al];
 
 uint16_t inpw_x(const unsigned short port);
-#pragma aux inpw_x = "in AX,DX" parm [dx] value [ax];
+#pragma aux inpw_x = "in AX,DX" parm [dx] value [ax] modify [ax];
 
 uint32_t inpd_x(const unsigned short port);
 #if TARGET_MSDOS == 32
-# pragma aux inpd_x = "in EAX,DX" parm [dx] value [eax];
+# pragma aux inpd_x = "in EAX,DX" parm [dx] value [eax] modify [eax];
 #else
-# pragma aux inpd_x = ".386" "in EAX,DX" "mov EDX,EAX" "shr EDX,16" parm [dx] value [dx ax];
+# pragma aux inpd_x = ".386" "in EAX,DX" "mov EDX,EAX" "shr EDX,16" parm [dx] value [dx ax] modify [dx ax];
 #endif
 
 void outpb_x(const unsigned short port,const uint8_t v);
-#pragma aux outpb_x = "out DX,AL" parm [dx] [al];
+#pragma aux outpb_x = "out DX,AL" parm [dx] [al] modify [];
 
 void outpw_x(const unsigned short port,const uint16_t v);
-#pragma aux outpw_x = "out DX,AX" parm [dx] [ax];
+#pragma aux outpw_x = "out DX,AX" parm [dx] [ax] modify [];
 
 void outpd_x(const unsigned short port,const uint32_t v);
 #if TARGET_MSDOS == 32
-# pragma aux outpd_x = "out DX,EAX" parm [dx] [eax];
+# pragma aux outpd_x = "out DX,EAX" parm [dx] [eax] modify [];
 #else
-# pragma aux outpd_x = ".386" "shl EDX,16" "movzx EAX,AX" "add EAX,EDX" "mov DX,BX" "out DX,EAX" parm [bx] [dx ax];
+# pragma aux outpd_x = ".386" "shl EDX,16" "movzx EAX,AX" "add EAX,EDX" "mov DX,BX" "out DX,EAX" parm [bx] [dx ax] modify [dx];
 #endif
 
 /* instead of modifying all code, we just #define over the intrinsics */
