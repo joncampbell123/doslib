@@ -33,7 +33,7 @@ extern "C" {
 
 /* FIX: Open Watcom does not provide inpd/outpd in 16-bit real mode, so we have to provide it ourself */
 /*      We assume for the same stupid reasons the pragma aux function can't be used because it's a 386 level instruction */
-#if TARGET_MSDOS == 16
+#if TARGET_MSDOS == 16 && !defined(DOSLIB_REDEFINE_INP)
 uint32_t __cdecl inpd(uint16_t port);
 void __cdecl outpd(uint16_t port,uint32_t data);
 #endif
