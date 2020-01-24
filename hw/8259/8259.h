@@ -84,14 +84,28 @@ static inline unsigned char p8259_irq_to_base_port(unsigned char c,unsigned char
 }
 
 /* c = IRQ. */
-static inline unsigned char p8259_read_mask(unsigned char c) { /* mask register AKA OCW1 */
+static inline unsigned char p8259_read_mask_ncli(unsigned char c) { /* mask register AKA OCW1 */
 	outp(p8259_irq_to_base_port(c,0),P8259_OCW2_NO_OP); /* issue NO-OP to make sure the PIC is ready to accept OCW1 */
 	return inp(p8259_irq_to_base_port(c,1)); /* mask register */
 }
 
+static inline unsigned char p8259_read_mask(unsigned char c) { /* mask register AKA OCW1 */
+    unsigned char r;
+    SAVE_CPUFLAGS( _cli() ) {
+        r = p8259_read_mask_ncli(c);
+    } RESTORE_CPUFLAGS();
+    return r;
+}
+
+static inline void p8259_write_mask_ncli(unsigned char c,unsigned char m) { /* mask register AKA OCW1 */
+    outp(p8259_irq_to_base_port(c,0),P8259_OCW2_NO_OP); /* issue NO-OP to make sure the PIC is ready to accept OCW1 */
+    outp(p8259_irq_to_base_port(c,1),m); /* write mask register */
+}
+
 static inline void p8259_write_mask(unsigned char c,unsigned char m) { /* mask register AKA OCW1 */
-	outp(p8259_irq_to_base_port(c,0),P8259_OCW2_NO_OP); /* issue NO-OP to make sure the PIC is ready to accept OCW1 */
-	outp(p8259_irq_to_base_port(c,1),m); /* write mask register */
+    SAVE_CPUFLAGS( _cli() ) {
+        p8259_write_mask_ncli(c,m);
+    } RESTORE_CPUFLAGS();
 }
 
 static inline void p8259_OCW2(unsigned char c,unsigned char w) {
@@ -102,14 +116,30 @@ static inline void p8259_OCW3(unsigned char c,unsigned char w) {
 	outp(p8259_irq_to_base_port(c,0),(w & 0xE7) | 0x08);	/* D3-4 == 1 */
 }
 
-static inline unsigned char p8259_read_IRR(unsigned char c) {
+static inline unsigned char p8259_read_IRR_ncli(unsigned char c) {
 	p8259_OCW3(c,0x02);	/* OCW3 = read register command RR=1 RIS=0 */
 	return inp(p8259_irq_to_base_port(c,0)); /* mask register */
 }
 
-static inline unsigned char p8259_read_ISR(unsigned char c) {
+static inline unsigned char p8259_read_IRR(unsigned char c) {
+    unsigned char r;
+    SAVE_CPUFLAGS( _cli() ) {
+        r = p8259_read_IRR_ncli(c);
+    } RESTORE_CPUFLAGS();
+    return r;
+}
+
+static inline unsigned char p8259_read_ISR_ncli(unsigned char c) {
 	p8259_OCW3(c,0x03);	/* OCW3 = read register command RR=1 RIS=1 */
 	return inp(p8259_irq_to_base_port(c,0)); /* mask register */
+}
+
+static inline unsigned char p8259_read_ISR(unsigned char c) {
+    unsigned char r;
+    SAVE_CPUFLAGS( _cli() ) {
+        r = p8259_read_ISR_ncli(c);
+    } RESTORE_CPUFLAGS();
+    return r;
 }
 
 static inline unsigned char irq2int(unsigned char c) {
@@ -124,14 +154,26 @@ static inline unsigned char irq2int(unsigned char c) {
 #endif
 }
 
+static inline void p8259_unmask_ncli(unsigned char c) {
+	unsigned char m = p8259_read_mask_ncli(c);
+	p8259_write_mask_ncli(c,m & ~(1 << (c&7)));
+}
+
 static inline void p8259_unmask(unsigned char c) {
-	unsigned char m = p8259_read_mask(c);
-	p8259_write_mask(c,m & ~(1 << (c&7)));
+    SAVE_CPUFLAGS( _cli() ) {
+        p8259_unmask_ncli(c);
+    } RESTORE_CPUFLAGS();
+}
+
+static inline void p8259_mask_ncli(unsigned char c) {
+	unsigned char m = p8259_read_mask_ncli(c);
+	p8259_write_mask_ncli(c,m | (1 << (c&7)));
 }
 
 static inline void p8259_mask(unsigned char c) {
-	unsigned char m = p8259_read_mask(c);
-	p8259_write_mask(c,m | (1 << (c&7)));
+    SAVE_CPUFLAGS( _cli() ) {
+        p8259_mask_ncli(c);
+    } RESTORE_CPUFLAGS();
 }
 
 /* WARNING: For performance reasons, the return value is guaranteed only to be nonzero if masked.
