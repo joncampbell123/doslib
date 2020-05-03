@@ -230,6 +230,16 @@ static inline void writenm_8254_pc_speaker(t8254_time_t max) {
 /* FIXME: Does the PC-98 have a way to read PC speaker output back like IBM PC? */
 # define read_8254_pc_speaker_output() (0)
 #else
+// TODO: It turns out the IBM PC/XT platform DOES in fact have a bit to read back PIT 2 output.
+//       On the original hardware this was wired to PPI port C port 62h bit 5.
+//       Apparently IBM moved it to port 61h bit 5 later on?
+//
+//       Ref: [http://hackipedia.org/browse.cgi/Computer/Platform/PC%2c%20IBM%20compatible/Computers/IBM/PC/IBM%20Personal%20Computer%20Hardware%20Reference%20Library%20Technical%20Reference%20%281984%2d04%29%20Revised%20Edition%2epdf]
+//
+//       Add support for this and verify on real hardware later.
+//       This will have to mean making the I/O port a variable if the host application
+//       wants to detect PC/XT vs AT somehow and point it at port 62h.
+//
 /* IBM AT and PS/2 only. This does NOT exist on PC/XT, port B of the PPI is output only, bit 5 enables I/O channel check on PC/XT */
 static inline uint8_t read_8254_pc_speaker_output() {
     /* bit 5 of port 61h gives us the output of the counter (prior to the AND gate) */
