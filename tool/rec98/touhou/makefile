@@ -4,7 +4,7 @@ linux-host:
 	mkdir -p $@
 
 linux-host/bmp2arr: bmp2arr.c
-	gcc -DLINUX -Wall -Wextra -pedantic -o $@ $<
+	gcc -DLINUX -Wall -g3 -O0 -Wextra -pedantic -o $@ $<
 
 clean:
 	rm -Rf linux-host
