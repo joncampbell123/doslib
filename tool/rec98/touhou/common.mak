@@ -8,17 +8,7 @@ CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../.."
 #DEBUG
 #CFLAGS_THIS += -DDBG
 
-!ifeq TARGET_MSDOS 16
-! ifeq MMODE c
-! else
-!  ifeq MMODE s
-!  else
 BMP2ARR_EXE =    $(SUBDIR)$(HPS)bmp2arr.$(EXEEXT)
-! endif
-! endif
-!else
-BMP2ARR_EXE =    $(SUBDIR)$(HPS)bmp2arr.$(EXEEXT)
-!endif
 
 # NTS we have to construct the command line into tmp.cmd because for MS-DOS
 # systems all arguments would exceed the pitiful 128 char command line limit
