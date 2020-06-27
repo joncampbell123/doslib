@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# ref: [https://github.com/nmlgc/ReC98/issues/8#event-3487565621]
+
 # th01 pellet
 linux-host/bmp2arr -i pellet.bmp -o pellet.test.c   -of c   -sw 8 -sh 8 -sym 'sPELLET' -pshf inner
 linux-host/bmp2arr -i pellet.bmp -o pellet.test.asm -of asm -sw 8 -sh 8 -sym 'sPELLET' -pshf inner
