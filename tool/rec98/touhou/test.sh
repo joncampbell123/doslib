@@ -19,3 +19,8 @@ linux-host/bmp2arr -i pointnum.bmp -o pointnum.test.asm -of asm -sw 8 -sh 8 -sym
 linux-host/bmp2arr -i pointnum.bmp -o pointnum.test.bin -of bin -sw 8 -sh 8 -sym 'sPOINTNUMS'
 linux-host/bmp2arr -i pointnum.bmp -o pointnum.test.bmp -of bmp -sw 8 -sh 8 -sym 'sPOINTNUMS'
 
+linux-host/bmp2arr -i pelletbt.bmp -o pelletbt.test.c   -of c   -sw 8 -sh 4 -sym 'sPELLET_BOTTOM' -pshf inner
+linux-host/bmp2arr -i pelletbt.bmp -o pelletbt.test.asm -of asm -sw 8 -sh 4 -sym 'sPELLET_BOTTOM' -pshf inner
+linux-host/bmp2arr -i pelletbt.bmp -o pelletbt.test.bin -of bin -sw 8 -sh 4 -sym 'sPELLET_BOTTOM' -pshf inner
+linux-host/bmp2arr -i pelletbt.bmp -o pelletbt.test.bmp -of bmp -sw 8 -sh 4 -sym 'sPELLET_BOTTOM' -pshf inner
+
