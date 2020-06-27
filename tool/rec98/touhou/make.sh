@@ -11,6 +11,7 @@ win32=1 # Windows 9x/NT/XP/Vista/etc.
 if [ "$1" == "clean" ]; then
     do_clean
     rm -Rfv linux-host
+    rm -v *.test.{asm,bin,bmp,c}
     rm -fv test.dsk test2.dsk nul.err tmp.cmd tmp1.cmd tmp2.cmd
     exit 0
 fi
