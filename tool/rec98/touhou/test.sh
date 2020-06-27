@@ -14,11 +14,13 @@ linux-host/bmp2arr -i score.bmp -o score.test.asm -of asm -sw 8 -sh 8 -sym 'sSCO
 linux-host/bmp2arr -i score.bmp -o score.test.bin -of bin -sw 8 -sh 8 -sym 'sSCORE' -u
 linux-host/bmp2arr -i score.bmp -o score.test.bmp -of bmp -sw 8 -sh 8 -sym 'sSCORE' -u
 
+# th02 pointnum
 linux-host/bmp2arr -i pointnum.bmp -o pointnum.test.c   -of c   -sw 8 -sh 8 -sym 'sPOINTNUMS'
 linux-host/bmp2arr -i pointnum.bmp -o pointnum.test.asm -of asm -sw 8 -sh 8 -sym 'sPOINTNUMS'
 linux-host/bmp2arr -i pointnum.bmp -o pointnum.test.bin -of bin -sw 8 -sh 8 -sym 'sPOINTNUMS'
 linux-host/bmp2arr -i pointnum.bmp -o pointnum.test.bmp -of bmp -sw 8 -sh 8 -sym 'sPOINTNUMS'
 
+# th04/th05 pointnum
 linux-host/bmp2arr -i pointnum4.bmp -o pointnum4.test.c   -of c   -sw 8 -sh 8 -sym 'sPOINTNUMS' -pshf inner
 linux-host/bmp2arr -i pointnum4.bmp -o pointnum4.test.asm -of asm -sw 8 -sh 8 -sym 'sPOINTNUMS' -pshf inner
 linux-host/bmp2arr -i pointnum4.bmp -o pointnum4.test.bin -of bin -sw 8 -sh 8 -sym 'sPOINTNUMS' -pshf inner
