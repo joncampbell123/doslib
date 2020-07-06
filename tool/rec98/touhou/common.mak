@@ -24,8 +24,8 @@ all: $(OMFSEGDG) exe
 exe: $(BMP2ARR_EXE) .symbolic
 
 !ifdef BMP2ARR_EXE
-BMP2ARR_EXE_DEPS = $(SUBDIR)$(HPS)bmp2arr.obj
-BMP2ARR_EXE_WLINK = file $(SUBDIR)$(HPS)bmp2arr.obj
+BMP2ARR_EXE_DEPS = $(SUBDIR)$(HPS)bmp2arr.obj $(SUBDIR)$(HPS)bmp2arrl.obj
+BMP2ARR_EXE_WLINK = file $(SUBDIR)$(HPS)bmp2arr.obj file $(SUBDIR)$(HPS)bmp2arrl.obj
 !endif
 
 !ifdef BMP2ARR_EXE
