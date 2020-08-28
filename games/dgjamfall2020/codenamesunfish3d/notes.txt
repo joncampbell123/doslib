@@ -39,3 +39,18 @@ the poor user playing this game can get around. Alright, let's start!"
 
 *game starts in 3D maze*
 
+--------------------
+
+Intended runtime environment: 16-bit real mode DOS. With support for
+EMM386.EXE and HIMEM.SYS for some extra storage (but don't get carried away
+like Project 16). Each mini-game could run as a separate executable that
+talks to the main game executable (for memory reasons) and use their own
+video mode and routines or the parent game EXE's video code.
+
+Could later versions of the game pack the sub-EXEs into the game EXE and
+run them from within, "Second Reality" style with INT 21h interception to
+present the EXE contents as if a local filesystem? Obviously not in time
+for the game jam, of course.
+
+Sound Blaster and Adlib support, of course!
+
