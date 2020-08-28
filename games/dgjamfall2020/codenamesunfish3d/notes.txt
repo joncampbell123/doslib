@@ -49,6 +49,7 @@ video mode and routines or the parent game EXE's video code.
 
 EGA/VGA graphics, of course. 16-color, 256-color. Maybe even something
 that uses VESA BIOS extensions to get SVGA 256-color modes. Maybe CGA.
+The game will require VGA though.
 
 Could later versions of the game pack the sub-EXEs into the game EXE and
 run them from within, "Second Reality" style with INT 21h interception to
