@@ -51,6 +51,9 @@ EGA/VGA graphics, of course. 16-color, 256-color. Maybe even something
 that uses VESA BIOS extensions to get SVGA 256-color modes. Maybe CGA.
 The game will require VGA though.
 
+386 or higher. 540K conventional memory minimum, to allow it to run on a
+typical DOS setup.
+
 Could later versions of the game pack the sub-EXEs into the game EXE and
 run them from within, "Second Reality" style with INT 21h interception to
 present the EXE contents as if a local filesystem? Obviously not in time
