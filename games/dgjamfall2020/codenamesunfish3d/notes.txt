@@ -1,0 +1,41 @@
+Game starts. Game characters and NPC alike arrive to the game developer to
+hear the story of the game.
+
+Game dev with shiny demo effects around him:
+"I am the coolest programmer ever! I write the most optimized and
+clever code!"
+
+Game character: "But... what about us? What is the story of this game?"
+
+Game dev, blank background: "Uhmm.........." (demo fx reappear) "I WRITE
+THE MOST OPTIMIZED, THE MOST MODULAR AND AWESOME CODE! MY CODE IS UNMATCHED
+IN PORTABILITY AND FUNCTION! I--"
+
+(game cuts to game character leaving the room, closing the door)
+
+Game character: *sigh* "Alright, there is no story. So I'll just make one up
+to get things started" *ahem* "There once was a master programmer with
+incredible programming skills. But he also had an incredible ego and was an
+incredible perfectionist. So he spent his life writing incredibly optimized
+and clever useless code. Then one day he ate too many nachos and had a heart
+attack. The end."
+
+Character in the crowd: "Oh, come on, that's just mean."
+
+Game character: "Okay... okay... fine. And so he spent his life writing
+incredible useless code. He created whole OSes but cared not for the users
+who would run it. He created whole game worlds but cared not for the inhabitants.
+So he lives to this day making... well, nothing of significance."
+
+Game character: "Since the creator of this game doesn't seem to care about us, or
+the story, we're all on our own. So let's go make our own mini games so that
+we can salvage this game's playability and make it somewhat entertaining, at
+least. I made a 3D maze-like overworld that connects them together so that
+the poor user playing this game can get around. Alright, let's start!"
+
+*screen fades to black*
+
+*construction and hammering noises*
+
+*game starts in 3D maze*
+
