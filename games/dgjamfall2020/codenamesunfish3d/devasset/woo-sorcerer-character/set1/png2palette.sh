@@ -6,4 +6,4 @@
 #        matches the damn palette we wanted in common across the PNGs in the first place. >:(
 mkdir __DONE_PALUNORD__
 convert "$1" -channel A -threshold 50% -channel RGB -ordered-dither o8x8,32,64,32 -map palette.png -define png:compression-level=9 -define png:compression-strategy=0 "png8:$1.palunord.png" || exit 1
-mv -vn "$1" __DONE_PALUNORD__/
+mv -v "$1" __DONE_PALUNORD__/
