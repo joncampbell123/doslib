@@ -5,12 +5,14 @@
 
 #include <png.h>    /* libpng */
 
-static char*        pal_png = NULL;
-static char*        in_png = NULL;
-static char*        out_png = NULL;
+static char*            pal_png = NULL;
+static char*            in_png = NULL;
+static char*            out_png = NULL;
 
-static png_color    pal_png_pal[256] = {0};
-static int          pal_png_pal_count = 0;
+static png_color        pal_png_pal[256] = {0};
+static int              pal_png_pal_count = 0;
+static png_byte         pal_png_pal_trns[256];
+static int              pal_png_pal_trns_count = 0;
 
 static unsigned char    pal_remap[256] = {0};
 
@@ -151,6 +153,22 @@ static int load_palette_png(void) {
         pal_png_pal_count = pal_count;
         if (pal_count != 0 && pal_count <= 256)
             memcpy(pal_png_pal,pal,sizeof(png_color) * pal_count);
+    }
+
+    /* we gotta preserve alpha transparency too */
+    pal_png_pal_trns_count = 0;
+    {
+        png_color_16p trans_values = 0; /* throwaway value */
+        png_bytep trans = NULL;
+        int trans_count = 0;
+
+        pal_png_pal_trns_count = 0;
+        if (png_get_tRNS(png_context, png_context_info, &trans, &trans_count, &trans_values) != 0) {
+            if (trans_count != 0 && trans_count <= 256) {
+                memcpy(pal_png_pal_trns, trans, trans_count);
+                pal_png_pal_trns_count = trans_count;
+            }
+        }
     }
 
     /* success */
