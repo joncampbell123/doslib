@@ -4,7 +4,5 @@ elements in the same game.
 This is cropped and expanded to 256x256 from the original 320x200 artwork
 taken from the Second Reality source code repo to match the way it appears
 in the demo during the rotozoomer part. Note that conversion from LBM to
-PPM was needed for Linux image manipulation tools to use it. PCX compression
-is used to store it in a compressed image format that is also easy to
-implement decompression for in the DOS game.
+PPM to PNG was needed for Linux image manipulation tools to use it.
 
