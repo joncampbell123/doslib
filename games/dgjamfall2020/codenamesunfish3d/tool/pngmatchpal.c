@@ -8,9 +8,23 @@ static char*        pal_png = NULL;
 static char*        in_png = NULL;
 static char*        out_png = NULL;
 
-static png_color*   pal_png_pal = NULL;
+static png_color    pal_png_pal[256] = {0};
 static int          pal_png_pal_count = 0;
 
+static unsigned char    pal_remap[256] = {0};
+
+static png_color        gen_png_pal[256] = {0};
+static int              gen_png_pal_count = 0;
+
+static unsigned char*   gen_png_image = NULL;
+static png_bytep        gen_png_image_rows = NULL;
+png_uint_32             gen_png_width = 0,gen_png_height = 0;
+int                     gen_png_bit_depth = 0;
+int                     gen_png_color_type = 0;
+int                     gen_png_interlace_method = 0;
+int                     gen_png_compression_method = 0;
+int                     gen_png_filter_method = 0;
+ 
 static void help(void) {
     fprintf(stderr,"pngmatchpal -i <input PNG> -o <output PNG> -p <palette PNG>\n");
     fprintf(stderr,"Convert a paletted PNG to another paletted PNG,\n");
@@ -109,10 +123,20 @@ static int load_palette_png(void) {
         goto fail;
     }
 
-    /* FIXME: libpng makes no reference to freeing this. Do you? */
-    if (png_get_PLTE(png_context, png_context_info, &pal_png_pal, &pal_png_pal_count) == 0) {
-        fprintf(stderr,"Unable to get Palette PNG palette\n");
-        goto fail;
+    {
+        png_color* pal = NULL;
+        int pal_count = 0;
+
+        /* FIXME: libpng makes no reference to freeing this. Do you? */
+        if (png_get_PLTE(png_context, png_context_info, &pal, &pal_count) == 0) {
+            fprintf(stderr,"Unable to get Palette PNG palette\n");
+            goto fail;
+        }
+
+        /* I think libpng only points at it's in memory buffers. Copy it. */
+        pal_png_pal_count = pal_count;
+        if (pal_count != 0 && pal_count <= 256)
+            memcpy(pal_png_pal,pal,sizeof(png_color) * pal_count);
     }
 
     /* success */
