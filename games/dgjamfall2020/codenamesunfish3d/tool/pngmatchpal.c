@@ -19,12 +19,14 @@ static int              gen_png_pal_count = 0;
 
 static unsigned char*   gen_png_image = NULL;
 static png_bytep*       gen_png_image_rows = NULL;
-png_uint_32             gen_png_width = 0,gen_png_height = 0;
-int                     gen_png_bit_depth = 0;
-int                     gen_png_color_type = 0;
-int                     gen_png_interlace_method = 0;
-int                     gen_png_compression_method = 0;
-int                     gen_png_filter_method = 0;
+static png_uint_32      gen_png_width = 0,gen_png_height = 0;
+static int              gen_png_bit_depth = 0;
+static int              gen_png_color_type = 0;
+static int              gen_png_interlace_method = 0;
+static int              gen_png_compression_method = 0;
+static int              gen_png_filter_method = 0;
+static png_byte         gen_png_trns[256];
+static int              gen_png_trns_count = 0;
 
 static void free_gen_png(void) {
     if (gen_png_image) {
