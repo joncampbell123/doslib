@@ -368,7 +368,7 @@ static int remap_png(void) {
             }
         }
 
-        fprintf(stderr,"Remap: ");
+        fprintf(stderr,"Remap from in pal (%u ent) to palette (%u ent): ",gen_png_pal_count,pal_png_pal_count);
         for (i=0;i < gen_png_pal_count;i++) {
             if (pal_remap[i] == 0xFF)
                 fprintf(stderr,"X ");
