@@ -3,7 +3,7 @@ TOOLS=pngmatchpal
 all: $(TOOLS)
 
 pngmatchpal: pngmatchpal.c
-	gcc -o $@ $<
+	gcc -lpng -o $@ $<
 
 clean:
 	rm -f $(TOOLS)
