@@ -378,6 +378,25 @@ static int remap_png(void) {
         fprintf(stderr,"\n");
     }
 
+    /* TODO: Remap transparency index. Currently our PNGs put it in zero which does not move */
+
+    /* replace palette */
+    gen_png_pal_count = pal_png_pal_count;
+    if (gen_png_pal_count != 0)
+        memcpy(gen_png_pal,pal_png_pal,sizeof(png_color) * gen_png_pal_count);
+
+    /* remap image */
+    {
+        unsigned int y,x;
+        unsigned char *row;
+
+        for (y=0;y < gen_png_height;y++) {
+            row = gen_png_image_rows[y];
+            for (x=0;x < gen_png_width;x++)
+                row[x] = pal_remap[row[x]];
+        }
+    }
+
     return 0;
 }
 
