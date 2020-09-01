@@ -1,5 +1,6 @@
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <png.h>    /* libpng */
@@ -17,14 +18,25 @@ static png_color        gen_png_pal[256] = {0};
 static int              gen_png_pal_count = 0;
 
 static unsigned char*   gen_png_image = NULL;
-static png_bytep        gen_png_image_rows = NULL;
+static png_bytep*       gen_png_image_rows = NULL;
 png_uint_32             gen_png_width = 0,gen_png_height = 0;
 int                     gen_png_bit_depth = 0;
 int                     gen_png_color_type = 0;
 int                     gen_png_interlace_method = 0;
 int                     gen_png_compression_method = 0;
 int                     gen_png_filter_method = 0;
- 
+
+static void free_gen_png(void) {
+    if (gen_png_image) {
+        free(gen_png_image);
+        gen_png_image = NULL;
+    }
+    if (gen_png_image_rows) {
+        free(gen_png_image_rows);
+        gen_png_image_rows = NULL;
+    }
+}
+
 static void help(void) {
     fprintf(stderr,"pngmatchpal -i <input PNG> -o <output PNG> -p <palette PNG>\n");
     fprintf(stderr,"Convert a paletted PNG to another paletted PNG,\n");
@@ -118,7 +130,7 @@ static int load_palette_png(void) {
     if (!png_get_IHDR(png_context, png_context_info, &png_width, &png_height, &png_bit_depth, &png_color_type, &png_interlace_method, &png_compression_method, &png_filter_method))
         goto fail;
 
-    if (!(png_color_type & PNG_COLOR_MASK_PALETTE)) {
+    if (png_color_type != PNG_COLOR_TYPE_PALETTE) {
         fprintf(stderr,"Palette PNG not paletted\n");
         goto fail;
     }
@@ -152,12 +164,110 @@ fail:
     return ret;
 }
 
+static int load_in_png(void) {
+    png_structp png_context = NULL;
+    png_infop png_context_info = NULL;
+    png_infop png_context_end = NULL;
+    png_uint_32 png_width = 0,png_height = 0;
+    int png_bit_depth = 0;
+    int png_color_type = 0;
+    int png_interlace_method = 0;
+    int png_compression_method = 0;
+    int png_filter_method = 0;
+    FILE *fp = NULL;
+    int ret = 1;
+
+    free_gen_png();
+
+    if (in_png == NULL)
+        return 1;
+
+    fp = fopen(in_png,"rb");
+    if (fp == NULL)
+        return 1;
+
+    png_context = png_create_read_struct(PNG_LIBPNG_VER_STRING,NULL/*error*/,NULL/*error fn*/,NULL/*warn fn*/);
+    if (png_context == NULL) goto fail;
+
+    png_context_info = png_create_info_struct(png_context);
+    if (png_context_info == NULL) goto fail;
+
+    png_init_io(png_context, fp);
+    png_read_info(png_context, png_context_info);
+
+    if (!png_get_IHDR(png_context, png_context_info, &png_width, &png_height, &png_bit_depth, &png_color_type, &png_interlace_method, &png_compression_method, &png_filter_method))
+        goto fail;
+
+    if (png_color_type != PNG_COLOR_TYPE_PALETTE) {
+        fprintf(stderr,"Input PNG not paletted\n");
+        goto fail;
+    }
+
+    {
+        png_color* pal = NULL;
+        int pal_count = 0;
+
+        /* FIXME: libpng makes no reference to freeing this. Do you? */
+        if (png_get_PLTE(png_context, png_context_info, &pal, &pal_count) == 0) {
+            fprintf(stderr,"Unable to get Input PNG palette\n");
+            goto fail;
+        }
+
+        /* I think libpng only points at it's in memory buffers. Copy it. */
+        gen_png_pal_count = pal_count;
+        if (pal_count != 0 && pal_count <= 256)
+            memcpy(gen_png_pal,pal,sizeof(png_color) * pal_count);
+    }
+
+    if (png_width <= 0 || png_width > 4096 || png_height <= 0 || png_height > 4096 || png_bit_depth != 8)
+        goto fail;
+
+    gen_png_image = malloc((png_width * png_height) + 4096);
+    if (gen_png_image == NULL)
+        goto fail;
+
+    gen_png_image_rows = (png_bytep*)malloc(sizeof(png_bytep) * png_height);
+    if (gen_png_image_rows == NULL)
+        goto fail;
+
+    {
+        unsigned int y;
+        for (y=0;y < png_height;y++)
+            gen_png_image_rows[y] = gen_png_image + (y * png_width);
+    }
+
+    png_read_rows(png_context, gen_png_image_rows, NULL, png_height);
+
+    gen_png_width = png_width;
+    gen_png_height = png_height;
+    gen_png_bit_depth = png_bit_depth;
+    gen_png_color_type = png_color_type;
+    gen_png_interlace_method = png_interlace_method;
+    gen_png_compression_method = png_compression_method;
+    gen_png_filter_method = png_filter_method;
+
+    /* success */
+    ret = 0;
+fail:
+    if (png_context != NULL)
+        png_destroy_read_struct(&png_context,&png_context_info,&png_context_end);
+
+    if (ret)
+        fprintf(stderr,"Failed to load input PNG\n");
+
+    fclose(fp);
+    return ret;
+}
+
 int main(int argc,char **argv) {
     if (parse_argv(argc,argv))
         return 1;
 
     if (load_palette_png())
         return 1;
+    if (load_in_png())
+        return 1;
 
+    free_gen_png();
     return 0;
 }
