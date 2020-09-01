@@ -259,6 +259,62 @@ fail:
     return ret;
 }
 
+static int save_out_png(void) {
+    png_structp png_context = NULL;
+    png_infop png_context_info = NULL;
+    png_infop png_context_end = NULL;
+    png_uint_32 png_width = 0,png_height = 0;
+    int png_bit_depth = 0;
+    int png_color_type = 0;
+    int png_interlace_method = 0;
+    int png_compression_method = 0;
+    int png_filter_method = 0;
+    FILE *fp = NULL;
+    int ret = 1;
+
+    if (out_png == NULL)
+        return 1;
+
+    if (gen_png_width <= 0 || gen_png_width > 4096 || gen_png_height <= 0 || gen_png_height > 4096 || gen_png_bit_depth != 8)
+        return 1;
+    if (gen_png_color_type != PNG_COLOR_TYPE_PALETTE)
+        return 1;
+    if (gen_png_image == NULL || gen_png_image_rows == NULL)
+        return 1;
+
+    fp = fopen(out_png,"wb");
+    if (fp == NULL)
+        return 1;
+
+    png_context = png_create_write_struct(PNG_LIBPNG_VER_STRING,NULL/*error*/,NULL/*error fn*/,NULL/*warn fn*/);
+    if (png_context == NULL) goto fail;
+
+    png_context_info = png_create_info_struct(png_context);
+    if (png_context_info == NULL) goto fail;
+
+    png_init_io(png_context, fp);
+
+    png_set_IHDR(png_context, png_context_info, gen_png_width, gen_png_height, gen_png_bit_depth, gen_png_color_type, gen_png_interlace_method, gen_png_compression_method, gen_png_filter_method);
+
+    png_set_PLTE(png_context, png_context_info, gen_png_pal, gen_png_pal_count);
+
+    png_write_info(png_context, png_context_info);
+    png_write_rows(png_context, gen_png_image_rows, gen_png_height);
+    png_write_end(png_context, NULL);
+
+    /* success */
+    ret = 0;
+fail:
+    if (png_context != NULL)
+        png_destroy_write_struct(&png_context,&png_context_info);
+
+    if (ret)
+        fprintf(stderr,"Failed to save output PNG\n");
+
+    fclose(fp);
+    return ret;
+}
+
 int main(int argc,char **argv) {
     if (parse_argv(argc,argv))
         return 1;
@@ -266,6 +322,8 @@ int main(int argc,char **argv) {
     if (load_palette_png())
         return 1;
     if (load_in_png())
+        return 1;
+    if (save_out_png())
         return 1;
 
     free_gen_png();
