@@ -1,0 +1,2 @@
+This image has a 64-color palette, which is fine in combination with other
+elements in the same game.
