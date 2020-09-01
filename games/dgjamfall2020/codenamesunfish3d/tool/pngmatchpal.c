@@ -263,12 +263,6 @@ static int save_out_png(void) {
     png_structp png_context = NULL;
     png_infop png_context_info = NULL;
     png_infop png_context_end = NULL;
-    png_uint_32 png_width = 0,png_height = 0;
-    int png_bit_depth = 0;
-    int png_color_type = 0;
-    int png_interlace_method = 0;
-    int png_compression_method = 0;
-    int png_filter_method = 0;
     FILE *fp = NULL;
     int ret = 1;
 
