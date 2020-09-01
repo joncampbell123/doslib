@@ -199,6 +199,12 @@ $(TGFX_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_VGAGFX_LIB) $(HW_VGAG
 	@$(COPY) 46113319.pcx $(SUBDIR)$(HPS)46113319.pcx
 	@$(COPY) 46113319.vrl $(SUBDIR)$(HPS)46113319.vrl
 	@$(COPY) 46113319.pal $(SUBDIR)$(HPS)46113319.pal
+	@$(COPY) sorc1.pcx $(SUBDIR)$(HPS)sorc1.pcx
+	@$(COPY) sorc1.vrl $(SUBDIR)$(HPS)sorc1.vrl
+	@$(COPY) sorc1.pal $(SUBDIR)$(HPS)sorc1.pal
+	@$(COPY) sorc2.pcx $(SUBDIR)$(HPS)sorc2.pcx
+	@$(COPY) sorc2.vrl $(SUBDIR)$(HPS)sorc2.vrl
+	@$(COPY) sorc2.pal $(SUBDIR)$(HPS)sorc2.pal
 !endif
 
 !ifdef TMODESET_EXE
