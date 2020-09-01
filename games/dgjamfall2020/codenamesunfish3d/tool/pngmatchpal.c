@@ -123,7 +123,7 @@ int main(int argc,char **argv) {
     if (parse_argv(argc,argv))
         return 1;
 
-    if (!load_palette_png())
+    if (load_palette_png())
         return 1;
 
     return 0;
