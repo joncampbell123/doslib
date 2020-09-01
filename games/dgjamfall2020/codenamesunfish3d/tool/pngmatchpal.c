@@ -14,7 +14,7 @@ static int              pal_png_pal_count = 0;
 static png_byte         pal_png_pal_trns[256];
 static int              pal_png_pal_trns_count = 0;
 
-static unsigned char    pal_remap[256] = {0};
+static unsigned char    pal_remap[256] = {0}; /* gen_pal -> pal_pal */
 
 static png_color        gen_png_pal[256] = {0};
 static int              gen_png_pal_count = 0;
@@ -350,6 +350,37 @@ fail:
     return ret;
 }
 
+static int remap_png(void) {
+    if (gen_png_image == NULL || gen_png_image_rows == NULL || pal_png_pal_count > 256)
+        return 0;
+
+    {
+        unsigned int i,o;
+
+        memset(pal_remap,0xFF,256);
+        for (o=0;o < pal_png_pal_count;o++) {
+            for (i=0;i < gen_png_pal_count;i++) {
+                if (gen_png_pal[i].red   == pal_png_pal[o].red &&
+                    gen_png_pal[i].green == pal_png_pal[o].green &&
+                    gen_png_pal[i].blue  == pal_png_pal[o].blue) {
+                    pal_remap[i] = o;
+                }
+            }
+        }
+
+        fprintf(stderr,"Remap: ");
+        for (i=0;i < gen_png_pal_count;i++) {
+            if (pal_remap[i] == 0xFF)
+                fprintf(stderr,"X ");
+            else
+                fprintf(stderr,"%u ",pal_remap[i]);
+        }
+        fprintf(stderr,"\n");
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
     if (parse_argv(argc,argv))
         return 1;
@@ -357,6 +388,8 @@ int main(int argc,char **argv) {
     if (load_palette_png())
         return 1;
     if (load_in_png())
+        return 1;
+    if (remap_png())
         return 1;
     if (save_out_png())
         return 1;
