@@ -221,6 +221,22 @@ static int load_in_png(void) {
             memcpy(gen_png_pal,pal,sizeof(png_color) * pal_count);
     }
 
+    /* we gotta preserve alpha transparency too */
+    gen_png_trns_count = 0;
+    {
+        png_color_16p trans_values = 0; /* throwaway value */
+        png_bytep trans = NULL;
+        int trans_count = 0;
+
+        gen_png_trns_count = 0;
+        if (png_get_tRNS(png_context, png_context_info, &trans, &trans_count, &trans_values) != 0) {
+            if (trans_count != 0 && trans_count <= 256) {
+                memcpy(gen_png_trns, trans, trans_count);
+                gen_png_trns_count = trans_count;
+            }
+        }
+    }
+
     if (png_width <= 0 || png_width > 4096 || png_height <= 0 || png_height > 4096 || png_bit_depth != 8)
         goto fail;
 
@@ -293,6 +309,11 @@ static int save_out_png(void) {
     png_set_IHDR(png_context, png_context_info, gen_png_width, gen_png_height, gen_png_bit_depth, gen_png_color_type, gen_png_interlace_method, gen_png_compression_method, gen_png_filter_method);
 
     png_set_PLTE(png_context, png_context_info, gen_png_pal, gen_png_pal_count);
+
+    /* we gotta preserve alpha transparency too */
+    if (gen_png_trns_count != 0) {
+        png_set_tRNS(png_context, png_context_info, gen_png_trns, gen_png_trns_count, 0);
+    }
 
     png_write_info(png_context, png_context_info);
     png_write_rows(png_context, gen_png_image_rows, gen_png_height);
