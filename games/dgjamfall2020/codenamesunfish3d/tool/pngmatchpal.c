@@ -8,6 +8,9 @@ static char*        pal_png = NULL;
 static char*        in_png = NULL;
 static char*        out_png = NULL;
 
+static png_color*   pal_png_pal = NULL;
+static int          pal_png_pal_count = 0;
+
 static void help(void) {
     fprintf(stderr,"pngmatchpal -i <input PNG> -o <output PNG> -p <palette PNG>\n");
     fprintf(stderr,"Convert a paletted PNG to another paletted PNG,\n");
@@ -70,15 +73,6 @@ static int parse_argv(int argc,char **argv) {
 }
 
 static int load_palette_png(void) {
-    int ret = 1;
-
-    if (pal_png == NULL)
-        return 1;
-
-    FILE *fp = fopen(pal_png,"rb");
-    if (fp == NULL)
-        return 1;
-
     png_structp png_context = NULL;
     png_infop png_context_info = NULL;
     png_infop png_context_end = NULL;
@@ -88,6 +82,15 @@ static int load_palette_png(void) {
     int png_interlace_method = 0;
     int png_compression_method = 0;
     int png_filter_method = 0;
+    FILE *fp = NULL;
+    int ret = 1;
+
+    if (pal_png == NULL)
+        return 1;
+
+    fp = fopen(pal_png,"rb");
+    if (fp == NULL)
+        return 1;
 
     png_context = png_create_read_struct(PNG_LIBPNG_VER_STRING,NULL/*error*/,NULL/*error fn*/,NULL/*warn fn*/);
     if (png_context == NULL) goto fail;
@@ -103,6 +106,12 @@ static int load_palette_png(void) {
 
     if (!(png_color_type & PNG_COLOR_MASK_PALETTE)) {
         fprintf(stderr,"Palette PNG not paletted\n");
+        goto fail;
+    }
+
+    /* FIXME: libpng makes no reference to freeing this. Do you? */
+    if (png_get_PLTE(png_context, png_context_info, &pal_png_pal, &pal_png_pal_count) == 0) {
+        fprintf(stderr,"Unable to get Palette PNG palette\n");
         goto fail;
     }
 
