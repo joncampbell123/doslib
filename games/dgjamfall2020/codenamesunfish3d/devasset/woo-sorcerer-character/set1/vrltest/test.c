@@ -19,10 +19,10 @@ static unsigned char palette[768];
 #define MAX_IMAGES          64
 
 struct vrl_image {
-	struct vrl1_vgax_header*        vrl_header;
-	vrl1_vgax_offset_t*             vrl_lineoffs;
-	unsigned char*                  buffer;
-	unsigned int                    bufsz;
+    struct vrl1_vgax_header*        vrl_header;
+    vrl1_vgax_offset_t*             vrl_lineoffs;
+    unsigned char*                  buffer;
+    unsigned int                    bufsz;
 };
 
 int                     vrl_image_count = 0;
@@ -30,38 +30,38 @@ int                     vrl_image_select = 0;
 struct vrl_image        vrl_image[MAX_IMAGES];
 
 int load_vrl(int slot,const char *path) {
-	struct vrl1_vgax_header *vrl_header;
-	vrl1_vgax_offset_t *vrl_lineoffs;
-	unsigned char *buffer = NULL;
-	unsigned int bufsz = 0;
-	int fd = -1;
+    struct vrl1_vgax_header *vrl_header;
+    vrl1_vgax_offset_t *vrl_lineoffs;
+    unsigned char *buffer = NULL;
+    unsigned int bufsz = 0;
+    int fd = -1;
 
-	fd = open(path,O_RDONLY|O_BINARY);
-	if (fd < 0) {
-		fprintf(stderr,"Unable to open '%s'\n",path);
-		goto fail;
-	}
-	{
-		unsigned long sz = lseek(fd,0,SEEK_END);
-		if (sz < sizeof(*vrl_header)) goto fail;
-		if (sz >= 65535UL) goto fail;
+    fd = open(path,O_RDONLY|O_BINARY);
+    if (fd < 0) {
+        fprintf(stderr,"Unable to open '%s'\n",path);
+        goto fail;
+    }
+    {
+        unsigned long sz = lseek(fd,0,SEEK_END);
+        if (sz < sizeof(*vrl_header)) goto fail;
+        if (sz >= 65535UL) goto fail;
 
-		bufsz = (unsigned int)sz;
-		buffer = malloc(bufsz);
-		if (buffer == NULL) goto fail;
+        bufsz = (unsigned int)sz;
+        buffer = malloc(bufsz);
+        if (buffer == NULL) goto fail;
 
-		lseek(fd,0,SEEK_SET);
-		if ((unsigned int)read(fd,buffer,bufsz) < bufsz) goto fail;
+        lseek(fd,0,SEEK_SET);
+        if ((unsigned int)read(fd,buffer,bufsz) < bufsz) goto fail;
 
-		vrl_header = (struct vrl1_vgax_header*)buffer;
-		if (memcmp(vrl_header->vrl_sig,"VRL1",4) || memcmp(vrl_header->fmt_sig,"VGAX",4)) goto fail;
-		if (vrl_header->width == 0 || vrl_header->height == 0) goto fail;
-	}
-	close(fd);
+        vrl_header = (struct vrl1_vgax_header*)buffer;
+        if (memcmp(vrl_header->vrl_sig,"VRL1",4) || memcmp(vrl_header->fmt_sig,"VGAX",4)) goto fail;
+        if (vrl_header->width == 0 || vrl_header->height == 0) goto fail;
+    }
+    close(fd);
 
-	/* preprocess the sprite to generate line offsets */
-	vrl_lineoffs = vrl1_vgax_genlineoffsets(vrl_header,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
-	if (vrl_lineoffs == NULL) goto fail;
+    /* preprocess the sprite to generate line offsets */
+    vrl_lineoffs = vrl1_vgax_genlineoffsets(vrl_header,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+    if (vrl_lineoffs == NULL) goto fail;
 
     vrl_image[slot].vrl_header = vrl_header;
     vrl_image[slot].vrl_lineoffs = vrl_lineoffs;
@@ -92,14 +92,14 @@ int main() {
     if (vrl_image_count == 0)
         return 1;
 
-	probe_dos();
-	if (!probe_vga()) {
-		printf("VGA probe failed\n");
-		return 1;
-	}
-	int10_setmode(19);
-	update_state_from_vga();
-	vga_enable_256color_modex(); // VGA mode X
+    probe_dos();
+    if (!probe_vga()) {
+        printf("VGA probe failed\n");
+        return 1;
+    }
+    int10_setmode(19);
+    update_state_from_vga();
+    vga_enable_256color_modex(); // VGA mode X
 
     {
         int fd;
@@ -118,7 +118,7 @@ int main() {
     }
 
     do {
-    	draw_vrl1_vgax_modex(0,0,
+        draw_vrl1_vgax_modex(0,0,
             vrl_image[vrl_image_select].vrl_header,
             vrl_image[vrl_image_select].vrl_lineoffs,
             vrl_image[vrl_image_select].buffer+sizeof(*vrl_image[vrl_image_select].vrl_header),
@@ -137,7 +137,7 @@ int main() {
         }
     } while (1);
 
-	int10_setmode(3);
-	return 0;
+    int10_setmode(3);
+    return 0;
 }
 
