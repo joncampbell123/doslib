@@ -14,6 +14,27 @@
 #include <hw/vga/vga.h>
 #include <ext/zlib/zlib.h>
 
+void minipng_expand1to8(unsigned char *buf,unsigned int pixels) {
+    if (pixels > 0) {
+        unsigned int bytes = (pixels + 7u) / 8u;
+        unsigned char *w = buf + (bytes * 8u);
+        buf += bytes;
+
+        do {
+            unsigned char pb = *--buf;
+            w -= 8;
+            w[0] = (pb & 0x80) ? 1 : 0;
+            w[1] = (pb & 0x40) ? 1 : 0;
+            w[2] = (pb & 0x20) ? 1 : 0;
+            w[3] = (pb & 0x10) ? 1 : 0;
+            w[4] = (pb & 0x08) ? 1 : 0;
+            w[5] = (pb & 0x04) ? 1 : 0;
+            w[6] = (pb & 0x02) ? 1 : 0;
+            w[7] = (pb & 0x01) ? 1 : 0;
+        } while (--bytes != 0u);
+    }
+}
+
 /* PNG signature [https://www.w3.org/TR/PNG/#5PNG-file-signature] */
 const uint8_t minipng_sig[8] = { 137u, 80u, 78u, 71u, 13u, 10u, 26u, 10u };
 
@@ -333,6 +354,7 @@ int main(int argc,char **argv) {
             if (row != NULL) {
                 for (i=0;i < (rdr->ihdr.height < 200 ? rdr->ihdr.height : 200);i++) {
                     if (minipng_reader_read_idat(rdr,row,((rdr->ihdr.width+7u)/8u) + 1) <= 0) break;
+                    minipng_expand1to8(row,rdr->ihdr.width);
 
 #if TARGET_MSDOS == 32
                     memcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char*)row,rdr->ihdr.width);
