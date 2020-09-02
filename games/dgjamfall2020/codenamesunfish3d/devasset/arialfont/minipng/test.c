@@ -44,9 +44,60 @@ struct minipng_IHDR {
 };                                          /* =0x0D */
 #pragma pack(pop)
 
+struct minipng_reader {
+    off_t                   chunk_data_offset;
+    off_t                   next_chunk_start;
+    struct minipng_chunk    chunk_data_header;
+    int                     fd;
+};
+
+struct minipng_reader *minipng_reader_open(const char *path) {
+    struct minipng_reader *rdr = NULL;
+    unsigned char tmp[32]; /* keep this small, you never know if we're going to end up in a 16-bit DOS app with a very small stack */
+    int fd = -1;
+
+    /* open the file */
+    fd = open(path,O_RDONLY | O_BINARY);
+    if (fd < 0) goto fail;
+
+    /* check PNG signature */
+    if (read(fd,tmp,8) != 8) goto fail;
+    if (memcmp(tmp,minipng_sig,8)) goto fail;
+
+    /* good. Point at the first one (usually IHDR) */
+    rdr = malloc(sizeof(*rdr));
+    if (rdr == NULL) goto fail;
+    rdr->fd = fd;
+    rdr->chunk_data_offset = -1;
+    rdr->next_chunk_start = 8;
+
+/* success */
+    return rdr;
+
+fail:
+    if (rdr != NULL) free(rdr);
+    if (fd >= 0) close(fd);
+    return NULL;
+}
+
+void minipng_reader_close(struct minipng_reader **rdr) {
+    if (*rdr != NULL) {
+        if ((*rdr)->fd >= 0) close((*rdr)->fd);
+        free(*rdr);
+        *rdr = NULL;
+    }
+}
+
 int main(int argc,char **argv) {
+    struct minipng_reader *rdr;
+
     if (argc < 2) {
         fprintf(stderr,"Name the 8-bit paletted PNG file\n");
+        return 1;
+    }
+
+    if ((rdr=minipng_reader_open(argv[1])) == NULL) {
+        fprintf(stderr,"PNG open failed\n");
         return 1;
     }
 
@@ -61,6 +112,7 @@ int main(int argc,char **argv) {
     getch();
 
     int10_setmode(3);
+    minipng_reader_close(&rdr);
     return 0;
 }
 
