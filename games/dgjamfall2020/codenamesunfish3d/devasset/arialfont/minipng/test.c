@@ -72,7 +72,7 @@ struct minipng_reader *minipng_reader_open(const char *path) {
     if (memcmp(tmp,minipng_sig,8)) goto fail;
 
     /* good. Point at the first one (usually IHDR) */
-    rdr = malloc(sizeof(*rdr));
+    rdr = calloc(1,sizeof(*rdr)); /* calloc() zeros the memory */
     if (rdr == NULL) goto fail;
     rdr->fd = fd;
     rdr->err_msg = NULL;
