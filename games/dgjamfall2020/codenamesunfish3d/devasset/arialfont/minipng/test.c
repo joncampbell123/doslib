@@ -209,8 +209,18 @@ int main(int argc,char **argv) {
         rdr->ihdr.compression_method,
         rdr->ihdr.filter_method,
         rdr->ihdr.interlace_method);
-    if (rdr->plte != NULL)
+    if (rdr->plte != NULL) {
+        unsigned int i;
+
         fprintf(stderr,"PNG palette: count=%u\n",rdr->plte_count);
+        for (i=0;i < rdr->plte_count;i++) {
+            fprintf(stderr,"%02x%02x%02x ",
+                rdr->plte[i].red,
+                rdr->plte[i].green,
+                rdr->plte[i].blue);
+        }
+        fprintf(stderr,"\n");
+    }
     if (rdr->ihdr.color_type != 3) {
         fprintf(stderr,"Only indexed color is supported\n");
         return 1;
