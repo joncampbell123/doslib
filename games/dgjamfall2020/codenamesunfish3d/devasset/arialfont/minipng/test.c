@@ -290,8 +290,26 @@ int minipng_reader_read_idat(struct minipng_reader *rdr,unsigned char FAR *dst,s
     return (count - rdr->compr_zlib.avail_out);
 }
 
+size_t minipng_rowsize_bytes(struct minipng_reader *rdr) {
+    if (rdr == NULL) return 0;
+    if (rdr->fd < 0) return 0;
+
+    switch (rdr->ihdr.bit_depth) {
+        case 1:
+        case 2:
+        case 4:
+        case 8:
+            return ((size_t)((((unsigned long)rdr->ihdr.width*(unsigned long)rdr->ihdr.bit_depth)+7ul)/8ul)) + 1u;     /* one pad byte at the beginning? */
+        default:
+            break;
+    }
+
+    return 0;
+}
+
 int main(int argc,char **argv) {
     struct minipng_reader *rdr;
+    size_t rowsize;
 
     if (argc < 2) {
         fprintf(stderr,"Name the 8-bit paletted PNG file\n");
@@ -343,6 +361,8 @@ int main(int argc,char **argv) {
         for (i=0;i < rdr->trns_size;i++) fprintf(stderr,"%02x ",rdr->trns[i]);
         fprintf(stderr,"\n");
     }
+    rowsize = minipng_rowsize_bytes(rdr);
+    fprintf(stderr,"Row size in bytes: %zu\n",rowsize);
     if (rdr->ihdr.color_type != 3) {
         fprintf(stderr,"Only indexed color is supported\n");
         return 1;
@@ -370,10 +390,10 @@ int main(int argc,char **argv) {
         unsigned char *row;
 
         if (rdr->ihdr.bit_depth == 1) {
-            row = malloc(rdr->ihdr.width + 8); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
+            row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
             if (row != NULL) {
                 for (i=0;i < (rdr->ihdr.height < 200 ? rdr->ihdr.height : 200);i++) {
-                    if (minipng_reader_read_idat(rdr,row,((rdr->ihdr.width+7u)/8u) + 1) <= 0) break;
+                    if (minipng_reader_read_idat(rdr,row,rowsize) <= 0) break;
                     minipng_expand1to8(row+1/*extra pad byte*/,rdr->ihdr.width);
 
 #if TARGET_MSDOS == 32
@@ -389,7 +409,7 @@ int main(int argc,char **argv) {
             row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
             if (row != NULL) {
                 for (i=0;i < (rdr->ihdr.height < 200 ? rdr->ihdr.height : 200);i++) {
-                    if (minipng_reader_read_idat(rdr,row,rdr->ihdr.width + 1) <= 0) break;
+                    if (minipng_reader_read_idat(rdr,row,rowsize) <= 0) break;
 
 #if TARGET_MSDOS == 32
                     memcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char*)row + 1/*extra pad byte*/,rdr->ihdr.width);
