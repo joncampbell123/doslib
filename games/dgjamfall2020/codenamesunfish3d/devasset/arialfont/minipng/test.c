@@ -45,15 +45,22 @@ struct minipng_IHDR {
 #pragma pack(pop)
 
 struct minipng_reader {
+    char*                   err_msg;
     off_t                   chunk_data_offset;
     off_t                   next_chunk_start;
     struct minipng_chunk    chunk_data_header;
     int                     fd;
 };
 
+inline uint32_t minipng_byteswap32(uint32_t t) {
+    t = ((t & 0xFF00FF00UL) >>  8ul) + ((t & 0x00FF00FFUL) <<  8ul);
+    t = ((t & 0xFFFF0000UL) >> 16ul) + ((t & 0x0000FFFFUL) << 16ul);
+    return t;
+}
+
 struct minipng_reader *minipng_reader_open(const char *path) {
     struct minipng_reader *rdr = NULL;
-    unsigned char tmp[32]; /* keep this small, you never know if we're going to end up in a 16-bit DOS app with a very small stack */
+    unsigned char tmp[8]; /* keep this small, you never know if we're going to end up in a 16-bit DOS app with a very small stack */
     int fd = -1;
 
     /* open the file */
@@ -68,16 +75,37 @@ struct minipng_reader *minipng_reader_open(const char *path) {
     rdr = malloc(sizeof(*rdr));
     if (rdr == NULL) goto fail;
     rdr->fd = fd;
+    rdr->err_msg = NULL;
     rdr->chunk_data_offset = -1;
     rdr->next_chunk_start = 8;
 
-/* success */
+    /* success */
     return rdr;
 
 fail:
     if (rdr != NULL) free(rdr);
     if (fd >= 0) close(fd);
     return NULL;
+}
+
+int minipng_reader_next_chunk(struct minipng_reader *rdr) {
+    unsigned char tmp[8]; /* keep this small, you never know if we're going to end up in a 16-bit DOS app with a very small stack */
+
+    if (rdr == NULL) return -1;
+    if (rdr->fd < 0) return -1;
+    if (rdr->next_chunk_start < (off_t)-1) return -1;
+
+    if (lseek(rdr->fd,rdr->next_chunk_start,SEEK_SET) != rdr->next_chunk_start || read(rdr->fd,tmp,8) != 8) {
+        rdr->next_chunk_start = -1;
+        return -1;
+    }
+
+    rdr->chunk_data_header.type = *((uint32_t*)(tmp + 4));
+    rdr->chunk_data_offset = rdr->next_chunk_start + (off_t)8ul;
+    rdr->chunk_data_header.length = minipng_byteswap32( *((uint32_t*)(tmp + 0)) );
+    rdr->next_chunk_start = rdr->chunk_data_offset + (off_t)rdr->chunk_data_header.length + (off_t)4ul/*CRC field*/;
+
+    return 0;
 }
 
 void minipng_reader_close(struct minipng_reader **rdr) {
@@ -100,6 +128,16 @@ int main(int argc,char **argv) {
         fprintf(stderr,"PNG open failed\n");
         return 1;
     }
+    while (minipng_reader_next_chunk(rdr) == 0) {
+        char tmp[5];
+
+        tmp[4] = 0;
+        *((uint32_t*)(tmp+0)) = rdr->chunk_data_header.type;
+        fprintf(stderr,"PNG chunk '%s' data=%ld size=%ld\n",tmp,
+            (long)rdr->chunk_data_offset,
+            (long)rdr->chunk_data_header.length);
+    }
+    getch();
 
     probe_dos();
     if (!probe_vga()) {
