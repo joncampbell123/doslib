@@ -62,6 +62,13 @@ struct minipng_reader {
 
     struct minipng_PLTE_color*  plte;
     unsigned int                plte_count;
+
+    uint32_t                    idat_rem;
+    unsigned char*              compr;
+    size_t                      compr_size;
+    z_stream                    compr_zlib;
+
+    unsigned int                ungetch;
 };
 
 inline uint32_t minipng_byteswap32(uint32_t t) {
@@ -116,6 +123,10 @@ int minipng_reader_next_chunk(struct minipng_reader *rdr) {
     if (rdr == NULL) return -1;
     if (rdr->fd < 0) return -1;
     if (rdr->next_chunk_start < (off_t)-1) return -1;
+    if (rdr->ungetch > 0) {
+        rdr->ungetch--;
+        return 0;
+    }
 
     if (lseek(rdr->fd,rdr->next_chunk_start,SEEK_SET) != rdr->next_chunk_start || read(rdr->fd,tmp,8) != 8) {
         rdr->next_chunk_start = -1;
@@ -134,6 +145,8 @@ int minipng_reader_next_chunk(struct minipng_reader *rdr) {
 
 void minipng_reader_close(struct minipng_reader **rdr) {
     if (*rdr != NULL) {
+        if ((*rdr)->compr_zlib.next_in != NULL) inflateEnd(&((*rdr)->compr_zlib));
+        if ((*rdr)->compr != NULL) free((*rdr)->compr);
         if ((*rdr)->plte != NULL) free((*rdr)->plte);
         if ((*rdr)->fd >= 0) close((*rdr)->fd);
         free(*rdr);
@@ -164,6 +177,7 @@ int minipng_reader_parse_head(struct minipng_reader *rdr) {
         }
         else if (rdr->chunk_data_header.type == minipng_chunk_fourcc('I','D','A','T')) {
             /* it's the body of the PNG. stop now */
+            rdr->ungetch++;
             break;
         }
     }
@@ -173,6 +187,73 @@ int minipng_reader_parse_head(struct minipng_reader *rdr) {
         return -1;
 
     return 0;
+}
+
+/* WARNING: Normalize far pointer dst before calling this */
+int minipng_reader_read_idat(struct minipng_reader *rdr,unsigned char FAR *dst,size_t count) {
+    int err;
+
+    if (rdr == NULL) return -1;
+    if (rdr->fd < 0) return -1;
+
+    if (rdr->compr == NULL) {
+        rdr->compr_size = 1024;
+        rdr->compr = malloc(rdr->compr_size);
+        if (rdr->compr == NULL) return -1;
+
+        memset(&(rdr->compr_zlib),0,sizeof(rdr->compr_zlib));
+        rdr->compr_zlib.next_in = rdr->compr;
+        rdr->compr_zlib.avail_in = 0;
+        rdr->compr_zlib.next_out = dst;
+        rdr->compr_zlib.avail_out = 0;
+        rdr->idat_rem = 0;
+
+        if (inflateInit2(&(rdr->compr_zlib),15/*max window size 32KB*/) != Z_OK) {
+            memset(&(rdr->compr_zlib),0,sizeof(rdr->compr_zlib));
+            free(rdr->compr);
+            rdr->compr = NULL;
+            return -1;
+        }
+    }
+
+    rdr->compr_zlib.next_out = dst;
+    rdr->compr_zlib.avail_out = count;
+    while (rdr->compr_zlib.avail_out != 0) {
+        if (rdr->compr_zlib.avail_in == 0) {
+            if (rdr->idat_rem == 0) {
+                if (minipng_reader_next_chunk(rdr)) break;
+                if (rdr->chunk_data_header.type == minipng_chunk_fourcc('I','D','A','T')) {
+                    rdr->idat_rem = rdr->chunk_data_header.length;
+                    if (rdr->idat_rem == 0) continue;
+                }
+                else {
+                    rdr->ungetch++;
+                    break;
+                }
+            }
+
+            /* assume idat_rem != 0 */
+            {
+                size_t icount = (rdr->idat_rem < rdr->compr_size) ? rdr->idat_rem : rdr->compr_size; /* lesser of the two */
+
+                read(rdr->fd,rdr->compr,icount);
+                rdr->idat_rem -= icount;
+                rdr->compr_zlib.next_in = rdr->compr;
+                rdr->compr_zlib.avail_in = icount;
+            }
+        }
+
+        if ((err=inflate(&(rdr->compr_zlib),Z_NO_FLUSH)) != Z_OK) {
+            break;
+        }
+        if (rdr->compr_zlib.avail_out == count) {
+            if ((err=inflate(&(rdr->compr_zlib),Z_SYNC_FLUSH)) != Z_OK) {
+                break;
+            }
+        }
+    }
+
+    return (count - rdr->compr_zlib.avail_out);
 }
 
 int main(int argc,char **argv) {
@@ -221,6 +302,7 @@ int main(int argc,char **argv) {
         }
         fprintf(stderr,"\n");
     }
+    fprintf(stderr,"Head parse left file pointer at %ld\n",lseek(rdr->fd,0,SEEK_CUR));
     if (rdr->ihdr.color_type != 3) {
         fprintf(stderr,"Only indexed color is supported\n");
         return 1;
@@ -240,6 +322,25 @@ int main(int argc,char **argv) {
         unsigned int i;
         for (i=0;i < rdr->plte_count;i++) {
             vga_palette_write(rdr->plte[i].red >> 2u,rdr->plte[i].green >> 2u,rdr->plte[i].blue >> 2u);
+        }
+    }
+
+    {
+        unsigned int i;
+        unsigned char *row;
+
+        row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra pixel per row */
+        if (row != NULL) {
+            for (i=0;i < rdr->ihdr.height;i++) {
+                if (minipng_reader_read_idat(rdr,row,rdr->ihdr.width + 1) <= 0) break;
+
+#if TARGET_MSDOS == 32
+                memcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char*)row,rdr->ihdr.width);
+#else
+                _fmemcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char far*)row,rdr->ihdr.width);
+#endif
+            }
+            free(row);
         }
     }
 
