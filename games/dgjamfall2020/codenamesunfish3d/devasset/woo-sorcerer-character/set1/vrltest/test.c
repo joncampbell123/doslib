@@ -86,6 +86,10 @@ void load_seq(void) {
 }
 
 int main() {
+    unsigned int cur_offset=0x4000,next_offset=0;
+    VGA_RAM_PTR	orig_vga_graphics_ram;
+    unsigned int dof;
+    int redraw = 1;
     int c;
 
     load_seq();
@@ -100,6 +104,9 @@ int main() {
     int10_setmode(19);
     update_state_from_vga();
     vga_enable_256color_modex(); // VGA mode X
+    orig_vga_graphics_ram = vga_state.vga_graphics_ram;
+    vga_state.vga_graphics_ram = orig_vga_graphics_ram + next_offset;
+    vga_set_start_location(cur_offset);
 
     {
         int fd;
@@ -118,11 +125,24 @@ int main() {
     }
 
     do {
-        draw_vrl1_vgax_modex(0,0,
-            vrl_image[vrl_image_select].vrl_header,
-            vrl_image[vrl_image_select].vrl_lineoffs,
-            vrl_image[vrl_image_select].buffer+sizeof(*vrl_image[vrl_image_select].vrl_header),
-            vrl_image[vrl_image_select].bufsz-sizeof(*vrl_image[vrl_image_select].vrl_header));
+        if (redraw) {
+            redraw = 0;
+
+            vga_write_sequencer(0x02/*map mask*/,0xF);
+            vga_state.vga_graphics_ram = orig_vga_graphics_ram + next_offset;
+            for (dof=0;dof < 0x4000;dof++) vga_state.vga_graphics_ram[dof] = 0;
+
+            draw_vrl1_vgax_modex(0,0,
+                vrl_image[vrl_image_select].vrl_header,
+                vrl_image[vrl_image_select].vrl_lineoffs,
+                vrl_image[vrl_image_select].buffer+sizeof(*vrl_image[vrl_image_select].vrl_header),
+                vrl_image[vrl_image_select].bufsz-sizeof(*vrl_image[vrl_image_select].vrl_header));
+
+            cur_offset = next_offset;
+            next_offset = (next_offset ^ 0x4000) & 0x7FFF;
+            vga_set_start_location(cur_offset);
+            vga_state.vga_graphics_ram = orig_vga_graphics_ram + next_offset;
+        }
 
         c = getch();
         if (c == 27) break;
@@ -130,10 +150,14 @@ int main() {
         if (c == ',' || c == '<') {
             if (--vrl_image_select < 0)
                 vrl_image_select = vrl_image_count - 1;
+
+            redraw = 1;
         }
         else if (c == '.' || c == '>') {
             if (++vrl_image_select >= vrl_image_count)
                 vrl_image_select = 0;
+
+            redraw = 1;
         }
     } while (1);
 
