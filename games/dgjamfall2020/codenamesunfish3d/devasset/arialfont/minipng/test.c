@@ -302,7 +302,6 @@ int main(int argc,char **argv) {
         }
         fprintf(stderr,"\n");
     }
-    fprintf(stderr,"Head parse left file pointer at %ld\n",lseek(rdr->fd,0,SEEK_CUR));
     if (rdr->ihdr.color_type != 3) {
         fprintf(stderr,"Only indexed color is supported\n");
         return 1;
