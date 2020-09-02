@@ -16,40 +16,81 @@
 
 static unsigned char palette[768];
 
-int main(int argc,char **argv) {
+#define MAX_IMAGES          64
+
+struct vrl_image {
+	struct vrl1_vgax_header*        vrl_header;
+	vrl1_vgax_offset_t*             vrl_lineoffs;
+	unsigned char*                  buffer;
+	unsigned int                    bufsz;
+};
+
+int                     vrl_image_count = 0;
+int                     vrl_image_select = 0;
+struct vrl_image        vrl_image[MAX_IMAGES];
+
+int load_vrl(int slot,const char *path) {
 	struct vrl1_vgax_header *vrl_header;
 	vrl1_vgax_offset_t *vrl_lineoffs;
-	unsigned char *buffer;
-	unsigned int bufsz;
-	int fd;
+	unsigned char *buffer = NULL;
+	unsigned int bufsz = 0;
+	int fd = -1;
 
-	if (argc < 3) {
-		fprintf(stderr,"drawvrl <VRL file> <palette file>\n");
-		return 1;
-	}
-
-	fd = open(argv[1],O_RDONLY|O_BINARY);
+	fd = open(path,O_RDONLY|O_BINARY);
 	if (fd < 0) {
-		fprintf(stderr,"Unable to open '%s'\n",argv[1]);
-		return 1;
+		fprintf(stderr,"Unable to open '%s'\n",path);
+		goto fail;
 	}
 	{
 		unsigned long sz = lseek(fd,0,SEEK_END);
-		if (sz < sizeof(*vrl_header)) return 1;
-		if (sz >= 65535UL) return 1;
+		if (sz < sizeof(*vrl_header)) goto fail;
+		if (sz >= 65535UL) goto fail;
 
 		bufsz = (unsigned int)sz;
 		buffer = malloc(bufsz);
-		if (buffer == NULL) return 1;
+		if (buffer == NULL) goto fail;
 
 		lseek(fd,0,SEEK_SET);
-		if ((unsigned int)read(fd,buffer,bufsz) < bufsz) return 1;
+		if ((unsigned int)read(fd,buffer,bufsz) < bufsz) goto fail;
 
 		vrl_header = (struct vrl1_vgax_header*)buffer;
-		if (memcmp(vrl_header->vrl_sig,"VRL1",4) || memcmp(vrl_header->fmt_sig,"VGAX",4)) return 1;
-		if (vrl_header->width == 0 || vrl_header->height == 0) return 1;
+		if (memcmp(vrl_header->vrl_sig,"VRL1",4) || memcmp(vrl_header->fmt_sig,"VGAX",4)) goto fail;
+		if (vrl_header->width == 0 || vrl_header->height == 0) goto fail;
 	}
 	close(fd);
+
+	/* preprocess the sprite to generate line offsets */
+	vrl_lineoffs = vrl1_vgax_genlineoffsets(vrl_header,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
+	if (vrl_lineoffs == NULL) goto fail;
+
+    vrl_image[slot].vrl_header = vrl_header;
+    vrl_image[slot].vrl_lineoffs = vrl_lineoffs;
+    vrl_image[slot].buffer = buffer;
+    vrl_image[slot].bufsz = bufsz;
+
+    return 0;
+fail:
+    if (buffer != NULL) free(buffer);
+    if (fd >= 0) close(fd);
+    return 1;
+}
+
+void load_seq(void) {
+    char tmp[20];
+
+    while (vrl_image_count < MAX_IMAGES) {
+        sprintf(tmp,"%04d.vrl",vrl_image_count);
+        if (load_vrl(vrl_image_count,tmp)) break;
+        vrl_image_count++;
+    }
+}
+
+int main() {
+    int c;
+
+    load_seq();
+    if (vrl_image_count == 0)
+        return 1;
 
 	probe_dos();
 	if (!probe_vga()) {
@@ -60,61 +101,43 @@ int main(int argc,char **argv) {
 	update_state_from_vga();
 	vga_enable_256color_modex(); // VGA mode X
 
-	/* load color palette */
-	fd = open(argv[2],O_RDONLY|O_BINARY);
-	if (fd >= 0) {
-		unsigned int i;
+    {
+        int fd;
 
-		read(fd,palette,768);
-		close(fd);
+        /* load color palette */
+        fd = open("palette.pal",O_RDONLY|O_BINARY);
+        if (fd >= 0) {
+            unsigned int i;
 
-		vga_palette_lseek(0);
-		for (i=0;i < 256;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
-	}
+            read(fd,palette,768);
+            close(fd);
 
-	/* preprocess the sprite to generate line offsets */
-	vrl_lineoffs = vrl1_vgax_genlineoffsets(vrl_header,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
-	if (vrl_lineoffs == NULL) return 1;
+            vga_palette_lseek(0);
+            for (i=0;i < 256;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
+        }
+    }
 
-	draw_vrl1_vgax_modex(0,0,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
-	while (getch() != 13);
+    do {
+    	draw_vrl1_vgax_modex(0,0,
+            vrl_image[vrl_image_select].vrl_header,
+            vrl_image[vrl_image_select].vrl_lineoffs,
+            vrl_image[vrl_image_select].buffer+sizeof(*vrl_image[vrl_image_select].vrl_header),
+            vrl_image[vrl_image_select].bufsz-sizeof(*vrl_image[vrl_image_select].vrl_header));
 
-	{
-		unsigned int i;
+        c = getch();
+        if (c == 27) break;
 
-		for (i=1;i < 320;i++)
-			draw_vrl1_vgax_modex(i,0,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
-	}
-	while (getch() != 13);
-
-	{
-		unsigned int i;
-
-		for (i=1;i < 200;i++)
-			draw_vrl1_vgax_modex(i,i,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
-	}
-	while (getch() != 13);
-
-	{
-		unsigned int i;
-
-		for (i=(2 << 6)/*200%*/;i >= (1 << 4)/*25%*/;i--)
-			draw_vrl1_vgax_modexstretch(0,0,i,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
-	}
-	while (getch() != 13);
-	{
-		unsigned int i;
-
-		for (i=(2 << 6)/*200%*/;i >= (1 << 4)/*25%*/;i--)
-			draw_vrl1_vgax_modexystretch(0,0,i,i,vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),bufsz-sizeof(*vrl_header));
-	}
-	while (getch() != 13);
+        if (c == ',' || c == '<') {
+            if (--vrl_image_select < 0)
+                vrl_image_select = vrl_image_count - 1;
+        }
+        else if (c == '.' || c == '>') {
+            if (++vrl_image_select >= vrl_image_count)
+                vrl_image_select = 0;
+        }
+    } while (1);
 
 	int10_setmode(3);
-	free(vrl_lineoffs);
-	buffer = NULL;
-	free(buffer);
-	bufsz = 0;
 	return 0;
 }
 
