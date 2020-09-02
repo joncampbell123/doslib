@@ -169,7 +169,7 @@ int minipng_reader_parse_head(struct minipng_reader *rdr) {
     }
 
     /* IHDR required */
-    if (rdr->ihdr.bit_depth == 0)
+    if (rdr->ihdr.bit_depth == 0 || rdr->ihdr.width == 0 || rdr->ihdr.height == 0)
         return -1;
 
     return 0;
