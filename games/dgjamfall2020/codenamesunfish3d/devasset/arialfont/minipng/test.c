@@ -350,31 +350,31 @@ int main(int argc,char **argv) {
         unsigned char *row;
 
         if (rdr->ihdr.bit_depth == 1) {
-            row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] */
+            row = malloc(rdr->ihdr.width + 8); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
             if (row != NULL) {
                 for (i=0;i < (rdr->ihdr.height < 200 ? rdr->ihdr.height : 200);i++) {
                     if (minipng_reader_read_idat(rdr,row,((rdr->ihdr.width+7u)/8u) + 1) <= 0) break;
-                    minipng_expand1to8(row,rdr->ihdr.width);
+                    minipng_expand1to8(row+1/*extra pad byte*/,rdr->ihdr.width);
 
 #if TARGET_MSDOS == 32
-                    memcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char*)row,rdr->ihdr.width);
+                    memcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char*)row + 1/*extra pad byte*/,rdr->ihdr.width);
 #else
-                    _fmemcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char far*)row,rdr->ihdr.width);
+                    _fmemcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char far*)row + 1/*extra pad byte*/,rdr->ihdr.width);
 #endif
                 }
                 free(row);
             }
         }
         else if (rdr->ihdr.bit_depth == 8) {
-            row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] */
+            row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
             if (row != NULL) {
                 for (i=0;i < (rdr->ihdr.height < 200 ? rdr->ihdr.height : 200);i++) {
                     if (minipng_reader_read_idat(rdr,row,rdr->ihdr.width + 1) <= 0) break;
 
 #if TARGET_MSDOS == 32
-                    memcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char*)row,rdr->ihdr.width);
+                    memcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char*)row + 1/*extra pad byte*/,rdr->ihdr.width);
 #else
-                    _fmemcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char far*)row,rdr->ihdr.width);
+                    _fmemcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char far*)row + 1/*extra pad byte*/,rdr->ihdr.width);
 #endif
                 }
                 free(row);
