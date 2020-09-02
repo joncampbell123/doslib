@@ -390,7 +390,7 @@ int main(int argc,char **argv) {
         unsigned char *row;
 
         if (rdr->ihdr.bit_depth == 1) {
-            row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
+            row = malloc(rdr->ihdr.width + 8/*expansion*/ + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
             if (row != NULL) {
                 for (i=0;i < (rdr->ihdr.height < 200 ? rdr->ihdr.height : 200);i++) {
                     if (minipng_reader_read_idat(rdr,row,rowsize) <= 0) break;
