@@ -44,6 +44,13 @@ struct minipng_IHDR {
 };                                          /* =0x0D */
 #pragma pack(pop)
 
+/* PNG PLTE [https://www.w3.org/TR/PNG/#11PLTE] */
+#pragma pack(push,1)
+struct minipng_PLTE_color {
+    uint8_t         red,green,blue;         /* +0x00,+0x01,+0x02 */
+};                                          /* =0x03 */
+#pragma pack(pop)
+
 struct minipng_reader {
     char*                   err_msg;
     off_t                   chunk_data_offset;
@@ -52,6 +59,9 @@ struct minipng_reader {
     int                     fd;
 
     struct minipng_IHDR     ihdr;
+
+    struct minipng_PLTE_color*  plte;
+    unsigned int                plte_count;
 };
 
 inline uint32_t minipng_byteswap32(uint32_t t) {
@@ -117,15 +127,52 @@ int minipng_reader_next_chunk(struct minipng_reader *rdr) {
     rdr->chunk_data_header.length = minipng_byteswap32( *((uint32_t*)(tmp + 0)) );
     rdr->next_chunk_start = rdr->chunk_data_offset + (off_t)rdr->chunk_data_header.length + (off_t)4ul/*CRC field*/;
 
+    /* file pointer left at chunk data for caller if interested */
+
     return 0;
 }
 
 void minipng_reader_close(struct minipng_reader **rdr) {
     if (*rdr != NULL) {
+        if ((*rdr)->plte != NULL) free((*rdr)->plte);
         if ((*rdr)->fd >= 0) close((*rdr)->fd);
         free(*rdr);
         *rdr = NULL;
     }
+}
+
+/* assume caller just opened or called rewind.
+ * don't expect this to work if you call this twice in a row or after the IDAT. */
+int minipng_reader_parse_head(struct minipng_reader *rdr) {
+    while (minipng_reader_next_chunk(rdr) == 0) {
+        if (rdr->chunk_data_header.type == minipng_chunk_fourcc('I','H','D','R')) {
+            if (rdr->chunk_data_header.length >= 0x0D) {
+                read(rdr->fd,&rdr->ihdr,0x0D);
+                /* byte swap fields */
+                rdr->ihdr.width =       minipng_byteswap32(rdr->ihdr.width);
+                rdr->ihdr.height =      minipng_byteswap32(rdr->ihdr.height);
+            }
+        }
+        else if (rdr->chunk_data_header.type == minipng_chunk_fourcc('P','L','T','E')) {
+            if (rdr->plte == NULL && rdr->chunk_data_header.length >= 3ul) {
+                rdr->plte_count = rdr->chunk_data_header.length / 3ul;
+                if (rdr->plte_count <= 256) {
+                    rdr->plte = malloc(3 * rdr->plte_count);
+                    if (rdr->plte != NULL) read(rdr->fd,rdr->plte,3 * rdr->plte_count);
+                }
+            }
+        }
+        else if (rdr->chunk_data_header.type == minipng_chunk_fourcc('I','D','A','T')) {
+            /* it's the body of the PNG. stop now */
+            break;
+        }
+    }
+
+    /* IHDR required */
+    if (rdr->ihdr.bit_depth == 0)
+        return -1;
+
+    return 0;
 }
 
 int main(int argc,char **argv) {
@@ -150,14 +197,23 @@ int main(int argc,char **argv) {
             (long)rdr->chunk_data_header.length);
     }
     minipng_reader_rewind(rdr);
-    while (minipng_reader_next_chunk(rdr) == 0) {
-        char tmp[5];
-
-        tmp[4] = 0;
-        *((uint32_t*)(tmp+0)) = rdr->chunk_data_header.type;
-        fprintf(stderr,"PNG chunk '%s' data=%ld size=%ld\n",tmp,
-            (long)rdr->chunk_data_offset,
-            (long)rdr->chunk_data_header.length);
+    if (minipng_reader_parse_head(rdr)) {
+        fprintf(stderr,"PNG head parse failed\n");
+        return 1;
+    }
+    fprintf(stderr,"PNG header: %lu x %lu, depth=%u ctype=0x%02x cmpmet=%u flmet=%u ilmet=%u\n",
+        rdr->ihdr.width,
+        rdr->ihdr.height,
+        rdr->ihdr.bit_depth,
+        rdr->ihdr.color_type,
+        rdr->ihdr.compression_method,
+        rdr->ihdr.filter_method,
+        rdr->ihdr.interlace_method);
+    if (rdr->plte != NULL)
+        fprintf(stderr,"PNG palette: count=%u\n",rdr->plte_count);
+    if (rdr->ihdr.color_type != 3) {
+        fprintf(stderr,"Only indexed color is supported\n");
+        return 1;
     }
     getch();
 
