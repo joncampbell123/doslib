@@ -50,6 +50,8 @@ struct minipng_reader {
     off_t                   next_chunk_start;
     struct minipng_chunk    chunk_data_header;
     int                     fd;
+
+    struct minipng_IHDR     ihdr;
 };
 
 inline uint32_t minipng_byteswap32(uint32_t t) {
@@ -86,6 +88,16 @@ fail:
     if (rdr != NULL) free(rdr);
     if (fd >= 0) close(fd);
     return NULL;
+}
+
+int minipng_reader_rewind(struct minipng_reader *rdr) {
+    if (rdr == NULL) return -1;
+    if (rdr->fd < 0) return -1;
+
+    rdr->chunk_data_offset = -1;
+    rdr->next_chunk_start = 8;
+
+    return 0;
 }
 
 int minipng_reader_next_chunk(struct minipng_reader *rdr) {
@@ -128,6 +140,16 @@ int main(int argc,char **argv) {
         fprintf(stderr,"PNG open failed\n");
         return 1;
     }
+    while (minipng_reader_next_chunk(rdr) == 0) {
+        char tmp[5];
+
+        tmp[4] = 0;
+        *((uint32_t*)(tmp+0)) = rdr->chunk_data_header.type;
+        fprintf(stderr,"PNG chunk '%s' data=%ld size=%ld\n",tmp,
+            (long)rdr->chunk_data_offset,
+            (long)rdr->chunk_data_header.length);
+    }
+    minipng_reader_rewind(rdr);
     while (minipng_reader_next_chunk(rdr) == 0) {
         char tmp[5];
 
