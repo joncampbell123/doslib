@@ -84,6 +84,9 @@ struct minipng_reader {
     struct minipng_PLTE_color*  plte;
     unsigned int                plte_count;
 
+    unsigned char*              trns;
+    size_t                      trns_size;
+
     uint32_t                    idat_rem;
     unsigned char*              compr;
     size_t                      compr_size;
@@ -168,6 +171,7 @@ void minipng_reader_close(struct minipng_reader **rdr) {
     if (*rdr != NULL) {
         if ((*rdr)->compr_zlib.next_in != NULL) inflateEnd(&((*rdr)->compr_zlib));
         if ((*rdr)->compr != NULL) free((*rdr)->compr);
+        if ((*rdr)->trns != NULL) free((*rdr)->trns);
         if ((*rdr)->plte != NULL) free((*rdr)->plte);
         if ((*rdr)->fd >= 0) close((*rdr)->fd);
         free(*rdr);
@@ -193,6 +197,15 @@ int minipng_reader_parse_head(struct minipng_reader *rdr) {
                 if (rdr->plte_count <= 256) {
                     rdr->plte = malloc(3 * rdr->plte_count);
                     if (rdr->plte != NULL) read(rdr->fd,rdr->plte,3 * rdr->plte_count);
+                }
+            }
+        }
+        else if (rdr->chunk_data_header.type == minipng_chunk_fourcc('t','R','N','S')) {
+            if (rdr->trns == NULL && rdr->chunk_data_header.length != 0) {
+                rdr->trns_size = rdr->chunk_data_header.length;
+                if (rdr->chunk_data_header.length <= 1024) {
+                    rdr->trns = malloc(rdr->trns_size);
+                    if (rdr->trns != NULL) read(rdr->fd,rdr->trns,rdr->trns_size);
                 }
             }
         }
@@ -321,6 +334,13 @@ int main(int argc,char **argv) {
                 rdr->plte[i].green,
                 rdr->plte[i].blue);
         }
+        fprintf(stderr,"\n");
+    }
+    if (rdr->trns != NULL) {
+        unsigned int i;
+
+        fprintf(stderr,"PNG trns: bytelength=%u\n",rdr->trns_size);
+        for (i=0;i < rdr->trns_size;i++) fprintf(stderr,"%02x ",rdr->trns[i]);
         fprintf(stderr,"\n");
     }
     if (rdr->ihdr.color_type != 3) {
