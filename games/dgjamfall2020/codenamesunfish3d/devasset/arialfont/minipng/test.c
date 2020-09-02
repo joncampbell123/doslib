@@ -235,6 +235,14 @@ int main(int argc,char **argv) {
     int10_setmode(19);
     update_state_from_vga();
 
+    vga_palette_lseek(0);
+    {
+        unsigned int i;
+        for (i=0;i < rdr->plte_count;i++) {
+            vga_palette_write(rdr->plte[i].red >> 2u,rdr->plte[i].green >> 2u,rdr->plte[i].blue >> 2u);
+        }
+    }
+
     getch();
 
     int10_setmode(3);
