@@ -7,6 +7,7 @@ dos=1 # MS-DOS
 
 if [ "$1" == "clean" ]; then
     do_clean
+    rm -fv *.vrl *.pal
     exit 0
 fi
 

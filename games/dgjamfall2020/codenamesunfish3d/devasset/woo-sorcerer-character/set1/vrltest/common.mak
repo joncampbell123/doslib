@@ -14,6 +14,14 @@ TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
 !ifdef TINYMODE
 	$(OMFSEGDG) -i $@ -o $@
 !endif
+	$(COPY) ..$(HPS)REDOGREEN2-colorkey-matte-alpha-360p.prores.mov-103.27-103.47.mov.001.png.rsz.png.palunord.png.palord.png.pal palette.pal
+	$(COPY) ..$(HPS)REDOGREEN2-colorkey-matte-alpha-360p.prores.mov-103.27-103.47.mov.001.png.rsz.png.palunord.png.palord.png.vrl 0000.vrl
+	$(COPY) ..$(HPS)REDOGREEN2-colorkey-matte-alpha-360p.prores.mov-203.77-203.87.mov.001.png.rsz.png.palunord.png.palord.png.vrl 0001.vrl
+	$(COPY) ..$(HPS)REDOGREEN2-colorkey-matte-alpha-360p.prores.mov-203.77-203.87.mov.002.png.rsz.png.palunord.png.palord.png.vrl 0002.vrl
+	$(COPY) ..$(HPS)REDOGREEN2-colorkey-matte-alpha-360p.prores.mov-203.77-203.87.mov.003.png.rsz.png.palunord.png.palord.png.vrl 0003.vrl
+	$(COPY) ..$(HPS)REDOGREEN2-colorkey-matte-alpha-360p.prores.mov-73.07-73.27.mov.001.png.rsz.png.palunord.png.palord.png.vrl 0004.vrl
+	$(COPY) ..$(HPS)REDOGREEN2-colorkey-matte-alpha-360p.prores.mov-83.77-83.87.mov.003.png.rsz.png.palunord.png.palord.png.vrl 0005.vrl
+	$(COPY) ..$(HPS)REDOGREEN2-colorkey-matte-alpha-360p.prores.mov-98.87-98.97.mov.001.png.rsz.png.palunord.png.palord.png.vrl 0006.vrl
 
 all: $(OMFSEGDG) lib exe
        
