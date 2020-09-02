@@ -329,7 +329,7 @@ int main(int argc,char **argv) {
         unsigned char *row;
 
         if (rdr->ihdr.bit_depth == 8) {
-            row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra pixel per row */
+            row = malloc(rdr->ihdr.width + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] */
             if (row != NULL) {
                 for (i=0;i < rdr->ihdr.height;i++) {
                     if (minipng_reader_read_idat(rdr,row,rdr->ihdr.width + 1) <= 0) break;
