@@ -14,6 +14,7 @@
 #include <hw/vga/vga.h>
 #include <ext/zlib/zlib.h>
 
+/* WARNING: This function will expand bytes to a multiple of 8 pixels rounded up. Allocate your buffer accordingly. */
 void minipng_expand1to8(unsigned char *buf,unsigned int pixels) {
     if (pixels > 0) {
         unsigned int bytes = (pixels + 7u) / 8u;
@@ -390,16 +391,16 @@ int main(int argc,char **argv) {
         unsigned char *row;
 
         if (rdr->ihdr.bit_depth == 1) {
-            row = malloc(rdr->ihdr.width + 8/*expansion*/ + 1); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
+            row = malloc(rdr->ihdr.width + 8/*extra byte*/ + 8/*expandpad*/); /* NTS: For some reason, PNGs have an extra byte per row [https://github.com/glennrp/libpng/blob/libpng16/pngread.c#L543] at the beginning */
             if (row != NULL) {
                 for (i=0;i < (rdr->ihdr.height < 200 ? rdr->ihdr.height : 200);i++) {
                     if (minipng_reader_read_idat(rdr,row,rowsize) <= 0) break;
-                    minipng_expand1to8(row+1/*extra pad byte*/,rdr->ihdr.width);
+                    minipng_expand1to8(row,rowsize * 8u);
 
 #if TARGET_MSDOS == 32
-                    memcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char*)row + 1/*extra pad byte*/,rdr->ihdr.width);
+                    memcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char*)row + 8/*extra pad byte*/,rdr->ihdr.width);
 #else
-                    _fmemcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char far*)row + 1/*extra pad byte*/,rdr->ihdr.width);
+                    _fmemcpy(vga_state.vga_graphics_ram + (i * 320),(unsigned char far*)row + 8/*extra pad byte*/,rdr->ihdr.width);
 #endif
                 }
                 free(row);
