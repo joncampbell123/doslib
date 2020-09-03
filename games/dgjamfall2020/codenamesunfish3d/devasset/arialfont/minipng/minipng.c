@@ -19,28 +19,6 @@
 /* PNG signature [https://www.w3.org/TR/PNG/#5PNG-file-signature] */
 const uint8_t minipng_sig[8] = { 137u, 80u, 78u, 71u, 13u, 10u, 26u, 10u };
 
-/* WARNING: This function will expand bytes to a multiple of 8 pixels rounded up. Allocate your buffer accordingly. */
-void minipng_expand1to8(unsigned char *buf,unsigned int pixels) {
-    if (pixels > 0) {
-        unsigned int bytes = (pixels + 7u) / 8u;
-        unsigned char *w = buf + (bytes * 8u);
-        buf += bytes;
-
-        do {
-            unsigned char pb = *--buf;
-            w -= 8;
-            w[0] = (pb & 0x80) ? 1 : 0;
-            w[1] = (pb & 0x40) ? 1 : 0;
-            w[2] = (pb & 0x20) ? 1 : 0;
-            w[3] = (pb & 0x10) ? 1 : 0;
-            w[4] = (pb & 0x08) ? 1 : 0;
-            w[5] = (pb & 0x04) ? 1 : 0;
-            w[6] = (pb & 0x02) ? 1 : 0;
-            w[7] = (pb & 0x01) ? 1 : 0;
-        } while (--bytes != 0u);
-    }
-}
-
 struct minipng_reader *minipng_reader_open(const char *path) {
     struct minipng_reader *rdr = NULL;
     unsigned char tmp[8]; /* keep this small, you never know if we're going to end up in a 16-bit DOS app with a very small stack */
@@ -228,22 +206,5 @@ int minipng_reader_read_idat(struct minipng_reader *rdr,unsigned char FAR *dst,s
     }
 
     return (count - rdr->compr_zlib.avail_out);
-}
-
-size_t minipng_rowsize_bytes(struct minipng_reader *rdr) {
-    if (rdr == NULL) return 0;
-    if (rdr->fd < 0) return 0;
-
-    switch (rdr->ihdr.bit_depth) {
-        case 1:
-        case 2:
-        case 4:
-        case 8:
-            return ((size_t)((((unsigned long)rdr->ihdr.width*(unsigned long)rdr->ihdr.bit_depth)+7ul)/8ul)) + 1u;     /* one pad byte at the beginning? */
-        default:
-            break;
-    }
-
-    return 0;
 }
 

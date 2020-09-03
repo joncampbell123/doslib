@@ -23,8 +23,8 @@ lib: $(HW_VGA_LIB) $(EXT_ZLIBIMIN_LIB) .symbolic
 exe: $(TEST_EXE) $(TESTOLD1_EXE) .symbolic
 
 !ifdef TEST_EXE
-$(TEST_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(SUBDIR)$(HPS)minipng.obj
-	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj file $(SUBDIR)$(HPS)minipng.obj name $(TEST_EXE)
+$(TEST_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnx8.obj $(SUBDIR)$(HPS)minipnrb.obj
+	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj file $(SUBDIR)$(HPS)minipng.obj file $(SUBDIR)$(HPS)minipnx8.obj file $(SUBDIR)$(HPS)minipnrb.obj name $(TEST_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
@@ -33,8 +33,8 @@ $(TEST_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_L
 	$(COPY) ..$(HPS)ariallarge_0.png lrg.png
 
 !ifdef TESTOLD1_EXE
-$(TESTOLD1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testold1.obj $(SUBDIR)$(HPS)minipng.obj
-	%write tmp.cmd option quiet option map=$(TESTOLD1_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)testold1.obj file $(SUBDIR)$(HPS)minipng.obj name $(TESTOLD1_EXE)
+$(TESTOLD1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testold1.obj $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnx8.obj $(SUBDIR)$(HPS)minipnrb.obj
+	%write tmp.cmd option quiet option map=$(TESTOLD1_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)testold1.obj file $(SUBDIR)$(HPS)minipng.obj file $(SUBDIR)$(HPS)minipnx8.obj file $(SUBDIR)$(HPS)minipnrb.obj name $(TESTOLD1_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
