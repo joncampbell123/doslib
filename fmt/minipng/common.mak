@@ -2,13 +2,9 @@
 # NTS: HPS is either \ (DOS) or / (Linux)
 
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
-NOW_BUILDING = FMT_MINIPNG
+NOW_BUILDING = FMT_MINIPNG_LIB
 
 OBJS =         $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnid.obj $(SUBDIR)$(HPS)minipnph.obj $(SUBDIR)$(HPS)minipnrb.obj $(SUBDIR)$(HPS)minipnrw.obj $(SUBDIR)$(HPS)minipnx8.obj
-
-FMT_MINIPNG_LIB = $(SUBDIR)$(HPS)minipng.lib
-FMT_MINIPNG_LIB_DEPENDENCIES = $(EXT_ZLIBIMIN_LIB)
-FMT_MINIPNG_LIB_WLINK_LIBRARIES = library $(FMT_MINIPNG_LIB) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES)
 
 $(FMT_MINIPNG_LIB): $(OBJS)
 	wlib -q -b -c $(FMT_MINIPNG_LIB) -+$(SUBDIR)$(HPS)minipng.obj -+$(SUBDIR)$(HPS)minipnid.obj

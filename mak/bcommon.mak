@@ -466,6 +466,12 @@ FMT_OMF_LIB=$(FMT_OMF_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)omf.lib
 FMT_OMF_LIB_DEPENDENCIES=
 FMT_OMF_LIB_WLINK_LIBRARIES=library $(FMT_OMF_LIB)
 
+# FMT\MINIPNG------------------------------------------------------------------------------
+FMT_MINIPNG_LIB_DIR=$(REL)$(HPS)fmt$(HPS)minipng
+FMT_MINIPNG_LIB=$(FMT_MINIPNG_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)minipng.lib
+FMT_MINIPNG_LIB_DEPENDENCIES=$(EXT_ZLIBIMIN_LIB)
+FMT_MINIPNG_LIB_WLINK_LIBRARIES=library $(FMT_MINIPNG_LIB) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES)
+
 # HW\86DUINO-------------------------------------------------------------------------------
 HW_86DUINO_LIB_DIR=$(REL)$(HPS)hw$(HPS)86duino
 HW_86DUINO_LIB=$(HW_86DUINO_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)86duino.lib

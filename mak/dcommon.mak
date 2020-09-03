@@ -409,6 +409,14 @@ $(OMFSEGDG):
 	@cd $(HERE)
 !endif
 
+# FMT\MINIPNG-----------------------------------------------------------------------------------
+!ifneq NOW_BUILDING FMT_MINIPNG_LIB
+$(FMT_MINIPNG_LIB):
+	@cd $(FMT_MINIPNG_LIB_DIR)
+	@$(MAKECMD) build lib $(SUBDIR)
+	@cd $(HERE)
+!endif
+
 # DEBUG
 !ifndef NOW_BUILDING
 ! error no NOW_BUILDING
