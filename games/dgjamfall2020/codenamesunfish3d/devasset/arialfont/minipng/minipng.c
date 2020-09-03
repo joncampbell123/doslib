@@ -49,16 +49,6 @@ fail:
     return NULL;
 }
 
-int minipng_reader_rewind(struct minipng_reader *rdr) {
-    if (rdr == NULL) return -1;
-    if (rdr->fd < 0) return -1;
-
-    rdr->chunk_data_offset = -1;
-    rdr->next_chunk_start = 8;
-
-    return 0;
-}
-
 int minipng_reader_next_chunk(struct minipng_reader *rdr) {
     unsigned char tmp[8]; /* keep this small, you never know if we're going to end up in a 16-bit DOS app with a very small stack */
 
