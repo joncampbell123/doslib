@@ -42,7 +42,7 @@ int ZEXPORT uncompress (dest, destLen, source, sourceLen)
     stream.zalloc = (alloc_func)0;
     stream.zfree = (free_func)0;
 
-    err = inflateInit(&stream);
+    err = inflateInit2(&stream,15);
     if (err != Z_OK) return err;
 
     err = inflate(&stream, Z_FINISH);
