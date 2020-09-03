@@ -22,6 +22,7 @@ int minipng_reader_rewind(struct minipng_reader *rdr) {
 
     rdr->chunk_data_offset = -1;
     rdr->next_chunk_start = 8;
+    rdr->ungetch = 0;
 
     return 0;
 }
