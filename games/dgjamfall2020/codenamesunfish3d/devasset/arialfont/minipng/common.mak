@@ -22,8 +22,8 @@ lib: $(HW_VGA_LIB) $(EXT_ZLIBIMIN_LIB) .symbolic
 exe: $(TEST_EXE) .symbolic
 
 !ifdef TEST_EXE
-$(TEST_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
-	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE)
+$(TEST_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(SUBDIR)$(HPS)minipng.obj
+	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj file $(SUBDIR)$(HPS)minipng.obj name $(TEST_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
