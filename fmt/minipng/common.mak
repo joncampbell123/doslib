@@ -1,7 +1,7 @@
 # this makefile is included from all the dos*.mak files, do not use directly
 # NTS: HPS is either \ (DOS) or / (Linux)
 
-CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../../../../../.."
+CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
 NOW_BUILDING = WOO_SORC_SET1_VRLTEST
 
 TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
@@ -26,17 +26,14 @@ exe: $(TEST_EXE) $(TESTOLD1_EXE) .symbolic
 $(TEST_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnx8.obj $(SUBDIR)$(HPS)minipnrb.obj $(SUBDIR)$(HPS)minipnrw.obj $(SUBDIR)$(HPS)minipnph.obj $(SUBDIR)$(HPS)minipnid.obj
 	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj file $(SUBDIR)$(HPS)minipng.obj file $(SUBDIR)$(HPS)minipnx8.obj file $(SUBDIR)$(HPS)minipnrb.obj file $(SUBDIR)$(HPS)minipnrw.obj file $(SUBDIR)$(HPS)minipnph.obj file $(SUBDIR)$(HPS)minipnid.obj name $(TEST_EXE)
 	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
-	$(COPY) ..$(HPS)arialsmall_0.png sml.png
-	$(COPY) ..$(HPS)arialmed_0.png   med.png
-	$(COPY) ..$(HPS)ariallarge_0.png lrg.png
 
 !ifdef TESTOLD1_EXE
 $(TESTOLD1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testold1.obj $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnx8.obj $(SUBDIR)$(HPS)minipnrb.obj $(SUBDIR)$(HPS)minipnrw.obj $(SUBDIR)$(HPS)minipnph.obj $(SUBDIR)$(HPS)minipnid.obj
 	%write tmp.cmd option quiet option map=$(TESTOLD1_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)testold1.obj file $(SUBDIR)$(HPS)minipng.obj file $(SUBDIR)$(HPS)minipnx8.obj file $(SUBDIR)$(HPS)minipnrb.obj file $(SUBDIR)$(HPS)minipnrw.obj file $(SUBDIR)$(HPS)minipnph.obj file $(SUBDIR)$(HPS)minipnid.obj name $(TESTOLD1_EXE)
 	@wlink @tmp.cmd
-	@$(COPY) ..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
+	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 clean: .SYMBOLIC

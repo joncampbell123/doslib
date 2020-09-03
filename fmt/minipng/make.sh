@@ -1,5 +1,5 @@
 #!/bin/bash
-rel=../../../../../..
+rel=../..
 if [ x"$TOP" == x ]; then TOP=`pwd`/$rel; fi
 . $rel/linux-ow.sh
 
