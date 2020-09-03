@@ -2,7 +2,18 @@
 # NTS: HPS is either \ (DOS) or / (Linux)
 
 CFLAGS_THIS = -fr=nul -fo=$(SUBDIR)$(HPS).obj -i.. -i"../.."
-NOW_BUILDING = WOO_SORC_SET1_VRLTEST
+NOW_BUILDING = FMT_MINIPNG
+
+OBJS =         $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnid.obj $(SUBDIR)$(HPS)minipnph.obj $(SUBDIR)$(HPS)minipnrb.obj $(SUBDIR)$(HPS)minipnrw.obj $(SUBDIR)$(HPS)minipnx8.obj
+
+FMT_MINIPNG_LIB = $(SUBDIR)$(HPS)minipng.lib
+FMT_MINIPNG_LIB_DEPENDENCIES = $(EXT_ZLIBIMIN_LIB)
+FMT_MINIPNG_LIB_WLINK_LIBRARIES = library $(FMT_MINIPNG_LIB) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES)
+
+$(FMT_MINIPNG_LIB): $(OBJS)
+	wlib -q -b -c $(FMT_MINIPNG_LIB) -+$(SUBDIR)$(HPS)minipng.obj -+$(SUBDIR)$(HPS)minipnid.obj
+	wlib -q -b -c $(FMT_MINIPNG_LIB) -+$(SUBDIR)$(HPS)minipnph.obj -+$(SUBDIR)$(HPS)minipnrb.obj
+	wlib -q -b -c $(FMT_MINIPNG_LIB) -+$(SUBDIR)$(HPS)minipnrw.obj -+$(SUBDIR)$(HPS)minipnx8.obj
 
 TEST_EXE =     $(SUBDIR)$(HPS)test.$(EXEEXT)
 TESTOLD1_EXE = $(SUBDIR)$(HPS)testold1.$(EXEEXT)
@@ -18,20 +29,20 @@ TESTOLD1_EXE = $(SUBDIR)$(HPS)testold1.$(EXEEXT)
 
 all: $(OMFSEGDG) lib exe
        
-lib: $(HW_VGA_LIB) $(EXT_ZLIBIMIN_LIB) .symbolic
+lib: $(HW_VGA_LIB) $(FMT_MINIPNG_LIB) .symbolic
 	
 exe: $(TEST_EXE) $(TESTOLD1_EXE) .symbolic
 
 !ifdef TEST_EXE
-$(TEST_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnx8.obj $(SUBDIR)$(HPS)minipnrb.obj $(SUBDIR)$(HPS)minipnrw.obj $(SUBDIR)$(HPS)minipnph.obj $(SUBDIR)$(HPS)minipnid.obj
-	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj file $(SUBDIR)$(HPS)minipng.obj file $(SUBDIR)$(HPS)minipnx8.obj file $(SUBDIR)$(HPS)minipnrb.obj file $(SUBDIR)$(HPS)minipnrw.obj file $(SUBDIR)$(HPS)minipnph.obj file $(SUBDIR)$(HPS)minipnid.obj name $(TEST_EXE)
+$(TEST_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)test.obj
+	%write tmp.cmd option quiet option map=$(TEST_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)test.obj name $(TEST_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
 
 !ifdef TESTOLD1_EXE
-$(TESTOLD1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(EXT_ZLIBIMIN_LIB) $(EXT_ZLIBIMIN_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testold1.obj $(SUBDIR)$(HPS)minipng.obj $(SUBDIR)$(HPS)minipnx8.obj $(SUBDIR)$(HPS)minipnrb.obj $(SUBDIR)$(HPS)minipnrw.obj $(SUBDIR)$(HPS)minipnph.obj $(SUBDIR)$(HPS)minipnid.obj
-	%write tmp.cmd option quiet option map=$(TESTOLD1_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)testold1.obj file $(SUBDIR)$(HPS)minipng.obj file $(SUBDIR)$(HPS)minipnx8.obj file $(SUBDIR)$(HPS)minipnrb.obj file $(SUBDIR)$(HPS)minipnrw.obj file $(SUBDIR)$(HPS)minipnph.obj file $(SUBDIR)$(HPS)minipnid.obj name $(TESTOLD1_EXE)
+$(TESTOLD1_EXE): $(HW_VGA_LIB) $(HW_VGA_LIB_DEPENDENCIES) $(HW_8254_LIB) $(HW_8254_LIB_DEPENDENCIES) $(FMT_MINIPNG_LIB) $(FMT_MINIPNG_LIB_DEPENDENCIES) $(SUBDIR)$(HPS)testold1.obj
+	%write tmp.cmd option quiet option map=$(TESTOLD1_EXE).map system $(WLINK_CON_SYSTEM) $(HW_VGA_LIB_WLINK_LIBRARIES) $(HW_8254_LIB_WLINK_LIBRARIES) $(FMT_MINIPNG_LIB_WLINK_LIBRARIES) file $(SUBDIR)$(HPS)testold1.obj name $(TESTOLD1_EXE)
 	@wlink @tmp.cmd
 	@$(COPY) ..$(HPS)..$(HPS)dos32a.dat $(SUBDIR)$(HPS)dos4gw.exe
 !endif
