@@ -78,4 +78,5 @@ void minipng_reader_close(struct minipng_reader **rdr);
 int minipng_reader_parse_head(struct minipng_reader *rdr);
 int minipng_reader_read_idat(struct minipng_reader *rdr,unsigned char FAR *dst,size_t count);
 size_t minipng_rowsize_bytes(struct minipng_reader *rdr);
+void minipng_reader_reset_idat(struct minipng_reader *rdr);
 
