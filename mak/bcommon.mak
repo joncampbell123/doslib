@@ -418,6 +418,18 @@ EXT_ZLIB_MINIGZIP_EXE = $(SUBDIR)$(HPS)minigzip.exe
 EXT_ZLIB_EXAMPLE_EXE = $(SUBDIR)$(HPS)example.exe
 !endif
 
+# EXT\ZLIBIMIN------------------------------------------------------------------------------
+!ifndef EXT_ZLIBIMIN_LIB_NO_LIB
+EXT_ZLIBIMIN_LIB_DIR=$(REL)$(HPS)ext$(HPS)zlibimin
+EXT_ZLIBIMIN_LIB=$(EXT_ZLIBIMIN_LIB_DIR)$(HPS)$(SUBDIR)$(HPS)zlibimin.lib
+EXT_ZLIBIMIN_LIB_DEPENDENCIES=
+EXT_ZLIBIMIN_LIB_WLINK_LIBRARIES=library $(EXT_ZLIBIMIN_LIB)
+!endif
+!ifndef EXT_ZLIBIMIN_LIB_NO_EXE
+EXT_ZLIBIMIN_MINIGZIP_EXE = $(SUBDIR)$(HPS)minigzip.exe
+EXT_ZLIBIMIN_EXAMPLE_EXE = $(SUBDIR)$(HPS)example.exe
+!endif
+
 # EXT\BZIP2---------------------------------------------------------------------------------
 !ifeq TARGET_MSDOS 16
 EXT_BZIP2_LIB_NO_LIB = 1

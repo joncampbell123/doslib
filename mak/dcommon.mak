@@ -344,6 +344,16 @@ $(EXT_ZLIB_LIB):
 ! endif
 !endif
 
+# EXT\ZLIBIMIN------------------------------------------------------------------------------
+!ifneq NOW_BUILDING EXT_ZLIBIMIN_LIB
+! ifdef EXT_ZLIBIMIN_LIB
+$(EXT_ZLIBIMIN_LIB):
+	@cd $(EXT_ZLIBIMIN_LIB_DIR)
+	@$(MAKECMD) build lib $(SUBDIR)
+	@cd $(HERE)
+! endif
+!endif
+
 # EXT\BZIP2---------------------------------------------------------------------------------
 !ifneq NOW_BUILDING EXT_BZIP2_LIB
 ! ifdef EXT_BZIP2_LIB
