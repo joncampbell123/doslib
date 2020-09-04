@@ -180,6 +180,10 @@ int main() {
         if (redraw) {
             redraw = 0;
 
+            vga_wait_for_vsync();
+            vga_wait_for_vsync_end();
+            vga_wait_for_hsync_end();
+
             vga_write_sequencer(0x02/*map mask*/,0xF);
             vga_state.vga_graphics_ram = orig_vga_graphics_ram + next_offset;
             for (dof=0;dof < 0x4000;dof++) vga_state.vga_graphics_ram[dof] = 0;
@@ -196,21 +200,14 @@ int main() {
             vga_state.vga_graphics_ram = orig_vga_graphics_ram + next_offset;
         }
 
-        c = getch();
-        if (c == 27) break;
-
-        if (c == ',' || c == '<') {
-            if (--vrl_image_select < 0)
-                vrl_image_select = vrl_image_count - 1;
-
-            redraw = 1;
+        if (kbhit()) {
+            c = getch();
+            if (c == 27) break;
         }
-        else if (c == '.' || c == '>') {
-            if (++vrl_image_select >= vrl_image_count)
-                vrl_image_select = 0;
 
-            redraw = 1;
-        }
+        redraw = 1;
+        if ((++vrl_image_select) >= vrl_image_count)
+            vrl_image_select = 0;
     } while (1);
 
     int10_setmode(3);
