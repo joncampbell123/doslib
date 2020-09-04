@@ -155,7 +155,7 @@ void load_seq(void) {
 
 /* VGA unchained page flipping state for all code here */
 VGA_RAM_PTR orig_vga_graphics_ram;
-unsigned int vga_cur_page=VGA_PAGE_FIRST,vga_next_page=VGA_PAGE_SECOND;
+unsigned int vga_cur_page,vga_next_page;
 
 void vga_swap_pages() {
     vga_cur_page = vga_next_page;
@@ -174,6 +174,22 @@ void vga_update_disp_cur_page() {
     vga_wait_for_vsync_end();
     vga_wait_for_hsync_end();
     vga_set_start_location(vga_cur_page);
+}
+
+void init_vga256unchained() {
+    vga_cur_page=VGA_PAGE_FIRST;
+    vga_next_page=VGA_PAGE_SECOND;
+
+    int10_setmode(19);
+    update_state_from_vga();
+    vga_enable_256color_modex(); // VGA mode X
+    orig_vga_graphics_ram = vga_state.vga_graphics_ram;
+    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
+    vga_set_start_location(vga_cur_page);
+}
+
+void restore_text_mode() {
+    int10_setmode(3);
 }
 
 int main() {
@@ -204,25 +220,13 @@ int main() {
 #if TARGET_MSDOS == 16
     probe_emm();            // expanded memory support
     probe_himem_sys();      // extended memory support
-
-    if (emm_present) {
-        printf("Expanded memory present.\n");
-    }
-    if (himem_sys_present) {
-        printf("Extended memory present.\n");
-    }
 #endif
 
     load_seq();
     if (vrl_image_count == 0)
         return 1;
 
-    int10_setmode(19);
-    update_state_from_vga();
-    vga_enable_256color_modex(); // VGA mode X
-    orig_vga_graphics_ram = vga_state.vga_graphics_ram;
-    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
-    vga_set_start_location(vga_cur_page);
+    init_vga256unchained();
 
     pal_load_to_vga(/*offset*/0,/*count*/32,"sorcwoo.pal");
 
@@ -254,7 +258,7 @@ int main() {
             vrl_image_select = 0;
     } while (1);
 
-    int10_setmode(3);
+    restore_text_mode();
 
     for (vrl_image_select=0;vrl_image_select < vrl_image_count;vrl_image_select++)
         free_vrl(&vrl_image[vrl_image_select]);
