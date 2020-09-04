@@ -34,6 +34,9 @@ int                     vrl_image_count = 0;
 int                     vrl_image_select = 0;
 struct vrl_image        vrl_image[MAX_IMAGES];
 
+/* adjust the pixels in a VRL so combined images in one palette are possible.
+ * of course this does slow down loading the images, so perhaps by final release the VRLs could be pre-encoded for the
+ * palette offset especially if the VRL is one-time-use within the game. */
 void vrl_palrebase(struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs,unsigned char *buffer,const unsigned char adj) {
     unsigned char run,skip;
     unsigned char *cdat;
