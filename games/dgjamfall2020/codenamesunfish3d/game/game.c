@@ -170,7 +170,7 @@ int main() {
         if (fd >= 0) {
             unsigned int i;
 
-            read(fd,palette,768);
+            read(fd,palette,3*32);
             close(fd);
 
             vga_palette_lseek(0+0x20);
