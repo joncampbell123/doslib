@@ -9,6 +9,7 @@ also_build_list=dos86l
 if [ "$1" == "clean" ]; then
     do_clean
     rm -fv *.vrl *.pal
+    rm -Rf final
     exit 0
 fi
 
