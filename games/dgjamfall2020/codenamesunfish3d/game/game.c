@@ -34,6 +34,31 @@ int                     vrl_image_count = 0;
 int                     vrl_image_select = 0;
 struct vrl_image        vrl_image[MAX_IMAGES];
 
+void vrl_palrebase(struct vrl1_vgax_header *hdr,vrl1_vgax_offset_t *lineoffs,unsigned char *buffer,const unsigned char adj) {
+    unsigned char run,skip;
+    unsigned char *cdat;
+    unsigned int i,j;
+
+    for (i=0;i < hdr->width;i++) {
+        cdat = buffer + lineoffs[i];
+
+        do {
+            run = cdat[0];
+            if (run == 0xFF) break;
+            skip = cdat[1];
+
+            if (run & 0x80) {
+                cdat[2] += adj;
+                cdat += 1u + 2u;
+            }
+            else {
+                for (j=0;j < run;j++) cdat[2u+j] += adj;
+                cdat += run + 2u;
+            }
+        } while (1);
+    }
+}
+
 int load_vrl(int slot,const char *path) {
     struct vrl1_vgax_header *vrl_header;
     vrl1_vgax_offset_t *vrl_lineoffs;
@@ -72,6 +97,8 @@ int load_vrl(int slot,const char *path) {
     vrl_image[slot].vrl_lineoffs = vrl_lineoffs;
     vrl_image[slot].buffer = buffer;
     vrl_image[slot].bufsz = bufsz;
+
+    vrl_palrebase(vrl_header,vrl_lineoffs,buffer+sizeof(*vrl_header),0x20); /* adjust the image to start at palette 0x20 */
 
     return 0;
 fail:
@@ -171,7 +198,7 @@ int main() {
             read(fd,palette,768);
             close(fd);
 
-            vga_palette_lseek(0);
+            vga_palette_lseek(0+0x20);
             for (i=0;i < 256;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
         }
     }
