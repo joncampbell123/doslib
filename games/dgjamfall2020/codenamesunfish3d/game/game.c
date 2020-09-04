@@ -150,9 +150,33 @@ void load_seq(void) {
     }
 }
 
+#define VGA_PAGE_FIRST          0x0000
+#define VGA_PAGE_SECOND         0x4000
+
+/* VGA unchained page flipping state for all code here */
+VGA_RAM_PTR orig_vga_graphics_ram;
+unsigned int vga_cur_page=VGA_PAGE_FIRST,vga_next_page=VGA_PAGE_SECOND;
+
+void vga_swap_pages() {
+    vga_cur_page = vga_next_page;
+    vga_next_page = (vga_next_page ^ 0x4000) & 0x7FFF;
+    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
+}
+
+void vga_update_disp_cur_page() {
+    /* make sure the CRTC is not in the blanking portions or vsync
+     * so that we're not changing offset during a time the CRTC might
+     * latch the new display offset.
+     *
+     * caller is expected to wait for vsync start at some point to
+     * keep time with vertical refresh or bad things (flickering)
+     * happen. */
+    vga_wait_for_vsync_end();
+    vga_wait_for_hsync_end();
+    vga_set_start_location(vga_cur_page);
+}
+
 int main() {
-    unsigned int cur_offset=0x4000,next_offset=0;
-    VGA_RAM_PTR	orig_vga_graphics_ram;
     unsigned int dof;
     int redraw = 1;
     int c;
@@ -197,8 +221,8 @@ int main() {
     update_state_from_vga();
     vga_enable_256color_modex(); // VGA mode X
     orig_vga_graphics_ram = vga_state.vga_graphics_ram;
-    vga_state.vga_graphics_ram = orig_vga_graphics_ram + next_offset;
-    vga_set_start_location(cur_offset);
+    vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
+    vga_set_start_location(vga_cur_page);
 
     pal_load_to_vga(/*offset*/0,/*count*/32,"sorcwoo.pal");
 
@@ -206,12 +230,7 @@ int main() {
         if (redraw) {
             redraw = 0;
 
-            vga_wait_for_vsync();
-            vga_wait_for_vsync_end();
-            vga_wait_for_hsync_end();
-
             vga_write_sequencer(0x02/*map mask*/,0xF);
-            vga_state.vga_graphics_ram = orig_vga_graphics_ram + next_offset;
             for (dof=0;dof < 0x4000;dof++) vga_state.vga_graphics_ram[dof] = 0;
 
             draw_vrl1_vgax_modex(0,0,
@@ -220,10 +239,9 @@ int main() {
                 vrl_image[vrl_image_select].buffer+sizeof(*vrl_image[vrl_image_select].vrl_header),
                 vrl_image[vrl_image_select].bufsz-sizeof(*vrl_image[vrl_image_select].vrl_header));
 
-            cur_offset = next_offset;
-            next_offset = (next_offset ^ 0x4000) & 0x7FFF;
-            vga_set_start_location(cur_offset);
-            vga_state.vga_graphics_ram = orig_vga_graphics_ram + next_offset;
+            vga_swap_pages(); /* current <-> next */
+            vga_update_disp_cur_page();
+            vga_wait_for_vsync(); /* wait for vsync */
         }
 
         if (kbhit()) {
