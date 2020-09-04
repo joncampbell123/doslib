@@ -11,6 +11,8 @@
 
 #include <hw/cpu/cpu.h>
 #include <hw/dos/dos.h>
+#include <hw/dos/emm.h>
+#include <hw/dos/himemsys.h>
 #include <hw/vga/vga.h>
 #include <hw/vga/vrl.h>
 #include <hw/8254/8254.h>
@@ -113,6 +115,18 @@ int main() {
         printf("VGA probe failed.\n");
         return 1;
     }
+
+#if TARGET_MSDOS == 16
+    probe_emm();            // expanded memory support
+    probe_himem_sys();      // extended memory support
+
+    if (emm_present) {
+        printf("Expanded memory present.\n");
+    }
+    if (himem_sys_present) {
+        printf("Extended memory present.\n");
+    }
+#endif
 
     load_seq();
     if (vrl_image_count == 0)
