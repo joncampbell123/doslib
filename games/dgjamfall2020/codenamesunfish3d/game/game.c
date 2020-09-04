@@ -176,6 +176,13 @@ void vga_update_disp_cur_page() {
     vga_set_start_location(vga_cur_page);
 }
 
+void vga_clear_npage() {
+    unsigned int dof;
+
+    vga_write_sequencer(0x02/*map mask*/,0xF);
+    for (dof=0;dof < 0x4000;dof++) vga_state.vga_graphics_ram[dof] = 0;
+}
+
 void init_vga256unchained() {
     vga_cur_page=VGA_PAGE_FIRST;
     vga_next_page=VGA_PAGE_SECOND;
@@ -193,7 +200,6 @@ void restore_text_mode() {
 }
 
 int main() {
-    unsigned int dof;
     int redraw = 1;
     int c;
 
@@ -234,8 +240,7 @@ int main() {
         if (redraw) {
             redraw = 0;
 
-            vga_write_sequencer(0x02/*map mask*/,0xF);
-            for (dof=0;dof < 0x4000;dof++) vga_state.vga_graphics_ram[dof] = 0;
+            vga_clear_npage();
 
             draw_vrl1_vgax_modex(0,0,
                 vrl_image[vrl_image_select].vrl_header,
