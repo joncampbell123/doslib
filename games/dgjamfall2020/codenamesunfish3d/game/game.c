@@ -189,7 +189,7 @@ void init_vga256unchained() {
 
     int10_setmode(19);
     update_state_from_vga();
-    vga_enable_256color_modex(); // VGA mode X
+    vga_enable_256color_modex(); // VGA mode X (unchained)
     orig_vga_graphics_ram = vga_state.vga_graphics_ram;
     vga_state.vga_graphics_ram = orig_vga_graphics_ram + vga_next_page;
     vga_set_start_location(vga_cur_page);
