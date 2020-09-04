@@ -19,19 +19,12 @@
 #include <hw/8259/8259.h>
 #include <fmt/minipng/minipng.h>
 
-#define VRL_IMAGE_FILES             19
-#define MAX_IMAGES                  VRL_IMAGE_FILES
-
 struct vrl_image {
     struct vrl1_vgax_header*        vrl_header;
     vrl1_vgax_offset_t*             vrl_lineoffs;
     unsigned char*                  buffer;
     unsigned int                    bufsz;
 };
-
-int                     vrl_image_count = 0;
-int                     vrl_image_select = 0;
-struct vrl_image        vrl_image[MAX_IMAGES] = { {NULL,NULL,NULL,0} };
 
 void free_vrl(struct vrl_image *img) {
     if (img->buffer != NULL) {
@@ -91,6 +84,35 @@ fail:
     if (fd >= 0) close(fd);
     return 1;
 }
+
+int pal_load_to_vga(unsigned int offset,unsigned int count,const char *path) {
+    unsigned char *palette;
+    unsigned int i;
+    int fd,ret=-1;
+
+    /* load color palette */
+    fd = open(path,O_RDONLY|O_BINARY);
+    if (fd >= 0) {
+        palette = malloc(3u*count);
+        if (palette != NULL) {
+            read(fd,palette,3u*count);
+            close(fd);
+
+            vga_palette_lseek(offset);
+            for (i=0;i < count;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
+            free(palette);
+            ret = 0;
+        }
+    }
+
+    return 0;
+}
+
+#define VRL_IMAGE_FILES             19
+
+int                     vrl_image_count = 0;
+int                     vrl_image_select = 0;
+struct vrl_image        vrl_image[VRL_IMAGE_FILES] = { {NULL,NULL,NULL,0} };
 
 const char *image_file[VRL_IMAGE_FILES] = {
     "sorcwoo1.vrl",             // 0
@@ -172,22 +194,7 @@ int main() {
     vga_state.vga_graphics_ram = orig_vga_graphics_ram + next_offset;
     vga_set_start_location(cur_offset);
 
-    {
-        unsigned char palette[3*32];
-        int fd;
-
-        /* load color palette */
-        fd = open("sorcwoo.pal",O_RDONLY|O_BINARY);
-        if (fd >= 0) {
-            unsigned int i;
-
-            read(fd,palette,3*32);
-            close(fd);
-
-            vga_palette_lseek(0);
-            for (i=0;i < 32;i++) vga_palette_write(palette[(i*3)+0]>>2,palette[(i*3)+1]>>2,palette[(i*3)+2]>>2);
-        }
-    }
+    pal_load_to_vga(/*offset*/0,/*count*/32,"sorcwoo.pal");
 
     do {
         if (redraw) {
