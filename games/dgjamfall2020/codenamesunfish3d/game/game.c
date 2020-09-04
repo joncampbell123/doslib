@@ -80,12 +80,32 @@ fail:
     return 1;
 }
 
-void load_seq(void) {
-    char tmp[20];
+const char *image_file[] = {
+    "sorcbwo1.vrl",
+    "sorcbwo2.vrl",
+    "sorcbwo3.vrl",
+    "sorcbwo4.vrl",
+    "sorcbwo5.vrl",
+    "sorcbwo6.vrl",
+    "sorcbwo7.vrl",
+    "sorcbwo8.vrl",
+    "sorcbwo9.vrl",
+    "sorcuhhh.vrl",
+    "sorcwoo1.vrl",
+    "sorcwoo2.vrl",
+    "sorcwoo3.vrl",
+    "sorcwoo4.vrl",
+    "sorcwoo5.vrl",
+    "sorcwoo6.vrl",
+    "sorcwoo7.vrl",
+    "sorcwoo8.vrl",
+    "sorcwoo9.vrl",
+    NULL
+};
 
-    while (vrl_image_count < MAX_IMAGES) {
-        sprintf(tmp,"%04d.vrl",vrl_image_count);
-        if (load_vrl(vrl_image_count,tmp)) break;
+void load_seq(void) {
+    while (vrl_image_count < MAX_IMAGES && image_file[vrl_image_count] != NULL) {
+        if (load_vrl(vrl_image_count,image_file[vrl_image_count])) break;
         vrl_image_count++;
     }
 }
@@ -144,7 +164,7 @@ int main() {
         int fd;
 
         /* load color palette */
-        fd = open("palette.pal",O_RDONLY|O_BINARY);
+        fd = open("sorcwoo.pal",O_RDONLY|O_BINARY);
         if (fd >= 0) {
             unsigned int i;
 
