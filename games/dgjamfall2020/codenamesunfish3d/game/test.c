@@ -94,16 +94,13 @@ int main() {
     int redraw = 1;
     int c;
 
-    load_seq();
-    if (vrl_image_count == 0)
-        return 1;
-
+    probe_dos();
 	cpu_probe();
     if (cpu_basic_level < 3) {
         printf("This game requires a 386 or higher\n");
         return 1;
     }
-    probe_dos();
+
 	if (!probe_8254()) {
 		printf("No 8254 detected.\n");
 		return 1;
@@ -116,6 +113,11 @@ int main() {
         printf("VGA probe failed.\n");
         return 1;
     }
+
+    load_seq();
+    if (vrl_image_count == 0)
+        return 1;
+
     int10_setmode(19);
     update_state_from_vga();
     vga_enable_256color_modex(); // VGA mode X
