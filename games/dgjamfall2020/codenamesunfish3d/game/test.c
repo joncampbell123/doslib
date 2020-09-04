@@ -17,6 +17,7 @@
 #include <hw/vga/vrl.h>
 #include <hw/8254/8254.h>
 #include <hw/8259/8259.h>
+#include <fmt/minipng/minipng.h>
 
 static unsigned char palette[768];
 
