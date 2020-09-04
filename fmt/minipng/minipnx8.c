@@ -14,7 +14,7 @@
 #include <hw/vga/vga.h>
 #include <ext/zlib/zlib.h>
 
-#include "minipng.h"
+#include <fmt/minipng/minipng.h>
 
 /* WARNING: This function will expand bytes to a multiple of 8 pixels rounded up. Allocate your buffer accordingly. */
 void minipng_expand1to8(unsigned char *buf,unsigned int pixels) {

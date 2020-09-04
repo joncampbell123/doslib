@@ -14,7 +14,7 @@
 #include <hw/vga/vga.h>
 #include <ext/zlib/zlib.h>
 
-#include "minipng.h"
+#include <fmt/minipng/minipng.h>
 
 size_t minipng_rowsize_bytes(struct minipng_reader *rdr) {
     if (rdr == NULL) return 0;

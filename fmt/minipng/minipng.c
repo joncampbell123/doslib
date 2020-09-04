@@ -14,7 +14,7 @@
 #include <hw/vga/vga.h>
 #include <ext/zlib/zlib.h>
 
-#include "minipng.h"
+#include <fmt/minipng/minipng.h>
 
 /* PNG signature [https://www.w3.org/TR/PNG/#5PNG-file-signature] */
 const uint8_t minipng_sig[8] = { 137u, 80u, 78u, 71u, 13u, 10u, 26u, 10u };

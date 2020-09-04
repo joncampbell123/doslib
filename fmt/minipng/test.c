@@ -14,7 +14,7 @@
 #include <hw/vga/vga.h>
 #include <ext/zlib/zlib.h>
 
-#include "minipng.h"
+#include <fmt/minipng/minipng.h>
 
 int main(int argc,char **argv) {
     struct minipng_reader *rdr;

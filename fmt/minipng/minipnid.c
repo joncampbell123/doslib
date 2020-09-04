@@ -14,7 +14,7 @@
 #include <hw/vga/vga.h>
 #include <ext/zlib/zlib.h>
 
-#include "minipng.h"
+#include <fmt/minipng/minipng.h>
 
 /* WARNING: Normalize far pointer dst before calling this */
 int minipng_reader_read_idat(struct minipng_reader *rdr,unsigned char FAR *dst,size_t count) {

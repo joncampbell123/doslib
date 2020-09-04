@@ -14,7 +14,7 @@
 #include <hw/vga/vga.h>
 #include <ext/zlib/zlib.h>
 
-#include "minipng.h"
+#include <fmt/minipng/minipng.h>
 
 void minipng_reader_reset_idat(struct minipng_reader *rdr) {
     if (rdr == NULL) return;

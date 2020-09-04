@@ -14,7 +14,7 @@
 #include <hw/vga/vga.h>
 #include <ext/zlib/zlib.h>
 
-#include "minipng.h"
+#include <fmt/minipng/minipng.h>
 
 /* assume caller just opened or called rewind.
  * don't expect this to work if you call this twice in a row or after the IDAT. */
